@@ -8,10 +8,10 @@
 
 import { type ExecutionContext, isBacktest } from "@cream/domain";
 import {
-  createMacroGraphBuilder,
-  type MacroCategory,
-  PREDEFINED_MACRO_ENTITIES,
-  SECTOR_DEFAULT_SENSITIVITIES,
+	createMacroGraphBuilder,
+	type MacroCategory,
+	PREDEFINED_MACRO_ENTITIES,
+	SECTOR_DEFAULT_SENSITIVITIES,
 } from "@cream/helix";
 import { getHelixClient } from "../clients.js";
 
@@ -23,84 +23,84 @@ import { getHelixClient } from "../clients.js";
  * Macro factor exposure result
  */
 export interface MacroFactorExposure {
-  /** Macro entity ID (e.g., "fed_funds_rate", "oil_wti") */
-  entityId: string;
-  /** Human-readable name */
-  name: string;
-  /** Description of the macro factor */
-  description: string;
-  /** Sensitivity score (0-1, where 1 = highly sensitive) */
-  sensitivity: number;
-  /** Category of the macro factor */
-  category: MacroCategory;
+	/** Macro entity ID (e.g., "fed_funds_rate", "oil_wti") */
+	entityId: string;
+	/** Human-readable name */
+	name: string;
+	/** Description of the macro factor */
+	description: string;
+	/** Sensitivity score (0-1, where 1 = highly sensitive) */
+	sensitivity: number;
+	/** Category of the macro factor */
+	category: MacroCategory;
 }
 
 /**
  * Company macro exposure query result
  */
 export interface CompanyMacroExposureResult {
-  /** The queried company symbol */
-  symbol: string;
-  /** Macro factors affecting this company, sorted by sensitivity */
-  exposures: MacroFactorExposure[];
-  /** Query execution time in milliseconds */
-  executionTimeMs: number;
+	/** The queried company symbol */
+	symbol: string;
+	/** Macro factors affecting this company, sorted by sensitivity */
+	exposures: MacroFactorExposure[];
+	/** Query execution time in milliseconds */
+	executionTimeMs: number;
 }
 
 /**
  * Portfolio macro exposure result
  */
 export interface PortfolioMacroExposureResult {
-  /** Companies analyzed */
-  symbols: string[];
-  /** Aggregated exposure by macro factor */
-  aggregatedExposures: {
-    entityId: string;
-    name: string;
-    category: MacroCategory;
-    /** Average sensitivity across portfolio */
-    avgSensitivity: number;
-    /** Number of companies exposed */
-    companyCount: number;
-    /** Companies with highest sensitivity to this factor */
-    topExposed: { symbol: string; sensitivity: number }[];
-  }[];
-  /** Query execution time in milliseconds */
-  executionTimeMs: number;
+	/** Companies analyzed */
+	symbols: string[];
+	/** Aggregated exposure by macro factor */
+	aggregatedExposures: {
+		entityId: string;
+		name: string;
+		category: MacroCategory;
+		/** Average sensitivity across portfolio */
+		avgSensitivity: number;
+		/** Number of companies exposed */
+		companyCount: number;
+		/** Companies with highest sensitivity to this factor */
+		topExposed: { symbol: string; sensitivity: number }[];
+	}[];
+	/** Query execution time in milliseconds */
+	executionTimeMs: number;
 }
 
 /**
  * Companies affected by macro factor
  */
 export interface CompaniesAffectedResult {
-  /** The macro factor entity ID */
-  macroEntityId: string;
-  /** Human-readable name */
-  name: string;
-  /** Companies affected, sorted by sensitivity */
-  affectedCompanies: {
-    symbol: string;
-    sensitivity: number;
-  }[];
-  /** Query execution time in milliseconds */
-  executionTimeMs: number;
+	/** The macro factor entity ID */
+	macroEntityId: string;
+	/** Human-readable name */
+	name: string;
+	/** Companies affected, sorted by sensitivity */
+	affectedCompanies: {
+		symbol: string;
+		sensitivity: number;
+	}[];
+	/** Query execution time in milliseconds */
+	executionTimeMs: number;
 }
 
 /**
  * Available macro factors result
  */
 export interface MacroFactorsResult {
-  /** Available macro factors by category */
-  factors: {
-    entityId: string;
-    name: string;
-    description: string;
-    category: MacroCategory;
-    frequency: string;
-    dataSymbol?: string;
-  }[];
-  /** Sectors with default sensitivities */
-  sectorsWithDefaults: string[];
+	/** Available macro factors by category */
+	factors: {
+		entityId: string;
+		name: string;
+		description: string;
+		category: MacroCategory;
+		frequency: string;
+		dataSymbol?: string;
+	}[];
+	/** Sectors with default sensitivities */
+	sectorsWithDefaults: string[];
 }
 
 // ============================================
@@ -127,43 +127,43 @@ export interface MacroFactorsResult {
  * ```
  */
 export async function getCompanyMacroExposure(
-  ctx: ExecutionContext,
-  symbol: string
+	ctx: ExecutionContext,
+	symbol: string
 ): Promise<CompanyMacroExposureResult> {
-  const startTime = performance.now();
+	const startTime = performance.now();
 
-  if (isBacktest(ctx)) {
-    return {
-      symbol: symbol.toUpperCase(),
-      exposures: [],
-      executionTimeMs: 0,
-    };
-  }
+	if (isBacktest(ctx)) {
+		return {
+			symbol: symbol.toUpperCase(),
+			exposures: [],
+			executionTimeMs: 0,
+		};
+	}
 
-  const client = getHelixClient();
-  const builder = createMacroGraphBuilder(client);
+	const client = getHelixClient();
+	const builder = createMacroGraphBuilder(client);
 
-  const factors = await builder.getMacroFactorsForCompany(symbol.toUpperCase());
+	const factors = await builder.getMacroFactorsForCompany(symbol.toUpperCase());
 
-  const exposures: MacroFactorExposure[] = factors.map((f) => {
-    const predefined = PREDEFINED_MACRO_ENTITIES.find((p) => p.entity_id === f.entityId);
-    return {
-      entityId: f.entityId,
-      name: f.name,
-      description: predefined?.description ?? "",
-      sensitivity: f.sensitivity,
-      category: predefined?.category ?? "ECONOMIC_INDICATORS",
-    };
-  });
+	const exposures: MacroFactorExposure[] = factors.map((f) => {
+		const predefined = PREDEFINED_MACRO_ENTITIES.find((p) => p.entity_id === f.entityId);
+		return {
+			entityId: f.entityId,
+			name: f.name,
+			description: predefined?.description ?? "",
+			sensitivity: f.sensitivity,
+			category: predefined?.category ?? "ECONOMIC_INDICATORS",
+		};
+	});
 
-  // Sort by sensitivity descending
-  exposures.sort((a, b) => b.sensitivity - a.sensitivity);
+	// Sort by sensitivity descending
+	exposures.sort((a, b) => b.sensitivity - a.sensitivity);
 
-  return {
-    symbol: symbol.toUpperCase(),
-    exposures,
-    executionTimeMs: performance.now() - startTime,
-  };
+	return {
+		symbol: symbol.toUpperCase(),
+		exposures,
+		executionTimeMs: performance.now() - startTime,
+	};
 }
 
 /**
@@ -185,71 +185,71 @@ export async function getCompanyMacroExposure(
  * ```
  */
 export async function getPortfolioMacroExposure(
-  ctx: ExecutionContext,
-  symbols: string[]
+	ctx: ExecutionContext,
+	symbols: string[]
 ): Promise<PortfolioMacroExposureResult> {
-  const startTime = performance.now();
+	const startTime = performance.now();
 
-  if (isBacktest(ctx) || symbols.length === 0) {
-    return {
-      symbols,
-      aggregatedExposures: [],
-      executionTimeMs: 0,
-    };
-  }
+	if (isBacktest(ctx) || symbols.length === 0) {
+		return {
+			symbols,
+			aggregatedExposures: [],
+			executionTimeMs: 0,
+		};
+	}
 
-  const client = getHelixClient();
-  const builder = createMacroGraphBuilder(client);
+	const client = getHelixClient();
+	const builder = createMacroGraphBuilder(client);
 
-  // Collect exposures for all companies
-  const allExposures: { symbol: string; entityId: string; name: string; sensitivity: number }[] =
-    [];
+	// Collect exposures for all companies
+	const allExposures: { symbol: string; entityId: string; name: string; sensitivity: number }[] =
+		[];
 
-  for (const symbol of symbols) {
-    const factors = await builder.getMacroFactorsForCompany(symbol.toUpperCase());
-    for (const f of factors) {
-      allExposures.push({
-        symbol: symbol.toUpperCase(),
-        entityId: f.entityId,
-        name: f.name,
-        sensitivity: f.sensitivity,
-      });
-    }
-  }
+	for (const symbol of symbols) {
+		const factors = await builder.getMacroFactorsForCompany(symbol.toUpperCase());
+		for (const f of factors) {
+			allExposures.push({
+				symbol: symbol.toUpperCase(),
+				entityId: f.entityId,
+				name: f.name,
+				sensitivity: f.sensitivity,
+			});
+		}
+	}
 
-  // Aggregate by macro factor
-  const byFactor = Map.groupBy(allExposures, (e) => e.entityId);
+	// Aggregate by macro factor
+	const byFactor = Map.groupBy(allExposures, (e) => e.entityId);
 
-  const aggregatedExposures = [...byFactor.entries()].map(([entityId, exposures]) => {
-    const first = exposures[0];
-    const predefined = PREDEFINED_MACRO_ENTITIES.find((p) => p.entity_id === entityId);
+	const aggregatedExposures = [...byFactor.entries()].map(([entityId, exposures]) => {
+		const first = exposures[0];
+		const predefined = PREDEFINED_MACRO_ENTITIES.find((p) => p.entity_id === entityId);
 
-    const avgSensitivity = exposures.reduce((sum, e) => sum + e.sensitivity, 0) / exposures.length;
+		const avgSensitivity = exposures.reduce((sum, e) => sum + e.sensitivity, 0) / exposures.length;
 
-    const sorted = [...exposures].sort((a, b) => b.sensitivity - a.sensitivity);
-    const topExposed = sorted.slice(0, 3).map((e) => ({
-      symbol: e.symbol,
-      sensitivity: e.sensitivity,
-    }));
+		const sorted = [...exposures].sort((a, b) => b.sensitivity - a.sensitivity);
+		const topExposed = sorted.slice(0, 3).map((e) => ({
+			symbol: e.symbol,
+			sensitivity: e.sensitivity,
+		}));
 
-    return {
-      entityId,
-      name: first?.name ?? entityId,
-      category: predefined?.category ?? ("ECONOMIC_INDICATORS" as MacroCategory),
-      avgSensitivity,
-      companyCount: exposures.length,
-      topExposed,
-    };
-  });
+		return {
+			entityId,
+			name: first?.name ?? entityId,
+			category: predefined?.category ?? ("ECONOMIC_INDICATORS" as MacroCategory),
+			avgSensitivity,
+			companyCount: exposures.length,
+			topExposed,
+		};
+	});
 
-  // Sort by average sensitivity
-  aggregatedExposures.sort((a, b) => b.avgSensitivity - a.avgSensitivity);
+	// Sort by average sensitivity
+	aggregatedExposures.sort((a, b) => b.avgSensitivity - a.avgSensitivity);
 
-  return {
-    symbols: symbols.map((s) => s.toUpperCase()),
-    aggregatedExposures,
-    executionTimeMs: performance.now() - startTime,
-  };
+	return {
+		symbols: symbols.map((s) => s.toUpperCase()),
+		aggregatedExposures,
+		executionTimeMs: performance.now() - startTime,
+	};
 }
 
 /**
@@ -271,33 +271,33 @@ export async function getPortfolioMacroExposure(
  * ```
  */
 export async function getCompaniesAffectedByMacro(
-  ctx: ExecutionContext,
-  macroEntityId: string
+	ctx: ExecutionContext,
+	macroEntityId: string
 ): Promise<CompaniesAffectedResult> {
-  const startTime = performance.now();
+	const startTime = performance.now();
 
-  const predefined = PREDEFINED_MACRO_ENTITIES.find((p) => p.entity_id === macroEntityId);
+	const predefined = PREDEFINED_MACRO_ENTITIES.find((p) => p.entity_id === macroEntityId);
 
-  if (isBacktest(ctx)) {
-    return {
-      macroEntityId,
-      name: predefined?.name ?? macroEntityId,
-      affectedCompanies: [],
-      executionTimeMs: 0,
-    };
-  }
+	if (isBacktest(ctx)) {
+		return {
+			macroEntityId,
+			name: predefined?.name ?? macroEntityId,
+			affectedCompanies: [],
+			executionTimeMs: 0,
+		};
+	}
 
-  const client = getHelixClient();
-  const builder = createMacroGraphBuilder(client);
+	const client = getHelixClient();
+	const builder = createMacroGraphBuilder(client);
 
-  const affected = await builder.getCompaniesAffectedByMacro(macroEntityId);
+	const affected = await builder.getCompaniesAffectedByMacro(macroEntityId);
 
-  return {
-    macroEntityId,
-    name: predefined?.name ?? macroEntityId,
-    affectedCompanies: affected.sort((a, b) => b.sensitivity - a.sensitivity),
-    executionTimeMs: performance.now() - startTime,
-  };
+	return {
+		macroEntityId,
+		name: predefined?.name ?? macroEntityId,
+		affectedCompanies: affected.sort((a, b) => b.sensitivity - a.sensitivity),
+		executionTimeMs: performance.now() - startTime,
+	};
 }
 
 /**
@@ -307,29 +307,29 @@ export async function getCompaniesAffectedByMacro(
  * Useful for agents to understand what factors can be queried.
  */
 export function getAvailableMacroFactors(): MacroFactorsResult {
-  return {
-    factors: PREDEFINED_MACRO_ENTITIES.map((p) => ({
-      entityId: p.entity_id,
-      name: p.name,
-      description: p.description ?? "",
-      category: p.category,
-      frequency: p.frequency,
-      dataSymbol: p.dataSymbol,
-    })),
-    sectorsWithDefaults: Object.keys(SECTOR_DEFAULT_SENSITIVITIES),
-  };
+	return {
+		factors: PREDEFINED_MACRO_ENTITIES.map((p) => ({
+			entityId: p.entity_id,
+			name: p.name,
+			description: p.description ?? "",
+			category: p.category,
+			frequency: p.frequency,
+			dataSymbol: p.dataSymbol,
+		})),
+		sectorsWithDefaults: Object.keys(SECTOR_DEFAULT_SENSITIVITIES),
+	};
 }
 
 /**
  * Get macro factors by category
  */
 export function getMacroFactorsByCategory(category: MacroCategory): MacroFactorsResult["factors"] {
-  return PREDEFINED_MACRO_ENTITIES.filter((p) => p.category === category).map((p) => ({
-    entityId: p.entity_id,
-    name: p.name,
-    description: p.description ?? "",
-    category: p.category,
-    frequency: p.frequency,
-    dataSymbol: p.dataSymbol,
-  }));
+	return PREDEFINED_MACRO_ENTITIES.filter((p) => p.category === category).map((p) => ({
+		entityId: p.entity_id,
+		name: p.name,
+		description: p.description ?? "",
+		category: p.category,
+		frequency: p.frequency,
+		dataSymbol: p.dataSymbol,
+	}));
 }

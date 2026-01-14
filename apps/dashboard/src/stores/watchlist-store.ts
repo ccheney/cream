@@ -16,23 +16,23 @@ import { useShallow } from "zustand/react/shallow";
 // ============================================
 
 export interface WatchlistState {
-  /** Symbols in the watchlist */
-  symbols: string[];
+	/** Symbols in the watchlist */
+	symbols: string[];
 }
 
 export interface WatchlistActions {
-  /** Add a symbol to the watchlist */
-  addSymbol: (symbol: string) => void;
-  /** Remove a symbol from the watchlist */
-  removeSymbol: (symbol: string) => void;
-  /** Set the entire watchlist */
-  setSymbols: (symbols: string[]) => void;
-  /** Check if a symbol is in the watchlist */
-  hasSymbol: (symbol: string) => boolean;
-  /** Reorder symbols */
-  reorderSymbols: (fromIndex: number, toIndex: number) => void;
-  /** Clear the watchlist */
-  clear: () => void;
+	/** Add a symbol to the watchlist */
+	addSymbol: (symbol: string) => void;
+	/** Remove a symbol from the watchlist */
+	removeSymbol: (symbol: string) => void;
+	/** Set the entire watchlist */
+	setSymbols: (symbols: string[]) => void;
+	/** Check if a symbol is in the watchlist */
+	hasSymbol: (symbol: string) => boolean;
+	/** Reorder symbols */
+	reorderSymbols: (fromIndex: number, toIndex: number) => void;
+	/** Clear the watchlist */
+	clear: () => void;
 }
 
 export type WatchlistStore = WatchlistState & WatchlistActions;
@@ -44,7 +44,7 @@ export type WatchlistStore = WatchlistState & WatchlistActions;
 const DEFAULT_SYMBOLS = ["QQQ", "SPY", "UVXY", "TSLA", "NVDA", "PLTR"];
 
 const initialState: WatchlistState = {
-  symbols: DEFAULT_SYMBOLS,
+	symbols: DEFAULT_SYMBOLS,
 };
 
 // ============================================
@@ -70,61 +70,61 @@ const initialState: WatchlistState = {
  * ```
  */
 export const useWatchlistStore = create<WatchlistStore>()(
-  persist(
-    (set, get) => ({
-      ...initialState,
+	persist(
+		(set, get) => ({
+			...initialState,
 
-      addSymbol: (symbol) => {
-        const normalized = symbol.toUpperCase().trim();
-        if (!normalized) {
-          return;
-        }
+			addSymbol: (symbol) => {
+				const normalized = symbol.toUpperCase().trim();
+				if (!normalized) {
+					return;
+				}
 
-        set((state) => {
-          if (state.symbols.includes(normalized)) {
-            return state;
-          }
-          return { symbols: [...state.symbols, normalized] };
-        });
-      },
+				set((state) => {
+					if (state.symbols.includes(normalized)) {
+						return state;
+					}
+					return { symbols: [...state.symbols, normalized] };
+				});
+			},
 
-      removeSymbol: (symbol) => {
-        const normalized = symbol.toUpperCase().trim();
-        set((state) => ({
-          symbols: state.symbols.filter((s) => s !== normalized),
-        }));
-      },
+			removeSymbol: (symbol) => {
+				const normalized = symbol.toUpperCase().trim();
+				set((state) => ({
+					symbols: state.symbols.filter((s) => s !== normalized),
+				}));
+			},
 
-      setSymbols: (symbols) => {
-        const normalized = symbols.map((s) => s.toUpperCase().trim()).filter(Boolean);
-        set({ symbols: normalized });
-      },
+			setSymbols: (symbols) => {
+				const normalized = symbols.map((s) => s.toUpperCase().trim()).filter(Boolean);
+				set({ symbols: normalized });
+			},
 
-      hasSymbol: (symbol) => {
-        const normalized = symbol.toUpperCase().trim();
-        return get().symbols.includes(normalized);
-      },
+			hasSymbol: (symbol) => {
+				const normalized = symbol.toUpperCase().trim();
+				return get().symbols.includes(normalized);
+			},
 
-      reorderSymbols: (fromIndex, toIndex) => {
-        set((state) => {
-          const symbols = [...state.symbols];
-          const [removed] = symbols.splice(fromIndex, 1);
-          if (removed) {
-            symbols.splice(toIndex, 0, removed);
-          }
-          return { symbols };
-        });
-      },
+			reorderSymbols: (fromIndex, toIndex) => {
+				set((state) => {
+					const symbols = [...state.symbols];
+					const [removed] = symbols.splice(fromIndex, 1);
+					if (removed) {
+						symbols.splice(toIndex, 0, removed);
+					}
+					return { symbols };
+				});
+			},
 
-      clear: () => {
-        set({ symbols: [] });
-      },
-    }),
-    {
-      name: "cream-watchlist",
-      version: 1,
-    }
-  )
+			clear: () => {
+				set({ symbols: [] });
+			},
+		}),
+		{
+			name: "cream-watchlist",
+			version: 1,
+		}
+	)
 );
 
 // ============================================
@@ -142,17 +142,17 @@ export const selectSymbolCount = (state: WatchlistStore) => state.symbols.length
  * Hook for watchlist management.
  */
 export function useWatchlist() {
-  return useWatchlistStore(
-    useShallow((state) => ({
-      symbols: state.symbols,
-      addSymbol: state.addSymbol,
-      removeSymbol: state.removeSymbol,
-      setSymbols: state.setSymbols,
-      hasSymbol: state.hasSymbol,
-      reorderSymbols: state.reorderSymbols,
-      clear: state.clear,
-    }))
-  );
+	return useWatchlistStore(
+		useShallow((state) => ({
+			symbols: state.symbols,
+			addSymbol: state.addSymbol,
+			removeSymbol: state.removeSymbol,
+			setSymbols: state.setSymbols,
+			hasSymbol: state.hasSymbol,
+			reorderSymbols: state.reorderSymbols,
+			clear: state.clear,
+		}))
+	);
 }
 
 export default useWatchlistStore;

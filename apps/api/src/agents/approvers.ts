@@ -7,6 +7,7 @@
 import type { AgentType } from "@cream/agents";
 import type { IndicatorSnapshot } from "@cream/indicators";
 
+import { log } from "../logger.js";
 import type { AnalystOutputs } from "./analysts.js";
 import { buildGenerateOptions, createAgent, getAgentRuntimeSettings } from "./factory.js";
 import { buildDatetimeContext, buildIndicatorSummary } from "./prompts.js";
@@ -14,12 +15,12 @@ import { CriticOutputSchema, RiskManagerOutputSchema } from "./schemas.js";
 import { createStreamChunkForwarder } from "./stream-forwarder.js";
 import type { DebateOutputs } from "./trader.js";
 import type {
-  AgentConfigEntry,
-  AgentContext,
-  CriticOutput,
-  DecisionPlan,
-  OnStreamChunk,
-  RiskManagerOutput,
+	AgentConfigEntry,
+	AgentContext,
+	CriticOutput,
+	DecisionPlan,
+	OnStreamChunk,
+	RiskManagerOutput,
 } from "./types.js";
 
 // Re-export for convenience
@@ -44,10 +45,10 @@ export const criticAgent = createAgent("critic");
  * Pre/post-market naturally have wider spreads due to lower liquidity.
  */
 const SPREAD_THRESHOLDS = {
-  RTH: 0.005, // 0.5% during regular trading hours
-  PRE_MARKET: 0.03, // 3% during pre-market (expected to be wider)
-  AFTER_HOURS: 0.03, // 3% during after-hours
-  CLOSED: 0.05, // 5% when market is closed (stale quotes)
+	RTH: 0.005, // 0.5% during regular trading hours
+	PRE_MARKET: 0.03, // 3% during pre-market (expected to be wider)
+	AFTER_HOURS: 0.03, // 3% during after-hours
+	CLOSED: 0.05, // 5% when market is closed (stale quotes)
 } as const;
 
 /**
@@ -55,65 +56,65 @@ const SPREAD_THRESHOLDS = {
  * Session-aware spread checks use appropriate thresholds for pre/post-market.
  */
 function buildRiskIndicatorsSummary(indicators?: Record<string, IndicatorSnapshot>): string {
-  if (!indicators || Object.keys(indicators).length === 0) {
-    return "";
-  }
+	if (!indicators || Object.keys(indicators).length === 0) {
+		return "";
+	}
 
-  const lines: string[] = ["Risk-Relevant Indicators:"];
+	const lines: string[] = ["Risk-Relevant Indicators:"];
 
-  for (const [symbol, snapshot] of Object.entries(indicators)) {
-    const riskParts: string[] = [];
-    const session = snapshot.metadata.trading_session ?? "RTH";
+	for (const [symbol, snapshot] of Object.entries(indicators)) {
+		const riskParts: string[] = [];
+		const session = snapshot.metadata.trading_session ?? "RTH";
 
-    // Volatility metrics
-    if (snapshot.price.realized_vol_20d !== null) {
-      riskParts.push(`RV=${(snapshot.price.realized_vol_20d * 100).toFixed(1)}%`);
-    }
-    if (snapshot.options.atm_iv !== null) {
-      riskParts.push(`IV=${(snapshot.options.atm_iv * 100).toFixed(1)}%`);
-    }
-    if (snapshot.price.atr_14 !== null) {
-      riskParts.push(`ATR=${snapshot.price.atr_14.toFixed(2)}`);
-    }
+		// Volatility metrics
+		if (snapshot.price.realized_vol_20d !== null) {
+			riskParts.push(`RV=${(snapshot.price.realized_vol_20d * 100).toFixed(1)}%`);
+		}
+		if (snapshot.options.atm_iv !== null) {
+			riskParts.push(`IV=${(snapshot.options.atm_iv * 100).toFixed(1)}%`);
+		}
+		if (snapshot.price.atr_14 !== null) {
+			riskParts.push(`ATR=${snapshot.price.atr_14.toFixed(2)}`);
+		}
 
-    // Liquidity risk - session-aware thresholds
-    if (snapshot.liquidity.bid_ask_spread_pct !== null) {
-      const threshold = SPREAD_THRESHOLDS[session];
-      const isWide = snapshot.liquidity.bid_ask_spread_pct > threshold;
-      const sessionTag = session !== "RTH" ? ` (${session})` : "";
-      const spreadWarning = isWide ? " [WIDE]" : "";
-      riskParts.push(
-        `Spread=${(snapshot.liquidity.bid_ask_spread_pct * 100).toFixed(2)}%${sessionTag}${spreadWarning}`
-      );
-    }
+		// Liquidity risk - session-aware thresholds
+		if (snapshot.liquidity.bid_ask_spread_pct !== null) {
+			const threshold = SPREAD_THRESHOLDS[session];
+			const isWide = snapshot.liquidity.bid_ask_spread_pct > threshold;
+			const sessionTag = session !== "RTH" ? ` (${session})` : "";
+			const spreadWarning = isWide ? " [WIDE]" : "";
+			riskParts.push(
+				`Spread=${(snapshot.liquidity.bid_ask_spread_pct * 100).toFixed(2)}%${sessionTag}${spreadWarning}`
+			);
+		}
 
-    // Short squeeze risk
-    if (
-      snapshot.short_interest.short_pct_float !== null &&
-      snapshot.short_interest.short_pct_float > 0.1
-    ) {
-      riskParts.push(
-        `SI=${(snapshot.short_interest.short_pct_float * 100).toFixed(1)}% [ELEVATED]`
-      );
-    }
+		// Short squeeze risk
+		if (
+			snapshot.short_interest.short_pct_float !== null &&
+			snapshot.short_interest.short_pct_float > 0.1
+		) {
+			riskParts.push(
+				`SI=${(snapshot.short_interest.short_pct_float * 100).toFixed(1)}% [ELEVATED]`
+			);
+		}
 
-    // Options sentiment
-    if (snapshot.options.put_call_ratio_volume !== null) {
-      const pcSignal =
-        snapshot.options.put_call_ratio_volume > 1.2
-          ? " [BEARISH]"
-          : snapshot.options.put_call_ratio_volume < 0.7
-            ? " [BULLISH]"
-            : "";
-      riskParts.push(`P/C=${snapshot.options.put_call_ratio_volume.toFixed(2)}${pcSignal}`);
-    }
+		// Options sentiment
+		if (snapshot.options.put_call_ratio_volume !== null) {
+			const pcSignal =
+				snapshot.options.put_call_ratio_volume > 1.2
+					? " [BEARISH]"
+					: snapshot.options.put_call_ratio_volume < 0.7
+						? " [BULLISH]"
+						: "";
+			riskParts.push(`P/C=${snapshot.options.put_call_ratio_volume.toFixed(2)}${pcSignal}`);
+		}
 
-    if (riskParts.length > 0) {
-      lines.push(`- ${symbol}: ${riskParts.join(", ")}`);
-    }
-  }
+		if (riskParts.length > 0) {
+			lines.push(`- ${symbol}: ${riskParts.join(", ")}`);
+		}
+	}
 
-  return lines.length > 1 ? `\n${lines.join("\n")}\n` : "";
+	return lines.length > 1 ? `\n${lines.join("\n")}\n` : "";
 }
 
 /**
@@ -121,27 +122,27 @@ function buildRiskIndicatorsSummary(indicators?: Record<string, IndicatorSnapsho
  * Considers Factor Zoo decay alerts and risk indicators.
  */
 export async function runRiskManager(
-  plan: DecisionPlan,
-  portfolioState?: Record<string, unknown>,
-  constraints?: Record<string, unknown>,
-  factorZooContext?: AgentContext["factorZoo"],
-  agentConfigs?: Partial<Record<AgentType, AgentConfigEntry>>,
-  indicators?: Record<string, IndicatorSnapshot>
+	plan: DecisionPlan,
+	portfolioState?: Record<string, unknown>,
+	constraints?: Record<string, unknown>,
+	factorZooContext?: AgentContext["factorZoo"],
+	agentConfigs?: Partial<Record<AgentType, AgentConfigEntry>>,
+	indicators?: Record<string, IndicatorSnapshot>
 ): Promise<RiskManagerOutput> {
-  const decayRiskSection = factorZooContext?.decayAlerts.length
-    ? `
+	const decayRiskSection = factorZooContext?.decayAlerts.length
+		? `
 Factor Zoo Risk Alerts:
 ${factorZooContext.decayAlerts.map((a) => `- ${a.factorId}: ${a.alertType} (${a.severity}) - ${a.recommendation}`).join("\n")}
 
 NOTE: Decaying factors indicate reduced signal reliability. Consider this when validating positions that rely on quantitative signals.`
-    : "";
+		: "";
 
-  const riskIndicatorsSummary = buildRiskIndicatorsSummary(indicators);
+	const riskIndicatorsSummary = buildRiskIndicatorsSummary(indicators);
 
-  const portfolioStateProvided = Boolean(portfolioState && Object.keys(portfolioState).length > 0);
-  const constraintsProvided = Boolean(constraints && Object.keys(constraints).length > 0);
+	const portfolioStateProvided = Boolean(portfolioState && Object.keys(portfolioState).length > 0);
+	const constraintsProvided = Boolean(constraints && Object.keys(constraints).length > 0);
 
-  const prompt = `${buildDatetimeContext()}Validate this trading plan against risk constraints:
+	const prompt = `${buildDatetimeContext()}Validate this trading plan against risk constraints:
 
 Decision Plan:
 ${JSON.stringify(plan, null, 2)}
@@ -167,12 +168,12 @@ RISK VALIDATION GUIDANCE:
 - ATR should inform stop-loss distances (use 2-3x ATR minimum)
 - Put/Call > 1.2 suggests market expects downside - validate long positions carefully`;
 
-  const settings = getAgentRuntimeSettings("risk_manager", agentConfigs);
-  const options = buildGenerateOptions(settings, { schema: RiskManagerOutputSchema });
+	const settings = getAgentRuntimeSettings("risk_manager", agentConfigs);
+	const options = buildGenerateOptions(settings, { schema: RiskManagerOutputSchema });
 
-  const response = await riskManagerAgent.generate([{ role: "user", content: prompt }], options);
+	const response = await riskManagerAgent.generate([{ role: "user", content: prompt }], options);
 
-  return response.object as RiskManagerOutput;
+	return response.object as RiskManagerOutput;
 }
 
 /**
@@ -180,15 +181,15 @@ RISK VALIDATION GUIDANCE:
  * Validates that plan claims are supported by indicator signals.
  */
 export async function runCritic(
-  plan: DecisionPlan,
-  analystOutputs: AnalystOutputs,
-  debateOutputs: DebateOutputs,
-  agentConfigs?: Partial<Record<AgentType, AgentConfigEntry>>,
-  indicators?: Record<string, IndicatorSnapshot>
+	plan: DecisionPlan,
+	analystOutputs: AnalystOutputs,
+	debateOutputs: DebateOutputs,
+	agentConfigs?: Partial<Record<AgentType, AgentConfigEntry>>,
+	indicators?: Record<string, IndicatorSnapshot>
 ): Promise<CriticOutput> {
-  const indicatorSummary = buildIndicatorSummary(indicators);
+	const indicatorSummary = buildIndicatorSummary(indicators);
 
-  const prompt = `${buildDatetimeContext()}Validate the logical consistency of this trading plan:
+	const prompt = `${buildDatetimeContext()}Validate the logical consistency of this trading plan:
 
 Decision Plan:
 ${JSON.stringify(plan, null, 2)}
@@ -208,12 +209,12 @@ CONSISTENCY VALIDATION GUIDANCE:
 - Flag contradictions between plan rationale and quantitative signals
 - Verify that size/conviction aligns with signal strength and agreement`;
 
-  const settings = getAgentRuntimeSettings("critic", agentConfigs);
-  const options = buildGenerateOptions(settings, { schema: CriticOutputSchema });
+	const settings = getAgentRuntimeSettings("critic", agentConfigs);
+	const options = buildGenerateOptions(settings, { schema: CriticOutputSchema });
 
-  const response = await criticAgent.generate([{ role: "user", content: prompt }], options);
+	const response = await criticAgent.generate([{ role: "user", content: prompt }], options);
 
-  return response.object as CriticOutput;
+	return response.object as CriticOutput;
 }
 
 /**
@@ -221,24 +222,24 @@ CONSISTENCY VALIDATION GUIDANCE:
  * Passes Factor Zoo context and indicators to both Risk Manager and Critic for comprehensive validation.
  */
 export async function runApprovalParallel(
-  plan: DecisionPlan,
-  analystOutputs: AnalystOutputs,
-  debateOutputs: DebateOutputs,
-  portfolioState?: Record<string, unknown>,
-  constraints?: Record<string, unknown>,
-  factorZooContext?: AgentContext["factorZoo"],
-  agentConfigs?: Partial<Record<AgentType, AgentConfigEntry>>,
-  indicators?: Record<string, IndicatorSnapshot>
+	plan: DecisionPlan,
+	analystOutputs: AnalystOutputs,
+	debateOutputs: DebateOutputs,
+	portfolioState?: Record<string, unknown>,
+	constraints?: Record<string, unknown>,
+	factorZooContext?: AgentContext["factorZoo"],
+	agentConfigs?: Partial<Record<AgentType, AgentConfigEntry>>,
+	indicators?: Record<string, IndicatorSnapshot>
 ): Promise<{
-  riskManager: RiskManagerOutput;
-  critic: CriticOutput;
+	riskManager: RiskManagerOutput;
+	critic: CriticOutput;
 }> {
-  const [riskManager, critic] = await Promise.all([
-    runRiskManager(plan, portfolioState, constraints, factorZooContext, agentConfigs, indicators),
-    runCritic(plan, analystOutputs, debateOutputs, agentConfigs, indicators),
-  ]);
+	const [riskManager, critic] = await Promise.all([
+		runRiskManager(plan, portfolioState, constraints, factorZooContext, agentConfigs, indicators),
+		runCritic(plan, analystOutputs, debateOutputs, agentConfigs, indicators),
+	]);
 
-  return { riskManager, critic };
+	return { riskManager, critic };
 }
 
 // ============================================
@@ -249,29 +250,29 @@ export async function runApprovalParallel(
  * Run Risk Manager agent with streaming.
  */
 export async function runRiskManagerStreaming(
-  plan: DecisionPlan,
-  onChunk: OnStreamChunk,
-  portfolioState?: Record<string, unknown>,
-  constraints?: Record<string, unknown>,
-  factorZooContext?: AgentContext["factorZoo"],
-  agentConfigs?: Partial<Record<AgentType, AgentConfigEntry>>,
-  indicators?: Record<string, IndicatorSnapshot>,
-  abortSignal?: AbortSignal
+	plan: DecisionPlan,
+	onChunk: OnStreamChunk,
+	portfolioState?: Record<string, unknown>,
+	constraints?: Record<string, unknown>,
+	factorZooContext?: AgentContext["factorZoo"],
+	agentConfigs?: Partial<Record<AgentType, AgentConfigEntry>>,
+	indicators?: Record<string, IndicatorSnapshot>,
+	abortSignal?: AbortSignal
 ): Promise<RiskManagerOutput> {
-  const decayRiskSection = factorZooContext?.decayAlerts.length
-    ? `
+	const decayRiskSection = factorZooContext?.decayAlerts.length
+		? `
 Factor Zoo Risk Alerts:
 ${factorZooContext.decayAlerts.map((a) => `- ${a.factorId}: ${a.alertType} (${a.severity}) - ${a.recommendation}`).join("\n")}
 
 NOTE: Decaying factors indicate reduced signal reliability. Consider this when validating positions that rely on quantitative signals.`
-    : "";
+		: "";
 
-  const riskIndicatorsSummary = buildRiskIndicatorsSummary(indicators);
+	const riskIndicatorsSummary = buildRiskIndicatorsSummary(indicators);
 
-  const portfolioStateProvided = Boolean(portfolioState && Object.keys(portfolioState).length > 0);
-  const constraintsProvided = Boolean(constraints && Object.keys(constraints).length > 0);
+	const portfolioStateProvided = Boolean(portfolioState && Object.keys(portfolioState).length > 0);
+	const constraintsProvided = Boolean(constraints && Object.keys(constraints).length > 0);
 
-  const prompt = `${buildDatetimeContext()}Validate this trading plan against risk constraints:
+	const prompt = `${buildDatetimeContext()}Validate this trading plan against risk constraints:
 
 Decision Plan:
 ${JSON.stringify(plan, null, 2)}
@@ -297,52 +298,53 @@ RISK VALIDATION GUIDANCE:
 - ATR should inform stop-loss distances (use 2-3x ATR minimum)
 - Put/Call > 1.2 suggests market expects downside - validate long positions carefully`;
 
-  const settings = getAgentRuntimeSettings("risk_manager", agentConfigs);
-  const options = buildGenerateOptions(settings, { schema: RiskManagerOutputSchema });
+	const settings = getAgentRuntimeSettings("risk_manager", agentConfigs);
+	const options = buildGenerateOptions(settings, { schema: RiskManagerOutputSchema });
 
-  // Add abortSignal to options if provided
-  if (abortSignal) {
-    options.abortSignal = abortSignal;
-  }
+	// Add abortSignal to options if provided
+	if (abortSignal) {
+		options.abortSignal = abortSignal;
+	}
 
-  let stream: Awaited<ReturnType<typeof riskManagerAgent.stream>>;
-  try {
-    stream = await riskManagerAgent.stream([{ role: "user", content: prompt }], options);
-  } catch (err) {
-    console.error("[risk_manager] Failed to create stream:", err);
-    throw err;
-  }
+	let stream: Awaited<ReturnType<typeof riskManagerAgent.stream>>;
+	try {
+		stream = await riskManagerAgent.stream([{ role: "user", content: prompt }], options);
+	} catch (err) {
+		log.error({ err }, "[risk_manager] Failed to create stream");
+		throw err;
+	}
 
-  try {
-    const forwardChunk = createStreamChunkForwarder("risk_manager", onChunk);
-    for await (const chunk of stream.fullStream) {
-      // Check if aborted during streaming
-      if (abortSignal?.aborted) {
-        throw new Error("AbortError: Risk Manager streaming was aborted");
-      }
-      await forwardChunk(chunk as { type: string; payload?: Record<string, unknown> });
-    }
-  } catch (err) {
-    console.error("[risk_manager] Error during stream iteration:", err);
-    throw err;
-  }
+	try {
+		const forwardChunk = createStreamChunkForwarder("risk_manager", onChunk);
+		for await (const chunk of stream.fullStream) {
+			// Check if aborted during streaming
+			if (abortSignal?.aborted) {
+				throw new Error("AbortError: Risk Manager streaming was aborted");
+			}
+			await forwardChunk(chunk as { type: string; payload?: Record<string, unknown> });
+		}
+	} catch (err) {
+		log.error({ err }, "[risk_manager] Error during stream iteration");
+		throw err;
+	}
 
-  let result: RiskManagerOutput | undefined;
-  try {
-    result = (await stream.object) as RiskManagerOutput | undefined;
-  } catch (err) {
-    console.error("[risk_manager] Error awaiting stream.object:", err);
-  }
+	let result: RiskManagerOutput | undefined;
+	try {
+		result = (await stream.object) as RiskManagerOutput | undefined;
+	} catch (err) {
+		log.error({ err }, "[risk_manager] Error awaiting stream.object");
+	}
 
-  if (!result) {
-    console.error("[risk_manager] Structured output undefined after streaming");
-    console.error("[risk_manager] Stream text:", await stream.text);
-    console.error("[risk_manager] Stream usage:", await stream.usage);
-    // Check if there's a finishReason or other metadata
-    const response = await stream.response;
-    console.error("[risk_manager] Stream response headers:", response?.headers);
-  }
-  return result as RiskManagerOutput;
+	if (!result) {
+		const streamText = await stream.text;
+		const streamUsage = await stream.usage;
+		const response = await stream.response;
+		log.error(
+			{ streamText, streamUsage, responseHeaders: response?.headers },
+			"[risk_manager] Structured output undefined after streaming"
+		);
+	}
+	return result as RiskManagerOutput;
 }
 
 /**
@@ -350,17 +352,17 @@ RISK VALIDATION GUIDANCE:
  * Validates that plan claims are supported by indicator signals.
  */
 export async function runCriticStreaming(
-  plan: DecisionPlan,
-  analystOutputs: AnalystOutputs,
-  debateOutputs: DebateOutputs,
-  onChunk: OnStreamChunk,
-  agentConfigs?: Partial<Record<AgentType, AgentConfigEntry>>,
-  indicators?: Record<string, IndicatorSnapshot>,
-  abortSignal?: AbortSignal
+	plan: DecisionPlan,
+	analystOutputs: AnalystOutputs,
+	debateOutputs: DebateOutputs,
+	onChunk: OnStreamChunk,
+	agentConfigs?: Partial<Record<AgentType, AgentConfigEntry>>,
+	indicators?: Record<string, IndicatorSnapshot>,
+	abortSignal?: AbortSignal
 ): Promise<CriticOutput> {
-  const indicatorSummary = buildIndicatorSummary(indicators);
+	const indicatorSummary = buildIndicatorSummary(indicators);
 
-  const prompt = `${buildDatetimeContext()}Validate the logical consistency of this trading plan:
+	const prompt = `${buildDatetimeContext()}Validate the logical consistency of this trading plan:
 
 Decision Plan:
 ${JSON.stringify(plan, null, 2)}
@@ -380,52 +382,53 @@ CONSISTENCY VALIDATION GUIDANCE:
 - Flag contradictions between plan rationale and quantitative signals
 - Verify that size/conviction aligns with signal strength and agreement`;
 
-  const settings = getAgentRuntimeSettings("critic", agentConfigs);
-  const options = buildGenerateOptions(settings, { schema: CriticOutputSchema });
+	const settings = getAgentRuntimeSettings("critic", agentConfigs);
+	const options = buildGenerateOptions(settings, { schema: CriticOutputSchema });
 
-  // Add abortSignal to options if provided
-  if (abortSignal) {
-    options.abortSignal = abortSignal;
-  }
+	// Add abortSignal to options if provided
+	if (abortSignal) {
+		options.abortSignal = abortSignal;
+	}
 
-  let stream: Awaited<ReturnType<typeof criticAgent.stream>>;
-  try {
-    stream = await criticAgent.stream([{ role: "user", content: prompt }], options);
-  } catch (err) {
-    console.error("[critic] Failed to create stream:", err);
-    throw err;
-  }
+	let stream: Awaited<ReturnType<typeof criticAgent.stream>>;
+	try {
+		stream = await criticAgent.stream([{ role: "user", content: prompt }], options);
+	} catch (err) {
+		log.error({ err }, "[critic] Failed to create stream");
+		throw err;
+	}
 
-  try {
-    const forwardChunk = createStreamChunkForwarder("critic", onChunk);
-    for await (const chunk of stream.fullStream) {
-      // Check if aborted during streaming
-      if (abortSignal?.aborted) {
-        throw new Error("AbortError: Critic streaming was aborted");
-      }
-      await forwardChunk(chunk as { type: string; payload?: Record<string, unknown> });
-    }
-  } catch (err) {
-    console.error("[critic] Error during stream iteration:", err);
-    throw err;
-  }
+	try {
+		const forwardChunk = createStreamChunkForwarder("critic", onChunk);
+		for await (const chunk of stream.fullStream) {
+			// Check if aborted during streaming
+			if (abortSignal?.aborted) {
+				throw new Error("AbortError: Critic streaming was aborted");
+			}
+			await forwardChunk(chunk as { type: string; payload?: Record<string, unknown> });
+		}
+	} catch (err) {
+		log.error({ err }, "[critic] Error during stream iteration");
+		throw err;
+	}
 
-  let result: CriticOutput | undefined;
-  try {
-    result = (await stream.object) as CriticOutput | undefined;
-  } catch (err) {
-    console.error("[critic] Error awaiting stream.object:", err);
-  }
+	let result: CriticOutput | undefined;
+	try {
+		result = (await stream.object) as CriticOutput | undefined;
+	} catch (err) {
+		log.error({ err }, "[critic] Error awaiting stream.object");
+	}
 
-  if (!result) {
-    console.error("[critic] Structured output undefined after streaming");
-    console.error("[critic] Stream text:", await stream.text);
-    console.error("[critic] Stream usage:", await stream.usage);
-    // Check if there's a finishReason or other metadata
-    const response = await stream.response;
-    console.error("[critic] Stream response headers:", response?.headers);
-  }
-  return result as CriticOutput;
+	if (!result) {
+		const streamText = await stream.text;
+		const streamUsage = await stream.usage;
+		const response = await stream.response;
+		log.error(
+			{ streamText, streamUsage, responseHeaders: response?.headers },
+			"[critic] Structured output undefined after streaming"
+		);
+	}
+	return result as CriticOutput;
 }
 
 /**
@@ -433,41 +436,41 @@ CONSISTENCY VALIDATION GUIDANCE:
  * Passes indicators to both Risk Manager and Critic for comprehensive validation.
  */
 export async function runApprovalParallelStreaming(
-  plan: DecisionPlan,
-  analystOutputs: AnalystOutputs,
-  debateOutputs: DebateOutputs,
-  onChunk: OnStreamChunk,
-  portfolioState?: Record<string, unknown>,
-  constraints?: Record<string, unknown>,
-  factorZooContext?: AgentContext["factorZoo"],
-  agentConfigs?: Partial<Record<AgentType, AgentConfigEntry>>,
-  indicators?: Record<string, IndicatorSnapshot>,
-  abortSignal?: AbortSignal
+	plan: DecisionPlan,
+	analystOutputs: AnalystOutputs,
+	debateOutputs: DebateOutputs,
+	onChunk: OnStreamChunk,
+	portfolioState?: Record<string, unknown>,
+	constraints?: Record<string, unknown>,
+	factorZooContext?: AgentContext["factorZoo"],
+	agentConfigs?: Partial<Record<AgentType, AgentConfigEntry>>,
+	indicators?: Record<string, IndicatorSnapshot>,
+	abortSignal?: AbortSignal
 ): Promise<{
-  riskManager: RiskManagerOutput;
-  critic: CriticOutput;
+	riskManager: RiskManagerOutput;
+	critic: CriticOutput;
 }> {
-  const [riskManager, critic] = await Promise.all([
-    runRiskManagerStreaming(
-      plan,
-      onChunk,
-      portfolioState,
-      constraints,
-      factorZooContext,
-      agentConfigs,
-      indicators,
-      abortSignal
-    ),
-    runCriticStreaming(
-      plan,
-      analystOutputs,
-      debateOutputs,
-      onChunk,
-      agentConfigs,
-      indicators,
-      abortSignal
-    ),
-  ]);
+	const [riskManager, critic] = await Promise.all([
+		runRiskManagerStreaming(
+			plan,
+			onChunk,
+			portfolioState,
+			constraints,
+			factorZooContext,
+			agentConfigs,
+			indicators,
+			abortSignal
+		),
+		runCriticStreaming(
+			plan,
+			analystOutputs,
+			debateOutputs,
+			onChunk,
+			agentConfigs,
+			indicators,
+			abortSignal
+		),
+	]);
 
-  return { riskManager, critic };
+	return { riskManager, critic };
 }

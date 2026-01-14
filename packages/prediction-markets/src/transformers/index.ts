@@ -8,10 +8,10 @@
  */
 
 export {
-  INSTRUMENT_MAPPING,
-  type InstrumentMappingConfig,
-  mapToRelatedInstruments,
-  transformScoresToNumeric,
-  transformToExternalEvent,
-  transformToExternalEvents,
+	INSTRUMENT_MAPPING,
+	type InstrumentMappingConfig,
+	mapToRelatedInstruments,
+	transformScoresToNumeric,
+	transformToExternalEvent,
+	transformToExternalEvents,
 } from "./transformers";

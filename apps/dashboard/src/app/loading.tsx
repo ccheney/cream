@@ -37,30 +37,30 @@ const pulseKeyframes = `
  * Shows centered Cream logo with subtle pulse animation.
  */
 export default function Loading() {
-  return (
-    <>
-      {/* biome-ignore lint/security/noDangerouslySetInnerHtml: Required for SSR keyframe animation - constant styles defined at build time */}
-      <style dangerouslySetInnerHTML={{ __html: pulseKeyframes }} />
-      <output
-        className="loading-container"
-        style={{
-          position: "fixed",
-          top: 0,
-          left: 0,
-          right: 0,
-          bottom: 0,
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "center",
-          backgroundColor: "var(--background, #ffffff)",
-          zIndex: 50,
-        }}
-        aria-live="polite"
-        aria-label="Loading page..."
-        data-testid="page-loading"
-      >
-        <LoadingLogo size="xl" variant="icon" label="Loading page..." testId="page-loading-logo" />
-      </output>
-    </>
-  );
+	return (
+		<>
+			{/* biome-ignore lint/security/noDangerouslySetInnerHtml: Required for SSR keyframe animation - constant styles defined at build time */}
+			<style dangerouslySetInnerHTML={{ __html: pulseKeyframes }} />
+			<output
+				className="loading-container"
+				style={{
+					position: "fixed",
+					top: 0,
+					left: 0,
+					right: 0,
+					bottom: 0,
+					display: "flex",
+					alignItems: "center",
+					justifyContent: "center",
+					backgroundColor: "var(--background, #ffffff)",
+					zIndex: 50,
+				}}
+				aria-live="polite"
+				aria-label="Loading page..."
+				data-testid="page-loading"
+			>
+				<LoadingLogo size="xl" variant="icon" label="Loading page..." testId="page-loading-logo" />
+			</output>
+		</>
+	);
 }

@@ -9,16 +9,16 @@
  */
 
 import {
-  AlpacaConnectionState,
-  type AlpacaMarketDataClient,
-  type AlpacaWebSocketClient,
-  type AlpacaWsBarMessage,
-  type AlpacaWsEvent,
-  type AlpacaWsQuoteMessage,
-  type AlpacaWsTradeMessage,
-  createAlpacaClientFromEnv,
-  createAlpacaStocksClientFromEnv,
-  isAlpacaConfigured,
+	AlpacaConnectionState,
+	type AlpacaMarketDataClient,
+	type AlpacaWebSocketClient,
+	type AlpacaWsBarMessage,
+	type AlpacaWsEvent,
+	type AlpacaWsQuoteMessage,
+	type AlpacaWsTradeMessage,
+	createAlpacaClientFromEnv,
+	createAlpacaStocksClientFromEnv,
+	isAlpacaConfigured,
 } from "@cream/marketdata";
 import log from "../logger.js";
 import { broadcastAggregate, broadcastQuote, broadcastTrade } from "../websocket/handler.js";
@@ -27,14 +27,14 @@ import { broadcastAggregate, broadcastQuote, broadcastTrade } from "../websocket
 let alpacaClient: AlpacaMarketDataClient | null = null;
 
 function getAlpacaClient(): AlpacaMarketDataClient | null {
-  if (alpacaClient) {
-    return alpacaClient;
-  }
-  if (!isAlpacaConfigured()) {
-    return null;
-  }
-  alpacaClient = createAlpacaClientFromEnv();
-  return alpacaClient;
+	if (alpacaClient) {
+		return alpacaClient;
+	}
+	if (!isAlpacaConfigured()) {
+		return null;
+	}
+	alpacaClient = createAlpacaClientFromEnv();
+	return alpacaClient;
 }
 
 // ============================================
@@ -58,15 +58,15 @@ const activeSymbols = new Set<string>();
  * for new clients that subscribe.
  */
 const quoteCache = new Map<
-  string,
-  {
-    bid: number;
-    ask: number;
-    last: number;
-    volume: number;
-    prevClose: number;
-    timestamp: Date;
-  }
+	string,
+	{
+		bid: number;
+		ask: number;
+		last: number;
+		volume: number;
+		prevClose: number;
+		timestamp: Date;
+	}
 >();
 
 // ============================================
@@ -79,19 +79,19 @@ const quoteCache = new Map<
  * This avoids idle connections that Alpaca will terminate.
  */
 export async function initMarketDataStreaming(): Promise<void> {
-  if (isInitialized) {
-    return;
-  }
+	if (isInitialized) {
+		return;
+	}
 
-  // Check if Alpaca credentials are available
-  if (!isAlpacaConfigured()) {
-    log.warn("ALPACA_KEY/ALPACA_SECRET not set, market data streaming disabled");
-    return;
-  }
+	// Check if Alpaca credentials are available
+	if (!isAlpacaConfigured()) {
+		log.warn("ALPACA_KEY/ALPACA_SECRET not set, market data streaming disabled");
+		return;
+	}
 
-  // Mark as initialized but don't connect yet - will connect on first subscription
-  isInitialized = true;
-  log.info("Market data streaming initialized (will connect on first subscription)");
+	// Mark as initialized but don't connect yet - will connect on first subscription
+	isInitialized = true;
+	log.info("Market data streaming initialized (will connect on first subscription)");
 }
 
 /**
@@ -99,50 +99,50 @@ export async function initMarketDataStreaming(): Promise<void> {
  * Called lazily when first subscription is requested.
  */
 async function ensureConnected(): Promise<boolean> {
-  if (!isAlpacaConfigured()) {
-    return false;
-  }
+	if (!isAlpacaConfigured()) {
+		return false;
+	}
 
-  if (alpacaWsClient?.isConnected()) {
-    return true;
-  }
+	if (alpacaWsClient?.isConnected()) {
+		return true;
+	}
 
-  // Clean up any existing client
-  if (alpacaWsClient) {
-    alpacaWsClient.disconnect();
-    alpacaWsClient = null;
-  }
+	// Clean up any existing client
+	if (alpacaWsClient) {
+		alpacaWsClient.disconnect();
+		alpacaWsClient = null;
+	}
 
-  try {
-    // Use SIP feed for Algo Trader Plus full market data
-    alpacaWsClient = createAlpacaStocksClientFromEnv("sip");
-    alpacaWsClient.on(handleAlpacaEvent);
-    await alpacaWsClient.connect();
-    reconnectAttempts = 0;
-    log.info("Market data streaming connected to Alpaca");
-    return true;
-  } catch (error) {
-    const errorMsg = error instanceof Error ? error.message : String(error);
-    log.warn({ error: errorMsg }, "Failed to connect to Alpaca WebSocket");
-    alpacaWsClient?.disconnect();
-    alpacaWsClient = null;
-    return false;
-  }
+	try {
+		// Use SIP feed for Algo Trader Plus full market data
+		alpacaWsClient = createAlpacaStocksClientFromEnv("sip");
+		alpacaWsClient.on(handleAlpacaEvent);
+		await alpacaWsClient.connect();
+		reconnectAttempts = 0;
+		log.info("Market data streaming connected to Alpaca");
+		return true;
+	} catch (error) {
+		const errorMsg = error instanceof Error ? error.message : String(error);
+		log.warn({ error: errorMsg }, "Failed to connect to Alpaca WebSocket");
+		alpacaWsClient?.disconnect();
+		alpacaWsClient = null;
+		return false;
+	}
 }
 
 /**
  * Shutdown the market data streaming service.
  */
 export function shutdownMarketDataStreaming(): void {
-  log.info({ activeSymbols: activeSymbols.size }, "Shutting down market data streaming");
-  if (alpacaWsClient) {
-    alpacaWsClient.disconnect();
-    alpacaWsClient = null;
-  }
-  isInitialized = false;
-  activeSymbols.clear();
-  quoteCache.clear();
-  log.info("Market data streaming shutdown complete");
+	log.info({ activeSymbols: activeSymbols.size }, "Shutting down market data streaming");
+	if (alpacaWsClient) {
+		alpacaWsClient.disconnect();
+		alpacaWsClient = null;
+	}
+	isInitialized = false;
+	activeSymbols.clear();
+	quoteCache.clear();
+	log.info("Market data streaming shutdown complete");
 }
 
 // ============================================
@@ -153,61 +153,61 @@ export function shutdownMarketDataStreaming(): void {
  * Handle events from Alpaca WebSocket.
  */
 function handleAlpacaEvent(event: AlpacaWsEvent): void {
-  switch (event.type) {
-    case "connected":
-      log.debug("Alpaca WebSocket connected");
-      break;
+	switch (event.type) {
+		case "connected":
+			log.debug("Alpaca WebSocket connected");
+			break;
 
-    case "authenticated":
-      log.info({ activeSymbols: activeSymbols.size }, "Alpaca WebSocket authenticated");
-      // Resubscribe to active symbols after reconnection
-      if (activeSymbols.size > 0) {
-        const symbols = Array.from(activeSymbols);
-        alpacaWsClient?.subscribe("quotes", symbols);
-        alpacaWsClient?.subscribe("trades", symbols);
-        alpacaWsClient?.subscribe("bars", symbols);
-      }
-      break;
+		case "authenticated":
+			log.info({ activeSymbols: activeSymbols.size }, "Alpaca WebSocket authenticated");
+			// Resubscribe to active symbols after reconnection
+			if (activeSymbols.size > 0) {
+				const symbols = Array.from(activeSymbols);
+				alpacaWsClient?.subscribe("quotes", symbols);
+				alpacaWsClient?.subscribe("trades", symbols);
+				alpacaWsClient?.subscribe("bars", symbols);
+			}
+			break;
 
-    case "subscribed":
-      log.debug({ subscriptions: event.subscriptions }, "Subscribed to market data symbols");
-      break;
+		case "subscribed":
+			log.debug({ subscriptions: event.subscriptions }, "Subscribed to market data symbols");
+			break;
 
-    case "bar":
-      handleBarMessage(event.message);
-      break;
+		case "bar":
+			handleBarMessage(event.message);
+			break;
 
-    case "quote":
-      handleQuoteMessage(event.message);
-      break;
+		case "quote":
+			handleQuoteMessage(event.message);
+			break;
 
-    case "trade":
-      handleTradeMessage(event.message);
-      break;
+		case "trade":
+			handleTradeMessage(event.message);
+			break;
 
-    case "disconnected":
-      log.warn({ reason: event.reason }, "Alpaca WebSocket disconnected");
-      break;
+		case "disconnected":
+			log.warn({ reason: event.reason }, "Alpaca WebSocket disconnected");
+			break;
 
-    case "reconnecting":
-      reconnectAttempts = event.attempt;
-      log.info(
-        { attempt: event.attempt, maxAttempts: MAX_RECONNECT_ATTEMPTS },
-        "Reconnecting to Alpaca WebSocket"
-      );
-      break;
+		case "reconnecting":
+			reconnectAttempts = event.attempt;
+			log.info(
+				{ attempt: event.attempt, maxAttempts: MAX_RECONNECT_ATTEMPTS },
+				"Reconnecting to Alpaca WebSocket"
+			);
+			break;
 
-    case "error":
-      log.error(
-        { code: event.code, message: event.message, reconnectAttempts },
-        "Alpaca WebSocket error"
-      );
-      if (reconnectAttempts >= MAX_RECONNECT_ATTEMPTS) {
-        log.error("Max reconnect attempts reached, market data streaming disabled");
-        isInitialized = false;
-      }
-      break;
-  }
+		case "error":
+			log.error(
+				{ code: event.code, message: event.message, reconnectAttempts },
+				"Alpaca WebSocket error"
+			);
+			if (reconnectAttempts >= MAX_RECONNECT_ATTEMPTS) {
+				log.error("Max reconnect attempts reached, market data streaming disabled");
+				isInitialized = false;
+			}
+			break;
+	}
 }
 
 /**
@@ -215,54 +215,54 @@ function handleAlpacaEvent(event: AlpacaWsEvent): void {
  * These are per-minute candle updates.
  */
 function handleBarMessage(msg: AlpacaWsBarMessage): void {
-  const symbol = msg.S.toUpperCase();
+	const symbol = msg.S.toUpperCase();
 
-  // Update cache - preserve prevClose if we have it, otherwise use close price (gives 0% change)
-  const cached = quoteCache.get(symbol);
-  const prevClose = cached?.prevClose ?? msg.c; // Use cached prevClose or close price as fallback
+	// Update cache - preserve prevClose if we have it, otherwise use close price (gives 0% change)
+	const cached = quoteCache.get(symbol);
+	const prevClose = cached?.prevClose ?? msg.c; // Use cached prevClose or close price as fallback
 
-  quoteCache.set(symbol, {
-    bid: msg.c, // Use close as proxy for bid (no bid in bars)
-    ask: msg.c, // Use close as proxy for ask
-    last: msg.c,
-    volume: msg.v,
-    prevClose,
-    timestamp: new Date(msg.t),
-  });
+	quoteCache.set(symbol, {
+		bid: msg.c, // Use close as proxy for bid (no bid in bars)
+		ask: msg.c, // Use close as proxy for ask
+		last: msg.c,
+		volume: msg.v,
+		prevClose,
+		timestamp: new Date(msg.t),
+	});
 
-  // Calculate change percent
-  const changePercent = prevClose > 0 ? ((msg.c - prevClose) / prevClose) * 100 : 0;
+	// Calculate change percent
+	const changePercent = prevClose > 0 ? ((msg.c - prevClose) / prevClose) * 100 : 0;
 
-  // Broadcast to subscribed clients
-  broadcastQuote(symbol, {
-    type: "quote",
-    data: {
-      symbol,
-      bid: msg.c, // Bars don't have bid/ask, use close
-      ask: msg.c,
-      last: msg.c,
-      volume: msg.v,
-      prevClose,
-      changePercent,
-      timestamp: new Date(msg.t).toISOString(),
-    },
-  });
+	// Broadcast to subscribed clients
+	broadcastQuote(symbol, {
+		type: "quote",
+		data: {
+			symbol,
+			bid: msg.c, // Bars don't have bid/ask, use close
+			ask: msg.c,
+			last: msg.c,
+			volume: msg.v,
+			prevClose,
+			changePercent,
+			timestamp: new Date(msg.t).toISOString(),
+		},
+	});
 
-  // Broadcast aggregate candle
-  broadcastAggregate(symbol, {
-    type: "aggregate",
-    data: {
-      symbol,
-      open: msg.o,
-      high: msg.h,
-      low: msg.l,
-      close: msg.c,
-      volume: msg.v,
-      vwap: msg.vw ?? 0,
-      timestamp: new Date(msg.t).toISOString(), // Bar timestamp
-      endTimestamp: new Date(msg.t).toISOString(), // Same as timestamp for minute bars
-    },
-  });
+	// Broadcast aggregate candle
+	broadcastAggregate(symbol, {
+		type: "aggregate",
+		data: {
+			symbol,
+			open: msg.o,
+			high: msg.h,
+			low: msg.l,
+			close: msg.c,
+			volume: msg.v,
+			vwap: msg.vw ?? 0,
+			timestamp: new Date(msg.t).toISOString(), // Bar timestamp
+			endTimestamp: new Date(msg.t).toISOString(), // Same as timestamp for minute bars
+		},
+	});
 }
 
 /**
@@ -270,42 +270,42 @@ function handleBarMessage(msg: AlpacaWsBarMessage): void {
  * These provide real-time bid/ask updates.
  */
 function handleQuoteMessage(msg: AlpacaWsQuoteMessage): void {
-  const symbol = msg.S.toUpperCase();
+	const symbol = msg.S.toUpperCase();
 
-  // Get cached data for last price, volume, and prevClose
-  const cached = quoteCache.get(symbol);
-  const last = cached?.last ?? (msg.bp + msg.ap) / 2; // Use mid if no last
-  const prevClose = cached?.prevClose ?? last; // Use cached prevClose or current price as fallback
+	// Get cached data for last price, volume, and prevClose
+	const cached = quoteCache.get(symbol);
+	const last = cached?.last ?? (msg.bp + msg.ap) / 2; // Use mid if no last
+	const prevClose = cached?.prevClose ?? last; // Use cached prevClose or current price as fallback
 
-  // Update cache
-  quoteCache.set(symbol, {
-    bid: msg.bp,
-    ask: msg.ap,
-    last,
-    volume: cached?.volume ?? 0,
-    prevClose,
-    timestamp: new Date(msg.t), // RFC-3339 timestamp string
-  });
+	// Update cache
+	quoteCache.set(symbol, {
+		bid: msg.bp,
+		ask: msg.ap,
+		last,
+		volume: cached?.volume ?? 0,
+		prevClose,
+		timestamp: new Date(msg.t), // RFC-3339 timestamp string
+	});
 
-  // Calculate change percent from previous day's close
-  const changePercent = prevClose > 0 ? ((last - prevClose) / prevClose) * 100 : 0;
+	// Calculate change percent from previous day's close
+	const changePercent = prevClose > 0 ? ((last - prevClose) / prevClose) * 100 : 0;
 
-  // Broadcast to subscribed clients
-  broadcastQuote(symbol, {
-    type: "quote",
-    data: {
-      symbol,
-      bid: msg.bp,
-      ask: msg.ap,
-      last,
-      bidSize: msg.bs,
-      askSize: msg.as,
-      volume: cached?.volume ?? 0,
-      prevClose,
-      changePercent,
-      timestamp: new Date(msg.t).toISOString(),
-    },
-  });
+	// Broadcast to subscribed clients
+	broadcastQuote(symbol, {
+		type: "quote",
+		data: {
+			symbol,
+			bid: msg.bp,
+			ask: msg.ap,
+			last,
+			bidSize: msg.bs,
+			askSize: msg.as,
+			volume: cached?.volume ?? 0,
+			prevClose,
+			changePercent,
+			timestamp: new Date(msg.t).toISOString(),
+		},
+	});
 }
 
 /**
@@ -313,54 +313,54 @@ function handleQuoteMessage(msg: AlpacaWsQuoteMessage): void {
  * These provide real-time trade executions for Time & Sales.
  */
 function handleTradeMessage(msg: AlpacaWsTradeMessage): void {
-  const symbol = msg.S.toUpperCase();
+	const symbol = msg.S.toUpperCase();
 
-  // Broadcast to subscribed clients
-  // Note: Alpaca uses string trade conditions, but the dashboard expects numeric.
-  // We omit conditions for simplicity as they're rarely used in the UI.
-  broadcastTrade(symbol, {
-    type: "trade",
-    data: {
-      ev: "T",
-      sym: symbol,
-      p: msg.p, // Price
-      s: msg.s, // Size
-      x: msg.x ? exchangeCodeToId(msg.x) : 0, // Exchange ID
-      c: [], // Trade conditions (omitted - Alpaca uses strings, dashboard expects numbers)
-      t: new Date(msg.t).getTime() * 1e6, // Convert to nanoseconds for compatibility
-      i: msg.i?.toString() ?? `${symbol}-${msg.t}`, // Trade ID
-    },
-  });
+	// Broadcast to subscribed clients
+	// Note: Alpaca uses string trade conditions, but the dashboard expects numeric.
+	// We omit conditions for simplicity as they're rarely used in the UI.
+	broadcastTrade(symbol, {
+		type: "trade",
+		data: {
+			ev: "T",
+			sym: symbol,
+			p: msg.p, // Price
+			s: msg.s, // Size
+			x: msg.x ? exchangeCodeToId(msg.x) : 0, // Exchange ID
+			c: [], // Trade conditions (omitted - Alpaca uses strings, dashboard expects numbers)
+			t: new Date(msg.t).getTime() * 1e6, // Convert to nanoseconds for compatibility
+			i: msg.i?.toString() ?? `${symbol}-${msg.t}`, // Trade ID
+		},
+	});
 }
 
 /**
  * Convert exchange code to numeric ID for backwards compatibility.
  */
 function exchangeCodeToId(exchange: string): number {
-  const exchangeMap: Record<string, number> = {
-    A: 1, // NYSE American
-    B: 2, // NASDAQ OMX BX
-    C: 3, // NYSE National
-    D: 4, // FINRA ADF
-    H: 5, // MIAX
-    I: 6, // ISE
-    J: 7, // Cboe EDGA
-    K: 8, // Cboe EDGX
-    L: 9, // LTSE
-    M: 10, // NYSE Chicago
-    N: 11, // NYSE
-    P: 12, // NYSE Arca
-    Q: 13, // NASDAQ
-    S: 14, // NASDAQ TRF
-    T: 15, // NASDAQ TRF
-    U: 16, // MEMX
-    V: 17, // IEX
-    W: 18, // CBSX
-    X: 19, // NASDAQ PSX
-    Y: 20, // Cboe BYX
-    Z: 21, // Cboe BZX
-  };
-  return exchangeMap[exchange] ?? 0;
+	const exchangeMap: Record<string, number> = {
+		A: 1, // NYSE American
+		B: 2, // NASDAQ OMX BX
+		C: 3, // NYSE National
+		D: 4, // FINRA ADF
+		H: 5, // MIAX
+		I: 6, // ISE
+		J: 7, // Cboe EDGA
+		K: 8, // Cboe EDGX
+		L: 9, // LTSE
+		M: 10, // NYSE Chicago
+		N: 11, // NYSE
+		P: 12, // NYSE Arca
+		Q: 13, // NASDAQ
+		S: 14, // NASDAQ TRF
+		T: 15, // NASDAQ TRF
+		U: 16, // MEMX
+		V: 17, // IEX
+		W: 18, // CBSX
+		X: 19, // NASDAQ PSX
+		Y: 20, // Cboe BYX
+		Z: 21, // Cboe BZX
+	};
+	return exchangeMap[exchange] ?? 0;
 }
 
 // ============================================
@@ -374,50 +374,50 @@ function exchangeCodeToId(exchange: string): number {
  * Fetches previous close to enable accurate change percent calculation.
  */
 export async function subscribeSymbol(symbol: string): Promise<void> {
-  const upperSymbol = symbol.toUpperCase();
+	const upperSymbol = symbol.toUpperCase();
 
-  if (activeSymbols.has(upperSymbol)) {
-    return; // Already subscribed
-  }
+	if (activeSymbols.has(upperSymbol)) {
+		return; // Already subscribed
+	}
 
-  activeSymbols.add(upperSymbol);
+	activeSymbols.add(upperSymbol);
 
-  // Fetch snapshot to seed the cache with proper prevClose
-  const client = getAlpacaClient();
-  if (client && !quoteCache.has(upperSymbol)) {
-    client
-      .getSnapshots([upperSymbol])
-      .then((snapshots) => {
-        const snapshot = snapshots.get(upperSymbol);
-        if (snapshot && !quoteCache.has(upperSymbol)) {
-          const dailyBar = snapshot.dailyBar;
-          const prevBar = snapshot.prevDailyBar;
-          const latestTrade = snapshot.latestTrade;
-          const latestQuote = snapshot.latestQuote;
+	// Fetch snapshot to seed the cache with proper prevClose
+	const client = getAlpacaClient();
+	if (client && !quoteCache.has(upperSymbol)) {
+		client
+			.getSnapshots([upperSymbol])
+			.then((snapshots) => {
+				const snapshot = snapshots.get(upperSymbol);
+				if (snapshot && !quoteCache.has(upperSymbol)) {
+					const dailyBar = snapshot.dailyBar;
+					const prevBar = snapshot.prevDailyBar;
+					const latestTrade = snapshot.latestTrade;
+					const latestQuote = snapshot.latestQuote;
 
-          const lastPrice = latestTrade?.price ?? dailyBar?.close ?? 0;
-          quoteCache.set(upperSymbol, {
-            bid: latestQuote?.bidPrice ?? dailyBar?.close ?? 0,
-            ask: latestQuote?.askPrice ?? dailyBar?.close ?? 0,
-            last: lastPrice,
-            volume: dailyBar?.volume ?? 0,
-            // Use previous day's close for accurate % change - don't fall back to today's bar
-            prevClose: prevBar?.close ?? lastPrice,
-            timestamp: dailyBar?.timestamp ? new Date(dailyBar.timestamp) : new Date(),
-          });
-        }
-      })
-      .catch(() => {});
-  }
+					const lastPrice = latestTrade?.price ?? dailyBar?.close ?? 0;
+					quoteCache.set(upperSymbol, {
+						bid: latestQuote?.bidPrice ?? dailyBar?.close ?? 0,
+						ask: latestQuote?.askPrice ?? dailyBar?.close ?? 0,
+						last: lastPrice,
+						volume: dailyBar?.volume ?? 0,
+						// Use previous day's close for accurate % change - don't fall back to today's bar
+						prevClose: prevBar?.close ?? lastPrice,
+						timestamp: dailyBar?.timestamp ? new Date(dailyBar.timestamp) : new Date(),
+					});
+				}
+			})
+			.catch(() => {});
+	}
 
-  // Connect lazily on first subscription
-  const connected = await ensureConnected();
-  if (connected && alpacaWsClient?.isConnected()) {
-    // Subscribe to quotes, trades, and bars for the symbol
-    alpacaWsClient.subscribe("quotes", [upperSymbol]);
-    alpacaWsClient.subscribe("trades", [upperSymbol]);
-    alpacaWsClient.subscribe("bars", [upperSymbol]);
-  }
+	// Connect lazily on first subscription
+	const connected = await ensureConnected();
+	if (connected && alpacaWsClient?.isConnected()) {
+		// Subscribe to quotes, trades, and bars for the symbol
+		alpacaWsClient.subscribe("quotes", [upperSymbol]);
+		alpacaWsClient.subscribe("trades", [upperSymbol]);
+		alpacaWsClient.subscribe("bars", [upperSymbol]);
+	}
 }
 
 /**
@@ -426,54 +426,54 @@ export async function subscribeSymbol(symbol: string): Promise<void> {
  * Fetches previous close for new symbols to enable accurate change percent calculation.
  */
 export async function subscribeSymbols(symbols: string[]): Promise<void> {
-  const newSymbols = symbols.map((s) => s.toUpperCase()).filter((s) => !activeSymbols.has(s));
+	const newSymbols = symbols.map((s) => s.toUpperCase()).filter((s) => !activeSymbols.has(s));
 
-  if (newSymbols.length === 0) {
-    return;
-  }
+	if (newSymbols.length === 0) {
+		return;
+	}
 
-  for (const symbol of newSymbols) {
-    activeSymbols.add(symbol);
-  }
+	for (const symbol of newSymbols) {
+		activeSymbols.add(symbol);
+	}
 
-  // Fetch snapshots for new symbols to seed the cache with proper prevClose
-  const client = getAlpacaClient();
-  if (client) {
-    // Fetch in parallel but don't block subscription
-    client
-      .getSnapshots(newSymbols)
-      .then((snapshots) => {
-        for (const [symbol, snapshot] of snapshots) {
-          if (!quoteCache.has(symbol)) {
-            const dailyBar = snapshot.dailyBar;
-            const prevBar = snapshot.prevDailyBar;
-            const latestTrade = snapshot.latestTrade;
-            const latestQuote = snapshot.latestQuote;
+	// Fetch snapshots for new symbols to seed the cache with proper prevClose
+	const client = getAlpacaClient();
+	if (client) {
+		// Fetch in parallel but don't block subscription
+		client
+			.getSnapshots(newSymbols)
+			.then((snapshots) => {
+				for (const [symbol, snapshot] of snapshots) {
+					if (!quoteCache.has(symbol)) {
+						const dailyBar = snapshot.dailyBar;
+						const prevBar = snapshot.prevDailyBar;
+						const latestTrade = snapshot.latestTrade;
+						const latestQuote = snapshot.latestQuote;
 
-            const lastPrice = latestTrade?.price ?? dailyBar?.close ?? 0;
-            quoteCache.set(symbol, {
-              bid: latestQuote?.bidPrice ?? dailyBar?.close ?? 0,
-              ask: latestQuote?.askPrice ?? dailyBar?.close ?? 0,
-              last: lastPrice,
-              volume: dailyBar?.volume ?? 0,
-              // Use previous day's close for accurate % change - don't fall back to today's bar
-              prevClose: prevBar?.close ?? lastPrice,
-              timestamp: dailyBar?.timestamp ? new Date(dailyBar.timestamp) : new Date(),
-            });
-          }
-        }
-      })
-      .catch(() => {});
-  }
+						const lastPrice = latestTrade?.price ?? dailyBar?.close ?? 0;
+						quoteCache.set(symbol, {
+							bid: latestQuote?.bidPrice ?? dailyBar?.close ?? 0,
+							ask: latestQuote?.askPrice ?? dailyBar?.close ?? 0,
+							last: lastPrice,
+							volume: dailyBar?.volume ?? 0,
+							// Use previous day's close for accurate % change - don't fall back to today's bar
+							prevClose: prevBar?.close ?? lastPrice,
+							timestamp: dailyBar?.timestamp ? new Date(dailyBar.timestamp) : new Date(),
+						});
+					}
+				}
+			})
+			.catch(() => {});
+	}
 
-  // Connect lazily on first subscription
-  const connected = await ensureConnected();
-  if (connected && alpacaWsClient?.isConnected()) {
-    // Subscribe to quotes, trades, and bars for each symbol
-    alpacaWsClient.subscribe("quotes", newSymbols);
-    alpacaWsClient.subscribe("trades", newSymbols);
-    alpacaWsClient.subscribe("bars", newSymbols);
-  }
+	// Connect lazily on first subscription
+	const connected = await ensureConnected();
+	if (connected && alpacaWsClient?.isConnected()) {
+		// Subscribe to quotes, trades, and bars for each symbol
+		alpacaWsClient.subscribe("quotes", newSymbols);
+		alpacaWsClient.subscribe("trades", newSymbols);
+		alpacaWsClient.subscribe("bars", newSymbols);
+	}
 }
 
 /**
@@ -481,49 +481,49 @@ export async function subscribeSymbols(symbols: string[]): Promise<void> {
  * Called when no dashboard clients are subscribed to a symbol anymore.
  */
 export async function unsubscribeSymbol(symbol: string): Promise<void> {
-  const upperSymbol = symbol.toUpperCase();
+	const upperSymbol = symbol.toUpperCase();
 
-  if (!activeSymbols.has(upperSymbol)) {
-    return; // Not subscribed
-  }
+	if (!activeSymbols.has(upperSymbol)) {
+		return; // Not subscribed
+	}
 
-  activeSymbols.delete(upperSymbol);
-  quoteCache.delete(upperSymbol);
+	activeSymbols.delete(upperSymbol);
+	quoteCache.delete(upperSymbol);
 
-  if (alpacaWsClient?.isConnected()) {
-    // Unsubscribe from quotes, trades, and bars
-    alpacaWsClient.unsubscribe("quotes", [upperSymbol]);
-    alpacaWsClient.unsubscribe("trades", [upperSymbol]);
-    alpacaWsClient.unsubscribe("bars", [upperSymbol]);
-  }
+	if (alpacaWsClient?.isConnected()) {
+		// Unsubscribe from quotes, trades, and bars
+		alpacaWsClient.unsubscribe("quotes", [upperSymbol]);
+		alpacaWsClient.unsubscribe("trades", [upperSymbol]);
+		alpacaWsClient.unsubscribe("bars", [upperSymbol]);
+	}
 }
 
 /**
  * Get the cached quote for a symbol.
  */
 export function getCachedQuote(symbol: string): {
-  bid: number;
-  ask: number;
-  last: number;
-  volume: number;
-  prevClose: number;
-  timestamp: Date;
+	bid: number;
+	ask: number;
+	last: number;
+	volume: number;
+	prevClose: number;
+	timestamp: Date;
 } | null {
-  return quoteCache.get(symbol.toUpperCase()) ?? null;
+	return quoteCache.get(symbol.toUpperCase()) ?? null;
 }
 
 /**
  * Get all actively subscribed symbols.
  */
 export function getActiveSymbols(): string[] {
-  return Array.from(activeSymbols);
+	return Array.from(activeSymbols);
 }
 
 /**
  * Check if streaming is initialized and connected.
  */
 export function isStreamingConnected(): boolean {
-  return isInitialized && alpacaWsClient?.getState() === AlpacaConnectionState.AUTHENTICATED;
+	return isInitialized && alpacaWsClient?.getState() === AlpacaConnectionState.AUTHENTICATED;
 }
 
 // ============================================
@@ -531,12 +531,12 @@ export function isStreamingConnected(): boolean {
 // ============================================
 
 export default {
-  initMarketDataStreaming,
-  shutdownMarketDataStreaming,
-  subscribeSymbol,
-  subscribeSymbols,
-  unsubscribeSymbol,
-  getCachedQuote,
-  getActiveSymbols,
-  isStreamingConnected,
+	initMarketDataStreaming,
+	shutdownMarketDataStreaming,
+	subscribeSymbol,
+	subscribeSymbols,
+	unsubscribeSymbol,
+	getCachedQuote,
+	getActiveSymbols,
+	isStreamingConnected,
 };

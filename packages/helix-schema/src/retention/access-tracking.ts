@@ -16,24 +16,24 @@ import type { AccessRecord } from "./types.js";
  * @returns Updated access record
  */
 export function recordAccess(
-  existing: AccessRecord | undefined,
-  nodeId: string,
-  accessTime: Date = new Date()
+	existing: AccessRecord | undefined,
+	nodeId: string,
+	accessTime: Date = new Date()
 ): AccessRecord {
-  if (!existing) {
-    return {
-      nodeId,
-      accessCount: 1,
-      lastAccessedAt: accessTime,
-      firstAccessedAt: accessTime,
-    };
-  }
+	if (!existing) {
+		return {
+			nodeId,
+			accessCount: 1,
+			lastAccessedAt: accessTime,
+			firstAccessedAt: accessTime,
+		};
+	}
 
-  return {
-    ...existing,
-    accessCount: existing.accessCount + 1,
-    lastAccessedAt: accessTime,
-  };
+	return {
+		...existing,
+		accessCount: existing.accessCount + 1,
+		lastAccessedAt: accessTime,
+	};
 }
 
 /**
@@ -44,9 +44,9 @@ export function recordAccess(
  * @returns Days since last access
  */
 export function daysSinceLastAccess(
-  record: AccessRecord,
-  referenceDate: Date = new Date()
+	record: AccessRecord,
+	referenceDate: Date = new Date()
 ): number {
-  const diffMs = referenceDate.getTime() - record.lastAccessedAt.getTime();
-  return Math.floor(diffMs / (1000 * 60 * 60 * 24));
+	const diffMs = referenceDate.getTime() - record.lastAccessedAt.getTime();
+	return Math.floor(diffMs / (1000 * 60 * 60 * 24));
 }

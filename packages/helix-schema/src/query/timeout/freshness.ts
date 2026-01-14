@@ -14,11 +14,11 @@ import type { FreshnessInfo } from "./types.js";
  * @returns Whether embeddings are stale
  */
 export function isEmbeddingStale(
-  lastUpdate: Date,
-  thresholdMs: number = STALE_EMBEDDING_THRESHOLD_MS
+	lastUpdate: Date,
+	thresholdMs: number = STALE_EMBEDDING_THRESHOLD_MS
 ): boolean {
-  const ageMs = Date.now() - lastUpdate.getTime();
-  return ageMs > thresholdMs;
+	const ageMs = Date.now() - lastUpdate.getTime();
+	return ageMs > thresholdMs;
 }
 
 /**
@@ -28,8 +28,8 @@ export function isEmbeddingStale(
  * @returns Age in hours
  */
 export function getEmbeddingAgeHours(lastUpdate: Date): number {
-  const ageMs = Date.now() - lastUpdate.getTime();
-  return ageMs / (60 * 60 * 1000);
+	const ageMs = Date.now() - lastUpdate.getTime();
+	return ageMs / (60 * 60 * 1000);
 }
 
 /**
@@ -41,25 +41,25 @@ export function getEmbeddingAgeHours(lastUpdate: Date): number {
  * @returns Freshness validation result
  */
 export function validateFreshness(
-  lastEmbeddingUpdate: Date,
-  currentRegime?: string,
-  embeddingRegime?: string
+	lastEmbeddingUpdate: Date,
+	currentRegime?: string,
+	embeddingRegime?: string
 ): FreshnessInfo {
-  const isStale = isEmbeddingStale(lastEmbeddingUpdate);
-  const ageHours = getEmbeddingAgeHours(lastEmbeddingUpdate);
-  const regimeChanged =
-    currentRegime !== undefined &&
-    embeddingRegime !== undefined &&
-    currentRegime !== embeddingRegime;
+	const isStale = isEmbeddingStale(lastEmbeddingUpdate);
+	const ageHours = getEmbeddingAgeHours(lastEmbeddingUpdate);
+	const regimeChanged =
+		currentRegime !== undefined &&
+		embeddingRegime !== undefined &&
+		currentRegime !== embeddingRegime;
 
-  return {
-    lastEmbeddingUpdate,
-    isStale,
-    ageHours,
-    currentRegime,
-    embeddingRegime,
-    regimeChanged,
-  };
+	return {
+		lastEmbeddingUpdate,
+		isStale,
+		ageHours,
+		currentRegime,
+		embeddingRegime,
+		regimeChanged,
+	};
 }
 
 /**
@@ -69,5 +69,5 @@ export function validateFreshness(
  * @returns Whether re-embedding should be triggered
  */
 export function needsReembedding(freshness: FreshnessInfo): boolean {
-  return freshness.isStale || freshness.regimeChanged;
+	return freshness.isStale || freshness.regimeChanged;
 }

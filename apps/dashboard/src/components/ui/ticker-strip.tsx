@@ -22,26 +22,26 @@ import { TickerItem } from "./ticker-item";
 // ============================================
 
 export interface TickerStripProps {
-  /** Symbols to display */
-  symbols: string[];
-  /** Click handler for symbol navigation */
-  onSymbolClick?: (symbol: string) => void;
-  /** Remove symbol from watchlist */
-  onSymbolRemove?: (symbol: string) => void;
-  /** Add symbol callback */
-  onSymbolAdd?: () => void;
-  /** Show sparkline in each item */
-  showSparkline?: boolean;
-  /** Show tick history dots */
-  showTickHistory?: boolean;
-  /** Allow removing symbols */
-  allowRemove?: boolean;
-  /** Allow adding symbols */
-  allowAdd?: boolean;
-  /** Custom CSS class */
-  className?: string;
-  /** Test ID */
-  "data-testid"?: string;
+	/** Symbols to display */
+	symbols: string[];
+	/** Click handler for symbol navigation */
+	onSymbolClick?: (symbol: string) => void;
+	/** Remove symbol from watchlist */
+	onSymbolRemove?: (symbol: string) => void;
+	/** Add symbol callback */
+	onSymbolAdd?: () => void;
+	/** Show sparkline in each item */
+	showSparkline?: boolean;
+	/** Show tick history dots */
+	showTickHistory?: boolean;
+	/** Allow removing symbols */
+	allowRemove?: boolean;
+	/** Allow adding symbols */
+	allowAdd?: boolean;
+	/** Custom CSS class */
+	className?: string;
+	/** Test ID */
+	"data-testid"?: string;
 }
 
 // ============================================
@@ -73,309 +73,309 @@ export interface TickerStripProps {
  * ```
  */
 export const TickerStrip = memo(function TickerStrip({
-  symbols,
-  onSymbolClick,
-  onSymbolRemove,
-  onSymbolAdd,
-  showSparkline = false,
-  showTickHistory = true,
-  allowRemove = true,
-  allowAdd = true,
-  className = "",
-  "data-testid": testId,
+	symbols,
+	onSymbolClick,
+	onSymbolRemove,
+	onSymbolAdd,
+	showSparkline = false,
+	showTickHistory = true,
+	allowRemove = true,
+	allowAdd = true,
+	className = "",
+	"data-testid": testId,
 }: TickerStripProps) {
-  const scrollContainerRef = useRef<HTMLDivElement>(null);
-  const [quotes, setQuotes] = useState<Map<string, Quote>>(new Map());
-  const [previousPrices, setPreviousPrices] = useState<Map<string, number>>(new Map());
-  const { subscribe, subscribeSymbols, connected } = useWebSocketContext();
-  const { getTicks, getPriceHistory, recordTick } = useMultiTickHistory();
+	const scrollContainerRef = useRef<HTMLDivElement>(null);
+	const [quotes, setQuotes] = useState<Map<string, Quote>>(new Map());
+	const [previousPrices, setPreviousPrices] = useState<Map<string, number>>(new Map());
+	const { subscribe, subscribeSymbols, connected } = useWebSocketContext();
+	const { getTicks, getPriceHistory, recordTick } = useMultiTickHistory();
 
-  // Fetch initial quotes from REST API when symbols change
-  useEffect(() => {
-    if (symbols.length === 0) {
-      return;
-    }
+	// Fetch initial quotes from REST API when symbols change
+	useEffect(() => {
+		if (symbols.length === 0) {
+			return;
+		}
 
-    const fetchInitialQuotes = async () => {
-      try {
-        const { data } = await get<
-          Array<{
-            symbol: string;
-            bid: number;
-            ask: number;
-            last: number;
-            volume: number;
-            prevClose?: number;
-            changePercent?: number;
-            timestamp: string;
-          }>
-        >("/api/market/quotes", { params: { symbols: symbols.join(",") } });
+		const fetchInitialQuotes = async () => {
+			try {
+				const { data } = await get<
+					Array<{
+						symbol: string;
+						bid: number;
+						ask: number;
+						last: number;
+						volume: number;
+						prevClose?: number;
+						changePercent?: number;
+						timestamp: string;
+					}>
+				>("/api/market/quotes", { params: { symbols: symbols.join(",") } });
 
-        setQuotes((prev) => {
-          const updated = new Map(prev);
-          for (const quote of data) {
-            // Only set if we don't already have a quote (WebSocket may have updated first)
-            if (!updated.has(quote.symbol)) {
-              updated.set(quote.symbol, {
-                symbol: quote.symbol,
-                bid: quote.bid,
-                ask: quote.ask,
-                last: quote.last,
-                volume: quote.volume,
-                prevClose: quote.prevClose,
-                changePercent: quote.changePercent,
-                timestamp: new Date(quote.timestamp),
-              });
-              // Record initial tick
-              recordTick(quote.symbol, quote.last);
-            }
-          }
-          return updated;
-        });
-      } catch {
-        // Silently fail - WebSocket will provide data when available
-      }
-    };
+				setQuotes((prev) => {
+					const updated = new Map(prev);
+					for (const quote of data) {
+						// Only set if we don't already have a quote (WebSocket may have updated first)
+						if (!updated.has(quote.symbol)) {
+							updated.set(quote.symbol, {
+								symbol: quote.symbol,
+								bid: quote.bid,
+								ask: quote.ask,
+								last: quote.last,
+								volume: quote.volume,
+								prevClose: quote.prevClose,
+								changePercent: quote.changePercent,
+								timestamp: new Date(quote.timestamp),
+							});
+							// Record initial tick
+							recordTick(quote.symbol, quote.last);
+						}
+					}
+					return updated;
+				});
+			} catch {
+				// Silently fail - WebSocket will provide data when available
+			}
+		};
 
-    fetchInitialQuotes();
-  }, [symbols, recordTick]);
+		fetchInitialQuotes();
+	}, [symbols, recordTick]);
 
-  // Subscribe to symbols when they change
-  useEffect(() => {
-    if (!connected || symbols.length === 0) {
-      return;
-    }
+	// Subscribe to symbols when they change
+	useEffect(() => {
+		if (!connected || symbols.length === 0) {
+			return;
+		}
 
-    // Subscribe to quotes channel and specific symbols
-    subscribe(["quotes"]);
-    subscribeSymbols(symbols);
+		// Subscribe to quotes channel and specific symbols
+		subscribe(["quotes"]);
+		subscribeSymbols(symbols);
 
-    return () => {
-      // Cleanup: unsubscribe handled by provider on disconnect
-    };
-  }, [connected, symbols, subscribe, subscribeSymbols]);
+		return () => {
+			// Cleanup: unsubscribe handled by provider on disconnect
+		};
+	}, [connected, symbols, subscribe, subscribeSymbols]);
 
-  // Handle incoming quote update
-  const handleQuoteUpdate = useCallback(
-    (newQuote: Quote) => {
-      setQuotes((prev) => {
-        const updated = new Map(prev);
-        const existing = updated.get(newQuote.symbol);
+	// Handle incoming quote update
+	const handleQuoteUpdate = useCallback(
+		(newQuote: Quote) => {
+			setQuotes((prev) => {
+				const updated = new Map(prev);
+				const existing = updated.get(newQuote.symbol);
 
-        // Store previous price for flash animation
-        if (existing?.last !== undefined && existing.last !== newQuote.last) {
-          setPreviousPrices((prevPrices) => {
-            const newPrices = new Map(prevPrices);
-            newPrices.set(newQuote.symbol, existing.last);
-            return newPrices;
-          });
-        }
+				// Store previous price for flash animation
+				if (existing?.last !== undefined && existing.last !== newQuote.last) {
+					setPreviousPrices((prevPrices) => {
+						const newPrices = new Map(prevPrices);
+						newPrices.set(newQuote.symbol, existing.last);
+						return newPrices;
+					});
+				}
 
-        // Preserve prevClose from existing data if new quote doesn't have it
-        const prevClose = newQuote.prevClose ?? existing?.prevClose;
-        // Recalculate changePercent if we have prevClose but quote doesn't have changePercent
-        const changePercent =
-          newQuote.changePercent ??
-          (prevClose && prevClose > 0 ? ((newQuote.last - prevClose) / prevClose) * 100 : 0);
+				// Preserve prevClose from existing data if new quote doesn't have it
+				const prevClose = newQuote.prevClose ?? existing?.prevClose;
+				// Recalculate changePercent if we have prevClose but quote doesn't have changePercent
+				const changePercent =
+					newQuote.changePercent ??
+					(prevClose && prevClose > 0 ? ((newQuote.last - prevClose) / prevClose) * 100 : 0);
 
-        updated.set(newQuote.symbol, {
-          ...newQuote,
-          prevClose,
-          changePercent,
-        });
-        return updated;
-      });
+				updated.set(newQuote.symbol, {
+					...newQuote,
+					prevClose,
+					changePercent,
+				});
+				return updated;
+			});
 
-      // Record tick for history
-      if (newQuote.last !== undefined) {
-        recordTick(newQuote.symbol, newQuote.last);
-      }
-    },
-    [recordTick]
-  );
+			// Record tick for history
+			if (newQuote.last !== undefined) {
+				recordTick(newQuote.symbol, newQuote.last);
+			}
+		},
+		[recordTick]
+	);
 
-  // Get lastMessage from context for quote updates
-  const { lastMessage } = useWebSocketContext();
+	// Get lastMessage from context for quote updates
+	const { lastMessage } = useWebSocketContext();
 
-  // Handle quote updates from WebSocket
-  useEffect(() => {
-    if (!connected || !lastMessage) {
-      return;
-    }
+	// Handle quote updates from WebSocket
+	useEffect(() => {
+		if (!connected || !lastMessage) {
+			return;
+		}
 
-    // Check if this is a quote message for a subscribed symbol
-    if (lastMessage.type === "quote" && lastMessage.data) {
-      const quoteData = lastMessage.data as {
-        symbol: string;
-        bid: number;
-        ask: number;
-        last: number;
-        volume?: number;
-        prevClose?: number;
-        changePercent?: number;
-        timestamp?: string;
-      };
+		// Check if this is a quote message for a subscribed symbol
+		if (lastMessage.type === "quote" && lastMessage.data) {
+			const quoteData = lastMessage.data as {
+				symbol: string;
+				bid: number;
+				ask: number;
+				last: number;
+				volume?: number;
+				prevClose?: number;
+				changePercent?: number;
+				timestamp?: string;
+			};
 
-      // Only update if we're subscribed to this symbol
-      if (symbols.includes(quoteData.symbol)) {
-        handleQuoteUpdate({
-          symbol: quoteData.symbol,
-          bid: quoteData.bid,
-          ask: quoteData.ask,
-          last: quoteData.last,
-          volume: quoteData.volume,
-          prevClose: quoteData.prevClose,
-          changePercent: quoteData.changePercent,
-          timestamp: quoteData.timestamp ? new Date(quoteData.timestamp) : new Date(),
-        });
-      }
-    }
-  }, [connected, lastMessage, symbols, handleQuoteUpdate]);
+			// Only update if we're subscribed to this symbol
+			if (symbols.includes(quoteData.symbol)) {
+				handleQuoteUpdate({
+					symbol: quoteData.symbol,
+					bid: quoteData.bid,
+					ask: quoteData.ask,
+					last: quoteData.last,
+					volume: quoteData.volume,
+					prevClose: quoteData.prevClose,
+					changePercent: quoteData.changePercent,
+					timestamp: quoteData.timestamp ? new Date(quoteData.timestamp) : new Date(),
+				});
+			}
+		}
+	}, [connected, lastMessage, symbols, handleQuoteUpdate]);
 
-  // Scroll handlers
-  const [canScrollLeft, setCanScrollLeft] = useState(false);
-  const [canScrollRight, setCanScrollRight] = useState(false);
+	// Scroll handlers
+	const [canScrollLeft, setCanScrollLeft] = useState(false);
+	const [canScrollRight, setCanScrollRight] = useState(false);
 
-  const updateScrollState = useCallback(() => {
-    const container = scrollContainerRef.current;
-    if (!container) {
-      return;
-    }
+	const updateScrollState = useCallback(() => {
+		const container = scrollContainerRef.current;
+		if (!container) {
+			return;
+		}
 
-    setCanScrollLeft(container.scrollLeft > 0);
-    setCanScrollRight(container.scrollLeft < container.scrollWidth - container.clientWidth - 1);
-  }, []);
+		setCanScrollLeft(container.scrollLeft > 0);
+		setCanScrollRight(container.scrollLeft < container.scrollWidth - container.clientWidth - 1);
+	}, []);
 
-  useEffect(() => {
-    const container = scrollContainerRef.current;
-    if (!container) {
-      return;
-    }
+	useEffect(() => {
+		const container = scrollContainerRef.current;
+		if (!container) {
+			return;
+		}
 
-    updateScrollState();
-    container.addEventListener("scroll", updateScrollState);
-    const resizeObserver = new ResizeObserver(updateScrollState);
-    resizeObserver.observe(container);
+		updateScrollState();
+		container.addEventListener("scroll", updateScrollState);
+		const resizeObserver = new ResizeObserver(updateScrollState);
+		resizeObserver.observe(container);
 
-    return () => {
-      container.removeEventListener("scroll", updateScrollState);
-      resizeObserver.disconnect();
-    };
-  }, [updateScrollState]);
+		return () => {
+			container.removeEventListener("scroll", updateScrollState);
+			resizeObserver.disconnect();
+		};
+	}, [updateScrollState]);
 
-  const scrollLeft = () => {
-    scrollContainerRef.current?.scrollBy({ left: -200, behavior: "smooth" });
-  };
+	const scrollLeft = () => {
+		scrollContainerRef.current?.scrollBy({ left: -200, behavior: "smooth" });
+	};
 
-  const scrollRight = () => {
-    scrollContainerRef.current?.scrollBy({ left: 200, behavior: "smooth" });
-  };
+	const scrollRight = () => {
+		scrollContainerRef.current?.scrollBy({ left: 200, behavior: "smooth" });
+	};
 
-  // Calculate if strip should show based on symbols
-  const hasSymbols = symbols.length > 0;
+	// Calculate if strip should show based on symbols
+	const hasSymbols = symbols.length > 0;
 
-  // Memoize symbol list to avoid unnecessary re-renders
-  const symbolItems = useMemo(() => {
-    return symbols.map((symbol) => ({
-      symbol,
-      quote: quotes.get(symbol),
-      previousPrice: previousPrices.get(symbol),
-      tickHistory: getTicks(symbol),
-      priceHistory: getPriceHistory(symbol),
-    }));
-  }, [symbols, quotes, previousPrices, getTicks, getPriceHistory]);
+	// Memoize symbol list to avoid unnecessary re-renders
+	const symbolItems = useMemo(() => {
+		return symbols.map((symbol) => ({
+			symbol,
+			quote: quotes.get(symbol),
+			previousPrice: previousPrices.get(symbol),
+			tickHistory: getTicks(symbol),
+			priceHistory: getPriceHistory(symbol),
+		}));
+	}, [symbols, quotes, previousPrices, getTicks, getPriceHistory]);
 
-  if (!hasSymbols && !allowAdd) {
-    return null;
-  }
+	if (!hasSymbols && !allowAdd) {
+		return null;
+	}
 
-  return (
-    <div
-      className={`
+	return (
+		<div
+			className={`
         relative flex items-stretch
         bg-white dark:bg-night-800
         border-b border-cream-200 dark:border-night-700
         ${className}
       `}
-      data-testid={testId}
-    >
-      {/* Left scroll button */}
-      {canScrollLeft && (
-        <button
-          type="button"
-          onClick={scrollLeft}
-          className="
+			data-testid={testId}
+		>
+			{/* Left scroll button */}
+			{canScrollLeft && (
+				<button
+					type="button"
+					onClick={scrollLeft}
+					className="
             absolute left-0 top-0 bottom-0 w-8 z-10
             bg-gradient-to-r from-white dark:from-night-800 to-transparent
             flex items-center justify-start pl-1
             hover:from-cream-100 dark:hover:from-night-700
           "
-          aria-label="Scroll left"
-        >
-          <span className="text-stone-400 dark:text-night-400">‹</span>
-        </button>
-      )}
+					aria-label="Scroll left"
+				>
+					<span className="text-stone-400 dark:text-night-400">‹</span>
+				</button>
+			)}
 
-      {/* Scrollable container */}
-      <div
-        ref={scrollContainerRef}
-        className="flex overflow-x-auto scrollbar-hide"
-        style={{ scrollbarWidth: "none", msOverflowStyle: "none" }}
-      >
-        {/* Ticker items */}
-        {symbolItems.map(({ symbol, quote, previousPrice, tickHistory, priceHistory }) => (
-          <TickerItem
-            key={symbol}
-            symbol={symbol}
-            quote={quote}
-            previousPrice={previousPrice}
-            tickHistory={tickHistory}
-            priceHistory={priceHistory}
-            showSparkline={showSparkline}
-            showTickHistory={showTickHistory}
-            onClick={onSymbolClick}
-            onRemove={allowRemove ? onSymbolRemove : undefined}
-            showRemove={allowRemove}
-            data-testid={`ticker-item-${symbol}`}
-          />
-        ))}
+			{/* Scrollable container */}
+			<div
+				ref={scrollContainerRef}
+				className="flex overflow-x-auto scrollbar-hide"
+				style={{ scrollbarWidth: "none", msOverflowStyle: "none" }}
+			>
+				{/* Ticker items */}
+				{symbolItems.map(({ symbol, quote, previousPrice, tickHistory, priceHistory }) => (
+					<TickerItem
+						key={symbol}
+						symbol={symbol}
+						quote={quote}
+						previousPrice={previousPrice}
+						tickHistory={tickHistory}
+						priceHistory={priceHistory}
+						showSparkline={showSparkline}
+						showTickHistory={showTickHistory}
+						onClick={onSymbolClick}
+						onRemove={allowRemove ? onSymbolRemove : undefined}
+						showRemove={allowRemove}
+						data-testid={`ticker-item-${symbol}`}
+					/>
+				))}
 
-        {/* Add button */}
-        {allowAdd && (
-          <button
-            type="button"
-            onClick={onSymbolAdd}
-            className="
+				{/* Add button */}
+				{allowAdd && (
+					<button
+						type="button"
+						onClick={onSymbolAdd}
+						className="
               flex items-center justify-center px-4 py-2 min-w-[60px]
               text-stone-400 dark:text-night-400 hover:text-stone-600 dark:text-night-200 dark:hover:text-cream-300
               hover:bg-cream-50 dark:hover:bg-night-700
               transition-colors duration-150
             "
-            aria-label="Add symbol to watchlist"
-          >
-            <Plus className="w-4 h-4" />
-          </button>
-        )}
-      </div>
+						aria-label="Add symbol to watchlist"
+					>
+						<Plus className="w-4 h-4" />
+					</button>
+				)}
+			</div>
 
-      {/* Right scroll button */}
-      {canScrollRight && (
-        <button
-          type="button"
-          onClick={scrollRight}
-          className="
+			{/* Right scroll button */}
+			{canScrollRight && (
+				<button
+					type="button"
+					onClick={scrollRight}
+					className="
             absolute right-0 top-0 bottom-0 w-8 z-10
             bg-gradient-to-l from-white dark:from-night-800 to-transparent
             flex items-center justify-end pr-1
             hover:from-cream-100 dark:hover:from-night-700
           "
-          aria-label="Scroll right"
-        >
-          <span className="text-stone-400 dark:text-night-400">›</span>
-        </button>
-      )}
-    </div>
-  );
+					aria-label="Scroll right"
+				>
+					<span className="text-stone-400 dark:text-night-400">›</span>
+				</button>
+			)}
+		</div>
+	);
 });
 
 // ============================================

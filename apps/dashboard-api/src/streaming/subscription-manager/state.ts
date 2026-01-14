@@ -5,10 +5,10 @@
  */
 
 import type {
-  CachedQuote,
-  ConnectionPool,
-  PendingUnsubscribe,
-  SubscriptionEntry,
+	CachedQuote,
+	ConnectionPool,
+	PendingUnsubscribe,
+	SubscriptionEntry,
 } from "./types.js";
 
 /** Connection pools for options WebSocket */
@@ -30,29 +30,29 @@ export const pendingUnsubscribes = new Map<string, PendingUnsubscribe>();
 let initialized = false;
 
 export function isInitialized(): boolean {
-  return initialized;
+	return initialized;
 }
 
 export function setInitialized(value: boolean): void {
-  initialized = value;
+	initialized = value;
 }
 
 /**
  * Clear all state - used during shutdown.
  */
 export function clearAllState(): void {
-  for (const pending of pendingUnsubscribes.values()) {
-    clearTimeout(pending.timeoutId);
-  }
-  pendingUnsubscribes.clear();
+	for (const pending of pendingUnsubscribes.values()) {
+		clearTimeout(pending.timeoutId);
+	}
+	pendingUnsubscribes.clear();
 
-  for (const pool of connectionPools) {
-    pool.client.disconnect();
-  }
-  connectionPools.length = 0;
+	for (const pool of connectionPools) {
+		pool.client.disconnect();
+	}
+	connectionPools.length = 0;
 
-  subscriptions.clear();
-  pendingQueue.length = 0;
-  quoteCache.clear();
-  initialized = false;
+	subscriptions.clear();
+	pendingQueue.length = 0;
+	quoteCache.clear();
+	initialized = false;
 }

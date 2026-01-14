@@ -29,7 +29,7 @@ const SENSITIVE_PATTERNS = [/key$/i, /secret$/i, /token$/i, /password$/i, /crede
  * Check if a field name contains sensitive data
  */
 function isSensitiveField(fieldName: string): boolean {
-  return SENSITIVE_PATTERNS.some((pattern) => pattern.test(fieldName));
+	return SENSITIVE_PATTERNS.some((pattern) => pattern.test(fieldName));
 }
 
 // ============================================
@@ -49,67 +49,67 @@ const REDACTED = "[REDACTED]";
  * @returns Sanitized copy of the object
  */
 export function sanitizeConfig(obj: unknown, depth = 0): unknown {
-  // Prevent infinite recursion
-  if (depth > 10) {
-    return REDACTED;
-  }
+	// Prevent infinite recursion
+	if (depth > 10) {
+		return REDACTED;
+	}
 
-  if (obj === null || obj === undefined) {
-    return obj;
-  }
+	if (obj === null || obj === undefined) {
+		return obj;
+	}
 
-  if (typeof obj !== "object") {
-    return obj;
-  }
+	if (typeof obj !== "object") {
+		return obj;
+	}
 
-  if (Array.isArray(obj)) {
-    return obj.map((item) => sanitizeConfig(item, depth + 1));
-  }
+	if (Array.isArray(obj)) {
+		return obj.map((item) => sanitizeConfig(item, depth + 1));
+	}
 
-  const sanitized: Record<string, unknown> = {};
-  for (const [key, value] of Object.entries(obj)) {
-    if (isSensitiveField(key)) {
-      // Redact sensitive values, but indicate if present or missing
-      sanitized[key] = value ? REDACTED : "[NOT SET]";
-    } else if (typeof value === "object" && value !== null) {
-      sanitized[key] = sanitizeConfig(value, depth + 1);
-    } else {
-      sanitized[key] = value;
-    }
-  }
+	const sanitized: Record<string, unknown> = {};
+	for (const [key, value] of Object.entries(obj)) {
+		if (isSensitiveField(key)) {
+			// Redact sensitive values, but indicate if present or missing
+			sanitized[key] = value ? REDACTED : "[NOT SET]";
+		} else if (typeof value === "object" && value !== null) {
+			sanitized[key] = sanitizeConfig(value, depth + 1);
+		} else {
+			sanitized[key] = value;
+		}
+	}
 
-  return sanitized;
+	return sanitized;
 }
 
 /**
  * Sanitize environment variables for logging
  */
 export function sanitizeEnv(envConfig: EnvConfig): Record<string, string> {
-  const sanitized: Record<string, string> = {};
+	const sanitized: Record<string, string> = {};
 
-  // Include all known env fields for consistent output
-  const allFields = [
-    "TURSO_DATABASE_URL",
-    "TURSO_AUTH_TOKEN",
-    "HELIX_URL",
-    "FMP_KEY",
-    "ALPHAVANTAGE_KEY",
-    "ALPACA_KEY",
-    "ALPACA_SECRET",
-    "ALPACA_BASE_URL",
-    "GOOGLE_API_KEY",
-  ];
+	// Include all known env fields for consistent output
+	const allFields = [
+		"TURSO_DATABASE_URL",
+		"TURSO_AUTH_TOKEN",
+		"HELIX_URL",
+		"FMP_KEY",
+		"ALPHAVANTAGE_KEY",
+		"ALPACA_KEY",
+		"ALPACA_SECRET",
+		"ALPACA_BASE_URL",
+		"GOOGLE_API_KEY",
+	];
 
-  for (const key of allFields) {
-    const value = (envConfig as Record<string, unknown>)[key];
-    if (isSensitiveField(key)) {
-      sanitized[key] = value ? REDACTED : "[NOT SET]";
-    } else {
-      sanitized[key] = value !== undefined && value !== null ? String(value) : "[NOT SET]";
-    }
-  }
+	for (const key of allFields) {
+		const value = (envConfig as Record<string, unknown>)[key];
+		if (isSensitiveField(key)) {
+			sanitized[key] = value ? REDACTED : "[NOT SET]";
+		} else {
+			sanitized[key] = value !== undefined && value !== null ? String(value) : "[NOT SET]";
+		}
+	}
 
-  return sanitized;
+	return sanitized;
 }
 
 // ============================================
@@ -120,10 +120,10 @@ export function sanitizeEnv(envConfig: EnvConfig): Record<string, string> {
  * Startup validation result (environment validation only)
  */
 export interface StartupResult {
-  success: boolean;
-  env: EnvConfig;
-  errors: string[];
-  warnings: string[];
+	success: boolean;
+	env: EnvConfig;
+	errors: string[];
+	warnings: string[];
 }
 
 /**
@@ -135,28 +135,28 @@ export interface StartupResult {
  * 3. No conflicting environment settings
  */
 export function validateLiveTradingSafety(): {
-  approved: boolean;
-  errors: string[];
+	approved: boolean;
+	errors: string[];
 } {
-  const errors: string[] = [];
+	const errors: string[] = [];
 
-  // Check for explicit LIVE trading approval
-  const approved = process.env.LIVE_TRADING_APPROVED === "true";
-  if (!approved) {
-    errors.push("LIVE trading requires LIVE_TRADING_APPROVED=true environment variable");
-  }
+	// Check for explicit LIVE trading approval
+	const approved = process.env.LIVE_TRADING_APPROVED === "true";
+	if (!approved) {
+		errors.push("LIVE trading requires LIVE_TRADING_APPROVED=true environment variable");
+	}
 
-  // Double-check that we're not accidentally in LIVE
-  if (env.ALPACA_BASE_URL?.includes("paper-api")) {
-    errors.push("LIVE trading detected but ALPACA_BASE_URL points to paper trading endpoint");
-  }
+	// Double-check that we're not accidentally in LIVE
+	if (env.ALPACA_BASE_URL?.includes("paper-api")) {
+		errors.push("LIVE trading detected but ALPACA_BASE_URL points to paper trading endpoint");
+	}
 
-  // Verify database isolation
-  if (env.TURSO_DATABASE_URL?.includes("backtest") || env.TURSO_DATABASE_URL?.includes("paper")) {
-    errors.push("LIVE trading detected but database URL appears to be for non-LIVE environment");
-  }
+	// Verify database isolation
+	if (env.TURSO_DATABASE_URL?.includes("backtest") || env.TURSO_DATABASE_URL?.includes("paper")) {
+		errors.push("LIVE trading detected but database URL appears to be for non-LIVE environment");
+	}
 
-  return { approved: errors.length === 0, errors };
+	return { approved: errors.length === 0, errors };
 }
 
 /**
@@ -173,32 +173,32 @@ export function validateLiveTradingSafety(): {
  * @returns Validation result with diagnostics
  */
 export async function validateStartup(ctx: ExecutionContext): Promise<StartupResult> {
-  const errors: string[] = [];
-  const warnings: string[] = [];
+	const errors: string[] = [];
+	const warnings: string[] = [];
 
-  // Step 1: Validate environment variables for the target environment
-  const envValidation = validateEnvironment(ctx, "startup");
-  if (!envValidation.valid) {
-    errors.push(...envValidation.errors);
-  }
-  if (envValidation.warnings.length > 0) {
-    warnings.push(...envValidation.warnings);
-  }
+	// Step 1: Validate environment variables for the target environment
+	const envValidation = validateEnvironment(ctx, "startup");
+	if (!envValidation.valid) {
+		errors.push(...envValidation.errors);
+	}
+	if (envValidation.warnings.length > 0) {
+		warnings.push(...envValidation.warnings);
+	}
 
-  // Step 2: LIVE trading safety checks
-  if (isLive(ctx)) {
-    const liveCheck = validateLiveTradingSafety();
-    if (!liveCheck.approved) {
-      errors.push(...liveCheck.errors);
-    }
-  }
+	// Step 2: LIVE trading safety checks
+	if (isLive(ctx)) {
+		const liveCheck = validateLiveTradingSafety();
+		if (!liveCheck.approved) {
+			errors.push(...liveCheck.errors);
+		}
+	}
 
-  return {
-    success: errors.length === 0,
-    env,
-    errors,
-    warnings,
-  };
+	return {
+		success: errors.length === 0,
+		env,
+		errors,
+		warnings,
+	};
 }
 
 // ============================================
@@ -209,13 +209,13 @@ export async function validateStartup(ctx: ExecutionContext): Promise<StartupRes
  * Startup audit log entry
  */
 export interface StartupAuditLog {
-  timestamp: string;
-  service: string;
-  environment: string;
-  traceId: string;
-  env: Record<string, string>;
-  errors: string[];
-  warnings: string[];
+	timestamp: string;
+	service: string;
+	environment: string;
+	traceId: string;
+	env: Record<string, string>;
+	errors: string[];
+	warnings: string[];
 }
 
 /**
@@ -227,19 +227,19 @@ export interface StartupAuditLog {
  * @returns Audit log entry (sanitized)
  */
 export function createAuditLog(
-  service: string,
-  ctx: ExecutionContext,
-  result: StartupResult
+	service: string,
+	ctx: ExecutionContext,
+	result: StartupResult
 ): StartupAuditLog {
-  return {
-    timestamp: new Date().toISOString(),
-    service,
-    environment: ctx.environment,
-    traceId: ctx.traceId,
-    env: sanitizeEnv(result.env),
-    errors: result.errors,
-    warnings: result.warnings,
-  };
+	return {
+		timestamp: new Date().toISOString(),
+		service,
+		environment: ctx.environment,
+		traceId: ctx.traceId,
+		env: sanitizeEnv(result.env),
+		errors: result.errors,
+		warnings: result.warnings,
+	};
 }
 
 /**
@@ -290,36 +290,36 @@ export function logStartupAudit(_audit: StartupAuditLog): void {}
  * ```
  */
 export async function runStartupValidation(
-  service: string,
-  ctx: ExecutionContext
+	service: string,
+	ctx: ExecutionContext
 ): Promise<{ env: EnvConfig }> {
-  const result = await validateStartup(ctx);
+	const result = await validateStartup(ctx);
 
-  // Create and log audit entry
-  const audit = createAuditLog(service, ctx, result);
+	// Create and log audit entry
+	const audit = createAuditLog(service, ctx, result);
 
-  if (!result.success) {
-    for (const _error of result.errors) {
-      // Errors are logged via logStartupAudit
-    }
-    if (result.warnings.length > 0) {
-      for (const _warning of result.warnings) {
-        // Warnings are logged via logStartupAudit
-      }
-    }
-    logStartupAudit(audit);
-    process.exit(1);
-  }
+	if (!result.success) {
+		for (const _error of result.errors) {
+			// Errors are logged via logStartupAudit
+		}
+		if (result.warnings.length > 0) {
+			for (const _warning of result.warnings) {
+				// Warnings are logged via logStartupAudit
+			}
+		}
+		logStartupAudit(audit);
+		process.exit(1);
+	}
 
-  // Log warnings even on success
-  if (result.warnings.length > 0) {
-    for (const _warning of result.warnings) {
-      // Warnings are logged via logStartupAudit
-    }
-  }
-  logStartupAudit(audit);
+	// Log warnings even on success
+	if (result.warnings.length > 0) {
+		for (const _warning of result.warnings) {
+			// Warnings are logged via logStartupAudit
+		}
+	}
+	logStartupAudit(audit);
 
-  return { env: result.env };
+	return { env: result.env };
 }
 
 /**
@@ -328,10 +328,10 @@ export async function runStartupValidation(
  * Same as runStartupValidation but returns result instead of exiting.
  */
 export async function validateStartupNoExit(
-  service: string,
-  ctx: ExecutionContext
+	service: string,
+	ctx: ExecutionContext
 ): Promise<StartupResult & { audit: StartupAuditLog }> {
-  const result = await validateStartup(ctx);
-  const audit = createAuditLog(service, ctx, result);
-  return { ...result, audit };
+	const result = await validateStartup(ctx);
+	const audit = createAuditLog(service, ctx, result);
+	return { ...result, audit };
 }

@@ -28,20 +28,20 @@ import type { OHLCVBar } from "../../types";
 // ============================================================
 
 export interface BollingerBandsResult {
-  /** Upper band */
-  upper: number;
-  /** Middle band (SMA) */
-  middle: number;
-  /** Lower band */
-  lower: number;
-  /** Bandwidth: (upper - lower) / middle × 100 */
-  bandwidth: number;
-  /** %B: position within bands (0 = lower, 1 = upper) */
-  percentB: number;
-  /** Standard deviation */
-  stdDev: number;
-  /** Timestamp */
-  timestamp: number;
+	/** Upper band */
+	upper: number;
+	/** Middle band (SMA) */
+	middle: number;
+	/** Lower band */
+	lower: number;
+	/** Bandwidth: (upper - lower) / middle × 100 */
+	bandwidth: number;
+	/** %B: position within bands (0 = lower, 1 = upper) */
+	percentB: number;
+	/** Standard deviation */
+	stdDev: number;
+	/** Timestamp */
+	timestamp: number;
 }
 
 // ============================================================
@@ -52,12 +52,12 @@ export interface BollingerBandsResult {
  * Calculate standard deviation
  */
 function calculateStdDev(values: number[], mean: number): number {
-  if (values.length === 0) {
-    return 0;
-  }
+	if (values.length === 0) {
+		return 0;
+	}
 
-  const sumSquaredDiff = values.reduce((sum, val) => sum + (val - mean) ** 2, 0);
-  return Math.sqrt(sumSquaredDiff / values.length);
+	const sumSquaredDiff = values.reduce((sum, val) => sum + (val - mean) ** 2, 0);
+	return Math.sqrt(sumSquaredDiff / values.length);
 }
 
 /**
@@ -79,51 +79,51 @@ function calculateStdDev(values: number[], mean: number): number {
  * ```
  */
 export function calculateBollingerBands(
-  bars: OHLCVBar[],
-  period = 20,
-  multiplier = 2
+	bars: OHLCVBar[],
+	period = 20,
+	multiplier = 2
 ): BollingerBandsResult | null {
-  if (bars.length < period || period <= 0) {
-    return null;
-  }
+	if (bars.length < period || period <= 0) {
+		return null;
+	}
 
-  // Get closing prices for the period
-  const recentBars = bars.slice(-period);
-  const closes = recentBars.map((b) => b.close);
+	// Get closing prices for the period
+	const recentBars = bars.slice(-period);
+	const closes = recentBars.map((b) => b.close);
 
-  // Calculate SMA (middle band)
-  const sum = closes.reduce((acc, val) => acc + val, 0);
-  const middle = sum / period;
+	// Calculate SMA (middle band)
+	const sum = closes.reduce((acc, val) => acc + val, 0);
+	const middle = sum / period;
 
-  // Calculate standard deviation
-  const stdDev = calculateStdDev(closes, middle);
+	// Calculate standard deviation
+	const stdDev = calculateStdDev(closes, middle);
 
-  // Calculate bands
-  const upper = middle + stdDev * multiplier;
-  const lower = middle - stdDev * multiplier;
+	// Calculate bands
+	const upper = middle + stdDev * multiplier;
+	const lower = middle - stdDev * multiplier;
 
-  // Calculate bandwidth
-  const bandwidth = middle > 0 ? ((upper - lower) / middle) * 100 : 0;
+	// Calculate bandwidth
+	const bandwidth = middle > 0 ? ((upper - lower) / middle) * 100 : 0;
 
-  // Calculate %B
-  const lastBar = bars[bars.length - 1];
-  if (!lastBar) {
-    return null;
-  }
+	// Calculate %B
+	const lastBar = bars[bars.length - 1];
+	if (!lastBar) {
+		return null;
+	}
 
-  const currentPrice = lastBar.close;
-  const bandRange = upper - lower;
-  const percentB = bandRange > 0 ? (currentPrice - lower) / bandRange : 0.5;
+	const currentPrice = lastBar.close;
+	const bandRange = upper - lower;
+	const percentB = bandRange > 0 ? (currentPrice - lower) / bandRange : 0.5;
 
-  return {
-    upper,
-    middle,
-    lower,
-    bandwidth,
-    percentB,
-    stdDev,
-    timestamp: lastBar.timestamp,
-  };
+	return {
+		upper,
+		middle,
+		lower,
+		bandwidth,
+		percentB,
+		stdDev,
+		timestamp: lastBar.timestamp,
+	};
 }
 
 /**
@@ -135,38 +135,38 @@ export function calculateBollingerBands(
  * @returns Array of Bollinger Bands results
  */
 export function calculateBollingerBandsSeries(
-  bars: OHLCVBar[],
-  period = 20,
-  multiplier = 2
+	bars: OHLCVBar[],
+	period = 20,
+	multiplier = 2
 ): BollingerBandsResult[] {
-  const results: BollingerBandsResult[] = [];
+	const results: BollingerBandsResult[] = [];
 
-  if (bars.length < period || period <= 0) {
-    return results;
-  }
+	if (bars.length < period || period <= 0) {
+		return results;
+	}
 
-  for (let i = period - 1; i < bars.length; i++) {
-    const windowBars = bars.slice(i - period + 1, i + 1);
-    const result = calculateBollingerBands(windowBars, period, multiplier);
-    if (result) {
-      results.push(result);
-    }
-  }
+	for (let i = period - 1; i < bars.length; i++) {
+		const windowBars = bars.slice(i - period + 1, i + 1);
+		const result = calculateBollingerBands(windowBars, period, multiplier);
+		if (result) {
+			results.push(result);
+		}
+	}
 
-  return results;
+	return results;
 }
 
 /**
  * Classify Bollinger Band position
  */
 export type BollingerPosition =
-  | "above_upper"
-  | "at_upper"
-  | "upper_half"
-  | "at_middle"
-  | "lower_half"
-  | "at_lower"
-  | "below_lower";
+	| "above_upper"
+	| "at_upper"
+	| "upper_half"
+	| "at_middle"
+	| "lower_half"
+	| "at_lower"
+	| "below_lower";
 
 /**
  * Classify price position relative to Bollinger Bands
@@ -175,25 +175,25 @@ export type BollingerPosition =
  * @returns Position classification
  */
 export function classifyBollingerPosition(percentB: number): BollingerPosition {
-  if (percentB > 1.0) {
-    return "above_upper";
-  }
-  if (percentB >= 0.95) {
-    return "at_upper";
-  }
-  if (percentB > 0.55) {
-    return "upper_half";
-  }
-  if (percentB >= 0.45) {
-    return "at_middle";
-  }
-  if (percentB > 0.05) {
-    return "lower_half";
-  }
-  if (percentB >= 0.0) {
-    return "at_lower";
-  }
-  return "below_lower";
+	if (percentB > 1.0) {
+		return "above_upper";
+	}
+	if (percentB >= 0.95) {
+		return "at_upper";
+	}
+	if (percentB > 0.55) {
+		return "upper_half";
+	}
+	if (percentB >= 0.45) {
+		return "at_middle";
+	}
+	if (percentB > 0.05) {
+		return "lower_half";
+	}
+	if (percentB >= 0.0) {
+		return "at_lower";
+	}
+	return "below_lower";
 }
 
 /**
@@ -214,19 +214,19 @@ export type BandwidthLevel = "squeeze" | "low" | "normal" | "high" | "extreme";
  * @returns Classification
  */
 export function classifyBandwidth(bandwidth: number): BandwidthLevel {
-  if (bandwidth < 5) {
-    return "squeeze";
-  }
-  if (bandwidth < 10) {
-    return "low";
-  }
-  if (bandwidth < 15) {
-    return "normal";
-  }
-  if (bandwidth < 25) {
-    return "high";
-  }
-  return "extreme";
+	if (bandwidth < 5) {
+		return "squeeze";
+	}
+	if (bandwidth < 10) {
+		return "low";
+	}
+	if (bandwidth < 15) {
+		return "normal";
+	}
+	if (bandwidth < 25) {
+		return "high";
+	}
+	return "extreme";
 }
 
 /**
@@ -237,20 +237,20 @@ export function classifyBandwidth(bandwidth: number): BandwidthLevel {
  * @returns Whether current bandwidth indicates a squeeze
  */
 export function detectBollingerSqueeze(bandwidthHistory: number[], threshold = 10): boolean {
-  if (bandwidthHistory.length < 20) {
-    return false;
-  }
+	if (bandwidthHistory.length < 20) {
+		return false;
+	}
 
-  const sorted = bandwidthHistory.toSorted((a, b) => a - b);
-  const percentileIndex = Math.floor((threshold / 100) * sorted.length);
-  const percentileValue = sorted[percentileIndex] ?? sorted[0];
+	const sorted = bandwidthHistory.toSorted((a, b) => a - b);
+	const percentileIndex = Math.floor((threshold / 100) * sorted.length);
+	const percentileValue = sorted[percentileIndex] ?? sorted[0];
 
-  const currentBandwidth = bandwidthHistory[bandwidthHistory.length - 1];
-  if (currentBandwidth === undefined || percentileValue === undefined) {
-    return false;
-  }
+	const currentBandwidth = bandwidthHistory[bandwidthHistory.length - 1];
+	if (currentBandwidth === undefined || percentileValue === undefined) {
+		return false;
+	}
 
-  return currentBandwidth <= percentileValue;
+	return currentBandwidth <= percentileValue;
 }
 
 /**
@@ -264,21 +264,21 @@ export function detectBollingerSqueeze(bandwidthHistory: number[], threshold = 1
  * @returns Walking direction or null
  */
 export function detectBandWalking(
-  recentPercentB: number[],
-  walkThreshold = 0.8
+	recentPercentB: number[],
+	walkThreshold = 0.8
 ): "upper" | "lower" | null {
-  if (recentPercentB.length < 3) {
-    return null;
-  }
+	if (recentPercentB.length < 3) {
+		return null;
+	}
 
-  const upperWalk = recentPercentB.every((pb) => pb >= walkThreshold);
-  const lowerWalk = recentPercentB.every((pb) => pb <= 1 - walkThreshold);
+	const upperWalk = recentPercentB.every((pb) => pb >= walkThreshold);
+	const lowerWalk = recentPercentB.every((pb) => pb <= 1 - walkThreshold);
 
-  if (upperWalk) {
-    return "upper";
-  }
-  if (lowerWalk) {
-    return "lower";
-  }
-  return null;
+	if (upperWalk) {
+		return "upper";
+	}
+	if (lowerWalk) {
+		return "lower";
+	}
+	return null;
 }

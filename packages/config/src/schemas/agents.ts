@@ -17,13 +17,13 @@ import { z } from "zod";
  * Agent identifiers
  */
 export const AgentName = z.enum([
-  "news_sentiment_analyst",
-  "fundamentals_macro_analyst",
-  "bullish_research",
-  "bearish_research",
-  "trader",
-  "risk_manager",
-  "critic",
+	"news_sentiment_analyst",
+	"fundamentals_macro_analyst",
+	"bullish_research",
+	"bearish_research",
+	"trader",
+	"risk_manager",
+	"critic",
 ]);
 export type AgentName = z.infer<typeof AgentName>;
 
@@ -35,29 +35,29 @@ export type AgentName = z.infer<typeof AgentName>;
  * Configuration for a single agent
  */
 export const AgentSettingsSchema = z.object({
-  /**
-   * Whether this agent is enabled
-   */
-  enabled: z.boolean().default(true),
+	/**
+	 * Whether this agent is enabled
+	 */
+	enabled: z.boolean().default(true),
 
-  /**
-   * Optional custom prompt template path
-   *
-   * If not specified, uses default from 05-agents.md
-   */
-  prompt_template: z.string().optional(),
+	/**
+	 * Optional custom prompt template path
+	 *
+	 * If not specified, uses default from 05-agents.md
+	 */
+	prompt_template: z.string().optional(),
 
-  /**
-   * Agent-specific model override
-   *
-   * If not specified, uses global LLM config
-   */
-  model_id: z.string().optional(),
+	/**
+	 * Agent-specific model override
+	 *
+	 * If not specified, uses global LLM config
+	 */
+	model_id: z.string().optional(),
 
-  /**
-   * Maximum retries for this agent
-   */
-  max_retries: z.number().int().nonnegative().default(2),
+	/**
+	 * Maximum retries for this agent
+	 */
+	max_retries: z.number().int().nonnegative().default(2),
 });
 export type AgentSettings = z.infer<typeof AgentSettingsSchema>;
 
@@ -75,19 +75,19 @@ export type RequiredApprovers = z.infer<typeof RequiredApprovers>;
  * Consensus mechanism configuration
  */
 export const ConsensusConfigSchema = z.object({
-  /**
-   * Agents that must approve for a plan to proceed
-   *
-   * Default: risk_manager and critic must both approve
-   */
-  required_approvers: RequiredApprovers.default(["risk_manager", "critic"]),
+	/**
+	 * Agents that must approve for a plan to proceed
+	 *
+	 * Default: risk_manager and critic must both approve
+	 */
+	required_approvers: RequiredApprovers.default(["risk_manager", "critic"]),
 
-  /**
-   * Maximum iterations for consensus loop
-   *
-   * Prevents infinite loops in disagreement scenarios
-   */
-  iteration_cap: z.number().int().min(1).max(10).default(3),
+	/**
+	 * Maximum iterations for consensus loop
+	 *
+	 * Prevents infinite loops in disagreement scenarios
+	 */
+	iteration_cap: z.number().int().min(1).max(10).default(3),
 });
 export type ConsensusConfig = z.infer<typeof ConsensusConfigSchema>;
 
@@ -99,44 +99,44 @@ export type ConsensusConfig = z.infer<typeof ConsensusConfigSchema>;
  * Complete agents configuration
  */
 export const AgentsConfigSchema = z.object({
-  /**
-   * Consensus mechanism settings
-   */
-  consensus: ConsensusConfigSchema.optional(),
+	/**
+	 * Consensus mechanism settings
+	 */
+	consensus: ConsensusConfigSchema.optional(),
 
-  /**
-   * News & Sentiment Analyst configuration
-   */
-  news_sentiment_analyst: AgentSettingsSchema.optional(),
+	/**
+	 * News & Sentiment Analyst configuration
+	 */
+	news_sentiment_analyst: AgentSettingsSchema.optional(),
 
-  /**
-   * Fundamentals & Macro Analyst configuration
-   */
-  fundamentals_macro_analyst: AgentSettingsSchema.optional(),
+	/**
+	 * Fundamentals & Macro Analyst configuration
+	 */
+	fundamentals_macro_analyst: AgentSettingsSchema.optional(),
 
-  /**
-   * Bullish Research Agent configuration
-   */
-  bullish_research: AgentSettingsSchema.optional(),
+	/**
+	 * Bullish Research Agent configuration
+	 */
+	bullish_research: AgentSettingsSchema.optional(),
 
-  /**
-   * Bearish Research Agent configuration
-   */
-  bearish_research: AgentSettingsSchema.optional(),
+	/**
+	 * Bearish Research Agent configuration
+	 */
+	bearish_research: AgentSettingsSchema.optional(),
 
-  /**
-   * Trader Agent configuration
-   */
-  trader: AgentSettingsSchema.optional(),
+	/**
+	 * Trader Agent configuration
+	 */
+	trader: AgentSettingsSchema.optional(),
 
-  /**
-   * Risk Manager Agent configuration
-   */
-  risk_manager: AgentSettingsSchema.optional(),
+	/**
+	 * Risk Manager Agent configuration
+	 */
+	risk_manager: AgentSettingsSchema.optional(),
 
-  /**
-   * Critic Agent configuration
-   */
-  critic: AgentSettingsSchema.optional(),
+	/**
+	 * Critic Agent configuration
+	 */
+	critic: AgentSettingsSchema.optional(),
 });
 export type AgentsConfig = z.infer<typeof AgentsConfigSchema>;

@@ -14,37 +14,37 @@
 import { useParams, useRouter } from "next/navigation";
 import { useDecisionDetail } from "@/hooks/queries";
 import {
-  AgentVotesGrid,
-  CitationsSection,
-  DecisionDetails,
-  DecisionHeader,
-  ErrorState,
-  ExecutionSection,
-  LoadingState,
+	AgentVotesGrid,
+	CitationsSection,
+	DecisionDetails,
+	DecisionHeader,
+	ErrorState,
+	ExecutionSection,
+	LoadingState,
 } from "./components/index";
 
 export default function DecisionDetailPage(): React.ReactElement {
-  const params = useParams();
-  const router = useRouter();
-  const id = params.id as string;
+	const params = useParams();
+	const router = useRouter();
+	const id = params.id as string;
 
-  const { data: decision, isLoading, error } = useDecisionDetail(id);
+	const { data: decision, isLoading, error } = useDecisionDetail(id);
 
-  if (isLoading) {
-    return <LoadingState />;
-  }
+	if (isLoading) {
+		return <LoadingState />;
+	}
 
-  if (error || !decision) {
-    return <ErrorState onNavigateBack={() => router.push("/decisions")} />;
-  }
+	if (error || !decision) {
+		return <ErrorState onNavigateBack={() => router.push("/decisions")} />;
+	}
 
-  return (
-    <div className="space-y-6">
-      <DecisionHeader decision={decision} onBack={() => router.back()} />
-      <DecisionDetails decision={decision} />
-      <AgentVotesGrid outputs={decision.agentOutputs} />
-      <CitationsSection citations={decision.citations} />
-      <ExecutionSection execution={decision.execution} />
-    </div>
-  );
+	return (
+		<div className="space-y-6">
+			<DecisionHeader decision={decision} onBack={() => router.back()} />
+			<DecisionDetails decision={decision} />
+			<AgentVotesGrid outputs={decision.agentOutputs} />
+			<CitationsSection citations={decision.citations} />
+			<ExecutionSection execution={decision.execution} />
+		</div>
+	);
 }

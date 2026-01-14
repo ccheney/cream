@@ -19,73 +19,73 @@ import { AlpacaMarketDataAdapter, isAlpacaAdapterAvailable } from "./adapters/al
  * Candle data returned by the adapter.
  */
 export interface AdapterCandle {
-  timestamp: number;
-  open: number;
-  high: number;
-  low: number;
-  close: number;
-  volume: number;
-  vwap?: number;
+	timestamp: number;
+	open: number;
+	high: number;
+	low: number;
+	close: number;
+	volume: number;
+	vwap?: number;
 }
 
 /**
  * Quote data returned by the adapter.
  */
 export interface AdapterQuote {
-  symbol: string;
-  bid: number;
-  ask: number;
-  bidSize: number;
-  askSize: number;
-  last: number;
-  timestamp: number;
+	symbol: string;
+	bid: number;
+	ask: number;
+	bidSize: number;
+	askSize: number;
+	last: number;
+	timestamp: number;
 }
 
 /**
  * Market data adapter interface for unified access to candles and quotes.
  */
 export interface MarketDataAdapter {
-  /**
-   * Fetch historical candles for a symbol.
-   *
-   * @param symbol - Ticker symbol
-   * @param timeframe - Candle timeframe (e.g., "1h", "1d")
-   * @param from - Start date (YYYY-MM-DD)
-   * @param to - End date (YYYY-MM-DD)
-   * @returns Array of candles
-   */
-  getCandles(
-    symbol: string,
-    timeframe: "1m" | "5m" | "15m" | "1h" | "1d",
-    from: string,
-    to: string
-  ): Promise<AdapterCandle[]>;
+	/**
+	 * Fetch historical candles for a symbol.
+	 *
+	 * @param symbol - Ticker symbol
+	 * @param timeframe - Candle timeframe (e.g., "1h", "1d")
+	 * @param from - Start date (YYYY-MM-DD)
+	 * @param to - End date (YYYY-MM-DD)
+	 * @returns Array of candles
+	 */
+	getCandles(
+		symbol: string,
+		timeframe: "1m" | "5m" | "15m" | "1h" | "1d",
+		from: string,
+		to: string
+	): Promise<AdapterCandle[]>;
 
-  /**
-   * Fetch current quote for a symbol.
-   *
-   * @param symbol - Ticker symbol
-   * @returns Quote data
-   */
-  getQuote(symbol: string): Promise<AdapterQuote | null>;
+	/**
+	 * Fetch current quote for a symbol.
+	 *
+	 * @param symbol - Ticker symbol
+	 * @returns Quote data
+	 */
+	getQuote(symbol: string): Promise<AdapterQuote | null>;
 
-  /**
-   * Fetch current quotes for multiple symbols.
-   *
-   * @param symbols - Array of ticker symbols
-   * @returns Map of symbol to quote
-   */
-  getQuotes(symbols: string[]): Promise<Map<string, AdapterQuote>>;
+	/**
+	 * Fetch current quotes for multiple symbols.
+	 *
+	 * @param symbols - Array of ticker symbols
+	 * @returns Map of symbol to quote
+	 */
+	getQuotes(symbols: string[]): Promise<Map<string, AdapterQuote>>;
 
-  /**
-   * Check if the adapter is configured and ready.
-   */
-  isReady(): boolean;
+	/**
+	 * Check if the adapter is configured and ready.
+	 */
+	isReady(): boolean;
 
-  /**
-   * Get the adapter type for logging.
-   */
-  getType(): "mock" | "alpaca";
+	/**
+	 * Get the adapter type for logging.
+	 */
+	getType(): "mock" | "alpaca";
 }
 
 // ============================================
@@ -97,113 +97,113 @@ export interface MarketDataAdapter {
  * Used in BACKTEST mode for reproducible testing.
  */
 export class MockMarketDataAdapter implements MarketDataAdapter {
-  private readonly baseTimestamp = Date.UTC(2026, 0, 6, 14, 30, 0); // 2026-01-06 14:30 UTC
+	private readonly baseTimestamp = Date.UTC(2026, 0, 6, 14, 30, 0); // 2026-01-06 14:30 UTC
 
-  getType(): "mock" {
-    return "mock";
-  }
+	getType(): "mock" {
+		return "mock";
+	}
 
-  isReady(): boolean {
-    return true;
-  }
+	isReady(): boolean {
+		return true;
+	}
 
-  async getCandles(
-    symbol: string,
-    timeframe: "1m" | "5m" | "15m" | "1h" | "1d",
-    _from: string,
-    _to: string
-  ): Promise<AdapterCandle[]> {
-    const candles: AdapterCandle[] = [];
-    const intervalMs = this.getIntervalMs(timeframe);
-    const count = 120; // Generate 120 candles
+	async getCandles(
+		symbol: string,
+		timeframe: "1m" | "5m" | "15m" | "1h" | "1d",
+		_from: string,
+		_to: string
+	): Promise<AdapterCandle[]> {
+		const candles: AdapterCandle[] = [];
+		const intervalMs = this.getIntervalMs(timeframe);
+		const count = 120; // Generate 120 candles
 
-    // Generate deterministic candles based on symbol hash
-    const hash = this.hashSymbol(symbol);
-    let basePrice = 100 + (hash % 400); // Price between 100-500
+		// Generate deterministic candles based on symbol hash
+		const hash = this.hashSymbol(symbol);
+		let basePrice = 100 + (hash % 400); // Price between 100-500
 
-    for (let i = 0; i < count; i++) {
-      const timestamp = this.baseTimestamp - (count - i) * intervalMs;
-      const volatility = 0.02 + (hash % 5) * 0.005; // 2-4.5% volatility
+		for (let i = 0; i < count; i++) {
+			const timestamp = this.baseTimestamp - (count - i) * intervalMs;
+			const volatility = 0.02 + (hash % 5) * 0.005; // 2-4.5% volatility
 
-      // Generate deterministic price movement
-      const seed = (hash + i * 17) % 100;
-      const direction = seed > 50 ? 1 : -1;
-      const change = (seed / 100) * volatility * basePrice * direction;
+			// Generate deterministic price movement
+			const seed = (hash + i * 17) % 100;
+			const direction = seed > 50 ? 1 : -1;
+			const change = (seed / 100) * volatility * basePrice * direction;
 
-      const open = basePrice;
-      const close = basePrice + change;
-      const high = Math.max(open, close) * (1 + volatility * 0.3);
-      const low = Math.min(open, close) * (1 - volatility * 0.3);
-      const volume = 100000 + seed * 1000 + (hash % 50000);
+			const open = basePrice;
+			const close = basePrice + change;
+			const high = Math.max(open, close) * (1 + volatility * 0.3);
+			const low = Math.min(open, close) * (1 - volatility * 0.3);
+			const volume = 100000 + seed * 1000 + (hash % 50000);
 
-      candles.push({
-        timestamp,
-        open: Number(open.toFixed(2)),
-        high: Number(high.toFixed(2)),
-        low: Number(low.toFixed(2)),
-        close: Number(close.toFixed(2)),
-        volume: Math.round(volume),
-        vwap: Number(((open + close + high + low) / 4).toFixed(2)),
-      });
+			candles.push({
+				timestamp,
+				open: Number(open.toFixed(2)),
+				high: Number(high.toFixed(2)),
+				low: Number(low.toFixed(2)),
+				close: Number(close.toFixed(2)),
+				volume: Math.round(volume),
+				vwap: Number(((open + close + high + low) / 4).toFixed(2)),
+			});
 
-      basePrice = close;
-    }
+			basePrice = close;
+		}
 
-    return candles;
-  }
+		return candles;
+	}
 
-  async getQuote(symbol: string): Promise<AdapterQuote | null> {
-    const hash = this.hashSymbol(symbol);
-    const price = 100 + (hash % 400);
-    const spread = price * 0.0002; // 2bp spread
+	async getQuote(symbol: string): Promise<AdapterQuote | null> {
+		const hash = this.hashSymbol(symbol);
+		const price = 100 + (hash % 400);
+		const spread = price * 0.0002; // 2bp spread
 
-    return {
-      symbol,
-      bid: Number((price - spread / 2).toFixed(2)),
-      ask: Number((price + spread / 2).toFixed(2)),
-      bidSize: 100 + (hash % 900),
-      askSize: 100 + ((hash * 3) % 900),
-      last: price,
-      timestamp: Date.now(),
-    };
-  }
+		return {
+			symbol,
+			bid: Number((price - spread / 2).toFixed(2)),
+			ask: Number((price + spread / 2).toFixed(2)),
+			bidSize: 100 + (hash % 900),
+			askSize: 100 + ((hash * 3) % 900),
+			last: price,
+			timestamp: Date.now(),
+		};
+	}
 
-  async getQuotes(symbols: string[]): Promise<Map<string, AdapterQuote>> {
-    const quotes = new Map<string, AdapterQuote>();
-    for (const symbol of symbols) {
-      const quote = await this.getQuote(symbol);
-      if (quote) {
-        quotes.set(symbol, quote);
-      }
-    }
-    return quotes;
-  }
+	async getQuotes(symbols: string[]): Promise<Map<string, AdapterQuote>> {
+		const quotes = new Map<string, AdapterQuote>();
+		for (const symbol of symbols) {
+			const quote = await this.getQuote(symbol);
+			if (quote) {
+				quotes.set(symbol, quote);
+			}
+		}
+		return quotes;
+	}
 
-  private getIntervalMs(timeframe: string): number {
-    switch (timeframe) {
-      case "1m":
-        return 60 * 1000;
-      case "5m":
-        return 5 * 60 * 1000;
-      case "15m":
-        return 15 * 60 * 1000;
-      case "1h":
-        return 60 * 60 * 1000;
-      case "1d":
-        return 24 * 60 * 60 * 1000;
-      default:
-        return 60 * 60 * 1000;
-    }
-  }
+	private getIntervalMs(timeframe: string): number {
+		switch (timeframe) {
+			case "1m":
+				return 60 * 1000;
+			case "5m":
+				return 5 * 60 * 1000;
+			case "15m":
+				return 15 * 60 * 1000;
+			case "1h":
+				return 60 * 60 * 1000;
+			case "1d":
+				return 24 * 60 * 60 * 1000;
+			default:
+				return 60 * 60 * 1000;
+		}
+	}
 
-  private hashSymbol(symbol: string): number {
-    let hash = 0;
-    for (let i = 0; i < symbol.length; i++) {
-      hash = (hash << 5) - hash + symbol.charCodeAt(i);
-      hash = hash & hash; // Convert to 32bit integer
-    }
-    return Math.abs(hash);
-  }
+	private hashSymbol(symbol: string): number {
+		let hash = 0;
+		for (let i = 0; i < symbol.length; i++) {
+			hash = (hash << 5) - hash + symbol.charCodeAt(i);
+			hash = hash & hash; // Convert to 32bit integer
+		}
+		return Math.abs(hash);
+	}
 }
 
 // ============================================
@@ -221,16 +221,16 @@ export { AlpacaMarketDataAdapter } from "./adapters/alpaca-adapter.js";
  * Error thrown when market data provider is not configured.
  */
 export class MarketDataConfigError extends Error {
-  constructor(
-    public readonly provider: string,
-    public readonly missingVar: string
-  ) {
-    super(
-      `Market data provider "${provider}" requires ${missingVar} environment variable. ` +
-        `Set ${missingVar} or use CREAM_ENV=BACKTEST for mock data.`
-    );
-    this.name = "MarketDataConfigError";
-  }
+	constructor(
+		public readonly provider: string,
+		public readonly missingVar: string
+	) {
+		super(
+			`Market data provider "${provider}" requires ${missingVar} environment variable. ` +
+				`Set ${missingVar} or use CREAM_ENV=BACKTEST for mock data.`
+		);
+		this.name = "MarketDataConfigError";
+	}
 }
 
 /**
@@ -250,18 +250,18 @@ export class MarketDataConfigError extends Error {
  * ```
  */
 export function createMarketDataAdapter(env?: CreamEnvironment): MarketDataAdapter {
-  const environment = env ?? requireEnv();
+	const environment = env ?? requireEnv();
 
-  if (environment === "BACKTEST") {
-    return new MockMarketDataAdapter();
-  }
+	if (environment === "BACKTEST") {
+		return new MockMarketDataAdapter();
+	}
 
-  // PAPER/LIVE mode requires Alpaca API keys
-  if (!isAlpacaAdapterAvailable()) {
-    throw new MarketDataConfigError("alpaca", "ALPACA_KEY and ALPACA_SECRET");
-  }
+	// PAPER/LIVE mode requires Alpaca API keys
+	if (!isAlpacaAdapterAvailable()) {
+		throw new MarketDataConfigError("alpaca", "ALPACA_KEY and ALPACA_SECRET");
+	}
 
-  return new AlpacaMarketDataAdapter();
+	return new AlpacaMarketDataAdapter();
 }
 
 /**
@@ -273,14 +273,14 @@ export function createMarketDataAdapter(env?: CreamEnvironment): MarketDataAdapt
  * @returns Market data adapter or null if not configured
  */
 export function getMarketDataAdapter(env?: CreamEnvironment): MarketDataAdapter | null {
-  try {
-    return createMarketDataAdapter(env);
-  } catch (error) {
-    if (error instanceof MarketDataConfigError) {
-      return null;
-    }
-    throw error;
-  }
+	try {
+		return createMarketDataAdapter(env);
+	} catch (error) {
+		if (error instanceof MarketDataConfigError) {
+			return null;
+		}
+		throw error;
+	}
 }
 
 /**
@@ -290,5 +290,5 @@ export function getMarketDataAdapter(env?: CreamEnvironment): MarketDataAdapter 
  * @returns true if market data adapter can be created
  */
 export function isMarketDataAvailable(env?: CreamEnvironment): boolean {
-  return getMarketDataAdapter(env) !== null;
+	return getMarketDataAdapter(env) !== null;
 }

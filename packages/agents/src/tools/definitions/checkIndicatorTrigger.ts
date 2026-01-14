@@ -10,10 +10,10 @@
  */
 
 import {
-  createTriggerConditions,
-  evaluateTriggerConditions,
-  type ICHistoryEntry,
-  type TriggerConditions,
+	createTriggerConditions,
+	evaluateTriggerConditions,
+	type ICHistoryEntry,
+	type TriggerConditions,
 } from "@cream/indicators";
 import { createTool } from "@mastra/core/tools";
 import { z } from "zod";
@@ -26,8 +26,8 @@ import { z } from "zod";
  * IC (Information Coefficient) history entry schema
  */
 const ICHistoryEntrySchema = z.object({
-  date: z.string().describe("Date string in YYYY-MM-DD format"),
-  icValue: z.number().describe("IC value for that date"),
+	date: z.string().describe("Date string in YYYY-MM-DD format"),
+	icValue: z.number().describe("IC value for that date"),
 });
 
 /**
@@ -40,39 +40,39 @@ const ICHistoryEntrySchema = z.object({
  * - Indicator portfolio under capacity (max 20 indicators)
  */
 export const CheckIndicatorTriggerInputSchema = z.object({
-  regimeGapDetected: z
-    .boolean()
-    .describe("Whether a regime gap was detected (current regime lacks indicator coverage)"),
-  currentRegime: z
-    .string()
-    .describe("Current market regime label (e.g., BULL_TREND, BEAR_TREND, RANGE, HIGH_VOL)"),
-  regimeGapDetails: z.string().optional().describe("Details about the regime gap if detected"),
-  closestIndicatorSimilarity: z
-    .number()
-    .min(0)
-    .max(1)
-    .optional()
-    .describe("Similarity score of closest matching indicator (0-1, default 1.0)"),
-  icHistory: z
-    .array(ICHistoryEntrySchema)
-    .describe("IC history entries (newest first) for calculating rolling IC and decay"),
-  lastAttemptAt: z
-    .string()
-    .nullable()
-    .optional()
-    .describe("ISO timestamp of last generation attempt (null if never attempted)"),
-  activeIndicatorCount: z
-    .number()
-    .int()
-    .min(0)
-    .describe("Current count of active indicators in the portfolio"),
-  maxIndicatorCapacity: z
-    .number()
-    .int()
-    .positive()
-    .optional()
-    .default(20)
-    .describe("Maximum indicator capacity (defaults to 20)"),
+	regimeGapDetected: z
+		.boolean()
+		.describe("Whether a regime gap was detected (current regime lacks indicator coverage)"),
+	currentRegime: z
+		.string()
+		.describe("Current market regime label (e.g., BULL_TREND, BEAR_TREND, RANGE, HIGH_VOL)"),
+	regimeGapDetails: z.string().optional().describe("Details about the regime gap if detected"),
+	closestIndicatorSimilarity: z
+		.number()
+		.min(0)
+		.max(1)
+		.optional()
+		.describe("Similarity score of closest matching indicator (0-1, default 1.0)"),
+	icHistory: z
+		.array(ICHistoryEntrySchema)
+		.describe("IC history entries (newest first) for calculating rolling IC and decay"),
+	lastAttemptAt: z
+		.string()
+		.nullable()
+		.optional()
+		.describe("ISO timestamp of last generation attempt (null if never attempted)"),
+	activeIndicatorCount: z
+		.number()
+		.int()
+		.min(0)
+		.describe("Current count of active indicators in the portfolio"),
+	maxIndicatorCapacity: z
+		.number()
+		.int()
+		.positive()
+		.optional()
+		.default(20)
+		.describe("Maximum indicator capacity (defaults to 20)"),
 });
 
 export type CheckIndicatorTriggerInput = z.infer<typeof CheckIndicatorTriggerInputSchema>;
@@ -85,32 +85,32 @@ export type CheckIndicatorTriggerInput = z.infer<typeof CheckIndicatorTriggerInp
  * Computed trigger conditions for the output
  */
 const TriggerConditionsSchema = z.object({
-  regimeGapDetected: z.boolean().describe("Whether a regime gap was detected"),
-  currentRegime: z.string().describe("Current market regime"),
-  regimeGapDetails: z.string().optional().describe("Regime gap details if any"),
-  closestIndicatorSimilarity: z.number().describe("Closest indicator similarity score (0-1)"),
-  rollingIC30Day: z.number().describe("Rolling 30-day IC average"),
-  icDecayDays: z.number().describe("Number of consecutive days of IC decay"),
-  existingIndicatorsUnderperforming: z
-    .boolean()
-    .describe("Whether existing indicators are underperforming (IC < 0.02 for 5+ days)"),
-  daysSinceLastAttempt: z.number().describe("Days since last generation attempt"),
-  activeIndicatorCount: z.number().describe("Number of active indicators"),
-  maxIndicatorCapacity: z.number().describe("Maximum indicator capacity"),
+	regimeGapDetected: z.boolean().describe("Whether a regime gap was detected"),
+	currentRegime: z.string().describe("Current market regime"),
+	regimeGapDetails: z.string().optional().describe("Regime gap details if any"),
+	closestIndicatorSimilarity: z.number().describe("Closest indicator similarity score (0-1)"),
+	rollingIC30Day: z.number().describe("Rolling 30-day IC average"),
+	icDecayDays: z.number().describe("Number of consecutive days of IC decay"),
+	existingIndicatorsUnderperforming: z
+		.boolean()
+		.describe("Whether existing indicators are underperforming (IC < 0.02 for 5+ days)"),
+	daysSinceLastAttempt: z.number().describe("Days since last generation attempt"),
+	activeIndicatorCount: z.number().describe("Number of active indicators"),
+	maxIndicatorCapacity: z.number().describe("Maximum indicator capacity"),
 });
 
 /**
  * Output schema for indicator trigger check
  */
 export const CheckIndicatorTriggerOutputSchema = z.object({
-  shouldTrigger: z.boolean().describe("Whether indicator generation should be triggered"),
-  triggerReason: z
-    .string()
-    .nullable()
-    .describe("The reason for triggering (or null if not triggered)"),
-  conditions: TriggerConditionsSchema.describe("The computed trigger conditions"),
-  summary: z.string().describe("Human-readable summary of the evaluation"),
-  recommendation: z.string().describe("Actionable recommendation for the Orient agent"),
+	shouldTrigger: z.boolean().describe("Whether indicator generation should be triggered"),
+	triggerReason: z
+		.string()
+		.nullable()
+		.describe("The reason for triggering (or null if not triggered)"),
+	conditions: TriggerConditionsSchema.describe("The computed trigger conditions"),
+	summary: z.string().describe("Human-readable summary of the evaluation"),
+	recommendation: z.string().describe("Actionable recommendation for the Orient agent"),
 });
 
 export type CheckIndicatorTriggerOutput = z.infer<typeof CheckIndicatorTriggerOutputSchema>;
@@ -142,9 +142,9 @@ export type CheckIndicatorTriggerOutput = z.infer<typeof CheckIndicatorTriggerOu
  * ```
  */
 export function createCheckIndicatorTriggerTool() {
-  return createTool({
-    id: "check_indicator_trigger",
-    description: `Check if conditions warrant triggering autonomous indicator synthesis.
+	return createTool({
+		id: "check_indicator_trigger",
+		description: `Check if conditions warrant triggering autonomous indicator synthesis.
 
 This tool evaluates multiple trigger conditions for the Dynamic Indicator Synthesis pipeline:
 
@@ -159,81 +159,81 @@ This tool evaluates multiple trigger conditions for the Dynamic Indicator Synthe
 
 Use this during the Orient phase to decide if indicator synthesis should be initiated.
 Returns detailed conditions and a recommendation for next steps.`,
-    inputSchema: CheckIndicatorTriggerInputSchema,
-    outputSchema: CheckIndicatorTriggerOutputSchema,
-    execute: async (inputData) => {
-      const {
-        regimeGapDetected,
-        currentRegime,
-        regimeGapDetails,
-        closestIndicatorSimilarity,
-        icHistory,
-        lastAttemptAt,
-        activeIndicatorCount,
-        maxIndicatorCapacity,
-      } = inputData;
+		inputSchema: CheckIndicatorTriggerInputSchema,
+		outputSchema: CheckIndicatorTriggerOutputSchema,
+		execute: async (inputData) => {
+			const {
+				regimeGapDetected,
+				currentRegime,
+				regimeGapDetails,
+				closestIndicatorSimilarity,
+				icHistory,
+				lastAttemptAt,
+				activeIndicatorCount,
+				maxIndicatorCapacity,
+			} = inputData;
 
-      // Transform input to TriggerConditionsInput format
-      const triggerInput = {
-        regimeGapDetected,
-        currentRegime,
-        regimeGapDetails,
-        closestIndicatorSimilarity,
-        icHistory: icHistory as ICHistoryEntry[],
-        lastAttemptAt,
-        activeIndicatorCount,
-        maxIndicatorCapacity,
-      };
+			// Transform input to TriggerConditionsInput format
+			const triggerInput = {
+				regimeGapDetected,
+				currentRegime,
+				regimeGapDetails,
+				closestIndicatorSimilarity,
+				icHistory: icHistory as ICHistoryEntry[],
+				lastAttemptAt,
+				activeIndicatorCount,
+				maxIndicatorCapacity,
+			};
 
-      // Create computed conditions using the indicators package
-      const conditions: TriggerConditions = createTriggerConditions(triggerInput);
+			// Create computed conditions using the indicators package
+			const conditions: TriggerConditions = createTriggerConditions(triggerInput);
 
-      // Evaluate trigger conditions
-      const evaluation = evaluateTriggerConditions(conditions);
+			// Evaluate trigger conditions
+			const evaluation = evaluateTriggerConditions(conditions);
 
-      // Determine trigger reason
-      let triggerReason: string | null = null;
-      if (evaluation.shouldTrigger) {
-        if (conditions.regimeGapDetected) {
-          triggerReason = `Regime gap detected: ${conditions.currentRegime}${conditions.regimeGapDetails ? ` - ${conditions.regimeGapDetails}` : ""}`;
-        } else if (conditions.existingIndicatorsUnderperforming) {
-          triggerReason = `Sustained underperformance: IC ${conditions.rollingIC30Day.toFixed(4)} < 0.02 for ${conditions.icDecayDays}+ days`;
-        }
-      }
+			// Determine trigger reason
+			let triggerReason: string | null = null;
+			if (evaluation.shouldTrigger) {
+				if (conditions.regimeGapDetected) {
+					triggerReason = `Regime gap detected: ${conditions.currentRegime}${conditions.regimeGapDetails ? ` - ${conditions.regimeGapDetails}` : ""}`;
+				} else if (conditions.existingIndicatorsUnderperforming) {
+					triggerReason = `Sustained underperformance: IC ${conditions.rollingIC30Day.toFixed(4)} < 0.02 for ${conditions.icDecayDays}+ days`;
+				}
+			}
 
-      // Build actionable recommendation
-      let recommendation: string;
-      if (evaluation.shouldTrigger) {
-        recommendation = `Launch indicator synthesis workflow targeting ${conditions.currentRegime} regime. ${triggerReason}`;
-      } else if (conditions.daysSinceLastAttempt < 30) {
-        const daysRemaining = 30 - conditions.daysSinceLastAttempt;
-        recommendation = `Wait ${daysRemaining} more day(s) before next synthesis attempt (cooldown active)`;
-      } else if (conditions.activeIndicatorCount >= conditions.maxIndicatorCapacity) {
-        recommendation = `Retire underperforming indicators before creating new ones (capacity: ${conditions.activeIndicatorCount}/${conditions.maxIndicatorCapacity})`;
-      } else if (conditions.closestIndicatorSimilarity >= 0.7) {
-        recommendation = `Existing indicators are sufficient (similarity: ${conditions.closestIndicatorSimilarity.toFixed(2)}). Consider refinement instead of new synthesis.`;
-      } else {
-        recommendation = "Continue monitoring. No action required at this time.";
-      }
+			// Build actionable recommendation
+			let recommendation: string;
+			if (evaluation.shouldTrigger) {
+				recommendation = `Launch indicator synthesis workflow targeting ${conditions.currentRegime} regime. ${triggerReason}`;
+			} else if (conditions.daysSinceLastAttempt < 30) {
+				const daysRemaining = 30 - conditions.daysSinceLastAttempt;
+				recommendation = `Wait ${daysRemaining} more day(s) before next synthesis attempt (cooldown active)`;
+			} else if (conditions.activeIndicatorCount >= conditions.maxIndicatorCapacity) {
+				recommendation = `Retire underperforming indicators before creating new ones (capacity: ${conditions.activeIndicatorCount}/${conditions.maxIndicatorCapacity})`;
+			} else if (conditions.closestIndicatorSimilarity >= 0.7) {
+				recommendation = `Existing indicators are sufficient (similarity: ${conditions.closestIndicatorSimilarity.toFixed(2)}). Consider refinement instead of new synthesis.`;
+			} else {
+				recommendation = "Continue monitoring. No action required at this time.";
+			}
 
-      return {
-        shouldTrigger: evaluation.shouldTrigger,
-        triggerReason,
-        conditions: {
-          regimeGapDetected: conditions.regimeGapDetected,
-          currentRegime: conditions.currentRegime,
-          regimeGapDetails: conditions.regimeGapDetails,
-          closestIndicatorSimilarity: conditions.closestIndicatorSimilarity,
-          rollingIC30Day: conditions.rollingIC30Day,
-          icDecayDays: conditions.icDecayDays,
-          existingIndicatorsUnderperforming: conditions.existingIndicatorsUnderperforming,
-          daysSinceLastAttempt: conditions.daysSinceLastAttempt,
-          activeIndicatorCount: conditions.activeIndicatorCount,
-          maxIndicatorCapacity: conditions.maxIndicatorCapacity,
-        },
-        summary: evaluation.summary,
-        recommendation,
-      };
-    },
-  });
+			return {
+				shouldTrigger: evaluation.shouldTrigger,
+				triggerReason,
+				conditions: {
+					regimeGapDetected: conditions.regimeGapDetected,
+					currentRegime: conditions.currentRegime,
+					regimeGapDetails: conditions.regimeGapDetails,
+					closestIndicatorSimilarity: conditions.closestIndicatorSimilarity,
+					rollingIC30Day: conditions.rollingIC30Day,
+					icDecayDays: conditions.icDecayDays,
+					existingIndicatorsUnderperforming: conditions.existingIndicatorsUnderperforming,
+					daysSinceLastAttempt: conditions.daysSinceLastAttempt,
+					activeIndicatorCount: conditions.activeIndicatorCount,
+					maxIndicatorCapacity: conditions.maxIndicatorCapacity,
+				},
+				summary: evaluation.summary,
+				recommendation,
+			};
+		},
+	});
 }

@@ -12,13 +12,13 @@ export { auth, type Session, type User } from "./better-auth.js";
 
 // Session middleware (better-auth based)
 export {
-  DEFAULT_LIVE_PROTECTION,
-  getSession,
-  getUser,
-  type LiveProtectionOptions,
-  liveProtection,
-  optionalAuth,
-  requireAuth,
-  type SessionVariables,
-  sessionMiddleware,
+	DEFAULT_LIVE_PROTECTION,
+	getSession,
+	getUser,
+	type LiveProtectionOptions,
+	liveProtection,
+	optionalAuth,
+	requireAuth,
+	type SessionVariables,
+	sessionMiddleware,
 } from "./session.js";

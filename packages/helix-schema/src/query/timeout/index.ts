@@ -35,14 +35,14 @@ export { QueryCache } from "./cache.js";
 
 // Constants
 export {
-  DEFAULT_CACHE_TTL_MS,
-  DEFAULT_COMBINED_TIMEOUT_MS,
-  DEFAULT_GRAPH_TIMEOUT_MS,
-  DEFAULT_TIMEOUT_CONFIG,
-  DEFAULT_VECTOR_TIMEOUT_MS,
-  QueryType,
-  STALE_EMBEDDING_THRESHOLD_MS,
-  TIMEOUT_RATE_ALERT_THRESHOLD,
+	DEFAULT_CACHE_TTL_MS,
+	DEFAULT_COMBINED_TIMEOUT_MS,
+	DEFAULT_GRAPH_TIMEOUT_MS,
+	DEFAULT_TIMEOUT_CONFIG,
+	DEFAULT_VECTOR_TIMEOUT_MS,
+	QueryType,
+	STALE_EMBEDDING_THRESHOLD_MS,
+	TIMEOUT_RATE_ALERT_THRESHOLD,
 } from "./constants.js";
 // Contradiction
 export { detectContradiction, resolveContradictions } from "./contradiction.js";
@@ -54,26 +54,26 @@ export { getTimeoutForQueryType, withTimeout } from "./execution.js";
 export { executeWithFallback } from "./fallback.js";
 // Freshness
 export {
-  getEmbeddingAgeHours,
-  isEmbeddingStale,
-  needsReembedding,
-  validateFreshness,
+	getEmbeddingAgeHours,
+	isEmbeddingStale,
+	needsReembedding,
+	validateFreshness,
 } from "./freshness.js";
 
 // Metrics
 export { MetricsCollector } from "./metrics.js";
 // Types
 export type {
-  CacheEntry,
-  ContradictionResult,
-  FallbackStrategy,
-  FreshnessInfo,
-  QueryFunction,
-  QueryMetrics,
-  QueryOptions,
-  QueryResult,
-  QueryWrapperOptions,
-  TimeoutConfig,
+	CacheEntry,
+	ContradictionResult,
+	FallbackStrategy,
+	FreshnessInfo,
+	QueryFunction,
+	QueryMetrics,
+	QueryOptions,
+	QueryResult,
+	QueryWrapperOptions,
+	TimeoutConfig,
 } from "./types.js";
 
 // Wrapper

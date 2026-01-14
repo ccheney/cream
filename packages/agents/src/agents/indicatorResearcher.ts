@@ -11,8 +11,10 @@
  * @see docs/plans/19-dynamic-indicator-synthesis.md (lines 276-343)
  */
 
-import { DEFAULT_GLOBAL_MODEL, type GlobalModel } from "@cream/domain";
+import { type GlobalModel, getDefaultGlobalModel } from "@cream/domain";
 import { type IndicatorHypothesis, IndicatorHypothesisSchema } from "@cream/indicators";
+
+import { INDICATOR_RESEARCHER_CONFIG } from "./configs/indicatorResearcher.js";
 
 // ============================================
 // System Prompt
@@ -84,40 +86,42 @@ Think step-by-step in <analysis> tags, then output the hypothesis.
  * Configuration for the Indicator Researcher agent
  */
 export interface IndicatorResearcherConfig {
-  /** Agent type identifier */
-  type: "indicator_researcher";
+	/** Agent type identifier */
+	type: "indicator_researcher";
 
-  /** Display name */
-  name: string;
+	/** Display name */
+	name: string;
 
-  /** Role description */
-  role: string;
+	/** Role description */
+	role: string;
 
-  /** Model to use (global model from trading_config) */
-  model: GlobalModel;
+	/** Model to use (global model from trading_config) */
+	model: GlobalModel;
 
-  /** System prompt for hypothesis generation */
-  systemPrompt: string;
+	/** System prompt for hypothesis generation */
+	systemPrompt: string;
 
-  /** Tools this agent can use */
-  tools: string[];
+	/** Tools this agent can use */
+	tools: string[];
 
-  /** Maximum output tokens */
-  maxTokens: number;
+	/** Maximum output tokens */
+	maxTokens: number;
 }
 
 /**
  * Default configuration for the Indicator Researcher agent
  */
-export const INDICATOR_RESEARCHER_CONFIG: IndicatorResearcherConfig = {
-  type: "indicator_researcher",
-  name: "Indicator Researcher",
-  role: "Formulate indicator hypotheses based on regime gaps and performance analysis",
-  model: DEFAULT_GLOBAL_MODEL,
-  systemPrompt: INDICATOR_RESEARCHER_SYSTEM_PROMPT,
-  tools: ["google_search", "helix_query"],
-  maxTokens: 2000,
-};
+export function getIndicatorResearcherConfig(): IndicatorResearcherConfig {
+	return {
+		type: "indicator_researcher",
+		name: "Indicator Researcher",
+		role: "Formulate indicator hypotheses based on regime gaps and performance analysis",
+		model: getDefaultGlobalModel(),
+		systemPrompt: INDICATOR_RESEARCHER_SYSTEM_PROMPT,
+		tools: ["google_search", "helix_query"],
+		maxTokens: 2000,
+	};
+}
 
 // ============================================
 // Input/Output Types
@@ -127,44 +131,44 @@ export const INDICATOR_RESEARCHER_CONFIG: IndicatorResearcherConfig = {
  * Input context for hypothesis generation
  */
 export interface ResearcherInput {
-  /** Current market regime identifier */
-  currentRegime: string;
+	/** Current market regime identifier */
+	currentRegime: string;
 
-  /** Details about the regime gap */
-  regimeGapDetails: string;
+	/** Details about the regime gap */
+	regimeGapDetails: string;
 
-  /** Rolling IC of existing indicators */
-  rollingIC: number;
+	/** Rolling IC of existing indicators */
+	rollingIC: number;
 
-  /** Days of IC decay */
-  icDecayDays: number;
+	/** Days of IC decay */
+	icDecayDays: number;
 
-  /** Names of existing indicators for orthogonality consideration */
-  existingIndicators: string[];
+	/** Names of existing indicators for orthogonality consideration */
+	existingIndicators: string[];
 
-  /** Optional context from previous hypotheses */
-  previousHypotheses?: Array<{
-    name: string;
-    status: string;
-    rejectionReason?: string;
-  }>;
+	/** Optional context from previous hypotheses */
+	previousHypotheses?: Array<{
+		name: string;
+		status: string;
+		rejectionReason?: string;
+	}>;
 }
 
 /**
  * Output from the Researcher agent
  */
 export interface ResearcherOutput {
-  /** Generated hypothesis (validated against schema) */
-  hypothesis: IndicatorHypothesis;
+	/** Generated hypothesis (validated against schema) */
+	hypothesis: IndicatorHypothesis;
 
-  /** Agent's confidence in this hypothesis (0-1) */
-  confidence: number;
+	/** Agent's confidence in this hypothesis (0-1) */
+	confidence: number;
 
-  /** Brief explanation of research process */
-  researchSummary: string;
+	/** Brief explanation of research process */
+	researchSummary: string;
 
-  /** Academic references consulted */
-  academicReferences: string[];
+	/** Academic references consulted */
+	academicReferences: string[];
 }
 
 // ============================================
@@ -178,53 +182,53 @@ export interface ResearcherOutput {
  * @returns Formatted user prompt
  */
 export function buildResearcherPrompt(input: ResearcherInput): string {
-  const now = new Date();
-  const eastern = now.toLocaleString("en-US", {
-    timeZone: "America/New_York",
-    year: "numeric",
-    month: "2-digit",
-    day: "2-digit",
-    hour: "2-digit",
-    minute: "2-digit",
-    second: "2-digit",
-    hour12: false,
-  });
+	const now = new Date();
+	const eastern = now.toLocaleString("en-US", {
+		timeZone: "America/New_York",
+		year: "numeric",
+		month: "2-digit",
+		day: "2-digit",
+		hour: "2-digit",
+		minute: "2-digit",
+		second: "2-digit",
+		hour12: false,
+	});
 
-  const lines: string[] = [
-    `Current Date/Time (UTC): ${now.toISOString()}`,
-    `Current Date/Time (US Eastern): ${eastern}`,
-    "",
-    "## Regime Gap Analysis Request",
-    "",
-    `**Current Regime:** ${input.currentRegime}`,
-    `**Gap Description:** ${input.regimeGapDetails}`,
-    "",
-    "## Performance Context",
-    `- Rolling 30-day IC: ${input.rollingIC.toFixed(4)}`,
-    `- IC Decay Days: ${input.icDecayDays}`,
-    "",
-    "## Existing Indicators (for orthogonality)",
-    ...input.existingIndicators.slice(0, 20).map((i) => `- ${i}`),
-  ];
+	const lines: string[] = [
+		`Current Date/Time (UTC): ${now.toISOString()}`,
+		`Current Date/Time (US Eastern): ${eastern}`,
+		"",
+		"## Regime Gap Analysis Request",
+		"",
+		`**Current Regime:** ${input.currentRegime}`,
+		`**Gap Description:** ${input.regimeGapDetails}`,
+		"",
+		"## Performance Context",
+		`- Rolling 30-day IC: ${input.rollingIC.toFixed(4)}`,
+		`- IC Decay Days: ${input.icDecayDays}`,
+		"",
+		"## Existing Indicators (for orthogonality)",
+		...input.existingIndicators.slice(0, 20).map((i) => `- ${i}`),
+	];
 
-  if (input.previousHypotheses && input.previousHypotheses.length > 0) {
-    lines.push("", "## Previous Hypotheses (avoid similar approaches)");
-    for (const h of input.previousHypotheses.slice(0, 5)) {
-      const reason = h.rejectionReason
-        ? ` - Rejected: ${h.rejectionReason}`
-        : ` - Status: ${h.status}`;
-      lines.push(`- ${h.name}${reason}`);
-    }
-  }
+	if (input.previousHypotheses && input.previousHypotheses.length > 0) {
+		lines.push("", "## Previous Hypotheses (avoid similar approaches)");
+		for (const h of input.previousHypotheses.slice(0, 5)) {
+			const reason = h.rejectionReason
+				? ` - Rejected: ${h.rejectionReason}`
+				: ` - Status: ${h.status}`;
+			lines.push(`- ${h.name}${reason}`);
+		}
+	}
 
-  lines.push(
-    "",
-    "## Task",
-    "Generate a single indicator hypothesis that addresses the regime gap.",
-    "Focus on orthogonality to existing indicators and clear economic rationale."
-  );
+	lines.push(
+		"",
+		"## Task",
+		"Generate a single indicator hypothesis that addresses the regime gap.",
+		"Focus on orthogonality to existing indicators and clear economic rationale."
+	);
 
-  return lines.join("\n");
+	return lines.join("\n");
 }
 
 // ============================================
@@ -238,35 +242,35 @@ export function buildResearcherPrompt(input: ResearcherInput): string {
  * @returns Validated hypothesis or throws error
  */
 export function parseResearcherResponse(response: string): IndicatorHypothesis {
-  // Extract JSON from response (may be wrapped in markdown code block)
-  let jsonStr = response;
+	// Extract JSON from response (may be wrapped in markdown code block)
+	let jsonStr = response;
 
-  // Handle markdown code blocks
-  const jsonMatch = response.match(/```(?:json)?\s*([\s\S]*?)\s*```/);
-  if (jsonMatch?.[1]) {
-    jsonStr = jsonMatch[1];
-  }
+	// Handle markdown code blocks
+	const jsonMatch = response.match(/```(?:json)?\s*([\s\S]*?)\s*```/);
+	if (jsonMatch?.[1]) {
+		jsonStr = jsonMatch[1];
+	}
 
-  // Parse JSON
-  let parsed: unknown;
-  try {
-    parsed = JSON.parse(jsonStr.trim());
-  } catch (e) {
-    throw new Error(
-      `Failed to parse researcher response as JSON: ${e instanceof Error ? e.message : String(e)}`
-    );
-  }
+	// Parse JSON
+	let parsed: unknown;
+	try {
+		parsed = JSON.parse(jsonStr.trim());
+	} catch (e) {
+		throw new Error(
+			`Failed to parse researcher response as JSON: ${e instanceof Error ? e.message : String(e)}`
+		);
+	}
 
-  // Validate against schema
-  const result = IndicatorHypothesisSchema.safeParse(parsed);
-  if (!result.success) {
-    const errors = result.error.issues
-      .map((issue) => `${issue.path.join(".")}: ${issue.message}`)
-      .join("; ");
-    throw new Error(`Invalid hypothesis schema: ${errors}`);
-  }
+	// Validate against schema
+	const result = IndicatorHypothesisSchema.safeParse(parsed);
+	if (!result.success) {
+		const errors = result.error.issues
+			.map((issue) => `${issue.path.join(".")}: ${issue.message}`)
+			.join("; ");
+		throw new Error(`Invalid hypothesis schema: ${errors}`);
+	}
 
-  return result.data;
+	return result.data;
 }
 
 // ============================================
@@ -274,10 +278,10 @@ export function parseResearcherResponse(response: string): IndicatorHypothesis {
 // ============================================
 
 export const indicatorResearcher = {
-  config: INDICATOR_RESEARCHER_CONFIG,
-  systemPrompt: INDICATOR_RESEARCHER_SYSTEM_PROMPT,
-  buildPrompt: buildResearcherPrompt,
-  parseResponse: parseResearcherResponse,
+	config: INDICATOR_RESEARCHER_CONFIG,
+	systemPrompt: INDICATOR_RESEARCHER_SYSTEM_PROMPT,
+	buildPrompt: buildResearcherPrompt,
+	parseResponse: parseResearcherResponse,
 };
 
 export default indicatorResearcher;

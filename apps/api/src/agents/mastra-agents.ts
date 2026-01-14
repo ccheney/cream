@@ -23,19 +23,19 @@
 // ============================================
 
 export type {
-  AgentConfigEntry,
-  AgentContext,
-  AgentRuntimeSettings,
-  AgentStreamChunk,
-  BearishResearchOutput,
-  BullishResearchOutput,
-  CriticOutput,
-  DecisionPlan,
-  FundamentalsAnalysisOutput,
-  IdeaAgentContext,
-  OnStreamChunk,
-  RiskManagerOutput,
-  SentimentAnalysisOutput,
+	AgentConfigEntry,
+	AgentContext,
+	AgentRuntimeSettings,
+	AgentStreamChunk,
+	BearishResearchOutput,
+	BullishResearchOutput,
+	CriticOutput,
+	DecisionPlan,
+	FundamentalsAnalysisOutput,
+	IdeaAgentContext,
+	OnStreamChunk,
+	RiskManagerOutput,
+	SentimentAnalysisOutput,
 } from "./types.js";
 
 // ============================================
@@ -49,14 +49,14 @@ export type { IdeaAgentOutput } from "./schemas.js";
 // ============================================
 
 export {
-  fundamentalsAnalystAgent,
-  newsAnalystAgent,
-  runAnalystsParallel,
-  runAnalystsParallelStreaming,
-  runFundamentalsAnalyst,
-  runFundamentalsAnalystStreaming,
-  runNewsAnalyst,
-  runNewsAnalystStreaming,
+	fundamentalsAnalystAgent,
+	newsAnalystAgent,
+	runAnalystsParallel,
+	runAnalystsParallelStreaming,
+	runFundamentalsAnalyst,
+	runFundamentalsAnalystStreaming,
+	runNewsAnalyst,
+	runNewsAnalystStreaming,
 } from "./analysts.js";
 
 // ============================================
@@ -64,18 +64,18 @@ export {
 // ============================================
 
 export {
-  bearishResearcherAgent,
-  bullishResearcherAgent,
-  ideaAgentAgent,
-  indicatorResearcherAgent,
-  runBearishResearcher,
-  runBearishResearcherStreaming,
-  runBullishResearcher,
-  runBullishResearcherStreaming,
-  runDebateParallel,
-  runDebateParallelStreaming,
-  runIdeaAgent,
-  runIndicatorResearcher,
+	bearishResearcherAgent,
+	bullishResearcherAgent,
+	ideaAgentAgent,
+	indicatorResearcherAgent,
+	runBearishResearcher,
+	runBearishResearcherStreaming,
+	runBullishResearcher,
+	runBullishResearcherStreaming,
+	runDebateParallel,
+	runDebateParallelStreaming,
+	runIdeaAgent,
+	runIndicatorResearcher,
 } from "./researchers.js";
 
 // ============================================
@@ -83,10 +83,10 @@ export {
 // ============================================
 
 export {
-  revisePlan,
-  runTrader,
-  runTraderStreaming,
-  traderAgent,
+	revisePlan,
+	runTrader,
+	runTraderStreaming,
+	traderAgent,
 } from "./trader.js";
 
 // ============================================
@@ -94,14 +94,14 @@ export {
 // ============================================
 
 export {
-  criticAgent,
-  riskManagerAgent,
-  runApprovalParallel,
-  runApprovalParallelStreaming,
-  runCritic,
-  runCriticStreaming,
-  runRiskManager,
-  runRiskManagerStreaming,
+	criticAgent,
+	riskManagerAgent,
+	runApprovalParallel,
+	runApprovalParallelStreaming,
+	runCritic,
+	runCriticStreaming,
+	runRiskManager,
+	runRiskManagerStreaming,
 } from "./approvers.js";
 
 // ============================================
@@ -109,9 +109,9 @@ export {
 // ============================================
 
 export {
-  type ConsensusResult,
-  runConsensusLoop,
-  runConsensusLoopStreaming,
+	type ConsensusResult,
+	runConsensusLoop,
+	runConsensusLoopStreaming,
 } from "./consensus.js";
 
 // ============================================
@@ -121,23 +121,23 @@ export {
 import { fundamentalsAnalystAgent, newsAnalystAgent } from "./analysts.js";
 import { criticAgent, riskManagerAgent } from "./approvers.js";
 import {
-  bearishResearcherAgent,
-  bullishResearcherAgent,
-  ideaAgentAgent,
-  indicatorResearcherAgent,
+	bearishResearcherAgent,
+	bullishResearcherAgent,
+	ideaAgentAgent,
+	indicatorResearcherAgent,
 } from "./researchers.js";
 import { traderAgent } from "./trader.js";
 
 export const mastraAgents = {
-  news_analyst: newsAnalystAgent,
-  fundamentals_analyst: fundamentalsAnalystAgent,
-  bullish_researcher: bullishResearcherAgent,
-  bearish_researcher: bearishResearcherAgent,
-  trader: traderAgent,
-  risk_manager: riskManagerAgent,
-  critic: criticAgent,
-  idea_agent: ideaAgentAgent,
-  indicator_researcher: indicatorResearcherAgent,
+	news_analyst: newsAnalystAgent,
+	fundamentals_analyst: fundamentalsAnalystAgent,
+	bullish_researcher: bullishResearcherAgent,
+	bearish_researcher: bearishResearcherAgent,
+	trader: traderAgent,
+	risk_manager: riskManagerAgent,
+	critic: criticAgent,
+	idea_agent: ideaAgentAgent,
+	indicator_researcher: indicatorResearcherAgent,
 } as const;
 
 export type MastraAgentRegistry = typeof mastraAgents;

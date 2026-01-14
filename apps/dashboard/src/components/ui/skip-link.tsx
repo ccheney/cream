@@ -14,10 +14,10 @@
 // ============================================
 
 export interface SkipLinkProps {
-  /** Target element ID to skip to (default: "main-content") */
-  href?: string;
-  /** Link text (default: "Skip to content") */
-  children?: React.ReactNode;
+	/** Target element ID to skip to (default: "main-content") */
+	href?: string;
+	/** Link text (default: "Skip to content") */
+	children?: React.ReactNode;
 }
 
 // ============================================
@@ -41,10 +41,10 @@ export interface SkipLinkProps {
  * ```
  */
 export function SkipLink({ href = "#main-content", children = "Skip to content" }: SkipLinkProps) {
-  return (
-    <a
-      href={href}
-      className="
+	return (
+		<a
+			href={href}
+			className="
         sr-only
         focus:not-sr-only
         focus:fixed
@@ -66,10 +66,10 @@ export function SkipLink({ href = "#main-content", children = "Skip to content" 
         focus:ring-offset-white
         dark:focus:ring-offset-night-900
       "
-    >
-      {children}
-    </a>
-  );
+		>
+			{children}
+		</a>
+	);
 }
 
 // ============================================

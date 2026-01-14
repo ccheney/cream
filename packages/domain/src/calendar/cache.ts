@@ -18,46 +18,46 @@ import type { CalendarDay, MarketClock } from "./types";
  * Cache entry for year calendar data.
  */
 interface YearCacheEntry {
-  data: CalendarDay[];
-  expiresAt: number;
+	data: CalendarDay[];
+	expiresAt: number;
 }
 
 /**
  * Cache entry for market clock.
  */
 interface ClockCacheEntry {
-  data: MarketClock;
-  expiresAt: number;
+	data: MarketClock;
+	expiresAt: number;
 }
 
 /**
  * Calendar cache configuration.
  */
 export interface CalendarCacheConfig {
-  /** Calendar data TTL in milliseconds (default: 24 hours) */
-  calendarTtlMs?: number;
-  /** Clock data TTL in milliseconds (default: 30 seconds) */
-  clockTtlMs?: number;
+	/** Calendar data TTL in milliseconds (default: 24 hours) */
+	calendarTtlMs?: number;
+	/** Clock data TTL in milliseconds (default: 30 seconds) */
+	clockTtlMs?: number;
 }
 
 /**
  * Calendar cache interface for dependency injection.
  */
 export interface CalendarCache {
-  /** Get calendar data for a year. Returns undefined if not cached or expired. */
-  getYear(year: number): CalendarDay[] | undefined;
-  /** Cache calendar data for a year. */
-  setYear(year: number, days: CalendarDay[]): void;
-  /** Get market clock. Returns undefined if not cached or expired. */
-  getClock(): MarketClock | undefined;
-  /** Cache market clock. */
-  setClock(clock: MarketClock): void;
-  /** Preload calendar data for specified years. */
-  preloadYears(years: number[], client: AlpacaCalendarClient): Promise<void>;
-  /** Check if a year is loaded and not expired. */
-  isYearLoaded(year: number): boolean;
-  /** Clear all cached data. Useful for testing. */
-  clear(): void;
+	/** Get calendar data for a year. Returns undefined if not cached or expired. */
+	getYear(year: number): CalendarDay[] | undefined;
+	/** Cache calendar data for a year. */
+	setYear(year: number, days: CalendarDay[]): void;
+	/** Get market clock. Returns undefined if not cached or expired. */
+	getClock(): MarketClock | undefined;
+	/** Cache market clock. */
+	setClock(clock: MarketClock): void;
+	/** Preload calendar data for specified years. */
+	preloadYears(years: number[], client: AlpacaCalendarClient): Promise<void>;
+	/** Check if a year is loaded and not expired. */
+	isYearLoaded(year: number): boolean;
+	/** Clear all cached data. Useful for testing. */
+	clear(): void;
 }
 
 // ============================================
@@ -100,116 +100,116 @@ const DEFAULT_CLOCK_TTL_MS = 30 * 1000;
  * ```
  */
 export class InMemoryCalendarCache implements CalendarCache {
-  private readonly yearCache = new Map<number, YearCacheEntry>();
-  private clockCache: ClockCacheEntry | undefined;
+	private readonly yearCache = new Map<number, YearCacheEntry>();
+	private clockCache: ClockCacheEntry | undefined;
 
-  private readonly calendarTtlMs: number;
-  private readonly clockTtlMs: number;
+	private readonly calendarTtlMs: number;
+	private readonly clockTtlMs: number;
 
-  constructor(config: CalendarCacheConfig = {}) {
-    this.calendarTtlMs = config.calendarTtlMs ?? DEFAULT_CALENDAR_TTL_MS;
-    this.clockTtlMs = config.clockTtlMs ?? DEFAULT_CLOCK_TTL_MS;
-  }
+	constructor(config: CalendarCacheConfig = {}) {
+		this.calendarTtlMs = config.calendarTtlMs ?? DEFAULT_CALENDAR_TTL_MS;
+		this.clockTtlMs = config.clockTtlMs ?? DEFAULT_CLOCK_TTL_MS;
+	}
 
-  /**
-   * Get calendar data for a year.
-   * Returns undefined if not cached or expired.
-   */
-  getYear(year: number): CalendarDay[] | undefined {
-    const entry = this.yearCache.get(year);
-    if (!entry) {
-      return undefined;
-    }
+	/**
+	 * Get calendar data for a year.
+	 * Returns undefined if not cached or expired.
+	 */
+	getYear(year: number): CalendarDay[] | undefined {
+		const entry = this.yearCache.get(year);
+		if (!entry) {
+			return undefined;
+		}
 
-    if (Date.now() > entry.expiresAt) {
-      this.yearCache.delete(year);
-      return undefined;
-    }
+		if (Date.now() > entry.expiresAt) {
+			this.yearCache.delete(year);
+			return undefined;
+		}
 
-    return entry.data;
-  }
+		return entry.data;
+	}
 
-  /**
-   * Cache calendar data for a year.
-   */
-  setYear(year: number, days: CalendarDay[]): void {
-    this.yearCache.set(year, {
-      data: days,
-      expiresAt: Date.now() + this.calendarTtlMs,
-    });
-  }
+	/**
+	 * Cache calendar data for a year.
+	 */
+	setYear(year: number, days: CalendarDay[]): void {
+		this.yearCache.set(year, {
+			data: days,
+			expiresAt: Date.now() + this.calendarTtlMs,
+		});
+	}
 
-  /**
-   * Get market clock.
-   * Returns undefined if not cached or expired.
-   */
-  getClock(): MarketClock | undefined {
-    if (!this.clockCache) {
-      return undefined;
-    }
+	/**
+	 * Get market clock.
+	 * Returns undefined if not cached or expired.
+	 */
+	getClock(): MarketClock | undefined {
+		if (!this.clockCache) {
+			return undefined;
+		}
 
-    if (Date.now() > this.clockCache.expiresAt) {
-      this.clockCache = undefined;
-      return undefined;
-    }
+		if (Date.now() > this.clockCache.expiresAt) {
+			this.clockCache = undefined;
+			return undefined;
+		}
 
-    return this.clockCache.data;
-  }
+		return this.clockCache.data;
+	}
 
-  /**
-   * Cache market clock.
-   */
-  setClock(clock: MarketClock): void {
-    this.clockCache = {
-      data: clock,
-      expiresAt: Date.now() + this.clockTtlMs,
-    };
-  }
+	/**
+	 * Cache market clock.
+	 */
+	setClock(clock: MarketClock): void {
+		this.clockCache = {
+			data: clock,
+			expiresAt: Date.now() + this.clockTtlMs,
+		};
+	}
 
-  /**
-   * Preload calendar data for specified years.
-   * Fetches data from the Alpaca API and caches it.
-   */
-  async preloadYears(years: number[], client: AlpacaCalendarClient): Promise<void> {
-    await Promise.all(
-      years.map(async (year) => {
-        // Skip if already loaded and not expired
-        if (this.isYearLoaded(year)) {
-          return;
-        }
+	/**
+	 * Preload calendar data for specified years.
+	 * Fetches data from the Alpaca API and caches it.
+	 */
+	async preloadYears(years: number[], client: AlpacaCalendarClient): Promise<void> {
+		await Promise.all(
+			years.map(async (year) => {
+				// Skip if already loaded and not expired
+				if (this.isYearLoaded(year)) {
+					return;
+				}
 
-        const startDate = `${year}-01-01`;
-        const endDate = `${year}-12-31`;
-        const days = await client.getCalendar(startDate, endDate);
-        this.setYear(year, days);
-      })
-    );
-  }
+				const startDate = `${year}-01-01`;
+				const endDate = `${year}-12-31`;
+				const days = await client.getCalendar(startDate, endDate);
+				this.setYear(year, days);
+			})
+		);
+	}
 
-  /**
-   * Check if a year is loaded and not expired.
-   */
-  isYearLoaded(year: number): boolean {
-    const entry = this.yearCache.get(year);
-    if (!entry) {
-      return false;
-    }
+	/**
+	 * Check if a year is loaded and not expired.
+	 */
+	isYearLoaded(year: number): boolean {
+		const entry = this.yearCache.get(year);
+		if (!entry) {
+			return false;
+		}
 
-    if (Date.now() > entry.expiresAt) {
-      this.yearCache.delete(year);
-      return false;
-    }
+		if (Date.now() > entry.expiresAt) {
+			this.yearCache.delete(year);
+			return false;
+		}
 
-    return true;
-  }
+		return true;
+	}
 
-  /**
-   * Clear all cached data.
-   */
-  clear(): void {
-    this.yearCache.clear();
-    this.clockCache = undefined;
-  }
+	/**
+	 * Clear all cached data.
+	 */
+	clear(): void {
+		this.yearCache.clear();
+		this.clockCache = undefined;
+	}
 }
 
 // ============================================
@@ -223,5 +223,5 @@ export class InMemoryCalendarCache implements CalendarCache {
  * @returns Configured cache instance
  */
 export function createCalendarCache(config?: CalendarCacheConfig): CalendarCache {
-  return new InMemoryCalendarCache(config);
+	return new InMemoryCalendarCache(config);
 }

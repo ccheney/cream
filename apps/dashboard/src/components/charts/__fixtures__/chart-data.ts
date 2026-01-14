@@ -17,35 +17,35 @@ import type { ReturnsDataPoint } from "../ReturnsChart";
  * Generate OHLCV data for testing.
  */
 export function generateOHLCVData(days: number, startPrice = 100): OHLCVData[] {
-  const data: OHLCVData[] = [];
-  let price = startPrice;
-  const now = new Date();
+	const data: OHLCVData[] = [];
+	let price = startPrice;
+	const now = new Date();
 
-  for (let i = days; i >= 0; i--) {
-    const date = new Date(now);
-    date.setDate(date.getDate() - i);
+	for (let i = days; i >= 0; i--) {
+		const date = new Date(now);
+		date.setDate(date.getDate() - i);
 
-    const open = price;
-    const change = (Math.random() - 0.5) * 4;
-    const close = open + change;
-    const high = Math.max(open, close) + Math.random() * 2;
-    const low = Math.min(open, close) - Math.random() * 2;
-    const volume = Math.floor(Math.random() * 1000000) + 100000;
+		const open = price;
+		const change = (Math.random() - 0.5) * 4;
+		const close = open + change;
+		const high = Math.max(open, close) + Math.random() * 2;
+		const low = Math.min(open, close) - Math.random() * 2;
+		const volume = Math.floor(Math.random() * 1000000) + 100000;
 
-    data.push({
-      // biome-ignore lint/style/noNonNullAssertion: split always returns array
-      time: date.toISOString().split("T")[0]!,
-      open: Number(open.toFixed(2)),
-      high: Number(high.toFixed(2)),
-      low: Number(low.toFixed(2)),
-      close: Number(close.toFixed(2)),
-      volume,
-    });
+		data.push({
+			// biome-ignore lint/style/noNonNullAssertion: split always returns array
+			time: date.toISOString().split("T")[0]!,
+			open: Number(open.toFixed(2)),
+			high: Number(high.toFixed(2)),
+			low: Number(low.toFixed(2)),
+			close: Number(close.toFixed(2)),
+			volume,
+		});
 
-    price = close;
-  }
+		price = close;
+	}
 
-  return data;
+	return data;
 }
 
 /** Sample 30-day OHLCV data */
@@ -56,7 +56,7 @@ export const emptyOHLCVData: OHLCVData[] = [];
 
 /** Single candle */
 export const singleCandleData: OHLCVData[] = [
-  { time: "2026-01-04", open: 100, high: 105, low: 98, close: 103, volume: 500000 },
+	{ time: "2026-01-04", open: 100, high: 105, low: 98, close: 103, volume: 500000 },
 ];
 
 /** Large dataset (1000 candles) */
@@ -68,20 +68,20 @@ export const largeOHLCVData: OHLCVData[] = generateOHLCVData(1000);
 
 /** Sample trade markers */
 export const sampleMarkers: TradeMarker[] = [
-  {
-    time: "2026-01-02",
-    position: "belowBar",
-    color: "#22c55e",
-    shape: "arrowUp",
-    text: "BUY @ 100.50",
-  },
-  {
-    time: "2026-01-03",
-    position: "aboveBar",
-    color: "#ef4444",
-    shape: "arrowDown",
-    text: "SELL @ 105.20",
-  },
+	{
+		time: "2026-01-02",
+		position: "belowBar",
+		color: "#22c55e",
+		shape: "arrowUp",
+		text: "BUY @ 100.50",
+	},
+	{
+		time: "2026-01-03",
+		position: "aboveBar",
+		color: "#ef4444",
+		shape: "arrowDown",
+		text: "SELL @ 105.20",
+	},
 ];
 
 /** Empty markers */
@@ -93,22 +93,22 @@ export const emptyMarkers: TradeMarker[] = [];
 
 /** Sample price lines */
 export const samplePriceLines: PriceLineConfig[] = [
-  {
-    price: 95,
-    color: "#ef4444",
-    lineWidth: 2,
-    lineStyle: 2,
-    title: "Stop Loss",
-    axisLabelVisible: true,
-  },
-  {
-    price: 110,
-    color: "#22c55e",
-    lineWidth: 2,
-    lineStyle: 2,
-    title: "Take Profit",
-    axisLabelVisible: true,
-  },
+	{
+		price: 95,
+		color: "#ef4444",
+		lineWidth: 2,
+		lineStyle: 2,
+		title: "Stop Loss",
+		axisLabelVisible: true,
+	},
+	{
+		price: 110,
+		color: "#22c55e",
+		lineWidth: 2,
+		lineStyle: 2,
+		title: "Take Profit",
+		axisLabelVisible: true,
+	},
 ];
 
 /** Empty price lines */
@@ -122,30 +122,30 @@ export const emptyPriceLines: PriceLineConfig[] = [];
  * Generate equity data for testing.
  */
 export function generateEquityData(days: number, startEquity = 100000): EquityDataPoint[] {
-  const data: EquityDataPoint[] = [];
-  let equity = startEquity;
-  let peak = equity;
-  const now = new Date();
+	const data: EquityDataPoint[] = [];
+	let equity = startEquity;
+	let peak = equity;
+	const now = new Date();
 
-  for (let i = days; i >= 0; i--) {
-    const date = new Date(now);
-    date.setDate(date.getDate() - i);
+	for (let i = days; i >= 0; i--) {
+		const date = new Date(now);
+		date.setDate(date.getDate() - i);
 
-    const dailyReturn = (Math.random() - 0.45) * 0.02;
-    equity = equity * (1 + dailyReturn);
+		const dailyReturn = (Math.random() - 0.45) * 0.02;
+		equity = equity * (1 + dailyReturn);
 
-    peak = Math.max(peak, equity);
-    const drawdown = ((peak - equity) / peak) * 100;
+		peak = Math.max(peak, equity);
+		const drawdown = ((peak - equity) / peak) * 100;
 
-    data.push({
-      // biome-ignore lint/style/noNonNullAssertion: split always returns array
-      time: date.toISOString().split("T")[0]!,
-      value: Math.round(equity * 100) / 100,
-      drawdown: Math.round(drawdown * 100) / 100,
-    });
-  }
+		data.push({
+			// biome-ignore lint/style/noNonNullAssertion: split always returns array
+			time: date.toISOString().split("T")[0]!,
+			value: Math.round(equity * 100) / 100,
+			drawdown: Math.round(drawdown * 100) / 100,
+		});
+	}
 
-  return data;
+	return data;
 }
 
 /** Sample equity data */
@@ -159,18 +159,18 @@ export const singlePointEquityData: EquityDataPoint[] = [{ time: "2026-01-04", v
 
 /** All positive equity (upward trend) */
 export const upwardEquityData: EquityDataPoint[] = [
-  { time: "2026-01-01", value: 100000 },
-  { time: "2026-01-02", value: 101000 },
-  { time: "2026-01-03", value: 102500 },
-  { time: "2026-01-04", value: 104000 },
+	{ time: "2026-01-01", value: 100000 },
+	{ time: "2026-01-02", value: 101000 },
+	{ time: "2026-01-03", value: 102500 },
+	{ time: "2026-01-04", value: 104000 },
 ];
 
 /** Drawdown equity data */
 export const drawdownEquityData: EquityDataPoint[] = [
-  { time: "2026-01-01", value: 100000, drawdown: 0 },
-  { time: "2026-01-02", value: 95000, drawdown: 5 },
-  { time: "2026-01-03", value: 90000, drawdown: 10 },
-  { time: "2026-01-04", value: 85000, drawdown: 15 },
+	{ time: "2026-01-01", value: 100000, drawdown: 0 },
+	{ time: "2026-01-02", value: 95000, drawdown: 5 },
+	{ time: "2026-01-03", value: 90000, drawdown: 10 },
+	{ time: "2026-01-04", value: 85000, drawdown: 15 },
 ];
 
 // ============================================
@@ -179,11 +179,11 @@ export const drawdownEquityData: EquityDataPoint[] = [
 
 /** Sample allocation data */
 export const sampleAllocationData: AllocationDataPoint[] = [
-  { name: "Technology", value: 35, color: "#3b82f6" },
-  { name: "Healthcare", value: 25, color: "#22c55e" },
-  { name: "Financials", value: 20, color: "#f59e0b" },
-  { name: "Energy", value: 15, color: "#ef4444" },
-  { name: "Other", value: 5, color: "#78716c" },
+	{ name: "Technology", value: 35, color: "#3b82f6" },
+	{ name: "Healthcare", value: 25, color: "#22c55e" },
+	{ name: "Financials", value: 20, color: "#f59e0b" },
+	{ name: "Energy", value: 15, color: "#ef4444" },
+	{ name: "Other", value: 5, color: "#78716c" },
 ];
 
 /** Empty allocation data */
@@ -194,8 +194,8 @@ export const singleSliceData: AllocationDataPoint[] = [{ name: "Cash", value: 10
 
 /** Two slice allocation */
 export const twoSliceData: AllocationDataPoint[] = [
-  { name: "Long", value: 70, color: "#22c55e" },
-  { name: "Short", value: 30, color: "#ef4444" },
+	{ name: "Long", value: 70, color: "#22c55e" },
+	{ name: "Short", value: 30, color: "#ef4444" },
 ];
 
 // ============================================
@@ -204,12 +204,12 @@ export const twoSliceData: AllocationDataPoint[] = [
 
 /** Sample monthly returns */
 export const sampleReturnsData: ReturnsDataPoint[] = [
-  { period: "Jan", value: 3.2 },
-  { period: "Feb", value: -1.5 },
-  { period: "Mar", value: 2.8 },
-  { period: "Apr", value: 4.1 },
-  { period: "May", value: -0.8 },
-  { period: "Jun", value: 1.9 },
+	{ period: "Jan", value: 3.2 },
+	{ period: "Feb", value: -1.5 },
+	{ period: "Mar", value: 2.8 },
+	{ period: "Apr", value: 4.1 },
+	{ period: "May", value: -0.8 },
+	{ period: "Jun", value: 1.9 },
 ];
 
 /** Empty returns data */
@@ -217,18 +217,18 @@ export const emptyReturnsData: ReturnsDataPoint[] = [];
 
 /** All positive returns */
 export const allPositiveReturns: ReturnsDataPoint[] = [
-  { period: "Q1", value: 5.2 },
-  { period: "Q2", value: 3.8 },
-  { period: "Q3", value: 7.1 },
-  { period: "Q4", value: 4.5 },
+	{ period: "Q1", value: 5.2 },
+	{ period: "Q2", value: 3.8 },
+	{ period: "Q3", value: 7.1 },
+	{ period: "Q4", value: 4.5 },
 ];
 
 /** All negative returns */
 export const allNegativeReturns: ReturnsDataPoint[] = [
-  { period: "Q1", value: -2.5 },
-  { period: "Q2", value: -4.1 },
-  { period: "Q3", value: -1.8 },
-  { period: "Q4", value: -3.2 },
+	{ period: "Q1", value: -2.5 },
+	{ period: "Q2", value: -4.1 },
+	{ period: "Q3", value: -1.8 },
+	{ period: "Q4", value: -3.2 },
 ];
 
 // ============================================

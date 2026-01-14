@@ -29,12 +29,12 @@ export type TradeEventType = "FILL" | "PARTIAL_FILL" | "ADJUSTMENT" | "CLOSE";
  * External event type
  */
 export type ExternalEventType =
-  | "EARNINGS"
-  | "MACRO"
-  | "NEWS"
-  | "SENTIMENT_SPIKE"
-  | "FED_MEETING"
-  | "ECONOMIC_RELEASE";
+	| "EARNINGS"
+	| "MACRO"
+	| "NEWS"
+	| "SENTIMENT_SPIKE"
+	| "FED_MEETING"
+	| "ECONOMIC_RELEASE";
 
 /**
  * Filing type
@@ -103,8 +103,8 @@ export type HypothesisStatus = "pending" | "validated" | "rejected" | "implement
  * Market mechanism type explaining why alpha exists
  */
 export type MarketMechanism =
-  | "BEHAVIORAL_BIAS"
-  | "STRUCTURAL_CONSTRAINT"
-  | "INFORMATION_ASYMMETRY"
-  | "LIQUIDITY_PREMIUM"
-  | "RISK_PREMIUM";
+	| "BEHAVIORAL_BIAS"
+	| "STRUCTURAL_CONSTRAINT"
+	| "INFORMATION_ASYMMETRY"
+	| "LIQUIDITY_PREMIUM"
+	| "RISK_PREMIUM";

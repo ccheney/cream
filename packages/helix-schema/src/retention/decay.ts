@@ -9,12 +9,12 @@
  */
 
 import {
-  COMPLIANCE_PERIOD_DAYS,
-  DECAY_CONSTANT_DAYS,
-  EDGE_COUNT_NORMALIZATION_FACTOR,
-  FREQUENCY_SCALE_FACTOR,
-  INFINITE_RETENTION,
-  PNL_NORMALIZATION_FACTOR,
+	COMPLIANCE_PERIOD_DAYS,
+	DECAY_CONSTANT_DAYS,
+	EDGE_COUNT_NORMALIZATION_FACTOR,
+	FREQUENCY_SCALE_FACTOR,
+	INFINITE_RETENTION,
+	PNL_NORMALIZATION_FACTOR,
 } from "./constants.js";
 import type { ForgettingEnvironment, NodeInfo, RetentionScoreBreakdown } from "./types.js";
 
@@ -36,13 +36,13 @@ import type { ForgettingEnvironment, NodeInfo, RetentionScoreBreakdown } from ".
  * @returns Recency factor between 0 and 1
  */
 export function calculateRecency(
-  ageDays: number,
-  decayConstant: number = DECAY_CONSTANT_DAYS
+	ageDays: number,
+	decayConstant: number = DECAY_CONSTANT_DAYS
 ): number {
-  if (ageDays < 0) {
-    throw new Error("Age cannot be negative");
-  }
-  return Math.exp(-ageDays / decayConstant);
+	if (ageDays < 0) {
+		throw new Error("Age cannot be negative");
+	}
+	return Math.exp(-ageDays / decayConstant);
 }
 
 /**
@@ -60,13 +60,13 @@ export function calculateRecency(
  * @returns Frequency factor (0 for never accessed, increases logarithmically)
  */
 export function calculateFrequency(
-  accessCount: number,
-  scaleFactor: number = FREQUENCY_SCALE_FACTOR
+	accessCount: number,
+	scaleFactor: number = FREQUENCY_SCALE_FACTOR
 ): number {
-  if (accessCount < 0) {
-    throw new Error("Access count cannot be negative");
-  }
-  return Math.log(1 + accessCount) / scaleFactor;
+	if (accessCount < 0) {
+		throw new Error("Access count cannot be negative");
+	}
+	return Math.log(1 + accessCount) / scaleFactor;
 }
 
 /**
@@ -85,11 +85,11 @@ export function calculateFrequency(
  * @returns Importance factor (higher = more important)
  */
 export function calculateImportance(nodeInfo: NodeInfo): number {
-  if (nodeInfo.nodeType === "TradeDecision" && nodeInfo.realizedPnl !== undefined) {
-    return Math.abs(nodeInfo.realizedPnl) / PNL_NORMALIZATION_FACTOR;
-  }
+	if (nodeInfo.nodeType === "TradeDecision" && nodeInfo.realizedPnl !== undefined) {
+		return Math.abs(nodeInfo.realizedPnl) / PNL_NORMALIZATION_FACTOR;
+	}
 
-  return nodeInfo.edgeCount / EDGE_COUNT_NORMALIZATION_FACTOR;
+	return nodeInfo.edgeCount / EDGE_COUNT_NORMALIZATION_FACTOR;
 }
 
 /**
@@ -104,15 +104,15 @@ export function calculateImportance(nodeInfo: NodeInfo): number {
  * @returns True if compliance override applies (infinite retention)
  */
 export function hasComplianceOverride(nodeInfo: NodeInfo, ageDays: number): boolean {
-  if (nodeInfo.environment !== "LIVE") {
-    return false;
-  }
+	if (nodeInfo.environment !== "LIVE") {
+		return false;
+	}
 
-  if (nodeInfo.nodeType !== "TradeDecision" && nodeInfo.nodeType !== "TradeLifecycleEvent") {
-    return false;
-  }
+	if (nodeInfo.nodeType !== "TradeDecision" && nodeInfo.nodeType !== "TradeLifecycleEvent") {
+		return false;
+	}
 
-  return ageDays < COMPLIANCE_PERIOD_DAYS;
+	return ageDays < COMPLIANCE_PERIOD_DAYS;
 }
 
 /**
@@ -128,35 +128,35 @@ export function hasComplianceOverride(nodeInfo: NodeInfo, ageDays: number): bool
  * @returns Complete retention score breakdown
  */
 export function calculateRetentionScore(
-  nodeInfo: NodeInfo,
-  referenceDate: Date = new Date()
+	nodeInfo: NodeInfo,
+	referenceDate: Date = new Date()
 ): RetentionScoreBreakdown {
-  const ageDays = Math.floor(
-    (referenceDate.getTime() - nodeInfo.createdAt.getTime()) / (1000 * 60 * 60 * 24)
-  );
+	const ageDays = Math.floor(
+		(referenceDate.getTime() - nodeInfo.createdAt.getTime()) / (1000 * 60 * 60 * 24)
+	);
 
-  const baseScore = 1.0;
-  const recencyFactor = calculateRecency(ageDays);
-  const frequencyFactor = 1 + calculateFrequency(nodeInfo.accessCount);
-  const importanceFactor = 1 + calculateImportance(nodeInfo);
-  const complianceOverride = hasComplianceOverride(nodeInfo, ageDays);
+	const baseScore = 1.0;
+	const recencyFactor = calculateRecency(ageDays);
+	const frequencyFactor = 1 + calculateFrequency(nodeInfo.accessCount);
+	const importanceFactor = 1 + calculateImportance(nodeInfo);
+	const complianceOverride = hasComplianceOverride(nodeInfo, ageDays);
 
-  let finalScore: number;
-  if (complianceOverride) {
-    finalScore = INFINITE_RETENTION;
-  } else {
-    finalScore = baseScore * recencyFactor * frequencyFactor * importanceFactor;
-  }
+	let finalScore: number;
+	if (complianceOverride) {
+		finalScore = INFINITE_RETENTION;
+	} else {
+		finalScore = baseScore * recencyFactor * frequencyFactor * importanceFactor;
+	}
 
-  return {
-    baseScore,
-    recencyFactor,
-    frequencyFactor,
-    importanceFactor,
-    complianceOverride,
-    finalScore,
-    ageDays,
-  };
+	return {
+		baseScore,
+		recencyFactor,
+		frequencyFactor,
+		importanceFactor,
+		complianceOverride,
+		finalScore,
+		ageDays,
+	};
 }
 
 /**
@@ -167,10 +167,10 @@ export function calculateRetentionScore(
  * @returns True if node should be summarized
  */
 export function shouldSummarize(score: number, threshold = 0.1): boolean {
-  if (!Number.isFinite(score)) {
-    return false;
-  }
-  return score < threshold;
+	if (!Number.isFinite(score)) {
+		return false;
+	}
+	return score < threshold;
 }
 
 /**
@@ -185,15 +185,15 @@ export function shouldSummarize(score: number, threshold = 0.1): boolean {
  * @returns True if node should be deleted
  */
 export function shouldDelete(
-  score: number,
-  environment: ForgettingEnvironment,
-  threshold = 0.05
+	score: number,
+	environment: ForgettingEnvironment,
+	threshold = 0.05
 ): boolean {
-  if (!Number.isFinite(score)) {
-    return false;
-  }
-  if (environment === "LIVE") {
-    return false;
-  }
-  return score < threshold;
+	if (!Number.isFinite(score)) {
+		return false;
+	}
+	if (environment === "LIVE") {
+		return false;
+	}
+	return score < threshold;
 }

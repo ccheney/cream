@@ -29,11 +29,11 @@ export const EarningsQuality = z.enum(["HIGH", "MEDIUM", "LOW"]);
 export type EarningsQuality = z.infer<typeof EarningsQuality>;
 
 export const SentimentClassification = z.enum([
-  "STRONG_BULLISH",
-  "BULLISH",
-  "NEUTRAL",
-  "BEARISH",
-  "STRONG_BEARISH",
+	"STRONG_BULLISH",
+	"BULLISH",
+	"NEUTRAL",
+	"BEARISH",
+	"STRONG_BEARISH",
 ]);
 export type SentimentClassification = z.infer<typeof SentimentClassification>;
 
@@ -47,10 +47,10 @@ export const TradingSession = z.enum(["PRE_MARKET", "RTH", "AFTER_HOURS", "CLOSE
 export type TradingSession = z.infer<typeof TradingSession>;
 
 export const SyncRunType = z.enum([
-  "fundamentals",
-  "short_interest",
-  "sentiment",
-  "corporate_actions",
+	"fundamentals",
+	"short_interest",
+	"sentiment",
+	"corporate_actions",
 ]);
 export type SyncRunType = z.infer<typeof SyncRunType>;
 
@@ -67,48 +67,48 @@ export type SyncRunStatus = z.infer<typeof SyncRunStatus>;
  * Includes trend, momentum, and volatility indicators.
  */
 export const PriceIndicatorsSchema = z.object({
-  // Momentum
-  rsi_14: z.number().nullable(),
+	// Momentum
+	rsi_14: z.number().nullable(),
 
-  // Volatility
-  atr_14: z.number().nullable(),
+	// Volatility
+	atr_14: z.number().nullable(),
 
-  // Trend - SMAs
-  sma_20: z.number().nullable(),
-  sma_50: z.number().nullable(),
-  sma_200: z.number().nullable(),
+	// Trend - SMAs
+	sma_20: z.number().nullable(),
+	sma_50: z.number().nullable(),
+	sma_200: z.number().nullable(),
 
-  // Trend - EMAs
-  ema_9: z.number().nullable(),
-  ema_12: z.number().nullable(),
-  ema_21: z.number().nullable(),
-  ema_26: z.number().nullable(),
+	// Trend - EMAs
+	ema_9: z.number().nullable(),
+	ema_12: z.number().nullable(),
+	ema_21: z.number().nullable(),
+	ema_26: z.number().nullable(),
 
-  // MACD
-  macd_line: z.number().nullable(),
-  macd_signal: z.number().nullable(),
-  macd_histogram: z.number().nullable(),
+	// MACD
+	macd_line: z.number().nullable(),
+	macd_signal: z.number().nullable(),
+	macd_histogram: z.number().nullable(),
 
-  // Bollinger Bands
-  bollinger_upper: z.number().nullable(),
-  bollinger_middle: z.number().nullable(),
-  bollinger_lower: z.number().nullable(),
-  bollinger_bandwidth: z.number().nullable(),
-  bollinger_percentb: z.number().nullable(),
+	// Bollinger Bands
+	bollinger_upper: z.number().nullable(),
+	bollinger_middle: z.number().nullable(),
+	bollinger_lower: z.number().nullable(),
+	bollinger_bandwidth: z.number().nullable(),
+	bollinger_percentb: z.number().nullable(),
 
-  // Stochastic
-  stochastic_k: z.number().nullable(),
-  stochastic_d: z.number().nullable(),
+	// Stochastic
+	stochastic_k: z.number().nullable(),
+	stochastic_d: z.number().nullable(),
 
-  // Momentum (returns)
-  momentum_1m: z.number().nullable(),
-  momentum_3m: z.number().nullable(),
-  momentum_6m: z.number().nullable(),
-  momentum_12m: z.number().nullable(),
+	// Momentum (returns)
+	momentum_1m: z.number().nullable(),
+	momentum_3m: z.number().nullable(),
+	momentum_6m: z.number().nullable(),
+	momentum_12m: z.number().nullable(),
 
-  // Volatility
-  realized_vol_20d: z.number().nullable(),
-  parkinson_vol_20d: z.number().nullable(),
+	// Volatility
+	realized_vol_20d: z.number().nullable(),
+	parkinson_vol_20d: z.number().nullable(),
 });
 export type PriceIndicators = z.infer<typeof PriceIndicatorsSchema>;
 
@@ -116,12 +116,12 @@ export type PriceIndicators = z.infer<typeof PriceIndicatorsSchema>;
  * Liquidity Indicators (Real-time from Alpaca quotes)
  */
 export const LiquidityIndicatorsSchema = z.object({
-  bid_ask_spread: z.number().nullable(),
-  bid_ask_spread_pct: z.number().nullable(),
-  amihud_illiquidity: z.number().nullable(),
-  vwap: z.number().nullable(),
-  turnover_ratio: z.number().nullable(),
-  volume_ratio: z.number().nullable(),
+	bid_ask_spread: z.number().nullable(),
+	bid_ask_spread_pct: z.number().nullable(),
+	amihud_illiquidity: z.number().nullable(),
+	vwap: z.number().nullable(),
+	turnover_ratio: z.number().nullable(),
+	volume_ratio: z.number().nullable(),
 });
 export type LiquidityIndicators = z.infer<typeof LiquidityIndicatorsSchema>;
 
@@ -129,32 +129,32 @@ export type LiquidityIndicators = z.infer<typeof LiquidityIndicatorsSchema>;
  * Options-Derived Indicators (Real-time from Alpaca options)
  */
 export const OptionsIndicatorsSchema = z.object({
-  // ATM Implied Volatility
-  atm_iv: z.number().nullable(),
+	// ATM Implied Volatility
+	atm_iv: z.number().nullable(),
 
-  // IV Skew (25-delta)
-  iv_skew_25d: z.number().nullable(),
-  iv_put_25d: z.number().nullable(),
-  iv_call_25d: z.number().nullable(),
+	// IV Skew (25-delta)
+	iv_skew_25d: z.number().nullable(),
+	iv_put_25d: z.number().nullable(),
+	iv_call_25d: z.number().nullable(),
 
-  // Put/Call Ratios
-  put_call_ratio_volume: z.number().nullable(),
-  put_call_ratio_oi: z.number().nullable(),
+	// Put/Call Ratios
+	put_call_ratio_volume: z.number().nullable(),
+	put_call_ratio_oi: z.number().nullable(),
 
-  // Term Structure
-  term_structure_slope: z.number().nullable(),
-  front_month_iv: z.number().nullable(),
-  back_month_iv: z.number().nullable(),
+	// Term Structure
+	term_structure_slope: z.number().nullable(),
+	front_month_iv: z.number().nullable(),
+	back_month_iv: z.number().nullable(),
 
-  // Volatility Risk Premium
-  vrp: z.number().nullable(),
-  realized_vol_20d: z.number().nullable(),
+	// Volatility Risk Premium
+	vrp: z.number().nullable(),
+	realized_vol_20d: z.number().nullable(),
 
-  // Aggregate Greeks (for portfolio positions)
-  net_delta: z.number().nullable(),
-  net_gamma: z.number().nullable(),
-  net_theta: z.number().nullable(),
-  net_vega: z.number().nullable(),
+	// Aggregate Greeks (for portfolio positions)
+	net_delta: z.number().nullable(),
+	net_gamma: z.number().nullable(),
+	net_theta: z.number().nullable(),
+	net_vega: z.number().nullable(),
 });
 export type OptionsIndicators = z.infer<typeof OptionsIndicatorsSchema>;
 
@@ -162,13 +162,13 @@ export type OptionsIndicators = z.infer<typeof OptionsIndicatorsSchema>;
  * Value Factors (Batch from FMP)
  */
 export const ValueIndicatorsSchema = z.object({
-  pe_ratio_ttm: z.number().nullable(),
-  pe_ratio_forward: z.number().nullable(),
-  pb_ratio: z.number().nullable(),
-  ev_ebitda: z.number().nullable(),
-  earnings_yield: z.number().nullable(),
-  dividend_yield: z.number().nullable(),
-  cape_10yr: z.number().nullable(),
+	pe_ratio_ttm: z.number().nullable(),
+	pe_ratio_forward: z.number().nullable(),
+	pb_ratio: z.number().nullable(),
+	ev_ebitda: z.number().nullable(),
+	earnings_yield: z.number().nullable(),
+	dividend_yield: z.number().nullable(),
+	cape_10yr: z.number().nullable(),
 });
 export type ValueIndicators = z.infer<typeof ValueIndicatorsSchema>;
 
@@ -176,14 +176,14 @@ export type ValueIndicators = z.infer<typeof ValueIndicatorsSchema>;
  * Quality Factors (Batch from FMP + EDGAR)
  */
 export const QualityIndicatorsSchema = z.object({
-  gross_profitability: z.number().nullable(),
-  roe: z.number().nullable(),
-  roa: z.number().nullable(),
-  asset_growth: z.number().nullable(),
-  accruals_ratio: z.number().nullable(),
-  cash_flow_quality: z.number().nullable(),
-  beneish_m_score: z.number().nullable(),
-  earnings_quality: EarningsQuality.nullable(),
+	gross_profitability: z.number().nullable(),
+	roe: z.number().nullable(),
+	roa: z.number().nullable(),
+	asset_growth: z.number().nullable(),
+	accruals_ratio: z.number().nullable(),
+	cash_flow_quality: z.number().nullable(),
+	beneish_m_score: z.number().nullable(),
+	earnings_quality: EarningsQuality.nullable(),
 });
 export type QualityIndicators = z.infer<typeof QualityIndicatorsSchema>;
 
@@ -191,11 +191,11 @@ export type QualityIndicators = z.infer<typeof QualityIndicatorsSchema>;
  * Short Interest Indicators (Batch from FINRA)
  */
 export const ShortInterestIndicatorsSchema = z.object({
-  short_interest_ratio: z.number().nullable(),
-  days_to_cover: z.number().nullable(),
-  short_pct_float: z.number().nullable(),
-  short_interest_change: z.number().nullable(),
-  settlement_date: z.string().nullable(),
+	short_interest_ratio: z.number().nullable(),
+	days_to_cover: z.number().nullable(),
+	short_pct_float: z.number().nullable(),
+	short_interest_change: z.number().nullable(),
+	settlement_date: z.string().nullable(),
 });
 export type ShortInterestIndicators = z.infer<typeof ShortInterestIndicatorsSchema>;
 
@@ -203,12 +203,12 @@ export type ShortInterestIndicators = z.infer<typeof ShortInterestIndicatorsSche
  * Sentiment Indicators (Batch + Real-time aggregation)
  */
 export const SentimentIndicatorsSchema = z.object({
-  overall_score: z.number().nullable(),
-  sentiment_strength: z.number().nullable(),
-  news_volume: z.number().nullable(),
-  sentiment_momentum: z.number().nullable(),
-  event_risk: z.boolean().nullable(),
-  classification: SentimentClassification.nullable(),
+	overall_score: z.number().nullable(),
+	sentiment_strength: z.number().nullable(),
+	news_volume: z.number().nullable(),
+	sentiment_momentum: z.number().nullable(),
+	event_risk: z.boolean().nullable(),
+	classification: SentimentClassification.nullable(),
 });
 export type SentimentIndicators = z.infer<typeof SentimentIndicatorsSchema>;
 
@@ -216,10 +216,10 @@ export type SentimentIndicators = z.infer<typeof SentimentIndicatorsSchema>;
  * Corporate Actions Indicators
  */
 export const CorporateIndicatorsSchema = z.object({
-  trailing_dividend_yield: z.number().nullable(),
-  ex_dividend_days: z.number().nullable(),
-  upcoming_earnings_days: z.number().nullable(),
-  recent_split: z.boolean().nullable(),
+	trailing_dividend_yield: z.number().nullable(),
+	ex_dividend_days: z.number().nullable(),
+	upcoming_earnings_days: z.number().nullable(),
+	recent_split: z.boolean().nullable(),
 });
 export type CorporateIndicators = z.infer<typeof CorporateIndicatorsSchema>;
 
@@ -227,10 +227,10 @@ export type CorporateIndicators = z.infer<typeof CorporateIndicatorsSchema>;
  * Market Context
  */
 export const MarketContextSchema = z.object({
-  sector: z.string().nullable(),
-  industry: z.string().nullable(),
-  market_cap: z.number().nullable(),
-  market_cap_category: MarketCapCategory.nullable(),
+	sector: z.string().nullable(),
+	industry: z.string().nullable(),
+	market_cap: z.number().nullable(),
+	market_cap_category: MarketCapCategory.nullable(),
 });
 export type MarketContext = z.infer<typeof MarketContextSchema>;
 
@@ -238,14 +238,14 @@ export type MarketContext = z.infer<typeof MarketContextSchema>;
  * Snapshot Metadata
  */
 export const SnapshotMetadataSchema = z.object({
-  price_updated_at: z.number(),
-  fundamentals_date: z.string().nullable(),
-  short_interest_date: z.string().nullable(),
-  sentiment_date: z.string().nullable(),
-  data_quality: DataQuality,
-  missing_fields: z.array(z.string()),
-  /** Current trading session when snapshot was taken */
-  trading_session: TradingSession.optional(),
+	price_updated_at: z.number(),
+	fundamentals_date: z.string().nullable(),
+	short_interest_date: z.string().nullable(),
+	sentiment_date: z.string().nullable(),
+	data_quality: DataQuality,
+	missing_fields: z.array(z.string()),
+	/** Current trading session when snapshot was taken */
+	trading_session: TradingSession.optional(),
 });
 export type SnapshotMetadata = z.infer<typeof SnapshotMetadataSchema>;
 
@@ -260,24 +260,24 @@ export type SnapshotMetadata = z.infer<typeof SnapshotMetadataSchema>;
  * This is the main type consumed by the OODA loop and dashboard.
  */
 export const IndicatorSnapshotSchema = z.object({
-  symbol: z.string(),
-  timestamp: z.number(),
+	symbol: z.string(),
+	timestamp: z.number(),
 
-  // Real-time indicators
-  price: PriceIndicatorsSchema,
-  liquidity: LiquidityIndicatorsSchema,
-  options: OptionsIndicatorsSchema,
+	// Real-time indicators
+	price: PriceIndicatorsSchema,
+	liquidity: LiquidityIndicatorsSchema,
+	options: OptionsIndicatorsSchema,
 
-  // Batch indicators
-  value: ValueIndicatorsSchema,
-  quality: QualityIndicatorsSchema,
-  short_interest: ShortInterestIndicatorsSchema,
-  sentiment: SentimentIndicatorsSchema,
-  corporate: CorporateIndicatorsSchema,
+	// Batch indicators
+	value: ValueIndicatorsSchema,
+	quality: QualityIndicatorsSchema,
+	short_interest: ShortInterestIndicatorsSchema,
+	sentiment: SentimentIndicatorsSchema,
+	corporate: CorporateIndicatorsSchema,
 
-  // Context
-  market: MarketContextSchema,
-  metadata: SnapshotMetadataSchema,
+	// Context
+	market: MarketContextSchema,
+	metadata: SnapshotMetadataSchema,
 });
 export type IndicatorSnapshot = z.infer<typeof IndicatorSnapshotSchema>;
 
@@ -289,36 +289,36 @@ export type IndicatorSnapshot = z.infer<typeof IndicatorSnapshotSchema>;
  * Fundamental indicators stored in Turso (nightly batch)
  */
 export const FundamentalIndicatorsRowSchema = z.object({
-  id: z.string(),
-  symbol: z.string(),
-  date: z.string(),
+	id: z.string(),
+	symbol: z.string(),
+	date: z.string(),
 
-  // Value factors
-  pe_ratio_ttm: z.number().nullable(),
-  pe_ratio_forward: z.number().nullable(),
-  pb_ratio: z.number().nullable(),
-  ev_ebitda: z.number().nullable(),
-  earnings_yield: z.number().nullable(),
-  dividend_yield: z.number().nullable(),
-  cape_10yr: z.number().nullable(),
+	// Value factors
+	pe_ratio_ttm: z.number().nullable(),
+	pe_ratio_forward: z.number().nullable(),
+	pb_ratio: z.number().nullable(),
+	ev_ebitda: z.number().nullable(),
+	earnings_yield: z.number().nullable(),
+	dividend_yield: z.number().nullable(),
+	cape_10yr: z.number().nullable(),
 
-  // Quality factors
-  gross_profitability: z.number().nullable(),
-  roe: z.number().nullable(),
-  roa: z.number().nullable(),
-  asset_growth: z.number().nullable(),
-  accruals_ratio: z.number().nullable(),
-  cash_flow_quality: z.number().nullable(),
-  beneish_m_score: z.number().nullable(),
+	// Quality factors
+	gross_profitability: z.number().nullable(),
+	roe: z.number().nullable(),
+	roa: z.number().nullable(),
+	asset_growth: z.number().nullable(),
+	accruals_ratio: z.number().nullable(),
+	cash_flow_quality: z.number().nullable(),
+	beneish_m_score: z.number().nullable(),
 
-  // Market context
-  market_cap: z.number().nullable(),
-  sector: z.string().nullable(),
-  industry: z.string().nullable(),
+	// Market context
+	market_cap: z.number().nullable(),
+	sector: z.string().nullable(),
+	industry: z.string().nullable(),
 
-  // Metadata
-  source: z.string(),
-  computed_at: z.string(),
+	// Metadata
+	source: z.string(),
+	computed_at: z.string(),
 });
 export type FundamentalIndicatorsRow = z.infer<typeof FundamentalIndicatorsRowSchema>;
 
@@ -326,18 +326,18 @@ export type FundamentalIndicatorsRow = z.infer<typeof FundamentalIndicatorsRowSc
  * Short interest indicators stored in Turso (bi-weekly batch)
  */
 export const ShortInterestIndicatorsRowSchema = z.object({
-  id: z.string(),
-  symbol: z.string(),
-  settlement_date: z.string(),
+	id: z.string(),
+	symbol: z.string(),
+	settlement_date: z.string(),
 
-  short_interest: z.number(),
-  short_interest_ratio: z.number().nullable(),
-  days_to_cover: z.number().nullable(),
-  short_pct_float: z.number().nullable(),
-  short_interest_change: z.number().nullable(),
+	short_interest: z.number(),
+	short_interest_ratio: z.number().nullable(),
+	days_to_cover: z.number().nullable(),
+	short_pct_float: z.number().nullable(),
+	short_interest_change: z.number().nullable(),
 
-  source: z.string(),
-  fetched_at: z.string(),
+	source: z.string(),
+	fetched_at: z.string(),
 });
 export type ShortInterestIndicatorsRow = z.infer<typeof ShortInterestIndicatorsRowSchema>;
 
@@ -345,21 +345,21 @@ export type ShortInterestIndicatorsRow = z.infer<typeof ShortInterestIndicatorsR
  * Sentiment indicators stored in Turso (nightly aggregation)
  */
 export const SentimentIndicatorsRowSchema = z.object({
-  id: z.string(),
-  symbol: z.string(),
-  date: z.string(),
+	id: z.string(),
+	symbol: z.string(),
+	date: z.string(),
 
-  sentiment_score: z.number().nullable(),
-  sentiment_strength: z.number().nullable(),
-  news_volume: z.number().nullable(),
-  sentiment_momentum: z.number().nullable(),
-  event_risk_flag: z.boolean(),
+	sentiment_score: z.number().nullable(),
+	sentiment_strength: z.number().nullable(),
+	news_volume: z.number().nullable(),
+	sentiment_momentum: z.number().nullable(),
+	event_risk_flag: z.boolean(),
 
-  news_sentiment: z.number().nullable(),
-  social_sentiment: z.number().nullable(),
-  analyst_sentiment: z.number().nullable(),
+	news_sentiment: z.number().nullable(),
+	social_sentiment: z.number().nullable(),
+	analyst_sentiment: z.number().nullable(),
 
-  computed_at: z.string(),
+	computed_at: z.string(),
 });
 export type SentimentIndicatorsRow = z.infer<typeof SentimentIndicatorsRowSchema>;
 
@@ -367,22 +367,22 @@ export type SentimentIndicatorsRow = z.infer<typeof SentimentIndicatorsRowSchema
  * Options indicators cache stored in Turso (refreshed hourly)
  */
 export const OptionsIndicatorsCacheRowSchema = z.object({
-  id: z.string(),
-  symbol: z.string(),
-  timestamp: z.string(),
+	id: z.string(),
+	symbol: z.string(),
+	timestamp: z.string(),
 
-  implied_volatility: z.number().nullable(),
-  iv_skew: z.number().nullable(),
-  put_call_ratio: z.number().nullable(),
-  vrp: z.number().nullable(),
-  term_structure_slope: z.number().nullable(),
+	implied_volatility: z.number().nullable(),
+	iv_skew: z.number().nullable(),
+	put_call_ratio: z.number().nullable(),
+	vrp: z.number().nullable(),
+	term_structure_slope: z.number().nullable(),
 
-  net_delta: z.number().nullable(),
-  net_gamma: z.number().nullable(),
-  net_theta: z.number().nullable(),
-  net_vega: z.number().nullable(),
+	net_delta: z.number().nullable(),
+	net_gamma: z.number().nullable(),
+	net_theta: z.number().nullable(),
+	net_vega: z.number().nullable(),
 
-  expires_at: z.string(),
+	expires_at: z.string(),
 });
 export type OptionsIndicatorsCacheRow = z.infer<typeof OptionsIndicatorsCacheRowSchema>;
 
@@ -390,14 +390,14 @@ export type OptionsIndicatorsCacheRow = z.infer<typeof OptionsIndicatorsCacheRow
  * Corporate actions indicators stored in Turso (daily update)
  */
 export const CorporateActionsIndicatorsRowSchema = z.object({
-  id: z.string(),
-  symbol: z.string(),
-  date: z.string(),
+	id: z.string(),
+	symbol: z.string(),
+	date: z.string(),
 
-  trailing_dividend_yield: z.number().nullable(),
-  ex_dividend_days: z.number().nullable(),
-  recent_split: z.boolean(),
-  split_ratio: z.string().nullable(),
+	trailing_dividend_yield: z.number().nullable(),
+	ex_dividend_days: z.number().nullable(),
+	recent_split: z.boolean(),
+	split_ratio: z.string().nullable(),
 });
 export type CorporateActionsIndicatorsRow = z.infer<typeof CorporateActionsIndicatorsRowSchema>;
 
@@ -405,15 +405,15 @@ export type CorporateActionsIndicatorsRow = z.infer<typeof CorporateActionsIndic
  * Indicator sync run tracking
  */
 export const IndicatorSyncRunSchema = z.object({
-  id: z.string(),
-  run_type: SyncRunType,
-  started_at: z.string(),
-  completed_at: z.string().nullable(),
-  symbols_processed: z.number(),
-  symbols_failed: z.number(),
-  status: SyncRunStatus,
-  error_message: z.string().nullable(),
-  environment: z.string(),
+	id: z.string(),
+	run_type: SyncRunType,
+	started_at: z.string(),
+	completed_at: z.string().nullable(),
+	symbols_processed: z.number(),
+	symbols_failed: z.number(),
+	status: SyncRunStatus,
+	error_message: z.string().nullable(),
+	environment: z.string(),
 });
 export type IndicatorSyncRun = z.infer<typeof IndicatorSyncRunSchema>;
 
@@ -425,9 +425,9 @@ export type IndicatorSyncRun = z.infer<typeof IndicatorSyncRunSchema>;
  * Result from a price indicator calculator
  */
 export const CalculatorResultSchema = z.object({
-  value: z.number().nullable(),
-  timestamp: z.number(),
-  metadata: z.record(z.string(), z.unknown()).optional(),
+	value: z.number().nullable(),
+	timestamp: z.number(),
+	metadata: z.record(z.string(), z.unknown()).optional(),
 });
 export type CalculatorResult = z.infer<typeof CalculatorResultSchema>;
 
@@ -435,12 +435,12 @@ export type CalculatorResult = z.infer<typeof CalculatorResultSchema>;
  * OHLCV bar input for calculators
  */
 export const OHLCVBarSchema = z.object({
-  timestamp: z.number(),
-  open: z.number(),
-  high: z.number(),
-  low: z.number(),
-  close: z.number(),
-  volume: z.number(),
+	timestamp: z.number(),
+	open: z.number(),
+	high: z.number(),
+	low: z.number(),
+	close: z.number(),
+	volume: z.number(),
 });
 export type OHLCVBar = z.infer<typeof OHLCVBarSchema>;
 
@@ -454,11 +454,11 @@ export type Candle = OHLCVBar;
  * Quote input for liquidity calculators
  */
 export const QuoteSchema = z.object({
-  timestamp: z.number(),
-  bidPrice: z.number(),
-  bidSize: z.number(),
-  askPrice: z.number(),
-  askSize: z.number(),
+	timestamp: z.number(),
+	bidPrice: z.number(),
+	bidSize: z.number(),
+	askPrice: z.number(),
+	askSize: z.number(),
 });
 export type Quote = z.infer<typeof QuoteSchema>;
 
@@ -470,186 +470,186 @@ export type Quote = z.infer<typeof QuoteSchema>;
  * Creates an empty PriceIndicators object with all nulls
  */
 export function createEmptyPriceIndicators(): PriceIndicators {
-  return {
-    rsi_14: null,
-    atr_14: null,
-    sma_20: null,
-    sma_50: null,
-    sma_200: null,
-    ema_9: null,
-    ema_12: null,
-    ema_21: null,
-    ema_26: null,
-    macd_line: null,
-    macd_signal: null,
-    macd_histogram: null,
-    bollinger_upper: null,
-    bollinger_middle: null,
-    bollinger_lower: null,
-    bollinger_bandwidth: null,
-    bollinger_percentb: null,
-    stochastic_k: null,
-    stochastic_d: null,
-    momentum_1m: null,
-    momentum_3m: null,
-    momentum_6m: null,
-    momentum_12m: null,
-    realized_vol_20d: null,
-    parkinson_vol_20d: null,
-  };
+	return {
+		rsi_14: null,
+		atr_14: null,
+		sma_20: null,
+		sma_50: null,
+		sma_200: null,
+		ema_9: null,
+		ema_12: null,
+		ema_21: null,
+		ema_26: null,
+		macd_line: null,
+		macd_signal: null,
+		macd_histogram: null,
+		bollinger_upper: null,
+		bollinger_middle: null,
+		bollinger_lower: null,
+		bollinger_bandwidth: null,
+		bollinger_percentb: null,
+		stochastic_k: null,
+		stochastic_d: null,
+		momentum_1m: null,
+		momentum_3m: null,
+		momentum_6m: null,
+		momentum_12m: null,
+		realized_vol_20d: null,
+		parkinson_vol_20d: null,
+	};
 }
 
 /**
  * Creates an empty LiquidityIndicators object with all nulls
  */
 export function createEmptyLiquidityIndicators(): LiquidityIndicators {
-  return {
-    bid_ask_spread: null,
-    bid_ask_spread_pct: null,
-    amihud_illiquidity: null,
-    vwap: null,
-    turnover_ratio: null,
-    volume_ratio: null,
-  };
+	return {
+		bid_ask_spread: null,
+		bid_ask_spread_pct: null,
+		amihud_illiquidity: null,
+		vwap: null,
+		turnover_ratio: null,
+		volume_ratio: null,
+	};
 }
 
 /**
  * Creates an empty OptionsIndicators object with all nulls
  */
 export function createEmptyOptionsIndicators(): OptionsIndicators {
-  return {
-    atm_iv: null,
-    iv_skew_25d: null,
-    iv_put_25d: null,
-    iv_call_25d: null,
-    put_call_ratio_volume: null,
-    put_call_ratio_oi: null,
-    term_structure_slope: null,
-    front_month_iv: null,
-    back_month_iv: null,
-    vrp: null,
-    realized_vol_20d: null,
-    net_delta: null,
-    net_gamma: null,
-    net_theta: null,
-    net_vega: null,
-  };
+	return {
+		atm_iv: null,
+		iv_skew_25d: null,
+		iv_put_25d: null,
+		iv_call_25d: null,
+		put_call_ratio_volume: null,
+		put_call_ratio_oi: null,
+		term_structure_slope: null,
+		front_month_iv: null,
+		back_month_iv: null,
+		vrp: null,
+		realized_vol_20d: null,
+		net_delta: null,
+		net_gamma: null,
+		net_theta: null,
+		net_vega: null,
+	};
 }
 
 /**
  * Creates an empty ValueIndicators object with all nulls
  */
 export function createEmptyValueIndicators(): ValueIndicators {
-  return {
-    pe_ratio_ttm: null,
-    pe_ratio_forward: null,
-    pb_ratio: null,
-    ev_ebitda: null,
-    earnings_yield: null,
-    dividend_yield: null,
-    cape_10yr: null,
-  };
+	return {
+		pe_ratio_ttm: null,
+		pe_ratio_forward: null,
+		pb_ratio: null,
+		ev_ebitda: null,
+		earnings_yield: null,
+		dividend_yield: null,
+		cape_10yr: null,
+	};
 }
 
 /**
  * Creates an empty QualityIndicators object with all nulls
  */
 export function createEmptyQualityIndicators(): QualityIndicators {
-  return {
-    gross_profitability: null,
-    roe: null,
-    roa: null,
-    asset_growth: null,
-    accruals_ratio: null,
-    cash_flow_quality: null,
-    beneish_m_score: null,
-    earnings_quality: null,
-  };
+	return {
+		gross_profitability: null,
+		roe: null,
+		roa: null,
+		asset_growth: null,
+		accruals_ratio: null,
+		cash_flow_quality: null,
+		beneish_m_score: null,
+		earnings_quality: null,
+	};
 }
 
 /**
  * Creates an empty ShortInterestIndicators object with all nulls
  */
 export function createEmptyShortInterestIndicators(): ShortInterestIndicators {
-  return {
-    short_interest_ratio: null,
-    days_to_cover: null,
-    short_pct_float: null,
-    short_interest_change: null,
-    settlement_date: null,
-  };
+	return {
+		short_interest_ratio: null,
+		days_to_cover: null,
+		short_pct_float: null,
+		short_interest_change: null,
+		settlement_date: null,
+	};
 }
 
 /**
  * Creates an empty SentimentIndicators object with all nulls
  */
 export function createEmptySentimentIndicators(): SentimentIndicators {
-  return {
-    overall_score: null,
-    sentiment_strength: null,
-    news_volume: null,
-    sentiment_momentum: null,
-    event_risk: null,
-    classification: null,
-  };
+	return {
+		overall_score: null,
+		sentiment_strength: null,
+		news_volume: null,
+		sentiment_momentum: null,
+		event_risk: null,
+		classification: null,
+	};
 }
 
 /**
  * Creates an empty CorporateIndicators object with all nulls
  */
 export function createEmptyCorporateIndicators(): CorporateIndicators {
-  return {
-    trailing_dividend_yield: null,
-    ex_dividend_days: null,
-    upcoming_earnings_days: null,
-    recent_split: null,
-  };
+	return {
+		trailing_dividend_yield: null,
+		ex_dividend_days: null,
+		upcoming_earnings_days: null,
+		recent_split: null,
+	};
 }
 
 /**
  * Creates an empty MarketContext object with all nulls
  */
 export function createEmptyMarketContext(): MarketContext {
-  return {
-    sector: null,
-    industry: null,
-    market_cap: null,
-    market_cap_category: null,
-  };
+	return {
+		sector: null,
+		industry: null,
+		market_cap: null,
+		market_cap_category: null,
+	};
 }
 
 /**
  * Creates a default SnapshotMetadata object
  */
 export function createDefaultMetadata(): SnapshotMetadata {
-  return {
-    price_updated_at: Date.now(),
-    fundamentals_date: null,
-    short_interest_date: null,
-    sentiment_date: null,
-    data_quality: "PARTIAL",
-    missing_fields: [],
-  };
+	return {
+		price_updated_at: Date.now(),
+		fundamentals_date: null,
+		short_interest_date: null,
+		sentiment_date: null,
+		data_quality: "PARTIAL",
+		missing_fields: [],
+	};
 }
 
 /**
  * Creates an empty IndicatorSnapshot for a symbol
  */
 export function createEmptySnapshot(symbol: string): IndicatorSnapshot {
-  return {
-    symbol,
-    timestamp: Date.now(),
-    price: createEmptyPriceIndicators(),
-    liquidity: createEmptyLiquidityIndicators(),
-    options: createEmptyOptionsIndicators(),
-    value: createEmptyValueIndicators(),
-    quality: createEmptyQualityIndicators(),
-    short_interest: createEmptyShortInterestIndicators(),
-    sentiment: createEmptySentimentIndicators(),
-    corporate: createEmptyCorporateIndicators(),
-    market: createEmptyMarketContext(),
-    metadata: createDefaultMetadata(),
-  };
+	return {
+		symbol,
+		timestamp: Date.now(),
+		price: createEmptyPriceIndicators(),
+		liquidity: createEmptyLiquidityIndicators(),
+		options: createEmptyOptionsIndicators(),
+		value: createEmptyValueIndicators(),
+		quality: createEmptyQualityIndicators(),
+		short_interest: createEmptyShortInterestIndicators(),
+		sentiment: createEmptySentimentIndicators(),
+		corporate: createEmptyCorporateIndicators(),
+		market: createEmptyMarketContext(),
+		metadata: createDefaultMetadata(),
+	};
 }
 
 // ============================================================
@@ -666,14 +666,14 @@ export type MarketRegimeType = z.infer<typeof MarketRegimeType>;
  * Indicator category for classification
  */
 export const IndicatorCategory = z.enum([
-  "momentum",
-  "trend",
-  "volatility",
-  "liquidity",
-  "correlation",
-  "microstructure",
-  "sentiment",
-  "regime",
+	"momentum",
+	"trend",
+	"volatility",
+	"liquidity",
+	"correlation",
+	"microstructure",
+	"sentiment",
+	"regime",
 ]);
 export type IndicatorCategory = z.infer<typeof IndicatorCategory>;
 
@@ -681,14 +681,14 @@ export type IndicatorCategory = z.infer<typeof IndicatorCategory>;
  * Expected properties for an indicator hypothesis
  */
 export const ExpectedPropertiesSchema = z.object({
-  /** Expected information coefficient range [min, max] */
-  expectedICRange: z.tuple([z.number().min(0).max(1), z.number().min(0).max(1)]),
-  /** Maximum acceptable correlation with existing indicators */
-  maxCorrelationWithExisting: z.number().min(0).max(1),
-  /** Target timeframe for the indicator */
-  targetTimeframe: z.string(),
-  /** Market regimes where indicator should perform well */
-  applicableRegimes: z.array(MarketRegimeType),
+	/** Expected information coefficient range [min, max] */
+	expectedICRange: z.tuple([z.number().min(0).max(1), z.number().min(0).max(1)]),
+	/** Maximum acceptable correlation with existing indicators */
+	maxCorrelationWithExisting: z.number().min(0).max(1),
+	/** Target timeframe for the indicator */
+	targetTimeframe: z.string(),
+	/** Market regimes where indicator should perform well */
+	applicableRegimes: z.array(MarketRegimeType),
 });
 export type ExpectedProperties = z.infer<typeof ExpectedPropertiesSchema>;
 
@@ -700,29 +700,29 @@ export type ExpectedProperties = z.infer<typeof ExpectedPropertiesSchema>;
  * @see docs/plans/19-dynamic-indicator-synthesis.md
  */
 export const IndicatorHypothesisSchema = z.object({
-  /** Unique name for the indicator (snake_case) */
-  name: z.string().regex(/^[a-z][a-z0-9_]*$/, "Must be snake_case"),
+	/** Unique name for the indicator (snake_case) */
+	name: z.string().regex(/^[a-z][a-z0-9_]*$/, "Must be snake_case"),
 
-  /** Category classification */
-  category: IndicatorCategory,
+	/** Category classification */
+	category: IndicatorCategory,
 
-  /** Core hypothesis statement (min 50 chars) */
-  hypothesis: z.string().min(50),
+	/** Core hypothesis statement (min 50 chars) */
+	hypothesis: z.string().min(50),
 
-  /** Economic rationale explaining predictive power (min 100 chars) */
-  economicRationale: z.string().min(100),
+	/** Economic rationale explaining predictive power (min 100 chars) */
+	economicRationale: z.string().min(100),
 
-  /** Mathematical approach description (min 50 chars) */
-  mathematicalApproach: z.string().min(50),
+	/** Mathematical approach description (min 50 chars) */
+	mathematicalApproach: z.string().min(50),
 
-  /** Specific criteria that would invalidate the hypothesis */
-  falsificationCriteria: z.array(z.string().min(10)).min(1),
+	/** Specific criteria that would invalidate the hypothesis */
+	falsificationCriteria: z.array(z.string().min(10)).min(1),
 
-  /** Expected statistical properties */
-  expectedProperties: ExpectedPropertiesSchema,
+	/** Expected statistical properties */
+	expectedProperties: ExpectedPropertiesSchema,
 
-  /** Related academic/practitioner research */
-  relatedAcademicWork: z.array(z.string()).optional(),
+	/** Related academic/practitioner research */
+	relatedAcademicWork: z.array(z.string()).optional(),
 });
 export type IndicatorHypothesis = z.infer<typeof IndicatorHypothesisSchema>;
 
@@ -734,12 +734,12 @@ export type IndicatorHypothesis = z.infer<typeof IndicatorHypothesisSchema>;
  * Result of comparing two indicators
  */
 export interface IndicatorComparisonResult {
-  /** Correlation coefficient between indicators */
-  correlation: number;
-  /** AST similarity score (0-1) for code comparison */
-  astSimilarity?: number;
-  /** Whether indicators are sufficiently orthogonal */
-  isOrthogonal: boolean;
+	/** Correlation coefficient between indicators */
+	correlation: number;
+	/** AST similarity score (0-1) for code comparison */
+	astSimilarity?: number;
+	/** Whether indicators are sufficiently orthogonal */
+	isOrthogonal: boolean;
 }
 
 /**
@@ -754,42 +754,42 @@ export interface IndicatorComparisonResult {
  * @returns Comparison result with correlation and orthogonality determination
  */
 export function compareIndicator(
-  indicator1Values: number[],
-  indicator2Values: number[],
-  threshold = 0.5
+	indicator1Values: number[],
+	indicator2Values: number[],
+	threshold = 0.5
 ): IndicatorComparisonResult {
-  if (indicator1Values.length !== indicator2Values.length) {
-    throw new Error("Indicator arrays must have the same length");
-  }
+	if (indicator1Values.length !== indicator2Values.length) {
+		throw new Error("Indicator arrays must have the same length");
+	}
 
-  if (indicator1Values.length === 0) {
-    return { correlation: 0, isOrthogonal: true };
-  }
+	if (indicator1Values.length === 0) {
+		return { correlation: 0, isOrthogonal: true };
+	}
 
-  // Calculate Pearson correlation
-  const n = indicator1Values.length;
-  const mean1 = indicator1Values.reduce((a, b) => a + b, 0) / n;
-  const mean2 = indicator2Values.reduce((a, b) => a + b, 0) / n;
+	// Calculate Pearson correlation
+	const n = indicator1Values.length;
+	const mean1 = indicator1Values.reduce((a, b) => a + b, 0) / n;
+	const mean2 = indicator2Values.reduce((a, b) => a + b, 0) / n;
 
-  let numerator = 0;
-  let sum1Sq = 0;
-  let sum2Sq = 0;
+	let numerator = 0;
+	let sum1Sq = 0;
+	let sum2Sq = 0;
 
-  for (let i = 0; i < n; i++) {
-    const diff1 = (indicator1Values[i] ?? 0) - mean1;
-    const diff2 = (indicator2Values[i] ?? 0) - mean2;
-    numerator += diff1 * diff2;
-    sum1Sq += diff1 * diff1;
-    sum2Sq += diff2 * diff2;
-  }
+	for (let i = 0; i < n; i++) {
+		const diff1 = (indicator1Values[i] ?? 0) - mean1;
+		const diff2 = (indicator2Values[i] ?? 0) - mean2;
+		numerator += diff1 * diff2;
+		sum1Sq += diff1 * diff1;
+		sum2Sq += diff2 * diff2;
+	}
 
-  const denominator = Math.sqrt(sum1Sq * sum2Sq);
-  const correlation = denominator === 0 ? 0 : numerator / denominator;
+	const denominator = Math.sqrt(sum1Sq * sum2Sq);
+	const correlation = denominator === 0 ? 0 : numerator / denominator;
 
-  return {
-    correlation,
-    isOrthogonal: Math.abs(correlation) < threshold,
-  };
+	return {
+		correlation,
+		isOrthogonal: Math.abs(correlation) < threshold,
+	};
 }
 
 // ============================================================
@@ -800,70 +800,70 @@ export function compareIndicator(
  * IC (Information Coefficient) history entry
  */
 export interface ICHistoryEntry {
-  /** Date string in YYYY-MM-DD format */
-  date: string;
-  /** IC value for that date */
-  icValue: number;
+	/** Date string in YYYY-MM-DD format */
+	date: string;
+	/** IC value for that date */
+	icValue: number;
 }
 
 /**
  * Input parameters for creating trigger conditions
  */
 export interface TriggerConditionsInput {
-  /** Whether a regime gap was detected */
-  regimeGapDetected: boolean;
-  /** Current market regime label */
-  currentRegime: string;
-  /** Details about the regime gap (if any) */
-  regimeGapDetails?: string;
-  /** Similarity score of closest matching indicator (0-1) */
-  closestIndicatorSimilarity?: number;
-  /** IC history entries (newest first) */
-  icHistory: ICHistoryEntry[];
-  /** ISO timestamp of last generation attempt (null if never attempted) */
-  lastAttemptAt?: string | null;
-  /** Current count of active indicators */
-  activeIndicatorCount: number;
-  /** Maximum indicator capacity (defaults to 20) */
-  maxIndicatorCapacity?: number;
+	/** Whether a regime gap was detected */
+	regimeGapDetected: boolean;
+	/** Current market regime label */
+	currentRegime: string;
+	/** Details about the regime gap (if any) */
+	regimeGapDetails?: string;
+	/** Similarity score of closest matching indicator (0-1) */
+	closestIndicatorSimilarity?: number;
+	/** IC history entries (newest first) */
+	icHistory: ICHistoryEntry[];
+	/** ISO timestamp of last generation attempt (null if never attempted) */
+	lastAttemptAt?: string | null;
+	/** Current count of active indicators */
+	activeIndicatorCount: number;
+	/** Maximum indicator capacity (defaults to 20) */
+	maxIndicatorCapacity?: number;
 }
 
 /**
  * Computed trigger conditions for evaluation
  */
 export interface TriggerConditions {
-  /** Whether a regime gap was detected */
-  regimeGapDetected: boolean;
-  /** Current market regime */
-  currentRegime: string;
-  /** Regime gap details */
-  regimeGapDetails?: string;
-  /** Closest indicator similarity score */
-  closestIndicatorSimilarity: number;
-  /** Rolling 30-day IC */
-  rollingIC30Day: number;
-  /** Number of consecutive days of IC decay */
-  icDecayDays: number;
-  /** Whether existing indicators are underperforming */
-  existingIndicatorsUnderperforming: boolean;
-  /** Days since last generation attempt */
-  daysSinceLastAttempt: number;
-  /** Number of active indicators */
-  activeIndicatorCount: number;
-  /** Maximum indicator capacity */
-  maxIndicatorCapacity: number;
+	/** Whether a regime gap was detected */
+	regimeGapDetected: boolean;
+	/** Current market regime */
+	currentRegime: string;
+	/** Regime gap details */
+	regimeGapDetails?: string;
+	/** Closest indicator similarity score */
+	closestIndicatorSimilarity: number;
+	/** Rolling 30-day IC */
+	rollingIC30Day: number;
+	/** Number of consecutive days of IC decay */
+	icDecayDays: number;
+	/** Whether existing indicators are underperforming */
+	existingIndicatorsUnderperforming: boolean;
+	/** Days since last generation attempt */
+	daysSinceLastAttempt: number;
+	/** Number of active indicators */
+	activeIndicatorCount: number;
+	/** Maximum indicator capacity */
+	maxIndicatorCapacity: number;
 }
 
 /**
  * Result of trigger condition evaluation
  */
 export interface TriggerEvaluationResult {
-  /** Whether indicator generation should be triggered */
-  shouldTrigger: boolean;
-  /** The computed conditions */
-  conditions: TriggerConditions;
-  /** Summary explanation */
-  summary: string;
+	/** Whether indicator generation should be triggered */
+	shouldTrigger: boolean;
+	/** The computed conditions */
+	conditions: TriggerConditions;
+	/** Summary explanation */
+	summary: string;
 }
 
 /**
@@ -873,60 +873,60 @@ export interface TriggerEvaluationResult {
  * @returns Computed trigger conditions
  */
 export function createTriggerConditions(input: TriggerConditionsInput): TriggerConditions {
-  const {
-    regimeGapDetected,
-    currentRegime,
-    regimeGapDetails,
-    closestIndicatorSimilarity = 1.0,
-    icHistory,
-    lastAttemptAt,
-    activeIndicatorCount,
-    maxIndicatorCapacity = 20,
-  } = input;
+	const {
+		regimeGapDetected,
+		currentRegime,
+		regimeGapDetails,
+		closestIndicatorSimilarity = 1.0,
+		icHistory,
+		lastAttemptAt,
+		activeIndicatorCount,
+		maxIndicatorCapacity = 20,
+	} = input;
 
-  // Calculate rolling 30-day IC
-  const recent30 = icHistory.slice(0, 30);
-  const rollingIC30Day =
-    recent30.length > 0 ? recent30.reduce((sum, e) => sum + e.icValue, 0) / recent30.length : 0;
+	// Calculate rolling 30-day IC
+	const recent30 = icHistory.slice(0, 30);
+	const rollingIC30Day =
+		recent30.length > 0 ? recent30.reduce((sum, e) => sum + e.icValue, 0) / recent30.length : 0;
 
-  // Calculate consecutive IC decay days
-  let icDecayDays = 0;
-  for (let i = 1; i < icHistory.length; i++) {
-    const current = icHistory[i];
-    const previous = icHistory[i - 1];
-    if (current && previous && current.icValue < previous.icValue) {
-      icDecayDays++;
-    } else {
-      break;
-    }
-  }
+	// Calculate consecutive IC decay days
+	let icDecayDays = 0;
+	for (let i = 1; i < icHistory.length; i++) {
+		const current = icHistory[i];
+		const previous = icHistory[i - 1];
+		if (current && previous && current.icValue < previous.icValue) {
+			icDecayDays++;
+		} else {
+			break;
+		}
+	}
 
-  // Determine if existing indicators are underperforming
-  const existingIndicatorsUnderperforming = rollingIC30Day < 0.02 && icDecayDays >= 5;
+	// Determine if existing indicators are underperforming
+	const existingIndicatorsUnderperforming = rollingIC30Day < 0.02 && icDecayDays >= 5;
 
-  // Calculate days since last attempt
-  // Use large finite number (365000 = ~1000 years) when never attempted, since Infinity isn't JSON-serializable
-  let daysSinceLastAttempt = 365000;
-  if (lastAttemptAt) {
-    const lastAttemptDate = new Date(lastAttemptAt);
-    const now = new Date();
-    daysSinceLastAttempt = Math.floor(
-      (now.getTime() - lastAttemptDate.getTime()) / (1000 * 60 * 60 * 24)
-    );
-  }
+	// Calculate days since last attempt
+	// Use large finite number (365000 = ~1000 years) when never attempted, since Infinity isn't JSON-serializable
+	let daysSinceLastAttempt = 365000;
+	if (lastAttemptAt) {
+		const lastAttemptDate = new Date(lastAttemptAt);
+		const now = new Date();
+		daysSinceLastAttempt = Math.floor(
+			(now.getTime() - lastAttemptDate.getTime()) / (1000 * 60 * 60 * 24)
+		);
+	}
 
-  return {
-    regimeGapDetected,
-    currentRegime,
-    regimeGapDetails,
-    closestIndicatorSimilarity,
-    rollingIC30Day,
-    icDecayDays,
-    existingIndicatorsUnderperforming,
-    daysSinceLastAttempt,
-    activeIndicatorCount,
-    maxIndicatorCapacity,
-  };
+	return {
+		regimeGapDetected,
+		currentRegime,
+		regimeGapDetails,
+		closestIndicatorSimilarity,
+		rollingIC30Day,
+		icDecayDays,
+		existingIndicatorsUnderperforming,
+		daysSinceLastAttempt,
+		activeIndicatorCount,
+		maxIndicatorCapacity,
+	};
 }
 
 /**
@@ -942,61 +942,61 @@ export function createTriggerConditions(input: TriggerConditionsInput): TriggerC
  * @returns Evaluation result with trigger decision and summary
  */
 export function evaluateTriggerConditions(conditions: TriggerConditions): TriggerEvaluationResult {
-  const {
-    regimeGapDetected,
-    existingIndicatorsUnderperforming,
-    daysSinceLastAttempt,
-    closestIndicatorSimilarity,
-    activeIndicatorCount,
-    maxIndicatorCapacity,
-  } = conditions;
+	const {
+		regimeGapDetected,
+		existingIndicatorsUnderperforming,
+		daysSinceLastAttempt,
+		closestIndicatorSimilarity,
+		activeIndicatorCount,
+		maxIndicatorCapacity,
+	} = conditions;
 
-  // Check cooldown (30 days)
-  if (daysSinceLastAttempt < 30) {
-    return {
-      shouldTrigger: false,
-      conditions,
-      summary: `Cooldown active: ${30 - daysSinceLastAttempt} days remaining`,
-    };
-  }
+	// Check cooldown (30 days)
+	if (daysSinceLastAttempt < 30) {
+		return {
+			shouldTrigger: false,
+			conditions,
+			summary: `Cooldown active: ${30 - daysSinceLastAttempt} days remaining`,
+		};
+	}
 
-  // Check capacity
-  if (activeIndicatorCount >= maxIndicatorCapacity) {
-    return {
-      shouldTrigger: false,
-      conditions,
-      summary: `Indicator capacity reached (${activeIndicatorCount}/${maxIndicatorCapacity})`,
-    };
-  }
+	// Check capacity
+	if (activeIndicatorCount >= maxIndicatorCapacity) {
+		return {
+			shouldTrigger: false,
+			conditions,
+			summary: `Indicator capacity reached (${activeIndicatorCount}/${maxIndicatorCapacity})`,
+		};
+	}
 
-  // Check similarity threshold
-  if (closestIndicatorSimilarity >= 0.7) {
-    return {
-      shouldTrigger: false,
-      conditions,
-      summary: `Existing indicator too similar (${closestIndicatorSimilarity.toFixed(2)})`,
-    };
-  }
+	// Check similarity threshold
+	if (closestIndicatorSimilarity >= 0.7) {
+		return {
+			shouldTrigger: false,
+			conditions,
+			summary: `Existing indicator too similar (${closestIndicatorSimilarity.toFixed(2)})`,
+		};
+	}
 
-  // Check trigger conditions (regime gap OR underperformance)
-  const hasRegimeGap = regimeGapDetected;
-  const hasUnderperformance = existingIndicatorsUnderperforming;
+	// Check trigger conditions (regime gap OR underperformance)
+	const hasRegimeGap = regimeGapDetected;
+	const hasUnderperformance = existingIndicatorsUnderperforming;
 
-  if (!hasRegimeGap && !hasUnderperformance) {
-    return {
-      shouldTrigger: false,
-      conditions,
-      summary: "No trigger condition met: no regime gap and performance adequate",
-    };
-  }
+	if (!hasRegimeGap && !hasUnderperformance) {
+		return {
+			shouldTrigger: false,
+			conditions,
+			summary: "No trigger condition met: no regime gap and performance adequate",
+		};
+	}
 
-  // All conditions met - should trigger
-  const reason = hasRegimeGap ? "Regime gap detected" : "Sustained underperformance";
-  return {
-    shouldTrigger: true,
-    conditions,
-    summary: `${reason}, generation warranted`,
-  };
+	// All conditions met - should trigger
+	const reason = hasRegimeGap ? "Regime gap detected" : "Sustained underperformance";
+	return {
+		shouldTrigger: true,
+		conditions,
+		summary: `${reason}, generation warranted`,
+	};
 }
 
 // ============================================================
@@ -1010,54 +1010,54 @@ export function evaluateTriggerConditions(conditions: TriggerConditions): Trigge
  * @see docs/plans/02-data-layer.md - Feature Computation
  */
 export interface IndicatorPipelineConfig {
-  /** Timeframes to calculate indicators for */
-  timeframes: string[];
-  /** Base period for calculations */
-  basePeriod: number;
-  /** Whether to include volume indicators */
-  includeVolume: boolean;
+	/** Timeframes to calculate indicators for */
+	timeframes: string[];
+	/** Base period for calculations */
+	basePeriod: number;
+	/** Whether to include volume indicators */
+	includeVolume: boolean;
 }
 
 /**
  * Default pipeline configuration
  */
 export const DEFAULT_PIPELINE_CONFIG: IndicatorPipelineConfig = {
-  timeframes: ["1d", "1h", "15m"],
-  basePeriod: 14,
-  includeVolume: true,
+	timeframes: ["1d", "1h", "15m"],
+	basePeriod: 14,
+	includeVolume: true,
 };
 
 /**
  * Transform configuration for feature normalization
  */
 export interface TransformConfig {
-  /** Normalization method */
-  method: "zscore" | "minmax" | "robust";
-  /** Lookback period for normalization */
-  lookbackPeriod: number;
-  /** Whether to clip outliers */
-  clipOutliers: boolean;
-  /** Standard deviation threshold for outlier clipping */
-  clipThreshold: number;
+	/** Normalization method */
+	method: "zscore" | "minmax" | "robust";
+	/** Lookback period for normalization */
+	lookbackPeriod: number;
+	/** Whether to clip outliers */
+	clipOutliers: boolean;
+	/** Standard deviation threshold for outlier clipping */
+	clipThreshold: number;
 }
 
 /**
  * Default transform configuration
  */
 export const DEFAULT_TRANSFORM_CONFIG: TransformConfig = {
-  method: "zscore",
-  lookbackPeriod: 20,
-  clipOutliers: true,
-  clipThreshold: 3,
+	method: "zscore",
+	lookbackPeriod: 20,
+	clipOutliers: true,
+	clipThreshold: 3,
 };
 
 /**
  * Multi-timeframe indicator calculation result
  */
 export interface MultiTimeframeIndicators {
-  [timeframe: string]: {
-    [indicator: string]: number | null;
-  };
+	[timeframe: string]: {
+		[indicator: string]: number | null;
+	};
 }
 
 /**
@@ -1073,37 +1073,37 @@ export interface MultiTimeframeIndicators {
  * @returns Multi-timeframe indicator values
  */
 export function calculateMultiTimeframeIndicators(
-  candles: OHLCVBar[],
-  config: Partial<IndicatorPipelineConfig> = {}
+	candles: OHLCVBar[],
+	config: Partial<IndicatorPipelineConfig> = {}
 ): MultiTimeframeIndicators {
-  if (candles.length === 0) {
-    return {};
-  }
+	if (candles.length === 0) {
+		return {};
+	}
 
-  const fullConfig = { ...DEFAULT_PIPELINE_CONFIG, ...config };
-  const period = fullConfig.basePeriod;
-  const indicators: { [indicator: string]: number | null } = {};
+	const fullConfig = { ...DEFAULT_PIPELINE_CONFIG, ...config };
+	const period = fullConfig.basePeriod;
+	const indicators: { [indicator: string]: number | null } = {};
 
-  // Calculate RSI
-  const rsiResult = calculateRSI(candles, period);
-  indicators[`rsi_${period}`] = rsiResult?.rsi ?? null;
+	// Calculate RSI
+	const rsiResult = calculateRSI(candles, period);
+	indicators[`rsi_${period}`] = rsiResult?.rsi ?? null;
 
-  // Calculate SMA
-  indicators[`sma_${period}`] = calculateSMA(candles, period);
+	// Calculate SMA
+	indicators[`sma_${period}`] = calculateSMA(candles, period);
 
-  // Calculate ATR
-  indicators[`atr_${period}`] = calculateATR(candles, period);
+	// Calculate ATR
+	indicators[`atr_${period}`] = calculateATR(candles, period);
 
-  return {
-    "1h": indicators,
-  };
+	return {
+		"1h": indicators,
+	};
 }
 
 /**
  * Transformed feature result
  */
 export interface TransformedFeatures {
-  [feature: string]: number;
+	[feature: string]: number;
 }
 
 /**
@@ -1118,14 +1118,14 @@ export interface TransformedFeatures {
  * @returns Transformed feature values
  */
 export function applyTransforms(
-  candles: OHLCVBar[],
-  _timeframe: string,
-  _config: Partial<TransformConfig> = {}
+	candles: OHLCVBar[],
+	_timeframe: string,
+	_config: Partial<TransformConfig> = {}
 ): TransformedFeatures {
-  // Stub implementation - returns empty structure
-  // TODO: Implement zscore/minmax/robust normalization
-  if (candles.length === 0) {
-    return {};
-  }
-  return {};
+	// Stub implementation - returns empty structure
+	// TODO: Implement zscore/minmax/robust normalization
+	if (candles.length === 0) {
+		return {};
+	}
+	return {};
 }

@@ -14,14 +14,14 @@
 import type { OHLCVBar } from "../../types";
 
 export interface TurnoverResult {
-  /** Volume ratio (current / average) */
-  volumeRatio: number;
-  /** Average volume over lookback period */
-  avgVolume: number;
-  /** Current volume */
-  currentVolume: number;
-  /** Timestamp of calculation */
-  timestamp: number;
+	/** Volume ratio (current / average) */
+	volumeRatio: number;
+	/** Average volume over lookback period */
+	avgVolume: number;
+	/** Current volume */
+	currentVolume: number;
+	/** Timestamp of calculation */
+	timestamp: number;
 }
 
 /**
@@ -44,39 +44,39 @@ export interface TurnoverResult {
  * ```
  */
 export function calculateTurnover(bars: OHLCVBar[], period = 20): TurnoverResult | null {
-  if (bars.length < period) {
-    return null;
-  }
+	if (bars.length < period) {
+		return null;
+	}
 
-  // Get lookback bars for average (excluding current)
-  const lookbackBars = bars.slice(-period - 1, -1);
-  const currentBar = bars[bars.length - 1];
+	// Get lookback bars for average (excluding current)
+	const lookbackBars = bars.slice(-period - 1, -1);
+	const currentBar = bars[bars.length - 1];
 
-  if (!currentBar || lookbackBars.length === 0) {
-    return null;
-  }
+	if (!currentBar || lookbackBars.length === 0) {
+		return null;
+	}
 
-  // Calculate average volume
-  const validVolumes = lookbackBars.filter((b) => b.volume > 0).map((b) => b.volume);
-  if (validVolumes.length === 0) {
-    return null;
-  }
+	// Calculate average volume
+	const validVolumes = lookbackBars.filter((b) => b.volume > 0).map((b) => b.volume);
+	if (validVolumes.length === 0) {
+		return null;
+	}
 
-  const avgVolume = validVolumes.reduce((sum, v) => sum + v, 0) / validVolumes.length;
-  const currentVolume = currentBar.volume;
+	const avgVolume = validVolumes.reduce((sum, v) => sum + v, 0) / validVolumes.length;
+	const currentVolume = currentBar.volume;
 
-  if (avgVolume <= 0) {
-    return null;
-  }
+	if (avgVolume <= 0) {
+		return null;
+	}
 
-  const volumeRatio = currentVolume / avgVolume;
+	const volumeRatio = currentVolume / avgVolume;
 
-  return {
-    volumeRatio,
-    avgVolume,
-    currentVolume,
-    timestamp: currentBar.timestamp,
-  };
+	return {
+		volumeRatio,
+		avgVolume,
+		currentVolume,
+		timestamp: currentBar.timestamp,
+	};
 }
 
 /**
@@ -85,19 +85,19 @@ export function calculateTurnover(bars: OHLCVBar[], period = 20): TurnoverResult
 export type VolumeActivity = "very_low" | "low" | "normal" | "high" | "very_high";
 
 export function classifyVolumeActivity(volumeRatio: number): VolumeActivity {
-  if (volumeRatio < 0.5) {
-    return "very_low";
-  }
-  if (volumeRatio < 0.8) {
-    return "low";
-  }
-  if (volumeRatio < 1.5) {
-    return "normal";
-  }
-  if (volumeRatio < 2.5) {
-    return "high";
-  }
-  return "very_high";
+	if (volumeRatio < 0.5) {
+		return "very_low";
+	}
+	if (volumeRatio < 0.8) {
+		return "low";
+	}
+	if (volumeRatio < 1.5) {
+		return "normal";
+	}
+	if (volumeRatio < 2.5) {
+		return "high";
+	}
+	return "very_high";
 }
 
 /**
@@ -108,8 +108,8 @@ export function classifyVolumeActivity(volumeRatio: number): VolumeActivity {
  * @returns Turnover ratio (0-1 range typically)
  */
 export function calculateTrueTurnover(volume: number, sharesOutstanding: number): number {
-  if (sharesOutstanding <= 0) {
-    return 0;
-  }
-  return volume / sharesOutstanding;
+	if (sharesOutstanding <= 0) {
+		return 0;
+	}
+	return volume / sharesOutstanding;
 }

@@ -6,77 +6,77 @@ import { riskRoutes } from "./risk";
 
 // Mock system state
 mock.module("./system", () => ({
-  systemState: { environment: "PAPER" },
+	systemState: { environment: "PAPER" },
 }));
 
 describe("Risk Routes", () => {
-  const app = new Hono();
-  app.route("/", riskRoutes);
+	const app = new Hono();
+	app.route("/", riskRoutes);
 
-  it("GET /exposure returns 200 with metrics", async () => {
-    // Mock DB
-    const mockPositionsRepo = {
-      findOpen: mock(() =>
-        Promise.resolve([
-          {
-            symbol: "AAPL",
-            side: "LONG",
-            quantity: 10,
-            marketValue: 1500,
-            costBasis: 1400,
-          },
-        ])
-      ),
-    };
-    const mockSnapshotsRepo = {
-      getLatest: mock(() => Promise.resolve({ nav: 100000 })),
-    };
+	it("GET /exposure returns 200 with metrics", async () => {
+		// Mock DB
+		const mockPositionsRepo = {
+			findOpen: mock(() =>
+				Promise.resolve([
+					{
+						symbol: "AAPL",
+						side: "LONG",
+						quantity: 10,
+						marketValue: 1500,
+						costBasis: 1400,
+					},
+				])
+			),
+		};
+		const mockSnapshotsRepo = {
+			getLatest: mock(() => Promise.resolve({ nav: 100000 })),
+		};
 
-    spyOn(db, "getPositionsRepo").mockResolvedValue(mockPositionsRepo as any);
-    spyOn(db, "getPortfolioSnapshotsRepo").mockResolvedValue(mockSnapshotsRepo as any);
+		spyOn(db, "getPositionsRepo").mockResolvedValue(mockPositionsRepo as any);
+		spyOn(db, "getPortfolioSnapshotsRepo").mockResolvedValue(mockSnapshotsRepo as any);
 
-    const res = await app.request("/exposure");
-    expect(res.status).toBe(200);
+		const res = await app.request("/exposure");
+		expect(res.status).toBe(200);
 
-    const data = (await res.json()) as any;
-    expect(data.gross).toBeDefined();
-    expect(data.net).toBeDefined();
-    expect(data.long).toBe(1500);
-    expect(data.short).toBe(0);
-  });
+		const data = (await res.json()) as any;
+		expect(data.gross).toBeDefined();
+		expect(data.net).toBeDefined();
+		expect(data.long).toBe(1500);
+		expect(data.short).toBe(0);
+	});
 
-  it("GET /greeks returns 200 with summary", async () => {
-    // Mock PortfolioService
-    spyOn(portfolioService, "getOptionsPositions").mockResolvedValue([
-      {
-        contractSymbol: "AAPL240119C00150000",
-        underlying: "AAPL",
-        underlyingPrice: 150,
-        expiration: "2024-01-19",
-        strike: 150,
-        right: "CALL",
-        quantity: 10,
-        avgCost: 5.0,
-        currentPrice: 5.5,
-        marketValue: 5500,
-        unrealizedPnl: 500,
-        unrealizedPnlPct: 10,
-        greeks: { delta: 0.5, gamma: 0.05, theta: -0.1, vega: 0.2 },
-      },
-    ]);
+	it("GET /greeks returns 200 with summary", async () => {
+		// Mock PortfolioService
+		spyOn(portfolioService, "getOptionsPositions").mockResolvedValue([
+			{
+				contractSymbol: "AAPL240119C00150000",
+				underlying: "AAPL",
+				underlyingPrice: 150,
+				expiration: "2024-01-19",
+				strike: 150,
+				right: "CALL",
+				quantity: 10,
+				avgCost: 5.0,
+				currentPrice: 5.5,
+				marketValue: 5500,
+				unrealizedPnl: 500,
+				unrealizedPnlPct: 10,
+				greeks: { delta: 0.5, gamma: 0.05, theta: -0.1, vega: 0.2 },
+			},
+		]);
 
-    const res = await app.request("/greeks");
-    expect(res.status).toBe(200);
+		const res = await app.request("/greeks");
+		expect(res.status).toBe(200);
 
-    const data = (await res.json()) as any;
-    // Delta Notional = 0.5 (delta) * 150 (price) * 100 (mult) * 10 (qty) = 75000
-    expect(data.delta.current).toBe(75000);
-    // Gamma = 0.05 * 100 * 10 = 50
-    expect(data.gamma.current).toBe(50);
-    // Vega = 0.2 * 100 * 10 = 200
-    expect(data.vega.current).toBe(200);
+		const data = (await res.json()) as any;
+		// Delta Notional = 0.5 (delta) * 150 (price) * 100 (mult) * 10 (qty) = 75000
+		expect(data.delta.current).toBe(75000);
+		// Gamma = 0.05 * 100 * 10 = 50
+		expect(data.gamma.current).toBe(50);
+		// Vega = 0.2 * 100 * 10 = 200
+		expect(data.vega.current).toBe(200);
 
-    expect(data.byPosition).toHaveLength(1);
-    expect(data.byPosition[0].symbol).toBe("AAPL240119C00150000");
-  });
+		expect(data.byPosition).toHaveLength(1);
+		expect(data.byPosition[0].symbol).toBe("AAPL240119C00150000");
+	});
 });

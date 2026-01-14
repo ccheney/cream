@@ -36,25 +36,25 @@ export type RegimeLabel = z.infer<typeof RegimeLabel>;
  * Uses MA crossovers and volatility percentiles.
  */
 export const RuleBasedConfigSchema = z.object({
-  /**
-   * Fast moving average period for trend detection
-   */
-  trend_ma_fast: z.number().int().positive().default(20),
+	/**
+	 * Fast moving average period for trend detection
+	 */
+	trend_ma_fast: z.number().int().positive().default(20),
 
-  /**
-   * Slow moving average period for trend detection
-   */
-  trend_ma_slow: z.number().int().positive().default(50),
+	/**
+	 * Slow moving average period for trend detection
+	 */
+	trend_ma_slow: z.number().int().positive().default(50),
 
-  /**
-   * Volatility percentile threshold for HIGH_VOL
-   */
-  volatility_percentile_high: z.number().min(0).max(100).default(80),
+	/**
+	 * Volatility percentile threshold for HIGH_VOL
+	 */
+	volatility_percentile_high: z.number().min(0).max(100).default(80),
 
-  /**
-   * Volatility percentile threshold for LOW_VOL
-   */
-  volatility_percentile_low: z.number().min(0).max(100).default(20),
+	/**
+	 * Volatility percentile threshold for LOW_VOL
+	 */
+	volatility_percentile_low: z.number().min(0).max(100).default(20),
 });
 export type RuleBasedConfig = z.infer<typeof RuleBasedConfigSchema>;
 
@@ -77,32 +77,32 @@ export type RetrainFrequency = z.infer<typeof RetrainFrequency>;
  * Captures market regimes from data patterns.
  */
 export const HMMConfigSchema = z.object({
-  /**
-   * Number of hidden states
-   *
-   * Typically 3-5 (bull/bear/neutral or with vol states)
-   */
-  n_states: z.number().int().min(2).max(10).default(5),
+	/**
+	 * Number of hidden states
+	 *
+	 * Typically 3-5 (bull/bear/neutral or with vol states)
+	 */
+	n_states: z.number().int().min(2).max(10).default(5),
 
-  /**
-   * Features used for training
-   */
-  features: z.array(z.string()).min(1).default(["return_5h", "atr_14_zscore"]),
+	/**
+	 * Features used for training
+	 */
+	features: z.array(z.string()).min(1).default(["return_5h", "atr_14_zscore"]),
 
-  /**
-   * How often to retrain the model
-   */
-  retrain_frequency: RetrainFrequency.default("weekly"),
+	/**
+	 * How often to retrain the model
+	 */
+	retrain_frequency: RetrainFrequency.default("weekly"),
 
-  /**
-   * Covariance matrix type
-   */
-  covariance_type: CovarianceType.default("full"),
+	/**
+	 * Covariance matrix type
+	 */
+	covariance_type: CovarianceType.default("full"),
 
-  /**
-   * EM algorithm iterations
-   */
-  n_iter: z.number().int().positive().default(100),
+	/**
+	 * EM algorithm iterations
+	 */
+	n_iter: z.number().int().positive().default(100),
 });
 export type HMMConfig = z.infer<typeof HMMConfigSchema>;
 
@@ -112,20 +112,20 @@ export type HMMConfig = z.infer<typeof HMMConfigSchema>;
  * Custom ML model for regime classification.
  */
 export const MLModelConfigSchema = z.object({
-  /**
-   * Model path or identifier
-   */
-  model_path: z.string().min(1),
+	/**
+	 * Model path or identifier
+	 */
+	model_path: z.string().min(1),
 
-  /**
-   * Features used for inference
-   */
-  features: z.array(z.string()).min(1),
+	/**
+	 * Features used for inference
+	 */
+	features: z.array(z.string()).min(1),
 
-  /**
-   * Model version for tracking
-   */
-  version: z.string().optional(),
+	/**
+	 * Model version for tracking
+	 */
+	version: z.string().optional(),
 });
 export type MLModelConfig = z.infer<typeof MLModelConfigSchema>;
 
@@ -139,56 +139,56 @@ export type MLModelConfig = z.infer<typeof MLModelConfigSchema>;
  * Uses discriminated union based on classifier_type.
  */
 export const RegimeConfigSchema = z
-  .object({
-    /**
-     * Type of classifier to use
-     */
-    classifier_type: ClassifierType,
+	.object({
+		/**
+		 * Type of classifier to use
+		 */
+		classifier_type: ClassifierType,
 
-    /**
-     * Regime labels (fixed taxonomy)
-     */
-    labels: z
-      .array(RegimeLabel)
-      .default(["BULL_TREND", "BEAR_TREND", "RANGE", "HIGH_VOL", "LOW_VOL"]),
+		/**
+		 * Regime labels (fixed taxonomy)
+		 */
+		labels: z
+			.array(RegimeLabel)
+			.default(["BULL_TREND", "BEAR_TREND", "RANGE", "HIGH_VOL", "LOW_VOL"]),
 
-    /**
-     * Rule-based classifier settings
-     */
-    rule_based: RuleBasedConfigSchema.optional(),
+		/**
+		 * Rule-based classifier settings
+		 */
+		rule_based: RuleBasedConfigSchema.optional(),
 
-    /**
-     * HMM classifier settings
-     */
-    hmm: HMMConfigSchema.optional(),
+		/**
+		 * HMM classifier settings
+		 */
+		hmm: HMMConfigSchema.optional(),
 
-    /**
-     * ML model classifier settings
-     */
-    ml_model: MLModelConfigSchema.optional(),
-  })
-  .superRefine((data, ctx) => {
-    // Validate that the appropriate config is provided for the classifier type
-    if (data.classifier_type === "rule_based" && !data.rule_based) {
-      ctx.addIssue({
-        code: z.ZodIssueCode.custom,
-        message: "rule_based config required when classifier_type is 'rule_based'",
-        path: ["rule_based"],
-      });
-    }
-    if (data.classifier_type === "hmm" && !data.hmm) {
-      ctx.addIssue({
-        code: z.ZodIssueCode.custom,
-        message: "hmm config required when classifier_type is 'hmm'",
-        path: ["hmm"],
-      });
-    }
-    if (data.classifier_type === "ml_model" && !data.ml_model) {
-      ctx.addIssue({
-        code: z.ZodIssueCode.custom,
-        message: "ml_model config required when classifier_type is 'ml_model'",
-        path: ["ml_model"],
-      });
-    }
-  });
+		/**
+		 * ML model classifier settings
+		 */
+		ml_model: MLModelConfigSchema.optional(),
+	})
+	.superRefine((data, ctx) => {
+		// Validate that the appropriate config is provided for the classifier type
+		if (data.classifier_type === "rule_based" && !data.rule_based) {
+			ctx.addIssue({
+				code: z.ZodIssueCode.custom,
+				message: "rule_based config required when classifier_type is 'rule_based'",
+				path: ["rule_based"],
+			});
+		}
+		if (data.classifier_type === "hmm" && !data.hmm) {
+			ctx.addIssue({
+				code: z.ZodIssueCode.custom,
+				message: "hmm config required when classifier_type is 'hmm'",
+				path: ["hmm"],
+			});
+		}
+		if (data.classifier_type === "ml_model" && !data.ml_model) {
+			ctx.addIssue({
+				code: z.ZodIssueCode.custom,
+				message: "ml_model config required when classifier_type is 'ml_model'",
+				path: ["ml_model"],
+			});
+		}
+	});
 export type RegimeConfig = z.infer<typeof RegimeConfigSchema>;

@@ -17,14 +17,14 @@ import type { ElementType, HTMLAttributes, ReactNode } from "react";
 export type TextSize = "xs" | "sm" | "base" | "lg" | "xl" | "2xl" | "3xl" | "4xl";
 export type TextWeight = "normal" | "medium" | "semibold" | "bold";
 export type TextColor =
-  | "heading"
-  | "primary"
-  | "secondary"
-  | "muted"
-  | "profit"
-  | "loss"
-  | "neutral"
-  | "inherit";
+	| "heading"
+	| "primary"
+	| "secondary"
+	| "muted"
+	| "profit"
+	| "loss"
+	| "neutral"
+	| "inherit";
 
 export type HeadingLevel = 1 | 2 | 3 | 4 | 5 | 6;
 
@@ -35,45 +35,45 @@ export type DataFormat = "price" | "percentage" | "number" | "currency" | "share
 // ============================================
 
 export interface TextProps extends HTMLAttributes<HTMLSpanElement> {
-  /** Font size */
-  size?: TextSize;
-  /** Font weight */
-  weight?: TextWeight;
-  /** Text color */
-  color?: TextColor;
-  /** Element to render as */
-  as?: ElementType;
-  /** Children */
-  children: ReactNode;
+	/** Font size */
+	size?: TextSize;
+	/** Font weight */
+	weight?: TextWeight;
+	/** Text color */
+	color?: TextColor;
+	/** Element to render as */
+	as?: ElementType;
+	/** Children */
+	children: ReactNode;
 }
 
 const textSizeClasses: Record<TextSize, string> = {
-  xs: "text-xs",
-  sm: "text-sm",
-  base: "text-base",
-  lg: "text-lg",
-  xl: "text-xl",
-  "2xl": "text-2xl",
-  "3xl": "text-3xl",
-  "4xl": "text-4xl",
+	xs: "text-xs",
+	sm: "text-sm",
+	base: "text-base",
+	lg: "text-lg",
+	xl: "text-xl",
+	"2xl": "text-2xl",
+	"3xl": "text-3xl",
+	"4xl": "text-4xl",
 };
 
 const textWeightClasses: Record<TextWeight, string> = {
-  normal: "font-normal",
-  medium: "font-medium",
-  semibold: "font-semibold",
-  bold: "font-bold",
+	normal: "font-normal",
+	medium: "font-medium",
+	semibold: "font-semibold",
+	bold: "font-bold",
 };
 
 const textColorClasses: Record<TextColor, string> = {
-  heading: "text-text-heading",
-  primary: "text-text-primary",
-  secondary: "text-text-secondary",
-  muted: "text-text-muted",
-  profit: "text-profit",
-  loss: "text-loss",
-  neutral: "text-neutral",
-  inherit: "text-inherit",
+	heading: "text-text-heading",
+	primary: "text-text-primary",
+	secondary: "text-text-secondary",
+	muted: "text-text-muted",
+	profit: "text-profit",
+	loss: "text-loss",
+	neutral: "text-neutral",
+	inherit: "text-inherit",
 };
 
 /**
@@ -87,28 +87,28 @@ const textColorClasses: Record<TextColor, string> = {
  * ```
  */
 export function Text({
-  size = "base",
-  weight = "normal",
-  color = "primary",
-  as: Component = "span",
-  className = "",
-  children,
-  ...props
+	size = "base",
+	weight = "normal",
+	color = "primary",
+	as: Component = "span",
+	className = "",
+	children,
+	...props
 }: TextProps) {
-  return (
-    <Component
-      className={`
+	return (
+		<Component
+			className={`
         font-ui
         ${textSizeClasses[size]}
         ${textWeightClasses[weight]}
         ${textColorClasses[color]}
         ${className}
       `.trim()}
-      {...props}
-    >
-      {children}
-    </Component>
-  );
+			{...props}
+		>
+			{children}
+		</Component>
+	);
 }
 
 // ============================================
@@ -116,23 +116,23 @@ export function Text({
 // ============================================
 
 export interface HeadingProps extends HTMLAttributes<HTMLHeadingElement> {
-  /** Heading level (semantic) */
-  level?: HeadingLevel;
-  /** Visual size override */
-  size?: TextSize;
-  /** Text color */
-  color?: TextColor;
-  /** Children */
-  children: ReactNode;
+	/** Heading level (semantic) */
+	level?: HeadingLevel;
+	/** Visual size override */
+	size?: TextSize;
+	/** Text color */
+	color?: TextColor;
+	/** Children */
+	children: ReactNode;
 }
 
 const headingSizeDefaults: Record<HeadingLevel, TextSize> = {
-  1: "4xl",
-  2: "3xl",
-  3: "2xl",
-  4: "xl",
-  5: "lg",
-  6: "base",
+	1: "4xl",
+	2: "3xl",
+	3: "2xl",
+	4: "xl",
+	5: "lg",
+	6: "base",
 };
 
 /**
@@ -146,29 +146,29 @@ const headingSizeDefaults: Record<HeadingLevel, TextSize> = {
  * ```
  */
 export function Heading({
-  level = 2,
-  size,
-  color = "heading",
-  className = "",
-  children,
-  ...props
+	level = 2,
+	size,
+	color = "heading",
+	className = "",
+	children,
+	...props
 }: HeadingProps) {
-  const Component = `h${level}` as ElementType;
-  const actualSize = size || headingSizeDefaults[level];
+	const Component = `h${level}` as ElementType;
+	const actualSize = size || headingSizeDefaults[level];
 
-  return (
-    <Component
-      className={`
+	return (
+		<Component
+			className={`
         headline
         ${textSizeClasses[actualSize]}
         ${textColorClasses[color]}
         ${className}
       `.trim()}
-      {...props}
-    >
-      {children}
-    </Component>
-  );
+			{...props}
+		>
+			{children}
+		</Component>
+	);
 }
 
 // ============================================
@@ -176,77 +176,77 @@ export function Heading({
 // ============================================
 
 export interface DataValueProps extends HTMLAttributes<HTMLSpanElement> {
-  /** The numeric value to display */
-  value: number | string;
-  /** Display format */
-  format?: DataFormat;
-  /** Number of decimal places */
-  decimals?: number;
-  /** Show sign for positive numbers */
-  showSign?: boolean;
-  /** Font size */
-  size?: TextSize;
-  /** Auto-color based on sign (profit/loss) */
-  colorBySign?: boolean;
-  /** Manual color override */
-  color?: TextColor;
+	/** The numeric value to display */
+	value: number | string;
+	/** Display format */
+	format?: DataFormat;
+	/** Number of decimal places */
+	decimals?: number;
+	/** Show sign for positive numbers */
+	showSign?: boolean;
+	/** Font size */
+	size?: TextSize;
+	/** Auto-color based on sign (profit/loss) */
+	colorBySign?: boolean;
+	/** Manual color override */
+	color?: TextColor;
 }
 
 /**
  * Format number according to specified format.
  */
 function formatDataValue(
-  value: number | string,
-  format: DataFormat,
-  decimals: number,
-  showSign: boolean
+	value: number | string,
+	format: DataFormat,
+	decimals: number,
+	showSign: boolean
 ): string {
-  const num = typeof value === "string" ? parseFloat(value) : value;
+	const num = typeof value === "string" ? parseFloat(value) : value;
 
-  if (Number.isNaN(num)) {
-    return String(value);
-  }
+	if (Number.isNaN(num)) {
+		return String(value);
+	}
 
-  const sign = showSign && num > 0 ? "+" : "";
+	const sign = showSign && num > 0 ? "+" : "";
 
-  switch (format) {
-    case "price":
-      return (
-        sign +
-        num.toLocaleString("en-US", {
-          minimumFractionDigits: decimals,
-          maximumFractionDigits: decimals,
-        })
-      );
+	switch (format) {
+		case "price":
+			return (
+				sign +
+				num.toLocaleString("en-US", {
+					minimumFractionDigits: decimals,
+					maximumFractionDigits: decimals,
+				})
+			);
 
-    case "currency":
-      return (
-        sign +
-        num.toLocaleString("en-US", {
-          style: "currency",
-          currency: "USD",
-          minimumFractionDigits: decimals,
-          maximumFractionDigits: decimals,
-        })
-      );
+		case "currency":
+			return (
+				sign +
+				num.toLocaleString("en-US", {
+					style: "currency",
+					currency: "USD",
+					minimumFractionDigits: decimals,
+					maximumFractionDigits: decimals,
+				})
+			);
 
-    case "percentage":
-      return `${sign + num.toFixed(decimals)}%`;
+		case "percentage":
+			return `${sign + num.toFixed(decimals)}%`;
 
-    case "shares":
-      return num.toLocaleString("en-US", {
-        minimumFractionDigits: 0,
-        maximumFractionDigits: 0,
-      });
-    default:
-      return (
-        sign +
-        num.toLocaleString("en-US", {
-          minimumFractionDigits: decimals,
-          maximumFractionDigits: decimals,
-        })
-      );
-  }
+		case "shares":
+			return num.toLocaleString("en-US", {
+				minimumFractionDigits: 0,
+				maximumFractionDigits: 0,
+			});
+		default:
+			return (
+				sign +
+				num.toLocaleString("en-US", {
+					minimumFractionDigits: decimals,
+					maximumFractionDigits: decimals,
+				})
+			);
+	}
 }
 
 /**
@@ -266,44 +266,44 @@ function formatDataValue(
  * ```
  */
 export function DataValue({
-  value,
-  format = "number",
-  decimals = 2,
-  showSign = false,
-  size = "base",
-  colorBySign = false,
-  color,
-  className = "",
-  ...props
+	value,
+	format = "number",
+	decimals = 2,
+	showSign = false,
+	size = "base",
+	colorBySign = false,
+	color,
+	className = "",
+	...props
 }: DataValueProps) {
-  const num = typeof value === "string" ? parseFloat(value) : value;
-  const formatted = formatDataValue(value, format, decimals, showSign);
+	const num = typeof value === "string" ? parseFloat(value) : value;
+	const formatted = formatDataValue(value, format, decimals, showSign);
 
-  // Determine color
-  let finalColor: TextColor = color || "heading";
-  if (colorBySign && !color && !Number.isNaN(num)) {
-    if (num > 0) {
-      finalColor = "profit";
-    } else if (num < 0) {
-      finalColor = "loss";
-    } else {
-      finalColor = "muted";
-    }
-  }
+	// Determine color
+	let finalColor: TextColor = color || "heading";
+	if (colorBySign && !color && !Number.isNaN(num)) {
+		if (num > 0) {
+			finalColor = "profit";
+		} else if (num < 0) {
+			finalColor = "loss";
+		} else {
+			finalColor = "muted";
+		}
+	}
 
-  return (
-    <span
-      className={`
+	return (
+		<span
+			className={`
         data-value
         ${textSizeClasses[size]}
         ${textColorClasses[finalColor]}
         ${className}
       `.trim()}
-      {...props}
-    >
-      {formatted}
-    </span>
-  );
+			{...props}
+		>
+			{formatted}
+		</span>
+	);
 }
 
 // ============================================
@@ -311,12 +311,12 @@ export function DataValue({
 // ============================================
 
 export interface CodeProps extends HTMLAttributes<HTMLElement> {
-  /** Inline or block display */
-  inline?: boolean;
-  /** Font size */
-  size?: TextSize;
-  /** Children */
-  children: ReactNode;
+	/** Inline or block display */
+	inline?: boolean;
+	/** Font size */
+	size?: TextSize;
+	/** Children */
+	children: ReactNode;
 }
 
 /**
@@ -332,31 +332,31 @@ export interface CodeProps extends HTMLAttributes<HTMLElement> {
  * ```
  */
 export function Code({
-  inline = true,
-  size = "sm",
-  className = "",
-  children,
-  ...props
+	inline = true,
+	size = "sm",
+	className = "",
+	children,
+	...props
 }: CodeProps) {
-  const Component = inline ? "code" : "pre";
+	const Component = inline ? "code" : "pre";
 
-  return (
-    <Component
-      className={`
+	return (
+		<Component
+			className={`
         font-mono
         ${textSizeClasses[size]}
         ${
-          inline
-            ? "px-1.5 py-0.5 bg-bg-muted rounded text-text-heading"
-            : "p-4 bg-bg-muted rounded-lg overflow-x-auto text-text-primary"
-        }
+					inline
+						? "px-1.5 py-0.5 bg-bg-muted rounded text-text-heading"
+						: "p-4 bg-bg-muted rounded-lg overflow-x-auto text-text-primary"
+				}
         ${className}
       `.trim()}
-      {...props}
-    >
-      {children}
-    </Component>
-  );
+			{...props}
+		>
+			{children}
+		</Component>
+	);
 }
 
 // ============================================
@@ -364,10 +364,10 @@ export function Code({
 // ============================================
 
 export interface LabelProps extends HTMLAttributes<HTMLSpanElement> {
-  /** Font size */
-  size?: "xs" | "sm";
-  /** Children */
-  children: ReactNode;
+	/** Font size */
+	size?: "xs" | "sm";
+	/** Children */
+	children: ReactNode;
 }
 
 /**
@@ -381,18 +381,18 @@ export interface LabelProps extends HTMLAttributes<HTMLSpanElement> {
  * ```
  */
 export function Label({ size = "xs", className = "", children, ...props }: LabelProps) {
-  return (
-    <span
-      className={`
+	return (
+		<span
+			className={`
         label
         ${size === "xs" ? "text-xs" : "text-sm"}
         ${className}
       `.trim()}
-      {...props}
-    >
-      {children}
-    </span>
-  );
+			{...props}
+		>
+			{children}
+		</span>
+	);
 }
 
 // ============================================
@@ -400,8 +400,8 @@ export function Label({ size = "xs", className = "", children, ...props }: Label
 // ============================================
 
 export interface ProseProps extends HTMLAttributes<HTMLDivElement> {
-  /** Children */
-  children: ReactNode;
+	/** Children */
+	children: ReactNode;
 }
 
 /**
@@ -416,9 +416,9 @@ export interface ProseProps extends HTMLAttributes<HTMLDivElement> {
  * ```
  */
 export function Prose({ className = "", children, ...props }: ProseProps) {
-  return (
-    <div
-      className={`
+	return (
+		<div
+			className={`
         reasoning
         space-y-4
         [&>p]:mb-4
@@ -428,11 +428,11 @@ export function Prose({ className = "", children, ...props }: ProseProps) {
         [&>ol]:pl-5
         ${className}
       `.trim()}
-      {...props}
-    >
-      {children}
-    </div>
-  );
+			{...props}
+		>
+			{children}
+		</div>
+	);
 }
 
 // ============================================
@@ -440,14 +440,14 @@ export function Prose({ className = "", children, ...props }: ProseProps) {
 // ============================================
 
 export interface PriceChangeProps {
-  /** Change value (positive or negative) */
-  value: number;
-  /** Show as percentage */
-  asPercentage?: boolean;
-  /** Font size */
-  size?: TextSize;
-  /** Additional class names */
-  className?: string;
+	/** Change value (positive or negative) */
+	value: number;
+	/** Show as percentage */
+	asPercentage?: boolean;
+	/** Font size */
+	size?: TextSize;
+	/** Additional class names */
+	className?: string;
 }
 
 /**
@@ -460,21 +460,21 @@ export interface PriceChangeProps {
  * ```
  */
 export function PriceChange({
-  value,
-  asPercentage = false,
-  size = "base",
-  className = "",
+	value,
+	asPercentage = false,
+	size = "base",
+	className = "",
 }: PriceChangeProps) {
-  return (
-    <DataValue
-      value={value}
-      format={asPercentage ? "percentage" : "price"}
-      showSign
-      colorBySign
-      size={size}
-      className={className}
-    />
-  );
+	return (
+		<DataValue
+			value={value}
+			format={asPercentage ? "percentage" : "price"}
+			showSign
+			colorBySign
+			size={size}
+			className={className}
+		/>
+	);
 }
 
 // ============================================
@@ -482,11 +482,11 @@ export function PriceChange({
 // ============================================
 
 export default {
-  Text,
-  Heading,
-  DataValue,
-  Code,
-  Label,
-  Prose,
-  PriceChange,
+	Text,
+	Heading,
+	DataValue,
+	Code,
+	Label,
+	Prose,
+	PriceChange,
 };

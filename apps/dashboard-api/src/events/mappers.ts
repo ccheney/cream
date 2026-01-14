@@ -10,14 +10,14 @@ import type { Action } from "../../../../packages/domain/src/decision.js";
 import type { AgentType, OrderStatus } from "../../../../packages/domain/src/websocket/channel.js";
 import type { ServerMessage } from "../../../../packages/domain/src/websocket/index.js";
 import type {
-  BroadcastEvent,
-  DecisionInsertEvent,
-  HealthCheckEvent,
-  MastraAgentEvent,
-  MastraCycleEvent,
-  OrderUpdateEvent,
-  QuoteStreamEvent,
-  SystemAlertEvent,
+	BroadcastEvent,
+	DecisionInsertEvent,
+	HealthCheckEvent,
+	MastraAgentEvent,
+	MastraCycleEvent,
+	OrderUpdateEvent,
+	QuoteStreamEvent,
+	SystemAlertEvent,
 } from "./types.js";
 
 // ============================================
@@ -28,64 +28,64 @@ import type {
  * Map Mastra cycle event to CycleProgressMessage.
  */
 export function mapCycleEvent(event: MastraCycleEvent): BroadcastEvent {
-  const message: ServerMessage = {
-    type: "cycle_progress",
-    data: {
-      cycleId: event.cycleId,
-      phase: event.phase,
-      step: event.status, // Map status to step
-      progress: event.progress ?? 0,
-      message: event.message ?? "",
-      startedAt: event.timestamp,
-      estimatedCompletion: undefined,
-      timestamp: event.timestamp,
-    },
-  };
+	const message: ServerMessage = {
+		type: "cycle_progress",
+		data: {
+			cycleId: event.cycleId,
+			phase: event.phase,
+			step: event.status, // Map status to step
+			progress: event.progress ?? 0,
+			message: event.message ?? "",
+			startedAt: event.timestamp,
+			estimatedCompletion: undefined,
+			timestamp: event.timestamp,
+		},
+	};
 
-  return {
-    target: { channel: "cycles" },
-    message,
-  };
+	return {
+		target: { channel: "cycles" },
+		message,
+	};
 }
 
 /**
  * Map Mastra agent event to AgentOutputMessage.
  */
 export function mapAgentEvent(event: MastraAgentEvent): BroadcastEvent {
-  // Map event agent types to domain AgentType values
-  const agentTypeMap: Record<MastraAgentEvent["agentType"], AgentType> = {
-    sentiment: "news",
-    fundamentals: "fundamentals",
-    bullish: "bullish",
-    bearish: "bearish",
-    trader: "trader",
-    risk: "risk",
-    critic: "critic",
-  };
+	// Map event agent types to domain AgentType values
+	const agentTypeMap: Record<MastraAgentEvent["agentType"], AgentType> = {
+		sentiment: "news",
+		fundamentals: "fundamentals",
+		bullish: "bullish",
+		bearish: "bearish",
+		trader: "trader",
+		risk: "risk",
+		critic: "critic",
+	};
 
-  // Map event status to domain status
-  const statusMap: Record<MastraAgentEvent["status"], "running" | "complete" | "error"> = {
-    started: "running",
-    thinking: "running",
-    complete: "complete",
-    error: "error",
-  };
+	// Map event status to domain status
+	const statusMap: Record<MastraAgentEvent["status"], "running" | "complete" | "error"> = {
+		started: "running",
+		thinking: "running",
+		complete: "complete",
+		error: "error",
+	};
 
-  const message: ServerMessage = {
-    type: "agent_output",
-    data: {
-      cycleId: event.cycleId,
-      agentType: agentTypeMap[event.agentType],
-      status: statusMap[event.status],
-      output: typeof event.output === "string" ? event.output : JSON.stringify(event.output ?? ""),
-      timestamp: event.timestamp,
-    },
-  };
+	const message: ServerMessage = {
+		type: "agent_output",
+		data: {
+			cycleId: event.cycleId,
+			agentType: agentTypeMap[event.agentType],
+			status: statusMap[event.status],
+			output: typeof event.output === "string" ? event.output : JSON.stringify(event.output ?? ""),
+			timestamp: event.timestamp,
+		},
+	};
 
-  return {
-    target: { channel: "cycles" },
-    message,
-  };
+	return {
+		target: { channel: "cycles" },
+		message,
+	};
 }
 
 // ============================================
@@ -96,68 +96,68 @@ export function mapAgentEvent(event: MastraAgentEvent): BroadcastEvent {
  * Map quote stream event to QuoteMessage.
  */
 export function mapQuoteEvent(event: QuoteStreamEvent): BroadcastEvent {
-  const message: ServerMessage = {
-    type: "quote",
-    data: {
-      symbol: event.symbol,
-      bid: event.bid,
-      ask: event.ask,
-      last: event.last ?? event.bid, // Use bid as fallback for last
-      bidSize: event.bidSize,
-      askSize: event.askSize,
-      volume: event.volume ?? 0,
-      changePercent: undefined,
-      timestamp: event.timestamp,
-    },
-  };
+	const message: ServerMessage = {
+		type: "quote",
+		data: {
+			symbol: event.symbol,
+			bid: event.bid,
+			ask: event.ask,
+			last: event.last ?? event.bid, // Use bid as fallback for last
+			bidSize: event.bidSize,
+			askSize: event.askSize,
+			volume: event.volume ?? 0,
+			changePercent: undefined,
+			timestamp: event.timestamp,
+		},
+	};
 
-  return {
-    target: { channel: "quotes", symbol: event.symbol },
-    message,
-  };
+	return {
+		target: { channel: "quotes", symbol: event.symbol },
+		message,
+	};
 }
 
 /**
  * Map order update event to OrderMessage.
  */
 export function mapOrderEvent(event: OrderUpdateEvent): BroadcastEvent {
-  // Map event side to domain side (lowercase)
-  const sideMap: Record<OrderUpdateEvent["side"], "buy" | "sell"> = {
-    BUY: "buy",
-    SELL: "sell",
-  };
+	// Map event side to domain side (lowercase)
+	const sideMap: Record<OrderUpdateEvent["side"], "buy" | "sell"> = {
+		BUY: "buy",
+		SELL: "sell",
+	};
 
-  // Map event status to domain OrderStatus
-  const statusMap: Record<OrderUpdateEvent["status"], OrderStatus> = {
-    pending: "pending",
-    open: "submitted",
-    partially_filled: "partial_fill",
-    filled: "filled",
-    cancelled: "cancelled",
-    rejected: "rejected",
-    expired: "expired",
-  };
+	// Map event status to domain OrderStatus
+	const statusMap: Record<OrderUpdateEvent["status"], OrderStatus> = {
+		pending: "pending",
+		open: "submitted",
+		partially_filled: "partial_fill",
+		filled: "filled",
+		cancelled: "cancelled",
+		rejected: "rejected",
+		expired: "expired",
+	};
 
-  const message: ServerMessage = {
-    type: "order",
-    data: {
-      id: event.orderId,
-      symbol: event.symbol,
-      side: sideMap[event.side],
-      orderType: event.type,
-      status: statusMap[event.status],
-      quantity: event.quantity,
-      filledQty: event.filledQuantity,
-      limitPrice: event.price,
-      avgPrice: event.avgFillPrice,
-      timestamp: event.timestamp,
-    },
-  };
+	const message: ServerMessage = {
+		type: "order",
+		data: {
+			id: event.orderId,
+			symbol: event.symbol,
+			side: sideMap[event.side],
+			orderType: event.type,
+			status: statusMap[event.status],
+			quantity: event.quantity,
+			filledQty: event.filledQuantity,
+			limitPrice: event.price,
+			avgPrice: event.avgFillPrice,
+			timestamp: event.timestamp,
+		},
+	};
 
-  return {
-    target: { channel: "orders" },
-    message,
-  };
+	return {
+		target: { channel: "orders" },
+		message,
+	};
 }
 
 // ============================================
@@ -168,48 +168,48 @@ export function mapOrderEvent(event: OrderUpdateEvent): BroadcastEvent {
  * Map decision insert event to DecisionMessage.
  */
 export function mapDecisionEvent(event: DecisionInsertEvent): BroadcastEvent {
-  // Map CLOSE action to NO_TRADE since CLOSE is not in the domain Action type
-  const actionMap: Record<DecisionInsertEvent["action"], Action> = {
-    BUY: "BUY",
-    SELL: "SELL",
-    HOLD: "HOLD",
-    CLOSE: "NO_TRADE",
-  };
+	// Map CLOSE action to NO_TRADE since CLOSE is not in the domain Action type
+	const actionMap: Record<DecisionInsertEvent["action"], Action> = {
+		BUY: "BUY",
+		SELL: "SELL",
+		HOLD: "HOLD",
+		CLOSE: "NO_TRADE",
+	};
 
-  const message: ServerMessage = {
-    type: "decision",
-    data: {
-      instrument: {
-        instrumentId: event.symbol,
-        instrumentType: "EQUITY",
-      },
-      action: actionMap[event.action],
-      size: {
-        quantity: 0,
-        unit: "SHARES",
-        targetPositionQuantity: 0,
-      },
-      orderPlan: {
-        entryOrderType: "MARKET",
-        exitOrderType: "MARKET",
-        timeInForce: "DAY",
-      },
-      riskLevels: {
-        stopLossLevel: 0,
-        takeProfitLevel: 0,
-        denomination: "UNDERLYING_PRICE",
-      },
-      strategyFamily: "TREND",
-      rationale: "Decision loaded from database",
-      confidence: event.confidence,
-    },
-    cycleId: event.cycleId,
-  };
+	const message: ServerMessage = {
+		type: "decision",
+		data: {
+			instrument: {
+				instrumentId: event.symbol,
+				instrumentType: "EQUITY",
+			},
+			action: actionMap[event.action],
+			size: {
+				quantity: 0,
+				unit: "SHARES",
+				targetPositionQuantity: 0,
+			},
+			orderPlan: {
+				entryOrderType: "MARKET",
+				exitOrderType: "MARKET",
+				timeInForce: "DAY",
+			},
+			riskLevels: {
+				stopLossLevel: 0,
+				takeProfitLevel: 0,
+				denomination: "UNDERLYING_PRICE",
+			},
+			strategyFamily: "TREND",
+			rationale: "Decision loaded from database",
+			confidence: event.confidence,
+		},
+		cycleId: event.cycleId,
+	};
 
-  return {
-    target: { channel: "decisions" },
-    message,
-  };
+	return {
+		target: { channel: "decisions" },
+		message,
+	};
 }
 
 // ============================================
@@ -220,52 +220,52 @@ export function mapDecisionEvent(event: DecisionInsertEvent): BroadcastEvent {
  * Map system alert to AlertMessage.
  */
 export function mapAlertEvent(event: SystemAlertEvent): BroadcastEvent {
-  const message: ServerMessage = {
-    type: "alert",
-    data: {
-      id: event.alertId,
-      severity: event.severity,
-      title: event.title,
-      message: event.message,
-      acknowledged: false,
-      timestamp: event.timestamp,
-    },
-  };
+	const message: ServerMessage = {
+		type: "alert",
+		data: {
+			id: event.alertId,
+			severity: event.severity,
+			title: event.title,
+			message: event.message,
+			acknowledged: false,
+			timestamp: event.timestamp,
+		},
+	};
 
-  return {
-    target: { channel: "alerts" },
-    message,
-  };
+	return {
+		target: { channel: "alerts" },
+		message,
+	};
 }
 
 /**
  * Map health check to SystemStatusMessage.
  */
 export function mapHealthCheckEvent(event: HealthCheckEvent): BroadcastEvent {
-  const message: ServerMessage = {
-    type: "system_status",
-    data: {
-      health: event.status,
-      uptimeSeconds: event.uptime,
-      activeConnections: event.connections,
-      services: Object.fromEntries(
-        Object.entries(event.sources).map(([name, status]) => [
-          name,
-          {
-            status: status === "connected" ? ("healthy" as const) : ("unhealthy" as const),
-            lastCheck: event.timestamp,
-          },
-        ])
-      ),
-      environment: "PAPER" as const,
-      timestamp: event.timestamp,
-    },
-  };
+	const message: ServerMessage = {
+		type: "system_status",
+		data: {
+			health: event.status,
+			uptimeSeconds: event.uptime,
+			activeConnections: event.connections,
+			services: Object.fromEntries(
+				Object.entries(event.sources).map(([name, status]) => [
+					name,
+					{
+						status: status === "connected" ? ("healthy" as const) : ("unhealthy" as const),
+						lastCheck: event.timestamp,
+					},
+				])
+			),
+			environment: "PAPER" as const,
+			timestamp: event.timestamp,
+		},
+	};
 
-  return {
-    target: { channel: null }, // Broadcast to all
-    message,
-  };
+	return {
+		target: { channel: null }, // Broadcast to all
+		message,
+	};
 }
 
 // ============================================
@@ -276,34 +276,34 @@ export function mapHealthCheckEvent(event: HealthCheckEvent): BroadcastEvent {
  * Event type discriminators.
  */
 export type MappableEvent =
-  | { type: "cycle"; data: MastraCycleEvent }
-  | { type: "agent"; data: MastraAgentEvent }
-  | { type: "quote"; data: QuoteStreamEvent }
-  | { type: "order"; data: OrderUpdateEvent }
-  | { type: "decision"; data: DecisionInsertEvent }
-  | { type: "alert"; data: SystemAlertEvent }
-  | { type: "health"; data: HealthCheckEvent };
+	| { type: "cycle"; data: MastraCycleEvent }
+	| { type: "agent"; data: MastraAgentEvent }
+	| { type: "quote"; data: QuoteStreamEvent }
+	| { type: "order"; data: OrderUpdateEvent }
+	| { type: "decision"; data: DecisionInsertEvent }
+	| { type: "alert"; data: SystemAlertEvent }
+	| { type: "health"; data: HealthCheckEvent };
 
 /**
  * Map any event to broadcast event.
  */
 export function mapEvent(event: MappableEvent): BroadcastEvent {
-  switch (event.type) {
-    case "cycle":
-      return mapCycleEvent(event.data);
-    case "agent":
-      return mapAgentEvent(event.data);
-    case "quote":
-      return mapQuoteEvent(event.data);
-    case "order":
-      return mapOrderEvent(event.data);
-    case "decision":
-      return mapDecisionEvent(event.data);
-    case "alert":
-      return mapAlertEvent(event.data);
-    case "health":
-      return mapHealthCheckEvent(event.data);
-  }
+	switch (event.type) {
+		case "cycle":
+			return mapCycleEvent(event.data);
+		case "agent":
+			return mapAgentEvent(event.data);
+		case "quote":
+			return mapQuoteEvent(event.data);
+		case "order":
+			return mapOrderEvent(event.data);
+		case "decision":
+			return mapDecisionEvent(event.data);
+		case "alert":
+			return mapAlertEvent(event.data);
+		case "health":
+			return mapHealthCheckEvent(event.data);
+	}
 }
 
 // ============================================
@@ -315,24 +315,24 @@ export function mapEvent(event: MappableEvent): BroadcastEvent {
  * Used for throttled quote delivery.
  */
 export function batchQuoteEvents(events: QuoteStreamEvent[]): BroadcastEvent[] {
-  // Group by symbol
-  const bySymbol = new Map<string, QuoteStreamEvent>();
-  for (const event of events) {
-    // Keep latest quote per symbol
-    bySymbol.set(event.symbol, event);
-  }
+	// Group by symbol
+	const bySymbol = new Map<string, QuoteStreamEvent>();
+	for (const event of events) {
+		// Keep latest quote per symbol
+		bySymbol.set(event.symbol, event);
+	}
 
-  // Map each to broadcast event
-  return Array.from(bySymbol.values()).map(mapQuoteEvent);
+	// Map each to broadcast event
+	return Array.from(bySymbol.values()).map(mapQuoteEvent);
 }
 
 /**
  * Aggregate quote events by symbol (for batch messages).
  */
 export function aggregateQuotes(events: QuoteStreamEvent[]): Map<string, QuoteStreamEvent> {
-  const latest = new Map<string, QuoteStreamEvent>();
-  for (const event of events) {
-    latest.set(event.symbol, event);
-  }
-  return latest;
+	const latest = new Map<string, QuoteStreamEvent>();
+	for (const event of events) {
+		latest.set(event.symbol, event);
+	}
+	return latest;
 }

@@ -26,18 +26,18 @@ export type LogoVariant = "full" | "icon";
  * Logo props.
  */
 export interface LogoProps extends React.SVGAttributes<SVGSVGElement> {
-  /** Size variant */
-  size?: LogoSize;
-  /** Custom size in pixels */
-  sizePx?: number;
-  /** Logo variant */
-  variant?: LogoVariant;
-  /** Enable pulse animation */
-  pulse?: boolean;
-  /** Accessibility label */
-  label?: string;
-  /** Test ID */
-  testId?: string;
+	/** Size variant */
+	size?: LogoSize;
+	/** Custom size in pixels */
+	sizePx?: number;
+	/** Logo variant */
+	variant?: LogoVariant;
+	/** Enable pulse animation */
+	pulse?: boolean;
+	/** Accessibility label */
+	label?: string;
+	/** Test ID */
+	testId?: string;
 }
 
 // ============================================
@@ -48,11 +48,11 @@ export interface LogoProps extends React.SVGAttributes<SVGSVGElement> {
  * Size mapping in pixels.
  */
 export const SIZE_MAP: Record<LogoSize, number> = {
-  xs: 24,
-  sm: 32,
-  md: 48,
-  lg: 64,
-  xl: 96,
+	xs: 24,
+	sm: 32,
+	md: 48,
+	lg: 64,
+	xl: 96,
 };
 
 // ============================================
@@ -88,56 +88,56 @@ const pulseKeyframes = `
  * ```
  */
 export function Logo({
-  size = "md",
-  sizePx,
-  variant = "full",
-  pulse = false,
-  label = "Cream",
-  testId = "logo",
-  style,
-  className,
-  ...props
+	size = "md",
+	sizePx,
+	variant = "full",
+	pulse = false,
+	label = "Cream",
+	testId = "logo",
+	style,
+	className,
+	...props
 }: LogoProps) {
-  const computedSize = sizePx ?? SIZE_MAP[size];
+	const computedSize = sizePx ?? SIZE_MAP[size];
 
-  const logoStyle: React.CSSProperties = {
-    width: variant === "icon" ? computedSize : computedSize * 3.2,
-    height: computedSize,
-    animation: pulse ? "logo-pulse 2s ease-in-out infinite" : "none",
-    ...style,
-  };
+	const logoStyle: React.CSSProperties = {
+		width: variant === "icon" ? computedSize : computedSize * 3.2,
+		height: computedSize,
+		animation: pulse ? "logo-pulse 2s ease-in-out infinite" : "none",
+		...style,
+	};
 
-  const viewBoxWidth = variant === "icon" ? 100 : 380;
+	const viewBoxWidth = variant === "icon" ? 100 : 380;
 
-  return (
-    <>
-      {/* biome-ignore lint/security/noDangerouslySetInnerHtml: Safe - hardcoded CSS keyframes */}
-      {pulse && <style dangerouslySetInnerHTML={{ __html: pulseKeyframes }} />}
-      {/* biome-ignore lint/a11y/noSvgWithoutTitle: SVG has aria-label for accessibility */}
-      <svg
-        xmlns="http://www.w3.org/2000/svg"
-        viewBox={`0 0 ${viewBoxWidth} 120`}
-        fill="none"
-        aria-label={label}
-        data-testid={testId}
-        className={className}
-        style={logoStyle}
-        {...props}
-      >
-        <text
-          x="0"
-          y="95"
-          fontFamily="system-ui, -apple-system, sans-serif"
-          fontSize="110"
-          fontWeight="700"
-          fill="currentColor"
-          letterSpacing="-0.05em"
-        >
-          {variant === "icon" ? "C" : "Cream"}
-        </text>
-      </svg>
-    </>
-  );
+	return (
+		<>
+			{/* biome-ignore lint/security/noDangerouslySetInnerHtml: Safe - hardcoded CSS keyframes */}
+			{pulse && <style dangerouslySetInnerHTML={{ __html: pulseKeyframes }} />}
+			{/* biome-ignore lint/a11y/noSvgWithoutTitle: SVG has aria-label for accessibility */}
+			<svg
+				xmlns="http://www.w3.org/2000/svg"
+				viewBox={`0 0 ${viewBoxWidth} 120`}
+				fill="none"
+				aria-label={label}
+				data-testid={testId}
+				className={className}
+				style={logoStyle}
+				{...props}
+			>
+				<text
+					x="0"
+					y="95"
+					fontFamily="system-ui, -apple-system, sans-serif"
+					fontSize="110"
+					fontWeight="700"
+					fill="currentColor"
+					letterSpacing="-0.05em"
+				>
+					{variant === "icon" ? "C" : "Cream"}
+				</text>
+			</svg>
+		</>
+	);
 }
 
 // ============================================
@@ -156,39 +156,39 @@ export function Logo({
  * ```
  */
 export function LoadingLogo({
-  size = "lg",
-  sizePx,
-  variant = "icon",
-  label = "Loading...",
-  testId = "loading-logo",
-  ...props
+	size = "lg",
+	sizePx,
+	variant = "icon",
+	label = "Loading...",
+	testId = "loading-logo",
+	...props
 }: Omit<LogoProps, "pulse">) {
-  return (
-    // biome-ignore lint/a11y/useSemanticElements: role="status" is appropriate for loading indicator
-    <div
-      style={{
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "center",
-        minHeight: "100%",
-      }}
-      role="status"
-      aria-live="polite"
-      aria-label={label}
-      data-testid={`${testId}-container`}
-    >
-      <Logo
-        size={size}
-        sizePx={sizePx}
-        variant={variant}
-        pulse
-        label={label}
-        testId={testId}
-        {...props}
-      />
-      <span className="sr-only">{label}</span>
-    </div>
-  );
+	return (
+		// biome-ignore lint/a11y/useSemanticElements: role="status" is appropriate for loading indicator
+		<div
+			style={{
+				display: "flex",
+				alignItems: "center",
+				justifyContent: "center",
+				minHeight: "100%",
+			}}
+			role="status"
+			aria-live="polite"
+			aria-label={label}
+			data-testid={`${testId}-container`}
+		>
+			<Logo
+				size={size}
+				sizePx={sizePx}
+				variant={variant}
+				pulse
+				label={label}
+				testId={testId}
+				{...props}
+			/>
+			<span className="sr-only">{label}</span>
+		</div>
+	);
 }
 
 // ============================================

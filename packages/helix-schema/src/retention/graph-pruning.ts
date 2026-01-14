@@ -6,10 +6,10 @@
  */
 
 import type {
-  EdgeInfo,
-  GraphPruningAction,
-  GraphPruningConfig,
-  NodeConnectivity,
+	EdgeInfo,
+	GraphPruningAction,
+	GraphPruningConfig,
+	NodeConnectivity,
 } from "./types.js";
 import { DEFAULT_PRUNING_CONFIG } from "./types.js";
 
@@ -21,13 +21,13 @@ import { DEFAULT_PRUNING_CONFIG } from "./types.js";
  * @returns Array of pruning actions for low-weight edges
  */
 export function pruneEdgesByWeight(edges: EdgeInfo[], minWeight = 0.3): GraphPruningAction[] {
-  return edges
-    .filter((edge) => edge.weight < minWeight)
-    .map((edge) => ({
-      type: "remove_edge" as const,
-      edgeId: edge.edgeId,
-      reason: `Edge weight ${edge.weight.toFixed(3)} below threshold ${minWeight}`,
-    }));
+	return edges
+		.filter((edge) => edge.weight < minWeight)
+		.map((edge) => ({
+			type: "remove_edge" as const,
+			edgeId: edge.edgeId,
+			reason: `Edge weight ${edge.weight.toFixed(3)} below threshold ${minWeight}`,
+		}));
 }
 
 /**
@@ -37,13 +37,13 @@ export function pruneEdgesByWeight(edges: EdgeInfo[], minWeight = 0.3): GraphPru
  * @returns Array of pruning actions for isolated nodes
  */
 export function findIsolatedNodes(nodes: NodeConnectivity[]): GraphPruningAction[] {
-  return nodes
-    .filter((node) => node.edgeIds.length === 0)
-    .map((node) => ({
-      type: "remove_node" as const,
-      nodeId: node.nodeId,
-      reason: "Node has no edges (isolated)",
-    }));
+	return nodes
+		.filter((node) => node.edgeIds.length === 0)
+		.map((node) => ({
+			type: "remove_node" as const,
+			nodeId: node.nodeId,
+			reason: "Node has no edges (isolated)",
+		}));
 }
 
 /**
@@ -54,25 +54,25 @@ export function findIsolatedNodes(nodes: NodeConnectivity[]): GraphPruningAction
  * @returns Array of pruning actions for hub nodes
  */
 export function findHubsTooPrune(
-  nodes: NodeConnectivity[],
-  config: GraphPruningConfig = DEFAULT_PRUNING_CONFIG
+	nodes: NodeConnectivity[],
+	config: GraphPruningConfig = DEFAULT_PRUNING_CONFIG
 ): GraphPruningAction[] {
-  const actions: GraphPruningAction[] = [];
+	const actions: GraphPruningAction[] = [];
 
-  for (const node of nodes) {
-    if (node.edgeIds.length > config.hubEdgeThreshold) {
-      const prunedEdges = node.edgeIds.length - config.maxHubEdges;
-      actions.push({
-        type: "prune_hub",
-        nodeId: node.nodeId,
-        retainedEdges: config.maxHubEdges,
-        prunedEdges,
-        reason: `Hub node has ${node.edgeIds.length} edges, pruning to top ${config.maxHubEdges} by weight`,
-      });
-    }
-  }
+	for (const node of nodes) {
+		if (node.edgeIds.length > config.hubEdgeThreshold) {
+			const prunedEdges = node.edgeIds.length - config.maxHubEdges;
+			actions.push({
+				type: "prune_hub",
+				nodeId: node.nodeId,
+				retainedEdges: config.maxHubEdges,
+				prunedEdges,
+				reason: `Hub node has ${node.edgeIds.length} edges, pruning to top ${config.maxHubEdges} by weight`,
+			});
+		}
+	}
 
-  return actions;
+	return actions;
 }
 
 /**
@@ -87,18 +87,18 @@ export function findHubsTooPrune(
  * @returns Pruning action if subgraph should be merged, null otherwise
  */
 export function evaluateSubgraphForMerge(
-  subgraphNodeIds: string[],
-  maxSize = 5,
-  summaryNodeIdGenerator: () => string = () => `summary_${Date.now()}`
+	subgraphNodeIds: string[],
+	maxSize = 5,
+	summaryNodeIdGenerator: () => string = () => `summary_${Date.now()}`
 ): GraphPruningAction | null {
-  if (subgraphNodeIds.length >= maxSize || subgraphNodeIds.length <= 1) {
-    return null;
-  }
+	if (subgraphNodeIds.length >= maxSize || subgraphNodeIds.length <= 1) {
+		return null;
+	}
 
-  return {
-    type: "merge_subgraph",
-    nodeIds: subgraphNodeIds,
-    summaryNodeId: summaryNodeIdGenerator(),
-    reason: `Isolated subgraph with ${subgraphNodeIds.length} nodes merged into summary node`,
-  };
+	return {
+		type: "merge_subgraph",
+		nodeIds: subgraphNodeIds,
+		summaryNodeId: summaryNodeIdGenerator(),
+		reason: `Isolated subgraph with ${subgraphNodeIds.length} nodes merged into summary node`,
+	};
 }

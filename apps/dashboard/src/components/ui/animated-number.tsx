@@ -19,26 +19,26 @@ import { memo, useEffect, useMemo, useRef, useState } from "react";
 export type NumberFormat = "currency" | "percent" | "decimal" | "integer";
 
 export interface AnimatedNumberProps {
-  /** The numeric value to display */
-  value: number;
-  /** Format type for the number */
-  format?: NumberFormat;
-  /** Number of decimal places (default based on format) */
-  decimals?: number;
-  /** Prefix string (e.g., "$" for custom currency) */
-  prefix?: string;
-  /** Suffix string (e.g., "%" for custom percent) */
-  suffix?: string;
-  /** Enable/disable animation (default: true) */
-  animate?: boolean;
-  /** Minimum change threshold for animation (default: 0.01 = 1%) */
-  animationThreshold?: number;
-  /** CSS class name for styling */
-  className?: string;
-  /** ARIA label for accessibility */
-  "aria-label"?: string;
-  /** Test ID for testing */
-  "data-testid"?: string;
+	/** The numeric value to display */
+	value: number;
+	/** Format type for the number */
+	format?: NumberFormat;
+	/** Number of decimal places (default based on format) */
+	decimals?: number;
+	/** Prefix string (e.g., "$" for custom currency) */
+	prefix?: string;
+	/** Suffix string (e.g., "%" for custom percent) */
+	suffix?: string;
+	/** Enable/disable animation (default: true) */
+	animate?: boolean;
+	/** Minimum change threshold for animation (default: 0.01 = 1%) */
+	animationThreshold?: number;
+	/** CSS class name for styling */
+	className?: string;
+	/** ARIA label for accessibility */
+	"aria-label"?: string;
+	/** Test ID for testing */
+	"data-testid"?: string;
 }
 
 // ============================================
@@ -57,101 +57,101 @@ const DEFAULT_THRESHOLD = 0.01; // 1% change threshold
  * Get default decimal places for format type
  */
 function getDefaultDecimals(format: NumberFormat): number {
-  switch (format) {
-    case "currency":
-      return 2;
-    case "percent":
-      return 2;
-    case "decimal":
-      return 2;
-    case "integer":
-      return 0;
-    default:
-      return 2;
-  }
+	switch (format) {
+		case "currency":
+			return 2;
+		case "percent":
+			return 2;
+		case "decimal":
+			return 2;
+		case "integer":
+			return 0;
+		default:
+			return 2;
+	}
 }
 
 /**
  * Format number based on format type
  */
 function formatNumber(
-  value: number,
-  format: NumberFormat,
-  decimals: number,
-  prefix?: string,
-  suffix?: string
+	value: number,
+	format: NumberFormat,
+	decimals: number,
+	prefix?: string,
+	suffix?: string
 ): string {
-  let formatted: string;
+	let formatted: string;
 
-  switch (format) {
-    case "currency":
-      formatted = new Intl.NumberFormat("en-US", {
-        style: "currency",
-        currency: "USD",
-        minimumFractionDigits: decimals,
-        maximumFractionDigits: decimals,
-      }).format(value);
-      break;
+	switch (format) {
+		case "currency":
+			formatted = new Intl.NumberFormat("en-US", {
+				style: "currency",
+				currency: "USD",
+				minimumFractionDigits: decimals,
+				maximumFractionDigits: decimals,
+			}).format(value);
+			break;
 
-    case "percent":
-      formatted = new Intl.NumberFormat("en-US", {
-        style: "percent",
-        minimumFractionDigits: decimals,
-        maximumFractionDigits: decimals,
-      }).format(value / 100); // Divide by 100 for percent display
-      break;
+		case "percent":
+			formatted = new Intl.NumberFormat("en-US", {
+				style: "percent",
+				minimumFractionDigits: decimals,
+				maximumFractionDigits: decimals,
+			}).format(value / 100); // Divide by 100 for percent display
+			break;
 
-    case "integer":
-      formatted = new Intl.NumberFormat("en-US", {
-        style: "decimal",
-        minimumFractionDigits: 0,
-        maximumFractionDigits: 0,
-      }).format(Math.round(value));
-      break;
-    default:
-      formatted = new Intl.NumberFormat("en-US", {
-        style: "decimal",
-        minimumFractionDigits: decimals,
-        maximumFractionDigits: decimals,
-      }).format(value);
-      break;
-  }
+		case "integer":
+			formatted = new Intl.NumberFormat("en-US", {
+				style: "decimal",
+				minimumFractionDigits: 0,
+				maximumFractionDigits: 0,
+			}).format(Math.round(value));
+			break;
+		default:
+			formatted = new Intl.NumberFormat("en-US", {
+				style: "decimal",
+				minimumFractionDigits: decimals,
+				maximumFractionDigits: decimals,
+			}).format(value);
+			break;
+	}
 
-  // Apply custom prefix/suffix (overrides format defaults)
-  if (prefix || suffix) {
-    // For currency, remove the default $ if custom prefix provided
-    if (format === "currency" && prefix) {
-      formatted = formatted.replace("$", "");
-    }
-    // For percent, remove the default % if custom suffix provided
-    if (format === "percent" && suffix) {
-      formatted = formatted.replace("%", "");
-    }
-    formatted = `${prefix ?? ""}${formatted}${suffix ?? ""}`;
-  }
+	// Apply custom prefix/suffix (overrides format defaults)
+	if (prefix || suffix) {
+		// For currency, remove the default $ if custom prefix provided
+		if (format === "currency" && prefix) {
+			formatted = formatted.replace("$", "");
+		}
+		// For percent, remove the default % if custom suffix provided
+		if (format === "percent" && suffix) {
+			formatted = formatted.replace("%", "");
+		}
+		formatted = `${prefix ?? ""}${formatted}${suffix ?? ""}`;
+	}
 
-  return formatted;
+	return formatted;
 }
 
 /**
  * Check if user prefers reduced motion
  */
 function usePrefersReducedMotion(): boolean {
-  const [prefersReducedMotion, setPrefersReducedMotion] = useState(false);
+	const [prefersReducedMotion, setPrefersReducedMotion] = useState(false);
 
-  useEffect(() => {
-    const mediaQuery = window.matchMedia("(prefers-reduced-motion: reduce)");
-    setPrefersReducedMotion(mediaQuery.matches);
+	useEffect(() => {
+		const mediaQuery = window.matchMedia("(prefers-reduced-motion: reduce)");
+		setPrefersReducedMotion(mediaQuery.matches);
 
-    const handler = (event: MediaQueryListEvent) => {
-      setPrefersReducedMotion(event.matches);
-    };
+		const handler = (event: MediaQueryListEvent) => {
+			setPrefersReducedMotion(event.matches);
+		};
 
-    mediaQuery.addEventListener("change", handler);
-    return () => mediaQuery.removeEventListener("change", handler);
-  }, []);
+		mediaQuery.addEventListener("change", handler);
+		return () => mediaQuery.removeEventListener("change", handler);
+	}, []);
 
-  return prefersReducedMotion;
+	return prefersReducedMotion;
 }
 
 // ============================================
@@ -175,112 +175,112 @@ function usePrefersReducedMotion(): boolean {
  * ```
  */
 export const AnimatedNumber = memo(function AnimatedNumber({
-  value,
-  format = "decimal",
-  decimals,
-  prefix,
-  suffix,
-  animate = true,
-  animationThreshold = DEFAULT_THRESHOLD,
-  className = "",
-  "aria-label": ariaLabel,
-  "data-testid": testId,
+	value,
+	format = "decimal",
+	decimals,
+	prefix,
+	suffix,
+	animate = true,
+	animationThreshold = DEFAULT_THRESHOLD,
+	className = "",
+	"aria-label": ariaLabel,
+	"data-testid": testId,
 }: AnimatedNumberProps) {
-  const prefersReducedMotion = usePrefersReducedMotion();
-  const previousValueRef = useRef(value);
-  const lastAnimationRef = useRef(0);
-  const [displayValue, setDisplayValue] = useState(value);
-  const [animationKey, setAnimationKey] = useState(0);
+	const prefersReducedMotion = usePrefersReducedMotion();
+	const previousValueRef = useRef(value);
+	const lastAnimationRef = useRef(0);
+	const [displayValue, setDisplayValue] = useState(value);
+	const [animationKey, setAnimationKey] = useState(0);
 
-  // Calculate actual decimals
-  const actualDecimals = decimals ?? getDefaultDecimals(format);
+	// Calculate actual decimals
+	const actualDecimals = decimals ?? getDefaultDecimals(format);
 
-  // Determine if we should animate this change
-  const shouldAnimate = useMemo(() => {
-    if (!animate || prefersReducedMotion) {
-      return false;
-    }
+	// Determine if we should animate this change
+	const shouldAnimate = useMemo(() => {
+		if (!animate || prefersReducedMotion) {
+			return false;
+		}
 
-    const previousValue = previousValueRef.current;
-    if (previousValue === 0) {
-      return value !== 0;
-    }
+		const previousValue = previousValueRef.current;
+		if (previousValue === 0) {
+			return value !== 0;
+		}
 
-    const percentChange = Math.abs((value - previousValue) / previousValue);
-    return percentChange >= animationThreshold;
-  }, [value, animate, prefersReducedMotion, animationThreshold]);
+		const percentChange = Math.abs((value - previousValue) / previousValue);
+		return percentChange >= animationThreshold;
+	}, [value, animate, prefersReducedMotion, animationThreshold]);
 
-  // Update display value with debouncing
-  useEffect((): undefined | (() => void) => {
-    const now = Date.now();
-    const timeSinceLastAnimation = now - lastAnimationRef.current;
+	// Update display value with debouncing
+	useEffect((): undefined | (() => void) => {
+		const now = Date.now();
+		const timeSinceLastAnimation = now - lastAnimationRef.current;
 
-    // Debounce: schedule update after remaining debounce time
-    if (shouldAnimate && timeSinceLastAnimation < DEBOUNCE_INTERVAL) {
-      const remainingTime = DEBOUNCE_INTERVAL - timeSinceLastAnimation;
-      const timeoutId = setTimeout(() => {
-        lastAnimationRef.current = Date.now();
-        setAnimationKey((prev) => prev + 1);
-        setDisplayValue(value);
-      }, remainingTime);
+		// Debounce: schedule update after remaining debounce time
+		if (shouldAnimate && timeSinceLastAnimation < DEBOUNCE_INTERVAL) {
+			const remainingTime = DEBOUNCE_INTERVAL - timeSinceLastAnimation;
+			const timeoutId = setTimeout(() => {
+				lastAnimationRef.current = Date.now();
+				setAnimationKey((prev) => prev + 1);
+				setDisplayValue(value);
+			}, remainingTime);
 
-      previousValueRef.current = value;
-      return () => clearTimeout(timeoutId);
-    }
+			previousValueRef.current = value;
+			return () => clearTimeout(timeoutId);
+		}
 
-    // Trigger animation immediately
-    if (shouldAnimate) {
-      lastAnimationRef.current = now;
-      setAnimationKey((prev) => prev + 1);
-    }
+		// Trigger animation immediately
+		if (shouldAnimate) {
+			lastAnimationRef.current = now;
+			setAnimationKey((prev) => prev + 1);
+		}
 
-    // Update display value
-    setDisplayValue(value);
-    previousValueRef.current = value;
-    return undefined;
-  }, [value, shouldAnimate]);
+		// Update display value
+		setDisplayValue(value);
+		previousValueRef.current = value;
+		return undefined;
+	}, [value, shouldAnimate]);
 
-  // Format the display value
-  const formattedValue = formatNumber(displayValue, format, actualDecimals, prefix, suffix);
+	// Format the display value
+	const formattedValue = formatNumber(displayValue, format, actualDecimals, prefix, suffix);
 
-  // Animation variants
-  const variants = {
-    initial: { y: 10, opacity: 0 },
-    animate: { y: 0, opacity: 1 },
-    exit: { y: -10, opacity: 0 },
-  };
+	// Animation variants
+	const variants = {
+		initial: { y: 10, opacity: 0 },
+		animate: { y: 0, opacity: 1 },
+		exit: { y: -10, opacity: 0 },
+	};
 
-  // Disable animation if not needed
-  const shouldRenderAnimated = animate && !prefersReducedMotion;
+	// Disable animation if not needed
+	const shouldRenderAnimated = animate && !prefersReducedMotion;
 
-  return (
-    <output
-      className={`inline-block ${className}`}
-      aria-label={ariaLabel}
-      aria-live="polite"
-      aria-atomic="true"
-      data-testid={testId}
-      style={{ willChange: shouldRenderAnimated ? "transform, opacity" : "auto" }}
-    >
-      {shouldRenderAnimated ? (
-        <AnimatePresence mode="wait">
-          <motion.span
-            key={animationKey}
-            variants={variants}
-            initial="initial"
-            animate="animate"
-            exit="exit"
-            transition={{ duration: ANIMATION_DURATION, ease: "easeOut" }}
-            className="inline-block"
-          >
-            {formattedValue}
-          </motion.span>
-        </AnimatePresence>
-      ) : (
-        <span>{formattedValue}</span>
-      )}
-    </output>
-  );
+	return (
+		<output
+			className={`inline-block ${className}`}
+			aria-label={ariaLabel}
+			aria-live="polite"
+			aria-atomic="true"
+			data-testid={testId}
+			style={{ willChange: shouldRenderAnimated ? "transform, opacity" : "auto" }}
+		>
+			{shouldRenderAnimated ? (
+				<AnimatePresence mode="wait">
+					<motion.span
+						key={animationKey}
+						variants={variants}
+						initial="initial"
+						animate="animate"
+						exit="exit"
+						transition={{ duration: ANIMATION_DURATION, ease: "easeOut" }}
+						className="inline-block"
+					>
+						{formattedValue}
+					</motion.span>
+				</AnimatePresence>
+			) : (
+				<span>{formattedValue}</span>
+			)}
+		</output>
+	);
 });
 
 // ============================================

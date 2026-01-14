@@ -15,8 +15,8 @@ import { createWorkflow } from "@mastra/core/workflows";
 import { z } from "zod";
 
 import {
-  fetchPredictionMarketsStep,
-  PredictionMarketOutputSchema,
+	fetchPredictionMarketsStep,
+	PredictionMarketOutputSchema,
 } from "../steps/fetchPredictionMarkets.js";
 
 // ============================================
@@ -24,18 +24,18 @@ import {
 // ============================================
 
 export const predictionMarketsWorkflow = createWorkflow({
-  id: "prediction-markets",
-  description: "Fetch and process prediction market data",
-  inputSchema: z.object({
-    /** Market types to fetch */
-    marketTypes: z
-      .array(
-        z.enum(["FED_RATE", "ECONOMIC_DATA", "RECESSION", "GEOPOLITICAL", "REGULATORY", "ELECTION"])
-      )
-      .optional()
-      .default(["FED_RATE", "ECONOMIC_DATA", "RECESSION"]),
-  }),
-  outputSchema: PredictionMarketOutputSchema,
+	id: "prediction-markets",
+	description: "Fetch and process prediction market data",
+	inputSchema: z.object({
+		/** Market types to fetch */
+		marketTypes: z
+			.array(
+				z.enum(["FED_RATE", "ECONOMIC_DATA", "RECESSION", "GEOPOLITICAL", "REGULATORY", "ELECTION"])
+			)
+			.optional()
+			.default(["FED_RATE", "ECONOMIC_DATA", "RECESSION"]),
+	}),
+	outputSchema: PredictionMarketOutputSchema,
 });
 
 // Wire steps

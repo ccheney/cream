@@ -29,53 +29,53 @@ import { isBacktest } from "./env";
  * Clock skew thresholds
  */
 export interface ClockSkewThresholds {
-  /** Warn if skew exceeds this (ms) */
-  warnThresholdMs: number;
-  /** Error if skew exceeds this (ms) */
-  errorThresholdMs: number;
-  /** Cross-component skew warning threshold (ms) */
-  componentSkewWarnMs: number;
+	/** Warn if skew exceeds this (ms) */
+	warnThresholdMs: number;
+	/** Error if skew exceeds this (ms) */
+	errorThresholdMs: number;
+	/** Cross-component skew warning threshold (ms) */
+	componentSkewWarnMs: number;
 }
 
 /**
  * Default clock skew thresholds
  */
 export const DEFAULT_CLOCK_THRESHOLDS: ClockSkewThresholds = {
-  warnThresholdMs: 100, // 100ms - warn
-  errorThresholdMs: 1000, // 1s - error
-  componentSkewWarnMs: 10, // 10ms - cross-component
+	warnThresholdMs: 100, // 100ms - warn
+	errorThresholdMs: 1000, // 1s - error
+	componentSkewWarnMs: 10, // 10ms - cross-component
 };
 
 /**
  * Clock check result
  */
 export interface ClockCheckResult {
-  /** Whether the check passed */
-  ok: boolean;
-  /** Measured skew in milliseconds (positive = ahead, negative = behind) */
-  skewMs: number;
-  /** Server time used for comparison (ISO 8601) */
-  referenceTime?: string;
-  /** Warning message if applicable */
-  warning?: string;
-  /** Error message if applicable */
-  error?: string;
-  /** Timestamp of the check */
-  checkedAt: string;
+	/** Whether the check passed */
+	ok: boolean;
+	/** Measured skew in milliseconds (positive = ahead, negative = behind) */
+	skewMs: number;
+	/** Server time used for comparison (ISO 8601) */
+	referenceTime?: string;
+	/** Warning message if applicable */
+	warning?: string;
+	/** Error message if applicable */
+	error?: string;
+	/** Timestamp of the check */
+	checkedAt: string;
 }
 
 /**
  * Timestamp validation result
  */
 export interface TimestampValidationResult {
-  /** Whether the timestamp is valid */
-  valid: boolean;
-  /** The validated timestamp (may be adjusted) */
-  timestamp: string;
-  /** Warning messages */
-  warnings: string[];
-  /** Error messages */
-  errors: string[];
+	/** Whether the timestamp is valid */
+	valid: boolean;
+	/** The validated timestamp (may be adjusted) */
+	timestamp: string;
+	/** Warning messages */
+	warnings: string[];
+	/** Error messages */
+	errors: string[];
 }
 
 // ============================================
@@ -92,52 +92,52 @@ export interface TimestampValidationResult {
  * @returns Clock check result
  */
 export async function checkClockSkew(
-  ctx: ExecutionContext,
-  thresholds: ClockSkewThresholds = DEFAULT_CLOCK_THRESHOLDS
+	ctx: ExecutionContext,
+	thresholds: ClockSkewThresholds = DEFAULT_CLOCK_THRESHOLDS
 ): Promise<ClockCheckResult> {
-  const checkedAt = new Date().toISOString();
+	const checkedAt = new Date().toISOString();
 
-  // Skip in backtest mode
-  if (isBacktest(ctx)) {
-    return {
-      ok: true,
-      skewMs: 0,
-      checkedAt,
-      warning: "Clock check skipped in BACKTEST mode",
-    };
-  }
+	// Skip in backtest mode
+	if (isBacktest(ctx)) {
+		return {
+			ok: true,
+			skewMs: 0,
+			checkedAt,
+			warning: "Clock check skipped in BACKTEST mode",
+		};
+	}
 
-  try {
-    // Try to get reference time from HTTP headers
-    const { skewMs, referenceTime } = await measureHttpSkew();
+	try {
+		// Try to get reference time from HTTP headers
+		const { skewMs, referenceTime } = await measureHttpSkew();
 
-    const result: ClockCheckResult = {
-      ok: true,
-      skewMs,
-      referenceTime,
-      checkedAt,
-    };
+		const result: ClockCheckResult = {
+			ok: true,
+			skewMs,
+			referenceTime,
+			checkedAt,
+		};
 
-    // Check against thresholds
-    const absSkew = Math.abs(skewMs);
+		// Check against thresholds
+		const absSkew = Math.abs(skewMs);
 
-    if (absSkew >= thresholds.errorThresholdMs) {
-      result.ok = false;
-      result.error = `Clock skew ${skewMs}ms exceeds error threshold (${thresholds.errorThresholdMs}ms). Sync your system clock.`;
-    } else if (absSkew >= thresholds.warnThresholdMs) {
-      result.warning = `Clock skew ${skewMs}ms exceeds warning threshold (${thresholds.warnThresholdMs}ms). Consider syncing your system clock.`;
-    }
+		if (absSkew >= thresholds.errorThresholdMs) {
+			result.ok = false;
+			result.error = `Clock skew ${skewMs}ms exceeds error threshold (${thresholds.errorThresholdMs}ms). Sync your system clock.`;
+		} else if (absSkew >= thresholds.warnThresholdMs) {
+			result.warning = `Clock skew ${skewMs}ms exceeds warning threshold (${thresholds.warnThresholdMs}ms). Consider syncing your system clock.`;
+		}
 
-    return result;
-  } catch (error) {
-    // If we can't check, warn but don't fail
-    return {
-      ok: true,
-      skewMs: 0,
-      checkedAt,
-      warning: `Unable to verify clock sync: ${error instanceof Error ? error.message : String(error)}. Ensure NTP is configured.`,
-    };
-  }
+		return result;
+	} catch (error) {
+		// If we can't check, warn but don't fail
+		return {
+			ok: true,
+			skewMs: 0,
+			checkedAt,
+			warning: `Unable to verify clock sync: ${error instanceof Error ? error.message : String(error)}. Ensure NTP is configured.`,
+		};
+	}
 }
 
 /**
@@ -147,37 +147,37 @@ export async function checkClockSkew(
  * Typical accuracy: ±50-200ms depending on network latency.
  */
 async function measureHttpSkew(): Promise<{ skewMs: number; referenceTime: string }> {
-  const beforeMs = Date.now();
+	const beforeMs = Date.now();
 
-  // Use a reliable server with accurate Date header
-  const response = await fetch("https://www.google.com", {
-    method: "HEAD",
-    cache: "no-store",
-  });
+	// Use a reliable server with accurate Date header
+	const response = await fetch("https://www.google.com", {
+		method: "HEAD",
+		cache: "no-store",
+	});
 
-  const afterMs = Date.now();
-  const dateHeader = response.headers.get("Date");
+	const afterMs = Date.now();
+	const dateHeader = response.headers.get("Date");
 
-  if (!dateHeader) {
-    throw new Error("No Date header in response");
-  }
+	if (!dateHeader) {
+		throw new Error("No Date header in response");
+	}
 
-  const serverTime = new Date(dateHeader);
-  if (Number.isNaN(serverTime.getTime())) {
-    throw new Error(`Invalid Date header: ${dateHeader}`);
-  }
+	const serverTime = new Date(dateHeader);
+	if (Number.isNaN(serverTime.getTime())) {
+		throw new Error(`Invalid Date header: ${dateHeader}`);
+	}
 
-  // Account for round-trip time
-  const rttMs = afterMs - beforeMs;
-  const estimatedServerTime = serverTime.getTime() + rttMs / 2;
-  const localTime = beforeMs + rttMs / 2;
+	// Account for round-trip time
+	const rttMs = afterMs - beforeMs;
+	const estimatedServerTime = serverTime.getTime() + rttMs / 2;
+	const localTime = beforeMs + rttMs / 2;
 
-  const skewMs = Math.round(localTime - estimatedServerTime);
+	const skewMs = Math.round(localTime - estimatedServerTime);
 
-  return {
-    skewMs,
-    referenceTime: serverTime.toISOString(),
-  };
+	return {
+		skewMs,
+		referenceTime: serverTime.toISOString(),
+	};
 }
 
 // ============================================
@@ -192,71 +192,71 @@ async function measureHttpSkew(): Promise<{ skewMs: number; referenceTime: strin
  * @returns Validation result
  */
 export function validateTimestamp(
-  timestamp: string,
-  options: {
-    /** Allow future timestamps (default: false) */
-    allowFuture?: boolean;
-    /** Maximum age in milliseconds (default: 30 days) */
-    maxAgeMs?: number;
-    /** Tolerance for future timestamps in ms (default: 5000 = 5s) */
-    futureTolerance?: number;
-  } = {}
+	timestamp: string,
+	options: {
+		/** Allow future timestamps (default: false) */
+		allowFuture?: boolean;
+		/** Maximum age in milliseconds (default: 30 days) */
+		maxAgeMs?: number;
+		/** Tolerance for future timestamps in ms (default: 5000 = 5s) */
+		futureTolerance?: number;
+	} = {}
 ): TimestampValidationResult {
-  const {
-    allowFuture = false,
-    maxAgeMs = 30 * 24 * 60 * 60 * 1000, // 30 days
-    futureTolerance = 5000, // 5 seconds
-  } = options;
+	const {
+		allowFuture = false,
+		maxAgeMs = 30 * 24 * 60 * 60 * 1000, // 30 days
+		futureTolerance = 5000, // 5 seconds
+	} = options;
 
-  const result: TimestampValidationResult = {
-    valid: true,
-    timestamp,
-    warnings: [],
-    errors: [],
-  };
+	const result: TimestampValidationResult = {
+		valid: true,
+		timestamp,
+		warnings: [],
+		errors: [],
+	};
 
-  // Parse timestamp
-  const date = new Date(timestamp);
-  if (Number.isNaN(date.getTime())) {
-    result.valid = false;
-    result.errors.push(`Invalid timestamp format: ${timestamp}`);
-    return result;
-  }
+	// Parse timestamp
+	const date = new Date(timestamp);
+	if (Number.isNaN(date.getTime())) {
+		result.valid = false;
+		result.errors.push(`Invalid timestamp format: ${timestamp}`);
+		return result;
+	}
 
-  const now = Date.now();
-  const timestampMs = date.getTime();
+	const now = Date.now();
+	const timestampMs = date.getTime();
 
-  // Check for pre-epoch timestamp (most fundamental check)
-  if (timestampMs < 0) {
-    result.valid = false;
-    result.errors.push(`Timestamp ${timestamp} is before Unix epoch`);
-    return result;
-  }
+	// Check for pre-epoch timestamp (most fundamental check)
+	if (timestampMs < 0) {
+		result.valid = false;
+		result.errors.push(`Timestamp ${timestamp} is before Unix epoch`);
+		return result;
+	}
 
-  // Check for future timestamp
-  if (timestampMs > now + futureTolerance) {
-    if (allowFuture) {
-      result.warnings.push(
-        `Timestamp ${timestamp} is ${Math.round((timestampMs - now) / 1000)}s in the future`
-      );
-    } else {
-      result.valid = false;
-      result.errors.push(
-        `Timestamp ${timestamp} is ${Math.round((timestampMs - now) / 1000)}s in the future (beyond ${futureTolerance}ms tolerance)`
-      );
-    }
-  }
+	// Check for future timestamp
+	if (timestampMs > now + futureTolerance) {
+		if (allowFuture) {
+			result.warnings.push(
+				`Timestamp ${timestamp} is ${Math.round((timestampMs - now) / 1000)}s in the future`
+			);
+		} else {
+			result.valid = false;
+			result.errors.push(
+				`Timestamp ${timestamp} is ${Math.round((timestampMs - now) / 1000)}s in the future (beyond ${futureTolerance}ms tolerance)`
+			);
+		}
+	}
 
-  // Check for stale timestamp
-  const ageMs = now - timestampMs;
-  if (ageMs > maxAgeMs) {
-    result.valid = false;
-    result.errors.push(
-      `Timestamp ${timestamp} is ${Math.round(ageMs / (24 * 60 * 60 * 1000))} days old (max: ${Math.round(maxAgeMs / (24 * 60 * 60 * 1000))} days)`
-    );
-  }
+	// Check for stale timestamp
+	const ageMs = now - timestampMs;
+	if (ageMs > maxAgeMs) {
+		result.valid = false;
+		result.errors.push(
+			`Timestamp ${timestamp} is ${Math.round(ageMs / (24 * 60 * 60 * 1000))} days old (max: ${Math.round(maxAgeMs / (24 * 60 * 60 * 1000))} days)`
+		);
+	}
 
-  return result;
+	return result;
 }
 
 /**
@@ -270,31 +270,31 @@ export function validateTimestamp(
  * @returns Whether timestamps are consistent
  */
 export function validateTimestampConsistency(
-  timestamp1: string,
-  timestamp2: string,
-  maxDiffMs = DEFAULT_CLOCK_THRESHOLDS.componentSkewWarnMs
+	timestamp1: string,
+	timestamp2: string,
+	maxDiffMs = DEFAULT_CLOCK_THRESHOLDS.componentSkewWarnMs
 ): { consistent: boolean; diffMs: number; warning?: string } {
-  const time1 = new Date(timestamp1).getTime();
-  const time2 = new Date(timestamp2).getTime();
+	const time1 = new Date(timestamp1).getTime();
+	const time2 = new Date(timestamp2).getTime();
 
-  if (Number.isNaN(time1) || Number.isNaN(time2)) {
-    return {
-      consistent: false,
-      diffMs: Number.NaN,
-      warning: "One or both timestamps are invalid",
-    };
-  }
+	if (Number.isNaN(time1) || Number.isNaN(time2)) {
+		return {
+			consistent: false,
+			diffMs: Number.NaN,
+			warning: "One or both timestamps are invalid",
+		};
+	}
 
-  const diffMs = Math.abs(time1 - time2);
-  const consistent = diffMs <= maxDiffMs;
+	const diffMs = Math.abs(time1 - time2);
+	const consistent = diffMs <= maxDiffMs;
 
-  return {
-    consistent,
-    diffMs,
-    warning: consistent
-      ? undefined
-      : `Timestamp skew ${diffMs}ms exceeds threshold (${maxDiffMs}ms)`,
-  };
+	return {
+		consistent,
+		diffMs,
+		warning: consistent
+			? undefined
+			: `Timestamp skew ${diffMs}ms exceeds threshold (${maxDiffMs}ms)`,
+	};
 }
 
 // ============================================
@@ -310,9 +310,9 @@ export function validateTimestampConsistency(
  * @returns Start of hour (ISO 8601)
  */
 export function alignToHourlyCandle(timestamp: string): string {
-  const date = new Date(timestamp);
-  date.setUTCMinutes(0, 0, 0);
-  return date.toISOString();
+	const date = new Date(timestamp);
+	date.setUTCMinutes(0, 0, 0);
+	return date.toISOString();
 }
 
 /**
@@ -324,9 +324,9 @@ export function alignToHourlyCandle(timestamp: string): string {
  * @returns Start of UTC day (ISO 8601)
  */
 export function alignToDailyCandle(timestamp: string): string {
-  const date = new Date(timestamp);
-  date.setUTCHours(0, 0, 0, 0);
-  return date.toISOString();
+	const date = new Date(timestamp);
+	date.setUTCHours(0, 0, 0, 0);
+	return date.toISOString();
 }
 
 /**
@@ -336,10 +336,10 @@ export function alignToDailyCandle(timestamp: string): string {
  * @returns Whether timestamp is on hour boundary
  */
 export function isHourlyAligned(timestamp: string): boolean {
-  const date = new Date(timestamp);
-  return (
-    date.getUTCMinutes() === 0 && date.getUTCSeconds() === 0 && date.getUTCMilliseconds() === 0
-  );
+	const date = new Date(timestamp);
+	return (
+		date.getUTCMinutes() === 0 && date.getUTCSeconds() === 0 && date.getUTCMilliseconds() === 0
+	);
 }
 
 /**
@@ -349,54 +349,54 @@ export function isHourlyAligned(timestamp: string): boolean {
  * @returns Validation result with detected issues
  */
 export function validateCandleSequence(timestamps: string[]): {
-  valid: boolean;
-  gaps: { from: string; to: string; missingHours: number }[];
-  outOfOrder: { index: number; timestamp: string }[];
+	valid: boolean;
+	gaps: { from: string; to: string; missingHours: number }[];
+	outOfOrder: { index: number; timestamp: string }[];
 } {
-  const gaps: { from: string; to: string; missingHours: number }[] = [];
-  const outOfOrder: { index: number; timestamp: string }[] = [];
+	const gaps: { from: string; to: string; missingHours: number }[] = [];
+	const outOfOrder: { index: number; timestamp: string }[] = [];
 
-  if (timestamps.length < 2) {
-    return { valid: true, gaps, outOfOrder };
-  }
+	if (timestamps.length < 2) {
+		return { valid: true, gaps, outOfOrder };
+	}
 
-  const hourMs = 60 * 60 * 1000;
+	const hourMs = 60 * 60 * 1000;
 
-  for (let i = 1; i < timestamps.length; i++) {
-    const prevTimestamp = timestamps[i - 1];
-    const currTimestamp = timestamps[i];
+	for (let i = 1; i < timestamps.length; i++) {
+		const prevTimestamp = timestamps[i - 1];
+		const currTimestamp = timestamps[i];
 
-    if (!prevTimestamp || !currTimestamp) {
-      continue;
-    }
+		if (!prevTimestamp || !currTimestamp) {
+			continue;
+		}
 
-    const prevTime = new Date(prevTimestamp).getTime();
-    const currTime = new Date(currTimestamp).getTime();
+		const prevTime = new Date(prevTimestamp).getTime();
+		const currTime = new Date(currTimestamp).getTime();
 
-    // Check for out-of-order
-    if (currTime <= prevTime) {
-      outOfOrder.push({ index: i, timestamp: currTimestamp });
-    }
+		// Check for out-of-order
+		if (currTime <= prevTime) {
+			outOfOrder.push({ index: i, timestamp: currTimestamp });
+		}
 
-    // Check for gaps (more than 1 hour apart)
-    const diff = currTime - prevTime;
-    if (diff > hourMs) {
-      const missingHours = Math.floor(diff / hourMs) - 1;
-      if (missingHours > 0) {
-        gaps.push({
-          from: prevTimestamp,
-          to: currTimestamp,
-          missingHours,
-        });
-      }
-    }
-  }
+		// Check for gaps (more than 1 hour apart)
+		const diff = currTime - prevTime;
+		if (diff > hourMs) {
+			const missingHours = Math.floor(diff / hourMs) - 1;
+			if (missingHours > 0) {
+				gaps.push({
+					from: prevTimestamp,
+					to: currTimestamp,
+					missingHours,
+				});
+			}
+		}
+	}
 
-  return {
-    valid: gaps.length === 0 && outOfOrder.length === 0,
-    gaps,
-    outOfOrder,
-  };
+	return {
+		valid: gaps.length === 0 && outOfOrder.length === 0,
+		gaps,
+		outOfOrder,
+	};
 }
 
 // ============================================
@@ -407,19 +407,19 @@ export function validateCandleSequence(timestamps: string[]): {
  * Clock monitoring state
  */
 interface ClockMonitorState {
-  lastCheck: string | null;
-  lastSkewMs: number;
-  checkCount: number;
-  warningCount: number;
-  errorCount: number;
+	lastCheck: string | null;
+	lastSkewMs: number;
+	checkCount: number;
+	warningCount: number;
+	errorCount: number;
 }
 
 let monitorState: ClockMonitorState = {
-  lastCheck: null,
-  lastSkewMs: 0,
-  checkCount: 0,
-  warningCount: 0,
-  errorCount: 0,
+	lastCheck: null,
+	lastSkewMs: 0,
+	checkCount: 0,
+	warningCount: 0,
+	errorCount: 0,
 };
 
 /**
@@ -430,41 +430,41 @@ let monitorState: ClockMonitorState = {
  * @returns Check result
  */
 export async function periodicClockCheck(
-  ctx: ExecutionContext,
-  thresholds: ClockSkewThresholds = DEFAULT_CLOCK_THRESHOLDS
+	ctx: ExecutionContext,
+	thresholds: ClockSkewThresholds = DEFAULT_CLOCK_THRESHOLDS
 ): Promise<ClockCheckResult> {
-  const result = await checkClockSkew(ctx, thresholds);
+	const result = await checkClockSkew(ctx, thresholds);
 
-  monitorState.lastCheck = result.checkedAt;
-  monitorState.lastSkewMs = result.skewMs;
-  monitorState.checkCount++;
+	monitorState.lastCheck = result.checkedAt;
+	monitorState.lastSkewMs = result.skewMs;
+	monitorState.checkCount++;
 
-  if (result.warning) {
-    monitorState.warningCount++;
-  }
-  if (result.error) {
-    monitorState.errorCount++;
-  }
+	if (result.warning) {
+		monitorState.warningCount++;
+	}
+	if (result.error) {
+		monitorState.errorCount++;
+	}
 
-  return result;
+	return result;
 }
 
 /**
  * Get current clock monitoring state
  */
 export function getClockMonitorState(): ClockMonitorState {
-  return { ...monitorState };
+	return { ...monitorState };
 }
 
 /**
  * Reset clock monitoring state (for testing)
  */
 export function resetClockMonitorState(): void {
-  monitorState = {
-    lastCheck: null,
-    lastSkewMs: 0,
-    checkCount: 0,
-    warningCount: 0,
-    errorCount: 0,
-  };
+	monitorState = {
+		lastCheck: null,
+		lastSkewMs: 0,
+		checkCount: 0,
+		warningCount: 0,
+		errorCount: 0,
+	};
 }

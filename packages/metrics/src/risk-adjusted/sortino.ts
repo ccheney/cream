@@ -22,29 +22,29 @@ import { DEFAULT_METRICS_CONFIG, type MetricsConfig } from "./types.js";
  * @returns Annualized Sortino ratio, or null if insufficient data
  */
 export function calculateSortino(
-  returns: number[],
-  config: MetricsConfig = DEFAULT_METRICS_CONFIG
+	returns: number[],
+	config: MetricsConfig = DEFAULT_METRICS_CONFIG
 ): number | null {
-  if (returns.length < 2) {
-    return null;
-  }
+	if (returns.length < 2) {
+		return null;
+	}
 
-  const meanReturn = mean(returns);
-  const downDev = downsideDeviation(returns, config.targetReturn / config.periodsPerYear);
+	const meanReturn = mean(returns);
+	const downDev = downsideDeviation(returns, config.targetReturn / config.periodsPerYear);
 
-  if (downDev === 0) {
-    return null; // No downside volatility case
-  }
+	if (downDev === 0) {
+		return null; // No downside volatility case
+	}
 
-  // Convert annual target to per-period
-  const periodTarget = config.targetReturn / config.periodsPerYear;
+	// Convert annual target to per-period
+	const periodTarget = config.targetReturn / config.periodsPerYear;
 
-  // Excess return over target
-  const excessReturn = meanReturn - periodTarget;
+	// Excess return over target
+	const excessReturn = meanReturn - periodTarget;
 
-  // Sortino ratio (not yet annualized)
-  const periodSortino = excessReturn / downDev;
+	// Sortino ratio (not yet annualized)
+	const periodSortino = excessReturn / downDev;
 
-  // Annualize
-  return periodSortino * Math.sqrt(config.periodsPerYear);
+	// Annualize
+	return periodSortino * Math.sqrt(config.periodsPerYear);
 }

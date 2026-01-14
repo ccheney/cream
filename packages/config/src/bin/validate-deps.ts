@@ -15,13 +15,13 @@ const rootDir = process.argv[2] ?? ".";
 const result = await validatePackageDependencies(rootDir);
 
 if (result.violations.length > 0) {
-  for (const v of result.violations) {
-    const _icon = v.severity === "ERROR" ? "x" : "!";
-  }
+	for (const v of result.violations) {
+		const _icon = v.severity === "ERROR" ? "x" : "!";
+	}
 }
 
 if (result.errorCount > 0) {
-  process.exit(1);
+	process.exit(1);
 }
 
 if (result.warningCount > 0) {

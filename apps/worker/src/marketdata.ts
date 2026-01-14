@@ -5,9 +5,9 @@
  */
 
 import {
-  createMarketDataClient,
-  type MarketDataServiceClient,
-  type Quote,
+	createMarketDataClient,
+	type MarketDataServiceClient,
+	type Quote,
 } from "@cream/domain/grpc";
 import { log } from "./logger";
 
@@ -33,12 +33,12 @@ let marketDataClient: MarketDataServiceClient | null = null;
  * Get or create the market data gRPC client
  */
 function getMarketDataClient(): MarketDataServiceClient {
-  if (!marketDataClient) {
-    marketDataClient = createMarketDataClient(GRPC_BASE_URL, {
-      enableLogging: process.env.GRPC_LOGGING === "true",
-    });
-  }
-  return marketDataClient;
+	if (!marketDataClient) {
+		marketDataClient = createMarketDataClient(GRPC_BASE_URL, {
+			enableLogging: process.env.GRPC_LOGGING === "true",
+		});
+	}
+	return marketDataClient;
 }
 
 // ============================================
@@ -46,19 +46,19 @@ function getMarketDataClient(): MarketDataServiceClient {
 // ============================================
 
 interface SubscriptionState {
-  active: boolean;
-  symbols: string[];
-  abortController: AbortController | null;
-  lastUpdate: Date | null;
-  updateCount: number;
+	active: boolean;
+	symbols: string[];
+	abortController: AbortController | null;
+	lastUpdate: Date | null;
+	updateCount: number;
 }
 
 const subscriptionState: SubscriptionState = {
-  active: false,
-  symbols: [],
-  abortController: null,
-  lastUpdate: null,
-  updateCount: 0,
+	active: false,
+	symbols: [],
+	abortController: null,
+	lastUpdate: null,
+	updateCount: 0,
 };
 
 // ============================================
@@ -74,37 +74,37 @@ const subscriptionState: SubscriptionState = {
  * @param onUpdate - Optional callback for quote updates
  */
 export async function startMarketDataSubscription(
-  symbols: string[],
-  onUpdate?: (quote: Quote) => void
+	symbols: string[],
+	onUpdate?: (quote: Quote) => void
 ): Promise<void> {
-  if (subscriptionState.active) {
-    log.info({}, "Subscription already active, updating symbols");
-    await stopMarketDataSubscription();
-  }
+	if (subscriptionState.active) {
+		log.info({}, "Subscription already active, updating symbols");
+		await stopMarketDataSubscription();
+	}
 
-  if (symbols.length === 0) {
-    log.warn({}, "No symbols provided, skipping subscription");
-    return;
-  }
+	if (symbols.length === 0) {
+		log.warn({}, "No symbols provided, skipping subscription");
+		return;
+	}
 
-  subscriptionState.active = true;
-  subscriptionState.symbols = symbols;
-  subscriptionState.abortController = new AbortController();
-  subscriptionState.updateCount = 0;
+	subscriptionState.active = true;
+	subscriptionState.symbols = symbols;
+	subscriptionState.abortController = new AbortController();
+	subscriptionState.updateCount = 0;
 
-  log.info({ symbolCount: symbols.length, symbols: symbols.join(", ") }, "Starting subscription");
+	log.info({ symbolCount: symbols.length, symbols: symbols.join(", ") }, "Starting subscription");
 
-  const client = getMarketDataClient();
+	const client = getMarketDataClient();
 
-  // Start the subscription in a background task
-  // The connection stays open and streams market data updates
-  runSubscriptionLoop(client, symbols, onUpdate).catch((error) => {
-    log.error(
-      { error: error instanceof Error ? error.message : String(error) },
-      "Subscription error"
-    );
-    subscriptionState.active = false;
-  });
+	// Start the subscription in a background task
+	// The connection stays open and streams market data updates
+	runSubscriptionLoop(client, symbols, onUpdate).catch((error) => {
+		log.error(
+			{ error: error instanceof Error ? error.message : String(error) },
+			"Subscription error"
+		);
+		subscriptionState.active = false;
+	});
 }
 
 /**
@@ -112,105 +112,105 @@ export async function startMarketDataSubscription(
  * Includes retry logic for when execution-engine is still starting.
  */
 async function runSubscriptionLoop(
-  client: MarketDataServiceClient,
-  symbols: string[],
-  onUpdate?: (quote: Quote) => void
+	client: MarketDataServiceClient,
+	symbols: string[],
+	onUpdate?: (quote: Quote) => void
 ): Promise<void> {
-  let retryCount = 0;
-  let retryDelay = INITIAL_RETRY_DELAY_MS;
+	let retryCount = 0;
+	let retryDelay = INITIAL_RETRY_DELAY_MS;
 
-  while (subscriptionState.active) {
-    try {
-      for await (const result of client.subscribeMarketData({ symbols })) {
-        // Reset retry count on successful connection
-        retryCount = 0;
-        retryDelay = INITIAL_RETRY_DELAY_MS;
+	while (subscriptionState.active) {
+		try {
+			for await (const result of client.subscribeMarketData({ symbols })) {
+				// Reset retry count on successful connection
+				retryCount = 0;
+				retryDelay = INITIAL_RETRY_DELAY_MS;
 
-        subscriptionState.lastUpdate = new Date();
-        subscriptionState.updateCount++;
+				subscriptionState.lastUpdate = new Date();
+				subscriptionState.updateCount++;
 
-        // Extract quote from the update
-        const response = result.data;
-        if (response.update?.case === "quote" && onUpdate) {
-          onUpdate(response.update.value);
-        }
+				// Extract quote from the update
+				const response = result.data;
+				if (response.update?.case === "quote" && onUpdate) {
+					onUpdate(response.update.value);
+				}
 
-        // Log periodic updates (every 100 updates)
-        if (subscriptionState.updateCount % 100 === 0) {
-          log.info({ updateCount: subscriptionState.updateCount }, "Received market data updates");
-        }
+				// Log periodic updates (every 100 updates)
+				if (subscriptionState.updateCount % 100 === 0) {
+					log.info({ updateCount: subscriptionState.updateCount }, "Received market data updates");
+				}
 
-        // Check if we should stop
-        if (!subscriptionState.active) {
-          return;
-        }
-      }
-    } catch (error) {
-      if (!subscriptionState.active) {
-        // Expected - subscription was stopped
-        return;
-      }
+				// Check if we should stop
+				if (!subscriptionState.active) {
+					return;
+				}
+			}
+		} catch (error) {
+			if (!subscriptionState.active) {
+				// Expected - subscription was stopped
+				return;
+			}
 
-      // Check if this is a connection error (execution-engine not ready)
-      const isConnectionError =
-        error instanceof Error &&
-        (error.message.includes("UNAVAILABLE") ||
-          error.message.includes("ECONNREFUSED") ||
-          error.cause?.toString().includes("ECONNREFUSED"));
+			// Check if this is a connection error (execution-engine not ready)
+			const isConnectionError =
+				error instanceof Error &&
+				(error.message.includes("UNAVAILABLE") ||
+					error.message.includes("ECONNREFUSED") ||
+					error.cause?.toString().includes("ECONNREFUSED"));
 
-      if (isConnectionError && retryCount < MAX_CONNECTION_RETRIES) {
-        retryCount++;
-        log.info(
-          { retryDelayMs: retryDelay, attempt: retryCount, maxAttempts: MAX_CONNECTION_RETRIES },
-          "Execution engine not ready, retrying"
-        );
-        await new Promise((resolve) => setTimeout(resolve, retryDelay));
-        // Exponential backoff with max 30s
-        retryDelay = Math.min(retryDelay * 2, 30000);
-        continue;
-      }
+			if (isConnectionError && retryCount < MAX_CONNECTION_RETRIES) {
+				retryCount++;
+				log.info(
+					{ retryDelayMs: retryDelay, attempt: retryCount, maxAttempts: MAX_CONNECTION_RETRIES },
+					"Execution engine not ready, retrying"
+				);
+				await new Promise((resolve) => setTimeout(resolve, retryDelay));
+				// Exponential backoff with max 30s
+				retryDelay = Math.min(retryDelay * 2, 30000);
+				continue;
+			}
 
-      throw error;
-    }
-  }
+			throw error;
+		}
+	}
 }
 
 /**
  * Stop the market data subscription
  */
 export async function stopMarketDataSubscription(): Promise<void> {
-  if (!subscriptionState.active) {
-    return;
-  }
+	if (!subscriptionState.active) {
+		return;
+	}
 
-  log.info({}, "Stopping subscription");
+	log.info({}, "Stopping subscription");
 
-  subscriptionState.active = false;
+	subscriptionState.active = false;
 
-  if (subscriptionState.abortController) {
-    subscriptionState.abortController.abort();
-    subscriptionState.abortController = null;
-  }
+	if (subscriptionState.abortController) {
+		subscriptionState.abortController.abort();
+		subscriptionState.abortController = null;
+	}
 
-  // Give the loop time to exit cleanly
-  await new Promise((resolve) => setTimeout(resolve, 100));
+	// Give the loop time to exit cleanly
+	await new Promise((resolve) => setTimeout(resolve, 100));
 
-  log.info({ updateCount: subscriptionState.updateCount }, "Subscription stopped");
+	log.info({ updateCount: subscriptionState.updateCount }, "Subscription stopped");
 }
 
 /**
  * Get current subscription status
  */
 export function getSubscriptionStatus(): {
-  active: boolean;
-  symbols: string[];
-  lastUpdate: Date | null;
-  updateCount: number;
+	active: boolean;
+	symbols: string[];
+	lastUpdate: Date | null;
+	updateCount: number;
 } {
-  return {
-    active: subscriptionState.active,
-    symbols: subscriptionState.symbols,
-    lastUpdate: subscriptionState.lastUpdate,
-    updateCount: subscriptionState.updateCount,
-  };
+	return {
+		active: subscriptionState.active,
+		symbols: subscriptionState.symbols,
+		lastUpdate: subscriptionState.lastUpdate,
+		updateCount: subscriptionState.updateCount,
+	};
 }

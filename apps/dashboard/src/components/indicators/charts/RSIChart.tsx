@@ -18,20 +18,20 @@ import { IndicatorChart, type IndicatorDataPoint, type ReferenceLine } from "./I
 // ============================================
 
 export interface RSIChartProps {
-  /** RSI data points */
-  data: IndicatorDataPoint[];
+	/** RSI data points */
+	data: IndicatorDataPoint[];
 
-  /** Overbought level (default: 70) */
-  overboughtLevel?: number;
+	/** Overbought level (default: 70) */
+	overboughtLevel?: number;
 
-  /** Oversold level (default: 30) */
-  oversoldLevel?: number;
+	/** Oversold level (default: 30) */
+	oversoldLevel?: number;
 
-  /** Chart height in pixels */
-  height?: number;
+	/** Chart height in pixels */
+	height?: number;
 
-  /** Additional CSS class */
-  className?: string;
+	/** Additional CSS class */
+	className?: string;
 }
 
 // ============================================
@@ -48,45 +48,45 @@ const NEUTRAL_COLOR = "rgba(120, 113, 108, 0.2)"; // Neutral
 // ============================================
 
 function RSIChartComponent({
-  data,
-  overboughtLevel = 70,
-  oversoldLevel = 30,
-  height = 150,
-  className = "",
+	data,
+	overboughtLevel = 70,
+	oversoldLevel = 30,
+	height = 150,
+	className = "",
 }: RSIChartProps) {
-  const referenceLines: ReferenceLine[] = [
-    {
-      value: overboughtLevel,
-      color: OVERBOUGHT_COLOR,
-      lineWidth: 1,
-      title: `${overboughtLevel}`,
-    },
-    {
-      value: 50,
-      color: NEUTRAL_COLOR,
-      lineWidth: 1,
-    },
-    {
-      value: oversoldLevel,
-      color: OVERSOLD_COLOR,
-      lineWidth: 1,
-      title: `${oversoldLevel}`,
-    },
-  ];
+	const referenceLines: ReferenceLine[] = [
+		{
+			value: overboughtLevel,
+			color: OVERBOUGHT_COLOR,
+			lineWidth: 1,
+			title: `${overboughtLevel}`,
+		},
+		{
+			value: 50,
+			color: NEUTRAL_COLOR,
+			lineWidth: 1,
+		},
+		{
+			value: oversoldLevel,
+			color: OVERSOLD_COLOR,
+			lineWidth: 1,
+			title: `${oversoldLevel}`,
+		},
+	];
 
-  return (
-    <IndicatorChart
-      data={data}
-      type="line"
-      color={RSI_COLOR}
-      title="RSI (14)"
-      referenceLines={referenceLines}
-      height={height}
-      minValue={0}
-      maxValue={100}
-      className={className}
-    />
-  );
+	return (
+		<IndicatorChart
+			data={data}
+			type="line"
+			color={RSI_COLOR}
+			title="RSI (14)"
+			referenceLines={referenceLines}
+			height={height}
+			minValue={0}
+			maxValue={100}
+			className={className}
+		/>
+	);
 }
 
 export const RSIChart = memo(RSIChartComponent);

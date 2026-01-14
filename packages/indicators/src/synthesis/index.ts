@@ -6,8 +6,8 @@
  */
 
 export {
-  type SecurityScanConfig,
-  type SecurityScanResult,
-  validateIndicatorFile,
-  validateIndicatorFileFromPath,
+	type SecurityScanConfig,
+	type SecurityScanResult,
+	validateIndicatorFile,
+	validateIndicatorFileFromPath,
 } from "./securityScan.js";

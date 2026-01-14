@@ -30,20 +30,20 @@ import { z } from "zod/v4";
  * - synthesis: Indicator synthesis workflow progress and results
  */
 export const Channel = z.enum([
-  "quotes",
-  "trades",
-  "options",
-  "indicators",
-  "orders",
-  "decisions",
-  "agents",
-  "cycles",
-  "backtests",
-  "alerts",
-  "system",
-  "portfolio",
-  "filings",
-  "synthesis",
+	"quotes",
+	"trades",
+	"options",
+	"indicators",
+	"orders",
+	"decisions",
+	"agents",
+	"cycles",
+	"backtests",
+	"alerts",
+	"system",
+	"portfolio",
+	"filings",
+	"synthesis",
 ]);
 
 export type Channel = z.infer<typeof Channel>;
@@ -61,20 +61,20 @@ export const CHANNELS = Channel.options;
  * Human-readable descriptions for each channel.
  */
 export const CHANNEL_DESCRIPTIONS: Record<Channel, string> = {
-  quotes: "Real-time price quotes (bid, ask, last, volume)",
-  trades: "Real-time trade executions (time & sales)",
-  options: "Options contract quotes and trades",
-  indicators: "Real-time indicator updates (RSI, ATR, momentum, volatility)",
-  orders: "Order status updates (submitted, filled, cancelled)",
-  decisions: "Trading decisions from agents",
-  agents: "Agent output and reasoning",
-  cycles: "Trading cycle progress",
-  backtests: "Backtest progress and results",
-  alerts: "System alerts and notifications",
-  system: "System status updates",
-  portfolio: "Portfolio value and position updates",
-  filings: "SEC filings sync progress and results",
-  synthesis: "Indicator synthesis workflow progress and results",
+	quotes: "Real-time price quotes (bid, ask, last, volume)",
+	trades: "Real-time trade executions (time & sales)",
+	options: "Options contract quotes and trades",
+	indicators: "Real-time indicator updates (RSI, ATR, momentum, volatility)",
+	orders: "Order status updates (submitted, filled, cancelled)",
+	decisions: "Trading decisions from agents",
+	agents: "Agent output and reasoning",
+	cycles: "Trading cycle progress",
+	backtests: "Backtest progress and results",
+	alerts: "System alerts and notifications",
+	system: "System status updates",
+	portfolio: "Portfolio value and position updates",
+	filings: "SEC filings sync progress and results",
+	synthesis: "Indicator synthesis workflow progress and results",
 };
 
 // ============================================
@@ -96,14 +96,14 @@ export const CHANNEL_DESCRIPTIONS: Record<Channel, string> = {
  * - critic → critic
  */
 export const AgentType = z.enum([
-  "grounding",
-  "news",
-  "fundamentals",
-  "bullish",
-  "bearish",
-  "trader",
-  "risk",
-  "critic",
+	"grounding",
+	"news",
+	"fundamentals",
+	"bullish",
+	"bearish",
+	"trader",
+	"risk",
+	"critic",
 ]);
 
 export type AgentType = z.infer<typeof AgentType>;
@@ -127,13 +127,13 @@ export type CyclePhase = z.infer<typeof CyclePhase>;
  * Order execution status.
  */
 export const OrderStatus = z.enum([
-  "pending",
-  "submitted",
-  "partial_fill",
-  "filled",
-  "cancelled",
-  "rejected",
-  "expired",
+	"pending",
+	"submitted",
+	"partial_fill",
+	"filled",
+	"cancelled",
+	"rejected",
+	"expired",
 ]);
 
 export type OrderStatus = z.infer<typeof OrderStatus>;

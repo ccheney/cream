@@ -5,9 +5,9 @@
  */
 
 export {
-  createSemanticScholarClient,
-  SemanticScholarClient,
-  type SemanticScholarConfig,
-  type SemanticScholarPaper,
-  type SemanticScholarSearchResponse,
+	createSemanticScholarClient,
+	SemanticScholarClient,
+	type SemanticScholarConfig,
+	type SemanticScholarPaper,
+	type SemanticScholarSearchResponse,
 } from "./semanticScholar.js";

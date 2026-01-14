@@ -22,46 +22,46 @@ import { CACHE_TIMES, queryKeys, STALE_TIMES } from "@/lib/api/query-client";
  * Calendar day with market hours.
  */
 export interface CalendarDayResponse {
-  /** Date in YYYY-MM-DD format */
-  date: string;
-  /** Market open time in HH:MM format (ET) */
-  open: string;
-  /** Market close time in HH:MM format (ET) */
-  close: string;
-  /** Extended session open time (ET) */
-  sessionOpen?: string;
-  /** Extended session close time (ET) */
-  sessionClose?: string;
+	/** Date in YYYY-MM-DD format */
+	date: string;
+	/** Market open time in HH:MM format (ET) */
+	open: string;
+	/** Market close time in HH:MM format (ET) */
+	close: string;
+	/** Extended session open time (ET) */
+	sessionOpen?: string;
+	/** Extended session close time (ET) */
+	sessionClose?: string;
 }
 
 /**
  * Market clock status response.
  */
 export interface MarketClockResponse {
-  /** Whether the market is currently open */
-  isOpen: boolean;
-  /** Next market open time (ISO 8601) */
-  nextOpen: string;
-  /** Next market close time (ISO 8601) */
-  nextClose: string;
-  /** Current timestamp (ISO 8601) */
-  timestamp: string;
+	/** Whether the market is currently open */
+	isOpen: boolean;
+	/** Next market open time (ISO 8601) */
+	nextOpen: string;
+	/** Next market close time (ISO 8601) */
+	nextClose: string;
+	/** Current timestamp (ISO 8601) */
+	timestamp: string;
 }
 
 /**
  * Market status with human-readable message.
  */
 export interface MarketStatusResponse {
-  /** Whether the market is currently open */
-  isOpen: boolean;
-  /** Current trading session */
-  session: "PRE_MARKET" | "RTH" | "AFTER_HOURS" | "CLOSED";
-  /** Next market open time (ISO 8601) */
-  nextOpen: string;
-  /** Next market close time (ISO 8601) */
-  nextClose: string;
-  /** Human-readable status message */
-  message: string;
+	/** Whether the market is currently open */
+	isOpen: boolean;
+	/** Current trading session */
+	session: "PRE_MARKET" | "RTH" | "AFTER_HOURS" | "CLOSED";
+	/** Next market open time (ISO 8601) */
+	nextOpen: string;
+	/** Next market close time (ISO 8601) */
+	nextClose: string;
+	/** Human-readable status message */
+	message: string;
 }
 
 // ============================================
@@ -72,26 +72,26 @@ export interface MarketStatusResponse {
  * Fetch market clock status.
  */
 async function fetchMarketClock(): Promise<MarketClockResponse> {
-  const { data } = await api.get<MarketClockResponse>("/api/calendar/clock");
-  return data;
+	const { data } = await api.get<MarketClockResponse>("/api/calendar/clock");
+	return data;
 }
 
 /**
  * Fetch market status with message.
  */
 async function fetchMarketStatus(): Promise<MarketStatusResponse> {
-  const { data } = await api.get<MarketStatusResponse>("/api/calendar/status");
-  return data;
+	const { data } = await api.get<MarketStatusResponse>("/api/calendar/status");
+	return data;
 }
 
 /**
  * Fetch calendar days for a date range.
  */
 async function fetchCalendarRange(start: string, end: string): Promise<CalendarDayResponse[]> {
-  const { data } = await api.get<CalendarDayResponse[]>("/api/calendar", {
-    params: { start, end },
-  });
-  return data;
+	const { data } = await api.get<CalendarDayResponse[]>("/api/calendar", {
+		params: { start, end },
+	});
+	return data;
 }
 
 // ============================================
@@ -112,17 +112,17 @@ async function fetchCalendarRange(start: string, end: string): Promise<CalendarD
  * ```
  */
 export function useMarketClock(
-  options?: Omit<UseQueryOptions<MarketClockResponse>, "queryKey" | "queryFn">
+	options?: Omit<UseQueryOptions<MarketClockResponse>, "queryKey" | "queryFn">
 ) {
-  return useQuery({
-    queryKey: queryKeys.calendar.clock(),
-    queryFn: fetchMarketClock,
-    staleTime: STALE_TIMES.MARKET,
-    gcTime: CACHE_TIMES.MARKET,
-    // Auto-refresh every 30 seconds
-    refetchInterval: 30 * 1000,
-    ...options,
-  });
+	return useQuery({
+		queryKey: queryKeys.calendar.clock(),
+		queryFn: fetchMarketClock,
+		staleTime: STALE_TIMES.MARKET,
+		gcTime: CACHE_TIMES.MARKET,
+		// Auto-refresh every 30 seconds
+		refetchInterval: 30 * 1000,
+		...options,
+	});
 }
 
 /**
@@ -138,17 +138,17 @@ export function useMarketClock(
  * ```
  */
 export function useMarketStatus(
-  options?: Omit<UseQueryOptions<MarketStatusResponse>, "queryKey" | "queryFn">
+	options?: Omit<UseQueryOptions<MarketStatusResponse>, "queryKey" | "queryFn">
 ) {
-  return useQuery({
-    queryKey: queryKeys.calendar.status(),
-    queryFn: fetchMarketStatus,
-    staleTime: STALE_TIMES.MARKET,
-    gcTime: CACHE_TIMES.MARKET,
-    // Auto-refresh every 30 seconds
-    refetchInterval: 30 * 1000,
-    ...options,
-  });
+	return useQuery({
+		queryKey: queryKeys.calendar.status(),
+		queryFn: fetchMarketStatus,
+		staleTime: STALE_TIMES.MARKET,
+		gcTime: CACHE_TIMES.MARKET,
+		// Auto-refresh every 30 seconds
+		refetchInterval: 30 * 1000,
+		...options,
+	});
 }
 
 /**
@@ -167,19 +167,19 @@ export function useMarketStatus(
  * ```
  */
 export function useCalendarRange(
-  start: string,
-  end: string,
-  options?: Omit<UseQueryOptions<CalendarDayResponse[]>, "queryKey" | "queryFn">
+	start: string,
+	end: string,
+	options?: Omit<UseQueryOptions<CalendarDayResponse[]>, "queryKey" | "queryFn">
 ) {
-  return useQuery({
-    queryKey: queryKeys.calendar.range(start, end),
-    queryFn: () => fetchCalendarRange(start, end),
-    staleTime: STALE_TIMES.STATIC,
-    gcTime: CACHE_TIMES.STATIC,
-    // Only fetch if dates are provided
-    enabled: Boolean(start && end),
-    ...options,
-  });
+	return useQuery({
+		queryKey: queryKeys.calendar.range(start, end),
+		queryFn: () => fetchCalendarRange(start, end),
+		staleTime: STALE_TIMES.STATIC,
+		gcTime: CACHE_TIMES.STATIC,
+		// Only fetch if dates are provided
+		enabled: Boolean(start && end),
+		...options,
+	});
 }
 
 // ============================================
@@ -200,15 +200,15 @@ export function useCalendarRange(
  * ```
  */
 export function useIsMarketOpen() {
-  const { data, isLoading, error } = useMarketClock();
+	const { data, isLoading, error } = useMarketClock();
 
-  return {
-    isOpen: data?.isOpen ?? false,
-    isLoading,
-    error,
-    nextOpen: data?.nextOpen ? new Date(data.nextOpen) : null,
-    nextClose: data?.nextClose ? new Date(data.nextClose) : null,
-  };
+	return {
+		isOpen: data?.isOpen ?? false,
+		isLoading,
+		error,
+		nextOpen: data?.nextOpen ? new Date(data.nextOpen) : null,
+		nextClose: data?.nextClose ? new Date(data.nextClose) : null,
+	};
 }
 
 /**
@@ -227,12 +227,12 @@ export function useIsMarketOpen() {
  * ```
  */
 export function useTradingSession() {
-  const { data, isLoading, error } = useMarketStatus();
+	const { data, isLoading, error } = useMarketStatus();
 
-  return {
-    session: data?.session ?? "CLOSED",
-    message: data?.message ?? "",
-    isLoading,
-    error,
-  };
+	return {
+		session: data?.session ?? "CLOSED",
+		message: data?.message ?? "",
+		isLoading,
+		error,
+	};
 }

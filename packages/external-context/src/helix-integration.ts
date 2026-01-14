@@ -23,9 +23,9 @@
 
 import type { HelixClient } from "@cream/helix";
 import {
-  createEventIngestionService,
-  type EventIngestionResult,
-  type ExtractedEvent as HelixExtractedEvent,
+	createEventIngestionService,
+	type EventIngestionResult,
+	type ExtractedEvent as HelixExtractedEvent,
 } from "@cream/helix";
 
 import type { ExtractedEvent } from "./types.js";
@@ -34,17 +34,17 @@ import type { ExtractedEvent } from "./types.js";
  * Convert external-context ExtractedEvent to helix ExtractedEvent format
  */
 function toHelixEvent(event: ExtractedEvent): HelixExtractedEvent {
-  return {
-    eventId: event.eventId,
-    sourceType: event.sourceType,
-    eventType: event.eventType,
-    eventTime: event.eventTime,
-    extraction: event.extraction,
-    scores: event.scores,
-    relatedInstrumentIds: event.relatedInstrumentIds,
-    originalContent: event.originalContent,
-    processedAt: event.processedAt,
-  };
+	return {
+		eventId: event.eventId,
+		sourceType: event.sourceType,
+		eventType: event.eventType,
+		eventTime: event.eventTime,
+		extraction: event.extraction,
+		scores: event.scores,
+		relatedInstrumentIds: event.relatedInstrumentIds,
+		originalContent: event.originalContent,
+		processedAt: event.processedAt,
+	};
 }
 
 /**
@@ -59,33 +59,33 @@ function toHelixEvent(event: ExtractedEvent): HelixExtractedEvent {
  * @returns Ingestion result
  */
 export async function ingestExtractedEvents(
-  client: HelixClient,
-  events: ExtractedEvent[],
-  options: {
-    generateEmbeddings?: boolean;
-    createMacroEdges?: boolean;
-    createCompanyEdges?: boolean;
-    batchSize?: number;
-  } = {}
+	client: HelixClient,
+	events: ExtractedEvent[],
+	options: {
+		generateEmbeddings?: boolean;
+		createMacroEdges?: boolean;
+		createCompanyEdges?: boolean;
+		batchSize?: number;
+	} = {}
 ): Promise<EventIngestionResult> {
-  const service = createEventIngestionService(client);
-  const helixEvents = events.map(toHelixEvent);
-  return service.ingestEvents(helixEvents, options);
+	const service = createEventIngestionService(client);
+	const helixEvents = events.map(toHelixEvent);
+	return service.ingestEvents(helixEvents, options);
 }
 
 /**
  * Ingest a single extracted event into HelixDB
  */
 export async function ingestExtractedEvent(
-  client: HelixClient,
-  event: ExtractedEvent,
-  options: {
-    generateEmbeddings?: boolean;
-    createMacroEdges?: boolean;
-    createCompanyEdges?: boolean;
-  } = {}
+	client: HelixClient,
+	event: ExtractedEvent,
+	options: {
+		generateEmbeddings?: boolean;
+		createMacroEdges?: boolean;
+		createCompanyEdges?: boolean;
+	} = {}
 ): Promise<EventIngestionResult> {
-  return ingestExtractedEvents(client, [event], options);
+	return ingestExtractedEvents(client, [event], options);
 }
 
 /**
@@ -97,12 +97,12 @@ export async function ingestExtractedEvent(
  * @returns Similar events with similarity scores
  */
 export async function searchSimilarEvents(
-  client: HelixClient,
-  queryText: string,
-  limit = 10
+	client: HelixClient,
+	queryText: string,
+	limit = 10
 ): Promise<Array<{ eventId: string; similarity: number; textSummary: string }>> {
-  const service = createEventIngestionService(client);
-  return service.searchSimilarEvents(queryText, limit);
+	const service = createEventIngestionService(client);
+	return service.searchSimilarEvents(queryText, limit);
 }
 
 export type { EventIngestionResult };

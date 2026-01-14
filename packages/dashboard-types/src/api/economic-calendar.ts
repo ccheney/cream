@@ -18,16 +18,16 @@ export type EconomicEventImpact = z.infer<typeof EconomicEventImpactSchema>;
 // ============================================
 
 export const EconomicEventCategorySchema = z.enum([
-  "INTEREST_RATE",
-  "EMPLOYMENT",
-  "INFLATION",
-  "GDP",
-  "CONSUMER",
-  "HOUSING",
-  "MANUFACTURING",
-  "TRADE",
-  "SPEECH",
-  "OTHER",
+	"INTEREST_RATE",
+	"EMPLOYMENT",
+	"INFLATION",
+	"GDP",
+	"CONSUMER",
+	"HOUSING",
+	"MANUFACTURING",
+	"TRADE",
+	"SPEECH",
+	"OTHER",
 ]);
 export type EconomicEventCategory = z.infer<typeof EconomicEventCategorySchema>;
 
@@ -36,19 +36,19 @@ export type EconomicEventCategory = z.infer<typeof EconomicEventCategorySchema>;
 // ============================================
 
 export const EconomicCalendarEventSchema = z.object({
-  id: z.string(),
-  name: z.string(),
-  description: z.string().optional(),
-  date: z.string(),
-  time: z.string().optional(),
-  country: z.string(),
-  impact: EconomicEventImpactSchema,
-  category: EconomicEventCategorySchema,
-  previous: z.string().optional(),
-  forecast: z.string().optional(),
-  actual: z.string().optional(),
-  unit: z.string().optional(),
-  source: z.string().optional(),
+	id: z.string(),
+	name: z.string(),
+	description: z.string().optional(),
+	date: z.string(),
+	time: z.string().optional(),
+	country: z.string(),
+	impact: EconomicEventImpactSchema,
+	category: EconomicEventCategorySchema,
+	previous: z.string().optional(),
+	forecast: z.string().optional(),
+	actual: z.string().optional(),
+	unit: z.string().optional(),
+	source: z.string().optional(),
 });
 
 export type EconomicCalendarEvent = z.infer<typeof EconomicCalendarEventSchema>;
@@ -58,11 +58,11 @@ export type EconomicCalendarEvent = z.infer<typeof EconomicCalendarEventSchema>;
 // ============================================
 
 export const FOMCMeetingSchema = z.object({
-  date: z.string(),
-  type: z.enum(["SCHEDULED", "UNSCHEDULED"]),
-  isStatementRelease: z.boolean(),
-  isPressConference: z.boolean(),
-  isProjectionsRelease: z.boolean(),
+	date: z.string(),
+	type: z.enum(["SCHEDULED", "UNSCHEDULED"]),
+	isStatementRelease: z.boolean(),
+	isPressConference: z.boolean(),
+	isProjectionsRelease: z.boolean(),
 });
 
 export type FOMCMeeting = z.infer<typeof FOMCMeetingSchema>;
@@ -72,10 +72,10 @@ export type FOMCMeeting = z.infer<typeof FOMCMeetingSchema>;
 // ============================================
 
 export const EconomicCalendarResponseSchema = z.object({
-  events: z.array(EconomicCalendarEventSchema),
-  startDate: z.string(),
-  endDate: z.string(),
-  count: z.number(),
+	events: z.array(EconomicCalendarEventSchema),
+	startDate: z.string(),
+	endDate: z.string(),
+	count: z.number(),
 });
 
 export type EconomicCalendarResponse = z.infer<typeof EconomicCalendarResponseSchema>;
@@ -85,9 +85,9 @@ export type EconomicCalendarResponse = z.infer<typeof EconomicCalendarResponseSc
 // ============================================
 
 export const UpcomingEventsResponseSchema = z.object({
-  events: z.array(EconomicCalendarEventSchema),
-  nextHighImpact: EconomicCalendarEventSchema.nullable(),
-  fomcMeetings: z.array(FOMCMeetingSchema),
+	events: z.array(EconomicCalendarEventSchema),
+	nextHighImpact: EconomicCalendarEventSchema.nullable(),
+	fomcMeetings: z.array(FOMCMeetingSchema),
 });
 
 export type UpcomingEventsResponse = z.infer<typeof UpcomingEventsResponseSchema>;

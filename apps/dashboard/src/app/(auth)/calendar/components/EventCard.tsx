@@ -19,17 +19,17 @@ import type { ImpactLevel } from "@/lib/api/types";
 // ============================================
 
 export interface CalendarEventData {
-  id: string;
-  title: string;
-  start: Temporal.ZonedDateTime;
-  end: Temporal.ZonedDateTime;
-  calendarId: string;
-  description?: string;
-  location?: string;
+	id: string;
+	title: string;
+	start: Temporal.ZonedDateTime;
+	end: Temporal.ZonedDateTime;
+	calendarId: string;
+	description?: string;
+	location?: string;
 }
 
 interface EventCardProps {
-  calendarEvent: CalendarEventData;
+	calendarEvent: CalendarEventData;
 }
 
 // ============================================
@@ -37,42 +37,42 @@ interface EventCardProps {
 // ============================================
 
 const IMPACT_STYLES: Record<
-  ImpactLevel,
-  {
-    container: string;
-    border: string;
-    text: string;
-    badge: string;
-    badgeText: string;
-  }
+	ImpactLevel,
+	{
+		container: string;
+		border: string;
+		text: string;
+		badge: string;
+		badgeText: string;
+	}
 > = {
-  high: {
-    container: "bg-orange-50 dark:bg-orange-900/20",
-    border: "border-l-2 border-orange-500",
-    text: "text-orange-900 dark:text-orange-100",
-    badge: "bg-orange-100 dark:bg-orange-800/50",
-    badgeText: "text-orange-700 dark:text-orange-300",
-  },
-  medium: {
-    container: "bg-teal-50 dark:bg-teal-900/20",
-    border: "border-l-2 border-teal-500",
-    text: "text-teal-900 dark:text-teal-100",
-    badge: "bg-teal-100 dark:bg-teal-800/50",
-    badgeText: "text-teal-700 dark:text-teal-300",
-  },
-  low: {
-    container: "bg-stone-50 dark:bg-stone-800/50",
-    border: "border-l-2 border-stone-400",
-    text: "text-stone-700 dark:text-stone-200",
-    badge: "bg-stone-100 dark:bg-stone-700/50",
-    badgeText: "text-stone-600 dark:text-stone-300",
-  },
+	high: {
+		container: "bg-orange-50 dark:bg-orange-900/20",
+		border: "border-l-2 border-orange-500",
+		text: "text-orange-900 dark:text-orange-100",
+		badge: "bg-orange-100 dark:bg-orange-800/50",
+		badgeText: "text-orange-700 dark:text-orange-300",
+	},
+	medium: {
+		container: "bg-teal-50 dark:bg-teal-900/20",
+		border: "border-l-2 border-teal-500",
+		text: "text-teal-900 dark:text-teal-100",
+		badge: "bg-teal-100 dark:bg-teal-800/50",
+		badgeText: "text-teal-700 dark:text-teal-300",
+	},
+	low: {
+		container: "bg-stone-50 dark:bg-stone-800/50",
+		border: "border-l-2 border-stone-400",
+		text: "text-stone-700 dark:text-stone-200",
+		badge: "bg-stone-100 dark:bg-stone-700/50",
+		badgeText: "text-stone-600 dark:text-stone-300",
+	},
 };
 
 const IMPACT_LABELS: Record<ImpactLevel, string> = {
-  high: "HIGH",
-  medium: "MED",
-  low: "LOW",
+	high: "HIGH",
+	medium: "MED",
+	low: "LOW",
 };
 
 // ============================================
@@ -80,18 +80,18 @@ const IMPACT_LABELS: Record<ImpactLevel, string> = {
 // ============================================
 
 function getImpactFromCalendarId(calendarId: string): ImpactLevel {
-  if (calendarId === "high" || calendarId === "medium" || calendarId === "low") {
-    return calendarId;
-  }
-  return "low";
+	if (calendarId === "high" || calendarId === "medium" || calendarId === "low") {
+		return calendarId;
+	}
+	return "low";
 }
 
 function formatTime(dateTime: Temporal.ZonedDateTime): string {
-  const hour = dateTime.hour;
-  const minutes = String(dateTime.minute).padStart(2, "0");
-  const ampm = hour >= 12 ? "PM" : "AM";
-  const hour12 = hour % 12 || 12;
-  return `${hour12}:${minutes} ${ampm}`;
+	const hour = dateTime.hour;
+	const minutes = String(dateTime.minute).padStart(2, "0");
+	const ampm = hour >= 12 ? "PM" : "AM";
+	const hour12 = hour % 12 || 12;
+	return `${hour12}:${minutes} ${ampm}`;
 }
 
 // ============================================
@@ -103,27 +103,27 @@ function formatTime(dateTime: Temporal.ZonedDateTime): string {
  * Full-height card with title and time
  */
 export function TimeGridEventCard({ calendarEvent }: EventCardProps) {
-  const impact = getImpactFromCalendarId(calendarEvent.calendarId);
-  const styles = IMPACT_STYLES[impact];
-  const time = formatTime(calendarEvent.start);
+	const impact = getImpactFromCalendarId(calendarEvent.calendarId);
+	const styles = IMPACT_STYLES[impact];
+	const time = formatTime(calendarEvent.start);
 
-  return (
-    <button
-      type="button"
-      className={`h-full w-full px-2 py-1 rounded-sm overflow-hidden text-left ${styles.container} ${styles.border}`}
-      aria-label={`${calendarEvent.title}, ${impact} impact event at ${time}`}
-    >
-      <div className="flex flex-col h-full">
-        <span className={`text-xs font-medium truncate ${styles.text}`}>{calendarEvent.title}</span>
-        <span className="text-[10px] text-stone-500 dark:text-night-400 mt-0.5">{time} ET</span>
-        {calendarEvent.description && (
-          <span className="text-[10px] text-stone-400 dark:text-night-500 truncate mt-auto">
-            {calendarEvent.description}
-          </span>
-        )}
-      </div>
-    </button>
-  );
+	return (
+		<button
+			type="button"
+			className={`h-full w-full px-2 py-1 rounded-sm overflow-hidden text-left ${styles.container} ${styles.border}`}
+			aria-label={`${calendarEvent.title}, ${impact} impact event at ${time}`}
+		>
+			<div className="flex flex-col h-full">
+				<span className={`text-xs font-medium truncate ${styles.text}`}>{calendarEvent.title}</span>
+				<span className="text-[10px] text-stone-500 dark:text-night-400 mt-0.5">{time} ET</span>
+				{calendarEvent.description && (
+					<span className="text-[10px] text-stone-400 dark:text-night-500 truncate mt-auto">
+						{calendarEvent.description}
+					</span>
+				)}
+			</div>
+		</button>
+	);
 }
 
 /**
@@ -131,23 +131,23 @@ export function TimeGridEventCard({ calendarEvent }: EventCardProps) {
  * Compact single-line card with impact badge
  */
 export function MonthGridEventCard({ calendarEvent }: EventCardProps) {
-  const impact = getImpactFromCalendarId(calendarEvent.calendarId);
-  const styles = IMPACT_STYLES[impact];
+	const impact = getImpactFromCalendarId(calendarEvent.calendarId);
+	const styles = IMPACT_STYLES[impact];
 
-  return (
-    <button
-      type="button"
-      className={`flex items-center gap-1 px-1.5 py-0.5 rounded-sm overflow-hidden w-full text-left ${styles.container} ${styles.border}`}
-      aria-label={`${calendarEvent.title}, ${impact} impact event`}
-    >
-      <span
-        className={`shrink-0 text-[9px] font-bold px-1 py-0.5 rounded ${styles.badge} ${styles.badgeText}`}
-      >
-        {IMPACT_LABELS[impact]}
-      </span>
-      <span className={`text-[11px] truncate ${styles.text}`}>{calendarEvent.title}</span>
-    </button>
-  );
+	return (
+		<button
+			type="button"
+			className={`flex items-center gap-1 px-1.5 py-0.5 rounded-sm overflow-hidden w-full text-left ${styles.container} ${styles.border}`}
+			aria-label={`${calendarEvent.title}, ${impact} impact event`}
+		>
+			<span
+				className={`shrink-0 text-[9px] font-bold px-1 py-0.5 rounded ${styles.badge} ${styles.badgeText}`}
+			>
+				{IMPACT_LABELS[impact]}
+			</span>
+			<span className={`text-[11px] truncate ${styles.text}`}>{calendarEvent.title}</span>
+		</button>
+	);
 }
 
 /**
@@ -155,7 +155,7 @@ export function MonthGridEventCard({ calendarEvent }: EventCardProps) {
  * Can be used for both time grid and month grid
  */
 export function EventCard({ calendarEvent }: EventCardProps) {
-  return <TimeGridEventCard calendarEvent={calendarEvent} />;
+	return <TimeGridEventCard calendarEvent={calendarEvent} />;
 }
 
 export default EventCard;

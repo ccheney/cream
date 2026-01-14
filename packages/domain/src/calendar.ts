@@ -32,16 +32,16 @@ let fallbackService: CalendarService | null = null;
  * initialize the CalendarService.
  */
 function resolveCalendarService(): CalendarService {
-  const service = getCalendarService();
-  if (service) {
-    return service;
-  }
+	const service = getCalendarService();
+	if (service) {
+		return service;
+	}
 
-  // Create fallback hardcoded service (safe to create synchronously)
-  if (!fallbackService) {
-    fallbackService = new HardcodedCalendarService();
-  }
-  return fallbackService;
+	// Create fallback hardcoded service (safe to create synchronously)
+	if (!fallbackService) {
+		fallbackService = new HardcodedCalendarService();
+	}
+	return fallbackService;
 }
 
 // ============================================
@@ -64,24 +64,24 @@ export type HolidayType = z.infer<typeof HolidayType>;
  * Holiday definition
  */
 export interface Holiday {
-  /** Date in YYYY-MM-DD format */
-  date: string;
-  /** Holiday name */
-  name: string;
-  /** Type of closure */
-  type: HolidayType;
-  /** Close time in HH:MM ET (for early close only) */
-  closeTime?: string;
+	/** Date in YYYY-MM-DD format */
+	date: string;
+	/** Holiday name */
+	name: string;
+	/** Type of closure */
+	type: HolidayType;
+	/** Close time in HH:MM ET (for early close only) */
+	closeTime?: string;
 }
 
 /**
  * Session hours definition
  */
 export interface SessionHours {
-  /** Start time in HH:MM ET */
-  start: string;
-  /** End time in HH:MM ET */
-  end: string;
+	/** Start time in HH:MM ET */
+	start: string;
+	/** End time in HH:MM ET */
+	end: string;
 }
 
 /**
@@ -110,24 +110,24 @@ export type ActionForSession = z.infer<typeof ActionForSession>;
  * Configuration for session validation
  */
 export interface SessionValidationConfig {
-  /** Override to always consider market open (for testing/backtesting) */
-  alwaysOpen?: boolean;
-  /** Allow equity extended hours trading */
-  allowExtendedHours?: boolean;
+	/** Override to always consider market open (for testing/backtesting) */
+	alwaysOpen?: boolean;
+	/** Allow equity extended hours trading */
+	allowExtendedHours?: boolean;
 }
 
 /**
  * Result of session validation
  */
 export interface SessionValidationResult {
-  /** Whether the action is allowed */
-  valid: boolean;
-  /** Current trading session */
-  session: TradingSession;
-  /** Reason for rejection (if invalid) */
-  reason?: string;
-  /** Suggestion for re-planning (if invalid) */
-  suggestion?: string;
+	/** Whether the action is allowed */
+	valid: boolean;
+	/** Current trading session */
+	session: TradingSession;
+	/** Reason for rejection (if invalid) */
+	reason?: string;
+	/** Suggestion for re-planning (if invalid) */
+	suggestion?: string;
 }
 
 // ============================================
@@ -141,18 +141,18 @@ export interface SessionValidationResult {
  * Note: Good Friday moves option expiration to Thursday
  */
 export const NYSE_HOLIDAYS_2026: Holiday[] = [
-  { date: "2026-01-01", name: "New Year's Day", type: "FULL_CLOSE" },
-  { date: "2026-01-19", name: "Martin Luther King Jr. Day", type: "FULL_CLOSE" },
-  { date: "2026-02-16", name: "Presidents' Day", type: "FULL_CLOSE" },
-  { date: "2026-04-03", name: "Good Friday", type: "FULL_CLOSE" },
-  { date: "2026-05-25", name: "Memorial Day", type: "FULL_CLOSE" },
-  { date: "2026-06-19", name: "Juneteenth", type: "FULL_CLOSE" },
-  { date: "2026-07-03", name: "Independence Day (observed)", type: "FULL_CLOSE" },
-  { date: "2026-09-07", name: "Labor Day", type: "FULL_CLOSE" },
-  { date: "2026-11-26", name: "Thanksgiving Day", type: "FULL_CLOSE" },
-  { date: "2026-11-27", name: "Day After Thanksgiving", type: "EARLY_CLOSE", closeTime: "13:00" },
-  { date: "2026-12-24", name: "Christmas Eve", type: "EARLY_CLOSE", closeTime: "13:00" },
-  { date: "2026-12-25", name: "Christmas Day", type: "FULL_CLOSE" },
+	{ date: "2026-01-01", name: "New Year's Day", type: "FULL_CLOSE" },
+	{ date: "2026-01-19", name: "Martin Luther King Jr. Day", type: "FULL_CLOSE" },
+	{ date: "2026-02-16", name: "Presidents' Day", type: "FULL_CLOSE" },
+	{ date: "2026-04-03", name: "Good Friday", type: "FULL_CLOSE" },
+	{ date: "2026-05-25", name: "Memorial Day", type: "FULL_CLOSE" },
+	{ date: "2026-06-19", name: "Juneteenth", type: "FULL_CLOSE" },
+	{ date: "2026-07-03", name: "Independence Day (observed)", type: "FULL_CLOSE" },
+	{ date: "2026-09-07", name: "Labor Day", type: "FULL_CLOSE" },
+	{ date: "2026-11-26", name: "Thanksgiving Day", type: "FULL_CLOSE" },
+	{ date: "2026-11-27", name: "Day After Thanksgiving", type: "EARLY_CLOSE", closeTime: "13:00" },
+	{ date: "2026-12-24", name: "Christmas Eve", type: "EARLY_CLOSE", closeTime: "13:00" },
+	{ date: "2026-12-25", name: "Christmas Day", type: "FULL_CLOSE" },
 ];
 
 // Create lookup map for fast access
@@ -166,9 +166,9 @@ const holidayMap = new Map<string, Holiday>(NYSE_HOLIDAYS_2026.map((h) => [h.dat
  * NYSE Trading Session Hours (Eastern Time)
  */
 export const NYSE_SESSIONS: Record<Exclude<TradingSession, "CLOSED">, SessionHours> = {
-  PRE_MARKET: { start: "04:00", end: "09:30" },
-  RTH: { start: "09:30", end: "16:00" },
-  AFTER_HOURS: { start: "16:00", end: "20:00" },
+	PRE_MARKET: { start: "04:00", end: "09:30" },
+	RTH: { start: "09:30", end: "16:00" },
+	AFTER_HOURS: { start: "16:00", end: "20:00" },
 };
 
 /**
@@ -192,8 +192,8 @@ export const EARLY_CLOSE_TIME = "13:00";
  * @returns Holiday object if holiday, null otherwise
  */
 export function getHoliday(date: Date | string): Holiday | null {
-  const dateStr = typeof date === "string" ? date.slice(0, 10) : formatDateOnly(date);
-  return holidayMap.get(dateStr) ?? null;
+	const dateStr = typeof date === "string" ? date.slice(0, 10) : formatDateOnly(date);
+	return holidayMap.get(dateStr) ?? null;
 }
 
 /**
@@ -203,7 +203,7 @@ export function getHoliday(date: Date | string): Holiday | null {
  * @returns true if market is open (or partially open), false for full closures
  */
 export function isMarketOpen(date: Date | string): boolean {
-  return resolveCalendarService().isTradingDaySync(date);
+	return resolveCalendarService().isTradingDaySync(date);
 }
 
 /**
@@ -213,7 +213,7 @@ export function isMarketOpen(date: Date | string): boolean {
  * @returns Close time in HH:MM ET, or null if market is closed all day
  */
 export function getMarketCloseTime(date: Date | string): string | null {
-  return resolveCalendarService().getMarketCloseTimeSync(date);
+	return resolveCalendarService().getMarketCloseTimeSync(date);
 }
 
 /**
@@ -223,7 +223,7 @@ export function getMarketCloseTime(date: Date | string): string | null {
  * @returns Current trading session
  */
 export function getTradingSession(datetime: Date | string): TradingSession {
-  return resolveCalendarService().getTradingSessionSync(datetime);
+	return resolveCalendarService().getTradingSessionSync(datetime);
 }
 
 /**
@@ -233,7 +233,7 @@ export function getTradingSession(datetime: Date | string): TradingSession {
  * @returns true if within RTH
  */
 export function isRTH(datetime: Date | string): boolean {
-  return getTradingSession(datetime) === "RTH";
+	return getTradingSession(datetime) === "RTH";
 }
 
 // ============================================
@@ -248,21 +248,21 @@ export function isRTH(datetime: Date | string): boolean {
  * @returns Date of third Friday
  */
 export function getThirdFriday(year: number, month: number): Date {
-  // Start from first of month
-  const firstDay = new Date(Date.UTC(year, month - 1, 1));
+	// Start from first of month
+	const firstDay = new Date(Date.UTC(year, month - 1, 1));
 
-  // Find first Friday
-  // dayOfWeek: 0=Sun, 1=Mon, ..., 5=Fri, 6=Sat
-  const dayOfWeek = firstDay.getUTCDay();
-  // Days from 1st to first Friday (0 if 1st is Friday)
-  const daysToFriday = (5 - dayOfWeek + 7) % 7;
-  // Day of month for first Friday
-  const firstFridayDay = 1 + daysToFriday;
+	// Find first Friday
+	// dayOfWeek: 0=Sun, 1=Mon, ..., 5=Fri, 6=Sat
+	const dayOfWeek = firstDay.getUTCDay();
+	// Days from 1st to first Friday (0 if 1st is Friday)
+	const daysToFriday = (5 - dayOfWeek + 7) % 7;
+	// Day of month for first Friday
+	const firstFridayDay = 1 + daysToFriday;
 
-  // Third Friday is first Friday + 14 days
-  const thirdFriday = new Date(Date.UTC(year, month - 1, firstFridayDay + 14));
+	// Third Friday is first Friday + 14 days
+	const thirdFriday = new Date(Date.UTC(year, month - 1, firstFridayDay + 14));
 
-  return thirdFriday;
+	return thirdFriday;
 }
 
 /**
@@ -275,16 +275,16 @@ export function getThirdFriday(year: number, month: number): Date {
  * @returns Adjusted expiration date
  */
 export function getMonthlyExpiration(year: number, month: number): Date {
-  let expiration = getThirdFriday(year, month);
+	let expiration = getThirdFriday(year, month);
 
-  // Check if expiration is a holiday (e.g., Good Friday)
-  const holiday = getHoliday(expiration);
-  if (holiday?.type === "FULL_CLOSE") {
-    // Move to Thursday before
-    expiration = new Date(expiration.getTime() - 24 * 60 * 60 * 1000);
-  }
+	// Check if expiration is a holiday (e.g., Good Friday)
+	const holiday = getHoliday(expiration);
+	if (holiday?.type === "FULL_CLOSE") {
+		// Move to Thursday before
+		expiration = new Date(expiration.getTime() - 24 * 60 * 60 * 1000);
+	}
 
-  return expiration;
+	return expiration;
 }
 
 /**
@@ -294,12 +294,12 @@ export function getMonthlyExpiration(year: number, month: number): Date {
  * @returns true if monthly expiration
  */
 export function isMonthlyExpiration(date: Date | string): boolean {
-  const dateObj = typeof date === "string" ? new Date(date) : date;
-  const year = dateObj.getUTCFullYear();
-  const month = dateObj.getUTCMonth() + 1;
+	const dateObj = typeof date === "string" ? new Date(date) : date;
+	const year = dateObj.getUTCFullYear();
+	const month = dateObj.getUTCMonth() + 1;
 
-  const expiration = getMonthlyExpiration(year, month);
-  return formatDateOnly(dateObj) === formatDateOnly(expiration);
+	const expiration = getMonthlyExpiration(year, month);
+	return formatDateOnly(dateObj) === formatDateOnly(expiration);
 }
 
 /**
@@ -309,15 +309,15 @@ export function isMonthlyExpiration(date: Date | string): boolean {
  * @returns true if weekly expiration
  */
 export function isWeeklyExpiration(date: Date | string): boolean {
-  const dateObj = typeof date === "string" ? new Date(date) : date;
+	const dateObj = typeof date === "string" ? new Date(date) : date;
 
-  // Must be Friday (5 = Friday in UTC)
-  if (dateObj.getUTCDay() !== 5) {
-    return false;
-  }
+	// Must be Friday (5 = Friday in UTC)
+	if (dateObj.getUTCDay() !== 5) {
+		return false;
+	}
 
-  // Must not be monthly expiration
-  return !isMonthlyExpiration(date);
+	// Must not be monthly expiration
+	return !isMonthlyExpiration(date);
 }
 
 /**
@@ -327,10 +327,10 @@ export function isWeeklyExpiration(date: Date | string): boolean {
  * @returns true if symbol has daily options
  */
 export function hasDailyOptions(symbol: string): boolean {
-  // Major indices with daily options
-  const dailyOptionSymbols = new Set(["SPY", "QQQ", "IWM", "SPX", "NDX", "RUT", "XSP"]);
+	// Major indices with daily options
+	const dailyOptionSymbols = new Set(["SPY", "QQQ", "IWM", "SPX", "NDX", "RUT", "XSP"]);
 
-  return dailyOptionSymbols.has(symbol.toUpperCase());
+	return dailyOptionSymbols.has(symbol.toUpperCase());
 }
 
 /**
@@ -341,12 +341,12 @@ export function hasDailyOptions(symbol: string): boolean {
  * @returns true if 0DTE expiration
  */
 export function isDailyExpiration(symbol: string, date: Date | string): boolean {
-  if (!hasDailyOptions(symbol)) {
-    return false;
-  }
+	if (!hasDailyOptions(symbol)) {
+		return false;
+	}
 
-  // Must be a trading day
-  return isMarketOpen(date);
+	// Must be a trading day
+	return isMarketOpen(date);
 }
 
 /**
@@ -357,19 +357,19 @@ export function isDailyExpiration(symbol: string, date: Date | string): boolean 
  * @returns Expiration cycle type, or null if not an expiration
  */
 export function getExpirationCycle(symbol: string, date: Date | string): ExpirationCycle | null {
-  if (isMonthlyExpiration(date)) {
-    return "MONTHLY";
-  }
+	if (isMonthlyExpiration(date)) {
+		return "MONTHLY";
+	}
 
-  if (isWeeklyExpiration(date)) {
-    return "WEEKLY";
-  }
+	if (isWeeklyExpiration(date)) {
+		return "WEEKLY";
+	}
 
-  if (isDailyExpiration(symbol, date)) {
-    return "DAILY";
-  }
+	if (isDailyExpiration(symbol, date)) {
+		return "DAILY";
+	}
 
-  return null;
+	return null;
 }
 
 // ============================================
@@ -388,36 +388,36 @@ export const MIN_MINUTES_BEFORE_CLOSE = 5;
  * @returns true if cycle can be started
  */
 export function canStartCycle(datetime: Date | string): boolean {
-  const dateObj = typeof datetime === "string" ? new Date(datetime) : datetime;
-  const dateStr = formatDateOnly(dateObj);
+	const dateObj = typeof datetime === "string" ? new Date(datetime) : datetime;
+	const dateStr = formatDateOnly(dateObj);
 
-  // Must be market open
-  if (!isMarketOpen(dateStr)) {
-    return false;
-  }
+	// Must be market open
+	if (!isMarketOpen(dateStr)) {
+		return false;
+	}
 
-  // Must be RTH
-  const session = getTradingSession(datetime);
-  if (session !== "RTH") {
-    return false;
-  }
+	// Must be RTH
+	const session = getTradingSession(datetime);
+	if (session !== "RTH") {
+		return false;
+	}
 
-  // Check time until close
-  const closeTime = getMarketCloseTime(dateStr);
-  if (!closeTime) {
-    return false;
-  }
+	// Check time until close
+	const closeTime = getMarketCloseTime(dateStr);
+	if (!closeTime) {
+		return false;
+	}
 
-  // Get current time in minutes since midnight ET
-  const hours = dateObj.getUTCHours() - 5;
-  const minutes = dateObj.getUTCMinutes();
-  const currentMinutes = hours * 60 + minutes;
+	// Get current time in minutes since midnight ET
+	const hours = dateObj.getUTCHours() - 5;
+	const minutes = dateObj.getUTCMinutes();
+	const currentMinutes = hours * 60 + minutes;
 
-  // Get close time in minutes
-  const closeMinutes = parseTimeToMinutes(closeTime);
+	// Get close time in minutes
+	const closeMinutes = parseTimeToMinutes(closeTime);
 
-  // Must be at least MIN_MINUTES_BEFORE_CLOSE before close
-  return closeMinutes - currentMinutes >= MIN_MINUTES_BEFORE_CLOSE;
+	// Must be at least MIN_MINUTES_BEFORE_CLOSE before close
+	return closeMinutes - currentMinutes >= MIN_MINUTES_BEFORE_CLOSE;
 }
 
 /**
@@ -427,17 +427,17 @@ export function canStartCycle(datetime: Date | string): boolean {
  * @returns Next trading day
  */
 export function getNextTradingDay(date: Date | string): Date {
-  const nextDay = typeof date === "string" ? new Date(date) : new Date(date.getTime());
+	const nextDay = typeof date === "string" ? new Date(date) : new Date(date.getTime());
 
-  // Add one day
-  nextDay.setUTCDate(nextDay.getUTCDate() + 1);
+	// Add one day
+	nextDay.setUTCDate(nextDay.getUTCDate() + 1);
 
-  // Keep adding days until we find an open market day
-  while (!isMarketOpen(nextDay)) {
-    nextDay.setUTCDate(nextDay.getUTCDate() + 1);
-  }
+	// Keep adding days until we find an open market day
+	while (!isMarketOpen(nextDay)) {
+		nextDay.setUTCDate(nextDay.getUTCDate() + 1);
+	}
 
-  return nextDay;
+	return nextDay;
 }
 
 /**
@@ -447,17 +447,17 @@ export function getNextTradingDay(date: Date | string): Date {
  * @returns Previous trading day
  */
 export function getPreviousTradingDay(date: Date | string): Date {
-  const prevDay = typeof date === "string" ? new Date(date) : new Date(date.getTime());
+	const prevDay = typeof date === "string" ? new Date(date) : new Date(date.getTime());
 
-  // Subtract one day
-  prevDay.setUTCDate(prevDay.getUTCDate() - 1);
+	// Subtract one day
+	prevDay.setUTCDate(prevDay.getUTCDate() - 1);
 
-  // Keep subtracting days until we find an open market day
-  while (!isMarketOpen(prevDay)) {
-    prevDay.setUTCDate(prevDay.getUTCDate() - 1);
-  }
+	// Keep subtracting days until we find an open market day
+	while (!isMarketOpen(prevDay)) {
+		prevDay.setUTCDate(prevDay.getUTCDate() - 1);
+	}
 
-  return prevDay;
+	return prevDay;
 }
 
 // ============================================
@@ -468,25 +468,25 @@ export function getPreviousTradingDay(date: Date | string): Date {
  * Format a Date to YYYY-MM-DD string
  */
 function formatDateOnly(date: Date): string {
-  const year = date.getUTCFullYear();
-  const month = String(date.getUTCMonth() + 1).padStart(2, "0");
-  const day = String(date.getUTCDate()).padStart(2, "0");
-  return `${year}-${month}-${day}`;
+	const year = date.getUTCFullYear();
+	const month = String(date.getUTCMonth() + 1).padStart(2, "0");
+	const day = String(date.getUTCDate()).padStart(2, "0");
+	return `${year}-${month}-${day}`;
 }
 
 /**
  * Parse HH:MM time string to minutes since midnight
  */
 function parseTimeToMinutes(time: string): number {
-  const parts = time.split(":").map(Number);
-  const hours = parts[0];
-  const minutes = parts[1];
+	const parts = time.split(":").map(Number);
+	const hours = parts[0];
+	const minutes = parts[1];
 
-  if (hours === undefined || minutes === undefined) {
-    throw new Error(`Invalid time format: ${time}`);
-  }
+	if (hours === undefined || minutes === undefined) {
+		throw new Error(`Invalid time format: ${time}`);
+	}
 
-  return hours * 60 + minutes;
+	return hours * 60 + minutes;
 }
 
 /**
@@ -495,7 +495,7 @@ function parseTimeToMinutes(time: string): number {
  * @returns Array of holidays
  */
 export function getAllHolidays(): Holiday[] {
-  return [...NYSE_HOLIDAYS_2026];
+	return [...NYSE_HOLIDAYS_2026];
 }
 
 /**
@@ -505,11 +505,11 @@ export function getAllHolidays(): Holiday[] {
  * @returns Array of expiration dates
  */
 export function getMonthlyExpirations(year: number): Date[] {
-  const expirations: Date[] = [];
-  for (let month = 1; month <= 12; month++) {
-    expirations.push(getMonthlyExpiration(year, month));
-  }
-  return expirations;
+	const expirations: Date[] = [];
+	for (let month = 1; month <= 12; month++) {
+		expirations.push(getMonthlyExpiration(year, month));
+	}
+	return expirations;
 }
 
 // ============================================
@@ -535,7 +535,7 @@ const EXIT_ACTIONS = new Set<ActionForSession>(["CLOSE", "REDUCE"]);
  * @returns true if action is an entry
  */
 export function isEntryAction(action: ActionForSession): boolean {
-  return ENTRY_ACTIONS.has(action);
+	return ENTRY_ACTIONS.has(action);
 }
 
 /**
@@ -545,7 +545,7 @@ export function isEntryAction(action: ActionForSession): boolean {
  * @returns true if action is an exit
  */
 export function isExitAction(action: ActionForSession): boolean {
-  return EXIT_ACTIONS.has(action);
+	return EXIT_ACTIONS.has(action);
 }
 
 /**
@@ -555,7 +555,7 @@ export function isExitAction(action: ActionForSession): boolean {
  * @returns true if action is passive (HOLD)
  */
 export function isPassiveAction(action: ActionForSession): boolean {
-  return action === "HOLD";
+	return action === "HOLD";
 }
 
 /**
@@ -567,40 +567,40 @@ export function isPassiveAction(action: ActionForSession): boolean {
  * @returns Array of allowed trading sessions
  */
 export function getAllowedSessions(
-  instrumentType: InstrumentTypeForSession,
-  action: ActionForSession,
-  config: SessionValidationConfig = {}
+	instrumentType: InstrumentTypeForSession,
+	action: ActionForSession,
+	config: SessionValidationConfig = {}
 ): TradingSession[] {
-  // HOLD is always allowed (no market interaction)
-  if (isPassiveAction(action)) {
-    return ["PRE_MARKET", "RTH", "AFTER_HOURS", "CLOSED"];
-  }
+	// HOLD is always allowed (no market interaction)
+	if (isPassiveAction(action)) {
+		return ["PRE_MARKET", "RTH", "AFTER_HOURS", "CLOSED"];
+	}
 
-  // Exits are allowed during any open session
-  if (isExitAction(action)) {
-    if (instrumentType === "OPTION") {
-      // Options can only trade during RTH
-      return ["RTH"];
-    }
-    // Equities can exit during any open session
-    if (config.allowExtendedHours) {
-      return ["PRE_MARKET", "RTH", "AFTER_HOURS"];
-    }
-    return ["RTH"];
-  }
+	// Exits are allowed during any open session
+	if (isExitAction(action)) {
+		if (instrumentType === "OPTION") {
+			// Options can only trade during RTH
+			return ["RTH"];
+		}
+		// Equities can exit during any open session
+		if (config.allowExtendedHours) {
+			return ["PRE_MARKET", "RTH", "AFTER_HOURS"];
+		}
+		return ["RTH"];
+	}
 
-  // Entries require RTH for risk management
-  // Options: RTH only (no extended hours)
-  // Equities: RTH by default, extended hours if configured
-  if (instrumentType === "OPTION") {
-    return ["RTH"];
-  }
+	// Entries require RTH for risk management
+	// Options: RTH only (no extended hours)
+	// Equities: RTH by default, extended hours if configured
+	if (instrumentType === "OPTION") {
+		return ["RTH"];
+	}
 
-  // Equity entries
-  if (config.allowExtendedHours) {
-    return ["PRE_MARKET", "RTH", "AFTER_HOURS"];
-  }
-  return ["RTH"];
+	// Equity entries
+	if (config.allowExtendedHours) {
+		return ["PRE_MARKET", "RTH", "AFTER_HOURS"];
+	}
+	return ["RTH"];
 }
 
 /**
@@ -630,90 +630,90 @@ export function getAllowedSessions(
  * ```
  */
 export function validateSessionForAction(
-  action: ActionForSession,
-  instrumentType: InstrumentTypeForSession,
-  datetime: Date | string,
-  config: SessionValidationConfig = {}
+	action: ActionForSession,
+	instrumentType: InstrumentTypeForSession,
+	datetime: Date | string,
+	config: SessionValidationConfig = {}
 ): SessionValidationResult {
-  // Override: always consider market open
-  if (config.alwaysOpen) {
-    return {
-      valid: true,
-      session: "RTH",
-    };
-  }
+	// Override: always consider market open
+	if (config.alwaysOpen) {
+		return {
+			valid: true,
+			session: "RTH",
+		};
+	}
 
-  const session = getTradingSession(datetime);
-  const allowedSessions = getAllowedSessions(instrumentType, action, config);
+	const session = getTradingSession(datetime);
+	const allowedSessions = getAllowedSessions(instrumentType, action, config);
 
-  // Check if current session is allowed
-  if (allowedSessions.includes(session)) {
-    return {
-      valid: true,
-      session,
-    };
-  }
+	// Check if current session is allowed
+	if (allowedSessions.includes(session)) {
+		return {
+			valid: true,
+			session,
+		};
+	}
 
-  // Build rejection reason and suggestion
-  const dateObj = typeof datetime === "string" ? new Date(datetime) : datetime;
-  const timeStr = dateObj.toISOString();
+	// Build rejection reason and suggestion
+	const dateObj = typeof datetime === "string" ? new Date(datetime) : datetime;
+	const timeStr = dateObj.toISOString();
 
-  if (session === "CLOSED") {
-    const dateStr = formatDateOnly(dateObj);
-    const holiday = getHoliday(dateStr);
+	if (session === "CLOSED") {
+		const dateStr = formatDateOnly(dateObj);
+		const holiday = getHoliday(dateStr);
 
-    if (holiday) {
-      return {
-        valid: false,
-        session,
-        reason: `Market closed for ${holiday.name}`,
-        suggestion: "Re-plan with NO_TRADE or schedule for next trading day",
-      };
-    }
+		if (holiday) {
+			return {
+				valid: false,
+				session,
+				reason: `Market closed for ${holiday.name}`,
+				suggestion: "Re-plan with NO_TRADE or schedule for next trading day",
+			};
+		}
 
-    return {
-      valid: false,
-      session,
-      reason: `Market closed at ${timeStr}`,
-      suggestion: "Re-plan with NO_TRADE or schedule for next trading day",
-    };
-  }
+		return {
+			valid: false,
+			session,
+			reason: `Market closed at ${timeStr}`,
+			suggestion: "Re-plan with NO_TRADE or schedule for next trading day",
+		};
+	}
 
-  // Session is open but not allowed for this action/instrument
-  if (isEntryAction(action)) {
-    if (instrumentType === "OPTION") {
-      return {
-        valid: false,
-        session,
-        reason: `Options can only be traded during RTH (9:30 AM - 4:00 PM ET). Current session: ${session}`,
-        suggestion: "Re-plan with NO_TRADE or wait for RTH",
-      };
-    }
+	// Session is open but not allowed for this action/instrument
+	if (isEntryAction(action)) {
+		if (instrumentType === "OPTION") {
+			return {
+				valid: false,
+				session,
+				reason: `Options can only be traded during RTH (9:30 AM - 4:00 PM ET). Current session: ${session}`,
+				suggestion: "Re-plan with NO_TRADE or wait for RTH",
+			};
+		}
 
-    return {
-      valid: false,
-      session,
-      reason: `Entry actions (${action}) require RTH (9:30 AM - 4:00 PM ET). Current session: ${session}`,
-      suggestion: "Re-plan with NO_TRADE or wait for RTH",
-    };
-  }
+		return {
+			valid: false,
+			session,
+			reason: `Entry actions (${action}) require RTH (9:30 AM - 4:00 PM ET). Current session: ${session}`,
+			suggestion: "Re-plan with NO_TRADE or wait for RTH",
+		};
+	}
 
-  if (isExitAction(action) && instrumentType === "OPTION") {
-    return {
-      valid: false,
-      session,
-      reason: `Option exits can only be executed during RTH (9:30 AM - 4:00 PM ET). Current session: ${session}`,
-      suggestion: "Schedule exit for next RTH session",
-    };
-  }
+	if (isExitAction(action) && instrumentType === "OPTION") {
+		return {
+			valid: false,
+			session,
+			reason: `Option exits can only be executed during RTH (9:30 AM - 4:00 PM ET). Current session: ${session}`,
+			suggestion: "Schedule exit for next RTH session",
+		};
+	}
 
-  // Fallback (shouldn't reach here)
-  return {
-    valid: false,
-    session,
-    reason: `Action ${action} not allowed during ${session}`,
-    suggestion: "Re-plan with NO_TRADE",
-  };
+	// Fallback (shouldn't reach here)
+	return {
+		valid: false,
+		session,
+		reason: `Action ${action} not allowed during ${session}`,
+		suggestion: "Re-plan with NO_TRADE",
+	};
 }
 
 /**
@@ -723,8 +723,8 @@ export function validateSessionForAction(
  * @returns true if any trading is possible
  */
 export function isTradingPossible(datetime: Date | string): boolean {
-  const session = getTradingSession(datetime);
-  return session !== "CLOSED";
+	const session = getTradingSession(datetime);
+	return session !== "CLOSED";
 }
 
 /**
@@ -734,28 +734,28 @@ export function isTradingPossible(datetime: Date | string): boolean {
  * @returns DateTime of next RTH start
  */
 export function getNextRTHStart(datetime: Date | string): Date {
-  const dateObj = typeof datetime === "string" ? new Date(datetime) : new Date(datetime.getTime());
+	const dateObj = typeof datetime === "string" ? new Date(datetime) : new Date(datetime.getTime());
 
-  // Get current session
-  const session = getTradingSession(dateObj);
+	// Get current session
+	const session = getTradingSession(dateObj);
 
-  // If already in RTH, return current time
-  if (session === "RTH") {
-    return dateObj;
-  }
+	// If already in RTH, return current time
+	if (session === "RTH") {
+		return dateObj;
+	}
 
-  // If before RTH today and market is open, return today's RTH start
-  if (session === "PRE_MARKET") {
-    const dateStr = formatDateOnly(dateObj);
-    // Return 9:30 AM ET today (approximate: UTC-5)
-    const rthStart = new Date(`${dateStr}T14:30:00.000Z`); // 9:30 AM ET = 14:30 UTC
-    return rthStart;
-  }
+	// If before RTH today and market is open, return today's RTH start
+	if (session === "PRE_MARKET") {
+		const dateStr = formatDateOnly(dateObj);
+		// Return 9:30 AM ET today (approximate: UTC-5)
+		const rthStart = new Date(`${dateStr}T14:30:00.000Z`); // 9:30 AM ET = 14:30 UTC
+		return rthStart;
+	}
 
-  // Otherwise, find next trading day and return its RTH start
-  const nextDay = getNextTradingDay(dateObj);
-  const nextDayStr = formatDateOnly(nextDay);
-  return new Date(`${nextDayStr}T14:30:00.000Z`);
+	// Otherwise, find next trading day and return its RTH start
+	const nextDay = getNextTradingDay(dateObj);
+	const nextDayStr = formatDateOnly(nextDay);
+	return new Date(`${nextDayStr}T14:30:00.000Z`);
 }
 
 /**
@@ -765,26 +765,26 @@ export function getNextRTHStart(datetime: Date | string): Date {
  * @returns Minutes until close, or null if market closed
  */
 export function getMinutesToClose(datetime: Date | string): number | null {
-  const dateObj = typeof datetime === "string" ? new Date(datetime) : datetime;
-  const dateStr = formatDateOnly(dateObj);
+	const dateObj = typeof datetime === "string" ? new Date(datetime) : datetime;
+	const dateStr = formatDateOnly(dateObj);
 
-  if (!isMarketOpen(dateStr)) {
-    return null;
-  }
+	if (!isMarketOpen(dateStr)) {
+		return null;
+	}
 
-  const closeTime = getMarketCloseTime(dateStr);
-  if (!closeTime) {
-    return null;
-  }
+	const closeTime = getMarketCloseTime(dateStr);
+	if (!closeTime) {
+		return null;
+	}
 
-  // Get current time in minutes since midnight ET
-  const hours = dateObj.getUTCHours() - 5;
-  const minutes = dateObj.getUTCMinutes();
-  const currentMinutes = (hours < 0 ? hours + 24 : hours) * 60 + minutes;
+	// Get current time in minutes since midnight ET
+	const hours = dateObj.getUTCHours() - 5;
+	const minutes = dateObj.getUTCMinutes();
+	const currentMinutes = (hours < 0 ? hours + 24 : hours) * 60 + minutes;
 
-  // Get close time in minutes
-  const closeMinutes = parseTimeToMinutes(closeTime);
+	// Get close time in minutes
+	const closeMinutes = parseTimeToMinutes(closeTime);
 
-  const diff = closeMinutes - currentMinutes;
-  return diff > 0 ? diff : 0;
+	const diff = closeMinutes - currentMinutes;
+	return diff > 0 ? diff : 0;
 }

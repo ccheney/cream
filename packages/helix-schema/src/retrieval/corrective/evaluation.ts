@@ -6,9 +6,9 @@
 
 import type { RetrievalResult, RRFResult } from "../rrf.js";
 import {
-  DEFAULT_QUALITY_THRESHOLDS,
-  type QualityAssessment,
-  type QualityThresholds,
+	DEFAULT_QUALITY_THRESHOLDS,
+	type QualityAssessment,
+	type QualityThresholds,
 } from "./types.js";
 
 /**
@@ -18,11 +18,11 @@ import {
  * @returns Average score (0 if empty)
  */
 export function calculateAvgScore<T>(results: RetrievalResult<T>[]): number {
-  if (results.length === 0) {
-    return 0;
-  }
-  const sum = results.reduce((acc, r) => acc + r.score, 0);
-  return sum / results.length;
+	if (results.length === 0) {
+		return 0;
+	}
+	const sum = results.reduce((acc, r) => acc + r.score, 0);
+	return sum / results.length;
 }
 
 /**
@@ -36,15 +36,15 @@ export function calculateAvgScore<T>(results: RetrievalResult<T>[]): number {
  * @returns Standard deviation of scores (0 if < 2 results)
  */
 export function calculateDiversityScore<T>(results: RetrievalResult<T>[]): number {
-  if (results.length < 2) {
-    return 0;
-  }
+	if (results.length < 2) {
+		return 0;
+	}
 
-  const avg = calculateAvgScore(results);
-  const squaredDiffs = results.map((r) => (r.score - avg) ** 2);
-  const variance = squaredDiffs.reduce((acc, d) => acc + d, 0) / results.length;
+	const avg = calculateAvgScore(results);
+	const squaredDiffs = results.map((r) => (r.score - avg) ** 2);
+	const variance = squaredDiffs.reduce((acc, d) => acc + d, 0) / results.length;
 
-  return Math.sqrt(variance);
+	return Math.sqrt(variance);
 }
 
 /**
@@ -55,10 +55,10 @@ export function calculateDiversityScore<T>(results: RetrievalResult<T>[]): numbe
  * @returns Coverage score (0-1, capped at 1)
  */
 export function calculateCoverageScore(resultCount: number, expectedCount: number): number {
-  if (expectedCount <= 0) {
-    return 1;
-  }
-  return Math.min(1, resultCount / expectedCount);
+	if (expectedCount <= 0) {
+		return 1;
+	}
+	return Math.min(1, resultCount / expectedCount);
 }
 
 /**
@@ -69,55 +69,55 @@ export function calculateCoverageScore(resultCount: number, expectedCount: numbe
  * @returns Quality assessment
  */
 export function assessRetrievalQuality<T>(
-  results: RetrievalResult<T>[],
-  thresholds: QualityThresholds = DEFAULT_QUALITY_THRESHOLDS
+	results: RetrievalResult<T>[],
+	thresholds: QualityThresholds = DEFAULT_QUALITY_THRESHOLDS
 ): QualityAssessment {
-  const avgScore = calculateAvgScore(results);
-  const diversityScore = calculateDiversityScore(results);
-  const coverageScore = calculateCoverageScore(results.length, thresholds.expectedResultCount);
+	const avgScore = calculateAvgScore(results);
+	const diversityScore = calculateDiversityScore(results);
+	const coverageScore = calculateCoverageScore(results.length, thresholds.expectedResultCount);
 
-  const correctionReasons: string[] = [];
+	const correctionReasons: string[] = [];
 
-  if (avgScore < thresholds.minAvgScore) {
-    correctionReasons.push(
-      `Average score ${avgScore.toFixed(3)} below threshold ${thresholds.minAvgScore}`
-    );
-  }
+	if (avgScore < thresholds.minAvgScore) {
+		correctionReasons.push(
+			`Average score ${avgScore.toFixed(3)} below threshold ${thresholds.minAvgScore}`
+		);
+	}
 
-  if (results.length < thresholds.minResultCount) {
-    correctionReasons.push(
-      `Result count ${results.length} below minimum ${thresholds.minResultCount}`
-    );
-  }
+	if (results.length < thresholds.minResultCount) {
+		correctionReasons.push(
+			`Result count ${results.length} below minimum ${thresholds.minResultCount}`
+		);
+	}
 
-  if (results.length >= 2 && diversityScore < thresholds.minDiversityScore) {
-    correctionReasons.push(
-      `Diversity score ${diversityScore.toFixed(3)} below threshold ${thresholds.minDiversityScore}`
-    );
-  }
+	if (results.length >= 2 && diversityScore < thresholds.minDiversityScore) {
+		correctionReasons.push(
+			`Diversity score ${diversityScore.toFixed(3)} below threshold ${thresholds.minDiversityScore}`
+		);
+	}
 
-  if (coverageScore < thresholds.minCoverageScore) {
-    correctionReasons.push(
-      `Coverage score ${coverageScore.toFixed(3)} below threshold ${thresholds.minCoverageScore}`
-    );
-  }
+	if (coverageScore < thresholds.minCoverageScore) {
+		correctionReasons.push(
+			`Coverage score ${coverageScore.toFixed(3)} below threshold ${thresholds.minCoverageScore}`
+		);
+	}
 
-  // Calculate overall score (weighted average)
-  const weights = { avg: 0.4, diversity: 0.2, coverage: 0.4 };
-  const overallScore =
-    weights.avg * avgScore +
-    weights.diversity * Math.min(1, diversityScore * 2) + // Scale diversity to [0, 1]
-    weights.coverage * coverageScore;
+	// Calculate overall score (weighted average)
+	const weights = { avg: 0.4, diversity: 0.2, coverage: 0.4 };
+	const overallScore =
+		weights.avg * avgScore +
+		weights.diversity * Math.min(1, diversityScore * 2) + // Scale diversity to [0, 1]
+		weights.coverage * coverageScore;
 
-  return {
-    overallScore,
-    avgScore,
-    resultCount: results.length,
-    diversityScore,
-    coverageScore,
-    needsCorrection: correctionReasons.length > 0,
-    correctionReasons,
-  };
+	return {
+		overallScore,
+		avgScore,
+		resultCount: results.length,
+		diversityScore,
+		coverageScore,
+		needsCorrection: correctionReasons.length > 0,
+		correctionReasons,
+	};
 }
 
 /**
@@ -127,7 +127,7 @@ export function assessRetrievalQuality<T>(
  * @returns True if correction should be attempted
  */
 export function shouldCorrect(quality: QualityAssessment): boolean {
-  return quality.needsCorrection;
+	return quality.needsCorrection;
 }
 
 /**
@@ -136,25 +136,25 @@ export function shouldCorrect(quality: QualityAssessment): boolean {
  * Converts RRF results to standard retrieval results for assessment.
  */
 export function assessRRFQuality<T>(
-  results: RRFResult<T>[],
-  thresholds: QualityThresholds = DEFAULT_QUALITY_THRESHOLDS
+	results: RRFResult<T>[],
+	thresholds: QualityThresholds = DEFAULT_QUALITY_THRESHOLDS
 ): QualityAssessment {
-  const retrievalResults: RetrievalResult<T>[] = results.map((r) => ({
-    node: r.node,
-    nodeId: r.nodeId,
-    score: r.rrfScore,
-  }));
+	const retrievalResults: RetrievalResult<T>[] = results.map((r) => ({
+		node: r.node,
+		nodeId: r.nodeId,
+		score: r.rrfScore,
+	}));
 
-  return assessRetrievalQuality(retrievalResults, thresholds);
+	return assessRetrievalQuality(retrievalResults, thresholds);
 }
 
 /**
  * Check if RRF results need correction based on quality.
  */
 export function shouldCorrectRRF<T>(
-  results: RRFResult<T>[],
-  thresholds: QualityThresholds = DEFAULT_QUALITY_THRESHOLDS
+	results: RRFResult<T>[],
+	thresholds: QualityThresholds = DEFAULT_QUALITY_THRESHOLDS
 ): boolean {
-  const quality = assessRRFQuality(results, thresholds);
-  return shouldCorrect(quality);
+	const quality = assessRRFQuality(results, thresholds);
+	return shouldCorrect(quality);
 }

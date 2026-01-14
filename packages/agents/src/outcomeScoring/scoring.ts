@@ -16,21 +16,21 @@ import type { CompletedTrade, OutcomeScoringConfig } from "./types.js";
  * using configured weights.
  */
 export function calculateOverallScore(
-  realizedReturn: number,
-  executionQuality: number,
-  planScore: DecisionQualityScore | undefined,
-  trade: CompletedTrade,
-  config: OutcomeScoringConfig
+	realizedReturn: number,
+	executionQuality: number,
+	planScore: DecisionQualityScore | undefined,
+	trade: CompletedTrade,
+	config: OutcomeScoringConfig
 ): number {
-  const returnScore = normalizeReturnScore(realizedReturn);
-  const predictionScore = calculatePredictionScore(planScore, realizedReturn, trade);
+	const returnScore = normalizeReturnScore(realizedReturn);
+	const predictionScore = calculatePredictionScore(planScore, realizedReturn, trade);
 
-  const overall =
-    returnScore * config.returnWeight +
-    executionQuality * config.executionWeight +
-    predictionScore * config.predictionWeight;
+	const overall =
+		returnScore * config.returnWeight +
+		executionQuality * config.executionWeight +
+		predictionScore * config.predictionWeight;
 
-  return Math.round(overall);
+	return Math.round(overall);
 }
 
 /**
@@ -38,31 +38,31 @@ export function calculateOverallScore(
  * Assumes +10% return = 100, 0% = 50, -10% = 0.
  */
 function normalizeReturnScore(realizedReturn: number): number {
-  return Math.max(0, Math.min(100, 50 + realizedReturn * 5));
+	return Math.max(0, Math.min(100, 50 + realizedReturn * 5));
 }
 
 /**
  * Calculate prediction accuracy score.
  */
 function calculatePredictionScore(
-  planScore: DecisionQualityScore | undefined,
-  realizedReturn: number,
-  trade: CompletedTrade
+	planScore: DecisionQualityScore | undefined,
+	realizedReturn: number,
+	trade: CompletedTrade
 ): number {
-  if (!planScore) {
-    return 50;
-  }
+	if (!planScore) {
+		return 50;
+	}
 
-  const predictedPositive = planScore.expectedValue.netExpectedValue > 0;
-  const actualPositive = realizedReturn > 0;
+	const predictedPositive = planScore.expectedValue.netExpectedValue > 0;
+	const actualPositive = realizedReturn > 0;
 
-  if (predictedPositive !== actualPositive) {
-    return 30;
-  }
+	if (predictedPositive !== actualPositive) {
+		return 30;
+	}
 
-  if (trade.exitReason === "TAKE_PROFIT" && predictedPositive) {
-    return 90;
-  }
+	if (trade.exitReason === "TAKE_PROFIT" && predictedPositive) {
+		return 90;
+	}
 
-  return 70;
+	return 70;
 }

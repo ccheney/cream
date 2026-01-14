@@ -23,68 +23,68 @@ export type ExposureBucket = "total" | "instrument_type" | "sector" | "strategy"
 
 /** Position with optional metadata for bucketing */
 export interface PositionWithMetadata {
-  /** The base position data */
-  position: Position;
-  /** Optional sector classification (e.g., "Technology", "Healthcare") */
-  sector?: string;
-  /** Optional strategy identifier (e.g., "momentum", "mean_reversion") */
-  strategy?: string;
-  /** Optional asset class (e.g., "equity", "fixed_income") */
-  assetClass?: string;
+	/** The base position data */
+	position: Position;
+	/** Optional sector classification (e.g., "Technology", "Healthcare") */
+	sector?: string;
+	/** Optional strategy identifier (e.g., "momentum", "mean_reversion") */
+	strategy?: string;
+	/** Optional asset class (e.g., "equity", "fixed_income") */
+	assetClass?: string;
 }
 
 /** Exposure values in different units */
 export interface ExposureValues {
-  /** Exposure in number of units (shares/contracts) */
-  units: number;
-  /** Exposure in notional value (dollars) */
-  notional: number;
-  /** Exposure as percentage of equity (0-1, e.g., 0.70 = 70%) */
-  pctEquity: number;
+	/** Exposure in number of units (shares/contracts) */
+	units: number;
+	/** Exposure in notional value (dollars) */
+	notional: number;
+	/** Exposure as percentage of equity (0-1, e.g., 0.70 = 70%) */
+	pctEquity: number;
 }
 
 /** Gross and net exposure pair */
 export interface ExposurePair {
-  /** Gross exposure (sum of absolute values) */
-  gross: ExposureValues;
-  /** Net exposure (long - short) */
-  net: ExposureValues;
-  /** Long exposure */
-  long: ExposureValues;
-  /** Short exposure */
-  short: ExposureValues;
+	/** Gross exposure (sum of absolute values) */
+	gross: ExposureValues;
+	/** Net exposure (long - short) */
+	net: ExposureValues;
+	/** Long exposure */
+	long: ExposureValues;
+	/** Short exposure */
+	short: ExposureValues;
 }
 
 /** Bucketed exposure results */
 export interface BucketedExposure {
-  /** Bucket type used for grouping */
-  bucketType: ExposureBucket;
-  /** Total exposure across all positions */
-  total: ExposurePair;
-  /** Breakdown by bucket key */
-  breakdown: Map<string, ExposurePair>;
+	/** Bucket type used for grouping */
+	bucketType: ExposureBucket;
+	/** Total exposure across all positions */
+	total: ExposurePair;
+	/** Breakdown by bucket key */
+	breakdown: Map<string, ExposurePair>;
 }
 
 /** Simple exposure stats without bucketing */
 export interface ExposureStats {
-  /** Total gross exposure (notional) */
-  grossExposureNotional: number;
-  /** Total net exposure (notional) */
-  netExposureNotional: number;
-  /** Gross exposure as % of equity */
-  grossExposurePctEquity: number;
-  /** Net exposure as % of equity */
-  netExposurePctEquity: number;
-  /** Long exposure (notional) */
-  longExposureNotional: number;
-  /** Short exposure (notional) */
-  shortExposureNotional: number;
-  /** Number of long positions */
-  longPositionCount: number;
-  /** Number of short positions */
-  shortPositionCount: number;
-  /** Total position count */
-  totalPositionCount: number;
+	/** Total gross exposure (notional) */
+	grossExposureNotional: number;
+	/** Total net exposure (notional) */
+	netExposureNotional: number;
+	/** Gross exposure as % of equity */
+	grossExposurePctEquity: number;
+	/** Net exposure as % of equity */
+	netExposurePctEquity: number;
+	/** Long exposure (notional) */
+	longExposureNotional: number;
+	/** Short exposure (notional) */
+	shortExposureNotional: number;
+	/** Number of long positions */
+	longPositionCount: number;
+	/** Number of short positions */
+	shortPositionCount: number;
+	/** Total position count */
+	totalPositionCount: number;
 }
 
 // ============================================
@@ -92,28 +92,28 @@ export interface ExposureStats {
 // ============================================
 
 export const ExposureValuesSchema = z.object({
-  units: z.number(),
-  notional: z.number(),
-  pctEquity: z.number(),
+	units: z.number(),
+	notional: z.number(),
+	pctEquity: z.number(),
 });
 
 export const ExposurePairSchema = z.object({
-  gross: ExposureValuesSchema,
-  net: ExposureValuesSchema,
-  long: ExposureValuesSchema,
-  short: ExposureValuesSchema,
+	gross: ExposureValuesSchema,
+	net: ExposureValuesSchema,
+	long: ExposureValuesSchema,
+	short: ExposureValuesSchema,
 });
 
 export const ExposureStatsSchema = z.object({
-  grossExposureNotional: z.number().nonnegative(),
-  netExposureNotional: z.number(),
-  grossExposurePctEquity: z.number().nonnegative(),
-  netExposurePctEquity: z.number(),
-  longExposureNotional: z.number().nonnegative(),
-  shortExposureNotional: z.number().nonnegative(),
-  longPositionCount: z.number().int().nonnegative(),
-  shortPositionCount: z.number().int().nonnegative(),
-  totalPositionCount: z.number().int().nonnegative(),
+	grossExposureNotional: z.number().nonnegative(),
+	netExposureNotional: z.number(),
+	grossExposurePctEquity: z.number().nonnegative(),
+	netExposurePctEquity: z.number(),
+	longExposureNotional: z.number().nonnegative(),
+	shortExposureNotional: z.number().nonnegative(),
+	longPositionCount: z.number().int().nonnegative(),
+	shortPositionCount: z.number().int().nonnegative(),
+	totalPositionCount: z.number().int().nonnegative(),
 });
 
 // ============================================
@@ -141,46 +141,46 @@ export const ExposureStatsSchema = z.object({
  * ```
  */
 export function calculateExposureStats(
-  positions: Position[],
-  accountEquity: number
+	positions: Position[],
+	accountEquity: number
 ): ExposureStats {
-  if (accountEquity <= 0) {
-    throw new Error("accountEquity must be positive");
-  }
+	if (accountEquity <= 0) {
+		throw new Error("accountEquity must be positive");
+	}
 
-  let longNotional = 0;
-  let shortNotional = 0;
-  let longCount = 0;
-  let shortCount = 0;
+	let longNotional = 0;
+	let shortNotional = 0;
+	let longCount = 0;
+	let shortCount = 0;
 
-  for (const pos of positions) {
-    // Use absolute market value for notional calculation
-    const notional = Math.abs(pos.marketValue);
+	for (const pos of positions) {
+		// Use absolute market value for notional calculation
+		const notional = Math.abs(pos.marketValue);
 
-    if (pos.quantity > 0) {
-      longNotional += notional;
-      longCount++;
-    } else if (pos.quantity < 0) {
-      shortNotional += notional;
-      shortCount++;
-    }
-    // Zero quantity positions are ignored
-  }
+		if (pos.quantity > 0) {
+			longNotional += notional;
+			longCount++;
+		} else if (pos.quantity < 0) {
+			shortNotional += notional;
+			shortCount++;
+		}
+		// Zero quantity positions are ignored
+	}
 
-  const grossNotional = longNotional + shortNotional;
-  const netNotional = longNotional - shortNotional;
+	const grossNotional = longNotional + shortNotional;
+	const netNotional = longNotional - shortNotional;
 
-  return {
-    grossExposureNotional: grossNotional,
-    netExposureNotional: netNotional,
-    grossExposurePctEquity: grossNotional / accountEquity,
-    netExposurePctEquity: netNotional / accountEquity,
-    longExposureNotional: longNotional,
-    shortExposureNotional: shortNotional,
-    longPositionCount: longCount,
-    shortPositionCount: shortCount,
-    totalPositionCount: longCount + shortCount,
-  };
+	return {
+		grossExposureNotional: grossNotional,
+		netExposureNotional: netNotional,
+		grossExposurePctEquity: grossNotional / accountEquity,
+		netExposurePctEquity: netNotional / accountEquity,
+		longExposureNotional: longNotional,
+		shortExposureNotional: shortNotional,
+		longPositionCount: longCount,
+		shortPositionCount: shortCount,
+		totalPositionCount: longCount + shortCount,
+	};
 }
 
 /**
@@ -191,55 +191,55 @@ export function calculateExposureStats(
  * @returns ExposurePair with all exposure metrics
  */
 export function calculateExposurePair(positions: Position[], accountEquity: number): ExposurePair {
-  if (accountEquity <= 0) {
-    throw new Error("accountEquity must be positive");
-  }
+	if (accountEquity <= 0) {
+		throw new Error("accountEquity must be positive");
+	}
 
-  let longUnits = 0;
-  let shortUnits = 0;
-  let longNotional = 0;
-  let shortNotional = 0;
+	let longUnits = 0;
+	let shortUnits = 0;
+	let longNotional = 0;
+	let shortNotional = 0;
 
-  for (const pos of positions) {
-    const notional = Math.abs(pos.marketValue);
-    const units = Math.abs(pos.quantity);
+	for (const pos of positions) {
+		const notional = Math.abs(pos.marketValue);
+		const units = Math.abs(pos.quantity);
 
-    if (pos.quantity > 0) {
-      longUnits += units;
-      longNotional += notional;
-    } else if (pos.quantity < 0) {
-      shortUnits += units;
-      shortNotional += notional;
-    }
-  }
+		if (pos.quantity > 0) {
+			longUnits += units;
+			longNotional += notional;
+		} else if (pos.quantity < 0) {
+			shortUnits += units;
+			shortNotional += notional;
+		}
+	}
 
-  const grossUnits = longUnits + shortUnits;
-  const grossNotional = longNotional + shortNotional;
-  const netUnits = longUnits - shortUnits;
-  const netNotional = longNotional - shortNotional;
+	const grossUnits = longUnits + shortUnits;
+	const grossNotional = longNotional + shortNotional;
+	const netUnits = longUnits - shortUnits;
+	const netNotional = longNotional - shortNotional;
 
-  return {
-    gross: {
-      units: grossUnits,
-      notional: grossNotional,
-      pctEquity: grossNotional / accountEquity,
-    },
-    net: {
-      units: netUnits,
-      notional: netNotional,
-      pctEquity: netNotional / accountEquity,
-    },
-    long: {
-      units: longUnits,
-      notional: longNotional,
-      pctEquity: longNotional / accountEquity,
-    },
-    short: {
-      units: shortUnits,
-      notional: shortNotional,
-      pctEquity: shortNotional / accountEquity,
-    },
-  };
+	return {
+		gross: {
+			units: grossUnits,
+			notional: grossNotional,
+			pctEquity: grossNotional / accountEquity,
+		},
+		net: {
+			units: netUnits,
+			notional: netNotional,
+			pctEquity: netNotional / accountEquity,
+		},
+		long: {
+			units: longUnits,
+			notional: longNotional,
+			pctEquity: longNotional / accountEquity,
+		},
+		short: {
+			units: shortUnits,
+			notional: shortNotional,
+			pctEquity: shortNotional / accountEquity,
+		},
+	};
 }
 
 // ============================================
@@ -256,32 +256,32 @@ export function calculateExposurePair(positions: Position[], accountEquity: numb
  * @returns BucketedExposure with breakdown by instrument type
  */
 export function calculateExposureByInstrumentType(
-  positions: Position[],
-  accountEquity: number
+	positions: Position[],
+	accountEquity: number
 ): BucketedExposure {
-  if (accountEquity <= 0) {
-    throw new Error("accountEquity must be positive");
-  }
+	if (accountEquity <= 0) {
+		throw new Error("accountEquity must be positive");
+	}
 
-  const buckets = new Map<string, Position[]>();
+	const buckets = new Map<string, Position[]>();
 
-  for (const pos of positions) {
-    const key = pos.instrument.instrumentType;
-    const existing = buckets.get(key) ?? [];
-    existing.push(pos);
-    buckets.set(key, existing);
-  }
+	for (const pos of positions) {
+		const key = pos.instrument.instrumentType;
+		const existing = buckets.get(key) ?? [];
+		existing.push(pos);
+		buckets.set(key, existing);
+	}
 
-  const breakdown = new Map<string, ExposurePair>();
-  for (const [key, bucketPositions] of buckets) {
-    breakdown.set(key, calculateExposurePair(bucketPositions, accountEquity));
-  }
+	const breakdown = new Map<string, ExposurePair>();
+	for (const [key, bucketPositions] of buckets) {
+		breakdown.set(key, calculateExposurePair(bucketPositions, accountEquity));
+	}
 
-  return {
-    bucketType: "instrument_type",
-    total: calculateExposurePair(positions, accountEquity),
-    breakdown,
-  };
+	return {
+		bucketType: "instrument_type",
+		total: calculateExposurePair(positions, accountEquity),
+		breakdown,
+	};
 }
 
 /**
@@ -295,46 +295,46 @@ export function calculateExposureByInstrumentType(
  * @returns BucketedExposure with breakdown by the specified bucket
  */
 export function calculateExposureByBucket(
-  positions: PositionWithMetadata[],
-  accountEquity: number,
-  bucketType: "sector" | "strategy" | "asset_class"
+	positions: PositionWithMetadata[],
+	accountEquity: number,
+	bucketType: "sector" | "strategy" | "asset_class"
 ): BucketedExposure {
-  if (accountEquity <= 0) {
-    throw new Error("accountEquity must be positive");
-  }
+	if (accountEquity <= 0) {
+		throw new Error("accountEquity must be positive");
+	}
 
-  const buckets = new Map<string, Position[]>();
+	const buckets = new Map<string, Position[]>();
 
-  for (const { position, sector, strategy, assetClass } of positions) {
-    let key: string;
-    switch (bucketType) {
-      case "sector":
-        key = sector ?? "Unknown";
-        break;
-      case "strategy":
-        key = strategy ?? "Unknown";
-        break;
-      case "asset_class":
-        key = assetClass ?? "Unknown";
-        break;
-    }
+	for (const { position, sector, strategy, assetClass } of positions) {
+		let key: string;
+		switch (bucketType) {
+			case "sector":
+				key = sector ?? "Unknown";
+				break;
+			case "strategy":
+				key = strategy ?? "Unknown";
+				break;
+			case "asset_class":
+				key = assetClass ?? "Unknown";
+				break;
+		}
 
-    const existing = buckets.get(key) ?? [];
-    existing.push(position);
-    buckets.set(key, existing);
-  }
+		const existing = buckets.get(key) ?? [];
+		existing.push(position);
+		buckets.set(key, existing);
+	}
 
-  const allPositions = positions.map((p) => p.position);
-  const breakdown = new Map<string, ExposurePair>();
-  for (const [key, bucketPositions] of buckets) {
-    breakdown.set(key, calculateExposurePair(bucketPositions, accountEquity));
-  }
+	const allPositions = positions.map((p) => p.position);
+	const breakdown = new Map<string, ExposurePair>();
+	for (const [key, bucketPositions] of buckets) {
+		breakdown.set(key, calculateExposurePair(bucketPositions, accountEquity));
+	}
 
-  return {
-    bucketType,
-    total: calculateExposurePair(allPositions, accountEquity),
-    breakdown,
-  };
+	return {
+		bucketType,
+		total: calculateExposurePair(allPositions, accountEquity),
+		breakdown,
+	};
 }
 
 /**
@@ -347,10 +347,10 @@ export function calculateExposureByBucket(
  * @returns BucketedExposure with sector breakdown
  */
 export function calculateExposureBySector(
-  positions: PositionWithMetadata[],
-  accountEquity: number
+	positions: PositionWithMetadata[],
+	accountEquity: number
 ): BucketedExposure {
-  return calculateExposureByBucket(positions, accountEquity, "sector");
+	return calculateExposureByBucket(positions, accountEquity, "sector");
 }
 
 /**
@@ -363,10 +363,10 @@ export function calculateExposureBySector(
  * @returns BucketedExposure with strategy breakdown
  */
 export function calculateExposureByStrategy(
-  positions: PositionWithMetadata[],
-  accountEquity: number
+	positions: PositionWithMetadata[],
+	accountEquity: number
 ): BucketedExposure {
-  return calculateExposureByBucket(positions, accountEquity, "strategy");
+	return calculateExposureByBucket(positions, accountEquity, "strategy");
 }
 
 /**
@@ -379,10 +379,10 @@ export function calculateExposureByStrategy(
  * @returns BucketedExposure with asset class breakdown
  */
 export function calculateExposureByAssetClass(
-  positions: PositionWithMetadata[],
-  accountEquity: number
+	positions: PositionWithMetadata[],
+	accountEquity: number
 ): BucketedExposure {
-  return calculateExposureByBucket(positions, accountEquity, "asset_class");
+	return calculateExposureByBucket(positions, accountEquity, "asset_class");
 }
 
 // ============================================
@@ -391,46 +391,46 @@ export function calculateExposureByAssetClass(
 
 /** Exposure limit configuration */
 export interface ExposureLimits {
-  /** Maximum gross exposure as % of equity (default: 2.0 = 200%) */
-  maxGrossExposure?: number;
-  /** Maximum net exposure as % of equity (default: 1.0 = 100%) */
-  maxNetExposure?: number;
-  /** Maximum single-position exposure as % of equity (default: 0.20 = 20%) */
-  maxSinglePositionExposure?: number;
-  /** Maximum sector exposure as % of equity (default: 0.40 = 40%) */
-  maxSectorExposure?: number;
+	/** Maximum gross exposure as % of equity (default: 2.0 = 200%) */
+	maxGrossExposure?: number;
+	/** Maximum net exposure as % of equity (default: 1.0 = 100%) */
+	maxNetExposure?: number;
+	/** Maximum single-position exposure as % of equity (default: 0.20 = 20%) */
+	maxSinglePositionExposure?: number;
+	/** Maximum sector exposure as % of equity (default: 0.40 = 40%) */
+	maxSectorExposure?: number;
 }
 
 /** Default exposure limits */
 export const DEFAULT_EXPOSURE_LIMITS: Required<ExposureLimits> = {
-  maxGrossExposure: 2.0, // 200%
-  maxNetExposure: 1.0, // 100%
-  maxSinglePositionExposure: 0.2, // 20%
-  maxSectorExposure: 0.4, // 40%
+	maxGrossExposure: 2.0, // 200%
+	maxNetExposure: 1.0, // 100%
+	maxSinglePositionExposure: 0.2, // 20%
+	maxSectorExposure: 0.4, // 40%
 };
 
 /** Exposure limit violation */
 export interface ExposureViolation {
-  /** Type of limit violated */
-  limitType: "gross" | "net" | "single_position" | "sector";
-  /** Current value */
-  currentValue: number;
-  /** Limit value */
-  limit: number;
-  /** Human-readable message */
-  message: string;
-  /** Additional context (e.g., symbol or sector name) */
-  context?: string;
+	/** Type of limit violated */
+	limitType: "gross" | "net" | "single_position" | "sector";
+	/** Current value */
+	currentValue: number;
+	/** Limit value */
+	limit: number;
+	/** Human-readable message */
+	message: string;
+	/** Additional context (e.g., symbol or sector name) */
+	context?: string;
 }
 
 /** Result of exposure validation */
 export interface ExposureValidationResult {
-  /** Whether all limits are satisfied */
-  valid: boolean;
-  /** List of violations (empty if valid) */
-  violations: ExposureViolation[];
-  /** Current exposure stats */
-  stats: ExposureStats;
+	/** Whether all limits are satisfied */
+	valid: boolean;
+	/** List of violations (empty if valid) */
+	violations: ExposureViolation[];
+	/** Current exposure stats */
+	stats: ExposureStats;
 }
 
 /**
@@ -444,53 +444,53 @@ export interface ExposureValidationResult {
  * @returns ExposureValidationResult with validation status and violations
  */
 export function validateExposure(
-  positions: Position[],
-  accountEquity: number,
-  limits: ExposureLimits = {}
+	positions: Position[],
+	accountEquity: number,
+	limits: ExposureLimits = {}
 ): ExposureValidationResult {
-  const effectiveLimits = { ...DEFAULT_EXPOSURE_LIMITS, ...limits };
-  const stats = calculateExposureStats(positions, accountEquity);
-  const violations: ExposureViolation[] = [];
+	const effectiveLimits = { ...DEFAULT_EXPOSURE_LIMITS, ...limits };
+	const stats = calculateExposureStats(positions, accountEquity);
+	const violations: ExposureViolation[] = [];
 
-  // Check gross exposure
-  if (stats.grossExposurePctEquity > effectiveLimits.maxGrossExposure) {
-    violations.push({
-      limitType: "gross",
-      currentValue: stats.grossExposurePctEquity,
-      limit: effectiveLimits.maxGrossExposure,
-      message: `Gross exposure ${(stats.grossExposurePctEquity * 100).toFixed(1)}% exceeds limit of ${(effectiveLimits.maxGrossExposure * 100).toFixed(1)}%`,
-    });
-  }
+	// Check gross exposure
+	if (stats.grossExposurePctEquity > effectiveLimits.maxGrossExposure) {
+		violations.push({
+			limitType: "gross",
+			currentValue: stats.grossExposurePctEquity,
+			limit: effectiveLimits.maxGrossExposure,
+			message: `Gross exposure ${(stats.grossExposurePctEquity * 100).toFixed(1)}% exceeds limit of ${(effectiveLimits.maxGrossExposure * 100).toFixed(1)}%`,
+		});
+	}
 
-  // Check net exposure (absolute value)
-  if (Math.abs(stats.netExposurePctEquity) > effectiveLimits.maxNetExposure) {
-    violations.push({
-      limitType: "net",
-      currentValue: stats.netExposurePctEquity,
-      limit: effectiveLimits.maxNetExposure,
-      message: `Net exposure ${(stats.netExposurePctEquity * 100).toFixed(1)}% exceeds limit of ${(effectiveLimits.maxNetExposure * 100).toFixed(1)}%`,
-    });
-  }
+	// Check net exposure (absolute value)
+	if (Math.abs(stats.netExposurePctEquity) > effectiveLimits.maxNetExposure) {
+		violations.push({
+			limitType: "net",
+			currentValue: stats.netExposurePctEquity,
+			limit: effectiveLimits.maxNetExposure,
+			message: `Net exposure ${(stats.netExposurePctEquity * 100).toFixed(1)}% exceeds limit of ${(effectiveLimits.maxNetExposure * 100).toFixed(1)}%`,
+		});
+	}
 
-  // Check single-position exposure
-  for (const pos of positions) {
-    const posExposure = Math.abs(pos.marketValue) / accountEquity;
-    if (posExposure > effectiveLimits.maxSinglePositionExposure) {
-      violations.push({
-        limitType: "single_position",
-        currentValue: posExposure,
-        limit: effectiveLimits.maxSinglePositionExposure,
-        message: `Position ${pos.instrument.instrumentId} exposure ${(posExposure * 100).toFixed(1)}% exceeds limit of ${(effectiveLimits.maxSinglePositionExposure * 100).toFixed(1)}%`,
-        context: pos.instrument.instrumentId,
-      });
-    }
-  }
+	// Check single-position exposure
+	for (const pos of positions) {
+		const posExposure = Math.abs(pos.marketValue) / accountEquity;
+		if (posExposure > effectiveLimits.maxSinglePositionExposure) {
+			violations.push({
+				limitType: "single_position",
+				currentValue: posExposure,
+				limit: effectiveLimits.maxSinglePositionExposure,
+				message: `Position ${pos.instrument.instrumentId} exposure ${(posExposure * 100).toFixed(1)}% exceeds limit of ${(effectiveLimits.maxSinglePositionExposure * 100).toFixed(1)}%`,
+				context: pos.instrument.instrumentId,
+			});
+		}
+	}
 
-  return {
-    valid: violations.length === 0,
-    violations,
-    stats,
-  };
+	return {
+		valid: violations.length === 0,
+		violations,
+		stats,
+	};
 }
 
 /**
@@ -502,26 +502,26 @@ export function validateExposure(
  * @returns Array of sector violations (empty if all valid)
  */
 export function validateSectorExposure(
-  positions: PositionWithMetadata[],
-  accountEquity: number,
-  maxSectorExposure: number = DEFAULT_EXPOSURE_LIMITS.maxSectorExposure
+	positions: PositionWithMetadata[],
+	accountEquity: number,
+	maxSectorExposure: number = DEFAULT_EXPOSURE_LIMITS.maxSectorExposure
 ): ExposureViolation[] {
-  const violations: ExposureViolation[] = [];
-  const sectorExposure = calculateExposureBySector(positions, accountEquity);
+	const violations: ExposureViolation[] = [];
+	const sectorExposure = calculateExposureBySector(positions, accountEquity);
 
-  for (const [sector, exposure] of sectorExposure.breakdown) {
-    if (exposure.gross.pctEquity > maxSectorExposure) {
-      violations.push({
-        limitType: "sector",
-        currentValue: exposure.gross.pctEquity,
-        limit: maxSectorExposure,
-        message: `Sector ${sector} exposure ${(exposure.gross.pctEquity * 100).toFixed(1)}% exceeds limit of ${(maxSectorExposure * 100).toFixed(1)}%`,
-        context: sector,
-      });
-    }
-  }
+	for (const [sector, exposure] of sectorExposure.breakdown) {
+		if (exposure.gross.pctEquity > maxSectorExposure) {
+			violations.push({
+				limitType: "sector",
+				currentValue: exposure.gross.pctEquity,
+				limit: maxSectorExposure,
+				message: `Sector ${sector} exposure ${(exposure.gross.pctEquity * 100).toFixed(1)}% exceeds limit of ${(maxSectorExposure * 100).toFixed(1)}%`,
+				context: sector,
+			});
+		}
+	}
 
-  return violations;
+	return violations;
 }
 
 // ============================================
@@ -530,10 +530,10 @@ export function validateSectorExposure(
 
 /** Position with delta for options exposure calculation */
 export interface PositionWithDelta extends Position {
-  /** Delta for options (0-1 for calls, -1-0 for puts). Undefined for equity. */
-  delta?: number;
-  /** Underlying price for options (required if delta is provided) */
-  underlyingPrice?: number;
+	/** Delta for options (0-1 for calls, -1-0 for puts). Undefined for equity. */
+	delta?: number;
+	/** Underlying price for options (required if delta is provided) */
+	underlyingPrice?: number;
 }
 
 /**
@@ -547,55 +547,55 @@ export interface PositionWithDelta extends Position {
  * @returns ExposureStats with delta-adjusted exposure
  */
 export function calculateDeltaAdjustedExposure(
-  positions: PositionWithDelta[],
-  accountEquity: number
+	positions: PositionWithDelta[],
+	accountEquity: number
 ): ExposureStats {
-  if (accountEquity <= 0) {
-    throw new Error("accountEquity must be positive");
-  }
+	if (accountEquity <= 0) {
+		throw new Error("accountEquity must be positive");
+	}
 
-  let longNotional = 0;
-  let shortNotional = 0;
-  let longCount = 0;
-  let shortCount = 0;
+	let longNotional = 0;
+	let shortNotional = 0;
+	let longCount = 0;
+	let shortCount = 0;
 
-  for (const pos of positions) {
-    let notional: number;
+	for (const pos of positions) {
+		let notional: number;
 
-    if (pos.delta !== undefined && pos.underlyingPrice !== undefined) {
-      // Options: use delta-adjusted exposure
-      // Delta exposure = |delta| × underlying × |qty| × multiplier(100)
-      const multiplier = pos.instrument.instrumentType === "OPTION" ? 100 : 1;
-      notional = Math.abs(pos.delta) * pos.underlyingPrice * Math.abs(pos.quantity) * multiplier;
-    } else {
-      // Equities: use market value
-      notional = Math.abs(pos.marketValue);
-    }
+		if (pos.delta !== undefined && pos.underlyingPrice !== undefined) {
+			// Options: use delta-adjusted exposure
+			// Delta exposure = |delta| × underlying × |qty| × multiplier(100)
+			const multiplier = pos.instrument.instrumentType === "OPTION" ? 100 : 1;
+			notional = Math.abs(pos.delta) * pos.underlyingPrice * Math.abs(pos.quantity) * multiplier;
+		} else {
+			// Equities: use market value
+			notional = Math.abs(pos.marketValue);
+		}
 
-    // Determine direction from signed quantity
-    if (pos.quantity > 0) {
-      longNotional += notional;
-      longCount++;
-    } else if (pos.quantity < 0) {
-      shortNotional += notional;
-      shortCount++;
-    }
-  }
+		// Determine direction from signed quantity
+		if (pos.quantity > 0) {
+			longNotional += notional;
+			longCount++;
+		} else if (pos.quantity < 0) {
+			shortNotional += notional;
+			shortCount++;
+		}
+	}
 
-  const grossNotional = longNotional + shortNotional;
-  const netNotional = longNotional - shortNotional;
+	const grossNotional = longNotional + shortNotional;
+	const netNotional = longNotional - shortNotional;
 
-  return {
-    grossExposureNotional: grossNotional,
-    netExposureNotional: netNotional,
-    grossExposurePctEquity: grossNotional / accountEquity,
-    netExposurePctEquity: netNotional / accountEquity,
-    longExposureNotional: longNotional,
-    shortExposureNotional: shortNotional,
-    longPositionCount: longCount,
-    shortPositionCount: shortCount,
-    totalPositionCount: longCount + shortCount,
-  };
+	return {
+		grossExposureNotional: grossNotional,
+		netExposureNotional: netNotional,
+		grossExposurePctEquity: grossNotional / accountEquity,
+		netExposurePctEquity: netNotional / accountEquity,
+		longExposureNotional: longNotional,
+		shortExposureNotional: shortNotional,
+		longPositionCount: longCount,
+		shortPositionCount: shortCount,
+		totalPositionCount: longCount + shortCount,
+	};
 }
 
 // ============================================
@@ -609,13 +609,13 @@ export function calculateDeltaAdjustedExposure(
  * @returns Formatted string summary
  */
 export function formatExposureStats(stats: ExposureStats): string {
-  const lines = [
-    `Gross Exposure: ${(stats.grossExposurePctEquity * 100).toFixed(1)}% ($${stats.grossExposureNotional.toLocaleString()})`,
-    `Net Exposure: ${(stats.netExposurePctEquity * 100).toFixed(1)}% ($${stats.netExposureNotional.toLocaleString()})`,
-    `Long: ${((stats.longExposureNotional / stats.grossExposureNotional) * 100 || 0).toFixed(1)}% ($${stats.longExposureNotional.toLocaleString()}) - ${stats.longPositionCount} positions`,
-    `Short: ${((stats.shortExposureNotional / stats.grossExposureNotional) * 100 || 0).toFixed(1)}% ($${stats.shortExposureNotional.toLocaleString()}) - ${stats.shortPositionCount} positions`,
-  ];
-  return lines.join("\n");
+	const lines = [
+		`Gross Exposure: ${(stats.grossExposurePctEquity * 100).toFixed(1)}% ($${stats.grossExposureNotional.toLocaleString()})`,
+		`Net Exposure: ${(stats.netExposurePctEquity * 100).toFixed(1)}% ($${stats.netExposureNotional.toLocaleString()})`,
+		`Long: ${((stats.longExposureNotional / stats.grossExposureNotional) * 100 || 0).toFixed(1)}% ($${stats.longExposureNotional.toLocaleString()}) - ${stats.longPositionCount} positions`,
+		`Short: ${((stats.shortExposureNotional / stats.grossExposureNotional) * 100 || 0).toFixed(1)}% ($${stats.shortExposureNotional.toLocaleString()}) - ${stats.shortPositionCount} positions`,
+	];
+	return lines.join("\n");
 }
 
 /**
@@ -624,15 +624,15 @@ export function formatExposureStats(stats: ExposureStats): string {
  * @returns ExposureStats with all zero values
  */
 export function createEmptyExposureStats(): ExposureStats {
-  return {
-    grossExposureNotional: 0,
-    netExposureNotional: 0,
-    grossExposurePctEquity: 0,
-    netExposurePctEquity: 0,
-    longExposureNotional: 0,
-    shortExposureNotional: 0,
-    longPositionCount: 0,
-    shortPositionCount: 0,
-    totalPositionCount: 0,
-  };
+	return {
+		grossExposureNotional: 0,
+		netExposureNotional: 0,
+		grossExposurePctEquity: 0,
+		netExposurePctEquity: 0,
+		longExposureNotional: 0,
+		shortExposureNotional: 0,
+		longPositionCount: 0,
+		shortPositionCount: 0,
+		totalPositionCount: 0,
+	};
 }

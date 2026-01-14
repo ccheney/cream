@@ -1,62 +1,56 @@
 /**
  * Global LLM Model Configuration
  *
- * All Mastra agents and LLM-based services use a single global model selection.
- * Only two models are allowed: gemini-3-pro-preview and gemini-3-flash-preview.
+ * All Mastra agents and LLM-based services use a single global model selection
+ * determined by environment variables: LLM_PROVIDER and LLM_MODEL_ID.
  *
  * Exception: claudeCodeIndicator uses claude-opus-4-5-20251101 (hardcoded).
  */
 
 import { z } from "zod";
+import { getFullModelId, getLLMModelId, getLLMProvider } from "./env.js";
 
 /**
- * Allowed global model options
- * - gemini-3-flash-preview: Default, faster model for most tasks
- * - gemini-3-pro-preview: More capable model for complex reasoning
+ * Zod schema for global model selection - validates against env var value
  */
-export const ALLOWED_MODELS = ["gemini-3-flash-preview", "gemini-3-pro-preview"] as const;
+export const GlobalModelSchema = z.string();
 
 /**
- * Zod schema for global model selection
+ * Type for global model selection (now a simple string from env)
  */
-export const GlobalModelSchema = z.enum(ALLOWED_MODELS);
+export type GlobalModel = string;
 
 /**
- * Type for global model selection
+ * Get the default model from environment variable
  */
-export type GlobalModel = z.infer<typeof GlobalModelSchema>;
-
-/**
- * Default model used when no explicit selection is made
- */
-export const DEFAULT_GLOBAL_MODEL: GlobalModel = "gemini-3-flash-preview";
-
-/**
- * Model ID mapping to provider-prefixed format used by Mastra
- */
-export const MODEL_ID_MAP: Record<GlobalModel, string> = {
-  "gemini-3-flash-preview": "google/gemini-3-flash-preview",
-  "gemini-3-pro-preview": "google/gemini-3-pro-preview",
-} as const;
-
-/**
- * Get the Mastra-compatible model ID for a global model
- */
-export function getModelId(model: GlobalModel): string {
-  return MODEL_ID_MAP[model];
+export function getDefaultGlobalModel(): GlobalModel {
+	return getLLMModelId();
 }
 
 /**
- * Validate and parse a model string, returning the default if invalid
+ * Get the Mastra-compatible model ID (provider/model format)
+ * Uses environment variables LLM_PROVIDER and LLM_MODEL_ID
+ */
+export function getModelId(_model?: GlobalModel): string {
+	return getFullModelId();
+}
+
+/**
+ * Validate and parse a model string, returning the env default if invalid/empty
  */
 export function parseModel(model: string | undefined | null): GlobalModel {
-  const result = GlobalModelSchema.safeParse(model);
-  return result.success ? result.data : DEFAULT_GLOBAL_MODEL;
+	if (model?.trim()) {
+		return model;
+	}
+	return getLLMModelId();
 }
 
 /**
- * Check if a string is a valid global model
+ * Check if a string is a valid global model (any non-empty string is valid)
  */
 export function isValidModel(model: string): model is GlobalModel {
-  return GlobalModelSchema.safeParse(model).success;
+	return typeof model === "string" && model.trim().length > 0;
 }
+
+// Re-export env helpers for convenience
+export { getFullModelId, getLLMModelId, getLLMProvider };

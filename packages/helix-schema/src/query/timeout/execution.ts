@@ -14,19 +14,19 @@ import type { QueryFunction, TimeoutConfig } from "./types.js";
  * @returns Timeout in milliseconds
  */
 export function getTimeoutForQueryType(
-  queryType: QueryType,
-  config: TimeoutConfig = DEFAULT_TIMEOUT_CONFIG
+	queryType: QueryType,
+	config: TimeoutConfig = DEFAULT_TIMEOUT_CONFIG
 ): number {
-  switch (queryType) {
-    case "vector":
-      return config.vectorTimeoutMs;
-    case "graph":
-      return config.graphTimeoutMs;
-    case "combined":
-      return config.combinedTimeoutMs;
-    default:
-      return config.combinedTimeoutMs;
-  }
+	switch (queryType) {
+		case "vector":
+			return config.vectorTimeoutMs;
+		case "graph":
+			return config.graphTimeoutMs;
+		case "combined":
+			return config.combinedTimeoutMs;
+		default:
+			return config.combinedTimeoutMs;
+	}
 }
 
 /**
@@ -37,30 +37,30 @@ export function getTimeoutForQueryType(
  * @returns Query result or timeout error
  */
 export async function withTimeout<T>(
-  queryFn: QueryFunction<T>,
-  timeoutMs: number
+	queryFn: QueryFunction<T>,
+	timeoutMs: number
 ): Promise<{ data: T[]; timedOut: boolean; executionTimeMs: number }> {
-  const startTime = Date.now();
+	const startTime = Date.now();
 
-  try {
-    const result = await Promise.race([
-      queryFn(),
-      new Promise<never>((_, reject) =>
-        setTimeout(() => reject(new Error("Query timeout")), timeoutMs)
-      ),
-    ]);
+	try {
+		const result = await Promise.race([
+			queryFn(),
+			new Promise<never>((_, reject) =>
+				setTimeout(() => reject(new Error("Query timeout")), timeoutMs)
+			),
+		]);
 
-    return {
-      data: result,
-      timedOut: false,
-      executionTimeMs: Date.now() - startTime,
-    };
-  } catch (error) {
-    const isTimeout = error instanceof Error && error.message === "Query timeout";
-    return {
-      data: [],
-      timedOut: isTimeout,
-      executionTimeMs: Date.now() - startTime,
-    };
-  }
+		return {
+			data: result,
+			timedOut: false,
+			executionTimeMs: Date.now() - startTime,
+		};
+	} catch (error) {
+		const isTimeout = error instanceof Error && error.message === "Query timeout";
+		return {
+			data: [],
+			timedOut: isTimeout,
+			executionTimeMs: Date.now() - startTime,
+		};
+	}
 }

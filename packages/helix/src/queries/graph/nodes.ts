@@ -17,15 +17,15 @@ import type { GraphNode } from "./types.js";
  * @returns The node or null if not found
  */
 export async function getNode<T = Record<string, unknown>>(
-  client: HelixClient,
-  nodeId: string
+	client: HelixClient,
+	nodeId: string
 ): Promise<GraphNode<T> | null> {
-  try {
-    const result = await client.query<GraphNode<T>>("getNode", { id: nodeId });
-    return result.data;
-  } catch {
-    return null;
-  }
+	try {
+		const result = await client.query<GraphNode<T>>("getNode", { id: nodeId });
+		return result.data;
+	} catch {
+		return null;
+	}
 }
 
 /**
@@ -37,16 +37,16 @@ export async function getNode<T = Record<string, unknown>>(
  * @returns Matching nodes
  */
 export async function getNodesByType<T = Record<string, unknown>>(
-  client: HelixClient,
-  nodeType: string,
-  options: { limit?: number; filters?: Record<string, unknown> } = {}
+	client: HelixClient,
+	nodeType: string,
+	options: { limit?: number; filters?: Record<string, unknown> } = {}
 ): Promise<GraphNode<T>[]> {
-  const result = await client.query<GraphNode<T>[]>("getNodesByType", {
-    type: nodeType,
-    limit: options.limit ?? 100,
-    filters: options.filters ?? {},
-  });
-  return result.data;
+	const result = await client.query<GraphNode<T>[]>("getNodesByType", {
+		type: nodeType,
+		limit: options.limit ?? 100,
+		filters: options.filters ?? {},
+	});
+	return result.data;
 }
 
 /**
@@ -58,17 +58,17 @@ export async function getNodesByType<T = Record<string, unknown>>(
  * @returns Related nodes
  */
 export async function getCompanyNodes(
-  client: HelixClient,
-  companySymbol: string,
-  nodeTypes: ("FilingChunk" | "TranscriptChunk" | "NewsItem")[] = [
-    "FilingChunk",
-    "TranscriptChunk",
-    "NewsItem",
-  ]
+	client: HelixClient,
+	companySymbol: string,
+	nodeTypes: ("FilingChunk" | "TranscriptChunk" | "NewsItem")[] = [
+		"FilingChunk",
+		"TranscriptChunk",
+		"NewsItem",
+	]
 ): Promise<GraphNode[]> {
-  const result = await client.query<GraphNode[]>("getCompanyNodes", {
-    symbol: companySymbol,
-    node_types: nodeTypes,
-  });
-  return result.data;
+	const result = await client.query<GraphNode[]>("getCompanyNodes", {
+		symbol: companySymbol,
+		node_types: nodeTypes,
+	});
+	return result.data;
 }

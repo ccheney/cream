@@ -8,9 +8,9 @@
 
 import { type ExecutionContext, isBacktest } from "@cream/domain";
 import {
-  type GraphRAGSearchResult,
-  searchGraphContext,
-  searchGraphContextByCompany,
+	type GraphRAGSearchResult,
+	searchGraphContext,
+	searchGraphContextByCompany,
 } from "@cream/helix";
 import { getHelixClient } from "../clients.js";
 
@@ -18,12 +18,12 @@ import { getHelixClient } from "../clients.js";
  * Parameters for GraphRAG query.
  */
 export interface GraphRAGQueryParams {
-  /** Natural language query text */
-  query: string;
-  /** Maximum results per type (default: 10) */
-  limit?: number;
-  /** Filter to specific company symbol */
-  symbol?: string;
+	/** Natural language query text */
+	query: string;
+	/** Maximum results per type (default: 10) */
+	limit?: number;
+	/** Filter to specific company symbol */
+	symbol?: string;
 }
 
 /**
@@ -35,14 +35,14 @@ export type GraphRAGQueryResult = GraphRAGSearchResult;
  * Empty result for BACKTEST mode.
  */
 function emptyResult(_query: string): GraphRAGQueryResult {
-  return {
-    filingChunks: [],
-    transcriptChunks: [],
-    newsItems: [],
-    externalEvents: [],
-    companies: [],
-    executionTimeMs: 0,
-  };
+	return {
+		filingChunks: [],
+		transcriptChunks: [],
+		newsItems: [],
+		externalEvents: [],
+		companies: [],
+		executionTimeMs: 0,
+	};
 }
 
 /**
@@ -75,19 +75,19 @@ function emptyResult(_query: string): GraphRAGQueryResult {
  * ```
  */
 export async function graphragQuery(
-  ctx: ExecutionContext,
-  params: GraphRAGQueryParams
+	ctx: ExecutionContext,
+	params: GraphRAGQueryParams
 ): Promise<GraphRAGQueryResult> {
-  if (isBacktest(ctx)) {
-    return emptyResult(params.query);
-  }
+	if (isBacktest(ctx)) {
+		return emptyResult(params.query);
+	}
 
-  const client = getHelixClient();
-  const { query, limit = 10, symbol } = params;
+	const client = getHelixClient();
+	const { query, limit = 10, symbol } = params;
 
-  if (symbol) {
-    return searchGraphContextByCompany(client, symbol, query, limit);
-  }
+	if (symbol) {
+		return searchGraphContextByCompany(client, symbol, query, limit);
+	}
 
-  return searchGraphContext(client, { query, limit });
+	return searchGraphContext(client, { query, limit });
 }

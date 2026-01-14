@@ -5,4 +5,4 @@ process.env.CREAM_ENV = process.env.CREAM_ENV || "BACKTEST";
 // Set a dummy secret for better-auth so it doesn't throw
 // The actual auth is mocked in tests
 process.env.BETTER_AUTH_SECRET =
-  process.env.BETTER_AUTH_SECRET || "test-secret-for-development-only-not-for-production";
+	process.env.BETTER_AUTH_SECRET || "test-secret-for-development-only-not-for-production";

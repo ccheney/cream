@@ -31,28 +31,28 @@ import type { OHLCVBar } from "../../types";
 // ============================================================
 
 export interface StochasticResult {
-  /** Fast %K (raw stochastic) */
-  k: number;
-  /** %D (SMA of %K) */
-  d: number;
-  /** Timestamp */
-  timestamp: number;
+	/** Fast %K (raw stochastic) */
+	k: number;
+	/** %D (SMA of %K) */
+	d: number;
+	/** Timestamp */
+	timestamp: number;
 }
 
 export interface SlowStochasticResult extends StochasticResult {
-  /** Slow %K (smoothed, equals Fast %D) */
-  slowK: number;
-  /** Slow %D (SMA of Slow %K) */
-  slowD: number;
+	/** Slow %K (smoothed, equals Fast %D) */
+	slowK: number;
+	/** Slow %D (SMA of Slow %K) */
+	slowD: number;
 }
 
 export interface StochasticSettings {
-  /** %K period (default: 14) */
-  kPeriod: number;
-  /** %D period - SMA of %K (default: 3) */
-  dPeriod: number;
-  /** Slow %K smoothing period (default: 3) */
-  slowKPeriod: number;
+	/** %K period (default: 14) */
+	kPeriod: number;
+	/** %D period - SMA of %K (default: 3) */
+	dPeriod: number;
+	/** Slow %K smoothing period (default: 3) */
+	slowKPeriod: number;
 }
 
 // ============================================================
@@ -60,42 +60,42 @@ export interface StochasticSettings {
 // ============================================================
 
 const DEFAULT_SETTINGS: StochasticSettings = {
-  kPeriod: 14,
-  dPeriod: 3,
-  slowKPeriod: 3,
+	kPeriod: 14,
+	dPeriod: 3,
+	slowKPeriod: 3,
 };
 
 /**
  * Calculate raw %K for a single window
  */
 function calculateRawK(bars: OHLCVBar[]): number | null {
-  if (bars.length === 0) {
-    return null;
-  }
+	if (bars.length === 0) {
+		return null;
+	}
 
-  let lowestLow = Infinity;
-  let highestHigh = -Infinity;
+	let lowestLow = Infinity;
+	let highestHigh = -Infinity;
 
-  for (const bar of bars) {
-    if (bar.low < lowestLow) {
-      lowestLow = bar.low;
-    }
-    if (bar.high > highestHigh) {
-      highestHigh = bar.high;
-    }
-  }
+	for (const bar of bars) {
+		if (bar.low < lowestLow) {
+			lowestLow = bar.low;
+		}
+		if (bar.high > highestHigh) {
+			highestHigh = bar.high;
+		}
+	}
 
-  const range = highestHigh - lowestLow;
-  if (range <= 0) {
-    return 50; // No price movement
-  }
+	const range = highestHigh - lowestLow;
+	if (range <= 0) {
+		return 50; // No price movement
+	}
 
-  const lastBar = bars[bars.length - 1];
-  if (!lastBar) {
-    return null;
-  }
+	const lastBar = bars[bars.length - 1];
+	if (!lastBar) {
+		return null;
+	}
 
-  return ((lastBar.close - lowestLow) / range) * 100;
+	return ((lastBar.close - lowestLow) / range) * 100;
 }
 
 /**
@@ -114,48 +114,48 @@ function calculateRawK(bars: OHLCVBar[]): number | null {
  * ```
  */
 export function calculateStochastic(
-  bars: OHLCVBar[],
-  settings: Partial<StochasticSettings> = {}
+	bars: OHLCVBar[],
+	settings: Partial<StochasticSettings> = {}
 ): StochasticResult | null {
-  const { kPeriod, dPeriod } = { ...DEFAULT_SETTINGS, ...settings };
+	const { kPeriod, dPeriod } = { ...DEFAULT_SETTINGS, ...settings };
 
-  const minBars = kPeriod + dPeriod - 1;
-  if (bars.length < minBars) {
-    return null;
-  }
+	const minBars = kPeriod + dPeriod - 1;
+	if (bars.length < minBars) {
+		return null;
+	}
 
-  // Calculate %K values for %D calculation
-  const kValues: number[] = [];
+	// Calculate %K values for %D calculation
+	const kValues: number[] = [];
 
-  for (let i = kPeriod - 1; i < bars.length; i++) {
-    const windowBars = bars.slice(i - kPeriod + 1, i + 1);
-    const rawK = calculateRawK(windowBars);
-    if (rawK !== null) {
-      kValues.push(rawK);
-    }
-  }
+	for (let i = kPeriod - 1; i < bars.length; i++) {
+		const windowBars = bars.slice(i - kPeriod + 1, i + 1);
+		const rawK = calculateRawK(windowBars);
+		if (rawK !== null) {
+			kValues.push(rawK);
+		}
+	}
 
-  if (kValues.length < dPeriod) {
-    return null;
-  }
+	if (kValues.length < dPeriod) {
+		return null;
+	}
 
-  // Current %K
-  const k = kValues[kValues.length - 1];
-  if (k === undefined) {
-    return null;
-  }
+	// Current %K
+	const k = kValues[kValues.length - 1];
+	if (k === undefined) {
+		return null;
+	}
 
-  // Calculate %D (SMA of last dPeriod %K values)
-  const recentKValues = kValues.slice(-dPeriod);
-  const d = recentKValues.reduce((sum, val) => sum + val, 0) / dPeriod;
+	// Calculate %D (SMA of last dPeriod %K values)
+	const recentKValues = kValues.slice(-dPeriod);
+	const d = recentKValues.reduce((sum, val) => sum + val, 0) / dPeriod;
 
-  const lastBar = bars[bars.length - 1];
+	const lastBar = bars[bars.length - 1];
 
-  return {
-    k,
-    d,
-    timestamp: lastBar?.timestamp ?? Date.now(),
-  };
+	return {
+		k,
+		d,
+		timestamp: lastBar?.timestamp ?? Date.now(),
+	};
 }
 
 /**
@@ -170,159 +170,159 @@ export function calculateStochastic(
  * @returns Slow Stochastic result or null
  */
 export function calculateSlowStochastic(
-  bars: OHLCVBar[],
-  settings: Partial<StochasticSettings> = {}
+	bars: OHLCVBar[],
+	settings: Partial<StochasticSettings> = {}
 ): SlowStochasticResult | null {
-  const { kPeriod, dPeriod, slowKPeriod } = { ...DEFAULT_SETTINGS, ...settings };
+	const { kPeriod, dPeriod, slowKPeriod } = { ...DEFAULT_SETTINGS, ...settings };
 
-  const minBars = kPeriod + dPeriod + slowKPeriod - 2;
-  if (bars.length < minBars) {
-    return null;
-  }
+	const minBars = kPeriod + dPeriod + slowKPeriod - 2;
+	if (bars.length < minBars) {
+		return null;
+	}
 
-  // Calculate all %K values
-  const kValues: number[] = [];
-  for (let i = kPeriod - 1; i < bars.length; i++) {
-    const windowBars = bars.slice(i - kPeriod + 1, i + 1);
-    const rawK = calculateRawK(windowBars);
-    if (rawK !== null) {
-      kValues.push(rawK);
-    }
-  }
+	// Calculate all %K values
+	const kValues: number[] = [];
+	for (let i = kPeriod - 1; i < bars.length; i++) {
+		const windowBars = bars.slice(i - kPeriod + 1, i + 1);
+		const rawK = calculateRawK(windowBars);
+		if (rawK !== null) {
+			kValues.push(rawK);
+		}
+	}
 
-  if (kValues.length < dPeriod + slowKPeriod - 1) {
-    return null;
-  }
+	if (kValues.length < dPeriod + slowKPeriod - 1) {
+		return null;
+	}
 
-  // Calculate Fast %D (Slow %K) values
-  const slowKValues: number[] = [];
-  for (let i = dPeriod - 1; i < kValues.length; i++) {
-    const window = kValues.slice(i - dPeriod + 1, i + 1);
-    const avg = window.reduce((sum, val) => sum + val, 0) / dPeriod;
-    slowKValues.push(avg);
-  }
+	// Calculate Fast %D (Slow %K) values
+	const slowKValues: number[] = [];
+	for (let i = dPeriod - 1; i < kValues.length; i++) {
+		const window = kValues.slice(i - dPeriod + 1, i + 1);
+		const avg = window.reduce((sum, val) => sum + val, 0) / dPeriod;
+		slowKValues.push(avg);
+	}
 
-  if (slowKValues.length < slowKPeriod) {
-    return null;
-  }
+	if (slowKValues.length < slowKPeriod) {
+		return null;
+	}
 
-  // Current Slow %K
-  const slowK = slowKValues[slowKValues.length - 1];
-  if (slowK === undefined) {
-    return null;
-  }
+	// Current Slow %K
+	const slowK = slowKValues[slowKValues.length - 1];
+	if (slowK === undefined) {
+		return null;
+	}
 
-  // Calculate Slow %D
-  const recentSlowK = slowKValues.slice(-slowKPeriod);
-  const slowD = recentSlowK.reduce((sum, val) => sum + val, 0) / slowKPeriod;
+	// Calculate Slow %D
+	const recentSlowK = slowKValues.slice(-slowKPeriod);
+	const slowD = recentSlowK.reduce((sum, val) => sum + val, 0) / slowKPeriod;
 
-  // Current Fast %K for reference
-  const k = kValues[kValues.length - 1];
-  if (k === undefined) {
-    return null;
-  }
+	// Current Fast %K for reference
+	const k = kValues[kValues.length - 1];
+	if (k === undefined) {
+		return null;
+	}
 
-  const lastBar = bars[bars.length - 1];
+	const lastBar = bars[bars.length - 1];
 
-  return {
-    k,
-    d: slowK, // Fast %D
-    slowK,
-    slowD,
-    timestamp: lastBar?.timestamp ?? Date.now(),
-  };
+	return {
+		k,
+		d: slowK, // Fast %D
+		slowK,
+		slowD,
+		timestamp: lastBar?.timestamp ?? Date.now(),
+	};
 }
 
 /**
  * Calculate Stochastic series
  */
 export function calculateStochasticSeries(
-  bars: OHLCVBar[],
-  settings: Partial<StochasticSettings> = {}
+	bars: OHLCVBar[],
+	settings: Partial<StochasticSettings> = {}
 ): StochasticResult[] {
-  const { kPeriod, dPeriod } = { ...DEFAULT_SETTINGS, ...settings };
-  const results: StochasticResult[] = [];
+	const { kPeriod, dPeriod } = { ...DEFAULT_SETTINGS, ...settings };
+	const results: StochasticResult[] = [];
 
-  const minBars = kPeriod + dPeriod - 1;
-  if (bars.length < minBars) {
-    return results;
-  }
+	const minBars = kPeriod + dPeriod - 1;
+	if (bars.length < minBars) {
+		return results;
+	}
 
-  // Calculate all %K values
-  const kValues: Array<{ k: number; timestamp: number }> = [];
-  for (let i = kPeriod - 1; i < bars.length; i++) {
-    const windowBars = bars.slice(i - kPeriod + 1, i + 1);
-    const rawK = calculateRawK(windowBars);
-    const bar = bars[i];
-    if (rawK !== null && bar) {
-      kValues.push({ k: rawK, timestamp: bar.timestamp });
-    }
-  }
+	// Calculate all %K values
+	const kValues: Array<{ k: number; timestamp: number }> = [];
+	for (let i = kPeriod - 1; i < bars.length; i++) {
+		const windowBars = bars.slice(i - kPeriod + 1, i + 1);
+		const rawK = calculateRawK(windowBars);
+		const bar = bars[i];
+		if (rawK !== null && bar) {
+			kValues.push({ k: rawK, timestamp: bar.timestamp });
+		}
+	}
 
-  // Calculate %D for each point
-  for (let i = dPeriod - 1; i < kValues.length; i++) {
-    const window = kValues.slice(i - dPeriod + 1, i + 1);
-    const d = window.reduce((sum, val) => sum + val.k, 0) / dPeriod;
-    const current = kValues[i];
-    if (current) {
-      results.push({
-        k: current.k,
-        d,
-        timestamp: current.timestamp,
-      });
-    }
-  }
+	// Calculate %D for each point
+	for (let i = dPeriod - 1; i < kValues.length; i++) {
+		const window = kValues.slice(i - dPeriod + 1, i + 1);
+		const d = window.reduce((sum, val) => sum + val.k, 0) / dPeriod;
+		const current = kValues[i];
+		if (current) {
+			results.push({
+				k: current.k,
+				d,
+				timestamp: current.timestamp,
+			});
+		}
+	}
 
-  return results;
+	return results;
 }
 
 /**
  * Classify Stochastic level
  */
 export type StochasticLevel =
-  | "extreme_overbought"
-  | "overbought"
-  | "neutral"
-  | "oversold"
-  | "extreme_oversold";
+	| "extreme_overbought"
+	| "overbought"
+	| "neutral"
+	| "oversold"
+	| "extreme_oversold";
 
 /**
  * Classify Stochastic reading
  */
 export function classifyStochastic(k: number): StochasticLevel {
-  if (k >= 90) {
-    return "extreme_overbought";
-  }
-  if (k >= 80) {
-    return "overbought";
-  }
-  if (k <= 10) {
-    return "extreme_oversold";
-  }
-  if (k <= 20) {
-    return "oversold";
-  }
-  return "neutral";
+	if (k >= 90) {
+		return "extreme_overbought";
+	}
+	if (k >= 80) {
+		return "overbought";
+	}
+	if (k <= 10) {
+		return "extreme_oversold";
+	}
+	if (k <= 20) {
+		return "oversold";
+	}
+	return "neutral";
 }
 
 /**
  * Detect Stochastic crossover
  */
 export function detectStochasticCrossover(
-  current: StochasticResult,
-  previous: StochasticResult
+	current: StochasticResult,
+	previous: StochasticResult
 ): "bullish" | "bearish" | "none" {
-  const currentDiff = current.k - current.d;
-  const previousDiff = previous.k - previous.d;
+	const currentDiff = current.k - current.d;
+	const previousDiff = previous.k - previous.d;
 
-  if (previousDiff <= 0 && currentDiff > 0) {
-    return "bullish";
-  }
-  if (previousDiff >= 0 && currentDiff < 0) {
-    return "bearish";
-  }
+	if (previousDiff <= 0 && currentDiff > 0) {
+		return "bullish";
+	}
+	if (previousDiff >= 0 && currentDiff < 0) {
+		return "bearish";
+	}
 
-  return "none";
+	return "none";
 }
 
 /**
@@ -332,18 +332,18 @@ export function detectStochasticCrossover(
  * Bearish hook: %K falls below 80 (exiting overbought)
  */
 export function detectStochasticHook(
-  current: StochasticResult,
-  previous: StochasticResult
+	current: StochasticResult,
+	previous: StochasticResult
 ): "bullish_hook" | "bearish_hook" | "none" {
-  // Bullish hook: crossing up through 20
-  if (previous.k <= 20 && current.k > 20) {
-    return "bullish_hook";
-  }
+	// Bullish hook: crossing up through 20
+	if (previous.k <= 20 && current.k > 20) {
+		return "bullish_hook";
+	}
 
-  // Bearish hook: crossing down through 80
-  if (previous.k >= 80 && current.k < 80) {
-    return "bearish_hook";
-  }
+	// Bearish hook: crossing down through 80
+	if (previous.k >= 80 && current.k < 80) {
+		return "bearish_hook";
+	}
 
-  return "none";
+	return "none";
 }

@@ -28,14 +28,14 @@ import type { OHLCVBar } from "../../types";
 // ============================================================
 
 export interface RSIResult {
-  /** RSI value (0-100) */
-  rsi: number;
-  /** Average gain */
-  avgGain: number;
-  /** Average loss */
-  avgLoss: number;
-  /** Timestamp */
-  timestamp: number;
+	/** RSI value (0-100) */
+	rsi: number;
+	/** Average gain */
+	avgGain: number;
+	/** Average loss */
+	avgLoss: number;
+	/** Timestamp */
+	timestamp: number;
 }
 
 // ============================================================
@@ -57,77 +57,77 @@ export interface RSIResult {
  * ```
  */
 export function calculateRSI(bars: OHLCVBar[], period = 14): RSIResult | null {
-  if (bars.length < period + 1) {
-    return null;
-  }
+	if (bars.length < period + 1) {
+		return null;
+	}
 
-  // Calculate price changes
-  const changes: number[] = [];
-  for (let i = 1; i < bars.length; i++) {
-    const current = bars[i];
-    const previous = bars[i - 1];
-    if (!current || !previous) {
-      continue;
-    }
-    changes.push(current.close - previous.close);
-  }
+	// Calculate price changes
+	const changes: number[] = [];
+	for (let i = 1; i < bars.length; i++) {
+		const current = bars[i];
+		const previous = bars[i - 1];
+		if (!current || !previous) {
+			continue;
+		}
+		changes.push(current.close - previous.close);
+	}
 
-  if (changes.length < period) {
-    return null;
-  }
+	if (changes.length < period) {
+		return null;
+	}
 
-  // Initial averages (simple average for first period)
-  let avgGain = 0;
-  let avgLoss = 0;
+	// Initial averages (simple average for first period)
+	let avgGain = 0;
+	let avgLoss = 0;
 
-  for (let i = 0; i < period; i++) {
-    const change = changes[i];
-    if (change === undefined) {
-      continue;
-    }
-    if (change > 0) {
-      avgGain += change;
-    } else {
-      avgLoss += Math.abs(change);
-    }
-  }
+	for (let i = 0; i < period; i++) {
+		const change = changes[i];
+		if (change === undefined) {
+			continue;
+		}
+		if (change > 0) {
+			avgGain += change;
+		} else {
+			avgLoss += Math.abs(change);
+		}
+	}
 
-  avgGain /= period;
-  avgLoss /= period;
+	avgGain /= period;
+	avgLoss /= period;
 
-  // Wilder's smoothing for subsequent values
-  for (let i = period; i < changes.length; i++) {
-    const change = changes[i];
-    if (change === undefined) {
-      continue;
-    }
+	// Wilder's smoothing for subsequent values
+	for (let i = period; i < changes.length; i++) {
+		const change = changes[i];
+		if (change === undefined) {
+			continue;
+		}
 
-    const gain = change > 0 ? change : 0;
-    const loss = change < 0 ? Math.abs(change) : 0;
+		const gain = change > 0 ? change : 0;
+		const loss = change < 0 ? Math.abs(change) : 0;
 
-    avgGain = (avgGain * (period - 1) + gain) / period;
-    avgLoss = (avgLoss * (period - 1) + loss) / period;
-  }
+		avgGain = (avgGain * (period - 1) + gain) / period;
+		avgLoss = (avgLoss * (period - 1) + loss) / period;
+	}
 
-  // Calculate RSI
-  let rsi: number;
-  if (avgLoss === 0) {
-    rsi = 100;
-  } else if (avgGain === 0) {
-    rsi = 0;
-  } else {
-    const rs = avgGain / avgLoss;
-    rsi = 100 - 100 / (1 + rs);
-  }
+	// Calculate RSI
+	let rsi: number;
+	if (avgLoss === 0) {
+		rsi = 100;
+	} else if (avgGain === 0) {
+		rsi = 0;
+	} else {
+		const rs = avgGain / avgLoss;
+		rsi = 100 - 100 / (1 + rs);
+	}
 
-  const lastBar = bars[bars.length - 1];
+	const lastBar = bars[bars.length - 1];
 
-  return {
-    rsi,
-    avgGain,
-    avgLoss,
-    timestamp: lastBar?.timestamp ?? Date.now(),
-  };
+	return {
+		rsi,
+		avgGain,
+		avgLoss,
+		timestamp: lastBar?.timestamp ?? Date.now(),
+	};
 }
 
 /**
@@ -138,111 +138,111 @@ export function calculateRSI(bars: OHLCVBar[], period = 14): RSIResult | null {
  * @returns Array of RSI results
  */
 export function calculateRSISeries(bars: OHLCVBar[], period = 14): RSIResult[] {
-  const results: RSIResult[] = [];
+	const results: RSIResult[] = [];
 
-  if (bars.length < period + 1) {
-    return results;
-  }
+	if (bars.length < period + 1) {
+		return results;
+	}
 
-  // Calculate all price changes
-  const changes: number[] = [];
-  for (let i = 1; i < bars.length; i++) {
-    const current = bars[i];
-    const previous = bars[i - 1];
-    if (!current || !previous) {
-      continue;
-    }
-    changes.push(current.close - previous.close);
-  }
+	// Calculate all price changes
+	const changes: number[] = [];
+	for (let i = 1; i < bars.length; i++) {
+		const current = bars[i];
+		const previous = bars[i - 1];
+		if (!current || !previous) {
+			continue;
+		}
+		changes.push(current.close - previous.close);
+	}
 
-  // Initial averages
-  let avgGain = 0;
-  let avgLoss = 0;
+	// Initial averages
+	let avgGain = 0;
+	let avgLoss = 0;
 
-  for (let i = 0; i < period; i++) {
-    const change = changes[i];
-    if (change === undefined) {
-      continue;
-    }
-    if (change > 0) {
-      avgGain += change;
-    } else {
-      avgLoss += Math.abs(change);
-    }
-  }
+	for (let i = 0; i < period; i++) {
+		const change = changes[i];
+		if (change === undefined) {
+			continue;
+		}
+		if (change > 0) {
+			avgGain += change;
+		} else {
+			avgLoss += Math.abs(change);
+		}
+	}
 
-  avgGain /= period;
-  avgLoss /= period;
+	avgGain /= period;
+	avgLoss /= period;
 
-  // First RSI value
-  const firstBar = bars[period];
-  if (firstBar) {
-    let rsi: number;
-    if (avgLoss === 0) {
-      rsi = 100;
-    } else if (avgGain === 0) {
-      rsi = 0;
-    } else {
-      const rs = avgGain / avgLoss;
-      rsi = 100 - 100 / (1 + rs);
-    }
+	// First RSI value
+	const firstBar = bars[period];
+	if (firstBar) {
+		let rsi: number;
+		if (avgLoss === 0) {
+			rsi = 100;
+		} else if (avgGain === 0) {
+			rsi = 0;
+		} else {
+			const rs = avgGain / avgLoss;
+			rsi = 100 - 100 / (1 + rs);
+		}
 
-    results.push({
-      rsi,
-      avgGain,
-      avgLoss,
-      timestamp: firstBar.timestamp,
-    });
-  }
+		results.push({
+			rsi,
+			avgGain,
+			avgLoss,
+			timestamp: firstBar.timestamp,
+		});
+	}
 
-  // Calculate subsequent values using Wilder's smoothing
-  for (let i = period; i < changes.length; i++) {
-    const change = changes[i];
-    if (change === undefined) {
-      continue;
-    }
+	// Calculate subsequent values using Wilder's smoothing
+	for (let i = period; i < changes.length; i++) {
+		const change = changes[i];
+		if (change === undefined) {
+			continue;
+		}
 
-    const gain = change > 0 ? change : 0;
-    const loss = change < 0 ? Math.abs(change) : 0;
+		const gain = change > 0 ? change : 0;
+		const loss = change < 0 ? Math.abs(change) : 0;
 
-    avgGain = (avgGain * (period - 1) + gain) / period;
-    avgLoss = (avgLoss * (period - 1) + loss) / period;
+		avgGain = (avgGain * (period - 1) + gain) / period;
+		avgLoss = (avgLoss * (period - 1) + loss) / period;
 
-    let rsi: number;
-    if (avgLoss === 0) {
-      rsi = 100;
-    } else if (avgGain === 0) {
-      rsi = 0;
-    } else {
-      const rs = avgGain / avgLoss;
-      rsi = 100 - 100 / (1 + rs);
-    }
+		let rsi: number;
+		if (avgLoss === 0) {
+			rsi = 100;
+		} else if (avgGain === 0) {
+			rsi = 0;
+		} else {
+			const rs = avgGain / avgLoss;
+			rsi = 100 - 100 / (1 + rs);
+		}
 
-    const bar = bars[i + 1];
-    if (bar) {
-      results.push({
-        rsi,
-        avgGain,
-        avgLoss,
-        timestamp: bar.timestamp,
-      });
-    }
-  }
+		const bar = bars[i + 1];
+		if (bar) {
+			results.push({
+				rsi,
+				avgGain,
+				avgLoss,
+				timestamp: bar.timestamp,
+			});
+		}
+	}
 
-  return results;
+	return results;
 }
 
 /**
  * Classify RSI level
  */
 export type RSILevel =
-  | "extreme_overbought"
-  | "overbought"
-  | "neutral_bullish"
-  | "neutral"
-  | "neutral_bearish"
-  | "oversold"
-  | "extreme_oversold";
+	| "extreme_overbought"
+	| "overbought"
+	| "neutral_bullish"
+	| "neutral"
+	| "neutral_bearish"
+	| "oversold"
+	| "extreme_oversold";
 
 /**
  * Classify RSI reading
@@ -251,25 +251,25 @@ export type RSILevel =
  * @returns Classification
  */
 export function classifyRSI(rsi: number): RSILevel {
-  if (rsi >= 80) {
-    return "extreme_overbought";
-  }
-  if (rsi >= 70) {
-    return "overbought";
-  }
-  if (rsi >= 55) {
-    return "neutral_bullish";
-  }
-  if (rsi >= 45) {
-    return "neutral";
-  }
-  if (rsi >= 30) {
-    return "neutral_bearish";
-  }
-  if (rsi >= 20) {
-    return "oversold";
-  }
-  return "extreme_oversold";
+	if (rsi >= 80) {
+		return "extreme_overbought";
+	}
+	if (rsi >= 70) {
+		return "overbought";
+	}
+	if (rsi >= 55) {
+		return "neutral_bullish";
+	}
+	if (rsi >= 45) {
+		return "neutral";
+	}
+	if (rsi >= 30) {
+		return "neutral_bearish";
+	}
+	if (rsi >= 20) {
+		return "oversold";
+	}
+	return "extreme_oversold";
 }
 
 /**
@@ -282,20 +282,20 @@ export function classifyRSI(rsi: number): RSILevel {
  * @returns Divergence type or null
  */
 export function detectRSIDivergence(
-  priceHighs: [number, number],
-  priceLows: [number, number],
-  rsiHighs: [number, number],
-  rsiLows: [number, number]
+	priceHighs: [number, number],
+	priceLows: [number, number],
+	rsiHighs: [number, number],
+	rsiLows: [number, number]
 ): "bullish" | "bearish" | null {
-  // Bullish divergence: lower price lows, but higher RSI lows
-  if (priceLows[1] < priceLows[0] && rsiLows[1] > rsiLows[0]) {
-    return "bullish";
-  }
+	// Bullish divergence: lower price lows, but higher RSI lows
+	if (priceLows[1] < priceLows[0] && rsiLows[1] > rsiLows[0]) {
+		return "bullish";
+	}
 
-  // Bearish divergence: higher price highs, but lower RSI highs
-  if (priceHighs[1] > priceHighs[0] && rsiHighs[1] < rsiHighs[0]) {
-    return "bearish";
-  }
+	// Bearish divergence: higher price highs, but lower RSI highs
+	if (priceHighs[1] > priceHighs[0] && rsiHighs[1] < rsiHighs[0]) {
+		return "bearish";
+	}
 
-  return null;
+	return null;
 }

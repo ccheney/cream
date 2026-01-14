@@ -14,10 +14,10 @@
 
 // Immutability
 export {
-  checkImmutability,
-  type ImmutabilityCheckResult,
-  ImmutabilityViolationError,
-  requireMutable,
+	checkImmutability,
+	type ImmutabilityCheckResult,
+	ImmutabilityViolationError,
+	requireMutable,
 } from "./immutability.js";
 // Logger
 export { AuditLogger, type AuditLoggerConfig } from "./logger.js";
@@ -27,12 +27,12 @@ export { AuditRetentionPolicy } from "./retention.js";
 export { type AuditStorage, InMemoryAuditStorage } from "./storage.js";
 // Types and schemas
 export {
-  AuditEntityType,
-  type AuditLogEntry,
-  AuditLogEntrySchema,
-  AuditOperationType,
-  type AuditTrailQuery,
-  AuditTrailQuerySchema,
-  type VersionHistoryEntry,
-  VersionHistoryEntrySchema,
+	AuditEntityType,
+	type AuditLogEntry,
+	AuditLogEntrySchema,
+	AuditOperationType,
+	type AuditTrailQuery,
+	AuditTrailQuerySchema,
+	type VersionHistoryEntry,
+	VersionHistoryEntrySchema,
 } from "./types.js";

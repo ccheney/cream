@@ -27,25 +27,25 @@ const OPTIONS_FETCH_TIMEOUT_MS = 5000;
  * Wrap a promise with a timeout. Returns null if timeout expires.
  */
 async function withTimeout<T>(
-  promise: Promise<T>,
-  timeoutMs: number,
-  label: string
+	promise: Promise<T>,
+	timeoutMs: number,
+	label: string
 ): Promise<T | null> {
-  const { promise: timeoutPromise, resolve } = Promise.withResolvers<T | null>();
-  const timer = setTimeout(() => {
-    log.warn({ label, timeoutMs }, "Options data fetch timed out");
-    resolve(null);
-  }, timeoutMs);
+	const { promise: timeoutPromise, resolve } = Promise.withResolvers<T | null>();
+	const timer = setTimeout(() => {
+		log.warn({ label, timeoutMs }, "Options data fetch timed out");
+		resolve(null);
+	}, timeoutMs);
 
-  try {
-    const result = await Promise.race([promise, timeoutPromise]);
-    clearTimeout(timer);
-    return result;
-  } catch (error) {
-    clearTimeout(timer);
-    log.warn({ label, error }, "Options data fetch failed");
-    return null;
-  }
+	try {
+		const result = await Promise.race([promise, timeoutPromise]);
+		clearTimeout(timer);
+		return result;
+	} catch (error) {
+		clearTimeout(timer);
+		log.warn({ label, error }, "Options data fetch failed");
+		return null;
+	}
 }
 
 /**
@@ -58,52 +58,52 @@ async function withTimeout<T>(
  * For full options calculations with raw chain data, use the calculators directly.
  */
 export class OptionsCalculatorAdapter implements OptionsCalculator {
-  /**
-   * Fetch options indicators from provider.
-   *
-   * @param symbol - Stock symbol
-   * @param provider - Options data provider
-   * @returns OptionsIndicators object with available values
-   *
-   * @example
-   * ```typescript
-   * const adapter = new OptionsCalculatorAdapter();
-   * const provider = { ... };
-   * const indicators = await adapter.calculate("AAPL", provider);
-   * console.log(indicators.atm_iv); // 0.25
-   * ```
-   */
-  async calculate(symbol: string, provider: OptionsDataProvider): Promise<OptionsIndicators> {
-    // Fetch available indicators from provider in parallel with timeout
-    const [atmIV, ivSkew, putCallRatio] = await Promise.all([
-      withTimeout(provider.getImpliedVolatility(symbol), OPTIONS_FETCH_TIMEOUT_MS, "atmIV"),
-      withTimeout(provider.getIVSkew(symbol), OPTIONS_FETCH_TIMEOUT_MS, "ivSkew"),
-      withTimeout(provider.getPutCallRatio(symbol), OPTIONS_FETCH_TIMEOUT_MS, "putCallRatio"),
-    ]);
+	/**
+	 * Fetch options indicators from provider.
+	 *
+	 * @param symbol - Stock symbol
+	 * @param provider - Options data provider
+	 * @returns OptionsIndicators object with available values
+	 *
+	 * @example
+	 * ```typescript
+	 * const adapter = new OptionsCalculatorAdapter();
+	 * const provider = { ... };
+	 * const indicators = await adapter.calculate("AAPL", provider);
+	 * console.log(indicators.atm_iv); // 0.25
+	 * ```
+	 */
+	async calculate(symbol: string, provider: OptionsDataProvider): Promise<OptionsIndicators> {
+		// Fetch available indicators from provider in parallel with timeout
+		const [atmIV, ivSkew, putCallRatio] = await Promise.all([
+			withTimeout(provider.getImpliedVolatility(symbol), OPTIONS_FETCH_TIMEOUT_MS, "atmIV"),
+			withTimeout(provider.getIVSkew(symbol), OPTIONS_FETCH_TIMEOUT_MS, "ivSkew"),
+			withTimeout(provider.getPutCallRatio(symbol), OPTIONS_FETCH_TIMEOUT_MS, "putCallRatio"),
+		]);
 
-    // Start with empty indicators
-    const indicators = createEmptyOptionsIndicators();
+		// Start with empty indicators
+		const indicators = createEmptyOptionsIndicators();
 
-    // Fill in values from provider
-    indicators.atm_iv = atmIV;
-    indicators.iv_skew_25d = ivSkew;
-    indicators.put_call_ratio_volume = putCallRatio;
+		// Fill in values from provider
+		indicators.atm_iv = atmIV;
+		indicators.iv_skew_25d = ivSkew;
+		indicators.put_call_ratio_volume = putCallRatio;
 
-    // Note: The following fields require raw options chain data
-    // and are not available through the simple provider interface:
-    // - iv_put_25d, iv_call_25d (need options chain)
-    // - put_call_ratio_oi (need open interest data)
-    // - term_structure_slope, front_month_iv, back_month_iv (need multiple expirations)
-    // - vrp, realized_vol_20d (need OHLCV bars)
-    // - net_delta, net_gamma, net_theta, net_vega (need positions)
+		// Note: The following fields require raw options chain data
+		// and are not available through the simple provider interface:
+		// - iv_put_25d, iv_call_25d (need options chain)
+		// - put_call_ratio_oi (need open interest data)
+		// - term_structure_slope, front_month_iv, back_month_iv (need multiple expirations)
+		// - vrp, realized_vol_20d (need OHLCV bars)
+		// - net_delta, net_gamma, net_theta, net_vega (need positions)
 
-    return indicators;
-  }
+		return indicators;
+	}
 }
 
 /**
  * Factory function to create an OptionsCalculatorAdapter instance.
  */
 export function createOptionsCalculator(): OptionsCalculator {
-  return new OptionsCalculatorAdapter();
+	return new OptionsCalculatorAdapter();
 }

@@ -11,14 +11,14 @@ import { buildDatetimeContext, buildFactorZooContext, buildIndicatorContext } fr
 import { DecisionPlanSchema } from "./schemas.js";
 import { createStreamChunkForwarder } from "./stream-forwarder.js";
 import type {
-  AgentConfigEntry,
-  AgentContext,
-  BearishResearchOutput,
-  BullishResearchOutput,
-  DecisionPlan,
-  FundamentalsAnalysisOutput,
-  OnStreamChunk,
-  SentimentAnalysisOutput,
+	AgentConfigEntry,
+	AgentContext,
+	BearishResearchOutput,
+	BullishResearchOutput,
+	DecisionPlan,
+	FundamentalsAnalysisOutput,
+	OnStreamChunk,
+	SentimentAnalysisOutput,
 } from "./types.js";
 
 // ============================================
@@ -33,8 +33,8 @@ export const traderAgent = createAgent("trader");
 // ============================================
 
 export interface DebateOutputs {
-  bullish: BullishResearchOutput[];
-  bearish: BearishResearchOutput[];
+	bullish: BullishResearchOutput[];
+	bearish: BearishResearchOutput[];
 }
 
 // ============================================
@@ -46,16 +46,16 @@ export interface DebateOutputs {
  * Incorporates Factor Zoo signals (Mega-Alpha) and comprehensive indicators when available.
  */
 export async function runTrader(
-  context: AgentContext,
-  debateOutputs: DebateOutputs,
-  portfolioState?: Record<string, unknown>
+	context: AgentContext,
+	debateOutputs: DebateOutputs,
+	portfolioState?: Record<string, unknown>
 ): Promise<DecisionPlan> {
-  const factorZooContext = buildFactorZooContext(context.factorZoo);
-  const indicatorContext = buildIndicatorContext(context.indicators);
+	const factorZooContext = buildFactorZooContext(context.factorZoo);
+	const indicatorContext = buildIndicatorContext(context.indicators);
 
-  const portfolioStateProvided = Boolean(portfolioState && Object.keys(portfolioState).length > 0);
+	const portfolioStateProvided = Boolean(portfolioState && Object.keys(portfolioState).length > 0);
 
-  const prompt = `${buildDatetimeContext()}Synthesize the debate into a concrete trading plan:
+	const prompt = `${buildDatetimeContext()}Synthesize the debate into a concrete trading plan:
 
 Bullish Research:
 ${JSON.stringify(debateOutputs.bullish, null, 2)}
@@ -80,22 +80,22 @@ POSITION SIZING GUIDANCE from indicators:
 - Liquidity metrics (bid_ask_spread, volume_ratio) inform execution
 - Short interest > 20% signals potential squeeze risk
 ${
-  context.factorZoo
-    ? `
+	context.factorZoo
+		? `
 FACTOR ZOO SIGNALS:
 - Mega-Alpha signal (${context.factorZoo.megaAlpha.toFixed(3)}) represents ${context.factorZoo.stats.activeCount} active factors
 - Use Mega-Alpha direction to inform overall market stance
 - Weight position sizing by signal strength
 - Be cautious of factors showing decay (IC degradation)`
-    : ""
+		: ""
 }`;
 
-  const settings = getAgentRuntimeSettings("trader", context.agentConfigs);
-  const options = buildGenerateOptions(settings, { schema: DecisionPlanSchema });
+	const settings = getAgentRuntimeSettings("trader", context.agentConfigs);
+	const options = buildGenerateOptions(settings, { schema: DecisionPlanSchema });
 
-  const response = await traderAgent.generate([{ role: "user", content: prompt }], options);
+	const response = await traderAgent.generate([{ role: "user", content: prompt }], options);
 
-  return response.object as DecisionPlan;
+	return response.object as DecisionPlan;
 }
 
 // ============================================
@@ -106,17 +106,17 @@ FACTOR ZOO SIGNALS:
  * Run Trader agent with streaming.
  */
 export async function runTraderStreaming(
-  context: AgentContext,
-  debateOutputs: DebateOutputs,
-  onChunk: OnStreamChunk,
-  portfolioState?: Record<string, unknown>
+	context: AgentContext,
+	debateOutputs: DebateOutputs,
+	onChunk: OnStreamChunk,
+	portfolioState?: Record<string, unknown>
 ): Promise<DecisionPlan> {
-  const factorZooContext = buildFactorZooContext(context.factorZoo);
-  const indicatorContext = buildIndicatorContext(context.indicators);
+	const factorZooContext = buildFactorZooContext(context.factorZoo);
+	const indicatorContext = buildIndicatorContext(context.indicators);
 
-  const portfolioStateProvided = Boolean(portfolioState && Object.keys(portfolioState).length > 0);
+	const portfolioStateProvided = Boolean(portfolioState && Object.keys(portfolioState).length > 0);
 
-  const prompt = `${buildDatetimeContext()}Synthesize the debate into a concrete trading plan:
+	const prompt = `${buildDatetimeContext()}Synthesize the debate into a concrete trading plan:
 
 Bullish Research:
 ${JSON.stringify(debateOutputs.bullish, null, 2)}
@@ -141,27 +141,27 @@ POSITION SIZING GUIDANCE from indicators:
 - Liquidity metrics (bid_ask_spread, volume_ratio) inform execution
 - Short interest > 20% signals potential squeeze risk
 ${
-  context.factorZoo
-    ? `
+	context.factorZoo
+		? `
 FACTOR ZOO SIGNALS:
 - Mega-Alpha signal (${context.factorZoo.megaAlpha.toFixed(3)}) represents ${context.factorZoo.stats.activeCount} active factors
 - Use Mega-Alpha direction to inform overall market stance
 - Weight position sizing by signal strength
 - Be cautious of factors showing decay (IC degradation)`
-    : ""
+		: ""
 }`;
 
-  const settings = getAgentRuntimeSettings("trader", context.agentConfigs);
-  const options = buildGenerateOptions(settings, { schema: DecisionPlanSchema });
+	const settings = getAgentRuntimeSettings("trader", context.agentConfigs);
+	const options = buildGenerateOptions(settings, { schema: DecisionPlanSchema });
 
-  const stream = await traderAgent.stream([{ role: "user", content: prompt }], options);
-  const forwardChunk = createStreamChunkForwarder("trader", onChunk);
+	const stream = await traderAgent.stream([{ role: "user", content: prompt }], options);
+	const forwardChunk = createStreamChunkForwarder("trader", onChunk);
 
-  for await (const chunk of stream.fullStream) {
-    await forwardChunk(chunk as { type: string; payload?: Record<string, unknown> });
-  }
+	for await (const chunk of stream.fullStream) {
+		await forwardChunk(chunk as { type: string; payload?: Record<string, unknown> });
+	}
 
-  return (await stream.object) as DecisionPlan;
+	return (await stream.object) as DecisionPlan;
 }
 
 // ============================================
@@ -169,22 +169,22 @@ FACTOR ZOO SIGNALS:
 // ============================================
 
 export interface AnalystOutputs {
-  news: SentimentAnalysisOutput[];
-  fundamentals: FundamentalsAnalysisOutput[];
+	news: SentimentAnalysisOutput[];
+	fundamentals: FundamentalsAnalysisOutput[];
 }
 
 /**
  * Revise a plan based on rejection feedback.
  */
 export async function revisePlan(
-  originalPlan: DecisionPlan,
-  rejectionReasons: string[],
-  _analystOutputs: AnalystOutputs,
-  debateOutputs: DebateOutputs,
-  agentConfigs?: Partial<Record<AgentType, AgentConfigEntry>>,
-  abortSignal?: AbortSignal
+	originalPlan: DecisionPlan,
+	rejectionReasons: string[],
+	_analystOutputs: AnalystOutputs,
+	debateOutputs: DebateOutputs,
+	agentConfigs?: Partial<Record<AgentType, AgentConfigEntry>>,
+	abortSignal?: AbortSignal
 ): Promise<DecisionPlan> {
-  const prompt = `${buildDatetimeContext()}Revise the following trading plan based on the rejection feedback:
+	const prompt = `${buildDatetimeContext()}Revise the following trading plan based on the rejection feedback:
 
 Original Plan:
 ${JSON.stringify(originalPlan, null, 2)}
@@ -202,15 +202,15 @@ Please address ALL rejection reasons and produce a revised plan that:
 3. Removes any unsupported claims
 4. Maintains proper stop-loss and take-profit levels`;
 
-  const settings = getAgentRuntimeSettings("trader", agentConfigs);
-  const options = buildGenerateOptions(settings, { schema: DecisionPlanSchema });
+	const settings = getAgentRuntimeSettings("trader", agentConfigs);
+	const options = buildGenerateOptions(settings, { schema: DecisionPlanSchema });
 
-  // Add abortSignal to options if provided
-  if (abortSignal) {
-    options.abortSignal = abortSignal;
-  }
+	// Add abortSignal to options if provided
+	if (abortSignal) {
+		options.abortSignal = abortSignal;
+	}
 
-  const response = await traderAgent.generate([{ role: "user", content: prompt }], options);
+	const response = await traderAgent.generate([{ role: "user", content: prompt }], options);
 
-  return response.object as DecisionPlan;
+	return response.object as DecisionPlan;
 }

@@ -16,12 +16,12 @@ export { KeyRotationManager } from "./manager.js";
 export { createKeyRotationRegistry, KeyRotationRegistry } from "./registry.js";
 // Types
 export type {
-  ApiKey,
-  ApiService,
-  KeyRotationConfig,
-  KeyRotationLogger,
-  KeyStats,
-  RotationStrategy,
+	ApiKey,
+	ApiService,
+	KeyRotationConfig,
+	KeyRotationLogger,
+	KeyStats,
+	RotationStrategy,
 } from "./types.js";
 export { DEFAULT_CONFIG, DEFAULT_LOGGER } from "./types.js";
 
@@ -31,8 +31,8 @@ import { createKeyRotationRegistry, KeyRotationRegistry } from "./registry.js";
 import { DEFAULT_CONFIG } from "./types.js";
 
 export default {
-  KeyRotationManager,
-  KeyRotationRegistry,
-  createKeyRotationRegistry,
-  DEFAULT_CONFIG,
+	KeyRotationManager,
+	KeyRotationRegistry,
+	createKeyRotationRegistry,
+	DEFAULT_CONFIG,
 };

@@ -36,51 +36,51 @@ import { tradingCycleWorkflow } from "../workflows/trading-cycle/index.js";
  * - predictionMarketsWorkflow: Prediction market data fetching
  */
 export const mastra = new Mastra({
-  agents: mastraAgents,
-  workflows: {
-    tradingCycleWorkflow,
-    indicatorSynthesisWorkflow,
-    predictionMarketsWorkflow,
-  },
-  bundler: {
-    // Workspace packages to transpile (must match package.json names exactly)
-    transpilePackages: [
-      "@cream/broker",
-      "@cream/config",
-      "@cream/domain",
-      "@cream/logger",
-      "@cream/external-context",
-      "@cream/helix",
-      "@cream/helix-schema",
-      "@cream/indicators",
-      "@cream/marketdata",
-      "@cream/agents",
-      "@cream/prediction-markets",
-      "@cream/regime",
-      "@cream/storage",
-      "@cream/universe",
-    ],
-    // Externalize packages resolved at runtime (exact names, no globs)
-    externals: [
-      // Protobuf packages - proto has no JS, schema/schema-gen are pre-compiled
-      "@cream/proto",
-      "@cream/schema",
-      "@cream/schema-gen",
-      "@bufbuild/protobuf",
-      "@connectrpc/connect",
-      "@connectrpc/connect-node",
-      // Google AI SDK
-      "@google/genai",
-      // Native/binary dependencies
-      "@libsql/client",
-      "libsql",
-      "better-sqlite3",
-      // Turso packages
-      "@tursodatabase/database",
-      "@tursodatabase/sync",
-    ],
-    sourcemap: true,
-  },
+	agents: mastraAgents,
+	workflows: {
+		tradingCycleWorkflow,
+		indicatorSynthesisWorkflow,
+		predictionMarketsWorkflow,
+	},
+	bundler: {
+		// Workspace packages to transpile (must match package.json names exactly)
+		transpilePackages: [
+			"@cream/broker",
+			"@cream/config",
+			"@cream/domain",
+			"@cream/logger",
+			"@cream/external-context",
+			"@cream/helix",
+			"@cream/helix-schema",
+			"@cream/indicators",
+			"@cream/marketdata",
+			"@cream/agents",
+			"@cream/prediction-markets",
+			"@cream/regime",
+			"@cream/storage",
+			"@cream/universe",
+		],
+		// Externalize packages resolved at runtime (exact names, no globs)
+		externals: [
+			// Protobuf packages - proto has no JS, schema/schema-gen are pre-compiled
+			"@cream/proto",
+			"@cream/schema",
+			"@cream/schema-gen",
+			"@bufbuild/protobuf",
+			"@connectrpc/connect",
+			"@connectrpc/connect-node",
+			// Google AI SDK
+			"@google/genai",
+			// Native/binary dependencies
+			"@libsql/client",
+			"libsql",
+			"better-sqlite3",
+			// Turso packages
+			"@tursodatabase/database",
+			"@tursodatabase/sync",
+		],
+		sourcemap: true,
+	},
 });
 
 // Exports

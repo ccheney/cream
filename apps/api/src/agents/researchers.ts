@@ -13,11 +13,11 @@ import { buildDatetimeContext, buildGroundingContext, buildIndicatorSummary } fr
 import { BearishResearchSchema, BullishResearchSchema } from "./schemas.js";
 import { createStreamChunkForwarder } from "./stream-forwarder.js";
 import type {
-  AgentConfigEntry,
-  AgentContext,
-  BearishResearchOutput,
-  BullishResearchOutput,
-  OnStreamChunk,
+	AgentConfigEntry,
+	AgentContext,
+	BearishResearchOutput,
+	BullishResearchOutput,
+	OnStreamChunk,
 } from "./types.js";
 
 // Re-export for convenience
@@ -41,16 +41,16 @@ export const bearishResearcherAgent = createAgent("bearish_researcher");
  * Run Bullish Researcher agent.
  */
 export async function runBullishResearcher(
-  context: AgentContext,
-  analystOutputs: AnalystOutputs
+	context: AgentContext,
+	analystOutputs: AnalystOutputs
 ): Promise<BullishResearchOutput[]> {
-  // Build compact indicator summary for momentum/trend signals
-  const indicatorSummary = buildIndicatorSummary(context.indicators);
+	// Build compact indicator summary for momentum/trend signals
+	const indicatorSummary = buildIndicatorSummary(context.indicators);
 
-  // Build grounding context from web searches (focus on bullCase)
-  const groundingContext = buildGroundingContext(context.groundingOutput);
+	// Build grounding context from web searches (focus on bullCase)
+	const groundingContext = buildGroundingContext(context.groundingOutput);
 
-  const prompt = `${buildDatetimeContext()}Construct the bullish case for the following instruments based on analyst outputs:
+	const prompt = `${buildDatetimeContext()}Construct the bullish case for the following instruments based on analyst outputs:
 ${groundingContext}
 News & Sentiment Analysis:
 ${JSON.stringify(analystOutputs.news, null, 2)}
@@ -73,32 +73,32 @@ IMPORTANT: Build the bullish thesis considering:
 
 Weight technical factors alongside fundamental drivers.`;
 
-  const settings = getAgentRuntimeSettings("bullish_researcher", context.agentConfigs);
-  const options = buildGenerateOptions(settings, { schema: z.array(BullishResearchSchema) });
+	const settings = getAgentRuntimeSettings("bullish_researcher", context.agentConfigs);
+	const options = buildGenerateOptions(settings, { schema: z.array(BullishResearchSchema) });
 
-  const response = await bullishResearcherAgent.generate(
-    [{ role: "user", content: prompt }],
-    options
-  );
+	const response = await bullishResearcherAgent.generate(
+		[{ role: "user", content: prompt }],
+		options
+	);
 
-  const result = response.object as BullishResearchOutput[] | undefined;
-  return result ?? [];
+	const result = response.object as BullishResearchOutput[] | undefined;
+	return result ?? [];
 }
 
 /**
  * Run Bearish Researcher agent.
  */
 export async function runBearishResearcher(
-  context: AgentContext,
-  analystOutputs: AnalystOutputs
+	context: AgentContext,
+	analystOutputs: AnalystOutputs
 ): Promise<BearishResearchOutput[]> {
-  // Build compact indicator summary for momentum/trend signals
-  const indicatorSummary = buildIndicatorSummary(context.indicators);
+	// Build compact indicator summary for momentum/trend signals
+	const indicatorSummary = buildIndicatorSummary(context.indicators);
 
-  // Build grounding context from web searches (focus on bearCase)
-  const groundingContext = buildGroundingContext(context.groundingOutput);
+	// Build grounding context from web searches (focus on bearCase)
+	const groundingContext = buildGroundingContext(context.groundingOutput);
 
-  const prompt = `${buildDatetimeContext()}Construct the bearish case for the following instruments based on analyst outputs:
+	const prompt = `${buildDatetimeContext()}Construct the bearish case for the following instruments based on analyst outputs:
 ${groundingContext}
 News & Sentiment Analysis:
 ${JSON.stringify(analystOutputs.news, null, 2)}
@@ -122,34 +122,34 @@ IMPORTANT: Build the bearish thesis considering:
 
 Weight technical factors alongside fundamental headwinds.`;
 
-  const settings = getAgentRuntimeSettings("bearish_researcher", context.agentConfigs);
-  const options = buildGenerateOptions(settings, { schema: z.array(BearishResearchSchema) });
+	const settings = getAgentRuntimeSettings("bearish_researcher", context.agentConfigs);
+	const options = buildGenerateOptions(settings, { schema: z.array(BearishResearchSchema) });
 
-  const response = await bearishResearcherAgent.generate(
-    [{ role: "user", content: prompt }],
-    options
-  );
+	const response = await bearishResearcherAgent.generate(
+		[{ role: "user", content: prompt }],
+		options
+	);
 
-  const result = response.object as BearishResearchOutput[] | undefined;
-  return result ?? [];
+	const result = response.object as BearishResearchOutput[] | undefined;
+	return result ?? [];
 }
 
 /**
  * Run both research agents in parallel (debate phase).
  */
 export async function runDebateParallel(
-  context: AgentContext,
-  analystOutputs: AnalystOutputs
+	context: AgentContext,
+	analystOutputs: AnalystOutputs
 ): Promise<{
-  bullish: BullishResearchOutput[];
-  bearish: BearishResearchOutput[];
+	bullish: BullishResearchOutput[];
+	bearish: BearishResearchOutput[];
 }> {
-  const [bullish, bearish] = await Promise.all([
-    runBullishResearcher(context, analystOutputs),
-    runBearishResearcher(context, analystOutputs),
-  ]);
+	const [bullish, bearish] = await Promise.all([
+		runBullishResearcher(context, analystOutputs),
+		runBearishResearcher(context, analystOutputs),
+	]);
 
-  return { bullish, bearish };
+	return { bullish, bearish };
 }
 
 // ============================================
@@ -160,17 +160,17 @@ export async function runDebateParallel(
  * Run Bullish Researcher agent with streaming.
  */
 export async function runBullishResearcherStreaming(
-  context: AgentContext,
-  analystOutputs: AnalystOutputs,
-  onChunk: OnStreamChunk
+	context: AgentContext,
+	analystOutputs: AnalystOutputs,
+	onChunk: OnStreamChunk
 ): Promise<BullishResearchOutput[]> {
-  // Build compact indicator summary for momentum/trend signals
-  const indicatorSummary = buildIndicatorSummary(context.indicators);
+	// Build compact indicator summary for momentum/trend signals
+	const indicatorSummary = buildIndicatorSummary(context.indicators);
 
-  // Build grounding context from web searches (focus on bullCase)
-  const groundingContext = buildGroundingContext(context.groundingOutput);
+	// Build grounding context from web searches (focus on bullCase)
+	const groundingContext = buildGroundingContext(context.groundingOutput);
 
-  const prompt = `${buildDatetimeContext()}Construct the bullish case for the following instruments based on analyst outputs:
+	const prompt = `${buildDatetimeContext()}Construct the bullish case for the following instruments based on analyst outputs:
 ${groundingContext}
 News & Sentiment Analysis:
 ${JSON.stringify(analystOutputs.news, null, 2)}
@@ -193,35 +193,35 @@ IMPORTANT: Build the bullish thesis considering:
 
 Weight technical factors alongside fundamental drivers.`;
 
-  const settings = getAgentRuntimeSettings("bullish_researcher", context.agentConfigs);
-  const options = buildGenerateOptions(settings, { schema: z.array(BullishResearchSchema) });
+	const settings = getAgentRuntimeSettings("bullish_researcher", context.agentConfigs);
+	const options = buildGenerateOptions(settings, { schema: z.array(BullishResearchSchema) });
 
-  const stream = await bullishResearcherAgent.stream([{ role: "user", content: prompt }], options);
-  const forwardChunk = createStreamChunkForwarder("bullish_researcher", onChunk);
+	const stream = await bullishResearcherAgent.stream([{ role: "user", content: prompt }], options);
+	const forwardChunk = createStreamChunkForwarder("bullish_researcher", onChunk);
 
-  for await (const chunk of stream.fullStream) {
-    await forwardChunk(chunk as { type: string; payload?: Record<string, unknown> });
-  }
+	for await (const chunk of stream.fullStream) {
+		await forwardChunk(chunk as { type: string; payload?: Record<string, unknown> });
+	}
 
-  const result = (await stream.object) as BullishResearchOutput[] | undefined;
-  return result ?? [];
+	const result = (await stream.object) as BullishResearchOutput[] | undefined;
+	return result ?? [];
 }
 
 /**
  * Run Bearish Researcher agent with streaming.
  */
 export async function runBearishResearcherStreaming(
-  context: AgentContext,
-  analystOutputs: AnalystOutputs,
-  onChunk: OnStreamChunk
+	context: AgentContext,
+	analystOutputs: AnalystOutputs,
+	onChunk: OnStreamChunk
 ): Promise<BearishResearchOutput[]> {
-  // Build compact indicator summary for momentum/trend signals
-  const indicatorSummary = buildIndicatorSummary(context.indicators);
+	// Build compact indicator summary for momentum/trend signals
+	const indicatorSummary = buildIndicatorSummary(context.indicators);
 
-  // Build grounding context from web searches (focus on bearCase)
-  const groundingContext = buildGroundingContext(context.groundingOutput);
+	// Build grounding context from web searches (focus on bearCase)
+	const groundingContext = buildGroundingContext(context.groundingOutput);
 
-  const prompt = `${buildDatetimeContext()}Construct the bearish case for the following instruments based on analyst outputs:
+	const prompt = `${buildDatetimeContext()}Construct the bearish case for the following instruments based on analyst outputs:
 ${groundingContext}
 News & Sentiment Analysis:
 ${JSON.stringify(analystOutputs.news, null, 2)}
@@ -245,37 +245,37 @@ IMPORTANT: Build the bearish thesis considering:
 
 Weight technical factors alongside fundamental headwinds.`;
 
-  const settings = getAgentRuntimeSettings("bearish_researcher", context.agentConfigs);
-  const options = buildGenerateOptions(settings, { schema: z.array(BearishResearchSchema) });
+	const settings = getAgentRuntimeSettings("bearish_researcher", context.agentConfigs);
+	const options = buildGenerateOptions(settings, { schema: z.array(BearishResearchSchema) });
 
-  const stream = await bearishResearcherAgent.stream([{ role: "user", content: prompt }], options);
-  const forwardChunk = createStreamChunkForwarder("bearish_researcher", onChunk);
+	const stream = await bearishResearcherAgent.stream([{ role: "user", content: prompt }], options);
+	const forwardChunk = createStreamChunkForwarder("bearish_researcher", onChunk);
 
-  for await (const chunk of stream.fullStream) {
-    await forwardChunk(chunk as { type: string; payload?: Record<string, unknown> });
-  }
+	for await (const chunk of stream.fullStream) {
+		await forwardChunk(chunk as { type: string; payload?: Record<string, unknown> });
+	}
 
-  const result = (await stream.object) as BearishResearchOutput[] | undefined;
-  return result ?? [];
+	const result = (await stream.object) as BearishResearchOutput[] | undefined;
+	return result ?? [];
 }
 
 /**
  * Run both research agents in parallel with streaming (debate phase).
  */
 export async function runDebateParallelStreaming(
-  context: AgentContext,
-  analystOutputs: AnalystOutputs,
-  onChunk: OnStreamChunk
+	context: AgentContext,
+	analystOutputs: AnalystOutputs,
+	onChunk: OnStreamChunk
 ): Promise<{
-  bullish: BullishResearchOutput[];
-  bearish: BearishResearchOutput[];
+	bullish: BullishResearchOutput[];
+	bearish: BearishResearchOutput[];
 }> {
-  const [bullish, bearish] = await Promise.all([
-    runBullishResearcherStreaming(context, analystOutputs, onChunk),
-    runBearishResearcherStreaming(context, analystOutputs, onChunk),
-  ]);
+	const [bullish, bearish] = await Promise.all([
+		runBullishResearcherStreaming(context, analystOutputs, onChunk),
+		runBearishResearcherStreaming(context, analystOutputs, onChunk),
+	]);
 
-  return { bullish, bearish };
+	return { bullish, bearish };
 }
 
 // ============================================
@@ -302,52 +302,52 @@ export const indicatorResearcherAgent = createAgent("indicator_researcher");
  * Uses the shared buildIdeaAgentUserPrompt from @cream/agents for consistency.
  */
 export async function runIdeaAgent(context: IdeaAgentContext): Promise<IdeaAgentOutput> {
-  // Convert IdeaAgentContext to IdeaContext for the shared prompt builder
-  // IdeaAgentContext uses loose string types; cast to ResearchTrigger for type safety
-  const trigger: ResearchTrigger = {
-    type: context.trigger.type as ResearchTrigger["type"],
-    severity: context.trigger.severity as ResearchTrigger["severity"],
-    affectedFactors: context.trigger.affectedFactors,
-    suggestedFocus: context.trigger.suggestedFocus,
-    detectedAt: context.trigger.detectedAt,
-    metadata: {},
-  };
+	// Convert IdeaAgentContext to IdeaContext for the shared prompt builder
+	// IdeaAgentContext uses loose string types; cast to ResearchTrigger for type safety
+	const trigger: ResearchTrigger = {
+		type: context.trigger.type as ResearchTrigger["type"],
+		severity: context.trigger.severity as ResearchTrigger["severity"],
+		affectedFactors: context.trigger.affectedFactors,
+		suggestedFocus: context.trigger.suggestedFocus,
+		detectedAt: context.trigger.detectedAt,
+		metadata: {},
+	};
 
-  const ideaContext: IdeaContext = {
-    regime: context.regime,
-    gaps: context.gaps,
-    decayingFactors: context.decayingFactors,
-    factorZooSummary: context.factorZooSummary,
-    trigger,
-    memoryResults: context.memoryResults ?? [],
-  };
+	const ideaContext: IdeaContext = {
+		regime: context.regime,
+		gaps: context.gaps,
+		decayingFactors: context.decayingFactors,
+		factorZooSummary: context.factorZooSummary,
+		trigger,
+		memoryResults: context.memoryResults ?? [],
+	};
 
-  const prompt = buildIdeaAgentUserPrompt(ideaContext);
+	const prompt = buildIdeaAgentUserPrompt(ideaContext);
 
-  const settings = getAgentRuntimeSettings("idea_agent", context.agentConfigs);
-  const options = buildGenerateOptions(settings, { schema: IdeaAgentOutputSchema });
+	const settings = getAgentRuntimeSettings("idea_agent", context.agentConfigs);
+	const options = buildGenerateOptions(settings, { schema: IdeaAgentOutputSchema });
 
-  const response = await ideaAgentAgent.generate([{ role: "user", content: prompt }], options);
+	const response = await ideaAgentAgent.generate([{ role: "user", content: prompt }], options);
 
-  return response.object as IdeaAgentOutput;
+	return response.object as IdeaAgentOutput;
 }
 
 /**
  * Run Indicator Researcher agent to formulate indicator hypotheses.
  */
 export async function runIndicatorResearcher(
-  input: ResearcherInput,
-  agentConfigs?: Partial<Record<AgentType, AgentConfigEntry>>
+	input: ResearcherInput,
+	agentConfigs?: Partial<Record<AgentType, AgentConfigEntry>>
 ): Promise<IndicatorHypothesis> {
-  const prompt = buildResearcherPrompt(input);
+	const prompt = buildResearcherPrompt(input);
 
-  const settings = getAgentRuntimeSettings("indicator_researcher", agentConfigs);
-  const options = buildGenerateOptions(settings, { schema: IndicatorHypothesisSchema });
+	const settings = getAgentRuntimeSettings("indicator_researcher", agentConfigs);
+	const options = buildGenerateOptions(settings, { schema: IndicatorHypothesisSchema });
 
-  const response = await indicatorResearcherAgent.generate(
-    [{ role: "user", content: prompt }],
-    options
-  );
+	const response = await indicatorResearcherAgent.generate(
+		[{ role: "user", content: prompt }],
+		options
+	);
 
-  return response.object as IndicatorHypothesis;
+	return response.object as IndicatorHypothesis;
 }

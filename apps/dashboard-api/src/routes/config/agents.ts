@@ -13,11 +13,11 @@ import { type RuntimeAgentConfig, type RuntimeAgentType, RuntimeConfigError } fr
 import { createRoute, OpenAPIHono, z } from "@hono/zod-openapi";
 import { getRuntimeConfigService } from "../../db.js";
 import {
-  AgentConfigSchema,
-  AgentTypeSchema,
-  EnvironmentQuerySchema,
-  ErrorResponseSchema,
-  getEnvironment,
+	AgentConfigSchema,
+	AgentTypeSchema,
+	EnvironmentQuerySchema,
+	ErrorResponseSchema,
+	getEnvironment,
 } from "./types.js";
 
 const app = new OpenAPIHono();
@@ -27,40 +27,40 @@ const app = new OpenAPIHono();
 // ============================================
 
 const getAgentsRoute = createRoute({
-  method: "get",
-  path: "/agents",
-  request: {
-    query: EnvironmentQuerySchema,
-  },
-  responses: {
-    200: {
-      content: {
-        "application/json": {
-          schema: z.record(AgentTypeSchema, AgentConfigSchema),
-        },
-      },
-      description: "Agent configurations",
-    },
-    404: {
-      content: { "application/json": { schema: ErrorResponseSchema } },
-      description: "No active configuration found",
-    },
-  },
-  tags: ["Config"],
+	method: "get",
+	path: "/agents",
+	request: {
+		query: EnvironmentQuerySchema,
+	},
+	responses: {
+		200: {
+			content: {
+				"application/json": {
+					schema: z.record(AgentTypeSchema, AgentConfigSchema),
+				},
+			},
+			description: "Agent configurations",
+		},
+		404: {
+			content: { "application/json": { schema: ErrorResponseSchema } },
+			description: "No active configuration found",
+		},
+	},
+	tags: ["Config"],
 });
 
 app.openapi(getAgentsRoute, async (c) => {
-  const environment = getEnvironment(c);
-  try {
-    const service = await getRuntimeConfigService();
-    const config = await service.getActiveConfig(environment);
-    return c.json(config.agents, 200);
-  } catch (err) {
-    if (err instanceof RuntimeConfigError && err.code === "NOT_SEEDED") {
-      return c.json({ error: err.message, code: err.code }, 404);
-    }
-    throw err;
-  }
+	const environment = getEnvironment(c);
+	try {
+		const service = await getRuntimeConfigService();
+		const config = await service.getActiveConfig(environment);
+		return c.json(config.agents, 200);
+	} catch (err) {
+		if (err instanceof RuntimeConfigError && err.code === "NOT_SEEDED") {
+			return c.json({ error: err.message, code: err.code }, 404);
+		}
+		throw err;
+	}
 });
 
 // ============================================
@@ -68,54 +68,54 @@ app.openapi(getAgentsRoute, async (c) => {
 // ============================================
 
 const AgentUpdateInputSchema = z.object({
-  systemPromptOverride: z.string().nullable().optional(),
-  enabled: z.boolean().optional(),
+	systemPromptOverride: z.string().nullable().optional(),
+	enabled: z.boolean().optional(),
 });
 
 const updateAgentRoute = createRoute({
-  method: "put",
-  path: "/agents/{agentType}",
-  request: {
-    query: EnvironmentQuerySchema,
-    params: z.object({
-      agentType: AgentTypeSchema.openapi({ description: "Agent type to update" }),
-    }),
-    body: {
-      content: { "application/json": { schema: AgentUpdateInputSchema } },
-    },
-  },
-  responses: {
-    200: {
-      content: { "application/json": { schema: AgentConfigSchema } },
-      description: "Updated agent configuration",
-    },
-    404: {
-      content: { "application/json": { schema: ErrorResponseSchema } },
-      description: "No active configuration found",
-    },
-  },
-  tags: ["Config"],
+	method: "put",
+	path: "/agents/{agentType}",
+	request: {
+		query: EnvironmentQuerySchema,
+		params: z.object({
+			agentType: AgentTypeSchema.openapi({ description: "Agent type to update" }),
+		}),
+		body: {
+			content: { "application/json": { schema: AgentUpdateInputSchema } },
+		},
+	},
+	responses: {
+		200: {
+			content: { "application/json": { schema: AgentConfigSchema } },
+			description: "Updated agent configuration",
+		},
+		404: {
+			content: { "application/json": { schema: ErrorResponseSchema } },
+			description: "No active configuration found",
+		},
+	},
+	tags: ["Config"],
 });
 
 app.openapi(updateAgentRoute, async (c) => {
-  const environment = getEnvironment(c);
-  const { agentType } = c.req.valid("param");
-  const updates = c.req.valid("json");
+	const environment = getEnvironment(c);
+	const { agentType } = c.req.valid("param");
+	const updates = c.req.valid("json");
 
-  try {
-    const service = await getRuntimeConfigService();
-    const updated = await service.saveDraft(environment, {
-      agents: {
-        [agentType]: updates as Partial<RuntimeAgentConfig>,
-      } as Partial<Record<RuntimeAgentType, Partial<RuntimeAgentConfig>>>,
-    });
-    return c.json(updated.agents[agentType as RuntimeAgentType], 200);
-  } catch (err) {
-    if (err instanceof RuntimeConfigError && err.code === "NOT_SEEDED") {
-      return c.json({ error: err.message, code: err.code }, 404);
-    }
-    throw err;
-  }
+	try {
+		const service = await getRuntimeConfigService();
+		const updated = await service.saveDraft(environment, {
+			agents: {
+				[agentType]: updates as Partial<RuntimeAgentConfig>,
+			} as Partial<Record<RuntimeAgentType, Partial<RuntimeAgentConfig>>>,
+		});
+		return c.json(updated.agents[agentType as RuntimeAgentType], 200);
+	} catch (err) {
+		if (err instanceof RuntimeConfigError && err.code === "NOT_SEEDED") {
+			return c.json({ error: err.message, code: err.code }, 404);
+		}
+		throw err;
+	}
 });
 
 export const agentsRoutes = app;

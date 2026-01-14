@@ -5,9 +5,9 @@
  */
 
 export {
-  createIndicatorSynthesisScheduler,
-  IndicatorSynthesisScheduler,
-  type SynthesisSchedulerDependencies,
-  type SynthesisSchedulerState,
-  startIndicatorSynthesisScheduler,
+	createIndicatorSynthesisScheduler,
+	IndicatorSynthesisScheduler,
+	type SynthesisSchedulerDependencies,
+	type SynthesisSchedulerState,
+	startIndicatorSynthesisScheduler,
 } from "./indicator-synthesis.js";

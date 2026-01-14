@@ -13,49 +13,49 @@ import type { CorrectionLogEntry, CorrectionMetrics, CorrectiveRetrievalResult }
  * @returns Aggregated metrics
  */
 export function calculateCorrectionMetrics(entries: CorrectionLogEntry[]): CorrectionMetrics {
-  if (entries.length === 0) {
-    return {
-      totalAttempts: 0,
-      successfulCorrections: 0,
-      failedCorrections: 0,
-      avgAttemptsPerCorrection: 0,
-      avgQualityImprovement: 0,
-      avgCorrectionTimeMs: 0,
-      strategySuccessRates: {
-        broaden: { attempts: 0, successes: 0 },
-        lower_threshold: { attempts: 0, successes: 0 },
-        expand_query: { attempts: 0, successes: 0 },
-      },
-    };
-  }
+	if (entries.length === 0) {
+		return {
+			totalAttempts: 0,
+			successfulCorrections: 0,
+			failedCorrections: 0,
+			avgAttemptsPerCorrection: 0,
+			avgQualityImprovement: 0,
+			avgCorrectionTimeMs: 0,
+			strategySuccessRates: {
+				broaden: { attempts: 0, successes: 0 },
+				lower_threshold: { attempts: 0, successes: 0 },
+				expand_query: { attempts: 0, successes: 0 },
+			},
+		};
+	}
 
-  const totalAttempts = entries.reduce((sum, e) => sum + e.attemptCount, 0);
-  const successfulCorrections = entries.filter((e) => e.succeeded).length;
-  const failedCorrections = entries.length - successfulCorrections;
+	const totalAttempts = entries.reduce((sum, e) => sum + e.attemptCount, 0);
+	const successfulCorrections = entries.filter((e) => e.succeeded).length;
+	const failedCorrections = entries.length - successfulCorrections;
 
-  const avgAttemptsPerCorrection = totalAttempts / entries.length;
+	const avgAttemptsPerCorrection = totalAttempts / entries.length;
 
-  const qualityImprovements = entries.map(
-    (e) => e.finalQuality.overallScore - e.initialQuality.overallScore
-  );
-  const avgQualityImprovement = qualityImprovements.reduce((sum, i) => sum + i, 0) / entries.length;
+	const qualityImprovements = entries.map(
+		(e) => e.finalQuality.overallScore - e.initialQuality.overallScore
+	);
+	const avgQualityImprovement = qualityImprovements.reduce((sum, i) => sum + i, 0) / entries.length;
 
-  const avgCorrectionTimeMs =
-    entries.reduce((sum, e) => sum + e.correctionTimeMs, 0) / entries.length;
+	const avgCorrectionTimeMs =
+		entries.reduce((sum, e) => sum + e.correctionTimeMs, 0) / entries.length;
 
-  return {
-    totalAttempts,
-    successfulCorrections,
-    failedCorrections,
-    avgAttemptsPerCorrection,
-    avgQualityImprovement,
-    avgCorrectionTimeMs,
-    strategySuccessRates: {
-      broaden: { attempts: 0, successes: 0 },
-      lower_threshold: { attempts: 0, successes: 0 },
-      expand_query: { attempts: 0, successes: 0 },
-    },
-  };
+	return {
+		totalAttempts,
+		successfulCorrections,
+		failedCorrections,
+		avgAttemptsPerCorrection,
+		avgQualityImprovement,
+		avgCorrectionTimeMs,
+		strategySuccessRates: {
+			broaden: { attempts: 0, successes: 0 },
+			lower_threshold: { attempts: 0, successes: 0 },
+			expand_query: { attempts: 0, successes: 0 },
+		},
+	};
 }
 
 /**
@@ -66,16 +66,16 @@ export function calculateCorrectionMetrics(entries: CorrectionLogEntry[]): Corre
  * @returns Log entry
  */
 export function createCorrectionLogEntry<T>(
-  result: CorrectiveRetrievalResult<T>,
-  queryId?: string
+	result: CorrectiveRetrievalResult<T>,
+	queryId?: string
 ): CorrectionLogEntry {
-  return {
-    timestamp: new Date(),
-    queryId,
-    initialQuality: result.initialQuality,
-    finalQuality: result.finalQuality,
-    attemptCount: result.attempts.length,
-    succeeded: !result.finalQuality.needsCorrection,
-    correctionTimeMs: result.correctionTimeMs ?? 0,
-  };
+	return {
+		timestamp: new Date(),
+		queryId,
+		initialQuality: result.initialQuality,
+		finalQuality: result.finalQuality,
+		attemptCount: result.attempts.length,
+		succeeded: !result.finalQuality.needsCorrection,
+		correctionTimeMs: result.correctionTimeMs ?? 0,
+	};
 }

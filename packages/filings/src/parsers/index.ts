@@ -37,17 +37,17 @@ export { Form10QParser, SECTIONS_10Q } from "./form-10q.js";
  * ```
  */
 export function getParser(filing: Filing, html: string): FilingParser {
-  switch (filing.filingType) {
-    case "10-K":
-      return new Form10KParser(filing, html);
-    case "10-Q":
-      return new Form10QParser(filing, html);
-    case "8-K":
-      return new Form8KParser(filing, html);
-    default:
-      // Use base parser for unknown types (DEF14A, etc.)
-      return new FilingParser(filing, html);
-  }
+	switch (filing.filingType) {
+		case "10-K":
+			return new Form10KParser(filing, html);
+		case "10-Q":
+			return new Form10QParser(filing, html);
+		case "8-K":
+			return new Form8KParser(filing, html);
+		default:
+			// Use base parser for unknown types (DEF14A, etc.)
+			return new FilingParser(filing, html);
+	}
 }
 
 /**
@@ -66,8 +66,8 @@ export function getParser(filing: Filing, html: string): FilingParser {
  * ```
  */
 export function parseFiling(filing: Filing, html: string): ParsedFiling {
-  const parser = getParser(filing, html);
-  return parser.parse();
+	const parser = getParser(filing, html);
+	return parser.parse();
 }
 
 /**
@@ -80,6 +80,6 @@ export function parseFiling(filing: Filing, html: string): ParsedFiling {
  * @returns Tuple of [ParsedFiling, FilingParser]
  */
 export function parseFilingWithParser(filing: Filing, html: string): [ParsedFiling, FilingParser] {
-  const parser = getParser(filing, html);
-  return [parser.parse(), parser];
+	const parser = getParser(filing, html);
+	return [parser.parse(), parser];
 }

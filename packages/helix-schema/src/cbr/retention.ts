@@ -24,35 +24,35 @@ import type { CaseRetentionResult, HelixClient } from "./types.js";
  * @returns Result indicating success or failure
  */
 export async function retainCase(
-  client: HelixClient,
-  decision: TradeDecision
+	client: HelixClient,
+	decision: TradeDecision
 ): Promise<CaseRetentionResult> {
-  try {
-    await client.query("InsertTradeDecision", {
-      decision_id: decision.decision_id,
-      cycle_id: decision.cycle_id,
-      instrument_id: decision.instrument_id,
-      underlying_symbol: decision.underlying_symbol ?? null,
-      regime_label: decision.regime_label,
-      action: decision.action,
-      decision_json: decision.decision_json,
-      rationale_text: decision.rationale_text,
-      snapshot_reference: decision.snapshot_reference,
-      created_at: decision.created_at,
-      environment: decision.environment,
-    });
+	try {
+		await client.query("InsertTradeDecision", {
+			decision_id: decision.decision_id,
+			cycle_id: decision.cycle_id,
+			instrument_id: decision.instrument_id,
+			underlying_symbol: decision.underlying_symbol ?? null,
+			regime_label: decision.regime_label,
+			action: decision.action,
+			decision_json: decision.decision_json,
+			rationale_text: decision.rationale_text,
+			snapshot_reference: decision.snapshot_reference,
+			created_at: decision.created_at,
+			environment: decision.environment,
+		});
 
-    return {
-      success: true,
-      decisionId: decision.decision_id,
-    };
-  } catch (error) {
-    return {
-      success: false,
-      decisionId: decision.decision_id,
-      error: error instanceof Error ? error.message : "Unknown error",
-    };
-  }
+		return {
+			success: true,
+			decisionId: decision.decision_id,
+		};
+	} catch (error) {
+		return {
+			success: false,
+			decisionId: decision.decision_id,
+			error: error instanceof Error ? error.message : "Unknown error",
+		};
+	}
 }
 
 /**
@@ -68,37 +68,37 @@ export async function retainCase(
  * @returns Whether update succeeded
  */
 export async function updateCaseOutcome(
-  client: HelixClient,
-  decisionId: string,
-  outcome: {
-    pnl: number;
-    returnPct: number;
-    holdingHours: number;
-    entryPrice?: number;
-    exitPrice?: number;
-    mae?: number;
-    mfe?: number;
-  }
+	client: HelixClient,
+	decisionId: string,
+	outcome: {
+		pnl: number;
+		returnPct: number;
+		holdingHours: number;
+		entryPrice?: number;
+		exitPrice?: number;
+		mae?: number;
+		mfe?: number;
+	}
 ): Promise<boolean> {
-  try {
-    const outcomeJson = JSON.stringify({
-      pnl: outcome.pnl,
-      return_pct: outcome.returnPct,
-      holding_hours: outcome.holdingHours,
-      entry_price: outcome.entryPrice,
-      exit_price: outcome.exitPrice,
-      mae: outcome.mae,
-      mfe: outcome.mfe,
-    });
+	try {
+		const outcomeJson = JSON.stringify({
+			pnl: outcome.pnl,
+			return_pct: outcome.returnPct,
+			holding_hours: outcome.holdingHours,
+			entry_price: outcome.entryPrice,
+			exit_price: outcome.exitPrice,
+			mae: outcome.mae,
+			mfe: outcome.mfe,
+		});
 
-    await client.query("UpdateDecisionOutcome", {
-      decision_id: decisionId,
-      realized_outcome: outcomeJson,
-      closed_at: new Date().toISOString(),
-    });
+		await client.query("UpdateDecisionOutcome", {
+			decision_id: decisionId,
+			realized_outcome: outcomeJson,
+			closed_at: new Date().toISOString(),
+		});
 
-    return true;
-  } catch (_error) {
-    return false;
-  }
+		return true;
+	} catch (_error) {
+		return false;
+	}
 }

@@ -22,19 +22,19 @@ export { createEnvSecretsManager, createSecretsManager } from "./factory.js";
 export { SecretsManager } from "./manager.js";
 // Providers
 export {
-  EncryptedFileSecretsProvider,
-  EnvSecretsProvider,
-  MemorySecretsProvider,
+	EncryptedFileSecretsProvider,
+	EnvSecretsProvider,
+	MemorySecretsProvider,
 } from "./providers.js";
 // Types
 export type {
-  CachedSecretEntry,
-  FileEncryptionConfig,
-  Secret,
-  SecretAuditEvent,
-  SecretsLogger,
-  SecretsManagerConfig,
-  SecretsProvider,
+	CachedSecretEntry,
+	FileEncryptionConfig,
+	Secret,
+	SecretAuditEvent,
+	SecretsLogger,
+	SecretsManagerConfig,
+	SecretsProvider,
 } from "./types.js";
 export { DEFAULT_ENCRYPTION_CONFIG, DEFAULT_LOGGER, DEFAULT_MANAGER_CONFIG } from "./types.js";
 
@@ -42,16 +42,16 @@ import { createEnvSecretsManager, createSecretsManager } from "./factory.js";
 // Default export for backwards compatibility
 import { SecretsManager } from "./manager.js";
 import {
-  EncryptedFileSecretsProvider,
-  EnvSecretsProvider,
-  MemorySecretsProvider,
+	EncryptedFileSecretsProvider,
+	EnvSecretsProvider,
+	MemorySecretsProvider,
 } from "./providers.js";
 
 export default {
-  SecretsManager,
-  EnvSecretsProvider,
-  EncryptedFileSecretsProvider,
-  MemorySecretsProvider,
-  createEnvSecretsManager,
-  createSecretsManager,
+	SecretsManager,
+	EnvSecretsProvider,
+	EncryptedFileSecretsProvider,
+	MemorySecretsProvider,
+	createEnvSecretsManager,
+	createSecretsManager,
 };

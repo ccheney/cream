@@ -6,7 +6,7 @@
 
 // Alpaca adapter (primary for PAPER/LIVE)
 export {
-  AlpacaMarketDataAdapter,
-  createAlpacaAdapterFromEnv,
-  isAlpacaAdapterAvailable,
+	AlpacaMarketDataAdapter,
+	createAlpacaAdapterFromEnv,
+	isAlpacaAdapterAvailable,
 } from "./alpaca-adapter";

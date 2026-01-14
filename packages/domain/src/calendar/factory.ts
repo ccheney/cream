@@ -10,10 +10,10 @@
 
 import { type CreamEnvironment, requireEnv } from "../env";
 import {
-  AlpacaCalendarService,
-  type AlpacaCalendarServiceConfig,
-  CalendarServiceError,
-  HardcodedCalendarService,
+	AlpacaCalendarService,
+	type AlpacaCalendarServiceConfig,
+	CalendarServiceError,
+	HardcodedCalendarService,
 } from "./service";
 import type { CalendarService } from "./types";
 
@@ -25,14 +25,14 @@ import type { CalendarService } from "./types";
  * Options for creating a CalendarService.
  */
 export interface CalendarServiceFactoryOptions {
-  /** Trading environment (uses CREAM_ENV if not provided) */
-  mode?: CreamEnvironment;
-  /** Alpaca API key (uses ALPACA_KEY if not provided) */
-  alpacaKey?: string;
-  /** Alpaca API secret (uses ALPACA_SECRET if not provided) */
-  alpacaSecret?: string;
-  /** Years to preload for PAPER/LIVE modes (default: current + next year) */
-  preloadYears?: number[];
+	/** Trading environment (uses CREAM_ENV if not provided) */
+	mode?: CreamEnvironment;
+	/** Alpaca API key (uses ALPACA_KEY if not provided) */
+	alpacaKey?: string;
+	/** Alpaca API secret (uses ALPACA_SECRET if not provided) */
+	alpacaSecret?: string;
+	/** Years to preload for PAPER/LIVE modes (default: current + next year) */
+	preloadYears?: number[];
 }
 
 // ============================================
@@ -43,16 +43,16 @@ export interface CalendarServiceFactoryOptions {
  * Error thrown when CalendarService is not configured properly.
  */
 export class CalendarConfigError extends Error {
-  constructor(
-    public readonly missingVar: string,
-    public readonly mode: CreamEnvironment
-  ) {
-    super(
-      `CalendarService in ${mode} mode requires ${missingVar}. ` +
-        `Set ${missingVar} environment variable or use CREAM_ENV=BACKTEST for offline mode.`
-    );
-    this.name = "CalendarConfigError";
-  }
+	constructor(
+		public readonly missingVar: string,
+		public readonly mode: CreamEnvironment
+	) {
+		super(
+			`CalendarService in ${mode} mode requires ${missingVar}. ` +
+				`Set ${missingVar} environment variable or use CREAM_ENV=BACKTEST for offline mode.`
+		);
+		this.name = "CalendarConfigError";
+	}
 }
 
 // ============================================
@@ -78,7 +78,7 @@ let initializationPromise: Promise<CalendarService> | null = null;
  * ```
  */
 export function getCalendarService(): CalendarService | null {
-  return calendarServiceInstance;
+	return calendarServiceInstance;
 }
 
 /**
@@ -95,13 +95,13 @@ export function getCalendarService(): CalendarService | null {
  * ```
  */
 export function requireCalendarService(): CalendarService {
-  if (!calendarServiceInstance) {
-    throw new CalendarServiceError(
-      "CalendarService not initialized. Call initCalendarService() first.",
-      "NOT_INITIALIZED"
-    );
-  }
-  return calendarServiceInstance;
+	if (!calendarServiceInstance) {
+		throw new CalendarServiceError(
+			"CalendarService not initialized. Call initCalendarService() first.",
+			"NOT_INITIALIZED"
+		);
+	}
+	return calendarServiceInstance;
 }
 
 /**
@@ -124,29 +124,29 @@ export function requireCalendarService(): CalendarService {
  * ```
  */
 export async function initCalendarService(
-  options: CalendarServiceFactoryOptions = {}
+	options: CalendarServiceFactoryOptions = {}
 ): Promise<CalendarService> {
-  // Return existing instance if already initialized
-  if (calendarServiceInstance) {
-    return calendarServiceInstance;
-  }
+	// Return existing instance if already initialized
+	if (calendarServiceInstance) {
+		return calendarServiceInstance;
+	}
 
-  // Return pending initialization if in progress
-  if (initializationPromise) {
-    return initializationPromise;
-  }
+	// Return pending initialization if in progress
+	if (initializationPromise) {
+		return initializationPromise;
+	}
 
-  // Start initialization
-  initializationPromise = (async () => {
-    try {
-      calendarServiceInstance = await createCalendarService(options);
-      return calendarServiceInstance;
-    } finally {
-      initializationPromise = null;
-    }
-  })();
+	// Start initialization
+	initializationPromise = (async () => {
+		try {
+			calendarServiceInstance = await createCalendarService(options);
+			return calendarServiceInstance;
+		} finally {
+			initializationPromise = null;
+		}
+	})();
 
-  return initializationPromise;
+	return initializationPromise;
 }
 
 /**
@@ -163,8 +163,8 @@ export async function initCalendarService(
  * ```
  */
 export function resetCalendarService(): void {
-  calendarServiceInstance = null;
-  initializationPromise = null;
+	calendarServiceInstance = null;
+	initializationPromise = null;
 }
 
 // ============================================
@@ -196,39 +196,39 @@ export function resetCalendarService(): void {
  * ```
  */
 export async function createCalendarService(
-  options: CalendarServiceFactoryOptions = {}
+	options: CalendarServiceFactoryOptions = {}
 ): Promise<CalendarService> {
-  const mode = options.mode ?? requireEnv();
+	const mode = options.mode ?? requireEnv();
 
-  if (mode === "BACKTEST") {
-    return new HardcodedCalendarService();
-  }
+	if (mode === "BACKTEST") {
+		return new HardcodedCalendarService();
+	}
 
-  // PAPER/LIVE modes require Alpaca credentials
-  const apiKey = options.alpacaKey ?? Bun.env.ALPACA_KEY;
-  const apiSecret = options.alpacaSecret ?? Bun.env.ALPACA_SECRET;
+	// PAPER/LIVE modes require Alpaca credentials
+	const apiKey = options.alpacaKey ?? Bun.env.ALPACA_KEY;
+	const apiSecret = options.alpacaSecret ?? Bun.env.ALPACA_SECRET;
 
-  if (!apiKey) {
-    throw new CalendarConfigError("ALPACA_KEY", mode);
-  }
+	if (!apiKey) {
+		throw new CalendarConfigError("ALPACA_KEY", mode);
+	}
 
-  if (!apiSecret) {
-    throw new CalendarConfigError("ALPACA_SECRET", mode);
-  }
+	if (!apiSecret) {
+		throw new CalendarConfigError("ALPACA_SECRET", mode);
+	}
 
-  // Determine Alpaca environment based on mode
-  const alpacaEnvironment = mode === "LIVE" ? "LIVE" : "PAPER";
+	// Determine Alpaca environment based on mode
+	const alpacaEnvironment = mode === "LIVE" ? "LIVE" : "PAPER";
 
-  const config: AlpacaCalendarServiceConfig = {
-    apiKey,
-    apiSecret,
-    environment: alpacaEnvironment,
-    preloadYears: options.preloadYears,
-  };
+	const config: AlpacaCalendarServiceConfig = {
+		apiKey,
+		apiSecret,
+		environment: alpacaEnvironment,
+		preloadYears: options.preloadYears,
+	};
 
-  const service = new AlpacaCalendarService(config);
-  await service.initialize(config.preloadYears);
-  return service;
+	const service = new AlpacaCalendarService(config);
+	await service.initialize(config.preloadYears);
+	return service;
 }
 
 /**
@@ -238,15 +238,15 @@ export async function createCalendarService(
  * @returns true if service can be created
  */
 export function isCalendarServiceAvailable(options: CalendarServiceFactoryOptions = {}): boolean {
-  const mode = options.mode ?? requireEnv();
+	const mode = options.mode ?? requireEnv();
 
-  if (mode === "BACKTEST") {
-    return true;
-  }
+	if (mode === "BACKTEST") {
+		return true;
+	}
 
-  // PAPER/LIVE require credentials
-  const apiKey = options.alpacaKey ?? Bun.env.ALPACA_KEY;
-  const apiSecret = options.alpacaSecret ?? Bun.env.ALPACA_SECRET;
+	// PAPER/LIVE require credentials
+	const apiKey = options.alpacaKey ?? Bun.env.ALPACA_KEY;
+	const apiSecret = options.alpacaSecret ?? Bun.env.ALPACA_SECRET;
 
-  return Boolean(apiKey && apiSecret);
+	return Boolean(apiKey && apiSecret);
 }

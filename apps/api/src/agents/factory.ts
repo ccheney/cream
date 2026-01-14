@@ -6,27 +6,27 @@
 
 import { google } from "@ai-sdk/google";
 import {
-  AGENT_CONFIGS,
-  AGENT_PROMPTS,
-  type AgentType,
-  analyzeContentTool,
-  extractNewsContextTool,
-  fredEconomicCalendarTool,
-  getGreeksTool,
-  getMarketSnapshotsTool,
-  getOptionChainTool,
-  getPortfolioStateTool,
-  getPredictionSignalsTool,
-  getQuotesTool,
-  graphragQueryTool,
-  helixQueryTool,
-  newsSearchTool,
-  recalcIndicatorTool,
+	AGENT_CONFIGS,
+	AGENT_PROMPTS,
+	type AgentType,
+	analyzeContentTool,
+	extractNewsContextTool,
+	fredEconomicCalendarTool,
+	getGreeksTool,
+	getMarketSnapshotsTool,
+	getOptionChainTool,
+	getPortfolioStateTool,
+	getPredictionSignalsTool,
+	getQuotesTool,
+	graphragQueryTool,
+	helixQueryTool,
+	newsSearchTool,
+	recalcIndicatorTool,
 } from "@cream/agents";
 import {
-  DEFAULT_GLOBAL_MODEL,
-  type GlobalModel,
-  getModelId as getGlobalModelId,
+	DEFAULT_GLOBAL_MODEL,
+	type GlobalModel,
+	getModelId as getGlobalModelId,
 } from "@cream/domain";
 import { Agent } from "@mastra/core/agent";
 import { RequestContext } from "@mastra/core/request-context";
@@ -43,19 +43,19 @@ import type { AgentConfigEntry, AgentRuntimeSettings } from "./types.js";
  */
 // biome-ignore lint/suspicious/noExplicitAny: Mastra tools have varying generic types
 const TOOL_INSTANCES: Record<string, Tool<any, any>> = {
-  get_quotes: getQuotesTool,
-  get_portfolio_state: getPortfolioStateTool,
-  option_chain: getOptionChainTool,
-  get_greeks: getGreeksTool,
-  recalc_indicator: recalcIndicatorTool,
-  fred_economic_calendar: fredEconomicCalendarTool,
-  news_search: newsSearchTool,
-  graphrag_query: graphragQueryTool,
-  helix_query: helixQueryTool,
-  extract_news_context: extractNewsContextTool,
-  analyze_content: analyzeContentTool,
-  get_prediction_signals: getPredictionSignalsTool,
-  get_market_snapshots: getMarketSnapshotsTool,
+	get_quotes: getQuotesTool,
+	get_portfolio_state: getPortfolioStateTool,
+	option_chain: getOptionChainTool,
+	get_greeks: getGreeksTool,
+	recalc_indicator: recalcIndicatorTool,
+	fred_economic_calendar: fredEconomicCalendarTool,
+	news_search: newsSearchTool,
+	graphrag_query: graphragQueryTool,
+	helix_query: helixQueryTool,
+	extract_news_context: extractNewsContextTool,
+	analyze_content: analyzeContentTool,
+	get_prediction_signals: getPredictionSignalsTool,
+	get_market_snapshots: getMarketSnapshotsTool,
 };
 
 /**
@@ -63,10 +63,10 @@ const TOOL_INSTANCES: Record<string, Tool<any, any>> = {
  * Falls back to default (flash) if invalid model is passed.
  */
 export function getModelIdForRuntime(model: string | undefined): string {
-  if (model?.includes("/")) {
-    return model;
-  }
-  return getGlobalModelId((model as GlobalModel) ?? DEFAULT_GLOBAL_MODEL);
+	if (model?.includes("/")) {
+		return model;
+	}
+	return getGlobalModelId((model as GlobalModel) ?? DEFAULT_GLOBAL_MODEL);
 }
 
 /**
@@ -74,9 +74,9 @@ export function getModelIdForRuntime(model: string | undefined): string {
  * e.g., "google/gemini-3-flash-preview" -> "gemini-3-flash-preview"
  */
 function extractModelName(modelId: string): string {
-  const parts = modelId.split("/");
-  const modelName = parts[1];
-  return modelName ?? modelId;
+	const parts = modelId.split("/");
+	const modelName = parts[1];
+	return modelName ?? modelId;
 }
 
 /**
@@ -87,13 +87,13 @@ function extractModelName(modelId: string): string {
  * @see https://ai.google.dev/gemini-api/docs/thought-signatures
  */
 function createWrappedGoogleModel(modelId: string) {
-  const modelName = extractModelName(modelId);
-  const baseModel = google(modelName);
+	const modelName = extractModelName(modelId);
+	const baseModel = google(modelName);
 
-  return wrapLanguageModel({
-    model: baseModel,
-    middleware: geminiThoughtSignatureMiddleware,
-  });
+	return wrapLanguageModel({
+		model: baseModel,
+		middleware: geminiThoughtSignatureMiddleware,
+	});
 }
 
 /**
@@ -105,119 +105,119 @@ function createWrappedGoogleModel(modelId: string) {
  * @see https://ai.google.dev/gemini-api/docs/thought-signatures
  */
 export function createAgent(agentType: AgentType): Agent {
-  const config = AGENT_CONFIGS[agentType];
-  const systemPrompt = AGENT_PROMPTS[agentType];
+	const config = AGENT_CONFIGS[agentType];
+	const systemPrompt = AGENT_PROMPTS[agentType];
 
-  // biome-ignore lint/suspicious/noExplicitAny: Mastra tools have varying generic types
-  const tools: Record<string, any> = {};
-  const shouldEnableNativeGoogleSearch =
-    config.tools.includes("google_search") &&
-    config.tools.filter((t) => t !== "google_search").length === 0;
+	// biome-ignore lint/suspicious/noExplicitAny: Mastra tools have varying generic types
+	const tools: Record<string, any> = {};
+	const shouldEnableNativeGoogleSearch =
+		config.tools.includes("google_search") &&
+		config.tools.filter((t) => t !== "google_search").length === 0;
 
-  if (config.tools.includes("google_search") && !shouldEnableNativeGoogleSearch) {
-    // Gemini does not support combining provider-defined tools (google_search, url_context, etc.)
-    // with custom function tools in the same request. The Google provider drops function tools
-    // when any provider tool is present, which makes agents appear to "never call tools".
-    //
-    // See: https://github.com/vercel/ai/issues/8258
-    log.warn(
-      { agentType },
-      "Skipping native google_search tool because it cannot be combined with function tools on Gemini"
-    );
-  }
+	if (config.tools.includes("google_search") && !shouldEnableNativeGoogleSearch) {
+		// Gemini does not support combining provider-defined tools (google_search, url_context, etc.)
+		// with custom function tools in the same request. The Google provider drops function tools
+		// when any provider tool is present, which makes agents appear to "never call tools".
+		//
+		// See: https://github.com/vercel/ai/issues/8258
+		log.warn(
+			{ agentType },
+			"Skipping native google_search tool because it cannot be combined with function tools on Gemini"
+		);
+	}
 
-  for (const toolName of config.tools) {
-    if (toolName === "google_search") {
-      if (shouldEnableNativeGoogleSearch) {
-        tools.google_search = google.tools.googleSearch({});
-      }
-    } else {
-      const tool = TOOL_INSTANCES[toolName];
-      if (tool) {
-        tools[toolName] = tool;
-      } else {
-        log.warn({ toolName, agentType }, "Tool not found in TOOL_INSTANCES for agent");
-      }
-    }
-  }
+	for (const toolName of config.tools) {
+		if (toolName === "google_search") {
+			if (shouldEnableNativeGoogleSearch) {
+				tools.google_search = google.tools.googleSearch({});
+			}
+		} else {
+			const tool = TOOL_INSTANCES[toolName];
+			if (tool) {
+				tools[toolName] = tool;
+			} else {
+				log.warn({ toolName, agentType }, "Tool not found in TOOL_INSTANCES for agent");
+			}
+		}
+	}
 
-  const toolNames = Object.keys(tools);
-  log.info({ agentType, toolNames, toolCount: toolNames.length }, "Creating agent with tools");
+	const toolNames = Object.keys(tools);
+	log.info({ agentType, toolNames, toolCount: toolNames.length }, "Creating agent with tools");
 
-  // Dynamic model selection with thought signature middleware for Gemini 3
-  const dynamicModel = ({ requestContext }: { requestContext: RequestContext }) => {
-    const runtimeModel = requestContext?.get("model") as string | undefined;
-    const modelId = getModelIdForRuntime(runtimeModel);
+	// Dynamic model selection with thought signature middleware for Gemini 3
+	const dynamicModel = ({ requestContext }: { requestContext: RequestContext }) => {
+		const runtimeModel = requestContext?.get("model") as string | undefined;
+		const modelId = getModelIdForRuntime(runtimeModel);
 
-    // Only wrap Google models with middleware
-    if (modelId.startsWith("google/")) {
-      return createWrappedGoogleModel(modelId);
-    }
+		// Only wrap Google models with middleware
+		if (modelId.startsWith("google/")) {
+			return createWrappedGoogleModel(modelId);
+		}
 
-    // Non-Google models return as-is
-    return modelId;
-  };
+		// Non-Google models return as-is
+		return modelId;
+	};
 
-  return new Agent({
-    id: config.type,
-    name: config.name,
-    instructions: systemPrompt,
-    model: dynamicModel,
-    tools: Object.keys(tools).length > 0 ? tools : undefined,
-  });
+	return new Agent({
+		id: config.type,
+		name: config.name,
+		instructions: systemPrompt,
+		model: dynamicModel,
+		tools: Object.keys(tools).length > 0 ? tools : undefined,
+	});
 }
 
 /**
  * Create a RequestContext with model configuration for runtime model selection.
  */
 export function createRequestContext(model?: string | null): RequestContext {
-  const ctx = new RequestContext();
-  if (model) {
-    ctx.set("model", model);
-  }
-  return ctx;
+	const ctx = new RequestContext();
+	if (model) {
+		ctx.set("model", model);
+	}
+	return ctx;
 }
 
 /**
  * Get runtime settings for an agent from context config.
  */
 export function getAgentRuntimeSettings(
-  agentType: AgentType,
-  agentConfigs?: Partial<Record<AgentType, AgentConfigEntry>>
+	agentType: AgentType,
+	agentConfigs?: Partial<Record<AgentType, AgentConfigEntry>>
 ): AgentRuntimeSettings {
-  const config = agentConfigs?.[agentType];
-  if (config) {
-    return {
-      systemPromptOverride: config.systemPromptOverride,
-    };
-  }
-  return {};
+	const config = agentConfigs?.[agentType];
+	if (config) {
+		return {
+			systemPromptOverride: config.systemPromptOverride,
+		};
+	}
+	return {};
 }
 
 /**
  * Options returned by buildGenerateOptions.
  */
 export interface GenerateOptions {
-  structuredOutput: {
-    schema: z.ZodType;
-    model?: string;
-  };
-  requestContext: RequestContext;
-  instructions?: string;
-  abortSignal?: AbortSignal;
-  maxSteps?: number;
-  /**
-   * Provider-specific options for the underlying AI SDK model call.
-   * Used to enable Gemini 3 thinking (reasoning) streaming.
-   */
-  providerOptions?: {
-    google?: {
-      thinkingConfig?: {
-        includeThoughts?: boolean;
-        thinkingLevel?: "minimal" | "low" | "medium" | "high";
-      };
-    };
-  };
+	structuredOutput: {
+		schema: z.ZodType;
+		model?: string;
+	};
+	requestContext: RequestContext;
+	instructions?: string;
+	abortSignal?: AbortSignal;
+	maxSteps?: number;
+	/**
+	 * Provider-specific options for the underlying AI SDK model call.
+	 * Used to enable Gemini 3 thinking (reasoning) streaming.
+	 */
+	providerOptions?: {
+		google?: {
+			thinkingConfig?: {
+				includeThoughts?: boolean;
+				thinkingLevel?: "minimal" | "low" | "medium" | "high";
+			};
+		};
+	};
 }
 
 /**
@@ -237,23 +237,23 @@ export interface GenerateOptions {
  * @see https://ai.google.dev/gemini-api/docs/thought-signatures
  */
 export function buildGenerateOptions(
-  settings: AgentRuntimeSettings,
-  structuredOutput: { schema: z.ZodType }
+	settings: AgentRuntimeSettings,
+	structuredOutput: { schema: z.ZodType }
 ): GenerateOptions {
-  return {
-    structuredOutput: {
-      ...structuredOutput,
-      model: "google/gemini-3-flash-preview",
-    },
-    requestContext: createRequestContext(settings.model),
-    instructions: settings.systemPromptOverride ?? undefined,
-    providerOptions: {
-      google: {
-        thinkingConfig: {
-          includeThoughts: true,
-          thinkingLevel: "medium",
-        },
-      },
-    },
-  };
+	return {
+		structuredOutput: {
+			...structuredOutput,
+			model: "google/gemini-3-flash-preview",
+		},
+		requestContext: createRequestContext(settings.model),
+		instructions: settings.systemPromptOverride ?? undefined,
+		providerOptions: {
+			google: {
+				thinkingConfig: {
+					includeThoughts: true,
+					thinkingLevel: "medium",
+				},
+			},
+		},
+	};
 }

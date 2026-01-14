@@ -32,35 +32,35 @@ import { TRADER_PROMPT } from "./trader.js";
 // ============================================
 
 export const AGENT_PROMPTS: Record<AgentType, string> = {
-  grounding_agent: GROUNDING_AGENT_PROMPT,
-  news_analyst: NEWS_ANALYST_PROMPT,
-  fundamentals_analyst: FUNDAMENTALS_ANALYST_PROMPT,
-  bullish_researcher: BULLISH_RESEARCHER_PROMPT,
-  bearish_researcher: BEARISH_RESEARCHER_PROMPT,
-  trader: TRADER_PROMPT,
-  risk_manager: RISK_MANAGER_PROMPT,
-  critic: CRITIC_PROMPT,
-  idea_agent: IDEA_AGENT_SYSTEM_PROMPT,
-  indicator_researcher: INDICATOR_RESEARCHER_SYSTEM_PROMPT,
+	grounding_agent: GROUNDING_AGENT_PROMPT,
+	news_analyst: NEWS_ANALYST_PROMPT,
+	fundamentals_analyst: FUNDAMENTALS_ANALYST_PROMPT,
+	bullish_researcher: BULLISH_RESEARCHER_PROMPT,
+	bearish_researcher: BEARISH_RESEARCHER_PROMPT,
+	trader: TRADER_PROMPT,
+	risk_manager: RISK_MANAGER_PROMPT,
+	critic: CRITIC_PROMPT,
+	idea_agent: IDEA_AGENT_SYSTEM_PROMPT,
+	indicator_researcher: INDICATOR_RESEARCHER_SYSTEM_PROMPT,
 };
 
 export function getAgentPrompt(agentType: AgentType): string {
-  const prompt = AGENT_PROMPTS[agentType];
-  if (!prompt) {
-    throw new Error(`Unknown agent type: ${agentType}`);
-  }
-  return prompt;
+	const prompt = AGENT_PROMPTS[agentType];
+	if (!prompt) {
+		throw new Error(`Unknown agent type: ${agentType}`);
+	}
+	return prompt;
 }
 
 export function getAllAgentPrompts(): Record<AgentType, string> {
-  return { ...AGENT_PROMPTS };
+	return { ...AGENT_PROMPTS };
 }
 
 // Re-export idea agent prompts
 export {
-  buildFactorZooSummary,
-  buildIdeaAgentUserPrompt,
-  type HypothesisMemory,
-  IDEA_AGENT_SYSTEM_PROMPT,
-  type IdeaContext,
+	buildFactorZooSummary,
+	buildIdeaAgentUserPrompt,
+	type HypothesisMemory,
+	IDEA_AGENT_SYSTEM_PROMPT,
+	type IdeaContext,
 } from "./idea-agent.js";

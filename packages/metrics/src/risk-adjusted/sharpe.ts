@@ -21,29 +21,29 @@ import { DEFAULT_METRICS_CONFIG, type MetricsConfig } from "./types.js";
  * @returns Annualized Sharpe ratio, or null if insufficient data
  */
 export function calculateSharpe(
-  returns: number[],
-  config: MetricsConfig = DEFAULT_METRICS_CONFIG
+	returns: number[],
+	config: MetricsConfig = DEFAULT_METRICS_CONFIG
 ): number | null {
-  if (returns.length < 2) {
-    return null;
-  }
+	if (returns.length < 2) {
+		return null;
+	}
 
-  const meanReturn = mean(returns);
-  const std = stdDev(returns, meanReturn);
+	const meanReturn = mean(returns);
+	const std = stdDev(returns, meanReturn);
 
-  if (std === 0) {
-    return null; // Zero volatility case
-  }
+	if (std === 0) {
+		return null; // Zero volatility case
+	}
 
-  // Convert annual risk-free rate to per-period
-  const periodRiskFreeRate = config.riskFreeRate / config.periodsPerYear;
+	// Convert annual risk-free rate to per-period
+	const periodRiskFreeRate = config.riskFreeRate / config.periodsPerYear;
 
-  // Calculate per-period excess return
-  const excessReturn = meanReturn - periodRiskFreeRate;
+	// Calculate per-period excess return
+	const excessReturn = meanReturn - periodRiskFreeRate;
 
-  // Sharpe ratio (not yet annualized)
-  const periodSharpe = excessReturn / std;
+	// Sharpe ratio (not yet annualized)
+	const periodSharpe = excessReturn / std;
 
-  // Annualize: multiply by sqrt(periods per year)
-  return periodSharpe * Math.sqrt(config.periodsPerYear);
+	// Annualize: multiply by sqrt(periods per year)
+	return periodSharpe * Math.sqrt(config.periodsPerYear);
 }

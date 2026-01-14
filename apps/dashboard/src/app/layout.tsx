@@ -12,31 +12,31 @@ import { Providers } from "./providers";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "Cream Trading Dashboard",
-  description: "Agentic trading system dashboard",
-  icons: {
-    icon: "/favicon.ico",
-  },
+	title: "Cream Trading Dashboard",
+	description: "Agentic trading system dashboard",
+	icons: {
+		icon: "/favicon.ico",
+	},
 };
 
 export const viewport: Viewport = {
-  width: "device-width",
-  initialScale: 1,
-  themeColor: [
-    { media: "(prefers-color-scheme: light)", color: "#FFFDF9" },
-    { media: "(prefers-color-scheme: dark)", color: "#0C0A09" },
-  ],
+	width: "device-width",
+	initialScale: 1,
+	themeColor: [
+		{ media: "(prefers-color-scheme: light)", color: "#FFFDF9" },
+		{ media: "(prefers-color-scheme: dark)", color: "#0C0A09" },
+	],
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
-  return (
-    <html lang="en" suppressHydrationWarning>
-      <head>
-        {/* Theme initialization script - prevents flash of wrong theme */}
-        <script
-          // biome-ignore lint/security/noDangerouslySetInnerHtml: Required for synchronous theme init before hydration
-          dangerouslySetInnerHTML={{
-            __html: `
+	return (
+		<html lang="en" suppressHydrationWarning>
+			<head>
+				{/* Theme initialization script - prevents flash of wrong theme */}
+				<script
+					// biome-ignore lint/security/noDangerouslySetInnerHtml: Required for synchronous theme init before hydration
+					dangerouslySetInnerHTML={{
+						__html: `
               (function() {
                 try {
                   var stored = localStorage.getItem('cream-preferences');
@@ -60,12 +60,12 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
                 } catch (e) {}
               })();
             `,
-          }}
-        />
-      </head>
-      <body className="font-ui antialiased">
-        <Providers>{children}</Providers>
-      </body>
-    </html>
-  );
+					}}
+				/>
+			</head>
+			<body className="font-ui antialiased">
+				<Providers>{children}</Providers>
+			</body>
+		</html>
+	);
 }

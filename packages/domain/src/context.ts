@@ -30,11 +30,11 @@ export type ExecutionSource = "test" | "backtest" | "dashboard-test" | "schedule
  * All valid ExecutionSource values for validation
  */
 export const EXECUTION_SOURCES: readonly ExecutionSource[] = [
-  "test",
-  "backtest",
-  "dashboard-test",
-  "scheduled",
-  "manual",
+	"test",
+	"backtest",
+	"dashboard-test",
+	"scheduled",
+	"manual",
 ] as const;
 
 /**
@@ -56,31 +56,31 @@ export const EXECUTION_SOURCES: readonly ExecutionSource[] = [
  * ```
  */
 export interface ExecutionContext {
-  /**
-   * Trading environment for this execution.
-   * Determines broker endpoints, safety checks, and data isolation.
-   */
-  readonly environment: CreamEnvironment;
+	/**
+	 * Trading environment for this execution.
+	 * Determines broker endpoints, safety checks, and data isolation.
+	 */
+	readonly environment: CreamEnvironment;
 
-  /**
-   * Source of the execution - identifies the entry point.
-   */
-  readonly source: ExecutionSource;
+	/**
+	 * Source of the execution - identifies the entry point.
+	 */
+	readonly source: ExecutionSource;
 
-  /**
-   * Optional reference to runtime config version.
-   * Used for config promotion workflows and audit trails.
-   */
-  readonly configId?: string;
+	/**
+	 * Optional reference to runtime config version.
+	 * Used for config promotion workflows and audit trails.
+	 */
+	readonly configId?: string;
 
-  /**
-   * UUID for request tracing across service boundaries.
-   * Generated using crypto.randomUUID() (UUID v4).
-   *
-   * Can be used as the parent-id in W3C traceparent header:
-   * `00-{trace-id}-{parent-id}-01`
-   */
-  readonly traceId: string;
+	/**
+	 * UUID for request tracing across service boundaries.
+	 * Generated using crypto.randomUUID() (UUID v4).
+	 *
+	 * Can be used as the parent-id in W3C traceparent header:
+	 * `00-{trace-id}-{parent-id}-01`
+	 */
+	readonly traceId: string;
 }
 
 /**
@@ -109,24 +109,24 @@ export interface ExecutionContext {
  * ```
  */
 export function createContext(
-  environment: CreamEnvironment,
-  source: ExecutionSource,
-  configId?: string
+	environment: CreamEnvironment,
+	source: ExecutionSource,
+	configId?: string
 ): ExecutionContext {
-  const context: ExecutionContext = {
-    environment,
-    source,
-    configId,
-    traceId: crypto.randomUUID(),
-  };
+	const context: ExecutionContext = {
+		environment,
+		source,
+		configId,
+		traceId: crypto.randomUUID(),
+	};
 
-  // Freeze to enforce immutability
-  return Object.freeze(context);
+	// Freeze to enforce immutability
+	return Object.freeze(context);
 }
 
 /**
  * Type guard to check if a value is a valid ExecutionSource
  */
 export function isValidExecutionSource(value: unknown): value is ExecutionSource {
-  return typeof value === "string" && EXECUTION_SOURCES.includes(value as ExecutionSource);
+	return typeof value === "string" && EXECUTION_SOURCES.includes(value as ExecutionSource);
 }

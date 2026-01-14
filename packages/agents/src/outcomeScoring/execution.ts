@@ -15,15 +15,15 @@ import type { OutcomeMetrics } from "./types.js";
  * - Positive slippage (better than expected) adds a bonus
  */
 export function scoreExecution(metrics: OutcomeMetrics): number {
-  const { totalSlippagePct } = metrics;
-  const absSlippage = Math.abs(totalSlippagePct);
+	const { totalSlippagePct } = metrics;
+	const absSlippage = Math.abs(totalSlippagePct);
 
-  const slippagePenalty = absSlippage * 100;
-  const score = Math.max(0, 100 - slippagePenalty);
+	const slippagePenalty = absSlippage * 100;
+	const score = Math.max(0, 100 - slippagePenalty);
 
-  if (totalSlippagePct < 0) {
-    return Math.min(100, score + 10);
-  }
+	if (totalSlippagePct < 0) {
+		return Math.min(100, score + 10);
+	}
 
-  return score;
+	return score;
 }

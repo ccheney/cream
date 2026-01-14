@@ -23,71 +23,71 @@ import type { ButtonState, UseAsyncButtonOptions, UseAsyncButtonReturn } from ".
  * ```
  */
 export function useAsyncButton<T>(
-  asyncFn: () => Promise<T>,
-  options: UseAsyncButtonOptions<T> = {}
+	asyncFn: () => Promise<T>,
+	options: UseAsyncButtonOptions<T> = {}
 ): UseAsyncButtonReturn {
-  const [state, setState] = useState<ButtonState>("idle");
-  const [error, setError] = useState<Error | null>(null);
-  const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+	const [state, setState] = useState<ButtonState>("idle");
+	const [error, setError] = useState<Error | null>(null);
+	const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  const {
-    successDuration = SUCCESS_STATE_DURATION,
-    errorDuration = ERROR_STATE_DURATION,
-    onSuccess,
-    onError,
-  } = options;
+	const {
+		successDuration = SUCCESS_STATE_DURATION,
+		errorDuration = ERROR_STATE_DURATION,
+		onSuccess,
+		onError,
+	} = options;
 
-  const reset = useCallback(() => {
-    setState("idle");
-    setError(null);
-    if (timeoutRef.current) {
-      clearTimeout(timeoutRef.current);
-    }
-  }, []);
+	const reset = useCallback(() => {
+		setState("idle");
+		setError(null);
+		if (timeoutRef.current) {
+			clearTimeout(timeoutRef.current);
+		}
+	}, []);
 
-  const execute = useCallback(async () => {
-    if (state === "loading") {
-      return;
-    }
+	const execute = useCallback(async () => {
+		if (state === "loading") {
+			return;
+		}
 
-    setState("loading");
-    setError(null);
+		setState("loading");
+		setError(null);
 
-    try {
-      const result = await asyncFn();
-      setState("success");
+		try {
+			const result = await asyncFn();
+			setState("success");
 
-      timeoutRef.current = setTimeout(() => {
-        setState("idle");
-        onSuccess?.(result);
-      }, successDuration);
-    } catch (e) {
-      const err = e instanceof Error ? e : new Error(String(e));
-      setError(err);
-      setState("error");
+			timeoutRef.current = setTimeout(() => {
+				setState("idle");
+				onSuccess?.(result);
+			}, successDuration);
+		} catch (e) {
+			const err = e instanceof Error ? e : new Error(String(e));
+			setError(err);
+			setState("error");
 
-      timeoutRef.current = setTimeout(() => {
-        setState("idle");
-        onError?.(err);
-      }, errorDuration);
-    }
-  }, [asyncFn, state, successDuration, errorDuration, onSuccess, onError]);
+			timeoutRef.current = setTimeout(() => {
+				setState("idle");
+				onError?.(err);
+			}, errorDuration);
+		}
+	}, [asyncFn, state, successDuration, errorDuration, onSuccess, onError]);
 
-  useEffect(() => {
-    return () => {
-      if (timeoutRef.current) {
-        clearTimeout(timeoutRef.current);
-      }
-    };
-  }, []);
+	useEffect(() => {
+		return () => {
+			if (timeoutRef.current) {
+				clearTimeout(timeoutRef.current);
+			}
+		};
+	}, []);
 
-  return {
-    state,
-    execute,
-    reset,
-    isLoading: state === "loading",
-    isSuccess: state === "success",
-    isError: state === "error",
-    error,
-  };
+	return {
+		state,
+		execute,
+		reset,
+		isLoading: state === "loading",
+		isSuccess: state === "success",
+		isError: state === "error",
+		error,
+	};
 }

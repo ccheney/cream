@@ -15,24 +15,24 @@ export { FlowLabel } from "./FlowLabel";
 export { DataItem, PhaseContainer } from "./PhaseContainer";
 // Types
 export type {
-  AgentMetadata,
-  AgentNetworkState,
-  DataFlow,
-  NetworkAgentType,
-  OODAPhase,
-  PhaseConfig,
-  PhaseStatus,
+	AgentMetadata,
+	AgentNetworkState,
+	DataFlow,
+	NetworkAgentType,
+	OODAPhase,
+	PhaseConfig,
+	PhaseStatus,
 } from "./types";
 // Constants and utilities
 export {
-  AGENT_METADATA,
-  DATA_FLOW_LABELS,
-  getAgentsForPhase,
-  getAllAgentTypes,
-  getPhaseForAgent,
-  getPhaseIndex,
-  INITIAL_PHASE_STATUS,
-  PHASE_CONFIG,
+	AGENT_METADATA,
+	DATA_FLOW_LABELS,
+	getAgentsForPhase,
+	getAllAgentTypes,
+	getPhaseForAgent,
+	getPhaseIndex,
+	INITIAL_PHASE_STATUS,
+	PHASE_CONFIG,
 } from "./types";
 export { useAnnounce } from "./useAnnounce";
 // Hooks

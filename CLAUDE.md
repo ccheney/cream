@@ -22,33 +22,33 @@ Cream is an agentic trading system for US equities and options combining LLM rea
 ```
 apps/
   api/                  # Mastra server (agents + workflows)
-  worker/               # Hourly scheduler
   dashboard/            # Next.js 16 trading dashboard
   dashboard-api/        # Hono REST + WebSocket API
   execution-engine/     # Rust gRPC server (order routing, risk)
+  worker/               # Hourly scheduler
 
 packages/
-  domain/               # Zod schemas, environment, time utilities
+  agents/               # Agent prompts, tools, evaluations
+  broker/               # Alpaca Markets integration
   config/               # Runtime config service, Zod schemas, secrets
+  dashboard-types/      # Shared dashboard/API types
+  domain/               # Zod schemas, environment, time utilities
+  external-context/     # News, sentiment, fundamentals extraction
+  filings/              # SEC EDGAR filing ingestion (10-K, 10-Q, 8-K)
+  helix/                # HelixDB client
+  helix-schema/         # HelixDB schema definitions
+  indicators/           # Technical indicators (RSI, ATR, SMA)
+  infra/                # OpenTelemetry, OpenTofu infrastructure
+  marketdata/           # Alpaca market data (unified provider)
+  metrics/              # Risk-adjusted performance metrics
+  prediction-markets/   # Kalshi integration
+  regime/               # Market regime classification
+  research/             # Python backtesting (VectorBT subprocess runner)
   schema/               # Protobuf definitions (.proto files)
   schema-gen/           # Generated Protobuf stubs (TS/Rust)
   storage/              # Turso client wrapper
-  helix/                # HelixDB client
-  helix-schema/         # HelixDB schema definitions
-  broker/               # Alpaca Markets integration
-  marketdata/           # Alpaca market data (unified provider)
-  universe/             # Trading universe resolution
-  indicators/           # Technical indicators (RSI, ATR, SMA)
-  regime/               # Market regime classification
-  metrics/              # Risk-adjusted performance metrics
-  agents/           # Agent prompts, tools, evaluations
-  external-context/     # News, sentiment, fundamentals extraction
-  filings/              # SEC EDGAR filing ingestion (10-K, 10-Q, 8-K)
-  prediction-markets/   # Kalshi integration
-  dashboard-types/      # Shared dashboard/API types
   tsconfig/             # Shared TypeScript configs
-  infra/                # OpenTelemetry, OpenTofu infrastructure
-  research/             # Python backtesting (VectorBT subprocess runner)
+  universe/             # Trading universe resolution
 ```
 
 ## Commands
@@ -56,7 +56,6 @@ packages/
 ```bash
 # Development
 bun install                         # Install TS dependencies
-bun run dev                         # Start all services (Turborepo)
 cargo build --workspace             # Build Rust
 uv pip install -e ".[dev]"          # Install Python package (in app/package dir)
 
@@ -249,23 +248,6 @@ const promise = new Promise<string>((res, rej) => {
   resolve = res;
   reject = rej;
 });
-```
-
-### Bun Native WebSocket
-
-Use Bun's native WebSocket API (browser-compatible) instead of the `ws` library:
-
-```typescript
-// ✅ Good - Bun native WebSocket
-const ws = new WebSocket(url);
-ws.addEventListener("open", () => {});
-ws.addEventListener("message", (event) => { /* event.data */ });
-ws.addEventListener("close", (event) => { /* event.code, event.reason */ });
-
-// ❌ Bad - ws library (Node.js-specific)
-import WebSocket from "ws";
-ws.on("open", () => {});
-ws.on("message", (data: Buffer) => {});
 ```
 
 ### TypeScript Configuration

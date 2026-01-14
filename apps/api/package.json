@@ -21,7 +21,7 @@
     "start": "bun run src/server.ts",
     "typecheck": "tsc --noEmit",
     "test": "CREAM_ENV=BACKTEST bun test",
-    "lint": "biome check src/",
+    "lint": "biome check --fix src/",
     "format": "biome format --write src/"
   },
   "dependencies": {

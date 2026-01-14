@@ -39,71 +39,71 @@
  * A single result from a retrieval method (vector search or graph traversal)
  */
 export interface RetrievalResult<T = unknown> {
-  /** The retrieved node/item */
-  node: T;
-  /** Unique identifier for deduplication */
-  nodeId: string;
-  /** Original score from the retrieval method (e.g., cosine similarity, relevance) */
-  score: number;
+	/** The retrieved node/item */
+	node: T;
+	/** Unique identifier for deduplication */
+	nodeId: string;
+	/** Original score from the retrieval method (e.g., cosine similarity, relevance) */
+	score: number;
 }
 
 /**
  * A ranked result with position information
  */
 export interface RankedResult<T = unknown> extends RetrievalResult<T> {
-  /** Rank position (1-based) */
-  rank: number;
-  /** Source retrieval method */
-  source: "vector" | "graph";
+	/** Rank position (1-based) */
+	rank: number;
+	/** Source retrieval method */
+	source: "vector" | "graph";
 }
 
 /**
  * Final RRF-scored result
  */
 export interface RRFResult<T = unknown> {
-  /** The retrieved node */
-  node: T;
-  /** Unique identifier */
-  nodeId: string;
-  /** Final RRF score (sum of 1/(k + rank) across methods) */
-  rrfScore: number;
-  /** Which methods returned this node */
-  sources: ("vector" | "graph")[];
-  /** Original ranks by source */
-  ranks: {
-    vector?: number;
-    graph?: number;
-  };
-  /** Original scores by source */
-  originalScores: {
-    vector?: number;
-    graph?: number;
-  };
+	/** The retrieved node */
+	node: T;
+	/** Unique identifier */
+	nodeId: string;
+	/** Final RRF score (sum of 1/(k + rank) across methods) */
+	rrfScore: number;
+	/** Which methods returned this node */
+	sources: ("vector" | "graph")[];
+	/** Original ranks by source */
+	ranks: {
+		vector?: number;
+		graph?: number;
+	};
+	/** Original scores by source */
+	originalScores: {
+		vector?: number;
+		graph?: number;
+	};
 }
 
 /**
  * RRF fusion options
  */
 export interface RRFOptions {
-  /**
-   * RRF constant k (default: 60)
-   *
-   * Controls how quickly relevance drops off with rank:
-   * - Higher k → more uniform weighting
-   * - Lower k → stronger top-rank preference
-   */
-  k?: number;
+	/**
+	 * RRF constant k (default: 60)
+	 *
+	 * Controls how quickly relevance drops off with rank:
+	 * - Higher k → more uniform weighting
+	 * - Lower k → stronger top-rank preference
+	 */
+	k?: number;
 
-  /**
-   * Maximum results to return (default: 10)
-   */
-  topK?: number;
+	/**
+	 * Maximum results to return (default: 10)
+	 */
+	topK?: number;
 
-  /**
-   * Minimum RRF score threshold (default: 0, no threshold)
-   * Useful for filtering low-relevance results
-   */
-  minScore?: number;
+	/**
+	 * Minimum RRF score threshold (default: 0, no threshold)
+	 * Useful for filtering low-relevance results
+	 */
+	minScore?: number;
 }
 
 // ============================================
@@ -134,10 +134,10 @@ export const DEFAULT_TOP_K = 10;
  * @returns RRF score component
  */
 export function calculateRRFScore(rank: number, k: number = DEFAULT_RRF_K): number {
-  if (rank < 1) {
-    throw new Error("Rank must be >= 1 (1-based indexing)");
-  }
-  return 1 / (k + rank);
+	if (rank < 1) {
+		throw new Error("Rank must be >= 1 (1-based indexing)");
+	}
+	return 1 / (k + rank);
 }
 
 /**
@@ -151,34 +151,34 @@ export function calculateRRFScore(rank: number, k: number = DEFAULT_RRF_K): numb
  * @returns Ranked results
  */
 export function assignRanks<T>(
-  results: RetrievalResult<T>[],
-  source: "vector" | "graph"
+	results: RetrievalResult<T>[],
+	source: "vector" | "graph"
 ): RankedResult<T>[] {
-  // Sort by score descending
-  const sorted = results.toSorted((a, b) => b.score - a.score);
+	// Sort by score descending
+	const sorted = results.toSorted((a, b) => b.score - a.score);
 
-  let currentRank = 1;
-  let previousScore: number | null = null;
-  let skipCount = 0;
+	let currentRank = 1;
+	let previousScore: number | null = null;
+	let skipCount = 0;
 
-  return sorted.map((result, _index) => {
-    if (previousScore !== null && result.score < previousScore) {
-      // Score decreased, advance rank by accumulated ties
-      currentRank += 1 + skipCount;
-      skipCount = 0;
-    } else if (previousScore !== null && result.score === previousScore) {
-      // Tie: keep same rank, increment skip count
-      skipCount++;
-    }
+	return sorted.map((result, _index) => {
+		if (previousScore !== null && result.score < previousScore) {
+			// Score decreased, advance rank by accumulated ties
+			currentRank += 1 + skipCount;
+			skipCount = 0;
+		} else if (previousScore !== null && result.score === previousScore) {
+			// Tie: keep same rank, increment skip count
+			skipCount++;
+		}
 
-    previousScore = result.score;
+		previousScore = result.score;
 
-    return {
-      ...result,
-      rank: currentRank,
-      source,
-    };
-  });
+		return {
+			...result,
+			rank: currentRank,
+			source,
+		};
+	});
 }
 
 /**
@@ -192,73 +192,73 @@ export function assignRanks<T>(
  * @returns Fused and re-ranked results
  */
 export function fuseWithRRF<T>(
-  vectorResults: RetrievalResult<T>[],
-  graphResults: RetrievalResult<T>[],
-  options: RRFOptions = {}
+	vectorResults: RetrievalResult<T>[],
+	graphResults: RetrievalResult<T>[],
+	options: RRFOptions = {}
 ): RRFResult<T>[] {
-  const { k = DEFAULT_RRF_K, topK = DEFAULT_TOP_K, minScore = 0 } = options;
+	const { k = DEFAULT_RRF_K, topK = DEFAULT_TOP_K, minScore = 0 } = options;
 
-  // Assign ranks to each result set
-  const rankedVector = assignRanks(vectorResults, "vector");
-  const rankedGraph = assignRanks(graphResults, "graph");
+	// Assign ranks to each result set
+	const rankedVector = assignRanks(vectorResults, "vector");
+	const rankedGraph = assignRanks(graphResults, "graph");
 
-  // Build map of nodeId -> aggregated result
-  const resultMap = new Map<
-    string,
-    {
-      node: T;
-      nodeId: string;
-      rrfScore: number;
-      sources: ("vector" | "graph")[];
-      ranks: { vector?: number; graph?: number };
-      originalScores: { vector?: number; graph?: number };
-    }
-  >();
+	// Build map of nodeId -> aggregated result
+	const resultMap = new Map<
+		string,
+		{
+			node: T;
+			nodeId: string;
+			rrfScore: number;
+			sources: ("vector" | "graph")[];
+			ranks: { vector?: number; graph?: number };
+			originalScores: { vector?: number; graph?: number };
+		}
+	>();
 
-  // Process vector results
-  for (const result of rankedVector) {
-    const score = calculateRRFScore(result.rank, k);
-    resultMap.set(result.nodeId, {
-      node: result.node,
-      nodeId: result.nodeId,
-      rrfScore: score,
-      sources: ["vector"],
-      ranks: { vector: result.rank },
-      originalScores: { vector: result.score },
-    });
-  }
+	// Process vector results
+	for (const result of rankedVector) {
+		const score = calculateRRFScore(result.rank, k);
+		resultMap.set(result.nodeId, {
+			node: result.node,
+			nodeId: result.nodeId,
+			rrfScore: score,
+			sources: ["vector"],
+			ranks: { vector: result.rank },
+			originalScores: { vector: result.score },
+		});
+	}
 
-  // Process graph results (add to existing or create new)
-  for (const result of rankedGraph) {
-    const score = calculateRRFScore(result.rank, k);
-    const existing = resultMap.get(result.nodeId);
+	// Process graph results (add to existing or create new)
+	for (const result of rankedGraph) {
+		const score = calculateRRFScore(result.rank, k);
+		const existing = resultMap.get(result.nodeId);
 
-    if (existing) {
-      // Node appears in both result sets - add scores
-      existing.rrfScore += score;
-      existing.sources.push("graph");
-      existing.ranks.graph = result.rank;
-      existing.originalScores.graph = result.score;
-    } else {
-      // New node from graph only
-      resultMap.set(result.nodeId, {
-        node: result.node,
-        nodeId: result.nodeId,
-        rrfScore: score,
-        sources: ["graph"],
-        ranks: { graph: result.rank },
-        originalScores: { graph: result.score },
-      });
-    }
-  }
+		if (existing) {
+			// Node appears in both result sets - add scores
+			existing.rrfScore += score;
+			existing.sources.push("graph");
+			existing.ranks.graph = result.rank;
+			existing.originalScores.graph = result.score;
+		} else {
+			// New node from graph only
+			resultMap.set(result.nodeId, {
+				node: result.node,
+				nodeId: result.nodeId,
+				rrfScore: score,
+				sources: ["graph"],
+				ranks: { graph: result.rank },
+				originalScores: { graph: result.score },
+			});
+		}
+	}
 
-  // Convert to array and sort by RRF score descending
-  const fused = Array.from(resultMap.values())
-    .filter((r) => r.rrfScore >= minScore)
-    .sort((a, b) => b.rrfScore - a.rrfScore);
+	// Convert to array and sort by RRF score descending
+	const fused = Array.from(resultMap.values())
+		.filter((r) => r.rrfScore >= minScore)
+		.sort((a, b) => b.rrfScore - a.rrfScore);
 
-  // Return top-K results
-  return fused.slice(0, topK);
+	// Return top-K results
+	return fused.slice(0, topK);
 }
 
 /**
@@ -271,75 +271,75 @@ export function fuseWithRRF<T>(
  * @returns Fused and re-ranked results
  */
 export function fuseMultipleWithRRF<T>(
-  resultSets: { method: string; results: RetrievalResult<T>[] }[],
-  options: RRFOptions = {}
+	resultSets: { method: string; results: RetrievalResult<T>[] }[],
+	options: RRFOptions = {}
 ): (RRFResult<T> & { sourcesByMethod: Record<string, number> })[] {
-  const { k = DEFAULT_RRF_K, topK = DEFAULT_TOP_K, minScore = 0 } = options;
+	const { k = DEFAULT_RRF_K, topK = DEFAULT_TOP_K, minScore = 0 } = options;
 
-  // Build map of nodeId -> aggregated result
-  const resultMap = new Map<
-    string,
-    {
-      node: T;
-      nodeId: string;
-      rrfScore: number;
-      sourcesByMethod: Record<string, number>;
-    }
-  >();
+	// Build map of nodeId -> aggregated result
+	const resultMap = new Map<
+		string,
+		{
+			node: T;
+			nodeId: string;
+			rrfScore: number;
+			sourcesByMethod: Record<string, number>;
+		}
+	>();
 
-  // Process each result set
-  for (const { method, results } of resultSets) {
-    // Sort by score descending and assign ranks
-    const sorted = results.toSorted((a, b) => b.score - a.score);
+	// Process each result set
+	for (const { method, results } of resultSets) {
+		// Sort by score descending and assign ranks
+		const sorted = results.toSorted((a, b) => b.score - a.score);
 
-    let currentRank = 1;
-    let previousScore: number | null = null;
-    let skipCount = 0;
+		let currentRank = 1;
+		let previousScore: number | null = null;
+		let skipCount = 0;
 
-    for (const result of sorted) {
-      // Handle ties
-      if (previousScore !== null && result.score < previousScore) {
-        currentRank += 1 + skipCount;
-        skipCount = 0;
-      } else if (previousScore !== null && result.score === previousScore) {
-        skipCount++;
-      }
-      previousScore = result.score;
+		for (const result of sorted) {
+			// Handle ties
+			if (previousScore !== null && result.score < previousScore) {
+				currentRank += 1 + skipCount;
+				skipCount = 0;
+			} else if (previousScore !== null && result.score === previousScore) {
+				skipCount++;
+			}
+			previousScore = result.score;
 
-      const score = calculateRRFScore(currentRank, k);
-      const existing = resultMap.get(result.nodeId);
+			const score = calculateRRFScore(currentRank, k);
+			const existing = resultMap.get(result.nodeId);
 
-      if (existing) {
-        existing.rrfScore += score;
-        existing.sourcesByMethod[method] = currentRank;
-      } else {
-        resultMap.set(result.nodeId, {
-          node: result.node,
-          nodeId: result.nodeId,
-          rrfScore: score,
-          sourcesByMethod: { [method]: currentRank },
-        });
-      }
-    }
-  }
+			if (existing) {
+				existing.rrfScore += score;
+				existing.sourcesByMethod[method] = currentRank;
+			} else {
+				resultMap.set(result.nodeId, {
+					node: result.node,
+					nodeId: result.nodeId,
+					rrfScore: score,
+					sourcesByMethod: { [method]: currentRank },
+				});
+			}
+		}
+	}
 
-  // Convert, filter, and sort
-  const fused = Array.from(resultMap.values())
-    .filter((r) => r.rrfScore >= minScore)
-    .sort((a, b) => b.rrfScore - a.rrfScore);
+	// Convert, filter, and sort
+	const fused = Array.from(resultMap.values())
+		.filter((r) => r.rrfScore >= minScore)
+		.sort((a, b) => b.rrfScore - a.rrfScore);
 
-  // Map to expected output format
-  return fused.slice(0, topK).map((r) => ({
-    node: r.node,
-    nodeId: r.nodeId,
-    rrfScore: r.rrfScore,
-    sources: Object.keys(r.sourcesByMethod) as ("vector" | "graph")[],
-    ranks: Object.fromEntries(
-      Object.entries(r.sourcesByMethod).map(([method, rank]) => [method, rank])
-    ) as { vector?: number; graph?: number },
-    originalScores: {},
-    sourcesByMethod: r.sourcesByMethod,
-  }));
+	// Map to expected output format
+	return fused.slice(0, topK).map((r) => ({
+		node: r.node,
+		nodeId: r.nodeId,
+		rrfScore: r.rrfScore,
+		sources: Object.keys(r.sourcesByMethod) as ("vector" | "graph")[],
+		ranks: Object.fromEntries(
+			Object.entries(r.sourcesByMethod).map(([method, rank]) => [method, rank])
+		) as { vector?: number; graph?: number },
+		originalScores: {},
+		sourcesByMethod: r.sourcesByMethod,
+	}));
 }
 
 // ============================================
@@ -357,11 +357,11 @@ export function fuseMultipleWithRRF<T>(
  * @returns Combined RRF score
  */
 export function calculateCombinedRRFScore(
-  vectorRank: number,
-  graphRank: number,
-  k: number = DEFAULT_RRF_K
+	vectorRank: number,
+	graphRank: number,
+	k: number = DEFAULT_RRF_K
 ): number {
-  return calculateRRFScore(vectorRank, k) + calculateRRFScore(graphRank, k);
+	return calculateRRFScore(vectorRank, k) + calculateRRFScore(graphRank, k);
 }
 
 /**
@@ -372,7 +372,7 @@ export function calculateCombinedRRFScore(
  * @returns Maximum possible score
  */
 export function getMaxRRFScore(methodCount: number, k: number = DEFAULT_RRF_K): number {
-  return methodCount * calculateRRFScore(1, k);
+	return methodCount * calculateRRFScore(1, k);
 }
 
 /**
@@ -383,15 +383,15 @@ export function getMaxRRFScore(methodCount: number, k: number = DEFAULT_RRF_K): 
  * @returns Results with normalized scores
  */
 export function normalizeRRFScores<T>(
-  results: RRFResult<T>[],
-  methodCount = 2
+	results: RRFResult<T>[],
+	methodCount = 2
 ): (RRFResult<T> & { normalizedScore: number })[] {
-  const maxScore = getMaxRRFScore(methodCount);
+	const maxScore = getMaxRRFScore(methodCount);
 
-  return results.map((r) => ({
-    ...r,
-    normalizedScore: r.rrfScore / maxScore,
-  }));
+	return results.map((r) => ({
+		...r,
+		normalizedScore: r.rrfScore / maxScore,
+	}));
 }
 
 /**
@@ -404,8 +404,8 @@ export function normalizeRRFScores<T>(
  * @returns Boost percentage (e.g., 0.5 = 50% boost)
  */
 export function calculateMultiMethodBoost(singleMethodScore: number, actualScore: number): number {
-  if (singleMethodScore === 0) {
-    return 0;
-  }
-  return (actualScore - singleMethodScore) / singleMethodScore;
+	if (singleMethodScore === 0) {
+		return 0;
+	}
+	return (actualScore - singleMethodScore) / singleMethodScore;
 }

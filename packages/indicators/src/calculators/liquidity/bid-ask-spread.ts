@@ -20,14 +20,14 @@
 import type { Quote } from "../../types";
 
 export interface BidAskSpreadResult {
-  /** Absolute spread in price units */
-  spread: number;
-  /** Spread as percentage of midpoint */
-  spreadPct: number;
-  /** Midpoint price */
-  midpoint: number;
-  /** Timestamp of the quote */
-  timestamp: number;
+	/** Absolute spread in price units */
+	spread: number;
+	/** Spread as percentage of midpoint */
+	spreadPct: number;
+	/** Midpoint price */
+	midpoint: number;
+	/** Timestamp of the quote */
+	timestamp: number;
 }
 
 /**
@@ -46,28 +46,28 @@ export interface BidAskSpreadResult {
  * ```
  */
 export function calculateBidAskSpread(quote: Quote): BidAskSpreadResult | null {
-  const { bidPrice, askPrice, timestamp } = quote;
+	const { bidPrice, askPrice, timestamp } = quote;
 
-  // Validate quote
-  if (bidPrice <= 0 || askPrice <= 0) {
-    return null;
-  }
+	// Validate quote
+	if (bidPrice <= 0 || askPrice <= 0) {
+		return null;
+	}
 
-  if (askPrice < bidPrice) {
-    // Crossed quote - invalid market state
-    return null;
-  }
+	if (askPrice < bidPrice) {
+		// Crossed quote - invalid market state
+		return null;
+	}
 
-  const spread = askPrice - bidPrice;
-  const midpoint = (askPrice + bidPrice) / 2;
-  const spreadPct = midpoint > 0 ? (spread / midpoint) * 100 : 0;
+	const spread = askPrice - bidPrice;
+	const midpoint = (askPrice + bidPrice) / 2;
+	const spreadPct = midpoint > 0 ? (spread / midpoint) * 100 : 0;
 
-  return {
-    spread,
-    spreadPct,
-    midpoint,
-    timestamp,
-  };
+	return {
+		spread,
+		spreadPct,
+		midpoint,
+		timestamp,
+	};
 }
 
 /**
@@ -79,25 +79,25 @@ export function calculateBidAskSpread(quote: Quote): BidAskSpreadResult | null {
  * @returns Average spread metrics or null if no valid quotes
  */
 export function calculateAverageBidAskSpread(quotes: Quote[]): BidAskSpreadResult | null {
-  const validResults = quotes
-    .map((q) => calculateBidAskSpread(q))
-    .filter((r): r is BidAskSpreadResult => r !== null);
+	const validResults = quotes
+		.map((q) => calculateBidAskSpread(q))
+		.filter((r): r is BidAskSpreadResult => r !== null);
 
-  if (validResults.length === 0) {
-    return null;
-  }
+	if (validResults.length === 0) {
+		return null;
+	}
 
-  const avgSpread = validResults.reduce((sum, r) => sum + r.spread, 0) / validResults.length;
-  const avgSpreadPct = validResults.reduce((sum, r) => sum + r.spreadPct, 0) / validResults.length;
-  const avgMidpoint = validResults.reduce((sum, r) => sum + r.midpoint, 0) / validResults.length;
-  const latestTimestamp = validResults[validResults.length - 1]?.timestamp ?? Date.now();
+	const avgSpread = validResults.reduce((sum, r) => sum + r.spread, 0) / validResults.length;
+	const avgSpreadPct = validResults.reduce((sum, r) => sum + r.spreadPct, 0) / validResults.length;
+	const avgMidpoint = validResults.reduce((sum, r) => sum + r.midpoint, 0) / validResults.length;
+	const latestTimestamp = validResults[validResults.length - 1]?.timestamp ?? Date.now();
 
-  return {
-    spread: avgSpread,
-    spreadPct: avgSpreadPct,
-    midpoint: avgMidpoint,
-    timestamp: latestTimestamp,
-  };
+	return {
+		spread: avgSpread,
+		spreadPct: avgSpreadPct,
+		midpoint: avgMidpoint,
+		timestamp: latestTimestamp,
+	};
 }
 
 /**
@@ -112,14 +112,14 @@ export function calculateAverageBidAskSpread(quotes: Quote[]): BidAskSpreadResul
 export type SpreadQuality = "tight" | "normal" | "wide" | "very_wide";
 
 export function classifySpreadQuality(spreadPct: number): SpreadQuality {
-  if (spreadPct < 0.05) {
-    return "tight";
-  }
-  if (spreadPct < 0.2) {
-    return "normal";
-  }
-  if (spreadPct < 0.5) {
-    return "wide";
-  }
-  return "very_wide";
+	if (spreadPct < 0.05) {
+		return "tight";
+	}
+	if (spreadPct < 0.2) {
+		return "normal";
+	}
+	if (spreadPct < 0.5) {
+		return "wide";
+	}
+	return "very_wide";
 }

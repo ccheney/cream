@@ -7,12 +7,12 @@
 
 import { type ExecutionContext, isBacktest } from "@cream/domain";
 import {
-  type ContentScores,
-  type ContentSourceType,
-  createExtractionPipeline,
-  type ExtractedEvent,
-  type ExtractionResult,
-  type PipelineResult,
+	type ContentScores,
+	type ContentSourceType,
+	createExtractionPipeline,
+	type ExtractedEvent,
+	type ExtractionResult,
+	type PipelineResult,
 } from "@cream/external-context";
 import { createExtractionClient } from "../../extraction/index.js";
 import { getFMPClient } from "../clients.js";
@@ -22,36 +22,36 @@ import { getFMPClient } from "../clients.js";
 // ============================================
 
 export interface ExtractNewsContextParams {
-  /** Stock symbols to focus on */
-  symbols: string[];
-  /** Maximum number of articles to process */
-  limit?: number;
-  /** Enable dry run (skip LLM calls) - useful for testing */
-  dryRun?: boolean;
+	/** Stock symbols to focus on */
+	symbols: string[];
+	/** Maximum number of articles to process */
+	limit?: number;
+	/** Enable dry run (skip LLM calls) - useful for testing */
+	dryRun?: boolean;
 }
 
 export interface ExtractNewsContextResult {
-  events: ExtractedEvent[];
-  stats: PipelineResult["stats"];
-  errors: PipelineResult["errors"];
+	events: ExtractedEvent[];
+	stats: PipelineResult["stats"];
+	errors: PipelineResult["errors"];
 }
 
 export interface AnalyzeContentParams {
-  /** Raw content to analyze */
-  content: string;
-  /** Type of content */
-  sourceType: ContentSourceType;
-  /** Related symbols (optional) */
-  symbols?: string[];
-  /** Enable dry run (skip LLM calls) */
-  dryRun?: boolean;
+	/** Raw content to analyze */
+	content: string;
+	/** Type of content */
+	sourceType: ContentSourceType;
+	/** Related symbols (optional) */
+	symbols?: string[];
+	/** Enable dry run (skip LLM calls) */
+	dryRun?: boolean;
 }
 
 export interface AnalyzeContentResult {
-  extraction: ExtractionResult | null;
-  scores: ContentScores | null;
-  relatedSymbols: string[];
-  error?: string;
+	extraction: ExtractionResult | null;
+	scores: ContentScores | null;
+	relatedSymbols: string[];
+	error?: string;
 }
 
 // ============================================
@@ -72,69 +72,69 @@ export interface AnalyzeContentResult {
  * @returns Extracted events with scores and entity links
  */
 export async function extractNewsContext(
-  ctx: ExecutionContext,
-  params: ExtractNewsContextParams
+	ctx: ExecutionContext,
+	params: ExtractNewsContextParams
 ): Promise<ExtractNewsContextResult> {
-  const { symbols, limit = 10, dryRun = false } = params;
+	const { symbols, limit = 10, dryRun = false } = params;
 
-  // In backtest mode, return empty result for consistent/fast execution
-  if (isBacktest(ctx)) {
-    return {
-      events: [],
-      stats: { inputCount: 0, successCount: 0, errorCount: 0, processingTimeMs: 0 },
-      errors: [],
-    };
-  }
+	// In backtest mode, return empty result for consistent/fast execution
+	if (isBacktest(ctx)) {
+		return {
+			events: [],
+			stats: { inputCount: 0, successCount: 0, errorCount: 0, processingTimeMs: 0 },
+			errors: [],
+		};
+	}
 
-  const client = getFMPClient();
-  if (!client) {
-    return {
-      events: [],
-      stats: { inputCount: 0, successCount: 0, errorCount: 0, processingTimeMs: 0 },
-      errors: [{ content: "FMP client", error: "FMP_KEY not configured" }],
-    };
-  }
+	const client = getFMPClient();
+	if (!client) {
+		return {
+			events: [],
+			stats: { inputCount: 0, successCount: 0, errorCount: 0, processingTimeMs: 0 },
+			errors: [{ content: "FMP client", error: "FMP_KEY not configured" }],
+		};
+	}
 
-  try {
-    // Fetch news from FMP
-    const newsItems = await client.getStockNews(symbols, limit);
+	try {
+		// Fetch news from FMP
+		const newsItems = await client.getStockNews(symbols, limit);
 
-    // Transform to FMPNewsArticle format expected by pipeline
-    const articles = newsItems.map((item) => ({
-      symbol: item.symbol,
-      publishedDate: item.publishedDate,
-      title: item.title,
-      image: item.image,
-      site: item.site,
-      text: item.text,
-      url: item.url,
-    }));
+		// Transform to FMPNewsArticle format expected by pipeline
+		const articles = newsItems.map((item) => ({
+			symbol: item.symbol,
+			publishedDate: item.publishedDate,
+			title: item.title,
+			image: item.image,
+			site: item.site,
+			text: item.text,
+			url: item.url,
+		}));
 
-    // Create extraction client and pipeline
-    const extractionClient = createExtractionClient();
-    const pipeline = createExtractionPipeline({
-      extractionClient,
-      targetSymbols: symbols,
-      dryRun,
-    });
+		// Create extraction client and pipeline
+		const extractionClient = createExtractionClient();
+		const pipeline = createExtractionPipeline({
+			extractionClient,
+			targetSymbols: symbols,
+			dryRun,
+		});
 
-    // Process through extraction pipeline
-    const result = await pipeline.processNews(articles);
+		// Process through extraction pipeline
+		const result = await pipeline.processNews(articles);
 
-    return {
-      events: result.events,
-      stats: result.stats,
-      errors: result.errors,
-    };
-  } catch (error) {
-    return {
-      events: [],
-      stats: { inputCount: 0, successCount: 0, errorCount: 0, processingTimeMs: 0 },
-      errors: [
-        { content: "pipeline", error: error instanceof Error ? error.message : "Unknown error" },
-      ],
-    };
-  }
+		return {
+			events: result.events,
+			stats: result.stats,
+			errors: result.errors,
+		};
+	} catch (error) {
+		return {
+			events: [],
+			stats: { inputCount: 0, successCount: 0, errorCount: 0, processingTimeMs: 0 },
+			errors: [
+				{ content: "pipeline", error: error instanceof Error ? error.message : "Unknown error" },
+			],
+		};
+	}
 }
 
 /**
@@ -152,58 +152,58 @@ export async function extractNewsContext(
  * @returns Extraction result with scores
  */
 export async function analyzeContent(
-  ctx: ExecutionContext,
-  params: AnalyzeContentParams
+	ctx: ExecutionContext,
+	params: AnalyzeContentParams
 ): Promise<AnalyzeContentResult> {
-  const { content, sourceType, symbols = [], dryRun = false } = params;
+	const { content, sourceType, symbols = [], dryRun = false } = params;
 
-  // In backtest mode, return empty result
-  if (isBacktest(ctx)) {
-    return {
-      extraction: null,
-      scores: null,
-      relatedSymbols: [],
-    };
-  }
+	// In backtest mode, return empty result
+	if (isBacktest(ctx)) {
+		return {
+			extraction: null,
+			scores: null,
+			relatedSymbols: [],
+		};
+	}
 
-  try {
-    // Create extraction client and pipeline
-    const extractionClient = createExtractionClient();
-    const pipeline = createExtractionPipeline({
-      extractionClient,
-      targetSymbols: symbols,
-      dryRun,
-    });
+	try {
+		// Create extraction client and pipeline
+		const extractionClient = createExtractionClient();
+		const pipeline = createExtractionPipeline({
+			extractionClient,
+			targetSymbols: symbols,
+			dryRun,
+		});
 
-    // Process single content item
-    const event = await pipeline.processContent(
-      content,
-      sourceType,
-      new Date(),
-      "user_provided",
-      symbols
-    );
+		// Process single content item
+		const event = await pipeline.processContent(
+			content,
+			sourceType,
+			new Date(),
+			"user_provided",
+			symbols
+		);
 
-    if (!event) {
-      return {
-        extraction: null,
-        scores: null,
-        relatedSymbols: [],
-        error: "Extraction failed",
-      };
-    }
+		if (!event) {
+			return {
+				extraction: null,
+				scores: null,
+				relatedSymbols: [],
+				error: "Extraction failed",
+			};
+		}
 
-    return {
-      extraction: event.extraction,
-      scores: event.scores,
-      relatedSymbols: event.relatedInstrumentIds,
-    };
-  } catch (error) {
-    return {
-      extraction: null,
-      scores: null,
-      relatedSymbols: [],
-      error: error instanceof Error ? error.message : "Unknown error",
-    };
-  }
+		return {
+			extraction: event.extraction,
+			scores: event.scores,
+			relatedSymbols: event.relatedInstrumentIds,
+		};
+	} catch (error) {
+		return {
+			extraction: null,
+			scores: null,
+			relatedSymbols: [],
+			error: error instanceof Error ? error.message : "Unknown error",
+		};
+	}
 }

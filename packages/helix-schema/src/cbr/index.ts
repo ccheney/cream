@@ -34,13 +34,13 @@ export { executeVectorSearch, retrieveSimilarCases } from "./retrieval.js";
 export { generateCBRSituationBrief } from "./situation-brief.js";
 // Types
 export type {
-  CaseRetentionResult,
-  CBRMarketSnapshot,
-  CBRQualityMetrics,
-  CBRRetrievalOptions,
-  CBRRetrievalResult,
-  HelixClient,
-  QueryResult,
-  SearchSimilarDecisionsResult,
-  SimilarityFeatures,
+	CaseRetentionResult,
+	CBRMarketSnapshot,
+	CBRQualityMetrics,
+	CBRRetrievalOptions,
+	CBRRetrievalResult,
+	HelixClient,
+	QueryResult,
+	SearchSimilarDecisionsResult,
+	SimilarityFeatures,
 } from "./types.js";

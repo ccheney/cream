@@ -36,10 +36,10 @@ import { env, isBacktest, isLive } from "./env";
  * @param ctx - ExecutionContext containing environment info
  */
 export function generateOrderId(ctx: ExecutionContext): string {
-  const prefix = ctx.environment;
-  const timestamp = Date.now().toString(16);
-  const random = Math.random().toString(16).slice(2, 10);
-  return `${prefix}-${timestamp}-${random}`;
+	const prefix = ctx.environment;
+	const timestamp = Date.now().toString(16);
+	const random = Math.random().toString(16).slice(2, 10);
+	return `${prefix}-${timestamp}-${random}`;
 }
 
 /**
@@ -50,14 +50,14 @@ export function generateOrderId(ctx: ExecutionContext): string {
  * @throws {SafetyError} If order ID is from a different environment
  */
 export function validateOrderIdEnvironment(orderId: string, ctx: ExecutionContext): void {
-  const expectedPrefix = ctx.environment;
-  if (!orderId.startsWith(`${expectedPrefix}-`)) {
-    throw new SafetyError(
-      `Order ID ${orderId} does not belong to ${expectedPrefix} environment`,
-      "ORDER_ID_ENVIRONMENT_MISMATCH",
-      ctx.traceId
-    );
-  }
+	const expectedPrefix = ctx.environment;
+	if (!orderId.startsWith(`${expectedPrefix}-`)) {
+		throw new SafetyError(
+			`Order ID ${orderId} does not belong to ${expectedPrefix} environment`,
+			"ORDER_ID_ENVIRONMENT_MISMATCH",
+			ctx.traceId
+		);
+	}
 }
 
 // ============================================
@@ -75,21 +75,21 @@ export function validateOrderIdEnvironment(orderId: string, ctx: ExecutionContex
  * @throws {SafetyError} If endpoint doesn't match environment
  */
 export function validateBrokerEndpoint(endpoint: string, ctx: ExecutionContext): void {
-  if (isLive(ctx) && !endpoint.includes("api.alpaca.markets")) {
-    throw new SafetyError(
-      `LIVE environment requires production broker endpoint, got: ${endpoint}`,
-      "BROKER_ENDPOINT_MISMATCH",
-      ctx.traceId
-    );
-  }
+	if (isLive(ctx) && !endpoint.includes("api.alpaca.markets")) {
+		throw new SafetyError(
+			`LIVE environment requires production broker endpoint, got: ${endpoint}`,
+			"BROKER_ENDPOINT_MISMATCH",
+			ctx.traceId
+		);
+	}
 
-  if (!isLive(ctx) && endpoint.includes("api.alpaca.markets") && !endpoint.includes("paper-api")) {
-    throw new SafetyError(
-      `${ctx.environment} environment should not use production broker endpoint: ${endpoint}`,
-      "BROKER_ENDPOINT_MISMATCH",
-      ctx.traceId
-    );
-  }
+	if (!isLive(ctx) && endpoint.includes("api.alpaca.markets") && !endpoint.includes("paper-api")) {
+		throw new SafetyError(
+			`${ctx.environment} environment should not use production broker endpoint: ${endpoint}`,
+			"BROKER_ENDPOINT_MISMATCH",
+			ctx.traceId
+		);
+	}
 }
 
 // ============================================
@@ -110,28 +110,28 @@ const LIVE_CONFIRMATION_TOKEN = "I_UNDERSTAND_THIS_IS_REAL_MONEY";
  * @throws {SafetyError} If not in LIVE environment or token doesn't match
  */
 export function requireLiveConfirmation(confirmationToken: string, ctx: ExecutionContext): void {
-  if (!isLive(ctx)) {
-    return;
-  }
+	if (!isLive(ctx)) {
+		return;
+	}
 
-  if (confirmationToken !== LIVE_CONFIRMATION_TOKEN) {
-    throw new SafetyError(
-      "LIVE environment requires confirmation token: I_UNDERSTAND_THIS_IS_REAL_MONEY",
-      "LIVE_CONFIRMATION_REQUIRED",
-      ctx.traceId
-    );
-  }
+	if (confirmationToken !== LIVE_CONFIRMATION_TOKEN) {
+		throw new SafetyError(
+			"LIVE environment requires confirmation token: I_UNDERSTAND_THIS_IS_REAL_MONEY",
+			"LIVE_CONFIRMATION_REQUIRED",
+			ctx.traceId
+		);
+	}
 
-  liveConfirmationGranted = true;
-  auditLog(
-    "LIVE_CONFIRMATION_GRANTED",
-    {
-      timestamp: new Date().toISOString(),
-      environment: ctx.environment,
-      traceId: ctx.traceId,
-    },
-    ctx
-  );
+	liveConfirmationGranted = true;
+	auditLog(
+		"LIVE_CONFIRMATION_GRANTED",
+		{
+			timestamp: new Date().toISOString(),
+			environment: ctx.environment,
+			traceId: ctx.traceId,
+		},
+		ctx
+	);
 }
 
 /**
@@ -140,10 +140,10 @@ export function requireLiveConfirmation(confirmationToken: string, ctx: Executio
  * @param ctx - ExecutionContext containing environment info
  */
 export function isLiveConfirmed(ctx: ExecutionContext): boolean {
-  if (!isLive(ctx)) {
-    return true;
-  }
-  return liveConfirmationGranted;
+	if (!isLive(ctx)) {
+		return true;
+	}
+	return liveConfirmationGranted;
 }
 
 /**
@@ -155,13 +155,13 @@ export function isLiveConfirmed(ctx: ExecutionContext): boolean {
  * @throws {SafetyError} If in LIVE environment without confirmation
  */
 export function preventAccidentalLiveExecution(ctx: ExecutionContext): void {
-  if (isLive(ctx) && !liveConfirmationGranted) {
-    throw new SafetyError(
-      "LIVE execution blocked: Call requireLiveConfirmation() first",
-      "LIVE_CONFIRMATION_NOT_GRANTED",
-      ctx.traceId
-    );
-  }
+	if (isLive(ctx) && !liveConfirmationGranted) {
+		throw new SafetyError(
+			"LIVE execution blocked: Call requireLiveConfirmation() first",
+			"LIVE_CONFIRMATION_NOT_GRANTED",
+			ctx.traceId
+		);
+	}
 }
 
 // ============================================
@@ -179,22 +179,22 @@ export function preventAccidentalLiveExecution(ctx: ExecutionContext): void {
  * @throws {SafetyError} If any consistency check fails
  */
 export function validateEnvironmentConsistency(ctx: ExecutionContext): void {
-  if (env.ALPACA_BASE_URL) {
-    validateBrokerEndpoint(env.ALPACA_BASE_URL, ctx);
-  }
+	if (env.ALPACA_BASE_URL) {
+		validateBrokerEndpoint(env.ALPACA_BASE_URL, ctx);
+	}
 
-  if (isLive(ctx)) {
-    auditLog(
-      "ENVIRONMENT_VALIDATION",
-      {
-        environment: ctx.environment,
-        source: ctx.source,
-        configId: ctx.configId,
-        liveConfirmed: liveConfirmationGranted,
-      },
-      ctx
-    );
-  }
+	if (isLive(ctx)) {
+		auditLog(
+			"ENVIRONMENT_VALIDATION",
+			{
+				environment: ctx.environment,
+				source: ctx.source,
+				configId: ctx.configId,
+				liveConfirmed: liveConfirmationGranted,
+			},
+			ctx
+		);
+	}
 }
 
 // ============================================
@@ -213,7 +213,7 @@ export function validateEnvironmentConsistency(ctx: ExecutionContext): void {
  * @param ctx - ExecutionContext containing environment info
  */
 export function getIsolatedDatabaseName(baseName: string, ctx: ExecutionContext): string {
-  return `${baseName}_${ctx.environment.toLowerCase()}`;
+	return `${baseName}_${ctx.environment.toLowerCase()}`;
 }
 
 /**
@@ -224,19 +224,19 @@ export function getIsolatedDatabaseName(baseName: string, ctx: ExecutionContext)
  * @throws {SafetyError} If database name suggests wrong environment
  */
 export function validateDatabaseIsolation(dbUrl: string, ctx: ExecutionContext): void {
-  // Check for cross-environment database access
-  const environments = ["backtest", "paper", "live"];
-  for (const otherEnv of environments) {
-    if (otherEnv !== ctx.environment.toLowerCase()) {
-      if (dbUrl.includes(`_${otherEnv}`)) {
-        throw new SafetyError(
-          `Database isolation violation: ${ctx.environment} environment accessing ${otherEnv} database`,
-          "DATABASE_ISOLATION_VIOLATION",
-          ctx.traceId
-        );
-      }
-    }
-  }
+	// Check for cross-environment database access
+	const environments = ["backtest", "paper", "live"];
+	for (const otherEnv of environments) {
+		if (otherEnv !== ctx.environment.toLowerCase()) {
+			if (dbUrl.includes(`_${otherEnv}`)) {
+				throw new SafetyError(
+					`Database isolation violation: ${ctx.environment} environment accessing ${otherEnv} database`,
+					"DATABASE_ISOLATION_VIOLATION",
+					ctx.traceId
+				);
+			}
+		}
+	}
 }
 
 // ============================================
@@ -246,11 +246,11 @@ export function validateDatabaseIsolation(dbUrl: string, ctx: ExecutionContext):
 const auditLogEntries: AuditLogEntry[] = [];
 
 interface AuditLogEntry {
-  timestamp: string;
-  operation: string;
-  details: Record<string, unknown>;
-  environment: string;
-  traceId: string;
+	timestamp: string;
+	operation: string;
+	details: Record<string, unknown>;
+	environment: string;
+	traceId: string;
 }
 
 /**
@@ -263,26 +263,26 @@ interface AuditLogEntry {
  * @param ctx - ExecutionContext containing environment info
  */
 export function auditLog(
-  operation: string,
-  details: Record<string, unknown>,
-  ctx: ExecutionContext
+	operation: string,
+	details: Record<string, unknown>,
+	ctx: ExecutionContext
 ): void {
-  const entry: AuditLogEntry = {
-    timestamp: new Date().toISOString(),
-    operation,
-    details,
-    environment: ctx.environment,
-    traceId: ctx.traceId,
-  };
+	const entry: AuditLogEntry = {
+		timestamp: new Date().toISOString(),
+		operation,
+		details,
+		environment: ctx.environment,
+		traceId: ctx.traceId,
+	};
 
-  auditLogEntries.push(entry);
+	auditLogEntries.push(entry);
 }
 
 /**
  * Get all audit log entries (for export/review)
  */
 export function getAuditLog(): readonly AuditLogEntry[] {
-  return auditLogEntries;
+	return auditLogEntries;
 }
 
 /**
@@ -292,14 +292,14 @@ export function getAuditLog(): readonly AuditLogEntry[] {
  * @throws {SafetyError} If called in LIVE environment
  */
 export function clearAuditLog(ctx: ExecutionContext): void {
-  if (isLive(ctx)) {
-    throw new SafetyError(
-      "Cannot clear audit log in LIVE environment",
-      "AUDIT_LOG_PROTECTED",
-      ctx.traceId
-    );
-  }
-  auditLogEntries.length = 0;
+	if (isLive(ctx)) {
+		throw new SafetyError(
+			"Cannot clear audit log in LIVE environment",
+			"AUDIT_LOG_PROTECTED",
+			ctx.traceId
+		);
+	}
+	auditLogEntries.length = 0;
 }
 
 // ============================================
@@ -307,10 +307,10 @@ export function clearAuditLog(ctx: ExecutionContext): void {
 // ============================================
 
 interface CircuitBreakerState {
-  isOpen: boolean;
-  failureCount: number;
-  lastFailureTime: number | null;
-  openedAt: number | null;
+	isOpen: boolean;
+	failureCount: number;
+	lastFailureTime: number | null;
+	openedAt: number | null;
 }
 
 const circuitBreakers: Map<string, CircuitBreakerState> = new Map();
@@ -329,49 +329,49 @@ const DEFAULT_RESET_TIMEOUT_MS = 60000; // 1 minute
  * @param threshold - Number of failures before opening circuit
  */
 export function recordCircuitFailure(
-  circuitName: string,
-  error: Error,
-  ctx: ExecutionContext,
-  threshold = DEFAULT_FAILURE_THRESHOLD
+	circuitName: string,
+	error: Error,
+	ctx: ExecutionContext,
+	threshold = DEFAULT_FAILURE_THRESHOLD
 ): void {
-  let state = circuitBreakers.get(circuitName);
-  if (!state) {
-    state = {
-      isOpen: false,
-      failureCount: 0,
-      lastFailureTime: null,
-      openedAt: null,
-    };
-    circuitBreakers.set(circuitName, state);
-  }
+	let state = circuitBreakers.get(circuitName);
+	if (!state) {
+		state = {
+			isOpen: false,
+			failureCount: 0,
+			lastFailureTime: null,
+			openedAt: null,
+		};
+		circuitBreakers.set(circuitName, state);
+	}
 
-  state.failureCount++;
-  state.lastFailureTime = Date.now();
+	state.failureCount++;
+	state.lastFailureTime = Date.now();
 
-  auditLog(
-    "CIRCUIT_FAILURE",
-    {
-      circuit: circuitName,
-      failureCount: state.failureCount,
-      threshold,
-      error: error.message,
-    },
-    ctx
-  );
+	auditLog(
+		"CIRCUIT_FAILURE",
+		{
+			circuit: circuitName,
+			failureCount: state.failureCount,
+			threshold,
+			error: error.message,
+		},
+		ctx
+	);
 
-  if (state.failureCount >= threshold) {
-    state.isOpen = true;
-    state.openedAt = Date.now();
+	if (state.failureCount >= threshold) {
+		state.isOpen = true;
+		state.openedAt = Date.now();
 
-    auditLog(
-      "CIRCUIT_OPENED",
-      {
-        circuit: circuitName,
-        failureCount: state.failureCount,
-      },
-      ctx
-    );
-  }
+		auditLog(
+			"CIRCUIT_OPENED",
+			{
+				circuit: circuitName,
+				failureCount: state.failureCount,
+			},
+			ctx
+		);
+	}
 }
 
 /**
@@ -381,19 +381,19 @@ export function recordCircuitFailure(
  * @param resetTimeoutMs - Time after which to try again (half-open state)
  */
 export function isCircuitOpen(
-  circuitName: string,
-  resetTimeoutMs = DEFAULT_RESET_TIMEOUT_MS
+	circuitName: string,
+	resetTimeoutMs = DEFAULT_RESET_TIMEOUT_MS
 ): boolean {
-  const state = circuitBreakers.get(circuitName);
-  if (!state || !state.isOpen) {
-    return false;
-  }
+	const state = circuitBreakers.get(circuitName);
+	if (!state || !state.isOpen) {
+		return false;
+	}
 
-  if (state.openedAt && Date.now() - state.openedAt > resetTimeoutMs) {
-    return false;
-  }
+	if (state.openedAt && Date.now() - state.openedAt > resetTimeoutMs) {
+		return false;
+	}
 
-  return true;
+	return true;
 }
 
 /**
@@ -403,15 +403,15 @@ export function isCircuitOpen(
  * @param ctx - ExecutionContext containing environment info
  */
 export function resetCircuit(circuitName: string, ctx: ExecutionContext): void {
-  const state = circuitBreakers.get(circuitName);
-  if (state) {
-    state.isOpen = false;
-    state.failureCount = 0;
-    state.lastFailureTime = null;
-    state.openedAt = null;
+	const state = circuitBreakers.get(circuitName);
+	if (state) {
+		state.isOpen = false;
+		state.failureCount = 0;
+		state.lastFailureTime = null;
+		state.openedAt = null;
 
-    auditLog("CIRCUIT_RESET", { circuit: circuitName }, ctx);
-  }
+		auditLog("CIRCUIT_RESET", { circuit: circuitName }, ctx);
+	}
 }
 
 /**
@@ -422,13 +422,13 @@ export function resetCircuit(circuitName: string, ctx: ExecutionContext): void {
  * @throws {SafetyError} If circuit is open
  */
 export function requireCircuitClosed(circuitName: string, ctx: ExecutionContext): void {
-  if (isCircuitOpen(circuitName)) {
-    throw new SafetyError(
-      `Circuit breaker '${circuitName}' is open - operations blocked`,
-      "CIRCUIT_BREAKER_OPEN",
-      ctx.traceId
-    );
-  }
+	if (isCircuitOpen(circuitName)) {
+		throw new SafetyError(
+			`Circuit breaker '${circuitName}' is open - operations blocked`,
+			"CIRCUIT_BREAKER_OPEN",
+			ctx.traceId
+		);
+	}
 }
 
 // ============================================
@@ -436,13 +436,13 @@ export function requireCircuitClosed(circuitName: string, ctx: ExecutionContext)
 // ============================================
 
 export type SafetyErrorCode =
-  | "ORDER_ID_ENVIRONMENT_MISMATCH"
-  | "BROKER_ENDPOINT_MISMATCH"
-  | "LIVE_CONFIRMATION_REQUIRED"
-  | "LIVE_CONFIRMATION_NOT_GRANTED"
-  | "DATABASE_ISOLATION_VIOLATION"
-  | "AUDIT_LOG_PROTECTED"
-  | "CIRCUIT_BREAKER_OPEN";
+	| "ORDER_ID_ENVIRONMENT_MISMATCH"
+	| "BROKER_ENDPOINT_MISMATCH"
+	| "LIVE_CONFIRMATION_REQUIRED"
+	| "LIVE_CONFIRMATION_NOT_GRANTED"
+	| "DATABASE_ISOLATION_VIOLATION"
+	| "AUDIT_LOG_PROTECTED"
+	| "CIRCUIT_BREAKER_OPEN";
 
 /**
  * Custom error for safety-related failures
@@ -450,14 +450,14 @@ export type SafetyErrorCode =
  * Includes traceId from ExecutionContext for debugging.
  */
 export class SafetyError extends Error {
-  constructor(
-    message: string,
-    public readonly code: SafetyErrorCode,
-    public readonly traceId?: string
-  ) {
-    super(message);
-    this.name = "SafetyError";
-  }
+	constructor(
+		message: string,
+		public readonly code: SafetyErrorCode,
+		public readonly traceId?: string
+	) {
+		super(message);
+		this.name = "SafetyError";
+	}
 }
 
 // ============================================
@@ -473,15 +473,15 @@ export class SafetyError extends Error {
  * @throws {SafetyError} If not in BACKTEST environment
  */
 export function resetSafetyState(ctx: ExecutionContext): void {
-  if (!isBacktest(ctx)) {
-    throw new SafetyError(
-      "Safety state can only be reset in BACKTEST environment",
-      "AUDIT_LOG_PROTECTED",
-      ctx.traceId
-    );
-  }
+	if (!isBacktest(ctx)) {
+		throw new SafetyError(
+			"Safety state can only be reset in BACKTEST environment",
+			"AUDIT_LOG_PROTECTED",
+			ctx.traceId
+		);
+	}
 
-  liveConfirmationGranted = false;
-  circuitBreakers.clear();
-  auditLogEntries.length = 0;
+	liveConfirmationGranted = false;
+	circuitBreakers.clear();
+	auditLogEntries.length = 0;
 }

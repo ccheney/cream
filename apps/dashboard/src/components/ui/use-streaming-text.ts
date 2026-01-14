@@ -11,27 +11,27 @@ import { useCallback, useEffect, useRef, useState } from "react";
 export type StreamingStatus = "idle" | "processing" | "complete" | "error";
 
 export interface UseStreamingTextOptions {
-  /** Auto-connect on mount */
-  autoConnect?: boolean;
-  /** Debounce interval for UI updates (ms) */
-  debounceMs?: number;
-  /** Maximum text length before truncation */
-  maxLength?: number;
+	/** Auto-connect on mount */
+	autoConnect?: boolean;
+	/** Debounce interval for UI updates (ms) */
+	debounceMs?: number;
+	/** Maximum text length before truncation */
+	maxLength?: number;
 }
 
 export interface UseStreamingTextReturn {
-  /** Accumulated text from stream */
-  text: string;
-  /** Current streaming status */
-  status: StreamingStatus;
-  /** Error message if status is 'error' */
-  error: string | null;
-  /** Start the stream */
-  start: () => void;
-  /** Stop the stream */
-  stop: () => void;
-  /** Reset text and status */
-  reset: () => void;
+	/** Accumulated text from stream */
+	text: string;
+	/** Current streaming status */
+	status: StreamingStatus;
+	/** Error message if status is 'error' */
+	error: string | null;
+	/** Start the stream */
+	start: () => void;
+	/** Stop the stream */
+	stop: () => void;
+	/** Reset text and status */
+	reset: () => void;
 }
 
 // ============================================
@@ -39,129 +39,129 @@ export interface UseStreamingTextReturn {
 // ============================================
 
 export function useStreamingText(
-  url: string | null,
-  options: UseStreamingTextOptions = {}
+	url: string | null,
+	options: UseStreamingTextOptions = {}
 ): UseStreamingTextReturn {
-  const { autoConnect = false, debounceMs = 50, maxLength = 50000 } = options;
+	const { autoConnect = false, debounceMs = 50, maxLength = 50000 } = options;
 
-  const [text, setText] = useState("");
-  const [status, setStatus] = useState<StreamingStatus>("idle");
-  const [error, setError] = useState<string | null>(null);
+	const [text, setText] = useState("");
+	const [status, setStatus] = useState<StreamingStatus>("idle");
+	const [error, setError] = useState<string | null>(null);
 
-  const eventSourceRef = useRef<EventSource | null>(null);
-  const pendingTextRef = useRef("");
-  const debounceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+	const eventSourceRef = useRef<EventSource | null>(null);
+	const pendingTextRef = useRef("");
+	const debounceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  const flushText = useCallback(() => {
-    if (pendingTextRef.current) {
-      setText((prev) => {
-        const newText = prev + pendingTextRef.current;
-        pendingTextRef.current = "";
-        return newText.length > maxLength ? newText.slice(-maxLength) : newText;
-      });
-    }
-  }, [maxLength]);
+	const flushText = useCallback(() => {
+		if (pendingTextRef.current) {
+			setText((prev) => {
+				const newText = prev + pendingTextRef.current;
+				pendingTextRef.current = "";
+				return newText.length > maxLength ? newText.slice(-maxLength) : newText;
+			});
+		}
+	}, [maxLength]);
 
-  const start = useCallback(() => {
-    if (!url || eventSourceRef.current) {
-      return;
-    }
+	const start = useCallback(() => {
+		if (!url || eventSourceRef.current) {
+			return;
+		}
 
-    setStatus("processing");
-    setError(null);
+		setStatus("processing");
+		setError(null);
 
-    const eventSource = new EventSource(url);
-    eventSourceRef.current = eventSource;
+		const eventSource = new EventSource(url);
+		eventSourceRef.current = eventSource;
 
-    eventSource.onopen = () => {
-      setStatus("processing");
-    };
+		eventSource.onopen = () => {
+			setStatus("processing");
+		};
 
-    eventSource.onmessage = (event) => {
-      pendingTextRef.current += event.data;
+		eventSource.onmessage = (event) => {
+			pendingTextRef.current += event.data;
 
-      if (!debounceTimerRef.current) {
-        debounceTimerRef.current = setTimeout(() => {
-          flushText();
-          debounceTimerRef.current = null;
-        }, debounceMs);
-      }
-    };
+			if (!debounceTimerRef.current) {
+				debounceTimerRef.current = setTimeout(() => {
+					flushText();
+					debounceTimerRef.current = null;
+				}, debounceMs);
+			}
+		};
 
-    eventSource.onerror = () => {
-      flushText();
+		eventSource.onerror = () => {
+			flushText();
 
-      // SSE onerror fires for both errors and normal stream completion
-      if (eventSource.readyState === EventSource.CLOSED) {
-        setStatus("complete");
-      } else {
-        setError("Connection error");
-        setStatus("error");
-      }
-      eventSource.close();
-      eventSourceRef.current = null;
-    };
+			// SSE onerror fires for both errors and normal stream completion
+			if (eventSource.readyState === EventSource.CLOSED) {
+				setStatus("complete");
+			} else {
+				setError("Connection error");
+				setStatus("error");
+			}
+			eventSource.close();
+			eventSourceRef.current = null;
+		};
 
-    eventSource.addEventListener("complete", () => {
-      flushText();
-      setStatus("complete");
-      eventSource.close();
-      eventSourceRef.current = null;
-    });
+		eventSource.addEventListener("complete", () => {
+			flushText();
+			setStatus("complete");
+			eventSource.close();
+			eventSourceRef.current = null;
+		});
 
-    eventSource.addEventListener("error-message", (event) => {
-      flushText();
-      setError((event as MessageEvent).data || "Stream error");
-      setStatus("error");
-      eventSource.close();
-      eventSourceRef.current = null;
-    });
-  }, [url, debounceMs, flushText]);
+		eventSource.addEventListener("error-message", (event) => {
+			flushText();
+			setError((event as MessageEvent).data || "Stream error");
+			setStatus("error");
+			eventSource.close();
+			eventSourceRef.current = null;
+		});
+	}, [url, debounceMs, flushText]);
 
-  const stop = useCallback(() => {
-    if (debounceTimerRef.current) {
-      clearTimeout(debounceTimerRef.current);
-      debounceTimerRef.current = null;
-    }
+	const stop = useCallback(() => {
+		if (debounceTimerRef.current) {
+			clearTimeout(debounceTimerRef.current);
+			debounceTimerRef.current = null;
+		}
 
-    if (eventSourceRef.current) {
-      eventSourceRef.current.close();
-      eventSourceRef.current = null;
-    }
+		if (eventSourceRef.current) {
+			eventSourceRef.current.close();
+			eventSourceRef.current = null;
+		}
 
-    flushText();
+		flushText();
 
-    if (status === "processing") {
-      setStatus("idle");
-    }
-  }, [flushText, status]);
+		if (status === "processing") {
+			setStatus("idle");
+		}
+	}, [flushText, status]);
 
-  const reset = useCallback(() => {
-    stop();
-    setText("");
-    setStatus("idle");
-    setError(null);
-    pendingTextRef.current = "";
-  }, [stop]);
+	const reset = useCallback(() => {
+		stop();
+		setText("");
+		setStatus("idle");
+		setError(null);
+		pendingTextRef.current = "";
+	}, [stop]);
 
-  useEffect(() => {
-    if (autoConnect && url) {
-      start();
-    }
+	useEffect(() => {
+		if (autoConnect && url) {
+			start();
+		}
 
-    return () => {
-      stop();
-    };
-  }, [autoConnect, url, start, stop]);
+		return () => {
+			stop();
+		};
+	}, [autoConnect, url, start, stop]);
 
-  return {
-    text,
-    status,
-    error,
-    start,
-    stop,
-    reset,
-  };
+	return {
+		text,
+		status,
+		error,
+		start,
+		stop,
+		reset,
+	};
 }
 
 // ============================================
@@ -169,44 +169,44 @@ export function useStreamingText(
 // ============================================
 
 export interface UseManualStreamingReturn {
-  /** Accumulated text */
-  text: string;
-  /** Current status */
-  status: StreamingStatus;
-  /** Append text chunk */
-  append: (chunk: string) => void;
-  /** Set status */
-  setStatus: (status: StreamingStatus) => void;
-  /** Reset */
-  reset: () => void;
+	/** Accumulated text */
+	text: string;
+	/** Current status */
+	status: StreamingStatus;
+	/** Append text chunk */
+	append: (chunk: string) => void;
+	/** Set status */
+	setStatus: (status: StreamingStatus) => void;
+	/** Reset */
+	reset: () => void;
 }
 
 export function useManualStreaming(): UseManualStreamingReturn {
-  const [text, setText] = useState("");
-  const [status, setStatus] = useState<StreamingStatus>("idle");
+	const [text, setText] = useState("");
+	const [status, setStatus] = useState<StreamingStatus>("idle");
 
-  const append = useCallback(
-    (chunk: string) => {
-      setText((prev) => prev + chunk);
-      if (status === "idle") {
-        setStatus("processing");
-      }
-    },
-    [status]
-  );
+	const append = useCallback(
+		(chunk: string) => {
+			setText((prev) => prev + chunk);
+			if (status === "idle") {
+				setStatus("processing");
+			}
+		},
+		[status]
+	);
 
-  const reset = useCallback(() => {
-    setText("");
-    setStatus("idle");
-  }, []);
+	const reset = useCallback(() => {
+		setText("");
+		setStatus("idle");
+	}, []);
 
-  return {
-    text,
-    status,
-    append,
-    setStatus,
-    reset,
-  };
+	return {
+		text,
+		status,
+		append,
+		setStatus,
+		reset,
+	};
 }
 
 export default useStreamingText;

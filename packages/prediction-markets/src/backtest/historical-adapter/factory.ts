@@ -10,9 +10,9 @@ import { HistoricalPredictionMarketAdapter } from "./adapter.js";
  * Create a historical adapter with a repository
  */
 export function createHistoricalAdapter(
-  repository: PredictionMarketsRepository
+	repository: PredictionMarketsRepository
 ): HistoricalPredictionMarketAdapter {
-  return new HistoricalPredictionMarketAdapter({ repository });
+	return new HistoricalPredictionMarketAdapter({ repository });
 }
 
 /**
@@ -20,5 +20,5 @@ export function createHistoricalAdapter(
  * Note: Requires repository to be passed for full functionality
  */
 export function createHistoricalAdapterFromEnv(): HistoricalPredictionMarketAdapter {
-  return new HistoricalPredictionMarketAdapter();
+	return new HistoricalPredictionMarketAdapter();
 }

@@ -9,16 +9,16 @@ import { createContext, requireEnv } from "@cream/domain";
 import { createTool } from "@mastra/core/tools";
 import { z } from "zod";
 import {
-  getCompanyRelationships,
-  getSectorPeers,
-  getSupplyChain,
+	getCompanyRelationships,
+	getSectorPeers,
+	getSupplyChain,
 } from "../implementations/companyRelationship.js";
 
 /**
  * Create ExecutionContext for tool invocation.
  */
 function createToolContext() {
-  return createContext(requireEnv(), "scheduled");
+	return createContext(requireEnv(), "scheduled");
 }
 
 // ============================================
@@ -26,55 +26,55 @@ function createToolContext() {
 // ============================================
 
 const RelatedCompanySchema = z.object({
-  symbol: z.string().describe("Company ticker symbol"),
-  relationshipType: z
-    .enum(["SECTOR_PEER", "SUPPLY_CHAIN", "COMPETITOR", "CUSTOMER"])
-    .describe("Type of relationship"),
+	symbol: z.string().describe("Company ticker symbol"),
+	relationshipType: z
+		.enum(["SECTOR_PEER", "SUPPLY_CHAIN", "COMPETITOR", "CUSTOMER"])
+		.describe("Type of relationship"),
 });
 
 const DependencySchema = z.object({
-  symbol: z.string().describe("Company ticker symbol"),
-  dependencyType: z.enum(["SUPPLIER", "CUSTOMER", "PARTNER"]).describe("Type of dependency"),
-  strength: z.number().min(0).max(1).describe("Dependency strength (0-1, 1 = strongest)"),
+	symbol: z.string().describe("Company ticker symbol"),
+	dependencyType: z.enum(["SUPPLIER", "CUSTOMER", "PARTNER"]).describe("Type of dependency"),
+	strength: z.number().min(0).max(1).describe("Dependency strength (0-1, 1 = strongest)"),
 });
 
 export const CompanyRelationshipsInputSchema = z.object({
-  symbol: z
-    .string()
-    .min(1)
-    .max(10)
-    .describe("Company ticker symbol to query relationships for (e.g., 'AAPL')"),
+	symbol: z
+		.string()
+		.min(1)
+		.max(10)
+		.describe("Company ticker symbol to query relationships for (e.g., 'AAPL')"),
 });
 
 export const CompanyRelationshipsOutputSchema = z.object({
-  symbol: z.string().describe("The queried company symbol"),
-  relatedCompanies: z
-    .array(RelatedCompanySchema)
-    .describe("Related companies (sector peers, competitors, customers)"),
-  dependencies: z
-    .array(DependencySchema)
-    .describe("Companies this company depends on (suppliers, partners)"),
-  dependents: z.array(DependencySchema).describe("Companies that depend on this company"),
-  executionTimeMs: z.number().describe("Query execution time in milliseconds"),
+	symbol: z.string().describe("The queried company symbol"),
+	relatedCompanies: z
+		.array(RelatedCompanySchema)
+		.describe("Related companies (sector peers, competitors, customers)"),
+	dependencies: z
+		.array(DependencySchema)
+		.describe("Companies this company depends on (suppliers, partners)"),
+	dependents: z.array(DependencySchema).describe("Companies that depend on this company"),
+	executionTimeMs: z.number().describe("Query execution time in milliseconds"),
 });
 
 export const SectorPeersInputSchema = z.object({
-  symbol: z.string().min(1).max(10).describe("Company ticker symbol (e.g., 'NVDA')"),
+	symbol: z.string().min(1).max(10).describe("Company ticker symbol (e.g., 'NVDA')"),
 });
 
 export const SectorPeersOutputSchema = z.object({
-  symbol: z.string().describe("The queried company symbol"),
-  peers: z.array(z.string()).describe("Sector peer ticker symbols"),
+	symbol: z.string().describe("The queried company symbol"),
+	peers: z.array(z.string()).describe("Sector peer ticker symbols"),
 });
 
 export const SupplyChainInputSchema = z.object({
-  symbol: z.string().min(1).max(10).describe("Company ticker symbol (e.g., 'TSLA')"),
+	symbol: z.string().min(1).max(10).describe("Company ticker symbol (e.g., 'TSLA')"),
 });
 
 export const SupplyChainOutputSchema = z.object({
-  symbol: z.string().describe("The queried company symbol"),
-  suppliers: z.array(DependencySchema).describe("Upstream suppliers"),
-  customers: z.array(DependencySchema).describe("Downstream customers"),
+	symbol: z.string().describe("The queried company symbol"),
+	suppliers: z.array(DependencySchema).describe("Upstream suppliers"),
+	customers: z.array(DependencySchema).describe("Downstream customers"),
 });
 
 export type CompanyRelationshipsInput = z.infer<typeof CompanyRelationshipsInputSchema>;
@@ -89,8 +89,8 @@ export type SupplyChainOutput = z.infer<typeof SupplyChainOutputSchema>;
 // ============================================
 
 export const companyRelationshipsTool = createTool({
-  id: "company_relationships",
-  description: `Query all relationships for a company from the HelixDB company graph.
+	id: "company_relationships",
+	description: `Query all relationships for a company from the HelixDB company graph.
 
 Use this tool when you need to understand:
 - What companies are in the same sector as a given company (sector peers)
@@ -110,17 +110,17 @@ Example queries:
 
 BACKTEST mode: Returns empty results.
 PAPER/LIVE mode: Queries HelixDB company graph.`,
-  inputSchema: CompanyRelationshipsInputSchema,
-  outputSchema: CompanyRelationshipsOutputSchema,
-  execute: async (inputData): Promise<CompanyRelationshipsOutput> => {
-    const ctx = createToolContext();
-    return getCompanyRelationships(ctx, inputData.symbol);
-  },
+	inputSchema: CompanyRelationshipsInputSchema,
+	outputSchema: CompanyRelationshipsOutputSchema,
+	execute: async (inputData): Promise<CompanyRelationshipsOutput> => {
+		const ctx = createToolContext();
+		return getCompanyRelationships(ctx, inputData.symbol);
+	},
 });
 
 export const sectorPeersTool = createTool({
-  id: "sector_peers",
-  description: `Get sector peer companies for a given ticker symbol.
+	id: "sector_peers",
+	description: `Get sector peer companies for a given ticker symbol.
 
 Use this tool when you need to:
 - Find companies in the same sector for comparison
@@ -133,17 +133,17 @@ Example: "Get sector peers for AMD" → Returns ["NVDA", "INTC", "QCOM", ...]
 
 BACKTEST mode: Returns empty peers list.
 PAPER/LIVE mode: Queries HelixDB company graph.`,
-  inputSchema: SectorPeersInputSchema,
-  outputSchema: SectorPeersOutputSchema,
-  execute: async (inputData): Promise<SectorPeersOutput> => {
-    const ctx = createToolContext();
-    return getSectorPeers(ctx, inputData.symbol);
-  },
+	inputSchema: SectorPeersInputSchema,
+	outputSchema: SectorPeersOutputSchema,
+	execute: async (inputData): Promise<SectorPeersOutput> => {
+		const ctx = createToolContext();
+		return getSectorPeers(ctx, inputData.symbol);
+	},
 });
 
 export const supplyChainTool = createTool({
-  id: "supply_chain",
-  description: `Get supply chain relationships for a company.
+	id: "supply_chain",
+	description: `Get supply chain relationships for a company.
 
 Use this tool when you need to understand:
 - Upstream suppliers: Who provides components/services to this company
@@ -159,19 +159,19 @@ Example: "What is TSLA's supply chain?" → Returns suppliers (battery, chips) a
 
 BACKTEST mode: Returns empty supply chain.
 PAPER/LIVE mode: Queries HelixDB company graph.`,
-  inputSchema: SupplyChainInputSchema,
-  outputSchema: SupplyChainOutputSchema,
-  execute: async (inputData): Promise<SupplyChainOutput> => {
-    const ctx = createToolContext();
-    return getSupplyChain(ctx, inputData.symbol);
-  },
+	inputSchema: SupplyChainInputSchema,
+	outputSchema: SupplyChainOutputSchema,
+	execute: async (inputData): Promise<SupplyChainOutput> => {
+		const ctx = createToolContext();
+		return getSupplyChain(ctx, inputData.symbol);
+	},
 });
 
 /**
  * All company relationship tools
  */
 export const companyRelationshipTools = [
-  companyRelationshipsTool,
-  sectorPeersTool,
-  supplyChainTool,
+	companyRelationshipsTool,
+	sectorPeersTool,
+	supplyChainTool,
 ];

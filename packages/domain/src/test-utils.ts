@@ -43,7 +43,7 @@ import type { CreamEnvironment } from "./env";
  * ```
  */
 export function createTestContext(environment: CreamEnvironment = "BACKTEST"): ExecutionContext {
-  return createContext(environment, "test");
+	return createContext(environment, "test");
 }
 
 /**
@@ -62,8 +62,8 @@ export function createTestContext(environment: CreamEnvironment = "BACKTEST"): E
  * ```
  */
 export function createTestContextWithConfig(
-  environment: CreamEnvironment = "BACKTEST",
-  configId: string
+	environment: CreamEnvironment = "BACKTEST",
+	configId: string
 ): ExecutionContext {
-  return createContext(environment, "test", configId);
+	return createContext(environment, "test", configId);
 }

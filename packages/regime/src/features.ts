@@ -13,31 +13,31 @@
 import type { OHLCVBar } from "@cream/indicators";
 
 export interface RegimeFeatures {
-  /** Log returns */
-  returns: number;
-  /** Realized volatility (std of returns) */
-  volatility: number;
-  /** Volume z-score relative to recent average */
-  volumeZScore: number;
-  /** Trend strength (price change / volatility) */
-  trendStrength: number;
-  /** Timestamp of the feature observation */
-  timestamp: string;
+	/** Log returns */
+	returns: number;
+	/** Realized volatility (std of returns) */
+	volatility: number;
+	/** Volume z-score relative to recent average */
+	volumeZScore: number;
+	/** Trend strength (price change / volatility) */
+	trendStrength: number;
+	/** Timestamp of the feature observation */
+	timestamp: string;
 }
 
 export interface FeatureExtractionConfig {
-  /** Lookback period for returns calculation */
-  returnsPeriod: number;
-  /** Lookback period for volatility calculation */
-  volatilityPeriod: number;
-  /** Lookback period for volume average */
-  volumePeriod: number;
+	/** Lookback period for returns calculation */
+	returnsPeriod: number;
+	/** Lookback period for volatility calculation */
+	volatilityPeriod: number;
+	/** Lookback period for volume average */
+	volumePeriod: number;
 }
 
 export const DEFAULT_FEATURE_CONFIG: FeatureExtractionConfig = {
-  returnsPeriod: 1,
-  volatilityPeriod: 20,
-  volumePeriod: 20,
+	returnsPeriod: 1,
+	volatilityPeriod: 20,
+	volumePeriod: 20,
 };
 
 /**
@@ -48,164 +48,164 @@ export const DEFAULT_FEATURE_CONFIG: FeatureExtractionConfig = {
  * @returns Array of extracted features
  */
 export function extractFeatures(
-  candles: OHLCVBar[],
-  config: FeatureExtractionConfig = DEFAULT_FEATURE_CONFIG
+	candles: OHLCVBar[],
+	config: FeatureExtractionConfig = DEFAULT_FEATURE_CONFIG
 ): RegimeFeatures[] {
-  if (candles.length < config.volatilityPeriod + 1) {
-    return [];
-  }
+	if (candles.length < config.volatilityPeriod + 1) {
+		return [];
+	}
 
-  const features: RegimeFeatures[] = [];
-  const logReturns: number[] = [];
-  for (let i = 1; i < candles.length; i++) {
-    const prevClose = candles[i - 1]?.close ?? 0;
-    const currClose = candles[i]?.close ?? 0;
-    if (prevClose > 0 && currClose > 0) {
-      logReturns.push(Math.log(currClose / prevClose));
-    } else {
-      logReturns.push(0);
-    }
-  }
+	const features: RegimeFeatures[] = [];
+	const logReturns: number[] = [];
+	for (let i = 1; i < candles.length; i++) {
+		const prevClose = candles[i - 1]?.close ?? 0;
+		const currClose = candles[i]?.close ?? 0;
+		if (prevClose > 0 && currClose > 0) {
+			logReturns.push(Math.log(currClose / prevClose));
+		} else {
+			logReturns.push(0);
+		}
+	}
 
-  for (let i = config.volatilityPeriod; i < candles.length; i++) {
-    // Returns array is offset by 1 from candles array due to diff calculation
-    const returnIdx = i - 1;
-    const candle = candles[i];
-    if (!candle) {
-      continue;
-    }
+	for (let i = config.volatilityPeriod; i < candles.length; i++) {
+		// Returns array is offset by 1 from candles array due to diff calculation
+		const returnIdx = i - 1;
+		const candle = candles[i];
+		if (!candle) {
+			continue;
+		}
 
-    const returns = logReturns[returnIdx] ?? 0;
+		const returns = logReturns[returnIdx] ?? 0;
 
-    const recentReturns = logReturns.slice(returnIdx - config.volatilityPeriod + 1, returnIdx + 1);
-    const volatility = calculateStd(recentReturns);
+		const recentReturns = logReturns.slice(returnIdx - config.volatilityPeriod + 1, returnIdx + 1);
+		const volatility = calculateStd(recentReturns);
 
-    const recentVolumes = candles.slice(i - config.volumePeriod + 1, i + 1).map((c) => c.volume);
-    const volumeZScore = calculateZScore(candle.volume, recentVolumes);
+		const recentVolumes = candles.slice(i - config.volumePeriod + 1, i + 1).map((c) => c.volume);
+		const volumeZScore = calculateZScore(candle.volume, recentVolumes);
 
-    const trendStrength = volatility > 0.0001 ? returns / volatility : 0;
+		const trendStrength = volatility > 0.0001 ? returns / volatility : 0;
 
-    features.push({
-      returns,
-      volatility,
-      volumeZScore,
-      trendStrength: Math.max(-3, Math.min(3, trendStrength)),
-      timestamp: new Date(candle.timestamp).toISOString(),
-    });
-  }
+		features.push({
+			returns,
+			volatility,
+			volumeZScore,
+			trendStrength: Math.max(-3, Math.min(3, trendStrength)),
+			timestamp: new Date(candle.timestamp).toISOString(),
+		});
+	}
 
-  return features;
+	return features;
 }
 
 export function extractSingleFeature(
-  candles: OHLCVBar[],
-  config: FeatureExtractionConfig = DEFAULT_FEATURE_CONFIG
+	candles: OHLCVBar[],
+	config: FeatureExtractionConfig = DEFAULT_FEATURE_CONFIG
 ): RegimeFeatures | null {
-  const features = extractFeatures(candles, config);
-  return features[features.length - 1] ?? null;
+	const features = extractFeatures(candles, config);
+	return features[features.length - 1] ?? null;
 }
 
 export function getMinimumCandleCount(
-  config: FeatureExtractionConfig = DEFAULT_FEATURE_CONFIG
+	config: FeatureExtractionConfig = DEFAULT_FEATURE_CONFIG
 ): number {
-  return Math.max(config.volatilityPeriod, config.volumePeriod) + 1;
+	return Math.max(config.volatilityPeriod, config.volumePeriod) + 1;
 }
 
 export function calculateStd(values: number[]): number {
-  if (values.length === 0) {
-    return 0;
-  }
-  if (values.length === 1) {
-    return 0;
-  }
+	if (values.length === 0) {
+		return 0;
+	}
+	if (values.length === 1) {
+		return 0;
+	}
 
-  const mean = values.reduce((a, b) => a + b, 0) / values.length;
-  const squaredDiffs = values.map((v) => (v - mean) ** 2);
-  const variance = squaredDiffs.reduce((a, b) => a + b, 0) / values.length;
-  return Math.sqrt(variance);
+	const mean = values.reduce((a, b) => a + b, 0) / values.length;
+	const squaredDiffs = values.map((v) => (v - mean) ** 2);
+	const variance = squaredDiffs.reduce((a, b) => a + b, 0) / values.length;
+	return Math.sqrt(variance);
 }
 
 export function calculateMean(values: number[]): number {
-  if (values.length === 0) {
-    return 0;
-  }
-  return values.reduce((a, b) => a + b, 0) / values.length;
+	if (values.length === 0) {
+		return 0;
+	}
+	return values.reduce((a, b) => a + b, 0) / values.length;
 }
 
 export function calculateZScore(value: number, sample: number[]): number {
-  const mean = calculateMean(sample);
-  const std = calculateStd(sample);
-  if (std < 0.0001) {
-    return 0; // Avoid division by near-zero
-  }
-  return (value - mean) / std;
+	const mean = calculateMean(sample);
+	const std = calculateStd(sample);
+	if (std < 0.0001) {
+		return 0; // Avoid division by near-zero
+	}
+	return (value - mean) / std;
 }
 
 export function normalizeFeatures(features: RegimeFeatures[]): {
-  normalized: number[][];
-  means: number[];
-  stds: number[];
+	normalized: number[][];
+	means: number[];
+	stds: number[];
 } {
-  if (features.length === 0) {
-    return { normalized: [], means: [0, 0, 0, 0], stds: [1, 1, 1, 1] };
-  }
+	if (features.length === 0) {
+		return { normalized: [], means: [0, 0, 0, 0], stds: [1, 1, 1, 1] };
+	}
 
-  const returns = features.map((f) => f.returns);
-  const volatility = features.map((f) => f.volatility);
-  const volumeZScore = features.map((f) => f.volumeZScore);
-  const trendStrength = features.map((f) => f.trendStrength);
+	const returns = features.map((f) => f.returns);
+	const volatility = features.map((f) => f.volatility);
+	const volumeZScore = features.map((f) => f.volumeZScore);
+	const trendStrength = features.map((f) => f.trendStrength);
 
-  const means = [
-    calculateMean(returns),
-    calculateMean(volatility),
-    calculateMean(volumeZScore),
-    calculateMean(trendStrength),
-  ];
+	const means = [
+		calculateMean(returns),
+		calculateMean(volatility),
+		calculateMean(volumeZScore),
+		calculateMean(trendStrength),
+	];
 
-  const stds = [
-    Math.max(calculateStd(returns), 0.0001),
-    Math.max(calculateStd(volatility), 0.0001),
-    Math.max(calculateStd(volumeZScore), 0.0001),
-    Math.max(calculateStd(trendStrength), 0.0001),
-  ];
+	const stds = [
+		Math.max(calculateStd(returns), 0.0001),
+		Math.max(calculateStd(volatility), 0.0001),
+		Math.max(calculateStd(volumeZScore), 0.0001),
+		Math.max(calculateStd(trendStrength), 0.0001),
+	];
 
-  const meanReturns = means[0] ?? 0;
-  const meanVol = means[1] ?? 0;
-  const meanVolZ = means[2] ?? 0;
-  const meanTrend = means[3] ?? 0;
-  const stdReturns = stds[0] ?? 1;
-  const stdVol = stds[1] ?? 1;
-  const stdVolZ = stds[2] ?? 1;
-  const stdTrend = stds[3] ?? 1;
+	const meanReturns = means[0] ?? 0;
+	const meanVol = means[1] ?? 0;
+	const meanVolZ = means[2] ?? 0;
+	const meanTrend = means[3] ?? 0;
+	const stdReturns = stds[0] ?? 1;
+	const stdVol = stds[1] ?? 1;
+	const stdVolZ = stds[2] ?? 1;
+	const stdTrend = stds[3] ?? 1;
 
-  const normalized = features.map((f) => [
-    (f.returns - meanReturns) / stdReturns,
-    (f.volatility - meanVol) / stdVol,
-    (f.volumeZScore - meanVolZ) / stdVolZ,
-    (f.trendStrength - meanTrend) / stdTrend,
-  ]);
+	const normalized = features.map((f) => [
+		(f.returns - meanReturns) / stdReturns,
+		(f.volatility - meanVol) / stdVol,
+		(f.volumeZScore - meanVolZ) / stdVolZ,
+		(f.trendStrength - meanTrend) / stdTrend,
+	]);
 
-  return { normalized, means, stds };
+	return { normalized, means, stds };
 }
 
 export function normalizeFeatureVector(
-  feature: RegimeFeatures,
-  means: number[],
-  stds: number[]
+	feature: RegimeFeatures,
+	means: number[],
+	stds: number[]
 ): number[] {
-  const meanReturns = means[0] ?? 0;
-  const meanVol = means[1] ?? 0;
-  const meanVolZ = means[2] ?? 0;
-  const meanTrend = means[3] ?? 0;
-  const stdReturns = stds[0] ?? 1;
-  const stdVol = stds[1] ?? 1;
-  const stdVolZ = stds[2] ?? 1;
-  const stdTrend = stds[3] ?? 1;
+	const meanReturns = means[0] ?? 0;
+	const meanVol = means[1] ?? 0;
+	const meanVolZ = means[2] ?? 0;
+	const meanTrend = means[3] ?? 0;
+	const stdReturns = stds[0] ?? 1;
+	const stdVol = stds[1] ?? 1;
+	const stdVolZ = stds[2] ?? 1;
+	const stdTrend = stds[3] ?? 1;
 
-  return [
-    (feature.returns - meanReturns) / stdReturns,
-    (feature.volatility - meanVol) / stdVol,
-    (feature.volumeZScore - meanVolZ) / stdVolZ,
-    (feature.trendStrength - meanTrend) / stdTrend,
-  ];
+	return [
+		(feature.returns - meanReturns) / stdReturns,
+		(feature.volatility - meanVol) / stdVol,
+		(feature.volumeZScore - meanVolZ) / stdVolZ,
+		(feature.trendStrength - meanTrend) / stdTrend,
+	];
 }

@@ -5,8 +5,8 @@
  */
 
 export {
-  type KeyboardShortcutsContextValue,
-  KeyboardShortcutsProvider,
-  type KeyboardShortcutsProviderProps,
-  useKeyboardShortcutsContext,
+	type KeyboardShortcutsContextValue,
+	KeyboardShortcutsProvider,
+	type KeyboardShortcutsProviderProps,
+	useKeyboardShortcutsContext,
 } from "./keyboard-shortcuts-provider";

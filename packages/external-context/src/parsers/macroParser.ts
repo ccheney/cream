@@ -5,12 +5,12 @@
  */
 
 import {
-  classifyReleaseImpact,
-  FRED_SERIES,
-  type FREDReleaseDate,
-  type FREDSeriesId,
-  getReleaseById,
-  type ReleaseImpact,
+	classifyReleaseImpact,
+	FRED_SERIES,
+	type FREDReleaseDate,
+	type FREDSeriesId,
+	getReleaseById,
+	type ReleaseImpact,
 } from "@cream/universe";
 import type { ParsedMacroRelease } from "../types.js";
 
@@ -18,41 +18,41 @@ import type { ParsedMacroRelease } from "../types.js";
  * Alpha Vantage economic indicator response
  */
 export interface AlphaVantageEconomicIndicator {
-  name: string;
-  interval: string;
-  unit: string;
-  data: Array<{
-    date: string;
-    value: string;
-  }>;
+	name: string;
+	interval: string;
+	unit: string;
+	data: Array<{
+		date: string;
+		value: string;
+	}>;
 }
 
 /**
  * Known macro indicators with metadata
  */
 export const MACRO_INDICATORS = {
-  // Growth indicators
-  REAL_GDP: { name: "Real GDP", unit: "billions USD", frequency: "quarterly" },
-  REAL_GDP_PER_CAPITA: { name: "Real GDP per Capita", unit: "USD", frequency: "quarterly" },
+	// Growth indicators
+	REAL_GDP: { name: "Real GDP", unit: "billions USD", frequency: "quarterly" },
+	REAL_GDP_PER_CAPITA: { name: "Real GDP per Capita", unit: "USD", frequency: "quarterly" },
 
-  // Inflation indicators
-  CPI: { name: "Consumer Price Index", unit: "index", frequency: "monthly" },
-  INFLATION: { name: "Inflation Rate", unit: "percent", frequency: "monthly" },
+	// Inflation indicators
+	CPI: { name: "Consumer Price Index", unit: "index", frequency: "monthly" },
+	INFLATION: { name: "Inflation Rate", unit: "percent", frequency: "monthly" },
 
-  // Employment indicators
-  UNEMPLOYMENT: { name: "Unemployment Rate", unit: "percent", frequency: "monthly" },
-  NONFARM_PAYROLL: { name: "Nonfarm Payrolls", unit: "thousands", frequency: "monthly" },
+	// Employment indicators
+	UNEMPLOYMENT: { name: "Unemployment Rate", unit: "percent", frequency: "monthly" },
+	NONFARM_PAYROLL: { name: "Nonfarm Payrolls", unit: "thousands", frequency: "monthly" },
 
-  // Interest rate indicators
-  FEDERAL_FUNDS_RATE: { name: "Federal Funds Rate", unit: "percent", frequency: "daily" },
-  TREASURY_YIELD: { name: "Treasury Yield", unit: "percent", frequency: "daily" },
+	// Interest rate indicators
+	FEDERAL_FUNDS_RATE: { name: "Federal Funds Rate", unit: "percent", frequency: "daily" },
+	TREASURY_YIELD: { name: "Treasury Yield", unit: "percent", frequency: "daily" },
 
-  // Retail and consumer
-  RETAIL_SALES: { name: "Retail Sales", unit: "millions USD", frequency: "monthly" },
-  CONSUMER_SENTIMENT: { name: "Consumer Sentiment", unit: "index", frequency: "monthly" },
+	// Retail and consumer
+	RETAIL_SALES: { name: "Retail Sales", unit: "millions USD", frequency: "monthly" },
+	CONSUMER_SENTIMENT: { name: "Consumer Sentiment", unit: "index", frequency: "monthly" },
 
-  // Trade
-  DURABLES: { name: "Durable Goods Orders", unit: "millions USD", frequency: "monthly" },
+	// Trade
+	DURABLES: { name: "Durable Goods Orders", unit: "millions USD", frequency: "monthly" },
 } as const;
 
 export type MacroIndicatorType = keyof typeof MACRO_INDICATORS;
@@ -61,95 +61,95 @@ export type MacroIndicatorType = keyof typeof MACRO_INDICATORS;
  * Parse Alpha Vantage economic indicator response
  */
 export function parseAlphaVantageIndicator(
-  response: AlphaVantageEconomicIndicator,
-  indicatorType?: MacroIndicatorType
+	response: AlphaVantageEconomicIndicator,
+	indicatorType?: MacroIndicatorType
 ): ParsedMacroRelease[] {
-  const results: ParsedMacroRelease[] = [];
+	const results: ParsedMacroRelease[] = [];
 
-  if (!response.data || !Array.isArray(response.data)) {
-    return results;
-  }
+	if (!response.data || !Array.isArray(response.data)) {
+		return results;
+	}
 
-  // Get metadata
-  const metadata = indicatorType ? MACRO_INDICATORS[indicatorType] : null;
+	// Get metadata
+	const metadata = indicatorType ? MACRO_INDICATORS[indicatorType] : null;
 
-  for (let i = 0; i < response.data.length; i++) {
-    const item = response.data[i];
-    if (!item || !item.date || item.value === ".") {
-      continue;
-    }
+	for (let i = 0; i < response.data.length; i++) {
+		const item = response.data[i];
+		if (!item || !item.date || item.value === ".") {
+			continue;
+		}
 
-    const value = parseFloat(item.value);
-    if (Number.isNaN(value)) {
-      continue;
-    }
+		const value = parseFloat(item.value);
+		if (Number.isNaN(value)) {
+			continue;
+		}
 
-    const date = parseDate(item.date);
-    if (!date) {
-      continue;
-    }
+		const date = parseDate(item.date);
+		if (!date) {
+			continue;
+		}
 
-    // Get previous value if available
-    const nextItem = response.data[i + 1];
-    const previousValue = nextItem ? parseFloat(nextItem.value) : undefined;
+		// Get previous value if available
+		const nextItem = response.data[i + 1];
+		const previousValue = nextItem ? parseFloat(nextItem.value) : undefined;
 
-    results.push({
-      indicator: metadata?.name ?? response.name ?? "Unknown",
-      value,
-      previousValue: Number.isNaN(previousValue ?? NaN) ? undefined : previousValue,
-      date,
-      unit: metadata?.unit ?? response.unit ?? undefined,
-      source: "Alpha Vantage",
-    });
-  }
+		results.push({
+			indicator: metadata?.name ?? response.name ?? "Unknown",
+			value,
+			previousValue: Number.isNaN(previousValue ?? NaN) ? undefined : previousValue,
+			date,
+			unit: metadata?.unit ?? response.unit ?? undefined,
+			source: "Alpha Vantage",
+		});
+	}
 
-  return results;
+	return results;
 }
 
 /**
  * Parse FMP economic calendar event
  */
 export interface FMPEconomicEvent {
-  date: string;
-  country: string;
-  event: string;
-  actual?: number | null;
-  previous?: number | null;
-  estimate?: number | null;
-  change?: number | null;
-  changePercentage?: number | null;
-  unit?: string;
-  impact?: "Low" | "Medium" | "High";
+	date: string;
+	country: string;
+	event: string;
+	actual?: number | null;
+	previous?: number | null;
+	estimate?: number | null;
+	change?: number | null;
+	changePercentage?: number | null;
+	unit?: string;
+	impact?: "Low" | "Medium" | "High";
 }
 
 /**
  * Parse FMP economic calendar events
  */
 export function parseFMPEconomicEvents(events: FMPEconomicEvent[]): ParsedMacroRelease[] {
-  const results: ParsedMacroRelease[] = [];
+	const results: ParsedMacroRelease[] = [];
 
-  for (const event of events) {
-    // Only process events with actual values
-    if (event.actual === null || event.actual === undefined) {
-      continue;
-    }
+	for (const event of events) {
+		// Only process events with actual values
+		if (event.actual === null || event.actual === undefined) {
+			continue;
+		}
 
-    const date = parseDate(event.date);
-    if (!date) {
-      continue;
-    }
+		const date = parseDate(event.date);
+		if (!date) {
+			continue;
+		}
 
-    results.push({
-      indicator: event.event,
-      value: event.actual,
-      previousValue: event.previous ?? undefined,
-      date,
-      unit: event.unit,
-      source: `FMP:${event.country}`,
-    });
-  }
+		results.push({
+			indicator: event.event,
+			value: event.actual,
+			previousValue: event.previous ?? undefined,
+			date,
+			unit: event.unit,
+			source: `FMP:${event.country}`,
+		});
+	}
 
-  return results;
+	return results;
 }
 
 // ============================================
@@ -160,20 +160,20 @@ export function parseFMPEconomicEvents(events: FMPEconomicEvent[]): ParsedMacroR
  * Metadata for FRED observations parsing.
  */
 export interface FREDObservationMetadata {
-  /** Display name for the indicator */
-  name: string;
-  /** Unit of measurement */
-  unit: string;
+	/** Display name for the indicator */
+	name: string;
+	/** Unit of measurement */
+	unit: string;
 }
 
 /**
  * FRED observation entry (from FREDClient.getObservations).
  */
 export interface FREDObservationEntry {
-  /** Date in YYYY-MM-DD format */
-  date: string;
-  /** Value as string (can be '.' for missing data) */
-  value: string;
+	/** Date in YYYY-MM-DD format */
+	date: string;
+	/** Value as string (can be '.' for missing data) */
+	value: string;
 }
 
 /**
@@ -204,80 +204,80 @@ export interface FREDObservationEntry {
  * ```
  */
 export function parseFREDObservations(
-  seriesId: string,
-  observations: FREDObservationEntry[],
-  metadata?: FREDObservationMetadata
+	seriesId: string,
+	observations: FREDObservationEntry[],
+	metadata?: FREDObservationMetadata
 ): ParsedMacroRelease[] {
-  const results: ParsedMacroRelease[] = [];
+	const results: ParsedMacroRelease[] = [];
 
-  if (!observations || observations.length === 0) {
-    return results;
-  }
+	if (!observations || observations.length === 0) {
+		return results;
+	}
 
-  // Look up series metadata from registry if not provided
-  const registryMeta = FRED_SERIES[seriesId as FREDSeriesId] as
-    | { name: string; unit: string }
-    | undefined;
-  const name = metadata?.name ?? registryMeta?.name ?? seriesId;
-  const unit = metadata?.unit ?? registryMeta?.unit ?? undefined;
+	// Look up series metadata from registry if not provided
+	const registryMeta = FRED_SERIES[seriesId as FREDSeriesId] as
+		| { name: string; unit: string }
+		| undefined;
+	const name = metadata?.name ?? registryMeta?.name ?? seriesId;
+	const unit = metadata?.unit ?? registryMeta?.unit ?? undefined;
 
-  for (let i = 0; i < observations.length; i++) {
-    const item = observations[i];
-    if (!item || !item.date) {
-      continue;
-    }
+	for (let i = 0; i < observations.length; i++) {
+		const item = observations[i];
+		if (!item || !item.date) {
+			continue;
+		}
 
-    // Skip missing data (FRED uses '.' for unavailable values)
-    if (item.value === "." || item.value === "" || item.value == null) {
-      continue;
-    }
+		// Skip missing data (FRED uses '.' for unavailable values)
+		if (item.value === "." || item.value === "" || item.value == null) {
+			continue;
+		}
 
-    const value = Number.parseFloat(item.value);
-    if (Number.isNaN(value)) {
-      continue;
-    }
+		const value = Number.parseFloat(item.value);
+		if (Number.isNaN(value)) {
+			continue;
+		}
 
-    const date = parseDate(item.date);
-    if (!date) {
-      continue;
-    }
+		const date = parseDate(item.date);
+		if (!date) {
+			continue;
+		}
 
-    // Get previous value from next item (observations typically newest-first)
-    // Scan for next valid observation
-    let previousValue: number | undefined;
-    for (let j = i + 1; j < observations.length; j++) {
-      const nextItem = observations[j];
-      if (nextItem && nextItem.value !== "." && nextItem.value !== "" && nextItem.value != null) {
-        const parsed = Number.parseFloat(nextItem.value);
-        if (!Number.isNaN(parsed)) {
-          previousValue = parsed;
-          break;
-        }
-      }
-    }
+		// Get previous value from next item (observations typically newest-first)
+		// Scan for next valid observation
+		let previousValue: number | undefined;
+		for (let j = i + 1; j < observations.length; j++) {
+			const nextItem = observations[j];
+			if (nextItem && nextItem.value !== "." && nextItem.value !== "" && nextItem.value != null) {
+				const parsed = Number.parseFloat(nextItem.value);
+				if (!Number.isNaN(parsed)) {
+					previousValue = parsed;
+					break;
+				}
+			}
+		}
 
-    results.push({
-      indicator: name,
-      value,
-      previousValue,
-      date,
-      unit,
-      source: `FRED:${seriesId}`,
-    });
-  }
+		results.push({
+			indicator: name,
+			value,
+			previousValue,
+			date,
+			unit,
+			source: `FRED:${seriesId}`,
+		});
+	}
 
-  return results;
+	return results;
 }
 
 /**
  * Parse date string
  */
 function parseDate(dateStr: string): Date | null {
-  if (!dateStr) {
-    return null;
-  }
-  const date = new Date(dateStr);
-  return Number.isNaN(date.getTime()) ? null : date;
+	if (!dateStr) {
+		return null;
+	}
+	const date = new Date(dateStr);
+	return Number.isNaN(date.getTime()) ? null : date;
 }
 
 /**
@@ -289,74 +289,74 @@ function parseDate(dateStr: string): Date | null {
  * @returns Surprise score from -1 (big miss) to 1 (big beat)
  */
 export function calculateMacroSurprise(
-  actual: number,
-  estimate?: number,
-  previous?: number
+	actual: number,
+	estimate?: number,
+	previous?: number
 ): number {
-  // If we have an estimate, use it for surprise calculation
-  if (estimate !== undefined && estimate !== 0) {
-    const surprise = (actual - estimate) / Math.abs(estimate);
-    // Clamp to [-1, 1] range
-    return Math.max(-1, Math.min(1, surprise));
-  }
+	// If we have an estimate, use it for surprise calculation
+	if (estimate !== undefined && estimate !== 0) {
+		const surprise = (actual - estimate) / Math.abs(estimate);
+		// Clamp to [-1, 1] range
+		return Math.max(-1, Math.min(1, surprise));
+	}
 
-  // If no estimate but have previous, use previous as baseline
-  if (previous !== undefined && previous !== 0) {
-    const change = (actual - previous) / Math.abs(previous);
-    // Use half the weight for previous-based surprise
-    return Math.max(-1, Math.min(1, change * 0.5));
-  }
+	// If no estimate but have previous, use previous as baseline
+	if (previous !== undefined && previous !== 0) {
+		const change = (actual - previous) / Math.abs(previous);
+		// Use half the weight for previous-based surprise
+		return Math.max(-1, Math.min(1, change * 0.5));
+	}
 
-  // No baseline available
-  return 0;
+	// No baseline available
+	return 0;
 }
 
 /**
  * Determine if macro release is significant
  */
 export function isMacroReleaseSignificant(
-  release: ParsedMacroRelease,
-  thresholdPercent = 0.5
+	release: ParsedMacroRelease,
+	thresholdPercent = 0.5
 ): boolean {
-  if (release.previousValue === undefined) {
-    return true; // Assume significant if unknown
-  }
+	if (release.previousValue === undefined) {
+		return true; // Assume significant if unknown
+	}
 
-  const changePercent =
-    Math.abs((release.value - release.previousValue) / release.previousValue) * 100;
+	const changePercent =
+		Math.abs((release.value - release.previousValue) / release.previousValue) * 100;
 
-  return changePercent >= thresholdPercent;
+	return changePercent >= thresholdPercent;
 }
 
 /**
  * Filter macro releases by recency
  */
 export function filterRecentMacroReleases(
-  releases: ParsedMacroRelease[],
-  maxAgeDays = 7
+	releases: ParsedMacroRelease[],
+	maxAgeDays = 7
 ): ParsedMacroRelease[] {
-  const cutoff = new Date(Date.now() - maxAgeDays * 24 * 60 * 60 * 1000);
-  return releases.filter((r) => r.date >= cutoff);
+	const cutoff = new Date(Date.now() - maxAgeDays * 24 * 60 * 60 * 1000);
+	return releases.filter((r) => r.date >= cutoff);
 }
 
 /**
  * Group macro releases by indicator
  */
 export function groupByIndicator(
-  releases: ParsedMacroRelease[]
+	releases: ParsedMacroRelease[]
 ): Map<string, ParsedMacroRelease[]> {
-  const groups = Map.groupBy(releases, (r) => r.indicator);
+	const groups = Map.groupBy(releases, (r) => r.indicator);
 
-  // Sort each group by date descending
-  const sortedGroups = new Map<string, ParsedMacroRelease[]>();
-  for (const [key, groupReleases] of groups) {
-    sortedGroups.set(
-      key,
-      groupReleases.toSorted((a, b) => b.date.getTime() - a.date.getTime())
-    );
-  }
+	// Sort each group by date descending
+	const sortedGroups = new Map<string, ParsedMacroRelease[]>();
+	for (const [key, groupReleases] of groups) {
+		sortedGroups.set(
+			key,
+			groupReleases.toSorted((a, b) => b.date.getTime() - a.date.getTime())
+		);
+	}
 
-  return sortedGroups;
+	return sortedGroups;
 }
 
 // ============================================
@@ -369,8 +369,8 @@ export function groupByIndicator(
  * FOMC announcements are at 2:00 PM ET.
  */
 const FRED_RELEASE_TIMES: Record<number, string> = {
-  101: "14:00:00", // FOMC - 2:00 PM ET
-  // All others default to 8:30 AM ET
+	101: "14:00:00", // FOMC - 2:00 PM ET
+	// All others default to 8:30 AM ET
 };
 
 const DEFAULT_FRED_RELEASE_TIME = "08:30:00";
@@ -381,24 +381,24 @@ const DEFAULT_FRED_RELEASE_TIME = "08:30:00";
  * Represents an upcoming or historical economic release from FRED.
  */
 export interface FREDEconomicEvent {
-  /** Unique event ID (e.g., 'fred-10-2025-01-15') */
-  id: string;
-  /** Release name (e.g., 'Consumer Price Index') */
-  name: string;
-  /** Release date in YYYY-MM-DD format */
-  date: string;
-  /** Release time in HH:MM:SS format (ET) - defaults to '08:30:00' */
-  time: string;
-  /** Market impact level based on release importance */
-  impact: ReleaseImpact;
-  /** Forecast value (FRED doesn't provide forecasts, always null) */
-  forecast: string | null;
-  /** Previous release value */
-  previous: string | null;
-  /** Actual released value (null if not yet released) */
-  actual: string | null;
-  /** FRED release ID for reference */
-  releaseId: number;
+	/** Unique event ID (e.g., 'fred-10-2025-01-15') */
+	id: string;
+	/** Release name (e.g., 'Consumer Price Index') */
+	name: string;
+	/** Release date in YYYY-MM-DD format */
+	date: string;
+	/** Release time in HH:MM:SS format (ET) - defaults to '08:30:00' */
+	time: string;
+	/** Market impact level based on release importance */
+	impact: ReleaseImpact;
+	/** Forecast value (FRED doesn't provide forecasts, always null) */
+	forecast: string | null;
+	/** Previous release value */
+	previous: string | null;
+	/** Actual released value (null if not yet released) */
+	actual: string | null;
+	/** FRED release ID for reference */
+	releaseId: number;
 }
 
 /**
@@ -406,8 +406,8 @@ export interface FREDEconomicEvent {
  * Used to populate previous/actual fields in economic events.
  */
 export interface FREDLatestValues {
-  previous: number | null;
-  actual: number | null;
+	previous: number | null;
+	actual: number | null;
 }
 
 /**
@@ -434,46 +434,46 @@ export interface FREDLatestValues {
  * ```
  */
 export function parseFREDReleaseDates(
-  releaseDates: FREDReleaseDate[],
-  latestValues?: Map<number, FREDLatestValues>
+	releaseDates: FREDReleaseDate[],
+	latestValues?: Map<number, FREDLatestValues>
 ): FREDEconomicEvent[] {
-  const events: FREDEconomicEvent[] = [];
+	const events: FREDEconomicEvent[] = [];
 
-  for (const rd of releaseDates) {
-    const releaseId = typeof rd.release_id === "string" ? Number(rd.release_id) : rd.release_id;
+	for (const rd of releaseDates) {
+		const releaseId = typeof rd.release_id === "string" ? Number(rd.release_id) : rd.release_id;
 
-    // Generate stable ID from release_id + date
-    const id = `fred-${releaseId}-${rd.date}`;
+		// Generate stable ID from release_id + date
+		const id = `fred-${releaseId}-${rd.date}`;
 
-    // Get release name from registry or API response
-    const releaseInfo = getReleaseById(releaseId);
-    const name = releaseInfo?.name ?? rd.release_name ?? `FRED Release ${releaseId}`;
+		// Get release name from registry or API response
+		const releaseInfo = getReleaseById(releaseId);
+		const name = releaseInfo?.name ?? rd.release_name ?? `FRED Release ${releaseId}`;
 
-    // Determine release time (FOMC at 2pm, others at 8:30am ET)
-    const time = FRED_RELEASE_TIMES[releaseId] ?? DEFAULT_FRED_RELEASE_TIME;
+		// Determine release time (FOMC at 2pm, others at 8:30am ET)
+		const time = FRED_RELEASE_TIMES[releaseId] ?? DEFAULT_FRED_RELEASE_TIME;
 
-    // Classify impact level
-    const impact = classifyReleaseImpact(releaseId);
+		// Classify impact level
+		const impact = classifyReleaseImpact(releaseId);
 
-    // Get latest values if provided
-    const values = latestValues?.get(releaseId);
-    const previous = values?.previous != null ? String(values.previous) : null;
-    const actual = values?.actual != null ? String(values.actual) : null;
+		// Get latest values if provided
+		const values = latestValues?.get(releaseId);
+		const previous = values?.previous != null ? String(values.previous) : null;
+		const actual = values?.actual != null ? String(values.actual) : null;
 
-    events.push({
-      id,
-      name,
-      date: rd.date,
-      time,
-      impact,
-      forecast: null, // FRED doesn't provide forecasts
-      previous,
-      actual,
-      releaseId,
-    });
-  }
+		events.push({
+			id,
+			name,
+			date: rd.date,
+			time,
+			impact,
+			forecast: null, // FRED doesn't provide forecasts
+			previous,
+			actual,
+			releaseId,
+		});
+	}
 
-  return events;
+	return events;
 }
 
 /**
@@ -483,7 +483,7 @@ export function parseFREDReleaseDates(
  * @returns Filtered array with only significant releases
  */
 export function filterSignificantFREDEvents(events: FREDEconomicEvent[]): FREDEconomicEvent[] {
-  return events.filter((e) => e.impact === "high" || e.impact === "medium");
+	return events.filter((e) => e.impact === "high" || e.impact === "medium");
 }
 
 /**
@@ -494,20 +494,20 @@ export function filterSignificantFREDEvents(events: FREDEconomicEvent[]): FREDEc
  * @returns Sorted array
  */
 export function sortFREDEventsByDateAndImpact(events: FREDEconomicEvent[]): FREDEconomicEvent[] {
-  const impactOrder: Record<ReleaseImpact, number> = {
-    high: 0,
-    medium: 1,
-    low: 2,
-  };
+	const impactOrder: Record<ReleaseImpact, number> = {
+		high: 0,
+		medium: 1,
+		low: 2,
+	};
 
-  return events.toSorted((a, b) => {
-    // Primary sort by date
-    const dateCompare = a.date.localeCompare(b.date);
-    if (dateCompare !== 0) {
-      return dateCompare;
-    }
+	return events.toSorted((a, b) => {
+		// Primary sort by date
+		const dateCompare = a.date.localeCompare(b.date);
+		if (dateCompare !== 0) {
+			return dateCompare;
+		}
 
-    // Secondary sort by impact (high first)
-    return impactOrder[a.impact] - impactOrder[b.impact];
-  });
+		// Secondary sort by impact (high first)
+		return impactOrder[a.impact] - impactOrder[b.impact];
+	});
 }

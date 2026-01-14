@@ -10,11 +10,11 @@
 export * from "./mappers.js";
 // Publisher
 export {
-  createEventPublisher,
-  default,
-  type EventPublisher,
-  getEventPublisher,
-  resetEventPublisher,
+	createEventPublisher,
+	default,
+	type EventPublisher,
+	getEventPublisher,
+	resetEventPublisher,
 } from "./publisher.js";
 // Types
 export * from "./types.js";

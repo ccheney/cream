@@ -21,12 +21,12 @@ export type Environment = z.infer<typeof EnvironmentSchema>;
 
 /** Trading action expressing intent in terms of exposure */
 export const ActionSchema = z.enum([
-  "BUY", // Establish new long from flat
-  "SELL", // Establish new short from flat
-  "HOLD", // Maintain current position
-  "INCREASE", // Increase exposure in direction
-  "REDUCE", // Reduce exposure magnitude
-  "NO_TRADE", // Remain flat
+	"BUY", // Establish new long from flat
+	"SELL", // Establish new short from flat
+	"HOLD", // Maintain current position
+	"INCREASE", // Increase exposure in direction
+	"REDUCE", // Reduce exposure magnitude
+	"NO_TRADE", // Remain flat
 ]);
 export type Action = z.infer<typeof ActionSchema>;
 
@@ -60,91 +60,91 @@ export type RiskDenomination = z.infer<typeof RiskDenominationSchema>;
 
 /** Strategy family */
 export const StrategyFamilySchema = z.enum([
-  "TREND",
-  "MEAN_REVERSION",
-  "EVENT_DRIVEN",
-  "VOLATILITY",
-  "RELATIVE_VALUE",
+	"TREND",
+	"MEAN_REVERSION",
+	"EVENT_DRIVEN",
+	"VOLATILITY",
+	"RELATIVE_VALUE",
 ]);
 export type StrategyFamily = z.infer<typeof StrategyFamilySchema>;
 
 /** Market regime classification */
 export const RegimeSchema = z.enum([
-  "BULL_TREND",
-  "BEAR_TREND",
-  "RANGE_BOUND",
-  "HIGH_VOLATILITY",
-  "LOW_VOLATILITY",
-  "CRISIS",
+	"BULL_TREND",
+	"BEAR_TREND",
+	"RANGE_BOUND",
+	"HIGH_VOLATILITY",
+	"LOW_VOLATILITY",
+	"CRISIS",
 ]);
 export type Regime = z.infer<typeof RegimeSchema>;
 
 /** Option contract details */
 export const OptionContractSchema = z.object({
-  /** Underlying symbol (e.g., "AAPL") */
-  underlyingSymbol: z.string().min(1),
-  /** Expiration date in YYYY-MM-DD format */
-  expirationDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
-  /** Strike price */
-  strike: z.number().positive(),
-  /** Call or put */
-  right: OptionTypeSchema,
-  /** Contract multiplier (typically 100 for equity options) */
-  multiplier: z.number().int().positive().default(100),
+	/** Underlying symbol (e.g., "AAPL") */
+	underlyingSymbol: z.string().min(1),
+	/** Expiration date in YYYY-MM-DD format */
+	expirationDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+	/** Strike price */
+	strike: z.number().positive(),
+	/** Call or put */
+	right: OptionTypeSchema,
+	/** Contract multiplier (typically 100 for equity options) */
+	multiplier: z.number().int().positive().default(100),
 });
 export type OptionContract = z.infer<typeof OptionContractSchema>;
 
 /** Instrument identifier */
 export const InstrumentSchema = z
-  .object({
-    /** Unique identifier (ticker or OCC symbol for options) */
-    instrumentId: z.string().min(1),
-    /** Type of instrument */
-    instrumentType: InstrumentTypeSchema,
-    /** Option contract details (required when instrumentType is OPTION) */
-    optionContract: OptionContractSchema.optional(),
-  })
-  .superRefine((data, ctx) => {
-    if (data.instrumentType === "OPTION" && !data.optionContract) {
-      ctx.addIssue({
-        code: z.ZodIssueCode.custom,
-        message: "optionContract is required when instrumentType is OPTION",
-        path: ["optionContract"],
-      });
-    }
-  });
+	.object({
+		/** Unique identifier (ticker or OCC symbol for options) */
+		instrumentId: z.string().min(1),
+		/** Type of instrument */
+		instrumentType: InstrumentTypeSchema,
+		/** Option contract details (required when instrumentType is OPTION) */
+		optionContract: OptionContractSchema.optional(),
+	})
+	.superRefine((data, ctx) => {
+		if (data.instrumentType === "OPTION" && !data.optionContract) {
+			ctx.addIssue({
+				code: z.ZodIssueCode.custom,
+				message: "optionContract is required when instrumentType is OPTION",
+				path: ["optionContract"],
+			});
+		}
+	});
 export type Instrument = z.infer<typeof InstrumentSchema>;
 
 /** Position sizing */
 export const SizeSchema = z.object({
-  /** Number of shares or contracts (absolute value) */
-  quantity: z.number().int().nonnegative(),
-  /** Unit of size */
-  unit: SizeUnitSchema,
-  /** Target position after execution (signed: positive=long, negative=short) */
-  targetPositionQuantity: z.number().int(),
+	/** Number of shares or contracts (absolute value) */
+	quantity: z.number().int().nonnegative(),
+	/** Unit of size */
+	unit: SizeUnitSchema,
+	/** Target position after execution (signed: positive=long, negative=short) */
+	targetPositionQuantity: z.number().int(),
 });
 export type Size = z.infer<typeof SizeSchema>;
 
 /** Risk levels - mandatory for all decisions */
 export const RiskLevelsSchema = z
-  .object({
-    /** Stop-loss price level */
-    stopLossLevel: z.number().finite().positive(),
-    /** Take-profit price level */
-    takeProfitLevel: z.number().finite().positive(),
-    /** What price the levels refer to */
-    denomination: RiskDenominationSchema,
-  })
-  .superRefine((data, ctx) => {
-    if (data.stopLossLevel === data.takeProfitLevel) {
-      ctx.addIssue({
-        code: z.ZodIssueCode.custom,
-        message: "stopLossLevel and takeProfitLevel must be different",
-        path: ["takeProfitLevel"],
-      });
-    }
-  });
+	.object({
+		/** Stop-loss price level */
+		stopLossLevel: z.number().finite().positive(),
+		/** Take-profit price level */
+		takeProfitLevel: z.number().finite().positive(),
+		/** What price the levels refer to */
+		denomination: RiskDenominationSchema,
+	})
+	.superRefine((data, ctx) => {
+		if (data.stopLossLevel === data.takeProfitLevel) {
+			ctx.addIssue({
+				code: z.ZodIssueCode.custom,
+				message: "stopLossLevel and takeProfitLevel must be different",
+				path: ["takeProfitLevel"],
+			});
+		}
+	});
 export type RiskLevels = z.infer<typeof RiskLevelsSchema>;
 
 /** Execution tactic for algorithmic execution */
@@ -153,146 +153,146 @@ export type ExecutionTactic = z.infer<typeof ExecutionTacticSchema>;
 
 /** Execution parameters for tactics */
 export const ExecutionParamsSchema = z
-  .object({
-    /** Duration in minutes (for TWAP/VWAP) */
-    durationMinutes: z.number().int().positive().optional(),
-    /** Interval between child orders in minutes (for TWAP) */
-    intervalMinutes: z.number().int().positive().optional(),
-    /** Randomize timing to avoid detection (for TWAP) */
-    randomize: z.boolean().optional(),
-    /** Target participation rate 0-1 (for VWAP) */
-    participationRate: z.number().min(0).max(1).optional(),
-    /** Limit price (for PASSIVE_LIMIT) */
-    limitPrice: z.number().positive().optional(),
-    /** Max wait time in seconds (for PASSIVE_LIMIT) */
-    maxWaitSeconds: z.number().int().positive().optional(),
-  })
-  .passthrough(); // Allow additional params
+	.object({
+		/** Duration in minutes (for TWAP/VWAP) */
+		durationMinutes: z.number().int().positive().optional(),
+		/** Interval between child orders in minutes (for TWAP) */
+		intervalMinutes: z.number().int().positive().optional(),
+		/** Randomize timing to avoid detection (for TWAP) */
+		randomize: z.boolean().optional(),
+		/** Target participation rate 0-1 (for VWAP) */
+		participationRate: z.number().min(0).max(1).optional(),
+		/** Limit price (for PASSIVE_LIMIT) */
+		limitPrice: z.number().positive().optional(),
+		/** Max wait time in seconds (for PASSIVE_LIMIT) */
+		maxWaitSeconds: z.number().int().positive().optional(),
+	})
+	.passthrough(); // Allow additional params
 export type ExecutionParams = z.infer<typeof ExecutionParamsSchema>;
 
 /** Order execution plan */
 export const OrderPlanSchema = z
-  .object({
-    /** Order type for entry */
-    entryOrderType: OrderTypeSchema,
-    /** Limit price for entry (required when entryOrderType is LIMIT) */
-    entryLimitPrice: z.number().positive().optional(),
-    /** Order type for exit */
-    exitOrderType: OrderTypeSchema,
-    /** Time in force for orders */
-    timeInForce: TimeInForceSchema,
-    /** Execution tactic identifier */
-    executionTactic: z.string().optional().default(""),
-    /** Additional execution parameters */
-    executionParams: ExecutionParamsSchema.optional().default({}),
-  })
-  .superRefine((data, ctx) => {
-    if (data.entryOrderType === "LIMIT" && data.entryLimitPrice === undefined) {
-      ctx.addIssue({
-        code: z.ZodIssueCode.custom,
-        message: "entryLimitPrice is required when entryOrderType is LIMIT",
-        path: ["entryLimitPrice"],
-      });
-    }
+	.object({
+		/** Order type for entry */
+		entryOrderType: OrderTypeSchema,
+		/** Limit price for entry (required when entryOrderType is LIMIT) */
+		entryLimitPrice: z.number().positive().optional(),
+		/** Order type for exit */
+		exitOrderType: OrderTypeSchema,
+		/** Time in force for orders */
+		timeInForce: TimeInForceSchema,
+		/** Execution tactic identifier */
+		executionTactic: z.string().optional().default(""),
+		/** Additional execution parameters */
+		executionParams: ExecutionParamsSchema.optional().default({}),
+	})
+	.superRefine((data, ctx) => {
+		if (data.entryOrderType === "LIMIT" && data.entryLimitPrice === undefined) {
+			ctx.addIssue({
+				code: z.ZodIssueCode.custom,
+				message: "entryLimitPrice is required when entryOrderType is LIMIT",
+				path: ["entryLimitPrice"],
+			});
+		}
 
-    if (
-      data.executionTactic &&
-      !["", "PASSIVE_LIMIT", "TWAP", "VWAP"].includes(data.executionTactic)
-    ) {
-      ctx.addIssue({
-        code: z.ZodIssueCode.custom,
-        message: "executionTactic must be one of: PASSIVE_LIMIT, TWAP, VWAP, or empty string",
-        path: ["executionTactic"],
-      });
-    }
-  });
+		if (
+			data.executionTactic &&
+			!["", "PASSIVE_LIMIT", "TWAP", "VWAP"].includes(data.executionTactic)
+		) {
+			ctx.addIssue({
+				code: z.ZodIssueCode.custom,
+				message: "executionTactic must be one of: PASSIVE_LIMIT, TWAP, VWAP, or empty string",
+				path: ["executionTactic"],
+			});
+		}
+	});
 export type OrderPlan = z.infer<typeof OrderPlanSchema>;
 
 /** References to supporting data */
 export const ReferencesSchema = z.object({
-  /** Indicator names used in decision */
-  usedIndicators: z.array(z.string()).default([]),
-  /** Memory case IDs from HelixDB */
-  memoryCaseIds: z.array(z.string()).default([]),
-  /** Event IDs that influenced decision */
-  eventIds: z.array(z.string()).default([]),
+	/** Indicator names used in decision */
+	usedIndicators: z.array(z.string()).default([]),
+	/** Memory case IDs from HelixDB */
+	memoryCaseIds: z.array(z.string()).default([]),
+	/** Event IDs that influenced decision */
+	eventIds: z.array(z.string()).default([]),
 });
 export type References = z.infer<typeof ReferencesSchema>;
 
 /** Individual decision for an instrument */
 export const DecisionSchema = z.object({
-  /** Target instrument */
-  instrument: InstrumentSchema,
-  /** Trading action */
-  action: ActionSchema,
-  /** Position sizing */
-  size: SizeSchema,
-  /** Order execution plan */
-  orderPlan: OrderPlanSchema,
-  /** Risk levels (mandatory - always required) */
-  riskLevels: RiskLevelsSchema,
-  /** Strategy family */
-  strategyFamily: StrategyFamilySchema,
-  /** Human-readable rationale for the decision */
-  rationale: z.string().min(1),
-  /** Confidence score [0.0, 1.0] */
-  confidence: z.number().min(0).max(1),
-  /** Supporting references */
-  references: ReferencesSchema.optional().default({
-    usedIndicators: [],
-    memoryCaseIds: [],
-    eventIds: [],
-  }),
+	/** Target instrument */
+	instrument: InstrumentSchema,
+	/** Trading action */
+	action: ActionSchema,
+	/** Position sizing */
+	size: SizeSchema,
+	/** Order execution plan */
+	orderPlan: OrderPlanSchema,
+	/** Risk levels (mandatory - always required) */
+	riskLevels: RiskLevelsSchema,
+	/** Strategy family */
+	strategyFamily: StrategyFamilySchema,
+	/** Human-readable rationale for the decision */
+	rationale: z.string().min(1),
+	/** Confidence score [0.0, 1.0] */
+	confidence: z.number().min(0).max(1),
+	/** Supporting references */
+	references: ReferencesSchema.optional().default({
+		usedIndicators: [],
+		memoryCaseIds: [],
+		eventIds: [],
+	}),
 });
 export type Decision = z.infer<typeof DecisionSchema>;
 
 /** ISO-8601 timestamp with UTC timezone */
 export const ISO8601TimestampSchema = z
-  .string()
-  .regex(
-    /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d{3})?Z$/,
-    "Must be ISO-8601 format with UTC timezone (e.g., 2026-01-04T15:00:00Z)"
-  );
+	.string()
+	.regex(
+		/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d{3})?Z$/,
+		"Must be ISO-8601 format with UTC timezone (e.g., 2026-01-04T15:00:00Z)"
+	);
 export type ISO8601Timestamp = z.infer<typeof ISO8601TimestampSchema>;
 
 /** Complete decision plan for a trading cycle */
 export const DecisionPlanSchema = z.object({
-  /** Unique identifier for this trading cycle */
-  cycleId: z.string().min(1),
-  /** Timestamp when the decision was made (ISO-8601 with UTC) */
-  asOfTimestamp: ISO8601TimestampSchema,
-  /** Trading environment */
-  environment: EnvironmentSchema,
-  /** List of decisions for this cycle */
-  decisions: z.array(DecisionSchema),
-  /** Optional portfolio-level notes */
-  portfolioNotes: z.string().optional(),
+	/** Unique identifier for this trading cycle */
+	cycleId: z.string().min(1),
+	/** Timestamp when the decision was made (ISO-8601 with UTC) */
+	asOfTimestamp: ISO8601TimestampSchema,
+	/** Trading environment */
+	environment: EnvironmentSchema,
+	/** List of decisions for this cycle */
+	decisions: z.array(DecisionSchema),
+	/** Optional portfolio-level notes */
+	portfolioNotes: z.string().optional(),
 });
 export type DecisionPlan = z.infer<typeof DecisionPlanSchema>;
 
 /** Risk validation result */
 export const RiskValidationResultSchema = z.object({
-  /** Whether the validation passed */
-  valid: z.boolean(),
-  /** Validation errors (blocking issues) */
-  errors: z.array(z.string()).default([]),
-  /** Validation warnings (non-blocking issues) */
-  warnings: z.array(z.string()).default([]),
-  /** Calculated risk-reward ratio */
-  riskRewardRatio: z.number().positive().optional(),
+	/** Whether the validation passed */
+	valid: z.boolean(),
+	/** Validation errors (blocking issues) */
+	errors: z.array(z.string()).default([]),
+	/** Validation warnings (non-blocking issues) */
+	warnings: z.array(z.string()).default([]),
+	/** Calculated risk-reward ratio */
+	riskRewardRatio: z.number().positive().optional(),
 });
 export type RiskValidationResult = z.infer<typeof RiskValidationResultSchema>;
 
 /** Decision plan validation result */
 export const DecisionPlanValidationResultSchema = z.object({
-  /** Whether the validation passed */
-  success: z.boolean(),
-  /** Validated decision plan (if successful) */
-  decisionPlan: DecisionPlanSchema.optional(),
-  /** Validation errors */
-  errors: z.array(z.string()).default([]),
-  /** Validation warnings */
-  warnings: z.array(z.string()).default([]),
+	/** Whether the validation passed */
+	success: z.boolean(),
+	/** Validated decision plan (if successful) */
+	decisionPlan: DecisionPlanSchema.optional(),
+	/** Validation errors */
+	errors: z.array(z.string()).default([]),
+	/** Validation warnings */
+	warnings: z.array(z.string()).default([]),
 });
 export type DecisionPlanValidationResult = z.infer<typeof DecisionPlanValidationResultSchema>;
 
@@ -301,106 +301,106 @@ export type DecisionPlanValidationResult = z.infer<typeof DecisionPlanValidation
  * Returns minimum 1.5:1 risk-reward ratio as per spec.
  */
 export function validateRiskReward(decision: Decision, entryPrice: number): RiskValidationResult {
-  const errors: string[] = [];
-  const warnings: string[] = [];
+	const errors: string[] = [];
+	const warnings: string[] = [];
 
-  const { stopLossLevel, takeProfitLevel } = decision.riskLevels;
-  const isLong = decision.size.targetPositionQuantity > 0;
-  const isShort = decision.size.targetPositionQuantity < 0;
+	const { stopLossLevel, takeProfitLevel } = decision.riskLevels;
+	const isLong = decision.size.targetPositionQuantity > 0;
+	const isShort = decision.size.targetPositionQuantity < 0;
 
-  if (isLong) {
-    if (stopLossLevel >= entryPrice) {
-      errors.push(
-        `Long position: stopLossLevel (${stopLossLevel}) must be below entry (${entryPrice})`
-      );
-    }
-    if (takeProfitLevel <= entryPrice) {
-      errors.push(
-        `Long position: takeProfitLevel (${takeProfitLevel}) must be above entry (${entryPrice})`
-      );
-    }
-  } else if (isShort) {
-    if (stopLossLevel <= entryPrice) {
-      errors.push(
-        `Short position: stopLossLevel (${stopLossLevel}) must be above entry (${entryPrice})`
-      );
-    }
-    if (takeProfitLevel >= entryPrice) {
-      errors.push(
-        `Short position: takeProfitLevel (${takeProfitLevel}) must be below entry (${entryPrice})`
-      );
-    }
-  }
+	if (isLong) {
+		if (stopLossLevel >= entryPrice) {
+			errors.push(
+				`Long position: stopLossLevel (${stopLossLevel}) must be below entry (${entryPrice})`
+			);
+		}
+		if (takeProfitLevel <= entryPrice) {
+			errors.push(
+				`Long position: takeProfitLevel (${takeProfitLevel}) must be above entry (${entryPrice})`
+			);
+		}
+	} else if (isShort) {
+		if (stopLossLevel <= entryPrice) {
+			errors.push(
+				`Short position: stopLossLevel (${stopLossLevel}) must be above entry (${entryPrice})`
+			);
+		}
+		if (takeProfitLevel >= entryPrice) {
+			errors.push(
+				`Short position: takeProfitLevel (${takeProfitLevel}) must be below entry (${entryPrice})`
+			);
+		}
+	}
 
-  const risk = Math.abs(entryPrice - stopLossLevel);
-  const reward = Math.abs(takeProfitLevel - entryPrice);
-  const riskRewardRatio = risk > 0 ? reward / risk : 0;
+	const risk = Math.abs(entryPrice - stopLossLevel);
+	const reward = Math.abs(takeProfitLevel - entryPrice);
+	const riskRewardRatio = risk > 0 ? reward / risk : 0;
 
-  if (riskRewardRatio < 1.5) {
-    errors.push(`Risk-reward ratio ${riskRewardRatio.toFixed(2)}:1 is below minimum 1.5:1`);
-  }
+	if (riskRewardRatio < 1.5) {
+		errors.push(`Risk-reward ratio ${riskRewardRatio.toFixed(2)}:1 is below minimum 1.5:1`);
+	}
 
-  if (risk > reward * 5) {
-    warnings.push(`Stop loss distance exceeds 5x the profit target`);
-  }
+	if (risk > reward * 5) {
+		warnings.push(`Stop loss distance exceeds 5x the profit target`);
+	}
 
-  return {
-    valid: errors.length === 0,
-    errors,
-    warnings,
-    riskRewardRatio: riskRewardRatio > 0 ? riskRewardRatio : undefined,
-  };
+	return {
+		valid: errors.length === 0,
+		errors,
+		warnings,
+		riskRewardRatio: riskRewardRatio > 0 ? riskRewardRatio : undefined,
+	};
 }
 
 /**
  * Validate an entire decision plan.
  */
 export function validateDecisionPlan(plan: unknown): DecisionPlanValidationResult {
-  const parseResult = DecisionPlanSchema.safeParse(plan);
+	const parseResult = DecisionPlanSchema.safeParse(plan);
 
-  if (!parseResult.success) {
-    return {
-      success: false,
-      errors: parseResult.error.issues.map((issue) => `${issue.path.join(".")}: ${issue.message}`),
-      warnings: [],
-    };
-  }
+	if (!parseResult.success) {
+		return {
+			success: false,
+			errors: parseResult.error.issues.map((issue) => `${issue.path.join(".")}: ${issue.message}`),
+			warnings: [],
+		};
+	}
 
-  const errors: string[] = [];
-  const warnings: string[] = [];
+	const errors: string[] = [];
+	const warnings: string[] = [];
 
-  for (const decision of parseResult.data.decisions) {
-    if (decision.action === "NO_TRADE" && decision.size.quantity !== 0) {
-      warnings.push(`${decision.instrument.instrumentId}: NO_TRADE action should have quantity 0`);
-    }
+	for (const decision of parseResult.data.decisions) {
+		if (decision.action === "NO_TRADE" && decision.size.quantity !== 0) {
+			warnings.push(`${decision.instrument.instrumentId}: NO_TRADE action should have quantity 0`);
+		}
 
-    if (decision.instrument.instrumentType === "OPTION" && decision.size.unit !== "CONTRACTS") {
-      errors.push(
-        `${decision.instrument.instrumentId}: OPTIONS must use CONTRACTS unit, not ${decision.size.unit}`
-      );
-    }
-    if (decision.instrument.instrumentType === "EQUITY" && decision.size.unit !== "SHARES") {
-      errors.push(
-        `${decision.instrument.instrumentId}: EQUITY must use SHARES unit, not ${decision.size.unit}`
-      );
-    }
-  }
+		if (decision.instrument.instrumentType === "OPTION" && decision.size.unit !== "CONTRACTS") {
+			errors.push(
+				`${decision.instrument.instrumentId}: OPTIONS must use CONTRACTS unit, not ${decision.size.unit}`
+			);
+		}
+		if (decision.instrument.instrumentType === "EQUITY" && decision.size.unit !== "SHARES") {
+			errors.push(
+				`${decision.instrument.instrumentId}: EQUITY must use SHARES unit, not ${decision.size.unit}`
+			);
+		}
+	}
 
-  return {
-    success: errors.length === 0,
-    decisionPlan: errors.length === 0 ? parseResult.data : undefined,
-    errors,
-    warnings,
-  };
+	return {
+		success: errors.length === 0,
+		decisionPlan: errors.length === 0 ? parseResult.data : undefined,
+		errors,
+		warnings,
+	};
 }
 
 export {
-  ActionSchema as Action_Schema,
-  DecisionPlanSchema as DecisionPlan_Schema,
-  DecisionSchema as Decision_Schema,
-  EnvironmentSchema as Environment_Schema,
-  InstrumentSchema as Instrument_Schema,
-  OrderPlanSchema as OrderPlan_Schema,
-  RiskLevelsSchema as RiskLevels_Schema,
-  SizeSchema as Size_Schema,
+	ActionSchema as Action_Schema,
+	DecisionPlanSchema as DecisionPlan_Schema,
+	DecisionSchema as Decision_Schema,
+	EnvironmentSchema as Environment_Schema,
+	InstrumentSchema as Instrument_Schema,
+	OrderPlanSchema as OrderPlan_Schema,
+	RiskLevelsSchema as RiskLevels_Schema,
+	SizeSchema as Size_Schema,
 };

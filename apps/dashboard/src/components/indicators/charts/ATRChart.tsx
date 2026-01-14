@@ -18,14 +18,14 @@ import { IndicatorChart, type IndicatorDataPoint } from "./IndicatorChart";
 // ============================================
 
 export interface ATRChartProps {
-  /** ATR data points */
-  data: IndicatorDataPoint[];
+	/** ATR data points */
+	data: IndicatorDataPoint[];
 
-  /** Chart height in pixels */
-  height?: number;
+	/** Chart height in pixels */
+	height?: number;
 
-  /** Additional CSS class */
-  className?: string;
+	/** Additional CSS class */
+	className?: string;
 }
 
 // ============================================
@@ -39,16 +39,16 @@ const ATR_COLOR = "#F59E0B"; // Amber
 // ============================================
 
 function ATRChartComponent({ data, height = 120, className = "" }: ATRChartProps) {
-  return (
-    <IndicatorChart
-      data={data}
-      type="area"
-      color={ATR_COLOR}
-      title="ATR (14)"
-      height={height}
-      className={className}
-    />
-  );
+	return (
+		<IndicatorChart
+			data={data}
+			type="area"
+			color={ATR_COLOR}
+			title="ATR (14)"
+			height={height}
+			className={className}
+		/>
+	);
 }
 
 export const ATRChart = memo(ATRChartComponent);

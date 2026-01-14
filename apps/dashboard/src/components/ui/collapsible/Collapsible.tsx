@@ -21,36 +21,36 @@ import type { CollapsibleProps } from "./types";
  * ```
  */
 export function Collapsible({
-  open: controlledOpen,
-  defaultOpen = false,
-  onOpenChange,
-  disabled = false,
-  children,
+	open: controlledOpen,
+	defaultOpen = false,
+	onOpenChange,
+	disabled = false,
+	children,
 }: CollapsibleProps) {
-  const [internalOpen, setInternalOpen] = useState(defaultOpen);
-  const contentId = useId();
-  const triggerId = useId();
+	const [internalOpen, setInternalOpen] = useState(defaultOpen);
+	const contentId = useId();
+	const triggerId = useId();
 
-  const isControlled = controlledOpen !== undefined;
-  const isOpen = isControlled ? controlledOpen : internalOpen;
+	const isControlled = controlledOpen !== undefined;
+	const isOpen = isControlled ? controlledOpen : internalOpen;
 
-  const toggle = useCallback(() => {
-    if (disabled) {
-      return;
-    }
+	const toggle = useCallback(() => {
+		if (disabled) {
+			return;
+		}
 
-    const newOpen = !isOpen;
-    if (!isControlled) {
-      setInternalOpen(newOpen);
-    }
-    onOpenChange?.(newOpen);
-  }, [isOpen, isControlled, onOpenChange, disabled]);
+		const newOpen = !isOpen;
+		if (!isControlled) {
+			setInternalOpen(newOpen);
+		}
+		onOpenChange?.(newOpen);
+	}, [isOpen, isControlled, onOpenChange, disabled]);
 
-  return (
-    <CollapsibleContext.Provider value={{ isOpen, toggle, contentId, triggerId }}>
-      <div data-state={isOpen ? "open" : "closed"} data-disabled={disabled || undefined}>
-        {children}
-      </div>
-    </CollapsibleContext.Provider>
-  );
+	return (
+		<CollapsibleContext.Provider value={{ isOpen, toggle, contentId, triggerId }}>
+			<div data-state={isOpen ? "open" : "closed"} data-disabled={disabled || undefined}>
+				{children}
+			</div>
+		</CollapsibleContext.Provider>
+	);
 }

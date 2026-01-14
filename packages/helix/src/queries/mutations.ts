@@ -8,12 +8,12 @@
  */
 
 import type {
-  ExternalEvent,
-  HasEventEdge,
-  InfluencedDecisionEdge,
-  ThesisIncludesEdge,
-  TradeDecision,
-  TradeLifecycleEvent,
+	ExternalEvent,
+	HasEventEdge,
+	InfluencedDecisionEdge,
+	ThesisIncludesEdge,
+	TradeDecision,
+	TradeLifecycleEvent,
 } from "@cream/helix-schema";
 import type { HelixClient } from "../client";
 
@@ -25,38 +25,38 @@ import type { HelixClient } from "../client";
  * Result of a single mutation operation.
  */
 export interface MutationResult {
-  success: boolean;
-  id: string;
-  error?: string;
+	success: boolean;
+	id: string;
+	error?: string;
 }
 
 /**
  * Result of a batch mutation operation.
  */
 export interface BatchMutationResult {
-  successful: MutationResult[];
-  failed: MutationResult[];
-  totalProcessed: number;
-  executionTimeMs: number;
+	successful: MutationResult[];
+	failed: MutationResult[];
+	totalProcessed: number;
+	executionTimeMs: number;
 }
 
 /**
  * Node with embedding for upsert.
  */
 export interface NodeWithEmbedding<T> {
-  node: T;
-  embedding?: number[];
-  embeddingModelVersion?: string;
+	node: T;
+	embedding?: number[];
+	embeddingModelVersion?: string;
 }
 
 /**
  * Edge creation input.
  */
 export interface EdgeInput {
-  sourceId: string;
-  targetId: string;
-  edgeType: string;
-  properties?: Record<string, unknown>;
+	sourceId: string;
+	targetId: string;
+	edgeType: string;
+	properties?: Record<string, unknown>;
 }
 
 // ============================================
@@ -69,54 +69,54 @@ export interface EdgeInput {
  * Creates or updates based on decision_id.
  */
 export async function upsertTradeDecision(
-  client: HelixClient,
-  decision: TradeDecision,
-  embedding?: number[],
-  embeddingModelVersion?: string
+	client: HelixClient,
+	decision: TradeDecision,
+	embedding?: number[],
+	embeddingModelVersion?: string
 ): Promise<MutationResult> {
-  try {
-    const params: Record<string, unknown> = {
-      ...decision,
-      embedding,
-      embedding_model_version: embeddingModelVersion,
-    };
+	try {
+		const params: Record<string, unknown> = {
+			...decision,
+			embedding,
+			embedding_model_version: embeddingModelVersion,
+		};
 
-    await client.query("upsertTradeDecision", params);
+		await client.query("upsertTradeDecision", params);
 
-    return {
-      success: true,
-      id: decision.decision_id,
-    };
-  } catch (error) {
-    return {
-      success: false,
-      id: decision.decision_id,
-      error: error instanceof Error ? error.message : "Unknown error",
-    };
-  }
+		return {
+			success: true,
+			id: decision.decision_id,
+		};
+	} catch (error) {
+		return {
+			success: false,
+			id: decision.decision_id,
+			error: error instanceof Error ? error.message : "Unknown error",
+		};
+	}
 }
 
 /**
  * Create a TradeLifecycleEvent node.
  */
 export async function createLifecycleEvent(
-  client: HelixClient,
-  event: TradeLifecycleEvent
+	client: HelixClient,
+	event: TradeLifecycleEvent
 ): Promise<MutationResult> {
-  try {
-    await client.query("createLifecycleEvent", event as unknown as Record<string, unknown>);
+	try {
+		await client.query("createLifecycleEvent", event as unknown as Record<string, unknown>);
 
-    return {
-      success: true,
-      id: event.event_id,
-    };
-  } catch (error) {
-    return {
-      success: false,
-      id: event.event_id,
-      error: error instanceof Error ? error.message : "Unknown error",
-    };
-  }
+		return {
+			success: true,
+			id: event.event_id,
+		};
+	} catch (error) {
+		return {
+			success: false,
+			id: event.event_id,
+			error: error instanceof Error ? error.message : "Unknown error",
+		};
+	}
 }
 
 /**
@@ -125,31 +125,31 @@ export async function createLifecycleEvent(
  * Creates or updates based on event_id.
  */
 export async function upsertExternalEvent(
-  client: HelixClient,
-  event: ExternalEvent,
-  embedding?: number[],
-  embeddingModelVersion?: string
+	client: HelixClient,
+	event: ExternalEvent,
+	embedding?: number[],
+	embeddingModelVersion?: string
 ): Promise<MutationResult> {
-  try {
-    const params: Record<string, unknown> = {
-      ...event,
-      embedding,
-      embedding_model_version: embeddingModelVersion,
-    };
+	try {
+		const params: Record<string, unknown> = {
+			...event,
+			embedding,
+			embedding_model_version: embeddingModelVersion,
+		};
 
-    await client.query("upsertExternalEvent", params);
+		await client.query("upsertExternalEvent", params);
 
-    return {
-      success: true,
-      id: event.event_id,
-    };
-  } catch (error) {
-    return {
-      success: false,
-      id: event.event_id,
-      error: error instanceof Error ? error.message : "Unknown error",
-    };
-  }
+		return {
+			success: true,
+			id: event.event_id,
+		};
+	} catch (error) {
+		return {
+			success: false,
+			id: event.event_id,
+			error: error instanceof Error ? error.message : "Unknown error",
+		};
+	}
 }
 
 // ============================================
@@ -160,57 +160,57 @@ export async function upsertExternalEvent(
  * Create an edge between two nodes.
  */
 export async function createEdge(client: HelixClient, edge: EdgeInput): Promise<MutationResult> {
-  try {
-    await client.query("createEdge", {
-      source_id: edge.sourceId,
-      target_id: edge.targetId,
-      edge_type: edge.edgeType,
-      properties: edge.properties ?? {},
-    });
+	try {
+		await client.query("createEdge", {
+			source_id: edge.sourceId,
+			target_id: edge.targetId,
+			edge_type: edge.edgeType,
+			properties: edge.properties ?? {},
+		});
 
-    return {
-      success: true,
-      id: `${edge.sourceId}->${edge.targetId}`,
-    };
-  } catch (error) {
-    return {
-      success: false,
-      id: `${edge.sourceId}->${edge.targetId}`,
-      error: error instanceof Error ? error.message : "Unknown error",
-    };
-  }
+		return {
+			success: true,
+			id: `${edge.sourceId}->${edge.targetId}`,
+		};
+	} catch (error) {
+		return {
+			success: false,
+			id: `${edge.sourceId}->${edge.targetId}`,
+			error: error instanceof Error ? error.message : "Unknown error",
+		};
+	}
 }
 
 /**
  * Create an INFLUENCED_DECISION edge.
  */
 export async function createInfluencedDecisionEdge(
-  client: HelixClient,
-  edge: InfluencedDecisionEdge
+	client: HelixClient,
+	edge: InfluencedDecisionEdge
 ): Promise<MutationResult> {
-  return createEdge(client, {
-    sourceId: edge.source_id,
-    targetId: edge.target_id,
-    edgeType: "INFLUENCED_DECISION",
-    properties: {
-      influence_score: edge.influence_score,
-      influence_type: edge.influence_type,
-    },
-  });
+	return createEdge(client, {
+		sourceId: edge.source_id,
+		targetId: edge.target_id,
+		edgeType: "INFLUENCED_DECISION",
+		properties: {
+			influence_score: edge.influence_score,
+			influence_type: edge.influence_type,
+		},
+	});
 }
 
 /**
  * Create a HAS_EVENT edge.
  */
 export async function createHasEventEdge(
-  client: HelixClient,
-  edge: HasEventEdge
+	client: HelixClient,
+	edge: HasEventEdge
 ): Promise<MutationResult> {
-  return createEdge(client, {
-    sourceId: edge.source_id,
-    targetId: edge.target_id,
-    edgeType: "HAS_EVENT",
-  });
+	return createEdge(client, {
+		sourceId: edge.source_id,
+		targetId: edge.target_id,
+		edgeType: "HAS_EVENT",
+	});
 }
 
 /**
@@ -218,14 +218,14 @@ export async function createHasEventEdge(
  * Links a ThesisMemory to related TradeDecisions.
  */
 export async function createThesisIncludesEdge(
-  client: HelixClient,
-  edge: ThesisIncludesEdge
+	client: HelixClient,
+	edge: ThesisIncludesEdge
 ): Promise<MutationResult> {
-  return createEdge(client, {
-    sourceId: edge.source_id,
-    targetId: edge.target_id,
-    edgeType: "THESIS_INCLUDES",
-  });
+	return createEdge(client, {
+		sourceId: edge.source_id,
+		targetId: edge.target_id,
+		edgeType: "THESIS_INCLUDES",
+	});
 }
 
 // ============================================
@@ -239,56 +239,56 @@ export async function createThesisIncludesEdge(
  * Handles partial failures gracefully.
  */
 export async function batchUpsertTradeDecisions(
-  client: HelixClient,
-  decisions: NodeWithEmbedding<TradeDecision>[]
+	client: HelixClient,
+	decisions: NodeWithEmbedding<TradeDecision>[]
 ): Promise<BatchMutationResult> {
-  const startTime = performance.now();
-  const results = await Promise.allSettled(
-    decisions.map((d) => upsertTradeDecision(client, d.node, d.embedding, d.embeddingModelVersion))
-  );
+	const startTime = performance.now();
+	const results = await Promise.allSettled(
+		decisions.map((d) => upsertTradeDecision(client, d.node, d.embedding, d.embeddingModelVersion))
+	);
 
-  return processBatchResults(results, startTime);
+	return processBatchResults(results, startTime);
 }
 
 /**
  * Batch create TradeLifecycleEvent nodes.
  */
 export async function batchCreateLifecycleEvents(
-  client: HelixClient,
-  events: TradeLifecycleEvent[]
+	client: HelixClient,
+	events: TradeLifecycleEvent[]
 ): Promise<BatchMutationResult> {
-  const startTime = performance.now();
-  const results = await Promise.allSettled(events.map((e) => createLifecycleEvent(client, e)));
+	const startTime = performance.now();
+	const results = await Promise.allSettled(events.map((e) => createLifecycleEvent(client, e)));
 
-  return processBatchResults(results, startTime);
+	return processBatchResults(results, startTime);
 }
 
 /**
  * Batch upsert ExternalEvent nodes.
  */
 export async function batchUpsertExternalEvents(
-  client: HelixClient,
-  events: NodeWithEmbedding<ExternalEvent>[]
+	client: HelixClient,
+	events: NodeWithEmbedding<ExternalEvent>[]
 ): Promise<BatchMutationResult> {
-  const startTime = performance.now();
-  const results = await Promise.allSettled(
-    events.map((e) => upsertExternalEvent(client, e.node, e.embedding, e.embeddingModelVersion))
-  );
+	const startTime = performance.now();
+	const results = await Promise.allSettled(
+		events.map((e) => upsertExternalEvent(client, e.node, e.embedding, e.embeddingModelVersion))
+	);
 
-  return processBatchResults(results, startTime);
+	return processBatchResults(results, startTime);
 }
 
 /**
  * Batch create edges.
  */
 export async function batchCreateEdges(
-  client: HelixClient,
-  edges: EdgeInput[]
+	client: HelixClient,
+	edges: EdgeInput[]
 ): Promise<BatchMutationResult> {
-  const startTime = performance.now();
-  const results = await Promise.allSettled(edges.map((e) => createEdge(client, e)));
+	const startTime = performance.now();
+	const results = await Promise.allSettled(edges.map((e) => createEdge(client, e)));
 
-  return processBatchResults(results, startTime);
+	return processBatchResults(results, startTime);
 }
 
 // ============================================
@@ -299,32 +299,32 @@ export async function batchCreateEdges(
  * Process batch results from Promise.allSettled.
  */
 function processBatchResults(
-  results: PromiseSettledResult<MutationResult>[],
-  startTime: number
+	results: PromiseSettledResult<MutationResult>[],
+	startTime: number
 ): BatchMutationResult {
-  const successful: MutationResult[] = [];
-  const failed: MutationResult[] = [];
+	const successful: MutationResult[] = [];
+	const failed: MutationResult[] = [];
 
-  for (const result of results) {
-    if (result.status === "fulfilled") {
-      if (result.value.success) {
-        successful.push(result.value);
-      } else {
-        failed.push(result.value);
-      }
-    } else {
-      failed.push({
-        success: false,
-        id: "unknown",
-        error: result.reason instanceof Error ? result.reason.message : String(result.reason),
-      });
-    }
-  }
+	for (const result of results) {
+		if (result.status === "fulfilled") {
+			if (result.value.success) {
+				successful.push(result.value);
+			} else {
+				failed.push(result.value);
+			}
+		} else {
+			failed.push({
+				success: false,
+				id: "unknown",
+				error: result.reason instanceof Error ? result.reason.message : String(result.reason),
+			});
+		}
+	}
 
-  return {
-    successful,
-    failed,
-    totalProcessed: results.length,
-    executionTimeMs: performance.now() - startTime,
-  };
+	return {
+		successful,
+		failed,
+		totalProcessed: results.length,
+		executionTimeMs: performance.now() - startTime,
+	};
 }

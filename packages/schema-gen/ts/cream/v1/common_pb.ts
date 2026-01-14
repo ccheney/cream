@@ -15,10 +15,10 @@ import { enumDesc, fileDesc, messageDesc } from "@bufbuild/protobuf/codegenv1";
  * Describes the file cream/v1/common.proto.
  */
 export const file_cream_v1_common: GenFile =
-  /*@__PURE__*/
-  fileDesc(
-    "ChVjcmVhbS92MS9jb21tb24ucHJvdG8SCGNyZWFtLnYxInMKDk9wdGlvbkNvbnRyYWN0EhIKCnVuZGVybHlpbmcYASABKAkSEgoKZXhwaXJhdGlvbhgCIAEoCRIOCgZzdHJpa2UYAyABKAESKQoLb3B0aW9uX3R5cGUYBCABKA4yFC5jcmVhbS52MS5PcHRpb25UeXBlIokBCgpJbnN0cnVtZW50EhUKDWluc3RydW1lbnRfaWQYASABKAkSMQoPaW5zdHJ1bWVudF90eXBlGAIgASgOMhguY3JlYW0udjEuSW5zdHJ1bWVudFR5cGUSMQoPb3B0aW9uX2NvbnRyYWN0GAMgASgLMhguY3JlYW0udjEuT3B0aW9uQ29udHJhY3QiXAoEU2l6ZRIQCghxdWFudGl0eRgBIAEoBRIgCgR1bml0GAIgASgOMhIuY3JlYW0udjEuU2l6ZVVuaXQSIAoYdGFyZ2V0X3Bvc2l0aW9uX3F1YW50aXR5GAMgASgFInIKClJpc2tMZXZlbHMSFwoPc3RvcF9sb3NzX2xldmVsGAEgASgBEhkKEXRha2VfcHJvZml0X2xldmVsGAIgASgBEjAKDGRlbm9taW5hdGlvbhgDIAEoDjIaLmNyZWFtLnYxLlJpc2tEZW5vbWluYXRpb24qcQoLRW52aXJvbm1lbnQSGwoXRU5WSVJPTk1FTlRfVU5TUEVDSUZJRUQQABIYChRFTlZJUk9OTUVOVF9CQUNLVEVTVBABEhUKEUVOVklST05NRU5UX1BBUEVSEAISFAoQRU5WSVJPTk1FTlRfTElWRRADKo8BCgZBY3Rpb24SFgoSQUNUSU9OX1VOU1BFQ0lGSUVEEAASDgoKQUNUSU9OX0JVWRABEg8KC0FDVElPTl9TRUxMEAISDwoLQUNUSU9OX0hPTEQQAxITCg9BQ1RJT05fSU5DUkVBU0UQBBIRCg1BQ1RJT05fUkVEVUNFEAUSEwoPQUNUSU9OX05PX1RSQURFEAYqYwoJRGlyZWN0aW9uEhkKFURJUkVDVElPTl9VTlNQRUNJRklFRBAAEhIKDkRJUkVDVElPTl9MT05HEAESEwoPRElSRUNUSU9OX1NIT1JUEAISEgoORElSRUNUSU9OX0ZMQVQQAyppCg5JbnN0cnVtZW50VHlwZRIfChtJTlNUUlVNRU5UX1RZUEVfVU5TUEVDSUZJRUQQABIaChZJTlNUUlVNRU5UX1RZUEVfRVFVSVRZEAESGgoWSU5TVFJVTUVOVF9UWVBFX09QVElPThACKlQKCk9wdGlvblR5cGUSGwoXT1BUSU9OX1RZUEVfVU5TUEVDSUZJRUQQABIUChBPUFRJT05fVFlQRV9DQUxMEAESEwoPT1BUSU9OX1RZUEVfUFVUEAIqVAoIU2l6ZVVuaXQSGQoVU0laRV9VTklUX1VOU1BFQ0lGSUVEEAASFAoQU0laRV9VTklUX1NIQVJFUxABEhcKE1NJWkVfVU5JVF9DT05UUkFDVFMQAipUCglPcmRlclR5cGUSGgoWT1JERVJfVFlQRV9VTlNQRUNJRklFRBAAEhQKEE9SREVSX1RZUEVfTElNSVQQARIVChFPUkRFUl9UWVBFX01BUktFVBACKrYBCgtUaW1lSW5Gb3JjZRIdChlUSU1FX0lOX0ZPUkNFX1VOU1BFQ0lGSUVEEAASFQoRVElNRV9JTl9GT1JDRV9EQVkQARIVChFUSU1FX0lOX0ZPUkNFX0dUQxACEhUKEVRJTUVfSU5fRk9SQ0VfSU9DEAMSFQoRVElNRV9JTl9GT1JDRV9GT0sQBBIVChFUSU1FX0lOX0ZPUkNFX09QRxAFEhUKEVRJTUVfSU5fRk9SQ0VfQ0xTEAYqgQEKEFJpc2tEZW5vbWluYXRpb24SIQodUklTS19ERU5PTUlOQVRJT05fVU5TUEVDSUZJRUQQABImCiJSSVNLX0RFTk9NSU5BVElPTl9VTkRFUkxZSU5HX1BSSUNFEAESIgoeUklTS19ERU5PTUlOQVRJT05fT1BUSU9OX1BSSUNFEAIq1gEKDlN0cmF0ZWd5RmFtaWx5Eh8KG1NUUkFURUdZX0ZBTUlMWV9VTlNQRUNJRklFRBAAEhkKFVNUUkFURUdZX0ZBTUlMWV9UUkVORBABEiIKHlNUUkFURUdZX0ZBTUlMWV9NRUFOX1JFVkVSU0lPThACEiAKHFNUUkFURUdZX0ZBTUlMWV9FVkVOVF9EUklWRU4QAxIeChpTVFJBVEVHWV9GQU1JTFlfVk9MQVRJTElUWRAEEiIKHlNUUkFURUdZX0ZBTUlMWV9SRUxBVElWRV9WQUxVRRAFKrABCgZSZWdpbWUSFgoSUkVHSU1FX1VOU1BFQ0lGSUVEEAASFQoRUkVHSU1FX0JVTExfVFJFTkQQARIVChFSRUdJTUVfQkVBUl9UUkVORBACEhYKElJFR0lNRV9SQU5HRV9CT1VORBADEhoKFlJFR0lNRV9ISUdIX1ZPTEFUSUxJVFkQBBIZChVSRUdJTUVfTE9XX1ZPTEFUSUxJVFkQBRIRCg1SRUdJTUVfQ1JJU0lTEAYqnAEKDE1hcmtldFN0YXR1cxIdChlNQVJLRVRfU1RBVFVTX1VOU1BFQ0lGSUVEEAASHAoYTUFSS0VUX1NUQVRVU19QUkVfTUFSS0VUEAESFgoSTUFSS0VUX1NUQVRVU19PUEVOEAISHQoZTUFSS0VUX1NUQVRVU19BRlRFUl9IT1VSUxADEhgKFE1BUktFVF9TVEFUVVNfQ0xPU0VEEARClAEKDGNvbS5jcmVhbS52MUILQ29tbW9uUHJvdG9QAVo2Z2l0aHViLmNvbS9jcmVhbS10cmFkaW5nL2NyZWFtL2dlbi9nby9jcmVhbS92MTtjcmVhbXYxogIDQ1hYqgIIQ3JlYW0uVjHKAghDcmVhbVxWMeICFENyZWFtXFYxXEdQQk1ldGFkYXRh6gIJQ3JlYW06OlYxYgZwcm90bzM"
-  );
+	/*@__PURE__*/
+	fileDesc(
+		"ChVjcmVhbS92MS9jb21tb24ucHJvdG8SCGNyZWFtLnYxInMKDk9wdGlvbkNvbnRyYWN0EhIKCnVuZGVybHlpbmcYASABKAkSEgoKZXhwaXJhdGlvbhgCIAEoCRIOCgZzdHJpa2UYAyABKAESKQoLb3B0aW9uX3R5cGUYBCABKA4yFC5jcmVhbS52MS5PcHRpb25UeXBlIokBCgpJbnN0cnVtZW50EhUKDWluc3RydW1lbnRfaWQYASABKAkSMQoPaW5zdHJ1bWVudF90eXBlGAIgASgOMhguY3JlYW0udjEuSW5zdHJ1bWVudFR5cGUSMQoPb3B0aW9uX2NvbnRyYWN0GAMgASgLMhguY3JlYW0udjEuT3B0aW9uQ29udHJhY3QiXAoEU2l6ZRIQCghxdWFudGl0eRgBIAEoBRIgCgR1bml0GAIgASgOMhIuY3JlYW0udjEuU2l6ZVVuaXQSIAoYdGFyZ2V0X3Bvc2l0aW9uX3F1YW50aXR5GAMgASgFInIKClJpc2tMZXZlbHMSFwoPc3RvcF9sb3NzX2xldmVsGAEgASgBEhkKEXRha2VfcHJvZml0X2xldmVsGAIgASgBEjAKDGRlbm9taW5hdGlvbhgDIAEoDjIaLmNyZWFtLnYxLlJpc2tEZW5vbWluYXRpb24qcQoLRW52aXJvbm1lbnQSGwoXRU5WSVJPTk1FTlRfVU5TUEVDSUZJRUQQABIYChRFTlZJUk9OTUVOVF9CQUNLVEVTVBABEhUKEUVOVklST05NRU5UX1BBUEVSEAISFAoQRU5WSVJPTk1FTlRfTElWRRADKo8BCgZBY3Rpb24SFgoSQUNUSU9OX1VOU1BFQ0lGSUVEEAASDgoKQUNUSU9OX0JVWRABEg8KC0FDVElPTl9TRUxMEAISDwoLQUNUSU9OX0hPTEQQAxITCg9BQ1RJT05fSU5DUkVBU0UQBBIRCg1BQ1RJT05fUkVEVUNFEAUSEwoPQUNUSU9OX05PX1RSQURFEAYqYwoJRGlyZWN0aW9uEhkKFURJUkVDVElPTl9VTlNQRUNJRklFRBAAEhIKDkRJUkVDVElPTl9MT05HEAESEwoPRElSRUNUSU9OX1NIT1JUEAISEgoORElSRUNUSU9OX0ZMQVQQAyppCg5JbnN0cnVtZW50VHlwZRIfChtJTlNUUlVNRU5UX1RZUEVfVU5TUEVDSUZJRUQQABIaChZJTlNUUlVNRU5UX1RZUEVfRVFVSVRZEAESGgoWSU5TVFJVTUVOVF9UWVBFX09QVElPThACKlQKCk9wdGlvblR5cGUSGwoXT1BUSU9OX1RZUEVfVU5TUEVDSUZJRUQQABIUChBPUFRJT05fVFlQRV9DQUxMEAESEwoPT1BUSU9OX1RZUEVfUFVUEAIqVAoIU2l6ZVVuaXQSGQoVU0laRV9VTklUX1VOU1BFQ0lGSUVEEAASFAoQU0laRV9VTklUX1NIQVJFUxABEhcKE1NJWkVfVU5JVF9DT05UUkFDVFMQAipUCglPcmRlclR5cGUSGgoWT1JERVJfVFlQRV9VTlNQRUNJRklFRBAAEhQKEE9SREVSX1RZUEVfTElNSVQQARIVChFPUkRFUl9UWVBFX01BUktFVBACKrYBCgtUaW1lSW5Gb3JjZRIdChlUSU1FX0lOX0ZPUkNFX1VOU1BFQ0lGSUVEEAASFQoRVElNRV9JTl9GT1JDRV9EQVkQARIVChFUSU1FX0lOX0ZPUkNFX0dUQxACEhUKEVRJTUVfSU5fRk9SQ0VfSU9DEAMSFQoRVElNRV9JTl9GT1JDRV9GT0sQBBIVChFUSU1FX0lOX0ZPUkNFX09QRxAFEhUKEVRJTUVfSU5fRk9SQ0VfQ0xTEAYqgQEKEFJpc2tEZW5vbWluYXRpb24SIQodUklTS19ERU5PTUlOQVRJT05fVU5TUEVDSUZJRUQQABImCiJSSVNLX0RFTk9NSU5BVElPTl9VTkRFUkxZSU5HX1BSSUNFEAESIgoeUklTS19ERU5PTUlOQVRJT05fT1BUSU9OX1BSSUNFEAIq1gEKDlN0cmF0ZWd5RmFtaWx5Eh8KG1NUUkFURUdZX0ZBTUlMWV9VTlNQRUNJRklFRBAAEhkKFVNUUkFURUdZX0ZBTUlMWV9UUkVORBABEiIKHlNUUkFURUdZX0ZBTUlMWV9NRUFOX1JFVkVSU0lPThACEiAKHFNUUkFURUdZX0ZBTUlMWV9FVkVOVF9EUklWRU4QAxIeChpTVFJBVEVHWV9GQU1JTFlfVk9MQVRJTElUWRAEEiIKHlNUUkFURUdZX0ZBTUlMWV9SRUxBVElWRV9WQUxVRRAFKrABCgZSZWdpbWUSFgoSUkVHSU1FX1VOU1BFQ0lGSUVEEAASFQoRUkVHSU1FX0JVTExfVFJFTkQQARIVChFSRUdJTUVfQkVBUl9UUkVORBACEhYKElJFR0lNRV9SQU5HRV9CT1VORBADEhoKFlJFR0lNRV9ISUdIX1ZPTEFUSUxJVFkQBBIZChVSRUdJTUVfTE9XX1ZPTEFUSUxJVFkQBRIRCg1SRUdJTUVfQ1JJU0lTEAYqnAEKDE1hcmtldFN0YXR1cxIdChlNQVJLRVRfU1RBVFVTX1VOU1BFQ0lGSUVEEAASHAoYTUFSS0VUX1NUQVRVU19QUkVfTUFSS0VUEAESFgoSTUFSS0VUX1NUQVRVU19PUEVOEAISHQoZTUFSS0VUX1NUQVRVU19BRlRFUl9IT1VSUxADEhgKFE1BUktFVF9TVEFUVVNfQ0xPU0VEEARClAEKDGNvbS5jcmVhbS52MUILQ29tbW9uUHJvdG9QAVo2Z2l0aHViLmNvbS9jcmVhbS10cmFkaW5nL2NyZWFtL2dlbi9nby9jcmVhbS92MTtjcmVhbXYxogIDQ1hYqgIIQ3JlYW0uVjHKAghDcmVhbVxWMeICFENyZWFtXFYxXEdQQk1ldGFkYXRh6gIJQ3JlYW06OlYxYgZwcm90bzM"
+	);
 
 /**
  * Option contract details
@@ -26,33 +26,33 @@ export const file_cream_v1_common: GenFile =
  * @generated from message cream.v1.OptionContract
  */
 export type OptionContract = Message<"cream.v1.OptionContract"> & {
-  /**
-   * Underlying symbol (e.g., "AAPL")
-   *
-   * @generated from field: string underlying = 1;
-   */
-  underlying: string;
+	/**
+	 * Underlying symbol (e.g., "AAPL")
+	 *
+	 * @generated from field: string underlying = 1;
+	 */
+	underlying: string;
 
-  /**
-   * Expiration date in YYYY-MM-DD format
-   *
-   * @generated from field: string expiration = 2;
-   */
-  expiration: string;
+	/**
+	 * Expiration date in YYYY-MM-DD format
+	 *
+	 * @generated from field: string expiration = 2;
+	 */
+	expiration: string;
 
-  /**
-   * Strike price
-   *
-   * @generated from field: double strike = 3;
-   */
-  strike: number;
+	/**
+	 * Strike price
+	 *
+	 * @generated from field: double strike = 3;
+	 */
+	strike: number;
 
-  /**
-   * Call or put
-   *
-   * @generated from field: cream.v1.OptionType option_type = 4;
-   */
-  optionType: OptionType;
+	/**
+	 * Call or put
+	 *
+	 * @generated from field: cream.v1.OptionType option_type = 4;
+	 */
+	optionType: OptionType;
 };
 
 /**
@@ -60,8 +60,8 @@ export type OptionContract = Message<"cream.v1.OptionContract"> & {
  * Use `create(OptionContractSchema)` to create a new message.
  */
 export const OptionContractSchema: GenMessage<OptionContract> =
-  /*@__PURE__*/
-  messageDesc(file_cream_v1_common, 0);
+	/*@__PURE__*/
+	messageDesc(file_cream_v1_common, 0);
 
 /**
  * Instrument identifier
@@ -69,26 +69,26 @@ export const OptionContractSchema: GenMessage<OptionContract> =
  * @generated from message cream.v1.Instrument
  */
 export type Instrument = Message<"cream.v1.Instrument"> & {
-  /**
-   * Unique identifier (ticker or OCC symbol for options)
-   *
-   * @generated from field: string instrument_id = 1;
-   */
-  instrumentId: string;
+	/**
+	 * Unique identifier (ticker or OCC symbol for options)
+	 *
+	 * @generated from field: string instrument_id = 1;
+	 */
+	instrumentId: string;
 
-  /**
-   * Type of instrument
-   *
-   * @generated from field: cream.v1.InstrumentType instrument_type = 2;
-   */
-  instrumentType: InstrumentType;
+	/**
+	 * Type of instrument
+	 *
+	 * @generated from field: cream.v1.InstrumentType instrument_type = 2;
+	 */
+	instrumentType: InstrumentType;
 
-  /**
-   * Option contract details (required when instrument_type is OPTION)
-   *
-   * @generated from field: cream.v1.OptionContract option_contract = 3;
-   */
-  optionContract?: OptionContract;
+	/**
+	 * Option contract details (required when instrument_type is OPTION)
+	 *
+	 * @generated from field: cream.v1.OptionContract option_contract = 3;
+	 */
+	optionContract?: OptionContract;
 };
 
 /**
@@ -96,8 +96,8 @@ export type Instrument = Message<"cream.v1.Instrument"> & {
  * Use `create(InstrumentSchema)` to create a new message.
  */
 export const InstrumentSchema: GenMessage<Instrument> =
-  /*@__PURE__*/
-  messageDesc(file_cream_v1_common, 1);
+	/*@__PURE__*/
+	messageDesc(file_cream_v1_common, 1);
 
 /**
  * Position sizing
@@ -105,26 +105,26 @@ export const InstrumentSchema: GenMessage<Instrument> =
  * @generated from message cream.v1.Size
  */
 export type Size = Message<"cream.v1.Size"> & {
-  /**
-   * Number of shares or contracts
-   *
-   * @generated from field: int32 quantity = 1;
-   */
-  quantity: number;
+	/**
+	 * Number of shares or contracts
+	 *
+	 * @generated from field: int32 quantity = 1;
+	 */
+	quantity: number;
 
-  /**
-   * Unit of size
-   *
-   * @generated from field: cream.v1.SizeUnit unit = 2;
-   */
-  unit: SizeUnit;
+	/**
+	 * Unit of size
+	 *
+	 * @generated from field: cream.v1.SizeUnit unit = 2;
+	 */
+	unit: SizeUnit;
 
-  /**
-   * Target position after execution (signed: positive=long, negative=short)
-   *
-   * @generated from field: int32 target_position_quantity = 3;
-   */
-  targetPositionQuantity: number;
+	/**
+	 * Target position after execution (signed: positive=long, negative=short)
+	 *
+	 * @generated from field: int32 target_position_quantity = 3;
+	 */
+	targetPositionQuantity: number;
 };
 
 /**
@@ -139,26 +139,26 @@ export const SizeSchema: GenMessage<Size> = /*@__PURE__*/ messageDesc(file_cream
  * @generated from message cream.v1.RiskLevels
  */
 export type RiskLevels = Message<"cream.v1.RiskLevels"> & {
-  /**
-   * Stop-loss price level
-   *
-   * @generated from field: double stop_loss_level = 1;
-   */
-  stopLossLevel: number;
+	/**
+	 * Stop-loss price level
+	 *
+	 * @generated from field: double stop_loss_level = 1;
+	 */
+	stopLossLevel: number;
 
-  /**
-   * Take-profit price level
-   *
-   * @generated from field: double take_profit_level = 2;
-   */
-  takeProfitLevel: number;
+	/**
+	 * Take-profit price level
+	 *
+	 * @generated from field: double take_profit_level = 2;
+	 */
+	takeProfitLevel: number;
 
-  /**
-   * What price the levels refer to
-   *
-   * @generated from field: cream.v1.RiskDenomination denomination = 3;
-   */
-  denomination: RiskDenomination;
+	/**
+	 * What price the levels refer to
+	 *
+	 * @generated from field: cream.v1.RiskDenomination denomination = 3;
+	 */
+	denomination: RiskDenomination;
 };
 
 /**
@@ -166,8 +166,8 @@ export type RiskLevels = Message<"cream.v1.RiskLevels"> & {
  * Use `create(RiskLevelsSchema)` to create a new message.
  */
 export const RiskLevelsSchema: GenMessage<RiskLevels> =
-  /*@__PURE__*/
-  messageDesc(file_cream_v1_common, 3);
+	/*@__PURE__*/
+	messageDesc(file_cream_v1_common, 3);
 
 /**
  * Trading environment
@@ -175,33 +175,33 @@ export const RiskLevelsSchema: GenMessage<RiskLevels> =
  * @generated from enum cream.v1.Environment
  */
 export enum Environment {
-  /**
-   * @generated from enum value: ENVIRONMENT_UNSPECIFIED = 0;
-   */
-  UNSPECIFIED = 0,
+	/**
+	 * @generated from enum value: ENVIRONMENT_UNSPECIFIED = 0;
+	 */
+	UNSPECIFIED = 0,
 
-  /**
-   * @generated from enum value: ENVIRONMENT_BACKTEST = 1;
-   */
-  BACKTEST = 1,
+	/**
+	 * @generated from enum value: ENVIRONMENT_BACKTEST = 1;
+	 */
+	BACKTEST = 1,
 
-  /**
-   * @generated from enum value: ENVIRONMENT_PAPER = 2;
-   */
-  PAPER = 2,
+	/**
+	 * @generated from enum value: ENVIRONMENT_PAPER = 2;
+	 */
+	PAPER = 2,
 
-  /**
-   * @generated from enum value: ENVIRONMENT_LIVE = 3;
-   */
-  LIVE = 3,
+	/**
+	 * @generated from enum value: ENVIRONMENT_LIVE = 3;
+	 */
+	LIVE = 3,
 }
 
 /**
  * Describes the enum cream.v1.Environment.
  */
 export const EnvironmentSchema: GenEnum<Environment> =
-  /*@__PURE__*/
-  enumDesc(file_cream_v1_common, 0);
+	/*@__PURE__*/
+	enumDesc(file_cream_v1_common, 0);
 
 /**
  * Trading action that expresses intent in terms of exposure
@@ -209,52 +209,52 @@ export const EnvironmentSchema: GenEnum<Environment> =
  * @generated from enum cream.v1.Action
  */
 export enum Action {
-  /**
-   * @generated from enum value: ACTION_UNSPECIFIED = 0;
-   */
-  UNSPECIFIED = 0,
+	/**
+	 * @generated from enum value: ACTION_UNSPECIFIED = 0;
+	 */
+	UNSPECIFIED = 0,
 
-  /**
-   * Establish new long from flat
-   *
-   * @generated from enum value: ACTION_BUY = 1;
-   */
-  BUY = 1,
+	/**
+	 * Establish new long from flat
+	 *
+	 * @generated from enum value: ACTION_BUY = 1;
+	 */
+	BUY = 1,
 
-  /**
-   * Establish new short from flat
-   *
-   * @generated from enum value: ACTION_SELL = 2;
-   */
-  SELL = 2,
+	/**
+	 * Establish new short from flat
+	 *
+	 * @generated from enum value: ACTION_SELL = 2;
+	 */
+	SELL = 2,
 
-  /**
-   * Maintain current position
-   *
-   * @generated from enum value: ACTION_HOLD = 3;
-   */
-  HOLD = 3,
+	/**
+	 * Maintain current position
+	 *
+	 * @generated from enum value: ACTION_HOLD = 3;
+	 */
+	HOLD = 3,
 
-  /**
-   * Increase exposure in direction
-   *
-   * @generated from enum value: ACTION_INCREASE = 4;
-   */
-  INCREASE = 4,
+	/**
+	 * Increase exposure in direction
+	 *
+	 * @generated from enum value: ACTION_INCREASE = 4;
+	 */
+	INCREASE = 4,
 
-  /**
-   * Reduce exposure magnitude
-   *
-   * @generated from enum value: ACTION_REDUCE = 5;
-   */
-  REDUCE = 5,
+	/**
+	 * Reduce exposure magnitude
+	 *
+	 * @generated from enum value: ACTION_REDUCE = 5;
+	 */
+	REDUCE = 5,
 
-  /**
-   * Remain flat
-   *
-   * @generated from enum value: ACTION_NO_TRADE = 6;
-   */
-  NO_TRADE = 6,
+	/**
+	 * Remain flat
+	 *
+	 * @generated from enum value: ACTION_NO_TRADE = 6;
+	 */
+	NO_TRADE = 6,
 }
 
 /**
@@ -268,25 +268,25 @@ export const ActionSchema: GenEnum<Action> = /*@__PURE__*/ enumDesc(file_cream_v
  * @generated from enum cream.v1.Direction
  */
 export enum Direction {
-  /**
-   * @generated from enum value: DIRECTION_UNSPECIFIED = 0;
-   */
-  UNSPECIFIED = 0,
+	/**
+	 * @generated from enum value: DIRECTION_UNSPECIFIED = 0;
+	 */
+	UNSPECIFIED = 0,
 
-  /**
-   * @generated from enum value: DIRECTION_LONG = 1;
-   */
-  LONG = 1,
+	/**
+	 * @generated from enum value: DIRECTION_LONG = 1;
+	 */
+	LONG = 1,
 
-  /**
-   * @generated from enum value: DIRECTION_SHORT = 2;
-   */
-  SHORT = 2,
+	/**
+	 * @generated from enum value: DIRECTION_SHORT = 2;
+	 */
+	SHORT = 2,
 
-  /**
-   * @generated from enum value: DIRECTION_FLAT = 3;
-   */
-  FLAT = 3,
+	/**
+	 * @generated from enum value: DIRECTION_FLAT = 3;
+	 */
+	FLAT = 3,
 }
 
 /**
@@ -300,28 +300,28 @@ export const DirectionSchema: GenEnum<Direction> = /*@__PURE__*/ enumDesc(file_c
  * @generated from enum cream.v1.InstrumentType
  */
 export enum InstrumentType {
-  /**
-   * @generated from enum value: INSTRUMENT_TYPE_UNSPECIFIED = 0;
-   */
-  UNSPECIFIED = 0,
+	/**
+	 * @generated from enum value: INSTRUMENT_TYPE_UNSPECIFIED = 0;
+	 */
+	UNSPECIFIED = 0,
 
-  /**
-   * @generated from enum value: INSTRUMENT_TYPE_EQUITY = 1;
-   */
-  EQUITY = 1,
+	/**
+	 * @generated from enum value: INSTRUMENT_TYPE_EQUITY = 1;
+	 */
+	EQUITY = 1,
 
-  /**
-   * @generated from enum value: INSTRUMENT_TYPE_OPTION = 2;
-   */
-  OPTION = 2,
+	/**
+	 * @generated from enum value: INSTRUMENT_TYPE_OPTION = 2;
+	 */
+	OPTION = 2,
 }
 
 /**
  * Describes the enum cream.v1.InstrumentType.
  */
 export const InstrumentTypeSchema: GenEnum<InstrumentType> =
-  /*@__PURE__*/
-  enumDesc(file_cream_v1_common, 3);
+	/*@__PURE__*/
+	enumDesc(file_cream_v1_common, 3);
 
 /**
  * Option type (call or put)
@@ -329,28 +329,28 @@ export const InstrumentTypeSchema: GenEnum<InstrumentType> =
  * @generated from enum cream.v1.OptionType
  */
 export enum OptionType {
-  /**
-   * @generated from enum value: OPTION_TYPE_UNSPECIFIED = 0;
-   */
-  UNSPECIFIED = 0,
+	/**
+	 * @generated from enum value: OPTION_TYPE_UNSPECIFIED = 0;
+	 */
+	UNSPECIFIED = 0,
 
-  /**
-   * @generated from enum value: OPTION_TYPE_CALL = 1;
-   */
-  CALL = 1,
+	/**
+	 * @generated from enum value: OPTION_TYPE_CALL = 1;
+	 */
+	CALL = 1,
 
-  /**
-   * @generated from enum value: OPTION_TYPE_PUT = 2;
-   */
-  PUT = 2,
+	/**
+	 * @generated from enum value: OPTION_TYPE_PUT = 2;
+	 */
+	PUT = 2,
 }
 
 /**
  * Describes the enum cream.v1.OptionType.
  */
 export const OptionTypeSchema: GenEnum<OptionType> =
-  /*@__PURE__*/
-  enumDesc(file_cream_v1_common, 4);
+	/*@__PURE__*/
+	enumDesc(file_cream_v1_common, 4);
 
 /**
  * Size unit for position sizing
@@ -358,20 +358,20 @@ export const OptionTypeSchema: GenEnum<OptionType> =
  * @generated from enum cream.v1.SizeUnit
  */
 export enum SizeUnit {
-  /**
-   * @generated from enum value: SIZE_UNIT_UNSPECIFIED = 0;
-   */
-  UNSPECIFIED = 0,
+	/**
+	 * @generated from enum value: SIZE_UNIT_UNSPECIFIED = 0;
+	 */
+	UNSPECIFIED = 0,
 
-  /**
-   * @generated from enum value: SIZE_UNIT_SHARES = 1;
-   */
-  SHARES = 1,
+	/**
+	 * @generated from enum value: SIZE_UNIT_SHARES = 1;
+	 */
+	SHARES = 1,
 
-  /**
-   * @generated from enum value: SIZE_UNIT_CONTRACTS = 2;
-   */
-  CONTRACTS = 2,
+	/**
+	 * @generated from enum value: SIZE_UNIT_CONTRACTS = 2;
+	 */
+	CONTRACTS = 2,
 }
 
 /**
@@ -385,20 +385,20 @@ export const SizeUnitSchema: GenEnum<SizeUnit> = /*@__PURE__*/ enumDesc(file_cre
  * @generated from enum cream.v1.OrderType
  */
 export enum OrderType {
-  /**
-   * @generated from enum value: ORDER_TYPE_UNSPECIFIED = 0;
-   */
-  UNSPECIFIED = 0,
+	/**
+	 * @generated from enum value: ORDER_TYPE_UNSPECIFIED = 0;
+	 */
+	UNSPECIFIED = 0,
 
-  /**
-   * @generated from enum value: ORDER_TYPE_LIMIT = 1;
-   */
-  LIMIT = 1,
+	/**
+	 * @generated from enum value: ORDER_TYPE_LIMIT = 1;
+	 */
+	LIMIT = 1,
 
-  /**
-   * @generated from enum value: ORDER_TYPE_MARKET = 2;
-   */
-  MARKET = 2,
+	/**
+	 * @generated from enum value: ORDER_TYPE_MARKET = 2;
+	 */
+	MARKET = 2,
 }
 
 /**
@@ -412,58 +412,58 @@ export const OrderTypeSchema: GenEnum<OrderType> = /*@__PURE__*/ enumDesc(file_c
  * @generated from enum cream.v1.TimeInForce
  */
 export enum TimeInForce {
-  /**
-   * @generated from enum value: TIME_IN_FORCE_UNSPECIFIED = 0;
-   */
-  UNSPECIFIED = 0,
+	/**
+	 * @generated from enum value: TIME_IN_FORCE_UNSPECIFIED = 0;
+	 */
+	UNSPECIFIED = 0,
 
-  /**
-   * @generated from enum value: TIME_IN_FORCE_DAY = 1;
-   */
-  DAY = 1,
+	/**
+	 * @generated from enum value: TIME_IN_FORCE_DAY = 1;
+	 */
+	DAY = 1,
 
-  /**
-   * Good 'til canceled
-   *
-   * @generated from enum value: TIME_IN_FORCE_GTC = 2;
-   */
-  GTC = 2,
+	/**
+	 * Good 'til canceled
+	 *
+	 * @generated from enum value: TIME_IN_FORCE_GTC = 2;
+	 */
+	GTC = 2,
 
-  /**
-   * Immediate or cancel
-   *
-   * @generated from enum value: TIME_IN_FORCE_IOC = 3;
-   */
-  IOC = 3,
+	/**
+	 * Immediate or cancel
+	 *
+	 * @generated from enum value: TIME_IN_FORCE_IOC = 3;
+	 */
+	IOC = 3,
 
-  /**
-   * Fill or kill
-   *
-   * @generated from enum value: TIME_IN_FORCE_FOK = 4;
-   */
-  FOK = 4,
+	/**
+	 * Fill or kill
+	 *
+	 * @generated from enum value: TIME_IN_FORCE_FOK = 4;
+	 */
+	FOK = 4,
 
-  /**
-   * Market-on-open
-   *
-   * @generated from enum value: TIME_IN_FORCE_OPG = 5;
-   */
-  OPG = 5,
+	/**
+	 * Market-on-open
+	 *
+	 * @generated from enum value: TIME_IN_FORCE_OPG = 5;
+	 */
+	OPG = 5,
 
-  /**
-   * Market-on-close
-   *
-   * @generated from enum value: TIME_IN_FORCE_CLS = 6;
-   */
-  CLS = 6,
+	/**
+	 * Market-on-close
+	 *
+	 * @generated from enum value: TIME_IN_FORCE_CLS = 6;
+	 */
+	CLS = 6,
 }
 
 /**
  * Describes the enum cream.v1.TimeInForce.
  */
 export const TimeInForceSchema: GenEnum<TimeInForce> =
-  /*@__PURE__*/
-  enumDesc(file_cream_v1_common, 7);
+	/*@__PURE__*/
+	enumDesc(file_cream_v1_common, 7);
 
 /**
  * Risk level denomination
@@ -471,28 +471,28 @@ export const TimeInForceSchema: GenEnum<TimeInForce> =
  * @generated from enum cream.v1.RiskDenomination
  */
 export enum RiskDenomination {
-  /**
-   * @generated from enum value: RISK_DENOMINATION_UNSPECIFIED = 0;
-   */
-  UNSPECIFIED = 0,
+	/**
+	 * @generated from enum value: RISK_DENOMINATION_UNSPECIFIED = 0;
+	 */
+	UNSPECIFIED = 0,
 
-  /**
-   * @generated from enum value: RISK_DENOMINATION_UNDERLYING_PRICE = 1;
-   */
-  UNDERLYING_PRICE = 1,
+	/**
+	 * @generated from enum value: RISK_DENOMINATION_UNDERLYING_PRICE = 1;
+	 */
+	UNDERLYING_PRICE = 1,
 
-  /**
-   * @generated from enum value: RISK_DENOMINATION_OPTION_PRICE = 2;
-   */
-  OPTION_PRICE = 2,
+	/**
+	 * @generated from enum value: RISK_DENOMINATION_OPTION_PRICE = 2;
+	 */
+	OPTION_PRICE = 2,
 }
 
 /**
  * Describes the enum cream.v1.RiskDenomination.
  */
 export const RiskDenominationSchema: GenEnum<RiskDenomination> =
-  /*@__PURE__*/
-  enumDesc(file_cream_v1_common, 8);
+	/*@__PURE__*/
+	enumDesc(file_cream_v1_common, 8);
 
 /**
  * Strategy family
@@ -500,43 +500,43 @@ export const RiskDenominationSchema: GenEnum<RiskDenomination> =
  * @generated from enum cream.v1.StrategyFamily
  */
 export enum StrategyFamily {
-  /**
-   * @generated from enum value: STRATEGY_FAMILY_UNSPECIFIED = 0;
-   */
-  UNSPECIFIED = 0,
+	/**
+	 * @generated from enum value: STRATEGY_FAMILY_UNSPECIFIED = 0;
+	 */
+	UNSPECIFIED = 0,
 
-  /**
-   * @generated from enum value: STRATEGY_FAMILY_TREND = 1;
-   */
-  TREND = 1,
+	/**
+	 * @generated from enum value: STRATEGY_FAMILY_TREND = 1;
+	 */
+	TREND = 1,
 
-  /**
-   * @generated from enum value: STRATEGY_FAMILY_MEAN_REVERSION = 2;
-   */
-  MEAN_REVERSION = 2,
+	/**
+	 * @generated from enum value: STRATEGY_FAMILY_MEAN_REVERSION = 2;
+	 */
+	MEAN_REVERSION = 2,
 
-  /**
-   * @generated from enum value: STRATEGY_FAMILY_EVENT_DRIVEN = 3;
-   */
-  EVENT_DRIVEN = 3,
+	/**
+	 * @generated from enum value: STRATEGY_FAMILY_EVENT_DRIVEN = 3;
+	 */
+	EVENT_DRIVEN = 3,
 
-  /**
-   * @generated from enum value: STRATEGY_FAMILY_VOLATILITY = 4;
-   */
-  VOLATILITY = 4,
+	/**
+	 * @generated from enum value: STRATEGY_FAMILY_VOLATILITY = 4;
+	 */
+	VOLATILITY = 4,
 
-  /**
-   * @generated from enum value: STRATEGY_FAMILY_RELATIVE_VALUE = 5;
-   */
-  RELATIVE_VALUE = 5,
+	/**
+	 * @generated from enum value: STRATEGY_FAMILY_RELATIVE_VALUE = 5;
+	 */
+	RELATIVE_VALUE = 5,
 }
 
 /**
  * Describes the enum cream.v1.StrategyFamily.
  */
 export const StrategyFamilySchema: GenEnum<StrategyFamily> =
-  /*@__PURE__*/
-  enumDesc(file_cream_v1_common, 9);
+	/*@__PURE__*/
+	enumDesc(file_cream_v1_common, 9);
 
 /**
  * Regime classification
@@ -544,40 +544,40 @@ export const StrategyFamilySchema: GenEnum<StrategyFamily> =
  * @generated from enum cream.v1.Regime
  */
 export enum Regime {
-  /**
-   * @generated from enum value: REGIME_UNSPECIFIED = 0;
-   */
-  UNSPECIFIED = 0,
+	/**
+	 * @generated from enum value: REGIME_UNSPECIFIED = 0;
+	 */
+	UNSPECIFIED = 0,
 
-  /**
-   * @generated from enum value: REGIME_BULL_TREND = 1;
-   */
-  BULL_TREND = 1,
+	/**
+	 * @generated from enum value: REGIME_BULL_TREND = 1;
+	 */
+	BULL_TREND = 1,
 
-  /**
-   * @generated from enum value: REGIME_BEAR_TREND = 2;
-   */
-  BEAR_TREND = 2,
+	/**
+	 * @generated from enum value: REGIME_BEAR_TREND = 2;
+	 */
+	BEAR_TREND = 2,
 
-  /**
-   * @generated from enum value: REGIME_RANGE_BOUND = 3;
-   */
-  RANGE_BOUND = 3,
+	/**
+	 * @generated from enum value: REGIME_RANGE_BOUND = 3;
+	 */
+	RANGE_BOUND = 3,
 
-  /**
-   * @generated from enum value: REGIME_HIGH_VOLATILITY = 4;
-   */
-  HIGH_VOLATILITY = 4,
+	/**
+	 * @generated from enum value: REGIME_HIGH_VOLATILITY = 4;
+	 */
+	HIGH_VOLATILITY = 4,
 
-  /**
-   * @generated from enum value: REGIME_LOW_VOLATILITY = 5;
-   */
-  LOW_VOLATILITY = 5,
+	/**
+	 * @generated from enum value: REGIME_LOW_VOLATILITY = 5;
+	 */
+	LOW_VOLATILITY = 5,
 
-  /**
-   * @generated from enum value: REGIME_CRISIS = 6;
-   */
-  CRISIS = 6,
+	/**
+	 * @generated from enum value: REGIME_CRISIS = 6;
+	 */
+	CRISIS = 6,
 }
 
 /**
@@ -591,35 +591,35 @@ export const RegimeSchema: GenEnum<Regime> = /*@__PURE__*/ enumDesc(file_cream_v
  * @generated from enum cream.v1.MarketStatus
  */
 export enum MarketStatus {
-  /**
-   * @generated from enum value: MARKET_STATUS_UNSPECIFIED = 0;
-   */
-  UNSPECIFIED = 0,
+	/**
+	 * @generated from enum value: MARKET_STATUS_UNSPECIFIED = 0;
+	 */
+	UNSPECIFIED = 0,
 
-  /**
-   * @generated from enum value: MARKET_STATUS_PRE_MARKET = 1;
-   */
-  PRE_MARKET = 1,
+	/**
+	 * @generated from enum value: MARKET_STATUS_PRE_MARKET = 1;
+	 */
+	PRE_MARKET = 1,
 
-  /**
-   * @generated from enum value: MARKET_STATUS_OPEN = 2;
-   */
-  OPEN = 2,
+	/**
+	 * @generated from enum value: MARKET_STATUS_OPEN = 2;
+	 */
+	OPEN = 2,
 
-  /**
-   * @generated from enum value: MARKET_STATUS_AFTER_HOURS = 3;
-   */
-  AFTER_HOURS = 3,
+	/**
+	 * @generated from enum value: MARKET_STATUS_AFTER_HOURS = 3;
+	 */
+	AFTER_HOURS = 3,
 
-  /**
-   * @generated from enum value: MARKET_STATUS_CLOSED = 4;
-   */
-  CLOSED = 4,
+	/**
+	 * @generated from enum value: MARKET_STATUS_CLOSED = 4;
+	 */
+	CLOSED = 4,
 }
 
 /**
  * Describes the enum cream.v1.MarketStatus.
  */
 export const MarketStatusSchema: GenEnum<MarketStatus> =
-  /*@__PURE__*/
-  enumDesc(file_cream_v1_common, 11);
+	/*@__PURE__*/
+	enumDesc(file_cream_v1_common, 11);

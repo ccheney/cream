@@ -9,12 +9,12 @@
 
 import type { HelixClient } from "../client.js";
 import {
-  type CompanyData,
-  type CompanyGraphBuildOptions,
-  type CompanyGraphBuildResult,
-  type CorrelationPair,
-  createCompanyGraphBuilder,
-  type SupplyChainRelationship,
+	type CompanyData,
+	type CompanyGraphBuildOptions,
+	type CompanyGraphBuildResult,
+	type CorrelationPair,
+	createCompanyGraphBuilder,
+	type SupplyChainRelationship,
 } from "./company-graph-builder.js";
 
 // ============================================
@@ -26,32 +26,32 @@ import {
  * Matches the ResolvedInstrument interface from @cream/universe
  */
 export interface ResolvedInstrument {
-  symbol: string;
-  source: string;
-  name?: string;
-  sector?: string;
-  industry?: string;
-  marketCap?: number;
-  avgVolume?: number;
-  price?: number;
+	symbol: string;
+	source: string;
+	name?: string;
+	sector?: string;
+	industry?: string;
+	marketCap?: number;
+	avgVolume?: number;
+	price?: number;
 }
 
 /**
  * Universe sync options
  */
 export interface UniverseSyncOptions extends CompanyGraphBuildOptions {
-  /** Correlation pairs from price analysis (optional) */
-  correlationPairs?: CorrelationPair[];
-  /** Supply chain relationships from external data (optional) */
-  supplyChainRelationships?: SupplyChainRelationship[];
+	/** Correlation pairs from price analysis (optional) */
+	correlationPairs?: CorrelationPair[];
+	/** Supply chain relationships from external data (optional) */
+	supplyChainRelationships?: SupplyChainRelationship[];
 }
 
 /**
  * Universe sync result
  */
 export interface UniverseSyncResult extends CompanyGraphBuildResult {
-  /** Symbols that were synced */
-  syncedSymbols: string[];
+	/** Symbols that were synced */
+	syncedSymbols: string[];
 }
 
 // ============================================
@@ -62,13 +62,13 @@ export interface UniverseSyncResult extends CompanyGraphBuildResult {
  * Transform resolved instruments to company data for graph builder
  */
 export function instrumentsToCompanyData(instruments: ResolvedInstrument[]): CompanyData[] {
-  return instruments.map((i) => ({
-    symbol: i.symbol,
-    name: i.name,
-    sector: i.sector,
-    industry: i.industry,
-    marketCap: i.marketCap,
-  }));
+	return instruments.map((i) => ({
+		symbol: i.symbol,
+		name: i.name,
+		sector: i.sector,
+		industry: i.industry,
+		marketCap: i.marketCap,
+	}));
 }
 
 // ============================================
@@ -86,29 +86,29 @@ export function instrumentsToCompanyData(instruments: ResolvedInstrument[]): Com
  * @param options - Sync options
  */
 export async function syncUniverseToGraph(
-  client: HelixClient,
-  instruments: ResolvedInstrument[],
-  options: UniverseSyncOptions = {}
+	client: HelixClient,
+	instruments: ResolvedInstrument[],
+	options: UniverseSyncOptions = {}
 ): Promise<UniverseSyncResult> {
-  const builder = createCompanyGraphBuilder(client);
-  const companyData = instrumentsToCompanyData(instruments);
+	const builder = createCompanyGraphBuilder(client);
+	const companyData = instrumentsToCompanyData(instruments);
 
-  const result = await builder.build(
-    companyData,
-    options.correlationPairs ?? [],
-    options.supplyChainRelationships ?? [],
-    {
-      maxPeersPerCompany: options.maxPeersPerCompany,
-      includeIndustryPeers: options.includeIndustryPeers,
-      correlationOptions: options.correlationOptions,
-      batchSize: options.batchSize,
-    }
-  );
+	const result = await builder.build(
+		companyData,
+		options.correlationPairs ?? [],
+		options.supplyChainRelationships ?? [],
+		{
+			maxPeersPerCompany: options.maxPeersPerCompany,
+			includeIndustryPeers: options.includeIndustryPeers,
+			correlationOptions: options.correlationOptions,
+			batchSize: options.batchSize,
+		}
+	);
 
-  return {
-    ...result,
-    syncedSymbols: instruments.map((i) => i.symbol),
-  };
+	return {
+		...result,
+		syncedSymbols: instruments.map((i) => i.symbol),
+	};
 }
 
 /**
@@ -117,22 +117,22 @@ export async function syncUniverseToGraph(
  * Use this for adding individual companies rather than full universe refresh.
  */
 export async function syncCompaniesToGraph(
-  client: HelixClient,
-  companies: CompanyData[]
+	client: HelixClient,
+	companies: CompanyData[]
 ): Promise<{ successful: number; failed: number; errors: string[] }> {
-  const builder = createCompanyGraphBuilder(client);
+	const builder = createCompanyGraphBuilder(client);
 
-  // Build with empty relationships - just upsert company nodes
-  const result = await builder.build(companies, [], [], {
-    maxPeersPerCompany: 0,
-    includeIndustryPeers: false,
-  });
+	// Build with empty relationships - just upsert company nodes
+	const result = await builder.build(companies, [], [], {
+		maxPeersPerCompany: 0,
+		includeIndustryPeers: false,
+	});
 
-  return {
-    successful: result.companiesUpserted,
-    failed: companies.length - result.companiesUpserted,
-    errors: result.warnings,
-  };
+	return {
+		successful: result.companiesUpserted,
+		failed: companies.length - result.companiesUpserted,
+		errors: result.warnings,
+	};
 }
 
 // ============================================
@@ -143,9 +143,9 @@ export async function syncCompaniesToGraph(
  * Create a universe sync function bound to a specific client
  */
 export function createUniverseSyncer(client: HelixClient) {
-  return {
-    sync: (instruments: ResolvedInstrument[], options?: UniverseSyncOptions) =>
-      syncUniverseToGraph(client, instruments, options),
-    syncCompanies: (companies: CompanyData[]) => syncCompaniesToGraph(client, companies),
-  };
+	return {
+		sync: (instruments: ResolvedInstrument[], options?: UniverseSyncOptions) =>
+			syncUniverseToGraph(client, instruments, options),
+		syncCompanies: (companies: CompanyData[]) => syncCompaniesToGraph(client, companies),
+	};
 }

@@ -64,20 +64,20 @@ export type Iso8601 = z.infer<typeof Iso8601Schema>;
  * Use this when you specifically need UTC-only validation
  */
 export const Iso8601UtcSchema = z
-  .string()
-  .refine((val) => ISO_8601_FLEXIBLE_REGEX.test(val), {
-    message: "Invalid ISO-8601 UTC timestamp format. Must be YYYY-MM-DDTHH:mm:ss.sssZ",
-  })
-  .refine(
-    (val) => {
-      const date = new Date(val);
-      return !Number.isNaN(date.getTime());
-    },
-    { message: "Invalid date value" }
-  )
-  .refine((val) => new Date(val) >= UNIX_EPOCH, {
-    message: "Timestamp must be after Unix epoch (1970-01-01)",
-  });
+	.string()
+	.refine((val) => ISO_8601_FLEXIBLE_REGEX.test(val), {
+		message: "Invalid ISO-8601 UTC timestamp format. Must be YYYY-MM-DDTHH:mm:ss.sssZ",
+	})
+	.refine(
+		(val) => {
+			const date = new Date(val);
+			return !Number.isNaN(date.getTime());
+		},
+		{ message: "Invalid date value" }
+	)
+	.refine((val) => new Date(val) >= UNIX_EPOCH, {
+		message: "Timestamp must be after Unix epoch (1970-01-01)",
+	});
 export type Iso8601Utc = z.infer<typeof Iso8601UtcSchema>;
 
 /**
@@ -85,27 +85,27 @@ export type Iso8601Utc = z.infer<typeof Iso8601UtcSchema>;
  * Used for option expirations
  */
 export const DateOnlySchema = z
-  .string()
-  .refine((val) => DATE_ONLY_REGEX.test(val), {
-    message: "Invalid date format. Must be YYYY-MM-DD",
-  })
-  .refine(
-    (val) => {
-      // Validate it's a real date (e.g., reject 2026-02-30)
-      const parts = val.split("-");
-      const year = Number(parts[0]);
-      const month = Number(parts[1]);
-      const day = Number(parts[2]);
+	.string()
+	.refine((val) => DATE_ONLY_REGEX.test(val), {
+		message: "Invalid date format. Must be YYYY-MM-DD",
+	})
+	.refine(
+		(val) => {
+			// Validate it's a real date (e.g., reject 2026-02-30)
+			const parts = val.split("-");
+			const year = Number(parts[0]);
+			const month = Number(parts[1]);
+			const day = Number(parts[2]);
 
-      if (!month || !day) {
-        return false;
-      }
+			if (!month || !day) {
+				return false;
+			}
 
-      const date = new Date(year, month - 1, day);
-      return date.getFullYear() === year && date.getMonth() === month - 1 && date.getDate() === day;
-    },
-    { message: "Invalid date value" }
-  );
+			const date = new Date(year, month - 1, day);
+			return date.getFullYear() === year && date.getMonth() === month - 1 && date.getDate() === day;
+		},
+		{ message: "Invalid date value" }
+	);
 export type DateOnly = z.infer<typeof DateOnlySchema>;
 
 // ============================================
@@ -125,13 +125,13 @@ export type DateOnly = z.infer<typeof DateOnlySchema>;
  * ```
  */
 export function toIso8601(date: Date): Iso8601Utc {
-  if (!(date instanceof Date) || Number.isNaN(date.getTime())) {
-    throw new Error("Invalid Date object");
-  }
+	if (!(date instanceof Date) || Number.isNaN(date.getTime())) {
+		throw new Error("Invalid Date object");
+	}
 
-  // Date.toISOString() already produces the correct format
-  // with milliseconds and Z suffix
-  return date.toISOString() as Iso8601Utc;
+	// Date.toISOString() already produces the correct format
+	// with milliseconds and Z suffix
+	return date.toISOString() as Iso8601Utc;
 }
 
 /**
@@ -147,18 +147,18 @@ export function toIso8601(date: Date): Iso8601Utc {
  * ```
  */
 export function fromIso8601(str: string): Date {
-  // Validate format first
-  if (!isValidIso8601(str)) {
-    throw new Error(`Invalid ISO-8601 format: ${str}`);
-  }
+	// Validate format first
+	if (!isValidIso8601(str)) {
+		throw new Error(`Invalid ISO-8601 format: ${str}`);
+	}
 
-  const date = new Date(str);
+	const date = new Date(str);
 
-  if (Number.isNaN(date.getTime())) {
-    throw new Error(`Invalid date value: ${str}`);
-  }
+	if (Number.isNaN(date.getTime())) {
+		throw new Error(`Invalid date value: ${str}`);
+	}
 
-  return date;
+	return date;
 }
 
 /**
@@ -173,7 +173,7 @@ export function fromIso8601(str: string): Date {
  * ```
  */
 export function nowIso8601(): Iso8601Utc {
-  return toIso8601(new Date());
+	return toIso8601(new Date());
 }
 
 /**
@@ -190,16 +190,16 @@ export function nowIso8601(): Iso8601Utc {
  * ```
  */
 export function toDateOnly(date: Date): DateOnly {
-  if (!(date instanceof Date) || Number.isNaN(date.getTime())) {
-    throw new Error("Invalid Date object");
-  }
+	if (!(date instanceof Date) || Number.isNaN(date.getTime())) {
+		throw new Error("Invalid Date object");
+	}
 
-  // Use UTC date to avoid timezone issues
-  const year = date.getUTCFullYear();
-  const month = String(date.getUTCMonth() + 1).padStart(2, "0");
-  const day = String(date.getUTCDate()).padStart(2, "0");
+	// Use UTC date to avoid timezone issues
+	const year = date.getUTCFullYear();
+	const month = String(date.getUTCMonth() + 1).padStart(2, "0");
+	const day = String(date.getUTCDate()).padStart(2, "0");
 
-  return `${year}-${month}-${day}` as DateOnly;
+	return `${year}-${month}-${day}` as DateOnly;
 }
 
 /**
@@ -216,19 +216,19 @@ export function toDateOnly(date: Date): DateOnly {
  * ```
  */
 export function fromDateOnly(str: string): Date {
-  const result = DateOnlySchema.safeParse(str);
-  if (!result.success) {
-    throw new Error(`Invalid date format: ${str}`);
-  }
+	const result = DateOnlySchema.safeParse(str);
+	if (!result.success) {
+		throw new Error(`Invalid date format: ${str}`);
+	}
 
-  // Parse as UTC midnight
-  const date = new Date(`${str}T00:00:00.000Z`);
+	// Parse as UTC midnight
+	const date = new Date(`${str}T00:00:00.000Z`);
 
-  if (Number.isNaN(date.getTime())) {
-    throw new Error(`Invalid date value: ${str}`);
-  }
+	if (Number.isNaN(date.getTime())) {
+		throw new Error(`Invalid date value: ${str}`);
+	}
 
-  return date;
+	return date;
 }
 
 // ============================================
@@ -249,21 +249,21 @@ export function fromDateOnly(str: string): Date {
  * ```
  */
 export function isValidIso8601(str: string): boolean {
-  if (!ISO_8601_FLEXIBLE_REGEX.test(str)) {
-    return false;
-  }
+	if (!ISO_8601_FLEXIBLE_REGEX.test(str)) {
+		return false;
+	}
 
-  const date = new Date(str);
-  if (Number.isNaN(date.getTime())) {
-    return false;
-  }
+	const date = new Date(str);
+	if (Number.isNaN(date.getTime())) {
+		return false;
+	}
 
-  // Ensure it's after Unix epoch
-  if (date < UNIX_EPOCH) {
-    return false;
-  }
+	// Ensure it's after Unix epoch
+	if (date < UNIX_EPOCH) {
+		return false;
+	}
 
-  return true;
+	return true;
 }
 
 /**
@@ -280,7 +280,7 @@ export function isValidIso8601(str: string): boolean {
  * ```
  */
 export function isValidDateOnly(str: string): boolean {
-  return DateOnlySchema.safeParse(str).success;
+	return DateOnlySchema.safeParse(str).success;
 }
 
 // ============================================
@@ -295,37 +295,37 @@ export function isValidDateOnly(str: string): boolean {
  * @returns -1 if a < b, 0 if a === b, 1 if a > b
  */
 export function compareIso8601(a: string, b: string): -1 | 0 | 1 {
-  const dateA = fromIso8601(a);
-  const dateB = fromIso8601(b);
+	const dateA = fromIso8601(a);
+	const dateB = fromIso8601(b);
 
-  if (dateA < dateB) {
-    return -1;
-  }
-  if (dateA > dateB) {
-    return 1;
-  }
-  return 0;
+	if (dateA < dateB) {
+		return -1;
+	}
+	if (dateA > dateB) {
+		return 1;
+	}
+	return 0;
 }
 
 /**
  * Check if timestamp a is before timestamp b
  */
 export function isBefore(a: string, b: string): boolean {
-  return compareIso8601(a, b) < 0;
+	return compareIso8601(a, b) < 0;
 }
 
 /**
  * Check if timestamp a is after timestamp b
  */
 export function isAfter(a: string, b: string): boolean {
-  return compareIso8601(a, b) > 0;
+	return compareIso8601(a, b) > 0;
 }
 
 /**
  * Check if timestamp a is between start and end (inclusive)
  */
 export function isBetween(timestamp: string, start: string, end: string): boolean {
-  return compareIso8601(timestamp, start) >= 0 && compareIso8601(timestamp, end) <= 0;
+	return compareIso8601(timestamp, start) >= 0 && compareIso8601(timestamp, end) <= 0;
 }
 
 // ============================================
@@ -340,37 +340,37 @@ export function isBetween(timestamp: string, start: string, end: string): boolea
  * @returns New ISO-8601 timestamp
  */
 export function addMilliseconds(timestamp: string, ms: number): Iso8601Utc {
-  const date = fromIso8601(timestamp);
-  date.setTime(date.getTime() + ms);
-  return toIso8601(date);
+	const date = fromIso8601(timestamp);
+	date.setTime(date.getTime() + ms);
+	return toIso8601(date);
 }
 
 /**
  * Add seconds to a timestamp
  */
 export function addSeconds(timestamp: string, seconds: number): Iso8601Utc {
-  return addMilliseconds(timestamp, seconds * 1000);
+	return addMilliseconds(timestamp, seconds * 1000);
 }
 
 /**
  * Add minutes to a timestamp
  */
 export function addMinutes(timestamp: string, minutes: number): Iso8601Utc {
-  return addMilliseconds(timestamp, minutes * 60 * 1000);
+	return addMilliseconds(timestamp, minutes * 60 * 1000);
 }
 
 /**
  * Add hours to a timestamp
  */
 export function addHours(timestamp: string, hours: number): Iso8601Utc {
-  return addMilliseconds(timestamp, hours * 60 * 60 * 1000);
+	return addMilliseconds(timestamp, hours * 60 * 60 * 1000);
 }
 
 /**
  * Add days to a timestamp
  */
 export function addDays(timestamp: string, days: number): Iso8601Utc {
-  return addMilliseconds(timestamp, days * 24 * 60 * 60 * 1000);
+	return addMilliseconds(timestamp, days * 24 * 60 * 60 * 1000);
 }
 
 /**
@@ -381,9 +381,9 @@ export function addDays(timestamp: string, days: number): Iso8601Utc {
  * @returns Difference in milliseconds (a - b)
  */
 export function diffMilliseconds(a: string, b: string): number {
-  const dateA = fromIso8601(a);
-  const dateB = fromIso8601(b);
-  return dateA.getTime() - dateB.getTime();
+	const dateA = fromIso8601(a);
+	const dateB = fromIso8601(b);
+	return dateA.getTime() - dateB.getTime();
 }
 
 // ============================================
@@ -404,9 +404,9 @@ export function diffMilliseconds(a: string, b: string): number {
  * ```
  */
 export function startOfHour(timestamp: string): Iso8601Utc {
-  const date = fromIso8601(timestamp);
-  date.setUTCMinutes(0, 0, 0);
-  return toIso8601(date);
+	const date = fromIso8601(timestamp);
+	date.setUTCMinutes(0, 0, 0);
+	return toIso8601(date);
 }
 
 /**
@@ -416,16 +416,16 @@ export function startOfHour(timestamp: string): Iso8601Utc {
  * @returns Timestamp at midnight UTC
  */
 export function startOfDay(timestamp: string): Iso8601Utc {
-  const date = fromIso8601(timestamp);
-  date.setUTCHours(0, 0, 0, 0);
-  return toIso8601(date);
+	const date = fromIso8601(timestamp);
+	date.setUTCHours(0, 0, 0, 0);
+	return toIso8601(date);
 }
 
 /**
  * Check if two timestamps are on the same trading day (UTC)
  */
 export function isSameTradingDay(a: string, b: string): boolean {
-  return startOfDay(a) === startOfDay(b);
+	return startOfDay(a) === startOfDay(b);
 }
 
 /**
@@ -435,8 +435,8 @@ export function isSameTradingDay(a: string, b: string): boolean {
  * @returns Date-only string for the trading day
  */
 export function getTradingDay(timestamp: string): DateOnly {
-  const date = fromIso8601(timestamp);
-  return toDateOnly(date);
+	const date = fromIso8601(timestamp);
+	return toDateOnly(date);
 }
 
 /**
@@ -454,14 +454,14 @@ export function getTradingDay(timestamp: string): DateOnly {
  * ```
  */
 export function getOptionExpirationTime(expirationDate: string): Iso8601Utc {
-  if (!isValidDateOnly(expirationDate)) {
-    throw new Error(`Invalid expiration date format: ${expirationDate}`);
-  }
+	if (!isValidDateOnly(expirationDate)) {
+		throw new Error(`Invalid expiration date format: ${expirationDate}`);
+	}
 
-  // Options expire at 4:00 PM ET
-  // ET is UTC-5 (EST) or UTC-4 (EDT)
-  // We use UTC-5 (21:00 UTC) as a conservative approximation
-  return `${expirationDate}T21:00:00.000Z` as Iso8601Utc;
+	// Options expire at 4:00 PM ET
+	// ET is UTC-5 (EST) or UTC-4 (EDT)
+	// We use UTC-5 (21:00 UTC) as a conservative approximation
+	return `${expirationDate}T21:00:00.000Z` as Iso8601Utc;
 }
 
 /**
@@ -472,9 +472,9 @@ export function getOptionExpirationTime(expirationDate: string): Iso8601Utc {
  * @returns true if the option has expired
  */
 export function isOptionExpired(expirationDate: string, currentTime?: string): boolean {
-  const expiry = getOptionExpirationTime(expirationDate);
-  const now = currentTime ?? nowIso8601();
-  return isAfter(now, expiry);
+	const expiry = getOptionExpirationTime(expirationDate);
+	const now = currentTime ?? nowIso8601();
+	return isAfter(now, expiry);
 }
 
 /**
@@ -485,8 +485,8 @@ export function isOptionExpired(expirationDate: string, currentTime?: string): b
  * @returns Days until expiration (negative if expired)
  */
 export function daysToExpiration(expirationDate: string, currentTime?: string): number {
-  const expiry = getOptionExpirationTime(expirationDate);
-  const now = currentTime ?? nowIso8601();
-  const diffMs = diffMilliseconds(expiry, now);
-  return diffMs / (24 * 60 * 60 * 1000);
+	const expiry = getOptionExpirationTime(expirationDate);
+	const now = currentTime ?? nowIso8601();
+	const diffMs = diffMilliseconds(expiry, now);
+	return diffMs / (24 * 60 * 60 * 1000);
 }

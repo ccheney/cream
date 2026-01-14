@@ -5,12 +5,12 @@
  */
 
 export {
-  AUTH_CONFIG,
-  clearStore,
-  DEFAULT_CONFIG,
-  PASSWORD_RESET_CONFIG,
-  type RateLimitConfig,
-  rateLimit,
-  SESSION_CONFIG,
-  stopCleanup,
+	AUTH_CONFIG,
+	clearStore,
+	DEFAULT_CONFIG,
+	PASSWORD_RESET_CONFIG,
+	type RateLimitConfig,
+	rateLimit,
+	SESSION_CONFIG,
+	stopCleanup,
 } from "./rate-limit.js";

@@ -18,23 +18,23 @@ import { IndicatorChart, type IndicatorDataPoint, type ReferenceLine } from "./I
 // ============================================
 
 export interface StochasticChartProps {
-  /** %K data points */
-  kData: IndicatorDataPoint[];
+	/** %K data points */
+	kData: IndicatorDataPoint[];
 
-  /** %D data points */
-  dData: IndicatorDataPoint[];
+	/** %D data points */
+	dData: IndicatorDataPoint[];
 
-  /** Overbought level (default: 80) */
-  overboughtLevel?: number;
+	/** Overbought level (default: 80) */
+	overboughtLevel?: number;
 
-  /** Oversold level (default: 20) */
-  oversoldLevel?: number;
+	/** Oversold level (default: 20) */
+	oversoldLevel?: number;
 
-  /** Chart height in pixels */
-  height?: number;
+	/** Chart height in pixels */
+	height?: number;
 
-  /** Additional CSS class */
-  className?: string;
+	/** Additional CSS class */
+	className?: string;
 }
 
 // ============================================
@@ -51,43 +51,43 @@ const OVERSOLD_COLOR = "rgba(34, 197, 94, 0.3)";
 // ============================================
 
 function StochasticChartComponent({
-  kData,
-  dData,
-  overboughtLevel = 80,
-  oversoldLevel = 20,
-  height = 150,
-  className = "",
+	kData,
+	dData,
+	overboughtLevel = 80,
+	oversoldLevel = 20,
+	height = 150,
+	className = "",
 }: StochasticChartProps) {
-  const referenceLines: ReferenceLine[] = [
-    {
-      value: overboughtLevel,
-      color: OVERBOUGHT_COLOR,
-      lineWidth: 1,
-      title: `${overboughtLevel}`,
-    },
-    {
-      value: oversoldLevel,
-      color: OVERSOLD_COLOR,
-      lineWidth: 1,
-      title: `${oversoldLevel}`,
-    },
-  ];
+	const referenceLines: ReferenceLine[] = [
+		{
+			value: overboughtLevel,
+			color: OVERBOUGHT_COLOR,
+			lineWidth: 1,
+			title: `${overboughtLevel}`,
+		},
+		{
+			value: oversoldLevel,
+			color: OVERSOLD_COLOR,
+			lineWidth: 1,
+			title: `${oversoldLevel}`,
+		},
+	];
 
-  return (
-    <IndicatorChart
-      data={kData}
-      type="line"
-      color={K_COLOR}
-      secondaryData={dData}
-      secondaryColor={D_COLOR}
-      title="Stochastic (14, 3, 3)"
-      referenceLines={referenceLines}
-      height={height}
-      minValue={0}
-      maxValue={100}
-      className={className}
-    />
-  );
+	return (
+		<IndicatorChart
+			data={kData}
+			type="line"
+			color={K_COLOR}
+			secondaryData={dData}
+			secondaryColor={D_COLOR}
+			title="Stochastic (14, 3, 3)"
+			referenceLines={referenceLines}
+			height={height}
+			minValue={0}
+			maxValue={100}
+			className={className}
+		/>
+	);
 }
 
 export const StochasticChart = memo(StochasticChartComponent);

@@ -15,19 +15,19 @@ import type { GraphEdge, TraversalOptions } from "./types.js";
  * @see docs/plans/04-memory-helixdb.md:325-330
  */
 export const EDGE_TYPE_THRESHOLDS: Record<string, number> = {
-  INFLUENCED_DECISION: 0.6, // confidence_score >= 0.6
-  DEPENDS_ON: 0.3, // strength weighted
-  AFFECTED_BY: 0.3, // sensitivity threshold
-  MENTIONED_IN: 0.5, // mention_type dependent
+	INFLUENCED_DECISION: 0.6, // confidence_score >= 0.6
+	DEPENDS_ON: 0.3, // strength weighted
+	AFFECTED_BY: 0.3, // sensitivity threshold
+	MENTIONED_IN: 0.5, // mention_type dependent
 };
 
 /**
  * Mention type weights for MENTIONED_IN edges.
  */
 export const MENTION_TYPE_WEIGHTS: Record<string, number> = {
-  PRIMARY: 1.0,
-  SECONDARY: 0.7,
-  PEER_COMPARISON: 0.5,
+	PRIMARY: 1.0,
+	SECONDARY: 0.7,
+	PEER_COMPARISON: 0.5,
 };
 
 /**
@@ -37,41 +37,41 @@ export const MENTION_TYPE_WEIGHTS: Record<string, number> = {
  * @returns Weight value [0, 1] or undefined if no weight attribute
  */
 export function getEdgeWeight(edge: GraphEdge): number | undefined {
-  const props = edge.properties;
+	const props = edge.properties;
 
-  switch (edge.type) {
-    case "INFLUENCED_DECISION":
-      if (typeof props.confidence_score === "number") {
-        return props.confidence_score;
-      }
-      if (typeof props.influence_score === "number") {
-        return props.influence_score;
-      }
-      return undefined;
+	switch (edge.type) {
+		case "INFLUENCED_DECISION":
+			if (typeof props.confidence_score === "number") {
+				return props.confidence_score;
+			}
+			if (typeof props.influence_score === "number") {
+				return props.influence_score;
+			}
+			return undefined;
 
-    case "DEPENDS_ON":
-      return typeof props.strength === "number" ? props.strength : undefined;
+		case "DEPENDS_ON":
+			return typeof props.strength === "number" ? props.strength : undefined;
 
-    case "AFFECTED_BY":
-      return typeof props.sensitivity === "number" ? props.sensitivity : undefined;
+		case "AFFECTED_BY":
+			return typeof props.sensitivity === "number" ? props.sensitivity : undefined;
 
-    case "MENTIONED_IN": {
-      const mentionType = props.mention_type as string | undefined;
-      return mentionType ? (MENTION_TYPE_WEIGHTS[mentionType] ?? 0.5) : 0.5;
-    }
+		case "MENTIONED_IN": {
+			const mentionType = props.mention_type as string | undefined;
+			return mentionType ? (MENTION_TYPE_WEIGHTS[mentionType] ?? 0.5) : 0.5;
+		}
 
-    default:
-      if (typeof props.weight === "number") {
-        return props.weight;
-      }
-      if (typeof props.score === "number") {
-        return props.score;
-      }
-      if (typeof props.strength === "number") {
-        return props.strength;
-      }
-      return undefined;
-  }
+		default:
+			if (typeof props.weight === "number") {
+				return props.weight;
+			}
+			if (typeof props.score === "number") {
+				return props.score;
+			}
+			if (typeof props.strength === "number") {
+				return props.strength;
+			}
+			return undefined;
+	}
 }
 
 /**
@@ -82,17 +82,17 @@ export function getEdgeWeight(edge: GraphEdge): number | undefined {
  * @returns true if edge should be followed
  */
 export function shouldFollowEdge(edge: GraphEdge, options: Required<TraversalOptions>): boolean {
-  const customThreshold = options.edgeTypeWeights[edge.type];
-  const typeThreshold = EDGE_TYPE_THRESHOLDS[edge.type];
-  const threshold = customThreshold ?? typeThreshold ?? options.edgeWeightThreshold;
+	const customThreshold = options.edgeTypeWeights[edge.type];
+	const typeThreshold = EDGE_TYPE_THRESHOLDS[edge.type];
+	const threshold = customThreshold ?? typeThreshold ?? options.edgeWeightThreshold;
 
-  const weight = getEdgeWeight(edge);
+	const weight = getEdgeWeight(edge);
 
-  if (weight === undefined) {
-    return true;
-  }
+	if (weight === undefined) {
+		return true;
+	}
 
-  return weight >= threshold;
+	return weight >= threshold;
 }
 
 /**
@@ -103,26 +103,26 @@ export function shouldFollowEdge(edge: GraphEdge, options: Required<TraversalOpt
  * @returns Multiplier (1.0 for old edges, recencyBoostMultiplier for recent)
  */
 export function calculateRecencyBoost(
-  edge: GraphEdge,
-  options: Required<TraversalOptions>
+	edge: GraphEdge,
+	options: Required<TraversalOptions>
 ): number {
-  const props = edge.properties;
+	const props = edge.properties;
 
-  const timestampStr = props.created_at ?? props.timestamp ?? props.computed_at ?? props.derived_at;
+	const timestampStr = props.created_at ?? props.timestamp ?? props.computed_at ?? props.derived_at;
 
-  if (typeof timestampStr !== "string") {
-    return 1.0;
-  }
+	if (typeof timestampStr !== "string") {
+		return 1.0;
+	}
 
-  const edgeDate = new Date(timestampStr);
-  const now = new Date();
-  const daysSinceCreation = (now.getTime() - edgeDate.getTime()) / (1000 * 60 * 60 * 24);
+	const edgeDate = new Date(timestampStr);
+	const now = new Date();
+	const daysSinceCreation = (now.getTime() - edgeDate.getTime()) / (1000 * 60 * 60 * 24);
 
-  if (daysSinceCreation <= options.recencyBoostDays) {
-    return options.recencyBoostMultiplier;
-  }
+	if (daysSinceCreation <= options.recencyBoostDays) {
+		return options.recencyBoostMultiplier;
+	}
 
-  return 1.0;
+	return 1.0;
 }
 
 /**
@@ -133,13 +133,13 @@ export function calculateRecencyBoost(
  * @returns Multiplier (1.0 for normal nodes, hubPenaltyMultiplier for hubs)
  */
 export function calculateHubPenalty(
-  edgeCount: number,
-  options: Required<TraversalOptions>
+	edgeCount: number,
+	options: Required<TraversalOptions>
 ): number {
-  if (edgeCount > options.hubPenaltyThreshold) {
-    return options.hubPenaltyMultiplier;
-  }
-  return 1.0;
+	if (edgeCount > options.hubPenaltyThreshold) {
+		return options.hubPenaltyMultiplier;
+	}
+	return 1.0;
 }
 
 /**
@@ -156,15 +156,15 @@ export function calculateHubPenalty(
  * @returns Priority score (higher = traverse first)
  */
 export function calculateEdgePriority(
-  edge: GraphEdge,
-  targetNodeEdgeCount: number,
-  options: Required<TraversalOptions>
+	edge: GraphEdge,
+	targetNodeEdgeCount: number,
+	options: Required<TraversalOptions>
 ): number {
-  const baseWeight = getEdgeWeight(edge) ?? 0.5;
-  const recencyMultiplier = calculateRecencyBoost(edge, options);
-  const hubMultiplier = calculateHubPenalty(targetNodeEdgeCount, options);
+	const baseWeight = getEdgeWeight(edge) ?? 0.5;
+	const recencyMultiplier = calculateRecencyBoost(edge, options);
+	const hubMultiplier = calculateHubPenalty(targetNodeEdgeCount, options);
 
-  return baseWeight * recencyMultiplier * hubMultiplier;
+	return baseWeight * recencyMultiplier * hubMultiplier;
 }
 
 /**
@@ -175,15 +175,15 @@ export function calculateEdgePriority(
  * @returns Sorted edges
  */
 export function sortEdgesByPriority(
-  edges: Array<{ edge: GraphEdge; targetNodeEdgeCount: number }>,
-  options: Required<TraversalOptions>
+	edges: Array<{ edge: GraphEdge; targetNodeEdgeCount: number }>,
+	options: Required<TraversalOptions>
 ): Array<{ edge: GraphEdge; targetNodeEdgeCount: number; priority: number }> {
-  return edges
-    .map((e) => ({
-      ...e,
-      priority: calculateEdgePriority(e.edge, e.targetNodeEdgeCount, options),
-    }))
-    .sort((a, b) => b.priority - a.priority);
+	return edges
+		.map((e) => ({
+			...e,
+			priority: calculateEdgePriority(e.edge, e.targetNodeEdgeCount, options),
+		}))
+		.sort((a, b) => b.priority - a.priority);
 }
 
 /**
@@ -201,18 +201,18 @@ export function sortEdgesByPriority(
  * @returns Filtered and sorted edges
  */
 export function filterAndPrioritizeEdges(
-  edges: GraphEdge[],
-  targetNodeEdgeCounts: Map<string, number>,
-  options: Required<TraversalOptions>
+	edges: GraphEdge[],
+	targetNodeEdgeCounts: Map<string, number>,
+	options: Required<TraversalOptions>
 ): GraphEdge[] {
-  const filtered = edges.filter((edge) => shouldFollowEdge(edge, options));
+	const filtered = edges.filter((edge) => shouldFollowEdge(edge, options));
 
-  const withCounts = filtered.map((edge) => ({
-    edge,
-    targetNodeEdgeCount: targetNodeEdgeCounts.get(edge.targetId) ?? 0,
-  }));
+	const withCounts = filtered.map((edge) => ({
+		edge,
+		targetNodeEdgeCount: targetNodeEdgeCounts.get(edge.targetId) ?? 0,
+	}));
 
-  const sorted = sortEdgesByPriority(withCounts, options);
+	const sorted = sortEdgesByPriority(withCounts, options);
 
-  return sorted.slice(0, options.maxNeighborsPerNode).map((e) => e.edge);
+	return sorted.slice(0, options.maxNeighborsPerNode).map((e) => e.edge);
 }

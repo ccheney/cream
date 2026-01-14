@@ -19,37 +19,37 @@ import { z } from "zod";
  * Message from SDK stream
  */
 export interface SDKMessage {
-  type: string;
-  session_id: string;
-  message?: {
-    role: string;
-    content: Array<{ type: string; text?: string }>;
-  };
+	type: string;
+	session_id: string;
+	message?: {
+		role: string;
+		content: Array<{ type: string; text?: string }>;
+	};
 }
 
 /**
  * Options for creating a session
  */
 export interface SessionOptions {
-  model?: string;
-  maxTurns?: number;
-  cwd?: string;
-  allowedTools?: string[];
-  additionalDirectories?: string[];
-  canUseTool?: (
-    toolName: string,
-    toolInput: unknown
-  ) => Promise<{ behavior: "allow" | "deny"; message?: string }>;
+	model?: string;
+	maxTurns?: number;
+	cwd?: string;
+	allowedTools?: string[];
+	additionalDirectories?: string[];
+	canUseTool?: (
+		toolName: string,
+		toolInput: unknown
+	) => Promise<{ behavior: "allow" | "deny"; message?: string }>;
 }
 
 /**
  * Session interface for V2 SDK
  */
 export interface Session {
-  send(message: string): Promise<void>;
-  stream(): AsyncGenerator<SDKMessage>;
-  close(): void;
-  [Symbol.asyncDispose]?: () => Promise<void>;
+	send(message: string): Promise<void>;
+	stream(): AsyncGenerator<SDKMessage>;
+	close(): void;
+	[Symbol.asyncDispose]?: () => Promise<void>;
 }
 
 /**
@@ -62,7 +62,7 @@ export type CreateSessionFunction = (options: SessionOptions) => Session;
  * Allows mocking the SDK in tests
  */
 export interface SDKProvider {
-  createSession: CreateSessionFunction;
+	createSession: CreateSessionFunction;
 }
 
 /**
@@ -70,14 +70,14 @@ export interface SDKProvider {
  * @returns SDK provider or null if not available
  */
 export async function loadSDKProvider(): Promise<SDKProvider | null> {
-  try {
-    const sdk = await import("@anthropic-ai/claude-agent-sdk");
-    return {
-      createSession: sdk.unstable_v2_createSession as CreateSessionFunction,
-    };
-  } catch {
-    return null;
-  }
+	try {
+		const sdk = await import("@anthropic-ai/claude-agent-sdk");
+		return {
+			createSession: sdk.unstable_v2_createSession as CreateSessionFunction,
+		};
+	} catch {
+		return null;
+	}
 }
 
 // ============================================
@@ -91,23 +91,23 @@ export async function loadSDKProvider(): Promise<SDKProvider | null> {
  * All other LLM usage goes through the global model (Gemini).
  */
 export interface ClaudeCodeConfig {
-  /** Model to use (default: claude-opus-4-5-20251101) */
-  model?: string;
-  /** Maximum turns for implementation (default: 20) */
-  maxTurns?: number;
-  /** Timeout in milliseconds (default: 5 minutes) */
-  timeout?: number;
-  /** Working directory (default: process.cwd()) */
-  workingDirectory?: string;
-  /** SDK provider for dependency injection (default: loads real SDK) */
-  sdkProvider?: SDKProvider | null;
+	/** Model to use (default: claude-opus-4-5-20251101) */
+	model?: string;
+	/** Maximum turns for implementation (default: 20) */
+	maxTurns?: number;
+	/** Timeout in milliseconds (default: 5 minutes) */
+	timeout?: number;
+	/** Working directory (default: process.cwd()) */
+	workingDirectory?: string;
+	/** SDK provider for dependency injection (default: loads real SDK) */
+	sdkProvider?: SDKProvider | null;
 }
 
 const DEFAULT_CONFIG: Required<Omit<ClaudeCodeConfig, "sdkProvider">> = {
-  model: "claude-opus-4-5-20251101",
-  maxTurns: 20,
-  timeout: 5 * 60 * 1000, // 5 minutes
-  workingDirectory: process.cwd(),
+	model: "claude-opus-4-5-20251101",
+	maxTurns: 20,
+	timeout: 5 * 60 * 1000, // 5 minutes
+	workingDirectory: process.cwd(),
 };
 
 // ============================================
@@ -118,61 +118,61 @@ const DEFAULT_CONFIG: Required<Omit<ClaudeCodeConfig, "sdkProvider">> = {
  * Input schema for the implement-indicator tool
  */
 export const ImplementIndicatorInputSchema = z.object({
-  /** The indicator hypothesis to implement */
-  hypothesis: IndicatorHypothesisSchema,
+	/** The indicator hypothesis to implement */
+	hypothesis: IndicatorHypothesisSchema,
 
-  /** Example indicator code patterns to follow */
-  existingPatterns: z
-    .string()
-    .describe("Example indicator implementation code for pattern reference"),
+	/** Example indicator code patterns to follow */
+	existingPatterns: z
+		.string()
+		.describe("Example indicator implementation code for pattern reference"),
 
-  /** Configuration overrides */
-  config: z
-    .object({
-      model: z.string().optional(),
-      maxTurns: z.number().min(5).max(50).optional(),
-      timeout: z.number().min(30000).max(600000).optional(),
-      workingDirectory: z.string().optional(),
-      // sdkProvider is not part of schema (injected programmatically for testing)
-    })
-    .passthrough() // Allow additional properties like sdkProvider
-    .optional(),
+	/** Configuration overrides */
+	config: z
+		.object({
+			model: z.string().optional(),
+			maxTurns: z.number().min(5).max(50).optional(),
+			timeout: z.number().min(30000).max(600000).optional(),
+			workingDirectory: z.string().optional(),
+			// sdkProvider is not part of schema (injected programmatically for testing)
+		})
+		.passthrough() // Allow additional properties like sdkProvider
+		.optional(),
 });
 
 // Extended input type that includes sdkProvider for programmatic use
 export type ImplementIndicatorInput = Omit<
-  z.infer<typeof ImplementIndicatorInputSchema>,
-  "config"
+	z.infer<typeof ImplementIndicatorInputSchema>,
+	"config"
 > & {
-  config?: z.infer<typeof ImplementIndicatorInputSchema>["config"] & {
-    sdkProvider?: SDKProvider | null;
-  };
+	config?: z.infer<typeof ImplementIndicatorInputSchema>["config"] & {
+		sdkProvider?: SDKProvider | null;
+	};
 };
 
 /**
  * Output schema for the implement-indicator tool
  */
 export const ImplementIndicatorOutputSchema = z.object({
-  /** Whether implementation succeeded */
-  success: z.boolean(),
+	/** Whether implementation succeeded */
+	success: z.boolean(),
 
-  /** Path to the implemented indicator file */
-  indicatorPath: z.string().optional(),
+	/** Path to the implemented indicator file */
+	indicatorPath: z.string().optional(),
 
-  /** Path to the test file */
-  testPath: z.string().optional(),
+	/** Path to the test file */
+	testPath: z.string().optional(),
 
-  /** AST similarity score with existing indicators (0-1) */
-  astSimilarity: z.number().min(0).max(1).optional(),
+	/** AST similarity score with existing indicators (0-1) */
+	astSimilarity: z.number().min(0).max(1).optional(),
 
-  /** Error message if implementation failed */
-  error: z.string().optional(),
+	/** Error message if implementation failed */
+	error: z.string().optional(),
 
-  /** Number of turns used */
-  turnsUsed: z.number().optional(),
+	/** Number of turns used */
+	turnsUsed: z.number().optional(),
 
-  /** Whether tests passed */
-  testsPassed: z.boolean().optional(),
+	/** Whether tests passed */
+	testsPassed: z.boolean().optional(),
 });
 
 export type ImplementIndicatorOutput = z.infer<typeof ImplementIndicatorOutputSchema>;
@@ -189,23 +189,23 @@ export type ImplementIndicatorOutput = z.infer<typeof ImplementIndicatorOutputSc
  * @returns Formatted prompt string
  */
 export function buildImplementationPrompt(
-  hypothesis: IndicatorHypothesis,
-  existingPatterns: string
+	hypothesis: IndicatorHypothesis,
+	existingPatterns: string
 ): string {
-  // Format datetime for prompt
-  const now = new Date();
-  const eastern = now.toLocaleString("en-US", {
-    timeZone: "America/New_York",
-    year: "numeric",
-    month: "2-digit",
-    day: "2-digit",
-    hour: "2-digit",
-    minute: "2-digit",
-    second: "2-digit",
-    hour12: false,
-  });
+	// Format datetime for prompt
+	const now = new Date();
+	const eastern = now.toLocaleString("en-US", {
+		timeZone: "America/New_York",
+		year: "numeric",
+		month: "2-digit",
+		day: "2-digit",
+		hour: "2-digit",
+		minute: "2-digit",
+		second: "2-digit",
+		hour12: false,
+	});
 
-  return `Current Date/Time (UTC): ${now.toISOString()}
+	return `Current Date/Time (UTC): ${now.toISOString()}
 Current Date/Time (US Eastern): ${eastern}
 
 # Indicator Implementation Task
@@ -285,10 +285,10 @@ DO NOT report success if tests are failing.
  * Convert snake_case to PascalCase
  */
 function toPascalCase(str: string): string {
-  return str
-    .split("_")
-    .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
-    .join("");
+	return str
+		.split("_")
+		.map((word) => word.charAt(0).toUpperCase() + word.slice(1))
+		.join("");
 }
 
 // ============================================
@@ -334,173 +334,173 @@ function toPascalCase(str: string): string {
  * ```
  */
 export async function implementIndicator(
-  input: ImplementIndicatorInput
+	input: ImplementIndicatorInput
 ): Promise<ImplementIndicatorOutput> {
-  const config = { ...DEFAULT_CONFIG, ...input.config };
+	const config = { ...DEFAULT_CONFIG, ...input.config };
 
-  // Build the implementation prompt
-  const prompt = buildImplementationPrompt(input.hypothesis, input.existingPatterns);
+	// Build the implementation prompt
+	const prompt = buildImplementationPrompt(input.hypothesis, input.existingPatterns);
 
-  // Expected file paths
-  const indicatorPath = `packages/indicators/src/custom/${input.hypothesis.name}.ts`;
-  const testPath = `packages/indicators/src/custom/${input.hypothesis.name}.test.ts`;
+	// Expected file paths
+	const indicatorPath = `packages/indicators/src/custom/${input.hypothesis.name}.ts`;
+	const testPath = `packages/indicators/src/custom/${input.hypothesis.name}.test.ts`;
 
-  try {
-    // Get SDK provider: use injected provider if provided, otherwise load real SDK
-    // If explicitly set to null, treat as disabled
-    let sdkProvider: SDKProvider | null;
-    if (input.config?.sdkProvider !== undefined) {
-      sdkProvider = input.config.sdkProvider;
-    } else {
-      sdkProvider = await loadSDKProvider();
-    }
+	try {
+		// Get SDK provider: use injected provider if provided, otherwise load real SDK
+		// If explicitly set to null, treat as disabled
+		let sdkProvider: SDKProvider | null;
+		if (input.config?.sdkProvider !== undefined) {
+			sdkProvider = input.config.sdkProvider;
+		} else {
+			sdkProvider = await loadSDKProvider();
+		}
 
-    if (!sdkProvider) {
-      return {
-        success: false,
-        error: "Claude Agent SDK not installed. Run: npm install @anthropic-ai/claude-agent-sdk",
-      };
-    }
+		if (!sdkProvider) {
+			return {
+				success: false,
+				error: "Claude Agent SDK not installed. Run: npm install @anthropic-ai/claude-agent-sdk",
+			};
+		}
 
-    // Create session with restrictions
-    const session = sdkProvider.createSession({
-      model: config.model,
-      maxTurns: config.maxTurns,
-      cwd: config.workingDirectory,
+		// Create session with restrictions
+		const session = sdkProvider.createSession({
+			model: config.model,
+			maxTurns: config.maxTurns,
+			cwd: config.workingDirectory,
 
-      // Restrict tools to safe operations
-      allowedTools: ["Read", "Write", "Edit", "Grep", "Glob", "Bash"],
+			// Restrict tools to safe operations
+			allowedTools: ["Read", "Write", "Edit", "Grep", "Glob", "Bash"],
 
-      // Restrict paths to custom indicators directory
-      additionalDirectories: [
-        "packages/indicators/src/custom",
-        "packages/indicators/src/types.ts",
-        "packages/indicators/src/momentum", // Pattern reference
-      ],
+			// Restrict paths to custom indicators directory
+			additionalDirectories: [
+				"packages/indicators/src/custom",
+				"packages/indicators/src/types.ts",
+				"packages/indicators/src/momentum", // Pattern reference
+			],
 
-      // Custom permission handler for additional safety
-      canUseTool: async (toolName: string, toolInput: unknown) => {
-        // Allow all whitelisted tools
-        if (["Read", "Grep", "Glob"].includes(toolName)) {
-          return { behavior: "allow" as const };
-        }
+			// Custom permission handler for additional safety
+			canUseTool: async (toolName: string, toolInput: unknown) => {
+				// Allow all whitelisted tools
+				if (["Read", "Grep", "Glob"].includes(toolName)) {
+					return { behavior: "allow" as const };
+				}
 
-        // For Write/Edit, ensure it's in the custom directory
-        if (toolName === "Write" || toolName === "Edit") {
-          const path = (toolInput as { file_path?: string })?.file_path ?? "";
-          if (!path.includes("/custom/") && !path.includes("\\custom\\")) {
-            return {
-              behavior: "deny" as const,
-              message: "Write operations restricted to packages/indicators/src/custom/",
-            };
-          }
-          return { behavior: "allow" as const };
-        }
+				// For Write/Edit, ensure it's in the custom directory
+				if (toolName === "Write" || toolName === "Edit") {
+					const path = (toolInput as { file_path?: string })?.file_path ?? "";
+					if (!path.includes("/custom/") && !path.includes("\\custom\\")) {
+						return {
+							behavior: "deny" as const,
+							message: "Write operations restricted to packages/indicators/src/custom/",
+						};
+					}
+					return { behavior: "allow" as const };
+				}
 
-        // For Bash, only allow test commands
-        if (toolName === "Bash") {
-          const command = (toolInput as { command?: string })?.command ?? "";
-          if (command.startsWith("bun test") || command.startsWith("ls")) {
-            return { behavior: "allow" as const };
-          }
-          return {
-            behavior: "deny" as const,
-            message: "Only test and list commands allowed",
-          };
-        }
+				// For Bash, only allow test commands
+				if (toolName === "Bash") {
+					const command = (toolInput as { command?: string })?.command ?? "";
+					if (command.startsWith("bun test") || command.startsWith("ls")) {
+						return { behavior: "allow" as const };
+					}
+					return {
+						behavior: "deny" as const,
+						message: "Only test and list commands allowed",
+					};
+				}
 
-        return { behavior: "allow" as const };
-      },
-    });
+				return { behavior: "allow" as const };
+			},
+		});
 
-    // Send prompt and process the streaming response
-    let turnsUsed = 0;
+		// Send prompt and process the streaming response
+		let turnsUsed = 0;
 
-    try {
-      await session.send(prompt);
+		try {
+			await session.send(prompt);
 
-      for await (const message of session.stream()) {
-        if (message.type === "assistant") {
-          turnsUsed++;
-        }
-      }
-    } finally {
-      // Ensure session is closed even if an error occurs
-      session.close();
-    }
+			for await (const message of session.stream()) {
+				if (message.type === "assistant") {
+					turnsUsed++;
+				}
+			}
+		} finally {
+			// Ensure session is closed even if an error occurs
+			session.close();
+		}
 
-    // Verify files were created by checking filesystem
-    const { existsSync } = await import("node:fs");
-    const indicatorExists = existsSync(indicatorPath);
-    const testExists = existsSync(testPath);
+		// Verify files were created by checking filesystem
+		const { existsSync } = await import("node:fs");
+		const indicatorExists = existsSync(indicatorPath);
+		const testExists = existsSync(testPath);
 
-    if (!indicatorExists || !testExists) {
-      return {
-        success: false,
-        error: `Files not created: indicator=${indicatorExists}, test=${testExists}`,
-        turnsUsed,
-      };
-    }
+		if (!indicatorExists || !testExists) {
+			return {
+				success: false,
+				error: `Files not created: indicator=${indicatorExists}, test=${testExists}`,
+				turnsUsed,
+			};
+		}
 
-    // AST similarity check is not implemented yet
-    // TODO: Implement proper source code similarity comparison
-    const astSimilarity = 0;
+		// AST similarity check is not implemented yet
+		// TODO: Implement proper source code similarity comparison
+		const astSimilarity = 0;
 
-    // Reject if too similar to existing indicators
-    if (astSimilarity > 0.8) {
-      return {
-        success: false,
-        indicatorPath,
-        testPath,
-        astSimilarity,
-        error: `Indicator too similar to existing (${(astSimilarity * 100).toFixed(1)}% AST similarity)`,
-        turnsUsed,
-      };
-    }
+		// Reject if too similar to existing indicators
+		if (astSimilarity > 0.8) {
+			return {
+				success: false,
+				indicatorPath,
+				testPath,
+				astSimilarity,
+				error: `Indicator too similar to existing (${(astSimilarity * 100).toFixed(1)}% AST similarity)`,
+				turnsUsed,
+			};
+		}
 
-    // Run tests to verify implementation
-    let testsPassed = false;
-    try {
-      const { exec } = await import("node:child_process");
-      const { promisify } = await import("node:util");
-      const execAsync = promisify(exec);
+		// Run tests to verify implementation
+		let testsPassed = false;
+		try {
+			const { exec } = await import("node:child_process");
+			const { promisify } = await import("node:util");
+			const execAsync = promisify(exec);
 
-      const testResult = await execAsync(`bun test ${testPath}`, {
-        cwd: config.workingDirectory,
-        timeout: 60000, // 1 minute timeout for tests
-      });
+			const testResult = await execAsync(`bun test ${testPath}`, {
+				cwd: config.workingDirectory,
+				timeout: 60000, // 1 minute timeout for tests
+			});
 
-      testsPassed = testResult.stderr.includes("pass") || !testResult.stderr.includes("fail");
-    } catch {
-      testsPassed = false;
-    }
+			testsPassed = testResult.stderr.includes("pass") || !testResult.stderr.includes("fail");
+		} catch {
+			testsPassed = false;
+		}
 
-    return {
-      success: testsPassed,
-      indicatorPath,
-      testPath,
-      astSimilarity,
-      turnsUsed,
-      testsPassed,
-      error: testsPassed ? undefined : "Tests did not pass",
-    };
-  } catch (error) {
-    // Handle SDK not installed or other errors
-    const message = error instanceof Error ? error.message : String(error);
+		return {
+			success: testsPassed,
+			indicatorPath,
+			testPath,
+			astSimilarity,
+			turnsUsed,
+			testsPassed,
+			error: testsPassed ? undefined : "Tests did not pass",
+		};
+	} catch (error) {
+		// Handle SDK not installed or other errors
+		const message = error instanceof Error ? error.message : String(error);
 
-    // Check if SDK is not installed
-    if (message.includes("Cannot find module") || message.includes("MODULE_NOT_FOUND")) {
-      return {
-        success: false,
-        error: "Claude Agent SDK not installed. Run: npm install @anthropic-ai/claude-agent-sdk",
-      };
-    }
+		// Check if SDK is not installed
+		if (message.includes("Cannot find module") || message.includes("MODULE_NOT_FOUND")) {
+			return {
+				success: false,
+				error: "Claude Agent SDK not installed. Run: npm install @anthropic-ai/claude-agent-sdk",
+			};
+		}
 
-    return {
-      success: false,
-      error: `Implementation failed: ${message}`,
-    };
-  }
+		return {
+			success: false,
+			error: `Implementation failed: ${message}`,
+		};
+	}
 }
 
 // ============================================
@@ -508,11 +508,11 @@ export async function implementIndicator(
 // ============================================
 
 export const claudeCodeIndicator = {
-  name: "implement-indicator",
-  description: "Use Claude Code to implement a new indicator based on hypothesis",
-  inputSchema: ImplementIndicatorInputSchema,
-  outputSchema: ImplementIndicatorOutputSchema,
-  execute: implementIndicator,
+	name: "implement-indicator",
+	description: "Use Claude Code to implement a new indicator based on hypothesis",
+	inputSchema: ImplementIndicatorInputSchema,
+	outputSchema: ImplementIndicatorOutputSchema,
+	execute: implementIndicator,
 };
 
 export default claudeCodeIndicator;

@@ -13,29 +13,29 @@ import { HTTPException } from "hono/http-exception";
 // Mock the better-auth module to avoid secret validation at import time
 const mockGetSession = mock(() => Promise.resolve(null as unknown));
 mock.module("./better-auth.js", () => ({
-  auth: {
-    api: {
-      getSession: mockGetSession,
-    },
-    $Infer: {
-      Session: {} as const,
-    },
-  },
-  default: {
-    api: {
-      getSession: mockGetSession,
-    },
-  },
+	auth: {
+		api: {
+			getSession: mockGetSession,
+		},
+		$Infer: {
+			Session: {} as const,
+		},
+	},
+	default: {
+		api: {
+			getSession: mockGetSession,
+		},
+	},
 }));
 
 import {
-  getSession,
-  getUser,
-  liveProtection,
-  optionalAuth,
-  requireAuth,
-  type SessionVariables,
-  sessionMiddleware,
+	getSession,
+	getUser,
+	liveProtection,
+	optionalAuth,
+	requireAuth,
+	type SessionVariables,
+	sessionMiddleware,
 } from "./session.js";
 
 // ============================================
@@ -43,31 +43,31 @@ import {
 // ============================================
 
 function createMockSession() {
-  return {
-    session: {
-      id: "session-123",
-      createdAt: new Date(),
-      updatedAt: new Date(),
-      userId: "user-123",
-      expiresAt: new Date(Date.now() + 3600000),
-      token: "mock-token",
-    },
-    user: {
-      id: "user-123",
-      email: "test@example.com",
-      name: "Test User",
-      emailVerified: true,
-      createdAt: new Date(),
-      updatedAt: new Date(),
-      twoFactorEnabled: false,
-    },
-  };
+	return {
+		session: {
+			id: "session-123",
+			createdAt: new Date(),
+			updatedAt: new Date(),
+			userId: "user-123",
+			expiresAt: new Date(Date.now() + 3600000),
+			token: "mock-token",
+		},
+		user: {
+			id: "user-123",
+			email: "test@example.com",
+			name: "Test User",
+			emailVerified: true,
+			createdAt: new Date(),
+			updatedAt: new Date(),
+			twoFactorEnabled: false,
+		},
+	};
 }
 
 function createMockSessionWithMFA() {
-  const session = createMockSession();
-  session.user.twoFactorEnabled = true;
-  return session;
+	const session = createMockSession();
+	session.user.twoFactorEnabled = true;
+	return session;
 }
 
 // ============================================
@@ -75,82 +75,82 @@ function createMockSessionWithMFA() {
 // ============================================
 
 describe("sessionMiddleware", () => {
-  beforeEach(() => {
-    mockGetSession.mockClear();
-  });
+	beforeEach(() => {
+		mockGetSession.mockClear();
+	});
 
-  it("sets session and user when authenticated", async () => {
-    const mockSessionData = createMockSession();
-    mockGetSession.mockResolvedValue(mockSessionData);
+	it("sets session and user when authenticated", async () => {
+		const mockSessionData = createMockSession();
+		mockGetSession.mockResolvedValue(mockSessionData);
 
-    const app = new Hono<{ Variables: SessionVariables }>();
-    app.use("/*", sessionMiddleware());
-    app.get("/test", (c) => {
-      const session = c.get("session");
-      const user = c.get("user");
-      return c.json({ hasSession: !!session, hasUser: !!user, userId: user?.id });
-    });
+		const app = new Hono<{ Variables: SessionVariables }>();
+		app.use("/*", sessionMiddleware());
+		app.get("/test", (c) => {
+			const session = c.get("session");
+			const user = c.get("user");
+			return c.json({ hasSession: !!session, hasUser: !!user, userId: user?.id });
+		});
 
-    const res = await app.request("/test");
-    const data = (await res.json()) as { hasSession: boolean; hasUser: boolean; userId: string };
+		const res = await app.request("/test");
+		const data = (await res.json()) as { hasSession: boolean; hasUser: boolean; userId: string };
 
-    expect(data.hasSession).toBe(true);
-    expect(data.hasUser).toBe(true);
-    expect(data.userId).toBe("user-123");
-  });
+		expect(data.hasSession).toBe(true);
+		expect(data.hasUser).toBe(true);
+		expect(data.userId).toBe("user-123");
+	});
 
-  it("sets session and user to null when not authenticated", async () => {
-    mockGetSession.mockResolvedValue(null);
+	it("sets session and user to null when not authenticated", async () => {
+		mockGetSession.mockResolvedValue(null);
 
-    const app = new Hono<{ Variables: SessionVariables }>();
-    app.use("/*", sessionMiddleware());
-    app.get("/test", (c) => {
-      const session = c.get("session");
-      const user = c.get("user");
-      return c.json({ session, user });
-    });
+		const app = new Hono<{ Variables: SessionVariables }>();
+		app.use("/*", sessionMiddleware());
+		app.get("/test", (c) => {
+			const session = c.get("session");
+			const user = c.get("user");
+			return c.json({ session, user });
+		});
 
-    const res = await app.request("/test");
-    const data = (await res.json()) as { session: null; user: null };
+		const res = await app.request("/test");
+		const data = (await res.json()) as { session: null; user: null };
 
-    expect(data.session).toBeNull();
-    expect(data.user).toBeNull();
-  });
+		expect(data.session).toBeNull();
+		expect(data.user).toBeNull();
+	});
 
-  it("sets session and user to null on error", async () => {
-    mockGetSession.mockRejectedValue(new Error("Auth error"));
+	it("sets session and user to null on error", async () => {
+		mockGetSession.mockRejectedValue(new Error("Auth error"));
 
-    const app = new Hono<{ Variables: SessionVariables }>();
-    app.use("/*", sessionMiddleware());
-    app.get("/test", (c) => {
-      const session = c.get("session");
-      const user = c.get("user");
-      return c.json({ session, user });
-    });
+		const app = new Hono<{ Variables: SessionVariables }>();
+		app.use("/*", sessionMiddleware());
+		app.get("/test", (c) => {
+			const session = c.get("session");
+			const user = c.get("user");
+			return c.json({ session, user });
+		});
 
-    const res = await app.request("/test");
-    const data = (await res.json()) as { session: null; user: null };
+		const res = await app.request("/test");
+		const data = (await res.json()) as { session: null; user: null };
 
-    expect(data.session).toBeNull();
-    expect(data.user).toBeNull();
-  });
+		expect(data.session).toBeNull();
+		expect(data.user).toBeNull();
+	});
 
-  it("calls next() after setting context", async () => {
-    mockGetSession.mockResolvedValue(null);
-    let nextCalled = false;
+	it("calls next() after setting context", async () => {
+		mockGetSession.mockResolvedValue(null);
+		let nextCalled = false;
 
-    const app = new Hono<{ Variables: SessionVariables }>();
-    app.use("/*", sessionMiddleware());
-    app.use("/*", async (_, next) => {
-      nextCalled = true;
-      await next();
-    });
-    app.get("/test", () => new Response("ok"));
+		const app = new Hono<{ Variables: SessionVariables }>();
+		app.use("/*", sessionMiddleware());
+		app.use("/*", async (_, next) => {
+			nextCalled = true;
+			await next();
+		});
+		app.get("/test", () => new Response("ok"));
 
-    await app.request("/test");
+		await app.request("/test");
 
-    expect(nextCalled).toBe(true);
-  });
+		expect(nextCalled).toBe(true);
+	});
 });
 
 // ============================================
@@ -158,60 +158,60 @@ describe("sessionMiddleware", () => {
 // ============================================
 
 describe("requireAuth", () => {
-  it("throws 401 when session is null", async () => {
-    const app = new Hono<{ Variables: SessionVariables }>();
-    app.use("/*", async (c, next) => {
-      c.set("session", null);
-      c.set("user", null);
-      await next();
-    });
-    app.use("/*", requireAuth());
-    app.get("/test", () => new Response("ok"));
+	it("throws 401 when session is null", async () => {
+		const app = new Hono<{ Variables: SessionVariables }>();
+		app.use("/*", async (c, next) => {
+			c.set("session", null);
+			c.set("user", null);
+			await next();
+		});
+		app.use("/*", requireAuth());
+		app.get("/test", () => new Response("ok"));
 
-    const res = await app.request("/test");
+		const res = await app.request("/test");
 
-    expect(res.status).toBe(401);
-  });
+		expect(res.status).toBe(401);
+	});
 
-  it("calls next() when session exists", async () => {
-    const mockSession = createMockSession();
+	it("calls next() when session exists", async () => {
+		const mockSession = createMockSession();
 
-    const app = new Hono<{ Variables: SessionVariables }>();
-    app.use("/*", async (c, next) => {
-      c.set("session", mockSession);
-      c.set("user", mockSession.user);
-      await next();
-    });
-    app.use("/*", requireAuth());
-    app.get("/test", () => new Response("ok"));
+		const app = new Hono<{ Variables: SessionVariables }>();
+		app.use("/*", async (c, next) => {
+			c.set("session", mockSession);
+			c.set("user", mockSession.user);
+			await next();
+		});
+		app.use("/*", requireAuth());
+		app.get("/test", () => new Response("ok"));
 
-    const res = await app.request("/test");
+		const res = await app.request("/test");
 
-    expect(res.status).toBe(200);
-  });
+		expect(res.status).toBe(200);
+	});
 
-  it("returns error message in JSON response", async () => {
-    const app = new Hono<{ Variables: SessionVariables }>();
-    app.use("/*", async (c, next) => {
-      c.set("session", null);
-      c.set("user", null);
-      await next();
-    });
-    app.use("/*", requireAuth());
-    app.get("/test", () => new Response("ok"));
-    app.onError((err, c) => {
-      if (err instanceof HTTPException) {
-        return c.json({ error: err.message }, err.status);
-      }
-      return c.json({ error: "Unknown error" }, 500);
-    });
+	it("returns error message in JSON response", async () => {
+		const app = new Hono<{ Variables: SessionVariables }>();
+		app.use("/*", async (c, next) => {
+			c.set("session", null);
+			c.set("user", null);
+			await next();
+		});
+		app.use("/*", requireAuth());
+		app.get("/test", () => new Response("ok"));
+		app.onError((err, c) => {
+			if (err instanceof HTTPException) {
+				return c.json({ error: err.message }, err.status);
+			}
+			return c.json({ error: "Unknown error" }, 500);
+		});
 
-    const res = await app.request("/test");
-    const data = (await res.json()) as { error: string };
+		const res = await app.request("/test");
+		const data = (await res.json()) as { error: string };
 
-    expect(res.status).toBe(401);
-    expect(data.error).toBe("Authentication required");
-  });
+		expect(res.status).toBe(401);
+		expect(data.error).toBe("Authentication required");
+	});
 });
 
 // ============================================
@@ -219,37 +219,37 @@ describe("requireAuth", () => {
 // ============================================
 
 describe("optionalAuth", () => {
-  it("allows unauthenticated requests", async () => {
-    const app = new Hono<{ Variables: SessionVariables }>();
-    app.use("/*", async (c, next) => {
-      c.set("session", null);
-      c.set("user", null);
-      await next();
-    });
-    app.use("/*", optionalAuth());
-    app.get("/test", () => new Response("ok"));
+	it("allows unauthenticated requests", async () => {
+		const app = new Hono<{ Variables: SessionVariables }>();
+		app.use("/*", async (c, next) => {
+			c.set("session", null);
+			c.set("user", null);
+			await next();
+		});
+		app.use("/*", optionalAuth());
+		app.get("/test", () => new Response("ok"));
 
-    const res = await app.request("/test");
+		const res = await app.request("/test");
 
-    expect(res.status).toBe(200);
-  });
+		expect(res.status).toBe(200);
+	});
 
-  it("allows authenticated requests", async () => {
-    const mockSession = createMockSession();
+	it("allows authenticated requests", async () => {
+		const mockSession = createMockSession();
 
-    const app = new Hono<{ Variables: SessionVariables }>();
-    app.use("/*", async (c, next) => {
-      c.set("session", mockSession);
-      c.set("user", mockSession.user);
-      await next();
-    });
-    app.use("/*", optionalAuth());
-    app.get("/test", () => new Response("ok"));
+		const app = new Hono<{ Variables: SessionVariables }>();
+		app.use("/*", async (c, next) => {
+			c.set("session", mockSession);
+			c.set("user", mockSession.user);
+			await next();
+		});
+		app.use("/*", optionalAuth());
+		app.get("/test", () => new Response("ok"));
 
-    const res = await app.request("/test");
+		const res = await app.request("/test");
 
-    expect(res.status).toBe(200);
-  });
+		expect(res.status).toBe(200);
+	});
 });
 
 // ============================================
@@ -257,248 +257,248 @@ describe("optionalAuth", () => {
 // ============================================
 
 describe("liveProtection", () => {
-  const originalEnv = process.env.CREAM_ENV;
+	const originalEnv = process.env.CREAM_ENV;
 
-  afterEach(() => {
-    process.env.CREAM_ENV = originalEnv;
-  });
+	afterEach(() => {
+		process.env.CREAM_ENV = originalEnv;
+	});
 
-  it("passes through in non-LIVE environments", async () => {
-    process.env.CREAM_ENV = "PAPER";
+	it("passes through in non-LIVE environments", async () => {
+		process.env.CREAM_ENV = "PAPER";
 
-    const app = new Hono<{ Variables: SessionVariables }>();
-    app.use("/*", async (c, next) => {
-      c.set("session", null);
-      c.set("user", null);
-      await next();
-    });
-    app.use("/*", liveProtection());
-    app.get("/test", () => new Response("ok"));
+		const app = new Hono<{ Variables: SessionVariables }>();
+		app.use("/*", async (c, next) => {
+			c.set("session", null);
+			c.set("user", null);
+			await next();
+		});
+		app.use("/*", liveProtection());
+		app.get("/test", () => new Response("ok"));
 
-    const res = await app.request("/test");
+		const res = await app.request("/test");
 
-    expect(res.status).toBe(200);
-  });
+		expect(res.status).toBe(200);
+	});
 
-  it("passes through in BACKTEST environment", async () => {
-    process.env.CREAM_ENV = "BACKTEST";
+	it("passes through in BACKTEST environment", async () => {
+		process.env.CREAM_ENV = "BACKTEST";
 
-    const app = new Hono<{ Variables: SessionVariables }>();
-    app.use("/*", async (c, next) => {
-      c.set("session", null);
-      c.set("user", null);
-      await next();
-    });
-    app.use("/*", liveProtection());
-    app.get("/test", () => new Response("ok"));
+		const app = new Hono<{ Variables: SessionVariables }>();
+		app.use("/*", async (c, next) => {
+			c.set("session", null);
+			c.set("user", null);
+			await next();
+		});
+		app.use("/*", liveProtection());
+		app.get("/test", () => new Response("ok"));
 
-    const res = await app.request("/test");
+		const res = await app.request("/test");
 
-    expect(res.status).toBe(200);
-  });
+		expect(res.status).toBe(200);
+	});
 
-  it("returns 401 when not authenticated in LIVE", async () => {
-    process.env.CREAM_ENV = "LIVE";
+	it("returns 401 when not authenticated in LIVE", async () => {
+		process.env.CREAM_ENV = "LIVE";
 
-    const app = new Hono<{ Variables: SessionVariables }>();
-    app.use("/*", async (c, next) => {
-      c.set("session", null);
-      c.set("user", null);
-      await next();
-    });
-    app.use("/*", liveProtection());
-    app.get("/test", () => new Response("ok"));
-    app.onError((err, c) => {
-      if (err instanceof HTTPException) {
-        return c.json({ error: err.message }, err.status);
-      }
-      return c.json({ error: "Unknown error" }, 500);
-    });
+		const app = new Hono<{ Variables: SessionVariables }>();
+		app.use("/*", async (c, next) => {
+			c.set("session", null);
+			c.set("user", null);
+			await next();
+		});
+		app.use("/*", liveProtection());
+		app.get("/test", () => new Response("ok"));
+		app.onError((err, c) => {
+			if (err instanceof HTTPException) {
+				return c.json({ error: err.message }, err.status);
+			}
+			return c.json({ error: "Unknown error" }, 500);
+		});
 
-    const res = await app.request("/test");
+		const res = await app.request("/test");
 
-    expect(res.status).toBe(401);
-  });
+		expect(res.status).toBe(401);
+	});
 
-  it("returns 403 when MFA not enabled in LIVE", async () => {
-    process.env.CREAM_ENV = "LIVE";
-    const mockSession = createMockSession(); // MFA disabled by default
+	it("returns 403 when MFA not enabled in LIVE", async () => {
+		process.env.CREAM_ENV = "LIVE";
+		const mockSession = createMockSession(); // MFA disabled by default
 
-    const app = new Hono<{ Variables: SessionVariables }>();
-    app.use("/*", async (c, next) => {
-      c.set("session", mockSession);
-      c.set("user", mockSession.user);
-      await next();
-    });
-    app.use("/*", liveProtection({ requireMFA: true, requireConfirmation: false }));
-    app.get("/test", () => new Response("ok"));
-    app.onError((err, c) => {
-      if (err instanceof HTTPException) {
-        return c.json({ error: err.message, cause: err.cause }, err.status);
-      }
-      return c.json({ error: "Unknown error" }, 500);
-    });
+		const app = new Hono<{ Variables: SessionVariables }>();
+		app.use("/*", async (c, next) => {
+			c.set("session", mockSession);
+			c.set("user", mockSession.user);
+			await next();
+		});
+		app.use("/*", liveProtection({ requireMFA: true, requireConfirmation: false }));
+		app.get("/test", () => new Response("ok"));
+		app.onError((err, c) => {
+			if (err instanceof HTTPException) {
+				return c.json({ error: err.message, cause: err.cause }, err.status);
+			}
+			return c.json({ error: "Unknown error" }, 500);
+		});
 
-    const res = await app.request("/test");
-    const data = (await res.json()) as { error: string; cause: { code: string } };
+		const res = await app.request("/test");
+		const data = (await res.json()) as { error: string; cause: { code: string } };
 
-    expect(res.status).toBe(403);
-    expect(data.error).toContain("Two-factor authentication");
-    expect(data.cause.code).toBe("MFA_REQUIRED");
-  });
+		expect(res.status).toBe(403);
+		expect(data.error).toContain("Two-factor authentication");
+		expect(data.cause.code).toBe("MFA_REQUIRED");
+	});
 
-  it("passes through when MFA enabled in LIVE", async () => {
-    process.env.CREAM_ENV = "LIVE";
-    const mockSession = createMockSessionWithMFA();
+	it("passes through when MFA enabled in LIVE", async () => {
+		process.env.CREAM_ENV = "LIVE";
+		const mockSession = createMockSessionWithMFA();
 
-    const app = new Hono<{ Variables: SessionVariables }>();
-    app.use("/*", async (c, next) => {
-      c.set("session", mockSession);
-      c.set("user", mockSession.user);
-      await next();
-    });
-    app.use(
-      "/*",
-      liveProtection({
-        requireMFA: true,
-        requireConfirmation: false,
-        auditLog: false,
-      })
-    );
-    app.get("/test", () => new Response("ok"));
+		const app = new Hono<{ Variables: SessionVariables }>();
+		app.use("/*", async (c, next) => {
+			c.set("session", mockSession);
+			c.set("user", mockSession.user);
+			await next();
+		});
+		app.use(
+			"/*",
+			liveProtection({
+				requireMFA: true,
+				requireConfirmation: false,
+				auditLog: false,
+			})
+		);
+		app.get("/test", () => new Response("ok"));
 
-    const res = await app.request("/test");
+		const res = await app.request("/test");
 
-    expect(res.status).toBe(200);
-  });
+		expect(res.status).toBe(200);
+	});
 
-  it("returns 428 when confirmation header missing in LIVE", async () => {
-    process.env.CREAM_ENV = "LIVE";
-    const mockSession = createMockSessionWithMFA();
+	it("returns 428 when confirmation header missing in LIVE", async () => {
+		process.env.CREAM_ENV = "LIVE";
+		const mockSession = createMockSessionWithMFA();
 
-    const app = new Hono<{ Variables: SessionVariables }>();
-    app.use("/*", async (c, next) => {
-      c.set("session", mockSession);
-      c.set("user", mockSession.user);
-      await next();
-    });
-    app.use(
-      "/*",
-      liveProtection({
-        requireMFA: true,
-        requireConfirmation: true,
-        auditLog: false,
-      })
-    );
-    app.get("/test", () => new Response("ok"));
-    app.onError((err, c) => {
-      if (err instanceof HTTPException) {
-        return c.json({ error: err.message, cause: err.cause }, err.status);
-      }
-      return c.json({ error: "Unknown error" }, 500);
-    });
+		const app = new Hono<{ Variables: SessionVariables }>();
+		app.use("/*", async (c, next) => {
+			c.set("session", mockSession);
+			c.set("user", mockSession.user);
+			await next();
+		});
+		app.use(
+			"/*",
+			liveProtection({
+				requireMFA: true,
+				requireConfirmation: true,
+				auditLog: false,
+			})
+		);
+		app.get("/test", () => new Response("ok"));
+		app.onError((err, c) => {
+			if (err instanceof HTTPException) {
+				return c.json({ error: err.message, cause: err.cause }, err.status);
+			}
+			return c.json({ error: "Unknown error" }, 500);
+		});
 
-    const res = await app.request("/test");
-    const data = (await res.json()) as { cause: { code: string } };
+		const res = await app.request("/test");
+		const data = (await res.json()) as { cause: { code: string } };
 
-    expect(res.status).toBe(428);
-    expect(data.cause.code).toBe("CONFIRMATION_REQUIRED");
-  });
+		expect(res.status).toBe(428);
+		expect(data.cause.code).toBe("CONFIRMATION_REQUIRED");
+	});
 
-  it("passes through with confirmation header in LIVE", async () => {
-    process.env.CREAM_ENV = "LIVE";
-    const mockSession = createMockSessionWithMFA();
+	it("passes through with confirmation header in LIVE", async () => {
+		process.env.CREAM_ENV = "LIVE";
+		const mockSession = createMockSessionWithMFA();
 
-    const app = new Hono<{ Variables: SessionVariables }>();
-    app.use("/*", async (c, next) => {
-      c.set("session", mockSession);
-      c.set("user", mockSession.user);
-      await next();
-    });
-    app.use(
-      "/*",
-      liveProtection({
-        requireMFA: true,
-        requireConfirmation: true,
-        auditLog: false,
-      })
-    );
-    app.get("/test", () => new Response("ok"));
+		const app = new Hono<{ Variables: SessionVariables }>();
+		app.use("/*", async (c, next) => {
+			c.set("session", mockSession);
+			c.set("user", mockSession.user);
+			await next();
+		});
+		app.use(
+			"/*",
+			liveProtection({
+				requireMFA: true,
+				requireConfirmation: true,
+				auditLog: false,
+			})
+		);
+		app.get("/test", () => new Response("ok"));
 
-    const res = await app.request("/test", {
-      headers: {
-        "X-Confirm-Action": "true",
-      },
-    });
+		const res = await app.request("/test", {
+			headers: {
+				"X-Confirm-Action": "true",
+			},
+		});
 
-    expect(res.status).toBe(200);
-  });
+		expect(res.status).toBe(200);
+	});
 
-  it("returns 403 when IP not in whitelist", async () => {
-    process.env.CREAM_ENV = "LIVE";
-    const mockSession = createMockSessionWithMFA();
+	it("returns 403 when IP not in whitelist", async () => {
+		process.env.CREAM_ENV = "LIVE";
+		const mockSession = createMockSessionWithMFA();
 
-    const app = new Hono<{ Variables: SessionVariables }>();
-    app.use("/*", async (c, next) => {
-      c.set("session", mockSession);
-      c.set("user", mockSession.user);
-      await next();
-    });
-    app.use(
-      "/*",
-      liveProtection({
-        requireMFA: false,
-        requireConfirmation: false,
-        auditLog: false,
-        ipWhitelist: ["192.168.1.100"],
-      })
-    );
-    app.get("/test", () => new Response("ok"));
-    app.onError((err, c) => {
-      if (err instanceof HTTPException) {
-        return c.json({ error: err.message }, err.status);
-      }
-      return c.json({ error: "Unknown error" }, 500);
-    });
+		const app = new Hono<{ Variables: SessionVariables }>();
+		app.use("/*", async (c, next) => {
+			c.set("session", mockSession);
+			c.set("user", mockSession.user);
+			await next();
+		});
+		app.use(
+			"/*",
+			liveProtection({
+				requireMFA: false,
+				requireConfirmation: false,
+				auditLog: false,
+				ipWhitelist: ["192.168.1.100"],
+			})
+		);
+		app.get("/test", () => new Response("ok"));
+		app.onError((err, c) => {
+			if (err instanceof HTTPException) {
+				return c.json({ error: err.message }, err.status);
+			}
+			return c.json({ error: "Unknown error" }, 500);
+		});
 
-    const res = await app.request("/test", {
-      headers: {
-        "X-Forwarded-For": "10.0.0.1",
-      },
-    });
+		const res = await app.request("/test", {
+			headers: {
+				"X-Forwarded-For": "10.0.0.1",
+			},
+		});
 
-    expect(res.status).toBe(403);
-  });
+		expect(res.status).toBe(403);
+	});
 
-  it("passes through when IP in whitelist", async () => {
-    process.env.CREAM_ENV = "LIVE";
-    const mockSession = createMockSessionWithMFA();
+	it("passes through when IP in whitelist", async () => {
+		process.env.CREAM_ENV = "LIVE";
+		const mockSession = createMockSessionWithMFA();
 
-    const app = new Hono<{ Variables: SessionVariables }>();
-    app.use("/*", async (c, next) => {
-      c.set("session", mockSession);
-      c.set("user", mockSession.user);
-      await next();
-    });
-    app.use(
-      "/*",
-      liveProtection({
-        requireMFA: false,
-        requireConfirmation: false,
-        auditLog: false,
-        ipWhitelist: ["192.168.1.100"],
-      })
-    );
-    app.get("/test", () => new Response("ok"));
+		const app = new Hono<{ Variables: SessionVariables }>();
+		app.use("/*", async (c, next) => {
+			c.set("session", mockSession);
+			c.set("user", mockSession.user);
+			await next();
+		});
+		app.use(
+			"/*",
+			liveProtection({
+				requireMFA: false,
+				requireConfirmation: false,
+				auditLog: false,
+				ipWhitelist: ["192.168.1.100"],
+			})
+		);
+		app.get("/test", () => new Response("ok"));
 
-    const res = await app.request("/test", {
-      headers: {
-        "X-Forwarded-For": "192.168.1.100",
-      },
-    });
+		const res = await app.request("/test", {
+			headers: {
+				"X-Forwarded-For": "192.168.1.100",
+			},
+		});
 
-    expect(res.status).toBe(200);
-  });
+		expect(res.status).toBe(200);
+	});
 });
 
 // ============================================
@@ -506,24 +506,24 @@ describe("liveProtection", () => {
 // ============================================
 
 describe("getSession", () => {
-  it("returns session when present", () => {
-    const mockSession = createMockSession();
-    const mockContext = {
-      get: (key: "session") => (key === "session" ? mockSession : null),
-    };
+	it("returns session when present", () => {
+		const mockSession = createMockSession();
+		const mockContext = {
+			get: (key: "session") => (key === "session" ? mockSession : null),
+		};
 
-    const session = getSession(mockContext);
+		const session = getSession(mockContext);
 
-    expect(session).toBe(mockSession);
-  });
+		expect(session).toBe(mockSession);
+	});
 
-  it("throws 401 when session is null", () => {
-    const mockContext = {
-      get: () => null,
-    };
+	it("throws 401 when session is null", () => {
+		const mockContext = {
+			get: () => null,
+		};
 
-    expect(() => getSession(mockContext)).toThrow(HTTPException);
-  });
+		expect(() => getSession(mockContext)).toThrow(HTTPException);
+	});
 });
 
 // ============================================
@@ -531,22 +531,22 @@ describe("getSession", () => {
 // ============================================
 
 describe("getUser", () => {
-  it("returns user when present", () => {
-    const mockSession = createMockSession();
-    const mockContext = {
-      get: (key: "user") => (key === "user" ? mockSession.user : null),
-    };
+	it("returns user when present", () => {
+		const mockSession = createMockSession();
+		const mockContext = {
+			get: (key: "user") => (key === "user" ? mockSession.user : null),
+		};
 
-    const user = getUser(mockContext);
+		const user = getUser(mockContext);
 
-    expect(user).toBe(mockSession.user);
-  });
+		expect(user).toBe(mockSession.user);
+	});
 
-  it("throws 401 when user is null", () => {
-    const mockContext = {
-      get: () => null,
-    };
+	it("throws 401 when user is null", () => {
+		const mockContext = {
+			get: () => null,
+		};
 
-    expect(() => getUser(mockContext)).toThrow(HTTPException);
-  });
+		expect(() => getUser(mockContext)).toThrow(HTTPException);
+	});
 });

@@ -7,17 +7,17 @@
  */
 
 import type {
-  Action,
-  Environment,
-  ExternalEventType,
-  FilingType,
-  HypothesisStatus,
-  IndicatorCategory,
-  IndicatorStatus,
-  MacroFrequency,
-  MarketCapBucket,
-  MarketMechanism,
-  TradeEventType,
+	Action,
+	Environment,
+	ExternalEventType,
+	FilingType,
+	HypothesisStatus,
+	IndicatorCategory,
+	IndicatorStatus,
+	MacroFrequency,
+	MarketCapBucket,
+	MarketMechanism,
+	TradeEventType,
 } from "./enums.js";
 import type { ThesisMemory as ThesisMemoryNode } from "./thesisMemory.js";
 
@@ -29,32 +29,32 @@ import type { ThesisMemory as ThesisMemoryNode } from "./thesisMemory.js";
  * TradeDecision node - stores trading decisions with context
  */
 export interface TradeDecision {
-  decision_id: string;
-  cycle_id: string;
-  instrument_id: string;
-  underlying_symbol?: string;
-  regime_label: string;
-  action: Action;
-  decision_json: string;
-  rationale_text: string; // Embedded field
-  snapshot_reference: string;
-  realized_outcome?: string;
-  created_at: string;
-  closed_at?: string;
-  environment: Environment;
+	decision_id: string;
+	cycle_id: string;
+	instrument_id: string;
+	underlying_symbol?: string;
+	regime_label: string;
+	action: Action;
+	decision_json: string;
+	rationale_text: string; // Embedded field
+	snapshot_reference: string;
+	realized_outcome?: string;
+	created_at: string;
+	closed_at?: string;
+	environment: Environment;
 }
 
 /**
  * TradeLifecycleEvent node - events in a trade's lifecycle
  */
 export interface TradeLifecycleEvent {
-  event_id: string;
-  decision_id: string;
-  event_type: TradeEventType;
-  timestamp: string;
-  price: number;
-  quantity: number;
-  environment: Environment;
+	event_id: string;
+	decision_id: string;
+	event_type: TradeEventType;
+	timestamp: string;
+	price: number;
+	quantity: number;
+	environment: Environment;
 }
 
 // ============================================
@@ -65,12 +65,12 @@ export interface TradeLifecycleEvent {
  * ExternalEvent node - discrete market events
  */
 export interface ExternalEvent {
-  event_id: string;
-  event_type: ExternalEventType | string;
-  event_time: string;
-  payload: string;
-  text_summary?: string; // Optionally embedded
-  related_instrument_ids: string; // JSON array
+	event_id: string;
+	event_type: ExternalEventType | string;
+	event_time: string;
+	payload: string;
+	text_summary?: string; // Optionally embedded
+	related_instrument_ids: string; // JSON array
 }
 
 // ============================================
@@ -81,39 +81,39 @@ export interface ExternalEvent {
  * FilingChunk node - chunked SEC filings
  */
 export interface FilingChunk {
-  chunk_id: string;
-  filing_id: string;
-  company_symbol: string;
-  filing_type: FilingType | string;
-  filing_date: string;
-  chunk_text: string; // Embedded field
-  chunk_index: number;
+	chunk_id: string;
+	filing_id: string;
+	company_symbol: string;
+	filing_type: FilingType | string;
+	filing_date: string;
+	chunk_text: string; // Embedded field
+	chunk_index: number;
 }
 
 /**
  * TranscriptChunk node - chunked earnings transcripts
  */
 export interface TranscriptChunk {
-  chunk_id: string;
-  transcript_id: string;
-  company_symbol: string;
-  call_date: string;
-  speaker: string;
-  chunk_text: string; // Embedded field
-  chunk_index: number;
+	chunk_id: string;
+	transcript_id: string;
+	company_symbol: string;
+	call_date: string;
+	speaker: string;
+	chunk_text: string; // Embedded field
+	chunk_index: number;
 }
 
 /**
  * NewsItem node - news articles and press releases
  */
 export interface NewsItem {
-  item_id: string;
-  headline: string; // Embedded field
-  body_text: string; // Embedded field
-  published_at: string;
-  source: string;
-  related_symbols: string; // JSON array
-  sentiment_score: number;
+	item_id: string;
+	headline: string; // Embedded field
+	body_text: string; // Embedded field
+	published_at: string;
+	source: string;
+	related_symbols: string; // JSON array
+	sentiment_score: number;
 }
 
 // ============================================
@@ -124,21 +124,21 @@ export interface NewsItem {
  * Company node - company metadata
  */
 export interface Company {
-  symbol: string;
-  name: string;
-  sector: string;
-  industry: string;
-  market_cap_bucket: MarketCapBucket;
+	symbol: string;
+	name: string;
+	sector: string;
+	industry: string;
+	market_cap_bucket: MarketCapBucket;
 }
 
 /**
  * MacroEntity node - macroeconomic concepts
  */
 export interface MacroEntity {
-  entity_id: string;
-  name: string;
-  description: string;
-  frequency: MacroFrequency;
+	entity_id: string;
+	name: string;
+	description: string;
+	frequency: MacroFrequency;
 }
 
 // ============================================
@@ -154,36 +154,36 @@ export interface MacroEntity {
  * @see docs/plans/19-dynamic-indicator-synthesis.md
  */
 export interface Indicator {
-  /** Unique identifier (matches Turso indicators.id) */
-  indicator_id: string;
-  /** Human-readable name (e.g., "RSI_Adaptive_14") */
-  name: string;
-  /** Indicator category */
-  category: IndicatorCategory;
-  /** Lifecycle status */
-  status: IndicatorStatus;
-  /** Economic hypothesis driving the indicator */
-  hypothesis: string;
-  /** Economic rationale for why this indicator should work */
-  economic_rationale: string;
-  /** Combined text for semantic embedding (hypothesis + economic_rationale) */
-  embedding_text: string; // Embedded field
-  /** Market regime label when indicator was generated */
-  generated_in_regime?: string;
-  /** Code hash for deduplication (SHA256) */
-  code_hash?: string;
-  /** AST signature for structural similarity */
-  ast_signature?: string;
-  /** Deflated Sharpe Ratio from validation */
-  deflated_sharpe?: number;
-  /** Probability of Backtest Overfitting */
-  probability_of_overfit?: number;
-  /** Information Coefficient */
-  information_coefficient?: number;
-  /** Generation timestamp (ISO 8601) */
-  generated_at: string;
-  /** Environment where indicator was generated */
-  environment: Environment;
+	/** Unique identifier (matches Turso indicators.id) */
+	indicator_id: string;
+	/** Human-readable name (e.g., "RSI_Adaptive_14") */
+	name: string;
+	/** Indicator category */
+	category: IndicatorCategory;
+	/** Lifecycle status */
+	status: IndicatorStatus;
+	/** Economic hypothesis driving the indicator */
+	hypothesis: string;
+	/** Economic rationale for why this indicator should work */
+	economic_rationale: string;
+	/** Combined text for semantic embedding (hypothesis + economic_rationale) */
+	embedding_text: string; // Embedded field
+	/** Market regime label when indicator was generated */
+	generated_in_regime?: string;
+	/** Code hash for deduplication (SHA256) */
+	code_hash?: string;
+	/** AST signature for structural similarity */
+	ast_signature?: string;
+	/** Deflated Sharpe Ratio from validation */
+	deflated_sharpe?: number;
+	/** Probability of Backtest Overfitting */
+	probability_of_overfit?: number;
+	/** Information Coefficient */
+	information_coefficient?: number;
+	/** Generation timestamp (ISO 8601) */
+	generated_at: string;
+	/** Environment where indicator was generated */
+	environment: Environment;
 }
 
 // ============================================
@@ -199,70 +199,70 @@ export interface Indicator {
  * @see docs/plans/20-research-to-production-pipeline.md - Phase 1: Idea Generation
  */
 export interface ResearchHypothesis {
-  /** Unique identifier (format: hyp-{timestamp}-{shortname}) */
-  hypothesis_id: string;
-  /** Human-readable title (3-5 words) */
-  title: string;
-  /** Economic rationale explaining WHY this alpha exists (embedded field) */
-  economic_rationale: string;
-  /** Market mechanism that creates the alpha */
-  market_mechanism: MarketMechanism;
-  /** Target market regime */
-  target_regime: string;
-  /** Current status in the pipeline */
-  status: HypothesisStatus;
-  /** Expected Information Coefficient (0.03-0.10) */
-  expected_ic: number;
-  /** Expected Sharpe ratio (1.0-2.5) */
-  expected_sharpe: number;
-  /** Testable conditions that would prove hypothesis wrong */
-  falsification_criteria: string; // JSON array
-  /** Required input features (max 8) */
-  required_features: string; // JSON array
-  /** Related academic papers and references */
-  related_literature: string; // JSON array
-  /** How this differs from existing factors */
-  originality_justification: string;
-  /** What triggered this hypothesis (REGIME_GAP, ALPHA_DECAY, etc.) */
-  trigger_type: string;
-  /** Suggestions for implementation */
-  implementation_hints?: string;
-  /** Lessons learned after validation/rejection */
-  lessons_learned?: string;
-  /** Actual IC achieved (after validation) */
-  realized_ic?: number;
-  /** Actual Sharpe achieved (after validation) */
-  realized_sharpe?: number;
-  /** Factor ID if hypothesis was implemented */
-  factor_id?: string;
-  /** Agent that generated the hypothesis */
-  author: string;
-  /** Creation timestamp (ISO 8601) */
-  created_at: string;
-  /** Validation completion timestamp */
-  validated_at?: string;
-  /** Environment */
-  environment: Environment;
+	/** Unique identifier (format: hyp-{timestamp}-{shortname}) */
+	hypothesis_id: string;
+	/** Human-readable title (3-5 words) */
+	title: string;
+	/** Economic rationale explaining WHY this alpha exists (embedded field) */
+	economic_rationale: string;
+	/** Market mechanism that creates the alpha */
+	market_mechanism: MarketMechanism;
+	/** Target market regime */
+	target_regime: string;
+	/** Current status in the pipeline */
+	status: HypothesisStatus;
+	/** Expected Information Coefficient (0.03-0.10) */
+	expected_ic: number;
+	/** Expected Sharpe ratio (1.0-2.5) */
+	expected_sharpe: number;
+	/** Testable conditions that would prove hypothesis wrong */
+	falsification_criteria: string; // JSON array
+	/** Required input features (max 8) */
+	required_features: string; // JSON array
+	/** Related academic papers and references */
+	related_literature: string; // JSON array
+	/** How this differs from existing factors */
+	originality_justification: string;
+	/** What triggered this hypothesis (REGIME_GAP, ALPHA_DECAY, etc.) */
+	trigger_type: string;
+	/** Suggestions for implementation */
+	implementation_hints?: string;
+	/** Lessons learned after validation/rejection */
+	lessons_learned?: string;
+	/** Actual IC achieved (after validation) */
+	realized_ic?: number;
+	/** Actual Sharpe achieved (after validation) */
+	realized_sharpe?: number;
+	/** Factor ID if hypothesis was implemented */
+	factor_id?: string;
+	/** Agent that generated the hypothesis */
+	author: string;
+	/** Creation timestamp (ISO 8601) */
+	created_at: string;
+	/** Validation completion timestamp */
+	validated_at?: string;
+	/** Environment */
+	environment: Environment;
 }
 
 /**
  * AcademicPaper node - referenced academic papers
  */
 export interface AcademicPaper {
-  /** Unique identifier */
-  paper_id: string;
-  /** Paper title */
-  title: string;
-  /** Authors */
-  authors: string;
-  /** Abstract or summary (embedded field) - named paper_abstract to avoid Rust reserved keyword */
-  paper_abstract: string;
-  /** URL or DOI */
-  url?: string;
-  /** Publication year */
-  publication_year?: number;
-  /** How many hypotheses reference this paper */
-  citation_count: number;
+	/** Unique identifier */
+	paper_id: string;
+	/** Paper title */
+	title: string;
+	/** Authors */
+	authors: string;
+	/** Abstract or summary (embedded field) - named paper_abstract to avoid Rust reserved keyword */
+	paper_abstract: string;
+	/** URL or DOI */
+	url?: string;
+	/** Publication year */
+	publication_year?: number;
+	/** How many hypotheses reference this paper */
+	citation_count: number;
 }
 
 // ============================================
@@ -273,35 +273,35 @@ export interface AcademicPaper {
  * All node types
  */
 export type NodeType =
-  | TradeDecision
-  | TradeLifecycleEvent
-  | ExternalEvent
-  | FilingChunk
-  | TranscriptChunk
-  | NewsItem
-  | Company
-  | MacroEntity
-  | Indicator
-  | ThesisMemoryNode
-  | ResearchHypothesis
-  | AcademicPaper;
+	| TradeDecision
+	| TradeLifecycleEvent
+	| ExternalEvent
+	| FilingChunk
+	| TranscriptChunk
+	| NewsItem
+	| Company
+	| MacroEntity
+	| Indicator
+	| ThesisMemoryNode
+	| ResearchHypothesis
+	| AcademicPaper;
 
 /**
  * Node type names for runtime type checking
  */
 export const NODE_TYPES = [
-  "TradeDecision",
-  "TradeLifecycleEvent",
-  "ExternalEvent",
-  "FilingChunk",
-  "TranscriptChunk",
-  "NewsItem",
-  "Company",
-  "MacroEntity",
-  "Indicator",
-  "ThesisMemory",
-  "ResearchHypothesis",
-  "AcademicPaper",
+	"TradeDecision",
+	"TradeLifecycleEvent",
+	"ExternalEvent",
+	"FilingChunk",
+	"TranscriptChunk",
+	"NewsItem",
+	"Company",
+	"MacroEntity",
+	"Indicator",
+	"ThesisMemory",
+	"ResearchHypothesis",
+	"AcademicPaper",
 ] as const;
 
 export type NodeTypeName = (typeof NODE_TYPES)[number];
@@ -314,16 +314,16 @@ export type NodeTypeName = (typeof NODE_TYPES)[number];
  * Fields that are embedded for vector similarity search
  */
 export const EMBEDDED_FIELDS: Record<NodeTypeName, string[]> = {
-  TradeDecision: ["rationale_text"],
-  TradeLifecycleEvent: [],
-  ExternalEvent: ["text_summary"],
-  FilingChunk: ["chunk_text"],
-  TranscriptChunk: ["chunk_text"],
-  NewsItem: ["headline", "body_text"],
-  Company: [],
-  MacroEntity: [],
-  Indicator: ["embedding_text"],
-  ThesisMemory: ["entry_thesis"],
-  ResearchHypothesis: ["economic_rationale"],
-  AcademicPaper: ["paper_abstract"],
+	TradeDecision: ["rationale_text"],
+	TradeLifecycleEvent: [],
+	ExternalEvent: ["text_summary"],
+	FilingChunk: ["chunk_text"],
+	TranscriptChunk: ["chunk_text"],
+	NewsItem: ["headline", "body_text"],
+	Company: [],
+	MacroEntity: [],
+	Indicator: ["embedding_text"],
+	ThesisMemory: ["entry_thesis"],
+	ResearchHypothesis: ["economic_rationale"],
+	AcademicPaper: ["paper_abstract"],
 };

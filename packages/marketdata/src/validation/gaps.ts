@@ -14,40 +14,40 @@ import type { Timeframe } from "../ingestion/candleIngestion";
 // ============================================
 
 export interface Candle {
-  symbol: string;
-  timeframe: Timeframe;
-  timestamp: string;
-  open: number;
-  high: number;
-  low: number;
-  close: number;
-  volume: number;
-  vwap?: number | null;
-  tradeCount?: number | null;
-  adjusted?: boolean;
+	symbol: string;
+	timeframe: Timeframe;
+	timestamp: string;
+	open: number;
+	high: number;
+	low: number;
+	close: number;
+	volume: number;
+	vwap?: number | null;
+	tradeCount?: number | null;
+	adjusted?: boolean;
 }
 
 export const GapInfoSchema = z.object({
-  expectedTimestamp: z.string().datetime(),
-  previousTimestamp: z.string().datetime(),
-  gapMinutes: z.number(),
-  gapCandles: z.number(),
+	expectedTimestamp: z.string().datetime(),
+	previousTimestamp: z.string().datetime(),
+	gapMinutes: z.number(),
+	gapCandles: z.number(),
 });
 
 export type GapInfo = z.infer<typeof GapInfoSchema>;
 
 export interface GapDetectionResult {
-  symbol: string;
-  timeframe: Timeframe;
-  totalCandles: number;
-  gaps: GapInfo[];
-  gapCount: number;
-  totalMissingCandles: number;
-  hasGaps: boolean;
+	symbol: string;
+	timeframe: Timeframe;
+	totalCandles: number;
+	gaps: GapInfo[];
+	gapCount: number;
+	totalMissingCandles: number;
+	hasGaps: boolean;
 }
 
 export interface InterpolatedCandle extends Candle {
-  interpolated: true;
+	interpolated: true;
 }
 
 // ============================================
@@ -55,21 +55,21 @@ export interface InterpolatedCandle extends Candle {
 // ============================================
 
 const TIMEFRAME_MINUTES: Record<Timeframe, number> = {
-  "1m": 1,
-  "5m": 5,
-  "15m": 15,
-  "30m": 30,
-  "1h": 60,
-  "4h": 240,
-  "1d": 1440,
-  "1w": 10080,
+	"1m": 1,
+	"5m": 5,
+	"15m": 15,
+	"30m": 30,
+	"1h": 60,
+	"4h": 240,
+	"1d": 1440,
+	"1w": 10080,
 };
 
 /**
  * Get expected interval in milliseconds for a timeframe.
  */
 export function getExpectedIntervalMs(timeframe: Timeframe): number {
-  return TIMEFRAME_MINUTES[timeframe] * 60 * 1000;
+	return TIMEFRAME_MINUTES[timeframe] * 60 * 1000;
 }
 
 // ============================================
@@ -84,72 +84,72 @@ export function getExpectedIntervalMs(timeframe: Timeframe): number {
  * @returns Gap detection result
  */
 export function detectGaps(candles: Candle[], toleranceMultiplier = 1.5): GapDetectionResult {
-  if (candles.length === 0) {
-    return {
-      symbol: "",
-      timeframe: "1h",
-      totalCandles: 0,
-      gaps: [],
-      gapCount: 0,
-      totalMissingCandles: 0,
-      hasGaps: false,
-    };
-  }
+	if (candles.length === 0) {
+		return {
+			symbol: "",
+			timeframe: "1h",
+			totalCandles: 0,
+			gaps: [],
+			gapCount: 0,
+			totalMissingCandles: 0,
+			hasGaps: false,
+		};
+	}
 
-  const firstCandle = candles[0];
-  if (!firstCandle) {
-    return {
-      symbol: "",
-      timeframe: "1h",
-      totalCandles: 0,
-      gaps: [],
-      gapCount: 0,
-      totalMissingCandles: 0,
-      hasGaps: false,
-    };
-  }
-  const timeframe = firstCandle.timeframe;
-  const expectedIntervalMs = getExpectedIntervalMs(timeframe);
-  const toleranceMs = expectedIntervalMs * toleranceMultiplier;
+	const firstCandle = candles[0];
+	if (!firstCandle) {
+		return {
+			symbol: "",
+			timeframe: "1h",
+			totalCandles: 0,
+			gaps: [],
+			gapCount: 0,
+			totalMissingCandles: 0,
+			hasGaps: false,
+		};
+	}
+	const timeframe = firstCandle.timeframe;
+	const expectedIntervalMs = getExpectedIntervalMs(timeframe);
+	const toleranceMs = expectedIntervalMs * toleranceMultiplier;
 
-  const gaps: GapInfo[] = [];
-  let totalMissingCandles = 0;
+	const gaps: GapInfo[] = [];
+	let totalMissingCandles = 0;
 
-  for (let i = 1; i < candles.length; i++) {
-    const prev = candles[i - 1];
-    const curr = candles[i];
-    if (!prev || !curr) {
-      continue;
-    }
+	for (let i = 1; i < candles.length; i++) {
+		const prev = candles[i - 1];
+		const curr = candles[i];
+		if (!prev || !curr) {
+			continue;
+		}
 
-    const prevTime = new Date(prev.timestamp).getTime();
-    const currTime = new Date(curr.timestamp).getTime();
-    const actualInterval = currTime - prevTime;
+		const prevTime = new Date(prev.timestamp).getTime();
+		const currTime = new Date(curr.timestamp).getTime();
+		const actualInterval = currTime - prevTime;
 
-    if (actualInterval > toleranceMs) {
-      const gapMinutes = actualInterval / (1000 * 60);
-      const gapCandles = Math.floor(actualInterval / expectedIntervalMs) - 1;
+		if (actualInterval > toleranceMs) {
+			const gapMinutes = actualInterval / (1000 * 60);
+			const gapCandles = Math.floor(actualInterval / expectedIntervalMs) - 1;
 
-      gaps.push({
-        expectedTimestamp: new Date(prevTime + expectedIntervalMs).toISOString(),
-        previousTimestamp: prev.timestamp,
-        gapMinutes,
-        gapCandles,
-      });
+			gaps.push({
+				expectedTimestamp: new Date(prevTime + expectedIntervalMs).toISOString(),
+				previousTimestamp: prev.timestamp,
+				gapMinutes,
+				gapCandles,
+			});
 
-      totalMissingCandles += gapCandles;
-    }
-  }
+			totalMissingCandles += gapCandles;
+		}
+	}
 
-  return {
-    symbol: firstCandle.symbol,
-    timeframe,
-    totalCandles: candles.length,
-    gaps,
-    gapCount: gaps.length,
-    totalMissingCandles,
-    hasGaps: gaps.length > 0,
-  };
+	return {
+		symbol: firstCandle.symbol,
+		timeframe,
+		totalCandles: candles.length,
+		gaps,
+		gapCount: gaps.length,
+		totalMissingCandles,
+		hasGaps: gaps.length > 0,
+	};
 }
 
 /**
@@ -160,7 +160,7 @@ export function detectGaps(candles: Candle[], toleranceMultiplier = 1.5): GapDet
  * @returns true if gap should be interpolated
  */
 export function shouldInterpolate(gap: GapInfo, maxInterpolateCandles = 1): boolean {
-  return gap.gapCandles <= maxInterpolateCandles;
+	return gap.gapCandles <= maxInterpolateCandles;
 }
 
 /**
@@ -174,27 +174,27 @@ export function shouldInterpolate(gap: GapInfo, maxInterpolateCandles = 1): bool
  * @returns Interpolated candle
  */
 export function interpolateCandle(
-  prev: Candle,
-  next: Candle,
-  timestamp: string
+	prev: Candle,
+	next: Candle,
+	timestamp: string
 ): InterpolatedCandle {
-  // Linear interpolation between prev.close and next.open
-  const midPrice = (prev.close + next.open) / 2;
+	// Linear interpolation between prev.close and next.open
+	const midPrice = (prev.close + next.open) / 2;
 
-  return {
-    symbol: prev.symbol,
-    timeframe: prev.timeframe,
-    timestamp,
-    open: prev.close, // Open at previous close
-    high: Math.max(prev.close, next.open, midPrice),
-    low: Math.min(prev.close, next.open, midPrice),
-    close: next.open, // Close at next open
-    volume: 0, // No actual volume
-    vwap: null,
-    tradeCount: 0,
-    adjusted: prev.adjusted,
-    interpolated: true,
-  };
+	return {
+		symbol: prev.symbol,
+		timeframe: prev.timeframe,
+		timestamp,
+		open: prev.close, // Open at previous close
+		high: Math.max(prev.close, next.open, midPrice),
+		low: Math.min(prev.close, next.open, midPrice),
+		close: next.open, // Close at next open
+		volume: 0, // No actual volume
+		vwap: null,
+		tradeCount: 0,
+		adjusted: prev.adjusted,
+		interpolated: true,
+	};
 }
 
 /**
@@ -207,47 +207,47 @@ export function interpolateCandle(
  * @returns Array of candles with gaps filled
  */
 export function fillGaps(
-  candles: Candle[],
-  maxInterpolateCandles = 1
+	candles: Candle[],
+	maxInterpolateCandles = 1
 ): (Candle | InterpolatedCandle)[] {
-  if (candles.length < 2) {
-    return candles;
-  }
+	if (candles.length < 2) {
+		return candles;
+	}
 
-  const firstCandle = candles[0];
-  if (!firstCandle) {
-    return candles;
-  }
-  const expectedIntervalMs = getExpectedIntervalMs(firstCandle.timeframe);
-  const result: (Candle | InterpolatedCandle)[] = [firstCandle];
+	const firstCandle = candles[0];
+	if (!firstCandle) {
+		return candles;
+	}
+	const expectedIntervalMs = getExpectedIntervalMs(firstCandle.timeframe);
+	const result: (Candle | InterpolatedCandle)[] = [firstCandle];
 
-  for (let i = 1; i < candles.length; i++) {
-    const prev = candles[i - 1];
-    const curr = candles[i];
-    if (!prev || !curr) {
-      continue;
-    }
+	for (let i = 1; i < candles.length; i++) {
+		const prev = candles[i - 1];
+		const curr = candles[i];
+		if (!prev || !curr) {
+			continue;
+		}
 
-    const prevTime = new Date(prev.timestamp).getTime();
-    const currTime = new Date(curr.timestamp).getTime();
-    const gapCandles = Math.floor((currTime - prevTime) / expectedIntervalMs) - 1;
+		const prevTime = new Date(prev.timestamp).getTime();
+		const currTime = new Date(curr.timestamp).getTime();
+		const gapCandles = Math.floor((currTime - prevTime) / expectedIntervalMs) - 1;
 
-    if (gapCandles > 0 && gapCandles <= maxInterpolateCandles) {
-      for (let j = 1; j <= gapCandles; j++) {
-        const interpolatedTime = prevTime + j * expectedIntervalMs;
-        const interpolated = interpolateCandle(
-          prev,
-          curr,
-          new Date(interpolatedTime).toISOString()
-        );
-        result.push(interpolated);
-      }
-    }
+		if (gapCandles > 0 && gapCandles <= maxInterpolateCandles) {
+			for (let j = 1; j <= gapCandles; j++) {
+				const interpolatedTime = prevTime + j * expectedIntervalMs;
+				const interpolated = interpolateCandle(
+					prev,
+					curr,
+					new Date(interpolatedTime).toISOString()
+				);
+				result.push(interpolated);
+			}
+		}
 
-    result.push(curr);
-  }
+		result.push(curr);
+	}
 
-  return result;
+	return result;
 }
 
 /**
@@ -258,14 +258,14 @@ export function fillGaps(
  * @returns Filtered gaps (those that exceed max interpolation)
  */
 export function getExtendedGaps(gaps: GapInfo[], maxInterpolateCandles = 1): GapInfo[] {
-  return gaps.filter((gap) => gap.gapCandles > maxInterpolateCandles);
+	return gaps.filter((gap) => gap.gapCandles > maxInterpolateCandles);
 }
 
 export default {
-  detectGaps,
-  fillGaps,
-  interpolateCandle,
-  shouldInterpolate,
-  getExtendedGaps,
-  getExpectedIntervalMs,
+	detectGaps,
+	fillGaps,
+	interpolateCandle,
+	shouldInterpolate,
+	getExtendedGaps,
+	getExpectedIntervalMs,
 };

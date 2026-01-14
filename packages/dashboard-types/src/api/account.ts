@@ -11,13 +11,13 @@ import { z } from "zod";
 // ============================================
 
 export const AccountStatusSchema = z.enum([
-  "ACTIVE",
-  "SUBMITTED",
-  "APPROVAL_PENDING",
-  "APPROVED",
-  "REJECTED",
-  "CLOSED",
-  "DISABLED",
+	"ACTIVE",
+	"SUBMITTED",
+	"APPROVAL_PENDING",
+	"APPROVED",
+	"REJECTED",
+	"CLOSED",
+	"DISABLED",
 ]);
 
 export type AccountStatus = z.infer<typeof AccountStatusSchema>;
@@ -27,29 +27,29 @@ export type AccountStatus = z.infer<typeof AccountStatusSchema>;
 // ============================================
 
 export const AccountSchema = z.object({
-  id: z.string(),
-  status: AccountStatusSchema,
-  currency: z.string(),
-  cash: z.number(),
-  portfolioValue: z.number(),
-  buyingPower: z.number(),
-  regtBuyingPower: z.number(),
-  daytradingBuyingPower: z.number(),
-  daytradeCount: z.number(),
-  patternDayTrader: z.boolean(),
-  tradingBlocked: z.boolean(),
-  transfersBlocked: z.boolean(),
-  accountBlocked: z.boolean(),
-  shortingEnabled: z.boolean(),
-  longMarketValue: z.number(),
-  shortMarketValue: z.number(),
-  equity: z.number(),
-  lastEquity: z.number(),
-  multiplier: z.number(),
-  initialMargin: z.number(),
-  maintenanceMargin: z.number(),
-  sma: z.number(),
-  createdAt: z.string(),
+	id: z.string(),
+	status: AccountStatusSchema,
+	currency: z.string(),
+	cash: z.number(),
+	portfolioValue: z.number(),
+	buyingPower: z.number(),
+	regtBuyingPower: z.number(),
+	daytradingBuyingPower: z.number(),
+	daytradeCount: z.number(),
+	patternDayTrader: z.boolean(),
+	tradingBlocked: z.boolean(),
+	transfersBlocked: z.boolean(),
+	accountBlocked: z.boolean(),
+	shortingEnabled: z.boolean(),
+	longMarketValue: z.number(),
+	shortMarketValue: z.number(),
+	equity: z.number(),
+	lastEquity: z.number(),
+	multiplier: z.number(),
+	initialMargin: z.number(),
+	maintenanceMargin: z.number(),
+	sma: z.number(),
+	createdAt: z.string(),
 });
 
 export type Account = z.infer<typeof AccountSchema>;
@@ -59,11 +59,11 @@ export type Account = z.infer<typeof AccountSchema>;
 // ============================================
 
 export const AccountSummarySchema = z.object({
-  cash: z.number(),
-  equity: z.number(),
-  buyingPower: z.number(),
-  marginUsed: z.number(),
-  dayTradesRemaining: z.number(),
+	cash: z.number(),
+	equity: z.number(),
+	buyingPower: z.number(),
+	marginUsed: z.number(),
+	dayTradesRemaining: z.number(),
 });
 
 export type AccountSummary = z.infer<typeof AccountSummarySchema>;
@@ -81,21 +81,21 @@ export const PortfolioHistoryPeriodSchema = z.enum(["1D", "1W", "1M", "3M", "1A"
 export type PortfolioHistoryPeriod = z.infer<typeof PortfolioHistoryPeriodSchema>;
 
 export const PortfolioHistoryPointSchema = z.object({
-  timestamp: z.number(),
-  equity: z.number(),
-  profitLoss: z.number(),
-  profitLossPct: z.number(),
+	timestamp: z.number(),
+	equity: z.number(),
+	profitLoss: z.number(),
+	profitLossPct: z.number(),
 });
 
 export type PortfolioHistoryPoint = z.infer<typeof PortfolioHistoryPointSchema>;
 
 export const PortfolioHistorySchema = z.object({
-  timestamp: z.array(z.number()),
-  equity: z.array(z.number()),
-  profitLoss: z.array(z.number()),
-  profitLossPct: z.array(z.number()),
-  timeframe: PortfolioHistoryTimeframeSchema,
-  baseValue: z.number(),
+	timestamp: z.array(z.number()),
+	equity: z.array(z.number()),
+	profitLoss: z.array(z.number()),
+	profitLossPct: z.array(z.number()),
+	timeframe: PortfolioHistoryTimeframeSchema,
+	baseValue: z.number(),
 });
 
 export type PortfolioHistory = z.infer<typeof PortfolioHistorySchema>;

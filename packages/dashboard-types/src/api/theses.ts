@@ -21,20 +21,20 @@ export type ThesisStatus = z.infer<typeof ThesisStatusSchema>;
 // ============================================
 
 export const ThesisSchema = z.object({
-  id: z.string(),
-  symbol: z.string(),
-  thesis: z.string(),
-  direction: ThesisDirectionSchema,
-  status: ThesisStatusSchema,
-  timeHorizon: z.string(),
-  confidence: z.number(),
-  targetPrice: z.number().nullable(),
-  stopPrice: z.number().nullable(),
-  catalysts: z.array(z.string()),
-  agentSource: z.string(),
-  pnlPct: z.number().nullable(),
-  createdAt: z.string(),
-  updatedAt: z.string(),
+	id: z.string(),
+	symbol: z.string(),
+	thesis: z.string(),
+	direction: ThesisDirectionSchema,
+	status: ThesisStatusSchema,
+	timeHorizon: z.string(),
+	confidence: z.number(),
+	targetPrice: z.number().nullable(),
+	stopPrice: z.number().nullable(),
+	catalysts: z.array(z.string()),
+	agentSource: z.string(),
+	pnlPct: z.number().nullable(),
+	createdAt: z.string(),
+	updatedAt: z.string(),
 });
 
 export type Thesis = z.infer<typeof ThesisSchema>;
@@ -44,13 +44,13 @@ export type Thesis = z.infer<typeof ThesisSchema>;
 // ============================================
 
 export const ThesisHistoryEntrySchema = z.object({
-  id: z.string(),
-  thesisId: z.string(),
-  field: z.string(),
-  oldValue: z.string(),
-  newValue: z.string(),
-  changedBy: z.string(),
-  changedAt: z.string(),
+	id: z.string(),
+	thesisId: z.string(),
+	field: z.string(),
+	oldValue: z.string(),
+	newValue: z.string(),
+	changedBy: z.string(),
+	changedAt: z.string(),
 });
 
 export type ThesisHistoryEntry = z.infer<typeof ThesisHistoryEntrySchema>;

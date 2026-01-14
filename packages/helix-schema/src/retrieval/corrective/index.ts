@@ -32,21 +32,21 @@
 
 // Correction Strategies
 export {
-  calculateBroadenedK,
-  calculateLoweredThreshold,
-  generateExpansionTerms,
-  selectCorrectionStrategy,
+	calculateBroadenedK,
+	calculateLoweredThreshold,
+	generateExpansionTerms,
+	selectCorrectionStrategy,
 } from "./correction.js";
 
 // Quality Assessment
 export {
-  assessRetrievalQuality,
-  assessRRFQuality,
-  calculateAvgScore,
-  calculateCoverageScore,
-  calculateDiversityScore,
-  shouldCorrect,
-  shouldCorrectRRF,
+	assessRetrievalQuality,
+	assessRRFQuality,
+	calculateAvgScore,
+	calculateCoverageScore,
+	calculateDiversityScore,
+	shouldCorrect,
+	shouldCorrectRRF,
 } from "./evaluation.js";
 // Logging and Metrics
 export { calculateCorrectionMetrics, createCorrectionLogEntry } from "./metrics.js";
@@ -55,21 +55,21 @@ export { calculateCorrectionMetrics, createCorrectionLogEntry } from "./metrics.
 export { correctiveRetrieval, withCorrectiveRetrieval } from "./retrieval.js";
 // Types and Constants
 export {
-  type CorrectionAttempt,
-  type CorrectionLogEntry,
-  type CorrectionMetrics,
-  type CorrectionStrategy,
-  type CorrectionStrategyConfig,
-  type CorrectiveRetrievalOptions,
-  type CorrectiveRetrievalResult,
-  DEFAULT_BROADENING_FACTOR,
-  DEFAULT_DIVERSITY_THRESHOLD,
-  DEFAULT_MIN_RESULTS,
-  DEFAULT_QUALITY_THRESHOLD,
-  DEFAULT_QUALITY_THRESHOLDS,
-  MAX_CORRECTION_ATTEMPTS,
-  type QualityAssessment,
-  type QualityThresholds,
-  type RetrievalFunction,
-  THRESHOLD_REDUCTION_STEP,
+	type CorrectionAttempt,
+	type CorrectionLogEntry,
+	type CorrectionMetrics,
+	type CorrectionStrategy,
+	type CorrectionStrategyConfig,
+	type CorrectiveRetrievalOptions,
+	type CorrectiveRetrievalResult,
+	DEFAULT_BROADENING_FACTOR,
+	DEFAULT_DIVERSITY_THRESHOLD,
+	DEFAULT_MIN_RESULTS,
+	DEFAULT_QUALITY_THRESHOLD,
+	DEFAULT_QUALITY_THRESHOLDS,
+	MAX_CORRECTION_ATTEMPTS,
+	type QualityAssessment,
+	type QualityThresholds,
+	type RetrievalFunction,
+	THRESHOLD_REDUCTION_STEP,
 } from "./types.js";

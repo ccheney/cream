@@ -10,12 +10,12 @@
 
 import { z } from "zod";
 import {
-  type AlpacaCalendarResponse,
-  AlpacaCalendarResponseSchema,
-  type AlpacaClockResponse,
-  AlpacaClockResponseSchema,
-  type CalendarDay,
-  type MarketClock,
+	type AlpacaCalendarResponse,
+	AlpacaCalendarResponseSchema,
+	type AlpacaClockResponse,
+	AlpacaClockResponseSchema,
+	type CalendarDay,
+	type MarketClock,
 } from "./types";
 
 // ============================================
@@ -25,31 +25,31 @@ import {
 export type AlpacaEnvironment = "PAPER" | "LIVE";
 
 export interface AlpacaCalendarClientConfig {
-  apiKey: string;
-  apiSecret: string;
-  environment: AlpacaEnvironment;
-  /** Maximum retry attempts (default: 3) */
-  maxRetries?: number;
-  /** Initial backoff in ms before exponential increase (default: 1000) */
-  initialBackoffMs?: number;
+	apiKey: string;
+	apiSecret: string;
+	environment: AlpacaEnvironment;
+	/** Maximum retry attempts (default: 3) */
+	maxRetries?: number;
+	/** Initial backoff in ms before exponential increase (default: 1000) */
+	initialBackoffMs?: number;
 }
 
 export type CalendarErrorCode =
-  | "INVALID_CREDENTIALS"
-  | "RATE_LIMITED"
-  | "NETWORK_ERROR"
-  | "VALIDATION_ERROR"
-  | "UNKNOWN";
+	| "INVALID_CREDENTIALS"
+	| "RATE_LIMITED"
+	| "NETWORK_ERROR"
+	| "VALIDATION_ERROR"
+	| "UNKNOWN";
 
 export class CalendarClientError extends Error {
-  constructor(
-    message: string,
-    public readonly code: CalendarErrorCode,
-    public override readonly cause?: Error
-  ) {
-    super(message);
-    this.name = "CalendarClientError";
-  }
+	constructor(
+		message: string,
+		public readonly code: CalendarErrorCode,
+		public override readonly cause?: Error
+	) {
+		super(message);
+		this.name = "CalendarClientError";
+	}
 }
 
 // ============================================
@@ -57,8 +57,8 @@ export class CalendarClientError extends Error {
 // ============================================
 
 const ENDPOINTS = {
-  PAPER: "https://paper-api.alpaca.markets",
-  LIVE: "https://api.alpaca.markets",
+	PAPER: "https://paper-api.alpaca.markets",
+	LIVE: "https://api.alpaca.markets",
 } as const;
 
 const MAX_RETRIES = 3;
@@ -72,60 +72,60 @@ const INITIAL_BACKOFF_MS = 1000;
  * Map HTTP status to error code.
  */
 function mapHttpStatusToErrorCode(status: number): CalendarErrorCode {
-  switch (status) {
-    case 401:
-    case 403:
-      return "INVALID_CREDENTIALS";
-    case 429:
-      return "RATE_LIMITED";
-    default:
-      return "UNKNOWN";
-  }
+	switch (status) {
+		case 401:
+		case 403:
+			return "INVALID_CREDENTIALS";
+		case 429:
+			return "RATE_LIMITED";
+		default:
+			return "UNKNOWN";
+	}
 }
 
 /**
  * Sleep for a given number of milliseconds.
  */
 function sleep(ms: number): Promise<void> {
-  return new Promise((resolve) => setTimeout(resolve, ms));
+	return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
 /**
  * Format date to YYYY-MM-DD string.
  */
 function formatDateStr(date: Date | string): string {
-  if (typeof date === "string") {
-    return date.slice(0, 10);
-  }
-  const year = date.getUTCFullYear();
-  const month = String(date.getUTCMonth() + 1).padStart(2, "0");
-  const day = String(date.getUTCDate()).padStart(2, "0");
-  return `${year}-${month}-${day}`;
+	if (typeof date === "string") {
+		return date.slice(0, 10);
+	}
+	const year = date.getUTCFullYear();
+	const month = String(date.getUTCMonth() + 1).padStart(2, "0");
+	const day = String(date.getUTCDate()).padStart(2, "0");
+	return `${year}-${month}-${day}`;
 }
 
 /**
  * Map Alpaca calendar response to domain CalendarDay.
  */
 function mapCalendarResponse(response: AlpacaCalendarResponse): CalendarDay {
-  return {
-    date: response.date,
-    open: response.open,
-    close: response.close,
-    sessionOpen: response.session_open,
-    sessionClose: response.session_close,
-  };
+	return {
+		date: response.date,
+		open: response.open,
+		close: response.close,
+		sessionOpen: response.session_open,
+		sessionClose: response.session_close,
+	};
 }
 
 /**
  * Map Alpaca clock response to domain MarketClock.
  */
 function mapClockResponse(response: AlpacaClockResponse): MarketClock {
-  return {
-    isOpen: response.is_open,
-    timestamp: new Date(response.timestamp),
-    nextOpen: new Date(response.next_open),
-    nextClose: new Date(response.next_close),
-  };
+	return {
+		isOpen: response.is_open,
+		timestamp: new Date(response.timestamp),
+		nextOpen: new Date(response.next_open),
+		nextClose: new Date(response.next_close),
+	};
 }
 
 // ============================================
@@ -154,130 +154,130 @@ function mapClockResponse(response: AlpacaClockResponse): MarketClock {
  * ```
  */
 export class AlpacaCalendarClient {
-  private readonly baseUrl: string;
-  private readonly headers: Record<string, string>;
-  private readonly maxRetries: number;
-  private readonly initialBackoffMs: number;
+	private readonly baseUrl: string;
+	private readonly headers: Record<string, string>;
+	private readonly maxRetries: number;
+	private readonly initialBackoffMs: number;
 
-  constructor(config: AlpacaCalendarClientConfig) {
-    this.baseUrl = ENDPOINTS[config.environment];
-    this.headers = {
-      "APCA-API-KEY-ID": config.apiKey,
-      "APCA-API-SECRET-KEY": config.apiSecret,
-      "Content-Type": "application/json",
-    };
-    this.maxRetries = config.maxRetries ?? MAX_RETRIES;
-    this.initialBackoffMs = config.initialBackoffMs ?? INITIAL_BACKOFF_MS;
-  }
+	constructor(config: AlpacaCalendarClientConfig) {
+		this.baseUrl = ENDPOINTS[config.environment];
+		this.headers = {
+			"APCA-API-KEY-ID": config.apiKey,
+			"APCA-API-SECRET-KEY": config.apiSecret,
+			"Content-Type": "application/json",
+		};
+		this.maxRetries = config.maxRetries ?? MAX_RETRIES;
+		this.initialBackoffMs = config.initialBackoffMs ?? INITIAL_BACKOFF_MS;
+	}
 
-  /**
-   * Get market calendar for a date range.
-   *
-   * @param start - Start date (inclusive)
-   * @param end - End date (inclusive)
-   * @returns Array of calendar days in the range
-   */
-  async getCalendar(start: Date | string, end: Date | string): Promise<CalendarDay[]> {
-    const startStr = formatDateStr(start);
-    const endStr = formatDateStr(end);
-    const path = `/v2/calendar?start=${startStr}&end=${endStr}`;
+	/**
+	 * Get market calendar for a date range.
+	 *
+	 * @param start - Start date (inclusive)
+	 * @param end - End date (inclusive)
+	 * @returns Array of calendar days in the range
+	 */
+	async getCalendar(start: Date | string, end: Date | string): Promise<CalendarDay[]> {
+		const startStr = formatDateStr(start);
+		const endStr = formatDateStr(end);
+		const path = `/v2/calendar?start=${startStr}&end=${endStr}`;
 
-    const rawResponse = await this.request<unknown[]>(path);
+		const rawResponse = await this.request<unknown[]>(path);
 
-    // Validate each item in the response array
-    const validated = z.array(AlpacaCalendarResponseSchema).safeParse(rawResponse);
-    if (!validated.success) {
-      throw new CalendarClientError(
-        `Invalid calendar response: ${validated.error.message}`,
-        "VALIDATION_ERROR"
-      );
-    }
+		// Validate each item in the response array
+		const validated = z.array(AlpacaCalendarResponseSchema).safeParse(rawResponse);
+		if (!validated.success) {
+			throw new CalendarClientError(
+				`Invalid calendar response: ${validated.error.message}`,
+				"VALIDATION_ERROR"
+			);
+		}
 
-    return validated.data.map(mapCalendarResponse);
-  }
+		return validated.data.map(mapCalendarResponse);
+	}
 
-  /**
-   * Get current market clock status.
-   *
-   * @returns Current market clock with open status and next open/close times
-   */
-  async getClock(): Promise<MarketClock> {
-    const path = "/v2/clock";
-    const rawResponse = await this.request<unknown>(path);
+	/**
+	 * Get current market clock status.
+	 *
+	 * @returns Current market clock with open status and next open/close times
+	 */
+	async getClock(): Promise<MarketClock> {
+		const path = "/v2/clock";
+		const rawResponse = await this.request<unknown>(path);
 
-    const validated = AlpacaClockResponseSchema.safeParse(rawResponse);
-    if (!validated.success) {
-      throw new CalendarClientError(
-        `Invalid clock response: ${validated.error.message}`,
-        "VALIDATION_ERROR"
-      );
-    }
+		const validated = AlpacaClockResponseSchema.safeParse(rawResponse);
+		if (!validated.success) {
+			throw new CalendarClientError(
+				`Invalid clock response: ${validated.error.message}`,
+				"VALIDATION_ERROR"
+			);
+		}
 
-    return mapClockResponse(validated.data);
-  }
+		return mapClockResponse(validated.data);
+	}
 
-  /**
-   * Make an authenticated request with retry logic.
-   */
-  private async request<T>(path: string): Promise<T> {
-    const url = `${this.baseUrl}${path}`;
-    const retries = this.maxRetries;
+	/**
+	 * Make an authenticated request with retry logic.
+	 */
+	private async request<T>(path: string): Promise<T> {
+		const url = `${this.baseUrl}${path}`;
+		const retries = this.maxRetries;
 
-    for (let attempt = 0; attempt <= retries; attempt++) {
-      try {
-        const response = await fetch(url, {
-          method: "GET",
-          headers: this.headers,
-        });
+		for (let attempt = 0; attempt <= retries; attempt++) {
+			try {
+				const response = await fetch(url, {
+					method: "GET",
+					headers: this.headers,
+				});
 
-        if (!response.ok) {
-          const errorCode = mapHttpStatusToErrorCode(response.status);
+				if (!response.ok) {
+					const errorCode = mapHttpStatusToErrorCode(response.status);
 
-          // Retry on rate limiting
-          if (response.status === 429 && attempt < retries) {
-            const backoffMs = this.initialBackoffMs * 2 ** attempt;
-            await sleep(backoffMs);
-            continue;
-          }
+					// Retry on rate limiting
+					if (response.status === 429 && attempt < retries) {
+						const backoffMs = this.initialBackoffMs * 2 ** attempt;
+						await sleep(backoffMs);
+						continue;
+					}
 
-          const errorBody = await response.text();
-          let errorMessage = `Alpaca Calendar API error: ${response.status}`;
+					const errorBody = await response.text();
+					let errorMessage = `Alpaca Calendar API error: ${response.status}`;
 
-          try {
-            const errorJson = JSON.parse(errorBody);
-            errorMessage = errorJson.message || errorMessage;
-          } catch {
-            errorMessage = errorBody || errorMessage;
-          }
+					try {
+						const errorJson = JSON.parse(errorBody);
+						errorMessage = errorJson.message || errorMessage;
+					} catch {
+						errorMessage = errorBody || errorMessage;
+					}
 
-          throw new CalendarClientError(errorMessage, errorCode);
-        }
+					throw new CalendarClientError(errorMessage, errorCode);
+				}
 
-        const text = await response.text();
-        return JSON.parse(text) as T;
-      } catch (error) {
-        if (error instanceof CalendarClientError) {
-          throw error;
-        }
+				const text = await response.text();
+				return JSON.parse(text) as T;
+			} catch (error) {
+				if (error instanceof CalendarClientError) {
+					throw error;
+				}
 
-        // Retry on network errors
-        if (attempt < retries) {
-          const backoffMs = this.initialBackoffMs * 2 ** attempt;
-          await sleep(backoffMs);
-          continue;
-        }
+				// Retry on network errors
+				if (attempt < retries) {
+					const backoffMs = this.initialBackoffMs * 2 ** attempt;
+					await sleep(backoffMs);
+					continue;
+				}
 
-        throw new CalendarClientError(
-          `Network error: ${error instanceof Error ? error.message : "Unknown error"}`,
-          "NETWORK_ERROR",
-          error instanceof Error ? error : undefined
-        );
-      }
-    }
+				throw new CalendarClientError(
+					`Network error: ${error instanceof Error ? error.message : "Unknown error"}`,
+					"NETWORK_ERROR",
+					error instanceof Error ? error : undefined
+				);
+			}
+		}
 
-    // Should not reach here, but TypeScript needs this
-    throw new CalendarClientError("Max retries exceeded", "NETWORK_ERROR");
-  }
+		// Should not reach here, but TypeScript needs this
+		throw new CalendarClientError("Max retries exceeded", "NETWORK_ERROR");
+	}
 }
 
 // ============================================
@@ -291,7 +291,7 @@ export class AlpacaCalendarClient {
  * @returns Configured client instance
  */
 export function createAlpacaCalendarClient(
-  config: AlpacaCalendarClientConfig
+	config: AlpacaCalendarClientConfig
 ): AlpacaCalendarClient {
-  return new AlpacaCalendarClient(config);
+	return new AlpacaCalendarClient(config);
 }

@@ -4,22 +4,22 @@ import type { AgentOutput } from "@/lib/api/types";
 import { AgentVoteCard } from "./AgentVoteCard";
 
 export interface AgentVotesGridProps {
-  outputs: AgentOutput[];
+	outputs: AgentOutput[];
 }
 
 export function AgentVotesGrid({ outputs }: AgentVotesGridProps): React.ReactElement {
-  return (
-    <div className="bg-white dark:bg-night-800 rounded-lg border border-cream-200 dark:border-night-700 p-6">
-      <h2 className="text-lg font-medium text-stone-900 dark:text-night-50 mb-4">Agent Votes</h2>
-      {outputs.length > 0 ? (
-        <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-4">
-          {outputs.map((output) => (
-            <AgentVoteCard key={output.agentType} output={output} />
-          ))}
-        </div>
-      ) : (
-        <p className="text-sm text-stone-500 dark:text-night-300">No agent votes recorded</p>
-      )}
-    </div>
-  );
+	return (
+		<div className="bg-white dark:bg-night-800 rounded-lg border border-cream-200 dark:border-night-700 p-6">
+			<h2 className="text-lg font-medium text-stone-900 dark:text-night-50 mb-4">Agent Votes</h2>
+			{outputs.length > 0 ? (
+				<div className="grid md:grid-cols-2 lg:grid-cols-4 gap-4">
+					{outputs.map((output) => (
+						<AgentVoteCard key={output.agentType} output={output} />
+					))}
+				</div>
+			) : (
+				<p className="text-sm text-stone-500 dark:text-night-300">No agent votes recorded</p>
+			)}
+		</div>
+	);
 }

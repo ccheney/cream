@@ -31,19 +31,19 @@ export const groundingAgent = createAgent("grounding_agent");
  * Instructs the agent on what to search for.
  */
 export function buildGroundingPrompt(symbols: string[]): string {
-  const symbolList = symbols.join(", ");
-  const symbolQueries = symbols
-    .map(
-      (s) => `
+	const symbolList = symbols.join(", ");
+	const symbolQueries = symbols
+		.map(
+			(s) => `
 For ${s}:
 - Search for "${s} stock news today"
 - Search for "${s} analyst rating outlook"
 - Search for "${s} earnings expectations"
 - Search for "${s} risks concerns"`
-    )
-    .join("\n");
+		)
+		.join("\n");
 
-  return `${buildDatetimeContext()}## Grounding Task
+	return `${buildDatetimeContext()}## Grounding Task
 
 Gather real-time web context for these trading symbols: ${symbolList}
 
@@ -79,21 +79,21 @@ If a search returns no relevant results for a category, use an empty array.`;
  * Run Grounding Agent (non-streaming).
  */
 export async function runGroundingAgent(context: AgentContext): Promise<GroundingOutput> {
-  const prompt = buildGroundingPrompt(context.symbols);
+	const prompt = buildGroundingPrompt(context.symbols);
 
-  const settings = getAgentRuntimeSettings("grounding_agent", context.agentConfigs);
-  const options = buildGenerateOptions(settings, { schema: GroundingOutputSchema });
+	const settings = getAgentRuntimeSettings("grounding_agent", context.agentConfigs);
+	const options = buildGenerateOptions(settings, { schema: GroundingOutputSchema });
 
-  const response = await groundingAgent.generate([{ role: "user", content: prompt }], options);
+	const response = await groundingAgent.generate([{ role: "user", content: prompt }], options);
 
-  const result = response.object as GroundingOutput | undefined;
-  return (
-    result ?? {
-      perSymbol: {},
-      global: { macro: [], events: [] },
-      sources: [],
-    }
-  );
+	const result = response.object as GroundingOutput | undefined;
+	return (
+		result ?? {
+			perSymbol: {},
+			global: { macro: [], events: [] },
+			sources: [],
+		}
+	);
 }
 
 /**
@@ -101,29 +101,29 @@ export async function runGroundingAgent(context: AgentContext): Promise<Groundin
  * Streams tool calls and results to the UI via onChunk callback.
  */
 export async function runGroundingAgentStreaming(
-  context: AgentContext,
-  onChunk: OnStreamChunk
+	context: AgentContext,
+	onChunk: OnStreamChunk
 ): Promise<GroundingOutput> {
-  const prompt = buildGroundingPrompt(context.symbols);
+	const prompt = buildGroundingPrompt(context.symbols);
 
-  const settings = getAgentRuntimeSettings("grounding_agent", context.agentConfigs);
-  const options = buildGenerateOptions(settings, { schema: GroundingOutputSchema });
+	const settings = getAgentRuntimeSettings("grounding_agent", context.agentConfigs);
+	const options = buildGenerateOptions(settings, { schema: GroundingOutputSchema });
 
-  const stream = await groundingAgent.stream([{ role: "user", content: prompt }], options);
-  const forwardChunk = createStreamChunkForwarder("grounding_agent", onChunk);
+	const stream = await groundingAgent.stream([{ role: "user", content: prompt }], options);
+	const forwardChunk = createStreamChunkForwarder("grounding_agent", onChunk);
 
-  for await (const chunk of stream.fullStream) {
-    await forwardChunk(chunk as { type: string; payload?: Record<string, unknown> });
-  }
+	for await (const chunk of stream.fullStream) {
+		await forwardChunk(chunk as { type: string; payload?: Record<string, unknown> });
+	}
 
-  const result = (await stream.object) as GroundingOutput | undefined;
-  return (
-    result ?? {
-      perSymbol: {},
-      global: { macro: [], events: [] },
-      sources: [],
-    }
-  );
+	const result = (await stream.object) as GroundingOutput | undefined;
+	return (
+		result ?? {
+			perSymbol: {},
+			global: { macro: [], events: [] },
+			sources: [],
+		}
+	);
 }
 
 // ============================================
@@ -134,9 +134,9 @@ export async function runGroundingAgentStreaming(
  * Create an empty grounding output for STUB mode or when grounding is skipped.
  */
 export function createEmptyGroundingOutput(): GroundingOutput {
-  return {
-    perSymbol: {},
-    global: { macro: [], events: [] },
-    sources: [],
-  };
+	return {
+		perSymbol: {},
+		global: { macro: [], events: [] },
+		sources: [],
+	};
 }

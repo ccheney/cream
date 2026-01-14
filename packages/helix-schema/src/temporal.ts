@@ -31,48 +31,48 @@
  * ```
  */
 export interface TemporalEdgeProperties {
-  /**
-   * Unix timestamp (ms) when the relationship started in reality.
-   * Event time - when this relationship actually began.
-   */
-  valid_from: number;
+	/**
+	 * Unix timestamp (ms) when the relationship started in reality.
+	 * Event time - when this relationship actually began.
+	 */
+	valid_from: number;
 
-  /**
-   * Unix timestamp (ms) when the relationship ended.
-   * null/undefined = relationship is current/active.
-   */
-  valid_to?: number;
+	/**
+	 * Unix timestamp (ms) when the relationship ended.
+	 * null/undefined = relationship is current/active.
+	 */
+	valid_to?: number;
 
-  /**
-   * Unix timestamp (ms) when we recorded this relationship.
-   * Ingestion time - when the system learned about this.
-   * Enables "what did we know at time X?" queries.
-   */
-  recorded_at: number;
+	/**
+	 * Unix timestamp (ms) when we recorded this relationship.
+	 * Ingestion time - when the system learned about this.
+	 * Enables "what did we know at time X?" queries.
+	 */
+	recorded_at: number;
 }
 
 /**
  * Point-in-time query options for temporal graph traversal.
  */
 export interface TemporalQueryOptions {
-  /**
-   * Query timestamp - only include edges active at this point in time.
-   * If not provided, returns all edges (including historical).
-   */
-  asOfTimestamp?: number;
+	/**
+	 * Query timestamp - only include edges active at this point in time.
+	 * If not provided, returns all edges (including historical).
+	 */
+	asOfTimestamp?: number;
 
-  /**
-   * Include only edges we knew about by this timestamp.
-   * Enables "what did we know at time X?" reconstruction.
-   * If not provided, includes all recorded edges.
-   */
-  knownAsOfTimestamp?: number;
+	/**
+	 * Include only edges we knew about by this timestamp.
+	 * Enables "what did we know at time X?" reconstruction.
+	 * If not provided, includes all recorded edges.
+	 */
+	knownAsOfTimestamp?: number;
 
-  /**
-   * Include expired edges (where valid_to < asOfTimestamp).
-   * Default: false (only include active edges).
-   */
-  includeExpired?: boolean;
+	/**
+	 * Include expired edges (where valid_to < asOfTimestamp).
+	 * Default: false (only include active edges).
+	 */
+	includeExpired?: boolean;
 }
 
 // ============================================
@@ -98,26 +98,26 @@ export interface TemporalQueryOptions {
  * ```
  */
 export function isEdgeActiveAt(
-  edge: Partial<TemporalEdgeProperties>,
-  asOfTimestamp: number
+	edge: Partial<TemporalEdgeProperties>,
+	asOfTimestamp: number
 ): boolean {
-  // No temporal data - treat as always active
-  if (edge.valid_from === undefined) {
-    return true;
-  }
+	// No temporal data - treat as always active
+	if (edge.valid_from === undefined) {
+		return true;
+	}
 
-  // Must have started before or at query time
-  if (edge.valid_from > asOfTimestamp) {
-    return false;
-  }
+	// Must have started before or at query time
+	if (edge.valid_from > asOfTimestamp) {
+		return false;
+	}
 
-  // If not expired, it's active
-  if (edge.valid_to === undefined || edge.valid_to === null) {
-    return true;
-  }
+	// If not expired, it's active
+	if (edge.valid_to === undefined || edge.valid_to === null) {
+		return true;
+	}
 
-  // Check if expired before query time
-  return edge.valid_to > asOfTimestamp;
+	// Check if expired before query time
+	return edge.valid_to > asOfTimestamp;
 }
 
 /**
@@ -128,15 +128,15 @@ export function isEdgeActiveAt(
  * @returns true if edge was recorded by that time
  */
 export function wasEdgeKnownAt(
-  edge: Partial<TemporalEdgeProperties>,
-  knownAsOfTimestamp: number
+	edge: Partial<TemporalEdgeProperties>,
+	knownAsOfTimestamp: number
 ): boolean {
-  // No recorded_at - treat as always known
-  if (edge.recorded_at === undefined) {
-    return true;
-  }
+	// No recorded_at - treat as always known
+	if (edge.recorded_at === undefined) {
+		return true;
+	}
 
-  return edge.recorded_at <= knownAsOfTimestamp;
+	return edge.recorded_at <= knownAsOfTimestamp;
 }
 
 /**
@@ -151,27 +151,27 @@ export function wasEdgeKnownAt(
  * @returns true if edge should be included in results
  */
 export function matchesTemporalQuery(
-  edge: Partial<TemporalEdgeProperties>,
-  options: TemporalQueryOptions
+	edge: Partial<TemporalEdgeProperties>,
+	options: TemporalQueryOptions
 ): boolean {
-  // Check event time (when relationship existed)
-  if (options.asOfTimestamp !== undefined) {
-    const isActive = isEdgeActiveAt(edge, options.asOfTimestamp);
+	// Check event time (when relationship existed)
+	if (options.asOfTimestamp !== undefined) {
+		const isActive = isEdgeActiveAt(edge, options.asOfTimestamp);
 
-    // If not active and we don't want expired edges, exclude
-    if (!isActive && !options.includeExpired) {
-      return false;
-    }
-  }
+		// If not active and we don't want expired edges, exclude
+		if (!isActive && !options.includeExpired) {
+			return false;
+		}
+	}
 
-  // Check ingestion time (when we knew about it)
-  if (options.knownAsOfTimestamp !== undefined) {
-    if (!wasEdgeKnownAt(edge, options.knownAsOfTimestamp)) {
-      return false;
-    }
-  }
+	// Check ingestion time (when we knew about it)
+	if (options.knownAsOfTimestamp !== undefined) {
+		if (!wasEdgeKnownAt(edge, options.knownAsOfTimestamp)) {
+			return false;
+		}
+	}
 
-  return true;
+	return true;
 }
 
 // ============================================
@@ -201,14 +201,14 @@ export function matchesTemporalQuery(
  * ```
  */
 export function createTemporalEdge(
-  validFrom: number = Date.now(),
-  validTo?: number
+	validFrom: number = Date.now(),
+	validTo?: number
 ): TemporalEdgeProperties {
-  return {
-    valid_from: validFrom,
-    valid_to: validTo,
-    recorded_at: Date.now(),
-  };
+	return {
+		valid_from: validFrom,
+		valid_to: validTo,
+		recorded_at: Date.now(),
+	};
 }
 
 /**
@@ -219,13 +219,13 @@ export function createTemporalEdge(
  * @returns Updated temporal properties with valid_to set
  */
 export function expireEdge(
-  edge: TemporalEdgeProperties,
-  expiredAt: number = Date.now()
+	edge: TemporalEdgeProperties,
+	expiredAt: number = Date.now()
 ): TemporalEdgeProperties {
-  return {
-    ...edge,
-    valid_to: expiredAt,
-  };
+	return {
+		...edge,
+		valid_to: expiredAt,
+	};
 }
 
 // ============================================
@@ -245,33 +245,33 @@ export function expireEdge(
  * @returns Edge with temporal properties added
  */
 export function addTemporalPropertiesToEdge(
-  existingEdge: Record<string, unknown>,
-  migrationTimestamp: number = Date.now()
+	existingEdge: Record<string, unknown>,
+	migrationTimestamp: number = Date.now()
 ): TemporalEdgeProperties {
-  // Try to extract created_at from existing edge
-  let validFrom = migrationTimestamp;
+	// Try to extract created_at from existing edge
+	let validFrom = migrationTimestamp;
 
-  if (typeof existingEdge.created_at === "string") {
-    const parsed = Date.parse(existingEdge.created_at);
-    if (!Number.isNaN(parsed)) {
-      validFrom = parsed;
-    }
-  } else if (typeof existingEdge.created_at === "number") {
-    validFrom = existingEdge.created_at;
-  } else if (typeof existingEdge.timestamp === "string") {
-    const parsed = Date.parse(existingEdge.timestamp);
-    if (!Number.isNaN(parsed)) {
-      validFrom = parsed;
-    }
-  } else if (typeof existingEdge.timestamp === "number") {
-    validFrom = existingEdge.timestamp;
-  }
+	if (typeof existingEdge.created_at === "string") {
+		const parsed = Date.parse(existingEdge.created_at);
+		if (!Number.isNaN(parsed)) {
+			validFrom = parsed;
+		}
+	} else if (typeof existingEdge.created_at === "number") {
+		validFrom = existingEdge.created_at;
+	} else if (typeof existingEdge.timestamp === "string") {
+		const parsed = Date.parse(existingEdge.timestamp);
+		if (!Number.isNaN(parsed)) {
+			validFrom = parsed;
+		}
+	} else if (typeof existingEdge.timestamp === "number") {
+		validFrom = existingEdge.timestamp;
+	}
 
-  return {
-    valid_from: validFrom,
-    valid_to: undefined,
-    recorded_at: migrationTimestamp,
-  };
+	return {
+		valid_from: validFrom,
+		valid_to: undefined,
+		recorded_at: migrationTimestamp,
+	};
 }
 
 // ============================================
@@ -282,20 +282,20 @@ export function addTemporalPropertiesToEdge(
  * Statistics about temporal edges in a result set.
  */
 export interface TemporalEdgeStats {
-  /** Total edges examined */
-  totalEdges: number;
-  /** Edges with temporal data */
-  temporalEdges: number;
-  /** Edges without temporal data (legacy) */
-  legacyEdges: number;
-  /** Active edges (valid_to is null/undefined) */
-  activeEdges: number;
-  /** Expired edges (valid_to is set) */
-  expiredEdges: number;
-  /** Earliest valid_from timestamp */
-  earliestValidFrom?: number;
-  /** Latest valid_to timestamp (among expired) */
-  latestValidTo?: number;
+	/** Total edges examined */
+	totalEdges: number;
+	/** Edges with temporal data */
+	temporalEdges: number;
+	/** Edges without temporal data (legacy) */
+	legacyEdges: number;
+	/** Active edges (valid_to is null/undefined) */
+	activeEdges: number;
+	/** Expired edges (valid_to is set) */
+	expiredEdges: number;
+	/** Earliest valid_from timestamp */
+	earliestValidFrom?: number;
+	/** Latest valid_to timestamp (among expired) */
+	latestValidTo?: number;
 }
 
 /**
@@ -305,37 +305,37 @@ export interface TemporalEdgeStats {
  * @returns Statistics about temporal coverage
  */
 export function calculateTemporalStats(
-  edges: Array<Partial<TemporalEdgeProperties>>
+	edges: Array<Partial<TemporalEdgeProperties>>
 ): TemporalEdgeStats {
-  const stats: TemporalEdgeStats = {
-    totalEdges: edges.length,
-    temporalEdges: 0,
-    legacyEdges: 0,
-    activeEdges: 0,
-    expiredEdges: 0,
-  };
+	const stats: TemporalEdgeStats = {
+		totalEdges: edges.length,
+		temporalEdges: 0,
+		legacyEdges: 0,
+		activeEdges: 0,
+		expiredEdges: 0,
+	};
 
-  for (const edge of edges) {
-    if (edge.valid_from !== undefined) {
-      stats.temporalEdges++;
+	for (const edge of edges) {
+		if (edge.valid_from !== undefined) {
+			stats.temporalEdges++;
 
-      if (edge.valid_to === undefined || edge.valid_to === null) {
-        stats.activeEdges++;
-      } else {
-        stats.expiredEdges++;
-        if (stats.latestValidTo === undefined || edge.valid_to > stats.latestValidTo) {
-          stats.latestValidTo = edge.valid_to;
-        }
-      }
+			if (edge.valid_to === undefined || edge.valid_to === null) {
+				stats.activeEdges++;
+			} else {
+				stats.expiredEdges++;
+				if (stats.latestValidTo === undefined || edge.valid_to > stats.latestValidTo) {
+					stats.latestValidTo = edge.valid_to;
+				}
+			}
 
-      if (stats.earliestValidFrom === undefined || edge.valid_from < stats.earliestValidFrom) {
-        stats.earliestValidFrom = edge.valid_from;
-      }
-    } else {
-      stats.legacyEdges++;
-      stats.activeEdges++; // Legacy edges treated as active
-    }
-  }
+			if (stats.earliestValidFrom === undefined || edge.valid_from < stats.earliestValidFrom) {
+				stats.earliestValidFrom = edge.valid_from;
+			}
+		} else {
+			stats.legacyEdges++;
+			stats.activeEdges++; // Legacy edges treated as active
+		}
+	}
 
-  return stats;
+	return stats;
 }

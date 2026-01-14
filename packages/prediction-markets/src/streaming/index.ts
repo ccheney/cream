@@ -5,11 +5,11 @@
  */
 
 export {
-  createStreamingServiceFromConfig,
-  createUnifiedStreamingService,
-  type Platform,
-  type StreamingCallback,
-  type StreamingConfig,
-  type StreamingMarketUpdate,
-  UnifiedStreamingService,
+	createStreamingServiceFromConfig,
+	createUnifiedStreamingService,
+	type Platform,
+	type StreamingCallback,
+	type StreamingConfig,
+	type StreamingMarketUpdate,
+	UnifiedStreamingService,
 } from "./unified-streaming";

@@ -15,28 +15,28 @@
 import type { FactorZooStats, ResearchTrigger } from "@cream/domain";
 
 export interface IdeaContext {
-  /** Current market regime classification */
-  regime: string;
-  /** Market regimes not covered by active factors */
-  gaps: string[];
-  /** Factors currently experiencing alpha decay */
-  decayingFactors: Array<{ id: string; decayRate: number }>;
-  /** Similar past hypotheses from HelixDB memory */
-  memoryResults: HypothesisMemory[];
-  /** Summary statistics of the Factor Zoo */
-  factorZooSummary: string;
-  /** The research trigger that initiated this request */
-  trigger: ResearchTrigger;
+	/** Current market regime classification */
+	regime: string;
+	/** Market regimes not covered by active factors */
+	gaps: string[];
+	/** Factors currently experiencing alpha decay */
+	decayingFactors: Array<{ id: string; decayRate: number }>;
+	/** Similar past hypotheses from HelixDB memory */
+	memoryResults: HypothesisMemory[];
+	/** Summary statistics of the Factor Zoo */
+	factorZooSummary: string;
+	/** The research trigger that initiated this request */
+	trigger: ResearchTrigger;
 }
 
 export interface HypothesisMemory {
-  hypothesisId: string;
-  title: string;
-  status: "validated" | "rejected";
-  targetRegime: string;
-  ic?: number;
-  sharpe?: number;
-  lessonsLearned?: string;
+	hypothesisId: string;
+	title: string;
+	status: "validated" | "rejected";
+	targetRegime: string;
+	ic?: number;
+	sharpe?: number;
+	lessonsLearned?: string;
 }
 
 export const IDEA_AGENT_SYSTEM_PROMPT = `<system>
@@ -99,43 +99,43 @@ Generate a novel alpha factor hypothesis using Chain-of-Thought reasoning:
 </instructions>`;
 
 export function buildIdeaAgentUserPrompt(context: IdeaContext): string {
-  const { regime, gaps, decayingFactors, memoryResults, factorZooSummary, trigger } = context;
+	const { regime, gaps, decayingFactors, memoryResults, factorZooSummary, trigger } = context;
 
-  // Format datetime for prompt
-  const now = new Date();
-  const eastern = now.toLocaleString("en-US", {
-    timeZone: "America/New_York",
-    year: "numeric",
-    month: "2-digit",
-    day: "2-digit",
-    hour: "2-digit",
-    minute: "2-digit",
-    second: "2-digit",
-    hour12: false,
-  });
+	// Format datetime for prompt
+	const now = new Date();
+	const eastern = now.toLocaleString("en-US", {
+		timeZone: "America/New_York",
+		year: "numeric",
+		month: "2-digit",
+		day: "2-digit",
+		hour: "2-digit",
+		minute: "2-digit",
+		second: "2-digit",
+		hour12: false,
+	});
 
-  const decayingInfo =
-    decayingFactors.length > 0
-      ? decayingFactors.map((f) => `${f.id} (decay rate: ${f.decayRate.toFixed(4)}/day)`).join(", ")
-      : "None currently decaying";
+	const decayingInfo =
+		decayingFactors.length > 0
+			? decayingFactors.map((f) => `${f.id} (decay rate: ${f.decayRate.toFixed(4)}/day)`).join(", ")
+			: "None currently decaying";
 
-  const memoryInfo =
-    memoryResults.length > 0
-      ? JSON.stringify(
-          memoryResults.map((h) => ({
-            id: h.hypothesisId,
-            title: h.title,
-            status: h.status,
-            regime: h.targetRegime,
-            ic: h.ic,
-            lessons: h.lessonsLearned,
-          })),
-          null,
-          2
-        )
-      : "No similar past hypotheses found";
+	const memoryInfo =
+		memoryResults.length > 0
+			? JSON.stringify(
+					memoryResults.map((h) => ({
+						id: h.hypothesisId,
+						title: h.title,
+						status: h.status,
+						regime: h.targetRegime,
+						ic: h.ic,
+						lessons: h.lessonsLearned,
+					})),
+					null,
+					2
+				)
+			: "No similar past hypotheses found";
 
-  return `Current Date/Time (UTC): ${now.toISOString()}
+	return `Current Date/Time (UTC): ${now.toISOString()}
 Current Date/Time (US Eastern): ${eastern}
 
 <context>
@@ -178,7 +178,7 @@ Output a complete hypothesis in the specified JSON format.
 }
 
 export function buildFactorZooSummary(stats: FactorZooStats, activeFactorNames: string[]): string {
-  return `Total Factors: ${stats.totalFactors}
+	return `Total Factors: ${stats.totalFactors}
 Active Factors: ${stats.activeFactors}
 Decaying Factors: ${stats.decayingFactors}
 Research In Progress: ${stats.researchFactors}

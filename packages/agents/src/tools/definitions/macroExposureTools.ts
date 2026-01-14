@@ -11,18 +11,18 @@ import { createContext, requireEnv } from "@cream/domain";
 import { createTool } from "@mastra/core/tools";
 import { z } from "zod";
 import {
-  getAvailableMacroFactors,
-  getCompaniesAffectedByMacro,
-  getCompanyMacroExposure,
-  getMacroFactorsByCategory,
-  getPortfolioMacroExposure,
+	getAvailableMacroFactors,
+	getCompaniesAffectedByMacro,
+	getCompanyMacroExposure,
+	getMacroFactorsByCategory,
+	getPortfolioMacroExposure,
 } from "../implementations/macroExposure.js";
 
 /**
  * Create ExecutionContext for tool invocation.
  */
 function createToolContext() {
-  return createContext(requireEnv(), "scheduled");
+	return createContext(requireEnv(), "scheduled");
 }
 
 // ============================================
@@ -30,102 +30,102 @@ function createToolContext() {
 // ============================================
 
 const MacroCategorySchema = z
-  .enum([
-    "INTEREST_RATES",
-    "COMMODITIES",
-    "CURRENCIES",
-    "VOLATILITY",
-    "CREDIT",
-    "ECONOMIC_INDICATORS",
-  ])
-  .describe("Category of macro economic factor");
+	.enum([
+		"INTEREST_RATES",
+		"COMMODITIES",
+		"CURRENCIES",
+		"VOLATILITY",
+		"CREDIT",
+		"ECONOMIC_INDICATORS",
+	])
+	.describe("Category of macro economic factor");
 
 const MacroExposureSchema = z.object({
-  entityId: z.string().describe("Macro entity ID (e.g., 'fed_funds_rate')"),
-  name: z.string().describe("Human-readable factor name"),
-  description: z.string().describe("Description of the macro factor"),
-  sensitivity: z.number().min(0).max(1).describe("Sensitivity score (0-1, 1 = highly sensitive)"),
-  category: MacroCategorySchema,
+	entityId: z.string().describe("Macro entity ID (e.g., 'fed_funds_rate')"),
+	name: z.string().describe("Human-readable factor name"),
+	description: z.string().describe("Description of the macro factor"),
+	sensitivity: z.number().min(0).max(1).describe("Sensitivity score (0-1, 1 = highly sensitive)"),
+	category: MacroCategorySchema,
 });
 
 const AggregatedExposureSchema = z.object({
-  entityId: z.string().describe("Macro entity ID"),
-  name: z.string().describe("Factor name"),
-  category: MacroCategorySchema,
-  avgSensitivity: z.number().describe("Average sensitivity across portfolio"),
-  companyCount: z.number().describe("Number of companies exposed"),
-  topExposed: z
-    .array(z.object({ symbol: z.string(), sensitivity: z.number() }))
-    .describe("Companies with highest sensitivity"),
+	entityId: z.string().describe("Macro entity ID"),
+	name: z.string().describe("Factor name"),
+	category: MacroCategorySchema,
+	avgSensitivity: z.number().describe("Average sensitivity across portfolio"),
+	companyCount: z.number().describe("Number of companies exposed"),
+	topExposed: z
+		.array(z.object({ symbol: z.string(), sensitivity: z.number() }))
+		.describe("Companies with highest sensitivity"),
 });
 
 const AffectedCompanySchema = z.object({
-  symbol: z.string().describe("Company ticker symbol"),
-  sensitivity: z.number().min(0).max(1).describe("Sensitivity to the macro factor"),
+	symbol: z.string().describe("Company ticker symbol"),
+	sensitivity: z.number().min(0).max(1).describe("Sensitivity to the macro factor"),
 });
 
 const MacroFactorSchema = z.object({
-  entityId: z.string().describe("Macro entity ID"),
-  name: z.string().describe("Factor name"),
-  description: z.string().describe("Description"),
-  category: MacroCategorySchema,
-  frequency: z.string().describe("Data release frequency (MONTHLY, QUARTERLY, etc.)"),
-  dataSymbol: z.string().optional().describe("Market data symbol if available"),
+	entityId: z.string().describe("Macro entity ID"),
+	name: z.string().describe("Factor name"),
+	description: z.string().describe("Description"),
+	category: MacroCategorySchema,
+	frequency: z.string().describe("Data release frequency (MONTHLY, QUARTERLY, etc.)"),
+	dataSymbol: z.string().optional().describe("Market data symbol if available"),
 });
 
 export const CompanyMacroExposureInputSchema = z.object({
-  symbol: z
-    .string()
-    .min(1)
-    .max(10)
-    .describe("Company ticker symbol to query macro exposure for (e.g., 'JPM')"),
+	symbol: z
+		.string()
+		.min(1)
+		.max(10)
+		.describe("Company ticker symbol to query macro exposure for (e.g., 'JPM')"),
 });
 
 export const CompanyMacroExposureOutputSchema = z.object({
-  symbol: z.string().describe("The queried company symbol"),
-  exposures: z.array(MacroExposureSchema).describe("Macro factors affecting this company"),
-  executionTimeMs: z.number().describe("Query execution time in milliseconds"),
+	symbol: z.string().describe("The queried company symbol"),
+	exposures: z.array(MacroExposureSchema).describe("Macro factors affecting this company"),
+	executionTimeMs: z.number().describe("Query execution time in milliseconds"),
 });
 
 export const PortfolioMacroExposureInputSchema = z.object({
-  symbols: z
-    .array(z.string().min(1).max(10))
-    .min(1)
-    .max(50)
-    .describe("List of company ticker symbols to analyze (e.g., ['AAPL', 'JPM', 'XOM'])"),
+	symbols: z
+		.array(z.string().min(1).max(10))
+		.min(1)
+		.max(50)
+		.describe("List of company ticker symbols to analyze (e.g., ['AAPL', 'JPM', 'XOM'])"),
 });
 
 export const PortfolioMacroExposureOutputSchema = z.object({
-  symbols: z.array(z.string()).describe("Companies analyzed"),
-  aggregatedExposures: z.array(AggregatedExposureSchema).describe("Aggregated exposure by factor"),
-  executionTimeMs: z.number().describe("Query execution time in milliseconds"),
+	symbols: z.array(z.string()).describe("Companies analyzed"),
+	aggregatedExposures: z.array(AggregatedExposureSchema).describe("Aggregated exposure by factor"),
+	executionTimeMs: z.number().describe("Query execution time in milliseconds"),
 });
 
 export const CompaniesAffectedInputSchema = z.object({
-  macroEntityId: z
-    .string()
-    .min(1)
-    .describe(
-      "Macro entity ID to query (e.g., 'fed_funds_rate', 'oil_wti', 'vix'). Use list_macro_factors to see available factors."
-    ),
+	macroEntityId: z
+		.string()
+		.min(1)
+		.describe(
+			"Macro entity ID to query (e.g., 'fed_funds_rate', 'oil_wti', 'vix'). Use list_macro_factors to see available factors."
+		),
 });
 
 export const CompaniesAffectedOutputSchema = z.object({
-  macroEntityId: z.string().describe("The macro factor ID"),
-  name: z.string().describe("Human-readable factor name"),
-  affectedCompanies: z.array(AffectedCompanySchema).describe("Companies affected by this factor"),
-  executionTimeMs: z.number().describe("Query execution time in milliseconds"),
+	macroEntityId: z.string().describe("The macro factor ID"),
+	name: z.string().describe("Human-readable factor name"),
+	affectedCompanies: z.array(AffectedCompanySchema).describe("Companies affected by this factor"),
+	executionTimeMs: z.number().describe("Query execution time in milliseconds"),
 });
 
 export const ListMacroFactorsInputSchema = z.object({
-  category: MacroCategorySchema.optional().describe(
-    "Optional category to filter by. If not provided, returns all factors."
-  ),
+	category: MacroCategorySchema.optional().describe(
+		"Optional category to filter by. If not provided, returns all factors."
+	),
 });
 
 export const ListMacroFactorsOutputSchema = z.object({
-  factors: z.array(MacroFactorSchema).describe("Available macro factors"),
-  sectorsWithDefaults: z.array(z.string()).describe("Sectors with predefined sensitivity defaults"),
+	factors: z.array(MacroFactorSchema).describe("Available macro factors"),
+	sectorsWithDefaults: z.array(z.string()).describe("Sectors with predefined sensitivity defaults"),
 });
 
 export type CompanyMacroExposureInput = z.infer<typeof CompanyMacroExposureInputSchema>;
@@ -142,8 +142,8 @@ export type ListMacroFactorsOutput = z.infer<typeof ListMacroFactorsOutputSchema
 // ============================================
 
 export const companyMacroExposureTool = createTool({
-  id: "company_macro_exposure",
-  description: `Get macro factor exposures for a company.
+	id: "company_macro_exposure",
+	description: `Get macro factor exposures for a company.
 
 Use this tool when you need to understand:
 - How sensitive a company is to interest rate changes
@@ -171,17 +171,17 @@ Categories of factors:
 
 BACKTEST mode: Returns empty exposures.
 PAPER/LIVE mode: Queries HelixDB macro graph.`,
-  inputSchema: CompanyMacroExposureInputSchema,
-  outputSchema: CompanyMacroExposureOutputSchema,
-  execute: async (inputData): Promise<CompanyMacroExposureOutput> => {
-    const ctx = createToolContext();
-    return getCompanyMacroExposure(ctx, inputData.symbol);
-  },
+	inputSchema: CompanyMacroExposureInputSchema,
+	outputSchema: CompanyMacroExposureOutputSchema,
+	execute: async (inputData): Promise<CompanyMacroExposureOutput> => {
+		const ctx = createToolContext();
+		return getCompanyMacroExposure(ctx, inputData.symbol);
+	},
 });
 
 export const portfolioMacroExposureTool = createTool({
-  id: "portfolio_macro_exposure",
-  description: `Analyze macro factor exposure across a portfolio of companies.
+	id: "portfolio_macro_exposure",
+	description: `Analyze macro factor exposure across a portfolio of companies.
 
 Use this tool when you need to:
 - Identify concentrated macro risks in a portfolio
@@ -206,17 +206,17 @@ Interpretation:
 
 BACKTEST mode: Returns empty aggregations.
 PAPER/LIVE mode: Queries HelixDB macro graph for each company.`,
-  inputSchema: PortfolioMacroExposureInputSchema,
-  outputSchema: PortfolioMacroExposureOutputSchema,
-  execute: async (inputData): Promise<PortfolioMacroExposureOutput> => {
-    const ctx = createToolContext();
-    return getPortfolioMacroExposure(ctx, inputData.symbols);
-  },
+	inputSchema: PortfolioMacroExposureInputSchema,
+	outputSchema: PortfolioMacroExposureOutputSchema,
+	execute: async (inputData): Promise<PortfolioMacroExposureOutput> => {
+		const ctx = createToolContext();
+		return getPortfolioMacroExposure(ctx, inputData.symbols);
+	},
 });
 
 export const companiesAffectedByMacroTool = createTool({
-  id: "companies_affected_by_macro",
-  description: `Get companies affected by a specific macro factor.
+	id: "companies_affected_by_macro",
+	description: `Get companies affected by a specific macro factor.
 
 Use this tool when you need to:
 - Find all holdings impacted by a specific macro change (e.g., Fed rate hike)
@@ -242,17 +242,17 @@ Use list_macro_factors tool to see all available factors.
 
 BACKTEST mode: Returns empty list.
 PAPER/LIVE mode: Queries HelixDB macro graph.`,
-  inputSchema: CompaniesAffectedInputSchema,
-  outputSchema: CompaniesAffectedOutputSchema,
-  execute: async (inputData): Promise<CompaniesAffectedOutput> => {
-    const ctx = createToolContext();
-    return getCompaniesAffectedByMacro(ctx, inputData.macroEntityId);
-  },
+	inputSchema: CompaniesAffectedInputSchema,
+	outputSchema: CompaniesAffectedOutputSchema,
+	execute: async (inputData): Promise<CompaniesAffectedOutput> => {
+		const ctx = createToolContext();
+		return getCompaniesAffectedByMacro(ctx, inputData.macroEntityId);
+	},
 });
 
 export const listMacroFactorsTool = createTool({
-  id: "list_macro_factors",
-  description: `List available macro factors that can be queried.
+	id: "list_macro_factors",
+	description: `List available macro factors that can be queried.
 
 Use this tool to:
 - Discover what macro factors are available for analysis
@@ -273,41 +273,41 @@ Categories:
 - ECONOMIC_INDICATORS: GDP, inflation, employment data
 
 This tool does not require database access and works in all modes.`,
-  inputSchema: ListMacroFactorsInputSchema,
-  outputSchema: ListMacroFactorsOutputSchema,
-  execute: async (inputData): Promise<ListMacroFactorsOutput> => {
-    if (inputData.category) {
-      const filtered = getMacroFactorsByCategory(inputData.category);
-      return {
-        factors: filtered,
-        sectorsWithDefaults: Object.keys(
-          // Import statically to avoid context issues
-          {
-            "Financial Services": {},
-            Technology: {},
-            Energy: {},
-            "Basic Materials": {},
-            "Consumer Cyclical": {},
-            "Consumer Defensive": {},
-            Healthcare: {},
-            Utilities: {},
-            "Real Estate": {},
-            Industrials: {},
-            "Communication Services": {},
-          }
-        ),
-      };
-    }
-    return getAvailableMacroFactors();
-  },
+	inputSchema: ListMacroFactorsInputSchema,
+	outputSchema: ListMacroFactorsOutputSchema,
+	execute: async (inputData): Promise<ListMacroFactorsOutput> => {
+		if (inputData.category) {
+			const filtered = getMacroFactorsByCategory(inputData.category);
+			return {
+				factors: filtered,
+				sectorsWithDefaults: Object.keys(
+					// Import statically to avoid context issues
+					{
+						"Financial Services": {},
+						Technology: {},
+						Energy: {},
+						"Basic Materials": {},
+						"Consumer Cyclical": {},
+						"Consumer Defensive": {},
+						Healthcare: {},
+						Utilities: {},
+						"Real Estate": {},
+						Industrials: {},
+						"Communication Services": {},
+					}
+				),
+			};
+		}
+		return getAvailableMacroFactors();
+	},
 });
 
 /**
  * All macro exposure tools
  */
 export const macroExposureTools = [
-  companyMacroExposureTool,
-  portfolioMacroExposureTool,
-  companiesAffectedByMacroTool,
-  listMacroFactorsTool,
+	companyMacroExposureTool,
+	portfolioMacroExposureTool,
+	companiesAffectedByMacroTool,
+	listMacroFactorsTool,
 ];

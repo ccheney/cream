@@ -10,8 +10,8 @@
 import type { OHLCVBar } from "../../types";
 
 export interface SMAResult {
-  value: number | null;
-  timestamp: number;
+	value: number | null;
+	timestamp: number;
 }
 
 /**
@@ -22,13 +22,13 @@ export interface SMAResult {
  * @returns SMA value for the most recent bar, or null if insufficient data
  */
 export function calculateSMA(bars: OHLCVBar[], period: number): number | null {
-  if (bars.length < period) {
-    return null;
-  }
+	if (bars.length < period) {
+		return null;
+	}
 
-  const recentBars = bars.slice(-period);
-  const sum = recentBars.reduce((acc, bar) => acc + bar.close, 0);
-  return sum / period;
+	const recentBars = bars.slice(-period);
+	const sum = recentBars.reduce((acc, bar) => acc + bar.close, 0);
+	return sum / period;
 }
 
 /**
@@ -39,15 +39,15 @@ export function calculateSMA(bars: OHLCVBar[], period: number): number | null {
  * @returns Array of SMA values (null for bars with insufficient history)
  */
 export function calculateSMASeries(bars: OHLCVBar[], period: number): SMAResult[] {
-  return bars.map((bar, index) => {
-    if (index < period - 1) {
-      return { value: null, timestamp: bar.timestamp };
-    }
+	return bars.map((bar, index) => {
+		if (index < period - 1) {
+			return { value: null, timestamp: bar.timestamp };
+		}
 
-    const windowBars = bars.slice(index - period + 1, index + 1);
-    const sum = windowBars.reduce((acc, b) => acc + b.close, 0);
-    return { value: sum / period, timestamp: bar.timestamp };
-  });
+		const windowBars = bars.slice(index - period + 1, index + 1);
+		const sum = windowBars.reduce((acc, b) => acc + b.close, 0);
+		return { value: sum / period, timestamp: bar.timestamp };
+	});
 }
 
 // ============================================================
@@ -65,12 +65,12 @@ export function calculateSMASeries(bars: OHLCVBar[], period: number): SMAResult[
  * @returns true if golden cross occurred
  */
 export function isGoldenCross(
-  prevFast: number,
-  prevSlow: number,
-  currFast: number,
-  currSlow: number
+	prevFast: number,
+	prevSlow: number,
+	currFast: number,
+	currSlow: number
 ): boolean {
-  return prevFast <= prevSlow && currFast > currSlow;
+	return prevFast <= prevSlow && currFast > currSlow;
 }
 
 /**
@@ -84,10 +84,10 @@ export function isGoldenCross(
  * @returns true if death cross occurred
  */
 export function isDeathCross(
-  prevFast: number,
-  prevSlow: number,
-  currFast: number,
-  currSlow: number
+	prevFast: number,
+	prevSlow: number,
+	currFast: number,
+	currSlow: number
 ): boolean {
-  return prevFast >= prevSlow && currFast < currSlow;
+	return prevFast >= prevSlow && currFast < currSlow;
 }

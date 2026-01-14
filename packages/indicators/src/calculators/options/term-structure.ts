@@ -27,39 +27,39 @@ import { calculateATMIV } from "./iv-skew";
 // ============================================================
 
 export interface TermStructurePoint {
-  /** Days to expiration */
-  daysToExpiry: number;
-  /** Expiration date (ISO string) */
-  expiration: string;
-  /** ATM implied volatility */
-  atmIV: number;
+	/** Days to expiration */
+	daysToExpiry: number;
+	/** Expiration date (ISO string) */
+	expiration: string;
+	/** ATM implied volatility */
+	atmIV: number;
 }
 
 export interface TermStructureResult {
-  /** Underlying symbol */
-  symbol: string;
-  /** IV term structure points */
-  points: TermStructurePoint[];
-  /** Slope: (long IV - short IV) / days difference */
-  slope: number;
-  /** Front-month ATM IV */
-  frontIV: number;
-  /** Back-month ATM IV */
-  backIV: number;
-  /** Days between front and back */
-  daysDifference: number;
-  /** Structure shape classification */
-  shape: TermStructureShape;
-  /** Timestamp */
-  timestamp: number;
+	/** Underlying symbol */
+	symbol: string;
+	/** IV term structure points */
+	points: TermStructurePoint[];
+	/** Slope: (long IV - short IV) / days difference */
+	slope: number;
+	/** Front-month ATM IV */
+	frontIV: number;
+	/** Back-month ATM IV */
+	backIV: number;
+	/** Days between front and back */
+	daysDifference: number;
+	/** Structure shape classification */
+	shape: TermStructureShape;
+	/** Timestamp */
+	timestamp: number;
 }
 
 export type TermStructureShape =
-  | "steep_contango"
-  | "contango"
-  | "flat"
-  | "backwardation"
-  | "steep_backwardation";
+	| "steep_contango"
+	| "contango"
+	| "flat"
+	| "backwardation"
+	| "steep_backwardation";
 
 // ============================================================
 // CALCULATORS
@@ -69,9 +69,9 @@ export type TermStructureShape =
  * Calculate days to expiry from expiration date
  */
 function calculateDaysToExpiry(expiration: string, referenceDate: Date): number {
-  const expiryDate = new Date(expiration);
-  const diffMs = expiryDate.getTime() - referenceDate.getTime();
-  return Math.max(0, Math.ceil(diffMs / (1000 * 60 * 60 * 24)));
+	const expiryDate = new Date(expiration);
+	const diffMs = expiryDate.getTime() - referenceDate.getTime();
+	return Math.max(0, Math.ceil(diffMs / (1000 * 60 * 60 * 24)));
 }
 
 /**
@@ -82,33 +82,33 @@ function calculateDaysToExpiry(expiration: string, referenceDate: Date): number 
  * @returns Array of term structure points
  */
 export function buildTermStructure(
-  chains: OptionsChain[],
-  referenceDate: Date = new Date()
+	chains: OptionsChain[],
+	referenceDate: Date = new Date()
 ): TermStructurePoint[] {
-  const points: TermStructurePoint[] = [];
+	const points: TermStructurePoint[] = [];
 
-  for (const chain of chains) {
-    const atmIV = calculateATMIV(chain);
-    if (atmIV === null) {
-      continue;
-    }
+	for (const chain of chains) {
+		const atmIV = calculateATMIV(chain);
+		if (atmIV === null) {
+			continue;
+		}
 
-    const daysToExpiry = calculateDaysToExpiry(chain.expiration, referenceDate);
-    if (daysToExpiry <= 0) {
-      continue; // Skip expired options
-    }
+		const daysToExpiry = calculateDaysToExpiry(chain.expiration, referenceDate);
+		if (daysToExpiry <= 0) {
+			continue; // Skip expired options
+		}
 
-    points.push({
-      daysToExpiry,
-      expiration: chain.expiration,
-      atmIV,
-    });
-  }
+		points.push({
+			daysToExpiry,
+			expiration: chain.expiration,
+			atmIV,
+		});
+	}
 
-  // Sort by days to expiry
-  points.sort((a, b) => a.daysToExpiry - b.daysToExpiry);
+	// Sort by days to expiry
+	points.sort((a, b) => a.daysToExpiry - b.daysToExpiry);
 
-  return points;
+	return points;
 }
 
 /**
@@ -129,50 +129,50 @@ export function buildTermStructure(
  * ```
  */
 export function calculateTermStructureSlope(
-  chains: OptionsChain[],
-  referenceDate: Date = new Date()
+	chains: OptionsChain[],
+	referenceDate: Date = new Date()
 ): TermStructureResult | null {
-  if (chains.length < 2) {
-    return null;
-  }
+	if (chains.length < 2) {
+		return null;
+	}
 
-  const symbol = chains[0]?.underlyingSymbol;
-  if (!symbol) {
-    return null;
-  }
+	const symbol = chains[0]?.underlyingSymbol;
+	if (!symbol) {
+		return null;
+	}
 
-  const points = buildTermStructure(chains, referenceDate);
+	const points = buildTermStructure(chains, referenceDate);
 
-  if (points.length < 2) {
-    return null;
-  }
+	if (points.length < 2) {
+		return null;
+	}
 
-  // Use first and last points for slope
-  const front = points[0];
-  const back = points[points.length - 1];
+	// Use first and last points for slope
+	const front = points[0];
+	const back = points[points.length - 1];
 
-  if (!front || !back) {
-    return null;
-  }
+	if (!front || !back) {
+		return null;
+	}
 
-  const daysDifference = back.daysToExpiry - front.daysToExpiry;
-  if (daysDifference <= 0) {
-    return null;
-  }
+	const daysDifference = back.daysToExpiry - front.daysToExpiry;
+	if (daysDifference <= 0) {
+		return null;
+	}
 
-  const slope = (back.atmIV - front.atmIV) / daysDifference;
-  const shape = classifyTermStructureShape(slope);
+	const slope = (back.atmIV - front.atmIV) / daysDifference;
+	const shape = classifyTermStructureShape(slope);
 
-  return {
-    symbol,
-    points,
-    slope,
-    frontIV: front.atmIV,
-    backIV: back.atmIV,
-    daysDifference,
-    shape,
-    timestamp: Date.now(),
-  };
+	return {
+		symbol,
+		points,
+		slope,
+		frontIV: front.atmIV,
+		backIV: back.atmIV,
+		daysDifference,
+		shape,
+		timestamp: Date.now(),
+	};
 }
 
 /**
@@ -184,11 +184,11 @@ export function calculateTermStructureSlope(
  * @returns Term structure result or null
  */
 export function calculateTermStructureSlopeSimple(
-  frontChain: OptionsChain,
-  backChain: OptionsChain,
-  referenceDate: Date = new Date()
+	frontChain: OptionsChain,
+	backChain: OptionsChain,
+	referenceDate: Date = new Date()
 ): TermStructureResult | null {
-  return calculateTermStructureSlope([frontChain, backChain], referenceDate);
+	return calculateTermStructureSlope([frontChain, backChain], referenceDate);
 }
 
 /**
@@ -198,21 +198,21 @@ export function calculateTermStructureSlopeSimple(
  * @returns Shape classification
  */
 export function classifyTermStructureShape(slope: number): TermStructureShape {
-  // Thresholds in IV per day
-  // 0.001 per day ≈ 3% IV difference over 30 days
-  if (slope > 0.001) {
-    return "steep_contango";
-  }
-  if (slope > 0.0002) {
-    return "contango";
-  }
-  if (slope >= -0.0002) {
-    return "flat";
-  }
-  if (slope >= -0.001) {
-    return "backwardation";
-  }
-  return "steep_backwardation";
+	// Thresholds in IV per day
+	// 0.001 per day ≈ 3% IV difference over 30 days
+	if (slope > 0.001) {
+		return "steep_contango";
+	}
+	if (slope > 0.0002) {
+		return "contango";
+	}
+	if (slope >= -0.0002) {
+		return "flat";
+	}
+	if (slope >= -0.001) {
+		return "backwardation";
+	}
+	return "steep_backwardation";
 }
 
 /**
@@ -224,29 +224,29 @@ export function classifyTermStructureShape(slope: number): TermStructureShape {
  * @returns Weighted average IV
  */
 export function calculateWeightedAverageIV(points: TermStructurePoint[]): number | null {
-  if (points.length === 0) {
-    return null;
-  }
+	if (points.length === 0) {
+		return null;
+	}
 
-  // Use inverse days as weights (shorter = more weight)
-  let weightedSum = 0;
-  let totalWeight = 0;
+	// Use inverse days as weights (shorter = more weight)
+	let weightedSum = 0;
+	let totalWeight = 0;
 
-  for (const point of points) {
-    if (point.daysToExpiry <= 0) {
-      continue;
-    }
+	for (const point of points) {
+		if (point.daysToExpiry <= 0) {
+			continue;
+		}
 
-    const weight = 1 / point.daysToExpiry;
-    weightedSum += point.atmIV * weight;
-    totalWeight += weight;
-  }
+		const weight = 1 / point.daysToExpiry;
+		weightedSum += point.atmIV * weight;
+		totalWeight += weight;
+	}
 
-  if (totalWeight === 0) {
-    return null;
-  }
+	if (totalWeight === 0) {
+		return null;
+	}
 
-  return weightedSum / totalWeight;
+	return weightedSum / totalWeight;
 }
 
 /**
@@ -259,34 +259,34 @@ export function calculateWeightedAverageIV(points: TermStructurePoint[]): number
  * @returns Array of kink points
  */
 export function findTermStructureKinks(
-  points: TermStructurePoint[],
-  threshold = 0.02
+	points: TermStructurePoint[],
+	threshold = 0.02
 ): TermStructurePoint[] {
-  if (points.length < 3) {
-    return [];
-  }
+	if (points.length < 3) {
+		return [];
+	}
 
-  const kinks: TermStructurePoint[] = [];
+	const kinks: TermStructurePoint[] = [];
 
-  for (let i = 1; i < points.length - 1; i++) {
-    const prev = points[i - 1];
-    const curr = points[i];
-    const next = points[i + 1];
+	for (let i = 1; i < points.length - 1; i++) {
+		const prev = points[i - 1];
+		const curr = points[i];
+		const next = points[i + 1];
 
-    if (!prev || !curr || !next) {
-      continue;
-    }
+		if (!prev || !curr || !next) {
+			continue;
+		}
 
-    // Check for local maximum (IV spike)
-    const jumpFromPrev = curr.atmIV - prev.atmIV;
-    const dropToNext = curr.atmIV - next.atmIV;
+		// Check for local maximum (IV spike)
+		const jumpFromPrev = curr.atmIV - prev.atmIV;
+		const dropToNext = curr.atmIV - next.atmIV;
 
-    if (jumpFromPrev > threshold && dropToNext > threshold * 0.5) {
-      kinks.push(curr);
-    }
-  }
+		if (jumpFromPrev > threshold && dropToNext > threshold * 0.5) {
+			kinks.push(curr);
+		}
+	}
 
-  return kinks;
+	return kinks;
 }
 
 /**
@@ -299,31 +299,31 @@ export function findTermStructureKinks(
  * @returns Curvature metric or null
  */
 export function calculateTermStructureCurvature(points: TermStructurePoint[]): number | null {
-  if (points.length < 3) {
-    return null;
-  }
+	if (points.length < 3) {
+		return null;
+	}
 
-  // Use three points for second derivative approximation
-  const p1 = points[0];
-  const p2 = points[Math.floor(points.length / 2)];
-  const p3 = points[points.length - 1];
+	// Use three points for second derivative approximation
+	const p1 = points[0];
+	const p2 = points[Math.floor(points.length / 2)];
+	const p3 = points[points.length - 1];
 
-  if (!p1 || !p2 || !p3) {
-    return null;
-  }
+	if (!p1 || !p2 || !p3) {
+		return null;
+	}
 
-  const d1 = p2.daysToExpiry - p1.daysToExpiry;
-  const d2 = p3.daysToExpiry - p2.daysToExpiry;
+	const d1 = p2.daysToExpiry - p1.daysToExpiry;
+	const d2 = p3.daysToExpiry - p2.daysToExpiry;
 
-  if (d1 <= 0 || d2 <= 0) {
-    return null;
-  }
+	if (d1 <= 0 || d2 <= 0) {
+		return null;
+	}
 
-  // First derivatives
-  const slope1 = (p2.atmIV - p1.atmIV) / d1;
-  const slope2 = (p3.atmIV - p2.atmIV) / d2;
+	// First derivatives
+	const slope1 = (p2.atmIV - p1.atmIV) / d1;
+	const slope2 = (p3.atmIV - p2.atmIV) / d2;
 
-  // Second derivative (curvature)
-  const avgD = (d1 + d2) / 2;
-  return (slope2 - slope1) / avgD;
+	// Second derivative (curvature)
+	const avgD = (d1 + d2) / 2;
+	return (slope2 - slope1) / avgD;
 }

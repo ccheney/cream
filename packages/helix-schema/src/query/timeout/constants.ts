@@ -46,7 +46,7 @@ export type QueryType = z.infer<typeof QueryType>;
  * Default timeout configuration
  */
 export const DEFAULT_TIMEOUT_CONFIG: TimeoutConfig = {
-  vectorTimeoutMs: DEFAULT_VECTOR_TIMEOUT_MS,
-  graphTimeoutMs: DEFAULT_GRAPH_TIMEOUT_MS,
-  combinedTimeoutMs: DEFAULT_COMBINED_TIMEOUT_MS,
+	vectorTimeoutMs: DEFAULT_VECTOR_TIMEOUT_MS,
+	graphTimeoutMs: DEFAULT_GRAPH_TIMEOUT_MS,
+	combinedTimeoutMs: DEFAULT_COMBINED_TIMEOUT_MS,
 };

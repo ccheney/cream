@@ -17,10 +17,10 @@ export { OptionsChainTable } from "./OptionsChainTable";
 export type { OrderPreviewProps } from "./OrderPreview";
 export { OrderPreview } from "./OrderPreview";
 export type {
-  OptionsOrderRequest,
-  OrderSide,
-  OrderType,
-  PositionBuilderModalProps,
-  TimeInForce,
+	OptionsOrderRequest,
+	OrderSide,
+	OrderType,
+	PositionBuilderModalProps,
+	TimeInForce,
 } from "./PositionBuilderModal";
 export { PositionBuilderModal } from "./PositionBuilderModal";

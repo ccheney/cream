@@ -16,12 +16,12 @@ export { ExecutionSection, type ExecutionSectionProps } from "./ExecutionSection
 export { ExecutionTimeline, type ExecutionTimelineProps } from "./ExecutionTimeline";
 export { LoadingState } from "./LoadingState";
 export {
-  actionColors,
-  formatAgentName,
-  formatPrice,
-  formatSize,
-  formatSizeUnit,
-  formatStrategy,
-  formatTimeHorizon,
-  statusColors,
+	actionColors,
+	formatAgentName,
+	formatPrice,
+	formatSize,
+	formatSizeUnit,
+	formatStrategy,
+	formatTimeHorizon,
+	statusColors,
 } from "./utils";

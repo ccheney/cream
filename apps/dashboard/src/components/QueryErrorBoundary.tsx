@@ -15,16 +15,16 @@ import { ErrorState } from "./ErrorState";
 import { ErrorBoundary } from "./error-boundary";
 
 export interface QueryErrorBoundaryProps {
-  children: ReactNode;
-  title?: string;
-  fallback?: ReactNode;
-  onError?: (error: Error) => void;
-  showRetry?: boolean;
-  actions?: Array<{
-    label: string;
-    onClick: () => void;
-    variant?: "primary" | "secondary";
-  }>;
+	children: ReactNode;
+	title?: string;
+	fallback?: ReactNode;
+	onError?: (error: Error) => void;
+	showRetry?: boolean;
+	actions?: Array<{
+		label: string;
+		onClick: () => void;
+		variant?: "primary" | "secondary";
+	}>;
 }
 
 /**
@@ -53,39 +53,39 @@ export interface QueryErrorBoundaryProps {
  * ```
  */
 export function QueryErrorBoundary({
-  children,
-  title = "Something went wrong",
-  fallback,
-  onError,
-  showRetry = true,
-  actions,
+	children,
+	title = "Something went wrong",
+	fallback,
+	onError,
+	showRetry = true,
+	actions,
 }: QueryErrorBoundaryProps) {
-  return (
-    <QueryErrorResetBoundary>
-      {({ reset }) => (
-        <ErrorBoundary
-          onError={onError ? (error) => onError(error) : undefined}
-          onReset={reset}
-          fallback={({ error, reset: boundaryReset }) => {
-            if (fallback) {
-              return fallback;
-            }
+	return (
+		<QueryErrorResetBoundary>
+			{({ reset }) => (
+				<ErrorBoundary
+					onError={onError ? (error) => onError(error) : undefined}
+					onReset={reset}
+					fallback={({ error, reset: boundaryReset }) => {
+						if (fallback) {
+							return fallback;
+						}
 
-            return (
-              <ErrorState
-                title={title}
-                message={error.message}
-                onRetry={showRetry ? boundaryReset : undefined}
-                actions={actions}
-              />
-            );
-          }}
-        >
-          {children}
-        </ErrorBoundary>
-      )}
-    </QueryErrorResetBoundary>
-  );
+						return (
+							<ErrorState
+								title={title}
+								message={error.message}
+								onRetry={showRetry ? boundaryReset : undefined}
+								actions={actions}
+							/>
+						);
+					}}
+				>
+					{children}
+				</ErrorBoundary>
+			)}
+		</QueryErrorResetBoundary>
+	);
 }
 
 export default QueryErrorBoundary;

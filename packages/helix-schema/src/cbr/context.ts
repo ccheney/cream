@@ -10,10 +10,10 @@ import type { MemoryContext } from "@cream/domain";
 import type { EmbeddingClient } from "../embeddings.js";
 import { retrieveSimilarCases } from "./retrieval.js";
 import type {
-  CBRMarketSnapshot,
-  CBRRetrievalOptions,
-  CBRRetrievalResult,
-  HelixClient,
+	CBRMarketSnapshot,
+	CBRRetrievalOptions,
+	CBRRetrievalResult,
+	HelixClient,
 } from "./types.js";
 
 /**
@@ -26,10 +26,10 @@ import type {
  * @returns MemoryContext for agent consumption
  */
 export function buildMemoryContext(retrievalResult: CBRRetrievalResult): MemoryContext {
-  return {
-    retrievedCases: retrievalResult.cases,
-    caseStatistics: retrievalResult.statistics,
-  };
+	return {
+		retrievedCases: retrievalResult.cases,
+		caseStatistics: retrievalResult.statistics,
+	};
 }
 
 /**
@@ -44,11 +44,11 @@ export function buildMemoryContext(retrievalResult: CBRRetrievalResult): MemoryC
  * @returns MemoryContext ready for agent use
  */
 export async function retrieveMemoryContext(
-  client: HelixClient,
-  embeddingClient: EmbeddingClient,
-  snapshot: CBRMarketSnapshot,
-  options: CBRRetrievalOptions = {}
+	client: HelixClient,
+	embeddingClient: EmbeddingClient,
+	snapshot: CBRMarketSnapshot,
+	options: CBRRetrievalOptions = {}
 ): Promise<MemoryContext> {
-  const result = await retrieveSimilarCases(client, embeddingClient, snapshot, options);
-  return buildMemoryContext(result);
+	const result = await retrieveSimilarCases(client, embeddingClient, snapshot, options);
+	return buildMemoryContext(result);
 }

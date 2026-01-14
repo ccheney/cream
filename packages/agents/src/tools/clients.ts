@@ -7,17 +7,17 @@
 import { type AlpacaClient, createBrokerClient } from "@cream/broker";
 import type { ExecutionContext } from "@cream/domain";
 import {
-  createExecutionClient,
-  createMarketDataClient,
-  type ExecutionServiceClient,
-  type MarketDataServiceClient,
+	createExecutionClient,
+	createMarketDataClient,
+	type ExecutionServiceClient,
+	type MarketDataServiceClient,
 } from "@cream/domain/grpc";
 import { createHelixClientFromEnv, type HelixClient } from "@cream/helix";
 import {
-  createFMPClient,
-  createFREDClient,
-  type FMPClient,
-  type FREDClient,
+	createFMPClient,
+	createFREDClient,
+	type FMPClient,
+	type FREDClient,
 } from "@cream/universe";
 
 // ============================================
@@ -33,17 +33,17 @@ let marketDataClient: MarketDataServiceClient | null = null;
 let executionClient: ExecutionServiceClient | null = null;
 
 export function getMarketDataClient(): MarketDataServiceClient {
-  if (!marketDataClient) {
-    marketDataClient = createMarketDataClient(DEFAULT_MARKET_DATA_URL);
-  }
-  return marketDataClient;
+	if (!marketDataClient) {
+		marketDataClient = createMarketDataClient(DEFAULT_MARKET_DATA_URL);
+	}
+	return marketDataClient;
 }
 
 export function getExecutionClient(): ExecutionServiceClient {
-  if (!executionClient) {
-    executionClient = createExecutionClient(DEFAULT_EXECUTION_URL);
-  }
-  return executionClient;
+	if (!executionClient) {
+		executionClient = createExecutionClient(DEFAULT_EXECUTION_URL);
+	}
+	return executionClient;
 }
 
 // ============================================
@@ -53,10 +53,10 @@ export function getExecutionClient(): ExecutionServiceClient {
 let helixClient: HelixClient | null = null;
 
 export function getHelixClient(): HelixClient {
-  if (!helixClient) {
-    helixClient = createHelixClientFromEnv();
-  }
-  return helixClient;
+	if (!helixClient) {
+		helixClient = createHelixClientFromEnv();
+	}
+	return helixClient;
 }
 
 // ============================================
@@ -71,22 +71,22 @@ let brokerClientEnvironment: string | null = null;
  * Returns null if credentials are not configured.
  */
 export function getBrokerClient(ctx: ExecutionContext): AlpacaClient | null {
-  // Re-create client if environment changed
-  if (brokerClient && brokerClientEnvironment === ctx.environment) {
-    return brokerClient;
-  }
+	// Re-create client if environment changed
+	if (brokerClient && brokerClientEnvironment === ctx.environment) {
+		return brokerClient;
+	}
 
-  // Check for required credentials
-  const apiKey = process.env.ALPACA_KEY;
-  const apiSecret = process.env.ALPACA_SECRET;
+	// Check for required credentials
+	const apiKey = process.env.ALPACA_KEY;
+	const apiSecret = process.env.ALPACA_SECRET;
 
-  if (!apiKey || !apiSecret) {
-    return null;
-  }
+	if (!apiKey || !apiSecret) {
+		return null;
+	}
 
-  brokerClient = createBrokerClient(ctx);
-  brokerClientEnvironment = ctx.environment;
-  return brokerClient;
+	brokerClient = createBrokerClient(ctx);
+	brokerClientEnvironment = ctx.environment;
+	return brokerClient;
 }
 
 // ============================================
@@ -96,18 +96,18 @@ export function getBrokerClient(ctx: ExecutionContext): AlpacaClient | null {
 let fmpClient: FMPClient | null = null;
 
 export function getFMPClient(): FMPClient | null {
-  if (fmpClient) {
-    return fmpClient;
-  }
+	if (fmpClient) {
+		return fmpClient;
+	}
 
-  // Only initialize if API key is available
-  const apiKey = process.env.FMP_KEY;
-  if (!apiKey) {
-    return null;
-  }
+	// Only initialize if API key is available
+	const apiKey = process.env.FMP_KEY;
+	if (!apiKey) {
+		return null;
+	}
 
-  fmpClient = createFMPClient({ apiKey });
-  return fmpClient;
+	fmpClient = createFMPClient({ apiKey });
+	return fmpClient;
 }
 
 // ============================================
@@ -118,23 +118,23 @@ let fredClient: FREDClient | null = null;
 let fredClientOverride: FREDClient | null | undefined;
 
 export function getFREDClient(): FREDClient | null {
-  // Return test override if explicitly set (including null)
-  if (fredClientOverride !== undefined) {
-    return fredClientOverride;
-  }
+	// Return test override if explicitly set (including null)
+	if (fredClientOverride !== undefined) {
+		return fredClientOverride;
+	}
 
-  if (fredClient) {
-    return fredClient;
-  }
+	if (fredClient) {
+		return fredClient;
+	}
 
-  // Only initialize if API key is available
-  const apiKey = process.env.FRED_API_KEY;
-  if (!apiKey) {
-    return null;
-  }
+	// Only initialize if API key is available
+	const apiKey = process.env.FRED_API_KEY;
+	if (!apiKey) {
+		return null;
+	}
 
-  fredClient = createFREDClient({ apiKey });
-  return fredClient;
+	fredClient = createFREDClient({ apiKey });
+	return fredClient;
 }
 
 /**
@@ -143,13 +143,13 @@ export function getFREDClient(): FREDClient | null {
  * Pass undefined or call resetFREDClient to clear override.
  */
 export function setFREDClientForTesting(client: FREDClient | null): void {
-  fredClientOverride = client;
+	fredClientOverride = client;
 }
 
 /**
  * Reset FRED client state (for testing cleanup).
  */
 export function resetFREDClient(): void {
-  fredClient = null;
-  fredClientOverride = undefined;
+	fredClient = null;
+	fredClientOverride = undefined;
 }

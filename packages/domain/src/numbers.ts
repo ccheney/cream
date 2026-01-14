@@ -53,10 +53,10 @@ export const BASIS_POINTS_PER_PERCENT = 100;
  * Use this for position quantities and signed counts
  */
 export const Sint32Schema = z
-  .number()
-  .int()
-  .min(SINT32_MIN, `Value must be >= ${SINT32_MIN} (sint32 min)`)
-  .max(SINT32_MAX, `Value must be <= ${SINT32_MAX} (sint32 max)`);
+	.number()
+	.int()
+	.min(SINT32_MIN, `Value must be >= ${SINT32_MIN} (sint32 min)`)
+	.max(SINT32_MAX, `Value must be <= ${SINT32_MAX} (sint32 max)`);
 export type Sint32 = z.infer<typeof Sint32Schema>;
 
 /**
@@ -64,10 +64,10 @@ export type Sint32 = z.infer<typeof Sint32Schema>;
  * Use this for unsigned counts
  */
 export const Uint32Schema = z
-  .number()
-  .int()
-  .nonnegative()
-  .max(UINT32_MAX, `Value must be <= ${UINT32_MAX} (uint32 max)`);
+	.number()
+	.int()
+	.nonnegative()
+	.max(UINT32_MAX, `Value must be <= ${UINT32_MAX} (uint32 max)`);
 export type Uint32 = z.infer<typeof Uint32Schema>;
 
 /**
@@ -93,10 +93,10 @@ export type NonNegativePrice = z.infer<typeof NonNegativePriceSchema>;
  * - 100% = 10000 bp
  */
 export const BasisPointsSchema = z
-  .number()
-  .int()
-  .min(-1_000_000, "Basis points must be >= -1,000,000 (-10000%)")
-  .max(1_000_000, "Basis points must be <= 1,000,000 (10000%)");
+	.number()
+	.int()
+	.min(-1_000_000, "Basis points must be >= -1,000,000 (-10000%)")
+	.max(1_000_000, "Basis points must be <= 1,000,000 (10000%)");
 export type BasisPoints = z.infer<typeof BasisPointsSchema>;
 
 /**
@@ -123,12 +123,12 @@ export type Quantity = z.infer<typeof QuantitySchema>;
  * ```
  */
 export function validateSint32(n: number): void {
-  if (!Number.isInteger(n)) {
-    throw new Error(`Value ${n} is not an integer`);
-  }
-  if (n < SINT32_MIN || n > SINT32_MAX) {
-    throw new Error(`Value ${n} is outside sint32 range [${SINT32_MIN}, ${SINT32_MAX}]`);
-  }
+	if (!Number.isInteger(n)) {
+		throw new Error(`Value ${n} is not an integer`);
+	}
+	if (n < SINT32_MIN || n > SINT32_MAX) {
+		throw new Error(`Value ${n} is outside sint32 range [${SINT32_MIN}, ${SINT32_MAX}]`);
+	}
 }
 
 /**
@@ -138,12 +138,12 @@ export function validateSint32(n: number): void {
  * @throws Error if outside uint32 range
  */
 export function validateUint32(n: number): void {
-  if (!Number.isInteger(n)) {
-    throw new Error(`Value ${n} is not an integer`);
-  }
-  if (n < 0 || n > UINT32_MAX) {
-    throw new Error(`Value ${n} is outside uint32 range [0, ${UINT32_MAX}]`);
-  }
+	if (!Number.isInteger(n)) {
+		throw new Error(`Value ${n} is not an integer`);
+	}
+	if (n < 0 || n > UINT32_MAX) {
+		throw new Error(`Value ${n} is outside uint32 range [0, ${UINT32_MAX}]`);
+	}
 }
 
 /**
@@ -154,21 +154,21 @@ export function validateUint32(n: number): void {
  * @returns true if safe integer
  */
 export function isSafeInteger(n: number): boolean {
-  return Number.isSafeInteger(n);
+	return Number.isSafeInteger(n);
 }
 
 /**
  * Check if a number is within sint32 range
  */
 export function isInSint32Range(n: number): boolean {
-  return Number.isInteger(n) && n >= SINT32_MIN && n <= SINT32_MAX;
+	return Number.isInteger(n) && n >= SINT32_MIN && n <= SINT32_MAX;
 }
 
 /**
  * Check if a number is within uint32 range
  */
 export function isInUint32Range(n: number): boolean {
-  return Number.isInteger(n) && n >= 0 && n <= UINT32_MAX;
+	return Number.isInteger(n) && n >= 0 && n <= UINT32_MAX;
 }
 
 // ============================================
@@ -189,15 +189,15 @@ export function isInUint32Range(n: number): boolean {
  * ```
  */
 export function toBasisPoints(percent: number): BasisPoints {
-  const bp = Math.round(percent * BASIS_POINTS_PER_PERCENT);
+	const bp = Math.round(percent * BASIS_POINTS_PER_PERCENT);
 
-  // Validate result is within range
-  const result = BasisPointsSchema.safeParse(bp);
-  if (!result.success) {
-    throw new Error(`Percentage ${percent}% exceeds basis points range`);
-  }
+	// Validate result is within range
+	const result = BasisPointsSchema.safeParse(bp);
+	if (!result.success) {
+		throw new Error(`Percentage ${percent}% exceeds basis points range`);
+	}
 
-  return bp as BasisPoints;
+	return bp as BasisPoints;
 }
 
 /**
@@ -214,13 +214,13 @@ export function toBasisPoints(percent: number): BasisPoints {
  * ```
  */
 export function fromBasisPoints(bp: number): number {
-  // Validate input
-  const result = BasisPointsSchema.safeParse(bp);
-  if (!result.success) {
-    throw new Error(`Invalid basis points value: ${bp}`);
-  }
+	// Validate input
+	const result = BasisPointsSchema.safeParse(bp);
+	if (!result.success) {
+		throw new Error(`Invalid basis points value: ${bp}`);
+	}
 
-  return bp / BASIS_POINTS_PER_PERCENT;
+	return bp / BASIS_POINTS_PER_PERCENT;
 }
 
 // ============================================
@@ -244,21 +244,21 @@ export function fromBasisPoints(bp: number): number {
  * ```
  */
 export function formatMoney(cents: number): string {
-  if (!Number.isInteger(cents)) {
-    throw new Error("Cents must be an integer");
-  }
+	if (!Number.isInteger(cents)) {
+		throw new Error("Cents must be an integer");
+	}
 
-  const isNegative = cents < 0;
-  const absCents = Math.abs(cents);
-  const dollars = Math.floor(absCents / 100);
-  const remainingCents = absCents % 100;
+	const isNegative = cents < 0;
+	const absCents = Math.abs(cents);
+	const dollars = Math.floor(absCents / 100);
+	const remainingCents = absCents % 100;
 
-  // Format with thousands separators
-  const formattedDollars = dollars.toLocaleString("en-US");
-  const formattedCents = remainingCents.toString().padStart(2, "0");
+	// Format with thousands separators
+	const formattedDollars = dollars.toLocaleString("en-US");
+	const formattedCents = remainingCents.toString().padStart(2, "0");
 
-  const sign = isNegative ? "-" : "";
-  return `${sign}$${formattedDollars}.${formattedCents}`;
+	const sign = isNegative ? "-" : "";
+	return `${sign}$${formattedDollars}.${formattedCents}`;
 }
 
 /**
@@ -275,17 +275,17 @@ export function formatMoney(cents: number): string {
  * ```
  */
 export function parseMoney(str: string): number {
-  // Remove currency symbol and thousands separators
-  const cleaned = str.replace(/[$,]/g, "").trim();
+	// Remove currency symbol and thousands separators
+	const cleaned = str.replace(/[$,]/g, "").trim();
 
-  // Parse as float then convert to cents
-  const amount = parseFloat(cleaned);
-  if (Number.isNaN(amount)) {
-    throw new Error(`Invalid money string: ${str}`);
-  }
+	// Parse as float then convert to cents
+	const amount = parseFloat(cleaned);
+	if (Number.isNaN(amount)) {
+		throw new Error(`Invalid money string: ${str}`);
+	}
 
-  // Round to avoid floating point issues
-  return Math.round(amount * 100);
+	// Round to avoid floating point issues
+	return Math.round(amount * 100);
 }
 
 // ============================================
@@ -300,10 +300,10 @@ export function parseMoney(str: string): number {
  * @returns Formatted price string
  */
 export function formatPrice(price: number, decimals = 2): string {
-  if (price < 0) {
-    throw new Error("Price cannot be negative");
-  }
-  return price.toFixed(decimals);
+	if (price < 0) {
+		throw new Error("Price cannot be negative");
+	}
+	return price.toFixed(decimals);
 }
 
 /**
@@ -313,16 +313,16 @@ export function formatPrice(price: number, decimals = 2): string {
  * @returns Clamped value within sint32 range
  */
 export function clampToSint32(n: number): number {
-  const value = Number.isInteger(n) ? n : Math.round(n);
-  return Math.max(SINT32_MIN, Math.min(SINT32_MAX, value));
+	const value = Number.isInteger(n) ? n : Math.round(n);
+	return Math.max(SINT32_MIN, Math.min(SINT32_MAX, value));
 }
 
 /**
  * Clamp a number to uint32 range
  */
 export function clampToUint32(n: number): number {
-  const value = Number.isInteger(n) ? n : Math.round(n);
-  return Math.max(0, Math.min(UINT32_MAX, value));
+	const value = Number.isInteger(n) ? n : Math.round(n);
+	return Math.max(0, Math.min(UINT32_MAX, value));
 }
 
 // ============================================
@@ -344,17 +344,17 @@ export function clampToUint32(n: number): number {
  * ```
  */
 export function calculateQtyChange(currentQty: number, targetQty: number): number {
-  validateSint32(currentQty);
-  validateSint32(targetQty);
+	validateSint32(currentQty);
+	validateSint32(targetQty);
 
-  const change = targetQty - currentQty;
+	const change = targetQty - currentQty;
 
-  // Validate result is within range
-  if (!isInSint32Range(change)) {
-    throw new Error("Quantity change would overflow sint32 range");
-  }
+	// Validate result is within range
+	if (!isInSint32Range(change)) {
+		throw new Error("Quantity change would overflow sint32 range");
+	}
 
-  return change;
+	return change;
 }
 
 /**
@@ -364,11 +364,11 @@ export function calculateQtyChange(currentQty: number, targetQty: number): numbe
  * @returns "LONG", "SHORT", or "FLAT"
  */
 export function getPositionDirection(qty: number): "LONG" | "SHORT" | "FLAT" {
-  if (qty > 0) {
-    return "LONG";
-  }
-  if (qty < 0) {
-    return "SHORT";
-  }
-  return "FLAT";
+	if (qty > 0) {
+		return "LONG";
+	}
+	if (qty < 0) {
+		return "SHORT";
+	}
+	return "FLAT";
 }

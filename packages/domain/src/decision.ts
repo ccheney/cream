@@ -17,12 +17,12 @@ import { z } from "zod";
  * Trading action that expresses intent in terms of exposure
  */
 export const Action = z.enum([
-  "BUY", // Establish new long from flat
-  "SELL", // Establish new short from flat
-  "HOLD", // Maintain current position
-  "INCREASE", // Increase exposure in direction
-  "REDUCE", // Reduce exposure magnitude
-  "NO_TRADE", // Remain flat
+	"BUY", // Establish new long from flat
+	"SELL", // Establish new short from flat
+	"HOLD", // Maintain current position
+	"INCREASE", // Increase exposure in direction
+	"REDUCE", // Reduce exposure magnitude
+	"NO_TRADE", // Remain flat
 ]);
 export type Action = z.infer<typeof Action>;
 
@@ -60,11 +60,11 @@ export type RiskDenomination = z.infer<typeof RiskDenomination>;
  * Strategy family
  */
 export const StrategyFamily = z.enum([
-  "TREND",
-  "MEAN_REVERSION",
-  "EVENT_DRIVEN",
-  "VOLATILITY",
-  "RELATIVE_VALUE",
+	"TREND",
+	"MEAN_REVERSION",
+	"EVENT_DRIVEN",
+	"VOLATILITY",
+	"RELATIVE_VALUE",
 ]);
 export type StrategyFamily = z.infer<typeof StrategyFamily>;
 
@@ -78,12 +78,12 @@ export type Direction = z.infer<typeof Direction>;
  * Market regime classification
  */
 export const Regime = z.enum([
-  "BULL_TREND",
-  "BEAR_TREND",
-  "RANGE_BOUND",
-  "HIGH_VOLATILITY",
-  "LOW_VOLATILITY",
-  "CRISIS",
+	"BULL_TREND",
+	"BEAR_TREND",
+	"RANGE_BOUND",
+	"HIGH_VOLATILITY",
+	"LOW_VOLATILITY",
+	"CRISIS",
 ]);
 export type Regime = z.infer<typeof Regime>;
 
@@ -107,13 +107,13 @@ export type OptionType = z.infer<typeof OptionType>;
  * Option contract details (required when instrumentType is OPTION)
  */
 export const OptionContractSchema = z.object({
-  underlying: z.string().min(1),
-  expiration: z
-    .string()
-    .regex(/^\d{4}-\d{2}-\d{2}$/)
-    .describe("Expiration date in YYYY-MM-DD format"),
-  strike: z.number().positive(),
-  optionType: OptionType,
+	underlying: z.string().min(1),
+	expiration: z
+		.string()
+		.regex(/^\d{4}-\d{2}-\d{2}$/)
+		.describe("Expiration date in YYYY-MM-DD format"),
+	strike: z.number().positive(),
+	optionType: OptionType,
 });
 export type OptionContract = z.infer<typeof OptionContractSchema>;
 
@@ -121,32 +121,32 @@ export type OptionContract = z.infer<typeof OptionContractSchema>;
  * Instrument identifier
  */
 export const InstrumentSchema = z
-  .object({
-    instrumentId: z.string().min(1),
-    instrumentType: InstrumentType,
-    optionContract: OptionContractSchema.optional(),
-  })
-  .superRefine((data, ctx) => {
-    if (data.instrumentType === "OPTION" && !data.optionContract) {
-      ctx.addIssue({
-        code: z.ZodIssueCode.custom,
-        message: "optionContract is required when instrumentType is OPTION",
-        path: ["optionContract"],
-      });
-    }
-  });
+	.object({
+		instrumentId: z.string().min(1),
+		instrumentType: InstrumentType,
+		optionContract: OptionContractSchema.optional(),
+	})
+	.superRefine((data, ctx) => {
+		if (data.instrumentType === "OPTION" && !data.optionContract) {
+			ctx.addIssue({
+				code: z.ZodIssueCode.custom,
+				message: "optionContract is required when instrumentType is OPTION",
+				path: ["optionContract"],
+			});
+		}
+	});
 export type Instrument = z.infer<typeof InstrumentSchema>;
 
 /**
  * Position sizing
  */
 export const SizeSchema = z.object({
-  quantity: z.number().int().nonnegative(),
-  unit: SizeUnit,
-  targetPositionQuantity: z
-    .number()
-    .int()
-    .describe("Target position signed quantity: positive=long, negative=short"),
+	quantity: z.number().int().nonnegative(),
+	unit: SizeUnit,
+	targetPositionQuantity: z
+		.number()
+		.int()
+		.describe("Target position signed quantity: positive=long, negative=short"),
 });
 export type Size = z.infer<typeof SizeSchema>;
 
@@ -154,23 +154,23 @@ export type Size = z.infer<typeof SizeSchema>;
  * Order plan
  */
 export const OrderPlanSchema = z
-  .object({
-    entryOrderType: OrderType,
-    entryLimitPrice: z.number().positive().optional(),
-    exitOrderType: OrderType,
-    timeInForce: TimeInForce,
-    executionTactic: z.string().optional(),
-    executionParams: z.record(z.string(), z.unknown()).optional(),
-  })
-  .superRefine((data, ctx) => {
-    if (data.entryOrderType === "LIMIT" && data.entryLimitPrice === undefined) {
-      ctx.addIssue({
-        code: z.ZodIssueCode.custom,
-        message: "entryLimitPrice is required when entryOrderType is LIMIT",
-        path: ["entryLimitPrice"],
-      });
-    }
-  });
+	.object({
+		entryOrderType: OrderType,
+		entryLimitPrice: z.number().positive().optional(),
+		exitOrderType: OrderType,
+		timeInForce: TimeInForce,
+		executionTactic: z.string().optional(),
+		executionParams: z.record(z.string(), z.unknown()).optional(),
+	})
+	.superRefine((data, ctx) => {
+		if (data.entryOrderType === "LIMIT" && data.entryLimitPrice === undefined) {
+			ctx.addIssue({
+				code: z.ZodIssueCode.custom,
+				message: "entryLimitPrice is required when entryOrderType is LIMIT",
+				path: ["entryLimitPrice"],
+			});
+		}
+	});
 export type OrderPlan = z.infer<typeof OrderPlanSchema>;
 
 /**
@@ -183,23 +183,23 @@ export type OrderPlan = z.infer<typeof OrderPlanSchema>;
  * - NO_TRADE: Entry trigger thresholds
  */
 export const RiskLevelsSchema = z
-  .object({
-    stopLossLevel: z.number().positive(),
-    takeProfitLevel: z.number().positive(),
-    denomination: RiskDenomination,
-  })
-  .refine((data) => data.stopLossLevel !== data.takeProfitLevel, {
-    message: "stopLossLevel and takeProfitLevel must be different",
-  });
+	.object({
+		stopLossLevel: z.number().positive(),
+		takeProfitLevel: z.number().positive(),
+		denomination: RiskDenomination,
+	})
+	.refine((data) => data.stopLossLevel !== data.takeProfitLevel, {
+		message: "stopLossLevel and takeProfitLevel must be different",
+	});
 export type RiskLevels = z.infer<typeof RiskLevelsSchema>;
 
 /**
  * References to supporting data
  */
 export const ReferencesSchema = z.object({
-  usedIndicators: z.array(z.string()).optional(),
-  memoryCaseIds: z.array(z.string()).optional(),
-  eventIds: z.array(z.string()).optional(),
+	usedIndicators: z.array(z.string()).optional(),
+	memoryCaseIds: z.array(z.string()).optional(),
+	eventIds: z.array(z.string()).optional(),
 });
 export type References = z.infer<typeof ReferencesSchema>;
 
@@ -213,15 +213,15 @@ export type References = z.infer<typeof ReferencesSchema>;
  * Mandatory stop-loss and take-profit are enforced via riskLevels.
  */
 export const DecisionSchema = z.object({
-  instrument: InstrumentSchema,
-  action: Action,
-  size: SizeSchema,
-  orderPlan: OrderPlanSchema,
-  riskLevels: RiskLevelsSchema, // MANDATORY - always required
-  strategyFamily: StrategyFamily,
-  rationale: z.string().min(10).describe("Human-readable justification for the trading decision"),
-  confidence: z.number().min(0).max(1),
-  references: ReferencesSchema.optional(),
+	instrument: InstrumentSchema,
+	action: Action,
+	size: SizeSchema,
+	orderPlan: OrderPlanSchema,
+	riskLevels: RiskLevelsSchema, // MANDATORY - always required
+	strategyFamily: StrategyFamily,
+	rationale: z.string().min(10).describe("Human-readable justification for the trading decision"),
+	confidence: z.number().min(0).max(1),
+	references: ReferencesSchema.optional(),
 });
 export type Decision = z.infer<typeof DecisionSchema>;
 
@@ -233,47 +233,47 @@ export type Decision = z.infer<typeof DecisionSchema>;
  * Determine the direction of a decision
  */
 export function getDecisionDirection(decision: Decision): Direction {
-  const { action, size } = decision;
+	const { action, size } = decision;
 
-  if (action === "NO_TRADE" || action === "HOLD") {
-    if (size.targetPositionQuantity > 0) {
-      return "LONG";
-    }
-    if (size.targetPositionQuantity < 0) {
-      return "SHORT";
-    }
-    return "FLAT";
-  }
+	if (action === "NO_TRADE" || action === "HOLD") {
+		if (size.targetPositionQuantity > 0) {
+			return "LONG";
+		}
+		if (size.targetPositionQuantity < 0) {
+			return "SHORT";
+		}
+		return "FLAT";
+	}
 
-  if (action === "BUY" || (action === "INCREASE" && size.targetPositionQuantity > 0)) {
-    return "LONG";
-  }
+	if (action === "BUY" || (action === "INCREASE" && size.targetPositionQuantity > 0)) {
+		return "LONG";
+	}
 
-  if (action === "SELL" || (action === "INCREASE" && size.targetPositionQuantity < 0)) {
-    return "SHORT";
-  }
+	if (action === "SELL" || (action === "INCREASE" && size.targetPositionQuantity < 0)) {
+		return "SHORT";
+	}
 
-  if (action === "REDUCE") {
-    if (size.targetPositionQuantity > 0) {
-      return "LONG";
-    }
-    if (size.targetPositionQuantity < 0) {
-      return "SHORT";
-    }
-    return "FLAT";
-  }
+	if (action === "REDUCE") {
+		if (size.targetPositionQuantity > 0) {
+			return "LONG";
+		}
+		if (size.targetPositionQuantity < 0) {
+			return "SHORT";
+		}
+		return "FLAT";
+	}
 
-  return "FLAT";
+	return "FLAT";
 }
 
 /**
  * Risk validation result
  */
 export interface RiskValidationResult {
-  valid: boolean;
-  errors: string[];
-  warnings: string[];
-  riskRewardRatio: number | null;
+	valid: boolean;
+	errors: string[];
+	warnings: string[];
+	riskRewardRatio: number | null;
 }
 
 /**
@@ -287,73 +287,73 @@ export interface RiskValidationResult {
  * 5. Maximum stop distance (stop not > 5x profit target)
  */
 export function validateRiskLevels(decision: Decision, entryPrice: number): RiskValidationResult {
-  const result: RiskValidationResult = {
-    valid: true,
-    errors: [],
-    warnings: [],
-    riskRewardRatio: null,
-  };
+	const result: RiskValidationResult = {
+		valid: true,
+		errors: [],
+		warnings: [],
+		riskRewardRatio: null,
+	};
 
-  const { stopLossLevel, takeProfitLevel } = decision.riskLevels;
-  const direction = getDecisionDirection(decision);
+	const { stopLossLevel, takeProfitLevel } = decision.riskLevels;
+	const direction = getDecisionDirection(decision);
 
-  // Skip detailed validation for FLAT positions
-  if (direction === "FLAT") {
-    return result;
-  }
+	// Skip detailed validation for FLAT positions
+	if (direction === "FLAT") {
+		return result;
+	}
 
-  const riskAmount = Math.abs(entryPrice - stopLossLevel);
-  const rewardAmount = Math.abs(takeProfitLevel - entryPrice);
+	const riskAmount = Math.abs(entryPrice - stopLossLevel);
+	const rewardAmount = Math.abs(takeProfitLevel - entryPrice);
 
-  // Calculate risk-reward ratio
-  if (riskAmount > 0) {
-    result.riskRewardRatio = rewardAmount / riskAmount;
-  }
+	// Calculate risk-reward ratio
+	if (riskAmount > 0) {
+		result.riskRewardRatio = rewardAmount / riskAmount;
+	}
 
-  // Validate logical direction
-  if (direction === "LONG") {
-    if (stopLossLevel >= entryPrice) {
-      result.valid = false;
-      result.errors.push(
-        `LONG position: stopLossLevel (${stopLossLevel}) must be below entryPrice (${entryPrice})`
-      );
-    }
-    if (takeProfitLevel <= entryPrice) {
-      result.valid = false;
-      result.errors.push(
-        `LONG position: takeProfitLevel (${takeProfitLevel}) must be above entryPrice (${entryPrice})`
-      );
-    }
-  } else if (direction === "SHORT") {
-    if (stopLossLevel <= entryPrice) {
-      result.valid = false;
-      result.errors.push(
-        `SHORT position: stopLossLevel (${stopLossLevel}) must be above entryPrice (${entryPrice})`
-      );
-    }
-    if (takeProfitLevel >= entryPrice) {
-      result.valid = false;
-      result.errors.push(
-        `SHORT position: takeProfitLevel (${takeProfitLevel}) must be below entryPrice (${entryPrice})`
-      );
-    }
-  }
+	// Validate logical direction
+	if (direction === "LONG") {
+		if (stopLossLevel >= entryPrice) {
+			result.valid = false;
+			result.errors.push(
+				`LONG position: stopLossLevel (${stopLossLevel}) must be below entryPrice (${entryPrice})`
+			);
+		}
+		if (takeProfitLevel <= entryPrice) {
+			result.valid = false;
+			result.errors.push(
+				`LONG position: takeProfitLevel (${takeProfitLevel}) must be above entryPrice (${entryPrice})`
+			);
+		}
+	} else if (direction === "SHORT") {
+		if (stopLossLevel <= entryPrice) {
+			result.valid = false;
+			result.errors.push(
+				`SHORT position: stopLossLevel (${stopLossLevel}) must be above entryPrice (${entryPrice})`
+			);
+		}
+		if (takeProfitLevel >= entryPrice) {
+			result.valid = false;
+			result.errors.push(
+				`SHORT position: takeProfitLevel (${takeProfitLevel}) must be below entryPrice (${entryPrice})`
+			);
+		}
+	}
 
-  // Check minimum risk-reward ratio (1.5:1)
-  if (result.riskRewardRatio !== null && result.riskRewardRatio < 1.5) {
-    result.warnings.push(
-      `Risk-reward ratio (${result.riskRewardRatio.toFixed(2)}) is below minimum 1.5:1`
-    );
-  }
+	// Check minimum risk-reward ratio (1.5:1)
+	if (result.riskRewardRatio !== null && result.riskRewardRatio < 1.5) {
+		result.warnings.push(
+			`Risk-reward ratio (${result.riskRewardRatio.toFixed(2)}) is below minimum 1.5:1`
+		);
+	}
 
-  // Check maximum stop distance (stop loss not > 5x profit target)
-  if (riskAmount > rewardAmount * 5) {
-    result.warnings.push(
-      `Stop distance (${riskAmount.toFixed(2)}) exceeds 5x profit target (${rewardAmount.toFixed(2)})`
-    );
-  }
+	// Check maximum stop distance (stop loss not > 5x profit target)
+	if (riskAmount > rewardAmount * 5) {
+		result.warnings.push(
+			`Stop distance (${riskAmount.toFixed(2)}) exceeds 5x profit target (${rewardAmount.toFixed(2)})`
+		);
+	}
 
-  return result;
+	return result;
 }
 
 // ============================================
@@ -364,14 +364,14 @@ export function validateRiskLevels(decision: Decision, entryPrice: number): Risk
  * Complete decision plan for a trading cycle
  */
 export const DecisionPlanSchema = z.object({
-  cycleId: z.string().min(1),
-  asOfTimestamp: z
-    .string()
-    .datetime({ offset: true })
-    .describe("ISO-8601 timestamp with timezone offset"),
-  environment: z.enum(["BACKTEST", "PAPER", "LIVE"]),
-  decisions: z.array(DecisionSchema),
-  portfolioNotes: z.string().optional(),
+	cycleId: z.string().min(1),
+	asOfTimestamp: z
+		.string()
+		.datetime({ offset: true })
+		.describe("ISO-8601 timestamp with timezone offset"),
+	environment: z.enum(["BACKTEST", "PAPER", "LIVE"]),
+	decisions: z.array(DecisionSchema),
+	portfolioNotes: z.string().optional(),
 });
 export type DecisionPlan = z.infer<typeof DecisionPlanSchema>;
 
@@ -386,54 +386,54 @@ export type DecisionPlan = z.infer<typeof DecisionPlanSchema>;
  * for risk levels.
  */
 export function validateDecisionPlan(
-  plan: unknown,
-  entryPrices?: Map<string, number>
+	plan: unknown,
+	entryPrices?: Map<string, number>
 ): {
-  success: boolean;
-  data?: DecisionPlan;
-  errors: string[];
-  warnings: string[];
+	success: boolean;
+	data?: DecisionPlan;
+	errors: string[];
+	warnings: string[];
 } {
-  // Schema validation
-  const parseResult = DecisionPlanSchema.safeParse(plan);
+	// Schema validation
+	const parseResult = DecisionPlanSchema.safeParse(plan);
 
-  if (!parseResult.success) {
-    return {
-      success: false,
-      errors: parseResult.error.issues.map((i) => `${i.path.join(".")}: ${i.message}`),
-      warnings: [],
-    };
-  }
+	if (!parseResult.success) {
+		return {
+			success: false,
+			errors: parseResult.error.issues.map((i) => `${i.path.join(".")}: ${i.message}`),
+			warnings: [],
+		};
+	}
 
-  const validPlan = parseResult.data;
-  const errors: string[] = [];
-  const warnings: string[] = [];
+	const validPlan = parseResult.data;
+	const errors: string[] = [];
+	const warnings: string[] = [];
 
-  // Business logic validation for each decision
-  for (const decision of validPlan.decisions) {
-    const entryPrice = entryPrices?.get(decision.instrument.instrumentId);
+	// Business logic validation for each decision
+	for (const decision of validPlan.decisions) {
+		const entryPrice = entryPrices?.get(decision.instrument.instrumentId);
 
-    if (entryPrice !== undefined) {
-      const riskResult = validateRiskLevels(decision, entryPrice);
-      if (!riskResult.valid) {
-        errors.push(...riskResult.errors.map((e) => `${decision.instrument.instrumentId}: ${e}`));
-      }
-      warnings.push(...riskResult.warnings.map((w) => `${decision.instrument.instrumentId}: ${w}`));
-    }
-  }
+		if (entryPrice !== undefined) {
+			const riskResult = validateRiskLevels(decision, entryPrice);
+			if (!riskResult.valid) {
+				errors.push(...riskResult.errors.map((e) => `${decision.instrument.instrumentId}: ${e}`));
+			}
+			warnings.push(...riskResult.warnings.map((w) => `${decision.instrument.instrumentId}: ${w}`));
+		}
+	}
 
-  if (errors.length === 0) {
-    return {
-      success: true,
-      data: validPlan,
-      errors,
-      warnings,
-    };
-  }
+	if (errors.length === 0) {
+		return {
+			success: true,
+			data: validPlan,
+			errors,
+			warnings,
+		};
+	}
 
-  return {
-    success: false,
-    errors,
-    warnings,
-  };
+	return {
+		success: false,
+		errors,
+		warnings,
+	};
 }

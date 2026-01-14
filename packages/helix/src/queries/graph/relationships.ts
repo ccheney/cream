@@ -19,13 +19,13 @@ import type { GraphNode } from "./types.js";
  * @returns Events that influenced this decision
  */
 export async function getInfluencingEvents(
-  client: HelixClient,
-  decisionId: string
+	client: HelixClient,
+	decisionId: string
 ): Promise<GraphNode[]> {
-  return getNeighbors(client, decisionId, {
-    edgeTypes: ["INFLUENCED_DECISION"],
-    direction: "incoming",
-  });
+	return getNeighbors(client, decisionId, {
+		edgeTypes: ["INFLUENCED_DECISION"],
+		direction: "incoming",
+	});
 }
 
 /**
@@ -36,13 +36,13 @@ export async function getInfluencingEvents(
  * @returns Decisions influenced by this event
  */
 export async function getInfluencedDecisions(
-  client: HelixClient,
-  eventId: string
+	client: HelixClient,
+	eventId: string
 ): Promise<GraphNode[]> {
-  return getNeighbors(client, eventId, {
-    edgeTypes: ["INFLUENCED_DECISION"],
-    direction: "outgoing",
-  });
+	return getNeighbors(client, eventId, {
+		edgeTypes: ["INFLUENCED_DECISION"],
+		direction: "outgoing",
+	});
 }
 
 /**
@@ -53,11 +53,11 @@ export async function getInfluencedDecisions(
  * @returns Lifecycle events for this decision
  */
 export async function getLifecycleEvents(
-  client: HelixClient,
-  decisionId: string
+	client: HelixClient,
+	decisionId: string
 ): Promise<GraphNode[]> {
-  return getNeighbors(client, decisionId, {
-    edgeTypes: ["HAS_EVENT"],
-    direction: "outgoing",
-  });
+	return getNeighbors(client, decisionId, {
+		edgeTypes: ["HAS_EVENT"],
+		direction: "outgoing",
+	});
 }

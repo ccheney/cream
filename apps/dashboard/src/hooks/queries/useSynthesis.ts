@@ -17,9 +17,9 @@ import { CACHE_TIMES, STALE_TIMES } from "@/lib/api/query-client";
 // ============================================
 
 export const synthesisKeys = {
-  all: ["synthesis"] as const,
-  status: () => [...synthesisKeys.all, "status"] as const,
-  history: (limit?: number) => [...synthesisKeys.all, "history", limit] as const,
+	all: ["synthesis"] as const,
+	status: () => [...synthesisKeys.all, "status"] as const,
+	history: (limit?: number) => [...synthesisKeys.all, "history", limit] as const,
 };
 
 // ============================================
@@ -35,16 +35,16 @@ export const synthesisKeys = {
  * Polls every 60 seconds for real-time updates.
  */
 export function useSynthesisStatus() {
-  return useQuery({
-    queryKey: synthesisKeys.status(),
-    queryFn: async () => {
-      const { data } = await get<SynthesisStatusResponse>("/api/indicators/synthesis/status");
-      return data;
-    },
-    staleTime: STALE_TIMES.DEFAULT, // 30 seconds
-    gcTime: CACHE_TIMES.DEFAULT,
-    refetchInterval: 60_000, // Poll every minute
-  });
+	return useQuery({
+		queryKey: synthesisKeys.status(),
+		queryFn: async () => {
+			const { data } = await get<SynthesisStatusResponse>("/api/indicators/synthesis/status");
+			return data;
+		},
+		staleTime: STALE_TIMES.DEFAULT, // 30 seconds
+		gcTime: CACHE_TIMES.DEFAULT,
+		refetchInterval: 60_000, // Poll every minute
+	});
 }
 
 // ============================================
@@ -58,17 +58,17 @@ export function useSynthesisStatus() {
  * lifecycle status and 30-day rolling IC.
  */
 export function useSynthesisHistory(limit = 20) {
-  return useQuery({
-    queryKey: synthesisKeys.history(limit),
-    queryFn: async () => {
-      const { data } = await get<{ history: SynthesisHistoryResponse["history"] }>(
-        `/api/indicators/synthesis/history?limit=${limit}`
-      );
-      return data.history;
-    },
-    staleTime: STALE_TIMES.DEFAULT,
-    gcTime: CACHE_TIMES.DEFAULT,
-  });
+	return useQuery({
+		queryKey: synthesisKeys.history(limit),
+		queryFn: async () => {
+			const { data } = await get<{ history: SynthesisHistoryResponse["history"] }>(
+				`/api/indicators/synthesis/history?limit=${limit}`
+			);
+			return data.history;
+		},
+		staleTime: STALE_TIMES.DEFAULT,
+		gcTime: CACHE_TIMES.DEFAULT,
+	});
 }
 
 // ============================================
@@ -76,22 +76,22 @@ export function useSynthesisHistory(limit = 20) {
 // ============================================
 
 export interface TriggerSynthesisInput {
-  reason?: string;
-  regime?: string;
+	reason?: string;
+	regime?: string;
 }
 
 export interface TriggerSynthesisResult {
-  success: boolean;
-  indicatorId?: string;
-  indicatorName?: string;
-  status: string;
-  message: string;
-  phases: {
-    hypothesisGenerated: boolean;
-    implementationSucceeded: boolean;
-    validationPassed: boolean;
-    paperTradingStarted: boolean;
-  };
+	success: boolean;
+	indicatorId?: string;
+	indicatorName?: string;
+	status: string;
+	message: string;
+	phases: {
+		hypothesisGenerated: boolean;
+		implementationSucceeded: boolean;
+		validationPassed: boolean;
+		paperTradingStarted: boolean;
+	};
 }
 
 /**
@@ -101,20 +101,20 @@ export interface TriggerSynthesisResult {
  * Invalidates status and history queries on success.
  */
 export function useTriggerSynthesis() {
-  const queryClient = useQueryClient();
+	const queryClient = useQueryClient();
 
-  return useMutation({
-    mutationFn: async (input: TriggerSynthesisInput): Promise<TriggerSynthesisResult> => {
-      const { data } = await post<TriggerSynthesisResult>(
-        "/api/indicators/synthesis/trigger",
-        input
-      );
-      return data;
-    },
-    onSuccess: () => {
-      // Invalidate related queries
-      queryClient.invalidateQueries({ queryKey: synthesisKeys.status() });
-      queryClient.invalidateQueries({ queryKey: synthesisKeys.history() });
-    },
-  });
+	return useMutation({
+		mutationFn: async (input: TriggerSynthesisInput): Promise<TriggerSynthesisResult> => {
+			const { data } = await post<TriggerSynthesisResult>(
+				"/api/indicators/synthesis/trigger",
+				input
+			);
+			return data;
+		},
+		onSuccess: () => {
+			// Invalidate related queries
+			queryClient.invalidateQueries({ queryKey: synthesisKeys.status() });
+			queryClient.invalidateQueries({ queryKey: synthesisKeys.history() });
+		},
+	});
 }

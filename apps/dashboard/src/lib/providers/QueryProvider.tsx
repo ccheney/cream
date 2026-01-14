@@ -6,20 +6,20 @@ import { type ReactNode, useState } from "react";
 import { getQueryClient } from "../api/query-client";
 
 export interface QueryProviderProps {
-  children: ReactNode;
-  showDevtools?: boolean;
+	children: ReactNode;
+	showDevtools?: boolean;
 }
 
 export function QueryProvider({ children, showDevtools = false }: QueryProviderProps) {
-  // useState ensures stable client across re-renders while allowing SSR to create fresh instances
-  const [queryClient] = useState(() => getQueryClient());
+	// useState ensures stable client across re-renders while allowing SSR to create fresh instances
+	const [queryClient] = useState(() => getQueryClient());
 
-  return (
-    <QueryClientProvider client={queryClient}>
-      {children}
-      {showDevtools && <ReactQueryDevtools initialIsOpen={false} buttonPosition="bottom-right" />}
-    </QueryClientProvider>
-  );
+	return (
+		<QueryClientProvider client={queryClient}>
+			{children}
+			{showDevtools && <ReactQueryDevtools initialIsOpen={false} buttonPosition="bottom-right" />}
+		</QueryClientProvider>
+	);
 }
 
 export default QueryProvider;

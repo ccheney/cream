@@ -15,12 +15,12 @@ import { createConnectionPool } from "./pool.js";
 import { clearAllState, connectionPools, isInitialized, setInitialized } from "./state.js";
 import { getActiveSubscriptions, getStats, getTotalCapacity, isReady } from "./stats.js";
 import {
-  evictLowestPriority,
-  releaseBatchSubscription,
-  releaseSubscription,
-  requestBatchSubscription,
-  requestSubscription,
-  setCriticalContracts,
+	evictLowestPriority,
+	releaseBatchSubscription,
+	releaseSubscription,
+	requestBatchSubscription,
+	requestSubscription,
+	setCriticalContracts,
 } from "./subscriptions.js";
 import { SubscriptionPriority } from "./types.js";
 
@@ -29,60 +29,60 @@ import { SubscriptionPriority } from "./types.js";
  * Creates the first connection pool.
  */
 export async function initSubscriptionManager(): Promise<void> {
-  if (isInitialized()) {
-    return;
-  }
+	if (isInitialized()) {
+		return;
+	}
 
-  if (!isAlpacaConfigured()) {
-    return;
-  }
+	if (!isAlpacaConfigured()) {
+		return;
+	}
 
-  try {
-    const pool = await createConnectionPool(0);
-    connectionPools.push(pool);
-    setInitialized(true);
-  } catch (_error) {}
+	try {
+		const pool = await createConnectionPool(0);
+		connectionPools.push(pool);
+		setInitialized(true);
+	} catch (_error) {}
 }
 
 /**
  * Shutdown the subscription manager.
  */
 export function shutdownSubscriptionManager(): void {
-  clearAllState();
+	clearAllState();
 }
 
 export {
-  cleanExpiredCache,
-  evictLowestPriority,
-  getActiveSubscriptions,
-  getCachedQuote,
-  getStats,
-  getTotalCapacity,
-  isReady,
-  releaseBatchSubscription,
-  releaseSubscription,
-  requestBatchSubscription,
-  requestSubscription,
-  setCriticalContracts,
-  SubscriptionPriority,
+	cleanExpiredCache,
+	evictLowestPriority,
+	getActiveSubscriptions,
+	getCachedQuote,
+	getStats,
+	getTotalCapacity,
+	isReady,
+	releaseBatchSubscription,
+	releaseSubscription,
+	requestBatchSubscription,
+	requestSubscription,
+	setCriticalContracts,
+	SubscriptionPriority,
 };
 
 export type { CachedQuote, SubscriptionManagerStats } from "./types.js";
 
 export default {
-  initSubscriptionManager,
-  shutdownSubscriptionManager,
-  requestSubscription,
-  releaseSubscription,
-  requestBatchSubscription,
-  releaseBatchSubscription,
-  setCriticalContracts,
-  getCachedQuote,
-  cleanExpiredCache,
-  evictLowestPriority,
-  getStats,
-  isReady,
-  getTotalCapacity,
-  getActiveSubscriptions,
-  SubscriptionPriority,
+	initSubscriptionManager,
+	shutdownSubscriptionManager,
+	requestSubscription,
+	releaseSubscription,
+	requestBatchSubscription,
+	releaseBatchSubscription,
+	setCriticalContracts,
+	getCachedQuote,
+	cleanExpiredCache,
+	evictLowestPriority,
+	getStats,
+	isReady,
+	getTotalCapacity,
+	getActiveSubscriptions,
+	SubscriptionPriority,
 };

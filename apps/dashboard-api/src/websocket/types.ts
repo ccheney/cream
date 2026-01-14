@@ -11,13 +11,13 @@ import type { Channel } from "../../../../packages/domain/src/websocket/index.js
  * Connection metadata attached to each WebSocket.
  */
 export interface ConnectionMetadata {
-  connectionId: string;
-  userId: string;
-  connectedAt: Date;
-  lastPing: Date;
-  channels: Set<Channel>;
-  symbols: Set<string>;
-  contracts: Set<string>;
+	connectionId: string;
+	userId: string;
+	connectedAt: Date;
+	lastPing: Date;
+	channels: Set<Channel>;
+	symbols: Set<string>;
+	contracts: Set<string>;
 }
 
 /**
@@ -29,9 +29,9 @@ export type WebSocketWithMetadata = ServerWebSocket<ConnectionMetadata>;
  * Authentication validation result.
  */
 export interface AuthResult {
-  valid: boolean;
-  userId?: string;
-  error?: string;
+	valid: boolean;
+	userId?: string;
+	error?: string;
 }
 
 /**

@@ -10,75 +10,75 @@ export type DateFormat = "relative" | "absolute" | "iso";
 export type NumberFormat = "short" | "full" | "compact";
 
 export interface SoundPreferences {
-  enabled: boolean;
-  /** 0-1 */
-  volume: number;
-  criticalAlerts: boolean;
-  tradeExecutions: boolean;
-  orderFills: boolean;
+	enabled: boolean;
+	/** 0-1 */
+	volume: number;
+	criticalAlerts: boolean;
+	tradeExecutions: boolean;
+	orderFills: boolean;
 }
 
 export interface NotificationPreferences {
-  enabled: boolean;
-  criticalAlerts: boolean;
-  tradeExecutions: boolean;
-  priceAlerts: boolean;
+	enabled: boolean;
+	criticalAlerts: boolean;
+	tradeExecutions: boolean;
+	priceAlerts: boolean;
 }
 
 export interface DisplayPreferences {
-  theme: ThemeMode;
-  /** Combined with prefers-reduced-motion in shouldAnimate() */
-  animationsEnabled: boolean;
-  dateFormat: DateFormat;
-  numberFormat: NumberFormat;
-  /** Privacy mode - hides portfolio values when false */
-  showValues: boolean;
-  compactMode: boolean;
+	theme: ThemeMode;
+	/** Combined with prefers-reduced-motion in shouldAnimate() */
+	animationsEnabled: boolean;
+	dateFormat: DateFormat;
+	numberFormat: NumberFormat;
+	/** Privacy mode - hides portfolio values when false */
+	showValues: boolean;
+	compactMode: boolean;
 }
 
 export type FeedEventType =
-  | "quote"
-  | "trade"
-  | "options_quote"
-  | "options_trade"
-  | "decision"
-  | "order"
-  | "fill"
-  | "reject"
-  | "alert"
-  | "agent"
-  | "cycle"
-  | "backtest"
-  | "system";
+	| "quote"
+	| "trade"
+	| "options_quote"
+	| "options_trade"
+	| "decision"
+	| "order"
+	| "fill"
+	| "reject"
+	| "alert"
+	| "agent"
+	| "cycle"
+	| "backtest"
+	| "system";
 
 export interface FeedPreferences {
-  autoScroll: boolean;
-  maxEvents: number;
-  showTimestamps: boolean;
-  groupSimilar: boolean;
-  /** Which event types are visible in the feed */
-  enabledEventTypes: Record<FeedEventType, boolean>;
-  /** Symbol filter text */
-  symbolFilter: string;
+	autoScroll: boolean;
+	maxEvents: number;
+	showTimestamps: boolean;
+	groupSimilar: boolean;
+	/** Which event types are visible in the feed */
+	enabledEventTypes: Record<FeedEventType, boolean>;
+	/** Symbol filter text */
+	symbolFilter: string;
 }
 
 export interface PreferencesState {
-  sound: SoundPreferences;
-  notifications: NotificationPreferences;
-  display: DisplayPreferences;
-  feed: FeedPreferences;
-  lastUpdated: number;
+	sound: SoundPreferences;
+	notifications: NotificationPreferences;
+	display: DisplayPreferences;
+	feed: FeedPreferences;
+	lastUpdated: number;
 }
 
 export interface PreferencesActions {
-  updateSound: (prefs: Partial<SoundPreferences>) => void;
-  updateNotifications: (prefs: Partial<NotificationPreferences>) => void;
-  updateDisplay: (prefs: Partial<DisplayPreferences>) => void;
-  updateFeed: (prefs: Partial<FeedPreferences>) => void;
-  resetToDefaults: () => void;
-  togglePreference: (category: "sound" | "notifications" | "display" | "feed", key: string) => void;
-  getComputedTheme: () => "light" | "dark";
-  shouldAnimate: () => boolean;
+	updateSound: (prefs: Partial<SoundPreferences>) => void;
+	updateNotifications: (prefs: Partial<NotificationPreferences>) => void;
+	updateDisplay: (prefs: Partial<DisplayPreferences>) => void;
+	updateFeed: (prefs: Partial<FeedPreferences>) => void;
+	resetToDefaults: () => void;
+	togglePreference: (category: "sound" | "notifications" | "display" | "feed", key: string) => void;
+	getComputedTheme: () => "light" | "dark";
+	shouldAnimate: () => boolean;
 }
 
 export type PreferencesStore = PreferencesState & PreferencesActions;
@@ -88,58 +88,58 @@ export type PreferencesStore = PreferencesState & PreferencesActions;
 // ============================================
 
 const defaultSoundPreferences: SoundPreferences = {
-  enabled: true,
-  volume: 0.5,
-  criticalAlerts: true,
-  tradeExecutions: true,
-  orderFills: false,
+	enabled: true,
+	volume: 0.5,
+	criticalAlerts: true,
+	tradeExecutions: true,
+	orderFills: false,
 };
 
 const defaultNotificationPreferences: NotificationPreferences = {
-  enabled: false,
-  criticalAlerts: true,
-  tradeExecutions: true,
-  priceAlerts: true,
+	enabled: false,
+	criticalAlerts: true,
+	tradeExecutions: true,
+	priceAlerts: true,
 };
 
 const defaultDisplayPreferences: DisplayPreferences = {
-  theme: "light",
-  animationsEnabled: true,
-  dateFormat: "relative",
-  numberFormat: "short",
-  showValues: true,
-  compactMode: false,
+	theme: "light",
+	animationsEnabled: true,
+	dateFormat: "relative",
+	numberFormat: "short",
+	showValues: true,
+	compactMode: false,
 };
 
 const defaultFeedPreferences: FeedPreferences = {
-  autoScroll: true,
-  maxEvents: 1000,
-  showTimestamps: true,
-  groupSimilar: true,
-  enabledEventTypes: {
-    quote: true,
-    trade: true,
-    options_quote: true,
-    options_trade: true,
-    decision: true,
-    order: true,
-    fill: true,
-    reject: true,
-    alert: true,
-    agent: true,
-    cycle: true,
-    backtest: true,
-    system: false, // Hidden by default
-  },
-  symbolFilter: "",
+	autoScroll: true,
+	maxEvents: 1000,
+	showTimestamps: true,
+	groupSimilar: true,
+	enabledEventTypes: {
+		quote: true,
+		trade: true,
+		options_quote: true,
+		options_trade: true,
+		decision: true,
+		order: true,
+		fill: true,
+		reject: true,
+		alert: true,
+		agent: true,
+		cycle: true,
+		backtest: true,
+		system: false, // Hidden by default
+	},
+	symbolFilter: "",
 };
 
 const initialState: PreferencesState = {
-  sound: defaultSoundPreferences,
-  notifications: defaultNotificationPreferences,
-  display: defaultDisplayPreferences,
-  feed: defaultFeedPreferences,
-  lastUpdated: Date.now(),
+	sound: defaultSoundPreferences,
+	notifications: defaultNotificationPreferences,
+	display: defaultDisplayPreferences,
+	feed: defaultFeedPreferences,
+	lastUpdated: Date.now(),
 };
 
 // ============================================
@@ -147,120 +147,120 @@ const initialState: PreferencesState = {
 // ============================================
 
 function prefersReducedMotion(): boolean {
-  if (typeof window === "undefined") {
-    return false;
-  }
-  return window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+	if (typeof window === "undefined") {
+		return false;
+	}
+	return window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 }
 
 function getSystemTheme(): "light" | "dark" {
-  if (typeof window === "undefined") {
-    return "light";
-  }
-  return window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
+	if (typeof window === "undefined") {
+		return "light";
+	}
+	return window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
 }
 
 export const usePreferencesStore = create<PreferencesStore>()(
-  devtools(
-    subscribeWithSelector(
-      persist(
-        (set, get) => ({
-          ...initialState,
+	devtools(
+		subscribeWithSelector(
+			persist(
+				(set, get) => ({
+					...initialState,
 
-          updateSound: (prefs) => {
-            set((state) => ({
-              sound: { ...state.sound, ...prefs },
-              lastUpdated: Date.now(),
-            }));
-          },
+					updateSound: (prefs) => {
+						set((state) => ({
+							sound: { ...state.sound, ...prefs },
+							lastUpdated: Date.now(),
+						}));
+					},
 
-          updateNotifications: (prefs) => {
-            set((state) => ({
-              notifications: { ...state.notifications, ...prefs },
-              lastUpdated: Date.now(),
-            }));
-          },
+					updateNotifications: (prefs) => {
+						set((state) => ({
+							notifications: { ...state.notifications, ...prefs },
+							lastUpdated: Date.now(),
+						}));
+					},
 
-          updateDisplay: (prefs) => {
-            set((state) => ({
-              display: { ...state.display, ...prefs },
-              lastUpdated: Date.now(),
-            }));
-          },
+					updateDisplay: (prefs) => {
+						set((state) => ({
+							display: { ...state.display, ...prefs },
+							lastUpdated: Date.now(),
+						}));
+					},
 
-          updateFeed: (prefs) => {
-            set((state) => ({
-              feed: { ...state.feed, ...prefs },
-              lastUpdated: Date.now(),
-            }));
-          },
+					updateFeed: (prefs) => {
+						set((state) => ({
+							feed: { ...state.feed, ...prefs },
+							lastUpdated: Date.now(),
+						}));
+					},
 
-          resetToDefaults: () => {
-            set({
-              ...initialState,
-              lastUpdated: Date.now(),
-            });
-          },
+					resetToDefaults: () => {
+						set({
+							...initialState,
+							lastUpdated: Date.now(),
+						});
+					},
 
-          togglePreference: (category, key) => {
-            set((state) => {
-              const categoryState = state[category] as unknown as Record<string, unknown>;
-              if (typeof categoryState[key] !== "boolean") {
-                return state;
-              }
+					togglePreference: (category, key) => {
+						set((state) => {
+							const categoryState = state[category] as unknown as Record<string, unknown>;
+							if (typeof categoryState[key] !== "boolean") {
+								return state;
+							}
 
-              return {
-                [category]: {
-                  ...categoryState,
-                  [key]: !categoryState[key],
-                },
-                lastUpdated: Date.now(),
-              };
-            });
-          },
+							return {
+								[category]: {
+									...categoryState,
+									[key]: !categoryState[key],
+								},
+								lastUpdated: Date.now(),
+							};
+						});
+					},
 
-          getComputedTheme: () => {
-            const { theme } = get().display;
-            if (theme === "system") {
-              return getSystemTheme();
-            }
-            return theme;
-          },
+					getComputedTheme: () => {
+						const { theme } = get().display;
+						if (theme === "system") {
+							return getSystemTheme();
+						}
+						return theme;
+					},
 
-          shouldAnimate: () => {
-            const state = get();
-            if (!state.display.animationsEnabled) {
-              return false;
-            }
-            if (prefersReducedMotion()) {
-              return false;
-            }
-            return true;
-          },
-        }),
-        {
-          name: "cream-preferences",
-          version: 2,
-          migrate: (persisted, version) => {
-            const state = persisted as Partial<PreferencesState>;
-            if (version < 2) {
-              // Add new feed filter preferences
-              return {
-                ...initialState,
-                ...state,
-                feed: {
-                  ...defaultFeedPreferences,
-                  ...state.feed,
-                },
-              };
-            }
-            return persisted as PreferencesState;
-          },
-        }
-      )
-    ),
-    { name: "preferences-store" }
-  )
+					shouldAnimate: () => {
+						const state = get();
+						if (!state.display.animationsEnabled) {
+							return false;
+						}
+						if (prefersReducedMotion()) {
+							return false;
+						}
+						return true;
+					},
+				}),
+				{
+					name: "cream-preferences",
+					version: 2,
+					migrate: (persisted, version) => {
+						const state = persisted as Partial<PreferencesState>;
+						if (version < 2) {
+							// Add new feed filter preferences
+							return {
+								...initialState,
+								...state,
+								feed: {
+									...defaultFeedPreferences,
+									...state.feed,
+								},
+							};
+						}
+						return persisted as PreferencesState;
+					},
+				}
+			)
+		),
+		{ name: "preferences-store" }
+	)
 );
 
 // ============================================
@@ -277,7 +277,7 @@ export const selectAutoScroll = (state: PreferencesStore) => state.feed.autoScro
 export const selectDateFormat = (state: PreferencesStore) => state.display.dateFormat;
 export const selectNumberFormat = (state: PreferencesStore) => state.display.numberFormat;
 export const selectFeedEnabledEventTypes = (state: PreferencesStore) =>
-  state.feed.enabledEventTypes;
+	state.feed.enabledEventTypes;
 export const selectFeedSymbolFilter = (state: PreferencesStore) => state.feed.symbolFilter;
 
 // ============================================
@@ -285,53 +285,53 @@ export const selectFeedSymbolFilter = (state: PreferencesStore) => state.feed.sy
 // ============================================
 
 export function applyTheme(theme: "light" | "dark"): void {
-  if (typeof document === "undefined") {
-    return;
-  }
+	if (typeof document === "undefined") {
+		return;
+	}
 
-  document.documentElement.setAttribute("data-theme", theme);
+	document.documentElement.setAttribute("data-theme", theme);
 
-  // Toggle .dark class for Tailwind dark: variants
-  if (theme === "dark") {
-    document.documentElement.classList.add("dark");
-  } else {
-    document.documentElement.classList.remove("dark");
-  }
+	// Toggle .dark class for Tailwind dark: variants
+	if (theme === "dark") {
+		document.documentElement.classList.add("dark");
+	} else {
+		document.documentElement.classList.remove("dark");
+	}
 
-  const metaThemeColor = document.querySelector('meta[name="theme-color"]');
-  if (metaThemeColor) {
-    metaThemeColor.setAttribute("content", theme === "dark" ? "#0c0a09" : "#f5f5f4");
-  }
+	const metaThemeColor = document.querySelector('meta[name="theme-color"]');
+	if (metaThemeColor) {
+		metaThemeColor.setAttribute("content", theme === "dark" ? "#0c0a09" : "#f5f5f4");
+	}
 }
 
 /** Call in app root useEffect. Returns unsubscribe function. */
 export function subscribeToThemeChanges(): () => void {
-  const store = usePreferencesStore.getState();
-  applyTheme(store.getComputedTheme());
+	const store = usePreferencesStore.getState();
+	applyTheme(store.getComputedTheme());
 
-  const unsubscribe = usePreferencesStore.subscribe(
-    (state) => state.display.theme,
-    () => {
-      const store = usePreferencesStore.getState();
-      applyTheme(store.getComputedTheme());
-    }
-  );
+	const unsubscribe = usePreferencesStore.subscribe(
+		(state) => state.display.theme,
+		() => {
+			const store = usePreferencesStore.getState();
+			applyTheme(store.getComputedTheme());
+		}
+	);
 
-  // Re-apply when OS theme changes while in 'system' mode
-  const mediaQuery = window.matchMedia("(prefers-color-scheme: dark)");
-  const handleChange = () => {
-    const store = usePreferencesStore.getState();
-    if (store.display.theme === "system") {
-      applyTheme(store.getComputedTheme());
-    }
-  };
+	// Re-apply when OS theme changes while in 'system' mode
+	const mediaQuery = window.matchMedia("(prefers-color-scheme: dark)");
+	const handleChange = () => {
+		const store = usePreferencesStore.getState();
+		if (store.display.theme === "system") {
+			applyTheme(store.getComputedTheme());
+		}
+	};
 
-  mediaQuery.addEventListener("change", handleChange);
+	mediaQuery.addEventListener("change", handleChange);
 
-  return () => {
-    unsubscribe();
-    mediaQuery.removeEventListener("change", handleChange);
-  };
+	return () => {
+		unsubscribe();
+		mediaQuery.removeEventListener("change", handleChange);
+	};
 }
 
 export default usePreferencesStore;

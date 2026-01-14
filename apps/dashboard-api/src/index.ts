@@ -16,53 +16,53 @@ import { prettyJSON } from "hono/pretty-json";
 import { timing } from "hono/timing";
 import { auth } from "./auth/better-auth.js";
 import {
-  liveProtection,
-  requireAuth,
-  type SessionVariables,
-  sessionMiddleware,
+	liveProtection,
+	requireAuth,
+	type SessionVariables,
+	sessionMiddleware,
 } from "./auth/session.js";
 import { closeDb, getCyclesRepo } from "./db.js";
 import { getEventPublisher, resetEventPublisher } from "./events/publisher.js";
 import log from "./logger.js";
 import { AUTH_CONFIG, rateLimit, SESSION_CONFIG } from "./middleware/index.js";
 import {
-  agentsRoutes,
-  aiRoutes,
-  alertsRoutes,
-  backtestRoutes,
-  batchStatusRoutes,
-  batchTriggerRoutes,
-  calendarRoutes,
-  configRoutes,
-  decisionsRoutes,
-  economicCalendarRoutes,
-  filingsRoutes,
-  indicatorsRoutes,
-  marketRoutes,
-  optionsRoutes,
-  portfolioRoutes,
-  preferencesRoutes,
-  researchRoutes,
-  riskRoutes,
-  snapshotsRoutes,
-  systemRoutes,
-  thesesRoutes,
+	agentsRoutes,
+	aiRoutes,
+	alertsRoutes,
+	backtestRoutes,
+	batchStatusRoutes,
+	batchTriggerRoutes,
+	calendarRoutes,
+	configRoutes,
+	decisionsRoutes,
+	economicCalendarRoutes,
+	filingsRoutes,
+	indicatorsRoutes,
+	marketRoutes,
+	optionsRoutes,
+	portfolioRoutes,
+	preferencesRoutes,
+	researchRoutes,
+	riskRoutes,
+	snapshotsRoutes,
+	systemRoutes,
+	thesesRoutes,
 } from "./routes/index.js";
 import {
-  initMarketDataStreaming,
-  initOptionsDataStreaming,
-  initSharedOptionsWebSocket,
-  shutdownMarketDataStreaming,
-  shutdownOptionsDataStreaming,
-  shutdownSharedOptionsWebSocket,
+	initMarketDataStreaming,
+	initOptionsDataStreaming,
+	initSharedOptionsWebSocket,
+	shutdownMarketDataStreaming,
+	shutdownOptionsDataStreaming,
+	shutdownSharedOptionsWebSocket,
 } from "./streaming/index.js";
 import {
-  closeAllConnections,
-  createConnectionMetadata,
-  getConnectionCount,
-  startHeartbeat,
-  validateAuthTokenAsync,
-  websocketHandler,
+	closeAllConnections,
+	createConnectionMetadata,
+	getConnectionCount,
+	startHeartbeat,
+	validateAuthTokenAsync,
+	websocketHandler,
 } from "./websocket/handler.js";
 
 // ============================================
@@ -78,19 +78,19 @@ const app = new OpenAPIHono<{ Variables: SessionVariables }>();
 // Parse allowed origins from environment variable or use defaults
 const DEFAULT_ORIGINS = ["http://localhost:3000", "http://localhost:3001"];
 const allowedOrigins = process.env.ALLOWED_ORIGINS
-  ? process.env.ALLOWED_ORIGINS.split(",")
-      .map((origin) => origin.trim())
-      .filter((origin) => {
-        // Validate each origin is a valid URL
-        try {
-          new URL(origin);
-          return true;
-        } catch {
-          log.warn({ origin }, "Invalid origin in ALLOWED_ORIGINS");
-          return false;
-        }
-      })
-  : DEFAULT_ORIGINS;
+	? process.env.ALLOWED_ORIGINS.split(",")
+			.map((origin) => origin.trim())
+			.filter((origin) => {
+				// Validate each origin is a valid URL
+				try {
+					new URL(origin);
+					return true;
+				} catch {
+					log.warn({ origin }, "Invalid origin in ALLOWED_ORIGINS");
+					return false;
+				}
+			})
+	: DEFAULT_ORIGINS;
 
 // ============================================
 // Middleware
@@ -98,13 +98,13 @@ const allowedOrigins = process.env.ALLOWED_ORIGINS
 
 // CORS configuration
 app.use(
-  "/*",
-  cors({
-    origin: allowedOrigins,
-    allowMethods: ["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"],
-    allowHeaders: ["Content-Type", "Authorization"],
-    credentials: true,
-  })
+	"/*",
+	cors({
+		origin: allowedOrigins,
+		allowMethods: ["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"],
+		allowHeaders: ["Content-Type", "Authorization"],
+		credentials: true,
+	})
 );
 
 // Request logging
@@ -115,7 +115,7 @@ app.use("/*", timing());
 
 // Pretty JSON in development
 if (process.env.NODE_ENV !== "production") {
-  app.use("/*", prettyJSON());
+	app.use("/*", prettyJSON());
 }
 
 // Global rate limiting (100 req/min per endpoint)
@@ -136,7 +136,7 @@ app.use("/*", sessionMiddleware());
 
 // Mount better-auth handler for all auth routes
 app.on(["POST", "GET"], "/api/auth/*", (c) => {
-  return auth.handler(c.req.raw);
+	return auth.handler(c.req.raw);
 });
 
 // ============================================
@@ -144,37 +144,37 @@ app.on(["POST", "GET"], "/api/auth/*", (c) => {
 // ============================================
 
 const healthRoute = createRoute({
-  method: "get",
-  path: "/health",
-  responses: {
-    200: {
-      content: {
-        "application/json": {
-          schema: z.object({
-            status: z.enum(["ok", "degraded", "down"]),
-            timestamp: z.string(),
-            version: z.string(),
-            websocket: z.object({
-              connections: z.number(),
-            }),
-          }),
-        },
-      },
-      description: "Health check response",
-    },
-  },
-  tags: ["System"],
+	method: "get",
+	path: "/health",
+	responses: {
+		200: {
+			content: {
+				"application/json": {
+					schema: z.object({
+						status: z.enum(["ok", "degraded", "down"]),
+						timestamp: z.string(),
+						version: z.string(),
+						websocket: z.object({
+							connections: z.number(),
+						}),
+					}),
+				},
+			},
+			description: "Health check response",
+		},
+	},
+	tags: ["System"],
 });
 
 app.openapi(healthRoute, (c) => {
-  return c.json({
-    status: "ok" as const,
-    timestamp: new Date().toISOString(),
-    version: "0.1.0",
-    websocket: {
-      connections: getConnectionCount(),
-    },
-  });
+	return c.json({
+		status: "ok" as const,
+		timestamp: new Date().toISOString(),
+		version: "0.1.0",
+		websocket: {
+			connections: getConnectionCount(),
+		},
+	});
 });
 
 // ============================================
@@ -236,18 +236,18 @@ app.route("/api/ai", aiRoutes);
 // ============================================
 
 app.doc("/openapi.json", {
-  openapi: "3.0.0",
-  info: {
-    title: "Cream Dashboard API",
-    version: "0.1.0",
-    description: "API for the Cream trading system dashboard",
-  },
-  servers: [{ url: "http://localhost:3001", description: "Development" }],
+	openapi: "3.0.0",
+	info: {
+		title: "Cream Dashboard API",
+		version: "0.1.0",
+		description: "API for the Cream trading system dashboard",
+	},
+	servers: [{ url: "http://localhost:3001", description: "Development" }],
 });
 
 // Swagger UI redirect
 app.get("/docs", (c) => {
-  return c.html(`
+	return c.html(`
     <!DOCTYPE html>
     <html>
       <head>
@@ -281,121 +281,121 @@ export type AppType = typeof app;
 // ============================================
 
 if (import.meta.main) {
-  const port = parseInt(process.env.PORT ?? "3001", 10);
+	const port = parseInt(process.env.PORT ?? "3001", 10);
 
-  log.info({ port, allowedOrigins }, "Starting Dashboard API server");
+	log.info({ port, allowedOrigins }, "Starting Dashboard API server");
 
-  // Mark any orphaned "running" cycles as failed from previous server instance
-  getCyclesRepo()
-    .then((repo) => repo.markOrphanedAsFailed())
-    .then((count) => {
-      if (count > 0) {
-        log.info({ count }, "Marked orphaned cycles as failed");
-      }
-    })
-    .catch((error) => {
-      log.warn(
-        { error: error instanceof Error ? error.message : String(error) },
-        "Failed to clean up orphaned cycles"
-      );
-    });
+	// Mark any orphaned "running" cycles as failed from previous server instance
+	getCyclesRepo()
+		.then((repo) => repo.markOrphanedAsFailed())
+		.then((count) => {
+			if (count > 0) {
+				log.info({ count }, "Marked orphaned cycles as failed");
+			}
+		})
+		.catch((error) => {
+			log.warn(
+				{ error: error instanceof Error ? error.message : String(error) },
+				"Failed to clean up orphaned cycles"
+			);
+		});
 
-  // Initialize CalendarService (non-blocking, falls back to hardcoded for BACKTEST)
-  const creamEnv = (process.env.CREAM_ENV as CreamEnvironment | undefined) ?? "BACKTEST";
-  initCalendarService({
-    mode: creamEnv,
-    alpacaKey: process.env.ALPACA_KEY,
-    alpacaSecret: process.env.ALPACA_SECRET,
-  })
-    .then(() => {
-      log.info({ mode: creamEnv }, "CalendarService initialized");
-    })
-    .catch((error: unknown) => {
-      log.warn(
-        { error: error instanceof Error ? error.message : String(error), mode: creamEnv },
-        "CalendarService initialization failed, using fallback"
-      );
-    });
+	// Initialize CalendarService (non-blocking, falls back to hardcoded for BACKTEST)
+	const creamEnv = (process.env.CREAM_ENV as CreamEnvironment | undefined) ?? "BACKTEST";
+	initCalendarService({
+		mode: creamEnv,
+		alpacaKey: process.env.ALPACA_KEY,
+		alpacaSecret: process.env.ALPACA_SECRET,
+	})
+		.then(() => {
+			log.info({ mode: creamEnv }, "CalendarService initialized");
+		})
+		.catch((error: unknown) => {
+			log.warn(
+				{ error: error instanceof Error ? error.message : String(error), mode: creamEnv },
+				"CalendarService initialization failed, using fallback"
+			);
+		});
 
-  // Start heartbeat for WebSocket connections
-  startHeartbeat();
+	// Start heartbeat for WebSocket connections
+	startHeartbeat();
 
-  // Initialize market data streaming (non-blocking)
-  initMarketDataStreaming().catch((error) => {
-    log.warn(
-      { error: error instanceof Error ? error.message : String(error) },
-      "Market data streaming initialization failed"
-    );
-  });
+	// Initialize market data streaming (non-blocking)
+	initMarketDataStreaming().catch((error) => {
+		log.warn(
+			{ error: error instanceof Error ? error.message : String(error) },
+			"Market data streaming initialization failed"
+		);
+	});
 
-  // Initialize shared options WebSocket first (single connection for Alpaca)
-  initSharedOptionsWebSocket()
-    .then(() => {
-      // Initialize options data streaming after shared WebSocket is ready
-      return initOptionsDataStreaming();
-    })
-    .catch((error) => {
-      log.warn(
-        { error: error instanceof Error ? error.message : String(error) },
-        "Options streaming initialization failed"
-      );
-    });
+	// Initialize shared options WebSocket first (single connection for Alpaca)
+	initSharedOptionsWebSocket()
+		.then(() => {
+			// Initialize options data streaming after shared WebSocket is ready
+			return initOptionsDataStreaming();
+		})
+		.catch((error) => {
+			log.warn(
+				{ error: error instanceof Error ? error.message : String(error) },
+				"Options streaming initialization failed"
+			);
+		});
 
-  // Start event publisher for broadcasting events to WebSocket clients
-  const publisher = getEventPublisher();
-  publisher.start().catch((error) => {
-    log.warn(
-      { error: error instanceof Error ? error.message : String(error) },
-      "Event publisher failed to start"
-    );
-  });
+	// Start event publisher for broadcasting events to WebSocket clients
+	const publisher = getEventPublisher();
+	publisher.start().catch((error) => {
+		log.warn(
+			{ error: error instanceof Error ? error.message : String(error) },
+			"Event publisher failed to start"
+		);
+	});
 
-  const server = Bun.serve({
-    port,
-    async fetch(req, server) {
-      const url = new URL(req.url);
+	const server = Bun.serve({
+		port,
+		async fetch(req, server) {
+			const url = new URL(req.url);
 
-      // WebSocket upgrade on /ws path
-      if (url.pathname === "/ws") {
-        // Use better-auth session validation via cookies
-        const authResult = await validateAuthTokenAsync(req.headers);
+			// WebSocket upgrade on /ws path
+			if (url.pathname === "/ws") {
+				// Use better-auth session validation via cookies
+				const authResult = await validateAuthTokenAsync(req.headers);
 
-        if (!authResult.valid || !authResult.userId) {
-          return new Response(authResult.error ?? "Unauthorized", { status: 401 });
-        }
+				if (!authResult.valid || !authResult.userId) {
+					return new Response(authResult.error ?? "Unauthorized", { status: 401 });
+				}
 
-        const metadata = createConnectionMetadata(authResult.userId);
-        const success = server.upgrade(req, { data: metadata });
+				const metadata = createConnectionMetadata(authResult.userId);
+				const success = server.upgrade(req, { data: metadata });
 
-        if (success) {
-          return undefined;
-        }
+				if (success) {
+					return undefined;
+				}
 
-        return new Response("WebSocket upgrade failed", { status: 400 });
-      }
+				return new Response("WebSocket upgrade failed", { status: 400 });
+			}
 
-      // Handle HTTP requests with Hono
-      return app.fetch(req, { server });
-    },
-    websocket: websocketHandler,
-  });
+			// Handle HTTP requests with Hono
+			return app.fetch(req, { server });
+		},
+		websocket: websocketHandler,
+	});
 
-  log.info({ port, url: `http://localhost:${port}` }, "Dashboard API server ready");
+	log.info({ port, url: `http://localhost:${port}` }, "Dashboard API server ready");
 
-  // Graceful shutdown
-  const gracefulShutdown = (signal: string) => {
-    log.info({ signal }, "Received shutdown signal, initiating graceful shutdown");
-    resetEventPublisher();
-    shutdownMarketDataStreaming();
-    shutdownOptionsDataStreaming();
-    shutdownSharedOptionsWebSocket();
-    closeAllConnections("Server shutting down");
-    closeDb();
-    server.stop();
-    log.info("Dashboard API server shutdown complete");
-    process.exit(0);
-  };
+	// Graceful shutdown
+	const gracefulShutdown = (signal: string) => {
+		log.info({ signal }, "Received shutdown signal, initiating graceful shutdown");
+		resetEventPublisher();
+		shutdownMarketDataStreaming();
+		shutdownOptionsDataStreaming();
+		shutdownSharedOptionsWebSocket();
+		closeAllConnections("Server shutting down");
+		closeDb();
+		server.stop();
+		log.info("Dashboard API server shutdown complete");
+		process.exit(0);
+	};
 
-  process.on("SIGINT", () => gracefulShutdown("SIGINT"));
-  process.on("SIGTERM", () => gracefulShutdown("SIGTERM"));
+	process.on("SIGINT", () => gracefulShutdown("SIGINT"));
+	process.on("SIGTERM", () => gracefulShutdown("SIGTERM"));
 }

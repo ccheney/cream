@@ -22,15 +22,15 @@ import { createEmbeddingClient, type EmbeddingClient } from "@cream/helix-schema
 import { createNodeLogger, type LifecycleLogger } from "@cream/logger";
 import { createTursoClient, ThesisStateRepository, type TursoClient } from "@cream/storage";
 import {
-  batchIngestClosedTheses,
-  type ThesisIngestionInput,
+	batchIngestClosedTheses,
+	type ThesisIngestionInput,
 } from "../workflows/steps/thesisMemoryIngestion.js";
 
 const log: LifecycleLogger = createNodeLogger({
-  service: "backfill-thesis-memory",
-  level: "info",
-  environment: process.env.CREAM_ENV ?? "BACKTEST",
-  pretty: true,
+	service: "backfill-thesis-memory",
+	level: "info",
+	environment: process.env.CREAM_ENV ?? "BACKTEST",
+	pretty: true,
 });
 
 // ============================================
@@ -38,36 +38,36 @@ const log: LifecycleLogger = createNodeLogger({
 // ============================================
 
 interface BackfillOptions {
-  dryRun: boolean;
-  environment?: string;
-  limit?: number;
-  since?: string;
+	dryRun: boolean;
+	environment?: string;
+	limit?: number;
+	since?: string;
 }
 
 function parseArgs(): BackfillOptions {
-  const args = process.argv.slice(2);
-  const options: BackfillOptions = {
-    dryRun: false,
-  };
+	const args = process.argv.slice(2);
+	const options: BackfillOptions = {
+		dryRun: false,
+	};
 
-  for (let i = 0; i < args.length; i++) {
-    const arg = args[i];
-    const nextArg = args[i + 1];
-    if (arg === "--dry-run") {
-      options.dryRun = true;
-    } else if (arg === "--environment" && nextArg) {
-      options.environment = nextArg;
-      i++;
-    } else if (arg === "--limit" && nextArg) {
-      options.limit = parseInt(nextArg, 10);
-      i++;
-    } else if (arg === "--since" && nextArg) {
-      options.since = nextArg;
-      i++;
-    }
-  }
+	for (let i = 0; i < args.length; i++) {
+		const arg = args[i];
+		const nextArg = args[i + 1];
+		if (arg === "--dry-run") {
+			options.dryRun = true;
+		} else if (arg === "--environment" && nextArg) {
+			options.environment = nextArg;
+			i++;
+		} else if (arg === "--limit" && nextArg) {
+			options.limit = parseInt(nextArg, 10);
+			i++;
+		} else if (arg === "--since" && nextArg) {
+			options.since = nextArg;
+			i++;
+		}
+	}
 
-  return options;
+	return options;
 }
 
 // ============================================
@@ -79,25 +79,25 @@ function parseArgs(): BackfillOptions {
  * Falls back to "UNKNOWN" if no regime data is available.
  */
 async function getRegimeForDate(client: TursoClient, date: string): Promise<string> {
-  try {
-    // Look for the closest regime label before or at the given date
-    const row = await client.get<{ regime: string }>(
-      `SELECT regime FROM regime_labels
+	try {
+		// Look for the closest regime label before or at the given date
+		const row = await client.get<{ regime: string }>(
+			`SELECT regime FROM regime_labels
        WHERE symbol = '_MARKET' AND timeframe = '1d'
        AND timestamp <= ?
        ORDER BY timestamp DESC
        LIMIT 1`,
-      [date]
-    );
+			[date]
+		);
 
-    if (row?.regime) {
-      return String(row.regime).toUpperCase();
-    }
-  } catch {
-    // Ignore errors - just return UNKNOWN
-  }
+		if (row?.regime) {
+			return String(row.regime).toUpperCase();
+		}
+	} catch {
+		// Ignore errors - just return UNKNOWN
+	}
 
-  return "UNKNOWN";
+	return "UNKNOWN";
 }
 
 // ============================================
@@ -105,148 +105,148 @@ async function getRegimeForDate(client: TursoClient, date: string): Promise<stri
 // ============================================
 
 async function backfillThesisMemory(options: BackfillOptions): Promise<void> {
-  log.info({}, "Starting thesis memory backfill");
+	log.info({}, "Starting thesis memory backfill");
 
-  if (options.dryRun) {
-    log.info({}, "DRY RUN MODE - No data will be ingested");
-  }
+	if (options.dryRun) {
+		log.info({}, "DRY RUN MODE - No data will be ingested");
+	}
 
-  // Create Turso client
-  const databaseUrl = process.env.TURSO_DATABASE_URL;
-  const authToken = process.env.TURSO_AUTH_TOKEN;
+	// Create Turso client
+	const databaseUrl = process.env.TURSO_DATABASE_URL;
+	const authToken = process.env.TURSO_AUTH_TOKEN;
 
-  if (!databaseUrl) {
-    log.error({}, "TURSO_DATABASE_URL environment variable not set");
-    process.exit(1);
-  }
+	if (!databaseUrl) {
+		log.error({}, "TURSO_DATABASE_URL environment variable not set");
+		process.exit(1);
+	}
 
-  // Create context for CLI invocation (use environment from options or default to BACKTEST)
-  const envValue = (options.environment || "BACKTEST") as CreamEnvironment;
-  const ctx = createContext(envValue, "manual");
+	// Create context for CLI invocation (use environment from options or default to BACKTEST)
+	const envValue = (options.environment || "BACKTEST") as CreamEnvironment;
+	const ctx = createContext(envValue, "manual");
 
-  const storageClient = await createTursoClient(ctx, {
-    syncUrl: databaseUrl,
-    authToken,
-  });
-  const thesisRepo = new ThesisStateRepository(storageClient);
+	const storageClient = await createTursoClient(ctx, {
+		syncUrl: databaseUrl,
+		authToken,
+	});
+	const thesisRepo = new ThesisStateRepository(storageClient);
 
-  // Build filters
-  const environment = options.environment ?? "BACKTEST";
+	// Build filters
+	const environment = options.environment ?? "BACKTEST";
 
-  log.info({ environment, since: options.since, limit: options.limit }, "Fetching closed theses");
+	log.info({ environment, since: options.since, limit: options.limit }, "Fetching closed theses");
 
-  // Get closed theses
-  const result = await thesisRepo.findMany(
-    {
-      state: "CLOSED",
-      environment: environment as "BACKTEST" | "PAPER" | "LIVE",
-      closedAfter: options.since,
-    },
-    options.limit ? { page: 1, pageSize: options.limit } : undefined
-  );
+	// Get closed theses
+	const result = await thesisRepo.findMany(
+		{
+			state: "CLOSED",
+			environment: environment as "BACKTEST" | "PAPER" | "LIVE",
+			closedAfter: options.since,
+		},
+		options.limit ? { page: 1, pageSize: options.limit } : undefined
+	);
 
-  const closedTheses = result.data;
+	const closedTheses = result.data;
 
-  if (closedTheses.length === 0) {
-    log.info({}, "No closed theses found to backfill");
-    storageClient.close();
-    return;
-  }
+	if (closedTheses.length === 0) {
+		log.info({}, "No closed theses found to backfill");
+		storageClient.close();
+		return;
+	}
 
-  log.info({ count: closedTheses.length }, "Found closed theses to process");
+	log.info({ count: closedTheses.length }, "Found closed theses to process");
 
-  // Prepare ingestion inputs
-  const inputs: ThesisIngestionInput[] = [];
+	// Prepare ingestion inputs
+	const inputs: ThesisIngestionInput[] = [];
 
-  for (const thesis of closedTheses) {
-    // Get regime at entry and exit
-    const entryDate = thesis.entryDate ?? thesis.createdAt;
-    const exitDate = thesis.closedAt ?? new Date().toISOString();
+	for (const thesis of closedTheses) {
+		// Get regime at entry and exit
+		const entryDate = thesis.entryDate ?? thesis.createdAt;
+		const exitDate = thesis.closedAt ?? new Date().toISOString();
 
-    const entryRegime = await getRegimeForDate(storageClient, entryDate);
-    const exitRegime = await getRegimeForDate(storageClient, exitDate);
+		const entryRegime = await getRegimeForDate(storageClient, entryDate);
+		const exitRegime = await getRegimeForDate(storageClient, exitDate);
 
-    inputs.push({
-      thesis,
-      entryRegime,
-      exitRegime,
-    });
+		inputs.push({
+			thesis,
+			entryRegime,
+			exitRegime,
+		});
 
-    if (options.dryRun) {
-      log.info(
-        {
-          thesisId: thesis.thesisId,
-          instrumentId: thesis.instrumentId,
-          entryDate,
-          entryRegime,
-          exitDate,
-          exitRegime,
-          realizedPnlPct: thesis.realizedPnlPct,
-          closeReason: thesis.closeReason,
-        },
-        "Would ingest thesis"
-      );
-    }
-  }
+		if (options.dryRun) {
+			log.info(
+				{
+					thesisId: thesis.thesisId,
+					instrumentId: thesis.instrumentId,
+					entryDate,
+					entryRegime,
+					exitDate,
+					exitRegime,
+					realizedPnlPct: thesis.realizedPnlPct,
+					closeReason: thesis.closeReason,
+				},
+				"Would ingest thesis"
+			);
+		}
+	}
 
-  if (options.dryRun) {
-    log.info({ count: inputs.length }, "Dry run complete");
-    storageClient.close();
-    storageClient.close();
-    return;
-  }
+	if (options.dryRun) {
+		log.info({ count: inputs.length }, "Dry run complete");
+		storageClient.close();
+		storageClient.close();
+		return;
+	}
 
-  // Create HelixDB and embedding clients
-  let helixClient: HelixClient | null = null;
-  let embeddingClient: EmbeddingClient | null = null;
+	// Create HelixDB and embedding clients
+	let helixClient: HelixClient | null = null;
+	let embeddingClient: EmbeddingClient | null = null;
 
-  try {
-    helixClient = createHelixClientFromEnv();
-    embeddingClient = createEmbeddingClient();
-  } catch (error) {
-    log.error(
-      { error: error instanceof Error ? error.message : String(error) },
-      "Failed to create HelixDB or embedding client - ensure HELIX_HOST and GOOGLE_GENAI_API_KEY are set"
-    );
-    storageClient.close();
-    storageClient.close();
-    return;
-  }
+	try {
+		helixClient = createHelixClientFromEnv();
+		embeddingClient = createEmbeddingClient();
+	} catch (error) {
+		log.error(
+			{ error: error instanceof Error ? error.message : String(error) },
+			"Failed to create HelixDB or embedding client - ensure HELIX_HOST and GOOGLE_GENAI_API_KEY are set"
+		);
+		storageClient.close();
+		storageClient.close();
+		return;
+	}
 
-  // Batch ingest
-  log.info({}, "Starting batch ingestion");
+	// Batch ingest
+	log.info({}, "Starting batch ingestion");
 
-  const batchResult = await batchIngestClosedTheses(inputs, helixClient, embeddingClient);
+	const batchResult = await batchIngestClosedTheses(inputs, helixClient, embeddingClient);
 
-  // Report results
-  log.info(
-    {
-      successful: batchResult.successful.length,
-      skipped: batchResult.skipped.length,
-      failed: batchResult.failed.length,
-      totalTimeSeconds: (batchResult.totalExecutionTimeMs / 1000).toFixed(2),
-    },
-    "Backfill results"
-  );
+	// Report results
+	log.info(
+		{
+			successful: batchResult.successful.length,
+			skipped: batchResult.skipped.length,
+			failed: batchResult.failed.length,
+			totalTimeSeconds: (batchResult.totalExecutionTimeMs / 1000).toFixed(2),
+		},
+		"Backfill results"
+	);
 
-  if (batchResult.failed.length > 0) {
-    for (const failure of batchResult.failed) {
-      log.warn({ thesisId: failure.thesisId, error: failure.error }, "Failed to ingest thesis");
-    }
-  }
+	if (batchResult.failed.length > 0) {
+		for (const failure of batchResult.failed) {
+			log.warn({ thesisId: failure.thesisId, error: failure.error }, "Failed to ingest thesis");
+		}
+	}
 
-  if (batchResult.skipped.length > 0) {
-    for (const skip of batchResult.skipped) {
-      log.info({ thesisId: skip.thesisId, reason: skip.reason }, "Skipped thesis");
-    }
-  }
+	if (batchResult.skipped.length > 0) {
+		for (const skip of batchResult.skipped) {
+			log.info({ thesisId: skip.thesisId, reason: skip.reason }, "Skipped thesis");
+		}
+	}
 
-  // Cleanup
-  helixClient.close();
-  storageClient.close();
-  storageClient.close();
+	// Cleanup
+	helixClient.close();
+	storageClient.close();
+	storageClient.close();
 
-  log.info({}, "Backfill complete");
+	log.info({}, "Backfill complete");
 }
 
 // ============================================
@@ -256,6 +256,6 @@ async function backfillThesisMemory(options: BackfillOptions): Promise<void> {
 const options = parseArgs();
 
 backfillThesisMemory(options).catch((error) => {
-  log.error({ error: error instanceof Error ? error.message : String(error) }, "Backfill failed");
-  process.exit(1);
+	log.error({ error: error instanceof Error ? error.message : String(error) }, "Backfill failed");
+	process.exit(1);
 });

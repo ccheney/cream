@@ -15,16 +15,16 @@ import type { ChartPageProps } from "./components/index";
 import { ChartContent } from "./components/index";
 
 export default function ChartPage({ params }: ChartPageProps) {
-  // Use React 19's `use` hook to unwrap the params promise
-  const { symbol } = use(params);
+	// Use React 19's `use` hook to unwrap the params promise
+	const { symbol } = use(params);
 
-  // Defer the symbol change to keep old UI visible during transition
-  const deferredSymbol = useDeferredValue(symbol);
-  const isStale = symbol !== deferredSymbol;
+	// Defer the symbol change to keep old UI visible during transition
+	const deferredSymbol = useDeferredValue(symbol);
+	const isStale = symbol !== deferredSymbol;
 
-  return (
-    <LoadingOverlay isLoading={isStale} label="Loading chart">
-      <ChartContent symbol={deferredSymbol} />
-    </LoadingOverlay>
-  );
+	return (
+		<LoadingOverlay isLoading={isStale} label="Loading chart">
+			<ChartContent symbol={deferredSymbol} />
+		</LoadingOverlay>
+	);
 }

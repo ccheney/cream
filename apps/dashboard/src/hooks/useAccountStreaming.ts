@@ -16,32 +16,32 @@ import { useWebSocketContext } from "@/providers/WebSocketProvider";
 // ============================================
 
 export interface AccountStreamingState {
-  /** Current cash balance */
-  cash: number;
-  /** Current equity value */
-  equity: number;
-  /** Available buying power */
-  buyingPower: number;
-  /** Today's P&L (equity change from previous close) */
-  dayPnl: number;
-  /** Today's P&L percentage */
-  dayPnlPct: number;
-  /** Whether receiving streaming updates */
-  isStreaming: boolean;
-  /** Last update timestamp */
-  lastUpdated: Date | null;
+	/** Current cash balance */
+	cash: number;
+	/** Current equity value */
+	equity: number;
+	/** Available buying power */
+	buyingPower: number;
+	/** Today's P&L (equity change from previous close) */
+	dayPnl: number;
+	/** Today's P&L percentage */
+	dayPnlPct: number;
+	/** Whether receiving streaming updates */
+	isStreaming: boolean;
+	/** Last update timestamp */
+	lastUpdated: Date | null;
 }
 
 interface AccountUpdateData {
-  cash: number;
-  equity: number;
-  buyingPower: number;
-  timestamp: string;
+	cash: number;
+	equity: number;
+	buyingPower: number;
+	timestamp: string;
 }
 
 interface AccountUpdateMessage {
-  type: "account_update";
-  data: AccountUpdateData;
+	type: "account_update";
+	data: AccountUpdateData;
 }
 
 // ============================================
@@ -69,70 +69,70 @@ interface AccountUpdateMessage {
  * ```
  */
 export function useAccountStreaming(initialAccount?: Account): AccountStreamingState {
-  const { lastMessage, connected, subscribe } = useWebSocketContext();
+	const { lastMessage, connected, subscribe } = useWebSocketContext();
 
-  // Track streaming state
-  const [streamingData, setStreamingData] = useState<AccountUpdateData | null>(null);
-  const lastUpdatedRef = useRef<Date | null>(null);
+	// Track streaming state
+	const [streamingData, setStreamingData] = useState<AccountUpdateData | null>(null);
+	const lastUpdatedRef = useRef<Date | null>(null);
 
-  // Subscribe to portfolio channel (account updates are sent there)
-  useEffect(() => {
-    if (connected) {
-      subscribe(["portfolio"]);
-    }
-  }, [connected, subscribe]);
+	// Subscribe to portfolio channel (account updates are sent there)
+	useEffect(() => {
+		if (connected) {
+			subscribe(["portfolio"]);
+		}
+	}, [connected, subscribe]);
 
-  // Handle incoming account_update messages
-  useEffect(() => {
-    if (!lastMessage) {
-      return;
-    }
+	// Handle incoming account_update messages
+	useEffect(() => {
+		if (!lastMessage) {
+			return;
+		}
 
-    const message = lastMessage as unknown as AccountUpdateMessage;
-    if (message.type === "account_update" && message.data) {
-      setStreamingData(message.data);
-      lastUpdatedRef.current = new Date();
-    }
-  }, [lastMessage]);
+		const message = lastMessage as unknown as AccountUpdateMessage;
+		if (message.type === "account_update" && message.data) {
+			setStreamingData(message.data);
+			lastUpdatedRef.current = new Date();
+		}
+	}, [lastMessage]);
 
-  // Calculate day P&L using lastEquity from initial account
-  const calculateDayPnl = useCallback(
-    (currentEquity: number): { dayPnl: number; dayPnlPct: number } => {
-      if (!initialAccount?.lastEquity || initialAccount.lastEquity === 0) {
-        return { dayPnl: 0, dayPnlPct: 0 };
-      }
+	// Calculate day P&L using lastEquity from initial account
+	const calculateDayPnl = useCallback(
+		(currentEquity: number): { dayPnl: number; dayPnlPct: number } => {
+			if (!initialAccount?.lastEquity || initialAccount.lastEquity === 0) {
+				return { dayPnl: 0, dayPnlPct: 0 };
+			}
 
-      const dayPnl = currentEquity - initialAccount.lastEquity;
-      const dayPnlPct = (dayPnl / initialAccount.lastEquity) * 100;
+			const dayPnl = currentEquity - initialAccount.lastEquity;
+			const dayPnlPct = (dayPnl / initialAccount.lastEquity) * 100;
 
-      return { dayPnl, dayPnlPct };
-    },
-    [initialAccount?.lastEquity]
-  );
+			return { dayPnl, dayPnlPct };
+		},
+		[initialAccount?.lastEquity]
+	);
 
-  // Compute streaming state, merging with initial data
-  const state = useMemo((): AccountStreamingState => {
-    const isStreaming = streamingData !== null;
+	// Compute streaming state, merging with initial data
+	const state = useMemo((): AccountStreamingState => {
+		const isStreaming = streamingData !== null;
 
-    // Use streaming data if available, otherwise fall back to initial
-    const cash = streamingData?.cash ?? initialAccount?.cash ?? 0;
-    const equity = streamingData?.equity ?? initialAccount?.equity ?? 0;
-    const buyingPower = streamingData?.buyingPower ?? initialAccount?.buyingPower ?? 0;
+		// Use streaming data if available, otherwise fall back to initial
+		const cash = streamingData?.cash ?? initialAccount?.cash ?? 0;
+		const equity = streamingData?.equity ?? initialAccount?.equity ?? 0;
+		const buyingPower = streamingData?.buyingPower ?? initialAccount?.buyingPower ?? 0;
 
-    const { dayPnl, dayPnlPct } = calculateDayPnl(equity);
+		const { dayPnl, dayPnlPct } = calculateDayPnl(equity);
 
-    return {
-      cash,
-      equity,
-      buyingPower,
-      dayPnl,
-      dayPnlPct,
-      isStreaming,
-      lastUpdated: lastUpdatedRef.current,
-    };
-  }, [streamingData, initialAccount, calculateDayPnl]);
+		return {
+			cash,
+			equity,
+			buyingPower,
+			dayPnl,
+			dayPnlPct,
+			isStreaming,
+			lastUpdated: lastUpdatedRef.current,
+		};
+	}, [streamingData, initialAccount, calculateDayPnl]);
 
-  return state;
+	return state;
 }
 
 export default useAccountStreaming;

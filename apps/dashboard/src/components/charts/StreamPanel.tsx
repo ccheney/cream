@@ -11,10 +11,10 @@ import { useCallback, useEffect, useState } from "react";
 import { SymbolStream } from "@/components/feed/SymbolStream";
 
 interface StreamPanelProps {
-  symbol: string;
-  isOpen: boolean;
-  onClose: () => void;
-  width?: number;
+	symbol: string;
+	isOpen: boolean;
+	onClose: () => void;
+	width?: number;
 }
 
 const DEFAULT_WIDTH = 400;
@@ -22,174 +22,174 @@ const MIN_WIDTH = 300;
 const MAX_WIDTH = 600;
 
 export function StreamPanel({
-  symbol,
-  isOpen,
-  onClose,
-  width: initialWidth = DEFAULT_WIDTH,
+	symbol,
+	isOpen,
+	onClose,
+	width: initialWidth = DEFAULT_WIDTH,
 }: StreamPanelProps) {
-  const [width, setWidth] = useState(initialWidth);
-  const [isResizing, setIsResizing] = useState(false);
+	const [width, setWidth] = useState(initialWidth);
+	const [isResizing, setIsResizing] = useState(false);
 
-  const handleResizeStart = useCallback((e: React.MouseEvent) => {
-    e.preventDefault();
-    setIsResizing(true);
-  }, []);
+	const handleResizeStart = useCallback((e: React.MouseEvent) => {
+		e.preventDefault();
+		setIsResizing(true);
+	}, []);
 
-  useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === "Escape" && isOpen) {
-        onClose();
-      }
-    };
+	useEffect(() => {
+		const handleKeyDown = (e: KeyboardEvent) => {
+			if (e.key === "Escape" && isOpen) {
+				onClose();
+			}
+		};
 
-    window.addEventListener("keydown", handleKeyDown);
-    return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [isOpen, onClose]);
+		window.addEventListener("keydown", handleKeyDown);
+		return () => window.removeEventListener("keydown", handleKeyDown);
+	}, [isOpen, onClose]);
 
-  useEffect(() => {
-    if (!isResizing) {
-      return;
-    }
+	useEffect(() => {
+		if (!isResizing) {
+			return;
+		}
 
-    const handleMouseMove = (e: MouseEvent) => {
-      const newWidth = window.innerWidth - e.clientX;
-      setWidth(Math.min(MAX_WIDTH, Math.max(MIN_WIDTH, newWidth)));
-    };
+		const handleMouseMove = (e: MouseEvent) => {
+			const newWidth = window.innerWidth - e.clientX;
+			setWidth(Math.min(MAX_WIDTH, Math.max(MIN_WIDTH, newWidth)));
+		};
 
-    const handleMouseUp = () => {
-      setIsResizing(false);
-    };
+		const handleMouseUp = () => {
+			setIsResizing(false);
+		};
 
-    window.addEventListener("mousemove", handleMouseMove);
-    window.addEventListener("mouseup", handleMouseUp);
+		window.addEventListener("mousemove", handleMouseMove);
+		window.addEventListener("mouseup", handleMouseUp);
 
-    return () => {
-      window.removeEventListener("mousemove", handleMouseMove);
-      window.removeEventListener("mouseup", handleMouseUp);
-    };
-  }, [isResizing]);
+		return () => {
+			window.removeEventListener("mousemove", handleMouseMove);
+			window.removeEventListener("mouseup", handleMouseUp);
+		};
+	}, [isResizing]);
 
-  return (
-    <AnimatePresence>
-      {isOpen && (
-        <>
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 0.3 }}
-            exit={{ opacity: 0 }}
-            transition={{ duration: 0.2 }}
-            className="fixed inset-0 bg-black z-40"
-            onClick={onClose}
-          />
+	return (
+		<AnimatePresence>
+			{isOpen && (
+				<>
+					<motion.div
+						initial={{ opacity: 0 }}
+						animate={{ opacity: 0.3 }}
+						exit={{ opacity: 0 }}
+						transition={{ duration: 0.2 }}
+						className="fixed inset-0 bg-black z-40"
+						onClick={onClose}
+					/>
 
-          <motion.div
-            initial={{ x: "100%" }}
-            animate={{ x: 0 }}
-            exit={{ x: "100%" }}
-            transition={{ type: "spring", damping: 25, stiffness: 300 }}
-            style={{ width }}
-            className="fixed right-0 top-0 h-full bg-white dark:bg-night-800 border-l border-cream-200 dark:border-night-700 z-50 flex flex-col shadow-xl"
-          >
-            <div
-              role="slider"
-              aria-label="Resize panel"
-              aria-valuemin={MIN_WIDTH}
-              aria-valuemax={MAX_WIDTH}
-              aria-valuenow={width}
-              tabIndex={0}
-              onMouseDown={handleResizeStart}
-              onKeyDown={(e) => {
-                if (e.key === "ArrowLeft") {
-                  setWidth((w) => Math.min(MAX_WIDTH, w + 20));
-                } else if (e.key === "ArrowRight") {
-                  setWidth((w) => Math.max(MIN_WIDTH, w - 20));
-                }
-              }}
-              className={`absolute left-0 top-0 bottom-0 w-1 cursor-ew-resize hover:bg-cream-300 dark:hover:bg-night-600 transition-colors ${
-                isResizing ? "bg-cream-400 dark:bg-night-500" : ""
-              }`}
-            />
+					<motion.div
+						initial={{ x: "100%" }}
+						animate={{ x: 0 }}
+						exit={{ x: "100%" }}
+						transition={{ type: "spring", damping: 25, stiffness: 300 }}
+						style={{ width }}
+						className="fixed right-0 top-0 h-full bg-white dark:bg-night-800 border-l border-cream-200 dark:border-night-700 z-50 flex flex-col shadow-xl"
+					>
+						<div
+							role="slider"
+							aria-label="Resize panel"
+							aria-valuemin={MIN_WIDTH}
+							aria-valuemax={MAX_WIDTH}
+							aria-valuenow={width}
+							tabIndex={0}
+							onMouseDown={handleResizeStart}
+							onKeyDown={(e) => {
+								if (e.key === "ArrowLeft") {
+									setWidth((w) => Math.min(MAX_WIDTH, w + 20));
+								} else if (e.key === "ArrowRight") {
+									setWidth((w) => Math.max(MIN_WIDTH, w - 20));
+								}
+							}}
+							className={`absolute left-0 top-0 bottom-0 w-1 cursor-ew-resize hover:bg-cream-300 dark:hover:bg-night-600 transition-colors ${
+								isResizing ? "bg-cream-400 dark:bg-night-500" : ""
+							}`}
+						/>
 
-            <div className="flex items-center justify-between px-4 py-3 border-b border-cream-200 dark:border-night-700">
-              <h2 className="text-lg font-semibold text-stone-900 dark:text-night-50">
-                {symbol} Event Stream
-              </h2>
-              <button
-                type="button"
-                onClick={onClose}
-                className="p-1 text-stone-500 dark:text-night-300 hover:text-stone-700 dark:text-night-100 dark:text-night-400 dark:hover:text-night-100 transition-colors"
-                title="Close (Esc)"
-              >
-                <svg
-                  className="w-5 h-5"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                  role="img"
-                  aria-label="Close panel"
-                >
-                  <title>Close panel</title>
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M6 18L18 6M6 6l12 12"
-                  />
-                </svg>
-              </button>
-            </div>
+						<div className="flex items-center justify-between px-4 py-3 border-b border-cream-200 dark:border-night-700">
+							<h2 className="text-lg font-semibold text-stone-900 dark:text-night-50">
+								{symbol} Event Stream
+							</h2>
+							<button
+								type="button"
+								onClick={onClose}
+								className="p-1 text-stone-500 dark:text-night-300 hover:text-stone-700 dark:text-night-100 dark:text-night-400 dark:hover:text-night-100 transition-colors"
+								title="Close (Esc)"
+							>
+								<svg
+									className="w-5 h-5"
+									fill="none"
+									stroke="currentColor"
+									viewBox="0 0 24 24"
+									role="img"
+									aria-label="Close panel"
+								>
+									<title>Close panel</title>
+									<path
+										strokeLinecap="round"
+										strokeLinejoin="round"
+										strokeWidth={2}
+										d="M6 18L18 6M6 6l12 12"
+									/>
+								</svg>
+							</button>
+						</div>
 
-            <div className="flex-1 overflow-hidden">
-              <SymbolStream
-                symbol={symbol}
-                showQuoteHeader={true}
-                showStatistics={true}
-                maxEvents={300}
-              />
-            </div>
-          </motion.div>
-        </>
-      )}
-    </AnimatePresence>
-  );
+						<div className="flex-1 overflow-hidden">
+							<SymbolStream
+								symbol={symbol}
+								showQuoteHeader={true}
+								showStatistics={true}
+								maxEvents={300}
+							/>
+						</div>
+					</motion.div>
+				</>
+			)}
+		</AnimatePresence>
+	);
 }
 
 interface StreamToggleButtonProps {
-  isOpen: boolean;
-  onClick: () => void;
+	isOpen: boolean;
+	onClick: () => void;
 }
 
 export function StreamToggleButton({ isOpen, onClick }: StreamToggleButtonProps) {
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      className={`flex items-center gap-2 px-3 py-1.5 text-sm rounded-md transition-colors ${
-        isOpen
-          ? "bg-stone-700 dark:bg-night-200 text-cream-50 dark:text-night-900"
-          : "bg-cream-300 dark:bg-night-700 text-stone-600 dark:text-night-300 hover:bg-cream-200 dark:hover:bg-night-800"
-      }`}
-      title="Toggle events panel (Shift+E)"
-    >
-      <svg
-        className="w-4 h-4"
-        fill="none"
-        stroke="currentColor"
-        viewBox="0 0 24 24"
-        role="img"
-        aria-label="Events"
-      >
-        <title>Events</title>
-        <path
-          strokeLinecap="round"
-          strokeLinejoin="round"
-          strokeWidth={2}
-          d="M13 10V3L4 14h7v7l9-11h-7z"
-        />
-      </svg>
-      <span>Events</span>
-    </button>
-  );
+	return (
+		<button
+			type="button"
+			onClick={onClick}
+			className={`flex items-center gap-2 px-3 py-1.5 text-sm rounded-md transition-colors ${
+				isOpen
+					? "bg-stone-700 dark:bg-night-200 text-cream-50 dark:text-night-900"
+					: "bg-cream-300 dark:bg-night-700 text-stone-600 dark:text-night-300 hover:bg-cream-200 dark:hover:bg-night-800"
+			}`}
+			title="Toggle events panel (Shift+E)"
+		>
+			<svg
+				className="w-4 h-4"
+				fill="none"
+				stroke="currentColor"
+				viewBox="0 0 24 24"
+				role="img"
+				aria-label="Events"
+			>
+				<title>Events</title>
+				<path
+					strokeLinecap="round"
+					strokeLinejoin="round"
+					strokeWidth={2}
+					d="M13 10V3L4 14h7v7l9-11h-7z"
+				/>
+			</svg>
+			<span>Events</span>
+		</button>
+	);
 }
 
 export default StreamPanel;

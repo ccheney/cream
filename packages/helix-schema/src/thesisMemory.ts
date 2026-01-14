@@ -20,8 +20,8 @@ import type { EmbeddingClient } from "./embeddings";
  * This is a local copy to avoid cyclic dependency.
  */
 interface QueryResult<T = unknown> {
-  data: T;
-  executionTimeMs: number;
+	data: T;
+	executionTimeMs: number;
 }
 
 /**
@@ -29,7 +29,7 @@ interface QueryResult<T = unknown> {
  * This is a local copy to avoid cyclic dependency.
  */
 interface HelixClient {
-  query<T = unknown>(queryName: string, params?: Record<string, unknown>): Promise<QueryResult<T>>;
+	query<T = unknown>(queryName: string, params?: Record<string, unknown>): Promise<QueryResult<T>>;
 }
 
 // ============================================
@@ -45,78 +45,78 @@ export type ThesisOutcome = "WIN" | "LOSS" | "SCRATCH";
  * Close reason from thesis state
  */
 export type ThesisCloseReason =
-  | "STOP_HIT"
-  | "TARGET_HIT"
-  | "INVALIDATED"
-  | "MANUAL"
-  | "TIME_DECAY"
-  | "CORRELATION";
+	| "STOP_HIT"
+	| "TARGET_HIT"
+	| "INVALIDATED"
+	| "MANUAL"
+	| "TIME_DECAY"
+	| "CORRELATION";
 
 /**
  * ThesisMemory node for HelixDB storage
  */
 export interface ThesisMemory {
-  thesis_id: string;
-  instrument_id: string;
-  underlying_symbol?: string;
-  entry_thesis: string;
-  outcome: ThesisOutcome;
-  pnl_percent: number;
-  holding_period_days: number;
-  lessons_learned: string; // JSON array of strings
-  entry_regime: string;
-  exit_regime?: string;
-  close_reason: ThesisCloseReason;
-  entry_price?: number;
-  exit_price?: number;
-  entry_date: string;
-  closed_at: string;
-  environment: string;
+	thesis_id: string;
+	instrument_id: string;
+	underlying_symbol?: string;
+	entry_thesis: string;
+	outcome: ThesisOutcome;
+	pnl_percent: number;
+	holding_period_days: number;
+	lessons_learned: string; // JSON array of strings
+	entry_regime: string;
+	exit_regime?: string;
+	close_reason: ThesisCloseReason;
+	entry_price?: number;
+	exit_price?: number;
+	entry_date: string;
+	closed_at: string;
+	environment: string;
 }
 
 /**
  * Input for creating a thesis memory from a closed thesis
  */
 export interface ThesisMemoryInput {
-  thesisId: string;
-  instrumentId: string;
-  underlyingSymbol?: string;
-  entryThesis: string;
-  pnlPercent: number;
-  entryDate: string;
-  closedAt: string;
-  closeReason: ThesisCloseReason;
-  entryPrice?: number;
-  exitPrice?: number;
-  entryRegime: string;
-  exitRegime?: string;
-  environment: string;
+	thesisId: string;
+	instrumentId: string;
+	underlyingSymbol?: string;
+	entryThesis: string;
+	pnlPercent: number;
+	entryDate: string;
+	closedAt: string;
+	closeReason: ThesisCloseReason;
+	entryPrice?: number;
+	exitPrice?: number;
+	entryRegime: string;
+	exitRegime?: string;
+	environment: string;
 }
 
 /**
  * Result of thesis memory retrieval
  */
 export interface ThesisMemoryResult {
-  memory: ThesisMemory;
-  similarityScore?: number;
+	memory: ThesisMemory;
+	similarityScore?: number;
 }
 
 /**
  * Options for retrieving similar thesis memories
  */
 export interface ThesisMemoryRetrievalOptions {
-  /** Maximum number of memories to retrieve */
-  topK?: number;
-  /** Minimum similarity score */
-  minSimilarity?: number;
-  /** Filter by outcome */
-  filterOutcome?: ThesisOutcome;
-  /** Filter by instrument */
-  filterInstrument?: string;
-  /** Filter by regime */
-  filterRegime?: string;
-  /** Environment filter */
-  environment?: string;
+	/** Maximum number of memories to retrieve */
+	topK?: number;
+	/** Minimum similarity score */
+	minSimilarity?: number;
+	/** Filter by outcome */
+	filterOutcome?: ThesisOutcome;
+	/** Filter by instrument */
+	filterInstrument?: string;
+	/** Filter by regime */
+	filterRegime?: string;
+	/** Environment filter */
+	environment?: string;
 }
 
 // ============================================
@@ -133,12 +133,12 @@ export const SCRATCH_THRESHOLD_PERCENT = 0.5;
  * Default retrieval options
  */
 export const DEFAULT_RETRIEVAL_OPTIONS: Required<ThesisMemoryRetrievalOptions> = {
-  topK: 10,
-  minSimilarity: 0.5,
-  filterOutcome: undefined as unknown as ThesisOutcome,
-  filterInstrument: "",
-  filterRegime: "",
-  environment: "PAPER",
+	topK: 10,
+	minSimilarity: 0.5,
+	filterOutcome: undefined as unknown as ThesisOutcome,
+	filterInstrument: "",
+	filterRegime: "",
+	environment: "PAPER",
 };
 
 // ============================================
@@ -153,13 +153,13 @@ export const DEFAULT_RETRIEVAL_OPTIONS: Required<ThesisMemoryRetrievalOptions> =
  * @returns Outcome classification: WIN, LOSS, or SCRATCH
  */
 export function classifyOutcome(
-  pnlPercent: number,
-  scratchThreshold = SCRATCH_THRESHOLD_PERCENT
+	pnlPercent: number,
+	scratchThreshold = SCRATCH_THRESHOLD_PERCENT
 ): ThesisOutcome {
-  if (Math.abs(pnlPercent) <= scratchThreshold) {
-    return "SCRATCH";
-  }
-  return pnlPercent > 0 ? "WIN" : "LOSS";
+	if (Math.abs(pnlPercent) <= scratchThreshold) {
+		return "SCRATCH";
+	}
+	return pnlPercent > 0 ? "WIN" : "LOSS";
 }
 
 /**
@@ -170,11 +170,11 @@ export function classifyOutcome(
  * @returns Holding period in days (minimum 0)
  */
 export function calculateHoldingPeriod(entryDate: string, closedAt: string): number {
-  const entry = new Date(entryDate);
-  const close = new Date(closedAt);
-  const diffMs = close.getTime() - entry.getTime();
-  const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
-  return Math.max(0, diffDays);
+	const entry = new Date(entryDate);
+	const close = new Date(closedAt);
+	const diffMs = close.getTime() - entry.getTime();
+	const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+	return Math.max(0, diffDays);
 }
 
 // ============================================
@@ -192,69 +192,69 @@ export function calculateHoldingPeriod(entryDate: string, closedAt: string): num
  * @returns Array of lessons learned strings
  */
 export function generateLessonsLearned(input: ThesisMemoryInput, outcome: ThesisOutcome): string[] {
-  const lessons: string[] = [];
+	const lessons: string[] = [];
 
-  // Analyze based on close reason
-  switch (input.closeReason) {
-    case "STOP_HIT":
-      lessons.push(`Stop loss triggered at ${input.exitPrice ?? "N/A"}`);
-      if (outcome === "LOSS") {
-        lessons.push("Risk management worked as intended - loss was limited");
-      }
-      break;
+	// Analyze based on close reason
+	switch (input.closeReason) {
+		case "STOP_HIT":
+			lessons.push(`Stop loss triggered at ${input.exitPrice ?? "N/A"}`);
+			if (outcome === "LOSS") {
+				lessons.push("Risk management worked as intended - loss was limited");
+			}
+			break;
 
-    case "TARGET_HIT":
-      lessons.push(`Target reached at ${input.exitPrice ?? "N/A"}`);
-      if (outcome === "WIN") {
-        lessons.push("Entry thesis validated - target execution successful");
-      }
-      break;
+		case "TARGET_HIT":
+			lessons.push(`Target reached at ${input.exitPrice ?? "N/A"}`);
+			if (outcome === "WIN") {
+				lessons.push("Entry thesis validated - target execution successful");
+			}
+			break;
 
-    case "INVALIDATED":
-      lessons.push("Original thesis was invalidated before full resolution");
-      lessons.push("Early exit prevented potential larger loss or gain");
-      break;
+		case "INVALIDATED":
+			lessons.push("Original thesis was invalidated before full resolution");
+			lessons.push("Early exit prevented potential larger loss or gain");
+			break;
 
-    case "MANUAL":
-      lessons.push("Manual exit - discretionary decision");
-      break;
+		case "MANUAL":
+			lessons.push("Manual exit - discretionary decision");
+			break;
 
-    case "TIME_DECAY":
-      lessons.push("Position closed due to time decay considerations");
-      lessons.push("Consider time horizon in future similar setups");
-      break;
+		case "TIME_DECAY":
+			lessons.push("Position closed due to time decay considerations");
+			lessons.push("Consider time horizon in future similar setups");
+			break;
 
-    case "CORRELATION":
-      lessons.push("Position closed due to correlation risk management");
-      lessons.push("Monitor portfolio correlation in similar setups");
-      break;
-  }
+		case "CORRELATION":
+			lessons.push("Position closed due to correlation risk management");
+			lessons.push("Monitor portfolio correlation in similar setups");
+			break;
+	}
 
-  // Analyze based on outcome
-  if (outcome === "WIN" && input.pnlPercent > 10) {
-    lessons.push("Strong positive outcome - review entry timing and sizing");
-  }
-  if (outcome === "LOSS" && input.pnlPercent < -10) {
-    lessons.push("Significant loss - review risk parameters and entry criteria");
-  }
-  if (outcome === "SCRATCH") {
-    lessons.push("Breakeven trade - consider if edge was present");
-  }
+	// Analyze based on outcome
+	if (outcome === "WIN" && input.pnlPercent > 10) {
+		lessons.push("Strong positive outcome - review entry timing and sizing");
+	}
+	if (outcome === "LOSS" && input.pnlPercent < -10) {
+		lessons.push("Significant loss - review risk parameters and entry criteria");
+	}
+	if (outcome === "SCRATCH") {
+		lessons.push("Breakeven trade - consider if edge was present");
+	}
 
-  // Analyze holding period
-  const holdingDays = calculateHoldingPeriod(input.entryDate, input.closedAt);
-  if (holdingDays <= 1) {
-    lessons.push("Very short holding period - day trade or quick exit");
-  } else if (holdingDays > 30) {
-    lessons.push("Long holding period - swing/position trade");
-  }
+	// Analyze holding period
+	const holdingDays = calculateHoldingPeriod(input.entryDate, input.closedAt);
+	if (holdingDays <= 1) {
+		lessons.push("Very short holding period - day trade or quick exit");
+	} else if (holdingDays > 30) {
+		lessons.push("Long holding period - swing/position trade");
+	}
 
-  // Regime analysis
-  if (input.entryRegime !== input.exitRegime && input.exitRegime) {
-    lessons.push(`Regime shifted from ${input.entryRegime} to ${input.exitRegime} during hold`);
-  }
+	// Regime analysis
+	if (input.entryRegime !== input.exitRegime && input.exitRegime) {
+		lessons.push(`Regime shifted from ${input.entryRegime} to ${input.exitRegime} during hold`);
+	}
 
-  return lessons;
+	return lessons;
 }
 
 // ============================================
@@ -268,28 +268,28 @@ export function generateLessonsLearned(input: ThesisMemoryInput, outcome: Thesis
  * @returns ThesisMemory ready for HelixDB storage
  */
 export function createThesisMemory(input: ThesisMemoryInput): ThesisMemory {
-  const outcome = classifyOutcome(input.pnlPercent);
-  const holdingDays = calculateHoldingPeriod(input.entryDate, input.closedAt);
-  const lessons = generateLessonsLearned(input, outcome);
+	const outcome = classifyOutcome(input.pnlPercent);
+	const holdingDays = calculateHoldingPeriod(input.entryDate, input.closedAt);
+	const lessons = generateLessonsLearned(input, outcome);
 
-  return {
-    thesis_id: input.thesisId,
-    instrument_id: input.instrumentId,
-    underlying_symbol: input.underlyingSymbol,
-    entry_thesis: input.entryThesis,
-    outcome,
-    pnl_percent: input.pnlPercent,
-    holding_period_days: holdingDays,
-    lessons_learned: JSON.stringify(lessons),
-    entry_regime: input.entryRegime,
-    exit_regime: input.exitRegime,
-    close_reason: input.closeReason,
-    entry_price: input.entryPrice,
-    exit_price: input.exitPrice,
-    entry_date: input.entryDate,
-    closed_at: input.closedAt,
-    environment: input.environment,
-  };
+	return {
+		thesis_id: input.thesisId,
+		instrument_id: input.instrumentId,
+		underlying_symbol: input.underlyingSymbol,
+		entry_thesis: input.entryThesis,
+		outcome,
+		pnl_percent: input.pnlPercent,
+		holding_period_days: holdingDays,
+		lessons_learned: JSON.stringify(lessons),
+		entry_regime: input.entryRegime,
+		exit_regime: input.exitRegime,
+		close_reason: input.closeReason,
+		entry_price: input.entryPrice,
+		exit_price: input.exitPrice,
+		entry_date: input.entryDate,
+		closed_at: input.closedAt,
+		environment: input.environment,
+	};
 }
 
 // ============================================
@@ -305,34 +305,34 @@ export function createThesisMemory(input: ThesisMemoryInput): ThesisMemory {
  * @returns Text suitable for embedding
  */
 export function generateEmbeddingText(memory: ThesisMemory): string {
-  const parts: string[] = [];
+	const parts: string[] = [];
 
-  // Entry thesis
-  parts.push(`Thesis: ${memory.entry_thesis}`);
+	// Entry thesis
+	parts.push(`Thesis: ${memory.entry_thesis}`);
 
-  // Outcome context
-  parts.push(`Outcome: ${memory.outcome} (${memory.pnl_percent.toFixed(1)}%)`);
+	// Outcome context
+	parts.push(`Outcome: ${memory.outcome} (${memory.pnl_percent.toFixed(1)}%)`);
 
-  // Regime context
-  parts.push(`Regime: ${memory.entry_regime}`);
-  if (memory.exit_regime && memory.exit_regime !== memory.entry_regime) {
-    parts.push(`(shifted to ${memory.exit_regime})`);
-  }
+	// Regime context
+	parts.push(`Regime: ${memory.entry_regime}`);
+	if (memory.exit_regime && memory.exit_regime !== memory.entry_regime) {
+		parts.push(`(shifted to ${memory.exit_regime})`);
+	}
 
-  // Close reason
-  parts.push(`Close reason: ${memory.close_reason}`);
+	// Close reason
+	parts.push(`Close reason: ${memory.close_reason}`);
 
-  // Lessons learned
-  try {
-    const lessons = JSON.parse(memory.lessons_learned) as string[];
-    if (lessons.length > 0) {
-      parts.push(`Lessons: ${lessons.slice(0, 3).join("; ")}`);
-    }
-  } catch {
-    // Ignore parsing errors
-  }
+	// Lessons learned
+	try {
+		const lessons = JSON.parse(memory.lessons_learned) as string[];
+		if (lessons.length > 0) {
+			parts.push(`Lessons: ${lessons.slice(0, 3).join("; ")}`);
+		}
+	} catch {
+		// Ignore parsing errors
+	}
 
-  return parts.join(". ");
+	return parts.join(". ");
 }
 
 // ============================================
@@ -348,22 +348,22 @@ export function generateEmbeddingText(memory: ThesisMemory): string {
  * @returns Promise resolving when stored
  */
 export async function ingestThesisMemory(
-  client: HelixClient,
-  embeddingClient: EmbeddingClient,
-  memory: ThesisMemory
+	client: HelixClient,
+	embeddingClient: EmbeddingClient,
+	memory: ThesisMemory
 ): Promise<void> {
-  // Generate embedding text
-  const embeddingText = generateEmbeddingText(memory);
+	// Generate embedding text
+	const embeddingText = generateEmbeddingText(memory);
 
-  // Generate embedding
-  const embeddingResult = await embeddingClient.generateEmbedding(embeddingText);
+	// Generate embedding
+	const embeddingResult = await embeddingClient.generateEmbedding(embeddingText);
 
-  // Store in HelixDB
-  // The client.query call would insert the ThesisMemory node with its embedding
-  await client.query("InsertThesisMemory", {
-    ...memory,
-    entry_thesis_embedding: embeddingResult.values,
-  });
+	// Store in HelixDB
+	// The client.query call would insert the ThesisMemory node with its embedding
+	await client.query("InsertThesisMemory", {
+		...memory,
+		entry_thesis_embedding: embeddingResult.values,
+	});
 }
 
 /**
@@ -376,46 +376,46 @@ export async function ingestThesisMemory(
  * @returns Array of similar thesis memories
  */
 export async function retrieveSimilarTheses(
-  client: HelixClient,
-  embeddingClient: EmbeddingClient,
-  query: string,
-  options: ThesisMemoryRetrievalOptions = {}
+	client: HelixClient,
+	embeddingClient: EmbeddingClient,
+	query: string,
+	options: ThesisMemoryRetrievalOptions = {}
 ): Promise<ThesisMemoryResult[]> {
-  const opts = { ...DEFAULT_RETRIEVAL_OPTIONS, ...options };
+	const opts = { ...DEFAULT_RETRIEVAL_OPTIONS, ...options };
 
-  // Generate query embedding
-  const embeddingResult = await embeddingClient.generateEmbedding(query);
+	// Generate query embedding
+	const embeddingResult = await embeddingClient.generateEmbedding(query);
 
-  // Build filters
-  const filters: Record<string, unknown> = {
-    environment: opts.environment,
-  };
-  if (opts.filterOutcome) {
-    filters.outcome = opts.filterOutcome;
-  }
-  if (opts.filterInstrument) {
-    filters.instrument_id = opts.filterInstrument;
-  }
-  if (opts.filterRegime) {
-    filters.entry_regime = opts.filterRegime;
-  }
+	// Build filters
+	const filters: Record<string, unknown> = {
+		environment: opts.environment,
+	};
+	if (opts.filterOutcome) {
+		filters.outcome = opts.filterOutcome;
+	}
+	if (opts.filterInstrument) {
+		filters.instrument_id = opts.filterInstrument;
+	}
+	if (opts.filterRegime) {
+		filters.entry_regime = opts.filterRegime;
+	}
 
-  // Execute vector search
-  const results = await client.query<Array<{ node: ThesisMemory; similarity: number }>>(
-    "SearchSimilarTheses",
-    {
-      query_embedding: embeddingResult.values,
-      top_k: opts.topK,
-      min_similarity: opts.minSimilarity,
-      ...filters,
-    }
-  );
+	// Execute vector search
+	const results = await client.query<Array<{ node: ThesisMemory; similarity: number }>>(
+		"SearchSimilarTheses",
+		{
+			query_embedding: embeddingResult.values,
+			top_k: opts.topK,
+			min_similarity: opts.minSimilarity,
+			...filters,
+		}
+	);
 
-  // Convert to ThesisMemoryResult
-  return results.data.map((r) => ({
-    memory: r.node,
-    similarityScore: r.similarity,
-  }));
+	// Convert to ThesisMemoryResult
+	return results.data.map((r) => ({
+		memory: r.node,
+		similarityScore: r.similarity,
+	}));
 }
 
 /**
@@ -424,15 +424,15 @@ export async function retrieveSimilarTheses(
  * Convenience function for Bullish Research Agent.
  */
 export async function retrieveWinningTheses(
-  client: HelixClient,
-  embeddingClient: EmbeddingClient,
-  query: string,
-  options: Omit<ThesisMemoryRetrievalOptions, "filterOutcome"> = {}
+	client: HelixClient,
+	embeddingClient: EmbeddingClient,
+	query: string,
+	options: Omit<ThesisMemoryRetrievalOptions, "filterOutcome"> = {}
 ): Promise<ThesisMemoryResult[]> {
-  return retrieveSimilarTheses(client, embeddingClient, query, {
-    ...options,
-    filterOutcome: "WIN",
-  });
+	return retrieveSimilarTheses(client, embeddingClient, query, {
+		...options,
+		filterOutcome: "WIN",
+	});
 }
 
 /**
@@ -441,15 +441,15 @@ export async function retrieveWinningTheses(
  * Convenience function for Bearish Research Agent.
  */
 export async function retrieveLosingTheses(
-  client: HelixClient,
-  embeddingClient: EmbeddingClient,
-  query: string,
-  options: Omit<ThesisMemoryRetrievalOptions, "filterOutcome"> = {}
+	client: HelixClient,
+	embeddingClient: EmbeddingClient,
+	query: string,
+	options: Omit<ThesisMemoryRetrievalOptions, "filterOutcome"> = {}
 ): Promise<ThesisMemoryResult[]> {
-  return retrieveSimilarTheses(client, embeddingClient, query, {
-    ...options,
-    filterOutcome: "LOSS",
-  });
+	return retrieveSimilarTheses(client, embeddingClient, query, {
+		...options,
+		filterOutcome: "LOSS",
+	});
 }
 
 // ============================================
@@ -463,15 +463,15 @@ export async function retrieveLosingTheses(
  * @returns Array of lesson strings
  */
 export function parseLessonsLearned(lessonsJson: string): string[] {
-  try {
-    const parsed = JSON.parse(lessonsJson);
-    if (Array.isArray(parsed)) {
-      return parsed.filter((item): item is string => typeof item === "string");
-    }
-    return [];
-  } catch {
-    return [];
-  }
+	try {
+		const parsed = JSON.parse(lessonsJson);
+		if (Array.isArray(parsed)) {
+			return parsed.filter((item): item is string => typeof item === "string");
+		}
+		return [];
+	} catch {
+		return [];
+	}
 }
 
 /**
@@ -481,15 +481,15 @@ export function parseLessonsLearned(lessonsJson: string): string[] {
  * @returns Human-readable summary
  */
 export function summarizeThesisMemory(memory: ThesisMemory): string {
-  const lessons = parseLessonsLearned(memory.lessons_learned);
-  const lessonsText = lessons.length > 0 ? lessons[0] : "No lessons recorded";
+	const lessons = parseLessonsLearned(memory.lessons_learned);
+	const lessonsText = lessons.length > 0 ? lessons[0] : "No lessons recorded";
 
-  return [
-    `${memory.outcome} on ${memory.instrument_id}`,
-    `(${memory.pnl_percent > 0 ? "+" : ""}${memory.pnl_percent.toFixed(1)}%,`,
-    `${memory.holding_period_days} days,`,
-    `${memory.close_reason})`,
-    `-`,
-    lessonsText,
-  ].join(" ");
+	return [
+		`${memory.outcome} on ${memory.instrument_id}`,
+		`(${memory.pnl_percent > 0 ? "+" : ""}${memory.pnl_percent.toFixed(1)}%,`,
+		`${memory.holding_period_days} days,`,
+		`${memory.close_reason})`,
+		`-`,
+		lessonsText,
+	].join(" ");
 }

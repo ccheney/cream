@@ -18,20 +18,20 @@ import { IndicatorChart, type IndicatorDataPoint, type ReferenceLine } from "./I
 // ============================================
 
 export interface MACDChartProps {
-  /** MACD line data points */
-  macdLine: IndicatorDataPoint[];
+	/** MACD line data points */
+	macdLine: IndicatorDataPoint[];
 
-  /** Signal line data points */
-  signalLine: IndicatorDataPoint[];
+	/** Signal line data points */
+	signalLine: IndicatorDataPoint[];
 
-  /** Histogram data points */
-  histogram: IndicatorDataPoint[];
+	/** Histogram data points */
+	histogram: IndicatorDataPoint[];
 
-  /** Chart height in pixels */
-  height?: number;
+	/** Chart height in pixels */
+	height?: number;
 
-  /** Additional CSS class */
-  className?: string;
+	/** Additional CSS class */
+	className?: string;
 }
 
 // ============================================
@@ -47,34 +47,34 @@ const ZERO_LINE_COLOR = "rgba(120, 113, 108, 0.3)";
 // ============================================
 
 function MACDChartComponent({
-  macdLine,
-  signalLine,
-  histogram,
-  height = 150,
-  className = "",
+	macdLine,
+	signalLine,
+	histogram,
+	height = 150,
+	className = "",
 }: MACDChartProps) {
-  const referenceLines: ReferenceLine[] = [
-    {
-      value: 0,
-      color: ZERO_LINE_COLOR,
-      lineWidth: 1,
-    },
-  ];
+	const referenceLines: ReferenceLine[] = [
+		{
+			value: 0,
+			color: ZERO_LINE_COLOR,
+			lineWidth: 1,
+		},
+	];
 
-  return (
-    <IndicatorChart
-      data={macdLine}
-      type="line"
-      color={MACD_COLOR}
-      secondaryData={signalLine}
-      secondaryColor={SIGNAL_COLOR}
-      histogramData={histogram}
-      title="MACD (12, 26, 9)"
-      referenceLines={referenceLines}
-      height={height}
-      className={className}
-    />
-  );
+	return (
+		<IndicatorChart
+			data={macdLine}
+			type="line"
+			color={MACD_COLOR}
+			secondaryData={signalLine}
+			secondaryColor={SIGNAL_COLOR}
+			histogramData={histogram}
+			title="MACD (12, 26, 9)"
+			referenceLines={referenceLines}
+			height={height}
+			className={className}
+		/>
+	);
 }
 
 export const MACDChart = memo(MACDChartComponent);

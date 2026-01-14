@@ -5,6 +5,6 @@
  */
 
 export {
-  EconomicCalendarWidget,
-  type EconomicCalendarWidgetProps,
+	EconomicCalendarWidget,
+	type EconomicCalendarWidgetProps,
 } from "./EconomicCalendarWidget";

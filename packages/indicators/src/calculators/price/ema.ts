@@ -26,19 +26,19 @@ import type { OHLCVBar } from "../../types";
 // ============================================================
 
 export interface EMAResult {
-  /** EMA value */
-  ema: number;
-  /** Period used */
-  period: number;
-  /** Timestamp */
-  timestamp: number;
+	/** EMA value */
+	ema: number;
+	/** Period used */
+	period: number;
+	/** Timestamp */
+	timestamp: number;
 }
 
 export interface MultiEMAResult {
-  /** EMA values by period */
-  emas: Map<number, number>;
-  /** Timestamp */
-  timestamp: number;
+	/** EMA values by period */
+	emas: Map<number, number>;
+	/** Timestamp */
+	timestamp: number;
 }
 
 // ============================================================
@@ -49,7 +49,7 @@ export interface MultiEMAResult {
  * Calculate EMA multiplier (smoothing factor)
  */
 export function calculateEMAMultiplier(period: number): number {
-  return 2 / (period + 1);
+	return 2 / (period + 1);
 }
 
 /**
@@ -67,39 +67,39 @@ export function calculateEMAMultiplier(period: number): number {
  * ```
  */
 export function calculateEMA(bars: OHLCVBar[], period: number): EMAResult | null {
-  if (bars.length < period || period <= 0) {
-    return null;
-  }
+	if (bars.length < period || period <= 0) {
+		return null;
+	}
 
-  const multiplier = calculateEMAMultiplier(period);
+	const multiplier = calculateEMAMultiplier(period);
 
-  // Initialize with SMA of first 'period' bars
-  let sum = 0;
-  for (let i = 0; i < period; i++) {
-    const bar = bars[i];
-    if (!bar) {
-      return null;
-    }
-    sum += bar.close;
-  }
-  let ema = sum / period;
+	// Initialize with SMA of first 'period' bars
+	let sum = 0;
+	for (let i = 0; i < period; i++) {
+		const bar = bars[i];
+		if (!bar) {
+			return null;
+		}
+		sum += bar.close;
+	}
+	let ema = sum / period;
 
-  // Calculate EMA for remaining bars
-  for (let i = period; i < bars.length; i++) {
-    const bar = bars[i];
-    if (!bar) {
-      continue;
-    }
-    ema = bar.close * multiplier + ema * (1 - multiplier);
-  }
+	// Calculate EMA for remaining bars
+	for (let i = period; i < bars.length; i++) {
+		const bar = bars[i];
+		if (!bar) {
+			continue;
+		}
+		ema = bar.close * multiplier + ema * (1 - multiplier);
+	}
 
-  const lastBar = bars[bars.length - 1];
+	const lastBar = bars[bars.length - 1];
 
-  return {
-    ema,
-    period,
-    timestamp: lastBar?.timestamp ?? Date.now(),
-  };
+	return {
+		ema,
+		period,
+		timestamp: lastBar?.timestamp ?? Date.now(),
+	};
 }
 
 /**
@@ -110,52 +110,52 @@ export function calculateEMA(bars: OHLCVBar[], period: number): EMAResult | null
  * @returns Array of EMA results
  */
 export function calculateEMASeries(bars: OHLCVBar[], period: number): EMAResult[] {
-  const results: EMAResult[] = [];
+	const results: EMAResult[] = [];
 
-  if (bars.length < period || period <= 0) {
-    return results;
-  }
+	if (bars.length < period || period <= 0) {
+		return results;
+	}
 
-  const multiplier = calculateEMAMultiplier(period);
+	const multiplier = calculateEMAMultiplier(period);
 
-  // Initialize with SMA
-  let sum = 0;
-  for (let i = 0; i < period; i++) {
-    const bar = bars[i];
-    if (!bar) {
-      return results;
-    }
-    sum += bar.close;
-  }
-  let ema = sum / period;
+	// Initialize with SMA
+	let sum = 0;
+	for (let i = 0; i < period; i++) {
+		const bar = bars[i];
+		if (!bar) {
+			return results;
+		}
+		sum += bar.close;
+	}
+	let ema = sum / period;
 
-  // First EMA point
-  const firstBar = bars[period - 1];
-  if (firstBar) {
-    results.push({
-      ema,
-      period,
-      timestamp: firstBar.timestamp,
-    });
-  }
+	// First EMA point
+	const firstBar = bars[period - 1];
+	if (firstBar) {
+		results.push({
+			ema,
+			period,
+			timestamp: firstBar.timestamp,
+		});
+	}
 
-  // Calculate EMA for remaining bars
-  for (let i = period; i < bars.length; i++) {
-    const bar = bars[i];
-    if (!bar) {
-      continue;
-    }
+	// Calculate EMA for remaining bars
+	for (let i = period; i < bars.length; i++) {
+		const bar = bars[i];
+		if (!bar) {
+			continue;
+		}
 
-    ema = bar.close * multiplier + ema * (1 - multiplier);
+		ema = bar.close * multiplier + ema * (1 - multiplier);
 
-    results.push({
-      ema,
-      period,
-      timestamp: bar.timestamp,
-    });
-  }
+		results.push({
+			ema,
+			period,
+			timestamp: bar.timestamp,
+		});
+	}
 
-  return results;
+	return results;
 }
 
 /**
@@ -174,34 +174,34 @@ export function calculateEMASeries(bars: OHLCVBar[], period: number): EMAResult[
  * ```
  */
 export function calculateMultipleEMAs(bars: OHLCVBar[], periods: number[]): MultiEMAResult | null {
-  if (bars.length === 0 || periods.length === 0) {
-    return null;
-  }
+	if (bars.length === 0 || periods.length === 0) {
+		return null;
+	}
 
-  const maxPeriod = Math.max(...periods);
-  if (bars.length < maxPeriod) {
-    return null;
-  }
+	const maxPeriod = Math.max(...periods);
+	if (bars.length < maxPeriod) {
+		return null;
+	}
 
-  const emas = new Map<number, number>();
+	const emas = new Map<number, number>();
 
-  for (const period of periods) {
-    const result = calculateEMA(bars, period);
-    if (result) {
-      emas.set(period, result.ema);
-    }
-  }
+	for (const period of periods) {
+		const result = calculateEMA(bars, period);
+		if (result) {
+			emas.set(period, result.ema);
+		}
+	}
 
-  if (emas.size === 0) {
-    return null;
-  }
+	if (emas.size === 0) {
+		return null;
+	}
 
-  const lastBar = bars[bars.length - 1];
+	const lastBar = bars[bars.length - 1];
 
-  return {
-    emas,
-    timestamp: lastBar?.timestamp ?? Date.now(),
-  };
+	return {
+		emas,
+		timestamp: lastBar?.timestamp ?? Date.now(),
+	};
 }
 
 /**
@@ -213,41 +213,41 @@ export function calculateMultipleEMAs(bars: OHLCVBar[], periods: number[]): Mult
  * @returns Crossover signal or null
  */
 export function detectEMACrossover(
-  bars: OHLCVBar[],
-  fastPeriod: number,
-  slowPeriod: number
+	bars: OHLCVBar[],
+	fastPeriod: number,
+	slowPeriod: number
 ): "bullish_crossover" | "bearish_crossover" | "no_crossover" | null {
-  if (bars.length < slowPeriod + 2) {
-    return null;
-  }
+	if (bars.length < slowPeriod + 2) {
+		return null;
+	}
 
-  // Calculate EMAs for last two bars
-  const currentBars = bars;
-  const previousBars = bars.slice(0, -1);
+	// Calculate EMAs for last two bars
+	const currentBars = bars;
+	const previousBars = bars.slice(0, -1);
 
-  const currentFast = calculateEMA(currentBars, fastPeriod);
-  const currentSlow = calculateEMA(currentBars, slowPeriod);
-  const previousFast = calculateEMA(previousBars, fastPeriod);
-  const previousSlow = calculateEMA(previousBars, slowPeriod);
+	const currentFast = calculateEMA(currentBars, fastPeriod);
+	const currentSlow = calculateEMA(currentBars, slowPeriod);
+	const previousFast = calculateEMA(previousBars, fastPeriod);
+	const previousSlow = calculateEMA(previousBars, slowPeriod);
 
-  if (!currentFast || !currentSlow || !previousFast || !previousSlow) {
-    return null;
-  }
+	if (!currentFast || !currentSlow || !previousFast || !previousSlow) {
+		return null;
+	}
 
-  const currentDiff = currentFast.ema - currentSlow.ema;
-  const previousDiff = previousFast.ema - previousSlow.ema;
+	const currentDiff = currentFast.ema - currentSlow.ema;
+	const previousDiff = previousFast.ema - previousSlow.ema;
 
-  // Bullish crossover: fast crosses above slow
-  if (previousDiff <= 0 && currentDiff > 0) {
-    return "bullish_crossover";
-  }
+	// Bullish crossover: fast crosses above slow
+	if (previousDiff <= 0 && currentDiff > 0) {
+		return "bullish_crossover";
+	}
 
-  // Bearish crossover: fast crosses below slow
-  if (previousDiff >= 0 && currentDiff < 0) {
-    return "bearish_crossover";
-  }
+	// Bearish crossover: fast crosses below slow
+	if (previousDiff >= 0 && currentDiff < 0) {
+		return "bearish_crossover";
+	}
 
-  return "no_crossover";
+	return "no_crossover";
 }
 
 /**
@@ -258,8 +258,8 @@ export function detectEMACrossover(
  * @returns Percentage above/below EMA
  */
 export function calculatePriceToEMA(price: number, ema: number): number | null {
-  if (ema <= 0) {
-    return null;
-  }
-  return ((price - ema) / ema) * 100;
+	if (ema <= 0) {
+		return null;
+	}
+	return ((price - ema) / ema) * 100;
 }

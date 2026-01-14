@@ -6,7 +6,7 @@
  */
 
 export {
-  createExtractionClient,
-  ExtractionClient,
-  type ExtractionClientConfig,
+	createExtractionClient,
+	ExtractionClient,
+	type ExtractionClientConfig,
 } from "./client.js";

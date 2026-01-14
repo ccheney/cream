@@ -20,45 +20,45 @@ import type { Quote } from "../types.js";
  * @throws Error if gRPC call fails or backtest mode is used
  */
 export async function getQuotes(ctx: ExecutionContext, instruments: string[]): Promise<Quote[]> {
-  if (isBacktest(ctx)) {
-    throw new Error("getQuotes is not available in BACKTEST mode - use historical data instead");
-  }
+	if (isBacktest(ctx)) {
+		throw new Error("getQuotes is not available in BACKTEST mode - use historical data instead");
+	}
 
-  const client = getMarketDataClient();
-  const response = await client.getSnapshot({
-    symbols: instruments,
-    includeBars: false,
-    barTimeframes: [],
-  });
+	const client = getMarketDataClient();
+	const response = await client.getSnapshot({
+		symbols: instruments,
+		includeBars: false,
+		barTimeframes: [],
+	});
 
-  // Map protobuf quotes to tool Quote format
-  const quotes: Quote[] = [];
-  for (const symbolSnapshot of response.data.snapshot?.symbols ?? []) {
-    const quote = symbolSnapshot.quote;
-    if (quote) {
-      quotes.push({
-        symbol: quote.symbol,
-        bid: quote.bid,
-        ask: quote.ask,
-        last: quote.last,
-        volume: Number(quote.volume),
-        timestamp: quote.timestamp
-          ? timestampDate(quote.timestamp).toISOString()
-          : new Date().toISOString(),
-      });
-    }
-  }
+	// Map protobuf quotes to tool Quote format
+	const quotes: Quote[] = [];
+	for (const symbolSnapshot of response.data.snapshot?.symbols ?? []) {
+		const quote = symbolSnapshot.quote;
+		if (quote) {
+			quotes.push({
+				symbol: quote.symbol,
+				bid: quote.bid,
+				ask: quote.ask,
+				last: quote.last,
+				volume: Number(quote.volume),
+				timestamp: quote.timestamp
+					? timestampDate(quote.timestamp).toISOString()
+					: new Date().toISOString(),
+			});
+		}
+	}
 
-  // Log warning for any missing symbols (ADRs, OTC, etc. may not be available)
-  const foundSymbols = new Set(quotes.map((q) => q.symbol));
-  const missingSymbols = instruments.filter((s) => !foundSymbols.has(s));
-  if (missingSymbols.length > 0) {
-  }
+	// Log warning for any missing symbols (ADRs, OTC, etc. may not be available)
+	const foundSymbols = new Set(quotes.map((q) => q.symbol));
+	const missingSymbols = instruments.filter((s) => !foundSymbols.has(s));
+	if (missingSymbols.length > 0) {
+	}
 
-  // Return partial results even if some symbols are missing
-  if (quotes.length === 0) {
-    throw new Error(`No quotes available for any requested symbols: ${instruments.join(", ")}`);
-  }
+	// Return partial results even if some symbols are missing
+	if (quotes.length === 0) {
+		throw new Error(`No quotes available for any requested symbols: ${instruments.join(", ")}`);
+	}
 
-  return quotes;
+	return quotes;
 }

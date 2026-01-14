@@ -5,11 +5,11 @@
  */
 
 import {
-  type CorrectionStrategy,
-  DEFAULT_BROADENING_FACTOR,
-  DEFAULT_QUALITY_THRESHOLD,
-  type QualityAssessment,
-  THRESHOLD_REDUCTION_STEP,
+	type CorrectionStrategy,
+	DEFAULT_BROADENING_FACTOR,
+	DEFAULT_QUALITY_THRESHOLD,
+	type QualityAssessment,
+	THRESHOLD_REDUCTION_STEP,
 } from "./types.js";
 
 /**
@@ -20,10 +20,10 @@ import {
  * @returns New k value
  */
 export function calculateBroadenedK(
-  initialK: number,
-  factor: number = DEFAULT_BROADENING_FACTOR
+	initialK: number,
+	factor: number = DEFAULT_BROADENING_FACTOR
 ): number {
-  return Math.ceil(initialK * factor);
+	return Math.ceil(initialK * factor);
 }
 
 /**
@@ -34,10 +34,10 @@ export function calculateBroadenedK(
  * @returns New threshold (minimum 0)
  */
 export function calculateLoweredThreshold(
-  initialThreshold: number,
-  reduction: number = THRESHOLD_REDUCTION_STEP
+	initialThreshold: number,
+	reduction: number = THRESHOLD_REDUCTION_STEP
 ): number {
-  return Math.max(0, initialThreshold - reduction);
+	return Math.max(0, initialThreshold - reduction);
 }
 
 /**
@@ -51,11 +51,11 @@ export function calculateLoweredThreshold(
  * @returns Expanded query terms
  */
 export function generateExpansionTerms(query: string): string[] {
-  const terms = query
-    .toLowerCase()
-    .split(/\s+/)
-    .filter((t) => t.length > 2);
-  return terms;
+	const terms = query
+		.toLowerCase()
+		.split(/\s+/)
+		.filter((t) => t.length > 2);
+	return terms;
 }
 
 /**
@@ -66,19 +66,19 @@ export function generateExpansionTerms(query: string): string[] {
  * @returns Recommended strategy
  */
 export function selectCorrectionStrategy(
-  quality: QualityAssessment,
-  attemptNumber: number
+	quality: QualityAssessment,
+	attemptNumber: number
 ): CorrectionStrategy {
-  // First attempt: broaden (fastest, most likely to help)
-  if (attemptNumber === 1) {
-    return "broaden";
-  }
+	// First attempt: broaden (fastest, most likely to help)
+	if (attemptNumber === 1) {
+		return "broaden";
+	}
 
-  // Second attempt: lower threshold (if avg score was the issue)
-  if (attemptNumber === 2 && quality.avgScore < DEFAULT_QUALITY_THRESHOLD) {
-    return "lower_threshold";
-  }
+	// Second attempt: lower threshold (if avg score was the issue)
+	if (attemptNumber === 2 && quality.avgScore < DEFAULT_QUALITY_THRESHOLD) {
+		return "lower_threshold";
+	}
 
-  // Third attempt: broaden more aggressively
-  return "broaden";
+	// Third attempt: broaden more aggressively
+	return "broaden";
 }

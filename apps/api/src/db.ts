@@ -7,29 +7,29 @@
 
 import { setPredictionMarketsRepoProvider } from "@cream/agents";
 import {
-  createRuntimeConfigService,
-  type RuntimeConfigService,
-  type RuntimeEnvironment,
+	createRuntimeConfigService,
+	type RuntimeConfigService,
+	type RuntimeEnvironment,
 } from "@cream/config";
 import { createContext, type ExecutionContext, isBacktest, requireEnv } from "@cream/domain";
 import { createHelixClientFromEnv, type HealthCheckResult, type HelixClient } from "@cream/helix";
 import {
-  AgentConfigsRepository,
-  createInMemoryClient,
-  createTursoClient,
-  DecisionsRepository,
-  ExternalEventsRepository,
-  FactorZooRepository,
-  IndicatorsRepository,
-  OrdersRepository,
-  PositionsRepository,
-  PredictionMarketsRepository,
-  RegimeLabelsRepository,
-  runMigrations,
-  ThesisStateRepository,
-  TradingConfigRepository,
-  type TursoClient,
-  UniverseConfigsRepository,
+	AgentConfigsRepository,
+	createInMemoryClient,
+	createTursoClient,
+	DecisionsRepository,
+	ExternalEventsRepository,
+	FactorZooRepository,
+	IndicatorsRepository,
+	OrdersRepository,
+	PositionsRepository,
+	PredictionMarketsRepository,
+	RegimeLabelsRepository,
+	runMigrations,
+	ThesisStateRepository,
+	TradingConfigRepository,
+	type TursoClient,
+	UniverseConfigsRepository,
 } from "@cream/storage";
 
 import { log } from "./logger.js";
@@ -39,7 +39,7 @@ import { log } from "./logger.js";
  * DB client is created at API startup.
  */
 function createDbContext(): ExecutionContext {
-  return createContext(requireEnv(), "scheduled");
+	return createContext(requireEnv(), "scheduled");
 }
 
 // ============================================
@@ -54,64 +54,64 @@ let initPromise: Promise<TursoClient> | null = null;
  * Uses a lock to prevent race conditions during initialization.
  */
 export async function getDbClient(): Promise<TursoClient> {
-  // Fast path: already initialized
-  if (dbClient) {
-    return dbClient;
-  }
+	// Fast path: already initialized
+	if (dbClient) {
+		return dbClient;
+	}
 
-  // Initialization in progress: wait for it
-  if (initPromise) {
-    return initPromise;
-  }
+	// Initialization in progress: wait for it
+	if (initPromise) {
+		return initPromise;
+	}
 
-  // First caller: start initialization
-  initPromise = initializeDb();
+	// First caller: start initialization
+	initPromise = initializeDb();
 
-  try {
-    dbClient = await initPromise;
-    return dbClient;
-  } catch (error) {
-    // Reset on failure so next call can retry
-    initPromise = null;
-    throw error;
-  }
+	try {
+		dbClient = await initPromise;
+		return dbClient;
+	} catch (error) {
+		// Reset on failure so next call can retry
+		initPromise = null;
+		throw error;
+	}
 }
 
 /**
  * Initialize database client and run migrations.
  */
 async function initializeDb(): Promise<TursoClient> {
-  const ctx = createDbContext();
-  let client: TursoClient;
+	const ctx = createDbContext();
+	let client: TursoClient;
 
-  if (process.env.NODE_ENV === "test") {
-    // In-memory for testing
-    client = await createInMemoryClient();
-  } else {
-    // createTursoClient reads TURSO_DATABASE_URL and handles HTTP/local automatically
-    client = await createTursoClient(ctx);
-  }
+	if (process.env.NODE_ENV === "test") {
+		// In-memory for testing
+		client = await createInMemoryClient();
+	} else {
+		// createTursoClient reads TURSO_DATABASE_URL and handles HTTP/local automatically
+		client = await createTursoClient(ctx);
+	}
 
-  // Run migrations on first connection
-  const result = await runMigrations(client, {
-    logger: (msg) => log.debug({ migration: msg }, "DB migration"),
-  });
-  if (result.applied.length > 0) {
-    log.info({ count: result.applied.length }, "Applied DB migrations");
-  }
+	// Run migrations on first connection
+	const result = await runMigrations(client, {
+		logger: (msg) => log.debug({ migration: msg }, "DB migration"),
+	});
+	if (result.applied.length > 0) {
+		log.info({ count: result.applied.length }, "Applied DB migrations");
+	}
 
-  return client;
+	return client;
 }
 
 /**
  * Close the database connection
  */
 export function closeDb(): void {
-  if (dbClient) {
-    dbClient.close();
-    dbClient = null;
-  }
-  initPromise = null;
+	if (dbClient) {
+		dbClient.close();
+		dbClient = null;
+	}
+	initPromise = null;
 }
 
 // ============================================
@@ -125,14 +125,14 @@ let toolProvidersRegistered = false;
  * This should be called early in application startup.
  */
 export function registerToolProviders(): void {
-  if (toolProvidersRegistered) {
-    return;
-  }
+	if (toolProvidersRegistered) {
+		return;
+	}
 
-  // Register prediction markets repo provider for agent tools
-  setPredictionMarketsRepoProvider(getPredictionMarketsRepo);
+	// Register prediction markets repo provider for agent tools
+	setPredictionMarketsRepoProvider(getPredictionMarketsRepo);
 
-  toolProvidersRegistered = true;
+	toolProvidersRegistered = true;
 }
 
 // Auto-register on module load
@@ -146,72 +146,72 @@ registerToolProviders();
  * Get positions repository
  */
 export async function getPositionsRepo(): Promise<PositionsRepository> {
-  const client = await getDbClient();
-  return new PositionsRepository(client);
+	const client = await getDbClient();
+	return new PositionsRepository(client);
 }
 
 /**
  * Get orders repository
  */
 export async function getOrdersRepo(): Promise<OrdersRepository> {
-  const client = await getDbClient();
-  return new OrdersRepository(client);
+	const client = await getDbClient();
+	return new OrdersRepository(client);
 }
 
 /**
  * Get thesis state repository
  */
 export async function getThesisStateRepo(): Promise<ThesisStateRepository> {
-  const client = await getDbClient();
-  return new ThesisStateRepository(client);
+	const client = await getDbClient();
+	return new ThesisStateRepository(client);
 }
 
 /**
  * Get external events repository
  */
 export async function getExternalEventsRepo(): Promise<ExternalEventsRepository> {
-  const client = await getDbClient();
-  return new ExternalEventsRepository(client);
+	const client = await getDbClient();
+	return new ExternalEventsRepository(client);
 }
 
 /**
  * Get prediction markets repository
  */
 export async function getPredictionMarketsRepo(): Promise<PredictionMarketsRepository> {
-  const client = await getDbClient();
-  return new PredictionMarketsRepository(client);
+	const client = await getDbClient();
+	return new PredictionMarketsRepository(client);
 }
 
 /**
  * Get regime labels repository
  */
 export async function getRegimeLabelsRepo(): Promise<RegimeLabelsRepository> {
-  const client = await getDbClient();
-  return new RegimeLabelsRepository(client);
+	const client = await getDbClient();
+	return new RegimeLabelsRepository(client);
 }
 
 /**
  * Get decisions repository
  */
 export async function getDecisionsRepo(): Promise<DecisionsRepository> {
-  const client = await getDbClient();
-  return new DecisionsRepository(client);
+	const client = await getDbClient();
+	return new DecisionsRepository(client);
 }
 
 /**
  * Get factor zoo repository
  */
 export async function getFactorZooRepo(): Promise<FactorZooRepository> {
-  const client = await getDbClient();
-  return new FactorZooRepository(client);
+	const client = await getDbClient();
+	return new FactorZooRepository(client);
 }
 
 /**
  * Get indicators repository
  */
 export async function getIndicatorsRepo(): Promise<IndicatorsRepository> {
-  const client = await getDbClient();
-  return new IndicatorsRepository(client);
+	const client = await getDbClient();
+	return new IndicatorsRepository(client);
 }
 
 // ============================================
@@ -222,24 +222,24 @@ export async function getIndicatorsRepo(): Promise<IndicatorsRepository> {
  * Get trading config repository
  */
 export async function getTradingConfigRepo(): Promise<TradingConfigRepository> {
-  const client = await getDbClient();
-  return new TradingConfigRepository(client);
+	const client = await getDbClient();
+	return new TradingConfigRepository(client);
 }
 
 /**
  * Get agent configs repository
  */
 export async function getAgentConfigsRepo(): Promise<AgentConfigsRepository> {
-  const client = await getDbClient();
-  return new AgentConfigsRepository(client);
+	const client = await getDbClient();
+	return new AgentConfigsRepository(client);
 }
 
 /**
  * Get universe configs repository
  */
 export async function getUniverseConfigsRepo(): Promise<UniverseConfigsRepository> {
-  const client = await getDbClient();
-  return new UniverseConfigsRepository(client);
+	const client = await getDbClient();
+	return new UniverseConfigsRepository(client);
 }
 
 /**
@@ -248,12 +248,12 @@ export async function getUniverseConfigsRepo(): Promise<UniverseConfigsRepositor
  * Creates a RuntimeConfigService with all required repositories.
  */
 export async function getRuntimeConfigService(): Promise<RuntimeConfigService> {
-  const [tradingRepo, agentRepo, universeRepo] = await Promise.all([
-    getTradingConfigRepo(),
-    getAgentConfigsRepo(),
-    getUniverseConfigsRepo(),
-  ]);
-  return createRuntimeConfigService(tradingRepo, agentRepo, universeRepo);
+	const [tradingRepo, agentRepo, universeRepo] = await Promise.all([
+		getTradingConfigRepo(),
+		getAgentConfigsRepo(),
+		getUniverseConfigsRepo(),
+	]);
+	return createRuntimeConfigService(tradingRepo, agentRepo, universeRepo);
 }
 
 /**
@@ -272,30 +272,30 @@ let helixClient: HelixClient | null = null;
  * Returns null if client creation fails (e.g., missing helix-ts module).
  */
 export function getHelixClient(): HelixClient | null {
-  if (helixClient) {
-    return helixClient;
-  }
+	if (helixClient) {
+		return helixClient;
+	}
 
-  try {
-    helixClient = createHelixClientFromEnv();
-    return helixClient;
-  } catch (error) {
-    log.error(
-      { error: error instanceof Error ? error.message : "Unknown error" },
-      "HelixDB failed to create client"
-    );
-    return null;
-  }
+	try {
+		helixClient = createHelixClientFromEnv();
+		return helixClient;
+	} catch (error) {
+		log.error(
+			{ error: error instanceof Error ? error.message : "Unknown error" },
+			"HelixDB failed to create client"
+		);
+		return null;
+	}
 }
 
 /**
  * Close the HelixDB client connection.
  */
 export function closeHelixClient(): void {
-  if (helixClient) {
-    helixClient.close();
-    helixClient = null;
-  }
+	if (helixClient) {
+		helixClient.close();
+		helixClient = null;
+	}
 }
 
 /**
@@ -304,25 +304,25 @@ export function closeHelixClient(): void {
  * @returns Health check result with latency and any error
  */
 export async function checkHelixHealth(): Promise<HealthCheckResult> {
-  const client = getHelixClient();
-  if (!client) {
-    return {
-      healthy: false,
-      latencyMs: 0,
-      error: "HelixDB client could not be created",
-    };
-  }
-  return client.healthCheck();
+	const client = getHelixClient();
+	if (!client) {
+		return {
+			healthy: false,
+			latencyMs: 0,
+			error: "HelixDB client could not be created",
+		};
+	}
+	return client.healthCheck();
 }
 
 /**
  * HelixDB validation error - thrown when startup validation fails.
  */
 export class HelixDBValidationError extends Error {
-  constructor(message: string) {
-    super(message);
-    this.name = "HelixDBValidationError";
-  }
+	constructor(message: string) {
+		super(message);
+		this.name = "HelixDBValidationError";
+	}
 }
 
 /**
@@ -336,47 +336,47 @@ export class HelixDBValidationError extends Error {
  * @throws HelixDBValidationError if validation fails in PAPER/LIVE mode
  */
 export async function validateHelixDBAtStartup(
-  ctx: ExecutionContext,
-  options: {
-    /** Whether to fail fast (throw) on health check failure. Default: true for PAPER/LIVE */
-    failFast?: boolean;
-    /** Maximum allowed latency in ms. Default: 5000 */
-    maxLatencyMs?: number;
-  } = {}
+	ctx: ExecutionContext,
+	options: {
+		/** Whether to fail fast (throw) on health check failure. Default: true for PAPER/LIVE */
+		failFast?: boolean;
+		/** Maximum allowed latency in ms. Default: 5000 */
+		maxLatencyMs?: number;
+	} = {}
 ): Promise<HealthCheckResult> {
-  const isBacktestEnv = isBacktest(ctx);
-  const { failFast = !isBacktestEnv, maxLatencyMs = 5000 } = options;
+	const isBacktestEnv = isBacktest(ctx);
+	const { failFast = !isBacktestEnv, maxLatencyMs = 5000 } = options;
 
-  log.info({ environment: ctx.environment }, "HelixDB validating connection");
+	log.info({ environment: ctx.environment }, "HelixDB validating connection");
 
-  const health = await checkHelixHealth();
+	const health = await checkHelixHealth();
 
-  if (!health.healthy) {
-    const errorMsg =
-      `HelixDB health check failed: ${health.error}. ` +
-      `Ensure HelixDB is running at ${process.env.HELIX_HOST ?? "localhost"}:${process.env.HELIX_PORT ?? "6969"}`;
+	if (!health.healthy) {
+		const errorMsg =
+			`HelixDB health check failed: ${health.error}. ` +
+			`Ensure HelixDB is running at ${process.env.HELIX_HOST ?? "localhost"}:${process.env.HELIX_PORT ?? "6969"}`;
 
-    log.error(
-      {
-        error: health.error,
-        host: process.env.HELIX_HOST ?? "localhost",
-        port: process.env.HELIX_PORT ?? "6969",
-      },
-      "HelixDB health check failed"
-    );
+		log.error(
+			{
+				error: health.error,
+				host: process.env.HELIX_HOST ?? "localhost",
+				port: process.env.HELIX_PORT ?? "6969",
+			},
+			"HelixDB health check failed"
+		);
 
-    if (failFast) {
-      throw new HelixDBValidationError(errorMsg);
-    }
+		if (failFast) {
+			throw new HelixDBValidationError(errorMsg);
+		}
 
-    log.warn({}, "HelixDB continuing despite health check failure (failFast=false)");
-  } else if (health.latencyMs > maxLatencyMs) {
-    log.warn({ latencyMs: health.latencyMs, maxLatencyMs }, "HelixDB latency exceeds threshold");
-  } else {
-    log.info({ latencyMs: health.latencyMs }, "HelixDB health check passed");
-  }
+		log.warn({}, "HelixDB continuing despite health check failure (failFast=false)");
+	} else if (health.latencyMs > maxLatencyMs) {
+		log.warn({ latencyMs: health.latencyMs, maxLatencyMs }, "HelixDB latency exceeds threshold");
+	} else {
+		log.info({ latencyMs: health.latencyMs }, "HelixDB health check passed");
+	}
 
-  return health;
+	return health;
 }
 
 /**
@@ -387,16 +387,16 @@ export async function validateHelixDBAtStartup(
  * @param ctx - ExecutionContext with environment information
  */
 export async function validateHelixDBOrExit(ctx: ExecutionContext): Promise<void> {
-  try {
-    await validateHelixDBAtStartup(ctx, { failFast: !isBacktest(ctx) });
-  } catch (error) {
-    if (error instanceof HelixDBValidationError) {
-      log.error(
-        { error: error.message, environment: ctx.environment },
-        "HelixDB validation failed for API service"
-      );
-      process.exit(1);
-    }
-    throw error;
-  }
+	try {
+		await validateHelixDBAtStartup(ctx, { failFast: !isBacktest(ctx) });
+	} catch (error) {
+		if (error instanceof HelixDBValidationError) {
+			log.error(
+				{ error: error.message, environment: ctx.environment },
+				"HelixDB validation failed for API service"
+			);
+			process.exit(1);
+		}
+		throw error;
+	}
 }

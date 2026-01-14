@@ -20,9 +20,9 @@ import { Channel } from "./channel.js";
  * { type: "subscribe", channels: ["quotes", "orders"] }
  */
 export const SubscribeMessageSchema = z.object({
-  type: z.literal("subscribe"),
-  /** Channels to subscribe to */
-  channels: z.array(Channel).min(1),
+	type: z.literal("subscribe"),
+	/** Channels to subscribe to */
+	channels: z.array(Channel).min(1),
 });
 
 export type SubscribeMessage = z.infer<typeof SubscribeMessageSchema>;
@@ -38,9 +38,9 @@ export type SubscribeMessage = z.infer<typeof SubscribeMessageSchema>;
  * { type: "unsubscribe", channels: ["quotes"] }
  */
 export const UnsubscribeMessageSchema = z.object({
-  type: z.literal("unsubscribe"),
-  /** Channels to unsubscribe from */
-  channels: z.array(Channel).min(1),
+	type: z.literal("unsubscribe"),
+	/** Channels to unsubscribe from */
+	channels: z.array(Channel).min(1),
 });
 
 export type UnsubscribeMessage = z.infer<typeof UnsubscribeMessageSchema>;
@@ -56,9 +56,9 @@ export type UnsubscribeMessage = z.infer<typeof UnsubscribeMessageSchema>;
  * { type: "subscribe_symbols", symbols: ["AAPL", "MSFT", "GOOGL"] }
  */
 export const SubscribeSymbolsMessageSchema = z.object({
-  type: z.literal("subscribe_symbols"),
-  /** Symbols to subscribe to (max 100) */
-  symbols: z.array(z.string().min(1).max(20)).min(1).max(100),
+	type: z.literal("subscribe_symbols"),
+	/** Symbols to subscribe to (max 100) */
+	symbols: z.array(z.string().min(1).max(20)).min(1).max(100),
 });
 
 export type SubscribeSymbolsMessage = z.infer<typeof SubscribeSymbolsMessageSchema>;
@@ -74,9 +74,9 @@ export type SubscribeSymbolsMessage = z.infer<typeof SubscribeSymbolsMessageSche
  * { type: "unsubscribe_symbols", symbols: ["AAPL"] }
  */
 export const UnsubscribeSymbolsMessageSchema = z.object({
-  type: z.literal("unsubscribe_symbols"),
-  /** Symbols to unsubscribe from */
-  symbols: z.array(z.string().min(1).max(20)).min(1).max(100),
+	type: z.literal("unsubscribe_symbols"),
+	/** Symbols to unsubscribe from */
+	symbols: z.array(z.string().min(1).max(20)).min(1).max(100),
 });
 
 export type UnsubscribeSymbolsMessage = z.infer<typeof UnsubscribeSymbolsMessageSchema>;
@@ -93,9 +93,9 @@ export type UnsubscribeSymbolsMessage = z.infer<typeof UnsubscribeSymbolsMessage
  * { type: "subscribe_options", contracts: ["O:AAPL250117C00100000"] }
  */
 export const SubscribeOptionsMessageSchema = z.object({
-  type: z.literal("subscribe_options"),
-  /** OCC contract symbols to subscribe to (max 50) */
-  contracts: z.array(z.string().min(1).max(30)).min(1).max(50),
+	type: z.literal("subscribe_options"),
+	/** OCC contract symbols to subscribe to (max 50) */
+	contracts: z.array(z.string().min(1).max(30)).min(1).max(50),
 });
 
 export type SubscribeOptionsMessage = z.infer<typeof SubscribeOptionsMessageSchema>;
@@ -111,9 +111,9 @@ export type SubscribeOptionsMessage = z.infer<typeof SubscribeOptionsMessageSche
  * { type: "unsubscribe_options", contracts: ["O:AAPL250117C00100000"] }
  */
 export const UnsubscribeOptionsMessageSchema = z.object({
-  type: z.literal("unsubscribe_options"),
-  /** OCC contract symbols to unsubscribe from */
-  contracts: z.array(z.string().min(1).max(30)).min(1).max(50),
+	type: z.literal("unsubscribe_options"),
+	/** OCC contract symbols to unsubscribe from */
+	contracts: z.array(z.string().min(1).max(30)).min(1).max(50),
 });
 
 export type UnsubscribeOptionsMessage = z.infer<typeof UnsubscribeOptionsMessageSchema>;
@@ -129,7 +129,7 @@ export type UnsubscribeOptionsMessage = z.infer<typeof UnsubscribeOptionsMessage
  * { type: "ping" }
  */
 export const PingMessageSchema = z.object({
-  type: z.literal("ping"),
+	type: z.literal("ping"),
 });
 
 export type PingMessage = z.infer<typeof PingMessageSchema>;
@@ -145,9 +145,9 @@ export type PingMessage = z.infer<typeof PingMessageSchema>;
  * { type: "request_state", channel: "portfolio" }
  */
 export const RequestStateMessageSchema = z.object({
-  type: z.literal("request_state"),
-  /** Channel to request state for */
-  channel: Channel,
+	type: z.literal("request_state"),
+	/** Channel to request state for */
+	channel: Channel,
 });
 
 export type RequestStateMessage = z.infer<typeof RequestStateMessageSchema>;
@@ -163,9 +163,9 @@ export type RequestStateMessage = z.infer<typeof RequestStateMessageSchema>;
  * { type: "acknowledge_alert", alertId: "uuid-here" }
  */
 export const AcknowledgeAlertMessageSchema = z.object({
-  type: z.literal("acknowledge_alert"),
-  /** Alert ID to acknowledge */
-  alertId: z.string().uuid(),
+	type: z.literal("acknowledge_alert"),
+	/** Alert ID to acknowledge */
+	alertId: z.string().uuid(),
 });
 
 export type AcknowledgeAlertMessage = z.infer<typeof AcknowledgeAlertMessageSchema>;
@@ -181,9 +181,9 @@ export type AcknowledgeAlertMessage = z.infer<typeof AcknowledgeAlertMessageSche
  * { type: "subscribe_backtest", backtestId: "backtest-uuid" }
  */
 export const SubscribeBacktestMessageSchema = z.object({
-  type: z.literal("subscribe_backtest"),
-  /** Backtest ID to subscribe to */
-  backtestId: z.string().min(1),
+	type: z.literal("subscribe_backtest"),
+	/** Backtest ID to subscribe to */
+	backtestId: z.string().min(1),
 });
 
 export type SubscribeBacktestMessage = z.infer<typeof SubscribeBacktestMessageSchema>;
@@ -199,9 +199,9 @@ export type SubscribeBacktestMessage = z.infer<typeof SubscribeBacktestMessageSc
  * { type: "unsubscribe_backtest", backtestId: "backtest-uuid" }
  */
 export const UnsubscribeBacktestMessageSchema = z.object({
-  type: z.literal("unsubscribe_backtest"),
-  /** Backtest ID to unsubscribe from */
-  backtestId: z.string().min(1),
+	type: z.literal("unsubscribe_backtest"),
+	/** Backtest ID to unsubscribe from */
+	backtestId: z.string().min(1),
 });
 
 export type UnsubscribeBacktestMessage = z.infer<typeof UnsubscribeBacktestMessageSchema>;
@@ -214,17 +214,17 @@ export type UnsubscribeBacktestMessage = z.infer<typeof UnsubscribeBacktestMessa
  * Discriminated union of all client → server messages.
  */
 export const ClientMessageSchema = z.discriminatedUnion("type", [
-  SubscribeMessageSchema,
-  UnsubscribeMessageSchema,
-  SubscribeSymbolsMessageSchema,
-  UnsubscribeSymbolsMessageSchema,
-  SubscribeOptionsMessageSchema,
-  UnsubscribeOptionsMessageSchema,
-  SubscribeBacktestMessageSchema,
-  UnsubscribeBacktestMessageSchema,
-  PingMessageSchema,
-  RequestStateMessageSchema,
-  AcknowledgeAlertMessageSchema,
+	SubscribeMessageSchema,
+	UnsubscribeMessageSchema,
+	SubscribeSymbolsMessageSchema,
+	UnsubscribeSymbolsMessageSchema,
+	SubscribeOptionsMessageSchema,
+	UnsubscribeOptionsMessageSchema,
+	SubscribeBacktestMessageSchema,
+	UnsubscribeBacktestMessageSchema,
+	PingMessageSchema,
+	RequestStateMessageSchema,
+	AcknowledgeAlertMessageSchema,
 ]);
 
 export type ClientMessage = z.infer<typeof ClientMessageSchema>;

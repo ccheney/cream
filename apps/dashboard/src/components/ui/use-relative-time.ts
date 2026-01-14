@@ -10,138 +10,138 @@
 import { useEffect, useState } from "react";
 
 export interface UseRelativeTimeOptions {
-  recentIntervalMs?: number;
-  olderIntervalMs?: number;
-  recentThresholdSec?: number;
+	recentIntervalMs?: number;
+	olderIntervalMs?: number;
+	recentThresholdSec?: number;
 }
 
 export interface RelativeTimeResult {
-  formatted: string;
-  secondsAgo: number;
-  isRecent: boolean;
+	formatted: string;
+	secondsAgo: number;
+	isRecent: boolean;
 }
 
 function formatRelativeTime(seconds: number): string {
-  if (seconds < 0) {
-    return "just now";
-  }
-  if (seconds < 5) {
-    return "just now";
-  }
-  if (seconds < 60) {
-    return `${Math.floor(seconds)}s ago`;
-  }
+	if (seconds < 0) {
+		return "just now";
+	}
+	if (seconds < 5) {
+		return "just now";
+	}
+	if (seconds < 60) {
+		return `${Math.floor(seconds)}s ago`;
+	}
 
-  const minutes = Math.floor(seconds / 60);
-  if (minutes < 60) {
-    return `${minutes}m ago`;
-  }
+	const minutes = Math.floor(seconds / 60);
+	if (minutes < 60) {
+		return `${minutes}m ago`;
+	}
 
-  const hours = Math.floor(minutes / 60);
-  if (hours < 24) {
-    return `${hours}h ago`;
-  }
+	const hours = Math.floor(minutes / 60);
+	if (hours < 24) {
+		return `${hours}h ago`;
+	}
 
-  const days = Math.floor(hours / 24);
-  return `${days}d ago`;
+	const days = Math.floor(hours / 24);
+	return `${days}d ago`;
 }
 
 function getSecondsAgo(timestamp: Date | number): number {
-  const now = Date.now();
-  const then = typeof timestamp === "number" ? timestamp : timestamp.getTime();
-  return Math.floor((now - then) / 1000);
+	const now = Date.now();
+	const then = typeof timestamp === "number" ? timestamp : timestamp.getTime();
+	return Math.floor((now - then) / 1000);
 }
 
 export function useRelativeTime(
-  timestamp: Date | number | undefined,
-  options: UseRelativeTimeOptions = {}
+	timestamp: Date | number | undefined,
+	options: UseRelativeTimeOptions = {}
 ): RelativeTimeResult {
-  const { recentIntervalMs = 1000, olderIntervalMs = 30000, recentThresholdSec = 60 } = options;
+	const { recentIntervalMs = 1000, olderIntervalMs = 30000, recentThresholdSec = 60 } = options;
 
-  const [result, setResult] = useState<RelativeTimeResult>(() => {
-    if (!timestamp) {
-      return { formatted: "", secondsAgo: 0, isRecent: false };
-    }
-    const seconds = getSecondsAgo(timestamp);
-    return {
-      formatted: formatRelativeTime(seconds),
-      secondsAgo: seconds,
-      isRecent: seconds < recentThresholdSec,
-    };
-  });
+	const [result, setResult] = useState<RelativeTimeResult>(() => {
+		if (!timestamp) {
+			return { formatted: "", secondsAgo: 0, isRecent: false };
+		}
+		const seconds = getSecondsAgo(timestamp);
+		return {
+			formatted: formatRelativeTime(seconds),
+			secondsAgo: seconds,
+			isRecent: seconds < recentThresholdSec,
+		};
+	});
 
-  useEffect(() => {
-    if (!timestamp) {
-      return;
-    }
+	useEffect(() => {
+		if (!timestamp) {
+			return;
+		}
 
-    const updateTime = () => {
-      const seconds = getSecondsAgo(timestamp);
-      setResult({
-        formatted: formatRelativeTime(seconds),
-        secondsAgo: seconds,
-        isRecent: seconds < recentThresholdSec,
-      });
-    };
+		const updateTime = () => {
+			const seconds = getSecondsAgo(timestamp);
+			setResult({
+				formatted: formatRelativeTime(seconds),
+				secondsAgo: seconds,
+				isRecent: seconds < recentThresholdSec,
+			});
+		};
 
-    updateTime();
+		updateTime();
 
-    const seconds = getSecondsAgo(timestamp);
-    const intervalMs = seconds < recentThresholdSec ? recentIntervalMs : olderIntervalMs;
+		const seconds = getSecondsAgo(timestamp);
+		const intervalMs = seconds < recentThresholdSec ? recentIntervalMs : olderIntervalMs;
 
-    const interval = setInterval(updateTime, intervalMs);
+		const interval = setInterval(updateTime, intervalMs);
 
-    return () => clearInterval(interval);
-  }, [timestamp, recentIntervalMs, olderIntervalMs, recentThresholdSec]);
+		return () => clearInterval(interval);
+	}, [timestamp, recentIntervalMs, olderIntervalMs, recentThresholdSec]);
 
-  return result;
+	return result;
 }
 
 export function useRelativeTimeBatch(
-  timestamps: Array<Date | number>,
-  options: UseRelativeTimeOptions = {}
+	timestamps: Array<Date | number>,
+	options: UseRelativeTimeOptions = {}
 ): RelativeTimeResult[] {
-  const {
-    recentIntervalMs = 1000,
-    olderIntervalMs: _olderIntervalMs = 30000,
-    recentThresholdSec = 60,
-  } = options;
-  void _olderIntervalMs; // Reserved for future use with adaptive intervals
+	const {
+		recentIntervalMs = 1000,
+		olderIntervalMs: _olderIntervalMs = 30000,
+		recentThresholdSec = 60,
+	} = options;
+	void _olderIntervalMs; // Reserved for future use with adaptive intervals
 
-  const [results, setResults] = useState<RelativeTimeResult[]>(() =>
-    timestamps.map((ts) => {
-      const seconds = getSecondsAgo(ts);
-      return {
-        formatted: formatRelativeTime(seconds),
-        secondsAgo: seconds,
-        isRecent: seconds < recentThresholdSec,
-      };
-    })
-  );
+	const [results, setResults] = useState<RelativeTimeResult[]>(() =>
+		timestamps.map((ts) => {
+			const seconds = getSecondsAgo(ts);
+			return {
+				formatted: formatRelativeTime(seconds),
+				secondsAgo: seconds,
+				isRecent: seconds < recentThresholdSec,
+			};
+		})
+	);
 
-  useEffect(() => {
-    const updateTimes = () => {
-      setResults(
-        timestamps.map((ts) => {
-          const seconds = getSecondsAgo(ts);
-          return {
-            formatted: formatRelativeTime(seconds),
-            secondsAgo: seconds,
-            isRecent: seconds < recentThresholdSec,
-          };
-        })
-      );
-    };
+	useEffect(() => {
+		const updateTimes = () => {
+			setResults(
+				timestamps.map((ts) => {
+					const seconds = getSecondsAgo(ts);
+					return {
+						formatted: formatRelativeTime(seconds),
+						secondsAgo: seconds,
+						isRecent: seconds < recentThresholdSec,
+					};
+				})
+			);
+		};
 
-    updateTimes();
+		updateTimes();
 
-    // Batch updates use shortest interval since any timestamp could be recent
-    const interval = setInterval(updateTimes, recentIntervalMs);
+		// Batch updates use shortest interval since any timestamp could be recent
+		const interval = setInterval(updateTimes, recentIntervalMs);
 
-    return () => clearInterval(interval);
-  }, [timestamps, recentIntervalMs, recentThresholdSec]);
+		return () => clearInterval(interval);
+	}, [timestamps, recentIntervalMs, recentThresholdSec]);
 
-  return results;
+	return results;
 }
 
 export { formatRelativeTime, getSecondsAgo };

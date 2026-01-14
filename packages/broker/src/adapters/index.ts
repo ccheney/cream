@@ -5,8 +5,8 @@
  */
 
 export {
-  type BacktestAdapterConfig,
-  type BacktestUtils,
-  createBacktestAdapter,
-  createBacktestAdapterWithUtils,
+	type BacktestAdapterConfig,
+	type BacktestUtils,
+	createBacktestAdapter,
+	createBacktestAdapterWithUtils,
 } from "./backtest.js";

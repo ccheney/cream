@@ -12,22 +12,22 @@
 import { useLoadingStore } from "@/stores/loading-store";
 
 export function GlobalLoadingIndicator() {
-  const isAnyLoading = useLoadingStore((s) => s.isAnyLoading());
+	const isAnyLoading = useLoadingStore((s) => s.isAnyLoading());
 
-  if (!isAnyLoading) {
-    return null;
-  }
+	if (!isAnyLoading) {
+		return null;
+	}
 
-  return (
-    <div className="fixed top-0 left-0 right-0 z-50 h-0.5 overflow-hidden">
-      <div
-        className="h-full w-full bg-gradient-to-r from-amber-400/80 via-amber-500 to-amber-400/80 animate-pulse"
-        style={{
-          backgroundSize: "200% 100%",
-          animation: "gradient-slide 1.5s ease-in-out infinite",
-        }}
-      />
-      <style jsx>{`
+	return (
+		<div className="fixed top-0 left-0 right-0 z-50 h-0.5 overflow-hidden">
+			<div
+				className="h-full w-full bg-gradient-to-r from-amber-400/80 via-amber-500 to-amber-400/80 animate-pulse"
+				style={{
+					backgroundSize: "200% 100%",
+					animation: "gradient-slide 1.5s ease-in-out infinite",
+				}}
+			/>
+			<style jsx>{`
         @keyframes gradient-slide {
           0% {
             background-position: 0% 50%;
@@ -40,8 +40,8 @@ export function GlobalLoadingIndicator() {
           }
         }
       `}</style>
-    </div>
-  );
+		</div>
+	);
 }
 
 export default GlobalLoadingIndicator;

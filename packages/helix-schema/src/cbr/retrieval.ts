@@ -14,11 +14,11 @@ import { DEFAULT_CBR_OPTIONS } from "./config.js";
 import { convertToRetrievedCase } from "./conversion.js";
 import { generateCBRSituationBrief } from "./situation-brief.js";
 import type {
-  CBRMarketSnapshot,
-  CBRRetrievalOptions,
-  CBRRetrievalResult,
-  HelixClient,
-  SearchSimilarDecisionsResult,
+	CBRMarketSnapshot,
+	CBRRetrievalOptions,
+	CBRRetrievalResult,
+	HelixClient,
+	SearchSimilarDecisionsResult,
 } from "./types.js";
 
 /**
@@ -53,64 +53,64 @@ import type {
  * ```
  */
 export async function retrieveSimilarCases(
-  client: HelixClient,
-  embeddingClient: EmbeddingClient,
-  snapshot: CBRMarketSnapshot,
-  options: CBRRetrievalOptions = {}
+	client: HelixClient,
+	embeddingClient: EmbeddingClient,
+	snapshot: CBRMarketSnapshot,
+	options: CBRRetrievalOptions = {}
 ): Promise<CBRRetrievalResult> {
-  const opts = { ...DEFAULT_CBR_OPTIONS, ...options };
-  const startTime = performance.now();
+	const opts = { ...DEFAULT_CBR_OPTIONS, ...options };
+	const startTime = performance.now();
 
-  const situationBrief = generateCBRSituationBrief(snapshot);
+	const situationBrief = generateCBRSituationBrief(snapshot);
 
-  const embeddingResult = await embeddingClient.generateEmbedding(situationBrief);
-  const queryEmbedding = embeddingResult.values;
+	const embeddingResult = await embeddingClient.generateEmbedding(situationBrief);
+	const queryEmbedding = embeddingResult.values;
 
-  const filters: Record<string, unknown> = {};
+	const filters: Record<string, unknown> = {};
 
-  if (opts.filterRegime) {
-    filters.regime_label = opts.filterRegime;
-  } else {
-    filters.regime_label = snapshot.regimeLabel;
-  }
+	if (opts.filterRegime) {
+		filters.regime_label = opts.filterRegime;
+	} else {
+		filters.regime_label = snapshot.regimeLabel;
+	}
 
-  filters.environment = opts.environment;
+	filters.environment = opts.environment;
 
-  if (snapshot.underlyingSymbol) {
-    filters.underlying_symbol = snapshot.underlyingSymbol;
-  }
+	if (snapshot.underlyingSymbol) {
+		filters.underlying_symbol = snapshot.underlyingSymbol;
+	}
 
-  const vectorResults = await executeVectorSearch(
-    client,
-    situationBrief,
-    opts.topK,
-    opts.minSimilarity,
-    filters
-  );
+	const vectorResults = await executeVectorSearch(
+		client,
+		situationBrief,
+		opts.topK,
+		opts.minSimilarity,
+		filters
+	);
 
-  const cases = vectorResults.map((result) =>
-    convertToRetrievedCase(result.decision, result.similarity)
-  );
+	const cases = vectorResults.map((result) =>
+		convertToRetrievedCase(result.decision, result.similarity)
+	);
 
-  let filteredCases = cases;
+	let filteredCases = cases;
 
-  if (opts.maxAgeDays > 0) {
-    const cutoffDate = new Date();
-    cutoffDate.setDate(cutoffDate.getDate() - opts.maxAgeDays);
-    filteredCases = filteredCases.filter((c) => new Date(c.asOfTimestamp) >= cutoffDate);
-  }
+	if (opts.maxAgeDays > 0) {
+		const cutoffDate = new Date();
+		cutoffDate.setDate(cutoffDate.getDate() - opts.maxAgeDays);
+		filteredCases = filteredCases.filter((c) => new Date(c.asOfTimestamp) >= cutoffDate);
+	}
 
-  const statistics = calculateCaseStatistics(filteredCases);
+	const statistics = calculateCaseStatistics(filteredCases);
 
-  const executionTimeMs = performance.now() - startTime;
+	const executionTimeMs = performance.now() - startTime;
 
-  return {
-    cases: filteredCases,
-    statistics,
-    executionTimeMs,
-    queryEmbedding,
-    correctionApplied: false,
-  };
+	return {
+		cases: filteredCases,
+		statistics,
+		executionTimeMs,
+		queryEmbedding,
+		correctionApplied: false,
+	};
 }
 
 /**
@@ -128,41 +128,41 @@ export async function retrieveSimilarCases(
  * @returns Array of decisions with similarity scores
  */
 export async function executeVectorSearch(
-  client: HelixClient,
-  queryText: string,
-  topK: number,
-  minSimilarity: number,
-  filters: Record<string, unknown>
+	client: HelixClient,
+	queryText: string,
+	topK: number,
+	minSimilarity: number,
+	filters: Record<string, unknown>
 ): Promise<Array<{ decision: TradeDecision; similarity: number }>> {
-  try {
-    const result = await client.query<SearchSimilarDecisionsResult[]>("SearchSimilarDecisions", {
-      query_text: queryText,
-      instrument_id: filters.underlying_symbol ?? filters.instrument_id ?? null,
-      regime_label: filters.regime_label ?? null,
-      limit: topK,
-    });
+	try {
+		const result = await client.query<SearchSimilarDecisionsResult[]>("SearchSimilarDecisions", {
+			query_text: queryText,
+			instrument_id: filters.underlying_symbol ?? filters.instrument_id ?? null,
+			regime_label: filters.regime_label ?? null,
+			limit: topK,
+		});
 
-    return result.data
-      .filter((r) => r.similarity_score >= minSimilarity)
-      .map((r) => ({
-        decision: {
-          decision_id: r.decision_id,
-          cycle_id: r.cycle_id ?? "",
-          instrument_id: r.instrument_id,
-          underlying_symbol: r.underlying_symbol,
-          regime_label: r.regime_label,
-          action: r.action as TradeDecision["action"],
-          decision_json: r.decision_json ?? "{}",
-          rationale_text: r.rationale_text,
-          snapshot_reference: r.snapshot_reference ?? "",
-          realized_outcome: r.realized_outcome,
-          created_at: r.created_at ?? new Date().toISOString(),
-          closed_at: r.closed_at,
-          environment: r.environment as TradeDecision["environment"],
-        },
-        similarity: r.similarity_score,
-      }));
-  } catch (_error) {
-    return [];
-  }
+		return result.data
+			.filter((r) => r.similarity_score >= minSimilarity)
+			.map((r) => ({
+				decision: {
+					decision_id: r.decision_id,
+					cycle_id: r.cycle_id ?? "",
+					instrument_id: r.instrument_id,
+					underlying_symbol: r.underlying_symbol,
+					regime_label: r.regime_label,
+					action: r.action as TradeDecision["action"],
+					decision_json: r.decision_json ?? "{}",
+					rationale_text: r.rationale_text,
+					snapshot_reference: r.snapshot_reference ?? "",
+					realized_outcome: r.realized_outcome,
+					created_at: r.created_at ?? new Date().toISOString(),
+					closed_at: r.closed_at,
+					environment: r.environment as TradeDecision["environment"],
+				},
+				similarity: r.similarity_score,
+			}));
+	} catch (_error) {
+		return [];
+	}
 }

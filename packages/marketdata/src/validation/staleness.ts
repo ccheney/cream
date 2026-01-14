@@ -14,18 +14,18 @@ import type { Timeframe } from "../ingestion/candleIngestion";
 // ============================================
 
 export const StalenessThresholdsSchema = z.record(
-  z.enum(["1m", "5m", "15m", "30m", "1h", "4h", "1d", "1w"]),
-  z.number().positive()
+	z.enum(["1m", "5m", "15m", "30m", "1h", "4h", "1d", "1w"]),
+	z.number().positive()
 );
 
 export type StalenessThresholds = z.infer<typeof StalenessThresholdsSchema>;
 
 export interface StalenessCheckResult {
-  isStale: boolean;
-  lastTimestamp: string | null;
-  staleMinutes: number;
-  threshold: number;
-  timeframe: Timeframe;
+	isStale: boolean;
+	lastTimestamp: string | null;
+	staleMinutes: number;
+	threshold: number;
+	timeframe: Timeframe;
 }
 
 // ============================================
@@ -38,14 +38,14 @@ export interface StalenessCheckResult {
  * Rule: Allow 2x the timeframe duration before marking as stale.
  */
 export const DEFAULT_STALENESS_THRESHOLDS: StalenessThresholds = {
-  "1m": 2, // 2 minutes
-  "5m": 10, // 10 minutes
-  "15m": 30, // 30 minutes
-  "30m": 60, // 1 hour
-  "1h": 120, // 2 hours
-  "4h": 480, // 8 hours
-  "1d": 2880, // 2 days (48 hours)
-  "1w": 20160, // 2 weeks
+	"1m": 2, // 2 minutes
+	"5m": 10, // 10 minutes
+	"15m": 30, // 30 minutes
+	"30m": 60, // 1 hour
+	"1h": 120, // 2 hours
+	"4h": 480, // 8 hours
+	"1d": 2880, // 2 days (48 hours)
+	"1w": 20160, // 2 weeks
 };
 
 // ============================================
@@ -61,38 +61,38 @@ export const DEFAULT_STALENESS_THRESHOLDS: StalenessThresholds = {
  * @returns Staleness check result
  */
 export function checkStaleness(
-  lastTimestamp: string | null,
-  timeframe: Timeframe,
-  thresholds: StalenessThresholds = DEFAULT_STALENESS_THRESHOLDS
+	lastTimestamp: string | null,
+	timeframe: Timeframe,
+	thresholds: StalenessThresholds = DEFAULT_STALENESS_THRESHOLDS
 ): StalenessCheckResult {
-  const threshold = thresholds[timeframe] ?? DEFAULT_STALENESS_THRESHOLDS[timeframe];
+	const threshold = thresholds[timeframe] ?? DEFAULT_STALENESS_THRESHOLDS[timeframe];
 
-  // Ensure threshold is defined (should always be, but TypeScript needs the guard)
-  if (threshold === undefined) {
-    throw new Error(`No staleness threshold defined for timeframe: ${timeframe}`);
-  }
+	// Ensure threshold is defined (should always be, but TypeScript needs the guard)
+	if (threshold === undefined) {
+		throw new Error(`No staleness threshold defined for timeframe: ${timeframe}`);
+	}
 
-  if (!lastTimestamp) {
-    return {
-      isStale: true,
-      lastTimestamp: null,
-      staleMinutes: Infinity,
-      threshold,
-      timeframe,
-    };
-  }
+	if (!lastTimestamp) {
+		return {
+			isStale: true,
+			lastTimestamp: null,
+			staleMinutes: Infinity,
+			threshold,
+			timeframe,
+		};
+	}
 
-  const lastTime = new Date(lastTimestamp).getTime();
-  const now = Date.now();
-  const staleMinutes = (now - lastTime) / (1000 * 60);
+	const lastTime = new Date(lastTimestamp).getTime();
+	const now = Date.now();
+	const staleMinutes = (now - lastTime) / (1000 * 60);
 
-  return {
-    isStale: staleMinutes > threshold,
-    lastTimestamp,
-    staleMinutes,
-    threshold,
-    timeframe,
-  };
+	return {
+		isStale: staleMinutes > threshold,
+		lastTimestamp,
+		staleMinutes,
+		threshold,
+		timeframe,
+	};
 }
 
 /**
@@ -104,17 +104,17 @@ export function checkStaleness(
  * @returns Map of symbol to staleness result
  */
 export function checkMultipleStaleness(
-  timestamps: Map<string, string | null>,
-  timeframe: Timeframe,
-  thresholds: StalenessThresholds = DEFAULT_STALENESS_THRESHOLDS
+	timestamps: Map<string, string | null>,
+	timeframe: Timeframe,
+	thresholds: StalenessThresholds = DEFAULT_STALENESS_THRESHOLDS
 ): Map<string, StalenessCheckResult> {
-  const results = new Map<string, StalenessCheckResult>();
+	const results = new Map<string, StalenessCheckResult>();
 
-  for (const [symbol, timestamp] of timestamps) {
-    results.set(symbol, checkStaleness(timestamp, timeframe, thresholds));
-  }
+	for (const [symbol, timestamp] of timestamps) {
+		results.set(symbol, checkStaleness(timestamp, timeframe, thresholds));
+	}
 
-  return results;
+	return results;
 }
 
 /**
@@ -126,37 +126,37 @@ export function checkMultipleStaleness(
  * @returns Array of stale symbols
  */
 export function getStaleSymbols(
-  timestamps: Map<string, string | null>,
-  timeframe: Timeframe,
-  thresholds: StalenessThresholds = DEFAULT_STALENESS_THRESHOLDS
+	timestamps: Map<string, string | null>,
+	timeframe: Timeframe,
+	thresholds: StalenessThresholds = DEFAULT_STALENESS_THRESHOLDS
 ): string[] {
-  const stale: string[] = [];
+	const stale: string[] = [];
 
-  for (const [symbol, timestamp] of timestamps) {
-    const result = checkStaleness(timestamp, timeframe, thresholds);
-    if (result.isStale) {
-      stale.push(symbol);
-    }
-  }
+	for (const [symbol, timestamp] of timestamps) {
+		const result = checkStaleness(timestamp, timeframe, thresholds);
+		if (result.isStale) {
+			stale.push(symbol);
+		}
+	}
 
-  return stale;
+	return stale;
 }
 
 /**
  * Check if data is fresh (not stale).
  */
 export function isFresh(
-  lastTimestamp: string | null,
-  timeframe: Timeframe,
-  thresholds: StalenessThresholds = DEFAULT_STALENESS_THRESHOLDS
+	lastTimestamp: string | null,
+	timeframe: Timeframe,
+	thresholds: StalenessThresholds = DEFAULT_STALENESS_THRESHOLDS
 ): boolean {
-  return !checkStaleness(lastTimestamp, timeframe, thresholds).isStale;
+	return !checkStaleness(lastTimestamp, timeframe, thresholds).isStale;
 }
 
 export default {
-  checkStaleness,
-  checkMultipleStaleness,
-  getStaleSymbols,
-  isFresh,
-  DEFAULT_STALENESS_THRESHOLDS,
+	checkStaleness,
+	checkMultipleStaleness,
+	getStaleSymbols,
+	isFresh,
+	DEFAULT_STALENESS_THRESHOLDS,
 };

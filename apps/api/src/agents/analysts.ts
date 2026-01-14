@@ -8,20 +8,20 @@ import { z } from "zod";
 
 import { buildGenerateOptions, createAgent, getAgentRuntimeSettings } from "./factory.js";
 import {
-  buildDatetimeContext,
-  buildGroundingContext,
-  buildIndicatorContext,
-  buildIndicatorSummary,
-  buildPredictionMarketContext,
-  buildRegimeContext,
+	buildDatetimeContext,
+	buildGroundingContext,
+	buildIndicatorContext,
+	buildIndicatorSummary,
+	buildPredictionMarketContext,
+	buildRegimeContext,
 } from "./prompts.js";
 import { FundamentalsAnalysisSchema, SentimentAnalysisSchema } from "./schemas.js";
 import { createStreamChunkForwarder } from "./stream-forwarder.js";
 import type {
-  AgentContext,
-  FundamentalsAnalysisOutput,
-  OnStreamChunk,
-  SentimentAnalysisOutput,
+	AgentContext,
+	FundamentalsAnalysisOutput,
+	OnStreamChunk,
+	SentimentAnalysisOutput,
 } from "./types.js";
 
 // ============================================
@@ -29,8 +29,8 @@ import type {
 // ============================================
 
 export interface AnalystOutputs {
-  news: SentimentAnalysisOutput[];
-  fundamentals: FundamentalsAnalysisOutput[];
+	news: SentimentAnalysisOutput[];
+	fundamentals: FundamentalsAnalysisOutput[];
 }
 
 // ============================================
@@ -51,18 +51,18 @@ export const fundamentalsAnalystAgent = createAgent("fundamentals_analyst");
  * Run News & Sentiment Analyst agent.
  */
 export async function runNewsAnalyst(context: AgentContext): Promise<SentimentAnalysisOutput[]> {
-  const newsEvents = (context.recentEvents ?? []).filter(
-    (e) => e.sourceType === "news" || e.sourceType === "press_release"
-  );
+	const newsEvents = (context.recentEvents ?? []).filter(
+		(e) => e.sourceType === "news" || e.sourceType === "press_release"
+	);
 
-  // Build indicator context with sentiment signals
-  const indicatorContext = buildIndicatorContext(context.indicators);
-  const indicatorSummary = buildIndicatorSummary(context.indicators);
+	// Build indicator context with sentiment signals
+	const indicatorContext = buildIndicatorContext(context.indicators);
+	const indicatorSummary = buildIndicatorSummary(context.indicators);
 
-  // Build grounding context from web searches
-  const groundingContext = buildGroundingContext(context.groundingOutput);
+	// Build grounding context from web searches
+	const groundingContext = buildGroundingContext(context.groundingOutput);
 
-  const prompt = `${buildDatetimeContext()}Analyze news and sentiment for the following instruments:
+	const prompt = `${buildDatetimeContext()}Analyze news and sentiment for the following instruments:
 ${groundingContext}
 Current News from Pipeline:
 ${JSON.stringify(context.externalContext?.news ?? [], null, 2)}
@@ -83,50 +83,50 @@ IMPORTANT: Use the sentiment indicators above to contextualize your analysis:
 When sentiment indicators conflict with news content, highlight this divergence.
 If event_risk is true, pay special attention to potential catalysts.`;
 
-  const settings = getAgentRuntimeSettings("news_analyst", context.agentConfigs);
-  const options = buildGenerateOptions(settings, { schema: z.array(SentimentAnalysisSchema) });
+	const settings = getAgentRuntimeSettings("news_analyst", context.agentConfigs);
+	const options = buildGenerateOptions(settings, { schema: z.array(SentimentAnalysisSchema) });
 
-  const response = await newsAnalystAgent.generate([{ role: "user", content: prompt }], options);
+	const response = await newsAnalystAgent.generate([{ role: "user", content: prompt }], options);
 
-  const result = response.object as SentimentAnalysisOutput[] | undefined;
-  return result ?? [];
+	const result = response.object as SentimentAnalysisOutput[] | undefined;
+	return result ?? [];
 }
 
 /**
  * Run Fundamentals & Macro Analyst agent.
  */
 export async function runFundamentalsAnalyst(
-  context: AgentContext
+	context: AgentContext
 ): Promise<FundamentalsAnalysisOutput[]> {
-  const fundamentalEvents = (context.recentEvents ?? []).filter(
-    (e) =>
-      e.sourceType === "macro" ||
-      e.sourceType === "transcript" ||
-      e.eventType === "earnings" ||
-      e.eventType === "guidance" ||
-      e.eventType === "macro_release"
-  );
+	const fundamentalEvents = (context.recentEvents ?? []).filter(
+		(e) =>
+			e.sourceType === "macro" ||
+			e.sourceType === "transcript" ||
+			e.eventType === "earnings" ||
+			e.eventType === "guidance" ||
+			e.eventType === "macro_release"
+	);
 
-  const regimeContext = buildRegimeContext(context.regimeLabels);
-  const predictionMarketContext = buildPredictionMarketContext(context.predictionMarketSignals);
+	const regimeContext = buildRegimeContext(context.regimeLabels);
+	const predictionMarketContext = buildPredictionMarketContext(context.predictionMarketSignals);
 
-  // Build indicator context with value and quality factors
-  const indicatorContext = buildIndicatorContext(context.indicators);
+	// Build indicator context with value and quality factors
+	const indicatorContext = buildIndicatorContext(context.indicators);
 
-  // Build grounding context from web searches
-  const groundingContext = buildGroundingContext(context.groundingOutput);
+	// Build grounding context from web searches
+	const groundingContext = buildGroundingContext(context.groundingOutput);
 
-  const nyFormatter = new Intl.DateTimeFormat("en-CA", {
-    timeZone: "America/New_York",
-    year: "numeric",
-    month: "2-digit",
-    day: "2-digit",
-  });
-  const today = new Date();
-  const fredStartDate = nyFormatter.format(today);
-  const fredEndDate = nyFormatter.format(new Date(today.getTime() + 3 * 24 * 60 * 60 * 1000));
+	const nyFormatter = new Intl.DateTimeFormat("en-CA", {
+		timeZone: "America/New_York",
+		year: "numeric",
+		month: "2-digit",
+		day: "2-digit",
+	});
+	const today = new Date();
+	const fredStartDate = nyFormatter.format(today);
+	const fredEndDate = nyFormatter.format(new Date(today.getTime() + 3 * 24 * 60 * 60 * 1000));
 
-  const prompt = `${buildDatetimeContext()}Analyze fundamentals and macro context for the following instruments:
+	const prompt = `${buildDatetimeContext()}Analyze fundamentals and macro context for the following instruments:
 ${groundingContext}
 Current Macro Indicators:
 ${JSON.stringify(context.externalContext?.macroIndicators ?? {}, null, 2)}
@@ -161,40 +161,40 @@ QUALITY FACTORS from the indicators above:
 
 Use these quantitative factors to support or challenge qualitative assessments.
 ${
-  context.predictionMarketSignals
-    ? `IMPORTANT: Prediction market signals reflect real-money bets on macro outcomes.
+	context.predictionMarketSignals
+		? `IMPORTANT: Prediction market signals reflect real-money bets on macro outcomes.
 - High Fed cut probability suggests easing expectations - generally supportive for equities
 - High recession probability warrants defensive positioning
 - High macro uncertainty may justify smaller position sizes
 - Use these signals to inform your fundamental thesis and event risk assessment.`
-    : ""
+		: ""
 }`;
 
-  const settings = getAgentRuntimeSettings("fundamentals_analyst", context.agentConfigs);
-  const options = buildGenerateOptions(settings, { schema: z.array(FundamentalsAnalysisSchema) });
+	const settings = getAgentRuntimeSettings("fundamentals_analyst", context.agentConfigs);
+	const options = buildGenerateOptions(settings, { schema: z.array(FundamentalsAnalysisSchema) });
 
-  const response = await fundamentalsAnalystAgent.generate(
-    [{ role: "user", content: prompt }],
-    options
-  );
+	const response = await fundamentalsAnalystAgent.generate(
+		[{ role: "user", content: prompt }],
+		options
+	);
 
-  const result = response.object as FundamentalsAnalysisOutput[] | undefined;
-  return result ?? [];
+	const result = response.object as FundamentalsAnalysisOutput[] | undefined;
+	return result ?? [];
 }
 
 /**
  * Run all analyst agents in parallel.
  */
 export async function runAnalystsParallel(context: AgentContext): Promise<{
-  news: SentimentAnalysisOutput[];
-  fundamentals: FundamentalsAnalysisOutput[];
+	news: SentimentAnalysisOutput[];
+	fundamentals: FundamentalsAnalysisOutput[];
 }> {
-  const [news, fundamentals] = await Promise.all([
-    runNewsAnalyst(context),
-    runFundamentalsAnalyst(context),
-  ]);
+	const [news, fundamentals] = await Promise.all([
+		runNewsAnalyst(context),
+		runFundamentalsAnalyst(context),
+	]);
 
-  return { news, fundamentals };
+	return { news, fundamentals };
 }
 
 // ============================================
@@ -205,21 +205,21 @@ export async function runAnalystsParallel(context: AgentContext): Promise<{
  * Run News & Sentiment Analyst agent with streaming.
  */
 export async function runNewsAnalystStreaming(
-  context: AgentContext,
-  onChunk: OnStreamChunk
+	context: AgentContext,
+	onChunk: OnStreamChunk
 ): Promise<SentimentAnalysisOutput[]> {
-  const newsEvents = (context.recentEvents ?? []).filter(
-    (e) => e.sourceType === "news" || e.sourceType === "press_release"
-  );
+	const newsEvents = (context.recentEvents ?? []).filter(
+		(e) => e.sourceType === "news" || e.sourceType === "press_release"
+	);
 
-  // Build indicator context with sentiment signals
-  const indicatorContext = buildIndicatorContext(context.indicators);
-  const indicatorSummary = buildIndicatorSummary(context.indicators);
+	// Build indicator context with sentiment signals
+	const indicatorContext = buildIndicatorContext(context.indicators);
+	const indicatorSummary = buildIndicatorSummary(context.indicators);
 
-  // Build grounding context from web searches
-  const groundingContext = buildGroundingContext(context.groundingOutput);
+	// Build grounding context from web searches
+	const groundingContext = buildGroundingContext(context.groundingOutput);
 
-  const prompt = `${buildDatetimeContext()}Analyze news and sentiment for the following instruments:
+	const prompt = `${buildDatetimeContext()}Analyze news and sentiment for the following instruments:
 ${groundingContext}
 Current News from Pipeline:
 ${JSON.stringify(context.externalContext?.news ?? [], null, 2)}
@@ -240,56 +240,56 @@ IMPORTANT: Use the sentiment indicators above to contextualize your analysis:
 When sentiment indicators conflict with news content, highlight this divergence.
 If event_risk is true, pay special attention to potential catalysts.`;
 
-  const settings = getAgentRuntimeSettings("news_analyst", context.agentConfigs);
-  const options = buildGenerateOptions(settings, { schema: z.array(SentimentAnalysisSchema) });
+	const settings = getAgentRuntimeSettings("news_analyst", context.agentConfigs);
+	const options = buildGenerateOptions(settings, { schema: z.array(SentimentAnalysisSchema) });
 
-  const stream = await newsAnalystAgent.stream([{ role: "user", content: prompt }], options);
-  const forwardChunk = createStreamChunkForwarder("news_analyst", onChunk);
+	const stream = await newsAnalystAgent.stream([{ role: "user", content: prompt }], options);
+	const forwardChunk = createStreamChunkForwarder("news_analyst", onChunk);
 
-  for await (const chunk of stream.fullStream) {
-    await forwardChunk(chunk as { type: string; payload?: Record<string, unknown> });
-  }
+	for await (const chunk of stream.fullStream) {
+		await forwardChunk(chunk as { type: string; payload?: Record<string, unknown> });
+	}
 
-  const result = (await stream.object) as SentimentAnalysisOutput[] | undefined;
-  return result ?? [];
+	const result = (await stream.object) as SentimentAnalysisOutput[] | undefined;
+	return result ?? [];
 }
 
 /**
  * Run Fundamentals & Macro Analyst agent with streaming.
  */
 export async function runFundamentalsAnalystStreaming(
-  context: AgentContext,
-  onChunk: OnStreamChunk
+	context: AgentContext,
+	onChunk: OnStreamChunk
 ): Promise<FundamentalsAnalysisOutput[]> {
-  const fundamentalEvents = (context.recentEvents ?? []).filter(
-    (e) =>
-      e.sourceType === "macro" ||
-      e.sourceType === "transcript" ||
-      e.eventType === "earnings" ||
-      e.eventType === "guidance" ||
-      e.eventType === "macro_release"
-  );
+	const fundamentalEvents = (context.recentEvents ?? []).filter(
+		(e) =>
+			e.sourceType === "macro" ||
+			e.sourceType === "transcript" ||
+			e.eventType === "earnings" ||
+			e.eventType === "guidance" ||
+			e.eventType === "macro_release"
+	);
 
-  const regimeContext = buildRegimeContext(context.regimeLabels);
-  const predictionMarketContext = buildPredictionMarketContext(context.predictionMarketSignals);
+	const regimeContext = buildRegimeContext(context.regimeLabels);
+	const predictionMarketContext = buildPredictionMarketContext(context.predictionMarketSignals);
 
-  // Build indicator context with value and quality factors
-  const indicatorContext = buildIndicatorContext(context.indicators);
+	// Build indicator context with value and quality factors
+	const indicatorContext = buildIndicatorContext(context.indicators);
 
-  // Build grounding context from web searches
-  const groundingContext = buildGroundingContext(context.groundingOutput);
+	// Build grounding context from web searches
+	const groundingContext = buildGroundingContext(context.groundingOutput);
 
-  const nyFormatter = new Intl.DateTimeFormat("en-CA", {
-    timeZone: "America/New_York",
-    year: "numeric",
-    month: "2-digit",
-    day: "2-digit",
-  });
-  const today = new Date();
-  const fredStartDate = nyFormatter.format(today);
-  const fredEndDate = nyFormatter.format(new Date(today.getTime() + 3 * 24 * 60 * 60 * 1000));
+	const nyFormatter = new Intl.DateTimeFormat("en-CA", {
+		timeZone: "America/New_York",
+		year: "numeric",
+		month: "2-digit",
+		day: "2-digit",
+	});
+	const today = new Date();
+	const fredStartDate = nyFormatter.format(today);
+	const fredEndDate = nyFormatter.format(new Date(today.getTime() + 3 * 24 * 60 * 60 * 1000));
 
-  const prompt = `${buildDatetimeContext()}Analyze fundamentals and macro context for the following instruments:
+	const prompt = `${buildDatetimeContext()}Analyze fundamentals and macro context for the following instruments:
 ${groundingContext}
 Current Macro Indicators:
 ${JSON.stringify(context.externalContext?.macroIndicators ?? {}, null, 2)}
@@ -324,46 +324,46 @@ QUALITY FACTORS from the indicators above:
 
 Use these quantitative factors to support or challenge qualitative assessments.
 ${
-  context.predictionMarketSignals
-    ? `IMPORTANT: Prediction market signals reflect real-money bets on macro outcomes.
+	context.predictionMarketSignals
+		? `IMPORTANT: Prediction market signals reflect real-money bets on macro outcomes.
 - High Fed cut probability suggests easing expectations - generally supportive for equities
 - High recession probability warrants defensive positioning
 - High macro uncertainty may justify smaller position sizes
 - Use these signals to inform your fundamental thesis and event risk assessment.`
-    : ""
+		: ""
 }`;
 
-  const settings = getAgentRuntimeSettings("fundamentals_analyst", context.agentConfigs);
-  const options = buildGenerateOptions(settings, { schema: z.array(FundamentalsAnalysisSchema) });
+	const settings = getAgentRuntimeSettings("fundamentals_analyst", context.agentConfigs);
+	const options = buildGenerateOptions(settings, { schema: z.array(FundamentalsAnalysisSchema) });
 
-  const stream = await fundamentalsAnalystAgent.stream(
-    [{ role: "user", content: prompt }],
-    options
-  );
-  const forwardChunk = createStreamChunkForwarder("fundamentals_analyst", onChunk);
+	const stream = await fundamentalsAnalystAgent.stream(
+		[{ role: "user", content: prompt }],
+		options
+	);
+	const forwardChunk = createStreamChunkForwarder("fundamentals_analyst", onChunk);
 
-  for await (const chunk of stream.fullStream) {
-    await forwardChunk(chunk as { type: string; payload?: Record<string, unknown> });
-  }
+	for await (const chunk of stream.fullStream) {
+		await forwardChunk(chunk as { type: string; payload?: Record<string, unknown> });
+	}
 
-  const result = (await stream.object) as FundamentalsAnalysisOutput[] | undefined;
-  return result ?? [];
+	const result = (await stream.object) as FundamentalsAnalysisOutput[] | undefined;
+	return result ?? [];
 }
 
 /**
  * Run all analyst agents in parallel with streaming.
  */
 export async function runAnalystsParallelStreaming(
-  context: AgentContext,
-  onChunk: OnStreamChunk
+	context: AgentContext,
+	onChunk: OnStreamChunk
 ): Promise<{
-  news: SentimentAnalysisOutput[];
-  fundamentals: FundamentalsAnalysisOutput[];
+	news: SentimentAnalysisOutput[];
+	fundamentals: FundamentalsAnalysisOutput[];
 }> {
-  const [news, fundamentals] = await Promise.all([
-    runNewsAnalystStreaming(context, onChunk),
-    runFundamentalsAnalystStreaming(context, onChunk),
-  ]);
+	const [news, fundamentals] = await Promise.all([
+		runNewsAnalystStreaming(context, onChunk),
+		runFundamentalsAnalystStreaming(context, onChunk),
+	]);
 
-  return { news, fundamentals };
+	return { news, fundamentals };
 }

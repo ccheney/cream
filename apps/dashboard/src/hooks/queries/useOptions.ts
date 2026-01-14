@@ -3,18 +3,18 @@ import type { OptionsOrderRequest } from "@/components/options/PositionBuilderMo
 import { get, post } from "@/lib/api/client";
 import { CACHE_TIMES, queryKeys, STALE_TIMES } from "@/lib/api/query-client";
 import type {
-  ExpirationsResponse,
-  OptionsChainResponse,
-  OptionsQuoteDetail,
+	ExpirationsResponse,
+	OptionsChainResponse,
+	OptionsQuoteDetail,
 } from "@/lib/api/types";
 
 export interface UseOptionsChainOptions {
-  /** Filter to specific expiration date (YYYY-MM-DD) */
-  expiration?: string;
-  /** Strike range as percentage from current price (default: 20) */
-  strikeRange?: number;
-  /** Disable automatic fetching */
-  enabled?: boolean;
+	/** Filter to specific expiration date (YYYY-MM-DD) */
+	expiration?: string;
+	/** Strike range as percentage from current price (default: 20) */
+	strikeRange?: number;
+	/** Disable automatic fetching */
+	enabled?: boolean;
 }
 
 /**
@@ -29,27 +29,27 @@ export interface UseOptionsChainOptions {
  * ```
  */
 export function useOptionsChain(underlying: string, options: UseOptionsChainOptions = {}) {
-  const { expiration, strikeRange = 20, enabled = true } = options;
+	const { expiration, strikeRange = 20, enabled = true } = options;
 
-  return useQuery({
-    queryKey: queryKeys.options.chain(underlying, expiration),
-    queryFn: async () => {
-      const params = new URLSearchParams();
-      if (expiration) {
-        params.set("expiration", expiration);
-      }
-      params.set("strikeRange", strikeRange.toString());
+	return useQuery({
+		queryKey: queryKeys.options.chain(underlying, expiration),
+		queryFn: async () => {
+			const params = new URLSearchParams();
+			if (expiration) {
+				params.set("expiration", expiration);
+			}
+			params.set("strikeRange", strikeRange.toString());
 
-      const url = `/api/options/chain/${underlying.toUpperCase()}?${params.toString()}`;
-      const { data } = await get<OptionsChainResponse>(url);
-      return data;
-    },
-    staleTime: STALE_TIMES.MARKET,
-    gcTime: CACHE_TIMES.CHART,
-    enabled: enabled && Boolean(underlying),
-    refetchInterval: 30000,
-    placeholderData: keepPreviousData,
-  });
+			const url = `/api/options/chain/${underlying.toUpperCase()}?${params.toString()}`;
+			const { data } = await get<OptionsChainResponse>(url);
+			return data;
+		},
+		staleTime: STALE_TIMES.MARKET,
+		gcTime: CACHE_TIMES.CHART,
+		enabled: enabled && Boolean(underlying),
+		refetchInterval: 30000,
+		placeholderData: keepPreviousData,
+	});
 }
 
 /**
@@ -62,17 +62,17 @@ export function useOptionsChain(underlying: string, options: UseOptionsChainOpti
  * ```
  */
 export function useOptionsExpirations(underlying: string, enabled = true) {
-  return useQuery({
-    queryKey: queryKeys.options.expirations(underlying),
-    queryFn: async () => {
-      const url = `/api/options/expirations/${underlying.toUpperCase()}`;
-      const { data } = await get<ExpirationsResponse>(url);
-      return data;
-    },
-    staleTime: STALE_TIMES.CONFIG,
-    gcTime: CACHE_TIMES.CONFIG,
-    enabled: enabled && Boolean(underlying),
-  });
+	return useQuery({
+		queryKey: queryKeys.options.expirations(underlying),
+		queryFn: async () => {
+			const url = `/api/options/expirations/${underlying.toUpperCase()}`;
+			const { data } = await get<ExpirationsResponse>(url);
+			return data;
+		},
+		staleTime: STALE_TIMES.CONFIG,
+		gcTime: CACHE_TIMES.CONFIG,
+		enabled: enabled && Boolean(underlying),
+	});
 }
 
 /**
@@ -85,17 +85,17 @@ export function useOptionsExpirations(underlying: string, enabled = true) {
  * ```
  */
 export function useOptionQuote(contract: string, enabled = true) {
-  return useQuery({
-    queryKey: queryKeys.options.quote(contract),
-    queryFn: async () => {
-      const url = `/api/options/quote/${contract.toUpperCase()}`;
-      const { data } = await get<OptionsQuoteDetail>(url);
-      return data;
-    },
-    staleTime: STALE_TIMES.MARKET,
-    gcTime: CACHE_TIMES.MARKET,
-    enabled: enabled && Boolean(contract),
-  });
+	return useQuery({
+		queryKey: queryKeys.options.quote(contract),
+		queryFn: async () => {
+			const url = `/api/options/quote/${contract.toUpperCase()}`;
+			const { data } = await get<OptionsQuoteDetail>(url);
+			return data;
+		},
+		staleTime: STALE_TIMES.MARKET,
+		gcTime: CACHE_TIMES.MARKET,
+		enabled: enabled && Boolean(contract),
+	});
 }
 
 /**
@@ -107,17 +107,17 @@ export function useOptionQuote(contract: string, enabled = true) {
  * ```
  */
 export function formatOccSymbol(
-  underlying: string,
-  expiration: string,
-  type: "C" | "P",
-  strike: number
+	underlying: string,
+	expiration: string,
+	type: "C" | "P",
+	strike: number
 ): string {
-  const [year, month, day] = expiration.split("-");
-  const yy = year?.slice(2) ?? "00";
-  const strikeFormatted = Math.round(strike * 1000)
-    .toString()
-    .padStart(8, "0");
-  return `${underlying.toUpperCase()}${yy}${month}${day}${type}${strikeFormatted}`;
+	const [year, month, day] = expiration.split("-");
+	const yy = year?.slice(2) ?? "00";
+	const strikeFormatted = Math.round(strike * 1000)
+		.toString()
+		.padStart(8, "0");
+	return `${underlying.toUpperCase()}${yy}${month}${day}${type}${strikeFormatted}`;
 }
 
 /**
@@ -130,40 +130,40 @@ export function formatOccSymbol(
  * ```
  */
 export function parseOccSymbol(symbol: string): {
-  underlying: string;
-  expiration: string;
-  type: "C" | "P";
-  strike: number;
+	underlying: string;
+	expiration: string;
+	type: "C" | "P";
+	strike: number;
 } | null {
-  const match = symbol.match(/^([A-Z]+)(\d{6})([CP])(\d{8})$/);
-  if (!match) {
-    return null;
-  }
+	const match = symbol.match(/^([A-Z]+)(\d{6})([CP])(\d{8})$/);
+	if (!match) {
+		return null;
+	}
 
-  const [, underlying, expStr, typeChar, strikeStr] = match;
-  if (!underlying || !expStr || !typeChar || !strikeStr) {
-    return null;
-  }
+	const [, underlying, expStr, typeChar, strikeStr] = match;
+	if (!underlying || !expStr || !typeChar || !strikeStr) {
+		return null;
+	}
 
-  const year = 2000 + Number.parseInt(expStr.slice(0, 2), 10);
-  const month = expStr.slice(2, 4);
-  const day = expStr.slice(4, 6);
+	const year = 2000 + Number.parseInt(expStr.slice(0, 2), 10);
+	const month = expStr.slice(2, 4);
+	const day = expStr.slice(4, 6);
 
-  return {
-    underlying,
-    expiration: `${year}-${month}-${day}`,
-    type: typeChar as "C" | "P",
-    strike: Number.parseInt(strikeStr, 10) / 1000,
-  };
+	return {
+		underlying,
+		expiration: `${year}-${month}-${day}`,
+		type: typeChar as "C" | "P",
+		strike: Number.parseInt(strikeStr, 10) / 1000,
+	};
 }
 
 export interface OptionsOrderResponse {
-  orderId: string;
-  clientOrderId: string;
-  status: "pending" | "accepted" | "filled" | "rejected";
-  filledQty: number;
-  avgFillPrice: number | null;
-  createdAt: string;
+	orderId: string;
+	clientOrderId: string;
+	status: "pending" | "accepted" | "filled" | "rejected";
+	filledQty: number;
+	avgFillPrice: number | null;
+	createdAt: string;
 }
 
 /**
@@ -180,16 +180,16 @@ export interface OptionsOrderResponse {
  * ```
  */
 export function useOptionsOrder() {
-  const queryClient = useQueryClient();
+	const queryClient = useQueryClient();
 
-  return useMutation({
-    mutationFn: async (order: OptionsOrderRequest) => {
-      const { data } = await post<OptionsOrderResponse>("/api/orders/options", order);
-      return data;
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: queryKeys.portfolio.positions() });
-      queryClient.invalidateQueries({ queryKey: ["options-positions"] });
-    },
-  });
+	return useMutation({
+		mutationFn: async (order: OptionsOrderRequest) => {
+			const { data } = await post<OptionsOrderResponse>("/api/orders/options", order);
+			return data;
+		},
+		onSuccess: () => {
+			queryClient.invalidateQueries({ queryKey: queryKeys.portfolio.positions() });
+			queryClient.invalidateQueries({ queryKey: ["options-positions"] });
+		},
+	});
 }

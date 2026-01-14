@@ -5,16 +5,16 @@
  */
 
 export {
-  findRelatedInstruments,
-  findSectorMatches,
-  getAggregateImpact,
-  getPrimarySector,
-  getSectorETFs,
-  type ImpactDirection,
-  isHighVolatilityMarket,
-  SECTOR_MAPPINGS,
-  type Sector,
-  type SectorMarketMapping,
-  type SectorMatchResult,
-  type VolatilityExpectation,
+	findRelatedInstruments,
+	findSectorMatches,
+	getAggregateImpact,
+	getPrimarySector,
+	getSectorETFs,
+	type ImpactDirection,
+	isHighVolatilityMarket,
+	SECTOR_MAPPINGS,
+	type Sector,
+	type SectorMarketMapping,
+	type SectorMatchResult,
+	type VolatilityExpectation,
 } from "./sector-markets";

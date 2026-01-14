@@ -26,12 +26,12 @@ import { BrokerError } from "./types.js";
  * Broker client factory configuration.
  */
 export interface BrokerClientConfig {
-  /** Alpaca API key (required for PAPER/LIVE) */
-  apiKey?: string;
-  /** Alpaca API secret (required for PAPER/LIVE) */
-  apiSecret?: string;
-  /** Backtest configuration (for BACKTEST environment) */
-  backtest?: BacktestAdapterConfig;
+	/** Alpaca API key (required for PAPER/LIVE) */
+	apiKey?: string;
+	/** Alpaca API secret (required for PAPER/LIVE) */
+	apiSecret?: string;
+	/** Backtest configuration (for BACKTEST environment) */
+	backtest?: BacktestAdapterConfig;
 }
 
 /**
@@ -60,36 +60,36 @@ export interface BrokerClientConfig {
  * ```
  */
 export function createBrokerClient(
-  ctx: ExecutionContext,
-  config: BrokerClientConfig = {}
+	ctx: ExecutionContext,
+	config: BrokerClientConfig = {}
 ): AlpacaClient {
-  switch (ctx.environment) {
-    case "BACKTEST":
-      return createBacktestAdapter(config.backtest);
+	switch (ctx.environment) {
+		case "BACKTEST":
+			return createBacktestAdapter(config.backtest);
 
-    case "PAPER":
-    case "LIVE": {
-      const apiKey = config.apiKey ?? process.env.ALPACA_KEY;
-      const apiSecret = config.apiSecret ?? process.env.ALPACA_SECRET;
+		case "PAPER":
+		case "LIVE": {
+			const apiKey = config.apiKey ?? process.env.ALPACA_KEY;
+			const apiSecret = config.apiSecret ?? process.env.ALPACA_SECRET;
 
-      if (!apiKey || !apiSecret) {
-        throw new BrokerError(
-          `ALPACA_KEY and ALPACA_SECRET are required for ${ctx.environment} trading`,
-          "INVALID_CREDENTIALS"
-        );
-      }
+			if (!apiKey || !apiSecret) {
+				throw new BrokerError(
+					`ALPACA_KEY and ALPACA_SECRET are required for ${ctx.environment} trading`,
+					"INVALID_CREDENTIALS"
+				);
+			}
 
-      return createAlpacaClient({
-        apiKey,
-        apiSecret,
-        environment: ctx.environment,
-      });
-    }
+			return createAlpacaClient({
+				apiKey,
+				apiSecret,
+				environment: ctx.environment,
+			});
+		}
 
-    default:
-      throw new BrokerError(
-        `Unknown environment: ${ctx.environment}. Use BACKTEST, PAPER, or LIVE.`,
-        "ENVIRONMENT_MISMATCH"
-      );
-  }
+		default:
+			throw new BrokerError(
+				`Unknown environment: ${ctx.environment}. Use BACKTEST, PAPER, or LIVE.`,
+				"ENVIRONMENT_MISMATCH"
+			);
+	}
 }

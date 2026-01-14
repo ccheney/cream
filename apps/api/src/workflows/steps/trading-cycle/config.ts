@@ -23,13 +23,13 @@ export const DEFAULT_MAX_CONSENSUS_ITERATIONS = 3;
 // ============================================
 
 export type AgentType =
-  | "news_analyst"
-  | "fundamentals_analyst"
-  | "bullish_researcher"
-  | "bearish_researcher"
-  | "trader"
-  | "risk_manager"
-  | "critic";
+	| "news_analyst"
+	| "fundamentals_analyst"
+	| "bullish_researcher"
+	| "bearish_researcher"
+	| "trader"
+	| "risk_manager"
+	| "critic";
 
 // ============================================
 // Config Loading
@@ -40,23 +40,23 @@ export type AgentType =
  * Returns null if config not available (will use defaults).
  */
 export async function loadRuntimeConfig(
-  ctx: ExecutionContext,
-  useDraft: boolean
+	ctx: ExecutionContext,
+	useDraft: boolean
 ): Promise<FullRuntimeConfig | null> {
-  try {
-    const service = await getRuntimeConfigService();
-    const environment = ctx.environment as RuntimeEnvironment;
+	try {
+		const service = await getRuntimeConfigService();
+		const environment = ctx.environment as RuntimeEnvironment;
 
-    if (useDraft) {
-      return await service.getDraft(environment);
-    }
-    return await service.getActiveConfig(environment);
-  } catch (error) {
-    if (error instanceof RuntimeConfigError && error.code === "NOT_SEEDED") {
-      return null;
-    }
-    throw error;
-  }
+		if (useDraft) {
+			return await service.getDraft(environment);
+		}
+		return await service.getActiveConfig(environment);
+	} catch (error) {
+		if (error instanceof RuntimeConfigError && error.code === "NOT_SEEDED") {
+			return null;
+		}
+		throw error;
+	}
 }
 
 /**
@@ -64,18 +64,18 @@ export async function loadRuntimeConfig(
  * Returns undefined if no config available.
  */
 export function buildAgentConfigs(
-  runtimeConfig: FullRuntimeConfig | null
+	runtimeConfig: FullRuntimeConfig | null
 ): Record<AgentType, AgentConfigEntry> | undefined {
-  if (!runtimeConfig?.agents) {
-    return undefined;
-  }
+	if (!runtimeConfig?.agents) {
+		return undefined;
+	}
 
-  const result: Partial<Record<AgentType, AgentConfigEntry>> = {};
-  for (const [agentType, config] of Object.entries(runtimeConfig.agents)) {
-    result[agentType as AgentType] = {
-      enabled: config.enabled,
-      systemPromptOverride: config.systemPromptOverride,
-    };
-  }
-  return result as Record<AgentType, AgentConfigEntry>;
+	const result: Partial<Record<AgentType, AgentConfigEntry>> = {};
+	for (const [agentType, config] of Object.entries(runtimeConfig.agents)) {
+		result[agentType as AgentType] = {
+			enabled: config.enabled,
+			systemPromptOverride: config.systemPromptOverride,
+		};
+	}
+	return result as Record<AgentType, AgentConfigEntry>;
 }

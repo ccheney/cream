@@ -13,77 +13,77 @@ import type { TursoClient } from "../turso.js";
 import { parseJson, RepositoryError, toJson } from "./base.js";
 
 export const IndexIdSchema = z.enum([
-  "SP500",
-  "NASDAQ100",
-  "DOWJONES",
-  "RUSSELL2000",
-  "RUSSELL3000",
-  "SP400",
-  "SP600",
+	"SP500",
+	"NASDAQ100",
+	"DOWJONES",
+	"RUSSELL2000",
+	"RUSSELL3000",
+	"SP400",
+	"SP600",
 ]);
 export type IndexId = z.infer<typeof IndexIdSchema>;
 
 export const ChangeTypeSchema = z.enum([
-  "rename",
-  "merger",
-  "spinoff",
-  "acquisition",
-  "restructure",
+	"rename",
+	"merger",
+	"spinoff",
+	"acquisition",
+	"restructure",
 ]);
 export type ChangeType = z.infer<typeof ChangeTypeSchema>;
 
 export const IndexConstituentSchema = z.object({
-  id: z.number().optional(),
-  indexId: IndexIdSchema,
-  symbol: z.string().min(1),
-  dateAdded: z.string().describe("Date symbol was added to index in ISO8601 format"),
-  dateRemoved: z.string().nullable().optional(),
-  reasonAdded: z.string().nullable().optional(),
-  reasonRemoved: z.string().nullable().optional(),
-  sector: z.string().nullable().optional(),
-  industry: z.string().nullable().optional(),
-  marketCapAtAdd: z.number().nullable().optional(),
-  provider: z.string().default("fmp"),
-  createdAt: z.string().optional(),
-  updatedAt: z.string().optional(),
+	id: z.number().optional(),
+	indexId: IndexIdSchema,
+	symbol: z.string().min(1),
+	dateAdded: z.string().describe("Date symbol was added to index in ISO8601 format"),
+	dateRemoved: z.string().nullable().optional(),
+	reasonAdded: z.string().nullable().optional(),
+	reasonRemoved: z.string().nullable().optional(),
+	sector: z.string().nullable().optional(),
+	industry: z.string().nullable().optional(),
+	marketCapAtAdd: z.number().nullable().optional(),
+	provider: z.string().default("fmp"),
+	createdAt: z.string().optional(),
+	updatedAt: z.string().optional(),
 });
 export type IndexConstituent = z.infer<typeof IndexConstituentSchema>;
 
 export const TickerChangeSchema = z.object({
-  id: z.number().optional(),
-  oldSymbol: z.string().min(1),
-  newSymbol: z.string().min(1),
-  changeDate: z.string().describe("Date of ticker change in ISO8601 format"),
-  changeType: ChangeTypeSchema,
-  conversionRatio: z.number().nullable().optional(),
-  reason: z.string().nullable().optional(),
-  acquiringCompany: z.string().nullable().optional(),
-  provider: z.string().default("fmp"),
-  createdAt: z.string().optional(),
+	id: z.number().optional(),
+	oldSymbol: z.string().min(1),
+	newSymbol: z.string().min(1),
+	changeDate: z.string().describe("Date of ticker change in ISO8601 format"),
+	changeType: ChangeTypeSchema,
+	conversionRatio: z.number().nullable().optional(),
+	reason: z.string().nullable().optional(),
+	acquiringCompany: z.string().nullable().optional(),
+	provider: z.string().default("fmp"),
+	createdAt: z.string().optional(),
 });
 export type TickerChange = z.infer<typeof TickerChangeSchema>;
 
 export const UniverseSnapshotSchema = z.object({
-  id: z.number().optional(),
-  snapshotDate: z.string().describe("Point-in-time date of universe snapshot in ISO8601 format"),
-  indexId: IndexIdSchema,
-  tickers: z.array(z.string()),
-  tickerCount: z.number(),
-  sourceVersion: z.string().nullable().optional(),
-  computedAt: z.string().optional(),
-  expiresAt: z.string().nullable().optional(),
+	id: z.number().optional(),
+	snapshotDate: z.string().describe("Point-in-time date of universe snapshot in ISO8601 format"),
+	indexId: IndexIdSchema,
+	tickers: z.array(z.string()),
+	tickerCount: z.number(),
+	sourceVersion: z.string().nullable().optional(),
+	computedAt: z.string().optional(),
+	expiresAt: z.string().nullable().optional(),
 });
 export type UniverseSnapshot = z.infer<typeof UniverseSnapshotSchema>;
 
 export class IndexConstituentsRepository {
-  constructor(private client: TursoClient) {}
+	constructor(private client: TursoClient) {}
 
-  async upsert(
-    constituent: Omit<IndexConstituent, "id" | "createdAt" | "updatedAt">
-  ): Promise<void> {
-    try {
-      await this.client.run(
-        `INSERT INTO index_constituents (
+	async upsert(
+		constituent: Omit<IndexConstituent, "id" | "createdAt" | "updatedAt">
+	): Promise<void> {
+		try {
+			await this.client.run(
+				`INSERT INTO index_constituents (
           index_id, symbol, date_added, date_removed, reason_added, reason_removed,
           sector, industry, market_cap_at_add, provider
         ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
@@ -92,245 +92,245 @@ export class IndexConstituentsRepository {
           date_removed = excluded.date_removed,
           reason_removed = excluded.reason_removed,
           updated_at = datetime('now')`,
-        [
-          constituent.indexId,
-          constituent.symbol,
-          constituent.dateAdded,
-          constituent.dateRemoved ?? null,
-          constituent.reasonAdded ?? null,
-          constituent.reasonRemoved ?? null,
-          constituent.sector ?? null,
-          constituent.industry ?? null,
-          constituent.marketCapAtAdd ?? null,
-          constituent.provider ?? "fmp",
-        ]
-      );
-    } catch (error) {
-      throw RepositoryError.fromSqliteError("index_constituents", error as Error);
-    }
-  }
+				[
+					constituent.indexId,
+					constituent.symbol,
+					constituent.dateAdded,
+					constituent.dateRemoved ?? null,
+					constituent.reasonAdded ?? null,
+					constituent.reasonRemoved ?? null,
+					constituent.sector ?? null,
+					constituent.industry ?? null,
+					constituent.marketCapAtAdd ?? null,
+					constituent.provider ?? "fmp",
+				]
+			);
+		} catch (error) {
+			throw RepositoryError.fromSqliteError("index_constituents", error as Error);
+		}
+	}
 
-  async bulkInsert(
-    constituents: Omit<IndexConstituent, "id" | "createdAt" | "updatedAt">[]
-  ): Promise<number> {
-    if (constituents.length === 0) {
-      return 0;
-    }
+	async bulkInsert(
+		constituents: Omit<IndexConstituent, "id" | "createdAt" | "updatedAt">[]
+	): Promise<number> {
+		if (constituents.length === 0) {
+			return 0;
+		}
 
-    let inserted = 0;
-    for (const constituent of constituents) {
-      await this.upsert(constituent);
-      inserted++;
-    }
-    return inserted;
-  }
+		let inserted = 0;
+		for (const constituent of constituents) {
+			await this.upsert(constituent);
+			inserted++;
+		}
+		return inserted;
+	}
 
-  async getConstituentsAsOf(indexId: IndexId, asOfDate: string): Promise<string[]> {
-    const rows = await this.client.execute<{ symbol: string }>(
-      `SELECT DISTINCT symbol FROM index_constituents
+	async getConstituentsAsOf(indexId: IndexId, asOfDate: string): Promise<string[]> {
+		const rows = await this.client.execute<{ symbol: string }>(
+			`SELECT DISTINCT symbol FROM index_constituents
        WHERE index_id = ?
          AND date_added <= ?
          AND (date_removed IS NULL OR date_removed > ?)
        ORDER BY symbol`,
-      [indexId, asOfDate, asOfDate]
-    );
-    return rows.map((r) => r.symbol);
-  }
+			[indexId, asOfDate, asOfDate]
+		);
+		return rows.map((r) => r.symbol);
+	}
 
-  async getCurrentConstituents(indexId: IndexId): Promise<IndexConstituent[]> {
-    const rows = await this.client.execute<IndexConstituentRow>(
-      `SELECT * FROM index_constituents
+	async getCurrentConstituents(indexId: IndexId): Promise<IndexConstituent[]> {
+		const rows = await this.client.execute<IndexConstituentRow>(
+			`SELECT * FROM index_constituents
        WHERE index_id = ? AND date_removed IS NULL
        ORDER BY symbol`,
-      [indexId]
-    );
-    return rows.map(mapRowToConstituent);
-  }
+			[indexId]
+		);
+		return rows.map(mapRowToConstituent);
+	}
 
-  async getSymbolHistory(symbol: string): Promise<IndexConstituent[]> {
-    const rows = await this.client.execute<IndexConstituentRow>(
-      `SELECT * FROM index_constituents
+	async getSymbolHistory(symbol: string): Promise<IndexConstituent[]> {
+		const rows = await this.client.execute<IndexConstituentRow>(
+			`SELECT * FROM index_constituents
        WHERE symbol = ?
        ORDER BY index_id, date_added`,
-      [symbol]
-    );
-    return rows.map(mapRowToConstituent);
-  }
+			[symbol]
+		);
+		return rows.map(mapRowToConstituent);
+	}
 
-  async wasInIndexOnDate(indexId: IndexId, symbol: string, date: string): Promise<boolean> {
-    const row = await this.client.get<{ cnt: number }>(
-      `SELECT COUNT(*) as cnt FROM index_constituents
+	async wasInIndexOnDate(indexId: IndexId, symbol: string, date: string): Promise<boolean> {
+		const row = await this.client.get<{ cnt: number }>(
+			`SELECT COUNT(*) as cnt FROM index_constituents
        WHERE index_id = ? AND symbol = ?
          AND date_added <= ?
          AND (date_removed IS NULL OR date_removed > ?)`,
-      [indexId, symbol, date, date]
-    );
-    return (row?.cnt ?? 0) > 0;
-  }
+			[indexId, symbol, date, date]
+		);
+		return (row?.cnt ?? 0) > 0;
+	}
 
-  async getChangesInRange(
-    indexId: IndexId,
-    startDate: string,
-    endDate: string
-  ): Promise<{ additions: IndexConstituent[]; removals: IndexConstituent[] }> {
-    const additions = await this.client.execute<IndexConstituentRow>(
-      `SELECT * FROM index_constituents
+	async getChangesInRange(
+		indexId: IndexId,
+		startDate: string,
+		endDate: string
+	): Promise<{ additions: IndexConstituent[]; removals: IndexConstituent[] }> {
+		const additions = await this.client.execute<IndexConstituentRow>(
+			`SELECT * FROM index_constituents
        WHERE index_id = ? AND date_added >= ? AND date_added <= ?
        ORDER BY date_added`,
-      [indexId, startDate, endDate]
-    );
+			[indexId, startDate, endDate]
+		);
 
-    const removals = await this.client.execute<IndexConstituentRow>(
-      `SELECT * FROM index_constituents
+		const removals = await this.client.execute<IndexConstituentRow>(
+			`SELECT * FROM index_constituents
        WHERE index_id = ? AND date_removed >= ? AND date_removed <= ?
        ORDER BY date_removed`,
-      [indexId, startDate, endDate]
-    );
+			[indexId, startDate, endDate]
+		);
 
-    return {
-      additions: additions.map(mapRowToConstituent),
-      removals: removals.map(mapRowToConstituent),
-    };
-  }
+		return {
+			additions: additions.map(mapRowToConstituent),
+			removals: removals.map(mapRowToConstituent),
+		};
+	}
 
-  async getConstituentCount(indexId: IndexId, asOfDate?: string): Promise<number> {
-    if (asOfDate) {
-      const row = await this.client.get<{ cnt: number }>(
-        `SELECT COUNT(DISTINCT symbol) as cnt FROM index_constituents
+	async getConstituentCount(indexId: IndexId, asOfDate?: string): Promise<number> {
+		if (asOfDate) {
+			const row = await this.client.get<{ cnt: number }>(
+				`SELECT COUNT(DISTINCT symbol) as cnt FROM index_constituents
          WHERE index_id = ?
            AND date_added <= ?
            AND (date_removed IS NULL OR date_removed > ?)`,
-        [indexId, asOfDate, asOfDate]
-      );
-      return row?.cnt ?? 0;
-    }
+				[indexId, asOfDate, asOfDate]
+			);
+			return row?.cnt ?? 0;
+		}
 
-    const row = await this.client.get<{ cnt: number }>(
-      `SELECT COUNT(*) as cnt FROM index_constituents
+		const row = await this.client.get<{ cnt: number }>(
+			`SELECT COUNT(*) as cnt FROM index_constituents
        WHERE index_id = ? AND date_removed IS NULL`,
-      [indexId]
-    );
-    return row?.cnt ?? 0;
-  }
+			[indexId]
+		);
+		return row?.cnt ?? 0;
+	}
 }
 
 export class TickerChangesRepository {
-  constructor(private client: TursoClient) {}
+	constructor(private client: TursoClient) {}
 
-  async insert(change: Omit<TickerChange, "id" | "createdAt">): Promise<void> {
-    try {
-      await this.client.run(
-        `INSERT INTO ticker_changes (
+	async insert(change: Omit<TickerChange, "id" | "createdAt">): Promise<void> {
+		try {
+			await this.client.run(
+				`INSERT INTO ticker_changes (
           old_symbol, new_symbol, change_date, change_type,
           conversion_ratio, reason, acquiring_company, provider
         ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
         ON CONFLICT(old_symbol, new_symbol, change_date) DO NOTHING`,
-        [
-          change.oldSymbol,
-          change.newSymbol,
-          change.changeDate,
-          change.changeType,
-          change.conversionRatio ?? null,
-          change.reason ?? null,
-          change.acquiringCompany ?? null,
-          change.provider ?? "fmp",
-        ]
-      );
-    } catch (error) {
-      throw RepositoryError.fromSqliteError("ticker_changes", error as Error);
-    }
-  }
+				[
+					change.oldSymbol,
+					change.newSymbol,
+					change.changeDate,
+					change.changeType,
+					change.conversionRatio ?? null,
+					change.reason ?? null,
+					change.acquiringCompany ?? null,
+					change.provider ?? "fmp",
+				]
+			);
+		} catch (error) {
+			throw RepositoryError.fromSqliteError("ticker_changes", error as Error);
+		}
+	}
 
-  async getChangesFromSymbol(oldSymbol: string): Promise<TickerChange[]> {
-    const rows = await this.client.execute<TickerChangeRow>(
-      `SELECT * FROM ticker_changes
+	async getChangesFromSymbol(oldSymbol: string): Promise<TickerChange[]> {
+		const rows = await this.client.execute<TickerChangeRow>(
+			`SELECT * FROM ticker_changes
        WHERE old_symbol = ?
        ORDER BY change_date`,
-      [oldSymbol]
-    );
-    return rows.map(mapRowToTickerChange);
-  }
+			[oldSymbol]
+		);
+		return rows.map(mapRowToTickerChange);
+	}
 
-  async getChangesToSymbol(newSymbol: string): Promise<TickerChange[]> {
-    const rows = await this.client.execute<TickerChangeRow>(
-      `SELECT * FROM ticker_changes
+	async getChangesToSymbol(newSymbol: string): Promise<TickerChange[]> {
+		const rows = await this.client.execute<TickerChangeRow>(
+			`SELECT * FROM ticker_changes
        WHERE new_symbol = ?
        ORDER BY change_date`,
-      [newSymbol]
-    );
-    return rows.map(mapRowToTickerChange);
-  }
+			[newSymbol]
+		);
+		return rows.map(mapRowToTickerChange);
+	}
 
-  /** Follows the chain of ticker changes to find the final symbol */
-  async resolveToCurrentSymbol(historicalSymbol: string): Promise<string> {
-    let current = historicalSymbol;
-    const visited = new Set<string>();
+	/** Follows the chain of ticker changes to find the final symbol */
+	async resolveToCurrentSymbol(historicalSymbol: string): Promise<string> {
+		let current = historicalSymbol;
+		const visited = new Set<string>();
 
-    while (!visited.has(current)) {
-      visited.add(current);
+		while (!visited.has(current)) {
+			visited.add(current);
 
-      const row = await this.client.get<{ new_symbol: string }>(
-        `SELECT new_symbol FROM ticker_changes
+			const row = await this.client.get<{ new_symbol: string }>(
+				`SELECT new_symbol FROM ticker_changes
          WHERE old_symbol = ?
          ORDER BY change_date DESC
          LIMIT 1`,
-        [current]
-      );
+				[current]
+			);
 
-      if (!row) {
-        break;
-      }
-      current = row.new_symbol;
-    }
+			if (!row) {
+				break;
+			}
+			current = row.new_symbol;
+		}
 
-    return current;
-  }
+		return current;
+	}
 
-  /** Follows the chain of ticker changes backward to find what the symbol was on a given date */
-  async resolveToHistoricalSymbol(currentSymbol: string, asOfDate: string): Promise<string> {
-    let historical = currentSymbol;
-    const visited = new Set<string>();
+	/** Follows the chain of ticker changes backward to find what the symbol was on a given date */
+	async resolveToHistoricalSymbol(currentSymbol: string, asOfDate: string): Promise<string> {
+		let historical = currentSymbol;
+		const visited = new Set<string>();
 
-    while (!visited.has(historical)) {
-      visited.add(historical);
+		while (!visited.has(historical)) {
+			visited.add(historical);
 
-      const row = await this.client.get<{ old_symbol: string }>(
-        `SELECT old_symbol FROM ticker_changes
+			const row = await this.client.get<{ old_symbol: string }>(
+				`SELECT old_symbol FROM ticker_changes
          WHERE new_symbol = ? AND change_date > ?
          ORDER BY change_date ASC
          LIMIT 1`,
-        [historical, asOfDate]
-      );
+				[historical, asOfDate]
+			);
 
-      if (!row) {
-        break;
-      }
-      historical = row.old_symbol;
-    }
+			if (!row) {
+				break;
+			}
+			historical = row.old_symbol;
+		}
 
-    return historical;
-  }
+		return historical;
+	}
 
-  async getChangesInRange(startDate: string, endDate: string): Promise<TickerChange[]> {
-    const rows = await this.client.execute<TickerChangeRow>(
-      `SELECT * FROM ticker_changes
+	async getChangesInRange(startDate: string, endDate: string): Promise<TickerChange[]> {
+		const rows = await this.client.execute<TickerChangeRow>(
+			`SELECT * FROM ticker_changes
        WHERE change_date >= ? AND change_date <= ?
        ORDER BY change_date`,
-      [startDate, endDate]
-    );
-    return rows.map(mapRowToTickerChange);
-  }
+			[startDate, endDate]
+		);
+		return rows.map(mapRowToTickerChange);
+	}
 }
 
 export class UniverseSnapshotsRepository {
-  constructor(private client: TursoClient) {}
+	constructor(private client: TursoClient) {}
 
-  async save(snapshot: Omit<UniverseSnapshot, "id" | "computedAt">): Promise<void> {
-    const tickerCount = snapshot.tickers.length;
+	async save(snapshot: Omit<UniverseSnapshot, "id" | "computedAt">): Promise<void> {
+		const tickerCount = snapshot.tickers.length;
 
-    try {
-      await this.client.run(
-        `INSERT INTO universe_snapshots (
+		try {
+			await this.client.run(
+				`INSERT INTO universe_snapshots (
           snapshot_date, index_id, tickers, ticker_count, source_version, expires_at
         ) VALUES (?, ?, ?, ?, ?, ?)
         ON CONFLICT(index_id, snapshot_date)
@@ -340,144 +340,144 @@ export class UniverseSnapshotsRepository {
           source_version = excluded.source_version,
           computed_at = datetime('now'),
           expires_at = excluded.expires_at`,
-        [
-          snapshot.snapshotDate,
-          snapshot.indexId,
-          toJson(snapshot.tickers),
-          tickerCount,
-          snapshot.sourceVersion ?? null,
-          snapshot.expiresAt ?? null,
-        ]
-      );
-    } catch (error) {
-      throw RepositoryError.fromSqliteError("universe_snapshots", error as Error);
-    }
-  }
+				[
+					snapshot.snapshotDate,
+					snapshot.indexId,
+					toJson(snapshot.tickers),
+					tickerCount,
+					snapshot.sourceVersion ?? null,
+					snapshot.expiresAt ?? null,
+				]
+			);
+		} catch (error) {
+			throw RepositoryError.fromSqliteError("universe_snapshots", error as Error);
+		}
+	}
 
-  async get(indexId: IndexId, snapshotDate: string): Promise<UniverseSnapshot | null> {
-    const row = await this.client.get<UniverseSnapshotRow>(
-      `SELECT * FROM universe_snapshots
+	async get(indexId: IndexId, snapshotDate: string): Promise<UniverseSnapshot | null> {
+		const row = await this.client.get<UniverseSnapshotRow>(
+			`SELECT * FROM universe_snapshots
        WHERE index_id = ? AND snapshot_date = ?`,
-      [indexId, snapshotDate]
-    );
-    return row ? mapRowToSnapshot(row) : null;
-  }
+			[indexId, snapshotDate]
+		);
+		return row ? mapRowToSnapshot(row) : null;
+	}
 
-  async getClosestBefore(indexId: IndexId, date: string): Promise<UniverseSnapshot | null> {
-    const row = await this.client.get<UniverseSnapshotRow>(
-      `SELECT * FROM universe_snapshots
+	async getClosestBefore(indexId: IndexId, date: string): Promise<UniverseSnapshot | null> {
+		const row = await this.client.get<UniverseSnapshotRow>(
+			`SELECT * FROM universe_snapshots
        WHERE index_id = ? AND snapshot_date <= ?
        ORDER BY snapshot_date DESC
        LIMIT 1`,
-      [indexId, date]
-    );
-    return row ? mapRowToSnapshot(row) : null;
-  }
+			[indexId, date]
+		);
+		return row ? mapRowToSnapshot(row) : null;
+	}
 
-  async listDates(indexId: IndexId): Promise<string[]> {
-    const rows = await this.client.execute<{ snapshot_date: string }>(
-      `SELECT snapshot_date FROM universe_snapshots
+	async listDates(indexId: IndexId): Promise<string[]> {
+		const rows = await this.client.execute<{ snapshot_date: string }>(
+			`SELECT snapshot_date FROM universe_snapshots
        WHERE index_id = ?
        ORDER BY snapshot_date`,
-      [indexId]
-    );
-    return rows.map((r) => r.snapshot_date);
-  }
+			[indexId]
+		);
+		return rows.map((r) => r.snapshot_date);
+	}
 
-  async purgeExpired(): Promise<number> {
-    const result = await this.client.run(
-      `DELETE FROM universe_snapshots
+	async purgeExpired(): Promise<number> {
+		const result = await this.client.run(
+			`DELETE FROM universe_snapshots
        WHERE expires_at IS NOT NULL AND expires_at <= datetime('now')`
-    );
-    return result.changes;
-  }
+		);
+		return result.changes;
+	}
 }
 
 interface IndexConstituentRow {
-  id: number;
-  index_id: string;
-  symbol: string;
-  date_added: string;
-  date_removed: string | null;
-  reason_added: string | null;
-  reason_removed: string | null;
-  sector: string | null;
-  industry: string | null;
-  market_cap_at_add: number | null;
-  provider: string;
-  created_at: string;
-  updated_at: string;
-  [key: string]: unknown;
+	id: number;
+	index_id: string;
+	symbol: string;
+	date_added: string;
+	date_removed: string | null;
+	reason_added: string | null;
+	reason_removed: string | null;
+	sector: string | null;
+	industry: string | null;
+	market_cap_at_add: number | null;
+	provider: string;
+	created_at: string;
+	updated_at: string;
+	[key: string]: unknown;
 }
 
 function mapRowToConstituent(row: IndexConstituentRow): IndexConstituent {
-  return {
-    id: row.id,
-    indexId: row.index_id as IndexId,
-    symbol: row.symbol,
-    dateAdded: row.date_added,
-    dateRemoved: row.date_removed,
-    reasonAdded: row.reason_added,
-    reasonRemoved: row.reason_removed,
-    sector: row.sector,
-    industry: row.industry,
-    marketCapAtAdd: row.market_cap_at_add,
-    provider: row.provider,
-    createdAt: row.created_at,
-    updatedAt: row.updated_at,
-  };
+	return {
+		id: row.id,
+		indexId: row.index_id as IndexId,
+		symbol: row.symbol,
+		dateAdded: row.date_added,
+		dateRemoved: row.date_removed,
+		reasonAdded: row.reason_added,
+		reasonRemoved: row.reason_removed,
+		sector: row.sector,
+		industry: row.industry,
+		marketCapAtAdd: row.market_cap_at_add,
+		provider: row.provider,
+		createdAt: row.created_at,
+		updatedAt: row.updated_at,
+	};
 }
 
 interface TickerChangeRow {
-  id: number;
-  old_symbol: string;
-  new_symbol: string;
-  change_date: string;
-  change_type: string;
-  conversion_ratio: number | null;
-  reason: string | null;
-  acquiring_company: string | null;
-  provider: string;
-  created_at: string;
-  [key: string]: unknown;
+	id: number;
+	old_symbol: string;
+	new_symbol: string;
+	change_date: string;
+	change_type: string;
+	conversion_ratio: number | null;
+	reason: string | null;
+	acquiring_company: string | null;
+	provider: string;
+	created_at: string;
+	[key: string]: unknown;
 }
 
 function mapRowToTickerChange(row: TickerChangeRow): TickerChange {
-  return {
-    id: row.id,
-    oldSymbol: row.old_symbol,
-    newSymbol: row.new_symbol,
-    changeDate: row.change_date,
-    changeType: row.change_type as ChangeType,
-    conversionRatio: row.conversion_ratio,
-    reason: row.reason,
-    acquiringCompany: row.acquiring_company,
-    provider: row.provider,
-    createdAt: row.created_at,
-  };
+	return {
+		id: row.id,
+		oldSymbol: row.old_symbol,
+		newSymbol: row.new_symbol,
+		changeDate: row.change_date,
+		changeType: row.change_type as ChangeType,
+		conversionRatio: row.conversion_ratio,
+		reason: row.reason,
+		acquiringCompany: row.acquiring_company,
+		provider: row.provider,
+		createdAt: row.created_at,
+	};
 }
 
 interface UniverseSnapshotRow {
-  id: number;
-  snapshot_date: string;
-  index_id: string;
-  tickers: string;
-  ticker_count: number;
-  source_version: string | null;
-  computed_at: string;
-  expires_at: string | null;
-  [key: string]: unknown;
+	id: number;
+	snapshot_date: string;
+	index_id: string;
+	tickers: string;
+	ticker_count: number;
+	source_version: string | null;
+	computed_at: string;
+	expires_at: string | null;
+	[key: string]: unknown;
 }
 
 function mapRowToSnapshot(row: UniverseSnapshotRow): UniverseSnapshot {
-  return {
-    id: row.id,
-    snapshotDate: row.snapshot_date,
-    indexId: row.index_id as IndexId,
-    tickers: parseJson<string[]>(row.tickers, []),
-    tickerCount: row.ticker_count,
-    sourceVersion: row.source_version,
-    computedAt: row.computed_at,
-    expiresAt: row.expires_at,
-  };
+	return {
+		id: row.id,
+		snapshotDate: row.snapshot_date,
+		indexId: row.index_id as IndexId,
+		tickers: parseJson<string[]>(row.tickers, []),
+		tickerCount: row.ticker_count,
+		sourceVersion: row.source_version,
+		computedAt: row.computed_at,
+		expiresAt: row.expires_at,
+	};
 }

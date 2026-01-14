@@ -24,30 +24,30 @@ export const VERSION = "0.0.1";
 // ============================================
 
 export {
-  // Aggregated data
-  type AggregatedPredictionData,
-  AggregatedPredictionDataSchema,
-  // Helper functions
-  createEmptyPredictionScores,
-  getFedDirection,
-  hasHighMacroUncertainty,
-  hasHighPolicyRisk,
-  // Type aliases for convenience
-  type MarketOutcome,
-  type MarketType,
-  type Platform,
-  // Core types
-  type PredictionMarketEvent,
-  PredictionMarketEventSchema,
-  type PredictionMarketPayload,
-  PredictionMarketPayloadSchema,
-  type PredictionMarketScores,
-  PredictionMarketScoresSchema,
-  PredictionMarketType,
-  type PredictionOutcome,
-  PredictionOutcomeSchema,
-  PredictionPlatform,
-  toNumericScores,
+	// Aggregated data
+	type AggregatedPredictionData,
+	AggregatedPredictionDataSchema,
+	// Helper functions
+	createEmptyPredictionScores,
+	getFedDirection,
+	hasHighMacroUncertainty,
+	hasHighPolicyRisk,
+	// Type aliases for convenience
+	type MarketOutcome,
+	type MarketType,
+	type Platform,
+	// Core types
+	type PredictionMarketEvent,
+	PredictionMarketEventSchema,
+	type PredictionMarketPayload,
+	PredictionMarketPayloadSchema,
+	type PredictionMarketScores,
+	PredictionMarketScoresSchema,
+	PredictionMarketType,
+	type PredictionOutcome,
+	PredictionOutcomeSchema,
+	PredictionPlatform,
+	toNumericScores,
 } from "./types";
 
 // ============================================
@@ -55,12 +55,12 @@ export {
 // ============================================
 
 export {
-  // Error classes
-  AuthenticationError,
-  PredictionMarketError,
-  // Provider interface
-  type PredictionMarketProvider,
-  RateLimitError,
+	// Error classes
+	AuthenticationError,
+	PredictionMarketError,
+	// Provider interface
+	type PredictionMarketProvider,
+	RateLimitError,
 } from "./types";
 
 // ============================================
@@ -68,35 +68,35 @@ export {
 // ============================================
 
 export {
-  createKalshiClient,
-  createKalshiClientFromEnv,
-  KALSHI_RATE_LIMITS,
-  KalshiClient,
-  type KalshiClientOptions,
-  type KalshiEvent,
-  KalshiEventSchema,
-  type KalshiMarket,
-  KalshiMarketSchema,
-  MARKET_TYPE_TO_SERIES,
+	createKalshiClient,
+	createKalshiClientFromEnv,
+	KALSHI_RATE_LIMITS,
+	KalshiClient,
+	type KalshiClientOptions,
+	type KalshiEvent,
+	KalshiEventSchema,
+	type KalshiMarket,
+	KalshiMarketSchema,
+	MARKET_TYPE_TO_SERIES,
 } from "./providers/kalshi";
 
 export {
-  type ClobOrderbook,
-  ClobOrderbookSchema,
-  type ClobPrice,
-  ClobPriceSchema,
-  createPolymarketClient,
-  createPolymarketClientFromEnv,
-  DEFAULT_SEARCH_QUERIES,
-  POLYMARKET_CLOB_URL,
-  POLYMARKET_GAMMA_URL,
-  POLYMARKET_RATE_LIMITS,
-  PolymarketClient,
-  type PolymarketClientOptions,
-  type PolymarketEvent,
-  PolymarketEventSchema,
-  type PolymarketMarket,
-  PolymarketMarketSchema,
+	type ClobOrderbook,
+	ClobOrderbookSchema,
+	type ClobPrice,
+	ClobPriceSchema,
+	createPolymarketClient,
+	createPolymarketClientFromEnv,
+	DEFAULT_SEARCH_QUERIES,
+	POLYMARKET_CLOB_URL,
+	POLYMARKET_GAMMA_URL,
+	POLYMARKET_RATE_LIMITS,
+	PolymarketClient,
+	type PolymarketClientOptions,
+	type PolymarketEvent,
+	PolymarketEventSchema,
+	type PolymarketMarket,
+	PolymarketMarketSchema,
 } from "./providers/polymarket";
 
 // ============================================
@@ -104,24 +104,24 @@ export {
 // ============================================
 
 export {
-  AGGREGATOR_VERSION,
-  type ArbitrageAlert,
-  ArbitrageDetector,
-  type ArbitrageDetectorConfig,
-  type ArbitrageSummary,
-  createUnifiedClient,
-  DEFAULT_ARBITRAGE_CONFIG,
-  DEFAULT_MATCHER_CONFIG,
-  DEFAULT_UNIFIED_CONFIG,
-  type EconomicDataMarket,
-  type FedRateMarket,
-  type MacroRiskSignals,
-  MarketMatcher,
-  type MarketMatcherConfig,
-  type MatchedMarket,
-  type UnifiedClientConfig,
-  type UnifiedMarketData,
-  UnifiedPredictionMarketClient,
+	AGGREGATOR_VERSION,
+	type ArbitrageAlert,
+	ArbitrageDetector,
+	type ArbitrageDetectorConfig,
+	type ArbitrageSummary,
+	createUnifiedClient,
+	DEFAULT_ARBITRAGE_CONFIG,
+	DEFAULT_MATCHER_CONFIG,
+	DEFAULT_UNIFIED_CONFIG,
+	type EconomicDataMarket,
+	type FedRateMarket,
+	type MacroRiskSignals,
+	MarketMatcher,
+	type MarketMatcherConfig,
+	type MatchedMarket,
+	type UnifiedClientConfig,
+	type UnifiedMarketData,
+	UnifiedPredictionMarketClient,
 } from "./aggregator";
 
 // ============================================
@@ -129,12 +129,12 @@ export {
 // ============================================
 
 export {
-  INSTRUMENT_MAPPING,
-  type InstrumentMappingConfig,
-  mapToRelatedInstruments,
-  transformScoresToNumeric,
-  transformToExternalEvent,
-  transformToExternalEvents,
+	INSTRUMENT_MAPPING,
+	type InstrumentMappingConfig,
+	mapToRelatedInstruments,
+	transformScoresToNumeric,
+	transformToExternalEvent,
+	transformToExternalEvents,
 } from "./transformers";
 
 // ============================================
@@ -142,10 +142,10 @@ export {
 // ============================================
 
 export {
-  type CacheStats,
-  createMarketCache,
-  MarketCache,
-  type MarketCacheConfig,
+	type CacheStats,
+	createMarketCache,
+	MarketCache,
+	type MarketCacheConfig,
 } from "./cache";
 
 // ============================================
@@ -153,18 +153,18 @@ export {
 // ============================================
 
 export {
-  findRelatedInstruments as findSectorInstruments,
-  findSectorMatches,
-  getAggregateImpact,
-  getPrimarySector,
-  getSectorETFs,
-  type ImpactDirection,
-  isHighVolatilityMarket,
-  SECTOR_MAPPINGS,
-  type Sector,
-  type SectorMarketMapping,
-  type SectorMatchResult,
-  type VolatilityExpectation,
+	findRelatedInstruments as findSectorInstruments,
+	findSectorMatches,
+	getAggregateImpact,
+	getPrimarySector,
+	getSectorETFs,
+	type ImpactDirection,
+	isHighVolatilityMarket,
+	SECTOR_MAPPINGS,
+	type Sector,
+	type SectorMarketMapping,
+	type SectorMatchResult,
+	type VolatilityExpectation,
 } from "./mappings";
 
 // ============================================
@@ -172,14 +172,14 @@ export {
 // ============================================
 
 export {
-  createHistoricalAdapterFromEnv,
-  type HistoricalAdapterConfig,
-  type HistoricalMarketSnapshot,
-  type HistoricalPredictionMarket,
-  HistoricalPredictionMarketAdapter,
-  type ProbabilityPoint,
-  type SignalAccuracyReport,
-  type SignalCorrelation,
+	createHistoricalAdapterFromEnv,
+	type HistoricalAdapterConfig,
+	type HistoricalMarketSnapshot,
+	type HistoricalPredictionMarket,
+	HistoricalPredictionMarketAdapter,
+	type ProbabilityPoint,
+	type SignalAccuracyReport,
+	type SignalCorrelation,
 } from "./backtest";
 
 // ============================================
@@ -187,13 +187,13 @@ export {
 // ============================================
 
 export {
-  createStreamingServiceFromConfig,
-  createUnifiedStreamingService,
-  type Platform as StreamingPlatform,
-  type StreamingCallback,
-  type StreamingConfig,
-  type StreamingMarketUpdate,
-  UnifiedStreamingService,
+	createStreamingServiceFromConfig,
+	createUnifiedStreamingService,
+	type Platform as StreamingPlatform,
+	type StreamingCallback,
+	type StreamingConfig,
+	type StreamingMarketUpdate,
+	UnifiedStreamingService,
 } from "./streaming";
 
 // ============================================
@@ -201,21 +201,21 @@ export {
 // ============================================
 
 export {
-  createKalshiWebSocketClient,
-  KALSHI_DEMO_WEBSOCKET_URL,
-  KALSHI_WEBSOCKET_URL,
-  type KalshiWebSocketCallback,
-  type KalshiWebSocketChannel,
-  KalshiWebSocketClient,
-  type KalshiWebSocketConfig,
-  type KalshiWebSocketMessage,
+	createKalshiWebSocketClient,
+	KALSHI_DEMO_WEBSOCKET_URL,
+	KALSHI_WEBSOCKET_URL,
+	type KalshiWebSocketCallback,
+	type KalshiWebSocketChannel,
+	KalshiWebSocketClient,
+	type KalshiWebSocketConfig,
+	type KalshiWebSocketMessage,
 } from "./providers/kalshi/websocket";
 
 export {
-  createPolymarketWebSocketClient,
-  POLYMARKET_WEBSOCKET_URL,
-  type PolymarketWebSocketCallback,
-  PolymarketWebSocketClient,
-  type PolymarketWebSocketConfig,
-  type PolymarketWebSocketMessage,
+	createPolymarketWebSocketClient,
+	POLYMARKET_WEBSOCKET_URL,
+	type PolymarketWebSocketCallback,
+	PolymarketWebSocketClient,
+	type PolymarketWebSocketConfig,
+	type PolymarketWebSocketMessage,
 } from "./providers/polymarket/websocket";

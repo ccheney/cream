@@ -14,20 +14,20 @@ import type { Toast, ToastPosition } from "./toast";
 // ============================================
 
 describe("Toast Module Exports", () => {
-  it("exports ToastItem component", async () => {
-    const module = await import("./toast");
-    expect(typeof module.ToastItem).toBe("function");
-  });
+	it("exports ToastItem component", async () => {
+		const module = await import("./toast");
+		expect(typeof module.ToastItem).toBe("function");
+	});
 
-  it("exports ToastContainer component", async () => {
-    const module = await import("./toast");
-    expect(typeof module.ToastContainer).toBe("function");
-  });
+	it("exports ToastContainer component", async () => {
+		const module = await import("./toast");
+		expect(typeof module.ToastContainer).toBe("function");
+	});
 
-  it("exports useToast hook", async () => {
-    const module = await import("./toast");
-    expect(typeof module.useToast).toBe("function");
-  });
+	it("exports useToast hook", async () => {
+		const module = await import("./toast");
+		expect(typeof module.useToast).toBe("function");
+	});
 });
 
 // ============================================
@@ -35,25 +35,25 @@ describe("Toast Module Exports", () => {
 // ============================================
 
 describe("Toast Variants", () => {
-  it("success variant uses green color", () => {
-    const successColor = "#22c55e";
-    expect(successColor).toBe("#22c55e");
-  });
+	it("success variant uses green color", () => {
+		const successColor = "#22c55e";
+		expect(successColor).toBe("#22c55e");
+	});
 
-  it("error variant uses red color", () => {
-    const errorColor = "#ef4444";
-    expect(errorColor).toBe("#ef4444");
-  });
+	it("error variant uses red color", () => {
+		const errorColor = "#ef4444";
+		expect(errorColor).toBe("#ef4444");
+	});
 
-  it("warning variant uses amber color", () => {
-    const warningColor = "#f59e0b";
-    expect(warningColor).toBe("#f59e0b");
-  });
+	it("warning variant uses amber color", () => {
+		const warningColor = "#f59e0b";
+		expect(warningColor).toBe("#f59e0b");
+	});
 
-  it("info variant uses blue color", () => {
-    const infoColor = "#3b82f6";
-    expect(infoColor).toBe("#3b82f6");
-  });
+	it("info variant uses blue color", () => {
+		const infoColor = "#3b82f6";
+		expect(infoColor).toBe("#3b82f6");
+	});
 });
 
 // ============================================
@@ -61,55 +61,55 @@ describe("Toast Variants", () => {
 // ============================================
 
 describe("Toast Accessibility", () => {
-  it("success uses role=status", () => {
-    const role: "status" | "alert" = "status";
-    expect(role).toBe("status");
-  });
+	it("success uses role=status", () => {
+		const role: "status" | "alert" = "status";
+		expect(role).toBe("status");
+	});
 
-  it("error uses role=alert", () => {
-    const role: "status" | "alert" = "alert";
-    expect(role).toBe("alert");
-  });
+	it("error uses role=alert", () => {
+		const role: "status" | "alert" = "alert";
+		expect(role).toBe("alert");
+	});
 
-  it("warning uses role=alert", () => {
-    const role: "status" | "alert" = "alert";
-    expect(role).toBe("alert");
-  });
+	it("warning uses role=alert", () => {
+		const role: "status" | "alert" = "alert";
+		expect(role).toBe("alert");
+	});
 
-  it("info uses role=status", () => {
-    const role: "status" | "alert" = "status";
-    expect(role).toBe("status");
-  });
+	it("info uses role=status", () => {
+		const role: "status" | "alert" = "status";
+		expect(role).toBe("status");
+	});
 
-  it("success uses aria-live=polite", () => {
-    const ariaLive: "polite" | "assertive" = "polite";
-    expect(ariaLive).toBe("polite");
-  });
+	it("success uses aria-live=polite", () => {
+		const ariaLive: "polite" | "assertive" = "polite";
+		expect(ariaLive).toBe("polite");
+	});
 
-  it("error uses aria-live=assertive", () => {
-    const ariaLive: "polite" | "assertive" = "assertive";
-    expect(ariaLive).toBe("assertive");
-  });
+	it("error uses aria-live=assertive", () => {
+		const ariaLive: "polite" | "assertive" = "assertive";
+		expect(ariaLive).toBe("assertive");
+	});
 
-  it("warning uses aria-live=assertive", () => {
-    const ariaLive: "polite" | "assertive" = "assertive";
-    expect(ariaLive).toBe("assertive");
-  });
+	it("warning uses aria-live=assertive", () => {
+		const ariaLive: "polite" | "assertive" = "assertive";
+		expect(ariaLive).toBe("assertive");
+	});
 
-  it("info uses aria-live=polite", () => {
-    const ariaLive: "polite" | "assertive" = "polite";
-    expect(ariaLive).toBe("polite");
-  });
+	it("info uses aria-live=polite", () => {
+		const ariaLive: "polite" | "assertive" = "polite";
+		expect(ariaLive).toBe("polite");
+	});
 
-  it("close button has aria-label", () => {
-    const ariaLabel = "Dismiss notification";
-    expect(ariaLabel).toBe("Dismiss notification");
-  });
+	it("close button has aria-label", () => {
+		const ariaLabel = "Dismiss notification";
+		expect(ariaLabel).toBe("Dismiss notification");
+	});
 
-  it("container has aria-label", () => {
-    const ariaLabel = "Notifications";
-    expect(ariaLabel).toBe("Notifications");
-  });
+	it("container has aria-label", () => {
+		const ariaLabel = "Notifications";
+		expect(ariaLabel).toBe("Notifications");
+	});
 });
 
 // ============================================
@@ -117,47 +117,47 @@ describe("Toast Accessibility", () => {
 // ============================================
 
 describe("Toast Positions", () => {
-  it("top-right positions at top right corner", () => {
-    const position: ToastPosition = "top-right";
-    const styles = { top: "16px", right: "16px" };
-    expect(position).toBe("top-right");
-    expect(styles.top).toBe("16px");
-    expect(styles.right).toBe("16px");
-  });
+	it("top-right positions at top right corner", () => {
+		const position: ToastPosition = "top-right";
+		const styles = { top: "16px", right: "16px" };
+		expect(position).toBe("top-right");
+		expect(styles.top).toBe("16px");
+		expect(styles.right).toBe("16px");
+	});
 
-  it("top-left positions at top left corner", () => {
-    const position: ToastPosition = "top-left";
-    const styles = { top: "16px", left: "16px" };
-    expect(position).toBe("top-left");
-    expect(styles.top).toBe("16px");
-    expect(styles.left).toBe("16px");
-  });
+	it("top-left positions at top left corner", () => {
+		const position: ToastPosition = "top-left";
+		const styles = { top: "16px", left: "16px" };
+		expect(position).toBe("top-left");
+		expect(styles.top).toBe("16px");
+		expect(styles.left).toBe("16px");
+	});
 
-  it("bottom-right positions at bottom right corner", () => {
-    const position: ToastPosition = "bottom-right";
-    const styles = { bottom: "16px", right: "16px" };
-    expect(position).toBe("bottom-right");
-    expect(styles.bottom).toBe("16px");
-    expect(styles.right).toBe("16px");
-  });
+	it("bottom-right positions at bottom right corner", () => {
+		const position: ToastPosition = "bottom-right";
+		const styles = { bottom: "16px", right: "16px" };
+		expect(position).toBe("bottom-right");
+		expect(styles.bottom).toBe("16px");
+		expect(styles.right).toBe("16px");
+	});
 
-  it("bottom-left positions at bottom left corner", () => {
-    const position: ToastPosition = "bottom-left";
-    const styles = { bottom: "16px", left: "16px" };
-    expect(position).toBe("bottom-left");
-    expect(styles.bottom).toBe("16px");
-    expect(styles.left).toBe("16px");
-  });
+	it("bottom-left positions at bottom left corner", () => {
+		const position: ToastPosition = "bottom-left";
+		const styles = { bottom: "16px", left: "16px" };
+		expect(position).toBe("bottom-left");
+		expect(styles.bottom).toBe("16px");
+		expect(styles.left).toBe("16px");
+	});
 
-  it("top positions use column flex direction", () => {
-    const direction = "column";
-    expect(direction).toBe("column");
-  });
+	it("top positions use column flex direction", () => {
+		const direction = "column";
+		expect(direction).toBe("column");
+	});
 
-  it("bottom positions use column-reverse flex direction", () => {
-    const direction = "column-reverse";
-    expect(direction).toBe("column-reverse");
-  });
+	it("bottom positions use column-reverse flex direction", () => {
+		const direction = "column-reverse";
+		expect(direction).toBe("column-reverse");
+	});
 });
 
 // ============================================
@@ -165,26 +165,26 @@ describe("Toast Positions", () => {
 // ============================================
 
 describe("Toast Animations", () => {
-  it("enter animation slides in from right", () => {
-    const enterAnimation = "toast-enter 200ms ease-out";
-    expect(enterAnimation).toContain("toast-enter");
-    expect(enterAnimation).toContain("200ms");
-  });
+	it("enter animation slides in from right", () => {
+		const enterAnimation = "toast-enter 200ms ease-out";
+		expect(enterAnimation).toContain("toast-enter");
+		expect(enterAnimation).toContain("200ms");
+	});
 
-  it("exit animation slides out to right", () => {
-    const exitAnimation = "toast-exit 200ms ease-in forwards";
-    expect(exitAnimation).toContain("toast-exit");
-  });
+	it("exit animation slides out to right", () => {
+		const exitAnimation = "toast-exit 200ms ease-in forwards";
+		expect(exitAnimation).toContain("toast-exit");
+	});
 
-  it("respects prefers-reduced-motion", () => {
-    const reducedMotionRule = "@media (prefers-reduced-motion: reduce)";
-    expect(reducedMotionRule).toContain("prefers-reduced-motion");
-  });
+	it("respects prefers-reduced-motion", () => {
+		const reducedMotionRule = "@media (prefers-reduced-motion: reduce)";
+		expect(reducedMotionRule).toContain("prefers-reduced-motion");
+	});
 
-  it("disables animation for reduced motion", () => {
-    const reducedMotionStyle = "animation: none !important";
-    expect(reducedMotionStyle).toContain("none");
-  });
+	it("disables animation for reduced motion", () => {
+		const reducedMotionStyle = "animation: none !important";
+		expect(reducedMotionStyle).toContain("none");
+	});
 });
 
 // ============================================
@@ -192,50 +192,50 @@ describe("Toast Animations", () => {
 // ============================================
 
 describe("Toast Styling", () => {
-  it("has white background", () => {
-    const bgColor = "#ffffff";
-    expect(bgColor).toBe("#ffffff");
-  });
+	it("has white background", () => {
+		const bgColor = "#ffffff";
+		expect(bgColor).toBe("#ffffff");
+	});
 
-  it("has border with stone-200", () => {
-    const borderColor = "#e7e5e4";
-    expect(borderColor).toBe("#e7e5e4");
-  });
+	it("has border with stone-200", () => {
+		const borderColor = "#e7e5e4";
+		expect(borderColor).toBe("#e7e5e4");
+	});
 
-  it("has left border accent", () => {
-    const borderLeft = "4px solid";
-    expect(borderLeft).toContain("4px");
-  });
+	it("has left border accent", () => {
+		const borderLeft = "4px solid";
+		expect(borderLeft).toContain("4px");
+	});
 
-  it("has 8px border radius", () => {
-    const borderRadius = "8px";
-    expect(borderRadius).toBe("8px");
-  });
+	it("has 8px border radius", () => {
+		const borderRadius = "8px";
+		expect(borderRadius).toBe("8px");
+	});
 
-  it("has shadow", () => {
-    const shadow = "0 4px 6px -1px rgba(0, 0, 0, 0.1)";
-    expect(shadow).toContain("rgba(0, 0, 0");
-  });
+	it("has shadow", () => {
+		const shadow = "0 4px 6px -1px rgba(0, 0, 0, 0.1)";
+		expect(shadow).toContain("rgba(0, 0, 0");
+	});
 
-  it("min width is 300px", () => {
-    const minWidth = "300px";
-    expect(minWidth).toBe("300px");
-  });
+	it("min width is 300px", () => {
+		const minWidth = "300px";
+		expect(minWidth).toBe("300px");
+	});
 
-  it("max width is 400px", () => {
-    const maxWidth = "400px";
-    expect(maxWidth).toBe("400px");
-  });
+	it("max width is 400px", () => {
+		const maxWidth = "400px";
+		expect(maxWidth).toBe("400px");
+	});
 
-  it("container uses z-index 100", () => {
-    const zIndex = 100;
-    expect(zIndex).toBe(100);
-  });
+	it("container uses z-index 100", () => {
+		const zIndex = 100;
+		expect(zIndex).toBe(100);
+	});
 
-  it("container has fixed positioning", () => {
-    const position = "fixed";
-    expect(position).toBe("fixed");
-  });
+	it("container has fixed positioning", () => {
+		const position = "fixed";
+		expect(position).toBe("fixed");
+	});
 });
 
 // ============================================
@@ -243,30 +243,30 @@ describe("Toast Styling", () => {
 // ============================================
 
 describe("Toast Icons", () => {
-  it("success uses checkmark icon", () => {
-    const icon = "✓";
-    expect(icon).toBe("✓");
-  });
+	it("success uses checkmark icon", () => {
+		const icon = "✓";
+		expect(icon).toBe("✓");
+	});
 
-  it("error uses X icon", () => {
-    const icon = "✕";
-    expect(icon).toBe("✕");
-  });
+	it("error uses X icon", () => {
+		const icon = "✕";
+		expect(icon).toBe("✕");
+	});
 
-  it("warning uses warning icon", () => {
-    const icon = "⚠";
-    expect(icon).toBe("⚠");
-  });
+	it("warning uses warning icon", () => {
+		const icon = "⚠";
+		expect(icon).toBe("⚠");
+	});
 
-  it("info uses info icon", () => {
-    const icon = "ℹ";
-    expect(icon).toBe("ℹ");
-  });
+	it("info uses info icon", () => {
+		const icon = "ℹ";
+		expect(icon).toBe("ℹ");
+	});
 
-  it("icons have aria-hidden", () => {
-    const ariaHidden = true;
-    expect(ariaHidden).toBe(true);
-  });
+	it("icons have aria-hidden", () => {
+		const ariaHidden = true;
+		expect(ariaHidden).toBe(true);
+	});
 });
 
 // ============================================
@@ -274,30 +274,30 @@ describe("Toast Icons", () => {
 // ============================================
 
 describe("Toast Structure", () => {
-  it("has icon section", () => {
-    const hasIcon = true;
-    expect(hasIcon).toBe(true);
-  });
+	it("has icon section", () => {
+		const hasIcon = true;
+		expect(hasIcon).toBe(true);
+	});
 
-  it("has content section", () => {
-    const hasContent = true;
-    expect(hasContent).toBe(true);
-  });
+	it("has content section", () => {
+		const hasContent = true;
+		expect(hasContent).toBe(true);
+	});
 
-  it("has close button", () => {
-    const hasCloseButton = true;
-    expect(hasCloseButton).toBe(true);
-  });
+	it("has close button", () => {
+		const hasCloseButton = true;
+		expect(hasCloseButton).toBe(true);
+	});
 
-  it("content can include title", () => {
-    const supportsTitle = true;
-    expect(supportsTitle).toBe(true);
-  });
+	it("content can include title", () => {
+		const supportsTitle = true;
+		expect(supportsTitle).toBe(true);
+	});
 
-  it("content includes message", () => {
-    const hasMessage = true;
-    expect(hasMessage).toBe(true);
-  });
+	it("content includes message", () => {
+		const hasMessage = true;
+		expect(hasMessage).toBe(true);
+	});
 });
 
 // ============================================
@@ -305,37 +305,37 @@ describe("Toast Structure", () => {
 // ============================================
 
 describe("ToastContainer", () => {
-  it("accepts position prop", () => {
-    const position: ToastPosition = "top-right";
-    expect(position).toBe("top-right");
-  });
+	it("accepts position prop", () => {
+		const position: ToastPosition = "top-right";
+		expect(position).toBe("top-right");
+	});
 
-  it("uses store position when prop not provided", () => {
-    const defaultPosition = "bottom-right";
-    expect(defaultPosition).toBe("bottom-right");
-  });
+	it("uses store position when prop not provided", () => {
+		const defaultPosition = "bottom-right";
+		expect(defaultPosition).toBe("bottom-right");
+	});
 
-  it("renders nothing when no toasts", () => {
-    const emptyToasts: Toast[] = [];
-    expect(emptyToasts.length).toBe(0);
-  });
+	it("renders nothing when no toasts", () => {
+		const emptyToasts: Toast[] = [];
+		expect(emptyToasts.length).toBe(0);
+	});
 
-  it("has gap between toasts", () => {
-    const gap = "8px";
-    expect(gap).toBe("8px");
-  });
+	it("has gap between toasts", () => {
+		const gap = "8px";
+		expect(gap).toBe("8px");
+	});
 
-  it("container has pointer-events none", () => {
-    // Container doesn't block mouse, toasts do
-    const pointerEvents = "none";
-    expect(pointerEvents).toBe("none");
-  });
+	it("container has pointer-events none", () => {
+		// Container doesn't block mouse, toasts do
+		const pointerEvents = "none";
+		expect(pointerEvents).toBe("none");
+	});
 
-  it("toasts have pointer-events auto", () => {
-    // Individual toasts are clickable
-    const pointerEvents = "auto";
-    expect(pointerEvents).toBe("auto");
-  });
+	it("toasts have pointer-events auto", () => {
+		// Individual toasts are clickable
+		const pointerEvents = "auto";
+		expect(pointerEvents).toBe("auto");
+	});
 });
 
 // ============================================
@@ -343,20 +343,20 @@ describe("ToastContainer", () => {
 // ============================================
 
 describe("Toast Dismiss", () => {
-  it("close button triggers dismiss", () => {
-    const onDismissCalled = true;
-    expect(onDismissCalled).toBe(true);
-  });
+	it("close button triggers dismiss", () => {
+		const onDismissCalled = true;
+		expect(onDismissCalled).toBe(true);
+	});
 
-  it("dismiss starts exit animation", () => {
-    const toast: Partial<Toast> = { dismissing: true };
-    expect(toast.dismissing).toBe(true);
-  });
+	it("dismiss starts exit animation", () => {
+		const toast: Partial<Toast> = { dismissing: true };
+		expect(toast.dismissing).toBe(true);
+	});
 
-  it("exit animation duration is 200ms", () => {
-    const duration = 200;
-    expect(duration).toBe(200);
-  });
+	it("exit animation duration is 200ms", () => {
+		const duration = 200;
+		expect(duration).toBe(200);
+	});
 });
 
 // ============================================
@@ -364,26 +364,26 @@ describe("Toast Dismiss", () => {
 // ============================================
 
 describe("Toast Integration", () => {
-  it("ToastContainer connects to store", async () => {
-    const storeModule = await import("../../stores/toast-store");
-    expect(typeof storeModule.useToastStore).toBe("function");
-  });
+	it("ToastContainer connects to store", async () => {
+		const storeModule = await import("../../stores/toast-store");
+		expect(typeof storeModule.useToastStore).toBe("function");
+	});
 
-  it("ToastItem receives toast prop", () => {
-    const toast: Toast = {
-      id: "test-1",
-      variant: "success",
-      message: "Test",
-      duration: 4000,
-      createdAt: Date.now(),
-    };
-    expect(toast.id).toBe("test-1");
-  });
+	it("ToastItem receives toast prop", () => {
+		const toast: Toast = {
+			id: "test-1",
+			variant: "success",
+			message: "Test",
+			duration: 4000,
+			createdAt: Date.now(),
+		};
+		expect(toast.id).toBe("test-1");
+	});
 
-  it("ToastItem receives onDismiss prop", () => {
-    const onDismiss = (id: string) => id;
-    expect(typeof onDismiss).toBe("function");
-  });
+	it("ToastItem receives onDismiss prop", () => {
+		const onDismiss = (id: string) => id;
+		expect(typeof onDismiss).toBe("function");
+	});
 });
 
 // ============================================
@@ -391,25 +391,25 @@ describe("Toast Integration", () => {
 // ============================================
 
 describe("Toast Edge Cases", () => {
-  it("handles long message text", () => {
-    const longMessage = "A".repeat(200);
-    expect(longMessage.length).toBe(200);
-  });
+	it("handles long message text", () => {
+		const longMessage = "A".repeat(200);
+		expect(longMessage.length).toBe(200);
+	});
 
-  it("handles missing title", () => {
-    const toast: Partial<Toast> = { title: undefined };
-    expect(toast.title).toBeUndefined();
-  });
+	it("handles missing title", () => {
+		const toast: Partial<Toast> = { title: undefined };
+		expect(toast.title).toBeUndefined();
+	});
 
-  it("handles empty toasts array", () => {
-    const toasts: Toast[] = [];
-    expect(toasts.length).toBe(0);
-  });
+	it("handles empty toasts array", () => {
+		const toasts: Toast[] = [];
+		expect(toasts.length).toBe(0);
+	});
 
-  it("handles multiple rapid toasts", () => {
-    const toastCount = 10;
-    expect(toastCount).toBe(10);
-  });
+	it("handles multiple rapid toasts", () => {
+		const toastCount = 10;
+		expect(toastCount).toBe(10);
+	});
 });
 
 // ============================================
@@ -417,18 +417,18 @@ describe("Toast Edge Cases", () => {
 // ============================================
 
 describe("Toast Test IDs", () => {
-  it("toast has data-testid", () => {
-    const testId = "toast-test-1";
-    expect(testId).toContain("toast-");
-  });
+	it("toast has data-testid", () => {
+		const testId = "toast-test-1";
+		expect(testId).toContain("toast-");
+	});
 
-  it("close button has data-testid", () => {
-    const testId = "toast-close-test-1";
-    expect(testId).toContain("toast-close-");
-  });
+	it("close button has data-testid", () => {
+		const testId = "toast-close-test-1";
+		expect(testId).toContain("toast-close-");
+	});
 
-  it("container has data-testid", () => {
-    const testId = "toast-container";
-    expect(testId).toBe("toast-container");
-  });
+	it("container has data-testid", () => {
+		const testId = "toast-container";
+		expect(testId).toBe("toast-container");
+	});
 });

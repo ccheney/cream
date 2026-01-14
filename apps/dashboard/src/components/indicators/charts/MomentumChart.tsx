@@ -18,17 +18,17 @@ import { IndicatorChart, type IndicatorDataPoint, type ReferenceLine } from "./I
 // ============================================
 
 export interface MomentumChartProps {
-  /** Momentum data points */
-  data: IndicatorDataPoint[];
+	/** Momentum data points */
+	data: IndicatorDataPoint[];
 
-  /** Period label (e.g., "1M", "3M") */
-  period?: string;
+	/** Period label (e.g., "1M", "3M") */
+	period?: string;
 
-  /** Chart height in pixels */
-  height?: number;
+	/** Chart height in pixels */
+	height?: number;
 
-  /** Additional CSS class */
-  className?: string;
+	/** Additional CSS class */
+	className?: string;
 }
 
 // ============================================
@@ -43,30 +43,30 @@ const ZERO_LINE_COLOR = "rgba(120, 113, 108, 0.3)";
 // ============================================
 
 function MomentumChartComponent({
-  data,
-  period = "12M",
-  height = 120,
-  className = "",
+	data,
+	period = "12M",
+	height = 120,
+	className = "",
 }: MomentumChartProps) {
-  const referenceLines: ReferenceLine[] = [
-    {
-      value: 0,
-      color: ZERO_LINE_COLOR,
-      lineWidth: 1,
-    },
-  ];
+	const referenceLines: ReferenceLine[] = [
+		{
+			value: 0,
+			color: ZERO_LINE_COLOR,
+			lineWidth: 1,
+		},
+	];
 
-  return (
-    <IndicatorChart
-      data={data}
-      type="line"
-      color={MOMENTUM_COLOR}
-      title={`Momentum (${period})`}
-      referenceLines={referenceLines}
-      height={height}
-      className={className}
-    />
-  );
+	return (
+		<IndicatorChart
+			data={data}
+			type="line"
+			color={MOMENTUM_COLOR}
+			title={`Momentum (${period})`}
+			referenceLines={referenceLines}
+			height={height}
+			className={className}
+		/>
+	);
 }
 
 export const MomentumChart = memo(MomentumChartComponent);

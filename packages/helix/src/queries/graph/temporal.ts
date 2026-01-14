@@ -14,45 +14,45 @@ import type { GraphEdge, TraversalOptions, WeightedTraversalResponse } from "./t
  * Options for point-in-time graph traversal.
  */
 export interface TemporalTraversalOptions extends TraversalOptions {
-  /**
-   * Query timestamp - only include edges active at this point in time.
-   * Edge is active when: valid_from <= asOfTimestamp AND (valid_to IS NULL OR valid_to > asOfTimestamp)
-   */
-  asOfTimestamp?: number;
+	/**
+	 * Query timestamp - only include edges active at this point in time.
+	 * Edge is active when: valid_from <= asOfTimestamp AND (valid_to IS NULL OR valid_to > asOfTimestamp)
+	 */
+	asOfTimestamp?: number;
 
-  /**
-   * Include only edges we knew about by this timestamp.
-   * Enables "what did we know at time X?" reconstruction.
-   */
-  knownAsOfTimestamp?: number;
+	/**
+	 * Include only edges we knew about by this timestamp.
+	 * Enables "what did we know at time X?" reconstruction.
+	 */
+	knownAsOfTimestamp?: number;
 
-  /**
-   * Include expired edges (where valid_to < asOfTimestamp).
-   * Default: false (only include active edges).
-   */
-  includeExpired?: boolean;
+	/**
+	 * Include expired edges (where valid_to < asOfTimestamp).
+	 * Default: false (only include active edges).
+	 */
+	includeExpired?: boolean;
 }
 
 /**
  * Response from point-in-time traversal.
  */
 export interface TemporalTraversalResponse<T = Record<string, unknown>>
-  extends WeightedTraversalResponse<T> {
-  /** Point in time this query represents */
-  asOfTimestamp?: number;
-  /** Statistics about temporal filtering */
-  temporalStats: {
-    /** Total edges before temporal filtering */
-    beforeFiltering: number;
-    /** Edges remaining after temporal filtering */
-    afterFiltering: number;
-    /** Edges excluded due to not yet valid (valid_from > asOfTimestamp) */
-    notYetValid: number;
-    /** Edges excluded due to expired (valid_to <= asOfTimestamp) */
-    expired: number;
-    /** Edges excluded due to not yet recorded (recorded_at > knownAsOfTimestamp) */
-    notYetRecorded: number;
-  };
+	extends WeightedTraversalResponse<T> {
+	/** Point in time this query represents */
+	asOfTimestamp?: number;
+	/** Statistics about temporal filtering */
+	temporalStats: {
+		/** Total edges before temporal filtering */
+		beforeFiltering: number;
+		/** Edges remaining after temporal filtering */
+		afterFiltering: number;
+		/** Edges excluded due to not yet valid (valid_from > asOfTimestamp) */
+		notYetValid: number;
+		/** Edges excluded due to expired (valid_to <= asOfTimestamp) */
+		expired: number;
+		/** Edges excluded due to not yet recorded (recorded_at > knownAsOfTimestamp) */
+		notYetRecorded: number;
+	};
 }
 
 /**
@@ -63,21 +63,21 @@ export interface TemporalTraversalResponse<T = Record<string, unknown>>
  * @returns true if edge is active at that time
  */
 export function isEdgeActiveAtTime(edge: GraphEdge, asOfTimestamp: number): boolean {
-  const props = edge.properties;
+	const props = edge.properties;
 
-  const validFrom = props.valid_from;
-  if (typeof validFrom === "number" && validFrom > asOfTimestamp) {
-    return false;
-  }
+	const validFrom = props.valid_from;
+	if (typeof validFrom === "number" && validFrom > asOfTimestamp) {
+		return false;
+	}
 
-  const validTo = props.valid_to;
-  if (validTo !== undefined && validTo !== null && typeof validTo === "number") {
-    if (validTo <= asOfTimestamp) {
-      return false;
-    }
-  }
+	const validTo = props.valid_to;
+	if (validTo !== undefined && validTo !== null && typeof validTo === "number") {
+		if (validTo <= asOfTimestamp) {
+			return false;
+		}
+	}
 
-  return true;
+	return true;
 }
 
 /**
@@ -88,13 +88,13 @@ export function isEdgeActiveAtTime(edge: GraphEdge, asOfTimestamp: number): bool
  * @returns true if edge was recorded by that time
  */
 export function wasEdgeRecordedBy(edge: GraphEdge, knownAsOfTimestamp: number): boolean {
-  const recordedAt = edge.properties.recorded_at;
+	const recordedAt = edge.properties.recorded_at;
 
-  if (typeof recordedAt !== "number") {
-    return true;
-  }
+	if (typeof recordedAt !== "number") {
+		return true;
+	}
 
-  return recordedAt <= knownAsOfTimestamp;
+	return recordedAt <= knownAsOfTimestamp;
 }
 
 /**
@@ -105,50 +105,50 @@ export function wasEdgeRecordedBy(edge: GraphEdge, knownAsOfTimestamp: number): 
  * @returns Filtered edges and statistics
  */
 export function filterEdgesByTime(
-  edges: GraphEdge[],
-  options: Pick<TemporalTraversalOptions, "asOfTimestamp" | "knownAsOfTimestamp" | "includeExpired">
+	edges: GraphEdge[],
+	options: Pick<TemporalTraversalOptions, "asOfTimestamp" | "knownAsOfTimestamp" | "includeExpired">
 ): { filtered: GraphEdge[]; stats: TemporalTraversalResponse["temporalStats"] } {
-  const stats = {
-    beforeFiltering: edges.length,
-    afterFiltering: 0,
-    notYetValid: 0,
-    expired: 0,
-    notYetRecorded: 0,
-  };
+	const stats = {
+		beforeFiltering: edges.length,
+		afterFiltering: 0,
+		notYetValid: 0,
+		expired: 0,
+		notYetRecorded: 0,
+	};
 
-  const filtered = edges.filter((edge) => {
-    if (options.asOfTimestamp !== undefined) {
-      const props = edge.properties;
+	const filtered = edges.filter((edge) => {
+		if (options.asOfTimestamp !== undefined) {
+			const props = edge.properties;
 
-      const validFrom = props.valid_from;
-      if (typeof validFrom === "number" && validFrom > options.asOfTimestamp) {
-        stats.notYetValid++;
-        return false;
-      }
+			const validFrom = props.valid_from;
+			if (typeof validFrom === "number" && validFrom > options.asOfTimestamp) {
+				stats.notYetValid++;
+				return false;
+			}
 
-      if (!options.includeExpired) {
-        const validTo = props.valid_to;
-        if (validTo !== undefined && validTo !== null && typeof validTo === "number") {
-          if (validTo <= options.asOfTimestamp) {
-            stats.expired++;
-            return false;
-          }
-        }
-      }
-    }
+			if (!options.includeExpired) {
+				const validTo = props.valid_to;
+				if (validTo !== undefined && validTo !== null && typeof validTo === "number") {
+					if (validTo <= options.asOfTimestamp) {
+						stats.expired++;
+						return false;
+					}
+				}
+			}
+		}
 
-    if (options.knownAsOfTimestamp !== undefined) {
-      if (!wasEdgeRecordedBy(edge, options.knownAsOfTimestamp)) {
-        stats.notYetRecorded++;
-        return false;
-      }
-    }
+		if (options.knownAsOfTimestamp !== undefined) {
+			if (!wasEdgeRecordedBy(edge, options.knownAsOfTimestamp)) {
+				stats.notYetRecorded++;
+				return false;
+			}
+		}
 
-    return true;
-  });
+		return true;
+	});
 
-  stats.afterFiltering = filtered.length;
-  return { filtered, stats };
+	stats.afterFiltering = filtered.length;
+	return { filtered, stats };
 }
 
 /**
@@ -189,73 +189,73 @@ export function filterEdgesByTime(
  * ```
  */
 export async function traverseAtTime<T = Record<string, unknown>>(
-  client: HelixClient,
-  startNodeId: string,
-  options: TemporalTraversalOptions = {}
+	client: HelixClient,
+	startNodeId: string,
+	options: TemporalTraversalOptions = {}
 ): Promise<TemporalTraversalResponse<T>> {
-  const startTime = performance.now();
+	const startTime = performance.now();
 
-  const weightedResult = await weightedTraverse<T>(client, startNodeId, options);
+	const weightedResult = await weightedTraverse<T>(client, startNodeId, options);
 
-  if (options.asOfTimestamp === undefined && options.knownAsOfTimestamp === undefined) {
-    return {
-      ...weightedResult,
-      asOfTimestamp: undefined,
-      temporalStats: {
-        beforeFiltering: weightedResult.filterStats.totalEdges,
-        afterFiltering: weightedResult.filterStats.totalEdges,
-        notYetValid: 0,
-        expired: 0,
-        notYetRecorded: 0,
-      },
-    };
-  }
+	if (options.asOfTimestamp === undefined && options.knownAsOfTimestamp === undefined) {
+		return {
+			...weightedResult,
+			asOfTimestamp: undefined,
+			temporalStats: {
+				beforeFiltering: weightedResult.filterStats.totalEdges,
+				afterFiltering: weightedResult.filterStats.totalEdges,
+				notYetValid: 0,
+				expired: 0,
+				notYetRecorded: 0,
+			},
+		};
+	}
 
-  const allEdges = new Map<string, (typeof weightedResult.paths)[0]["edges"][0]>();
-  for (const path of weightedResult.paths) {
-    for (const edge of path.edges) {
-      allEdges.set(edge.id, edge);
-    }
-  }
+	const allEdges = new Map<string, (typeof weightedResult.paths)[0]["edges"][0]>();
+	for (const path of weightedResult.paths) {
+		for (const edge of path.edges) {
+			allEdges.set(edge.id, edge);
+		}
+	}
 
-  const { filtered: temporallyFiltered, stats: temporalStats } = filterEdgesByTime(
-    Array.from(allEdges.values()),
-    options
-  );
+	const { filtered: temporallyFiltered, stats: temporalStats } = filterEdgesByTime(
+		Array.from(allEdges.values()),
+		options
+	);
 
-  const validEdgeIds = new Set(temporallyFiltered.map((e) => e.id));
+	const validEdgeIds = new Set(temporallyFiltered.map((e) => e.id));
 
-  const filteredPaths = weightedResult.paths.filter((path) =>
-    path.edges.every((edge) => validEdgeIds.has(edge.id))
-  );
+	const filteredPaths = weightedResult.paths.filter((path) =>
+		path.edges.every((edge) => validEdgeIds.has(edge.id))
+	);
 
-  const filteredPrioritizedEdges = weightedResult.prioritizedEdges.filter((pe) =>
-    validEdgeIds.has(pe.edge.id)
-  );
+	const filteredPrioritizedEdges = weightedResult.prioritizedEdges.filter((pe) =>
+		validEdgeIds.has(pe.edge.id)
+	);
 
-  const validNodeIds = new Set<string>();
-  for (const path of filteredPaths) {
-    for (const node of path.nodes) {
-      validNodeIds.add(node.id);
-    }
-  }
-  const filteredNodes = weightedResult.nodes.filter((n) => validNodeIds.has(n.id));
+	const validNodeIds = new Set<string>();
+	for (const path of filteredPaths) {
+		for (const node of path.nodes) {
+			validNodeIds.add(node.id);
+		}
+	}
+	const filteredNodes = weightedResult.nodes.filter((n) => validNodeIds.has(n.id));
 
-  return {
-    paths: filteredPaths,
-    nodes: filteredNodes,
-    executionTimeMs: performance.now() - startTime,
-    prioritizedEdges: filteredPrioritizedEdges,
-    filterStats: {
-      totalEdges: weightedResult.filterStats.totalEdges,
-      filteredEdges: temporallyFiltered.length,
-      averagePriority:
-        filteredPrioritizedEdges.length > 0
-          ? filteredPrioritizedEdges.reduce((sum, e) => sum + e.priority, 0) /
-            filteredPrioritizedEdges.length
-          : 0,
-    },
-    asOfTimestamp: options.asOfTimestamp,
-    temporalStats,
-  };
+	return {
+		paths: filteredPaths,
+		nodes: filteredNodes,
+		executionTimeMs: performance.now() - startTime,
+		prioritizedEdges: filteredPrioritizedEdges,
+		filterStats: {
+			totalEdges: weightedResult.filterStats.totalEdges,
+			filteredEdges: temporallyFiltered.length,
+			averagePriority:
+				filteredPrioritizedEdges.length > 0
+					? filteredPrioritizedEdges.reduce((sum, e) => sum + e.priority, 0) /
+						filteredPrioritizedEdges.length
+					: 0,
+		},
+		asOfTimestamp: options.asOfTimestamp,
+		temporalStats,
+	};
 }

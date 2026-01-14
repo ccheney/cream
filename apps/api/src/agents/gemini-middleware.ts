@@ -14,9 +14,9 @@
  */
 
 import type {
-  LanguageModelV3CallOptions,
-  LanguageModelV3Middleware,
-  LanguageModelV3Prompt,
+	LanguageModelV3CallOptions,
+	LanguageModelV3Middleware,
+	LanguageModelV3Prompt,
 } from "@ai-sdk/provider";
 
 /**
@@ -32,50 +32,50 @@ const BYPASS_SIGNATURE = "skip_thought_signature_validator";
  * even when upstream doesn't preserve thought signatures correctly yet.
  */
 export const geminiThoughtSignatureMiddleware: LanguageModelV3Middleware = {
-  specificationVersion: "v3",
-  transformParams: async ({ params }) => {
-    // Inject bypass signatures into assistant tool-call parts when missing.
-    const transformedPrompt: LanguageModelV3Prompt = params.prompt.map((message) => {
-      if (message.role !== "assistant") {
-        return message;
-      }
+	specificationVersion: "v3",
+	transformParams: async ({ params }) => {
+		// Inject bypass signatures into assistant tool-call parts when missing.
+		const transformedPrompt: LanguageModelV3Prompt = params.prompt.map((message) => {
+			if (message.role !== "assistant") {
+				return message;
+			}
 
-      return {
-        ...message,
-        content: message.content.map((part) => {
-          if (part.type !== "tool-call") {
-            return part;
-          }
+			return {
+				...message,
+				content: message.content.map((part) => {
+					if (part.type !== "tool-call") {
+						return part;
+					}
 
-          // If upstream already provided a real signature, preserve it.
-          const existingSignature =
-            typeof part.providerOptions?.google === "object" &&
-            part.providerOptions?.google !== null &&
-            "thoughtSignature" in part.providerOptions.google
-              ? (part.providerOptions.google as { thoughtSignature?: unknown }).thoughtSignature
-              : undefined;
+					// If upstream already provided a real signature, preserve it.
+					const existingSignature =
+						typeof part.providerOptions?.google === "object" &&
+						part.providerOptions?.google !== null &&
+						"thoughtSignature" in part.providerOptions.google
+							? (part.providerOptions.google as { thoughtSignature?: unknown }).thoughtSignature
+							: undefined;
 
-          if (typeof existingSignature === "string" && existingSignature.length > 0) {
-            return part;
-          }
+					if (typeof existingSignature === "string" && existingSignature.length > 0) {
+						return part;
+					}
 
-          return {
-            ...part,
-            providerOptions: {
-              ...part.providerOptions,
-              google: {
-                ...(part.providerOptions?.google ?? {}),
-                thoughtSignature: BYPASS_SIGNATURE,
-              },
-            },
-          };
-        }),
-      };
-    });
+					return {
+						...part,
+						providerOptions: {
+							...part.providerOptions,
+							google: {
+								...(part.providerOptions?.google ?? {}),
+								thoughtSignature: BYPASS_SIGNATURE,
+							},
+						},
+					};
+				}),
+			};
+		});
 
-    return {
-      ...params,
-      prompt: transformedPrompt,
-    } satisfies LanguageModelV3CallOptions;
-  },
+		return {
+			...params,
+			prompt: transformedPrompt,
+		} satisfies LanguageModelV3CallOptions;
+	},
 };

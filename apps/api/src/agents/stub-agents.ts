@@ -21,25 +21,25 @@ import { AGENT_CONFIGS, AGENT_PROMPTS, type AgentType } from "@cream/agents";
  * Note: model is now global (configured in trading settings), not per-agent.
  */
 export interface StubAgent {
-  id: AgentType;
-  name: string;
-  role: string;
-  systemPrompt: string;
+	id: AgentType;
+	name: string;
+	role: string;
+	systemPrompt: string;
 }
 
 /**
  * Create a stub agent configuration.
  */
 function createStubAgent(agentType: AgentType): StubAgent {
-  const config = AGENT_CONFIGS[agentType];
-  const systemPrompt = AGENT_PROMPTS[agentType];
+	const config = AGENT_CONFIGS[agentType];
+	const systemPrompt = AGENT_PROMPTS[agentType];
 
-  return {
-    id: agentType,
-    name: config.name,
-    role: config.role,
-    systemPrompt,
-  };
+	return {
+		id: agentType,
+		name: config.name,
+		role: config.role,
+		systemPrompt,
+	};
 }
 
 // ============================================
@@ -76,15 +76,15 @@ export const indicatorResearcher = createStubAgent("indicator_researcher");
 // ============================================
 
 export const agents = {
-  newsAnalyst,
-  fundamentalsAnalyst,
-  bullishResearcher,
-  bearishResearcher,
-  trader,
-  riskManager,
-  critic,
-  ideaAgent,
-  indicatorResearcher,
+	newsAnalyst,
+	fundamentalsAnalyst,
+	bullishResearcher,
+	bearishResearcher,
+	trader,
+	riskManager,
+	critic,
+	ideaAgent,
+	indicatorResearcher,
 };
 
 export type AgentRegistry = typeof agents;

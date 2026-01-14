@@ -20,34 +20,34 @@ import type { HelixQueryResult } from "../types.js";
  * @throws Error if HelixDB query fails or backtest mode is used
  */
 export async function helixQuery(
-  ctx: ExecutionContext,
-  queryName: string,
-  params: Record<string, unknown> = {}
+	ctx: ExecutionContext,
+	queryName: string,
+	params: Record<string, unknown> = {}
 ): Promise<HelixQueryResult> {
-  if (isBacktest(ctx)) {
-    throw new Error("helixQuery is not available in BACKTEST mode");
-  }
+	if (isBacktest(ctx)) {
+		throw new Error("helixQuery is not available in BACKTEST mode");
+	}
 
-  const client = getHelixClient();
+	const client = getHelixClient();
 
-  // Execute the HelixQL query
-  const result = await client.query(queryName, params);
+	// Execute the HelixQL query
+	const result = await client.query(queryName, params);
 
-  // Map query result to HelixQueryResult format
-  // The actual structure depends on the query, but typically includes nodes and edges
-  const data = result.data as {
-    nodes?: unknown[];
-    edges?: unknown[];
-    [key: string]: unknown;
-  };
+	// Map query result to HelixQueryResult format
+	// The actual structure depends on the query, but typically includes nodes and edges
+	const data = result.data as {
+		nodes?: unknown[];
+		edges?: unknown[];
+		[key: string]: unknown;
+	};
 
-  return {
-    nodes: data.nodes ?? [],
-    edges: data.edges ?? [],
-    metadata: {
-      executionTimeMs: result.executionTimeMs,
-      queryName,
-      ...params,
-    },
-  };
+	return {
+		nodes: data.nodes ?? [],
+		edges: data.edges ?? [],
+		metadata: {
+			executionTimeMs: result.executionTimeMs,
+			queryName,
+			...params,
+		},
+	};
 }

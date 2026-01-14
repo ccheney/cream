@@ -17,21 +17,21 @@ import { WebSocketProvider } from "@/providers/WebSocketProvider";
 import { subscribeToThemeChanges } from "@/stores/preferences-store";
 
 interface ProvidersProps {
-  children: React.ReactNode;
+	children: React.ReactNode;
 }
 
 export function Providers({ children }: ProvidersProps) {
-  useEffect(() => {
-    return subscribeToThemeChanges();
-  }, []);
+	useEffect(() => {
+		return subscribeToThemeChanges();
+	}, []);
 
-  return (
-    <QueryProvider>
-      <AuthProvider>
-        <WebSocketProvider>
-          <KeyboardShortcutsProvider>{children}</KeyboardShortcutsProvider>
-        </WebSocketProvider>
-      </AuthProvider>
-    </QueryProvider>
-  );
+	return (
+		<QueryProvider>
+			<AuthProvider>
+				<WebSocketProvider>
+					<KeyboardShortcutsProvider>{children}</KeyboardShortcutsProvider>
+				</WebSocketProvider>
+			</AuthProvider>
+		</QueryProvider>
+	);
 }

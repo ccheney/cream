@@ -9,14 +9,14 @@ import { createAuthClient } from "better-auth/react";
 import { config } from "./config";
 
 export const authClient = createAuthClient({
-  baseURL: config.api.baseUrl,
-  plugins: [
-    twoFactorClient({
-      onTwoFactorRedirect() {
-        window.location.href = "/two-factor";
-      },
-    }),
-  ],
+	baseURL: config.api.baseUrl,
+	plugins: [
+		twoFactorClient({
+			onTwoFactorRedirect() {
+				window.location.href = "/two-factor";
+			},
+		}),
+	],
 });
 
 export const signIn = authClient.signIn;

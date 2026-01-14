@@ -27,54 +27,54 @@ export type FeedFilter = "all" | "quotes" | "orders" | "decisions" | "agents" | 
  * UI store state.
  */
 export interface UIState {
-  // Panel visibility
-  sidebarCollapsed: boolean;
-  realTimeFeedVisible: boolean;
-  alertsPanelVisible: boolean;
+	// Panel visibility
+	sidebarCollapsed: boolean;
+	realTimeFeedVisible: boolean;
+	alertsPanelVisible: boolean;
 
-  // User preferences
-  theme: Theme;
-  chartTimeframe: ChartTimeframe;
-  realTimeFeedFilters: FeedFilter[];
+	// User preferences
+	theme: Theme;
+	chartTimeframe: ChartTimeframe;
+	realTimeFeedFilters: FeedFilter[];
 
-  // Table preferences
-  tablePageSize: number;
-  tableDensity: "compact" | "normal" | "comfortable";
+	// Table preferences
+	tablePageSize: number;
+	tableDensity: "compact" | "normal" | "comfortable";
 
-  // Chart preferences
-  chartShowVolume: boolean;
-  chartShowIndicators: string[];
+	// Chart preferences
+	chartShowVolume: boolean;
+	chartShowIndicators: string[];
 }
 
 /**
  * UI store actions.
  */
 export interface UIActions {
-  // Panel toggles
-  toggleSidebar: () => void;
-  setSidebarCollapsed: (collapsed: boolean) => void;
-  toggleRealTimeFeed: () => void;
-  setRealTimeFeedVisible: (visible: boolean) => void;
-  toggleAlertsPanel: () => void;
-  setAlertsPanelVisible: (visible: boolean) => void;
+	// Panel toggles
+	toggleSidebar: () => void;
+	setSidebarCollapsed: (collapsed: boolean) => void;
+	toggleRealTimeFeed: () => void;
+	setRealTimeFeedVisible: (visible: boolean) => void;
+	toggleAlertsPanel: () => void;
+	setAlertsPanelVisible: (visible: boolean) => void;
 
-  // Preferences
-  setTheme: (theme: Theme) => void;
-  setChartTimeframe: (timeframe: ChartTimeframe) => void;
-  setFeedFilters: (filters: FeedFilter[]) => void;
-  toggleFeedFilter: (filter: FeedFilter) => void;
+	// Preferences
+	setTheme: (theme: Theme) => void;
+	setChartTimeframe: (timeframe: ChartTimeframe) => void;
+	setFeedFilters: (filters: FeedFilter[]) => void;
+	toggleFeedFilter: (filter: FeedFilter) => void;
 
-  // Table preferences
-  setTablePageSize: (size: number) => void;
-  setTableDensity: (density: "compact" | "normal" | "comfortable") => void;
+	// Table preferences
+	setTablePageSize: (size: number) => void;
+	setTableDensity: (density: "compact" | "normal" | "comfortable") => void;
 
-  // Chart preferences
-  setChartShowVolume: (show: boolean) => void;
-  setChartIndicators: (indicators: string[]) => void;
-  toggleChartIndicator: (indicator: string) => void;
+	// Chart preferences
+	setChartShowVolume: (show: boolean) => void;
+	setChartIndicators: (indicators: string[]) => void;
+	toggleChartIndicator: (indicator: string) => void;
 
-  // Reset
-  reset: () => void;
+	// Reset
+	reset: () => void;
 }
 
 /**
@@ -87,23 +87,23 @@ export type UIStore = UIState & UIActions;
 // ============================================
 
 const initialState: UIState = {
-  // Panel visibility
-  sidebarCollapsed: false,
-  realTimeFeedVisible: true,
-  alertsPanelVisible: false,
+	// Panel visibility
+	sidebarCollapsed: false,
+	realTimeFeedVisible: true,
+	alertsPanelVisible: false,
 
-  // User preferences
-  theme: "system",
-  chartTimeframe: "15m",
-  realTimeFeedFilters: ["all"],
+	// User preferences
+	theme: "system",
+	chartTimeframe: "15m",
+	realTimeFeedFilters: ["all"],
 
-  // Table preferences
-  tablePageSize: 25,
-  tableDensity: "normal",
+	// Table preferences
+	tablePageSize: 25,
+	tableDensity: "normal",
 
-  // Chart preferences
-  chartShowVolume: true,
-  chartShowIndicators: ["SMA_20", "SMA_50"],
+	// Chart preferences
+	chartShowVolume: true,
+	chartShowIndicators: ["SMA_20", "SMA_50"],
 };
 
 // ============================================
@@ -126,106 +126,106 @@ const initialState: UIState = {
  * ```
  */
 export const useUIStore = create<UIStore>()(
-  persist(
-    (set, get) => ({
-      // Initial state
-      ...initialState,
+	persist(
+		(set, get) => ({
+			// Initial state
+			...initialState,
 
-      // Panel toggles
-      toggleSidebar: () => {
-        set((state) => ({ sidebarCollapsed: !state.sidebarCollapsed }));
-      },
+			// Panel toggles
+			toggleSidebar: () => {
+				set((state) => ({ sidebarCollapsed: !state.sidebarCollapsed }));
+			},
 
-      setSidebarCollapsed: (collapsed) => {
-        set({ sidebarCollapsed: collapsed });
-      },
+			setSidebarCollapsed: (collapsed) => {
+				set({ sidebarCollapsed: collapsed });
+			},
 
-      toggleRealTimeFeed: () => {
-        set((state) => ({ realTimeFeedVisible: !state.realTimeFeedVisible }));
-      },
+			toggleRealTimeFeed: () => {
+				set((state) => ({ realTimeFeedVisible: !state.realTimeFeedVisible }));
+			},
 
-      setRealTimeFeedVisible: (visible) => {
-        set({ realTimeFeedVisible: visible });
-      },
+			setRealTimeFeedVisible: (visible) => {
+				set({ realTimeFeedVisible: visible });
+			},
 
-      toggleAlertsPanel: () => {
-        set((state) => ({ alertsPanelVisible: !state.alertsPanelVisible }));
-      },
+			toggleAlertsPanel: () => {
+				set((state) => ({ alertsPanelVisible: !state.alertsPanelVisible }));
+			},
 
-      setAlertsPanelVisible: (visible) => {
-        set({ alertsPanelVisible: visible });
-      },
+			setAlertsPanelVisible: (visible) => {
+				set({ alertsPanelVisible: visible });
+			},
 
-      // Preferences
-      setTheme: (theme) => {
-        set({ theme });
-      },
+			// Preferences
+			setTheme: (theme) => {
+				set({ theme });
+			},
 
-      setChartTimeframe: (timeframe) => {
-        set({ chartTimeframe: timeframe });
-      },
+			setChartTimeframe: (timeframe) => {
+				set({ chartTimeframe: timeframe });
+			},
 
-      setFeedFilters: (filters) => {
-        set({ realTimeFeedFilters: filters });
-      },
+			setFeedFilters: (filters) => {
+				set({ realTimeFeedFilters: filters });
+			},
 
-      toggleFeedFilter: (filter) => {
-        const current = get().realTimeFeedFilters;
-        if (filter === "all") {
-          set({ realTimeFeedFilters: ["all"] });
-        } else {
-          // Remove 'all' when selecting specific filters
-          const withoutAll = current.filter((f) => f !== "all");
-          if (current.includes(filter)) {
-            const newFilters = withoutAll.filter((f) => f !== filter);
-            set({
-              realTimeFeedFilters: newFilters.length > 0 ? newFilters : ["all"],
-            });
-          } else {
-            set({ realTimeFeedFilters: [...withoutAll, filter] });
-          }
-        }
-      },
+			toggleFeedFilter: (filter) => {
+				const current = get().realTimeFeedFilters;
+				if (filter === "all") {
+					set({ realTimeFeedFilters: ["all"] });
+				} else {
+					// Remove 'all' when selecting specific filters
+					const withoutAll = current.filter((f) => f !== "all");
+					if (current.includes(filter)) {
+						const newFilters = withoutAll.filter((f) => f !== filter);
+						set({
+							realTimeFeedFilters: newFilters.length > 0 ? newFilters : ["all"],
+						});
+					} else {
+						set({ realTimeFeedFilters: [...withoutAll, filter] });
+					}
+				}
+			},
 
-      // Table preferences
-      setTablePageSize: (size) => {
-        set({ tablePageSize: size });
-      },
+			// Table preferences
+			setTablePageSize: (size) => {
+				set({ tablePageSize: size });
+			},
 
-      setTableDensity: (density) => {
-        set({ tableDensity: density });
-      },
+			setTableDensity: (density) => {
+				set({ tableDensity: density });
+			},
 
-      // Chart preferences
-      setChartShowVolume: (show) => {
-        set({ chartShowVolume: show });
-      },
+			// Chart preferences
+			setChartShowVolume: (show) => {
+				set({ chartShowVolume: show });
+			},
 
-      setChartIndicators: (indicators) => {
-        set({ chartShowIndicators: indicators });
-      },
+			setChartIndicators: (indicators) => {
+				set({ chartShowIndicators: indicators });
+			},
 
-      toggleChartIndicator: (indicator) => {
-        const current = get().chartShowIndicators;
-        if (current.includes(indicator)) {
-          set({
-            chartShowIndicators: current.filter((i) => i !== indicator),
-          });
-        } else {
-          set({ chartShowIndicators: [...current, indicator] });
-        }
-      },
+			toggleChartIndicator: (indicator) => {
+				const current = get().chartShowIndicators;
+				if (current.includes(indicator)) {
+					set({
+						chartShowIndicators: current.filter((i) => i !== indicator),
+					});
+				} else {
+					set({ chartShowIndicators: [...current, indicator] });
+				}
+			},
 
-      // Reset
-      reset: () => {
-        set(initialState);
-      },
-    }),
-    {
-      name: "cream-ui-preferences",
-      storage: createJSONStorage(() => localStorage),
-    }
-  )
+			// Reset
+			reset: () => {
+				set(initialState);
+			},
+		}),
+		{
+			name: "cream-ui-preferences",
+			storage: createJSONStorage(() => localStorage),
+		}
+	)
 );
 
 // ============================================
@@ -246,60 +246,60 @@ export const selectFeedFilters = (state: UIStore) => state.realTimeFeedFilters;
  * Hook for sidebar state and toggle.
  */
 export function useSidebar() {
-  return useUIStore(
-    useShallow((state) => ({
-      collapsed: state.sidebarCollapsed,
-      toggle: state.toggleSidebar,
-      setCollapsed: state.setSidebarCollapsed,
-    }))
-  );
+	return useUIStore(
+		useShallow((state) => ({
+			collapsed: state.sidebarCollapsed,
+			toggle: state.toggleSidebar,
+			setCollapsed: state.setSidebarCollapsed,
+		}))
+	);
 }
 
 /**
  * Hook for real-time feed visibility.
  */
 export function useRealTimeFeed() {
-  return useUIStore(
-    useShallow((state) => ({
-      visible: state.realTimeFeedVisible,
-      toggle: state.toggleRealTimeFeed,
-      setVisible: state.setRealTimeFeedVisible,
-      filters: state.realTimeFeedFilters,
-      setFilters: state.setFeedFilters,
-      toggleFilter: state.toggleFeedFilter,
-    }))
-  );
+	return useUIStore(
+		useShallow((state) => ({
+			visible: state.realTimeFeedVisible,
+			toggle: state.toggleRealTimeFeed,
+			setVisible: state.setRealTimeFeedVisible,
+			filters: state.realTimeFeedFilters,
+			setFilters: state.setFeedFilters,
+			toggleFilter: state.toggleFeedFilter,
+		}))
+	);
 }
 
 /**
  * Hook for chart preferences.
  */
 export function useChartPreferences() {
-  return useUIStore(
-    useShallow((state) => ({
-      timeframe: state.chartTimeframe,
-      setTimeframe: state.setChartTimeframe,
-      showVolume: state.chartShowVolume,
-      setShowVolume: state.setChartShowVolume,
-      indicators: state.chartShowIndicators,
-      setIndicators: state.setChartIndicators,
-      toggleIndicator: state.toggleChartIndicator,
-    }))
-  );
+	return useUIStore(
+		useShallow((state) => ({
+			timeframe: state.chartTimeframe,
+			setTimeframe: state.setChartTimeframe,
+			showVolume: state.chartShowVolume,
+			setShowVolume: state.setChartShowVolume,
+			indicators: state.chartShowIndicators,
+			setIndicators: state.setChartIndicators,
+			toggleIndicator: state.toggleChartIndicator,
+		}))
+	);
 }
 
 /**
  * Hook for table preferences.
  */
 export function useTablePreferences() {
-  return useUIStore(
-    useShallow((state) => ({
-      pageSize: state.tablePageSize,
-      setPageSize: state.setTablePageSize,
-      density: state.tableDensity,
-      setDensity: state.setTableDensity,
-    }))
-  );
+	return useUIStore(
+		useShallow((state) => ({
+			pageSize: state.tablePageSize,
+			setPageSize: state.setTablePageSize,
+			density: state.tableDensity,
+			setDensity: state.setTableDensity,
+		}))
+	);
 }
 
 export default useUIStore;

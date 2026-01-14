@@ -28,36 +28,36 @@ import type { OHLCVBar } from "../../types";
 // ============================================================
 
 export interface VRPResult {
-  /** Volatility Risk Premium (IV - RV) */
-  vrp: number;
-  /** Implied volatility used */
-  impliedVolatility: number;
-  /** Realized volatility calculated */
-  realizedVolatility: number;
-  /** VRP as percentage of realized vol */
-  vrpRatio: number | null;
-  /** Period used for realized vol (days) */
-  realizedVolPeriod: number;
-  /** Annualization factor used */
-  annualizationFactor: number;
-  /** Timestamp */
-  timestamp: number;
+	/** Volatility Risk Premium (IV - RV) */
+	vrp: number;
+	/** Implied volatility used */
+	impliedVolatility: number;
+	/** Realized volatility calculated */
+	realizedVolatility: number;
+	/** VRP as percentage of realized vol */
+	vrpRatio: number | null;
+	/** Period used for realized vol (days) */
+	realizedVolPeriod: number;
+	/** Annualization factor used */
+	annualizationFactor: number;
+	/** Timestamp */
+	timestamp: number;
 }
 
 export interface VRPTermStructure {
-  /** Underlying symbol */
-  symbol: string;
-  /** VRP at different horizons */
-  horizons: Array<{
-    days: number;
-    impliedVol: number;
-    realizedVol: number;
-    vrp: number;
-  }>;
-  /** Average VRP across horizons */
-  avgVRP: number;
-  /** Timestamp */
-  timestamp: number;
+	/** Underlying symbol */
+	symbol: string;
+	/** VRP at different horizons */
+	horizons: Array<{
+		days: number;
+		impliedVol: number;
+		realizedVol: number;
+		vrp: number;
+	}>;
+	/** Average VRP across horizons */
+	avgVRP: number;
+	/** Timestamp */
+	timestamp: number;
 }
 
 // ============================================================
@@ -75,44 +75,44 @@ export interface VRPTermStructure {
  * @returns Annualized realized volatility or null
  */
 export function calculateRealizedVolatility(
-  bars: OHLCVBar[],
-  period = 20,
-  annualizationFactor = 252
+	bars: OHLCVBar[],
+	period = 20,
+	annualizationFactor = 252
 ): number | null {
-  if (bars.length < period + 1) {
-    return null;
-  }
+	if (bars.length < period + 1) {
+		return null;
+	}
 
-  const recentBars = bars.slice(-period - 1);
-  const logReturns: number[] = [];
+	const recentBars = bars.slice(-period - 1);
+	const logReturns: number[] = [];
 
-  for (let i = 1; i < recentBars.length; i++) {
-    const current = recentBars[i];
-    const previous = recentBars[i - 1];
+	for (let i = 1; i < recentBars.length; i++) {
+		const current = recentBars[i];
+		const previous = recentBars[i - 1];
 
-    if (!current || !previous) {
-      continue;
-    }
-    if (previous.close <= 0 || current.close <= 0) {
-      continue;
-    }
+		if (!current || !previous) {
+			continue;
+		}
+		if (previous.close <= 0 || current.close <= 0) {
+			continue;
+		}
 
-    const logReturn = Math.log(current.close / previous.close);
-    logReturns.push(logReturn);
-  }
+		const logReturn = Math.log(current.close / previous.close);
+		logReturns.push(logReturn);
+	}
 
-  if (logReturns.length < 2) {
-    return null;
-  }
+	if (logReturns.length < 2) {
+		return null;
+	}
 
-  // Calculate standard deviation of log returns
-  const mean = logReturns.reduce((sum, r) => sum + r, 0) / logReturns.length;
-  const variance =
-    logReturns.reduce((sum, r) => sum + (r - mean) ** 2, 0) / (logReturns.length - 1);
-  const dailyVol = Math.sqrt(variance);
+	// Calculate standard deviation of log returns
+	const mean = logReturns.reduce((sum, r) => sum + r, 0) / logReturns.length;
+	const variance =
+		logReturns.reduce((sum, r) => sum + (r - mean) ** 2, 0) / (logReturns.length - 1);
+	const dailyVol = Math.sqrt(variance);
 
-  // Annualize
-  return dailyVol * Math.sqrt(annualizationFactor);
+	// Annualize
+	return dailyVol * Math.sqrt(annualizationFactor);
 }
 
 /**
@@ -127,38 +127,38 @@ export function calculateRealizedVolatility(
  * @returns Annualized Parkinson volatility or null
  */
 export function calculateParkinsonVolatility(
-  bars: OHLCVBar[],
-  period = 20,
-  annualizationFactor = 252
+	bars: OHLCVBar[],
+	period = 20,
+	annualizationFactor = 252
 ): number | null {
-  if (bars.length < period) {
-    return null;
-  }
+	if (bars.length < period) {
+		return null;
+	}
 
-  const recentBars = bars.slice(-period);
-  const parkinsonConstant = 1 / (4 * Math.log(2)); // ≈ 0.361
+	const recentBars = bars.slice(-period);
+	const parkinsonConstant = 1 / (4 * Math.log(2)); // ≈ 0.361
 
-  let sumSquaredLogRange = 0;
-  let validBars = 0;
+	let sumSquaredLogRange = 0;
+	let validBars = 0;
 
-  for (const bar of recentBars) {
-    if (bar.high <= 0 || bar.low <= 0 || bar.high < bar.low) {
-      continue;
-    }
+	for (const bar of recentBars) {
+		if (bar.high <= 0 || bar.low <= 0 || bar.high < bar.low) {
+			continue;
+		}
 
-    const logRange = Math.log(bar.high / bar.low);
-    sumSquaredLogRange += logRange ** 2;
-    validBars++;
-  }
+		const logRange = Math.log(bar.high / bar.low);
+		sumSquaredLogRange += logRange ** 2;
+		validBars++;
+	}
 
-  if (validBars === 0) {
-    return null;
-  }
+	if (validBars === 0) {
+		return null;
+	}
 
-  const dailyVariance = parkinsonConstant * (sumSquaredLogRange / validBars);
-  const dailyVol = Math.sqrt(dailyVariance);
+	const dailyVariance = parkinsonConstant * (sumSquaredLogRange / validBars);
+	const dailyVol = Math.sqrt(dailyVariance);
 
-  return dailyVol * Math.sqrt(annualizationFactor);
+	return dailyVol * Math.sqrt(annualizationFactor);
 }
 
 // ============================================================
@@ -184,37 +184,37 @@ export function calculateParkinsonVolatility(
  * ```
  */
 export function calculateVRP(
-  impliedVolatility: number,
-  bars: OHLCVBar[],
-  realizedVolPeriod = 20,
-  annualizationFactor = 252
+	impliedVolatility: number,
+	bars: OHLCVBar[],
+	realizedVolPeriod = 20,
+	annualizationFactor = 252
 ): VRPResult | null {
-  if (impliedVolatility < 0) {
-    return null;
-  }
+	if (impliedVolatility < 0) {
+		return null;
+	}
 
-  const realizedVolatility = calculateRealizedVolatility(
-    bars,
-    realizedVolPeriod,
-    annualizationFactor
-  );
+	const realizedVolatility = calculateRealizedVolatility(
+		bars,
+		realizedVolPeriod,
+		annualizationFactor
+	);
 
-  if (realizedVolatility === null) {
-    return null;
-  }
+	if (realizedVolatility === null) {
+		return null;
+	}
 
-  const vrp = impliedVolatility - realizedVolatility;
-  const vrpRatio = realizedVolatility > 0 ? vrp / realizedVolatility : null;
+	const vrp = impliedVolatility - realizedVolatility;
+	const vrpRatio = realizedVolatility > 0 ? vrp / realizedVolatility : null;
 
-  return {
-    vrp,
-    impliedVolatility,
-    realizedVolatility,
-    vrpRatio,
-    realizedVolPeriod,
-    annualizationFactor,
-    timestamp: Date.now(),
-  };
+	return {
+		vrp,
+		impliedVolatility,
+		realizedVolatility,
+		vrpRatio,
+		realizedVolPeriod,
+		annualizationFactor,
+		timestamp: Date.now(),
+	};
 }
 
 /**
@@ -223,37 +223,37 @@ export function calculateVRP(
  * Parkinson vol is more efficient, useful when high/low data is reliable.
  */
 export function calculateVRPWithParkinson(
-  impliedVolatility: number,
-  bars: OHLCVBar[],
-  realizedVolPeriod = 20,
-  annualizationFactor = 252
+	impliedVolatility: number,
+	bars: OHLCVBar[],
+	realizedVolPeriod = 20,
+	annualizationFactor = 252
 ): VRPResult | null {
-  if (impliedVolatility < 0) {
-    return null;
-  }
+	if (impliedVolatility < 0) {
+		return null;
+	}
 
-  const realizedVolatility = calculateParkinsonVolatility(
-    bars,
-    realizedVolPeriod,
-    annualizationFactor
-  );
+	const realizedVolatility = calculateParkinsonVolatility(
+		bars,
+		realizedVolPeriod,
+		annualizationFactor
+	);
 
-  if (realizedVolatility === null) {
-    return null;
-  }
+	if (realizedVolatility === null) {
+		return null;
+	}
 
-  const vrp = impliedVolatility - realizedVolatility;
-  const vrpRatio = realizedVolatility > 0 ? vrp / realizedVolatility : null;
+	const vrp = impliedVolatility - realizedVolatility;
+	const vrpRatio = realizedVolatility > 0 ? vrp / realizedVolatility : null;
 
-  return {
-    vrp,
-    impliedVolatility,
-    realizedVolatility,
-    vrpRatio,
-    realizedVolPeriod,
-    annualizationFactor,
-    timestamp: Date.now(),
-  };
+	return {
+		vrp,
+		impliedVolatility,
+		realizedVolatility,
+		vrpRatio,
+		realizedVolPeriod,
+		annualizationFactor,
+		timestamp: Date.now(),
+	};
 }
 
 /**
@@ -267,46 +267,46 @@ export function calculateVRPWithParkinson(
  * @returns VRP term structure
  */
 export function calculateVRPTermStructure(
-  ivByDays: Map<number, number>,
-  bars: OHLCVBar[],
-  symbol: string
+	ivByDays: Map<number, number>,
+	bars: OHLCVBar[],
+	symbol: string
 ): VRPTermStructure | null {
-  if (ivByDays.size === 0) {
-    return null;
-  }
+	if (ivByDays.size === 0) {
+		return null;
+	}
 
-  const horizons: VRPTermStructure["horizons"] = [];
+	const horizons: VRPTermStructure["horizons"] = [];
 
-  for (const [days, impliedVol] of ivByDays) {
-    // Use matching lookback period for RV
-    const realizedVol = calculateRealizedVolatility(bars, days);
-    if (realizedVol === null) {
-      continue;
-    }
+	for (const [days, impliedVol] of ivByDays) {
+		// Use matching lookback period for RV
+		const realizedVol = calculateRealizedVolatility(bars, days);
+		if (realizedVol === null) {
+			continue;
+		}
 
-    horizons.push({
-      days,
-      impliedVol,
-      realizedVol,
-      vrp: impliedVol - realizedVol,
-    });
-  }
+		horizons.push({
+			days,
+			impliedVol,
+			realizedVol,
+			vrp: impliedVol - realizedVol,
+		});
+	}
 
-  if (horizons.length === 0) {
-    return null;
-  }
+	if (horizons.length === 0) {
+		return null;
+	}
 
-  // Sort by days
-  horizons.sort((a, b) => a.days - b.days);
+	// Sort by days
+	horizons.sort((a, b) => a.days - b.days);
 
-  const avgVRP = horizons.reduce((sum, h) => sum + h.vrp, 0) / horizons.length;
+	const avgVRP = horizons.reduce((sum, h) => sum + h.vrp, 0) / horizons.length;
 
-  return {
-    symbol,
-    horizons,
-    avgVRP,
-    timestamp: Date.now(),
-  };
+	return {
+		symbol,
+		horizons,
+		avgVRP,
+		timestamp: Date.now(),
+	};
 }
 
 /**
@@ -321,20 +321,20 @@ export type VRPLevel = "very_rich" | "rich" | "fair" | "cheap" | "very_cheap";
  * @returns Classification
  */
 export function classifyVRPLevel(vrp: number): VRPLevel {
-  // Thresholds in absolute vol terms
-  if (vrp > 0.1) {
-    return "very_rich"; // >10% premium, great for selling
-  }
-  if (vrp > 0.03) {
-    return "rich"; // 3-10% premium
-  }
-  if (vrp >= -0.02) {
-    return "fair"; // -2% to 3%
-  }
-  if (vrp >= -0.05) {
-    return "cheap"; // -5% to -2%
-  }
-  return "very_cheap"; // <-5%, avoid selling, consider buying
+	// Thresholds in absolute vol terms
+	if (vrp > 0.1) {
+		return "very_rich"; // >10% premium, great for selling
+	}
+	if (vrp > 0.03) {
+		return "rich"; // 3-10% premium
+	}
+	if (vrp >= -0.02) {
+		return "fair"; // -2% to 3%
+	}
+	if (vrp >= -0.05) {
+		return "cheap"; // -5% to -2%
+	}
+	return "very_cheap"; // <-5%, avoid selling, consider buying
 }
 
 /**
@@ -345,13 +345,13 @@ export function classifyVRPLevel(vrp: number): VRPLevel {
  * @returns Percentile (0-100)
  */
 export function calculateVRPPercentile(
-  currentVRP: number,
-  historicalVRPs: number[]
+	currentVRP: number,
+	historicalVRPs: number[]
 ): number | null {
-  if (historicalVRPs.length === 0) {
-    return null;
-  }
+	if (historicalVRPs.length === 0) {
+		return null;
+	}
 
-  const belowCount = historicalVRPs.filter((v) => v < currentVRP).length;
-  return (belowCount / historicalVRPs.length) * 100;
+	const belowCount = historicalVRPs.filter((v) => v < currentVRP).length;
+	return (belowCount / historicalVRPs.length) * 100;
 }

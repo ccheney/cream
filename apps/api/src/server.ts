@@ -17,11 +17,11 @@ const app = new Hono<{ Bindings: HonoBindings; Variables: HonoVariables }>();
 
 // Enable CORS for development
 app.use(
-  "*",
-  cors({
-    origin: ["http://localhost:3000", "http://localhost:3001"],
-    credentials: true,
-  })
+	"*",
+	cors({
+		origin: ["http://localhost:3000", "http://localhost:3001"],
+		credentials: true,
+	})
 );
 
 // Health check
@@ -29,23 +29,23 @@ app.get("/health", (c) => c.json({ status: "ok" }));
 
 // Root handler - show available endpoints
 app.get("/", (c) =>
-  c.json({
-    name: "@cream/api",
-    version: "0.1.0",
-    endpoints: {
-      openapi: "/openapi.json",
-      health: "/health",
-      agents: "/api/agents",
-      workflows: "/api/workflows",
-    },
-  })
+	c.json({
+		name: "@cream/api",
+		version: "0.1.0",
+		endpoints: {
+			openapi: "/openapi.json",
+			health: "/health",
+			agents: "/api/agents",
+			workflows: "/api/workflows",
+		},
+	})
 );
 
 // Initialize Mastra server with OpenAPI enabled
 const server = new MastraServer({
-  app,
-  mastra,
-  openapiPath: "/openapi.json",
+	app,
+	mastra,
+	openapiPath: "/openapi.json",
 });
 
 await server.init();
@@ -53,6 +53,6 @@ await server.init();
 const port = Number(process.env.PORT) || 4111;
 
 export default {
-  port,
-  fetch: app.fetch,
+	port,
+	fetch: app.fetch,
 };

@@ -38,19 +38,19 @@ export type BrokerId = z.infer<typeof BrokerId>;
  * Default order type policy
  */
 export const OrderPolicySchema = z.object({
-  /**
-   * Default order type for entries
-   *
-   * LIMIT preferred for better fills
-   */
-  entry_default: OrderType.default("LIMIT"),
+	/**
+	 * Default order type for entries
+	 *
+	 * LIMIT preferred for better fills
+	 */
+	entry_default: OrderType.default("LIMIT"),
 
-  /**
-   * Default order type for exits
-   *
-   * MARKET preferred for guaranteed execution
-   */
-  exit_default: OrderType.default("MARKET"),
+	/**
+	 * Default order type for exits
+	 *
+	 * MARKET preferred for guaranteed execution
+	 */
+	exit_default: OrderType.default("MARKET"),
 });
 export type OrderPolicy = z.infer<typeof OrderPolicySchema>;
 
@@ -62,10 +62,10 @@ export type OrderPolicy = z.infer<typeof OrderPolicySchema>;
  * Execution tactics configuration
  */
 export const TacticsConfigSchema = z.object({
-  /**
-   * Default execution tactic
-   */
-  default: ExecutionTactic.default("PASSIVE_LIMIT"),
+	/**
+	 * Default execution tactic
+	 */
+	default: ExecutionTactic.default("PASSIVE_LIMIT"),
 });
 export type TacticsConfig = z.infer<typeof TacticsConfigSchema>;
 
@@ -77,15 +77,15 @@ export type TacticsConfig = z.infer<typeof TacticsConfigSchema>;
  * Alpaca-specific configuration
  */
 export const AlpacaConfigSchema = z.object({
-  /**
-   * Paper trading endpoint
-   */
-  paper_url: z.string().url().default("https://paper-api.alpaca.markets"),
+	/**
+	 * Paper trading endpoint
+	 */
+	paper_url: z.string().url().default("https://paper-api.alpaca.markets"),
 
-  /**
-   * Live trading endpoint
-   */
-  live_url: z.string().url().default("https://api.alpaca.markets"),
+	/**
+	 * Live trading endpoint
+	 */
+	live_url: z.string().url().default("https://api.alpaca.markets"),
 });
 export type AlpacaConfig = z.infer<typeof AlpacaConfigSchema>;
 
@@ -97,20 +97,20 @@ export type AlpacaConfig = z.infer<typeof AlpacaConfigSchema>;
  * Interactive Brokers-specific configuration
  */
 export const IBKRConfigSchema = z.object({
-  /**
-   * TWS Gateway host
-   */
-  gateway_host: z.string().default("127.0.0.1"),
+	/**
+	 * TWS Gateway host
+	 */
+	gateway_host: z.string().default("127.0.0.1"),
 
-  /**
-   * TWS Gateway port
-   */
-  gateway_port: z.number().int().positive().default(4001),
+	/**
+	 * TWS Gateway port
+	 */
+	gateway_port: z.number().int().positive().default(4001),
 
-  /**
-   * Client ID
-   */
-  client_id: z.number().int().nonnegative().default(1),
+	/**
+	 * Client ID
+	 */
+	client_id: z.number().int().nonnegative().default(1),
 });
 export type IBKRConfig = z.infer<typeof IBKRConfigSchema>;
 
@@ -122,41 +122,41 @@ export type IBKRConfig = z.infer<typeof IBKRConfigSchema>;
  * Complete execution configuration
  */
 export const ExecutionConfigSchema = z.object({
-  /**
-   * Order type policy
-   */
-  order_policy: OrderPolicySchema.optional(),
+	/**
+	 * Order type policy
+	 */
+	order_policy: OrderPolicySchema.optional(),
 
-  /**
-   * Execution tactics
-   */
-  tactics: TacticsConfigSchema.optional(),
+	/**
+	 * Execution tactics
+	 */
+	tactics: TacticsConfigSchema.optional(),
 
-  /**
-   * Broker selection
-   */
-  brokers: z
-    .object({
-      /**
-       * Primary broker
-       */
-      primary: BrokerId.default("alpaca"),
+	/**
+	 * Broker selection
+	 */
+	brokers: z
+		.object({
+			/**
+			 * Primary broker
+			 */
+			primary: BrokerId.default("alpaca"),
 
-      /**
-       * Secondary/fallback broker
-       */
-      secondary: BrokerId.nullable().default(null),
-    })
-    .optional(),
+			/**
+			 * Secondary/fallback broker
+			 */
+			secondary: BrokerId.nullable().default(null),
+		})
+		.optional(),
 
-  /**
-   * Alpaca-specific settings
-   */
-  alpaca: AlpacaConfigSchema.optional(),
+	/**
+	 * Alpaca-specific settings
+	 */
+	alpaca: AlpacaConfigSchema.optional(),
 
-  /**
-   * IBKR-specific settings
-   */
-  ibkr: IBKRConfigSchema.optional(),
+	/**
+	 * IBKR-specific settings
+	 */
+	ibkr: IBKRConfigSchema.optional(),
 });
 export type ExecutionConfig = z.infer<typeof ExecutionConfigSchema>;

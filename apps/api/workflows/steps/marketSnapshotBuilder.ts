@@ -18,28 +18,28 @@
 
 import type { Position } from "@cream/broker";
 import type {
-  MarketSnapshot,
-  MarketStatus,
-  Regime,
-  SymbolSnapshot,
-  UniverseConfig,
+	MarketSnapshot,
+	MarketStatus,
+	Regime,
+	SymbolSnapshot,
+	UniverseConfig,
 } from "@cream/domain";
 import { requireEnv } from "@cream/domain";
 import { createExecutionClient, type ExecutionServiceClient } from "@cream/domain/grpc";
 import type { Candle } from "@cream/indicators";
 import {
-  type AlpacaMarketDataClient,
-  type AlpacaSnapshot,
-  createAlpacaClientFromEnv,
-  isAlpacaConfigured,
+	type AlpacaMarketDataClient,
+	type AlpacaSnapshot,
+	createAlpacaClientFromEnv,
+	isAlpacaConfigured,
 } from "@cream/marketdata";
 import { classifyRegime, DEFAULT_RULE_BASED_CONFIG, getRequiredCandleCount } from "@cream/regime";
 import { resolveUniverseSymbols as resolveUniverseSymbolsFromConfig } from "@cream/universe";
 
 import {
-  getCandleFixtures,
-  getSnapshotFixture,
-  type InternalSnapshot,
+	getCandleFixtures,
+	getSnapshotFixture,
+	type InternalSnapshot,
 } from "../../fixtures/market";
 
 // ============================================
@@ -50,46 +50,46 @@ import {
  * Input for the market snapshot builder workflow step.
  */
 export interface SnapshotBuilderInput {
-  /** Timestamp for the snapshot (defaults to now) */
-  asOf?: string;
-  /** Universe symbols to include (if not provided, resolves from config) */
-  symbols?: string[];
-  /** Include option chains */
-  includeOptions?: boolean;
+	/** Timestamp for the snapshot (defaults to now) */
+	asOf?: string;
+	/** Universe symbols to include (if not provided, resolves from config) */
+	symbols?: string[];
+	/** Include option chains */
+	includeOptions?: boolean;
 }
 
 /**
  * Result of the snapshot builder operation.
  */
 export interface SnapshotBuilderResult {
-  success: boolean;
-  /** Complete market snapshot */
-  snapshot?: MarketSnapshot;
-  /** Performance metrics */
-  metrics: {
-    marketDataFetchMs: number;
-    indicatorCalculationMs: number;
-    regimeClassificationMs: number;
-    positionFetchMs: number;
-    totalMs: number;
-  };
-  /** Number of symbols processed */
-  symbolCount: number;
-  /** Errors encountered */
-  errors: string[];
-  /** Warnings */
-  warnings: string[];
+	success: boolean;
+	/** Complete market snapshot */
+	snapshot?: MarketSnapshot;
+	/** Performance metrics */
+	metrics: {
+		marketDataFetchMs: number;
+		indicatorCalculationMs: number;
+		regimeClassificationMs: number;
+		positionFetchMs: number;
+		totalMs: number;
+	};
+	/** Number of symbols processed */
+	symbolCount: number;
+	/** Errors encountered */
+	errors: string[];
+	/** Warnings */
+	warnings: string[];
 }
 
 /**
  * Intermediate data structure for building snapshot.
  */
 interface SnapshotData {
-  marketSnapshots: Map<string, InternalSnapshot>;
-  positions: Position[];
-  regime: Regime;
-  /** Historical candles for indicators (keyed by symbol) */
-  historicalCandles: Map<string, Candle[]>;
+	marketSnapshots: Map<string, InternalSnapshot>;
+	positions: Position[];
+	regime: Regime;
+	/** Historical candles for indicators (keyed by symbol) */
+	historicalCandles: Map<string, Candle[]>;
 }
 
 // ============================================
@@ -100,36 +100,36 @@ interface SnapshotData {
  * Default configuration for snapshot builder.
  */
 export const DEFAULT_SNAPSHOT_CONFIG = {
-  /** Bar timeframes to fetch (in minutes) */
-  barTimeframes: [60], // 1-hour candles for hourly cycle
-  /** Number of historical bars to fetch per timeframe */
-  historicalBars: 100, // Enough for 100-period indicators
-  /** Request timeout in milliseconds */
-  timeoutMs: 30000,
-  /** Concurrent symbol fetch limit */
-  concurrency: 10,
+	/** Bar timeframes to fetch (in minutes) */
+	barTimeframes: [60], // 1-hour candles for hourly cycle
+	/** Number of historical bars to fetch per timeframe */
+	historicalBars: 100, // Enough for 100-period indicators
+	/** Request timeout in milliseconds */
+	timeoutMs: 30000,
+	/** Concurrent symbol fetch limit */
+	concurrency: 10,
 };
 
 /**
  * Performance targets (milliseconds).
  */
 export const PERFORMANCE_TARGETS = {
-  marketDataFetchMs: 5000, // 5 seconds for all symbols
-  indicatorCalculationMs: 1000, // 1 second for all indicators
-  regimeClassificationMs: 100, // 100ms for regime
-  totalMs: 10000, // 10 seconds total
+	marketDataFetchMs: 5000, // 5 seconds for all symbols
+	indicatorCalculationMs: 1000, // 1 second for all indicators
+	regimeClassificationMs: 100, // 100ms for regime
+	totalMs: 10000, // 10 seconds total
 };
 
 /**
  * gRPC execution engine configuration.
  */
 const GRPC_CONFIG = {
-  /** gRPC server URL (from env or default) */
-  baseUrl: process.env.EXECUTION_ENGINE_URL ?? "http://localhost:50053",
-  /** Connection timeout */
-  timeoutMs: 5000,
-  /** Max retries */
-  maxRetries: 2,
+	/** gRPC server URL (from env or default) */
+	baseUrl: process.env.EXECUTION_ENGINE_URL ?? "http://localhost:50053",
+	/** Connection timeout */
+	timeoutMs: 5000,
+	/** Max retries */
+	maxRetries: 2,
 };
 
 // ============================================
@@ -151,89 +151,89 @@ const GRPC_CONFIG = {
  * @returns Snapshot builder result with complete market snapshot
  */
 export async function executeMarketSnapshotBuilder(
-  input: SnapshotBuilderInput
+	input: SnapshotBuilderInput
 ): Promise<SnapshotBuilderResult> {
-  const startTime = performance.now();
-  const errors: string[] = [];
-  const warnings: string[] = [];
+	const startTime = performance.now();
+	const errors: string[] = [];
+	const warnings: string[] = [];
 
-  try {
-    // Phase 1: Resolve universe
-    const symbols = input.symbols ?? (await resolveUniverseSymbols());
-    if (symbols.length === 0) {
-      return {
-        success: false,
-        metrics: createEmptyMetrics(startTime),
-        symbolCount: 0,
-        errors: ["No symbols in trading universe"],
-        warnings,
-      };
-    }
+	try {
+		// Phase 1: Resolve universe
+		const symbols = input.symbols ?? (await resolveUniverseSymbols());
+		if (symbols.length === 0) {
+			return {
+				success: false,
+				metrics: createEmptyMetrics(startTime),
+				symbolCount: 0,
+				errors: ["No symbols in trading universe"],
+				warnings,
+			};
+		}
 
-    // Phase 2: Gather data from all sources
-    const snapshotData = await gatherSnapshotData(symbols, input, errors, warnings);
+		// Phase 2: Gather data from all sources
+		const snapshotData = await gatherSnapshotData(symbols, input, errors, warnings);
 
-    // Phase 3: Build symbol snapshots
-    const symbolSnapshots: SymbolSnapshot[] = [];
-    for (const symbol of symbols) {
-      try {
-        const symbolSnapshot = await buildSymbolSnapshot(symbol, snapshotData, input);
-        symbolSnapshots.push(symbolSnapshot);
-      } catch (error) {
-        errors.push(`Failed to build snapshot for ${symbol}: ${formatError(error)}`);
-      }
-    }
+		// Phase 3: Build symbol snapshots
+		const symbolSnapshots: SymbolSnapshot[] = [];
+		for (const symbol of symbols) {
+			try {
+				const symbolSnapshot = await buildSymbolSnapshot(symbol, snapshotData, input);
+				symbolSnapshots.push(symbolSnapshot);
+			} catch (error) {
+				errors.push(`Failed to build snapshot for ${symbol}: ${formatError(error)}`);
+			}
+		}
 
-    if (symbolSnapshots.length === 0) {
-      return {
-        success: false,
-        metrics: createEmptyMetrics(startTime),
-        symbolCount: symbols.length,
-        errors: ["Failed to build snapshots for all symbols"],
-        warnings,
-      };
-    }
+		if (symbolSnapshots.length === 0) {
+			return {
+				success: false,
+				metrics: createEmptyMetrics(startTime),
+				symbolCount: symbols.length,
+				errors: ["Failed to build snapshots for all symbols"],
+				warnings,
+			};
+		}
 
-    // Phase 4: Assemble final market snapshot
-    const asOf = input.asOf ?? new Date().toISOString();
-    // Note: env.CREAM_ENV is not in the domain env schema, so read directly from process.env
-    const environment = requireEnv();
-    const marketStatus = determineMarketStatus();
+		// Phase 4: Assemble final market snapshot
+		const asOf = input.asOf ?? new Date().toISOString();
+		// Note: env.CREAM_ENV is not in the domain env schema, so read directly from process.env
+		const environment = requireEnv();
+		const marketStatus = determineMarketStatus();
 
-    const snapshot: MarketSnapshot = {
-      environment,
-      asOf,
-      marketStatus,
-      regime: snapshotData.regime,
-      symbols: symbolSnapshots,
-    };
+		const snapshot: MarketSnapshot = {
+			environment,
+			asOf,
+			marketStatus,
+			regime: snapshotData.regime,
+			symbols: symbolSnapshots,
+		};
 
-    const totalMs = performance.now() - startTime;
+		const totalMs = performance.now() - startTime;
 
-    return {
-      success: true,
-      snapshot,
-      metrics: {
-        marketDataFetchMs: 0, // Will be populated during implementation
-        indicatorCalculationMs: 0,
-        regimeClassificationMs: 0,
-        positionFetchMs: 0,
-        totalMs,
-      },
-      symbolCount: symbolSnapshots.length,
-      errors,
-      warnings,
-    };
-  } catch (error) {
-    const _totalMs = performance.now() - startTime;
-    return {
-      success: false,
-      metrics: createEmptyMetrics(startTime),
-      symbolCount: 0,
-      errors: [`Fatal error: ${formatError(error)}`],
-      warnings,
-    };
-  }
+		return {
+			success: true,
+			snapshot,
+			metrics: {
+				marketDataFetchMs: 0, // Will be populated during implementation
+				indicatorCalculationMs: 0,
+				regimeClassificationMs: 0,
+				positionFetchMs: 0,
+				totalMs,
+			},
+			symbolCount: symbolSnapshots.length,
+			errors,
+			warnings,
+		};
+	} catch (error) {
+		const _totalMs = performance.now() - startTime;
+		return {
+			success: false,
+			metrics: createEmptyMetrics(startTime),
+			symbolCount: 0,
+			errors: [`Fatal error: ${formatError(error)}`],
+			warnings,
+		};
+	}
 }
 
 // ============================================
@@ -244,194 +244,194 @@ export async function executeMarketSnapshotBuilder(
  * Gather all required data for snapshot building.
  */
 async function gatherSnapshotData(
-  symbols: string[],
-  input: SnapshotBuilderInput,
-  errors: string[],
-  warnings: string[]
+	symbols: string[],
+	input: SnapshotBuilderInput,
+	errors: string[],
+	warnings: string[]
 ): Promise<SnapshotData> {
-  // Create Alpaca client for market data
-  let alpacaClient: AlpacaMarketDataClient | null = null;
-  const creamEnv = requireEnv();
+	// Create Alpaca client for market data
+	let alpacaClient: AlpacaMarketDataClient | null = null;
+	const creamEnv = requireEnv();
 
-  if (creamEnv !== "BACKTEST" || isAlpacaConfigured()) {
-    try {
-      alpacaClient = createAlpacaClientFromEnv();
-    } catch (error) {
-      warnings.push(`Could not create Alpaca client: ${formatError(error)}`);
-    }
-  }
+	if (creamEnv !== "BACKTEST" || isAlpacaConfigured()) {
+		try {
+			alpacaClient = createAlpacaClientFromEnv();
+		} catch (error) {
+			warnings.push(`Could not create Alpaca client: ${formatError(error)}`);
+		}
+	}
 
-  // Fetch market data for all symbols
-  const marketSnapshots = await fetchMarketData(symbols, input, errors, warnings);
+	// Fetch market data for all symbols
+	const marketSnapshots = await fetchMarketData(symbols, input, errors, warnings);
 
-  // Fetch historical candles for regime classification and indicators
-  const historicalCandles = await fetchHistoricalCandles(symbols, alpacaClient, errors, warnings);
+	// Fetch historical candles for regime classification and indicators
+	const historicalCandles = await fetchHistoricalCandles(symbols, alpacaClient, errors, warnings);
 
-  // Fetch current positions from broker
-  const positions = await fetchPositions(errors, warnings);
+	// Fetch current positions from broker
+	const positions = await fetchPositions(errors, warnings);
 
-  // Classify regime based on market leader (SPY)
-  const regime = await classifyMarketRegime(historicalCandles, errors, warnings);
+	// Classify regime based on market leader (SPY)
+	const regime = await classifyMarketRegime(historicalCandles, errors, warnings);
 
-  return {
-    marketSnapshots,
-    positions,
-    regime,
-    historicalCandles,
-  };
+	return {
+		marketSnapshots,
+		positions,
+		regime,
+		historicalCandles,
+	};
 }
 
 /**
  * Fetch market data snapshots from Alpaca.
  */
 async function fetchMarketData(
-  symbols: string[],
-  _input: SnapshotBuilderInput,
-  errors: string[],
-  warnings: string[]
+	symbols: string[],
+	_input: SnapshotBuilderInput,
+	errors: string[],
+	warnings: string[]
 ): Promise<Map<string, InternalSnapshot>> {
-  const snapshots = new Map<string, InternalSnapshot>();
-  const creamEnv = requireEnv();
+	const snapshots = new Map<string, InternalSnapshot>();
+	const creamEnv = requireEnv();
 
-  // In BACKTEST mode without API keys, use deterministic fixtures
-  if (creamEnv === "BACKTEST" && !isAlpacaConfigured()) {
-    warnings.push("BACKTEST mode without ALPACA_KEY: using fixture market data");
+	// In BACKTEST mode without API keys, use deterministic fixtures
+	if (creamEnv === "BACKTEST" && !isAlpacaConfigured()) {
+		warnings.push("BACKTEST mode without ALPACA_KEY: using fixture market data");
 
-    for (const symbol of symbols) {
-      snapshots.set(symbol, getSnapshotFixture(symbol));
-    }
+		for (const symbol of symbols) {
+			snapshots.set(symbol, getSnapshotFixture(symbol));
+		}
 
-    return snapshots;
-  }
+		return snapshots;
+	}
 
-  // In PAPER/LIVE mode, Alpaca credentials are required
-  if (!isAlpacaConfigured()) {
-    throw new Error(
-      `ALPACA_KEY and ALPACA_SECRET are required in ${creamEnv} mode. ` +
-        "Set these environment variables to fetch live market data."
-    );
-  }
+	// In PAPER/LIVE mode, Alpaca credentials are required
+	if (!isAlpacaConfigured()) {
+		throw new Error(
+			`ALPACA_KEY and ALPACA_SECRET are required in ${creamEnv} mode. ` +
+				"Set these environment variables to fetch live market data."
+		);
+	}
 
-  try {
-    const client = createAlpacaClientFromEnv();
+	try {
+		const client = createAlpacaClientFromEnv();
 
-    // Fetch snapshots in batches for efficiency
-    const batches = chunkArray(symbols, DEFAULT_SNAPSHOT_CONFIG.concurrency);
+		// Fetch snapshots in batches for efficiency
+		const batches = chunkArray(symbols, DEFAULT_SNAPSHOT_CONFIG.concurrency);
 
-    for (const batch of batches) {
-      try {
-        const alpacaSnapshots = await client.getSnapshots(batch);
+		for (const batch of batches) {
+			try {
+				const alpacaSnapshots = await client.getSnapshots(batch);
 
-        for (const symbol of batch) {
-          const alpacaSnapshot = alpacaSnapshots.get(symbol);
-          if (alpacaSnapshot) {
-            snapshots.set(symbol, transformAlpacaSnapshot(symbol, alpacaSnapshot));
-          } else {
-            errors.push(`No snapshot data returned for ${symbol}`);
-          }
-        }
-      } catch (error) {
-        errors.push(`Failed to fetch batch snapshots: ${formatError(error)}`);
-      }
-    }
-  } catch (error) {
-    errors.push(`Market data fetch error: ${formatError(error)}`);
-  }
+				for (const symbol of batch) {
+					const alpacaSnapshot = alpacaSnapshots.get(symbol);
+					if (alpacaSnapshot) {
+						snapshots.set(symbol, transformAlpacaSnapshot(symbol, alpacaSnapshot));
+					} else {
+						errors.push(`No snapshot data returned for ${symbol}`);
+					}
+				}
+			} catch (error) {
+				errors.push(`Failed to fetch batch snapshots: ${formatError(error)}`);
+			}
+		}
+	} catch (error) {
+		errors.push(`Market data fetch error: ${formatError(error)}`);
+	}
 
-  return snapshots;
+	return snapshots;
 }
 
 /**
  * Transform an Alpaca API Snapshot to our internal format.
  */
 function transformAlpacaSnapshot(symbol: string, alpaca: AlpacaSnapshot): InternalSnapshot {
-  return {
-    symbol,
-    lastTrade: alpaca.latestTrade
-      ? {
-          price: alpaca.latestTrade.price,
-          size: alpaca.latestTrade.size,
-          timestamp: new Date(alpaca.latestTrade.timestamp).getTime(),
-        }
-      : undefined,
-    lastQuote: alpaca.latestQuote
-      ? {
-          bid: alpaca.latestQuote.bidPrice,
-          ask: alpaca.latestQuote.askPrice,
-          bidSize: alpaca.latestQuote.bidSize,
-          askSize: alpaca.latestQuote.askSize,
-          timestamp: new Date(alpaca.latestQuote.timestamp).getTime(),
-        }
-      : undefined,
-    volume: alpaca.dailyBar?.volume ?? 0,
-    dayHigh: alpaca.dailyBar?.high ?? 0,
-    dayLow: alpaca.dailyBar?.low ?? 0,
-    prevClose: alpaca.prevDailyBar?.close ?? 0,
-    open: alpaca.dailyBar?.open ?? 0,
-  };
+	return {
+		symbol,
+		lastTrade: alpaca.latestTrade
+			? {
+					price: alpaca.latestTrade.price,
+					size: alpaca.latestTrade.size,
+					timestamp: new Date(alpaca.latestTrade.timestamp).getTime(),
+				}
+			: undefined,
+		lastQuote: alpaca.latestQuote
+			? {
+					bid: alpaca.latestQuote.bidPrice,
+					ask: alpaca.latestQuote.askPrice,
+					bidSize: alpaca.latestQuote.bidSize,
+					askSize: alpaca.latestQuote.askSize,
+					timestamp: new Date(alpaca.latestQuote.timestamp).getTime(),
+				}
+			: undefined,
+		volume: alpaca.dailyBar?.volume ?? 0,
+		dayHigh: alpaca.dailyBar?.high ?? 0,
+		dayLow: alpaca.dailyBar?.low ?? 0,
+		prevClose: alpaca.prevDailyBar?.close ?? 0,
+		open: alpaca.dailyBar?.open ?? 0,
+	};
 }
 
 /**
  * Fetch historical candles for all symbols.
  */
 async function fetchHistoricalCandles(
-  symbols: string[],
-  alpacaClient: AlpacaMarketDataClient | null,
-  errors: string[],
-  warnings: string[]
+	symbols: string[],
+	alpacaClient: AlpacaMarketDataClient | null,
+	errors: string[],
+	warnings: string[]
 ): Promise<Map<string, Candle[]>> {
-  const candles = new Map<string, Candle[]>();
-  const requiredBars = getRequiredCandleCount(DEFAULT_RULE_BASED_CONFIG) + 10; // Extra buffer
+	const candles = new Map<string, Candle[]>();
+	const requiredBars = getRequiredCandleCount(DEFAULT_RULE_BASED_CONFIG) + 10; // Extra buffer
 
-  // If no client available, use deterministic fixtures in BACKTEST mode
-  if (!alpacaClient) {
-    warnings.push("Using fixture historical candles (no Alpaca client available)");
-    for (const symbol of symbols) {
-      candles.set(symbol, getCandleFixtures(symbol, requiredBars));
-    }
-    return candles;
-  }
+	// If no client available, use deterministic fixtures in BACKTEST mode
+	if (!alpacaClient) {
+		warnings.push("Using fixture historical candles (no Alpaca client available)");
+		for (const symbol of symbols) {
+			candles.set(symbol, getCandleFixtures(symbol, requiredBars));
+		}
+		return candles;
+	}
 
-  // Calculate date range (fetch last ~60 trading days for hourly bars)
-  const to = new Date();
-  const from = new Date();
-  from.setDate(from.getDate() - 90); // ~60 trading days
+	// Calculate date range (fetch last ~60 trading days for hourly bars)
+	const to = new Date();
+	const from = new Date();
+	from.setDate(from.getDate() - 90); // ~60 trading days
 
-  const toStr = to.toISOString().split("T")[0];
-  const fromStr = from.toISOString().split("T")[0];
+	const toStr = to.toISOString().split("T")[0];
+	const fromStr = from.toISOString().split("T")[0];
 
-  // Fetch candles in batches
-  const batches = chunkArray(symbols, DEFAULT_SNAPSHOT_CONFIG.concurrency);
+	// Fetch candles in batches
+	const batches = chunkArray(symbols, DEFAULT_SNAPSHOT_CONFIG.concurrency);
 
-  for (const batch of batches) {
-    const results = await Promise.allSettled(
-      batch.map(async (symbol) => {
-        const bars = await alpacaClient.getBars(symbol, "1Hour", fromStr, toStr, requiredBars);
+	for (const batch of batches) {
+		const results = await Promise.allSettled(
+			batch.map(async (symbol) => {
+				const bars = await alpacaClient.getBars(symbol, "1Hour", fromStr, toStr, requiredBars);
 
-        // Convert to Candle format (Alpaca returns oldest-first by default)
-        const symbolCandles: Candle[] = bars.map((bar) => ({
-          timestamp: new Date(bar.timestamp).getTime(),
-          open: bar.open,
-          high: bar.high,
-          low: bar.low,
-          close: bar.close,
-          volume: bar.volume,
-        }));
+				// Convert to Candle format (Alpaca returns oldest-first by default)
+				const symbolCandles: Candle[] = bars.map((bar) => ({
+					timestamp: new Date(bar.timestamp).getTime(),
+					open: bar.open,
+					high: bar.high,
+					low: bar.low,
+					close: bar.close,
+					volume: bar.volume,
+				}));
 
-        return { symbol, candles: symbolCandles };
-      })
-    );
+				return { symbol, candles: symbolCandles };
+			})
+		);
 
-    for (const result of results) {
-      if (result.status === "fulfilled") {
-        candles.set(result.value.symbol, result.value.candles);
-      } else {
-        errors.push(`Failed to fetch candles for symbol: ${result.reason}`);
-      }
-    }
-  }
+		for (const result of results) {
+			if (result.status === "fulfilled") {
+				candles.set(result.value.symbol, result.value.candles);
+			} else {
+				errors.push(`Failed to fetch candles for symbol: ${result.reason}`);
+			}
+		}
+	}
 
-  return candles;
+	return candles;
 }
 
 /**
@@ -443,106 +443,106 @@ let executionClient: ExecutionServiceClient | null = null;
  * Get or create the execution gRPC client.
  */
 function getExecutionClient(): ExecutionServiceClient {
-  if (!executionClient) {
-    executionClient = createExecutionClient(GRPC_CONFIG.baseUrl, {
-      timeoutMs: GRPC_CONFIG.timeoutMs,
-      maxRetries: GRPC_CONFIG.maxRetries,
-    });
-  }
-  return executionClient;
+	if (!executionClient) {
+		executionClient = createExecutionClient(GRPC_CONFIG.baseUrl, {
+			timeoutMs: GRPC_CONFIG.timeoutMs,
+			maxRetries: GRPC_CONFIG.maxRetries,
+		});
+	}
+	return executionClient;
 }
 
 /**
  * Fetch current positions from broker via gRPC.
  */
 async function fetchPositions(errors: string[], warnings: string[]): Promise<Position[]> {
-  try {
-    // In BACKTEST mode, positions come from backtest state
-    // Note: env.CREAM_ENV is not in the domain env schema, so read directly from process.env
-    const environment = process.env.CREAM_ENV;
+	try {
+		// In BACKTEST mode, positions come from backtest state
+		// Note: env.CREAM_ENV is not in the domain env schema, so read directly from process.env
+		const environment = process.env.CREAM_ENV;
 
-    if (environment === "BACKTEST") {
-      warnings.push("Backtest mode: positions not fetched from broker");
-      return [];
-    }
+		if (environment === "BACKTEST") {
+			warnings.push("Backtest mode: positions not fetched from broker");
+			return [];
+		}
 
-    // Fetch from execution engine gRPC
-    const client = getExecutionClient();
-    const result = await client.getPositions({});
+		// Fetch from execution engine gRPC
+		const client = getExecutionClient();
+		const result = await client.getPositions({});
 
-    // Convert gRPC Position to broker Position
-    const positions: Position[] = result.data.positions.map((p) => ({
-      symbol: p.instrument?.symbol ?? "",
-      qty: p.quantity,
-      side: p.quantity >= 0 ? "long" : "short",
-      avgEntryPrice: p.avgEntryPrice,
-      marketValue: p.marketValue,
-      costBasis: p.costBasis,
-      unrealizedPl: p.unrealizedPnl,
-      unrealizedPlpc: p.unrealizedPnlPct,
-      currentPrice: p.marketValue / Math.abs(p.quantity || 1),
-      lastdayPrice: 0, // Not available from gRPC
-      changeToday: 0, // Not available from gRPC
-    }));
+		// Convert gRPC Position to broker Position
+		const positions: Position[] = result.data.positions.map((p) => ({
+			symbol: p.instrument?.symbol ?? "",
+			qty: p.quantity,
+			side: p.quantity >= 0 ? "long" : "short",
+			avgEntryPrice: p.avgEntryPrice,
+			marketValue: p.marketValue,
+			costBasis: p.costBasis,
+			unrealizedPl: p.unrealizedPnl,
+			unrealizedPlpc: p.unrealizedPnlPct,
+			currentPrice: p.marketValue / Math.abs(p.quantity || 1),
+			lastdayPrice: 0, // Not available from gRPC
+			changeToday: 0, // Not available from gRPC
+		}));
 
-    return positions;
-  } catch (error) {
-    // Graceful degradation - return empty positions if gRPC fails
-    const errorMsg = formatError(error);
-    if (errorMsg.includes("UNAVAILABLE") || errorMsg.includes("connect")) {
-      warnings.push(`Execution engine not available: ${errorMsg}`);
-    } else {
-      errors.push(`Position fetch error: ${errorMsg}`);
-    }
-    return [];
-  }
+		return positions;
+	} catch (error) {
+		// Graceful degradation - return empty positions if gRPC fails
+		const errorMsg = formatError(error);
+		if (errorMsg.includes("UNAVAILABLE") || errorMsg.includes("connect")) {
+			warnings.push(`Execution engine not available: ${errorMsg}`);
+		} else {
+			errors.push(`Position fetch error: ${errorMsg}`);
+		}
+		return [];
+	}
 }
 
 /**
  * Classify current market regime using historical candles.
  */
 async function classifyMarketRegime(
-  historicalCandles: Map<string, Candle[]>,
-  errors: string[],
-  warnings: string[]
+	historicalCandles: Map<string, Candle[]>,
+	errors: string[],
+	warnings: string[]
 ): Promise<Regime> {
-  try {
-    // Use SPY as market leader for regime classification
-    const spyCandles = historicalCandles.get("SPY");
+	try {
+		// Use SPY as market leader for regime classification
+		const spyCandles = historicalCandles.get("SPY");
 
-    if (!spyCandles || spyCandles.length === 0) {
-      warnings.push("SPY candles not available for regime classification");
-      return "RANGE_BOUND"; // Default regime
-    }
+		if (!spyCandles || spyCandles.length === 0) {
+			warnings.push("SPY candles not available for regime classification");
+			return "RANGE_BOUND"; // Default regime
+		}
 
-    // Check if we have enough data for classification
-    const requiredCount = getRequiredCandleCount(DEFAULT_RULE_BASED_CONFIG);
-    if (spyCandles.length < requiredCount) {
-      warnings.push(
-        `Insufficient SPY candles for regime classification: ${spyCandles.length}/${requiredCount}`
-      );
-      return "RANGE_BOUND";
-    }
+		// Check if we have enough data for classification
+		const requiredCount = getRequiredCandleCount(DEFAULT_RULE_BASED_CONFIG);
+		if (spyCandles.length < requiredCount) {
+			warnings.push(
+				`Insufficient SPY candles for regime classification: ${spyCandles.length}/${requiredCount}`
+			);
+			return "RANGE_BOUND";
+		}
 
-    // Classify regime using rule-based classifier
-    const result = classifyRegime({ candles: spyCandles }, DEFAULT_RULE_BASED_CONFIG);
+		// Classify regime using rule-based classifier
+		const result = classifyRegime({ candles: spyCandles }, DEFAULT_RULE_BASED_CONFIG);
 
-    // Map regime labels to domain Regime type
-    const regimeMap: Record<string, Regime> = {
-      BULL_TREND: "BULL_TREND",
-      BEAR_TREND: "BEAR_TREND",
-      RANGE: "RANGE_BOUND",
-      HIGH_VOL: "HIGH_VOL",
-      LOW_VOL: "LOW_VOL",
-    };
+		// Map regime labels to domain Regime type
+		const regimeMap: Record<string, Regime> = {
+			BULL_TREND: "BULL_TREND",
+			BEAR_TREND: "BEAR_TREND",
+			RANGE: "RANGE_BOUND",
+			HIGH_VOL: "HIGH_VOL",
+			LOW_VOL: "LOW_VOL",
+		};
 
-    const regime = regimeMap[result.regime] ?? "RANGE_BOUND";
+		const regime = regimeMap[result.regime] ?? "RANGE_BOUND";
 
-    return regime;
-  } catch (error) {
-    errors.push(`Regime classification error: ${formatError(error)}`);
-    return "RANGE_BOUND"; // Default fallback
-  }
+		return regime;
+	} catch (error) {
+		errors.push(`Regime classification error: ${formatError(error)}`);
+		return "RANGE_BOUND"; // Default fallback
+	}
 }
 
 // ============================================
@@ -553,56 +553,56 @@ async function classifyMarketRegime(
  * Build a complete symbol snapshot with indicators.
  */
 async function buildSymbolSnapshot(
-  symbol: string,
-  data: SnapshotData,
-  input: SnapshotBuilderInput
+	symbol: string,
+	data: SnapshotData,
+	input: SnapshotBuilderInput
 ): Promise<SymbolSnapshot> {
-  const marketSnapshot = data.marketSnapshots.get(symbol);
+	const marketSnapshot = data.marketSnapshots.get(symbol);
 
-  if (!marketSnapshot) {
-    throw new Error(`No market data available for ${symbol}`);
-  }
+	if (!marketSnapshot) {
+		throw new Error(`No market data available for ${symbol}`);
+	}
 
-  // Convert internal snapshot to domain Quote schema
-  const quote = {
-    symbol,
-    bid: marketSnapshot.lastQuote?.bid ?? marketSnapshot.lastTrade?.price ?? 0,
-    ask: marketSnapshot.lastQuote?.ask ?? marketSnapshot.lastTrade?.price ?? 0,
-    bidSize: marketSnapshot.lastQuote?.bidSize ?? 0,
-    askSize: marketSnapshot.lastQuote?.askSize ?? 0,
-    last: marketSnapshot.lastTrade?.price ?? 0,
-    lastSize: marketSnapshot.lastTrade?.size ?? 0,
-    volume: marketSnapshot.volume ?? 0,
-    timestamp: new Date(marketSnapshot.lastTrade?.timestamp ?? Date.now()).toISOString(),
-  };
+	// Convert internal snapshot to domain Quote schema
+	const quote = {
+		symbol,
+		bid: marketSnapshot.lastQuote?.bid ?? marketSnapshot.lastTrade?.price ?? 0,
+		ask: marketSnapshot.lastQuote?.ask ?? marketSnapshot.lastTrade?.price ?? 0,
+		bidSize: marketSnapshot.lastQuote?.bidSize ?? 0,
+		askSize: marketSnapshot.lastQuote?.askSize ?? 0,
+		last: marketSnapshot.lastTrade?.price ?? 0,
+		lastSize: marketSnapshot.lastTrade?.size ?? 0,
+		volume: marketSnapshot.volume ?? 0,
+		timestamp: new Date(marketSnapshot.lastTrade?.timestamp ?? Date.now()).toISOString(),
+	};
 
-  // Get historical candles for this symbol
-  const candles = data.historicalCandles.get(symbol) ?? [];
+	// Get historical candles for this symbol
+	const candles = data.historicalCandles.get(symbol) ?? [];
 
-  // Convert candles to bar format for snapshot
-  const bars = candles.slice(-DEFAULT_SNAPSHOT_CONFIG.historicalBars).map((candle) => ({
-    timestamp: new Date(candle.timestamp).toISOString(),
-    open: candle.open,
-    high: candle.high,
-    low: candle.low,
-    close: candle.close,
-    volume: candle.volume,
-  }));
+	// Convert candles to bar format for snapshot
+	const bars = candles.slice(-DEFAULT_SNAPSHOT_CONFIG.historicalBars).map((candle) => ({
+		timestamp: new Date(candle.timestamp).toISOString(),
+		open: candle.open,
+		high: candle.high,
+		low: candle.low,
+		close: candle.close,
+		volume: candle.volume,
+	}));
 
-  const marketStatus = determineMarketStatus();
-  const asOf = input.asOf ?? new Date().toISOString();
+	const marketStatus = determineMarketStatus();
+	const asOf = input.asOf ?? new Date().toISOString();
 
-  return {
-    symbol,
-    quote,
-    bars,
-    marketStatus,
-    dayHigh: marketSnapshot.dayHigh ?? quote.last,
-    dayLow: marketSnapshot.dayLow ?? quote.last,
-    prevClose: marketSnapshot.prevClose ?? quote.last,
-    open: marketSnapshot.open ?? quote.last,
-    asOf,
-  };
+	return {
+		symbol,
+		quote,
+		bars,
+		marketStatus,
+		dayHigh: marketSnapshot.dayHigh ?? quote.last,
+		dayLow: marketSnapshot.dayLow ?? quote.last,
+		prevClose: marketSnapshot.prevClose ?? quote.last,
+		open: marketSnapshot.open ?? quote.last,
+		asOf,
+	};
 }
 
 // ============================================
@@ -613,91 +613,91 @@ async function buildSymbolSnapshot(
  * Resolve trading universe symbols.
  */
 async function resolveUniverseSymbols(): Promise<string[]> {
-  try {
-    // Create a simple default universe config
-    // In production, this would be loaded from config files
-    const defaultUniverseConfig: UniverseConfig = {
-      sources: [
-        {
-          type: "static",
-          enabled: true,
-          tickers: ["SPY", "QQQ", "AAPL", "MSFT", "GOOGL", "AMZN", "NVDA", "TSLA"],
-        },
-      ],
-    };
+	try {
+		// Create a simple default universe config
+		// In production, this would be loaded from config files
+		const defaultUniverseConfig: UniverseConfig = {
+			sources: [
+				{
+					type: "static",
+					enabled: true,
+					tickers: ["SPY", "QQQ", "AAPL", "MSFT", "GOOGL", "AMZN", "NVDA", "TSLA"],
+				},
+			],
+		};
 
-    const symbols = await resolveUniverseSymbolsFromConfig(defaultUniverseConfig);
-    return symbols;
-  } catch (_error) {
-    // Fallback to default watchlist
-    return ["SPY", "QQQ", "AAPL", "MSFT", "GOOGL", "AMZN", "NVDA", "TSLA"];
-  }
+		const symbols = await resolveUniverseSymbolsFromConfig(defaultUniverseConfig);
+		return symbols;
+	} catch (_error) {
+		// Fallback to default watchlist
+		return ["SPY", "QQQ", "AAPL", "MSFT", "GOOGL", "AMZN", "NVDA", "TSLA"];
+	}
 }
 
 /**
  * Determine current market status.
  */
 function determineMarketStatus(): MarketStatus {
-  const now = new Date();
-  const hour = now.getUTCHours();
-  const day = now.getUTCDay();
+	const now = new Date();
+	const hour = now.getUTCHours();
+	const day = now.getUTCDay();
 
-  // Weekend (Saturday = 6, Sunday = 0)
-  if (day === 0 || day === 6) {
-    return "CLOSED";
-  }
+	// Weekend (Saturday = 6, Sunday = 0)
+	if (day === 0 || day === 6) {
+		return "CLOSED";
+	}
 
-  // Convert to ET (UTC-5 or UTC-4 depending on DST)
-  // Simple approximation: 14:30-21:00 UTC is 9:30-16:00 ET
-  const etHour = hour - 5;
+	// Convert to ET (UTC-5 or UTC-4 depending on DST)
+	// Simple approximation: 14:30-21:00 UTC is 9:30-16:00 ET
+	const etHour = hour - 5;
 
-  if (etHour >= 9.5 && etHour < 16) {
-    return "OPEN";
-  }
+	if (etHour >= 9.5 && etHour < 16) {
+		return "OPEN";
+	}
 
-  if (etHour >= 4 && etHour < 9.5) {
-    return "PRE_MARKET";
-  }
+	if (etHour >= 4 && etHour < 9.5) {
+		return "PRE_MARKET";
+	}
 
-  if (etHour >= 16 && etHour < 20) {
-    return "AFTER_HOURS";
-  }
+	if (etHour >= 16 && etHour < 20) {
+		return "AFTER_HOURS";
+	}
 
-  return "CLOSED";
+	return "CLOSED";
 }
 
 /**
  * Chunk array into batches.
  */
 function chunkArray<T>(array: T[], size: number): T[][] {
-  const chunks: T[][] = [];
-  for (let i = 0; i < array.length; i += size) {
-    chunks.push(array.slice(i, i + size));
-  }
-  return chunks;
+	const chunks: T[][] = [];
+	for (let i = 0; i < array.length; i += size) {
+		chunks.push(array.slice(i, i + size));
+	}
+	return chunks;
 }
 
 /**
  * Format error for logging.
  */
 function formatError(error: unknown): string {
-  if (error instanceof Error) {
-    return error.message;
-  }
-  return String(error);
+	if (error instanceof Error) {
+		return error.message;
+	}
+	return String(error);
 }
 
 /**
  * Create empty metrics structure.
  */
 function createEmptyMetrics(startTime: number): SnapshotBuilderResult["metrics"] {
-  return {
-    marketDataFetchMs: 0,
-    indicatorCalculationMs: 0,
-    regimeClassificationMs: 0,
-    positionFetchMs: 0,
-    totalMs: performance.now() - startTime,
-  };
+	return {
+		marketDataFetchMs: 0,
+		indicatorCalculationMs: 0,
+		regimeClassificationMs: 0,
+		positionFetchMs: 0,
+		totalMs: performance.now() - startTime,
+	};
 }
 
 // ============================================
@@ -710,7 +710,7 @@ function createEmptyMetrics(startTime: number): SnapshotBuilderResult["metrics"]
  * Convenience wrapper for targeted snapshot building.
  */
 export async function buildSnapshotForSymbols(symbols: string[]): Promise<SnapshotBuilderResult> {
-  return executeMarketSnapshotBuilder({ symbols });
+	return executeMarketSnapshotBuilder({ symbols });
 }
 
 /**
@@ -719,7 +719,7 @@ export async function buildSnapshotForSymbols(symbols: string[]): Promise<Snapsh
  * Convenience wrapper for full universe snapshot.
  */
 export async function buildSnapshotForUniverse(): Promise<SnapshotBuilderResult> {
-  return executeMarketSnapshotBuilder({});
+	return executeMarketSnapshotBuilder({});
 }
 
 /**
@@ -728,8 +728,8 @@ export async function buildSnapshotForUniverse(): Promise<SnapshotBuilderResult>
  * Convenience wrapper for historical snapshot building.
  */
 export async function buildHistoricalSnapshot(
-  asOf: string,
-  symbols?: string[]
+	asOf: string,
+	symbols?: string[]
 ): Promise<SnapshotBuilderResult> {
-  return executeMarketSnapshotBuilder({ asOf, symbols });
+	return executeMarketSnapshotBuilder({ asOf, symbols });
 }
