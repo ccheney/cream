@@ -11,6 +11,7 @@
 import { motion } from "framer-motion";
 import { memo } from "react";
 import type { AgentStreamingState } from "@/stores/agent-streaming-store";
+import { useStatusNarrative } from "@/hooks/useStatusNarrative";
 import { AGENT_METADATA, type NetworkAgentType } from "./types";
 
 // ============================================
@@ -132,6 +133,7 @@ export const AgentNode = memo(function AgentNode({
   const activeToolName = toolCalls.find((tc) => tc.status === "pending")?.toolName;
 
   const isProcessing = status === "processing";
+  const { narrative } = useStatusNarrative(state?.reasoningText ?? "", isProcessing);
 
   return (
     <motion.button
@@ -219,7 +221,9 @@ export const AgentNode = memo(function AgentNode({
               </p>
             )}
             {status === "processing" && !activeToolName && (
-              <p className="text-[11px] text-amber-600 dark:text-amber-400">Processing...</p>
+              <p className="text-[11px] text-amber-600 dark:text-amber-400 truncate max-w-[160px]">
+                {narrative}
+              </p>
             )}
             {status === "complete" && (
               <p className="text-[11px] text-emerald-600 dark:text-emerald-400">Complete</p>

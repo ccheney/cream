@@ -132,14 +132,26 @@ function ContextFeedConnector({ isActive }: ContextFeedConnectorProps) {
 
 interface ConnectionArrowProps {
   isActive: boolean;
+  isComplete?: boolean;
   label?: string;
 }
 
-function ConnectionArrow({ isActive, label }: ConnectionArrowProps) {
-  const color = isActive ? "bg-amber-500" : "bg-stone-300 dark:bg-night-600";
+function ConnectionArrow({ isActive, isComplete = false, label }: ConnectionArrowProps) {
+  const color = isActive
+    ? "bg-amber-500"
+    : isComplete
+      ? "bg-emerald-500"
+      : "bg-stone-300 dark:bg-night-600";
+  const borderColor = isActive
+    ? "border-t-amber-500"
+    : isComplete
+      ? "border-t-emerald-500"
+      : "border-t-stone-300 dark:border-t-night-600";
   const textColor = isActive
     ? "text-amber-600 dark:text-amber-400 bg-amber-50 dark:bg-amber-900/20"
-    : "text-stone-400 dark:text-stone-500 bg-stone-100 dark:bg-night-700";
+    : isComplete
+      ? "text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-900/20"
+      : "text-stone-400 dark:text-stone-500 bg-stone-100 dark:bg-night-700";
 
   return (
     <div className="flex flex-col items-center py-1">
@@ -147,9 +159,7 @@ function ConnectionArrow({ isActive, label }: ConnectionArrowProps) {
       <div className={`w-0.5 h-4 ${color}`} />
       {/* Arrow triangle */}
       <div
-        className={`w-0 h-0 border-l-[6px] border-l-transparent border-r-[6px] border-r-transparent border-t-[8px] ${
-          isActive ? "border-t-amber-500" : "border-t-stone-300 dark:border-t-night-600"
-        }`}
+        className={`w-0 h-0 border-l-[6px] border-l-transparent border-r-[6px] border-r-transparent border-t-[8px] ${borderColor}`}
       />
       {/* Label */}
       {label && (
@@ -183,10 +193,8 @@ export function AgentNetwork({
   isLive = false,
   compact = false,
 }: AgentNetworkProps) {
-  // Track expanded phases for collapsible UI
-  const [expandedPhases, setExpandedPhases] = useState<Set<OODAPhase>>(
-    new Set(["grounding", "analysts", "debate", "trader", "consensus"])
-  );
+  // Track expanded phases for collapsible UI (start collapsed)
+  const [expandedPhases, setExpandedPhases] = useState<Set<OODAPhase>>(new Set());
 
   // Track user interaction for auto-focus behavior
   const [userHasInteracted, setUserHasInteracted] = useState(false);
@@ -259,6 +267,31 @@ export function AgentNetwork({
     }
     return status;
   }, [agents, currentPhase]);
+
+  // Auto-expand phases when they become active or complete
+  useEffect(() => {
+    const phasesToExpand: OODAPhase[] = [];
+
+    for (const config of PHASE_CONFIG) {
+      const status = phaseStatus[config.phase];
+      // Expand if active or complete (not pending)
+      if (status === "active" || status === "complete" || status === "error") {
+        if (!expandedPhases.has(config.phase)) {
+          phasesToExpand.push(config.phase);
+        }
+      }
+    }
+
+    if (phasesToExpand.length > 0) {
+      setExpandedPhases((prev) => {
+        const next = new Set(prev);
+        for (const phase of phasesToExpand) {
+          next.add(phase);
+        }
+        return next;
+      });
+    }
+  }, [phaseStatus, expandedPhases]);
 
   // Screen reader announcements
   const selectedAgentStatus = selectedAgent ? agents.get(selectedAgent)?.status : undefined;
@@ -338,26 +371,14 @@ export function AgentNetwork({
       tabIndex={0}
       onKeyDown={handleKeyDown}
     >
-      {/* Header */}
-      <div className="flex items-center justify-between mb-4">
-        <h2 className="text-lg font-semibold text-stone-900 dark:text-night-50">Agent Network</h2>
-        <div className="flex items-center gap-4">
-          {cycleId && (
-            <span className="text-xs font-mono text-stone-400 dark:text-stone-500">
-              Cycle: {cycleId.slice(0, 12)}...
-            </span>
-          )}
-          {isLive && (
-            <span className="flex items-center gap-1.5 text-xs text-emerald-600 dark:text-emerald-400">
-              <span className="relative flex h-2 w-2">
-                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />
-                <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500" />
-              </span>
-              Live
-            </span>
-          )}
+      {/* Cycle ID Display */}
+      {cycleId && (
+        <div className="flex items-center justify-end mb-4">
+          <span className="text-xs font-mono text-stone-400 dark:text-stone-500">
+            Cycle: {cycleId.slice(0, 12)}...
+          </span>
         </div>
-      </div>
+      )}
 
       {/* Context Header - Observe/Orient data inputs */}
       <ContextHeader
@@ -385,6 +406,7 @@ export function AgentNetwork({
 
       <ConnectionArrow
         isActive={phaseStatus.grounding === "complete" && phaseStatus.analysts !== "complete"}
+        isComplete={phaseStatus.analysts === "complete"}
         label="Grounding Context"
       />
 
@@ -404,6 +426,7 @@ export function AgentNetwork({
 
       <ConnectionArrow
         isActive={phaseStatus.analysts === "complete" && phaseStatus.debate !== "complete"}
+        isComplete={phaseStatus.debate === "complete"}
         label="Analyst Outputs"
       />
 
@@ -423,6 +446,7 @@ export function AgentNetwork({
 
       <ConnectionArrow
         isActive={phaseStatus.debate === "complete" && phaseStatus.trader !== "complete"}
+        isComplete={phaseStatus.trader === "complete"}
         label="Bull/Bear Cases"
       />
 
@@ -442,6 +466,7 @@ export function AgentNetwork({
 
       <ConnectionArrow
         isActive={phaseStatus.trader === "complete" && phaseStatus.consensus !== "complete"}
+        isComplete={phaseStatus.consensus === "complete"}
         label="DecisionPlan"
       />
 
@@ -461,6 +486,7 @@ export function AgentNetwork({
 
       <ConnectionArrow
         isActive={phaseStatus.consensus === "complete" && phaseStatus.act !== "complete"}
+        isComplete={phaseStatus.act === "complete"}
         label="Votes"
       />
 

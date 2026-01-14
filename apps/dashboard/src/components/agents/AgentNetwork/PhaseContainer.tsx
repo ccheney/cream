@@ -226,7 +226,7 @@ export const PhaseContainer = memo(function PhaseContainer({
               exit="collapsed"
               className="overflow-hidden"
             >
-              <div className={compact ? "px-3 pb-3" : "px-4 pb-4"}>{children}</div>
+              <div className={compact ? "p-3" : "p-4"}>{children}</div>
             </motion.div>
           )}
         </AnimatePresence>
