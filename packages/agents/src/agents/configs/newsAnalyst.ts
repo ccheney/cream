@@ -15,7 +15,6 @@ export const NEWS_ANALYST_CONFIG: AgentConfig = {
 		"Cross-references multiple sources",
 	],
 	tools: [
-		"news_search",
 		"extract_news_context",
 		"analyze_content",
 		"helix_query",
