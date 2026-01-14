@@ -1,464 +1,369 @@
-# Cream Technical Architecture
+# Cream Architecture
 
-> Agentic trading system for US equities and options combining LLM reasoning with deterministic Rust execution. Runs hourly OODA loops (Observe → Orient → Decide → Act).
-
----
-
-## Table of Contents
-
-1. [System Overview](#1-system-overview)
-2. [Service Architecture](#2-service-architecture)
-3. [Agent Architecture](#3-agent-architecture)
-4. [OODA Loop Data Flow](#4-ooda-loop-data-flow)
-5. [Rust Execution Engine](#5-rust-execution-engine)
+> Agentic trading system for US equities and options. Runs hourly OODA loops (Observe → Orient → Decide → Act) with an 8-agent consensus network.
 
 ---
 
-## 1. System Overview
-
-Cream is a multi-language monorepo implementing an autonomous trading system:
-
-- **8-Agent Consensus Network**: LLM agents (Gemini) analyze markets, debate positions, and reach consensus before execution
-- **Deterministic Execution**: Rust engine validates decisions against risk constraints and routes orders
-- **Hourly OODA Cycles**: Scheduled trading cycles with checkpoint-based recovery
-- **Multi-Asset Support**: US equities and options (up to 4-leg strategies)
-- **Environment Isolation**: Complete separation of BACKTEST, PAPER, and LIVE modes
-- **GraphRAG Memory**: HelixDB stores trade decisions for case-based reasoning
+## System Overview
 
 ```mermaid
-%%{init: {'theme': 'base', 'themeVariables': { 'primaryColor': '#FEF3C7', 'primaryTextColor': '#3D3832', 'primaryBorderColor': '#D97706', 'lineColor': '#78716C', 'secondaryColor': '#CCFBF1', 'tertiaryColor': '#FBF8F3'}}}%%
 flowchart TB
-    subgraph Services["Application Layer"]
-        Dashboard["`**Dashboard**
-        Next.js 16 · :3000`"]
-        DashAPI["`**Dashboard-API**
-        Hono + Bun · :3001`"]
-        Worker["`**Worker**
-        Scheduler · :3002`"]
-        Engine["`**Execution Engine**
-        Rust · :50051/53/55`"]
+    subgraph UI["User Interface"]
+        Dashboard[Web Dashboard]
+    end
+
+    subgraph Services["Application Services"]
+        API[Dashboard API]
+        Worker[Scheduler]
+        Engine[Execution Engine]
     end
 
     subgraph Data["Data Layer"]
-        Turso[("`**Turso**
-        SQLite · :8080`")]
-        Helix[("`**HelixDB**
-        Graph+Vec · :6969`")]
-        Redis[("`**Redis**
-        Cache · :6379`")]
+        SQL[(SQL Database)]
+        Graph[(Graph + Vector DB)]
+        Cache[(Cache)]
     end
 
-    subgraph External["External Services"]
-        Alpaca(["`**Alpaca**
-        Broker + Market Data`"])
+    subgraph External["External"]
+        Broker([Broker])
+        LLM([LLM Provider])
+        Embed([Embeddings Provider])
     end
 
-    Dashboard -->|HTTP/WS| DashAPI
-    DashAPI --> Turso
-    DashAPI --> Helix
-    DashAPI -->|gRPC| Engine
-    Worker --> Turso
-    Worker --> Helix
+    Dashboard -->|HTTP/WebSocket| API
+    API --> SQL
+    API --> Graph
+    API -->|gRPC| Engine
+    API --> LLM
+    API --> Embed
+    Worker --> SQL
+    Worker --> Graph
     Worker -->|gRPC| Engine
-    Engine --> Alpaca
-    Services --> Redis
-
-    classDef service fill:#FEF3C7,stroke:#D97706,stroke-width:2px,color:#3D3832
-    classDef database fill:#CCFBF1,stroke:#14B8A6,stroke-width:2px,color:#3D3832
-    classDef external fill:#F5F5F4,stroke:#78716C,stroke-width:2px,color:#3D3832
-
-    class Dashboard,DashAPI,Worker,Engine service
-    class Turso,Helix,Redis database
-    class Alpaca external
+    Worker --> LLM
+    Worker --> Embed
+    Engine --> Broker
+    Services --> Cache
 ```
 
 ---
 
-## 2. Service Architecture
+## Services
 
-### Dashboard Request Flow
-
-```mermaid
-%%{init: {'theme': 'base', 'themeVariables': { 'primaryColor': '#FEF3C7', 'primaryTextColor': '#3D3832', 'lineColor': '#78716C', 'actorBkg': '#FEF3C7', 'actorBorder': '#D97706', 'actorTextColor': '#3D3832', 'activationBkgColor': '#F5F1EA', 'activationBorderColor': '#D97706', 'signalColor': '#57534E', 'signalTextColor': '#3D3832', 'noteBkgColor': '#FBF8F3', 'noteBorderColor': '#EBE5DA', 'noteTextColor': '#3D3832'}}}%%
-sequenceDiagram
-    participant U as User
-    participant D as Dashboard<br/>:3000
-    participant A as Dashboard-API<br/>:3001
-    participant T as Turso<br/>:8080
-    participant H as HelixDB<br/>:6969
-    participant E as Execution Engine<br/>:50053
-
-    U->>D: View portfolio
-    D->>+A: GET /api/portfolio
-    par Fetch data
-        A->>T: Query positions
-        T-->>A: Position data
-    and
-        A->>H: Query decisions
-        H-->>A: Decision history
-    and
-        A->>E: gRPC GetPositions
-        E-->>A: Live positions
-    end
-    A-->>-D: Aggregated response
-    D-->>U: Render portfolio
-```
-
-### Trading Cycle Flow
-
-```mermaid
-%%{init: {'theme': 'base', 'themeVariables': { 'primaryColor': '#FEF3C7', 'primaryTextColor': '#3D3832', 'lineColor': '#78716C', 'actorBkg': '#FEF3C7', 'actorBorder': '#D97706', 'actorTextColor': '#3D3832', 'activationBkgColor': '#F5F1EA', 'activationBorderColor': '#D97706', 'signalColor': '#57534E', 'signalTextColor': '#3D3832', 'noteBkgColor': '#FBF8F3', 'noteBorderColor': '#EBE5DA', 'noteTextColor': '#3D3832'}}}%%
-sequenceDiagram
-    participant W as Worker<br/>:3002
-    participant T as Turso<br/>:8080
-    participant H as HelixDB<br/>:6969
-    participant E as Execution Engine<br/>:50053
-    participant B as Alpaca<br/>Broker + Data
-
-    W->>T: Load config
-    T-->>W: Trading config
-
-    rect rgba(99, 102, 241, 0.08)
-        Note over W,B: OBSERVE
-        W->>E: gRPC GetSnapshot
-        E->>B: Subscribe market data
-        B-->>E: OHLCV + quotes
-        E-->>W: Market snapshot
-    end
-
-    rect rgba(139, 92, 246, 0.08)
-        Note over W,H: ORIENT
-        W->>H: Query similar decisions
-        H-->>W: GraphRAG results
-    end
-
-    rect rgba(217, 119, 6, 0.08)
-        Note over W: DECIDE
-        W->>W: Run 7-agent consensus
-    end
-
-    rect rgba(16, 185, 129, 0.08)
-        Note over W,B: ACT
-        W->>E: gRPC CheckConstraints
-        E-->>W: Approved
-        W->>E: gRPC SubmitOrder
-        E->>B: POST /orders
-        B-->>E: Order confirmation
-        E-->>W: Execution result
-        W->>T: Persist decision
-        W->>H: Store embeddings
-    end
-```
-
-### Execution Engine Ports
-
-```mermaid
-%%{init: {'theme': 'base', 'themeVariables': { 'primaryColor': '#FEF3C7', 'primaryTextColor': '#3D3832', 'lineColor': '#78716C', 'tertiaryColor': '#FBF8F3'}}}%%
-flowchart LR
-    subgraph Engine["Execution Engine (Rust)"]
-        HTTP["`**:50051**
-        HTTP/Axum
-        REST API`"]
-        GRPC["`**:50053**
-        gRPC/Tonic
-        ExecutionService`"]
-    end
-
-    Client([Client]) -->|/health, /v1/*| HTTP
-    Worker([Worker]) -->|CheckConstraints, SubmitOrder| GRPC
-
-    classDef port fill:#FEF3C7,stroke:#D97706,stroke-width:2px,color:#3D3832
-    classDef client fill:#F5F5F4,stroke:#78716C,stroke-width:2px,color:#3D3832
-
-    class HTTP,GRPC port
-    class Client,Worker client
-```
+| Service | Role | Ports | Protocol |
+|---------|------|-------|----------|
+| **Dashboard** | Real-time trading UI, portfolio view, decision history | 3000 | HTTP |
+| **Dashboard API** | Gateway, authentication, data aggregation | 3001 | HTTP/WebSocket |
+| **API** | Agent orchestration, workflow engine | 4111 | HTTP |
+| **Worker** | Hourly trading cycles, background jobs | 3002 | HTTP |
+| **Execution Engine** | Order validation, risk constraints, broker routing | 50051, 50053 | HTTP, gRPC |
 
 ---
 
-## 3. Agent Architecture
+## Agent Network
 
-### 8-Agent Consensus Network
-
-The system implements a multi-agent debate architecture in 4 phases:
+The system uses an 8-agent debate architecture in 4 phases:
 
 ```mermaid
-%%{init: {'theme': 'base', 'themeVariables': { 'primaryColor': '#FEF3C7', 'primaryTextColor': '#3D3832', 'lineColor': '#78716C', 'tertiaryColor': '#FBF8F3'}}}%%
 flowchart TB
     subgraph Phase1["PHASE 1: ANALYSIS"]
         direction LR
-        Tech["`**Technical**
-        Analyst`"]
-        News["`**News**
-        Analyst`"]
-        Fund["`**Fundamentals**
-        Analyst`"]
+        News[News Analyst]
+        Fund[Fundamentals Analyst]
     end
 
     subgraph Phase2["PHASE 2: DEBATE"]
         direction LR
-        Bull["`**Bullish**
-        Researcher`"]
-        Bear["`**Bearish**
-        Researcher`"]
+        Bull[Bullish Researcher]
+        Bear[Bearish Researcher]
     end
 
     subgraph Phase3["PHASE 3: DECISION"]
-        Trader["`**TRADER**
-        Head Trader`"]
-        DecPlan(["DecisionPlan"])
+        Trader[Head Trader]
+        Plan([Decision Plan])
     end
 
     subgraph Phase4["PHASE 4: APPROVAL"]
-        Risk["`**RISK**
-        MANAGER`"]
-        Critic["`**CRITIC**`"]
-        Approve{"`Both
-        APPROVE?`"}
-        Execute([EXECUTE])
-        NoTrade([NO_TRADE])
+        Risk[Risk Manager]
+        Critic[Critic]
+        Gate{Both Approve?}
+        Retry{Retries < 3?}
+        Execute([Execute])
+        NoTrade([No Trade])
     end
 
-    Tech & News & Fund --> Bull & Bear
+    News & Fund --> Bull & Bear
     Bull & Bear --> Trader
-    Trader --> DecPlan
-    DecPlan --> Risk & Critic
-    Risk & Critic --> Approve
-    Approve -->|YES| Execute
-    Approve -->|"NO (max 3)"| NoTrade
-
-    classDef technical fill:#EDE9FE,stroke:#8B5CF6,stroke-width:2px,color:#3D3832
-    classDef sentiment fill:#FCE7F3,stroke:#EC4899,stroke-width:2px,color:#3D3832
-    classDef fundamentals fill:#CCFBF1,stroke:#14B8A6,stroke-width:2px,color:#3D3832
-    classDef bullish fill:#DCFCE7,stroke:#22C55E,stroke-width:2px,color:#3D3832
-    classDef bearish fill:#FEE2E2,stroke:#EF4444,stroke-width:2px,color:#3D3832
-    classDef trader fill:#FEF3C7,stroke:#D97706,stroke-width:2px,color:#3D3832
-    classDef risk fill:#FFEDD5,stroke:#F97316,stroke-width:2px,color:#3D3832
-    classDef critic fill:#E0E7FF,stroke:#6366F1,stroke-width:2px,color:#3D3832
-    classDef output fill:#F5F5F4,stroke:#78716C,stroke-width:2px,color:#3D3832
-
-    class Tech technical
-    class News sentiment
-    class Fund fundamentals
-    class Bull bullish
-    class Bear bearish
-    class Trader,DecPlan trader
-    class Risk risk
-    class Critic critic
-    class Approve,Execute,NoTrade output
+    Trader --> Plan
+    Plan --> Risk & Critic
+    Risk & Critic --> Gate
+    Gate -->|Yes| Execute
+    Gate -->|No| Retry
+    Retry -->|Yes| Trader
+    Retry -->|No| NoTrade
 ```
-
-### Agent Configuration
-
-| Agent | Model | Role |
-|-------|-------|------|
-| News Analyst | Gemini 3 Pro | News impact, sentiment, event timing |
-| Fundamentals Analyst | Gemini 3 Pro | Valuation, macro context, prediction markets |
-| Bullish Researcher | Gemini 3 Pro | Long thesis with conviction score |
-| Bearish Researcher | Gemini 3 Pro | Short thesis with conviction score |
-| Trader | Gemini 3 Pro | Synthesizes all inputs, sizes positions |
-| Risk Manager | Gemini 3 Flash | Constraint validation, position limits |
-| Critic | Gemini 3 Flash | Logic validation, hallucination detection |
 
 ### Decision Rules
 
-```
-delta = bullish_conviction - bearish_conviction
+$$
+\delta = S_{\text{bull}} - S_{\text{bear}}
+$$
 
-|delta| < 0.2  → HOLD (insufficient edge)
-delta > 0.3    → BUY/LONG with Kelly-inspired sizing
-delta < -0.3   → SELL/SHORT or CLOSE existing
+$$
+\text{action} = \left\{ \begin{array}{lcr}
+\text{HOLD} & |\delta| < & 0.2 \\
+\text{BUY}  & \delta > & 0.3 \\
+\text{SELL} & \delta < & -0.3
+\end{array} \right.
+$$
 
-Every decision requires:
-  - Stop-loss at price levels that would invalidate thesis
-  - Risk/reward minimum 1.5:1
-  - Sizing adjusted for macro events (prediction markets)
-```
+**Requirements:**
+- Stop-loss at thesis invalidation price
+- $\dfrac{\text{reward}}{\text{risk}} \geq 1.5$
 
 ---
 
-## 4. OODA Loop Data Flow
-
-### Trading Cycle (Hourly)
+## OODA Loop
 
 ```mermaid
-%%{init: {'theme': 'base', 'themeVariables': { 'primaryColor': '#FEF3C7', 'primaryTextColor': '#3D3832', 'lineColor': '#78716C', 'tertiaryColor': '#FBF8F3'}}}%%
 flowchart LR
-    subgraph OBSERVE["OBSERVE"]
-        Market[["`**Market Snapshot**
-        OHLCV, quotes, options`"]]
-        Context[["`**External Context**
-        news, earnings, macro`"]]
+    subgraph OBSERVE
+        Market[[Market Snapshot]]
+        Context[[External Context]]
     end
 
-    subgraph ORIENT["ORIENT"]
-        Memory[["`**GraphRAG**
-        Retrieval`"]]
-        Regimes[["`**Regime**
-        Classification`"]]
-        PredictionMkt[["`**Prediction**
-        Markets`"]]
+    subgraph ORIENT
+        Memory[[Memory Retrieval]]
+        Regime[[Regime Classification]]
     end
 
-    subgraph DECIDE["DECIDE"]
-        Analysts[["`**3 Analysts**
-        parallel`"]]
-        Debate[["`**Bull vs Bear**
-        parallel`"]]
-        TraderStep[["`**Trader**
-        DecisionPlan`"]]
-        Consensus[["`**Risk + Critic**
-        approval`"]]
+    subgraph DECIDE
+        Analysts[[Analysts]]
+        Debate[[Bull vs Bear]]
+        Trade[[Trader]]
+        Approve[[Approvers]]
     end
 
-    subgraph ACT["ACT"]
-        Constraints[["`**checkConstraints**
-        gRPC → Rust`"]]
-        Submit[["`**submitOrders**
-        Rust → Alpaca`"]]
-        Persist[["`**persistDecisions**
-        Turso + HelixDB`"]]
+    subgraph ACT
+        Validate[[Constraint Check]]
+        Submit[[Submit Order]]
+        Persist[[Store Decision]]
     end
 
     OBSERVE --> ORIENT --> DECIDE --> ACT
-
-    classDef observe fill:#E0E7FF,stroke:#6366F1,stroke-width:2px,color:#3D3832
-    classDef orient fill:#EDE9FE,stroke:#8B5CF6,stroke-width:2px,color:#3D3832
-    classDef decide fill:#FEF3C7,stroke:#D97706,stroke-width:2px,color:#3D3832
-    classDef act fill:#D1FAE5,stroke:#10B981,stroke-width:2px,color:#3D3832
-
-    class Market,Context observe
-    class Memory,Regimes,PredictionMkt orient
-    class Analysts,Debate,TraderStep,Consensus decide
-    class Constraints,Submit,Persist act
 ```
 
 ### Scheduled Workflows
 
+| Workflow | Schedule | Purpose |
+|----------|----------|---------|
+| Prediction Markets | Every 15 minutes | Fetch probability data |
+| Trading Cycle | Hourly (aligned to candle close) | Full OODA loop execution |
+| Sentiment | Hourly 9 AM - 4 PM ET (Mon-Fri) | News sentiment aggregation |
+| SEC Filings | Daily 6 AM ET | Ingest 10-K, 10-Q, 8-K documents |
+| Corporate Actions | Daily 6 AM ET | Dividends, splits, spinoffs |
+| Short Interest | Daily 6 PM ET | FINRA short interest data |
+| Indicator Synthesis | Daily 6 AM ET (Mon-Fri) | Generate new indicators via agents |
+
+---
+
+## Data Flow
+
+### Trading Cycle
+
 ```mermaid
-%%{init: {'theme': 'base', 'themeVariables': { 'primaryColor': '#FEF3C7', 'primaryTextColor': '#3D3832', 'lineColor': '#78716C', 'tertiaryColor': '#FBF8F3'}}}%%
-flowchart TB
-    Scheduler([Worker Scheduler])
+sequenceDiagram
+    participant W as Worker
+    participant E as Execution Engine
+    participant B as Broker
+    participant SQL as SQL Database
+    participant G as Graph DB
 
-    Scheduler --> Trading
-    Scheduler --> Predictions
-    Scheduler --> Filings
-
-    subgraph Trading["Trading Cycle"]
-        T1["`**Hourly**
-        aligned to candle close`"]
+    rect rgba(99, 102, 241, 0.1)
+        Note over W,B: OBSERVE
+        W->>E: GetSnapshot
+        E->>B: Market data request
+        B-->>E: OHLCV + quotes
+        E-->>W: Market snapshot
     end
 
-    subgraph Predictions["Prediction Markets"]
-        P1["`**Every 15 min**
-        Kalshi + Polymarket`"]
+    rect rgba(139, 92, 246, 0.1)
+        Note over W,G: ORIENT
+        W->>G: Vector search (similar decisions)
+        G-->>W: Past decisions + context
     end
 
-    subgraph Filings["SEC Filings Sync"]
-        F1["`**Daily 6 AM EST**
-        10-K, 10-Q, 8-K`"]
+    rect rgba(217, 119, 6, 0.1)
+        Note over W: DECIDE
+        W->>W: Run 8-agent consensus
     end
 
-    classDef scheduler fill:#FEF3C7,stroke:#D97706,stroke-width:2px,color:#3D3832
-    classDef workflow fill:#CCFBF1,stroke:#14B8A6,stroke-width:2px,color:#3D3832
+    rect rgba(16, 185, 129, 0.1)
+        Note over W,B: ACT
+        W->>E: CheckConstraints
+        E-->>W: Approved
+        W->>E: SubmitOrder
+        E->>B: Place order
+        B-->>E: Confirmation
+        E-->>W: Execution result
+        W->>SQL: Persist decision
+        W->>G: Store embedding
+    end
+```
 
-    class Scheduler scheduler
-    class T1,P1,F1 workflow
+### Dashboard Request
+
+```mermaid
+sequenceDiagram
+    participant U as User
+    participant D as Dashboard
+    participant A as API
+    participant SQL as SQL Database
+    participant G as Graph DB
+    participant E as Execution Engine
+
+    U->>D: View portfolio
+    D->>A: GET /portfolio
+
+    par Parallel fetch
+        A->>SQL: Query positions
+        SQL-->>A: Position data
+    and
+        A->>G: Query recent decisions
+        G-->>A: Decision history
+    and
+        A->>E: GetPositions
+        E-->>A: Live positions
+    end
+
+    A-->>D: Aggregated response
+    D-->>U: Render portfolio
 ```
 
 ---
 
-## 5. Rust Execution Engine
-
-### Module Structure
+## Execution Engine
 
 ```mermaid
-%%{init: {'theme': 'base', 'themeVariables': { 'primaryColor': '#FEF3C7', 'primaryTextColor': '#3D3832', 'lineColor': '#78716C', 'tertiaryColor': '#FBF8F3'}}}%%
 flowchart TB
-    subgraph Engine["apps/execution-engine/src/"]
-        Main["main.rs"]
-        Config["config.rs"]
+    subgraph Engine["Execution Engine"]
+        HTTP[HTTP Server]
+        GRPC[gRPC Server]
 
-        subgraph Server["server/"]
-            HTTP["http.rs<br/>Axum :50051"]
-            GRPC["grpc.rs<br/>Tonic :50053"]
+        subgraph Core
+            Gateway[Execution Gateway]
+            State[Order State Manager]
         end
 
-        subgraph Execution["execution/"]
-            Gateway["ExecutionGateway"]
-            OrderState["OrderStateManager"]
+        subgraph Validation
+            Constraints[Constraint Validator]
         end
 
-        subgraph Risk["risk/"]
-            Constraints["ConstraintValidator"]
+        subgraph Routing
+            Adapter[Broker Adapter]
+            Feed[Market Feed]
         end
 
-        subgraph Broker["broker/"]
-            AlpacaAdapter["AlpacaAdapter"]
-        end
-
-        subgraph Feed["feed/"]
-            AlpacaFeed["AlpacaFeed"]
-        end
-
-        subgraph Safety["safety/"]
-            Monitor["ConnectionMonitor"]
+        subgraph Safety
+            Monitor[Connection Monitor]
         end
     end
 
-    Main --> Server
-    Main --> Config
-    Server --> Execution
-    Execution --> Risk
-    Execution --> Broker
-    Execution --> Feed
-    Broker --> Safety
-
-    classDef core fill:#FEF3C7,stroke:#D97706,stroke-width:2px,color:#3D3832
-    classDef module fill:#CCFBF1,stroke:#14B8A6,stroke-width:2px,color:#3D3832
-
-    class Main,Config core
-    class HTTP,GRPC,Gateway,OrderState,Constraints,AlpacaAdapter,AlpacaFeed,Monitor module
-```
-
-### Environment-Based Behavior
-
-```mermaid
-%%{init: {'theme': 'base', 'themeVariables': { 'primaryColor': '#FEF3C7', 'primaryTextColor': '#3D3832', 'lineColor': '#78716C', 'tertiaryColor': '#FBF8F3'}}}%%
-flowchart LR
-    subgraph BACKTEST
-        B1[Mock Broker]
-        B2[No Feed]
-        B3[Safety OFF]
-    end
-
-    subgraph PAPER
-        P1[Alpaca Paper]
-        P2[Alpaca Data]
-        P3[Safety Optional]
-    end
-
-    subgraph LIVE
-        L1[Alpaca Live]
-        L2[Alpaca Data]
-        L3[Safety Required]
-    end
-
-    classDef backtest fill:#F5F5F4,stroke:#78716C,stroke-width:2px,color:#3D3832
-    classDef paper fill:#FEF3C7,stroke:#D97706,stroke-width:2px,color:#3D3832
-    classDef live fill:#FEE2E2,stroke:#EF4444,stroke-width:2px,color:#3D3832
-
-    class B1,B2,B3 backtest
-    class P1,P2,P3 paper
-    class L1,L2,L3 live
+    HTTP --> Gateway
+    GRPC --> Gateway
+    Gateway --> Constraints
+    Gateway --> Adapter
+    Gateway --> Feed
+    Adapter --> Monitor
 ```
 
 ### Constraint Checks
 
-The execution engine validates every decision against:
+Every decision is validated against:
 
-- Position size limits (% of account)
+- Position size limits (% of account equity)
 - Sector concentration limits
-- Options Greeks limits (portfolio delta/gamma/vega)
-- PDT rule compliance
-- Stop-loss requirement (every decision must have one)
+- Options Greeks limits (delta, gamma, vega)
+- Pattern day trader rule compliance
+- Stop-loss requirement (mandatory)
+- Buying power validation
+
+---
+
+## Environment Isolation
+
+```mermaid
+flowchart LR
+    subgraph BACKTEST
+        B1[Mock Broker]
+        B2[No Market Feed]
+        B3[Safety OFF]
+    end
+
+    subgraph PAPER
+        P1[Paper Account]
+        P2[Live Data]
+        P3[Safety Optional]
+    end
+
+    subgraph LIVE
+        L1[Live Account]
+        L2[Live Data]
+        L3[Safety Required]
+    end
+```
+
+| Environment | Auth Required | Real Money | Safety Checks |
+|-------------|---------------|------------|---------------|
+| BACKTEST | No | No | Disabled |
+| PAPER | Yes | No | Optional |
+| LIVE | Yes + MFA | Yes | Required |
+
+---
+
+## Storage
+
+### SQL Database
+
+Structured data with indexed queries:
+
+- **decisions** - Trading decisions from OODA cycles
+- **orders** - Order lifecycle tracking
+- **positions** - Current open positions
+- **indicators** - Technical indicators
+- **runtime_config** - Active trading configuration
+
+### Graph + Vector Database
+
+Memory and case-based reasoning:
+
+- **Nodes**: Decisions, Markets, Instruments, Events
+- **Edges**: INFLUENCED_DECISION, SIMILAR_MARKET, CORRELATED_WITH
+- **Vectors**: Decision embeddings for semantic similarity search
+
+---
+
+## Service Communication
+
+```mermaid
+flowchart LR
+    Dashboard -->|HTTP| API
+    Dashboard -->|WebSocket| API
+    API -->|gRPC| Engine
+    API -->|HTTPS| LLM
+    API -->|HTTPS| Embed
+    Worker -->|gRPC| Engine
+    Worker -->|HTTPS| LLM
+    Worker -->|HTTPS| Embed
+    Engine -->|HTTPS| Broker
+```
+
+| From | To | Protocol | Purpose |
+|------|----|----------|---------|
+| Dashboard | API | HTTP/WebSocket | UI data, real-time updates |
+| API | Engine | gRPC | Position queries, account state |
+| API | LLM | HTTPS | Agent streaming, direct inference |
+| API | Embeddings | HTTPS | Vector generation for queries |
+| Worker | Engine | gRPC | Constraint checks, order submission |
+| Worker | LLM | HTTPS | Agent inference |
+| Worker | Embeddings | HTTPS | Vector generation for storage |
+| Engine | Broker | HTTPS | Order execution, market data |
