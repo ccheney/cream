@@ -17,7 +17,7 @@
  * @see docs/plans/22-self-service-dashboard.md (Phase 1)
  */
 
-import { createContext } from "@cream/domain";
+import { createContext, getDefaultGlobalModel } from "@cream/domain";
 import { log } from "./logger.js";
 import {
 	AGENT_TYPES,
@@ -30,26 +30,23 @@ import { UniverseConfigsRepository } from "./repositories/universe-configs.js";
 import { createTursoClient } from "./turso.js";
 
 /** Extracted from packages/config/configs/default.yaml and apps/worker/src/index.ts */
-const DEFAULT_TRADING_CONFIG = {
-	globalModel: "gemini-3-flash-preview" as const, // Global model for all agents
-
-	maxConsensusIterations: 3,
-	agentTimeoutMs: 1_800_000, // 30 minutes - LLMs can be slow
-	totalConsensusTimeoutMs: 7_200_000, // 2 hours total for full consensus
-
-	convictionDeltaHold: 0.2,
-	convictionDeltaAction: 0.3,
-
-	highConvictionPct: 0.7, // % of Kelly optimal
-	mediumConvictionPct: 0.5,
-	lowConvictionPct: 0.25,
-
-	minRiskRewardRatio: 1.5,
-	kellyFraction: 0.5,
-
-	tradingCycleIntervalMs: 60 * 60 * 1000,
-	predictionMarketsIntervalMs: 15 * 60 * 1000,
-};
+function getDefaultTradingConfig() {
+	return {
+		globalModel: getDefaultGlobalModel(), // Global model from LLM_MODEL_ID env var
+		maxConsensusIterations: 3,
+		agentTimeoutMs: 1_800_000, // 30 minutes - LLMs can be slow
+		totalConsensusTimeoutMs: 1_800_000, // 30 minutes total for full consensus
+		convictionDeltaHold: 0.2,
+		convictionDeltaAction: 0.3,
+		highConvictionPct: 0.7, // % of Kelly optimal
+		mediumConvictionPct: 0.5,
+		lowConvictionPct: 0.25,
+		minRiskRewardRatio: 1.5,
+		kellyFraction: 0.5,
+		tradingCycleIntervalMs: 60 * 60 * 1000,
+		predictionMarketsIntervalMs: 15 * 60 * 1000,
+	};
+}
 
 /**
  * Default agent configs - model is now global (in trading config)
@@ -151,7 +148,7 @@ async function seedEnvironment(
 			id: configId,
 			environment,
 			version,
-			...DEFAULT_TRADING_CONFIG,
+			...getDefaultTradingConfig(),
 			status: "active",
 		});
 	}

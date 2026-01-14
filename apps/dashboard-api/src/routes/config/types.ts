@@ -13,7 +13,7 @@ import { z } from "@hono/zod-openapi";
 
 export const EnvironmentSchema = z.enum(["BACKTEST", "PAPER", "LIVE"]);
 
-export const GlobalModelSchema = z.enum(["gemini-3-flash-preview", "gemini-3-pro-preview"]);
+export const GlobalModelSchema = z.string();
 
 export const ConfigStatusSchema = z.enum(["draft", "testing", "active", "archived"]);
 

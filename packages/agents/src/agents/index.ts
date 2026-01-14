@@ -24,7 +24,7 @@ export {
 // Re-export specialized agents (not part of trading network)
 export {
 	buildResearcherPrompt,
-	INDICATOR_RESEARCHER_CONFIG,
+	getIndicatorResearcherConfig,
 	INDICATOR_RESEARCHER_SYSTEM_PROMPT,
 	type IndicatorResearcherConfig,
 	indicatorResearcher,

@@ -56,7 +56,7 @@ export type RuntimeAgentType =
 
 export type ConfigStatus = "draft" | "testing" | "active" | "archived";
 
-export type GlobalModel = "gemini-3-flash-preview" | "gemini-3-pro-preview";
+export type GlobalModel = string;
 
 export interface RuntimeTradingConfig {
 	id: string;

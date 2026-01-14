@@ -101,22 +101,26 @@ class TestLLMJudge:
     """Tests for LLMJudge class."""
 
     def test_init_with_api_key(self) -> None:
-        """Test initializing LLMJudge with explicit API key."""
-        with patch("research.evaluator.llm_judge.judge.genai") as mock_genai:
+        """Test initializing LLMJudge with explicit API key and model from env var."""
+        with (
+            patch.dict("os.environ", {"LLM_MODEL_ID": "test-model"}),
+            patch("research.evaluator.llm_judge.judge.genai") as mock_genai,
+        ):
             judge = LLMJudge(api_key="test-key")
             assert judge.api_key == "test-key"
-            assert judge.model_name == LLMJudge.DEFAULT_MODEL
+            assert judge.model_name == "test-model"
             assert judge.enable_cache is True
             mock_genai.Client.assert_called_once_with(api_key="test-key")
 
     def test_init_with_env_var(self) -> None:
-        """Test initializing LLMJudge from environment variable."""
+        """Test initializing LLMJudge from environment variables."""
         with (
-            patch.dict("os.environ", {"GOOGLE_API_KEY": "env-key"}),
+            patch.dict("os.environ", {"GOOGLE_API_KEY": "env-key", "LLM_MODEL_ID": "test-model"}),
             patch("research.evaluator.llm_judge.judge.genai") as mock_genai,
         ):
             judge = LLMJudge()
             assert judge.api_key == "env-key"
+            assert judge.model_name == "test-model"
             mock_genai.Client.assert_called_once_with(api_key="env-key")
 
     def test_init_without_api_key_raises(self) -> None:

@@ -71,8 +71,8 @@ class LLMJudge:
     All scores are on a 0-100 scale.
     """
 
-    DEFAULT_MODEL = "gemini-3-pro-preview"
-    FALLBACK_MODEL = "gemini-3-flash-preview"
+    # Model is determined by LLM_MODEL_ID env var (no fallback)
+    DEFAULT_MODEL_ENV = "LLM_MODEL_ID"
 
     # Temperature for consistency (lower = more deterministic)
     TEMPERATURE = 0.1
@@ -93,7 +93,7 @@ class LLMJudge:
 
         Args:
             api_key: Google AI API key (defaults to GOOGLE_API_KEY env var)
-            model: Model to use (defaults to gemini-3-pro-preview)
+            model: Model to use (defaults to LLM_MODEL_ID env var)
             enable_cache: Enable response caching (default: True)
 
         Raises:
@@ -106,7 +106,12 @@ class LLMJudge:
             )
 
         self.client = genai.Client(api_key=self.api_key)
-        self.model_name = model or self.DEFAULT_MODEL
+        default_model = os.getenv(self.DEFAULT_MODEL_ENV)
+        if not default_model and not model:
+            raise ValueError(
+                f"Model required: pass model argument or set {self.DEFAULT_MODEL_ENV} environment variable"
+            )
+        self.model_name = model or default_model
 
         self.enable_cache = enable_cache
         self._cache: dict[str, CacheEntry] = {}

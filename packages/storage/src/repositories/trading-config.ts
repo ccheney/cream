@@ -7,7 +7,7 @@
  * @see docs/plans/22-self-service-dashboard.md (Phase 1)
  */
 
-import { DEFAULT_GLOBAL_MODEL, type GlobalModel } from "@cream/domain";
+import { type GlobalModel, getDefaultGlobalModel } from "@cream/domain";
 import type { Row, TursoClient } from "../turso.js";
 import { RepositoryError } from "./base.js";
 
@@ -166,7 +166,7 @@ function mapTradingConfigRow(row: Row): TradingConfig {
 		predictionMarketsIntervalMs: row.prediction_markets_interval_ms as number,
 
 		// Global LLM model
-		globalModel: (row.global_model as GlobalModel) ?? DEFAULT_GLOBAL_MODEL,
+		globalModel: (row.global_model as GlobalModel) ?? getDefaultGlobalModel(),
 
 		// Workflow
 		status: row.status as TradingConfigStatus,
@@ -222,7 +222,7 @@ export class TradingConfigRepository {
 					input.kellyFraction ?? 0.5,
 					input.tradingCycleIntervalMs ?? 3600000,
 					input.predictionMarketsIntervalMs ?? 900000,
-					input.globalModel ?? DEFAULT_GLOBAL_MODEL,
+					input.globalModel ?? getDefaultGlobalModel(),
 					input.status ?? "draft",
 					now,
 					now,

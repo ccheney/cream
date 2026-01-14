@@ -15,19 +15,21 @@ class TestLLMJudgeInitialization:
     """Tests for LLMJudge initialization."""
 
     def test_init_with_api_key(self) -> None:
-        """Test initialization with explicit API key."""
+        """Test initialization with explicit API key and model from env var."""
         with patch("google.genai.Client"):
-            judge = LLMJudge(api_key="test-key")
-            assert judge.api_key == "test-key"
-            assert judge.model_name == LLMJudge.DEFAULT_MODEL
-            assert judge.enable_cache is True
+            with patch.dict("os.environ", {"LLM_MODEL_ID": "test-model"}):
+                judge = LLMJudge(api_key="test-key")
+                assert judge.api_key == "test-key"
+                assert judge.model_name == "test-model"
+                assert judge.enable_cache is True
 
     def test_init_with_env_var(self) -> None:
-        """Test initialization with GOOGLE_API_KEY environment variable."""
-        with patch("os.getenv", return_value="env-key"):
+        """Test initialization with environment variables."""
+        with patch.dict("os.environ", {"GOOGLE_API_KEY": "env-key", "LLM_MODEL_ID": "test-model"}):
             with patch("google.genai.Client"):
                 judge = LLMJudge()
                 assert judge.api_key == "env-key"
+                assert judge.model_name == "test-model"
 
     def test_init_no_api_key_raises(self) -> None:
         """Test initialization without API key raises ValueError."""

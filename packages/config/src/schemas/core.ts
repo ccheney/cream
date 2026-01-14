@@ -26,22 +26,13 @@ export type CreamEnvironment = z.infer<typeof CreamEnvironment>;
 /**
  * LLM provider configuration
  *
- * Validates Gemini model IDs (exclusive provider for Cream).
- * Supports gemini-3-pro-preview and gemini-3-flash-preview.
+ * Model ID is determined by LLM_MODEL_ID environment variable.
  */
 export const LLMConfigSchema = z.object({
 	/**
-	 * Model ID - must be a valid Gemini 3.x model
-	 *
-	 * Supported models:
-	 * - gemini-3-pro-preview: Best quality, higher latency
-	 * - gemini-3-flash-preview: Faster, good for iteration
+	 * Model ID - any valid model string from env var
 	 */
-	model_id: z
-		.string()
-		.refine((id) => id.startsWith("gemini-3-pro") || id.startsWith("gemini-3-flash"), {
-			message: "Must use Gemini 3.x model (gemini-3-pro-preview or gemini-3-flash-preview)",
-		}),
+	model_id: z.string(),
 });
 export type LLMConfig = z.infer<typeof LLMConfigSchema>;
 

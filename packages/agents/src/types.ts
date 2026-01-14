@@ -5,7 +5,7 @@
  * for the 8-agent trading network.
  *
  * NOTE: Model selection is now global via trading_config.global_model.
- * All agents use the same model (gemini-3-flash-preview or gemini-3-pro-preview).
+ * All agents use the same model (configured via LLM_MODEL_ID env var).
  *
  * @see docs/plans/05-agents.md
  */

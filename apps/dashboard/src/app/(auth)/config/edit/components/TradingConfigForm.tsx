@@ -33,7 +33,7 @@ export function TradingConfigForm({ config, onSave, onChange, isSaving }: Tradin
 	}
 
 	function getGlobalModel(): string {
-		return (formData.globalModel as string) ?? config.globalModel ?? "gemini-3-flash-preview";
+		return (formData.globalModel as string) ?? config.globalModel;
 	}
 
 	return (
@@ -192,17 +192,16 @@ function GlobalModelSelector({ value, onChange }: GlobalModelSelectorProps) {
 					</TooltipContent>
 				</Tooltip>
 			</div>
-			<select
+			<input
 				id="global-model"
+				type="text"
 				value={value}
 				onChange={(e) => onChange(e.target.value)}
+				placeholder="e.g., gemini-2.5-flash-preview-05-20"
 				className="w-full max-w-md px-3 py-2 border border-cream-200 dark:border-night-600 rounded-md bg-white dark:bg-night-700 text-stone-900 dark:text-night-50"
-			>
-				<option value="gemini-3-flash-preview">Gemini 3 Flash (faster)</option>
-				<option value="gemini-3-pro-preview">Gemini 3 Pro (more capable)</option>
-			</select>
+			/>
 			<p className="mt-2 text-xs text-stone-500 dark:text-night-300">
-				All 8 trading agents will use this model. Claude Code indicators use a separate fixed model.
+				Model ID for all trading agents. Default is set via LLM_MODEL_ID environment variable.
 			</p>
 		</div>
 	);

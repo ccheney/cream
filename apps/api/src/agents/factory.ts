@@ -23,11 +23,7 @@ import {
 	newsSearchTool,
 	recalcIndicatorTool,
 } from "@cream/agents";
-import {
-	DEFAULT_GLOBAL_MODEL,
-	type GlobalModel,
-	getModelId as getGlobalModelId,
-} from "@cream/domain";
+import { type GlobalModel, getFullModelId, getModelId as getGlobalModelId } from "@cream/domain";
 import { Agent } from "@mastra/core/agent";
 import { RequestContext } from "@mastra/core/request-context";
 import type { Tool } from "@mastra/core/tools";
@@ -60,13 +56,14 @@ const TOOL_INSTANCES: Record<string, Tool<any, any>> = {
 
 /**
  * Get the Mastra-compatible model ID for the global model setting.
- * Falls back to default (flash) if invalid model is passed.
+ * Uses env var model if no model is specified.
  */
 export function getModelIdForRuntime(model: string | undefined): string {
 	if (model?.includes("/")) {
 		return model;
 	}
-	return getGlobalModelId((model as GlobalModel) ?? DEFAULT_GLOBAL_MODEL);
+	// If model is provided, use it; otherwise use env var default
+	return model ? getGlobalModelId(model as GlobalModel) : getFullModelId();
 }
 
 /**
@@ -243,7 +240,7 @@ export function buildGenerateOptions(
 	return {
 		structuredOutput: {
 			...structuredOutput,
-			model: "google/gemini-3-flash-preview",
+			model: getFullModelId(),
 		},
 		requestContext: createRequestContext(settings.model),
 		instructions: settings.systemPromptOverride ?? undefined,

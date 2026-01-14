@@ -8,6 +8,7 @@
  */
 
 import { google } from "@ai-sdk/google";
+import { getLLMModelId } from "@cream/domain";
 import { createRoute, OpenAPIHono, z } from "@hono/zod-openapi";
 import { generateText } from "ai";
 
@@ -102,7 +103,7 @@ app.openapi(summarizeReasoningRoute, async (c) => {
 
 	try {
 		const { text } = await generateText({
-			model: google("gemini-3-flash-preview"),
+			model: google(getLLMModelId()),
 			prompt: STATUS_PROMPT.replace("{reasoning}", reasoning.slice(-500)),
 			maxOutputTokens: 200,
 		});

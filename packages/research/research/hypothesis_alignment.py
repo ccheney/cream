@@ -127,7 +127,7 @@ class HypothesisAlignmentEvaluator:
     """
 
     DEFAULT_THRESHOLD = 0.7
-    DEFAULT_MODEL = "gemini-3-flash-preview"
+    DEFAULT_MODEL_ENV = "LLM_MODEL_ID"
 
     def __init__(
         self,
@@ -138,10 +138,17 @@ class HypothesisAlignmentEvaluator:
         Initialize the evaluator.
 
         Args:
-            model: Gemini model to use (default: gemini-3-flash-preview)
+            model: Gemini model to use (default: LLM_MODEL_ID env var)
             threshold: Alignment threshold (default: 0.7)
         """
-        self.model = model or self.DEFAULT_MODEL
+        import os
+
+        default_model = os.getenv(self.DEFAULT_MODEL_ENV)
+        if not default_model and not model:
+            raise ValueError(
+                f"Model required: pass model argument or set {self.DEFAULT_MODEL_ENV} environment variable"
+            )
+        self.model = model or default_model
         self.threshold = threshold or self.DEFAULT_THRESHOLD
         self._client: Any = None
 

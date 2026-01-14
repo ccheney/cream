@@ -59,10 +59,7 @@ export default function ConfigPage() {
 					{/* Trading Config (includes consensus) */}
 					<ConfigSection title="Trading" href="/config/edit">
 						<ConfigField label="Environment" value={config.trading.environment} />
-						<ConfigField
-							label="Global Model"
-							value={config.trading.globalModel ?? "gemini-3-flash-preview"}
-						/>
+						<ConfigField label="Global Model" value={config.trading.globalModel} />
 						<ConfigField
 							label="Cycle Interval"
 							value={`${config.trading.tradingCycleIntervalMs / 60000}m`}

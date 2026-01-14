@@ -13,8 +13,8 @@
  */
 
 import {
-	DEFAULT_GLOBAL_MODEL,
 	type Factor,
+	getDefaultGlobalModel,
 	type Hypothesis,
 	type NewHypothesis,
 	type ResearchTrigger,
@@ -198,11 +198,11 @@ export class IdeaAgent {
 		}
 
 		const userPrompt = buildIdeaAgentUserPrompt(context);
-		// Use global model (caller should set via config, defaults to flash)
+		// Use global model from environment
 		const rawOutput = await this.llmProvider.generate({
 			systemPrompt: IDEA_AGENT_SYSTEM_PROMPT,
 			userPrompt,
-			model: DEFAULT_GLOBAL_MODEL,
+			model: getDefaultGlobalModel(),
 		});
 
 		const jsonStr = extractJsonFromOutput(rawOutput);
