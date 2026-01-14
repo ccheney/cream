@@ -442,7 +442,7 @@ ALPACA_SECRET=                      # Alpaca API secret
 ### LLM
 
 ```bash
-GOOGLE_API_KEY=                     # Gemini models
+GOOGLE_GENERATIVE_AI_API_KEY=       # Gemini models
 ANTHROPIC_API_KEY=                  # Claude extraction
 ```
 

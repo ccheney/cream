@@ -37,7 +37,6 @@
         "FMP_KEY",
         "ALPHAVANTAGE_KEY",
         "ANTHROPIC_API_KEY",
-        "GOOGLE_API_KEY",
         "GOOGLE_GENERATIVE_AI_API_KEY",
         "GOOGLE_CLIENT_ID",
         "GOOGLE_CLIENT_SECRET",

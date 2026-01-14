@@ -48,7 +48,6 @@ export const DEFAULT_REDACT_PATHS = [
 	"*.ALPACA_SECRET",
 	"*.ANTHROPIC_API_KEY",
 	"*.GOOGLE_GENERATIVE_AI_API_KEY",
-	"*.GOOGLE_API_KEY",
 ] as const;
 
 export type RedactPath = (typeof DEFAULT_REDACT_PATHS)[number];

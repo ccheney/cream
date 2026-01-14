@@ -63,7 +63,7 @@ Located in `src/agents/`:
 CREAM_ENV=BACKTEST|PAPER|LIVE
 TURSO_DATABASE_URL=http://localhost:8080
 HELIX_URL=http://localhost:6969
-GOOGLE_API_KEY=...  # For LLM agents (PAPER/LIVE)
+GOOGLE_GENERATIVE_AI_API_KEY=...  # For LLM agents (PAPER/LIVE)
 ```
 
 ### Runtime Configuration

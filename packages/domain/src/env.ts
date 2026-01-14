@@ -127,7 +127,6 @@ const envSchema = z.object({
 		.string()
 		.optional()
 		.describe("Google Gemini API key (required for OODA agents)"),
-	GOOGLE_API_KEY: z.string().optional().describe("Google Gemini API key (legacy, unused)"),
 
 	// LLM Model Selection (optional - checked at runtime when needed)
 	LLM_PROVIDER: z.string().optional().describe("LLM provider (e.g., google)"),
@@ -171,7 +170,6 @@ function parseEnv(): EnvConfig {
 		ANTHROPIC_API_KEY: Bun.env.ANTHROPIC_API_KEY ?? process.env.ANTHROPIC_API_KEY,
 		GOOGLE_GENERATIVE_AI_API_KEY:
 			Bun.env.GOOGLE_GENERATIVE_AI_API_KEY ?? process.env.GOOGLE_GENERATIVE_AI_API_KEY,
-		GOOGLE_API_KEY: Bun.env.GOOGLE_API_KEY ?? process.env.GOOGLE_API_KEY,
 		LLM_PROVIDER: Bun.env.LLM_PROVIDER ?? process.env.LLM_PROVIDER,
 		LLM_MODEL_ID: Bun.env.LLM_MODEL_ID ?? process.env.LLM_MODEL_ID,
 		KALSHI_API_KEY_ID: Bun.env.KALSHI_API_KEY_ID ?? process.env.KALSHI_API_KEY_ID,

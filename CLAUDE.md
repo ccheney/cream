@@ -98,7 +98,8 @@ Single switch controls environment: `CREAM_ENV=BACKTEST|PAPER|LIVE`
 | `CREAM_ENV` | ✓ | ✓ | ✓ | Trading environment |
 | `ALPACA_KEY` | - | ✓ | ✓ | Alpaca API key (market data + trading) |
 | `ALPACA_SECRET` | - | ✓ | ✓ | Alpaca API secret |
-| `ANTHROPIC_API_KEY` or `GOOGLE_API_KEY` | - | - | ✓ | LLM API key |
+| `GOOGLE_GENERATIVE_AI_API_KEY` | - | - | ✓ | Gemini API key (OODA agents) |
+| `ANTHROPIC_API_KEY` | - | - | ✓ | Anthropic API key (claude-agent-sdk) |
 | `GOOGLE_CLIENT_ID` | - | ✓ | ✓ | Google OAuth client ID |
 | `GOOGLE_CLIENT_SECRET` | - | ✓ | ✓ | Google OAuth client secret |
 | `FRED_API_KEY` | - | Optional | Recommended | FRED economic calendar API key |
@@ -128,7 +129,7 @@ FRED_API_KEY=                # FRED economic data (Federal Reserve)
 
 # LLM
 ANTHROPIC_API_KEY=           # Anthropic Claude API key
-GOOGLE_API_KEY=              # Google Gemini API key
+GOOGLE_GENERATIVE_AI_API_KEY=  # Google Gemini API key
 
 # Prediction Markets
 KALSHI_API_KEY_ID=           # Kalshi API key ID

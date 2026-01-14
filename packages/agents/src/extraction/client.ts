@@ -28,7 +28,7 @@ import {
  * Gemini extraction client configuration
  */
 export interface ExtractionClientConfig {
-	/** Google API key (defaults to GOOGLE_API_KEY env var) */
+	/** Google API key (defaults to GOOGLE_GENERATIVE_AI_API_KEY env var) */
 	apiKey?: string;
 	/** Model to use (defaults to global model) */
 	model?: GlobalModel;
@@ -199,9 +199,9 @@ export class ExtractionClient implements IExtractionClient {
 	private model: GlobalModel;
 
 	constructor(config: ExtractionClientConfig = {}) {
-		const apiKey = config.apiKey ?? process.env.GOOGLE_API_KEY;
+		const apiKey = config.apiKey ?? process.env.GOOGLE_GENERATIVE_AI_API_KEY;
 		if (!apiKey) {
-			throw new Error("GOOGLE_API_KEY environment variable not set");
+			throw new Error("GOOGLE_GENERATIVE_AI_API_KEY environment variable not set");
 		}
 
 		this.client = new GoogleGenAI({ apiKey });

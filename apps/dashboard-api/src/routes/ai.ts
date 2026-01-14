@@ -124,7 +124,7 @@ app.openapi(summarizeReasoningRoute, async (c) => {
 	}
 
 	// Check if Google API key is available
-	if (!process.env.GOOGLE_API_KEY) {
+	if (!process.env.GOOGLE_GENERATIVE_AI_API_KEY) {
 		// Fallback: extract key phrases from reasoning without LLM
 		const summary = extractKeyPhrase(reasoning);
 		return c.json({ summary });
@@ -155,7 +155,7 @@ app.openapi(summarizeReasoningRoute, async (c) => {
 
 /**
  * Fallback: Extract a key phrase from reasoning without using LLM.
- * Used when GOOGLE_API_KEY is not available or LLM call fails.
+ * Used when GOOGLE_GENERATIVE_AI_API_KEY is not available or LLM call fails.
  */
 function extractKeyPhrase(reasoning: string): string {
 	// Get the last ~200 characters for context
@@ -250,7 +250,7 @@ app.openapi(classifyThoughtRoute, async (c) => {
 	}
 
 	// Require Google API key
-	if (!process.env.GOOGLE_API_KEY) {
+	if (!process.env.GOOGLE_GENERATIVE_AI_API_KEY) {
 		return c.json({ type: "observation" as const, confidence: 0.3 });
 	}
 

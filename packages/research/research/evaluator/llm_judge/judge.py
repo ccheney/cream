@@ -92,17 +92,17 @@ class LLMJudge:
         Initialize the LLM judge.
 
         Args:
-            api_key: Google AI API key (defaults to GOOGLE_API_KEY env var)
+            api_key: Google AI API key (defaults to GOOGLE_GENERATIVE_AI_API_KEY env var)
             model: Model to use (defaults to LLM_MODEL_ID env var)
             enable_cache: Enable response caching (default: True)
 
         Raises:
             ValueError: If API key is not provided and not in environment
         """
-        self.api_key = api_key or os.getenv("GOOGLE_API_KEY")
+        self.api_key = api_key or os.getenv("GOOGLE_GENERATIVE_AI_API_KEY")
         if not self.api_key:
             raise ValueError(
-                "API key required: pass api_key argument or set GOOGLE_API_KEY environment variable"
+                "API key required: pass api_key argument or set GOOGLE_GENERATIVE_AI_API_KEY environment variable"
             )
 
         self.client = genai.Client(api_key=self.api_key)

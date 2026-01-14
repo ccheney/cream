@@ -115,7 +115,10 @@ class TestLLMJudge:
     def test_init_with_env_var(self) -> None:
         """Test initializing LLMJudge from environment variables."""
         with (
-            patch.dict("os.environ", {"GOOGLE_API_KEY": "env-key", "LLM_MODEL_ID": "test-model"}),
+            patch.dict(
+                "os.environ",
+                {"GOOGLE_GENERATIVE_AI_API_KEY": "env-key", "LLM_MODEL_ID": "test-model"},
+            ),
             patch("research.evaluator.llm_judge.judge.genai") as mock_genai,
         ):
             judge = LLMJudge()

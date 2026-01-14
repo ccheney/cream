@@ -25,7 +25,9 @@ class TestLLMJudgeInitialization:
 
     def test_init_with_env_var(self) -> None:
         """Test initialization with environment variables."""
-        with patch.dict("os.environ", {"GOOGLE_API_KEY": "env-key", "LLM_MODEL_ID": "test-model"}):
+        with patch.dict(
+            "os.environ", {"GOOGLE_GENERATIVE_AI_API_KEY": "env-key", "LLM_MODEL_ID": "test-model"}
+        ):
             with patch("google.genai.Client"):
                 judge = LLMJudge()
                 assert judge.api_key == "env-key"

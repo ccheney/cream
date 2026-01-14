@@ -97,7 +97,7 @@ export function sanitizeEnv(envConfig: EnvConfig): Record<string, string> {
 		"ALPACA_KEY",
 		"ALPACA_SECRET",
 		"ALPACA_BASE_URL",
-		"GOOGLE_API_KEY",
+		"GOOGLE_GENERATIVE_AI_API_KEY",
 	];
 
 	for (const key of allFields) {
