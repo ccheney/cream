@@ -298,10 +298,16 @@ export function hasWebSearchCapability(): boolean {
 
 /**
  * Get the LLM model ID from environment
- * @throws {Error} If LLM_MODEL_ID is not set
+ * Returns a default value for tests (BACKTEST environment)
+ * @throws {Error} If LLM_MODEL_ID is not set and not in BACKTEST
  */
 export function getLLMModelId(): string {
 	if (!env.LLM_MODEL_ID) {
+		// Use default for tests (CREAM_ENV is not in env schema, check raw env)
+		const creamEnv = Bun.env.CREAM_ENV ?? process.env.CREAM_ENV;
+		if (creamEnv === "BACKTEST") {
+			return "llm-model-id";
+		}
 		throw new Error("LLM_MODEL_ID environment variable is required");
 	}
 	return env.LLM_MODEL_ID;

@@ -48,7 +48,7 @@ import {
 	newsAnalystAgent,
 	riskManagerAgent,
 	traderAgent,
-} from "../src/agents/mastra-agents";
+} from "../src/mastra/agents/mastra-agents";
 
 import {
 	bearishResearcher,
@@ -61,7 +61,7 @@ import {
 	riskManager,
 	agents as stubAgents,
 	trader,
-} from "../src/agents/stub-agents";
+} from "../src/mastra/agents/stub-agents";
 
 // ============================================
 // Zod Schemas (mirroring mastra-agents.ts)

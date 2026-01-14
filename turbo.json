@@ -10,8 +10,8 @@
     "test": {
       "dependsOn": ["^build", "build"],
       "outputs": [],
-      "env": ["CREAM_ENV", "LLM_MODEL_ID"],
-      "passThroughEnv": ["CREAM_ENV", "LLM_MODEL_ID"]
+      "env": ["CREAM_ENV"],
+      "passThroughEnv": ["CREAM_ENV"]
     },
     "lint": {
       "dependsOn": ["^build"],

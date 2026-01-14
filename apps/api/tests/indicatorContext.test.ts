@@ -25,7 +25,7 @@ import {
 	interpretRSI,
 	interpretSMATrend,
 	interpretStochastic,
-} from "../src/agents/prompts.js";
+} from "../src/mastra/agents/prompts.js";
 
 // ============================================
 // Test Fixtures
