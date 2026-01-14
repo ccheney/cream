@@ -49,6 +49,8 @@ export interface ReconstructedAgentState {
 	textOutput: string;
 	error?: string;
 	lastUpdate: string | null;
+	/** Timestamp when agent started processing */
+	startedAt: string | null;
 }
 
 export interface FullCycleResponse {

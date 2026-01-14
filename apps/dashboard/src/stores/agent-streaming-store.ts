@@ -63,6 +63,8 @@ export interface AgentStreamingState {
 	textOutput: string;
 	error?: string;
 	lastUpdate: string | null;
+	/** Timestamp when agent started processing (for duration tracking) */
+	startedAt: string | null;
 }
 
 // ============================================
@@ -115,7 +117,12 @@ export interface AgentStreamingStoreActions {
 	/** Append text output to an agent */
 	appendTextOutput: (agentType: AgentType, text: string, timestamp: string) => void;
 	/** Update agent status */
-	updateAgentStatus: (agentType: AgentType, status: AgentStatus, error?: string) => void;
+	updateAgentStatus: (
+		agentType: AgentType,
+		status: AgentStatus,
+		error?: string,
+		startedAt?: string
+	) => void;
 	/** Set the current cycle ID (clears state if different) */
 	setCycleId: (cycleId: string) => void;
 	/** Get streaming state for a specific agent */
@@ -169,6 +176,7 @@ const createInitialAgentState = (): AgentStreamingState => ({
 	reasoningText: "",
 	textOutput: "",
 	lastUpdate: null,
+	startedAt: null,
 });
 
 const initialState: AgentStreamingStoreState = {
@@ -349,7 +357,7 @@ export const useAgentStreamingStore = create<AgentStreamingStore>()(
 				});
 			},
 
-			updateAgentStatus: (agentType, status, error) => {
+			updateAgentStatus: (agentType, status, error, startedAt) => {
 				set((state) => {
 					const newAgents = new Map(state.agents);
 					const current = newAgents.get(agentType) ?? createInitialAgentState();
@@ -360,6 +368,7 @@ export const useAgentStreamingStore = create<AgentStreamingStore>()(
 							...createInitialAgentState(),
 							status: "processing",
 							lastUpdate: new Date().toISOString(),
+							startedAt: startedAt ?? new Date().toISOString(),
 						});
 					} else {
 						newAgents.set(agentType, {
@@ -476,6 +485,7 @@ export const useAgentStreamingStore = create<AgentStreamingStore>()(
 						textOutput: state.textOutput,
 						error: state.error,
 						lastUpdate: state.lastUpdate,
+						startedAt: state.startedAt,
 					});
 				}
 

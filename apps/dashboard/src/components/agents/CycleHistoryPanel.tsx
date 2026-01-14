@@ -196,6 +196,7 @@ export const CycleHistoryPanel = memo(function CycleHistoryPanel({
 				textOutput: state.textOutput,
 				error: state.error,
 				lastUpdate: state.lastUpdate,
+				startedAt: state.startedAt ?? null,
 			};
 		}
 		loadHistoricalCycle(

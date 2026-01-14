@@ -80,28 +80,27 @@ function usePrefersReducedMotion(): boolean {
 }
 
 /**
- * Hook to track streaming duration
+ * Hook to track streaming duration using backend-provided startedAt timestamp
  */
-function useStreamingDuration(isStreaming: boolean): number {
+function useStreamingDuration(isStreaming: boolean, startedAt: string | null): number {
 	const [duration, setDuration] = useState(0);
-	const startTimeRef = useRef<number | null>(null);
 	const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
 	useEffect(() => {
-		if (isStreaming) {
-			startTimeRef.current = Date.now();
-			setDuration(0);
+		if (isStreaming && startedAt) {
+			const startTime = new Date(startedAt).getTime();
+			// Calculate initial duration immediately
+			setDuration(Math.floor((Date.now() - startTime) / 1000));
 
 			intervalRef.current = setInterval(() => {
-				if (startTimeRef.current) {
-					setDuration(Math.floor((Date.now() - startTimeRef.current) / 1000));
-				}
+				setDuration(Math.floor((Date.now() - startTime) / 1000));
 			}, 1000);
-		} else {
+		} else if (!isStreaming) {
 			if (intervalRef.current) {
 				clearInterval(intervalRef.current);
 				intervalRef.current = null;
 			}
+			// Keep showing final duration when complete (don't reset to 0)
 		}
 
 		return () => {
@@ -109,7 +108,7 @@ function useStreamingDuration(isStreaming: boolean): number {
 				clearInterval(intervalRef.current);
 			}
 		};
-	}, [isStreaming]);
+	}, [isStreaming, startedAt]);
 
 	return duration;
 }
@@ -1076,8 +1075,8 @@ export function AgentStreamingDetail({ agentType, state, cycleId }: AgentStreami
 		[state.reasoningText, state.toolCalls.length, state.status]
 	);
 
-	// Track duration while streaming
-	const duration = useStreamingDuration(isStreaming);
+	// Track duration while streaming (using backend timestamp)
+	const duration = useStreamingDuration(isStreaming, state.startedAt);
 
 	// Section open states - controlled for auto-open/close behavior
 	const [toolCallsOpen, setToolCallsOpen] = useState(true);

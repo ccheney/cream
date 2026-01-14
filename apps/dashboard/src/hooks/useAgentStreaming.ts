@@ -248,7 +248,9 @@ export function useAgentStreaming(options: UseAgentStreamingOptions = {}): UseAg
 							: outputData.status === "complete"
 								? "complete"
 								: "error";
-					updateAgentStatus(agentType, status, outputData.error);
+					// Pass timestamp as startedAt when agent starts (status=running)
+					const startedAt = outputData.status === "running" ? outputData.timestamp : undefined;
+					updateAgentStatus(agentType, status, outputData.error, startedAt);
 					break;
 				}
 			}

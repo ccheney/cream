@@ -252,6 +252,8 @@ export interface ReconstructedAgentState {
 	textOutput: string;
 	error?: string;
 	lastUpdate: string | null;
+	/** Timestamp when agent started processing */
+	startedAt: string | null;
 }
 
 /** Full streaming state for a cycle */
@@ -278,6 +280,7 @@ export function reconstructStreamingState(events: CycleEvent[]): ReconstructedSt
 				reasoningText: "",
 				textOutput: "",
 				lastUpdate: null,
+				startedAt: null,
 			};
 		}
 		return agents[agentType] as ReconstructedAgentState;
@@ -297,6 +300,7 @@ export function reconstructStreamingState(events: CycleEvent[]): ReconstructedSt
 		switch (event.eventType) {
 			case "agent_start":
 				agent.status = "processing";
+				agent.startedAt = event.timestamp;
 				break;
 
 			case "agent_complete":
