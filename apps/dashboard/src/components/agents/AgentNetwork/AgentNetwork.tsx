@@ -14,6 +14,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import type { AgentStreamingState } from "@/stores/agent-streaming-store";
 import { AgentNode } from "./AgentNode";
 import { ContextHeader } from "./ContextHeader";
+import { OODAWrapper } from "./OODAWrapper";
 import { PhaseContainer } from "./PhaseContainer";
 import {
 	INITIAL_PHASE_STATUS,
@@ -41,6 +42,30 @@ const staggerContainer = {
 // Helper Functions
 // ============================================
 
+/**
+ * Derive overall DECIDE status from component phase statuses
+ */
+function deriveDecideStatus(phaseStatus: Record<OODAPhase, PhaseStatus>): PhaseStatus {
+	const decidePhases: OODAPhase[] = ["grounding", "analysts", "debate", "trader", "consensus"];
+
+	// Check for any errors
+	if (decidePhases.some((p) => phaseStatus[p] === "error")) {
+		return "error";
+	}
+
+	// Check if all complete
+	if (decidePhases.every((p) => phaseStatus[p] === "complete")) {
+		return "complete";
+	}
+
+	// Check if any active
+	if (decidePhases.some((p) => phaseStatus[p] === "active")) {
+		return "active";
+	}
+
+	return "pending";
+}
+
 function derivePhaseStatus(
 	phase: OODAPhase,
 	agents: Map<NetworkAgentType, AgentStreamingState>,
@@ -53,6 +78,11 @@ function derivePhaseStatus(
 
 	// Phases without agents (observe, orient, act) use currentPhase
 	if (config.agents.length === 0) {
+		// "complete" means cycle finished - all phases are complete
+		if (currentPhase === "complete") {
+			return "complete";
+		}
+
 		const phaseIndex = PHASE_CONFIG.findIndex((p) => p.phase === phase);
 		const currentIndex = currentPhase
 			? PHASE_CONFIG.findIndex((p) => p.phase === currentPhase)
@@ -93,33 +123,36 @@ function derivePhaseStatus(
 
 interface ContextFeedConnectorProps {
 	isActive: boolean;
+	isComplete?: boolean;
 }
 
-function ContextFeedConnector({ isActive }: ContextFeedConnectorProps) {
+function ContextFeedConnector({ isActive, isComplete = false }: ContextFeedConnectorProps) {
+	const lineColor = isActive
+		? "bg-gradient-to-b from-emerald-400 to-amber-400"
+		: isComplete
+			? "bg-emerald-500"
+			: "bg-stone-300 dark:bg-night-600";
+	const borderColor = isActive
+		? "border-t-amber-400"
+		: isComplete
+			? "border-t-emerald-500"
+			: "border-t-stone-300 dark:border-t-night-600";
+	const textColor = isActive
+		? "text-amber-600 dark:text-amber-400 bg-amber-50 dark:bg-amber-900/20"
+		: isComplete
+			? "text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-900/20"
+			: "text-stone-400 dark:text-stone-500 bg-stone-100 dark:bg-night-700";
+
 	return (
 		<div className="flex flex-col items-center py-2">
 			{/* Gradient line showing context flowing into agents */}
-			<div
-				className={`w-0.5 h-6 rounded-full ${
-					isActive
-						? "bg-gradient-to-b from-emerald-400 to-amber-400"
-						: "bg-stone-300 dark:bg-night-600"
-				}`}
-			/>
+			<div className={`w-0.5 h-6 rounded-full ${lineColor}`} />
 			{/* Arrow triangle */}
 			<div
-				className={`w-0 h-0 border-l-[5px] border-l-transparent border-r-[5px] border-r-transparent border-t-[6px] ${
-					isActive ? "border-t-amber-400" : "border-t-stone-300 dark:border-t-night-600"
-				}`}
+				className={`w-0 h-0 border-l-[5px] border-l-transparent border-r-[5px] border-r-transparent border-t-[6px] ${borderColor}`}
 			/>
 			{/* Label */}
-			<span
-				className={`mt-1.5 text-[9px] font-medium uppercase tracking-wider px-2 py-0.5 rounded ${
-					isActive
-						? "text-amber-600 dark:text-amber-400 bg-amber-50 dark:bg-amber-900/20"
-						: "text-stone-400 dark:text-stone-500 bg-stone-100 dark:bg-night-700"
-				}`}
-			>
+			<span className={`mt-1 text-[10px] font-mono px-2 py-0.5 rounded ${textColor}`}>
 				Agent Network
 			</span>
 		</div>
@@ -183,6 +216,8 @@ export interface AgentNetworkProps {
 	isLive?: boolean;
 	/** Compact mode for mobile layouts */
 	compact?: boolean;
+	/** Override current phase (used for historical cycles) */
+	currentPhase?: OODAPhase | null;
 }
 
 export function AgentNetwork({
@@ -192,6 +227,7 @@ export function AgentNetwork({
 	onAgentSelect,
 	isLive: _isLive = false,
 	compact = false,
+	currentPhase: currentPhaseProp,
 }: AgentNetworkProps) {
 	// Track expanded phases for collapsible UI (start collapsed)
 	const [expandedPhases, setExpandedPhases] = useState<Set<OODAPhase>>(new Set());
@@ -224,7 +260,8 @@ export function AgentNetwork({
 	});
 
 	// Derive current active phase from agent states for accessibility announcements
-	const currentPhase = useMemo<OODAPhase | null>(() => {
+	// Use prop if provided (for historical cycles), otherwise compute from agent states
+	const derivedPhase = useMemo<OODAPhase | null>(() => {
 		// Find the first phase with an active agent
 		for (const config of PHASE_CONFIG) {
 			if (config.agents.length === 0) {
@@ -258,6 +295,9 @@ export function AgentNetwork({
 
 		return null;
 	}, [agents]);
+
+	// Use prop override if provided (for historical/completed cycles)
+	const currentPhase = currentPhaseProp !== undefined ? currentPhaseProp : derivedPhase;
 
 	// Derive phase statuses
 	const phaseStatus = useMemo(() => {
@@ -401,142 +441,181 @@ export function AgentNetwork({
 				</div>
 			)}
 
-			{/* Context Header - Observe/Orient data inputs */}
-			<ContextHeader
-				isReady={phaseStatus.grounding !== "pending" || phaseStatus.observe === "complete"}
-				compact={compact}
+			{/* ============================================ */}
+			{/* OBSERVE - Market data inputs */}
+			{/* ============================================ */}
+			<OODAWrapper step="OBSERVE" status={phaseStatus.observe} compact={compact}>
+				<ContextHeader
+					isReady={phaseStatus.observe === "complete"}
+					compact={compact}
+					section="observe"
+				/>
+			</OODAWrapper>
+
+			{/* OBSERVE → ORIENT connector */}
+			<ConnectionArrow
+				isActive={phaseStatus.observe === "complete" && phaseStatus.orient !== "complete"}
+				isComplete={phaseStatus.orient === "complete"}
+				label="Market Context"
 			/>
 
-			{/* Context feeds into Agent Network */}
+			{/* ============================================ */}
+			{/* ORIENT - Indicators & analysis inputs */}
+			{/* ============================================ */}
+			<OODAWrapper step="ORIENT" status={phaseStatus.orient} compact={compact}>
+				<ContextHeader
+					isReady={phaseStatus.orient === "complete"}
+					compact={compact}
+					section="orient"
+				/>
+			</OODAWrapper>
+
+			{/* ORIENT → DECIDE connector */}
 			<ContextFeedConnector
-				isActive={phaseStatus.grounding === "active" || phaseStatus.grounding === "complete"}
+				isActive={phaseStatus.grounding === "active"}
+				isComplete={phaseStatus.grounding === "complete"}
 			/>
 
-			{/* GROUNDING Phase */}
-			<PhaseContainer
-				phase="grounding"
-				displayName="GROUNDING"
-				status={phaseStatus.grounding}
-				isExpanded={expandedPhases.has("grounding")}
-				onToggle={() => handlePhaseToggle("grounding")}
-				collapsible
-				compact={compact}
-			>
-				{renderAgents(["grounding"], false)}
-			</PhaseContainer>
+			{/* ============================================ */}
+			{/* DECIDE - Agent network processing */}
+			{/* ============================================ */}
+			<OODAWrapper step="DECIDE" status={deriveDecideStatus(phaseStatus)} compact={compact}>
+				<div className="space-y-2">
+					{/* GROUNDING Phase */}
+					<PhaseContainer
+						phase="grounding"
+						displayName="GROUNDING"
+						status={phaseStatus.grounding}
+						isExpanded={expandedPhases.has("grounding")}
+						onToggle={() => handlePhaseToggle("grounding")}
+						collapsible
+						compact={compact}
+					>
+						{renderAgents(["grounding"], false)}
+					</PhaseContainer>
 
-			<ConnectionArrow
-				isActive={phaseStatus.grounding === "complete" && phaseStatus.analysts !== "complete"}
-				isComplete={phaseStatus.analysts === "complete"}
-				label="Grounding Context"
-			/>
+					<ConnectionArrow
+						isActive={phaseStatus.grounding === "complete" && phaseStatus.analysts !== "complete"}
+						isComplete={phaseStatus.analysts === "complete"}
+						label="Grounding Context"
+					/>
 
-			{/* ANALYSTS Phase */}
-			<PhaseContainer
-				phase="analysts"
-				displayName="ANALYSTS"
-				description="Parallel analysis"
-				status={phaseStatus.analysts}
-				isExpanded={expandedPhases.has("analysts")}
-				onToggle={() => handlePhaseToggle("analysts")}
-				collapsible
-				compact={compact}
-			>
-				{renderAgents(["news", "fundamentals"], true)}
-			</PhaseContainer>
+					{/* ANALYSTS Phase */}
+					<PhaseContainer
+						phase="analysts"
+						displayName="ANALYSTS"
+						description="Parallel analysis"
+						status={phaseStatus.analysts}
+						isExpanded={expandedPhases.has("analysts")}
+						onToggle={() => handlePhaseToggle("analysts")}
+						collapsible
+						compact={compact}
+					>
+						{renderAgents(["news", "fundamentals"], true)}
+					</PhaseContainer>
 
-			<ConnectionArrow
-				isActive={phaseStatus.analysts === "complete" && phaseStatus.debate !== "complete"}
-				isComplete={phaseStatus.debate === "complete"}
-				label="Analyst Outputs"
-			/>
+					<ConnectionArrow
+						isActive={phaseStatus.analysts === "complete" && phaseStatus.debate !== "complete"}
+						isComplete={phaseStatus.debate === "complete"}
+						label="Analyst Outputs"
+					/>
 
-			{/* DEBATE Phase */}
-			<PhaseContainer
-				phase="debate"
-				displayName="DEBATE"
-				description="Bull vs Bear thesis"
-				status={phaseStatus.debate}
-				isExpanded={expandedPhases.has("debate")}
-				onToggle={() => handlePhaseToggle("debate")}
-				collapsible
-				compact={compact}
-			>
-				{renderAgents(["bullish", "bearish"], true)}
-			</PhaseContainer>
+					{/* DEBATE Phase */}
+					<PhaseContainer
+						phase="debate"
+						displayName="DEBATE"
+						description="Bull vs Bear thesis"
+						status={phaseStatus.debate}
+						isExpanded={expandedPhases.has("debate")}
+						onToggle={() => handlePhaseToggle("debate")}
+						collapsible
+						compact={compact}
+					>
+						{renderAgents(["bullish", "bearish"], true)}
+					</PhaseContainer>
 
-			<ConnectionArrow
-				isActive={phaseStatus.debate === "complete" && phaseStatus.trader !== "complete"}
-				isComplete={phaseStatus.trader === "complete"}
-				label="Bull/Bear Cases"
-			/>
+					<ConnectionArrow
+						isActive={phaseStatus.debate === "complete" && phaseStatus.trader !== "complete"}
+						isComplete={phaseStatus.trader === "complete"}
+						label="Bull/Bear Cases"
+					/>
 
-			{/* TRADER Phase */}
-			<PhaseContainer
-				phase="trader"
-				displayName="TRADER"
-				description="Decision synthesis"
-				status={phaseStatus.trader}
-				isExpanded={expandedPhases.has("trader")}
-				onToggle={() => handlePhaseToggle("trader")}
-				collapsible
-				compact={compact}
-			>
-				{renderAgents(["trader"], false)}
-			</PhaseContainer>
+					{/* TRADER Phase */}
+					<PhaseContainer
+						phase="trader"
+						displayName="TRADER"
+						description="Decision synthesis"
+						status={phaseStatus.trader}
+						isExpanded={expandedPhases.has("trader")}
+						onToggle={() => handlePhaseToggle("trader")}
+						collapsible
+						compact={compact}
+					>
+						{renderAgents(["trader"], false)}
+					</PhaseContainer>
 
-			<ConnectionArrow
-				isActive={phaseStatus.trader === "complete" && phaseStatus.consensus !== "complete"}
-				isComplete={phaseStatus.consensus === "complete"}
-				label="DecisionPlan"
-			/>
+					<ConnectionArrow
+						isActive={phaseStatus.trader === "complete" && phaseStatus.consensus !== "complete"}
+						isComplete={phaseStatus.consensus === "complete"}
+						label="DecisionPlan"
+					/>
 
-			{/* CONSENSUS Phase */}
-			<PhaseContainer
-				phase="consensus"
-				displayName="CONSENSUS"
-				description="Risk & validation"
-				status={phaseStatus.consensus}
-				isExpanded={expandedPhases.has("consensus")}
-				onToggle={() => handlePhaseToggle("consensus")}
-				collapsible
-				compact={compact}
-			>
-				{renderAgents(["risk", "critic"], true)}
-			</PhaseContainer>
+					{/* CONSENSUS Phase */}
+					<PhaseContainer
+						phase="consensus"
+						displayName="CONSENSUS"
+						description="Risk & validation"
+						status={phaseStatus.consensus}
+						isExpanded={expandedPhases.has("consensus")}
+						onToggle={() => handlePhaseToggle("consensus")}
+						collapsible
+						compact={compact}
+					>
+						{renderAgents(["risk", "critic"], true)}
+					</PhaseContainer>
+				</div>
+			</OODAWrapper>
 
+			{/* DECIDE → ACT connector */}
 			<ConnectionArrow
 				isActive={phaseStatus.consensus === "complete" && phaseStatus.act !== "complete"}
 				isComplete={phaseStatus.act === "complete"}
 				label="Votes"
 			/>
 
-			{/* ACT Phase */}
-			<PhaseContainer
-				phase="act"
-				displayName="ACT"
-				description="Execution Engine"
-				status={phaseStatus.act}
-				compact={compact}
-			>
-				<div className="flex justify-center">
-					<div className="flex items-center gap-2 px-4 py-2 bg-stone-100 dark:bg-night-700 rounded-lg">
-						<span className="text-xs font-bold text-amber-600 dark:text-amber-400">EX</span>
-						<div>
-							<p className="text-sm font-medium text-stone-900 dark:text-stone-100">
-								Execution Engine
-							</p>
-							<p className="text-[11px] text-stone-500 dark:text-stone-400">
-								{phaseStatus.act === "complete"
-									? "Orders submitted"
-									: phaseStatus.act === "active"
-										? "Executing..."
-										: "Pending consensus"}
-							</p>
+			{/* ============================================ */}
+			{/* ACT - Execution Engine */}
+			{/* ============================================ */}
+			<OODAWrapper step="ACT" status={phaseStatus.act} compact={compact}>
+				<PhaseContainer
+					phase="act"
+					displayName="EXECUTION"
+					description="Order routing & risk checks"
+					status={phaseStatus.act}
+					isExpanded={expandedPhases.has("act")}
+					onToggle={() => handlePhaseToggle("act")}
+					collapsible
+					compact={compact}
+				>
+					<div className="flex justify-center">
+						<div className="flex items-center gap-2 px-4 py-2 bg-stone-100 dark:bg-night-700 rounded-lg">
+							<span className="text-xs font-bold text-emerald-600 dark:text-emerald-400">EX</span>
+							<div>
+								<p className="text-sm font-medium text-stone-900 dark:text-stone-100">
+									Execution Engine
+								</p>
+								<p className="text-[11px] text-stone-500 dark:text-stone-400">
+									{phaseStatus.act === "complete"
+										? "Orders submitted"
+										: phaseStatus.act === "active"
+											? "Executing..."
+											: "Pending consensus"}
+								</p>
+							</div>
 						</div>
 					</div>
-				</div>
-			</PhaseContainer>
+				</PhaseContainer>
+			</OODAWrapper>
 		</motion.div>
 	);
 }

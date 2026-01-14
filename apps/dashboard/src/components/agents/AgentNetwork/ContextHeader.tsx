@@ -111,6 +111,8 @@ export interface ContextHeaderProps {
 	pcRatio?: number;
 	/** Compact mode for mobile */
 	compact?: boolean;
+	/** Which section to render: "observe", "orient", or undefined for both */
+	section?: "observe" | "orient";
 }
 
 export const ContextHeader = memo(function ContextHeader({
@@ -118,10 +120,49 @@ export const ContextHeader = memo(function ContextHeader({
 	regime,
 	pcRatio,
 	compact = false,
+	section,
 }: ContextHeaderProps) {
 	const [observeExpanded, setObserveExpanded] = useState(!compact);
 	const [orientExpanded, setOrientExpanded] = useState(!compact);
 
+	// Single section mode - simpler layout
+	if (section === "observe") {
+		return (
+			<motion.div
+				variants={containerVariants}
+				initial="initial"
+				animate="animate"
+				className={compact ? "px-1" : "px-2"}
+			>
+				<div className="flex flex-wrap gap-1.5">
+					<ContextItem label="Market Data" isReady={isReady} />
+					<ContextItem label="Options Chains" isReady={isReady} />
+					<ContextItem label="Portfolio" isReady={isReady} />
+					<ContextItem label="Universe" isReady={isReady} />
+				</div>
+			</motion.div>
+		);
+	}
+
+	if (section === "orient") {
+		return (
+			<motion.div
+				variants={containerVariants}
+				initial="initial"
+				animate="animate"
+				className={compact ? "px-1" : "px-2"}
+			>
+				<div className="flex flex-wrap gap-1.5">
+					<ContextItem label="Indicators" isReady={isReady} />
+					<ContextItem label="Regime" isReady={isReady} value={regime} />
+					<ContextItem label="Memory" isReady={isReady} />
+					<ContextItem label="P/C Ratio" isReady={isReady} value={pcRatio?.toFixed(2)} />
+				</div>
+			</motion.div>
+		);
+	}
+
+	// Combined mode (original behavior)
 	return (
 		<motion.div
 			variants={containerVariants}
