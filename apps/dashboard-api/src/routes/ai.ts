@@ -65,25 +65,25 @@ const summarizeReasoningRoute = createRoute({
 // Implementation
 // ============================================
 
-const STATUS_PROMPT = `Summarize what this AI agent is currently thinking about in ONE short phrase (max 8 words). Use present continuous tense. Be specific about the domain concepts mentioned.
+const STATUS_PROMPT = `Summarize what this AI agent is currently thinking about in a concise sentence (8-15 words). Use present continuous tense. Be specific about the domain concepts and data mentioned.
 
 Examples of good summaries:
-- "Analyzing RSI divergence patterns..."
-- "Weighing earnings vs macro risk..."
-- "Checking Fed policy implications..."
-- "Evaluating sector momentum signals..."
-- "Reviewing options Greeks data..."
-- "Assessing position sizing limits..."
+- "Analyzing RSI divergence patterns to identify potential reversal points..."
+- "Weighing earnings growth against macro headwinds for position sizing..."
+- "Checking Fed policy implications on rate-sensitive sectors..."
+- "Evaluating momentum signals across tech sector holdings..."
+- "Reviewing options Greeks to assess downside protection levels..."
+- "Assessing position sizing limits given current volatility regime..."
 
-Bad examples (too generic):
-- "Thinking about the data..."
-- "Processing information..."
-- "Analyzing the situation..."
+Bad examples (too short or generic):
+- "Thinking..."
+- "Analyzing data..."
+- "Processing..."
 
 Current reasoning (analyze the most recent content):
 {reasoning}
 
-Output ONLY the summary phrase, nothing else.`;
+Output ONLY the summary sentence, nothing else.`;
 
 app.openapi(summarizeReasoningRoute, async (c) => {
   const { reasoning } = c.req.valid("json");
@@ -104,8 +104,7 @@ app.openapi(summarizeReasoningRoute, async (c) => {
     const { text } = await generateText({
       model: google("gemini-3-flash-preview"),
       prompt: STATUS_PROMPT.replace("{reasoning}", reasoning.slice(-500)),
-      maxOutputTokens: 20,
-      temperature: 0.3,
+      maxOutputTokens: 200,
     });
 
     // Clean up the response
