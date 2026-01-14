@@ -14,6 +14,8 @@ export {
 	type AlpacaCorporateActionSplit,
 	AlpacaCorporateActionSplitSchema,
 	AlpacaMarketDataClient,
+	type AlpacaNewsArticle,
+	AlpacaNewsArticleSchema,
 	type AlpacaOptionContract,
 	AlpacaOptionContractSchema,
 	type AlpacaOptionGreeks,

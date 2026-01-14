@@ -180,6 +180,7 @@
         "@cream/helix-schema": "workspace:*",
         "@cream/indicators": "workspace:*",
         "@cream/logger": "workspace:*",
+        "@cream/marketdata": "workspace:*",
         "@cream/storage": "workspace:*",
         "@cream/universe": "workspace:*",
         "@google/genai": "1.35.0",

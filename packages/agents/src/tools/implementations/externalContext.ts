@@ -15,7 +15,7 @@ import {
 	type PipelineResult,
 } from "@cream/external-context";
 import { createExtractionClient } from "../../extraction/index.js";
-import { getFMPClient } from "../clients.js";
+import { getAlpacaMarketDataClient } from "../clients.js";
 
 // ============================================
 // Types
@@ -62,7 +62,7 @@ export interface AnalyzeContentResult {
  * Extract and analyze news context for symbols
  *
  * Uses the full external-context extraction pipeline:
- * 1. Fetches news from FMP API
+ * 1. Fetches news from Alpaca API
  * 2. Runs structured outputs extraction
  * 3. Computes sentiment, importance, and surprise scores
  * 4. Links entities to ticker symbols
@@ -86,28 +86,28 @@ export async function extractNewsContext(
 		};
 	}
 
-	const client = getFMPClient();
+	const client = getAlpacaMarketDataClient();
 	if (!client) {
 		return {
 			events: [],
 			stats: { inputCount: 0, successCount: 0, errorCount: 0, processingTimeMs: 0 },
-			errors: [{ content: "FMP client", error: "FMP_KEY not configured" }],
+			errors: [{ content: "Alpaca client", error: "ALPACA_KEY/ALPACA_SECRET not configured" }],
 		};
 	}
 
 	try {
-		// Fetch news from FMP
-		const newsItems = await client.getStockNews(symbols, limit);
+		// Fetch news from Alpaca
+		const newsItems = await client.getNews(symbols, limit);
 
-		// Transform to FMPNewsArticle format expected by pipeline
+		// Transform Alpaca news to FMPNewsArticle format expected by pipeline
 		const articles = newsItems.map((item) => ({
-			symbol: item.symbol,
-			publishedDate: item.publishedDate,
-			title: item.title,
-			image: item.image,
-			site: item.site,
-			text: item.text,
-			url: item.url,
+			symbol: item.symbols.join(","),
+			publishedDate: item.created_at,
+			title: item.headline,
+			image: undefined,
+			site: item.source,
+			text: item.content ?? item.summary ?? item.headline,
+			url: item.url ?? "",
 		}));
 
 		// Create extraction client and pipeline

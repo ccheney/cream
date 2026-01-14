@@ -170,6 +170,20 @@ export const AlpacaCorporateActionDividendSchema = z.object({
 });
 export type AlpacaCorporateActionDividend = z.infer<typeof AlpacaCorporateActionDividendSchema>;
 
+export const AlpacaNewsArticleSchema = z.object({
+	id: z.number(),
+	headline: z.string(),
+	summary: z.string().optional(),
+	author: z.string().optional(),
+	created_at: z.string(),
+	updated_at: z.string().optional(),
+	url: z.string().optional(),
+	content: z.string().optional(),
+	symbols: z.array(z.string()),
+	source: z.string(),
+});
+export type AlpacaNewsArticle = z.infer<typeof AlpacaNewsArticleSchema>;
+
 // ============================================
 // Client Types
 // ============================================
@@ -947,6 +961,68 @@ export class AlpacaMarketDataClient {
 		}
 
 		return dividends;
+	}
+
+	// ============================================
+	// News Methods
+	// ============================================
+
+	/**
+	 * Get news articles for symbols.
+	 *
+	 * @param symbols - Array of ticker symbols to filter news (empty for all news)
+	 * @param limit - Maximum number of articles to return (default: 10)
+	 * @param start - Start date for news (ISO 8601 format)
+	 * @param end - End date for news (ISO 8601 format)
+	 */
+	async getNews(
+		symbols: string[],
+		limit = 10,
+		start?: string,
+		end?: string
+	): Promise<AlpacaNewsArticle[]> {
+		const articles: AlpacaNewsArticle[] = [];
+
+		try {
+			const params: Record<string, string | number | boolean | undefined> = {
+				limit,
+			};
+
+			if (symbols.length > 0) {
+				params.symbols = symbols.join(",");
+			}
+			if (start) {
+				params.start = start;
+			}
+			if (end) {
+				params.end = end;
+			}
+
+			const response = await this.request<{ news: unknown[] }>("/v1beta1/news", params);
+
+			if (response?.news && Array.isArray(response.news)) {
+				for (const article of response.news) {
+					const a = article as Record<string, unknown>;
+
+					articles.push({
+						id: (a.id as number) ?? 0,
+						headline: (a.headline as string) ?? "",
+						summary: a.summary as string | undefined,
+						author: a.author as string | undefined,
+						created_at: (a.created_at as string) ?? new Date().toISOString(),
+						updated_at: a.updated_at as string | undefined,
+						url: a.url as string | undefined,
+						content: a.content as string | undefined,
+						symbols: (a.symbols as string[]) ?? [],
+						source: (a.source as string) ?? "unknown",
+					});
+				}
+			}
+		} catch {
+			// Return empty array on error
+		}
+
+		return articles;
 	}
 }
 

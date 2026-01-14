@@ -14,6 +14,11 @@ import {
 } from "@cream/domain/grpc";
 import { createHelixClientFromEnv, type HelixClient } from "@cream/helix";
 import {
+	type AlpacaMarketDataClient,
+	createAlpacaClientFromEnv,
+	isAlpacaConfigured,
+} from "@cream/marketdata";
+import {
 	createFMPClient,
 	createFREDClient,
 	type FMPClient,
@@ -87,6 +92,25 @@ export function getBrokerClient(ctx: ExecutionContext): AlpacaClient | null {
 	brokerClient = createBrokerClient(ctx);
 	brokerClientEnvironment = ctx.environment;
 	return brokerClient;
+}
+
+// ============================================
+// Alpaca Market Data Client Singleton
+// ============================================
+
+let alpacaMarketDataClient: AlpacaMarketDataClient | null = null;
+
+export function getAlpacaMarketDataClient(): AlpacaMarketDataClient | null {
+	if (alpacaMarketDataClient) {
+		return alpacaMarketDataClient;
+	}
+
+	if (!isAlpacaConfigured()) {
+		return null;
+	}
+
+	alpacaMarketDataClient = createAlpacaClientFromEnv();
+	return alpacaMarketDataClient;
 }
 
 // ============================================
