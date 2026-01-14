@@ -103,8 +103,9 @@ export default function AgentsPage() {
           )}
         </div>
 
-        {/* Detail Panel */}
-        <div className="lg:col-span-1">
+        {/* Detail Panel + Historical Outputs */}
+        <div className="lg:col-span-1 space-y-4">
+          {/* Streaming Detail */}
           {selectedAgent && selectedState ? (
             <AgentStreamingDetail
               agentType={toStoreAgentType(selectedAgent)}
@@ -130,68 +131,71 @@ export default function AgentsPage() {
               </p>
             </div>
           )}
-        </div>
-      </div>
 
-      {/* Historical Outputs Section */}
-      <div className="bg-white dark:bg-night-800 rounded-lg border border-cream-200 dark:border-night-700">
-        <div className="p-4 border-b border-cream-200 dark:border-night-700 flex items-center justify-between">
-          <h2 className="text-lg font-medium text-stone-900 dark:text-night-50">
-            Historical Outputs
-          </h2>
-          {selectedAgent && (
-            <span className="text-sm text-stone-500 dark:text-night-300">
-              Showing outputs for {getAgentDisplayName(selectedAgent)}
-            </span>
-          )}
-        </div>
-        <div className="p-4 max-h-96 overflow-auto">
-          {!selectedAgent ? (
-            <p className="text-stone-500 dark:text-night-300">
-              Select an agent to view their historical outputs
-            </p>
-          ) : outputsLoading ? (
-            <div className="space-y-4">
-              {[1, 2, 3].map((i) => (
-                <div
-                  key={i}
-                  className="h-20 bg-cream-100 dark:bg-night-700 rounded animate-pulse"
-                />
-              ))}
+          {/* Historical Outputs */}
+          <div className="bg-white dark:bg-night-800 rounded-lg border border-cream-200 dark:border-night-700">
+            <div className="p-3 border-b border-cream-200 dark:border-night-700 flex items-center justify-between">
+              <h3 className="text-sm font-medium text-stone-900 dark:text-night-50">
+                Historical Outputs
+              </h3>
+              {selectedAgent && (
+                <span className="text-xs text-stone-500 dark:text-night-300">
+                  {getAgentDisplayName(selectedAgent)}
+                </span>
+              )}
             </div>
-          ) : outputs && outputs.length > 0 ? (
-            <div className="space-y-4">
-              {outputs.map((output, i) => (
-                <div key={`output-${i}`} className="p-3 bg-cream-50 dark:bg-night-750 rounded-lg">
-                  <div className="flex items-center justify-between mb-2">
-                    <span
-                      className={`px-2 py-0.5 text-xs font-medium rounded ${
-                        output.vote === "APPROVE"
-                          ? "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400"
-                          : "bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400"
-                      }`}
-                    >
-                      {output.vote}
-                    </span>
-                    <span className="text-xs text-stone-500 dark:text-night-300">
-                      {formatDistanceToNow(new Date(output.createdAt), {
-                        addSuffix: true,
-                      })}
-                    </span>
-                  </div>
-                  <p className="text-sm text-stone-700 dark:text-night-100 whitespace-pre-wrap">
-                    {output.reasoning}
-                  </p>
-                  <div className="mt-2 flex items-center gap-4 text-xs text-stone-500 dark:text-night-300">
-                    <span>Confidence: {(output.confidence * 100).toFixed(0)}%</span>
-                    <span>Processing: {output.processingTimeMs}ms</span>
-                  </div>
+            <div className="p-3 max-h-64 overflow-auto">
+              {!selectedAgent ? (
+                <p className="text-sm text-stone-500 dark:text-night-300">
+                  Select an agent to view outputs
+                </p>
+              ) : outputsLoading ? (
+                <div className="space-y-3">
+                  {[1, 2, 3].map((i) => (
+                    <div
+                      key={i}
+                      className="h-16 bg-cream-100 dark:bg-night-700 rounded animate-pulse"
+                    />
+                  ))}
                 </div>
-              ))}
+              ) : outputs && outputs.length > 0 ? (
+                <div className="space-y-3">
+                  {outputs.map((output, i) => (
+                    <div
+                      key={`output-${i}`}
+                      className="p-2.5 bg-cream-50 dark:bg-night-750 rounded-lg"
+                    >
+                      <div className="flex items-center justify-between mb-1.5">
+                        <span
+                          className={`px-1.5 py-0.5 text-[10px] font-medium rounded ${
+                            output.vote === "APPROVE"
+                              ? "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400"
+                              : "bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400"
+                          }`}
+                        >
+                          {output.vote}
+                        </span>
+                        <span className="text-[10px] text-stone-500 dark:text-night-300">
+                          {formatDistanceToNow(new Date(output.createdAt), {
+                            addSuffix: true,
+                          })}
+                        </span>
+                      </div>
+                      <p className="text-xs text-stone-700 dark:text-night-100 whitespace-pre-wrap line-clamp-3">
+                        {output.reasoning}
+                      </p>
+                      <div className="mt-1.5 flex items-center gap-3 text-[10px] text-stone-500 dark:text-night-300">
+                        <span>{(output.confidence * 100).toFixed(0)}% conf</span>
+                        <span>{output.processingTimeMs}ms</span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <p className="text-sm text-stone-500 dark:text-night-300">No outputs yet</p>
+              )}
             </div>
-          ) : (
-            <p className="text-stone-500 dark:text-night-300">No outputs for this agent yet</p>
-          )}
+          </div>
         </div>
       </div>
     </div>
