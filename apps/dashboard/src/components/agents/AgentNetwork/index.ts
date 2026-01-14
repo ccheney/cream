@@ -9,6 +9,7 @@ export { AgentNetwork } from "./AgentNetwork";
 export { AgentNode } from "./AgentNode";
 // SVG connection components
 export { ConnectionLine } from "./ConnectionLine";
+export { ContextHeader } from "./ContextHeader";
 export { DataFlowPulse, DataFlowPulses } from "./DataFlowPulse";
 export { FlowLabel } from "./FlowLabel";
 export { DataItem, PhaseContainer } from "./PhaseContainer";

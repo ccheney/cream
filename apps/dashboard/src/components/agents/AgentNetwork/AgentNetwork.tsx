@@ -13,7 +13,8 @@ import { motion } from "framer-motion";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import type { AgentStreamingState } from "@/stores/agent-streaming-store";
 import { AgentNode } from "./AgentNode";
-import { DataItem, PhaseContainer } from "./PhaseContainer";
+import { ContextHeader } from "./ContextHeader";
+import { PhaseContainer } from "./PhaseContainer";
 import {
   INITIAL_PHASE_STATUS,
   type NetworkAgentType,
@@ -84,6 +85,45 @@ function derivePhaseStatus(
     return "active";
   }
   return "pending";
+}
+
+// ============================================
+// Context Feed Connector
+// ============================================
+
+interface ContextFeedConnectorProps {
+  isActive: boolean;
+}
+
+function ContextFeedConnector({ isActive }: ContextFeedConnectorProps) {
+  return (
+    <div className="flex flex-col items-center py-2">
+      {/* Gradient line showing context flowing into agents */}
+      <div
+        className={`w-0.5 h-6 rounded-full ${
+          isActive
+            ? "bg-gradient-to-b from-emerald-400 to-amber-400"
+            : "bg-stone-300 dark:bg-night-600"
+        }`}
+      />
+      {/* Arrow triangle */}
+      <div
+        className={`w-0 h-0 border-l-[5px] border-l-transparent border-r-[5px] border-r-transparent border-t-[6px] ${
+          isActive ? "border-t-amber-400" : "border-t-stone-300 dark:border-t-night-600"
+        }`}
+      />
+      {/* Label */}
+      <span
+        className={`mt-1.5 text-[9px] font-medium uppercase tracking-wider px-2 py-0.5 rounded ${
+          isActive
+            ? "text-amber-600 dark:text-amber-400 bg-amber-50 dark:bg-amber-900/20"
+            : "text-stone-400 dark:text-stone-500 bg-stone-100 dark:bg-night-700"
+        }`}
+      >
+        Agent Network
+      </span>
+    </div>
+  );
 }
 
 // ============================================
@@ -319,46 +359,15 @@ export function AgentNetwork({
         </div>
       </div>
 
-      {/* OBSERVE Phase */}
-      <PhaseContainer
-        phase="observe"
-        displayName="OBSERVE"
-        description="Market Data, Options Chains, Portfolio, Universe"
-        status={phaseStatus.observe}
+      {/* Context Header - Observe/Orient data inputs */}
+      <ContextHeader
+        isReady={phaseStatus.grounding !== "pending" || phaseStatus.observe === "complete"}
         compact={compact}
-      >
-        <div className="flex flex-wrap gap-2">
-          <DataItem label="Market Data" isComplete={phaseStatus.observe !== "pending"} />
-          <DataItem label="Options Chains" isComplete={phaseStatus.observe !== "pending"} />
-          <DataItem label="Portfolio" isComplete={phaseStatus.observe !== "pending"} />
-          <DataItem label="Universe" isComplete={phaseStatus.observe !== "pending"} />
-        </div>
-      </PhaseContainer>
-
-      <ConnectionArrow
-        isActive={phaseStatus.observe === "complete" && phaseStatus.orient !== "complete"}
-        label="Market Context"
       />
 
-      {/* ORIENT Phase */}
-      <PhaseContainer
-        phase="orient"
-        displayName="ORIENT"
-        description="Indicators, Regime, Memory, P/C Ratio"
-        status={phaseStatus.orient}
-        compact={compact}
-      >
-        <div className="flex flex-wrap gap-2">
-          <DataItem label="Indicators" isComplete={phaseStatus.orient !== "pending"} />
-          <DataItem label="Regime" isComplete={phaseStatus.orient !== "pending"} />
-          <DataItem label="Memory" isComplete={phaseStatus.orient !== "pending"} />
-          <DataItem label="P/C Ratio" isComplete={phaseStatus.orient !== "pending"} />
-        </div>
-      </PhaseContainer>
-
-      <ConnectionArrow
-        isActive={phaseStatus.orient === "complete" && phaseStatus.grounding !== "complete"}
-        label="Orientation Data"
+      {/* Context feeds into Agent Network */}
+      <ContextFeedConnector
+        isActive={phaseStatus.grounding === "active" || phaseStatus.grounding === "complete"}
       />
 
       {/* GROUNDING Phase */}
