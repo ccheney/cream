@@ -88,7 +88,6 @@ setup_directories() {
   log_info "Setting up fixture directories..."
 
   mkdir -p "$FIXTURE_DIR/alpaca"
-  mkdir -p "$FIXTURE_DIR/fmp"
   mkdir -p "$FIXTURE_DIR/alphavantage"
 
   log_success "Fixture directories created"
@@ -99,7 +98,7 @@ setup_directories() {
 # ============================================
 
 run_alpaca() {
-  log_info "Running fetch-alpaca.ts (1/3)..."
+  log_info "Running fetch-alpaca.ts (1/2)..."
 
   if bun "$SCRIPT_DIR/fetch-alpaca.ts"; then
     log_success "fetch-alpaca.ts complete"
@@ -110,20 +109,8 @@ run_alpaca() {
   fi
 }
 
-run_fmp() {
-  log_info "Running fetch-fmp.ts (2/3)..."
-
-  if bun "$SCRIPT_DIR/fetch-fmp.ts"; then
-    log_success "fetch-fmp.ts complete"
-    return 0
-  else
-    log_error "fetch-fmp.ts failed"
-    return 1
-  fi
-}
-
 run_alphavantage() {
-  log_info "Running fetch-alphavantage.ts (3/3)..."
+  log_info "Running fetch-alphavantage.ts (2/2)..."
   log_info "Note: Limited to 25 req/day, ~1 min total"
 
   if bun "$SCRIPT_DIR/fetch-alphavantage.ts"; then
@@ -147,8 +134,7 @@ main() {
   echo ""
   echo "This script will fetch API fixtures from:"
   echo "  1. Alpaca (paper trading, candles, quotes)"
-  echo "  2. FMP (fundamentals)"
-  echo "  3. Alpha Vantage (macro)"
+  echo "  2. Alpha Vantage (macro)"
   echo ""
   echo "Estimated time: ~2 minutes"
   echo ""
@@ -171,7 +157,6 @@ main() {
   local failed=0
 
   run_alpaca || ((failed++))
-  run_fmp || ((failed++))
   run_alphavantage || ((failed++))
 
   echo ""
