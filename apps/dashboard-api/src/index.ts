@@ -21,7 +21,7 @@ import {
   type SessionVariables,
   sessionMiddleware,
 } from "./auth/session.js";
-import { closeDb } from "./db.js";
+import { closeDb, getCyclesRepo } from "./db.js";
 import { getEventPublisher, resetEventPublisher } from "./events/publisher.js";
 import log from "./logger.js";
 import { AUTH_CONFIG, rateLimit, SESSION_CONFIG } from "./middleware/index.js";
@@ -284,6 +284,21 @@ if (import.meta.main) {
   const port = parseInt(process.env.PORT ?? "3001", 10);
 
   log.info({ port, allowedOrigins }, "Starting Dashboard API server");
+
+  // Mark any orphaned "running" cycles as failed from previous server instance
+  getCyclesRepo()
+    .then((repo) => repo.markOrphanedAsFailed())
+    .then((count) => {
+      if (count > 0) {
+        log.info({ count }, "Marked orphaned cycles as failed");
+      }
+    })
+    .catch((error) => {
+      log.warn(
+        { error: error instanceof Error ? error.message : String(error) },
+        "Failed to clean up orphaned cycles"
+      );
+    });
 
   // Initialize CalendarService (non-blocking, falls back to hardcoded for BACKTEST)
   const creamEnv = (process.env.CREAM_ENV as CreamEnvironment | undefined) ?? "BACKTEST";

@@ -401,6 +401,9 @@ export interface CyclesRepository {
   }): Promise<PaginatedResult<Cycle>>;
   findRecent(environment: string, limit?: number): Promise<Cycle[]>;
 
+  // Cleanup
+  markOrphanedAsFailed(): Promise<number>;
+
   // Cycle events
   addEvent(input: CreateCycleEventInput): Promise<CycleEvent>;
   addEventsBatch(events: CreateCycleEventInput[]): Promise<void>;
@@ -775,6 +778,24 @@ export function createCyclesRepository(client: TursoClient): CyclesRepository {
         errorMessage: error,
         errorStack: stack,
       });
+    },
+
+    async markOrphanedAsFailed(): Promise<number> {
+      const now = new Date().toISOString();
+      try {
+        const result = await client.run(
+          `UPDATE cycles
+           SET status = 'failed',
+               completed_at = ?,
+               error_message = 'Server restarted - cycle orphaned',
+               updated_at = ?
+           WHERE status = 'running'`,
+          [now, now]
+        );
+        return result.changes;
+      } catch (error) {
+        throw RepositoryError.fromSqliteError("cycles", error as Error);
+      }
     },
   };
 }
