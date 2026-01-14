@@ -64,6 +64,17 @@ export {
   useUpdateUniverseConfig,
   useValidateDraft,
 } from "./useConfig";
+// Cycle History
+export {
+  type CycleListFilters,
+  type CycleListItem,
+  type CycleListResponse,
+  type FullCycleResponse,
+  type ReconstructedAgentState,
+  type ReconstructedToolCall,
+  useCycleHistory,
+  useFullCycle,
+} from "./useCycleHistory";
 // Decisions
 export {
   useApproveDecision,

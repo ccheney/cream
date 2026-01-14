@@ -113,6 +113,66 @@ export const CycleStatusResponseSchema = z.object({
 });
 
 // ============================================
+// Cycle History Schemas
+// ============================================
+
+export const CycleListItemSchema = z.object({
+  id: z.string(),
+  environment: z.string(),
+  status: z.enum(["running", "completed", "failed"]),
+  startedAt: z.string(),
+  completedAt: z.string().nullable(),
+  durationMs: z.number().nullable(),
+  decisionsCount: z.number(),
+  approved: z.boolean().nullable(),
+  configVersion: z.string().nullable(),
+});
+
+export const CycleListResponseSchema = z.object({
+  data: z.array(CycleListItemSchema),
+  total: z.number(),
+  page: z.number(),
+  pageSize: z.number(),
+  totalPages: z.number(),
+});
+
+export const CycleListQuerySchema = z.object({
+  environment: EnvironmentSchema.optional(),
+  status: z.enum(["running", "completed", "failed"]).optional(),
+  page: z.coerce.number().min(1).default(1),
+  pageSize: z.coerce.number().min(1).max(100).default(20),
+});
+
+export const ReconstructedToolCallSchema = z.object({
+  toolCallId: z.string(),
+  toolName: z.string(),
+  toolArgs: z.string(),
+  status: z.enum(["pending", "complete", "error"]),
+  resultSummary: z.string().optional(),
+  durationMs: z.number().optional(),
+  timestamp: z.string(),
+});
+
+export const ReconstructedAgentStateSchema = z.object({
+  status: z.enum(["idle", "processing", "complete", "error"]),
+  toolCalls: z.array(ReconstructedToolCallSchema),
+  reasoningText: z.string(),
+  textOutput: z.string(),
+  error: z.string().optional(),
+  lastUpdate: z.string().nullable(),
+});
+
+export const FullCycleResponseSchema = z.object({
+  cycle: CycleListItemSchema.extend({
+    currentPhase: z.string().nullable(),
+    progressPct: z.number(),
+    iterations: z.number().nullable(),
+    errorMessage: z.string().nullable(),
+  }),
+  streamingState: z.record(z.string(), ReconstructedAgentStateSchema),
+});
+
+// ============================================
 // TypeScript Interfaces
 // ============================================
 

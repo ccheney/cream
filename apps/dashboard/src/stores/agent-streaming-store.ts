@@ -81,6 +81,9 @@ const INITIAL_PHASE_STATUS: Record<OODAPhase, PhaseStatus> = {
   act: "pending",
 };
 
+/** View mode for the agent network */
+export type ViewMode = "live" | "historical";
+
 export interface AgentStreamingStoreState {
   /** Streaming state per agent type */
   agents: Map<AgentType, AgentStreamingState>;
@@ -92,6 +95,10 @@ export interface AgentStreamingStoreState {
   phaseStatus: Record<OODAPhase, PhaseStatus>;
   /** Active data flows */
   dataFlows: DataFlow[];
+  /** Current view mode (live or historical) */
+  viewMode: ViewMode;
+  /** Historical cycle ID when viewing past data */
+  historicalCycleId: string | null;
 }
 
 export interface AgentStreamingStoreActions {
@@ -125,6 +132,15 @@ export interface AgentStreamingStoreActions {
   clear: () => void;
   /** Reset store to initial state */
   reset: () => void;
+  /** Load historical cycle data */
+  loadHistoricalCycle: (
+    cycleId: string,
+    streamingState: Record<string, AgentStreamingState>
+  ) => void;
+  /** Return to live mode */
+  returnToLive: () => void;
+  /** Check if currently viewing historical data */
+  isHistorical: () => boolean;
 }
 
 export type AgentStreamingStore = AgentStreamingStoreState & AgentStreamingStoreActions;
@@ -158,6 +174,8 @@ const initialState: AgentStreamingStoreState = {
   currentPhase: null,
   phaseStatus: { ...INITIAL_PHASE_STATUS },
   dataFlows: [],
+  viewMode: "live",
+  historicalCycleId: null,
 };
 
 // ============================================
@@ -167,7 +185,13 @@ const initialState: AgentStreamingStoreState = {
 // Persisted state type (only state, not actions)
 type PersistedState = Pick<
   AgentStreamingStoreState,
-  "agents" | "currentCycleId" | "currentPhase" | "phaseStatus" | "dataFlows"
+  | "agents"
+  | "currentCycleId"
+  | "currentPhase"
+  | "phaseStatus"
+  | "dataFlows"
+  | "viewMode"
+  | "historicalCycleId"
 >;
 
 // Custom storage to handle Map serialization
@@ -177,6 +201,8 @@ type SerializedState = {
   currentPhase: OODAPhase | null;
   phaseStatus: Record<OODAPhase, PhaseStatus>;
   dataFlows: DataFlow[];
+  viewMode: ViewMode;
+  historicalCycleId: string | null;
 };
 
 const storage = createJSONStorage<PersistedState>(() => sessionStorage, {
@@ -399,11 +425,54 @@ export const useAgentStreamingStore = create<AgentStreamingStore>()(
           currentPhase: null,
           phaseStatus: { ...INITIAL_PHASE_STATUS },
           dataFlows: [],
+          viewMode: "live",
+          historicalCycleId: null,
         });
       },
 
       reset: () => {
         set(initialState);
+      },
+
+      loadHistoricalCycle: (cycleId, streamingState) => {
+        // Convert record to Map and transform to AgentStreamingState format
+        const agentsMap = new Map<AgentType, AgentStreamingState>();
+        for (const [agentType, state] of Object.entries(streamingState)) {
+          agentsMap.set(agentType as AgentType, {
+            status: state.status,
+            toolCalls: state.toolCalls,
+            reasoningText: state.reasoningText,
+            textOutput: state.textOutput,
+            error: state.error,
+            lastUpdate: state.lastUpdate,
+          });
+        }
+
+        set({
+          agents: agentsMap,
+          currentCycleId: cycleId,
+          viewMode: "historical",
+          historicalCycleId: cycleId,
+          currentPhase: null,
+          phaseStatus: { ...INITIAL_PHASE_STATUS },
+          dataFlows: [],
+        });
+      },
+
+      returnToLive: () => {
+        set({
+          agents: new Map(),
+          currentCycleId: null,
+          viewMode: "live",
+          historicalCycleId: null,
+          currentPhase: null,
+          phaseStatus: { ...INITIAL_PHASE_STATUS },
+          dataFlows: [],
+        });
+      },
+
+      isHistorical: () => {
+        return get().viewMode === "historical";
       },
     }),
     {
@@ -415,6 +484,8 @@ export const useAgentStreamingStore = create<AgentStreamingStore>()(
         currentPhase: state.currentPhase,
         phaseStatus: state.phaseStatus,
         dataFlows: state.dataFlows,
+        viewMode: state.viewMode,
+        historicalCycleId: state.historicalCycleId,
       }),
     }
   )
@@ -429,6 +500,8 @@ export const selectCurrentCycleId = (state: AgentStreamingStore) => state.curren
 export const selectCurrentPhase = (state: AgentStreamingStore) => state.currentPhase;
 export const selectPhaseStatus = (state: AgentStreamingStore) => state.phaseStatus;
 export const selectDataFlows = (state: AgentStreamingStore) => state.dataFlows;
+export const selectViewMode = (state: AgentStreamingStore) => state.viewMode;
+export const selectHistoricalCycleId = (state: AgentStreamingStore) => state.historicalCycleId;
 
 export function useAgentStreamingState(agentType: AgentType) {
   return useAgentStreamingStore((state) => state.agents.get(agentType));
@@ -442,6 +515,8 @@ export function useAllAgentStreaming() {
       currentPhase: state.currentPhase,
       phaseStatus: state.phaseStatus,
       dataFlows: state.dataFlows,
+      viewMode: state.viewMode,
+      historicalCycleId: state.historicalCycleId,
       getAgent: state.getAgent,
     }))
   );
@@ -462,6 +537,9 @@ export function useAgentStreamingActions() {
       clearDataFlows: state.clearDataFlows,
       clear: state.clear,
       reset: state.reset,
+      loadHistoricalCycle: state.loadHistoricalCycle,
+      returnToLive: state.returnToLive,
+      isHistorical: state.isHistorical,
     }))
   );
 }

@@ -118,6 +118,10 @@ export interface UseAgentStreamingReturn {
   isSubscribed: boolean;
   /** Current cycle ID being tracked */
   currentCycleId: string | null;
+  /** View mode (live or historical) */
+  viewMode: "live" | "historical";
+  /** Historical cycle ID when viewing past data */
+  historicalCycleId: string | null;
   /** Clear all streaming state */
   clear: () => void;
 }
@@ -132,7 +136,7 @@ export function useAgentStreaming(options: UseAgentStreamingOptions = {}): UseAg
   const { lastMessage, subscribe, unsubscribe, connected } = useWebSocketContext();
 
   // Use Zustand store for persistent state
-  const { agents, currentCycleId, getAgent } = useAllAgentStreaming();
+  const { agents, currentCycleId, viewMode, historicalCycleId, getAgent } = useAllAgentStreaming();
   const {
     addToolCall,
     updateToolCallResult,
@@ -149,9 +153,18 @@ export function useAgentStreaming(options: UseAgentStreamingOptions = {}): UseAg
   const cycleIdRef = useRef(cycleId);
   cycleIdRef.current = cycleId;
 
+  // Ref for stable viewMode access in callbacks
+  const viewModeRef = useRef(viewMode);
+  viewModeRef.current = viewMode;
+
   // Handle incoming WebSocket messages
   const handleMessage = useCallback(
     (message: AgentStreamMessage) => {
+      // Skip processing when viewing historical data
+      if (viewModeRef.current === "historical") {
+        return;
+      }
+
       if (!("data" in message) || !message.data) {
         return;
       }
@@ -289,9 +302,11 @@ export function useAgentStreaming(options: UseAgentStreamingOptions = {}): UseAg
       getAgent,
       isSubscribed,
       currentCycleId,
+      viewMode,
+      historicalCycleId,
       clear,
     }),
-    [agents, getAgent, isSubscribed, currentCycleId, clear]
+    [agents, getAgent, isSubscribed, currentCycleId, viewMode, historicalCycleId, clear]
   );
 }
 

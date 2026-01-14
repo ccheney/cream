@@ -190,6 +190,16 @@ export const queryKeys = {
         : ([...queryKeys.theses.all] as const),
     detail: (id: string) => [...queryKeys.theses.all, id] as const,
   },
+
+  // Cycles
+  cycles: {
+    all: ["cycles"] as const,
+    list: (filters?: Record<string, unknown>) =>
+      filters
+        ? ([...queryKeys.cycles.all, "list", filters] as const)
+        : ([...queryKeys.cycles.all, "list"] as const),
+    full: (id: string) => [...queryKeys.cycles.all, id, "full"] as const,
+  },
 } as const;
 
 // ============================================

@@ -117,6 +117,11 @@ export {
   createCyclesRepository,
   type DecisionSummary as CycleDecisionSummary,
   type OrderSummary as CycleOrderSummary,
+  type ReconstructedAgentState,
+  type ReconstructedStreamingState,
+  type ReconstructedToolCall,
+  reconstructStreamingState,
+  STREAMING_EVENT_TYPES,
   type UpdateCycleInput,
 } from "./cycles.js";
 // Repositories

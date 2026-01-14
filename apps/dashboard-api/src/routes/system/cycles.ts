@@ -6,8 +6,19 @@
 
 import { tradingCycleWorkflow } from "@cream/api";
 import type { CyclePhase, CycleProgressData, CycleResultData } from "@cream/domain/websocket";
+import { reconstructStreamingState } from "@cream/storage";
 import { createRoute, OpenAPIHono, z } from "@hono/zod-openapi";
 import { getCyclesRepo, getDecisionsRepo, getRuntimeConfigService } from "../../db.js";
+import {
+  flushSync,
+  queueAgentComplete,
+  queueAgentStart,
+  queueReasoningDelta,
+  queueTextDelta,
+  queueToolCall,
+  queueToolResult,
+  setCyclesRepository,
+} from "../../services/cycle-event-persistence.js";
 import {
   broadcastAgentOutput,
   broadcastAgentReasoning,
@@ -25,8 +36,11 @@ import {
   updateCycleState,
 } from "./state.js";
 import {
+  CycleListQuerySchema,
+  CycleListResponseSchema,
   type CycleState,
   CycleStatusResponseSchema,
+  FullCycleResponseSchema,
   TRIGGER_RATE_LIMIT_MS,
   TriggerCycleRequestSchema,
   TriggerCycleResponseSchema,
@@ -197,6 +211,8 @@ app.openapi(triggerCycleRoute, async (c) => {
     let cyclesRepo: Awaited<ReturnType<typeof getCyclesRepo>> | null = null;
     try {
       cyclesRepo = await getCyclesRepo();
+      // Set up persistence service with repository
+      setCyclesRepository(cyclesRepo);
       await cyclesRepo.start(
         cycleId,
         environment,
@@ -376,6 +392,7 @@ app.openapi(triggerCycleRoute, async (c) => {
                   timestamp: ts,
                 },
               });
+              queueAgentStart(cycleId, agentType);
               break;
 
             case "agent-chunk": {
@@ -402,6 +419,7 @@ app.openapi(triggerCycleRoute, async (c) => {
                     timestamp: ts,
                   },
                 });
+                queueTextDelta(cycleId, agentType, textContent);
               } else if (chunkType === "reasoning-delta" && textContent) {
                 // reasoning-delta is the AgentStreamChunk type for reasoning output
                 broadcastAgentReasoning({
@@ -413,33 +431,52 @@ app.openapi(triggerCycleRoute, async (c) => {
                     timestamp: ts,
                   },
                 });
+                queueReasoningDelta(cycleId, agentType, textContent);
               } else if (chunkType === "tool-result" || result !== undefined) {
+                const resolvedToolCallId = toolCallId ?? `tc_${Date.now()}`;
+                const resolvedToolName = String(toolName ?? "unknown");
+                const resolvedSuccess = success ?? true;
+                const resolvedResultSummary = JSON.stringify(result ?? {}).slice(0, 200);
                 broadcastAgentToolResult({
                   type: "agent_tool_result",
                   data: {
                     cycleId,
                     agentType,
-                    toolName: String(toolName ?? "unknown"),
-                    toolCallId: toolCallId ?? `tc_${Date.now()}`,
-                    resultSummary: JSON.stringify(result ?? {}).slice(0, 200),
-                    success: success ?? true,
+                    toolName: resolvedToolName,
+                    toolCallId: resolvedToolCallId,
+                    resultSummary: resolvedResultSummary,
+                    success: resolvedSuccess,
                     timestamp: ts,
                   },
+                });
+                queueToolResult(cycleId, agentType, {
+                  toolCallId: resolvedToolCallId,
+                  toolName: resolvedToolName,
+                  success: resolvedSuccess,
+                  resultSummary: resolvedResultSummary,
                 });
               } else if (
                 chunkType === "tool-call" ||
                 (toolName !== undefined && toolArgs !== undefined)
               ) {
+                const resolvedToolCallId = toolCallId ?? `tc_${Date.now()}`;
+                const resolvedToolName = String(toolName ?? "unknown");
+                const resolvedToolArgs = JSON.stringify(toolArgs ?? {});
                 broadcastAgentToolCall({
                   type: "agent_tool_call",
                   data: {
                     cycleId,
                     agentType,
-                    toolName: String(toolName ?? "unknown"),
-                    toolArgs: JSON.stringify(toolArgs ?? {}),
-                    toolCallId: toolCallId ?? `tc_${Date.now()}`,
+                    toolName: resolvedToolName,
+                    toolArgs: resolvedToolArgs,
+                    toolCallId: resolvedToolCallId,
                     timestamp: ts,
                   },
+                });
+                queueToolCall(cycleId, agentType, {
+                  toolCallId: resolvedToolCallId,
+                  toolName: resolvedToolName,
+                  toolArgs: resolvedToolArgs,
                 });
               } else if (chunkType === "error" && errorText) {
                 broadcastAgentOutput({
@@ -468,6 +505,7 @@ app.openapi(triggerCycleRoute, async (c) => {
                   timestamp: ts,
                 },
               });
+              queueAgentComplete(cycleId, agentType, { output: agentEvent.data?.output });
               break;
 
             case "agent-error":
@@ -538,6 +576,13 @@ app.openapi(triggerCycleRoute, async (c) => {
       cycleState.status = "completed";
       cycleState.completedAt = new Date().toISOString();
 
+      // Flush remaining streaming events to database
+      try {
+        await flushSync(cycleId);
+      } catch {
+        // Non-critical
+      }
+
       // Persist cycle completion to database
       await updateCycleState(environment, cycleId, "complete");
 
@@ -601,6 +646,13 @@ app.openapi(triggerCycleRoute, async (c) => {
       cycleState.completedAt = new Date().toISOString();
       cycleState.error = error instanceof Error ? error.message : "Unknown error";
       const durationMs = Date.now() - startTime;
+
+      // Flush remaining streaming events to database
+      try {
+        await flushSync(cycleId);
+      } catch {
+        // Non-critical
+      }
 
       if (cyclesRepo) {
         try {
@@ -676,6 +728,118 @@ app.openapi(cycleStatusRoute, async (c) => {
   }
 
   return c.json({ error: "Cycle not found" }, 404);
+});
+
+// ============================================
+// Cycle History Routes
+// ============================================
+
+// GET /api/system/cycles
+const cycleListRoute = createRoute({
+  method: "get",
+  path: "/cycles",
+  request: {
+    query: CycleListQuerySchema,
+  },
+  responses: {
+    200: {
+      content: { "application/json": { schema: CycleListResponseSchema } },
+      description: "List of cycles",
+    },
+  },
+  tags: ["System"],
+});
+
+app.openapi(cycleListRoute, async (c) => {
+  const query = c.req.valid("query");
+  const cyclesRepo = await getCyclesRepo();
+
+  const result = await cyclesRepo.findMany({
+    environment: query.environment,
+    status: query.status,
+    pagination: {
+      page: query.page,
+      pageSize: query.pageSize,
+    },
+  });
+
+  return c.json({
+    data: result.data.map((cycle) => ({
+      id: cycle.id,
+      environment: cycle.environment,
+      status: cycle.status,
+      startedAt: cycle.startedAt,
+      completedAt: cycle.completedAt,
+      durationMs: cycle.durationMs,
+      decisionsCount: cycle.decisionsCount,
+      approved: cycle.approved,
+      configVersion: cycle.configVersion,
+    })),
+    total: result.total,
+    page: result.page,
+    pageSize: result.pageSize,
+    totalPages: result.totalPages,
+  });
+});
+
+// GET /api/system/cycles/:id/full
+const cycleFullRoute = createRoute({
+  method: "get",
+  path: "/cycles/:id/full",
+  request: {
+    params: z.object({
+      id: z.string(),
+    }),
+  },
+  responses: {
+    200: {
+      content: { "application/json": { schema: FullCycleResponseSchema } },
+      description: "Full cycle data with streaming state",
+    },
+    404: {
+      content: {
+        "application/json": {
+          schema: z.object({ error: z.string() }),
+        },
+      },
+      description: "Cycle not found",
+    },
+  },
+  tags: ["System"],
+});
+
+// @ts-expect-error - Hono OpenAPI multi-response type inference limitation
+app.openapi(cycleFullRoute, async (c) => {
+  const { id } = c.req.valid("param");
+  const cyclesRepo = await getCyclesRepo();
+
+  const cycle = await cyclesRepo.findById(id);
+  if (!cycle) {
+    return c.json({ error: "Cycle not found" }, 404);
+  }
+
+  // Reconstruct streaming state from events
+  const events = await cyclesRepo.findStreamingEvents(id);
+  const streamingState = reconstructStreamingState(events);
+
+  return c.json({
+    cycle: {
+      id: cycle.id,
+      environment: cycle.environment,
+      status: cycle.status,
+      startedAt: cycle.startedAt,
+      completedAt: cycle.completedAt,
+      durationMs: cycle.durationMs,
+      decisionsCount: cycle.decisionsCount,
+      approved: cycle.approved,
+      configVersion: cycle.configVersion,
+      currentPhase: cycle.currentPhase,
+      progressPct: cycle.progressPct,
+      iterations: cycle.iterations,
+      errorMessage: cycle.errorMessage,
+    },
+    streamingState: streamingState.agents,
+  });
 });
 
 export default app;

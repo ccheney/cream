@@ -1,4 +1,3 @@
-// biome-ignore-all lint/suspicious/noArrayIndexKey: Skeleton loaders use stable indices
 "use client";
 
 /**
@@ -7,10 +6,15 @@
  * Displays 8-agent consensus network as vertical flow diagram with
  * animated connections showing data flow between phases.
  *
+ * Features:
+ * - Live mode: Real-time streaming from WebSocket
+ * - Historical mode: Load past cycles from database
+ *
  * @see docs/plans/43-agent-network-visualization.md
+ * @see docs/plans/44-cycle-history-persistence.md
  */
 
-import { formatDistanceToNow } from "date-fns";
+import { ArrowLeft, History } from "lucide-react";
 import { useCallback, useState } from "react";
 import {
   AGENT_METADATA,
@@ -18,10 +22,11 @@ import {
   type NetworkAgentType,
 } from "@/components/agents/AgentNetwork";
 import { AgentStreamingDetail } from "@/components/agents/AgentStreamingDetail";
-import { useAgentOutputs } from "@/hooks/queries";
+import { CycleHistoryPanel } from "@/components/agents/CycleHistoryPanel";
 import { useAgentStatus } from "@/hooks/useAgentStatus";
 import { type AgentType, useAgentStreaming } from "@/hooks/useAgentStreaming";
 import { useMediaQuery } from "@/lib/hooks/useMediaQuery";
+import { useAgentStreamingActions } from "@/stores/agent-streaming-store";
 
 // ============================================
 // Type Mapping
@@ -46,7 +51,7 @@ function getAgentDisplayName(agentType: NetworkAgentType | null): string {
 
 export default function AgentsPage() {
   const [selectedAgent, setSelectedAgent] = useState<NetworkAgentType | null>(null);
-  const { data: outputs, isLoading: outputsLoading } = useAgentOutputs(selectedAgent ?? "", 20);
+  const [selectedHistoricalCycleId, setSelectedHistoricalCycleId] = useState<string | null>(null);
 
   // Responsive breakpoint detection
   const { isMobile, isTablet } = useMediaQuery();
@@ -56,7 +61,15 @@ export default function AgentsPage() {
   const { isSubscribed: statusSubscribed, hasData: hasStatusData } = useAgentStatus();
 
   // Real-time streaming state (tool calls, reasoning)
-  const { agents: streamingAgents, currentCycleId, isSubscribed } = useAgentStreaming();
+  const {
+    agents: streamingAgents,
+    currentCycleId,
+    isSubscribed,
+    viewMode,
+    historicalCycleId,
+  } = useAgentStreaming();
+
+  const { returnToLive } = useAgentStreamingActions();
 
   // Convert store Map to NetworkAgentType Map
   const networkAgents = streamingAgents as Map<
@@ -73,8 +86,47 @@ export default function AgentsPage() {
     setSelectedAgent(agentType);
   }, []);
 
+  // Handle historical cycle selection
+  const handleSelectHistoricalCycle = useCallback((cycleId: string) => {
+    setSelectedHistoricalCycleId(cycleId);
+    // Clear agent selection when loading new cycle
+    setSelectedAgent(null);
+  }, []);
+
+  // Handle return to live mode
+  const handleReturnToLive = useCallback(() => {
+    returnToLive();
+    setSelectedHistoricalCycleId(null);
+    setSelectedAgent(null);
+  }, [returnToLive]);
+
+  // Determine if we're in an empty state (no cycle running and not viewing historical)
+  const isEmptyState =
+    viewMode === "live" && !currentCycleId && streamingAgents.size === 0 && hasStatusData;
+
   return (
-    <div className="space-y-6">
+    <div className="space-y-4">
+      {/* Historical Mode Banner */}
+      {viewMode === "historical" && historicalCycleId && (
+        <div className="bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-700 rounded-lg p-3 flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <History className="w-4 h-4 text-amber-600 dark:text-amber-400" />
+            <span className="text-sm text-amber-800 dark:text-amber-200">
+              Viewing historical cycle:{" "}
+              <span className="font-mono">{historicalCycleId.slice(0, 16)}...</span>
+            </span>
+          </div>
+          <button
+            type="button"
+            onClick={handleReturnToLive}
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-amber-700 dark:text-amber-300 bg-amber-100 dark:bg-amber-900/40 hover:bg-amber-200 dark:hover:bg-amber-900/60 rounded transition-colors"
+          >
+            <ArrowLeft className="w-3 h-3" />
+            Return to Live
+          </button>
+        </div>
+      )}
+
       {/* Main Layout: Network + Detail Panel */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Agent Network Visualization */}
@@ -82,35 +134,50 @@ export default function AgentsPage() {
           <div className="bg-white dark:bg-night-800 rounded-xl border border-cream-200 dark:border-night-700 p-4">
             <AgentNetwork
               agents={networkAgents}
-              cycleId={currentCycleId}
+              cycleId={viewMode === "historical" ? historicalCycleId : currentCycleId}
               selectedAgent={selectedAgent}
               onAgentSelect={handleAgentSelect}
-              isLive={isSubscribed || statusSubscribed}
+              isLive={viewMode === "live" && (isSubscribed || statusSubscribed)}
               compact={isCompact}
             />
           </div>
 
-          {/* Fallback: Show loading skeleton while waiting for WebSocket data */}
-          {!hasStatusData && streamingAgents.size === 0 && (
+          {/* Empty State: Ready for new cycle */}
+          {isEmptyState && (
+            <div className="mt-4 p-6 bg-white dark:bg-night-800 rounded-lg border border-cream-200 dark:border-night-700 text-center">
+              <div className="inline-flex items-center justify-center w-12 h-12 rounded-full bg-emerald-100 dark:bg-emerald-900/30 mb-3">
+                <span className="text-2xl">✓</span>
+              </div>
+              <h3 className="text-lg font-medium text-stone-900 dark:text-stone-100 mb-1">
+                Ready for Trading
+              </h3>
+              <p className="text-sm text-stone-500 dark:text-stone-400">
+                No active trading cycle. Trigger a cycle to see real-time agent activity.
+              </p>
+            </div>
+          )}
+
+          {/* Loading State: Waiting for WebSocket connection */}
+          {viewMode === "live" && !hasStatusData && streamingAgents.size === 0 && (
             <div className="mt-4 p-4 bg-white dark:bg-night-800 rounded-lg border border-cream-200 dark:border-night-700">
               <div className="flex items-center gap-3">
                 <div className="w-4 h-4 rounded-full bg-amber-400 animate-pulse" />
                 <p className="text-sm text-stone-500 dark:text-stone-400">
-                  Waiting for streaming data...
+                  Connecting to streaming service...
                 </p>
               </div>
             </div>
           )}
         </div>
 
-        {/* Detail Panel + Historical Outputs */}
+        {/* Detail Panel + Cycle History */}
         <div className="lg:col-span-1 space-y-4">
           {/* Streaming Detail */}
           {selectedAgent && selectedState ? (
             <AgentStreamingDetail
               agentType={toStoreAgentType(selectedAgent)}
               state={selectedState}
-              cycleId={currentCycleId}
+              cycleId={viewMode === "historical" ? historicalCycleId : currentCycleId}
             />
           ) : selectedAgent ? (
             <div className="bg-white dark:bg-night-800 rounded-lg border border-stone-200 dark:border-night-700 p-6">
@@ -118,84 +185,30 @@ export default function AgentsPage() {
                 {getAgentDisplayName(selectedAgent)}
               </h3>
               <p className="text-sm text-stone-500 dark:text-stone-400">
-                Waiting for streaming data...
+                {viewMode === "historical"
+                  ? "No data for this agent in selected cycle"
+                  : "Waiting for streaming data..."}
               </p>
-              <p className="text-xs text-stone-400 dark:text-stone-500 mt-2">
-                Trigger a trading cycle to see real-time tool calls and reasoning.
-              </p>
+              {viewMode === "live" && (
+                <p className="text-xs text-stone-400 dark:text-stone-500 mt-2">
+                  Trigger a trading cycle to see real-time tool calls and reasoning.
+                </p>
+              )}
             </div>
           ) : (
             <div className="bg-white dark:bg-night-800 rounded-lg border border-stone-200 dark:border-night-700 p-6">
               <p className="text-sm text-stone-500 dark:text-stone-400">
-                Click an agent in the network to view streaming details
+                Click an agent in the network to view{" "}
+                {viewMode === "historical" ? "historical" : "streaming"} details
               </p>
             </div>
           )}
 
-          {/* Historical Outputs */}
-          <div className="bg-white dark:bg-night-800 rounded-lg border border-cream-200 dark:border-night-700">
-            <div className="p-3 border-b border-cream-200 dark:border-night-700 flex items-center justify-between">
-              <h3 className="text-sm font-medium text-stone-900 dark:text-night-50">
-                Historical Outputs
-              </h3>
-              {selectedAgent && (
-                <span className="text-xs text-stone-500 dark:text-night-300">
-                  {getAgentDisplayName(selectedAgent)}
-                </span>
-              )}
-            </div>
-            <div className="p-3 max-h-64 overflow-auto">
-              {!selectedAgent ? (
-                <p className="text-sm text-stone-500 dark:text-night-300">
-                  Select an agent to view outputs
-                </p>
-              ) : outputsLoading ? (
-                <div className="space-y-3">
-                  {[1, 2, 3].map((i) => (
-                    <div
-                      key={i}
-                      className="h-16 bg-cream-100 dark:bg-night-700 rounded animate-pulse"
-                    />
-                  ))}
-                </div>
-              ) : outputs && outputs.length > 0 ? (
-                <div className="space-y-3">
-                  {outputs.map((output, i) => (
-                    <div
-                      key={`output-${i}`}
-                      className="p-2.5 bg-cream-50 dark:bg-night-750 rounded-lg"
-                    >
-                      <div className="flex items-center justify-between mb-1.5">
-                        <span
-                          className={`px-1.5 py-0.5 text-[10px] font-medium rounded ${
-                            output.vote === "APPROVE"
-                              ? "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400"
-                              : "bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400"
-                          }`}
-                        >
-                          {output.vote}
-                        </span>
-                        <span className="text-[10px] text-stone-500 dark:text-night-300">
-                          {formatDistanceToNow(new Date(output.createdAt), {
-                            addSuffix: true,
-                          })}
-                        </span>
-                      </div>
-                      <p className="text-xs text-stone-700 dark:text-night-100 whitespace-pre-wrap line-clamp-3">
-                        {output.reasoning}
-                      </p>
-                      <div className="mt-1.5 flex items-center gap-3 text-[10px] text-stone-500 dark:text-night-300">
-                        <span>{(output.confidence * 100).toFixed(0)}% conf</span>
-                        <span>{output.processingTimeMs}ms</span>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              ) : (
-                <p className="text-sm text-stone-500 dark:text-night-300">No outputs yet</p>
-              )}
-            </div>
-          </div>
+          {/* Cycle History Panel */}
+          <CycleHistoryPanel
+            selectedCycleId={selectedHistoricalCycleId}
+            onSelectCycle={handleSelectHistoricalCycle}
+          />
         </div>
       </div>
     </div>

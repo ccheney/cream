@@ -113,7 +113,12 @@ export type CycleEventType =
   | "decision"
   | "order"
   | "error"
-  | "progress";
+  | "progress"
+  // Streaming events for UI replay
+  | "tool_call"
+  | "tool_result"
+  | "reasoning_delta"
+  | "text_delta";
 
 /**
  * Cycle event entity
@@ -211,6 +216,176 @@ function mapCycleEventRow(row: Row): CycleEvent {
 }
 
 // ============================================
+// Streaming Event Types
+// ============================================
+
+/** Event types used for streaming state reconstruction */
+export const STREAMING_EVENT_TYPES: CycleEventType[] = [
+  "tool_call",
+  "tool_result",
+  "reasoning_delta",
+  "text_delta",
+  "agent_start",
+  "agent_complete",
+];
+
+// ============================================
+// Streaming State Types
+// ============================================
+
+/** Reconstructed tool call from events */
+export interface ReconstructedToolCall {
+  toolCallId: string;
+  toolName: string;
+  toolArgs: string;
+  status: "pending" | "complete" | "error";
+  resultSummary?: string;
+  durationMs?: number;
+  timestamp: string;
+}
+
+/** Reconstructed agent streaming state */
+export interface ReconstructedAgentState {
+  status: "idle" | "processing" | "complete" | "error";
+  toolCalls: ReconstructedToolCall[];
+  reasoningText: string;
+  textOutput: string;
+  error?: string;
+  lastUpdate: string | null;
+}
+
+/** Full streaming state for a cycle */
+export interface ReconstructedStreamingState {
+  agents: Record<string, ReconstructedAgentState>;
+  cycleId: string;
+}
+
+// ============================================
+// Helper Functions
+// ============================================
+
+/**
+ * Reconstruct streaming state from cycle events
+ */
+export function reconstructStreamingState(events: CycleEvent[]): ReconstructedStreamingState {
+  const agents: Record<string, ReconstructedAgentState> = {};
+
+  const getOrCreateAgent = (agentType: string): ReconstructedAgentState => {
+    if (!agents[agentType]) {
+      agents[agentType] = {
+        status: "idle",
+        toolCalls: [],
+        reasoningText: "",
+        textOutput: "",
+        lastUpdate: null,
+      };
+    }
+    return agents[agentType] as ReconstructedAgentState;
+  };
+
+  // Track tool calls by ID for upsert
+  const toolCallMap = new Map<string, ReconstructedToolCall>();
+
+  for (const event of events) {
+    if (!event.agentType) {
+      continue;
+    }
+
+    const agent = getOrCreateAgent(event.agentType);
+    agent.lastUpdate = event.timestamp;
+
+    switch (event.eventType) {
+      case "agent_start":
+        agent.status = "processing";
+        break;
+
+      case "agent_complete":
+        agent.status = "complete";
+        break;
+
+      case "tool_call": {
+        agent.status = "processing";
+        const data = event.data as {
+          toolCallId?: string;
+          toolName?: string;
+          toolArgs?: string;
+        };
+        if (data.toolCallId) {
+          const toolCall: ReconstructedToolCall = {
+            toolCallId: data.toolCallId,
+            toolName: data.toolName ?? "unknown",
+            toolArgs: data.toolArgs ?? "{}",
+            status: "pending",
+            timestamp: event.timestamp,
+          };
+          toolCallMap.set(data.toolCallId, toolCall);
+        }
+        break;
+      }
+
+      case "tool_result": {
+        const data = event.data as {
+          toolCallId?: string;
+          success?: boolean;
+          resultSummary?: string;
+          durationMs?: number;
+        };
+        const existing = data.toolCallId ? toolCallMap.get(data.toolCallId) : undefined;
+        if (existing) {
+          existing.status = data.success ? "complete" : "error";
+          existing.resultSummary = data.resultSummary;
+          existing.durationMs = data.durationMs;
+        }
+        break;
+      }
+
+      case "reasoning_delta": {
+        agent.status = "processing";
+        const data = event.data as { text?: string };
+        if (data.text) {
+          agent.reasoningText += data.text;
+        }
+        break;
+      }
+
+      case "text_delta": {
+        agent.status = "processing";
+        const data = event.data as { text?: string };
+        if (data.text) {
+          agent.textOutput += data.text;
+        }
+        break;
+      }
+
+      case "error": {
+        agent.status = "error";
+        agent.error = event.message ?? "Unknown error";
+        break;
+      }
+    }
+  }
+
+  // Convert tool call map to arrays in each agent
+  for (const agent of Object.values(agents)) {
+    const agentToolCalls = Array.from(toolCallMap.values()).filter((tc) => {
+      // Find events for this tool call to determine which agent it belongs to
+      const toolEvent = events.find(
+        (e) =>
+          e.eventType === "tool_call" &&
+          (e.data as { toolCallId?: string }).toolCallId === tc.toolCallId
+      );
+      return toolEvent?.agentType && agents[toolEvent.agentType] === agent;
+    });
+    agent.toolCalls = agentToolCalls.toSorted(
+      (a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime()
+    );
+  }
+
+  const cycleId = events[0]?.cycleId ?? "";
+  return { agents, cycleId };
+}
+
+// ============================================
 // Repository
 // ============================================
 
@@ -228,7 +403,9 @@ export interface CyclesRepository {
 
   // Cycle events
   addEvent(input: CreateCycleEventInput): Promise<CycleEvent>;
+  addEventsBatch(events: CreateCycleEventInput[]): Promise<void>;
   findEvents(cycleId: string, options?: { eventType?: CycleEventType }): Promise<CycleEvent[]>;
+  findStreamingEvents(cycleId: string): Promise<CycleEvent[]>;
 
   // Convenience methods
   start(
@@ -466,6 +643,40 @@ export function createCyclesRepository(client: TursoClient): CyclesRepository {
       return mapCycleEventRow(row);
     },
 
+    async addEventsBatch(events: CreateCycleEventInput[]): Promise<void> {
+      if (events.length === 0) {
+        return;
+      }
+
+      try {
+        // Use a transaction for batch insert
+        const values: (string | number | null)[] = [];
+        const placeholders = events
+          .map((input) => {
+            values.push(
+              input.cycleId,
+              input.eventType,
+              input.phase ?? null,
+              input.agentType ?? null,
+              input.symbol ?? null,
+              input.message ?? null,
+              input.data ? toJson(input.data) : null,
+              input.durationMs ?? null
+            );
+            return "(?, ?, ?, ?, ?, ?, ?, ?)";
+          })
+          .join(", ");
+
+        await client.execute(
+          `INSERT INTO cycle_events (cycle_id, event_type, phase, agent_type, symbol, message, data_json, duration_ms)
+           VALUES ${placeholders}`,
+          values
+        );
+      } catch (error) {
+        throw RepositoryError.fromSqliteError("cycle_events", error as Error);
+      }
+    },
+
     async findEvents(
       cycleId: string,
       options?: { eventType?: CycleEventType }
@@ -483,6 +694,17 @@ export function createCyclesRepository(client: TursoClient): CyclesRepository {
         values
       );
 
+      return rows.map(mapCycleEventRow);
+    },
+
+    async findStreamingEvents(cycleId: string): Promise<CycleEvent[]> {
+      const eventTypes = STREAMING_EVENT_TYPES.map(() => "?").join(", ");
+      const rows = await client.execute<Row>(
+        `SELECT * FROM cycle_events
+         WHERE cycle_id = ? AND event_type IN (${eventTypes})
+         ORDER BY timestamp ASC`,
+        [cycleId, ...STREAMING_EVENT_TYPES]
+      );
       return rows.map(mapCycleEventRow);
     },
 

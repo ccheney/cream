@@ -117,8 +117,7 @@ app.openapi(summarizeReasoningRoute, async (c) => {
     }
 
     return c.json({ summary });
-  } catch (error) {
-    console.error("Failed to generate status summary:", error);
+  } catch (_error) {
     // Fallback to simple extraction
     const summary = extractKeyPhrase(reasoning);
     return c.json({ summary });
