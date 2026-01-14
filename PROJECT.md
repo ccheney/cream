@@ -1,191 +1,312 @@
 # Cream
 
-Agentic trading system for US equities and options combining LLM-based reasoning with deterministic Rust execution. Runs hourly OODA loops (Observe → Orient → Decide → Act) through a 7-agent consensus network, plus 2 specialized agents for dynamic indicator synthesis (9 total).
-
-## Status
-
-**Pre-production** - Core infrastructure implemented, agents in development (Phase 4).
-
-## Architecture Overview
-
-```mermaid
-%%{init: {'theme': 'base', 'themeVariables': { 'primaryColor': '#FEF3C7', 'primaryTextColor': '#3D3832', 'lineColor': '#78716C', 'tertiaryColor': '#FBF8F3'}}}%%
-flowchart LR
-    subgraph OBSERVE["OBSERVE"]
-        O1["`Market data
-        OHLCV candles
-        Positions
-        News/events`"]
-    end
-
-    subgraph ORIENT["ORIENT"]
-        O2["`HelixDB retrieval
-        Indicators
-        Regime classify`"]
-    end
-
-    subgraph DECIDE["DECIDE"]
-        O3["`8-agent
-        consensus
-        network
-        produces plan`"]
-    end
-
-    subgraph ACT["ACT"]
-        O4["`Rust execution
-        engine validates
-        & routes orders
-        via Alpaca`"]
-    end
-
-    OBSERVE --> ORIENT --> DECIDE --> ACT
-
-    ACT --> Approval
-
-    subgraph Approval["Dual Approval Gate"]
-        Risk["`**Risk Manager**`"]
-        Critic["`**Critic**`"]
-    end
-
-    classDef observe fill:#E0E7FF,stroke:#6366F1,stroke-width:2px,color:#3D3832
-    classDef orient fill:#EDE9FE,stroke:#8B5CF6,stroke-width:2px,color:#3D3832
-    classDef decide fill:#FEF3C7,stroke:#D97706,stroke-width:2px,color:#3D3832
-    classDef act fill:#D1FAE5,stroke:#10B981,stroke-width:2px,color:#3D3832
-    classDef approval fill:#FEE2E2,stroke:#EF4444,stroke-width:2px,color:#3D3832
-
-    class O1 observe
-    class O2 orient
-    class O3 decide
-    class O4 act
-    class Risk,Critic approval
-```
-
-### Agent Consensus Network (7 Agents)
-
-| Phase | Agent | Role |
-|-------|-------|------|
-| **Analysis** (parallel) | News Analyst | Breaking news, social sentiment |
-| | Fundamentals Analyst | Earnings, economic indicators, prediction markets |
-| **Research** (parallel) | Bullish Researcher | Constructs strongest bull case |
-| | Bearish Researcher | Constructs strongest bear case with counterarguments |
-| **Decision** (sequential) | Trader | Synthesizes inputs into DecisionPlan |
-| **Approval** (parallel) | Risk Manager | Validates against risk constraints |
-| | Critic | Validates logical consistency, anti-hallucination |
-
-**Consensus Rule**: Plans execute only when **both** Risk Manager and Critic approve. Up to 3 revision iterations if rejected.
-
-### Dynamic Indicator Synthesis (2 Additional Agents)
-
-Two specialized agents operate **outside** the trading consensus network to autonomously generate, validate, and deploy new technical indicators when existing signals fail to capture market dynamics.
-
-| Agent | Role |
-|-------|------|
-| **Idea Agent** | Generates novel alpha factor hypotheses based on regime gaps and academic research |
-| **Indicator Researcher** | Formulates indicator hypotheses with economic rationale and falsification criteria |
-
-```mermaid
-%%{init: {'theme': 'base', 'themeVariables': { 'primaryColor': '#FEF3C7', 'primaryTextColor': '#3D3832', 'lineColor': '#78716C', 'tertiaryColor': '#FBF8F3'}}}%%
-flowchart TB
-    subgraph Trigger["1. TRIGGER DETECTION"]
-        T1["`**Orient Phase**
-        detects regime gap
-        + IC decay`"]
-    end
-
-    subgraph Hypothesis["2. HYPOTHESIS GENERATION"]
-        H1["`**Idea Agent**
-        Academic research
-        Alpha factor gaps`"]
-        H2["`**Indicator Researcher**
-        Economic rationale
-        Falsification criteria`"]
-    end
-
-    subgraph Implement["3. IMPLEMENTATION"]
-        I1["`**Claude Code**
-        Write indicator code
-        AST similarity check`"]
-    end
-
-    subgraph Validate["4. VALIDATION PIPELINE"]
-        V1["`DSR`"]
-        V2["`PBO`"]
-        V3["`IC`"]
-        V4["`Walk-Forward`"]
-        V5["`Orthogonality`"]
-    end
-
-    subgraph Paper["5. PAPER TRADING"]
-        P1["`**30 days**
-        Realized vs Backtested
-        Sharpe comparison`"]
-    end
-
-    subgraph Production["6. PRODUCTION"]
-        PR["`**PR Creation**
-        Human review
-        Merge & deploy`"]
-        Mon["`**Monitoring**
-        Daily IC tracking
-        Auto-retirement`"]
-    end
-
-    Trigger --> Hypothesis
-    H1 --> H2
-    Hypothesis --> Implement
-    Implement --> Validate
-    V1 --> V2 --> V3 --> V4 --> V5
-    Validate -->|~4% survive| Paper
-    Paper -->|pass| Production
-    PR --> Mon
-
-    classDef trigger fill:#E0E7FF,stroke:#6366F1,stroke-width:2px,color:#3D3832
-    classDef hypothesis fill:#EDE9FE,stroke:#8B5CF6,stroke-width:2px,color:#3D3832
-    classDef implement fill:#FEF3C7,stroke:#D97706,stroke-width:2px,color:#3D3832
-    classDef validate fill:#FFEDD5,stroke:#EA580C,stroke-width:2px,color:#3D3832
-    classDef paper fill:#FEE2E2,stroke:#EF4444,stroke-width:2px,color:#3D3832
-    classDef production fill:#D1FAE5,stroke:#10B981,stroke-width:2px,color:#3D3832
-
-    class T1 trigger
-    class H1,H2 hypothesis
-    class I1 implement
-    class V1,V2,V3,V4,V5 validate
-    class P1 paper
-    class PR,Mon production
-```
-
-**Trigger Conditions** (all must be met):
-- Regime gap detected (market phenomenon not captured)
-- Rolling 30-day IC < 0.02 for 5+ days
-- 30+ days since last generation attempt
-- Capacity available (< 20 active indicators)
-
-**Validation Gates** (~4% survival rate):
-- **DSR** (Deflated Sharpe Ratio) - p-value > 0.95
-- **PBO** (Probability of Backtest Overfitting) - < 0.50
-- **IC** (Information Coefficient) - mean > 0.02, std < 0.03
-- **Walk-Forward** - efficiency > 0.50
-- **Orthogonality** - max correlation < 0.70, VIF < 5
-
-**Retirement Conditions**: IC decay (< 0.01 for 30 days), signal crowding, capacity limits.
+Cream is an agentic trading system for US equities and options. It combines LLM-driven reasoning with deterministic execution, running hourly decision cycles that synthesize market data, sentiment, fundamentals, and technical analysis into structured trading decisions.
 
 ---
 
-## Technology Stack
+## The Problem Cream Solves
 
-| Layer | Technology | Version |
-|-------|------------|---------|
-| **TypeScript Runtime** | Bun | 1.3+ |
-| **TypeScript Compiler** | tsgo (`@typescript/native-preview`) | 7.0+ |
-| **Rust** | Edition 2024 | 1.92+ |
-| **Python** | uv package manager | 3.14+ |
-| **Agent Orchestration** | Mastra | 1.0.0-beta.14 |
-| **LLM Provider** | Google Gemini | gemini-3-pro-preview, gemini-3-flash-preview |
-| **Graph + Vector DB** | HelixDB | HNSW indexing, 3072D embeddings |
-| **Relational DB** | Turso (SQLite) | turso |
-| **Serialization** | Protobuf (Buf CLI) + Zod v4 | - |
-| **Monorepo** | Turborepo | 2.7+ |
-| **Linting** | Biome (TS), Clippy (Rust), Ruff (Python) | - |
+Algorithmic trading traditionally relies on single models or rigid strategies that struggle with market uncertainty. Cream takes a different approach: instead of one model making decisions, it orchestrates a network of specialized AI agents that independently analyze markets from different angles, debate competing hypotheses, and only execute trades that pass a strict consensus test.
+
+The result is a system that can reason about markets the way a trading desk operates — with analysts, researchers, and risk managers each contributing their expertise, but with the speed and consistency of software.
+
+---
+
+## How It Works: The OODA Loop
+
+Every hour, Cream runs a complete decision cycle based on the military OODA framework (Observe → Orient → Decide → Act). This isn't just a metaphor — the system literally implements each phase as a distinct workflow step.
+
+```mermaid
+%%{init: {'theme': 'base', 'themeVariables': {
+  'primaryColor': '#D97706',
+  'primaryTextColor': '#FAFAF9',
+  'primaryBorderColor': '#B45309',
+  'lineColor': '#78716C',
+  'secondaryColor': '#1F1C1A',
+  'tertiaryColor': '#141211',
+  'background': '#0C0A09',
+  'mainBkg': '#141211',
+  'textColor': '#D6D3D1',
+  'clusterBkg': '#1F1C1A',
+  'clusterBorder': '#2D2926'
+}}}%%
+flowchart TB
+    subgraph Observe["OBSERVE"]
+        O1["`Market data
+        Candles, quotes
+        Positions, news`"]
+    end
+
+    subgraph Orient["ORIENT"]
+        O2["`Memory retrieval
+        Indicators
+        Regime classification`"]
+    end
+
+    subgraph Decide["DECIDE"]
+        subgraph Analysis["Analysis"]
+            NA["News Analyst"]
+            FA["Fundamentals Analyst"]
+        end
+
+        subgraph Research["Research"]
+            Bull["Bullish Researcher"]
+            Bear["Bearish Researcher"]
+        end
+
+        Trader["Trader"]
+
+        subgraph Approval["Dual Approval Gate"]
+            RM["Risk Manager"]
+            CR["Critic"]
+        end
+
+        Analysis --> Research --> Trader --> Approval
+    end
+
+    subgraph Act["ACT"]
+        O4["`Execution engine
+        validates & routes
+        orders to broker`"]
+    end
+
+    Observe --> Orient --> Decide
+    Approval -->|consensus| Act
+    Approval -->|rejected| Trader
+
+    %% OODA Phase styling
+    classDef observe fill:#6366F1,stroke:#4F46E5,color:#FAFAF9
+    classDef orient fill:#14B8A6,stroke:#0D9488,color:#FAFAF9
+    classDef decide fill:#D97706,stroke:#B45309,color:#FAFAF9
+    classDef act fill:#8B5CF6,stroke:#7C3AED,color:#FAFAF9
+
+    %% Agent-specific styling
+    classDef news fill:#EC4899,stroke:#DB2777,color:#FAFAF9
+    classDef fundamentals fill:#14B8A6,stroke:#0D9488,color:#FAFAF9
+    classDef bullish fill:#22C55E,stroke:#16A34A,color:#FAFAF9
+    classDef bearish fill:#EF4444,stroke:#DC2626,color:#FAFAF9
+    classDef trader fill:#F59E0B,stroke:#D97706,color:#1C1917
+    classDef risk fill:#F97316,stroke:#EA580C,color:#FAFAF9
+    classDef critic fill:#6366F1,stroke:#4F46E5,color:#FAFAF9
+
+    class O1 observe
+    class O2 orient
+    class O4 act
+    class NA news
+    class FA fundamentals
+    class Bull bullish
+    class Bear bearish
+    class Trader trader
+    class RM risk
+    class CR critic
+```
+
+### Observe
+
+The system gathers a comprehensive market snapshot:
+
+- **Price data** — 1-hour candles with 120-bar lookback, current quotes with bid/ask spreads
+- **Technical indicators** — RSI, SMA, EMA, ATR, MACD, Bollinger Bands, Stochastic oscillators
+- **Options data** — Implied volatility, Greeks, put/call ratios
+- **External context** — Breaking news, earnings announcements, SEC filings, macro events
+
+Data flows in from market data providers, fundamentals APIs, FRED macro indicators, and SEC EDGAR filings.
+
+### Orient
+
+Raw data becomes decision context:
+
+- **Memory retrieval** — GraphRAG searches for similar past decisions and their outcomes
+- **Regime classification** — Is this a bull trend, bear trend, range-bound, or volatile market?
+- **Prediction signals** — Prediction market contracts provide market-implied probabilities
+- **Thesis state** — Current positions, entry prices, unrealized P&L
+
+Every agent receives this enriched context, ensuring no information silos.
+
+### Decide
+
+This is where the 8-agent consensus network operates. Agents run in a structured sequence:
+
+**Analysis Stage** (parallel)
+- **News Analyst** extracts events, scores sentiment, assesses market impact
+- **Fundamentals Analyst** evaluates valuations, macro conditions, and guidance
+
+**Research Stage** (parallel)
+- **Bullish Researcher** builds the strongest case for going long
+- **Bearish Researcher** builds the strongest case for going short, with counterarguments
+
+**Decision Stage** (sequential)
+- **Trader** synthesizes all inputs into a structured DecisionPlan with specific actions, position sizes, stop-losses, and profit targets
+
+**Approval Stage** (parallel)
+- **Risk Manager** validates against position limits, leverage constraints, and margin requirements
+- **Critic** checks for logical consistency, hallucinations, and missing justifications
+
+### The Consensus Gate
+
+No trade executes without dual approval. Both the Risk Manager and Critic must approve, or the Trader revises the plan based on their feedback. After three revision attempts, the system defaults to NO_TRADE — a safe fallback that prevents rogue decisions.
+
+```mermaid
+%%{init: {'theme': 'base', 'themeVariables': {
+  'primaryColor': '#D97706',
+  'primaryTextColor': '#FAFAF9',
+  'primaryBorderColor': '#B45309',
+  'lineColor': '#78716C',
+  'secondaryColor': '#1F1C1A',
+  'tertiaryColor': '#141211',
+  'background': '#0C0A09',
+  'mainBkg': '#141211',
+  'textColor': '#D6D3D1'
+}}}%%
+flowchart TB
+    Trader["`Trader proposes
+    DecisionPlan`"] --> Gate{"Both approve?"}
+    Gate -->|Yes| Execute["`Execute via
+    execution engine`"]
+    Gate -->|No| Feedback["Feedback to Trader"]
+    Feedback --> Revise["Trader revises plan"]
+    Revise --> Counter{"Attempts < 3?"}
+    Counter -->|Yes| Gate
+    Counter -->|No| NoTrade["`NO_TRADE
+    (safe default)`"]
+
+    classDef trader fill:#F59E0B,stroke:#D97706,color:#1C1917
+    classDef gate fill:#D97706,stroke:#B45309,color:#FAFAF9
+    classDef success fill:#22C55E,stroke:#16A34A,color:#FAFAF9
+    classDef safe fill:#6366F1,stroke:#4F46E5,color:#FAFAF9
+    classDef feedback fill:#F97316,stroke:#EA580C,color:#FAFAF9
+
+    class Trader trader
+    class Gate,Counter gate
+    class Execute success
+    class NoTrade safe
+    class Feedback,Revise feedback
+```
+
+### Act
+
+Approved orders flow to the execution engine:
+
+1. **Final validation** — One last constraint check before submission
+2. **Order routing** — Sent to the broker (live/paper) or the backtest simulator
+3. **State persistence** — Decision records stored with embeddings for future retrieval
+4. **Monitoring** — Stop-loss and take-profit enforcement, mass cancel on disconnect
+
+---
+
+## The Agent Network
+
+Each agent is a specialized reasoner powered by an LLM. They share a common toolkit of 30+ functions but apply different analytical lenses.
+
+**What agents can do:**
+- Query market data (quotes, candles, option chains)
+- Calculate technical indicators on demand
+- Search SEC filings and earnings transcripts
+- Run semantic searches across news and documents
+- Check portfolio state and thesis progress
+- Access prediction market probabilities
+
+The key insight is that agents don't just analyze — they debate. The Bullish and Bearish Researchers construct opposing cases, and the Trader must synthesize these into a coherent decision that accounts for both perspectives.
+
+---
+
+## Memory and Learning
+
+Cream uses a combined graph and vector database as its memory system.
+
+**Vector search** finds similar past decisions based on market conditions. If today's setup resembles a pattern from three months ago, the system retrieves what it decided then and what happened.
+
+**Graph traversal** follows relationships: Decision → Events → Outcomes. This enables case-based reasoning: "In similar conditions, what strategies worked and which failed?"
+
+The memory layer implements a forgetting curve — recent decisions have high weight, older decisions fade unless they were particularly significant (large profit or loss).
+
+---
+
+## The Execution Engine
+
+Agents propose trades; the execution engine disposes. All execution flows through a deterministic core that enforces hard constraints:
+
+- **Financial precision** — Exact decimal arithmetic, no floating-point rounding errors
+- **Crash recovery** — State snapshots enable reconciliation after unexpected shutdowns
+- **Risk enforcement** — Hard limits enforced at the execution layer, not just the reasoning layer
+
+The engine supports multiple execution tactics:
+- **PASSIVE_LIMIT** — Patient limit orders
+- **TWAP** — Time-weighted average price
+- **VWAP** — Volume-weighted average price
+- **ICEBERG** — Hidden size for large orders
+
+The agent layer and execution layer communicate through typed schemas ensuring decisions are validated before execution.
+
+---
+
+## Three Operating Modes
+
+A single environment variable (`CREAM_ENV`) switches the entire system:
+
+| Mode | Agents | Market Data | Execution |
+|------|--------|-------------|-----------|
+| **BACKTEST** | Stub (no LLM calls) | Historical fixtures | Simulated fills |
+| **PAPER** | Full LLM reasoning | Live market data | Paper orders |
+| **LIVE** | Full LLM reasoning | Live market data | Real money |
+
+The same codebase runs in all three modes. Backtesting uses deterministic stubs for speed; paper and live trading use the full agent network.
+
+---
+
+## Data Architecture
+
+Cream maintains two databases with distinct purposes:
+
+The **relational database** handles structured data — decisions, orders, positions, configuration, backtest results. It's the system of record for what happened.
+
+The **graph + vector database** handles semantic data — document embeddings, decision context vectors, relationship graphs. It's the system of memory for why things happened.
+
+```mermaid
+%%{init: {'theme': 'base', 'themeVariables': {
+  'primaryColor': '#D97706',
+  'primaryTextColor': '#FAFAF9',
+  'primaryBorderColor': '#B45309',
+  'lineColor': '#78716C',
+  'secondaryColor': '#1F1C1A',
+  'tertiaryColor': '#141211',
+  'background': '#0C0A09',
+  'mainBkg': '#141211',
+  'textColor': '#D6D3D1',
+  'clusterBkg': '#1F1C1A',
+  'clusterBorder': '#2D2926'
+}}}%%
+flowchart LR
+    subgraph Sources["Data Sources"]
+        Market["Market Data"]
+        Fund["Fundamentals"]
+        EDGAR["SEC EDGAR"]
+        Predict["Prediction Markets"]
+    end
+
+    subgraph Processing["Processing"]
+        Ind["Indicator Service"]
+        Ext["`External Context
+        Pipeline`"]
+    end
+
+    subgraph Storage["Storage"]
+        Relational[("Relational DB")]
+        VectorGraph[("Vector + Graph DB")]
+    end
+
+    Sources --> Processing
+    Ind --> Storage
+    Ext --> Storage
+
+    classDef source fill:#6366F1,stroke:#4F46E5,color:#FAFAF9
+    classDef process fill:#D97706,stroke:#B45309,color:#FAFAF9
+    classDef storage fill:#14B8A6,stroke:#0D9488,color:#FAFAF9
+
+    class Market,Fund,EDGAR,Predict source
+    class Ind,Ext process
+    class Relational,VectorGraph storage
+```
 
 ---
 
@@ -193,394 +314,48 @@ flowchart TB
 
 ```
 cream/
-├── apps/                           # Applications
-│   ├── api/                        # Mastra server (agents + workflows)
-│   ├── worker/                     # Hourly scheduler
-│   ├── dashboard/                  # Next.js 16 trading dashboard
-│   ├── dashboard-api/              # Hono REST + WebSocket API
-│   └── execution-engine/           # Rust gRPC server
+├── apps/
+│   ├── api/                  # Agent orchestration server
+│   ├── worker/               # Hourly scheduler
+│   ├── dashboard/            # Trading dashboard
+│   ├── dashboard-api/        # REST + WebSocket API
+│   └── execution-engine/     # Order validation and routing
 │
-├── packages/                       # Shared libraries (23 packages)
-│   ├── domain/                     # Zod schemas, environment, gRPC clients
-│   ├── config/                     # Runtime config service, secrets
-│   ├── schema/                     # Protobuf definitions (.proto files)
-│   ├── schema-gen/                 # Generated Protobuf stubs (TS/Rust/Python)
-│   ├── storage/                    # Turso client, 25+ repositories
-│   ├── helix/                      # HelixDB client (vector search, GraphRAG)
-│   ├── helix-schema/               # HelixDB schema, CBR, memory management
-│   ├── broker/                     # Alpaca Markets integration
-│   ├── marketdata/                 # Alpaca/FMP adapters
-│   ├── universe/                   # Trading universe resolution
-│   ├── indicators/                 # Technical indicators (RSI, ATR, SMA)
-│   ├── regime/                     # Market regime classification
-│   ├── metrics/                    # Risk-adjusted performance metrics
-│   ├── agents/                 # 8 agents, 30+ tools, consensus gate
-│   ├── external-context/           # News/sentiment extraction pipeline
-│   ├── filings/                    # SEC EDGAR filing ingestion
-│   ├── prediction-markets/         # Kalshi/Polymarket integration
-│   ├── dashboard-types/            # Shared dashboard/API types
-│   ├── logger/                     # Pino-based structured logging
-│   ├── validation/                 # Research-to-production parity
-│   ├── tsconfig/                   # Shared TypeScript configs
-│   ├── infra/                      # OpenTofu infrastructure
-│   └── research/                   # Python backtesting (VectorBT)
+├── packages/
+│   ├── agents/               # 8 agents, 30+ tools, consensus gate
+│   ├── broker/               # Broker integration
+│   ├── domain/               # Schemas, environment config
+│   ├── external-context/     # News/sentiment extraction
+│   ├── helix/                # Memory system client
+│   ├── indicators/           # Technical indicator engine
+│   ├── marketdata/           # Market data providers
+│   ├── regime/               # Market regime classification
+│   ├── storage/              # Data repositories
+│   ├── universe/             # Trading universe resolution
+│   └── ...                   # 23 packages total
 ```
 
 ---
 
-## Applications
-
-### API (`apps/api`)
-
-Mastra orchestration server running the hourly OODA loop with 7-agent consensus (+2 for indicator synthesis).
-
-**Port**: 4111
-
-**Workflows**:
-- Trading Cycle - 5-phase OODA loop (analysts → researchers → trader → consensus)
-- Prediction Markets - 15-minute macro signal fetching
-
-**Mode Selection**:
-| Mode | Agents | Market Data | Execution |
-|------|--------|-------------|-----------|
-| BACKTEST | Stub (no LLM) | Fixtures | Mock |
-| PAPER | Mastra + Gemini | Live | Paper orders |
-| LIVE | Mastra + Gemini | Live | Real orders |
-
-### Worker (`apps/worker`)
-
-Scheduler triggering three workflows:
-
-- **Trading Cycle** (~hourly) - Full OODA loop
-- **Prediction Markets** (~15 min) - Kalshi/Polymarket signals
-- **SEC Filings** (daily 6 AM ET) - Filing ingestion
-
-**Port**: 3002 (health endpoint)
-
-### Dashboard (`apps/dashboard`)
-
-Trading control center built with Next.js 16.1, React 19, and Turbopack.
-
-**Tech**: TanStack Query 5, Zustand, Lightweight Charts, Tailwind CSS 4, better-auth
-
-**Port**: 3000
-
-**Pages**: `/dashboard`, `/portfolio`, `/decisions`, `/charts/[symbol]`, `/agents`, `/config`, `/risk`, `/options`, `/backtest/[id]`
-
-### Dashboard API (`apps/dashboard-api`)
-
-Hono REST + WebSocket API for the dashboard.
-
-**Port**: 3001
-
-**Routes** (14): system, decisions, portfolio, alerts, agents, config, market, options, risk, backtests, theses, indicators, filings
-
-**WebSocket Channels**: quote, backtest, system
-
-**Auth**: Google OAuth via better-auth, TOTP 2FA required for LIVE
-
-### Execution Engine (`apps/execution-engine`)
-
-Rust gRPC server for deterministic order validation and routing.
-
-**Ports**: 50051 (HTTP), 50053 (gRPC)
-
-**Capabilities**:
-- DecisionPlan validation against risk constraints
-- Order routing to Alpaca Markets
-- Position sizing (shares, contracts, dollars, % equity)
-- Execution tactics (PASSIVE_LIMIT, TWAP, VWAP, ICEBERG)
-- Backtest simulation with configurable fill/slippage models
-- Crash recovery and reconciliation
-- Options Greeks and multi-leg validation
-
----
-
-## Key Packages
-
-### Core Domain
-
-| Package | Purpose |
-|---------|---------|
-| `@cream/domain` | Zod schemas, ExecutionContext, gRPC/Arrow clients |
-| `@cream/config` | RuntimeConfigService, secrets, startup validation |
-| `@cream/proto` | Protobuf definitions (common, decision, execution, events) |
-| `@cream/schema-gen` | Generated stubs for TS, Rust, Python |
-| `@cream/logger` | Pino structured logging with redaction |
-| `@cream/validation` | Research-to-production parity checks |
-
-### Data Layer
-
-| Package | Purpose |
-|---------|---------|
-| `@cream/storage` | Turso client, 25+ repositories, migrations |
-| `@cream/helix` | HelixDB client (vector search ~2ms, graph <1ms) |
-| `@cream/helix-schema` | 10 node types, 11 edge types, CBR, forgetting |
-| `@cream/marketdata` | Alpaca, FMP, Alpha Vantage adapters |
-
-### Trading Logic
-
-| Package | Purpose |
-|---------|---------|
-| `@cream/broker` | Alpaca adapter with multi-leg options |
-| `@cream/indicators` | RSI, SMA, EMA, ATR, Bollinger Bands, transforms |
-| `@cream/regime` | Rule-based and GMM classification |
-| `@cream/universe` | Index constituents, screeners, point-in-time |
-| `@cream/metrics` | Sharpe, Sortino, Calmar, drawdown |
-
-### Agent System
-
-| Package | Purpose |
-|---------|---------|
-| `@cream/agents` | 9 agents, 30+ tools, dual-approval consensus |
-| `@cream/external-context` | Claude extraction pipeline for news/sentiment |
-| `@cream/filings` | SEC EDGAR ingestion (10-K, 10-Q, 8-K) |
-| `@cream/prediction-markets` | Kalshi/Polymarket clients, arbitrage detection |
-
-### Research
-
-| Package | Purpose |
-|---------|---------|
-| `@cream/research` | VectorBT, NautilusTrader, model calibration |
-
----
-
-## Database Architecture
-
-### Dual Database Design
-
-| Database | Purpose | Data |
-|----------|---------|------|
-| **HelixDB** | Graph + Vector | Trade memory, semantic relationships, document embeddings |
-| **Turso** | Relational | Decisions, orders, positions, config, backtests |
-
----
-
-## Commands
-
-### Development
-
-```bash
-bun install                         # Install TS dependencies
-cargo build --workspace             # Build Rust
-uv pip install -e ".[dev]"          # Install Python (in app/package dir)
-bun run dev                         # Start all services (Turborepo)
-```
-
-### Testing
-
-```bash
-bun test                            # All TS tests (CREAM_ENV=BACKTEST)
-bun test packages/domain            # Single package
-cargo test --workspace              # Rust tests
-pytest                              # Python tests
-```
-
-### Linting & Formatting
-
-```bash
-bun run lint                        # All linters
-bun run format                      # All formatters
-biome check .                       # TS/JS only
-cargo clippy --all-targets          # Rust only
-ruff check                          # Python only
-```
-
-### Coverage
-
-```bash
-cargo cov                           # Rust → lcov.info
-cargo cov-html                      # Rust → coverage/
-cargo cov-check                     # Verify threshold
-```
-
-### Code Generation
-
-```bash
-buf generate                        # Protobuf → TS + Rust + Python stubs
-```
-
-### Database
-
-```bash
-bun run db:migrate                  # Run migrations
-bun run db:status                   # Check status
-bun run db:seed                     # Seed config
-```
-
----
-
-## Environment Variables
-
-### Core
-
-```bash
-CREAM_ENV=BACKTEST                  # BACKTEST | PAPER | LIVE
-```
-
-### Databases
-
-```bash
-TURSO_DATABASE_URL=                 # Self-hosted Turso URL
-HELIX_URL=http://localhost:6969    # HelixDB endpoint
-```
-
-### Market Data
-
-```bash
-FMP_KEY=                            # Fundamentals
-ALPHAVANTAGE_KEY=                   # Macro indicators
-```
-
-### Broker
-
-```bash
-ALPACA_KEY=                         # Alpaca API key
-ALPACA_SECRET=                      # Alpaca API secret
-```
-
-### LLM
-
-```bash
-GOOGLE_GENERATIVE_AI_API_KEY=       # Gemini models
-ANTHROPIC_API_KEY=                  # Claude extraction
-```
-
-### Prediction Markets
-
-```bash
-KALSHI_API_KEY_ID=                  # Kalshi API key ID
-KALSHI_PRIVATE_KEY_PATH=            # Path to RSA private key
-```
-
-### Authentication
-
-```bash
-GOOGLE_CLIENT_ID=                   # Google OAuth
-GOOGLE_CLIENT_SECRET=               # Google OAuth
-BETTER_AUTH_URL=                    # OAuth callbacks
-```
-
-### Dashboard API
-
-```bash
-PORT=3001                           # Server port
-ALLOWED_ORIGINS=                    # CORS origins
-```
-
----
-
-## Configuration System
-
-Runtime configuration stored in database (no YAML fallback):
-
-### Promotion Workflow
-
-```mermaid
-%%{init: {'theme': 'base', 'themeVariables': { 'primaryColor': '#FEF3C7', 'primaryTextColor': '#3D3832', 'lineColor': '#78716C', 'tertiaryColor': '#FBF8F3'}}}%%
-flowchart LR
-    Draft["`**DRAFT**
-    editing`"]
-    Test["`**TEST**
-    sandbox`"]
-    Active["`**ACTIVE**
-    production`"]
-
-    Draft -->|promote| Test -->|promote| Active
-
-    classDef draft fill:#F5F5F4,stroke:#78716C,stroke-width:2px,color:#3D3832
-    classDef test fill:#FEF3C7,stroke:#D97706,stroke-width:2px,color:#3D3832
-    classDef active fill:#D1FAE5,stroke:#10B981,stroke-width:2px,color:#3D3832
-
-    class Draft draft
-    class Test test
-    class Active active
-```
-
-### Config Tables
-
-- `trading_config` - Consensus thresholds, position sizing
-- `agent_configs` - Model selection, temperature, prompts
-- `universe_configs` - Symbol sources, filters
-
----
-
-## Testing Infrastructure
-
-### Test Frameworks
-
-| Language | Framework |
-|----------|-----------|
-| TypeScript | bun:test |
-| Rust | cargo test + mockall |
-| Python | pytest + pytest-asyncio |
-
-### Coverage Tiers
-
-| Tier | Packages | Target |
-|------|----------|--------|
-| Critical | execution-engine, broker, domain | 90% |
-| Core | indicators, helix, schema | 80% |
-| Standard | api, research | 70% |
-| Agent | agents | 60% |
-
----
-
-## CI/CD
-
-### GitHub Actions
-
-- **test.yml** - Path-based filtering, parallel jobs
-- **buf-check.yml** - Proto linting, breaking changes
-- **deploy.yml** - Hetzner deployment via Docker Compose
-
----
-
-## Infrastructure
-
-### Deployment (Hetzner + Vercel DNS)
-
-```mermaid
-%%{init: {'theme': 'base', 'themeVariables': { 'primaryColor': '#FEF3C7', 'primaryTextColor': '#3D3832', 'lineColor': '#78716C', 'tertiaryColor': '#FBF8F3'}}}%%
-flowchart TB
-    subgraph Internet["Internet"]
-        User([User])
-    end
-
-    subgraph Hetzner["Hetzner VPS (cpx31)"]
-        subgraph Caddy["Caddy (Auto-HTTPS)"]
-            Route1["cream.broker"]
-            Route2["api.cream.broker"]
-        end
-
-        subgraph Services["Docker Services"]
-            Dashboard["`**Dashboard**
-            :3000`"]
-            DashAPI["`**Dashboard API**
-            :3001`"]
-            Worker["`**Worker**
-            :3002`"]
-        end
-    end
-
-    subgraph Data["Data Layer"]
-        Turso[("`**Turso**
-        SQLite`")]
-    end
-
-    User --> Route1 --> Dashboard
-    User --> Route2 --> DashAPI
-    Dashboard --> DashAPI
-    DashAPI --> Turso
-    Worker --> Turso
-
-    classDef internet fill:#F5F5F4,stroke:#78716C,stroke-width:2px,color:#3D3832
-    classDef caddy fill:#CCFBF1,stroke:#14B8A6,stroke-width:2px,color:#3D3832
-    classDef service fill:#FEF3C7,stroke:#D97706,stroke-width:2px,color:#3D3832
-    classDef data fill:#CCFBF1,stroke:#14B8A6,stroke-width:2px,color:#3D3832
-
-    class User internet
-    class Route1,Route2 caddy
-    class Dashboard,DashAPI,Worker service
-    class Turso data
-```
+## Risk Management
+
+Risk controls operate at multiple levels:
+
+**Per-instrument limits**
+- Maximum notional value
+- Maximum units (shares/contracts)
+- Maximum percentage of equity
+
+**Portfolio limits**
+- Gross leverage cap
+- Net leverage bounds
+- Margin requirement validation
+
+**Options risk**
+- Aggregated Greeks (delta, gamma, vega, theta)
+- Multi-leg strategy validation
+
+**Circuit breakers**
+- API failure backoff
+- Mass cancel on disconnect
+- Safe defaults on timeout
