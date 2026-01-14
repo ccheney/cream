@@ -132,7 +132,7 @@ export const ContextHeader = memo(function ContextHeader({
         ${
 					isReady
 						? "border-emerald-300/60 dark:border-emerald-700/40 bg-emerald-50/30 dark:bg-emerald-900/5"
-						: "border-stone-300 dark:border-night-600 bg-stone-50/50 dark:bg-night-850/50"
+						: "border-stone-300 dark:border-night-600 bg-stone-50/50 dark:bg-night-900/50"
 				}
       `}
 		>

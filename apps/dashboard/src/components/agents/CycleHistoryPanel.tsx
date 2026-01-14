@@ -89,7 +89,7 @@ const CycleItem = memo(function CycleItem({
         ${
 					isSelected
 						? "bg-amber-50 dark:bg-amber-900/20 border border-amber-300 dark:border-amber-700"
-						: "bg-cream-50 dark:bg-night-750 hover:bg-cream-100 dark:hover:bg-night-700 border border-transparent"
+						: "bg-cream-50 dark:bg-night-700 hover:bg-cream-100 dark:hover:bg-night-700 border border-transparent"
 				}
         ${isLoading ? "opacity-60 cursor-wait" : "cursor-pointer"}
       `}

@@ -215,7 +215,7 @@ function ReasoningPhases({
 	const currentIndex = phaseOrder[currentPhase];
 
 	return (
-		<div className="flex items-center gap-4 px-4 py-2 border-b border-stone-200 dark:border-night-700 bg-stone-50/50 dark:bg-night-750/50">
+		<div className="flex items-center gap-4 px-4 py-2 border-b border-stone-200 dark:border-night-700 bg-stone-50/50 dark:bg-night-700/50">
 			{phases.map((phase, index) => {
 				const isComplete = index < currentIndex || currentPhase === "complete";
 				const isActive = index === currentIndex && currentPhase !== "complete";
@@ -428,7 +428,7 @@ function CollapsibleSection({
 				}}
 				aria-expanded={isOpen}
 				aria-controls={`section-${title.toLowerCase().replace(/\s+/g, "-")}`}
-				className="w-full flex items-center justify-between py-3 px-4 text-left hover:bg-stone-50 dark:hover:bg-night-750 transition-colors focus:outline-none focus:ring-2 focus:ring-inset focus:ring-amber-500/50"
+				className="w-full flex items-center justify-between py-3 px-4 text-left hover:bg-stone-50 dark:hover:bg-night-700 transition-colors focus:outline-none focus:ring-2 focus:ring-inset focus:ring-amber-500/50"
 			>
 				<div className="flex-1 min-w-0">
 					<span className="text-sm font-medium text-stone-900 dark:text-stone-100">
@@ -829,7 +829,7 @@ function ThoughtSectionComponent({
 			<button
 				type="button"
 				onClick={() => setIsExpanded(!isExpanded)}
-				className="w-full flex items-start gap-3 p-3 text-left hover:bg-stone-50/50 dark:hover:bg-night-750/50 transition-colors"
+				className="w-full flex items-start gap-3 p-3 text-left hover:bg-stone-50/50 dark:hover:bg-night-700/50 transition-colors"
 			>
 				<div className="flex-shrink-0 mt-0.5">{statusIcon}</div>
 				<div className="flex-1 min-w-0 flex items-center gap-2">
@@ -1016,7 +1016,7 @@ function StreamingReasoning({
 		<div
 			ref={containerRef}
 			onScroll={handleScroll}
-			className="max-h-96 overflow-y-auto rounded-lg bg-stone-50 dark:bg-night-750 p-3"
+			className="max-h-96 overflow-y-auto rounded-lg bg-stone-50 dark:bg-night-700 p-3"
 			aria-live="polite"
 			aria-atomic="false"
 			aria-relevant="additions"
@@ -1268,7 +1268,7 @@ export function AgentStreamingDetail({ agentType, state, cycleId }: AgentStreami
 						onToggle={handleOutputToggle}
 						reducedMotion={reducedMotion}
 					>
-						<div className="max-h-48 overflow-y-auto rounded-lg bg-stone-50 dark:bg-night-750 p-4">
+						<div className="max-h-48 overflow-y-auto rounded-lg bg-stone-50 dark:bg-night-700 p-4">
 							<p className="text-sm text-stone-600 dark:text-stone-400 leading-relaxed whitespace-pre-wrap">
 								{state.textOutput}
 							</p>

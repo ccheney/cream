@@ -70,21 +70,26 @@ export function ConnectionLine({
 	strokeWidth = 2,
 }: ConnectionLineProps) {
 	// Determine color based on state
+	// Use currentColor with CSS classes for dark mode support when no explicit color
 	const strokeColor = color
 		? color
 		: isActive
 			? "var(--color-active, #F5A623)"
 			: isComplete
 				? "var(--color-success, #10B981)"
-				: "var(--color-stone-300, #D1D5DB)";
+				: "currentColor";
 
 	// Calculate path for vertical line with small curve
 	const midY = (start.y + end.y) / 2;
 	const pathD = `M ${start.x} ${start.y} C ${start.x} ${midY}, ${end.x} ${midY}, ${end.x} ${end.y}`;
 
+	// CSS class for inactive state to support dark mode
+	const inactiveColorClass =
+		!color && !isActive && !isComplete ? "text-stone-300 dark:text-night-600" : "";
+
 	return (
 		<svg
-			className="absolute inset-0 w-full h-full pointer-events-none overflow-visible"
+			className={`absolute inset-0 w-full h-full pointer-events-none overflow-visible ${inactiveColorClass}`}
 			style={{ zIndex: 0 }}
 			aria-hidden="true"
 		>

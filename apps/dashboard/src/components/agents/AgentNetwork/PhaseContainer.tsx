@@ -134,7 +134,7 @@ export const PhaseContainer = memo(function PhaseContainer({
 	};
 
 	const bgColors = {
-		pending: "bg-cream-50 dark:bg-night-850",
+		pending: "bg-cream-50 dark:bg-night-900",
 		active: "bg-amber-50/30 dark:bg-amber-900/10",
 		complete: "bg-emerald-50/30 dark:bg-emerald-900/10",
 		error: "bg-red-50/30 dark:bg-red-900/10",
@@ -142,7 +142,7 @@ export const PhaseContainer = memo(function PhaseContainer({
 
 	// Opaque backgrounds for label (to cover the border line)
 	const labelBgColors = {
-		pending: "bg-cream-50 dark:bg-night-850",
+		pending: "bg-cream-50 dark:bg-night-900",
 		active: "bg-white dark:bg-night-800",
 		complete: "bg-white dark:bg-night-800",
 		error: "bg-white dark:bg-night-800",
