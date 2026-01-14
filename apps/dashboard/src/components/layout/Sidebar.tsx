@@ -52,17 +52,25 @@ export interface SidebarProps {
   className?: string;
 }
 
-export const NAV_ITEMS: NavItem[] = [
-  { href: "/portfolio", label: "Portfolio", icon: Briefcase },
-  { href: "/charts", label: "Charts", icon: LineChart },
-  { href: "/options", label: "Options", icon: Grid2x2 },
-  { href: "/console", label: "Console", icon: Terminal },
-  { href: "/agents", label: "Agents", icon: Bot },
-  { href: "/decisions", label: "Decisions", icon: FileText },
-  { href: "/calendar", label: "Calendar", icon: CalendarDays },
-  { href: "/feed", label: "Feed", icon: Rss },
-  { href: "/config", label: "Config", icon: Settings },
+export const NAV_GROUPS: NavItem[][] = [
+  [
+    { href: "/portfolio", label: "Portfolio", icon: Briefcase },
+    { href: "/charts", label: "Charts", icon: LineChart },
+    { href: "/options", label: "Options", icon: Grid2x2 },
+  ],
+  [
+    { href: "/console", label: "Console", icon: Terminal },
+    { href: "/agents", label: "Agents", icon: Bot },
+    { href: "/decisions", label: "Decisions", icon: FileText },
+  ],
+  [
+    { href: "/calendar", label: "Calendar", icon: CalendarDays },
+    { href: "/feed", label: "Feed", icon: Rss },
+  ],
+  [{ href: "/config", label: "Config", icon: Settings }],
 ];
+
+export const NAV_ITEMS: NavItem[] = NAV_GROUPS.flat();
 
 export const EXPERIMENT_ITEMS: NavItem[] = [
   { href: "/risk", label: "Risk", icon: ShieldAlert },
@@ -162,8 +170,15 @@ export const Sidebar = memo(function Sidebar({
 
       <nav className="flex-1 mt-4 px-2 overflow-y-auto flex flex-col" aria-label="Main navigation">
         <div className="space-y-1">
-          {NAV_ITEMS.map((item) => (
-            <NavLink key={item.href} item={item} collapsed={collapsed} isHovered={isHovered} />
+          {NAV_GROUPS.map((group, groupIndex) => (
+            <div key={groupIndex}>
+              {groupIndex > 0 && (
+                <div className="my-2 mx-3 border-t border-cream-200 dark:border-night-700" />
+              )}
+              {group.map((item) => (
+                <NavLink key={item.href} item={item} collapsed={collapsed} isHovered={isHovered} />
+              ))}
+            </div>
           ))}
         </div>
 

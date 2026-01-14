@@ -186,8 +186,7 @@ button,
 a,
 label[for],
 select,
-summary,
-[tabindex]:not([tabindex="-1"]) {
+summary {
   cursor: pointer;
 }
 

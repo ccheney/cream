@@ -9,7 +9,7 @@
 
 import { formatDistanceToNow, formatDuration, intervalToDuration } from "date-fns";
 import { CheckCircle, Clock, Loader2, XCircle } from "lucide-react";
-import { memo, useCallback } from "react";
+import { memo, useCallback, useEffect } from "react";
 import { type CycleListItem, useCycleHistory, useFullCycle } from "@/hooks/queries/useCycleHistory";
 import type { AgentStreamingState } from "@/stores/agent-streaming-store";
 import { useAgentStreamingActions } from "@/stores/agent-streaming-store";
@@ -172,8 +172,12 @@ export const CycleHistoryPanel = memo(function CycleHistoryPanel({
     [onSelectCycle]
   );
 
-  // Load into store when full cycle data arrives
-  if (fullCycle && selectedCycleId && !fullCycleLoading) {
+  // Load into store when full cycle data arrives (must be in useEffect, not during render)
+  useEffect(() => {
+    if (!fullCycle || !selectedCycleId || fullCycleLoading) {
+      return;
+    }
+
     // Transform streaming state to match store format
     const agentState: Record<string, AgentStreamingState> = {};
     for (const [agentType, state] of Object.entries(fullCycle.streamingState)) {
@@ -195,7 +199,7 @@ export const CycleHistoryPanel = memo(function CycleHistoryPanel({
       };
     }
     loadHistoricalCycle(selectedCycleId, agentState);
-  }
+  }, [fullCycle, selectedCycleId, fullCycleLoading, loadHistoricalCycle]);
 
   return (
     <div className="bg-white dark:bg-night-800 rounded-lg border border-cream-200 dark:border-night-700">

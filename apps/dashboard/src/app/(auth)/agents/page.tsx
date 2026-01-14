@@ -106,6 +106,9 @@ export default function AgentsPage() {
 
   return (
     <div className="space-y-4">
+      {/* Page Header */}
+      <h1 className="text-2xl font-semibold text-stone-900 dark:text-night-50">Agents</h1>
+
       {/* Historical Mode Banner */}
       {viewMode === "historical" && historicalCycleId && (
         <div className="bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-700 rounded-lg p-3 flex items-center justify-between">
