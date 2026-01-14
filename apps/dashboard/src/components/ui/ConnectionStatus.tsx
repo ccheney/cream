@@ -36,7 +36,7 @@ export const ConnectionStatus = memo(function ConnectionStatus({
 		connected: {
 			dotColor: "bg-green-500",
 			textColor: "text-green-600 dark:text-green-400",
-			label: "Connected",
+			label: "Live",
 			icon: Wifi,
 			animate: false,
 		},

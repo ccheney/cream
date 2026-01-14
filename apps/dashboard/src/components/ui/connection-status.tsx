@@ -81,10 +81,10 @@ export function ConnectionStatus({
 		switch (state) {
 			case "connected":
 				return {
-					text: "Connected",
+					text: "Live",
 					color: "green" as const,
 					pulse: false,
-					ariaLabel: "Connection active",
+					ariaLabel: "Live connection",
 				};
 			case "connecting":
 				return {
