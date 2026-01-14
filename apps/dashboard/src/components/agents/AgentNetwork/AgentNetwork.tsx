@@ -332,7 +332,7 @@ export function AgentNetwork({
       variants={staggerContainer}
       initial="initial"
       animate="animate"
-      className="space-y-2 focus:outline-none"
+      className="space-y-2 focus:outline-none cursor-default"
       role="tree"
       aria-label="Agent Network"
       tabIndex={0}
