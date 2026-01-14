@@ -11,6 +11,7 @@ import type {
 	OrderSummaryBrief,
 } from "@/lib/api/types";
 import { useWebSocketContext } from "@/providers/WebSocketProvider";
+import { useAgentStreamingStore } from "@/stores/agent-streaming-store";
 
 export type CycleStatus = "idle" | "running" | "completed" | "failed";
 
@@ -65,6 +66,7 @@ type CycleWSMessage = CycleProgressMessage | CycleResultMessage;
 export function useCycleProgress(cycleId: string | null): UseCycleProgressReturn {
 	const queryClient = useQueryClient();
 	const { lastMessage, subscribe, unsubscribe, connected } = useWebSocketContext();
+	const markCycleFailed = useAgentStreamingStore((state) => state.markCycleFailed);
 
 	const [status, setStatus] = useState<CycleStatus>("idle");
 	const [progress, setProgress] = useState<CycleProgressData | null>(null);
@@ -131,6 +133,8 @@ export function useCycleProgress(cycleId: string | null): UseCycleProgressReturn
 					} else {
 						setStatus("failed");
 						setError(resultData.error ?? "Cycle failed");
+						// Mark all processing agents as error in the streaming store
+						markCycleFailed(resultData.error);
 					}
 
 					setResult({
@@ -151,7 +155,7 @@ export function useCycleProgress(cycleId: string | null): UseCycleProgressReturn
 				}
 			}
 		},
-		[queryClient]
+		[queryClient, markCycleFailed]
 	);
 
 	// Process incoming WebSocket messages

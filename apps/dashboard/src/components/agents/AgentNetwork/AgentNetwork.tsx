@@ -268,8 +268,29 @@ export function AgentNetwork({
 		return status;
 	}, [agents, currentPhase]);
 
+	// Check if agent UI state is empty (all agents idle or no data)
+	const isAgentStateEmpty = useMemo(() => {
+		if (agents.size === 0) {
+			return true;
+		}
+		// Check if all agents are idle
+		return Array.from(agents.values()).every((state) => state.status === "idle");
+	}, [agents]);
+
+	// Collapse all phases when agent UI state is empty
+	useEffect(() => {
+		if (isAgentStateEmpty && expandedPhases.size > 0) {
+			setExpandedPhases(new Set());
+		}
+	}, [isAgentStateEmpty, expandedPhases.size]);
+
 	// Auto-expand phases when they become active or complete
 	useEffect(() => {
+		// Don't auto-expand if state is empty
+		if (isAgentStateEmpty) {
+			return;
+		}
+
 		const phasesToExpand: OODAPhase[] = [];
 
 		for (const config of PHASE_CONFIG) {
@@ -291,7 +312,7 @@ export function AgentNetwork({
 				return next;
 			});
 		}
-	}, [phaseStatus, expandedPhases]);
+	}, [phaseStatus, expandedPhases, isAgentStateEmpty]);
 
 	// Screen reader announcements
 	const selectedAgentStatus = selectedAgent ? agents.get(selectedAgent)?.status : undefined;

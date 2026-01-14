@@ -130,6 +130,8 @@ export interface AgentStreamingStoreActions {
 	clearDataFlows: () => void;
 	/** Clear all streaming state */
 	clear: () => void;
+	/** Mark cycle as failed - sets all processing agents to error */
+	markCycleFailed: (error?: string) => void;
 	/** Reset store to initial state */
 	reset: () => void;
 	/** Load historical cycle data */
@@ -430,6 +432,34 @@ export const useAgentStreamingStore = create<AgentStreamingStore>()(
 				});
 			},
 
+			markCycleFailed: (error) => {
+				set((state) => {
+					const newAgents = new Map(state.agents);
+					// Mark all processing agents as error
+					for (const [agentType, agentState] of newAgents) {
+						if (agentState.status === "processing") {
+							newAgents.set(agentType, {
+								...agentState,
+								status: "error",
+								error: error ?? "Cycle failed",
+								lastUpdate: new Date().toISOString(),
+							});
+						}
+					}
+					// Also update phase status - set any active phase to error
+					const newPhaseStatus = { ...state.phaseStatus };
+					for (const phase of Object.keys(newPhaseStatus) as OODAPhase[]) {
+						if (newPhaseStatus[phase] === "active") {
+							newPhaseStatus[phase] = "error";
+						}
+					}
+					return {
+						agents: newAgents,
+						phaseStatus: newPhaseStatus,
+					};
+				});
+			},
+
 			reset: () => {
 				set(initialState);
 			},
@@ -536,6 +566,7 @@ export function useAgentStreamingActions() {
 			addDataFlow: state.addDataFlow,
 			clearDataFlows: state.clearDataFlows,
 			clear: state.clear,
+			markCycleFailed: state.markCycleFailed,
 			reset: state.reset,
 			loadHistoricalCycle: state.loadHistoricalCycle,
 			returnToLive: state.returnToLive,

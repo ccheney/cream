@@ -120,7 +120,7 @@ export function createAgent(agentType: AgentType): Agent {
 		// when any provider tool is present, which makes agents appear to "never call tools".
 		//
 		// See: https://github.com/vercel/ai/issues/8258
-		log.warn(
+		log.debug(
 			{ agentType },
 			"Skipping native google_search tool because it cannot be combined with function tools on Gemini"
 		);
@@ -142,7 +142,7 @@ export function createAgent(agentType: AgentType): Agent {
 	}
 
 	const toolNames = Object.keys(tools);
-	log.info({ agentType, toolNames, toolCount: toolNames.length }, "Creating agent with tools");
+	log.debug({ agentType, toolNames, toolCount: toolNames.length }, "Creating agent with tools");
 
 	// Dynamic model selection with thought signature middleware for Gemini 3
 	const dynamicModel = ({ requestContext }: { requestContext: RequestContext }) => {
