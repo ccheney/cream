@@ -31,6 +31,35 @@ const SummarizeReasoningResponseSchema = z.object({
 });
 
 // ============================================
+// Thought Classification Schema
+// ============================================
+
+/**
+ * Semantic thought types for agent reasoning display.
+ * Each type maps to a specific color from the design system.
+ */
+const ThoughtTypeSchema = z.enum([
+	"observation", // stone - gathering facts, noting data
+	"analysis", // violet - working through patterns
+	"hypothesis", // indigo - forming predictions
+	"concern", // orange - caution, uncertainty, caveats
+	"insight", // pink - aha moments, realizations
+	"synthesis", // amber - pulling together factors
+	"conclusion", // emerald - final recommendation
+	"question", // teal - self-reflection, alternatives
+]);
+
+const ClassifyThoughtRequestSchema = z.object({
+	content: z.string().describe("The thought section content to classify"),
+	title: z.string().optional().describe("Optional section title/header"),
+});
+
+const ClassifyThoughtResponseSchema = z.object({
+	type: ThoughtTypeSchema.describe("The semantic type of this thought section"),
+	confidence: z.number().min(0).max(1).describe("Classification confidence (0-1)"),
+});
+
+// ============================================
 // Route Definition
 // ============================================
 
@@ -160,5 +189,111 @@ function extractKeyPhrase(reasoning: string): string {
 
 	return "Processing...";
 }
+
+// ============================================
+// Thought Classification Route
+// ============================================
+
+const classifyThoughtRoute = createRoute({
+	method: "post",
+	path: "/classify-thought",
+	tags: ["AI"],
+	summary: "Classify a thought section into a semantic type",
+	description:
+		"Uses Gemini Flash to classify agent reasoning sections into semantic types (observation, analysis, hypothesis, concern, insight, synthesis, conclusion, question). Used for visual differentiation in the reasoning trace UI.",
+	request: {
+		body: {
+			content: {
+				"application/json": {
+					schema: ClassifyThoughtRequestSchema,
+				},
+			},
+		},
+	},
+	responses: {
+		200: {
+			description: "Successfully classified thought",
+			content: {
+				"application/json": {
+					schema: ClassifyThoughtResponseSchema,
+				},
+			},
+		},
+	},
+});
+
+const CLASSIFY_PROMPT = `Classify this AI agent thought into exactly ONE of these semantic types:
+
+- observation: Gathering facts, noting data, reading information
+- analysis: Working through patterns, examining relationships, evaluating data
+- hypothesis: Forming predictions, making assumptions, proposing theories
+- concern: Expressing caution, noting risks, identifying uncertainties or caveats
+- insight: Key realizations, aha moments, important discoveries
+- synthesis: Pulling together multiple factors, weighing tradeoffs, combining perspectives
+- conclusion: Final recommendations, decisions, actionable outcomes
+- question: Self-reflection, considering alternatives, exploring "what if" scenarios
+
+Title (if provided): {title}
+
+Content:
+{content}
+
+Respond with ONLY valid JSON in this exact format:
+{"type": "<one of the 8 types>", "confidence": <0.0-1.0>}`;
+
+app.openapi(classifyThoughtRoute, async (c) => {
+	const { content, title } = c.req.valid("json");
+
+	// Default for very short content
+	if (!content || content.length < 20) {
+		return c.json({ type: "observation" as const, confidence: 0.5 });
+	}
+
+	// Require Google API key
+	if (!process.env.GOOGLE_API_KEY) {
+		return c.json({ type: "observation" as const, confidence: 0.3 });
+	}
+
+	try {
+		const prompt = CLASSIFY_PROMPT.replace("{title}", title || "(none)").replace(
+			"{content}",
+			content.slice(0, 400)
+		);
+
+		const { text } = await generateText({
+			model: google(getLLMModelId()),
+			prompt,
+			maxOutputTokens: 50,
+		});
+
+		// Parse JSON response
+		const cleaned = text.trim();
+		const match = cleaned.match(/\{[\s\S]*\}/);
+		if (match) {
+			const parsed = JSON.parse(match[0]) as { type: string; confidence: number };
+			const validTypes = [
+				"observation",
+				"analysis",
+				"hypothesis",
+				"concern",
+				"insight",
+				"synthesis",
+				"conclusion",
+				"question",
+			];
+			if (validTypes.includes(parsed.type)) {
+				return c.json({
+					type: parsed.type as z.infer<typeof ThoughtTypeSchema>,
+					confidence: Math.min(1, Math.max(0, parsed.confidence)),
+				});
+			}
+		}
+
+		// Default if parsing fails
+		return c.json({ type: "observation" as const, confidence: 0.3 });
+	} catch (_error) {
+		return c.json({ type: "observation" as const, confidence: 0.3 });
+	}
+});
 
 export default app;

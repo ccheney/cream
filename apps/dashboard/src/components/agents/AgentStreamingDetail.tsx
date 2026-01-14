@@ -21,6 +21,7 @@ import { AnimatePresence, motion } from "framer-motion";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { AgentStreamingState, AgentType, ToolCall } from "@/hooks/useAgentStreaming";
 import { useStatusNarrative } from "@/hooks/useStatusNarrative";
+import { type ThoughtType, useThoughtClassification } from "@/hooks/useThoughtClassification";
 
 // ============================================
 // Constants
@@ -598,13 +599,11 @@ function ToolCallItem({ toolCall }: { toolCall: ToolCall }) {
 // Semantic Section Types
 // ============================================
 
-type SectionType = "normal" | "reflection" | "conclusion";
 type SectionStatus = "complete" | "active" | "pending";
 
 interface ThoughtSection {
 	title: string | null;
 	content: string;
-	type: SectionType;
 	status: SectionStatus;
 	key: string;
 }
@@ -616,6 +615,7 @@ interface ThoughtSection {
 /**
  * Parse reasoning text into semantic sections.
  * Detects **Header** style markdown headers and groups content accordingly.
+ * Type classification is handled by the useThoughtClassification hook.
  */
 function parseThoughtSections(text: string, isStreaming: boolean): ThoughtSection[] {
 	if (!text) {
@@ -649,7 +649,6 @@ function parseThoughtSections(text: string, isStreaming: boolean): ThoughtSectio
 			{
 				title: null,
 				content: text.trim(),
-				type: detectSectionType(text),
 				status: isStreaming ? "active" : "complete",
 				key: "section-0",
 			},
@@ -667,7 +666,6 @@ function parseThoughtSections(text: string, isStreaming: boolean): ThoughtSectio
 				sections.push({
 					title: null,
 					content: preContent,
-					type: detectSectionType(preContent),
 					status: "complete",
 					key: `section-${sectionIndex++}`,
 				});
@@ -685,7 +683,6 @@ function parseThoughtSections(text: string, isStreaming: boolean): ThoughtSectio
 		sections.push({
 			title: currentMatch.header,
 			content,
-			type: detectSectionType(content, currentMatch.header),
 			status,
 			key: `section-${sectionIndex++}`,
 		});
@@ -694,43 +691,90 @@ function parseThoughtSections(text: string, isStreaming: boolean): ThoughtSectio
 	return sections;
 }
 
+// ============================================
+// Thought Type Styles
+// ============================================
+
 /**
- * Detect the type of a section based on content and title.
+ * Style configurations for each thought type.
+ * Colors are from the design system (21-color-system.md).
  */
-function detectSectionType(content: string, title?: string): SectionType {
-	const text = `${title || ""} ${content}`;
-	const lowerText = text.toLowerCase();
-
-	// Reflection patterns
-	const reflectionPatterns = [
-		/wait|actually|hmm|reconsider|second thought|but wait/,
-		/should also consider|need to reconsider|thinking about it/,
-		/however|although|that said|other hand|caveat|concern/,
-		/risk|warning|caution|careful/,
-	];
-
-	for (const pattern of reflectionPatterns) {
-		if (pattern.test(lowerText)) {
-			return "reflection";
-		}
+const THOUGHT_TYPE_STYLES: Record<
+	ThoughtType,
+	{
+		bg: string;
+		border: string;
+		accent: string;
+		label: string;
+		labelBg: string;
+		labelText: string;
 	}
-
-	// Conclusion patterns
-	const conclusionPatterns = [
-		/therefore|thus|conclusion|summarize|overall|finally/,
-		/assessment|recommendation|verdict|decision/,
-		/based on.*analysis|given.*factors|considering.*above/,
-		/synthesis|final.*thought|bottom.*line/,
-	];
-
-	for (const pattern of conclusionPatterns) {
-		if (pattern.test(lowerText)) {
-			return "conclusion";
-		}
-	}
-
-	return "normal";
-}
+> = {
+	observation: {
+		bg: "bg-white dark:bg-night-800",
+		border: "border-stone-200 dark:border-night-700",
+		accent: "border-l-stone-300 dark:border-l-night-600",
+		label: "Observing",
+		labelBg: "bg-stone-100 dark:bg-night-700",
+		labelText: "text-stone-600 dark:text-stone-400",
+	},
+	analysis: {
+		bg: "bg-violet-50/50 dark:bg-violet-900/10",
+		border: "border-violet-200 dark:border-violet-800/30",
+		accent: "border-l-violet-500",
+		label: "Analyzing",
+		labelBg: "bg-violet-100 dark:bg-violet-900/30",
+		labelText: "text-violet-700 dark:text-violet-400",
+	},
+	hypothesis: {
+		bg: "bg-indigo-50/50 dark:bg-indigo-900/10",
+		border: "border-indigo-200 dark:border-indigo-800/30",
+		accent: "border-l-indigo-500",
+		label: "Hypothesizing",
+		labelBg: "bg-indigo-100 dark:bg-indigo-900/30",
+		labelText: "text-indigo-700 dark:text-indigo-400",
+	},
+	concern: {
+		bg: "bg-orange-50/50 dark:bg-orange-900/10",
+		border: "border-orange-200 dark:border-orange-800/30",
+		accent: "border-l-orange-500",
+		label: "Considering Risk",
+		labelBg: "bg-orange-100 dark:bg-orange-900/30",
+		labelText: "text-orange-700 dark:text-orange-400",
+	},
+	insight: {
+		bg: "bg-pink-50/50 dark:bg-pink-900/10",
+		border: "border-pink-200 dark:border-pink-800/30",
+		accent: "border-l-pink-500",
+		label: "Key Insight",
+		labelBg: "bg-pink-100 dark:bg-pink-900/30",
+		labelText: "text-pink-700 dark:text-pink-400",
+	},
+	synthesis: {
+		bg: "bg-amber-50/50 dark:bg-amber-900/10",
+		border: "border-amber-200 dark:border-amber-800/30",
+		accent: "border-l-amber-500",
+		label: "Synthesizing",
+		labelBg: "bg-amber-100 dark:bg-amber-900/30",
+		labelText: "text-amber-700 dark:text-amber-400",
+	},
+	conclusion: {
+		bg: "bg-emerald-50/50 dark:bg-emerald-900/10",
+		border: "border-emerald-200 dark:border-emerald-800/30",
+		accent: "border-l-emerald-500",
+		label: "Conclusion",
+		labelBg: "bg-emerald-100 dark:bg-emerald-900/30",
+		labelText: "text-emerald-700 dark:text-emerald-400",
+	},
+	question: {
+		bg: "bg-teal-50/50 dark:bg-teal-900/10",
+		border: "border-teal-200 dark:border-teal-800/30",
+		accent: "border-l-teal-500",
+		label: "Questioning",
+		labelBg: "bg-teal-100 dark:bg-teal-900/30",
+		labelText: "text-teal-700 dark:text-teal-400",
+	},
+};
 
 // ============================================
 // Thought Section Component
@@ -745,35 +789,14 @@ function ThoughtSectionComponent({
 }) {
 	const [isExpanded, setIsExpanded] = useState(false);
 
-	// Style configurations based on type
-	const typeStyles = {
-		normal: {
-			bg: "bg-white dark:bg-night-800",
-			border: "border-stone-200 dark:border-night-700",
-			accent: "border-l-stone-300 dark:border-l-night-600",
-			label: null,
-			labelBg: "",
-			labelText: "",
-		},
-		reflection: {
-			bg: "bg-amber-50/50 dark:bg-amber-900/10",
-			border: "border-amber-200 dark:border-amber-800/30",
-			accent: "border-l-amber-500",
-			label: "Reconsidering",
-			labelBg: "bg-amber-100 dark:bg-amber-900/30",
-			labelText: "text-amber-700 dark:text-amber-400",
-		},
-		conclusion: {
-			bg: "bg-emerald-50/50 dark:bg-emerald-900/10",
-			border: "border-emerald-200 dark:border-emerald-800/30",
-			accent: "border-l-emerald-500",
-			label: "Synthesis",
-			labelBg: "bg-emerald-100 dark:bg-emerald-900/30",
-			labelText: "text-emerald-700 dark:text-emerald-400",
-		},
-	};
+	// Use LLM-powered classification
+	const { type, isClassifying } = useThoughtClassification(
+		section.content,
+		section.title ?? undefined,
+		section.status === "complete"
+	);
 
-	const styles = typeStyles[section.type];
+	const styles = THOUGHT_TYPE_STYLES[type];
 
 	// Status indicator
 	const statusIcon =
@@ -788,11 +811,12 @@ function ThoughtSectionComponent({
 				<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
 			</svg>
 		) : section.status === "active" ? (
-			<motion.div
-				className="w-4 h-4 rounded-full border-2 border-amber-500 border-t-transparent"
-				animate={reducedMotion ? {} : { rotate: 360 }}
-				transition={{ duration: 1, repeat: Number.POSITIVE_INFINITY, ease: "linear" }}
-			/>
+			<span className="flex items-center justify-center w-4 h-4">
+				<span className="relative flex h-2 w-2">
+					<span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-amber-400 opacity-75" />
+					<span className="relative inline-flex rounded-full h-2 w-2 bg-amber-500" />
+				</span>
+			</span>
 		) : (
 			<div className="w-4 h-4 rounded-full border-2 border-stone-300 dark:border-night-600" />
 		);
@@ -814,13 +838,11 @@ function ThoughtSectionComponent({
 							<span className="text-stone-500 dark:text-stone-400 italic">Thinking...</span>
 						)}
 					</span>
-					{styles.label && (
-						<span
-							className={`flex-shrink-0 text-[10px] font-semibold uppercase tracking-wider px-1.5 py-0.5 rounded ${styles.labelBg} ${styles.labelText}`}
-						>
-							{styles.label}
-						</span>
-					)}
+					<span
+						className={`flex-shrink-0 text-[10px] font-semibold uppercase tracking-wider px-1.5 py-0.5 rounded ${styles.labelBg} ${styles.labelText} ${isClassifying ? "animate-pulse" : ""}`}
+					>
+						{styles.label}
+					</span>
 				</div>
 				<motion.svg
 					className="w-4 h-4 text-stone-400 flex-shrink-0 mt-0.5"
@@ -968,14 +990,24 @@ function StreamingReasoning({
 	reducedMotion?: boolean;
 }) {
 	const containerRef = useRef<HTMLDivElement>(null);
+	const isNearBottomRef = useRef(true);
 
 	// Parse text into semantic sections
 	const sections = useMemo(() => parseThoughtSections(text, isStreaming), [text, isStreaming]);
 
-	// Auto-scroll to bottom as new text streams in
+	// Track scroll position to determine if user is near bottom
+	const handleScroll = useCallback(() => {
+		if (containerRef.current) {
+			const { scrollTop, scrollHeight, clientHeight } = containerRef.current;
+			const threshold = 50; // pixels from bottom
+			isNearBottomRef.current = scrollHeight - scrollTop - clientHeight < threshold;
+		}
+	}, []);
+
+	// Auto-scroll to bottom only if already near bottom (terminal-like behavior)
 	// biome-ignore lint/correctness/useExhaustiveDependencies: text changes trigger scroll
 	useEffect(() => {
-		if (containerRef.current) {
+		if (containerRef.current && isNearBottomRef.current) {
 			containerRef.current.scrollTop = containerRef.current.scrollHeight;
 		}
 	}, [text]);
@@ -983,6 +1015,7 @@ function StreamingReasoning({
 	return (
 		<div
 			ref={containerRef}
+			onScroll={handleScroll}
 			className="max-h-96 overflow-y-auto rounded-lg bg-stone-50 dark:bg-night-750 p-3"
 			aria-live="polite"
 			aria-atomic="false"
