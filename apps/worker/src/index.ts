@@ -645,10 +645,11 @@ async function main() {
 	const environment = requireEnv();
 
 	// Validate environment at startup
-	// In non-backtest mode, require FMP_KEY for external context and at least one LLM key
+	// FMP_KEY is now optional - the indicator scheduler handles missing keys gracefully with stub providers
+	// News was migrated from FMP to Alpaca (commit 1c4f76a9)
 	const startupCtx = createContext(environment, "scheduled");
 	if (!isBacktest(startupCtx)) {
-		validateEnvironmentOrExit(startupCtx, "worker", ["FMP_KEY"]);
+		validateEnvironmentOrExit(startupCtx, "worker", []);
 
 		// Warn if no LLM key is set (needed for OODA agent execution)
 		// OODA agents use Gemini exclusively via GOOGLE_GENERATIVE_AI_API_KEY
@@ -656,6 +657,14 @@ async function main() {
 			log.warn(
 				{},
 				"GOOGLE_GENERATIVE_AI_API_KEY not configured. Agent execution will use stub agents."
+			);
+		}
+
+		// Warn if FMP_KEY is not set (used for fundamentals, short interest, sentiment)
+		if (!process.env.FMP_KEY) {
+			log.warn(
+				{},
+				"FMP_KEY not configured. Fundamentals, short interest, and sentiment jobs will be disabled."
 			);
 		}
 	}
