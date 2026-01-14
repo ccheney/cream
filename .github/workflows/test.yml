@@ -20,6 +20,7 @@ concurrency:
 
 env:
   CREAM_ENV: BACKTEST
+  LLM_MODEL_ID: gemini-3-flash-preview
   TURBO_TOKEN: ${{ secrets.TURBO_TOKEN }}
   TURBO_TEAM: ${{ secrets.TURBO_TEAM }}
 

@@ -1,11 +1,8 @@
 /**
  * Trading Config Repository Tests
+ *
+ * Requires CREAM_ENV=BACKTEST and LLM_MODEL_ID to be set (see .github/workflows/test.yml)
  */
-
-// Set required environment variables before imports
-// Must use Bun.env as domain/env.ts prefers Bun.env over process.env
-Bun.env.CREAM_ENV = "BACKTEST";
-Bun.env.LLM_MODEL_ID = "gemini-3-flash-preview";
 
 import { afterEach, beforeEach, describe, expect, test } from "bun:test";
 import { createInMemoryClient, type TursoClient } from "../turso.js";
