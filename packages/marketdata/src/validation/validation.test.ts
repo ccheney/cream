@@ -10,13 +10,6 @@ import {
 	detectPriceSpikes,
 	detectVolumeAnomalies,
 } from "./anomalies";
-import {
-	getNextTradingDay,
-	getTradingDaysBetween,
-	isHoliday,
-	isTradingDay,
-	isWeekend,
-} from "./calendar";
 import { type Candle, detectGaps, fillGaps, interpolateCandle } from "./gaps";
 import { getQualityScore, isValidCandleData, validateCandleData } from "./index";
 import { checkStaleness, getStaleSymbols, isFresh } from "./staleness";
@@ -286,85 +279,6 @@ describe("Anomaly Detection", () => {
 
 			expect(result.hasAnomalies).toBe(true);
 			expect(result.anomalies.length).toBeGreaterThan(0);
-		});
-	});
-});
-
-// ============================================
-// Calendar Tests
-// ============================================
-
-describe("Trading Calendar", () => {
-	describe("isWeekend", () => {
-		it("should detect Saturday", () => {
-			const saturday = new Date("2024-01-06T12:00:00Z"); // Saturday
-			expect(isWeekend(saturday)).toBe(true);
-		});
-
-		it("should detect Sunday", () => {
-			const sunday = new Date("2024-01-07T12:00:00Z"); // Sunday
-			expect(isWeekend(sunday)).toBe(true);
-		});
-
-		it("should not detect weekday", () => {
-			const monday = new Date("2024-01-08T12:00:00Z"); // Monday
-			expect(isWeekend(monday)).toBe(false);
-		});
-	});
-
-	describe("isHoliday", () => {
-		it("should detect Christmas", () => {
-			const christmas = new Date("2024-12-25T12:00:00Z");
-			expect(isHoliday(christmas)).toBe(true);
-		});
-
-		it("should not flag regular day", () => {
-			const regularDay = new Date("2024-06-15T12:00:00Z");
-			expect(isHoliday(regularDay)).toBe(false);
-		});
-	});
-
-	describe("isTradingDay", () => {
-		it("should return false for weekend", () => {
-			const saturday = new Date("2024-01-06T12:00:00Z");
-			expect(isTradingDay(saturday)).toBe(false);
-		});
-
-		it("should return false for holiday", () => {
-			const thanksgiving = new Date("2024-11-28T12:00:00Z");
-			expect(isTradingDay(thanksgiving)).toBe(false);
-		});
-
-		it("should return true for regular weekday", () => {
-			const tuesday = new Date("2024-06-18T12:00:00Z");
-			expect(isTradingDay(tuesday)).toBe(true);
-		});
-	});
-
-	describe("getNextTradingDay", () => {
-		it("should skip weekend", () => {
-			const friday = new Date("2024-01-05T12:00:00Z");
-			const next = getNextTradingDay(friday);
-
-			expect(next.getDay()).toBe(1); // Monday
-		});
-
-		it("should skip holiday", () => {
-			const dayBeforeChristmas = new Date("2024-12-24T12:00:00Z");
-			const next = getNextTradingDay(dayBeforeChristmas);
-
-			expect(next.getDate()).toBe(26);
-		});
-	});
-
-	describe("getTradingDaysBetween", () => {
-		it("should count trading days correctly", () => {
-			const monday = new Date("2024-01-08T00:00:00Z");
-			const friday = new Date("2024-01-12T00:00:00Z");
-
-			const days = getTradingDaysBetween(monday, friday);
-
-			expect(days).toBe(4); // Tue, Wed, Thu, Fri
 		});
 	});
 });

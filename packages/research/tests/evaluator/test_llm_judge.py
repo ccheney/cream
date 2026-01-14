@@ -144,13 +144,13 @@ class TestLLMJudge:
     def test_init_with_cache_disabled(self) -> None:
         """Test initializing with cache disabled."""
         with patch("research.evaluator.llm_judge.judge.genai"):
-            judge = LLMJudge(api_key="test-key", enable_cache=False)
+            judge = LLMJudge(api_key="test-key", model="test-model", enable_cache=False)
             assert judge.enable_cache is False
 
     def test_get_cache_key(self) -> None:
         """Test cache key generation."""
         with patch("research.evaluator.llm_judge.judge.genai"):
-            judge = LLMJudge(api_key="test-key")
+            judge = LLMJudge(api_key="test-key", model="test-model")
             key1 = judge._get_cache_key("prompt1", {"a": 1})
             key2 = judge._get_cache_key("prompt1", {"a": 1})
             key3 = judge._get_cache_key("prompt1", {"a": 2})
@@ -162,7 +162,7 @@ class TestLLMJudge:
     def test_parse_score_response(self) -> None:
         """Test parsing LLM response."""
         with patch("research.evaluator.llm_judge.judge.genai"):
-            judge = LLMJudge(api_key="test-key")
+            judge = LLMJudge(api_key="test-key", model="test-model")
 
             response = """SCORE: 85
 COMPONENTS: {"factor_a": 90, "factor_b": 80}
@@ -177,7 +177,7 @@ FEEDBACK: Good alignment with technicals."""
     def test_parse_score_response_missing_fields(self) -> None:
         """Test parsing response with missing fields raises ValueError."""
         with patch("research.evaluator.llm_judge.judge.genai"):
-            judge = LLMJudge(api_key="test-key")
+            judge = LLMJudge(api_key="test-key", model="test-model")
 
             response = "Some invalid response"
 
@@ -187,7 +187,7 @@ FEEDBACK: Good alignment with technicals."""
     def test_clear_cache(self) -> None:
         """Test clearing cache."""
         with patch("research.evaluator.llm_judge.judge.genai"):
-            judge = LLMJudge(api_key="test-key")
+            judge = LLMJudge(api_key="test-key", model="test-model")
             judge._cache["key1"] = CacheEntry(85.0, {}, "test")
             judge._cache["key2"] = CacheEntry(90.0, {}, "test")
 
@@ -199,7 +199,7 @@ FEEDBACK: Good alignment with technicals."""
     async def test_score_technical_alignment_with_cache(self) -> None:
         """Test technical alignment scoring returns cached result."""
         with patch("research.evaluator.llm_judge.judge.genai"):
-            judge = LLMJudge(api_key="test-key")
+            judge = LLMJudge(api_key="test-key", model="test-model")
 
             plan = {"action": "BUY", "symbol": "AAPL"}
             context = {"rsi": 35.2}
@@ -223,7 +223,7 @@ FEEDBACK: Good alignment with technicals."""
     async def test_score_memory_consistency_with_cache(self) -> None:
         """Test memory consistency scoring returns cached result."""
         with patch("research.evaluator.llm_judge.judge.genai"):
-            judge = LLMJudge(api_key="test-key")
+            judge = LLMJudge(api_key="test-key", model="test-model")
 
             plan = {"action": "BUY", "symbol": "AAPL"}
             memory_nodes = [{"outcome": "WIN"}]
@@ -247,7 +247,7 @@ FEEDBACK: Good alignment with technicals."""
     async def test_score_context_relevance_with_cache(self) -> None:
         """Test context relevance scoring returns cached result."""
         with patch("research.evaluator.llm_judge.judge.genai"):
-            judge = LLMJudge(api_key="test-key")
+            judge = LLMJudge(api_key="test-key", model="test-model")
 
             plan = {"action": "BUY", "symbol": "AAPL"}
             regime = {"classification": "range_bound"}
@@ -282,7 +282,7 @@ FEEDBACK: Good technical alignment."""
             mock_client.aio.models.generate_content = AsyncMock(return_value=mock_response)
             mock_genai.Client.return_value = mock_client
 
-            judge = LLMJudge(api_key="test-key")
+            judge = LLMJudge(api_key="test-key", model="test-model")
 
             plan = {"action": "BUY", "symbol": "AAPL"}
             context = {"rsi": 35.2}

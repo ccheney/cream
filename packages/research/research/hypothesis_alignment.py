@@ -368,7 +368,7 @@ class MockHypothesisAlignmentEvaluator(HypothesisAlignmentEvaluator):
             mock_extras: Extras to return
             threshold: Alignment threshold
         """
-        super().__init__(threshold=threshold)
+        super().__init__(model="mock", threshold=threshold)
         self.mock_score = mock_score
         self.mock_reasoning = mock_reasoning
         self.mock_gaps = mock_gaps or []
