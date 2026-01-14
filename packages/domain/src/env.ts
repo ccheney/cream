@@ -129,9 +129,9 @@ const envSchema = z.object({
 		.describe("Google Gemini API key (required for OODA agents)"),
 	GOOGLE_API_KEY: z.string().optional().describe("Google Gemini API key (legacy, unused)"),
 
-	// LLM Model Selection (required)
-	LLM_PROVIDER: z.string().describe("LLM provider (e.g., google)"),
-	LLM_MODEL_ID: z.string().describe("LLM model ID (e.g., gemini-3-flash-preview)"),
+	// LLM Model Selection (optional - checked at runtime when needed)
+	LLM_PROVIDER: z.string().optional().describe("LLM provider (e.g., google)"),
+	LLM_MODEL_ID: z.string().optional().describe("LLM model ID"),
 
 	// Prediction Markets
 	KALSHI_API_KEY_ID: z.string().optional().describe("Kalshi API key ID"),
@@ -297,24 +297,33 @@ export function hasWebSearchCapability(): boolean {
 }
 
 /**
- * Get the LLM model ID from environment (e.g., "gemini-3-flash-preview")
+ * Get the LLM model ID from environment
+ * @throws {Error} If LLM_MODEL_ID is not set
  */
 export function getLLMModelId(): string {
+	if (!env.LLM_MODEL_ID) {
+		throw new Error("LLM_MODEL_ID environment variable is required");
+	}
 	return env.LLM_MODEL_ID;
 }
 
 /**
- * Get the LLM provider from environment (e.g., "google")
+ * Get the LLM provider from environment
+ * @throws {Error} If LLM_PROVIDER is not set
  */
 export function getLLMProvider(): string {
+	if (!env.LLM_PROVIDER) {
+		throw new Error("LLM_PROVIDER environment variable is required");
+	}
 	return env.LLM_PROVIDER;
 }
 
 /**
- * Get the full model ID with provider prefix (e.g., "google/gemini-3-flash-preview")
+ * Get the full model ID with provider prefix (e.g., "google/gemini-2.0-flash")
+ * @throws {Error} If LLM_PROVIDER or LLM_MODEL_ID is not set
  */
 export function getFullModelId(): string {
-	return `${env.LLM_PROVIDER}/${env.LLM_MODEL_ID}`;
+	return `${getLLMProvider()}/${getLLMModelId()}`;
 }
 
 // ============================================
@@ -472,11 +481,11 @@ export function getEnvVarDocumentation(): Array<{
 			required: "LIVE",
 			description: "Google Gemini API key (required for OODA agents)",
 		},
-		{ name: "LLM_PROVIDER", required: "yes", description: "LLM provider (e.g., google)" },
+		{ name: "LLM_PROVIDER", required: "runtime", description: "LLM provider (checked when used)" },
 		{
 			name: "LLM_MODEL_ID",
-			required: "yes",
-			description: "LLM model ID (e.g., gemini-3-flash-preview)",
+			required: "runtime",
+			description: "LLM model ID (checked when used)",
 		},
 		{ name: "KALSHI_API_KEY_ID", required: "no", description: "Kalshi API key ID" },
 		{ name: "KALSHI_PRIVATE_KEY_PATH", required: "no", description: "Path to Kalshi private key" },
