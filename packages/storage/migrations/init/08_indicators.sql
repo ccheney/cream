@@ -71,7 +71,7 @@ CREATE INDEX IF NOT EXISTS idx_ic_history_indicator_date ON indicator_ic_history
 -- ============================================
 -- Batch indicator storage tables for the v2 indicator engine
 
--- Fundamental Indicators (nightly batch from FMP)
+-- Fundamental Indicators (computed from market data)
 CREATE TABLE IF NOT EXISTS fundamental_indicators (
   id TEXT PRIMARY KEY,
   symbol TEXT NOT NULL,
@@ -101,7 +101,7 @@ CREATE TABLE IF NOT EXISTS fundamental_indicators (
   industry TEXT,
 
   -- Metadata
-  source TEXT NOT NULL DEFAULT 'FMP',
+  source TEXT NOT NULL DEFAULT 'computed',
   computed_at TEXT NOT NULL DEFAULT (datetime('now')),
 
   UNIQUE(symbol, date)

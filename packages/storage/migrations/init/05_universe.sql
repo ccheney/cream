@@ -14,7 +14,7 @@ CREATE TABLE IF NOT EXISTS index_constituents (
   sector TEXT,
   industry TEXT,
   market_cap_at_add REAL,
-  provider TEXT NOT NULL DEFAULT 'fmp',
+  provider TEXT NOT NULL DEFAULT 'alpaca',
   created_at TEXT NOT NULL DEFAULT (datetime('now')),
   updated_at TEXT NOT NULL DEFAULT (datetime('now'))
 );
@@ -33,7 +33,7 @@ CREATE TABLE IF NOT EXISTS ticker_changes (
   conversion_ratio REAL,
   reason TEXT,
   acquiring_company TEXT,
-  provider TEXT NOT NULL DEFAULT 'fmp',
+  provider TEXT NOT NULL DEFAULT 'alpaca',
   created_at TEXT NOT NULL DEFAULT (datetime('now'))
 );
 
