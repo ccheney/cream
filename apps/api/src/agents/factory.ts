@@ -224,9 +224,6 @@ export interface GenerateOptions {
  * Build generation options with runtime context and optional instruction override.
  * Uses model's default temperature (1.0).
  *
- * maxSteps: Controls how many LLM calls can happen for tool use. Default is 1 (no tool execution).
- * We set to 5 to allow tools to be called and results processed.
- *
  * structuredOutput.model: Two-step approach for combining tools with structured output.
  * The main agent runs with tools and generates natural language. A secondary model
  * (Gemini Flash) then extracts structured data from that response.
@@ -250,7 +247,6 @@ export function buildGenerateOptions(
     },
     requestContext: createRequestContext(settings.model),
     instructions: settings.systemPromptOverride ?? undefined,
-    maxSteps: 5,
     providerOptions: {
       google: {
         thinkingConfig: {
