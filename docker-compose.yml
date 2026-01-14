@@ -160,7 +160,6 @@ services:
       # Pass through API keys from host
       - ALPACA_KEY=${ALPACA_KEY:-}
       - ALPACA_SECRET=${ALPACA_SECRET:-}
-      - FMP_KEY=${FMP_KEY:-}
       - GOOGLE_GENERATIVE_AI_API_KEY=${GOOGLE_GENERATIVE_AI_API_KEY:-}
       # Python backtest execution
       - PYTHONPATH=/app/packages/research

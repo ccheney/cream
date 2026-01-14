@@ -15,7 +15,6 @@ export {
 	getMockAccount,
 	// Convenience Functions
 	getMockCandles,
-	getMockCompanyProfile,
 	getMockPositions,
 	getMockQuote,
 	getMockTrades,
@@ -26,7 +25,6 @@ export {
 	type MockAdapterConfig,
 	MockApiError,
 	type MockCandle,
-	type MockCompanyProfile,
 	type MockMacroIndicator,
 	type MockOrder,
 	type MockPosition,

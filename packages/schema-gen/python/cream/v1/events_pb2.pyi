@@ -34,13 +34,14 @@ class EventType(int, metaclass=_enum_type_wrapper.EnumTypeWrapper):
 class DataSource(int, metaclass=_enum_type_wrapper.EnumTypeWrapper):
     __slots__ = ()
     DATA_SOURCE_UNSPECIFIED: _ClassVar[DataSource]
-    DATA_SOURCE_FMP: _ClassVar[DataSource]
+    DATA_SOURCE_RESERVED_1: _ClassVar[DataSource]
     DATA_SOURCE_ALPHA_VANTAGE: _ClassVar[DataSource]
     DATA_SOURCE_RESERVED_3: _ClassVar[DataSource]
     DATA_SOURCE_BENZINGA: _ClassVar[DataSource]
     DATA_SOURCE_SEC_EDGAR: _ClassVar[DataSource]
     DATA_SOURCE_SOCIAL: _ClassVar[DataSource]
     DATA_SOURCE_INTERNAL: _ClassVar[DataSource]
+    DATA_SOURCE_ALPACA: _ClassVar[DataSource]
 
 class Sentiment(int, metaclass=_enum_type_wrapper.EnumTypeWrapper):
     __slots__ = ()
@@ -66,13 +67,14 @@ EVENT_TYPE_EXECUTIVE_CHANGE: EventType
 EVENT_TYPE_LEGAL: EventType
 EVENT_TYPE_OTHER: EventType
 DATA_SOURCE_UNSPECIFIED: DataSource
-DATA_SOURCE_FMP: DataSource
+DATA_SOURCE_RESERVED_1: DataSource
 DATA_SOURCE_ALPHA_VANTAGE: DataSource
 DATA_SOURCE_RESERVED_3: DataSource
 DATA_SOURCE_BENZINGA: DataSource
 DATA_SOURCE_SEC_EDGAR: DataSource
 DATA_SOURCE_SOCIAL: DataSource
 DATA_SOURCE_INTERNAL: DataSource
+DATA_SOURCE_ALPACA: DataSource
 SENTIMENT_UNSPECIFIED: Sentiment
 SENTIMENT_BULLISH: Sentiment
 SENTIMENT_BEARISH: Sentiment

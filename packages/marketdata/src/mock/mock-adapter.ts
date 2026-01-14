@@ -71,8 +71,6 @@ import tradesAAPL from "../../fixtures/alpaca/trades-AAPL.json";
 // Alpha Vantage fixtures
 import avFederalFundsRate from "../../fixtures/alphavantage/federal-funds-rate.json";
 import avRealGDP from "../../fixtures/alphavantage/real-gdp.json";
-// FMP fixtures
-import fmpProfileAAPL from "../../fixtures/fmp/profile-AAPL.json";
 
 // ============================================
 // Fixture Registry
@@ -99,11 +97,6 @@ export const mockData = {
 		account: alpacaAccount,
 		positions: alpacaPositions,
 		orders: alpacaOrders,
-	},
-	fmp: {
-		profiles: {
-			AAPL: fmpProfileAAPL,
-		},
 	},
 	alphavantage: {
 		realGDP: avRealGDP,
@@ -178,16 +171,6 @@ export interface MockMacroIndicator {
 	interval: string;
 	unit: string;
 	data: Array<{ date: string; value: string }>;
-}
-
-export interface MockCompanyProfile {
-	symbol: string;
-	companyName: string;
-	sector: string;
-	industry: string;
-	mktCap: number;
-	price: number;
-	beta: number;
 }
 
 // ============================================
@@ -526,34 +509,6 @@ export class MockAdapter {
 	}
 
 	// ============================================
-	// Fundamentals (FMP)
-	// ============================================
-
-	/**
-	 * Get company profile.
-	 */
-	async getCompanyProfile(symbol: string): Promise<MockCompanyProfile | null> {
-		await this.maybeThrowError();
-		await this.simulateLatency();
-
-		const profileData = mockData.fmp.profiles[symbol as keyof typeof mockData.fmp.profiles];
-		if (!profileData?.[0]) {
-			return null;
-		}
-
-		const p = profileData[0];
-		return {
-			symbol: p.symbol,
-			companyName: p.companyName,
-			sector: p.sector,
-			industry: p.industry,
-			mktCap: p.mktCap,
-			price: p.price,
-			beta: p.beta,
-		};
-	}
-
-	// ============================================
 	// Macro Data (Alpha Vantage)
 	// ============================================
 
@@ -692,15 +647,6 @@ export async function getMockAccount(): Promise<MockAccount> {
 export async function getMockPositions(): Promise<MockPosition[]> {
 	const adapter = new MockAdapter();
 	return adapter.getPositions();
-}
-
-/**
- * Get mock company profile.
- * Convenience function that creates a temporary adapter.
- */
-export async function getMockCompanyProfile(symbol: string): Promise<MockCompanyProfile | null> {
-	const adapter = new MockAdapter();
-	return adapter.getCompanyProfile(symbol);
 }
 
 // ============================================

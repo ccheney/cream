@@ -2,7 +2,6 @@
  * Economic Calendar Routes
  *
  * REST endpoints for economic calendar events (FOMC, CPI, employment reports, etc.).
- * Uses FMP API as the data source.
  *
  * @see docs/plans/41-economic-calendar-page.md
  */

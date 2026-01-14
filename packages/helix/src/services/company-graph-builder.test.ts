@@ -232,7 +232,7 @@ describe("SupplyChainRelationship validation", () => {
 			targetSymbol: "QCOM",
 			dependencyType: "SUPPLIER",
 			strength: 0.7,
-			source: "FMP",
+			source: "ALPACA",
 		},
 		{
 			sourceSymbol: "NVDA",

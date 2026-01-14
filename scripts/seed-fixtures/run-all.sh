@@ -58,7 +58,6 @@ check_prerequisites() {
   # Check required env vars
   if [[ -z "${ALPACA_KEY:-}" ]]; then missing+=("ALPACA_KEY"); fi
   if [[ -z "${ALPACA_SECRET:-}" ]]; then missing+=("ALPACA_SECRET"); fi
-  if [[ -z "${FMP_KEY:-}" ]]; then missing+=("FMP_KEY"); fi
   if [[ -z "${ALPHAVANTAGE_KEY:-}" ]]; then missing+=("ALPHAVANTAGE_KEY"); fi
 
   # Check for bun

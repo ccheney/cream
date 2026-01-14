@@ -235,7 +235,7 @@ describe("Economic Calendar Routes", () => {
 
 		test("returns 503 when service throws error", async () => {
 			mockGetEvents = async () => {
-				throw new Error("FMP API unavailable");
+				throw new Error("API unavailable");
 			};
 
 			const res = await economicCalendarRoutes.request("/?start=2025-01-15&end=2025-01-17");

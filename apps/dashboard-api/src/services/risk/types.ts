@@ -70,7 +70,7 @@ export const DEFAULT_EXPOSURE_LIMITS: ExposureLimits = {
 
 /**
  * GICS sector mapping for common symbols.
- * This is a simplified mapping - in production would come from FMP or similar.
+ * This is a simplified mapping - in production would come from market data provider.
  */
 export const SECTOR_MAPPING: Record<string, string> = {
 	// Technology

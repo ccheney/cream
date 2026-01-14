@@ -38,13 +38,14 @@ enum EventType {
 // Data source for external events
 enum DataSource {
   DATA_SOURCE_UNSPECIFIED = 0;
-  DATA_SOURCE_FMP = 1;            // Financial Modeling Prep
+  DATA_SOURCE_RESERVED_1 = 1;     // Reserved (formerly FMP)
   DATA_SOURCE_ALPHA_VANTAGE = 2;  // Alpha Vantage
   DATA_SOURCE_RESERVED_3 = 3;     // Reserved (formerly Polygon)
   DATA_SOURCE_BENZINGA = 4;       // Benzinga
   DATA_SOURCE_SEC_EDGAR = 5;      // SEC EDGAR
   DATA_SOURCE_SOCIAL = 6;         // Social media aggregation
   DATA_SOURCE_INTERNAL = 7;       // Internal system-generated
+  DATA_SOURCE_ALPACA = 8;         // Alpaca Markets
 }
 
 // Sentiment classification

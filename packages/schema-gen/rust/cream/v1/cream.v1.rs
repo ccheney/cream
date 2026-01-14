@@ -1094,8 +1094,8 @@ impl EventType {
 #[repr(i32)]
 pub enum DataSource {
     Unspecified = 0,
-    /// Financial Modeling Prep
-    Fmp = 1,
+    /// Reserved (formerly FMP)
+    Reserved1 = 1,
     /// Alpha Vantage
     AlphaVantage = 2,
     /// Reserved (formerly Polygon)
@@ -1108,6 +1108,8 @@ pub enum DataSource {
     Social = 6,
     /// Internal system-generated
     Internal = 7,
+    /// Alpaca Markets
+    Alpaca = 8,
 }
 impl DataSource {
     /// String value of the enum field names used in the ProtoBuf definition.
@@ -1117,26 +1119,28 @@ impl DataSource {
     pub fn as_str_name(&self) -> &'static str {
         match self {
             Self::Unspecified => "DATA_SOURCE_UNSPECIFIED",
-            Self::Fmp => "DATA_SOURCE_FMP",
+            Self::Reserved1 => "DATA_SOURCE_RESERVED_1",
             Self::AlphaVantage => "DATA_SOURCE_ALPHA_VANTAGE",
             Self::Reserved3 => "DATA_SOURCE_RESERVED_3",
             Self::Benzinga => "DATA_SOURCE_BENZINGA",
             Self::SecEdgar => "DATA_SOURCE_SEC_EDGAR",
             Self::Social => "DATA_SOURCE_SOCIAL",
             Self::Internal => "DATA_SOURCE_INTERNAL",
+            Self::Alpaca => "DATA_SOURCE_ALPACA",
         }
     }
     /// Creates an enum from field names used in the ProtoBuf definition.
     pub fn from_str_name(value: &str) -> ::core::option::Option<Self> {
         match value {
             "DATA_SOURCE_UNSPECIFIED" => Some(Self::Unspecified),
-            "DATA_SOURCE_FMP" => Some(Self::Fmp),
+            "DATA_SOURCE_RESERVED_1" => Some(Self::Reserved1),
             "DATA_SOURCE_ALPHA_VANTAGE" => Some(Self::AlphaVantage),
             "DATA_SOURCE_RESERVED_3" => Some(Self::Reserved3),
             "DATA_SOURCE_BENZINGA" => Some(Self::Benzinga),
             "DATA_SOURCE_SEC_EDGAR" => Some(Self::SecEdgar),
             "DATA_SOURCE_SOCIAL" => Some(Self::Social),
             "DATA_SOURCE_INTERNAL" => Some(Self::Internal),
+            "DATA_SOURCE_ALPACA" => Some(Self::Alpaca),
             _ => None,
         }
     }

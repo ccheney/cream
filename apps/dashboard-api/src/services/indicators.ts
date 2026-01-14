@@ -140,7 +140,7 @@ function createFundamentalsRepo(client: TursoClient): TursoFundamentalsRepositor
 				marketCap: row.market_cap as number | null,
 				sector: row.sector as string | null,
 				industry: row.industry as string | null,
-				source: String(row.source ?? "FMP"),
+				source: String(row.source ?? "computed"),
 				computedAt: String(row.computed_at),
 			};
 		},

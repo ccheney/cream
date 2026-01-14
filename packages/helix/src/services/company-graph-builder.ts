@@ -44,7 +44,7 @@ export interface SupplyChainRelationship {
 	dependencyType: DependencyType;
 	/** Revenue percentage or estimated dependency strength (0-1) */
 	strength: number;
-	/** Source of this data (e.g., "SEC_10K", "FMP", "POLYGON") */
+	/** Source of this data (e.g., "SEC_10K", "ALPACA") */
 	source: string;
 }
 

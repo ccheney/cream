@@ -63,7 +63,7 @@ function addSecurityHeaders(response: NextResponse): NextResponse {
 				"style-src 'self' 'unsafe-inline'",
 				"img-src 'self' data: https: blob:",
 				"font-src 'self' data:",
-				`connect-src 'self' ${apiUrl} ${wsUrl} wss: ws: https://api.polygon.io https://api.massive.com https://financialmodelingprep.com`,
+				`connect-src 'self' ${apiUrl} ${wsUrl} wss: ws:`,
 				"frame-src 'self'",
 				"frame-ancestors 'none'",
 				"object-src 'none'",

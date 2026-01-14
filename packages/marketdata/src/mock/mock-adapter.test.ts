@@ -10,7 +10,6 @@ import {
 	createMockAdapterWithLatency,
 	getMockAccount,
 	getMockCandles,
-	getMockCompanyProfile,
 	getMockPositions,
 	getMockQuote,
 	getMockTrades,
@@ -135,21 +134,6 @@ describe("MockAdapter", () => {
 		it("should filter orders by status", async () => {
 			const filledOrders = await adapter.getOrders("filled");
 			expect(filledOrders.every((o) => o.status === "filled")).toBe(true);
-		});
-	});
-
-	describe("Fundamentals Data", () => {
-		it("should return company profile for AAPL", async () => {
-			const profile = await adapter.getCompanyProfile("AAPL");
-			expect(profile).not.toBeNull();
-			expect(profile?.symbol).toBe("AAPL");
-			expect(profile?.companyName).toContain("Apple");
-			expect(profile?.sector).toBe("Technology");
-		});
-
-		it("should return null for unknown symbol", async () => {
-			const profile = await adapter.getCompanyProfile("UNKNOWN");
-			expect(profile).toBeNull();
 		});
 	});
 
@@ -280,11 +264,6 @@ describe("Convenience Functions", () => {
 		const positions = await getMockPositions();
 		expect(positions.length).toBeGreaterThan(0);
 	});
-
-	it("getMockCompanyProfile should return profile", async () => {
-		const profile = await getMockCompanyProfile("AAPL");
-		expect(profile).not.toBeNull();
-	});
 });
 
 describe("Factory Functions", () => {
@@ -322,11 +301,6 @@ describe("Fixture Registry", () => {
 		expect(mockData.alpaca.account).toBeDefined();
 		expect(mockData.alpaca.positions).toBeDefined();
 		expect(mockData.alpaca.orders).toBeDefined();
-	});
-
-	it("should have fmp fixtures", () => {
-		expect(mockData.fmp).toBeDefined();
-		expect(mockData.fmp.profiles).toBeDefined();
 	});
 
 	it("should have alphavantage fixtures", () => {
