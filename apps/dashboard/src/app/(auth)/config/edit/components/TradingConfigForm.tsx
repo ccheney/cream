@@ -192,14 +192,19 @@ function GlobalModelSelector({ value, onChange }: GlobalModelSelectorProps) {
 					</TooltipContent>
 				</Tooltip>
 			</div>
-			<input
-				id="global-model"
-				type="text"
-				value={value}
-				onChange={(e) => onChange(e.target.value)}
-				placeholder="e.g., gemini-2.5-flash-preview-05-20"
-				className="w-full max-w-md px-3 py-2 border border-cream-200 dark:border-night-600 rounded-md bg-white dark:bg-night-700 text-stone-900 dark:text-night-50"
-			/>
+			<div className="flex items-center gap-0 max-w-md">
+				<span className="px-3 py-2 text-sm text-stone-500 dark:text-night-400 bg-stone-100 dark:bg-night-800 border border-r-0 border-cream-200 dark:border-night-600 rounded-l-md">
+					google/
+				</span>
+				<input
+					id="global-model"
+					type="text"
+					value={value}
+					onChange={(e) => onChange(e.target.value)}
+					placeholder="gemini-2.5-flash-preview-05-20"
+					className="flex-1 px-3 py-2 border border-cream-200 dark:border-night-600 rounded-r-md bg-white dark:bg-night-700 text-stone-900 dark:text-night-50"
+				/>
+			</div>
 			<p className="mt-2 text-xs text-stone-500 dark:text-night-300">
 				Model ID for all trading agents. Default is set via LLM_MODEL_ID environment variable.
 			</p>
