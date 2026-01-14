@@ -241,8 +241,7 @@ mod tests {
     #[test]
     fn test_parse_timestamp_valid() {
         let ts = parse_timestamp("2024-01-15T10:30:00Z");
-        assert!(ts.is_some());
-        let ts = ts.unwrap();
+        let ts = ts.expect("valid ISO timestamp should parse");
         assert!(ts.seconds > 0);
     }
 

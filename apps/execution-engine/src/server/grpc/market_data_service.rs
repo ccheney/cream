@@ -110,8 +110,8 @@ impl MarketDataService for MarketDataServiceImpl {
 
             // Spawn a task to stream microstructure updates
             let microstructure = feed_controller.microstructure();
-            let stream_symbols = symbols.clone();
             tokio::spawn(async move {
+                let stream_symbols = symbols;
                 let mut interval = tokio::time::interval(tokio::time::Duration::from_millis(100));
 
                 loop {

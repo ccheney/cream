@@ -66,8 +66,9 @@ mod tests {
             },
             fetched_at: Instant::now(),
         };
-        let cloned = cached.clone();
-        assert_eq!(cloned.state.account_id, "test");
+        assert_eq!(cached.state.account_id, "test");
+        // Verify Clone is implemented
+        let _: CachedAccountState = cached.clone();
     }
 
     #[test]
@@ -76,7 +77,8 @@ mod tests {
             positions: vec![],
             fetched_at: Instant::now(),
         };
-        let cloned = cached.clone();
-        assert!(cloned.positions.is_empty());
+        assert!(cached.positions.is_empty());
+        // Verify Clone is implemented
+        let _: CachedPositions = cached.clone();
     }
 }

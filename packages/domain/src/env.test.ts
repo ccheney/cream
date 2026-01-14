@@ -319,47 +319,60 @@ describe("getEnvVarDocumentation", () => {
 });
 
 describe("requireEnv", () => {
-	let originalCreamEnv: string | undefined;
+	let originalProcessEnv: string | undefined;
+	let originalBunEnv: string | undefined;
 
 	beforeEach(() => {
-		originalCreamEnv = process.env.CREAM_ENV;
+		originalProcessEnv = process.env.CREAM_ENV;
+		originalBunEnv = Bun.env.CREAM_ENV;
 	});
 
 	afterEach(() => {
-		if (originalCreamEnv !== undefined) {
-			process.env.CREAM_ENV = originalCreamEnv;
+		if (originalProcessEnv !== undefined) {
+			process.env.CREAM_ENV = originalProcessEnv;
 		} else {
 			delete process.env.CREAM_ENV;
+		}
+		if (originalBunEnv !== undefined) {
+			Bun.env.CREAM_ENV = originalBunEnv;
+		} else {
+			delete Bun.env.CREAM_ENV;
 		}
 	});
 
 	it("throws when CREAM_ENV not set", () => {
 		delete process.env.CREAM_ENV;
+		delete Bun.env.CREAM_ENV;
 		expect(() => requireEnv()).toThrow("CREAM_ENV environment variable is required");
 	});
 
 	it("throws for invalid value", () => {
 		process.env.CREAM_ENV = "INVALID";
+		Bun.env.CREAM_ENV = "INVALID";
 		expect(() => requireEnv()).toThrow('Invalid CREAM_ENV value: "INVALID"');
 	});
 
 	it("throws for lowercase value", () => {
 		process.env.CREAM_ENV = "backtest";
+		Bun.env.CREAM_ENV = "backtest";
 		expect(() => requireEnv()).toThrow('Invalid CREAM_ENV value: "backtest"');
 	});
 
 	it("returns BACKTEST when set", () => {
 		process.env.CREAM_ENV = "BACKTEST";
+		Bun.env.CREAM_ENV = "BACKTEST";
 		expect(requireEnv()).toBe("BACKTEST");
 	});
 
 	it("returns PAPER when set", () => {
 		process.env.CREAM_ENV = "PAPER";
+		Bun.env.CREAM_ENV = "PAPER";
 		expect(requireEnv()).toBe("PAPER");
 	});
 
 	it("returns LIVE when set", () => {
 		process.env.CREAM_ENV = "LIVE";
+		Bun.env.CREAM_ENV = "LIVE";
 		expect(requireEnv()).toBe("LIVE");
 	});
 });
