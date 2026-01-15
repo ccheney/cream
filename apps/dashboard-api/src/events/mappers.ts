@@ -6,9 +6,8 @@
  * @see docs/plans/ui/08-realtime.md
  */
 
-import type { Action } from "../../../../packages/domain/src/decision.js";
-import type { AgentType, OrderStatus } from "../../../../packages/domain/src/websocket/channel.js";
-import type { ServerMessage } from "../../../../packages/domain/src/websocket/index.js";
+import type { Action } from "@cream/domain";
+import type { AgentType, OrderStatus, ServerMessage } from "@cream/domain/websocket";
 import type {
 	BroadcastEvent,
 	DecisionInsertEvent,

@@ -14,7 +14,7 @@ import {
 	type RequestStateMessage,
 	type SubscribeMessage,
 	type UnsubscribeMessage,
-} from "../../../../packages/domain/src/websocket/index.js";
+} from "@cream/domain/websocket";
 import { getCachedQuote } from "../streaming/market-data.js";
 import { getConnectionCount, sendError, sendMessage } from "./channels.js";
 import {

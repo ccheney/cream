@@ -10,7 +10,7 @@
  */
 
 import { beforeEach, describe, expect, it } from "bun:test";
-import type { Channel } from "../../../../packages/domain/src/websocket/channel.js";
+import type { Channel } from "@cream/domain/websocket";
 import type { Session } from "../auth/better-auth.js";
 import {
 	ALLOWED_ORIGINS,

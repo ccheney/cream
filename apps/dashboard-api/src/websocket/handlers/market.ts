@@ -9,7 +9,7 @@ import type {
 	SubscribeSymbolsMessage,
 	UnsubscribeOptionsMessage,
 	UnsubscribeSymbolsMessage,
-} from "../../../../../packages/domain/src/websocket/index.js";
+} from "@cream/domain/websocket";
 import {
 	getCachedQuote,
 	subscribeSymbols as subscribeToStreaming,

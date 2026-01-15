@@ -7,8 +7,7 @@
  */
 
 import { z } from "zod/v4";
-import type { Channel } from "../../../../packages/domain/src/websocket/channel.js";
-import type { ServerMessage } from "../../../../packages/domain/src/websocket/index.js";
+import type { Channel, ServerMessage } from "@cream/domain/websocket";
 
 // ============================================
 // Event Sources

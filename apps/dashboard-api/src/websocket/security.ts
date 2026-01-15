@@ -9,7 +9,7 @@
  * @see docs/plans/30-better-auth-migration.md
  */
 
-import type { Channel } from "../../../../packages/domain/src/websocket/channel.js";
+import type { Channel } from "@cream/domain/websocket";
 import type { Session } from "../auth/better-auth.js";
 
 export interface AuthResult {

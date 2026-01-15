@@ -5,7 +5,7 @@
  */
 
 import type { ServerWebSocket } from "bun";
-import type { Channel } from "../../../../packages/domain/src/websocket/index.js";
+import type { Channel } from "@cream/domain/websocket";
 
 /**
  * Connection metadata attached to each WebSocket.

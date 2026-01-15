@@ -5,7 +5,7 @@
  */
 
 import { requireEnv } from "@cream/domain";
-import type { AcknowledgeAlertMessage } from "../../../../../packages/domain/src/websocket/index.js";
+import type { AcknowledgeAlertMessage } from "@cream/domain/websocket";
 import { broadcast, sendError, sendMessage } from "../channels.js";
 import type { WebSocketWithMetadata } from "../types.js";
 

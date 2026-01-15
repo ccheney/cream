@@ -7,7 +7,7 @@
 import type {
 	SubscribeBacktestMessage,
 	UnsubscribeBacktestMessage,
-} from "../../../../../packages/domain/src/websocket/index.js";
+} from "@cream/domain/websocket";
 import { subscribeToBacktest, unsubscribeFromBacktest } from "../backtest-channel.js";
 import { sendError, sendMessage } from "../channels.js";
 import type { WebSocketWithMetadata } from "../types.js";

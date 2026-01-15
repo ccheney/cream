@@ -4,7 +4,7 @@
  * Connection tracking, broadcasting, and channel subscription logic.
  */
 
-import type { Channel, ServerMessage } from "../../../../packages/domain/src/websocket/index.js";
+import type { Channel, ServerMessage } from "@cream/domain/websocket";
 import log from "../logger.js";
 import type { ConnectionMetadata, WebSocketWithMetadata } from "./types.js";
 import { HEARTBEAT_INTERVAL_MS, STALE_CONNECTION_TIMEOUT_MS } from "./types.js";
