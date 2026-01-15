@@ -64,7 +64,7 @@ const DEVELOPMENT_CONFIG: CompressionConfig = {
 };
 
 export function getCompressionConfig(): CompressionConfig {
-	const env = process.env.NODE_ENV ?? "development";
+	const env = Bun.env.NODE_ENV ?? "development";
 
 	if (env === "production") {
 		return PRODUCTION_CONFIG;
@@ -72,7 +72,7 @@ export function getCompressionConfig(): CompressionConfig {
 
 	if (env === "development") {
 		// Allow override for testing compression
-		if (process.env.WS_COMPRESSION_ENABLED === "true") {
+		if (Bun.env.WS_COMPRESSION_ENABLED === "true") {
 			return DEFAULT_CONFIG;
 		}
 		return DEVELOPMENT_CONFIG;

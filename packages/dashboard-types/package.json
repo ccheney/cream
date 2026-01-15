@@ -22,7 +22,7 @@
   "files": ["dist"],
   "scripts": {
     "build": "bun build ./src/index.ts --outdir ./dist --target node && tsc --emitDeclarationOnly",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsgo --noEmit"
   },
   "dependencies": {
     "@cream/indicators": "workspace:*",

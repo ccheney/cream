@@ -601,14 +601,14 @@ describe("createFREDClient", () => {
 });
 
 describe("createFREDClientFromEnv", () => {
-	const originalProcessEnv = process.env.FRED_API_KEY;
+	const originalProcessEnv = Bun.env.FRED_API_KEY;
 	const originalBunEnv = Bun.env.FRED_API_KEY;
 
 	afterEach(() => {
 		if (originalProcessEnv !== undefined) {
-			process.env.FRED_API_KEY = originalProcessEnv;
+			Bun.env.FRED_API_KEY = originalProcessEnv;
 		} else {
-			delete process.env.FRED_API_KEY;
+			delete Bun.env.FRED_API_KEY;
 		}
 		if (originalBunEnv !== undefined) {
 			Bun.env.FRED_API_KEY = originalBunEnv;
@@ -618,7 +618,7 @@ describe("createFREDClientFromEnv", () => {
 	});
 
 	it("creates client when FRED_API_KEY is set", () => {
-		process.env.FRED_API_KEY = "test-api-key";
+		Bun.env.FRED_API_KEY = "test-api-key";
 		Bun.env.FRED_API_KEY = "test-api-key";
 
 		const client = createFREDClientFromEnv();
@@ -626,7 +626,7 @@ describe("createFREDClientFromEnv", () => {
 	});
 
 	it("throws when FRED_API_KEY is not set", () => {
-		delete process.env.FRED_API_KEY;
+		delete Bun.env.FRED_API_KEY;
 		delete Bun.env.FRED_API_KEY;
 
 		expect(() => createFREDClientFromEnv()).toThrow(

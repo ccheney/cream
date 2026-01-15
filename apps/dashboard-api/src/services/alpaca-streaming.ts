@@ -208,8 +208,8 @@ export type TradingStreamEventHandler = (event: TradingStreamEvent) => void | Pr
  * @example
  * ```typescript
  * const service = new AlpacaTradingStreamService({
- *   apiKey: process.env.ALPACA_KEY!,
- *   apiSecret: process.env.ALPACA_SECRET!,
+ *   apiKey: Bun.env.ALPACA_KEY!,
+ *   apiSecret: Bun.env.ALPACA_SECRET!,
  *   paper: true,
  * });
  *
@@ -610,8 +610,8 @@ export class AlpacaTradingStreamService {
  * Create an Alpaca trading stream service from environment variables.
  */
 export function createAlpacaTradingStreamFromEnv(paper = true): AlpacaTradingStreamService {
-	const apiKey = process.env.ALPACA_KEY ?? Bun.env.ALPACA_KEY;
-	const apiSecret = process.env.ALPACA_SECRET ?? Bun.env.ALPACA_SECRET;
+	const apiKey = Bun.env.ALPACA_KEY;
+	const apiSecret = Bun.env.ALPACA_SECRET;
 
 	if (!apiKey || !apiSecret) {
 		throw new Error("ALPACA_KEY and ALPACA_SECRET environment variables are required");

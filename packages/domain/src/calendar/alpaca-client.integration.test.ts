@@ -14,8 +14,8 @@ import { createAlpacaCalendarClient } from "./alpaca-client";
 // Environment Check
 // ============================================
 
-const ALPACA_KEY = process.env.ALPACA_KEY;
-const ALPACA_SECRET = process.env.ALPACA_SECRET;
+const ALPACA_KEY = Bun.env.ALPACA_KEY;
+const ALPACA_SECRET = Bun.env.ALPACA_SECRET;
 const HAS_CREDENTIALS = Boolean(ALPACA_KEY && ALPACA_SECRET);
 
 // ============================================

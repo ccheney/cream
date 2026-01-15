@@ -8,8 +8,8 @@
  */
 
 // Set required environment variables before imports
-process.env.CREAM_ENV = "BACKTEST";
-process.env.NODE_ENV = "test";
+Bun.env.CREAM_ENV = "BACKTEST";
+Bun.env.NODE_ENV = "test";
 
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "bun:test";
 import { createRuntimeConfigService, type RuntimeConfigService } from "@cream/config";

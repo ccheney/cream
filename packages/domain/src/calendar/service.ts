@@ -324,8 +324,8 @@ export interface AlpacaCalendarServiceConfig extends AlpacaCalendarClientConfig 
  * @example
  * ```typescript
  * const service = await createAlpacaCalendarService({
- *   apiKey: process.env.ALPACA_KEY!,
- *   apiSecret: process.env.ALPACA_SECRET!,
+ *   apiKey: Bun.env.ALPACA_KEY!,
+ *   apiSecret: Bun.env.ALPACA_SECRET!,
  *   environment: "PAPER",
  * });
  *

@@ -146,7 +146,7 @@ export class EmbeddingClient {
 		config: EmbeddingConfig = DEFAULT_EMBEDDING_CONFIG,
 		retryConfig: RetryConfig = DEFAULT_RETRY_CONFIG
 	) {
-		const apiKey = process.env[config.apiKeyEnvVar];
+		const apiKey = Bun.env[config.apiKeyEnvVar];
 		if (!apiKey) {
 			throw new Error(`Missing API key: ${config.apiKeyEnvVar} environment variable not set`);
 		}

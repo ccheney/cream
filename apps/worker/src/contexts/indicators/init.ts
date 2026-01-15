@@ -39,10 +39,7 @@ export interface IndicatorSchedulerInitResult {
 }
 
 function hasAlpacaCredentials(): boolean {
-	return !!(
-		(process.env.ALPACA_KEY ?? Bun.env.ALPACA_KEY) &&
-		(process.env.ALPACA_SECRET ?? Bun.env.ALPACA_SECRET)
-	);
+	return !!(Bun.env.ALPACA_KEY && Bun.env.ALPACA_SECRET);
 }
 
 export function initIndicatorScheduler(

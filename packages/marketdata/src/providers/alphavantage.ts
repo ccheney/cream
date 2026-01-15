@@ -528,12 +528,12 @@ export class AlphaVantageClient {
  * Create an Alpha Vantage client from environment variables.
  */
 export function createAlphaVantageClientFromEnv(): AlphaVantageClient {
-	const apiKey = process.env.ALPHAVANTAGE_KEY ?? Bun.env.ALPHAVANTAGE_KEY;
+	const apiKey = Bun.env.ALPHAVANTAGE_KEY;
 	if (!apiKey) {
 		throw new Error("ALPHAVANTAGE_KEY environment variable is required");
 	}
 
-	const tier = (process.env.ALPHAVANTAGE_TIER as AlphaVantageClientConfig["tier"]) ?? "free";
+	const tier = (Bun.env.ALPHAVANTAGE_TIER as AlphaVantageClientConfig["tier"]) ?? "free";
 
 	return new AlphaVantageClient({ apiKey, tier });
 }

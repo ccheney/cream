@@ -125,8 +125,8 @@ export class AlpacaSentimentAdapter implements SentimentDataProvider {
 }
 
 export function createSentimentProviderFromEnv(): AlpacaSentimentAdapter {
-	const apiKey = process.env.ALPACA_KEY ?? Bun.env.ALPACA_KEY;
-	const apiSecret = process.env.ALPACA_SECRET ?? Bun.env.ALPACA_SECRET;
+	const apiKey = Bun.env.ALPACA_KEY;
+	const apiSecret = Bun.env.ALPACA_SECRET;
 	if (!apiKey || !apiSecret) {
 		throw new Error(
 			"ALPACA_KEY and ALPACA_SECRET environment variables are required for sentiment provider"

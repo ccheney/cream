@@ -97,7 +97,7 @@ interface StatusResponse {
 }
 
 beforeAll(() => {
-	process.env.CREAM_ENV = "BACKTEST";
+	Bun.env.CREAM_ENV = "BACKTEST";
 });
 
 afterAll(() => {

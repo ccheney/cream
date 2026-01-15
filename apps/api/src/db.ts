@@ -84,7 +84,7 @@ async function initializeDb(): Promise<TursoClient> {
 	const ctx = createDbContext();
 	let client: TursoClient;
 
-	if (process.env.NODE_ENV === "test") {
+	if (Bun.env.NODE_ENV === "test") {
 		// In-memory for testing
 		client = await createInMemoryClient();
 	} else {
@@ -354,13 +354,13 @@ export async function validateHelixDBAtStartup(
 	if (!health.healthy) {
 		const errorMsg =
 			`HelixDB health check failed: ${health.error}. ` +
-			`Ensure HelixDB is running at ${process.env.HELIX_HOST ?? "localhost"}:${process.env.HELIX_PORT ?? "6969"}`;
+			`Ensure HelixDB is running at ${Bun.env.HELIX_HOST ?? "localhost"}:${Bun.env.HELIX_PORT ?? "6969"}`;
 
 		log.error(
 			{
 				error: health.error,
-				host: process.env.HELIX_HOST ?? "localhost",
-				port: process.env.HELIX_PORT ?? "6969",
+				host: Bun.env.HELIX_HOST ?? "localhost",
+				port: Bun.env.HELIX_PORT ?? "6969",
 			},
 			"HelixDB health check failed"
 		);

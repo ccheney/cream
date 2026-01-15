@@ -28,7 +28,7 @@ export type CreamEnvironment = z.infer<typeof CreamEnvironment>;
  * Validates and returns CREAM_ENV from environment. Throws if not set or invalid.
  *
  * Use this at startup/system boundaries when transitioning from env var to ExecutionContext.
- * This replaces fallback patterns like `process.env.CREAM_ENV || "BACKTEST"`.
+ * This replaces fallback patterns like `Bun.env.CREAM_ENV || "BACKTEST"`.
  *
  * @throws {Error} If CREAM_ENV is not set
  * @throws {Error} If CREAM_ENV is not one of: BACKTEST, PAPER, LIVE
@@ -36,7 +36,7 @@ export type CreamEnvironment = z.infer<typeof CreamEnvironment>;
  *
  * @example
  * ```ts
- * // Instead of: process.env.CREAM_ENV || "BACKTEST"
+ * // Instead of: Bun.env.CREAM_ENV || "BACKTEST"
  * const env = requireEnv(); // Throws if not set
  *
  * // Then create context at system boundary
@@ -44,7 +44,7 @@ export type CreamEnvironment = z.infer<typeof CreamEnvironment>;
  * ```
  */
 export function requireEnv(): CreamEnvironment {
-	const envValue = Bun.env.CREAM_ENV ?? process.env.CREAM_ENV;
+	const envValue = Bun.env.CREAM_ENV;
 
 	if (!envValue) {
 		throw new Error(
@@ -153,28 +153,27 @@ export type EnvConfig = z.infer<typeof envSchema>;
  * @throws {z.ZodError} If validation fails with detailed error messages
  */
 function parseEnv(): EnvConfig {
-	// Access environment variables using Bun.env or process.env
+	// Access environment variables using Bun.env
 	const rawEnv = {
-		TURSO_DATABASE_URL: Bun.env.TURSO_DATABASE_URL ?? process.env.TURSO_DATABASE_URL,
-		TURSO_AUTH_TOKEN: Bun.env.TURSO_AUTH_TOKEN ?? process.env.TURSO_AUTH_TOKEN,
-		HELIX_URL: Bun.env.HELIX_URL ?? process.env.HELIX_URL,
-		HELIX_HOST: Bun.env.HELIX_HOST ?? process.env.HELIX_HOST,
-		HELIX_PORT: Bun.env.HELIX_PORT ?? process.env.HELIX_PORT,
-		ALPHAVANTAGE_KEY: Bun.env.ALPHAVANTAGE_KEY ?? process.env.ALPHAVANTAGE_KEY,
-		FRED_API_KEY: Bun.env.FRED_API_KEY ?? process.env.FRED_API_KEY,
-		ALPACA_KEY: Bun.env.ALPACA_KEY ?? process.env.ALPACA_KEY,
-		ALPACA_SECRET: Bun.env.ALPACA_SECRET ?? process.env.ALPACA_SECRET,
-		ALPACA_BASE_URL: Bun.env.ALPACA_BASE_URL ?? process.env.ALPACA_BASE_URL,
-		ANTHROPIC_API_KEY: Bun.env.ANTHROPIC_API_KEY ?? process.env.ANTHROPIC_API_KEY,
-		GOOGLE_GENERATIVE_AI_API_KEY:
-			Bun.env.GOOGLE_GENERATIVE_AI_API_KEY ?? process.env.GOOGLE_GENERATIVE_AI_API_KEY,
-		LLM_PROVIDER: Bun.env.LLM_PROVIDER ?? process.env.LLM_PROVIDER,
-		LLM_MODEL_ID: Bun.env.LLM_MODEL_ID ?? process.env.LLM_MODEL_ID,
-		KALSHI_API_KEY_ID: Bun.env.KALSHI_API_KEY_ID ?? process.env.KALSHI_API_KEY_ID,
-		KALSHI_PRIVATE_KEY_PATH: Bun.env.KALSHI_PRIVATE_KEY_PATH ?? process.env.KALSHI_PRIVATE_KEY_PATH,
-		GOOGLE_CLIENT_ID: Bun.env.GOOGLE_CLIENT_ID ?? process.env.GOOGLE_CLIENT_ID,
-		GOOGLE_CLIENT_SECRET: Bun.env.GOOGLE_CLIENT_SECRET ?? process.env.GOOGLE_CLIENT_SECRET,
-		BETTER_AUTH_URL: Bun.env.BETTER_AUTH_URL ?? process.env.BETTER_AUTH_URL,
+		TURSO_DATABASE_URL: Bun.env.TURSO_DATABASE_URL,
+		TURSO_AUTH_TOKEN: Bun.env.TURSO_AUTH_TOKEN,
+		HELIX_URL: Bun.env.HELIX_URL,
+		HELIX_HOST: Bun.env.HELIX_HOST,
+		HELIX_PORT: Bun.env.HELIX_PORT,
+		ALPHAVANTAGE_KEY: Bun.env.ALPHAVANTAGE_KEY,
+		FRED_API_KEY: Bun.env.FRED_API_KEY,
+		ALPACA_KEY: Bun.env.ALPACA_KEY,
+		ALPACA_SECRET: Bun.env.ALPACA_SECRET,
+		ALPACA_BASE_URL: Bun.env.ALPACA_BASE_URL,
+		ANTHROPIC_API_KEY: Bun.env.ANTHROPIC_API_KEY,
+		GOOGLE_GENERATIVE_AI_API_KEY: Bun.env.GOOGLE_GENERATIVE_AI_API_KEY,
+		LLM_PROVIDER: Bun.env.LLM_PROVIDER,
+		LLM_MODEL_ID: Bun.env.LLM_MODEL_ID,
+		KALSHI_API_KEY_ID: Bun.env.KALSHI_API_KEY_ID,
+		KALSHI_PRIVATE_KEY_PATH: Bun.env.KALSHI_PRIVATE_KEY_PATH,
+		GOOGLE_CLIENT_ID: Bun.env.GOOGLE_CLIENT_ID,
+		GOOGLE_CLIENT_SECRET: Bun.env.GOOGLE_CLIENT_SECRET,
+		BETTER_AUTH_URL: Bun.env.BETTER_AUTH_URL,
 	};
 
 	const result = envSchema.safeParse(rawEnv);
@@ -300,8 +299,7 @@ export function hasWebSearchCapability(): boolean {
 export function getLLMModelId(): string {
 	if (!env.LLM_MODEL_ID) {
 		// Use default for tests (CREAM_ENV is not in env schema, check raw env)
-		const creamEnv = Bun.env.CREAM_ENV ?? process.env.CREAM_ENV;
-		if (creamEnv === "BACKTEST") {
+		if (Bun.env.CREAM_ENV === "BACKTEST") {
 			return "llm-model-id";
 		}
 		throw new Error("LLM_MODEL_ID environment variable is required");

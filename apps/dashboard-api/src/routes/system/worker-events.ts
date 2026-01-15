@@ -38,7 +38,7 @@ const app = new OpenAPIHono();
 // Authentication Middleware
 // ============================================
 
-const INTERNAL_SECRET = process.env.WORKER_INTERNAL_SECRET ?? "dev-internal-secret";
+const INTERNAL_SECRET = Bun.env.WORKER_INTERNAL_SECRET ?? "dev-internal-secret";
 
 /**
  * Validate internal secret for worker-to-dashboard communication.

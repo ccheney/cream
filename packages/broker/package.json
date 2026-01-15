@@ -15,7 +15,7 @@
     "build": "bun build src/index.ts --outdir dist",
     "test": "CREAM_ENV=BACKTEST bun test",
     "test:paper": "CREAM_ENV=PAPER bun test tests/paper",
-    "typecheck": "tsc --noEmit",
+    "typecheck": "tsgo --noEmit",
     "lint": "biome check src/ tests/",
     "format": "biome format --write src/ tests/"
   },

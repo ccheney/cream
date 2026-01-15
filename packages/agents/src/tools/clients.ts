@@ -26,8 +26,8 @@ import { createFREDClient, type FREDClient } from "@cream/universe";
 
 // gRPC services (MarketDataService, ExecutionService) run on port 50053
 // HTTP REST endpoints run on port 50051
-const DEFAULT_MARKET_DATA_URL = process.env.MARKET_DATA_SERVICE_URL ?? "http://localhost:50053";
-const DEFAULT_EXECUTION_URL = process.env.EXECUTION_SERVICE_URL ?? "http://localhost:50053";
+const DEFAULT_MARKET_DATA_URL = Bun.env.MARKET_DATA_SERVICE_URL ?? "http://localhost:50053";
+const DEFAULT_EXECUTION_URL = Bun.env.EXECUTION_SERVICE_URL ?? "http://localhost:50053";
 
 let marketDataClient: MarketDataServiceClient | null = null;
 let executionClient: ExecutionServiceClient | null = null;
@@ -77,8 +77,8 @@ export function getBrokerClient(ctx: ExecutionContext): AlpacaClient | null {
 	}
 
 	// Check for required credentials
-	const apiKey = process.env.ALPACA_KEY;
-	const apiSecret = process.env.ALPACA_SECRET;
+	const apiKey = Bun.env.ALPACA_KEY;
+	const apiSecret = Bun.env.ALPACA_SECRET;
 
 	if (!apiKey || !apiSecret) {
 		return null;
@@ -126,7 +126,7 @@ export function getFREDClient(): FREDClient | null {
 	}
 
 	// Only initialize if API key is available
-	const apiKey = process.env.FRED_API_KEY;
+	const apiKey = Bun.env.FRED_API_KEY;
 	if (!apiKey) {
 		return null;
 	}

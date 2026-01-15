@@ -26,7 +26,7 @@ export class EnvSecretsProvider implements SecretsProvider {
 
 	async get(key: string): Promise<string | null> {
 		const fullKey = this.prefix + key;
-		return process.env[fullKey] ?? Bun.env[fullKey] ?? null;
+		return Bun.env[fullKey] ?? Bun.env[fullKey] ?? null;
 	}
 
 	async has(key: string): Promise<boolean> {
@@ -35,7 +35,7 @@ export class EnvSecretsProvider implements SecretsProvider {
 	}
 
 	async list(): Promise<string[]> {
-		const env = { ...process.env, ...Bun.env };
+		const env = { ...Bun.env, ...Bun.env };
 		return Object.keys(env)
 			.filter((key) => key.startsWith(this.prefix))
 			.map((key) => key.slice(this.prefix.length));

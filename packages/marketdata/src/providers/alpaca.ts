@@ -236,8 +236,8 @@ export interface OptionContractParams {
  * @example
  * ```typescript
  * const client = new AlpacaMarketDataClient({
- *   apiKey: process.env.ALPACA_KEY!,
- *   apiSecret: process.env.ALPACA_SECRET!,
+ *   apiKey: Bun.env.ALPACA_KEY!,
+ *   apiSecret: Bun.env.ALPACA_SECRET!,
  * });
  *
  * const quotes = await client.getQuotes(["AAPL", "MSFT"]);
@@ -1036,9 +1036,9 @@ export class AlpacaMarketDataClient {
  * Uses CREAM_ENV to determine trading environment (PAPER/LIVE).
  */
 export function createAlpacaClientFromEnv(): AlpacaMarketDataClient {
-	const apiKey = process.env.ALPACA_KEY ?? Bun.env.ALPACA_KEY;
-	const apiSecret = process.env.ALPACA_SECRET ?? Bun.env.ALPACA_SECRET;
-	const creamEnv = process.env.CREAM_ENV ?? Bun.env.CREAM_ENV;
+	const apiKey = Bun.env.ALPACA_KEY;
+	const apiSecret = Bun.env.ALPACA_SECRET;
+	const creamEnv = Bun.env.CREAM_ENV;
 
 	if (!apiKey || !apiSecret) {
 		throw new Error("ALPACA_KEY and ALPACA_SECRET environment variables are required");
@@ -1054,7 +1054,5 @@ export function createAlpacaClientFromEnv(): AlpacaMarketDataClient {
  * Check if Alpaca credentials are available.
  */
 export function isAlpacaConfigured(): boolean {
-	const apiKey = process.env.ALPACA_KEY ?? Bun.env.ALPACA_KEY;
-	const apiSecret = process.env.ALPACA_SECRET ?? Bun.env.ALPACA_SECRET;
-	return Boolean(apiKey && apiSecret);
+	return Boolean(Bun.env.ALPACA_KEY && Bun.env.ALPACA_SECRET);
 }

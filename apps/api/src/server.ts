@@ -50,7 +50,7 @@ const server = new MastraServer({
 
 await server.init();
 
-const port = Number(process.env.PORT) || 4111;
+const port = Number(Bun.env.PORT) || 4111;
 
 export default {
 	port,

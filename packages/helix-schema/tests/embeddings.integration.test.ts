@@ -14,7 +14,7 @@ import { batchEmbedWithProgress, createEmbeddingClient } from "../src/embeddings
 // Environment Check
 // ============================================
 
-const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
+const GEMINI_API_KEY = Bun.env.GEMINI_API_KEY;
 
 // ============================================
 // Integration Tests

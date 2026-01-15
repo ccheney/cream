@@ -395,26 +395,26 @@ describe("KeyRotationRegistry", () => {
 
 	describe("initFromEnv", () => {
 		// Save specific vars we modify rather than the whole env
-		const savedAlpacaKey = process.env.ALPACA_KEY;
-		const savedAlphavantageKey = process.env.ALPHAVANTAGE_KEY;
+		const savedAlpacaKey = Bun.env.ALPACA_KEY;
+		const savedAlphavantageKey = Bun.env.ALPHAVANTAGE_KEY;
 
 		afterEach(() => {
 			// Restore only the vars we modified
 			if (savedAlpacaKey !== undefined) {
-				process.env.ALPACA_KEY = savedAlpacaKey;
+				Bun.env.ALPACA_KEY = savedAlpacaKey;
 			} else {
-				delete process.env.ALPACA_KEY;
+				delete Bun.env.ALPACA_KEY;
 			}
 			if (savedAlphavantageKey !== undefined) {
-				process.env.ALPHAVANTAGE_KEY = savedAlphavantageKey;
+				Bun.env.ALPHAVANTAGE_KEY = savedAlphavantageKey;
 			} else {
-				delete process.env.ALPHAVANTAGE_KEY;
+				delete Bun.env.ALPHAVANTAGE_KEY;
 			}
 		});
 
 		it("should initialize managers from environment variables", () => {
-			process.env.ALPACA_KEY = "test-alpaca-key";
-			process.env.ALPHAVANTAGE_KEY = "test-alphavantage-key";
+			Bun.env.ALPACA_KEY = "test-alpaca-key";
+			Bun.env.ALPHAVANTAGE_KEY = "test-alphavantage-key";
 
 			const envRegistry = new KeyRotationRegistry({}, silentLogger);
 			envRegistry.initFromEnv();
@@ -424,7 +424,7 @@ describe("KeyRotationRegistry", () => {
 		});
 
 		it("should handle comma-separated keys from env", () => {
-			process.env.ALPACA_KEY = "key1,key2,key3";
+			Bun.env.ALPACA_KEY = "key1,key2,key3";
 
 			const envRegistry = new KeyRotationRegistry({}, silentLogger);
 			envRegistry.initFromEnv();
@@ -433,9 +433,9 @@ describe("KeyRotationRegistry", () => {
 		});
 
 		it("should handle missing env variables gracefully", () => {
-			// Clear both process.env and Bun.env
-			delete process.env.ALPHAVANTAGE_KEY;
-			delete process.env.ALPACA_KEY;
+			// Clear both Bun.env and Bun.env
+			delete Bun.env.ALPHAVANTAGE_KEY;
+			delete Bun.env.ALPACA_KEY;
 			// @ts-expect-error - Bun.env is readonly but we need to clear for test
 			Bun.env.ALPHAVANTAGE_KEY = undefined;
 			// @ts-expect-error - Bun.env is readonly but we need to clear for test
@@ -457,19 +457,19 @@ describe("KeyRotationRegistry", () => {
 
 describe("createKeyRotationRegistry", () => {
 	// Save specific vars we modify rather than the whole env
-	const savedAlpacaKey = process.env.ALPACA_KEY;
+	const savedAlpacaKey = Bun.env.ALPACA_KEY;
 
 	afterEach(() => {
 		// Restore only the vars we modified
 		if (savedAlpacaKey !== undefined) {
-			process.env.ALPACA_KEY = savedAlpacaKey;
+			Bun.env.ALPACA_KEY = savedAlpacaKey;
 		} else {
-			delete process.env.ALPACA_KEY;
+			delete Bun.env.ALPACA_KEY;
 		}
 	});
 
 	it("should create registry initialized from env", () => {
-		process.env.ALPACA_KEY = "factory-test-key";
+		Bun.env.ALPACA_KEY = "factory-test-key";
 
 		const registry = createKeyRotationRegistry({});
 
@@ -478,7 +478,7 @@ describe("createKeyRotationRegistry", () => {
 	});
 
 	it("should accept custom config", () => {
-		process.env.ALPACA_KEY = "config-test-key";
+		Bun.env.ALPACA_KEY = "config-test-key";
 
 		const registry = createKeyRotationRegistry({ maxConsecutiveErrors: 5 });
 

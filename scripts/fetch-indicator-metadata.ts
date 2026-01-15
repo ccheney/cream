@@ -25,7 +25,7 @@ import { createNodeLogger, type LifecycleLogger } from "@cream/logger";
 const log: LifecycleLogger = createNodeLogger({
   service: "fetch-indicator-metadata",
   level: "info",
-  environment: process.env.CREAM_ENV ?? "BACKTEST",
+  environment: Bun.env.CREAM_ENV ?? "BACKTEST",
   pretty: true,
 });
 
@@ -101,7 +101,7 @@ const THRESHOLDS = {
 
 /* biome-ignore lint/suspicious/noConsole: Local testing output for GitHub Actions simulation */
 function setOutput(name: string, value: string): void {
-  const outputFile = process.env.GITHUB_OUTPUT;
+  const outputFile = Bun.env.GITHUB_OUTPUT;
   if (outputFile) {
     // Handle multiline values
     if (value.includes("\n")) {
@@ -121,8 +121,8 @@ function setOutput(name: string, value: string): void {
 // ============================================
 
 async function fetchIndicator(indicatorId: string): Promise<Indicator | null> {
-  const dbUrl = process.env.TURSO_DATABASE_URL;
-  const authToken = process.env.TURSO_AUTH_TOKEN;
+  const dbUrl = Bun.env.TURSO_DATABASE_URL;
+  const authToken = Bun.env.TURSO_AUTH_TOKEN;
 
   if (!dbUrl) {
     log.error({}, "TURSO_DATABASE_URL not set");

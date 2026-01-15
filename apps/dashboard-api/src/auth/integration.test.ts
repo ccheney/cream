@@ -9,10 +9,10 @@
  */
 
 // Set required environment variables before imports
-process.env.CREAM_ENV = "BACKTEST";
-process.env.BETTER_AUTH_URL = "http://localhost:3001";
-process.env.GOOGLE_CLIENT_ID = "test-client-id";
-process.env.GOOGLE_CLIENT_SECRET = "test-client-secret";
+Bun.env.CREAM_ENV = "BACKTEST";
+Bun.env.BETTER_AUTH_URL = "http://localhost:3001";
+Bun.env.GOOGLE_CLIENT_ID = "test-client-id";
+Bun.env.GOOGLE_CLIENT_SECRET = "test-client-secret";
 
 import { afterAll, afterEach, beforeAll, describe, expect, it } from "bun:test";
 import type { TursoClient } from "@cream/storage";

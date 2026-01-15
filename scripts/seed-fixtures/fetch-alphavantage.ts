@@ -19,7 +19,7 @@ import { createNodeLogger, type LifecycleLogger } from "@cream/logger";
 const log: LifecycleLogger = createNodeLogger({
   service: "fetch-alphavantage-fixtures",
   level: "info",
-  environment: process.env.CREAM_ENV ?? "BACKTEST",
+  environment: Bun.env.CREAM_ENV ?? "BACKTEST",
   pretty: true,
 });
 

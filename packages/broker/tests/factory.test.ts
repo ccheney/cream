@@ -29,20 +29,20 @@ describe("createBrokerClient factory", () => {
 
 	describe("PAPER environment", () => {
 		test("throws error for PAPER without credentials", () => {
-			const savedKey = process.env.ALPACA_KEY;
-			const savedSecret = process.env.ALPACA_SECRET;
-			delete process.env.ALPACA_KEY;
-			delete process.env.ALPACA_SECRET;
+			const savedKey = Bun.env.ALPACA_KEY;
+			const savedSecret = Bun.env.ALPACA_SECRET;
+			delete Bun.env.ALPACA_KEY;
+			delete Bun.env.ALPACA_SECRET;
 
 			try {
 				const ctx = createTestContext("PAPER");
 				expect(() => createBrokerClient(ctx)).toThrow("ALPACA_KEY and ALPACA_SECRET are required");
 			} finally {
 				if (savedKey) {
-					process.env.ALPACA_KEY = savedKey;
+					Bun.env.ALPACA_KEY = savedKey;
 				}
 				if (savedSecret) {
-					process.env.ALPACA_SECRET = savedSecret;
+					Bun.env.ALPACA_SECRET = savedSecret;
 				}
 			}
 		});

@@ -236,8 +236,8 @@ export type AlpacaWsEventHandler = (event: AlpacaWsEvent) => void | Promise<void
  * ```typescript
  * // Stocks streaming (JSON)
  * const stocksClient = new AlpacaWebSocketClient({
- *   apiKey: process.env.ALPACA_KEY!,
- *   apiSecret: process.env.ALPACA_SECRET!,
+ *   apiKey: Bun.env.ALPACA_KEY!,
+ *   apiSecret: Bun.env.ALPACA_SECRET!,
  *   market: 'stocks',
  *   feed: 'sip',
  * });
@@ -253,15 +253,15 @@ export type AlpacaWsEventHandler = (event: AlpacaWsEvent) => void | Promise<void
  *
  * // Options streaming (msgpack)
  * const optionsClient = new AlpacaWebSocketClient({
- *   apiKey: process.env.ALPACA_KEY!,
- *   apiSecret: process.env.ALPACA_SECRET!,
+ *   apiKey: Bun.env.ALPACA_KEY!,
+ *   apiSecret: Bun.env.ALPACA_SECRET!,
  *   market: 'options',
  * });
  *
  * // News streaming (JSON)
  * const newsClient = new AlpacaWebSocketClient({
- *   apiKey: process.env.ALPACA_KEY!,
- *   apiSecret: process.env.ALPACA_SECRET!,
+ *   apiKey: Bun.env.ALPACA_KEY!,
+ *   apiSecret: Bun.env.ALPACA_SECRET!,
  *   market: 'news',
  * });
  *
@@ -919,8 +919,8 @@ export class AlpacaWebSocketClient {
  * Create an Alpaca WebSocket client for stocks from environment variables.
  */
 export function createAlpacaStocksClientFromEnv(feed: AlpacaWsFeed = "sip"): AlpacaWebSocketClient {
-	const apiKey = process.env.ALPACA_KEY ?? Bun.env.ALPACA_KEY;
-	const apiSecret = process.env.ALPACA_SECRET ?? Bun.env.ALPACA_SECRET;
+	const apiKey = Bun.env.ALPACA_KEY;
+	const apiSecret = Bun.env.ALPACA_SECRET;
 
 	if (!apiKey || !apiSecret) {
 		throw new Error("ALPACA_KEY and ALPACA_SECRET environment variables are required");
@@ -939,8 +939,8 @@ export function createAlpacaStocksClientFromEnv(feed: AlpacaWsFeed = "sip"): Alp
  * Note: Options stream uses msgpack encoding.
  */
 export function createAlpacaOptionsClientFromEnv(): AlpacaWebSocketClient {
-	const apiKey = process.env.ALPACA_KEY ?? Bun.env.ALPACA_KEY;
-	const apiSecret = process.env.ALPACA_SECRET ?? Bun.env.ALPACA_SECRET;
+	const apiKey = Bun.env.ALPACA_KEY;
+	const apiSecret = Bun.env.ALPACA_SECRET;
 
 	if (!apiKey || !apiSecret) {
 		throw new Error("ALPACA_KEY and ALPACA_SECRET environment variables are required");
@@ -958,8 +958,8 @@ export function createAlpacaOptionsClientFromEnv(): AlpacaWebSocketClient {
  * Create an Alpaca WebSocket client for news from environment variables.
  */
 export function createAlpacaNewsClientFromEnv(): AlpacaWebSocketClient {
-	const apiKey = process.env.ALPACA_KEY ?? Bun.env.ALPACA_KEY;
-	const apiSecret = process.env.ALPACA_SECRET ?? Bun.env.ALPACA_SECRET;
+	const apiKey = Bun.env.ALPACA_KEY;
+	const apiSecret = Bun.env.ALPACA_SECRET;
 
 	if (!apiKey || !apiSecret) {
 		throw new Error("ALPACA_KEY and ALPACA_SECRET environment variables are required");
@@ -980,8 +980,8 @@ export function createAlpacaWebSocketClientFromEnv(
 	market: AlpacaWsMarket = "stocks",
 	feed: AlpacaWsFeed = "sip"
 ): AlpacaWebSocketClient {
-	const apiKey = process.env.ALPACA_KEY ?? Bun.env.ALPACA_KEY;
-	const apiSecret = process.env.ALPACA_SECRET ?? Bun.env.ALPACA_SECRET;
+	const apiKey = Bun.env.ALPACA_KEY;
+	const apiSecret = Bun.env.ALPACA_SECRET;
 
 	if (!apiKey || !apiSecret) {
 		throw new Error("ALPACA_KEY and ALPACA_SECRET environment variables are required");

@@ -13,9 +13,9 @@ import type { VMConfig, VMHandle } from "./types.js";
 // Constants
 // ============================================
 
-const FIRECRACKER_BINARY = process.env.FIRECRACKER_BIN ?? "/usr/bin/firecracker";
-const _JAILER_BINARY = process.env.JAILER_BIN ?? "/usr/bin/jailer";
-const VM_BASE_PATH = process.env.VM_BASE_PATH ?? "/var/lib/firecracker";
+const FIRECRACKER_BINARY = Bun.env.FIRECRACKER_BIN ?? "/usr/bin/firecracker";
+const _JAILER_BINARY = Bun.env.JAILER_BIN ?? "/usr/bin/jailer";
+const VM_BASE_PATH = Bun.env.VM_BASE_PATH ?? "/var/lib/firecracker";
 const SOCKET_DIR = `${VM_BASE_PATH}/sockets`;
 
 const DEFAULT_KERNEL_PATH = `${VM_BASE_PATH}/vmlinux`;

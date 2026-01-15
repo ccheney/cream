@@ -87,7 +87,7 @@ async function initializeDb(): Promise<TursoClient> {
 	const ctx = createDbContext();
 	let client: TursoClient;
 
-	if (process.env.NODE_ENV === "test") {
+	if (Bun.env.NODE_ENV === "test") {
 		// In-memory for testing
 		client = await createInMemoryClient();
 	} else {

@@ -257,14 +257,14 @@ describe("optionalAuth", () => {
 // ============================================
 
 describe("liveProtection", () => {
-	const originalEnv = process.env.CREAM_ENV;
+	const originalEnv = Bun.env.CREAM_ENV;
 
 	afterEach(() => {
-		process.env.CREAM_ENV = originalEnv;
+		Bun.env.CREAM_ENV = originalEnv;
 	});
 
 	it("passes through in non-LIVE environments", async () => {
-		process.env.CREAM_ENV = "PAPER";
+		Bun.env.CREAM_ENV = "PAPER";
 
 		const app = new Hono<{ Variables: SessionVariables }>();
 		app.use("/*", async (c, next) => {
@@ -281,7 +281,7 @@ describe("liveProtection", () => {
 	});
 
 	it("passes through in BACKTEST environment", async () => {
-		process.env.CREAM_ENV = "BACKTEST";
+		Bun.env.CREAM_ENV = "BACKTEST";
 
 		const app = new Hono<{ Variables: SessionVariables }>();
 		app.use("/*", async (c, next) => {
@@ -298,7 +298,7 @@ describe("liveProtection", () => {
 	});
 
 	it("returns 401 when not authenticated in LIVE", async () => {
-		process.env.CREAM_ENV = "LIVE";
+		Bun.env.CREAM_ENV = "LIVE";
 
 		const app = new Hono<{ Variables: SessionVariables }>();
 		app.use("/*", async (c, next) => {
@@ -321,7 +321,7 @@ describe("liveProtection", () => {
 	});
 
 	it("returns 403 when MFA not enabled in LIVE", async () => {
-		process.env.CREAM_ENV = "LIVE";
+		Bun.env.CREAM_ENV = "LIVE";
 		const mockSession = createMockSession(); // MFA disabled by default
 
 		const app = new Hono<{ Variables: SessionVariables }>();
@@ -348,7 +348,7 @@ describe("liveProtection", () => {
 	});
 
 	it("passes through when MFA enabled in LIVE", async () => {
-		process.env.CREAM_ENV = "LIVE";
+		Bun.env.CREAM_ENV = "LIVE";
 		const mockSession = createMockSessionWithMFA();
 
 		const app = new Hono<{ Variables: SessionVariables }>();
@@ -373,7 +373,7 @@ describe("liveProtection", () => {
 	});
 
 	it("returns 428 when confirmation header missing in LIVE", async () => {
-		process.env.CREAM_ENV = "LIVE";
+		Bun.env.CREAM_ENV = "LIVE";
 		const mockSession = createMockSessionWithMFA();
 
 		const app = new Hono<{ Variables: SessionVariables }>();
@@ -406,7 +406,7 @@ describe("liveProtection", () => {
 	});
 
 	it("passes through with confirmation header in LIVE", async () => {
-		process.env.CREAM_ENV = "LIVE";
+		Bun.env.CREAM_ENV = "LIVE";
 		const mockSession = createMockSessionWithMFA();
 
 		const app = new Hono<{ Variables: SessionVariables }>();
@@ -435,7 +435,7 @@ describe("liveProtection", () => {
 	});
 
 	it("returns 403 when IP not in whitelist", async () => {
-		process.env.CREAM_ENV = "LIVE";
+		Bun.env.CREAM_ENV = "LIVE";
 		const mockSession = createMockSessionWithMFA();
 
 		const app = new Hono<{ Variables: SessionVariables }>();
@@ -471,7 +471,7 @@ describe("liveProtection", () => {
 	});
 
 	it("passes through when IP in whitelist", async () => {
-		process.env.CREAM_ENV = "LIVE";
+		Bun.env.CREAM_ENV = "LIVE";
 		const mockSession = createMockSessionWithMFA();
 
 		const app = new Hono<{ Variables: SessionVariables }>();

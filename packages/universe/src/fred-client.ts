@@ -470,7 +470,7 @@ function sleep(ms: number): Promise<void> {
  *
  * @example
  * ```typescript
- * const client = new FREDClient({ apiKey: process.env.FRED_API_KEY! });
+ * const client = new FREDClient({ apiKey: Bun.env.FRED_API_KEY! });
  *
  * // Get upcoming release dates
  * const releaseDates = await client.getReleaseDates({
@@ -820,7 +820,7 @@ export function createFREDClient(config: FREDClientConfig): FREDClient {
 /**
  * Create a FREDClient instance using environment variables.
  *
- * Checks both `process.env.FRED_API_KEY` and `Bun.env.FRED_API_KEY`.
+ * Checks both `Bun.env.FRED_API_KEY` and `Bun.env.FRED_API_KEY`.
  *
  * @returns Configured FREDClient instance
  * @throws Error if FRED_API_KEY environment variable is not set
@@ -833,7 +833,7 @@ export function createFREDClient(config: FREDClientConfig): FREDClient {
  * ```
  */
 export function createFREDClientFromEnv(): FREDClient {
-	const apiKey = process.env.FRED_API_KEY ?? Bun.env.FRED_API_KEY;
+	const apiKey = Bun.env.FRED_API_KEY;
 
 	if (!apiKey) {
 		throw new Error("FRED_API_KEY environment variable is required");

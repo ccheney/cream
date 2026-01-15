@@ -419,7 +419,7 @@ export function internalError(
 		unavailable: "INTERNAL_UNAVAILABLE",
 	} as const;
 
-	const isDevelopment = process.env.NODE_ENV === "development";
+	const isDevelopment = Bun.env.NODE_ENV === "development";
 
 	return createErrorMessage(codeMap[type], undefined, {
 		stack: isDevelopment ? stack : undefined,

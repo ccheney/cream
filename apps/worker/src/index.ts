@@ -143,7 +143,7 @@ async function main() {
 	if (!isBacktest(startupCtx)) {
 		validateEnvironmentOrExit(startupCtx, "worker", []);
 
-		if (!process.env.GOOGLE_GENERATIVE_AI_API_KEY) {
+		if (!Bun.env.GOOGLE_GENERATIVE_AI_API_KEY) {
 			log.warn(
 				{},
 				"GOOGLE_GENERATIVE_AI_API_KEY not configured. Agent execution will use stub agents."
@@ -155,8 +155,8 @@ async function main() {
 
 	initCalendarService({
 		mode: environment as CreamEnvironment,
-		alpacaKey: process.env.ALPACA_KEY,
-		alpacaSecret: process.env.ALPACA_SECRET,
+		alpacaKey: Bun.env.ALPACA_KEY,
+		alpacaSecret: Bun.env.ALPACA_SECRET,
 	})
 		.then(() => log.info({ mode: environment }, "CalendarService initialized"))
 		.catch((error: unknown) => {

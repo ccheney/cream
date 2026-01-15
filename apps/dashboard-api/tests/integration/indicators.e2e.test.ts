@@ -7,8 +7,8 @@
  * @see docs/plans/33-indicator-engine-v2.md
  */
 
-process.env.CREAM_ENV = "BACKTEST";
-process.env.NODE_ENV = "test";
+Bun.env.CREAM_ENV = "BACKTEST";
+Bun.env.NODE_ENV = "test";
 
 import { afterAll, beforeAll, beforeEach, describe, expect, it, mock } from "bun:test";
 import { createInMemoryClient, runMigrations, type TursoClient } from "@cream/storage";

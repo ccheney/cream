@@ -5,7 +5,7 @@
  */
 
 // Set required environment variables before imports
-process.env.CREAM_ENV = "PAPER";
+Bun.env.CREAM_ENV = "PAPER";
 
 import { describe, expect, test } from "bun:test";
 import {

@@ -131,7 +131,7 @@ export class SemanticScholarClient {
 
 		// Check for API key in environment
 		if (!this.config.apiKey) {
-			const envKey = process.env.SEMANTIC_SCHOLAR_API_KEY;
+			const envKey = Bun.env.SEMANTIC_SCHOLAR_API_KEY;
 			if (envKey) {
 				this.config.apiKey = envKey;
 			}

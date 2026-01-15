@@ -29,7 +29,7 @@ import {
 const log: LifecycleLogger = createNodeLogger({
 	service: "backfill-thesis-memory",
 	level: "info",
-	environment: process.env.CREAM_ENV ?? "BACKTEST",
+	environment: Bun.env.CREAM_ENV ?? "BACKTEST",
 	pretty: true,
 });
 
@@ -112,8 +112,8 @@ async function backfillThesisMemory(options: BackfillOptions): Promise<void> {
 	}
 
 	// Create Turso client
-	const databaseUrl = process.env.TURSO_DATABASE_URL;
-	const authToken = process.env.TURSO_AUTH_TOKEN;
+	const databaseUrl = Bun.env.TURSO_DATABASE_URL;
+	const authToken = Bun.env.TURSO_AUTH_TOKEN;
 
 	if (!databaseUrl) {
 		log.error({}, "TURSO_DATABASE_URL environment variable not set");

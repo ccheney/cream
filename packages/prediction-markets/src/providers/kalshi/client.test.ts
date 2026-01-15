@@ -431,20 +431,20 @@ describe("MARKET_TYPE_TO_SERIES extended", () => {
 // ============================================
 
 describe("createKalshiClientFromEnv", () => {
-	const originalApiKeyId = process.env.KALSHI_API_KEY_ID;
-	const originalPrivateKeyPath = process.env.KALSHI_PRIVATE_KEY_PATH;
+	const originalApiKeyId = Bun.env.KALSHI_API_KEY_ID;
+	const originalPrivateKeyPath = Bun.env.KALSHI_PRIVATE_KEY_PATH;
 
 	// Reset env vars to original state (delete if not originally set)
 	const resetEnv = () => {
 		if (originalApiKeyId !== undefined) {
-			process.env.KALSHI_API_KEY_ID = originalApiKeyId;
+			Bun.env.KALSHI_API_KEY_ID = originalApiKeyId;
 		} else {
-			delete process.env.KALSHI_API_KEY_ID;
+			delete Bun.env.KALSHI_API_KEY_ID;
 		}
 		if (originalPrivateKeyPath !== undefined) {
-			process.env.KALSHI_PRIVATE_KEY_PATH = originalPrivateKeyPath;
+			Bun.env.KALSHI_PRIVATE_KEY_PATH = originalPrivateKeyPath;
 		} else {
-			delete process.env.KALSHI_PRIVATE_KEY_PATH;
+			delete Bun.env.KALSHI_PRIVATE_KEY_PATH;
 		}
 	};
 
@@ -452,9 +452,9 @@ describe("createKalshiClientFromEnv", () => {
 	afterEach(resetEnv);
 
 	it("should throw AuthenticationError without KALSHI_API_KEY_ID", () => {
-		// Delete from both process.env and Bun.env to ensure the var is truly unset
-		delete process.env.KALSHI_API_KEY_ID;
-		delete process.env.KALSHI_PRIVATE_KEY_PATH;
+		// Delete from both Bun.env and Bun.env to ensure the var is truly unset
+		delete Bun.env.KALSHI_API_KEY_ID;
+		delete Bun.env.KALSHI_PRIVATE_KEY_PATH;
 		// @ts-expect-error - Bun.env is readonly but we need to clear for test
 		Bun.env.KALSHI_API_KEY_ID = undefined;
 		// @ts-expect-error - Bun.env is readonly but we need to clear for test
@@ -470,8 +470,8 @@ describe("createKalshiClientFromEnv", () => {
 	});
 
 	it("should throw AuthenticationError without KALSHI_PRIVATE_KEY_PATH", () => {
-		process.env.KALSHI_API_KEY_ID = "test-key-id";
-		delete process.env.KALSHI_PRIVATE_KEY_PATH;
+		Bun.env.KALSHI_API_KEY_ID = "test-key-id";
+		delete Bun.env.KALSHI_PRIVATE_KEY_PATH;
 		// @ts-expect-error - Bun.env is readonly but we need to clear for test
 		Bun.env.KALSHI_PRIVATE_KEY_PATH = undefined;
 

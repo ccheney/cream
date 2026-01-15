@@ -68,7 +68,7 @@ function setCache<T>(key: string, data: T): void {
 }
 
 function isAlpacaConfigured(): boolean {
-	return Boolean(process.env.ALPACA_KEY && process.env.ALPACA_SECRET);
+	return Boolean(Bun.env.ALPACA_KEY && Bun.env.ALPACA_SECRET);
 }
 
 function getBrokerClient(): AlpacaClient {
@@ -84,8 +84,8 @@ function getBrokerClient(): AlpacaClient {
 
 	try {
 		// Safe to assert: isAlpacaConfigured() check above guarantees these exist
-		const apiKey = process.env.ALPACA_KEY as string;
-		const apiSecret = process.env.ALPACA_SECRET as string;
+		const apiKey = Bun.env.ALPACA_KEY as string;
+		const apiSecret = Bun.env.ALPACA_SECRET as string;
 
 		brokerClient = createAlpacaClient({
 			apiKey,
@@ -1047,8 +1047,8 @@ app.openapi(historyRoute, async (c) => {
 
 	try {
 		// Safe to assert: isAlpacaConfigured() check above guarantees these exist
-		const apiKey = process.env.ALPACA_KEY as string;
-		const apiSecret = process.env.ALPACA_SECRET as string;
+		const apiKey = Bun.env.ALPACA_KEY as string;
+		const apiSecret = Bun.env.ALPACA_SECRET as string;
 
 		const history = await getPortfolioHistory(
 			{

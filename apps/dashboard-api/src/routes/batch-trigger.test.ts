@@ -17,7 +17,7 @@ const mockSyncRuns: Array<{
 }> = [];
 
 beforeAll(() => {
-	process.env.CREAM_ENV = "BACKTEST";
+	Bun.env.CREAM_ENV = "BACKTEST";
 });
 
 mock.module("../db", () => ({

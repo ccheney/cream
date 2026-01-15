@@ -70,7 +70,7 @@ export function createNodeLogger(options: NodeLoggerOptions): LifecycleLogger {
 		pinoOptions = {},
 	} = options;
 
-	const isPretty = pretty ?? process.env.NODE_ENV === "development";
+	const isPretty = pretty ?? Bun.env.NODE_ENV === "development";
 
 	const loggerOptions: LoggerOptions = {
 		level,

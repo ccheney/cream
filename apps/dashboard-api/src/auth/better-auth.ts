@@ -24,8 +24,8 @@ import { twoFactor } from "better-auth/plugins";
  * Connects to the same Turso server as @cream/storage.
  */
 function createLibsqlDialect(): LibsqlDialect {
-	const url = process.env.TURSO_DATABASE_URL ?? "http://localhost:8080";
-	const authToken = process.env.TURSO_AUTH_TOKEN;
+	const url = Bun.env.TURSO_DATABASE_URL ?? "http://localhost:8080";
+	const authToken = Bun.env.TURSO_AUTH_TOKEN;
 
 	return new LibsqlDialect({ url, authToken });
 }
@@ -34,7 +34,7 @@ function createLibsqlDialect(): LibsqlDialect {
 // Environment Helpers
 // ============================================
 
-const isLive = process.env.CREAM_ENV === "LIVE";
+const isLive = Bun.env.CREAM_ENV === "LIVE";
 
 // ============================================
 // Better Auth Instance
@@ -51,7 +51,7 @@ const isLive = process.env.CREAM_ENV === "LIVE";
  */
 export const auth = betterAuth({
 	appName: "Cream Dashboard",
-	baseURL: process.env.BETTER_AUTH_URL ?? "http://localhost:3001",
+	baseURL: Bun.env.BETTER_AUTH_URL ?? "http://localhost:3001",
 
 	// Database configuration using Kysely with libSQL
 	database: {
@@ -93,8 +93,8 @@ export const auth = betterAuth({
 	// Google OAuth provider
 	socialProviders: {
 		google: {
-			clientId: process.env.GOOGLE_CLIENT_ID ?? "",
-			clientSecret: process.env.GOOGLE_CLIENT_SECRET ?? "",
+			clientId: Bun.env.GOOGLE_CLIENT_ID ?? "",
+			clientSecret: Bun.env.GOOGLE_CLIENT_SECRET ?? "",
 			// Request offline access for refresh tokens
 			accessType: "offline",
 			// Always show account selector and consent screen
@@ -168,8 +168,8 @@ export const auth = betterAuth({
 	trustedOrigins: [
 		"http://localhost:3000",
 		"http://localhost:3001",
-		process.env.DASHBOARD_URL,
-		process.env.BETTER_AUTH_URL,
+		Bun.env.DASHBOARD_URL,
+		Bun.env.BETTER_AUTH_URL,
 	].filter((origin): origin is string => Boolean(origin)),
 });
 

@@ -140,7 +140,7 @@ export function validateLiveTradingSafety(): {
 	const errors: string[] = [];
 
 	// Check for explicit LIVE trading approval
-	const approved = process.env.LIVE_TRADING_APPROVED === "true";
+	const approved = Bun.env.LIVE_TRADING_APPROVED === "true";
 	if (!approved) {
 		errors.push("LIVE trading requires LIVE_TRADING_APPROVED=true environment variable");
 	}

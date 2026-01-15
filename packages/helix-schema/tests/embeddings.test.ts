@@ -264,22 +264,22 @@ describe("needsReembedding", () => {
 describe("EmbeddingClient construction", () => {
 	it("throws when API key is missing", () => {
 		// Save current env
-		const savedKey = process.env.GOOGLE_GENERATIVE_AI_API_KEY;
-		delete process.env.GOOGLE_GENERATIVE_AI_API_KEY;
+		const savedKey = Bun.env.GOOGLE_GENERATIVE_AI_API_KEY;
+		delete Bun.env.GOOGLE_GENERATIVE_AI_API_KEY;
 
 		try {
 			expect(() => new EmbeddingClient()).toThrow("Missing API key");
 		} finally {
 			// Restore env
 			if (savedKey) {
-				process.env.GOOGLE_GENERATIVE_AI_API_KEY = savedKey;
+				Bun.env.GOOGLE_GENERATIVE_AI_API_KEY = savedKey;
 			}
 		}
 	});
 
 	it("getConfig returns config copy", () => {
 		// Skip if no API key
-		if (!process.env.GOOGLE_GENERATIVE_AI_API_KEY) {
+		if (!Bun.env.GOOGLE_GENERATIVE_AI_API_KEY) {
 			return;
 		}
 
@@ -298,7 +298,7 @@ describe("EmbeddingClient construction", () => {
 describe("createEmbeddingClient", () => {
 	it("creates client with default config", () => {
 		// Skip if no API key
-		if (!process.env.GOOGLE_GENERATIVE_AI_API_KEY) {
+		if (!Bun.env.GOOGLE_GENERATIVE_AI_API_KEY) {
 			return;
 		}
 

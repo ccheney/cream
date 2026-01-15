@@ -52,7 +52,7 @@ const app = new OpenAPIHono();
 // Internal Auth Helper
 // ============================================
 
-const INTERNAL_SECRET = process.env.WORKER_INTERNAL_SECRET ?? "dev-internal-secret";
+const INTERNAL_SECRET = Bun.env.WORKER_INTERNAL_SECRET ?? "dev-internal-secret";
 
 /**
  * Check if request is using internal auth (from worker).

@@ -10,7 +10,7 @@
   "scripts": {
     "build": "bun build src/index.ts --outdir dist --target bun",
     "test": "CREAM_ENV=BACKTEST bun test",
-    "typecheck": "tsc --noEmit",
+    "typecheck": "tsgo --noEmit",
     "lint": "biome check src/ tests/",
     "format": "biome format --write src/ tests/"
   },

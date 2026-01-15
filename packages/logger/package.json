@@ -13,7 +13,7 @@
   },
   "scripts": {
     "build": "bun build ./src/index.ts --outdir ./dist --target bun",
-    "typecheck": "tsc --noEmit",
+    "typecheck": "tsgo --noEmit",
     "test": "echo 'No tests for logger package'",
     "lint": "biome check src/",
     "format": "biome format --write src/",

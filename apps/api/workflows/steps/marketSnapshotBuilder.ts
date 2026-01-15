@@ -125,7 +125,7 @@ export const PERFORMANCE_TARGETS = {
  */
 const GRPC_CONFIG = {
 	/** gRPC server URL (from env or default) */
-	baseUrl: process.env.EXECUTION_ENGINE_URL ?? "http://localhost:50053",
+	baseUrl: Bun.env.EXECUTION_ENGINE_URL ?? "http://localhost:50053",
 	/** Connection timeout */
 	timeoutMs: 5000,
 	/** Max retries */
@@ -196,7 +196,7 @@ export async function executeMarketSnapshotBuilder(
 
 		// Phase 4: Assemble final market snapshot
 		const asOf = input.asOf ?? new Date().toISOString();
-		// Note: env.CREAM_ENV is not in the domain env schema, so read directly from process.env
+		// Note: env.CREAM_ENV is not in the domain env schema, so read directly from Bun.env
 		const environment = requireEnv();
 		const marketStatus = determineMarketStatus();
 
@@ -458,8 +458,8 @@ function getExecutionClient(): ExecutionServiceClient {
 async function fetchPositions(errors: string[], warnings: string[]): Promise<Position[]> {
 	try {
 		// In BACKTEST mode, positions come from backtest state
-		// Note: env.CREAM_ENV is not in the domain env schema, so read directly from process.env
-		const environment = process.env.CREAM_ENV;
+		// Note: env.CREAM_ENV is not in the domain env schema, so read directly from Bun.env
+		const environment = Bun.env.CREAM_ENV;
 
 		if (environment === "BACKTEST") {
 			warnings.push("Backtest mode: positions not fetched from broker");

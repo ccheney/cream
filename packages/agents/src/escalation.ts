@@ -446,8 +446,8 @@ export class EscalationService {
  * ```typescript
  * const service = createEscalationService({
  *   environment: requireEnv(),
- *   slackWebhook: process.env.SLACK_WEBHOOK_URL,
- *   dashboardUrl: process.env.DASHBOARD_URL,
+ *   slackWebhook: Bun.env.SLACK_WEBHOOK_URL,
+ *   dashboardUrl: Bun.env.DASHBOARD_URL,
  * });
  *
  * const gate = new ConsensusGate({
@@ -500,8 +500,8 @@ export function createEscalationService(options: {
 export function createEscalationServiceFromEnv(): EscalationService {
 	return createEscalationService({
 		environment: requireEnv(),
-		slackWebhook: process.env.SLACK_WEBHOOK_URL,
-		dashboardUrl: process.env.DASHBOARD_URL,
+		slackWebhook: Bun.env.SLACK_WEBHOOK_URL,
+		dashboardUrl: Bun.env.DASHBOARD_URL,
 	});
 }
 

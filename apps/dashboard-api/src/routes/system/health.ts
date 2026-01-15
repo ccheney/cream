@@ -53,15 +53,15 @@ async function checkHelix(): Promise<ServiceHealth> {
 async function checkBroker(): Promise<ServiceHealth> {
 	const start = performance.now();
 	try {
-		const hasKeys = process.env.ALPACA_KEY && process.env.ALPACA_SECRET;
+		const hasKeys = Bun.env.ALPACA_KEY && Bun.env.ALPACA_SECRET;
 		if (!hasKeys) {
 			return { status: "degraded", message: "API keys not configured" };
 		}
-		const baseUrl = process.env.ALPACA_BASE_URL ?? "https://paper-api.alpaca.markets";
+		const baseUrl = Bun.env.ALPACA_BASE_URL ?? "https://paper-api.alpaca.markets";
 		const response = await fetch(`${baseUrl}/v2/account`, {
 			headers: {
-				"APCA-API-KEY-ID": process.env.ALPACA_KEY ?? "",
-				"APCA-API-SECRET-KEY": process.env.ALPACA_SECRET ?? "",
+				"APCA-API-KEY-ID": Bun.env.ALPACA_KEY ?? "",
+				"APCA-API-SECRET-KEY": Bun.env.ALPACA_SECRET ?? "",
 			},
 			signal: AbortSignal.timeout(5000),
 		});
@@ -83,15 +83,15 @@ async function checkMarketData(): Promise<ServiceHealth> {
 	const start = performance.now();
 	try {
 		// Alpaca is the unified market data + broker provider
-		const hasKeys = process.env.ALPACA_KEY && process.env.ALPACA_SECRET;
+		const hasKeys = Bun.env.ALPACA_KEY && Bun.env.ALPACA_SECRET;
 		if (!hasKeys) {
 			return { status: "degraded", message: "API keys not configured" };
 		}
 		// Use Alpaca data API to check market data availability
 		const response = await fetch("https://data.alpaca.markets/v2/stocks/AAPL/quotes/latest", {
 			headers: {
-				"APCA-API-KEY-ID": process.env.ALPACA_KEY ?? "",
-				"APCA-API-SECRET-KEY": process.env.ALPACA_SECRET ?? "",
+				"APCA-API-KEY-ID": Bun.env.ALPACA_KEY ?? "",
+				"APCA-API-SECRET-KEY": Bun.env.ALPACA_SECRET ?? "",
 			},
 			signal: AbortSignal.timeout(5000),
 		});
@@ -112,9 +112,9 @@ async function checkMarketData(): Promise<ServiceHealth> {
 async function checkExecution(): Promise<ServiceHealth> {
 	const start = performance.now();
 	try {
-		const host = process.env.EXECUTION_ENGINE_HOST ?? "localhost";
-		const port = process.env.EXECUTION_ENGINE_PORT ?? "50053";
-		const isConfigured = process.env.EXECUTION_ENGINE_HOST || process.env.CREAM_ENV !== "BACKTEST";
+		const host = Bun.env.EXECUTION_ENGINE_HOST ?? "localhost";
+		const port = Bun.env.EXECUTION_ENGINE_PORT ?? "50053";
+		const isConfigured = Bun.env.EXECUTION_ENGINE_HOST || Bun.env.CREAM_ENV !== "BACKTEST";
 		if (!isConfigured) {
 			return { status: "degraded", message: "Not configured (BACKTEST mode)" };
 		}

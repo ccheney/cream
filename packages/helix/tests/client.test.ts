@@ -59,10 +59,10 @@ describe("HelixDB Client", () => {
 	describe("createHelixClientFromEnv", () => {
 		it("uses environment defaults when env vars not set", () => {
 			// Clear relevant env vars
-			const originalHost = process.env.HELIX_HOST;
-			const originalPort = process.env.HELIX_PORT;
-			delete process.env.HELIX_HOST;
-			delete process.env.HELIX_PORT;
+			const originalHost = Bun.env.HELIX_HOST;
+			const originalPort = Bun.env.HELIX_PORT;
+			delete Bun.env.HELIX_HOST;
+			delete Bun.env.HELIX_PORT;
 
 			try {
 				const client = createHelixClientFromEnv();
@@ -73,10 +73,10 @@ describe("HelixDB Client", () => {
 			} finally {
 				// Restore
 				if (originalHost) {
-					process.env.HELIX_HOST = originalHost;
+					Bun.env.HELIX_HOST = originalHost;
 				}
 				if (originalPort) {
-					process.env.HELIX_PORT = originalPort;
+					Bun.env.HELIX_PORT = originalPort;
 				}
 			}
 		});

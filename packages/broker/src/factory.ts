@@ -69,8 +69,8 @@ export function createBrokerClient(
 
 		case "PAPER":
 		case "LIVE": {
-			const apiKey = config.apiKey ?? process.env.ALPACA_KEY;
-			const apiSecret = config.apiSecret ?? process.env.ALPACA_SECRET;
+			const apiKey = config.apiKey ?? Bun.env.ALPACA_KEY;
+			const apiSecret = config.apiSecret ?? Bun.env.ALPACA_SECRET;
 
 			if (!apiKey || !apiSecret) {
 				throw new BrokerError(

@@ -29,12 +29,12 @@ function resetMetrics() {
 // ============================================
 
 describe("getCompressionConfig", () => {
-	const originalEnv = process.env.NODE_ENV;
-	const originalWsCompression = process.env.WS_COMPRESSION_ENABLED;
+	const originalEnv = Bun.env.NODE_ENV;
+	const originalWsCompression = Bun.env.WS_COMPRESSION_ENABLED;
 
 	beforeEach(() => {
-		process.env.NODE_ENV = originalEnv;
-		process.env.WS_COMPRESSION_ENABLED = originalWsCompression;
+		Bun.env.NODE_ENV = originalEnv;
+		Bun.env.WS_COMPRESSION_ENABLED = originalWsCompression;
 	});
 
 	it("returns config with required properties", () => {
@@ -50,7 +50,7 @@ describe("getCompressionConfig", () => {
 	});
 
 	it("returns production config in production", () => {
-		process.env.NODE_ENV = "production";
+		Bun.env.NODE_ENV = "production";
 		const config = getCompressionConfig();
 
 		expect(config.enabled).toBe(true);
@@ -59,23 +59,23 @@ describe("getCompressionConfig", () => {
 	});
 
 	it("returns development config in development", () => {
-		process.env.NODE_ENV = "development";
-		delete process.env.WS_COMPRESSION_ENABLED;
+		Bun.env.NODE_ENV = "development";
+		delete Bun.env.WS_COMPRESSION_ENABLED;
 		const config = getCompressionConfig();
 
 		expect(config.enabled).toBe(false);
 	});
 
 	it("allows compression override in development", () => {
-		process.env.NODE_ENV = "development";
-		process.env.WS_COMPRESSION_ENABLED = "true";
+		Bun.env.NODE_ENV = "development";
+		Bun.env.WS_COMPRESSION_ENABLED = "true";
 		const config = getCompressionConfig();
 
 		expect(config.enabled).toBe(true);
 	});
 
 	it("returns default config for unknown environment", () => {
-		process.env.NODE_ENV = "staging";
+		Bun.env.NODE_ENV = "staging";
 		const config = getCompressionConfig();
 
 		expect(config.enabled).toBe(true);
@@ -107,21 +107,21 @@ describe("getCompressionConfig", () => {
 // ============================================
 
 describe("getBunCompressionOptions", () => {
-	const originalEnv = process.env.NODE_ENV;
+	const originalEnv = Bun.env.NODE_ENV;
 
 	beforeEach(() => {
-		process.env.NODE_ENV = originalEnv;
+		Bun.env.NODE_ENV = originalEnv;
 	});
 
 	it("returns 'shared' when compression enabled", () => {
-		process.env.NODE_ENV = "production";
+		Bun.env.NODE_ENV = "production";
 		const options = getBunCompressionOptions();
 		expect(options).toBe("shared");
 	});
 
 	it("returns false when compression disabled", () => {
-		process.env.NODE_ENV = "development";
-		delete process.env.WS_COMPRESSION_ENABLED;
+		Bun.env.NODE_ENV = "development";
+		delete Bun.env.WS_COMPRESSION_ENABLED;
 		const options = getBunCompressionOptions();
 		expect(options).toBe(false);
 	});
@@ -283,12 +283,12 @@ describe("getBandwidthSavings", () => {
 // ============================================
 
 describe("shouldCompress", () => {
-	const _originalEnv = process.env.NODE_ENV;
-	const _originalWsCompression = process.env.WS_COMPRESSION_ENABLED;
+	const _originalEnv = Bun.env.NODE_ENV;
+	const _originalWsCompression = Bun.env.WS_COMPRESSION_ENABLED;
 
 	beforeEach(() => {
-		process.env.NODE_ENV = "production"; // Ensure compression enabled
-		delete process.env.WS_COMPRESSION_ENABLED;
+		Bun.env.NODE_ENV = "production"; // Ensure compression enabled
+		delete Bun.env.WS_COMPRESSION_ENABLED;
 	});
 
 	// Note: Each test should restore env if it modifies it
@@ -319,8 +319,8 @@ describe("shouldCompress", () => {
 	});
 
 	it("returns false when compression disabled", () => {
-		process.env.NODE_ENV = "development";
-		delete process.env.WS_COMPRESSION_ENABLED;
+		Bun.env.NODE_ENV = "development";
+		delete Bun.env.WS_COMPRESSION_ENABLED;
 
 		const large = "x".repeat(5000);
 		expect(shouldCompress(large)).toBe(false);

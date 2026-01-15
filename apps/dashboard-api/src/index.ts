@@ -77,8 +77,8 @@ const app = new OpenAPIHono<{ Variables: SessionVariables }>();
 
 // Parse allowed origins from environment variable or use defaults
 const DEFAULT_ORIGINS = ["http://localhost:3000", "http://localhost:3001"];
-const allowedOrigins = process.env.ALLOWED_ORIGINS
-	? process.env.ALLOWED_ORIGINS.split(",")
+const allowedOrigins = Bun.env.ALLOWED_ORIGINS
+	? Bun.env.ALLOWED_ORIGINS.split(",")
 			.map((origin) => origin.trim())
 			.filter((origin) => {
 				// Validate each origin is a valid URL
@@ -114,7 +114,7 @@ app.use("/*", honoLogger());
 app.use("/*", timing());
 
 // Pretty JSON in development
-if (process.env.NODE_ENV !== "production") {
+if (Bun.env.NODE_ENV !== "production") {
 	app.use("/*", prettyJSON());
 }
 
@@ -193,7 +193,7 @@ app.use("/api/system/*", async (c, next) => {
 		const authHeader = c.req.header("Authorization");
 		if (authHeader?.startsWith("Bearer ")) {
 			const token = authHeader.slice(7);
-			const internalSecret = process.env.WORKER_INTERNAL_SECRET ?? "dev-internal-secret";
+			const internalSecret = Bun.env.WORKER_INTERNAL_SECRET ?? "dev-internal-secret";
 			if (token === internalSecret) {
 				return next(); // Internal auth valid, skip user auth
 			}
@@ -300,7 +300,7 @@ export type AppType = typeof app;
 // ============================================
 
 if (import.meta.main) {
-	const port = parseInt(process.env.PORT ?? "3001", 10);
+	const port = parseInt(Bun.env.PORT ?? "3001", 10);
 
 	log.info({ port, allowedOrigins }, "Starting Dashboard API server");
 
@@ -320,11 +320,11 @@ if (import.meta.main) {
 		});
 
 	// Initialize CalendarService (non-blocking, falls back to hardcoded for BACKTEST)
-	const creamEnv = (process.env.CREAM_ENV as CreamEnvironment | undefined) ?? "BACKTEST";
+	const creamEnv = (Bun.env.CREAM_ENV as CreamEnvironment | undefined) ?? "BACKTEST";
 	initCalendarService({
 		mode: creamEnv,
-		alpacaKey: process.env.ALPACA_KEY,
-		alpacaSecret: process.env.ALPACA_SECRET,
+		alpacaKey: Bun.env.ALPACA_KEY,
+		alpacaSecret: Bun.env.ALPACA_SECRET,
 	})
 		.then(() => {
 			log.info({ mode: creamEnv }, "CalendarService initialized");

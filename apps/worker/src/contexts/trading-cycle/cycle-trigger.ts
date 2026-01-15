@@ -95,7 +95,7 @@ export function createCycleTriggerService(config: CycleTriggerConfig): CycleTrig
 
 export function createCycleTriggerServiceFromEnv(): CycleTriggerService {
 	return new CycleTriggerService({
-		dashboardApiUrl: process.env.DASHBOARD_API_URL ?? "http://localhost:3001",
-		workerInternalSecret: process.env.WORKER_INTERNAL_SECRET ?? "dev-internal-secret",
+		dashboardApiUrl: Bun.env.DASHBOARD_API_URL ?? "http://localhost:3001",
+		workerInternalSecret: Bun.env.WORKER_INTERNAL_SECRET ?? "dev-internal-secret",
 	});
 }

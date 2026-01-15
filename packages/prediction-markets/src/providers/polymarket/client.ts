@@ -251,11 +251,11 @@ export function createPolymarketClient(config: PolymarketConfig): PolymarketClie
 
 export function createPolymarketClientFromEnv(): PolymarketClient {
 	const clobEndpoint =
-		process.env.POLYMARKET_CLOB_ENDPOINT ??
+		Bun.env.POLYMARKET_CLOB_ENDPOINT ??
 		Bun.env.POLYMARKET_CLOB_ENDPOINT ??
 		"https://clob.polymarket.com";
 	const gammaEndpoint =
-		process.env.POLYMARKET_GAMMA_ENDPOINT ??
+		Bun.env.POLYMARKET_GAMMA_ENDPOINT ??
 		Bun.env.POLYMARKET_GAMMA_ENDPOINT ??
 		"https://gamma-api.polymarket.com";
 

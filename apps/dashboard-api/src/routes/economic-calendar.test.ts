@@ -95,7 +95,7 @@ const createMockService = () => ({
 });
 
 beforeAll(() => {
-	process.env.CREAM_ENV = "BACKTEST";
+	Bun.env.CREAM_ENV = "BACKTEST";
 });
 
 // Mock the economic calendar service

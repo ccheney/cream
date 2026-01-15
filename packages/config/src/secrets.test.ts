@@ -30,13 +30,13 @@ describe("EnvSecretsProvider", () => {
 	});
 
 	it("should get value from environment", async () => {
-		process.env.TEST_SECRET_KEY = "test-value";
+		Bun.env.TEST_SECRET_KEY = "test-value";
 		const provider = new EnvSecretsProvider();
 
 		const value = await provider.get("TEST_SECRET_KEY");
 		expect(value).toBe("test-value");
 
-		delete process.env.TEST_SECRET_KEY;
+		delete Bun.env.TEST_SECRET_KEY;
 	});
 
 	it("should return null for missing key", async () => {
@@ -46,36 +46,36 @@ describe("EnvSecretsProvider", () => {
 	});
 
 	it("should check if key exists", async () => {
-		process.env.TEST_HAS_KEY = "value";
+		Bun.env.TEST_HAS_KEY = "value";
 		const provider = new EnvSecretsProvider();
 
 		expect(await provider.has("TEST_HAS_KEY")).toBe(true);
 		expect(await provider.has("NONEXISTENT_KEY_12345")).toBe(false);
 
-		delete process.env.TEST_HAS_KEY;
+		delete Bun.env.TEST_HAS_KEY;
 	});
 
 	it("should list keys with prefix", async () => {
-		process.env.CREAM_TEST_A = "a";
-		process.env.CREAM_TEST_B = "b";
+		Bun.env.CREAM_TEST_A = "a";
+		Bun.env.CREAM_TEST_B = "b";
 		const provider = new EnvSecretsProvider("CREAM_TEST_");
 
 		const keys = await provider.list();
 		expect(keys).toContain("A");
 		expect(keys).toContain("B");
 
-		delete process.env.CREAM_TEST_A;
-		delete process.env.CREAM_TEST_B;
+		delete Bun.env.CREAM_TEST_A;
+		delete Bun.env.CREAM_TEST_B;
 	});
 
 	it("should use prefix for get", async () => {
-		process.env.PREFIX_SECRET = "prefixed-value";
+		Bun.env.PREFIX_SECRET = "prefixed-value";
 		const provider = new EnvSecretsProvider("PREFIX_");
 
 		const value = await provider.get("SECRET");
 		expect(value).toBe("prefixed-value");
 
-		delete process.env.PREFIX_SECRET;
+		delete Bun.env.PREFIX_SECRET;
 	});
 
 	it("should always pass health check", async () => {
@@ -482,13 +482,13 @@ describe("SecretsManager", () => {
 describe("Factory Functions", () => {
 	describe("createEnvSecretsManager", () => {
 		it("should create manager with env provider", async () => {
-			process.env.FACTORY_TEST_KEY = "factory-value";
+			Bun.env.FACTORY_TEST_KEY = "factory-value";
 			const manager = createEnvSecretsManager({ logger: silentLogger });
 
 			const value = await manager.get("FACTORY_TEST_KEY");
 			expect(value).toBe("factory-value");
 
-			delete process.env.FACTORY_TEST_KEY;
+			delete Bun.env.FACTORY_TEST_KEY;
 		});
 	});
 

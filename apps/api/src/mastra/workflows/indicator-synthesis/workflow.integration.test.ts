@@ -8,7 +8,7 @@
  */
 
 // Set required environment variables before imports
-process.env.CREAM_ENV = "BACKTEST";
+Bun.env.CREAM_ENV = "BACKTEST";
 
 import { afterEach, beforeEach, describe, expect, mock, test } from "bun:test";
 import type { IndicatorHypothesis } from "@cream/indicators";

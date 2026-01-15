@@ -84,7 +84,7 @@ function createValidPlan(): DecisionPlan {
  * Check if running in CI environment.
  */
 function isCI(): boolean {
-	return process.env.CI === "true" || process.env.GITHUB_ACTIONS === "true";
+	return Bun.env.CI === "true" || Bun.env.GITHUB_ACTIONS === "true";
 }
 
 /**

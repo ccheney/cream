@@ -1,25 +1,25 @@
 import { afterAll, beforeAll, describe, expect, mock, test } from "bun:test";
 import marketRoutes from "./market";
 
-const originalAlpacaKey = process.env.ALPACA_KEY;
-const originalAlpacaSecret = process.env.ALPACA_SECRET;
+const originalAlpacaKey = Bun.env.ALPACA_KEY;
+const originalAlpacaSecret = Bun.env.ALPACA_SECRET;
 
 beforeAll(() => {
-	process.env.ALPACA_KEY = "test";
-	process.env.ALPACA_SECRET = "test";
+	Bun.env.ALPACA_KEY = "test";
+	Bun.env.ALPACA_SECRET = "test";
 });
 
 afterAll(() => {
 	// Restore original env vars to avoid polluting other tests
 	if (originalAlpacaKey !== undefined) {
-		process.env.ALPACA_KEY = originalAlpacaKey;
+		Bun.env.ALPACA_KEY = originalAlpacaKey;
 	} else {
-		delete process.env.ALPACA_KEY;
+		delete Bun.env.ALPACA_KEY;
 	}
 	if (originalAlpacaSecret !== undefined) {
-		process.env.ALPACA_SECRET = originalAlpacaSecret;
+		Bun.env.ALPACA_SECRET = originalAlpacaSecret;
 	} else {
-		delete process.env.ALPACA_SECRET;
+		delete Bun.env.ALPACA_SECRET;
 	}
 });
 

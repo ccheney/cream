@@ -102,7 +102,7 @@ const orientStep = createStep({
 		// Determine execution mode based on environment
 		// BACKTEST always uses STUB (no LLM calls for speed)
 		// PAPER/LIVE use LLM (real agent reasoning)
-		const env = process.env.CREAM_ENV ?? "BACKTEST";
+		const env = Bun.env.CREAM_ENV ?? "BACKTEST";
 		const forceStub = inputData.forceStub ?? false;
 		const mode = env === "BACKTEST" || forceStub ? "STUB" : "LLM";
 		await setState({ ...state, mode });

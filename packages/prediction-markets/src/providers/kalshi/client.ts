@@ -447,8 +447,8 @@ export function createKalshiClient(config: KalshiConfig): KalshiClient {
  * Create Kalshi client from environment variables
  */
 export function createKalshiClientFromEnv(): KalshiClient {
-	const apiKeyId = process.env.KALSHI_API_KEY_ID ?? Bun.env.KALSHI_API_KEY_ID;
-	const privateKeyPath = process.env.KALSHI_PRIVATE_KEY_PATH ?? Bun.env.KALSHI_PRIVATE_KEY_PATH;
+	const apiKeyId = Bun.env.KALSHI_API_KEY_ID;
+	const privateKeyPath = Bun.env.KALSHI_PRIVATE_KEY_PATH;
 
 	if (!apiKeyId) {
 		throw new AuthenticationError("KALSHI", "KALSHI_API_KEY_ID environment variable is required");

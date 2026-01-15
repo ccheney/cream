@@ -6,12 +6,12 @@
  */
 
 // Set environment BEFORE imports so cached env is correct
-process.env.CREAM_ENV = "BACKTEST";
+Bun.env.CREAM_ENV = "BACKTEST";
 // Clear Alpaca credentials to trigger fixture/mock data path
-const savedAlpacaKey = process.env.ALPACA_KEY;
-const savedAlpacaSecret = process.env.ALPACA_SECRET;
-delete process.env.ALPACA_KEY;
-delete process.env.ALPACA_SECRET;
+const savedAlpacaKey = Bun.env.ALPACA_KEY;
+const savedAlpacaSecret = Bun.env.ALPACA_SECRET;
+delete Bun.env.ALPACA_KEY;
+delete Bun.env.ALPACA_SECRET;
 
 import { afterAll, describe, expect, test } from "bun:test";
 import {
@@ -26,10 +26,10 @@ import {
 // Restore Alpaca credentials after tests (for other tests in the same process)
 afterAll(() => {
 	if (savedAlpacaKey !== undefined) {
-		process.env.ALPACA_KEY = savedAlpacaKey;
+		Bun.env.ALPACA_KEY = savedAlpacaKey;
 	}
 	if (savedAlpacaSecret !== undefined) {
-		process.env.ALPACA_SECRET = savedAlpacaSecret;
+		Bun.env.ALPACA_SECRET = savedAlpacaSecret;
 	}
 });
 
