@@ -9,6 +9,7 @@
 
 import type { BacktestsRepository } from "@cream/storage";
 import log from "../logger.js";
+import { getResearchPath } from "./research-path.js";
 
 // ============================================
 // Types
@@ -140,14 +141,6 @@ export interface ExecuteOptions {
 // ============================================
 
 const DEFAULT_TIMEOUT_MS = 10 * 60 * 1000; // 10 minutes
-
-/**
- * Get the path to the research package.
- */
-function getResearchPath(): string {
-	// Navigate from apps/dashboard-api/src/services to packages/research
-	return `${import.meta.dir}/../../../../packages/research`;
-}
 
 // ============================================
 // Event Handlers

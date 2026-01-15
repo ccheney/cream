@@ -10,6 +10,7 @@
 import { beforeEach, describe, expect, it, mock } from "bun:test";
 import type { Backtest } from "@cream/storage";
 import { prepareSignals } from "./backtest-data";
+import { getResearchPath } from "./research-path.js";
 
 // ============================================
 // Environment Check
@@ -30,7 +31,7 @@ function checkPythonDepsAvailable(): boolean {
 
 		// Check if pandas and pyarrow are importable
 		const proc = Bun.spawnSync(["uv", "run", "python", "-c", "import pandas; import pyarrow"], {
-			cwd: `${import.meta.dir}/../../../../packages/research`,
+			cwd: getResearchPath(),
 		});
 		return proc.exitCode === 0;
 	} catch {

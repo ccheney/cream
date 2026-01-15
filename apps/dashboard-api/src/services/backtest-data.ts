@@ -26,6 +26,7 @@ import {
 } from "@cream/marketdata";
 import type { Backtest } from "@cream/storage";
 import { z } from "zod/v4";
+import { getResearchPath } from "./research-path.js";
 
 // ============================================
 // Types
@@ -133,13 +134,6 @@ const TIMEFRAME_MAP: Record<BacktestTimeframe, AlpacaTimeframe> = {
 	"1Hour": "1Hour",
 	"1Day": "1Day",
 };
-
-/**
- * Get the path to the research package (for uv run).
- */
-function getResearchPath(): string {
-	return `${import.meta.dir}/../../../../packages/research`;
-}
 
 // ============================================
 // Parquet Writing
