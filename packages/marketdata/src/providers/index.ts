@@ -34,6 +34,22 @@ export {
 	type OptionContractParams,
 	type TradingEnvironment,
 } from "./alpaca";
+// Alpaca Screener (market movers, most actives)
+export {
+	AlpacaScreenerClient,
+	type AlpacaScreenerConfig,
+	createAlpacaScreenerFromEnv,
+	isAlpacaScreenerConfigured,
+	type MostActiveStock,
+	MostActiveStockSchema,
+	type MostActivesBy,
+	type MostActivesResponse,
+	MostActivesResponseSchema,
+	type Mover,
+	MoverSchema,
+	type MoversResponse,
+	MoversResponseSchema,
+} from "./alpaca-screener";
 // Alpaca WebSocket (real-time streaming)
 export {
 	AlpacaConnectionState,
