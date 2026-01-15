@@ -1,4 +1,4 @@
-# @cream/schema
+# @cream/proto
 
 Protobuf schema definitions for the Cream trading system.
 

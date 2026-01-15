@@ -27,7 +27,7 @@ import {
 // ============================================
 
 /**
- * Load a JSON example from packages/schema/examples/
+ * Load a JSON example from packages/proto/examples/
  */
 async function loadProtoExample<T = unknown>(filename: string): Promise<T> {
 	const examplesDir = `${import.meta.dir}/../../schema/examples`;

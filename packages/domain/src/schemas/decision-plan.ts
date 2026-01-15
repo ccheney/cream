@@ -2,8 +2,8 @@
  * DecisionPlan Zod Schema Mirrors
  *
  * TypeScript Zod schemas that mirror the Protobuf definitions in:
- * packages/schema/cream/v1/decision.proto
- * packages/schema/cream/v1/common.proto
+ * packages/proto/cream/v1/decision.proto
+ * packages/proto/cream/v1/common.proto
  *
  * These schemas are used for:
  * - Validating LLM-generated DecisionPlans

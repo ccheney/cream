@@ -10,7 +10,7 @@
  * 2. Payload validation works the same on both sides
  * 3. Breaking changes are detected early
  *
- * @see packages/schema/cream/v1/execution.proto
+ * @see packages/proto/cream/v1/execution.proto
  * @see apps/execution-engine/src/server/http.rs
  */
 

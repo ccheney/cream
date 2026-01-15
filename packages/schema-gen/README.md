@@ -4,13 +4,13 @@ Generated Protobuf stubs for the Cream trading system.
 
 ## Overview
 
-Contains compiled Protobuf code generated from `packages/schema`:
+Contains compiled Protobuf code generated from `packages/proto`:
 
 - **TypeScript/JavaScript** - `ts/` → `dist/`
 - **Python** - `python/`
 - **Rust** - `rust/`
 
-## Proto Files (Source: packages/schema)
+## Proto Files (Source: packages/proto)
 
 | File | Purpose |
 |------|---------|
@@ -46,7 +46,7 @@ from cream_schema_gen.execution_pb2_grpc import ExecutionServiceStub
 ## Regenerating
 
 ```bash
-# From packages/schema
+# From packages/proto
 bun run generate
 
 # Uses Buf CLI with buf.gen.yaml configuration

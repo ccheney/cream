@@ -4,7 +4,7 @@
  * Real-time market data structures for the trading system.
  * Mirrors cream/v1/market_snapshot.proto
  *
- * @see packages/schema/cream/v1/market_snapshot.proto
+ * @see packages/proto/cream/v1/market_snapshot.proto
  */
 
 import { z } from "zod";

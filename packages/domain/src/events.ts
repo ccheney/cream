@@ -2,7 +2,7 @@
  * Event Payload Schemas
  *
  * Typed payload schemas for external events, mirroring the Protobuf definitions
- * in packages/schema/cream/v1/events.proto.
+ * in packages/proto/cream/v1/events.proto.
  *
  * These schemas provide type-safe payloads for each event type.
  */

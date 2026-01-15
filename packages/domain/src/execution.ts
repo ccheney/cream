@@ -4,7 +4,7 @@
  * Messages for Rust execution engine communication.
  * Mirrors cream/v1/execution.proto
  *
- * @see packages/schema/cream/v1/execution.proto
+ * @see packages/proto/cream/v1/execution.proto
  */
 
 import { z } from "zod";

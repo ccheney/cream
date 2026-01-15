@@ -10,7 +10,7 @@
   },
   "scripts": {
     "lint": "buf lint",
-    "breaking": "buf breaking --against '../../.git#branch=master,subdir=packages/schema'",
+    "breaking": "buf breaking --against '../../.git#branch=master,subdir=packages/proto'",
     "generate": "buf generate",
     "clean": "rm -rf ../schema-gen/ts ../schema-gen/python ../schema-gen/rust",
     "build": "bun run lint && bun run generate"

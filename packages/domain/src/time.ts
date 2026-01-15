@@ -21,7 +21,7 @@
  * 2. Date parsing is locale-dependent and error-prone
  * 3. This module provides explicit validation and formatting
  *
- * @see packages/schema/cream/v1/common.proto (uses google.protobuf.Timestamp)
+ * @see packages/proto/cream/v1/common.proto (uses google.protobuf.Timestamp)
  * @see https://datatracker.ietf.org/doc/html/rfc3339
  */
 
