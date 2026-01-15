@@ -21,7 +21,13 @@ import {
 } from "../../indicator-synthesis/index.js";
 import { getEmbeddingClient, getHelixOrchestrator } from "./helix.js";
 import { log } from "./logger.js";
-import type { IndicatorTriggerResult, MarketSnapshot, MemoryContext, RegimeData } from "./types.js";
+import type {
+	IndicatorTriggerResult,
+	MarketSnapshot,
+	MemoryContext,
+	MorningNewspaperContext,
+	RegimeData,
+} from "./types.js";
 
 // ============================================
 // Memory Context Loading
@@ -35,11 +41,13 @@ import type { IndicatorTriggerResult, MarketSnapshot, MemoryContext, RegimeData 
  *
  * @param snapshot - Market snapshot with instrument data
  * @param ctx - Execution context for environment detection
- * @returns Memory context with relevant cases and initial regime labels
+ * @param morningNewspaper - Optional morning newspaper from overnight MacroWatch
+ * @returns Memory context with relevant cases, regime labels, and newspaper
  */
 export async function loadMemoryContext(
 	snapshot: MarketSnapshot,
-	ctx?: ExecutionContext
+	ctx?: ExecutionContext,
+	morningNewspaper?: MorningNewspaperContext
 ): Promise<MemoryContext> {
 	const regimeLabels: Record<string, RegimeData> = {};
 	for (const symbol of snapshot.instruments) {
@@ -130,9 +138,22 @@ export async function loadMemoryContext(
 		}
 	}
 
+	// Log newspaper injection if present
+	if (morningNewspaper) {
+		log.info(
+			{
+				date: morningNewspaper.date,
+				entryCount: morningNewspaper.entryCount,
+				compiledAt: morningNewspaper.compiledAt,
+			},
+			"Morning newspaper injected into memory context"
+		);
+	}
+
 	return {
 		relevantCases,
 		regimeLabels,
+		morningNewspaper,
 	};
 }
 

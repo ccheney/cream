@@ -136,6 +136,29 @@ export interface MarketSnapshot {
 }
 
 // ============================================
+// Morning Newspaper (Overnight Context)
+// ============================================
+
+/**
+ * Morning newspaper content from overnight MacroWatch scan.
+ * Injected into Orient phase on first RTH cycle after market open.
+ *
+ * @see docs/plans/42-overnight-macro-watch.md
+ */
+export interface MorningNewspaperContext {
+	date: string;
+	compiledAt: string;
+	summary: string;
+	sections: {
+		macro: string;
+		universe: string;
+		predictionMarkets: string;
+		economicCalendar: string;
+	};
+	entryCount: number;
+}
+
+// ============================================
 // Regime and Memory Types
 // ============================================
 
@@ -148,6 +171,8 @@ export interface RegimeData {
 export interface MemoryContext {
 	relevantCases: unknown[];
 	regimeLabels: Record<string, RegimeData>;
+	/** Morning newspaper context if available (first RTH cycle) */
+	morningNewspaper?: MorningNewspaperContext;
 }
 
 // ============================================
