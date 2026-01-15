@@ -6,8 +6,8 @@
  * @see docs/plans/ui/08-realtime.md lines 143-167, 190-200
  */
 
-import { z } from "zod/v4";
 import type { Channel, ServerMessage } from "@cream/domain/websocket";
+import { z } from "zod/v4";
 
 // ============================================
 // Event Sources

@@ -4,8 +4,8 @@
  * Core types for WebSocket connections, metadata, and authentication.
  */
 
-import type { ServerWebSocket } from "bun";
 import type { Channel } from "@cream/domain/websocket";
+import type { ServerWebSocket } from "bun";
 
 /**
  * Connection metadata attached to each WebSocket.

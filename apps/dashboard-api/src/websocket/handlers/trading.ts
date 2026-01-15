@@ -4,10 +4,7 @@
  * Handlers for trading cycle events, agent status, and backtest subscriptions.
  */
 
-import type {
-	SubscribeBacktestMessage,
-	UnsubscribeBacktestMessage,
-} from "@cream/domain/websocket";
+import type { SubscribeBacktestMessage, UnsubscribeBacktestMessage } from "@cream/domain/websocket";
 import { subscribeToBacktest, unsubscribeFromBacktest } from "../backtest-channel.js";
 import { sendError, sendMessage } from "../channels.js";
 import type { WebSocketWithMetadata } from "../types.js";
