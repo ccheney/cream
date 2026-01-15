@@ -14,6 +14,7 @@
     "format": "biome format --write src/"
   },
   "dependencies": {
+    "@cream/agents": "workspace:*",
     "@cream/api": "workspace:*",
     "@cream/config": "workspace:*",
     "@cream/domain": "workspace:*",
@@ -21,15 +22,14 @@
     "@cream/helix": "workspace:*",
     "@cream/indicators": "workspace:*",
     "@cream/logger": "workspace:*",
-    "@cream/agents": "workspace:*",
     "@cream/storage": "workspace:*",
     "@mastra/core": "1.0.0-beta.21",
     "croner": "9.1.0",
-    "zod": "^4.3.5"
+    "zod": "4.3.5"
   },
   "devDependencies": {
     "@cream/tsconfig": "workspace:*",
     "@types/bun": "1.3.6",
-    "@typescript/native-preview": "7.0.0-dev.20260109.1"
+    "@typescript/native-preview": "7.0.0-dev.20260115.1"
   }
 }

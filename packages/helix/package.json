@@ -19,12 +19,12 @@
     "@cream/domain": "workspace:*",
     "@cream/config": "workspace:*",
     "@cream/helix-schema": "workspace:*",
-    "helix-ts": "^1.0.8"
+    "helix-ts": "1.0.8"
   },
   "devDependencies": {
     "@cream/tsconfig": "workspace:*",
     "@types/bun": "1.3.6",
-    "testcontainers": "^10.13.0",
-    "@typescript/native-preview": "7.0.0-dev.20260109.1"
+    "testcontainers": "11.11.0",
+    "@typescript/native-preview": "7.0.0-dev.20260115.1"
   }
 }

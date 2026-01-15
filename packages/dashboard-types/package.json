@@ -26,10 +26,10 @@
   },
   "dependencies": {
     "@cream/indicators": "workspace:*",
-    "zod": "^4.3.5"
+    "zod": "4.3.5"
   },
   "devDependencies": {
     "@cream/tsconfig": "workspace:*",
-    "@typescript/native-preview": "7.0.0-dev.20260109.1"
+    "@typescript/native-preview": "7.0.0-dev.20260115.1"
   }
 }
