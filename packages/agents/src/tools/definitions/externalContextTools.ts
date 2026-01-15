@@ -99,7 +99,6 @@ Use this tool when you need:
 - Event type classification (earnings, M&A, regulatory, etc.)
 - Key insights extraction for decision support
 
-This is more sophisticated than news_search which only provides basic keyword sentiment.
 Returns full extraction results with:
 - sentiment: bullish/bearish/neutral with confidence score
 - entities: companies, people, products mentioned with ticker links
