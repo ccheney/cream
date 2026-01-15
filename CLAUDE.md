@@ -105,6 +105,9 @@ buf generate # Protobuf → TS + Rust stubs
 
 | Tool | Purpose |
 |------|---------|
+| `gh` | GitHub CLI |
+| `hcloud` | Hetzner Cloud CLI |
+| `agent-browser` | browser automation CLI |
 | `jq` | JSON query & transform |
 | `dasel` | Multi-format config (JSON/YAML/TOML/XML) |
 | `qsv` | Fast CSV data-wrangling |
