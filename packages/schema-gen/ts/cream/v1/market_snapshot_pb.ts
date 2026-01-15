@@ -7,19 +7,23 @@
 // @generated from file cream/v1/market_snapshot.proto (package cream.v1, syntax proto3)
 /* eslint-disable */
 
+import type { Message } from "@bufbuild/protobuf";
 import type { GenFile, GenMessage, GenService } from "@bufbuild/protobuf/codegenv1";
 import { fileDesc, messageDesc, serviceDesc } from "@bufbuild/protobuf/codegenv1";
-import type { Environment, MarketStatus, OptionContract, Regime } from "./common_pb.js";
-import { file_cream_v1_common } from "./common_pb.js";
 import type { Timestamp } from "@bufbuild/protobuf/wkt";
 import { file_google_protobuf_timestamp } from "@bufbuild/protobuf/wkt";
-import type { Message } from "@bufbuild/protobuf";
+import type { Environment, MarketStatus, OptionContract, Regime } from "./common_pb.js";
+import { file_cream_v1_common } from "./common_pb.js";
 
 /**
  * Describes the file cream/v1/market_snapshot.proto.
  */
-export const file_cream_v1_market_snapshot: GenFile = /*@__PURE__*/
-  fileDesc("Ch5jcmVhbS92MS9tYXJrZXRfc25hcHNob3QucHJvdG8SCGNyZWFtLnYxIrUBCgVRdW90ZRIOCgZzeW1ib2wYASABKAkSCwoDYmlkGAIgASgBEgsKA2FzaxgDIAEoARIQCghiaWRfc2l6ZRgEIAEoBRIQCghhc2tfc2l6ZRgFIAEoBRIMCgRsYXN0GAYgASgBEhEKCWxhc3Rfc2l6ZRgHIAEoBRIOCgZ2b2x1bWUYCCABKAMSLQoJdGltZXN0YW1wGAkgASgLMhouZ29vZ2xlLnByb3RvYnVmLlRpbWVzdGFtcCLtAQoDQmFyEg4KBnN5bWJvbBgBIAEoCRItCgl0aW1lc3RhbXAYAiABKAsyGi5nb29nbGUucHJvdG9idWYuVGltZXN0YW1wEhkKEXRpbWVmcmFtZV9taW51dGVzGAMgASgFEgwKBG9wZW4YBCABKAESDAoEaGlnaBgFIAEoARILCgNsb3cYBiABKAESDQoFY2xvc2UYByABKAESDgoGdm9sdW1lGAggASgDEhEKBHZ3YXAYCSABKAFIAIgBARIYCgt0cmFkZV9jb3VudBgKIAEoBUgBiAEBQgcKBV92d2FwQg4KDF90cmFkZV9jb3VudCL8AQoOU3ltYm9sU25hcHNob3QSDgoGc3ltYm9sGAEgASgJEh4KBXF1b3RlGAIgASgLMg8uY3JlYW0udjEuUXVvdGUSGwoEYmFycxgDIAMoCzINLmNyZWFtLnYxLkJhchItCg1tYXJrZXRfc3RhdHVzGAQgASgOMhYuY3JlYW0udjEuTWFya2V0U3RhdHVzEhAKCGRheV9oaWdoGAUgASgBEg8KB2RheV9sb3cYBiABKAESEgoKcHJldl9jbG9zZRgHIAEoARIMCgRvcGVuGAggASgBEikKBWFzX29mGAkgASgLMhouZ29vZ2xlLnByb3RvYnVmLlRpbWVzdGFtcCLjAQoOTWFya2V0U25hcHNob3QSKgoLZW52aXJvbm1lbnQYASABKA4yFS5jcmVhbS52MS5FbnZpcm9ubWVudBIpCgVhc19vZhgCIAEoCzIaLmdvb2dsZS5wcm90b2J1Zi5UaW1lc3RhbXASLQoNbWFya2V0X3N0YXR1cxgDIAEoDjIWLmNyZWFtLnYxLk1hcmtldFN0YXR1cxIgCgZyZWdpbWUYBCABKA4yEC5jcmVhbS52MS5SZWdpbWUSKQoHc3ltYm9scxgFIAMoCzIYLmNyZWFtLnYxLlN5bWJvbFNuYXBzaG90IrgCCgtPcHRpb25RdW90ZRIqCghjb250cmFjdBgBIAEoCzIYLmNyZWFtLnYxLk9wdGlvbkNvbnRyYWN0Eh4KBXF1b3RlGAIgASgLMg8uY3JlYW0udjEuUXVvdGUSHwoSaW1wbGllZF92b2xhdGlsaXR5GAMgASgBSACIAQESEgoFZGVsdGEYBCABKAFIAYgBARISCgVnYW1tYRgFIAEoAUgCiAEBEhIKBXRoZXRhGAYgASgBSAOIAQESEQoEdmVnYRgHIAEoAUgEiAEBEhAKA3JobxgIIAEoAUgFiAEBEhUKDW9wZW5faW50ZXJlc3QYCSABKAVCFQoTX2ltcGxpZWRfdm9sYXRpbGl0eUIICgZfZGVsdGFCCAoGX2dhbW1hQggKBl90aGV0YUIHCgVfdmVnYUIGCgRfcmhvIo4BCgtPcHRpb25DaGFpbhISCgp1bmRlcmx5aW5nGAEgASgJEhgKEHVuZGVybHlpbmdfcHJpY2UYAiABKAESJgoHb3B0aW9ucxgDIAMoCzIVLmNyZWFtLnYxLk9wdGlvblF1b3RlEikKBWFzX29mGAQgASgLMhouZ29vZ2xlLnByb3RvYnVmLlRpbWVzdGFtcCJeChpTdWJzY3JpYmVNYXJrZXREYXRhUmVxdWVzdBIPCgdzeW1ib2xzGAEgAygJEhcKD2luY2x1ZGVfb3B0aW9ucxgCIAEoCBIWCg5iYXJfdGltZWZyYW1lcxgDIAMoBSLEAQobU3Vic2NyaWJlTWFya2V0RGF0YVJlc3BvbnNlEiAKBXF1b3RlGAEgASgLMg8uY3JlYW0udjEuUXVvdGVIABIcCgNiYXIYAiABKAsyDS5jcmVhbS52MS5CYXJIABItCgxvcHRpb25fcXVvdGUYAyABKAsyFS5jcmVhbS52MS5PcHRpb25RdW90ZUgAEiwKCHNuYXBzaG90GAQgASgLMhguY3JlYW0udjEuU3ltYm9sU25hcHNob3RIAEIICgZ1cGRhdGUiUwoSR2V0U25hcHNob3RSZXF1ZXN0Eg8KB3N5bWJvbHMYASADKAkSFAoMaW5jbHVkZV9iYXJzGAIgASgIEhYKDmJhcl90aW1lZnJhbWVzGAMgAygFIkEKE0dldFNuYXBzaG90UmVzcG9uc2USKgoIc25hcHNob3QYASABKAsyGC5jcmVhbS52MS5NYXJrZXRTbmFwc2hvdCKQAQoVR2V0T3B0aW9uQ2hhaW5SZXF1ZXN0EhIKCnVuZGVybHlpbmcYASABKAkSEwoLZXhwaXJhdGlvbnMYAiADKAkSFwoKbWluX3N0cmlrZRgDIAEoAUgAiAEBEhcKCm1heF9zdHJpa2UYBCABKAFIAYgBAUINCgtfbWluX3N0cmlrZUINCgtfbWF4X3N0cmlrZSI+ChZHZXRPcHRpb25DaGFpblJlc3BvbnNlEiQKBWNoYWluGAEgASgLMhUuY3JlYW0udjEuT3B0aW9uQ2hhaW4ymgIKEU1hcmtldERhdGFTZXJ2aWNlEmQKE1N1YnNjcmliZU1hcmtldERhdGESJC5jcmVhbS52MS5TdWJzY3JpYmVNYXJrZXREYXRhUmVxdWVzdBolLmNyZWFtLnYxLlN1YnNjcmliZU1hcmtldERhdGFSZXNwb25zZTABEkoKC0dldFNuYXBzaG90EhwuY3JlYW0udjEuR2V0U25hcHNob3RSZXF1ZXN0Gh0uY3JlYW0udjEuR2V0U25hcHNob3RSZXNwb25zZRJTCg5HZXRPcHRpb25DaGFpbhIfLmNyZWFtLnYxLkdldE9wdGlvbkNoYWluUmVxdWVzdBogLmNyZWFtLnYxLkdldE9wdGlvbkNoYWluUmVzcG9uc2VCnAEKDGNvbS5jcmVhbS52MUITTWFya2V0U25hcHNob3RQcm90b1ABWjZnaXRodWIuY29tL2NyZWFtLXRyYWRpbmcvY3JlYW0vZ2VuL2dvL2NyZWFtL3YxO2NyZWFtdjGiAgNDWFiqAghDcmVhbS5WMcoCCENyZWFtXFYx4gIUQ3JlYW1cVjFcR1BCTWV0YWRhdGHqAglDcmVhbTo6VjFiBnByb3RvMw", [file_cream_v1_common, file_google_protobuf_timestamp]);
+export const file_cream_v1_market_snapshot: GenFile =
+	/*@__PURE__*/
+	fileDesc(
+		"Ch5jcmVhbS92MS9tYXJrZXRfc25hcHNob3QucHJvdG8SCGNyZWFtLnYxIrUBCgVRdW90ZRIOCgZzeW1ib2wYASABKAkSCwoDYmlkGAIgASgBEgsKA2FzaxgDIAEoARIQCghiaWRfc2l6ZRgEIAEoBRIQCghhc2tfc2l6ZRgFIAEoBRIMCgRsYXN0GAYgASgBEhEKCWxhc3Rfc2l6ZRgHIAEoBRIOCgZ2b2x1bWUYCCABKAMSLQoJdGltZXN0YW1wGAkgASgLMhouZ29vZ2xlLnByb3RvYnVmLlRpbWVzdGFtcCLtAQoDQmFyEg4KBnN5bWJvbBgBIAEoCRItCgl0aW1lc3RhbXAYAiABKAsyGi5nb29nbGUucHJvdG9idWYuVGltZXN0YW1wEhkKEXRpbWVmcmFtZV9taW51dGVzGAMgASgFEgwKBG9wZW4YBCABKAESDAoEaGlnaBgFIAEoARILCgNsb3cYBiABKAESDQoFY2xvc2UYByABKAESDgoGdm9sdW1lGAggASgDEhEKBHZ3YXAYCSABKAFIAIgBARIYCgt0cmFkZV9jb3VudBgKIAEoBUgBiAEBQgcKBV92d2FwQg4KDF90cmFkZV9jb3VudCL8AQoOU3ltYm9sU25hcHNob3QSDgoGc3ltYm9sGAEgASgJEh4KBXF1b3RlGAIgASgLMg8uY3JlYW0udjEuUXVvdGUSGwoEYmFycxgDIAMoCzINLmNyZWFtLnYxLkJhchItCg1tYXJrZXRfc3RhdHVzGAQgASgOMhYuY3JlYW0udjEuTWFya2V0U3RhdHVzEhAKCGRheV9oaWdoGAUgASgBEg8KB2RheV9sb3cYBiABKAESEgoKcHJldl9jbG9zZRgHIAEoARIMCgRvcGVuGAggASgBEikKBWFzX29mGAkgASgLMhouZ29vZ2xlLnByb3RvYnVmLlRpbWVzdGFtcCLjAQoOTWFya2V0U25hcHNob3QSKgoLZW52aXJvbm1lbnQYASABKA4yFS5jcmVhbS52MS5FbnZpcm9ubWVudBIpCgVhc19vZhgCIAEoCzIaLmdvb2dsZS5wcm90b2J1Zi5UaW1lc3RhbXASLQoNbWFya2V0X3N0YXR1cxgDIAEoDjIWLmNyZWFtLnYxLk1hcmtldFN0YXR1cxIgCgZyZWdpbWUYBCABKA4yEC5jcmVhbS52MS5SZWdpbWUSKQoHc3ltYm9scxgFIAMoCzIYLmNyZWFtLnYxLlN5bWJvbFNuYXBzaG90IrgCCgtPcHRpb25RdW90ZRIqCghjb250cmFjdBgBIAEoCzIYLmNyZWFtLnYxLk9wdGlvbkNvbnRyYWN0Eh4KBXF1b3RlGAIgASgLMg8uY3JlYW0udjEuUXVvdGUSHwoSaW1wbGllZF92b2xhdGlsaXR5GAMgASgBSACIAQESEgoFZGVsdGEYBCABKAFIAYgBARISCgVnYW1tYRgFIAEoAUgCiAEBEhIKBXRoZXRhGAYgASgBSAOIAQESEQoEdmVnYRgHIAEoAUgEiAEBEhAKA3JobxgIIAEoAUgFiAEBEhUKDW9wZW5faW50ZXJlc3QYCSABKAVCFQoTX2ltcGxpZWRfdm9sYXRpbGl0eUIICgZfZGVsdGFCCAoGX2dhbW1hQggKBl90aGV0YUIHCgVfdmVnYUIGCgRfcmhvIo4BCgtPcHRpb25DaGFpbhISCgp1bmRlcmx5aW5nGAEgASgJEhgKEHVuZGVybHlpbmdfcHJpY2UYAiABKAESJgoHb3B0aW9ucxgDIAMoCzIVLmNyZWFtLnYxLk9wdGlvblF1b3RlEikKBWFzX29mGAQgASgLMhouZ29vZ2xlLnByb3RvYnVmLlRpbWVzdGFtcCJeChpTdWJzY3JpYmVNYXJrZXREYXRhUmVxdWVzdBIPCgdzeW1ib2xzGAEgAygJEhcKD2luY2x1ZGVfb3B0aW9ucxgCIAEoCBIWCg5iYXJfdGltZWZyYW1lcxgDIAMoBSLEAQobU3Vic2NyaWJlTWFya2V0RGF0YVJlc3BvbnNlEiAKBXF1b3RlGAEgASgLMg8uY3JlYW0udjEuUXVvdGVIABIcCgNiYXIYAiABKAsyDS5jcmVhbS52MS5CYXJIABItCgxvcHRpb25fcXVvdGUYAyABKAsyFS5jcmVhbS52MS5PcHRpb25RdW90ZUgAEiwKCHNuYXBzaG90GAQgASgLMhguY3JlYW0udjEuU3ltYm9sU25hcHNob3RIAEIICgZ1cGRhdGUiUwoSR2V0U25hcHNob3RSZXF1ZXN0Eg8KB3N5bWJvbHMYASADKAkSFAoMaW5jbHVkZV9iYXJzGAIgASgIEhYKDmJhcl90aW1lZnJhbWVzGAMgAygFIkEKE0dldFNuYXBzaG90UmVzcG9uc2USKgoIc25hcHNob3QYASABKAsyGC5jcmVhbS52MS5NYXJrZXRTbmFwc2hvdCKQAQoVR2V0T3B0aW9uQ2hhaW5SZXF1ZXN0EhIKCnVuZGVybHlpbmcYASABKAkSEwoLZXhwaXJhdGlvbnMYAiADKAkSFwoKbWluX3N0cmlrZRgDIAEoAUgAiAEBEhcKCm1heF9zdHJpa2UYBCABKAFIAYgBAUINCgtfbWluX3N0cmlrZUINCgtfbWF4X3N0cmlrZSI+ChZHZXRPcHRpb25DaGFpblJlc3BvbnNlEiQKBWNoYWluGAEgASgLMhUuY3JlYW0udjEuT3B0aW9uQ2hhaW4ymgIKEU1hcmtldERhdGFTZXJ2aWNlEmQKE1N1YnNjcmliZU1hcmtldERhdGESJC5jcmVhbS52MS5TdWJzY3JpYmVNYXJrZXREYXRhUmVxdWVzdBolLmNyZWFtLnYxLlN1YnNjcmliZU1hcmtldERhdGFSZXNwb25zZTABEkoKC0dldFNuYXBzaG90EhwuY3JlYW0udjEuR2V0U25hcHNob3RSZXF1ZXN0Gh0uY3JlYW0udjEuR2V0U25hcHNob3RSZXNwb25zZRJTCg5HZXRPcHRpb25DaGFpbhIfLmNyZWFtLnYxLkdldE9wdGlvbkNoYWluUmVxdWVzdBogLmNyZWFtLnYxLkdldE9wdGlvbkNoYWluUmVzcG9uc2VCnAEKDGNvbS5jcmVhbS52MUITTWFya2V0U25hcHNob3RQcm90b1ABWjZnaXRodWIuY29tL2NyZWFtLXRyYWRpbmcvY3JlYW0vZ2VuL2dvL2NyZWFtL3YxO2NyZWFtdjGiAgNDWFiqAghDcmVhbS5WMcoCCENyZWFtXFYx4gIUQ3JlYW1cVjFcR1BCTWV0YWRhdGHqAglDcmVhbTo6VjFiBnByb3RvMw",
+		[file_cream_v1_common, file_google_protobuf_timestamp]
+	);
 
 /**
  * Real-time quote for a symbol
@@ -27,76 +31,77 @@ export const file_cream_v1_market_snapshot: GenFile = /*@__PURE__*/
  * @generated from message cream.v1.Quote
  */
 export type Quote = Message<"cream.v1.Quote"> & {
-  /**
-   * Symbol (e.g., "AAPL")
-   *
-   * @generated from field: string symbol = 1;
-   */
-  symbol: string;
+	/**
+	 * Symbol (e.g., "AAPL")
+	 *
+	 * @generated from field: string symbol = 1;
+	 */
+	symbol: string;
 
-  /**
-   * Best bid price
-   *
-   * @generated from field: double bid = 2;
-   */
-  bid: number;
+	/**
+	 * Best bid price
+	 *
+	 * @generated from field: double bid = 2;
+	 */
+	bid: number;
 
-  /**
-   * Best ask price
-   *
-   * @generated from field: double ask = 3;
-   */
-  ask: number;
+	/**
+	 * Best ask price
+	 *
+	 * @generated from field: double ask = 3;
+	 */
+	ask: number;
 
-  /**
-   * Bid size (shares/contracts)
-   *
-   * @generated from field: int32 bid_size = 4;
-   */
-  bidSize: number;
+	/**
+	 * Bid size (shares/contracts)
+	 *
+	 * @generated from field: int32 bid_size = 4;
+	 */
+	bidSize: number;
 
-  /**
-   * Ask size (shares/contracts)
-   *
-   * @generated from field: int32 ask_size = 5;
-   */
-  askSize: number;
+	/**
+	 * Ask size (shares/contracts)
+	 *
+	 * @generated from field: int32 ask_size = 5;
+	 */
+	askSize: number;
 
-  /**
-   * Last trade price
-   *
-   * @generated from field: double last = 6;
-   */
-  last: number;
+	/**
+	 * Last trade price
+	 *
+	 * @generated from field: double last = 6;
+	 */
+	last: number;
 
-  /**
-   * Last trade size
-   *
-   * @generated from field: int32 last_size = 7;
-   */
-  lastSize: number;
+	/**
+	 * Last trade size
+	 *
+	 * @generated from field: int32 last_size = 7;
+	 */
+	lastSize: number;
 
-  /**
-   * Cumulative volume
-   *
-   * @generated from field: int64 volume = 8;
-   */
-  volume: bigint;
+	/**
+	 * Cumulative volume
+	 *
+	 * @generated from field: int64 volume = 8;
+	 */
+	volume: bigint;
 
-  /**
-   * Quote timestamp
-   *
-   * @generated from field: google.protobuf.Timestamp timestamp = 9;
-   */
-  timestamp?: Timestamp;
+	/**
+	 * Quote timestamp
+	 *
+	 * @generated from field: google.protobuf.Timestamp timestamp = 9;
+	 */
+	timestamp?: Timestamp;
 };
 
 /**
  * Describes the message cream.v1.Quote.
  * Use `create(QuoteSchema)` to create a new message.
  */
-export const QuoteSchema: GenMessage<Quote> = /*@__PURE__*/
-  messageDesc(file_cream_v1_market_snapshot, 0);
+export const QuoteSchema: GenMessage<Quote> =
+	/*@__PURE__*/
+	messageDesc(file_cream_v1_market_snapshot, 0);
 
 /**
  * OHLCV candlestick bar
@@ -104,83 +109,84 @@ export const QuoteSchema: GenMessage<Quote> = /*@__PURE__*/
  * @generated from message cream.v1.Bar
  */
 export type Bar = Message<"cream.v1.Bar"> & {
-  /**
-   * Symbol
-   *
-   * @generated from field: string symbol = 1;
-   */
-  symbol: string;
+	/**
+	 * Symbol
+	 *
+	 * @generated from field: string symbol = 1;
+	 */
+	symbol: string;
 
-  /**
-   * Bar open time
-   *
-   * @generated from field: google.protobuf.Timestamp timestamp = 2;
-   */
-  timestamp?: Timestamp;
+	/**
+	 * Bar open time
+	 *
+	 * @generated from field: google.protobuf.Timestamp timestamp = 2;
+	 */
+	timestamp?: Timestamp;
 
-  /**
-   * Bar timeframe in minutes (1, 5, 15, 60, 240, 1440)
-   *
-   * @generated from field: int32 timeframe_minutes = 3;
-   */
-  timeframeMinutes: number;
+	/**
+	 * Bar timeframe in minutes (1, 5, 15, 60, 240, 1440)
+	 *
+	 * @generated from field: int32 timeframe_minutes = 3;
+	 */
+	timeframeMinutes: number;
 
-  /**
-   * Open price
-   *
-   * @generated from field: double open = 4;
-   */
-  open: number;
+	/**
+	 * Open price
+	 *
+	 * @generated from field: double open = 4;
+	 */
+	open: number;
 
-  /**
-   * High price
-   *
-   * @generated from field: double high = 5;
-   */
-  high: number;
+	/**
+	 * High price
+	 *
+	 * @generated from field: double high = 5;
+	 */
+	high: number;
 
-  /**
-   * Low price
-   *
-   * @generated from field: double low = 6;
-   */
-  low: number;
+	/**
+	 * Low price
+	 *
+	 * @generated from field: double low = 6;
+	 */
+	low: number;
 
-  /**
-   * Close price
-   *
-   * @generated from field: double close = 7;
-   */
-  close: number;
+	/**
+	 * Close price
+	 *
+	 * @generated from field: double close = 7;
+	 */
+	close: number;
 
-  /**
-   * Volume
-   *
-   * @generated from field: int64 volume = 8;
-   */
-  volume: bigint;
+	/**
+	 * Volume
+	 *
+	 * @generated from field: int64 volume = 8;
+	 */
+	volume: bigint;
 
-  /**
-   * VWAP (volume-weighted average price)
-   *
-   * @generated from field: optional double vwap = 9;
-   */
-  vwap?: number;
+	/**
+	 * VWAP (volume-weighted average price)
+	 *
+	 * @generated from field: optional double vwap = 9;
+	 */
+	vwap?: number;
 
-  /**
-   * Number of trades
-   *
-   * @generated from field: optional int32 trade_count = 10;
-   */
-  tradeCount?: number;
+	/**
+	 * Number of trades
+	 *
+	 * @generated from field: optional int32 trade_count = 10;
+	 */
+	tradeCount?: number;
 };
 
 /**
  * Describes the message cream.v1.Bar.
  * Use `create(BarSchema)` to create a new message.
  */
-export const BarSchema: GenMessage<Bar> = /*@__PURE__*/
-  messageDesc(file_cream_v1_market_snapshot, 1);
+export const BarSchema: GenMessage<Bar> =
+	/*@__PURE__*/
+	messageDesc(file_cream_v1_market_snapshot, 1);
 
 /**
  * Complete market snapshot for a symbol
@@ -188,76 +194,77 @@ export const BarSchema: GenMessage<Bar> = /*@__PURE__*/
  * @generated from message cream.v1.SymbolSnapshot
  */
 export type SymbolSnapshot = Message<"cream.v1.SymbolSnapshot"> & {
-  /**
-   * Symbol
-   *
-   * @generated from field: string symbol = 1;
-   */
-  symbol: string;
+	/**
+	 * Symbol
+	 *
+	 * @generated from field: string symbol = 1;
+	 */
+	symbol: string;
 
-  /**
-   * Current quote
-   *
-   * @generated from field: cream.v1.Quote quote = 2;
-   */
-  quote?: Quote;
+	/**
+	 * Current quote
+	 *
+	 * @generated from field: cream.v1.Quote quote = 2;
+	 */
+	quote?: Quote;
 
-  /**
-   * Latest completed bars (multiple timeframes)
-   *
-   * @generated from field: repeated cream.v1.Bar bars = 3;
-   */
-  bars: Bar[];
+	/**
+	 * Latest completed bars (multiple timeframes)
+	 *
+	 * @generated from field: repeated cream.v1.Bar bars = 3;
+	 */
+	bars: Bar[];
 
-  /**
-   * Market status
-   *
-   * @generated from field: cream.v1.MarketStatus market_status = 4;
-   */
-  marketStatus: MarketStatus;
+	/**
+	 * Market status
+	 *
+	 * @generated from field: cream.v1.MarketStatus market_status = 4;
+	 */
+	marketStatus: MarketStatus;
 
-  /**
-   * Daily high
-   *
-   * @generated from field: double day_high = 5;
-   */
-  dayHigh: number;
+	/**
+	 * Daily high
+	 *
+	 * @generated from field: double day_high = 5;
+	 */
+	dayHigh: number;
 
-  /**
-   * Daily low
-   *
-   * @generated from field: double day_low = 6;
-   */
-  dayLow: number;
+	/**
+	 * Daily low
+	 *
+	 * @generated from field: double day_low = 6;
+	 */
+	dayLow: number;
 
-  /**
-   * Previous close
-   *
-   * @generated from field: double prev_close = 7;
-   */
-  prevClose: number;
+	/**
+	 * Previous close
+	 *
+	 * @generated from field: double prev_close = 7;
+	 */
+	prevClose: number;
 
-  /**
-   * Today's open
-   *
-   * @generated from field: double open = 8;
-   */
-  open: number;
+	/**
+	 * Today's open
+	 *
+	 * @generated from field: double open = 8;
+	 */
+	open: number;
 
-  /**
-   * Snapshot timestamp
-   *
-   * @generated from field: google.protobuf.Timestamp as_of = 9;
-   */
-  asOf?: Timestamp;
+	/**
+	 * Snapshot timestamp
+	 *
+	 * @generated from field: google.protobuf.Timestamp as_of = 9;
+	 */
+	asOf?: Timestamp;
 };
 
 /**
  * Describes the message cream.v1.SymbolSnapshot.
  * Use `create(SymbolSnapshotSchema)` to create a new message.
  */
-export const SymbolSnapshotSchema: GenMessage<SymbolSnapshot> = /*@__PURE__*/
-  messageDesc(file_cream_v1_market_snapshot, 2);
+export const SymbolSnapshotSchema: GenMessage<SymbolSnapshot> =
+	/*@__PURE__*/
+	messageDesc(file_cream_v1_market_snapshot, 2);
 
 /**
  * Full market snapshot for multiple symbols
@@ -265,48 +272,49 @@ export const SymbolSnapshotSchema: GenMessage<SymbolSnapshot> = /*@__PURE__*/
  * @generated from message cream.v1.MarketSnapshot
  */
 export type MarketSnapshot = Message<"cream.v1.MarketSnapshot"> & {
-  /**
-   * Trading environment
-   *
-   * @generated from field: cream.v1.Environment environment = 1;
-   */
-  environment: Environment;
+	/**
+	 * Trading environment
+	 *
+	 * @generated from field: cream.v1.Environment environment = 1;
+	 */
+	environment: Environment;
 
-  /**
-   * Snapshot timestamp
-   *
-   * @generated from field: google.protobuf.Timestamp as_of = 2;
-   */
-  asOf?: Timestamp;
+	/**
+	 * Snapshot timestamp
+	 *
+	 * @generated from field: google.protobuf.Timestamp as_of = 2;
+	 */
+	asOf?: Timestamp;
 
-  /**
-   * Market status (overall)
-   *
-   * @generated from field: cream.v1.MarketStatus market_status = 3;
-   */
-  marketStatus: MarketStatus;
+	/**
+	 * Market status (overall)
+	 *
+	 * @generated from field: cream.v1.MarketStatus market_status = 3;
+	 */
+	marketStatus: MarketStatus;
 
-  /**
-   * Current regime classification
-   *
-   * @generated from field: cream.v1.Regime regime = 4;
-   */
-  regime: Regime;
+	/**
+	 * Current regime classification
+	 *
+	 * @generated from field: cream.v1.Regime regime = 4;
+	 */
+	regime: Regime;
 
-  /**
-   * Symbol snapshots
-   *
-   * @generated from field: repeated cream.v1.SymbolSnapshot symbols = 5;
-   */
-  symbols: SymbolSnapshot[];
+	/**
+	 * Symbol snapshots
+	 *
+	 * @generated from field: repeated cream.v1.SymbolSnapshot symbols = 5;
+	 */
+	symbols: SymbolSnapshot[];
 };
 
 /**
  * Describes the message cream.v1.MarketSnapshot.
  * Use `create(MarketSnapshotSchema)` to create a new message.
  */
-export const MarketSnapshotSchema: GenMessage<MarketSnapshot> = /*@__PURE__*/
-  messageDesc(file_cream_v1_market_snapshot, 3);
+export const MarketSnapshotSchema: GenMessage<MarketSnapshot> =
+	/*@__PURE__*/
+	messageDesc(file_cream_v1_market_snapshot, 3);
 
 /**
  * Option quote
@@ -314,76 +322,77 @@ export const MarketSnapshotSchema: GenMessage<MarketSnapshot> = /*@__PURE__*/
  * @generated from message cream.v1.OptionQuote
  */
 export type OptionQuote = Message<"cream.v1.OptionQuote"> & {
-  /**
-   * Option contract
-   *
-   * @generated from field: cream.v1.OptionContract contract = 1;
-   */
-  contract?: OptionContract;
+	/**
+	 * Option contract
+	 *
+	 * @generated from field: cream.v1.OptionContract contract = 1;
+	 */
+	contract?: OptionContract;
 
-  /**
-   * Quote data
-   *
-   * @generated from field: cream.v1.Quote quote = 2;
-   */
-  quote?: Quote;
+	/**
+	 * Quote data
+	 *
+	 * @generated from field: cream.v1.Quote quote = 2;
+	 */
+	quote?: Quote;
 
-  /**
-   * Implied volatility
-   *
-   * @generated from field: optional double implied_volatility = 3;
-   */
-  impliedVolatility?: number;
+	/**
+	 * Implied volatility
+	 *
+	 * @generated from field: optional double implied_volatility = 3;
+	 */
+	impliedVolatility?: number;
 
-  /**
-   * Delta
-   *
-   * @generated from field: optional double delta = 4;
-   */
-  delta?: number;
+	/**
+	 * Delta
+	 *
+	 * @generated from field: optional double delta = 4;
+	 */
+	delta?: number;
 
-  /**
-   * Gamma
-   *
-   * @generated from field: optional double gamma = 5;
-   */
-  gamma?: number;
+	/**
+	 * Gamma
+	 *
+	 * @generated from field: optional double gamma = 5;
+	 */
+	gamma?: number;
 
-  /**
-   * Theta
-   *
-   * @generated from field: optional double theta = 6;
-   */
-  theta?: number;
+	/**
+	 * Theta
+	 *
+	 * @generated from field: optional double theta = 6;
+	 */
+	theta?: number;
 
-  /**
-   * Vega
-   *
-   * @generated from field: optional double vega = 7;
-   */
-  vega?: number;
+	/**
+	 * Vega
+	 *
+	 * @generated from field: optional double vega = 7;
+	 */
+	vega?: number;
 
-  /**
-   * Rho
-   *
-   * @generated from field: optional double rho = 8;
-   */
-  rho?: number;
+	/**
+	 * Rho
+	 *
+	 * @generated from field: optional double rho = 8;
+	 */
+	rho?: number;
 
-  /**
-   * Open interest
-   *
-   * @generated from field: int32 open_interest = 9;
-   */
-  openInterest: number;
+	/**
+	 * Open interest
+	 *
+	 * @generated from field: int32 open_interest = 9;
+	 */
+	openInterest: number;
 };
 
 /**
  * Describes the message cream.v1.OptionQuote.
  * Use `create(OptionQuoteSchema)` to create a new message.
  */
-export const OptionQuoteSchema: GenMessage<OptionQuote> = /*@__PURE__*/
-  messageDesc(file_cream_v1_market_snapshot, 4);
+export const OptionQuoteSchema: GenMessage<OptionQuote> =
+	/*@__PURE__*/
+	messageDesc(file_cream_v1_market_snapshot, 4);
 
 /**
  * Option chain for an underlying
@@ -391,41 +400,42 @@ export const OptionQuoteSchema: GenMessage<OptionQuote> = /*@__PURE__*/
  * @generated from message cream.v1.OptionChain
  */
 export type OptionChain = Message<"cream.v1.OptionChain"> & {
-  /**
-   * Underlying symbol
-   *
-   * @generated from field: string underlying = 1;
-   */
-  underlying: string;
+	/**
+	 * Underlying symbol
+	 *
+	 * @generated from field: string underlying = 1;
+	 */
+	underlying: string;
 
-  /**
-   * Underlying price
-   *
-   * @generated from field: double underlying_price = 2;
-   */
-  underlyingPrice: number;
+	/**
+	 * Underlying price
+	 *
+	 * @generated from field: double underlying_price = 2;
+	 */
+	underlyingPrice: number;
 
-  /**
-   * Option quotes
-   *
-   * @generated from field: repeated cream.v1.OptionQuote options = 3;
-   */
-  options: OptionQuote[];
+	/**
+	 * Option quotes
+	 *
+	 * @generated from field: repeated cream.v1.OptionQuote options = 3;
+	 */
+	options: OptionQuote[];
 
-  /**
-   * Chain timestamp
-   *
-   * @generated from field: google.protobuf.Timestamp as_of = 4;
-   */
-  asOf?: Timestamp;
+	/**
+	 * Chain timestamp
+	 *
+	 * @generated from field: google.protobuf.Timestamp as_of = 4;
+	 */
+	asOf?: Timestamp;
 };
 
 /**
  * Describes the message cream.v1.OptionChain.
  * Use `create(OptionChainSchema)` to create a new message.
  */
-export const OptionChainSchema: GenMessage<OptionChain> = /*@__PURE__*/
-  messageDesc(file_cream_v1_market_snapshot, 5);
+export const OptionChainSchema: GenMessage<OptionChain> =
+	/*@__PURE__*/
+	messageDesc(file_cream_v1_market_snapshot, 5);
 
 /**
  * Request to subscribe to market data
@@ -433,34 +443,35 @@ export const OptionChainSchema: GenMessage<OptionChain> = /*@__PURE__*/
  * @generated from message cream.v1.SubscribeMarketDataRequest
  */
 export type SubscribeMarketDataRequest = Message<"cream.v1.SubscribeMarketDataRequest"> & {
-  /**
-   * Symbols to subscribe to
-   *
-   * @generated from field: repeated string symbols = 1;
-   */
-  symbols: string[];
+	/**
+	 * Symbols to subscribe to
+	 *
+	 * @generated from field: repeated string symbols = 1;
+	 */
+	symbols: string[];
 
-  /**
-   * Include option chains
-   *
-   * @generated from field: bool include_options = 2;
-   */
-  includeOptions: boolean;
+	/**
+	 * Include option chains
+	 *
+	 * @generated from field: bool include_options = 2;
+	 */
+	includeOptions: boolean;
 
-  /**
-   * Bar timeframes to include (in minutes)
-   *
-   * @generated from field: repeated int32 bar_timeframes = 3;
-   */
-  barTimeframes: number[];
+	/**
+	 * Bar timeframes to include (in minutes)
+	 *
+	 * @generated from field: repeated int32 bar_timeframes = 3;
+	 */
+	barTimeframes: number[];
 };
 
 /**
  * Describes the message cream.v1.SubscribeMarketDataRequest.
  * Use `create(SubscribeMarketDataRequestSchema)` to create a new message.
  */
-export const SubscribeMarketDataRequestSchema: GenMessage<SubscribeMarketDataRequest> = /*@__PURE__*/
-  messageDesc(file_cream_v1_market_snapshot, 6);
+export const SubscribeMarketDataRequestSchema: GenMessage<SubscribeMarketDataRequest> =
+	/*@__PURE__*/
+	messageDesc(file_cream_v1_market_snapshot, 6);
 
 /**
  * Market data update (streamed response)
@@ -468,44 +479,50 @@ export const SubscribeMarketDataRequestSchema: GenMessage<SubscribeMarketDataReq
  * @generated from message cream.v1.SubscribeMarketDataResponse
  */
 export type SubscribeMarketDataResponse = Message<"cream.v1.SubscribeMarketDataResponse"> & {
-  /**
-   * Update type
-   *
-   * @generated from oneof cream.v1.SubscribeMarketDataResponse.update
-   */
-  update: {
-    /**
-     * @generated from field: cream.v1.Quote quote = 1;
-     */
-    value: Quote;
-    case: "quote";
-  } | {
-    /**
-     * @generated from field: cream.v1.Bar bar = 2;
-     */
-    value: Bar;
-    case: "bar";
-  } | {
-    /**
-     * @generated from field: cream.v1.OptionQuote option_quote = 3;
-     */
-    value: OptionQuote;
-    case: "optionQuote";
-  } | {
-    /**
-     * @generated from field: cream.v1.SymbolSnapshot snapshot = 4;
-     */
-    value: SymbolSnapshot;
-    case: "snapshot";
-  } | { case: undefined; value?: undefined };
+	/**
+	 * Update type
+	 *
+	 * @generated from oneof cream.v1.SubscribeMarketDataResponse.update
+	 */
+	update:
+		| {
+				/**
+				 * @generated from field: cream.v1.Quote quote = 1;
+				 */
+				value: Quote;
+				case: "quote";
+		  }
+		| {
+				/**
+				 * @generated from field: cream.v1.Bar bar = 2;
+				 */
+				value: Bar;
+				case: "bar";
+		  }
+		| {
+				/**
+				 * @generated from field: cream.v1.OptionQuote option_quote = 3;
+				 */
+				value: OptionQuote;
+				case: "optionQuote";
+		  }
+		| {
+				/**
+				 * @generated from field: cream.v1.SymbolSnapshot snapshot = 4;
+				 */
+				value: SymbolSnapshot;
+				case: "snapshot";
+		  }
+		| { case: undefined; value?: undefined };
 };
 
 /**
  * Describes the message cream.v1.SubscribeMarketDataResponse.
  * Use `create(SubscribeMarketDataResponseSchema)` to create a new message.
  */
-export const SubscribeMarketDataResponseSchema: GenMessage<SubscribeMarketDataResponse> = /*@__PURE__*/
-  messageDesc(file_cream_v1_market_snapshot, 7);
+export const SubscribeMarketDataResponseSchema: GenMessage<SubscribeMarketDataResponse> =
+	/*@__PURE__*/
+	messageDesc(file_cream_v1_market_snapshot, 7);
 
 /**
  * Request for snapshot
@@ -513,34 +530,35 @@ export const SubscribeMarketDataResponseSchema: GenMessage<SubscribeMarketDataRe
  * @generated from message cream.v1.GetSnapshotRequest
  */
 export type GetSnapshotRequest = Message<"cream.v1.GetSnapshotRequest"> & {
-  /**
-   * Symbols to get snapshot for
-   *
-   * @generated from field: repeated string symbols = 1;
-   */
-  symbols: string[];
+	/**
+	 * Symbols to get snapshot for
+	 *
+	 * @generated from field: repeated string symbols = 1;
+	 */
+	symbols: string[];
 
-  /**
-   * Include bars
-   *
-   * @generated from field: bool include_bars = 2;
-   */
-  includeBars: boolean;
+	/**
+	 * Include bars
+	 *
+	 * @generated from field: bool include_bars = 2;
+	 */
+	includeBars: boolean;
 
-  /**
-   * Bar timeframes to include
-   *
-   * @generated from field: repeated int32 bar_timeframes = 3;
-   */
-  barTimeframes: number[];
+	/**
+	 * Bar timeframes to include
+	 *
+	 * @generated from field: repeated int32 bar_timeframes = 3;
+	 */
+	barTimeframes: number[];
 };
 
 /**
  * Describes the message cream.v1.GetSnapshotRequest.
  * Use `create(GetSnapshotRequestSchema)` to create a new message.
  */
-export const GetSnapshotRequestSchema: GenMessage<GetSnapshotRequest> = /*@__PURE__*/
-  messageDesc(file_cream_v1_market_snapshot, 8);
+export const GetSnapshotRequestSchema: GenMessage<GetSnapshotRequest> =
+	/*@__PURE__*/
+	messageDesc(file_cream_v1_market_snapshot, 8);
 
 /**
  * Response with snapshot
@@ -548,20 +566,21 @@ export const GetSnapshotRequestSchema: GenMessage<GetSnapshotRequest> = /*@__PUR
  * @generated from message cream.v1.GetSnapshotResponse
  */
 export type GetSnapshotResponse = Message<"cream.v1.GetSnapshotResponse"> & {
-  /**
-   * Market snapshot
-   *
-   * @generated from field: cream.v1.MarketSnapshot snapshot = 1;
-   */
-  snapshot?: MarketSnapshot;
+	/**
+	 * Market snapshot
+	 *
+	 * @generated from field: cream.v1.MarketSnapshot snapshot = 1;
+	 */
+	snapshot?: MarketSnapshot;
 };
 
 /**
  * Describes the message cream.v1.GetSnapshotResponse.
  * Use `create(GetSnapshotResponseSchema)` to create a new message.
  */
-export const GetSnapshotResponseSchema: GenMessage<GetSnapshotResponse> = /*@__PURE__*/
-  messageDesc(file_cream_v1_market_snapshot, 9);
+export const GetSnapshotResponseSchema: GenMessage<GetSnapshotResponse> =
+	/*@__PURE__*/
+	messageDesc(file_cream_v1_market_snapshot, 9);
 
 /**
  * Request for option chain
@@ -569,41 +588,42 @@ export const GetSnapshotResponseSchema: GenMessage<GetSnapshotResponse> = /*@__P
  * @generated from message cream.v1.GetOptionChainRequest
  */
 export type GetOptionChainRequest = Message<"cream.v1.GetOptionChainRequest"> & {
-  /**
-   * Underlying symbol
-   *
-   * @generated from field: string underlying = 1;
-   */
-  underlying: string;
+	/**
+	 * Underlying symbol
+	 *
+	 * @generated from field: string underlying = 1;
+	 */
+	underlying: string;
 
-  /**
-   * Expiration dates to include (YYYY-MM-DD format, empty for all)
-   *
-   * @generated from field: repeated string expirations = 2;
-   */
-  expirations: string[];
+	/**
+	 * Expiration dates to include (YYYY-MM-DD format, empty for all)
+	 *
+	 * @generated from field: repeated string expirations = 2;
+	 */
+	expirations: string[];
 
-  /**
-   * Strike range (min)
-   *
-   * @generated from field: optional double min_strike = 3;
-   */
-  minStrike?: number;
+	/**
+	 * Strike range (min)
+	 *
+	 * @generated from field: optional double min_strike = 3;
+	 */
+	minStrike?: number;
 
-  /**
-   * Strike range (max)
-   *
-   * @generated from field: optional double max_strike = 4;
-   */
-  maxStrike?: number;
+	/**
+	 * Strike range (max)
+	 *
+	 * @generated from field: optional double max_strike = 4;
+	 */
+	maxStrike?: number;
 };
 
 /**
  * Describes the message cream.v1.GetOptionChainRequest.
  * Use `create(GetOptionChainRequestSchema)` to create a new message.
  */
-export const GetOptionChainRequestSchema: GenMessage<GetOptionChainRequest> = /*@__PURE__*/
-  messageDesc(file_cream_v1_market_snapshot, 10);
+export const GetOptionChainRequestSchema: GenMessage<GetOptionChainRequest> =
+	/*@__PURE__*/
+	messageDesc(file_cream_v1_market_snapshot, 10);
 
 /**
  * Response with option chain
@@ -611,20 +631,21 @@ export const GetOptionChainRequestSchema: GenMessage<GetOptionChainRequest> = /*
  * @generated from message cream.v1.GetOptionChainResponse
  */
 export type GetOptionChainResponse = Message<"cream.v1.GetOptionChainResponse"> & {
-  /**
-   * Option chain
-   *
-   * @generated from field: cream.v1.OptionChain chain = 1;
-   */
-  chain?: OptionChain;
+	/**
+	 * Option chain
+	 *
+	 * @generated from field: cream.v1.OptionChain chain = 1;
+	 */
+	chain?: OptionChain;
 };
 
 /**
  * Describes the message cream.v1.GetOptionChainResponse.
  * Use `create(GetOptionChainResponseSchema)` to create a new message.
  */
-export const GetOptionChainResponseSchema: GenMessage<GetOptionChainResponse> = /*@__PURE__*/
-  messageDesc(file_cream_v1_market_snapshot, 11);
+export const GetOptionChainResponseSchema: GenMessage<GetOptionChainResponse> =
+	/*@__PURE__*/
+	messageDesc(file_cream_v1_market_snapshot, 11);
 
 /**
  * Market data streaming service
@@ -632,36 +653,34 @@ export const GetOptionChainResponseSchema: GenMessage<GetOptionChainResponse> = 
  * @generated from service cream.v1.MarketDataService
  */
 export const MarketDataService: GenService<{
-  /**
-   * Subscribe to real-time market data
-   *
-   * @generated from rpc cream.v1.MarketDataService.SubscribeMarketData
-   */
-  subscribeMarketData: {
-    methodKind: "server_streaming";
-    input: typeof SubscribeMarketDataRequestSchema;
-    output: typeof SubscribeMarketDataResponseSchema;
-  },
-  /**
-   * Get current snapshot for symbols
-   *
-   * @generated from rpc cream.v1.MarketDataService.GetSnapshot
-   */
-  getSnapshot: {
-    methodKind: "unary";
-    input: typeof GetSnapshotRequestSchema;
-    output: typeof GetSnapshotResponseSchema;
-  },
-  /**
-   * Get option chain for underlying
-   *
-   * @generated from rpc cream.v1.MarketDataService.GetOptionChain
-   */
-  getOptionChain: {
-    methodKind: "unary";
-    input: typeof GetOptionChainRequestSchema;
-    output: typeof GetOptionChainResponseSchema;
-  },
-}> = /*@__PURE__*/
-  serviceDesc(file_cream_v1_market_snapshot, 0);
-
+	/**
+	 * Subscribe to real-time market data
+	 *
+	 * @generated from rpc cream.v1.MarketDataService.SubscribeMarketData
+	 */
+	subscribeMarketData: {
+		methodKind: "server_streaming";
+		input: typeof SubscribeMarketDataRequestSchema;
+		output: typeof SubscribeMarketDataResponseSchema;
+	};
+	/**
+	 * Get current snapshot for symbols
+	 *
+	 * @generated from rpc cream.v1.MarketDataService.GetSnapshot
+	 */
+	getSnapshot: {
+		methodKind: "unary";
+		input: typeof GetSnapshotRequestSchema;
+		output: typeof GetSnapshotResponseSchema;
+	};
+	/**
+	 * Get option chain for underlying
+	 *
+	 * @generated from rpc cream.v1.MarketDataService.GetOptionChain
+	 */
+	getOptionChain: {
+		methodKind: "unary";
+		input: typeof GetOptionChainRequestSchema;
+		output: typeof GetOptionChainResponseSchema;
+	};
+}> = /*@__PURE__*/ serviceDesc(file_cream_v1_market_snapshot, 0);
