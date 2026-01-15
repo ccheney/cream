@@ -7,9 +7,14 @@
 //! 1. `#[cfg(not(coverage))]` attributes on code
 //! 2. `LLVM_PROFILE_FILE` environment variable
 //! 3. `cargo-llvm-cov` ignore comments
+//!
+//! Note: Build scripts intentionally panic on failure since they must halt
+//! the build process when prerequisites are missing.
 
-use std::{env, fs, path::PathBuf, process::Command};
+#![allow(clippy::expect_used)]
+
 use prost::Message;
+use std::{env, fs, path::PathBuf, process::Command};
 
 fn main() {
     // Set profile file pattern for coverage runs
@@ -62,9 +67,10 @@ fn main() {
         .status()
         .expect("Failed to run buf build");
 
-    if !status.success() {
-        panic!("buf build failed; ensure buf is installed and available in PATH");
-    }
+    assert!(
+        status.success(),
+        "buf build failed; ensure buf is installed and available in PATH"
+    );
 
     let descriptor_bytes =
         fs::read(&descriptor_path).expect("Failed to read buf descriptor set output");

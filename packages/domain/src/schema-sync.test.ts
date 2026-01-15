@@ -30,7 +30,7 @@ import {
  * Load a JSON example from packages/proto/examples/
  */
 async function loadProtoExample<T = unknown>(filename: string): Promise<T> {
-	const examplesDir = `${import.meta.dir}/../../schema/examples`;
+	const examplesDir = `${import.meta.dir}/../../proto/examples`;
 	return Bun.file(`${examplesDir}/${filename}`).json() as Promise<T>;
 }
 
