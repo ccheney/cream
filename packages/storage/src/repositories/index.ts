@@ -211,6 +211,18 @@ export {
 	type ValidationReport,
 	type WalkForwardPeriod,
 } from "./indicators.js";
+// Macro watch (migration 018) - overnight macro watch entries and newspapers
+export {
+	type CreateMacroWatchEntryInput,
+	type CreateMorningNewspaperInput,
+	type MacroWatchCategory,
+	type MacroWatchEntry,
+	type MacroWatchFilters,
+	MacroWatchRepository,
+	type MacroWatchSession,
+	type MorningNewspaper,
+	type NewspaperSections,
+} from "./macro-watch.js";
 // Options indicators cache (migration 008) - TTL-based options metrics cache
 export {
 	type CreateOptionsIndicatorsCacheInput,
