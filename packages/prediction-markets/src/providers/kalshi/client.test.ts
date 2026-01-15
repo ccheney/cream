@@ -2,7 +2,7 @@
  * Tests for Kalshi API client
  */
 
-import { afterEach, describe, expect, it } from "bun:test";
+import { afterEach, beforeEach, describe, expect, it } from "bun:test";
 import type { AuthenticationError } from "../../index";
 import {
 	createKalshiClientFromEnv,
@@ -434,8 +434,8 @@ describe("createKalshiClientFromEnv", () => {
 	const originalApiKeyId = process.env.KALSHI_API_KEY_ID;
 	const originalPrivateKeyPath = process.env.KALSHI_PRIVATE_KEY_PATH;
 
-	afterEach(() => {
-		// Restore original env
+	// Reset env vars to original state (delete if not originally set)
+	const resetEnv = () => {
 		if (originalApiKeyId !== undefined) {
 			process.env.KALSHI_API_KEY_ID = originalApiKeyId;
 		} else {
@@ -446,11 +446,19 @@ describe("createKalshiClientFromEnv", () => {
 		} else {
 			delete process.env.KALSHI_PRIVATE_KEY_PATH;
 		}
-	});
+	};
+
+	beforeEach(resetEnv);
+	afterEach(resetEnv);
 
 	it("should throw AuthenticationError without KALSHI_API_KEY_ID", () => {
+		// Delete from both process.env and Bun.env to ensure the var is truly unset
 		delete process.env.KALSHI_API_KEY_ID;
 		delete process.env.KALSHI_PRIVATE_KEY_PATH;
+		// @ts-expect-error - Bun.env is readonly but we need to clear for test
+		Bun.env.KALSHI_API_KEY_ID = undefined;
+		// @ts-expect-error - Bun.env is readonly but we need to clear for test
+		Bun.env.KALSHI_PRIVATE_KEY_PATH = undefined;
 
 		try {
 			createKalshiClientFromEnv();
@@ -464,6 +472,8 @@ describe("createKalshiClientFromEnv", () => {
 	it("should throw AuthenticationError without KALSHI_PRIVATE_KEY_PATH", () => {
 		process.env.KALSHI_API_KEY_ID = "test-key-id";
 		delete process.env.KALSHI_PRIVATE_KEY_PATH;
+		// @ts-expect-error - Bun.env is readonly but we need to clear for test
+		Bun.env.KALSHI_PRIVATE_KEY_PATH = undefined;
 
 		try {
 			createKalshiClientFromEnv();

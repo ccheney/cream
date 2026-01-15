@@ -18,6 +18,9 @@ exact = true
 production = false
 
 [test]
+# Preload script to set environment variables before modules load
+preload = ["./tests/preload.ts"]
+
 # Enable coverage by default
 coverage = true
 coverageDir = "coverage"

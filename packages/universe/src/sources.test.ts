@@ -2,12 +2,37 @@
  * Universe Source Resolvers Tests
  */
 
+// Save original env vars for cleanup
+const originalAlpacaKey = process.env.ALPACA_KEY;
+const originalAlpacaSecret = process.env.ALPACA_SECRET;
+const originalCreamEnv = process.env.CREAM_ENV;
+
 // Set required environment variables before imports
 process.env.CREAM_ENV = "BACKTEST";
 process.env.ALPACA_KEY = "test-api-key";
 process.env.ALPACA_SECRET = "test-api-secret";
 
-import { describe, expect, test } from "bun:test";
+import { afterAll, describe, expect, test } from "bun:test";
+
+// Clean up env vars after all tests to avoid polluting other test files
+afterAll(() => {
+	if (originalAlpacaKey !== undefined) {
+		process.env.ALPACA_KEY = originalAlpacaKey;
+	} else {
+		delete process.env.ALPACA_KEY;
+	}
+	if (originalAlpacaSecret !== undefined) {
+		process.env.ALPACA_SECRET = originalAlpacaSecret;
+	} else {
+		delete process.env.ALPACA_SECRET;
+	}
+	if (originalCreamEnv !== undefined) {
+		process.env.CREAM_ENV = originalCreamEnv;
+	} else {
+		delete process.env.CREAM_ENV;
+	}
+});
+
 import type { ETFHoldingsSource, IndexSource, ScreenerSource, StaticSource } from "@cream/config";
 import { resolveSource, resolveStaticSource } from "./sources.js";
 

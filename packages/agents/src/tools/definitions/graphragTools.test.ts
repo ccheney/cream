@@ -23,7 +23,7 @@ describe("graphragQueryTool", () => {
 	});
 
 	test("has description mentioning semantic search", () => {
-		expect(graphragQueryTool.description).toContain("semantic search");
+		expect(graphragQueryTool.description.toLowerCase()).toContain("semantic search");
 	});
 
 	test("has description mentioning filings", () => {

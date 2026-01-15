@@ -4,8 +4,72 @@
  * Tests for the /api/calendar endpoints that provide market calendar data.
  */
 
-import { beforeAll, describe, expect, mock, test } from "bun:test";
-import type { CalendarDay, MarketClock, TradingSession } from "@cream/domain";
+// IMPORTANT: Mock must be set up before any imports that use @cream/domain
+import { afterAll, mock } from "bun:test";
+
+// Define mock calendar service helper for generating date ranges
+function generateMockCalendarRange(start: string, end: string) {
+	const days: Array<{
+		date: string;
+		open: string;
+		close: string;
+		sessionOpen: string;
+		sessionClose: string;
+	}> = [];
+	const startDate = new Date(start);
+	const endDate = new Date(end);
+
+	for (let d = new Date(startDate); d <= endDate; d.setDate(d.getDate() + 1)) {
+		const dayOfWeek = d.getDay();
+		// Skip weekends
+		if (dayOfWeek === 0 || dayOfWeek === 6) {
+			continue;
+		}
+		days.push({
+			date: d.toISOString().split("T")[0] ?? "",
+			open: "09:30",
+			close: "16:00",
+			sessionOpen: "04:00",
+			sessionClose: "20:00",
+		});
+	}
+	return days;
+}
+
+// Define mock calendar service
+const mockCalendarServiceForModule = {
+	isMarketOpen: async () => true,
+	isTradingDay: async () => true,
+	getMarketCloseTime: async () => "16:00",
+	getTradingSession: async () => "RTH" as const,
+	isRTH: async () => true,
+	getNextTradingDay: async () => new Date("2025-01-13"),
+	getPreviousTradingDay: async () => new Date("2025-01-10"),
+	getClock: async () => ({
+		isOpen: true,
+		nextOpen: new Date("2025-01-13T14:30:00Z"),
+		nextClose: new Date("2025-01-12T21:00:00Z"),
+		timestamp: new Date("2025-01-12T16:00:00Z"),
+	}),
+	getCalendarRange: async (start: string, end: string) => generateMockCalendarRange(start, end),
+	isTradingDaySync: () => true,
+	getTradingSessionSync: () => "RTH" as const,
+	getMarketCloseTimeSync: () => "16:00",
+};
+
+// Mock @cream/domain BEFORE importing calendarRoutes
+mock.module("@cream/domain", () => ({
+	getCalendarService: () => mockCalendarServiceForModule,
+	initCalendarService: async () => {},
+	TradingSessionSchema: {
+		parse: (v: string) => v,
+		safeParse: (v: string) => ({ success: true, data: v }),
+	},
+}));
+
+// Now import dependencies that use @cream/domain
+import { beforeAll, describe, expect, test } from "bun:test";
+import type { TradingSession } from "@cream/domain";
 import calendarRoutes from "./calendar";
 
 // Response types for type-safe assertions
@@ -32,62 +96,14 @@ interface StatusResponse {
 	message: string;
 }
 
-// Mock CalendarService
-const mockCalendarService = {
-	isMarketOpen: async () => true,
-	isTradingDay: async () => true,
-	getMarketCloseTime: async () => "16:00",
-	getTradingSession: async (): Promise<TradingSession> => "RTH",
-	isRTH: async () => true,
-	getNextTradingDay: async () => new Date("2025-01-13"),
-	getPreviousTradingDay: async () => new Date("2025-01-10"),
-	getClock: async (): Promise<MarketClock> => ({
-		isOpen: true,
-		nextOpen: new Date("2025-01-13T14:30:00Z"),
-		nextClose: new Date("2025-01-12T21:00:00Z"),
-		timestamp: new Date("2025-01-12T16:00:00Z"),
-	}),
-	getCalendarRange: async (start: string, end: string): Promise<CalendarDay[]> => {
-		// Return mock data for the requested range
-		const days: CalendarDay[] = [];
-		const startDate = new Date(start);
-		const endDate = new Date(end);
-
-		for (let d = new Date(startDate); d <= endDate; d.setDate(d.getDate() + 1)) {
-			const dayOfWeek = d.getDay();
-			// Skip weekends
-			if (dayOfWeek === 0 || dayOfWeek === 6) {
-				continue;
-			}
-
-			days.push({
-				date: d.toISOString().split("T")[0] ?? "",
-				open: "09:30",
-				close: "16:00",
-				sessionOpen: "04:00",
-				sessionClose: "20:00",
-			});
-		}
-		return days;
-	},
-	isTradingDaySync: () => true,
-	getTradingSessionSync: (): TradingSession => "RTH",
-	getMarketCloseTimeSync: () => "16:00",
-};
-
 beforeAll(() => {
 	process.env.CREAM_ENV = "BACKTEST";
 });
 
-// Mock @cream/domain calendar service
-mock.module("@cream/domain", () => ({
-	getCalendarService: () => mockCalendarService,
-	initCalendarService: async () => {},
-	TradingSessionSchema: {
-		parse: (v: string) => v,
-		safeParse: (v: string) => ({ success: true, data: v }),
-	},
-}));
+afterAll(() => {
+	// Restore mocked modules to clean up for other tests
+	mock.restore();
+});
 
 describe("Calendar Routes", () => {
 	describe("GET /", () => {

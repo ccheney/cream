@@ -29,6 +29,10 @@
     "./grpc": {
       "types": "./src/grpc/index.ts",
       "import": "./src/grpc/index.ts"
+    },
+    "./calendar": {
+      "types": "./src/calendar/index.ts",
+      "import": "./src/calendar/index.ts"
     }
   },
   "scripts": {

@@ -394,11 +394,22 @@ describe("KeyRotationRegistry", () => {
 	});
 
 	describe("initFromEnv", () => {
-		const originalEnv = { ...process.env };
+		// Save specific vars we modify rather than the whole env
+		const savedAlpacaKey = process.env.ALPACA_KEY;
+		const savedAlphavantageKey = process.env.ALPHAVANTAGE_KEY;
 
 		afterEach(() => {
-			// Restore original env
-			process.env = { ...originalEnv };
+			// Restore only the vars we modified
+			if (savedAlpacaKey !== undefined) {
+				process.env.ALPACA_KEY = savedAlpacaKey;
+			} else {
+				delete process.env.ALPACA_KEY;
+			}
+			if (savedAlphavantageKey !== undefined) {
+				process.env.ALPHAVANTAGE_KEY = savedAlphavantageKey;
+			} else {
+				delete process.env.ALPHAVANTAGE_KEY;
+			}
 		});
 
 		it("should initialize managers from environment variables", () => {
@@ -445,10 +456,16 @@ describe("KeyRotationRegistry", () => {
 // ============================================
 
 describe("createKeyRotationRegistry", () => {
-	const originalEnv = { ...process.env };
+	// Save specific vars we modify rather than the whole env
+	const savedAlpacaKey = process.env.ALPACA_KEY;
 
 	afterEach(() => {
-		process.env = { ...originalEnv };
+		// Restore only the vars we modified
+		if (savedAlpacaKey !== undefined) {
+			process.env.ALPACA_KEY = savedAlpacaKey;
+		} else {
+			delete process.env.ALPACA_KEY;
+		}
 	});
 
 	it("should create registry initialized from env", () => {
