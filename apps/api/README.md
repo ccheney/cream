@@ -117,7 +117,7 @@ export * from "./workflows/index.js";
 - `@cream/broker` - Alpaca integration
 
 **External:**
-- `@mastra/core` (1.0.0-beta.14) - Workflow orchestration
+- `@mastra/core` (1.0.0-beta.21) - Workflow orchestration
 - `zod` (4.3.5) - Schema validation
 
 ## Important Notes

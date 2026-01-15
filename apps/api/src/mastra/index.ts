@@ -42,16 +42,6 @@ export const mastra = new Mastra({
 		indicatorSynthesisWorkflow,
 		predictionMarketsWorkflow,
 	},
-	bundler: {
-		externals: [
-			"@bufbuild/protobuf",
-			"@bufbuild/protobuf/*",
-			"@cream/schema-gen",
-			"@cream/schema-gen/*",
-			"@connectrpc/connect",
-			"@connectrpc/connect/*",
-		],
-	},
 });
 
 // Exports
