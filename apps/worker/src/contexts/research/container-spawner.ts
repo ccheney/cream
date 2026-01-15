@@ -3,9 +3,6 @@
  *
  * Spawns Claude Code agents in isolated environments for autonomous research.
  * Uses the Claude Agent SDK with security guardrails.
- *
- * NOTE: This is a stub implementation. The actual Claude Agent SDK integration
- * will be completed when the SDK is publicly released.
  */
 
 import type {
@@ -16,6 +13,65 @@ import type {
 	ResearchRunResult,
 	ResearchRunStatus,
 } from "./types.js";
+
+// ============================================
+// SDK Types (from @anthropic-ai/claude-agent-sdk)
+// ============================================
+
+interface SDKMessage {
+	type: string;
+	session_id: string;
+	message?: {
+		role: string;
+		content: Array<{ type: string; text?: string }>;
+	};
+}
+
+interface SessionOptions {
+	model?: string;
+	maxTurns?: number;
+	cwd?: string;
+	allowedTools?: string[];
+	additionalDirectories?: string[];
+	canUseTool?: (
+		toolName: string,
+		toolInput: unknown
+	) => Promise<{ behavior: "allow" | "deny"; message?: string }>;
+}
+
+interface Session {
+	send(message: string): Promise<void>;
+	stream(): AsyncGenerator<SDKMessage>;
+	close(): void;
+}
+
+type CreateSessionFunction = (options: SessionOptions) => Session;
+
+interface SDKProvider {
+	createSession: CreateSessionFunction;
+}
+
+// ============================================
+// SDK Loader
+// ============================================
+
+let cachedProvider: SDKProvider | null = null;
+
+async function loadSDKProvider(): Promise<SDKProvider | null> {
+	if (cachedProvider) {
+		return cachedProvider;
+	}
+
+	try {
+		const sdk = await import("@anthropic-ai/claude-agent-sdk");
+		cachedProvider = {
+			createSession: sdk.unstable_v2_createSession as CreateSessionFunction,
+		};
+		return cachedProvider;
+	} catch {
+		return null;
+	}
+}
 
 // ============================================
 // Research Prompt Builder
@@ -194,30 +250,141 @@ export class ResearchContainerSpawner {
 	private async executeInContainer(
 		config: ResearchContainerConfig,
 		onProgress?: ProgressCallback,
-		_signal?: AbortSignal
+		signal?: AbortSignal
 	): Promise<void> {
-		const _prompt = buildResearchPrompt(config);
-		const _permissionCallback = createPermissionCallback(config.guardrails);
+		const prompt = buildResearchPrompt(config);
+		const permissionCallback = createPermissionCallback(config.guardrails);
 
-		await this.emitProgress(onProgress, {
-			runId: config.runId,
-			type: "error",
-			message:
-				"Claude Agent SDK not yet available. " +
-				"This is a stub implementation that will be completed when the SDK is released. " +
-				"See: https://github.com/anthropics/claude-agent-sdk-typescript",
-			timestamp: new Date().toISOString(),
+		const sdkProvider = await loadSDKProvider();
+
+		if (!sdkProvider) {
+			await this.emitProgress(onProgress, {
+				runId: config.runId,
+				type: "error",
+				message:
+					"Claude Agent SDK not installed. Install with: bun add @anthropic-ai/claude-agent-sdk",
+				timestamp: new Date().toISOString(),
+			});
+
+			await this.emitProgress(onProgress, {
+				runId: config.runId,
+				type: "completed",
+				message: "Research run failed: SDK not available",
+				timestamp: new Date().toISOString(),
+				metadata: { status: "failed" as ResearchRunStatus },
+			});
+
+			this.activeRuns.delete(config.runId);
+			return;
+		}
+
+		const session = sdkProvider.createSession({
+			model: "claude-sonnet-4-20250514",
+			maxTurns: 50,
+			cwd: process.cwd(),
+			allowedTools: ["Read", "Write", "Edit", "Grep", "Glob", "Bash", "WebSearch", "WebFetch"],
+			additionalDirectories: ["packages/research", "packages/indicators", "packages/domain"],
+			canUseTool: async (toolName: string, toolInput: unknown) => {
+				const result = await permissionCallback(toolName, toolInput as Record<string, unknown>);
+				return {
+					behavior: result.behavior,
+					message: result.message,
+				};
+			},
 		});
 
-		await this.emitProgress(onProgress, {
-			runId: config.runId,
-			type: "completed",
-			message: "Research run failed: SDK not available",
-			timestamp: new Date().toISOString(),
-			metadata: { status: "failed" as ResearchRunStatus },
-		});
+		try {
+			await session.send(prompt);
 
-		this.activeRuns.delete(config.runId);
+			let turnsUsed = 0;
+			let prUrl: string | null = null;
+			let lastError: string | null = null;
+
+			for await (const message of session.stream()) {
+				if (signal?.aborted) {
+					await this.emitProgress(onProgress, {
+						runId: config.runId,
+						type: "completed",
+						message: "Research run cancelled",
+						timestamp: new Date().toISOString(),
+						metadata: { status: "cancelled" as ResearchRunStatus },
+					});
+					break;
+				}
+
+				if (message.type === "assistant" && message.message?.content) {
+					turnsUsed++;
+
+					const textContent = message.message.content
+						.filter((c) => c.type === "text" && c.text)
+						.map((c) => c.text)
+						.join("\n");
+
+					if (textContent) {
+						await this.handleAssistantMessage(config.runId, textContent, onProgress);
+
+						const prMatch = textContent.match(/PR created:\s*(https?:\/\/[^\s]+)/i);
+						if (prMatch?.[1]) {
+							prUrl = prMatch[1];
+						}
+
+						const failMatch = textContent.match(/Research failed:\s*(.+)/i);
+						if (failMatch?.[1]) {
+							lastError = failMatch[1];
+						}
+					}
+
+					await this.emitProgress(onProgress, {
+						runId: config.runId,
+						type: "iteration_complete",
+						message: `Turn ${turnsUsed} completed`,
+						timestamp: new Date().toISOString(),
+						metadata: { turnsUsed },
+					});
+				}
+			}
+
+			const finalStatus: ResearchRunStatus = prUrl
+				? "completed"
+				: lastError
+					? "failed"
+					: "completed";
+
+			await this.emitProgress(onProgress, {
+				runId: config.runId,
+				type: "completed",
+				message: prUrl
+					? `Research completed with PR: ${prUrl}`
+					: lastError
+						? `Research failed: ${lastError}`
+						: "Research completed",
+				timestamp: new Date().toISOString(),
+				metadata: {
+					status: finalStatus,
+					prUrl,
+					turnsUsed,
+					errorMessage: lastError,
+				},
+			});
+		} catch (error) {
+			await this.emitProgress(onProgress, {
+				runId: config.runId,
+				type: "error",
+				message: `Session error: ${error instanceof Error ? error.message : String(error)}`,
+				timestamp: new Date().toISOString(),
+			});
+
+			await this.emitProgress(onProgress, {
+				runId: config.runId,
+				type: "completed",
+				message: "Research run failed",
+				timestamp: new Date().toISOString(),
+				metadata: { status: "failed" as ResearchRunStatus },
+			});
+		} finally {
+			session.close();
+			this.activeRuns.delete(config.runId);
+		}
 	}
 
 	async handleAssistantMessage(
