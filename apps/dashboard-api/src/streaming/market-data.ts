@@ -186,15 +186,28 @@ function handleAlpacaEvent(event: AlpacaWsEvent): void {
 			break;
 
 		case "disconnected":
-			log.warn({ reason: event.reason }, "Alpaca WebSocket disconnected");
+			// Code 1000 is normal close (server idle timeout) - log at debug level
+			if (event.reason.includes("code 1000")) {
+				log.debug({ reason: event.reason }, "Alpaca WebSocket disconnected (idle timeout)");
+			} else {
+				log.warn({ reason: event.reason }, "Alpaca WebSocket disconnected");
+			}
 			break;
 
 		case "reconnecting":
 			reconnectAttempts = event.attempt;
-			log.info(
-				{ attempt: event.attempt, maxAttempts: MAX_RECONNECT_ATTEMPTS },
-				"Reconnecting to Alpaca WebSocket"
-			);
+			// First few reconnect attempts are expected after idle timeout
+			if (event.attempt <= 2) {
+				log.debug(
+					{ attempt: event.attempt, maxAttempts: MAX_RECONNECT_ATTEMPTS },
+					"Reconnecting to Alpaca WebSocket"
+				);
+			} else {
+				log.info(
+					{ attempt: event.attempt, maxAttempts: MAX_RECONNECT_ATTEMPTS },
+					"Reconnecting to Alpaca WebSocket"
+				);
+			}
 			break;
 
 		case "error":

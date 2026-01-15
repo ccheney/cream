@@ -8,6 +8,7 @@ import { OpenAPIHono } from "@hono/zod-openapi";
 import controlRoutes from "./control.js";
 import cyclesRoutes from "./cycles.js";
 import healthRoutes from "./health.js";
+import workerEventsRoutes from "./worker-events.js";
 
 const app = new OpenAPIHono();
 
@@ -15,6 +16,7 @@ const app = new OpenAPIHono();
 app.route("/", controlRoutes);
 app.route("/", cyclesRoutes);
 app.route("/", healthRoutes);
+app.route("/worker-events", workerEventsRoutes);
 
 export default app;
 

@@ -167,6 +167,135 @@ function generateCycleId(): string {
 }
 
 // ============================================
+// Dashboard Event Streaming
+// ============================================
+
+/**
+ * Configuration for streaming events to dashboard-api.
+ * Events are batched and sent via HTTP for real-time visibility.
+ */
+const DASHBOARD_API_URL = process.env.DASHBOARD_API_URL ?? "http://localhost:3001";
+const WORKER_INTERNAL_SECRET = process.env.WORKER_INTERNAL_SECRET ?? "dev-internal-secret";
+const EVENT_BATCH_SIZE = 10;
+const EVENT_FLUSH_INTERVAL_MS = 500;
+
+type AgentType =
+	| "grounding"
+	| "news"
+	| "fundamentals"
+	| "bullish"
+	| "bearish"
+	| "trader"
+	| "risk"
+	| "critic";
+type CyclePhase = "observe" | "orient" | "decide" | "act" | "complete" | "error";
+
+interface WorkerEvent {
+	type: string;
+	cycleId: string;
+	timestamp: string;
+	[key: string]: unknown;
+}
+
+/**
+ * Event batcher for streaming events to dashboard-api.
+ * Batches events and flushes periodically or when batch is full.
+ */
+class EventStreamer {
+	private eventQueue: WorkerEvent[] = [];
+	private flushTimer: ReturnType<typeof setTimeout> | null = null;
+	private enabled = true;
+
+	constructor() {
+		// Check if streaming is enabled
+		if (process.env.DISABLE_WORKER_STREAMING === "true") {
+			this.enabled = false;
+			log.info({}, "Worker event streaming disabled via DISABLE_WORKER_STREAMING");
+		}
+	}
+
+	async push(event: WorkerEvent): Promise<void> {
+		if (!this.enabled) {
+			return;
+		}
+
+		this.eventQueue.push(event);
+
+		if (this.eventQueue.length >= EVENT_BATCH_SIZE) {
+			await this.flush();
+		} else if (!this.flushTimer) {
+			this.flushTimer = setTimeout(() => this.flush(), EVENT_FLUSH_INTERVAL_MS);
+		}
+	}
+
+	async flush(): Promise<void> {
+		if (this.flushTimer) {
+			clearTimeout(this.flushTimer);
+			this.flushTimer = null;
+		}
+
+		if (this.eventQueue.length === 0) {
+			return;
+		}
+
+		const events = this.eventQueue.splice(0);
+
+		try {
+			const response = await fetch(`${DASHBOARD_API_URL}/api/system/worker-events`, {
+				method: "POST",
+				headers: {
+					"Content-Type": "application/json",
+					Authorization: `Bearer ${WORKER_INTERNAL_SECRET}`,
+				},
+				body: JSON.stringify({ events }),
+			});
+
+			if (!response.ok) {
+				log.warn(
+					{ status: response.status, count: events.length },
+					"Failed to send events to dashboard-api"
+				);
+			}
+		} catch (error) {
+			log.debug(
+				{ error: error instanceof Error ? error.message : String(error), count: events.length },
+				"Could not reach dashboard-api for event streaming (non-critical)"
+			);
+		}
+	}
+}
+
+const eventStreamer = new EventStreamer();
+
+/**
+ * Map workflow agent types to dashboard agent types.
+ */
+const AGENT_TYPE_MAP: Record<string, AgentType> = {
+	grounding_agent: "grounding",
+	news_analyst: "news",
+	fundamentals_analyst: "fundamentals",
+	bullish_researcher: "bullish",
+	bearish_researcher: "bearish",
+	trader: "trader",
+	risk_manager: "risk",
+	critic: "critic",
+};
+
+/**
+ * Map workflow step names to cycle phases with progress percentages.
+ */
+const STEP_PROGRESS_MAP: Record<string, { phase: CyclePhase; progress: number }> = {
+	observe: { phase: "observe", progress: 20 },
+	orient: { phase: "orient", progress: 30 },
+	grounding: { phase: "decide", progress: 35 },
+	analysts: { phase: "decide", progress: 45 },
+	debate: { phase: "decide", progress: 60 },
+	trader: { phase: "decide", progress: 75 },
+	consensus: { phase: "decide", progress: 90 },
+	act: { phase: "act", progress: 100 },
+};
+
+// ============================================
 // Workflow Execution
 // ============================================
 
@@ -179,92 +308,336 @@ async function runTradingCycle(): Promise<void> {
 	state.running.tradingCycle = true;
 	const cycleId = generateCycleId();
 	state.lastRun.tradingCycle = new Date();
+	const startTime = Date.now();
+
+	log.info({ cycleId, environment: state.environment }, "Starting trading cycle");
 
 	try {
 		const instruments = getInstruments();
+		log.debug({ cycleId, instruments }, "Fetched instruments for cycle");
 
+		// Emit cycle start event
+		await eventStreamer.push({
+			type: "cycle-start",
+			cycleId,
+			environment: state.environment,
+			instruments,
+			timestamp: new Date().toISOString(),
+		});
+
+		// Use streaming mode for real-time event visibility
 		const run = await tradingCycleWorkflow.createRun();
-		const workflowRunResult = await run.start({
+		const stream = await run.stream({
 			inputData: {
 				cycleId,
 				instruments,
 			},
 		});
 
-		// Persist decisions so they show up in the dashboard Decisions page.
-		if (workflowRunResult.status === "success") {
-			const output = (workflowRunResult as { result?: unknown }).result as
-				| {
-						approved?: boolean;
-						decisionPlan?: {
-							decisions?: Array<{
-								decisionId: string;
-								instrumentId: string;
-								action: "BUY" | "SELL" | "HOLD" | "CLOSE";
-								direction: "LONG" | "SHORT" | "FLAT";
-								size: { value: number; unit: string };
-								strategyFamily?: string | null;
-								timeHorizon?: string | null;
-								rationale?: {
-									summary?: string | null;
-									bullishFactors?: string[] | null;
-									bearishFactors?: string[] | null;
-								} | null;
-							}>;
-						};
-				  }
-				| undefined;
+		// Track workflow result
+		type WorkflowOutput = {
+			approved?: boolean;
+			iterations?: number;
+			decisionPlan?: {
+				decisions?: Array<{
+					decisionId: string;
+					instrumentId: string;
+					action: "BUY" | "SELL" | "HOLD" | "CLOSE";
+					direction: "LONG" | "SHORT" | "FLAT";
+					size: { value: number; unit: string };
+					strategyFamily?: string | null;
+					timeHorizon?: string | null;
+					rationale?: {
+						summary?: string | null;
+						bullishFactors?: string[] | null;
+						bearishFactors?: string[] | null;
+					} | null;
+				}>;
+			};
+		};
+		let workflowOutput: WorkflowOutput | undefined;
 
-			const decisions = output?.decisionPlan?.decisions ?? [];
-			if (decisions.length > 0) {
-				try {
-					const client = await getDbClient();
-					const repo = new DecisionsRepository(client);
-					const status = output?.approved ? "approved" : "rejected";
+		// Process stream events and forward to dashboard
+		for await (const event of stream.fullStream) {
+			const evt = event as unknown as Record<string, unknown>;
 
-					let created = 0;
-					for (const decision of decisions) {
-						if (!decision.decisionId || !decision.instrumentId) {
-							continue;
-						}
+			// Helper to check if an object is an agent event
+			const isAgentEvent = (obj: unknown): obj is Record<string, unknown> => {
+				if (!obj || typeof obj !== "object") {
+					return false;
+				}
+				const o = obj as Record<string, unknown>;
+				return (
+					o.type === "agent-start" ||
+					o.type === "agent-chunk" ||
+					o.type === "agent-complete" ||
+					o.type === "agent-error"
+				);
+			};
 
-						const existing = await repo.findById(decision.decisionId);
-						if (existing) {
-							continue;
-						}
+			// Extract agent event from stream
+			let agentEvt: Record<string, unknown> | null = null;
+			if (evt.type === "workflow-step-output" && evt.payload) {
+				const payload = evt.payload as Record<string, unknown>;
+				if (isAgentEvent(payload.output)) {
+					agentEvt = payload.output as Record<string, unknown>;
+				}
+			} else if (isAgentEvent(evt)) {
+				agentEvt = evt;
+			}
 
-						await repo.create({
-							id: decision.decisionId,
+			// Forward agent events
+			if (agentEvt) {
+				const agentEvent = agentEvt as {
+					type: string;
+					agent: string;
+					data?: Record<string, unknown>;
+					error?: string;
+					timestamp?: string;
+				};
+
+				const agentType = AGENT_TYPE_MAP[agentEvent.agent ?? ""];
+				if (!agentType) {
+					continue;
+				}
+
+				const ts = agentEvent.timestamp ?? new Date().toISOString();
+
+				switch (agentEvent.type) {
+					case "agent-start":
+						await eventStreamer.push({
+							type: "agent-start",
+							agentType,
 							cycleId,
-							symbol: decision.instrumentId,
-							action: decision.action === "CLOSE" ? "SELL" : decision.action,
-							direction: decision.direction,
-							size: decision.size.value,
-							sizeUnit: decision.size.unit,
-							status,
-							strategyFamily: decision.strategyFamily ?? null,
-							timeHorizon: decision.timeHorizon ?? null,
-							rationale: decision.rationale?.summary ?? null,
-							bullishFactors: decision.rationale?.bullishFactors ?? [],
-							bearishFactors: decision.rationale?.bearishFactors ?? [],
-							environment: state.environment,
+							timestamp: ts,
 						});
-						created++;
+						break;
+
+					case "agent-chunk": {
+						const data = agentEvent.data as Record<string, unknown> | undefined;
+						const payload = data?.payload as Record<string, unknown> | undefined;
+						const chunkType = data?.type as string | undefined;
+
+						if (chunkType === "text-delta" && payload?.text) {
+							await eventStreamer.push({
+								type: "agent-chunk",
+								chunkType: "text-delta",
+								agentType,
+								cycleId,
+								text: String(payload.text),
+								timestamp: ts,
+							});
+						} else if (chunkType === "reasoning-delta" && payload?.text) {
+							await eventStreamer.push({
+								type: "agent-chunk",
+								chunkType: "reasoning-delta",
+								agentType,
+								cycleId,
+								text: String(payload.text),
+								timestamp: ts,
+							});
+						} else if (chunkType === "tool-call" && payload?.toolName) {
+							await eventStreamer.push({
+								type: "agent-chunk",
+								chunkType: "tool-call",
+								agentType,
+								cycleId,
+								toolName: String(payload.toolName),
+								toolArgs: JSON.stringify(payload.toolArgs ?? {}),
+								toolCallId: String(payload.toolCallId ?? `tc_${Date.now()}`),
+								timestamp: ts,
+							});
+						} else if (chunkType === "tool-result" || payload?.result !== undefined) {
+							await eventStreamer.push({
+								type: "agent-chunk",
+								chunkType: "tool-result",
+								agentType,
+								cycleId,
+								toolName: String(payload?.toolName ?? "unknown"),
+								toolCallId: String(payload?.toolCallId ?? `tc_${Date.now()}`),
+								result: JSON.stringify(payload?.result ?? {}).slice(0, 200),
+								success: Boolean(payload?.success ?? true),
+								timestamp: ts,
+							});
+						} else if (chunkType === "error" && payload?.error) {
+							await eventStreamer.push({
+								type: "agent-chunk",
+								chunkType: "error",
+								agentType,
+								cycleId,
+								error: String(payload.error),
+								timestamp: ts,
+							});
+						}
+						break;
 					}
 
-					if (created > 0) {
-						log.info({ cycleId, created }, "Persisted trading decisions");
-					}
-				} catch (error) {
-					log.warn(
-						{ cycleId, error: error instanceof Error ? error.message : String(error) },
-						"Failed to persist trading decisions"
-					);
+					case "agent-complete":
+						await eventStreamer.push({
+							type: "agent-complete",
+							agentType,
+							cycleId,
+							output: JSON.stringify(agentEvent.data?.output ?? {}).slice(0, 500),
+							timestamp: ts,
+						});
+						break;
+
+					case "agent-error":
+						await eventStreamer.push({
+							type: "agent-error",
+							agentType,
+							cycleId,
+							error: agentEvent.error ?? "Unknown error",
+							timestamp: ts,
+						});
+						break;
+				}
+			}
+
+			// Handle step completion for progress updates
+			if (evt.type === "workflow-step-finish") {
+				const stepId = String((evt.payload as Record<string, unknown>)?.stepName ?? "");
+				const stepInfo = STEP_PROGRESS_MAP[stepId];
+				if (stepInfo) {
+					await eventStreamer.push({
+						type: "cycle-progress",
+						cycleId,
+						phase: stepInfo.phase,
+						step: stepId,
+						progress: stepInfo.progress,
+						message: `Completed ${stepId} step`,
+						timestamp: new Date().toISOString(),
+					});
 				}
 			}
 		}
-	} catch (_error) {
-		// Error handling done in workflow
+
+		// Flush any remaining events
+		await eventStreamer.flush();
+
+		// Get workflow result
+		const durationMs = Date.now() - startTime;
+
+		if (stream.status !== "success") {
+			log.error(
+				{ cycleId, status: stream.status, durationMs },
+				"Trading cycle workflow returned non-success status"
+			);
+
+			await eventStreamer.push({
+				type: "cycle-result",
+				cycleId,
+				environment: state.environment,
+				status: "failed",
+				durationMs,
+				error: "Workflow execution failed",
+				timestamp: new Date().toISOString(),
+			});
+			await eventStreamer.flush();
+			return;
+		}
+
+		// Get result from stream
+		if (stream.result) {
+			workflowOutput = (await stream.result) as unknown as WorkflowOutput;
+		}
+
+		// Persist decisions so they show up in the dashboard Decisions page.
+		const decisions = workflowOutput?.decisionPlan?.decisions ?? [];
+		if (decisions.length > 0) {
+			try {
+				const client = await getDbClient();
+				const repo = new DecisionsRepository(client);
+				const status = workflowOutput?.approved ? "approved" : "rejected";
+
+				let created = 0;
+				for (const decision of decisions) {
+					if (!decision.decisionId || !decision.instrumentId) {
+						continue;
+					}
+
+					const existing = await repo.findById(decision.decisionId);
+					if (existing) {
+						continue;
+					}
+
+					await repo.create({
+						id: decision.decisionId,
+						cycleId,
+						symbol: decision.instrumentId,
+						action: decision.action === "CLOSE" ? "SELL" : decision.action,
+						direction: decision.direction,
+						size: decision.size.value,
+						sizeUnit: decision.size.unit,
+						status,
+						strategyFamily: decision.strategyFamily ?? null,
+						timeHorizon: decision.timeHorizon ?? null,
+						rationale: decision.rationale?.summary ?? null,
+						bullishFactors: decision.rationale?.bullishFactors ?? [],
+						bearishFactors: decision.rationale?.bearishFactors ?? [],
+						environment: state.environment,
+					});
+					created++;
+				}
+
+				if (created > 0) {
+					log.info(
+						{ cycleId, created, approved: workflowOutput?.approved, durationMs },
+						"Trading cycle completed with decisions"
+					);
+				} else {
+					log.info(
+						{ cycleId, approved: workflowOutput?.approved, durationMs },
+						"Trading cycle completed - no new decisions to persist"
+					);
+				}
+			} catch (error) {
+				log.warn(
+					{ cycleId, error: error instanceof Error ? error.message : String(error) },
+					"Failed to persist trading decisions"
+				);
+			}
+		} else {
+			log.info(
+				{ cycleId, approved: workflowOutput?.approved, durationMs },
+				"Trading cycle completed - workflow produced no decisions"
+			);
+		}
+
+		// Emit cycle result
+		await eventStreamer.push({
+			type: "cycle-result",
+			cycleId,
+			environment: state.environment,
+			status: "completed",
+			durationMs,
+			approved: workflowOutput?.approved ?? false,
+			iterations: workflowOutput?.iterations ?? 0,
+			timestamp: new Date().toISOString(),
+		});
+		await eventStreamer.flush();
+	} catch (error) {
+		const durationMs = Date.now() - startTime;
+		log.error(
+			{
+				cycleId,
+				error: error instanceof Error ? error.message : String(error),
+				stack: error instanceof Error ? error.stack : undefined,
+			},
+			"Trading cycle failed with error"
+		);
+
+		// Emit error event
+		await eventStreamer.push({
+			type: "cycle-result",
+			cycleId,
+			environment: state.environment,
+			status: "failed",
+			durationMs,
+			error: error instanceof Error ? error.message : String(error),
+			timestamp: new Date().toISOString(),
+		});
+		await eventStreamer.flush();
 	} finally {
 		state.running.tradingCycle = false;
 	}

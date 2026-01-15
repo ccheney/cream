@@ -829,9 +829,16 @@ export class AlpacaWebSocketClient {
 	}
 
 	/**
-	 * Start connection monitor to detect stale connections.
-	 * Bun native WebSocket handles protocol-level ping/pong automatically.
-	 * We monitor message activity to detect if the connection has gone stale.
+	 * Start keepalive mechanism to prevent server-side idle timeouts.
+	 *
+	 * Alpaca WebSocket servers close idle connections after ~60 seconds.
+	 * Browser-compatible WebSocket clients don't have a ping() method,
+	 * so we send application-level keepalive messages by re-subscribing
+	 * to existing subscriptions periodically.
+	 *
+	 * The keepalive is sent only when there's been no message activity
+	 * for half the ping interval, avoiding unnecessary traffic when
+	 * the connection is actively receiving data.
 	 */
 	private startPing(): void {
 		this.lastPongTime = Date.now();
@@ -839,13 +846,53 @@ export class AlpacaWebSocketClient {
 		this.pingTimer = setInterval(() => {
 			if (this.ws && this.ws.readyState === WebSocket.OPEN) {
 				const timeSinceLastActivity = Date.now() - this.lastPongTime;
+
+				// Send keepalive if no activity for half the ping interval
+				// This keeps the connection alive before server timeout
+				if (timeSinceLastActivity > (this.config.pingIntervalS * 1000) / 2) {
+					this.sendKeepalive();
+				}
+
 				// Close connection if no activity for 2x ping interval
+				// (indicates server is not responding)
 				if (timeSinceLastActivity > this.config.pingIntervalS * 2 * 1000) {
 					this.ws.close();
 				}
-				// Bun native WebSocket handles protocol pings automatically
 			}
 		}, this.config.pingIntervalS * 1000);
+	}
+
+	/**
+	 * Send a keepalive message to prevent server-side idle timeout.
+	 * Re-subscribes to existing subscriptions (idempotent operation).
+	 */
+	private sendKeepalive(): void {
+		if (!this.ws || this.ws.readyState !== WebSocket.OPEN) {
+			return;
+		}
+
+		// Build subscription message from active subscriptions
+		const trades = Array.from(this.activeSubscriptions.trades);
+		const quotes = Array.from(this.activeSubscriptions.quotes);
+
+		// Only send if we have active subscriptions
+		if (trades.length === 0 && quotes.length === 0) {
+			return;
+		}
+
+		const subscriptionMsg: Record<string, unknown> = { action: "subscribe" };
+		if (trades.length > 0) {
+			subscriptionMsg.trades = trades;
+		}
+		if (quotes.length > 0) {
+			subscriptionMsg.quotes = quotes;
+		}
+
+		try {
+			this.send(subscriptionMsg);
+		} catch {
+			// Ignore send failures - connection will be detected as stale
+		}
 	}
 
 	/**

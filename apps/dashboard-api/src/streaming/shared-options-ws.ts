@@ -39,6 +39,8 @@ const eventHandlers: Set<(event: AlpacaWsEvent) => void> = new Set();
  */
 function broadcastEvent(event: AlpacaWsEvent): void {
 	// Log connection lifecycle events
+	// Note: Disconnects/reconnects with code 1000 (normal close) are expected
+	// during quiet market periods when server closes idle connections.
 	switch (event.type) {
 		case "connected":
 			log.debug("Shared Options WebSocket connected");
@@ -47,11 +49,21 @@ function broadcastEvent(event: AlpacaWsEvent): void {
 			log.info("Shared Options WebSocket authenticated");
 			break;
 		case "disconnected":
-			log.warn({ reason: event.reason }, "Shared Options WebSocket disconnected");
-			// Try to reconnect (the client has auto-reconnect built in)
+			// Code 1000 is normal close (server idle timeout) - log at debug level
+			if (event.reason.includes("code 1000")) {
+				log.debug({ reason: event.reason }, "Shared Options WebSocket disconnected (idle timeout)");
+			} else {
+				log.warn({ reason: event.reason }, "Shared Options WebSocket disconnected");
+			}
+			// Auto-reconnect is built into the client
 			break;
 		case "reconnecting":
-			log.info({ attempt: event.attempt }, "Shared Options WebSocket reconnecting");
+			// First few reconnect attempts are expected after idle timeout
+			if (event.attempt <= 2) {
+				log.debug({ attempt: event.attempt }, "Shared Options WebSocket reconnecting");
+			} else {
+				log.info({ attempt: event.attempt }, "Shared Options WebSocket reconnecting");
+			}
 			break;
 		case "error":
 			log.error({ code: event.code, message: event.message }, "Shared Options WebSocket error");
