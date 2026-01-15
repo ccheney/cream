@@ -102,8 +102,9 @@ tempfile = "3.24"
 filetime = "0.2"
 
 [build-dependencies]
-# Protobuf codegen (future)
-# tonic-build = "0.12"
+tonic-prost-build = "0.14.2"
+prost = "0.14.1"
+prost-types = "0.14.1"
 
 [[bin]]
 name = "execution-engine"

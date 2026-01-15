@@ -33,7 +33,7 @@ mod server;
 pub mod proto {
     pub mod cream {
         pub mod v1 {
-            include!("../../../../../packages/schema-gen/rust/cream/v1/cream.v1.rs");
+            include!(concat!(env!("OUT_DIR"), "/cream.v1.rs"));
         }
     }
 }
