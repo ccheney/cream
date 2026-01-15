@@ -1,13 +1,10 @@
 /**
- * Scheduler Exports
- *
- * Exports scheduled jobs for the worker.
+ * @deprecated Import from '../contexts/synthesis/index.js' instead
  */
-
 export {
 	createIndicatorSynthesisScheduler,
 	IndicatorSynthesisScheduler,
 	type SynthesisSchedulerDependencies,
 	type SynthesisSchedulerState,
 	startIndicatorSynthesisScheduler,
-} from "./indicator-synthesis.js";
+} from "../contexts/synthesis/index.js";

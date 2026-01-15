@@ -1,125 +1,33 @@
 /**
- * Indicator Batch Jobs Scheduler
+ * Indicator Batch Scheduler
  *
- * Uses croner to schedule batch data fetching jobs for the v2 indicator engine.
+ * Uses croner to schedule batch data fetching jobs for the indicator engine.
  * Jobs run on different schedules based on data freshness requirements.
  *
  * Schedule (all times in America/New_York timezone):
  * - Short Interest: 6:00 PM daily (after FINRA publishes)
  * - Sentiment: Hourly from 9:00 AM - 4:00 PM (market hours)
  * - Corporate Actions: 6:00 AM daily (before market open)
- *
- * @see docs/plans/33-indicator-engine-v2.md
  */
 
+import type { BatchJobResult } from "@cream/indicators";
 import {
-	type AlpacaCorporateActionsClient,
-	type BatchJobResult,
 	CorporateActionsBatchJob,
-	type FINRAClient,
 	SentimentAggregationJob,
-	type SentimentDataProvider,
-	type SharesOutstandingProvider,
 	ShortInterestBatchJob,
 } from "@cream/indicators";
-import type {
-	CorporateActionsRepository,
-	SentimentRepository,
-	ShortInterestRepository,
-} from "@cream/storage";
 import { Cron } from "croner";
-import { z } from "zod";
-import { log } from "../logger";
+import { log } from "../../shared/logger.js";
+import {
+	CRON_SCHEDULES,
+	type IndicatorSchedulerConfig,
+	type IndicatorSchedulerDependencies,
+	type JobName,
+	JobNameSchema,
+	type JobState,
+	TIMEZONE,
+} from "./types.js";
 
-// ============================================
-// Constants
-// ============================================
-
-const TIMEZONE = "America/New_York";
-
-// Cron expressions (minute hour day month weekday)
-// Note: croner uses 6-field cron with seconds, so we use 5-field with implicit "0" seconds
-const CRON_SCHEDULES = {
-	// 6:00 PM ET daily - after FINRA publishes short interest data
-	shortInterest: "0 18 * * *",
-	// Every hour from 9 AM - 4 PM ET (market hours), Mon-Fri
-	sentiment: "0 9-16 * * 1-5",
-	// 6:00 AM ET daily - before market open
-	corporateActions: "0 6 * * *",
-} as const;
-
-// ============================================
-// Types
-// ============================================
-
-export const JobStatusSchema = z.enum(["idle", "running", "error", "disabled"]);
-export type JobStatus = z.infer<typeof JobStatusSchema>;
-
-export const JobNameSchema = z.enum(["shortInterest", "sentiment", "corporateActions"]);
-export type JobName = z.infer<typeof JobNameSchema>;
-
-export interface JobState {
-	status: JobStatus;
-	lastRun: Date | null;
-	lastResult: BatchJobResult | null;
-	lastError: string | null;
-	nextRun: Date | null;
-	runCount: number;
-}
-
-export interface IndicatorSchedulerConfig {
-	/** Enable/disable individual jobs */
-	enabled: {
-		shortInterest: boolean;
-		sentiment: boolean;
-		corporateActions: boolean;
-	};
-	/** Override job configurations */
-	jobConfigs?: {
-		shortInterest?: { rateLimitDelayMs?: number };
-		sentiment?: { rateLimitDelayMs?: number };
-		corporateActions?: { rateLimitDelayMs?: number };
-	};
-}
-
-export interface IndicatorSchedulerDependencies {
-	// Data providers (injected for testability)
-	finraClient: FINRAClient;
-	sharesProvider: SharesOutstandingProvider;
-	sentimentProvider: SentimentDataProvider;
-	alpacaClient: AlpacaCorporateActionsClient;
-
-	// Repositories
-	shortInterestRepo: ShortInterestRepository;
-	sentimentRepo: SentimentRepository;
-	corporateActionsRepo: CorporateActionsRepository;
-
-	// Universe symbols provider
-	getSymbols: () => string[];
-}
-
-// ============================================
-// Scheduler Class
-// ============================================
-
-/**
- * Manages scheduled batch jobs for indicator data fetching.
- *
- * @example
- * ```typescript
- * const scheduler = new IndicatorBatchScheduler(deps, config);
- * scheduler.start();
- *
- * // Get job status for health endpoint
- * const status = scheduler.getJobStatus();
- *
- * // Trigger a job manually
- * await scheduler.triggerJob("fundamentals");
- *
- * // Graceful shutdown
- * scheduler.stop();
- * ```
- */
 export class IndicatorBatchScheduler {
 	private readonly deps: IndicatorSchedulerDependencies;
 	private readonly config: IndicatorSchedulerConfig;
@@ -130,7 +38,6 @@ export class IndicatorBatchScheduler {
 		this.deps = deps;
 		this.config = config;
 
-		// Initialize state for all jobs
 		for (const jobName of JobNameSchema.options) {
 			this.state.set(jobName, {
 				status: config.enabled[jobName] ? "idle" : "disabled",
@@ -143,9 +50,6 @@ export class IndicatorBatchScheduler {
 		}
 	}
 
-	/**
-	 * Start all enabled scheduled jobs.
-	 */
 	start(): void {
 		log.info({}, "Starting indicator batch scheduler");
 
@@ -165,7 +69,6 @@ export class IndicatorBatchScheduler {
 			);
 		}
 
-		// Log next run times
 		for (const [name, job] of this.jobs) {
 			const nextRun = job.nextRun();
 			const state = this.state.get(name);
@@ -179,9 +82,6 @@ export class IndicatorBatchScheduler {
 		}
 	}
 
-	/**
-	 * Stop all scheduled jobs gracefully.
-	 */
 	stop(): void {
 		log.info({}, "Stopping indicator batch scheduler");
 
@@ -193,9 +93,6 @@ export class IndicatorBatchScheduler {
 		this.jobs.clear();
 	}
 
-	/**
-	 * Get current status of all jobs.
-	 */
 	getJobStatus(): Record<JobName, JobState> {
 		const result: Record<JobName, JobState> = {} as Record<JobName, JobState>;
 
@@ -203,7 +100,6 @@ export class IndicatorBatchScheduler {
 			const state = this.state.get(jobName);
 			const job = this.jobs.get(jobName);
 
-			// Update next run time from cron job
 			if (state && job) {
 				state.nextRun = job.nextRun();
 			}
@@ -221,10 +117,6 @@ export class IndicatorBatchScheduler {
 		return result;
 	}
 
-	/**
-	 * Manually trigger a specific job.
-	 * Returns the job result or throws if job is already running.
-	 */
 	async triggerJob(jobName: JobName): Promise<BatchJobResult> {
 		const state = this.state.get(jobName);
 		if (!state) {
@@ -248,10 +140,6 @@ export class IndicatorBatchScheduler {
 				return this.runCorporateActionsJob();
 		}
 	}
-
-	// ============================================
-	// Private Methods
-	// ============================================
 
 	private scheduleJob(
 		name: JobName,
@@ -316,7 +204,6 @@ export class IndicatorBatchScheduler {
 				this.deps.sentimentRepo,
 				this.config.jobConfigs?.sentiment
 			);
-			// Get today's date in YYYY-MM-DD format
 			const today = new Date().toISOString().split("T")[0] ?? "";
 			return job.run(symbols, today);
 		});
@@ -327,7 +214,7 @@ export class IndicatorBatchScheduler {
 			const job = new CorporateActionsBatchJob(
 				this.deps.alpacaClient,
 				this.deps.corporateActionsRepo,
-				undefined, // priceProvider - reserved for future use
+				undefined,
 				this.config.jobConfigs?.corporateActions
 			);
 			return job.run(symbols);
@@ -377,22 +264,4 @@ export class IndicatorBatchScheduler {
 			throw error;
 		}
 	}
-}
-
-// ============================================
-// Factory
-// ============================================
-
-/**
- * Create default scheduler configuration.
- * All jobs enabled by default.
- */
-export function createDefaultConfig(): IndicatorSchedulerConfig {
-	return {
-		enabled: {
-			shortInterest: true,
-			sentiment: true,
-			corporateActions: true,
-		},
-	};
 }

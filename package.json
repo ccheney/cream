@@ -19,6 +19,7 @@
     "typecheck": "turbo run typecheck",
     "clean": "turbo run clean && rm -rf node_modules",
     "format": "bun run format:ts && bun run format:rust && bun run format:py",
+    "check": "biome check --write .",
     "format:ts": "biome format --write .",
     "format:rust": "cargo fmt --all",
     "format:py": "ruff format packages/research",

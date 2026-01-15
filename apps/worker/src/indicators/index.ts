@@ -1,22 +1,14 @@
 /**
- * Indicator Batch Jobs
- *
- * Scheduled batch data fetching for the v2 indicator engine.
- *
- * @see docs/plans/33-indicator-engine-v2.md
+ * @deprecated Import from '../contexts/indicators/index.js' instead
  */
-
 export {
-	// Adapters
 	AlpacaCorporateActionsAdapter,
 	AlpacaSentimentAdapter,
 	createAlpacaCorporateActionsFromEnv,
+	createDefaultConfig,
 	createFINRAClient,
 	createSentimentProviderFromEnv,
 	FINRAClientAdapter,
-} from "./adapters.js";
-export {
-	createDefaultConfig,
 	IndicatorBatchScheduler,
 	type IndicatorSchedulerConfig,
 	type IndicatorSchedulerDependencies,
@@ -25,4 +17,4 @@ export {
 	type JobState,
 	type JobStatus,
 	JobStatusSchema,
-} from "./scheduler.js";
+} from "../contexts/indicators/index.js";

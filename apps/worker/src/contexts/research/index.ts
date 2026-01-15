@@ -1,18 +1,27 @@
 /**
- * @deprecated Import from '../contexts/research/index.js' instead
+ * Research Bounded Context
+ *
+ * Container orchestration for autonomous Claude Code research.
+ * Provides isolated execution environments using Firecracker microVMs.
  */
+
 export {
 	buildResearchPrompt,
-	createFirecrackerRunner,
 	createPermissionCallback,
 	createResearchSpawner,
+	type PermissionResult,
+	ResearchContainerSpawner,
+} from "./container-spawner.js";
+export {
+	createFirecrackerRunner,
+	FirecrackerRunner,
+	isFirecrackerAvailable,
+} from "./firecracker-runner.js";
+export {
 	DEFAULT_GUARDRAILS,
 	DEFAULT_RESOURCE_LIMITS,
-	FirecrackerRunner,
 	type Guardrails,
 	GuardrailsSchema,
-	isFirecrackerAvailable,
-	type PermissionResult,
 	type ProgressCallback,
 	type ProgressEvent,
 	ProgressEventSchema,
@@ -20,7 +29,6 @@ export {
 	ProgressEventTypeSchema,
 	type ResearchContainerConfig,
 	ResearchContainerConfigSchema,
-	ResearchContainerSpawner,
 	type ResearchRunResult,
 	ResearchRunResultSchema,
 	type ResearchRunStatus,
@@ -30,4 +38,4 @@ export {
 	type VMConfig,
 	VMConfigSchema,
 	type VMHandle,
-} from "../contexts/research/index.js";
+} from "./types.js";

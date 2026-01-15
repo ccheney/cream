@@ -393,7 +393,6 @@ export function handleWSMessage(message: WSMessage): void {
 
 			const parsed = parseOccSymbol(optQuote.contract);
 			if (!parsed) {
-				console.debug("[WS] options_quote: failed to parse contract", optQuote.contract);
 				break;
 			}
 
@@ -402,11 +401,6 @@ export function handleWSMessage(message: WSMessage): void {
 			const chainData = queryClient.getQueryData<OptionsChainResponse>(chainQueryKey);
 
 			if (!chainData?.chain) {
-				console.debug("[WS] options_quote: no chain data in cache for", {
-					underlying: parsed.underlying,
-					expiration: parsed.expiration,
-					queryKey: chainQueryKey,
-				});
 				break;
 			}
 
@@ -441,18 +435,7 @@ export function handleWSMessage(message: WSMessage): void {
 			});
 
 			if (!foundContract) {
-				console.debug("[WS] options_quote: contract not found in chain", {
-					contract: optQuote.contract,
-					chainLength: chainData.chain.length,
-					sampleCallSymbol: chainData.chain[0]?.call?.symbol,
-					samplePutSymbol: chainData.chain[0]?.put?.symbol,
-				});
 			} else {
-				console.debug("[WS] options_quote: updating cache", {
-					contract: optQuote.contract,
-					bid: optQuote.bid,
-					ask: optQuote.ask,
-				});
 			}
 
 			queryClient.setQueryData<OptionsChainResponse>(chainQueryKey, {
@@ -505,11 +488,6 @@ export function handleWSMessage(message: WSMessage): void {
 			});
 
 			if (foundContract) {
-				console.debug("[WS] options_trade: updating cache", {
-					contract: optTrade.contract,
-					price: optTrade.price,
-					size: optTrade.size,
-				});
 			}
 
 			queryClient.setQueryData<OptionsChainResponse>(chainQueryKey, {

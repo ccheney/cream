@@ -5,11 +5,7 @@
  * Uses the Claude Agent SDK with security guardrails.
  *
  * NOTE: This is a stub implementation. The actual Claude Agent SDK integration
- * will be completed when the SDK is publicly released. Current implementation
- * provides the interface and types for future integration.
- *
- * @see docs/plans/20-research-to-production-pipeline.md
- * @see https://github.com/anthropics/claude-agent-sdk-typescript
+ * will be completed when the SDK is publicly released.
  */
 
 import type {
@@ -25,9 +21,6 @@ import type {
 // Research Prompt Builder
 // ============================================
 
-/**
- * Build the research prompt from configuration
- */
 export function buildResearchPrompt(config: ResearchContainerConfig): string {
 	const factorContext =
 		config.activeFactorIds.length > 0
@@ -75,30 +68,21 @@ Begin your research now.`;
 // Permission Callback
 // ============================================
 
-/**
- * Permission check result
- */
 export interface PermissionResult {
 	behavior: "allow" | "deny";
 	message?: string;
 	updatedInput?: Record<string, unknown>;
 }
 
-/**
- * Create permission callback that enforces guardrails
- */
 export function createPermissionCallback(guardrails: Guardrails) {
 	return async (toolName: string, input: Record<string, unknown>): Promise<PermissionResult> => {
-		// Allow read-only operations
 		if (["Read", "Grep", "Glob", "WebSearch", "WebFetch"].includes(toolName)) {
 			return { behavior: "allow", updatedInput: input };
 		}
 
-		// Check bash commands
 		if (toolName === "Bash") {
 			const command = String(input.command ?? "");
 
-			// Block dangerous commands
 			for (const blocked of guardrails.blockedCommands) {
 				if (command.includes(blocked)) {
 					return {
@@ -108,7 +92,6 @@ export function createPermissionCallback(guardrails: Guardrails) {
 				}
 			}
 
-			// Block git push to protected branches
 			if (command.includes("git push")) {
 				for (const branch of guardrails.blockedBranches) {
 					if (command.includes(branch)) {
@@ -120,7 +103,6 @@ export function createPermissionCallback(guardrails: Guardrails) {
 				}
 			}
 
-			// Block API calls to production
 			for (const api of guardrails.blockedApis) {
 				if (command.includes(api)) {
 					return {
@@ -131,11 +113,9 @@ export function createPermissionCallback(guardrails: Guardrails) {
 			}
 		}
 
-		// Check file writes
 		if (toolName === "Write" || toolName === "Edit") {
 			const filePath = String(input.file_path ?? "");
 
-			// Block writes to system paths
 			if (
 				filePath.startsWith("/etc/") ||
 				filePath.startsWith("/usr/") ||
@@ -156,33 +136,15 @@ export function createPermissionCallback(guardrails: Guardrails) {
 // Container Spawner
 // ============================================
 
-/**
- * Spawns and manages research containers running Claude Code
- *
- * NOTE: This is a stub implementation. The `executeInContainer` method
- * will be implemented when the Claude Agent SDK is publicly available.
- */
 export class ResearchContainerSpawner {
 	private activeRuns: Map<string, AbortController> = new Map();
 
-	/**
-	 * Generate unique run ID
-	 */
 	private generateRunId(): string {
 		const timestamp = Date.now().toString(36);
 		const random = Math.random().toString(36).substring(2, 8);
 		return `research-${timestamp}-${random}`;
 	}
 
-	/**
-	 * Spawn a new research container
-	 *
-	 * Launches the container asynchronously and returns immediately.
-	 * Progress can be monitored via the onProgress callback.
-	 *
-	 * NOTE: Currently a stub - returns immediately with "pending" status.
-	 * Full implementation requires Claude Agent SDK.
-	 */
 	async spawn(
 		config: Omit<ResearchContainerConfig, "runId">,
 		onProgress?: ProgressCallback
@@ -191,11 +153,9 @@ export class ResearchContainerSpawner {
 		const fullConfig: ResearchContainerConfig = { ...config, runId };
 		const startedAt = new Date().toISOString();
 
-		// Create abort controller for cancellation
 		const abortController = new AbortController();
 		this.activeRuns.set(runId, abortController);
 
-		// Emit start event
 		if (onProgress) {
 			await onProgress({
 				runId,
@@ -206,7 +166,6 @@ export class ResearchContainerSpawner {
 			});
 		}
 
-		// Execute in background (don't await)
 		this.executeInContainer(fullConfig, onProgress, abortController.signal).catch((error) => {
 			if (onProgress) {
 				onProgress({
@@ -232,22 +191,14 @@ export class ResearchContainerSpawner {
 		};
 	}
 
-	/**
-	 * Execute Claude Code in the container
-	 *
-	 * NOTE: Stub implementation. Will integrate with Claude Agent SDK
-	 * when publicly available. Currently emits a "not implemented" error.
-	 */
 	private async executeInContainer(
 		config: ResearchContainerConfig,
 		onProgress?: ProgressCallback,
 		_signal?: AbortSignal
 	): Promise<void> {
-		// Build prompt for documentation/testing purposes
 		const _prompt = buildResearchPrompt(config);
 		const _permissionCallback = createPermissionCallback(config.guardrails);
 
-		// Stub: Emit error indicating SDK is not yet available
 		await this.emitProgress(onProgress, {
 			runId: config.runId,
 			type: "error",
@@ -258,7 +209,6 @@ export class ResearchContainerSpawner {
 			timestamp: new Date().toISOString(),
 		});
 
-		// Mark as completed (failed)
 		await this.emitProgress(onProgress, {
 			runId: config.runId,
 			type: "completed",
@@ -270,15 +220,11 @@ export class ResearchContainerSpawner {
 		this.activeRuns.delete(config.runId);
 	}
 
-	/**
-	 * Handle assistant messages, looking for completion markers
-	 */
 	async handleAssistantMessage(
 		runId: string,
 		content: string,
 		onProgress?: ProgressCallback
 	): Promise<void> {
-		// Check for PR creation
 		const prMatch = content.match(/PR created:\s*(https?:\/\/[^\s]+)/i);
 		if (prMatch) {
 			await this.emitProgress(onProgress, {
@@ -291,7 +237,6 @@ export class ResearchContainerSpawner {
 			return;
 		}
 
-		// Check for failure
 		const failMatch = content.match(/Research failed:\s*(.+)/i);
 		if (failMatch) {
 			await this.emitProgress(onProgress, {
@@ -303,7 +248,6 @@ export class ResearchContainerSpawner {
 			return;
 		}
 
-		// Check for phase changes
 		const phaseKeywords = [
 			"Idea Generation",
 			"Implementation",
@@ -327,9 +271,6 @@ export class ResearchContainerSpawner {
 		}
 	}
 
-	/**
-	 * Emit progress event if callback is provided
-	 */
 	private async emitProgress(
 		callback: ProgressCallback | undefined,
 		event: ProgressEvent
@@ -339,9 +280,6 @@ export class ResearchContainerSpawner {
 		}
 	}
 
-	/**
-	 * Cancel a running research container
-	 */
 	cancel(runId: string): boolean {
 		const controller = this.activeRuns.get(runId);
 		if (controller) {
@@ -352,24 +290,15 @@ export class ResearchContainerSpawner {
 		return false;
 	}
 
-	/**
-	 * Get list of active run IDs
-	 */
 	getActiveRuns(): string[] {
 		return Array.from(this.activeRuns.keys());
 	}
 
-	/**
-	 * Check if a run is active
-	 */
 	isRunning(runId: string): boolean {
 		return this.activeRuns.has(runId);
 	}
 }
 
-/**
- * Create a new ResearchContainerSpawner instance
- */
 export function createResearchSpawner(): ResearchContainerSpawner {
 	return new ResearchContainerSpawner();
 }

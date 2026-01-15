@@ -7,24 +7,23 @@
  */
 
 import { describe, expect, test } from "bun:test";
-import { createResearchSpawner, ResearchContainerSpawner } from "../container-spawner.js";
 import {
 	createFirecrackerRunner,
-	FirecrackerRunner,
-	isFirecrackerAvailable,
-} from "../firecracker-runner.js";
-import {
+	createResearchSpawner,
 	DEFAULT_GUARDRAILS,
 	DEFAULT_RESOURCE_LIMITS,
+	FirecrackerRunner,
 	GuardrailsSchema,
+	isFirecrackerAvailable,
 	ProgressEventSchema,
 	ProgressEventTypeSchema,
 	ResearchContainerConfigSchema,
+	ResearchContainerSpawner,
 	ResearchRunResultSchema,
 	ResearchRunStatusSchema,
 	ResourceLimitsSchema,
 	VMConfigSchema,
-} from "../types.js";
+} from "../../contexts/research/index.js";
 
 // ============================================
 // Type Schema Tests

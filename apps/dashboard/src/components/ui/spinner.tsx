@@ -422,8 +422,7 @@ export function LoadingOverlay({
 				<>
 					{/* biome-ignore lint/security/noDangerouslySetInnerHtml: Safe - hardcoded CSS keyframes */}
 					<style dangerouslySetInnerHTML={{ __html: pulseOverlayKeyframes }} />
-					<div
-						role="status"
+					<output
 						aria-label={label}
 						style={{
 							position: "absolute",

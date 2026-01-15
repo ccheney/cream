@@ -33,6 +33,8 @@
       "persistent": true,
       "passThroughEnv": [
         "CREAM_ENV",
+        "NODE_ENV",
+        "LOG_LEVEL",
         "TURSO_DATABASE_URL",
         "TURSO_AUTH_TOKEN",
         "HELIX_URL",
@@ -42,16 +44,22 @@
         "ALPACA_SECRET",
         "ALPACA_BASE_URL",
         "ALPHAVANTAGE_KEY",
+        "FRED_API_KEY",
         "ANTHROPIC_API_KEY",
         "GOOGLE_GENERATIVE_AI_API_KEY",
+        "LLM_PROVIDER",
+        "LLM_MODEL_ID",
         "GOOGLE_CLIENT_ID",
         "GOOGLE_CLIENT_SECRET",
         "BETTER_AUTH_URL",
         "KALSHI_API_KEY_ID",
         "KALSHI_PRIVATE_KEY_PATH",
+        "POLYMARKET_API_KEY",
+        "POLYMARKET_SECRET",
+        "POLYMARKET_PASSPHRASE",
         "ALLOWED_ORIGINS",
-        "NODE_ENV",
-        "LOG_LEVEL"
+        "DASHBOARD_API_URL",
+        "WORKER_INTERNAL_SECRET"
       ]
     },
     "clean": {

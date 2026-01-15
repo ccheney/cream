@@ -181,8 +181,27 @@ app.openapi(healthRoute, (c) => {
 // API Routes (protected)
 // ============================================
 
-// Apply authentication to all /api routes except /api/auth
-app.use("/api/system/*", requireAuth());
+// Apply authentication to all /api routes except /api/auth and internal endpoints
+// Note: /api/system/worker-events and /api/system/trigger-cycle accept internal auth (WORKER_INTERNAL_SECRET)
+app.use("/api/system/*", async (c, next) => {
+	// Skip user auth for internal worker endpoints (they have their own auth)
+	if (c.req.path === "/api/system/worker-events") {
+		return next();
+	}
+	// Allow trigger-cycle to use either user auth or internal auth
+	if (c.req.path === "/api/system/trigger-cycle") {
+		const authHeader = c.req.header("Authorization");
+		if (authHeader?.startsWith("Bearer ")) {
+			const token = authHeader.slice(7);
+			const internalSecret = process.env.WORKER_INTERNAL_SECRET ?? "dev-internal-secret";
+			if (token === internalSecret) {
+				return next(); // Internal auth valid, skip user auth
+			}
+		}
+		// Fall through to requireAuth for user auth
+	}
+	return requireAuth()(c, next);
+});
 app.use("/api/decisions/*", requireAuth());
 app.use("/api/portfolio/*", requireAuth());
 app.use("/api/alerts/*", requireAuth());

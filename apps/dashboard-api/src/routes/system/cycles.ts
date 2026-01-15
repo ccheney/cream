@@ -49,6 +49,23 @@ import {
 const app = new OpenAPIHono();
 
 // ============================================
+// Internal Auth Helper
+// ============================================
+
+const INTERNAL_SECRET = process.env.WORKER_INTERNAL_SECRET ?? "dev-internal-secret";
+
+/**
+ * Check if request is using internal auth (from worker).
+ * Internal requests skip rate limiting.
+ */
+function isInternalAuth(authHeader: string | undefined): boolean {
+	if (!authHeader?.startsWith("Bearer ")) {
+		return false;
+	}
+	return authHeader.slice(7) === INTERNAL_SECRET;
+}
+
+// ============================================
 // Routes
 // ============================================
 
@@ -112,18 +129,22 @@ app.openapi(triggerCycleRoute, async (c) => {
 		);
 	}
 
-	const lastTriggerTime = getLastTriggerTime();
-	const lastTrigger = lastTriggerTime.get(environment) ?? 0;
-	const timeSinceLastTrigger = Date.now() - lastTrigger;
-	if (timeSinceLastTrigger < TRIGGER_RATE_LIMIT_MS) {
-		const retryAfterMs = TRIGGER_RATE_LIMIT_MS - timeSinceLastTrigger;
-		return c.json(
-			{
-				error: `Rate limited. Try again in ${Math.ceil(retryAfterMs / 1000)} seconds.`,
-				retryAfterMs,
-			},
-			429
-		);
+	// Skip rate limit for internal auth (scheduled worker calls)
+	const isInternal = isInternalAuth(c.req.header("Authorization"));
+	if (!isInternal) {
+		const lastTriggerTime = getLastTriggerTime();
+		const lastTrigger = lastTriggerTime.get(environment) ?? 0;
+		const timeSinceLastTrigger = Date.now() - lastTrigger;
+		if (timeSinceLastTrigger < TRIGGER_RATE_LIMIT_MS) {
+			const retryAfterMs = TRIGGER_RATE_LIMIT_MS - timeSinceLastTrigger;
+			return c.json(
+				{
+					error: `Rate limited. Try again in ${Math.ceil(retryAfterMs / 1000)} seconds.`,
+					retryAfterMs,
+				},
+				429
+			);
+		}
 	}
 
 	const cycleId = `cycle_${Date.now()}_${crypto.randomUUID().slice(0, 8)}`;

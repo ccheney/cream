@@ -6,29 +6,21 @@
  *
  * Schedule: 6:00 AM ET on weekdays
  * Cron: 0 6 * * 1-5
- *
- * @see docs/plans/36-dynamic-indicator-synthesis-workflow.md
  */
 
 import { createResearchTriggerService } from "@cream/agents";
 import { type IndicatorSynthesisInput, indicatorSynthesisWorkflow } from "@cream/api";
 import type { TriggerDetectionState } from "@cream/domain";
-import {
-	FactorZooRepository,
-	RegimeLabelsRepository,
-	type RegimeType,
-	type TursoClient,
-} from "@cream/storage";
+import { FactorZooRepository, RegimeLabelsRepository, type TursoClient } from "@cream/storage";
 import { Cron } from "croner";
-import { log } from "../logger.js";
+import { log } from "../../shared/logger.js";
+import { mapRegimeToTriggerFormat } from "./regime-mapper.js";
 
 // ============================================
 // Constants
 // ============================================
 
 const TIMEZONE = "America/New_York";
-
-/** Cron: 6:00 AM ET on weekdays (Mon-Fri) */
 const SYNTHESIS_CHECK_CRON = "0 6 * * 1-5";
 
 // ============================================
@@ -51,26 +43,6 @@ export interface SynthesisSchedulerState {
 // Helper Functions
 // ============================================
 
-/**
- * Map regime_labels regime types to trigger detection regime types.
- * The regime_labels table uses lowercase with underscores, but the
- * TriggerDetectionState expects the string format used by activeRegimes.
- */
-function mapRegimeToTriggerFormat(regime: RegimeType): string {
-	const mapping: Record<RegimeType, string> = {
-		bull_trend: "bull",
-		bear_trend: "bear",
-		range_bound: "sideways",
-		high_volatility: "volatile",
-		low_volatility: "low_vol",
-		crisis: "crisis",
-	};
-	return mapping[regime] ?? regime;
-}
-
-/**
- * Get the current market regime from regime_labels table.
- */
 async function getCurrentMarketRegime(db: TursoClient): Promise<string | null> {
 	const regimeRepo = new RegimeLabelsRepository(db);
 	const label = await regimeRepo.getMarketRegime("1d");
@@ -82,10 +54,6 @@ async function getCurrentMarketRegime(db: TursoClient): Promise<string | null> {
 	return mapRegimeToTriggerFormat(label.regime);
 }
 
-/**
- * Get active regimes covered by production factors.
- * Queries the factors table for active factors and extracts their target regimes.
- */
 async function getActiveRegimes(db: TursoClient): Promise<string[]> {
 	const factorZooRepo = new FactorZooRepository(db);
 	const activeFactors = await factorZooRepo.findActiveFactors();
@@ -96,7 +64,6 @@ async function getActiveRegimes(db: TursoClient): Promise<string[]> {
 		const regimes = factor.targetRegimes ?? [];
 		for (const regime of regimes) {
 			if (regime === "all") {
-				// "all" covers all regimes
 				regimeSet.add("bull");
 				regimeSet.add("bear");
 				regimeSet.add("sideways");
@@ -110,9 +77,6 @@ async function getActiveRegimes(db: TursoClient): Promise<string[]> {
 	return [...regimeSet];
 }
 
-/**
- * Generate a unique cycle ID for the synthesis workflow.
- */
 function generateCycleId(): string {
 	const now = new Date();
 	const timestamp = now.toISOString().replace(/[:.]/g, "-");
@@ -124,12 +88,6 @@ function generateCycleId(): string {
 // Scheduler Class
 // ============================================
 
-/**
- * Indicator Synthesis Scheduler
- *
- * Runs daily before market open to check if new indicators should be
- * synthesized based on regime gaps, alpha decay, or performance degradation.
- */
 export class IndicatorSynthesisScheduler {
 	private readonly db: TursoClient;
 	private job: Cron | null = null;
@@ -146,9 +104,6 @@ export class IndicatorSynthesisScheduler {
 		};
 	}
 
-	/**
-	 * Start the scheduled job.
-	 */
 	start(): void {
 		log.info({ cron: SYNTHESIS_CHECK_CRON, timezone: TIMEZONE }, "Starting synthesis scheduler");
 
@@ -156,7 +111,6 @@ export class IndicatorSynthesisScheduler {
 			await this.runCheck();
 		});
 
-		// Update next run time
 		const nextRun = this.job.nextRun();
 		if (nextRun) {
 			this.state.nextRun = nextRun;
@@ -164,9 +118,6 @@ export class IndicatorSynthesisScheduler {
 		}
 	}
 
-	/**
-	 * Stop the scheduled job.
-	 */
 	stop(): void {
 		if (this.job) {
 			this.job.stop();
@@ -175,11 +126,7 @@ export class IndicatorSynthesisScheduler {
 		}
 	}
 
-	/**
-	 * Get current scheduler state.
-	 */
 	getState(): SynthesisSchedulerState {
-		// Update next run from job if available
 		if (this.job) {
 			const nextRun = this.job.nextRun();
 			if (nextRun) {
@@ -189,22 +136,11 @@ export class IndicatorSynthesisScheduler {
 		return { ...this.state };
 	}
 
-	/**
-	 * Manually trigger a synthesis check.
-	 */
 	async triggerCheck(): Promise<boolean> {
 		log.info({}, "Manually triggering synthesis check");
 		return this.runCheck();
 	}
 
-	/**
-	 * Run the synthesis trigger check.
-	 *
-	 * 1. Get current market regime
-	 * 2. Get active regimes from production factors
-	 * 3. Check if research should be triggered
-	 * 4. If triggered, launch synthesis workflow
-	 */
 	private async runCheck(): Promise<boolean> {
 		const startTime = Date.now();
 		this.state.runCount++;
@@ -214,7 +150,6 @@ export class IndicatorSynthesisScheduler {
 		log.info({ runCount: this.state.runCount }, "Running synthesis trigger check");
 
 		try {
-			// Get current market regime
 			const currentRegime = await getCurrentMarketRegime(this.db);
 			if (!currentRegime) {
 				log.warn({}, "No market regime found, skipping synthesis check");
@@ -222,7 +157,6 @@ export class IndicatorSynthesisScheduler {
 				return false;
 			}
 
-			// Get active regimes covered by production factors
 			const activeRegimes = await getActiveRegimes(this.db);
 
 			log.info(
@@ -230,15 +164,13 @@ export class IndicatorSynthesisScheduler {
 				"Regime context gathered"
 			);
 
-			// Create trigger detection state
 			const triggerState: TriggerDetectionState = {
 				currentRegime,
 				activeRegimes,
-				activeFactorIds: [], // Will be populated by service if needed
+				activeFactorIds: [],
 				timestamp: new Date().toISOString(),
 			};
 
-			// Check if research should be triggered
 			const factorZooRepo = new FactorZooRepository(this.db);
 			const triggerService = createResearchTriggerService({ factorZoo: factorZooRepo });
 			const result = await triggerService.shouldTriggerResearch(triggerState);
@@ -256,7 +188,6 @@ export class IndicatorSynthesisScheduler {
 					"Synthesis trigger detected, launching workflow"
 				);
 
-				// Launch synthesis workflow
 				const cycleId = generateCycleId();
 				const workflowInput: IndicatorSynthesisInput = {
 					triggerReason: result.trigger.type,
@@ -265,12 +196,11 @@ export class IndicatorSynthesisScheduler {
 						result.trigger.type === "REGIME_GAP"
 							? (result.trigger.metadata?.uncoveredRegimes as string[])?.join(", ")
 							: undefined,
-					rollingIC30Day: 0, // Will be calculated by workflow
-					icDecayDays: 0, // Will be calculated by workflow
+					rollingIC30Day: 0,
+					icDecayDays: 0,
 					cycleId,
 				};
 
-				// Execute workflow asynchronously
 				const run = await indicatorSynthesisWorkflow.createRun();
 				run
 					.start({
@@ -310,22 +240,15 @@ export class IndicatorSynthesisScheduler {
 }
 
 // ============================================
-// Factory Function
+// Factory Functions
 // ============================================
 
-/**
- * Create an IndicatorSynthesisScheduler instance.
- */
 export function createIndicatorSynthesisScheduler(
 	deps: SynthesisSchedulerDependencies
 ): IndicatorSynthesisScheduler {
 	return new IndicatorSynthesisScheduler(deps);
 }
 
-/**
- * Create and start the synthesis scheduler.
- * Convenience function for worker initialization.
- */
 export function startIndicatorSynthesisScheduler(db: TursoClient): IndicatorSynthesisScheduler {
 	const scheduler = createIndicatorSynthesisScheduler({ db });
 	scheduler.start();
