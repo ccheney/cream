@@ -79,7 +79,7 @@ buf generate # Protobuf → TS + Rust stubs
 
 ## Code Conventions
 
-- Prefer Bun APIs over Node.js equivalents including websockets (`Bun.file()`, `Bun.serve()`, etc.)
+- Prefer Bun APIs over Node.js equivalents including websockets (`Bun.file()`, `Bun.serve()`, `Bun.env`, etc.)
 - Use `workspace:*` for internal package dependencies
 - **Trust self-documenting code.** Do not add comments that restate what the code does. Only add comments when explaining *why* something non-obvious is necessary.
 - **Do NOT modify linting rules** without explicit approval
@@ -103,7 +103,10 @@ buf generate # Protobuf → TS + Rust stubs
 
 ## Available Tools
 
-| Tool | Purpose |
+Use context7 for exploring libraries and API documentation.
+Use your web search tool to ground all your assumptions, findings.
+
+| CLI Tool | Purpose |
 |------|---------|
 | `gh` | GitHub CLI |
 | `hcloud` | Hetzner Cloud CLI |
