@@ -62,6 +62,7 @@ export { default as portfolioRoutes } from "./portfolio.js";
 export { default as preferencesRoutes } from "./preferences.js";
 export { default as researchRoutes } from "./research.js";
 export { default as riskRoutes } from "./risk.js";
+export { default as searchRoutes } from "./search.js";
 export { default as snapshotsRoutes } from "./snapshots.js";
 export { default as systemRoutes } from "./system.js";
 export { default as thesesRoutes } from "./theses.js";

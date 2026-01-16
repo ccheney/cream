@@ -4,6 +4,7 @@
  * Reusable React hooks for the dashboard.
  */
 
+export { useDebouncedValue } from "./useDebouncedValue";
 export { type UseFocusTrapOptions, type UseFocusTrapReturn, useFocusTrap } from "./useFocusTrap";
 export {
 	type KeyboardShortcut,

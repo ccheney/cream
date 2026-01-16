@@ -162,6 +162,14 @@ export {
 	useLimits,
 	useVaR,
 } from "./useRisk";
+// Search
+export {
+	searchKeys,
+	type SearchResponse,
+	type SearchResult,
+	type SearchResultType,
+	useGlobalSearch,
+} from "./useSearch";
 // Synthesis
 export {
 	synthesisKeys,

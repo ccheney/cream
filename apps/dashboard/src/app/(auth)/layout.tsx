@@ -15,6 +15,7 @@
 import { Menu } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useState } from "react";
+import { GlobalSearch } from "@/components/GlobalSearch";
 import { MobileNav, NavDrawer, Sidebar } from "@/components/layout";
 import { AddSymbolModal } from "@/components/ui/add-symbol-modal";
 import { GlobalLoadingIndicator } from "@/components/ui/GlobalLoadingIndicator";
@@ -151,6 +152,9 @@ export default function AuthLayout({ children }: { children: React.ReactNode }) 
 					onAdd={handleAddSymbol}
 					existingSymbols={watchlistSymbols}
 				/>
+
+				{/* Global Search (Cmd+K) */}
+				<GlobalSearch />
 			</div>
 		);
 	}
@@ -212,6 +216,9 @@ export default function AuthLayout({ children }: { children: React.ReactNode }) 
 					onAdd={handleAddSymbol}
 					existingSymbols={watchlistSymbols}
 				/>
+
+				{/* Global Search (Cmd+K) */}
+				<GlobalSearch />
 			</div>
 		);
 	}
@@ -259,6 +266,9 @@ export default function AuthLayout({ children }: { children: React.ReactNode }) 
 				onAdd={handleAddSymbol}
 				existingSymbols={watchlistSymbols}
 			/>
+
+			{/* Global Search (Cmd+K) */}
+			<GlobalSearch />
 		</div>
 	);
 }
