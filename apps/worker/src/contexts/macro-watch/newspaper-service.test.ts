@@ -8,7 +8,7 @@ import { afterEach, beforeEach, describe, expect, mock, test } from "bun:test";
 import { compileMorningNewspaper as realCompileMorningNewspaper } from "@cream/api";
 import { createNewspaperService, NewspaperService } from "./newspaper-service.js";
 
-const mockSaveNewspaper = mock(() => Promise.resolve());
+const mockUpsertNewspaper = mock(() => Promise.resolve());
 const mockGetEntriesSinceClose = mock(() =>
 	Promise.resolve([
 		{
@@ -38,7 +38,7 @@ const mockGetEntriesSinceClose = mock(() =>
 
 const mockRepo = {
 	getEntriesSinceClose: mockGetEntriesSinceClose,
-	saveNewspaper: mockSaveNewspaper,
+	upsertNewspaper: mockUpsertNewspaper,
 };
 
 const mockGetMacroWatchRepo = mock(() => Promise.resolve(mockRepo));
@@ -66,7 +66,7 @@ describe("NewspaperService", () => {
 		service = createNewspaperService();
 		mockGetMacroWatchRepo.mockClear();
 		mockGetEntriesSinceClose.mockClear();
-		mockSaveNewspaper.mockClear();
+		mockUpsertNewspaper.mockClear();
 		mockGetCalendarService.mockClear();
 		mockGetPreviousTradingDay.mockClear();
 	});
@@ -74,7 +74,7 @@ describe("NewspaperService", () => {
 	afterEach(() => {
 		mockGetMacroWatchRepo.mockClear();
 		mockGetEntriesSinceClose.mockClear();
-		mockSaveNewspaper.mockClear();
+		mockUpsertNewspaper.mockClear();
 		mockGetCalendarService.mockClear();
 		mockGetPreviousTradingDay.mockClear();
 	});
@@ -100,8 +100,8 @@ describe("NewspaperService", () => {
 			expect(mockGetCalendarService).toHaveBeenCalled();
 			expect(mockGetMacroWatchRepo).toHaveBeenCalled();
 			expect(mockGetEntriesSinceClose).toHaveBeenCalled();
-			// compileMorningNewspaper is called (verified by saveNewspaper being called with result)
-			expect(mockSaveNewspaper).toHaveBeenCalled();
+			// compileMorningNewspaper is called (verified by upsertNewspaper being called with result)
+			expect(mockUpsertNewspaper).toHaveBeenCalled();
 		});
 
 		test("updates lastCompile timestamp after successful compile", async () => {
@@ -130,7 +130,7 @@ describe("NewspaperService", () => {
 							() =>
 								resolve({
 									getEntriesSinceClose: mock(() => Promise.resolve([])),
-									saveNewspaper: mock(() => Promise.resolve()),
+									upsertNewspaper: mock(() => Promise.resolve()),
 								}),
 							100
 						)
@@ -149,8 +149,8 @@ describe("NewspaperService", () => {
 
 			await service.compile(["AAPL"]);
 
-			// When no entries, saveNewspaper should not be called (compilation skipped)
-			expect(mockSaveNewspaper).not.toHaveBeenCalled();
+			// When no entries, upsertNewspaper should not be called (compilation skipped)
+			expect(mockUpsertNewspaper).not.toHaveBeenCalled();
 		});
 
 		test("handles calendar service not available", async () => {
