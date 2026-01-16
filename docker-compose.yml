@@ -3,7 +3,7 @@
 # This file configures local development infrastructure.
 #
 # Services:
-# - turso: SQLite-compatible database
+# - postgres: PostgreSQL 17 with TimescaleDB, pg_cron, pgAudit, pg_trgm
 # - helix: Graph + Vector database (HelixDB)
 # - otel-collector: OpenTelemetry trace/metrics collection
 # - redis: In-memory cache for rate limiting
@@ -18,30 +18,65 @@
 #   docker compose down -v      # Stop and remove volumes
 
 services:
-  # Turso - SQLite-compatible database with HTTP protocol
-  # https://github.com/tursodatabase/turso
-  turso:
-    image: ghcr.io/tursodatabase/libsql-server:latest
-    container_name: cream-turso
+  # PostgreSQL with TimescaleDB - Primary database
+  # https://docs.timescale.com/
+  postgres:
+    image: timescale/timescaledb:latest-pg17
+    container_name: cream-postgres
+    restart: unless-stopped
     ports:
-      - "8080:8080"     # HTTP endpoint for libsql client
-      - "5001:5001"     # gRPC endpoint (optional)
+      - "5432:5432"
     environment:
-      - SQLD_NODE=primary
-      # Uncomment for authentication:
-      # - SQLD_HTTP_AUTH=basic:$(echo -n "admin:password" | base64)
+      POSTGRES_USER: cream
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-cream_dev_password}
+      POSTGRES_DB: cream
     volumes:
-      - turso_data:/var/lib/sqld
+      - postgres_data:/var/lib/postgresql/data
+      - ./docker/postgres/init.sql:/docker-entrypoint-initdb.d/init.sql
     healthcheck:
-      # Use bash TCP check since container doesn't have curl/wget
-      test: ["CMD-SHELL", "bash -c 'exec 3<>/dev/tcp/localhost/8080 && echo -e \"GET / HTTP/1.1\\r\\nHost: localhost\\r\\n\\r\\n\" >&3 && timeout 2 cat <&3 | head -1 | grep -q HTTP'"]
+      test: ["CMD-SHELL", "pg_isready -U cream -d cream"]
       interval: 10s
       timeout: 5s
       retries: 5
       start_period: 10s
+    command:
+      - "postgres"
+      - "-c"
+      - "shared_preload_libraries=timescaledb,pg_cron,pgaudit,pg_stat_statements"
+      - "-c"
+      - "cron.database_name=cream"
+      - "-c"
+      - "pgaudit.log=ddl,role,write"
+      - "-c"
+      - "pgaudit.log_parameter=on"
+      - "-c"
+      - "log_statement=mod"
+      - "-c"
+      - "max_connections=100"
+      - "-c"
+      - "shared_buffers=256MB"
+      - "-c"
+      - "effective_cache_size=768MB"
+      - "-c"
+      - "maintenance_work_mem=64MB"
+      - "-c"
+      - "checkpoint_completion_target=0.9"
+      - "-c"
+      - "wal_buffers=16MB"
+      - "-c"
+      - "default_statistics_target=100"
+      - "-c"
+      - "random_page_cost=1.1"
+      - "-c"
+      - "effective_io_concurrency=200"
+      - "-c"
+      - "work_mem=4MB"
+      - "-c"
+      - "min_wal_size=1GB"
+      - "-c"
+      - "max_wal_size=4GB"
     networks:
       - cream-network
-    restart: unless-stopped
 
   # HelixDB - Graph + Vector Database
   # https://github.com/HelixDB/helix-db
@@ -150,7 +185,9 @@ services:
       - PORT=3001
       - NODE_ENV=production
       - CREAM_ENV=${CREAM_ENV:-PAPER}
-      - TURSO_DATABASE_URL=http://turso:8080
+      - DATABASE_URL=postgresql://cream:${POSTGRES_PASSWORD:-cream_dev_password}@postgres:5432/cream
+      - DATABASE_URL_BACKTEST=postgresql://cream:${POSTGRES_PASSWORD:-cream_dev_password}@postgres:5432/cream_backtest
+      - DATABASE_URL_PAPER=postgresql://cream:${POSTGRES_PASSWORD:-cream_dev_password}@postgres:5432/cream_paper
       - HELIX_URL=http://helix:6969
       - RUST_GRPC_URL=execution-engine:50053
       - MASTRA_API_URL=http://api:4111
@@ -168,7 +205,7 @@ services:
       # Temp directory for Parquet files (backtest data)
       - backtest_temp:/tmp/backtest
     depends_on:
-      turso:
+      postgres:
         condition: service_healthy
       redis:
         condition: service_healthy
@@ -188,8 +225,8 @@ networks:
     name: cream-network
 
 volumes:
-  turso_data:
-    name: cream-turso-data
+  postgres_data:
+    name: cream-postgres-data
   helix_data:
     name: cream-helix-data
   redis_data:
