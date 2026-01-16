@@ -1,9 +1,17 @@
 /**
- * @see docs/plans/ui/04-data-requirements.md
+ * Config Versions Repository (Drizzle ORM)
+ *
+ * Data access for config_versions table. Manages version-controlled
+ * configuration with activation/deactivation tracking.
  */
+import { and, desc, eq } from "drizzle-orm";
+import { getDb, type Database } from "../db";
+import { configVersions } from "../schema/core-trading";
+import { RepositoryError } from "./base";
 
-import type { Row, TursoClient } from "../turso.js";
-import { parseJson, RepositoryError, toBoolean, toJson } from "./base.js";
+// ============================================
+// Types
+// ============================================
 
 export interface ConfigVersion {
 	id: string;
@@ -18,55 +26,65 @@ export interface ConfigVersion {
 }
 
 export interface CreateConfigVersionInput {
-	id: string;
+	id?: string;
 	environment: string;
 	config: Record<string, unknown>;
 	description?: string | null;
 	createdBy?: string | null;
 }
 
-function mapConfigVersionRow(row: Row): ConfigVersion {
+// ============================================
+// Row Mapping
+// ============================================
+
+type ConfigVersionRow = typeof configVersions.$inferSelect;
+
+function mapConfigVersionRow(row: ConfigVersionRow): ConfigVersion {
 	return {
-		id: row.id as string,
-		environment: row.environment as string,
-		config: parseJson<Record<string, unknown>>(row.config_json, {}),
-		description: row.description as string | null,
-		active: toBoolean(row.active),
-		createdAt: row.created_at as string,
-		createdBy: row.created_by as string | null,
-		activatedAt: row.activated_at as string | null,
-		deactivatedAt: row.deactivated_at as string | null,
+		id: row.id,
+		environment: row.environment,
+		config: row.configJson ?? {},
+		description: row.description,
+		active: row.active,
+		createdAt: row.createdAt.toISOString(),
+		createdBy: row.createdBy,
+		activatedAt: row.activatedAt?.toISOString() ?? null,
+		deactivatedAt: row.deactivatedAt?.toISOString() ?? null,
 	};
 }
 
-export class ConfigVersionsRepository {
-	private readonly table = "config_versions";
+// ============================================
+// Repository
+// ============================================
 
-	constructor(private readonly client: TursoClient) {}
+export class ConfigVersionsRepository {
+	private db: Database;
+
+	constructor(db?: Database) {
+		this.db = db ?? getDb();
+	}
 
 	async create(input: CreateConfigVersionInput): Promise<ConfigVersion> {
-		try {
-			await this.client.run(
-				`INSERT INTO ${this.table} (
-          id, environment, config_json, description, active, created_by
-        ) VALUES (?, ?, ?, ?, 0, ?)`,
-				[
-					input.id,
-					input.environment,
-					toJson(input.config),
-					input.description ?? null,
-					input.createdBy ?? null,
-				]
-			);
-		} catch (error) {
-			throw RepositoryError.fromSqliteError(this.table, error as Error);
-		}
+		const [row] = await this.db
+			.insert(configVersions)
+			.values({
+				environment: input.environment as "BACKTEST" | "PAPER" | "LIVE",
+				configJson: input.config,
+				description: input.description ?? null,
+				active: false,
+				createdBy: input.createdBy ?? null,
+			})
+			.returning();
 
-		return this.findById(input.id) as Promise<ConfigVersion>;
+		return mapConfigVersionRow(row);
 	}
 
 	async findById(id: string): Promise<ConfigVersion | null> {
-		const row = await this.client.get<Row>(`SELECT * FROM ${this.table} WHERE id = ?`, [id]);
+		const [row] = await this.db
+			.select()
+			.from(configVersions)
+			.where(eq(configVersions.id, id))
+			.limit(1);
 
 		return row ? mapConfigVersionRow(row) : null;
 	}
@@ -74,16 +92,22 @@ export class ConfigVersionsRepository {
 	async findByIdOrThrow(id: string): Promise<ConfigVersion> {
 		const config = await this.findById(id);
 		if (!config) {
-			throw RepositoryError.notFound(this.table, id);
+			throw RepositoryError.notFound("config_versions", id);
 		}
 		return config;
 	}
 
 	async getActive(environment: string): Promise<ConfigVersion | null> {
-		const row = await this.client.get<Row>(
-			`SELECT * FROM ${this.table} WHERE environment = ? AND active = 1`,
-			[environment]
-		);
+		const [row] = await this.db
+			.select()
+			.from(configVersions)
+			.where(
+				and(
+					eq(configVersions.environment, environment as "BACKTEST" | "PAPER" | "LIVE"),
+					eq(configVersions.active, true),
+				),
+			)
+			.limit(1);
 
 		return row ? mapConfigVersionRow(row) : null;
 	}
@@ -94,57 +118,65 @@ export class ConfigVersionsRepository {
 			throw new RepositoryError(
 				`No active config found for environment '${environment}'`,
 				"NOT_FOUND",
-				this.table
+				"config_versions",
 			);
 		}
 		return config;
 	}
 
 	async findByEnvironment(environment: string, limit = 20): Promise<ConfigVersion[]> {
-		const rows = await this.client.execute<Row>(
-			`SELECT * FROM ${this.table} WHERE environment = ? ORDER BY created_at DESC LIMIT ?`,
-			[environment, limit]
-		);
+		const rows = await this.db
+			.select()
+			.from(configVersions)
+			.where(eq(configVersions.environment, environment as "BACKTEST" | "PAPER" | "LIVE"))
+			.orderBy(desc(configVersions.createdAt))
+			.limit(limit);
 
 		return rows.map(mapConfigVersionRow);
 	}
 
-	/** Deactivates current active config before activating the new one. */
 	async activate(id: string): Promise<ConfigVersion> {
 		const config = await this.findByIdOrThrow(id);
-		const now = new Date().toISOString();
+		const now = new Date();
 
-		await this.client.run(
-			`UPDATE ${this.table} SET active = 0, deactivated_at = ? WHERE environment = ? AND active = 1`,
-			[now, config.environment]
-		);
+		await this.db
+			.update(configVersions)
+			.set({ active: false, deactivatedAt: now })
+			.where(
+				and(
+					eq(
+						configVersions.environment,
+						config.environment as "BACKTEST" | "PAPER" | "LIVE",
+					),
+					eq(configVersions.active, true),
+				),
+			);
 
-		await this.client.run(`UPDATE ${this.table} SET active = 1, activated_at = ? WHERE id = ?`, [
-			now,
-			id,
-		]);
+		await this.db
+			.update(configVersions)
+			.set({ active: true, activatedAt: now })
+			.where(eq(configVersions.id, id));
 
 		return this.findByIdOrThrow(id);
 	}
 
 	async deactivate(id: string): Promise<ConfigVersion> {
-		const now = new Date().toISOString();
-
-		const result = await this.client.run(
-			`UPDATE ${this.table} SET active = 0, deactivated_at = ? WHERE id = ?`,
-			[now, id]
-		);
-
-		if (result.changes === 0) {
-			throw RepositoryError.notFound(this.table, id);
+		const config = await this.findById(id);
+		if (!config) {
+			throw RepositoryError.notFound("config_versions", id);
 		}
+
+		await this.db
+			.update(configVersions)
+			.set({ active: false, deactivatedAt: new Date() })
+			.where(eq(configVersions.id, id));
 
 		return this.findByIdOrThrow(id);
 	}
 
 	async compare(
 		id1: string,
-		id2: string
+		id2: string,
 	): Promise<{
 		config1: ConfigVersion;
 		config2: ConfigVersion;
@@ -155,7 +187,7 @@ export class ConfigVersionsRepository {
 
 		const differences: { path: string; value1: unknown; value2: unknown }[] = [];
 		const allKeys = new Set(Object.keys(config1.config)).union(
-			new Set(Object.keys(config2.config))
+			new Set(Object.keys(config2.config)),
 		);
 
 		for (const key of allKeys) {
@@ -177,18 +209,21 @@ export class ConfigVersionsRepository {
 			throw new RepositoryError(
 				"Cannot delete active config version",
 				"CONSTRAINT_VIOLATION",
-				this.table
+				"config_versions",
 			);
 		}
 
-		const result = await this.client.run(`DELETE FROM ${this.table} WHERE id = ?`, [id]);
+		const result = await this.db
+			.delete(configVersions)
+			.where(eq(configVersions.id, id))
+			.returning({ id: configVersions.id });
 
-		return result.changes > 0;
+		return result.length > 0;
 	}
 
 	async getHistory(
 		environment: string,
-		limit = 50
+		limit = 50,
 	): Promise<{
 		versions: ConfigVersion[];
 		activationHistory: { id: string; activatedAt: string; deactivatedAt: string | null }[];

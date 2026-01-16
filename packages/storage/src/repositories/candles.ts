@@ -1,21 +1,30 @@
 /**
- * Candles Repository
+ * Candles Repository (Drizzle ORM)
  *
  * CRUD operations for OHLCV candle data.
  * Primary storage for price data used in indicator computation.
- *
- * @see migrations/003_market_data_tables.sql
  */
-
+import { and, asc, count, desc, eq, gte, lte, sql } from "drizzle-orm";
+import type { NodePgDatabase } from "drizzle-orm/node-postgres";
 import { z } from "zod";
-import type { TursoClient } from "../turso.js";
-import { parseJson, RepositoryError, toJson } from "./base.js";
+import { getDb, type Database } from "../db";
+import { candles } from "../schema/market-data";
+import type * as schema from "../schema";
 
 // ============================================
 // Zod Schemas
 // ============================================
 
-export const TimeframeSchema = z.enum(["1m", "5m", "15m", "30m", "1h", "4h", "1d", "1w"]);
+export const TimeframeSchema = z.enum([
+	"1m",
+	"5m",
+	"15m",
+	"30m",
+	"1h",
+	"4h",
+	"1d",
+	"1w",
+]);
 export type Timeframe = z.infer<typeof TimeframeSchema>;
 
 export const CandleSchema = z.object({
@@ -40,7 +49,10 @@ export const CandleSchema = z.object({
 
 export type Candle = z.infer<typeof CandleSchema>;
 
-export const CandleInsertSchema = CandleSchema.omit({ id: true, createdAt: true });
+export const CandleInsertSchema = CandleSchema.omit({
+	id: true,
+	createdAt: true,
+});
 export type CandleInsert = z.infer<typeof CandleInsertSchema>;
 
 // ============================================
@@ -48,78 +60,105 @@ export type CandleInsert = z.infer<typeof CandleInsertSchema>;
 // ============================================
 
 export class CandlesRepository {
-	constructor(private client: TursoClient) {}
+	private db: Database;
+
+	constructor(db?: Database) {
+		this.db = db ?? getDb();
+	}
 
 	/**
 	 * Insert a single candle (upsert on symbol+timeframe+timestamp)
 	 */
 	async upsert(candle: CandleInsert): Promise<void> {
-		try {
-			await this.client.run(
-				`INSERT INTO candles (
-          symbol, timeframe, timestamp, open, high, low, close, volume,
-          vwap, trade_count, adjusted, split_adjusted, dividend_adjusted,
-          quality_flags, provider
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-        ON CONFLICT(symbol, timeframe, timestamp)
-        DO UPDATE SET
-          open = excluded.open,
-          high = excluded.high,
-          low = excluded.low,
-          close = excluded.close,
-          volume = excluded.volume,
-          vwap = excluded.vwap,
-          trade_count = excluded.trade_count,
-          adjusted = excluded.adjusted,
-          split_adjusted = excluded.split_adjusted,
-          dividend_adjusted = excluded.dividend_adjusted,
-          quality_flags = excluded.quality_flags`,
-				[
-					candle.symbol,
-					candle.timeframe,
-					candle.timestamp,
-					candle.open,
-					candle.high,
-					candle.low,
-					candle.close,
-					candle.volume,
-					candle.vwap ?? null,
-					candle.tradeCount ?? null,
-					candle.adjusted ? 1 : 0,
-					candle.splitAdjusted ? 1 : 0,
-					candle.dividendAdjusted ? 1 : 0,
-					candle.qualityFlags ? toJson(candle.qualityFlags) : null,
-					candle.provider,
-				]
-			);
-		} catch (error) {
-			throw RepositoryError.fromSqliteError("candles", error as Error);
-		}
+		await this.db
+			.insert(candles)
+			.values({
+				symbol: candle.symbol,
+				timeframe: candle.timeframe,
+				timestamp: new Date(candle.timestamp),
+				open: String(candle.open),
+				high: String(candle.high),
+				low: String(candle.low),
+				close: String(candle.close),
+				volume: String(candle.volume),
+				vwap: candle.vwap != null ? String(candle.vwap) : null,
+				tradeCount: candle.tradeCount ?? null,
+				adjusted: candle.adjusted,
+				splitAdjusted: candle.splitAdjusted,
+				dividendAdjusted: candle.dividendAdjusted,
+				qualityFlags: candle.qualityFlags ?? [],
+				provider: candle.provider,
+			})
+			.onConflictDoUpdate({
+				target: [candles.symbol, candles.timeframe, candles.timestamp],
+				set: {
+					open: String(candle.open),
+					high: String(candle.high),
+					low: String(candle.low),
+					close: String(candle.close),
+					volume: String(candle.volume),
+					vwap: candle.vwap != null ? String(candle.vwap) : null,
+					tradeCount: candle.tradeCount ?? null,
+					adjusted: candle.adjusted,
+					splitAdjusted: candle.splitAdjusted,
+					dividendAdjusted: candle.dividendAdjusted,
+					qualityFlags: candle.qualityFlags ?? [],
+				},
+			});
 	}
 
 	/**
 	 * Bulk insert candles
 	 */
-	async bulkUpsert(candles: CandleInsert[]): Promise<number> {
-		if (candles.length === 0) {
+	async bulkUpsert(candlesList: CandleInsert[]): Promise<number> {
+		if (candlesList.length === 0) {
 			return 0;
 		}
 
 		let inserted = 0;
 		// Process in batches of 100
-		for (let i = 0; i < candles.length; i += 100) {
-			const batch = candles.slice(i, i + 100);
-			await this.client.run("BEGIN TRANSACTION");
-			try {
-				for (const candle of batch) {
-					await this.upsert(candle);
-					inserted++;
-				}
-				await this.client.run("COMMIT");
-			} catch (error) {
-				await this.client.run("ROLLBACK");
-				throw error;
-			}
+		for (let i = 0; i < candlesList.length; i += 100) {
+			const batch = candlesList.slice(i, i + 100);
+
+			const values = batch.map((candle) => ({
+				symbol: candle.symbol,
+				timeframe: candle.timeframe,
+				timestamp: new Date(candle.timestamp),
+				open: String(candle.open),
+				high: String(candle.high),
+				low: String(candle.low),
+				close: String(candle.close),
+				volume: String(candle.volume),
+				vwap: candle.vwap != null ? String(candle.vwap) : null,
+				tradeCount: candle.tradeCount ?? null,
+				adjusted: candle.adjusted,
+				splitAdjusted: candle.splitAdjusted,
+				dividendAdjusted: candle.dividendAdjusted,
+				qualityFlags: candle.qualityFlags ?? [],
+				provider: candle.provider,
+			}));
+
+			await this.db
+				.insert(candles)
+				.values(values)
+				.onConflictDoUpdate({
+					target: [candles.symbol, candles.timeframe, candles.timestamp],
+					set: {
+						open: sql`excluded.open`,
+						high: sql`excluded.high`,
+						low: sql`excluded.low`,
+						close: sql`excluded.close`,
+						volume: sql`excluded.volume`,
+						vwap: sql`excluded.vwap`,
+						tradeCount: sql`excluded.trade_count`,
+						adjusted: sql`excluded.adjusted`,
+						splitAdjusted: sql`excluded.split_adjusted`,
+						dividendAdjusted: sql`excluded.dividend_adjusted`,
+						qualityFlags: sql`excluded.quality_flags`,
+					},
+				});
+
+			inserted += batch.length;
 		}
 		return inserted;
 	}
@@ -131,29 +170,41 @@ export class CandlesRepository {
 		symbol: string,
 		timeframe: Timeframe,
 		startTime: string,
-		endTime: string
+		endTime: string,
 	): Promise<Candle[]> {
-		const rows = await this.client.execute<CandleRow>(
-			`SELECT * FROM candles
-       WHERE symbol = ? AND timeframe = ?
-         AND timestamp >= ? AND timestamp <= ?
-       ORDER BY timestamp ASC`,
-			[symbol, timeframe, startTime, endTime]
-		);
+		const rows = await this.db
+			.select()
+			.from(candles)
+			.where(
+				and(
+					eq(candles.symbol, symbol),
+					eq(candles.timeframe, timeframe),
+					gte(candles.timestamp, new Date(startTime)),
+					lte(candles.timestamp, new Date(endTime)),
+				),
+			)
+			.orderBy(asc(candles.timestamp));
+
 		return rows.map(mapRowToCandle);
 	}
 
 	/**
 	 * Get the latest N candles for a symbol
 	 */
-	async getLatest(symbol: string, timeframe: Timeframe, limit = 100): Promise<Candle[]> {
-		const rows = await this.client.execute<CandleRow>(
-			`SELECT * FROM candles
-       WHERE symbol = ? AND timeframe = ?
-       ORDER BY timestamp DESC
-       LIMIT ?`,
-			[symbol, timeframe, limit]
-		);
+	async getLatest(
+		symbol: string,
+		timeframe: Timeframe,
+		limit = 100,
+	): Promise<Candle[]> {
+		const rows = await this.db
+			.select()
+			.from(candles)
+			.where(
+				and(eq(candles.symbol, symbol), eq(candles.timeframe, timeframe)),
+			)
+			.orderBy(desc(candles.timestamp))
+			.limit(limit);
+
 		// Return in ascending order
 		return rows.map(mapRowToCandle).toReversed();
 	}
@@ -161,37 +212,56 @@ export class CandlesRepository {
 	/**
 	 * Get the most recent candle for a symbol
 	 */
-	async getLastCandle(symbol: string, timeframe: Timeframe): Promise<Candle | null> {
-		const row = await this.client.get<CandleRow>(
-			`SELECT * FROM candles
-       WHERE symbol = ? AND timeframe = ?
-       ORDER BY timestamp DESC
-       LIMIT 1`,
-			[symbol, timeframe]
-		);
-		return row ? mapRowToCandle(row) : null;
+	async getLastCandle(
+		symbol: string,
+		timeframe: Timeframe,
+	): Promise<Candle | null> {
+		const rows = await this.db
+			.select()
+			.from(candles)
+			.where(
+				and(eq(candles.symbol, symbol), eq(candles.timeframe, timeframe)),
+			)
+			.orderBy(desc(candles.timestamp))
+			.limit(1);
+
+		return rows[0] ? mapRowToCandle(rows[0]) : null;
 	}
 
 	/**
 	 * Get candle count for a symbol
 	 */
 	async count(symbol: string, timeframe: Timeframe): Promise<number> {
-		const result = await this.client.get<{ count: number }>(
-			`SELECT COUNT(*) as count FROM candles WHERE symbol = ? AND timeframe = ?`,
-			[symbol, timeframe]
-		);
-		return result?.count ?? 0;
+		const result = await this.db
+			.select({ count: count() })
+			.from(candles)
+			.where(
+				and(eq(candles.symbol, symbol), eq(candles.timeframe, timeframe)),
+			);
+
+		return result[0]?.count ?? 0;
 	}
 
 	/**
 	 * Delete candles older than a date
 	 */
-	async deleteOlderThan(symbol: string, timeframe: Timeframe, beforeDate: string): Promise<number> {
-		const result = await this.client.run(
-			`DELETE FROM candles WHERE symbol = ? AND timeframe = ? AND timestamp < ?`,
-			[symbol, timeframe, beforeDate]
-		);
-		return result.changes;
+	async deleteOlderThan(
+		symbol: string,
+		timeframe: Timeframe,
+		beforeDate: string,
+	): Promise<number> {
+		const result = await this.db
+			.delete(candles)
+			.where(
+				and(
+					eq(candles.symbol, symbol),
+					eq(candles.timeframe, timeframe),
+					lte(candles.timestamp, new Date(beforeDate)),
+				),
+			)
+			.returning({ id: candles.id });
+
+		return result.length;
 	}
 
 	/**
@@ -199,10 +269,17 @@ export class CandlesRepository {
 	 */
 	async getSymbols(timeframe?: Timeframe): Promise<string[]> {
 		const query = timeframe
-			? `SELECT DISTINCT symbol FROM candles WHERE timeframe = ? ORDER BY symbol`
-			: `SELECT DISTINCT symbol FROM candles ORDER BY symbol`;
-		const args = timeframe ? [timeframe] : [];
-		const rows = await this.client.execute<{ symbol: string }>(query, args);
+			? this.db
+					.selectDistinct({ symbol: candles.symbol })
+					.from(candles)
+					.where(eq(candles.timeframe, timeframe))
+					.orderBy(asc(candles.symbol))
+			: this.db
+					.selectDistinct({ symbol: candles.symbol })
+					.from(candles)
+					.orderBy(asc(candles.symbol));
+
+		const rows = await query;
 		return rows.map((r) => r.symbol);
 	}
 }
@@ -211,45 +288,26 @@ export class CandlesRepository {
 // Row Mapping
 // ============================================
 
-interface CandleRow {
-	id: number;
-	symbol: string;
-	timeframe: string;
-	timestamp: string;
-	open: number;
-	high: number;
-	low: number;
-	close: number;
-	volume: number;
-	vwap: number | null;
-	trade_count: number | null;
-	adjusted: number;
-	split_adjusted: number;
-	dividend_adjusted: number;
-	quality_flags: string | null;
-	provider: string;
-	created_at: string;
-	[key: string]: unknown;
-}
+type CandleRow = typeof candles.$inferSelect;
 
 function mapRowToCandle(row: CandleRow): Candle {
 	return {
 		id: row.id,
 		symbol: row.symbol,
 		timeframe: row.timeframe as Timeframe,
-		timestamp: row.timestamp,
-		open: row.open,
-		high: row.high,
-		low: row.low,
-		close: row.close,
-		volume: row.volume,
-		vwap: row.vwap,
-		tradeCount: row.trade_count,
-		adjusted: row.adjusted === 1,
-		splitAdjusted: row.split_adjusted === 1,
-		dividendAdjusted: row.dividend_adjusted === 1,
-		qualityFlags: parseJson<string[] | null>(row.quality_flags, null),
+		timestamp: row.timestamp.toISOString(),
+		open: Number(row.open),
+		high: Number(row.high),
+		low: Number(row.low),
+		close: Number(row.close),
+		volume: Number(row.volume),
+		vwap: row.vwap ? Number(row.vwap) : null,
+		tradeCount: row.tradeCount,
+		adjusted: row.adjusted,
+		splitAdjusted: row.splitAdjusted,
+		dividendAdjusted: row.dividendAdjusted,
+		qualityFlags: row.qualityFlags as string[] | null,
 		provider: row.provider,
-		createdAt: row.created_at,
+		createdAt: row.createdAt.toISOString(),
 	};
 }

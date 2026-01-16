@@ -287,6 +287,8 @@ export const configVersions = pgTable(
 			.notNull()
 			.defaultNow(),
 		createdBy: text("created_by"),
+		activatedAt: timestamp("activated_at", { withTimezone: true }),
+		deactivatedAt: timestamp("deactivated_at", { withTimezone: true }),
 	},
 	(table) => [
 		index("idx_config_versions_environment").on(table.environment),

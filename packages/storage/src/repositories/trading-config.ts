@@ -1,33 +1,22 @@
 /**
- * Trading Config Repository
+ * Trading Config Repository (Drizzle ORM)
  *
  * Data access for trading_config table. Manages runtime trading configuration
  * with draft/testing/active/archived workflow and cross-environment promotion.
- *
- * @see docs/plans/22-self-service-dashboard.md (Phase 1)
  */
-
+import { and, desc, eq, max, sql } from "drizzle-orm";
 import { type GlobalModel, getDefaultGlobalModel } from "@cream/domain";
-import type { Row, TursoClient } from "../turso.js";
-import { RepositoryError } from "./base.js";
+import { getDb, type Database } from "../db";
+import { tradingConfig } from "../schema/config";
+import { RepositoryError } from "./base";
 
 // ============================================
 // Types
 // ============================================
 
-/**
- * Trading configuration status
- */
 export type TradingConfigStatus = "draft" | "testing" | "active" | "archived";
-
-/**
- * Trading environment
- */
 export type TradingEnvironment = "BACKTEST" | "PAPER" | "LIVE";
 
-/**
- * Trading configuration entity
- */
 export interface TradingConfig {
 	id: string;
 	environment: TradingEnvironment;
@@ -65,13 +54,10 @@ export interface TradingConfig {
 	promotedFrom: string | null;
 }
 
-/**
- * Create trading config input
- */
 export interface CreateTradingConfigInput {
-	id: string;
+	id?: string;
 	environment: TradingEnvironment;
-	version: number;
+	version?: number;
 
 	// Consensus settings (optional - defaults provided)
 	maxConsensusIterations?: number;
@@ -103,9 +89,6 @@ export interface CreateTradingConfigInput {
 	promotedFrom?: string | null;
 }
 
-/**
- * Update trading config input (partial)
- */
 export interface UpdateTradingConfigInput {
 	// Consensus settings
 	maxConsensusIterations?: number;
@@ -134,45 +117,40 @@ export interface UpdateTradingConfigInput {
 }
 
 // ============================================
-// Row Mapper
+// Row Mapping
 // ============================================
 
-function mapTradingConfigRow(row: Row): TradingConfig {
+type TradingConfigRow = typeof tradingConfig.$inferSelect;
+
+function mapTradingConfigRow(row: TradingConfigRow): TradingConfig {
 	return {
-		id: row.id as string,
+		id: row.id,
 		environment: row.environment as TradingEnvironment,
-		version: row.version as number,
+		version: row.version,
 
-		// Consensus settings
-		maxConsensusIterations: row.max_consensus_iterations as number,
-		agentTimeoutMs: row.agent_timeout_ms as number,
-		totalConsensusTimeoutMs: row.total_consensus_timeout_ms as number,
+		maxConsensusIterations: row.maxConsensusIterations ?? 3,
+		agentTimeoutMs: row.agentTimeoutMs ?? 30000,
+		totalConsensusTimeoutMs: row.totalConsensusTimeoutMs ?? 300000,
 
-		// Conviction thresholds
-		convictionDeltaHold: row.conviction_delta_hold as number,
-		convictionDeltaAction: row.conviction_delta_action as number,
+		convictionDeltaHold: Number(row.convictionDeltaHold ?? "0.2"),
+		convictionDeltaAction: Number(row.convictionDeltaAction ?? "0.3"),
 
-		// Position sizing
-		highConvictionPct: row.high_conviction_pct as number,
-		mediumConvictionPct: row.medium_conviction_pct as number,
-		lowConvictionPct: row.low_conviction_pct as number,
+		highConvictionPct: Number(row.highConvictionPct ?? "0.7"),
+		mediumConvictionPct: Number(row.mediumConvictionPct ?? "0.5"),
+		lowConvictionPct: Number(row.lowConvictionPct ?? "0.25"),
 
-		// Risk/reward
-		minRiskRewardRatio: row.min_risk_reward_ratio as number,
-		kellyFraction: row.kelly_fraction as number,
+		minRiskRewardRatio: Number(row.minRiskRewardRatio ?? "1.5"),
+		kellyFraction: Number(row.kellyFraction ?? "0.5"),
 
-		// Schedule
-		tradingCycleIntervalMs: row.trading_cycle_interval_ms as number,
-		predictionMarketsIntervalMs: row.prediction_markets_interval_ms as number,
+		tradingCycleIntervalMs: row.tradingCycleIntervalMs ?? 3600000,
+		predictionMarketsIntervalMs: row.predictionMarketsIntervalMs ?? 900000,
 
-		// Global LLM model
-		globalModel: (row.global_model as GlobalModel) ?? getDefaultGlobalModel(),
+		globalModel: (row.globalModel as GlobalModel) ?? getDefaultGlobalModel(),
 
-		// Workflow
 		status: row.status as TradingConfigStatus,
-		createdAt: row.created_at as string,
-		updatedAt: row.updated_at as string,
-		promotedFrom: row.promoted_from as string | null,
+		createdAt: row.createdAt.toISOString(),
+		updatedAt: row.updatedAt.toISOString(),
+		promotedFrom: row.promotedFrom,
 	};
 }
 
@@ -180,258 +158,196 @@ function mapTradingConfigRow(row: Row): TradingConfig {
 // Repository
 // ============================================
 
-/**
- * Trading config repository
- */
 export class TradingConfigRepository {
-	private readonly table = "trading_config";
+	private db: Database;
 
-	constructor(private readonly client: TursoClient) {}
-
-	/**
-	 * Create a new trading config version
-	 */
-	async create(input: CreateTradingConfigInput): Promise<TradingConfig> {
-		const now = new Date().toISOString();
-
-		try {
-			await this.client.run(
-				`INSERT INTO ${this.table} (
-          id, environment, version,
-          max_consensus_iterations, agent_timeout_ms, total_consensus_timeout_ms,
-          conviction_delta_hold, conviction_delta_action,
-          high_conviction_pct, medium_conviction_pct, low_conviction_pct,
-          min_risk_reward_ratio, kelly_fraction,
-          trading_cycle_interval_ms, prediction_markets_interval_ms,
-          global_model,
-          status, created_at, updated_at, promoted_from
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-				[
-					input.id,
-					input.environment,
-					input.version,
-					input.maxConsensusIterations ?? 3,
-					input.agentTimeoutMs ?? 30000,
-					input.totalConsensusTimeoutMs ?? 300000,
-					input.convictionDeltaHold ?? 0.2,
-					input.convictionDeltaAction ?? 0.3,
-					input.highConvictionPct ?? 0.7,
-					input.mediumConvictionPct ?? 0.5,
-					input.lowConvictionPct ?? 0.25,
-					input.minRiskRewardRatio ?? 1.5,
-					input.kellyFraction ?? 0.5,
-					input.tradingCycleIntervalMs ?? 3600000,
-					input.predictionMarketsIntervalMs ?? 900000,
-					input.globalModel ?? getDefaultGlobalModel(),
-					input.status ?? "draft",
-					now,
-					now,
-					input.promotedFrom ?? null,
-				]
-			);
-		} catch (error) {
-			throw RepositoryError.fromSqliteError(this.table, error as Error);
-		}
-
-		return this.findById(input.id) as Promise<TradingConfig>;
+	constructor(db?: Database) {
+		this.db = db ?? getDb();
 	}
 
-	/**
-	 * Find trading config by ID
-	 */
+	async create(input: CreateTradingConfigInput): Promise<TradingConfig> {
+		const version = input.version ?? (await this.getNextVersion(input.environment));
+
+		const [row] = await this.db
+			.insert(tradingConfig)
+			.values({
+				environment: input.environment,
+				version,
+				maxConsensusIterations: input.maxConsensusIterations ?? 3,
+				agentTimeoutMs: input.agentTimeoutMs ?? 30000,
+				totalConsensusTimeoutMs: input.totalConsensusTimeoutMs ?? 300000,
+				convictionDeltaHold: String(input.convictionDeltaHold ?? 0.2),
+				convictionDeltaAction: String(input.convictionDeltaAction ?? 0.3),
+				highConvictionPct: String(input.highConvictionPct ?? 0.7),
+				mediumConvictionPct: String(input.mediumConvictionPct ?? 0.5),
+				lowConvictionPct: String(input.lowConvictionPct ?? 0.25),
+				minRiskRewardRatio: String(input.minRiskRewardRatio ?? 1.5),
+				kellyFraction: String(input.kellyFraction ?? 0.5),
+				tradingCycleIntervalMs: input.tradingCycleIntervalMs ?? 3600000,
+				predictionMarketsIntervalMs: input.predictionMarketsIntervalMs ?? 900000,
+				globalModel: input.globalModel ?? getDefaultGlobalModel(),
+				status: input.status ?? "draft",
+				promotedFrom: input.promotedFrom ?? null,
+			})
+			.returning();
+
+		return mapTradingConfigRow(row);
+	}
+
 	async findById(id: string): Promise<TradingConfig | null> {
-		const row = await this.client.get<Row>(`SELECT * FROM ${this.table} WHERE id = ?`, [id]);
+		const [row] = await this.db
+			.select()
+			.from(tradingConfig)
+			.where(eq(tradingConfig.id, id))
+			.limit(1);
 
 		return row ? mapTradingConfigRow(row) : null;
 	}
 
-	/**
-	 * Find trading config by ID, throw if not found
-	 */
 	async findByIdOrThrow(id: string): Promise<TradingConfig> {
 		const config = await this.findById(id);
 		if (!config) {
-			throw RepositoryError.notFound(this.table, id);
+			throw RepositoryError.notFound("trading_config", id);
 		}
 		return config;
 	}
 
-	/**
-	 * Get active config for environment
-	 */
 	async getActive(environment: TradingEnvironment): Promise<TradingConfig | null> {
-		const row = await this.client.get<Row>(
-			`SELECT * FROM ${this.table} WHERE environment = ? AND status = 'active'`,
-			[environment]
-		);
+		const [row] = await this.db
+			.select()
+			.from(tradingConfig)
+			.where(
+				and(
+					eq(tradingConfig.environment, environment),
+					eq(tradingConfig.status, "active"),
+				),
+			)
+			.limit(1);
 
 		return row ? mapTradingConfigRow(row) : null;
 	}
 
-	/**
-	 * Get active config, throw if not found
-	 */
 	async getActiveOrThrow(environment: TradingEnvironment): Promise<TradingConfig> {
 		const config = await this.getActive(environment);
 		if (!config) {
 			throw new RepositoryError(
 				`No active trading config found for environment '${environment}'. Run seed script.`,
 				"NOT_FOUND",
-				this.table
+				"trading_config",
 			);
 		}
 		return config;
 	}
 
-	/**
-	 * Get draft config for editing
-	 */
 	async getDraft(environment: TradingEnvironment): Promise<TradingConfig | null> {
-		const row = await this.client.get<Row>(
-			`SELECT * FROM ${this.table} WHERE environment = ? AND status = 'draft' ORDER BY created_at DESC LIMIT 1`,
-			[environment]
-		);
+		const [row] = await this.db
+			.select()
+			.from(tradingConfig)
+			.where(
+				and(
+					eq(tradingConfig.environment, environment),
+					eq(tradingConfig.status, "draft"),
+				),
+			)
+			.orderBy(desc(tradingConfig.createdAt))
+			.limit(1);
 
 		return row ? mapTradingConfigRow(row) : null;
 	}
 
-	/**
-	 * Save draft config (update existing draft or create new one)
-	 */
 	async saveDraft(
 		environment: TradingEnvironment,
-		input: UpdateTradingConfigInput & { id?: string; version?: number }
+		input: UpdateTradingConfigInput & { id?: string; version?: number },
 	): Promise<TradingConfig> {
 		const existingDraft = await this.getDraft(environment);
-		const now = new Date().toISOString();
 
 		if (existingDraft) {
-			// Update existing draft
-			const updateFields: string[] = [];
-			const updateValues: unknown[] = [];
+			const updateData: Partial<typeof tradingConfig.$inferInsert> = {
+				updatedAt: new Date(),
+			};
 
-			if (input.maxConsensusIterations !== undefined) {
-				updateFields.push("max_consensus_iterations = ?");
-				updateValues.push(input.maxConsensusIterations);
-			}
-			if (input.agentTimeoutMs !== undefined) {
-				updateFields.push("agent_timeout_ms = ?");
-				updateValues.push(input.agentTimeoutMs);
-			}
-			if (input.totalConsensusTimeoutMs !== undefined) {
-				updateFields.push("total_consensus_timeout_ms = ?");
-				updateValues.push(input.totalConsensusTimeoutMs);
-			}
-			if (input.convictionDeltaHold !== undefined) {
-				updateFields.push("conviction_delta_hold = ?");
-				updateValues.push(input.convictionDeltaHold);
-			}
-			if (input.convictionDeltaAction !== undefined) {
-				updateFields.push("conviction_delta_action = ?");
-				updateValues.push(input.convictionDeltaAction);
-			}
-			if (input.highConvictionPct !== undefined) {
-				updateFields.push("high_conviction_pct = ?");
-				updateValues.push(input.highConvictionPct);
-			}
-			if (input.mediumConvictionPct !== undefined) {
-				updateFields.push("medium_conviction_pct = ?");
-				updateValues.push(input.mediumConvictionPct);
-			}
-			if (input.lowConvictionPct !== undefined) {
-				updateFields.push("low_conviction_pct = ?");
-				updateValues.push(input.lowConvictionPct);
-			}
-			if (input.minRiskRewardRatio !== undefined) {
-				updateFields.push("min_risk_reward_ratio = ?");
-				updateValues.push(input.minRiskRewardRatio);
-			}
-			if (input.kellyFraction !== undefined) {
-				updateFields.push("kelly_fraction = ?");
-				updateValues.push(input.kellyFraction);
-			}
-			if (input.tradingCycleIntervalMs !== undefined) {
-				updateFields.push("trading_cycle_interval_ms = ?");
-				updateValues.push(input.tradingCycleIntervalMs);
-			}
-			if (input.predictionMarketsIntervalMs !== undefined) {
-				updateFields.push("prediction_markets_interval_ms = ?");
-				updateValues.push(input.predictionMarketsIntervalMs);
-			}
-			if (input.globalModel !== undefined) {
-				updateFields.push("global_model = ?");
-				updateValues.push(input.globalModel);
-			}
+			if (input.maxConsensusIterations !== undefined)
+				updateData.maxConsensusIterations = input.maxConsensusIterations;
+			if (input.agentTimeoutMs !== undefined)
+				updateData.agentTimeoutMs = input.agentTimeoutMs;
+			if (input.totalConsensusTimeoutMs !== undefined)
+				updateData.totalConsensusTimeoutMs = input.totalConsensusTimeoutMs;
+			if (input.convictionDeltaHold !== undefined)
+				updateData.convictionDeltaHold = String(input.convictionDeltaHold);
+			if (input.convictionDeltaAction !== undefined)
+				updateData.convictionDeltaAction = String(input.convictionDeltaAction);
+			if (input.highConvictionPct !== undefined)
+				updateData.highConvictionPct = String(input.highConvictionPct);
+			if (input.mediumConvictionPct !== undefined)
+				updateData.mediumConvictionPct = String(input.mediumConvictionPct);
+			if (input.lowConvictionPct !== undefined)
+				updateData.lowConvictionPct = String(input.lowConvictionPct);
+			if (input.minRiskRewardRatio !== undefined)
+				updateData.minRiskRewardRatio = String(input.minRiskRewardRatio);
+			if (input.kellyFraction !== undefined)
+				updateData.kellyFraction = String(input.kellyFraction);
+			if (input.tradingCycleIntervalMs !== undefined)
+				updateData.tradingCycleIntervalMs = input.tradingCycleIntervalMs;
+			if (input.predictionMarketsIntervalMs !== undefined)
+				updateData.predictionMarketsIntervalMs = input.predictionMarketsIntervalMs;
+			if (input.globalModel !== undefined) updateData.globalModel = input.globalModel;
 
-			if (updateFields.length > 0) {
-				updateFields.push("updated_at = ?");
-				updateValues.push(now);
-				updateValues.push(existingDraft.id);
-
-				await this.client.run(
-					`UPDATE ${this.table} SET ${updateFields.join(", ")} WHERE id = ?`,
-					updateValues
-				);
-			}
+			await this.db
+				.update(tradingConfig)
+				.set(updateData)
+				.where(eq(tradingConfig.id, existingDraft.id));
 
 			return this.findByIdOrThrow(existingDraft.id);
-		} else {
-			// Create new draft based on active config or defaults
-			const activeConfig = await this.getActive(environment);
-			const nextVersion = activeConfig ? activeConfig.version + 1 : 1;
-
-			return this.create({
-				id: input.id ?? `tc_${environment.toLowerCase()}_v${nextVersion}_${Date.now()}`,
-				environment,
-				version: input.version ?? nextVersion,
-				status: "draft",
-				...input,
-			});
 		}
+
+		const activeConfig = await this.getActive(environment);
+		const nextVersion = activeConfig ? activeConfig.version + 1 : 1;
+
+		return this.create({
+			environment,
+			version: input.version ?? nextVersion,
+			status: "draft",
+			...input,
+		});
 	}
 
-	/**
-	 * Update config status
-	 */
 	async setStatus(id: string, status: TradingConfigStatus): Promise<TradingConfig> {
 		const config = await this.findByIdOrThrow(id);
-		const now = new Date().toISOString();
 
-		// If setting to active, archive current active config
 		if (status === "active") {
-			await this.client.run(
-				`UPDATE ${this.table} SET status = 'archived', updated_at = ? WHERE environment = ? AND status = 'active'`,
-				[now, config.environment]
-			);
+			await this.db
+				.update(tradingConfig)
+				.set({ status: "archived", updatedAt: new Date() })
+				.where(
+					and(
+						eq(tradingConfig.environment, config.environment),
+						eq(tradingConfig.status, "active"),
+					),
+				);
 		}
 
-		await this.client.run(`UPDATE ${this.table} SET status = ?, updated_at = ? WHERE id = ?`, [
-			status,
-			now,
-			id,
-		]);
+		await this.db
+			.update(tradingConfig)
+			.set({ status, updatedAt: new Date() })
+			.where(eq(tradingConfig.id, id));
 
 		return this.findByIdOrThrow(id);
 	}
 
-	/**
-	 * Get version history for environment
-	 */
 	async getHistory(environment: TradingEnvironment, limit = 20): Promise<TradingConfig[]> {
-		const rows = await this.client.execute<Row>(
-			`SELECT * FROM ${this.table} WHERE environment = ? ORDER BY version DESC, created_at DESC LIMIT ?`,
-			[environment, limit]
-		);
+		const rows = await this.db
+			.select()
+			.from(tradingConfig)
+			.where(eq(tradingConfig.environment, environment))
+			.orderBy(desc(tradingConfig.version), desc(tradingConfig.createdAt))
+			.limit(limit);
 
 		return rows.map(mapTradingConfigRow);
 	}
 
-	/**
-	 * Compare two config versions
-	 */
 	async compare(
 		id1: string,
-		id2: string
+		id2: string,
 	): Promise<{
 		config1: TradingConfig;
 		config2: TradingConfig;
@@ -471,29 +387,21 @@ export class TradingConfigRepository {
 		return { config1, config2, differences };
 	}
 
-	/**
-	 * Promote a config from one environment to another
-	 * (e.g., PAPER → LIVE)
-	 */
 	async promote(sourceId: string, targetEnvironment: TradingEnvironment): Promise<TradingConfig> {
 		const source = await this.findByIdOrThrow(sourceId);
 
-		// Source must be active to promote
 		if (source.status !== "active") {
 			throw new RepositoryError(
 				`Cannot promote config with status '${source.status}'. Only active configs can be promoted.`,
 				"CONSTRAINT_VIOLATION",
-				this.table
+				"trading_config",
 			);
 		}
 
-		// Get the current active config for the target environment to determine version
 		const targetActive = await this.getActive(targetEnvironment);
 		const nextVersion = targetActive ? targetActive.version + 1 : 1;
 
-		// Create new config in target environment
-		const newConfig = await this.create({
-			id: `tc_${targetEnvironment.toLowerCase()}_v${nextVersion}_${Date.now()}`,
+		return this.create({
 			environment: targetEnvironment,
 			version: nextVersion,
 			maxConsensusIterations: source.maxConsensusIterations,
@@ -512,13 +420,8 @@ export class TradingConfigRepository {
 			status: "draft",
 			promotedFrom: sourceId,
 		});
-
-		return newConfig;
 	}
 
-	/**
-	 * Delete a config (cannot delete active)
-	 */
 	async delete(id: string): Promise<boolean> {
 		const config = await this.findById(id);
 
@@ -526,24 +429,24 @@ export class TradingConfigRepository {
 			throw new RepositoryError(
 				"Cannot delete active trading config",
 				"CONSTRAINT_VIOLATION",
-				this.table
+				"trading_config",
 			);
 		}
 
-		const result = await this.client.run(`DELETE FROM ${this.table} WHERE id = ?`, [id]);
+		const result = await this.db
+			.delete(tradingConfig)
+			.where(eq(tradingConfig.id, id))
+			.returning({ id: tradingConfig.id });
 
-		return result.changes > 0;
+		return result.length > 0;
 	}
 
-	/**
-	 * Get the next version number for an environment
-	 */
 	async getNextVersion(environment: TradingEnvironment): Promise<number> {
-		const row = await this.client.get<{ max_version: number | null }>(
-			`SELECT MAX(version) as max_version FROM ${this.table} WHERE environment = ?`,
-			[environment]
-		);
+		const result = await this.db
+			.select({ maxVersion: max(tradingConfig.version) })
+			.from(tradingConfig)
+			.where(eq(tradingConfig.environment, environment));
 
-		return (row?.max_version ?? 0) + 1;
+		return (result[0]?.maxVersion ?? 0) + 1;
 	}
 }
