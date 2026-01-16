@@ -1,22 +1,14 @@
 /**
- * Filings Repository
+ * Filings Repository (Drizzle ORM)
  *
  * Data access for filings and filing_sync_runs tables.
  * Tracks SEC filing ingestion and sync job history.
  *
  * @see packages/filings for the ingestion pipeline
  */
-
-import type { Row, TursoClient } from "../turso.js";
-import {
-	type PaginatedResult,
-	type PaginationOptions,
-	paginate,
-	parseJson,
-	query,
-	RepositoryError,
-	toJson,
-} from "./base.js";
+import { and, count, desc, eq, gte, inArray, lte, sql, sum } from "drizzle-orm";
+import { getDb, type Database } from "../db";
+import { filings, filingSyncRuns } from "../schema/external";
 
 // ============================================
 // Types
@@ -50,7 +42,6 @@ export interface Filing {
 }
 
 export interface CreateFilingInput {
-	id: string;
 	accessionNumber: string;
 	symbol: string;
 	filingType: FilingType;
@@ -91,7 +82,6 @@ export interface FilingSyncRun {
 }
 
 export interface CreateSyncRunInput {
-	id: string;
 	symbolsRequested: string[];
 	filingTypes: string[];
 	dateRangeStart?: string;
@@ -108,51 +98,67 @@ export interface UpdateSyncRunProgress {
 	chunksCreated?: number;
 }
 
+export interface PaginationOptions {
+	page?: number;
+	pageSize?: number;
+}
+
+export interface PaginatedResult<T> {
+	data: T[];
+	total: number;
+	page: number;
+	pageSize: number;
+	totalPages: number;
+}
+
 // ============================================
 // Row Mappers
 // ============================================
 
-function mapFilingRow(row: Row): Filing {
+type FilingRow = typeof filings.$inferSelect;
+type SyncRunRow = typeof filingSyncRuns.$inferSelect;
+
+function mapFilingRow(row: FilingRow): Filing {
 	return {
-		id: row.id as string,
-		accessionNumber: row.accession_number as string,
-		symbol: row.symbol as string,
-		filingType: row.filing_type as FilingType,
-		filedDate: row.filed_date as string,
-		reportDate: row.report_date as string | null,
-		companyName: row.company_name as string | null,
-		cik: row.cik as string | null,
-		sectionCount: (row.section_count as number) ?? 0,
-		chunkCount: (row.chunk_count as number) ?? 0,
+		id: row.id,
+		accessionNumber: row.accessionNumber,
+		symbol: row.symbol,
+		filingType: row.filingType as FilingType,
+		filedDate: row.filedDate.toISOString(),
+		reportDate: row.reportDate?.toISOString() ?? null,
+		companyName: row.companyName,
+		cik: row.cik,
+		sectionCount: row.sectionCount ?? 0,
+		chunkCount: row.chunkCount ?? 0,
 		status: row.status as FilingStatus,
-		errorMessage: row.error_message as string | null,
-		ingestedAt: row.ingested_at as string,
-		completedAt: row.completed_at as string | null,
-		createdAt: row.created_at as string,
-		updatedAt: row.updated_at as string,
+		errorMessage: row.errorMessage,
+		ingestedAt: row.ingestedAt.toISOString(),
+		completedAt: row.completedAt?.toISOString() ?? null,
+		createdAt: row.createdAt.toISOString(),
+		updatedAt: row.updatedAt.toISOString(),
 	};
 }
 
-function mapSyncRunRow(row: Row): FilingSyncRun {
+function mapSyncRunRow(row: SyncRunRow): FilingSyncRun {
 	return {
-		id: row.id as string,
-		startedAt: row.started_at as string,
-		completedAt: row.completed_at as string | null,
-		symbolsRequested: parseJson<string[]>(row.symbols_requested, []),
-		filingTypes: parseJson<string[]>(row.filing_types, []),
-		dateRangeStart: row.date_range_start as string | null,
-		dateRangeEnd: row.date_range_end as string | null,
-		symbolsTotal: (row.symbols_total as number) ?? 0,
-		symbolsProcessed: (row.symbols_processed as number) ?? 0,
-		filingsFetched: (row.filings_fetched as number) ?? 0,
-		filingsIngested: (row.filings_ingested as number) ?? 0,
-		chunksCreated: (row.chunks_created as number) ?? 0,
+		id: row.id,
+		startedAt: row.startedAt.toISOString(),
+		completedAt: row.completedAt?.toISOString() ?? null,
+		symbolsRequested: row.symbolsRequested as string[],
+		filingTypes: row.filingTypes as string[],
+		dateRangeStart: row.dateRangeStart?.toISOString() ?? null,
+		dateRangeEnd: row.dateRangeEnd?.toISOString() ?? null,
+		symbolsTotal: row.symbolsTotal ?? 0,
+		symbolsProcessed: row.symbolsProcessed ?? 0,
+		filingsFetched: row.filingsFetched ?? 0,
+		filingsIngested: row.filingsIngested ?? 0,
+		chunksCreated: row.chunksCreated ?? 0,
 		status: row.status as SyncRunStatus,
-		errorMessage: row.error_message as string | null,
-		triggerSource: row.trigger_source as TriggerSource,
-		environment: row.environment as string,
-		createdAt: row.created_at as string,
-		updatedAt: row.updated_at as string,
+		errorMessage: row.errorMessage,
+		triggerSource: row.triggerSource as TriggerSource,
+		environment: row.environment,
+		createdAt: row.createdAt.toISOString(),
+		updatedAt: row.updatedAt.toISOString(),
 	};
 }
 
@@ -161,165 +167,179 @@ function mapSyncRunRow(row: Row): FilingSyncRun {
 // ============================================
 
 export class FilingsRepository {
-	private readonly table = "filings";
+	private db: Database;
 
-	constructor(private readonly client: TursoClient) {}
+	constructor(db?: Database) {
+		this.db = db ?? getDb();
+	}
 
 	async create(input: CreateFilingInput): Promise<Filing> {
-		try {
-			await this.client.run(
-				`INSERT INTO ${this.table} (
-          id, accession_number, symbol, filing_type, filed_date,
-          report_date, company_name, cik, ingested_at, status
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'pending')`,
-				[
-					input.id,
-					input.accessionNumber,
-					input.symbol,
-					input.filingType,
-					input.filedDate,
-					input.reportDate ?? null,
-					input.companyName ?? null,
-					input.cik ?? null,
-					input.ingestedAt,
-				]
-			);
-		} catch (error) {
-			throw RepositoryError.fromSqliteError(this.table, error as Error);
-		}
+		const [row] = await this.db
+			.insert(filings)
+			.values({
+				accessionNumber: input.accessionNumber,
+				symbol: input.symbol,
+				filingType: input.filingType as typeof filings.$inferInsert.filingType,
+				filedDate: new Date(input.filedDate),
+				reportDate: input.reportDate ? new Date(input.reportDate) : null,
+				companyName: input.companyName ?? null,
+				cik: input.cik ?? null,
+				ingestedAt: new Date(input.ingestedAt),
+				status: "pending",
+			})
+			.returning();
 
-		return this.findById(input.id) as Promise<Filing>;
+		return mapFilingRow(row);
 	}
 
 	async findById(id: string): Promise<Filing | null> {
-		const row = await this.client.get<Row>(`SELECT * FROM ${this.table} WHERE id = ?`, [id]);
+		const [row] = await this.db
+			.select()
+			.from(filings)
+			.where(eq(filings.id, id))
+			.limit(1);
+
 		return row ? mapFilingRow(row) : null;
 	}
 
 	async findByAccessionNumber(accessionNumber: string): Promise<Filing | null> {
-		const row = await this.client.get<Row>(
-			`SELECT * FROM ${this.table} WHERE accession_number = ?`,
-			[accessionNumber]
-		);
+		const [row] = await this.db
+			.select()
+			.from(filings)
+			.where(eq(filings.accessionNumber, accessionNumber))
+			.limit(1);
+
 		return row ? mapFilingRow(row) : null;
 	}
 
 	async existsByAccessionNumber(accessionNumber: string): Promise<boolean> {
-		const row = await this.client.get<{ count: number }>(
-			`SELECT COUNT(*) as count FROM ${this.table} WHERE accession_number = ?`,
-			[accessionNumber]
-		);
-		return (row?.count ?? 0) > 0;
+		const [result] = await this.db
+			.select({ count: count() })
+			.from(filings)
+			.where(eq(filings.accessionNumber, accessionNumber));
+
+		return (result?.count ?? 0) > 0;
 	}
 
 	async findMany(
 		filters: FilingFilters = {},
 		pagination?: PaginationOptions
 	): Promise<PaginatedResult<Filing>> {
-		const builder = query().orderBy("filed_date", "DESC");
+		const conditions = [];
 
 		if (filters.symbol) {
-			builder.eq("symbol", filters.symbol);
+			conditions.push(eq(filings.symbol, filters.symbol));
 		}
 		if (filters.filingType) {
 			if (Array.isArray(filters.filingType)) {
-				builder.where("filing_type", "IN", filters.filingType);
+				conditions.push(inArray(filings.filingType, filters.filingType as typeof filings.$inferSelect.filingType[]));
 			} else {
-				builder.eq("filing_type", filters.filingType);
+				conditions.push(eq(filings.filingType, filters.filingType as typeof filings.$inferSelect.filingType));
 			}
 		}
 		if (filters.status) {
 			if (Array.isArray(filters.status)) {
-				builder.where("status", "IN", filters.status);
+				conditions.push(inArray(filings.status, filters.status as typeof filings.$inferSelect.status[]));
 			} else {
-				builder.eq("status", filters.status);
+				conditions.push(eq(filings.status, filters.status as typeof filings.$inferSelect.status));
 			}
 		}
 		if (filters.fromDate) {
-			builder.where("filed_date", ">=", filters.fromDate);
+			conditions.push(gte(filings.filedDate, new Date(filters.fromDate)));
 		}
 		if (filters.toDate) {
-			builder.where("filed_date", "<=", filters.toDate);
+			conditions.push(lte(filings.filedDate, new Date(filters.toDate)));
 		}
 
-		const { sql, args } = builder.build(`SELECT * FROM ${this.table}`);
-		// split() always returns at least one element, so index 0 is safe
-		// biome-ignore lint/style/noNonNullAssertion: split always returns at least one element
-		const baseSql = sql.split(" LIMIT ")[0]!;
-		const countSql = baseSql.replace("SELECT *", "SELECT COUNT(*) as count");
+		const whereClause = conditions.length > 0 ? and(...conditions) : undefined;
+		const page = pagination?.page ?? 1;
+		const pageSize = pagination?.pageSize ?? 50;
+		const offset = (page - 1) * pageSize;
 
-		const result = await paginate<Row>(
-			this.client,
-			baseSql,
-			countSql,
-			args.slice(0, -2),
-			pagination
-		);
+		const [countResult] = await this.db
+			.select({ count: count() })
+			.from(filings)
+			.where(whereClause);
+
+		const rows = await this.db
+			.select()
+			.from(filings)
+			.where(whereClause)
+			.orderBy(desc(filings.filedDate))
+			.limit(pageSize)
+			.offset(offset);
+
+		const total = countResult?.count ?? 0;
 
 		return {
-			...result,
-			data: result.data.map(mapFilingRow),
+			data: rows.map(mapFilingRow),
+			total,
+			page,
+			pageSize,
+			totalPages: Math.ceil(total / pageSize),
 		};
 	}
 
 	async findBySymbol(symbol: string, limit = 50): Promise<Filing[]> {
-		const rows = await this.client.execute<Row>(
-			`SELECT * FROM ${this.table}
-       WHERE symbol = ?
-       ORDER BY filed_date DESC
-       LIMIT ?`,
-			[symbol, limit]
-		);
+		const rows = await this.db
+			.select()
+			.from(filings)
+			.where(eq(filings.symbol, symbol))
+			.orderBy(desc(filings.filedDate))
+			.limit(limit);
+
 		return rows.map(mapFilingRow);
 	}
 
 	async findRecent(symbol: string, filingType?: FilingType, limit = 10): Promise<Filing[]> {
-		let sql = `SELECT * FROM ${this.table} WHERE symbol = ?`;
-		const args: unknown[] = [symbol];
+		const conditions = [
+			eq(filings.symbol, symbol),
+			eq(filings.status, "complete"),
+		];
 
 		if (filingType) {
-			sql += ` AND filing_type = ?`;
-			args.push(filingType);
+			conditions.push(eq(filings.filingType, filingType as typeof filings.$inferSelect.filingType));
 		}
 
-		sql += ` AND status = 'complete' ORDER BY filed_date DESC LIMIT ?`;
-		args.push(limit);
+		const rows = await this.db
+			.select()
+			.from(filings)
+			.where(and(...conditions))
+			.orderBy(desc(filings.filedDate))
+			.limit(limit);
 
-		const rows = await this.client.execute<Row>(sql, args);
 		return rows.map(mapFilingRow);
 	}
 
 	async markProcessing(id: string): Promise<void> {
-		await this.client.run(
-			`UPDATE ${this.table}
-       SET status = 'processing', updated_at = datetime('now')
-       WHERE id = ?`,
-			[id]
-		);
+		await this.db
+			.update(filings)
+			.set({ status: "processing", updatedAt: new Date() })
+			.where(eq(filings.id, id));
 	}
 
 	async markComplete(id: string, sectionCount: number, chunkCount: number): Promise<void> {
-		await this.client.run(
-			`UPDATE ${this.table}
-       SET status = 'complete',
-           section_count = ?,
-           chunk_count = ?,
-           completed_at = datetime('now'),
-           updated_at = datetime('now')
-       WHERE id = ?`,
-			[sectionCount, chunkCount, id]
-		);
+		await this.db
+			.update(filings)
+			.set({
+				status: "complete",
+				sectionCount,
+				chunkCount,
+				completedAt: new Date(),
+				updatedAt: new Date(),
+			})
+			.where(eq(filings.id, id));
 	}
 
 	async markFailed(id: string, errorMessage: string): Promise<void> {
-		await this.client.run(
-			`UPDATE ${this.table}
-       SET status = 'failed',
-           error_message = ?,
-           updated_at = datetime('now')
-       WHERE id = ?`,
-			[errorMessage, id]
-		);
+		await this.db
+			.update(filings)
+			.set({
+				status: "failed",
+				errorMessage,
+				updatedAt: new Date(),
+			})
+			.where(eq(filings.id, id));
 	}
 
 	async getStatsBySymbol(symbol: string): Promise<{
@@ -327,25 +347,26 @@ export class FilingsRepository {
 		byType: Record<FilingType, number>;
 		lastIngested: string | null;
 	}> {
-		const countRow = await this.client.get<{ count: number }>(
-			`SELECT COUNT(*) as count FROM ${this.table} WHERE symbol = ? AND status = 'complete'`,
-			[symbol]
-		);
+		const [countResult] = await this.db
+			.select({ count: count() })
+			.from(filings)
+			.where(and(eq(filings.symbol, symbol), eq(filings.status, "complete")));
 
-		const typeRows = await this.client.execute<{ filing_type: string; count: number }>(
-			`SELECT filing_type, COUNT(*) as count
-       FROM ${this.table}
-       WHERE symbol = ? AND status = 'complete'
-       GROUP BY filing_type`,
-			[symbol]
-		);
+		const typeRows = await this.db
+			.select({
+				filingType: filings.filingType,
+				count: sql<number>`COUNT(*)::int`,
+			})
+			.from(filings)
+			.where(and(eq(filings.symbol, symbol), eq(filings.status, "complete")))
+			.groupBy(filings.filingType);
 
-		const lastRow = await this.client.get<{ ingested_at: string }>(
-			`SELECT ingested_at FROM ${this.table}
-       WHERE symbol = ? AND status = 'complete'
-       ORDER BY ingested_at DESC LIMIT 1`,
-			[symbol]
-		);
+		const [lastRow] = await this.db
+			.select({ ingestedAt: filings.ingestedAt })
+			.from(filings)
+			.where(and(eq(filings.symbol, symbol), eq(filings.status, "complete")))
+			.orderBy(desc(filings.ingestedAt))
+			.limit(1);
 
 		const byType: Record<FilingType, number> = {
 			"10-K": 0,
@@ -354,13 +375,13 @@ export class FilingsRepository {
 			DEF14A: 0,
 		};
 		for (const row of typeRows) {
-			byType[row.filing_type as FilingType] = row.count;
+			byType[row.filingType as FilingType] = row.count;
 		}
 
 		return {
-			total: countRow?.count ?? 0,
+			total: countResult?.count ?? 0,
 			byType,
-			lastIngested: lastRow?.ingested_at ?? null,
+			lastIngested: lastRow?.ingestedAt?.toISOString() ?? null,
 		};
 	}
 
@@ -369,29 +390,33 @@ export class FilingsRepository {
 		totalChunks: number;
 		byType: Record<string, number>;
 	}> {
-		const countRow = await this.client.get<{ count: number }>(
-			`SELECT COUNT(*) as count FROM ${this.table} WHERE status = 'complete'`
-		);
+		const [countResult] = await this.db
+			.select({ count: count() })
+			.from(filings)
+			.where(eq(filings.status, "complete"));
 
-		const chunkRow = await this.client.get<{ total: number }>(
-			`SELECT SUM(chunk_count) as total FROM ${this.table} WHERE status = 'complete'`
-		);
+		const [chunkResult] = await this.db
+			.select({ total: sql<number>`COALESCE(SUM(${filings.chunkCount}), 0)::int` })
+			.from(filings)
+			.where(eq(filings.status, "complete"));
 
-		const typeRows = await this.client.execute<{ filing_type: string; count: number }>(
-			`SELECT filing_type, COUNT(*) as count
-       FROM ${this.table}
-       WHERE status = 'complete'
-       GROUP BY filing_type`
-		);
+		const typeRows = await this.db
+			.select({
+				filingType: filings.filingType,
+				count: sql<number>`COUNT(*)::int`,
+			})
+			.from(filings)
+			.where(eq(filings.status, "complete"))
+			.groupBy(filings.filingType);
 
 		const byType: Record<string, number> = {};
 		for (const row of typeRows) {
-			byType[row.filing_type] = row.count;
+			byType[row.filingType] = row.count;
 		}
 
 		return {
-			total: countRow?.count ?? 0,
-			totalChunks: chunkRow?.total ?? 0,
+			total: countResult?.count ?? 0,
+			totalChunks: chunkResult?.total ?? 0,
 			byType,
 		};
 	}
@@ -402,125 +427,122 @@ export class FilingsRepository {
 // ============================================
 
 export class FilingSyncRunsRepository {
-	private readonly table = "filing_sync_runs";
+	private db: Database;
 
-	constructor(private readonly client: TursoClient) {}
+	constructor(db?: Database) {
+		this.db = db ?? getDb();
+	}
 
 	async start(input: CreateSyncRunInput): Promise<FilingSyncRun> {
-		const now = new Date().toISOString();
+		const [row] = await this.db
+			.insert(filingSyncRuns)
+			.values({
+				startedAt: new Date(),
+				symbolsRequested: input.symbolsRequested,
+				filingTypes: input.filingTypes,
+				dateRangeStart: input.dateRangeStart ? new Date(input.dateRangeStart) : null,
+				dateRangeEnd: input.dateRangeEnd ? new Date(input.dateRangeEnd) : null,
+				symbolsTotal: input.symbolsTotal,
+				triggerSource: input.triggerSource as typeof filingSyncRuns.$inferInsert.triggerSource,
+				environment: input.environment as typeof filingSyncRuns.$inferInsert.environment,
+				status: "running",
+			})
+			.returning();
 
-		try {
-			await this.client.run(
-				`INSERT INTO ${this.table} (
-          id, started_at, symbols_requested, filing_types,
-          date_range_start, date_range_end, symbols_total,
-          trigger_source, environment, status
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'running')`,
-				[
-					input.id,
-					now,
-					toJson(input.symbolsRequested),
-					toJson(input.filingTypes),
-					input.dateRangeStart ?? null,
-					input.dateRangeEnd ?? null,
-					input.symbolsTotal,
-					input.triggerSource,
-					input.environment,
-				]
-			);
-		} catch (error) {
-			throw RepositoryError.fromSqliteError(this.table, error as Error);
-		}
-
-		return this.findById(input.id) as Promise<FilingSyncRun>;
+		return mapSyncRunRow(row);
 	}
 
 	async findById(id: string): Promise<FilingSyncRun | null> {
-		const row = await this.client.get<Row>(`SELECT * FROM ${this.table} WHERE id = ?`, [id]);
+		const [row] = await this.db
+			.select()
+			.from(filingSyncRuns)
+			.where(eq(filingSyncRuns.id, id))
+			.limit(1);
+
 		return row ? mapSyncRunRow(row) : null;
 	}
 
 	async updateProgress(id: string, progress: UpdateSyncRunProgress): Promise<void> {
-		const updates: string[] = ["updated_at = datetime('now')"];
-		const args: unknown[] = [];
+		const updates: Record<string, unknown> = {
+			updatedAt: new Date(),
+		};
 
 		if (progress.symbolsProcessed !== undefined) {
-			updates.push("symbols_processed = ?");
-			args.push(progress.symbolsProcessed);
+			updates.symbolsProcessed = progress.symbolsProcessed;
 		}
 		if (progress.filingsFetched !== undefined) {
-			updates.push("filings_fetched = ?");
-			args.push(progress.filingsFetched);
+			updates.filingsFetched = progress.filingsFetched;
 		}
 		if (progress.filingsIngested !== undefined) {
-			updates.push("filings_ingested = ?");
-			args.push(progress.filingsIngested);
+			updates.filingsIngested = progress.filingsIngested;
 		}
 		if (progress.chunksCreated !== undefined) {
-			updates.push("chunks_created = ?");
-			args.push(progress.chunksCreated);
+			updates.chunksCreated = progress.chunksCreated;
 		}
 
-		args.push(id);
-
-		await this.client.run(`UPDATE ${this.table} SET ${updates.join(", ")} WHERE id = ?`, args);
+		await this.db
+			.update(filingSyncRuns)
+			.set(updates)
+			.where(eq(filingSyncRuns.id, id));
 	}
 
 	async complete(
 		id: string,
 		stats: { filingsIngested: number; chunksCreated: number }
 	): Promise<void> {
-		await this.client.run(
-			`UPDATE ${this.table}
-       SET status = 'completed',
-           completed_at = datetime('now'),
-           filings_ingested = ?,
-           chunks_created = ?,
-           updated_at = datetime('now')
-       WHERE id = ?`,
-			[stats.filingsIngested, stats.chunksCreated, id]
-		);
+		await this.db
+			.update(filingSyncRuns)
+			.set({
+				status: "completed",
+				completedAt: new Date(),
+				filingsIngested: stats.filingsIngested,
+				chunksCreated: stats.chunksCreated,
+				updatedAt: new Date(),
+			})
+			.where(eq(filingSyncRuns.id, id));
 	}
 
 	async fail(id: string, errorMessage: string): Promise<void> {
-		await this.client.run(
-			`UPDATE ${this.table}
-       SET status = 'failed',
-           completed_at = datetime('now'),
-           error_message = ?,
-           updated_at = datetime('now')
-       WHERE id = ?`,
-			[errorMessage, id]
-		);
+		await this.db
+			.update(filingSyncRuns)
+			.set({
+				status: "failed",
+				completedAt: new Date(),
+				errorMessage,
+				updatedAt: new Date(),
+			})
+			.where(eq(filingSyncRuns.id, id));
 	}
 
 	async findRecent(limit = 10): Promise<FilingSyncRun[]> {
-		const rows = await this.client.execute<Row>(
-			`SELECT * FROM ${this.table}
-       ORDER BY started_at DESC
-       LIMIT ?`,
-			[limit]
-		);
+		const rows = await this.db
+			.select()
+			.from(filingSyncRuns)
+			.orderBy(desc(filingSyncRuns.startedAt))
+			.limit(limit);
+
 		return rows.map(mapSyncRunRow);
 	}
 
 	async findRunning(): Promise<FilingSyncRun | null> {
-		const row = await this.client.get<Row>(
-			`SELECT * FROM ${this.table}
-       WHERE status = 'running'
-       ORDER BY started_at DESC
-       LIMIT 1`
-		);
+		const [row] = await this.db
+			.select()
+			.from(filingSyncRuns)
+			.where(eq(filingSyncRuns.status, "running"))
+			.orderBy(desc(filingSyncRuns.startedAt))
+			.limit(1);
+
 		return row ? mapSyncRunRow(row) : null;
 	}
 
 	async getLastSuccessful(): Promise<FilingSyncRun | null> {
-		const row = await this.client.get<Row>(
-			`SELECT * FROM ${this.table}
-       WHERE status = 'completed'
-       ORDER BY completed_at DESC
-       LIMIT 1`
-		);
+		const [row] = await this.db
+			.select()
+			.from(filingSyncRuns)
+			.where(eq(filingSyncRuns.status, "completed"))
+			.orderBy(desc(filingSyncRuns.completedAt))
+			.limit(1);
+
 		return row ? mapSyncRunRow(row) : null;
 	}
 }

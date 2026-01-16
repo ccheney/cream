@@ -1,14 +1,14 @@
 /**
- * Universe Cache Repository
+ * Universe Cache Repository (Drizzle ORM)
  *
- * Cached universe resolution results (index constituents, ETF holdings, screeners).
+ * Data access for cached universe resolution results (index constituents, ETF holdings, screeners).
  *
- * @see migrations/003_market_data_tables.sql
+ * @see docs/plans/33-indicator-engine-v2.md
  */
-
+import { and, eq, gt, lte } from "drizzle-orm";
 import { z } from "zod";
-import type { TursoClient } from "../turso.js";
-import { parseJson, RepositoryError, toJson } from "./base.js";
+import { getDb, type Database } from "../db";
+import { universeCache } from "../schema/market-data";
 
 // ============================================
 // Zod Schemas
@@ -17,166 +17,163 @@ import { parseJson, RepositoryError, toJson } from "./base.js";
 export const SourceTypeSchema = z.enum(["index", "etf", "screener", "static", "custom"]);
 export type SourceType = z.infer<typeof SourceTypeSchema>;
 
-export const UniverseCacheSchema = z.object({
-	id: z.number().optional(),
-	sourceType: SourceTypeSchema,
-	sourceId: z.string().describe("Universe source identifier (e.g., 'SP500', 'QQQ', 'custom-tech')"),
-	sourceHash: z.string().describe("Content hash for cache invalidation"),
-	tickers: z.array(z.string()),
-	tickerCount: z.number(),
-	metadata: z.record(z.string(), z.unknown()).nullable().optional(),
-	cachedAt: z.string().datetime().optional(),
-	expiresAt: z.string().datetime(),
-	provider: z.string().nullable().optional(),
-});
+export interface UniverseCache {
+	id: number;
+	sourceType: SourceType;
+	sourceId: string;
+	sourceHash: string;
+	tickers: string[];
+	tickerCount: number;
+	metadata: Record<string, unknown> | null;
+	cachedAt: string;
+	expiresAt: string;
+	provider: string | null;
+}
 
-export type UniverseCache = z.infer<typeof UniverseCacheSchema>;
-
-export const UniverseCacheInsertSchema = UniverseCacheSchema.omit({
-	id: true,
-	cachedAt: true,
-	tickerCount: true,
-}).extend({
-	tickerCount: z.number().optional().describe("Computed from tickers array length"),
-});
-export type UniverseCacheInsert = z.infer<typeof UniverseCacheInsertSchema>;
-
-// ============================================
-// Repository
-// ============================================
-
-export class UniverseCacheRepository {
-	constructor(private client: TursoClient) {}
-
-	/**
-	 * Get cached universe by source type and ID
-	 */
-	async get(sourceType: SourceType, sourceId: string): Promise<UniverseCache | null> {
-		const row = await this.client.get<UniverseCacheRow>(
-			`SELECT * FROM universe_cache
-       WHERE source_type = ? AND source_id = ?
-         AND expires_at > datetime('now')`,
-			[sourceType, sourceId]
-		);
-		return row ? mapRowToCache(row) : null;
-	}
-
-	/**
-	 * Get cached universe by hash (for invalidation check)
-	 */
-	async getByHash(sourceHash: string): Promise<UniverseCache | null> {
-		const row = await this.client.get<UniverseCacheRow>(
-			`SELECT * FROM universe_cache
-       WHERE source_hash = ?
-         AND expires_at > datetime('now')`,
-			[sourceHash]
-		);
-		return row ? mapRowToCache(row) : null;
-	}
-
-	/**
-	 * Set/update cached universe
-	 */
-	async set(cache: UniverseCacheInsert): Promise<void> {
-		const tickerCount = cache.tickers.length;
-
-		try {
-			await this.client.run(
-				`INSERT INTO universe_cache (
-          source_type, source_id, source_hash, tickers, ticker_count,
-          metadata, expires_at, provider
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-        ON CONFLICT(source_type, source_id)
-        DO UPDATE SET
-          source_hash = excluded.source_hash,
-          tickers = excluded.tickers,
-          ticker_count = excluded.ticker_count,
-          metadata = excluded.metadata,
-          cached_at = datetime('now'),
-          expires_at = excluded.expires_at,
-          provider = excluded.provider`,
-				[
-					cache.sourceType,
-					cache.sourceId,
-					cache.sourceHash,
-					toJson(cache.tickers),
-					tickerCount,
-					cache.metadata ? toJson(cache.metadata) : null,
-					cache.expiresAt,
-					cache.provider ?? null,
-				]
-			);
-		} catch (error) {
-			throw RepositoryError.fromSqliteError("universe_cache", error as Error);
-		}
-	}
-
-	/**
-	 * Delete cached universe
-	 */
-	async delete(sourceType: SourceType, sourceId: string): Promise<boolean> {
-		const result = await this.client.run(
-			`DELETE FROM universe_cache WHERE source_type = ? AND source_id = ?`,
-			[sourceType, sourceId]
-		);
-		return result.changes > 0;
-	}
-
-	/**
-	 * Delete all expired cache entries
-	 */
-	async purgeExpired(): Promise<number> {
-		const result = await this.client.run(
-			`DELETE FROM universe_cache WHERE expires_at <= datetime('now')`
-		);
-		return result.changes;
-	}
-
-	/**
-	 * Get all cached sources
-	 */
-	async listSources(): Promise<{ sourceType: SourceType; sourceId: string }[]> {
-		const rows = await this.client.execute<{ source_type: string; source_id: string }>(
-			`SELECT source_type, source_id FROM universe_cache
-       WHERE expires_at > datetime('now')
-       ORDER BY source_type, source_id`
-		);
-		return rows.map((r) => ({
-			sourceType: r.source_type as SourceType,
-			sourceId: r.source_id,
-		}));
-	}
+export interface UniverseCacheInsert {
+	sourceType: SourceType;
+	sourceId: string;
+	sourceHash: string;
+	tickers: string[];
+	tickerCount?: number;
+	metadata?: Record<string, unknown> | null;
+	expiresAt: string;
+	provider?: string | null;
 }
 
 // ============================================
 // Row Mapping
 // ============================================
 
-interface UniverseCacheRow {
-	id: number;
-	source_type: string;
-	source_id: string;
-	source_hash: string;
-	tickers: string;
-	ticker_count: number;
-	metadata: string | null;
-	cached_at: string;
-	expires_at: string;
-	provider: string | null;
-	[key: string]: unknown;
-}
+type UniverseCacheRow = typeof universeCache.$inferSelect;
 
-function mapRowToCache(row: UniverseCacheRow): UniverseCache {
+function mapUniverseCacheRow(row: UniverseCacheRow): UniverseCache {
 	return {
 		id: row.id,
-		sourceType: row.source_type as SourceType,
-		sourceId: row.source_id,
-		sourceHash: row.source_hash,
-		tickers: parseJson<string[]>(row.tickers, []),
-		tickerCount: row.ticker_count,
-		metadata: parseJson<Record<string, unknown> | null>(row.metadata, null),
-		cachedAt: row.cached_at,
-		expiresAt: row.expires_at,
+		sourceType: row.sourceType as SourceType,
+		sourceId: row.sourceId,
+		sourceHash: row.sourceHash,
+		tickers: row.tickers as string[],
+		tickerCount: row.tickerCount,
+		metadata: row.metadata as Record<string, unknown> | null,
+		cachedAt: row.cachedAt.toISOString(),
+		expiresAt: row.expiresAt.toISOString(),
 		provider: row.provider,
 	};
+}
+
+// ============================================
+// Repository
+// ============================================
+
+export class UniverseCacheRepository {
+	private db: Database;
+
+	constructor(db?: Database) {
+		this.db = db ?? getDb();
+	}
+
+	async get(sourceType: SourceType, sourceId: string): Promise<UniverseCache | null> {
+		const now = new Date();
+
+		const [row] = await this.db
+			.select()
+			.from(universeCache)
+			.where(
+				and(
+					eq(universeCache.sourceType, sourceType),
+					eq(universeCache.sourceId, sourceId),
+					gt(universeCache.expiresAt, now)
+				)
+			)
+			.limit(1);
+
+		return row ? mapUniverseCacheRow(row) : null;
+	}
+
+	async getByHash(sourceHash: string): Promise<UniverseCache | null> {
+		const now = new Date();
+
+		const [row] = await this.db
+			.select()
+			.from(universeCache)
+			.where(
+				and(
+					eq(universeCache.sourceHash, sourceHash),
+					gt(universeCache.expiresAt, now)
+				)
+			)
+			.limit(1);
+
+		return row ? mapUniverseCacheRow(row) : null;
+	}
+
+	async set(cache: UniverseCacheInsert): Promise<void> {
+		const tickerCount = cache.tickers.length;
+
+		await this.db
+			.insert(universeCache)
+			.values({
+				sourceType: cache.sourceType,
+				sourceId: cache.sourceId,
+				sourceHash: cache.sourceHash,
+				tickers: cache.tickers,
+				tickerCount,
+				metadata: cache.metadata ?? null,
+				expiresAt: new Date(cache.expiresAt),
+				provider: cache.provider ?? null,
+			})
+			.onConflictDoUpdate({
+				target: [universeCache.sourceType, universeCache.sourceId],
+				set: {
+					sourceHash: cache.sourceHash,
+					tickers: cache.tickers,
+					tickerCount,
+					metadata: cache.metadata ?? null,
+					cachedAt: new Date(),
+					expiresAt: new Date(cache.expiresAt),
+					provider: cache.provider ?? null,
+				},
+			});
+	}
+
+	async delete(sourceType: SourceType, sourceId: string): Promise<boolean> {
+		const result = await this.db
+			.delete(universeCache)
+			.where(
+				and(
+					eq(universeCache.sourceType, sourceType),
+					eq(universeCache.sourceId, sourceId)
+				)
+			)
+			.returning({ id: universeCache.id });
+
+		return result.length > 0;
+	}
+
+	async purgeExpired(): Promise<number> {
+		const now = new Date();
+
+		const result = await this.db
+			.delete(universeCache)
+			.where(lte(universeCache.expiresAt, now))
+			.returning({ id: universeCache.id });
+
+		return result.length;
+	}
+
+	async listSources(): Promise<{ sourceType: SourceType; sourceId: string }[]> {
+		const now = new Date();
+
+		const rows = await this.db
+			.select({ sourceType: universeCache.sourceType, sourceId: universeCache.sourceId })
+			.from(universeCache)
+			.where(gt(universeCache.expiresAt, now))
+			.orderBy(universeCache.sourceType, universeCache.sourceId);
+
+		return rows.map((r) => ({
+			sourceType: r.sourceType as SourceType,
+			sourceId: r.sourceId,
+		}));
+	}
 }
