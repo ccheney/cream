@@ -46,13 +46,13 @@ export const styles = {
 		marginBottom: "16px",
 	},
 	errorIcon: {
-		fontSize: "48px",
+		fontSize: "40px",
 		marginBottom: "16px",
-		color: "#dc2626", // red-600
+		color: "#a8a29e", // stone-400
 	},
 	errorMessage: {
 		fontSize: "14px",
-		color: "#dc2626", // red-600
+		color: "#78716c", // stone-500
 		marginBottom: "16px",
 		textAlign: "center" as const,
 	},
@@ -60,8 +60,8 @@ export const styles = {
 		padding: "8px 16px",
 		fontSize: "14px",
 		fontWeight: 500,
-		backgroundColor: "#292524", // stone-800
-		color: "#fafaf9", // stone-50
+		backgroundColor: "#d97706", // amber-600 (primary)
+		color: "#ffffff",
 		border: "none",
 		borderRadius: "6px",
 		cursor: "pointer",
@@ -70,10 +70,10 @@ export const styles = {
 	details: {
 		marginTop: "8px",
 		padding: "8px",
-		backgroundColor: "#fef2f2", // red-50
+		backgroundColor: "#fafaf9", // stone-50
 		borderRadius: "4px",
 		fontSize: "12px",
-		color: "#991b1b", // red-800
+		color: "#57534e", // stone-600
 		fontFamily: "monospace",
 		maxWidth: "100%",
 		overflow: "auto",
@@ -94,11 +94,11 @@ export const shimmerKeyframes = `
 export function handleButtonHover(
 	e: React.MouseEvent<HTMLButtonElement> | React.FocusEvent<HTMLButtonElement>
 ): void {
-	e.currentTarget.style.backgroundColor = "#1c1917";
+	e.currentTarget.style.backgroundColor = "#b45309"; // amber-700
 }
 
 export function handleButtonReset(
 	e: React.MouseEvent<HTMLButtonElement> | React.FocusEvent<HTMLButtonElement>
 ): void {
-	e.currentTarget.style.backgroundColor = "#292524";
+	e.currentTarget.style.backgroundColor = "#d97706"; // amber-600
 }

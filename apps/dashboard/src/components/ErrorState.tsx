@@ -55,14 +55,14 @@ function WarningIcon({ className }: { className?: string }) {
 			viewBox="0 0 24 24"
 			fill="none"
 			stroke="currentColor"
-			strokeWidth="2"
+			strokeWidth="1.5"
 			strokeLinecap="round"
 			strokeLinejoin="round"
 			aria-hidden="true"
 		>
-			<path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z" />
-			<line x1="12" y1="9" x2="12" y2="13" />
-			<line x1="12" y1="17" x2="12.01" y2="17" />
+			<circle cx="12" cy="12" r="10" />
+			<line x1="12" y1="8" x2="12" y2="12" />
+			<line x1="12" y1="16" x2="12.01" y2="16" />
 		</svg>
 	);
 }
@@ -157,20 +157,20 @@ export function ErrorState({
 			{/* Icon */}
 			<div
 				className={`
-          text-red-500 dark:text-red-400
+          text-stone-400 dark:text-night-500
           ${isCompact ? "mb-3" : "mb-4"}
         `}
 			>
-				{icon ?? <WarningIcon className={isCompact ? "w-8 h-8" : "w-12 h-12"} />}
+				{icon ?? <WarningIcon className={isCompact ? "w-8 h-8" : "w-10 h-10"} />}
 			</div>
 
 			{/* Title */}
 			{!isCompact && (
 				<h3
 					className={`
-            font-semibold text-stone-900 dark:text-night-50
-            ${isFull ? "text-xl" : "text-lg"}
-            mb-2
+            font-medium text-stone-700 dark:text-night-100
+            ${isFull ? "text-lg" : "text-base"}
+            mb-1.5
           `}
 				>
 					{title}
@@ -180,9 +180,9 @@ export function ErrorState({
 			{/* Message */}
 			<p
 				className={`
-          text-stone-600 dark:text-night-200
-          ${isCompact ? "text-sm" : "text-base"}
-          max-w-md
+          text-stone-500 dark:text-night-300
+          ${isCompact ? "text-sm" : "text-sm"}
+          max-w-sm
         `}
 			>
 				{isCompact ? message : message}
@@ -190,39 +190,37 @@ export function ErrorState({
 
 			{/* Hint */}
 			{hint && !isCompact && (
-				<p className="text-sm text-stone-500 dark:text-night-300 dark:text-stone-500 dark:text-night-300 mt-2 max-w-md">
-					{hint}
-				</p>
+				<p className="text-xs text-stone-400 dark:text-night-400 mt-2 max-w-sm">{hint}</p>
 			)}
 
 			{/* Error Code */}
 			{errorCode && (
-				<p className="text-xs text-stone-400 dark:text-night-400 dark:text-stone-600 dark:text-night-200 mt-2 font-mono">
-					Error: {errorCode}
+				<p className="text-xs text-stone-400 dark:text-night-500 mt-2 font-mono">
+					Code: {errorCode}
 				</p>
 			)}
 
 			{/* Actions */}
 			{allActions.length > 0 && (
-				<div className={`flex items-center gap-3 ${isCompact ? "mt-4" : "mt-6"}`}>
+				<div className={`flex items-center gap-2 ${isCompact ? "mt-4" : "mt-5"}`}>
 					{allActions.map((action, index) => (
 						<button
 							key={`action-${index}`}
 							type="button"
 							onClick={action.onClick}
 							className={`
-                inline-flex items-center gap-2
-                ${isCompact ? "px-3 py-1.5 text-sm" : "px-4 py-2 text-sm"}
+                inline-flex items-center gap-1.5
+                ${isCompact ? "px-3 py-1.5 text-xs" : "px-3 py-1.5 text-sm"}
                 font-medium rounded-md transition-colors
                 ${
 									action.variant === "secondary"
-										? "text-stone-700 dark:text-night-100 bg-cream-100 dark:bg-night-700 hover:bg-cream-200 dark:hover:bg-night-600 border border-cream-200 dark:border-night-600"
-										: "text-white bg-red-600 hover:bg-red-700 dark:bg-red-600 dark:hover:bg-red-700"
+										? "text-stone-600 dark:text-night-200 bg-cream-100 dark:bg-night-700 hover:bg-cream-200 dark:hover:bg-night-600"
+										: "text-white bg-amber-600 hover:bg-amber-700 dark:bg-amber-600 dark:hover:bg-amber-700"
 								}
               `}
 							data-testid={`${testId}-action-${index}`}
 						>
-							{action.label === "Try Again" && <RefreshIcon className="w-4 h-4" />}
+							{action.label === "Try Again" && <RefreshIcon className="w-3.5 h-3.5" />}
 							{action.label}
 						</button>
 					))}

@@ -64,24 +64,24 @@ const fallbackStyles = {
 		padding: "48px 24px",
 		minHeight: "200px",
 		textAlign: "center" as const,
-		backgroundColor: "#fef2f2", // red-50
-		border: "1px solid #fecaca", // red-200
+		backgroundColor: "#fafaf9", // stone-50
+		border: "1px solid #e7e5e4", // stone-200
 		borderRadius: "8px",
 		margin: "16px",
 	},
 	icon: {
-		fontSize: "48px",
 		marginBottom: "16px",
+		color: "#a8a29e", // stone-400
 	},
 	title: {
-		fontSize: "20px",
-		fontWeight: 600,
-		color: "#991b1b", // red-800
+		fontSize: "18px",
+		fontWeight: 500,
+		color: "#44403c", // stone-700
 		marginBottom: "8px",
 	},
 	message: {
 		fontSize: "14px",
-		color: "#b91c1c", // red-700
+		color: "#78716c", // stone-500
 		marginBottom: "24px",
 		maxWidth: "400px",
 	},
@@ -96,7 +96,7 @@ const fallbackStyles = {
 		fontSize: "14px",
 		fontWeight: 500,
 		color: "#ffffff",
-		backgroundColor: "#dc2626", // red-600
+		backgroundColor: "#d97706", // amber-600 (primary)
 		border: "none",
 		borderRadius: "6px",
 		cursor: "pointer",
@@ -106,9 +106,9 @@ const fallbackStyles = {
 		padding: "10px 20px",
 		fontSize: "14px",
 		fontWeight: 500,
-		color: "#b91c1c", // red-700
+		color: "#57534e", // stone-600
 		backgroundColor: "transparent",
-		border: "1px solid #fca5a5", // red-300
+		border: "1px solid #d6d3d1", // stone-300
 		borderRadius: "6px",
 		cursor: "pointer",
 		transition: "background-color 0.2s",
@@ -117,7 +117,7 @@ const fallbackStyles = {
 		marginTop: "24px",
 		padding: "16px",
 		backgroundColor: "#ffffff",
-		border: "1px solid #fecaca",
+		border: "1px solid #e7e5e4", // stone-200
 		borderRadius: "6px",
 		maxWidth: "600px",
 		overflow: "auto",
@@ -126,12 +126,12 @@ const fallbackStyles = {
 	errorName: {
 		fontSize: "14px",
 		fontWeight: 600,
-		color: "#991b1b",
+		color: "#44403c", // stone-700
 		marginBottom: "8px",
 	},
 	errorMessage: {
 		fontSize: "13px",
-		color: "#dc2626",
+		color: "#57534e", // stone-600
 		marginBottom: "12px",
 		fontFamily: "monospace",
 		whiteSpace: "pre-wrap" as const,
@@ -139,7 +139,7 @@ const fallbackStyles = {
 	},
 	stack: {
 		fontSize: "12px",
-		color: "#6b7280",
+		color: "#78716c", // stone-500
 		fontFamily: "monospace",
 		whiteSpace: "pre-wrap" as const,
 		wordBreak: "break-word" as const,
@@ -162,7 +162,23 @@ export function DefaultErrorFallback({ error, errorInfo, reset }: ErrorFallbackP
 			data-testid="error-fallback"
 			style={fallbackStyles.container}
 		>
-			<div style={fallbackStyles.icon} aria-hidden="true"></div>
+			<svg
+				style={fallbackStyles.icon}
+				xmlns="http://www.w3.org/2000/svg"
+				viewBox="0 0 24 24"
+				fill="none"
+				stroke="currentColor"
+				strokeWidth="1.5"
+				strokeLinecap="round"
+				strokeLinejoin="round"
+				aria-hidden="true"
+				width="40"
+				height="40"
+			>
+				<circle cx="12" cy="12" r="10" />
+				<line x1="12" y1="8" x2="12" y2="12" />
+				<line x1="12" y1="16" x2="12.01" y2="16" />
+			</svg>
 
 			<h2 style={fallbackStyles.title}>Something went wrong</h2>
 
@@ -177,16 +193,16 @@ export function DefaultErrorFallback({ error, errorInfo, reset }: ErrorFallbackP
 					onClick={reset}
 					style={fallbackStyles.primaryButton}
 					onMouseOver={(e) => {
-						e.currentTarget.style.backgroundColor = "#b91c1c";
+						e.currentTarget.style.backgroundColor = "#b45309"; // amber-700
 					}}
 					onFocus={(e) => {
-						e.currentTarget.style.backgroundColor = "#b91c1c";
+						e.currentTarget.style.backgroundColor = "#b45309";
 					}}
 					onMouseOut={(e) => {
-						e.currentTarget.style.backgroundColor = "#dc2626";
+						e.currentTarget.style.backgroundColor = "#d97706"; // amber-600
 					}}
 					onBlur={(e) => {
-						e.currentTarget.style.backgroundColor = "#dc2626";
+						e.currentTarget.style.backgroundColor = "#d97706";
 					}}
 				>
 					Try again
@@ -197,10 +213,10 @@ export function DefaultErrorFallback({ error, errorInfo, reset }: ErrorFallbackP
 					onClick={() => setShowDetails(!showDetails)}
 					style={fallbackStyles.secondaryButton}
 					onMouseOver={(e) => {
-						e.currentTarget.style.backgroundColor = "#fef2f2";
+						e.currentTarget.style.backgroundColor = "#f5f5f4"; // stone-100
 					}}
 					onFocus={(e) => {
-						e.currentTarget.style.backgroundColor = "#fef2f2";
+						e.currentTarget.style.backgroundColor = "#f5f5f4";
 					}}
 					onMouseOut={(e) => {
 						e.currentTarget.style.backgroundColor = "transparent";
