@@ -43,6 +43,7 @@
  * @see https://github.com/honojs/middleware/issues/1410
  */
 
+export { default as adminRoutes } from "./admin.js";
 export { default as agentsRoutes } from "./agents.js";
 export { default as aiRoutes } from "./ai.js";
 export { default as alertsRoutes } from "./alerts.js";

@@ -11,6 +11,16 @@
 
 // Re-export query keys and cache config for convenience
 export { CACHE_TIMES, queryKeys, STALE_TIMES } from "@/lib/api/query-client";
+// Admin
+export {
+	adminKeys,
+	type QueryStat,
+	type QueryStatsFilters,
+	type QueryStatsResponse,
+	type QueryStatsSummary,
+	useQueryStats,
+	useResetQueryStats,
+} from "./useAdmin";
 // Agents
 export {
 	useAgentConfig,

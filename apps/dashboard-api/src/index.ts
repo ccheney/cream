@@ -26,6 +26,7 @@ import { getEventPublisher, resetEventPublisher } from "./events/publisher.js";
 import log from "./logger.js";
 import { AUTH_CONFIG, rateLimit, SESSION_CONFIG } from "./middleware/index.js";
 import {
+	adminRoutes,
 	agentsRoutes,
 	aiRoutes,
 	alertsRoutes,
@@ -220,6 +221,7 @@ app.use("/api/filings/*", requireAuth());
 app.use("/api/snapshots/*", requireAuth());
 app.use("/api/economic-calendar/*", requireAuth());
 app.use("/api/workers/*", requireAuth());
+app.use("/api/admin/*", requireAuth());
 
 // Apply LIVE protection to sensitive operations
 app.use("/api/decisions/*", liveProtection());
@@ -249,6 +251,7 @@ app.route("/api/filings", filingsRoutes);
 app.route("/api/snapshots", snapshotsRoutes);
 app.route("/api/economic-calendar", economicCalendarRoutes);
 app.route("/api/workers", workersRoutes);
+app.route("/api/admin", adminRoutes);
 
 // AI routes (no auth required for status summaries - they're read-only and rate-limited)
 app.route("/api/ai", aiRoutes);
