@@ -20,7 +20,7 @@ Foundational package providing:
 import { createContext, validateEnvironmentOrExit } from "@cream/domain";
 
 const ctx = createContext("PAPER", "scheduled");
-validateEnvironmentOrExit(ctx, "my-service", ["TURSO_DATABASE_URL"]);
+validateEnvironmentOrExit(ctx, "my-service", ["DATABASE_URL"]);
 ```
 
 ### Trading Domain

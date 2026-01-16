@@ -12,7 +12,7 @@ Fetches SEC EDGAR filings (10-K, 10-Q, 8-K), parses with semantic extraction, ch
 2. **Parse** - HTML extraction with Cheerio
 3. **Chunk** - Section-based chunking with overlap
 4. **Ingest** - Store in HelixDB with embeddings
-5. **Track** - Metadata in Turso
+5. **Track** - Metadata in PostgreSQL
 
 ## Key Components
 
@@ -61,13 +61,13 @@ const chunks = chunkParsedFiling(parsed);
 
 ## Configuration
 
-Uses HelixDB and Turso environment variables:
+Uses HelixDB and PostgreSQL environment variables:
 - `HELIX_URL` or `HELIX_HOST`/`HELIX_PORT`
-- `TURSO_DATABASE_URL`
+- `DATABASE_URL`
 
 ## Dependencies
 
 - `sec-edgar-toolkit` - SEC EDGAR API
 - `cheerio` - HTML parsing
 - `@cream/helix` - HelixDB client
-- `@cream/storage` - Turso repositories
+- `@cream/storage` - Database repositories

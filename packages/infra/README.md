@@ -22,8 +22,7 @@ This module provisions:
 | `HCLOUD_TOKEN` | Hetzner Cloud API token |
 | `VERCEL_API_TOKEN` | Vercel API token for DNS |
 | `HETZNER_SSH_PRIVATE_KEY` | SSH private key for server access |
-| `TURSO_DATABASE_URL` | Turso Cloud database URL |
-| `TURSO_AUTH_TOKEN` | Turso Cloud auth token |
+| `DATABASE_URL` | PostgreSQL database URL |
 | `ALPACA_KEY` | Alpaca broker API key |
 | `ALPACA_SECRET` | Alpaca broker API secret |
 | `` | Polygon market data API key |
@@ -103,7 +102,7 @@ tofu output dashboard_url
 │                           │                                   │
 │                           ▼                                   │
 │                    ┌─────────────┐                           │
-│                    │   Turso     │                           │
+│                    │ PostgreSQL  │                           │
 │                    │  (Cloud)    │                           │
 │                    └─────────────┘                           │
 └──────────────────────────────────────────────────────────────┘
@@ -190,6 +189,6 @@ docker builder prune -af
 | Resource | Monthly Cost |
 |----------|-------------|
 | Hetzner cpx31 (4 vCPU, 8 GB) | ~$15 |
-| Turso Cloud (Pro) | ~$29 |
+| PostgreSQL (Supabase/Neon) | ~$25 |
 | Vercel (Pro) | ~$20 |
-| **Total** | ~$64/month |
+| **Total** | ~$60/month |

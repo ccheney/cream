@@ -6,7 +6,7 @@
  */
 
 import { type MacroWatchEntry, runMacroWatch } from "@cream/api";
-import { MacroWatchRepository, type TursoClient } from "@cream/storage";
+import { type Database, MacroWatchRepository } from "@cream/storage";
 
 import { log } from "../../shared/logger.js";
 
@@ -23,13 +23,13 @@ export class MacroWatchService {
 	private running = false;
 	private lastRun: Date | null = null;
 	private readonly config: MacroWatchServiceConfig;
-	private getDb: (() => Promise<TursoClient>) | null = null;
+	private getDb: (() => Database) | null = null;
 
 	constructor(config: MacroWatchServiceConfig = {}) {
 		this.config = config;
 	}
 
-	setDbProvider(getDb: () => Promise<TursoClient>): void {
+	setDbProvider(getDb: () => Database): void {
 		this.getDb = getDb;
 	}
 
@@ -54,7 +54,7 @@ export class MacroWatchService {
 
 			let saved = 0;
 			if (this.getDb && entries.length > 0) {
-				const db = await this.getDb();
+				const db = this.getDb();
 				const repo = new MacroWatchRepository(db);
 				saved = await repo.saveEntries(entries);
 			}

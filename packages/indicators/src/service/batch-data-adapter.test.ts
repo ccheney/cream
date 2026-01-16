@@ -13,14 +13,14 @@ import {
 	FundamentalRepositoryAdapter,
 	SentimentRepositoryAdapter,
 	ShortInterestRepositoryAdapter,
-	type TursoCorporateActionRow,
-	type TursoCorporateActionsRepository,
-	type TursoFundamentalRow,
-	type TursoFundamentalsRepository,
-	type TursoSentimentRepository,
-	type TursoSentimentRow,
-	type TursoShortInterestRepository,
-	type TursoShortInterestRow,
+	type StorageCorporateActionRow,
+	type StorageCorporateActionsRepository,
+	type StorageFundamentalRow,
+	type StorageFundamentalsRepository,
+	type StorageSentimentRepository,
+	type StorageSentimentRow,
+	type StorageShortInterestRepository,
+	type StorageShortInterestRow,
 } from "./batch-data-adapter";
 
 // ============================================================
@@ -28,8 +28,8 @@ import {
 // ============================================================
 
 function createMockFundamentalsRepo(
-	data: Map<string, TursoFundamentalRow>
-): TursoFundamentalsRepository {
+	data: Map<string, StorageFundamentalRow>
+): StorageFundamentalsRepository {
 	return {
 		async findLatestBySymbol(symbol: string) {
 			return data.get(symbol) ?? null;
@@ -38,8 +38,8 @@ function createMockFundamentalsRepo(
 }
 
 function createMockShortInterestRepo(
-	data: Map<string, TursoShortInterestRow>
-): TursoShortInterestRepository {
+	data: Map<string, StorageShortInterestRow>
+): StorageShortInterestRepository {
 	return {
 		async findLatestBySymbol(symbol: string) {
 			return data.get(symbol) ?? null;
@@ -47,7 +47,7 @@ function createMockShortInterestRepo(
 	};
 }
 
-function createMockSentimentRepo(data: Map<string, TursoSentimentRow>): TursoSentimentRepository {
+function createMockSentimentRepo(data: Map<string, StorageSentimentRow>): StorageSentimentRepository {
 	return {
 		async findLatestBySymbol(symbol: string) {
 			return data.get(symbol) ?? null;
@@ -56,9 +56,9 @@ function createMockSentimentRepo(data: Map<string, TursoSentimentRow>): TursoSen
 }
 
 function createMockCorporateActionsRepo(
-	dividends: Map<string, TursoCorporateActionRow[]>,
-	splits: Map<string, TursoCorporateActionRow[]>
-): TursoCorporateActionsRepository {
+	dividends: Map<string, StorageCorporateActionRow[]>,
+	splits: Map<string, StorageCorporateActionRow[]>
+): StorageCorporateActionsRepository {
 	return {
 		async getForSymbol(symbol: string) {
 			return [...(dividends.get(symbol) ?? []), ...(splits.get(symbol) ?? [])];
@@ -87,7 +87,7 @@ describe("FundamentalRepositoryAdapter", () => {
 	});
 
 	test("transforms fundamental row to value and quality indicators", async () => {
-		const row: TursoFundamentalRow = {
+		const row: StorageFundamentalRow = {
 			id: "test-1",
 			symbol: "AAPL",
 			date: "2026-01-10",
@@ -137,7 +137,7 @@ describe("FundamentalRepositoryAdapter", () => {
 	});
 
 	test("handles null values in fundamental row", async () => {
-		const row: TursoFundamentalRow = {
+		const row: StorageFundamentalRow = {
 			id: "test-2",
 			symbol: "TSLA",
 			date: "2026-01-10",
@@ -201,7 +201,7 @@ describe("ShortInterestRepositoryAdapter", () => {
 	});
 
 	test("transforms short interest row to indicators", async () => {
-		const row: TursoShortInterestRow = {
+		const row: StorageShortInterestRow = {
 			id: "si-1",
 			symbol: "GME",
 			settlementDate: "2026-01-08",
@@ -228,7 +228,7 @@ describe("ShortInterestRepositoryAdapter", () => {
 	});
 
 	test("handles null values in short interest row", async () => {
-		const row: TursoShortInterestRow = {
+		const row: StorageShortInterestRow = {
 			id: "si-2",
 			symbol: "AMC",
 			settlementDate: "2026-01-08",
@@ -278,7 +278,7 @@ describe("SentimentRepositoryAdapter", () => {
 	});
 
 	test("transforms sentiment row to indicators", async () => {
-		const row: TursoSentimentRow = {
+		const row: StorageSentimentRow = {
 			id: "sent-1",
 			symbol: "AAPL",
 			date: "2026-01-10",
@@ -327,7 +327,7 @@ describe("SentimentRepositoryAdapter", () => {
 		];
 
 		for (const { score, expected } of testCases) {
-			const row: TursoSentimentRow = {
+			const row: StorageSentimentRow = {
 				id: "sent-test",
 				symbol: "TEST",
 				date: "2026-01-10",
@@ -352,7 +352,7 @@ describe("SentimentRepositoryAdapter", () => {
 	});
 
 	test("returns null classification for null sentiment score", async () => {
-		const row: TursoSentimentRow = {
+		const row: StorageSentimentRow = {
 			id: "sent-null",
 			symbol: "NULL",
 			date: "2026-01-10",
@@ -408,7 +408,7 @@ describe("CorporateActionsRepositoryAdapter", () => {
 		const nineMonthsAgo = new Date(today);
 		nineMonthsAgo.setMonth(nineMonthsAgo.getMonth() - 9);
 
-		const dividends: TursoCorporateActionRow[] = [
+		const dividends: StorageCorporateActionRow[] = [
 			{
 				symbol: "AAPL",
 				actionType: "dividend",
@@ -447,7 +447,7 @@ describe("CorporateActionsRepositoryAdapter", () => {
 		const threeMonthsAgo = new Date(today);
 		threeMonthsAgo.setMonth(threeMonthsAgo.getMonth() - 3);
 
-		const splits: TursoCorporateActionRow[] = [
+		const splits: StorageCorporateActionRow[] = [
 			{
 				symbol: "GOOGL",
 				actionType: "split",
@@ -475,7 +475,7 @@ describe("CorporateActionsRepositoryAdapter", () => {
 		const oneYearAgo = new Date(today);
 		oneYearAgo.setFullYear(oneYearAgo.getFullYear() - 1);
 
-		const splits: TursoCorporateActionRow[] = [
+		const splits: StorageCorporateActionRow[] = [
 			{
 				symbol: "TSLA",
 				actionType: "split",
@@ -503,7 +503,7 @@ describe("CorporateActionsRepositoryAdapter", () => {
 		const tenDaysFromNow = new Date(today);
 		tenDaysFromNow.setDate(tenDaysFromNow.getDate() + 10);
 
-		const dividends: TursoCorporateActionRow[] = [
+		const dividends: StorageCorporateActionRow[] = [
 			{
 				symbol: "MSFT",
 				actionType: "dividend",
@@ -532,7 +532,7 @@ describe("CorporateActionsRepositoryAdapter", () => {
 		const oneMonthAgo = new Date(today);
 		oneMonthAgo.setMonth(oneMonthAgo.getMonth() - 1);
 
-		const dividends: TursoCorporateActionRow[] = [
+		const dividends: StorageCorporateActionRow[] = [
 			{
 				symbol: "IBM",
 				actionType: "dividend",

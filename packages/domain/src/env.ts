@@ -67,8 +67,8 @@ export function requireEnv(): CreamEnvironment {
  */
 function isValidUrl(val: string): boolean {
 	try {
-		// Allow file: URLs for local SQLite, http/https/ws for remote
-		if (val.startsWith("file:")) {
+		// Allow postgres:// and postgresql:// schemes for database URLs
+		if (val.startsWith("postgres://") || val.startsWith("postgresql://")) {
 			return true;
 		}
 		new URL(val);
@@ -98,9 +98,11 @@ function optionalUrlWithDefault(defaultValue: string) {
  */
 const envSchema = z.object({
 	// Database URLs
-	TURSO_DATABASE_URL:
-		optionalUrlWithDefault("http://localhost:8080").describe("Turso database URL"),
-	TURSO_AUTH_TOKEN: z.string().optional().describe("Turso Cloud authentication token"),
+	DATABASE_URL: z
+		.string()
+		.optional()
+		.refine((val) => val === undefined || isValidUrl(val), { message: "Invalid URL format" })
+		.describe("PostgreSQL database connection URL"),
 	HELIX_URL: optionalUrlWithDefault("http://localhost:6969").describe("HelixDB server URL"),
 	// Alternative HelixDB config (host:port vs URL)
 	HELIX_HOST: z.string().optional().describe("HelixDB host (alternative to HELIX_URL)"),
@@ -155,8 +157,7 @@ export type EnvConfig = z.infer<typeof envSchema>;
 function parseEnv(): EnvConfig {
 	// Access environment variables using Bun.env
 	const rawEnv = {
-		TURSO_DATABASE_URL: Bun.env.TURSO_DATABASE_URL,
-		TURSO_AUTH_TOKEN: Bun.env.TURSO_AUTH_TOKEN,
+		DATABASE_URL: Bun.env.DATABASE_URL,
 		HELIX_URL: Bun.env.HELIX_URL,
 		HELIX_HOST: Bun.env.HELIX_HOST,
 		HELIX_PORT: Bun.env.HELIX_PORT,
@@ -411,7 +412,7 @@ export function validateEnvironment(
  * @example
  * ```ts
  * const ctx = createContext("PAPER", "scheduled");
- * validateEnvironmentOrExit(ctx, "dashboard-api", ["TURSO_DATABASE_URL"]);
+ * validateEnvironmentOrExit(ctx, "dashboard-api", ["DATABASE_URL"]);
  * ```
  */
 export function validateEnvironmentOrExit(
@@ -456,8 +457,7 @@ export function getEnvVarDocumentation(): Array<{
 	description: string;
 }> {
 	return [
-		{ name: "TURSO_DATABASE_URL", required: "no", description: "Turso database URL" },
-		{ name: "TURSO_AUTH_TOKEN", required: "no", description: "Turso Cloud authentication token" },
+		{ name: "DATABASE_URL", required: "no", description: "PostgreSQL database connection URL" },
 		{ name: "HELIX_URL", required: "no", description: "HelixDB server URL" },
 		{ name: "HELIX_HOST", required: "no", description: "HelixDB host (alternative to HELIX_URL)" },
 		{ name: "HELIX_PORT", required: "no", description: "HelixDB port (alternative to HELIX_URL)" },

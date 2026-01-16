@@ -6,35 +6,28 @@ Database abstraction layer for the Cream trading system.
 
 Provides:
 
-- **Turso Client** - Multi-backend support (HTTP, sync, local, in-memory)
+- **Drizzle ORM** - Type-safe PostgreSQL client
 - **Connection Pooling** - Configurable pool with health checks
 - **25+ Repositories** - Type-safe data access
-- **Migration System** - Version-controlled schema changes
+- **Migration System** - drizzle-kit for schema changes
 
-## Turso Client
+## Database Client
 
 ```typescript
-import { createTursoClient } from "@cream/storage";
+import { getDb } from "@cream/storage";
 
-const client = await createTursoClient(ctx);
+const db = getDb();
 
-const rows = await client.execute<MyRow>("SELECT * FROM table");
-const row = await client.get<MyRow>("SELECT * FROM table WHERE id = ?", [id]);
+// Use Drizzle's type-safe query builder
+const orders = await db.select().from(ordersTable).where(eq(ordersTable.symbol, "AAPL"));
 ```
-
-### Connection Types
-
-- **HTTP** (`https://...`) - Remote Turso Cloud
-- **Sync** (`libsql://...`) - Local replica with sync
-- **Local File** - Direct SQLite
-- **In-Memory** - Testing (`:memory:`)
 
 ## Repositories
 
 ```typescript
 import { OrdersRepository, PositionsRepository } from "@cream/storage";
 
-const ordersRepo = new OrdersRepository(client);
+const ordersRepo = new OrdersRepository();
 const orders = await ordersRepo.list({ filters: { symbol: "AAPL" } });
 ```
 
@@ -51,14 +44,17 @@ const orders = await ordersRepo.list({ filters: { symbol: "AAPL" } });
 ## Migrations
 
 ```bash
+# Generate migration from schema changes
+bun run db:generate
+
 # Apply migrations
 bun run db:migrate
 
-# Check status
-bun run db:status
+# Push schema (development)
+bun run db:push
 
-# Rollback
-bun run db:rollback 5
+# Open Drizzle Studio
+bun run db:studio
 
 # Seed config
 bun run db:seed
@@ -68,23 +64,20 @@ bun run db:seed
 
 ```bash
 CREAM_ENV=BACKTEST|PAPER|LIVE
-TURSO_DATABASE_URL=http://localhost:8080
-TURSO_AUTH_TOKEN=...  # Optional for cloud
+DATABASE_URL=postgresql://user:pass@localhost:5432/cream
 ```
 
-Database auto-selected by environment:
-- `BACKTEST` → `cream_backtest.db`
-- `PAPER` → `cream_paper.db`
-- `LIVE` → `cream_live.db`
+Database selection by environment is handled at the application level.
 
 ## Important Notes
 
-- **No CHECK constraints** - Turso doesn't support them; use Zod
-- **Single-writer** - SQLite architecture; pool primarily for reads
-- **Boolean mapping** - INTEGER (0/1) in database
+- **PostgreSQL 17** - Using postgres-js driver
+- **Type-safe queries** - Drizzle ORM with generated types
+- **Connection pooling** - Built into the database client
 
 ## Dependencies
 
-- `@libsql/client` - HTTP connections
-- `@tursodatabase/database` - Local SQLite
+- `drizzle-orm` - ORM and query builder
+- `postgres` - PostgreSQL driver
+- `drizzle-kit` - Migration tooling
 - `@cream/domain` - ExecutionContext

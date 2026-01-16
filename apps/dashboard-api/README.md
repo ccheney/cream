@@ -38,7 +38,7 @@ Provides the backend for the trading dashboard:
 ## Authentication
 
 - **Provider**: Google OAuth via better-auth
-- **Session**: httpOnly cookies (Turso storage)
+- **Session**: httpOnly cookies (PostgreSQL storage)
 - **2FA**: TOTP-based (required for LIVE)
 
 | Environment | Auth | MFA |
@@ -51,7 +51,7 @@ Provides the backend for the trading dashboard:
 
 ```bash
 CREAM_ENV=BACKTEST|PAPER|LIVE
-TURSO_DATABASE_URL=http://localhost:8080
+DATABASE_URL=postgresql://user:pass@localhost:5432/cream
 PORT=3001
 ALLOWED_ORIGINS=http://localhost:3000
 GOOGLE_CLIENT_ID=...
@@ -91,7 +91,7 @@ bun run typecheck
 
 - `hono` - HTTP framework
 - `better-auth` - Authentication
-- `@libsql/client` - Turso database
+- `drizzle-orm` - PostgreSQL ORM
 - `zod` - Schema validation
 - `@cream/storage` - Database repositories
 - `@cream/marketdata` - Market data adapters

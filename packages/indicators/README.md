@@ -24,7 +24,7 @@ import {
 const service = createIndicatorService({
   marketData: alpacaMarketData,
   optionsProvider: alpacaOptionsProvider,
-  fundamentalRepo: tursoFundamentalsRepo,
+  fundamentalRepo: fundamentalsRepo,
   // ... other repos
 });
 

@@ -61,14 +61,14 @@ Located in `src/agents/`:
 
 ```bash
 CREAM_ENV=BACKTEST|PAPER|LIVE
-TURSO_DATABASE_URL=http://localhost:8080
+DATABASE_URL=postgresql://user:pass@localhost:5432/cream
 HELIX_URL=http://localhost:6969
 GOOGLE_GENERATIVE_AI_API_KEY=...  # For LLM agents (PAPER/LIVE)
 ```
 
 ### Runtime Configuration
 
-Loaded from Turso database via `RuntimeConfigService`:
+Loaded from PostgreSQL database via `RuntimeConfigService`:
 - Agent settings (enabled/disabled, prompt overrides)
 - Model selection (`gemini-3-flash-preview` or `gemini-3-pro-preview`)
 - Timeouts and consensus parameters
@@ -110,7 +110,7 @@ export * from "./workflows/index.js";
 **Workspace:**
 - `@cream/agents` - Agent prompts, tools, consensus logic
 - `@cream/helix` - HelixDB GraphRAG client
-- `@cream/storage` - Turso repositories
+- `@cream/storage` - Database repositories
 - `@cream/marketdata` - Market data adapters
 - `@cream/config` - Runtime config service
 - `@cream/domain` - Types, environment validation

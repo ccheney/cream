@@ -19,9 +19,9 @@ Runs three critical workflows:
 - Config reload on SIGHUP
 - Health endpoint on port 3002
 
-### Database (`src/db.ts`)
+### Database (`src/shared/database.ts`)
 
-- Turso client singleton
+- Drizzle/PostgreSQL client
 - RuntimeConfigService for active config
 - HelixDB client initialization
 
@@ -42,7 +42,7 @@ Runs three critical workflows:
 
 ```bash
 CREAM_ENV=BACKTEST|PAPER|LIVE
-TURSO_DATABASE_URL=http://localhost:8080
+DATABASE_URL=postgresql://user:pass@localhost:5432/cream
 HELIX_HOST=localhost
 HELIX_PORT=6969
 ALPACA_KEY=...                    # Required for batch jobs

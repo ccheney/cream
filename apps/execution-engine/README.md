@@ -367,7 +367,7 @@ Key external dependencies:
 - `tonic` - gRPC server
 - `axum` - HTTP server
 - `rust_decimal` - Precise decimal arithmetic
-- `turso` - SQLite client for persistence
+- `sqlx` - SQLite/PostgreSQL client for persistence
 - `alpaca-websocket` - Market data feed
 - `reqwest` - HTTP client
 - `tracing` - Observability

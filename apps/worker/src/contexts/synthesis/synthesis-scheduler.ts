@@ -11,7 +11,7 @@
 import { createResearchTriggerService } from "@cream/agents";
 import { type IndicatorSynthesisInput, indicatorSynthesisWorkflow } from "@cream/api";
 import type { TriggerDetectionState } from "@cream/domain";
-import { FactorZooRepository, RegimeLabelsRepository, type TursoClient } from "@cream/storage";
+import { FactorZooRepository, RegimeLabelsRepository, type Database } from "@cream/storage";
 import { Cron } from "croner";
 import { log } from "../../shared/logger.js";
 import { mapRegimeToTriggerFormat } from "./regime-mapper.js";
@@ -28,7 +28,7 @@ const SYNTHESIS_CHECK_CRON = "0 6 * * 1-5";
 // ============================================
 
 export interface SynthesisSchedulerDependencies {
-	db: TursoClient;
+	db: Database;
 }
 
 export interface SynthesisSchedulerState {
@@ -43,7 +43,7 @@ export interface SynthesisSchedulerState {
 // Helper Functions
 // ============================================
 
-async function getCurrentMarketRegime(db: TursoClient): Promise<string | null> {
+async function getCurrentMarketRegime(db: Database): Promise<string | null> {
 	const regimeRepo = new RegimeLabelsRepository(db);
 	const label = await regimeRepo.getMarketRegime("1d");
 
@@ -54,7 +54,7 @@ async function getCurrentMarketRegime(db: TursoClient): Promise<string | null> {
 	return mapRegimeToTriggerFormat(label.regime);
 }
 
-async function getActiveRegimes(db: TursoClient): Promise<string[]> {
+async function getActiveRegimes(db: Database): Promise<string[]> {
 	const factorZooRepo = new FactorZooRepository(db);
 	const activeFactors = await factorZooRepo.findActiveFactors();
 
@@ -89,7 +89,7 @@ function generateCycleId(): string {
 // ============================================
 
 export class IndicatorSynthesisScheduler {
-	private readonly db: TursoClient;
+	private readonly db: Database;
 	private job: Cron | null = null;
 	private state: SynthesisSchedulerState;
 
@@ -249,7 +249,7 @@ export function createIndicatorSynthesisScheduler(
 	return new IndicatorSynthesisScheduler(deps);
 }
 
-export function startIndicatorSynthesisScheduler(db: TursoClient): IndicatorSynthesisScheduler {
+export function startIndicatorSynthesisScheduler(db: Database): IndicatorSynthesisScheduler {
 	const scheduler = createIndicatorSynthesisScheduler({ db });
 	scheduler.start();
 	return scheduler;

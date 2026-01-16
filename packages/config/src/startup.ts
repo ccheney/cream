@@ -89,8 +89,7 @@ export function sanitizeEnv(envConfig: EnvConfig): Record<string, string> {
 
 	// Include all known env fields for consistent output
 	const allFields = [
-		"TURSO_DATABASE_URL",
-		"TURSO_AUTH_TOKEN",
+		"DATABASE_URL",
 		"HELIX_URL",
 		"ALPHAVANTAGE_KEY",
 		"ALPACA_KEY",
@@ -151,7 +150,7 @@ export function validateLiveTradingSafety(): {
 	}
 
 	// Verify database isolation
-	if (env.TURSO_DATABASE_URL?.includes("backtest") || env.TURSO_DATABASE_URL?.includes("paper")) {
+	if (env.DATABASE_URL?.includes("backtest") || env.DATABASE_URL?.includes("paper")) {
 		errors.push("LIVE trading detected but database URL appears to be for non-LIVE environment");
 	}
 

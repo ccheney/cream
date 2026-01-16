@@ -11,109 +11,44 @@ import {
 	type RuntimeConfigService,
 	type RuntimeEnvironment,
 } from "@cream/config";
-import { createContext, type ExecutionContext, isBacktest, requireEnv } from "@cream/domain";
+import { type ExecutionContext, isBacktest } from "@cream/domain";
 import { createHelixClientFromEnv, type HealthCheckResult, type HelixClient } from "@cream/helix";
 import {
 	AgentConfigsRepository,
-	createInMemoryClient,
-	createTursoClient,
+	closeDb as closeDbConnection,
+	type Database,
 	DecisionsRepository,
 	ExternalEventsRepository,
 	FactorZooRepository,
+	getDb,
 	IndicatorsRepository,
 	MacroWatchRepository,
 	OrdersRepository,
 	PositionsRepository,
 	PredictionMarketsRepository,
 	RegimeLabelsRepository,
-	runMigrations,
 	ThesisStateRepository,
 	TradingConfigRepository,
-	type TursoClient,
 	UniverseConfigsRepository,
 } from "@cream/storage";
 
 import { log } from "./logger.js";
 
-/**
- * Create ExecutionContext for database initialization.
- * DB client is created at API startup.
- */
-function createDbContext(): ExecutionContext {
-	return createContext(requireEnv(), "scheduled");
-}
-
 // ============================================
-// Database Client Singleton
+// Database Client (Drizzle + PostgreSQL)
 // ============================================
 
-let dbClient: TursoClient | null = null;
-let initPromise: Promise<TursoClient> | null = null;
-
 /**
- * Get or create the database client.
- * Uses a lock to prevent race conditions during initialization.
+ * Get the Drizzle database client.
  */
-export async function getDbClient(): Promise<TursoClient> {
-	// Fast path: already initialized
-	if (dbClient) {
-		return dbClient;
-	}
-
-	// Initialization in progress: wait for it
-	if (initPromise) {
-		return initPromise;
-	}
-
-	// First caller: start initialization
-	initPromise = initializeDb();
-
-	try {
-		dbClient = await initPromise;
-		return dbClient;
-	} catch (error) {
-		// Reset on failure so next call can retry
-		initPromise = null;
-		throw error;
-	}
-}
-
-/**
- * Initialize database client and run migrations.
- */
-async function initializeDb(): Promise<TursoClient> {
-	const ctx = createDbContext();
-	let client: TursoClient;
-
-	if (Bun.env.NODE_ENV === "test") {
-		// In-memory for testing
-		client = await createInMemoryClient();
-	} else {
-		// createTursoClient reads TURSO_DATABASE_URL and handles HTTP/local automatically
-		client = await createTursoClient(ctx);
-	}
-
-	// Run migrations on first connection
-	const result = await runMigrations(client, {
-		logger: (msg) => log.debug({ migration: msg }, "DB migration"),
-	});
-	if (result.applied.length > 0) {
-		log.info({ count: result.applied.length }, "Applied DB migrations");
-	}
-
-	return client;
+export function getDbClient(): Database {
+	return getDb();
 }
 
 /**
  * Close the database connection
  */
-export function closeDb(): void {
-	if (dbClient) {
-		dbClient.close();
-		dbClient = null;
-	}
-	initPromise = null;
-}
+export { closeDbConnection as closeDb };
 
 // ============================================
 // Tool Provider Registration
@@ -146,81 +81,71 @@ registerToolProviders();
 /**
  * Get positions repository
  */
-export async function getPositionsRepo(): Promise<PositionsRepository> {
-	const client = await getDbClient();
-	return new PositionsRepository(client);
+export function getPositionsRepo(): PositionsRepository {
+	return new PositionsRepository();
 }
 
 /**
  * Get orders repository
  */
-export async function getOrdersRepo(): Promise<OrdersRepository> {
-	const client = await getDbClient();
-	return new OrdersRepository(client);
+export function getOrdersRepo(): OrdersRepository {
+	return new OrdersRepository();
 }
 
 /**
  * Get thesis state repository
  */
-export async function getThesisStateRepo(): Promise<ThesisStateRepository> {
-	const client = await getDbClient();
-	return new ThesisStateRepository(client);
+export function getThesisStateRepo(): ThesisStateRepository {
+	return new ThesisStateRepository();
 }
 
 /**
  * Get external events repository
  */
-export async function getExternalEventsRepo(): Promise<ExternalEventsRepository> {
-	const client = await getDbClient();
-	return new ExternalEventsRepository(client);
+export function getExternalEventsRepo(): ExternalEventsRepository {
+	return new ExternalEventsRepository();
 }
 
 /**
  * Get prediction markets repository
  */
-export async function getPredictionMarketsRepo(): Promise<PredictionMarketsRepository> {
-	const client = await getDbClient();
-	return new PredictionMarketsRepository(client);
+export function getPredictionMarketsRepo(): PredictionMarketsRepository {
+	return new PredictionMarketsRepository();
 }
 
 /**
  * Get regime labels repository
  */
-export async function getRegimeLabelsRepo(): Promise<RegimeLabelsRepository> {
-	const client = await getDbClient();
-	return new RegimeLabelsRepository(client);
+export function getRegimeLabelsRepo(): RegimeLabelsRepository {
+	return new RegimeLabelsRepository();
 }
 
 /**
  * Get decisions repository
  */
-export async function getDecisionsRepo(): Promise<DecisionsRepository> {
-	const client = await getDbClient();
-	return new DecisionsRepository(client);
+export function getDecisionsRepo(): DecisionsRepository {
+	return new DecisionsRepository();
 }
 
 /**
  * Get factor zoo repository
  */
-export async function getFactorZooRepo(): Promise<FactorZooRepository> {
-	const client = await getDbClient();
-	return new FactorZooRepository(client);
+export function getFactorZooRepo(): FactorZooRepository {
+	return new FactorZooRepository();
 }
 
 /**
  * Get indicators repository
  */
-export async function getIndicatorsRepo(): Promise<IndicatorsRepository> {
-	const client = await getDbClient();
-	return new IndicatorsRepository(client);
+export function getIndicatorsRepo(): IndicatorsRepository {
+	return new IndicatorsRepository();
 }
 
 /**
  * Get macro watch repository
  */
-export async function getMacroWatchRepo(): Promise<MacroWatchRepository> {
-	const client = await getDbClient();
-	return new MacroWatchRepository(client);
+export function getMacroWatchRepo(): MacroWatchRepository {
+	return new MacroWatchRepository();
 }
 
 // ============================================
@@ -230,25 +155,22 @@ export async function getMacroWatchRepo(): Promise<MacroWatchRepository> {
 /**
  * Get trading config repository
  */
-export async function getTradingConfigRepo(): Promise<TradingConfigRepository> {
-	const client = await getDbClient();
-	return new TradingConfigRepository(client);
+export function getTradingConfigRepo(): TradingConfigRepository {
+	return new TradingConfigRepository();
 }
 
 /**
  * Get agent configs repository
  */
-export async function getAgentConfigsRepo(): Promise<AgentConfigsRepository> {
-	const client = await getDbClient();
-	return new AgentConfigsRepository(client);
+export function getAgentConfigsRepo(): AgentConfigsRepository {
+	return new AgentConfigsRepository();
 }
 
 /**
  * Get universe configs repository
  */
-export async function getUniverseConfigsRepo(): Promise<UniverseConfigsRepository> {
-	const client = await getDbClient();
-	return new UniverseConfigsRepository(client);
+export function getUniverseConfigsRepo(): UniverseConfigsRepository {
+	return new UniverseConfigsRepository();
 }
 
 /**
@@ -256,12 +178,10 @@ export async function getUniverseConfigsRepo(): Promise<UniverseConfigsRepositor
  *
  * Creates a RuntimeConfigService with all required repositories.
  */
-export async function getRuntimeConfigService(): Promise<RuntimeConfigService> {
-	const [tradingRepo, agentRepo, universeRepo] = await Promise.all([
-		getTradingConfigRepo(),
-		getAgentConfigsRepo(),
-		getUniverseConfigsRepo(),
-	]);
+export function getRuntimeConfigService(): RuntimeConfigService {
+	const tradingRepo = getTradingConfigRepo();
+	const agentRepo = getAgentConfigsRepo();
+	const universeRepo = getUniverseConfigsRepo();
 	return createRuntimeConfigService(tradingRepo, agentRepo, universeRepo);
 }
 

@@ -7,7 +7,7 @@
 
 import type { RuntimeEnvironment } from "@cream/config";
 import { createFilingsIngestionService } from "@cream/filings";
-import type { TursoClient } from "@cream/storage";
+import type { Database } from "@cream/storage";
 import { log } from "../../shared/logger.js";
 
 // ============================================
@@ -32,12 +32,12 @@ export interface FilingsSyncResult {
 // ============================================
 
 export class FilingsSyncService {
-	private readonly db: TursoClient;
+	private readonly db: Database;
 	private readonly config: FilingsSyncConfig;
 	private running = false;
 
 	constructor(
-		db: TursoClient,
+		db: Database,
 		config: FilingsSyncConfig = { filingTypes: ["10-K", "10-Q", "8-K"], limitPerSymbol: 5 }
 	) {
 		this.db = db;
@@ -94,7 +94,7 @@ export class FilingsSyncService {
 }
 
 export function createFilingsSyncService(
-	db: TursoClient,
+	db: Database,
 	config?: FilingsSyncConfig
 ): FilingsSyncService {
 	return new FilingsSyncService(db, config);

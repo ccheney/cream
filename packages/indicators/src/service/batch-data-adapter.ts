@@ -1,7 +1,7 @@
 /**
  * Batch Data Adapter
  *
- * Adapts the Turso storage repositories to the interfaces expected
+ * Adapts the storage repositories to the interfaces expected
  * by the IndicatorService. This bridges the gap between:
  * - @cream/storage repositories (FundamentalsRepository, etc.)
  * - @cream/indicators service interfaces (FundamentalRepository, etc.)
@@ -43,14 +43,14 @@ function toDateString(date: Date): string {
 // ============================================
 
 /**
- * Turso FundamentalsRepository interface
+ * Storage FundamentalsRepository interface
  * Maps to @cream/storage FundamentalsRepository
  */
-export interface TursoFundamentalsRepository {
-	findLatestBySymbol(symbol: string): Promise<TursoFundamentalRow | null>;
+export interface StorageFundamentalsRepository {
+	findLatestBySymbol(symbol: string): Promise<StorageFundamentalRow | null>;
 }
 
-export interface TursoFundamentalRow {
+export interface StorageFundamentalRow {
 	id: string;
 	symbol: string;
 	date: string;
@@ -76,14 +76,14 @@ export interface TursoFundamentalRow {
 }
 
 /**
- * Turso ShortInterestRepository interface
+ * Storage ShortInterestRepository interface
  * Maps to @cream/storage ShortInterestRepository
  */
-export interface TursoShortInterestRepository {
-	findLatestBySymbol(symbol: string): Promise<TursoShortInterestRow | null>;
+export interface StorageShortInterestRepository {
+	findLatestBySymbol(symbol: string): Promise<StorageShortInterestRow | null>;
 }
 
-export interface TursoShortInterestRow {
+export interface StorageShortInterestRow {
 	id: string;
 	symbol: string;
 	settlementDate: string;
@@ -97,14 +97,14 @@ export interface TursoShortInterestRow {
 }
 
 /**
- * Turso SentimentRepository interface
+ * Storage SentimentRepository interface
  * Maps to @cream/storage SentimentRepository
  */
-export interface TursoSentimentRepository {
-	findLatestBySymbol(symbol: string): Promise<TursoSentimentRow | null>;
+export interface StorageSentimentRepository {
+	findLatestBySymbol(symbol: string): Promise<StorageSentimentRow | null>;
 }
 
-export interface TursoSentimentRow {
+export interface StorageSentimentRow {
 	id: string;
 	symbol: string;
 	date: string;
@@ -120,16 +120,16 @@ export interface TursoSentimentRow {
 }
 
 /**
- * Turso CorporateActionsRepository interface
+ * Storage CorporateActionsRepository interface
  * Maps to @cream/storage CorporateActionsRepository
  */
-export interface TursoCorporateActionsRepository {
-	getForSymbol(symbol: string): Promise<TursoCorporateActionRow[]>;
-	getDividends(symbol: string): Promise<TursoCorporateActionRow[]>;
-	getSplits(symbol: string): Promise<TursoCorporateActionRow[]>;
+export interface StorageCorporateActionsRepository {
+	getForSymbol(symbol: string): Promise<StorageCorporateActionRow[]>;
+	getDividends(symbol: string): Promise<StorageCorporateActionRow[]>;
+	getSplits(symbol: string): Promise<StorageCorporateActionRow[]>;
 }
 
-export interface TursoCorporateActionRow {
+export interface StorageCorporateActionRow {
 	id?: number;
 	symbol: string;
 	actionType: string;
@@ -148,11 +148,11 @@ export interface TursoCorporateActionRow {
 // ============================================
 
 /**
- * Adapts TursoFundamentalsRepository to FundamentalRepository interface.
- * Transforms Turso row format to ValueIndicators + QualityIndicators.
+ * Adapts StorageFundamentalsRepository to FundamentalRepository interface.
+ * Transforms storage row format to ValueIndicators + QualityIndicators.
  */
 export class FundamentalRepositoryAdapter implements FundamentalRepository {
-	constructor(private repo: TursoFundamentalsRepository) {}
+	constructor(private repo: StorageFundamentalsRepository) {}
 
 	async getLatest(
 		symbol: string
@@ -191,11 +191,11 @@ export class FundamentalRepositoryAdapter implements FundamentalRepository {
 // ============================================
 
 /**
- * Adapts TursoShortInterestRepository to ShortInterestRepository interface.
- * Transforms Turso row format to ShortInterestIndicators.
+ * Adapts StorageShortInterestRepository to ShortInterestRepository interface.
+ * Transforms storage row format to ShortInterestIndicators.
  */
 export class ShortInterestRepositoryAdapter implements ShortInterestRepository {
-	constructor(private repo: TursoShortInterestRepository) {}
+	constructor(private repo: StorageShortInterestRepository) {}
 
 	async getLatest(symbol: string): Promise<ShortInterestIndicators | null> {
 		const row = await this.repo.findLatestBySymbol(symbol);
@@ -218,11 +218,11 @@ export class ShortInterestRepositoryAdapter implements ShortInterestRepository {
 // ============================================
 
 /**
- * Adapts TursoSentimentRepository to SentimentRepository interface.
- * Transforms Turso row format to SentimentIndicators.
+ * Adapts StorageSentimentRepository to SentimentRepository interface.
+ * Transforms storage row format to SentimentIndicators.
  */
 export class SentimentRepositoryAdapter implements SentimentRepository {
-	constructor(private repo: TursoSentimentRepository) {}
+	constructor(private repo: StorageSentimentRepository) {}
 
 	async getLatest(symbol: string): Promise<SentimentIndicators | null> {
 		const row = await this.repo.findLatestBySymbol(symbol);
@@ -267,11 +267,11 @@ export class SentimentRepositoryAdapter implements SentimentRepository {
 // ============================================
 
 /**
- * Adapts TursoCorporateActionsRepository to CorporateActionsRepository interface.
- * Transforms Turso row format to CorporateIndicators.
+ * Adapts StorageCorporateActionsRepository to CorporateActionsRepository interface.
+ * Transforms storage row format to CorporateIndicators.
  */
 export class CorporateActionsRepositoryAdapter implements CorporateActionsRepository {
-	constructor(private repo: TursoCorporateActionsRepository) {}
+	constructor(private repo: StorageCorporateActionsRepository) {}
 
 	async getLatest(symbol: string): Promise<CorporateIndicators | null> {
 		const [dividends, splits] = await Promise.all([
@@ -296,7 +296,7 @@ export class CorporateActionsRepositoryAdapter implements CorporateActionsReposi
 		};
 	}
 
-	private calculateTrailingDividendYield(dividends: TursoCorporateActionRow[]): number | null {
+	private calculateTrailingDividendYield(dividends: StorageCorporateActionRow[]): number | null {
 		if (dividends.length === 0) {
 			return null;
 		}
@@ -315,7 +315,7 @@ export class CorporateActionsRepositoryAdapter implements CorporateActionsReposi
 	}
 
 	private calculateDaysUntilExDividend(
-		dividends: TursoCorporateActionRow[],
+		dividends: StorageCorporateActionRow[],
 		today: Date
 	): number | null {
 		const todayStr = toDateString(today);
@@ -336,7 +336,7 @@ export class CorporateActionsRepositoryAdapter implements CorporateActionsReposi
 		return diffDays;
 	}
 
-	private hasRecentSplit(splits: TursoCorporateActionRow[], today: Date): boolean {
+	private hasRecentSplit(splits: StorageCorporateActionRow[], today: Date): boolean {
 		if (splits.length === 0) {
 			return false;
 		}
@@ -354,37 +354,37 @@ export class CorporateActionsRepositoryAdapter implements CorporateActionsReposi
 // ============================================
 
 /**
- * Create a FundamentalRepository adapter from a Turso repository
+ * Create a FundamentalRepository adapter from a storage repository
  */
 export function createFundamentalRepositoryAdapter(
-	repo: TursoFundamentalsRepository
+	repo: StorageFundamentalsRepository
 ): FundamentalRepository {
 	return new FundamentalRepositoryAdapter(repo);
 }
 
 /**
- * Create a ShortInterestRepository adapter from a Turso repository
+ * Create a ShortInterestRepository adapter from a storage repository
  */
 export function createShortInterestRepositoryAdapter(
-	repo: TursoShortInterestRepository
+	repo: StorageShortInterestRepository
 ): ShortInterestRepository {
 	return new ShortInterestRepositoryAdapter(repo);
 }
 
 /**
- * Create a SentimentRepository adapter from a Turso repository
+ * Create a SentimentRepository adapter from a storage repository
  */
 export function createSentimentRepositoryAdapter(
-	repo: TursoSentimentRepository
+	repo: StorageSentimentRepository
 ): SentimentRepository {
 	return new SentimentRepositoryAdapter(repo);
 }
 
 /**
- * Create a CorporateActionsRepository adapter from a Turso repository
+ * Create a CorporateActionsRepository adapter from a storage repository
  */
 export function createCorporateActionsRepositoryAdapter(
-	repo: TursoCorporateActionsRepository
+	repo: StorageCorporateActionsRepository
 ): CorporateActionsRepository {
 	return new CorporateActionsRepositoryAdapter(repo);
 }
@@ -393,11 +393,11 @@ export function createCorporateActionsRepositoryAdapter(
 // All-in-One Factory
 // ============================================
 
-export interface TursoRepositories {
-	fundamentals?: TursoFundamentalsRepository;
-	shortInterest?: TursoShortInterestRepository;
-	sentiment?: TursoSentimentRepository;
-	corporateActions?: TursoCorporateActionsRepository;
+export interface StorageRepositories {
+	fundamentals?: StorageFundamentalsRepository;
+	shortInterest?: StorageShortInterestRepository;
+	sentiment?: StorageSentimentRepository;
+	corporateActions?: StorageCorporateActionsRepository;
 }
 
 export interface BatchRepositoryAdapters {
@@ -408,10 +408,10 @@ export interface BatchRepositoryAdapters {
 }
 
 /**
- * Create all batch repository adapters from Turso repositories.
+ * Create all batch repository adapters from storage repositories.
  * Only creates adapters for repositories that are provided.
  */
-export function createBatchRepositoryAdapters(repos: TursoRepositories): BatchRepositoryAdapters {
+export function createBatchRepositoryAdapters(repos: StorageRepositories): BatchRepositoryAdapters {
 	const adapters: BatchRepositoryAdapters = {};
 
 	if (repos.fundamentals) {

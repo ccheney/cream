@@ -77,15 +77,13 @@ services:
     environment:
       - NODE_ENV=production
       - CREAM_ENV=${CREAM_ENV:-PAPER}
-      - TURSO_DATABASE_URL=${TURSO_DATABASE_URL:-file:/data/cream.db}
-      - TURSO_AUTH_TOKEN=${TURSO_AUTH_TOKEN:-}
+      - DATABASE_URL=${DATABASE_URL}
       - ALLOWED_ORIGINS=https://${DASHBOARD_HOST:-cream.broker}
       - HELIX_URL=${HELIX_URL:-}
       # Python backtest execution
       - PYTHONPATH=/app/packages/research
       - BACKTEST_TEMP_DIR=/tmp/backtest
     volumes:
-      - turso_data:/data
       - backtest_temp:/tmp/backtest
     restart: unless-stopped
     networks:
@@ -110,11 +108,8 @@ services:
     environment:
       - NODE_ENV=production
       - CREAM_ENV=${CREAM_ENV:-PAPER}
-      - TURSO_DATABASE_URL=${TURSO_DATABASE_URL:-file:/data/cream.db}
-      - TURSO_AUTH_TOKEN=${TURSO_AUTH_TOKEN:-}
+      - DATABASE_URL=${DATABASE_URL}
       - HELIX_URL=${HELIX_URL:-}
-    volumes:
-      - turso_data:/data
     depends_on:
       dashboard-api:
         condition: service_healthy
@@ -123,26 +118,10 @@ services:
       - cream-network
 
   # ==========================================
-  # Optional: Turso Server (for multi-instance)
+  # PostgreSQL Database
   # ==========================================
-  # Uncomment to run a local Turso server instead of file-based SQLite
-  # turso-server:
-  #   image: ghcr.io/tursodatabase/turso:latest
-  #   container_name: cream-turso-server
-  #   volumes:
-  #     - turso_server_data:/var/lib/sqld
-  #   ports:
-  #     - "8080:8080"
-  #   environment:
-  #     - SQLD_HTTP_LISTEN_ADDR=0.0.0.0:8080
-  #   restart: unless-stopped
-  #   networks:
-  #     - cream-network
-  #   healthcheck:
-  #     test: ["CMD", "wget", "-q", "--spider", "http://localhost:8080/health"]
-  #     interval: 30s
-  #     timeout: 10s
-  #     retries: 3
+  # External PostgreSQL database is expected. Set DATABASE_URL in .env.live
+  # pointing to your PostgreSQL instance (local, Supabase, Neon, etc.)
 
 # ==========================================
 # Volumes
@@ -154,12 +133,8 @@ volumes:
     name: cream_caddy_config
   caddy_logs:
     name: cream_caddy_logs
-  turso_data:
-    name: cream_turso_data
   backtest_temp:
     name: cream_backtest_temp
-  # turso_server_data:
-  #   name: cream_turso_server_data
 
 # ==========================================
 # Networks

@@ -1,83 +1,32 @@
 /**
  * Shared Database Infrastructure
  *
- * Database client management (Turso), RuntimeConfigService, and HelixDB client.
+ * Database client management (Drizzle + PostgreSQL), RuntimeConfigService, and HelixDB client.
  * Used across all bounded contexts that need database access.
  */
 
 import { createRuntimeConfigService, type RuntimeConfigService } from "@cream/config";
-import { createContext, type ExecutionContext, isBacktest, requireEnv } from "@cream/domain";
+import { type ExecutionContext, isBacktest } from "@cream/domain";
 import { createHelixClientFromEnv, type HealthCheckResult, type HelixClient } from "@cream/helix";
 import {
 	AgentConfigsRepository,
-	createInMemoryClient,
-	createTursoClient,
-	runMigrations,
+	closeDb as closeDbConnection,
+	type Database,
+	getDb,
 	TradingConfigRepository,
-	type TursoClient,
 	UniverseConfigsRepository,
 } from "@cream/storage";
 import { log } from "./logger.js";
 
 // ============================================
-// Execution Context
+// Database Client (Drizzle + PostgreSQL)
 // ============================================
 
-function createDbContext(): ExecutionContext {
-	return createContext(requireEnv(), "scheduled");
+export function getDbClient(): Database {
+	return getDb();
 }
 
-// ============================================
-// Turso Database Client
-// ============================================
-
-let dbClient: TursoClient | null = null;
-let initPromise: Promise<TursoClient> | null = null;
-
-export async function getDbClient(): Promise<TursoClient> {
-	if (dbClient) {
-		return dbClient;
-	}
-
-	if (initPromise) {
-		return initPromise;
-	}
-
-	initPromise = initializeDb();
-
-	try {
-		dbClient = await initPromise;
-		return dbClient;
-	} catch (error) {
-		initPromise = null;
-		throw error;
-	}
-}
-
-async function initializeDb(): Promise<TursoClient> {
-	const ctx = createDbContext();
-	let client: TursoClient;
-
-	if (Bun.env.NODE_ENV === "test") {
-		client = await createInMemoryClient();
-	} else {
-		client = await createTursoClient(ctx);
-	}
-
-	await runMigrations(client, {
-		logger: (_msg) => {},
-	});
-
-	return client;
-}
-
-export function closeDb(): void {
-	if (dbClient) {
-		dbClient.close();
-		dbClient = null;
-	}
-	initPromise = null;
-}
+export { closeDbConnection as closeDb };
 
 // ============================================
 // Runtime Config Service
@@ -85,15 +34,15 @@ export function closeDb(): void {
 
 let runtimeConfigService: RuntimeConfigService | null = null;
 
-export async function getRuntimeConfigService(): Promise<RuntimeConfigService> {
+export function getRuntimeConfigService(): RuntimeConfigService {
 	if (runtimeConfigService) {
 		return runtimeConfigService;
 	}
 
-	const client = await getDbClient();
-	const tradingRepo = new TradingConfigRepository(client);
-	const agentRepo = new AgentConfigsRepository(client);
-	const universeRepo = new UniverseConfigsRepository(client);
+	// Repositories use getDb() internally
+	const tradingRepo = new TradingConfigRepository();
+	const agentRepo = new AgentConfigsRepository();
+	const universeRepo = new UniverseConfigsRepository();
 
 	runtimeConfigService = createRuntimeConfigService(tradingRepo, agentRepo, universeRepo);
 	return runtimeConfigService;

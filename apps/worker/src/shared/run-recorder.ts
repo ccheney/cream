@@ -5,7 +5,8 @@
  * Used by the scheduler to log when automated runs start and complete.
  */
 
-import type { TursoClient } from "@cream/storage";
+import type { Database } from "@cream/storage";
+import { sql } from "drizzle-orm";
 
 export type WorkerService =
 	| "macro_watch"
@@ -18,7 +19,7 @@ export type WorkerService =
 export type RunStatus = "pending" | "running" | "completed" | "failed";
 
 export interface RecordRunOptions {
-	db: TursoClient;
+	db: Database;
 	service: WorkerService;
 	environment: string;
 }
@@ -29,7 +30,7 @@ export interface RunRecordResult {
 }
 
 export interface CompleteRunOptions {
-	db: TursoClient;
+	db: Database;
 	runId: string;
 	success: boolean;
 	message?: string;
@@ -42,12 +43,11 @@ export async function recordRunStart(options: RecordRunOptions): Promise<RunReco
 	const runId = `run-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
 	const now = new Date().toISOString();
 
-	await db.run(
-		`INSERT INTO indicator_sync_runs
-		 (id, run_type, started_at, status, symbols_processed, symbols_failed, environment, error_message)
-		 VALUES (?, ?, ?, 'running', 0, 0, ?, NULL)`,
-		[runId, service, now, environment]
-	);
+	await db.execute(sql`
+		INSERT INTO indicator_sync_runs
+		(id, run_type, started_at, status, symbols_processed, symbols_failed, environment, error_message)
+		VALUES (${runId}, ${service}, ${now}, 'running', 0, 0, ${environment}, NULL)
+	`);
 
 	return { runId, startedAt: now };
 }
@@ -57,10 +57,9 @@ export async function recordRunComplete(options: CompleteRunOptions): Promise<vo
 	const completedAt = new Date().toISOString();
 	const status = success ? "completed" : "failed";
 
-	await db.run(
-		`UPDATE indicator_sync_runs
-		 SET status = ?, completed_at = ?, symbols_processed = ?, symbols_failed = ?, error_message = ?
-		 WHERE id = ?`,
-		[status, completedAt, processed, failed, message ?? null, runId]
-	);
+	await db.execute(sql`
+		UPDATE indicator_sync_runs
+		SET status = ${status}, completed_at = ${completedAt}, symbols_processed = ${processed}, symbols_failed = ${failed}, error_message = ${message ?? null}
+		WHERE id = ${runId}
+	`);
 }

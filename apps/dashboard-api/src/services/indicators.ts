@@ -17,11 +17,11 @@ import {
 	type MarketDataProvider,
 	type OHLCVBar,
 	type Quote,
-	type TursoCorporateActionsRepository,
-	type TursoFundamentalsRepository,
-	type TursoRepositories,
-	type TursoSentimentRepository,
-	type TursoShortInterestRepository,
+	type StorageCorporateActionsRepository,
+	type StorageFundamentalsRepository,
+	type StorageRepositories,
+	type StorageSentimentRepository,
+	type StorageShortInterestRepository,
 } from "@cream/indicators";
 import type { AlpacaMarketDataClient } from "@cream/marketdata";
 import {
@@ -95,10 +95,10 @@ class AlpacaMarketDataAdapter implements MarketDataProvider {
 // ============================================
 
 /**
- * Creates Turso-compatible repository adapters from Drizzle repositories.
+ * Creates storage repository adapters from Drizzle repositories.
  * These adapt the Drizzle repositories to the interfaces expected by @cream/indicators.
  */
-function createDrizzleRepositories(): TursoRepositories {
+function createDrizzleRepositories(): StorageRepositories {
 	return {
 		fundamentals: createFundamentalsAdapter(),
 		shortInterest: createShortInterestAdapter(),
@@ -107,7 +107,7 @@ function createDrizzleRepositories(): TursoRepositories {
 	};
 }
 
-function createFundamentalsAdapter(): TursoFundamentalsRepository {
+function createFundamentalsAdapter(): StorageFundamentalsRepository {
 	const repo = getFundamentalsRepo();
 	return {
 		async findLatestBySymbol(symbol: string) {
@@ -145,7 +145,7 @@ function createFundamentalsAdapter(): TursoFundamentalsRepository {
 	};
 }
 
-function createShortInterestAdapter(): TursoShortInterestRepository {
+function createShortInterestAdapter(): StorageShortInterestRepository {
 	const repo = getShortInterestRepo();
 	return {
 		async findLatestBySymbol(symbol: string) {
@@ -170,7 +170,7 @@ function createShortInterestAdapter(): TursoShortInterestRepository {
 	};
 }
 
-function createSentimentAdapter(): TursoSentimentRepository {
+function createSentimentAdapter(): StorageSentimentRepository {
 	const repo = getSentimentRepo();
 	return {
 		async findLatestBySymbol(symbol: string) {
@@ -197,7 +197,7 @@ function createSentimentAdapter(): TursoSentimentRepository {
 	};
 }
 
-function createCorporateActionsAdapter(): TursoCorporateActionsRepository {
+function createCorporateActionsAdapter(): StorageCorporateActionsRepository {
 	const repo = getCorporateActionsRepo();
 	return {
 		async getForSymbol(symbol: string) {
@@ -293,7 +293,7 @@ async function initializeIndicatorService(): Promise<IndicatorService> {
 	const optionsCalculator = createOptionsCalculator();
 	const cache = createIndicatorCache();
 
-	// Create Drizzle repository adapters (compatible with Turso interface)
+	// Create Drizzle repository adapters (compatible with storage interface)
 	const drizzleRepos = createDrizzleRepositories();
 	const batchRepos = createBatchRepositoryAdapters(drizzleRepos);
 

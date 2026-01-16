@@ -6,9 +6,9 @@
 
 import {
 	CorporateActionsRepository,
+	type Database,
 	SentimentRepository,
 	ShortInterestRepository,
-	type TursoClient,
 } from "@cream/storage";
 import { log } from "../../shared/logger.js";
 import {
@@ -25,7 +25,7 @@ import {
 import { createDefaultConfig } from "./types.js";
 
 export interface IndicatorSchedulerInitDeps {
-	db: TursoClient;
+	db: Database;
 	getSymbols: () => string[];
 }
 
