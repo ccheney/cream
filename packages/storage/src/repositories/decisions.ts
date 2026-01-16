@@ -3,7 +3,7 @@
  *
  * Data access for trading decisions table.
  */
-import { and, count, desc, eq, gte, inArray, lte } from "drizzle-orm";
+import { and, count, desc, eq, gte, ilike, inArray, lte, or } from "drizzle-orm";
 import { type Database, getDb } from "../db";
 import { decisions } from "../schema/core-trading";
 import { RepositoryError } from "./base";
@@ -379,5 +379,24 @@ export class DecisionsRepository {
 		}
 
 		return result as Record<DecisionStatus, number>;
+	}
+
+	async search(query: string, limit = 5): Promise<Pick<Decision, "id" | "symbol" | "action">[]> {
+		const rows = await this.db
+			.select({
+				id: decisions.id,
+				symbol: decisions.symbol,
+				action: decisions.action,
+			})
+			.from(decisions)
+			.where(or(ilike(decisions.symbol, `%${query}%`), ilike(decisions.action, `%${query}%`)))
+			.orderBy(desc(decisions.createdAt))
+			.limit(limit);
+
+		return rows.map((r) => ({
+			id: r.id,
+			symbol: r.symbol,
+			action: r.action as DecisionAction,
+		}));
 	}
 }

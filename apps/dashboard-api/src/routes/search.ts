@@ -7,9 +7,8 @@
  * @see docs/plans/46-postgres-drizzle-migration.md
  */
 
-import { sql } from "@cream/storage";
 import { createRoute, OpenAPIHono, z } from "@hono/zod-openapi";
-import { getDrizzleDb } from "../db.js";
+import { getAlertsRepo, getDecisionsRepo, getThesesRepo } from "../db.js";
 
 const app = new OpenAPIHono();
 
@@ -170,7 +169,6 @@ const searchRoute = createRoute({
 
 app.openapi(searchRoute, async (c) => {
 	const { q: query, limit = 20 } = c.req.valid("query");
-	const db = getDrizzleDb();
 
 	const results: Array<z.infer<typeof SearchResultSchema>> = [];
 
@@ -196,71 +194,48 @@ app.openapi(searchRoute, async (c) => {
 
 	try {
 		// Search decisions
-		const decisionsResult = await db.execute(sql`
-			SELECT id, symbol, action_type, created_at
-			FROM decisions
-			WHERE
-				symbol ILIKE ${`%${query}%`}
-				OR action_type ILIKE ${`%${query}%`}
-			ORDER BY created_at DESC
-			LIMIT 5
-		`);
+		const decisionsRepo = getDecisionsRepo();
+		const decisionsRows = await decisionsRepo.search(query, 5);
 
-		for (const row of decisionsResult.rows) {
-			const r = row as { id: string; symbol: string; action_type: string };
+		for (const r of decisionsRows) {
 			results.push({
 				id: `decision-${r.id}`,
 				type: "decision",
-				title: `${r.symbol} - ${r.action_type}`,
+				title: `${r.symbol} - ${r.action}`,
 				subtitle: "Decision",
 				url: `/decisions/${r.id}`,
-				score: fuzzyScore(query, `${r.symbol} ${r.action_type}`),
+				score: fuzzyScore(query, `${r.symbol} ${r.action}`),
 			});
 		}
 
 		// Search theses
-		const thesesResult = await db.execute(sql`
-			SELECT id, symbol, title
-			FROM thesis_states
-			WHERE
-				symbol ILIKE ${`%${query}%`}
-				OR title ILIKE ${`%${query}%`}
-			ORDER BY created_at DESC
-			LIMIT 5
-		`);
+		const thesesRepo = getThesesRepo();
+		const thesesRows = await thesesRepo.search(query, 5);
 
-		for (const row of thesesResult.rows) {
-			const r = row as { id: string; symbol: string; title: string };
+		for (const r of thesesRows) {
+			const title = r.entryThesis?.slice(0, 50) ?? r.instrumentId;
 			results.push({
-				id: `thesis-${r.id}`,
+				id: `thesis-${r.thesisId}`,
 				type: "thesis",
-				title: r.title,
-				subtitle: r.symbol,
-				url: `/theses/${r.id}`,
-				score: fuzzyScore(query, `${r.symbol} ${r.title}`),
+				title,
+				subtitle: r.instrumentId,
+				url: `/theses/${r.thesisId}`,
+				score: fuzzyScore(query, `${r.instrumentId} ${r.entryThesis ?? ""}`),
 			});
 		}
 
 		// Search alerts
-		const alertsResult = await db.execute(sql`
-			SELECT id, symbol, message
-			FROM alerts
-			WHERE
-				symbol ILIKE ${`%${query}%`}
-				OR message ILIKE ${`%${query}%`}
-			ORDER BY created_at DESC
-			LIMIT 5
-		`);
+		const alertsRepo = getAlertsRepo();
+		const alertsRows = await alertsRepo.search(query, 5);
 
-		for (const row of alertsResult.rows) {
-			const r = row as { id: string; symbol: string | null; message: string };
+		for (const r of alertsRows) {
 			results.push({
 				id: `alert-${r.id}`,
 				type: "alert",
 				title: r.message.slice(0, 50),
-				subtitle: r.symbol,
+				subtitle: r.title,
 				url: `/alerts#${r.id}`,
-				score: fuzzyScore(query, `${r.symbol ?? ""} ${r.message}`),
+				score: fuzzyScore(query, `${r.title} ${r.message}`),
 			});
 		}
 	} catch (_error) {}

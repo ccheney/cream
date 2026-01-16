@@ -21,8 +21,8 @@
 
 import { appendFileSync } from "node:fs";
 import { createNodeLogger, type LifecycleLogger } from "@cream/logger";
-import { getDb } from "@cream/storage";
-import { sql } from "drizzle-orm";
+import { getDb, indicators } from "@cream/storage";
+import { eq } from "drizzle-orm";
 
 const log: LifecycleLogger = createNodeLogger({
   service: "fetch-indicator-metadata",
@@ -132,29 +132,38 @@ async function fetchIndicator(indicatorId: string): Promise<Indicator | null> {
 
   const db = getDb();
 
-  const result = await db.execute(sql`
-    SELECT id, name, category, status, hypothesis, economic_rationale,
-           validation_report, paper_trading_report, paper_trading_start, paper_trading_end
-    FROM indicators WHERE id = ${indicatorId}
-  `);
+  const [row] = await db
+    .select({
+      id: indicators.id,
+      name: indicators.name,
+      category: indicators.category,
+      status: indicators.status,
+      hypothesis: indicators.hypothesis,
+      economicRationale: indicators.economicRationale,
+      validationReport: indicators.validationReport,
+      paperTradingReport: indicators.paperTradingReport,
+      paperTradingStart: indicators.paperTradingStart,
+      paperTradingEnd: indicators.paperTradingEnd,
+    })
+    .from(indicators)
+    .where(eq(indicators.id, indicatorId))
+    .limit(1);
 
-  const rows = result.rows;
-  if (!rows || rows.length === 0) {
+  if (!row) {
     return null;
   }
 
-  const row = rows[0] as Record<string, unknown>;
   return {
-    id: (row.id as string) ?? "",
-    name: (row.name as string) ?? "",
-    category: (row.category as string) ?? "",
-    status: (row.status as string) ?? "",
-    hypothesis: (row.hypothesis as string) ?? "",
-    economic_rationale: (row.economic_rationale as string) ?? "",
-    validation_report: (row.validation_report as string) ?? null,
-    paper_trading_report: (row.paper_trading_report as string) ?? null,
-    paper_trading_start: (row.paper_trading_start as string) ?? null,
-    paper_trading_end: (row.paper_trading_end as string) ?? null,
+    id: row.id,
+    name: row.name,
+    category: row.category,
+    status: row.status,
+    hypothesis: row.hypothesis,
+    economic_rationale: row.economicRationale,
+    validation_report: row.validationReport ?? null,
+    paper_trading_report: row.paperTradingReport ?? null,
+    paper_trading_start: row.paperTradingStart?.toISOString() ?? null,
+    paper_trading_end: row.paperTradingEnd?.toISOString() ?? null,
   };
 }
 

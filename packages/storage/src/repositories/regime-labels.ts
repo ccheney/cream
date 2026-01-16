@@ -5,7 +5,7 @@
  *
  * @see docs/plans/33-indicator-engine-v2.md
  */
-import { and, desc, eq, gte, lte, sql } from "drizzle-orm";
+import { and, count, desc, eq, gte, lte, max, ne } from "drizzle-orm";
 import { z } from "zod";
 import { type Database, getDb } from "../db";
 import { regimeLabels } from "../schema/market-data";
@@ -187,40 +187,72 @@ export class RegimeLabelsRepository {
 		timeframe: RegimeTimeframe,
 		minConfidence = 0.5
 	): Promise<string[]> {
-		const rows = await this.db.execute(sql`
-			SELECT DISTINCT r1.symbol
-			FROM ${regimeLabels} r1
-			INNER JOIN (
-				SELECT symbol, MAX(timestamp) as max_ts
-				FROM ${regimeLabels}
-				WHERE timeframe = ${timeframe}
-				GROUP BY symbol
-			) r2 ON r1.symbol = r2.symbol AND r1.timestamp = r2.max_ts
-			WHERE r1.regime = ${regime}
-				AND r1.confidence >= ${String(minConfidence)}
-				AND r1.timeframe = ${timeframe}
-				AND r1.symbol != ${MARKET_SYMBOL}
-		`);
+		const latestTimestamps = this.db
+			.select({
+				symbol: regimeLabels.symbol,
+				maxTs: max(regimeLabels.timestamp).as("max_ts"),
+			})
+			.from(regimeLabels)
+			.where(eq(regimeLabels.timeframe, timeframe as typeof regimeLabels.$inferSelect.timeframe))
+			.groupBy(regimeLabels.symbol)
+			.as("latest");
 
-		return (rows.rows as { symbol: string }[]).map((r) => r.symbol);
+		const rows = await this.db
+			.selectDistinct({ symbol: regimeLabels.symbol })
+			.from(regimeLabels)
+			.innerJoin(
+				latestTimestamps,
+				and(
+					eq(regimeLabels.symbol, latestTimestamps.symbol),
+					eq(regimeLabels.timestamp, latestTimestamps.maxTs)
+				)
+			)
+			.where(
+				and(
+					eq(regimeLabels.regime, regime as typeof regimeLabels.$inferSelect.regime),
+					gte(regimeLabels.confidence, String(minConfidence)),
+					eq(regimeLabels.timeframe, timeframe as typeof regimeLabels.$inferSelect.timeframe),
+					ne(regimeLabels.symbol, MARKET_SYMBOL)
+				)
+			);
+
+		return rows.map((r) => r.symbol);
 	}
 
 	async getRegimeDistribution(timeframe: RegimeTimeframe): Promise<Map<RegimeType, number>> {
-		const rows = await this.db.execute(sql`
-			SELECT r1.regime, COUNT(*)::int as count
-			FROM ${regimeLabels} r1
-			INNER JOIN (
-				SELECT symbol, MAX(timestamp) as max_ts
-				FROM ${regimeLabels}
-				WHERE timeframe = ${timeframe} AND symbol != ${MARKET_SYMBOL}
-				GROUP BY symbol
-			) r2 ON r1.symbol = r2.symbol AND r1.timestamp = r2.max_ts
-			WHERE r1.timeframe = ${timeframe}
-			GROUP BY r1.regime
-		`);
+		const latestTimestamps = this.db
+			.select({
+				symbol: regimeLabels.symbol,
+				maxTs: max(regimeLabels.timestamp).as("max_ts"),
+			})
+			.from(regimeLabels)
+			.where(
+				and(
+					eq(regimeLabels.timeframe, timeframe as typeof regimeLabels.$inferSelect.timeframe),
+					ne(regimeLabels.symbol, MARKET_SYMBOL)
+				)
+			)
+			.groupBy(regimeLabels.symbol)
+			.as("latest");
+
+		const rows = await this.db
+			.select({
+				regime: regimeLabels.regime,
+				count: count(),
+			})
+			.from(regimeLabels)
+			.innerJoin(
+				latestTimestamps,
+				and(
+					eq(regimeLabels.symbol, latestTimestamps.symbol),
+					eq(regimeLabels.timestamp, latestTimestamps.maxTs)
+				)
+			)
+			.where(eq(regimeLabels.timeframe, timeframe as typeof regimeLabels.$inferSelect.timeframe))
+			.groupBy(regimeLabels.regime);
 
 		const distribution = new Map<RegimeType, number>();
-		for (const row of rows.rows as { regime: string; count: number }[]) {
+		for (const row of rows) {
 			distribution.set(row.regime as RegimeType, row.count);
 		}
 		return distribution;
@@ -233,5 +265,26 @@ export class RegimeLabelsRepository {
 			.returning({ id: regimeLabels.id });
 
 		return result.length;
+	}
+
+	async getRegimeAtDate(
+		symbol: string,
+		timeframe: RegimeTimeframe,
+		asOfDate: string
+	): Promise<RegimeLabel | null> {
+		const [row] = await this.db
+			.select()
+			.from(regimeLabels)
+			.where(
+				and(
+					eq(regimeLabels.symbol, symbol),
+					eq(regimeLabels.timeframe, timeframe as typeof regimeLabels.$inferSelect.timeframe),
+					lte(regimeLabels.timestamp, new Date(asOfDate))
+				)
+			)
+			.orderBy(desc(regimeLabels.timestamp))
+			.limit(1);
+
+		return row ? mapRegimeLabelRow(row) : null;
 	}
 }

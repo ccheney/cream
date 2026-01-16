@@ -6,7 +6,7 @@
  *
  * @see docs/plans/33-indicator-engine-v2.md
  */
-import { and, count, eq, gt, lte, sql } from "drizzle-orm";
+import { and, count, eq, gt, inArray, lte, sql } from "drizzle-orm";
 import { type Database, getDb } from "../db";
 import { optionsIndicatorsCache } from "../schema/indicators";
 
@@ -207,13 +207,18 @@ export class OptionsIndicatorsCacheRepository {
 
 		const now = new Date();
 
-		const rows = await this.db.execute(sql`
-			SELECT * FROM ${optionsIndicatorsCache}
-			WHERE symbol = ANY(${symbols}) AND expires_at > ${now}
-		`);
+		const rows = await this.db
+			.select()
+			.from(optionsIndicatorsCache)
+			.where(
+				and(
+					inArray(optionsIndicatorsCache.symbol, symbols),
+					gt(optionsIndicatorsCache.expiresAt, now)
+				)
+			);
 
 		const result = new Map<string, OptionsIndicatorsCache>();
-		for (const row of rows.rows as OptionsIndicatorsRow[]) {
+		for (const row of rows) {
 			const entry = mapOptionsIndicatorsRow(row);
 			result.set(entry.symbol, entry);
 		}

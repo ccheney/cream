@@ -6,7 +6,7 @@
  *
  * @see docs/plans/33-indicator-engine-v2.md
  */
-import { and, count, desc, eq, gte, lte, sql } from "drizzle-orm";
+import { and, count, desc, eq, gte, inArray, isNotNull, lte, max } from "drizzle-orm";
 import { type Database, getDb } from "../db";
 import { shortInterestIndicators } from "../schema/indicators";
 
@@ -314,25 +314,36 @@ export class ShortInterestRepository {
 		limit = 10,
 		minShortPctFloat?: number
 	): Promise<ShortInterestIndicators[]> {
-		let query = sql`
-			SELECT si1.*
-			FROM ${shortInterestIndicators} si1
-			INNER JOIN (
-				SELECT symbol, MAX(settlement_date) as max_date
-				FROM ${shortInterestIndicators}
-				GROUP BY symbol
-			) si2 ON si1.symbol = si2.symbol AND si1.settlement_date = si2.max_date
-			WHERE si1.short_pct_float IS NOT NULL
-		`;
+		const latestDates = this.db
+			.select({
+				symbol: shortInterestIndicators.symbol,
+				maxDate: max(shortInterestIndicators.settlementDate).as("max_date"),
+			})
+			.from(shortInterestIndicators)
+			.groupBy(shortInterestIndicators.symbol)
+			.as("latest");
+
+		const conditions = [isNotNull(shortInterestIndicators.shortPctFloat)];
 
 		if (minShortPctFloat !== undefined) {
-			query = sql`${query} AND si1.short_pct_float >= ${String(minShortPctFloat)}`;
+			conditions.push(gte(shortInterestIndicators.shortPctFloat, String(minShortPctFloat)));
 		}
 
-		query = sql`${query} ORDER BY si1.short_pct_float DESC LIMIT ${limit}`;
+		const rows = await this.db
+			.select()
+			.from(shortInterestIndicators)
+			.innerJoin(
+				latestDates,
+				and(
+					eq(shortInterestIndicators.symbol, latestDates.symbol),
+					eq(shortInterestIndicators.settlementDate, latestDates.maxDate)
+				)
+			)
+			.where(and(...conditions))
+			.orderBy(desc(shortInterestIndicators.shortPctFloat))
+			.limit(limit);
 
-		const result = await this.db.execute(query);
-		return (result.rows as ShortInterestRow[]).map(mapShortInterestRow);
+		return rows.map((row) => mapShortInterestRow(row.short_interest_indicators));
 	}
 
 	async update(
@@ -423,14 +434,13 @@ export class ShortInterestRepository {
 			return [];
 		}
 
-		const rows = await this.db.execute(sql`
-			SELECT DISTINCT ON (symbol) *
-			FROM ${shortInterestIndicators}
-			WHERE symbol = ANY(${symbols})
-			ORDER BY symbol, settlement_date DESC
-		`);
+		const rows = await this.db
+			.selectDistinctOn([shortInterestIndicators.symbol])
+			.from(shortInterestIndicators)
+			.where(inArray(shortInterestIndicators.symbol, symbols))
+			.orderBy(shortInterestIndicators.symbol, desc(shortInterestIndicators.settlementDate));
 
-		return (rows.rows as ShortInterestRow[]).map(mapShortInterestRow);
+		return rows.map(mapShortInterestRow);
 	}
 
 	async findByFetchedAtRange(

@@ -19,8 +19,12 @@
 import { createHelixClientFromEnv, type HelixClient } from "@cream/helix";
 import { createEmbeddingClient, type EmbeddingClient } from "@cream/helix-schema";
 import { createNodeLogger, type LifecycleLogger } from "@cream/logger";
-import { type Database, getDb, ThesisStateRepository } from "@cream/storage";
-import { sql } from "drizzle-orm";
+import {
+	getDb,
+	MARKET_SYMBOL,
+	RegimeLabelsRepository,
+	ThesisStateRepository,
+} from "@cream/storage";
 import {
 	batchIngestClosedTheses,
 	type ThesisIngestionInput,
@@ -78,20 +82,11 @@ function parseArgs(): BackfillOptions {
  * Get the market regime for a specific date.
  * Falls back to "UNKNOWN" if no regime data is available.
  */
-async function getRegimeForDate(db: Database, date: string): Promise<string> {
+async function getRegimeForDate(regimeRepo: RegimeLabelsRepository, date: string): Promise<string> {
 	try {
-		// Look for the closest regime label before or at the given date
-		const result = await db.execute(sql`
-			SELECT regime FROM regime_labels
-			WHERE symbol = '_MARKET' AND timeframe = '1d'
-			AND timestamp <= ${date}
-			ORDER BY timestamp DESC
-			LIMIT 1
-		`);
-
-		const row = result.rows[0] as { regime: string } | undefined;
-		if (row?.regime) {
-			return String(row.regime).toUpperCase();
+		const label = await regimeRepo.getRegimeAtDate(MARKET_SYMBOL, "1d", date);
+		if (label?.regime) {
+			return label.regime.toUpperCase();
 		}
 	} catch {
 		// Ignore errors - just return UNKNOWN
@@ -121,6 +116,7 @@ async function backfillThesisMemory(options: BackfillOptions): Promise<void> {
 
 	const db = getDb();
 	const thesisRepo = new ThesisStateRepository(db);
+	const regimeRepo = new RegimeLabelsRepository(db);
 
 	// Build filters
 	const environment = options.environment ?? "BACKTEST";
@@ -154,8 +150,8 @@ async function backfillThesisMemory(options: BackfillOptions): Promise<void> {
 		const entryDate = thesis.entryDate ?? thesis.createdAt;
 		const exitDate = thesis.closedAt ?? new Date().toISOString();
 
-		const entryRegime = await getRegimeForDate(db, entryDate);
-		const exitRegime = await getRegimeForDate(db, exitDate);
+		const entryRegime = await getRegimeForDate(regimeRepo, entryDate);
+		const exitRegime = await getRegimeForDate(regimeRepo, exitDate);
 
 		inputs.push({
 			thesis,

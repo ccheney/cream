@@ -6,7 +6,7 @@
  *
  * @see docs/plans/05-agents.md - Thesis State Management section
  */
-import { and, asc, count, desc, eq, gte, inArray, ne, sql } from "drizzle-orm";
+import { and, asc, count, desc, eq, gte, ilike, inArray, ne, or, sql } from "drizzle-orm";
 import { type Database, getDb } from "../db";
 import { thesisState, thesisStateHistory } from "../schema/thesis";
 
@@ -656,5 +656,32 @@ export class ThesisStateRepository {
 			avgHoldingDays: performance?.avgHoldingDays ?? 0,
 			winRate: performance?.winRate ?? 0,
 		};
+	}
+
+	async search(
+		query: string,
+		limit = 5
+	): Promise<Pick<Thesis, "thesisId" | "instrumentId" | "entryThesis">[]> {
+		const rows = await this.db
+			.select({
+				thesisId: thesisState.thesisId,
+				instrumentId: thesisState.instrumentId,
+				entryThesis: thesisState.entryThesis,
+			})
+			.from(thesisState)
+			.where(
+				or(
+					ilike(thesisState.instrumentId, `%${query}%`),
+					ilike(thesisState.entryThesis, `%${query}%`)
+				)
+			)
+			.orderBy(desc(thesisState.createdAt))
+			.limit(limit);
+
+		return rows.map((r) => ({
+			thesisId: r.thesisId,
+			instrumentId: r.instrumentId,
+			entryThesis: r.entryThesis,
+		}));
 	}
 }

@@ -6,7 +6,19 @@
  *
  * @see packages/external-context for the extraction pipeline
  */
-import { and, count, desc, eq, gte, inArray, lte, sql } from "drizzle-orm";
+import {
+	and,
+	arrayContains,
+	arrayOverlaps,
+	avg,
+	count,
+	desc,
+	eq,
+	gte,
+	inArray,
+	lte,
+	sql,
+} from "drizzle-orm";
 import { type Database, getDb } from "../db";
 import { externalEvents } from "../schema/external";
 
@@ -324,14 +336,14 @@ export class ExternalEventsRepository {
 	}
 
 	async findBySymbol(symbol: string, limit = 50): Promise<ExternalEvent[]> {
-		const rows = await this.db.execute(sql`
-			SELECT * FROM ${externalEvents}
-			WHERE ${symbol} = ANY(related_instruments)
-			ORDER BY event_time DESC
-			LIMIT ${limit}
-		`);
+		const rows = await this.db
+			.select()
+			.from(externalEvents)
+			.where(arrayContains(externalEvents.relatedInstruments, [symbol]))
+			.orderBy(desc(externalEvents.eventTime))
+			.limit(limit);
 
-		return (rows.rows as ExternalEventRow[]).map(mapExternalEventRow);
+		return rows.map(mapExternalEventRow);
 	}
 
 	async findBySymbols(symbols: string[], limit = 100): Promise<ExternalEvent[]> {
@@ -339,14 +351,14 @@ export class ExternalEventsRepository {
 			return [];
 		}
 
-		const rows = await this.db.execute(sql`
-			SELECT * FROM ${externalEvents}
-			WHERE related_instruments && ${symbols}
-			ORDER BY importance_score DESC, event_time DESC
-			LIMIT ${limit}
-		`);
+		const rows = await this.db
+			.select()
+			.from(externalEvents)
+			.where(arrayOverlaps(externalEvents.relatedInstruments, symbols))
+			.orderBy(desc(externalEvents.importanceScore), desc(externalEvents.eventTime))
+			.limit(limit);
 
-		return (rows.rows as ExternalEventRow[]).map(mapExternalEventRow);
+		return rows.map(mapExternalEventRow);
 	}
 
 	async findMacroEvents(limit = 50): Promise<ExternalEvent[]> {
@@ -368,17 +380,22 @@ export class ExternalEventsRepository {
 	): Promise<{ avgSentiment: number; count: number }> {
 		const cutoff = new Date(Date.now() - hours * 60 * 60 * 1000);
 
-		const result = await this.db.execute(sql`
-			SELECT AVG(sentiment_score::numeric) as avg_sentiment, COUNT(*)::int as count
-			FROM ${externalEvents}
-			WHERE ${symbol} = ANY(related_instruments) AND event_time >= ${cutoff}
-		`);
-
-		const row = result.rows[0] as { avg_sentiment: string | null; count: number } | undefined;
+		const [result] = await this.db
+			.select({
+				avgSentiment: avg(externalEvents.sentimentScore),
+				count: count(),
+			})
+			.from(externalEvents)
+			.where(
+				and(
+					arrayContains(externalEvents.relatedInstruments, [symbol]),
+					gte(externalEvents.eventTime, cutoff)
+				)
+			);
 
 		return {
-			avgSentiment: row?.avg_sentiment ? Number(row.avg_sentiment) : 0,
-			count: row?.count ?? 0,
+			avgSentiment: result?.avgSentiment ? Number(result.avgSentiment) : 0,
+			count: result?.count ?? 0,
 		};
 	}
 

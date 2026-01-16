@@ -5,7 +5,7 @@
  *
  * @see docs/plans/18-prediction-markets.md
  */
-import { and, count, desc, eq, gte, isNotNull, isNull, lte, sql } from "drizzle-orm";
+import { and, count, desc, eq, gte, isNotNull, isNull, lte, max, sql } from "drizzle-orm";
 import { type Database, getDb } from "../db";
 import {
 	predictionMarketArbitrage,
@@ -153,30 +153,6 @@ function mapSnapshotRow(row: SnapshotRow): MarketSnapshot {
 	};
 }
 
-interface RawSnapshotRow {
-	id: string;
-	platform: string;
-	market_ticker: string;
-	market_type: string;
-	market_question: string | null;
-	snapshot_time: Date;
-	data: Record<string, unknown>;
-	created_at: Date | null;
-}
-
-function mapRawSnapshotRow(row: RawSnapshotRow): MarketSnapshot {
-	return {
-		id: row.id,
-		platform: row.platform as PredictionPlatform,
-		marketTicker: row.market_ticker,
-		marketType: row.market_type as PredictionMarketType,
-		marketQuestion: row.market_question,
-		snapshotTime: row.snapshot_time.toISOString(),
-		data: row.data as unknown as MarketSnapshotData,
-		createdAt: row.created_at?.toISOString() ?? new Date().toISOString(),
-	};
-}
-
 function mapSignalRow(row: SignalRow): ComputedSignal {
 	return {
 		id: row.id,
@@ -186,38 +162,6 @@ function mapSignalRow(row: SignalRow): ComputedSignal {
 		computedAt: row.computedAt.toISOString(),
 		inputs: row.inputs as unknown as SignalInputs,
 		createdAt: row.createdAt?.toISOString() ?? new Date().toISOString(),
-	};
-}
-
-interface RawSignalRow {
-	id: string;
-	signal_type: string;
-	signal_value: string;
-	confidence: string | null;
-	computed_at: Date;
-	inputs: Record<string, unknown>;
-	created_at: Date | null;
-}
-
-function mapRawSignalRow(row: RawSignalRow): ComputedSignal {
-	const computedAt =
-		row.computed_at instanceof Date
-			? row.computed_at
-			: new Date(row.computed_at as unknown as string);
-	const createdAt =
-		row.created_at instanceof Date
-			? row.created_at
-			: row.created_at
-				? new Date(row.created_at as unknown as string)
-				: new Date();
-	return {
-		id: row.id,
-		signalType: row.signal_type as SignalType,
-		signalValue: Number(row.signal_value),
-		confidence: row.confidence ? Number(row.confidence) : null,
-		computedAt: computedAt.toISOString(),
-		inputs: row.inputs as unknown as SignalInputs,
-		createdAt: createdAt.toISOString(),
 	};
 }
 
@@ -343,26 +287,35 @@ export class PredictionMarketsRepository {
 	}
 
 	async getLatestSnapshots(platform?: PredictionPlatform): Promise<MarketSnapshot[]> {
-		let query = sql`
-			SELECT s.*
-			FROM ${predictionMarketSnapshots} s
-			INNER JOIN (
-				SELECT market_ticker, MAX(snapshot_time) as max_time
-				FROM ${predictionMarketSnapshots}
-		`;
+		const subqueryConditions = platform
+			? eq(
+					predictionMarketSnapshots.platform,
+					platform as typeof predictionMarketSnapshots.$inferSelect.platform
+				)
+			: undefined;
 
-		if (platform) {
-			query = sql`${query} WHERE platform = ${platform}`;
-		}
+		const latestTimes = this.db
+			.select({
+				marketTicker: predictionMarketSnapshots.marketTicker,
+				maxTime: max(predictionMarketSnapshots.snapshotTime).as("max_time"),
+			})
+			.from(predictionMarketSnapshots)
+			.where(subqueryConditions)
+			.groupBy(predictionMarketSnapshots.marketTicker)
+			.as("latest");
 
-		query = sql`${query}
-				GROUP BY market_ticker
-			) latest ON s.market_ticker = latest.market_ticker
-				AND s.snapshot_time = latest.max_time
-		`;
+		const rows = await this.db
+			.select()
+			.from(predictionMarketSnapshots)
+			.innerJoin(
+				latestTimes,
+				and(
+					eq(predictionMarketSnapshots.marketTicker, latestTimes.marketTicker),
+					eq(predictionMarketSnapshots.snapshotTime, latestTimes.maxTime)
+				)
+			);
 
-		const result = await this.db.execute(query);
-		return (result.rows as unknown as RawSnapshotRow[]).map(mapRawSnapshotRow);
+		return rows.map((row) => mapSnapshotRow(row.prediction_market_snapshots));
 	}
 
 	// ============================================
@@ -440,18 +393,27 @@ export class PredictionMarketsRepository {
 	}
 
 	async getLatestSignals(): Promise<ComputedSignal[]> {
-		const result = await this.db.execute(sql`
-			SELECT s.*
-			FROM ${predictionMarketSignals} s
-			INNER JOIN (
-				SELECT signal_type, MAX(computed_at) as max_time
-				FROM ${predictionMarketSignals}
-				GROUP BY signal_type
-			) latest ON s.signal_type = latest.signal_type
-				AND s.computed_at = latest.max_time
-		`);
+		const latestTimes = this.db
+			.select({
+				signalType: predictionMarketSignals.signalType,
+				maxTime: max(predictionMarketSignals.computedAt).as("max_time"),
+			})
+			.from(predictionMarketSignals)
+			.groupBy(predictionMarketSignals.signalType)
+			.as("latest");
 
-		return (result.rows as unknown as RawSignalRow[]).map(mapRawSignalRow);
+		const rows = await this.db
+			.select()
+			.from(predictionMarketSignals)
+			.innerJoin(
+				latestTimes,
+				and(
+					eq(predictionMarketSignals.signalType, latestTimes.signalType),
+					eq(predictionMarketSignals.computedAt, latestTimes.maxTime)
+				)
+			);
+
+		return rows.map((row) => mapSignalRow(row.prediction_market_signals));
 	}
 
 	// ============================================

@@ -6,7 +6,7 @@
  *
  * @see docs/plans/33-indicator-engine-v2.md
  */
-import { and, count, desc, eq, sql } from "drizzle-orm";
+import { and, count, desc, eq, inArray, sql } from "drizzle-orm";
 import { type Database, getDb } from "../db";
 import { indicatorSyncRuns } from "../schema/indicators";
 
@@ -252,15 +252,19 @@ export class IndicatorSyncRunsRepository {
 	}
 
 	async getLastRunByType(): Promise<Map<SyncRunType, IndicatorSyncRun>> {
-		const rows = await this.db.execute(sql`
-			SELECT DISTINCT ON (run_type) *
-			FROM ${indicatorSyncRuns}
-			WHERE status IN ('completed', 'failed')
-			ORDER BY run_type, started_at DESC
-		`);
+		const rows = await this.db
+			.selectDistinctOn([indicatorSyncRuns.runType])
+			.from(indicatorSyncRuns)
+			.where(
+				inArray(indicatorSyncRuns.status, [
+					"completed" as typeof indicatorSyncRuns.$inferSelect.status,
+					"failed" as typeof indicatorSyncRuns.$inferSelect.status,
+				])
+			)
+			.orderBy(indicatorSyncRuns.runType, desc(indicatorSyncRuns.startedAt));
 
 		const result = new Map<SyncRunType, IndicatorSyncRun>();
-		for (const row of rows.rows as SyncRunRow[]) {
+		for (const row of rows) {
 			result.set(row.runType as SyncRunType, mapRow(row));
 		}
 		return result;

@@ -326,15 +326,13 @@ export class FundamentalsRepository {
 			return [];
 		}
 
-		// Use a window function approach
-		const rows = await this.db.execute(sql`
-			SELECT DISTINCT ON (symbol) *
-			FROM ${fundamentalIndicators}
-			WHERE symbol = ANY(${symbols})
-			ORDER BY symbol, date DESC
-		`);
+		const rows = await this.db
+			.selectDistinctOn([fundamentalIndicators.symbol])
+			.from(fundamentalIndicators)
+			.where(inArray(fundamentalIndicators.symbol, symbols))
+			.orderBy(fundamentalIndicators.symbol, desc(fundamentalIndicators.date));
 
-		return (rows.rows as FundamentalRow[]).map(mapRow);
+		return rows.map(mapRow);
 	}
 
 	async findBySymbol(
@@ -428,15 +426,13 @@ export class FundamentalsRepository {
 
 			return rows.map(mapRow);
 		} else {
-			// Get latest for each symbol in sector using DISTINCT ON
-			const rows = await this.db.execute(sql`
-				SELECT DISTINCT ON (symbol) *
-				FROM ${fundamentalIndicators}
-				WHERE sector = ${sector}
-				ORDER BY symbol, date DESC
-			`);
+			const rows = await this.db
+				.selectDistinctOn([fundamentalIndicators.symbol])
+				.from(fundamentalIndicators)
+				.where(eq(fundamentalIndicators.sector, sector))
+				.orderBy(fundamentalIndicators.symbol, desc(fundamentalIndicators.date));
 
-			return (rows.rows as FundamentalRow[]).map(mapRow);
+			return rows.map(mapRow);
 		}
 	}
 

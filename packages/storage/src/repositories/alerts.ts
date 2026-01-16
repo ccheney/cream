@@ -5,7 +5,7 @@
  *
  * @see docs/plans/ui/04-data-requirements.md
  */
-import { and, count, desc, eq, gte, inArray, lte, sql } from "drizzle-orm";
+import { and, count, desc, eq, gte, ilike, inArray, lte, or, sql } from "drizzle-orm";
 import { type Database, getDb } from "../db";
 import { alerts } from "../schema/dashboard";
 
@@ -343,5 +343,20 @@ export class AlertsRepository {
 		}
 
 		return result;
+	}
+
+	async search(query: string, limit = 5): Promise<Pick<Alert, "id" | "title" | "message">[]> {
+		const rows = await this.db
+			.select({
+				id: alerts.id,
+				title: alerts.title,
+				message: alerts.message,
+			})
+			.from(alerts)
+			.where(or(ilike(alerts.title, `%${query}%`), ilike(alerts.message, `%${query}%`)))
+			.orderBy(desc(alerts.createdAt))
+			.limit(limit);
+
+		return rows;
 	}
 }

@@ -6,7 +6,7 @@
  *
  * @see docs/plans/33-indicator-engine-v2.md
  */
-import { and, count, desc, eq, gte, isNotNull, lte, sql } from "drizzle-orm";
+import { and, asc, count, desc, eq, gte, inArray, isNotNull, lte, max } from "drizzle-orm";
 import { type Database, getDb } from "../db";
 import { sentimentIndicators } from "../schema/indicators";
 
@@ -351,20 +351,30 @@ export class SentimentRepository {
 			return rows.map(mapSentimentRow);
 		}
 
-		const rows = await this.db.execute(sql`
-			SELECT s1.*
-			FROM ${sentimentIndicators} s1
-			INNER JOIN (
-				SELECT symbol, MAX(date) as max_date
-				FROM ${sentimentIndicators}
-				GROUP BY symbol
-			) s2 ON s1.symbol = s2.symbol AND s1.date = s2.max_date
-			WHERE s1.sentiment_score IS NOT NULL
-			ORDER BY s1.sentiment_score DESC
-			LIMIT ${limit}
-		`);
+		const latestDates = this.db
+			.select({
+				symbol: sentimentIndicators.symbol,
+				maxDate: max(sentimentIndicators.date).as("max_date"),
+			})
+			.from(sentimentIndicators)
+			.groupBy(sentimentIndicators.symbol)
+			.as("latest");
 
-		return (rows.rows as SentimentRow[]).map(mapSentimentRow);
+		const rows = await this.db
+			.select()
+			.from(sentimentIndicators)
+			.innerJoin(
+				latestDates,
+				and(
+					eq(sentimentIndicators.symbol, latestDates.symbol),
+					eq(sentimentIndicators.date, latestDates.maxDate)
+				)
+			)
+			.where(isNotNull(sentimentIndicators.sentimentScore))
+			.orderBy(desc(sentimentIndicators.sentimentScore))
+			.limit(limit);
+
+		return rows.map((row) => mapSentimentRow(row.sentiment_indicators));
 	}
 
 	async findMostNegative(limit = 10, date?: string): Promise<SentimentIndicators[]> {
@@ -390,20 +400,30 @@ export class SentimentRepository {
 			return rows.map(mapSentimentRow);
 		}
 
-		const rows = await this.db.execute(sql`
-			SELECT s1.*
-			FROM ${sentimentIndicators} s1
-			INNER JOIN (
-				SELECT symbol, MAX(date) as max_date
-				FROM ${sentimentIndicators}
-				GROUP BY symbol
-			) s2 ON s1.symbol = s2.symbol AND s1.date = s2.max_date
-			WHERE s1.sentiment_score IS NOT NULL
-			ORDER BY s1.sentiment_score ASC
-			LIMIT ${limit}
-		`);
+		const latestDates = this.db
+			.select({
+				symbol: sentimentIndicators.symbol,
+				maxDate: max(sentimentIndicators.date).as("max_date"),
+			})
+			.from(sentimentIndicators)
+			.groupBy(sentimentIndicators.symbol)
+			.as("latest");
 
-		return (rows.rows as SentimentRow[]).map(mapSentimentRow);
+		const rows = await this.db
+			.select()
+			.from(sentimentIndicators)
+			.innerJoin(
+				latestDates,
+				and(
+					eq(sentimentIndicators.symbol, latestDates.symbol),
+					eq(sentimentIndicators.date, latestDates.maxDate)
+				)
+			)
+			.where(isNotNull(sentimentIndicators.sentimentScore))
+			.orderBy(asc(sentimentIndicators.sentimentScore))
+			.limit(limit);
+
+		return rows.map((row) => mapSentimentRow(row.sentiment_indicators));
 	}
 
 	async findWithEventRisk(date?: string): Promise<SentimentIndicators[]> {
@@ -428,19 +448,29 @@ export class SentimentRepository {
 			return rows.map(mapSentimentRow);
 		}
 
-		const rows = await this.db.execute(sql`
-			SELECT s1.*
-			FROM ${sentimentIndicators} s1
-			INNER JOIN (
-				SELECT symbol, MAX(date) as max_date
-				FROM ${sentimentIndicators}
-				GROUP BY symbol
-			) s2 ON s1.symbol = s2.symbol AND s1.date = s2.max_date
-			WHERE s1.event_risk_flag = true
-			ORDER BY s1.sentiment_score DESC
-		`);
+		const latestDates = this.db
+			.select({
+				symbol: sentimentIndicators.symbol,
+				maxDate: max(sentimentIndicators.date).as("max_date"),
+			})
+			.from(sentimentIndicators)
+			.groupBy(sentimentIndicators.symbol)
+			.as("latest");
 
-		return (rows.rows as SentimentRow[]).map(mapSentimentRow);
+		const rows = await this.db
+			.select()
+			.from(sentimentIndicators)
+			.innerJoin(
+				latestDates,
+				and(
+					eq(sentimentIndicators.symbol, latestDates.symbol),
+					eq(sentimentIndicators.date, latestDates.maxDate)
+				)
+			)
+			.where(eq(sentimentIndicators.eventRiskFlag, true))
+			.orderBy(desc(sentimentIndicators.sentimentScore));
+
+		return rows.map((row) => mapSentimentRow(row.sentiment_indicators));
 	}
 
 	async update(id: string, input: UpdateSentimentInput): Promise<SentimentIndicators | null> {
@@ -546,14 +576,13 @@ export class SentimentRepository {
 			return [];
 		}
 
-		const rows = await this.db.execute(sql`
-			SELECT DISTINCT ON (symbol) *
-			FROM ${sentimentIndicators}
-			WHERE symbol = ANY(${symbols})
-			ORDER BY symbol, date DESC
-		`);
+		const rows = await this.db
+			.selectDistinctOn([sentimentIndicators.symbol])
+			.from(sentimentIndicators)
+			.where(inArray(sentimentIndicators.symbol, symbols))
+			.orderBy(sentimentIndicators.symbol, desc(sentimentIndicators.date));
 
-		return (rows.rows as SentimentRow[]).map(mapSentimentRow);
+		return rows.map(mapSentimentRow);
 	}
 
 	async findByComputedAtRange(
