@@ -10,7 +10,7 @@
 import { requireEnv } from "@cream/domain";
 import type { MiddlewareHandler } from "hono";
 import { HTTPException } from "hono/http-exception";
-import { auth, type Session, type User } from "./better-auth.js";
+import { getAuth, type Session, type User } from "./better-auth.js";
 
 // ============================================
 // Session Types
@@ -40,7 +40,7 @@ export function sessionMiddleware(): MiddlewareHandler<{ Variables: SessionVaria
 	return async (c, next) => {
 		try {
 			// Get session from better-auth using request headers (cookies)
-			const session = await auth.api.getSession({
+			const session = await getAuth().api.getSession({
 				headers: c.req.raw.headers,
 			});
 

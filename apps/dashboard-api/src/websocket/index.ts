@@ -55,9 +55,9 @@ export { broadcastToBacktest } from "./backtest-channel.js";
  */
 export async function validateAuthTokenAsync(headers: Headers): Promise<AuthResult> {
 	try {
-		const { auth } = await import("../auth/better-auth.js");
+		const { getAuth } = await import("../auth/better-auth.js");
 
-		const session = await auth.api.getSession({
+		const session = await getAuth().api.getSession({
 			headers,
 		});
 

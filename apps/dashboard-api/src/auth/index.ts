@@ -8,7 +8,7 @@
  */
 
 // Better Auth instance and types
-export { auth, type Session, type User } from "./better-auth.js";
+export { type Auth, getAuth, type Session, type User } from "./better-auth.js";
 
 // Session middleware (better-auth based)
 export {

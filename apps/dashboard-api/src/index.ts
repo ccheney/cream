@@ -14,7 +14,7 @@ import { cors } from "hono/cors";
 import { logger as honoLogger } from "hono/logger";
 import { prettyJSON } from "hono/pretty-json";
 import { timing } from "hono/timing";
-import { auth } from "./auth/better-auth.js";
+import { getAuth } from "./auth/better-auth.js";
 import {
 	liveProtection,
 	requireAuth,
@@ -139,7 +139,7 @@ app.use("/*", sessionMiddleware());
 
 // Mount better-auth handler for all auth routes
 app.on(["POST", "GET"], "/api/auth/*", (c) => {
-	return auth.handler(c.req.raw);
+	return getAuth().handler(c.req.raw);
 });
 
 // ============================================

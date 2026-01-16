@@ -12,20 +12,17 @@ import { HTTPException } from "hono/http-exception";
 
 // Mock the better-auth module to avoid secret validation at import time
 const mockGetSession = mock(() => Promise.resolve(null as unknown));
+const mockAuth = {
+	api: {
+		getSession: mockGetSession,
+	},
+	$Infer: {
+		Session: {} as const,
+	},
+};
 mock.module("./better-auth.js", () => ({
-	auth: {
-		api: {
-			getSession: mockGetSession,
-		},
-		$Infer: {
-			Session: {} as const,
-		},
-	},
-	default: {
-		api: {
-			getSession: mockGetSession,
-		},
-	},
+	getAuth: () => mockAuth,
+	default: () => mockAuth,
 }));
 
 import {
