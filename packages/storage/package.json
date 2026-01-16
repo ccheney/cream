@@ -14,6 +14,10 @@
       "types": "./src/schema/index.ts",
       "import": "./src/schema/index.ts"
     },
+    "./schema/auth": {
+      "types": "./src/schema/auth.ts",
+      "import": "./src/schema/auth.ts"
+    },
     "./db": {
       "types": "./src/db.ts",
       "import": "./src/db.ts"

@@ -4,31 +4,18 @@
  * Core authentication configuration using better-auth with:
  * - Google OAuth provider
  * - Two-factor authentication (TOTP)
- * - Turso/libSQL database via Kysely
+ * - PostgreSQL database via Drizzle ORM
  *
  * This replaces the previous JWT-based authentication system.
  *
  * @see docs/plans/30-better-auth-migration.md
  */
 
-import { LibsqlDialect } from "@libsql/kysely-libsql";
+import { drizzleAdapter } from "better-auth/adapters/drizzle";
 import { betterAuth } from "better-auth";
 import { twoFactor } from "better-auth/plugins";
-
-// ============================================
-// Database Configuration
-// ============================================
-
-/**
- * Create the Kysely dialect for libSQL/Turso.
- * Connects to the same Turso server as @cream/storage.
- */
-function createLibsqlDialect(): LibsqlDialect {
-	const url = Bun.env.TURSO_DATABASE_URL ?? "http://localhost:8080";
-	const authToken = Bun.env.TURSO_AUTH_TOKEN;
-
-	return new LibsqlDialect({ url, authToken });
-}
+import * as authSchema from "@cream/storage/schema/auth";
+import { getDb } from "@cream/storage/db";
 
 // ============================================
 // Environment Helpers
@@ -53,11 +40,11 @@ export const auth = betterAuth({
 	appName: "Cream Dashboard",
 	baseURL: Bun.env.BETTER_AUTH_URL ?? "http://localhost:3001",
 
-	// Database configuration using Kysely with libSQL
-	database: {
-		dialect: createLibsqlDialect(),
-		type: "sqlite",
-	},
+	// Database configuration using Drizzle with PostgreSQL
+	database: drizzleAdapter(getDb(), {
+		provider: "pg",
+		schema: authSchema,
+	}),
 
 	// Map camelCase fields to snake_case database columns
 	user: {
