@@ -5,7 +5,7 @@
  * Runs near market open (9:00-9:30 AM ET) before the first RTH OODA cycle.
  */
 
-import { compileMorningNewspaper, getMacroWatchRepo } from "@cream/api";
+import { compileMorningNewspaper, formatNewspaperForLLM, getMacroWatchRepo } from "@cream/api";
 import { getCalendarService } from "@cream/domain";
 
 import { log } from "../../shared/logger.js";
@@ -67,9 +67,27 @@ export class NewspaperService {
 
 			// Compile the newspaper
 			const { content, storageInput } = compileMorningNewspaper(entries, symbols);
+			const maxBulletsPerSection = this.config.maxBulletsPerSection;
+			if (maxBulletsPerSection && maxBulletsPerSection > 0) {
+				const limitedSections = {
+					macro: storageInput.sections.macro.slice(0, maxBulletsPerSection),
+					universe: storageInput.sections.universe.slice(0, maxBulletsPerSection),
+					predictionMarkets: storageInput.sections.predictionMarkets.slice(0, maxBulletsPerSection),
+					economicCalendar: storageInput.sections.economicCalendar.slice(0, maxBulletsPerSection),
+				};
 
-			// Save to database
-			await repo.saveNewspaper(storageInput);
+				storageInput.sections = limitedSections;
+				content.sections = {
+					macro: limitedSections.macro.join("\n"),
+					universe: limitedSections.universe.join("\n"),
+					predictionMarkets: limitedSections.predictionMarkets.join("\n"),
+					economicCalendar: limitedSections.economicCalendar.join("\n"),
+				};
+				content.summary = formatNewspaperForLLM(limitedSections);
+			}
+
+			// Save to database (upsert to handle re-compilation on same day)
+			await repo.upsertNewspaper(storageInput);
 
 			this.lastCompile = new Date();
 

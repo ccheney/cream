@@ -218,6 +218,18 @@ describe("AlphaVantageClient", () => {
 		});
 	});
 
+	describe("Error handling", () => {
+		test("throws on Alpha Vantage error responses", async () => {
+			const errorResponse = { Note: "Thank you for using Alpha Vantage!" };
+			mockFetch = createMockFetch(() => Promise.resolve(createJsonResponse(errorResponse)));
+			globalThis.fetch = mockFetch;
+
+			await expect(client.getCPI()).rejects.toThrow(
+				"Alpha Vantage error: Thank you for using Alpha Vantage!"
+			);
+		});
+	});
+
 	describe("Static Utility Methods", () => {
 		test("getLatestValue returns first data point value", () => {
 			const response = {

@@ -88,6 +88,11 @@ export const cycleEventTypeEnum = pgEnum("cycle_event_type", [
 	"decision",
 	"order",
 	"error",
+	"progress",
+	"tool_call",
+	"tool_result",
+	"reasoning_delta",
+	"text_delta",
 ]);
 
 // Alert-related enums

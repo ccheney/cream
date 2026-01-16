@@ -51,24 +51,26 @@ export class MacroWatchService {
 		try {
 			const result = await runMacroWatch(symbols, since.toISOString());
 			const entries = result.entries;
+			const maxEntries = this.config.maxEntriesPerHour;
+			const limitedEntries = maxEntries ? entries.slice(0, maxEntries) : entries;
 
 			let saved = 0;
-			if (this.getDb && entries.length > 0) {
+			if (this.getDb && limitedEntries.length > 0) {
 				const db = this.getDb();
 				const repo = new MacroWatchRepository(db);
-				saved = await repo.saveEntries(entries);
+				saved = await repo.saveEntries(limitedEntries);
 			}
 
 			log.info(
 				{
-					entryCount: entries.length,
+					entryCount: limitedEntries.length,
 					savedCount: saved,
 					totalCount: result.totalCount,
 				},
 				"Macro watch cycle complete"
 			);
 
-			return { entries, saved };
+			return { entries: limitedEntries, saved };
 		} catch (error) {
 			log.error(
 				{ error: error instanceof Error ? error.message : String(error) },

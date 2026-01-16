@@ -51,6 +51,30 @@ export const EconomicIndicatorResponseSchema = z.object({
 export type EconomicIndicatorResponse = z.infer<typeof EconomicIndicatorResponseSchema>;
 
 /**
+ * Alpha Vantage error response.
+ */
+export const AlphaVantageErrorResponseSchema = z
+	.object({
+		"Error Message": z.string().optional(),
+		Information: z.string().optional(),
+		Note: z.string().optional(),
+		message: z.string().optional(),
+		error: z.string().optional(),
+	})
+	.refine(
+		(response) =>
+			Boolean(
+				response["Error Message"] ??
+					response.Information ??
+					response.Note ??
+					response.message ??
+					response.error
+			),
+		{ message: "Unknown Alpha Vantage error response" }
+	);
+export type AlphaVantageErrorResponse = z.infer<typeof AlphaVantageErrorResponseSchema>;
+
+/**
  * Treasury yield response.
  */
 export const TreasuryYieldResponseSchema = z.object({
@@ -71,6 +95,17 @@ export const FederalFundsRateResponseSchema = z.object({
 	data: z.array(EconomicDataPointSchema),
 });
 export type FederalFundsRateResponse = z.infer<typeof FederalFundsRateResponseSchema>;
+
+function formatAlphaVantageError(response: AlphaVantageErrorResponse): string {
+	return (
+		response["Error Message"] ??
+		response.Information ??
+		response.Note ??
+		response.message ??
+		response.error ??
+		"Alpha Vantage error"
+	);
+}
 
 // ============================================
 // Alpha Vantage Client
@@ -251,6 +286,18 @@ export class AlphaVantageClient {
 		this.apiKey = config.apiKey;
 	}
 
+	private async fetchIndicator<S extends z.ZodTypeAny>(
+		params: Record<string, string | number | boolean | undefined>,
+		schema: S
+	): Promise<z.output<S>> {
+		const response = await this.client.get("/query", params);
+		const error = AlphaVantageErrorResponseSchema.safeParse(response);
+		if (error.success) {
+			throw new Error(`Alpha Vantage error: ${formatAlphaVantageError(error.data)}`);
+		}
+		return schema.parse(response);
+	}
+
 	/**
 	 * Get Treasury yield data.
 	 */
@@ -258,8 +305,7 @@ export class AlphaVantageClient {
 		maturity: TreasuryMaturity = "10year",
 		interval: EconomicInterval = "daily"
 	): Promise<TreasuryYieldResponse> {
-		return this.client.get(
-			"/query",
+		return this.fetchIndicator(
 			{
 				function: "TREASURY_YIELD",
 				maturity,
@@ -276,8 +322,7 @@ export class AlphaVantageClient {
 	async getFederalFundsRate(
 		interval: EconomicInterval = "daily"
 	): Promise<FederalFundsRateResponse> {
-		return this.client.get(
-			"/query",
+		return this.fetchIndicator(
 			{
 				function: "FEDERAL_FUNDS_RATE",
 				interval,
@@ -291,8 +336,7 @@ export class AlphaVantageClient {
 	 * Get Consumer Price Index (CPI) data.
 	 */
 	async getCPI(interval: "monthly" | "semiannual" = "monthly"): Promise<EconomicIndicatorResponse> {
-		return this.client.get(
-			"/query",
+		return this.fetchIndicator(
 			{
 				function: "CPI",
 				interval,
@@ -308,8 +352,7 @@ export class AlphaVantageClient {
 	async getRealGDP(
 		interval: "quarterly" | "annual" = "quarterly"
 	): Promise<EconomicIndicatorResponse> {
-		return this.client.get(
-			"/query",
+		return this.fetchIndicator(
 			{
 				function: "REAL_GDP",
 				interval,
@@ -323,8 +366,7 @@ export class AlphaVantageClient {
 	 * Get unemployment rate data.
 	 */
 	async getUnemploymentRate(): Promise<EconomicIndicatorResponse> {
-		return this.client.get(
-			"/query",
+		return this.fetchIndicator(
 			{
 				function: "UNEMPLOYMENT",
 				apikey: this.apiKey,
@@ -337,8 +379,7 @@ export class AlphaVantageClient {
 	 * Get inflation data.
 	 */
 	async getInflation(): Promise<EconomicIndicatorResponse> {
-		return this.client.get(
-			"/query",
+		return this.fetchIndicator(
 			{
 				function: "INFLATION",
 				apikey: this.apiKey,
@@ -351,8 +392,7 @@ export class AlphaVantageClient {
 	 * Get retail sales data.
 	 */
 	async getRetailSales(): Promise<EconomicIndicatorResponse> {
-		return this.client.get(
-			"/query",
+		return this.fetchIndicator(
 			{
 				function: "RETAIL_SALES",
 				apikey: this.apiKey,
@@ -365,8 +405,7 @@ export class AlphaVantageClient {
 	 * Get nonfarm payroll data.
 	 */
 	async getNonfarmPayroll(): Promise<EconomicIndicatorResponse> {
-		return this.client.get(
-			"/query",
+		return this.fetchIndicator(
 			{
 				function: "NONFARM_PAYROLL",
 				apikey: this.apiKey,
@@ -379,8 +418,7 @@ export class AlphaVantageClient {
 	 * Get durable goods orders data.
 	 */
 	async getDurableGoods(): Promise<EconomicIndicatorResponse> {
-		return this.client.get(
-			"/query",
+		return this.fetchIndicator(
 			{
 				function: "DURABLES",
 				apikey: this.apiKey,
@@ -395,8 +433,7 @@ export class AlphaVantageClient {
 	async getRealGDPPerCapita(
 		_interval: "quarterly" | "annual" = "quarterly"
 	): Promise<EconomicIndicatorResponse> {
-		return this.client.get(
-			"/query",
+		return this.fetchIndicator(
 			{
 				function: "REAL_GDP_PER_CAPITA",
 				apikey: this.apiKey,
@@ -409,8 +446,7 @@ export class AlphaVantageClient {
 	 * Get inflation expectation data.
 	 */
 	async getInflationExpectation(): Promise<EconomicIndicatorResponse> {
-		return this.client.get(
-			"/query",
+		return this.fetchIndicator(
 			{
 				function: "INFLATION_EXPECTATION",
 				apikey: this.apiKey,
@@ -423,8 +459,7 @@ export class AlphaVantageClient {
 	 * Get consumer sentiment data.
 	 */
 	async getConsumerSentiment(): Promise<EconomicIndicatorResponse> {
-		return this.client.get(
-			"/query",
+		return this.fetchIndicator(
 			{
 				function: "CONSUMER_SENTIMENT",
 				apikey: this.apiKey,

@@ -15,6 +15,13 @@
       "when": 1768568142987,
       "tag": "0001_quick_mauler",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1768600441408,
+      "tag": "0002_flat_mockingbird",
+      "breakpoints": true
     }
   ]
 }
