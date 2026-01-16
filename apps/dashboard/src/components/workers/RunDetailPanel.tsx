@@ -185,7 +185,6 @@ function IndicatorDetails({
 				return [
 					{ key: "shortInterest", label: "Short Int" },
 					{ key: "daysToCover", label: "Days to Cover" },
-					{ key: "shortPctFloat", label: "% Float" },
 				];
 			case "sentiment":
 				return [

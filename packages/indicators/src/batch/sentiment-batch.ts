@@ -409,8 +409,13 @@ export class SentimentAggregationJob {
 	 * Process a single symbol and store aggregated sentiment.
 	 */
 	private async processSymbol(symbol: string, date: string): Promise<void> {
-		// Fetch sentiment data for the date
-		const sentimentData = await this.fetchSentimentWithRetry([symbol], date, date);
+		// Look back 3 days to capture recent news (not every symbol has news daily)
+		const startDate = new Date(date);
+		startDate.setDate(startDate.getDate() - 3);
+		const startDateStr = startDate.toISOString().split("T")[0] ?? date;
+
+		// Fetch sentiment data for the lookback window
+		const sentimentData = await this.fetchSentimentWithRetry([symbol], startDateStr, date);
 
 		// Filter to only this symbol
 		const symbolData = sentimentData.filter((s) => s.symbol.toUpperCase() === symbol);

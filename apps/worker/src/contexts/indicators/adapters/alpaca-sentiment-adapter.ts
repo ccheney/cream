@@ -26,10 +26,14 @@ export class AlpacaSentimentAdapter implements SentimentDataProvider {
 		const results: ExtractedSentiment[] = [];
 
 		try {
+			// Convert date strings to RFC3339 timestamps (Alpaca requires full timestamps)
+			const startTimestamp = startDate.includes("T") ? startDate : `${startDate}T00:00:00Z`;
+			const endTimestamp = endDate.includes("T") ? endDate : `${endDate}T23:59:59Z`;
+
 			const url = new URL(ALPACA_NEWS_URL);
 			url.searchParams.set("symbols", symbols.join(","));
-			url.searchParams.set("start", startDate);
-			url.searchParams.set("end", endDate);
+			url.searchParams.set("start", startTimestamp);
+			url.searchParams.set("end", endTimestamp);
 			url.searchParams.set("limit", "50");
 
 			const response = await fetch(url.toString(), {
