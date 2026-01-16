@@ -1,34 +1,20 @@
 /**
- * Backtests Repository
+ * Backtests Repository (Drizzle ORM)
  *
  * Data access for backtests and related tables.
  *
  * @see docs/plans/ui/04-data-requirements.md
  */
-
-import type { Row, TursoClient } from "../turso.js";
-import {
-	type PaginatedResult,
-	type PaginationOptions,
-	paginate,
-	parseJson,
-	query,
-	RepositoryError,
-	toJson,
-} from "./base.js";
+import { and, count, desc, eq, inArray, sql } from "drizzle-orm";
+import { getDb, type Database } from "../db";
+import { backtests, backtestTrades, backtestEquity } from "../schema/dashboard";
 
 // ============================================
 // Types
 // ============================================
 
-/**
- * Backtest status
- */
 export type BacktestStatus = "pending" | "running" | "completed" | "failed" | "cancelled";
 
-/**
- * Backtest entity
- */
 export interface Backtest {
 	id: string;
 	name: string;
@@ -40,7 +26,6 @@ export interface Backtest {
 	config: Record<string, unknown>;
 	status: BacktestStatus;
 	progressPct: number;
-	// Result metrics
 	totalReturn: number | null;
 	cagr: number | null;
 	sharpeRatio: number | null;
@@ -59,9 +44,6 @@ export interface Backtest {
 	createdBy: string | null;
 }
 
-/**
- * Create backtest input
- */
 export interface CreateBacktestInput {
 	id: string;
 	name: string;
@@ -74,9 +56,6 @@ export interface CreateBacktestInput {
 	createdBy?: string | null;
 }
 
-/**
- * Backtest trade entity
- */
 export interface BacktestTrade {
 	id: number;
 	backtestId: string;
@@ -91,9 +70,6 @@ export interface BacktestTrade {
 	decisionRationale: string | null;
 }
 
-/**
- * Backtest equity point
- */
 export interface BacktestEquityPoint {
 	id: number;
 	backtestId: string;
@@ -107,69 +83,96 @@ export interface BacktestEquityPoint {
 	cumulativeReturnPct: number | null;
 }
 
+export interface PaginationOptions {
+	page?: number;
+	pageSize?: number;
+}
+
+export interface PaginatedResult<T> {
+	data: T[];
+	total: number;
+	page: number;
+	pageSize: number;
+	totalPages: number;
+}
+
 // ============================================
-// Row Mappers
+// Row Mapping
 // ============================================
 
-function mapBacktestRow(row: Row): Backtest {
+type BacktestRow = typeof backtests.$inferSelect;
+type TradeRow = typeof backtestTrades.$inferSelect;
+type EquityRow = typeof backtestEquity.$inferSelect;
+
+function mapBacktestRow(row: BacktestRow): Backtest {
+	const universeValue = row.universe;
+	let universeArray: string[] = [];
+	if (universeValue) {
+		try {
+			universeArray = typeof universeValue === "string" ? JSON.parse(universeValue) : [];
+		} catch {
+			universeArray = [];
+		}
+	}
+
 	return {
-		id: row.id as string,
-		name: row.name as string,
-		description: row.description as string | null,
-		startDate: row.start_date as string,
-		endDate: row.end_date as string,
-		initialCapital: row.initial_capital as number,
-		universe: parseJson<string[]>(row.universe, []),
-		config: parseJson<Record<string, unknown>>(row.config_json, {}),
+		id: row.id,
+		name: row.name,
+		description: row.description,
+		startDate: row.startDate.toISOString(),
+		endDate: row.endDate.toISOString(),
+		initialCapital: Number(row.initialCapital),
+		universe: universeArray,
+		config: (row.configJson as Record<string, unknown>) ?? {},
 		status: row.status as BacktestStatus,
-		progressPct: (row.progress_pct as number) ?? 0,
-		totalReturn: row.total_return as number | null,
-		cagr: row.cagr as number | null,
-		sharpeRatio: row.sharpe_ratio as number | null,
-		sortinoRatio: row.sortino_ratio as number | null,
-		calmarRatio: row.calmar_ratio as number | null,
-		maxDrawdown: row.max_drawdown as number | null,
-		winRate: row.win_rate as number | null,
-		profitFactor: row.profit_factor as number | null,
-		totalTrades: row.total_trades as number | null,
-		avgTradePnl: row.avg_trade_pnl as number | null,
-		metrics: parseJson<Record<string, unknown>>(row.metrics_json, {}),
-		errorMessage: row.error_message as string | null,
-		createdAt: row.created_at as string,
-		startedAt: row.started_at as string | null,
-		completedAt: row.completed_at as string | null,
-		createdBy: row.created_by as string | null,
+		progressPct: row.progressPct ? Number(row.progressPct) : 0,
+		totalReturn: row.totalReturn ? Number(row.totalReturn) : null,
+		cagr: row.cagr ? Number(row.cagr) : null,
+		sharpeRatio: row.sharpeRatio ? Number(row.sharpeRatio) : null,
+		sortinoRatio: row.sortinoRatio ? Number(row.sortinoRatio) : null,
+		calmarRatio: row.calmarRatio ? Number(row.calmarRatio) : null,
+		maxDrawdown: row.maxDrawdown ? Number(row.maxDrawdown) : null,
+		winRate: row.winRate ? Number(row.winRate) : null,
+		profitFactor: row.profitFactor ? Number(row.profitFactor) : null,
+		totalTrades: row.totalTrades,
+		avgTradePnl: row.avgTradePnl ? Number(row.avgTradePnl) : null,
+		metrics: (row.metricsJson as Record<string, unknown>) ?? {},
+		errorMessage: row.errorMessage,
+		createdAt: row.createdAt.toISOString(),
+		startedAt: row.startedAt?.toISOString() ?? null,
+		completedAt: row.completedAt?.toISOString() ?? null,
+		createdBy: row.createdBy,
 	};
 }
 
-function mapTradeRow(row: Row): BacktestTrade {
+function mapTradeRow(row: TradeRow): BacktestTrade {
 	return {
-		id: row.id as number,
-		backtestId: row.backtest_id as string,
-		timestamp: row.timestamp as string,
-		symbol: row.symbol as string,
+		id: row.id,
+		backtestId: row.backtestId,
+		timestamp: row.timestamp.toISOString(),
+		symbol: row.symbol,
 		action: row.action as BacktestTrade["action"],
-		quantity: row.qty as number,
-		price: row.price as number,
-		commission: (row.commission as number) ?? 0,
-		pnl: row.pnl as number | null,
-		pnlPct: row.pnl_pct as number | null,
-		decisionRationale: row.decision_rationale as string | null,
+		quantity: Number(row.qty),
+		price: Number(row.price),
+		commission: row.commission ? Number(row.commission) : 0,
+		pnl: row.pnl ? Number(row.pnl) : null,
+		pnlPct: row.pnlPct ? Number(row.pnlPct) : null,
+		decisionRationale: row.decisionRationale,
 	};
 }
 
-function mapEquityRow(row: Row): BacktestEquityPoint {
+function mapEquityRow(row: EquityRow): BacktestEquityPoint {
 	return {
-		id: row.id as number,
-		backtestId: row.backtest_id as string,
-		timestamp: row.timestamp as string,
-		nav: row.nav as number,
-		cash: row.cash as number,
-		equity: row.equity as number,
-		drawdown: row.drawdown as number | null,
-		drawdownPct: row.drawdown_pct as number | null,
-		dayReturnPct: row.day_return_pct as number | null,
-		cumulativeReturnPct: row.cumulative_return_pct as number | null,
+		id: row.id,
+		backtestId: row.backtestId,
+		timestamp: row.timestamp.toISOString(),
+		nav: Number(row.nav),
+		cash: Number(row.cash),
+		equity: Number(row.equity),
+		drawdown: row.drawdown ? Number(row.drawdown) : null,
+		drawdownPct: row.drawdownPct ? Number(row.drawdownPct) : null,
+		dayReturnPct: row.dayReturnPct ? Number(row.dayReturnPct) : null,
+		cumulativeReturnPct: row.cumulativeReturnPct ? Number(row.cumulativeReturnPct) : null,
 	};
 }
 
@@ -177,143 +180,133 @@ function mapEquityRow(row: Row): BacktestEquityPoint {
 // Repository
 // ============================================
 
-/**
- * Backtests repository
- */
 export class BacktestsRepository {
-	constructor(private readonly client: TursoClient) {}
+	private db: Database;
+
+	constructor(db?: Database) {
+		this.db = db ?? getDb();
+	}
 
 	// ----------------------------------------
 	// Backtest CRUD
 	// ----------------------------------------
 
-	/**
-	 * Create a new backtest
-	 */
 	async create(input: CreateBacktestInput): Promise<Backtest> {
-		try {
-			await this.client.run(
-				`INSERT INTO backtests (
-          id, name, description, start_date, end_date,
-          initial_capital, universe, config_json, status, created_by
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'pending', ?)`,
-				[
-					input.id,
-					input.name,
-					input.description ?? null,
-					input.startDate,
-					input.endDate,
-					input.initialCapital,
-					toJson(input.universe ?? []),
-					toJson(input.config ?? {}),
-					input.createdBy ?? null,
-				]
-			);
-		} catch (error) {
-			throw RepositoryError.fromSqliteError("backtests", error as Error);
-		}
+		const [row] = await this.db
+			.insert(backtests)
+			.values({
+				id: input.id,
+				name: input.name,
+				description: input.description ?? null,
+				startDate: new Date(input.startDate),
+				endDate: new Date(input.endDate),
+				initialCapital: String(input.initialCapital),
+				universe: JSON.stringify(input.universe ?? []),
+				configJson: input.config ?? {},
+				status: "pending",
+				createdBy: input.createdBy ?? null,
+			})
+			.returning();
 
-		return this.findById(input.id) as Promise<Backtest>;
+		return mapBacktestRow(row);
 	}
 
-	/**
-	 * Find backtest by ID
-	 */
 	async findById(id: string): Promise<Backtest | null> {
-		const row = await this.client.get<Row>(`SELECT * FROM backtests WHERE id = ?`, [id]);
+		const [row] = await this.db
+			.select()
+			.from(backtests)
+			.where(eq(backtests.id, id))
+			.limit(1);
 
 		return row ? mapBacktestRow(row) : null;
 	}
 
-	/**
-	 * Find backtest by ID, throw if not found
-	 */
 	async findByIdOrThrow(id: string): Promise<Backtest> {
 		const backtest = await this.findById(id);
 		if (!backtest) {
-			throw RepositoryError.notFound("backtests", id);
+			throw new Error(`Backtest not found: ${id}`);
 		}
 		return backtest;
 	}
 
-	/**
-	 * Find backtests with pagination
-	 */
 	async findMany(
 		status?: BacktestStatus | BacktestStatus[],
 		pagination?: PaginationOptions
 	): Promise<PaginatedResult<Backtest>> {
-		const builder = query().orderBy("created_at", "DESC");
+		const conditions = [];
 
 		if (status) {
 			if (Array.isArray(status)) {
-				builder.where("status", "IN", status);
+				conditions.push(inArray(backtests.status, status as typeof backtests.$inferSelect.status[]));
 			} else {
-				builder.eq("status", status);
+				conditions.push(eq(backtests.status, status as typeof backtests.$inferSelect.status));
 			}
 		}
 
-		const { sql, args } = builder.build(`SELECT * FROM backtests`);
-		const baseSql = sql.split(" LIMIT ")[0] ?? sql;
-		const countSql = baseSql.replace("SELECT *", "SELECT COUNT(*) as count");
+		const whereClause = conditions.length > 0 ? and(...conditions) : undefined;
+		const page = pagination?.page ?? 1;
+		const pageSize = pagination?.pageSize ?? 50;
+		const offset = (page - 1) * pageSize;
 
-		const result = await paginate<Row>(
-			this.client,
-			baseSql,
-			countSql,
-			args.slice(0, -2),
-			pagination
-		);
+		const [countResult] = await this.db
+			.select({ count: count() })
+			.from(backtests)
+			.where(whereClause);
+
+		const rows = await this.db
+			.select()
+			.from(backtests)
+			.where(whereClause)
+			.orderBy(desc(backtests.createdAt))
+			.limit(pageSize)
+			.offset(offset);
+
+		const total = countResult?.count ?? 0;
 
 		return {
-			...result,
-			data: result.data.map(mapBacktestRow),
+			data: rows.map(mapBacktestRow),
+			total,
+			page,
+			pageSize,
+			totalPages: Math.ceil(total / pageSize),
 		};
 	}
 
-	/**
-	 * Find recent backtests
-	 */
 	async findRecent(limit = 10): Promise<Backtest[]> {
-		const rows = await this.client.execute<Row>(
-			`SELECT * FROM backtests ORDER BY created_at DESC LIMIT ?`,
-			[limit]
-		);
+		const rows = await this.db
+			.select()
+			.from(backtests)
+			.orderBy(desc(backtests.createdAt))
+			.limit(limit);
 
 		return rows.map(mapBacktestRow);
 	}
 
-	/**
-	 * Start backtest
-	 */
 	async start(id: string): Promise<Backtest> {
-		const now = new Date().toISOString();
+		const [row] = await this.db
+			.update(backtests)
+			.set({
+				status: "running",
+				startedAt: new Date(),
+				progressPct: "0",
+			})
+			.where(eq(backtests.id, id))
+			.returning();
 
-		const result = await this.client.run(
-			`UPDATE backtests SET status = 'running', started_at = ?, progress_pct = 0 WHERE id = ?`,
-			[now, id]
-		);
-
-		if (result.changes === 0) {
-			throw RepositoryError.notFound("backtests", id);
+		if (!row) {
+			throw new Error(`Backtest not found: ${id}`);
 		}
 
-		return this.findByIdOrThrow(id);
+		return mapBacktestRow(row);
 	}
 
-	/**
-	 * Update backtest progress
-	 */
 	async updateProgress(id: string, progressPct: number): Promise<void> {
-		await this.client.run(`UPDATE backtests SET progress_pct = ? WHERE id = ?`, [
-			Math.min(100, Math.max(0, progressPct)),
-			id,
-		]);
+		await this.db
+			.update(backtests)
+			.set({ progressPct: String(Math.min(100, Math.max(0, progressPct))) })
+			.where(eq(backtests.id, id));
 	}
 
-	/**
-	 * Complete backtest with results
-	 */
 	async complete(
 		id: string,
 		metrics: {
@@ -330,124 +323,108 @@ export class BacktestsRepository {
 			additionalMetrics?: Record<string, unknown>;
 		}
 	): Promise<Backtest> {
-		const now = new Date().toISOString();
+		const [row] = await this.db
+			.update(backtests)
+			.set({
+				status: "completed",
+				progressPct: "100",
+				completedAt: new Date(),
+				totalReturn: metrics.totalReturn != null ? String(metrics.totalReturn) : null,
+				cagr: metrics.cagr != null ? String(metrics.cagr) : null,
+				sharpeRatio: metrics.sharpeRatio != null ? String(metrics.sharpeRatio) : null,
+				sortinoRatio: metrics.sortinoRatio != null ? String(metrics.sortinoRatio) : null,
+				calmarRatio: metrics.calmarRatio != null ? String(metrics.calmarRatio) : null,
+				maxDrawdown: metrics.maxDrawdown != null ? String(metrics.maxDrawdown) : null,
+				winRate: metrics.winRate != null ? String(metrics.winRate) : null,
+				profitFactor: metrics.profitFactor != null ? String(metrics.profitFactor) : null,
+				totalTrades: metrics.totalTrades ?? null,
+				avgTradePnl: metrics.avgTradePnl != null ? String(metrics.avgTradePnl) : null,
+				metricsJson: metrics.additionalMetrics ?? {},
+			})
+			.where(eq(backtests.id, id))
+			.returning();
 
-		await this.client.run(
-			`UPDATE backtests SET
-        status = 'completed',
-        progress_pct = 100,
-        completed_at = ?,
-        total_return = ?,
-        cagr = ?,
-        sharpe_ratio = ?,
-        sortino_ratio = ?,
-        calmar_ratio = ?,
-        max_drawdown = ?,
-        win_rate = ?,
-        profit_factor = ?,
-        total_trades = ?,
-        avg_trade_pnl = ?,
-        metrics_json = ?
-       WHERE id = ?`,
-			[
-				now,
-				metrics.totalReturn ?? null,
-				metrics.cagr ?? null,
-				metrics.sharpeRatio ?? null,
-				metrics.sortinoRatio ?? null,
-				metrics.calmarRatio ?? null,
-				metrics.maxDrawdown ?? null,
-				metrics.winRate ?? null,
-				metrics.profitFactor ?? null,
-				metrics.totalTrades ?? null,
-				metrics.avgTradePnl ?? null,
-				toJson(metrics.additionalMetrics ?? {}),
-				id,
-			]
-		);
+		if (!row) {
+			throw new Error(`Backtest not found: ${id}`);
+		}
 
-		return this.findByIdOrThrow(id);
+		return mapBacktestRow(row);
 	}
 
-	/**
-	 * Fail backtest
-	 */
 	async fail(id: string, errorMessage: string): Promise<Backtest> {
-		const now = new Date().toISOString();
+		const [row] = await this.db
+			.update(backtests)
+			.set({
+				status: "failed",
+				completedAt: new Date(),
+				errorMessage,
+			})
+			.where(eq(backtests.id, id))
+			.returning();
 
-		await this.client.run(
-			`UPDATE backtests SET status = 'failed', completed_at = ?, error_message = ? WHERE id = ?`,
-			[now, errorMessage, id]
-		);
+		if (!row) {
+			throw new Error(`Backtest not found: ${id}`);
+		}
 
-		return this.findByIdOrThrow(id);
+		return mapBacktestRow(row);
 	}
 
-	/**
-	 * Cancel backtest
-	 */
 	async cancel(id: string): Promise<Backtest> {
-		await this.client.run(`UPDATE backtests SET status = 'cancelled' WHERE id = ?`, [id]);
+		const [row] = await this.db
+			.update(backtests)
+			.set({ status: "cancelled" })
+			.where(eq(backtests.id, id))
+			.returning();
 
-		return this.findByIdOrThrow(id);
+		if (!row) {
+			throw new Error(`Backtest not found: ${id}`);
+		}
+
+		return mapBacktestRow(row);
 	}
 
-	/**
-	 * Delete backtest and related data
-	 */
 	async delete(id: string): Promise<boolean> {
-		const result = await this.client.run(`DELETE FROM backtests WHERE id = ?`, [id]);
+		const result = await this.db
+			.delete(backtests)
+			.where(eq(backtests.id, id))
+			.returning({ id: backtests.id });
 
-		return result.changes > 0;
+		return result.length > 0;
 	}
 
 	// ----------------------------------------
 	// Backtest Trades
 	// ----------------------------------------
 
-	/**
-	 * Add trade to backtest
-	 */
 	async addTrade(
 		backtestId: string,
 		trade: Omit<BacktestTrade, "id" | "backtestId">
 	): Promise<BacktestTrade> {
-		const result = await this.client.run(
-			`INSERT INTO backtest_trades (
-        backtest_id, timestamp, symbol, action, qty, price, commission, pnl, pnl_pct, decision_rationale
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-			[
+		const [row] = await this.db
+			.insert(backtestTrades)
+			.values({
 				backtestId,
-				trade.timestamp,
-				trade.symbol,
-				trade.action,
-				trade.quantity,
-				trade.price,
-				trade.commission,
-				trade.pnl ?? null,
-				trade.pnlPct ?? null,
-				trade.decisionRationale ?? null,
-			]
-		);
+				timestamp: new Date(trade.timestamp),
+				symbol: trade.symbol,
+				action: trade.action,
+				qty: String(trade.quantity),
+				price: String(trade.price),
+				commission: String(trade.commission),
+				pnl: trade.pnl != null ? String(trade.pnl) : null,
+				pnlPct: trade.pnlPct != null ? String(trade.pnlPct) : null,
+				decisionRationale: trade.decisionRationale ?? null,
+			})
+			.returning();
 
-		const row = await this.client.get<Row>(`SELECT * FROM backtest_trades WHERE id = ?`, [
-			Number(result.lastInsertRowid),
-		]);
-
-		if (!row) {
-			throw new RepositoryError(`Failed to retrieve created trade`, "NOT_FOUND", "backtest_trades");
-		}
 		return mapTradeRow(row);
 	}
 
-	/**
-	 * Get trades for backtest
-	 */
 	async getTrades(backtestId: string): Promise<BacktestTrade[]> {
-		const rows = await this.client.execute<Row>(
-			`SELECT * FROM backtest_trades WHERE backtest_id = ? ORDER BY timestamp ASC`,
-			[backtestId]
-		);
+		const rows = await this.db
+			.select()
+			.from(backtestTrades)
+			.where(eq(backtestTrades.backtestId, backtestId))
+			.orderBy(backtestTrades.timestamp);
 
 		return rows.map(mapTradeRow);
 	}
@@ -456,39 +433,29 @@ export class BacktestsRepository {
 	// Backtest Equity
 	// ----------------------------------------
 
-	/**
-	 * Add equity point to backtest
-	 */
 	async addEquityPoint(
 		backtestId: string,
 		point: Omit<BacktestEquityPoint, "id" | "backtestId">
 	): Promise<void> {
-		await this.client.run(
-			`INSERT INTO backtest_equity (
-        backtest_id, timestamp, nav, cash, equity, drawdown, drawdown_pct, day_return_pct, cumulative_return_pct
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-			[
-				backtestId,
-				point.timestamp,
-				point.nav,
-				point.cash,
-				point.equity,
-				point.drawdown ?? null,
-				point.drawdownPct ?? null,
-				point.dayReturnPct ?? null,
-				point.cumulativeReturnPct ?? null,
-			]
-		);
+		await this.db.insert(backtestEquity).values({
+			backtestId,
+			timestamp: new Date(point.timestamp),
+			nav: String(point.nav),
+			cash: String(point.cash),
+			equity: String(point.equity),
+			drawdown: point.drawdown != null ? String(point.drawdown) : null,
+			drawdownPct: point.drawdownPct != null ? String(point.drawdownPct) : null,
+			dayReturnPct: point.dayReturnPct != null ? String(point.dayReturnPct) : null,
+			cumulativeReturnPct: point.cumulativeReturnPct != null ? String(point.cumulativeReturnPct) : null,
+		});
 	}
 
-	/**
-	 * Get equity curve for backtest
-	 */
 	async getEquityCurve(backtestId: string): Promise<BacktestEquityPoint[]> {
-		const rows = await this.client.execute<Row>(
-			`SELECT * FROM backtest_equity WHERE backtest_id = ? ORDER BY timestamp ASC`,
-			[backtestId]
-		);
+		const rows = await this.db
+			.select()
+			.from(backtestEquity)
+			.where(eq(backtestEquity.backtestId, backtestId))
+			.orderBy(backtestEquity.timestamp);
 
 		return rows.map(mapEquityRow);
 	}

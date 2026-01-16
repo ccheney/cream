@@ -1,36 +1,20 @@
 /**
- * Alerts Repository
+ * Alerts Repository (Drizzle ORM)
  *
  * Data access for system alerts table.
  *
  * @see docs/plans/ui/04-data-requirements.md
  */
-
-import type { Row, TursoClient } from "../turso.js";
-import {
-	fromBoolean,
-	type PaginatedResult,
-	type PaginationOptions,
-	paginate,
-	parseJson,
-	query,
-	RepositoryError,
-	toBoolean,
-	toJson,
-} from "./base.js";
+import { and, count, desc, eq, gte, inArray, lte, sql } from "drizzle-orm";
+import { getDb, type Database } from "../db";
+import { alerts } from "../schema/dashboard";
 
 // ============================================
 // Types
 // ============================================
 
-/**
- * Alert severity
- */
 export type AlertSeverity = "info" | "warning" | "critical";
 
-/**
- * Alert type
- */
 export type AlertType =
 	| "connection"
 	| "order"
@@ -40,9 +24,6 @@ export type AlertType =
 	| "market"
 	| "agent";
 
-/**
- * Alert entity
- */
 export interface Alert {
 	id: string;
 	severity: AlertSeverity;
@@ -58,11 +39,8 @@ export interface Alert {
 	expiresAt: string | null;
 }
 
-/**
- * Create alert input
- */
 export interface CreateAlertInput {
-	id: string;
+	id?: string;
 	severity: AlertSeverity;
 	type: AlertType;
 	title: string;
@@ -72,9 +50,6 @@ export interface CreateAlertInput {
 	expiresAt?: string | null;
 }
 
-/**
- * Alert filter options
- */
 export interface AlertFilters {
 	severity?: AlertSeverity | AlertSeverity[];
 	type?: AlertType | AlertType[];
@@ -84,24 +59,39 @@ export interface AlertFilters {
 	toDate?: string;
 }
 
+export interface PaginationOptions {
+	page?: number;
+	pageSize?: number;
+}
+
+export interface PaginatedResult<T> {
+	data: T[];
+	total: number;
+	page: number;
+	pageSize: number;
+	totalPages: number;
+}
+
 // ============================================
-// Row Mapper
+// Row Mapping
 // ============================================
 
-function mapAlertRow(row: Row): Alert {
+type AlertRow = typeof alerts.$inferSelect;
+
+function mapAlertRow(row: AlertRow): Alert {
 	return {
-		id: row.id as string,
+		id: row.id,
 		severity: row.severity as AlertSeverity,
 		type: row.type as AlertType,
-		title: row.title as string,
-		message: row.message as string,
-		metadata: parseJson<Record<string, unknown>>(row.metadata, {}),
-		acknowledged: toBoolean(row.acknowledged),
-		acknowledgedBy: row.acknowledged_by as string | null,
-		acknowledgedAt: row.acknowledged_at as string | null,
-		environment: row.environment as string,
-		createdAt: row.created_at as string,
-		expiresAt: row.expires_at as string | null,
+		title: row.title,
+		message: row.message,
+		metadata: (row.metadata as Record<string, unknown>) ?? {},
+		acknowledged: row.acknowledged,
+		acknowledgedBy: row.acknowledgedBy,
+		acknowledgedAt: row.acknowledgedAt?.toISOString() ?? null,
+		environment: row.environment,
+		createdAt: row.createdAt.toISOString(),
+		expiresAt: row.expiresAt?.toISOString() ?? null,
 	};
 }
 
@@ -109,245 +99,252 @@ function mapAlertRow(row: Row): Alert {
 // Repository
 // ============================================
 
-/**
- * Alerts repository
- */
 export class AlertsRepository {
-	private readonly table = "alerts";
+	private db: Database;
 
-	constructor(private readonly client: TursoClient) {}
-
-	/**
-	 * Create a new alert
-	 */
-	async create(input: CreateAlertInput): Promise<Alert> {
-		try {
-			await this.client.run(
-				`INSERT INTO ${this.table} (
-          id, severity, type, title, message, metadata,
-          acknowledged, environment, expires_at
-        ) VALUES (?, ?, ?, ?, ?, ?, 0, ?, ?)`,
-				[
-					input.id,
-					input.severity,
-					input.type,
-					input.title,
-					input.message,
-					toJson(input.metadata ?? {}),
-					input.environment,
-					input.expiresAt ?? null,
-				]
-			);
-		} catch (error) {
-			throw RepositoryError.fromSqliteError(this.table, error as Error);
-		}
-
-		return this.findById(input.id) as Promise<Alert>;
+	constructor(db?: Database) {
+		this.db = db ?? getDb();
 	}
 
-	/**
-	 * Find alert by ID
-	 */
+	async create(input: CreateAlertInput): Promise<Alert> {
+		const [row] = await this.db
+			.insert(alerts)
+			.values({
+				severity: input.severity as typeof alerts.$inferInsert.severity,
+				type: input.type,
+				title: input.title,
+				message: input.message,
+				metadata: input.metadata ?? {},
+				acknowledged: false,
+				environment: input.environment as typeof alerts.$inferInsert.environment,
+				expiresAt: input.expiresAt ? new Date(input.expiresAt) : null,
+			})
+			.returning();
+
+		return mapAlertRow(row);
+	}
+
 	async findById(id: string): Promise<Alert | null> {
-		const row = await this.client.get<Row>(`SELECT * FROM ${this.table} WHERE id = ?`, [id]);
+		const [row] = await this.db
+			.select()
+			.from(alerts)
+			.where(eq(alerts.id, id))
+			.limit(1);
 
 		return row ? mapAlertRow(row) : null;
 	}
 
-	/**
-	 * Find alert by ID, throw if not found
-	 */
 	async findByIdOrThrow(id: string): Promise<Alert> {
 		const alert = await this.findById(id);
 		if (!alert) {
-			throw RepositoryError.notFound(this.table, id);
+			throw new Error(`Alert not found: ${id}`);
 		}
 		return alert;
 	}
 
-	/**
-	 * Find alerts with filters
-	 */
 	async findMany(
 		filters: AlertFilters = {},
 		pagination?: PaginationOptions
 	): Promise<PaginatedResult<Alert>> {
-		const builder = query().orderBy("created_at", "DESC");
+		const conditions = [];
 
 		if (filters.severity) {
 			if (Array.isArray(filters.severity)) {
-				builder.where("severity", "IN", filters.severity);
+				conditions.push(inArray(alerts.severity, filters.severity as typeof alerts.$inferSelect.severity[]));
 			} else {
-				builder.eq("severity", filters.severity);
+				conditions.push(eq(alerts.severity, filters.severity as typeof alerts.$inferSelect.severity));
 			}
 		}
 		if (filters.type) {
 			if (Array.isArray(filters.type)) {
-				builder.where("type", "IN", filters.type);
+				conditions.push(inArray(alerts.type, filters.type));
 			} else {
-				builder.eq("type", filters.type);
+				conditions.push(eq(alerts.type, filters.type));
 			}
 		}
 		if (filters.acknowledged !== undefined) {
-			builder.eq("acknowledged", fromBoolean(filters.acknowledged));
+			conditions.push(eq(alerts.acknowledged, filters.acknowledged));
 		}
 		if (filters.environment) {
-			builder.eq("environment", filters.environment);
+			conditions.push(eq(alerts.environment, filters.environment as typeof alerts.$inferSelect.environment));
 		}
 		if (filters.fromDate) {
-			builder.where("created_at", ">=", filters.fromDate);
+			conditions.push(gte(alerts.createdAt, new Date(filters.fromDate)));
 		}
 		if (filters.toDate) {
-			builder.where("created_at", "<=", filters.toDate);
+			conditions.push(lte(alerts.createdAt, new Date(filters.toDate)));
 		}
 
-		const { sql, args } = builder.build(`SELECT * FROM ${this.table}`);
-		const baseSql = sql.split(" LIMIT ")[0] ?? sql;
-		const countSql = baseSql.replace("SELECT *", "SELECT COUNT(*) as count");
+		const whereClause = conditions.length > 0 ? and(...conditions) : undefined;
+		const page = pagination?.page ?? 1;
+		const pageSize = pagination?.pageSize ?? 50;
+		const offset = (page - 1) * pageSize;
 
-		const result = await paginate<Row>(
-			this.client,
-			baseSql,
-			countSql,
-			args.slice(0, -2),
-			pagination
-		);
+		const [countResult] = await this.db
+			.select({ count: count() })
+			.from(alerts)
+			.where(whereClause);
+
+		const rows = await this.db
+			.select()
+			.from(alerts)
+			.where(whereClause)
+			.orderBy(desc(alerts.createdAt))
+			.limit(pageSize)
+			.offset(offset);
+
+		const total = countResult?.count ?? 0;
 
 		return {
-			...result,
-			data: result.data.map(mapAlertRow),
+			data: rows.map(mapAlertRow),
+			total,
+			page,
+			pageSize,
+			totalPages: Math.ceil(total / pageSize),
 		};
 	}
 
-	/**
-	 * Find unacknowledged alerts
-	 */
 	async findUnacknowledged(environment: string, limit = 50): Promise<Alert[]> {
-		const rows = await this.client.execute<Row>(
-			`SELECT * FROM ${this.table}
-       WHERE environment = ? AND acknowledged = 0
-       ORDER BY
-         CASE severity WHEN 'critical' THEN 0 WHEN 'warning' THEN 1 ELSE 2 END,
-         created_at DESC
-       LIMIT ?`,
-			[environment, limit]
-		);
+		const rows = await this.db
+			.select()
+			.from(alerts)
+			.where(
+				and(
+					eq(alerts.environment, environment as typeof alerts.$inferSelect.environment),
+					eq(alerts.acknowledged, false)
+				)
+			)
+			.orderBy(
+				sql`CASE ${alerts.severity} WHEN 'critical' THEN 0 WHEN 'warning' THEN 1 ELSE 2 END`,
+				desc(alerts.createdAt)
+			)
+			.limit(limit);
 
 		return rows.map(mapAlertRow);
 	}
 
-	/**
-	 * Find recent alerts
-	 */
 	async findRecent(environment: string, limit = 20): Promise<Alert[]> {
-		const rows = await this.client.execute<Row>(
-			`SELECT * FROM ${this.table} WHERE environment = ? ORDER BY created_at DESC LIMIT ?`,
-			[environment, limit]
-		);
+		const rows = await this.db
+			.select()
+			.from(alerts)
+			.where(eq(alerts.environment, environment as typeof alerts.$inferSelect.environment))
+			.orderBy(desc(alerts.createdAt))
+			.limit(limit);
 
 		return rows.map(mapAlertRow);
 	}
 
-	/**
-	 * Acknowledge an alert
-	 */
 	async acknowledge(id: string, acknowledgedBy: string): Promise<Alert> {
-		const now = new Date().toISOString();
+		const [row] = await this.db
+			.update(alerts)
+			.set({
+				acknowledged: true,
+				acknowledgedBy,
+				acknowledgedAt: new Date(),
+			})
+			.where(eq(alerts.id, id))
+			.returning();
 
-		const result = await this.client.run(
-			`UPDATE ${this.table} SET acknowledged = 1, acknowledged_by = ?, acknowledged_at = ? WHERE id = ?`,
-			[acknowledgedBy, now, id]
-		);
-
-		if (result.changes === 0) {
-			throw RepositoryError.notFound(this.table, id);
+		if (!row) {
+			throw new Error(`Alert not found: ${id}`);
 		}
 
-		return this.findByIdOrThrow(id);
+		return mapAlertRow(row);
 	}
 
-	/**
-	 * Acknowledge multiple alerts
-	 */
 	async acknowledgeMany(ids: string[], acknowledgedBy: string): Promise<number> {
 		if (ids.length === 0) {
 			return 0;
 		}
 
-		const now = new Date().toISOString();
-		const placeholders = ids.map(() => "?").join(", ");
+		const result = await this.db
+			.update(alerts)
+			.set({
+				acknowledged: true,
+				acknowledgedBy,
+				acknowledgedAt: new Date(),
+			})
+			.where(inArray(alerts.id, ids))
+			.returning({ id: alerts.id });
 
-		const result = await this.client.run(
-			`UPDATE ${this.table} SET acknowledged = 1, acknowledged_by = ?, acknowledged_at = ? WHERE id IN (${placeholders})`,
-			[acknowledgedBy, now, ...ids]
-		);
-
-		return result.changes;
+		return result.length;
 	}
 
-	/**
-	 * Acknowledge all unacknowledged alerts
-	 */
 	async acknowledgeAll(environment: string, acknowledgedBy: string): Promise<number> {
-		const now = new Date().toISOString();
+		const result = await this.db
+			.update(alerts)
+			.set({
+				acknowledged: true,
+				acknowledgedBy,
+				acknowledgedAt: new Date(),
+			})
+			.where(
+				and(
+					eq(alerts.environment, environment as typeof alerts.$inferSelect.environment),
+					eq(alerts.acknowledged, false)
+				)
+			)
+			.returning({ id: alerts.id });
 
-		const result = await this.client.run(
-			`UPDATE ${this.table} SET acknowledged = 1, acknowledged_by = ?, acknowledged_at = ? WHERE environment = ? AND acknowledged = 0`,
-			[acknowledgedBy, now, environment]
-		);
-
-		return result.changes;
+		return result.length;
 	}
 
-	/**
-	 * Delete alert
-	 */
 	async delete(id: string): Promise<boolean> {
-		const result = await this.client.run(`DELETE FROM ${this.table} WHERE id = ?`, [id]);
+		const result = await this.db
+			.delete(alerts)
+			.where(eq(alerts.id, id))
+			.returning({ id: alerts.id });
 
-		return result.changes > 0;
+		return result.length > 0;
 	}
 
-	/**
-	 * Delete expired alerts
-	 */
 	async deleteExpired(): Promise<number> {
-		const now = new Date().toISOString();
+		const now = new Date();
 
-		const result = await this.client.run(
-			`DELETE FROM ${this.table} WHERE expires_at IS NOT NULL AND expires_at < ?`,
-			[now]
-		);
+		const result = await this.db
+			.delete(alerts)
+			.where(
+				and(
+					sql`${alerts.expiresAt} IS NOT NULL`,
+					lte(alerts.expiresAt, now)
+				)
+			)
+			.returning({ id: alerts.id });
 
-		return result.changes;
+		return result.length;
 	}
 
-	/**
-	 * Count alerts by severity
-	 */
 	async countBySeverity(
 		environment: string,
 		acknowledgedOnly = false
 	): Promise<Record<AlertSeverity, number>> {
-		const whereClause = acknowledgedOnly
-			? "WHERE environment = ?"
-			: "WHERE environment = ? AND acknowledged = 0";
+		const conditions = [
+			eq(alerts.environment, environment as typeof alerts.$inferSelect.environment),
+		];
 
-		const rows = await this.client.execute<{ severity: string; count: number }>(
-			`SELECT severity, COUNT(*) as count FROM ${this.table} ${whereClause} GROUP BY severity`,
-			[environment]
-		);
+		if (!acknowledgedOnly) {
+			conditions.push(eq(alerts.acknowledged, false));
+		}
 
-		const result: Record<string, number> = {
+		const rows = await this.db
+			.select({
+				severity: alerts.severity,
+				count: sql<number>`COUNT(*)::int`,
+			})
+			.from(alerts)
+			.where(and(...conditions))
+			.groupBy(alerts.severity);
+
+		const result: Record<AlertSeverity, number> = {
 			info: 0,
 			warning: 0,
 			critical: 0,
 		};
 
 		for (const row of rows) {
-			result[row.severity] = row.count;
+			result[row.severity as AlertSeverity] = row.count;
 		}
 
-		return result as Record<AlertSeverity, number>;
+		return result;
 	}
 }

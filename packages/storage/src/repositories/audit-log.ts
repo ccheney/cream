@@ -1,22 +1,19 @@
 /**
- * Audit Log Repository
+ * Audit Log Repository (Drizzle ORM)
  *
  * Data access for audit_log table. Tracks authenticated API actions
  * in LIVE environment for security compliance.
  *
  * @see apps/dashboard-api/src/auth/session.ts
  */
-
-import type { Row, TursoClient } from "../turso.js";
-import { type PaginatedResult, type PaginationOptions, paginate, query } from "./base.js";
+import { and, count, desc, eq, gte, lte } from "drizzle-orm";
+import { getDb, type Database } from "../db";
+import { auditLog } from "../schema/audit";
 
 // ============================================
 // Types
 // ============================================
 
-/**
- * Audit log entry
- */
 export interface AuditLogEntry {
 	id: string;
 	timestamp: string;
@@ -29,11 +26,8 @@ export interface AuditLogEntry {
 	createdAt: string;
 }
 
-/**
- * Create audit log entry input
- */
 export interface CreateAuditLogInput {
-	id: string;
+	id?: string;
 	userId: string;
 	userEmail: string;
 	action: string;
@@ -42,9 +36,6 @@ export interface CreateAuditLogInput {
 	environment?: string;
 }
 
-/**
- * Audit log filter options
- */
 export interface AuditLogFilters {
 	userId?: string;
 	action?: string;
@@ -53,21 +44,36 @@ export interface AuditLogFilters {
 	toDate?: string;
 }
 
+export interface PaginationOptions {
+	page?: number;
+	pageSize?: number;
+}
+
+export interface PaginatedResult<T> {
+	data: T[];
+	total: number;
+	page: number;
+	pageSize: number;
+	totalPages: number;
+}
+
 // ============================================
-// Row Mapper
+// Row Mapping
 // ============================================
 
-function mapAuditLogRow(row: Row): AuditLogEntry {
+type AuditLogRow = typeof auditLog.$inferSelect;
+
+function mapAuditLogRow(row: AuditLogRow): AuditLogEntry {
 	return {
-		id: row.id as string,
-		timestamp: row.timestamp as string,
-		userId: row.user_id as string,
-		userEmail: row.user_email as string,
-		action: row.action as string,
-		ipAddress: row.ip_address as string | null,
-		userAgent: row.user_agent as string | null,
-		environment: row.environment as string,
-		createdAt: row.created_at as string,
+		id: row.id,
+		timestamp: row.timestamp.toISOString(),
+		userId: row.userId,
+		userEmail: row.userEmail,
+		action: row.action,
+		ipAddress: row.ipAddress,
+		userAgent: row.userAgent,
+		environment: row.environment,
+		createdAt: row.createdAt.toISOString(),
 	};
 }
 
@@ -75,118 +81,112 @@ function mapAuditLogRow(row: Row): AuditLogEntry {
 // Repository
 // ============================================
 
-/**
- * Audit log repository
- */
 export class AuditLogRepository {
-	private readonly table = "audit_log";
+	private db: Database;
 
-	constructor(private readonly client: TursoClient) {}
-
-	/**
-	 * Create a new audit log entry
-	 */
-	async create(input: CreateAuditLogInput): Promise<AuditLogEntry> {
-		const now = new Date().toISOString();
-
-		await this.client.run(
-			`INSERT INTO ${this.table} (
-        id, timestamp, user_id, user_email, action, ip_address, user_agent, environment, created_at
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-			[
-				input.id,
-				now,
-				input.userId,
-				input.userEmail,
-				input.action,
-				input.ipAddress ?? null,
-				input.userAgent ?? null,
-				input.environment ?? "LIVE",
-				now,
-			]
-		);
-
-		const entry = await this.findById(input.id);
-		if (!entry) {
-			throw new Error(`Failed to create audit log entry: ${input.id}`);
-		}
-		return entry;
+	constructor(db?: Database) {
+		this.db = db ?? getDb();
 	}
 
-	/**
-	 * Find audit log entry by ID
-	 */
+	async create(input: CreateAuditLogInput): Promise<AuditLogEntry> {
+		const [row] = await this.db
+			.insert(auditLog)
+			.values({
+				userId: input.userId,
+				userEmail: input.userEmail,
+				action: input.action,
+				ipAddress: input.ipAddress ?? null,
+				userAgent: input.userAgent ?? null,
+				environment: (input.environment ?? "LIVE") as typeof auditLog.$inferInsert.environment,
+			})
+			.returning();
+
+		return mapAuditLogRow(row);
+	}
+
 	async findById(id: string): Promise<AuditLogEntry | null> {
-		const row = await this.client.get<Row>(`SELECT * FROM ${this.table} WHERE id = ?`, [id]);
+		const [row] = await this.db
+			.select()
+			.from(auditLog)
+			.where(eq(auditLog.id, id))
+			.limit(1);
 
 		return row ? mapAuditLogRow(row) : null;
 	}
 
-	/**
-	 * Find audit log entries with filters
-	 */
 	async findMany(
 		filters: AuditLogFilters = {},
 		pagination?: PaginationOptions
 	): Promise<PaginatedResult<AuditLogEntry>> {
-		const builder = query().orderBy("timestamp", "DESC");
+		const conditions = [];
 
 		if (filters.userId) {
-			builder.eq("user_id", filters.userId);
+			conditions.push(eq(auditLog.userId, filters.userId));
 		}
 		if (filters.action) {
-			builder.eq("action", filters.action);
+			conditions.push(eq(auditLog.action, filters.action));
 		}
 		if (filters.environment) {
-			builder.eq("environment", filters.environment);
+			conditions.push(eq(auditLog.environment, filters.environment as typeof auditLog.$inferSelect.environment));
 		}
 		if (filters.fromDate) {
-			builder.where("timestamp", ">=", filters.fromDate);
+			conditions.push(gte(auditLog.timestamp, new Date(filters.fromDate)));
 		}
 		if (filters.toDate) {
-			builder.where("timestamp", "<=", filters.toDate);
+			conditions.push(lte(auditLog.timestamp, new Date(filters.toDate)));
 		}
 
-		const { sql, args } = builder.build(`SELECT * FROM ${this.table}`);
-		const baseSql = sql.split(" LIMIT ")[0] ?? sql;
-		const countSql = baseSql.replace("SELECT *", "SELECT COUNT(*) as count");
+		const whereClause = conditions.length > 0 ? and(...conditions) : undefined;
+		const page = pagination?.page ?? 1;
+		const pageSize = pagination?.pageSize ?? 50;
+		const offset = (page - 1) * pageSize;
 
-		const result = await paginate<Row>(
-			this.client,
-			baseSql,
-			countSql,
-			args.slice(0, -2),
-			pagination
-		);
+		const [countResult] = await this.db
+			.select({ count: count() })
+			.from(auditLog)
+			.where(whereClause);
+
+		const rows = await this.db
+			.select()
+			.from(auditLog)
+			.where(whereClause)
+			.orderBy(desc(auditLog.timestamp))
+			.limit(pageSize)
+			.offset(offset);
+
+		const total = countResult?.count ?? 0;
 
 		return {
-			...result,
-			data: result.data.map(mapAuditLogRow),
+			data: rows.map(mapAuditLogRow),
+			total,
+			page,
+			pageSize,
+			totalPages: Math.ceil(total / pageSize),
 		};
 	}
 
-	/**
-	 * Find recent audit log entries for a user
-	 */
 	async findRecentByUser(userId: string, limit = 50): Promise<AuditLogEntry[]> {
-		const rows = await this.client.execute<Row>(
-			`SELECT * FROM ${this.table} WHERE user_id = ? ORDER BY timestamp DESC LIMIT ?`,
-			[userId, limit]
-		);
+		const rows = await this.db
+			.select()
+			.from(auditLog)
+			.where(eq(auditLog.userId, userId))
+			.orderBy(desc(auditLog.timestamp))
+			.limit(limit);
 
 		return rows.map(mapAuditLogRow);
 	}
 
-	/**
-	 * Count audit log entries for a user within a time period
-	 * Useful for rate limiting or anomaly detection
-	 */
 	async countByUserInPeriod(userId: string, sinceTimestamp: string): Promise<number> {
-		const row = await this.client.get<{ count: number }>(
-			`SELECT COUNT(*) as count FROM ${this.table} WHERE user_id = ? AND timestamp >= ?`,
-			[userId, sinceTimestamp]
-		);
+		const [result] = await this.db
+			.select({ count: count() })
+			.from(auditLog)
+			.where(
+				and(
+					eq(auditLog.userId, userId),
+					gte(auditLog.timestamp, new Date(sinceTimestamp))
+				)
+			);
 
-		return row?.count ?? 0;
+		return result?.count ?? 0;
 	}
 }
