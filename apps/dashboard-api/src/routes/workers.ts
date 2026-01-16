@@ -773,13 +773,15 @@ app.openapi(getRunDetailsRoute, async (c) => {
 		// Fetch associated data based on service type
 		switch (serviceName) {
 			case "macro_watch": {
+				// Macro watch entries are collected over time before the run.
+				// Query by timestamp within the last 24 hours to match what the job processed.
 				const entries = await db.execute(
 					`SELECT id, timestamp, session, category, headline, symbols, source
 					 FROM macro_watch_entries
-					 WHERE created_at >= ? AND created_at <= ?
+					 WHERE timestamp >= datetime(?, '-24 hours')
 					 ORDER BY timestamp DESC
 					 LIMIT 100`,
-					[startedAt, completedAt]
+					[startedAt]
 				);
 
 				return c.json(
@@ -906,14 +908,16 @@ app.openapi(getRunDetailsRoute, async (c) => {
 			}
 
 			case "corporate_actions": {
+				// Corporate actions table has no fetch timestamp.
+				// Query by indicator date matching the run's date.
 				const entries = await db.execute(
 					`SELECT symbol, date, trailing_dividend_yield, ex_dividend_days,
 					        upcoming_earnings_days, recent_split
 					 FROM corporate_actions_indicators
-					 WHERE date >= date(?) AND date <= date(?)
+					 WHERE date = date(?)
 					 ORDER BY symbol
 					 LIMIT 100`,
-					[startedAt, completedAt]
+					[startedAt]
 				);
 
 				return c.json(
@@ -939,10 +943,10 @@ app.openapi(getRunDetailsRoute, async (c) => {
 
 			case "filings_sync": {
 				const entries = await db.execute(
-					`SELECT symbol, form_type, filed_at, accession_number
+					`SELECT symbol, filing_type, filed_date, accession_number
 					 FROM filings
 					 WHERE created_at >= ? AND created_at <= ?
-					 ORDER BY filed_at DESC
+					 ORDER BY filed_date DESC
 					 LIMIT 100`,
 					[startedAt, completedAt]
 				);
@@ -954,9 +958,9 @@ app.openapi(getRunDetailsRoute, async (c) => {
 							type: "indicators" as const,
 							entries: entries.map((e) => ({
 								symbol: e.symbol as string,
-								date: e.filed_at as string,
+								date: e.filed_date as string,
 								values: {
-									formType: e.form_type as string,
+									formType: e.filing_type as string,
 									accessionNumber: e.accession_number as string,
 								},
 							})),
