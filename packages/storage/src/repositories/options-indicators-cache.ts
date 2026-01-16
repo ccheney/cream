@@ -1,15 +1,14 @@
 /**
- * Options Indicators Cache Repository
+ * Options Indicators Cache Repository (Drizzle ORM)
  *
- * CRUD operations for the options_indicators_cache table.
+ * Data access for options_indicators_cache table.
  * Stores cached options-derived indicators with TTL-based expiration.
  *
  * @see docs/plans/33-indicator-engine-v2.md
- * @see migrations/008_indicator_engine_v2.sql
  */
-
-import type { Row, TursoClient } from "../turso.js";
-import { RepositoryError } from "./base.js";
+import { and, count, eq, gt, lte, sql } from "drizzle-orm";
+import { getDb, type Database } from "../db";
+import { optionsIndicatorsCache } from "../schema/indicators";
 
 // ============================================
 // Types
@@ -36,7 +35,6 @@ export interface OptionsIndicatorsCache {
 }
 
 export interface CreateOptionsIndicatorsCacheInput {
-	id: string;
 	symbol: string;
 
 	impliedVolatility?: number | null;
@@ -51,7 +49,7 @@ export interface CreateOptionsIndicatorsCacheInput {
 	netTheta?: number | null;
 	netVega?: number | null;
 
-	ttlMinutes?: number; // Default 60 minutes
+	ttlMinutes?: number;
 }
 
 export interface UpdateOptionsIndicatorsCacheInput {
@@ -71,28 +69,30 @@ export interface UpdateOptionsIndicatorsCacheInput {
 }
 
 // ============================================
-// Mappers
+// Row Mapping
 // ============================================
 
-function mapRow(row: Row): OptionsIndicatorsCache {
+type OptionsIndicatorsRow = typeof optionsIndicatorsCache.$inferSelect;
+
+function mapOptionsIndicatorsRow(row: OptionsIndicatorsRow): OptionsIndicatorsCache {
 	return {
-		id: row.id as string,
-		symbol: row.symbol as string,
-		timestamp: row.timestamp as string,
+		id: row.id,
+		symbol: row.symbol,
+		timestamp: row.timestamp.toISOString(),
 
-		impliedVolatility: row.implied_volatility as number | null,
-		ivPercentile30d: row.iv_percentile_30d as number | null,
-		ivSkew: row.iv_skew as number | null,
-		putCallRatio: row.put_call_ratio as number | null,
-		vrp: row.vrp as number | null,
-		termStructureSlope: row.term_structure_slope as number | null,
+		impliedVolatility: row.impliedVolatility ? Number(row.impliedVolatility) : null,
+		ivPercentile30d: row.ivPercentile30d ? Number(row.ivPercentile30d) : null,
+		ivSkew: row.ivSkew ? Number(row.ivSkew) : null,
+		putCallRatio: row.putCallRatio ? Number(row.putCallRatio) : null,
+		vrp: row.vrp ? Number(row.vrp) : null,
+		termStructureSlope: row.termStructureSlope ? Number(row.termStructureSlope) : null,
 
-		netDelta: row.net_delta as number | null,
-		netGamma: row.net_gamma as number | null,
-		netTheta: row.net_theta as number | null,
-		netVega: row.net_vega as number | null,
+		netDelta: row.netDelta ? Number(row.netDelta) : null,
+		netGamma: row.netGamma ? Number(row.netGamma) : null,
+		netTheta: row.netTheta ? Number(row.netTheta) : null,
+		netVega: row.netVega ? Number(row.netVega) : null,
 
-		expiresAt: row.expires_at as string,
+		expiresAt: row.expiresAt.toISOString(),
 	};
 }
 
@@ -101,384 +101,279 @@ function mapRow(row: Row): OptionsIndicatorsCache {
 // ============================================
 
 export class OptionsIndicatorsCacheRepository {
-	constructor(private client: TursoClient) {}
+	private db: Database;
 
-	private calculateExpiresAt(ttlMinutes = 60): string {
+	constructor(db?: Database) {
+		this.db = db ?? getDb();
+	}
+
+	private calculateExpiresAt(ttlMinutes = 60): Date {
 		const now = new Date();
 		now.setMinutes(now.getMinutes() + ttlMinutes);
-		return now.toISOString();
+		return now;
 	}
 
-	/**
-	 * Create or update a cache entry
-	 */
 	async set(input: CreateOptionsIndicatorsCacheInput): Promise<OptionsIndicatorsCache> {
-		const now = new Date().toISOString();
+		const now = new Date();
 		const expiresAt = this.calculateExpiresAt(input.ttlMinutes);
 
-		await this.client.run(
-			`INSERT INTO options_indicators_cache (
-        id, symbol, timestamp,
-        implied_volatility, iv_percentile_30d, iv_skew,
-        put_call_ratio, vrp, term_structure_slope,
-        net_delta, net_gamma, net_theta, net_vega,
-        expires_at
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-      ON CONFLICT(symbol) DO UPDATE SET
-        timestamp = excluded.timestamp,
-        implied_volatility = excluded.implied_volatility,
-        iv_percentile_30d = excluded.iv_percentile_30d,
-        iv_skew = excluded.iv_skew,
-        put_call_ratio = excluded.put_call_ratio,
-        vrp = excluded.vrp,
-        term_structure_slope = excluded.term_structure_slope,
-        net_delta = excluded.net_delta,
-        net_gamma = excluded.net_gamma,
-        net_theta = excluded.net_theta,
-        net_vega = excluded.net_vega,
-        expires_at = excluded.expires_at`,
-			[
-				input.id,
-				input.symbol,
-				now,
-				input.impliedVolatility ?? null,
-				input.ivPercentile30d ?? null,
-				input.ivSkew ?? null,
-				input.putCallRatio ?? null,
-				input.vrp ?? null,
-				input.termStructureSlope ?? null,
-				input.netDelta ?? null,
-				input.netGamma ?? null,
-				input.netTheta ?? null,
-				input.netVega ?? null,
+		const [row] = await this.db
+			.insert(optionsIndicatorsCache)
+			.values({
+				symbol: input.symbol,
+				timestamp: now,
+				impliedVolatility: input.impliedVolatility != null ? String(input.impliedVolatility) : null,
+				ivPercentile30d: input.ivPercentile30d != null ? String(input.ivPercentile30d) : null,
+				ivSkew: input.ivSkew != null ? String(input.ivSkew) : null,
+				putCallRatio: input.putCallRatio != null ? String(input.putCallRatio) : null,
+				vrp: input.vrp != null ? String(input.vrp) : null,
+				termStructureSlope: input.termStructureSlope != null ? String(input.termStructureSlope) : null,
+				netDelta: input.netDelta != null ? String(input.netDelta) : null,
+				netGamma: input.netGamma != null ? String(input.netGamma) : null,
+				netTheta: input.netTheta != null ? String(input.netTheta) : null,
+				netVega: input.netVega != null ? String(input.netVega) : null,
 				expiresAt,
-			]
-		);
+			})
+			.onConflictDoUpdate({
+				target: optionsIndicatorsCache.symbol,
+				set: {
+					timestamp: now,
+					impliedVolatility: input.impliedVolatility != null ? String(input.impliedVolatility) : null,
+					ivPercentile30d: input.ivPercentile30d != null ? String(input.ivPercentile30d) : null,
+					ivSkew: input.ivSkew != null ? String(input.ivSkew) : null,
+					putCallRatio: input.putCallRatio != null ? String(input.putCallRatio) : null,
+					vrp: input.vrp != null ? String(input.vrp) : null,
+					termStructureSlope: input.termStructureSlope != null ? String(input.termStructureSlope) : null,
+					netDelta: input.netDelta != null ? String(input.netDelta) : null,
+					netGamma: input.netGamma != null ? String(input.netGamma) : null,
+					netTheta: input.netTheta != null ? String(input.netTheta) : null,
+					netVega: input.netVega != null ? String(input.netVega) : null,
+					expiresAt,
+				},
+			})
+			.returning();
 
-		// Return the entry regardless of expiration (for immediate use)
-		const result = await this.getIncludingExpired(input.symbol);
-		if (!result) {
-			throw new RepositoryError("Failed to retrieve cached record", "QUERY_ERROR");
-		}
-		return result;
+		return mapOptionsIndicatorsRow(row);
 	}
 
-	/**
-	 * Bulk set multiple cache entries
-	 */
 	async bulkSet(inputs: CreateOptionsIndicatorsCacheInput[]): Promise<number> {
 		if (inputs.length === 0) {
 			return 0;
 		}
 
-		const now = new Date().toISOString();
 		let count = 0;
-
 		for (const input of inputs) {
-			const expiresAt = this.calculateExpiresAt(input.ttlMinutes);
-
-			await this.client.run(
-				`INSERT INTO options_indicators_cache (
-          id, symbol, timestamp,
-          implied_volatility, iv_percentile_30d, iv_skew,
-          put_call_ratio, vrp, term_structure_slope,
-          net_delta, net_gamma, net_theta, net_vega,
-          expires_at
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-        ON CONFLICT(symbol) DO UPDATE SET
-          timestamp = excluded.timestamp,
-          implied_volatility = excluded.implied_volatility,
-          iv_percentile_30d = excluded.iv_percentile_30d,
-          iv_skew = excluded.iv_skew,
-          put_call_ratio = excluded.put_call_ratio,
-          vrp = excluded.vrp,
-          term_structure_slope = excluded.term_structure_slope,
-          net_delta = excluded.net_delta,
-          net_gamma = excluded.net_gamma,
-          net_theta = excluded.net_theta,
-          net_vega = excluded.net_vega,
-          expires_at = excluded.expires_at`,
-				[
-					input.id,
-					input.symbol,
-					now,
-					input.impliedVolatility ?? null,
-					input.ivPercentile30d ?? null,
-					input.ivSkew ?? null,
-					input.putCallRatio ?? null,
-					input.vrp ?? null,
-					input.termStructureSlope ?? null,
-					input.netDelta ?? null,
-					input.netGamma ?? null,
-					input.netTheta ?? null,
-					input.netVega ?? null,
-					expiresAt,
-				]
-			);
+			await this.set(input);
 			count++;
 		}
 
 		return count;
 	}
 
-	/**
-	 * Get a cache entry by symbol (returns null if expired or not found)
-	 */
 	async get(symbol: string): Promise<OptionsIndicatorsCache | null> {
-		const now = new Date().toISOString();
+		const now = new Date();
 
-		const row = await this.client.get<Row>(
-			`SELECT * FROM options_indicators_cache
-       WHERE symbol = ? AND expires_at > ?`,
-			[symbol, now]
-		);
+		const [row] = await this.db
+			.select()
+			.from(optionsIndicatorsCache)
+			.where(
+				and(
+					eq(optionsIndicatorsCache.symbol, symbol),
+					gt(optionsIndicatorsCache.expiresAt, now)
+				)
+			)
+			.limit(1);
 
-		if (!row) {
-			return null;
-		}
-		return mapRow(row);
+		return row ? mapOptionsIndicatorsRow(row) : null;
 	}
 
-	/**
-	 * Get a cache entry even if expired (for debugging/analytics)
-	 */
 	async getIncludingExpired(symbol: string): Promise<OptionsIndicatorsCache | null> {
-		const row = await this.client.get<Row>(
-			"SELECT * FROM options_indicators_cache WHERE symbol = ?",
-			[symbol]
-		);
+		const [row] = await this.db
+			.select()
+			.from(optionsIndicatorsCache)
+			.where(eq(optionsIndicatorsCache.symbol, symbol))
+			.limit(1);
 
-		if (!row) {
-			return null;
-		}
-		return mapRow(row);
+		return row ? mapOptionsIndicatorsRow(row) : null;
 	}
 
-	/**
-	 * Get multiple cache entries by symbols
-	 */
 	async getMany(symbols: string[]): Promise<Map<string, OptionsIndicatorsCache>> {
 		if (symbols.length === 0) {
 			return new Map();
 		}
 
-		const now = new Date().toISOString();
-		const placeholders = symbols.map(() => "?").join(", ");
+		const now = new Date();
 
-		const rows = await this.client.execute<Row>(
-			`SELECT * FROM options_indicators_cache
-       WHERE symbol IN (${placeholders}) AND expires_at > ?`,
-			[...symbols, now]
-		);
+		const rows = await this.db.execute(sql`
+			SELECT * FROM ${optionsIndicatorsCache}
+			WHERE symbol = ANY(${symbols}) AND expires_at > ${now}
+		`);
 
 		const result = new Map<string, OptionsIndicatorsCache>();
-		for (const row of rows) {
-			const entry = mapRow(row);
+		for (const row of rows.rows as OptionsIndicatorsRow[]) {
+			const entry = mapOptionsIndicatorsRow(row);
 			result.set(entry.symbol, entry);
 		}
 		return result;
 	}
 
-	/**
-	 * Check if a cache entry exists and is valid
-	 */
 	async has(symbol: string): Promise<boolean> {
-		const now = new Date().toISOString();
+		const now = new Date();
 
-		const row = await this.client.get<{ count: number }>(
-			`SELECT COUNT(*) as count FROM options_indicators_cache
-       WHERE symbol = ? AND expires_at > ?`,
-			[symbol, now]
-		);
+		const [result] = await this.db
+			.select({ count: count() })
+			.from(optionsIndicatorsCache)
+			.where(
+				and(
+					eq(optionsIndicatorsCache.symbol, symbol),
+					gt(optionsIndicatorsCache.expiresAt, now)
+				)
+			);
 
-		return (row?.count ?? 0) > 0;
+		return (result?.count ?? 0) > 0;
 	}
 
-	/**
-	 * Get all valid cache entries
-	 */
 	async getAll(): Promise<OptionsIndicatorsCache[]> {
-		const now = new Date().toISOString();
+		const now = new Date();
 
-		const rows = await this.client.execute<Row>(
-			`SELECT * FROM options_indicators_cache
-       WHERE expires_at > ?
-       ORDER BY symbol`,
-			[now]
-		);
+		const rows = await this.db
+			.select()
+			.from(optionsIndicatorsCache)
+			.where(gt(optionsIndicatorsCache.expiresAt, now))
+			.orderBy(optionsIndicatorsCache.symbol);
 
-		return rows.map(mapRow);
+		return rows.map(mapOptionsIndicatorsRow);
 	}
 
-	/**
-	 * Get symbols that need refresh (expired or missing)
-	 */
 	async getExpiredSymbols(): Promise<string[]> {
-		const now = new Date().toISOString();
+		const now = new Date();
 
-		const rows = await this.client.execute<{ symbol: string }>(
-			`SELECT symbol FROM options_indicators_cache
-       WHERE expires_at <= ?`,
-			[now]
-		);
+		const rows = await this.db
+			.select({ symbol: optionsIndicatorsCache.symbol })
+			.from(optionsIndicatorsCache)
+			.where(lte(optionsIndicatorsCache.expiresAt, now));
 
 		return rows.map((r) => r.symbol);
 	}
 
-	/**
-	 * Update TTL for a symbol
-	 */
 	async refresh(symbol: string, ttlMinutes = 60): Promise<boolean> {
 		const expiresAt = this.calculateExpiresAt(ttlMinutes);
+		const now = new Date();
 
-		const result = await this.client.run(
-			`UPDATE options_indicators_cache
-       SET expires_at = ?, timestamp = ?
-       WHERE symbol = ?`,
-			[expiresAt, new Date().toISOString(), symbol]
-		);
+		const result = await this.db
+			.update(optionsIndicatorsCache)
+			.set({ expiresAt, timestamp: now })
+			.where(eq(optionsIndicatorsCache.symbol, symbol))
+			.returning({ id: optionsIndicatorsCache.id });
 
-		return result.changes > 0;
+		return result.length > 0;
 	}
 
-	/**
-	 * Update a cache entry
-	 */
 	async update(
 		symbol: string,
 		input: UpdateOptionsIndicatorsCacheInput
 	): Promise<OptionsIndicatorsCache | null> {
-		const updates: string[] = [];
-		const args: unknown[] = [];
+		const updates: Record<string, unknown> = {
+			timestamp: new Date(),
+		};
 
 		if (input.impliedVolatility !== undefined) {
-			updates.push("implied_volatility = ?");
-			args.push(input.impliedVolatility);
+			updates.impliedVolatility = input.impliedVolatility != null ? String(input.impliedVolatility) : null;
 		}
 
 		if (input.ivPercentile30d !== undefined) {
-			updates.push("iv_percentile_30d = ?");
-			args.push(input.ivPercentile30d);
+			updates.ivPercentile30d = input.ivPercentile30d != null ? String(input.ivPercentile30d) : null;
 		}
 
 		if (input.ivSkew !== undefined) {
-			updates.push("iv_skew = ?");
-			args.push(input.ivSkew);
+			updates.ivSkew = input.ivSkew != null ? String(input.ivSkew) : null;
 		}
 
 		if (input.putCallRatio !== undefined) {
-			updates.push("put_call_ratio = ?");
-			args.push(input.putCallRatio);
+			updates.putCallRatio = input.putCallRatio != null ? String(input.putCallRatio) : null;
 		}
 
 		if (input.vrp !== undefined) {
-			updates.push("vrp = ?");
-			args.push(input.vrp);
+			updates.vrp = input.vrp != null ? String(input.vrp) : null;
 		}
 
 		if (input.termStructureSlope !== undefined) {
-			updates.push("term_structure_slope = ?");
-			args.push(input.termStructureSlope);
+			updates.termStructureSlope = input.termStructureSlope != null ? String(input.termStructureSlope) : null;
 		}
 
 		if (input.netDelta !== undefined) {
-			updates.push("net_delta = ?");
-			args.push(input.netDelta);
+			updates.netDelta = input.netDelta != null ? String(input.netDelta) : null;
 		}
 
 		if (input.netGamma !== undefined) {
-			updates.push("net_gamma = ?");
-			args.push(input.netGamma);
+			updates.netGamma = input.netGamma != null ? String(input.netGamma) : null;
 		}
 
 		if (input.netTheta !== undefined) {
-			updates.push("net_theta = ?");
-			args.push(input.netTheta);
+			updates.netTheta = input.netTheta != null ? String(input.netTheta) : null;
 		}
 
 		if (input.netVega !== undefined) {
-			updates.push("net_vega = ?");
-			args.push(input.netVega);
+			updates.netVega = input.netVega != null ? String(input.netVega) : null;
 		}
-
-		if (updates.length === 0 && input.ttlMinutes === undefined) {
-			return this.getIncludingExpired(symbol);
-		}
-
-		updates.push("timestamp = ?");
-		args.push(new Date().toISOString());
 
 		if (input.ttlMinutes !== undefined) {
-			updates.push("expires_at = ?");
-			args.push(this.calculateExpiresAt(input.ttlMinutes));
+			updates.expiresAt = this.calculateExpiresAt(input.ttlMinutes);
 		}
 
-		args.push(symbol);
+		const [row] = await this.db
+			.update(optionsIndicatorsCache)
+			.set(updates)
+			.where(eq(optionsIndicatorsCache.symbol, symbol))
+			.returning();
 
-		await this.client.run(
-			`UPDATE options_indicators_cache SET ${updates.join(", ")} WHERE symbol = ?`,
-			args
-		);
-
-		return this.getIncludingExpired(symbol);
+		return row ? mapOptionsIndicatorsRow(row) : null;
 	}
 
-	/**
-	 * Delete a cache entry
-	 */
 	async delete(symbol: string): Promise<boolean> {
-		const result = await this.client.run("DELETE FROM options_indicators_cache WHERE symbol = ?", [
-			symbol,
-		]);
+		const result = await this.db
+			.delete(optionsIndicatorsCache)
+			.where(eq(optionsIndicatorsCache.symbol, symbol))
+			.returning({ id: optionsIndicatorsCache.id });
 
-		return result.changes > 0;
+		return result.length > 0;
 	}
 
-	/**
-	 * Clear all expired entries
-	 */
 	async clearExpired(): Promise<number> {
-		const now = new Date().toISOString();
+		const now = new Date();
 
-		const result = await this.client.run(
-			"DELETE FROM options_indicators_cache WHERE expires_at <= ?",
-			[now]
-		);
+		const result = await this.db
+			.delete(optionsIndicatorsCache)
+			.where(lte(optionsIndicatorsCache.expiresAt, now))
+			.returning({ id: optionsIndicatorsCache.id });
 
-		return result.changes;
+		return result.length;
 	}
 
-	/**
-	 * Clear all cache entries
-	 */
 	async clearAll(): Promise<number> {
-		const result = await this.client.run("DELETE FROM options_indicators_cache");
+		const result = await this.db
+			.delete(optionsIndicatorsCache)
+			.returning({ id: optionsIndicatorsCache.id });
 
-		return result.changes;
+		return result.length;
 	}
 
-	/**
-	 * Count cache entries
-	 */
 	async count(includeExpired = false): Promise<number> {
 		if (includeExpired) {
-			const row = await this.client.get<{ count: number }>(
-				"SELECT COUNT(*) as count FROM options_indicators_cache"
-			);
-			return row?.count ?? 0;
+			const [result] = await this.db
+				.select({ count: count() })
+				.from(optionsIndicatorsCache);
+			return result?.count ?? 0;
 		}
 
-		const now = new Date().toISOString();
-		const row = await this.client.get<{ count: number }>(
-			"SELECT COUNT(*) as count FROM options_indicators_cache WHERE expires_at > ?",
-			[now]
-		);
-		return row?.count ?? 0;
+		const now = new Date();
+		const [result] = await this.db
+			.select({ count: count() })
+			.from(optionsIndicatorsCache)
+			.where(gt(optionsIndicatorsCache.expiresAt, now));
+		return result?.count ?? 0;
 	}
 
-	/**
-	 * Get cache statistics
-	 */
 	async getStats(): Promise<{
 		total: number;
 		valid: number;
@@ -486,29 +381,33 @@ export class OptionsIndicatorsCacheRepository {
 		oldestTimestamp: string | null;
 		newestTimestamp: string | null;
 	}> {
-		const now = new Date().toISOString();
+		const now = new Date();
 
-		const [totalRow, validRow, statsRow] = await Promise.all([
-			this.client.get<{ count: number }>("SELECT COUNT(*) as count FROM options_indicators_cache"),
-			this.client.get<{ count: number }>(
-				"SELECT COUNT(*) as count FROM options_indicators_cache WHERE expires_at > ?",
-				[now]
-			),
-			this.client.get<{ oldest: string | null; newest: string | null }>(
-				`SELECT MIN(timestamp) as oldest, MAX(timestamp) as newest
-         FROM options_indicators_cache`
-			),
-		]);
+		const [totalResult] = await this.db
+			.select({ count: count() })
+			.from(optionsIndicatorsCache);
 
-		const total = totalRow?.count ?? 0;
-		const valid = validRow?.count ?? 0;
+		const [validResult] = await this.db
+			.select({ count: count() })
+			.from(optionsIndicatorsCache)
+			.where(gt(optionsIndicatorsCache.expiresAt, now));
+
+		const [statsResult] = await this.db
+			.select({
+				oldest: sql<Date>`MIN(${optionsIndicatorsCache.timestamp})`,
+				newest: sql<Date>`MAX(${optionsIndicatorsCache.timestamp})`,
+			})
+			.from(optionsIndicatorsCache);
+
+		const total = totalResult?.count ?? 0;
+		const valid = validResult?.count ?? 0;
 
 		return {
 			total,
 			valid,
 			expired: total - valid,
-			oldestTimestamp: statsRow?.oldest ?? null,
-			newestTimestamp: statsRow?.newest ?? null,
+			oldestTimestamp: statsResult?.oldest?.toISOString() ?? null,
+			newestTimestamp: statsResult?.newest?.toISOString() ?? null,
 		};
 	}
 }

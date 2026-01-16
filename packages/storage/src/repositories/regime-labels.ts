@@ -1,14 +1,14 @@
 /**
- * Regime Labels Repository
+ * Regime Labels Repository (Drizzle ORM)
  *
- * Market regime classification results.
+ * Data access for market regime classifications.
  *
- * @see migrations/003_market_data_tables.sql
+ * @see docs/plans/33-indicator-engine-v2.md
  */
-
+import { and, count, desc, eq, gte, lte, sql } from "drizzle-orm";
 import { z } from "zod";
-import type { TursoClient } from "../turso.js";
-import { RepositoryError } from "./base.js";
+import { getDb, type Database } from "../db";
+import { regimeLabels } from "../schema/market-data";
 
 // ============================================
 // Zod Schemas
@@ -27,213 +27,196 @@ export const RegimeTypeSchema = z.enum([
 ]);
 export type RegimeType = z.infer<typeof RegimeTypeSchema>;
 
-export const RegimeLabelSchema = z.object({
-	id: z.number().optional(),
-	symbol: z.string().describe("Ticker symbol or '_MARKET' for market-wide regime"),
-	timestamp: z.string().datetime(),
-	timeframe: RegimeTimeframeSchema,
-	regime: RegimeTypeSchema,
-	confidence: z.number().min(0).max(1),
-	trendStrength: z.number().nullable().optional(),
-	volatilityPercentile: z.number().nullable().optional(),
-	correlationToMarket: z.number().nullable().optional(),
-	modelName: z.string().default("hmm_regime"),
-	modelVersion: z.string().nullable().optional(),
-	computedAt: z.string().datetime().optional(),
-});
+export interface RegimeLabel {
+	id: number;
+	symbol: string;
+	timestamp: string;
+	timeframe: RegimeTimeframe;
+	regime: RegimeType;
+	confidence: number;
+	trendStrength: number | null;
+	volatilityPercentile: number | null;
+	correlationToMarket: number | null;
+	modelName: string;
+	modelVersion: string | null;
+	computedAt: string;
+}
 
-export type RegimeLabel = z.infer<typeof RegimeLabelSchema>;
-
-export const RegimeLabelInsertSchema = RegimeLabelSchema.omit({ id: true, computedAt: true });
-export type RegimeLabelInsert = z.infer<typeof RegimeLabelInsertSchema>;
+export interface RegimeLabelInsert {
+	symbol: string;
+	timestamp: string;
+	timeframe: RegimeTimeframe;
+	regime: RegimeType;
+	confidence: number;
+	trendStrength?: number | null;
+	volatilityPercentile?: number | null;
+	correlationToMarket?: number | null;
+	modelName?: string;
+	modelVersion?: string | null;
+}
 
 // ============================================
 // Constants
 // ============================================
 
-/** Special symbol for market-wide regime */
 export const MARKET_SYMBOL = "_MARKET";
+
+// ============================================
+// Row Mapping
+// ============================================
+
+type RegimeLabelRow = typeof regimeLabels.$inferSelect;
+
+function mapRegimeLabelRow(row: RegimeLabelRow): RegimeLabel {
+	return {
+		id: row.id,
+		symbol: row.symbol,
+		timestamp: row.timestamp.toISOString(),
+		timeframe: row.timeframe as RegimeTimeframe,
+		regime: row.regime as RegimeType,
+		confidence: Number(row.confidence),
+		trendStrength: row.trendStrength ? Number(row.trendStrength) : null,
+		volatilityPercentile: row.volatilityPercentile ? Number(row.volatilityPercentile) : null,
+		correlationToMarket: row.correlationToMarket ? Number(row.correlationToMarket) : null,
+		modelName: row.modelName,
+		modelVersion: row.modelVersion,
+		computedAt: row.computedAt.toISOString(),
+	};
+}
 
 // ============================================
 // Repository
 // ============================================
 
 export class RegimeLabelsRepository {
-	constructor(private client: TursoClient) {}
+	private db: Database;
 
-	/**
-	 * Upsert a regime label
-	 */
+	constructor(db?: Database) {
+		this.db = db ?? getDb();
+	}
+
 	async upsert(label: RegimeLabelInsert): Promise<void> {
-		try {
-			await this.client.run(
-				`INSERT INTO regime_labels (
-          symbol, timestamp, timeframe, regime, confidence,
-          trend_strength, volatility_percentile, correlation_to_market,
-          model_name, model_version
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-        ON CONFLICT(symbol, timestamp, timeframe)
-        DO UPDATE SET
-          regime = excluded.regime,
-          confidence = excluded.confidence,
-          trend_strength = excluded.trend_strength,
-          volatility_percentile = excluded.volatility_percentile,
-          correlation_to_market = excluded.correlation_to_market,
-          model_name = excluded.model_name,
-          model_version = excluded.model_version,
-          computed_at = datetime('now')`,
-				[
-					label.symbol,
-					label.timestamp,
-					label.timeframe,
-					label.regime,
-					label.confidence,
-					label.trendStrength ?? null,
-					label.volatilityPercentile ?? null,
-					label.correlationToMarket ?? null,
-					label.modelName,
-					label.modelVersion ?? null,
-				]
-			);
-		} catch (error) {
-			throw RepositoryError.fromSqliteError("regime_labels", error as Error);
-		}
+		await this.db
+			.insert(regimeLabels)
+			.values({
+				symbol: label.symbol,
+				timestamp: new Date(label.timestamp),
+				timeframe: label.timeframe as typeof regimeLabels.$inferInsert.timeframe,
+				regime: label.regime as typeof regimeLabels.$inferInsert.regime,
+				confidence: String(label.confidence),
+				trendStrength: label.trendStrength != null ? String(label.trendStrength) : null,
+				volatilityPercentile: label.volatilityPercentile != null ? String(label.volatilityPercentile) : null,
+				correlationToMarket: label.correlationToMarket != null ? String(label.correlationToMarket) : null,
+				modelName: label.modelName ?? "hmm_regime",
+				modelVersion: label.modelVersion ?? null,
+			})
+			.onConflictDoUpdate({
+				target: [regimeLabels.symbol, regimeLabels.timestamp, regimeLabels.timeframe],
+				set: {
+					regime: label.regime as typeof regimeLabels.$inferInsert.regime,
+					confidence: String(label.confidence),
+					trendStrength: label.trendStrength != null ? String(label.trendStrength) : null,
+					volatilityPercentile: label.volatilityPercentile != null ? String(label.volatilityPercentile) : null,
+					correlationToMarket: label.correlationToMarket != null ? String(label.correlationToMarket) : null,
+					modelName: label.modelName ?? "hmm_regime",
+					modelVersion: label.modelVersion ?? null,
+					computedAt: new Date(),
+				},
+			});
 	}
 
-	/**
-	 * Get the current regime for a symbol
-	 */
 	async getCurrent(symbol: string, timeframe: RegimeTimeframe): Promise<RegimeLabel | null> {
-		const row = await this.client.get<RegimeLabelRow>(
-			`SELECT * FROM regime_labels
-       WHERE symbol = ? AND timeframe = ?
-       ORDER BY timestamp DESC
-       LIMIT 1`,
-			[symbol, timeframe]
-		);
-		return row ? mapRowToLabel(row) : null;
+		const [row] = await this.db
+			.select()
+			.from(regimeLabels)
+			.where(
+				and(
+					eq(regimeLabels.symbol, symbol),
+					eq(regimeLabels.timeframe, timeframe as typeof regimeLabels.$inferSelect.timeframe)
+				)
+			)
+			.orderBy(desc(regimeLabels.timestamp))
+			.limit(1);
+
+		return row ? mapRegimeLabelRow(row) : null;
 	}
 
-	/**
-	 * Get the current market-wide regime
-	 */
 	async getMarketRegime(timeframe: RegimeTimeframe): Promise<RegimeLabel | null> {
 		return this.getCurrent(MARKET_SYMBOL, timeframe);
 	}
 
-	/**
-	 * Get regime history for a symbol
-	 */
 	async getHistory(
 		symbol: string,
 		timeframe: RegimeTimeframe,
 		startTime: string,
 		endTime: string
 	): Promise<RegimeLabel[]> {
-		const rows = await this.client.execute<RegimeLabelRow>(
-			`SELECT * FROM regime_labels
-       WHERE symbol = ? AND timeframe = ?
-         AND timestamp >= ? AND timestamp <= ?
-       ORDER BY timestamp ASC`,
-			[symbol, timeframe, startTime, endTime]
-		);
-		return rows.map(mapRowToLabel);
+		const rows = await this.db
+			.select()
+			.from(regimeLabels)
+			.where(
+				and(
+					eq(regimeLabels.symbol, symbol),
+					eq(regimeLabels.timeframe, timeframe as typeof regimeLabels.$inferSelect.timeframe),
+					gte(regimeLabels.timestamp, new Date(startTime)),
+					lte(regimeLabels.timestamp, new Date(endTime))
+				)
+			)
+			.orderBy(regimeLabels.timestamp);
+
+		return rows.map(mapRegimeLabelRow);
 	}
 
-	/**
-	 * Get symbols currently in a specific regime
-	 */
 	async getSymbolsInRegime(
 		regime: RegimeType,
 		timeframe: RegimeTimeframe,
 		minConfidence = 0.5
 	): Promise<string[]> {
-		// Get most recent regime for each symbol
-		const rows = await this.client.execute<{ symbol: string }>(
-			`SELECT DISTINCT r1.symbol
-       FROM regime_labels r1
-       INNER JOIN (
-         SELECT symbol, MAX(timestamp) as max_ts
-         FROM regime_labels
-         WHERE timeframe = ?
-         GROUP BY symbol
-       ) r2 ON r1.symbol = r2.symbol AND r1.timestamp = r2.max_ts
-       WHERE r1.regime = ? AND r1.confidence >= ? AND r1.timeframe = ?
-         AND r1.symbol != ?`,
-			[timeframe, regime, minConfidence, timeframe, MARKET_SYMBOL]
-		);
-		return rows.map((r) => r.symbol);
+		const rows = await this.db.execute(sql`
+			SELECT DISTINCT r1.symbol
+			FROM ${regimeLabels} r1
+			INNER JOIN (
+				SELECT symbol, MAX(timestamp) as max_ts
+				FROM ${regimeLabels}
+				WHERE timeframe = ${timeframe}
+				GROUP BY symbol
+			) r2 ON r1.symbol = r2.symbol AND r1.timestamp = r2.max_ts
+			WHERE r1.regime = ${regime}
+				AND r1.confidence >= ${String(minConfidence)}
+				AND r1.timeframe = ${timeframe}
+				AND r1.symbol != ${MARKET_SYMBOL}
+		`);
+
+		return (rows.rows as { symbol: string }[]).map((r) => r.symbol);
 	}
 
-	/**
-	 * Get regime distribution (count of symbols in each regime)
-	 */
 	async getRegimeDistribution(timeframe: RegimeTimeframe): Promise<Map<RegimeType, number>> {
-		const rows = await this.client.execute<{ regime: string; count: number }>(
-			`SELECT r1.regime, COUNT(*) as count
-       FROM regime_labels r1
-       INNER JOIN (
-         SELECT symbol, MAX(timestamp) as max_ts
-         FROM regime_labels
-         WHERE timeframe = ? AND symbol != ?
-         GROUP BY symbol
-       ) r2 ON r1.symbol = r2.symbol AND r1.timestamp = r2.max_ts
-       WHERE r1.timeframe = ?
-       GROUP BY r1.regime`,
-			[timeframe, MARKET_SYMBOL, timeframe]
-		);
+		const rows = await this.db.execute(sql`
+			SELECT r1.regime, COUNT(*)::int as count
+			FROM ${regimeLabels} r1
+			INNER JOIN (
+				SELECT symbol, MAX(timestamp) as max_ts
+				FROM ${regimeLabels}
+				WHERE timeframe = ${timeframe} AND symbol != ${MARKET_SYMBOL}
+				GROUP BY symbol
+			) r2 ON r1.symbol = r2.symbol AND r1.timestamp = r2.max_ts
+			WHERE r1.timeframe = ${timeframe}
+			GROUP BY r1.regime
+		`);
 
 		const distribution = new Map<RegimeType, number>();
-		for (const row of rows) {
+		for (const row of rows.rows as { regime: string; count: number }[]) {
 			distribution.set(row.regime as RegimeType, row.count);
 		}
 		return distribution;
 	}
 
-	/**
-	 * Delete regime labels older than a date
-	 */
 	async deleteOlderThan(beforeDate: string): Promise<number> {
-		const result = await this.client.run(`DELETE FROM regime_labels WHERE timestamp < ?`, [
-			beforeDate,
-		]);
-		return result.changes;
+		const result = await this.db
+			.delete(regimeLabels)
+			.where(lte(regimeLabels.timestamp, new Date(beforeDate)))
+			.returning({ id: regimeLabels.id });
+
+		return result.length;
 	}
-}
-
-// ============================================
-// Row Mapping
-// ============================================
-
-interface RegimeLabelRow {
-	id: number;
-	symbol: string;
-	timestamp: string;
-	timeframe: string;
-	regime: string;
-	confidence: number;
-	trend_strength: number | null;
-	volatility_percentile: number | null;
-	correlation_to_market: number | null;
-	model_name: string;
-	model_version: string | null;
-	computed_at: string;
-	[key: string]: unknown;
-}
-
-function mapRowToLabel(row: RegimeLabelRow): RegimeLabel {
-	return {
-		id: row.id,
-		symbol: row.symbol,
-		timestamp: row.timestamp,
-		timeframe: row.timeframe as RegimeTimeframe,
-		regime: row.regime as RegimeType,
-		confidence: row.confidence,
-		trendStrength: row.trend_strength,
-		volatilityPercentile: row.volatility_percentile,
-		correlationToMarket: row.correlation_to_market,
-		modelName: row.model_name,
-		modelVersion: row.model_version,
-		computedAt: row.computed_at,
-	};
 }
