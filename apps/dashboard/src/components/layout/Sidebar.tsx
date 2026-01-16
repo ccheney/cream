@@ -17,6 +17,7 @@ import {
 	Briefcase,
 	CalendarDays,
 	ChevronLeft,
+	Cog,
 	FileText,
 	FlaskConical,
 	Grid2x2,
@@ -77,6 +78,7 @@ export const EXPERIMENT_ITEMS: NavItem[] = [
 	{ href: "/backtest", label: "Backtest", icon: FlaskConical },
 	{ href: "/indicators", label: "Indicators", icon: Beaker },
 	{ href: "/theses", label: "Theses", icon: BarChart3 },
+	{ href: "/workers", label: "Workers", icon: Cog },
 ];
 
 const SIDEBAR_WIDTH = 240;

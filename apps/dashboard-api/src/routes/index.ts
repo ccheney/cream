@@ -64,3 +64,4 @@ export { default as riskRoutes } from "./risk.js";
 export { default as snapshotsRoutes } from "./snapshots.js";
 export { default as systemRoutes } from "./system.js";
 export { default as thesesRoutes } from "./theses.js";
+export { default as workersRoutes } from "./workers.js";
