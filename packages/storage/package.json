@@ -17,11 +17,12 @@
     "test": "CREAM_ENV=BACKTEST bun test",
     "lint": "biome check src/",
     "format": "biome format --write src/",
-    "clean": "rm -rf dist coverage",
-    "db:migrate": "CREAM_ENV=${CREAM_ENV:-BACKTEST} bun run src/run-migrations.ts",
-    "db:status": "CREAM_ENV=${CREAM_ENV:-BACKTEST} bun run src/run-migrations.ts --status",
-    "db:rollback": "CREAM_ENV=${CREAM_ENV:-BACKTEST} bun run src/run-migrations.ts --rollback",
-    "db:seed": "bun run src/seed-config.ts"
+    "clean": "rm -rf dist coverage drizzle",
+    "db:generate": "drizzle-kit generate",
+    "db:migrate": "drizzle-kit migrate",
+    "db:push": "drizzle-kit push",
+    "db:seed": "bun run src/seed.ts",
+    "db:studio": "drizzle-kit studio"
   },
   "dependencies": {
     "@cream/config": "workspace:*",
@@ -29,11 +30,16 @@
     "@cream/logger": "workspace:*",
     "@libsql/client": "0.17.0",
     "@tursodatabase/database": "0.4.3",
-    "@tursodatabase/sync": "0.4.3"
+    "@tursodatabase/sync": "0.4.3",
+    "drizzle-orm": "^0.45.1",
+    "drizzle-zod": "^0.8.3",
+    "pg": "^8.17.1"
   },
   "devDependencies": {
     "@cream/tsconfig": "workspace:*",
     "@types/bun": "1.3.6",
-    "@typescript/native-preview": "7.0.0-dev.20260115.1"
+    "@types/pg": "^8.16.0",
+    "@typescript/native-preview": "7.0.0-dev.20260115.1",
+    "drizzle-kit": "^0.31.8"
   }
 }
