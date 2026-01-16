@@ -43,6 +43,12 @@ export interface ServiceTriggers {
 // Health Server Deps
 // ============================================
 
+export interface NextRunTimes {
+	tradingCycle: Date | null;
+	predictionMarkets: Date | null;
+	filingsSync: Date | null;
+}
+
 export interface HealthServerDeps {
 	getEnvironment: () => RuntimeEnvironment;
 	getConfigId: () => string;
@@ -56,10 +62,13 @@ export interface HealthServerDeps {
 		predictionMarkets: Date | null;
 		filingsSync: Date | null;
 	};
+	getNextRun: () => NextRunTimes | null;
 	getRunningStatus: () => {
 		tradingCycle: boolean;
 		predictionMarkets: boolean;
 		filingsSync: boolean;
+		macroWatch: boolean;
+		newspaper: boolean;
 	};
 	getIndicatorJobStatus: () => Record<string, JobState> | null;
 	getSynthesisScheduler: () => IndicatorSynthesisScheduler | null;
@@ -78,6 +87,7 @@ export function createHealthServer(deps: HealthServerDeps, port?: number) {
 		const indicatorJobs = deps.getIndicatorJobStatus();
 		const synthesisScheduler = deps.getSynthesisScheduler();
 		const startedAt = deps.getStartedAt();
+		const nextRun = deps.getNextRun();
 
 		return {
 			status: "ok",
@@ -90,6 +100,7 @@ export function createHealthServer(deps: HealthServerDeps, port?: number) {
 			},
 			instruments: deps.getInstruments(),
 			last_run: formatLastRun(deps.getLastRun()),
+			next_run: nextRun ? formatNextRun(nextRun) : null,
 			running: deps.getRunningStatus(),
 			indicator_batch_jobs: formatIndicatorJobs(indicatorJobs),
 			synthesis_scheduler: formatSynthesisScheduler(synthesisScheduler),
@@ -206,6 +217,14 @@ function formatLastRun(lastRun: {
 		trading_cycle: lastRun.tradingCycle?.toISOString() ?? null,
 		prediction_markets: lastRun.predictionMarkets?.toISOString() ?? null,
 		filings_sync: lastRun.filingsSync?.toISOString() ?? null,
+	};
+}
+
+function formatNextRun(nextRun: NextRunTimes) {
+	return {
+		trading_cycle: nextRun.tradingCycle?.toISOString() ?? null,
+		prediction_markets: nextRun.predictionMarkets?.toISOString() ?? null,
+		filings_sync: nextRun.filingsSync?.toISOString() ?? null,
 	};
 }
 

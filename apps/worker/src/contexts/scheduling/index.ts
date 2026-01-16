@@ -8,6 +8,7 @@
 export {
 	createSchedulerManager,
 	type JobName,
+	type NextRunTimes,
 	type SchedulerHandlers,
 	type SchedulerIntervals,
 	SchedulerManager,

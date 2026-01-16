@@ -7,7 +7,6 @@
  */
 
 import { formatDistanceToNow } from "date-fns";
-import { RefreshCw } from "lucide-react";
 import { memo } from "react";
 import type { WorkerRun, WorkerService } from "@/hooks/queries";
 import { cn } from "@/lib/utils";
@@ -101,20 +100,13 @@ function WorkerRunsTableSkeleton() {
 export interface WorkerRunsTableProps {
 	runs: WorkerRun[] | undefined;
 	isLoading: boolean;
-	isFetching?: boolean;
-	onRefresh: () => void;
 }
 
 // ============================================
 // Main Component
 // ============================================
 
-function WorkerRunsTableComponent({
-	runs,
-	isLoading,
-	isFetching = false,
-	onRefresh,
-}: WorkerRunsTableProps) {
+function WorkerRunsTableComponent({ runs, isLoading }: WorkerRunsTableProps) {
 	if (isLoading) {
 		return <WorkerRunsTableSkeleton />;
 	}
@@ -122,16 +114,8 @@ function WorkerRunsTableComponent({
 	if (!runs || runs.length === 0) {
 		return (
 			<div className="bg-white dark:bg-night-800 rounded-lg border border-cream-200 dark:border-night-700">
-				<div className="p-4 border-b border-cream-200 dark:border-night-700 flex items-center justify-between">
+				<div className="p-4 border-b border-cream-200 dark:border-night-700">
 					<h3 className="text-lg font-medium text-stone-900 dark:text-night-50">Recent Runs</h3>
-					<button
-						type="button"
-						onClick={onRefresh}
-						disabled={isFetching}
-						className="p-1.5 rounded-md text-stone-500 dark:text-night-300 hover:bg-cream-100 dark:hover:bg-night-700 hover:text-stone-700 dark:hover:text-night-100 transition-colors"
-					>
-						<RefreshCw className={cn("w-4 h-4", isFetching && "animate-spin")} />
-					</button>
 				</div>
 				<div className="flex h-32 items-center justify-center text-stone-500 dark:text-night-400">
 					No recent runs
@@ -142,16 +126,8 @@ function WorkerRunsTableComponent({
 
 	return (
 		<div className="bg-white dark:bg-night-800 rounded-lg border border-cream-200 dark:border-night-700">
-			<div className="p-4 border-b border-cream-200 dark:border-night-700 flex items-center justify-between">
+			<div className="p-4 border-b border-cream-200 dark:border-night-700">
 				<h3 className="text-lg font-medium text-stone-900 dark:text-night-50">Recent Runs</h3>
-				<button
-					type="button"
-					onClick={onRefresh}
-					disabled={isFetching}
-					className="p-1.5 rounded-md text-stone-500 dark:text-night-300 hover:bg-cream-100 dark:hover:bg-night-700 hover:text-stone-700 dark:hover:text-night-100 transition-colors"
-				>
-					<RefreshCw className={cn("w-4 h-4", isFetching && "animate-spin")} />
-				</button>
 			</div>
 
 			<div className="overflow-x-auto">

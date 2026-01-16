@@ -7,8 +7,8 @@
  */
 
 import { formatDistanceToNow } from "date-fns";
-import { Play } from "lucide-react";
-import { memo } from "react";
+import { Clock, Play } from "lucide-react";
+import { memo, useEffect, useState } from "react";
 import type { ServiceStatus } from "@/hooks/queries";
 import { cn } from "@/lib/utils";
 
@@ -30,6 +30,53 @@ function StatusDot({ status }: { status: DotStatus }) {
 			)}
 		/>
 	);
+}
+
+// ============================================
+// Countdown Hook
+// ============================================
+
+function useCountdown(targetDate: string | null): string | null {
+	const [countdown, setCountdown] = useState<string | null>(null);
+
+	useEffect(() => {
+		if (!targetDate) {
+			setCountdown(null);
+			return;
+		}
+
+		const calculateCountdown = () => {
+			const now = Date.now();
+			const target = new Date(targetDate).getTime();
+			const diff = target - now;
+
+			if (diff <= 0) {
+				return "now";
+			}
+
+			const hours = Math.floor(diff / (1000 * 60 * 60));
+			const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+			const seconds = Math.floor((diff % (1000 * 60)) / 1000);
+
+			if (hours > 0) {
+				return `${hours}h ${minutes}m`;
+			}
+			if (minutes > 0) {
+				return `${minutes}m ${seconds}s`;
+			}
+			return `${seconds}s`;
+		};
+
+		setCountdown(calculateCountdown());
+
+		const interval = setInterval(() => {
+			setCountdown(calculateCountdown());
+		}, 1000);
+
+		return () => clearInterval(interval);
+	}, [targetDate]);
+
+	return countdown;
 }
 
 // ============================================
@@ -55,7 +102,8 @@ function ServiceStatusCardComponent({
 	disabled = false,
 	isPending = false,
 }: ServiceStatusCardProps) {
-	const { displayName, status, lastRun } = service;
+	const { displayName, status, lastRun, nextRun } = service;
+	const countdown = useCountdown(nextRun);
 
 	const getDotStatus = (): DotStatus => {
 		if (status === "running") {
@@ -91,6 +139,12 @@ function ServiceStatusCardComponent({
 					<StatusDot status={dotStatus} />
 					<h4 className="font-medium text-stone-900 dark:text-night-50 truncate">{displayName}</h4>
 				</div>
+				{countdown && (
+					<div className="flex items-center gap-1 text-xs text-stone-500 dark:text-night-400 font-mono flex-shrink-0">
+						<Clock className="w-3 h-3" />
+						<span>{countdown}</span>
+					</div>
+				)}
 			</div>
 
 			<div className="flex items-center justify-between">

@@ -47,6 +47,8 @@ import {
 	getDbClient,
 	loadConfig,
 	log,
+	recordRunComplete,
+	recordRunStart,
 	reloadConfig,
 	type TriggerResult,
 	validateHelixDBOrExit,
@@ -124,17 +126,91 @@ async function runPredictionMarkets(): Promise<void> {
 
 async function runFilingsSync(): Promise<void> {
 	state.lastRun.filingsSync = new Date();
-	await state.filingsSync?.sync(getInstruments(), state.environment);
+	const db = await getDbClient();
+	const { runId } = await recordRunStart({
+		db,
+		service: "filings_sync",
+		environment: state.environment,
+	});
+
+	try {
+		const result = await state.filingsSync?.sync(getInstruments(), state.environment);
+		await recordRunComplete({
+			db,
+			runId,
+			success: true,
+			message: result
+				? `${result.filingsIngested} filings, ${result.chunksCreated} chunks`
+				: "Completed",
+			processed: result?.filingsIngested ?? 0,
+		});
+	} catch (error) {
+		await recordRunComplete({
+			db,
+			runId,
+			success: false,
+			message: error instanceof Error ? error.message : "Unknown error",
+		});
+		throw error;
+	}
 }
 
 async function runMacroWatch(): Promise<void> {
 	state.lastRun.macroWatch = new Date();
-	await state.macroWatch.run(getInstruments());
+	const db = await getDbClient();
+	const { runId } = await recordRunStart({
+		db,
+		service: "macro_watch",
+		environment: state.environment,
+	});
+
+	try {
+		const entries = await state.macroWatch.run(getInstruments());
+		await recordRunComplete({
+			db,
+			runId,
+			success: true,
+			message: `${entries.length} entries`,
+			processed: entries.length,
+		});
+	} catch (error) {
+		await recordRunComplete({
+			db,
+			runId,
+			success: false,
+			message: error instanceof Error ? error.message : "Unknown error",
+		});
+		throw error;
+	}
 }
 
 async function compileNewspaper(): Promise<void> {
 	state.lastRun.newspaper = new Date();
-	await state.newspaper.compile(getInstruments());
+	const db = await getDbClient();
+	const { runId } = await recordRunStart({
+		db,
+		service: "newspaper",
+		environment: state.environment,
+	});
+
+	try {
+		const result = await state.newspaper.compile(getInstruments());
+		await recordRunComplete({
+			db,
+			runId,
+			success: result.compiled,
+			message: result.message,
+			processed: result.entryCount,
+		});
+	} catch (error) {
+		await recordRunComplete({
+			db,
+			runId,
+			success: false,
+			message: error instanceof Error ? error.message : "Unknown error",
+		});
+		throw error;
+	}
 }
 
 // ============================================
@@ -360,6 +436,7 @@ async function main() {
 		getIntervals,
 		getInstruments,
 		getLastRun: () => state.lastRun,
+		getNextRun: () => state.schedulerManager?.getNextRunTimes() ?? null,
 		getRunningStatus: () => ({
 			tradingCycle: state.cycleTrigger.isRunning(),
 			predictionMarkets: state.predictionMarkets.isRunning(),

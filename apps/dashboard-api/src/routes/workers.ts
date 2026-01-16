@@ -63,6 +63,7 @@ const ServiceStatusSchema = z.object({
 	displayName: z.string(),
 	status: z.enum(["idle", "running"]),
 	lastRun: LastRunSchema.nullable(),
+	nextRun: z.string().nullable(),
 });
 
 const WorkerStatusResponseSchema = z.object({
@@ -226,11 +227,56 @@ app.openapi(getWorkerStatusRoute, async (c) => {
 			}
 		}
 
+		// Fetch next run times from worker health endpoint
+		const nextRunByService = new Map<WorkerService, string | null>();
+		try {
+			const healthResponse = await fetch(`${WORKER_URL}/health`);
+			if (healthResponse.ok) {
+				const health = (await healthResponse.json()) as {
+					next_run?: {
+						trading_cycle: string | null;
+						prediction_markets: string | null;
+						filings_sync: string | null;
+					};
+					indicator_batch_jobs?: Record<
+						string,
+						{
+							next_run: string | null;
+						}
+					>;
+				};
+
+				if (health.next_run) {
+					// macro_watch and newspaper run on trading cycle schedule
+					nextRunByService.set("macro_watch", health.next_run.trading_cycle);
+					nextRunByService.set("newspaper", health.next_run.trading_cycle);
+					nextRunByService.set("filings_sync", health.next_run.filings_sync);
+				}
+
+				if (health.indicator_batch_jobs) {
+					const jobs = health.indicator_batch_jobs;
+					if (jobs.shortInterest?.next_run) {
+						nextRunByService.set("short_interest", jobs.shortInterest.next_run);
+					}
+					if (jobs.sentiment?.next_run) {
+						nextRunByService.set("sentiment", jobs.sentiment.next_run);
+					}
+					if (jobs.corporateActions?.next_run) {
+						nextRunByService.set("corporate_actions", jobs.corporateActions.next_run);
+					}
+				}
+			}
+		} catch {
+			// Worker not available, continue without schedule info
+			log.debug({}, "Worker health endpoint not available, schedule info unavailable");
+		}
+
 		const services = allServices.map((name) => ({
 			name,
 			displayName: ServiceDisplayNames[name],
 			status: runningServices.has(name) ? ("running" as const) : ("idle" as const),
 			lastRun: lastRunByService.get(name) ?? null,
+			nextRun: nextRunByService.get(name) ?? null,
 		}));
 
 		return c.json({ services }, 200);

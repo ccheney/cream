@@ -25,3 +25,10 @@ export {
 	type WorkerService,
 } from "./health-server.js";
 export { log } from "./logger.js";
+export {
+	type CompleteRunOptions,
+	type RecordRunOptions,
+	type RunRecordResult,
+	recordRunComplete,
+	recordRunStart,
+} from "./run-recorder.js";

@@ -17,6 +17,9 @@ import {
 	calculateNext6AMESTMs,
 	calculateNext15MinMs,
 	calculateNextHourMs,
+	getNext6AMESTDate,
+	getNext15MinDate,
+	getNextHourDate,
 } from "./time-calculator.js";
 
 // ============================================
@@ -41,6 +44,12 @@ export interface SchedulerIntervals {
 	predictionMarketsIntervalMs: number;
 }
 
+export interface NextRunTimes {
+	tradingCycle: Date | null;
+	predictionMarkets: Date | null;
+	filingsSync: Date | null;
+}
+
 export interface SchedulerHandlers {
 	runTradingCycle: () => Promise<void>;
 	runPredictionMarkets: () => Promise<void>;
@@ -63,12 +72,22 @@ export class SchedulerManager {
 		filingsSync: null,
 	};
 
+	private nextRun: NextRunTimes = {
+		tradingCycle: null,
+		predictionMarkets: null,
+		filingsSync: null,
+	};
+
 	private readonly handlers: SchedulerHandlers;
 	private intervalProvider: () => SchedulerIntervals;
 
 	constructor(handlers: SchedulerHandlers, intervalProvider: () => SchedulerIntervals) {
 		this.handlers = handlers;
 		this.intervalProvider = intervalProvider;
+	}
+
+	getNextRunTimes(): NextRunTimes {
+		return { ...this.nextRun };
 	}
 
 	start(): void {
@@ -190,6 +209,7 @@ export class SchedulerManager {
 	private scheduleTradingCycle(): void {
 		const intervals = this.intervalProvider();
 		const msUntilNextHour = calculateNextHourMs();
+		this.nextRun.tradingCycle = getNextHourDate();
 
 		this.timers.tradingCycle = setTimeout(() => {
 			this.runTradingCycleWithGating().catch((error) => {
@@ -198,6 +218,8 @@ export class SchedulerManager {
 					"Trading cycle with gating failed"
 				);
 			});
+			// Update next run time after execution
+			this.nextRun.tradingCycle = new Date(Date.now() + intervals.tradingCycleIntervalMs);
 			this.timers.tradingCycle = setInterval(() => {
 				this.runTradingCycleWithGating().catch((error) => {
 					log.error(
@@ -205,6 +227,8 @@ export class SchedulerManager {
 						"Trading cycle with gating failed"
 					);
 				});
+				// Update next run time after each interval execution
+				this.nextRun.tradingCycle = new Date(Date.now() + intervals.tradingCycleIntervalMs);
 			}, intervals.tradingCycleIntervalMs);
 		}, msUntilNextHour);
 	}
@@ -212,22 +236,35 @@ export class SchedulerManager {
 	private schedulePredictionMarkets(): void {
 		const intervals = this.intervalProvider();
 		const msUntilNext15Min = calculateNext15MinMs();
+		this.nextRun.predictionMarkets = getNext15MinDate();
 
 		this.timers.predictionMarkets = setTimeout(() => {
 			this.handlers.runPredictionMarkets();
-			this.timers.predictionMarkets = setInterval(
-				this.handlers.runPredictionMarkets,
-				intervals.predictionMarketsIntervalMs
-			);
+			// Update next run time after execution
+			this.nextRun.predictionMarkets = new Date(Date.now() + intervals.predictionMarketsIntervalMs);
+			this.timers.predictionMarkets = setInterval(() => {
+				this.handlers.runPredictionMarkets();
+				// Update next run time after each interval execution
+				this.nextRun.predictionMarkets = new Date(
+					Date.now() + intervals.predictionMarketsIntervalMs
+				);
+			}, intervals.predictionMarketsIntervalMs);
 		}, msUntilNext15Min);
 	}
 
 	private scheduleFilingsSync(): void {
 		const msUntil6AM = calculateNext6AMESTMs();
+		this.nextRun.filingsSync = getNext6AMESTDate();
 
 		this.timers.filingsSync = setTimeout(() => {
 			this.handlers.runFilingsSync();
-			this.timers.filingsSync = setInterval(this.handlers.runFilingsSync, FILINGS_SYNC_INTERVAL_MS);
+			// Update next run time after execution
+			this.nextRun.filingsSync = new Date(Date.now() + FILINGS_SYNC_INTERVAL_MS);
+			this.timers.filingsSync = setInterval(() => {
+				this.handlers.runFilingsSync();
+				// Update next run time after each interval execution
+				this.nextRun.filingsSync = new Date(Date.now() + FILINGS_SYNC_INTERVAL_MS);
+			}, FILINGS_SYNC_INTERVAL_MS);
 		}, msUntil6AM);
 	}
 }

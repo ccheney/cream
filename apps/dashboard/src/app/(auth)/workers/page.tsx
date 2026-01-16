@@ -41,12 +41,7 @@ const triggerLabels: Record<WorkerService, string> = {
 export default function WorkersPage() {
 	const { subscribe, unsubscribe, connected } = useWebSocketContext();
 	const { data: statusData, isLoading: statusLoading } = useWorkerServicesStatus();
-	const {
-		data: runsData,
-		isLoading: runsLoading,
-		isFetching: runsFetching,
-		refetch: refetchRuns,
-	} = useWorkerRuns({ limit: 20 });
+	const { data: runsData, isLoading: runsLoading } = useWorkerRuns({ limit: 20 });
 	const triggerMutation = useTriggerWorkerService();
 
 	// Subscribe to workers channel for real-time updates
@@ -104,12 +99,7 @@ export default function WorkersPage() {
 
 			{/* Recent Runs Table */}
 			<QueryErrorBoundary title="Failed to load recent runs">
-				<WorkerRunsTable
-					runs={runsData?.runs}
-					isLoading={runsLoading}
-					isFetching={runsFetching}
-					onRefresh={() => refetchRuns()}
-				/>
+				<WorkerRunsTable runs={runsData?.runs} isLoading={runsLoading} />
 			</QueryErrorBoundary>
 		</div>
 	);

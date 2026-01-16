@@ -36,6 +36,7 @@ export interface ServiceStatus {
 	displayName: string;
 	status: "idle" | "running";
 	lastRun: LastRun | null;
+	nextRun: string | null;
 }
 
 export interface WorkerStatusResponse {
