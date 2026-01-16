@@ -6,9 +6,8 @@
  * @see docs/plans/ui/04-data-requirements.md
  */
 import { and, count, desc, eq, gte, lte, sql } from "drizzle-orm";
-import { getDb, type Database } from "../db";
+import { type Database, getDb } from "../db";
 import { portfolioSnapshots } from "../schema/core-trading";
-import { RepositoryError } from "./base";
 
 // ============================================
 // Types
@@ -128,6 +127,9 @@ export class PortfolioSnapshotsRepository {
 			})
 			.returning();
 
+		if (!row) {
+			throw new Error("Failed to create portfolio snapshot");
+		}
 		return mapSnapshotRow(row);
 	}
 

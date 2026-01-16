@@ -1,5 +1,4 @@
 import { beforeAll, describe, expect, mock, test } from "bun:test";
-import batchStatusRoutes from "./batch-status";
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type ApiResponse = any;
@@ -8,46 +7,46 @@ type ApiResponse = any;
 const mockSyncRuns = [
 	{
 		id: "run-001",
-		run_type: "fundamentals",
-		started_at: "2024-01-15T10:00:00Z",
-		completed_at: "2024-01-15T10:05:00Z",
-		symbols_processed: 100,
-		symbols_failed: 2,
+		runType: "fundamentals",
+		startedAt: "2024-01-15T10:00:00Z",
+		completedAt: "2024-01-15T10:05:00Z",
+		symbolsProcessed: 100,
+		symbolsFailed: 2,
 		status: "completed",
-		error_message: null,
+		errorMessage: null,
 		environment: "PAPER",
 	},
 	{
 		id: "run-002",
-		run_type: "short_interest",
-		started_at: "2024-01-15T10:10:00Z",
-		completed_at: "2024-01-15T10:12:00Z",
-		symbols_processed: 100,
-		symbols_failed: 0,
+		runType: "short_interest",
+		startedAt: "2024-01-15T10:10:00Z",
+		completedAt: "2024-01-15T10:12:00Z",
+		symbolsProcessed: 100,
+		symbolsFailed: 0,
 		status: "completed",
-		error_message: null,
+		errorMessage: null,
 		environment: "PAPER",
 	},
 	{
 		id: "run-003",
-		run_type: "sentiment",
-		started_at: "2024-01-15T10:15:00Z",
-		completed_at: null,
-		symbols_processed: 50,
-		symbols_failed: 0,
+		runType: "sentiment",
+		startedAt: "2024-01-15T10:15:00Z",
+		completedAt: null,
+		symbolsProcessed: 50,
+		symbolsFailed: 0,
 		status: "running",
-		error_message: null,
+		errorMessage: null,
 		environment: "PAPER",
 	},
 	{
 		id: "run-004",
-		run_type: "corporate_actions",
-		started_at: "2024-01-15T09:00:00Z",
-		completed_at: "2024-01-15T09:01:00Z",
-		symbols_processed: 0,
-		symbols_failed: 100,
+		runType: "corporate_actions",
+		startedAt: "2024-01-15T09:00:00Z",
+		completedAt: "2024-01-15T09:01:00Z",
+		symbolsProcessed: 0,
+		symbolsFailed: 100,
 		status: "failed",
-		error_message: "API rate limit exceeded",
+		errorMessage: "API rate limit exceeded",
 		environment: "PAPER",
 	},
 ];
@@ -56,75 +55,64 @@ beforeAll(() => {
 	Bun.env.CREAM_ENV = "BACKTEST";
 });
 
-mock.module("../db", () => ({
-	getDbClient: async () => ({
-		execute: async (query: string, args?: unknown[]) => {
-			// Handle different queries
-			if (query.includes("COUNT(*)")) {
-				// Summary query
-				return [
-					{
-						total: mockSyncRuns.length,
-						running: mockSyncRuns.filter((r) => r.status === "running").length,
-						completed: mockSyncRuns.filter((r) => r.status === "completed").length,
-						failed: mockSyncRuns.filter((r) => r.status === "failed").length,
-					},
-				];
+// Mock repository
+const mockIndicatorSyncRunsRepo = {
+	findMany: async (
+		filters?: { runType?: string; status?: string },
+		limit = 20
+	): Promise<typeof mockSyncRuns> => {
+		let filtered = [...mockSyncRuns];
+
+		if (filters?.runType) {
+			filtered = filtered.filter((r) => r.runType === filters.runType);
+		}
+		if (filters?.status) {
+			filtered = filtered.filter((r) => r.status === filters.status);
+		}
+
+		filtered.sort((a, b) => new Date(b.startedAt).getTime() - new Date(a.startedAt).getTime());
+		return filtered.slice(0, limit);
+	},
+
+	findById: async (id: string) => {
+		return mockSyncRuns.find((r) => r.id === id) ?? null;
+	},
+
+	getSummary: async () => {
+		const completed = mockSyncRuns.filter((r) => r.status === "completed");
+		const lastCompleted: Record<string, string | null> = {
+			fundamentals: null,
+			short_interest: null,
+			sentiment: null,
+			corporate_actions: null,
+		};
+		for (const run of completed) {
+			if (!lastCompleted[run.runType] || run.completedAt! > lastCompleted[run.runType]!) {
+				lastCompleted[run.runType] = run.completedAt;
 			}
+		}
 
-			if (query.includes("MAX(completed_at)")) {
-				// Last completed query
-				const completed = mockSyncRuns.filter((r) => r.status === "completed");
-				const byType: Record<string, string | null> = {};
-				for (const run of completed) {
-					if (!byType[run.run_type] || run.completed_at! > byType[run.run_type]!) {
-						byType[run.run_type] = run.completed_at;
-					}
-				}
-				return Object.entries(byType).map(([run_type, last_completed]) => ({
-					run_type,
-					last_completed,
-				}));
-			}
+		return {
+			totalRuns: mockSyncRuns.length,
+			running: mockSyncRuns.filter((r) => r.status === "running").length,
+			completed: mockSyncRuns.filter((r) => r.status === "completed").length,
+			failed: mockSyncRuns.filter((r) => r.status === "failed").length,
+			lastCompleted,
+		};
+	},
+};
 
-			if (query.includes("WHERE id = ?")) {
-				// Single run query
-				const id = args?.[0];
-				const run = mockSyncRuns.find((r) => r.id === id);
-				return run ? [run] : [];
-			}
-
-			// Main list query - apply filters
-			let filtered = [...mockSyncRuns];
-
-			if (args && args.length > 0) {
-				const lastArg = args[args.length - 1];
-				const limit = typeof lastArg === "number" ? lastArg : 20;
-
-				// Check for type filter
-				if (query.includes("run_type = ?")) {
-					const typeArg = args[0] as string;
-					filtered = filtered.filter((r) => r.run_type === typeArg);
-				}
-
-				// Check for status filter
-				if (query.includes("status = ?")) {
-					const statusIdx = query.includes("run_type = ?") ? 1 : 0;
-					const statusArg = args[statusIdx] as string;
-					filtered = filtered.filter((r) => r.status === statusArg);
-				}
-
-				// Sort by started_at DESC and limit
-				filtered.sort(
-					(a, b) => new Date(b.started_at).getTime() - new Date(a.started_at).getTime()
-				);
-				filtered = filtered.slice(0, limit);
-			}
-
-			return filtered;
-		},
-	}),
+mock.module("../db.js", () => ({
+	getIndicatorSyncRunsRepo: () => mockIndicatorSyncRunsRepo,
+	getMacroWatchRepo: () => ({}),
+	getShortInterestRepo: () => ({}),
+	getSentimentRepo: () => ({}),
+	getCorporateActionsRepo: () => ({}),
+	getFilingsRepo: () => ({}),
 }));
+
+// Import after mock is set up
+const batchStatusRoutes = (await import("./batch-status")).default;
 
 describe("Batch Status Routes", () => {
 	test("GET /batch/status returns recent runs with summary", async () => {

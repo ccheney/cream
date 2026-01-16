@@ -30,11 +30,11 @@
     "lint": "biome check src/",
     "format": "biome format --write src/",
     "clean": "rm -rf dist coverage drizzle",
-    "db:generate": "drizzle-kit generate",
-    "db:migrate": "drizzle-kit migrate",
-    "db:push": "drizzle-kit push",
+    "db:generate": "bun --bun x drizzle-kit generate",
+    "db:migrate": "bun --bun x drizzle-kit migrate",
+    "db:push": "bun --bun x drizzle-kit push",
     "db:seed": "bun run src/seed.ts",
-    "db:studio": "drizzle-kit studio"
+    "db:studio": "bun --bun x drizzle-kit studio"
   },
   "dependencies": {
     "@cream/config": "workspace:*",

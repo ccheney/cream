@@ -84,69 +84,72 @@ export async function scanEconomicCalendar(): Promise<MacroWatchEntry[]> {
 
 	try {
 		// Dynamic import to avoid circular dependencies
-		const { createAlphaVantageClientFromEnv } = await import("@cream/marketdata");
+		const { createAlphaVantageClientFromEnv, isAlphaVantageConfigured } = await import(
+			"@cream/marketdata"
+		);
 
-		try {
-			const avClient = createAlphaVantageClientFromEnv();
+		// Only attempt API calls if Alpha Vantage is configured
+		if (isAlphaVantageConfigured()) {
+			try {
+				const avClient = createAlphaVantageClientFromEnv();
 
-			// Fetch latest economic data to check for recent releases
-			const fedFundsRate = await avClient.getFederalFundsRate();
-			const treasuryYield = await avClient.getTreasuryYield("10year");
+				// Fetch latest economic data to check for recent releases
+				const fedFundsRate = await avClient.getFederalFundsRate();
+				const treasuryYield = await avClient.getTreasuryYield("10year");
 
-			// Check if there was a recent Fed rate change
-			if (fedFundsRate.data.length >= 2) {
-				const latest = fedFundsRate.data[0];
-				const previous = fedFundsRate.data[1];
+				// Check if there was a recent Fed rate change
+				if (fedFundsRate.data.length >= 2) {
+					const latest = fedFundsRate.data[0];
+					const previous = fedFundsRate.data[1];
 
-				if (latest && previous && latest.value !== previous.value) {
-					entries.push({
-						id: `economic-fed-rate-${Date.now()}`,
-						timestamp: now.toISOString(),
-						session,
-						category: "ECONOMIC",
-						headline: `Fed Funds Rate: ${latest.value}% (prev: ${previous.value}%)`,
-						symbols: ["SPY", "QQQ", "TLT"],
-						source: "Alpha Vantage",
-						metadata: {
-							indicator: "FEDERAL_FUNDS_RATE",
-							current: latest.value,
-							previous: previous.value,
-							date: latest.date,
-						},
-					});
-				}
-			}
-
-			// Check for treasury yield changes
-			if (treasuryYield.data.length >= 2) {
-				const latest = treasuryYield.data[0];
-				const previous = treasuryYield.data[1];
-
-				if (latest && previous) {
-					const delta = Number(latest.value) - Number(previous.value);
-					// Report significant yield changes (>5bps)
-					if (Math.abs(delta) > 0.05) {
+					if (latest && previous && latest.value !== previous.value) {
 						entries.push({
-							id: `economic-treasury-${Date.now()}`,
 							timestamp: now.toISOString(),
 							session,
 							category: "ECONOMIC",
-							headline: `10Y Treasury: ${latest.value}% (${delta > 0 ? "+" : ""}${(delta * 100).toFixed(1)}bps)`,
-							symbols: ["TLT", "IEF", "BND"],
+							headline: `Fed Funds Rate: ${latest.value}% (prev: ${previous.value}%)`,
+							symbols: ["SPY", "QQQ", "TLT"],
 							source: "Alpha Vantage",
 							metadata: {
-								indicator: "TREASURY_YIELD_10Y",
+								indicator: "FEDERAL_FUNDS_RATE",
 								current: latest.value,
 								previous: previous.value,
-								delta,
 								date: latest.date,
 							},
 						});
 					}
 				}
+
+				// Check for treasury yield changes
+				if (treasuryYield.data.length >= 2) {
+					const latest = treasuryYield.data[0];
+					const previous = treasuryYield.data[1];
+
+					if (latest && previous) {
+						const delta = Number(latest.value) - Number(previous.value);
+						// Report significant yield changes (>5bps)
+						if (Math.abs(delta) > 0.05) {
+							entries.push({
+								timestamp: now.toISOString(),
+								session,
+								category: "ECONOMIC",
+								headline: `10Y Treasury: ${latest.value}% (${delta > 0 ? "+" : ""}${(delta * 100).toFixed(1)}bps)`,
+								symbols: ["TLT", "IEF", "BND"],
+								source: "Alpha Vantage",
+								metadata: {
+									indicator: "TREASURY_YIELD_10Y",
+									current: latest.value,
+									previous: previous.value,
+									delta,
+									date: latest.date,
+								},
+							});
+						}
+					}
+				}
+			} catch {
+				// Alpha Vantage API error (rate limited, invalid key, etc.) - use static calendar check
 			}
-		} catch {
-			// Alpha Vantage not available, use static calendar check
 		}
 
 		// Static calendar check for high-impact releases
@@ -181,7 +184,6 @@ export async function scanEconomicCalendar(): Promise<MacroWatchEntry[]> {
 
 			if (releasesSoon) {
 				entries.push({
-					id: `economic-upcoming-${indicator.name}-${Date.now()}`,
 					timestamp: now.toISOString(),
 					session,
 					category: "ECONOMIC",

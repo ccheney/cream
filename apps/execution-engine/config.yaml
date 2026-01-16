@@ -140,11 +140,17 @@ circuit_breaker:
     minimum_calls: 10
 
 # Persistence Configuration
-# State persistence for crash recovery
+# State persistence for crash recovery using shared PostgreSQL database.
+# Database URL is resolved from environment variables:
+#   BACKTEST: DATABASE_URL_BACKTEST || DATABASE_URL
+#   PAPER:    DATABASE_URL_PAPER || DATABASE_URL
+#   LIVE:     DATABASE_URL
 persistence:
   enabled: true
-  db_path: "./data/orders.db"
+  # Optional: Override database URL (default: resolved from env vars)
+  # database_url: "postgresql://user:pass@localhost:5432/cream"
   snapshot_interval_secs: 60
+  max_connections: 5
 
 # Environment Configuration
 # Runtime environment settings

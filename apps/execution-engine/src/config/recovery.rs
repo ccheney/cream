@@ -3,6 +3,7 @@
 use serde::{Deserialize, Serialize};
 
 /// Recovery configuration for crash recovery on startup.
+#[allow(clippy::struct_excessive_bools)] // Config struct naturally has boolean flags
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct RecoveryConfig {
     /// Enable recovery on startup.
@@ -44,6 +45,7 @@ impl RecoveryConfig {
     /// Recovery is enabled by default in PAPER/LIVE modes,
     /// disabled in BACKTEST mode since there's no state to recover.
     #[must_use]
+    #[allow(clippy::missing_const_for_fn)] // Method call prevents const
     pub fn is_enabled_for_env(&self, env: &crate::models::Environment) -> bool {
         if !self.enabled {
             return false;
@@ -52,7 +54,7 @@ impl RecoveryConfig {
         !env.is_backtest()
     }
 
-    /// Convert to the internal RecoveryConfig type used by the recovery module.
+    /// Convert to the internal `RecoveryConfig` type used by the recovery module.
     #[must_use]
     pub fn to_recovery_config(&self) -> crate::execution::RecoveryConfig {
         use rust_decimal::Decimal;
@@ -75,7 +77,7 @@ const fn default_recovery_enabled() -> bool {
     true
 }
 
-pub(crate) const fn default_auto_resolve_orphans() -> bool {
+pub const fn default_auto_resolve_orphans() -> bool {
     true
 }
 

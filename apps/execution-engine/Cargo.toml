@@ -74,8 +74,8 @@ dotenvy = "0.15"  # Load .env files
 # HTTP client for broker APIs
 reqwest = { version = "0.13", features = ["json", "rustls"], default-features = false }
 
-# Turso Database (Rust rewrite of SQLite)
-turso = "0.4.2"
+# PostgreSQL database (shared with TypeScript apps)
+sqlx = { version = "0.8.6", features = ["runtime-tokio", "tls-rustls", "postgres", "chrono", "rust_decimal"] }
 async-trait = "0.1.89"
 libm = "0.2.15"
 rust_decimal_macros = "1.39.0"

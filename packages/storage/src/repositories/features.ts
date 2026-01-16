@@ -5,9 +5,9 @@
  *
  * @see docs/plans/33-indicator-engine-v2.md
  */
-import { and, desc, eq, gte, inArray, lte, sql } from "drizzle-orm";
+import { and, eq, gte, inArray, lte, sql } from "drizzle-orm";
 import { z } from "zod";
-import { getDb, type Database } from "../db";
+import { type Database, getDb } from "../db";
 import { features } from "../schema/market-data";
 
 // ============================================

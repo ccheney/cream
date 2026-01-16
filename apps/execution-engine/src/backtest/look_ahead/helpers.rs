@@ -44,6 +44,7 @@ pub fn format_duration(duration: Duration) -> String {
 }
 
 #[cfg(test)]
+#[allow(clippy::unwrap_used)]
 mod tests {
     use super::*;
 

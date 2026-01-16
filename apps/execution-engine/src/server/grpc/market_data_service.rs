@@ -1,4 +1,4 @@
-//! MarketDataService gRPC implementation.
+//! `MarketDataService` gRPC implementation.
 //!
 //! Implements the `MarketDataService` gRPC service for market data
 //! streaming, snapshots, and option chain queries.
@@ -42,7 +42,7 @@ impl std::fmt::Debug for MarketDataServiceImpl {
         f.debug_struct("MarketDataServiceImpl")
             .field("environment", &self.environment)
             .field("has_feed_controller", &self.feed_controller.is_some())
-            .finish()
+            .finish_non_exhaustive()
     }
 }
 
@@ -76,6 +76,7 @@ impl MarketDataServiceImpl {
 }
 
 #[tonic::async_trait]
+#[allow(clippy::too_many_lines)]
 impl MarketDataService for MarketDataServiceImpl {
     type SubscribeMarketDataStream =
         Pin<Box<dyn Stream<Item = Result<SubscribeMarketDataResponse, Status>> + Send>>;
@@ -197,6 +198,7 @@ impl MarketDataService for MarketDataServiceImpl {
 
         // Map timeframe from minutes to Alpaca format
         let timeframe_minutes = req.bar_timeframes.first().copied().unwrap_or(60);
+        #[allow(clippy::match_same_arms)] // 60 explicit for documentation
         let timeframe = match timeframe_minutes {
             1 => "1Min",
             5 => "5Min",
@@ -215,6 +217,7 @@ impl MarketDataService for MarketDataServiceImpl {
         // We fetch 100 bars minimum to support most indicators with some buffer.
         // For hourly bars, a trading day has ~6.5 hours, so 100 bars = ~15 trading days.
         // We go back extra calendar days to account for weekends/holidays.
+        #[allow(clippy::match_same_arms)] // 60 explicit for documentation
         let (bars_needed, calendar_days_back): (u32, i64) = match timeframe_minutes {
             1 => (100, 2),      // 1-min bars: 2 days covers ~780 market minutes
             5 => (100, 5),      // 5-min bars: 5 days covers ~390 bars
@@ -356,22 +359,23 @@ impl MarketDataService for MarketDataServiceImpl {
         // Get underlying price from stock quote
         let underlying_price = self
             .alpaca
-            .get_quotes(&[req.underlying.clone()])
+            .get_quotes(std::slice::from_ref(&req.underlying))
             .await
             .ok()
-            .and_then(|r| r.quotes.get(&req.underlying).map(|q| (q.bp + q.ap) / 2.0))
+            .and_then(|r| {
+                r.quotes
+                    .get(&req.underlying)
+                    .map(|q| f64::midpoint(q.bp, q.ap))
+            })
             .unwrap_or(0.0);
 
         // Convert Alpaca snapshots to proto OptionQuotes
         let mut option_quotes = Vec::new();
         for (symbol, snapshot) in &snapshots_response.snapshots {
             // Parse the OCC symbol to get contract details
-            let contract = match AlpacaOptionContract::parse_occ_symbol(symbol) {
-                Some(c) => c,
-                None => {
-                    tracing::trace!(symbol = %symbol, "Skipping unparseable option symbol");
-                    continue;
-                }
+            let Some(contract) = AlpacaOptionContract::parse_occ_symbol(symbol) else {
+                tracing::trace!(symbol = %symbol, "Skipping unparseable option symbol");
+                continue;
             };
 
             // Apply expiration filter if specified
@@ -380,15 +384,15 @@ impl MarketDataService for MarketDataServiceImpl {
             }
 
             // Apply strike range filter if specified
-            if let Some(min) = req.min_strike {
-                if contract.strike < min {
-                    continue;
-                }
+            if let Some(min) = req.min_strike
+                && contract.strike < min
+            {
+                continue;
             }
-            if let Some(max) = req.max_strike {
-                if contract.strike > max {
-                    continue;
-                }
+            if let Some(max) = req.max_strike
+                && contract.strike > max
+            {
+                continue;
             }
 
             // Build option quote from snapshot
@@ -398,8 +402,8 @@ impl MarketDataService for MarketDataServiceImpl {
                 ask: q.ap,
                 bid_size: q.bs,
                 ask_size: q.ask_size,
-                last: snapshot.latest_trade.as_ref().map(|t| t.p).unwrap_or(0.0),
-                last_size: snapshot.latest_trade.as_ref().map(|t| t.s).unwrap_or(0),
+                last: snapshot.latest_trade.as_ref().map_or(0.0, |t| t.p),
+                last_size: snapshot.latest_trade.as_ref().map_or(0, |t| t.s),
                 volume: 0, // Volume not provided in snapshots
                 timestamp: parse_timestamp(&q.t),
             });

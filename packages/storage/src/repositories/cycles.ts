@@ -5,8 +5,8 @@
  *
  * @see docs/plans/ui/40-streaming-data-integration.md
  */
-import { and, count, desc, eq, inArray, sql } from "drizzle-orm";
-import { getDb, type Database } from "../db";
+import { and, count, desc, eq, inArray } from "drizzle-orm";
+import { type Database, getDb } from "../db";
 import { cycleEvents, cycles } from "../schema/core-trading";
 import { RepositoryError } from "./base";
 
@@ -370,6 +370,9 @@ export class CyclesRepository {
 			})
 			.returning();
 
+		if (!row) {
+			throw new Error("Failed to create cycle");
+		}
 		return mapCycleRow(row);
 	}
 
@@ -392,28 +395,53 @@ export class CyclesRepository {
 			updatedAt: new Date(),
 		};
 
-		if (input.status !== undefined) updateData.status = input.status;
-		if (input.completedAt !== undefined) updateData.completedAt = new Date(input.completedAt);
-		if (input.durationMs !== undefined) updateData.durationMs = input.durationMs;
-		if (input.currentPhase !== undefined) updateData.currentPhase = input.currentPhase;
-		if (input.phaseStartedAt !== undefined)
+		if (input.status !== undefined) {
+			updateData.status = input.status;
+		}
+		if (input.completedAt !== undefined) {
+			updateData.completedAt = new Date(input.completedAt);
+		}
+		if (input.durationMs !== undefined) {
+			updateData.durationMs = input.durationMs;
+		}
+		if (input.currentPhase !== undefined) {
+			updateData.currentPhase = input.currentPhase;
+		}
+		if (input.phaseStartedAt !== undefined) {
 			updateData.phaseStartedAt = new Date(input.phaseStartedAt);
-		if (input.completedSymbols !== undefined) updateData.completedSymbols = input.completedSymbols;
-		if (input.progressPct !== undefined) updateData.progressPct = String(input.progressPct);
-		if (input.approved !== undefined) updateData.approved = input.approved;
-		if (input.iterations !== undefined) updateData.iterations = input.iterations;
-		if (input.decisionsCount !== undefined) updateData.decisionsCount = input.decisionsCount;
-		if (input.ordersCount !== undefined) updateData.ordersCount = input.ordersCount;
-		if (input.decisions !== undefined) updateData.decisionsJson = input.decisions;
-		if (input.orders !== undefined) updateData.ordersJson = input.orders;
-		if (input.errorMessage !== undefined) updateData.errorMessage = input.errorMessage;
-		if (input.errorStack !== undefined) updateData.errorStack = input.errorStack;
+		}
+		if (input.completedSymbols !== undefined) {
+			updateData.completedSymbols = input.completedSymbols;
+		}
+		if (input.progressPct !== undefined) {
+			updateData.progressPct = String(input.progressPct);
+		}
+		if (input.approved !== undefined) {
+			updateData.approved = input.approved;
+		}
+		if (input.iterations !== undefined) {
+			updateData.iterations = input.iterations;
+		}
+		if (input.decisionsCount !== undefined) {
+			updateData.decisionsCount = input.decisionsCount;
+		}
+		if (input.ordersCount !== undefined) {
+			updateData.ordersCount = input.ordersCount;
+		}
+		if (input.decisions !== undefined) {
+			updateData.decisionsJson = input.decisions;
+		}
+		if (input.orders !== undefined) {
+			updateData.ordersJson = input.orders;
+		}
+		if (input.errorMessage !== undefined) {
+			updateData.errorMessage = input.errorMessage;
+		}
+		if (input.errorStack !== undefined) {
+			updateData.errorStack = input.errorStack;
+		}
 
-		const [row] = await this.db
-			.update(cycles)
-			.set(updateData)
-			.where(eq(cycles.id, id))
-			.returning();
+		const [row] = await this.db.update(cycles).set(updateData).where(eq(cycles.id, id)).returning();
 
 		if (!row) {
 			throw RepositoryError.notFound("cycles", id);
@@ -430,9 +458,7 @@ export class CyclesRepository {
 		const conditions = [];
 
 		if (options?.environment) {
-			conditions.push(
-				eq(cycles.environment, options.environment as "BACKTEST" | "PAPER" | "LIVE")
-			);
+			conditions.push(eq(cycles.environment, options.environment as "BACKTEST" | "PAPER" | "LIVE"));
 		}
 		if (options?.status) {
 			conditions.push(eq(cycles.status, options.status));
@@ -443,10 +469,7 @@ export class CyclesRepository {
 		const pageSize = options?.pagination?.pageSize ?? 50;
 		const offset = (page - 1) * pageSize;
 
-		const [countResult] = await this.db
-			.select({ count: count() })
-			.from(cycles)
-			.where(whereClause);
+		const [countResult] = await this.db.select({ count: count() }).from(cycles).where(whereClause);
 
 		const rows = await this.db
 			.select()
@@ -512,6 +535,9 @@ export class CyclesRepository {
 			})
 			.returning();
 
+		if (!row) {
+			throw new Error("Failed to add cycle event");
+		}
 		return mapCycleEventRow(row);
 	}
 
@@ -564,7 +590,7 @@ export class CyclesRepository {
 					eq(cycleEvents.cycleId, cycleId),
 					inArray(
 						cycleEvents.eventType,
-						STREAMING_EVENT_TYPES as typeof cycleEvents.$inferInsert.eventType[]
+						STREAMING_EVENT_TYPES as (typeof cycleEvents.$inferInsert.eventType)[]
 					)
 				)
 			)

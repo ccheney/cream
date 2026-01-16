@@ -63,8 +63,8 @@ export function useGlobalSearch(query: string) {
 			);
 			return data;
 		},
-		staleTime: STALE_TIMES.SHORT,
-		gcTime: CACHE_TIMES.SHORT,
+		staleTime: STALE_TIMES.DEFAULT,
+		gcTime: CACHE_TIMES.DEFAULT,
 		enabled: trimmedQuery.length >= 2,
 	});
 }

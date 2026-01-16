@@ -361,10 +361,10 @@ app.openapi(summaryRoute, async (c) => {
 		status: "open",
 	});
 	const longValue = positions.data
-		.filter((p) => p.side === "LONG")
+		.filter((p) => p.side === "long")
 		.reduce((sum, p) => sum + (p.marketValue ?? 0), 0);
 	const shortValue = positions.data
-		.filter((p) => p.side === "SHORT")
+		.filter((p) => p.side === "short")
 		.reduce((sum, p) => sum + Math.abs(p.marketValue ?? 0), 0);
 	const netExposure = longValue - shortValue;
 
@@ -462,7 +462,7 @@ app.openapi(positionsRoute, async (c) => {
 			return {
 				id: p.id,
 				symbol: p.symbol,
-				side: p.side,
+				side: p.side === "long" ? "LONG" : "SHORT",
 				qty: p.quantity,
 				avgEntry: p.avgEntryPrice,
 				currentPrice,
@@ -515,7 +515,7 @@ app.openapi(positionDetailRoute, async (c) => {
 	return c.json({
 		id: position.id,
 		symbol: position.symbol,
-		side: position.side,
+		side: position.side === "long" ? "LONG" : "SHORT",
 		qty: position.quantity,
 		avgEntry: position.avgEntryPrice,
 		currentPrice: position.currentPrice,
@@ -661,13 +661,13 @@ app.openapi(performanceRoute, async (c) => {
 	// Get executed decisions for trade statistics (kept for potential future use)
 	const _decisions = await decisionsRepo.findMany(
 		{ status: "executed" },
-		{ page: 1, pageSize: 1000 }
+		{ limit: 1000, offset: 0 }
 	);
 
 	// Get filled orders for P&L calculations
 	const orders = await ordersRepo.findMany(
 		{ status: "filled", environment: getCurrentEnvironment() },
-		{ page: 1, pageSize: 1000 }
+		{ limit: 1000, offset: 0 }
 	);
 
 	// Calculate period boundaries
@@ -709,7 +709,7 @@ app.openapi(performanceRoute, async (c) => {
 		const qty = order.filledQuantity ?? order.quantity;
 		const price = order.avgFillPrice ?? order.limitPrice ?? 0;
 
-		if (order.side === "BUY") {
+		if (order.side === "buy") {
 			// Opening or adding to position
 			const existing = positionCosts.get(symbol);
 			if (existing) {
@@ -720,7 +720,7 @@ app.openapi(performanceRoute, async (c) => {
 			} else {
 				positionCosts.set(symbol, { qty, avgCost: price });
 			}
-		} else if (order.side === "SELL") {
+		} else if (order.side === "sell") {
 			// Closing position - calculate P&L
 			const existing = positionCosts.get(symbol);
 			if (existing && existing.qty > 0) {
@@ -900,14 +900,12 @@ app.openapi(closePositionRoute, async (c) => {
 
 	try {
 		// Create a close order
-		const orderId = crypto.randomUUID();
 		const order = await ordersRepo.create({
-			id: orderId,
 			decisionId: null,
 			symbol: position.symbol,
-			side: position.side === "LONG" ? "SELL" : "BUY",
+			side: position.side === "long" ? "sell" : "buy",
 			quantity: position.quantity,
-			orderType: body.marketOrder ? "MARKET" : "LIMIT",
+			orderType: body.marketOrder ? "market" : "limit",
 			limitPrice: body.limitPrice ?? null,
 			environment: position.environment,
 		});

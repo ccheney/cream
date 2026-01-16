@@ -30,7 +30,7 @@ impl Default for PricingConfig {
     }
 }
 
-pub(crate) const fn default_risk_free_rate() -> f64 {
+pub const fn default_risk_free_rate() -> f64 {
     0.05
 }
 
@@ -38,6 +38,6 @@ const fn default_volatility_window() -> u32 {
     30
 }
 
-pub(crate) const fn default_true() -> bool {
+pub const fn default_true() -> bool {
     true
 }

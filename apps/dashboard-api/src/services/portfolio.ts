@@ -184,7 +184,7 @@ export class PortfolioService {
 					// Calculate unrealized PnL
 					// Long: MV - Cost, Short: Cost - MV
 					const unrealizedPnl =
-						item.pos.side === "LONG" ? marketValue - costBasis : costBasis - marketValue;
+						item.pos.side === "long" ? marketValue - costBasis : costBasis - marketValue;
 
 					const unrealizedPnlPct = costBasis > 0 ? (unrealizedPnl / costBasis) * 100 : 0;
 

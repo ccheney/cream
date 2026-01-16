@@ -13,15 +13,24 @@ import type { MacroWatchEntry, MacroWatchSession } from "../schemas.js";
 /**
  * Major indices and macro symbols to always include in news.
  */
+const MAJOR_INDEX_ETFS = ["SPY", "QQQ", "DIA", "IWM", "RSP"];
+const VOLATILITY_SYMBOLS = ["VIX", "UVXY", "VXX", "VIXY", "SVXY", "VIXM"];
+const BOND_SYMBOLS = ["TLT", "TBT", "BND", "HYG", "LQD"];
+const METAL_SYMBOLS = ["GLD", "SLV", "GDX", "GOLD"];
+const ENERGY_SYMBOLS = ["USO", "XLE", "XOP", "OIL", "UCO"];
+const SECTOR_ETFS = ["XLF", "XLK", "XLV", "XLI", "XLC"];
+const CURRENCY_SYMBOLS = ["DXY", "UUP", "FXE", "FXY"];
+const INTERNATIONAL_ETFS = ["EEM", "EFA", "VWO"];
+
 const MAJOR_SYMBOLS = new Set([
-	"SPY", "QQQ", "DIA", "IWM", "RSP",   // Major index ETFs
-	"VIX", "UVXY", "VXX", "VIXY", "SVXY", "VIXM", // Volatility
-	"TLT", "TBT", "BND", "HYG", "LQD",   // Bonds
-	"GLD", "SLV", "GDX", "GOLD",         // Metals
-	"USO", "XLE", "XOP", "OIL", "UCO",   // Energy
-	"XLF", "XLK", "XLV", "XLI", "XLC",   // Sector ETFs
-	"DXY", "UUP", "FXE", "FXY",          // Currencies
-	"EEM", "EFA", "VWO",                  // International
+	...MAJOR_INDEX_ETFS,
+	...VOLATILITY_SYMBOLS,
+	...BOND_SYMBOLS,
+	...METAL_SYMBOLS,
+	...ENERGY_SYMBOLS,
+	...SECTOR_ETFS,
+	...CURRENCY_SYMBOLS,
+	...INTERNATIONAL_ETFS,
 ]);
 
 /**
@@ -67,7 +76,6 @@ export async function scanNews(symbols: string[], since: string): Promise<MacroW
 
 		for (const article of news) {
 			entries.push({
-				id: `news-${article.id}`,
 				timestamp: article.created_at,
 				session,
 				category: "NEWS",
@@ -86,9 +94,12 @@ export async function scanNews(symbols: string[], since: string): Promise<MacroW
 		const generalNews = await client.getNews([], 20, since, now);
 		const universeSet = new Set(symbols.map((u) => u.toUpperCase()));
 
+		// Track article IDs to avoid duplicates
+		const seenArticleIds = new Set(news.map((a) => a.id));
+
 		for (const article of generalNews) {
 			// Skip if already captured via symbol filter
-			if (entries.some((e) => e.id === `news-${article.id}`)) {
+			if (seenArticleIds.has(article.id)) {
 				continue;
 			}
 
@@ -98,7 +109,6 @@ export async function scanNews(symbols: string[], since: string): Promise<MacroW
 
 			if (mentionsUniverse || mentionsMajor) {
 				entries.push({
-					id: `news-${article.id}`,
 					timestamp: article.created_at,
 					session,
 					category: "NEWS",
@@ -112,6 +122,7 @@ export async function scanNews(symbols: string[], since: string): Promise<MacroW
 						isMacro: mentionsMajor && !mentionsUniverse,
 					},
 				});
+				seenArticleIds.add(article.id);
 			}
 		}
 	} catch {

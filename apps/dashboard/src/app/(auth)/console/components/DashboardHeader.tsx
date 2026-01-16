@@ -15,9 +15,10 @@ function SystemControls({
 	const systemStatus = status?.status;
 
 	// Default to showing Start enabled when status unknown (but not during initial load)
-	const canStart = !systemStatus || systemStatus === "STOPPED" || systemStatus === "PAUSED";
-	const canPause = systemStatus === "ACTIVE";
-	const canStop = systemStatus === "ACTIVE" || systemStatus === "PAUSED";
+	// API returns lowercase values: "stopped", "active", "paused"
+	const canStart = !systemStatus || systemStatus === "stopped" || systemStatus === "paused";
+	const canPause = systemStatus === "active";
+	const canStop = systemStatus === "active" || systemStatus === "paused";
 
 	return (
 		<>

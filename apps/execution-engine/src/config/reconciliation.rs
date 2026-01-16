@@ -22,7 +22,7 @@ pub struct ReconciliationConfig {
     /// Automatically resolve orphaned orders.
     #[serde(default = "default_auto_resolve_orphans")]
     pub auto_resolve_orphans: bool,
-    /// Action on critical discrepancy: "halt", "log_and_continue", or "alert".
+    /// Action on critical discrepancy: "halt", `log_and_continue`, or "alert".
     #[serde(default = "default_critical_action")]
     pub on_critical_discrepancy: String,
 }
@@ -46,6 +46,7 @@ impl ReconciliationConfig {
     /// Reconciliation is enabled by default in PAPER/LIVE modes,
     /// disabled in BACKTEST mode since there's no broker to reconcile with.
     #[must_use]
+    #[allow(clippy::missing_const_for_fn)] // Method call prevents const
     pub fn is_enabled_for_env(&self, env: &crate::models::Environment) -> bool {
         if !self.enabled {
             return false;
@@ -54,7 +55,7 @@ impl ReconciliationConfig {
         !env.is_backtest()
     }
 
-    /// Convert to the internal ReconciliationConfig type used by the reconciliation module.
+    /// Convert to the internal `ReconciliationConfig` type used by the reconciliation module.
     #[must_use]
     pub fn to_reconciliation_config(
         &self,
@@ -62,6 +63,7 @@ impl ReconciliationConfig {
         use crate::execution::reconciliation::CriticalDiscrepancyAction;
         use rust_decimal::Decimal;
 
+        #[allow(clippy::match_same_arms)] // Explicit halt arm for documentation clarity
         let critical_action = match self.on_critical_discrepancy.to_lowercase().as_str() {
             "halt" => CriticalDiscrepancyAction::Halt,
             "log_and_continue" => CriticalDiscrepancyAction::LogAndContinue,

@@ -7,7 +7,7 @@
  */
 import { and, eq, gt, lte } from "drizzle-orm";
 import { z } from "zod";
-import { getDb, type Database } from "../db";
+import { type Database, getDb } from "../db";
 import { universeCache } from "../schema/market-data";
 
 // ============================================
@@ -97,12 +97,7 @@ export class UniverseCacheRepository {
 		const [row] = await this.db
 			.select()
 			.from(universeCache)
-			.where(
-				and(
-					eq(universeCache.sourceHash, sourceHash),
-					gt(universeCache.expiresAt, now)
-				)
-			)
+			.where(and(eq(universeCache.sourceHash, sourceHash), gt(universeCache.expiresAt, now)))
 			.limit(1);
 
 		return row ? mapUniverseCacheRow(row) : null;
@@ -140,12 +135,7 @@ export class UniverseCacheRepository {
 	async delete(sourceType: SourceType, sourceId: string): Promise<boolean> {
 		const result = await this.db
 			.delete(universeCache)
-			.where(
-				and(
-					eq(universeCache.sourceType, sourceType),
-					eq(universeCache.sourceId, sourceId)
-				)
-			)
+			.where(and(eq(universeCache.sourceType, sourceType), eq(universeCache.sourceId, sourceId)))
 			.returning({ id: universeCache.id });
 
 		return result.length > 0;

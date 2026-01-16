@@ -59,7 +59,9 @@ function isCommonStock(symbol: string): boolean {
  * Check if a symbol passes exchange filter.
  */
 function isAllowedExchange(exchange: string | undefined): boolean {
-	if (!exchange) return false;
+	if (!exchange) {
+		return false;
+	}
 	return ALLOWED_EXCHANGES.has(exchange.toUpperCase());
 }
 
@@ -121,7 +123,6 @@ export async function scanMovers(universeSymbols: string[]): Promise<MacroWatchE
 				.includes(gainer.symbol.toUpperCase());
 
 			entries.push({
-				id: `mover-gainer-${gainer.symbol}-${Date.now()}`,
 				timestamp: now,
 				session,
 				category: "MOVER",
@@ -151,7 +152,6 @@ export async function scanMovers(universeSymbols: string[]): Promise<MacroWatchE
 				.includes(loser.symbol.toUpperCase());
 
 			entries.push({
-				id: `mover-loser-${loser.symbol}-${Date.now()}`,
 				timestamp: now,
 				session,
 				category: "MOVER",
@@ -179,7 +179,6 @@ export async function scanMovers(universeSymbols: string[]): Promise<MacroWatchE
 		// Report unusually active universe symbols
 		for (const active of universeActives.slice(0, 5)) {
 			entries.push({
-				id: `mover-active-${active.symbol}-${Date.now()}`,
 				timestamp: now,
 				session,
 				category: "MOVER",

@@ -54,7 +54,7 @@ fn default_alpaca_feed() -> String {
     "sip".to_string()
 }
 
-fn default_alpaca_symbols() -> Vec<String> {
+const fn default_alpaca_symbols() -> Vec<String> {
     Vec::new()
 }
 

@@ -8,7 +8,7 @@
  * @see docs/plans/42-overnight-macro-watch.md
  */
 import { and, count, desc, eq, gte, lte, sql } from "drizzle-orm";
-import { getDb, type Database } from "../db";
+import { type Database, getDb } from "../db";
 import { macroWatchEntries, morningNewspapers } from "../schema/external";
 
 // ============================================
@@ -32,7 +32,7 @@ export interface MacroWatchEntry {
 }
 
 export interface CreateMacroWatchEntryInput {
-	id: string;
+	id?: string;
 	timestamp: string;
 	session: MacroWatchSession;
 	category: MacroWatchCategory;
@@ -59,7 +59,7 @@ export interface MorningNewspaper {
 }
 
 export interface CreateMorningNewspaperInput {
-	id: string;
+	id?: string;
 	date: string;
 	compiledAt: string;
 	sections: NewspaperSections;
@@ -91,7 +91,7 @@ function mapEntryRow(row: MacroWatchEntryRow): MacroWatchEntry {
 		symbols: row.symbols as string[],
 		source: row.source,
 		metadata: row.metadata as Record<string, unknown> | null,
-		createdAt: row.createdAt.toISOString(),
+		createdAt: row.createdAt?.toISOString() ?? new Date().toISOString(),
 	};
 }
 
@@ -109,7 +109,7 @@ function mapNewspaperRow(row: MorningNewspaperRow): MorningNewspaper {
 		compiledAt: row.compiledAt.toISOString(),
 		sections: (row.sections as NewspaperSections) ?? defaultSections,
 		rawEntryIds: row.rawEntryIds as string[],
-		createdAt: row.createdAt.toISOString(),
+		createdAt: row.createdAt?.toISOString() ?? new Date().toISOString(),
 	};
 }
 
@@ -129,20 +129,26 @@ export class MacroWatchRepository {
 	// ============================================
 
 	async saveEntry(input: CreateMacroWatchEntryInput): Promise<MacroWatchEntry> {
-		const [row] = await this.db
-			.insert(macroWatchEntries)
-			.values({
-				id: input.id,
-				timestamp: new Date(input.timestamp),
-				session: input.session as typeof macroWatchEntries.$inferInsert.session,
-				category: input.category as typeof macroWatchEntries.$inferInsert.category,
-				headline: input.headline,
-				symbols: input.symbols,
-				source: input.source,
-				metadata: input.metadata ?? null,
-			})
-			.returning();
+		const values: typeof macroWatchEntries.$inferInsert = {
+			timestamp: new Date(input.timestamp),
+			session: input.session as typeof macroWatchEntries.$inferInsert.session,
+			category: input.category as typeof macroWatchEntries.$inferInsert.category,
+			headline: input.headline,
+			symbols: input.symbols,
+			source: input.source,
+			metadata: input.metadata ?? null,
+		};
 
+		// Only set id if provided (otherwise let DB generate uuidv7)
+		if (input.id) {
+			values.id = input.id;
+		}
+
+		const [row] = await this.db.insert(macroWatchEntries).values(values).returning();
+
+		if (!row) {
+			throw new Error("Failed to save macro watch entry");
+		}
 		return mapEntryRow(row);
 	}
 
@@ -192,10 +198,20 @@ export class MacroWatchRepository {
 		const conditions = [];
 
 		if (filters.session) {
-			conditions.push(eq(macroWatchEntries.session, filters.session as typeof macroWatchEntries.$inferSelect.session));
+			conditions.push(
+				eq(
+					macroWatchEntries.session,
+					filters.session as typeof macroWatchEntries.$inferSelect.session
+				)
+			);
 		}
 		if (filters.category) {
-			conditions.push(eq(macroWatchEntries.category, filters.category as typeof macroWatchEntries.$inferSelect.category));
+			conditions.push(
+				eq(
+					macroWatchEntries.category,
+					filters.category as typeof macroWatchEntries.$inferSelect.category
+				)
+			);
 		}
 		if (filters.fromTime) {
 			conditions.push(gte(macroWatchEntries.timestamp, new Date(filters.fromTime)));
@@ -266,30 +282,42 @@ export class MacroWatchRepository {
 	// ============================================
 
 	async saveNewspaper(input: CreateMorningNewspaperInput): Promise<MorningNewspaper> {
-		const [row] = await this.db
-			.insert(morningNewspapers)
-			.values({
-				id: input.id,
-				date: input.date,
-				compiledAt: new Date(input.compiledAt),
-				sections: input.sections,
-				rawEntryIds: input.rawEntryIds,
-			})
-			.returning();
+		const values: typeof morningNewspapers.$inferInsert = {
+			date: input.date,
+			compiledAt: new Date(input.compiledAt),
+			sections: input.sections,
+			rawEntryIds: input.rawEntryIds,
+		};
 
+		// Only set id if provided (otherwise let DB generate uuidv7)
+		if (input.id) {
+			values.id = input.id;
+		}
+
+		const [row] = await this.db.insert(morningNewspapers).values(values).returning();
+
+		if (!row) {
+			throw new Error("Failed to save morning newspaper");
+		}
 		return mapNewspaperRow(row);
 	}
 
 	async upsertNewspaper(input: CreateMorningNewspaperInput): Promise<MorningNewspaper> {
+		const values: typeof morningNewspapers.$inferInsert = {
+			date: input.date,
+			compiledAt: new Date(input.compiledAt),
+			sections: input.sections,
+			rawEntryIds: input.rawEntryIds,
+		};
+
+		// Only set id if provided (otherwise let DB generate uuidv7)
+		if (input.id) {
+			values.id = input.id;
+		}
+
 		const [row] = await this.db
 			.insert(morningNewspapers)
-			.values({
-				id: input.id,
-				date: input.date,
-				compiledAt: new Date(input.compiledAt),
-				sections: input.sections,
-				rawEntryIds: input.rawEntryIds,
-			})
+			.values(values)
 			.onConflictDoUpdate({
 				target: morningNewspapers.date,
 				set: {
@@ -300,6 +328,9 @@ export class MacroWatchRepository {
 			})
 			.returning();
 
+		if (!row) {
+			throw new Error("Failed to upsert morning newspaper");
+		}
 		return mapNewspaperRow(row);
 	}
 
@@ -327,12 +358,7 @@ export class MacroWatchRepository {
 		const rows = await this.db
 			.select()
 			.from(morningNewspapers)
-			.where(
-				and(
-					gte(morningNewspapers.date, startDate),
-					lte(morningNewspapers.date, endDate)
-				)
-			)
+			.where(and(gte(morningNewspapers.date, startDate), lte(morningNewspapers.date, endDate)))
 			.orderBy(desc(morningNewspapers.date));
 
 		return rows.map(mapNewspaperRow);
@@ -402,13 +428,9 @@ export class MacroWatchRepository {
 		newestEntry: string | null;
 		latestNewspaperDate: string | null;
 	}> {
-		const [entryCountResult] = await this.db
-			.select({ count: count() })
-			.from(macroWatchEntries);
+		const [entryCountResult] = await this.db.select({ count: count() }).from(macroWatchEntries);
 
-		const [newspaperCountResult] = await this.db
-			.select({ count: count() })
-			.from(morningNewspapers);
+		const [newspaperCountResult] = await this.db.select({ count: count() }).from(morningNewspapers);
 
 		const [oldest] = await this.db
 			.select({ timestamp: sql<Date>`MIN(${macroWatchEntries.timestamp})` })

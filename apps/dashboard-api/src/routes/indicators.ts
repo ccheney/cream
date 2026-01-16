@@ -22,16 +22,7 @@ const app = new OpenAPIHono();
 // ============================================
 
 const IndicatorStatusEnum = z.enum(["staging", "paper", "production", "retired"]);
-const IndicatorCategoryEnum = z.enum([
-	"momentum",
-	"trend",
-	"volatility",
-	"volume",
-	"custom",
-	"correlation",
-	"regime",
-	"microstructure",
-]);
+const IndicatorCategoryEnum = z.enum(["momentum", "trend", "volatility", "volume", "sentiment"]);
 
 const IndicatorSummarySchema = z.object({
 	id: z.string(),
@@ -157,8 +148,7 @@ async function getTriggerConditions(): Promise<{
 
 	// Get recent IC values for rolling average
 	const icValues = await indicatorsRepo.getRecentICValues(30);
-	const rollingIC =
-		icValues.length > 0 ? icValues.reduce((a, b) => a + b, 0) / icValues.length : 0;
+	const rollingIC = icValues.length > 0 ? icValues.reduce((a, b) => a + b, 0) / icValues.length : 0;
 
 	// Calculate IC decay (consecutive days below threshold)
 	let icDecayDays = 0;
@@ -245,7 +235,7 @@ app.openapi(listIndicatorsRoute, async (c) => {
 
 	const result = await repo.findMany({
 		status: status as "staging" | "paper" | "production" | "retired" | undefined,
-		category: category as "momentum" | "trend" | "volatility" | "volume" | "custom" | undefined,
+		category: category as "momentum" | "trend" | "volatility" | "volume" | "sentiment" | undefined,
 	});
 
 	// Sort by status priority then name
@@ -260,7 +250,9 @@ app.openapi(listIndicatorsRoute, async (c) => {
 		.sort((a, b) => {
 			const priorityA = statusPriority[a.status] ?? 5;
 			const priorityB = statusPriority[b.status] ?? 5;
-			if (priorityA !== priorityB) return priorityA - priorityB;
+			if (priorityA !== priorityB) {
+				return priorityA - priorityB;
+			}
 			return a.name.localeCompare(b.name);
 		})
 		.map((ind) => ({
@@ -418,11 +410,13 @@ app.openapi(getPaperTradingRoute, async (c) => {
 			const signalsWithOutcomes = await repo.getPaperSignalsWithOutcomes(ind.id);
 
 			let currentIC: number | null = null;
-			const validSignals = signalsWithOutcomes.filter((s) => s.outcome !== null);
+			const validSignals = signalsWithOutcomes.filter(
+				(s): s is typeof s & { outcome: number } => s.outcome !== null
+			);
 			if (validSignals.length > 0) {
 				currentIC = calculateSimpleIC(
 					validSignals.map((s) => s.signal),
-					validSignals.map((s) => s.outcome!)
+					validSignals.map((s) => s.outcome)
 				);
 			}
 
@@ -663,8 +657,9 @@ app.openapi(getSynthesisStatusRoute, async (c) => {
 	// Check for active synthesis
 	let activeSynthesis = null;
 	const recentStaging = await repo.findRecentStagingIndicators(1);
-	if (recentStaging.length > 0) {
-		const ind = recentStaging[0]!;
+	const firstStaging = recentStaging[0];
+	if (firstStaging) {
+		const ind = firstStaging;
 		activeSynthesis = {
 			id: ind.id,
 			name: ind.name,
@@ -757,10 +752,7 @@ const getSynthesisHistoryRoute = createRoute({
 	tags: ["Indicators"],
 });
 
-function extractTriggerReason(ind: {
-	generatedBy: string;
-	hypothesis: string;
-}): string {
+function extractTriggerReason(ind: { generatedBy: string; hypothesis: string }): string {
 	const generatedBy = ind.generatedBy ?? "";
 
 	if (generatedBy.startsWith("synthesis-")) {

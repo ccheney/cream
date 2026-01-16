@@ -46,6 +46,7 @@ impl AlpacaProcessor {
     /// * `rx` - Channel receiver for incoming messages
     /// * `microstructure` - Shared microstructure manager
     #[must_use]
+    #[allow(clippy::missing_const_for_fn)] // mpsc::Receiver is not const-constructible
     pub fn new(
         rx: mpsc::Receiver<AlpacaMessage>,
         microstructure: Arc<Mutex<MicrostructureManager>>,
@@ -131,7 +132,7 @@ impl AlpacaProcessor {
             }
 
             // Log progress periodically
-            if message_count % 10_000 == 0 {
+            if message_count.is_multiple_of(10_000) {
                 info!(
                     total = message_count,
                     trades = trade_count,
@@ -204,6 +205,7 @@ pub struct AlpacaProcessorBuilder {
 impl AlpacaProcessorBuilder {
     /// Create a new builder with a microstructure manager.
     #[must_use]
+    #[allow(clippy::missing_const_for_fn)] // Arc is not const-constructible
     pub fn new(microstructure: Arc<Mutex<MicrostructureManager>>) -> Self {
         Self {
             microstructure,
@@ -230,6 +232,7 @@ impl AlpacaProcessorBuilder {
 // ============================================================================
 
 #[cfg(test)]
+#[allow(clippy::expect_used, clippy::significant_drop_tightening)]
 mod tests {
     use super::*;
     use rust_decimal_macros::dec;

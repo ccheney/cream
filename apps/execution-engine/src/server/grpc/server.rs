@@ -1,7 +1,7 @@
 //! Server builder functions for gRPC services.
 //!
 //! Provides functions to build and run the gRPC server with
-//! the ExecutionService and MarketDataService.
+//! the `ExecutionService` and `MarketDataService`.
 
 use std::sync::Arc;
 

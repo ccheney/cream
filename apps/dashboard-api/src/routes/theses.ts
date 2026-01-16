@@ -225,10 +225,8 @@ app.openapi(createThesisRoute, async (c) => {
 	const body = c.req.valid("json");
 	const repo = await getThesesRepo();
 
-	const thesisId = `thesis_${Date.now()}_${Math.random().toString(36).slice(2, 9)}`;
-
+	// thesisId auto-generated as uuidv7 by database
 	const thesis = await repo.create({
-		thesisId,
 		instrumentId: body.symbol,
 		state: "WATCHING",
 		entryThesis: body.thesis,

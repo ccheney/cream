@@ -1,82 +1,84 @@
-import { beforeAll, describe, expect, mock, test } from "bun:test";
-import batchTriggerRoutes from "./batch-trigger";
+import { beforeAll, beforeEach, describe, expect, mock, test } from "bun:test";
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type ApiResponse = any;
 
-// Mock data for indicator_sync_runs
-const mockSyncRuns: Array<{
+interface MockRun {
 	id: string;
-	run_type: string;
-	started_at: string;
+	runType: string;
+	startedAt: string;
+	completedAt: string | null;
 	status: string;
-	symbols_processed: number;
-	symbols_failed: number;
+	symbolsProcessed: number;
+	symbolsFailed: number;
 	environment: string;
-	error_message: string | null;
-}> = [];
+	errorMessage: string | null;
+}
+
+// Mock data for indicator_sync_runs
+let mockSyncRuns: MockRun[] = [];
 
 beforeAll(() => {
 	Bun.env.CREAM_ENV = "BACKTEST";
 });
 
-mock.module("../db", () => ({
-	getDbClient: async () => ({
-		execute: async (query: string, args?: unknown[]) => {
-			// Check for running jobs
-			if (query.includes("status = 'running'")) {
-				const jobType = args?.[0] as string;
-				const runningJob = mockSyncRuns.find(
-					(r) => r.run_type === jobType && r.status === "running"
-				);
-				return runningJob ? [runningJob] : [];
-			}
+beforeEach(() => {
+	mockSyncRuns = [];
+});
 
-			// Check job status for cancel
-			if (query.includes("SELECT status FROM indicator_sync_runs WHERE id = ?")) {
-				const id = args?.[0] as string;
-				const run = mockSyncRuns.find((r) => r.id === id);
-				return run ? [{ status: run.status }] : [];
-			}
+// Mock repository
+const createMockIndicatorSyncRunsRepo = () => ({
+	findRunningByType: async (runType: string): Promise<MockRun | null> => {
+		return mockSyncRuns.find((r) => r.runType === runType && r.status === "running") ?? null;
+	},
 
-			return [];
-		},
-		run: async (query: string, args?: unknown[]) => {
-			// Insert new trigger request
-			if (query.includes("INSERT INTO indicator_sync_runs")) {
-				const id = args?.[0] as string;
-				const runType = args?.[1] as string;
-				const startedAt = args?.[2] as string;
-				const environment = args?.[3] as string;
+	findById: async (id: string): Promise<MockRun | null> => {
+		return mockSyncRuns.find((r) => r.id === id) ?? null;
+	},
 
-				mockSyncRuns.push({
-					id,
-					run_type: runType,
-					started_at: startedAt,
-					status: "pending",
-					symbols_processed: 0,
-					symbols_failed: 0,
-					environment,
-					error_message: null,
-				});
-				return { changes: 1 };
-			}
+	create: async (input: {
+		id?: string;
+		runType: string;
+		environment: string;
+		errorMessage?: string;
+	}): Promise<MockRun> => {
+		const newRun: MockRun = {
+			id: input.id ?? `run-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+			runType: input.runType,
+			startedAt: new Date().toISOString(),
+			completedAt: null,
+			status: "pending",
+			symbolsProcessed: 0,
+			symbolsFailed: 0,
+			environment: input.environment,
+			errorMessage: input.errorMessage ?? null,
+		};
+		mockSyncRuns.push(newRun);
+		return newRun;
+	},
 
-			// Update for cancel
-			if (query.includes("UPDATE indicator_sync_runs")) {
-				const id = args?.[0] as string;
-				const run = mockSyncRuns.find((r) => r.id === id);
-				if (run) {
-					run.status = "failed";
-					run.error_message = "Cancelled by user";
-				}
-				return { changes: run ? 1 : 0 };
-			}
+	cancel: async (id: string): Promise<MockRun | null> => {
+		const run = mockSyncRuns.find((r) => r.id === id);
+		if (run) {
+			run.status = "failed";
+			run.errorMessage = "Cancelled by user";
+			run.completedAt = new Date().toISOString();
+		}
+		return run ?? null;
+	},
+});
 
-			return { changes: 0 };
-		},
-	}),
+mock.module("../db.js", () => ({
+	getIndicatorSyncRunsRepo: createMockIndicatorSyncRunsRepo,
+	getMacroWatchRepo: () => ({}),
+	getShortInterestRepo: () => ({}),
+	getSentimentRepo: () => ({}),
+	getCorporateActionsRepo: () => ({}),
+	getFilingsRepo: () => ({}),
 }));
+
+// Import after mock is set up
+const batchTriggerRoutes = (await import("./batch-trigger")).default;
 
 describe("Batch Trigger Routes", () => {
 	describe("POST /batch/trigger", () => {
@@ -184,13 +186,14 @@ describe("Batch Trigger Routes", () => {
 			// Add a running job to mock data
 			mockSyncRuns.push({
 				id: "run-existing",
-				run_type: "fundamentals",
-				started_at: new Date().toISOString(),
+				runType: "fundamentals",
+				startedAt: new Date().toISOString(),
+				completedAt: null,
 				status: "running",
-				symbols_processed: 50,
-				symbols_failed: 0,
+				symbolsProcessed: 50,
+				symbolsFailed: 0,
 				environment: "BACKTEST",
-				error_message: null,
+				errorMessage: null,
 			});
 
 			const res = await batchTriggerRoutes.request("/batch/trigger", {
@@ -202,12 +205,6 @@ describe("Batch Trigger Routes", () => {
 			});
 
 			expect(res.status).toBe(409);
-
-			// Clean up
-			const idx = mockSyncRuns.findIndex((r) => r.id === "run-existing");
-			if (idx >= 0) {
-				mockSyncRuns.splice(idx, 1);
-			}
 		});
 	});
 
@@ -216,13 +213,14 @@ describe("Batch Trigger Routes", () => {
 			// Add a pending job
 			mockSyncRuns.push({
 				id: "run-to-cancel",
-				run_type: "fundamentals",
-				started_at: new Date().toISOString(),
+				runType: "fundamentals",
+				startedAt: new Date().toISOString(),
+				completedAt: null,
 				status: "pending",
-				symbols_processed: 0,
-				symbols_failed: 0,
+				symbolsProcessed: 0,
+				symbolsFailed: 0,
 				environment: "BACKTEST",
-				error_message: null,
+				errorMessage: null,
 			});
 
 			const res = await batchTriggerRoutes.request("/batch/cancel/run-to-cancel", {
@@ -233,24 +231,19 @@ describe("Batch Trigger Routes", () => {
 			const data = (await res.json()) as ApiResponse;
 			expect(data.success).toBe(true);
 			expect(data.message).toContain("run-to-cancel");
-
-			// Clean up
-			const idx = mockSyncRuns.findIndex((r) => r.id === "run-to-cancel");
-			if (idx >= 0) {
-				mockSyncRuns.splice(idx, 1);
-			}
 		});
 
 		test("cancels a running job", async () => {
 			mockSyncRuns.push({
 				id: "run-running",
-				run_type: "sentiment",
-				started_at: new Date().toISOString(),
+				runType: "sentiment",
+				startedAt: new Date().toISOString(),
+				completedAt: null,
 				status: "running",
-				symbols_processed: 25,
-				symbols_failed: 0,
+				symbolsProcessed: 25,
+				symbolsFailed: 0,
 				environment: "BACKTEST",
-				error_message: null,
+				errorMessage: null,
 			});
 
 			const res = await batchTriggerRoutes.request("/batch/cancel/run-running", {
@@ -260,12 +253,6 @@ describe("Batch Trigger Routes", () => {
 			expect(res.status).toBe(200);
 			const data = (await res.json()) as ApiResponse;
 			expect(data.success).toBe(true);
-
-			// Clean up
-			const idx = mockSyncRuns.findIndex((r) => r.id === "run-running");
-			if (idx >= 0) {
-				mockSyncRuns.splice(idx, 1);
-			}
 		});
 
 		test("returns 404 for non-existent job", async () => {
@@ -279,13 +266,14 @@ describe("Batch Trigger Routes", () => {
 		test("returns 409 when trying to cancel completed job", async () => {
 			mockSyncRuns.push({
 				id: "run-completed",
-				run_type: "fundamentals",
-				started_at: new Date().toISOString(),
+				runType: "fundamentals",
+				startedAt: new Date().toISOString(),
+				completedAt: new Date().toISOString(),
 				status: "completed",
-				symbols_processed: 100,
-				symbols_failed: 0,
+				symbolsProcessed: 100,
+				symbolsFailed: 0,
 				environment: "BACKTEST",
-				error_message: null,
+				errorMessage: null,
 			});
 
 			const res = await batchTriggerRoutes.request("/batch/cancel/run-completed", {
@@ -293,24 +281,19 @@ describe("Batch Trigger Routes", () => {
 			});
 
 			expect(res.status).toBe(409);
-
-			// Clean up
-			const idx = mockSyncRuns.findIndex((r) => r.id === "run-completed");
-			if (idx >= 0) {
-				mockSyncRuns.splice(idx, 1);
-			}
 		});
 
 		test("returns 409 when trying to cancel failed job", async () => {
 			mockSyncRuns.push({
 				id: "run-failed",
-				run_type: "short_interest",
-				started_at: new Date().toISOString(),
+				runType: "short_interest",
+				startedAt: new Date().toISOString(),
+				completedAt: new Date().toISOString(),
 				status: "failed",
-				symbols_processed: 0,
-				symbols_failed: 100,
+				symbolsProcessed: 0,
+				symbolsFailed: 100,
 				environment: "BACKTEST",
-				error_message: "API error",
+				errorMessage: "API error",
 			});
 
 			const res = await batchTriggerRoutes.request("/batch/cancel/run-failed", {
@@ -318,12 +301,6 @@ describe("Batch Trigger Routes", () => {
 			});
 
 			expect(res.status).toBe(409);
-
-			// Clean up
-			const idx = mockSyncRuns.findIndex((r) => r.id === "run-failed");
-			if (idx >= 0) {
-				mockSyncRuns.splice(idx, 1);
-			}
 		});
 	});
 });

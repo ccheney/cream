@@ -7,7 +7,7 @@
  * @see docs/plans/33-indicator-engine-v2.md
  */
 import { and, count, desc, eq, sql } from "drizzle-orm";
-import { getDb, type Database } from "../db";
+import { type Database, getDb } from "../db";
 import { indicatorSyncRuns } from "../schema/indicators";
 
 // ============================================
@@ -16,7 +16,7 @@ import { indicatorSyncRuns } from "../schema/indicators";
 
 export type SyncRunType = "fundamentals" | "short_interest" | "sentiment" | "corporate_actions";
 
-export type SyncRunStatus = "pending" | "running" | "completed" | "failed";
+export type SyncRunStatus = "running" | "completed" | "failed";
 
 export interface IndicatorSyncRun {
 	id: string;
@@ -90,20 +90,25 @@ export class IndicatorSyncRunsRepository {
 	}
 
 	async create(input: CreateIndicatorSyncRunInput): Promise<IndicatorSyncRun> {
-		const [row] = await this.db
-			.insert(indicatorSyncRuns)
-			.values({
-				id: input.id,
-				runType: input.runType,
-				startedAt: new Date(),
-				status: "pending",
-				symbolsProcessed: 0,
-				symbolsFailed: 0,
-				environment: input.environment as typeof indicatorSyncRuns.$inferInsert.environment,
-				errorMessage: input.errorMessage ?? null,
-			})
-			.returning();
+		const values: typeof indicatorSyncRuns.$inferInsert = {
+			runType: input.runType,
+			startedAt: new Date(),
+			status: "running",
+			symbolsProcessed: 0,
+			symbolsFailed: 0,
+			environment: input.environment as (typeof indicatorSyncRuns.$inferInsert)["environment"],
+			errorMessage: input.errorMessage ?? null,
+		};
 
+		if (input.id) {
+			values.id = input.id;
+		}
+
+		const [row] = await this.db.insert(indicatorSyncRuns).values(values).returning();
+
+		if (!row) {
+			throw new Error("Failed to create indicator sync run");
+		}
 		return mapRow(row);
 	}
 
@@ -117,17 +122,24 @@ export class IndicatorSyncRunsRepository {
 		return row ? mapRow(row) : null;
 	}
 
-	async findMany(filters?: SyncRunFilters, limit: number = 20): Promise<IndicatorSyncRun[]> {
+	async findMany(filters?: SyncRunFilters, limit = 20): Promise<IndicatorSyncRun[]> {
 		const conditions = [];
 
 		if (filters?.runType) {
 			conditions.push(eq(indicatorSyncRuns.runType, filters.runType));
 		}
 		if (filters?.status) {
-			conditions.push(eq(indicatorSyncRuns.status, filters.status as typeof indicatorSyncRuns.$inferSelect.status));
+			conditions.push(
+				eq(indicatorSyncRuns.status, filters.status as typeof indicatorSyncRuns.$inferSelect.status)
+			);
 		}
 		if (filters?.environment) {
-			conditions.push(eq(indicatorSyncRuns.environment, filters.environment as typeof indicatorSyncRuns.$inferSelect.environment));
+			conditions.push(
+				eq(
+					indicatorSyncRuns.environment,
+					filters.environment as typeof indicatorSyncRuns.$inferSelect.environment
+				)
+			);
 		}
 
 		const whereClause = conditions.length > 0 ? and(...conditions) : undefined;
@@ -146,12 +158,7 @@ export class IndicatorSyncRunsRepository {
 		const [row] = await this.db
 			.select()
 			.from(indicatorSyncRuns)
-			.where(
-				and(
-					eq(indicatorSyncRuns.runType, runType),
-					eq(indicatorSyncRuns.status, "running")
-				)
-			)
+			.where(and(eq(indicatorSyncRuns.runType, runType), eq(indicatorSyncRuns.status, "running")))
 			.limit(1);
 
 		return row ? mapRow(row) : null;
@@ -266,10 +273,17 @@ export class IndicatorSyncRunsRepository {
 			conditions.push(eq(indicatorSyncRuns.runType, filters.runType));
 		}
 		if (filters?.status) {
-			conditions.push(eq(indicatorSyncRuns.status, filters.status as typeof indicatorSyncRuns.$inferSelect.status));
+			conditions.push(
+				eq(indicatorSyncRuns.status, filters.status as typeof indicatorSyncRuns.$inferSelect.status)
+			);
 		}
 		if (filters?.environment) {
-			conditions.push(eq(indicatorSyncRuns.environment, filters.environment as typeof indicatorSyncRuns.$inferSelect.environment));
+			conditions.push(
+				eq(
+					indicatorSyncRuns.environment,
+					filters.environment as typeof indicatorSyncRuns.$inferSelect.environment
+				)
+			);
 		}
 
 		const whereClause = conditions.length > 0 ? and(...conditions) : undefined;

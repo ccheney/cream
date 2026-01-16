@@ -11,6 +11,7 @@ import {
 	BaseEventSchema,
 	type BroadcastEvent,
 	type BroadcastTarget,
+	type DatabaseCdcConfig,
 	DecisionInsertEventSchema,
 	type EventPublisherConfig,
 	type EventSource,
@@ -26,7 +27,6 @@ import {
 	type SourceState,
 	type SourceStatus,
 	SystemAlertEventSchema,
-	type TursoCdcConfig,
 } from "./types";
 
 // ============================================
@@ -44,9 +44,9 @@ describe("EventSource Type", () => {
 		expect(source).toBe("grpc");
 	});
 
-	it("includes turso", () => {
-		const source: EventSource = "turso";
-		expect(source).toBe("turso");
+	it("includes database", () => {
+		const source: EventSource = "database";
+		expect(source).toBe("database");
 	});
 
 	it("includes internal", () => {
@@ -124,7 +124,7 @@ describe("BaseEventSchema", () => {
 	});
 
 	it("validates source enum", () => {
-		const validSources = ["redis", "grpc", "turso", "internal"];
+		const validSources = ["redis", "grpc", "database", "internal"];
 		for (const source of validSources) {
 			const event = {
 				id: "evt-123",
@@ -621,9 +621,9 @@ describe("GrpcConfig Type", () => {
 	});
 });
 
-describe("TursoCdcConfig Type", () => {
+describe("DatabaseCdcConfig Type", () => {
 	it("has required fields", () => {
-		const config: TursoCdcConfig = {
+		const config: DatabaseCdcConfig = {
 			pollIntervalMs: 1000,
 			tables: ["decisions", "orders"],
 		};
@@ -642,12 +642,12 @@ describe("EventPublisherConfig Type", () => {
 		const config: EventPublisherConfig = {
 			redis: { url: "redis://localhost:6379" },
 			grpc: { host: "localhost", port: 50051 },
-			turso: { pollIntervalMs: 1000, tables: ["decisions"] },
+			database: { pollIntervalMs: 1000, tables: ["decisions"] },
 			enableInternalEvents: true,
 		};
 		expect(config.redis).toBeDefined();
 		expect(config.grpc).toBeDefined();
-		expect(config.turso).toBeDefined();
+		expect(config.database).toBeDefined();
 	});
 });
 
@@ -678,7 +678,12 @@ describe("PublisherStats Type", () => {
 			sourceStates: {
 				redis: { status: "connected", lastEvent: null, lastError: null, reconnectAttempts: 0 },
 				grpc: { status: "connected", lastEvent: null, lastError: null, reconnectAttempts: 0 },
-				turso: { status: "disconnected", lastEvent: null, lastError: null, reconnectAttempts: 0 },
+				database: {
+					status: "disconnected",
+					lastEvent: null,
+					lastError: null,
+					reconnectAttempts: 0,
+				},
 				internal: { status: "connected", lastEvent: null, lastError: null, reconnectAttempts: 0 },
 			},
 		};

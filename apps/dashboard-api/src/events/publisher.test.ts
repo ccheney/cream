@@ -222,8 +222,8 @@ describe("Source State", () => {
 		expect(state.status).toBe("disconnected");
 	});
 
-	it("returns state for turso source", () => {
-		const state = publisher.getSourceState("turso");
+	it("returns state for database source", () => {
+		const state = publisher.getSourceState("database");
 		expect(state).toBeDefined();
 		expect(state.status).toBe("disconnected");
 	});
@@ -305,7 +305,7 @@ describe("Publisher Stats", () => {
 		expect(stats.sourceStates).toBeDefined();
 		expect(stats.sourceStates.redis).toBeDefined();
 		expect(stats.sourceStates.grpc).toBeDefined();
-		expect(stats.sourceStates.turso).toBeDefined();
+		expect(stats.sourceStates.database).toBeDefined();
 		expect(stats.sourceStates.internal).toBeDefined();
 	});
 });

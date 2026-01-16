@@ -1,7 +1,7 @@
 /**
  * Tests for Data Validation Schemas
  *
- * @see turso.ts, helix.ts, validation.ts
+ * @see storage.ts, helix.ts, validation.ts
  */
 
 import { describe, expect, it } from "bun:test";
@@ -36,7 +36,6 @@ import {
 	ThesisNodeSchema,
 	TickerSymbolSchema,
 	TransitionsEdgeSchema,
-	// Turso schemas
 	UuidSchema,
 	VectorSearchQuerySchema,
 	validateBatch,
@@ -111,10 +110,10 @@ describe("Common Field Validators", () => {
 });
 
 // ============================================
-// Tests: Turso Schemas
+// Tests: Storage Schemas
 // ============================================
 
-describe("Turso Schemas", () => {
+describe("Storage Schemas", () => {
 	describe("DecisionInsertSchema", () => {
 		const validDecision = {
 			id: "550e8400-e29b-41d4-a716-446655440000",

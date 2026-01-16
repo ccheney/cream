@@ -314,14 +314,15 @@ if (import.meta.main) {
 	log.info({ port, allowedOrigins }, "Starting Dashboard API server");
 
 	// Mark any orphaned "running" cycles as failed from previous server instance
-	getCyclesRepo()
-		.then((repo) => repo.markOrphanedAsFailed())
-		.then((count) => {
+	const cyclesRepo = getCyclesRepo();
+	cyclesRepo
+		.markOrphanedAsFailed()
+		.then((count: number) => {
 			if (count > 0) {
 				log.info({ count }, "Marked orphaned cycles as failed");
 			}
 		})
-		.catch((error) => {
+		.catch((error: unknown) => {
 			log.warn(
 				{ error: error instanceof Error ? error.message : String(error) },
 				"Failed to clean up orphaned cycles"

@@ -164,10 +164,10 @@ export {
 } from "./useRisk";
 // Search
 export {
-	searchKeys,
 	type SearchResponse,
 	type SearchResult,
 	type SearchResultType,
+	searchKeys,
 	useGlobalSearch,
 } from "./useSearch";
 // Synthesis

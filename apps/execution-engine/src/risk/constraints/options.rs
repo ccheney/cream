@@ -11,7 +11,7 @@ use crate::models::{ConstraintViolation, ExposureLimits, ViolationSeverity};
 use super::types::GreeksSnapshot;
 
 /// Check all Greeks limits and return any violations.
-pub(crate) fn check_greeks_limits(
+pub fn check_greeks_limits(
     greeks: &GreeksSnapshot,
     limits: &ExposureLimits,
 ) -> Vec<ConstraintViolation> {
@@ -132,6 +132,7 @@ fn check_theta_limit(
 }
 
 #[cfg(test)]
+#[allow(clippy::unwrap_used)]
 mod tests {
     use super::*;
     use crate::models::{OptionsLimits, PerInstrumentLimits, PortfolioLimits, SizingLimits};

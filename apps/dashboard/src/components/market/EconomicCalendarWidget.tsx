@@ -251,7 +251,7 @@ export function EconomicCalendarWidget({
 					<ErrorState message={error instanceof Error ? error.message : undefined} />
 				) : isLoading ? (
 					<div className="space-y-0">
-						{Array.from({ length: 3 }).map((_, i) => (
+						{[0, 1, 2].map((i) => (
 							<SkeletonRow key={`skeleton-${i}`} compact={compact} />
 						))}
 					</div>

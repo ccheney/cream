@@ -7,7 +7,7 @@
  * @see packages/external-context for the extraction pipeline
  */
 import { and, count, desc, eq, gte, inArray, lte, sql } from "drizzle-orm";
-import { getDb, type Database } from "../db";
+import { type Database, getDb } from "../db";
 import { externalEvents } from "../schema/external";
 
 // ============================================
@@ -135,8 +135,8 @@ function mapExternalEventRow(row: ExternalEventRow): ExternalEvent {
 		importance: row.importance,
 		summary: row.summary,
 		keyInsights: row.keyInsights as string[],
-		entities: row.entities as ExtractedEntity[],
-		dataPoints: row.dataPoints as DataPoint[],
+		entities: row.entities as unknown as ExtractedEntity[],
+		dataPoints: row.dataPoints as unknown as DataPoint[],
 
 		sentimentScore: Number(row.sentimentScore),
 		importanceScore: Number(row.importanceScore),
@@ -172,8 +172,8 @@ export class ExternalEventsRepository {
 				importance: input.importance,
 				summary: input.summary,
 				keyInsights: input.keyInsights,
-				entities: input.entities as string[],
-				dataPoints: input.dataPoints as Record<string, unknown>[],
+				entities: input.entities as unknown as string[],
+				dataPoints: input.dataPoints as unknown as Record<string, unknown>[],
 				sentimentScore: String(input.sentimentScore),
 				importanceScore: String(input.importanceScore),
 				surpriseScore: String(input.surpriseScore),
@@ -182,6 +182,9 @@ export class ExternalEventsRepository {
 			})
 			.returning();
 
+		if (!row) {
+			throw new Error("Failed to create external event");
+		}
 		return mapExternalEventRow(row);
 	}
 
@@ -221,9 +224,19 @@ export class ExternalEventsRepository {
 
 		if (filters.sourceType) {
 			if (Array.isArray(filters.sourceType)) {
-				conditions.push(inArray(externalEvents.sourceType, filters.sourceType as typeof externalEvents.$inferSelect.sourceType[]));
+				conditions.push(
+					inArray(
+						externalEvents.sourceType,
+						filters.sourceType as (typeof externalEvents.$inferSelect.sourceType)[]
+					)
+				);
 			} else {
-				conditions.push(eq(externalEvents.sourceType, filters.sourceType as typeof externalEvents.$inferSelect.sourceType));
+				conditions.push(
+					eq(
+						externalEvents.sourceType,
+						filters.sourceType as typeof externalEvents.$inferSelect.sourceType
+					)
+				);
 			}
 		}
 		if (filters.eventType) {
@@ -235,9 +248,19 @@ export class ExternalEventsRepository {
 		}
 		if (filters.sentiment) {
 			if (Array.isArray(filters.sentiment)) {
-				conditions.push(inArray(externalEvents.sentiment, filters.sentiment as typeof externalEvents.$inferSelect.sentiment[]));
+				conditions.push(
+					inArray(
+						externalEvents.sentiment,
+						filters.sentiment as (typeof externalEvents.$inferSelect.sentiment)[]
+					)
+				);
 			} else {
-				conditions.push(eq(externalEvents.sentiment, filters.sentiment as typeof externalEvents.$inferSelect.sentiment));
+				conditions.push(
+					eq(
+						externalEvents.sentiment,
+						filters.sentiment as typeof externalEvents.$inferSelect.sentiment
+					)
+				);
 			}
 		}
 		if (filters.fromDate) {
@@ -272,9 +295,8 @@ export class ExternalEventsRepository {
 
 		// Symbol filtering done in-memory
 		if (filters.symbol) {
-			data = data.filter((event) =>
-				event.relatedInstruments.includes(filters.symbol!)
-			);
+			const symbolToFilter = filters.symbol;
+			data = data.filter((event) => event.relatedInstruments.includes(symbolToFilter));
 		}
 
 		const total = countResult?.count ?? 0;
@@ -331,7 +353,9 @@ export class ExternalEventsRepository {
 		const rows = await this.db
 			.select()
 			.from(externalEvents)
-			.where(eq(externalEvents.sourceType, "macro"))
+			.where(
+				eq(externalEvents.sourceType, "macro" as typeof externalEvents.$inferSelect.sourceType)
+			)
 			.orderBy(desc(externalEvents.eventTime))
 			.limit(limit);
 

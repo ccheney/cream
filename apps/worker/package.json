@@ -26,6 +26,7 @@
     "@cream/storage": "workspace:*",
     "@mastra/core": "1.0.0-beta.21",
     "croner": "9.1.0",
+    "drizzle-orm": "^0.45.1",
     "zod": "4.3.5"
   },
   "devDependencies": {

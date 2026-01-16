@@ -7,7 +7,7 @@
  * @see docs/plans/33-indicator-engine-v2.md
  */
 import { and, count, desc, eq, gte, isNotNull, lte, sql } from "drizzle-orm";
-import { getDb, type Database } from "../db";
+import { type Database, getDb } from "../db";
 import { sentimentIndicators } from "../schema/indicators";
 
 // ============================================
@@ -136,6 +136,9 @@ export class SentimentRepository {
 			})
 			.returning();
 
+		if (!row) {
+			throw new Error("Failed to create sentiment indicators");
+		}
 		return mapSentimentRow(row);
 	}
 
@@ -158,9 +161,11 @@ export class SentimentRepository {
 				target: [sentimentIndicators.symbol, sentimentIndicators.date],
 				set: {
 					sentimentScore: input.sentimentScore != null ? String(input.sentimentScore) : null,
-					sentimentStrength: input.sentimentStrength != null ? String(input.sentimentStrength) : null,
+					sentimentStrength:
+						input.sentimentStrength != null ? String(input.sentimentStrength) : null,
 					newsVolume: input.newsVolume ?? null,
-					sentimentMomentum: input.sentimentMomentum != null ? String(input.sentimentMomentum) : null,
+					sentimentMomentum:
+						input.sentimentMomentum != null ? String(input.sentimentMomentum) : null,
 					eventRiskFlag: input.eventRiskFlag ?? false,
 					newsSentiment: input.newsSentiment != null ? String(input.newsSentiment) : null,
 					socialSentiment: input.socialSentiment != null ? String(input.socialSentiment) : null,
@@ -170,6 +175,9 @@ export class SentimentRepository {
 			})
 			.returning();
 
+		if (!row) {
+			throw new Error("Failed to upsert sentiment indicators");
+		}
 		return mapSentimentRow(row);
 	}
 
@@ -445,7 +453,8 @@ export class SentimentRepository {
 		}
 
 		if (input.sentimentStrength !== undefined) {
-			updates.sentimentStrength = input.sentimentStrength != null ? String(input.sentimentStrength) : null;
+			updates.sentimentStrength =
+				input.sentimentStrength != null ? String(input.sentimentStrength) : null;
 		}
 
 		if (input.newsVolume !== undefined) {
@@ -453,7 +462,8 @@ export class SentimentRepository {
 		}
 
 		if (input.sentimentMomentum !== undefined) {
-			updates.sentimentMomentum = input.sentimentMomentum != null ? String(input.sentimentMomentum) : null;
+			updates.sentimentMomentum =
+				input.sentimentMomentum != null ? String(input.sentimentMomentum) : null;
 		}
 
 		if (input.eventRiskFlag !== undefined) {
@@ -465,11 +475,13 @@ export class SentimentRepository {
 		}
 
 		if (input.socialSentiment !== undefined) {
-			updates.socialSentiment = input.socialSentiment != null ? String(input.socialSentiment) : null;
+			updates.socialSentiment =
+				input.socialSentiment != null ? String(input.socialSentiment) : null;
 		}
 
 		if (input.analystSentiment !== undefined) {
-			updates.analystSentiment = input.analystSentiment != null ? String(input.analystSentiment) : null;
+			updates.analystSentiment =
+				input.analystSentiment != null ? String(input.analystSentiment) : null;
 		}
 
 		const [row] = await this.db

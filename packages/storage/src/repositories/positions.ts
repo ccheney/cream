@@ -3,8 +3,8 @@
  *
  * Data access for positions table.
  */
-import { and, count, desc, eq, sql, sum } from "drizzle-orm";
-import { getDb, type Database } from "../db";
+import { and, count, desc, eq, sql } from "drizzle-orm";
+import { type Database, getDb } from "../db";
 import { positions } from "../schema/core-trading";
 import { RepositoryError } from "./base";
 
@@ -12,7 +12,7 @@ import { RepositoryError } from "./base";
 // Types
 // ============================================
 
-export type PositionSide = "LONG" | "SHORT";
+export type PositionSide = "long" | "short";
 export type PositionStatus = "open" | "closed" | "pending";
 
 export interface Position {
@@ -110,9 +110,7 @@ export class PositionsRepository {
 				qty: String(input.quantity),
 				avgEntry: String(input.avgEntryPrice),
 				currentPrice:
-					input.currentPrice != null
-						? String(input.currentPrice)
-						: String(input.avgEntryPrice),
+					input.currentPrice != null ? String(input.currentPrice) : String(input.avgEntryPrice),
 				costBasis: String(costBasis),
 				thesisId: input.thesisId ?? null,
 				decisionId: input.decisionId ?? null,
@@ -122,6 +120,9 @@ export class PositionsRepository {
 			})
 			.returning();
 
+		if (!row) {
+			throw new RepositoryError("Failed to create position", "CONSTRAINT_VIOLATION", "positions");
+		}
 		return mapPositionRow(row);
 	}
 
@@ -141,7 +142,7 @@ export class PositionsRepository {
 
 	async findMany(
 		filters: PositionFilters = {},
-		pagination?: { limit?: number; offset?: number },
+		pagination?: { limit?: number; offset?: number }
 	): Promise<{ data: Position[]; total: number; limit: number; offset: number }> {
 		const conditions = [];
 
@@ -156,7 +157,7 @@ export class PositionsRepository {
 		}
 		if (filters.environment) {
 			conditions.push(
-				eq(positions.environment, filters.environment as "BACKTEST" | "PAPER" | "LIVE"),
+				eq(positions.environment, filters.environment as "BACKTEST" | "PAPER" | "LIVE")
 			);
 		}
 		if (filters.thesisId) {
@@ -195,8 +196,8 @@ export class PositionsRepository {
 			.where(
 				and(
 					eq(positions.environment, environment as "BACKTEST" | "PAPER" | "LIVE"),
-					eq(positions.status, "open"),
-				),
+					eq(positions.status, "open")
+				)
 			)
 			.orderBy(desc(positions.openedAt));
 
@@ -211,8 +212,8 @@ export class PositionsRepository {
 				and(
 					eq(positions.symbol, symbol),
 					eq(positions.environment, environment as "BACKTEST" | "PAPER" | "LIVE"),
-					eq(positions.status, "open"),
-				),
+					eq(positions.status, "open")
+				)
 			)
 			.limit(1);
 
@@ -224,7 +225,7 @@ export class PositionsRepository {
 
 		const marketValue = position.quantity * currentPrice;
 		const unrealizedPnl =
-			position.side === "LONG"
+			position.side === "long"
 				? marketValue - position.costBasis
 				: position.costBasis - marketValue;
 		const unrealizedPnlPct = (unrealizedPnl / position.costBasis) * 100;
@@ -241,6 +242,9 @@ export class PositionsRepository {
 			.where(eq(positions.id, id))
 			.returning();
 
+		if (!row) {
+			throw RepositoryError.notFound("positions", id);
+		}
 		return mapPositionRow(row);
 	}
 
@@ -263,6 +267,9 @@ export class PositionsRepository {
 			.where(eq(positions.id, id))
 			.returning();
 
+		if (!row) {
+			throw RepositoryError.notFound("positions", id);
+		}
 		return mapPositionRow(row);
 	}
 
@@ -270,7 +277,7 @@ export class PositionsRepository {
 		const position = await this.findByIdOrThrow(id);
 
 		const realizedPnl =
-			position.side === "LONG"
+			position.side === "long"
 				? (exitPrice - position.avgEntryPrice) * position.quantity
 				: (position.avgEntryPrice - exitPrice) * position.quantity;
 
@@ -290,6 +297,9 @@ export class PositionsRepository {
 			.where(eq(positions.id, id))
 			.returning();
 
+		if (!row) {
+			throw RepositoryError.notFound("positions", id);
+		}
 		return mapPositionRow(row);
 	}
 
@@ -322,8 +332,8 @@ export class PositionsRepository {
 			.where(
 				and(
 					eq(positions.environment, environment as "BACKTEST" | "PAPER" | "LIVE"),
-					eq(positions.status, "open"),
-				),
+					eq(positions.status, "open")
+				)
 			)
 			.groupBy(positions.side);
 
@@ -340,9 +350,9 @@ export class PositionsRepository {
 			totalUnrealizedPnl += Number(row.totalUnrealizedPnl);
 			totalCostBasis += Number(row.totalCostBasis);
 
-			if (row.side === "LONG") {
+			if (row.side === "long") {
 				longPositions = row.count;
-			} else if (row.side === "SHORT") {
+			} else if (row.side === "short") {
 				shortPositions = row.count;
 			}
 		}

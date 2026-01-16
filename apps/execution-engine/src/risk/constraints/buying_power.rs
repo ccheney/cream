@@ -14,7 +14,7 @@ use super::types::ExtendedConstraintContext;
 ///
 /// Uses a simplified 50% margin requirement (Reg T) for equities.
 /// In production, margin calculations would be more sophisticated.
-pub(crate) fn check_buying_power(
+pub fn check_buying_power(
     request: &ConstraintCheckRequest,
     context: &ExtendedConstraintContext,
 ) -> Option<ConstraintViolation> {
@@ -44,6 +44,7 @@ pub(crate) fn check_buying_power(
 }
 
 #[cfg(test)]
+#[allow(clippy::unwrap_used)]
 mod tests {
     use super::*;
     use crate::models::{

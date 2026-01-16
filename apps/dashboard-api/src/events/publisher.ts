@@ -207,7 +207,9 @@ export function createEventPublisher(config: EventPublisherConfig = {}): EventPu
 					grpc:
 						sourceStates.grpc.status === "connecting" ? "disconnected" : sourceStates.grpc.status,
 					database:
-						sourceStates.database.status === "connecting" ? "disconnected" : sourceStates.database.status,
+						sourceStates.database.status === "connecting"
+							? "disconnected"
+							: sourceStates.database.status,
 					internal:
 						sourceStates.internal.status === "connecting"
 							? "disconnected"

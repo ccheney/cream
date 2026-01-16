@@ -154,13 +154,6 @@ export interface SentimentScoringConfig {
 // ============================================
 
 /**
- * Generate unique ID for sentiment record
- */
-function generateId(): string {
-	return `sent_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`;
-}
-
-/**
  * Sleep for specified milliseconds
  */
 function sleep(ms: number): Promise<void> {
@@ -425,7 +418,6 @@ export class SentimentAggregationJob {
 
 		// Build input for repository
 		const input: CreateSentimentInput = {
-			id: generateId(),
 			symbol,
 			date,
 			sentimentScore: aggregated.sentimentScore,

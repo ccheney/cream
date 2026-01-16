@@ -525,6 +525,14 @@ export class AlphaVantageClient {
 // ============================================
 
 /**
+ * Check if Alpha Vantage API is configured.
+ * Use this before creating a client to avoid noisy error logs.
+ */
+export function isAlphaVantageConfigured(): boolean {
+	return Boolean(Bun.env.ALPHAVANTAGE_KEY);
+}
+
+/**
  * Create an Alpha Vantage client from environment variables.
  */
 export function createAlphaVantageClientFromEnv(): AlphaVantageClient {

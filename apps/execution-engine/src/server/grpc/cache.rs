@@ -67,8 +67,9 @@ mod tests {
             fetched_at: Instant::now(),
         };
         assert_eq!(cached.state.account_id, "test");
-        // Verify Clone is implemented
-        let _: CachedAccountState = cached.clone();
+        // Verify Clone is implemented - clone and verify both have same values
+        let cloned = Clone::clone(&cached);
+        assert_eq!(cached.state.account_id, cloned.state.account_id);
     }
 
     #[test]
@@ -78,7 +79,8 @@ mod tests {
             fetched_at: Instant::now(),
         };
         assert!(cached.positions.is_empty());
-        // Verify Clone is implemented
-        let _: CachedPositions = cached.clone();
+        // Verify Clone is implemented - clone and verify both have same values
+        let cloned = Clone::clone(&cached);
+        assert_eq!(cached.positions.len(), cloned.positions.len());
     }
 }

@@ -97,6 +97,7 @@ export {
 	FederalFundsRateResponseSchema,
 	INDICATOR_METADATA,
 	type IndicatorMetadata,
+	isAlphaVantageConfigured,
 	type TreasuryMaturity,
 	type TreasuryYieldResponse,
 	TreasuryYieldResponseSchema,

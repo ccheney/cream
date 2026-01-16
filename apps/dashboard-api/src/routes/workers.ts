@@ -13,7 +13,7 @@
  */
 
 import { requireEnv } from "@cream/domain";
-import type { IndicatorSyncRun, SyncRunType } from "@cream/storage";
+import type { IndicatorSyncRun, SyncRunStatus, SyncRunType } from "@cream/storage";
 import { createRoute, OpenAPIHono, z } from "@hono/zod-openapi";
 import { HTTPException } from "hono/http-exception";
 import {
@@ -48,7 +48,7 @@ const WorkerServiceSchema = z.enum([
 	"corporate_actions",
 ]);
 
-const RunStatusSchema = z.enum(["pending", "running", "completed", "failed"]);
+const RunStatusSchema = z.enum(["running", "completed", "failed"]);
 
 const ServiceDisplayNames: Record<z.infer<typeof WorkerServiceSchema>, string> = {
 	macro_watch: "Macro Watch",
@@ -349,18 +349,14 @@ app.openapi(triggerServiceRoute, async (c) => {
 			});
 		}
 
-		// Create a new run record with 'running' status
-		const runId = `run-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+		// Create a new run record with 'running' status (id auto-generated as uuidv7)
 		const now = new Date().toISOString();
 
-		await syncRunsRepo.create({
-			id: runId,
+		const createdRun = await syncRunsRepo.create({
 			runType: service as SyncRunType,
 			environment,
 		});
-
-		// Update status to running
-		await syncRunsRepo.update(runId, { status: "running" });
+		const runId = createdRun.id;
 
 		log.info({ runId, service, priority, environment }, "Worker service trigger starting");
 
@@ -514,7 +510,7 @@ app.openapi(getWorkerRunsRoute, async (c) => {
 
 		const filters = {
 			runType: service as SyncRunType | undefined,
-			status: status as "pending" | "running" | "completed" | "failed" | undefined,
+			status: status as SyncRunStatus | undefined,
 		};
 
 		const syncRuns = await syncRunsRepo.findMany(filters, limit);
@@ -707,7 +703,10 @@ app.openapi(getRunDetailsRoute, async (c) => {
 
 			case "newspaper": {
 				const macroWatchRepo = getMacroWatchRepo();
-				const newspaper = await macroWatchRepo.getNewspaperByCompiledAtRange(startedAt, completedAt);
+				const newspaper = await macroWatchRepo.getNewspaperByCompiledAtRange(
+					startedAt,
+					completedAt
+				);
 
 				if (!newspaper) {
 					return c.json(
@@ -788,7 +787,11 @@ app.openapi(getRunDetailsRoute, async (c) => {
 
 			case "corporate_actions": {
 				const corporateActionsRepo = getCorporateActionsRepo();
-				const entries = await corporateActionsRepo.findByCreatedAtRange(startedAt, completedAt, 100);
+				const entries = await corporateActionsRepo.findByCreatedAtRange(
+					startedAt,
+					completedAt,
+					100
+				);
 
 				return c.json(
 					{

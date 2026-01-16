@@ -1,4 +1,4 @@
-//! ExecutionService gRPC implementation.
+//! `ExecutionService` gRPC implementation.
 //!
 //! Implements the `ExecutionService` gRPC service for order management,
 //! constraint checking, and account/position queries.

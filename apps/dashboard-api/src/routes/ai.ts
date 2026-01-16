@@ -274,8 +274,7 @@ app.openapi(classifyThoughtRoute, async (c) => {
 			type: output?.type ?? ("observation" as const),
 			confidence: Math.min(1, Math.max(0, output?.confidence ?? 0.3)),
 		});
-	} catch (error) {
-		console.error("classify-thought error:", error);
+	} catch (_error) {
 		return c.json({ type: "observation" as const, confidence: 0.3 });
 	}
 });

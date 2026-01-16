@@ -47,7 +47,7 @@ describe("envSchema", () => {
 			const result = envSchema.safeParse(requiredEnvFields);
 			expect(result.success).toBe(true);
 			if (result.success) {
-				expect(result.data.TURSO_DATABASE_URL).toBe("http://localhost:8080"); // default
+				expect(result.data.DATABASE_URL).toBeUndefined(); // optional, no default
 				expect(result.data.HELIX_URL).toBe("http://localhost:6969"); // default
 			}
 		});
@@ -57,7 +57,7 @@ describe("envSchema", () => {
 		it("accepts valid HTTP URLs", () => {
 			const result = envSchema.safeParse({
 				...requiredEnvFields,
-				TURSO_DATABASE_URL: "http://localhost:8080",
+				DATABASE_URL: "http://localhost:5432",
 			});
 			expect(result.success).toBe(true);
 		});
@@ -65,15 +65,23 @@ describe("envSchema", () => {
 		it("accepts valid HTTPS URLs", () => {
 			const result = envSchema.safeParse({
 				...requiredEnvFields,
-				TURSO_DATABASE_URL: "https://example.turso.io",
+				DATABASE_URL: "https://db.example.com",
 			});
 			expect(result.success).toBe(true);
 		});
 
-		it("accepts file: URLs for local SQLite", () => {
+		it("accepts postgres:// URLs", () => {
 			const result = envSchema.safeParse({
 				...requiredEnvFields,
-				TURSO_DATABASE_URL: "file:local.db",
+				DATABASE_URL: "postgres://user:pass@localhost:5432/db",
+			});
+			expect(result.success).toBe(true);
+		});
+
+		it("accepts postgresql:// URLs", () => {
+			const result = envSchema.safeParse({
+				...requiredEnvFields,
+				DATABASE_URL: "postgresql://user:pass@localhost:5432/db",
 			});
 			expect(result.success).toBe(true);
 		});
@@ -81,18 +89,13 @@ describe("envSchema", () => {
 		it("rejects invalid URLs", () => {
 			const result = envSchema.safeParse({
 				...requiredEnvFields,
-				TURSO_DATABASE_URL: "not-a-url",
+				ALPACA_BASE_URL: "not-a-url",
 			});
 			expect(result.success).toBe(false);
 		});
 	});
 
 	describe("defaults", () => {
-		it("applies TURSO_DATABASE_URL default", () => {
-			const result = envSchema.parse(requiredEnvFields);
-			expect(result.TURSO_DATABASE_URL).toBe("http://localhost:8080");
-		});
-
 		it("applies HELIX_URL default", () => {
 			const result = envSchema.parse(requiredEnvFields);
 			expect(result.HELIX_URL).toBe("http://localhost:6969");

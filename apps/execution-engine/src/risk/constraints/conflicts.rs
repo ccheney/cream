@@ -13,7 +13,7 @@ use crate::models::{Action, ConstraintViolation, Direction, ViolationSeverity};
 use super::types::ExtendedConstraintContext;
 
 /// Check for conflicting orders on the same instrument.
-pub(crate) fn check_conflicting_orders(
+pub fn check_conflicting_orders(
     instrument_actions: &HashMap<String, Vec<(usize, Action, Direction)>>,
     context: &ExtendedConstraintContext,
     violations: &mut Vec<ConstraintViolation>,

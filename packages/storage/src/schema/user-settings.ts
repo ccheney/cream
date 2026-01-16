@@ -3,15 +3,8 @@
  *
  * alert_settings, user_preferences
  */
-import {
-	boolean,
-	index,
-	jsonb,
-	pgTable,
-	text,
-	timestamp,
-	uuid,
-} from "drizzle-orm/pg-core";
+import { sql } from "drizzle-orm";
+import { boolean, index, jsonb, pgTable, text, timestamp, uuid } from "drizzle-orm/pg-core";
 import { user } from "./auth";
 import {
 	chartTimeframeEnum,
@@ -25,7 +18,7 @@ import {
 export const alertSettings = pgTable(
 	"alert_settings",
 	{
-		id: uuid("id").primaryKey().defaultRandom(),
+		id: uuid("id").primaryKey().default(sql`uuidv7()`),
 		userId: uuid("user_id")
 			.notNull()
 			.unique()
@@ -36,14 +29,10 @@ export const alertSettings = pgTable(
 		criticalOnly: boolean("critical_only").notNull().default(false),
 		quietHoursStart: text("quiet_hours_start"),
 		quietHoursEnd: text("quiet_hours_end"),
-		createdAt: timestamp("created_at", { withTimezone: true })
-			.notNull()
-			.defaultNow(),
-		updatedAt: timestamp("updated_at", { withTimezone: true })
-			.notNull()
-			.defaultNow(),
+		createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+		updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
 	},
-	(table) => [index("idx_alert_settings_user_id").on(table.userId)],
+	(table) => [index("idx_alert_settings_user_id").on(table.userId)]
 );
 
 // Notification settings type
@@ -59,7 +48,7 @@ export interface NotificationSettings {
 export const userPreferences = pgTable(
 	"user_preferences",
 	{
-		id: uuid("id").primaryKey().defaultRandom(),
+		id: uuid("id").primaryKey().default(sql`uuidv7()`),
 		userId: uuid("user_id")
 			.notNull()
 			.unique()
@@ -69,9 +58,7 @@ export const userPreferences = pgTable(
 		theme: themeEnum("theme").notNull().default("system"),
 
 		// Chart settings
-		chartTimeframe: chartTimeframeEnum("chart_timeframe")
-			.notNull()
-			.default("1M"),
+		chartTimeframe: chartTimeframeEnum("chart_timeframe").notNull().default("1M"),
 
 		// Feed filters (JSON array of strings)
 		feedFilters: jsonb("feed_filters").$type<string[]>().notNull().default([]),
@@ -92,9 +79,7 @@ export const userPreferences = pgTable(
 			}),
 
 		// Portfolio view
-		defaultPortfolioView: portfolioViewEnum("default_portfolio_view")
-			.notNull()
-			.default("table"),
+		defaultPortfolioView: portfolioViewEnum("default_portfolio_view").notNull().default("table"),
 
 		// Date/time formatting
 		dateFormat: dateFormatEnum("date_format").notNull().default("MM/DD/YYYY"),
@@ -103,15 +88,11 @@ export const userPreferences = pgTable(
 		// Currency
 		currency: text("currency").notNull().default("USD"),
 
-		createdAt: timestamp("created_at", { withTimezone: true })
-			.notNull()
-			.defaultNow(),
-		updatedAt: timestamp("updated_at", { withTimezone: true })
-			.notNull()
-			.defaultNow(),
+		createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+		updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
 	},
 	(table) => [
 		index("idx_user_preferences_user_id").on(table.userId),
 		index("idx_user_preferences_created_at").on(table.createdAt),
-	],
+	]
 );

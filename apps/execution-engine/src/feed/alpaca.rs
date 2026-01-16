@@ -388,10 +388,10 @@ impl AlpacaFeed {
     /// Run a single connection attempt.
     async fn run_connection(&mut self, symbols: &[String]) -> Result<(), AlpacaError> {
         // Check circuit breaker
-        if let Some(ref breaker) = self.circuit_breaker {
-            if !breaker.is_call_permitted() {
-                return Err(AlpacaError::Connection("circuit breaker open".to_string()));
-            }
+        if let Some(ref breaker) = self.circuit_breaker
+            && !breaker.is_call_permitted()
+        {
+            return Err(AlpacaError::Connection("circuit breaker open".to_string()));
         }
 
         // Build credentials
@@ -510,11 +510,12 @@ impl AlpacaFeed {
     /// Convert f64 price to Decimal with appropriate precision.
     fn convert_price(price: f64) -> Decimal {
         // Use from_f64_retain for better precision
-        Decimal::try_from(price).unwrap_or_else(|_| Decimal::ZERO)
+        Decimal::try_from(price).unwrap_or(Decimal::ZERO)
     }
 
     /// Calculate latency from event timestamp.
     fn calculate_latency(ts_event_millis: i64) -> Duration {
+        #[allow(clippy::cast_possible_truncation)] // millis since 1970 fits in i64 for centuries
         let now_millis = std::time::SystemTime::now()
             .duration_since(std::time::UNIX_EPOCH)
             .map(|d| d.as_millis() as i64)
@@ -553,6 +554,7 @@ pub fn create_alpaca_feed_channel(
 // ============================================================================
 
 #[cfg(test)]
+#[allow(clippy::expect_used, clippy::cast_possible_truncation)]
 mod tests {
     use super::*;
 

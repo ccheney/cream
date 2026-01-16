@@ -8,9 +8,10 @@
  * import { db } from "@cream/storage";
  * const users = await db.select().from(schema.user);
  */
+
+import type { NodePgDatabase } from "drizzle-orm/node-postgres";
 import { drizzle } from "drizzle-orm/node-postgres";
 import { Pool } from "pg";
-import type { NodePgDatabase } from "drizzle-orm/node-postgres";
 import * as schema from "./schema";
 
 // Environment-to-database mapping
@@ -38,7 +39,7 @@ function getDatabaseUrl(): string {
 	if (!url) {
 		throw new Error(
 			`DATABASE_URL not configured for environment: ${env}. ` +
-				`Set DATABASE_URL_${env} or DATABASE_URL environment variable.`,
+				`Set DATABASE_URL_${env} or DATABASE_URL environment variable.`
 		);
 	}
 
@@ -95,14 +96,11 @@ export function getDb(): NodePgDatabase<typeof schema> {
  *   with: { sessions: true }
  * });
  */
-export const db: NodePgDatabase<typeof schema> = new Proxy(
-	{} as NodePgDatabase<typeof schema>,
-	{
-		get(_, prop) {
-			return getDb()[prop as keyof NodePgDatabase<typeof schema>];
-		},
+export const db: NodePgDatabase<typeof schema> = new Proxy({} as NodePgDatabase<typeof schema>, {
+	get(_, prop) {
+		return getDb()[prop as keyof NodePgDatabase<typeof schema>];
 	},
-);
+});
 
 /**
  * Close the database connection pool
@@ -127,7 +125,7 @@ export async function closeDb(): Promise<void> {
  * });
  */
 export async function withTransaction<T>(
-	fn: (tx: NodePgDatabase<typeof schema>) => Promise<T>,
+	fn: (tx: NodePgDatabase<typeof schema>) => Promise<T>
 ): Promise<T> {
 	const database = getDb();
 	return database.transaction(fn);

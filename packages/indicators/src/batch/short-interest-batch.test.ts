@@ -73,7 +73,7 @@ function createMockRepository(): MockShortInterestRepository {
 			upsertCalls.push(input);
 			// Return a mock ShortInterestIndicators that matches the input
 			return Promise.resolve({
-				id: input.id,
+				id: `si_${Date.now()}_mock`,
 				symbol: input.symbol,
 				settlementDate: input.settlementDate,
 				shortInterest: input.shortInterest,
@@ -384,7 +384,7 @@ describe("ShortInterestBatchJob", () => {
 			expect(upserted?.symbol).toBe("AAPL");
 		});
 
-		it("generates unique IDs for each record", async () => {
+		it("processes multiple symbols successfully", async () => {
 			const records = [
 				createMockFINRARecord({ symbolCode: "AAPL" }),
 				createMockFINRARecord({ symbolCode: "MSFT" }),
@@ -394,10 +394,9 @@ describe("ShortInterestBatchJob", () => {
 			const job = new ShortInterestBatchJob(mockFinra, mockRepo);
 			await job.run(["AAPL", "MSFT"]);
 
-			const ids = mockRepo.upsertCalls.map((c: CreateShortInterestInput) => c.id);
-			expect(ids[0]).toMatch(/^si_/);
-			expect(ids[1]).toMatch(/^si_/);
-			expect(ids[0]).not.toBe(ids[1]);
+			const symbols = mockRepo.upsertCalls.map((c: CreateShortInterestInput) => c.symbol);
+			expect(symbols).toContain("AAPL");
+			expect(symbols).toContain("MSFT");
 		});
 	});
 

@@ -437,9 +437,6 @@ impl PortfolioRecovery {
             .update_recovery_state(None, "shutdown", None)
             .await?;
 
-        // Sync to remote if configured
-        self.persistence.sync().ok();
-
         info!("State snapshot saved successfully");
         Ok(())
     }

@@ -30,6 +30,7 @@ import {
 	decisionDirectionEnum,
 	decisionStatusEnum,
 	environmentEnum,
+	executionRecoveryStatusEnum,
 	orderSideEnum,
 	orderStatusEnum,
 	orderTypeEnum,
@@ -43,7 +44,7 @@ import {
 export const decisions = pgTable(
 	"decisions",
 	{
-		id: uuid("id").primaryKey().defaultRandom(),
+		id: uuid("id").primaryKey().default(sql`uuidv7()`),
 		cycleId: uuid("cycle_id").notNull(),
 		symbol: text("symbol").notNull(),
 		action: decisionActionEnum("action").notNull(),
@@ -71,12 +72,8 @@ export const decisions = pgTable(
 		rationale: text("rationale"),
 		environment: environmentEnum("environment").notNull(),
 
-		createdAt: timestamp("created_at", { withTimezone: true })
-			.notNull()
-			.defaultNow(),
-		updatedAt: timestamp("updated_at", { withTimezone: true })
-			.notNull()
-			.defaultNow(),
+		createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+		updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
 		executedAt: timestamp("executed_at", { withTimezone: true }),
 		closedAt: timestamp("closed_at", { withTimezone: true }),
 	},
@@ -84,11 +81,11 @@ export const decisions = pgTable(
 		check("positive_size", sql`${table.size}::numeric > 0`),
 		check(
 			"valid_confidence",
-			sql`${table.confidenceScore} IS NULL OR (${table.confidenceScore}::numeric >= 0 AND ${table.confidenceScore}::numeric <= 1)`,
+			sql`${table.confidenceScore} IS NULL OR (${table.confidenceScore}::numeric >= 0 AND ${table.confidenceScore}::numeric <= 1)`
 		),
 		check(
 			"valid_risk",
-			sql`${table.riskScore} IS NULL OR (${table.riskScore}::numeric >= 0 AND ${table.riskScore}::numeric <= 1)`,
+			sql`${table.riskScore} IS NULL OR (${table.riskScore}::numeric >= 0 AND ${table.riskScore}::numeric <= 1)`
 		),
 		index("idx_decisions_cycle_id").on(table.cycleId),
 		index("idx_decisions_symbol").on(table.symbol),
@@ -96,14 +93,14 @@ export const decisions = pgTable(
 		index("idx_decisions_created_at").on(table.createdAt),
 		index("idx_decisions_symbol_created").on(table.symbol, table.createdAt),
 		index("idx_decisions_environment").on(table.environment),
-	],
+	]
 );
 
 // agent_outputs: Agent votes and reasoning
 export const agentOutputs = pgTable(
 	"agent_outputs",
 	{
-		id: uuid("id").primaryKey().defaultRandom(),
+		id: uuid("id").primaryKey().default(sql`uuidv7()`),
 		decisionId: uuid("decision_id")
 			.notNull()
 			.references(() => decisions.id, { onDelete: "cascade" }),
@@ -114,29 +111,24 @@ export const agentOutputs = pgTable(
 		fullReasoning: text("full_reasoning"),
 		tokensUsed: integer("tokens_used"),
 		latencyMs: integer("latency_ms"),
-		createdAt: timestamp("created_at", { withTimezone: true })
-			.notNull()
-			.defaultNow(),
+		createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
 	},
 	(table) => [
 		check(
 			"valid_confidence",
-			sql`${table.confidence}::numeric >= 0 AND ${table.confidence}::numeric <= 1`,
+			sql`${table.confidence}::numeric >= 0 AND ${table.confidence}::numeric <= 1`
 		),
 		index("idx_agent_outputs_decision_id").on(table.decisionId),
 		index("idx_agent_outputs_agent_type").on(table.agentType),
-		index("idx_agent_outputs_decision_agent").on(
-			table.decisionId,
-			table.agentType,
-		),
-	],
+		index("idx_agent_outputs_decision_agent").on(table.decisionId, table.agentType),
+	]
 );
 
 // orders: Order submissions and lifecycle
 export const orders = pgTable(
 	"orders",
 	{
-		id: uuid("id").primaryKey().defaultRandom(),
+		id: uuid("id").primaryKey().default(sql`uuidv7()`),
 		decisionId: uuid("decision_id").references(() => decisions.id),
 		symbol: text("symbol").notNull(),
 		side: orderSideEnum("side").notNull(),
@@ -151,9 +143,7 @@ export const orders = pgTable(
 		filledAvgPrice: numeric("filled_avg_price", { precision: 12, scale: 4 }),
 		commission: numeric("commission", { precision: 10, scale: 4 }),
 		environment: environmentEnum("environment").notNull(),
-		createdAt: timestamp("created_at", { withTimezone: true })
-			.notNull()
-			.defaultNow(),
+		createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
 		submittedAt: timestamp("submitted_at", { withTimezone: true }),
 		filledAt: timestamp("filled_at", { withTimezone: true }),
 		cancelledAt: timestamp("cancelled_at", { withTimezone: true }),
@@ -166,14 +156,14 @@ export const orders = pgTable(
 		index("idx_orders_broker_order_id").on(table.brokerOrderId),
 		index("idx_orders_created_at").on(table.createdAt),
 		index("idx_orders_environment").on(table.environment),
-	],
+	]
 );
 
 // positions: Current open positions
 export const positions = pgTable(
 	"positions",
 	{
-		id: uuid("id").primaryKey().defaultRandom(),
+		id: uuid("id").primaryKey().default(sql`uuidv7()`),
 		symbol: text("symbol").notNull(),
 		side: positionSideEnum("side").notNull(),
 		qty: numeric("qty", { precision: 14, scale: 4 }).notNull(),
@@ -181,9 +171,7 @@ export const positions = pgTable(
 		currentPrice: numeric("current_price", { precision: 12, scale: 4 }),
 		unrealizedPnl: numeric("unrealized_pnl", { precision: 14, scale: 2 }),
 		unrealizedPnlPct: numeric("unrealized_pnl_pct", { precision: 8, scale: 4 }),
-		realizedPnl: numeric("realized_pnl", { precision: 14, scale: 2 }).default(
-			"0",
-		),
+		realizedPnl: numeric("realized_pnl", { precision: 14, scale: 2 }).default("0"),
 		marketValue: numeric("market_value", { precision: 14, scale: 2 }),
 		costBasis: numeric("cost_basis", { precision: 14, scale: 2 }),
 		thesisId: uuid("thesis_id"),
@@ -191,12 +179,8 @@ export const positions = pgTable(
 		status: positionStatusEnum("status").notNull().default("open"),
 		metadata: jsonb("metadata").$type<Record<string, unknown>>().default({}),
 		environment: environmentEnum("environment").notNull(),
-		openedAt: timestamp("opened_at", { withTimezone: true })
-			.notNull()
-			.defaultNow(),
-		updatedAt: timestamp("updated_at", { withTimezone: true })
-			.notNull()
-			.defaultNow(),
+		openedAt: timestamp("opened_at", { withTimezone: true }).notNull().defaultNow(),
+		updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
 		closedAt: timestamp("closed_at", { withTimezone: true }),
 	},
 	(table) => [
@@ -210,7 +194,7 @@ export const positions = pgTable(
 		uniqueIndex("idx_positions_symbol_env_open")
 			.on(table.symbol, table.environment)
 			.where(sql`${table.closedAt} IS NULL`),
-	],
+	]
 );
 
 // position_history: Historical snapshots for P&L tracking
@@ -221,9 +205,7 @@ export const positionHistory = pgTable(
 		positionId: uuid("position_id")
 			.notNull()
 			.references(() => positions.id, { onDelete: "cascade" }),
-		timestamp: timestamp("timestamp", { withTimezone: true })
-			.notNull()
-			.defaultNow(),
+		timestamp: timestamp("timestamp", { withTimezone: true }).notNull().defaultNow(),
 		price: numeric("price", { precision: 12, scale: 4 }).notNull(),
 		qty: numeric("qty", { precision: 14, scale: 4 }).notNull(),
 		unrealizedPnl: numeric("unrealized_pnl", { precision: 14, scale: 2 }),
@@ -232,11 +214,8 @@ export const positionHistory = pgTable(
 	(table) => [
 		index("idx_position_history_position_id").on(table.positionId),
 		index("idx_position_history_timestamp").on(table.timestamp),
-		index("idx_position_history_position_ts").on(
-			table.positionId,
-			table.timestamp,
-		),
-	],
+		index("idx_position_history_position_ts").on(table.positionId, table.timestamp),
+	]
 );
 
 // portfolio_snapshots: Point-in-time portfolio state
@@ -263,29 +242,22 @@ export const portfolioSnapshots = pgTable(
 		maxDrawdown: numeric("max_drawdown", { precision: 8, scale: 4 }),
 	},
 	(table) => [
-		unique("portfolio_snapshots_timestamp_env").on(
-			table.timestamp,
-			table.environment,
-		),
+		unique("portfolio_snapshots_timestamp_env").on(table.timestamp, table.environment),
 		index("idx_portfolio_snapshots_timestamp").on(table.timestamp),
 		index("idx_portfolio_snapshots_environment").on(table.environment),
-	],
+	]
 );
 
 // config_versions: Version-controlled configuration
 export const configVersions = pgTable(
 	"config_versions",
 	{
-		id: uuid("id").primaryKey().defaultRandom(),
+		id: uuid("id").primaryKey().default(sql`uuidv7()`),
 		environment: environmentEnum("environment").notNull(),
-		configJson: jsonb("config_json")
-			.$type<Record<string, unknown>>()
-			.notNull(),
+		configJson: jsonb("config_json").$type<Record<string, unknown>>().notNull(),
 		description: text("description"),
 		active: boolean("active").notNull().default(false),
-		createdAt: timestamp("created_at", { withTimezone: true })
-			.notNull()
-			.defaultNow(),
+		createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
 		createdBy: text("created_by"),
 		activatedAt: timestamp("activated_at", { withTimezone: true }),
 		deactivatedAt: timestamp("deactivated_at", { withTimezone: true }),
@@ -297,14 +269,14 @@ export const configVersions = pgTable(
 		uniqueIndex("idx_config_versions_env_active")
 			.on(table.environment)
 			.where(sql`${table.active} = true`),
-	],
+	]
 );
 
 // cycles: Complete OODA cycle history with results
 export const cycles = pgTable(
 	"cycles",
 	{
-		id: uuid("id").primaryKey().defaultRandom(),
+		id: uuid("id").primaryKey().default(sql`uuidv7()`),
 		environment: environmentEnum("environment").notNull(),
 		status: cycleStatusEnum("status").notNull().default("running"),
 
@@ -317,43 +289,39 @@ export const cycles = pgTable(
 
 		totalSymbols: integer("total_symbols").default(0),
 		completedSymbols: integer("completed_symbols").default(0),
-		progressPct: numeric("progress_pct", { precision: 5, scale: 2 }).default(
-			"0",
-		),
+		progressPct: numeric("progress_pct", { precision: 5, scale: 2 }).default("0"),
 
 		approved: boolean("approved"),
 		iterations: integer("iterations"),
 		decisionsCount: integer("decisions_count").default(0),
 		ordersCount: integer("orders_count").default(0),
 
-		decisionsJson: jsonb("decisions_json").$type<
-			Array<{
-				symbol: string;
-				action: string;
-				direction: string;
-				confidence: number;
-			}>
-		>(),
-		ordersJson: jsonb("orders_json").$type<
-			Array<{
-				orderId: string;
-				symbol: string;
-				side: string;
-				quantity: number;
-				status: string;
-			}>
-		>(),
+		decisionsJson:
+			jsonb("decisions_json").$type<
+				Array<{
+					symbol: string;
+					action: string;
+					direction: string;
+					confidence: number;
+				}>
+			>(),
+		ordersJson:
+			jsonb("orders_json").$type<
+				Array<{
+					orderId: string;
+					symbol: string;
+					side: string;
+					quantity: number;
+					status: string;
+				}>
+			>(),
 
 		errorMessage: text("error_message"),
 		errorStack: text("error_stack"),
 		configVersion: text("config_version"),
 
-		createdAt: timestamp("created_at", { withTimezone: true })
-			.notNull()
-			.defaultNow(),
-		updatedAt: timestamp("updated_at", { withTimezone: true })
-			.notNull()
-			.defaultNow(),
+		createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+		updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
 	},
 	(table) => [
 		index("idx_cycles_environment").on(table.environment),
@@ -361,7 +329,7 @@ export const cycles = pgTable(
 		index("idx_cycles_started_at").on(table.startedAt),
 		index("idx_cycles_env_status").on(table.environment, table.status),
 		index("idx_cycles_env_started").on(table.environment, table.startedAt),
-	],
+	]
 );
 
 // cycle_events: Detailed event log for each cycle
@@ -378,9 +346,7 @@ export const cycleEvents = pgTable(
 		symbol: text("symbol"),
 		message: text("message"),
 		dataJson: jsonb("data_json").$type<Record<string, unknown>>(),
-		timestamp: timestamp("timestamp", { withTimezone: true })
-			.notNull()
-			.defaultNow(),
+		timestamp: timestamp("timestamp", { withTimezone: true }).notNull().defaultNow(),
 		durationMs: integer("duration_ms"),
 	},
 	(table) => [
@@ -388,10 +354,69 @@ export const cycleEvents = pgTable(
 		index("idx_cycle_events_type").on(table.eventType),
 		index("idx_cycle_events_timestamp").on(table.timestamp),
 		index("idx_cycle_events_agent").on(table.cycleId, table.agentType),
-		index("idx_cycle_events_agent_event").on(
-			table.cycleId,
-			table.agentType,
-			table.eventType,
-		),
-	],
+		index("idx_cycle_events_agent_event").on(table.cycleId, table.agentType, table.eventType),
+	]
+);
+
+// ============================================================================
+// Execution Engine State Persistence Tables
+// ============================================================================
+// These tables are used by the Rust execution-engine for crash recovery.
+// They store order and position snapshots for state restoration after restarts.
+
+// execution_order_snapshots: Order state for crash recovery
+export const executionOrderSnapshots = pgTable(
+	"execution_order_snapshots",
+	{
+		orderId: text("order_id").primaryKey(),
+		brokerOrderId: text("broker_order_id").notNull(),
+		instrumentId: text("instrument_id").notNull(),
+		status: text("status").notNull(),
+		side: text("side").notNull(),
+		orderType: text("order_type").notNull(),
+		timeInForce: text("time_in_force").notNull(),
+		requestedQuantity: numeric("requested_quantity", { precision: 14, scale: 4 }).notNull(),
+		filledQuantity: numeric("filled_quantity", { precision: 14, scale: 4 }).notNull(),
+		avgFillPrice: numeric("avg_fill_price", { precision: 12, scale: 4 }).notNull(),
+		limitPrice: numeric("limit_price", { precision: 12, scale: 4 }),
+		stopPrice: numeric("stop_price", { precision: 12, scale: 4 }),
+		submittedAt: text("submitted_at").notNull(),
+		lastUpdateAt: text("last_update_at").notNull(),
+		statusMessage: text("status_message"),
+		isMultiLeg: boolean("is_multi_leg").notNull().default(false),
+		environment: environmentEnum("environment").notNull(),
+		updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+	},
+	(table) => [
+		index("idx_exec_order_snapshots_broker_id").on(table.brokerOrderId),
+		index("idx_exec_order_snapshots_env_status").on(table.environment, table.status),
+	]
+);
+
+// execution_position_snapshots: Position state for crash recovery
+export const executionPositionSnapshots = pgTable(
+	"execution_position_snapshots",
+	{
+		symbol: text("symbol").primaryKey(),
+		quantity: numeric("quantity", { precision: 14, scale: 4 }).notNull(),
+		avgEntryPrice: numeric("avg_entry_price", { precision: 12, scale: 4 }).notNull(),
+		environment: environmentEnum("environment").notNull(),
+		updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+	},
+	(table) => [index("idx_exec_position_snapshots_env").on(table.environment)]
+);
+
+// execution_recovery_state: Recovery tracking for execution engine
+export const executionRecoveryState = pgTable(
+	"execution_recovery_state",
+	{
+		environment: environmentEnum("environment").primaryKey(),
+		lastSnapshotAt: timestamp("last_snapshot_at", { withTimezone: true }),
+		lastReconciliationAt: timestamp("last_reconciliation_at", { withTimezone: true }),
+		lastCycleId: text("last_cycle_id"),
+		status: executionRecoveryStatusEnum("status").notNull().default("unknown"),
+		errorMessage: text("error_message"),
+		updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+	},
+	() => []
 );

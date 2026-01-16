@@ -49,6 +49,7 @@
     "@mastra/core": "1.0.0-beta.21",
     "@mastra/hono": "0.1.0-beta.16",
     "ai": "6.0.37",
+    "drizzle-orm": "^0.45.1",
     "hono": "4.11.4",
     "zod": "4.3.5"
   },

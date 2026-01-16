@@ -7,7 +7,7 @@
  * NOTE: Model selection is global via trading_config.global_model.
  */
 import { and, asc, eq } from "drizzle-orm";
-import { getDb, type Database } from "../db";
+import { type Database, getDb } from "../db";
 import { agentConfigs } from "../schema/config";
 import { RepositoryError } from "./base";
 
@@ -99,15 +99,14 @@ export class AgentConfigsRepository {
 			})
 			.returning();
 
+		if (!row) {
+			throw new Error("Failed to create agent config");
+		}
 		return mapAgentConfigRow(row);
 	}
 
 	async findById(id: string): Promise<AgentConfig | null> {
-		const [row] = await this.db
-			.select()
-			.from(agentConfigs)
-			.where(eq(agentConfigs.id, id))
-			.limit(1);
+		const [row] = await this.db.select().from(agentConfigs).where(eq(agentConfigs.id, id)).limit(1);
 
 		return row ? mapAgentConfigRow(row) : null;
 	}
@@ -124,12 +123,7 @@ export class AgentConfigsRepository {
 		const [row] = await this.db
 			.select()
 			.from(agentConfigs)
-			.where(
-				and(
-					eq(agentConfigs.environment, environment),
-					eq(agentConfigs.agentType, agentType),
-				),
-			)
+			.where(and(eq(agentConfigs.environment, environment), eq(agentConfigs.agentType, agentType)))
 			.limit(1);
 
 		return row ? mapAgentConfigRow(row) : null;
@@ -141,7 +135,7 @@ export class AgentConfigsRepository {
 			throw new RepositoryError(
 				`No config found for agent '${agentType}' in environment '${environment}'. Run seed script.`,
 				"NOT_FOUND",
-				"agent_configs",
+				"agent_configs"
 			);
 		}
 		return config;
@@ -161,9 +155,7 @@ export class AgentConfigsRepository {
 		const rows = await this.db
 			.select()
 			.from(agentConfigs)
-			.where(
-				and(eq(agentConfigs.environment, environment), eq(agentConfigs.enabled, true)),
-			)
+			.where(and(eq(agentConfigs.environment, environment), eq(agentConfigs.enabled, true)))
 			.orderBy(asc(agentConfigs.agentType));
 
 		return rows.map(mapAgentConfigRow);
@@ -191,7 +183,7 @@ export class AgentConfigsRepository {
 	async upsert(
 		environment: AgentEnvironment,
 		agentType: AgentType,
-		input: UpdateAgentConfigInput,
+		input: UpdateAgentConfigInput
 	): Promise<AgentConfig> {
 		const existing = await this.get(environment, agentType);
 
@@ -209,10 +201,7 @@ export class AgentConfigsRepository {
 		return this.update(id, { enabled });
 	}
 
-	async resetToDefaults(
-		environment: AgentEnvironment,
-		agentType: AgentType,
-	): Promise<AgentConfig> {
+	async resetToDefaults(environment: AgentEnvironment, agentType: AgentType): Promise<AgentConfig> {
 		const existing = await this.get(environment, agentType);
 
 		if (!existing) {
@@ -248,7 +237,7 @@ export class AgentConfigsRepository {
 
 	async cloneToEnvironment(
 		sourceEnvironment: AgentEnvironment,
-		targetEnvironment: AgentEnvironment,
+		targetEnvironment: AgentEnvironment
 	): Promise<AgentConfig[]> {
 		const sourceConfigs = await this.getAll(sourceEnvironment);
 		const results: AgentConfig[] = [];

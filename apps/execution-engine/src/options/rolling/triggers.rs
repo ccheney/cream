@@ -80,10 +80,10 @@ pub fn check_roll_trigger(position: &PositionForRoll, config: &RollConfig) -> Ro
         return result;
     }
 
-    if position.is_credit {
-        if let Some(result) = check_credit_position_triggers(position, config) {
-            return result;
-        }
+    if position.is_credit
+        && let Some(result) = check_credit_position_triggers(position, config)
+    {
+        return result;
     }
 
     RollTriggerResult {

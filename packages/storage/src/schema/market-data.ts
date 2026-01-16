@@ -39,9 +39,7 @@ export const candles = pgTable(
 		dividendAdjusted: boolean("dividend_adjusted").notNull().default(false),
 		qualityFlags: jsonb("quality_flags").$type<string[]>().default([]),
 		provider: text("provider").notNull().default("alpaca"),
-		createdAt: timestamp("created_at", { withTimezone: true })
-			.notNull()
-			.defaultNow(),
+		createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
 	},
 	(table) => [
 		check(
@@ -50,18 +48,18 @@ export const candles = pgTable(
           ${table.high}::numeric >= ${table.open}::numeric AND
           ${table.high}::numeric >= ${table.close}::numeric AND
           ${table.low}::numeric <= ${table.open}::numeric AND
-          ${table.low}::numeric <= ${table.close}::numeric`,
+          ${table.low}::numeric <= ${table.close}::numeric`
 		),
 		check("positive_volume", sql`${table.volume}::numeric >= 0`),
 		uniqueIndex("idx_candles_symbol_timeframe_ts").on(
 			table.symbol,
 			table.timeframe,
-			table.timestamp,
+			table.timestamp
 		),
 		index("idx_candles_timestamp").on(table.timestamp),
 		index("idx_candles_symbol").on(table.symbol),
 		index("idx_candles_timeframe").on(table.timeframe),
-	],
+	]
 );
 
 // corporate_actions: Splits, dividends, mergers
@@ -78,20 +76,14 @@ export const corporateActions = pgTable(
 		amount: numeric("amount", { precision: 12, scale: 4 }),
 		details: text("details"),
 		provider: text("provider").notNull().default("alpaca"),
-		createdAt: timestamp("created_at", { withTimezone: true })
-			.notNull()
-			.defaultNow(),
+		createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
 	},
 	(table) => [
 		index("idx_corporate_actions_symbol_date").on(table.symbol, table.exDate),
 		index("idx_corporate_actions_ex_date").on(table.exDate),
 		index("idx_corporate_actions_type").on(table.actionType),
-		uniqueIndex("idx_corporate_actions_unique").on(
-			table.symbol,
-			table.actionType,
-			table.exDate,
-		),
-	],
+		uniqueIndex("idx_corporate_actions_unique").on(table.symbol, table.actionType, table.exDate),
+	]
 );
 
 // universe_cache: Cached universe resolution
@@ -105,20 +97,15 @@ export const universeCache = pgTable(
 		tickers: jsonb("tickers").$type<string[]>().notNull(),
 		tickerCount: integer("ticker_count").notNull(),
 		metadata: jsonb("metadata").$type<Record<string, unknown>>(),
-		cachedAt: timestamp("cached_at", { withTimezone: true })
-			.notNull()
-			.defaultNow(),
+		cachedAt: timestamp("cached_at", { withTimezone: true }).notNull().defaultNow(),
 		expiresAt: timestamp("expires_at", { withTimezone: true }).notNull(),
 		provider: text("provider"),
 	},
 	(table) => [
-		uniqueIndex("idx_universe_cache_source").on(
-			table.sourceType,
-			table.sourceId,
-		),
+		uniqueIndex("idx_universe_cache_source").on(table.sourceType, table.sourceId),
 		index("idx_universe_cache_expires").on(table.expiresAt),
 		index("idx_universe_cache_hash").on(table.sourceHash),
-	],
+	]
 );
 
 // features: Computed indicators
@@ -134,25 +121,23 @@ export const features = pgTable(
 		normalizedValue: numeric("normalized_value", { precision: 8, scale: 6 }),
 		parameters: jsonb("parameters").$type<Record<string, unknown>>(),
 		qualityScore: numeric("quality_score", { precision: 4, scale: 3 }),
-		computedAt: timestamp("computed_at", { withTimezone: true })
-			.notNull()
-			.defaultNow(),
+		computedAt: timestamp("computed_at", { withTimezone: true }).notNull().defaultNow(),
 	},
 	(table) => [
 		uniqueIndex("idx_features_symbol_ts_indicator").on(
 			table.symbol,
 			table.timestamp,
 			table.timeframe,
-			table.indicatorName,
+			table.indicatorName
 		),
 		index("idx_features_symbol_indicator_ts").on(
 			table.symbol,
 			table.indicatorName,
-			table.timestamp,
+			table.timestamp
 		),
 		index("idx_features_timestamp").on(table.timestamp),
 		index("idx_features_indicator").on(table.indicatorName),
-	],
+	]
 );
 
 // regime_labels: Market regime classifications
@@ -176,20 +161,18 @@ export const regimeLabels = pgTable(
 		}),
 		modelName: text("model_name").notNull().default("hmm_regime"),
 		modelVersion: text("model_version"),
-		computedAt: timestamp("computed_at", { withTimezone: true })
-			.notNull()
-			.defaultNow(),
+		computedAt: timestamp("computed_at", { withTimezone: true }).notNull().defaultNow(),
 	},
 	(table) => [
 		uniqueIndex("idx_regime_labels_symbol_ts_tf").on(
 			table.symbol,
 			table.timestamp,
-			table.timeframe,
+			table.timeframe
 		),
 		index("idx_regime_labels_symbol_ts").on(table.symbol, table.timestamp),
 		index("idx_regime_labels_regime").on(table.regime),
 		index("idx_regime_labels_market")
 			.on(table.symbol, table.timestamp)
 			.where(sql`${table.symbol} = '_MARKET'`),
-	],
+	]
 );

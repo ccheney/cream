@@ -175,7 +175,7 @@ export const Sidebar = memo(function Sidebar({
 			<nav className="flex-1 mt-4 px-2 overflow-y-auto flex flex-col" aria-label="Main navigation">
 				<div className="space-y-1">
 					{NAV_GROUPS.map((group, groupIndex) => (
-						<div key={`nav-group-${groupIndex}`}>
+						<div key={group[0]?.href ?? `nav-group-${groupIndex}`}>
 							{groupIndex > 0 && (
 								<div className="my-2 mx-3 border-t border-cream-200 dark:border-night-700" />
 							)}

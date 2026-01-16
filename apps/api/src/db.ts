@@ -27,12 +27,116 @@ import {
 	PositionsRepository,
 	PredictionMarketsRepository,
 	RegimeLabelsRepository,
+	type StoragePredictionMarketType,
+	type StoragePredictionPlatform,
 	ThesisStateRepository,
 	TradingConfigRepository,
 	UniverseConfigsRepository,
 } from "@cream/storage";
 
 import { log } from "./logger.js";
+
+type AgentPredictionPlatform = "KALSHI" | "POLYMARKET";
+type AgentPredictionMarketType =
+	| "FED_RATE"
+	| "ECONOMIC_DATA"
+	| "RECESSION"
+	| "GEOPOLITICAL"
+	| "REGULATORY"
+	| "ELECTION"
+	| "OTHER";
+
+function toAgentPlatform(platform: StoragePredictionPlatform): AgentPredictionPlatform {
+	return platform.toUpperCase() as AgentPredictionPlatform;
+}
+
+function toStoragePlatform(
+	platform: AgentPredictionPlatform | undefined
+): StoragePredictionPlatform | undefined {
+	return platform?.toLowerCase() as StoragePredictionPlatform | undefined;
+}
+
+function toAgentMarketType(marketType: StoragePredictionMarketType): AgentPredictionMarketType {
+	switch (marketType) {
+		case "rate":
+			return "FED_RATE";
+		case "election":
+			return "ELECTION";
+		case "economic":
+			return "ECONOMIC_DATA";
+		default:
+			return "OTHER";
+	}
+}
+
+function toStorageMarketType(
+	marketType: AgentPredictionMarketType | undefined
+): StoragePredictionMarketType | undefined {
+	if (!marketType) {
+		return undefined;
+	}
+	switch (marketType) {
+		case "FED_RATE":
+			return "rate";
+		case "ELECTION":
+			return "election";
+		default:
+			return "economic";
+	}
+}
+
+function createPredictionMarketsRepoAdapter(repo: PredictionMarketsRepository) {
+	return {
+		async getLatestSignals() {
+			const signals = await repo.getLatestSignals();
+			return signals.map((s) => ({
+				id: s.id,
+				signalType: s.signalType,
+				signalValue: s.signalValue,
+				confidence: s.confidence,
+				computedAt: s.computedAt,
+			}));
+		},
+		async getLatestSnapshots(platform?: AgentPredictionPlatform) {
+			const snapshots = await repo.getLatestSnapshots(toStoragePlatform(platform));
+			return snapshots.map((s) => ({
+				id: s.id,
+				platform: toAgentPlatform(s.platform as StoragePredictionPlatform),
+				marketTicker: s.marketTicker,
+				marketType: toAgentMarketType(s.marketType as StoragePredictionMarketType),
+				marketQuestion: s.marketQuestion,
+				snapshotTime: s.snapshotTime,
+				data: s.data,
+			}));
+		},
+		async findSnapshots(
+			filters: {
+				platform?: AgentPredictionPlatform;
+				marketType?: AgentPredictionMarketType;
+				fromTime?: string;
+				toTime?: string;
+			},
+			limit?: number
+		) {
+			const storageFilters = {
+				platform: toStoragePlatform(filters.platform),
+				marketType: toStorageMarketType(filters.marketType),
+				fromTime: filters.fromTime,
+				toTime: filters.toTime,
+			};
+			const snapshots = await repo.findSnapshots(storageFilters, limit);
+			return snapshots.map((s) => ({
+				id: s.id,
+				platform: toAgentPlatform(s.platform as StoragePredictionPlatform),
+				marketTicker: s.marketTicker,
+				marketType: toAgentMarketType(s.marketType as StoragePredictionMarketType),
+				marketQuestion: s.marketQuestion,
+				snapshotTime: s.snapshotTime,
+				data: s.data,
+			}));
+		},
+	};
+}
 
 // ============================================
 // Database Client (Drizzle + PostgreSQL)
@@ -66,7 +170,10 @@ export function registerToolProviders(): void {
 	}
 
 	// Register prediction markets repo provider for agent tools
-	setPredictionMarketsRepoProvider(getPredictionMarketsRepo);
+	// Use adapter to convert between storage types (lowercase) and agent types (uppercase)
+	setPredictionMarketsRepoProvider(async () =>
+		createPredictionMarketsRepoAdapter(getPredictionMarketsRepo())
+	);
 
 	toolProvidersRegistered = true;
 }

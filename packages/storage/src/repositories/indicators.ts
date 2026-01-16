@@ -3,8 +3,8 @@
  *
  * @see docs/plans/19-dynamic-indicator-synthesis.md
  */
-import { and, avg, count, desc, eq, inArray, sql } from "drizzle-orm";
-import { getDb, type Database } from "../db";
+import { and, count, desc, eq, getTableColumns, inArray, sql } from "drizzle-orm";
+import { type Database, getDb } from "../db";
 import {
 	indicatorIcHistory,
 	indicatorPaperSignals,
@@ -17,7 +17,7 @@ import { RepositoryError } from "./base";
 // Types
 // ============================================
 
-export type IndicatorCategory = "momentum" | "trend" | "volatility" | "volume" | "custom";
+export type IndicatorCategory = "momentum" | "trend" | "volatility" | "volume" | "sentiment";
 export type IndicatorStatus = "staging" | "paper" | "production" | "retired";
 
 export interface ValidationReport {
@@ -186,7 +186,9 @@ type TrialRow = typeof indicatorTrials.$inferSelect;
 type ICHistoryRow = typeof indicatorIcHistory.$inferSelect;
 
 function parseJsonReport<T>(value: string | null): T | null {
-	if (!value) return null;
+	if (!value) {
+		return null;
+	}
 	try {
 		return JSON.parse(value) as T;
 	} catch {
@@ -283,15 +285,14 @@ export class IndicatorsRepository {
 			})
 			.returning();
 
+		if (!row) {
+			throw new Error("Failed to create indicator");
+		}
 		return mapIndicatorRow(row);
 	}
 
 	async findById(id: string): Promise<Indicator | null> {
-		const [row] = await this.db
-			.select()
-			.from(indicators)
-			.where(eq(indicators.id, id))
-			.limit(1);
+		const [row] = await this.db.select().from(indicators).where(eq(indicators.id, id)).limit(1);
 
 		return row ? mapIndicatorRow(row) : null;
 	}
@@ -305,11 +306,7 @@ export class IndicatorsRepository {
 	}
 
 	async findByName(name: string): Promise<Indicator | null> {
-		const [row] = await this.db
-			.select()
-			.from(indicators)
-			.where(eq(indicators.name, name))
-			.limit(1);
+		const [row] = await this.db.select().from(indicators).where(eq(indicators.name, name)).limit(1);
 
 		return row ? mapIndicatorRow(row) : null;
 	}
@@ -578,10 +575,13 @@ export class IndicatorsRepository {
 				indicatorId: input.indicatorId,
 				trialNumber: input.trialNumber,
 				hypothesis: input.hypothesis,
-				parameters: input.parameters,
-			})
+				parameters: input.parameters as Record<string, unknown>,
+			} as typeof indicatorTrials.$inferInsert)
 			.returning();
 
+		if (!row) {
+			throw new Error("Failed to create indicator trial");
+		}
 		return mapTrialRow(row);
 	}
 
@@ -673,6 +673,9 @@ export class IndicatorsRepository {
 			.where(eq(indicatorTrials.id, id))
 			.returning();
 
+		if (!row) {
+			throw RepositoryError.notFound("indicator_trials", id);
+		}
 		return mapTrialRow(row);
 	}
 
@@ -702,6 +705,9 @@ export class IndicatorsRepository {
 			})
 			.returning();
 
+		if (!row) {
+			throw new Error("Failed to record IC history");
+		}
 		return mapICHistoryRow(row);
 	}
 
@@ -722,33 +728,24 @@ export class IndicatorsRepository {
 		const conditions = [eq(indicatorIcHistory.indicatorId, indicatorId)];
 
 		if (filters?.startDate) {
-			conditions.push(
-				sql`${indicatorIcHistory.date} >= ${new Date(filters.startDate)}`
-			);
+			conditions.push(sql`${indicatorIcHistory.date} >= ${new Date(filters.startDate)}`);
 		}
 		if (filters?.endDate) {
-			conditions.push(
-				sql`${indicatorIcHistory.date} <= ${new Date(filters.endDate)}`
-			);
+			conditions.push(sql`${indicatorIcHistory.date} <= ${new Date(filters.endDate)}`);
 		}
 
-		let query = this.db
+		const query = this.db
 			.select()
 			.from(indicatorIcHistory)
 			.where(and(...conditions))
-			.orderBy(desc(indicatorIcHistory.date));
+			.orderBy(desc(indicatorIcHistory.date))
+			.$dynamic();
 
-		if (filters?.limit) {
-			query = query.limit(filters.limit);
-		}
-
-		const rows = await query;
+		const rows = filters?.limit ? await query.limit(filters.limit) : await query;
 		return rows.map(mapICHistoryRow);
 	}
 
 	async getAverageIC(indicatorId: string, days?: number): Promise<number | null> {
-		let query;
-
 		if (days) {
 			// Get average of most recent N entries
 			const subquery = this.db
@@ -786,10 +783,12 @@ export class IndicatorsRepository {
 		return result?.count ?? 0;
 	}
 
-	async getPaperSignalsWithOutcomes(indicatorId: string): Promise<Array<{
-		signal: number;
-		outcome: number | null;
-	}>> {
+	async getPaperSignalsWithOutcomes(indicatorId: string): Promise<
+		Array<{
+			signal: number;
+			outcome: number | null;
+		}>
+	> {
 		const rows = await this.db
 			.select({
 				signal: indicatorPaperSignals.signal,
@@ -798,7 +797,7 @@ export class IndicatorsRepository {
 			.from(indicatorPaperSignals)
 			.where(eq(indicatorPaperSignals.indicatorId, indicatorId));
 
-		return rows.map(row => ({
+		return rows.map((row) => ({
 			signal: Number(row.signal),
 			outcome: row.outcome ? Number(row.outcome) : null,
 		}));
@@ -817,7 +816,7 @@ export class IndicatorsRepository {
 		return result?.count ?? 0;
 	}
 
-	async getRecentICValues(days: number = 30): Promise<number[]> {
+	async getRecentICValues(days = 30): Promise<number[]> {
 		const cutoff = new Date();
 		cutoff.setDate(cutoff.getDate() - days);
 
@@ -827,7 +826,7 @@ export class IndicatorsRepository {
 			.where(sql`${indicatorIcHistory.date} >= ${cutoff}`)
 			.orderBy(desc(indicatorIcHistory.date));
 
-		return rows.map(r => Number(r.icValue));
+		return rows.map((r) => Number(r.icValue));
 	}
 
 	async getLastGenerationAttempt(): Promise<string | null> {
@@ -841,31 +840,26 @@ export class IndicatorsRepository {
 	async findPaperTradingIndicators(): Promise<Array<Indicator & { daysTrading: number }>> {
 		const rows = await this.db
 			.select({
-				...indicators,
+				...getTableColumns(indicators),
 				daysTrading: sql<number>`EXTRACT(DAY FROM NOW() - ${indicators.paperTradingStart})`,
 			})
 			.from(indicators)
 			.where(eq(indicators.status, "paper"));
 
-		return rows.map(row => ({
+		return rows.map((row) => ({
 			...mapIndicatorRow(row),
 			daysTrading: Math.floor(row.daysTrading ?? 0),
 		}));
 	}
 
-	async findRecentStagingIndicators(hoursCutoff: number = 1): Promise<Indicator[]> {
+	async findRecentStagingIndicators(hoursCutoff = 1): Promise<Indicator[]> {
 		const cutoff = new Date();
 		cutoff.setHours(cutoff.getHours() - hoursCutoff);
 
 		const rows = await this.db
 			.select()
 			.from(indicators)
-			.where(
-				and(
-					eq(indicators.status, "staging"),
-					sql`${indicators.generatedAt} >= ${cutoff}`
-				)
-			)
+			.where(and(eq(indicators.status, "staging"), sql`${indicators.generatedAt} >= ${cutoff}`))
 			.orderBy(desc(indicators.generatedAt))
 			.limit(1);
 

@@ -21,11 +21,7 @@ import {
 	TableHeader,
 	TableRow,
 } from "@/components/ui/table";
-import {
-	useQueryStats,
-	useResetQueryStats,
-	type QueryStatsFilters,
-} from "@/hooks/queries";
+import { type QueryStatsFilters, useQueryStats, useResetQueryStats } from "@/hooks/queries";
 
 // ============================================
 // Summary Cards
@@ -53,9 +49,7 @@ function SummaryCard({ label, value, subtext, variant = "default" }: SummaryCard
 			<p className={`mt-1 text-2xl font-semibold tabular-nums ${variantClasses[variant]}`}>
 				{value}
 			</p>
-			{subtext && (
-				<p className="mt-1 text-xs text-stone-500 dark:text-stone-400">{subtext}</p>
-			)}
+			{subtext && <p className="mt-1 text-xs text-stone-500 dark:text-stone-400">{subtext}</p>}
 		</div>
 	);
 }
@@ -102,13 +96,11 @@ function QueryTable({ isLoading, stats }: QueryTableProps) {
 					{stats.length === 0 ? (
 						<TableEmpty colSpan={6}>No query statistics available</TableEmpty>
 					) : (
-						stats.map((stat, index) => (
-							<TableRow key={index}>
+						stats.map((stat) => (
+							<TableRow key={stat.query}>
 								<TableCell truncate className="max-w-md">
 									<code className="text-xs bg-stone-100 dark:bg-night-700 px-1.5 py-0.5 rounded">
-										{stat.query.length > 100
-											? `${stat.query.slice(0, 100)}...`
-											: stat.query}
+										{stat.query.length > 100 ? `${stat.query.slice(0, 100)}...` : stat.query}
 									</code>
 								</TableCell>
 								<TableCell numeric>{stat.calls.toLocaleString()}</TableCell>
@@ -227,7 +219,13 @@ export default function QueryPerformancePage() {
 						<SummaryCard
 							label="Buffer Hit Ratio"
 							value={`${(data.summary.overallHitRatio * 100).toFixed(1)}%`}
-							variant={data.summary.overallHitRatio >= 0.99 ? "success" : data.summary.overallHitRatio < 0.9 ? "warning" : "default"}
+							variant={
+								data.summary.overallHitRatio >= 0.99
+									? "success"
+									: data.summary.overallHitRatio < 0.9
+										? "warning"
+										: "default"
+							}
 							subtext="Shared buffer cache hits"
 						/>
 						<SummaryCard
@@ -251,7 +249,7 @@ export default function QueryPerformancePage() {
 					].map((option) => (
 						<Button
 							key={option.key}
-							variant={filters.sortBy === option.key ? "default" : "ghost"}
+							variant={filters.sortBy === option.key ? "primary" : "ghost"}
 							size="sm"
 							onClick={() => handleSortChange(option.key)}
 						>

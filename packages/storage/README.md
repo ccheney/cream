@@ -71,7 +71,7 @@ Database selection by environment is handled at the application level.
 
 ## Important Notes
 
-- **PostgreSQL 17** - Using postgres-js driver
+- **PostgreSQL 18** - Using pg driver
 - **Type-safe queries** - Drizzle ORM with generated types
 - **Connection pooling** - Built into the database client
 

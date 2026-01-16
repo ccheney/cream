@@ -11,7 +11,7 @@
 import { createResearchTriggerService } from "@cream/agents";
 import { type IndicatorSynthesisInput, indicatorSynthesisWorkflow } from "@cream/api";
 import type { TriggerDetectionState } from "@cream/domain";
-import { FactorZooRepository, RegimeLabelsRepository, type Database } from "@cream/storage";
+import { type Database, FactorZooRepository, RegimeLabelsRepository } from "@cream/storage";
 import { Cron } from "croner";
 import { log } from "../../shared/logger.js";
 import { mapRegimeToTriggerFormat } from "./regime-mapper.js";

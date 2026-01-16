@@ -5,9 +5,9 @@
  *
  * @see docs/plans/ui/04-data-requirements.md
  */
-import { and, count, desc, eq, inArray, sql } from "drizzle-orm";
-import { getDb, type Database } from "../db";
-import { backtests, backtestTrades, backtestEquity } from "../schema/dashboard";
+import { and, count, desc, eq, inArray } from "drizzle-orm";
+import { type Database, getDb } from "../db";
+import { backtestEquity, backtests, backtestTrades } from "../schema/dashboard";
 
 // ============================================
 // Types
@@ -208,15 +208,14 @@ export class BacktestsRepository {
 			})
 			.returning();
 
+		if (!row) {
+			throw new Error("Failed to create backtest");
+		}
 		return mapBacktestRow(row);
 	}
 
 	async findById(id: string): Promise<Backtest | null> {
-		const [row] = await this.db
-			.select()
-			.from(backtests)
-			.where(eq(backtests.id, id))
-			.limit(1);
+		const [row] = await this.db.select().from(backtests).where(eq(backtests.id, id)).limit(1);
 
 		return row ? mapBacktestRow(row) : null;
 	}
@@ -237,7 +236,9 @@ export class BacktestsRepository {
 
 		if (status) {
 			if (Array.isArray(status)) {
-				conditions.push(inArray(backtests.status, status as typeof backtests.$inferSelect.status[]));
+				conditions.push(
+					inArray(backtests.status, status as (typeof backtests.$inferSelect.status)[])
+				);
 			} else {
 				conditions.push(eq(backtests.status, status as typeof backtests.$inferSelect.status));
 			}
@@ -372,7 +373,7 @@ export class BacktestsRepository {
 	async cancel(id: string): Promise<Backtest> {
 		const [row] = await this.db
 			.update(backtests)
-			.set({ status: "cancelled" })
+			.set({ status: "failed" })
 			.where(eq(backtests.id, id))
 			.returning();
 
@@ -416,6 +417,9 @@ export class BacktestsRepository {
 			})
 			.returning();
 
+		if (!row) {
+			throw new Error("Failed to add backtest trade");
+		}
 		return mapTradeRow(row);
 	}
 
@@ -446,7 +450,8 @@ export class BacktestsRepository {
 			drawdown: point.drawdown != null ? String(point.drawdown) : null,
 			drawdownPct: point.drawdownPct != null ? String(point.drawdownPct) : null,
 			dayReturnPct: point.dayReturnPct != null ? String(point.dayReturnPct) : null,
-			cumulativeReturnPct: point.cumulativeReturnPct != null ? String(point.cumulativeReturnPct) : null,
+			cumulativeReturnPct:
+				point.cumulativeReturnPct != null ? String(point.cumulativeReturnPct) : null,
 		});
 	}
 

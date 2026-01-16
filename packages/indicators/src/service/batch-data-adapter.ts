@@ -138,7 +138,7 @@ export interface StorageCorporateActionRow {
 	payDate: string | null;
 	ratio: number | null;
 	amount: number | null;
-	details: Record<string, unknown> | null;
+	details: string | null;
 	provider: string;
 	createdAt?: string;
 }

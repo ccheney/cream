@@ -109,7 +109,7 @@ buf generate # Protobuf → TS + Rust stubs
 ## Available Tools
 
 Use context7 for exploring libraries and API documentation.
-Use your web search tool to ground all your assumptions, findings.
+Use your web search tool to ground all your assumptions and findings.
 
 | CLI Tool | Purpose |
 |------|---------|

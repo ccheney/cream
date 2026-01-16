@@ -7,8 +7,8 @@
  * @see docs/plans/46-postgres-drizzle-migration.md
  */
 
+import { sql } from "@cream/storage";
 import { createRoute, OpenAPIHono, z } from "@hono/zod-openapi";
-import { sql } from "drizzle-orm";
 import { getDrizzleDb } from "../db.js";
 
 const app = new OpenAPIHono();

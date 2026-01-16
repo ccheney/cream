@@ -3,8 +3,8 @@
  *
  * Data access for orders table.
  */
-import { and, count, desc, eq, gte, inArray, lte, sql } from "drizzle-orm";
-import { getDb, type Database } from "../db";
+import { and, count, desc, eq, gte, inArray, lte } from "drizzle-orm";
+import { type Database, getDb } from "../db";
 import { orders } from "../schema/core-trading";
 import { RepositoryError } from "./base";
 
@@ -12,13 +12,13 @@ import { RepositoryError } from "./base";
 // Types
 // ============================================
 
-export type OrderSide = "BUY" | "SELL";
-export type OrderType = "MARKET" | "LIMIT" | "STOP" | "STOP_LIMIT";
+export type OrderSide = "buy" | "sell";
+export type OrderType = "market" | "limit" | "stop" | "stop_limit";
 export type OrderStatus =
 	| "pending"
 	| "submitted"
 	| "accepted"
-	| "partially_filled"
+	| "partial_fill"
 	| "filled"
 	| "cancelled"
 	| "rejected"
@@ -129,6 +129,9 @@ export class OrdersRepository {
 			})
 			.returning();
 
+		if (!row) {
+			throw new Error("Failed to create order");
+		}
 		return mapOrderRow(row);
 	}
 
@@ -158,7 +161,7 @@ export class OrdersRepository {
 
 	async findMany(
 		filters: OrderFilters = {},
-		pagination?: { limit?: number; offset?: number },
+		pagination?: { limit?: number; offset?: number }
 	): Promise<{ data: Order[]; total: number; limit: number; offset: number }> {
 		const conditions = [];
 
@@ -182,9 +185,7 @@ export class OrdersRepository {
 			conditions.push(eq(orders.decisionId, filters.decisionId));
 		}
 		if (filters.environment) {
-			conditions.push(
-				eq(orders.environment, filters.environment as "BACKTEST" | "PAPER" | "LIVE"),
-			);
+			conditions.push(eq(orders.environment, filters.environment as "BACKTEST" | "PAPER" | "LIVE"));
 		}
 		if (filters.fromDate) {
 			conditions.push(gte(orders.createdAt, new Date(filters.fromDate)));
@@ -197,10 +198,7 @@ export class OrdersRepository {
 		const limit = pagination?.limit ?? 20;
 		const offset = pagination?.offset ?? 0;
 
-		const [countResult] = await this.db
-			.select({ count: count() })
-			.from(orders)
-			.where(whereClause);
+		const [countResult] = await this.db.select({ count: count() }).from(orders).where(whereClause);
 
 		const rows = await this.db
 			.select()
@@ -235,8 +233,8 @@ export class OrdersRepository {
 			.where(
 				and(
 					eq(orders.environment, environment as "BACKTEST" | "PAPER" | "LIVE"),
-					inArray(orders.status, ["pending", "submitted", "accepted", "partially_filled"]),
-				),
+					inArray(orders.status, ["pending", "submitted", "accepted", "partial_fill"])
+				)
 			)
 			.orderBy(desc(orders.createdAt));
 
@@ -254,11 +252,7 @@ export class OrdersRepository {
 		return rows.map(mapOrderRow);
 	}
 
-	async updateStatus(
-		id: string,
-		status: OrderStatus,
-		brokerOrderId?: string,
-	): Promise<Order> {
+	async updateStatus(id: string, status: OrderStatus, brokerOrderId?: string): Promise<Order> {
 		const updateData: Partial<typeof orders.$inferInsert> = { status };
 
 		if (brokerOrderId !== undefined) {
@@ -273,11 +267,7 @@ export class OrdersRepository {
 			updateData.cancelledAt = new Date();
 		}
 
-		const [row] = await this.db
-			.update(orders)
-			.set(updateData)
-			.where(eq(orders.id, id))
-			.returning();
+		const [row] = await this.db.update(orders).set(updateData).where(eq(orders.id, id)).returning();
 
 		if (!row) {
 			throw RepositoryError.notFound("orders", id);
@@ -289,7 +279,7 @@ export class OrdersRepository {
 	async updateFill(id: string, filledQty: number, avgFillPrice: number): Promise<Order> {
 		const order = await this.findByIdOrThrow(id);
 
-		const status: OrderStatus = filledQty >= order.quantity ? "filled" : "partially_filled";
+		const status: OrderStatus = filledQty >= order.quantity ? "filled" : "partial_fill";
 
 		const updateData: Partial<typeof orders.$inferInsert> = {
 			filledQty: String(filledQty),
@@ -301,12 +291,11 @@ export class OrdersRepository {
 			updateData.filledAt = new Date();
 		}
 
-		const [row] = await this.db
-			.update(orders)
-			.set(updateData)
-			.where(eq(orders.id, id))
-			.returning();
+		const [row] = await this.db.update(orders).set(updateData).where(eq(orders.id, id)).returning();
 
+		if (!row) {
+			throw RepositoryError.notFound("orders", id);
+		}
 		return mapOrderRow(row);
 	}
 
@@ -334,7 +323,7 @@ export class OrdersRepository {
 			pending: 0,
 			submitted: 0,
 			accepted: 0,
-			partially_filled: 0,
+			partial_fill: 0,
 			filled: 0,
 			cancelled: 0,
 			rejected: 0,

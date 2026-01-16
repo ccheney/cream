@@ -5,9 +5,9 @@
  *
  * @see docs/plans/33-indicator-engine-v2.md
  */
-import { and, count, desc, eq, gte, lte, sql } from "drizzle-orm";
+import { and, desc, eq, gte, lte, sql } from "drizzle-orm";
 import { z } from "zod";
-import { getDb, type Database } from "../db";
+import { type Database, getDb } from "../db";
 import { regimeLabels } from "../schema/market-data";
 
 // ============================================
@@ -105,8 +105,10 @@ export class RegimeLabelsRepository {
 				regime: label.regime as typeof regimeLabels.$inferInsert.regime,
 				confidence: String(label.confidence),
 				trendStrength: label.trendStrength != null ? String(label.trendStrength) : null,
-				volatilityPercentile: label.volatilityPercentile != null ? String(label.volatilityPercentile) : null,
-				correlationToMarket: label.correlationToMarket != null ? String(label.correlationToMarket) : null,
+				volatilityPercentile:
+					label.volatilityPercentile != null ? String(label.volatilityPercentile) : null,
+				correlationToMarket:
+					label.correlationToMarket != null ? String(label.correlationToMarket) : null,
 				modelName: label.modelName ?? "hmm_regime",
 				modelVersion: label.modelVersion ?? null,
 			})
@@ -116,8 +118,10 @@ export class RegimeLabelsRepository {
 					regime: label.regime as typeof regimeLabels.$inferInsert.regime,
 					confidence: String(label.confidence),
 					trendStrength: label.trendStrength != null ? String(label.trendStrength) : null,
-					volatilityPercentile: label.volatilityPercentile != null ? String(label.volatilityPercentile) : null,
-					correlationToMarket: label.correlationToMarket != null ? String(label.correlationToMarket) : null,
+					volatilityPercentile:
+						label.volatilityPercentile != null ? String(label.volatilityPercentile) : null,
+					correlationToMarket:
+						label.correlationToMarket != null ? String(label.correlationToMarket) : null,
 					modelName: label.modelName ?? "hmm_regime",
 					modelVersion: label.modelVersion ?? null,
 					computedAt: new Date(),

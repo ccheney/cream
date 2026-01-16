@@ -43,7 +43,7 @@ impl Default for PerInstrumentConstraints {
     }
 }
 
-pub(crate) const fn default_max_notional() -> f64 {
+pub const fn default_max_notional() -> f64 {
     50000.0
 }
 
@@ -79,7 +79,7 @@ impl Default for PortfolioConstraints {
     }
 }
 
-pub(crate) const fn default_max_gross_notional() -> f64 {
+pub const fn default_max_gross_notional() -> f64 {
     500_000.0
 }
 
@@ -87,7 +87,7 @@ const fn default_max_net_notional() -> f64 {
     200_000.0
 }
 
-pub(crate) const fn default_max_leverage() -> f64 {
+pub const fn default_max_leverage() -> f64 {
     2.0
 }
 

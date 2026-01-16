@@ -40,6 +40,7 @@ impl SafetyConfig {
     /// Safety features are enabled by default in PAPER/LIVE modes,
     /// disabled in BACKTEST mode since there's no real broker.
     #[must_use]
+    #[allow(clippy::missing_const_for_fn)] // Method call prevents const
     pub fn is_enabled_for_env(&self, env: &crate::models::Environment) -> bool {
         if !self.enabled {
             return false;
@@ -48,7 +49,7 @@ impl SafetyConfig {
         !env.is_backtest()
     }
 
-    /// Convert to the internal MassCancelConfig type used by the safety module.
+    /// Convert to the internal `MassCancelConfig` type used by the safety module.
     #[must_use]
     pub fn to_mass_cancel_config(&self) -> crate::safety::MassCancelConfig {
         use crate::safety::GtcOrderPolicy;

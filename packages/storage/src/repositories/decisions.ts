@@ -3,8 +3,8 @@
  *
  * Data access for trading decisions table.
  */
-import { and, asc, count, desc, eq, gte, inArray, lte, sql } from "drizzle-orm";
-import { getDb, type Database } from "../db";
+import { and, count, desc, eq, gte, inArray, lte } from "drizzle-orm";
+import { type Database, getDb } from "../db";
 import { decisions } from "../schema/core-trading";
 import { RepositoryError } from "./base";
 
@@ -16,12 +16,12 @@ export type DecisionStatus =
 	| "pending"
 	| "approved"
 	| "rejected"
-	| "executing"
 	| "executed"
-	| "failed"
-	| "cancelled";
+	| "cancelled"
+	| "expired";
 
-export type DecisionAction = "BUY" | "SELL" | "HOLD" | "CLOSE";
+export type DecisionAction = "BUY" | "SELL" | "HOLD" | "CLOSE" | "INCREASE" | "REDUCE" | "NO_TRADE";
+export type SizeUnit = "SHARES" | "CONTRACTS" | "DOLLARS" | "PCT_EQUITY";
 export type DecisionDirection = "LONG" | "SHORT" | "FLAT";
 
 export interface Decision {
@@ -31,7 +31,7 @@ export interface Decision {
 	action: DecisionAction;
 	direction: DecisionDirection;
 	size: number;
-	sizeUnit: string;
+	sizeUnit: SizeUnit;
 	entryPrice: number | null;
 	stopPrice: number | null;
 	targetPrice: number | null;
@@ -56,7 +56,7 @@ export interface CreateDecisionInput {
 	action: DecisionAction;
 	direction: DecisionDirection;
 	size: number;
-	sizeUnit?: string;
+	sizeUnit?: SizeUnit;
 	entryPrice?: number | null;
 	stopPrice?: number | null;
 	targetPrice?: number | null;
@@ -97,7 +97,7 @@ function mapDecisionRow(row: DecisionRow): Decision {
 		action: row.action as DecisionAction,
 		direction: row.direction as DecisionDirection,
 		size: Number(row.size),
-		sizeUnit: row.sizeUnit,
+		sizeUnit: row.sizeUnit as SizeUnit,
 		entryPrice: row.entryPrice ? Number(row.entryPrice) : null,
 		stopPrice: row.stopPrice ? Number(row.stopPrice) : null,
 		targetPrice: row.targetPrice ? Number(row.targetPrice) : null,
@@ -146,23 +146,21 @@ export class DecisionsRepository {
 				rationale: input.rationale ?? null,
 				bullishFactors: input.bullishFactors ?? [],
 				bearishFactors: input.bearishFactors ?? [],
-				confidenceScore:
-					input.confidenceScore != null ? String(input.confidenceScore) : null,
+				confidenceScore: input.confidenceScore != null ? String(input.confidenceScore) : null,
 				riskScore: input.riskScore != null ? String(input.riskScore) : null,
 				metadata: input.metadata ?? {},
 				environment: input.environment as "BACKTEST" | "PAPER" | "LIVE",
 			})
 			.returning();
 
+		if (!row) {
+			throw new Error("Failed to create decision");
+		}
 		return mapDecisionRow(row);
 	}
 
 	async findById(id: string): Promise<Decision | null> {
-		const [row] = await this.db
-			.select()
-			.from(decisions)
-			.where(eq(decisions.id, id))
-			.limit(1);
+		const [row] = await this.db.select().from(decisions).where(eq(decisions.id, id)).limit(1);
 
 		return row ? mapDecisionRow(row) : null;
 	}
@@ -177,7 +175,7 @@ export class DecisionsRepository {
 
 	async findMany(
 		filters: DecisionFilters = {},
-		pagination?: { limit?: number; offset?: number },
+		pagination?: { limit?: number; offset?: number }
 	): Promise<{ data: Decision[]; total: number; limit: number; offset: number }> {
 		const conditions = [];
 
@@ -199,7 +197,7 @@ export class DecisionsRepository {
 		}
 		if (filters.environment) {
 			conditions.push(
-				eq(decisions.environment, filters.environment as "BACKTEST" | "PAPER" | "LIVE"),
+				eq(decisions.environment, filters.environment as "BACKTEST" | "PAPER" | "LIVE")
 			);
 		}
 		if (filters.cycleId) {
@@ -285,35 +283,58 @@ export class DecisionsRepository {
 
 	async update(
 		id: string,
-		updates: Partial<Omit<CreateDecisionInput, "id" | "cycleId" | "environment">>,
+		updates: Partial<Omit<CreateDecisionInput, "id" | "cycleId" | "environment">>
 	): Promise<Decision> {
 		const updateData: Partial<typeof decisions.$inferInsert> = {
 			updatedAt: new Date(),
 		};
 
-		if (updates.symbol !== undefined) updateData.symbol = updates.symbol;
-		if (updates.action !== undefined) updateData.action = updates.action;
-		if (updates.direction !== undefined) updateData.direction = updates.direction;
-		if (updates.size !== undefined) updateData.size = String(updates.size);
-		if (updates.sizeUnit !== undefined)
-			updateData.sizeUnit = updates.sizeUnit as "SHARES" | "CONTRACTS" | "NOTIONAL";
-		if (updates.entryPrice !== undefined)
+		if (updates.symbol !== undefined) {
+			updateData.symbol = updates.symbol;
+		}
+		if (updates.action !== undefined) {
+			updateData.action = updates.action;
+		}
+		if (updates.direction !== undefined) {
+			updateData.direction = updates.direction;
+		}
+		if (updates.size !== undefined) {
+			updateData.size = String(updates.size);
+		}
+		if (updates.sizeUnit !== undefined) {
+			updateData.sizeUnit = updates.sizeUnit;
+		}
+		if (updates.entryPrice !== undefined) {
 			updateData.entryPrice = updates.entryPrice != null ? String(updates.entryPrice) : null;
-		if (updates.stopPrice !== undefined)
+		}
+		if (updates.stopPrice !== undefined) {
 			updateData.stopPrice = updates.stopPrice != null ? String(updates.stopPrice) : null;
-		if (updates.targetPrice !== undefined)
-			updateData.targetPrice =
-				updates.targetPrice != null ? String(updates.targetPrice) : null;
-		if (updates.status !== undefined) updateData.status = updates.status;
-		if (updates.rationale !== undefined) updateData.rationale = updates.rationale;
-		if (updates.bullishFactors !== undefined) updateData.bullishFactors = updates.bullishFactors;
-		if (updates.bearishFactors !== undefined) updateData.bearishFactors = updates.bearishFactors;
-		if (updates.confidenceScore !== undefined)
+		}
+		if (updates.targetPrice !== undefined) {
+			updateData.targetPrice = updates.targetPrice != null ? String(updates.targetPrice) : null;
+		}
+		if (updates.status !== undefined) {
+			updateData.status = updates.status;
+		}
+		if (updates.rationale !== undefined) {
+			updateData.rationale = updates.rationale;
+		}
+		if (updates.bullishFactors !== undefined) {
+			updateData.bullishFactors = updates.bullishFactors;
+		}
+		if (updates.bearishFactors !== undefined) {
+			updateData.bearishFactors = updates.bearishFactors;
+		}
+		if (updates.confidenceScore !== undefined) {
 			updateData.confidenceScore =
 				updates.confidenceScore != null ? String(updates.confidenceScore) : null;
-		if (updates.riskScore !== undefined)
+		}
+		if (updates.riskScore !== undefined) {
 			updateData.riskScore = updates.riskScore != null ? String(updates.riskScore) : null;
-		if (updates.metadata !== undefined) updateData.metadata = updates.metadata;
+		}
+		if (updates.metadata !== undefined) {
+			updateData.metadata = updates.metadata;
+		}
 
 		const [row] = await this.db
 			.update(decisions)
@@ -348,10 +369,9 @@ export class DecisionsRepository {
 			pending: 0,
 			approved: 0,
 			rejected: 0,
-			executing: 0,
 			executed: 0,
-			failed: 0,
 			cancelled: 0,
+			expired: 0,
 		};
 
 		for (const row of rows) {

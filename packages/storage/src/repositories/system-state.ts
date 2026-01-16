@@ -4,14 +4,14 @@
  * Data access for system_state table - persists system status per environment.
  */
 import { eq } from "drizzle-orm";
-import { getDb, type Database } from "../db";
+import { type Database, getDb } from "../db";
 import { systemState } from "../schema/dashboard";
 
 // ============================================
 // Types
 // ============================================
 
-export type SystemStatus = "stopped" | "active" | "paused";
+export type SystemStatus = "stopped" | "running" | "paused";
 
 export type SystemCyclePhase = "observe" | "orient" | "decide" | "act" | "complete";
 
@@ -82,6 +82,9 @@ export class SystemStateRepository {
 			})
 			.returning();
 
+		if (!row) {
+			throw new Error(`Failed to create system state for environment: ${environment}`);
+		}
 		return mapSystemStateRow(row);
 	}
 
@@ -89,7 +92,9 @@ export class SystemStateRepository {
 		const [row] = await this.db
 			.select()
 			.from(systemState)
-			.where(eq(systemState.environment, environment as typeof systemState.$inferSelect.environment))
+			.where(
+				eq(systemState.environment, environment as typeof systemState.$inferSelect.environment)
+			)
 			.limit(1);
 
 		return row ? mapSystemStateRow(row) : null;
@@ -127,9 +132,14 @@ export class SystemStateRepository {
 		const [row] = await this.db
 			.update(systemState)
 			.set(updates)
-			.where(eq(systemState.environment, environment as typeof systemState.$inferSelect.environment))
+			.where(
+				eq(systemState.environment, environment as typeof systemState.$inferSelect.environment)
+			)
 			.returning();
 
+		if (!row) {
+			throw new Error(`Failed to update system state for environment: ${environment}`);
+		}
 		return mapSystemStateRow(row);
 	}
 

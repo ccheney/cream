@@ -205,7 +205,8 @@ function createCorporateActionsAdapter(): StorageCorporateActionsRepository {
 			return rows.map((row) => ({
 				id: row.id,
 				symbol: row.symbol,
-				actionType: row.actionType === "split" || row.actionType === "reverse_split" ? "SPLIT" : "DIVIDEND",
+				actionType:
+					row.actionType === "split" || row.actionType === "reverse_split" ? "SPLIT" : "DIVIDEND",
 				exDate: row.exDate,
 				recordDate: row.recordDate,
 				payDate: row.payDate,

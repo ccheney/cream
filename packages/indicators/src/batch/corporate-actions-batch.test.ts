@@ -556,7 +556,7 @@ describe("CorporateActionsBatchJob", () => {
 			expect(insert.actionType).toBe("dividend");
 			expect(insert.amount).toBe(0.24);
 			expect(insert.ratio).toBeNull();
-			expect(insert.details).toEqual({ description: "Quarterly dividend" });
+			expect(insert.details).toBe("Quarterly dividend");
 		});
 
 		test("stores split actions with ratio", async () => {

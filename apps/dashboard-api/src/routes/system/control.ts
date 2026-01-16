@@ -53,7 +53,7 @@ async function getSystemStatusResponse(environmentOverride?: string) {
 		status: state.status,
 		lastCycleId: state.lastCycleId,
 		lastCycleTime: state.lastCycleTime,
-		nextCycleTime: state.status === "ACTIVE" ? nextHour.toISOString() : null,
+		nextCycleTime: state.status === "running" ? nextHour.toISOString() : null,
 		positionCount: positions.total,
 		openOrderCount: orders.total,
 		alerts: alerts.data.map((a) => ({
@@ -138,7 +138,7 @@ app.openapi(startRoute, async (c) => {
 	}
 
 	// Persist status to database
-	await setSystemStatus("ACTIVE", environment);
+	await setSystemStatus("running", environment);
 
 	return c.json(await getSystemStatusResponse(environment));
 });
@@ -167,7 +167,7 @@ app.openapi(stopRoute, async (c) => {
 	const state = await getSystemState();
 
 	// Persist status to database
-	await setSystemStatus("STOPPED", state.environment);
+	await setSystemStatus("stopped", state.environment);
 
 	if (body.closeAllPositions) {
 		try {
@@ -180,7 +180,6 @@ app.openapi(stopRoute, async (c) => {
 			if (openPositions.total > 0) {
 				const alertsRepo = await getAlertsRepo();
 				await alertsRepo.create({
-					id: crypto.randomUUID(),
 					severity: "warning",
 					type: "system",
 					title: "Position Close Requested",
@@ -217,7 +216,7 @@ app.openapi(pauseRoute, async (c) => {
 	const state = await getSystemState();
 
 	// Persist status to database
-	await setSystemStatus("PAUSED", state.environment);
+	await setSystemStatus("paused", state.environment);
 
 	return c.json(await getSystemStatusResponse());
 });
@@ -258,7 +257,7 @@ app.openapi(environmentRoute, async (c) => {
 
 	const state = await getSystemState();
 
-	if (state.status !== "STOPPED") {
+	if (state.status !== "stopped") {
 		return c.json({ error: "System must be stopped to change environment" }, 400);
 	}
 

@@ -1,12 +1,13 @@
 import { describe, expect, it, mock, spyOn } from "bun:test";
 import * as db from "../db";
 
-// Mock MassiveConnectionState enum for streaming modules
-const MassiveConnectionState = {
+// Mock AlpacaConnectionState enum for streaming modules
+const AlpacaConnectionState = {
 	DISCONNECTED: "DISCONNECTED",
 	CONNECTING: "CONNECTING",
 	CONNECTED: "CONNECTED",
-	RECONNECTING: "RECONNECTING",
+	AUTHENTICATING: "AUTHENTICATING",
+	AUTHENTICATED: "AUTHENTICATED",
 	ERROR: "ERROR",
 } as const;
 
@@ -55,11 +56,24 @@ mock.module("@cream/marketdata", () => ({
 		}
 		return undefined;
 	},
-	// Include MassiveConnectionState for streaming modules
-	MassiveConnectionState,
-	// Stub other exports that streaming modules might need
-	createMassiveStocksClientFromEnv: () => null,
-	createMassiveOptionsClientFromEnv: () => null,
+	// Include AlpacaConnectionState for streaming modules
+	AlpacaConnectionState,
+	// Stub websocket client exports
+	createAlpacaStocksClientFromEnv: () => null,
+	createAlpacaOptionsClientFromEnv: () => null,
+	createAlpacaNewsClientFromEnv: () => null,
+	createAlpacaWebSocketClientFromEnv: () => null,
+	AlpacaWebSocketClient: class {},
+	// Stub screener exports
+	createAlpacaScreenerFromEnv: () => ({
+		getMostActives: mock(() => Promise.resolve([])),
+		getMarketMovers: mock(() => Promise.resolve({ gainers: [], losers: [] })),
+		getPreMarketMovers: mock(() => Promise.resolve({ gainers: [], losers: [] })),
+		getAssetInfo: mock(() => Promise.resolve(null)),
+		getAssetsInfo: mock(() => Promise.resolve(new Map())),
+	}),
+	isAlpacaScreenerConfigured: () => false,
+	AlpacaScreenerClient: class {},
 }));
 
 describe("PortfolioService", () => {
@@ -77,7 +91,7 @@ describe("PortfolioService", () => {
 					{
 						id: "pos-1",
 						symbol: "AAPL240119C00150000",
-						side: "LONG",
+						side: "long",
 						quantity: 10,
 						avgEntryPrice: 5.0,
 						currentPrice: 5.2,
@@ -87,7 +101,7 @@ describe("PortfolioService", () => {
 					{
 						id: "pos-2",
 						symbol: "AAPL", // Not an option
-						side: "LONG",
+						side: "long",
 						quantity: 100,
 						avgEntryPrice: 150,
 						environment: "PAPER",
@@ -96,7 +110,9 @@ describe("PortfolioService", () => {
 			),
 		};
 
-		spyOn(db, "getPositionsRepo").mockResolvedValue(mockRepo as any);
+		spyOn(db, "getPositionsRepo").mockReturnValue(
+			mockRepo as unknown as ReturnType<typeof db.getPositionsRepo>
+		);
 
 		const service = PortfolioService.getInstance();
 		const results = await service.getOptionsPositions();
@@ -143,9 +159,21 @@ describe("PortfolioService", () => {
 				}
 				return undefined;
 			},
-			MassiveConnectionState,
-			createMassiveStocksClientFromEnv: () => null,
-			createMassiveOptionsClientFromEnv: () => null,
+			AlpacaConnectionState,
+			createAlpacaStocksClientFromEnv: () => null,
+			createAlpacaOptionsClientFromEnv: () => null,
+			createAlpacaNewsClientFromEnv: () => null,
+			createAlpacaWebSocketClientFromEnv: () => null,
+			AlpacaWebSocketClient: class {},
+			createAlpacaScreenerFromEnv: () => ({
+				getMostActives: mock(() => Promise.resolve([])),
+				getMarketMovers: mock(() => Promise.resolve({ gainers: [], losers: [] })),
+				getPreMarketMovers: mock(() => Promise.resolve({ gainers: [], losers: [] })),
+				getAssetInfo: mock(() => Promise.resolve(null)),
+				getAssetsInfo: mock(() => Promise.resolve(new Map())),
+			}),
+			isAlpacaScreenerConfigured: () => false,
+			AlpacaScreenerClient: class {},
 		}));
 
 		// Re-instantiate service to pick up new mock (Note: Singleton persists, so this test might depend on run order or need reset mechanism.

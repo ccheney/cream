@@ -50,6 +50,7 @@ use tokio::sync::broadcast;
 const SHUTDOWN_TIMEOUT: Duration = Duration::from_secs(30);
 
 #[tokio::main]
+#[allow(clippy::too_many_lines)]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
     // Load .env file from current directory (symlinked to project root)
     // Falls back to searching parent directories if symlink doesn't exist
@@ -133,8 +134,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         &components.state_manager_for_reconciliation,
     ) {
         let recon_config = config.reconciliation.to_reconciliation_config();
-        let recon_manager =
-            ReconciliationManager::new(recon_config.clone(), Arc::clone(state_manager));
+        let recon_manager = ReconciliationManager::new(recon_config, Arc::clone(state_manager));
         let interval_secs = config.reconciliation.interval_secs;
         let adapter_clone = Arc::clone(adapter);
 
@@ -309,6 +309,7 @@ struct ServerComponents {
 /// - PAPER/LIVE: Uses `AlpacaAdapter` with validated credentials
 ///
 /// Returns the execution server and optional components needed for background tasks.
+#[allow(clippy::too_many_lines)]
 async fn create_execution_server(
     config: &Config,
     env: Environment,
@@ -358,15 +359,23 @@ async fn create_execution_server(
     let reconciliation_enabled = config.reconciliation.is_enabled_for_env(&env);
 
     if persistence_enabled {
-        let persistence =
-            StatePersistence::new_local(&config.persistence.db_path, &env.to_string())
-                .await
-                .map_err(|e| format!("Failed to initialize persistence: {e}"))?;
+        let database_url = config
+            .persistence
+            .resolve_database_url(&env)
+            .map_err(|e| format!("Failed to resolve database URL: {e}"))?;
+
+        let persistence = StatePersistence::with_max_connections(
+            &database_url,
+            &env.to_string(),
+            config.persistence.max_connections,
+        )
+        .await
+        .map_err(|e| format!("Failed to initialize persistence: {e}"))?;
 
         tracing::info!(
-            db_path = %config.persistence.db_path,
+            max_connections = config.persistence.max_connections,
             snapshot_interval_secs = config.persistence.snapshot_interval_secs,
-            "State persistence initialized"
+            "PostgreSQL state persistence initialized"
         );
 
         let persistence_arc = Arc::new(persistence);

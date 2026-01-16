@@ -169,7 +169,8 @@ describe("Morning Newspaper Service", () => {
 		test("storage input has correct format", () => {
 			const result = compileMorningNewspaper(mockEntries, universeSymbols);
 
-			expect(result.storageInput.id).toMatch(/^newspaper-\d{4}-\d{2}-\d{2}-\d+$/);
+			// id is omitted - database generates uuidv7 on insert
+			expect(result.storageInput.id).toBeUndefined();
 			expect(result.storageInput.date).toMatch(/^\d{4}-\d{2}-\d{2}$/);
 			expect(result.storageInput.compiledAt).toMatch(/^\d{4}-\d{2}-\d{2}T/);
 			expect(result.storageInput.sections).toBeDefined();

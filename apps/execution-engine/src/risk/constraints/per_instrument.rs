@@ -14,7 +14,7 @@ use crate::models::{
 /// Check per-instrument notional limit.
 ///
 /// Returns a violation if the calculated notional exceeds the per-instrument limit.
-pub(crate) fn check_notional_limit(
+pub fn check_notional_limit(
     decision: &Decision,
     idx: usize,
     notional: Decimal,
@@ -41,7 +41,7 @@ pub(crate) fn check_notional_limit(
 /// Check per-instrument unit limit.
 ///
 /// Returns a violation if the number of shares/contracts exceeds the per-instrument limit.
-pub(crate) fn check_unit_limit(
+pub fn check_unit_limit(
     decision: &Decision,
     idx: usize,
     limits: &ExposureLimits,
@@ -74,7 +74,7 @@ pub(crate) fn check_unit_limit(
 /// Check per-instrument equity percentage limit.
 ///
 /// Returns a violation if the position exceeds the maximum percentage of account equity.
-pub(crate) fn check_equity_percentage_limit(
+pub fn check_equity_percentage_limit(
     decision: &Decision,
     idx: usize,
     notional: Decimal,
@@ -103,10 +103,7 @@ pub(crate) fn check_equity_percentage_limit(
 }
 
 /// Check stop loss is set for entry actions (Buy/Sell).
-pub(crate) fn check_stop_loss_required(
-    decision: &Decision,
-    idx: usize,
-) -> Option<ConstraintViolation> {
+pub fn check_stop_loss_required(decision: &Decision, idx: usize) -> Option<ConstraintViolation> {
     if matches!(decision.action, Action::Buy | Action::Sell)
         && decision.stop_loss_level == Decimal::ZERO
     {
@@ -125,10 +122,7 @@ pub(crate) fn check_stop_loss_required(
 }
 
 /// Check confidence is within valid range (0 to 1).
-pub(crate) fn check_confidence_valid(
-    decision: &Decision,
-    idx: usize,
-) -> Option<ConstraintViolation> {
+pub fn check_confidence_valid(decision: &Decision, idx: usize) -> Option<ConstraintViolation> {
     if decision.confidence < Decimal::ZERO || decision.confidence > Decimal::ONE {
         Some(ConstraintViolation {
             code: "INVALID_CONFIDENCE".to_string(),
@@ -145,6 +139,7 @@ pub(crate) fn check_confidence_valid(
 }
 
 #[cfg(test)]
+#[allow(clippy::unwrap_used)]
 mod tests {
     use super::*;
     use crate::models::{

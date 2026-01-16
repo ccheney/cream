@@ -1,9 +1,8 @@
 import { defineConfig } from "drizzle-kit";
 
-// Get database URL from environment
+// Get database URL from environment (use process.env for drizzle-kit compatibility)
 const databaseUrl =
-	Bun.env.DATABASE_URL ??
-	"postgresql://cream:cream_dev_password@localhost:5432/cream";
+	process.env.DATABASE_URL ?? "postgresql://cream:cream_dev_password@localhost:5432/cream";
 
 export default defineConfig({
 	// Schema location

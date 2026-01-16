@@ -142,9 +142,7 @@ async function seedEnvironment(
 			result.trading = "created";
 		}
 
-		const configId = `tc_${environment.toLowerCase()}_${Date.now()}_seed`;
 		await tradingRepo.create({
-			id: configId,
 			environment,
 			version,
 			...getDefaultTradingConfig(),
@@ -186,9 +184,7 @@ async function seedEnvironment(
 			result.constraints = "created";
 		}
 
-		const configId = `cc_${environment.toLowerCase()}_${Date.now()}_seed`;
 		await constraintsRepo.create({
-			id: configId,
 			environment,
 			status: "active",
 		});

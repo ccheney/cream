@@ -1,18 +1,17 @@
-import { beforeAll, describe, expect, mock, test } from "bun:test";
-import workersRoutes from "./workers";
+import { beforeAll, beforeEach, describe, expect, mock, test } from "bun:test";
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type ApiResponse = any;
 
 interface MockRun {
 	id: string;
-	run_type: string;
-	started_at: string;
-	completed_at: string | null;
-	symbols_processed: number;
-	symbols_failed: number;
+	runType: string;
+	startedAt: string;
+	completedAt: string | null;
+	symbolsProcessed: number;
+	symbolsFailed: number;
 	status: string;
-	error_message: string | null;
+	errorMessage: string | null;
 	environment: string;
 }
 
@@ -20,79 +19,79 @@ interface MockRun {
 const mockRuns: MockRun[] = [
 	{
 		id: "run-001",
-		run_type: "macro_watch",
-		started_at: "2024-01-15T10:00:00Z",
-		completed_at: "2024-01-15T10:05:00Z",
-		symbols_processed: 100,
-		symbols_failed: 2,
+		runType: "macro_watch",
+		startedAt: "2024-01-15T10:00:00Z",
+		completedAt: "2024-01-15T10:05:00Z",
+		symbolsProcessed: 100,
+		symbolsFailed: 2,
 		status: "completed",
-		error_message: null,
+		errorMessage: null,
 		environment: "PAPER",
 	},
 	{
 		id: "run-002",
-		run_type: "newspaper",
-		started_at: "2024-01-15T06:30:00Z",
-		completed_at: "2024-01-15T06:32:00Z",
-		symbols_processed: 50,
-		symbols_failed: 0,
+		runType: "newspaper",
+		startedAt: "2024-01-15T06:30:00Z",
+		completedAt: "2024-01-15T06:32:00Z",
+		symbolsProcessed: 50,
+		symbolsFailed: 0,
 		status: "completed",
-		error_message: null,
+		errorMessage: null,
 		environment: "PAPER",
 	},
 	{
 		id: "run-003",
-		run_type: "filings_sync",
-		started_at: "2024-01-15T08:00:00Z",
-		completed_at: "2024-01-15T08:03:00Z",
-		symbols_processed: 8,
-		symbols_failed: 0,
+		runType: "filings_sync",
+		startedAt: "2024-01-15T08:00:00Z",
+		completedAt: "2024-01-15T08:03:00Z",
+		symbolsProcessed: 8,
+		symbolsFailed: 0,
 		status: "completed",
-		error_message: null,
+		errorMessage: null,
 		environment: "PAPER",
 	},
 	{
 		id: "run-004",
-		run_type: "short_interest",
-		started_at: "2024-01-15T10:10:00Z",
-		completed_at: null,
-		symbols_processed: 25,
-		symbols_failed: 0,
+		runType: "short_interest",
+		startedAt: "2024-01-15T10:10:00Z",
+		completedAt: null,
+		symbolsProcessed: 25,
+		symbolsFailed: 0,
 		status: "running",
-		error_message: null,
+		errorMessage: null,
 		environment: "PAPER",
 	},
 	{
 		id: "run-005",
-		run_type: "sentiment",
-		started_at: "2024-01-15T09:00:00Z",
-		completed_at: "2024-01-15T09:01:00Z",
-		symbols_processed: 0,
-		symbols_failed: 100,
+		runType: "sentiment",
+		startedAt: "2024-01-15T09:00:00Z",
+		completedAt: "2024-01-15T09:01:00Z",
+		symbolsProcessed: 0,
+		symbolsFailed: 100,
 		status: "failed",
-		error_message: "API rate limit exceeded",
+		errorMessage: "API rate limit exceeded",
 		environment: "PAPER",
 	},
 	{
 		id: "run-006",
-		run_type: "corporate_actions",
-		started_at: "2024-01-15T10:15:00Z",
-		completed_at: "2024-01-15T10:16:00Z",
-		symbols_processed: 100,
-		symbols_failed: 0,
+		runType: "corporate_actions",
+		startedAt: "2024-01-15T10:15:00Z",
+		completedAt: "2024-01-15T10:16:00Z",
+		symbolsProcessed: 100,
+		symbolsFailed: 0,
 		status: "completed",
-		error_message: null,
+		errorMessage: null,
 		environment: "PAPER",
 	},
 	{
 		id: "run-007",
-		run_type: "fundamentals",
-		started_at: "2024-01-15T07:00:00Z",
-		completed_at: "2024-01-15T07:10:00Z",
-		symbols_processed: 200,
-		symbols_failed: 5,
+		runType: "fundamentals",
+		startedAt: "2024-01-15T07:00:00Z",
+		completedAt: "2024-01-15T07:10:00Z",
+		symbolsProcessed: 200,
+		symbolsFailed: 5,
 		status: "completed",
-		error_message: null,
+		errorMessage: null,
 		environment: "PAPER",
 	},
 ];
@@ -101,112 +100,141 @@ let insertedRuns: MockRun[] = [];
 
 beforeAll(() => {
 	Bun.env.CREAM_ENV = "BACKTEST";
+});
+
+beforeEach(() => {
 	insertedRuns = [];
 });
 
-mock.module("../db", () => ({
-	getDbClient: async () => ({
-		execute: async (query: string, args?: unknown[]) => {
-			const allRuns = [...mockRuns, ...insertedRuns];
+// Mock repository
+const createMockIndicatorSyncRunsRepo = () => ({
+	findMany: async (
+		filters?: { runType?: string; status?: string },
+		limit = 20
+	): Promise<MockRun[]> => {
+		const allRuns = [...mockRuns, ...insertedRuns];
+		let filtered = [...allRuns];
 
-			// Handle running services query (for status endpoint)
-			if (query.includes("status = 'running'") && !query.includes("WHERE id")) {
-				return allRuns.filter((r) => r.status === "running").map((r) => ({ run_type: r.run_type }));
+		if (filters?.runType) {
+			filtered = filtered.filter((r) => r.runType === filters.runType);
+		}
+		if (filters?.status) {
+			filtered = filtered.filter((r) => r.status === filters.status);
+		}
+
+		filtered.sort((a, b) => new Date(b.startedAt).getTime() - new Date(a.startedAt).getTime());
+		return filtered.slice(0, limit);
+	},
+
+	findById: async (id: string): Promise<MockRun | null> => {
+		const allRuns = [...mockRuns, ...insertedRuns];
+		return allRuns.find((r) => r.id === id) ?? null;
+	},
+
+	findAllRunning: async (): Promise<MockRun[]> => {
+		const allRuns = [...mockRuns, ...insertedRuns];
+		return allRuns.filter((r) => r.status === "running");
+	},
+
+	findRunningByType: async (runType: string): Promise<MockRun | null> => {
+		const allRuns = [...mockRuns, ...insertedRuns];
+		return allRuns.find((r) => r.runType === runType && r.status === "running") ?? null;
+	},
+
+	getLastRunByType: async (): Promise<Map<string, MockRun>> => {
+		const allRuns = [...mockRuns, ...insertedRuns];
+		const completed = allRuns.filter((r) => r.status === "completed" || r.status === "failed");
+		const byType = new Map<string, MockRun>();
+
+		for (const run of completed) {
+			const existing = byType.get(run.runType);
+			if (!existing || new Date(run.startedAt) > new Date(existing.startedAt)) {
+				byType.set(run.runType, run);
 			}
+		}
 
-			// Handle last completed query
-			if (
-				query.includes("status IN ('completed', 'failed')") &&
-				query.includes("MAX(started_at)")
-			) {
-				const completed = allRuns.filter((r) => r.status === "completed" || r.status === "failed");
-				const byType: Record<string, (typeof completed)[0] | null> = {};
-				for (const run of completed) {
-					const existing = byType[run.run_type];
-					if (!existing || new Date(run.started_at) > new Date(existing.started_at)) {
-						byType[run.run_type] = run;
-					}
-				}
-				return Object.values(byType).filter(Boolean);
+		return byType;
+	},
+
+	countByFilters: async (filters?: { runType?: string; status?: string }): Promise<number> => {
+		const allRuns = [...mockRuns, ...insertedRuns];
+		let filtered = [...allRuns];
+
+		if (filters?.runType) {
+			filtered = filtered.filter((r) => r.runType === filters.runType);
+		}
+		if (filters?.status) {
+			filtered = filtered.filter((r) => r.status === filters.status);
+		}
+
+		return filtered.length;
+	},
+
+	create: async (input: {
+		id?: string;
+		runType: string;
+		environment: string;
+	}): Promise<MockRun> => {
+		const newRun: MockRun = {
+			id: input.id ?? `run-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+			runType: input.runType,
+			startedAt: new Date().toISOString(),
+			completedAt: null,
+			symbolsProcessed: 0,
+			symbolsFailed: 0,
+			status: "running",
+			errorMessage: null,
+			environment: input.environment,
+		};
+		insertedRuns.push(newRun);
+		return newRun;
+	},
+
+	update: async (
+		id: string,
+		input: {
+			status?: string;
+			symbolsProcessed?: number;
+			symbolsFailed?: number;
+			errorMessage?: string;
+		}
+	): Promise<MockRun | null> => {
+		const allRuns = [...mockRuns, ...insertedRuns];
+		const run = allRuns.find((r) => r.id === id);
+		if (run) {
+			if (input.status) {
+				run.status = input.status;
 			}
-
-			// Handle check for already running (for trigger endpoint)
-			if (query.includes("status IN ('running', 'pending')") && args?.[0]) {
-				const runType = args[0] as string;
-				return allRuns.filter(
-					(r) => r.run_type === runType && (r.status === "running" || r.status === "pending")
-				);
+			if (input.symbolsProcessed !== undefined) {
+				run.symbolsProcessed = input.symbolsProcessed;
 			}
-
-			// Handle COUNT query
-			if (query.includes("COUNT(*)")) {
-				let filtered = allRuns;
-				if (query.includes("run_type = ?") && args) {
-					filtered = filtered.filter((r) => r.run_type === args[0]);
-				}
-				if (query.includes("status = ?") && args) {
-					const statusIdx = query.includes("run_type = ?") ? 1 : 0;
-					filtered = filtered.filter((r) => r.status === args[statusIdx]);
-				}
-				return [{ total: filtered.length }];
+			if (input.symbolsFailed !== undefined) {
+				run.symbolsFailed = input.symbolsFailed;
 			}
-
-			// Handle single run query
-			if (query.includes("WHERE id = ?")) {
-				const id = args?.[0];
-				const run = allRuns.find((r) => r.id === id);
-				return run ? [run] : [];
+			if (input.errorMessage !== undefined) {
+				run.errorMessage = input.errorMessage;
 			}
+		}
+		return run ?? null;
+	},
+});
 
-			// Handle main list query for runs
-			let filtered = [...allRuns];
-
-			if (args && args.length > 0) {
-				// Check for service filter
-				if (query.includes("run_type = ?")) {
-					const typeArg = args[0] as string;
-					filtered = filtered.filter((r) => r.run_type === typeArg);
-				}
-
-				// Check for status filter
-				if (query.includes("status = ?")) {
-					const statusIdx = query.includes("run_type = ?") ? 1 : 0;
-					const statusArg = args[statusIdx] as string;
-					filtered = filtered.filter((r) => r.status === statusArg);
-				}
-
-				// Get limit (last numeric arg)
-				const limit =
-					typeof args[args.length - 1] === "number" ? (args[args.length - 1] as number) : 20;
-
-				// Sort by started_at DESC and limit
-				filtered.sort(
-					(a, b) => new Date(b.started_at).getTime() - new Date(a.started_at).getTime()
-				);
-				filtered = filtered.slice(0, limit);
-			}
-
-			return filtered;
-		},
-		run: async (_query: string, args?: unknown[]) => {
-			// Handle INSERT for trigger
-			if (args && args.length >= 5) {
-				const newRun = {
-					id: args[0] as string,
-					run_type: args[1] as string,
-					started_at: args[2] as string,
-					completed_at: null,
-					symbols_processed: 0,
-					symbols_failed: 0,
-					status: "pending",
-					error_message: args[4] as string,
-					environment: args[3] as string,
-				};
-				insertedRuns.push(newRun);
-			}
-		},
-	}),
+mock.module("../db.js", () => ({
+	getIndicatorSyncRunsRepo: createMockIndicatorSyncRunsRepo,
+	getMacroWatchRepo: () => ({}),
+	getShortInterestRepo: () => ({}),
+	getSentimentRepo: () => ({}),
+	getCorporateActionsRepo: () => ({}),
+	getFilingsRepo: () => ({}),
 }));
+
+// Mock the websocket channel
+mock.module("../websocket/channels.js", () => ({
+	broadcastWorkerRunUpdate: () => {},
+}));
+
+// Import after mock is set up
+const workersRoutes = (await import("./workers")).default;
 
 describe("Workers Routes", () => {
 	describe("GET /status", () => {
@@ -217,7 +245,7 @@ describe("Workers Routes", () => {
 			const data = (await res.json()) as ApiResponse;
 			expect(data.services).toBeDefined();
 			expect(Array.isArray(data.services)).toBe(true);
-			expect(data.services.length).toBe(7);
+			expect(data.services.length).toBe(6);
 
 			const serviceNames = data.services.map((s: { name: string }) => s.name);
 			expect(serviceNames).toContain("macro_watch");
@@ -226,7 +254,6 @@ describe("Workers Routes", () => {
 			expect(serviceNames).toContain("short_interest");
 			expect(serviceNames).toContain("sentiment");
 			expect(serviceNames).toContain("corporate_actions");
-			expect(serviceNames).toContain("fundamentals");
 		});
 
 		test("includes display names for all services", async () => {
@@ -357,7 +384,7 @@ describe("Workers Routes", () => {
 
 	describe("POST /:service/trigger", () => {
 		test("triggers a service and returns run id", async () => {
-			const res = await workersRoutes.request("/fundamentals/trigger", {
+			const res = await workersRoutes.request("/macro_watch/trigger", {
 				method: "POST",
 				headers: { "Content-Type": "application/json" },
 				body: JSON.stringify({}),
@@ -368,7 +395,7 @@ describe("Workers Routes", () => {
 			const data = (await res.json()) as ApiResponse;
 			expect(data.runId).toBeDefined();
 			expect(data.status).toBe("started");
-			expect(data.message).toContain("Fundamentals");
+			expect(data.message).toContain("Macro Watch");
 		});
 
 		test("accepts optional symbols array", async () => {

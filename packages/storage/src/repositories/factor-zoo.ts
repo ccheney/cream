@@ -6,7 +6,7 @@
  *
  * @see docs/plans/20-research-to-production-pipeline.md
  */
-import { and, desc, eq, inArray, sql } from "drizzle-orm";
+
 import type {
 	DailyMetrics,
 	Factor,
@@ -24,7 +24,8 @@ import type {
 	ResearchRun,
 	TargetRegime,
 } from "@cream/domain";
-import { getDb, type Database } from "../db";
+import { and, desc, eq, inArray, sql } from "drizzle-orm";
+import { type Database, getDb } from "../db";
 import {
 	factorCorrelations,
 	factorPerformance,
@@ -44,7 +45,9 @@ type CorrelationRow = typeof factorCorrelations.$inferSelect;
 type ResearchRunRow = typeof researchRuns.$inferSelect;
 
 function parseJsonText<T>(text: string | null, defaultValue: T): T {
-	if (!text) return defaultValue;
+	if (!text) {
+		return defaultValue;
+	}
 	try {
 		return JSON.parse(text) as T;
 	} catch {
@@ -183,6 +186,9 @@ export class FactorZooRepository {
 			})
 			.returning();
 
+		if (!row) {
+			throw new Error("Failed to create hypothesis");
+		}
 		return mapHypothesisRow(row);
 	}
 
@@ -258,15 +264,14 @@ export class FactorZooRepository {
 			})
 			.returning();
 
+		if (!row) {
+			throw new Error("Failed to create factor");
+		}
 		return mapFactorRow(row);
 	}
 
 	async findFactorById(id: string): Promise<Factor | null> {
-		const [row] = await this.db
-			.select()
-			.from(factors)
-			.where(eq(factors.factorId, id))
-			.limit(1);
+		const [row] = await this.db.select().from(factors).where(eq(factors.factorId, id)).limit(1);
 
 		return row ? mapFactorRow(row) : null;
 	}
@@ -313,10 +318,7 @@ export class FactorZooRepository {
 			updates.retiredAt = now;
 		}
 
-		await this.db
-			.update(factors)
-			.set(updates)
-			.where(eq(factors.factorId, id));
+		await this.db.update(factors).set(updates).where(eq(factors.factorId, id));
 	}
 
 	async promote(factorId: string, parityReport?: Record<string, unknown>): Promise<void> {
@@ -603,6 +605,9 @@ export class FactorZooRepository {
 			})
 			.returning();
 
+		if (!row) {
+			throw new Error("Failed to create research run");
+		}
 		return mapResearchRunRow(row);
 	}
 
@@ -651,19 +656,14 @@ export class FactorZooRepository {
 			return;
 		}
 
-		await this.db
-			.update(researchRuns)
-			.set(updateObj)
-			.where(eq(researchRuns.runId, runId));
+		await this.db.update(researchRuns).set(updateObj).where(eq(researchRuns.runId, runId));
 	}
 
 	async findActiveResearchRuns(): Promise<ResearchRun[]> {
 		const rows = await this.db
 			.select()
 			.from(researchRuns)
-			.where(
-				sql`${researchRuns.phase} NOT IN ('completed', 'failed')`
-			)
+			.where(sql`${researchRuns.phase} NOT IN ('completed', 'failed')`)
 			.orderBy(desc(researchRuns.startedAt));
 
 		return rows.map(mapResearchRunRow);

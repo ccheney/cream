@@ -5,7 +5,7 @@
  * configuration with activation/deactivation tracking.
  */
 import { and, desc, eq } from "drizzle-orm";
-import { getDb, type Database } from "../db";
+import { type Database, getDb } from "../db";
 import { configVersions } from "../schema/core-trading";
 import { RepositoryError } from "./base";
 
@@ -76,6 +76,9 @@ export class ConfigVersionsRepository {
 			})
 			.returning();
 
+		if (!row) {
+			throw new Error("Failed to create config version");
+		}
 		return mapConfigVersionRow(row);
 	}
 
@@ -104,8 +107,8 @@ export class ConfigVersionsRepository {
 			.where(
 				and(
 					eq(configVersions.environment, environment as "BACKTEST" | "PAPER" | "LIVE"),
-					eq(configVersions.active, true),
-				),
+					eq(configVersions.active, true)
+				)
 			)
 			.limit(1);
 
@@ -118,7 +121,7 @@ export class ConfigVersionsRepository {
 			throw new RepositoryError(
 				`No active config found for environment '${environment}'`,
 				"NOT_FOUND",
-				"config_versions",
+				"config_versions"
 			);
 		}
 		return config;
@@ -144,12 +147,9 @@ export class ConfigVersionsRepository {
 			.set({ active: false, deactivatedAt: now })
 			.where(
 				and(
-					eq(
-						configVersions.environment,
-						config.environment as "BACKTEST" | "PAPER" | "LIVE",
-					),
-					eq(configVersions.active, true),
-				),
+					eq(configVersions.environment, config.environment as "BACKTEST" | "PAPER" | "LIVE"),
+					eq(configVersions.active, true)
+				)
 			);
 
 		await this.db
@@ -176,7 +176,7 @@ export class ConfigVersionsRepository {
 
 	async compare(
 		id1: string,
-		id2: string,
+		id2: string
 	): Promise<{
 		config1: ConfigVersion;
 		config2: ConfigVersion;
@@ -187,7 +187,7 @@ export class ConfigVersionsRepository {
 
 		const differences: { path: string; value1: unknown; value2: unknown }[] = [];
 		const allKeys = new Set(Object.keys(config1.config)).union(
-			new Set(Object.keys(config2.config)),
+			new Set(Object.keys(config2.config))
 		);
 
 		for (const key of allKeys) {
@@ -209,7 +209,7 @@ export class ConfigVersionsRepository {
 			throw new RepositoryError(
 				"Cannot delete active config version",
 				"CONSTRAINT_VIOLATION",
-				"config_versions",
+				"config_versions"
 			);
 		}
 
@@ -223,7 +223,7 @@ export class ConfigVersionsRepository {
 
 	async getHistory(
 		environment: string,
-		limit = 50,
+		limit = 50
 	): Promise<{
 		versions: ConfigVersion[];
 		activationHistory: { id: string; activatedAt: string; deactivatedAt: string | null }[];

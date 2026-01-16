@@ -7,7 +7,7 @@
  * @see docs/plans/33-indicator-engine-v2.md
  */
 import { and, count, desc, eq, gte, inArray, lte, sql } from "drizzle-orm";
-import { getDb, type Database } from "../db";
+import { type Database, getDb } from "../db";
 import { fundamentalIndicators } from "../schema/indicators";
 import { RepositoryError } from "./base";
 
@@ -181,7 +181,8 @@ export class FundamentalsRepository {
 				earningsYield: input.earningsYield != null ? String(input.earningsYield) : null,
 				dividendYield: input.dividendYield != null ? String(input.dividendYield) : null,
 				cape10yr: input.cape10yr != null ? String(input.cape10yr) : null,
-				grossProfitability: input.grossProfitability != null ? String(input.grossProfitability) : null,
+				grossProfitability:
+					input.grossProfitability != null ? String(input.grossProfitability) : null,
 				roe: input.roe != null ? String(input.roe) : null,
 				roa: input.roa != null ? String(input.roa) : null,
 				assetGrowth: input.assetGrowth != null ? String(input.assetGrowth) : null,
@@ -195,6 +196,9 @@ export class FundamentalsRepository {
 			})
 			.returning();
 
+		if (!row) {
+			throw new Error("Failed to create fundamental indicators");
+		}
 		return mapRow(row);
 	}
 
@@ -209,7 +213,8 @@ export class FundamentalsRepository {
 			earningsYield: input.earningsYield != null ? String(input.earningsYield) : null,
 			dividendYield: input.dividendYield != null ? String(input.dividendYield) : null,
 			cape10yr: input.cape10yr != null ? String(input.cape10yr) : null,
-			grossProfitability: input.grossProfitability != null ? String(input.grossProfitability) : null,
+			grossProfitability:
+				input.grossProfitability != null ? String(input.grossProfitability) : null,
 			roe: input.roe != null ? String(input.roe) : null,
 			roa: input.roa != null ? String(input.roa) : null,
 			assetGrowth: input.assetGrowth != null ? String(input.assetGrowth) : null,
@@ -252,6 +257,9 @@ export class FundamentalsRepository {
 			})
 			.returning();
 
+		if (!row) {
+			throw new Error("Failed to upsert fundamental indicators");
+		}
 		return mapRow(row);
 	}
 
@@ -444,7 +452,8 @@ export class FundamentalsRepository {
 			updateData.peRatioTtm = input.peRatioTtm != null ? String(input.peRatioTtm) : null;
 		}
 		if (input.peRatioForward !== undefined) {
-			updateData.peRatioForward = input.peRatioForward != null ? String(input.peRatioForward) : null;
+			updateData.peRatioForward =
+				input.peRatioForward != null ? String(input.peRatioForward) : null;
 		}
 		if (input.pbRatio !== undefined) {
 			updateData.pbRatio = input.pbRatio != null ? String(input.pbRatio) : null;
@@ -462,7 +471,8 @@ export class FundamentalsRepository {
 			updateData.cape10yr = input.cape10yr != null ? String(input.cape10yr) : null;
 		}
 		if (input.grossProfitability !== undefined) {
-			updateData.grossProfitability = input.grossProfitability != null ? String(input.grossProfitability) : null;
+			updateData.grossProfitability =
+				input.grossProfitability != null ? String(input.grossProfitability) : null;
 		}
 		if (input.roe !== undefined) {
 			updateData.roe = input.roe != null ? String(input.roe) : null;
@@ -477,7 +487,8 @@ export class FundamentalsRepository {
 			updateData.accrualsRatio = input.accrualsRatio != null ? String(input.accrualsRatio) : null;
 		}
 		if (input.cashFlowQuality !== undefined) {
-			updateData.cashFlowQuality = input.cashFlowQuality != null ? String(input.cashFlowQuality) : null;
+			updateData.cashFlowQuality =
+				input.cashFlowQuality != null ? String(input.cashFlowQuality) : null;
 		}
 		if (input.beneishMScore !== undefined) {
 			updateData.beneishMScore = input.beneishMScore != null ? String(input.beneishMScore) : null;

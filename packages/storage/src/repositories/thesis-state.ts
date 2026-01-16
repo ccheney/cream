@@ -7,7 +7,7 @@
  * @see docs/plans/05-agents.md - Thesis State Management section
  */
 import { and, asc, count, desc, eq, gte, inArray, ne, sql } from "drizzle-orm";
-import { getDb, type Database } from "../db";
+import { type Database, getDb } from "../db";
 import { thesisState, thesisStateHistory } from "../schema/thesis";
 
 // ============================================
@@ -143,7 +143,9 @@ type ThesisRow = typeof thesisState.$inferSelect;
 type HistoryRow = typeof thesisStateHistory.$inferSelect;
 
 function parseNotes(notes: string | null): Record<string, unknown> {
-	if (!notes) return {};
+	if (!notes) {
+		return {};
+	}
 	try {
 		return JSON.parse(notes) as Record<string, unknown>;
 	} catch {
@@ -221,6 +223,9 @@ export class ThesisStateRepository {
 			})
 			.returning();
 
+		if (!row) {
+			throw new Error("Failed to create thesis state");
+		}
 		return mapThesisRow(row);
 	}
 
@@ -269,13 +274,22 @@ export class ThesisStateRepository {
 			conditions.push(eq(thesisState.instrumentId, filters.instrumentId));
 		}
 		if (filters.state) {
-			conditions.push(eq(thesisState.state, filters.state as typeof thesisState.$inferSelect.state));
+			conditions.push(
+				eq(thesisState.state, filters.state as typeof thesisState.$inferSelect.state)
+			);
 		}
 		if (filters.states && filters.states.length > 0) {
-			conditions.push(inArray(thesisState.state, filters.states as typeof thesisState.$inferSelect.state[]));
+			conditions.push(
+				inArray(thesisState.state, filters.states as (typeof thesisState.$inferSelect.state)[])
+			);
 		}
 		if (filters.environment) {
-			conditions.push(eq(thesisState.environment, filters.environment as typeof thesisState.$inferSelect.environment));
+			conditions.push(
+				eq(
+					thesisState.environment,
+					filters.environment as typeof thesisState.$inferSelect.environment
+				)
+			);
 		}
 		if (filters.closedAfter) {
 			conditions.push(gte(thesisState.closedAt, new Date(filters.closedAfter)));
@@ -335,7 +349,7 @@ export class ThesisStateRepository {
 			.where(
 				and(
 					eq(thesisState.environment, environment as typeof thesisState.$inferSelect.environment),
-					inArray(thesisState.state, states as typeof thesisState.$inferSelect.state[])
+					inArray(thesisState.state, states as (typeof thesisState.$inferSelect.state)[])
 				)
 			)
 			.orderBy(desc(thesisState.createdAt));
@@ -490,10 +504,7 @@ export class ThesisStateRepository {
 			updates.currentTarget = target.toString();
 		}
 
-		await this.db
-			.update(thesisState)
-			.set(updates)
-			.where(eq(thesisState.thesisId, thesisId));
+		await this.db.update(thesisState).set(updates).where(eq(thesisState.thesisId, thesisId));
 
 		return this.findByIdOrThrow(thesisId);
 	}

@@ -6,8 +6,8 @@
  *
  * @see docs/plans/33-indicator-engine-v2.md
  */
-import { and, count, desc, eq, gte, isNotNull, lte, sql } from "drizzle-orm";
-import { getDb, type Database } from "../db";
+import { and, count, desc, eq, gte, lte, sql } from "drizzle-orm";
+import { type Database, getDb } from "../db";
 import { shortInterestIndicators } from "../schema/indicators";
 
 // ============================================
@@ -112,14 +112,19 @@ export class ShortInterestRepository {
 				symbol: input.symbol,
 				settlementDate: new Date(input.settlementDate),
 				shortInterest: String(input.shortInterest),
-				shortInterestRatio: input.shortInterestRatio != null ? String(input.shortInterestRatio) : null,
+				shortInterestRatio:
+					input.shortInterestRatio != null ? String(input.shortInterestRatio) : null,
 				daysToCover: input.daysToCover != null ? String(input.daysToCover) : null,
 				shortPctFloat: input.shortPctFloat != null ? String(input.shortPctFloat) : null,
-				shortInterestChange: input.shortInterestChange != null ? String(input.shortInterestChange) : null,
+				shortInterestChange:
+					input.shortInterestChange != null ? String(input.shortInterestChange) : null,
 				source: input.source ?? "FINRA",
 			})
 			.returning();
 
+		if (!row) {
+			throw new Error("Failed to create short interest indicators");
+		}
 		return mapShortInterestRow(row);
 	}
 
@@ -130,25 +135,32 @@ export class ShortInterestRepository {
 				symbol: input.symbol,
 				settlementDate: new Date(input.settlementDate),
 				shortInterest: String(input.shortInterest),
-				shortInterestRatio: input.shortInterestRatio != null ? String(input.shortInterestRatio) : null,
+				shortInterestRatio:
+					input.shortInterestRatio != null ? String(input.shortInterestRatio) : null,
 				daysToCover: input.daysToCover != null ? String(input.daysToCover) : null,
 				shortPctFloat: input.shortPctFloat != null ? String(input.shortPctFloat) : null,
-				shortInterestChange: input.shortInterestChange != null ? String(input.shortInterestChange) : null,
+				shortInterestChange:
+					input.shortInterestChange != null ? String(input.shortInterestChange) : null,
 				source: input.source ?? "FINRA",
 			})
 			.onConflictDoUpdate({
 				target: [shortInterestIndicators.symbol, shortInterestIndicators.settlementDate],
 				set: {
 					shortInterest: String(input.shortInterest),
-					shortInterestRatio: input.shortInterestRatio != null ? String(input.shortInterestRatio) : null,
+					shortInterestRatio:
+						input.shortInterestRatio != null ? String(input.shortInterestRatio) : null,
 					daysToCover: input.daysToCover != null ? String(input.daysToCover) : null,
 					shortPctFloat: input.shortPctFloat != null ? String(input.shortPctFloat) : null,
-					shortInterestChange: input.shortInterestChange != null ? String(input.shortInterestChange) : null,
+					shortInterestChange:
+						input.shortInterestChange != null ? String(input.shortInterestChange) : null,
 					fetchedAt: new Date(),
 				},
 			})
 			.returning();
 
+		if (!row) {
+			throw new Error("Failed to upsert short interest indicators");
+		}
 		return mapShortInterestRow(row);
 	}
 
@@ -254,11 +266,15 @@ export class ShortInterestRepository {
 		}
 
 		if (filters.settlementDateGte) {
-			conditions.push(gte(shortInterestIndicators.settlementDate, new Date(filters.settlementDateGte)));
+			conditions.push(
+				gte(shortInterestIndicators.settlementDate, new Date(filters.settlementDateGte))
+			);
 		}
 
 		if (filters.settlementDateLte) {
-			conditions.push(lte(shortInterestIndicators.settlementDate, new Date(filters.settlementDateLte)));
+			conditions.push(
+				lte(shortInterestIndicators.settlementDate, new Date(filters.settlementDateLte))
+			);
 		}
 
 		if (filters.shortPctFloatGte !== undefined) {
@@ -332,7 +348,8 @@ export class ShortInterestRepository {
 		}
 
 		if (input.shortInterestRatio !== undefined) {
-			updates.shortInterestRatio = input.shortInterestRatio != null ? String(input.shortInterestRatio) : null;
+			updates.shortInterestRatio =
+				input.shortInterestRatio != null ? String(input.shortInterestRatio) : null;
 		}
 
 		if (input.daysToCover !== undefined) {
@@ -344,7 +361,8 @@ export class ShortInterestRepository {
 		}
 
 		if (input.shortInterestChange !== undefined) {
-			updates.shortInterestChange = input.shortInterestChange != null ? String(input.shortInterestChange) : null;
+			updates.shortInterestChange =
+				input.shortInterestChange != null ? String(input.shortInterestChange) : null;
 		}
 
 		const [row] = await this.db

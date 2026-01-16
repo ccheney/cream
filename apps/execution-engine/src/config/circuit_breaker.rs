@@ -54,6 +54,7 @@ impl Default for CircuitBreakerSettings {
 impl CircuitBreakerSettings {
     /// Convert config settings to resilience module's `CircuitBreakerConfig`.
     #[must_use]
+    #[allow(clippy::missing_const_for_fn)] // Duration::from_secs prevents const
     pub fn to_resilience_config(&self) -> crate::resilience::CircuitBreakerConfig {
         crate::resilience::CircuitBreakerConfig {
             failure_rate_threshold: self.failure_rate_threshold,
@@ -77,7 +78,7 @@ impl CircuitBreakerConfig {
     }
 }
 
-pub(crate) const fn default_failure_rate_threshold() -> f64 {
+pub const fn default_failure_rate_threshold() -> f64 {
     0.5
 }
 

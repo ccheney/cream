@@ -4,9 +4,10 @@
  * Data access for trading_config table. Manages runtime trading configuration
  * with draft/testing/active/archived workflow and cross-environment promotion.
  */
-import { and, desc, eq, max, sql } from "drizzle-orm";
+
 import { type GlobalModel, getDefaultGlobalModel } from "@cream/domain";
-import { getDb, type Database } from "../db";
+import { and, desc, eq, max } from "drizzle-orm";
+import { type Database, getDb } from "../db";
 import { tradingConfig } from "../schema/config";
 import { RepositoryError } from "./base";
 
@@ -191,6 +192,13 @@ export class TradingConfigRepository {
 			})
 			.returning();
 
+		if (!row) {
+			throw new RepositoryError(
+				"Failed to create trading config",
+				"CONSTRAINT_VIOLATION",
+				"trading_config"
+			);
+		}
 		return mapTradingConfigRow(row);
 	}
 
@@ -216,12 +224,7 @@ export class TradingConfigRepository {
 		const [row] = await this.db
 			.select()
 			.from(tradingConfig)
-			.where(
-				and(
-					eq(tradingConfig.environment, environment),
-					eq(tradingConfig.status, "active"),
-				),
-			)
+			.where(and(eq(tradingConfig.environment, environment), eq(tradingConfig.status, "active")))
 			.limit(1);
 
 		return row ? mapTradingConfigRow(row) : null;
@@ -233,7 +236,7 @@ export class TradingConfigRepository {
 			throw new RepositoryError(
 				`No active trading config found for environment '${environment}'. Run seed script.`,
 				"NOT_FOUND",
-				"trading_config",
+				"trading_config"
 			);
 		}
 		return config;
@@ -243,12 +246,7 @@ export class TradingConfigRepository {
 		const [row] = await this.db
 			.select()
 			.from(tradingConfig)
-			.where(
-				and(
-					eq(tradingConfig.environment, environment),
-					eq(tradingConfig.status, "draft"),
-				),
-			)
+			.where(and(eq(tradingConfig.environment, environment), eq(tradingConfig.status, "draft")))
 			.orderBy(desc(tradingConfig.createdAt))
 			.limit(1);
 
@@ -257,7 +255,7 @@ export class TradingConfigRepository {
 
 	async saveDraft(
 		environment: TradingEnvironment,
-		input: UpdateTradingConfigInput & { id?: string; version?: number },
+		input: UpdateTradingConfigInput & { id?: string; version?: number }
 	): Promise<TradingConfig> {
 		const existingDraft = await this.getDraft(environment);
 
@@ -266,31 +264,45 @@ export class TradingConfigRepository {
 				updatedAt: new Date(),
 			};
 
-			if (input.maxConsensusIterations !== undefined)
+			if (input.maxConsensusIterations !== undefined) {
 				updateData.maxConsensusIterations = input.maxConsensusIterations;
-			if (input.agentTimeoutMs !== undefined)
+			}
+			if (input.agentTimeoutMs !== undefined) {
 				updateData.agentTimeoutMs = input.agentTimeoutMs;
-			if (input.totalConsensusTimeoutMs !== undefined)
+			}
+			if (input.totalConsensusTimeoutMs !== undefined) {
 				updateData.totalConsensusTimeoutMs = input.totalConsensusTimeoutMs;
-			if (input.convictionDeltaHold !== undefined)
+			}
+			if (input.convictionDeltaHold !== undefined) {
 				updateData.convictionDeltaHold = String(input.convictionDeltaHold);
-			if (input.convictionDeltaAction !== undefined)
+			}
+			if (input.convictionDeltaAction !== undefined) {
 				updateData.convictionDeltaAction = String(input.convictionDeltaAction);
-			if (input.highConvictionPct !== undefined)
+			}
+			if (input.highConvictionPct !== undefined) {
 				updateData.highConvictionPct = String(input.highConvictionPct);
-			if (input.mediumConvictionPct !== undefined)
+			}
+			if (input.mediumConvictionPct !== undefined) {
 				updateData.mediumConvictionPct = String(input.mediumConvictionPct);
-			if (input.lowConvictionPct !== undefined)
+			}
+			if (input.lowConvictionPct !== undefined) {
 				updateData.lowConvictionPct = String(input.lowConvictionPct);
-			if (input.minRiskRewardRatio !== undefined)
+			}
+			if (input.minRiskRewardRatio !== undefined) {
 				updateData.minRiskRewardRatio = String(input.minRiskRewardRatio);
-			if (input.kellyFraction !== undefined)
+			}
+			if (input.kellyFraction !== undefined) {
 				updateData.kellyFraction = String(input.kellyFraction);
-			if (input.tradingCycleIntervalMs !== undefined)
+			}
+			if (input.tradingCycleIntervalMs !== undefined) {
 				updateData.tradingCycleIntervalMs = input.tradingCycleIntervalMs;
-			if (input.predictionMarketsIntervalMs !== undefined)
+			}
+			if (input.predictionMarketsIntervalMs !== undefined) {
 				updateData.predictionMarketsIntervalMs = input.predictionMarketsIntervalMs;
-			if (input.globalModel !== undefined) updateData.globalModel = input.globalModel;
+			}
+			if (input.globalModel !== undefined) {
+				updateData.globalModel = input.globalModel;
+			}
 
 			await this.db
 				.update(tradingConfig)
@@ -319,10 +331,7 @@ export class TradingConfigRepository {
 				.update(tradingConfig)
 				.set({ status: "archived", updatedAt: new Date() })
 				.where(
-					and(
-						eq(tradingConfig.environment, config.environment),
-						eq(tradingConfig.status, "active"),
-					),
+					and(eq(tradingConfig.environment, config.environment), eq(tradingConfig.status, "active"))
 				);
 		}
 
@@ -347,7 +356,7 @@ export class TradingConfigRepository {
 
 	async compare(
 		id1: string,
-		id2: string,
+		id2: string
 	): Promise<{
 		config1: TradingConfig;
 		config2: TradingConfig;
@@ -394,7 +403,7 @@ export class TradingConfigRepository {
 			throw new RepositoryError(
 				`Cannot promote config with status '${source.status}'. Only active configs can be promoted.`,
 				"CONSTRAINT_VIOLATION",
-				"trading_config",
+				"trading_config"
 			);
 		}
 
@@ -429,7 +438,7 @@ export class TradingConfigRepository {
 			throw new RepositoryError(
 				"Cannot delete active trading config",
 				"CONSTRAINT_VIOLATION",
-				"trading_config",
+				"trading_config"
 			);
 		}
 

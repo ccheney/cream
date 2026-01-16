@@ -97,6 +97,7 @@ fn determine_execution_state(
     }
 }
 
+#[allow(clippy::missing_const_for_fn)] // Match with enums prevents const
 fn determine_action(
     state: RollExecutionState,
     timeout_exceeded: bool,

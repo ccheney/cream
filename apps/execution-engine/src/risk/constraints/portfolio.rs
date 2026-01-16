@@ -13,7 +13,7 @@ use crate::models::{
 };
 
 /// Calculate notional value for a decision.
-pub(crate) fn calculate_notional(decision: &Decision, account_equity: &Decimal) -> Decimal {
+pub fn calculate_notional(decision: &Decision, account_equity: &Decimal) -> Decimal {
     match decision.size.unit {
         SizeUnit::Dollars => decision.size.quantity,
         SizeUnit::PctEquity => decision.size.quantity * account_equity,
@@ -27,7 +27,7 @@ pub(crate) fn calculate_notional(decision: &Decision, account_equity: &Decimal) 
 }
 
 /// Calculate signed notional for a decision (positive for long, negative for short).
-pub(crate) fn calculate_signed_notional(decision: &Decision, account_equity: &Decimal) -> Decimal {
+pub fn calculate_signed_notional(decision: &Decision, account_equity: &Decimal) -> Decimal {
     let notional = calculate_notional(decision, account_equity);
     match decision.direction {
         Direction::Long => notional,
@@ -41,7 +41,7 @@ pub(crate) fn calculate_signed_notional(decision: &Decision, account_equity: &De
 /// Returns (`gross_notional`, `net_notional`) where:
 /// - gross = sum of absolute notional values
 /// - net = sum of signed notional values (long positive, short negative)
-pub(crate) fn calculate_portfolio_exposure(request: &ConstraintCheckRequest) -> (Decimal, Decimal) {
+pub fn calculate_portfolio_exposure(request: &ConstraintCheckRequest) -> (Decimal, Decimal) {
     let mut gross = Decimal::ZERO;
     let mut net = Decimal::ZERO;
 
@@ -61,7 +61,7 @@ pub(crate) fn calculate_portfolio_exposure(request: &ConstraintCheckRequest) -> 
 }
 
 /// Check gross notional limit.
-pub(crate) fn check_gross_notional_limit(
+pub fn check_gross_notional_limit(
     total_gross: Decimal,
     limits: &ExposureLimits,
 ) -> Option<ConstraintViolation> {
@@ -84,7 +84,7 @@ pub(crate) fn check_gross_notional_limit(
 }
 
 /// Check net notional limit.
-pub(crate) fn check_net_notional_limit(
+pub fn check_net_notional_limit(
     total_net: Decimal,
     limits: &ExposureLimits,
 ) -> Option<ConstraintViolation> {
@@ -108,7 +108,7 @@ pub(crate) fn check_net_notional_limit(
 }
 
 /// Check portfolio equity percentage limits (gross and net).
-pub(crate) fn check_equity_percentage_limits(
+pub fn check_equity_percentage_limits(
     total_gross: Decimal,
     total_net: Decimal,
     account_equity: Decimal,
@@ -157,6 +157,7 @@ pub(crate) fn check_equity_percentage_limits(
 }
 
 #[cfg(test)]
+#[allow(clippy::unwrap_used)]
 mod tests {
     use super::*;
     use crate::models::{

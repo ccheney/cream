@@ -14,21 +14,15 @@ import {
 	serial,
 	text,
 	timestamp,
-	uniqueIndex,
 	uuid,
 } from "drizzle-orm/pg-core";
-import {
-	alertSeverityEnum,
-	backtestStatusEnum,
-	environmentEnum,
-	systemStatusEnum,
-} from "./enums";
+import { alertSeverityEnum, backtestStatusEnum, environmentEnum, systemStatusEnum } from "./enums";
 
 // alerts: System and trading alerts
 export const alerts = pgTable(
 	"alerts",
 	{
-		id: uuid("id").primaryKey().defaultRandom(),
+		id: uuid("id").primaryKey().default(sql`uuidv7()`),
 		severity: alertSeverityEnum("severity").notNull(),
 		type: text("type").notNull(),
 		title: text("title").notNull(),
@@ -38,9 +32,7 @@ export const alerts = pgTable(
 		acknowledgedBy: text("acknowledged_by"),
 		acknowledgedAt: timestamp("acknowledged_at", { withTimezone: true }),
 		environment: environmentEnum("environment").notNull(),
-		createdAt: timestamp("created_at", { withTimezone: true })
-			.notNull()
-			.defaultNow(),
+		createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
 		expiresAt: timestamp("expires_at", { withTimezone: true }),
 	},
 	(table) => [
@@ -52,7 +44,7 @@ export const alerts = pgTable(
 		index("idx_alerts_unack_env")
 			.on(table.environment, table.acknowledged)
 			.where(sql`${table.acknowledged} = false`),
-	],
+	]
 );
 
 // system_state: Current system state per environment
@@ -65,16 +57,14 @@ export const systemState = pgTable("system_state", {
 	phaseStartedAt: timestamp("phase_started_at", { withTimezone: true }),
 	nextCycleAt: timestamp("next_cycle_at", { withTimezone: true }),
 	errorMessage: text("error_message"),
-	updatedAt: timestamp("updated_at", { withTimezone: true })
-		.notNull()
-		.defaultNow(),
+	updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
 });
 
 // backtests: Backtest configurations and results
 export const backtests = pgTable(
 	"backtests",
 	{
-		id: uuid("id").primaryKey().defaultRandom(),
+		id: uuid("id").primaryKey().default(sql`uuidv7()`),
 		name: text("name").notNull(),
 		description: text("description"),
 		startDate: timestamp("start_date", { withTimezone: true }).notNull(),
@@ -86,9 +76,7 @@ export const backtests = pgTable(
 		universe: text("universe"),
 		configJson: jsonb("config_json").$type<Record<string, unknown>>(),
 		status: backtestStatusEnum("status").notNull().default("pending"),
-		progressPct: numeric("progress_pct", { precision: 5, scale: 2 }).default(
-			"0",
-		),
+		progressPct: numeric("progress_pct", { precision: 5, scale: 2 }).default("0"),
 
 		// Performance metrics
 		totalReturn: numeric("total_return", { precision: 8, scale: 4 }),
@@ -104,9 +92,7 @@ export const backtests = pgTable(
 		metricsJson: jsonb("metrics_json").$type<Record<string, unknown>>(),
 
 		errorMessage: text("error_message"),
-		createdAt: timestamp("created_at", { withTimezone: true })
-			.notNull()
-			.defaultNow(),
+		createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
 		startedAt: timestamp("started_at", { withTimezone: true }),
 		completedAt: timestamp("completed_at", { withTimezone: true }),
 		createdBy: text("created_by"),
@@ -115,7 +101,7 @@ export const backtests = pgTable(
 		index("idx_backtests_status").on(table.status),
 		index("idx_backtests_start_date").on(table.startDate),
 		index("idx_backtests_created_at").on(table.createdAt),
-	],
+	]
 );
 
 // backtest_trades: Individual trades from backtests
@@ -141,7 +127,7 @@ export const backtestTrades = pgTable(
 		index("idx_backtest_trades_timestamp").on(table.timestamp),
 		index("idx_backtest_trades_symbol").on(table.symbol),
 		index("idx_backtest_trades_bt_ts").on(table.backtestId, table.timestamp),
-	],
+	]
 );
 
 // backtest_equity: Equity curve for visualization
@@ -168,5 +154,5 @@ export const backtestEquity = pgTable(
 		index("idx_backtest_equity_backtest_id").on(table.backtestId),
 		index("idx_backtest_equity_timestamp").on(table.timestamp),
 		index("idx_backtest_equity_bt_ts").on(table.backtestId, table.timestamp),
-	],
+	]
 );

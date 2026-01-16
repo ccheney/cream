@@ -132,9 +132,11 @@ impl AlpacaController {
     ///
     /// Note: This doesn't actually stop the feed - it relies on the shutdown signal.
     /// The feed will stop when the shutdown broadcast is sent.
+    #[allow(clippy::significant_drop_tightening)] // Lock ordering is intentional for consistency
     pub fn stop(&self) {
         let mut is_running = self.is_running.lock();
         *is_running = false;
+        drop(is_running);
 
         let mut subs = self.subscribed_symbols.lock();
         subs.clear();
@@ -193,6 +195,7 @@ impl std::fmt::Debug for AlpacaController {
 // ============================================================================
 
 #[cfg(test)]
+#[allow(clippy::let_underscore_lock)]
 mod tests {
     use super::*;
 

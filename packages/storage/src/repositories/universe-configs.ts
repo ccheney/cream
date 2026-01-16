@@ -5,7 +5,7 @@
  * with draft/testing/active/archived workflow.
  */
 import { and, desc, eq } from "drizzle-orm";
-import { getDb, type Database } from "../db";
+import { type Database, getDb } from "../db";
 import { universeConfigs } from "../schema/config";
 import { RepositoryError } from "./base";
 
@@ -110,6 +110,13 @@ export class UniverseConfigsRepository {
 			})
 			.returning();
 
+		if (!row) {
+			throw new RepositoryError(
+				"Failed to create universe config",
+				"CONSTRAINT_VIOLATION",
+				"universe_configs"
+			);
+		}
 		return mapUniverseConfigRow(row);
 	}
 
@@ -136,10 +143,7 @@ export class UniverseConfigsRepository {
 			.select()
 			.from(universeConfigs)
 			.where(
-				and(
-					eq(universeConfigs.environment, environment),
-					eq(universeConfigs.status, "active"),
-				),
+				and(eq(universeConfigs.environment, environment), eq(universeConfigs.status, "active"))
 			)
 			.limit(1);
 
@@ -152,7 +156,7 @@ export class UniverseConfigsRepository {
 			throw new RepositoryError(
 				`No active universe config found for environment '${environment}'. Run seed script.`,
 				"NOT_FOUND",
-				"universe_configs",
+				"universe_configs"
 			);
 		}
 		return config;
@@ -162,12 +166,7 @@ export class UniverseConfigsRepository {
 		const [row] = await this.db
 			.select()
 			.from(universeConfigs)
-			.where(
-				and(
-					eq(universeConfigs.environment, environment),
-					eq(universeConfigs.status, "draft"),
-				),
-			)
+			.where(and(eq(universeConfigs.environment, environment), eq(universeConfigs.status, "draft")))
 			.orderBy(desc(universeConfigs.createdAt))
 			.limit(1);
 
@@ -176,7 +175,7 @@ export class UniverseConfigsRepository {
 
 	async saveDraft(
 		environment: UniverseEnvironment,
-		input: UpdateUniverseConfigInput & { id?: string },
+		input: UpdateUniverseConfigInput & { id?: string }
 	): Promise<UniverseConfig> {
 		const existingDraft = await this.getDraft(environment);
 
@@ -185,15 +184,30 @@ export class UniverseConfigsRepository {
 				updatedAt: new Date(),
 			};
 
-			if (input.source !== undefined) updateData.source = input.source;
-			if (input.staticSymbols !== undefined) updateData.staticSymbols = input.staticSymbols;
-			if (input.indexSource !== undefined) updateData.indexSource = input.indexSource;
-			if (input.minVolume !== undefined) updateData.minVolume = input.minVolume;
-			if (input.minMarketCap !== undefined) updateData.minMarketCap = input.minMarketCap;
-			if (input.optionableOnly !== undefined)
+			if (input.source !== undefined) {
+				updateData.source = input.source;
+			}
+			if (input.staticSymbols !== undefined) {
+				updateData.staticSymbols = input.staticSymbols;
+			}
+			if (input.indexSource !== undefined) {
+				updateData.indexSource = input.indexSource;
+			}
+			if (input.minVolume !== undefined) {
+				updateData.minVolume = input.minVolume;
+			}
+			if (input.minMarketCap !== undefined) {
+				updateData.minMarketCap = input.minMarketCap;
+			}
+			if (input.optionableOnly !== undefined) {
 				updateData.optionableOnly = input.optionableOnly;
-			if (input.includeList !== undefined) updateData.includeList = input.includeList;
-			if (input.excludeList !== undefined) updateData.excludeList = input.excludeList;
+			}
+			if (input.includeList !== undefined) {
+				updateData.includeList = input.includeList;
+			}
+			if (input.excludeList !== undefined) {
+				updateData.excludeList = input.excludeList;
+			}
 
 			await this.db
 				.update(universeConfigs)
@@ -229,8 +243,8 @@ export class UniverseConfigsRepository {
 				.where(
 					and(
 						eq(universeConfigs.environment, config.environment),
-						eq(universeConfigs.status, "active"),
-					),
+						eq(universeConfigs.status, "active")
+					)
 				);
 		}
 
@@ -260,7 +274,7 @@ export class UniverseConfigsRepository {
 			throw new RepositoryError(
 				"Cannot delete active universe config",
 				"CONSTRAINT_VIOLATION",
-				"universe_configs",
+				"universe_configs"
 			);
 		}
 

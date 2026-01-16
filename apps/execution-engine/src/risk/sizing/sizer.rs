@@ -236,6 +236,7 @@ impl PositionSizer {
 }
 
 #[cfg(test)]
+#[allow(clippy::expect_used)]
 mod tests {
     use super::*;
     use rust_decimal_macros::dec;

@@ -7,8 +7,8 @@
  * @see apps/dashboard-api/src/routes/preferences.ts
  */
 import { eq } from "drizzle-orm";
-import { getDb, type Database } from "../db";
-import { userPreferences, type NotificationSettings } from "../schema/user-settings";
+import { type Database, getDb } from "../db";
+import { type NotificationSettings, userPreferences } from "../schema/user-settings";
 
 // ============================================
 // Types
@@ -105,7 +105,8 @@ function mapUserPreferencesRow(row: UserPreferencesRow): UserPreferences {
 		chartTimeframe: row.chartTimeframe as ChartTimeframe,
 		feedFilters: (row.feedFilters as string[]) ?? [],
 		sidebarCollapsed: row.sidebarCollapsed,
-		notificationSettings: (row.notificationSettings as NotificationSettings) ?? DEFAULT_NOTIFICATION_SETTINGS,
+		notificationSettings:
+			(row.notificationSettings as NotificationSettings) ?? DEFAULT_NOTIFICATION_SETTINGS,
 		defaultPortfolioView: row.defaultPortfolioView as PortfolioView,
 		dateFormat: row.dateFormat as DateFormat,
 		timeFormat: row.timeFormat as TimeFormat,
@@ -136,17 +137,26 @@ export class UserPreferencesRepository {
 			.insert(userPreferences)
 			.values({
 				userId: input.userId,
-				theme: (input.theme ?? DEFAULT_PREFERENCES.theme) as typeof userPreferences.$inferInsert.theme,
-				chartTimeframe: (input.chartTimeframe ?? DEFAULT_PREFERENCES.chartTimeframe) as typeof userPreferences.$inferInsert.chartTimeframe,
+				theme: (input.theme ??
+					DEFAULT_PREFERENCES.theme) as typeof userPreferences.$inferInsert.theme,
+				chartTimeframe: (input.chartTimeframe ??
+					DEFAULT_PREFERENCES.chartTimeframe) as typeof userPreferences.$inferInsert.chartTimeframe,
 				feedFilters: input.feedFilters ?? DEFAULT_PREFERENCES.feedFilters,
 				sidebarCollapsed: input.sidebarCollapsed ?? DEFAULT_PREFERENCES.sidebarCollapsed,
 				notificationSettings,
-				defaultPortfolioView: (input.defaultPortfolioView ?? DEFAULT_PREFERENCES.defaultPortfolioView) as typeof userPreferences.$inferInsert.defaultPortfolioView,
-				dateFormat: (input.dateFormat ?? DEFAULT_PREFERENCES.dateFormat) as typeof userPreferences.$inferInsert.dateFormat,
-				timeFormat: (input.timeFormat ?? DEFAULT_PREFERENCES.timeFormat) as typeof userPreferences.$inferInsert.timeFormat,
+				defaultPortfolioView: (input.defaultPortfolioView ??
+					DEFAULT_PREFERENCES.defaultPortfolioView) as typeof userPreferences.$inferInsert.defaultPortfolioView,
+				dateFormat: (input.dateFormat ??
+					DEFAULT_PREFERENCES.dateFormat) as typeof userPreferences.$inferInsert.dateFormat,
+				timeFormat: (input.timeFormat ??
+					DEFAULT_PREFERENCES.timeFormat) as typeof userPreferences.$inferInsert.timeFormat,
 				currency: input.currency ?? DEFAULT_PREFERENCES.currency,
 			})
 			.returning();
+
+		if (!row) {
+			throw new Error("Failed to create user preferences");
+		}
 
 		return mapUserPreferencesRow(row);
 	}
@@ -229,6 +239,10 @@ export class UserPreferencesRepository {
 			.where(eq(userPreferences.id, existing.id))
 			.returning();
 
+		if (!row) {
+			throw new Error("Failed to update user preferences");
+		}
+
 		return mapUserPreferencesRow(row);
 	}
 
@@ -243,18 +257,26 @@ export class UserPreferencesRepository {
 			.update(userPreferences)
 			.set({
 				theme: DEFAULT_PREFERENCES.theme as typeof userPreferences.$inferInsert.theme,
-				chartTimeframe: DEFAULT_PREFERENCES.chartTimeframe as typeof userPreferences.$inferInsert.chartTimeframe,
+				chartTimeframe:
+					DEFAULT_PREFERENCES.chartTimeframe as typeof userPreferences.$inferInsert.chartTimeframe,
 				feedFilters: DEFAULT_PREFERENCES.feedFilters,
 				sidebarCollapsed: DEFAULT_PREFERENCES.sidebarCollapsed,
 				notificationSettings: DEFAULT_PREFERENCES.notificationSettings,
-				defaultPortfolioView: DEFAULT_PREFERENCES.defaultPortfolioView as typeof userPreferences.$inferInsert.defaultPortfolioView,
-				dateFormat: DEFAULT_PREFERENCES.dateFormat as typeof userPreferences.$inferInsert.dateFormat,
-				timeFormat: DEFAULT_PREFERENCES.timeFormat as typeof userPreferences.$inferInsert.timeFormat,
+				defaultPortfolioView:
+					DEFAULT_PREFERENCES.defaultPortfolioView as typeof userPreferences.$inferInsert.defaultPortfolioView,
+				dateFormat:
+					DEFAULT_PREFERENCES.dateFormat as typeof userPreferences.$inferInsert.dateFormat,
+				timeFormat:
+					DEFAULT_PREFERENCES.timeFormat as typeof userPreferences.$inferInsert.timeFormat,
 				currency: DEFAULT_PREFERENCES.currency,
 				updatedAt: new Date(),
 			})
 			.where(eq(userPreferences.id, existing.id))
 			.returning();
+
+		if (!row) {
+			throw new Error("Failed to reset user preferences");
+		}
 
 		return mapUserPreferencesRow(row);
 	}

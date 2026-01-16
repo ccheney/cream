@@ -56,7 +56,7 @@ function createMockRepository(): MockSentimentRepository {
 		upsert: mock((input: CreateSentimentInput) => {
 			upsertCalls.push(input);
 			return Promise.resolve({
-				id: input.id,
+				id: `sent_${Date.now()}_mock`,
 				symbol: input.symbol,
 				date: input.date,
 				sentimentScore: input.sentimentScore ?? null,
@@ -420,7 +420,7 @@ describe("SentimentAggregationJob", () => {
 			expect(upserted?.symbol).toBe("AAPL");
 		});
 
-		it("generates unique IDs", async () => {
+		it("processes multiple symbols successfully", async () => {
 			const sentimentData = [
 				createMockSentiment({ symbol: "AAPL" }),
 				createMockSentiment({ symbol: "MSFT" }),
@@ -430,10 +430,9 @@ describe("SentimentAggregationJob", () => {
 			const job = new SentimentAggregationJob(mockProvider, mockRepo);
 			await job.run(["AAPL", "MSFT"], "2024-01-15");
 
-			const ids = mockRepo.upsertCalls.map((c: CreateSentimentInput) => c.id);
-			expect(ids[0]).toMatch(/^sent_/);
-			expect(ids[1]).toMatch(/^sent_/);
-			expect(ids[0]).not.toBe(ids[1]);
+			const symbols = mockRepo.upsertCalls.map((c: CreateSentimentInput) => c.symbol);
+			expect(symbols).toContain("AAPL");
+			expect(symbols).toContain("MSFT");
 		});
 	});
 

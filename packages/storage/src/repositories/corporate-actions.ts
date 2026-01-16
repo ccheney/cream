@@ -7,7 +7,7 @@
  */
 import { and, desc, eq, gte, inArray, lte } from "drizzle-orm";
 import { z } from "zod";
-import { getDb, type Database } from "../db";
+import { type Database, getDb } from "../db";
 import { corporateActions } from "../schema/market-data";
 
 // ============================================
@@ -138,10 +138,10 @@ export class CorporateActionsRepository {
 	async getSplits(symbol: string, afterDate?: string): Promise<CorporateAction[]> {
 		const conditions = [
 			eq(corporateActions.symbol, symbol),
-			inArray(
-				corporateActions.actionType,
-				["split", "reverse_split"] as typeof corporateActions.$inferSelect.actionType[]
-			),
+			inArray(corporateActions.actionType, [
+				"split",
+				"reverse_split",
+			] as (typeof corporateActions.$inferSelect.actionType)[]),
 		];
 
 		if (afterDate) {
@@ -160,10 +160,10 @@ export class CorporateActionsRepository {
 	async getDividends(symbol: string, afterDate?: string): Promise<CorporateAction[]> {
 		const conditions = [
 			eq(corporateActions.symbol, symbol),
-			inArray(
-				corporateActions.actionType,
-				["dividend", "special_dividend"] as typeof corporateActions.$inferSelect.actionType[]
-			),
+			inArray(corporateActions.actionType, [
+				"dividend",
+				"special_dividend",
+			] as (typeof corporateActions.$inferSelect.actionType)[]),
 		];
 
 		if (afterDate) {
@@ -188,12 +188,7 @@ export class CorporateActionsRepository {
 		const rows = await this.db
 			.select()
 			.from(corporateActions)
-			.where(
-				and(
-					gte(corporateActions.exDate, dateStart),
-					lte(corporateActions.exDate, dateEnd)
-				)
-			)
+			.where(and(gte(corporateActions.exDate, dateStart), lte(corporateActions.exDate, dateEnd)))
 			.orderBy(corporateActions.symbol);
 
 		return rows.map(mapCorporateActionRow);

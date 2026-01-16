@@ -3,14 +3,15 @@
 //! Provides database integration for persisting order and portfolio state,
 //! enabling recovery after system crashes.
 //!
-//! Uses Turso (Rust rewrite of `SQLite`) for durable state storage.
+//! Uses `PostgreSQL` via `SQLx` for durable state storage, shared with TypeScript apps.
 
 use rust_decimal::Decimal;
 use serde::{Deserialize, Serialize};
+use sqlx::postgres::PgPoolOptions;
+use sqlx::{PgPool, Row};
 use std::collections::HashMap;
 use thiserror::Error;
 use tracing::{debug, info};
-use turso::{Builder, Database, Error as TursoError, Row, Value};
 
 use super::reconciliation::{LocalPositionSnapshot, ReconciliationReport};
 use super::state::OrderStateManager;
@@ -44,8 +45,8 @@ pub enum PersistenceError {
     MissingField(String),
 }
 
-impl From<TursoError> for PersistenceError {
-    fn from(err: TursoError) -> Self {
+impl From<sqlx::Error> for PersistenceError {
+    fn from(err: sqlx::Error) -> Self {
         Self::Connection(err.to_string())
     }
 }
@@ -165,105 +166,63 @@ pub struct StateSnapshot {
 // State Persistence Manager
 // ============================================================================
 
-/// Manages state persistence to database.
+/// Manages state persistence to `PostgreSQL` database.
 pub struct StatePersistence {
-    /// Database connection.
-    db: Database,
+    /// Database connection pool.
+    pool: PgPool,
     /// Environment (PAPER/LIVE/BACKTEST).
     environment: String,
 }
 
 impl StatePersistence {
-    /// Create a new persistence manager with local database.
+    /// Create a new persistence manager with `PostgreSQL` connection.
     ///
     /// # Errors
     ///
-    /// Returns an error if the database cannot be opened or migrations fail.
-    pub async fn new_local(db_path: &str, environment: &str) -> Result<Self, PersistenceError> {
-        let db = Builder::new_local(db_path).build().await?;
+    /// Returns an error if the database cannot be connected.
+    pub async fn new(database_url: &str, environment: &str) -> Result<Self, PersistenceError> {
+        Self::with_max_connections(database_url, environment, 5).await
+    }
 
-        // Run migrations if needed
-        Self::run_migrations(&db).await?;
+    /// Create a new persistence manager with custom max connections.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the database cannot be connected.
+    pub async fn with_max_connections(
+        database_url: &str,
+        environment: &str,
+        max_connections: u32,
+    ) -> Result<Self, PersistenceError> {
+        let pool = PgPoolOptions::new()
+            .max_connections(max_connections)
+            .connect(database_url)
+            .await?;
+
+        info!(
+            max_connections = max_connections,
+            "PostgreSQL connection pool initialized"
+        );
 
         Ok(Self {
-            db,
+            pool,
             environment: environment.to_string(),
         })
     }
 
-    /// Create a new persistence manager (for testing with in-memory db).
-    ///
-    /// # Errors
-    ///
-    /// Returns an error if the in-memory database cannot be created or migrations fail.
-    pub async fn new_in_memory(environment: &str) -> Result<Self, PersistenceError> {
-        let db = Builder::new_local(":memory:").build().await?;
-
-        // Run migrations
-        Self::run_migrations(&db).await?;
-
-        Ok(Self {
-            db,
+    /// Create a persistence manager with an existing pool (for testing).
+    #[must_use]
+    pub fn with_pool(pool: PgPool, environment: &str) -> Self {
+        Self {
+            pool,
             environment: environment.to_string(),
-        })
+        }
     }
 
-    /// Run database migrations for state persistence tables.
-    async fn run_migrations(db: &Database) -> Result<(), PersistenceError> {
-        let conn = db.connect()?;
-
-        // Create order snapshots table if not exists
-        conn.execute_batch(
-            "CREATE TABLE IF NOT EXISTS order_snapshots (
-                order_id TEXT PRIMARY KEY,
-                broker_order_id TEXT NOT NULL,
-                instrument_id TEXT NOT NULL,
-                status TEXT NOT NULL,
-                side TEXT NOT NULL,
-                order_type TEXT NOT NULL,
-                time_in_force TEXT NOT NULL,
-                requested_quantity TEXT NOT NULL,
-                filled_quantity TEXT NOT NULL,
-                avg_fill_price TEXT NOT NULL,
-                limit_price TEXT,
-                stop_price TEXT,
-                submitted_at TEXT NOT NULL,
-                last_update_at TEXT NOT NULL,
-                status_message TEXT,
-                is_multi_leg INTEGER NOT NULL DEFAULT 0,
-                environment TEXT NOT NULL,
-                updated_at TEXT NOT NULL DEFAULT (datetime('now'))
-            );
-
-            CREATE INDEX IF NOT EXISTS idx_order_snapshots_broker_id
-             ON order_snapshots(broker_order_id);
-
-            CREATE INDEX IF NOT EXISTS idx_order_snapshots_env_status
-             ON order_snapshots(environment, status);
-
-            CREATE TABLE IF NOT EXISTS position_snapshots (
-                symbol TEXT PRIMARY KEY,
-                quantity TEXT NOT NULL,
-                avg_entry_price TEXT NOT NULL,
-                environment TEXT NOT NULL,
-                updated_at TEXT NOT NULL DEFAULT (datetime('now'))
-            );
-
-            CREATE TABLE IF NOT EXISTS recovery_state (
-                environment TEXT PRIMARY KEY,
-                last_snapshot_at TEXT,
-                last_reconciliation_at TEXT,
-                last_cycle_id TEXT,
-                status TEXT NOT NULL DEFAULT 'unknown',
-                error_message TEXT,
-                updated_at TEXT NOT NULL DEFAULT (datetime('now'))
-            );",
-        )
-        .await
-        .map_err(|e| PersistenceError::Query(e.to_string()))?;
-
-        info!("State persistence migrations complete");
-        Ok(())
+    /// Get the underlying connection pool.
+    #[must_use]
+    pub const fn pool(&self) -> &PgPool {
+        &self.pool
     }
 
     /// Save current order state to database.
@@ -272,42 +231,54 @@ impl StatePersistence {
     ///
     /// Returns an error if the database connection fails or the insert query fails.
     pub async fn save_order(&self, order: &OrderState) -> Result<(), PersistenceError> {
-        let conn = self.db.connect()?;
         let snapshot = OrderSnapshot::from_order_state(order);
 
-        let params: Vec<Value> = vec![
-            Value::Text(snapshot.order_id.clone()),
-            Value::Text(snapshot.broker_order_id.clone()),
-            Value::Text(snapshot.instrument_id.clone()),
-            Value::Text(snapshot.status.clone()),
-            Value::Text(snapshot.side.clone()),
-            Value::Text(snapshot.order_type.clone()),
-            Value::Text(snapshot.time_in_force.clone()),
-            Value::Text(snapshot.requested_quantity.to_string()),
-            Value::Text(snapshot.filled_quantity.to_string()),
-            Value::Text(snapshot.avg_fill_price.to_string()),
-            snapshot
-                .limit_price
-                .map_or(Value::Null, |p| Value::Text(p.to_string())),
-            snapshot
-                .stop_price
-                .map_or(Value::Null, |p| Value::Text(p.to_string())),
-            Value::Text(snapshot.submitted_at.clone()),
-            Value::Text(snapshot.last_update_at.clone()),
-            Value::Text(snapshot.status_message.clone()),
-            Value::Integer(i64::from(snapshot.is_multi_leg)),
-            Value::Text(self.environment.clone()),
-        ];
-
-        conn.execute(
-            "INSERT OR REPLACE INTO order_snapshots (
+        sqlx::query(
+            r"
+            INSERT INTO execution_order_snapshots (
                 order_id, broker_order_id, instrument_id, status, side,
                 order_type, time_in_force, requested_quantity, filled_quantity,
                 avg_fill_price, limit_price, stop_price, submitted_at,
                 last_update_at, status_message, is_multi_leg, environment, updated_at
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now'))",
-            params,
+            ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17::environment, NOW())
+            ON CONFLICT (order_id) DO UPDATE SET
+                broker_order_id = EXCLUDED.broker_order_id,
+                instrument_id = EXCLUDED.instrument_id,
+                status = EXCLUDED.status,
+                side = EXCLUDED.side,
+                order_type = EXCLUDED.order_type,
+                time_in_force = EXCLUDED.time_in_force,
+                requested_quantity = EXCLUDED.requested_quantity,
+                filled_quantity = EXCLUDED.filled_quantity,
+                avg_fill_price = EXCLUDED.avg_fill_price,
+                limit_price = EXCLUDED.limit_price,
+                stop_price = EXCLUDED.stop_price,
+                submitted_at = EXCLUDED.submitted_at,
+                last_update_at = EXCLUDED.last_update_at,
+                status_message = EXCLUDED.status_message,
+                is_multi_leg = EXCLUDED.is_multi_leg,
+                environment = EXCLUDED.environment,
+                updated_at = NOW()
+            ",
         )
+        .bind(&snapshot.order_id)
+        .bind(&snapshot.broker_order_id)
+        .bind(&snapshot.instrument_id)
+        .bind(&snapshot.status)
+        .bind(&snapshot.side)
+        .bind(&snapshot.order_type)
+        .bind(&snapshot.time_in_force)
+        .bind(snapshot.requested_quantity)
+        .bind(snapshot.filled_quantity)
+        .bind(snapshot.avg_fill_price)
+        .bind(snapshot.limit_price)
+        .bind(snapshot.stop_price)
+        .bind(&snapshot.submitted_at)
+        .bind(&snapshot.last_update_at)
+        .bind(&snapshot.status_message)
+        .bind(snapshot.is_multi_leg)
+        .bind(&self.environment)
+        .execute(&self.pool)
         .await
         .map_err(|e| PersistenceError::Query(e.to_string()))?;
 
@@ -345,29 +316,23 @@ impl StatePersistence {
         &self,
         state_manager: &OrderStateManager,
     ) -> Result<usize, PersistenceError> {
-        let conn = self.db.connect()?;
-
-        let params: Vec<Value> = vec![Value::Text(self.environment.clone())];
-
-        let mut rows = conn
-            .query(
-                "SELECT order_id, broker_order_id, instrument_id, status, side,
-                    order_type, time_in_force, requested_quantity, filled_quantity,
-                    avg_fill_price, limit_price, stop_price, submitted_at,
-                    last_update_at, status_message, is_multi_leg
-             FROM order_snapshots
-             WHERE environment = ? AND status NOT IN ('Filled', 'Canceled', 'Rejected', 'Expired')",
-                params,
-            )
-            .await
-            .map_err(|e| PersistenceError::Query(e.to_string()))?;
+        let rows = sqlx::query(
+            r"
+            SELECT order_id, broker_order_id, instrument_id, status, side,
+                   order_type, time_in_force, requested_quantity, filled_quantity,
+                   avg_fill_price, limit_price, stop_price, submitted_at,
+                   last_update_at, status_message, is_multi_leg
+            FROM execution_order_snapshots
+            WHERE environment = $1::environment AND status NOT IN ('Filled', 'Canceled', 'Rejected', 'Expired')
+            ",
+        )
+        .bind(&self.environment)
+        .fetch_all(&self.pool)
+        .await
+        .map_err(|e| PersistenceError::Query(e.to_string()))?;
 
         let mut count = 0;
-        while let Some(row) = rows
-            .next()
-            .await
-            .map_err(|e| PersistenceError::Query(e.to_string()))?
-        {
+        for row in rows {
             let snapshot = Self::row_to_order_snapshot(&row)?;
             let order_state = snapshot.to_order_state();
             state_manager.insert(order_state);
@@ -379,54 +344,52 @@ impl StatePersistence {
     }
 
     /// Convert database row to `OrderSnapshot`.
-    fn row_to_order_snapshot(row: &Row) -> Result<OrderSnapshot, PersistenceError> {
+    fn row_to_order_snapshot(
+        row: &sqlx::postgres::PgRow,
+    ) -> Result<OrderSnapshot, PersistenceError> {
         Ok(OrderSnapshot {
             order_id: row
-                .get::<String>(0)
+                .try_get::<String, _>("order_id")
                 .map_err(|e| PersistenceError::MissingField(format!("order_id: {e}")))?,
             broker_order_id: row
-                .get::<String>(1)
+                .try_get::<String, _>("broker_order_id")
                 .map_err(|e| PersistenceError::MissingField(format!("broker_order_id: {e}")))?,
             instrument_id: row
-                .get::<String>(2)
+                .try_get::<String, _>("instrument_id")
                 .map_err(|e| PersistenceError::MissingField(format!("instrument_id: {e}")))?,
             status: row
-                .get::<String>(3)
+                .try_get::<String, _>("status")
                 .map_err(|e| PersistenceError::MissingField(format!("status: {e}")))?,
             side: row
-                .get::<String>(4)
+                .try_get::<String, _>("side")
                 .map_err(|e| PersistenceError::MissingField(format!("side: {e}")))?,
             order_type: row
-                .get::<String>(5)
+                .try_get::<String, _>("order_type")
                 .map_err(|e| PersistenceError::MissingField(format!("order_type: {e}")))?,
             time_in_force: row
-                .get::<String>(6)
+                .try_get::<String, _>("time_in_force")
                 .map_err(|e| PersistenceError::MissingField(format!("time_in_force: {e}")))?,
             requested_quantity: row
-                .get::<String>(7)
-                .map_err(|e| PersistenceError::MissingField(format!("requested_quantity: {e}")))?
-                .parse()
+                .try_get::<Decimal, _>("requested_quantity")
                 .unwrap_or(Decimal::ZERO),
             filled_quantity: row
-                .get::<String>(8)
-                .map_err(|e| PersistenceError::MissingField(format!("filled_quantity: {e}")))?
-                .parse()
+                .try_get::<Decimal, _>("filled_quantity")
                 .unwrap_or(Decimal::ZERO),
             avg_fill_price: row
-                .get::<String>(9)
-                .map_err(|e| PersistenceError::MissingField(format!("avg_fill_price: {e}")))?
-                .parse()
+                .try_get::<Decimal, _>("avg_fill_price")
                 .unwrap_or(Decimal::ZERO),
-            limit_price: row.get::<String>(10).ok().and_then(|s| s.parse().ok()),
-            stop_price: row.get::<String>(11).ok().and_then(|s| s.parse().ok()),
+            limit_price: row.try_get::<Decimal, _>("limit_price").ok(),
+            stop_price: row.try_get::<Decimal, _>("stop_price").ok(),
             submitted_at: row
-                .get::<String>(12)
+                .try_get::<String, _>("submitted_at")
                 .map_err(|e| PersistenceError::MissingField(format!("submitted_at: {e}")))?,
             last_update_at: row
-                .get::<String>(13)
+                .try_get::<String, _>("last_update_at")
                 .map_err(|e| PersistenceError::MissingField(format!("last_update_at: {e}")))?,
-            status_message: row.get::<String>(14).unwrap_or_default(),
-            is_multi_leg: row.get::<i64>(15).unwrap_or(0) != 0,
+            status_message: row
+                .try_get::<String, _>("status_message")
+                .unwrap_or_default(),
+            is_multi_leg: row.try_get::<bool, _>("is_multi_leg").unwrap_or(false),
         })
     }
 
@@ -439,21 +402,23 @@ impl StatePersistence {
         &self,
         position: &LocalPositionSnapshot,
     ) -> Result<(), PersistenceError> {
-        let conn = self.db.connect()?;
-
-        let params: Vec<Value> = vec![
-            Value::Text(position.symbol.clone()),
-            Value::Text(position.qty.to_string()),
-            Value::Text(position.avg_entry_price.to_string()),
-            Value::Text(self.environment.clone()),
-        ];
-
-        conn.execute(
-            "INSERT OR REPLACE INTO position_snapshots (
+        sqlx::query(
+            r"
+            INSERT INTO execution_position_snapshots (
                 symbol, quantity, avg_entry_price, environment, updated_at
-            ) VALUES (?, ?, ?, ?, datetime('now'))",
-            params,
+            ) VALUES ($1, $2, $3, $4::environment, NOW())
+            ON CONFLICT (symbol) DO UPDATE SET
+                quantity = EXCLUDED.quantity,
+                avg_entry_price = EXCLUDED.avg_entry_price,
+                environment = EXCLUDED.environment,
+                updated_at = NOW()
+            ",
         )
+        .bind(&position.symbol)
+        .bind(position.qty)
+        .bind(position.avg_entry_price)
+        .bind(&self.environment)
+        .execute(&self.pool)
         .await
         .map_err(|e| PersistenceError::Query(e.to_string()))?;
 
@@ -469,36 +434,24 @@ impl StatePersistence {
     pub async fn load_positions(
         &self,
     ) -> Result<HashMap<String, LocalPositionSnapshot>, PersistenceError> {
-        let conn = self.db.connect()?;
-
-        let params: Vec<Value> = vec![Value::Text(self.environment.clone())];
-
-        let mut rows = conn
-            .query(
-                "SELECT symbol, quantity, avg_entry_price FROM position_snapshots WHERE environment = ?",
-                params,
-            )
-            .await
-            .map_err(|e| PersistenceError::Query(e.to_string()))?;
+        let rows = sqlx::query(
+            "SELECT symbol, quantity, avg_entry_price FROM execution_position_snapshots WHERE environment = $1::environment",
+        )
+        .bind(&self.environment)
+        .fetch_all(&self.pool)
+        .await
+        .map_err(|e| PersistenceError::Query(e.to_string()))?;
 
         let mut positions = HashMap::new();
-        while let Some(row) = rows
-            .next()
-            .await
-            .map_err(|e| PersistenceError::Query(e.to_string()))?
-        {
+        for row in rows {
             let symbol: String = row
-                .get(0)
+                .try_get("symbol")
                 .map_err(|e| PersistenceError::MissingField(format!("symbol: {e}")))?;
             let qty: Decimal = row
-                .get::<String>(1)
-                .map_err(|e| PersistenceError::MissingField(format!("quantity: {e}")))?
-                .parse()
+                .try_get::<Decimal, _>("quantity")
                 .unwrap_or(Decimal::ZERO);
             let avg_entry_price: Decimal = row
-                .get::<String>(2)
-                .map_err(|e| PersistenceError::MissingField(format!("avg_entry_price: {e}")))?
-                .parse()
+                .try_get::<Decimal, _>("avg_entry_price")
                 .unwrap_or(Decimal::ZERO);
 
             positions.insert(
@@ -526,21 +479,24 @@ impl StatePersistence {
         status: &str,
         error_message: Option<&str>,
     ) -> Result<(), PersistenceError> {
-        let conn = self.db.connect()?;
-
-        let params: Vec<Value> = vec![
-            Value::Text(self.environment.clone()),
-            cycle_id.map_or(Value::Null, |s| Value::Text(s.to_string())),
-            Value::Text(status.to_string()),
-            error_message.map_or(Value::Null, |s| Value::Text(s.to_string())),
-        ];
-
-        conn.execute(
-            "INSERT OR REPLACE INTO recovery_state (
+        sqlx::query(
+            r"
+            INSERT INTO execution_recovery_state (
                 environment, last_snapshot_at, last_cycle_id, status, error_message, updated_at
-            ) VALUES (?, datetime('now'), ?, ?, ?, datetime('now'))",
-            params,
+            ) VALUES ($1::environment, NOW(), $2, $3, $4, NOW())
+            ON CONFLICT (environment) DO UPDATE SET
+                last_snapshot_at = NOW(),
+                last_cycle_id = EXCLUDED.last_cycle_id,
+                status = EXCLUDED.status,
+                error_message = EXCLUDED.error_message,
+                updated_at = NOW()
+            ",
         )
+        .bind(&self.environment)
+        .bind(cycle_id)
+        .bind(status)
+        .bind(error_message)
+        .execute(&self.pool)
         .await
         .map_err(|e| PersistenceError::Query(e.to_string()))?;
 
@@ -554,34 +510,37 @@ impl StatePersistence {
     ///
     /// Returns an error if the database query fails.
     pub async fn get_recovery_state(&self) -> Result<RecoveryState, PersistenceError> {
-        let conn = self.db.connect()?;
+        let row = sqlx::query(
+            r"
+            SELECT last_snapshot_at, last_reconciliation_at, last_cycle_id, status, error_message
+            FROM execution_recovery_state WHERE environment = $1::environment
+            ",
+        )
+        .bind(&self.environment)
+        .fetch_optional(&self.pool)
+        .await
+        .map_err(|e| PersistenceError::Query(e.to_string()))?;
 
-        let params: Vec<Value> = vec![Value::Text(self.environment.clone())];
-
-        let mut rows = conn
-            .query(
-                "SELECT last_snapshot_at, last_reconciliation_at, last_cycle_id, status, error_message
-             FROM recovery_state WHERE environment = ?",
-                params,
-            )
-            .await
-            .map_err(|e| PersistenceError::Query(e.to_string()))?;
-
-        rows.next()
-            .await
-            .map_err(|e| PersistenceError::Query(e.to_string()))?
-            .map_or_else(
-                || Ok(RecoveryState::default()),
-                |row| {
-                    Ok(RecoveryState {
-                        last_snapshot_at: row.get(0).ok(),
-                        last_reconciliation_at: row.get(1).ok(),
-                        last_cycle_id: row.get(2).ok(),
-                        status: row.get(3).unwrap_or_else(|_| "unknown".to_string()),
-                        error_message: row.get(4).ok(),
-                    })
-                },
-            )
+        row.map_or_else(
+            || Ok(RecoveryState::default()),
+            |r| {
+                Ok(RecoveryState {
+                    last_snapshot_at: r
+                        .try_get::<chrono::DateTime<chrono::Utc>, _>("last_snapshot_at")
+                        .ok()
+                        .map(|dt| dt.to_rfc3339()),
+                    last_reconciliation_at: r
+                        .try_get::<chrono::DateTime<chrono::Utc>, _>("last_reconciliation_at")
+                        .ok()
+                        .map(|dt| dt.to_rfc3339()),
+                    last_cycle_id: r.try_get("last_cycle_id").ok(),
+                    status: r
+                        .try_get("status")
+                        .unwrap_or_else(|_| "unknown".to_string()),
+                    error_message: r.try_get("error_message").ok(),
+                })
+            },
+        )
     }
 
     /// Log reconciliation completion.
@@ -593,27 +552,24 @@ impl StatePersistence {
         &self,
         report: &ReconciliationReport,
     ) -> Result<(), PersistenceError> {
-        let conn = self.db.connect()?;
-
         let status = if report.passed {
             "healthy"
         } else {
             "needs_attention"
         };
 
-        let params: Vec<Value> = vec![
-            Value::Text(status.to_string()),
-            Value::Text(self.environment.clone()),
-        ];
-
-        conn.execute(
-            "UPDATE recovery_state SET
-                last_reconciliation_at = datetime('now'),
-                status = ?,
-                updated_at = datetime('now')
-             WHERE environment = ?",
-            params,
+        sqlx::query(
+            r"
+            UPDATE execution_recovery_state SET
+                last_reconciliation_at = NOW(),
+                status = $1,
+                updated_at = NOW()
+            WHERE environment = $2::environment
+            ",
         )
+        .bind(status)
+        .bind(&self.environment)
+        .execute(&self.pool)
         .await
         .map_err(|e| PersistenceError::Query(e.to_string()))?;
 
@@ -623,22 +579,6 @@ impl StatePersistence {
             orphans = report.orphaned_orders.len(),
             "Reconciliation logged"
         );
-        Ok(())
-    }
-
-    /// Sync with remote (no-op for local database).
-    ///
-    /// # Errors
-    ///
-    /// Currently always succeeds. For remote databases, would return an error
-    /// if synchronization with the remote server fails.
-    ///
-    /// Note: This is intentionally synchronous since Turso local databases
-    /// don't require sync. For remote sync support in the future, this would
-    /// need to become async with actual network calls.
-    pub const fn sync(&self) -> Result<(), PersistenceError> {
-        // Note: Turso local databases don't need sync
-        // For remote sync, we'd need a different builder configuration
         Ok(())
     }
 }

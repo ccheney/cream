@@ -467,7 +467,7 @@ export class CorporateActionsBatchJob {
 					action.corporate_action_type === "SpecialDividend"
 						? action.value
 						: null,
-				details: action.description ? { description: action.description } : null,
+				details: action.description ?? null,
 				provider: "alpaca",
 			};
 

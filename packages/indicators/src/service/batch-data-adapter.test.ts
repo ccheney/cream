@@ -47,7 +47,9 @@ function createMockShortInterestRepo(
 	};
 }
 
-function createMockSentimentRepo(data: Map<string, StorageSentimentRow>): StorageSentimentRepository {
+function createMockSentimentRepo(
+	data: Map<string, StorageSentimentRow>
+): StorageSentimentRepository {
 	return {
 		async findLatestBySymbol(symbol: string) {
 			return data.get(symbol) ?? null;

@@ -82,12 +82,10 @@ export class FilingsIngestionService {
 		onProgress?: ProgressCallback
 	): Promise<FilingSyncResult> {
 		const startTime = Date.now();
-		const runId = `sync_${Date.now()}_${crypto.randomUUID().slice(0, 8)}`;
 		const errors: string[] = [];
 
 		// Create sync run record
-		await this.syncRunsRepo.start({
-			id: runId,
+		const syncRun = await this.syncRunsRepo.start({
 			symbolsRequested: config.symbols,
 			filingTypes: config.filingTypes,
 			dateRangeStart: config.startDate,
@@ -96,6 +94,7 @@ export class FilingsIngestionService {
 			triggerSource: config.triggerSource,
 			environment: config.environment,
 		});
+		const runId = syncRun.id;
 
 		let symbolsProcessed = 0;
 		let filingsFetched = 0;
@@ -172,15 +171,14 @@ export class FilingsIngestionService {
 							const chunks = chunkParsedFiling(parsed);
 
 							// Create filing record
-							const filingId = `filing_${filing.accessionNumber.replace(/-/g, "")}`;
-							await this.filingsRepo.create({
-								id: filingId,
+							const createdFiling = await this.filingsRepo.create({
 								accessionNumber: filing.accessionNumber,
 								symbol,
 								filingType: filing.filingType,
 								filedDate: formatDate(filing.filedDate),
 								ingestedAt: new Date().toISOString(),
 							});
+							const filingId = createdFiling.id;
 
 							// Report progress - storing
 							if (onProgress) {

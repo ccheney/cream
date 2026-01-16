@@ -7,8 +7,8 @@
  * @see docs/plans/46-postgres-drizzle-migration.md
  */
 
+import { sql } from "@cream/storage";
 import { createRoute, OpenAPIHono, z } from "@hono/zod-openapi";
-import { sql } from "drizzle-orm";
 import { getDrizzleDb } from "../db.js";
 
 const app = new OpenAPIHono();
@@ -37,20 +37,40 @@ const SearchResponseSchema = z.object({
 // ============================================
 
 const NAVIGATION_ITEMS = [
-	{ id: "nav-portfolio", title: "Portfolio", subtitle: "View positions and P&L", url: "/portfolio" },
-	{ id: "nav-decisions", title: "Decisions", subtitle: "Review pending decisions", url: "/decisions" },
+	{
+		id: "nav-portfolio",
+		title: "Portfolio",
+		subtitle: "View positions and P&L",
+		url: "/portfolio",
+	},
+	{
+		id: "nav-decisions",
+		title: "Decisions",
+		subtitle: "Review pending decisions",
+		url: "/decisions",
+	},
 	{ id: "nav-risk", title: "Risk Dashboard", subtitle: "Risk metrics and exposure", url: "/risk" },
 	{ id: "nav-charts", title: "Charts", subtitle: "Technical analysis charts", url: "/charts" },
 	{ id: "nav-options", title: "Options", subtitle: "Options flow and chains", url: "/options" },
 	{ id: "nav-theses", title: "Theses", subtitle: "Investment theses", url: "/theses" },
 	{ id: "nav-config", title: "Configuration", subtitle: "System configuration", url: "/config" },
 	{ id: "nav-workers", title: "Workers", subtitle: "Worker services status", url: "/workers" },
-	{ id: "nav-indicators", title: "Indicators", subtitle: "Indicator engine status", url: "/indicators" },
+	{
+		id: "nav-indicators",
+		title: "Indicators",
+		subtitle: "Indicator engine status",
+		url: "/indicators",
+	},
 	{ id: "nav-backtest", title: "Backtest", subtitle: "Backtesting engine", url: "/backtest" },
 	{ id: "nav-calendar", title: "Calendar", subtitle: "Market calendar", url: "/calendar" },
 	{ id: "nav-console", title: "Console", subtitle: "Agent console", url: "/console" },
 	{ id: "nav-agents", title: "Agents", subtitle: "Agent status and outputs", url: "/agents" },
-	{ id: "nav-query-perf", title: "Query Performance", subtitle: "Database query stats", url: "/admin/query-performance" },
+	{
+		id: "nav-query-perf",
+		title: "Query Performance",
+		subtitle: "Database query stats",
+		url: "/admin/query-performance",
+	},
 ];
 
 // ============================================
@@ -62,18 +82,26 @@ function fuzzyScore(query: string, text: string): number {
 	const lowerText = text.toLowerCase();
 
 	// Exact match
-	if (lowerText === lowerQuery) return 1.0;
+	if (lowerText === lowerQuery) {
+		return 1.0;
+	}
 
 	// Starts with
-	if (lowerText.startsWith(lowerQuery)) return 0.9;
+	if (lowerText.startsWith(lowerQuery)) {
+		return 0.9;
+	}
 
 	// Contains
-	if (lowerText.includes(lowerQuery)) return 0.7;
+	if (lowerText.includes(lowerQuery)) {
+		return 0.7;
+	}
 
 	// Word match
 	const words = lowerText.split(/\s+/);
 	for (const word of words) {
-		if (word.startsWith(lowerQuery)) return 0.6;
+		if (word.startsWith(lowerQuery)) {
+			return 0.6;
+		}
 	}
 
 	// Trigram similarity approximation
@@ -87,25 +115,28 @@ function fuzzyScore(query: string, text: string): number {
 		textGrams.add(lowerText.slice(i, i + 3));
 	}
 
-	if (queryGrams.size === 0 || textGrams.size === 0) return 0;
+	if (queryGrams.size === 0 || textGrams.size === 0) {
+		return 0;
+	}
 
 	let intersection = 0;
 	for (const gram of queryGrams) {
-		if (textGrams.has(gram)) intersection++;
+		if (textGrams.has(gram)) {
+			intersection++;
+		}
 	}
 
 	const union = queryGrams.size + textGrams.size - intersection;
-	return intersection / union * 0.5;
+	return (intersection / union) * 0.5;
 }
 
 function searchNavigation(query: string): Array<z.infer<typeof SearchResultSchema>> {
-	return NAVIGATION_ITEMS
-		.map((item) => {
-			const titleScore = fuzzyScore(query, item.title);
-			const subtitleScore = item.subtitle ? fuzzyScore(query, item.subtitle) * 0.5 : 0;
-			const score = Math.max(titleScore, subtitleScore);
-			return { ...item, type: "navigation" as const, score };
-		})
+	return NAVIGATION_ITEMS.map((item) => {
+		const titleScore = fuzzyScore(query, item.title);
+		const subtitleScore = item.subtitle ? fuzzyScore(query, item.subtitle) * 0.5 : 0;
+		const score = Math.max(titleScore, subtitleScore);
+		return { ...item, type: "navigation" as const, score };
+	})
 		.filter((item) => item.score > 0.3)
 		.toSorted((a, b) => b.score - a.score);
 }
@@ -169,8 +200,8 @@ app.openapi(searchRoute, async (c) => {
 			SELECT id, symbol, action_type, created_at
 			FROM decisions
 			WHERE
-				symbol ILIKE ${'%' + query + '%'}
-				OR action_type ILIKE ${'%' + query + '%'}
+				symbol ILIKE ${`%${query}%`}
+				OR action_type ILIKE ${`%${query}%`}
 			ORDER BY created_at DESC
 			LIMIT 5
 		`);
@@ -192,8 +223,8 @@ app.openapi(searchRoute, async (c) => {
 			SELECT id, symbol, title
 			FROM thesis_states
 			WHERE
-				symbol ILIKE ${'%' + query + '%'}
-				OR title ILIKE ${'%' + query + '%'}
+				symbol ILIKE ${`%${query}%`}
+				OR title ILIKE ${`%${query}%`}
 			ORDER BY created_at DESC
 			LIMIT 5
 		`);
@@ -215,8 +246,8 @@ app.openapi(searchRoute, async (c) => {
 			SELECT id, symbol, message
 			FROM alerts
 			WHERE
-				symbol ILIKE ${'%' + query + '%'}
-				OR message ILIKE ${'%' + query + '%'}
+				symbol ILIKE ${`%${query}%`}
+				OR message ILIKE ${`%${query}%`}
 			ORDER BY created_at DESC
 			LIMIT 5
 		`);
@@ -232,15 +263,10 @@ app.openapi(searchRoute, async (c) => {
 				score: fuzzyScore(query, `${r.symbol ?? ""} ${r.message}`),
 			});
 		}
-	} catch (error) {
-		// Database search failed, continue with static results
-		console.warn("Database search failed:", error);
-	}
+	} catch (_error) {}
 
 	// Sort by score and limit
-	const sortedResults = results
-		.toSorted((a, b) => b.score - a.score)
-		.slice(0, limit);
+	const sortedResults = results.toSorted((a, b) => b.score - a.score).slice(0, limit);
 
 	return c.json({
 		results: sortedResults,

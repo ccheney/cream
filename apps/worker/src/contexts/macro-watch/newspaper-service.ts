@@ -23,7 +23,7 @@ export interface NewspaperCompileResult {
 export class NewspaperService {
 	private running = false;
 	private lastCompile: Date | null = null;
-	private readonly config: NewspaperServiceConfig;
+	private config: NewspaperServiceConfig;
 
 	constructor(config: NewspaperServiceConfig = {}) {
 		this.config = config;
@@ -48,7 +48,7 @@ export class NewspaperService {
 			const calendar = getCalendarService();
 			if (!calendar) {
 				log.warn({}, "CalendarService not available, cannot compile newspaper");
-				throw new Error("CalendarService not available");
+				return { compiled: false, entryCount: 0, message: "CalendarService not available" };
 			}
 
 			const prevClose = await calendar.getPreviousTradingDay(new Date());
@@ -93,7 +93,11 @@ export class NewspaperService {
 				{ error: error instanceof Error ? error.message : String(error) },
 				"Newspaper compilation failed"
 			);
-			throw error;
+			return {
+				compiled: false,
+				entryCount: 0,
+				message: `Compilation failed: ${error instanceof Error ? error.message : String(error)}`,
+			};
 		} finally {
 			this.running = false;
 		}

@@ -62,7 +62,6 @@ export {
 	type OrderDirection,
 	type PaginatedResult,
 	type PaginationOptions,
-	paginate,
 	parseJson,
 	QueryBuilder,
 	query,
@@ -70,7 +69,6 @@ export {
 	type RepositoryErrorCode,
 	toBoolean,
 	toJson,
-	withTransaction,
 } from "./base.js";
 // Market data repositories (migration 003)
 export {
@@ -113,8 +111,7 @@ export {
 	type CycleEventType,
 	type CyclePhase,
 	type CycleStatus,
-	type CyclesRepository,
-	createCyclesRepository,
+	CyclesRepository,
 	type DecisionSummary as CycleDecisionSummary,
 	type OrderSummary as CycleOrderSummary,
 	type ReconstructedAgentState,
@@ -164,7 +161,7 @@ export {
 	FilingSyncRunsRepository,
 	FilingsRepository,
 	type FilingType,
-	type SyncRunStatus,
+	type SyncRunStatus as FilingSyncRunStatus,
 	type TriggerSource,
 	type UpdateSyncRunProgress,
 } from "./filings.js";
@@ -217,7 +214,6 @@ export {
 	IndicatorsRepository,
 	type IndicatorTrial,
 	type PaperTradingReport,
-	type TrialFilters,
 	type TrialParameters,
 	type ValidationReport,
 	type WalkForwardPeriod,

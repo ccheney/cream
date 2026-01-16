@@ -45,6 +45,7 @@ pub struct ConnectionMonitor<B: BrokerAdapter> {
 impl<B: BrokerAdapter + 'static> ConnectionMonitor<B> {
     /// Create a new connection monitor.
     #[must_use]
+    #[allow(clippy::missing_const_for_fn)] // Arc is not const-constructible
     pub fn new(
         adapter: Arc<B>,
         config: MassCancelConfig,
@@ -251,6 +252,7 @@ mod tests {
             }
         }
 
+        #[allow(dead_code)] // Available for future tests
         fn set_healthy(&self, healthy: bool) {
             self.healthy.store(healthy, Ordering::SeqCst);
         }

@@ -5,7 +5,7 @@
  * with draft/testing/active/archived workflow.
  */
 import { and, desc, eq } from "drizzle-orm";
-import { getDb, type Database } from "../db";
+import { type Database, getDb } from "../db";
 import { constraintsConfig } from "../schema/config";
 import { RepositoryError } from "./base";
 
@@ -156,6 +156,9 @@ export class ConstraintsConfigRepository {
 			})
 			.returning();
 
+		if (!row) {
+			throw new Error("Failed to create constraints config");
+		}
 		return mapConstraintsConfigRow(row);
 	}
 
@@ -182,10 +185,7 @@ export class ConstraintsConfigRepository {
 			.select()
 			.from(constraintsConfig)
 			.where(
-				and(
-					eq(constraintsConfig.environment, environment),
-					eq(constraintsConfig.status, "active"),
-				),
+				and(eq(constraintsConfig.environment, environment), eq(constraintsConfig.status, "active"))
 			)
 			.limit(1);
 
@@ -198,7 +198,7 @@ export class ConstraintsConfigRepository {
 			throw new RepositoryError(
 				`No active constraints config found for environment '${environment}'. Run seed script.`,
 				"NOT_FOUND",
-				"constraints_config",
+				"constraints_config"
 			);
 		}
 		return config;
@@ -209,10 +209,7 @@ export class ConstraintsConfigRepository {
 			.select()
 			.from(constraintsConfig)
 			.where(
-				and(
-					eq(constraintsConfig.environment, environment),
-					eq(constraintsConfig.status, "draft"),
-				),
+				and(eq(constraintsConfig.environment, environment), eq(constraintsConfig.status, "draft"))
 			)
 			.orderBy(desc(constraintsConfig.createdAt))
 			.limit(1);
@@ -222,7 +219,7 @@ export class ConstraintsConfigRepository {
 
 	async saveDraft(
 		environment: ConstraintsEnvironment,
-		input: UpdateConstraintsConfigInput & { id?: string },
+		input: UpdateConstraintsConfigInput & { id?: string }
 	): Promise<ConstraintsConfig> {
 		const existingDraft = await this.getDraft(environment);
 
@@ -231,24 +228,45 @@ export class ConstraintsConfigRepository {
 				updatedAt: new Date(),
 			};
 
-			if (input.maxShares !== undefined) updateData.maxShares = input.maxShares;
-			if (input.maxContracts !== undefined) updateData.maxContracts = input.maxContracts;
-			if (input.maxNotional !== undefined) updateData.maxNotional = String(input.maxNotional);
-			if (input.maxPctEquity !== undefined)
+			if (input.maxShares !== undefined) {
+				updateData.maxShares = input.maxShares;
+			}
+			if (input.maxContracts !== undefined) {
+				updateData.maxContracts = input.maxContracts;
+			}
+			if (input.maxNotional !== undefined) {
+				updateData.maxNotional = String(input.maxNotional);
+			}
+			if (input.maxPctEquity !== undefined) {
 				updateData.maxPctEquity = String(input.maxPctEquity);
-			if (input.maxGrossExposure !== undefined)
+			}
+			if (input.maxGrossExposure !== undefined) {
 				updateData.maxGrossExposure = String(input.maxGrossExposure);
-			if (input.maxNetExposure !== undefined)
+			}
+			if (input.maxNetExposure !== undefined) {
 				updateData.maxNetExposure = String(input.maxNetExposure);
-			if (input.maxConcentration !== undefined)
+			}
+			if (input.maxConcentration !== undefined) {
 				updateData.maxConcentration = String(input.maxConcentration);
-			if (input.maxCorrelation !== undefined)
+			}
+			if (input.maxCorrelation !== undefined) {
 				updateData.maxCorrelation = String(input.maxCorrelation);
-			if (input.maxDrawdown !== undefined) updateData.maxDrawdown = String(input.maxDrawdown);
-			if (input.maxDelta !== undefined) updateData.maxDelta = String(input.maxDelta);
-			if (input.maxGamma !== undefined) updateData.maxGamma = String(input.maxGamma);
-			if (input.maxVega !== undefined) updateData.maxVega = String(input.maxVega);
-			if (input.maxTheta !== undefined) updateData.maxTheta = String(input.maxTheta);
+			}
+			if (input.maxDrawdown !== undefined) {
+				updateData.maxDrawdown = String(input.maxDrawdown);
+			}
+			if (input.maxDelta !== undefined) {
+				updateData.maxDelta = String(input.maxDelta);
+			}
+			if (input.maxGamma !== undefined) {
+				updateData.maxGamma = String(input.maxGamma);
+			}
+			if (input.maxVega !== undefined) {
+				updateData.maxVega = String(input.maxVega);
+			}
+			if (input.maxTheta !== undefined) {
+				updateData.maxTheta = String(input.maxTheta);
+			}
 
 			await this.db
 				.update(constraintsConfig)
@@ -275,8 +293,8 @@ export class ConstraintsConfigRepository {
 				.where(
 					and(
 						eq(constraintsConfig.environment, config.environment),
-						eq(constraintsConfig.status, "active"),
-					),
+						eq(constraintsConfig.status, "active")
+					)
 				);
 		}
 
@@ -288,10 +306,7 @@ export class ConstraintsConfigRepository {
 		return this.findByIdOrThrow(id);
 	}
 
-	async getHistory(
-		environment: ConstraintsEnvironment,
-		limit = 20,
-	): Promise<ConstraintsConfig[]> {
+	async getHistory(environment: ConstraintsEnvironment, limit = 20): Promise<ConstraintsConfig[]> {
 		const rows = await this.db
 			.select()
 			.from(constraintsConfig)
@@ -309,7 +324,7 @@ export class ConstraintsConfigRepository {
 			throw new RepositoryError(
 				"Cannot delete active constraints config",
 				"CONSTRAINT_VIOLATION",
-				"constraints_config",
+				"constraints_config"
 			);
 		}
 

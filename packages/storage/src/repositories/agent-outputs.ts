@@ -5,10 +5,9 @@
  *
  * @see docs/plans/ui/04-data-requirements.md
  */
-import { and, avg, count, desc, eq, sql, sum } from "drizzle-orm";
-import { getDb, type Database } from "../db";
+import { and, desc, eq, sql } from "drizzle-orm";
+import { type Database, getDb } from "../db";
 import { agentOutputs } from "../schema/core-trading";
-import { RepositoryError } from "./base";
 
 // ============================================
 // Types
@@ -87,6 +86,9 @@ export class AgentOutputsRepository {
 			})
 			.returning();
 
+		if (!row) {
+			throw new Error("Failed to create agent output");
+		}
 		return mapAgentOutputRow(row);
 	}
 
@@ -112,11 +114,7 @@ export class AgentOutputsRepository {
 	}
 
 	async findById(id: string): Promise<AgentOutput | null> {
-		const [row] = await this.db
-			.select()
-			.from(agentOutputs)
-			.where(eq(agentOutputs.id, id))
-			.limit(1);
+		const [row] = await this.db.select().from(agentOutputs).where(eq(agentOutputs.id, id)).limit(1);
 
 		return row ? mapAgentOutputRow(row) : null;
 	}

@@ -676,6 +676,7 @@ impl AlpacaAdapter {
         end: Option<&str>,
         limit: Option<u32>,
     ) -> Result<AlpacaBarsResponse, AlpacaError> {
+        use std::fmt::Write;
         if symbols.is_empty() {
             return Ok(AlpacaBarsResponse {
                 bars: std::collections::HashMap::new(),
@@ -685,19 +686,16 @@ impl AlpacaAdapter {
 
         // Build query parameters
         let symbols_param = symbols.join(",");
-        let mut query = format!(
-            "/v2/stocks/bars?symbols={}&timeframe={}",
-            symbols_param, timeframe
-        );
+        let mut query = format!("/v2/stocks/bars?symbols={symbols_param}&timeframe={timeframe}");
 
         if let Some(s) = start {
-            query.push_str(&format!("&start={s}"));
+            let _ = write!(query, "&start={s}");
         }
         if let Some(e) = end {
-            query.push_str(&format!("&end={e}"));
+            let _ = write!(query, "&end={e}");
         }
         if let Some(l) = limit {
-            query.push_str(&format!("&limit={l}"));
+            let _ = write!(query, "&limit={l}");
         }
 
         tracing::debug!(
@@ -731,7 +729,7 @@ impl AlpacaAdapter {
         }
 
         let symbols_param = symbols.join(",");
-        let query = format!("/v2/stocks/quotes/latest?symbols={}", symbols_param);
+        let query = format!("/v2/stocks/quotes/latest?symbols={symbols_param}");
 
         tracing::debug!(
             symbols = ?symbols,
@@ -799,6 +797,7 @@ impl super::gateway::BrokerAdapter for AlpacaAdapter {
 }
 
 #[cfg(test)]
+#[allow(clippy::expect_used)]
 mod tests {
     use super::*;
 

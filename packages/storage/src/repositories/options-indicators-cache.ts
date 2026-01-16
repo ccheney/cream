@@ -7,7 +7,7 @@
  * @see docs/plans/33-indicator-engine-v2.md
  */
 import { and, count, eq, gt, lte, sql } from "drizzle-orm";
-import { getDb, type Database } from "../db";
+import { type Database, getDb } from "../db";
 import { optionsIndicatorsCache } from "../schema/indicators";
 
 // ============================================
@@ -127,7 +127,8 @@ export class OptionsIndicatorsCacheRepository {
 				ivSkew: input.ivSkew != null ? String(input.ivSkew) : null,
 				putCallRatio: input.putCallRatio != null ? String(input.putCallRatio) : null,
 				vrp: input.vrp != null ? String(input.vrp) : null,
-				termStructureSlope: input.termStructureSlope != null ? String(input.termStructureSlope) : null,
+				termStructureSlope:
+					input.termStructureSlope != null ? String(input.termStructureSlope) : null,
 				netDelta: input.netDelta != null ? String(input.netDelta) : null,
 				netGamma: input.netGamma != null ? String(input.netGamma) : null,
 				netTheta: input.netTheta != null ? String(input.netTheta) : null,
@@ -138,12 +139,14 @@ export class OptionsIndicatorsCacheRepository {
 				target: optionsIndicatorsCache.symbol,
 				set: {
 					timestamp: now,
-					impliedVolatility: input.impliedVolatility != null ? String(input.impliedVolatility) : null,
+					impliedVolatility:
+						input.impliedVolatility != null ? String(input.impliedVolatility) : null,
 					ivPercentile30d: input.ivPercentile30d != null ? String(input.ivPercentile30d) : null,
 					ivSkew: input.ivSkew != null ? String(input.ivSkew) : null,
 					putCallRatio: input.putCallRatio != null ? String(input.putCallRatio) : null,
 					vrp: input.vrp != null ? String(input.vrp) : null,
-					termStructureSlope: input.termStructureSlope != null ? String(input.termStructureSlope) : null,
+					termStructureSlope:
+						input.termStructureSlope != null ? String(input.termStructureSlope) : null,
 					netDelta: input.netDelta != null ? String(input.netDelta) : null,
 					netGamma: input.netGamma != null ? String(input.netGamma) : null,
 					netTheta: input.netTheta != null ? String(input.netTheta) : null,
@@ -153,6 +156,9 @@ export class OptionsIndicatorsCacheRepository {
 			})
 			.returning();
 
+		if (!row) {
+			throw new Error("Failed to set options indicators cache");
+		}
 		return mapOptionsIndicatorsRow(row);
 	}
 
@@ -177,10 +183,7 @@ export class OptionsIndicatorsCacheRepository {
 			.select()
 			.from(optionsIndicatorsCache)
 			.where(
-				and(
-					eq(optionsIndicatorsCache.symbol, symbol),
-					gt(optionsIndicatorsCache.expiresAt, now)
-				)
+				and(eq(optionsIndicatorsCache.symbol, symbol), gt(optionsIndicatorsCache.expiresAt, now))
 			)
 			.limit(1);
 
@@ -224,10 +227,7 @@ export class OptionsIndicatorsCacheRepository {
 			.select({ count: count() })
 			.from(optionsIndicatorsCache)
 			.where(
-				and(
-					eq(optionsIndicatorsCache.symbol, symbol),
-					gt(optionsIndicatorsCache.expiresAt, now)
-				)
+				and(eq(optionsIndicatorsCache.symbol, symbol), gt(optionsIndicatorsCache.expiresAt, now))
 			);
 
 		return (result?.count ?? 0) > 0;
@@ -278,11 +278,13 @@ export class OptionsIndicatorsCacheRepository {
 		};
 
 		if (input.impliedVolatility !== undefined) {
-			updates.impliedVolatility = input.impliedVolatility != null ? String(input.impliedVolatility) : null;
+			updates.impliedVolatility =
+				input.impliedVolatility != null ? String(input.impliedVolatility) : null;
 		}
 
 		if (input.ivPercentile30d !== undefined) {
-			updates.ivPercentile30d = input.ivPercentile30d != null ? String(input.ivPercentile30d) : null;
+			updates.ivPercentile30d =
+				input.ivPercentile30d != null ? String(input.ivPercentile30d) : null;
 		}
 
 		if (input.ivSkew !== undefined) {
@@ -298,7 +300,8 @@ export class OptionsIndicatorsCacheRepository {
 		}
 
 		if (input.termStructureSlope !== undefined) {
-			updates.termStructureSlope = input.termStructureSlope != null ? String(input.termStructureSlope) : null;
+			updates.termStructureSlope =
+				input.termStructureSlope != null ? String(input.termStructureSlope) : null;
 		}
 
 		if (input.netDelta !== undefined) {
@@ -360,9 +363,7 @@ export class OptionsIndicatorsCacheRepository {
 
 	async count(includeExpired = false): Promise<number> {
 		if (includeExpired) {
-			const [result] = await this.db
-				.select({ count: count() })
-				.from(optionsIndicatorsCache);
+			const [result] = await this.db.select({ count: count() }).from(optionsIndicatorsCache);
 			return result?.count ?? 0;
 		}
 
@@ -383,9 +384,7 @@ export class OptionsIndicatorsCacheRepository {
 	}> {
 		const now = new Date();
 
-		const [totalResult] = await this.db
-			.select({ count: count() })
-			.from(optionsIndicatorsCache);
+		const [totalResult] = await this.db.select({ count: count() }).from(optionsIndicatorsCache);
 
 		const [validResult] = await this.db
 			.select({ count: count() })

@@ -170,7 +170,12 @@ export async function computeAndStoreRegimes(
 ): Promise<Record<string, RegimeData>> {
 	const regimeLabels: Record<string, RegimeData> = {};
 
-	const repoPromise = getRegimeLabelsRepo().catch(() => null);
+	let repo: ReturnType<typeof getRegimeLabelsRepo> | null = null;
+	try {
+		repo = getRegimeLabelsRepo();
+	} catch {
+		repo = null;
+	}
 
 	for (const instrument of snapshot.instruments) {
 		const candles = snapshot.candles[instrument];
@@ -210,37 +215,36 @@ export async function computeAndStoreRegimes(
 		}
 	}
 
-	repoPromise.then(async (repo) => {
-		if (!repo) {
-			return;
-		}
-
+	if (repo) {
 		const timestamp = new Date().toISOString();
-		for (const [symbol, data] of Object.entries(regimeLabels)) {
-			try {
-				await repo.upsert({
-					symbol,
-					timestamp,
-					timeframe: "1h",
-					regime: data.regime.toLowerCase().replace("_", "_") as
-						| "bull_trend"
-						| "bear_trend"
-						| "range_bound"
-						| "high_volatility"
-						| "low_volatility"
-						| "crisis",
-					confidence: data.confidence,
-					trendStrength: null,
-					volatilityPercentile: null,
-					correlationToMarket: null,
-					modelName: "rule_based",
-					modelVersion: "1.0.0",
-				});
-			} catch {
-				// Storage failed - continue without blocking
+		const repoRef = repo;
+		(async () => {
+			for (const [symbol, data] of Object.entries(regimeLabels)) {
+				try {
+					await repoRef.upsert({
+						symbol,
+						timestamp,
+						timeframe: "1h",
+						regime: data.regime.toLowerCase().replace("_", "_") as
+							| "bull_trend"
+							| "bear_trend"
+							| "range_bound"
+							| "high_volatility"
+							| "low_volatility"
+							| "crisis",
+						confidence: data.confidence,
+						trendStrength: null,
+						volatilityPercentile: null,
+						correlationToMarket: null,
+						modelName: "rule_based",
+						modelVersion: "1.0.0",
+					});
+				} catch {
+					// Storage failed - continue without blocking
+				}
 			}
-		}
-	});
+		})();
+	}
 
 	return regimeLabels;
 }

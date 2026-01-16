@@ -127,19 +127,19 @@ app.openapi(listRoute, async (c) => {
 				| "approved"
 				| "rejected"
 				| "executed"
-				| "failed"
+				| "cancelled"
+				| "expired"
 				| undefined,
 			fromDate: query.dateFrom,
 			toDate: query.dateTo,
 		},
 		{
-			page: Math.floor(query.offset / query.limit) + 1,
-			pageSize: query.limit,
+			limit: query.limit,
+			offset: query.offset,
 		}
 	);
 
-	const offset = (result.page - 1) * result.pageSize;
-	const hasMore = offset + result.data.length < result.total;
+	const hasMore = result.offset + result.data.length < result.total;
 
 	return c.json({
 		items: result.data.map((d) => ({
@@ -159,8 +159,8 @@ app.openapi(listRoute, async (c) => {
 			createdAt: d.createdAt,
 		})),
 		total: result.total,
-		limit: result.pageSize,
-		offset,
+		limit: result.limit,
+		offset: result.offset,
 		hasMore,
 	});
 });

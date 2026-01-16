@@ -7,7 +7,7 @@
  * @see apps/dashboard-api/src/auth/session.ts
  */
 import { and, count, desc, eq, gte, lte } from "drizzle-orm";
-import { getDb, type Database } from "../db";
+import { type Database, getDb } from "../db";
 import { auditLog } from "../schema/audit";
 
 // ============================================
@@ -101,15 +101,14 @@ export class AuditLogRepository {
 			})
 			.returning();
 
+		if (!row) {
+			throw new Error("Failed to create audit log entry");
+		}
 		return mapAuditLogRow(row);
 	}
 
 	async findById(id: string): Promise<AuditLogEntry | null> {
-		const [row] = await this.db
-			.select()
-			.from(auditLog)
-			.where(eq(auditLog.id, id))
-			.limit(1);
+		const [row] = await this.db.select().from(auditLog).where(eq(auditLog.id, id)).limit(1);
 
 		return row ? mapAuditLogRow(row) : null;
 	}
@@ -127,7 +126,9 @@ export class AuditLogRepository {
 			conditions.push(eq(auditLog.action, filters.action));
 		}
 		if (filters.environment) {
-			conditions.push(eq(auditLog.environment, filters.environment as typeof auditLog.$inferSelect.environment));
+			conditions.push(
+				eq(auditLog.environment, filters.environment as typeof auditLog.$inferSelect.environment)
+			);
 		}
 		if (filters.fromDate) {
 			conditions.push(gte(auditLog.timestamp, new Date(filters.fromDate)));
@@ -180,12 +181,7 @@ export class AuditLogRepository {
 		const [result] = await this.db
 			.select({ count: count() })
 			.from(auditLog)
-			.where(
-				and(
-					eq(auditLog.userId, userId),
-					gte(auditLog.timestamp, new Date(sinceTimestamp))
-				)
-			);
+			.where(and(eq(auditLog.userId, userId), gte(auditLog.timestamp, new Date(sinceTimestamp))));
 
 		return result?.count ?? 0;
 	}

@@ -9,7 +9,7 @@
 
 import { createFilingsIngestionService } from "@cream/filings";
 import { createRoute, OpenAPIHono, z } from "@hono/zod-openapi";
-import { getDbClient, getFilingSyncRunsRepo, getFilingsRepo } from "../db.js";
+import { getDrizzleDb, getFilingSyncRunsRepo, getFilingsRepo } from "../db.js";
 
 // ============================================
 // Schemas
@@ -192,7 +192,7 @@ app.openapi(triggerSyncRoute, async (c) => {
 		state.status = "running";
 
 		try {
-			const dbClient = await getDbClient();
+			const dbClient = getDrizzleDb();
 			const service = createFilingsIngestionService(dbClient);
 
 			const result = await service.syncFilings(
@@ -274,7 +274,7 @@ app.openapi(syncStatusRoute, async (c) => {
 	const state = syncStates.get(runId);
 	if (!state) {
 		// Try database
-		const syncRunsRepo = await getFilingSyncRunsRepo();
+		const syncRunsRepo = getFilingSyncRunsRepo();
 		const dbRun = await syncRunsRepo.findById(runId);
 		if (!dbRun) {
 			return c.json({ error: "Sync run not found" }, 404);
@@ -324,10 +324,8 @@ const statusRoute = createRoute({
 });
 
 app.openapi(statusRoute, async (c) => {
-	const [filingsRepo, syncRunsRepo] = await Promise.all([
-		getFilingsRepo(),
-		getFilingSyncRunsRepo(),
-	]);
+	const filingsRepo = getFilingsRepo();
+	const syncRunsRepo = getFilingSyncRunsRepo();
 
 	const [stats, lastRun] = await Promise.all([
 		filingsRepo.getOverallStats(),

@@ -3,7 +3,7 @@
 # This file configures local development infrastructure.
 #
 # Services:
-# - postgres: PostgreSQL 17 with TimescaleDB, pg_cron, pgAudit, pg_trgm
+# - postgres: PostgreSQL 18 with TimescaleDB, pg_stat_statements
 # - helix: Graph + Vector database (HelixDB)
 # - otel-collector: OpenTelemetry trace/metrics collection
 # - redis: In-memory cache for rate limiting
@@ -21,7 +21,7 @@ services:
   # PostgreSQL with TimescaleDB - Primary database
   # https://docs.timescale.com/
   postgres:
-    image: timescale/timescaledb:latest-pg17
+    image: timescale/timescaledb:latest-pg18
     container_name: cream-postgres
     restart: unless-stopped
     ports:
@@ -42,13 +42,7 @@ services:
     command:
       - "postgres"
       - "-c"
-      - "shared_preload_libraries=timescaledb,pg_cron,pgaudit,pg_stat_statements"
-      - "-c"
-      - "cron.database_name=cream"
-      - "-c"
-      - "pgaudit.log=ddl,role,write"
-      - "-c"
-      - "pgaudit.log_parameter=on"
+      - "shared_preload_libraries=timescaledb,pg_stat_statements"
       - "-c"
       - "log_statement=mod"
       - "-c"

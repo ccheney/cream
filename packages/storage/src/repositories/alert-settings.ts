@@ -7,7 +7,7 @@
  * @see apps/dashboard-api/src/routes/alerts.ts
  */
 import { eq } from "drizzle-orm";
-import { getDb, type Database } from "../db";
+import { type Database, getDb } from "../db";
 import { alertSettings } from "../schema/user-settings";
 
 // ============================================
@@ -65,7 +65,8 @@ function mapAlertSettingsRow(row: AlertSettingsRow): AlertSettings {
 		enableEmail: row.enableEmail,
 		emailAddress: row.emailAddress,
 		criticalOnly: row.criticalOnly,
-		quietHours: quietHoursStart && quietHoursEnd ? { start: quietHoursStart, end: quietHoursEnd } : null,
+		quietHours:
+			quietHoursStart && quietHoursEnd ? { start: quietHoursStart, end: quietHoursEnd } : null,
 		createdAt: row.createdAt.toISOString(),
 		updatedAt: row.updatedAt.toISOString(),
 	};
@@ -96,6 +97,9 @@ export class AlertSettingsRepository {
 			})
 			.returning();
 
+		if (!row) {
+			throw new Error("Failed to create alert settings");
+		}
 		return mapAlertSettingsRow(row);
 	}
 
@@ -176,6 +180,9 @@ export class AlertSettingsRepository {
 			.where(eq(alertSettings.id, existing.id))
 			.returning();
 
+		if (!row) {
+			throw new Error("Failed to update alert settings");
+		}
 		return mapAlertSettingsRow(row);
 	}
 

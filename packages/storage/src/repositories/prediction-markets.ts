@@ -6,7 +6,7 @@
  * @see docs/plans/18-prediction-markets.md
  */
 import { and, count, desc, eq, gte, isNotNull, isNull, lte, sql } from "drizzle-orm";
-import { getDb, type Database } from "../db";
+import { type Database, getDb } from "../db";
 import {
 	predictionMarketArbitrage,
 	predictionMarketSignals,
@@ -17,16 +17,9 @@ import {
 // Types
 // ============================================
 
-export type PredictionPlatform = "KALSHI" | "POLYMARKET";
+export type PredictionPlatform = "kalshi" | "polymarket";
 
-export type PredictionMarketType =
-	| "FED_RATE"
-	| "ECONOMIC_DATA"
-	| "RECESSION"
-	| "GEOPOLITICAL"
-	| "REGULATORY"
-	| "ELECTION"
-	| "OTHER";
+export type PredictionMarketType = "rate" | "election" | "economic";
 
 export type SignalType =
 	| "fed_cut_probability"
@@ -155,8 +148,32 @@ function mapSnapshotRow(row: SnapshotRow): MarketSnapshot {
 		marketType: row.marketType as PredictionMarketType,
 		marketQuestion: row.marketQuestion,
 		snapshotTime: row.snapshotTime.toISOString(),
-		data: row.data as MarketSnapshotData,
+		data: row.data as unknown as MarketSnapshotData,
 		createdAt: row.createdAt?.toISOString() ?? new Date().toISOString(),
+	};
+}
+
+interface RawSnapshotRow {
+	id: string;
+	platform: string;
+	market_ticker: string;
+	market_type: string;
+	market_question: string | null;
+	snapshot_time: Date;
+	data: Record<string, unknown>;
+	created_at: Date | null;
+}
+
+function mapRawSnapshotRow(row: RawSnapshotRow): MarketSnapshot {
+	return {
+		id: row.id,
+		platform: row.platform as PredictionPlatform,
+		marketTicker: row.market_ticker,
+		marketType: row.market_type as PredictionMarketType,
+		marketQuestion: row.market_question,
+		snapshotTime: row.snapshot_time.toISOString(),
+		data: row.data as unknown as MarketSnapshotData,
+		createdAt: row.created_at?.toISOString() ?? new Date().toISOString(),
 	};
 }
 
@@ -167,8 +184,30 @@ function mapSignalRow(row: SignalRow): ComputedSignal {
 		signalValue: Number(row.signalValue),
 		confidence: row.confidence ? Number(row.confidence) : null,
 		computedAt: row.computedAt.toISOString(),
-		inputs: row.inputs as SignalInputs,
+		inputs: row.inputs as unknown as SignalInputs,
 		createdAt: row.createdAt?.toISOString() ?? new Date().toISOString(),
+	};
+}
+
+interface RawSignalRow {
+	id: string;
+	signal_type: string;
+	signal_value: string;
+	confidence: string | null;
+	computed_at: Date;
+	inputs: Record<string, unknown>;
+	created_at: Date | null;
+}
+
+function mapRawSignalRow(row: RawSignalRow): ComputedSignal {
+	return {
+		id: row.id,
+		signalType: row.signal_type as SignalType,
+		signalValue: Number(row.signal_value),
+		confidence: row.confidence ? Number(row.confidence) : null,
+		computedAt: row.computed_at.toISOString(),
+		inputs: row.inputs as unknown as SignalInputs,
+		createdAt: row.created_at?.toISOString() ?? new Date().toISOString(),
 	};
 }
 
@@ -212,10 +251,13 @@ export class PredictionMarketsRepository {
 				marketType: input.marketType as typeof predictionMarketSnapshots.$inferInsert.marketType,
 				marketQuestion: input.marketQuestion ?? null,
 				snapshotTime: new Date(input.snapshotTime),
-				data: input.data,
+				data: input.data as unknown as Record<string, unknown>,
 			})
 			.returning();
 
+		if (!row) {
+			throw new Error("Failed to save market snapshot");
+		}
 		return mapSnapshotRow(row);
 	}
 
@@ -253,10 +295,20 @@ export class PredictionMarketsRepository {
 		const conditions = [];
 
 		if (filters.platform) {
-			conditions.push(eq(predictionMarketSnapshots.platform, filters.platform as typeof predictionMarketSnapshots.$inferSelect.platform));
+			conditions.push(
+				eq(
+					predictionMarketSnapshots.platform,
+					filters.platform as typeof predictionMarketSnapshots.$inferSelect.platform
+				)
+			);
 		}
 		if (filters.marketType) {
-			conditions.push(eq(predictionMarketSnapshots.marketType, filters.marketType as typeof predictionMarketSnapshots.$inferSelect.marketType));
+			conditions.push(
+				eq(
+					predictionMarketSnapshots.marketType,
+					filters.marketType as typeof predictionMarketSnapshots.$inferSelect.marketType
+				)
+			);
 		}
 		if (filters.marketTicker) {
 			conditions.push(eq(predictionMarketSnapshots.marketTicker, filters.marketTicker));
@@ -300,7 +352,7 @@ export class PredictionMarketsRepository {
 		`;
 
 		const result = await this.db.execute(query);
-		return (result.rows as SnapshotRow[]).map(mapSnapshotRow);
+		return (result.rows as unknown as RawSnapshotRow[]).map(mapRawSnapshotRow);
 	}
 
 	// ============================================
@@ -315,10 +367,13 @@ export class PredictionMarketsRepository {
 				signalValue: String(input.signalValue),
 				confidence: input.confidence != null ? String(input.confidence) : null,
 				computedAt: new Date(input.computedAt),
-				inputs: input.inputs,
+				inputs: input.inputs as unknown as Record<string, unknown>,
 			})
 			.returning();
 
+		if (!row) {
+			throw new Error("Failed to save computed signal");
+		}
 		return mapSignalRow(row);
 	}
 
@@ -386,7 +441,7 @@ export class PredictionMarketsRepository {
 				AND s.computed_at = latest.max_time
 		`);
 
-		return (result.rows as SignalRow[]).map(mapSignalRow);
+		return (result.rows as unknown as RawSignalRow[]).map(mapRawSignalRow);
 	}
 
 	// ============================================
@@ -407,6 +462,9 @@ export class PredictionMarketsRepository {
 			})
 			.returning();
 
+		if (!row) {
+			throw new Error("Failed to save arbitrage alert");
+		}
 		return mapArbitrageRow(row);
 	}
 
@@ -534,9 +592,7 @@ export class PredictionMarketsRepository {
 			.select({ count: count() })
 			.from(predictionMarketSnapshots);
 
-		const [signalCount] = await this.db
-			.select({ count: count() })
-			.from(predictionMarketSignals);
+		const [signalCount] = await this.db.select({ count: count() }).from(predictionMarketSignals);
 
 		const [arbitrageCount] = await this.db
 			.select({ count: count() })

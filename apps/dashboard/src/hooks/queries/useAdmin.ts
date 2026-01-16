@@ -73,9 +73,7 @@ export function useQueryStats(filters?: QueryStatsFilters) {
 	}
 
 	const queryString = params.toString();
-	const url = queryString
-		? `/api/admin/query-stats?${queryString}`
-		: "/api/admin/query-stats";
+	const url = queryString ? `/api/admin/query-stats?${queryString}` : "/api/admin/query-stats";
 
 	return useQuery({
 		queryKey: adminKeys.queryStats(filters),
@@ -83,8 +81,8 @@ export function useQueryStats(filters?: QueryStatsFilters) {
 			const { data } = await get<QueryStatsResponse>(url);
 			return data;
 		},
-		staleTime: STALE_TIMES.LONG,
-		gcTime: CACHE_TIMES.LONG,
+		staleTime: STALE_TIMES.HISTORICAL,
+		gcTime: CACHE_TIMES.HISTORICAL,
 		refetchInterval: 60000, // Refresh every minute
 	});
 }

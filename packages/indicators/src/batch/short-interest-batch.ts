@@ -130,13 +130,6 @@ export interface ShortInterestBatchJobConfig {
 // ============================================
 
 /**
- * Generate unique ID for short interest record
- */
-function generateId(): string {
-	return `si_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`;
-}
-
-/**
  * Sleep for specified milliseconds
  */
 function sleep(ms: number): Promise<void> {
@@ -373,7 +366,6 @@ export class ShortInterestBatchJob {
 
 		// Build input for repository
 		const input: CreateShortInterestInput = {
-			id: generateId(),
 			symbol,
 			settlementDate: finraRecord.settlementDate,
 			shortInterest: finraRecord.currentShortPositionQuantity,

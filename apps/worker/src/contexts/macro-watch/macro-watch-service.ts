@@ -22,8 +22,8 @@ export interface MacroWatchResult {
 export class MacroWatchService {
 	private running = false;
 	private lastRun: Date | null = null;
-	private readonly config: MacroWatchServiceConfig;
 	private getDb: (() => Database) | null = null;
+	private config: MacroWatchServiceConfig;
 
 	constructor(config: MacroWatchServiceConfig = {}) {
 		this.config = config;

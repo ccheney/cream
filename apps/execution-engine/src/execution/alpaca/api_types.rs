@@ -503,6 +503,8 @@ impl AlpacaOptionContract {
         }
 
         // Extract components from the end (strike is always 8 digits, type is 1 char, date is 6 digits)
+        #[allow(clippy::cast_precision_loss)]
+        // Strike price precision loss is negligible for practical values
         let strike = normalized[normalized.len() - 8..].parse::<u64>().ok()? as f64 / 1000.0;
         let type_char = normalized.chars().nth(normalized.len() - 9)?;
         let date_str = &normalized[normalized.len() - 15..normalized.len() - 9];

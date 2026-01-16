@@ -7,19 +7,35 @@
 // @generated from file cream/v1/decision.proto (package cream.v1, syntax proto3)
 /* eslint-disable */
 
+import type { JsonObject, Message } from "@bufbuild/protobuf";
 import type { GenFile, GenMessage } from "@bufbuild/protobuf/codegenv1";
 import { fileDesc, messageDesc } from "@bufbuild/protobuf/codegenv1";
-import type { Action, Environment, Instrument, OrderType, RiskLevels, Size, StrategyFamily, TimeInForce } from "./common_pb.js";
-import { file_cream_v1_common } from "./common_pb.js";
 import type { Timestamp } from "@bufbuild/protobuf/wkt";
-import { file_google_protobuf_struct, file_google_protobuf_timestamp } from "@bufbuild/protobuf/wkt";
-import type { JsonObject, Message } from "@bufbuild/protobuf";
+import {
+	file_google_protobuf_struct,
+	file_google_protobuf_timestamp,
+} from "@bufbuild/protobuf/wkt";
+import type {
+	Action,
+	Environment,
+	Instrument,
+	OrderType,
+	RiskLevels,
+	Size,
+	StrategyFamily,
+	TimeInForce,
+} from "./common_pb.js";
+import { file_cream_v1_common } from "./common_pb.js";
 
 /**
  * Describes the file cream/v1/decision.proto.
  */
-export const file_cream_v1_decision: GenFile = /*@__PURE__*/
-  fileDesc("ChdjcmVhbS92MS9kZWNpc2lvbi5wcm90bxIIY3JlYW0udjEiswIKCU9yZGVyUGxhbhItChBlbnRyeV9vcmRlcl90eXBlGAEgASgOMhMuY3JlYW0udjEuT3JkZXJUeXBlEh4KEWVudHJ5X2xpbWl0X3ByaWNlGAIgASgBSACIAQESLAoPZXhpdF9vcmRlcl90eXBlGAMgASgOMhMuY3JlYW0udjEuT3JkZXJUeXBlEiwKDXRpbWVfaW5fZm9yY2UYBCABKA4yFS5jcmVhbS52MS5UaW1lSW5Gb3JjZRIdChBleGVjdXRpb25fdGFjdGljGAUgASgJSAGIAQESMQoQZXhlY3V0aW9uX3BhcmFtcxgGIAEoCzIXLmdvb2dsZS5wcm90b2J1Zi5TdHJ1Y3RCFAoSX2VudHJ5X2xpbWl0X3ByaWNlQhMKEV9leGVjdXRpb25fdGFjdGljIlEKClJlZmVyZW5jZXMSFwoPdXNlZF9pbmRpY2F0b3JzGAEgAygJEhcKD21lbW9yeV9jYXNlX2lkcxgCIAMoCRIRCglldmVudF9pZHMYAyADKAkizAIKCERlY2lzaW9uEigKCmluc3RydW1lbnQYASABKAsyFC5jcmVhbS52MS5JbnN0cnVtZW50EiAKBmFjdGlvbhgCIAEoDjIQLmNyZWFtLnYxLkFjdGlvbhIcCgRzaXplGAMgASgLMg4uY3JlYW0udjEuU2l6ZRInCgpvcmRlcl9wbGFuGAQgASgLMhMuY3JlYW0udjEuT3JkZXJQbGFuEikKC3Jpc2tfbGV2ZWxzGAUgASgLMhQuY3JlYW0udjEuUmlza0xldmVscxIxCg9zdHJhdGVneV9mYW1pbHkYBiABKA4yGC5jcmVhbS52MS5TdHJhdGVneUZhbWlseRIRCglyYXRpb25hbGUYByABKAkSEgoKY29uZmlkZW5jZRgIIAEoARIoCgpyZWZlcmVuY2VzGAkgASgLMhQuY3JlYW0udjEuUmVmZXJlbmNlcyLaAQoMRGVjaXNpb25QbGFuEhAKCGN5Y2xlX2lkGAEgASgJEjMKD2FzX29mX3RpbWVzdGFtcBgCIAEoCzIaLmdvb2dsZS5wcm90b2J1Zi5UaW1lc3RhbXASKgoLZW52aXJvbm1lbnQYAyABKA4yFS5jcmVhbS52MS5FbnZpcm9ubWVudBIlCglkZWNpc2lvbnMYBCADKAsyEi5jcmVhbS52MS5EZWNpc2lvbhIcCg9wb3J0Zm9saW9fbm90ZXMYBSABKAlIAIgBAUISChBfcG9ydGZvbGlvX25vdGVzIn0KFFJpc2tWYWxpZGF0aW9uUmVzdWx0Eg0KBXZhbGlkGAEgASgIEg4KBmVycm9ycxgCIAMoCRIQCgh3YXJuaW5ncxgDIAMoCRIeChFyaXNrX3Jld2FyZF9yYXRpbxgEIAEoAUgAiAEBQhQKEl9yaXNrX3Jld2FyZF9yYXRpbyKAAQocRGVjaXNpb25QbGFuVmFsaWRhdGlvblJlc3VsdBIPCgdzdWNjZXNzGAEgASgIEi0KDWRlY2lzaW9uX3BsYW4YAiABKAsyFi5jcmVhbS52MS5EZWNpc2lvblBsYW4SDgoGZXJyb3JzGAMgAygJEhAKCHdhcm5pbmdzGAQgAygJQpYBCgxjb20uY3JlYW0udjFCDURlY2lzaW9uUHJvdG9QAVo2Z2l0aHViLmNvbS9jcmVhbS10cmFkaW5nL2NyZWFtL2dlbi9nby9jcmVhbS92MTtjcmVhbXYxogIDQ1hYqgIIQ3JlYW0uVjHKAghDcmVhbVxWMeICFENyZWFtXFYxXEdQQk1ldGFkYXRh6gIJQ3JlYW06OlYxYgZwcm90bzM", [file_cream_v1_common, file_google_protobuf_struct, file_google_protobuf_timestamp]);
+export const file_cream_v1_decision: GenFile =
+	/*@__PURE__*/
+	fileDesc(
+		"ChdjcmVhbS92MS9kZWNpc2lvbi5wcm90bxIIY3JlYW0udjEiswIKCU9yZGVyUGxhbhItChBlbnRyeV9vcmRlcl90eXBlGAEgASgOMhMuY3JlYW0udjEuT3JkZXJUeXBlEh4KEWVudHJ5X2xpbWl0X3ByaWNlGAIgASgBSACIAQESLAoPZXhpdF9vcmRlcl90eXBlGAMgASgOMhMuY3JlYW0udjEuT3JkZXJUeXBlEiwKDXRpbWVfaW5fZm9yY2UYBCABKA4yFS5jcmVhbS52MS5UaW1lSW5Gb3JjZRIdChBleGVjdXRpb25fdGFjdGljGAUgASgJSAGIAQESMQoQZXhlY3V0aW9uX3BhcmFtcxgGIAEoCzIXLmdvb2dsZS5wcm90b2J1Zi5TdHJ1Y3RCFAoSX2VudHJ5X2xpbWl0X3ByaWNlQhMKEV9leGVjdXRpb25fdGFjdGljIlEKClJlZmVyZW5jZXMSFwoPdXNlZF9pbmRpY2F0b3JzGAEgAygJEhcKD21lbW9yeV9jYXNlX2lkcxgCIAMoCRIRCglldmVudF9pZHMYAyADKAkizAIKCERlY2lzaW9uEigKCmluc3RydW1lbnQYASABKAsyFC5jcmVhbS52MS5JbnN0cnVtZW50EiAKBmFjdGlvbhgCIAEoDjIQLmNyZWFtLnYxLkFjdGlvbhIcCgRzaXplGAMgASgLMg4uY3JlYW0udjEuU2l6ZRInCgpvcmRlcl9wbGFuGAQgASgLMhMuY3JlYW0udjEuT3JkZXJQbGFuEikKC3Jpc2tfbGV2ZWxzGAUgASgLMhQuY3JlYW0udjEuUmlza0xldmVscxIxCg9zdHJhdGVneV9mYW1pbHkYBiABKA4yGC5jcmVhbS52MS5TdHJhdGVneUZhbWlseRIRCglyYXRpb25hbGUYByABKAkSEgoKY29uZmlkZW5jZRgIIAEoARIoCgpyZWZlcmVuY2VzGAkgASgLMhQuY3JlYW0udjEuUmVmZXJlbmNlcyLaAQoMRGVjaXNpb25QbGFuEhAKCGN5Y2xlX2lkGAEgASgJEjMKD2FzX29mX3RpbWVzdGFtcBgCIAEoCzIaLmdvb2dsZS5wcm90b2J1Zi5UaW1lc3RhbXASKgoLZW52aXJvbm1lbnQYAyABKA4yFS5jcmVhbS52MS5FbnZpcm9ubWVudBIlCglkZWNpc2lvbnMYBCADKAsyEi5jcmVhbS52MS5EZWNpc2lvbhIcCg9wb3J0Zm9saW9fbm90ZXMYBSABKAlIAIgBAUISChBfcG9ydGZvbGlvX25vdGVzIn0KFFJpc2tWYWxpZGF0aW9uUmVzdWx0Eg0KBXZhbGlkGAEgASgIEg4KBmVycm9ycxgCIAMoCRIQCgh3YXJuaW5ncxgDIAMoCRIeChFyaXNrX3Jld2FyZF9yYXRpbxgEIAEoAUgAiAEBQhQKEl9yaXNrX3Jld2FyZF9yYXRpbyKAAQocRGVjaXNpb25QbGFuVmFsaWRhdGlvblJlc3VsdBIPCgdzdWNjZXNzGAEgASgIEi0KDWRlY2lzaW9uX3BsYW4YAiABKAsyFi5jcmVhbS52MS5EZWNpc2lvblBsYW4SDgoGZXJyb3JzGAMgAygJEhAKCHdhcm5pbmdzGAQgAygJQpYBCgxjb20uY3JlYW0udjFCDURlY2lzaW9uUHJvdG9QAVo2Z2l0aHViLmNvbS9jcmVhbS10cmFkaW5nL2NyZWFtL2dlbi9nby9jcmVhbS92MTtjcmVhbXYxogIDQ1hYqgIIQ3JlYW0uVjHKAghDcmVhbVxWMeICFENyZWFtXFYxXEdQQk1ldGFkYXRh6gIJQ3JlYW06OlYxYgZwcm90bzM",
+		[file_cream_v1_common, file_google_protobuf_struct, file_google_protobuf_timestamp]
+	);
 
 /**
  * Order execution plan
@@ -27,55 +43,56 @@ export const file_cream_v1_decision: GenFile = /*@__PURE__*/
  * @generated from message cream.v1.OrderPlan
  */
 export type OrderPlan = Message<"cream.v1.OrderPlan"> & {
-  /**
-   * Order type for entry
-   *
-   * @generated from field: cream.v1.OrderType entry_order_type = 1;
-   */
-  entryOrderType: OrderType;
+	/**
+	 * Order type for entry
+	 *
+	 * @generated from field: cream.v1.OrderType entry_order_type = 1;
+	 */
+	entryOrderType: OrderType;
 
-  /**
-   * Limit price for entry (required when entry_order_type is LIMIT)
-   *
-   * @generated from field: optional double entry_limit_price = 2;
-   */
-  entryLimitPrice?: number;
+	/**
+	 * Limit price for entry (required when entry_order_type is LIMIT)
+	 *
+	 * @generated from field: optional double entry_limit_price = 2;
+	 */
+	entryLimitPrice?: number;
 
-  /**
-   * Order type for exit
-   *
-   * @generated from field: cream.v1.OrderType exit_order_type = 3;
-   */
-  exitOrderType: OrderType;
+	/**
+	 * Order type for exit
+	 *
+	 * @generated from field: cream.v1.OrderType exit_order_type = 3;
+	 */
+	exitOrderType: OrderType;
 
-  /**
-   * Time in force for orders
-   *
-   * @generated from field: cream.v1.TimeInForce time_in_force = 4;
-   */
-  timeInForce: TimeInForce;
+	/**
+	 * Time in force for orders
+	 *
+	 * @generated from field: cream.v1.TimeInForce time_in_force = 4;
+	 */
+	timeInForce: TimeInForce;
 
-  /**
-   * Execution tactic identifier (e.g., "TWAP", "VWAP", "ICEBERG")
-   *
-   * @generated from field: optional string execution_tactic = 5;
-   */
-  executionTactic?: string;
+	/**
+	 * Execution tactic identifier (e.g., "TWAP", "VWAP", "ICEBERG")
+	 *
+	 * @generated from field: optional string execution_tactic = 5;
+	 */
+	executionTactic?: string;
 
-  /**
-   * Additional execution parameters
-   *
-   * @generated from field: google.protobuf.Struct execution_params = 6;
-   */
-  executionParams?: JsonObject;
+	/**
+	 * Additional execution parameters
+	 *
+	 * @generated from field: google.protobuf.Struct execution_params = 6;
+	 */
+	executionParams?: JsonObject;
 };
 
 /**
  * Describes the message cream.v1.OrderPlan.
  * Use `create(OrderPlanSchema)` to create a new message.
  */
-export const OrderPlanSchema: GenMessage<OrderPlan> = /*@__PURE__*/
-  messageDesc(file_cream_v1_decision, 0);
+export const OrderPlanSchema: GenMessage<OrderPlan> =
+	/*@__PURE__*/
+	messageDesc(file_cream_v1_decision, 0);
 
 /**
  * References to supporting data
@@ -83,34 +100,35 @@ export const OrderPlanSchema: GenMessage<OrderPlan> = /*@__PURE__*/
  * @generated from message cream.v1.References
  */
 export type References = Message<"cream.v1.References"> & {
-  /**
-   * Indicator names used in decision
-   *
-   * @generated from field: repeated string used_indicators = 1;
-   */
-  usedIndicators: string[];
+	/**
+	 * Indicator names used in decision
+	 *
+	 * @generated from field: repeated string used_indicators = 1;
+	 */
+	usedIndicators: string[];
 
-  /**
-   * Memory case IDs from HelixDB
-   *
-   * @generated from field: repeated string memory_case_ids = 2;
-   */
-  memoryCaseIds: string[];
+	/**
+	 * Memory case IDs from HelixDB
+	 *
+	 * @generated from field: repeated string memory_case_ids = 2;
+	 */
+	memoryCaseIds: string[];
 
-  /**
-   * Event IDs that influenced decision
-   *
-   * @generated from field: repeated string event_ids = 3;
-   */
-  eventIds: string[];
+	/**
+	 * Event IDs that influenced decision
+	 *
+	 * @generated from field: repeated string event_ids = 3;
+	 */
+	eventIds: string[];
 };
 
 /**
  * Describes the message cream.v1.References.
  * Use `create(ReferencesSchema)` to create a new message.
  */
-export const ReferencesSchema: GenMessage<References> = /*@__PURE__*/
-  messageDesc(file_cream_v1_decision, 1);
+export const ReferencesSchema: GenMessage<References> =
+	/*@__PURE__*/
+	messageDesc(file_cream_v1_decision, 1);
 
 /**
  * Individual decision for an instrument
@@ -118,76 +136,77 @@ export const ReferencesSchema: GenMessage<References> = /*@__PURE__*/
  * @generated from message cream.v1.Decision
  */
 export type Decision = Message<"cream.v1.Decision"> & {
-  /**
-   * Target instrument
-   *
-   * @generated from field: cream.v1.Instrument instrument = 1;
-   */
-  instrument?: Instrument;
+	/**
+	 * Target instrument
+	 *
+	 * @generated from field: cream.v1.Instrument instrument = 1;
+	 */
+	instrument?: Instrument;
 
-  /**
-   * Trading action
-   *
-   * @generated from field: cream.v1.Action action = 2;
-   */
-  action: Action;
+	/**
+	 * Trading action
+	 *
+	 * @generated from field: cream.v1.Action action = 2;
+	 */
+	action: Action;
 
-  /**
-   * Position sizing
-   *
-   * @generated from field: cream.v1.Size size = 3;
-   */
-  size?: Size;
+	/**
+	 * Position sizing
+	 *
+	 * @generated from field: cream.v1.Size size = 3;
+	 */
+	size?: Size;
 
-  /**
-   * Order execution plan
-   *
-   * @generated from field: cream.v1.OrderPlan order_plan = 4;
-   */
-  orderPlan?: OrderPlan;
+	/**
+	 * Order execution plan
+	 *
+	 * @generated from field: cream.v1.OrderPlan order_plan = 4;
+	 */
+	orderPlan?: OrderPlan;
 
-  /**
-   * Risk levels (mandatory - always required)
-   *
-   * @generated from field: cream.v1.RiskLevels risk_levels = 5;
-   */
-  riskLevels?: RiskLevels;
+	/**
+	 * Risk levels (mandatory - always required)
+	 *
+	 * @generated from field: cream.v1.RiskLevels risk_levels = 5;
+	 */
+	riskLevels?: RiskLevels;
 
-  /**
-   * Strategy family
-   *
-   * @generated from field: cream.v1.StrategyFamily strategy_family = 6;
-   */
-  strategyFamily: StrategyFamily;
+	/**
+	 * Strategy family
+	 *
+	 * @generated from field: cream.v1.StrategyFamily strategy_family = 6;
+	 */
+	strategyFamily: StrategyFamily;
 
-  /**
-   * Human-readable rationale for the decision
-   *
-   * @generated from field: string rationale = 7;
-   */
-  rationale: string;
+	/**
+	 * Human-readable rationale for the decision
+	 *
+	 * @generated from field: string rationale = 7;
+	 */
+	rationale: string;
 
-  /**
-   * Confidence score [0.0, 1.0]
-   *
-   * @generated from field: double confidence = 8;
-   */
-  confidence: number;
+	/**
+	 * Confidence score [0.0, 1.0]
+	 *
+	 * @generated from field: double confidence = 8;
+	 */
+	confidence: number;
 
-  /**
-   * Supporting references
-   *
-   * @generated from field: cream.v1.References references = 9;
-   */
-  references?: References;
+	/**
+	 * Supporting references
+	 *
+	 * @generated from field: cream.v1.References references = 9;
+	 */
+	references?: References;
 };
 
 /**
  * Describes the message cream.v1.Decision.
  * Use `create(DecisionSchema)` to create a new message.
  */
-export const DecisionSchema: GenMessage<Decision> = /*@__PURE__*/
-  messageDesc(file_cream_v1_decision, 2);
+export const DecisionSchema: GenMessage<Decision> =
+	/*@__PURE__*/
+	messageDesc(file_cream_v1_decision, 2);
 
 /**
  * Complete decision plan for a trading cycle
@@ -195,48 +214,49 @@ export const DecisionSchema: GenMessage<Decision> = /*@__PURE__*/
  * @generated from message cream.v1.DecisionPlan
  */
 export type DecisionPlan = Message<"cream.v1.DecisionPlan"> & {
-  /**
-   * Unique identifier for this trading cycle
-   *
-   * @generated from field: string cycle_id = 1;
-   */
-  cycleId: string;
+	/**
+	 * Unique identifier for this trading cycle
+	 *
+	 * @generated from field: string cycle_id = 1;
+	 */
+	cycleId: string;
 
-  /**
-   * Timestamp when the decision was made
-   *
-   * @generated from field: google.protobuf.Timestamp as_of_timestamp = 2;
-   */
-  asOfTimestamp?: Timestamp;
+	/**
+	 * Timestamp when the decision was made
+	 *
+	 * @generated from field: google.protobuf.Timestamp as_of_timestamp = 2;
+	 */
+	asOfTimestamp?: Timestamp;
 
-  /**
-   * Trading environment
-   *
-   * @generated from field: cream.v1.Environment environment = 3;
-   */
-  environment: Environment;
+	/**
+	 * Trading environment
+	 *
+	 * @generated from field: cream.v1.Environment environment = 3;
+	 */
+	environment: Environment;
 
-  /**
-   * List of decisions for this cycle
-   *
-   * @generated from field: repeated cream.v1.Decision decisions = 4;
-   */
-  decisions: Decision[];
+	/**
+	 * List of decisions for this cycle
+	 *
+	 * @generated from field: repeated cream.v1.Decision decisions = 4;
+	 */
+	decisions: Decision[];
 
-  /**
-   * Optional portfolio-level notes
-   *
-   * @generated from field: optional string portfolio_notes = 5;
-   */
-  portfolioNotes?: string;
+	/**
+	 * Optional portfolio-level notes
+	 *
+	 * @generated from field: optional string portfolio_notes = 5;
+	 */
+	portfolioNotes?: string;
 };
 
 /**
  * Describes the message cream.v1.DecisionPlan.
  * Use `create(DecisionPlanSchema)` to create a new message.
  */
-export const DecisionPlanSchema: GenMessage<DecisionPlan> = /*@__PURE__*/
-  messageDesc(file_cream_v1_decision, 3);
+export const DecisionPlanSchema: GenMessage<DecisionPlan> =
+	/*@__PURE__*/
+	messageDesc(file_cream_v1_decision, 3);
 
 /**
  * Risk validation result
@@ -244,41 +264,42 @@ export const DecisionPlanSchema: GenMessage<DecisionPlan> = /*@__PURE__*/
  * @generated from message cream.v1.RiskValidationResult
  */
 export type RiskValidationResult = Message<"cream.v1.RiskValidationResult"> & {
-  /**
-   * Whether the validation passed
-   *
-   * @generated from field: bool valid = 1;
-   */
-  valid: boolean;
+	/**
+	 * Whether the validation passed
+	 *
+	 * @generated from field: bool valid = 1;
+	 */
+	valid: boolean;
 
-  /**
-   * Validation errors (blocking issues)
-   *
-   * @generated from field: repeated string errors = 2;
-   */
-  errors: string[];
+	/**
+	 * Validation errors (blocking issues)
+	 *
+	 * @generated from field: repeated string errors = 2;
+	 */
+	errors: string[];
 
-  /**
-   * Validation warnings (non-blocking issues)
-   *
-   * @generated from field: repeated string warnings = 3;
-   */
-  warnings: string[];
+	/**
+	 * Validation warnings (non-blocking issues)
+	 *
+	 * @generated from field: repeated string warnings = 3;
+	 */
+	warnings: string[];
 
-  /**
-   * Calculated risk-reward ratio
-   *
-   * @generated from field: optional double risk_reward_ratio = 4;
-   */
-  riskRewardRatio?: number;
+	/**
+	 * Calculated risk-reward ratio
+	 *
+	 * @generated from field: optional double risk_reward_ratio = 4;
+	 */
+	riskRewardRatio?: number;
 };
 
 /**
  * Describes the message cream.v1.RiskValidationResult.
  * Use `create(RiskValidationResultSchema)` to create a new message.
  */
-export const RiskValidationResultSchema: GenMessage<RiskValidationResult> = /*@__PURE__*/
-  messageDesc(file_cream_v1_decision, 4);
+export const RiskValidationResultSchema: GenMessage<RiskValidationResult> =
+	/*@__PURE__*/
+	messageDesc(file_cream_v1_decision, 4);
 
 /**
  * Decision plan validation result
@@ -286,39 +307,39 @@ export const RiskValidationResultSchema: GenMessage<RiskValidationResult> = /*@_
  * @generated from message cream.v1.DecisionPlanValidationResult
  */
 export type DecisionPlanValidationResult = Message<"cream.v1.DecisionPlanValidationResult"> & {
-  /**
-   * Whether the validation passed
-   *
-   * @generated from field: bool success = 1;
-   */
-  success: boolean;
+	/**
+	 * Whether the validation passed
+	 *
+	 * @generated from field: bool success = 1;
+	 */
+	success: boolean;
 
-  /**
-   * Validated decision plan (if successful)
-   *
-   * @generated from field: cream.v1.DecisionPlan decision_plan = 2;
-   */
-  decisionPlan?: DecisionPlan;
+	/**
+	 * Validated decision plan (if successful)
+	 *
+	 * @generated from field: cream.v1.DecisionPlan decision_plan = 2;
+	 */
+	decisionPlan?: DecisionPlan;
 
-  /**
-   * Validation errors
-   *
-   * @generated from field: repeated string errors = 3;
-   */
-  errors: string[];
+	/**
+	 * Validation errors
+	 *
+	 * @generated from field: repeated string errors = 3;
+	 */
+	errors: string[];
 
-  /**
-   * Validation warnings
-   *
-   * @generated from field: repeated string warnings = 4;
-   */
-  warnings: string[];
+	/**
+	 * Validation warnings
+	 *
+	 * @generated from field: repeated string warnings = 4;
+	 */
+	warnings: string[];
 };
 
 /**
  * Describes the message cream.v1.DecisionPlanValidationResult.
  * Use `create(DecisionPlanValidationResultSchema)` to create a new message.
  */
-export const DecisionPlanValidationResultSchema: GenMessage<DecisionPlanValidationResult> = /*@__PURE__*/
-  messageDesc(file_cream_v1_decision, 5);
-
+export const DecisionPlanValidationResultSchema: GenMessage<DecisionPlanValidationResult> =
+	/*@__PURE__*/
+	messageDesc(file_cream_v1_decision, 5);

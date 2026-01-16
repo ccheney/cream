@@ -8,7 +8,7 @@ pub struct StopsConfigExternal {
     /// Enable stops enforcement.
     #[serde(default = "default_stops_enabled")]
     pub enabled: bool,
-    /// Priority when both stop and target trigger in same bar: "stop_first", "target_first", "high_low_order".
+    /// Priority when both stop and target trigger in same bar: `stop_first`, `target_first`, `high_low_order`.
     #[serde(default = "default_same_bar_priority")]
     pub same_bar_priority: String,
     /// Monitoring interval in milliseconds for price checks.
@@ -36,11 +36,11 @@ impl StopsConfigExternal {
     /// Stops are enabled by default in all environments.
     /// In BACKTEST, uses simulation; in PAPER/LIVE, uses bracket orders or price monitoring.
     #[must_use]
-    pub fn is_enabled_for_env(&self, _env: &crate::models::Environment) -> bool {
+    pub const fn is_enabled_for_env(&self, _env: &crate::models::Environment) -> bool {
         self.enabled
     }
 
-    /// Convert to the internal StopsConfig type used by the stops module.
+    /// Convert to the internal `StopsConfig` type used by the stops module.
     #[must_use]
     pub fn to_stops_config(&self) -> crate::execution::stops::StopsConfig {
         use crate::execution::stops::SameBarPriority;

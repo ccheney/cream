@@ -171,6 +171,7 @@ impl<B: BrokerAdapter> ExecutionGateway<B> {
 
     /// Check if persistence is enabled.
     #[must_use]
+    #[allow(clippy::missing_const_for_fn)] // Option::is_some is not const
     pub fn has_persistence(&self) -> bool {
         self.persistence.is_some()
     }
@@ -286,6 +287,7 @@ impl<B: BrokerAdapter> ExecutionGateway<B> {
     }
 
     /// Store orders in state manager and persist to database.
+    #[allow(clippy::unused_async)] // Async for spawned persistence tasks
     async fn store_and_persist_orders(&self, orders: &[OrderState]) {
         for order in orders {
             self.state_manager.insert(order.clone());
@@ -654,11 +656,21 @@ mod tests {
         assert!(!gateway.has_persistence());
     }
 
+    /// Get test database URL from environment.
+    fn get_test_database_url() -> Option<String> {
+        std::env::var("TEST_DATABASE_URL")
+            .or_else(|_| std::env::var("DATABASE_URL"))
+            .ok()
+    }
+
     #[tokio::test]
+    #[ignore = "Requires PostgreSQL TEST_DATABASE_URL"]
+    #[allow(clippy::expect_used)]
     async fn test_gateway_with_persistence() {
-        let persistence = match StatePersistence::new_in_memory("PAPER").await {
+        let database_url = get_test_database_url().expect("TEST_DATABASE_URL required");
+        let persistence = match StatePersistence::new(&database_url, "PAPER").await {
             Ok(p) => p,
-            Err(e) => panic!("should create in-memory persistence: {e}"),
+            Err(e) => panic!("should create persistence: {e}"),
         };
 
         let mock = MockBrokerAdapter::new();
@@ -677,10 +689,13 @@ mod tests {
     }
 
     #[tokio::test]
+    #[ignore = "Requires PostgreSQL TEST_DATABASE_URL"]
+    #[allow(clippy::expect_used)]
     async fn test_submit_orders_with_persistence() {
-        let persistence = match StatePersistence::new_in_memory("PAPER").await {
+        let database_url = get_test_database_url().expect("TEST_DATABASE_URL required");
+        let persistence = match StatePersistence::new(&database_url, "PAPER").await {
             Ok(p) => p,
-            Err(e) => panic!("should create in-memory persistence: {e}"),
+            Err(e) => panic!("should create persistence: {e}"),
         };
         let persistence_arc = Arc::new(persistence);
         let persistence_check = Arc::clone(&persistence_arc);

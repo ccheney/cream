@@ -8,7 +8,7 @@ pub struct ServerConfig {
     /// HTTP server port for REST endpoints (/health, /v1/*).
     #[serde(default = "default_http_port")]
     pub http_port: u16,
-    /// gRPC server port for MarketDataService and ExecutionService.
+    /// gRPC server port for `MarketDataService` and `ExecutionService`.
     #[serde(default = "default_grpc_port")]
     pub grpc_port: u16,
     /// Bind address.
@@ -26,14 +26,14 @@ impl Default for ServerConfig {
     }
 }
 
-pub(crate) const fn default_http_port() -> u16 {
+pub const fn default_http_port() -> u16 {
     50051
 }
 
-pub(crate) const fn default_grpc_port() -> u16 {
+pub const fn default_grpc_port() -> u16 {
     50053
 }
 
-pub(crate) fn default_bind_address() -> String {
+pub fn default_bind_address() -> String {
     "0.0.0.0".to_string()
 }

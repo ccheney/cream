@@ -94,19 +94,15 @@ app.openapi(triggerBatchJobRoute, async (c) => {
 			});
 		}
 
-		// Generate a unique run ID
-		const runId = `run-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
-
 		// Get symbol count - if symbols provided, use those, otherwise indicate "all"
 		const symbolsCount = symbols?.length ?? -1; // -1 means "all symbols"
 
-		// Insert the trigger request as a pending sync run
+		// Insert the trigger request as a pending sync run (id auto-generated as uuidv7)
 		const errorMessage = symbols
 			? JSON.stringify({ symbols, priority })
 			: JSON.stringify({ priority });
 
 		const run = await repo.create({
-			id: runId,
 			runType: job_type,
 			environment,
 			errorMessage, // Store symbols/priority in errorMessage temporarily (worker will clear it)
@@ -114,7 +110,7 @@ app.openapi(triggerBatchJobRoute, async (c) => {
 
 		log.info(
 			{
-				runId,
+				runId: run.id,
 				jobType: job_type,
 				symbolsCount: symbolsCount === -1 ? "all" : symbolsCount,
 				priority,

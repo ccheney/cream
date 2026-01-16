@@ -568,7 +568,16 @@ app.openapi(triggerCycleRoute, async (c) => {
 					const decisionsRepo = await getDecisionsRepo();
 					const status = workflowResult.approved ? "approved" : "rejected";
 
+					const validSizeUnits = ["SHARES", "CONTRACTS", "DOLLARS", "PCT_EQUITY"] as const;
+					type SizeUnit = (typeof validSizeUnits)[number];
+
 					for (const decision of workflowResult.decisionPlan.decisions) {
+						const sizeUnit: SizeUnit | undefined = validSizeUnits.includes(
+							decision.size.unit as SizeUnit
+						)
+							? (decision.size.unit as SizeUnit)
+							: undefined;
+
 						await decisionsRepo.create({
 							id: decision.decisionId,
 							cycleId,
@@ -576,7 +585,7 @@ app.openapi(triggerCycleRoute, async (c) => {
 							action: decision.action === "CLOSE" ? "SELL" : decision.action,
 							direction: decision.direction,
 							size: decision.size.value,
-							sizeUnit: decision.size.unit,
+							sizeUnit,
 							status,
 							strategyFamily: decision.strategyFamily,
 							timeHorizon: decision.timeHorizon,

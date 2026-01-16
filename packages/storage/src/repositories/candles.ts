@@ -5,26 +5,15 @@
  * Primary storage for price data used in indicator computation.
  */
 import { and, asc, count, desc, eq, gte, lte, sql } from "drizzle-orm";
-import type { NodePgDatabase } from "drizzle-orm/node-postgres";
 import { z } from "zod";
-import { getDb, type Database } from "../db";
+import { type Database, getDb } from "../db";
 import { candles } from "../schema/market-data";
-import type * as schema from "../schema";
 
 // ============================================
 // Zod Schemas
 // ============================================
 
-export const TimeframeSchema = z.enum([
-	"1m",
-	"5m",
-	"15m",
-	"30m",
-	"1h",
-	"4h",
-	"1d",
-	"1w",
-]);
+export const TimeframeSchema = z.enum(["1m", "5m", "15m", "1h", "1d"]);
 export type Timeframe = z.infer<typeof TimeframeSchema>;
 
 export const CandleSchema = z.object({
@@ -170,7 +159,7 @@ export class CandlesRepository {
 		symbol: string,
 		timeframe: Timeframe,
 		startTime: string,
-		endTime: string,
+		endTime: string
 	): Promise<Candle[]> {
 		const rows = await this.db
 			.select()
@@ -180,8 +169,8 @@ export class CandlesRepository {
 					eq(candles.symbol, symbol),
 					eq(candles.timeframe, timeframe),
 					gte(candles.timestamp, new Date(startTime)),
-					lte(candles.timestamp, new Date(endTime)),
-				),
+					lte(candles.timestamp, new Date(endTime))
+				)
 			)
 			.orderBy(asc(candles.timestamp));
 
@@ -191,17 +180,11 @@ export class CandlesRepository {
 	/**
 	 * Get the latest N candles for a symbol
 	 */
-	async getLatest(
-		symbol: string,
-		timeframe: Timeframe,
-		limit = 100,
-	): Promise<Candle[]> {
+	async getLatest(symbol: string, timeframe: Timeframe, limit = 100): Promise<Candle[]> {
 		const rows = await this.db
 			.select()
 			.from(candles)
-			.where(
-				and(eq(candles.symbol, symbol), eq(candles.timeframe, timeframe)),
-			)
+			.where(and(eq(candles.symbol, symbol), eq(candles.timeframe, timeframe)))
 			.orderBy(desc(candles.timestamp))
 			.limit(limit);
 
@@ -212,16 +195,11 @@ export class CandlesRepository {
 	/**
 	 * Get the most recent candle for a symbol
 	 */
-	async getLastCandle(
-		symbol: string,
-		timeframe: Timeframe,
-	): Promise<Candle | null> {
+	async getLastCandle(symbol: string, timeframe: Timeframe): Promise<Candle | null> {
 		const rows = await this.db
 			.select()
 			.from(candles)
-			.where(
-				and(eq(candles.symbol, symbol), eq(candles.timeframe, timeframe)),
-			)
+			.where(and(eq(candles.symbol, symbol), eq(candles.timeframe, timeframe)))
 			.orderBy(desc(candles.timestamp))
 			.limit(1);
 
@@ -235,9 +213,7 @@ export class CandlesRepository {
 		const result = await this.db
 			.select({ count: count() })
 			.from(candles)
-			.where(
-				and(eq(candles.symbol, symbol), eq(candles.timeframe, timeframe)),
-			);
+			.where(and(eq(candles.symbol, symbol), eq(candles.timeframe, timeframe)));
 
 		return result[0]?.count ?? 0;
 	}
@@ -245,19 +221,15 @@ export class CandlesRepository {
 	/**
 	 * Delete candles older than a date
 	 */
-	async deleteOlderThan(
-		symbol: string,
-		timeframe: Timeframe,
-		beforeDate: string,
-	): Promise<number> {
+	async deleteOlderThan(symbol: string, timeframe: Timeframe, beforeDate: string): Promise<number> {
 		const result = await this.db
 			.delete(candles)
 			.where(
 				and(
 					eq(candles.symbol, symbol),
 					eq(candles.timeframe, timeframe),
-					lte(candles.timestamp, new Date(beforeDate)),
-				),
+					lte(candles.timestamp, new Date(beforeDate))
+				)
 			)
 			.returning({ id: candles.id });
 

@@ -13,7 +13,7 @@ import { z } from "@hono/zod-openapi";
 
 export const EnvironmentSchema = z.enum(["BACKTEST", "PAPER", "LIVE"]);
 
-export const SystemStatusValue = z.enum(["ACTIVE", "PAUSED", "STOPPED"]);
+export const SystemStatusValue = z.enum(["running", "paused", "stopped"]);
 
 export const AlertSchema = z.object({
 	id: z.string(),
@@ -191,7 +191,7 @@ export interface CycleState {
 export type RunningCycleState = CycleState;
 
 export interface SystemState {
-	status: "ACTIVE" | "PAUSED" | "STOPPED";
+	status: "running" | "paused" | "stopped";
 	environment: "BACKTEST" | "PAPER" | "LIVE";
 	lastCycleId: string | null;
 	lastCycleTime: string | null;

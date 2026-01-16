@@ -8,7 +8,7 @@ use rust_decimal::Decimal;
 use super::types::SizingSanityWarning;
 
 /// Calculate median of a list of decimals.
-pub(crate) fn calculate_median(values: &[Decimal]) -> Option<Decimal> {
+pub fn calculate_median(values: &[Decimal]) -> Option<Decimal> {
     if values.is_empty() {
         return None;
     }

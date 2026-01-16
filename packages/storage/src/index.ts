@@ -13,8 +13,10 @@
 export const PACKAGE_NAME = "@cream/storage";
 export const VERSION = "0.0.1";
 
+// Drizzle ORM utilities (re-exported for convenience)
+export { sql } from "drizzle-orm";
 // Database client (Drizzle + PostgreSQL)
-export { getDb, type Database, closeDb } from "./db.js";
+export { closeDb, type Database, getDb } from "./db.js";
 
 // Connection pooling (generic pool implementation)
 export {
@@ -24,10 +26,6 @@ export {
 	type PooledConnection,
 	type PoolStats,
 } from "./pool.js";
-
-// Repositories
-export * from "./repositories/index.js";
-
 // Repository base utilities
 export {
 	type Filter,
@@ -40,10 +38,12 @@ export {
 	type PaginatedResult,
 	type PaginationOptions,
 	parseJson,
-	query,
 	QueryBuilder,
+	query,
 	RepositoryError,
 	type RepositoryErrorCode,
 	toBoolean,
 	toJson,
 } from "./repositories/base.js";
+// Repositories
+export * from "./repositories/index.js";

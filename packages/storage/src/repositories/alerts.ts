@@ -6,7 +6,7 @@
  * @see docs/plans/ui/04-data-requirements.md
  */
 import { and, count, desc, eq, gte, inArray, lte, sql } from "drizzle-orm";
-import { getDb, type Database } from "../db";
+import { type Database, getDb } from "../db";
 import { alerts } from "../schema/dashboard";
 
 // ============================================
@@ -121,15 +121,14 @@ export class AlertsRepository {
 			})
 			.returning();
 
+		if (!row) {
+			throw new Error("Failed to create alert");
+		}
 		return mapAlertRow(row);
 	}
 
 	async findById(id: string): Promise<Alert | null> {
-		const [row] = await this.db
-			.select()
-			.from(alerts)
-			.where(eq(alerts.id, id))
-			.limit(1);
+		const [row] = await this.db.select().from(alerts).where(eq(alerts.id, id)).limit(1);
 
 		return row ? mapAlertRow(row) : null;
 	}
@@ -150,9 +149,13 @@ export class AlertsRepository {
 
 		if (filters.severity) {
 			if (Array.isArray(filters.severity)) {
-				conditions.push(inArray(alerts.severity, filters.severity as typeof alerts.$inferSelect.severity[]));
+				conditions.push(
+					inArray(alerts.severity, filters.severity as (typeof alerts.$inferSelect.severity)[])
+				);
 			} else {
-				conditions.push(eq(alerts.severity, filters.severity as typeof alerts.$inferSelect.severity));
+				conditions.push(
+					eq(alerts.severity, filters.severity as typeof alerts.$inferSelect.severity)
+				);
 			}
 		}
 		if (filters.type) {
@@ -166,7 +169,9 @@ export class AlertsRepository {
 			conditions.push(eq(alerts.acknowledged, filters.acknowledged));
 		}
 		if (filters.environment) {
-			conditions.push(eq(alerts.environment, filters.environment as typeof alerts.$inferSelect.environment));
+			conditions.push(
+				eq(alerts.environment, filters.environment as typeof alerts.$inferSelect.environment)
+			);
 		}
 		if (filters.fromDate) {
 			conditions.push(gte(alerts.createdAt, new Date(filters.fromDate)));
@@ -180,10 +185,7 @@ export class AlertsRepository {
 		const pageSize = pagination?.pageSize ?? 50;
 		const offset = (page - 1) * pageSize;
 
-		const [countResult] = await this.db
-			.select({ count: count() })
-			.from(alerts)
-			.where(whereClause);
+		const [countResult] = await this.db.select({ count: count() }).from(alerts).where(whereClause);
 
 		const rows = await this.db
 			.select()
@@ -303,12 +305,7 @@ export class AlertsRepository {
 
 		const result = await this.db
 			.delete(alerts)
-			.where(
-				and(
-					sql`${alerts.expiresAt} IS NOT NULL`,
-					lte(alerts.expiresAt, now)
-				)
-			)
+			.where(and(sql`${alerts.expiresAt} IS NOT NULL`, lte(alerts.expiresAt, now)))
 			.returning({ id: alerts.id });
 
 		return result.length;

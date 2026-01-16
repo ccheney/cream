@@ -73,7 +73,7 @@ describe("GuardrailsSchema", () => {
 		expect(result.success).toBe(true);
 		if (result.success) {
 			expect(result.data.blockedImports).toContain("os.system");
-			expect(result.data.blockedNetwork).toContain("turso.cream.internal");
+			expect(result.data.blockedNetwork).toContain("postgres.cream.internal");
 			expect(result.data.blockedBranches).toContain("main");
 			expect(result.data.blockedBranches).toContain("master");
 		}

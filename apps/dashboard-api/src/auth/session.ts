@@ -186,7 +186,6 @@ export function liveProtection(
 		// Audit logging
 		if (options.auditLog) {
 			const auditEntry = {
-				id: crypto.randomUUID(),
 				userId: user.id,
 				userEmail: user.email,
 				action: `${c.req.method} ${c.req.path}`,

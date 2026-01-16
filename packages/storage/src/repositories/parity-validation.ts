@@ -6,7 +6,7 @@
  * @see packages/validation/src/service.ts
  */
 import { and, desc, eq, sql } from "drizzle-orm";
-import { getDb, type Database } from "../db";
+import { type Database, getDb } from "../db";
 import { parityValidationHistory } from "../schema/audit";
 
 // ============================================
@@ -86,7 +86,8 @@ export class ParityValidationRepository {
 				entityId: input.entityId,
 				environment: input.environment as typeof parityValidationHistory.$inferInsert.environment,
 				passed: input.passed,
-				recommendation: input.recommendation as typeof parityValidationHistory.$inferInsert.recommendation,
+				recommendation:
+					input.recommendation as typeof parityValidationHistory.$inferInsert.recommendation,
 				blockingIssues: input.blockingIssues,
 				warnings: input.warnings,
 				fullReport: input.fullReport,
@@ -94,6 +95,9 @@ export class ParityValidationRepository {
 			})
 			.returning();
 
+		if (!row) {
+			throw new Error("Failed to create parity validation record");
+		}
 		return mapRow(row);
 	}
 
@@ -116,7 +120,10 @@ export class ParityValidationRepository {
 			.from(parityValidationHistory)
 			.where(
 				and(
-					eq(parityValidationHistory.entityType, entityType as typeof parityValidationHistory.$inferSelect.entityType),
+					eq(
+						parityValidationHistory.entityType,
+						entityType as typeof parityValidationHistory.$inferSelect.entityType
+					),
 					eq(parityValidationHistory.entityId, entityId)
 				)
 			)
@@ -135,7 +142,10 @@ export class ParityValidationRepository {
 			.from(parityValidationHistory)
 			.where(
 				and(
-					eq(parityValidationHistory.entityType, entityType as typeof parityValidationHistory.$inferSelect.entityType),
+					eq(
+						parityValidationHistory.entityType,
+						entityType as typeof parityValidationHistory.$inferSelect.entityType
+					),
 					eq(parityValidationHistory.entityId, entityId)
 				)
 			)
@@ -148,7 +158,12 @@ export class ParityValidationRepository {
 		const rows = await this.db
 			.select()
 			.from(parityValidationHistory)
-			.where(eq(parityValidationHistory.environment, environment as typeof parityValidationHistory.$inferSelect.environment))
+			.where(
+				eq(
+					parityValidationHistory.environment,
+					environment as typeof parityValidationHistory.$inferSelect.environment
+				)
+			)
 			.orderBy(desc(parityValidationHistory.validatedAt));
 
 		return rows.map(mapRow);

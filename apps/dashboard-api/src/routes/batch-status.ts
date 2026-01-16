@@ -24,7 +24,7 @@ const SyncRunTypeSchema = z.enum([
 	"corporate_actions",
 ]);
 
-const SyncRunStatusSchema = z.enum(["pending", "running", "completed", "failed"]);
+const SyncRunStatusSchema = z.enum(["running", "completed", "failed"]);
 
 const SyncRunSchema = z.object({
 	id: z.string(),

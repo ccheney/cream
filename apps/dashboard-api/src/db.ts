@@ -16,15 +16,14 @@ import {
 	ConfigVersionsRepository,
 	ConstraintsConfigRepository,
 	CorporateActionsRepository,
-	type CyclesRepository,
-	createCyclesRepository,
+	CyclesRepository,
 	DecisionsRepository,
 	FactorZooRepository,
 	FilingSyncRunsRepository,
 	FilingsRepository,
 	FundamentalsRepository,
-	IndicatorsRepository,
 	IndicatorSyncRunsRepository,
+	IndicatorsRepository,
 	MacroWatchRepository,
 	OrdersRepository,
 	PortfolioSnapshotsRepository,
@@ -38,7 +37,7 @@ import {
 	UniverseConfigsRepository,
 	UserPreferencesRepository,
 } from "@cream/storage";
-import { type Database, getDb, closeDb as drizzleCloseDb } from "@cream/storage/db";
+import { type Database, closeDb as drizzleCloseDb, getDb } from "@cream/storage/db";
 
 // ============================================
 // Database Client Singleton
@@ -193,7 +192,7 @@ export function getConstraintsConfigRepo(): ConstraintsConfigRepository {
  * Get cycles repository
  */
 export function getCyclesRepo(): CyclesRepository {
-	return createCyclesRepository();
+	return new CyclesRepository();
 }
 
 /**

@@ -148,18 +148,18 @@ describe("CachingConfigSchema", () => {
 	it("should apply defaults", () => {
 		const result = CachingConfigSchema.parse({});
 		expect(result.in_memory_ttl_minutes).toBe(5);
-		expect(result.persist_to_turso).toBe(true);
+		expect(result.persist_to_database).toBe(true);
 		expect(result.retention_days).toBe(365);
 	});
 
 	it("should accept custom values", () => {
 		const result = CachingConfigSchema.parse({
 			in_memory_ttl_minutes: 10,
-			persist_to_turso: false,
+			persist_to_database: false,
 			retention_days: 90,
 		});
 		expect(result.in_memory_ttl_minutes).toBe(10);
-		expect(result.persist_to_turso).toBe(false);
+		expect(result.persist_to_database).toBe(false);
 		expect(result.retention_days).toBe(90);
 	});
 });
@@ -172,7 +172,7 @@ describe("PredictionMarketsConfigSchema", () => {
 		expect(result.polymarket.enabled).toBe(false);
 		expect(result.signals.refresh_interval_minutes).toBe(15);
 		expect(result.risk_thresholds.macro_uncertainty_warning).toBe(0.5);
-		expect(result.caching.persist_to_turso).toBe(true);
+		expect(result.caching.persist_to_database).toBe(true);
 	});
 
 	it("should accept full configuration", () => {

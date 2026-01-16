@@ -28,6 +28,7 @@ pub struct MockBrokerAdapter {
 impl MockBrokerAdapter {
     /// Create a new mock broker adapter.
     #[must_use]
+    #[allow(clippy::missing_const_for_fn)] // AtomicU64::new is not const-stable
     pub fn new() -> Self {
         Self {
             order_counter: AtomicU64::new(1),
@@ -117,6 +118,7 @@ impl BrokerAdapter for MockBrokerAdapter {
 }
 
 #[cfg(test)]
+#[allow(clippy::expect_used)]
 mod tests {
     use super::*;
     use crate::models::{

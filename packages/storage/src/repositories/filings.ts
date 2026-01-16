@@ -6,9 +6,9 @@
  *
  * @see packages/filings for the ingestion pipeline
  */
-import { and, count, desc, eq, gte, inArray, lte, sql, sum } from "drizzle-orm";
-import { getDb, type Database } from "../db";
-import { filings, filingSyncRuns } from "../schema/external";
+import { and, count, desc, eq, gte, inArray, lte, sql } from "drizzle-orm";
+import { type Database, getDb } from "../db";
+import { filingSyncRuns, filings } from "../schema/external";
 
 // ============================================
 // Types
@@ -189,15 +189,14 @@ export class FilingsRepository {
 			})
 			.returning();
 
+		if (!row) {
+			throw new Error("Failed to create filing");
+		}
 		return mapFilingRow(row);
 	}
 
 	async findById(id: string): Promise<Filing | null> {
-		const [row] = await this.db
-			.select()
-			.from(filings)
-			.where(eq(filings.id, id))
-			.limit(1);
+		const [row] = await this.db.select().from(filings).where(eq(filings.id, id)).limit(1);
 
 		return row ? mapFilingRow(row) : null;
 	}
@@ -232,14 +231,23 @@ export class FilingsRepository {
 		}
 		if (filters.filingType) {
 			if (Array.isArray(filters.filingType)) {
-				conditions.push(inArray(filings.filingType, filters.filingType as typeof filings.$inferSelect.filingType[]));
+				conditions.push(
+					inArray(
+						filings.filingType,
+						filters.filingType as (typeof filings.$inferSelect.filingType)[]
+					)
+				);
 			} else {
-				conditions.push(eq(filings.filingType, filters.filingType as typeof filings.$inferSelect.filingType));
+				conditions.push(
+					eq(filings.filingType, filters.filingType as typeof filings.$inferSelect.filingType)
+				);
 			}
 		}
 		if (filters.status) {
 			if (Array.isArray(filters.status)) {
-				conditions.push(inArray(filings.status, filters.status as typeof filings.$inferSelect.status[]));
+				conditions.push(
+					inArray(filings.status, filters.status as (typeof filings.$inferSelect.status)[])
+				);
 			} else {
 				conditions.push(eq(filings.status, filters.status as typeof filings.$inferSelect.status));
 			}
@@ -256,10 +264,7 @@ export class FilingsRepository {
 		const pageSize = pagination?.pageSize ?? 50;
 		const offset = (page - 1) * pageSize;
 
-		const [countResult] = await this.db
-			.select({ count: count() })
-			.from(filings)
-			.where(whereClause);
+		const [countResult] = await this.db.select({ count: count() }).from(filings).where(whereClause);
 
 		const rows = await this.db
 			.select()
@@ -292,10 +297,7 @@ export class FilingsRepository {
 	}
 
 	async findRecent(symbol: string, filingType?: FilingType, limit = 10): Promise<Filing[]> {
-		const conditions = [
-			eq(filings.symbol, symbol),
-			eq(filings.status, "complete"),
-		];
+		const conditions = [eq(filings.symbol, symbol), eq(filings.status, "complete")];
 
 		if (filingType) {
 			conditions.push(eq(filings.filingType, filingType as typeof filings.$inferSelect.filingType));
@@ -421,19 +423,12 @@ export class FilingsRepository {
 		};
 	}
 
-	async findByCreatedAtRange(
-		startTime: string,
-		endTime: string,
-		limit = 100
-	): Promise<Filing[]> {
+	async findByCreatedAtRange(startTime: string, endTime: string, limit = 100): Promise<Filing[]> {
 		const rows = await this.db
 			.select()
 			.from(filings)
 			.where(
-				and(
-					gte(filings.createdAt, new Date(startTime)),
-					lte(filings.createdAt, new Date(endTime))
-				)
+				and(gte(filings.createdAt, new Date(startTime)), lte(filings.createdAt, new Date(endTime)))
 			)
 			.orderBy(desc(filings.filedDate))
 			.limit(limit);
@@ -469,6 +464,9 @@ export class FilingSyncRunsRepository {
 			})
 			.returning();
 
+		if (!row) {
+			throw new Error("Failed to start sync run");
+		}
 		return mapSyncRunRow(row);
 	}
 
@@ -500,10 +498,7 @@ export class FilingSyncRunsRepository {
 			updates.chunksCreated = progress.chunksCreated;
 		}
 
-		await this.db
-			.update(filingSyncRuns)
-			.set(updates)
-			.where(eq(filingSyncRuns.id, id));
+		await this.db.update(filingSyncRuns).set(updates).where(eq(filingSyncRuns.id, id));
 	}
 
 	async complete(

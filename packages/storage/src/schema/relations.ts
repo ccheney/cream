@@ -4,18 +4,17 @@
  * Defines relationships between tables for type-safe joins and nested queries.
  */
 import { relations } from "drizzle-orm";
+import { account, session, twoFactor, user } from "./auth";
 import {
 	agentOutputs,
-	configVersions,
 	cycleEvents,
 	cycles,
 	decisions,
 	orders,
 	positionHistory,
-	portfolioSnapshots,
 	positions,
 } from "./core-trading";
-import { alerts, backtestEquity, backtests, backtestTrades } from "./dashboard";
+import { backtestEquity, backtests, backtestTrades } from "./dashboard";
 import {
 	factorCorrelations,
 	factorPerformance,
@@ -32,7 +31,6 @@ import {
 	indicatorTrials,
 } from "./indicators";
 import { thesisState, thesisStateHistory } from "./thesis";
-import { account, session, twoFactor, user, verification } from "./auth";
 import { alertSettings, userPreferences } from "./user-settings";
 
 // Decision relations
@@ -268,7 +266,7 @@ export const userRelations = relations(user, ({ many, one }) => ({
 // Session relations
 export const sessionRelations = relations(session, ({ one }) => ({
 	user: one(user, {
-		fields: [session.userId],
+		fields: [session.user_id],
 		references: [user.id],
 	}),
 }));
@@ -276,7 +274,7 @@ export const sessionRelations = relations(session, ({ one }) => ({
 // Account relations
 export const accountRelations = relations(account, ({ one }) => ({
 	user: one(user, {
-		fields: [account.userId],
+		fields: [account.user_id],
 		references: [user.id],
 	}),
 }));
@@ -284,7 +282,7 @@ export const accountRelations = relations(account, ({ one }) => ({
 // Two factor relations
 export const twoFactorRelations = relations(twoFactor, ({ one }) => ({
 	user: one(user, {
-		fields: [twoFactor.userId],
+		fields: [twoFactor.user_id],
 		references: [user.id],
 	}),
 }));

@@ -28,7 +28,7 @@ import {
 export const hypotheses = pgTable(
 	"hypotheses",
 	{
-		hypothesisId: uuid("hypothesis_id").primaryKey().defaultRandom(),
+		hypothesisId: uuid("hypothesis_id").primaryKey().default(sql`uuidv7()`),
 		title: text("title").notNull(),
 		economicRationale: text("economic_rationale").notNull(),
 		marketMechanism: text("market_mechanism").notNull(),
@@ -37,24 +37,18 @@ export const hypotheses = pgTable(
 		status: hypothesisStatusEnum("status").notNull().default("proposed"),
 		iteration: integer("iteration").notNull().default(1),
 		parentHypothesisId: uuid("parent_hypothesis_id"),
-		createdAt: timestamp("created_at", { withTimezone: true })
-			.notNull()
-			.defaultNow(),
-		updatedAt: timestamp("updated_at", { withTimezone: true })
-			.notNull()
-			.defaultNow(),
+		createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+		updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
 	},
-	(table) => [index("idx_hypotheses_status").on(table.status)],
+	(table) => [index("idx_hypotheses_status").on(table.status)]
 );
 
 // factors: Factor definitions and lifecycle
 export const factors = pgTable(
 	"factors",
 	{
-		factorId: uuid("factor_id").primaryKey().defaultRandom(),
-		hypothesisId: uuid("hypothesis_id").references(
-			() => hypotheses.hypothesisId,
-		),
+		factorId: uuid("factor_id").primaryKey().default(sql`uuidv7()`),
+		hypothesisId: uuid("hypothesis_id").references(() => hypotheses.hypothesisId),
 		name: text("name").notNull().unique(),
 		status: factorStatusEnum("status").notNull().default("research"),
 		version: integer("version").notNull().default(1),
@@ -93,9 +87,7 @@ export const factors = pgTable(
 		paperRealizedIc: numeric("paper_realized_ic", { precision: 6, scale: 4 }),
 
 		// Runtime state
-		currentWeight: numeric("current_weight", { precision: 6, scale: 4 }).default(
-			"0.0",
-		),
+		currentWeight: numeric("current_weight", { precision: 6, scale: 4 }).default("0.0"),
 		lastIc: numeric("last_ic", { precision: 6, scale: 4 }),
 		decayRate: numeric("decay_rate", { precision: 6, scale: 4 }),
 
@@ -106,14 +98,10 @@ export const factors = pgTable(
 		parityReport: text("parity_report"),
 		parityValidatedAt: timestamp("parity_validated_at", { withTimezone: true }),
 
-		createdAt: timestamp("created_at", { withTimezone: true })
-			.notNull()
-			.defaultNow(),
+		createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
 		promotedAt: timestamp("promoted_at", { withTimezone: true }),
 		retiredAt: timestamp("retired_at", { withTimezone: true }),
-		lastUpdated: timestamp("last_updated", { withTimezone: true })
-			.notNull()
-			.defaultNow(),
+		lastUpdated: timestamp("last_updated", { withTimezone: true }).notNull().defaultNow(),
 	},
 	(table) => [
 		index("idx_factors_status").on(table.status),
@@ -121,14 +109,14 @@ export const factors = pgTable(
 		index("idx_factors_active")
 			.on(table.status)
 			.where(sql`${table.status} IN ('active', 'decaying')`),
-	],
+	]
 );
 
 // factor_performance: Daily performance metrics
 export const factorPerformance = pgTable(
 	"factor_performance",
 	{
-		id: uuid("id").primaryKey().defaultRandom(),
+		id: uuid("id").primaryKey().default(sql`uuidv7()`),
 		factorId: uuid("factor_id")
 			.notNull()
 			.references(() => factors.factorId, { onDelete: "cascade" }),
@@ -138,14 +126,12 @@ export const factorPerformance = pgTable(
 		sharpe: numeric("sharpe", { precision: 8, scale: 4 }),
 		weight: numeric("weight", { precision: 6, scale: 4 }).notNull().default("0.0"),
 		signalCount: integer("signal_count").notNull().default(0),
-		createdAt: timestamp("created_at", { withTimezone: true })
-			.notNull()
-			.defaultNow(),
+		createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
 	},
 	(table) => [
 		unique("factor_performance_factor_date").on(table.factorId, table.date),
 		index("idx_factor_perf_factor_date").on(table.factorId, table.date),
-	],
+	]
 );
 
 // factor_correlations: Pairwise correlations
@@ -159,35 +145,27 @@ export const factorCorrelations = pgTable(
 			.notNull()
 			.references(() => factors.factorId, { onDelete: "cascade" }),
 		correlation: numeric("correlation", { precision: 5, scale: 4 }).notNull(),
-		computedAt: timestamp("computed_at", { withTimezone: true })
-			.notNull()
-			.defaultNow(),
+		computedAt: timestamp("computed_at", { withTimezone: true }).notNull().defaultNow(),
 	},
-	(table) => [primaryKey({ columns: [table.factorId1, table.factorId2] })],
+	(table) => [primaryKey({ columns: [table.factorId1, table.factorId2] })]
 );
 
 // research_runs: Track research pipeline executions
 export const researchRuns = pgTable(
 	"research_runs",
 	{
-		runId: uuid("run_id").primaryKey().defaultRandom(),
+		runId: uuid("run_id").primaryKey().default(sql`uuidv7()`),
 		triggerType: researchTriggerTypeEnum("trigger_type").notNull(),
 		triggerReason: text("trigger_reason").notNull(),
 		phase: researchPhaseEnum("phase").notNull().default("idea"),
 		currentIteration: integer("current_iteration").notNull().default(1),
-		hypothesisId: uuid("hypothesis_id").references(
-			() => hypotheses.hypothesisId,
-		),
+		hypothesisId: uuid("hypothesis_id").references(() => hypotheses.hypothesisId),
 		factorId: uuid("factor_id").references(() => factors.factorId),
 		prUrl: text("pr_url"),
 		errorMessage: text("error_message"),
 		tokensUsed: integer("tokens_used").default(0),
-		computeHours: numeric("compute_hours", { precision: 8, scale: 2 }).default(
-			"0.0",
-		),
-		startedAt: timestamp("started_at", { withTimezone: true })
-			.notNull()
-			.defaultNow(),
+		computeHours: numeric("compute_hours", { precision: 8, scale: 2 }).default("0.0"),
+		startedAt: timestamp("started_at", { withTimezone: true }).notNull().defaultNow(),
 		completedAt: timestamp("completed_at", { withTimezone: true }),
 	},
 	(table) => [
@@ -195,7 +173,7 @@ export const researchRuns = pgTable(
 		index("idx_research_runs_trigger").on(table.triggerType),
 		index("idx_research_runs_hypothesis").on(table.hypothesisId),
 		index("idx_research_runs_factor").on(table.factorId),
-	],
+	]
 );
 
 // factor_weights: Current factor weights
@@ -205,16 +183,14 @@ export const factorWeights = pgTable("factor_weights", {
 		.references(() => factors.factorId, { onDelete: "cascade" }),
 	weight: numeric("weight", { precision: 6, scale: 4 }).notNull().default("0.0"),
 	lastIc: numeric("last_ic", { precision: 6, scale: 4 }),
-	lastUpdated: timestamp("last_updated", { withTimezone: true })
-		.notNull()
-		.defaultNow(),
+	lastUpdated: timestamp("last_updated", { withTimezone: true }).notNull().defaultNow(),
 });
 
 // paper_signals: Paper trading signals for factors
 export const paperSignals = pgTable(
 	"paper_signals",
 	{
-		id: uuid("id").primaryKey().defaultRandom(),
+		id: uuid("id").primaryKey().default(sql`uuidv7()`),
 		factorId: uuid("factor_id")
 			.notNull()
 			.references(() => factors.factorId, { onDelete: "cascade" }),
@@ -226,18 +202,12 @@ export const paperSignals = pgTable(
 		exitPrice: numeric("exit_price", { precision: 12, scale: 4 }),
 		actualReturn: numeric("actual_return", { precision: 8, scale: 4 }),
 		predictedReturn: numeric("predicted_return", { precision: 8, scale: 4 }),
-		createdAt: timestamp("created_at", { withTimezone: true })
-			.notNull()
-			.defaultNow(),
+		createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
 	},
 	(table) => [
-		unique("paper_signals_factor_date_symbol").on(
-			table.factorId,
-			table.signalDate,
-			table.symbol,
-		),
+		unique("paper_signals_factor_date_symbol").on(table.factorId, table.signalDate, table.symbol),
 		index("idx_paper_signals_factor").on(table.factorId),
 		index("idx_paper_signals_date").on(table.signalDate),
 		index("idx_paper_signals_factor_date").on(table.factorId, table.signalDate),
-	],
+	]
 );

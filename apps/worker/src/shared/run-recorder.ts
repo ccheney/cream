@@ -5,8 +5,7 @@
  * Used by the scheduler to log when automated runs start and complete.
  */
 
-import type { Database } from "@cream/storage";
-import { sql } from "drizzle-orm";
+import { type Database, IndicatorSyncRunsRepository, type SyncRunType } from "@cream/storage";
 
 export type WorkerService =
 	| "macro_watch"
@@ -40,26 +39,24 @@ export interface CompleteRunOptions {
 
 export async function recordRunStart(options: RecordRunOptions): Promise<RunRecordResult> {
 	const { db, service, environment } = options;
-	const runId = `run-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
-	const now = new Date().toISOString();
+	const repo = new IndicatorSyncRunsRepository(db);
 
-	await db.execute(sql`
-		INSERT INTO indicator_sync_runs
-		(id, run_type, started_at, status, symbols_processed, symbols_failed, environment, error_message)
-		VALUES (${runId}, ${service}, ${now}, 'running', 0, 0, ${environment}, NULL)
-	`);
+	const run = await repo.create({
+		runType: service as SyncRunType,
+		environment,
+	});
 
-	return { runId, startedAt: now };
+	return { runId: run.id, startedAt: run.startedAt };
 }
 
 export async function recordRunComplete(options: CompleteRunOptions): Promise<void> {
 	const { db, runId, success, message, processed = 0, failed = 0 } = options;
-	const completedAt = new Date().toISOString();
-	const status = success ? "completed" : "failed";
+	const repo = new IndicatorSyncRunsRepository(db);
 
-	await db.execute(sql`
-		UPDATE indicator_sync_runs
-		SET status = ${status}, completed_at = ${completedAt}, symbols_processed = ${processed}, symbols_failed = ${failed}, error_message = ${message ?? null}
-		WHERE id = ${runId}
-	`);
+	await repo.update(runId, {
+		status: success ? "completed" : "failed",
+		symbolsProcessed: processed,
+		symbolsFailed: failed,
+		errorMessage: message,
+	});
 }

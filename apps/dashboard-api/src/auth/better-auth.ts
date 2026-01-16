@@ -11,11 +11,11 @@
  * @see docs/plans/30-better-auth-migration.md
  */
 
-import { drizzleAdapter } from "better-auth/adapters/drizzle";
-import { betterAuth } from "better-auth";
-import { twoFactor } from "better-auth/plugins";
-import * as authSchema from "@cream/storage/schema/auth";
 import { getDb } from "@cream/storage/db";
+import * as authSchema from "@cream/storage/schema/auth";
+import { betterAuth } from "better-auth";
+import { drizzleAdapter } from "better-auth/adapters/drizzle";
+import { twoFactor } from "better-auth/plugins";
 
 // ============================================
 // Environment Helpers
@@ -148,6 +148,10 @@ export const auth = betterAuth({
 			secure: isLive,
 			sameSite: "lax",
 			path: "/",
+		},
+		// Let PostgreSQL generate UUIDs via uuidv7() default in schema
+		database: {
+			generateId: false,
 		},
 	},
 

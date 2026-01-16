@@ -75,6 +75,7 @@ pub fn check_roll_timing(
     }
 }
 
+#[allow(clippy::missing_const_for_fn)] // Method calls and arithmetic prevent const
 fn determine_recommendation(
     is_market_hours: bool,
     has_itm_leg: bool,

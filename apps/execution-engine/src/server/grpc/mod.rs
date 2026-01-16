@@ -7,8 +7,8 @@
 //!
 //! - `cache`: Caching for Alpaca API responses
 //! - `converters`: Type conversion functions between proto and internal types
-//! - `execution_service`: ExecutionService gRPC implementation
-//! - `market_data_service`: MarketDataService gRPC implementation
+//! - `execution_service`: `ExecutionService` gRPC implementation
+//! - `market_data_service`: `MarketDataService` gRPC implementation
 //! - `server`: Server builder functions
 
 mod cache;

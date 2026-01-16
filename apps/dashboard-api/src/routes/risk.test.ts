@@ -32,8 +32,12 @@ describe("Risk Routes", () => {
 			getLatest: mock(() => Promise.resolve({ nav: 100000 })),
 		};
 
-		spyOn(db, "getPositionsRepo").mockResolvedValue(mockPositionsRepo as any);
-		spyOn(db, "getPortfolioSnapshotsRepo").mockResolvedValue(mockSnapshotsRepo as any);
+		spyOn(db, "getPositionsRepo").mockReturnValue(
+			mockPositionsRepo as unknown as ReturnType<typeof db.getPositionsRepo>
+		);
+		spyOn(db, "getPortfolioSnapshotsRepo").mockReturnValue(
+			mockSnapshotsRepo as unknown as ReturnType<typeof db.getPortfolioSnapshotsRepo>
+		);
 
 		const res = await app.request("/exposure");
 		expect(res.status).toBe(200);

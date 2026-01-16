@@ -126,6 +126,7 @@ impl LookAheadChecker {
         self.violations_found = 0;
     }
 
+    #[allow(clippy::missing_const_for_fn)] // Mutable self prevents const
     fn update_counters(&mut self, result: &ValidationResult) {
         if !result.valid {
             self.violations_found += 1;

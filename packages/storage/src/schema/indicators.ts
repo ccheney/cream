@@ -17,7 +17,6 @@ import {
 	text,
 	timestamp,
 	unique,
-	uniqueIndex,
 	uuid,
 } from "drizzle-orm/pg-core";
 import {
@@ -31,7 +30,7 @@ import {
 export const indicators = pgTable(
 	"indicators",
 	{
-		id: uuid("id").primaryKey().defaultRandom(),
+		id: uuid("id").primaryKey().default(sql`uuidv7()`),
 		name: text("name").notNull().unique(),
 		category: indicatorCategoryEnum("category").notNull(),
 		status: indicatorStatusEnum("status").notNull().default("staging"),
@@ -54,12 +53,8 @@ export const indicators = pgTable(
 		replaces: uuid("replaces"),
 		parityReport: text("parity_report"),
 		parityValidatedAt: timestamp("parity_validated_at", { withTimezone: true }),
-		createdAt: timestamp("created_at", { withTimezone: true })
-			.notNull()
-			.defaultNow(),
-		updatedAt: timestamp("updated_at", { withTimezone: true })
-			.notNull()
-			.defaultNow(),
+		createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+		updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
 	},
 	(table) => [
 		index("idx_indicators_status").on(table.status),
@@ -68,22 +63,20 @@ export const indicators = pgTable(
 		index("idx_indicators_active")
 			.on(table.status)
 			.where(sql`${table.status} IN ('paper', 'production')`),
-	],
+	]
 );
 
 // indicator_trials: Trial runs for indicators
 export const indicatorTrials = pgTable(
 	"indicator_trials",
 	{
-		id: uuid("id").primaryKey().defaultRandom(),
+		id: uuid("id").primaryKey().default(sql`uuidv7()`),
 		indicatorId: uuid("indicator_id")
 			.notNull()
 			.references(() => indicators.id, { onDelete: "cascade" }),
 		trialNumber: integer("trial_number").notNull(),
 		hypothesis: text("hypothesis").notNull(),
-		parameters: jsonb("parameters")
-			.$type<Record<string, unknown>>()
-			.notNull(),
+		parameters: jsonb("parameters").$type<Record<string, unknown>>().notNull(),
 		sharpeRatio: numeric("sharpe_ratio", { precision: 8, scale: 4 }),
 		informationCoefficient: numeric("information_coefficient", {
 			precision: 6,
@@ -93,24 +86,19 @@ export const indicatorTrials = pgTable(
 		calmarRatio: numeric("calmar_ratio", { precision: 8, scale: 4 }),
 		sortinoRatio: numeric("sortino_ratio", { precision: 8, scale: 4 }),
 		selected: boolean("selected").notNull().default(false),
-		createdAt: timestamp("created_at", { withTimezone: true })
-			.notNull()
-			.defaultNow(),
+		createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
 	},
 	(table) => [
-		unique("indicator_trials_indicator_trial").on(
-			table.indicatorId,
-			table.trialNumber,
-		),
+		unique("indicator_trials_indicator_trial").on(table.indicatorId, table.trialNumber),
 		index("idx_trials_indicator").on(table.indicatorId),
-	],
+	]
 );
 
 // indicator_ic_history: Information coefficient history
 export const indicatorIcHistory = pgTable(
 	"indicator_ic_history",
 	{
-		id: uuid("id").primaryKey().defaultRandom(),
+		id: uuid("id").primaryKey().default(sql`uuidv7()`),
 		indicatorId: uuid("indicator_id")
 			.notNull()
 			.references(() => indicators.id, { onDelete: "cascade" }),
@@ -119,24 +107,19 @@ export const indicatorIcHistory = pgTable(
 		icStd: numeric("ic_std", { precision: 6, scale: 4 }).notNull(),
 		decisionsUsedIn: integer("decisions_used_in").notNull().default(0),
 		decisionsCorrect: integer("decisions_correct").notNull().default(0),
-		createdAt: timestamp("created_at", { withTimezone: true })
-			.notNull()
-			.defaultNow(),
+		createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
 	},
 	(table) => [
-		unique("indicator_ic_history_indicator_date").on(
-			table.indicatorId,
-			table.date,
-		),
+		unique("indicator_ic_history_indicator_date").on(table.indicatorId, table.date),
 		index("idx_ic_history_indicator_date").on(table.indicatorId, table.date),
-	],
+	]
 );
 
 // fundamental_indicators: Computed from market data
 export const fundamentalIndicators = pgTable(
 	"fundamental_indicators",
 	{
-		id: uuid("id").primaryKey().defaultRandom(),
+		id: uuid("id").primaryKey().default(sql`uuidv7()`),
 		symbol: text("symbol").notNull(),
 		date: timestamp("date", { withTimezone: true }).notNull(),
 
@@ -164,22 +147,20 @@ export const fundamentalIndicators = pgTable(
 		industry: text("industry"),
 
 		source: text("source").notNull().default("computed"),
-		computedAt: timestamp("computed_at", { withTimezone: true })
-			.notNull()
-			.defaultNow(),
+		computedAt: timestamp("computed_at", { withTimezone: true }).notNull().defaultNow(),
 	},
 	(table) => [
 		unique("fundamental_indicators_symbol_date").on(table.symbol, table.date),
 		index("idx_fundamental_symbol_date").on(table.symbol, table.date),
 		index("idx_fundamental_symbol").on(table.symbol),
-	],
+	]
 );
 
 // short_interest_indicators: Bi-weekly batch from FINRA
 export const shortInterestIndicators = pgTable(
 	"short_interest_indicators",
 	{
-		id: uuid("id").primaryKey().defaultRandom(),
+		id: uuid("id").primaryKey().default(sql`uuidv7()`),
 		symbol: text("symbol").notNull(),
 		settlementDate: timestamp("settlement_date", { withTimezone: true }).notNull(),
 
@@ -190,22 +171,20 @@ export const shortInterestIndicators = pgTable(
 		shortInterestChange: numeric("short_interest_change", { precision: 8, scale: 4 }),
 
 		source: text("source").notNull().default("FINRA"),
-		fetchedAt: timestamp("fetched_at", { withTimezone: true })
-			.notNull()
-			.defaultNow(),
+		fetchedAt: timestamp("fetched_at", { withTimezone: true }).notNull().defaultNow(),
 	},
 	(table) => [
 		unique("short_interest_symbol_date").on(table.symbol, table.settlementDate),
 		index("idx_short_interest_symbol").on(table.symbol, table.settlementDate),
 		index("idx_short_interest_settlement").on(table.settlementDate),
-	],
+	]
 );
 
 // sentiment_indicators: Nightly aggregation
 export const sentimentIndicators = pgTable(
 	"sentiment_indicators",
 	{
-		id: uuid("id").primaryKey().defaultRandom(),
+		id: uuid("id").primaryKey().default(sql`uuidv7()`),
 		symbol: text("symbol").notNull(),
 		date: timestamp("date", { withTimezone: true }).notNull(),
 
@@ -219,22 +198,20 @@ export const sentimentIndicators = pgTable(
 		socialSentiment: numeric("social_sentiment", { precision: 5, scale: 4 }),
 		analystSentiment: numeric("analyst_sentiment", { precision: 5, scale: 4 }),
 
-		computedAt: timestamp("computed_at", { withTimezone: true })
-			.notNull()
-			.defaultNow(),
+		computedAt: timestamp("computed_at", { withTimezone: true }).notNull().defaultNow(),
 	},
 	(table) => [
 		unique("sentiment_indicators_symbol_date").on(table.symbol, table.date),
 		index("idx_sentiment_symbol_date").on(table.symbol, table.date),
 		index("idx_sentiment_symbol").on(table.symbol),
-	],
+	]
 );
 
 // options_indicators_cache: Refreshed hourly
 export const optionsIndicatorsCache = pgTable(
 	"options_indicators_cache",
 	{
-		id: uuid("id").primaryKey().defaultRandom(),
+		id: uuid("id").primaryKey().default(sql`uuidv7()`),
 		symbol: text("symbol").notNull().unique(),
 		timestamp: timestamp("timestamp", { withTimezone: true }).notNull(),
 
@@ -255,14 +232,14 @@ export const optionsIndicatorsCache = pgTable(
 	(table) => [
 		index("idx_options_cache_symbol").on(table.symbol),
 		index("idx_options_cache_expires").on(table.expiresAt),
-	],
+	]
 );
 
 // corporate_actions_indicators: Daily update
 export const corporateActionsIndicators = pgTable(
 	"corporate_actions_indicators",
 	{
-		id: uuid("id").primaryKey().defaultRandom(),
+		id: uuid("id").primaryKey().default(sql`uuidv7()`),
 		symbol: text("symbol").notNull(),
 		date: timestamp("date", { withTimezone: true }).notNull(),
 
@@ -279,14 +256,14 @@ export const corporateActionsIndicators = pgTable(
 		unique("corp_actions_indicators_symbol_date").on(table.symbol, table.date),
 		index("idx_corp_actions_symbol").on(table.symbol, table.date),
 		index("idx_corp_actions_symbol_only").on(table.symbol),
-	],
+	]
 );
 
 // indicator_sync_runs: Tracking indicator sync jobs
 export const indicatorSyncRuns = pgTable(
 	"indicator_sync_runs",
 	{
-		id: uuid("id").primaryKey().defaultRandom(),
+		id: uuid("id").primaryKey().default(sql`uuidv7()`),
 		runType: text("run_type").notNull(),
 		startedAt: timestamp("started_at", { withTimezone: true }).notNull(),
 		completedAt: timestamp("completed_at", { withTimezone: true }),
@@ -300,14 +277,14 @@ export const indicatorSyncRuns = pgTable(
 		index("idx_indicator_sync_runs_type").on(table.runType),
 		index("idx_indicator_sync_runs_status").on(table.status),
 		index("idx_indicator_sync_runs_started").on(table.startedAt),
-	],
+	]
 );
 
 // indicator_paper_signals: Paper trading signal recording
 export const indicatorPaperSignals = pgTable(
 	"indicator_paper_signals",
 	{
-		id: uuid("id").primaryKey().defaultRandom(),
+		id: uuid("id").primaryKey().default(sql`uuidv7()`),
 		indicatorId: uuid("indicator_id")
 			.notNull()
 			.references(() => indicators.id, { onDelete: "cascade" }),
@@ -316,18 +293,12 @@ export const indicatorPaperSignals = pgTable(
 		signal: numeric("signal", { precision: 5, scale: 4 }).notNull(),
 		outcome: numeric("outcome", { precision: 8, scale: 4 }),
 		outcomeDate: timestamp("outcome_date", { withTimezone: true }),
-		createdAt: timestamp("created_at", { withTimezone: true })
-			.notNull()
-			.defaultNow(),
+		createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
 	},
 	(table) => [
-		unique("indicator_paper_signals_unique").on(
-			table.indicatorId,
-			table.symbol,
-			table.signalDate,
-		),
-		index("idx_paper_signals_indicator").on(table.indicatorId),
-		index("idx_paper_signals_symbol").on(table.symbol),
-		index("idx_paper_signals_date").on(table.signalDate),
-	],
+		unique("indicator_paper_signals_unique").on(table.indicatorId, table.symbol, table.signalDate),
+		index("idx_ind_paper_signals_indicator").on(table.indicatorId),
+		index("idx_ind_paper_signals_symbol").on(table.symbol),
+		index("idx_ind_paper_signals_date").on(table.signalDate),
+	]
 );

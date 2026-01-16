@@ -127,7 +127,7 @@ export function getCurrentEnvironment(): Environment {
 export const systemState: SystemState = {
 	get status() {
 		// This is a sync getter but we need async - callers should use getSystemState()
-		return "STOPPED" as SystemStatus;
+		return "stopped" as SystemStatus;
 	},
 	set status(_value: SystemStatus) {
 		// No-op, use setSystemStatus() instead

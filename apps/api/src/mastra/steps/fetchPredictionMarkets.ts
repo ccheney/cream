@@ -23,13 +23,34 @@ import {
 	toNumericScores,
 	type UnifiedPredictionMarketClient,
 } from "@cream/prediction-markets";
-import type { CreateSignalInput, CreateSnapshotInput, SignalType } from "@cream/storage";
+import type {
+	CreateSignalInput,
+	CreateSnapshotInput,
+	SignalType,
+	StoragePredictionMarketType,
+	StoragePredictionPlatform,
+} from "@cream/storage";
 import { createStep } from "@mastra/core/workflows";
 import { z } from "zod";
 
 import { getPredictionMarketsRepo } from "../../db.js";
 
 const log = createNodeLogger({ service: "prediction-markets", level: "info" });
+
+function toStoragePlatform(platform: string): StoragePredictionPlatform {
+	return platform.toLowerCase() as StoragePredictionPlatform;
+}
+
+function toStorageMarketType(marketType: string): StoragePredictionMarketType {
+	switch (marketType) {
+		case "FED_RATE":
+			return "rate";
+		case "ELECTION":
+			return "election";
+		default:
+			return "economic";
+	}
+}
 
 /**
  * Create ExecutionContext for step invocation.
@@ -139,10 +160,9 @@ async function storeMarketSnapshots(events: PredictionMarketEvent[]): Promise<vo
 
 	for (const event of events) {
 		const snapshot: CreateSnapshotInput = {
-			id: `${event.payload.platform}-${event.payload.marketTicker}-${Date.now()}`,
-			platform: event.payload.platform,
+			platform: toStoragePlatform(event.payload.platform),
 			marketTicker: event.payload.marketTicker,
-			marketType: event.payload.marketType,
+			marketType: toStorageMarketType(event.payload.marketType),
 			marketQuestion: event.payload.marketQuestion,
 			snapshotTime: new Date().toISOString(),
 			data: {
@@ -183,14 +203,13 @@ async function storeComputedSignals(
 	for (const { type, value } of signalMappings) {
 		if (value !== undefined) {
 			const input: CreateSignalInput = {
-				id: `${type}-${Date.now()}`,
 				signalType: type,
 				signalValue: value,
 				confidence: signals.marketConfidence,
 				computedAt: timestamp,
 				inputs: {
 					sources: signals.platforms.map((p) => ({
-						platform: p as "KALSHI" | "POLYMARKET",
+						platform: toStoragePlatform(p),
 						ticker: "",
 						price: 0,
 						weight: 1,

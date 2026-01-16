@@ -206,6 +206,7 @@ pub fn parse_timestamp(timestamp_str: &str) -> Option<prost_types::Timestamp> {
 }
 
 #[cfg(test)]
+#[allow(clippy::expect_used)]
 mod tests {
     use super::*;
     use rust_decimal::Decimal;

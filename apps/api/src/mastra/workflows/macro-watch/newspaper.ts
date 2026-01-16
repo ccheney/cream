@@ -167,8 +167,8 @@ export function prepareNewspaperForStorage(
 	const now = new Date();
 	const date = now.toISOString().slice(0, 10);
 
+	// id is auto-generated as uuidv7 by database - omit to let DB handle it
 	return {
-		id: `newspaper-${date}-${Date.now()}`,
 		date,
 		compiledAt: now.toISOString(),
 		sections,

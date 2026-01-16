@@ -8,7 +8,7 @@
  */
 import { and, asc, desc, eq, gte, isNull, lte, or, sql } from "drizzle-orm";
 import { z } from "zod";
-import { getDb, type Database } from "../db";
+import { type Database, getDb } from "../db";
 import { indexConstituents, tickerChanges, universeSnapshots } from "../schema/universe";
 
 // ============================================
@@ -195,10 +195,7 @@ export class IndexConstituentsRepository {
 				and(
 					eq(indexConstituents.indexId, indexId),
 					lte(indexConstituents.dateAdded, asOf),
-					or(
-						isNull(indexConstituents.dateRemoved),
-						sql`${indexConstituents.dateRemoved} > ${asOf}`
-					)
+					or(isNull(indexConstituents.dateRemoved), sql`${indexConstituents.dateRemoved} > ${asOf}`)
 				)
 			)
 			.orderBy(asc(indexConstituents.symbol));
@@ -210,12 +207,7 @@ export class IndexConstituentsRepository {
 		const rows = await this.db
 			.select()
 			.from(indexConstituents)
-			.where(
-				and(
-					eq(indexConstituents.indexId, indexId),
-					isNull(indexConstituents.dateRemoved)
-				)
-			)
+			.where(and(eq(indexConstituents.indexId, indexId), isNull(indexConstituents.dateRemoved)))
 			.orderBy(asc(indexConstituents.symbol));
 
 		return rows.map(mapConstituentRow);
@@ -314,12 +306,7 @@ export class IndexConstituentsRepository {
 		const [result] = await this.db
 			.select({ cnt: sql<number>`COUNT(*)::int` })
 			.from(indexConstituents)
-			.where(
-				and(
-					eq(indexConstituents.indexId, indexId),
-					isNull(indexConstituents.dateRemoved)
-				)
-			);
+			.where(and(eq(indexConstituents.indexId, indexId), isNull(indexConstituents.dateRemoved)));
 
 		return result?.cnt ?? 0;
 	}
@@ -407,10 +394,7 @@ export class TickerChangesRepository {
 				.select({ oldSymbol: tickerChanges.oldSymbol })
 				.from(tickerChanges)
 				.where(
-					and(
-						eq(tickerChanges.newSymbol, historical),
-						sql`${tickerChanges.changeDate} > ${asOf}`
-					)
+					and(eq(tickerChanges.newSymbol, historical), sql`${tickerChanges.changeDate} > ${asOf}`)
 				)
 				.orderBy(asc(tickerChanges.changeDate))
 				.limit(1);
@@ -431,12 +415,7 @@ export class TickerChangesRepository {
 		const rows = await this.db
 			.select()
 			.from(tickerChanges)
-			.where(
-				and(
-					gte(tickerChanges.changeDate, start),
-					lte(tickerChanges.changeDate, end)
-				)
-			)
+			.where(and(gte(tickerChanges.changeDate, start), lte(tickerChanges.changeDate, end)))
 			.orderBy(asc(tickerChanges.changeDate));
 
 		return rows.map(mapTickerChangeRow);
@@ -501,10 +480,7 @@ export class UniverseSnapshotsRepository {
 			.select()
 			.from(universeSnapshots)
 			.where(
-				and(
-					eq(universeSnapshots.indexId, indexId),
-					lte(universeSnapshots.snapshotDate, dateObj)
-				)
+				and(eq(universeSnapshots.indexId, indexId), lte(universeSnapshots.snapshotDate, dateObj))
 			)
 			.orderBy(desc(universeSnapshots.snapshotDate))
 			.limit(1);
@@ -528,10 +504,7 @@ export class UniverseSnapshotsRepository {
 		const result = await this.db
 			.delete(universeSnapshots)
 			.where(
-				and(
-					sql`${universeSnapshots.expiresAt} IS NOT NULL`,
-					lte(universeSnapshots.expiresAt, now)
-				)
+				and(sql`${universeSnapshots.expiresAt} IS NOT NULL`, lte(universeSnapshots.expiresAt, now))
 			)
 			.returning({ id: universeSnapshots.id });
 

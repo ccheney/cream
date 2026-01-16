@@ -25,7 +25,7 @@ export const MacroWatchCategorySchema = z.enum([
 export type MacroWatchCategory = z.infer<typeof MacroWatchCategorySchema>;
 
 export const MacroWatchEntrySchema = z.object({
-	id: z.string(),
+	id: z.string().optional(), // Auto-generated as uuidv7 by database
 	timestamp: z.string(),
 	session: MacroWatchSessionSchema,
 	category: MacroWatchCategorySchema,

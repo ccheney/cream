@@ -12,7 +12,6 @@ import {
 	serial,
 	text,
 	timestamp,
-	uniqueIndex,
 	uuid,
 } from "drizzle-orm/pg-core";
 import { environmentEnum, thesisStateEnum } from "./enums";
@@ -21,7 +20,7 @@ import { environmentEnum, thesisStateEnum } from "./enums";
 export const thesisState = pgTable(
 	"thesis_state",
 	{
-		thesisId: uuid("thesis_id").primaryKey().defaultRandom(),
+		thesisId: uuid("thesis_id").primaryKey().default(sql`uuidv7()`),
 		instrumentId: text("instrument_id").notNull(),
 		state: thesisStateEnum("state").notNull(),
 		entryPrice: numeric("entry_price", { precision: 12, scale: 4 }),
@@ -43,12 +42,8 @@ export const thesisState = pgTable(
 		realizedPnlPct: numeric("realized_pnl_pct", { precision: 8, scale: 4 }),
 		environment: environmentEnum("environment").notNull(),
 		notes: text("notes"),
-		lastUpdated: timestamp("last_updated", { withTimezone: true })
-			.notNull()
-			.defaultNow(),
-		createdAt: timestamp("created_at", { withTimezone: true })
-			.notNull()
-			.defaultNow(),
+		lastUpdated: timestamp("last_updated", { withTimezone: true }).notNull().defaultNow(),
+		createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
 		closedAt: timestamp("closed_at", { withTimezone: true }),
 	},
 	(table) => [
@@ -63,7 +58,7 @@ export const thesisState = pgTable(
 		index("idx_thesis_state_instrument_active")
 			.on(table.instrumentId, table.environment)
 			.where(sql`${table.state} != 'CLOSED'`),
-	],
+	]
 );
 
 // thesis_state_history: State transitions
@@ -87,16 +82,11 @@ export const thesisStateHistory = pgTable(
 			scale: 3,
 		}),
 		notes: text("notes"),
-		createdAt: timestamp("created_at", { withTimezone: true })
-			.notNull()
-			.defaultNow(),
+		createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
 	},
 	(table) => [
 		index("idx_thesis_history_thesis_id").on(table.thesisId),
 		index("idx_thesis_history_created_at").on(table.createdAt),
-		index("idx_thesis_history_thesis_created").on(
-			table.thesisId,
-			table.createdAt,
-		),
-	],
+		index("idx_thesis_history_thesis_created").on(table.thesisId, table.createdAt),
+	]
 );
