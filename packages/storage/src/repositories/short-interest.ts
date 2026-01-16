@@ -414,4 +414,24 @@ export class ShortInterestRepository {
 
 		return (rows.rows as ShortInterestRow[]).map(mapShortInterestRow);
 	}
+
+	async findByFetchedAtRange(
+		startTime: string,
+		endTime: string,
+		limit = 100
+	): Promise<ShortInterestIndicators[]> {
+		const rows = await this.db
+			.select()
+			.from(shortInterestIndicators)
+			.where(
+				and(
+					gte(shortInterestIndicators.fetchedAt, new Date(startTime)),
+					lte(shortInterestIndicators.fetchedAt, new Date(endTime))
+				)
+			)
+			.orderBy(shortInterestIndicators.symbol)
+			.limit(limit);
+
+		return rows.map(mapShortInterestRow);
+	}
 }

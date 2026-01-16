@@ -9,7 +9,7 @@
 
 import { createRoute, OpenAPIHono, z } from "@hono/zod-openapi";
 import { HTTPException } from "hono/http-exception";
-import { getDbClient } from "../db.js";
+import { getIndicatorSyncRunsRepo } from "../db.js";
 
 const app = new OpenAPIHono();
 
@@ -24,7 +24,7 @@ const SyncRunTypeSchema = z.enum([
 	"corporate_actions",
 ]);
 
-const SyncRunStatusSchema = z.enum(["running", "completed", "failed"]);
+const SyncRunStatusSchema = z.enum(["pending", "running", "completed", "failed"]);
 
 const SyncRunSchema = z.object({
 	id: z.string(),
@@ -53,8 +53,6 @@ const ErrorSchema = z.object({
 	error: z.string(),
 	message: z.string(),
 });
-
-type SyncRun = z.infer<typeof SyncRunSchema>;
 
 // ============================================
 // Route Definition
@@ -87,90 +85,40 @@ app.openapi(getBatchStatusRoute, async (c) => {
 	const { limit, type, status } = c.req.valid("query");
 
 	try {
-		const db = await getDbClient();
+		const repo = getIndicatorSyncRunsRepo();
 
-		// Build dynamic query with filters
-		const conditions: string[] = [];
-		const args: (string | number)[] = [];
+		const runs = await repo.findMany(
+			{
+				runType: type,
+				status: status,
+			},
+			limit
+		);
 
-		if (type) {
-			conditions.push("run_type = ?");
-			args.push(type);
-		}
-		if (status) {
-			conditions.push("status = ?");
-			args.push(status);
-		}
-
-		const whereClause = conditions.length > 0 ? `WHERE ${conditions.join(" AND ")}` : "";
-
-		// Get recent runs
-		const runsQuery = `
-      SELECT id, run_type, started_at, completed_at,
-             symbols_processed, symbols_failed, status,
-             error_message, environment
-      FROM indicator_sync_runs
-      ${whereClause}
-      ORDER BY started_at DESC
-      LIMIT ?
-    `;
-		args.push(limit);
-
-		const rows = await db.execute(runsQuery, args);
-
-		const runs: SyncRun[] = rows.map((row) => ({
-			id: row.id as string,
-			run_type: row.run_type as z.infer<typeof SyncRunTypeSchema>,
-			started_at: row.started_at as string,
-			completed_at: row.completed_at as string | null,
-			symbols_processed: (row.symbols_processed as number) ?? 0,
-			symbols_failed: (row.symbols_failed as number) ?? 0,
-			status: row.status as z.infer<typeof SyncRunStatusSchema>,
-			error_message: row.error_message as string | null,
-			environment: row.environment as string,
-		}));
-
-		// Get summary statistics
-		const summaryRows = await db.execute(`
-      SELECT
-        COUNT(*) as total,
-        SUM(CASE WHEN status = 'running' THEN 1 ELSE 0 END) as running,
-        SUM(CASE WHEN status = 'completed' THEN 1 ELSE 0 END) as completed,
-        SUM(CASE WHEN status = 'failed' THEN 1 ELSE 0 END) as failed
-      FROM indicator_sync_runs
-    `);
-
-		const summaryRow = summaryRows[0];
-
-		// Get last completed time for each run type
-		const lastCompletedRows = await db.execute(`
-      SELECT run_type, MAX(completed_at) as last_completed
-      FROM indicator_sync_runs
-      WHERE status = 'completed'
-      GROUP BY run_type
-    `);
-
-		const lastCompleted: Record<string, string | null> = {
-			fundamentals: null,
-			short_interest: null,
-			sentiment: null,
-			corporate_actions: null,
-		};
-
-		for (const row of lastCompletedRows) {
-			const runType = row.run_type as string;
-			lastCompleted[runType] = row.last_completed as string | null;
-		}
+		const summary = await repo.getSummary();
 
 		return c.json(
 			{
-				runs,
+				runs: runs.map((run) => ({
+					id: run.id,
+					run_type: run.runType as z.infer<typeof SyncRunTypeSchema>,
+					started_at: run.startedAt,
+					completed_at: run.completedAt,
+					symbols_processed: run.symbolsProcessed,
+					symbols_failed: run.symbolsFailed,
+					status: run.status as z.infer<typeof SyncRunStatusSchema>,
+					error_message: run.errorMessage,
+					environment: run.environment,
+				})),
 				summary: {
-					total_runs: (summaryRow?.total as number) ?? 0,
-					running: (summaryRow?.running as number) ?? 0,
-					completed: (summaryRow?.completed as number) ?? 0,
-					failed: (summaryRow?.failed as number) ?? 0,
-					last_completed: lastCompleted as Record<z.infer<typeof SyncRunTypeSchema>, string | null>,
+					total_runs: summary.totalRuns,
+					running: summary.running,
+					completed: summary.completed,
+					failed: summary.failed,
+					last_completed: summary.lastCompleted as Record<
+						z.infer<typeof SyncRunTypeSchema>,
+						string | null
+					>,
 				},
 			},
 			200
@@ -216,35 +164,29 @@ app.openapi(getSyncRunRoute, async (c) => {
 	const { id } = c.req.valid("param");
 
 	try {
-		const db = await getDbClient();
+		const repo = getIndicatorSyncRunsRepo();
+		const run = await repo.findById(id);
 
-		const rows = await db.execute(
-			`SELECT id, run_type, started_at, completed_at,
-              symbols_processed, symbols_failed, status,
-              error_message, environment
-       FROM indicator_sync_runs
-       WHERE id = ?`,
-			[id]
-		);
-
-		const row = rows[0];
-		if (!row) {
+		if (!run) {
 			throw new HTTPException(404, { message: `Sync run ${id} not found` });
 		}
 
-		const run: SyncRun = {
-			id: row.id as string,
-			run_type: row.run_type as z.infer<typeof SyncRunTypeSchema>,
-			started_at: row.started_at as string,
-			completed_at: row.completed_at as string | null,
-			symbols_processed: (row.symbols_processed as number) ?? 0,
-			symbols_failed: (row.symbols_failed as number) ?? 0,
-			status: row.status as z.infer<typeof SyncRunStatusSchema>,
-			error_message: row.error_message as string | null,
-			environment: row.environment as string,
-		};
-
-		return c.json({ run }, 200);
+		return c.json(
+			{
+				run: {
+					id: run.id,
+					run_type: run.runType as z.infer<typeof SyncRunTypeSchema>,
+					started_at: run.startedAt,
+					completed_at: run.completedAt,
+					symbols_processed: run.symbolsProcessed,
+					symbols_failed: run.symbolsFailed,
+					status: run.status as z.infer<typeof SyncRunStatusSchema>,
+					error_message: run.errorMessage,
+					environment: run.environment,
+				},
+			},
+			200
+		);
 	} catch (error) {
 		if (error instanceof HTTPException) {
 			throw error;

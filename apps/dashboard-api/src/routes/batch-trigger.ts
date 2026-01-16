@@ -10,7 +10,7 @@
 import { requireEnv } from "@cream/domain";
 import { createRoute, OpenAPIHono, z } from "@hono/zod-openapi";
 import { HTTPException } from "hono/http-exception";
-import { getDbClient } from "../db.js";
+import { getIndicatorSyncRunsRepo } from "../db.js";
 import log from "../logger.js";
 
 const app = new OpenAPIHono();
@@ -83,17 +83,12 @@ app.openapi(triggerBatchJobRoute, async (c) => {
 	const environment = requireEnv();
 
 	try {
-		const db = await getDbClient();
+		const repo = getIndicatorSyncRunsRepo();
 
 		// Check if a job of this type is already running
-		const runningJobs = await db.execute(
-			`SELECT id FROM indicator_sync_runs
-       WHERE run_type = ? AND status = 'running'
-       LIMIT 1`,
-			[job_type]
-		);
+		const runningJob = await repo.findRunningByType(job_type);
 
-		if (runningJobs.length > 0) {
+		if (runningJob) {
 			throw new HTTPException(409, {
 				message: `A ${job_type} batch job is already running`,
 			});
@@ -101,25 +96,21 @@ app.openapi(triggerBatchJobRoute, async (c) => {
 
 		// Generate a unique run ID
 		const runId = `run-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
-		const now = new Date().toISOString();
 
 		// Get symbol count - if symbols provided, use those, otherwise indicate "all"
 		const symbolsCount = symbols?.length ?? -1; // -1 means "all symbols"
 
 		// Insert the trigger request as a pending sync run
-		// The worker will pick this up and execute it
-		await db.run(
-			`INSERT INTO indicator_sync_runs
-       (id, run_type, started_at, status, symbols_processed, symbols_failed, environment, error_message)
-       VALUES (?, ?, ?, 'pending', 0, 0, ?, ?)`,
-			[
-				runId,
-				job_type,
-				now,
-				environment,
-				symbols ? JSON.stringify({ symbols, priority }) : JSON.stringify({ priority }),
-			]
-		);
+		const errorMessage = symbols
+			? JSON.stringify({ symbols, priority })
+			: JSON.stringify({ priority });
+
+		const run = await repo.create({
+			id: runId,
+			runType: job_type,
+			environment,
+			errorMessage, // Store symbols/priority in errorMessage temporarily (worker will clear it)
+		});
 
 		log.info(
 			{
@@ -134,11 +125,11 @@ app.openapi(triggerBatchJobRoute, async (c) => {
 
 		return c.json(
 			{
-				run_id: runId,
+				run_id: run.id,
 				job_type,
 				status: "pending" as const,
 				symbols_count: symbolsCount === -1 ? 0 : symbolsCount,
-				created_at: now,
+				created_at: run.startedAt,
 				message:
 					symbolsCount === -1
 						? `Triggered ${job_type} batch job for all symbols`
@@ -202,32 +193,23 @@ app.openapi(cancelBatchJobRoute, async (c) => {
 	const { id } = c.req.valid("param");
 
 	try {
-		const db = await getDbClient();
+		const repo = getIndicatorSyncRunsRepo();
 
 		// Check current status
-		const rows = await db.execute(`SELECT status FROM indicator_sync_runs WHERE id = ?`, [id]);
+		const run = await repo.findById(id);
 
-		if (rows.length === 0) {
+		if (!run) {
 			throw new HTTPException(404, { message: `Job ${id} not found` });
 		}
 
-		const status = rows[0]?.status as string;
-
-		if (status === "completed" || status === "failed") {
+		if (run.status === "completed" || run.status === "failed") {
 			throw new HTTPException(409, {
-				message: `Cannot cancel job ${id} - already ${status}`,
+				message: `Cannot cancel job ${id} - already ${run.status}`,
 			});
 		}
 
 		// Update status to cancelled
-		await db.run(
-			`UPDATE indicator_sync_runs
-       SET status = 'failed',
-           completed_at = datetime('now'),
-           error_message = 'Cancelled by user'
-       WHERE id = ?`,
-			[id]
-		);
+		await repo.cancel(id);
 
 		log.info({ runId: id }, "Batch job cancelled by user");
 

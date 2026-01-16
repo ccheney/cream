@@ -9,7 +9,7 @@
 
 import { createRoute, OpenAPIHono, z } from "@hono/zod-openapi";
 import { HTTPException } from "hono/http-exception";
-import { getDbClient } from "../db.js";
+import { getIndicatorsRepo, getRegimeLabelsRepo } from "../db.js";
 
 // ============================================
 // App Setup
@@ -100,6 +100,117 @@ const PaperTradingIndicatorSchema = z.object({
 });
 
 // ============================================
+// Helper Functions
+// ============================================
+
+/**
+ * Calculate a simple Information Coefficient (Pearson correlation)
+ */
+function calculateSimpleIC(signals: number[], outcomes: number[]): number {
+	if (signals.length === 0 || signals.length !== outcomes.length) {
+		return 0;
+	}
+
+	const n = signals.length;
+	const meanSignal = signals.reduce((a, b) => a + b, 0) / n;
+	const meanOutcome = outcomes.reduce((a, b) => a + b, 0) / n;
+
+	let numerator = 0;
+	let denomSignal = 0;
+	let denomOutcome = 0;
+
+	for (let i = 0; i < n; i++) {
+		const signal = signals[i];
+		const outcome = outcomes[i];
+		if (signal === undefined || outcome === undefined) {
+			continue;
+		}
+		const diffSignal = signal - meanSignal;
+		const diffOutcome = outcome - meanOutcome;
+		numerator += diffSignal * diffOutcome;
+		denomSignal += diffSignal * diffSignal;
+		denomOutcome += diffOutcome * diffOutcome;
+	}
+
+	const denominator = Math.sqrt(denomSignal * denomOutcome);
+	return denominator === 0 ? 0 : numerator / denominator;
+}
+
+/**
+ * Get trigger conditions from repositories
+ */
+async function getTriggerConditions(): Promise<{
+	rollingIC30Day: number;
+	icDecayDays: number;
+	daysSinceLastAttempt: number;
+	activeIndicatorCount: number;
+	maxIndicatorCapacity: number;
+	regimeGapDetected: boolean;
+	currentRegime: string | null;
+	regimeGapDetails?: string;
+}> {
+	const indicatorsRepo = getIndicatorsRepo();
+	const regimeLabelsRepo = getRegimeLabelsRepo();
+
+	// Get active indicator count
+	const activeCount = await indicatorsRepo.getActiveCount();
+
+	// Get recent IC values for rolling average
+	const icValues = await indicatorsRepo.getRecentICValues(30);
+	const rollingIC =
+		icValues.length > 0 ? icValues.reduce((a, b) => a + b, 0) / icValues.length : 0;
+
+	// Calculate IC decay (consecutive days below threshold)
+	let icDecayDays = 0;
+	for (const ic of icValues) {
+		if (ic < 0.02) {
+			icDecayDays++;
+		} else {
+			break;
+		}
+	}
+
+	// Get last generation attempt
+	const lastAttempt = await indicatorsRepo.getLastGenerationAttempt();
+	const daysSinceLastAttempt = lastAttempt
+		? Math.floor((Date.now() - new Date(lastAttempt).getTime()) / (24 * 60 * 60 * 1000))
+		: 999;
+
+	// Get current market regime from regime labels
+	let currentRegime: string | null = null;
+	let regimeGapDetected = false;
+	let regimeGapDetails: string | undefined;
+
+	try {
+		const marketRegime = await regimeLabelsRepo.getLatestForSymbol("_MARKET");
+		if (marketRegime) {
+			currentRegime = marketRegime.regime;
+			regimeGapDetected = marketRegime.confidence < 0.5;
+			if (regimeGapDetected) {
+				regimeGapDetails = `Low confidence (${(marketRegime.confidence * 100).toFixed(1)}%) in regime classification`;
+			}
+		} else {
+			regimeGapDetected = true;
+			regimeGapDetails = "No regime data available";
+		}
+	} catch {
+		regimeGapDetected = true;
+		regimeGapDetails = "Regime classification unavailable";
+	}
+
+	return {
+		rollingIC30Day: rollingIC,
+		icDecayDays,
+		daysSinceLastAttempt,
+		activeIndicatorCount: activeCount,
+		maxIndicatorCapacity: 20,
+		regimeGapDetected,
+		currentRegime,
+		regimeGapDetails,
+	};
+}
+
+// ============================================
 // Route Definitions
 // ============================================
 
@@ -130,51 +241,38 @@ const listIndicatorsRoute = createRoute({
 
 app.openapi(listIndicatorsRoute, async (c) => {
 	const { status, category } = c.req.valid("query");
-	const db = await getDbClient();
+	const repo = getIndicatorsRepo();
 
-	// Build dynamic query based on filters
-	const conditions: string[] = [];
-	const args: (string | null)[] = [];
+	const result = await repo.findMany({
+		status: status as "staging" | "paper" | "production" | "retired" | undefined,
+		category: category as "momentum" | "trend" | "volatility" | "volume" | "custom" | undefined,
+	});
 
-	if (status) {
-		conditions.push("status = ?");
-		args.push(status);
-	}
-	if (category) {
-		conditions.push("category = ?");
-		args.push(category);
-	}
+	// Sort by status priority then name
+	const statusPriority: Record<string, number> = {
+		production: 1,
+		paper: 2,
+		staging: 3,
+		retired: 4,
+	};
 
-	const whereClause = conditions.length > 0 ? `WHERE ${conditions.join(" AND ")}` : "";
-
-	const rows = await db.execute(
-		`
-      SELECT id, name, category, status, hypothesis,
-             generated_at, promoted_at, retired_at
-      FROM indicators
-      ${whereClause}
-      ORDER BY
-        CASE status
-          WHEN 'production' THEN 1
-          WHEN 'paper' THEN 2
-          WHEN 'staging' THEN 3
-          ELSE 4
-        END,
-        name
-    `,
-		args
-	);
-
-	const indicators = rows.map((row) => ({
-		id: row.id as string,
-		name: row.name as string,
-		category: row.category as string,
-		status: row.status as "staging" | "paper" | "production" | "retired",
-		hypothesis: row.hypothesis as string,
-		generatedAt: row.generated_at as string,
-		promotedAt: row.promoted_at as string | null,
-		retiredAt: row.retired_at as string | null,
-	}));
+	const indicators = result.data
+		.sort((a, b) => {
+			const priorityA = statusPriority[a.status] ?? 5;
+			const priorityB = statusPriority[b.status] ?? 5;
+			if (priorityA !== priorityB) return priorityA - priorityB;
+			return a.name.localeCompare(b.name);
+		})
+		.map((ind) => ({
+			id: ind.id,
+			name: ind.name,
+			category: ind.category,
+			status: ind.status as "staging" | "paper" | "production" | "retired",
+			hypothesis: ind.hypothesis,
+			generatedAt: ind.generatedAt,
+			promotedAt: ind.promotedAt,
+			retiredAt: ind.retiredAt,
+		}));
 
 	return c.json({ indicators });
 });
@@ -201,102 +299,37 @@ const getTriggerStatusRoute = createRoute({
 });
 
 app.openapi(getTriggerStatusRoute, async (c) => {
-	const db = await getDbClient();
+	const conditions = await getTriggerConditions();
 
-	// Get active indicator count
-	const activeRows = await db.execute(
-		"SELECT COUNT(*) as count FROM indicators WHERE status IN ('paper', 'production')"
-	);
-	const activeCount = (activeRows[0]?.count as number) ?? 0;
-
-	// Get recent IC values for rolling average
-	const icRows = await db.execute(
-		`
-      SELECT ic_value
-      FROM indicator_ic_history
-      WHERE date >= date('now', '-30 days')
-      ORDER BY date DESC
-    `
-	);
-
-	const icValues = icRows.map((r) => r.ic_value as number);
-	const rollingIC = icValues.length > 0 ? icValues.reduce((a, b) => a + b, 0) / icValues.length : 0;
-
-	// Calculate IC decay (consecutive days below threshold)
-	let icDecayDays = 0;
-	for (const ic of icValues) {
-		if (ic < 0.02) {
-			icDecayDays++;
-		} else {
-			break;
-		}
-	}
-
-	// Get last generation attempt
-	const lastAttemptRows = await db.execute(
-		"SELECT MAX(generated_at) as last_attempt FROM indicators"
-	);
-	const lastAttempt = lastAttemptRows[0]?.last_attempt as string | null;
-	const daysSinceLastAttempt = lastAttempt
-		? Math.floor((Date.now() - new Date(lastAttempt).getTime()) / (24 * 60 * 60 * 1000))
-		: 999;
-
-	// Get current market regime from regime labels
-	let currentRegime: string | null = null;
-	let regimeGapDetected = false;
-	try {
-		const regimeRows = await db.execute(
-			`SELECT regime, confidence FROM regime_labels
-       WHERE symbol = '_MARKET' AND timeframe = '1d'
-       ORDER BY timestamp DESC LIMIT 1`
-		);
-		if (regimeRows.length > 0) {
-			currentRegime = regimeRows[0]?.regime as string;
-			// A regime gap is detected when confidence is low (uncertain regime)
-			const confidence = regimeRows[0]?.confidence as number;
-			regimeGapDetected = confidence < 0.5;
-		} else {
-			// No regime data available - this is a gap
-			regimeGapDetected = true;
-		}
-	} catch {
-		// Regime labels table may not exist or be empty
-		regimeGapDetected = true;
-	}
-
-	const conditions = {
-		rollingIC30Day: rollingIC,
-		icDecayDays,
-		daysSinceLastAttempt,
-		activeIndicatorCount: activeCount,
-		maxIndicatorCapacity: 20,
-		regimeGapDetected,
-		currentRegime,
-	};
-
-	// Determine if generation should trigger
 	const shouldTrigger =
-		daysSinceLastAttempt >= 30 &&
-		activeCount < conditions.maxIndicatorCapacity &&
-		(rollingIC < 0.02 || icDecayDays >= 5);
+		conditions.daysSinceLastAttempt >= 30 &&
+		conditions.activeIndicatorCount < conditions.maxIndicatorCapacity &&
+		(conditions.rollingIC30Day < 0.02 || conditions.icDecayDays >= 5);
 
-	// Generate recommendation
 	let recommendation = "";
 	if (shouldTrigger) {
-		recommendation = `Indicator generation warranted: Rolling IC ${rollingIC.toFixed(4)}, ${icDecayDays} days of decay.`;
-	} else if (daysSinceLastAttempt < 30) {
-		recommendation = `Cooldown active: ${30 - daysSinceLastAttempt} days remaining.`;
-	} else if (rollingIC >= 0.02) {
-		recommendation = `Portfolio IC healthy at ${rollingIC.toFixed(4)}, no generation needed.`;
-	} else if (activeCount >= conditions.maxIndicatorCapacity) {
-		recommendation = `Indicator capacity reached (${activeCount}/${conditions.maxIndicatorCapacity}).`;
+		recommendation = `Indicator generation warranted: Rolling IC ${conditions.rollingIC30Day.toFixed(4)}, ${conditions.icDecayDays} days of decay.`;
+	} else if (conditions.daysSinceLastAttempt < 30) {
+		recommendation = `Cooldown active: ${30 - conditions.daysSinceLastAttempt} days remaining.`;
+	} else if (conditions.rollingIC30Day >= 0.02) {
+		recommendation = `Portfolio IC healthy at ${conditions.rollingIC30Day.toFixed(4)}, no generation needed.`;
+	} else if (conditions.activeIndicatorCount >= conditions.maxIndicatorCapacity) {
+		recommendation = `Indicator capacity reached (${conditions.activeIndicatorCount}/${conditions.maxIndicatorCapacity}).`;
 	} else {
 		recommendation = "No trigger conditions met.";
 	}
 
 	return c.json({
 		shouldTrigger,
-		conditions,
+		conditions: {
+			rollingIC30Day: conditions.rollingIC30Day,
+			icDecayDays: conditions.icDecayDays,
+			daysSinceLastAttempt: conditions.daysSinceLastAttempt,
+			activeIndicatorCount: conditions.activeIndicatorCount,
+			maxIndicatorCapacity: conditions.maxIndicatorCapacity,
+			regimeGapDetected: conditions.regimeGapDetected,
+			currentRegime: conditions.currentRegime,
+		},
 		lastCheck: new Date().toISOString(),
 		recommendation,
 	});
@@ -320,99 +353,37 @@ const forceTriggerCheckRoute = createRoute({
 });
 
 app.openapi(forceTriggerCheckRoute, async (c) => {
-	const db = await getDbClient();
+	const conditions = await getTriggerConditions();
 
-	// Get active indicator count
-	const activeRows = await db.execute(
-		"SELECT COUNT(*) as count FROM indicators WHERE status IN ('paper', 'production')"
-	);
-	const activeCount = (activeRows[0]?.count as number) ?? 0;
-
-	// Get recent IC values for rolling average
-	const icRows = await db.execute(
-		`
-      SELECT ic_value
-      FROM indicator_ic_history
-      WHERE date >= date('now', '-30 days')
-      ORDER BY date DESC
-    `
-	);
-
-	const icValues = icRows.map((r) => r.ic_value as number);
-	const rollingIC = icValues.length > 0 ? icValues.reduce((a, b) => a + b, 0) / icValues.length : 0;
-
-	// Calculate IC decay (consecutive days below threshold)
-	let icDecayDays = 0;
-	for (const ic of icValues) {
-		if (ic < 0.02) {
-			icDecayDays++;
-		} else {
-			break;
-		}
-	}
-
-	// Get last generation attempt
-	const lastAttemptRows = await db.execute(
-		"SELECT MAX(generated_at) as last_attempt FROM indicators"
-	);
-	const lastAttempt = lastAttemptRows[0]?.last_attempt as string | null;
-	const daysSinceLastAttempt = lastAttempt
-		? Math.floor((Date.now() - new Date(lastAttempt).getTime()) / (24 * 60 * 60 * 1000))
-		: 999;
-
-	// Get current market regime from regime labels
-	let currentRegime: string | null = null;
-	let regimeGapDetected = false;
-	try {
-		const regimeRows = await db.execute(
-			`SELECT regime, confidence FROM regime_labels
-       WHERE symbol = '_MARKET' AND timeframe = '1d'
-       ORDER BY timestamp DESC LIMIT 1`
-		);
-		if (regimeRows.length > 0) {
-			currentRegime = regimeRows[0]?.regime as string;
-			const confidence = regimeRows[0]?.confidence as number;
-			regimeGapDetected = confidence < 0.5;
-		} else {
-			regimeGapDetected = true;
-		}
-	} catch {
-		regimeGapDetected = true;
-	}
-
-	const conditions = {
-		rollingIC30Day: rollingIC,
-		icDecayDays,
-		daysSinceLastAttempt,
-		activeIndicatorCount: activeCount,
-		maxIndicatorCapacity: 20,
-		regimeGapDetected,
-		currentRegime,
-	};
-
-	// Determine if generation should trigger
 	const shouldTrigger =
-		daysSinceLastAttempt >= 30 &&
-		activeCount < conditions.maxIndicatorCapacity &&
-		(rollingIC < 0.02 || icDecayDays >= 5);
+		conditions.daysSinceLastAttempt >= 30 &&
+		conditions.activeIndicatorCount < conditions.maxIndicatorCapacity &&
+		(conditions.rollingIC30Day < 0.02 || conditions.icDecayDays >= 5);
 
-	// Generate recommendation
 	let recommendation = "";
 	if (shouldTrigger) {
-		recommendation = `Indicator generation warranted: Rolling IC ${rollingIC.toFixed(4)}, ${icDecayDays} days of decay.`;
-	} else if (daysSinceLastAttempt < 30) {
-		recommendation = `Cooldown active: ${30 - daysSinceLastAttempt} days remaining.`;
-	} else if (rollingIC >= 0.02) {
-		recommendation = `Portfolio IC healthy at ${rollingIC.toFixed(4)}, no generation needed.`;
-	} else if (activeCount >= conditions.maxIndicatorCapacity) {
-		recommendation = `Indicator capacity reached (${activeCount}/${conditions.maxIndicatorCapacity}).`;
+		recommendation = `Indicator generation warranted: Rolling IC ${conditions.rollingIC30Day.toFixed(4)}, ${conditions.icDecayDays} days of decay.`;
+	} else if (conditions.daysSinceLastAttempt < 30) {
+		recommendation = `Cooldown active: ${30 - conditions.daysSinceLastAttempt} days remaining.`;
+	} else if (conditions.rollingIC30Day >= 0.02) {
+		recommendation = `Portfolio IC healthy at ${conditions.rollingIC30Day.toFixed(4)}, no generation needed.`;
+	} else if (conditions.activeIndicatorCount >= conditions.maxIndicatorCapacity) {
+		recommendation = `Indicator capacity reached (${conditions.activeIndicatorCount}/${conditions.maxIndicatorCapacity}).`;
 	} else {
 		recommendation = "No trigger conditions met.";
 	}
 
 	return c.json({
 		shouldTrigger,
-		conditions,
+		conditions: {
+			rollingIC30Day: conditions.rollingIC30Day,
+			icDecayDays: conditions.icDecayDays,
+			daysSinceLastAttempt: conditions.daysSinceLastAttempt,
+			activeIndicatorCount: conditions.activeIndicatorCount,
+			maxIndicatorCapacity: conditions.maxIndicatorCapacity,
+			regimeGapDetected: conditions.regimeGapDetected,
+			currentRegime: conditions.currentRegime,
+		},
 		lastCheck: new Date().toISOString(),
 		recommendation,
 	});
@@ -438,57 +409,32 @@ const getPaperTradingRoute = createRoute({
 });
 
 app.openapi(getPaperTradingRoute, async (c) => {
-	const db = await getDbClient();
-
-	const rows = await db.execute(
-		`
-      SELECT id, name, category, paper_trading_start,
-             julianday('now') - julianday(paper_trading_start) as days_trading
-      FROM indicators
-      WHERE status = 'paper'
-    `
-	);
+	const repo = getIndicatorsRepo();
+	const paperIndicators = await repo.findPaperTradingIndicators();
 
 	const indicators = await Promise.all(
-		rows.map(async (row) => {
-			const indicatorId = row.id as string;
-
-			// Get signal count
-			const signalsRows = await db.execute(
-				"SELECT COUNT(*) as count FROM indicator_paper_signals WHERE indicator_id = ?",
-				[indicatorId]
-			);
-			const signalsRecorded = (signalsRows[0]?.count as number) ?? 0;
-
-			// Calculate IC from paper signals
-			const icRows = await db.execute(
-				`
-          SELECT signal, outcome
-          FROM indicator_paper_signals
-          WHERE indicator_id = ? AND outcome IS NOT NULL
-        `,
-				[indicatorId]
-			);
+		paperIndicators.map(async (ind) => {
+			const signalsRecorded = await repo.countPaperSignals(ind.id);
+			const signalsWithOutcomes = await repo.getPaperSignalsWithOutcomes(ind.id);
 
 			let currentIC: number | null = null;
-			if (icRows.length > 0) {
-				const signals = icRows.map((r) => r.signal as number);
-				const outcomes = icRows.map((r) => r.outcome as number);
-				// Simple IC calculation (Spearman correlation approximation)
-				currentIC = calculateSimpleIC(signals, outcomes);
+			const validSignals = signalsWithOutcomes.filter((s) => s.outcome !== null);
+			if (validSignals.length > 0) {
+				currentIC = calculateSimpleIC(
+					validSignals.map((s) => s.signal),
+					validSignals.map((s) => s.outcome!)
+				);
 			}
 
-			const daysTrading = (row.days_trading as number) ?? 0;
-
 			return {
-				id: indicatorId,
-				name: row.name as string,
-				category: row.category as string,
-				paperTradingStart: row.paper_trading_start as string,
-				daysTrading: Math.floor(daysTrading),
+				id: ind.id,
+				name: ind.name,
+				category: ind.category,
+				paperTradingStart: ind.paperTradingStart ?? "",
+				daysTrading: ind.daysTrading,
 				signalsRecorded,
 				currentIC,
-				progress: Math.min((daysTrading / 30) * 100, 100),
+				progress: Math.min((ind.daysTrading / 30) * 100, 100),
 			};
 		})
 	);
@@ -522,68 +468,66 @@ const getActivityRoute = createRoute({
 
 app.openapi(getActivityRoute, async (c) => {
 	const { limit } = c.req.valid("query");
-	const db = await getDbClient();
+	const repo = getIndicatorsRepo();
 
-	// Combine events from multiple sources
-	const rows = await db.execute(
-		`
-      SELECT
-        'generation' as type,
-        id as indicator_id,
-        name,
-        generated_at as timestamp,
-        hypothesis as details
-      FROM indicators
-      WHERE generated_at IS NOT NULL
+	// Get all indicators to build activity list
+	const result = await repo.findMany({}, { pageSize: 100 });
 
-      UNION ALL
+	// Build activity events from indicators
+	type Activity = {
+		type: "generation" | "promotion" | "retirement" | "paper_start";
+		indicatorId: string;
+		name: string;
+		timestamp: string;
+		details: string | null;
+	};
 
-      SELECT
-        'promotion' as type,
-        id,
-        name,
-        promoted_at as timestamp,
-        pr_url as details
-      FROM indicators
-      WHERE promoted_at IS NOT NULL
+	const activities: Activity[] = [];
 
-      UNION ALL
+	for (const ind of result.data) {
+		if (ind.generatedAt) {
+			activities.push({
+				type: "generation",
+				indicatorId: ind.id,
+				name: ind.name,
+				timestamp: ind.generatedAt,
+				details: ind.hypothesis,
+			});
+		}
+		if (ind.promotedAt) {
+			activities.push({
+				type: "promotion",
+				indicatorId: ind.id,
+				name: ind.name,
+				timestamp: ind.promotedAt,
+				details: ind.prUrl,
+			});
+		}
+		if (ind.retiredAt) {
+			activities.push({
+				type: "retirement",
+				indicatorId: ind.id,
+				name: ind.name,
+				timestamp: ind.retiredAt,
+				details: ind.retirementReason,
+			});
+		}
+		if (ind.paperTradingStart) {
+			activities.push({
+				type: "paper_start",
+				indicatorId: ind.id,
+				name: ind.name,
+				timestamp: ind.paperTradingStart,
+				details: "Started paper trading",
+			});
+		}
+	}
 
-      SELECT
-        'retirement' as type,
-        id,
-        name,
-        retired_at as timestamp,
-        retirement_reason as details
-      FROM indicators
-      WHERE retired_at IS NOT NULL
+	// Sort by timestamp descending and limit
+	activities.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
+	const limitedActivities = activities.slice(0, limit);
 
-      UNION ALL
-
-      SELECT
-        'paper_start' as type,
-        id,
-        name,
-        paper_trading_start as timestamp,
-        'Started paper trading' as details
-      FROM indicators
-      WHERE paper_trading_start IS NOT NULL
-
-      ORDER BY timestamp DESC
-      LIMIT ?
-    `,
-		[limit]
-	);
-
-	const activities = rows.map((row) => ({
-		type: row.type as "generation" | "promotion" | "retirement" | "paper_start",
-		indicatorId: row.indicator_id as string,
-		name: row.name as string,
-		timestamp: row.timestamp as string,
-		details: row.details as string | null,
-	}));
-
-	return c.json({ activities });
+	return c.json({ activities: limitedActivities });
 });
 
 // GET /api/indicators/synthesis/status - Get synthesis pipeline status
@@ -659,116 +603,37 @@ const getSynthesisStatusRoute = createRoute({
 });
 
 app.openapi(getSynthesisStatusRoute, async (c) => {
-	const db = await getDbClient();
+	const repo = getIndicatorsRepo();
+	const conditions = await getTriggerConditions();
 
-	// Get active indicator count
-	const activeRows = await db.execute(
-		"SELECT COUNT(*) as count FROM indicators WHERE status IN ('paper', 'production')"
-	);
-	const activeCount = (activeRows[0]?.count as number) ?? 0;
+	const cooldownMet = conditions.daysSinceLastAttempt >= 30;
+	const capacityAvailable = conditions.activeIndicatorCount < 20;
+	const existingIndicatorsUnderperforming =
+		conditions.rollingIC30Day < 0.02 || conditions.icDecayDays >= 5;
 
-	// Get recent IC values for rolling average
-	const icRows = await db.execute(
-		`
-      SELECT ic_value
-      FROM indicator_ic_history
-      WHERE date >= date('now', '-30 days')
-      ORDER BY date DESC
-    `
-	);
-
-	const icValues = icRows.map((r) => r.ic_value as number);
-	const rollingIC = icValues.length > 0 ? icValues.reduce((a, b) => a + b, 0) / icValues.length : 0;
-
-	// Calculate IC decay (consecutive days below threshold)
-	let icDecayDays = 0;
-	for (const ic of icValues) {
-		if (ic < 0.02) {
-			icDecayDays++;
-		} else {
-			break;
-		}
-	}
-
-	// Get last generation attempt
-	const lastAttemptRows = await db.execute(
-		"SELECT MAX(generated_at) as last_attempt FROM indicators"
-	);
-	const lastAttempt = lastAttemptRows[0]?.last_attempt as string | null;
-	const daysSinceLastAttempt = lastAttempt
-		? Math.floor((Date.now() - new Date(lastAttempt).getTime()) / (24 * 60 * 60 * 1000))
-		: 999;
-
-	// Get current market regime from regime labels
-	let currentRegime = "Unknown";
-	let regimeGapDetected = false;
-	let regimeGapDetails: string | undefined;
-	try {
-		const regimeRows = await db.execute(
-			`SELECT regime, confidence FROM regime_labels
-       WHERE symbol = '_MARKET' AND timeframe = '1d'
-       ORDER BY timestamp DESC LIMIT 1`
-		);
-		if (regimeRows.length > 0) {
-			currentRegime = regimeRows[0]?.regime as string;
-			const confidence = regimeRows[0]?.confidence as number;
-			regimeGapDetected = confidence < 0.5;
-			if (regimeGapDetected) {
-				regimeGapDetails = `Low confidence (${(confidence * 100).toFixed(1)}%) in regime classification`;
-			}
-		} else {
-			regimeGapDetected = true;
-			regimeGapDetails = "No regime data available";
-		}
-	} catch {
-		regimeGapDetected = true;
-		regimeGapDetails = "Regime classification unavailable";
-	}
-
-	const cooldownMet = daysSinceLastAttempt >= 30;
-	const capacityAvailable = activeCount < 20;
-	const existingIndicatorsUnderperforming = rollingIC < 0.02 || icDecayDays >= 5;
-
-	const conditions = {
-		regimeGapDetected,
-		currentRegime,
-		regimeGapDetails,
-		closestIndicatorSimilarity: 0,
-		rollingIC30Day: rollingIC,
-		icDecayDays,
-		existingIndicatorsUnderperforming,
-		daysSinceLastAttempt,
-		activeIndicatorCount: activeCount,
-		maxIndicatorCapacity: 20,
-		cooldownMet,
-		capacityAvailable,
-	};
-
-	// Determine if generation should trigger
 	const shouldTrigger = cooldownMet && capacityAvailable && existingIndicatorsUnderperforming;
 
-	// Generate recommendation and summary
 	let recommendation = "";
 	let summary = "";
 	let triggerReason: string | undefined;
 
 	if (shouldTrigger) {
-		triggerReason = regimeGapDetected
+		triggerReason = conditions.regimeGapDetected
 			? "regime_gap"
-			: icDecayDays >= 5
+			: conditions.icDecayDays >= 5
 				? "ic_decay"
 				: "low_rolling_ic";
-		summary = `Synthesis triggered: ${triggerReason === "regime_gap" ? "Regime gap detected" : `IC decay (${icDecayDays} days)`}`;
-		recommendation = `Indicator generation warranted: Rolling IC ${rollingIC.toFixed(4)}, ${icDecayDays} days of decay.`;
+		summary = `Synthesis triggered: ${triggerReason === "regime_gap" ? "Regime gap detected" : `IC decay (${conditions.icDecayDays} days)`}`;
+		recommendation = `Indicator generation warranted: Rolling IC ${conditions.rollingIC30Day.toFixed(4)}, ${conditions.icDecayDays} days of decay.`;
 	} else if (!cooldownMet) {
-		summary = `Cooldown active: ${30 - daysSinceLastAttempt} days remaining`;
-		recommendation = `Cooldown active: ${30 - daysSinceLastAttempt} days remaining.`;
+		summary = `Cooldown active: ${30 - conditions.daysSinceLastAttempt} days remaining`;
+		recommendation = `Cooldown active: ${30 - conditions.daysSinceLastAttempt} days remaining.`;
 	} else if (!capacityAvailable) {
-		summary = `Capacity reached: ${activeCount}/${conditions.maxIndicatorCapacity}`;
-		recommendation = `Indicator capacity reached (${activeCount}/${conditions.maxIndicatorCapacity}).`;
+		summary = `Capacity reached: ${conditions.activeIndicatorCount}/${conditions.maxIndicatorCapacity}`;
+		recommendation = `Indicator capacity reached (${conditions.activeIndicatorCount}/${conditions.maxIndicatorCapacity}).`;
 	} else if (!existingIndicatorsUnderperforming) {
-		summary = `Portfolio IC healthy at ${rollingIC.toFixed(4)}`;
-		recommendation = `Portfolio IC healthy at ${rollingIC.toFixed(4)}, no generation needed.`;
+		summary = `Portfolio IC healthy at ${conditions.rollingIC30Day.toFixed(4)}`;
+		recommendation = `Portfolio IC healthy at ${conditions.rollingIC30Day.toFixed(4)}, no generation needed.`;
 	} else {
 		summary = "No trigger conditions met";
 		recommendation = "No trigger conditions met.";
@@ -777,45 +642,43 @@ app.openapi(getSynthesisStatusRoute, async (c) => {
 	const triggerStatus = {
 		shouldTrigger,
 		triggerReason,
-		conditions,
+		conditions: {
+			regimeGapDetected: conditions.regimeGapDetected,
+			currentRegime: conditions.currentRegime ?? "Unknown",
+			regimeGapDetails: conditions.regimeGapDetails,
+			closestIndicatorSimilarity: 0,
+			rollingIC30Day: conditions.rollingIC30Day,
+			icDecayDays: conditions.icDecayDays,
+			existingIndicatorsUnderperforming,
+			daysSinceLastAttempt: conditions.daysSinceLastAttempt,
+			activeIndicatorCount: conditions.activeIndicatorCount,
+			maxIndicatorCapacity: conditions.maxIndicatorCapacity,
+			cooldownMet,
+			capacityAvailable,
+		},
 		summary,
 		recommendation,
 	};
 
-	// Check for active synthesis (staging indicator generated in last hour)
+	// Check for active synthesis
 	let activeSynthesis = null;
-	const stagingRows = await db.execute(
-		`SELECT id, name, generated_at, generated_by
-     FROM indicators
-     WHERE status = 'staging'
-       AND generated_at >= datetime('now', '-1 hour')
-     ORDER BY generated_at DESC
-     LIMIT 1`
-	);
-
-	if (stagingRows.length > 0) {
-		const row = stagingRows[0];
+	const recentStaging = await repo.findRecentStagingIndicators(1);
+	if (recentStaging.length > 0) {
+		const ind = recentStaging[0]!;
 		activeSynthesis = {
-			id: row?.id as string,
-			name: row?.name as string,
+			id: ind.id,
+			name: ind.name,
 			status: "running" as const,
 			currentPhase: "initiating_paper_trading" as const,
-			startedAt: row?.generated_at as string,
-			triggeredByCycleId: (row?.generated_by as string) ?? "unknown",
+			startedAt: ind.generatedAt,
+			triggeredByCycleId: ind.generatedBy ?? "unknown",
 			triggerReason: triggerReason ?? "manual",
 		};
 	}
 
-	// Get recent activity (last 5 generated indicators)
-	const recentRows = await db.execute(
-		`SELECT name, status, generated_at
-     FROM indicators
-     ORDER BY generated_at DESC
-     LIMIT 5`
-	);
-
-	const recentActivity = recentRows.map((row) => {
-		const status = row.status as string;
+	// Get recent activity
+	const result = await repo.findMany({}, { pageSize: 5 });
+	const recentActivity = result.data.map((ind) => {
 		let activityStatus:
 			| "paper_trading_started"
 			| "validation_failed"
@@ -823,13 +686,13 @@ app.openapi(getSynthesisStatusRoute, async (c) => {
 			| "error";
 		let success = false;
 
-		if (status === "paper" || status === "production") {
+		if (ind.status === "paper" || ind.status === "production") {
 			activityStatus = "paper_trading_started";
 			success = true;
-		} else if (status === "retired") {
+		} else if (ind.status === "retired") {
 			activityStatus = "validation_failed";
 			success = false;
-		} else if (status === "staging") {
+		} else if (ind.status === "staging") {
 			activityStatus = "paper_trading_started";
 			success = true;
 		} else {
@@ -838,9 +701,9 @@ app.openapi(getSynthesisStatusRoute, async (c) => {
 		}
 
 		return {
-			indicatorName: row.name as string,
+			indicatorName: ind.name,
 			status: activityStatus,
-			generatedAt: row.generated_at as string,
+			generatedAt: ind.generatedAt,
 			success,
 		};
 	});
@@ -894,17 +757,12 @@ const getSynthesisHistoryRoute = createRoute({
 	tags: ["Indicators"],
 });
 
-/**
- * Extract trigger reason from generated_by field or hypothesis.
- * The generated_by field contains the cycle ID that triggered synthesis.
- */
-function extractTriggerReason(row: {
-	generated_by: string | null;
-	hypothesis: string | null;
+function extractTriggerReason(ind: {
+	generatedBy: string;
+	hypothesis: string;
 }): string {
-	const generatedBy = row.generated_by ?? "";
+	const generatedBy = ind.generatedBy ?? "";
 
-	// Check for synthesis cycle patterns
 	if (generatedBy.startsWith("synthesis-")) {
 		return "synthesis";
 	}
@@ -912,8 +770,7 @@ function extractTriggerReason(row: {
 		return "ooda_cycle";
 	}
 
-	// Check hypothesis for regime-related keywords
-	const hypothesis = (row.hypothesis ?? "").toLowerCase();
+	const hypothesis = (ind.hypothesis ?? "").toLowerCase();
 	if (hypothesis.includes("regime") || hypothesis.includes("market condition")) {
 		return "regime_gap";
 	}
@@ -926,43 +783,33 @@ function extractTriggerReason(row: {
 
 app.openapi(getSynthesisHistoryRoute, async (c) => {
 	const { limit } = c.req.valid("query");
-	const db = await getDbClient();
+	const repo = getIndicatorsRepo();
 
-	// Query indicators with generated_at set (synthesized indicators)
-	// Join with IC history to get 30-day rolling IC
-	const rows = await db.execute(
-		`
-      SELECT
-        i.id, i.name, i.category, i.status, i.hypothesis,
-        i.generated_at, i.paper_trading_start, i.promoted_at,
-        i.retired_at, i.retirement_reason, i.generated_by,
-        (SELECT AVG(ic_value) FROM indicator_ic_history
-         WHERE indicator_id = i.id AND date >= date('now', '-30 days')) as ic
-      FROM indicators i
-      WHERE i.generated_at IS NOT NULL
-      ORDER BY i.generated_at DESC
-      LIMIT ?
-    `,
-		[limit]
+	const result = await repo.findMany({}, { pageSize: limit });
+
+	const history = await Promise.all(
+		result.data.map(async (ind) => {
+			const avgIC = await repo.getAverageIC(ind.id, 30);
+
+			return {
+				id: ind.id,
+				name: ind.name,
+				category: ind.category,
+				status: ind.status,
+				hypothesis: ind.hypothesis,
+				generatedAt: ind.generatedAt,
+				paperTradingStart: ind.paperTradingStart,
+				promotedAt: ind.promotedAt,
+				retiredAt: ind.retiredAt,
+				retirementReason: ind.retirementReason,
+				ic: avgIC,
+				triggerReason: extractTriggerReason({
+					generatedBy: ind.generatedBy,
+					hypothesis: ind.hypothesis,
+				}),
+			};
+		})
 	);
-
-	const history = rows.map((row) => ({
-		id: row.id as string,
-		name: row.name as string,
-		category: row.category as string,
-		status: row.status as string,
-		hypothesis: row.hypothesis as string,
-		generatedAt: row.generated_at as string,
-		paperTradingStart: row.paper_trading_start as string | null,
-		promotedAt: row.promoted_at as string | null,
-		retiredAt: row.retired_at as string | null,
-		retirementReason: row.retirement_reason as string | null,
-		ic: row.ic as number | null,
-		triggerReason: extractTriggerReason({
-			generated_by: row.generated_by as string | null,
-			hypothesis: row.hypothesis as string | null,
-		}),
-	}));
 
 	return c.json({ history });
 });
@@ -1032,10 +879,10 @@ const triggerSynthesisRoute = createRoute({
 app.openapi(triggerSynthesisRoute, async (c) => {
 	const { reason, regime } = c.req.valid("json");
 
-	// Import workflow dynamically to avoid circular dependencies
 	const { indicatorSynthesisWorkflow } = await import("@cream/api");
 
 	const cycleId = `manual-${Date.now()}`;
+	const conditions = await getTriggerConditions();
 
 	try {
 		const run = await indicatorSynthesisWorkflow.createRun();
@@ -1043,8 +890,8 @@ app.openapi(triggerSynthesisRoute, async (c) => {
 			inputData: {
 				triggerReason: reason,
 				currentRegime: regime,
-				rollingIC30Day: 0,
-				icDecayDays: 0,
+				rollingIC30Day: conditions.rollingIC30Day,
+				icDecayDays: conditions.icDecayDays,
 				cycleId,
 			},
 		});
@@ -1053,7 +900,6 @@ app.openapi(triggerSynthesisRoute, async (c) => {
 			throw new HTTPException(500, { message: "Workflow execution failed" });
 		}
 
-		// Extract result from successful workflow
 		const output = (workflowResult as { result?: Record<string, unknown> }).result as
 			| {
 					success?: boolean;
@@ -1144,32 +990,30 @@ const getIndicatorRoute = createRoute({
 // @ts-expect-error - Hono OpenAPI multi-response type inference limitation
 app.openapi(getIndicatorRoute, async (c) => {
 	const { id } = c.req.valid("param");
-	const db = await getDbClient();
+	const repo = getIndicatorsRepo();
 
-	const rows = await db.execute("SELECT * FROM indicators WHERE id = ?", [id]);
-	const row = rows[0];
-	if (!row) {
+	const ind = await repo.findById(id);
+	if (!ind) {
 		throw new HTTPException(404, { message: "Indicator not found" });
 	}
+
 	const indicator = {
-		id: row.id as string,
-		name: row.name as string,
-		category: row.category as string,
-		status: row.status as "staging" | "paper" | "production" | "retired",
-		hypothesis: row.hypothesis as string,
-		economicRationale: row.economic_rationale as string,
-		generatedAt: row.generated_at as string,
-		generatedBy: row.generated_by as string,
-		promotedAt: row.promoted_at as string | null,
-		retiredAt: row.retired_at as string | null,
-		validationReport: row.validation_report ? JSON.parse(row.validation_report as string) : null,
-		paperTradingReport: row.paper_trading_report
-			? JSON.parse(row.paper_trading_report as string)
-			: null,
-		paperTradingStart: row.paper_trading_start as string | null,
-		paperTradingEnd: row.paper_trading_end as string | null,
-		prUrl: row.pr_url as string | null,
-		codeHash: row.code_hash as string | null,
+		id: ind.id,
+		name: ind.name,
+		category: ind.category,
+		status: ind.status as "staging" | "paper" | "production" | "retired",
+		hypothesis: ind.hypothesis,
+		economicRationale: ind.economicRationale,
+		generatedAt: ind.generatedAt,
+		generatedBy: ind.generatedBy,
+		promotedAt: ind.promotedAt,
+		retiredAt: ind.retiredAt,
+		validationReport: ind.validationReport,
+		paperTradingReport: ind.paperTradingReport,
+		paperTradingStart: ind.paperTradingStart,
+		paperTradingEnd: ind.paperTradingEnd,
+		prUrl: ind.prUrl,
+		codeHash: ind.codeHash,
 	};
 
 	return c.json({ indicator });
@@ -1205,25 +1049,16 @@ const getICHistoryRoute = createRoute({
 app.openapi(getICHistoryRoute, async (c) => {
 	const { id } = c.req.valid("param");
 	const { days } = c.req.valid("query");
-	const db = await getDbClient();
+	const repo = getIndicatorsRepo();
 
-	const rows = await db.execute(
-		`
-      SELECT date, ic_value, ic_std, decisions_used_in, decisions_correct
-      FROM indicator_ic_history
-      WHERE indicator_id = ?
-      ORDER BY date DESC
-      LIMIT ?
-    `,
-		[id, days]
-	);
+	const icHistory = await repo.findICHistoryByIndicatorId(id, { limit: days });
 
-	const history = rows.map((row) => ({
-		date: row.date as string,
-		icValue: row.ic_value as number,
-		icStd: row.ic_std as number,
-		decisionsUsedIn: row.decisions_used_in as number,
-		decisionsCorrect: row.decisions_correct as number,
+	const history = icHistory.map((entry) => ({
+		date: entry.date,
+		icValue: entry.icValue,
+		icStd: entry.icStd,
+		decisionsUsedIn: entry.decisionsUsedIn,
+		decisionsCorrect: entry.decisionsCorrect,
 	}));
 
 	return c.json({ history });
@@ -1276,63 +1111,21 @@ const retireIndicatorRoute = createRoute({
 app.openapi(retireIndicatorRoute, async (c) => {
 	const { id } = c.req.valid("param");
 	const { reason } = c.req.valid("json");
-	const db = await getDbClient();
+	const repo = getIndicatorsRepo();
 
-	const result = await db.run(
-		`
-      UPDATE indicators
-      SET status = 'retired',
-          retired_at = datetime('now'),
-          retirement_reason = ?,
-          updated_at = datetime('now')
-      WHERE id = ? AND status != 'retired'
-    `,
-		[reason ?? "Manual retirement", id]
-	);
-
-	if (result.changes === 0) {
+	const ind = await repo.findById(id);
+	if (!ind) {
 		throw new HTTPException(404, { message: "Indicator not found or already retired" });
 	}
 
+	if (ind.status === "retired") {
+		throw new HTTPException(404, { message: "Indicator not found or already retired" });
+	}
+
+	await repo.retire(id, reason ?? "Manual retirement");
+
 	return c.json({ success: true });
 });
-
-// ============================================
-// Helper Functions
-// ============================================
-
-/**
- * Calculate a simple Information Coefficient (Pearson correlation)
- */
-function calculateSimpleIC(signals: number[], outcomes: number[]): number {
-	if (signals.length === 0 || signals.length !== outcomes.length) {
-		return 0;
-	}
-
-	const n = signals.length;
-	const meanSignal = signals.reduce((a, b) => a + b, 0) / n;
-	const meanOutcome = outcomes.reduce((a, b) => a + b, 0) / n;
-
-	let numerator = 0;
-	let denomSignal = 0;
-	let denomOutcome = 0;
-
-	for (let i = 0; i < n; i++) {
-		const signal = signals[i];
-		const outcome = outcomes[i];
-		if (signal === undefined || outcome === undefined) {
-			continue;
-		}
-		const diffSignal = signal - meanSignal;
-		const diffOutcome = outcome - meanOutcome;
-		numerator += diffSignal * diffOutcome;
-		denomSignal += diffSignal * diffSignal;
-		denomOutcome += diffOutcome * diffOutcome;
-	}
-
-	const denominator = Math.sqrt(denomSignal * denomOutcome);
-	return denominator === 0 ? 0 : numerator / denominator;
-}
 
 // ============================================
 // Export

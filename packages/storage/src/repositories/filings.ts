@@ -420,6 +420,26 @@ export class FilingsRepository {
 			byType,
 		};
 	}
+
+	async findByCreatedAtRange(
+		startTime: string,
+		endTime: string,
+		limit = 100
+	): Promise<Filing[]> {
+		const rows = await this.db
+			.select()
+			.from(filings)
+			.where(
+				and(
+					gte(filings.createdAt, new Date(startTime)),
+					lte(filings.createdAt, new Date(endTime))
+				)
+			)
+			.orderBy(desc(filings.filedDate))
+			.limit(limit);
+
+		return rows.map(mapFilingRow);
+	}
 }
 
 // ============================================

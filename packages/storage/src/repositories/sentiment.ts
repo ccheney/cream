@@ -543,4 +543,24 @@ export class SentimentRepository {
 
 		return (rows.rows as SentimentRow[]).map(mapSentimentRow);
 	}
+
+	async findByComputedAtRange(
+		startTime: string,
+		endTime: string,
+		limit = 100
+	): Promise<SentimentIndicators[]> {
+		const rows = await this.db
+			.select()
+			.from(sentimentIndicators)
+			.where(
+				and(
+					gte(sentimentIndicators.computedAt, new Date(startTime)),
+					lte(sentimentIndicators.computedAt, new Date(endTime))
+				)
+			)
+			.orderBy(sentimentIndicators.symbol)
+			.limit(limit);
+
+		return rows.map(mapSentimentRow);
+	}
 }

@@ -24,8 +24,12 @@ import {
 	type TursoShortInterestRepository,
 } from "@cream/indicators";
 import type { AlpacaMarketDataClient } from "@cream/marketdata";
-import type { TursoClient } from "@cream/storage";
-import { getDbClient } from "../db.js";
+import {
+	getCorporateActionsRepo,
+	getFundamentalsRepo,
+	getSentimentRepo,
+	getShortInterestRepo,
+} from "../db.js";
 import { getAlpacaClient } from "../routes/market/types.js";
 import { getSharedOptionsDataProvider } from "./shared-options-provider.js";
 
@@ -87,198 +91,161 @@ class AlpacaMarketDataAdapter implements MarketDataProvider {
 }
 
 // ============================================
-// Turso Repository Adapters
+// Drizzle Repository Adapters
 // ============================================
 
 /**
- * Creates Turso repository adapters from the database client.
- * These adapt the raw Turso queries to the repository interfaces.
+ * Creates Turso-compatible repository adapters from Drizzle repositories.
+ * These adapt the Drizzle repositories to the interfaces expected by @cream/indicators.
  */
-function createTursoRepositories(client: TursoClient): TursoRepositories {
+function createDrizzleRepositories(): TursoRepositories {
 	return {
-		fundamentals: createFundamentalsRepo(client),
-		shortInterest: createShortInterestRepo(client),
-		sentiment: createSentimentRepo(client),
-		corporateActions: createCorporateActionsRepo(client),
+		fundamentals: createFundamentalsAdapter(),
+		shortInterest: createShortInterestAdapter(),
+		sentiment: createSentimentAdapter(),
+		corporateActions: createCorporateActionsAdapter(),
 	};
 }
 
-function createFundamentalsRepo(client: TursoClient): TursoFundamentalsRepository {
+function createFundamentalsAdapter(): TursoFundamentalsRepository {
+	const repo = getFundamentalsRepo();
 	return {
 		async findLatestBySymbol(symbol: string) {
-			const rows = await client.execute(
-				`SELECT * FROM fundamental_indicators
-         WHERE symbol = ?
-         ORDER BY date DESC
-         LIMIT 1`,
-				[symbol.toUpperCase()]
-			);
-
-			const row = rows[0];
+			const results = await repo.findBySymbol(symbol.toUpperCase());
+			const row = results?.[0];
 			if (!row) {
 				return null;
 			}
 
 			return {
-				id: String(row.id),
-				symbol: String(row.symbol),
-				date: String(row.date),
-				peRatioTtm: row.pe_ratio_ttm as number | null,
-				peRatioForward: row.pe_ratio_forward as number | null,
-				pbRatio: row.pb_ratio as number | null,
-				evEbitda: row.ev_ebitda as number | null,
-				earningsYield: row.earnings_yield as number | null,
-				dividendYield: row.dividend_yield as number | null,
-				cape10yr: row.cape_10yr as number | null,
-				grossProfitability: row.gross_profitability as number | null,
-				roe: row.roe as number | null,
-				roa: row.roa as number | null,
-				assetGrowth: row.asset_growth as number | null,
-				accrualsRatio: row.accruals_ratio as number | null,
-				cashFlowQuality: row.cash_flow_quality as number | null,
-				beneishMScore: row.beneish_m_score as number | null,
-				marketCap: row.market_cap as number | null,
-				sector: row.sector as string | null,
-				industry: row.industry as string | null,
-				source: String(row.source ?? "computed"),
-				computedAt: String(row.computed_at),
+				id: row.id,
+				symbol: row.symbol,
+				date: row.date,
+				peRatioTtm: row.peRatioTtm,
+				peRatioForward: row.peRatioForward,
+				pbRatio: row.pbRatio,
+				evEbitda: row.evEbitda,
+				earningsYield: row.earningsYield,
+				dividendYield: row.dividendYield,
+				cape10yr: row.cape10yr,
+				grossProfitability: row.grossProfitability,
+				roe: row.roe,
+				roa: row.roa,
+				assetGrowth: row.assetGrowth,
+				accrualsRatio: row.accrualsRatio,
+				cashFlowQuality: row.cashFlowQuality,
+				beneishMScore: row.beneishMScore,
+				marketCap: row.marketCap,
+				sector: row.sector,
+				industry: row.industry,
+				source: row.source ?? "computed",
+				computedAt: row.computedAt,
 			};
 		},
 	};
 }
 
-function createShortInterestRepo(client: TursoClient): TursoShortInterestRepository {
+function createShortInterestAdapter(): TursoShortInterestRepository {
+	const repo = getShortInterestRepo();
 	return {
 		async findLatestBySymbol(symbol: string) {
-			const rows = await client.execute(
-				`SELECT * FROM short_interest_indicators
-         WHERE symbol = ?
-         ORDER BY settlement_date DESC
-         LIMIT 1`,
-				[symbol.toUpperCase()]
-			);
-
-			const row = rows[0];
+			const row = await repo.findLatestBySymbol(symbol.toUpperCase());
 			if (!row) {
 				return null;
 			}
 
 			return {
-				id: String(row.id),
-				symbol: String(row.symbol),
-				settlementDate: String(row.settlement_date),
-				shortInterest: row.short_interest as number,
-				shortInterestRatio: row.short_interest_ratio as number | null,
-				daysToCover: row.days_to_cover as number | null,
-				shortPctFloat: row.short_pct_float as number | null,
-				shortInterestChange: row.short_interest_change as number | null,
-				source: String(row.source ?? "FINRA"),
-				fetchedAt: String(row.fetched_at),
+				id: row.id,
+				symbol: row.symbol,
+				settlementDate: row.settlementDate,
+				shortInterest: row.shortInterest,
+				shortInterestRatio: row.shortInterestRatio,
+				daysToCover: row.daysToCover,
+				shortPctFloat: row.shortPctFloat,
+				shortInterestChange: row.shortInterestChange,
+				source: row.source ?? "FINRA",
+				fetchedAt: row.fetchedAt,
 			};
 		},
 	};
 }
 
-function createSentimentRepo(client: TursoClient): TursoSentimentRepository {
+function createSentimentAdapter(): TursoSentimentRepository {
+	const repo = getSentimentRepo();
 	return {
 		async findLatestBySymbol(symbol: string) {
-			const rows = await client.execute(
-				`SELECT * FROM sentiment_indicators
-         WHERE symbol = ?
-         ORDER BY date DESC
-         LIMIT 1`,
-				[symbol.toUpperCase()]
-			);
-
-			const row = rows[0];
+			const row = await repo.findLatestBySymbol(symbol.toUpperCase());
 			if (!row) {
 				return null;
 			}
 
 			return {
-				id: String(row.id),
-				symbol: String(row.symbol),
-				date: String(row.date),
-				sentimentScore: row.sentiment_score as number | null,
-				sentimentStrength: row.sentiment_strength as number | null,
-				newsVolume: row.news_volume as number | null,
-				sentimentMomentum: row.sentiment_momentum as number | null,
-				eventRiskFlag: Boolean(row.event_risk_flag),
-				newsSentiment: row.news_sentiment as number | null,
-				socialSentiment: row.social_sentiment as number | null,
-				analystSentiment: row.analyst_sentiment as number | null,
-				computedAt: String(row.computed_at),
+				id: row.id,
+				symbol: row.symbol,
+				date: row.date,
+				sentimentScore: row.sentimentScore,
+				sentimentStrength: row.sentimentStrength,
+				newsVolume: row.newsVolume,
+				sentimentMomentum: row.sentimentMomentum,
+				eventRiskFlag: row.eventRiskFlag,
+				newsSentiment: row.newsSentiment,
+				socialSentiment: row.socialSentiment,
+				analystSentiment: row.analystSentiment,
+				computedAt: row.computedAt,
 			};
 		},
 	};
 }
 
-function createCorporateActionsRepo(client: TursoClient): TursoCorporateActionsRepository {
+function createCorporateActionsAdapter(): TursoCorporateActionsRepository {
+	const repo = getCorporateActionsRepo();
 	return {
 		async getForSymbol(symbol: string) {
-			const rows = await client.execute(
-				`SELECT * FROM corporate_actions_indicators
-         WHERE symbol = ?
-         ORDER BY date DESC`,
-				[symbol.toUpperCase()]
-			);
-
+			const rows = await repo.getForSymbol(symbol.toUpperCase());
 			return rows.map((row) => ({
-				id: row.id as number | undefined,
-				symbol: String(row.symbol),
-				actionType: row.recent_split ? "SPLIT" : "DIVIDEND",
-				exDate: String(row.date),
-				recordDate: null,
-				payDate: null,
-				ratio: row.split_ratio ? Number.parseFloat(String(row.split_ratio)) : null,
-				amount: row.trailing_dividend_yield as number | null,
-				details: null,
-				provider: "ALPACA",
-				createdAt: undefined,
+				id: row.id,
+				symbol: row.symbol,
+				actionType: row.actionType === "split" || row.actionType === "reverse_split" ? "SPLIT" : "DIVIDEND",
+				exDate: row.exDate,
+				recordDate: row.recordDate,
+				payDate: row.payDate,
+				ratio: row.ratio,
+				amount: row.amount,
+				details: row.details,
+				provider: row.provider.toUpperCase(),
+				createdAt: row.createdAt,
 			}));
 		},
 		async getDividends(symbol: string) {
-			const rows = await client.execute(
-				`SELECT * FROM corporate_actions_indicators
-         WHERE symbol = ? AND trailing_dividend_yield IS NOT NULL
-         ORDER BY date DESC`,
-				[symbol.toUpperCase()]
-			);
-
+			const rows = await repo.getDividends(symbol.toUpperCase());
 			return rows.map((row) => ({
-				id: row.id as number | undefined,
-				symbol: String(row.symbol),
+				id: row.id,
+				symbol: row.symbol,
 				actionType: "DIVIDEND",
-				exDate: String(row.date),
-				recordDate: null,
-				payDate: null,
-				ratio: null,
-				amount: row.trailing_dividend_yield as number | null,
-				details: null,
-				provider: "ALPACA",
-				createdAt: undefined,
+				exDate: row.exDate,
+				recordDate: row.recordDate,
+				payDate: row.payDate,
+				ratio: row.ratio,
+				amount: row.amount,
+				details: row.details,
+				provider: row.provider.toUpperCase(),
+				createdAt: row.createdAt,
 			}));
 		},
 		async getSplits(symbol: string) {
-			const rows = await client.execute(
-				`SELECT * FROM corporate_actions_indicators
-         WHERE symbol = ? AND recent_split = 1
-         ORDER BY date DESC`,
-				[symbol.toUpperCase()]
-			);
-
+			const rows = await repo.getSplits(symbol.toUpperCase());
 			return rows.map((row) => ({
-				id: row.id as number | undefined,
-				symbol: String(row.symbol),
+				id: row.id,
+				symbol: row.symbol,
 				actionType: "SPLIT",
-				exDate: String(row.date),
-				recordDate: null,
-				payDate: null,
-				ratio: row.split_ratio ? Number.parseFloat(String(row.split_ratio)) : null,
-				amount: null,
-				details: null,
-				provider: "ALPACA",
-				createdAt: undefined,
+				exDate: row.exDate,
+				recordDate: row.recordDate,
+				payDate: row.payDate,
+				ratio: row.ratio,
+				amount: row.amount,
+				details: row.details,
+				provider: row.provider.toUpperCase(),
+				createdAt: row.createdAt,
 			}));
 		},
 	};
@@ -318,7 +285,6 @@ export async function getIndicatorService(): Promise<IndicatorService> {
 async function initializeIndicatorService(): Promise<IndicatorService> {
 	// Get dependencies
 	const alpacaClient = getAlpacaClient();
-	const tursoClient = await getDbClient();
 
 	// Create adapters
 	const marketData = new AlpacaMarketDataAdapter(alpacaClient);
@@ -327,9 +293,9 @@ async function initializeIndicatorService(): Promise<IndicatorService> {
 	const optionsCalculator = createOptionsCalculator();
 	const cache = createIndicatorCache();
 
-	// Create Turso repository adapters
-	const tursoRepos = createTursoRepositories(tursoClient);
-	const batchRepos = createBatchRepositoryAdapters(tursoRepos);
+	// Create Drizzle repository adapters (compatible with Turso interface)
+	const drizzleRepos = createDrizzleRepositories();
+	const batchRepos = createBatchRepositoryAdapters(drizzleRepos);
 
 	// Get the shared options data provider (uses the shared WebSocket connection)
 	const optionsData = getSharedOptionsDataProvider();

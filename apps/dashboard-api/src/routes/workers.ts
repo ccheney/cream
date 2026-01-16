@@ -13,9 +13,17 @@
  */
 
 import { requireEnv } from "@cream/domain";
+import type { IndicatorSyncRun, SyncRunType } from "@cream/storage";
 import { createRoute, OpenAPIHono, z } from "@hono/zod-openapi";
 import { HTTPException } from "hono/http-exception";
-import { getDbClient } from "../db.js";
+import {
+	getCorporateActionsRepo,
+	getFilingsRepo,
+	getIndicatorSyncRunsRepo,
+	getMacroWatchRepo,
+	getSentimentRepo,
+	getShortInterestRepo,
+} from "../db.js";
 import log from "../logger.js";
 import { broadcastWorkerRunUpdate } from "../websocket/channels.js";
 
@@ -120,20 +128,15 @@ function mapRunTypeToService(runType: string): WorkerService | null {
 	return mapping[runType] ?? null;
 }
 
-function formatResult(row: {
-	symbols_processed?: number;
-	symbols_failed?: number;
-	error_message?: string | null;
-}): string | null {
-	if (row.error_message) {
-		return row.error_message;
+function formatResult(run: IndicatorSyncRun): string | null {
+	if (run.errorMessage) {
+		return run.errorMessage;
 	}
-	if (row.symbols_processed !== undefined && row.symbols_processed > 0) {
-		const failed = row.symbols_failed ?? 0;
-		if (failed > 0) {
-			return `${row.symbols_processed} processed, ${failed} failed`;
+	if (run.symbolsProcessed > 0) {
+		if (run.symbolsFailed > 0) {
+			return `${run.symbolsProcessed} processed, ${run.symbolsFailed} failed`;
 		}
-		return `${row.symbols_processed} processed`;
+		return `${run.symbolsProcessed} processed`;
 	}
 	return null;
 }
@@ -145,6 +148,24 @@ function calculateDuration(startedAt: string, completedAt: string | null): numbe
 	const start = new Date(startedAt).getTime();
 	const end = new Date(completedAt).getTime();
 	return Math.round((end - start) / 1000);
+}
+
+function mapRunToSchema(run: IndicatorSyncRun) {
+	const serviceName = mapRunTypeToService(run.runType);
+	if (!serviceName) {
+		return null;
+	}
+
+	return {
+		id: run.id,
+		service: serviceName,
+		status: run.status as z.infer<typeof RunStatusSchema>,
+		startedAt: run.startedAt,
+		completedAt: run.completedAt,
+		duration: calculateDuration(run.startedAt, run.completedAt),
+		result: formatResult(run),
+		error: run.errorMessage,
+	};
 }
 
 // ============================================
@@ -169,7 +190,7 @@ const getWorkerStatusRoute = createRoute({
 
 app.openapi(getWorkerStatusRoute, async (c) => {
 	try {
-		const db = await getDbClient();
+		const syncRunsRepo = getIndicatorSyncRunsRepo();
 
 		const allServices: WorkerService[] = [
 			"macro_watch",
@@ -181,26 +202,15 @@ app.openapi(getWorkerStatusRoute, async (c) => {
 		];
 
 		// Get running services
-		const runningRows = await db.execute(
-			`SELECT run_type FROM indicator_sync_runs WHERE status = 'running'`
-		);
+		const runningRuns = await syncRunsRepo.findAllRunning();
 		const runningServices = new Set(
-			runningRows.map((row) => mapRunTypeToService(row.run_type as string)).filter(Boolean)
+			runningRuns
+				.map((run) => mapRunTypeToService(run.runType))
+				.filter((s): s is WorkerService => s !== null)
 		);
 
 		// Get last completed/failed run for each service
-		const lastRunRows = await db.execute(`
-			SELECT run_type, started_at, completed_at, status, symbols_processed, symbols_failed, error_message
-			FROM indicator_sync_runs
-			WHERE status IN ('completed', 'failed')
-			AND (run_type, started_at) IN (
-				SELECT run_type, MAX(started_at)
-				FROM indicator_sync_runs
-				WHERE status IN ('completed', 'failed')
-				GROUP BY run_type
-			)
-		`);
-
+		const lastRunByType = await syncRunsRepo.getLastRunByType();
 		const lastRunByService = new Map<
 			WorkerService,
 			{
@@ -211,18 +221,14 @@ app.openapi(getWorkerStatusRoute, async (c) => {
 			}
 		>();
 
-		for (const row of lastRunRows) {
-			const service = mapRunTypeToService(row.run_type as string);
+		for (const [runType, run] of lastRunByType) {
+			const service = mapRunTypeToService(runType);
 			if (service) {
 				lastRunByService.set(service, {
-					startedAt: row.started_at as string,
-					completedAt: row.completed_at as string | null,
-					status: row.status as "completed" | "failed",
-					result: formatResult({
-						symbols_processed: row.symbols_processed as number | undefined,
-						symbols_failed: row.symbols_failed as number | undefined,
-						error_message: row.error_message as string | null,
-					}),
+					startedAt: run.startedAt,
+					completedAt: run.completedAt,
+					status: run.status as "completed" | "failed",
+					result: formatResult(run),
 				});
 			}
 		}
@@ -332,17 +338,12 @@ app.openapi(triggerServiceRoute, async (c) => {
 	const environment = requireEnv();
 
 	try {
-		const db = await getDbClient();
+		const syncRunsRepo = getIndicatorSyncRunsRepo();
 
 		// Check if service is already running
-		const runningRows = await db.execute(
-			`SELECT id FROM indicator_sync_runs
-			 WHERE run_type = ? AND status IN ('running', 'pending')
-			 LIMIT 1`,
-			[service]
-		);
+		const runningRun = await syncRunsRepo.findRunningByType(service as SyncRunType);
 
-		if (runningRows.length > 0) {
+		if (runningRun) {
 			throw new HTTPException(409, {
 				message: `${ServiceDisplayNames[service]} is already running`,
 			});
@@ -352,12 +353,14 @@ app.openapi(triggerServiceRoute, async (c) => {
 		const runId = `run-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
 		const now = new Date().toISOString();
 
-		await db.run(
-			`INSERT INTO indicator_sync_runs
-			 (id, run_type, started_at, status, symbols_processed, symbols_failed, environment, error_message)
-			 VALUES (?, ?, ?, 'running', 0, 0, ?, NULL)`,
-			[runId, service, now, environment]
-		);
+		await syncRunsRepo.create({
+			id: runId,
+			runType: service as SyncRunType,
+			environment,
+		});
+
+		// Update status to running
+		await syncRunsRepo.update(runId, { status: "running" });
 
 		log.info({ runId, service, priority, environment }, "Worker service trigger starting");
 
@@ -400,19 +403,12 @@ app.openapi(triggerServiceRoute, async (c) => {
 				const completedAt = new Date().toISOString();
 				const status = result.success ? "completed" : "failed";
 
-				await db.run(
-					`UPDATE indicator_sync_runs
-					 SET status = ?, completed_at = ?, symbols_processed = ?, symbols_failed = ?, error_message = ?
-					 WHERE id = ?`,
-					[
-						status,
-						completedAt,
-						result.processed ?? 0,
-						result.failed ?? 0,
-						result.error ?? result.message ?? null,
-						runId,
-					]
-				);
+				await syncRunsRepo.update(runId, {
+					status: status as "completed" | "failed",
+					symbolsProcessed: result.processed ?? 0,
+					symbolsFailed: result.failed ?? 0,
+					errorMessage: result.error ?? result.message ?? undefined,
+				});
 
 				log.info(
 					{ runId, service, status, processed: result.processed, failed: result.failed },
@@ -440,12 +436,10 @@ app.openapi(triggerServiceRoute, async (c) => {
 				log.error({ runId, service, error: errorMessage }, "Worker service trigger failed");
 
 				const failedAt = new Date().toISOString();
-				await db.run(
-					`UPDATE indicator_sync_runs
-					 SET status = 'failed', completed_at = ?, error_message = ?
-					 WHERE id = ?`,
-					[failedAt, errorMessage, runId]
-				);
+				await syncRunsRepo.update(runId, {
+					status: "failed",
+					errorMessage,
+				});
 
 				// Broadcast run failed via websocket
 				broadcastWorkerRunUpdate({
@@ -516,64 +510,19 @@ app.openapi(getWorkerRunsRoute, async (c) => {
 	const { limit, service, status } = c.req.valid("query");
 
 	try {
-		const db = await getDbClient();
+		const syncRunsRepo = getIndicatorSyncRunsRepo();
 
-		// Build dynamic query
-		const conditions: string[] = [];
-		const args: (string | number)[] = [];
+		const filters = {
+			runType: service as SyncRunType | undefined,
+			status: status as "pending" | "running" | "completed" | "failed" | undefined,
+		};
 
-		if (service) {
-			conditions.push("run_type = ?");
-			args.push(service);
-		}
-		if (status) {
-			conditions.push("status = ?");
-			args.push(status);
-		}
+		const syncRuns = await syncRunsRepo.findMany(filters, limit);
+		const total = await syncRunsRepo.countByFilters(filters);
 
-		const whereClause = conditions.length > 0 ? `WHERE ${conditions.join(" AND ")}` : "";
-
-		// Get runs
-		const runsQuery = `
-			SELECT id, run_type, started_at, completed_at, status,
-			       symbols_processed, symbols_failed, error_message
-			FROM indicator_sync_runs
-			${whereClause}
-			ORDER BY started_at DESC
-			LIMIT ?
-		`;
-		args.push(limit);
-
-		const rows = await db.execute(runsQuery, args);
-
-		const runs = rows
-			.map((row) => {
-				const serviceName = mapRunTypeToService(row.run_type as string);
-				if (!serviceName) {
-					return null;
-				}
-
-				return {
-					id: row.id as string,
-					service: serviceName,
-					status: row.status as z.infer<typeof RunStatusSchema>,
-					startedAt: row.started_at as string,
-					completedAt: row.completed_at as string | null,
-					duration: calculateDuration(row.started_at as string, row.completed_at as string | null),
-					result: formatResult({
-						symbols_processed: row.symbols_processed as number | undefined,
-						symbols_failed: row.symbols_failed as number | undefined,
-						error_message: row.error_message as string | null,
-					}),
-					error: row.error_message as string | null,
-				};
-			})
+		const runs = syncRuns
+			.map(mapRunToSchema)
 			.filter((run): run is NonNullable<typeof run> => run !== null);
-
-		// Get total count
-		const countQuery = `SELECT COUNT(*) as total FROM indicator_sync_runs ${whereClause}`;
-		const countRows = await db.execute(countQuery, args.slice(0, -1));
-		const total = (countRows[0]?.total as number) ?? 0;
 
 		return c.json({ runs, total }, 200);
 	} catch (error) {
@@ -617,40 +566,17 @@ app.openapi(getWorkerRunRoute, async (c) => {
 	const { id } = c.req.valid("param");
 
 	try {
-		const db = await getDbClient();
+		const syncRunsRepo = getIndicatorSyncRunsRepo();
 
-		const rows = await db.execute(
-			`SELECT id, run_type, started_at, completed_at, status,
-			        symbols_processed, symbols_failed, error_message
-			 FROM indicator_sync_runs
-			 WHERE id = ?`,
-			[id]
-		);
-
-		const row = rows[0];
-		if (!row) {
+		const syncRun = await syncRunsRepo.findById(id);
+		if (!syncRun) {
 			throw new HTTPException(404, { message: `Run ${id} not found` });
 		}
 
-		const serviceName = mapRunTypeToService(row.run_type as string);
-		if (!serviceName) {
+		const run = mapRunToSchema(syncRun);
+		if (!run) {
 			throw new HTTPException(404, { message: `Run ${id} has unknown service type` });
 		}
-
-		const run = {
-			id: row.id as string,
-			service: serviceName,
-			status: row.status as z.infer<typeof RunStatusSchema>,
-			startedAt: row.started_at as string,
-			completedAt: row.completed_at as string | null,
-			duration: calculateDuration(row.started_at as string, row.completed_at as string | null),
-			result: formatResult({
-				symbols_processed: row.symbols_processed as number | undefined,
-				symbols_failed: row.symbols_failed as number | undefined,
-				error_message: row.error_message as string | null,
-			}),
-			error: row.error_message as string | null,
-		};
 
 		return c.json({ run }, 200);
 	} catch (error) {
@@ -731,57 +657,32 @@ app.openapi(getRunDetailsRoute, async (c) => {
 	const { id } = c.req.valid("param");
 
 	try {
-		const db = await getDbClient();
+		const syncRunsRepo = getIndicatorSyncRunsRepo();
 
 		// Fetch the run
-		const rows = await db.execute(
-			`SELECT id, run_type, started_at, completed_at, status,
-			        symbols_processed, symbols_failed, error_message
-			 FROM indicator_sync_runs
-			 WHERE id = ?`,
-			[id]
-		);
-
-		const row = rows[0];
-		if (!row) {
+		const syncRun = await syncRunsRepo.findById(id);
+		if (!syncRun) {
 			throw new HTTPException(404, { message: `Run ${id} not found` });
 		}
 
-		const serviceName = mapRunTypeToService(row.run_type as string);
-		if (!serviceName) {
+		const run = mapRunToSchema(syncRun);
+		if (!run) {
 			throw new HTTPException(404, { message: `Run ${id} has unknown service type` });
 		}
 
-		const run = {
-			id: row.id as string,
-			service: serviceName,
-			status: row.status as z.infer<typeof RunStatusSchema>,
-			startedAt: row.started_at as string,
-			completedAt: row.completed_at as string | null,
-			duration: calculateDuration(row.started_at as string, row.completed_at as string | null),
-			result: formatResult({
-				symbols_processed: row.symbols_processed as number | undefined,
-				symbols_failed: row.symbols_failed as number | undefined,
-				error_message: row.error_message as string | null,
-			}),
-			error: row.error_message as string | null,
-		};
-
-		const startedAt = row.started_at as string;
-		const completedAt = (row.completed_at as string | null) ?? new Date().toISOString();
+		const startedAt = syncRun.startedAt;
+		const completedAt = syncRun.completedAt ?? new Date().toISOString();
 
 		// Fetch associated data based on service type
-		switch (serviceName) {
+		switch (run.service) {
 			case "macro_watch": {
+				const macroWatchRepo = getMacroWatchRepo();
 				// Macro watch entries are collected over time before the run.
 				// Query by timestamp within the last 24 hours to match what the job processed.
-				const entries = await db.execute(
-					`SELECT id, timestamp, session, category, headline, symbols, source
-					 FROM macro_watch_entries
-					 WHERE timestamp >= datetime(?, '-24 hours')
-					 ORDER BY timestamp DESC
-					 LIMIT 100`,
-					[startedAt]
+				const twentyFourHoursAgo = new Date(new Date(startedAt).getTime() - 24 * 60 * 60 * 1000);
+				const entries = await macroWatchRepo.findEntries(
+					{ fromTime: twentyFourHoursAgo.toISOString() },
+					100
 				);
 
 				return c.json(
@@ -790,13 +691,13 @@ app.openapi(getRunDetailsRoute, async (c) => {
 						data: {
 							type: "macro_watch" as const,
 							entries: entries.map((e) => ({
-								id: e.id as string,
-								timestamp: e.timestamp as string,
-								session: e.session as string,
-								category: e.category as string,
-								headline: e.headline as string,
-								symbols: JSON.parse((e.symbols as string) || "[]") as string[],
-								source: e.source as string,
+								id: e.id,
+								timestamp: e.timestamp,
+								session: e.session,
+								category: e.category,
+								headline: e.headline,
+								symbols: e.symbols,
+								source: e.source,
 							})),
 						},
 					},
@@ -805,16 +706,9 @@ app.openapi(getRunDetailsRoute, async (c) => {
 			}
 
 			case "newspaper": {
-				const newspapers = await db.execute(
-					`SELECT id, date, compiled_at, sections, raw_entry_ids
-					 FROM morning_newspapers
-					 WHERE compiled_at >= ? AND compiled_at <= ?
-					 ORDER BY compiled_at DESC
-					 LIMIT 1`,
-					[startedAt, completedAt]
-				);
+				const macroWatchRepo = getMacroWatchRepo();
+				const newspaper = await macroWatchRepo.getNewspaperByCompiledAtRange(startedAt, completedAt);
 
-				const newspaper = newspapers[0];
 				if (!newspaper) {
 					return c.json(
 						{
@@ -825,19 +719,17 @@ app.openapi(getRunDetailsRoute, async (c) => {
 					);
 				}
 
-				const rawEntryIds = JSON.parse((newspaper.raw_entry_ids as string) || "[]") as string[];
-
 				return c.json(
 					{
 						run,
 						data: {
 							type: "newspaper" as const,
 							newspaper: {
-								id: newspaper.id as string,
-								date: newspaper.date as string,
-								compiledAt: newspaper.compiled_at as string,
-								sections: JSON.parse((newspaper.sections as string) || "{}"),
-								entryCount: rawEntryIds.length,
+								id: newspaper.id,
+								date: newspaper.date,
+								compiledAt: newspaper.compiledAt,
+								sections: newspaper.sections,
+								entryCount: newspaper.rawEntryIds.length,
 							},
 						},
 					},
@@ -846,15 +738,8 @@ app.openapi(getRunDetailsRoute, async (c) => {
 			}
 
 			case "short_interest": {
-				const entries = await db.execute(
-					`SELECT symbol, settlement_date, short_interest, short_interest_ratio,
-					        days_to_cover, short_pct_float
-					 FROM short_interest_indicators
-					 WHERE fetched_at >= ? AND fetched_at <= ?
-					 ORDER BY symbol
-					 LIMIT 100`,
-					[startedAt, completedAt]
-				);
+				const shortInterestRepo = getShortInterestRepo();
+				const entries = await shortInterestRepo.findByFetchedAtRange(startedAt, completedAt, 100);
 
 				return c.json(
 					{
@@ -862,13 +747,13 @@ app.openapi(getRunDetailsRoute, async (c) => {
 						data: {
 							type: "indicators" as const,
 							entries: entries.map((e) => ({
-								symbol: e.symbol as string,
-								date: e.settlement_date as string,
+								symbol: e.symbol,
+								date: e.settlementDate,
 								values: {
-									shortInterest: e.short_interest as number,
-									shortInterestRatio: e.short_interest_ratio as number | null,
-									daysToCover: e.days_to_cover as number | null,
-									shortPctFloat: e.short_pct_float as number | null,
+									shortInterest: e.shortInterest,
+									shortInterestRatio: e.shortInterestRatio,
+									daysToCover: e.daysToCover,
+									shortPctFloat: e.shortPctFloat,
 								},
 							})),
 						},
@@ -878,14 +763,8 @@ app.openapi(getRunDetailsRoute, async (c) => {
 			}
 
 			case "sentiment": {
-				const entries = await db.execute(
-					`SELECT symbol, date, sentiment_score, sentiment_strength, news_volume
-					 FROM sentiment_indicators
-					 WHERE computed_at >= ? AND computed_at <= ?
-					 ORDER BY symbol
-					 LIMIT 100`,
-					[startedAt, completedAt]
-				);
+				const sentimentRepo = getSentimentRepo();
+				const entries = await sentimentRepo.findByComputedAtRange(startedAt, completedAt, 100);
 
 				return c.json(
 					{
@@ -893,12 +772,12 @@ app.openapi(getRunDetailsRoute, async (c) => {
 						data: {
 							type: "indicators" as const,
 							entries: entries.map((e) => ({
-								symbol: e.symbol as string,
-								date: e.date as string,
+								symbol: e.symbol,
+								date: e.date,
 								values: {
-									sentimentScore: e.sentiment_score as number,
-									sentimentStrength: e.sentiment_strength as number | null,
-									newsVolume: e.news_volume as number | null,
+									sentimentScore: e.sentimentScore,
+									sentimentStrength: e.sentimentStrength,
+									newsVolume: e.newsVolume,
 								},
 							})),
 						},
@@ -908,17 +787,8 @@ app.openapi(getRunDetailsRoute, async (c) => {
 			}
 
 			case "corporate_actions": {
-				// Corporate actions table has no fetch timestamp.
-				// Query by indicator date matching the run's date.
-				const entries = await db.execute(
-					`SELECT symbol, date, trailing_dividend_yield, ex_dividend_days,
-					        upcoming_earnings_days, recent_split
-					 FROM corporate_actions_indicators
-					 WHERE date = date(?)
-					 ORDER BY symbol
-					 LIMIT 100`,
-					[startedAt]
-				);
+				const corporateActionsRepo = getCorporateActionsRepo();
+				const entries = await corporateActionsRepo.findByCreatedAtRange(startedAt, completedAt, 100);
 
 				return c.json(
 					{
@@ -926,13 +796,14 @@ app.openapi(getRunDetailsRoute, async (c) => {
 						data: {
 							type: "indicators" as const,
 							entries: entries.map((e) => ({
-								symbol: e.symbol as string,
-								date: e.date as string,
+								symbol: e.symbol,
+								date: e.exDate,
 								values: {
-									dividendYield: e.trailing_dividend_yield as number | null,
-									exDividendDays: e.ex_dividend_days as number | null,
-									earningsDays: e.upcoming_earnings_days as number | null,
-									recentSplit: e.recent_split as number | null,
+									actionType: e.actionType,
+									recordDate: e.recordDate,
+									payDate: e.payDate,
+									ratio: e.ratio,
+									amount: e.amount,
 								},
 							})),
 						},
@@ -942,14 +813,8 @@ app.openapi(getRunDetailsRoute, async (c) => {
 			}
 
 			case "filings_sync": {
-				const entries = await db.execute(
-					`SELECT symbol, filing_type, filed_date, accession_number
-					 FROM filings
-					 WHERE created_at >= ? AND created_at <= ?
-					 ORDER BY filed_date DESC
-					 LIMIT 100`,
-					[startedAt, completedAt]
-				);
+				const filingsRepo = getFilingsRepo();
+				const entries = await filingsRepo.findByCreatedAtRange(startedAt, completedAt, 100);
 
 				return c.json(
 					{
@@ -957,11 +822,11 @@ app.openapi(getRunDetailsRoute, async (c) => {
 						data: {
 							type: "indicators" as const,
 							entries: entries.map((e) => ({
-								symbol: e.symbol as string,
-								date: e.filed_date as string,
+								symbol: e.symbol,
+								date: e.filedDate,
 								values: {
-									formType: e.filing_type as string,
-									accessionNumber: e.accession_number as string,
+									formType: e.filingType,
+									accessionNumber: e.accessionNumber,
 								},
 							})),
 						},

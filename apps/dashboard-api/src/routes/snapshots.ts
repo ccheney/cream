@@ -7,15 +7,14 @@
  * @see docs/plans/33-indicator-engine-v2.md
  */
 
-import {
-	CorporateActionsRepository,
-	FundamentalsRepository,
-	SentimentRepository,
-	ShortInterestRepository,
-} from "@cream/storage";
 import { createRoute, OpenAPIHono, z } from "@hono/zod-openapi";
 import { HTTPException } from "hono/http-exception";
-import { getDbClient } from "../db.js";
+import {
+	getCorporateActionsRepo,
+	getFundamentalsRepo,
+	getSentimentRepo,
+	getShortInterestRepo,
+} from "../db.js";
 
 const app = new OpenAPIHono();
 
@@ -232,17 +231,13 @@ app.openapi(getSnapshotRoute, async (c) => {
 	const upperSymbol = symbol.toUpperCase();
 
 	try {
-		const db = await getDbClient();
+		// Get repositories
+		const fundamentalsRepo = getFundamentalsRepo();
+		const shortInterestRepo = getShortInterestRepo();
+		const sentimentRepo = getSentimentRepo();
+		const corporateActionsRepo = getCorporateActionsRepo();
 
 		// Fetch all batch data in parallel
-		const [fundamentalsRepo, shortInterestRepo, sentimentRepo, corporateActionsRepo] =
-			await Promise.all([
-				Promise.resolve(new FundamentalsRepository(db)),
-				Promise.resolve(new ShortInterestRepository(db)),
-				Promise.resolve(new SentimentRepository(db)),
-				Promise.resolve(new CorporateActionsRepository(db)),
-			]);
-
 		const [fundamentalsList, shortInterest, sentiment, corporateActions] = await Promise.all([
 			fundamentalsRepo.findBySymbol(upperSymbol),
 			shortInterestRepo.findLatestBySymbol(upperSymbol),
@@ -400,11 +395,11 @@ app.openapi(batchSnapshotsRoute, async (c) => {
 	const upperSymbols = symbols.map((s) => s.toUpperCase());
 
 	try {
-		const db = await getDbClient();
-		const fundamentalsRepo = new FundamentalsRepository(db);
-		const shortInterestRepo = new ShortInterestRepository(db);
-		const sentimentRepo = new SentimentRepository(db);
-		const corporateActionsRepo = new CorporateActionsRepository(db);
+		// Get repositories
+		const fundamentalsRepo = getFundamentalsRepo();
+		const shortInterestRepo = getShortInterestRepo();
+		const sentimentRepo = getSentimentRepo();
+		const corporateActionsRepo = getCorporateActionsRepo();
 
 		const snapshots: Record<string, z.infer<typeof BatchIndicatorSnapshotSchema>> = {};
 		const errors: Record<string, string> = {};

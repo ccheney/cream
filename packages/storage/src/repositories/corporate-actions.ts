@@ -198,4 +198,24 @@ export class CorporateActionsRepository {
 
 		return rows.map(mapCorporateActionRow);
 	}
+
+	async findByCreatedAtRange(
+		startTime: string,
+		endTime: string,
+		limit = 100
+	): Promise<CorporateAction[]> {
+		const rows = await this.db
+			.select()
+			.from(corporateActions)
+			.where(
+				and(
+					gte(corporateActions.createdAt, new Date(startTime)),
+					lte(corporateActions.createdAt, new Date(endTime))
+				)
+			)
+			.orderBy(desc(corporateActions.exDate), corporateActions.symbol)
+			.limit(limit);
+
+		return rows.map(mapCorporateActionRow);
+	}
 }

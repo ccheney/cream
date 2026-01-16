@@ -2,11 +2,10 @@
  * Database Context
  *
  * Provides database client and repositories for API routes.
- * Schema version: 2 - Added status, decision_id, metadata, unrealized_pnl_pct to positions
+ * Uses Drizzle ORM with PostgreSQL.
  */
 
 import { createRuntimeConfigService, type RuntimeConfigService } from "@cream/config";
-import { createContext, type ExecutionContext, requireEnv } from "@cream/domain";
 import {
 	AgentConfigsRepository,
 	AgentOutputsRepository,
@@ -16,104 +15,48 @@ import {
 	BacktestsRepository,
 	ConfigVersionsRepository,
 	ConstraintsConfigRepository,
+	CorporateActionsRepository,
 	type CyclesRepository,
 	createCyclesRepository,
-	createInMemoryClient,
-	createTursoClient,
 	DecisionsRepository,
 	FactorZooRepository,
 	FilingSyncRunsRepository,
 	FilingsRepository,
+	FundamentalsRepository,
+	IndicatorsRepository,
+	IndicatorSyncRunsRepository,
+	MacroWatchRepository,
 	OrdersRepository,
 	PortfolioSnapshotsRepository,
 	PositionsRepository,
 	RegimeLabelsRepository,
-	runMigrations,
+	SentimentRepository,
+	ShortInterestRepository,
 	SystemStateRepository,
 	ThesisStateRepository,
 	TradingConfigRepository,
-	type TursoClient,
 	UniverseConfigsRepository,
 	UserPreferencesRepository,
 } from "@cream/storage";
-
-/**
- * Create ExecutionContext for database initialization.
- * DB client is created at API startup.
- */
-function createDbContext(): ExecutionContext {
-	return createContext(requireEnv(), "scheduled");
-}
+import { type Database, getDb, closeDb as drizzleCloseDb } from "@cream/storage/db";
 
 // ============================================
 // Database Client Singleton
 // ============================================
 
-let dbClient: TursoClient | null = null;
-let initPromise: Promise<TursoClient> | null = null;
-
 /**
- * Get or create the database client.
- * Uses a lock to prevent race conditions during initialization.
+ * Get the Drizzle database client.
+ * The connection is managed by @cream/storage/db module.
  */
-export async function getDbClient(): Promise<TursoClient> {
-	// Fast path: already initialized
-	if (dbClient) {
-		return dbClient;
-	}
-
-	// Initialization in progress: wait for it
-	if (initPromise) {
-		return initPromise;
-	}
-
-	// First caller: start initialization
-	initPromise = initializeDb();
-
-	try {
-		dbClient = await initPromise;
-		return dbClient;
-	} catch (error) {
-		// Reset on failure so next call can retry
-		initPromise = null;
-		throw error;
-	}
-}
-
-/**
- * Initialize database client and run migrations.
- */
-async function initializeDb(): Promise<TursoClient> {
-	const ctx = createDbContext();
-	let client: TursoClient;
-
-	if (Bun.env.NODE_ENV === "test") {
-		// In-memory for testing
-		client = await createInMemoryClient();
-	} else {
-		// createTursoClient reads TURSO_DATABASE_URL and handles HTTP/local automatically
-		client = await createTursoClient(ctx);
-	}
-
-	// Run migrations on first connection
-	const result = await runMigrations(client, {
-		logger: (_msg) => {},
-	});
-	if (result.applied.length > 0) {
-	}
-
-	return client;
+export function getDrizzleDb(): Database {
+	return getDb();
 }
 
 /**
  * Close the database connection
  */
-export function closeDb(): void {
-	if (dbClient) {
-		dbClient.close();
-		dbClient = null;
-	}
-	initPromise = null;
+export async function closeDb(): Promise<void> {
+	await drizzleCloseDb();
 }
 
 // ============================================
@@ -123,177 +66,204 @@ export function closeDb(): void {
 /**
  * Get decisions repository
  */
-export async function getDecisionsRepo(): Promise<DecisionsRepository> {
-	const client = await getDbClient();
-	return new DecisionsRepository(client);
+export function getDecisionsRepo(): DecisionsRepository {
+	return new DecisionsRepository();
 }
 
 /**
  * Get alerts repository
  */
-export async function getAlertsRepo(): Promise<AlertsRepository> {
-	const client = await getDbClient();
-	return new AlertsRepository(client);
+export function getAlertsRepo(): AlertsRepository {
+	return new AlertsRepository();
 }
 
 /**
  * Get alert settings repository
  */
-export async function getAlertSettingsRepo(): Promise<AlertSettingsRepository> {
-	const client = await getDbClient();
-	return new AlertSettingsRepository(client);
+export function getAlertSettingsRepo(): AlertSettingsRepository {
+	return new AlertSettingsRepository();
 }
 
 /**
  * Get orders repository
  */
-export async function getOrdersRepo(): Promise<OrdersRepository> {
-	const client = await getDbClient();
-	return new OrdersRepository(client);
+export function getOrdersRepo(): OrdersRepository {
+	return new OrdersRepository();
 }
 
 /**
  * Get positions repository
  */
-export async function getPositionsRepo(): Promise<PositionsRepository> {
-	const client = await getDbClient();
-	return new PositionsRepository(client);
+export function getPositionsRepo(): PositionsRepository {
+	return new PositionsRepository();
 }
 
 /**
  * Get agent outputs repository
  */
-export async function getAgentOutputsRepo(): Promise<AgentOutputsRepository> {
-	const client = await getDbClient();
-	return new AgentOutputsRepository(client);
+export function getAgentOutputsRepo(): AgentOutputsRepository {
+	return new AgentOutputsRepository();
 }
 
 /**
  * Get portfolio snapshots repository
  */
-export async function getPortfolioSnapshotsRepo(): Promise<PortfolioSnapshotsRepository> {
-	const client = await getDbClient();
-	return new PortfolioSnapshotsRepository(client);
+export function getPortfolioSnapshotsRepo(): PortfolioSnapshotsRepository {
+	return new PortfolioSnapshotsRepository();
 }
 
 /**
  * Get backtests repository
  */
-export async function getBacktestsRepo(): Promise<BacktestsRepository> {
-	const client = await getDbClient();
-	return new BacktestsRepository(client);
+export function getBacktestsRepo(): BacktestsRepository {
+	return new BacktestsRepository();
 }
 
 /**
  * Get config versions repository
  */
-export async function getConfigVersionsRepo(): Promise<ConfigVersionsRepository> {
-	const client = await getDbClient();
-	return new ConfigVersionsRepository(client);
+export function getConfigVersionsRepo(): ConfigVersionsRepository {
+	return new ConfigVersionsRepository();
 }
 
 /**
  * Get thesis state repository
  */
-export async function getThesesRepo(): Promise<ThesisStateRepository> {
-	const client = await getDbClient();
-	return new ThesisStateRepository(client);
+export function getThesesRepo(): ThesisStateRepository {
+	return new ThesisStateRepository();
 }
 
 /**
  * Get factor zoo repository
  */
-export async function getFactorZooRepo(): Promise<FactorZooRepository> {
-	const client = await getDbClient();
-	return new FactorZooRepository(client);
+export function getFactorZooRepo(): FactorZooRepository {
+	return new FactorZooRepository();
 }
 
 /**
  * Get regime labels repository
  */
-export async function getRegimeLabelsRepo(): Promise<RegimeLabelsRepository> {
-	const client = await getDbClient();
-	return new RegimeLabelsRepository(client);
+export function getRegimeLabelsRepo(): RegimeLabelsRepository {
+	return new RegimeLabelsRepository();
 }
 
 /**
  * Get trading config repository
  */
-export async function getTradingConfigRepo(): Promise<TradingConfigRepository> {
-	const client = await getDbClient();
-	return new TradingConfigRepository(client);
+export function getTradingConfigRepo(): TradingConfigRepository {
+	return new TradingConfigRepository();
 }
 
 /**
  * Get agent configs repository
  */
-export async function getAgentConfigsRepo(): Promise<AgentConfigsRepository> {
-	const client = await getDbClient();
-	return new AgentConfigsRepository(client);
+export function getAgentConfigsRepo(): AgentConfigsRepository {
+	return new AgentConfigsRepository();
 }
 
 /**
  * Get universe configs repository
  */
-export async function getUniverseConfigsRepo(): Promise<UniverseConfigsRepository> {
-	const client = await getDbClient();
-	return new UniverseConfigsRepository(client);
+export function getUniverseConfigsRepo(): UniverseConfigsRepository {
+	return new UniverseConfigsRepository();
 }
 
 /**
  * Get user preferences repository
  */
-export async function getUserPreferencesRepo(): Promise<UserPreferencesRepository> {
-	const client = await getDbClient();
-	return new UserPreferencesRepository(client);
+export function getUserPreferencesRepo(): UserPreferencesRepository {
+	return new UserPreferencesRepository();
 }
 
 /**
  * Get audit log repository
  */
-export async function getAuditLogRepo(): Promise<AuditLogRepository> {
-	const client = await getDbClient();
-	return new AuditLogRepository(client);
+export function getAuditLogRepo(): AuditLogRepository {
+	return new AuditLogRepository();
 }
 
 /**
  * Get constraints config repository
  */
-export async function getConstraintsConfigRepo(): Promise<ConstraintsConfigRepository> {
-	const client = await getDbClient();
-	return new ConstraintsConfigRepository(client);
+export function getConstraintsConfigRepo(): ConstraintsConfigRepository {
+	return new ConstraintsConfigRepository();
 }
 
 /**
  * Get cycles repository
  */
-export async function getCyclesRepo(): Promise<CyclesRepository> {
-	const client = await getDbClient();
-	return createCyclesRepository(client);
+export function getCyclesRepo(): CyclesRepository {
+	return createCyclesRepository();
 }
 
 /**
  * Get filings repository
  */
-export async function getFilingsRepo(): Promise<FilingsRepository> {
-	const client = await getDbClient();
-	return new FilingsRepository(client);
+export function getFilingsRepo(): FilingsRepository {
+	return new FilingsRepository();
 }
 
 /**
  * Get filing sync runs repository
  */
-export async function getFilingSyncRunsRepo(): Promise<FilingSyncRunsRepository> {
-	const client = await getDbClient();
-	return new FilingSyncRunsRepository(client);
+export function getFilingSyncRunsRepo(): FilingSyncRunsRepository {
+	return new FilingSyncRunsRepository();
 }
 
 /**
  * Get system state repository
  */
-export async function getSystemStateRepo(): Promise<SystemStateRepository> {
-	const client = await getDbClient();
-	return new SystemStateRepository(client);
+export function getSystemStateRepo(): SystemStateRepository {
+	return new SystemStateRepository();
+}
+
+/**
+ * Get indicators repository
+ */
+export function getIndicatorsRepo(): IndicatorsRepository {
+	return new IndicatorsRepository();
+}
+
+/**
+ * Get indicator sync runs repository
+ */
+export function getIndicatorSyncRunsRepo(): IndicatorSyncRunsRepository {
+	return new IndicatorSyncRunsRepository();
+}
+
+/**
+ * Get macro watch repository
+ */
+export function getMacroWatchRepo(): MacroWatchRepository {
+	return new MacroWatchRepository();
+}
+
+/**
+ * Get fundamentals repository
+ */
+export function getFundamentalsRepo(): FundamentalsRepository {
+	return new FundamentalsRepository();
+}
+
+/**
+ * Get short interest repository
+ */
+export function getShortInterestRepo(): ShortInterestRepository {
+	return new ShortInterestRepository();
+}
+
+/**
+ * Get sentiment repository
+ */
+export function getSentimentRepo(): SentimentRepository {
+	return new SentimentRepository();
+}
+
+/**
+ * Get corporate actions repository
+ */
+export function getCorporateActionsRepo(): CorporateActionsRepository {
+	return new CorporateActionsRepository();
 }
 
 // ============================================
@@ -305,15 +275,15 @@ let runtimeConfigService: RuntimeConfigService | null = null;
 /**
  * Get the runtime configuration service
  */
-export async function getRuntimeConfigService(): Promise<RuntimeConfigService> {
+export function getRuntimeConfigService(): RuntimeConfigService {
 	if (runtimeConfigService) {
 		return runtimeConfigService;
 	}
 
-	const tradingRepo = await getTradingConfigRepo();
-	const agentRepo = await getAgentConfigsRepo();
-	const universeRepo = await getUniverseConfigsRepo();
-	const constraintsRepo = await getConstraintsConfigRepo();
+	const tradingRepo = getTradingConfigRepo();
+	const agentRepo = getAgentConfigsRepo();
+	const universeRepo = getUniverseConfigsRepo();
+	const constraintsRepo = getConstraintsConfigRepo();
 
 	runtimeConfigService = createRuntimeConfigService(
 		tradingRepo,

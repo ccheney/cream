@@ -7,6 +7,7 @@ import { and, avg, count, desc, eq, inArray, sql } from "drizzle-orm";
 import { getDb, type Database } from "../db";
 import {
 	indicatorIcHistory,
+	indicatorPaperSignals,
 	indicators,
 	indicatorTrials,
 } from "../schema/indicators";
@@ -770,5 +771,104 @@ export class IndicatorsRepository {
 
 			return result?.avgIc ? Number(result.avgIc) : null;
 		}
+	}
+
+	// ============================================
+	// Paper Trading Signals
+	// ============================================
+
+	async countPaperSignals(indicatorId: string): Promise<number> {
+		const [result] = await this.db
+			.select({ count: count() })
+			.from(indicatorPaperSignals)
+			.where(eq(indicatorPaperSignals.indicatorId, indicatorId));
+
+		return result?.count ?? 0;
+	}
+
+	async getPaperSignalsWithOutcomes(indicatorId: string): Promise<Array<{
+		signal: number;
+		outcome: number | null;
+	}>> {
+		const rows = await this.db
+			.select({
+				signal: indicatorPaperSignals.signal,
+				outcome: indicatorPaperSignals.outcome,
+			})
+			.from(indicatorPaperSignals)
+			.where(eq(indicatorPaperSignals.indicatorId, indicatorId));
+
+		return rows.map(row => ({
+			signal: Number(row.signal),
+			outcome: row.outcome ? Number(row.outcome) : null,
+		}));
+	}
+
+	// ============================================
+	// Indicator Statistics for Dashboard
+	// ============================================
+
+	async getActiveCount(): Promise<number> {
+		const [result] = await this.db
+			.select({ count: count() })
+			.from(indicators)
+			.where(inArray(indicators.status, ["paper", "production"]));
+
+		return result?.count ?? 0;
+	}
+
+	async getRecentICValues(days: number = 30): Promise<number[]> {
+		const cutoff = new Date();
+		cutoff.setDate(cutoff.getDate() - days);
+
+		const rows = await this.db
+			.select({ icValue: indicatorIcHistory.icValue })
+			.from(indicatorIcHistory)
+			.where(sql`${indicatorIcHistory.date} >= ${cutoff}`)
+			.orderBy(desc(indicatorIcHistory.date));
+
+		return rows.map(r => Number(r.icValue));
+	}
+
+	async getLastGenerationAttempt(): Promise<string | null> {
+		const [result] = await this.db
+			.select({ lastAttempt: sql<Date>`MAX(${indicators.generatedAt})` })
+			.from(indicators);
+
+		return result?.lastAttempt?.toISOString() ?? null;
+	}
+
+	async findPaperTradingIndicators(): Promise<Array<Indicator & { daysTrading: number }>> {
+		const rows = await this.db
+			.select({
+				...indicators,
+				daysTrading: sql<number>`EXTRACT(DAY FROM NOW() - ${indicators.paperTradingStart})`,
+			})
+			.from(indicators)
+			.where(eq(indicators.status, "paper"));
+
+		return rows.map(row => ({
+			...mapIndicatorRow(row),
+			daysTrading: Math.floor(row.daysTrading ?? 0),
+		}));
+	}
+
+	async findRecentStagingIndicators(hoursCutoff: number = 1): Promise<Indicator[]> {
+		const cutoff = new Date();
+		cutoff.setHours(cutoff.getHours() - hoursCutoff);
+
+		const rows = await this.db
+			.select()
+			.from(indicators)
+			.where(
+				and(
+					eq(indicators.status, "staging"),
+					sql`${indicators.generatedAt} >= ${cutoff}`
+				)
+			)
+			.orderBy(desc(indicators.generatedAt))
+			.limit(1);
+
+		return rows.map(mapIndicatorRow);
 	}
 }

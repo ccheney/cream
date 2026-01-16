@@ -192,6 +192,17 @@ export {
 	UniverseSnapshotSchema,
 	UniverseSnapshotsRepository,
 } from "./historical-universe.js";
+// Indicator sync runs (migration 008) - batch job tracking
+export {
+	type CreateIndicatorSyncRunInput,
+	type IndicatorSyncRun,
+	IndicatorSyncRunsRepository,
+	type SyncRunFilters,
+	type SyncRunStatus,
+	type SyncRunSummary,
+	type SyncRunType,
+	type UpdateIndicatorSyncRunInput,
+} from "./indicator-sync-runs.js";
 // Indicator synthesis (migration 008)
 export {
 	type CreateIndicatorICHistoryInput,

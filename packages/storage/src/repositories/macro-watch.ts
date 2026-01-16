@@ -348,6 +348,25 @@ export class MacroWatchRepository {
 		return row ? mapNewspaperRow(row) : null;
 	}
 
+	async getNewspaperByCompiledAtRange(
+		startTime: string,
+		endTime: string
+	): Promise<MorningNewspaper | null> {
+		const [row] = await this.db
+			.select()
+			.from(morningNewspapers)
+			.where(
+				and(
+					gte(morningNewspapers.compiledAt, new Date(startTime)),
+					lte(morningNewspapers.compiledAt, new Date(endTime))
+				)
+			)
+			.orderBy(desc(morningNewspapers.compiledAt))
+			.limit(1);
+
+		return row ? mapNewspaperRow(row) : null;
+	}
+
 	// ============================================
 	// Data Retention
 	// ============================================
