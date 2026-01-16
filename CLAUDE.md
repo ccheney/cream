@@ -77,6 +77,12 @@ bun run typecheck # TypeScript type checking
 buf generate # Protobuf → TS + Rust stubs
 ```
 
+## Important
+
+- **Do Your Own Exploration** - Verify assumptions against actual codebase, tests, and documentation
+- **Use Context7 for Documentation** - Always query context7 for up-to-date library/API docs (Drizzle, PostgreSQL extensions, pg driver etc.)
+- **Ground Assumptions with Internet Research** - Use web search tools to verify syntax, patterns, version compatibility, and best practices instead of making assumptions
+
 ## Code Conventions
 
 - Prefer Bun APIs over Node.js equivalents including websockets (`Bun.file()`, `Bun.serve()`, `Bun.env`, etc.)
