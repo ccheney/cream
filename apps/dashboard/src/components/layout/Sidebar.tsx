@@ -68,7 +68,10 @@ export const NAV_GROUPS: NavItem[][] = [
 		{ href: "/calendar", label: "Calendar", icon: CalendarDays },
 		{ href: "/feed", label: "Feed", icon: Rss },
 	],
-	[{ href: "/config", label: "Config", icon: Settings }],
+	[
+		{ href: "/workers", label: "Workers", icon: Cog },
+		{ href: "/config", label: "Config", icon: Settings },
+	],
 ];
 
 export const NAV_ITEMS: NavItem[] = NAV_GROUPS.flat();
@@ -78,7 +81,6 @@ export const EXPERIMENT_ITEMS: NavItem[] = [
 	{ href: "/backtest", label: "Backtest", icon: FlaskConical },
 	{ href: "/indicators", label: "Indicators", icon: Beaker },
 	{ href: "/theses", label: "Theses", icon: BarChart3 },
-	{ href: "/workers", label: "Workers", icon: Cog },
 ];
 
 const SIDEBAR_WIDTH = 240;
