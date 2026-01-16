@@ -1,5 +1,5 @@
 /**
- * Macro Watch Repository
+ * Macro Watch Repository (Drizzle ORM)
  *
  * Data access for overnight macro watch entries and morning newspapers.
  * Used by the MacroWatch workflow for accumulating overnight developments
@@ -7,27 +7,18 @@
  *
  * @see docs/plans/42-overnight-macro-watch.md
  */
-
-import type { Row, TursoClient } from "../turso.js";
-import { parseJson, RepositoryError, toJson } from "./base.js";
+import { and, count, desc, eq, gte, lte, sql } from "drizzle-orm";
+import { getDb, type Database } from "../db";
+import { macroWatchEntries, morningNewspapers } from "../schema/external";
 
 // ============================================
 // Types
 // ============================================
 
-/**
- * Trading session when entry was captured
- */
 export type MacroWatchSession = "OVERNIGHT" | "PRE_MARKET" | "AFTER_HOURS";
 
-/**
- * Category of macro watch entry
- */
 export type MacroWatchCategory = "NEWS" | "PREDICTION" | "ECONOMIC" | "MOVER" | "EARNINGS";
 
-/**
- * Macro watch entry entity
- */
 export interface MacroWatchEntry {
 	id: string;
 	timestamp: string;
@@ -40,9 +31,6 @@ export interface MacroWatchEntry {
 	createdAt: string;
 }
 
-/**
- * Create macro watch entry input
- */
 export interface CreateMacroWatchEntryInput {
 	id: string;
 	timestamp: string;
@@ -54,9 +42,6 @@ export interface CreateMacroWatchEntryInput {
 	metadata?: Record<string, unknown>;
 }
 
-/**
- * Morning newspaper sections
- */
 export interface NewspaperSections {
 	macro: string[];
 	universe: string[];
@@ -64,9 +49,6 @@ export interface NewspaperSections {
 	economicCalendar: string[];
 }
 
-/**
- * Morning newspaper entity
- */
 export interface MorningNewspaper {
 	id: string;
 	date: string;
@@ -76,9 +58,6 @@ export interface MorningNewspaper {
 	createdAt: string;
 }
 
-/**
- * Create morning newspaper input
- */
 export interface CreateMorningNewspaperInput {
 	id: string;
 	date: string;
@@ -87,9 +66,6 @@ export interface CreateMorningNewspaperInput {
 	rawEntryIds: string[];
 }
 
-/**
- * Filter options for macro watch entries
- */
 export interface MacroWatchFilters {
 	session?: MacroWatchSession;
 	category?: MacroWatchCategory;
@@ -99,36 +75,41 @@ export interface MacroWatchFilters {
 }
 
 // ============================================
-// Row Mappers
+// Row Mapping
 // ============================================
 
-function mapEntryRow(row: Row): MacroWatchEntry {
+type MacroWatchEntryRow = typeof macroWatchEntries.$inferSelect;
+type MorningNewspaperRow = typeof morningNewspapers.$inferSelect;
+
+function mapEntryRow(row: MacroWatchEntryRow): MacroWatchEntry {
 	return {
-		id: row.id as string,
-		timestamp: row.timestamp as string,
+		id: row.id,
+		timestamp: row.timestamp.toISOString(),
 		session: row.session as MacroWatchSession,
 		category: row.category as MacroWatchCategory,
-		headline: row.headline as string,
-		symbols: parseJson<string[]>(row.symbols, []),
-		source: row.source as string,
-		metadata: parseJson<Record<string, unknown> | null>(row.metadata, null),
-		createdAt: row.created_at as string,
+		headline: row.headline,
+		symbols: row.symbols as string[],
+		source: row.source,
+		metadata: row.metadata as Record<string, unknown> | null,
+		createdAt: row.createdAt.toISOString(),
 	};
 }
 
-function mapNewspaperRow(row: Row): MorningNewspaper {
+function mapNewspaperRow(row: MorningNewspaperRow): MorningNewspaper {
+	const defaultSections: NewspaperSections = {
+		macro: [],
+		universe: [],
+		predictionMarkets: [],
+		economicCalendar: [],
+	};
+
 	return {
-		id: row.id as string,
-		date: row.date as string,
-		compiledAt: row.compiled_at as string,
-		sections: parseJson<NewspaperSections>(row.sections, {
-			macro: [],
-			universe: [],
-			predictionMarkets: [],
-			economicCalendar: [],
-		}),
-		rawEntryIds: parseJson<string[]>(row.raw_entry_ids, []),
-		createdAt: row.created_at as string,
+		id: row.id,
+		date: row.date,
+		compiledAt: row.compiledAt.toISOString(),
+		sections: (row.sections as NewspaperSections) ?? defaultSections,
+		rawEntryIds: row.rawEntryIds as string[],
+		createdAt: row.createdAt.toISOString(),
 	};
 }
 
@@ -136,46 +117,35 @@ function mapNewspaperRow(row: Row): MorningNewspaper {
 // Repository
 // ============================================
 
-/**
- * Macro watch repository for overnight entries and newspapers
- */
 export class MacroWatchRepository {
-	constructor(private readonly client: TursoClient) {}
+	private db: Database;
+
+	constructor(db?: Database) {
+		this.db = db ?? getDb();
+	}
 
 	// ============================================
 	// Entry Operations
 	// ============================================
 
-	/**
-	 * Save a macro watch entry
-	 */
 	async saveEntry(input: CreateMacroWatchEntryInput): Promise<MacroWatchEntry> {
-		try {
-			await this.client.run(
-				`INSERT INTO macro_watch_entries (
-          id, timestamp, session, category, headline, symbols, source, metadata
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
-				[
-					input.id,
-					input.timestamp,
-					input.session,
-					input.category,
-					input.headline,
-					toJson(input.symbols),
-					input.source,
-					input.metadata ? toJson(input.metadata) : null,
-				]
-			);
-		} catch (error) {
-			throw RepositoryError.fromSqliteError("macro_watch_entries", error as Error);
-		}
+		const [row] = await this.db
+			.insert(macroWatchEntries)
+			.values({
+				id: input.id,
+				timestamp: new Date(input.timestamp),
+				session: input.session as typeof macroWatchEntries.$inferInsert.session,
+				category: input.category as typeof macroWatchEntries.$inferInsert.category,
+				headline: input.headline,
+				symbols: input.symbols,
+				source: input.source,
+				metadata: input.metadata ?? null,
+			})
+			.returning();
 
-		return this.findEntryById(input.id) as Promise<MacroWatchEntry>;
+		return mapEntryRow(row);
 	}
 
-	/**
-	 * Save multiple entries in a batch
-	 */
 	async saveEntries(inputs: CreateMacroWatchEntryInput[]): Promise<number> {
 		if (inputs.length === 0) {
 			return 0;
@@ -193,59 +163,55 @@ export class MacroWatchRepository {
 		return saved;
 	}
 
-	/**
-	 * Find entry by ID
-	 */
 	async findEntryById(id: string): Promise<MacroWatchEntry | null> {
-		const row = await this.client.get<Row>("SELECT * FROM macro_watch_entries WHERE id = ?", [id]);
+		const [row] = await this.db
+			.select()
+			.from(macroWatchEntries)
+			.where(eq(macroWatchEntries.id, id))
+			.limit(1);
+
 		return row ? mapEntryRow(row) : null;
 	}
 
-	/**
-	 * Get entries for a time range
-	 */
 	async getEntries(startTime: string, endTime: string): Promise<MacroWatchEntry[]> {
-		const rows = await this.client.execute<Row>(
-			`SELECT * FROM macro_watch_entries
-       WHERE timestamp >= ? AND timestamp <= ?
-       ORDER BY timestamp DESC`,
-			[startTime, endTime]
-		);
+		const rows = await this.db
+			.select()
+			.from(macroWatchEntries)
+			.where(
+				and(
+					gte(macroWatchEntries.timestamp, new Date(startTime)),
+					lte(macroWatchEntries.timestamp, new Date(endTime))
+				)
+			)
+			.orderBy(desc(macroWatchEntries.timestamp));
+
 		return rows.map(mapEntryRow);
 	}
 
-	/**
-	 * Find entries with filters
-	 */
 	async findEntries(filters: MacroWatchFilters = {}, limit = 100): Promise<MacroWatchEntry[]> {
-		const conditions: string[] = [];
-		const args: unknown[] = [];
+		const conditions = [];
 
 		if (filters.session) {
-			conditions.push("session = ?");
-			args.push(filters.session);
+			conditions.push(eq(macroWatchEntries.session, filters.session as typeof macroWatchEntries.$inferSelect.session));
 		}
 		if (filters.category) {
-			conditions.push("category = ?");
-			args.push(filters.category);
+			conditions.push(eq(macroWatchEntries.category, filters.category as typeof macroWatchEntries.$inferSelect.category));
 		}
 		if (filters.fromTime) {
-			conditions.push("timestamp >= ?");
-			args.push(filters.fromTime);
+			conditions.push(gte(macroWatchEntries.timestamp, new Date(filters.fromTime)));
 		}
 		if (filters.toTime) {
-			conditions.push("timestamp <= ?");
-			args.push(filters.toTime);
+			conditions.push(lte(macroWatchEntries.timestamp, new Date(filters.toTime)));
 		}
 
-		const whereClause = conditions.length > 0 ? `WHERE ${conditions.join(" AND ")}` : "";
+		const whereClause = conditions.length > 0 ? and(...conditions) : undefined;
 
-		const rows = await this.client.execute<Row>(
-			`SELECT * FROM macro_watch_entries ${whereClause}
-       ORDER BY timestamp DESC
-       LIMIT ?`,
-			[...args, limit]
-		);
+		const rows = await this.db
+			.select()
+			.from(macroWatchEntries)
+			.where(whereClause)
+			.orderBy(desc(macroWatchEntries.timestamp))
+			.limit(limit);
 
 		let results = rows.map(mapEntryRow);
 
@@ -260,29 +226,25 @@ export class MacroWatchRepository {
 		return results;
 	}
 
-	/**
-	 * Get entries since previous market close for newspaper compilation
-	 */
 	async getEntriesSinceClose(previousCloseTime: string): Promise<MacroWatchEntry[]> {
-		const rows = await this.client.execute<Row>(
-			`SELECT * FROM macro_watch_entries
-       WHERE timestamp >= ?
-       ORDER BY timestamp ASC`,
-			[previousCloseTime]
-		);
+		const rows = await this.db
+			.select()
+			.from(macroWatchEntries)
+			.where(gte(macroWatchEntries.timestamp, new Date(previousCloseTime)))
+			.orderBy(macroWatchEntries.timestamp);
+
 		return rows.map(mapEntryRow);
 	}
 
-	/**
-	 * Count entries by category since a timestamp
-	 */
 	async countByCategory(sinceTime: string): Promise<Record<MacroWatchCategory, number>> {
-		const rows = await this.client.execute<{ category: string; count: number }>(
-			`SELECT category, COUNT(*) as count FROM macro_watch_entries
-       WHERE timestamp >= ?
-       GROUP BY category`,
-			[sinceTime]
-		);
+		const rows = await this.db
+			.select({
+				category: macroWatchEntries.category,
+				count: sql<number>`COUNT(*)::int`,
+			})
+			.from(macroWatchEntries)
+			.where(gte(macroWatchEntries.timestamp, new Date(sinceTime)))
+			.groupBy(macroWatchEntries.category);
 
 		const result: Record<MacroWatchCategory, number> = {
 			NEWS: 0,
@@ -303,86 +265,86 @@ export class MacroWatchRepository {
 	// Newspaper Operations
 	// ============================================
 
-	/**
-	 * Save a morning newspaper
-	 */
 	async saveNewspaper(input: CreateMorningNewspaperInput): Promise<MorningNewspaper> {
-		try {
-			await this.client.run(
-				`INSERT INTO morning_newspapers (
-          id, date, compiled_at, sections, raw_entry_ids
-        ) VALUES (?, ?, ?, ?, ?)`,
-				[input.id, input.date, input.compiledAt, toJson(input.sections), toJson(input.rawEntryIds)]
-			);
-		} catch (error) {
-			throw RepositoryError.fromSqliteError("morning_newspapers", error as Error);
-		}
+		const [row] = await this.db
+			.insert(morningNewspapers)
+			.values({
+				id: input.id,
+				date: input.date,
+				compiledAt: new Date(input.compiledAt),
+				sections: input.sections,
+				rawEntryIds: input.rawEntryIds,
+			})
+			.returning();
 
-		return this.findNewspaperById(input.id) as Promise<MorningNewspaper>;
+		return mapNewspaperRow(row);
 	}
 
-	/**
-	 * Upsert a morning newspaper (update if exists for date)
-	 */
 	async upsertNewspaper(input: CreateMorningNewspaperInput): Promise<MorningNewspaper> {
-		try {
-			await this.client.run(
-				`INSERT INTO morning_newspapers (
-          id, date, compiled_at, sections, raw_entry_ids
-        ) VALUES (?, ?, ?, ?, ?)
-        ON CONFLICT(date) DO UPDATE SET
-          compiled_at = excluded.compiled_at,
-          sections = excluded.sections,
-          raw_entry_ids = excluded.raw_entry_ids`,
-				[input.id, input.date, input.compiledAt, toJson(input.sections), toJson(input.rawEntryIds)]
-			);
-		} catch (error) {
-			throw RepositoryError.fromSqliteError("morning_newspapers", error as Error);
-		}
+		const [row] = await this.db
+			.insert(morningNewspapers)
+			.values({
+				id: input.id,
+				date: input.date,
+				compiledAt: new Date(input.compiledAt),
+				sections: input.sections,
+				rawEntryIds: input.rawEntryIds,
+			})
+			.onConflictDoUpdate({
+				target: morningNewspapers.date,
+				set: {
+					compiledAt: new Date(input.compiledAt),
+					sections: input.sections,
+					rawEntryIds: input.rawEntryIds,
+				},
+			})
+			.returning();
 
-		return this.getNewspaperByDate(input.date) as Promise<MorningNewspaper>;
+		return mapNewspaperRow(row);
 	}
 
-	/**
-	 * Find newspaper by ID
-	 */
 	async findNewspaperById(id: string): Promise<MorningNewspaper | null> {
-		const row = await this.client.get<Row>("SELECT * FROM morning_newspapers WHERE id = ?", [id]);
+		const [row] = await this.db
+			.select()
+			.from(morningNewspapers)
+			.where(eq(morningNewspapers.id, id))
+			.limit(1);
+
 		return row ? mapNewspaperRow(row) : null;
 	}
 
-	/**
-	 * Get newspaper by date
-	 */
 	async getNewspaperByDate(date: string): Promise<MorningNewspaper | null> {
-		const row = await this.client.get<Row>("SELECT * FROM morning_newspapers WHERE date = ?", [
-			date,
-		]);
+		const [row] = await this.db
+			.select()
+			.from(morningNewspapers)
+			.where(eq(morningNewspapers.date, date))
+			.limit(1);
+
 		return row ? mapNewspaperRow(row) : null;
 	}
 
-	/**
-	 * Get newspapers for a date range
-	 */
 	async getNewspapers(startDate: string, endDate: string): Promise<MorningNewspaper[]> {
-		const rows = await this.client.execute<Row>(
-			`SELECT * FROM morning_newspapers
-       WHERE date >= ? AND date <= ?
-       ORDER BY date DESC`,
-			[startDate, endDate]
-		);
+		const rows = await this.db
+			.select()
+			.from(morningNewspapers)
+			.where(
+				and(
+					gte(morningNewspapers.date, startDate),
+					lte(morningNewspapers.date, endDate)
+				)
+			)
+			.orderBy(desc(morningNewspapers.date));
+
 		return rows.map(mapNewspaperRow);
 	}
 
-	/**
-	 * Get the most recent newspaper
-	 */
 	async getLatestNewspaper(): Promise<MorningNewspaper | null> {
-		const row = await this.client.get<Row>(
-			`SELECT * FROM morning_newspapers
-       ORDER BY date DESC
-       LIMIT 1`
-		);
+		const [row] = await this.db
+			.select()
+			.from(morningNewspapers)
+			.orderBy(desc(morningNewspapers.date))
+			.limit(1);
+
 		return row ? mapNewspaperRow(row) : null;
 	}
 
@@ -390,40 +352,30 @@ export class MacroWatchRepository {
 	// Data Retention
 	// ============================================
 
-	/**
-	 * Prune old entries based on retention policy
-	 *
-	 * @param retentionDays - Number of days to retain
-	 * @returns Object with counts of deleted records
-	 */
 	async pruneOldData(retentionDays: number): Promise<{
 		entries: number;
 		newspapers: number;
 	}> {
 		const cutoff = new Date();
 		cutoff.setDate(cutoff.getDate() - retentionDays);
-		const cutoffStr = cutoff.toISOString();
-		const cutoffDate = cutoffStr.slice(0, 10);
+		const cutoffDate = cutoff.toISOString().slice(0, 10);
 
-		const entriesResult = await this.client.run(
-			"DELETE FROM macro_watch_entries WHERE created_at < ?",
-			[cutoffStr]
-		);
+		const entriesResult = await this.db
+			.delete(macroWatchEntries)
+			.where(lte(macroWatchEntries.createdAt, cutoff))
+			.returning({ id: macroWatchEntries.id });
 
-		const newspapersResult = await this.client.run(
-			"DELETE FROM morning_newspapers WHERE date < ?",
-			[cutoffDate]
-		);
+		const newspapersResult = await this.db
+			.delete(morningNewspapers)
+			.where(lte(morningNewspapers.date, cutoffDate))
+			.returning({ id: morningNewspapers.id });
 
 		return {
-			entries: entriesResult.changes,
-			newspapers: newspapersResult.changes,
+			entries: entriesResult.length,
+			newspapers: newspapersResult.length,
 		};
 	}
 
-	/**
-	 * Get storage statistics
-	 */
 	async getStats(): Promise<{
 		entryCount: number;
 		newspaperCount: number;
@@ -431,27 +383,31 @@ export class MacroWatchRepository {
 		newestEntry: string | null;
 		latestNewspaperDate: string | null;
 	}> {
-		const entryCount = await this.client.get<{ count: number }>(
-			"SELECT COUNT(*) as count FROM macro_watch_entries"
-		);
-		const newspaperCount = await this.client.get<{ count: number }>(
-			"SELECT COUNT(*) as count FROM morning_newspapers"
-		);
-		const oldest = await this.client.get<{ timestamp: string }>(
-			"SELECT MIN(timestamp) as timestamp FROM macro_watch_entries"
-		);
-		const newest = await this.client.get<{ timestamp: string }>(
-			"SELECT MAX(timestamp) as timestamp FROM macro_watch_entries"
-		);
-		const latestNewspaper = await this.client.get<{ date: string }>(
-			"SELECT MAX(date) as date FROM morning_newspapers"
-		);
+		const [entryCountResult] = await this.db
+			.select({ count: count() })
+			.from(macroWatchEntries);
+
+		const [newspaperCountResult] = await this.db
+			.select({ count: count() })
+			.from(morningNewspapers);
+
+		const [oldest] = await this.db
+			.select({ timestamp: sql<Date>`MIN(${macroWatchEntries.timestamp})` })
+			.from(macroWatchEntries);
+
+		const [newest] = await this.db
+			.select({ timestamp: sql<Date>`MAX(${macroWatchEntries.timestamp})` })
+			.from(macroWatchEntries);
+
+		const [latestNewspaper] = await this.db
+			.select({ date: sql<string>`MAX(${morningNewspapers.date})` })
+			.from(morningNewspapers);
 
 		return {
-			entryCount: entryCount?.count ?? 0,
-			newspaperCount: newspaperCount?.count ?? 0,
-			oldestEntry: oldest?.timestamp ?? null,
-			newestEntry: newest?.timestamp ?? null,
+			entryCount: entryCountResult?.count ?? 0,
+			newspaperCount: newspaperCountResult?.count ?? 0,
+			oldestEntry: oldest?.timestamp?.toISOString() ?? null,
+			newestEntry: newest?.timestamp?.toISOString() ?? null,
 			latestNewspaperDate: latestNewspaper?.date ?? null,
 		};
 	}
