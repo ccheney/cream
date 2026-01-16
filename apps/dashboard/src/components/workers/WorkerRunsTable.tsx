@@ -2,14 +2,18 @@
  * Worker Runs Table
  *
  * Dense table showing recent runs across all services.
+ * Rows are expandable to show detailed data ingested during the run.
  *
  * @see docs/plans/ui/35-worker-services-page.md
+ * @see docs/plans/ui/36-expandable-worker-runs.md
  */
 
 import { formatDistanceToNow } from "date-fns";
-import { memo } from "react";
+import { memo, useState } from "react";
+import { ChevronIcon } from "@/components/ui/collapsible/ChevronIcon";
 import type { WorkerRun, WorkerService } from "@/hooks/queries";
 import { cn } from "@/lib/utils";
+import { RunDetailPanel } from "./RunDetailPanel";
 
 // ============================================
 // Service Display Names
@@ -107,6 +111,20 @@ export interface WorkerRunsTableProps {
 // ============================================
 
 function WorkerRunsTableComponent({ runs, isLoading }: WorkerRunsTableProps) {
+	const [expandedRows, setExpandedRows] = useState<Set<string>>(new Set());
+
+	const toggleRow = (id: string) => {
+		setExpandedRows((prev) => {
+			const next = new Set(prev);
+			if (next.has(id)) {
+				next.delete(id);
+			} else {
+				next.add(id);
+			}
+			return next;
+		});
+	};
+
 	if (isLoading) {
 		return <WorkerRunsTableSkeleton />;
 	}
@@ -134,6 +152,7 @@ function WorkerRunsTableComponent({ runs, isLoading }: WorkerRunsTableProps) {
 				<table className="min-w-full divide-y divide-cream-200 dark:divide-night-700">
 					<thead className="bg-cream-50 dark:bg-night-750">
 						<tr>
+							<th className="w-8 px-2 py-2" />
 							<th className="px-4 py-2 text-left text-xs font-medium text-stone-500 dark:text-night-300 uppercase tracking-wider">
 								Service
 							</th>
@@ -152,28 +171,47 @@ function WorkerRunsTableComponent({ runs, isLoading }: WorkerRunsTableProps) {
 						</tr>
 					</thead>
 					<tbody className="divide-y divide-cream-100 dark:divide-night-700">
-						{runs.map((run) => (
-							<tr
-								key={run.id}
-								className="hover:bg-cream-50 dark:hover:bg-night-750 transition-colors"
-							>
-								<td className="px-4 py-3 text-sm text-stone-900 dark:text-night-50 font-medium">
-									{serviceDisplayNames[run.service]}
-								</td>
-								<td className="px-4 py-3">
-									<StatusBadge status={run.status} />
-								</td>
-								<td className="px-4 py-3 text-sm text-stone-500 dark:text-night-300">
-									{formatDistanceToNow(new Date(run.startedAt), { addSuffix: true })}
-								</td>
-								<td className="px-4 py-3 text-right font-mono text-sm text-stone-600 dark:text-night-200">
-									{formatDuration(run.duration)}
-								</td>
-								<td className="px-4 py-3 text-sm text-stone-500 dark:text-night-300 max-w-xs truncate">
-									{run.result ?? run.error ?? "--"}
-								</td>
-							</tr>
-						))}
+						{runs.map((run) => {
+							const isExpanded = expandedRows.has(run.id);
+							return (
+								<>
+									<tr
+										key={run.id}
+										className={cn(
+											"hover:bg-cream-50 dark:hover:bg-night-750 transition-colors cursor-pointer",
+											isExpanded && "bg-cream-50 dark:bg-night-750"
+										)}
+										onClick={() => toggleRow(run.id)}
+									>
+										<td className="w-8 px-2 py-3 text-stone-400 dark:text-night-500">
+											<ChevronIcon open={isExpanded} className="rotate-[-90deg]" />
+										</td>
+										<td className="px-4 py-3 text-sm text-stone-900 dark:text-night-50 font-medium">
+											{serviceDisplayNames[run.service]}
+										</td>
+										<td className="px-4 py-3">
+											<StatusBadge status={run.status} />
+										</td>
+										<td className="px-4 py-3 text-sm text-stone-500 dark:text-night-300">
+											{formatDistanceToNow(new Date(run.startedAt), { addSuffix: true })}
+										</td>
+										<td className="px-4 py-3 text-right font-mono text-sm text-stone-600 dark:text-night-200">
+											{formatDuration(run.duration)}
+										</td>
+										<td className="px-4 py-3 text-sm text-stone-500 dark:text-night-300 max-w-xs truncate">
+											{run.result ?? run.error ?? "--"}
+										</td>
+									</tr>
+									{isExpanded && (
+										<tr key={`${run.id}-detail`}>
+											<td colSpan={6} className="p-0">
+												<RunDetailPanel runId={run.id} service={run.service} />
+											</td>
+										</tr>
+									)}
+								</>
+							);
+						})}
 					</tbody>
 				</table>
 			</div>

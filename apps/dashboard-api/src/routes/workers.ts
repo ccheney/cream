@@ -664,4 +664,326 @@ app.openapi(getWorkerRunRoute, async (c) => {
 	}
 });
 
+// ============================================
+// GET /runs/:id/details - Run Details with Data
+// ============================================
+
+const MacroWatchEntrySchema = z.object({
+	id: z.string(),
+	timestamp: z.string(),
+	session: z.string(),
+	category: z.string(),
+	headline: z.string(),
+	symbols: z.array(z.string()),
+	source: z.string(),
+});
+
+const NewspaperSchema = z.object({
+	id: z.string(),
+	date: z.string(),
+	compiledAt: z.string(),
+	sections: z.record(z.string(), z.unknown()),
+	entryCount: z.number(),
+});
+
+const IndicatorEntrySchema = z.object({
+	symbol: z.string(),
+	date: z.string(),
+	values: z.record(z.string(), z.union([z.string(), z.number(), z.null()])),
+});
+
+const RunDetailsResponseSchema = z.object({
+	run: WorkerRunSchema,
+	data: z.union([
+		z.object({ type: z.literal("macro_watch"), entries: z.array(MacroWatchEntrySchema) }),
+		z.object({ type: z.literal("newspaper"), newspaper: NewspaperSchema.nullable() }),
+		z.object({ type: z.literal("indicators"), entries: z.array(IndicatorEntrySchema) }),
+		z.object({ type: z.literal("empty"), message: z.string() }),
+	]),
+});
+
+const getRunDetailsRoute = createRoute({
+	method: "get",
+	path: "/runs/:id/details",
+	request: {
+		params: z.object({
+			id: z.string(),
+		}),
+	},
+	responses: {
+		200: {
+			content: { "application/json": { schema: RunDetailsResponseSchema } },
+			description: "Run details with associated data",
+		},
+		404: {
+			content: { "application/json": { schema: ErrorSchema } },
+			description: "Run not found",
+		},
+		503: {
+			content: { "application/json": { schema: ErrorSchema } },
+			description: "Database service unavailable",
+		},
+	},
+	tags: ["Workers"],
+});
+
+app.openapi(getRunDetailsRoute, async (c) => {
+	const { id } = c.req.valid("param");
+
+	try {
+		const db = await getDbClient();
+
+		// Fetch the run
+		const rows = await db.execute(
+			`SELECT id, run_type, started_at, completed_at, status,
+			        symbols_processed, symbols_failed, error_message
+			 FROM indicator_sync_runs
+			 WHERE id = ?`,
+			[id]
+		);
+
+		const row = rows[0];
+		if (!row) {
+			throw new HTTPException(404, { message: `Run ${id} not found` });
+		}
+
+		const serviceName = mapRunTypeToService(row.run_type as string);
+		if (!serviceName) {
+			throw new HTTPException(404, { message: `Run ${id} has unknown service type` });
+		}
+
+		const run = {
+			id: row.id as string,
+			service: serviceName,
+			status: row.status as z.infer<typeof RunStatusSchema>,
+			startedAt: row.started_at as string,
+			completedAt: row.completed_at as string | null,
+			duration: calculateDuration(row.started_at as string, row.completed_at as string | null),
+			result: formatResult({
+				symbols_processed: row.symbols_processed as number | undefined,
+				symbols_failed: row.symbols_failed as number | undefined,
+				error_message: row.error_message as string | null,
+			}),
+			error: row.error_message as string | null,
+		};
+
+		const startedAt = row.started_at as string;
+		const completedAt = (row.completed_at as string | null) ?? new Date().toISOString();
+
+		// Fetch associated data based on service type
+		switch (serviceName) {
+			case "macro_watch": {
+				const entries = await db.execute(
+					`SELECT id, timestamp, session, category, headline, symbols, source
+					 FROM macro_watch_entries
+					 WHERE created_at >= ? AND created_at <= ?
+					 ORDER BY timestamp DESC
+					 LIMIT 100`,
+					[startedAt, completedAt]
+				);
+
+				return c.json(
+					{
+						run,
+						data: {
+							type: "macro_watch" as const,
+							entries: entries.map((e) => ({
+								id: e.id as string,
+								timestamp: e.timestamp as string,
+								session: e.session as string,
+								category: e.category as string,
+								headline: e.headline as string,
+								symbols: JSON.parse((e.symbols as string) || "[]") as string[],
+								source: e.source as string,
+							})),
+						},
+					},
+					200
+				);
+			}
+
+			case "newspaper": {
+				const newspapers = await db.execute(
+					`SELECT id, date, compiled_at, sections, raw_entry_ids
+					 FROM morning_newspapers
+					 WHERE compiled_at >= ? AND compiled_at <= ?
+					 ORDER BY compiled_at DESC
+					 LIMIT 1`,
+					[startedAt, completedAt]
+				);
+
+				const newspaper = newspapers[0];
+				if (!newspaper) {
+					return c.json(
+						{
+							run,
+							data: { type: "empty" as const, message: "No newspaper compiled in this run" },
+						},
+						200
+					);
+				}
+
+				const rawEntryIds = JSON.parse((newspaper.raw_entry_ids as string) || "[]") as string[];
+
+				return c.json(
+					{
+						run,
+						data: {
+							type: "newspaper" as const,
+							newspaper: {
+								id: newspaper.id as string,
+								date: newspaper.date as string,
+								compiledAt: newspaper.compiled_at as string,
+								sections: JSON.parse((newspaper.sections as string) || "{}"),
+								entryCount: rawEntryIds.length,
+							},
+						},
+					},
+					200
+				);
+			}
+
+			case "short_interest": {
+				const entries = await db.execute(
+					`SELECT symbol, settlement_date, short_interest, short_interest_ratio,
+					        days_to_cover, short_pct_float
+					 FROM short_interest_indicators
+					 WHERE fetched_at >= ? AND fetched_at <= ?
+					 ORDER BY symbol
+					 LIMIT 100`,
+					[startedAt, completedAt]
+				);
+
+				return c.json(
+					{
+						run,
+						data: {
+							type: "indicators" as const,
+							entries: entries.map((e) => ({
+								symbol: e.symbol as string,
+								date: e.settlement_date as string,
+								values: {
+									shortInterest: e.short_interest as number,
+									shortInterestRatio: e.short_interest_ratio as number | null,
+									daysToCover: e.days_to_cover as number | null,
+									shortPctFloat: e.short_pct_float as number | null,
+								},
+							})),
+						},
+					},
+					200
+				);
+			}
+
+			case "sentiment": {
+				const entries = await db.execute(
+					`SELECT symbol, date, sentiment_score, sentiment_strength, news_volume
+					 FROM sentiment_indicators
+					 WHERE computed_at >= ? AND computed_at <= ?
+					 ORDER BY symbol
+					 LIMIT 100`,
+					[startedAt, completedAt]
+				);
+
+				return c.json(
+					{
+						run,
+						data: {
+							type: "indicators" as const,
+							entries: entries.map((e) => ({
+								symbol: e.symbol as string,
+								date: e.date as string,
+								values: {
+									sentimentScore: e.sentiment_score as number,
+									sentimentStrength: e.sentiment_strength as number | null,
+									newsVolume: e.news_volume as number | null,
+								},
+							})),
+						},
+					},
+					200
+				);
+			}
+
+			case "corporate_actions": {
+				const entries = await db.execute(
+					`SELECT symbol, date, trailing_dividend_yield, ex_dividend_days,
+					        upcoming_earnings_days, recent_split
+					 FROM corporate_actions_indicators
+					 WHERE date >= date(?) AND date <= date(?)
+					 ORDER BY symbol
+					 LIMIT 100`,
+					[startedAt, completedAt]
+				);
+
+				return c.json(
+					{
+						run,
+						data: {
+							type: "indicators" as const,
+							entries: entries.map((e) => ({
+								symbol: e.symbol as string,
+								date: e.date as string,
+								values: {
+									dividendYield: e.trailing_dividend_yield as number | null,
+									exDividendDays: e.ex_dividend_days as number | null,
+									earningsDays: e.upcoming_earnings_days as number | null,
+									recentSplit: e.recent_split as number | null,
+								},
+							})),
+						},
+					},
+					200
+				);
+			}
+
+			case "filings_sync": {
+				const entries = await db.execute(
+					`SELECT symbol, form_type, filed_at, accession_number
+					 FROM filings
+					 WHERE created_at >= ? AND created_at <= ?
+					 ORDER BY filed_at DESC
+					 LIMIT 100`,
+					[startedAt, completedAt]
+				);
+
+				return c.json(
+					{
+						run,
+						data: {
+							type: "indicators" as const,
+							entries: entries.map((e) => ({
+								symbol: e.symbol as string,
+								date: e.filed_at as string,
+								values: {
+									formType: e.form_type as string,
+									accessionNumber: e.accession_number as string,
+								},
+							})),
+						},
+					},
+					200
+				);
+			}
+
+			default:
+				return c.json(
+					{
+						run,
+						data: { type: "empty" as const, message: "No data available for this service type" },
+					},
+					200
+				);
+		}
+	} catch (error) {
+		if (error instanceof HTTPException) {
+			throw error;
+		}
+		const message = error instanceof Error ? error.message : "Unknown error";
+		throw new HTTPException(503, {
+			message: `Failed to fetch run details: ${message}`,
+		});
+	}
+});
+
 export default app;

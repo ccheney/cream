@@ -76,6 +76,42 @@ export interface TriggerResponse {
 	message: string;
 }
 
+// Run Details Types
+export interface MacroWatchEntry {
+	id: string;
+	timestamp: string;
+	session: string;
+	category: string;
+	headline: string;
+	symbols: string[];
+	source: string;
+}
+
+export interface NewspaperData {
+	id: string;
+	date: string;
+	compiledAt: string;
+	sections: Record<string, unknown>;
+	entryCount: number;
+}
+
+export interface IndicatorEntry {
+	symbol: string;
+	date: string;
+	values: Record<string, string | number | null>;
+}
+
+export type RunDetailsData =
+	| { type: "macro_watch"; entries: MacroWatchEntry[] }
+	| { type: "newspaper"; newspaper: NewspaperData | null }
+	| { type: "indicators"; entries: IndicatorEntry[] }
+	| { type: "empty"; message: string };
+
+export interface RunDetailsResponse {
+	run: WorkerRun;
+	data: RunDetailsData;
+}
+
 // ============================================
 // Query Keys
 // ============================================
@@ -88,6 +124,7 @@ export const workerServicesKeys = {
 			? ([...workerServicesKeys.all, "runs", filters] as const)
 			: ([...workerServicesKeys.all, "runs"] as const),
 	run: (id: string) => [...workerServicesKeys.all, "run", id] as const,
+	runDetails: (id: string) => [...workerServicesKeys.all, "runDetails", id] as const,
 };
 
 // ============================================
@@ -179,5 +216,22 @@ export function useTriggerWorkerService() {
 		onSuccess: () => {
 			queryClient.invalidateQueries({ queryKey: workerServicesKeys.all });
 		},
+	});
+}
+
+/**
+ * Fetch detailed data for a specific worker run.
+ * Only fetches when enabled (i.e., when the row is expanded).
+ */
+export function useWorkerRunDetails(id: string, enabled = false) {
+	return useQuery({
+		queryKey: workerServicesKeys.runDetails(id),
+		queryFn: async () => {
+			const { data } = await get<RunDetailsResponse>(`/api/workers/runs/${id}/details`);
+			return data;
+		},
+		staleTime: STALE_TIMES.DEFAULT,
+		gcTime: CACHE_TIMES.DEFAULT,
+		enabled: Boolean(id) && enabled,
 	});
 }

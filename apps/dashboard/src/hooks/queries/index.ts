@@ -185,13 +185,19 @@ export {
 } from "./useTheses";
 // Worker Services
 export {
+	type IndicatorEntry,
 	type LastRun,
+	type MacroWatchEntry,
+	type NewspaperData,
+	type RunDetailsData,
+	type RunDetailsResponse,
 	type RunStatus,
 	type ServiceStatus,
 	type TriggerResponse,
 	type TriggerServicePayload,
 	useTriggerWorkerService,
 	useWorkerRun,
+	useWorkerRunDetails,
 	useWorkerRuns,
 	useWorkerServicesStatus,
 	type WorkerRun,
