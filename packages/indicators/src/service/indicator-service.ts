@@ -6,7 +6,7 @@
  *
  * Architecture:
  * - Real-time indicators (price, liquidity, options) are calculated on-demand
- * - Batch indicators (value, quality, short interest, sentiment, corporate) are fetched from Turso
+ * - Batch indicators (value, quality, short interest, sentiment, corporate) are fetched from PostgreSQL
  * - Results are merged into a unified IndicatorSnapshot
  *
  * @see docs/plans/33-indicator-engine-v2.md
@@ -252,7 +252,7 @@ export interface IndicatorServiceDependencies {
  * const service = new IndicatorService({
  *   marketData: alpacaProvider,
  *   priceCalculator: new PriceCalculatorImpl(),
- *   fundamentalRepo: new FundamentalRepoImpl(turso),
+ *   fundamentalRepo: new FundamentalRepoImpl(db),
  * });
  *
  * const snapshot = await service.getSnapshot("AAPL");

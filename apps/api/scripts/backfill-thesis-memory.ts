@@ -3,7 +3,7 @@
 /**
  * Backfill Historical Theses into HelixDB
  *
- * Ingests all closed theses from Turso into HelixDB as ThesisMemory nodes.
+ * Ingests all closed theses from PostgreSQL into HelixDB as ThesisMemory nodes.
  * This enables agents to learn from past thesis outcomes.
  *
  * Usage:
@@ -16,11 +16,11 @@
  *   --since         Only process theses closed after this date (ISO 8601)
  */
 
-import { type CreamEnvironment, createContext } from "@cream/domain";
 import { createHelixClientFromEnv, type HelixClient } from "@cream/helix";
 import { createEmbeddingClient, type EmbeddingClient } from "@cream/helix-schema";
 import { createNodeLogger, type LifecycleLogger } from "@cream/logger";
-import { createTursoClient, ThesisStateRepository, type TursoClient } from "@cream/storage";
+import { type Database, getDb, ThesisStateRepository } from "@cream/storage";
+import { sql } from "drizzle-orm";
 import {
 	batchIngestClosedTheses,
 	type ThesisIngestionInput,
@@ -78,18 +78,18 @@ function parseArgs(): BackfillOptions {
  * Get the market regime for a specific date.
  * Falls back to "UNKNOWN" if no regime data is available.
  */
-async function getRegimeForDate(client: TursoClient, date: string): Promise<string> {
+async function getRegimeForDate(db: Database, date: string): Promise<string> {
 	try {
 		// Look for the closest regime label before or at the given date
-		const row = await client.get<{ regime: string }>(
-			`SELECT regime FROM regime_labels
-       WHERE symbol = '_MARKET' AND timeframe = '1d'
-       AND timestamp <= ?
-       ORDER BY timestamp DESC
-       LIMIT 1`,
-			[date]
-		);
+		const result = await db.execute(sql`
+			SELECT regime FROM regime_labels
+			WHERE symbol = '_MARKET' AND timeframe = '1d'
+			AND timestamp <= ${date}
+			ORDER BY timestamp DESC
+			LIMIT 1
+		`);
 
+		const row = result.rows[0] as { regime: string } | undefined;
 		if (row?.regime) {
 			return String(row.regime).toUpperCase();
 		}
@@ -111,24 +111,16 @@ async function backfillThesisMemory(options: BackfillOptions): Promise<void> {
 		log.info({}, "DRY RUN MODE - No data will be ingested");
 	}
 
-	// Create Turso client
-	const databaseUrl = Bun.env.TURSO_DATABASE_URL;
-	const authToken = Bun.env.TURSO_AUTH_TOKEN;
+	// Create database client
+	const databaseUrl = Bun.env.DATABASE_URL;
 
 	if (!databaseUrl) {
-		log.error({}, "TURSO_DATABASE_URL environment variable not set");
+		log.error({}, "DATABASE_URL environment variable not set");
 		process.exit(1);
 	}
 
-	// Create context for CLI invocation (use environment from options or default to BACKTEST)
-	const envValue = (options.environment || "BACKTEST") as CreamEnvironment;
-	const ctx = createContext(envValue, "manual");
-
-	const storageClient = await createTursoClient(ctx, {
-		syncUrl: databaseUrl,
-		authToken,
-	});
-	const thesisRepo = new ThesisStateRepository(storageClient);
+	const db = getDb();
+	const thesisRepo = new ThesisStateRepository(db);
 
 	// Build filters
 	const environment = options.environment ?? "BACKTEST";
@@ -149,7 +141,6 @@ async function backfillThesisMemory(options: BackfillOptions): Promise<void> {
 
 	if (closedTheses.length === 0) {
 		log.info({}, "No closed theses found to backfill");
-		storageClient.close();
 		return;
 	}
 
@@ -163,8 +154,8 @@ async function backfillThesisMemory(options: BackfillOptions): Promise<void> {
 		const entryDate = thesis.entryDate ?? thesis.createdAt;
 		const exitDate = thesis.closedAt ?? new Date().toISOString();
 
-		const entryRegime = await getRegimeForDate(storageClient, entryDate);
-		const exitRegime = await getRegimeForDate(storageClient, exitDate);
+		const entryRegime = await getRegimeForDate(db, entryDate);
+		const exitRegime = await getRegimeForDate(db, exitDate);
 
 		inputs.push({
 			thesis,
@@ -191,8 +182,6 @@ async function backfillThesisMemory(options: BackfillOptions): Promise<void> {
 
 	if (options.dryRun) {
 		log.info({ count: inputs.length }, "Dry run complete");
-		storageClient.close();
-		storageClient.close();
 		return;
 	}
 
@@ -208,8 +197,6 @@ async function backfillThesisMemory(options: BackfillOptions): Promise<void> {
 			{ error: error instanceof Error ? error.message : String(error) },
 			"Failed to create HelixDB or embedding client - ensure HELIX_HOST and GOOGLE_GENAI_API_KEY are set"
 		);
-		storageClient.close();
-		storageClient.close();
 		return;
 	}
 
@@ -243,8 +230,6 @@ async function backfillThesisMemory(options: BackfillOptions): Promise<void> {
 
 	// Cleanup
 	helixClient.close();
-	storageClient.close();
-	storageClient.close();
 
 	log.info({}, "Backfill complete");
 }

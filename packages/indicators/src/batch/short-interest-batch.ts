@@ -1,7 +1,7 @@
 /**
  * Short Interest Batch Job
  *
- * Fetches short interest data from FINRA API and stores in Turso.
+ * Fetches short interest data from FINRA API and stores in PostgreSQL.
  * Runs bi-monthly to align with FINRA's reporting schedule.
  *
  * FINRA publishes short interest data twice monthly:

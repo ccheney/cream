@@ -154,7 +154,7 @@ export interface MacroEntity {
  * @see docs/plans/19-dynamic-indicator-synthesis.md
  */
 export interface Indicator {
-	/** Unique identifier (matches Turso indicators.id) */
+	/** Unique identifier (matches PostgreSQL indicators.id) */
 	indicator_id: string;
 	/** Human-readable name (e.g., "RSI_Adaptive_14") */
 	name: string;

@@ -2,7 +2,7 @@
 /**
  * Fetch Indicator Metadata
  *
- * Retrieves indicator metadata from Turso and outputs GitHub Actions variables.
+ * Retrieves indicator metadata from PostgreSQL and outputs GitHub Actions variables.
  * Used by the indicator-promotion workflow to populate PR details.
  *
  * Usage: bun run scripts/fetch-indicator-metadata.ts <indicator_id>
@@ -21,6 +21,8 @@
 
 import { appendFileSync } from "node:fs";
 import { createNodeLogger, type LifecycleLogger } from "@cream/logger";
+import { getDb } from "@cream/storage";
+import { sql } from "drizzle-orm";
 
 const log: LifecycleLogger = createNodeLogger({
   service: "fetch-indicator-metadata",
@@ -121,74 +123,38 @@ function setOutput(name: string, value: string): void {
 // ============================================
 
 async function fetchIndicator(indicatorId: string): Promise<Indicator | null> {
-  const dbUrl = Bun.env.TURSO_DATABASE_URL;
-  const authToken = Bun.env.TURSO_AUTH_TOKEN;
+  const dbUrl = Bun.env.DATABASE_URL;
 
   if (!dbUrl) {
-    log.error({}, "TURSO_DATABASE_URL not set");
+    log.error({}, "DATABASE_URL not set");
     process.exit(1);
   }
 
-  // Use Turso HTTP API for simplicity in CI
-  const url = new URL(dbUrl.replace("libsql://", "https://"));
-  url.pathname = "/v2/pipeline";
+  const db = getDb();
 
-  const response = await fetch(url.toString(), {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      ...(authToken && { Authorization: `Bearer ${authToken}` }),
-    },
-    body: JSON.stringify({
-      requests: [
-        {
-          type: "execute",
-          stmt: {
-            sql: `SELECT id, name, category, status, hypothesis, economic_rationale,
-                  validation_report, paper_trading_report, paper_trading_start, paper_trading_end
-                  FROM indicators WHERE id = ?`,
-            args: [{ type: "text", value: indicatorId }],
-          },
-        },
-        { type: "close" },
-      ],
-    }),
-  });
+  const result = await db.execute(sql`
+    SELECT id, name, category, status, hypothesis, economic_rationale,
+           validation_report, paper_trading_report, paper_trading_start, paper_trading_end
+    FROM indicators WHERE id = ${indicatorId}
+  `);
 
-  if (!response.ok) {
-    const error = await response.text();
-    log.error({ error }, "Database error");
-    return null;
-  }
-
-  const result = (await response.json()) as {
-    results: Array<{
-      response?: {
-        type: string;
-        result?: {
-          rows: Array<Array<{ type: string; value: string | null }>>;
-        };
-      };
-    }>;
-  };
-
-  const rows = result.results[0]?.response?.result?.rows;
+  const rows = result.rows;
   if (!rows || rows.length === 0) {
     return null;
   }
 
-  const row = rows[0];
+  const row = rows[0] as Record<string, unknown>;
   return {
-    id: row[0]?.value ?? "",
-    name: row[1]?.value ?? "",
-    category: row[2]?.value ?? "",
-    status: row[3]?.value ?? "",
-    hypothesis: row[4]?.value ?? "",
-    economic_rationale: row[5]?.value ?? "",
-    validation_report: row[6]?.value ?? null,
-    paper_trading_report: row[7]?.value ?? null,
-    paper_trading_start: row[8]?.value ?? null,
-    paper_trading_end: row[9]?.value ?? null,
+    id: (row.id as string) ?? "",
+    name: (row.name as string) ?? "",
+    category: (row.category as string) ?? "",
+    status: (row.status as string) ?? "",
+    hypothesis: (row.hypothesis as string) ?? "",
+    economic_rationale: (row.economic_rationale as string) ?? "",
+    validation_report: (row.validation_report as string) ?? null,
+    paper_trading_report: (row.paper_trading_report as string) ?? null,
+    paper_trading_start: (row.paper_trading_start as string) ?? null,
+    paper_trading_end: (row.paper_trading_end as string) ?? null,
   };
 }
 

@@ -7,7 +7,7 @@
  * ```typescript
  * import { FilingsIngestionService, createFilingsIngestionService } from "@cream/filings";
  *
- * const service = createFilingsIngestionService(tursoClient);
+ * const service = createFilingsIngestionService(db);
  *
  * const result = await service.syncFilings({
  *   symbols: ["AAPL", "MSFT"],

@@ -199,7 +199,7 @@ export function ServicesHealthCard({
 	});
 
 	const services = [
-		{ name: "database", label: "Database (Turso)" },
+		{ name: "database", label: "Database (PostgreSQL)" },
 		{ name: "helix", label: "Memory (HelixDB)" },
 		{ name: "broker", label: "Broker (Alpaca)" },
 		{ name: "marketdata", label: "Market Data (Polygon)" },

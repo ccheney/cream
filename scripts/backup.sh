@@ -2,18 +2,19 @@
 #
 # Database Backup Script
 #
-# Backs up HelixDB and Turso databases to timestamped archives.
+# Backs up HelixDB and PostgreSQL databases to timestamped archives.
 # Run daily at 00:00 UTC (market closed) via cron.
 #
 # Usage:
 #   ./scripts/backup.sh                    # Backup both databases
 #   ./scripts/backup.sh helix              # Backup HelixDB only
-#   ./scripts/backup.sh turso              # Backup Turso only
+#   ./scripts/backup.sh postgres           # Backup PostgreSQL only
 #
 # Environment:
 #   BACKUP_DIR       - Backup directory (default: ./backups)
 #   KEEP_DAILY       - Number of daily backups to keep (default: 7)
 #   KEEP_WEEKLY      - Number of weekly backups to keep (default: 4)
+#   DATABASE_URL     - PostgreSQL connection URL (required for postgres backup)
 #
 # See: docs/plans/13-operations.md - Database Recovery section
 
@@ -105,31 +106,33 @@ backup_helix() {
     fi
 }
 
-backup_turso() {
-    log_info "Backing up Turso database..."
+backup_postgres() {
+    log_info "Backing up PostgreSQL database..."
 
-    local backup_file="$BACKUP_DIR/daily/turso-$TIMESTAMP.tar.gz"
+    local backup_file="$BACKUP_DIR/daily/postgres-$TIMESTAMP.sql.gz"
 
-    # Stop Turso for consistent backup
-    log_info "Stopping Turso container..."
-    docker compose -f "$PROJECT_ROOT/infrastructure/docker-compose.yml" stop turso 2>/dev/null || true
+    if [ -z "${DATABASE_URL:-}" ]; then
+        log_error "DATABASE_URL not set"
+        return 1
+    fi
 
-    # Create backup using docker
-    log_info "Creating backup archive..."
+    # Extract connection details from DATABASE_URL
+    # Format: postgresql://user:password@host:port/database
+    local db_url="$DATABASE_URL"
+
+    # Create backup using pg_dump via docker
+    log_info "Creating backup dump..."
     docker run --rm \
-        -v cream_turso_data:/data \
         -v "$BACKUP_DIR/daily:/backup" \
-        alpine tar czf "/backup/turso-$TIMESTAMP.tar.gz" -C /data .
-
-    # Restart Turso
-    log_info "Restarting Turso container..."
-    docker compose -f "$PROJECT_ROOT/infrastructure/docker-compose.yml" start turso 2>/dev/null || true
+        --network host \
+        postgres:17-alpine \
+        pg_dump "$db_url" | gzip > "$backup_file"
 
     if [ -f "$backup_file" ]; then
         local size=$(du -h "$backup_file" | cut -f1)
-        log_info "Turso backup complete: $backup_file ($size)"
+        log_info "PostgreSQL backup complete: $backup_file ($size)"
     else
-        log_error "Turso backup failed: file not created"
+        log_error "PostgreSQL backup failed: file not created"
         return 1
     fi
 }
@@ -142,7 +145,7 @@ apply_retention() {
     log_info "Applying retention policy..."
 
     # Keep only KEEP_DAILY daily backups
-    for prefix in helix turso; do
+    for prefix in helix postgres; do
         local count=$(ls -1 "$BACKUP_DIR/daily/$prefix-"* 2>/dev/null | wc -l)
         if [ "$count" -gt "$KEEP_DAILY" ]; then
             local to_delete=$((count - KEEP_DAILY))
@@ -162,7 +165,7 @@ apply_retention() {
     fi
 
     # Keep only KEEP_WEEKLY weekly backups
-    for prefix in helix turso; do
+    for prefix in helix postgres; do
         local count=$(ls -1 "$BACKUP_DIR/weekly/$prefix-"* 2>/dev/null | wc -l)
         if [ "$count" -gt "$KEEP_WEEKLY" ]; then
             local to_delete=$((count - KEEP_WEEKLY))
@@ -195,16 +198,16 @@ main() {
         helix)
             backup_helix
             ;;
-        turso)
-            backup_turso
+        postgres)
+            backup_postgres
             ;;
         all)
             backup_helix
-            backup_turso
+            backup_postgres
             ;;
         *)
             log_error "Unknown target: $target"
-            echo "Usage: $0 [helix|turso|all]"
+            echo "Usage: $0 [helix|postgres|all]"
             exit 1
             ;;
     esac

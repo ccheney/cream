@@ -245,10 +245,10 @@ export const CachingConfigSchema = z.object({
 	in_memory_ttl_minutes: z.number().int().positive().default(5),
 
 	/**
-	 * Persist cached data to Turso
+	 * Persist cached data to PostgreSQL
 	 * Default: true
 	 */
-	persist_to_turso: z.boolean().default(true),
+	persist_to_database: z.boolean().default(true),
 
 	/**
 	 * Data retention period (days)

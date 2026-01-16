@@ -2,7 +2,7 @@
  * Candle Ingestion Service
  *
  * Orchestrates fetching OHLCV candles from Alpaca API
- * and storing them in Turso database.
+ * and storing them in PostgreSQL database.
  *
  * @see docs/plans/02-data-layer.md
  * @see docs/plans/31-alpaca-data-consolidation.md

@@ -2,7 +2,7 @@
  * System State
  *
  * Database-backed system state with in-memory cache for running cycles.
- * Status is persisted to Turso and survives server restarts.
+ * Status is persisted to PostgreSQL and survives server restarts.
  */
 
 import { requireEnv } from "@cream/domain";

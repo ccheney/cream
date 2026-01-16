@@ -94,7 +94,7 @@ export function createEventPublisher(config: EventPublisherConfig = {}): EventPu
 	const sourceStates: Record<EventSource, SourceState> = {
 		redis: createSourceState(),
 		grpc: createSourceState(),
-		turso: createSourceState(),
+		database: createSourceState(),
 		internal: createSourceState(),
 	};
 
@@ -206,8 +206,8 @@ export function createEventPublisher(config: EventPublisherConfig = {}): EventPu
 						sourceStates.redis.status === "connecting" ? "disconnected" : sourceStates.redis.status,
 					grpc:
 						sourceStates.grpc.status === "connecting" ? "disconnected" : sourceStates.grpc.status,
-					turso:
-						sourceStates.turso.status === "connecting" ? "disconnected" : sourceStates.turso.status,
+					database:
+						sourceStates.database.status === "connecting" ? "disconnected" : sourceStates.database.status,
 					internal:
 						sourceStates.internal.status === "connecting"
 							? "disconnected"
@@ -276,7 +276,7 @@ export function createEventPublisher(config: EventPublisherConfig = {}): EventPu
 
 	function handleDecisionEvent(event: DecisionInsertEvent): void {
 		eventsReceived++;
-		updateSourceState("turso", { lastEvent: new Date() });
+		updateSourceState("database", { lastEvent: new Date() });
 		const broadcastEvent_ = mapDecisionEvent(event);
 		broadcastEvent(broadcastEvent_);
 	}

@@ -12,7 +12,6 @@ import { drizzle } from "drizzle-orm/node-postgres";
 import { Pool } from "pg";
 import type { NodePgDatabase } from "drizzle-orm/node-postgres";
 import * as schema from "./schema";
-import { getConfig } from "@cream/config";
 
 // Environment-to-database mapping
 const DATABASE_URLS: Record<string, string | undefined> = {
@@ -33,7 +32,7 @@ function getDatabaseUrl(): string {
 		return TEST_DATABASE_URL;
 	}
 
-	const env = getConfig().creamEnv;
+	const env = Bun.env.CREAM_ENV ?? "BACKTEST";
 	const url = DATABASE_URLS[env];
 
 	if (!url) {

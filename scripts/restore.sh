@@ -2,12 +2,12 @@
 #
 # Database Restore Script
 #
-# Restores HelixDB or Turso databases from backup archives.
+# Restores HelixDB or PostgreSQL databases from backup archives.
 #
 # Usage:
-#   ./scripts/restore.sh helix <backup-file>    # Restore HelixDB
-#   ./scripts/restore.sh turso <backup-file>    # Restore Turso
-#   ./scripts/restore.sh list                   # List available backups
+#   ./scripts/restore.sh helix <backup-file>      # Restore HelixDB
+#   ./scripts/restore.sh postgres <backup-file>   # Restore PostgreSQL
+#   ./scripts/restore.sh list                     # List available backups
 #
 # WARNING: This will overwrite existing data!
 #
@@ -145,7 +145,7 @@ restore_helix() {
     fi
 }
 
-restore_turso() {
+restore_postgres() {
     local backup_file="$1"
 
     if [ ! -f "$backup_file" ]; then
@@ -153,41 +153,26 @@ restore_turso() {
         exit 1
     fi
 
-    log_info "Restoring Turso from: $backup_file"
+    if [ -z "${DATABASE_URL:-}" ]; then
+        log_error "DATABASE_URL not set"
+        exit 1
+    fi
 
-    confirm "This will OVERWRITE all existing Turso data!"
+    log_info "Restoring PostgreSQL from: $backup_file"
 
-    # Stop Turso
-    log_info "Stopping Turso container..."
-    docker compose -f "$PROJECT_ROOT/infrastructure/docker-compose.yml" stop turso 2>/dev/null || true
+    confirm "This will OVERWRITE all existing PostgreSQL data!"
 
-    # Clear existing data
-    log_info "Clearing existing data..."
-    docker run --rm \
-        -v cream_turso_data:/data \
-        alpine sh -c "rm -rf /data/*"
+    # Extract connection details from DATABASE_URL
+    local db_url="$DATABASE_URL"
 
     # Restore from backup
-    log_info "Extracting backup..."
-    docker run --rm \
-        -v cream_turso_data:/data \
-        -v "$(dirname "$backup_file"):/backup" \
-        alpine tar xzf "/backup/$(basename "$backup_file")" -C /data
+    log_info "Restoring database from dump..."
+    gunzip -c "$backup_file" | docker run --rm -i \
+        --network host \
+        postgres:17-alpine \
+        psql "$db_url"
 
-    # Restart Turso
-    log_info "Restarting Turso container..."
-    docker compose -f "$PROJECT_ROOT/infrastructure/docker-compose.yml" start turso 2>/dev/null || true
-
-    # Wait for startup
-    log_info "Waiting for Turso to start..."
-    sleep 5
-
-    # Verify health
-    if curl -s http://localhost:8080/health | grep -q "ok"; then
-        log_info "Turso restore complete and healthy!"
-    else
-        log_warn "Turso started but health check failed. Check logs."
-    fi
+    log_info "PostgreSQL restore complete!"
 }
 
 # ============================================
@@ -198,14 +183,14 @@ usage() {
     echo "Usage: $0 <command> [options]"
     echo ""
     echo "Commands:"
-    echo "  list                      List available backups"
-    echo "  helix <backup-file>       Restore HelixDB from backup"
-    echo "  turso <backup-file>       Restore Turso from backup"
+    echo "  list                        List available backups"
+    echo "  helix <backup-file>         Restore HelixDB from backup"
+    echo "  postgres <backup-file>      Restore PostgreSQL from backup"
     echo ""
     echo "Examples:"
     echo "  $0 list"
     echo "  $0 helix backups/daily/helix-20260105-120000.tar.gz"
-    echo "  $0 turso backups/weekly/turso-20260101-000000.tar.gz"
+    echo "  $0 postgres backups/weekly/postgres-20260101-000000.sql.gz"
     echo ""
     echo "WARNING: Restore operations will OVERWRITE existing data!"
 }
@@ -238,14 +223,14 @@ main() {
             check_docker
             restore_helix "$backup_file"
             ;;
-        turso)
+        postgres)
             if [ -z "$backup_file" ]; then
                 log_error "Backup file required"
                 usage
                 exit 1
             fi
             check_docker
-            restore_turso "$backup_file"
+            restore_postgres "$backup_file"
             ;;
         "")
             usage

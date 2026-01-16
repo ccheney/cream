@@ -16,7 +16,7 @@ import { z } from "zod/v4";
 /**
  * Event sources in the system.
  */
-export type EventSource = "redis" | "grpc" | "turso" | "internal";
+export type EventSource = "redis" | "grpc" | "database" | "internal";
 
 /**
  * Event source status.
@@ -34,7 +34,7 @@ export const BaseEventSchema = z.object({
 	/** Unique event ID */
 	id: z.string(),
 	/** Event source */
-	source: z.enum(["redis", "grpc", "turso", "internal"]),
+	source: z.enum(["redis", "grpc", "database", "internal"]),
 	/** Event type */
 	type: z.string(),
 	/** Event timestamp */
@@ -142,11 +142,11 @@ export const OrderUpdateEventSchema = z.object({
 export type OrderUpdateEvent = z.infer<typeof OrderUpdateEventSchema>;
 
 // ============================================
-// Turso Events (Database CDC)
+// Database Events (CDC)
 // ============================================
 
 /**
- * Decision insert event (from Turso CDC).
+ * Decision insert event (from Database CDC).
  */
 export const DecisionInsertEventSchema = z.object({
 	decisionId: z.string(),
@@ -242,9 +242,9 @@ export interface GrpcConfig {
 }
 
 /**
- * Turso CDC configuration.
+ * Database CDC configuration.
  */
-export interface TursoCdcConfig {
+export interface DatabaseCdcConfig {
 	/** Polling interval in milliseconds */
 	pollIntervalMs: number;
 	/** Tables to watch */
@@ -261,8 +261,8 @@ export interface EventPublisherConfig {
 	redis?: RedisConfig;
 	/** gRPC configuration (optional) */
 	grpc?: GrpcConfig;
-	/** Turso CDC configuration (optional) */
-	turso?: TursoCdcConfig;
+	/** Database CDC configuration (optional) */
+	database?: DatabaseCdcConfig;
 	/** Enable internal events */
 	enableInternalEvents?: boolean;
 }

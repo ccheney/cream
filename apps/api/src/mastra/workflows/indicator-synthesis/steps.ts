@@ -711,7 +711,7 @@ export type PaperTradingOutput = z.infer<typeof PaperTradingOutputSchema>;
  *
  * - Returns early with validation_failed if !isValid
  * - Generates UUID for new indicator
- * - Creates indicator record in Turso with status 'staging'
+ * - Creates indicator record in PostgreSQL with status 'staging'
  * - Transitions to 'paper' status with paper_trading_start timestamp
  * - Optionally creates HelixDB node for graph relationships
  */

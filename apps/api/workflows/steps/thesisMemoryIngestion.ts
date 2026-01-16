@@ -1,7 +1,7 @@
 /**
  * Thesis Memory Ingestion Workflow Step
  *
- * Ingests closed theses from Turso into HelixDB as ThesisMemory nodes.
+ * Ingests closed theses from PostgreSQL into HelixDB as ThesisMemory nodes.
  * When a thesis closes, this step captures the outcome, generates lessons
  * learned, and stores it for future agent retrieval.
  *
@@ -34,7 +34,7 @@ import type { Thesis } from "@cream/storage";
  * Input for thesis memory ingestion
  */
 export interface ThesisIngestionInput {
-	/** Closed thesis from Turso */
+	/** Closed thesis from PostgreSQL */
 	thesis: Thesis;
 	/** Market regime at entry (required - not stored in thesis) */
 	entryRegime: string;
@@ -109,7 +109,7 @@ function validateForIngestion(thesis: Thesis): { valid: boolean; reason?: string
 }
 
 /**
- * Convert Turso Thesis to ThesisMemoryInput.
+ * Convert Thesis from PostgreSQL to ThesisMemoryInput.
  *
  * Note: This function assumes validation has been performed.
  * Required fields (entryThesis, entryDate, closedAt) are guaranteed
@@ -317,7 +317,7 @@ export async function batchIngestClosedTheses(
 /**
  * Handle thesis close event by triggering memory ingestion.
  *
- * This function should be called after a thesis is closed in Turso.
+ * This function should be called after a thesis is closed in PostgreSQL.
  * It runs as a background job to not block the main workflow.
  *
  * @param thesis - The closed thesis

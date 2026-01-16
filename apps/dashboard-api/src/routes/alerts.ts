@@ -2,7 +2,7 @@
  * Alert Settings Routes
  *
  * Routes for managing alert notification settings.
- * Settings are persisted in Turso database via AlertSettingsRepository.
+ * Settings are persisted in PostgreSQL database via AlertSettingsRepository.
  *
  * @see docs/plans/ui/05-api-endpoints.md Alerts section
  */

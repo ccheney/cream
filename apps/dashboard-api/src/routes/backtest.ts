@@ -2,12 +2,12 @@
  * Backtest API Routes
  *
  * Routes for running and viewing backtests.
- * Data is persisted in Turso database via BacktestsRepository.
+ * Data is persisted in PostgreSQL database via BacktestsRepository.
  *
  * Data Sources:
  * - Backtest execution: NautilusTrader (event-driven) or VectorBT (fast scan)
  * - Historical data: Massive REST aggregates
- * - Results storage: Turso database
+ * - Results storage: PostgreSQL database
  *
  * @see docs/plans/ui/05-api-endpoints.md Backtest section
  * @see docs/plans/12-backtest.md Full backtest specification

@@ -2,10 +2,10 @@
  * Risk API Routes
  *
  * Routes for exposure, Greeks, VaR, and risk limits.
- * Returns real data from positions (Turso) + market data (Massive API) - NO mock data.
+ * Returns real data from positions (PostgreSQL) + market data (Massive API) - NO mock data.
  *
  * Data Sources:
- * - Positions: Turso database
+ * - Positions: PostgreSQL database
  * - Real-time prices: Massive WebSocket streaming
  * - Greeks: Massive Options Snapshot API or local Black-Scholes
  * - Historical data: Massive REST aggregates (for correlation/VaR)

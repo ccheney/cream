@@ -2,7 +2,7 @@
  * User Preferences Routes
  *
  * Routes for managing user dashboard preferences.
- * Uses Turso/SQLite storage via UserPreferencesRepository for persistence.
+ * Uses PostgreSQL storage via UserPreferencesRepository for persistence.
  *
  * @see docs/plans/ui/04-data-requirements.md user_preferences
  */

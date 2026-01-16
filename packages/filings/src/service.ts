@@ -6,11 +6,11 @@
  * 2. Parse filings with cheerio
  * 3. Chunk filings by section
  * 4. Ingest chunks into HelixDB with embeddings
- * 5. Track progress in Turso
+ * 5. Track progress in PostgreSQL
  */
 
 import { createHelixClientFromEnv, type HelixClient } from "@cream/helix";
-import { FilingSyncRunsRepository, FilingsRepository, type TursoClient } from "@cream/storage";
+import { type Database, FilingSyncRunsRepository, FilingsRepository } from "@cream/storage";
 import { chunkParsedFiling } from "./chunker.js";
 import { EdgarClient, type EdgarClientConfig } from "./edgar-client.js";
 import { batchIngestChunks } from "./helix-ingest.js";
@@ -339,15 +339,15 @@ export class FilingsIngestionService {
 // ============================================
 
 /**
- * Create a FilingsIngestionService from Turso client.
+ * Create a FilingsIngestionService from database client.
  */
 export function createFilingsIngestionService(
-	tursoClient: TursoClient,
+	db: Database,
 	helixClient?: HelixClient,
 	config?: EdgarClientConfig
 ): FilingsIngestionService {
-	const filingsRepo = new FilingsRepository(tursoClient);
-	const syncRunsRepo = new FilingSyncRunsRepository(tursoClient);
+	const filingsRepo = new FilingsRepository(db);
+	const syncRunsRepo = new FilingSyncRunsRepository(db);
 
 	return new FilingsIngestionService(filingsRepo, syncRunsRepo, helixClient, config);
 }

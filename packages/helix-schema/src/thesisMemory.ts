@@ -2,7 +2,7 @@
  * Thesis Memory Module
  *
  * TypeScript types and utilities for thesis memory ingestion.
- * When a thesis closes in Turso, this module handles converting
+ * When a thesis closes in PostgreSQL, this module handles converting
  * it to a ThesisMemory node for HelixDB storage and retrieval.
  *
  * @see schema.hx - ThesisMemory node definition

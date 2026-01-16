@@ -282,11 +282,11 @@ export const IndicatorSnapshotSchema = z.object({
 export type IndicatorSnapshot = z.infer<typeof IndicatorSnapshotSchema>;
 
 // ============================================================
-// BATCH DATABASE SCHEMAS (Turso table mappings)
+// BATCH DATABASE SCHEMAS (PostgreSQL table mappings)
 // ============================================================
 
 /**
- * Fundamental indicators stored in Turso (nightly batch)
+ * Fundamental indicators stored in PostgreSQL (nightly batch)
  */
 export const FundamentalIndicatorsRowSchema = z.object({
 	id: z.string(),
@@ -323,7 +323,7 @@ export const FundamentalIndicatorsRowSchema = z.object({
 export type FundamentalIndicatorsRow = z.infer<typeof FundamentalIndicatorsRowSchema>;
 
 /**
- * Short interest indicators stored in Turso (bi-weekly batch)
+ * Short interest indicators stored in PostgreSQL (bi-weekly batch)
  */
 export const ShortInterestIndicatorsRowSchema = z.object({
 	id: z.string(),
@@ -342,7 +342,7 @@ export const ShortInterestIndicatorsRowSchema = z.object({
 export type ShortInterestIndicatorsRow = z.infer<typeof ShortInterestIndicatorsRowSchema>;
 
 /**
- * Sentiment indicators stored in Turso (nightly aggregation)
+ * Sentiment indicators stored in PostgreSQL (nightly aggregation)
  */
 export const SentimentIndicatorsRowSchema = z.object({
 	id: z.string(),
@@ -364,7 +364,7 @@ export const SentimentIndicatorsRowSchema = z.object({
 export type SentimentIndicatorsRow = z.infer<typeof SentimentIndicatorsRowSchema>;
 
 /**
- * Options indicators cache stored in Turso (refreshed hourly)
+ * Options indicators cache stored in PostgreSQL (refreshed hourly)
  */
 export const OptionsIndicatorsCacheRowSchema = z.object({
 	id: z.string(),
@@ -387,7 +387,7 @@ export const OptionsIndicatorsCacheRowSchema = z.object({
 export type OptionsIndicatorsCacheRow = z.infer<typeof OptionsIndicatorsCacheRowSchema>;
 
 /**
- * Corporate actions indicators stored in Turso (daily update)
+ * Corporate actions indicators stored in PostgreSQL (daily update)
  */
 export const CorporateActionsIndicatorsRowSchema = z.object({
 	id: z.string(),

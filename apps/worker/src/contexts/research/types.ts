@@ -40,13 +40,13 @@ export const GuardrailsSchema = z.object({
 		.default(["os.system", "subprocess.Popen", "eval", "exec", "__import__"]),
 	blockedNetwork: z
 		.array(z.string())
-		.default(["production.cream.internal", "turso.cream.internal", "helix.cream.internal"]),
+		.default(["production.cream.internal", "postgres.cream.internal", "helix.cream.internal"]),
 	maxFileSizeMb: z.number().positive().default(100),
 	allowedBranches: z.array(z.string()).default(["factor/*", "research/*"]),
 	blockedBranches: z.array(z.string()).default(["main", "master", "production"]),
 	blockedApis: z
 		.array(z.string())
-		.default(["alpaca.markets/v2/orders", "turso.cream.internal", "helix.cream.internal"]),
+		.default(["alpaca.markets/v2/orders", "postgres.cream.internal", "helix.cream.internal"]),
 	blockedCommands: z
 		.array(z.string())
 		.default(["rm -rf", "dd if=", "mkfs", "> /dev/", "chmod 777", "curl | bash", "wget | bash"]),
@@ -55,11 +55,11 @@ export type Guardrails = z.infer<typeof GuardrailsSchema>;
 
 export const DEFAULT_GUARDRAILS: Guardrails = {
 	blockedImports: ["os.system", "subprocess.Popen", "eval", "exec", "__import__"],
-	blockedNetwork: ["production.cream.internal", "turso.cream.internal", "helix.cream.internal"],
+	blockedNetwork: ["production.cream.internal", "postgres.cream.internal", "helix.cream.internal"],
 	maxFileSizeMb: 100,
 	allowedBranches: ["factor/*", "research/*"],
 	blockedBranches: ["main", "master", "production"],
-	blockedApis: ["alpaca.markets/v2/orders", "turso.cream.internal", "helix.cream.internal"],
+	blockedApis: ["alpaca.markets/v2/orders", "postgres.cream.internal", "helix.cream.internal"],
 	blockedCommands: [
 		"rm -rf",
 		"dd if=",

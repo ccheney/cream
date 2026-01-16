@@ -2,7 +2,7 @@
  * Corporate Actions Batch Job
  *
  * Fetches corporate actions (dividends, splits, mergers) from Alpaca API
- * and stores calculated indicators in Turso.
+ * and stores calculated indicators in PostgreSQL.
  *
  * Runs daily (6 AM ET) to fetch upcoming corporate actions and calculate:
  * - Trailing dividend yield

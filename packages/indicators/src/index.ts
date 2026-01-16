@@ -9,7 +9,7 @@
  *   - price/: Price-based indicators (trend, momentum, volatility)
  *   - liquidity/: Market microstructure indicators
  *   - options/: Options-derived indicators
- * - repositories/: Turso persistence layer
+ * - repositories/: PostgreSQL persistence layer
  * - types/: Zod schemas and TypeScript types
  * - batch/: Bulk processing utilities
  */

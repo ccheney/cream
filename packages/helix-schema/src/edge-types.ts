@@ -223,7 +223,7 @@ export interface ImprovesOnEdge {
  */
 export interface GeneratedFactorEdge {
 	source_id: string; // ResearchHypothesis.hypothesis_id
-	target_id: string; // Factor ID in Turso
+	target_id: string; // Factor ID in PostgreSQL
 	/** Validation timestamp */
 	validated_at: string;
 	/** Environment where validation occurred */

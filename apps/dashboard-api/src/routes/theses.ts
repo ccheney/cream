@@ -2,7 +2,7 @@
  * Theses API Routes
  *
  * Routes for managing trading theses and convictions.
- * Data is stored in Turso (SQLite) via ThesisStateRepository.
+ * Data is stored in PostgreSQL via ThesisStateRepository.
  *
  * @see docs/plans/ui/05-api-endpoints.md Theses section
  * @see packages/storage/src/repositories/thesis-state.ts
