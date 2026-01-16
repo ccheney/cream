@@ -58,7 +58,7 @@ export interface Cycle {
 }
 
 export interface CreateCycleInput {
-	id: string;
+	id?: string;
 	environment: string;
 	totalSymbols?: number;
 	configVersion?: string;
@@ -358,17 +358,20 @@ export class CyclesRepository {
 	async create(input: CreateCycleInput): Promise<Cycle> {
 		const now = new Date();
 
-		const [row] = await this.db
-			.insert(cycles)
-			.values({
-				id: input.id,
-				environment: input.environment as "BACKTEST" | "PAPER" | "LIVE",
-				status: "running",
-				startedAt: now,
-				totalSymbols: input.totalSymbols ?? 0,
-				configVersion: input.configVersion ?? null,
-			})
-			.returning();
+		const values: typeof cycles.$inferInsert = {
+			environment: input.environment as "BACKTEST" | "PAPER" | "LIVE",
+			status: "running",
+			startedAt: now,
+			totalSymbols: input.totalSymbols ?? 0,
+			configVersion: input.configVersion ?? null,
+		};
+
+		// Only include id if explicitly provided; otherwise let DB generate via uuidv7()
+		if (input.id) {
+			values.id = input.id;
+		}
+
+		const [row] = await this.db.insert(cycles).values(values).returning();
 
 		if (!row) {
 			throw new Error("Failed to create cycle");
@@ -602,10 +605,10 @@ export class CyclesRepository {
 	// Convenience methods
 
 	async start(
-		id: string,
 		environment: string,
 		totalSymbols = 0,
-		configVersion?: string
+		configVersion?: string,
+		id?: string
 	): Promise<Cycle> {
 		return this.create({ id, environment, totalSymbols, configVersion });
 	}

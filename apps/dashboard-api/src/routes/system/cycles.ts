@@ -147,7 +147,6 @@ app.openapi(triggerCycleRoute, async (c) => {
 		}
 	}
 
-	const cycleId = `cycle_${Date.now()}_${crypto.randomUUID().slice(0, 8)}`;
 	const startedAt = new Date().toISOString();
 
 	let configVersion: string | null = null;
@@ -161,6 +160,26 @@ app.openapi(triggerCycleRoute, async (c) => {
 		if (environment !== "BACKTEST") {
 			return c.json({ error: "No configuration found for environment. Run db:seed first." }, 400);
 		}
+	}
+
+	// Create cycle in database first - DB generates UUID via uuidv7()
+	let cycleId: string;
+	const cyclesRepo = getCyclesRepo();
+	setCyclesRepository(cyclesRepo);
+	try {
+		const cycle = await cyclesRepo.start(
+			environment,
+			symbols?.length ?? 0,
+			configVersion ?? undefined
+		);
+		cycleId = cycle.id;
+	} catch (error) {
+		return c.json(
+			{
+				error: `Failed to create cycle: ${error instanceof Error ? error.message : "Unknown error"}`,
+			},
+			500
+		);
 	}
 
 	const cycleState: CycleState = {
@@ -228,21 +247,6 @@ app.openapi(triggerCycleRoute, async (c) => {
 	const runCycle = async () => {
 		const startTime = Date.now();
 		cycleState.status = "running";
-
-		let cyclesRepo: Awaited<ReturnType<typeof getCyclesRepo>> | null = null;
-		try {
-			cyclesRepo = await getCyclesRepo();
-			// Set up persistence service with repository
-			setCyclesRepository(cyclesRepo);
-			await cyclesRepo.start(
-				cycleId,
-				environment,
-				symbols?.length ?? 0,
-				configVersion ?? undefined
-			);
-		} catch {
-			// Non-critical - continue cycle even if persistence fails
-		}
 
 		emitProgress("observe", 0, "starting", "Starting trading cycle...");
 
@@ -601,33 +605,31 @@ app.openapi(triggerCycleRoute, async (c) => {
 			}
 
 			const durationMs = Date.now() - startTime;
-			if (cyclesRepo) {
-				try {
-					const decisionsRepo = await getDecisionsRepo();
-					const decisionsResult = await decisionsRepo.findMany({ cycleId, environment });
-					const decisionSummaries = decisionsResult.data.map((d) => ({
-						symbol: d.symbol,
-						action: d.action as "BUY" | "SELL" | "HOLD",
-						direction: d.direction as "LONG" | "SHORT" | "FLAT",
-						confidence: d.confidenceScore ?? 0,
-					}));
+			try {
+				const decisionsRepo = await getDecisionsRepo();
+				const decisionsResult = await decisionsRepo.findMany({ cycleId, environment });
+				const decisionSummaries = decisionsResult.data.map((d) => ({
+					symbol: d.symbol,
+					action: d.action as "BUY" | "SELL" | "HOLD",
+					direction: d.direction as "LONG" | "SHORT" | "FLAT",
+					confidence: d.confidenceScore ?? 0,
+				}));
 
-					await cyclesRepo.complete(cycleId, {
-						approved: workflowResult.approved,
-						iterations: workflowResult.iterations,
-						decisions: decisionSummaries,
-						orders: (workflowResult.orderSubmission?.orderIds ?? []).map((orderId) => ({
-							orderId,
-							symbol: "unknown",
-							side: "buy" as const,
-							quantity: 0,
-							status: "submitted" as const,
-						})),
-						durationMs,
-					});
-				} catch {
-					// Non-critical - log but don't fail
-				}
+				await cyclesRepo.complete(cycleId, {
+					approved: workflowResult.approved,
+					iterations: workflowResult.iterations,
+					decisions: decisionSummaries,
+					orders: (workflowResult.orderSubmission?.orderIds ?? []).map((orderId) => ({
+						orderId,
+						symbol: "unknown",
+						side: "buy" as const,
+						quantity: 0,
+						status: "submitted" as const,
+					})),
+					durationMs,
+				});
+			} catch {
+				// Non-critical - log but don't fail
 			}
 
 			const statusMessage = workflowResult.approved
@@ -668,17 +670,15 @@ app.openapi(triggerCycleRoute, async (c) => {
 				// Non-critical
 			}
 
-			if (cyclesRepo) {
-				try {
-					await cyclesRepo.fail(
-						cycleId,
-						cycleState.error,
-						error instanceof Error ? error.stack : undefined,
-						durationMs
-					);
-				} catch {
-					// Non-critical
-				}
+			try {
+				await cyclesRepo.fail(
+					cycleId,
+					cycleState.error,
+					error instanceof Error ? error.stack : undefined,
+					durationMs
+				);
+			} catch {
+				// Non-critical
 			}
 
 			emitProgress("error", 0, "failed", `Cycle failed: ${cycleState.error}`);

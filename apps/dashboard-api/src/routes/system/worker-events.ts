@@ -190,10 +190,10 @@ app.openapi(workerEventsRoute, async (c) => {
 						const cyclesRepo = await getCyclesRepo();
 						setCyclesRepository(cyclesRepo);
 						await cyclesRepo.start(
-							event.cycleId,
 							event.environment,
 							event.instruments.length,
-							event.configVersion
+							event.configVersion,
+							event.cycleId
 						);
 					} catch {
 						// Non-critical - continue even if DB fails

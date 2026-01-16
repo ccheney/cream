@@ -483,7 +483,7 @@ impl StatePersistence {
             r"
             INSERT INTO execution_recovery_state (
                 environment, last_snapshot_at, last_cycle_id, status, error_message, updated_at
-            ) VALUES ($1::environment, NOW(), $2, $3, $4, NOW())
+            ) VALUES ($1::environment, NOW(), $2, $3::execution_recovery_status, $4, NOW())
             ON CONFLICT (environment) DO UPDATE SET
                 last_snapshot_at = NOW(),
                 last_cycle_id = EXCLUDED.last_cycle_id,
@@ -562,7 +562,7 @@ impl StatePersistence {
             r"
             UPDATE execution_recovery_state SET
                 last_reconciliation_at = NOW(),
-                status = $1,
+                status = $1::execution_recovery_status,
                 updated_at = NOW()
             WHERE environment = $2::environment
             ",

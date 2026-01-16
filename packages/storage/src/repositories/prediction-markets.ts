@@ -200,14 +200,24 @@ interface RawSignalRow {
 }
 
 function mapRawSignalRow(row: RawSignalRow): ComputedSignal {
+	const computedAt =
+		row.computed_at instanceof Date
+			? row.computed_at
+			: new Date(row.computed_at as unknown as string);
+	const createdAt =
+		row.created_at instanceof Date
+			? row.created_at
+			: row.created_at
+				? new Date(row.created_at as unknown as string)
+				: new Date();
 	return {
 		id: row.id,
 		signalType: row.signal_type as SignalType,
 		signalValue: Number(row.signal_value),
 		confidence: row.confidence ? Number(row.confidence) : null,
-		computedAt: row.computed_at.toISOString(),
+		computedAt: computedAt.toISOString(),
 		inputs: row.inputs as unknown as SignalInputs,
-		createdAt: row.created_at?.toISOString() ?? new Date().toISOString(),
+		createdAt: createdAt.toISOString(),
 	};
 }
 
