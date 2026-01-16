@@ -13,7 +13,7 @@ Single switch controls environment: `CREAM_ENV=BACKTEST|PAPER|LIVE`
 | TypeScript | Bun |
 | Rust | Edition 2024 |
 | Python | via uv |
-| Databases | Turso (SQLite), HelixDB |
+| Databases | PostgreSQL (Drizzle ORM), HelixDB |
 | Serialization | Protobuf (Buf CLI) + Zod |
 | Monorepo | Turborepo |
 | Linting | Biome, Clippy, Ruff |
@@ -51,7 +51,7 @@ packages/
   research/             # Python backtesting (VectorBT subprocess runner)
   schema/               # Protobuf definitions (.proto files)
   schema-gen/           # Generated Protobuf stubs (TS/Rust)
-  storage/              # Turso client wrapper
+  storage/              # PostgreSQL + Drizzle ORM repositories
   tsconfig/             # Shared TypeScript configs
   universe/             # Trading universe resolution
   validation/           # Research-to-production parity validation
@@ -64,7 +64,7 @@ packages/
 bun install # Install TS dependencies
 cargo build --workspace # Build all Rust packages
 uv pip install -e ".[dev]" # Install Python dev dependencies
-bun run db:migrate  # Run Turso database migrations
+bun run db:migrate  # Run PostgreSQL migrations via Drizzle
 
 # Testing, Linting, formatting, type checking
 bun test # run all tests
@@ -81,7 +81,7 @@ buf generate # Protobuf → TS + Rust stubs
 
 - **Do Your Own Exploration** - Verify assumptions against actual codebase, tests, and documentation
 - **Use Context7 for Documentation** - Always query context7 for up-to-date library/API docs (Drizzle, PostgreSQL extensions, pg driver etc.)
-- **Ground Assumptions with Internet Research** - Use web search tools to verify syntax, patterns, version compatibility, and best practices instead of making assumptions
+- **Ground Assumptions with Research** - Use web search to verify syntax, patterns, version compatibility, and best practices instead of making assumptions
 
 ## Code Conventions
 
@@ -90,7 +90,6 @@ buf generate # Protobuf → TS + Rust stubs
 - **Trust self-documenting code.** Do not add comments that restate what the code does. Only add comments when explaining *why* something non-obvious is necessary.
 - **Do NOT modify linting rules** without explicit approval
 - **Do NOT modify code coverage requirements** or thresholds without explicit approval
-- **Do NOT use CHECK constraints in SQL migrations** CHECK constraints not yet implemented See: [tursodatabase/turso#3753](https://github.com/tursodatabase/turso/issues/3753)
 
 ## ES2024 TypeScript Patterns
 
