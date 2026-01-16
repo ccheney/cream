@@ -6,6 +6,8 @@
  * HTTP server integration (via Hono/Express adapters) will be added later.
  */
 
+// Export database utilities
+export { getMacroWatchRepo } from "./db.js";
 // Export gRPC client
 export * from "./grpc/index.js";
 // Export agents

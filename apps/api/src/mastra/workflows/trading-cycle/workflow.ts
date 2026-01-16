@@ -94,7 +94,7 @@ const observeStep = createStep({
 
 const orientStep = createStep({
 	id: "orient",
-	description: "Load memory and compute regimes",
+	description: "Load memory, compute regimes, and fetch overnight brief",
 	inputSchema: AnyInputSchema,
 	outputSchema: AnyOutputSchema,
 	stateSchema: MinimalStateSchema,
@@ -106,7 +106,30 @@ const orientStep = createStep({
 		const forceStub = inputData.forceStub ?? false;
 		const mode = env === "BACKTEST" || forceStub ? "STUB" : "LLM";
 		await setState({ ...state, mode });
-		return { ...inputData, mode };
+
+		// Fetch today's morning newspaper if available (LLM mode only)
+		let overnightBrief: string | null = null;
+		if (mode === "LLM") {
+			try {
+				const { getMacroWatchRepo } = await import("../../../db.js");
+				const { formatNewspaperForLLM } = await import("../macro-watch/newspaper.js");
+				const repo = await getMacroWatchRepo();
+				const today = new Date().toISOString().slice(0, 10);
+				const newspaper = await repo.getNewspaperByDate(today);
+
+				if (newspaper) {
+					overnightBrief = formatNewspaperForLLM(newspaper.sections);
+					log.info({ date: today }, "Morning newspaper injected into Orient phase");
+				}
+			} catch (error) {
+				log.warn(
+					{ error: error instanceof Error ? error.message : String(error) },
+					"Failed to fetch morning newspaper"
+				);
+			}
+		}
+
+		return { ...inputData, mode, overnightBrief };
 	},
 });
 
@@ -135,6 +158,7 @@ const groundingStep = createStep({
 			snapshots: inputData.snapshot ?? {},
 			indicators: inputData.snapshot?.indicators ?? {},
 			externalContext: inputData.externalContext,
+			overnightBrief: inputData.overnightBrief,
 			recentEvents: [],
 		};
 
@@ -202,6 +226,7 @@ const analystsStep = createStep({
 			snapshots: inputData.snapshot ?? {},
 			indicators: inputData.snapshot?.indicators ?? {},
 			externalContext: inputData.externalContext,
+			overnightBrief: inputData.overnightBrief, // Pass overnight newspaper
 			recentEvents: [],
 			groundingOutput: inputData.groundingOutput, // Pass grounding context
 		};

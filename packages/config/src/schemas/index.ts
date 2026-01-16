@@ -98,6 +98,16 @@ export {
 	VolumeSMAIndicatorConfigSchema,
 	VolumeSMAParamsSchema,
 } from "./indicators";
+// Macro watch configuration
+export {
+	createDefaultMacroWatchConfig,
+	createDefaultNewspaperConfig,
+	type MacroWatchConfig,
+	MacroWatchConfigSchema,
+	type NewspaperConfig,
+	NewspaperConfigSchema,
+	NewsSymbolFilter,
+} from "./macro_watch";
 // Memory configuration
 export {
 	type CorrectionConfig,

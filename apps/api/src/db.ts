@@ -21,6 +21,7 @@ import {
 	ExternalEventsRepository,
 	FactorZooRepository,
 	IndicatorsRepository,
+	MacroWatchRepository,
 	OrdersRepository,
 	PositionsRepository,
 	PredictionMarketsRepository,
@@ -212,6 +213,14 @@ export async function getFactorZooRepo(): Promise<FactorZooRepository> {
 export async function getIndicatorsRepo(): Promise<IndicatorsRepository> {
 	const client = await getDbClient();
 	return new IndicatorsRepository(client);
+}
+
+/**
+ * Get macro watch repository
+ */
+export async function getMacroWatchRepo(): Promise<MacroWatchRepository> {
+	const client = await getDbClient();
+	return new MacroWatchRepository(client);
 }
 
 // ============================================

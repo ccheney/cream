@@ -98,6 +98,8 @@ export interface AgentContext {
 	};
 	/** Agent configurations from runtime config (from database) */
 	agentConfigs?: Partial<Record<AgentType, AgentConfigEntry>>;
+	/** Overnight brief from morning newspaper (compiled from MacroWatch entries) */
+	overnightBrief?: string | null;
 	/** Grounding output from the Grounding Agent (web search context) */
 	groundingOutput?: {
 		perSymbol: Array<{

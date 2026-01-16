@@ -23,6 +23,12 @@ import {
 	type JobState,
 	startIndicatorScheduler,
 } from "./contexts/indicators/index.js";
+import {
+	createMacroWatchService,
+	createNewspaperService,
+	type MacroWatchService,
+	type NewspaperService,
+} from "./contexts/macro-watch/index.js";
 import { createSchedulerManager, type SchedulerManager } from "./contexts/scheduling/index.js";
 import {
 	createIndicatorSynthesisScheduler,
@@ -58,6 +64,8 @@ interface WorkerState {
 		tradingCycle: Date | null;
 		predictionMarkets: Date | null;
 		filingsSync: Date | null;
+		macroWatch: Date | null;
+		newspaper: Date | null;
 	};
 	startedAt: Date;
 
@@ -65,6 +73,8 @@ interface WorkerState {
 	cycleTrigger: CycleTriggerService;
 	predictionMarkets: PredictionMarketsService;
 	filingsSync: FilingsSyncService | null;
+	macroWatch: MacroWatchService;
+	newspaper: NewspaperService;
 
 	// Schedulers
 	schedulerManager: SchedulerManager | null;
@@ -114,6 +124,16 @@ async function runPredictionMarkets(): Promise<void> {
 async function runFilingsSync(): Promise<void> {
 	state.lastRun.filingsSync = new Date();
 	await state.filingsSync?.sync(getInstruments(), state.environment);
+}
+
+async function runMacroWatch(): Promise<void> {
+	state.lastRun.macroWatch = new Date();
+	await state.macroWatch.run(getInstruments());
+}
+
+async function compileNewspaper(): Promise<void> {
+	state.lastRun.newspaper = new Date();
+	await state.newspaper.compile(getInstruments());
 }
 
 // ============================================
@@ -188,12 +208,16 @@ async function main() {
 			tradingCycle: null,
 			predictionMarkets: null,
 			filingsSync: null,
+			macroWatch: null,
+			newspaper: null,
 		},
 		startedAt: new Date(),
 
 		cycleTrigger: createCycleTriggerServiceFromEnv(),
 		predictionMarkets: createPredictionMarketsService(),
 		filingsSync: createFilingsSyncService(db),
+		macroWatch: createMacroWatchService(),
+		newspaper: createNewspaperService(),
 
 		schedulerManager: null,
 		indicatorScheduler: null,
@@ -221,6 +245,8 @@ async function main() {
 			tradingCycle: state.cycleTrigger.isRunning(),
 			predictionMarkets: state.predictionMarkets.isRunning(),
 			filingsSync: state.filingsSync?.isRunning() ?? false,
+			macroWatch: state.macroWatch.isRunning(),
+			newspaper: state.newspaper.isRunning(),
 		}),
 		getIndicatorJobStatus,
 		getSynthesisScheduler: () => state.synthesisScheduler,
@@ -242,6 +268,8 @@ async function main() {
 				runTradingCycle,
 				runPredictionMarkets,
 				runFilingsSync,
+				runMacroWatch,
+				compileNewspaper,
 			},
 			getIntervals
 		);
