@@ -4,7 +4,7 @@
 
 import type { Environment } from "./common";
 
-export type SystemStatusType = "ACTIVE" | "PAUSED" | "STOPPED";
+export type SystemStatusType = "running" | "paused" | "stopped" | "error";
 
 export interface Alert {
 	id: string;

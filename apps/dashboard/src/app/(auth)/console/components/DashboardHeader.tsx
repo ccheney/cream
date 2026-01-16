@@ -15,10 +15,10 @@ function SystemControls({
 	const systemStatus = status?.status;
 
 	// Default to showing Start enabled when status unknown (but not during initial load)
-	// API returns lowercase values: "stopped", "active", "paused"
+	// API returns lowercase values: "stopped", "running", "paused"
 	const canStart = !systemStatus || systemStatus === "stopped" || systemStatus === "paused";
-	const canPause = systemStatus === "active";
-	const canStop = systemStatus === "active" || systemStatus === "paused";
+	const canPause = systemStatus === "running";
+	const canStop = systemStatus === "running" || systemStatus === "paused";
 
 	return (
 		<>
@@ -44,7 +44,7 @@ function SystemControls({
 				disabled={!canStart || isStarting || isLoading}
 				className="px-3 py-1.5 text-sm font-medium rounded-md disabled:opacity-50 disabled:cursor-not-allowed text-emerald-700 dark:text-emerald-400 bg-emerald-50 hover:bg-emerald-100 dark:bg-emerald-900/30 dark:hover:bg-emerald-900/50 border border-emerald-200 dark:border-emerald-800"
 			>
-				{isStarting ? "Starting..." : systemStatus === "PAUSED" ? "Resume" : "Start"}
+				{isStarting ? "Starting..." : systemStatus === "paused" ? "Resume" : "Start"}
 			</button>
 		</>
 	);

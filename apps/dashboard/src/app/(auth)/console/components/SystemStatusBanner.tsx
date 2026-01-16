@@ -10,9 +10,10 @@ const ENV_DESCRIPTIONS: Record<string, string> = {
 };
 
 const STATUS_DESCRIPTIONS: Record<string, string> = {
-	ACTIVE: "System is running and executing OODA cycles",
-	PAUSED: "System is paused - no new cycles will start",
-	STOPPED: "System is stopped - must be started to trade",
+	running: "System is running and executing OODA cycles",
+	paused: "System is paused - no new cycles will start",
+	stopped: "System is stopped - must be started to trade",
+	error: "System encountered an error",
 };
 
 const ENV_COLORS = {
@@ -22,9 +23,10 @@ const ENV_COLORS = {
 } as const;
 
 const STATUS_COLORS = {
-	ACTIVE: "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400",
-	PAUSED: "bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-400",
-	STOPPED: "bg-cream-100 text-stone-700 dark:bg-night-700 dark:text-night-400",
+	running: "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400",
+	paused: "bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-400",
+	stopped: "bg-cream-100 text-stone-700 dark:bg-night-700 dark:text-night-400",
+	error: "bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400",
 } as const;
 
 export function SystemStatusBanner({
@@ -57,10 +59,10 @@ export function SystemStatusBanner({
 					<TooltipTrigger>
 						<span
 							className={`px-3 py-1 text-sm font-medium rounded-full cursor-help ${
-								STATUS_COLORS[statusKey] ?? STATUS_COLORS.STOPPED
+								STATUS_COLORS[statusKey] ?? STATUS_COLORS.stopped
 							}`}
 						>
-							{status?.status ?? "STOPPED"}
+							{status?.status ?? "stopped"}
 						</span>
 					</TooltipTrigger>
 					<TooltipContent>
