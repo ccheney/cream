@@ -12,6 +12,7 @@ export {
 
 export {
 	createNewspaperService,
+	type NewspaperCompileResult,
 	NewspaperService,
 	type NewspaperServiceConfig,
 } from "./newspaper-service.js";

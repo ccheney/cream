@@ -167,10 +167,11 @@ async function triggerNewspaper(): Promise<TriggerResult> {
 	const startTime = Date.now();
 	try {
 		state.lastRun.newspaper = new Date();
-		await state.newspaper.compile(getInstruments());
+		const result = await state.newspaper.compile(getInstruments());
 		return {
-			success: true,
-			message: "Newspaper compilation completed",
+			success: result.compiled,
+			message: result.message,
+			processed: result.entryCount,
 			durationMs: Date.now() - startTime,
 		};
 	} catch (error) {

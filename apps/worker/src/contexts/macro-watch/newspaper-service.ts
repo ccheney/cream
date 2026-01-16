@@ -14,6 +14,12 @@ export interface NewspaperServiceConfig {
 	maxBulletsPerSection?: number;
 }
 
+export interface NewspaperCompileResult {
+	compiled: boolean;
+	entryCount: number;
+	message: string;
+}
+
 export class NewspaperService {
 	private running = false;
 	private lastCompile: Date | null = null;
@@ -26,11 +32,14 @@ export class NewspaperService {
 	/**
 	 * Compile the morning newspaper from overnight MacroWatch entries.
 	 * Fetches all entries since previous market close and summarizes them.
+	 *
+	 * @returns Result indicating what happened during compilation
+	 * @throws Error if compilation fails
 	 */
-	async compile(symbols: string[]): Promise<void> {
+	async compile(symbols: string[]): Promise<NewspaperCompileResult> {
 		if (this.running) {
 			log.info({}, "Skipping newspaper compilation - already running");
-			return;
+			return { compiled: false, entryCount: 0, message: "Already running" };
 		}
 
 		this.running = true;
@@ -39,7 +48,7 @@ export class NewspaperService {
 			const calendar = getCalendarService();
 			if (!calendar) {
 				log.warn({}, "CalendarService not available, cannot compile newspaper");
-				return;
+				throw new Error("CalendarService not available");
 			}
 
 			const prevClose = await calendar.getPreviousTradingDay(new Date());
@@ -53,7 +62,7 @@ export class NewspaperService {
 
 			if (entries.length === 0) {
 				log.info({}, "No overnight entries to compile");
-				return;
+				return { compiled: false, entryCount: 0, message: "No overnight entries to compile" };
 			}
 
 			// Compile the newspaper
@@ -73,11 +82,18 @@ export class NewspaperService {
 				},
 				"Morning newspaper compiled"
 			);
+
+			return {
+				compiled: true,
+				entryCount: content.entryCount,
+				message: `Compiled ${content.entryCount} entries (${content.sections.macro.length} macro, ${content.sections.universe.length} universe)`,
+			};
 		} catch (error) {
 			log.error(
 				{ error: error instanceof Error ? error.message : String(error) },
 				"Newspaper compilation failed"
 			);
+			throw error;
 		} finally {
 			this.running = false;
 		}
