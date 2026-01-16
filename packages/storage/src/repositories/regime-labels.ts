@@ -145,6 +145,17 @@ export class RegimeLabelsRepository {
 		return this.getCurrent(MARKET_SYMBOL, timeframe);
 	}
 
+	async getLatestForSymbol(symbol: string): Promise<RegimeLabel | null> {
+		const [row] = await this.db
+			.select()
+			.from(regimeLabels)
+			.where(eq(regimeLabels.symbol, symbol))
+			.orderBy(desc(regimeLabels.timestamp))
+			.limit(1);
+
+		return row ? mapRegimeLabelRow(row) : null;
+	}
+
 	async getHistory(
 		symbol: string,
 		timeframe: RegimeTimeframe,

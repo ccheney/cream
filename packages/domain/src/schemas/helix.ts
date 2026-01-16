@@ -15,7 +15,7 @@ import {
 	EquityTickerSchema,
 	MarketRegime,
 	UuidSchema,
-} from "./turso.js";
+} from "./database.js";
 
 export const EMBEDDING_DIMENSION = 1536;
 

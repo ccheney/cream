@@ -16,6 +16,7 @@ import { z } from "zod";
 // ============================================
 
 const ALPACA_DATA_BASE_URL = "https://data.alpaca.markets";
+const ALPACA_TRADING_BASE_URL = "https://api.alpaca.markets";
 
 // ============================================
 // Response Schemas
@@ -49,6 +50,15 @@ export const MoversResponseSchema = z.object({
 	last_updated: z.string(),
 });
 export type MoversResponse = z.infer<typeof MoversResponseSchema>;
+
+export const AssetInfoSchema = z.object({
+	symbol: z.string(),
+	name: z.string(),
+	exchange: z.string(),
+	status: z.string(),
+	tradable: z.boolean(),
+});
+export type AssetInfo = z.infer<typeof AssetInfoSchema>;
 
 // ============================================
 // Client Types
@@ -99,9 +109,10 @@ export class AlpacaScreenerClient {
 	 */
 	private async request<T>(
 		path: string,
-		params?: Record<string, string | number | boolean | undefined>
+		params?: Record<string, string | number | boolean | undefined>,
+		baseUrl?: string
 	): Promise<T> {
-		const url = new URL(path, this.baseUrl);
+		const url = new URL(path, baseUrl ?? this.baseUrl);
 
 		if (params) {
 			for (const [key, value] of Object.entries(params)) {
@@ -121,10 +132,68 @@ export class AlpacaScreenerClient {
 
 		if (!response.ok) {
 			const errorText = await response.text().catch(() => response.statusText);
-			throw new Error(`Alpaca Screener API error ${response.status}: ${errorText}`);
+			throw new Error(`Alpaca API error ${response.status}: ${errorText}`);
 		}
 
 		return response.json() as Promise<T>;
+	}
+
+	/**
+	 * Get asset info for a single symbol.
+	 */
+	async getAssetInfo(symbol: string): Promise<AssetInfo | null> {
+		try {
+			const response = await this.request<Record<string, unknown>>(
+				`/v2/assets/${symbol}`,
+				undefined,
+				ALPACA_TRADING_BASE_URL
+			);
+
+			const parsed = AssetInfoSchema.safeParse(response);
+			if (parsed.success) {
+				return parsed.data;
+			}
+
+			// Fallback extraction
+			if (response?.symbol && response?.exchange) {
+				return {
+					symbol: String(response.symbol),
+					name: String(response.name ?? ""),
+					exchange: String(response.exchange),
+					status: String(response.status ?? "unknown"),
+					tradable: Boolean(response.tradable),
+				};
+			}
+
+			return null;
+		} catch {
+			return null;
+		}
+	}
+
+	/**
+	 * Get asset info for multiple symbols (batch lookup).
+	 * Returns a map of symbol -> AssetInfo.
+	 */
+	async getAssetsInfo(symbols: string[]): Promise<Map<string, AssetInfo>> {
+		const results = new Map<string, AssetInfo>();
+
+		// Batch lookup in parallel with concurrency limit
+		const BATCH_SIZE = 10;
+		for (let i = 0; i < symbols.length; i += BATCH_SIZE) {
+			const batch = symbols.slice(i, i + BATCH_SIZE);
+			const infos = await Promise.all(batch.map((s) => this.getAssetInfo(s)));
+
+			for (let j = 0; j < batch.length; j++) {
+				const info = infos[j];
+				const symbol = batch[j];
+				if (info && symbol) {
+					results.set(symbol.toUpperCase(), info);
+				}
+			}
+		}
+
+		return results;
 	}
 
 	/**

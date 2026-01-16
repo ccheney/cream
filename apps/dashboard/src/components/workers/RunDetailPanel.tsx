@@ -194,9 +194,9 @@ function IndicatorDetails({
 				];
 			case "corporate_actions":
 				return [
-					{ key: "dividendYield", label: "Div Yield" },
-					{ key: "exDividendDays", label: "Ex-Div Days" },
-					{ key: "earningsDays", label: "Earnings Days" },
+					{ key: "actionType", label: "Type" },
+					{ key: "amount", label: "Amount" },
+					{ key: "ratio", label: "Ratio" },
 				];
 			case "filings_sync":
 				return [

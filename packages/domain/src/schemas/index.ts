@@ -7,7 +7,7 @@
  */
 
 // ============================================
-// Turso Database Schemas
+// Database Entity Schemas
 // ============================================
 
 export {
@@ -67,7 +67,7 @@ export {
 	Timeframe,
 	TradingAction,
 	UuidSchema,
-} from "./turso.js";
+} from "./database.js";
 
 // ============================================
 // HelixDB Schemas

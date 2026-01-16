@@ -11,6 +11,20 @@ import { createAlpacaClientFromEnv, isAlpacaConfigured } from "@cream/marketdata
 import type { MacroWatchEntry, MacroWatchSession } from "../schemas.js";
 
 /**
+ * Major indices and macro symbols to always include in news.
+ */
+const MAJOR_SYMBOLS = new Set([
+	"SPY", "QQQ", "DIA", "IWM", "RSP",   // Major index ETFs
+	"VIX", "UVXY", "VXX", "VIXY", "SVXY", "VIXM", // Volatility
+	"TLT", "TBT", "BND", "HYG", "LQD",   // Bonds
+	"GLD", "SLV", "GDX", "GOLD",         // Metals
+	"USO", "XLE", "XOP", "OIL", "UCO",   // Energy
+	"XLF", "XLK", "XLV", "XLI", "XLC",   // Sector ETFs
+	"DXY", "UUP", "FXE", "FXY",          // Currencies
+	"EEM", "EFA", "VWO",                  // International
+]);
+
+/**
  * Determine the macro watch session based on current time.
  */
 function getCurrentSession(): MacroWatchSession {
@@ -70,18 +84,19 @@ export async function scanNews(symbols: string[], since: string): Promise<MacroW
 
 		// Also fetch general market news (no symbol filter) for broader context
 		const generalNews = await client.getNews([], 20, since, now);
+		const universeSet = new Set(symbols.map((u) => u.toUpperCase()));
+
 		for (const article of generalNews) {
 			// Skip if already captured via symbol filter
 			if (entries.some((e) => e.id === `news-${article.id}`)) {
 				continue;
 			}
 
-			// Only include if it mentions any universe symbol
-			const mentionsUniverse = article.symbols.some((s) =>
-				symbols.map((u) => u.toUpperCase()).includes(s.toUpperCase())
-			);
+			// Include if it mentions any universe symbol OR major indices/macro
+			const mentionsUniverse = article.symbols.some((s) => universeSet.has(s.toUpperCase()));
+			const mentionsMajor = article.symbols.some((s) => MAJOR_SYMBOLS.has(s.toUpperCase()));
 
-			if (mentionsUniverse) {
+			if (mentionsUniverse || mentionsMajor) {
 				entries.push({
 					id: `news-${article.id}`,
 					timestamp: article.created_at,
@@ -94,6 +109,7 @@ export async function scanNews(symbols: string[], since: string): Promise<MacroW
 						articleId: article.id,
 						summary: article.summary,
 						url: article.url,
+						isMacro: mentionsMajor && !mentionsUniverse,
 					},
 				});
 			}

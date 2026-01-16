@@ -31,8 +31,10 @@
     "validate": "bun scripts/validate-versions.ts",
     "prepare": "husky",
     "db:seed": "CREAM_ENV=${CREAM_ENV:-BACKTEST} bun run packages/storage/src/seed-config.ts",
-    "db:migrate": "CREAM_ENV=${CREAM_ENV:-BACKTEST} bun run packages/storage/src/run-migrations.ts",
-    "db:status": "CREAM_ENV=${CREAM_ENV:-BACKTEST} bun run packages/storage/src/run-migrations.ts --status"
+    "db:generate": "bun --cwd packages/storage run db:generate",
+    "db:migrate": "bun --cwd packages/storage run db:migrate",
+    "db:push": "bun --cwd packages/storage run db:push",
+    "db:studio": "bun --cwd packages/storage run db:studio"
   },
   "devDependencies": {
     "@biomejs/biome": "2.3.11",
@@ -44,8 +46,6 @@
   "dependencies": {
     "@google/genai": "1.37.0",
     "@hookform/resolvers": "5.2.2",
-    "@tursodatabase/database": "0.4.3",
-    "@tursodatabase/sync": "0.4.3",
     "lucide-react": "0.562.0",
     "react-hook-form": "7.71.1",
     "zod": "4.3.5"

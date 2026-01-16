@@ -1,12 +1,16 @@
 /**
  * Repository Base Utilities
  *
- * Common patterns, error handling, and transaction support for repositories.
+ * Common patterns, error handling, and query building for repositories.
  *
  * @see docs/plans/ui/04-data-requirements.md
  */
 
-import type { Row, TursoClient } from "../turso.js";
+// ============================================
+// Types
+// ============================================
+
+export type Row = Record<string, unknown>;
 
 // ============================================
 // Error Handling
@@ -75,44 +79,6 @@ export class RepositoryError extends Error {
 			"QUERY_ERROR",
 			table,
 			error
-		);
-	}
-}
-
-// ============================================
-// Transaction Support
-// ============================================
-
-/**
- * Execute operations within a transaction
- *
- * @example
- * ```typescript
- * await withTransaction(client, async (tx) => {
- *   await decisionsRepo.create(tx, decision);
- *   await ordersRepo.create(tx, order);
- * });
- * ```
- */
-export async function withTransaction<T>(
-	client: TursoClient,
-	callback: (tx: TursoClient) => Promise<T>
-): Promise<T> {
-	await client.run("BEGIN TRANSACTION");
-	try {
-		const result = await callback(client);
-		await client.run("COMMIT");
-		return result;
-	} catch (error) {
-		await client.run("ROLLBACK");
-		if (error instanceof RepositoryError) {
-			throw error;
-		}
-		throw new RepositoryError(
-			`Transaction failed: ${error instanceof Error ? error.message : String(error)}`,
-			"TRANSACTION_ERROR",
-			undefined,
-			error instanceof Error ? error : undefined
 		);
 	}
 }
@@ -286,41 +252,6 @@ export interface PaginatedResult<T> {
 	totalPages: number;
 	hasNext: boolean;
 	hasPrev: boolean;
-}
-
-/**
- * Execute a paginated query
- */
-export async function paginate<T extends Row>(
-	client: TursoClient,
-	baseQuery: string,
-	countQuery: string,
-	args: unknown[],
-	options: PaginationOptions = {}
-): Promise<PaginatedResult<T>> {
-	const page = Math.max(1, options.page ?? 1);
-	const pageSize = Math.min(100, Math.max(1, options.pageSize ?? 25));
-	const offset = (page - 1) * pageSize;
-
-	// Get total count
-	const countResult = await client.get<{ count: number }>(countQuery, args);
-	const total = countResult?.count ?? 0;
-
-	// Get page data
-	const sql = `${baseQuery} LIMIT ? OFFSET ?`;
-	const data = await client.execute<T>(sql, [...args, pageSize, offset]);
-
-	const totalPages = Math.ceil(total / pageSize);
-
-	return {
-		data,
-		total,
-		page,
-		pageSize,
-		totalPages,
-		hasNext: page < totalPages,
-		hasPrev: page > 1,
-	};
 }
 
 // ============================================

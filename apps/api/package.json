@@ -17,7 +17,7 @@
   "scripts": {
     "dev": "bunx --bun mastra dev",
     "dev:hono": "bun run src/server.ts",
-    "build": "bun build src/index.ts --outdir dist --target bun --external @libsql/client --external libsql --external better-sqlite3 --external @tursodatabase/* --external @cream/schema-gen/*",
+    "build": "bun build src/index.ts --outdir dist --target bun --external pg --external pg-native --external @cream/schema-gen/*",
     "start": "bun run src/server.ts",
     "typecheck": "tsgo --noEmit",
     "test": "CREAM_ENV=BACKTEST bun test",

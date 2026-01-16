@@ -6,6 +6,7 @@
 
 export {
 	createMacroWatchService,
+	type MacroWatchResult,
 	MacroWatchService,
 	type MacroWatchServiceConfig,
 } from "./macro-watch-service.js";

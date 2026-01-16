@@ -572,52 +572,6 @@ export function createPool<T>(config: PoolConfig<T>): ConnectionPool<T> {
 // ============================================
 
 /**
- * Create a Turso connection pool
- *
- * Note: SQLite (which Turso is based on) has a single-writer limitation.
- * This pool is primarily useful for:
- * - Reusing prepared statements
- * - Managing read concurrency
- * - Connection health monitoring
- *
- * @param config Turso configuration
- * @param poolConfig Pool configuration overrides
- */
-export async function createTursoPool(
-	createClient: () => Promise<{
-		execute: (sql: string, args?: unknown[]) => Promise<unknown[]>;
-		close: () => void | Promise<void>;
-	}>,
-	poolConfig: Partial<
-		Omit<
-			PoolConfig<ReturnType<typeof createClient> extends Promise<infer T> ? T : never>,
-			"create" | "destroy"
-		>
-	> = {}
-): Promise<ConnectionPool<Awaited<ReturnType<typeof createClient>>>> {
-	type ClientType = Awaited<ReturnType<typeof createClient>>;
-
-	return createPool<ClientType>({
-		create: createClient,
-		destroy: async (client) => {
-			await client.close();
-		},
-		validate: async (client) => {
-			try {
-				await client.execute("SELECT 1");
-				return true;
-			} catch {
-				return false;
-			}
-		},
-		name: "turso",
-		min: 1,
-		max: 3, // SQLite doesn't benefit much from many connections
-		...poolConfig,
-	});
-}
-
-/**
  * HTTP connection pool for API clients
  *
  * Uses a simple counter-based approach since HTTP connections

@@ -40,9 +40,6 @@
     "@cream/config": "workspace:*",
     "@cream/domain": "workspace:*",
     "@cream/logger": "workspace:*",
-    "@libsql/client": "0.17.0",
-    "@tursodatabase/database": "0.4.3",
-    "@tursodatabase/sync": "0.4.3",
     "drizzle-orm": "^0.45.1",
     "drizzle-zod": "^0.8.3",
     "pg": "^8.17.1"

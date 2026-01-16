@@ -165,12 +165,13 @@ async function runMacroWatch(): Promise<void> {
 	});
 
 	try {
-		const entries = await state.macroWatch.run(getInstruments());
+		const { entries, saved } = await state.macroWatch.run(getInstruments());
+
 		await recordRunComplete({
 			db,
 			runId,
 			success: true,
-			message: `${entries.length} entries`,
+			message: `${entries.length} entries, ${saved} saved`,
 			processed: entries.length,
 		});
 	} catch (error) {
@@ -221,10 +222,11 @@ async function triggerMacroWatch(): Promise<TriggerResult> {
 	const startTime = Date.now();
 	try {
 		state.lastRun.macroWatch = new Date();
-		const entries = await state.macroWatch.run(getInstruments());
+		const { entries, saved } = await state.macroWatch.run(getInstruments());
+
 		return {
 			success: true,
-			message: `MacroWatch completed with ${entries.length} entries`,
+			message: `MacroWatch completed with ${entries.length} entries, ${saved} saved`,
 			processed: entries.length,
 			failed: 0,
 			durationMs: Date.now() - startTime,
@@ -411,7 +413,11 @@ async function main() {
 		cycleTrigger: createCycleTriggerServiceFromEnv(),
 		predictionMarkets: createPredictionMarketsService(),
 		filingsSync: createFilingsSyncService(db),
-		macroWatch: createMacroWatchService(),
+		macroWatch: (() => {
+			const service = createMacroWatchService();
+			service.setDbProvider(getDbClient);
+			return service;
+		})(),
 		newspaper: createNewspaperService(),
 
 		schedulerManager: null,

@@ -32,6 +32,38 @@ function getCurrentSession(): MacroWatchSession {
 const SIGNIFICANT_MOVE_PCT = 3.0;
 
 /**
+ * Minimum price to filter out penny stocks/microcaps.
+ */
+const MIN_PRICE = 25.0;
+
+/**
+ * Allowed exchanges (filter out OTC).
+ */
+const ALLOWED_EXCHANGES = new Set(["NYSE", "NASDAQ", "ARCA", "AMEX", "BATS", "NYE"]);
+
+/**
+ * Excluded symbol suffixes (warrants, units, rights).
+ * W = Warrants, U = Units, R = Rights
+ */
+const EXCLUDED_SUFFIXES = ["W", "U", "R", "WS"];
+
+/**
+ * Check if a symbol is a common stock (not warrant/unit/rights).
+ */
+function isCommonStock(symbol: string): boolean {
+	const upper = symbol.toUpperCase();
+	return !EXCLUDED_SUFFIXES.some((suffix) => upper.endsWith(suffix));
+}
+
+/**
+ * Check if a symbol passes exchange filter.
+ */
+function isAllowedExchange(exchange: string | undefined): boolean {
+	if (!exchange) return false;
+	return ALLOWED_EXCHANGES.has(exchange.toUpperCase());
+}
+
+/**
  * Scan for significant market movers and most active stocks.
  *
  * @param universeSymbols - Universe symbols to prioritize
@@ -52,56 +84,89 @@ export async function scanMovers(universeSymbols: string[]): Promise<MacroWatchE
 		// Get market movers
 		const movers = await screener.getPreMarketMovers(universeSymbols, 10);
 
-		// Process gainers
-		for (const gainer of movers.gainers) {
-			if (Math.abs(gainer.percent_change) >= SIGNIFICANT_MOVE_PCT) {
-				const isUniverse = universeSymbols
-					.map((s) => s.toUpperCase())
-					.includes(gainer.symbol.toUpperCase());
+		// Filter movers by price and symbol type (exclude warrants/units)
+		const priceFilteredGainers = movers.gainers.filter(
+			(m) =>
+				Math.abs(m.percent_change) >= SIGNIFICANT_MOVE_PCT &&
+				m.price >= MIN_PRICE &&
+				isCommonStock(m.symbol)
+		);
+		const priceFilteredLosers = movers.losers.filter(
+			(m) =>
+				Math.abs(m.percent_change) >= SIGNIFICANT_MOVE_PCT &&
+				m.price >= MIN_PRICE &&
+				isCommonStock(m.symbol)
+		);
 
-				entries.push({
-					id: `mover-gainer-${gainer.symbol}-${Date.now()}`,
-					timestamp: now,
-					session,
-					category: "MOVER",
-					headline: `${gainer.symbol} +${gainer.percent_change.toFixed(1)}% (${isUniverse ? "UNIVERSE" : "market"})`,
-					symbols: [gainer.symbol],
-					source: "Alpaca Screener",
-					metadata: {
-						direction: "up",
-						percentChange: gainer.percent_change,
-						priceChange: gainer.change,
-						currentPrice: gainer.price,
-						isUniverse,
-					},
-				});
+		// Get unique symbols that passed price filter for exchange lookup
+		const symbolsToCheck = [
+			...new Set([
+				...priceFilteredGainers.map((m) => m.symbol),
+				...priceFilteredLosers.map((m) => m.symbol),
+			]),
+		];
+
+		// Batch lookup asset info for exchange filtering
+		const assetInfoMap = await screener.getAssetsInfo(symbolsToCheck);
+
+		// Process gainers (filter by exchange)
+		for (const gainer of priceFilteredGainers) {
+			const assetInfo = assetInfoMap.get(gainer.symbol.toUpperCase());
+			if (!isAllowedExchange(assetInfo?.exchange)) {
+				continue;
 			}
+
+			const isUniverse = universeSymbols
+				.map((s) => s.toUpperCase())
+				.includes(gainer.symbol.toUpperCase());
+
+			entries.push({
+				id: `mover-gainer-${gainer.symbol}-${Date.now()}`,
+				timestamp: now,
+				session,
+				category: "MOVER",
+				headline: `${gainer.symbol} +${gainer.percent_change.toFixed(1)}% (${isUniverse ? "UNIVERSE" : "market"})`,
+				symbols: [gainer.symbol],
+				source: "Alpaca Screener",
+				metadata: {
+					direction: "up",
+					percentChange: gainer.percent_change,
+					priceChange: gainer.change,
+					currentPrice: gainer.price,
+					exchange: assetInfo?.exchange,
+					isUniverse,
+				},
+			});
 		}
 
-		// Process losers
-		for (const loser of movers.losers) {
-			if (Math.abs(loser.percent_change) >= SIGNIFICANT_MOVE_PCT) {
-				const isUniverse = universeSymbols
-					.map((s) => s.toUpperCase())
-					.includes(loser.symbol.toUpperCase());
-
-				entries.push({
-					id: `mover-loser-${loser.symbol}-${Date.now()}`,
-					timestamp: now,
-					session,
-					category: "MOVER",
-					headline: `${loser.symbol} ${loser.percent_change.toFixed(1)}% (${isUniverse ? "UNIVERSE" : "market"})`,
-					symbols: [loser.symbol],
-					source: "Alpaca Screener",
-					metadata: {
-						direction: "down",
-						percentChange: loser.percent_change,
-						priceChange: loser.change,
-						currentPrice: loser.price,
-						isUniverse,
-					},
-				});
+		// Process losers (filter by exchange)
+		for (const loser of priceFilteredLosers) {
+			const assetInfo = assetInfoMap.get(loser.symbol.toUpperCase());
+			if (!isAllowedExchange(assetInfo?.exchange)) {
+				continue;
 			}
+
+			const isUniverse = universeSymbols
+				.map((s) => s.toUpperCase())
+				.includes(loser.symbol.toUpperCase());
+
+			entries.push({
+				id: `mover-loser-${loser.symbol}-${Date.now()}`,
+				timestamp: now,
+				session,
+				category: "MOVER",
+				headline: `${loser.symbol} ${loser.percent_change.toFixed(1)}% (${isUniverse ? "UNIVERSE" : "market"})`,
+				symbols: [loser.symbol],
+				source: "Alpaca Screener",
+				metadata: {
+					direction: "down",
+					percentChange: loser.percent_change,
+					priceChange: loser.change,
+					currentPrice: loser.price,
+					exchange: assetInfo?.exchange,
+					isUniverse,
+				},
+			});
 		}
 
 		// Get most active stocks

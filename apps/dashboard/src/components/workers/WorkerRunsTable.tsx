@@ -183,7 +183,10 @@ function WorkerRunsTableComponent({ runs, isLoading }: WorkerRunsTableProps) {
 										onClick={() => toggleRow(run.id)}
 									>
 										<td className="w-8 px-2 py-3 text-stone-400 dark:text-night-500">
-											<ChevronIcon open={isExpanded} className="rotate-[-90deg]" />
+											<ChevronIcon
+												open={isExpanded}
+												className={isExpanded ? "rotate-0" : "-rotate-90"}
+											/>
 										</td>
 										<td className="px-4 py-3 text-sm text-stone-900 dark:text-night-50 font-medium">
 											{serviceDisplayNames[run.service]}

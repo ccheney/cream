@@ -10,7 +10,7 @@
 import { google } from "@ai-sdk/google";
 import { getLLMModelId } from "@cream/domain";
 import { createRoute, OpenAPIHono, z } from "@hono/zod-openapi";
-import { generateText } from "ai";
+import { generateText, Output } from "ai";
 
 // ============================================
 // App Setup
@@ -111,9 +111,11 @@ Bad examples (too short or generic):
 - "Processing..."
 
 Current reasoning (analyze the most recent content):
-{reasoning}
+{reasoning}`;
 
-Output ONLY the summary sentence, nothing else.`;
+const SummaryOutputSchema = z.object({
+	summary: z.string().describe("A concise 8-15 word summary ending with ellipsis"),
+});
 
 app.openapi(summarizeReasoningRoute, async (c) => {
 	const { reasoning } = c.req.valid("json");
@@ -131,16 +133,15 @@ app.openapi(summarizeReasoningRoute, async (c) => {
 	}
 
 	try {
-		const { text } = await generateText({
+		const { output } = await generateText({
 			model: google(getLLMModelId()),
 			prompt: STATUS_PROMPT.replace("{reasoning}", reasoning.slice(-500)),
-			maxOutputTokens: 200,
+			output: Output.object({ schema: SummaryOutputSchema }),
+			maxOutputTokens: 25,
 		});
 
-		// Clean up the response
-		let summary = text.trim();
-
 		// Ensure it ends with ellipsis for consistency
+		let summary = output?.summary?.trim() ?? "Processing...";
 		if (!summary.endsWith("...")) {
 			summary = summary.replace(/[.!?]*$/, "...");
 		}
@@ -236,10 +237,12 @@ const CLASSIFY_PROMPT = `Classify this AI agent thought into exactly ONE of thes
 Title (if provided): {title}
 
 Content:
-{content}
+{content}`;
 
-Respond with ONLY valid JSON in this exact format:
-{"type": "<one of the 8 types>", "confidence": <0.0-1.0>}`;
+const ClassifyOutputSchema = z.object({
+	type: ThoughtTypeSchema.describe("The semantic type of this thought section"),
+	confidence: z.number().min(0).max(1).describe("Classification confidence (0-1)"),
+});
 
 app.openapi(classifyThoughtRoute, async (c) => {
 	const { content, title } = c.req.valid("json");
@@ -260,38 +263,19 @@ app.openapi(classifyThoughtRoute, async (c) => {
 			content.slice(0, 400)
 		);
 
-		const { text } = await generateText({
+		const { output } = await generateText({
 			model: google(getLLMModelId()),
 			prompt,
-			maxOutputTokens: 50,
+			output: Output.object({ schema: ClassifyOutputSchema }),
+			maxOutputTokens: 25,
 		});
 
-		// Parse JSON response
-		const cleaned = text.trim();
-		const match = cleaned.match(/\{[\s\S]*\}/);
-		if (match) {
-			const parsed = JSON.parse(match[0]) as { type: string; confidence: number };
-			const validTypes = [
-				"observation",
-				"analysis",
-				"hypothesis",
-				"concern",
-				"insight",
-				"synthesis",
-				"conclusion",
-				"question",
-			];
-			if (validTypes.includes(parsed.type)) {
-				return c.json({
-					type: parsed.type as z.infer<typeof ThoughtTypeSchema>,
-					confidence: Math.min(1, Math.max(0, parsed.confidence)),
-				});
-			}
-		}
-
-		// Default if parsing fails
-		return c.json({ type: "observation" as const, confidence: 0.3 });
-	} catch (_error) {
+		return c.json({
+			type: output?.type ?? ("observation" as const),
+			confidence: Math.min(1, Math.max(0, output?.confidence ?? 0.3)),
+		});
+	} catch (error) {
+		console.error("classify-thought error:", error);
 		return c.json({ type: "observation" as const, confidence: 0.3 });
 	}
 });

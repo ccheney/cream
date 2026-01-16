@@ -2,49 +2,48 @@
  * @cream/storage - Database storage layer
  *
  * This package provides:
- * - Turso database client wrapper
- * - Environment-aware database connections
- * - Type-safe query methods
+ * - Drizzle ORM database client
+ * - PostgreSQL connection management
+ * - Type-safe repositories
  *
- * Uses Turso Database (Rust rewrite of SQLite):
- * @see https://github.com/tursodatabase/turso
+ * Uses PostgreSQL via Drizzle ORM:
+ * @see https://orm.drizzle.team/docs/overview
  */
 
 export const PACKAGE_NAME = "@cream/storage";
 export const VERSION = "0.0.1";
 
-// Migrations
-export {
-	type AppliedMigration,
-	getMigrationStatus,
-	type Migration,
-	MigrationError,
-	type MigrationOptions,
-	type MigrationResult,
-	rollbackMigrations,
-	runMigrations,
-} from "./migrations.js";
-// Connection pooling
+// Database client (Drizzle + PostgreSQL)
+export { getDb, type Database, closeDb } from "./db.js";
+
+// Connection pooling (generic pool implementation)
 export {
 	type ConnectionPool,
-	createHttpPool,
 	createPool,
-	createTursoPool,
-	type HttpPool,
-	type HttpPoolConfig,
 	type PoolConfig,
 	type PooledConnection,
 	type PoolStats,
 } from "./pool.js";
+
 // Repositories
 export * from "./repositories/index.js";
-// Turso client
+
+// Repository base utilities
 export {
-	type BatchStatement,
-	createInMemoryClient,
-	createTursoClient,
-	getDefaultDatabasePath,
-	type Row,
-	type TursoClient,
-	type TursoConfig,
-} from "./turso.js";
+	type Filter,
+	type FilterOperator,
+	fromBoolean,
+	mapRow,
+	mapRows,
+	type Order,
+	type OrderDirection,
+	type PaginatedResult,
+	type PaginationOptions,
+	parseJson,
+	query,
+	QueryBuilder,
+	RepositoryError,
+	type RepositoryErrorCode,
+	toBoolean,
+	toJson,
+} from "./repositories/base.js";

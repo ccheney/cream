@@ -96,9 +96,9 @@ async function runMacroWatch(symbols: string[]): Promise<void> {
 	log.info({ symbols }, "Starting MacroWatch scan");
 
 	const service = createMacroWatchService();
-	const entries = await service.run(symbols);
+	const { entries, saved } = await service.run(symbols);
 
-	log.info({ entryCount: entries.length }, "MacroWatch scan complete");
+	log.info({ entryCount: entries.length, savedCount: saved }, "MacroWatch scan complete");
 
 	if (entries.length > 0) {
 		console.log("\n--- MacroWatch Results ---");

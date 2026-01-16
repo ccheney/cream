@@ -63,12 +63,13 @@ describe("MacroWatchService", () => {
 	describe("run", () => {
 		test("runs macro watch and returns entries", async () => {
 			const symbols = ["AAPL", "MSFT"];
-			const entries = await service.run(symbols);
+			const { entries, saved } = await service.run(symbols);
 
 			expect(mockRunMacroWatch).toHaveBeenCalledTimes(1);
 			expect(entries).toHaveLength(2);
 			expect(entries[0]?.category).toBe("NEWS");
 			expect(entries[1]?.category).toBe("PREDICTION");
+			expect(saved).toBe(0); // No db provider set
 		});
 
 		test("updates lastRun timestamp after successful run", async () => {
@@ -107,18 +108,18 @@ describe("MacroWatchService", () => {
 			const firstRun = service.run(["AAPL"]);
 			const secondResult = await service.run(["MSFT"]);
 
-			expect(secondResult).toEqual([]);
+			expect(secondResult).toEqual({ entries: [], saved: 0 });
 
 			await firstRun;
 			expect(mockRunMacroWatch).toHaveBeenCalledTimes(1);
 		});
 
-		test("returns empty array on error", async () => {
+		test("returns empty result on error", async () => {
 			mockRunMacroWatch.mockImplementationOnce(() => Promise.reject(new Error("API error")));
 
-			const entries = await service.run(["AAPL"]);
+			const result = await service.run(["AAPL"]);
 
-			expect(entries).toEqual([]);
+			expect(result).toEqual({ entries: [], saved: 0 });
 			expect(service.isRunning()).toBe(false);
 		});
 
