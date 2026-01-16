@@ -19,8 +19,7 @@ export type WorkerService =
 	| "filings_sync"
 	| "short_interest"
 	| "sentiment"
-	| "corporate_actions"
-	| "fundamentals";
+	| "corporate_actions";
 
 export interface TriggerResult {
 	success: boolean;
@@ -38,7 +37,6 @@ export interface ServiceTriggers {
 	triggerShortInterest: () => Promise<TriggerResult>;
 	triggerSentiment: () => Promise<TriggerResult>;
 	triggerCorporateActions: () => Promise<TriggerResult>;
-	triggerFundamentals: () => Promise<TriggerResult>;
 }
 
 // ============================================
@@ -106,7 +104,6 @@ export function createHealthServer(deps: HealthServerDeps, port?: number) {
 		short_interest: deps.triggers?.triggerShortInterest,
 		sentiment: deps.triggers?.triggerSentiment,
 		corporate_actions: deps.triggers?.triggerCorporateActions,
-		fundamentals: deps.triggers?.triggerFundamentals,
 	};
 
 	async function handleTrigger(service: WorkerService): Promise<Response> {
@@ -178,7 +175,6 @@ export function createHealthServer(deps: HealthServerDeps, port?: number) {
 						"short_interest",
 						"sentiment",
 						"corporate_actions",
-						"fundamentals",
 					];
 
 					if (!validServices.includes(service)) {

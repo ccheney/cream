@@ -44,6 +44,7 @@ export const Channel = z.enum([
 	"portfolio",
 	"filings",
 	"synthesis",
+	"workers",
 ]);
 
 export type Channel = z.infer<typeof Channel>;
@@ -75,6 +76,7 @@ export const CHANNEL_DESCRIPTIONS: Record<Channel, string> = {
 	portfolio: "Portfolio value and position updates",
 	filings: "SEC filings sync progress and results",
 	synthesis: "Indicator synthesis workflow progress and results",
+	workers: "Worker service status and run updates",
 };
 
 // ============================================

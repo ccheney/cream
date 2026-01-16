@@ -405,6 +405,13 @@ export function broadcastSynthesisComplete(message: ServerMessage): number {
 }
 
 /**
+ * Broadcast worker run update to connections subscribed to workers channel.
+ */
+export function broadcastWorkerRunUpdate(message: ServerMessage): number {
+	return broadcast("workers", message);
+}
+
+/**
  * Server-initiated ping to all connections.
  */
 export function pingAllConnections(): void {

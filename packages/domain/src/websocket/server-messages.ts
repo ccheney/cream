@@ -976,6 +976,70 @@ export const SynthesisCompleteMessageSchema = z.object({
 export type SynthesisCompleteMessage = z.infer<typeof SynthesisCompleteMessageSchema>;
 
 // ============================================
+// Worker Run Update Message
+// ============================================
+
+/**
+ * Worker service run status values.
+ */
+export const WorkerRunStatusSchema = z.enum(["pending", "running", "completed", "failed"]);
+
+export type WorkerRunStatus = z.infer<typeof WorkerRunStatusSchema>;
+
+/**
+ * Worker service names.
+ */
+export const WorkerServiceNameSchema = z.enum([
+	"macro_watch",
+	"newspaper",
+	"filings_sync",
+	"short_interest",
+	"sentiment",
+	"corporate_actions",
+]);
+
+export type WorkerServiceName = z.infer<typeof WorkerServiceNameSchema>;
+
+/**
+ * Worker run update data - triggered when a worker run changes status.
+ */
+export const WorkerRunUpdateDataSchema = z.object({
+	/** Run ID */
+	runId: z.string(),
+	/** Service name */
+	service: WorkerServiceNameSchema,
+	/** Run status */
+	status: WorkerRunStatusSchema,
+	/** Start time */
+	startedAt: z.string(),
+	/** Completion time (if completed/failed) */
+	completedAt: z.string().nullable(),
+	/** Duration in seconds (if completed/failed) */
+	duration: z.number().nullable(),
+	/** Result message */
+	result: z.string().nullable(),
+	/** Error message (if failed) */
+	error: z.string().nullable(),
+	/** Timestamp of this update */
+	timestamp: z.string(),
+});
+
+export type WorkerRunUpdateData = z.infer<typeof WorkerRunUpdateDataSchema>;
+
+/**
+ * Worker run update message - broadcasted when a worker run changes status.
+ *
+ * @example
+ * { type: "worker_run_update", data: { runId: "...", service: "macro_watch", status: "completed", ... } }
+ */
+export const WorkerRunUpdateMessageSchema = z.object({
+	type: z.literal("worker_run_update"),
+	data: WorkerRunUpdateDataSchema,
+});
+
+export type WorkerRunUpdateMessage = z.infer<typeof WorkerRunUpdateMessageSchema>;
+
+// ============================================
 // Server Message Union
 // ============================================
 
@@ -1019,6 +1083,7 @@ export const ServerMessageSchema = z.discriminatedUnion("type", [
 	OrderUpdateMessageSchema,
 	SynthesisProgressMessageSchema,
 	SynthesisCompleteMessageSchema,
+	WorkerRunUpdateMessageSchema,
 ]);
 
 export type ServerMessage = z.infer<typeof ServerMessageSchema>;

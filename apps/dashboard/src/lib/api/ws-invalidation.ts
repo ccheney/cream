@@ -168,7 +168,8 @@ export type WSMessageType =
 	| "position_update"
 	| "order_update"
 	| "portfolio_update"
-	| "portfolio";
+	| "portfolio"
+	| "worker_run_update";
 
 export interface WSMessage<T = unknown> {
 	type: WSMessageType;
@@ -640,6 +641,12 @@ export function handleWSMessage(message: WSMessage): void {
 		case "portfolio_update":
 		case "portfolio": {
 			queryClient.invalidateQueries({ queryKey: queryKeys.portfolio.all });
+			break;
+		}
+
+		case "worker_run_update": {
+			// Invalidate worker queries when a run status changes
+			queryClient.invalidateQueries({ queryKey: queryKeys.workers.all });
 			break;
 		}
 

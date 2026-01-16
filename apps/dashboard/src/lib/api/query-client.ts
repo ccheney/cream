@@ -200,6 +200,17 @@ export const queryKeys = {
 				: ([...queryKeys.cycles.all, "list"] as const),
 		full: (id: string) => [...queryKeys.cycles.all, id, "full"] as const,
 	},
+
+	// Workers
+	workers: {
+		all: ["workerServices"] as const,
+		status: () => [...queryKeys.workers.all, "status"] as const,
+		runs: (filters?: Record<string, unknown>) =>
+			filters
+				? ([...queryKeys.workers.all, "runs", filters] as const)
+				: ([...queryKeys.workers.all, "runs"] as const),
+		run: (id: string) => [...queryKeys.workers.all, "run", id] as const,
+	},
 } as const;
 
 // ============================================

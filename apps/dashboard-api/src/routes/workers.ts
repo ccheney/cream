@@ -8,7 +8,6 @@
  * - short_interest: FINRA short interest fetch
  * - sentiment: Sentiment data fetch
  * - corporate_actions: Corporate actions fetch
- * - fundamentals: Fundamental data fetch
  *
  * @see docs/plans/ui/35-worker-services-page.md
  */
@@ -18,6 +17,7 @@ import { createRoute, OpenAPIHono, z } from "@hono/zod-openapi";
 import { HTTPException } from "hono/http-exception";
 import { getDbClient } from "../db.js";
 import log from "../logger.js";
+import { broadcastWorkerRunUpdate } from "../websocket/channels.js";
 
 const app = new OpenAPIHono();
 
@@ -38,7 +38,6 @@ const WorkerServiceSchema = z.enum([
 	"short_interest",
 	"sentiment",
 	"corporate_actions",
-	"fundamentals",
 ]);
 
 const RunStatusSchema = z.enum(["pending", "running", "completed", "failed"]);
@@ -50,7 +49,6 @@ const ServiceDisplayNames: Record<z.infer<typeof WorkerServiceSchema>, string> =
 	short_interest: "Short Interest",
 	sentiment: "Sentiment",
 	corporate_actions: "Corporate Actions",
-	fundamentals: "Fundamentals",
 };
 
 const LastRunSchema = z.object({
@@ -111,7 +109,6 @@ type WorkerService = z.infer<typeof WorkerServiceSchema>;
 
 function mapRunTypeToService(runType: string): WorkerService | null {
 	const mapping: Record<string, WorkerService> = {
-		fundamentals: "fundamentals",
 		short_interest: "short_interest",
 		sentiment: "sentiment",
 		corporate_actions: "corporate_actions",
@@ -180,7 +177,6 @@ app.openapi(getWorkerStatusRoute, async (c) => {
 			"short_interest",
 			"sentiment",
 			"corporate_actions",
-			"fundamentals",
 		];
 
 		// Get running services
@@ -319,6 +315,22 @@ app.openapi(triggerServiceRoute, async (c) => {
 
 		log.info({ runId, service, priority, environment }, "Worker service trigger starting");
 
+		// Broadcast run started via websocket
+		broadcastWorkerRunUpdate({
+			type: "worker_run_update",
+			data: {
+				runId,
+				service,
+				status: "running",
+				startedAt: now,
+				completedAt: null,
+				duration: null,
+				result: null,
+				error: null,
+				timestamp: now,
+			},
+		});
+
 		// Call the worker's trigger endpoint (fire and forget with background update)
 		const workerUrl = `${WORKER_URL}/trigger/${service}`;
 
@@ -360,16 +372,50 @@ app.openapi(triggerServiceRoute, async (c) => {
 					{ runId, service, status, processed: result.processed, failed: result.failed },
 					"Worker service trigger completed"
 				);
+
+				// Broadcast run completed via websocket
+				const durationMs = result.durationMs ?? Date.now() - new Date(now).getTime();
+				broadcastWorkerRunUpdate({
+					type: "worker_run_update",
+					data: {
+						runId,
+						service,
+						status: status as "completed" | "failed",
+						startedAt: now,
+						completedAt,
+						duration: Math.round(durationMs / 1000),
+						result: result.message,
+						error: result.error ?? null,
+						timestamp: completedAt,
+					},
+				});
 			} catch (error) {
 				const errorMessage = error instanceof Error ? error.message : "Unknown error";
 				log.error({ runId, service, error: errorMessage }, "Worker service trigger failed");
 
+				const failedAt = new Date().toISOString();
 				await db.run(
 					`UPDATE indicator_sync_runs
 					 SET status = 'failed', completed_at = ?, error_message = ?
 					 WHERE id = ?`,
-					[new Date().toISOString(), errorMessage, runId]
+					[failedAt, errorMessage, runId]
 				);
+
+				// Broadcast run failed via websocket
+				broadcastWorkerRunUpdate({
+					type: "worker_run_update",
+					data: {
+						runId,
+						service,
+						status: "failed",
+						startedAt: now,
+						completedAt: failedAt,
+						duration: Math.round((Date.now() - new Date(now).getTime()) / 1000),
+						result: null,
+						error: errorMessage,
+						timestamp: failedAt,
+					},
+				});
 			}
 		})();
 

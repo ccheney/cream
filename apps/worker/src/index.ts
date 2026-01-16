@@ -254,16 +254,6 @@ async function triggerCorporateActions(): Promise<TriggerResult> {
 	return triggerIndicatorJob("corporateActions");
 }
 
-async function triggerFundamentals(): Promise<TriggerResult> {
-	// Fundamentals uses a different mechanism - same as short interest for now
-	// This is a placeholder - fundamentals batch job may need special handling
-	return {
-		success: false,
-		message: "Fundamentals trigger not yet implemented via HTTP API",
-		durationMs: 0,
-	};
-}
-
 // ============================================
 // Configuration Reload
 // ============================================
@@ -387,7 +377,6 @@ async function main() {
 			triggerShortInterest,
 			triggerSentiment,
 			triggerCorporateActions,
-			triggerFundamentals,
 		},
 	});
 	healthServer.start();

@@ -20,8 +20,7 @@ export type WorkerService =
 	| "filings_sync"
 	| "short_interest"
 	| "sentiment"
-	| "corporate_actions"
-	| "fundamentals";
+	| "corporate_actions";
 
 export type RunStatus = "pending" | "running" | "completed" | "failed";
 
@@ -96,7 +95,7 @@ export const workerServicesKeys = {
 
 /**
  * Fetch status of all worker services.
- * Polls every 5 seconds for real-time updates.
+ * Updates are pushed via WebSocket when subscribed to the "workers" channel.
  */
 export function useWorkerServicesStatus() {
 	return useQuery({
@@ -107,13 +106,12 @@ export function useWorkerServicesStatus() {
 		},
 		staleTime: STALE_TIMES.DEFAULT,
 		gcTime: CACHE_TIMES.DEFAULT,
-		refetchInterval: 5000,
 	});
 }
 
 /**
  * Fetch recent worker runs with optional filters.
- * Polls every 5 seconds for real-time updates.
+ * Updates are pushed via WebSocket when subscribed to the "workers" channel.
  */
 export function useWorkerRuns(filters?: WorkerRunsFilters) {
 	const params = new URLSearchParams();
@@ -138,7 +136,6 @@ export function useWorkerRuns(filters?: WorkerRunsFilters) {
 		},
 		staleTime: STALE_TIMES.DEFAULT,
 		gcTime: CACHE_TIMES.DEFAULT,
-		refetchInterval: 5000,
 	});
 }
 

@@ -23,7 +23,6 @@ const serviceDisplayNames: Record<WorkerService, string> = {
 	short_interest: "Short Interest",
 	sentiment: "Sentiment",
 	corporate_actions: "Corporate Actions",
-	fundamentals: "Fundamentals",
 };
 
 // ============================================
