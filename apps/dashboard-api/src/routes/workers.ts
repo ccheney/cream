@@ -363,7 +363,7 @@ app.openapi(triggerServiceRoute, async (c) => {
 						completedAt,
 						result.processed ?? 0,
 						result.failed ?? 0,
-						result.error ?? null,
+						result.error ?? result.message ?? null,
 						runId,
 					]
 				);
