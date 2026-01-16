@@ -1,12 +1,12 @@
 /**
- * Factor Zoo Repository
+ * Factor Zoo Repository (Drizzle ORM)
  *
  * Data access for the Factor Zoo system that manages alpha factors
  * throughout their lifecycle.
  *
  * @see docs/plans/20-research-to-production-pipeline.md
  */
-
+import { and, desc, eq, inArray, sql } from "drizzle-orm";
 import type {
 	DailyMetrics,
 	Factor,
@@ -24,109 +24,129 @@ import type {
 	ResearchRun,
 	TargetRegime,
 } from "@cream/domain";
-
-import type { Row, TursoClient } from "../turso.js";
-import { parseJson, RepositoryError, toJson } from "./base.js";
+import { getDb, type Database } from "../db";
+import {
+	factorCorrelations,
+	factorPerformance,
+	factors,
+	hypotheses,
+	researchRuns,
+} from "../schema/factors";
 
 // ============================================
-// Row Mappers
+// Row Mapping
 // ============================================
 
-function mapHypothesisRow(row: Row): Hypothesis {
+type HypothesisRow = typeof hypotheses.$inferSelect;
+type FactorRow = typeof factors.$inferSelect;
+type PerformanceRow = typeof factorPerformance.$inferSelect;
+type CorrelationRow = typeof factorCorrelations.$inferSelect;
+type ResearchRunRow = typeof researchRuns.$inferSelect;
+
+function parseJsonText<T>(text: string | null, defaultValue: T): T {
+	if (!text) return defaultValue;
+	try {
+		return JSON.parse(text) as T;
+	} catch {
+		return defaultValue;
+	}
+}
+
+function mapHypothesisRow(row: HypothesisRow): Hypothesis {
 	return {
-		hypothesisId: row.hypothesis_id as string,
-		title: row.title as string,
-		economicRationale: row.economic_rationale as string,
-		marketMechanism: row.market_mechanism as string,
-		targetRegime: row.target_regime as Hypothesis["targetRegime"],
-		falsificationCriteria: parseJson(row.falsification_criteria, null),
+		hypothesisId: row.hypothesisId,
+		title: row.title,
+		economicRationale: row.economicRationale,
+		marketMechanism: row.marketMechanism,
+		targetRegime: row.targetRegime as Hypothesis["targetRegime"],
+		falsificationCriteria: parseJsonText(row.falsificationCriteria, null),
 		status: row.status as HypothesisStatus,
-		iteration: row.iteration as number,
-		parentHypothesisId: row.parent_hypothesis_id as string | null,
-		createdAt: row.created_at as string,
-		updatedAt: row.updated_at as string,
+		iteration: row.iteration,
+		parentHypothesisId: row.parentHypothesisId,
+		createdAt: row.createdAt.toISOString(),
+		updatedAt: row.updatedAt.toISOString(),
 	};
 }
 
-function mapFactorRow(row: Row): Factor {
+function mapFactorRow(row: FactorRow): Factor {
 	return {
-		factorId: row.factor_id as string,
-		hypothesisId: row.hypothesis_id as string | null,
-		name: row.name as string,
+		factorId: row.factorId,
+		hypothesisId: row.hypothesisId,
+		name: row.name,
 		status: row.status as FactorStatus,
-		version: row.version as number,
-		author: row.author as string,
-		pythonModule: row.python_module as string | null,
-		typescriptModule: row.typescript_module as string | null,
-		symbolicLength: row.symbolic_length as number | null,
-		parameterCount: row.parameter_count as number | null,
-		featureCount: row.feature_count as number | null,
-		originalityScore: row.originality_score as number | null,
-		hypothesisAlignment: row.hypothesis_alignment as number | null,
-		stage1Sharpe: row.stage1_sharpe as number | null,
-		stage1Ic: row.stage1_ic as number | null,
-		stage1MaxDrawdown: row.stage1_max_drawdown as number | null,
-		stage1CompletedAt: row.stage1_completed_at as string | null,
-		stage2Pbo: row.stage2_pbo as number | null,
-		stage2DsrPvalue: row.stage2_dsr_pvalue as number | null,
-		stage2Wfe: row.stage2_wfe as number | null,
-		stage2CompletedAt: row.stage2_completed_at as string | null,
-		paperValidationPassed: (row.paper_validation_passed as number) === 1,
-		paperStartDate: row.paper_start_date as string | null,
-		paperEndDate: row.paper_end_date as string | null,
-		paperRealizedSharpe: row.paper_realized_sharpe as number | null,
-		paperRealizedIc: row.paper_realized_ic as number | null,
-		currentWeight: row.current_weight as number,
-		lastIc: row.last_ic as number | null,
-		decayRate: row.decay_rate as number | null,
-		targetRegimes: parseJson<TargetRegime[] | null>(row.target_regimes, null),
-		parityReport: parseJson<Record<string, unknown> | null>(row.parity_report, null),
-		parityValidatedAt: row.parity_validated_at as string | null,
-		createdAt: row.created_at as string,
-		promotedAt: row.promoted_at as string | null,
-		retiredAt: row.retired_at as string | null,
-		lastUpdated: row.last_updated as string,
+		version: row.version,
+		author: row.author,
+		pythonModule: row.pythonModule,
+		typescriptModule: row.typescriptModule,
+		symbolicLength: row.symbolicLength,
+		parameterCount: row.parameterCount,
+		featureCount: row.featureCount,
+		originalityScore: row.originalityScore ? Number(row.originalityScore) : null,
+		hypothesisAlignment: row.hypothesisAlignment ? Number(row.hypothesisAlignment) : null,
+		stage1Sharpe: row.stage1Sharpe ? Number(row.stage1Sharpe) : null,
+		stage1Ic: row.stage1Ic ? Number(row.stage1Ic) : null,
+		stage1MaxDrawdown: row.stage1MaxDrawdown ? Number(row.stage1MaxDrawdown) : null,
+		stage1CompletedAt: row.stage1CompletedAt?.toISOString() ?? null,
+		stage2Pbo: row.stage2Pbo ? Number(row.stage2Pbo) : null,
+		stage2DsrPvalue: row.stage2DsrPvalue ? Number(row.stage2DsrPvalue) : null,
+		stage2Wfe: row.stage2Wfe ? Number(row.stage2Wfe) : null,
+		stage2CompletedAt: row.stage2CompletedAt?.toISOString() ?? null,
+		paperValidationPassed: row.paperValidationPassed === 1,
+		paperStartDate: row.paperStartDate?.toISOString() ?? null,
+		paperEndDate: row.paperEndDate?.toISOString() ?? null,
+		paperRealizedSharpe: row.paperRealizedSharpe ? Number(row.paperRealizedSharpe) : null,
+		paperRealizedIc: row.paperRealizedIc ? Number(row.paperRealizedIc) : null,
+		currentWeight: row.currentWeight ? Number(row.currentWeight) : 0,
+		lastIc: row.lastIc ? Number(row.lastIc) : null,
+		decayRate: row.decayRate ? Number(row.decayRate) : null,
+		targetRegimes: (row.targetRegimes as TargetRegime[] | null) ?? null,
+		parityReport: parseJsonText<Record<string, unknown> | null>(row.parityReport, null),
+		parityValidatedAt: row.parityValidatedAt?.toISOString() ?? null,
+		createdAt: row.createdAt.toISOString(),
+		promotedAt: row.promotedAt?.toISOString() ?? null,
+		retiredAt: row.retiredAt?.toISOString() ?? null,
+		lastUpdated: row.lastUpdated.toISOString(),
 	};
 }
 
-function mapPerformanceRow(row: Row): FactorPerformance {
+function mapPerformanceRow(row: PerformanceRow): FactorPerformance {
 	return {
-		id: row.id as string,
-		factorId: row.factor_id as string,
-		date: row.date as string,
-		ic: row.ic as number,
-		icir: row.icir as number | null,
-		sharpe: row.sharpe as number | null,
-		weight: row.weight as number,
-		signalCount: row.signal_count as number,
-		createdAt: row.created_at as string,
+		id: row.id,
+		factorId: row.factorId,
+		date: row.date.toISOString(),
+		ic: Number(row.ic),
+		icir: row.icir ? Number(row.icir) : null,
+		sharpe: row.sharpe ? Number(row.sharpe) : null,
+		weight: Number(row.weight),
+		signalCount: row.signalCount,
+		createdAt: row.createdAt.toISOString(),
 	};
 }
 
-function mapCorrelationRow(row: Row): FactorCorrelation {
+function mapCorrelationRow(row: CorrelationRow): FactorCorrelation {
 	return {
-		factorId1: row.factor_id_1 as string,
-		factorId2: row.factor_id_2 as string,
-		correlation: row.correlation as number,
-		computedAt: row.computed_at as string,
+		factorId1: row.factorId1,
+		factorId2: row.factorId2,
+		correlation: Number(row.correlation),
+		computedAt: row.computedAt.toISOString(),
 	};
 }
 
-function mapResearchRunRow(row: Row): ResearchRun {
+function mapResearchRunRow(row: ResearchRunRow): ResearchRun {
 	return {
-		runId: row.run_id as string,
-		triggerType: row.trigger_type as ResearchRun["triggerType"],
-		triggerReason: row.trigger_reason as string,
+		runId: row.runId,
+		triggerType: row.triggerType as ResearchRun["triggerType"],
+		triggerReason: row.triggerReason,
 		phase: row.phase as ResearchPhase,
-		currentIteration: row.current_iteration as number,
-		hypothesisId: row.hypothesis_id as string | null,
-		factorId: row.factor_id as string | null,
-		prUrl: row.pr_url as string | null,
-		errorMessage: row.error_message as string | null,
-		tokensUsed: row.tokens_used as number,
-		computeHours: row.compute_hours as number,
-		startedAt: row.started_at as string,
-		completedAt: row.completed_at as string | null,
+		currentIteration: row.currentIteration,
+		hypothesisId: row.hypothesisId,
+		factorId: row.factorId,
+		prUrl: row.prUrl,
+		errorMessage: row.errorMessage,
+		tokensUsed: row.tokensUsed ?? 0,
+		computeHours: row.computeHours ? Number(row.computeHours) : 0,
+		startedAt: row.startedAt.toISOString(),
+		completedAt: row.completedAt?.toISOString() ?? null,
 	};
 }
 
@@ -134,319 +154,248 @@ function mapResearchRunRow(row: Row): ResearchRun {
 // Repository
 // ============================================
 
-/**
- * Factor Zoo repository for managing alpha factors
- */
 export class FactorZooRepository {
-	constructor(private client: TursoClient) {}
+	private db: Database;
+
+	constructor(db?: Database) {
+		this.db = db ?? getDb();
+	}
 
 	// ============================================
 	// Hypothesis CRUD
 	// ============================================
 
-	/**
-	 * Create a new hypothesis
-	 */
 	async createHypothesis(input: NewHypothesis): Promise<Hypothesis> {
-		const id = input.hypothesisId ?? crypto.randomUUID();
-		const now = new Date().toISOString();
+		const [row] = await this.db
+			.insert(hypotheses)
+			.values({
+				hypothesisId: input.hypothesisId,
+				title: input.title,
+				economicRationale: input.economicRationale,
+				marketMechanism: input.marketMechanism,
+				targetRegime: input.targetRegime,
+				falsificationCriteria: input.falsificationCriteria
+					? JSON.stringify(input.falsificationCriteria)
+					: null,
+				status: input.status as typeof hypotheses.$inferInsert.status,
+				iteration: input.iteration,
+				parentHypothesisId: input.parentHypothesisId,
+			})
+			.returning();
 
-		try {
-			await this.client.run(
-				`INSERT INTO hypotheses (
-          hypothesis_id, title, economic_rationale, market_mechanism,
-          target_regime, falsification_criteria, status, iteration,
-          parent_hypothesis_id, created_at, updated_at
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-				[
-					id,
-					input.title,
-					input.economicRationale,
-					input.marketMechanism,
-					input.targetRegime,
-					toJson(input.falsificationCriteria),
-					input.status,
-					input.iteration,
-					input.parentHypothesisId,
-					now,
-					now,
-				]
-			);
-
-			const result = await this.findHypothesisById(id);
-			if (!result) {
-				throw new RepositoryError("Failed to create hypothesis", "QUERY_ERROR", "hypotheses");
-			}
-			return result;
-		} catch (error) {
-			if (error instanceof RepositoryError) {
-				throw error;
-			}
-			throw new RepositoryError(
-				`Failed to create hypothesis: ${error}`,
-				"QUERY_ERROR",
-				"hypotheses"
-			);
-		}
-	}
-
-	/**
-	 * Find hypothesis by ID
-	 */
-	async findHypothesisById(id: string): Promise<Hypothesis | null> {
-		const result = await this.client.execute("SELECT * FROM hypotheses WHERE hypothesis_id = ?", [
-			id,
-		]);
-		const row = result[0];
-		if (!row) {
-			return null;
-		}
 		return mapHypothesisRow(row);
 	}
 
-	/**
-	 * Update hypothesis status
-	 */
-	async updateHypothesisStatus(id: string, status: HypothesisStatus): Promise<void> {
-		const now = new Date().toISOString();
-		await this.client.run(
-			"UPDATE hypotheses SET status = ?, updated_at = ? WHERE hypothesis_id = ?",
-			[status, now, id]
-		);
+	async findHypothesisById(id: string): Promise<Hypothesis | null> {
+		const [row] = await this.db
+			.select()
+			.from(hypotheses)
+			.where(eq(hypotheses.hypothesisId, id))
+			.limit(1);
+
+		return row ? mapHypothesisRow(row) : null;
 	}
 
-	/**
-	 * Find hypotheses by status
-	 */
+	async updateHypothesisStatus(id: string, status: HypothesisStatus): Promise<void> {
+		await this.db
+			.update(hypotheses)
+			.set({
+				status: status as typeof hypotheses.$inferInsert.status,
+				updatedAt: new Date(),
+			})
+			.where(eq(hypotheses.hypothesisId, id));
+	}
+
 	async findHypothesesByStatus(status: HypothesisStatus): Promise<Hypothesis[]> {
-		const result = await this.client.execute("SELECT * FROM hypotheses WHERE status = ?", [status]);
-		return result.map(mapHypothesisRow);
+		const rows = await this.db
+			.select()
+			.from(hypotheses)
+			.where(eq(hypotheses.status, status as typeof hypotheses.$inferSelect.status));
+
+		return rows.map(mapHypothesisRow);
 	}
 
 	// ============================================
 	// Factor CRUD
 	// ============================================
 
-	/**
-	 * Create a new factor
-	 */
 	async createFactor(input: NewFactor): Promise<Factor> {
-		const id = input.factorId ?? crypto.randomUUID();
-		const now = new Date().toISOString();
+		const [row] = await this.db
+			.insert(factors)
+			.values({
+				factorId: input.factorId,
+				hypothesisId: input.hypothesisId,
+				name: input.name,
+				status: input.status as typeof factors.$inferInsert.status,
+				version: input.version,
+				author: input.author,
+				pythonModule: input.pythonModule,
+				typescriptModule: input.typescriptModule,
+				symbolicLength: input.symbolicLength,
+				parameterCount: input.parameterCount,
+				featureCount: input.featureCount,
+				originalityScore: input.originalityScore?.toString(),
+				hypothesisAlignment: input.hypothesisAlignment?.toString(),
+				stage1Sharpe: input.stage1Sharpe?.toString(),
+				stage1Ic: input.stage1Ic?.toString(),
+				stage1MaxDrawdown: input.stage1MaxDrawdown?.toString(),
+				stage1CompletedAt: input.stage1CompletedAt ? new Date(input.stage1CompletedAt) : null,
+				stage2Pbo: input.stage2Pbo?.toString(),
+				stage2DsrPvalue: input.stage2DsrPvalue?.toString(),
+				stage2Wfe: input.stage2Wfe?.toString(),
+				stage2CompletedAt: input.stage2CompletedAt ? new Date(input.stage2CompletedAt) : null,
+				paperValidationPassed: input.paperValidationPassed ? 1 : 0,
+				paperStartDate: input.paperStartDate ? new Date(input.paperStartDate) : null,
+				paperEndDate: input.paperEndDate ? new Date(input.paperEndDate) : null,
+				paperRealizedSharpe: input.paperRealizedSharpe?.toString(),
+				paperRealizedIc: input.paperRealizedIc?.toString(),
+				currentWeight: input.currentWeight?.toString() ?? "0.0",
+				lastIc: input.lastIc?.toString(),
+				decayRate: input.decayRate?.toString(),
+				targetRegimes: input.targetRegimes ?? null,
+				promotedAt: input.promotedAt ? new Date(input.promotedAt) : null,
+				retiredAt: input.retiredAt ? new Date(input.retiredAt) : null,
+			})
+			.returning();
 
-		try {
-			await this.client.run(
-				`INSERT INTO factors (
-          factor_id, hypothesis_id, name, status, version, author,
-          python_module, typescript_module,
-          symbolic_length, parameter_count, feature_count,
-          originality_score, hypothesis_alignment,
-          stage1_sharpe, stage1_ic, stage1_max_drawdown, stage1_completed_at,
-          stage2_pbo, stage2_dsr_pvalue, stage2_wfe, stage2_completed_at,
-          paper_validation_passed, paper_start_date, paper_end_date,
-          paper_realized_sharpe, paper_realized_ic,
-          current_weight, last_ic, decay_rate, target_regimes,
-          created_at, promoted_at, retired_at, last_updated
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-				[
-					id,
-					input.hypothesisId,
-					input.name,
-					input.status,
-					input.version,
-					input.author,
-					input.pythonModule,
-					input.typescriptModule,
-					input.symbolicLength,
-					input.parameterCount,
-					input.featureCount,
-					input.originalityScore,
-					input.hypothesisAlignment,
-					input.stage1Sharpe,
-					input.stage1Ic,
-					input.stage1MaxDrawdown,
-					input.stage1CompletedAt,
-					input.stage2Pbo,
-					input.stage2DsrPvalue,
-					input.stage2Wfe,
-					input.stage2CompletedAt,
-					input.paperValidationPassed ? 1 : 0,
-					input.paperStartDate,
-					input.paperEndDate,
-					input.paperRealizedSharpe,
-					input.paperRealizedIc,
-					input.currentWeight,
-					input.lastIc,
-					input.decayRate,
-					input.targetRegimes ? toJson(input.targetRegimes) : null,
-					now,
-					input.promotedAt,
-					input.retiredAt,
-					now,
-				]
-			);
-
-			const result = await this.findFactorById(id);
-			if (!result) {
-				throw new RepositoryError("Failed to create factor", "QUERY_ERROR", "factors");
-			}
-			return result;
-		} catch (error) {
-			if (error instanceof RepositoryError) {
-				throw error;
-			}
-			throw new RepositoryError(`Failed to create factor: ${error}`, "QUERY_ERROR", "factors");
-		}
-	}
-
-	/**
-	 * Find factor by ID
-	 */
-	async findFactorById(id: string): Promise<Factor | null> {
-		const result = await this.client.execute("SELECT * FROM factors WHERE factor_id = ?", [id]);
-		const row = result[0];
-		if (!row) {
-			return null;
-		}
 		return mapFactorRow(row);
 	}
 
-	/**
-	 * Find active factors (status = 'active')
-	 */
+	async findFactorById(id: string): Promise<Factor | null> {
+		const [row] = await this.db
+			.select()
+			.from(factors)
+			.where(eq(factors.factorId, id))
+			.limit(1);
+
+		return row ? mapFactorRow(row) : null;
+	}
+
 	async findActiveFactors(): Promise<Factor[]> {
-		const result = await this.client.execute(
-			"SELECT * FROM factors WHERE status = 'active' ORDER BY current_weight DESC"
-		);
-		return result.map(mapFactorRow);
+		const rows = await this.db
+			.select()
+			.from(factors)
+			.where(eq(factors.status, "active"))
+			.orderBy(desc(sql`${factors.currentWeight}::numeric`));
+
+		return rows.map(mapFactorRow);
 	}
 
-	/**
-	 * Find decaying factors
-	 */
 	async findDecayingFactors(): Promise<Factor[]> {
-		const result = await this.client.execute(
-			"SELECT * FROM factors WHERE status = 'decaying' ORDER BY decay_rate ASC"
-		);
-		return result.map(mapFactorRow);
+		const rows = await this.db
+			.select()
+			.from(factors)
+			.where(eq(factors.status, "decaying"))
+			.orderBy(sql`${factors.decayRate}::numeric ASC`);
+
+		return rows.map(mapFactorRow);
 	}
 
-	/**
-	 * Find factors by status
-	 */
 	async findFactorsByStatus(status: FactorStatus): Promise<Factor[]> {
-		const result = await this.client.execute("SELECT * FROM factors WHERE status = ?", [status]);
-		return result.map(mapFactorRow);
+		const rows = await this.db
+			.select()
+			.from(factors)
+			.where(eq(factors.status, status as typeof factors.$inferSelect.status));
+
+		return rows.map(mapFactorRow);
 	}
 
-	/**
-	 * Update factor status
-	 */
 	async updateFactorStatus(id: string, status: FactorStatus): Promise<void> {
-		const now = new Date().toISOString();
-		const updates: Record<string, string | null> = { status, last_updated: now };
+		const now = new Date();
+		const updates: Record<string, unknown> = {
+			status,
+			lastUpdated: now,
+		};
 
 		if (status === "active") {
-			updates.promoted_at = now;
+			updates.promotedAt = now;
 		} else if (status === "retired") {
-			updates.retired_at = now;
+			updates.retiredAt = now;
 		}
 
-		const setClauses = Object.keys(updates)
-			.map((k) => `${k} = ?`)
-			.join(", ");
-		const values = [...Object.values(updates), id];
-
-		await this.client.run(`UPDATE factors SET ${setClauses} WHERE factor_id = ?`, values);
+		await this.db
+			.update(factors)
+			.set(updates)
+			.where(eq(factors.factorId, id));
 	}
 
-	/**
-	 * Promote a factor to active status
-	 *
-	 * @param factorId - Factor ID
-	 * @param parityReport - Optional parity validation report (JSON)
-	 */
 	async promote(factorId: string, parityReport?: Record<string, unknown>): Promise<void> {
-		const now = new Date().toISOString();
+		const now = new Date();
+
 		if (parityReport) {
-			await this.client.run(
-				`UPDATE factors
-         SET status = 'active', promoted_at = ?,
-             parity_report = ?, parity_validated_at = ?, last_updated = ?
-         WHERE factor_id = ?`,
-				[now, toJson(parityReport), now, now, factorId]
-			);
+			await this.db
+				.update(factors)
+				.set({
+					status: "active" as typeof factors.$inferInsert.status,
+					promotedAt: now,
+					parityReport: JSON.stringify(parityReport),
+					parityValidatedAt: now,
+					lastUpdated: now,
+				})
+				.where(eq(factors.factorId, factorId));
 		} else {
 			await this.updateFactorStatus(factorId, "active");
 		}
 	}
 
-	/**
-	 * Update parity validation result for a factor.
-	 */
 	async updateParityValidation(
 		factorId: string,
 		parityReport: Record<string, unknown>
 	): Promise<void> {
-		const now = new Date().toISOString();
-		await this.client.run(
-			"UPDATE factors SET parity_report = ?, parity_validated_at = ?, last_updated = ? WHERE factor_id = ?",
-			[toJson(parityReport), now, now, factorId]
-		);
+		const now = new Date();
+
+		await this.db
+			.update(factors)
+			.set({
+				parityReport: JSON.stringify(parityReport),
+				parityValidatedAt: now,
+				lastUpdated: now,
+			})
+			.where(eq(factors.factorId, factorId));
 	}
 
-	/**
-	 * Mark a factor as decaying
-	 */
 	async markDecaying(factorId: string, decayRate: number): Promise<void> {
-		const now = new Date().toISOString();
-		await this.client.run(
-			"UPDATE factors SET status = 'decaying', decay_rate = ?, last_updated = ? WHERE factor_id = ?",
-			[decayRate, now, factorId]
-		);
+		await this.db
+			.update(factors)
+			.set({
+				status: "decaying" as typeof factors.$inferInsert.status,
+				decayRate: decayRate.toString(),
+				lastUpdated: new Date(),
+			})
+			.where(eq(factors.factorId, factorId));
 	}
 
-	/**
-	 * Retire a factor
-	 */
 	async retire(factorId: string): Promise<void> {
 		await this.updateFactorStatus(factorId, "retired");
 	}
 
-	/**
-	 * Update target regimes for a factor
-	 */
 	async updateTargetRegimes(factorId: string, regimes: TargetRegime[]): Promise<void> {
-		const now = new Date().toISOString();
-		await this.client.run(
-			"UPDATE factors SET target_regimes = ?, last_updated = ? WHERE factor_id = ?",
-			[toJson(regimes), now, factorId]
-		);
+		await this.db
+			.update(factors)
+			.set({
+				targetRegimes: regimes,
+				lastUpdated: new Date(),
+			})
+			.where(eq(factors.factorId, factorId));
 	}
 
-	/**
-	 * Find factors that target a specific regime
-	 */
 	async findFactorsByTargetRegime(regime: TargetRegime): Promise<Factor[]> {
-		// SQLite JSON functions: use json_each to search within JSON arrays
-		const result = await this.client.execute(
-			`SELECT f.* FROM factors f
-       WHERE f.status = 'active'
-       AND (
-         f.target_regimes IS NOT NULL
-         AND (
-           json_extract(f.target_regimes, '$') LIKE ?
-           OR json_extract(f.target_regimes, '$') LIKE ?
-         )
-       )`,
-			[`%"${regime}"%`, `%"all"%`]
-		);
-		return result.map(mapFactorRow);
+		const rows = await this.db
+			.select()
+			.from(factors)
+			.where(
+				and(
+					eq(factors.status, "active"),
+					sql`${factors.targetRegimes} IS NOT NULL AND (
+						${factors.targetRegimes}::jsonb @> ${JSON.stringify([regime])}::jsonb
+						OR ${factors.targetRegimes}::jsonb @> '["all"]'::jsonb
+					)`
+				)
+			);
+
+		return rows.map(mapFactorRow);
 	}
 
-	/**
-	 * Get regime coverage map for active factors
-	 */
 	async getRegimeCoverage(): Promise<Map<TargetRegime, Factor[]>> {
 		const activeFactors = await this.findActiveFactors();
 		const allRegimes: TargetRegime[] = ["bull", "bear", "sideways", "volatile"];
@@ -460,7 +409,6 @@ export class FactorZooRepository {
 			const regimes = factor.targetRegimes ?? [];
 			for (const regime of regimes) {
 				if (regime === "all") {
-					// "all" means it covers all regimes
 					for (const r of allRegimes) {
 						coverage.get(r)?.push(factor);
 					}
@@ -477,102 +425,109 @@ export class FactorZooRepository {
 	// Performance Tracking
 	// ============================================
 
-	/**
-	 * Record daily performance for a factor
-	 */
 	async recordDailyPerformance(factorId: string, metrics: DailyMetrics): Promise<void> {
-		const id = crypto.randomUUID();
-		const now = new Date().toISOString();
+		const now = new Date();
 
-		await this.client.run(
-			`INSERT INTO factor_performance (id, factor_id, date, ic, icir, sharpe, weight, signal_count, created_at)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
-       ON CONFLICT(factor_id, date) DO UPDATE SET
-         ic = excluded.ic,
-         icir = excluded.icir,
-         sharpe = excluded.sharpe,
-         weight = excluded.weight,
-         signal_count = excluded.signal_count`,
-			[
-				id,
+		await this.db
+			.insert(factorPerformance)
+			.values({
 				factorId,
-				metrics.date,
-				metrics.ic,
-				metrics.icir ?? null,
-				metrics.sharpe ?? null,
-				metrics.weight ?? 0,
-				metrics.signalCount ?? 0,
-				now,
-			]
-		);
+				date: new Date(metrics.date),
+				ic: metrics.ic.toString(),
+				icir: metrics.icir?.toString(),
+				sharpe: metrics.sharpe?.toString(),
+				weight: (metrics.weight ?? 0).toString(),
+				signalCount: metrics.signalCount ?? 0,
+			})
+			.onConflictDoUpdate({
+				target: [factorPerformance.factorId, factorPerformance.date],
+				set: {
+					ic: metrics.ic.toString(),
+					icir: metrics.icir?.toString(),
+					sharpe: metrics.sharpe?.toString(),
+					weight: (metrics.weight ?? 0).toString(),
+					signalCount: metrics.signalCount ?? 0,
+				},
+			});
 
-		// Update last_ic on the factor
-		await this.client.run("UPDATE factors SET last_ic = ?, last_updated = ? WHERE factor_id = ?", [
-			metrics.ic,
-			now,
-			factorId,
-		]);
+		await this.db
+			.update(factors)
+			.set({
+				lastIc: metrics.ic.toString(),
+				lastUpdated: now,
+			})
+			.where(eq(factors.factorId, factorId));
 	}
 
-	/**
-	 * Get performance history for a factor
-	 */
 	async getPerformanceHistory(factorId: string, days: number): Promise<FactorPerformance[]> {
-		const result = await this.client.execute(
-			`SELECT * FROM factor_performance
-       WHERE factor_id = ?
-       ORDER BY date DESC
-       LIMIT ?`,
-			[factorId, days]
-		);
-		return result.map(mapPerformanceRow);
+		const rows = await this.db
+			.select()
+			.from(factorPerformance)
+			.where(eq(factorPerformance.factorId, factorId))
+			.orderBy(desc(factorPerformance.date))
+			.limit(days);
+
+		return rows.map(mapPerformanceRow);
 	}
 
 	// ============================================
 	// Correlation Tracking
 	// ============================================
 
-	/**
-	 * Update correlations between factors
-	 */
 	async updateCorrelations(correlations: FactorCorrelation[]): Promise<void> {
-		const now = new Date().toISOString();
+		const now = new Date();
 
 		for (const corr of correlations) {
-			// Ensure canonical ordering (factor_id_1 < factor_id_2)
 			const [id1, id2] =
 				corr.factorId1 < corr.factorId2
 					? [corr.factorId1, corr.factorId2]
 					: [corr.factorId2, corr.factorId1];
 
-			await this.client.run(
-				`INSERT INTO factor_correlations (factor_id_1, factor_id_2, correlation, computed_at)
-         VALUES (?, ?, ?, ?)
-         ON CONFLICT(factor_id_1, factor_id_2) DO UPDATE SET
-           correlation = excluded.correlation,
-           computed_at = excluded.computed_at`,
-				[id1, id2, corr.correlation, now]
-			);
+			await this.db
+				.insert(factorCorrelations)
+				.values({
+					factorId1: id1,
+					factorId2: id2,
+					correlation: corr.correlation.toString(),
+					computedAt: now,
+				})
+				.onConflictDoUpdate({
+					target: [factorCorrelations.factorId1, factorCorrelations.factorId2],
+					set: {
+						correlation: corr.correlation.toString(),
+						computedAt: now,
+					},
+				});
 		}
 	}
 
-	/**
-	 * Get correlation matrix for all active factors
-	 */
 	async getCorrelationMatrix(): Promise<Map<string, Map<string, number>>> {
-		const result = await this.client.execute(`
-      SELECT fc.* FROM factor_correlations fc
-      JOIN factors f1 ON fc.factor_id_1 = f1.factor_id
-      JOIN factors f2 ON fc.factor_id_2 = f2.factor_id
-      WHERE f1.status = 'active' AND f2.status = 'active'
-    `);
+		const activeFactorRows = await this.db
+			.select({ factorId: factors.factorId })
+			.from(factors)
+			.where(eq(factors.status, "active"));
+
+		const activeFactorIds = activeFactorRows.map((r) => r.factorId);
+
+		if (activeFactorIds.length === 0) {
+			return new Map();
+		}
+
+		const rows = await this.db
+			.select()
+			.from(factorCorrelations)
+			.where(
+				and(
+					inArray(factorCorrelations.factorId1, activeFactorIds),
+					inArray(factorCorrelations.factorId2, activeFactorIds)
+				)
+			);
 
 		const matrix = new Map<string, Map<string, number>>();
 
-		for (const row of result) {
+		for (const row of rows) {
 			const corr = mapCorrelationRow(row);
 
-			// Add both directions
 			let map1 = matrix.get(corr.factorId1);
 			if (!map1) {
 				map1 = new Map();
@@ -595,31 +550,32 @@ export class FactorZooRepository {
 	// Weight Management
 	// ============================================
 
-	/**
-	 * Update weights for multiple factors
-	 */
 	async updateWeights(weights: Map<string, number>): Promise<void> {
-		const now = new Date().toISOString();
+		const now = new Date();
 
 		for (const [factorId, weight] of weights) {
-			await this.client.run(
-				"UPDATE factors SET current_weight = ?, last_updated = ? WHERE factor_id = ?",
-				[weight, now, factorId]
-			);
+			await this.db
+				.update(factors)
+				.set({
+					currentWeight: weight.toString(),
+					lastUpdated: now,
+				})
+				.where(eq(factors.factorId, factorId));
 		}
 	}
 
-	/**
-	 * Get current weights for all active factors
-	 */
 	async getActiveWeights(): Promise<Map<string, number>> {
-		const result = await this.client.execute(
-			"SELECT factor_id, current_weight FROM factors WHERE status = 'active'"
-		);
+		const rows = await this.db
+			.select({
+				factorId: factors.factorId,
+				currentWeight: factors.currentWeight,
+			})
+			.from(factors)
+			.where(eq(factors.status, "active"));
 
 		const weights = new Map<string, number>();
-		for (const row of result) {
-			weights.set(row.factor_id as string, row.current_weight as number);
+		for (const row of rows) {
+			weights.set(row.factorId, row.currentWeight ? Number(row.currentWeight) : 0);
 		}
 		return weights;
 	}
@@ -628,179 +584,122 @@ export class FactorZooRepository {
 	// Research Runs
 	// ============================================
 
-	/**
-	 * Create a new research run
-	 */
 	async createResearchRun(input: NewResearchRun): Promise<ResearchRun> {
-		const id = input.runId ?? crypto.randomUUID();
-		const now = new Date().toISOString();
+		const [row] = await this.db
+			.insert(researchRuns)
+			.values({
+				runId: input.runId,
+				triggerType: input.triggerType as typeof researchRuns.$inferInsert.triggerType,
+				triggerReason: input.triggerReason,
+				phase: input.phase as typeof researchRuns.$inferInsert.phase,
+				currentIteration: input.currentIteration,
+				hypothesisId: input.hypothesisId,
+				factorId: input.factorId,
+				prUrl: input.prUrl,
+				errorMessage: input.errorMessage,
+				tokensUsed: input.tokensUsed,
+				computeHours: input.computeHours?.toString() ?? "0.0",
+				completedAt: input.completedAt ? new Date(input.completedAt) : null,
+			})
+			.returning();
 
-		try {
-			await this.client.run(
-				`INSERT INTO research_runs (
-          run_id, trigger_type, trigger_reason, phase, current_iteration,
-          hypothesis_id, factor_id, pr_url, error_message,
-          tokens_used, compute_hours, started_at, completed_at
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-				[
-					id,
-					input.triggerType,
-					input.triggerReason,
-					input.phase,
-					input.currentIteration,
-					input.hypothesisId,
-					input.factorId,
-					input.prUrl,
-					input.errorMessage,
-					input.tokensUsed,
-					input.computeHours,
-					now,
-					input.completedAt,
-				]
-			);
-
-			const result = await this.findResearchRunById(id);
-			if (!result) {
-				throw new RepositoryError("Failed to create research run", "QUERY_ERROR", "research_runs");
-			}
-			return result;
-		} catch (error) {
-			if (error instanceof RepositoryError) {
-				throw error;
-			}
-			throw new RepositoryError(
-				`Failed to create research run: ${error}`,
-				"QUERY_ERROR",
-				"research_runs"
-			);
-		}
-	}
-
-	/**
-	 * Find research run by ID
-	 */
-	async findResearchRunById(id: string): Promise<ResearchRun | null> {
-		const result = await this.client.execute("SELECT * FROM research_runs WHERE run_id = ?", [id]);
-		const row = result[0];
-		if (!row) {
-			return null;
-		}
 		return mapResearchRunRow(row);
 	}
 
-	/**
-	 * Update research run
-	 */
+	async findResearchRunById(id: string): Promise<ResearchRun | null> {
+		const [row] = await this.db
+			.select()
+			.from(researchRuns)
+			.where(eq(researchRuns.runId, id))
+			.limit(1);
+
+		return row ? mapResearchRunRow(row) : null;
+	}
+
 	async updateResearchRun(runId: string, updates: Partial<ResearchRun>): Promise<void> {
-		const updateFields: string[] = [];
-		const values: unknown[] = [];
+		const updateObj: Record<string, unknown> = {};
 
 		if (updates.phase !== undefined) {
-			updateFields.push("phase = ?");
-			values.push(updates.phase);
+			updateObj.phase = updates.phase;
 		}
 		if (updates.currentIteration !== undefined) {
-			updateFields.push("current_iteration = ?");
-			values.push(updates.currentIteration);
+			updateObj.currentIteration = updates.currentIteration;
 		}
 		if (updates.hypothesisId !== undefined) {
-			updateFields.push("hypothesis_id = ?");
-			values.push(updates.hypothesisId);
+			updateObj.hypothesisId = updates.hypothesisId;
 		}
 		if (updates.factorId !== undefined) {
-			updateFields.push("factor_id = ?");
-			values.push(updates.factorId);
+			updateObj.factorId = updates.factorId;
 		}
 		if (updates.prUrl !== undefined) {
-			updateFields.push("pr_url = ?");
-			values.push(updates.prUrl);
+			updateObj.prUrl = updates.prUrl;
 		}
 		if (updates.errorMessage !== undefined) {
-			updateFields.push("error_message = ?");
-			values.push(updates.errorMessage);
+			updateObj.errorMessage = updates.errorMessage;
 		}
 		if (updates.tokensUsed !== undefined) {
-			updateFields.push("tokens_used = ?");
-			values.push(updates.tokensUsed);
+			updateObj.tokensUsed = updates.tokensUsed;
 		}
 		if (updates.computeHours !== undefined) {
-			updateFields.push("compute_hours = ?");
-			values.push(updates.computeHours);
+			updateObj.computeHours = updates.computeHours.toString();
 		}
 		if (updates.completedAt !== undefined) {
-			updateFields.push("completed_at = ?");
-			values.push(updates.completedAt);
+			updateObj.completedAt = updates.completedAt ? new Date(updates.completedAt) : null;
 		}
 
-		if (updateFields.length === 0) {
+		if (Object.keys(updateObj).length === 0) {
 			return;
 		}
 
-		values.push(runId);
-		await this.client.run(
-			`UPDATE research_runs SET ${updateFields.join(", ")} WHERE run_id = ?`,
-			values
-		);
+		await this.db
+			.update(researchRuns)
+			.set(updateObj)
+			.where(eq(researchRuns.runId, runId));
 	}
 
-	/**
-	 * Find active research runs (not completed or failed)
-	 */
 	async findActiveResearchRuns(): Promise<ResearchRun[]> {
-		const result = await this.client.execute(
-			"SELECT * FROM research_runs WHERE phase NOT IN ('completed', 'failed') ORDER BY started_at DESC"
-		);
-		return result.map(mapResearchRunRow);
+		const rows = await this.db
+			.select()
+			.from(researchRuns)
+			.where(
+				sql`${researchRuns.phase} NOT IN ('completed', 'failed')`
+			)
+			.orderBy(desc(researchRuns.startedAt));
+
+		return rows.map(mapResearchRunRow);
 	}
 
-	/**
-	 * Find the most recently completed research run
-	 */
 	async findLastCompletedResearchRun(): Promise<ResearchRun | null> {
-		const result = await this.client.execute(
-			"SELECT * FROM research_runs WHERE phase = 'completed' ORDER BY completed_at DESC LIMIT 1"
-		);
-		const row = result[0];
-		if (!row) {
-			return null;
-		}
-		return mapResearchRunRow(row);
+		const [row] = await this.db
+			.select()
+			.from(researchRuns)
+			.where(eq(researchRuns.phase, "completed"))
+			.orderBy(desc(researchRuns.completedAt))
+			.limit(1);
+
+		return row ? mapResearchRunRow(row) : null;
 	}
 
-	/**
-	 * Get research budget status for the current month
-	 *
-	 * Calculates tokens used, compute hours, and run count for the current
-	 * billing period (calendar month).
-	 *
-	 * @param maxMonthlyTokens - Maximum tokens allowed per month (0 = unlimited)
-	 * @param maxMonthlyComputeHours - Maximum compute hours per month (0 = unlimited)
-	 */
 	async getResearchBudgetStatus(
 		maxMonthlyTokens = 0,
 		maxMonthlyComputeHours = 0
 	): Promise<ResearchBudgetStatus> {
-		// Get first day of current month
 		const now = new Date();
 		const periodStart = new Date(now.getFullYear(), now.getMonth(), 1);
-		const periodStartIso = periodStart.toISOString();
 
-		const result = await this.client.execute(
-			`SELECT
-        COALESCE(SUM(tokens_used), 0) as total_tokens,
-        COALESCE(SUM(compute_hours), 0) as total_compute,
-        COUNT(*) as run_count
-      FROM research_runs
-      WHERE started_at >= ?`,
-			[periodStartIso]
-		);
+		const [result] = await this.db
+			.select({
+				totalTokens: sql<number>`COALESCE(SUM(${researchRuns.tokensUsed}), 0)::int`,
+				totalCompute: sql<number>`COALESCE(SUM(${researchRuns.computeHours}::numeric), 0)`,
+				runCount: sql<number>`COUNT(*)::int`,
+			})
+			.from(researchRuns)
+			.where(sql`${researchRuns.startedAt} >= ${periodStart}`);
 
-		const row = result[0];
-		const tokensUsedThisMonth = (row?.total_tokens as number) ?? 0;
-		const computeHoursThisMonth = (row?.total_compute as number) ?? 0;
-		const runsThisMonth = (row?.run_count as number) ?? 0;
+		const tokensUsedThisMonth = result?.totalTokens ?? 0;
+		const computeHoursThisMonth = result?.totalCompute ?? 0;
+		const runsThisMonth = result?.runCount ?? 0;
 
-		// Determine if budget is exhausted
 		const tokenExhausted = maxMonthlyTokens > 0 && tokensUsedThisMonth >= maxMonthlyTokens;
 		const computeExhausted =
 			maxMonthlyComputeHours > 0 && computeHoursThisMonth >= maxMonthlyComputeHours;
@@ -813,7 +712,7 @@ export class FactorZooRepository {
 			maxMonthlyTokens,
 			maxMonthlyComputeHours,
 			isExhausted,
-			periodStart: periodStartIso,
+			periodStart: periodStart.toISOString(),
 		};
 	}
 
@@ -821,33 +720,45 @@ export class FactorZooRepository {
 	// Statistics
 	// ============================================
 
-	/**
-	 * Get Factor Zoo statistics
-	 */
 	async getStats(): Promise<FactorZooStats> {
-		const [factorStats, hypothesisStats, avgIc, totalWeight] = await Promise.all([
-			this.client.execute(`
-        SELECT status, COUNT(*) as count FROM factors GROUP BY status
-      `),
-			this.client.execute(`
-        SELECT status, COUNT(*) as count FROM hypotheses GROUP BY status
-      `),
-			this.client.execute(`
-        SELECT AVG(last_ic) as avg_ic FROM factors WHERE status = 'active'
-      `),
-			this.client.execute(`
-        SELECT SUM(current_weight) as total_weight FROM factors WHERE status = 'active'
-      `),
-		]);
+		const [factorStatsResult, hypothesisStatsResult, avgIcResult, totalWeightResult] =
+			await Promise.all([
+				this.db
+					.select({
+						status: factors.status,
+						count: sql<number>`COUNT(*)::int`,
+					})
+					.from(factors)
+					.groupBy(factors.status),
+				this.db
+					.select({
+						status: hypotheses.status,
+						count: sql<number>`COUNT(*)::int`,
+					})
+					.from(hypotheses)
+					.groupBy(hypotheses.status),
+				this.db
+					.select({
+						avgIc: sql<number>`AVG(${factors.lastIc}::numeric)`,
+					})
+					.from(factors)
+					.where(eq(factors.status, "active")),
+				this.db
+					.select({
+						totalWeight: sql<number>`SUM(${factors.currentWeight}::numeric)`,
+					})
+					.from(factors)
+					.where(eq(factors.status, "active")),
+			]);
 
 		const factorCounts: Record<string, number> = {};
-		for (const row of factorStats) {
-			factorCounts[row.status as string] = row.count as number;
+		for (const row of factorStatsResult) {
+			factorCounts[row.status] = row.count;
 		}
 
 		const hypothesisCounts: Record<string, number> = {};
-		for (const row of hypothesisStats) {
-			hypothesisCounts[row.status as string] = row.count as number;
+		for (const row of hypothesisStatsResult) {
+			hypothesisCounts[row.status] = row.count;
 		}
 
 		return {
@@ -856,8 +767,8 @@ export class FactorZooRepository {
 			decayingFactors: factorCounts.decaying ?? 0,
 			researchFactors: factorCounts.research ?? 0,
 			retiredFactors: factorCounts.retired ?? 0,
-			averageIc: (avgIc[0]?.avg_ic as number) ?? 0,
-			totalWeight: (totalWeight[0]?.total_weight as number) ?? 0,
+			averageIc: avgIcResult[0]?.avgIc ?? 0,
+			totalWeight: totalWeightResult[0]?.totalWeight ?? 0,
 			hypothesesValidated: hypothesisCounts.validated ?? 0,
 			hypothesesRejected: hypothesisCounts.rejected ?? 0,
 		};

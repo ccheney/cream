@@ -1,16 +1,19 @@
 /**
- * Historical Universe Repository
+ * Historical Universe Repository (Drizzle ORM)
  *
  * Stores and retrieves point-in-time universe data for survivorship-bias-free backtesting.
  * Tracks historical index compositions, ticker changes, and universe snapshots.
  *
- * @see migrations/005_historical_universe.sql
  * @see docs/plans/12-backtest.md - Survivorship Bias Prevention
  */
-
+import { and, asc, desc, eq, gte, isNull, lte, or, sql } from "drizzle-orm";
 import { z } from "zod";
-import type { TursoClient } from "../turso.js";
-import { parseJson, RepositoryError, toJson } from "./base.js";
+import { getDb, type Database } from "../db";
+import { indexConstituents, tickerChanges, universeSnapshots } from "../schema/universe";
+
+// ============================================
+// Types
+// ============================================
 
 export const IndexIdSchema = z.enum([
 	"SP500",
@@ -75,39 +78,96 @@ export const UniverseSnapshotSchema = z.object({
 });
 export type UniverseSnapshot = z.infer<typeof UniverseSnapshotSchema>;
 
+// ============================================
+// Row Mapping
+// ============================================
+
+type IndexConstituentRow = typeof indexConstituents.$inferSelect;
+type TickerChangeRow = typeof tickerChanges.$inferSelect;
+type UniverseSnapshotRow = typeof universeSnapshots.$inferSelect;
+
+function mapConstituentRow(row: IndexConstituentRow): IndexConstituent {
+	return {
+		id: row.id,
+		indexId: row.indexId as IndexId,
+		symbol: row.symbol,
+		dateAdded: row.dateAdded.toISOString(),
+		dateRemoved: row.dateRemoved?.toISOString() ?? null,
+		reasonAdded: row.reasonAdded,
+		reasonRemoved: row.reasonRemoved,
+		sector: row.sector,
+		industry: row.industry,
+		marketCapAtAdd: row.marketCapAtAdd ? Number(row.marketCapAtAdd) : null,
+		provider: row.provider,
+		createdAt: row.createdAt.toISOString(),
+		updatedAt: row.updatedAt.toISOString(),
+	};
+}
+
+function mapTickerChangeRow(row: TickerChangeRow): TickerChange {
+	return {
+		id: row.id,
+		oldSymbol: row.oldSymbol,
+		newSymbol: row.newSymbol,
+		changeDate: row.changeDate.toISOString(),
+		changeType: row.changeType as ChangeType,
+		conversionRatio: row.conversionRatio ? Number(row.conversionRatio) : null,
+		reason: row.reason,
+		acquiringCompany: row.acquiringCompany,
+		provider: row.provider,
+		createdAt: row.createdAt.toISOString(),
+	};
+}
+
+function mapSnapshotRow(row: UniverseSnapshotRow): UniverseSnapshot {
+	return {
+		id: row.id,
+		snapshotDate: row.snapshotDate.toISOString(),
+		indexId: row.indexId as IndexId,
+		tickers: (row.tickers as string[]) ?? [],
+		tickerCount: row.tickerCount,
+		sourceVersion: row.sourceVersion,
+		computedAt: row.computedAt.toISOString(),
+		expiresAt: row.expiresAt?.toISOString() ?? null,
+	};
+}
+
+// ============================================
+// IndexConstituentsRepository
+// ============================================
+
 export class IndexConstituentsRepository {
-	constructor(private client: TursoClient) {}
+	private db: Database;
+
+	constructor(db?: Database) {
+		this.db = db ?? getDb();
+	}
 
 	async upsert(
 		constituent: Omit<IndexConstituent, "id" | "createdAt" | "updatedAt">
 	): Promise<void> {
-		try {
-			await this.client.run(
-				`INSERT INTO index_constituents (
-          index_id, symbol, date_added, date_removed, reason_added, reason_removed,
-          sector, industry, market_cap_at_add, provider
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-        ON CONFLICT(index_id, symbol, date_added)
-        DO UPDATE SET
-          date_removed = excluded.date_removed,
-          reason_removed = excluded.reason_removed,
-          updated_at = datetime('now')`,
-				[
-					constituent.indexId,
-					constituent.symbol,
-					constituent.dateAdded,
-					constituent.dateRemoved ?? null,
-					constituent.reasonAdded ?? null,
-					constituent.reasonRemoved ?? null,
-					constituent.sector ?? null,
-					constituent.industry ?? null,
-					constituent.marketCapAtAdd ?? null,
-					constituent.provider ?? "alpaca",
-				]
-			);
-		} catch (error) {
-			throw RepositoryError.fromSqliteError("index_constituents", error as Error);
-		}
+		await this.db
+			.insert(indexConstituents)
+			.values({
+				indexId: constituent.indexId,
+				symbol: constituent.symbol,
+				dateAdded: new Date(constituent.dateAdded),
+				dateRemoved: constituent.dateRemoved ? new Date(constituent.dateRemoved) : null,
+				reasonAdded: constituent.reasonAdded ?? null,
+				reasonRemoved: constituent.reasonRemoved ?? null,
+				sector: constituent.sector ?? null,
+				industry: constituent.industry ?? null,
+				marketCapAtAdd: constituent.marketCapAtAdd?.toString() ?? null,
+				provider: constituent.provider ?? "alpaca",
+			})
+			.onConflictDoUpdate({
+				target: [indexConstituents.indexId, indexConstituents.symbol, indexConstituents.dateAdded],
+				set: {
+					dateRemoved: constituent.dateRemoved ? new Date(constituent.dateRemoved) : null,
+					reasonRemoved: constituent.reasonRemoved ?? null,
+					updatedAt: new Date(),
+				},
+			});
 	}
 
 	async bulkInsert(
@@ -126,46 +186,70 @@ export class IndexConstituentsRepository {
 	}
 
 	async getConstituentsAsOf(indexId: IndexId, asOfDate: string): Promise<string[]> {
-		const rows = await this.client.execute<{ symbol: string }>(
-			`SELECT DISTINCT symbol FROM index_constituents
-       WHERE index_id = ?
-         AND date_added <= ?
-         AND (date_removed IS NULL OR date_removed > ?)
-       ORDER BY symbol`,
-			[indexId, asOfDate, asOfDate]
-		);
+		const asOf = new Date(asOfDate);
+
+		const rows = await this.db
+			.selectDistinct({ symbol: indexConstituents.symbol })
+			.from(indexConstituents)
+			.where(
+				and(
+					eq(indexConstituents.indexId, indexId),
+					lte(indexConstituents.dateAdded, asOf),
+					or(
+						isNull(indexConstituents.dateRemoved),
+						sql`${indexConstituents.dateRemoved} > ${asOf}`
+					)
+				)
+			)
+			.orderBy(asc(indexConstituents.symbol));
+
 		return rows.map((r) => r.symbol);
 	}
 
 	async getCurrentConstituents(indexId: IndexId): Promise<IndexConstituent[]> {
-		const rows = await this.client.execute<IndexConstituentRow>(
-			`SELECT * FROM index_constituents
-       WHERE index_id = ? AND date_removed IS NULL
-       ORDER BY symbol`,
-			[indexId]
-		);
-		return rows.map(mapRowToConstituent);
+		const rows = await this.db
+			.select()
+			.from(indexConstituents)
+			.where(
+				and(
+					eq(indexConstituents.indexId, indexId),
+					isNull(indexConstituents.dateRemoved)
+				)
+			)
+			.orderBy(asc(indexConstituents.symbol));
+
+		return rows.map(mapConstituentRow);
 	}
 
 	async getSymbolHistory(symbol: string): Promise<IndexConstituent[]> {
-		const rows = await this.client.execute<IndexConstituentRow>(
-			`SELECT * FROM index_constituents
-       WHERE symbol = ?
-       ORDER BY index_id, date_added`,
-			[symbol]
-		);
-		return rows.map(mapRowToConstituent);
+		const rows = await this.db
+			.select()
+			.from(indexConstituents)
+			.where(eq(indexConstituents.symbol, symbol))
+			.orderBy(asc(indexConstituents.indexId), asc(indexConstituents.dateAdded));
+
+		return rows.map(mapConstituentRow);
 	}
 
 	async wasInIndexOnDate(indexId: IndexId, symbol: string, date: string): Promise<boolean> {
-		const row = await this.client.get<{ cnt: number }>(
-			`SELECT COUNT(*) as cnt FROM index_constituents
-       WHERE index_id = ? AND symbol = ?
-         AND date_added <= ?
-         AND (date_removed IS NULL OR date_removed > ?)`,
-			[indexId, symbol, date, date]
-		);
-		return (row?.cnt ?? 0) > 0;
+		const dateObj = new Date(date);
+
+		const [result] = await this.db
+			.select({ cnt: sql<number>`COUNT(*)::int` })
+			.from(indexConstituents)
+			.where(
+				and(
+					eq(indexConstituents.indexId, indexId),
+					eq(indexConstituents.symbol, symbol),
+					lte(indexConstituents.dateAdded, dateObj),
+					or(
+						isNull(indexConstituents.dateRemoved),
+						sql`${indexConstituents.dateRemoved} > ${dateObj}`
+					)
+				)
+			);
+
+		return (result?.cnt ?? 0) > 0;
 	}
 
 	async getChangesInRange(
@@ -173,95 +257,121 @@ export class IndexConstituentsRepository {
 		startDate: string,
 		endDate: string
 	): Promise<{ additions: IndexConstituent[]; removals: IndexConstituent[] }> {
-		const additions = await this.client.execute<IndexConstituentRow>(
-			`SELECT * FROM index_constituents
-       WHERE index_id = ? AND date_added >= ? AND date_added <= ?
-       ORDER BY date_added`,
-			[indexId, startDate, endDate]
-		);
+		const start = new Date(startDate);
+		const end = new Date(endDate);
 
-		const removals = await this.client.execute<IndexConstituentRow>(
-			`SELECT * FROM index_constituents
-       WHERE index_id = ? AND date_removed >= ? AND date_removed <= ?
-       ORDER BY date_removed`,
-			[indexId, startDate, endDate]
-		);
+		const additions = await this.db
+			.select()
+			.from(indexConstituents)
+			.where(
+				and(
+					eq(indexConstituents.indexId, indexId),
+					gte(indexConstituents.dateAdded, start),
+					lte(indexConstituents.dateAdded, end)
+				)
+			)
+			.orderBy(asc(indexConstituents.dateAdded));
+
+		const removals = await this.db
+			.select()
+			.from(indexConstituents)
+			.where(
+				and(
+					eq(indexConstituents.indexId, indexId),
+					gte(indexConstituents.dateRemoved, start),
+					lte(indexConstituents.dateRemoved, end)
+				)
+			)
+			.orderBy(asc(indexConstituents.dateRemoved));
 
 		return {
-			additions: additions.map(mapRowToConstituent),
-			removals: removals.map(mapRowToConstituent),
+			additions: additions.map(mapConstituentRow),
+			removals: removals.map(mapConstituentRow),
 		};
 	}
 
 	async getConstituentCount(indexId: IndexId, asOfDate?: string): Promise<number> {
 		if (asOfDate) {
-			const row = await this.client.get<{ cnt: number }>(
-				`SELECT COUNT(DISTINCT symbol) as cnt FROM index_constituents
-         WHERE index_id = ?
-           AND date_added <= ?
-           AND (date_removed IS NULL OR date_removed > ?)`,
-				[indexId, asOfDate, asOfDate]
-			);
-			return row?.cnt ?? 0;
+			const asOf = new Date(asOfDate);
+
+			const [result] = await this.db
+				.select({ cnt: sql<number>`COUNT(DISTINCT ${indexConstituents.symbol})::int` })
+				.from(indexConstituents)
+				.where(
+					and(
+						eq(indexConstituents.indexId, indexId),
+						lte(indexConstituents.dateAdded, asOf),
+						or(
+							isNull(indexConstituents.dateRemoved),
+							sql`${indexConstituents.dateRemoved} > ${asOf}`
+						)
+					)
+				);
+
+			return result?.cnt ?? 0;
 		}
 
-		const row = await this.client.get<{ cnt: number }>(
-			`SELECT COUNT(*) as cnt FROM index_constituents
-       WHERE index_id = ? AND date_removed IS NULL`,
-			[indexId]
-		);
-		return row?.cnt ?? 0;
+		const [result] = await this.db
+			.select({ cnt: sql<number>`COUNT(*)::int` })
+			.from(indexConstituents)
+			.where(
+				and(
+					eq(indexConstituents.indexId, indexId),
+					isNull(indexConstituents.dateRemoved)
+				)
+			);
+
+		return result?.cnt ?? 0;
 	}
 }
 
+// ============================================
+// TickerChangesRepository
+// ============================================
+
 export class TickerChangesRepository {
-	constructor(private client: TursoClient) {}
+	private db: Database;
+
+	constructor(db?: Database) {
+		this.db = db ?? getDb();
+	}
 
 	async insert(change: Omit<TickerChange, "id" | "createdAt">): Promise<void> {
-		try {
-			await this.client.run(
-				`INSERT INTO ticker_changes (
-          old_symbol, new_symbol, change_date, change_type,
-          conversion_ratio, reason, acquiring_company, provider
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-        ON CONFLICT(old_symbol, new_symbol, change_date) DO NOTHING`,
-				[
-					change.oldSymbol,
-					change.newSymbol,
-					change.changeDate,
-					change.changeType,
-					change.conversionRatio ?? null,
-					change.reason ?? null,
-					change.acquiringCompany ?? null,
-					change.provider ?? "alpaca",
-				]
-			);
-		} catch (error) {
-			throw RepositoryError.fromSqliteError("ticker_changes", error as Error);
-		}
+		await this.db
+			.insert(tickerChanges)
+			.values({
+				oldSymbol: change.oldSymbol,
+				newSymbol: change.newSymbol,
+				changeDate: new Date(change.changeDate),
+				changeType: change.changeType as typeof tickerChanges.$inferInsert.changeType,
+				conversionRatio: change.conversionRatio?.toString() ?? null,
+				reason: change.reason ?? null,
+				acquiringCompany: change.acquiringCompany ?? null,
+				provider: change.provider ?? "alpaca",
+			})
+			.onConflictDoNothing();
 	}
 
 	async getChangesFromSymbol(oldSymbol: string): Promise<TickerChange[]> {
-		const rows = await this.client.execute<TickerChangeRow>(
-			`SELECT * FROM ticker_changes
-       WHERE old_symbol = ?
-       ORDER BY change_date`,
-			[oldSymbol]
-		);
-		return rows.map(mapRowToTickerChange);
+		const rows = await this.db
+			.select()
+			.from(tickerChanges)
+			.where(eq(tickerChanges.oldSymbol, oldSymbol))
+			.orderBy(asc(tickerChanges.changeDate));
+
+		return rows.map(mapTickerChangeRow);
 	}
 
 	async getChangesToSymbol(newSymbol: string): Promise<TickerChange[]> {
-		const rows = await this.client.execute<TickerChangeRow>(
-			`SELECT * FROM ticker_changes
-       WHERE new_symbol = ?
-       ORDER BY change_date`,
-			[newSymbol]
-		);
-		return rows.map(mapRowToTickerChange);
+		const rows = await this.db
+			.select()
+			.from(tickerChanges)
+			.where(eq(tickerChanges.newSymbol, newSymbol))
+			.orderBy(asc(tickerChanges.changeDate));
+
+		return rows.map(mapTickerChangeRow);
 	}
 
-	/** Follows the chain of ticker changes to find the final symbol */
 	async resolveToCurrentSymbol(historicalSymbol: string): Promise<string> {
 		let current = historicalSymbol;
 		const visited = new Set<string>();
@@ -269,215 +379,162 @@ export class TickerChangesRepository {
 		while (!visited.has(current)) {
 			visited.add(current);
 
-			const row = await this.client.get<{ new_symbol: string }>(
-				`SELECT new_symbol FROM ticker_changes
-         WHERE old_symbol = ?
-         ORDER BY change_date DESC
-         LIMIT 1`,
-				[current]
-			);
+			const [row] = await this.db
+				.select({ newSymbol: tickerChanges.newSymbol })
+				.from(tickerChanges)
+				.where(eq(tickerChanges.oldSymbol, current))
+				.orderBy(desc(tickerChanges.changeDate))
+				.limit(1);
 
 			if (!row) {
 				break;
 			}
-			current = row.new_symbol;
+			current = row.newSymbol;
 		}
 
 		return current;
 	}
 
-	/** Follows the chain of ticker changes backward to find what the symbol was on a given date */
 	async resolveToHistoricalSymbol(currentSymbol: string, asOfDate: string): Promise<string> {
 		let historical = currentSymbol;
 		const visited = new Set<string>();
+		const asOf = new Date(asOfDate);
 
 		while (!visited.has(historical)) {
 			visited.add(historical);
 
-			const row = await this.client.get<{ old_symbol: string }>(
-				`SELECT old_symbol FROM ticker_changes
-         WHERE new_symbol = ? AND change_date > ?
-         ORDER BY change_date ASC
-         LIMIT 1`,
-				[historical, asOfDate]
-			);
+			const [row] = await this.db
+				.select({ oldSymbol: tickerChanges.oldSymbol })
+				.from(tickerChanges)
+				.where(
+					and(
+						eq(tickerChanges.newSymbol, historical),
+						sql`${tickerChanges.changeDate} > ${asOf}`
+					)
+				)
+				.orderBy(asc(tickerChanges.changeDate))
+				.limit(1);
 
 			if (!row) {
 				break;
 			}
-			historical = row.old_symbol;
+			historical = row.oldSymbol;
 		}
 
 		return historical;
 	}
 
 	async getChangesInRange(startDate: string, endDate: string): Promise<TickerChange[]> {
-		const rows = await this.client.execute<TickerChangeRow>(
-			`SELECT * FROM ticker_changes
-       WHERE change_date >= ? AND change_date <= ?
-       ORDER BY change_date`,
-			[startDate, endDate]
-		);
-		return rows.map(mapRowToTickerChange);
+		const start = new Date(startDate);
+		const end = new Date(endDate);
+
+		const rows = await this.db
+			.select()
+			.from(tickerChanges)
+			.where(
+				and(
+					gte(tickerChanges.changeDate, start),
+					lte(tickerChanges.changeDate, end)
+				)
+			)
+			.orderBy(asc(tickerChanges.changeDate));
+
+		return rows.map(mapTickerChangeRow);
 	}
 }
 
+// ============================================
+// UniverseSnapshotsRepository
+// ============================================
+
 export class UniverseSnapshotsRepository {
-	constructor(private client: TursoClient) {}
+	private db: Database;
+
+	constructor(db?: Database) {
+		this.db = db ?? getDb();
+	}
 
 	async save(snapshot: Omit<UniverseSnapshot, "id" | "computedAt">): Promise<void> {
 		const tickerCount = snapshot.tickers.length;
 
-		try {
-			await this.client.run(
-				`INSERT INTO universe_snapshots (
-          snapshot_date, index_id, tickers, ticker_count, source_version, expires_at
-        ) VALUES (?, ?, ?, ?, ?, ?)
-        ON CONFLICT(index_id, snapshot_date)
-        DO UPDATE SET
-          tickers = excluded.tickers,
-          ticker_count = excluded.ticker_count,
-          source_version = excluded.source_version,
-          computed_at = datetime('now'),
-          expires_at = excluded.expires_at`,
-				[
-					snapshot.snapshotDate,
-					snapshot.indexId,
-					toJson(snapshot.tickers),
+		await this.db
+			.insert(universeSnapshots)
+			.values({
+				snapshotDate: new Date(snapshot.snapshotDate),
+				indexId: snapshot.indexId,
+				tickers: snapshot.tickers,
+				tickerCount,
+				sourceVersion: snapshot.sourceVersion ?? null,
+				expiresAt: snapshot.expiresAt ? new Date(snapshot.expiresAt) : null,
+			})
+			.onConflictDoUpdate({
+				target: [universeSnapshots.indexId, universeSnapshots.snapshotDate],
+				set: {
+					tickers: snapshot.tickers,
 					tickerCount,
-					snapshot.sourceVersion ?? null,
-					snapshot.expiresAt ?? null,
-				]
-			);
-		} catch (error) {
-			throw RepositoryError.fromSqliteError("universe_snapshots", error as Error);
-		}
+					sourceVersion: snapshot.sourceVersion ?? null,
+					computedAt: new Date(),
+					expiresAt: snapshot.expiresAt ? new Date(snapshot.expiresAt) : null,
+				},
+			});
 	}
 
 	async get(indexId: IndexId, snapshotDate: string): Promise<UniverseSnapshot | null> {
-		const row = await this.client.get<UniverseSnapshotRow>(
-			`SELECT * FROM universe_snapshots
-       WHERE index_id = ? AND snapshot_date = ?`,
-			[indexId, snapshotDate]
-		);
-		return row ? mapRowToSnapshot(row) : null;
+		const [row] = await this.db
+			.select()
+			.from(universeSnapshots)
+			.where(
+				and(
+					eq(universeSnapshots.indexId, indexId),
+					eq(universeSnapshots.snapshotDate, new Date(snapshotDate))
+				)
+			)
+			.limit(1);
+
+		return row ? mapSnapshotRow(row) : null;
 	}
 
 	async getClosestBefore(indexId: IndexId, date: string): Promise<UniverseSnapshot | null> {
-		const row = await this.client.get<UniverseSnapshotRow>(
-			`SELECT * FROM universe_snapshots
-       WHERE index_id = ? AND snapshot_date <= ?
-       ORDER BY snapshot_date DESC
-       LIMIT 1`,
-			[indexId, date]
-		);
-		return row ? mapRowToSnapshot(row) : null;
+		const dateObj = new Date(date);
+
+		const [row] = await this.db
+			.select()
+			.from(universeSnapshots)
+			.where(
+				and(
+					eq(universeSnapshots.indexId, indexId),
+					lte(universeSnapshots.snapshotDate, dateObj)
+				)
+			)
+			.orderBy(desc(universeSnapshots.snapshotDate))
+			.limit(1);
+
+		return row ? mapSnapshotRow(row) : null;
 	}
 
 	async listDates(indexId: IndexId): Promise<string[]> {
-		const rows = await this.client.execute<{ snapshot_date: string }>(
-			`SELECT snapshot_date FROM universe_snapshots
-       WHERE index_id = ?
-       ORDER BY snapshot_date`,
-			[indexId]
-		);
-		return rows.map((r) => r.snapshot_date);
+		const rows = await this.db
+			.select({ snapshotDate: universeSnapshots.snapshotDate })
+			.from(universeSnapshots)
+			.where(eq(universeSnapshots.indexId, indexId))
+			.orderBy(asc(universeSnapshots.snapshotDate));
+
+		return rows.map((r) => r.snapshotDate.toISOString());
 	}
 
 	async purgeExpired(): Promise<number> {
-		const result = await this.client.run(
-			`DELETE FROM universe_snapshots
-       WHERE expires_at IS NOT NULL AND expires_at <= datetime('now')`
-		);
-		return result.changes;
+		const now = new Date();
+
+		const result = await this.db
+			.delete(universeSnapshots)
+			.where(
+				and(
+					sql`${universeSnapshots.expiresAt} IS NOT NULL`,
+					lte(universeSnapshots.expiresAt, now)
+				)
+			)
+			.returning({ id: universeSnapshots.id });
+
+		return result.length;
 	}
-}
-
-interface IndexConstituentRow {
-	id: number;
-	index_id: string;
-	symbol: string;
-	date_added: string;
-	date_removed: string | null;
-	reason_added: string | null;
-	reason_removed: string | null;
-	sector: string | null;
-	industry: string | null;
-	market_cap_at_add: number | null;
-	provider: string;
-	created_at: string;
-	updated_at: string;
-	[key: string]: unknown;
-}
-
-function mapRowToConstituent(row: IndexConstituentRow): IndexConstituent {
-	return {
-		id: row.id,
-		indexId: row.index_id as IndexId,
-		symbol: row.symbol,
-		dateAdded: row.date_added,
-		dateRemoved: row.date_removed,
-		reasonAdded: row.reason_added,
-		reasonRemoved: row.reason_removed,
-		sector: row.sector,
-		industry: row.industry,
-		marketCapAtAdd: row.market_cap_at_add,
-		provider: row.provider,
-		createdAt: row.created_at,
-		updatedAt: row.updated_at,
-	};
-}
-
-interface TickerChangeRow {
-	id: number;
-	old_symbol: string;
-	new_symbol: string;
-	change_date: string;
-	change_type: string;
-	conversion_ratio: number | null;
-	reason: string | null;
-	acquiring_company: string | null;
-	provider: string;
-	created_at: string;
-	[key: string]: unknown;
-}
-
-function mapRowToTickerChange(row: TickerChangeRow): TickerChange {
-	return {
-		id: row.id,
-		oldSymbol: row.old_symbol,
-		newSymbol: row.new_symbol,
-		changeDate: row.change_date,
-		changeType: row.change_type as ChangeType,
-		conversionRatio: row.conversion_ratio,
-		reason: row.reason,
-		acquiringCompany: row.acquiring_company,
-		provider: row.provider,
-		createdAt: row.created_at,
-	};
-}
-
-interface UniverseSnapshotRow {
-	id: number;
-	snapshot_date: string;
-	index_id: string;
-	tickers: string;
-	ticker_count: number;
-	source_version: string | null;
-	computed_at: string;
-	expires_at: string | null;
-	[key: string]: unknown;
-}
-
-function mapRowToSnapshot(row: UniverseSnapshotRow): UniverseSnapshot {
-	return {
-		id: row.id,
-		snapshotDate: row.snapshot_date,
-		indexId: row.index_id as IndexId,
-		tickers: parseJson<string[]>(row.tickers, []),
-		tickerCount: row.ticker_count,
-		sourceVersion: row.source_version,
-		computedAt: row.computed_at,
-		expiresAt: row.expires_at,
-	};
 }

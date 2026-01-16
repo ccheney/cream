@@ -1,36 +1,21 @@
 /**
- * Thesis State Repository
+ * Thesis State Repository (Drizzle ORM)
  *
  * Manages thesis lifecycle tracking across OODA cycles.
  * Theses track position state from WATCHING through CLOSED.
  *
  * @see docs/plans/05-agents.md - Thesis State Management section
  */
-
-import type { Row, TursoClient } from "../turso.js";
-import {
-	type PaginatedResult,
-	type PaginationOptions,
-	paginate,
-	parseJson,
-	query,
-	RepositoryError,
-	toBoolean,
-	toJson,
-} from "./base.js";
+import { and, asc, count, desc, eq, gte, inArray, ne, sql } from "drizzle-orm";
+import { getDb, type Database } from "../db";
+import { thesisState, thesisStateHistory } from "../schema/thesis";
 
 // ============================================
 // Types
 // ============================================
 
-/**
- * Thesis state enum
- */
 export type ThesisState = "WATCHING" | "ENTERED" | "ADDING" | "MANAGING" | "EXITING" | "CLOSED";
 
-/**
- * Close reason enum
- */
 export type CloseReason =
 	| "STOP_HIT"
 	| "TARGET_HIT"
@@ -39,9 +24,6 @@ export type CloseReason =
 	| "TIME_DECAY"
 	| "CORRELATION";
 
-/**
- * Thesis entity
- */
 export interface Thesis {
 	thesisId: string;
 	instrumentId: string;
@@ -67,9 +49,6 @@ export interface Thesis {
 	closedAt: string | null;
 }
 
-/**
- * Thesis context for agents (subset of Thesis with computed fields)
- */
 export interface ThesisContext {
 	instrumentId: string;
 	currentState: ThesisState;
@@ -83,11 +62,8 @@ export interface ThesisContext {
 	daysHeld: number;
 }
 
-/**
- * Create thesis input
- */
 export interface CreateThesisInput {
-	thesisId: string;
+	thesisId?: string;
 	instrumentId: string;
 	state?: ThesisState;
 	entryThesis?: string;
@@ -99,9 +75,6 @@ export interface CreateThesisInput {
 	notes?: Record<string, unknown>;
 }
 
-/**
- * State transition input
- */
 export interface StateTransitionInput {
 	toState: ThesisState;
 	triggerReason?: string;
@@ -110,9 +83,6 @@ export interface StateTransitionInput {
 	notes?: string;
 }
 
-/**
- * Thesis filter options
- */
 export interface ThesisFilters {
 	instrumentId?: string;
 	state?: ThesisState;
@@ -122,9 +92,6 @@ export interface ThesisFilters {
 	createdAfter?: string;
 }
 
-/**
- * State transition history entry
- */
 export interface ThesisStateHistoryEntry {
 	id: number;
 	thesisId: string;
@@ -138,72 +105,91 @@ export interface ThesisStateHistoryEntry {
 	createdAt: string;
 }
 
+export interface PaginationOptions {
+	page?: number;
+	pageSize?: number;
+}
+
+export interface PaginatedResult<T> {
+	data: T[];
+	total: number;
+	page: number;
+	pageSize: number;
+	totalPages: number;
+}
+
 // ============================================
 // State Transition Validation
 // ============================================
 
-/**
- * Valid state transitions
- */
 const VALID_TRANSITIONS: Record<ThesisState, ThesisState[]> = {
-	WATCHING: ["ENTERED", "CLOSED"], // Can enter or remove from watchlist
-	ENTERED: ["ADDING", "MANAGING", "EXITING", "CLOSED"], // Can add, manage, exit, or stop out
-	ADDING: ["MANAGING", "EXITING", "CLOSED"], // Position complete, change view, or stop out
-	MANAGING: ["ADDING", "EXITING", "CLOSED"], // Increase, take profits, or exit
-	EXITING: ["MANAGING", "CLOSED"], // Re-enter remaining or fully exit
-	CLOSED: ["WATCHING"], // New opportunity same instrument
+	WATCHING: ["ENTERED", "CLOSED"],
+	ENTERED: ["ADDING", "MANAGING", "EXITING", "CLOSED"],
+	ADDING: ["MANAGING", "EXITING", "CLOSED"],
+	MANAGING: ["ADDING", "EXITING", "CLOSED"],
+	EXITING: ["MANAGING", "CLOSED"],
+	CLOSED: ["WATCHING"],
 };
 
-/**
- * Check if state transition is valid
- */
 export function isValidTransition(from: ThesisState, to: ThesisState): boolean {
 	return VALID_TRANSITIONS[from]?.includes(to) ?? false;
 }
 
 // ============================================
-// Row Mapper
+// Row Mapping
 // ============================================
 
-function mapThesisRow(row: Row): Thesis {
+type ThesisRow = typeof thesisState.$inferSelect;
+type HistoryRow = typeof thesisStateHistory.$inferSelect;
+
+function parseNotes(notes: string | null): Record<string, unknown> {
+	if (!notes) return {};
+	try {
+		return JSON.parse(notes) as Record<string, unknown>;
+	} catch {
+		return {};
+	}
+}
+
+function mapThesisRow(row: ThesisRow): Thesis {
 	return {
-		thesisId: row.thesis_id as string,
-		instrumentId: row.instrument_id as string,
+		thesisId: row.thesisId,
+		instrumentId: row.instrumentId,
 		state: row.state as ThesisState,
-		entryPrice: row.entry_price as number | null,
-		entryDate: row.entry_date as string | null,
-		currentStop: row.current_stop as number | null,
-		currentTarget: row.current_target as number | null,
-		conviction: row.conviction as number | null,
-		entryThesis: row.entry_thesis as string | null,
-		invalidationConditions: row.invalidation_conditions as string | null,
-		addCount: row.add_count as number,
-		maxPositionReached: toBoolean(row.max_position_reached),
-		peakUnrealizedPnl: row.peak_unrealized_pnl as number | null,
-		closeReason: row.close_reason as CloseReason | null,
-		exitPrice: row.exit_price as number | null,
-		realizedPnl: row.realized_pnl as number | null,
-		realizedPnlPct: row.realized_pnl_pct as number | null,
-		environment: row.environment as string,
-		notes: parseJson<Record<string, unknown>>(row.notes, {}),
-		lastUpdated: row.last_updated as string,
-		createdAt: row.created_at as string,
-		closedAt: row.closed_at as string | null,
+		entryPrice: row.entryPrice ? Number(row.entryPrice) : null,
+		entryDate: row.entryDate?.toISOString() ?? null,
+		currentStop: row.currentStop ? Number(row.currentStop) : null,
+		currentTarget: row.currentTarget ? Number(row.currentTarget) : null,
+		conviction: row.conviction ? Number(row.conviction) : null,
+		entryThesis: row.entryThesis,
+		invalidationConditions: row.invalidationConditions,
+		addCount: row.addCount,
+		maxPositionReached: row.maxPositionReached === 1,
+		peakUnrealizedPnl: row.peakUnrealizedPnl ? Number(row.peakUnrealizedPnl) : null,
+		closeReason: row.closeReason as CloseReason | null,
+		exitPrice: row.exitPrice ? Number(row.exitPrice) : null,
+		realizedPnl: row.realizedPnl ? Number(row.realizedPnl) : null,
+		realizedPnlPct: row.realizedPnlPct ? Number(row.realizedPnlPct) : null,
+		environment: row.environment,
+		notes: parseNotes(row.notes),
+		lastUpdated: row.lastUpdated.toISOString(),
+		createdAt: row.createdAt.toISOString(),
+		closedAt: row.closedAt?.toISOString() ?? null,
 	};
 }
 
-function mapHistoryRow(row: Row): ThesisStateHistoryEntry {
+function mapHistoryRow(row: HistoryRow): ThesisStateHistoryEntry {
 	return {
-		id: row.id as number,
-		thesisId: row.thesis_id as string,
-		fromState: row.from_state as ThesisState,
-		toState: row.to_state as ThesisState,
-		triggerReason: row.trigger_reason as string | null,
-		cycleId: row.cycle_id as string | null,
-		priceAtTransition: row.price_at_transition as number | null,
-		convictionAtTransition: row.conviction_at_transition as number | null,
-		notes: row.notes as string | null,
-		createdAt: row.created_at as string,
+		id: row.id,
+		thesisId: row.thesisId,
+		fromState: row.fromState as ThesisState,
+		toState: row.toState as ThesisState,
+		triggerReason: row.triggerReason,
+		cycleId: row.cycleId,
+		priceAtTransition: row.priceAtTransition ? Number(row.priceAtTransition) : null,
+		convictionAtTransition: row.convictionAtTransition ? Number(row.convictionAtTransition) : null,
+		notes: row.notes,
+		createdAt: row.createdAt.toISOString(),
 	};
 }
 
@@ -211,216 +197,186 @@ function mapHistoryRow(row: Row): ThesisStateHistoryEntry {
 // Repository
 // ============================================
 
-/**
- * Thesis State Repository
- */
 export class ThesisStateRepository {
-	private readonly table = "thesis_state";
-	private readonly historyTable = "thesis_state_history";
+	private db: Database;
 
-	constructor(private readonly client: TursoClient) {}
-
-	/**
-	 * Create a new thesis (typically in WATCHING state)
-	 */
-	async create(input: CreateThesisInput): Promise<Thesis> {
-		const now = new Date().toISOString();
-
-		try {
-			await this.client.run(
-				`INSERT INTO ${this.table} (
-          thesis_id, instrument_id, state, entry_thesis, invalidation_conditions,
-          conviction, current_stop, current_target, environment, notes,
-          last_updated, created_at
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-				[
-					input.thesisId,
-					input.instrumentId,
-					input.state ?? "WATCHING",
-					input.entryThesis ?? null,
-					input.invalidationConditions ?? null,
-					input.conviction ?? null,
-					input.currentStop ?? null,
-					input.currentTarget ?? null,
-					input.environment,
-					toJson(input.notes ?? {}),
-					now,
-					now,
-				]
-			);
-		} catch (error) {
-			throw RepositoryError.fromSqliteError(this.table, error as Error);
-		}
-
-		return this.findById(input.thesisId) as Promise<Thesis>;
+	constructor(db?: Database) {
+		this.db = db ?? getDb();
 	}
 
-	/**
-	 * Find thesis by ID
-	 */
+	async create(input: CreateThesisInput): Promise<Thesis> {
+		const [row] = await this.db
+			.insert(thesisState)
+			.values({
+				thesisId: input.thesisId,
+				instrumentId: input.instrumentId,
+				state: (input.state ?? "WATCHING") as typeof thesisState.$inferInsert.state,
+				entryThesis: input.entryThesis ?? null,
+				invalidationConditions: input.invalidationConditions ?? null,
+				conviction: input.conviction?.toString() ?? null,
+				currentStop: input.currentStop?.toString() ?? null,
+				currentTarget: input.currentTarget?.toString() ?? null,
+				environment: input.environment as typeof thesisState.$inferInsert.environment,
+				notes: JSON.stringify(input.notes ?? {}),
+			})
+			.returning();
+
+		return mapThesisRow(row);
+	}
+
 	async findById(thesisId: string): Promise<Thesis | null> {
-		const row = await this.client.get<Row>(`SELECT * FROM ${this.table} WHERE thesis_id = ?`, [
-			thesisId,
-		]);
+		const [row] = await this.db
+			.select()
+			.from(thesisState)
+			.where(eq(thesisState.thesisId, thesisId))
+			.limit(1);
 
 		return row ? mapThesisRow(row) : null;
 	}
 
-	/**
-	 * Find thesis by ID, throw if not found
-	 */
 	async findByIdOrThrow(thesisId: string): Promise<Thesis> {
 		const thesis = await this.findById(thesisId);
 		if (!thesis) {
-			throw RepositoryError.notFound(this.table, thesisId);
+			throw new Error(`Thesis not found: ${thesisId}`);
 		}
 		return thesis;
 	}
 
-	/**
-	 * Find active thesis for instrument (not CLOSED)
-	 */
 	async findActiveForInstrument(instrumentId: string, environment: string): Promise<Thesis | null> {
-		const row = await this.client.get<Row>(
-			`SELECT * FROM ${this.table}
-       WHERE instrument_id = ? AND environment = ? AND state != 'CLOSED'
-       ORDER BY created_at DESC
-       LIMIT 1`,
-			[instrumentId, environment]
-		);
+		const [row] = await this.db
+			.select()
+			.from(thesisState)
+			.where(
+				and(
+					eq(thesisState.instrumentId, instrumentId),
+					eq(thesisState.environment, environment as typeof thesisState.$inferSelect.environment),
+					ne(thesisState.state, "CLOSED")
+				)
+			)
+			.orderBy(desc(thesisState.createdAt))
+			.limit(1);
 
 		return row ? mapThesisRow(row) : null;
 	}
 
-	/**
-	 * Find theses with filters
-	 */
 	async findMany(
 		filters: ThesisFilters = {},
 		pagination?: PaginationOptions
 	): Promise<PaginatedResult<Thesis>> {
-		const builder = query().orderBy("created_at", "DESC");
+		const conditions = [];
 
 		if (filters.instrumentId) {
-			builder.eq("instrument_id", filters.instrumentId);
+			conditions.push(eq(thesisState.instrumentId, filters.instrumentId));
 		}
 		if (filters.state) {
-			builder.eq("state", filters.state);
+			conditions.push(eq(thesisState.state, filters.state as typeof thesisState.$inferSelect.state));
 		}
 		if (filters.states && filters.states.length > 0) {
-			builder.where("state", "IN", filters.states);
+			conditions.push(inArray(thesisState.state, filters.states as typeof thesisState.$inferSelect.state[]));
 		}
 		if (filters.environment) {
-			builder.eq("environment", filters.environment);
+			conditions.push(eq(thesisState.environment, filters.environment as typeof thesisState.$inferSelect.environment));
 		}
 		if (filters.closedAfter) {
-			builder.where("closed_at", ">=", filters.closedAfter);
+			conditions.push(gte(thesisState.closedAt, new Date(filters.closedAfter)));
 		}
 		if (filters.createdAfter) {
-			builder.where("created_at", ">=", filters.createdAfter);
+			conditions.push(gte(thesisState.createdAt, new Date(filters.createdAfter)));
 		}
 
-		const { sql, args } = builder.build(`SELECT * FROM ${this.table}`);
-		// biome-ignore lint/style/noNonNullAssertion: split always returns array
-		const countSql = sql.replace("SELECT *", "SELECT COUNT(*) as count").split(" LIMIT ")[0]!;
+		const whereClause = conditions.length > 0 ? and(...conditions) : undefined;
+		const page = pagination?.page ?? 1;
+		const pageSize = pagination?.pageSize ?? 50;
+		const offset = (page - 1) * pageSize;
 
-		const result = await paginate<Row>(
-			this.client,
-			// biome-ignore lint/style/noNonNullAssertion: split always returns array
-			sql.split(" LIMIT ")[0]!,
-			countSql,
-			args.slice(0, -2),
-			pagination
-		);
+		const [countResult] = await this.db
+			.select({ count: count() })
+			.from(thesisState)
+			.where(whereClause);
+
+		const rows = await this.db
+			.select()
+			.from(thesisState)
+			.where(whereClause)
+			.orderBy(desc(thesisState.createdAt))
+			.limit(pageSize)
+			.offset(offset);
+
+		const total = countResult?.count ?? 0;
 
 		return {
-			...result,
-			data: result.data.map(mapThesisRow),
+			data: rows.map(mapThesisRow),
+			total,
+			page,
+			pageSize,
+			totalPages: Math.ceil(total / pageSize),
 		};
 	}
 
-	/**
-	 * Find all active theses (not CLOSED) for environment
-	 */
 	async findActive(environment: string): Promise<Thesis[]> {
-		const rows = await this.client.execute<Row>(
-			`SELECT * FROM ${this.table}
-       WHERE environment = ? AND state != 'CLOSED'
-       ORDER BY created_at DESC`,
-			[environment]
-		);
+		const rows = await this.db
+			.select()
+			.from(thesisState)
+			.where(
+				and(
+					eq(thesisState.environment, environment as typeof thesisState.$inferSelect.environment),
+					ne(thesisState.state, "CLOSED")
+				)
+			)
+			.orderBy(desc(thesisState.createdAt));
 
 		return rows.map(mapThesisRow);
 	}
 
-	/**
-	 * Find theses in specific states
-	 */
 	async findByStates(states: ThesisState[], environment: string): Promise<Thesis[]> {
-		const placeholders = states.map(() => "?").join(", ");
-		const rows = await this.client.execute<Row>(
-			`SELECT * FROM ${this.table}
-       WHERE environment = ? AND state IN (${placeholders})
-       ORDER BY created_at DESC`,
-			[environment, ...states]
-		);
+		const rows = await this.db
+			.select()
+			.from(thesisState)
+			.where(
+				and(
+					eq(thesisState.environment, environment as typeof thesisState.$inferSelect.environment),
+					inArray(thesisState.state, states as typeof thesisState.$inferSelect.state[])
+				)
+			)
+			.orderBy(desc(thesisState.createdAt));
 
 		return rows.map(mapThesisRow);
 	}
 
-	/**
-	 * Transition thesis to new state
-	 */
 	async transitionState(thesisId: string, transition: StateTransitionInput): Promise<Thesis> {
 		const thesis = await this.findByIdOrThrow(thesisId);
 		const fromState = thesis.state;
 		const { toState } = transition;
 
-		// Validate transition
 		if (!isValidTransition(fromState, toState)) {
-			throw RepositoryError.constraintViolation(
-				this.table,
-				`Invalid state transition: ${fromState} -> ${toState}`
-			);
+			throw new Error(`Invalid state transition: ${fromState} -> ${toState}`);
 		}
 
-		const now = new Date().toISOString();
+		const now = new Date();
 
-		// Update state
-		await this.client.run(
-			`UPDATE ${this.table} SET
-        state = ?,
-        last_updated = ?,
-        closed_at = CASE WHEN ? = 'CLOSED' THEN ? ELSE closed_at END
-       WHERE thesis_id = ?`,
-			[toState, now, toState, now, thesisId]
-		);
+		await this.db
+			.update(thesisState)
+			.set({
+				state: toState as typeof thesisState.$inferInsert.state,
+				lastUpdated: now,
+				closedAt: toState === "CLOSED" ? now : undefined,
+			})
+			.where(eq(thesisState.thesisId, thesisId));
 
-		// Record transition in history
-		await this.client.run(
-			`INSERT INTO ${this.historyTable} (
-        thesis_id, from_state, to_state, trigger_reason, cycle_id,
-        price_at_transition, conviction_at_transition, notes, created_at
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-			[
-				thesisId,
-				fromState,
-				toState,
-				transition.triggerReason ?? null,
-				transition.cycleId ?? null,
-				transition.priceAtTransition ?? null,
-				thesis.conviction,
-				transition.notes ?? null,
-				now,
-			]
-		);
+		await this.db.insert(thesisStateHistory).values({
+			thesisId,
+			fromState: fromState as typeof thesisStateHistory.$inferInsert.fromState,
+			toState: toState as typeof thesisStateHistory.$inferInsert.toState,
+			triggerReason: transition.triggerReason ?? null,
+			cycleId: transition.cycleId ?? null,
+			priceAtTransition: transition.priceAtTransition?.toString() ?? null,
+			convictionAtTransition: thesis.conviction?.toString() ?? null,
+			notes: transition.notes ?? null,
+		});
 
 		return this.findByIdOrThrow(thesisId);
 	}
 
-	/**
-	 * Enter a position (transition from WATCHING to ENTERED)
-	 */
 	async enterPosition(
 		thesisId: string,
 		entryPrice: number,
@@ -431,41 +387,36 @@ export class ThesisStateRepository {
 		const thesis = await this.findByIdOrThrow(thesisId);
 
 		if (thesis.state !== "WATCHING") {
-			throw RepositoryError.constraintViolation(
-				this.table,
-				`Cannot enter position from state: ${thesis.state}`
-			);
+			throw new Error(`Cannot enter position from state: ${thesis.state}`);
 		}
 
-		const now = new Date().toISOString();
+		const now = new Date();
 
-		await this.client.run(
-			`UPDATE ${this.table} SET
-        state = 'ENTERED',
-        entry_price = ?,
-        entry_date = ?,
-        current_stop = ?,
-        current_target = ?,
-        last_updated = ?
-       WHERE thesis_id = ?`,
-			[entryPrice, now, stopLoss, target ?? null, now, thesisId]
-		);
+		await this.db
+			.update(thesisState)
+			.set({
+				state: "ENTERED" as typeof thesisState.$inferInsert.state,
+				entryPrice: entryPrice.toString(),
+				entryDate: now,
+				currentStop: stopLoss.toString(),
+				currentTarget: target?.toString() ?? null,
+				lastUpdated: now,
+			})
+			.where(eq(thesisState.thesisId, thesisId));
 
-		// Record transition
-		await this.client.run(
-			`INSERT INTO ${this.historyTable} (
-        thesis_id, from_state, to_state, trigger_reason, cycle_id,
-        price_at_transition, conviction_at_transition, created_at
-      ) VALUES (?, 'WATCHING', 'ENTERED', 'Entry conditions met', ?, ?, ?, ?)`,
-			[thesisId, cycleId ?? null, entryPrice, thesis.conviction, now]
-		);
+		await this.db.insert(thesisStateHistory).values({
+			thesisId,
+			fromState: "WATCHING" as typeof thesisStateHistory.$inferInsert.fromState,
+			toState: "ENTERED" as typeof thesisStateHistory.$inferInsert.toState,
+			triggerReason: "Entry conditions met",
+			cycleId: cycleId ?? null,
+			priceAtTransition: entryPrice.toString(),
+			convictionAtTransition: thesis.conviction?.toString() ?? null,
+		});
 
 		return this.findByIdOrThrow(thesisId);
 	}
 
-	/**
-	 * Close a thesis
-	 */
 	async close(
 		thesisId: string,
 		reason: CloseReason,
@@ -476,149 +427,128 @@ export class ThesisStateRepository {
 		const thesis = await this.findByIdOrThrow(thesisId);
 
 		if (thesis.state === "CLOSED") {
-			throw RepositoryError.constraintViolation(this.table, "Thesis is already closed");
+			throw new Error("Thesis is already closed");
 		}
 
-		const now = new Date().toISOString();
+		const now = new Date();
 		const pnlPct =
 			realizedPnl !== undefined && thesis.entryPrice
 				? (realizedPnl / thesis.entryPrice) * 100
 				: null;
 
-		await this.client.run(
-			`UPDATE ${this.table} SET
-        state = 'CLOSED',
-        close_reason = ?,
-        exit_price = ?,
-        realized_pnl = ?,
-        realized_pnl_pct = ?,
-        last_updated = ?,
-        closed_at = ?
-       WHERE thesis_id = ?`,
-			[reason, exitPrice ?? null, realizedPnl ?? null, pnlPct, now, now, thesisId]
-		);
+		await this.db
+			.update(thesisState)
+			.set({
+				state: "CLOSED" as typeof thesisState.$inferInsert.state,
+				closeReason: reason,
+				exitPrice: exitPrice?.toString() ?? null,
+				realizedPnl: realizedPnl?.toString() ?? null,
+				realizedPnlPct: pnlPct?.toString() ?? null,
+				lastUpdated: now,
+				closedAt: now,
+			})
+			.where(eq(thesisState.thesisId, thesisId));
 
-		// Record transition
-		await this.client.run(
-			`INSERT INTO ${this.historyTable} (
-        thesis_id, from_state, to_state, trigger_reason, cycle_id,
-        price_at_transition, conviction_at_transition, created_at
-      ) VALUES (?, ?, 'CLOSED', ?, ?, ?, ?, ?)`,
-			[thesisId, thesis.state, reason, cycleId ?? null, exitPrice ?? null, thesis.conviction, now]
-		);
+		await this.db.insert(thesisStateHistory).values({
+			thesisId,
+			fromState: thesis.state as typeof thesisStateHistory.$inferInsert.fromState,
+			toState: "CLOSED" as typeof thesisStateHistory.$inferInsert.toState,
+			triggerReason: reason,
+			cycleId: cycleId ?? null,
+			priceAtTransition: exitPrice?.toString() ?? null,
+			convictionAtTransition: thesis.conviction?.toString() ?? null,
+		});
 
 		return this.findByIdOrThrow(thesisId);
 	}
 
-	/**
-	 * Update thesis conviction
-	 */
 	async updateConviction(thesisId: string, conviction: number): Promise<Thesis> {
 		if (conviction < 0 || conviction > 1) {
-			throw RepositoryError.constraintViolation(this.table, "Conviction must be between 0 and 1");
+			throw new Error("Conviction must be between 0 and 1");
 		}
 
-		const now = new Date().toISOString();
-
-		await this.client.run(
-			`UPDATE ${this.table} SET conviction = ?, last_updated = ? WHERE thesis_id = ?`,
-			[conviction, now, thesisId]
-		);
+		await this.db
+			.update(thesisState)
+			.set({
+				conviction: conviction.toString(),
+				lastUpdated: new Date(),
+			})
+			.where(eq(thesisState.thesisId, thesisId));
 
 		return this.findByIdOrThrow(thesisId);
 	}
 
-	/**
-	 * Update stop loss and target
-	 */
 	async updateLevels(thesisId: string, stopLoss?: number, target?: number): Promise<Thesis> {
-		const now = new Date().toISOString();
-		const updates: string[] = ["last_updated = ?"];
-		const args: unknown[] = [now];
+		const updates: Record<string, unknown> = {
+			lastUpdated: new Date(),
+		};
 
 		if (stopLoss !== undefined) {
-			updates.push("current_stop = ?");
-			args.push(stopLoss);
+			updates.currentStop = stopLoss.toString();
 		}
 		if (target !== undefined) {
-			updates.push("current_target = ?");
-			args.push(target);
+			updates.currentTarget = target.toString();
 		}
 
-		args.push(thesisId);
-
-		await this.client.run(
-			`UPDATE ${this.table} SET ${updates.join(", ")} WHERE thesis_id = ?`,
-			args
-		);
+		await this.db
+			.update(thesisState)
+			.set(updates)
+			.where(eq(thesisState.thesisId, thesisId));
 
 		return this.findByIdOrThrow(thesisId);
 	}
 
-	/**
-	 * Increment add count (when adding to position)
-	 */
 	async incrementAddCount(thesisId: string): Promise<Thesis> {
-		const now = new Date().toISOString();
-
-		await this.client.run(
-			`UPDATE ${this.table} SET add_count = add_count + 1, last_updated = ? WHERE thesis_id = ?`,
-			[now, thesisId]
-		);
+		await this.db
+			.update(thesisState)
+			.set({
+				addCount: sql`${thesisState.addCount} + 1`,
+				lastUpdated: new Date(),
+			})
+			.where(eq(thesisState.thesisId, thesisId));
 
 		return this.findByIdOrThrow(thesisId);
 	}
 
-	/**
-	 * Mark max position reached
-	 */
 	async markMaxPositionReached(thesisId: string): Promise<Thesis> {
-		const now = new Date().toISOString();
-
-		await this.client.run(
-			`UPDATE ${this.table} SET max_position_reached = 1, last_updated = ? WHERE thesis_id = ?`,
-			[now, thesisId]
-		);
+		await this.db
+			.update(thesisState)
+			.set({
+				maxPositionReached: 1,
+				lastUpdated: new Date(),
+			})
+			.where(eq(thesisState.thesisId, thesisId));
 
 		return this.findByIdOrThrow(thesisId);
 	}
 
-	/**
-	 * Update peak unrealized P&L
-	 */
 	async updatePeakPnl(thesisId: string, peakPnl: number): Promise<Thesis> {
-		const now = new Date().toISOString();
-
-		await this.client.run(
-			`UPDATE ${this.table} SET
-        peak_unrealized_pnl = MAX(COALESCE(peak_unrealized_pnl, ?), ?),
-        last_updated = ?
-       WHERE thesis_id = ?`,
-			[peakPnl, peakPnl, now, thesisId]
-		);
+		await this.db
+			.update(thesisState)
+			.set({
+				peakUnrealizedPnl: sql`GREATEST(COALESCE(${thesisState.peakUnrealizedPnl}, ${peakPnl}), ${peakPnl})`,
+				lastUpdated: new Date(),
+			})
+			.where(eq(thesisState.thesisId, thesisId));
 
 		return this.findByIdOrThrow(thesisId);
 	}
 
-	/**
-	 * Add notes to thesis (appends to existing notes)
-	 */
 	async addNotes(thesisId: string, key: string, value: unknown): Promise<Thesis> {
 		const thesis = await this.findByIdOrThrow(thesisId);
-		const now = new Date().toISOString();
 		const notes = { ...thesis.notes, [key]: value };
 
-		await this.client.run(
-			`UPDATE ${this.table} SET notes = ?, last_updated = ? WHERE thesis_id = ?`,
-			[toJson(notes), now, thesisId]
-		);
+		await this.db
+			.update(thesisState)
+			.set({
+				notes: JSON.stringify(notes),
+				lastUpdated: new Date(),
+			})
+			.where(eq(thesisState.thesisId, thesisId));
 
 		return this.findByIdOrThrow(thesisId);
 	}
 
-	/**
-	 * Get thesis context for agents
-	 */
 	async getContext(thesisId: string, currentPrice?: number): Promise<ThesisContext> {
 		const thesis = await this.findByIdOrThrow(thesisId);
 
@@ -645,75 +575,75 @@ export class ThesisStateRepository {
 		};
 	}
 
-	/**
-	 * Get state transition history for a thesis
-	 */
 	async getHistory(thesisId: string): Promise<ThesisStateHistoryEntry[]> {
-		const rows = await this.client.execute<Row>(
-			`SELECT * FROM ${this.historyTable}
-       WHERE thesis_id = ?
-       ORDER BY created_at ASC`,
-			[thesisId]
-		);
+		const rows = await this.db
+			.select()
+			.from(thesisStateHistory)
+			.where(eq(thesisStateHistory.thesisId, thesisId))
+			.orderBy(asc(thesisStateHistory.createdAt));
 
 		return rows.map(mapHistoryRow);
 	}
 
-	/**
-	 * Delete thesis
-	 */
 	async delete(thesisId: string): Promise<boolean> {
-		const result = await this.client.run(`DELETE FROM ${this.table} WHERE thesis_id = ?`, [
-			thesisId,
-		]);
+		const result = await this.db
+			.delete(thesisState)
+			.where(eq(thesisState.thesisId, thesisId))
+			.returning({ id: thesisState.thesisId });
 
-		return result.changes > 0;
+		return result.length > 0;
 	}
 
-	/**
-	 * Get thesis statistics
-	 */
 	async getStats(environment: string): Promise<{
 		total: number;
 		byState: Record<ThesisState, number>;
 		avgHoldingDays: number;
 		winRate: number;
 	}> {
-		const stateCountsRow = await this.client.get<Row>(
-			`SELECT
-        COUNT(*) as total,
-        SUM(CASE WHEN state = 'WATCHING' THEN 1 ELSE 0 END) as watching,
-        SUM(CASE WHEN state = 'ENTERED' THEN 1 ELSE 0 END) as entered,
-        SUM(CASE WHEN state = 'ADDING' THEN 1 ELSE 0 END) as adding,
-        SUM(CASE WHEN state = 'MANAGING' THEN 1 ELSE 0 END) as managing,
-        SUM(CASE WHEN state = 'EXITING' THEN 1 ELSE 0 END) as exiting,
-        SUM(CASE WHEN state = 'CLOSED' THEN 1 ELSE 0 END) as closed
-       FROM ${this.table}
-       WHERE environment = ?`,
-			[environment]
-		);
+		const envFilter = environment as typeof thesisState.$inferSelect.environment;
 
-		const performanceRow = await this.client.get<Row>(
-			`SELECT
-        AVG(JULIANDAY(closed_at) - JULIANDAY(entry_date)) as avg_holding_days,
-        AVG(CASE WHEN realized_pnl > 0 THEN 1.0 ELSE 0.0 END) as win_rate
-       FROM ${this.table}
-       WHERE environment = ? AND state = 'CLOSED' AND entry_date IS NOT NULL`,
-			[environment]
-		);
+		const stateCountsResult = await this.db
+			.select({
+				total: count(),
+				watching: sql<number>`SUM(CASE WHEN ${thesisState.state} = 'WATCHING' THEN 1 ELSE 0 END)::int`,
+				entered: sql<number>`SUM(CASE WHEN ${thesisState.state} = 'ENTERED' THEN 1 ELSE 0 END)::int`,
+				adding: sql<number>`SUM(CASE WHEN ${thesisState.state} = 'ADDING' THEN 1 ELSE 0 END)::int`,
+				managing: sql<number>`SUM(CASE WHEN ${thesisState.state} = 'MANAGING' THEN 1 ELSE 0 END)::int`,
+				exiting: sql<number>`SUM(CASE WHEN ${thesisState.state} = 'EXITING' THEN 1 ELSE 0 END)::int`,
+				closed: sql<number>`SUM(CASE WHEN ${thesisState.state} = 'CLOSED' THEN 1 ELSE 0 END)::int`,
+			})
+			.from(thesisState)
+			.where(eq(thesisState.environment, envFilter));
+
+		const performanceResult = await this.db
+			.select({
+				avgHoldingDays: sql<number>`AVG(EXTRACT(EPOCH FROM (${thesisState.closedAt} - ${thesisState.entryDate})) / 86400)`,
+				winRate: sql<number>`AVG(CASE WHEN ${thesisState.realizedPnl}::numeric > 0 THEN 1.0 ELSE 0.0 END)`,
+			})
+			.from(thesisState)
+			.where(
+				and(
+					eq(thesisState.environment, envFilter),
+					eq(thesisState.state, "CLOSED"),
+					sql`${thesisState.entryDate} IS NOT NULL`
+				)
+			);
+
+		const stateCounts = stateCountsResult[0];
+		const performance = performanceResult[0];
 
 		return {
-			total: (stateCountsRow?.total as number) ?? 0,
+			total: stateCounts?.total ?? 0,
 			byState: {
-				WATCHING: (stateCountsRow?.watching as number) ?? 0,
-				ENTERED: (stateCountsRow?.entered as number) ?? 0,
-				ADDING: (stateCountsRow?.adding as number) ?? 0,
-				MANAGING: (stateCountsRow?.managing as number) ?? 0,
-				EXITING: (stateCountsRow?.exiting as number) ?? 0,
-				CLOSED: (stateCountsRow?.closed as number) ?? 0,
+				WATCHING: stateCounts?.watching ?? 0,
+				ENTERED: stateCounts?.entered ?? 0,
+				ADDING: stateCounts?.adding ?? 0,
+				MANAGING: stateCounts?.managing ?? 0,
+				EXITING: stateCounts?.exiting ?? 0,
+				CLOSED: stateCounts?.closed ?? 0,
 			},
-			avgHoldingDays: (performanceRow?.avg_holding_days as number) ?? 0,
-			winRate: (performanceRow?.win_rate as number) ?? 0,
+			avgHoldingDays: performance?.avgHoldingDays ?? 0,
+			winRate: performance?.winRate ?? 0,
 		};
 	}
 }

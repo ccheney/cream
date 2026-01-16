@@ -1,36 +1,24 @@
 /**
- * Parity Validation Repository
+ * Parity Validation Repository (Drizzle ORM)
  *
  * Storage for parity validation history records.
  *
  * @see packages/validation/src/service.ts
  */
-
-import type { Row, TursoClient } from "../turso.js";
-import { parseJson, RepositoryError, toJson } from "./base.js";
+import { and, desc, eq, sql } from "drizzle-orm";
+import { getDb, type Database } from "../db";
+import { parityValidationHistory } from "../schema/audit";
 
 // ============================================
 // Types
 // ============================================
 
-/**
- * Entity types that can be validated for parity.
- */
 export type ParityEntityType = "indicator" | "factor" | "config";
 
-/**
- * Environment for validation.
- */
 export type ParityEnvironment = "BACKTEST" | "PAPER" | "LIVE";
 
-/**
- * Recommendation from parity validation.
- */
 export type ParityRecommendation = "APPROVE_FOR_LIVE" | "NEEDS_INVESTIGATION" | "NOT_READY";
 
-/**
- * Stored parity validation record.
- */
 export interface ParityValidationRecord {
 	id: string;
 	entityType: ParityEntityType;
@@ -45,9 +33,6 @@ export interface ParityValidationRecord {
 	createdAt: string;
 }
 
-/**
- * Input for creating a parity validation record.
- */
 export interface CreateParityValidationInput {
 	entityType: ParityEntityType;
 	entityId: string;
@@ -61,22 +46,24 @@ export interface CreateParityValidationInput {
 }
 
 // ============================================
-// Row Mapper
+// Row Mapping
 // ============================================
 
-function mapRow(row: Row): ParityValidationRecord {
+type ParityValidationRow = typeof parityValidationHistory.$inferSelect;
+
+function mapRow(row: ParityValidationRow): ParityValidationRecord {
 	return {
-		id: row.id as string,
-		entityType: row.entity_type as ParityEntityType,
-		entityId: row.entity_id as string,
+		id: row.id,
+		entityType: row.entityType as ParityEntityType,
+		entityId: row.entityId,
 		environment: row.environment as ParityEnvironment,
-		passed: (row.passed as number) === 1,
+		passed: row.passed,
 		recommendation: row.recommendation as ParityRecommendation,
-		blockingIssues: parseJson(row.blocking_issues, []),
-		warnings: parseJson(row.warnings, []),
-		fullReport: parseJson(row.full_report, {}),
-		validatedAt: row.validated_at as string,
-		createdAt: row.created_at as string,
+		blockingIssues: (row.blockingIssues as string[]) ?? [],
+		warnings: (row.warnings as string[]) ?? [],
+		fullReport: (row.fullReport as Record<string, unknown>) ?? {},
+		validatedAt: row.validatedAt.toISOString(),
+		createdAt: row.createdAt.toISOString(),
 	};
 }
 
@@ -84,165 +71,118 @@ function mapRow(row: Row): ParityValidationRecord {
 // Repository
 // ============================================
 
-/**
- * Repository for parity validation history.
- */
 export class ParityValidationRepository {
-	constructor(private client: TursoClient) {}
+	private db: Database;
 
-	/**
-	 * Create a new validation record.
-	 */
+	constructor(db?: Database) {
+		this.db = db ?? getDb();
+	}
+
 	async create(input: CreateParityValidationInput): Promise<ParityValidationRecord> {
-		const id = crypto.randomUUID();
-		const now = new Date().toISOString();
+		const [row] = await this.db
+			.insert(parityValidationHistory)
+			.values({
+				entityType: input.entityType as typeof parityValidationHistory.$inferInsert.entityType,
+				entityId: input.entityId,
+				environment: input.environment as typeof parityValidationHistory.$inferInsert.environment,
+				passed: input.passed,
+				recommendation: input.recommendation as typeof parityValidationHistory.$inferInsert.recommendation,
+				blockingIssues: input.blockingIssues,
+				warnings: input.warnings,
+				fullReport: input.fullReport,
+				validatedAt: new Date(input.validatedAt),
+			})
+			.returning();
 
-		try {
-			await this.client.run(
-				`INSERT INTO parity_validation_history (
-          id, entity_type, entity_id, environment, passed, recommendation,
-          blocking_issues, warnings, full_report, validated_at, created_at
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-				[
-					id,
-					input.entityType,
-					input.entityId,
-					input.environment,
-					input.passed ? 1 : 0,
-					input.recommendation,
-					toJson(input.blockingIssues),
-					toJson(input.warnings),
-					toJson(input.fullReport),
-					input.validatedAt,
-					now,
-				]
-			);
-
-			const record = await this.findById(id);
-			if (!record) {
-				throw new Error("Failed to create parity validation record");
-			}
-			return record;
-		} catch (error) {
-			throw RepositoryError.fromSqliteError("parity_validation_history", error as Error);
-		}
+		return mapRow(row);
 	}
 
-	/**
-	 * Find a validation record by ID.
-	 */
 	async findById(id: string): Promise<ParityValidationRecord | null> {
-		try {
-			const row = await this.client.get<Row>(
-				"SELECT * FROM parity_validation_history WHERE id = ?",
-				[id]
-			);
-			return row ? mapRow(row) : null;
-		} catch (error) {
-			throw RepositoryError.fromSqliteError("parity_validation_history", error as Error);
-		}
+		const [row] = await this.db
+			.select()
+			.from(parityValidationHistory)
+			.where(eq(parityValidationHistory.id, id))
+			.limit(1);
+
+		return row ? mapRow(row) : null;
 	}
 
-	/**
-	 * Find the most recent validation for an entity.
-	 */
 	async findLatestByEntity(
 		entityType: ParityEntityType,
 		entityId: string
 	): Promise<ParityValidationRecord | null> {
-		try {
-			const row = await this.client.get<Row>(
-				`SELECT * FROM parity_validation_history
-         WHERE entity_type = ? AND entity_id = ?
-         ORDER BY validated_at DESC LIMIT 1`,
-				[entityType, entityId]
-			);
-			return row ? mapRow(row) : null;
-		} catch (error) {
-			throw RepositoryError.fromSqliteError("parity_validation_history", error as Error);
-		}
+		const [row] = await this.db
+			.select()
+			.from(parityValidationHistory)
+			.where(
+				and(
+					eq(parityValidationHistory.entityType, entityType as typeof parityValidationHistory.$inferSelect.entityType),
+					eq(parityValidationHistory.entityId, entityId)
+				)
+			)
+			.orderBy(desc(parityValidationHistory.validatedAt))
+			.limit(1);
+
+		return row ? mapRow(row) : null;
 	}
 
-	/**
-	 * Find all validations for an entity.
-	 */
 	async findByEntity(
 		entityType: ParityEntityType,
 		entityId: string
 	): Promise<ParityValidationRecord[]> {
-		try {
-			const rows = await this.client.execute<Row>(
-				`SELECT * FROM parity_validation_history
-         WHERE entity_type = ? AND entity_id = ?
-         ORDER BY validated_at DESC`,
-				[entityType, entityId]
-			);
-			return rows.map(mapRow);
-		} catch (error) {
-			throw RepositoryError.fromSqliteError("parity_validation_history", error as Error);
-		}
+		const rows = await this.db
+			.select()
+			.from(parityValidationHistory)
+			.where(
+				and(
+					eq(parityValidationHistory.entityType, entityType as typeof parityValidationHistory.$inferSelect.entityType),
+					eq(parityValidationHistory.entityId, entityId)
+				)
+			)
+			.orderBy(desc(parityValidationHistory.validatedAt));
+
+		return rows.map(mapRow);
 	}
 
-	/**
-	 * Find all validations for an environment.
-	 */
 	async findByEnvironment(environment: ParityEnvironment): Promise<ParityValidationRecord[]> {
-		try {
-			const rows = await this.client.execute<Row>(
-				`SELECT * FROM parity_validation_history
-         WHERE environment = ?
-         ORDER BY validated_at DESC`,
-				[environment]
-			);
-			return rows.map(mapRow);
-		} catch (error) {
-			throw RepositoryError.fromSqliteError("parity_validation_history", error as Error);
-		}
+		const rows = await this.db
+			.select()
+			.from(parityValidationHistory)
+			.where(eq(parityValidationHistory.environment, environment as typeof parityValidationHistory.$inferSelect.environment))
+			.orderBy(desc(parityValidationHistory.validatedAt));
+
+		return rows.map(mapRow);
 	}
 
-	/**
-	 * Find failing validations.
-	 */
 	async findFailing(): Promise<ParityValidationRecord[]> {
-		try {
-			const rows = await this.client.execute<Row>(
-				`SELECT * FROM parity_validation_history
-         WHERE passed = 0
-         ORDER BY validated_at DESC`
-			);
-			return rows.map(mapRow);
-		} catch (error) {
-			throw RepositoryError.fromSqliteError("parity_validation_history", error as Error);
-		}
+		const rows = await this.db
+			.select()
+			.from(parityValidationHistory)
+			.where(eq(parityValidationHistory.passed, false))
+			.orderBy(desc(parityValidationHistory.validatedAt));
+
+		return rows.map(mapRow);
 	}
 
-	/**
-	 * Check if an entity has a passing validation.
-	 */
 	async hasPassingValidation(entityType: ParityEntityType, entityId: string): Promise<boolean> {
 		const latest = await this.findLatestByEntity(entityType, entityId);
 		return latest?.passed ?? false;
 	}
 
-	/**
-	 * Delete old validation records (keep last N per entity).
-	 */
 	async pruneHistory(keepLast = 10): Promise<number> {
-		try {
-			const result = await this.client.run(
-				`DELETE FROM parity_validation_history
-         WHERE id NOT IN (
-           SELECT id FROM (
-             SELECT id, entity_type, entity_id,
-               ROW_NUMBER() OVER (PARTITION BY entity_type, entity_id ORDER BY validated_at DESC) as rn
-             FROM parity_validation_history
-           ) WHERE rn <= ?
-         )`,
-				[keepLast]
-			);
-			return result.changes;
-		} catch (error) {
-			throw RepositoryError.fromSqliteError("parity_validation_history", error as Error);
-		}
+		const result = await this.db
+			.delete(parityValidationHistory)
+			.where(
+				sql`${parityValidationHistory.id} NOT IN (
+					SELECT id FROM (
+						SELECT id, entity_type, entity_id,
+							ROW_NUMBER() OVER (PARTITION BY entity_type, entity_id ORDER BY validated_at DESC) as rn
+						FROM ${parityValidationHistory}
+					) sub WHERE rn <= ${keepLast}
+				)`
+			)
+			.returning({ id: parityValidationHistory.id });
+
+		return result.length;
 	}
 }
