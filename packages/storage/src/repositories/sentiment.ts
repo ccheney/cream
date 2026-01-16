@@ -1,15 +1,14 @@
 /**
- * Sentiment Repository
+ * Sentiment Repository (Drizzle ORM)
  *
- * CRUD operations for the sentiment_indicators table.
+ * Data access for sentiment_indicators table.
  * Stores aggregated sentiment data from news, social, and analyst sources.
  *
  * @see docs/plans/33-indicator-engine-v2.md
- * @see migrations/008_indicator_engine_v2.sql
  */
-
-import type { Row, TursoClient } from "../turso.js";
-import { type PaginatedResult, type PaginationOptions, paginate, RepositoryError } from "./base.js";
+import { and, count, desc, eq, gte, isNotNull, lte, sql } from "drizzle-orm";
+import { getDb, type Database } from "../db";
+import { sentimentIndicators } from "../schema/indicators";
 
 // ============================================
 // Types
@@ -34,7 +33,6 @@ export interface SentimentIndicators {
 }
 
 export interface CreateSentimentInput {
-	id: string;
 	symbol: string;
 	date: string;
 
@@ -71,27 +69,42 @@ export interface SentimentFilters {
 	eventRiskFlag?: boolean;
 }
 
+export interface PaginationOptions {
+	page?: number;
+	pageSize?: number;
+}
+
+export interface PaginatedResult<T> {
+	data: T[];
+	total: number;
+	page: number;
+	pageSize: number;
+	totalPages: number;
+}
+
 // ============================================
-// Mappers
+// Row Mapping
 // ============================================
 
-function mapRow(row: Row): SentimentIndicators {
+type SentimentRow = typeof sentimentIndicators.$inferSelect;
+
+function mapSentimentRow(row: SentimentRow): SentimentIndicators {
 	return {
-		id: row.id as string,
-		symbol: row.symbol as string,
-		date: row.date as string,
+		id: row.id,
+		symbol: row.symbol,
+		date: row.date.toISOString(),
 
-		sentimentScore: row.sentiment_score as number | null,
-		sentimentStrength: row.sentiment_strength as number | null,
-		newsVolume: row.news_volume as number | null,
-		sentimentMomentum: row.sentiment_momentum as number | null,
-		eventRiskFlag: Boolean(row.event_risk_flag),
+		sentimentScore: row.sentimentScore ? Number(row.sentimentScore) : null,
+		sentimentStrength: row.sentimentStrength ? Number(row.sentimentStrength) : null,
+		newsVolume: row.newsVolume,
+		sentimentMomentum: row.sentimentMomentum ? Number(row.sentimentMomentum) : null,
+		eventRiskFlag: row.eventRiskFlag ?? false,
 
-		newsSentiment: row.news_sentiment as number | null,
-		socialSentiment: row.social_sentiment as number | null,
-		analystSentiment: row.analyst_sentiment as number | null,
+		newsSentiment: row.newsSentiment ? Number(row.newsSentiment) : null,
+		socialSentiment: row.socialSentiment ? Number(row.socialSentiment) : null,
+		analystSentiment: row.analystSentiment ? Number(row.analystSentiment) : null,
 
-		computedAt: row.computed_at as string,
+		computedAt: row.computedAt.toISOString(),
 	};
 }
 
@@ -100,466 +113,434 @@ function mapRow(row: Row): SentimentIndicators {
 // ============================================
 
 export class SentimentRepository {
-	constructor(private client: TursoClient) {}
+	private db: Database;
 
-	/**
-	 * Create a new sentiment record
-	 */
+	constructor(db?: Database) {
+		this.db = db ?? getDb();
+	}
+
 	async create(input: CreateSentimentInput): Promise<SentimentIndicators> {
-		const now = new Date().toISOString();
+		const [row] = await this.db
+			.insert(sentimentIndicators)
+			.values({
+				symbol: input.symbol,
+				date: new Date(input.date),
+				sentimentScore: input.sentimentScore != null ? String(input.sentimentScore) : null,
+				sentimentStrength: input.sentimentStrength != null ? String(input.sentimentStrength) : null,
+				newsVolume: input.newsVolume ?? null,
+				sentimentMomentum: input.sentimentMomentum != null ? String(input.sentimentMomentum) : null,
+				eventRiskFlag: input.eventRiskFlag ?? false,
+				newsSentiment: input.newsSentiment != null ? String(input.newsSentiment) : null,
+				socialSentiment: input.socialSentiment != null ? String(input.socialSentiment) : null,
+				analystSentiment: input.analystSentiment != null ? String(input.analystSentiment) : null,
+			})
+			.returning();
 
-		await this.client.run(
-			`INSERT INTO sentiment_indicators (
-        id, symbol, date,
-        sentiment_score, sentiment_strength, news_volume,
-        sentiment_momentum, event_risk_flag,
-        news_sentiment, social_sentiment, analyst_sentiment,
-        computed_at
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-			[
-				input.id,
-				input.symbol,
-				input.date,
-				input.sentimentScore ?? null,
-				input.sentimentStrength ?? null,
-				input.newsVolume ?? null,
-				input.sentimentMomentum ?? null,
-				input.eventRiskFlag ? 1 : 0,
-				input.newsSentiment ?? null,
-				input.socialSentiment ?? null,
-				input.analystSentiment ?? null,
-				now,
-			]
-		);
-
-		const created = await this.findById(input.id);
-		if (!created) {
-			throw new RepositoryError("Failed to retrieve created record", "QUERY_ERROR");
-		}
-		return created;
+		return mapSentimentRow(row);
 	}
 
-	/**
-	 * Upsert a sentiment record (insert or update on conflict)
-	 */
 	async upsert(input: CreateSentimentInput): Promise<SentimentIndicators> {
-		const now = new Date().toISOString();
+		const [row] = await this.db
+			.insert(sentimentIndicators)
+			.values({
+				symbol: input.symbol,
+				date: new Date(input.date),
+				sentimentScore: input.sentimentScore != null ? String(input.sentimentScore) : null,
+				sentimentStrength: input.sentimentStrength != null ? String(input.sentimentStrength) : null,
+				newsVolume: input.newsVolume ?? null,
+				sentimentMomentum: input.sentimentMomentum != null ? String(input.sentimentMomentum) : null,
+				eventRiskFlag: input.eventRiskFlag ?? false,
+				newsSentiment: input.newsSentiment != null ? String(input.newsSentiment) : null,
+				socialSentiment: input.socialSentiment != null ? String(input.socialSentiment) : null,
+				analystSentiment: input.analystSentiment != null ? String(input.analystSentiment) : null,
+			})
+			.onConflictDoUpdate({
+				target: [sentimentIndicators.symbol, sentimentIndicators.date],
+				set: {
+					sentimentScore: input.sentimentScore != null ? String(input.sentimentScore) : null,
+					sentimentStrength: input.sentimentStrength != null ? String(input.sentimentStrength) : null,
+					newsVolume: input.newsVolume ?? null,
+					sentimentMomentum: input.sentimentMomentum != null ? String(input.sentimentMomentum) : null,
+					eventRiskFlag: input.eventRiskFlag ?? false,
+					newsSentiment: input.newsSentiment != null ? String(input.newsSentiment) : null,
+					socialSentiment: input.socialSentiment != null ? String(input.socialSentiment) : null,
+					analystSentiment: input.analystSentiment != null ? String(input.analystSentiment) : null,
+					computedAt: new Date(),
+				},
+			})
+			.returning();
 
-		await this.client.run(
-			`INSERT INTO sentiment_indicators (
-        id, symbol, date,
-        sentiment_score, sentiment_strength, news_volume,
-        sentiment_momentum, event_risk_flag,
-        news_sentiment, social_sentiment, analyst_sentiment,
-        computed_at
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-      ON CONFLICT(symbol, date) DO UPDATE SET
-        sentiment_score = excluded.sentiment_score,
-        sentiment_strength = excluded.sentiment_strength,
-        news_volume = excluded.news_volume,
-        sentiment_momentum = excluded.sentiment_momentum,
-        event_risk_flag = excluded.event_risk_flag,
-        news_sentiment = excluded.news_sentiment,
-        social_sentiment = excluded.social_sentiment,
-        analyst_sentiment = excluded.analyst_sentiment,
-        computed_at = excluded.computed_at`,
-			[
-				input.id,
-				input.symbol,
-				input.date,
-				input.sentimentScore ?? null,
-				input.sentimentStrength ?? null,
-				input.newsVolume ?? null,
-				input.sentimentMomentum ?? null,
-				input.eventRiskFlag ? 1 : 0,
-				input.newsSentiment ?? null,
-				input.socialSentiment ?? null,
-				input.analystSentiment ?? null,
-				now,
-			]
-		);
-
-		const result = await this.findBySymbolAndDate(input.symbol, input.date);
-		if (!result) {
-			throw new RepositoryError("Failed to retrieve upserted record", "QUERY_ERROR");
-		}
-		return result;
+		return mapSentimentRow(row);
 	}
 
-	/**
-	 * Bulk upsert multiple records
-	 */
 	async bulkUpsert(inputs: CreateSentimentInput[]): Promise<number> {
 		if (inputs.length === 0) {
 			return 0;
 		}
 
-		const now = new Date().toISOString();
 		let count = 0;
-
 		for (const input of inputs) {
-			await this.client.run(
-				`INSERT INTO sentiment_indicators (
-          id, symbol, date,
-          sentiment_score, sentiment_strength, news_volume,
-          sentiment_momentum, event_risk_flag,
-          news_sentiment, social_sentiment, analyst_sentiment,
-          computed_at
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-        ON CONFLICT(symbol, date) DO UPDATE SET
-          sentiment_score = excluded.sentiment_score,
-          sentiment_strength = excluded.sentiment_strength,
-          news_volume = excluded.news_volume,
-          sentiment_momentum = excluded.sentiment_momentum,
-          event_risk_flag = excluded.event_risk_flag,
-          news_sentiment = excluded.news_sentiment,
-          social_sentiment = excluded.social_sentiment,
-          analyst_sentiment = excluded.analyst_sentiment,
-          computed_at = excluded.computed_at`,
-				[
-					input.id,
-					input.symbol,
-					input.date,
-					input.sentimentScore ?? null,
-					input.sentimentStrength ?? null,
-					input.newsVolume ?? null,
-					input.sentimentMomentum ?? null,
-					input.eventRiskFlag ? 1 : 0,
-					input.newsSentiment ?? null,
-					input.socialSentiment ?? null,
-					input.analystSentiment ?? null,
-					now,
-				]
-			);
+			await this.upsert(input);
 			count++;
 		}
 
 		return count;
 	}
 
-	/**
-	 * Find by ID
-	 */
 	async findById(id: string): Promise<SentimentIndicators | null> {
-		const row = await this.client.get<Row>("SELECT * FROM sentiment_indicators WHERE id = ?", [id]);
+		const [row] = await this.db
+			.select()
+			.from(sentimentIndicators)
+			.where(eq(sentimentIndicators.id, id))
+			.limit(1);
 
-		if (!row) {
-			return null;
-		}
-		return mapRow(row);
+		return row ? mapSentimentRow(row) : null;
 	}
 
-	/**
-	 * Find by symbol and date
-	 */
 	async findBySymbolAndDate(symbol: string, date: string): Promise<SentimentIndicators | null> {
-		const row = await this.client.get<Row>(
-			"SELECT * FROM sentiment_indicators WHERE symbol = ? AND date = ?",
-			[symbol, date]
-		);
+		const dateStart = new Date(date);
+		dateStart.setHours(0, 0, 0, 0);
+		const dateEnd = new Date(date);
+		dateEnd.setHours(23, 59, 59, 999);
 
-		if (!row) {
-			return null;
-		}
-		return mapRow(row);
+		const [row] = await this.db
+			.select()
+			.from(sentimentIndicators)
+			.where(
+				and(
+					eq(sentimentIndicators.symbol, symbol),
+					gte(sentimentIndicators.date, dateStart),
+					lte(sentimentIndicators.date, dateEnd)
+				)
+			)
+			.limit(1);
+
+		return row ? mapSentimentRow(row) : null;
 	}
 
-	/**
-	 * Find latest by symbol
-	 */
 	async findLatestBySymbol(symbol: string): Promise<SentimentIndicators | null> {
-		const row = await this.client.get<Row>(
-			`SELECT * FROM sentiment_indicators
-       WHERE symbol = ?
-       ORDER BY date DESC
-       LIMIT 1`,
-			[symbol]
-		);
+		const [row] = await this.db
+			.select()
+			.from(sentimentIndicators)
+			.where(eq(sentimentIndicators.symbol, symbol))
+			.orderBy(desc(sentimentIndicators.date))
+			.limit(1);
 
-		if (!row) {
-			return null;
-		}
-		return mapRow(row);
+		return row ? mapSentimentRow(row) : null;
 	}
 
-	/**
-	 * Find all by symbol with optional date range
-	 */
 	async findBySymbol(
 		symbol: string,
 		options?: { startDate?: string; endDate?: string }
 	): Promise<SentimentIndicators[]> {
-		let sql = "SELECT * FROM sentiment_indicators WHERE symbol = ?";
-		const args: unknown[] = [symbol];
+		const conditions = [eq(sentimentIndicators.symbol, symbol)];
 
 		if (options?.startDate) {
-			sql += " AND date >= ?";
-			args.push(options.startDate);
+			conditions.push(gte(sentimentIndicators.date, new Date(options.startDate)));
 		}
 
 		if (options?.endDate) {
-			sql += " AND date <= ?";
-			args.push(options.endDate);
+			conditions.push(lte(sentimentIndicators.date, new Date(options.endDate)));
 		}
 
-		sql += " ORDER BY date DESC";
+		const rows = await this.db
+			.select()
+			.from(sentimentIndicators)
+			.where(and(...conditions))
+			.orderBy(desc(sentimentIndicators.date));
 
-		const rows = await this.client.execute<Row>(sql, args);
-		return rows.map(mapRow);
+		return rows.map(mapSentimentRow);
 	}
 
-	/**
-	 * Find with filters and pagination
-	 */
 	async findWithFilters(
 		filters: SentimentFilters,
 		pagination?: PaginationOptions
 	): Promise<PaginatedResult<SentimentIndicators>> {
-		let sql = "SELECT * FROM sentiment_indicators WHERE 1=1";
-		const args: unknown[] = [];
+		const conditions = [];
 
 		if (filters.symbol) {
-			sql += " AND symbol = ?";
-			args.push(filters.symbol);
+			conditions.push(eq(sentimentIndicators.symbol, filters.symbol));
 		}
 
 		if (filters.date) {
-			sql += " AND date = ?";
-			args.push(filters.date);
+			const dateStart = new Date(filters.date);
+			dateStart.setHours(0, 0, 0, 0);
+			const dateEnd = new Date(filters.date);
+			dateEnd.setHours(23, 59, 59, 999);
+			conditions.push(gte(sentimentIndicators.date, dateStart));
+			conditions.push(lte(sentimentIndicators.date, dateEnd));
 		}
 
 		if (filters.dateGte) {
-			sql += " AND date >= ?";
-			args.push(filters.dateGte);
+			conditions.push(gte(sentimentIndicators.date, new Date(filters.dateGte)));
 		}
 
 		if (filters.dateLte) {
-			sql += " AND date <= ?";
-			args.push(filters.dateLte);
+			conditions.push(lte(sentimentIndicators.date, new Date(filters.dateLte)));
 		}
 
 		if (filters.sentimentScoreGte !== undefined) {
-			sql += " AND sentiment_score >= ?";
-			args.push(filters.sentimentScoreGte);
+			conditions.push(gte(sentimentIndicators.sentimentScore, String(filters.sentimentScoreGte)));
 		}
 
 		if (filters.sentimentScoreLte !== undefined) {
-			sql += " AND sentiment_score <= ?";
-			args.push(filters.sentimentScoreLte);
+			conditions.push(lte(sentimentIndicators.sentimentScore, String(filters.sentimentScoreLte)));
 		}
 
 		if (filters.eventRiskFlag !== undefined) {
-			sql += " AND event_risk_flag = ?";
-			args.push(filters.eventRiskFlag ? 1 : 0);
+			conditions.push(eq(sentimentIndicators.eventRiskFlag, filters.eventRiskFlag));
 		}
 
-		sql += " ORDER BY date DESC";
+		const whereClause = conditions.length > 0 ? and(...conditions) : undefined;
+		const page = pagination?.page ?? 1;
+		const pageSize = pagination?.pageSize ?? 50;
+		const offset = (page - 1) * pageSize;
 
-		const countSql = sql.replace("SELECT *", "SELECT COUNT(*) as count");
+		const [countResult] = await this.db
+			.select({ count: count() })
+			.from(sentimentIndicators)
+			.where(whereClause);
 
-		const result = await paginate<Row>(this.client, sql, countSql, args, pagination);
+		const rows = await this.db
+			.select()
+			.from(sentimentIndicators)
+			.where(whereClause)
+			.orderBy(desc(sentimentIndicators.date))
+			.limit(pageSize)
+			.offset(offset);
+
+		const total = countResult?.count ?? 0;
 
 		return {
-			...result,
-			data: result.data.map(mapRow),
+			data: rows.map(mapSentimentRow),
+			total,
+			page,
+			pageSize,
+			totalPages: Math.ceil(total / pageSize),
 		};
 	}
 
-	/**
-	 * Find most positive sentiment stocks
-	 */
 	async findMostPositive(limit = 10, date?: string): Promise<SentimentIndicators[]> {
-		let sql: string;
-		const args: unknown[] = [];
-
 		if (date) {
-			sql = `SELECT * FROM sentiment_indicators
-             WHERE date = ? AND sentiment_score IS NOT NULL
-             ORDER BY sentiment_score DESC
-             LIMIT ?`;
-			args.push(date, limit);
-		} else {
-			// Get latest for each symbol
-			sql = `SELECT s1.*
-             FROM sentiment_indicators s1
-             INNER JOIN (
-               SELECT symbol, MAX(date) as max_date
-               FROM sentiment_indicators
-               GROUP BY symbol
-             ) s2 ON s1.symbol = s2.symbol AND s1.date = s2.max_date
-             WHERE s1.sentiment_score IS NOT NULL
-             ORDER BY s1.sentiment_score DESC
-             LIMIT ?`;
-			args.push(limit);
+			const dateStart = new Date(date);
+			dateStart.setHours(0, 0, 0, 0);
+			const dateEnd = new Date(date);
+			dateEnd.setHours(23, 59, 59, 999);
+
+			const rows = await this.db
+				.select()
+				.from(sentimentIndicators)
+				.where(
+					and(
+						gte(sentimentIndicators.date, dateStart),
+						lte(sentimentIndicators.date, dateEnd),
+						isNotNull(sentimentIndicators.sentimentScore)
+					)
+				)
+				.orderBy(desc(sentimentIndicators.sentimentScore))
+				.limit(limit);
+
+			return rows.map(mapSentimentRow);
 		}
 
-		const rows = await this.client.execute<Row>(sql, args);
-		return rows.map(mapRow);
+		const rows = await this.db.execute(sql`
+			SELECT s1.*
+			FROM ${sentimentIndicators} s1
+			INNER JOIN (
+				SELECT symbol, MAX(date) as max_date
+				FROM ${sentimentIndicators}
+				GROUP BY symbol
+			) s2 ON s1.symbol = s2.symbol AND s1.date = s2.max_date
+			WHERE s1.sentiment_score IS NOT NULL
+			ORDER BY s1.sentiment_score DESC
+			LIMIT ${limit}
+		`);
+
+		return (rows.rows as SentimentRow[]).map(mapSentimentRow);
 	}
 
-	/**
-	 * Find most negative sentiment stocks
-	 */
 	async findMostNegative(limit = 10, date?: string): Promise<SentimentIndicators[]> {
-		let sql: string;
-		const args: unknown[] = [];
-
 		if (date) {
-			sql = `SELECT * FROM sentiment_indicators
-             WHERE date = ? AND sentiment_score IS NOT NULL
-             ORDER BY sentiment_score ASC
-             LIMIT ?`;
-			args.push(date, limit);
-		} else {
-			sql = `SELECT s1.*
-             FROM sentiment_indicators s1
-             INNER JOIN (
-               SELECT symbol, MAX(date) as max_date
-               FROM sentiment_indicators
-               GROUP BY symbol
-             ) s2 ON s1.symbol = s2.symbol AND s1.date = s2.max_date
-             WHERE s1.sentiment_score IS NOT NULL
-             ORDER BY s1.sentiment_score ASC
-             LIMIT ?`;
-			args.push(limit);
+			const dateStart = new Date(date);
+			dateStart.setHours(0, 0, 0, 0);
+			const dateEnd = new Date(date);
+			dateEnd.setHours(23, 59, 59, 999);
+
+			const rows = await this.db
+				.select()
+				.from(sentimentIndicators)
+				.where(
+					and(
+						gte(sentimentIndicators.date, dateStart),
+						lte(sentimentIndicators.date, dateEnd),
+						isNotNull(sentimentIndicators.sentimentScore)
+					)
+				)
+				.orderBy(sentimentIndicators.sentimentScore)
+				.limit(limit);
+
+			return rows.map(mapSentimentRow);
 		}
 
-		const rows = await this.client.execute<Row>(sql, args);
-		return rows.map(mapRow);
+		const rows = await this.db.execute(sql`
+			SELECT s1.*
+			FROM ${sentimentIndicators} s1
+			INNER JOIN (
+				SELECT symbol, MAX(date) as max_date
+				FROM ${sentimentIndicators}
+				GROUP BY symbol
+			) s2 ON s1.symbol = s2.symbol AND s1.date = s2.max_date
+			WHERE s1.sentiment_score IS NOT NULL
+			ORDER BY s1.sentiment_score ASC
+			LIMIT ${limit}
+		`);
+
+		return (rows.rows as SentimentRow[]).map(mapSentimentRow);
 	}
 
-	/**
-	 * Find stocks with event risk flags
-	 */
 	async findWithEventRisk(date?: string): Promise<SentimentIndicators[]> {
-		let sql: string;
-		const args: unknown[] = [];
-
 		if (date) {
-			sql = `SELECT * FROM sentiment_indicators
-             WHERE date = ? AND event_risk_flag = 1
-             ORDER BY sentiment_score DESC`;
-			args.push(date);
-		} else {
-			sql = `SELECT s1.*
-             FROM sentiment_indicators s1
-             INNER JOIN (
-               SELECT symbol, MAX(date) as max_date
-               FROM sentiment_indicators
-               GROUP BY symbol
-             ) s2 ON s1.symbol = s2.symbol AND s1.date = s2.max_date
-             WHERE s1.event_risk_flag = 1
-             ORDER BY s1.sentiment_score DESC`;
+			const dateStart = new Date(date);
+			dateStart.setHours(0, 0, 0, 0);
+			const dateEnd = new Date(date);
+			dateEnd.setHours(23, 59, 59, 999);
+
+			const rows = await this.db
+				.select()
+				.from(sentimentIndicators)
+				.where(
+					and(
+						gte(sentimentIndicators.date, dateStart),
+						lte(sentimentIndicators.date, dateEnd),
+						eq(sentimentIndicators.eventRiskFlag, true)
+					)
+				)
+				.orderBy(desc(sentimentIndicators.sentimentScore));
+
+			return rows.map(mapSentimentRow);
 		}
 
-		const rows = await this.client.execute<Row>(sql, args);
-		return rows.map(mapRow);
+		const rows = await this.db.execute(sql`
+			SELECT s1.*
+			FROM ${sentimentIndicators} s1
+			INNER JOIN (
+				SELECT symbol, MAX(date) as max_date
+				FROM ${sentimentIndicators}
+				GROUP BY symbol
+			) s2 ON s1.symbol = s2.symbol AND s1.date = s2.max_date
+			WHERE s1.event_risk_flag = true
+			ORDER BY s1.sentiment_score DESC
+		`);
+
+		return (rows.rows as SentimentRow[]).map(mapSentimentRow);
 	}
 
-	/**
-	 * Update a record
-	 */
 	async update(id: string, input: UpdateSentimentInput): Promise<SentimentIndicators | null> {
-		const updates: string[] = [];
-		const args: unknown[] = [];
+		const updates: Record<string, unknown> = {
+			computedAt: new Date(),
+		};
 
 		if (input.sentimentScore !== undefined) {
-			updates.push("sentiment_score = ?");
-			args.push(input.sentimentScore);
+			updates.sentimentScore = input.sentimentScore != null ? String(input.sentimentScore) : null;
 		}
 
 		if (input.sentimentStrength !== undefined) {
-			updates.push("sentiment_strength = ?");
-			args.push(input.sentimentStrength);
+			updates.sentimentStrength = input.sentimentStrength != null ? String(input.sentimentStrength) : null;
 		}
 
 		if (input.newsVolume !== undefined) {
-			updates.push("news_volume = ?");
-			args.push(input.newsVolume);
+			updates.newsVolume = input.newsVolume;
 		}
 
 		if (input.sentimentMomentum !== undefined) {
-			updates.push("sentiment_momentum = ?");
-			args.push(input.sentimentMomentum);
+			updates.sentimentMomentum = input.sentimentMomentum != null ? String(input.sentimentMomentum) : null;
 		}
 
 		if (input.eventRiskFlag !== undefined) {
-			updates.push("event_risk_flag = ?");
-			args.push(input.eventRiskFlag ? 1 : 0);
+			updates.eventRiskFlag = input.eventRiskFlag;
 		}
 
 		if (input.newsSentiment !== undefined) {
-			updates.push("news_sentiment = ?");
-			args.push(input.newsSentiment);
+			updates.newsSentiment = input.newsSentiment != null ? String(input.newsSentiment) : null;
 		}
 
 		if (input.socialSentiment !== undefined) {
-			updates.push("social_sentiment = ?");
-			args.push(input.socialSentiment);
+			updates.socialSentiment = input.socialSentiment != null ? String(input.socialSentiment) : null;
 		}
 
 		if (input.analystSentiment !== undefined) {
-			updates.push("analyst_sentiment = ?");
-			args.push(input.analystSentiment);
+			updates.analystSentiment = input.analystSentiment != null ? String(input.analystSentiment) : null;
 		}
 
-		if (updates.length === 0) {
-			return this.findById(id);
-		}
+		const [row] = await this.db
+			.update(sentimentIndicators)
+			.set(updates)
+			.where(eq(sentimentIndicators.id, id))
+			.returning();
 
-		updates.push("computed_at = ?");
-		args.push(new Date().toISOString());
-		args.push(id);
-
-		await this.client.run(
-			`UPDATE sentiment_indicators SET ${updates.join(", ")} WHERE id = ?`,
-			args
-		);
-
-		return this.findById(id);
+		return row ? mapSentimentRow(row) : null;
 	}
 
-	/**
-	 * Delete a record
-	 */
 	async delete(id: string): Promise<boolean> {
-		const result = await this.client.run("DELETE FROM sentiment_indicators WHERE id = ?", [id]);
+		const result = await this.db
+			.delete(sentimentIndicators)
+			.where(eq(sentimentIndicators.id, id))
+			.returning({ id: sentimentIndicators.id });
 
-		return result.changes > 0;
+		return result.length > 0;
 	}
 
-	/**
-	 * Delete old records
-	 */
 	async deleteOlderThan(date: string): Promise<number> {
-		const result = await this.client.run("DELETE FROM sentiment_indicators WHERE date < ?", [date]);
+		const result = await this.db
+			.delete(sentimentIndicators)
+			.where(lte(sentimentIndicators.date, new Date(date)))
+			.returning({ id: sentimentIndicators.id });
 
-		return result.changes;
+		return result.length;
 	}
 
-	/**
-	 * Count all records
-	 */
 	async count(filters?: SentimentFilters): Promise<number> {
-		let sql = "SELECT COUNT(*) as count FROM sentiment_indicators WHERE 1=1";
-		const args: unknown[] = [];
+		const conditions = [];
 
 		if (filters?.symbol) {
-			sql += " AND symbol = ?";
-			args.push(filters.symbol);
+			conditions.push(eq(sentimentIndicators.symbol, filters.symbol));
 		}
 
 		if (filters?.date) {
-			sql += " AND date = ?";
-			args.push(filters.date);
+			const dateStart = new Date(filters.date);
+			dateStart.setHours(0, 0, 0, 0);
+			const dateEnd = new Date(filters.date);
+			dateEnd.setHours(23, 59, 59, 999);
+			conditions.push(gte(sentimentIndicators.date, dateStart));
+			conditions.push(lte(sentimentIndicators.date, dateEnd));
 		}
 
 		if (filters?.eventRiskFlag !== undefined) {
-			sql += " AND event_risk_flag = ?";
-			args.push(filters.eventRiskFlag ? 1 : 0);
+			conditions.push(eq(sentimentIndicators.eventRiskFlag, filters.eventRiskFlag));
 		}
 
-		const row = await this.client.get<{ count: number }>(sql, args);
-		return row?.count ?? 0;
+		const whereClause = conditions.length > 0 ? and(...conditions) : undefined;
+
+		const [result] = await this.db
+			.select({ count: count() })
+			.from(sentimentIndicators)
+			.where(whereClause);
+
+		return result?.count ?? 0;
+	}
+
+	async findLatestForSymbols(symbols: string[]): Promise<SentimentIndicators[]> {
+		if (symbols.length === 0) {
+			return [];
+		}
+
+		const rows = await this.db.execute(sql`
+			SELECT DISTINCT ON (symbol) *
+			FROM ${sentimentIndicators}
+			WHERE symbol = ANY(${symbols})
+			ORDER BY symbol, date DESC
+		`);
+
+		return (rows.rows as SentimentRow[]).map(mapSentimentRow);
 	}
 }

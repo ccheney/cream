@@ -1,19 +1,22 @@
 /**
+ * Indicators Repository (Drizzle ORM)
+ *
  * @see docs/plans/19-dynamic-indicator-synthesis.md
  */
-
-import type { Row, TursoClient } from "../turso.js";
+import { and, avg, count, desc, eq, inArray, sql } from "drizzle-orm";
+import { getDb, type Database } from "../db";
 import {
-	type PaginatedResult,
-	type PaginationOptions,
-	paginate,
-	parseJson,
-	RepositoryError,
-	toJson,
-} from "./base.js";
+	indicatorIcHistory,
+	indicators,
+	indicatorTrials,
+} from "../schema/indicators";
+import { RepositoryError } from "./base";
+
+// ============================================
+// Types
+// ============================================
 
 export type IndicatorCategory = "momentum" | "trend" | "volatility" | "volume" | "custom";
-
 export type IndicatorStatus = "staging" | "paper" | "production" | "retired";
 
 export interface ValidationReport {
@@ -117,7 +120,7 @@ export interface IndicatorICHistory {
 }
 
 export interface CreateIndicatorInput {
-	id: string;
+	id?: string;
 	name: string;
 	category: IndicatorCategory;
 	hypothesis: string;
@@ -130,7 +133,7 @@ export interface CreateIndicatorInput {
 }
 
 export interface CreateIndicatorTrialInput {
-	id: string;
+	id?: string;
 	indicatorId: string;
 	trialNumber: number;
 	hypothesis: string;
@@ -138,7 +141,7 @@ export interface CreateIndicatorTrialInput {
 }
 
 export interface CreateIndicatorICHistoryInput {
-	id: string;
+	id?: string;
 	indicatorId: string;
 	date: string;
 	icValue: number;
@@ -154,114 +157,141 @@ export interface IndicatorFilters {
 	codeHash?: string;
 }
 
-export interface TrialFilters {
-	indicatorId?: string;
-	selected?: boolean;
-}
-
 export interface ICHistoryFilters {
 	startDate?: string;
 	endDate?: string;
 	limit?: number;
 }
 
-function mapIndicatorRow(row: Row): Indicator {
+export interface PaginationOptions {
+	page?: number;
+	pageSize?: number;
+}
+
+export interface PaginatedResult<T> {
+	data: T[];
+	total: number;
+	page: number;
+	pageSize: number;
+	totalPages: number;
+}
+
+// ============================================
+// Row Mapping
+// ============================================
+
+type IndicatorRow = typeof indicators.$inferSelect;
+type TrialRow = typeof indicatorTrials.$inferSelect;
+type ICHistoryRow = typeof indicatorIcHistory.$inferSelect;
+
+function parseJsonReport<T>(value: string | null): T | null {
+	if (!value) return null;
+	try {
+		return JSON.parse(value) as T;
+	} catch {
+		return null;
+	}
+}
+
+function mapIndicatorRow(row: IndicatorRow): Indicator {
 	return {
-		id: row.id as string,
-		name: row.name as string,
+		id: row.id,
+		name: row.name,
 		category: row.category as IndicatorCategory,
 		status: row.status as IndicatorStatus,
-		hypothesis: row.hypothesis as string,
-		economicRationale: row.economic_rationale as string,
-		generatedAt: row.generated_at as string,
-		generatedBy: row.generated_by as string,
-		codeHash: row.code_hash as string | null,
-		astSignature: row.ast_signature as string | null,
-		validationReport: parseJson<ValidationReport | null>(row.validation_report, null),
-		paperTradingStart: row.paper_trading_start as string | null,
-		paperTradingEnd: row.paper_trading_end as string | null,
-		paperTradingReport: parseJson<PaperTradingReport | null>(row.paper_trading_report, null),
-		promotedAt: row.promoted_at as string | null,
-		prUrl: row.pr_url as string | null,
-		mergedAt: row.merged_at as string | null,
-		retiredAt: row.retired_at as string | null,
-		retirementReason: row.retirement_reason as string | null,
-		similarTo: row.similar_to as string | null,
-		replaces: row.replaces as string | null,
-		parityReport: parseJson<Record<string, unknown> | null>(row.parity_report, null),
-		parityValidatedAt: row.parity_validated_at as string | null,
-		createdAt: row.created_at as string,
-		updatedAt: row.updated_at as string,
+		hypothesis: row.hypothesis,
+		economicRationale: row.economicRationale,
+		generatedAt: row.generatedAt.toISOString(),
+		generatedBy: row.generatedBy,
+		codeHash: row.codeHash,
+		astSignature: row.astSignature,
+		validationReport: parseJsonReport<ValidationReport>(row.validationReport),
+		paperTradingStart: row.paperTradingStart?.toISOString() ?? null,
+		paperTradingEnd: row.paperTradingEnd?.toISOString() ?? null,
+		paperTradingReport: parseJsonReport<PaperTradingReport>(row.paperTradingReport),
+		promotedAt: row.promotedAt?.toISOString() ?? null,
+		prUrl: row.prUrl,
+		mergedAt: row.mergedAt?.toISOString() ?? null,
+		retiredAt: row.retiredAt?.toISOString() ?? null,
+		retirementReason: row.retirementReason,
+		similarTo: row.similarTo,
+		replaces: row.replaces,
+		parityReport: parseJsonReport<Record<string, unknown>>(row.parityReport),
+		parityValidatedAt: row.parityValidatedAt?.toISOString() ?? null,
+		createdAt: row.createdAt.toISOString(),
+		updatedAt: row.updatedAt.toISOString(),
 	};
 }
 
-function mapTrialRow(row: Row): IndicatorTrial {
+function mapTrialRow(row: TrialRow): IndicatorTrial {
 	return {
-		id: row.id as string,
-		indicatorId: row.indicator_id as string,
-		trialNumber: row.trial_number as number,
-		hypothesis: row.hypothesis as string,
-		parameters: parseJson<TrialParameters>(row.parameters, {}),
-		sharpeRatio: row.sharpe_ratio as number | null,
-		informationCoefficient: row.information_coefficient as number | null,
-		maxDrawdown: row.max_drawdown as number | null,
-		calmarRatio: row.calmar_ratio as number | null,
-		sortinoRatio: row.sortino_ratio as number | null,
-		selected: (row.selected as number) === 1,
-		createdAt: row.created_at as string,
+		id: row.id,
+		indicatorId: row.indicatorId,
+		trialNumber: row.trialNumber,
+		hypothesis: row.hypothesis,
+		parameters: row.parameters as TrialParameters,
+		sharpeRatio: row.sharpeRatio ? Number(row.sharpeRatio) : null,
+		informationCoefficient: row.informationCoefficient ? Number(row.informationCoefficient) : null,
+		maxDrawdown: row.maxDrawdown ? Number(row.maxDrawdown) : null,
+		calmarRatio: row.calmarRatio ? Number(row.calmarRatio) : null,
+		sortinoRatio: row.sortinoRatio ? Number(row.sortinoRatio) : null,
+		selected: row.selected,
+		createdAt: row.createdAt.toISOString(),
 	};
 }
 
-function mapICHistoryRow(row: Row): IndicatorICHistory {
+function mapICHistoryRow(row: ICHistoryRow): IndicatorICHistory {
 	return {
-		id: row.id as string,
-		indicatorId: row.indicator_id as string,
-		date: row.date as string,
-		icValue: row.ic_value as number,
-		icStd: row.ic_std as number,
-		decisionsUsedIn: row.decisions_used_in as number,
-		decisionsCorrect: row.decisions_correct as number,
-		createdAt: row.created_at as string,
+		id: row.id,
+		indicatorId: row.indicatorId,
+		date: row.date.toISOString(),
+		icValue: Number(row.icValue),
+		icStd: Number(row.icStd),
+		decisionsUsedIn: row.decisionsUsedIn,
+		decisionsCorrect: row.decisionsCorrect,
+		createdAt: row.createdAt.toISOString(),
 	};
 }
+
+// ============================================
+// Repository
+// ============================================
 
 export class IndicatorsRepository {
-	constructor(private client: TursoClient) {}
+	private db: Database;
+
+	constructor(db?: Database) {
+		this.db = db ?? getDb();
+	}
 
 	async create(input: CreateIndicatorInput): Promise<Indicator> {
-		try {
-			await this.client.run(
-				`INSERT INTO indicators (
-          id, name, category, status, hypothesis, economic_rationale,
-          generated_at, generated_by, code_hash, ast_signature,
-          similar_to, replaces
-        ) VALUES (?, ?, ?, 'staging', ?, ?, datetime('now'), ?, ?, ?, ?, ?)`,
-				[
-					input.id,
-					input.name,
-					input.category,
-					input.hypothesis,
-					input.economicRationale,
-					input.generatedBy,
-					input.codeHash ?? null,
-					input.astSignature ?? null,
-					input.similarTo ?? null,
-					input.replaces ?? null,
-				]
-			);
+		const [row] = await this.db
+			.insert(indicators)
+			.values({
+				name: input.name,
+				category: input.category,
+				status: "staging",
+				hypothesis: input.hypothesis,
+				economicRationale: input.economicRationale,
+				generatedAt: new Date(),
+				generatedBy: input.generatedBy,
+				codeHash: input.codeHash ?? null,
+				astSignature: input.astSignature ?? null,
+				similarTo: input.similarTo ?? null,
+				replaces: input.replaces ?? null,
+			})
+			.returning();
 
-			const indicator = await this.findById(input.id);
-			if (!indicator) {
-				throw RepositoryError.notFound("indicators", input.id);
-			}
-			return indicator;
-		} catch (error) {
-			throw RepositoryError.fromSqliteError("indicators", error as Error);
-		}
+		return mapIndicatorRow(row);
 	}
 
 	async findById(id: string): Promise<Indicator | null> {
-		const row = await this.client.get<Row>("SELECT * FROM indicators WHERE id = ?", [id]);
+		const [row] = await this.db
+			.select()
+			.from(indicators)
+			.where(eq(indicators.id, id))
+			.limit(1);
+
 		return row ? mapIndicatorRow(row) : null;
 	}
 
@@ -274,14 +304,22 @@ export class IndicatorsRepository {
 	}
 
 	async findByName(name: string): Promise<Indicator | null> {
-		const row = await this.client.get<Row>("SELECT * FROM indicators WHERE name = ?", [name]);
+		const [row] = await this.db
+			.select()
+			.from(indicators)
+			.where(eq(indicators.name, name))
+			.limit(1);
+
 		return row ? mapIndicatorRow(row) : null;
 	}
 
 	async findByCodeHash(codeHash: string): Promise<Indicator | null> {
-		const row = await this.client.get<Row>("SELECT * FROM indicators WHERE code_hash = ?", [
-			codeHash,
-		]);
+		const [row] = await this.db
+			.select()
+			.from(indicators)
+			.where(eq(indicators.codeHash, codeHash))
+			.limit(1);
+
 		return row ? mapIndicatorRow(row) : null;
 	}
 
@@ -289,99 +327,121 @@ export class IndicatorsRepository {
 		filters?: IndicatorFilters,
 		pagination?: PaginationOptions
 	): Promise<PaginatedResult<Indicator>> {
-		let sql = "SELECT * FROM indicators WHERE 1=1";
-		const args: unknown[] = [];
+		const conditions = [];
 
 		if (filters?.status) {
 			if (Array.isArray(filters.status)) {
-				const placeholders = filters.status.map(() => "?").join(", ");
-				sql += ` AND status IN (${placeholders})`;
-				args.push(...filters.status);
+				conditions.push(inArray(indicators.status, filters.status));
 			} else {
-				sql += " AND status = ?";
-				args.push(filters.status);
+				conditions.push(eq(indicators.status, filters.status));
 			}
 		}
-
 		if (filters?.category) {
-			sql += " AND category = ?";
-			args.push(filters.category);
+			conditions.push(eq(indicators.category, filters.category));
 		}
-
 		if (filters?.generatedBy) {
-			sql += " AND generated_by = ?";
-			args.push(filters.generatedBy);
+			conditions.push(eq(indicators.generatedBy, filters.generatedBy));
 		}
-
 		if (filters?.codeHash) {
-			sql += " AND code_hash = ?";
-			args.push(filters.codeHash);
+			conditions.push(eq(indicators.codeHash, filters.codeHash));
 		}
 
-		sql += " ORDER BY created_at DESC";
+		const whereClause = conditions.length > 0 ? and(...conditions) : undefined;
+		const page = pagination?.page ?? 1;
+		const pageSize = pagination?.pageSize ?? 50;
+		const offset = (page - 1) * pageSize;
 
-		const countSql = sql.replace("SELECT *", "SELECT COUNT(*) as count");
+		const [countResult] = await this.db
+			.select({ count: count() })
+			.from(indicators)
+			.where(whereClause);
 
-		const result = await paginate<Row>(this.client, sql, countSql, args, pagination);
+		const rows = await this.db
+			.select()
+			.from(indicators)
+			.where(whereClause)
+			.orderBy(desc(indicators.createdAt))
+			.limit(pageSize)
+			.offset(offset);
+
+		const total = countResult?.count ?? 0;
 
 		return {
-			...result,
-			data: result.data.map(mapIndicatorRow),
+			data: rows.map(mapIndicatorRow),
+			total,
+			page,
+			pageSize,
+			totalPages: Math.ceil(total / pageSize),
 		};
 	}
 
 	async findActive(): Promise<Indicator[]> {
-		const rows = await this.client.execute<Row>(
-			"SELECT * FROM indicators WHERE status IN ('paper', 'production') ORDER BY created_at DESC"
-		);
+		const rows = await this.db
+			.select()
+			.from(indicators)
+			.where(inArray(indicators.status, ["paper", "production"]))
+			.orderBy(desc(indicators.createdAt));
+
 		return rows.map(mapIndicatorRow);
 	}
 
 	async findProduction(): Promise<Indicator[]> {
-		const rows = await this.client.execute<Row>(
-			"SELECT * FROM indicators WHERE status = 'production' ORDER BY created_at DESC"
-		);
+		const rows = await this.db
+			.select()
+			.from(indicators)
+			.where(eq(indicators.status, "production"))
+			.orderBy(desc(indicators.createdAt));
+
 		return rows.map(mapIndicatorRow);
 	}
 
 	async updateStatus(id: string, status: IndicatorStatus): Promise<Indicator> {
-		try {
-			await this.client.run(
-				"UPDATE indicators SET status = ?, updated_at = datetime('now') WHERE id = ?",
-				[status, id]
-			);
-			return this.findByIdOrThrow(id);
-		} catch (error) {
-			throw RepositoryError.fromSqliteError("indicators", error as Error);
+		const [row] = await this.db
+			.update(indicators)
+			.set({ status, updatedAt: new Date() })
+			.where(eq(indicators.id, id))
+			.returning();
+
+		if (!row) {
+			throw RepositoryError.notFound("indicators", id);
 		}
+
+		return mapIndicatorRow(row);
 	}
 
 	async saveValidationReport(id: string, report: ValidationReport): Promise<Indicator> {
-		try {
-			await this.client.run(
-				`UPDATE indicators
-         SET validation_report = ?, updated_at = datetime('now')
-         WHERE id = ?`,
-				[toJson(report), id]
-			);
-			return this.findByIdOrThrow(id);
-		} catch (error) {
-			throw RepositoryError.fromSqliteError("indicators", error as Error);
+		const [row] = await this.db
+			.update(indicators)
+			.set({
+				validationReport: JSON.stringify(report),
+				updatedAt: new Date(),
+			})
+			.where(eq(indicators.id, id))
+			.returning();
+
+		if (!row) {
+			throw RepositoryError.notFound("indicators", id);
 		}
+
+		return mapIndicatorRow(row);
 	}
 
 	async startPaperTrading(id: string, startTimestamp: string): Promise<Indicator> {
-		try {
-			await this.client.run(
-				`UPDATE indicators
-         SET status = 'paper', paper_trading_start = ?, updated_at = datetime('now')
-         WHERE id = ?`,
-				[startTimestamp, id]
-			);
-			return this.findByIdOrThrow(id);
-		} catch (error) {
-			throw RepositoryError.fromSqliteError("indicators", error as Error);
+		const [row] = await this.db
+			.update(indicators)
+			.set({
+				status: "paper",
+				paperTradingStart: new Date(startTimestamp),
+				updatedAt: new Date(),
+			})
+			.where(eq(indicators.id, id))
+			.returning();
+
+		if (!row) {
+			throw RepositoryError.notFound("indicators", id);
 		}
+
+		return mapIndicatorRow(row);
 	}
 
 	async endPaperTrading(
@@ -389,168 +449,161 @@ export class IndicatorsRepository {
 		endTimestamp: string,
 		report: PaperTradingReport
 	): Promise<Indicator> {
-		try {
-			await this.client.run(
-				`UPDATE indicators
-         SET paper_trading_end = ?, paper_trading_report = ?, updated_at = datetime('now')
-         WHERE id = ?`,
-				[endTimestamp, toJson(report), id]
-			);
-			return this.findByIdOrThrow(id);
-		} catch (error) {
-			throw RepositoryError.fromSqliteError("indicators", error as Error);
+		const [row] = await this.db
+			.update(indicators)
+			.set({
+				paperTradingEnd: new Date(endTimestamp),
+				paperTradingReport: JSON.stringify(report),
+				updatedAt: new Date(),
+			})
+			.where(eq(indicators.id, id))
+			.returning();
+
+		if (!row) {
+			throw RepositoryError.notFound("indicators", id);
 		}
+
+		return mapIndicatorRow(row);
 	}
 
-	/**
-	 * Promote to production
-	 *
-	 * @param id - Indicator ID
-	 * @param prUrl - Pull request URL
-	 * @param parityReport - Optional parity validation report (JSON)
-	 */
 	async promote(
 		id: string,
 		prUrl: string,
 		parityReport?: Record<string, unknown>
 	): Promise<Indicator> {
-		try {
-			if (parityReport) {
-				await this.client.run(
-					`UPDATE indicators
-           SET status = 'production', promoted_at = datetime('now'), pr_url = ?,
-               parity_report = ?, parity_validated_at = datetime('now'), updated_at = datetime('now')
-           WHERE id = ?`,
-					[prUrl, toJson(parityReport), id]
-				);
-			} else {
-				await this.client.run(
-					`UPDATE indicators
-           SET status = 'production', promoted_at = datetime('now'), pr_url = ?, updated_at = datetime('now')
-           WHERE id = ?`,
-					[prUrl, id]
-				);
-			}
-			return this.findByIdOrThrow(id);
-		} catch (error) {
-			throw RepositoryError.fromSqliteError("indicators", error as Error);
+		const now = new Date();
+		const updateData: Partial<typeof indicators.$inferInsert> = {
+			status: "production",
+			promotedAt: now,
+			prUrl,
+			updatedAt: now,
+		};
+
+		if (parityReport) {
+			updateData.parityReport = JSON.stringify(parityReport);
+			updateData.parityValidatedAt = now;
 		}
+
+		const [row] = await this.db
+			.update(indicators)
+			.set(updateData)
+			.where(eq(indicators.id, id))
+			.returning();
+
+		if (!row) {
+			throw RepositoryError.notFound("indicators", id);
+		}
+
+		return mapIndicatorRow(row);
 	}
 
-	/**
-	 * Update parity validation result for an indicator.
-	 */
 	async updateParityValidation(
 		id: string,
 		parityReport: Record<string, unknown>
 	): Promise<Indicator> {
-		try {
-			await this.client.run(
-				`UPDATE indicators
-         SET parity_report = ?, parity_validated_at = datetime('now'), updated_at = datetime('now')
-         WHERE id = ?`,
-				[toJson(parityReport), id]
-			);
-			return this.findByIdOrThrow(id);
-		} catch (error) {
-			throw RepositoryError.fromSqliteError("indicators", error as Error);
+		const now = new Date();
+
+		const [row] = await this.db
+			.update(indicators)
+			.set({
+				parityReport: JSON.stringify(parityReport),
+				parityValidatedAt: now,
+				updatedAt: now,
+			})
+			.where(eq(indicators.id, id))
+			.returning();
+
+		if (!row) {
+			throw RepositoryError.notFound("indicators", id);
 		}
+
+		return mapIndicatorRow(row);
 	}
 
-	/**
-	 * Mark PR as merged
-	 */
 	async markMerged(id: string): Promise<Indicator> {
-		try {
-			await this.client.run(
-				`UPDATE indicators
-         SET merged_at = datetime('now'), updated_at = datetime('now')
-         WHERE id = ?`,
-				[id]
-			);
-			return this.findByIdOrThrow(id);
-		} catch (error) {
-			throw RepositoryError.fromSqliteError("indicators", error as Error);
+		const now = new Date();
+
+		const [row] = await this.db
+			.update(indicators)
+			.set({ mergedAt: now, updatedAt: now })
+			.where(eq(indicators.id, id))
+			.returning();
+
+		if (!row) {
+			throw RepositoryError.notFound("indicators", id);
 		}
+
+		return mapIndicatorRow(row);
 	}
 
-	/**
-	 * Retire an indicator
-	 */
 	async retire(id: string, reason: string): Promise<Indicator> {
-		try {
-			await this.client.run(
-				`UPDATE indicators
-         SET status = 'retired', retired_at = datetime('now'), retirement_reason = ?, updated_at = datetime('now')
-         WHERE id = ?`,
-				[reason, id]
-			);
-			return this.findByIdOrThrow(id);
-		} catch (error) {
-			throw RepositoryError.fromSqliteError("indicators", error as Error);
+		const now = new Date();
+
+		const [row] = await this.db
+			.update(indicators)
+			.set({
+				status: "retired",
+				retiredAt: now,
+				retirementReason: reason,
+				updatedAt: now,
+			})
+			.where(eq(indicators.id, id))
+			.returning();
+
+		if (!row) {
+			throw RepositoryError.notFound("indicators", id);
 		}
+
+		return mapIndicatorRow(row);
 	}
 
-	/**
-	 * Delete an indicator (and cascade to trials/history)
-	 */
 	async delete(id: string): Promise<boolean> {
-		try {
-			const result = await this.client.run("DELETE FROM indicators WHERE id = ?", [id]);
-			return (result?.changes ?? 0) > 0;
-		} catch (error) {
-			throw RepositoryError.fromSqliteError("indicators", error as Error);
-		}
+		const result = await this.db
+			.delete(indicators)
+			.where(eq(indicators.id, id))
+			.returning({ id: indicators.id });
+
+		return result.length > 0;
 	}
 
 	// ============================================
 	// Trials CRUD
 	// ============================================
 
-	/**
-	 * Create a new trial
-	 */
 	async createTrial(input: CreateIndicatorTrialInput): Promise<IndicatorTrial> {
-		try {
-			await this.client.run(
-				`INSERT INTO indicator_trials (
-          id, indicator_id, trial_number, hypothesis, parameters
-        ) VALUES (?, ?, ?, ?, ?)`,
-				[input.id, input.indicatorId, input.trialNumber, input.hypothesis, toJson(input.parameters)]
-			);
+		const [row] = await this.db
+			.insert(indicatorTrials)
+			.values({
+				indicatorId: input.indicatorId,
+				trialNumber: input.trialNumber,
+				hypothesis: input.hypothesis,
+				parameters: input.parameters,
+			})
+			.returning();
 
-			const trial = await this.findTrialById(input.id);
-			if (!trial) {
-				throw RepositoryError.notFound("indicator_trials", input.id);
-			}
-			return trial;
-		} catch (error) {
-			throw RepositoryError.fromSqliteError("indicator_trials", error as Error);
-		}
+		return mapTrialRow(row);
 	}
 
-	/**
-	 * Find trial by ID
-	 */
 	async findTrialById(id: string): Promise<IndicatorTrial | null> {
-		const row = await this.client.get<Row>("SELECT * FROM indicator_trials WHERE id = ?", [id]);
+		const [row] = await this.db
+			.select()
+			.from(indicatorTrials)
+			.where(eq(indicatorTrials.id, id))
+			.limit(1);
+
 		return row ? mapTrialRow(row) : null;
 	}
 
-	/**
-	 * Find trials for an indicator
-	 */
 	async findTrialsByIndicatorId(indicatorId: string): Promise<IndicatorTrial[]> {
-		const rows = await this.client.execute<Row>(
-			"SELECT * FROM indicator_trials WHERE indicator_id = ? ORDER BY trial_number",
-			[indicatorId]
-		);
+		const rows = await this.db
+			.select()
+			.from(indicatorTrials)
+			.where(eq(indicatorTrials.indicatorId, indicatorId))
+			.orderBy(indicatorTrials.trialNumber);
+
 		return rows.map(mapTrialRow);
 	}
 
-	/**
-	 * Update trial results
-	 */
 	async updateTrialResults(
 		id: string,
 		results: {
@@ -561,191 +614,161 @@ export class IndicatorsRepository {
 			sortinoRatio?: number;
 		}
 	): Promise<IndicatorTrial> {
-		try {
-			const sets: string[] = [];
-			const args: unknown[] = [];
+		const updateData: Partial<typeof indicatorTrials.$inferInsert> = {};
 
-			if (results.sharpeRatio !== undefined) {
-				sets.push("sharpe_ratio = ?");
-				args.push(results.sharpeRatio);
-			}
-			if (results.informationCoefficient !== undefined) {
-				sets.push("information_coefficient = ?");
-				args.push(results.informationCoefficient);
-			}
-			if (results.maxDrawdown !== undefined) {
-				sets.push("max_drawdown = ?");
-				args.push(results.maxDrawdown);
-			}
-			if (results.calmarRatio !== undefined) {
-				sets.push("calmar_ratio = ?");
-				args.push(results.calmarRatio);
-			}
-			if (results.sortinoRatio !== undefined) {
-				sets.push("sortino_ratio = ?");
-				args.push(results.sortinoRatio);
-			}
+		if (results.sharpeRatio !== undefined) {
+			updateData.sharpeRatio = String(results.sharpeRatio);
+		}
+		if (results.informationCoefficient !== undefined) {
+			updateData.informationCoefficient = String(results.informationCoefficient);
+		}
+		if (results.maxDrawdown !== undefined) {
+			updateData.maxDrawdown = String(results.maxDrawdown);
+		}
+		if (results.calmarRatio !== undefined) {
+			updateData.calmarRatio = String(results.calmarRatio);
+		}
+		if (results.sortinoRatio !== undefined) {
+			updateData.sortinoRatio = String(results.sortinoRatio);
+		}
 
-			if (sets.length === 0) {
-				return this.findTrialById(id) as Promise<IndicatorTrial>;
-			}
-
-			args.push(id);
-			await this.client.run(`UPDATE indicator_trials SET ${sets.join(", ")} WHERE id = ?`, args);
-
+		if (Object.keys(updateData).length === 0) {
 			const trial = await this.findTrialById(id);
 			if (!trial) {
 				throw RepositoryError.notFound("indicator_trials", id);
 			}
 			return trial;
-		} catch (error) {
-			throw RepositoryError.fromSqliteError("indicator_trials", error as Error);
 		}
+
+		const [row] = await this.db
+			.update(indicatorTrials)
+			.set(updateData)
+			.where(eq(indicatorTrials.id, id))
+			.returning();
+
+		if (!row) {
+			throw RepositoryError.notFound("indicator_trials", id);
+		}
+
+		return mapTrialRow(row);
 	}
 
-	/**
-	 * Mark a trial as selected
-	 */
 	async selectTrial(id: string): Promise<IndicatorTrial> {
-		try {
-			// First, get the indicator_id for this trial
-			const trial = await this.findTrialById(id);
-			if (!trial) {
-				throw RepositoryError.notFound("indicator_trials", id);
-			}
-
-			// Deselect all trials for this indicator
-			await this.client.run("UPDATE indicator_trials SET selected = 0 WHERE indicator_id = ?", [
-				trial.indicatorId,
-			]);
-
-			// Select this trial
-			await this.client.run("UPDATE indicator_trials SET selected = 1 WHERE id = ?", [id]);
-
-			return this.findTrialById(id) as Promise<IndicatorTrial>;
-		} catch (error) {
-			throw RepositoryError.fromSqliteError("indicator_trials", error as Error);
+		const trial = await this.findTrialById(id);
+		if (!trial) {
+			throw RepositoryError.notFound("indicator_trials", id);
 		}
+
+		// Deselect all trials for this indicator
+		await this.db
+			.update(indicatorTrials)
+			.set({ selected: false })
+			.where(eq(indicatorTrials.indicatorId, trial.indicatorId));
+
+		// Select this trial
+		const [row] = await this.db
+			.update(indicatorTrials)
+			.set({ selected: true })
+			.where(eq(indicatorTrials.id, id))
+			.returning();
+
+		return mapTrialRow(row);
 	}
 
-	/**
-	 * Get count of trials for an indicator (for DSR calculation)
-	 */
 	async getTrialCount(indicatorId: string): Promise<number> {
-		const row = await this.client.get<{ count: number }>(
-			"SELECT COUNT(*) as count FROM indicator_trials WHERE indicator_id = ?",
-			[indicatorId]
-		);
-		return row?.count ?? 0;
+		const [result] = await this.db
+			.select({ count: count() })
+			.from(indicatorTrials)
+			.where(eq(indicatorTrials.indicatorId, indicatorId));
+
+		return result?.count ?? 0;
 	}
 
 	// ============================================
 	// IC History CRUD
 	// ============================================
 
-	/**
-	 * Record IC history entry
-	 */
 	async recordICHistory(input: CreateIndicatorICHistoryInput): Promise<IndicatorICHistory> {
-		try {
-			await this.client.run(
-				`INSERT INTO indicator_ic_history (
-          id, indicator_id, date, ic_value, ic_std, decisions_used_in, decisions_correct
-        ) VALUES (?, ?, ?, ?, ?, ?, ?)`,
-				[
-					input.id,
-					input.indicatorId,
-					input.date,
-					input.icValue,
-					input.icStd,
-					input.decisionsUsedIn ?? 0,
-					input.decisionsCorrect ?? 0,
-				]
-			);
+		const [row] = await this.db
+			.insert(indicatorIcHistory)
+			.values({
+				indicatorId: input.indicatorId,
+				date: new Date(input.date),
+				icValue: String(input.icValue),
+				icStd: String(input.icStd),
+				decisionsUsedIn: input.decisionsUsedIn ?? 0,
+				decisionsCorrect: input.decisionsCorrect ?? 0,
+			})
+			.returning();
 
-			const history = await this.findICHistoryById(input.id);
-			if (!history) {
-				throw RepositoryError.notFound("indicator_ic_history", input.id);
-			}
-			return history;
-		} catch (error) {
-			throw RepositoryError.fromSqliteError("indicator_ic_history", error as Error);
-		}
+		return mapICHistoryRow(row);
 	}
 
-	/**
-	 * Find IC history by ID
-	 */
 	async findICHistoryById(id: string): Promise<IndicatorICHistory | null> {
-		const row = await this.client.get<Row>("SELECT * FROM indicator_ic_history WHERE id = ?", [id]);
+		const [row] = await this.db
+			.select()
+			.from(indicatorIcHistory)
+			.where(eq(indicatorIcHistory.id, id))
+			.limit(1);
+
 		return row ? mapICHistoryRow(row) : null;
 	}
 
-	/**
-	 * Find IC history for an indicator
-	 */
 	async findICHistoryByIndicatorId(
 		indicatorId: string,
 		filters?: ICHistoryFilters
 	): Promise<IndicatorICHistory[]> {
-		let sql = "SELECT * FROM indicator_ic_history WHERE indicator_id = ?";
-		const args: unknown[] = [indicatorId];
+		const conditions = [eq(indicatorIcHistory.indicatorId, indicatorId)];
 
 		if (filters?.startDate) {
-			sql += " AND date >= ?";
-			args.push(filters.startDate);
+			conditions.push(
+				sql`${indicatorIcHistory.date} >= ${new Date(filters.startDate)}`
+			);
 		}
-
 		if (filters?.endDate) {
-			sql += " AND date <= ?";
-			args.push(filters.endDate);
+			conditions.push(
+				sql`${indicatorIcHistory.date} <= ${new Date(filters.endDate)}`
+			);
 		}
 
-		sql += " ORDER BY date DESC";
+		let query = this.db
+			.select()
+			.from(indicatorIcHistory)
+			.where(and(...conditions))
+			.orderBy(desc(indicatorIcHistory.date));
 
 		if (filters?.limit) {
-			sql += " LIMIT ?";
-			args.push(filters.limit);
+			query = query.limit(filters.limit);
 		}
 
-		const rows = await this.client.execute<Row>(sql, args);
+		const rows = await query;
 		return rows.map(mapICHistoryRow);
 	}
 
-	/**
-	 * Get average IC for an indicator over recent entries
-	 * @param indicatorId - The indicator ID
-	 * @param days - Optional number of recent entries to average (default: all)
-	 */
 	async getAverageIC(indicatorId: string, days?: number): Promise<number | null> {
-		let sql = `
-      SELECT AVG(ic_value) as avg_ic
-      FROM indicator_ic_history
-      WHERE indicator_id = ?
-    `;
-		const args: unknown[] = [indicatorId];
+		let query;
 
 		if (days) {
 			// Get average of most recent N entries
-			sql = `
-        SELECT AVG(ic_value) as avg_ic
-        FROM (
-          SELECT ic_value
-          FROM indicator_ic_history
-          WHERE indicator_id = ?
-          ORDER BY date DESC
-          LIMIT ?
-        )
-      `;
-			args.push(days);
+			const subquery = this.db
+				.select({ icValue: indicatorIcHistory.icValue })
+				.from(indicatorIcHistory)
+				.where(eq(indicatorIcHistory.indicatorId, indicatorId))
+				.orderBy(desc(indicatorIcHistory.date))
+				.limit(days);
+
+			const [result] = await this.db
+				.select({ avgIc: sql<string>`AVG(sub.ic_value::numeric)` })
+				.from(sql`(${subquery}) as sub`);
+
+			return result?.avgIc ? Number(result.avgIc) : null;
+		} else {
+			const [result] = await this.db
+				.select({ avgIc: sql<string>`AVG(${indicatorIcHistory.icValue}::numeric)` })
+				.from(indicatorIcHistory)
+				.where(eq(indicatorIcHistory.indicatorId, indicatorId));
+
+			return result?.avgIc ? Number(result.avgIc) : null;
 		}
-
-		const row = await this.client.get<{ avg_ic: number | null }>(sql, args);
-
-		if (!row || row.avg_ic === null) {
-			return null;
-		}
-
-		return row.avg_ic;
 	}
 }

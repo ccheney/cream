@@ -1,15 +1,15 @@
 /**
- * Fundamentals Repository
+ * Fundamentals Repository (Drizzle ORM)
  *
  * CRUD operations for the fundamental_indicators table.
  * Stores fundamental data (P/E, P/B, ROE, ROA, etc.).
  *
  * @see docs/plans/33-indicator-engine-v2.md
- * @see migrations/008_indicator_engine_v2.sql
  */
-
-import type { Row, TursoClient } from "../turso.js";
-import { type PaginatedResult, type PaginationOptions, paginate, RepositoryError } from "./base.js";
+import { and, count, desc, eq, gte, inArray, lte, sql } from "drizzle-orm";
+import { getDb, type Database } from "../db";
+import { fundamentalIndicators } from "../schema/indicators";
+import { RepositoryError } from "./base";
 
 // ============================================
 // Types
@@ -49,7 +49,7 @@ export interface FundamentalIndicators {
 }
 
 export interface CreateFundamentalIndicatorsInput {
-	id: string;
+	id?: string;
 	symbol: string;
 	date: string;
 
@@ -107,38 +107,53 @@ export interface FundamentalFilters {
 	endDate?: string;
 }
 
+export interface PaginationOptions {
+	page?: number;
+	pageSize?: number;
+}
+
+export interface PaginatedResult<T> {
+	data: T[];
+	total: number;
+	page: number;
+	pageSize: number;
+	totalPages: number;
+}
+
 // ============================================
-// Row Mapper
+// Row Mapping
 // ============================================
 
-function mapRow(row: Row): FundamentalIndicators {
+type FundamentalRow = typeof fundamentalIndicators.$inferSelect;
+
+function mapRow(row: FundamentalRow): FundamentalIndicators {
 	return {
-		id: row.id as string,
-		symbol: row.symbol as string,
-		date: row.date as string,
+		id: row.id,
+		symbol: row.symbol,
+		date: row.date.toISOString(),
 
-		peRatioTtm: row.pe_ratio_ttm as number | null,
-		peRatioForward: row.pe_ratio_forward as number | null,
-		pbRatio: row.pb_ratio as number | null,
-		evEbitda: row.ev_ebitda as number | null,
-		earningsYield: row.earnings_yield as number | null,
-		dividendYield: row.dividend_yield as number | null,
-		cape10yr: row.cape_10yr as number | null,
+		peRatioTtm: row.peRatioTtm ? Number(row.peRatioTtm) : null,
+		peRatioForward: row.peRatioForward ? Number(row.peRatioForward) : null,
+		pbRatio: row.pbRatio ? Number(row.pbRatio) : null,
+		evEbitda: row.evEbitda ? Number(row.evEbitda) : null,
+		earningsYield: row.earningsYield ? Number(row.earningsYield) : null,
+		dividendYield: row.dividendYield ? Number(row.dividendYield) : null,
+		cape10yr: row.cape10yr ? Number(row.cape10yr) : null,
 
-		grossProfitability: row.gross_profitability as number | null,
-		roe: row.roe as number | null,
-		roa: row.roa as number | null,
-		assetGrowth: row.asset_growth as number | null,
-		accrualsRatio: row.accruals_ratio as number | null,
-		cashFlowQuality: row.cash_flow_quality as number | null,
-		beneishMScore: row.beneish_m_score as number | null,
+		grossProfitability: row.grossProfitability ? Number(row.grossProfitability) : null,
+		roe: row.roe ? Number(row.roe) : null,
+		roa: row.roa ? Number(row.roa) : null,
+		assetGrowth: row.assetGrowth ? Number(row.assetGrowth) : null,
+		accrualsRatio: row.accrualsRatio ? Number(row.accrualsRatio) : null,
+		cashFlowQuality: row.cashFlowQuality ? Number(row.cashFlowQuality) : null,
+		beneishMScore: row.beneishMScore ? Number(row.beneishMScore) : null,
 
-		marketCap: row.market_cap as number | null,
-		sector: row.sector as string | null,
-		industry: row.industry as string | null,
+		marketCap: row.marketCap ? Number(row.marketCap) : null,
+		sector: row.sector,
+		industry: row.industry,
 
-		source: row.source as string,
-		computedAt: row.computed_at as string,
+		source: row.source,
+		computedAt: row.computedAt.toISOString(),
 	};
 }
 
@@ -147,161 +162,123 @@ function mapRow(row: Row): FundamentalIndicators {
 // ============================================
 
 export class FundamentalsRepository {
-	constructor(private client: TursoClient) {}
+	private db: Database;
 
-	/**
-	 * Create a new fundamental indicators record
-	 */
+	constructor(db?: Database) {
+		this.db = db ?? getDb();
+	}
+
 	async create(input: CreateFundamentalIndicatorsInput): Promise<FundamentalIndicators> {
-		try {
-			await this.client.run(
-				`INSERT INTO fundamental_indicators (
-          id, symbol, date,
-          pe_ratio_ttm, pe_ratio_forward, pb_ratio, ev_ebitda,
-          earnings_yield, dividend_yield, cape_10yr,
-          gross_profitability, roe, roa, asset_growth,
-          accruals_ratio, cash_flow_quality, beneish_m_score,
-          market_cap, sector, industry, source
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-				[
-					input.id,
-					input.symbol,
-					input.date,
-					input.peRatioTtm ?? null,
-					input.peRatioForward ?? null,
-					input.pbRatio ?? null,
-					input.evEbitda ?? null,
-					input.earningsYield ?? null,
-					input.dividendYield ?? null,
-					input.cape10yr ?? null,
-					input.grossProfitability ?? null,
-					input.roe ?? null,
-					input.roa ?? null,
-					input.assetGrowth ?? null,
-					input.accrualsRatio ?? null,
-					input.cashFlowQuality ?? null,
-					input.beneishMScore ?? null,
-					input.marketCap ?? null,
-					input.sector ?? null,
-					input.industry ?? null,
-					input.source ?? "computed",
-				]
-			);
+		const [row] = await this.db
+			.insert(fundamentalIndicators)
+			.values({
+				symbol: input.symbol,
+				date: new Date(input.date),
+				peRatioTtm: input.peRatioTtm != null ? String(input.peRatioTtm) : null,
+				peRatioForward: input.peRatioForward != null ? String(input.peRatioForward) : null,
+				pbRatio: input.pbRatio != null ? String(input.pbRatio) : null,
+				evEbitda: input.evEbitda != null ? String(input.evEbitda) : null,
+				earningsYield: input.earningsYield != null ? String(input.earningsYield) : null,
+				dividendYield: input.dividendYield != null ? String(input.dividendYield) : null,
+				cape10yr: input.cape10yr != null ? String(input.cape10yr) : null,
+				grossProfitability: input.grossProfitability != null ? String(input.grossProfitability) : null,
+				roe: input.roe != null ? String(input.roe) : null,
+				roa: input.roa != null ? String(input.roa) : null,
+				assetGrowth: input.assetGrowth != null ? String(input.assetGrowth) : null,
+				accrualsRatio: input.accrualsRatio != null ? String(input.accrualsRatio) : null,
+				cashFlowQuality: input.cashFlowQuality != null ? String(input.cashFlowQuality) : null,
+				beneishMScore: input.beneishMScore != null ? String(input.beneishMScore) : null,
+				marketCap: input.marketCap != null ? String(input.marketCap) : null,
+				sector: input.sector ?? null,
+				industry: input.industry ?? null,
+				source: input.source ?? "computed",
+			})
+			.returning();
 
-			const result = await this.findById(input.id);
-			if (!result) {
-				throw RepositoryError.notFound("fundamental_indicators", input.id);
-			}
-			return result;
-		} catch (error) {
-			throw RepositoryError.fromSqliteError("fundamental_indicators", error as Error);
-		}
+		return mapRow(row);
 	}
 
-	/**
-	 * Create or update (upsert) fundamental indicators
-	 */
 	async upsert(input: CreateFundamentalIndicatorsInput): Promise<FundamentalIndicators> {
-		try {
-			await this.client.run(
-				`INSERT INTO fundamental_indicators (
-          id, symbol, date,
-          pe_ratio_ttm, pe_ratio_forward, pb_ratio, ev_ebitda,
-          earnings_yield, dividend_yield, cape_10yr,
-          gross_profitability, roe, roa, asset_growth,
-          accruals_ratio, cash_flow_quality, beneish_m_score,
-          market_cap, sector, industry, source, computed_at
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now'))
-        ON CONFLICT(symbol, date) DO UPDATE SET
-          pe_ratio_ttm = excluded.pe_ratio_ttm,
-          pe_ratio_forward = excluded.pe_ratio_forward,
-          pb_ratio = excluded.pb_ratio,
-          ev_ebitda = excluded.ev_ebitda,
-          earnings_yield = excluded.earnings_yield,
-          dividend_yield = excluded.dividend_yield,
-          cape_10yr = excluded.cape_10yr,
-          gross_profitability = excluded.gross_profitability,
-          roe = excluded.roe,
-          roa = excluded.roa,
-          asset_growth = excluded.asset_growth,
-          accruals_ratio = excluded.accruals_ratio,
-          cash_flow_quality = excluded.cash_flow_quality,
-          beneish_m_score = excluded.beneish_m_score,
-          market_cap = excluded.market_cap,
-          sector = excluded.sector,
-          industry = excluded.industry,
-          source = excluded.source,
-          computed_at = datetime('now')`,
-				[
-					input.id,
-					input.symbol,
-					input.date,
-					input.peRatioTtm ?? null,
-					input.peRatioForward ?? null,
-					input.pbRatio ?? null,
-					input.evEbitda ?? null,
-					input.earningsYield ?? null,
-					input.dividendYield ?? null,
-					input.cape10yr ?? null,
-					input.grossProfitability ?? null,
-					input.roe ?? null,
-					input.roa ?? null,
-					input.assetGrowth ?? null,
-					input.accrualsRatio ?? null,
-					input.cashFlowQuality ?? null,
-					input.beneishMScore ?? null,
-					input.marketCap ?? null,
-					input.sector ?? null,
-					input.industry ?? null,
-					input.source ?? "computed",
-				]
-			);
+		const values = {
+			symbol: input.symbol,
+			date: new Date(input.date),
+			peRatioTtm: input.peRatioTtm != null ? String(input.peRatioTtm) : null,
+			peRatioForward: input.peRatioForward != null ? String(input.peRatioForward) : null,
+			pbRatio: input.pbRatio != null ? String(input.pbRatio) : null,
+			evEbitda: input.evEbitda != null ? String(input.evEbitda) : null,
+			earningsYield: input.earningsYield != null ? String(input.earningsYield) : null,
+			dividendYield: input.dividendYield != null ? String(input.dividendYield) : null,
+			cape10yr: input.cape10yr != null ? String(input.cape10yr) : null,
+			grossProfitability: input.grossProfitability != null ? String(input.grossProfitability) : null,
+			roe: input.roe != null ? String(input.roe) : null,
+			roa: input.roa != null ? String(input.roa) : null,
+			assetGrowth: input.assetGrowth != null ? String(input.assetGrowth) : null,
+			accrualsRatio: input.accrualsRatio != null ? String(input.accrualsRatio) : null,
+			cashFlowQuality: input.cashFlowQuality != null ? String(input.cashFlowQuality) : null,
+			beneishMScore: input.beneishMScore != null ? String(input.beneishMScore) : null,
+			marketCap: input.marketCap != null ? String(input.marketCap) : null,
+			sector: input.sector ?? null,
+			industry: input.industry ?? null,
+			source: input.source ?? "computed",
+			computedAt: new Date(),
+		};
 
-			const result = await this.findBySymbolAndDate(input.symbol, input.date);
-			if (!result) {
-				throw RepositoryError.notFound("fundamental_indicators", `${input.symbol}/${input.date}`);
-			}
-			return result;
-		} catch (error) {
-			throw RepositoryError.fromSqliteError("fundamental_indicators", error as Error);
-		}
+		const [row] = await this.db
+			.insert(fundamentalIndicators)
+			.values(values)
+			.onConflictDoUpdate({
+				target: [fundamentalIndicators.symbol, fundamentalIndicators.date],
+				set: {
+					peRatioTtm: values.peRatioTtm,
+					peRatioForward: values.peRatioForward,
+					pbRatio: values.pbRatio,
+					evEbitda: values.evEbitda,
+					earningsYield: values.earningsYield,
+					dividendYield: values.dividendYield,
+					cape10yr: values.cape10yr,
+					grossProfitability: values.grossProfitability,
+					roe: values.roe,
+					roa: values.roa,
+					assetGrowth: values.assetGrowth,
+					accrualsRatio: values.accrualsRatio,
+					cashFlowQuality: values.cashFlowQuality,
+					beneishMScore: values.beneishMScore,
+					marketCap: values.marketCap,
+					sector: values.sector,
+					industry: values.industry,
+					source: values.source,
+					computedAt: values.computedAt,
+				},
+			})
+			.returning();
+
+		return mapRow(row);
 	}
 
-	/**
-	 * Bulk upsert fundamental indicators
-	 */
 	async bulkUpsert(inputs: CreateFundamentalIndicatorsInput[]): Promise<number> {
 		if (inputs.length === 0) {
 			return 0;
 		}
 
-		try {
-			let upserted = 0;
-
-			for (const input of inputs) {
-				await this.upsert(input);
-				upserted++;
-			}
-
-			return upserted;
-		} catch (error) {
-			throw RepositoryError.fromSqliteError("fundamental_indicators", error as Error);
+		let upserted = 0;
+		for (const input of inputs) {
+			await this.upsert(input);
+			upserted++;
 		}
+
+		return upserted;
 	}
 
-	/**
-	 * Find by ID
-	 */
 	async findById(id: string): Promise<FundamentalIndicators | null> {
-		const row = await this.client.get<Row>("SELECT * FROM fundamental_indicators WHERE id = ?", [
-			id,
-		]);
+		const [row] = await this.db
+			.select()
+			.from(fundamentalIndicators)
+			.where(eq(fundamentalIndicators.id, id))
+			.limit(1);
+
 		return row ? mapRow(row) : null;
 	}
 
-	/**
-	 * Find by ID or throw
-	 */
 	async findByIdOrThrow(id: string): Promise<FundamentalIndicators> {
 		const result = await this.findById(id);
 		if (!result) {
@@ -310,373 +287,317 @@ export class FundamentalsRepository {
 		return result;
 	}
 
-	/**
-	 * Find by symbol and date
-	 */
 	async findBySymbolAndDate(symbol: string, date: string): Promise<FundamentalIndicators | null> {
-		const row = await this.client.get<Row>(
-			"SELECT * FROM fundamental_indicators WHERE symbol = ? AND date = ?",
-			[symbol, date]
-		);
+		const [row] = await this.db
+			.select()
+			.from(fundamentalIndicators)
+			.where(
+				and(
+					eq(fundamentalIndicators.symbol, symbol),
+					eq(fundamentalIndicators.date, new Date(date))
+				)
+			)
+			.limit(1);
+
 		return row ? mapRow(row) : null;
 	}
 
-	/**
-	 * Find latest fundamental indicators for a symbol
-	 */
 	async findLatestBySymbol(symbol: string): Promise<FundamentalIndicators | null> {
-		const row = await this.client.get<Row>(
-			"SELECT * FROM fundamental_indicators WHERE symbol = ? ORDER BY date DESC LIMIT 1",
-			[symbol]
-		);
+		const [row] = await this.db
+			.select()
+			.from(fundamentalIndicators)
+			.where(eq(fundamentalIndicators.symbol, symbol))
+			.orderBy(desc(fundamentalIndicators.date))
+			.limit(1);
+
 		return row ? mapRow(row) : null;
 	}
 
-	/**
-	 * Find latest fundamental indicators for multiple symbols
-	 */
 	async findLatestBySymbols(symbols: string[]): Promise<FundamentalIndicators[]> {
 		if (symbols.length === 0) {
 			return [];
 		}
 
-		const placeholders = symbols.map(() => "?").join(", ");
-		const rows = await this.client.execute<Row>(
-			`SELECT f1.*
-       FROM fundamental_indicators f1
-       INNER JOIN (
-         SELECT symbol, MAX(date) as max_date
-         FROM fundamental_indicators
-         WHERE symbol IN (${placeholders})
-         GROUP BY symbol
-       ) f2 ON f1.symbol = f2.symbol AND f1.date = f2.max_date`,
-			symbols
-		);
-		return rows.map(mapRow);
+		// Use a window function approach
+		const rows = await this.db.execute(sql`
+			SELECT DISTINCT ON (symbol) *
+			FROM ${fundamentalIndicators}
+			WHERE symbol = ANY(${symbols})
+			ORDER BY symbol, date DESC
+		`);
+
+		return (rows.rows as FundamentalRow[]).map(mapRow);
 	}
 
-	/**
-	 * Find fundamental indicators by symbol with date range
-	 */
 	async findBySymbol(
 		symbol: string,
 		filters?: { startDate?: string; endDate?: string }
 	): Promise<FundamentalIndicators[]> {
-		let sql = "SELECT * FROM fundamental_indicators WHERE symbol = ?";
-		const args: unknown[] = [symbol];
+		const conditions = [eq(fundamentalIndicators.symbol, symbol)];
 
 		if (filters?.startDate) {
-			sql += " AND date >= ?";
-			args.push(filters.startDate);
+			conditions.push(gte(fundamentalIndicators.date, new Date(filters.startDate)));
 		}
-
 		if (filters?.endDate) {
-			sql += " AND date <= ?";
-			args.push(filters.endDate);
+			conditions.push(lte(fundamentalIndicators.date, new Date(filters.endDate)));
 		}
 
-		sql += " ORDER BY date DESC";
+		const rows = await this.db
+			.select()
+			.from(fundamentalIndicators)
+			.where(and(...conditions))
+			.orderBy(desc(fundamentalIndicators.date));
 
-		const rows = await this.client.execute<Row>(sql, args);
 		return rows.map(mapRow);
 	}
 
-	/**
-	 * Find many with filters and pagination
-	 */
 	async findMany(
 		filters?: FundamentalFilters,
 		pagination?: PaginationOptions
 	): Promise<PaginatedResult<FundamentalIndicators>> {
-		let sql = "SELECT * FROM fundamental_indicators WHERE 1=1";
-		const args: unknown[] = [];
+		const conditions = [];
 
 		if (filters?.symbol) {
-			sql += " AND symbol = ?";
-			args.push(filters.symbol);
+			conditions.push(eq(fundamentalIndicators.symbol, filters.symbol));
 		}
-
 		if (filters?.symbols && filters.symbols.length > 0) {
-			const placeholders = filters.symbols.map(() => "?").join(", ");
-			sql += ` AND symbol IN (${placeholders})`;
-			args.push(...filters.symbols);
+			conditions.push(inArray(fundamentalIndicators.symbol, filters.symbols));
 		}
-
 		if (filters?.sector) {
-			sql += " AND sector = ?";
-			args.push(filters.sector);
+			conditions.push(eq(fundamentalIndicators.sector, filters.sector));
 		}
-
 		if (filters?.industry) {
-			sql += " AND industry = ?";
-			args.push(filters.industry);
+			conditions.push(eq(fundamentalIndicators.industry, filters.industry));
 		}
-
 		if (filters?.startDate) {
-			sql += " AND date >= ?";
-			args.push(filters.startDate);
+			conditions.push(gte(fundamentalIndicators.date, new Date(filters.startDate)));
 		}
-
 		if (filters?.endDate) {
-			sql += " AND date <= ?";
-			args.push(filters.endDate);
+			conditions.push(lte(fundamentalIndicators.date, new Date(filters.endDate)));
 		}
 
-		sql += " ORDER BY date DESC, symbol ASC";
+		const whereClause = conditions.length > 0 ? and(...conditions) : undefined;
+		const page = pagination?.page ?? 1;
+		const pageSize = pagination?.pageSize ?? 50;
+		const offset = (page - 1) * pageSize;
 
-		const countSql = sql.replace("SELECT *", "SELECT COUNT(*) as count");
+		const [countResult] = await this.db
+			.select({ count: count() })
+			.from(fundamentalIndicators)
+			.where(whereClause);
 
-		const result = await paginate<Row>(this.client, sql, countSql, args, pagination);
+		const rows = await this.db
+			.select()
+			.from(fundamentalIndicators)
+			.where(whereClause)
+			.orderBy(desc(fundamentalIndicators.date), fundamentalIndicators.symbol)
+			.limit(pageSize)
+			.offset(offset);
+
+		const total = countResult?.count ?? 0;
 
 		return {
-			...result,
-			data: result.data.map(mapRow),
+			data: rows.map(mapRow),
+			total,
+			page,
+			pageSize,
+			totalPages: Math.ceil(total / pageSize),
 		};
 	}
 
-	/**
-	 * Find by sector
-	 */
 	async findBySector(sector: string, date?: string): Promise<FundamentalIndicators[]> {
-		let sql: string;
-		let args: unknown[];
-
 		if (date) {
-			sql = "SELECT * FROM fundamental_indicators WHERE sector = ? AND date = ? ORDER BY symbol";
-			args = [sector, date];
-		} else {
-			// Get latest for each symbol in sector
-			sql = `SELECT f1.*
-             FROM fundamental_indicators f1
-             INNER JOIN (
-               SELECT symbol, MAX(date) as max_date
-               FROM fundamental_indicators
-               WHERE sector = ?
-               GROUP BY symbol
-             ) f2 ON f1.symbol = f2.symbol AND f1.date = f2.max_date
-             ORDER BY f1.symbol`;
-			args = [sector];
-		}
+			const rows = await this.db
+				.select()
+				.from(fundamentalIndicators)
+				.where(
+					and(
+						eq(fundamentalIndicators.sector, sector),
+						eq(fundamentalIndicators.date, new Date(date))
+					)
+				)
+				.orderBy(fundamentalIndicators.symbol);
 
-		const rows = await this.client.execute<Row>(sql, args);
-		return rows.map(mapRow);
+			return rows.map(mapRow);
+		} else {
+			// Get latest for each symbol in sector using DISTINCT ON
+			const rows = await this.db.execute(sql`
+				SELECT DISTINCT ON (symbol) *
+				FROM ${fundamentalIndicators}
+				WHERE sector = ${sector}
+				ORDER BY symbol, date DESC
+			`);
+
+			return (rows.rows as FundamentalRow[]).map(mapRow);
+		}
 	}
 
-	/**
-	 * Update fundamental indicators
-	 */
 	async update(
 		id: string,
 		input: UpdateFundamentalIndicatorsInput
 	): Promise<FundamentalIndicators> {
-		try {
-			const sets: string[] = [];
-			const args: unknown[] = [];
+		const updateData: Partial<typeof fundamentalIndicators.$inferInsert> = {
+			computedAt: new Date(),
+		};
 
-			if (input.peRatioTtm !== undefined) {
-				sets.push("pe_ratio_ttm = ?");
-				args.push(input.peRatioTtm);
-			}
-			if (input.peRatioForward !== undefined) {
-				sets.push("pe_ratio_forward = ?");
-				args.push(input.peRatioForward);
-			}
-			if (input.pbRatio !== undefined) {
-				sets.push("pb_ratio = ?");
-				args.push(input.pbRatio);
-			}
-			if (input.evEbitda !== undefined) {
-				sets.push("ev_ebitda = ?");
-				args.push(input.evEbitda);
-			}
-			if (input.earningsYield !== undefined) {
-				sets.push("earnings_yield = ?");
-				args.push(input.earningsYield);
-			}
-			if (input.dividendYield !== undefined) {
-				sets.push("dividend_yield = ?");
-				args.push(input.dividendYield);
-			}
-			if (input.cape10yr !== undefined) {
-				sets.push("cape_10yr = ?");
-				args.push(input.cape10yr);
-			}
-			if (input.grossProfitability !== undefined) {
-				sets.push("gross_profitability = ?");
-				args.push(input.grossProfitability);
-			}
-			if (input.roe !== undefined) {
-				sets.push("roe = ?");
-				args.push(input.roe);
-			}
-			if (input.roa !== undefined) {
-				sets.push("roa = ?");
-				args.push(input.roa);
-			}
-			if (input.assetGrowth !== undefined) {
-				sets.push("asset_growth = ?");
-				args.push(input.assetGrowth);
-			}
-			if (input.accrualsRatio !== undefined) {
-				sets.push("accruals_ratio = ?");
-				args.push(input.accrualsRatio);
-			}
-			if (input.cashFlowQuality !== undefined) {
-				sets.push("cash_flow_quality = ?");
-				args.push(input.cashFlowQuality);
-			}
-			if (input.beneishMScore !== undefined) {
-				sets.push("beneish_m_score = ?");
-				args.push(input.beneishMScore);
-			}
-			if (input.marketCap !== undefined) {
-				sets.push("market_cap = ?");
-				args.push(input.marketCap);
-			}
-			if (input.sector !== undefined) {
-				sets.push("sector = ?");
-				args.push(input.sector);
-			}
-			if (input.industry !== undefined) {
-				sets.push("industry = ?");
-				args.push(input.industry);
-			}
-
-			if (sets.length === 0) {
-				return this.findByIdOrThrow(id);
-			}
-
-			sets.push("computed_at = datetime('now')");
-			args.push(id);
-
-			await this.client.run(
-				`UPDATE fundamental_indicators SET ${sets.join(", ")} WHERE id = ?`,
-				args
-			);
-
-			return this.findByIdOrThrow(id);
-		} catch (error) {
-			throw RepositoryError.fromSqliteError("fundamental_indicators", error as Error);
+		if (input.peRatioTtm !== undefined) {
+			updateData.peRatioTtm = input.peRatioTtm != null ? String(input.peRatioTtm) : null;
 		}
+		if (input.peRatioForward !== undefined) {
+			updateData.peRatioForward = input.peRatioForward != null ? String(input.peRatioForward) : null;
+		}
+		if (input.pbRatio !== undefined) {
+			updateData.pbRatio = input.pbRatio != null ? String(input.pbRatio) : null;
+		}
+		if (input.evEbitda !== undefined) {
+			updateData.evEbitda = input.evEbitda != null ? String(input.evEbitda) : null;
+		}
+		if (input.earningsYield !== undefined) {
+			updateData.earningsYield = input.earningsYield != null ? String(input.earningsYield) : null;
+		}
+		if (input.dividendYield !== undefined) {
+			updateData.dividendYield = input.dividendYield != null ? String(input.dividendYield) : null;
+		}
+		if (input.cape10yr !== undefined) {
+			updateData.cape10yr = input.cape10yr != null ? String(input.cape10yr) : null;
+		}
+		if (input.grossProfitability !== undefined) {
+			updateData.grossProfitability = input.grossProfitability != null ? String(input.grossProfitability) : null;
+		}
+		if (input.roe !== undefined) {
+			updateData.roe = input.roe != null ? String(input.roe) : null;
+		}
+		if (input.roa !== undefined) {
+			updateData.roa = input.roa != null ? String(input.roa) : null;
+		}
+		if (input.assetGrowth !== undefined) {
+			updateData.assetGrowth = input.assetGrowth != null ? String(input.assetGrowth) : null;
+		}
+		if (input.accrualsRatio !== undefined) {
+			updateData.accrualsRatio = input.accrualsRatio != null ? String(input.accrualsRatio) : null;
+		}
+		if (input.cashFlowQuality !== undefined) {
+			updateData.cashFlowQuality = input.cashFlowQuality != null ? String(input.cashFlowQuality) : null;
+		}
+		if (input.beneishMScore !== undefined) {
+			updateData.beneishMScore = input.beneishMScore != null ? String(input.beneishMScore) : null;
+		}
+		if (input.marketCap !== undefined) {
+			updateData.marketCap = input.marketCap != null ? String(input.marketCap) : null;
+		}
+		if (input.sector !== undefined) {
+			updateData.sector = input.sector;
+		}
+		if (input.industry !== undefined) {
+			updateData.industry = input.industry;
+		}
+
+		const [row] = await this.db
+			.update(fundamentalIndicators)
+			.set(updateData)
+			.where(eq(fundamentalIndicators.id, id))
+			.returning();
+
+		if (!row) {
+			throw RepositoryError.notFound("fundamental_indicators", id);
+		}
+
+		return mapRow(row);
 	}
 
-	/**
-	 * Delete by ID
-	 */
 	async delete(id: string): Promise<boolean> {
-		try {
-			const result = await this.client.run("DELETE FROM fundamental_indicators WHERE id = ?", [id]);
-			return (result?.changes ?? 0) > 0;
-		} catch (error) {
-			throw RepositoryError.fromSqliteError("fundamental_indicators", error as Error);
-		}
+		const result = await this.db
+			.delete(fundamentalIndicators)
+			.where(eq(fundamentalIndicators.id, id))
+			.returning({ id: fundamentalIndicators.id });
+
+		return result.length > 0;
 	}
 
-	/**
-	 * Delete by symbol and date
-	 */
 	async deleteBySymbolAndDate(symbol: string, date: string): Promise<boolean> {
-		try {
-			const result = await this.client.run(
-				"DELETE FROM fundamental_indicators WHERE symbol = ? AND date = ?",
-				[symbol, date]
-			);
-			return (result?.changes ?? 0) > 0;
-		} catch (error) {
-			throw RepositoryError.fromSqliteError("fundamental_indicators", error as Error);
-		}
+		const result = await this.db
+			.delete(fundamentalIndicators)
+			.where(
+				and(
+					eq(fundamentalIndicators.symbol, symbol),
+					eq(fundamentalIndicators.date, new Date(date))
+				)
+			)
+			.returning({ id: fundamentalIndicators.id });
+
+		return result.length > 0;
 	}
 
-	/**
-	 * Delete all data for a symbol
-	 */
 	async deleteBySymbol(symbol: string): Promise<number> {
-		try {
-			const result = await this.client.run("DELETE FROM fundamental_indicators WHERE symbol = ?", [
-				symbol,
-			]);
-			return result?.changes ?? 0;
-		} catch (error) {
-			throw RepositoryError.fromSqliteError("fundamental_indicators", error as Error);
-		}
+		const result = await this.db
+			.delete(fundamentalIndicators)
+			.where(eq(fundamentalIndicators.symbol, symbol))
+			.returning({ id: fundamentalIndicators.id });
+
+		return result.length;
 	}
 
-	/**
-	 * Delete old data before a date
-	 */
 	async deleteOlderThan(date: string): Promise<number> {
-		try {
-			const result = await this.client.run("DELETE FROM fundamental_indicators WHERE date < ?", [
-				date,
-			]);
-			return result?.changes ?? 0;
-		} catch (error) {
-			throw RepositoryError.fromSqliteError("fundamental_indicators", error as Error);
-		}
+		const result = await this.db
+			.delete(fundamentalIndicators)
+			.where(lte(fundamentalIndicators.date, new Date(date)))
+			.returning({ id: fundamentalIndicators.id });
+
+		return result.length;
 	}
 
-	/**
-	 * Get distinct sectors
-	 */
 	async getDistinctSectors(): Promise<string[]> {
-		const rows = await this.client.execute<{ sector: string }>(
-			"SELECT DISTINCT sector FROM fundamental_indicators WHERE sector IS NOT NULL ORDER BY sector"
-		);
-		return rows.map((r) => r.sector);
+		const rows = await this.db
+			.selectDistinct({ sector: fundamentalIndicators.sector })
+			.from(fundamentalIndicators)
+			.where(sql`${fundamentalIndicators.sector} IS NOT NULL`)
+			.orderBy(fundamentalIndicators.sector);
+
+		return rows.map((r) => r.sector).filter((s): s is string => s !== null);
 	}
 
-	/**
-	 * Get distinct industries
-	 */
 	async getDistinctIndustries(sector?: string): Promise<string[]> {
-		let sql = "SELECT DISTINCT industry FROM fundamental_indicators WHERE industry IS NOT NULL";
-		const args: unknown[] = [];
+		const conditions = [sql`${fundamentalIndicators.industry} IS NOT NULL`];
 
 		if (sector) {
-			sql += " AND sector = ?";
-			args.push(sector);
+			conditions.push(eq(fundamentalIndicators.sector, sector));
 		}
 
-		sql += " ORDER BY industry";
+		const rows = await this.db
+			.selectDistinct({ industry: fundamentalIndicators.industry })
+			.from(fundamentalIndicators)
+			.where(and(...conditions))
+			.orderBy(fundamentalIndicators.industry);
 
-		const rows = await this.client.execute<{ industry: string }>(sql, args);
-		return rows.map((r) => r.industry);
+		return rows.map((r) => r.industry).filter((i): i is string => i !== null);
 	}
 
-	/**
-	 * Get count of records
-	 */
 	async count(filters?: FundamentalFilters): Promise<number> {
-		let sql = "SELECT COUNT(*) as count FROM fundamental_indicators WHERE 1=1";
-		const args: unknown[] = [];
+		const conditions = [];
 
 		if (filters?.symbol) {
-			sql += " AND symbol = ?";
-			args.push(filters.symbol);
+			conditions.push(eq(fundamentalIndicators.symbol, filters.symbol));
 		}
-
 		if (filters?.symbols && filters.symbols.length > 0) {
-			const placeholders = filters.symbols.map(() => "?").join(", ");
-			sql += ` AND symbol IN (${placeholders})`;
-			args.push(...filters.symbols);
+			conditions.push(inArray(fundamentalIndicators.symbol, filters.symbols));
 		}
-
 		if (filters?.sector) {
-			sql += " AND sector = ?";
-			args.push(filters.sector);
+			conditions.push(eq(fundamentalIndicators.sector, filters.sector));
 		}
-
 		if (filters?.startDate) {
-			sql += " AND date >= ?";
-			args.push(filters.startDate);
+			conditions.push(gte(fundamentalIndicators.date, new Date(filters.startDate)));
 		}
-
 		if (filters?.endDate) {
-			sql += " AND date <= ?";
-			args.push(filters.endDate);
+			conditions.push(lte(fundamentalIndicators.date, new Date(filters.endDate)));
 		}
 
-		const row = await this.client.get<{ count: number }>(sql, args);
-		return row?.count ?? 0;
+		const whereClause = conditions.length > 0 ? and(...conditions) : undefined;
+
+		const [result] = await this.db
+			.select({ count: count() })
+			.from(fundamentalIndicators)
+			.where(whereClause);
+
+		return result?.count ?? 0;
 	}
 }
