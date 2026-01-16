@@ -1,98 +1,96 @@
 /**
- * Portfolio Snapshots Repository
+ * Portfolio Snapshots Repository (Drizzle ORM)
  *
  * Data access for portfolio_snapshots table.
  *
  * @see docs/plans/ui/04-data-requirements.md
  */
-
-import type { Row, TursoClient } from "../turso.js";
-import {
-	type PaginatedResult,
-	type PaginationOptions,
-	paginate,
-	query,
-	RepositoryError,
-} from "./base.js";
+import { and, count, desc, eq, gte, lte, sql } from "drizzle-orm";
+import { getDb, type Database } from "../db";
+import { portfolioSnapshots } from "../schema/core-trading";
+import { RepositoryError } from "./base";
 
 // ============================================
 // Types
 // ============================================
 
-/**
- * Portfolio snapshot entity
- */
 export interface PortfolioSnapshot {
 	id: number;
 	timestamp: string;
+	environment: string;
 	nav: number;
 	cash: number;
 	equity: number;
-	marginUsed: number | null;
-	buyingPower: number | null;
-	grossExposure: number | null;
-	netExposure: number | null;
+	grossExposure: number;
+	netExposure: number;
 	longExposure: number | null;
 	shortExposure: number | null;
+	openPositions: number | null;
 	dayPnl: number | null;
-	dayPnlPct: number | null;
-	totalPnl: number | null;
-	totalPnlPct: number | null;
-	environment: string;
+	dayReturnPct: number | null;
+	totalReturnPct: number | null;
+	maxDrawdown: number | null;
 }
 
-/**
- * Create portfolio snapshot input
- */
 export interface CreatePortfolioSnapshotInput {
 	timestamp?: string;
+	environment: string;
 	nav: number;
 	cash: number;
 	equity: number;
-	marginUsed?: number | null;
-	buyingPower?: number | null;
-	grossExposure?: number | null;
-	netExposure?: number | null;
+	grossExposure: number;
+	netExposure: number;
 	longExposure?: number | null;
 	shortExposure?: number | null;
+	openPositions?: number | null;
 	dayPnl?: number | null;
-	dayPnlPct?: number | null;
-	totalPnl?: number | null;
-	totalPnlPct?: number | null;
-	environment: string;
+	dayReturnPct?: number | null;
+	totalReturnPct?: number | null;
+	maxDrawdown?: number | null;
 }
 
-/**
- * Snapshot filter options
- */
 export interface PortfolioSnapshotFilters {
 	environment?: string;
 	fromDate?: string;
 	toDate?: string;
 }
 
+export interface PaginationOptions {
+	page?: number;
+	pageSize?: number;
+}
+
+export interface PaginatedResult<T> {
+	data: T[];
+	total: number;
+	page: number;
+	pageSize: number;
+	totalPages: number;
+}
+
 // ============================================
-// Row Mapper
+// Row Mapping
 // ============================================
 
-function mapSnapshotRow(row: Row): PortfolioSnapshot {
+type SnapshotRow = typeof portfolioSnapshots.$inferSelect;
+
+function mapSnapshotRow(row: SnapshotRow): PortfolioSnapshot {
 	return {
-		id: row.id as number,
-		timestamp: row.timestamp as string,
-		nav: row.nav as number,
-		cash: row.cash as number,
-		equity: row.equity as number,
-		marginUsed: row.margin_used as number | null,
-		buyingPower: row.buying_power as number | null,
-		grossExposure: row.gross_exposure as number | null,
-		netExposure: row.net_exposure as number | null,
-		longExposure: row.long_exposure as number | null,
-		shortExposure: row.short_exposure as number | null,
-		dayPnl: row.day_pnl as number | null,
-		dayPnlPct: row.day_pnl_pct as number | null,
-		totalPnl: row.total_pnl as number | null,
-		totalPnlPct: row.total_pnl_pct as number | null,
-		environment: row.environment as string,
+		id: row.id,
+		timestamp: row.timestamp.toISOString(),
+		environment: row.environment,
+		nav: Number(row.nav),
+		cash: Number(row.cash),
+		equity: Number(row.equity),
+		grossExposure: Number(row.grossExposure),
+		netExposure: Number(row.netExposure),
+		longExposure: row.longExposure ? Number(row.longExposure) : null,
+		shortExposure: row.shortExposure ? Number(row.shortExposure) : null,
+		openPositions: row.openPositions,
+		dayPnl: row.dayPnl ? Number(row.dayPnl) : null,
+		dayReturnPct: row.dayReturnPct ? Number(row.dayReturnPct) : null,
+		totalReturnPct: row.totalReturnPct ? Number(row.totalReturnPct) : null,
+		maxDrawdown: row.maxDrawdown ? Number(row.maxDrawdown) : null,
 	};
 }
 
@@ -100,149 +98,142 @@ function mapSnapshotRow(row: Row): PortfolioSnapshot {
 // Repository
 // ============================================
 
-/**
- * Portfolio snapshots repository
- */
 export class PortfolioSnapshotsRepository {
-	private readonly table = "portfolio_snapshots";
+	private db: Database;
 
-	constructor(private readonly client: TursoClient) {}
-
-	/**
-	 * Create a new snapshot
-	 */
-	async create(input: CreatePortfolioSnapshotInput): Promise<PortfolioSnapshot> {
-		const timestamp = input.timestamp ?? new Date().toISOString();
-
-		try {
-			const result = await this.client.run(
-				`INSERT INTO ${this.table} (
-          timestamp, nav, cash, equity,
-          margin_used, buying_power, gross_exposure, net_exposure,
-          long_exposure, short_exposure, day_pnl, day_pnl_pct,
-          total_pnl, total_pnl_pct, environment
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-				[
-					timestamp,
-					input.nav,
-					input.cash,
-					input.equity,
-					input.marginUsed ?? null,
-					input.buyingPower ?? null,
-					input.grossExposure ?? null,
-					input.netExposure ?? null,
-					input.longExposure ?? null,
-					input.shortExposure ?? null,
-					input.dayPnl ?? null,
-					input.dayPnlPct ?? null,
-					input.totalPnl ?? null,
-					input.totalPnlPct ?? null,
-					input.environment,
-				]
-			);
-
-			return this.findById(Number(result.lastInsertRowid)) as Promise<PortfolioSnapshot>;
-		} catch (error) {
-			throw RepositoryError.fromSqliteError(this.table, error as Error);
-		}
+	constructor(db?: Database) {
+		this.db = db ?? getDb();
 	}
 
-	/**
-	 * Find snapshot by ID
-	 */
+	async create(input: CreatePortfolioSnapshotInput): Promise<PortfolioSnapshot> {
+		const timestamp = input.timestamp ? new Date(input.timestamp) : new Date();
+
+		const [row] = await this.db
+			.insert(portfolioSnapshots)
+			.values({
+				timestamp,
+				environment: input.environment as "BACKTEST" | "PAPER" | "LIVE",
+				nav: String(input.nav),
+				cash: String(input.cash),
+				equity: String(input.equity),
+				grossExposure: String(input.grossExposure),
+				netExposure: String(input.netExposure),
+				longExposure: input.longExposure != null ? String(input.longExposure) : null,
+				shortExposure: input.shortExposure != null ? String(input.shortExposure) : null,
+				openPositions: input.openPositions ?? null,
+				dayPnl: input.dayPnl != null ? String(input.dayPnl) : null,
+				dayReturnPct: input.dayReturnPct != null ? String(input.dayReturnPct) : null,
+				totalReturnPct: input.totalReturnPct != null ? String(input.totalReturnPct) : null,
+				maxDrawdown: input.maxDrawdown != null ? String(input.maxDrawdown) : null,
+			})
+			.returning();
+
+		return mapSnapshotRow(row);
+	}
+
 	async findById(id: number): Promise<PortfolioSnapshot | null> {
-		const row = await this.client.get<Row>(`SELECT * FROM ${this.table} WHERE id = ?`, [id]);
+		const [row] = await this.db
+			.select()
+			.from(portfolioSnapshots)
+			.where(eq(portfolioSnapshots.id, id))
+			.limit(1);
 
 		return row ? mapSnapshotRow(row) : null;
 	}
 
-	/**
-	 * Find snapshots with filters
-	 */
 	async findMany(
 		filters: PortfolioSnapshotFilters = {},
 		pagination?: PaginationOptions
 	): Promise<PaginatedResult<PortfolioSnapshot>> {
-		const builder = query().orderBy("timestamp", "DESC");
+		const conditions = [];
 
 		if (filters.environment) {
-			builder.eq("environment", filters.environment);
+			conditions.push(
+				eq(portfolioSnapshots.environment, filters.environment as "BACKTEST" | "PAPER" | "LIVE")
+			);
 		}
 		if (filters.fromDate) {
-			builder.where("timestamp", ">=", filters.fromDate);
+			conditions.push(gte(portfolioSnapshots.timestamp, new Date(filters.fromDate)));
 		}
 		if (filters.toDate) {
-			builder.where("timestamp", "<=", filters.toDate);
+			conditions.push(lte(portfolioSnapshots.timestamp, new Date(filters.toDate)));
 		}
 
-		const { sql, args } = builder.build(`SELECT * FROM ${this.table}`);
-		const baseSql = sql.split(" LIMIT ")[0] ?? sql;
-		const countSql = baseSql.replace("SELECT *", "SELECT COUNT(*) as count");
+		const whereClause = conditions.length > 0 ? and(...conditions) : undefined;
+		const page = pagination?.page ?? 1;
+		const pageSize = pagination?.pageSize ?? 50;
+		const offset = (page - 1) * pageSize;
 
-		const result = await paginate<Row>(
-			this.client,
-			baseSql,
-			countSql,
-			args.slice(0, -2),
-			pagination
-		);
+		const [countResult] = await this.db
+			.select({ count: count() })
+			.from(portfolioSnapshots)
+			.where(whereClause);
+
+		const rows = await this.db
+			.select()
+			.from(portfolioSnapshots)
+			.where(whereClause)
+			.orderBy(desc(portfolioSnapshots.timestamp))
+			.limit(pageSize)
+			.offset(offset);
+
+		const total = countResult?.count ?? 0;
 
 		return {
-			...result,
-			data: result.data.map(mapSnapshotRow),
+			data: rows.map(mapSnapshotRow),
+			total,
+			page,
+			pageSize,
+			totalPages: Math.ceil(total / pageSize),
 		};
 	}
 
-	/**
-	 * Get latest snapshot
-	 */
 	async getLatest(environment: string): Promise<PortfolioSnapshot | null> {
-		const row = await this.client.get<Row>(
-			`SELECT * FROM ${this.table} WHERE environment = ? ORDER BY timestamp DESC LIMIT 1`,
-			[environment]
-		);
+		const [row] = await this.db
+			.select()
+			.from(portfolioSnapshots)
+			.where(eq(portfolioSnapshots.environment, environment as "BACKTEST" | "PAPER" | "LIVE"))
+			.orderBy(desc(portfolioSnapshots.timestamp))
+			.limit(1);
 
 		return row ? mapSnapshotRow(row) : null;
 	}
 
-	/**
-	 * Get equity curve (NAV over time)
-	 */
 	async getEquityCurve(
 		environment: string,
 		fromDate?: string,
 		toDate?: string,
 		limit = 1000
 	): Promise<{ timestamp: string; nav: number; pnlPct: number }[]> {
-		let sql = `SELECT timestamp, nav, COALESCE(total_pnl_pct, 0) as pnl_pct
-               FROM ${this.table}
-               WHERE environment = ?`;
-		const args: unknown[] = [environment];
+		const conditions = [
+			eq(portfolioSnapshots.environment, environment as "BACKTEST" | "PAPER" | "LIVE"),
+		];
 
 		if (fromDate) {
-			sql += ` AND timestamp >= ?`;
-			args.push(fromDate);
+			conditions.push(gte(portfolioSnapshots.timestamp, new Date(fromDate)));
 		}
 		if (toDate) {
-			sql += ` AND timestamp <= ?`;
-			args.push(toDate);
+			conditions.push(lte(portfolioSnapshots.timestamp, new Date(toDate)));
 		}
 
-		sql += ` ORDER BY timestamp ASC LIMIT ?`;
-		args.push(limit);
-
-		const rows = await this.client.execute<Row>(sql, args);
+		const rows = await this.db
+			.select({
+				timestamp: portfolioSnapshots.timestamp,
+				nav: portfolioSnapshots.nav,
+				pnlPct: portfolioSnapshots.totalReturnPct,
+			})
+			.from(portfolioSnapshots)
+			.where(and(...conditions))
+			.orderBy(portfolioSnapshots.timestamp)
+			.limit(limit);
 
 		return rows.map((row) => ({
-			timestamp: row.timestamp as string,
-			nav: row.nav as number,
-			pnlPct: row.pnl_pct as number,
+			timestamp: row.timestamp.toISOString(),
+			nav: Number(row.nav),
+			pnlPct: row.pnlPct ? Number(row.pnlPct) : 0,
 		}));
 	}
 
-	/**
-	 * Get performance metrics
-	 */
 	async getPerformanceMetrics(
 		environment: string,
 		days = 30
@@ -259,24 +250,50 @@ export class PortfolioSnapshotsRepository {
 		const fromDate = new Date();
 		fromDate.setDate(fromDate.getDate() - days);
 
-		const row = await this.client.get<Row>(
-			`SELECT
-        (SELECT nav FROM ${this.table} WHERE environment = ? AND timestamp >= ? ORDER BY timestamp ASC LIMIT 1) as start_nav,
-        (SELECT nav FROM ${this.table} WHERE environment = ? ORDER BY timestamp DESC LIMIT 1) as end_nav,
-        MAX(nav) as max_nav,
-        MIN(nav) as min_nav,
-        COUNT(*) as snapshot_count
-       FROM ${this.table}
-       WHERE environment = ? AND timestamp >= ?`,
-			[environment, fromDate.toISOString(), environment, environment, fromDate.toISOString()]
-		);
+		const envType = environment as "BACKTEST" | "PAPER" | "LIVE";
 
-		const startNav = (row?.start_nav as number) ?? 0;
-		const endNav = (row?.end_nav as number) ?? 0;
+		// Get aggregates
+		const [aggRow] = await this.db
+			.select({
+				maxNav: sql<string>`MAX(${portfolioSnapshots.nav}::numeric)`,
+				minNav: sql<string>`MIN(${portfolioSnapshots.nav}::numeric)`,
+				snapshotCount: count(),
+			})
+			.from(portfolioSnapshots)
+			.where(
+				and(
+					eq(portfolioSnapshots.environment, envType),
+					gte(portfolioSnapshots.timestamp, fromDate)
+				)
+			);
+
+		// Get start NAV
+		const [startRow] = await this.db
+			.select({ nav: portfolioSnapshots.nav })
+			.from(portfolioSnapshots)
+			.where(
+				and(
+					eq(portfolioSnapshots.environment, envType),
+					gte(portfolioSnapshots.timestamp, fromDate)
+				)
+			)
+			.orderBy(portfolioSnapshots.timestamp)
+			.limit(1);
+
+		// Get end NAV
+		const [endRow] = await this.db
+			.select({ nav: portfolioSnapshots.nav })
+			.from(portfolioSnapshots)
+			.where(eq(portfolioSnapshots.environment, envType))
+			.orderBy(desc(portfolioSnapshots.timestamp))
+			.limit(1);
+
+		const startNav = startRow?.nav ? Number(startRow.nav) : 0;
+		const endNav = endRow?.nav ? Number(endRow.nav) : 0;
 		const periodReturn = endNav - startNav;
 		const periodReturnPct = startNav > 0 ? (periodReturn / startNav) * 100 : 0;
-		const maxNav = (row?.max_nav as number) ?? 0;
-		const minNav = (row?.min_nav as number) ?? 0;
+		const maxNav = aggRow?.maxNav ? Number(aggRow.maxNav) : 0;
+		const minNav = aggRow?.minNav ? Number(aggRow.minNav) : 0;
 		const maxDrawdown = maxNav > 0 ? ((maxNav - minNav) / maxNav) * 100 : 0;
 
 		return {
@@ -287,43 +304,48 @@ export class PortfolioSnapshotsRepository {
 			maxNav,
 			minNav,
 			maxDrawdown,
-			snapshotCount: (row?.snapshot_count as number) ?? 0,
+			snapshotCount: aggRow?.snapshotCount ?? 0,
 		};
 	}
 
-	/**
-	 * Delete old snapshots (cleanup)
-	 */
 	async deleteOlderThan(cutoffDate: string): Promise<number> {
-		const result = await this.client.run(`DELETE FROM ${this.table} WHERE timestamp < ?`, [
-			cutoffDate,
-		]);
+		const result = await this.db
+			.delete(portfolioSnapshots)
+			.where(lte(portfolioSnapshots.timestamp, new Date(cutoffDate)))
+			.returning({ id: portfolioSnapshots.id });
 
-		return result.changes;
+		return result.length;
 	}
 
-	/**
-	 * Find snapshot by date
-	 */
 	async findByDate(environment: string, date: string): Promise<PortfolioSnapshot | null> {
-		const row = await this.client.get<Row>(
-			`SELECT * FROM ${this.table}
-       WHERE environment = ? AND DATE(timestamp) = DATE(?)
-       ORDER BY timestamp DESC LIMIT 1`,
-			[environment, date]
-		);
+		const startOfDay = new Date(date);
+		startOfDay.setHours(0, 0, 0, 0);
+		const endOfDay = new Date(date);
+		endOfDay.setHours(23, 59, 59, 999);
+
+		const [row] = await this.db
+			.select()
+			.from(portfolioSnapshots)
+			.where(
+				and(
+					eq(portfolioSnapshots.environment, environment as "BACKTEST" | "PAPER" | "LIVE"),
+					gte(portfolioSnapshots.timestamp, startOfDay),
+					lte(portfolioSnapshots.timestamp, endOfDay)
+				)
+			)
+			.orderBy(desc(portfolioSnapshots.timestamp))
+			.limit(1);
 
 		return row ? mapSnapshotRow(row) : null;
 	}
 
-	/**
-	 * Get first snapshot
-	 */
 	async getFirst(environment: string): Promise<PortfolioSnapshot | null> {
-		const row = await this.client.get<Row>(
-			`SELECT * FROM ${this.table} WHERE environment = ? ORDER BY timestamp ASC LIMIT 1`,
-			[environment]
-		);
+		const [row] = await this.db
+			.select()
+			.from(portfolioSnapshots)
+			.where(eq(portfolioSnapshots.environment, environment as "BACKTEST" | "PAPER" | "LIVE"))
+			.orderBy(portfolioSnapshots.timestamp)
+			.limit(1);
 
 		return row ? mapSnapshotRow(row) : null;
 	}

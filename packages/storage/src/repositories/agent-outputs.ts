@@ -1,28 +1,23 @@
 /**
- * Agent Outputs Repository
+ * Agent Outputs Repository (Drizzle ORM)
  *
  * Data access for agent_outputs table.
  *
  * @see docs/plans/ui/04-data-requirements.md
  */
-
-import type { Row, TursoClient } from "../turso.js";
-import { parseJson, RepositoryError, toJson } from "./base.js";
+import { and, avg, count, desc, eq, sql, sum } from "drizzle-orm";
+import { getDb, type Database } from "../db";
+import { agentOutputs } from "../schema/core-trading";
+import { RepositoryError } from "./base";
 
 // ============================================
 // Types
 // ============================================
 
-/**
- * Agent vote
- */
 export type AgentVote = "APPROVE" | "REJECT" | "ABSTAIN";
 
-/**
- * Agent output entity
- */
 export interface AgentOutput {
-	id: number;
+	id: string;
 	decisionId: string;
 	agentType: string;
 	vote: AgentVote;
@@ -31,13 +26,9 @@ export interface AgentOutput {
 	fullReasoning: string | null;
 	tokensUsed: number | null;
 	latencyMs: number | null;
-	metadata: Record<string, unknown>;
 	createdAt: string;
 }
 
-/**
- * Create agent output input
- */
 export interface CreateAgentOutputInput {
 	decisionId: string;
 	agentType: string;
@@ -47,26 +38,26 @@ export interface CreateAgentOutputInput {
 	fullReasoning?: string | null;
 	tokensUsed?: number | null;
 	latencyMs?: number | null;
-	metadata?: Record<string, unknown>;
 }
 
 // ============================================
-// Row Mapper
+// Row Mapping
 // ============================================
 
-function mapAgentOutputRow(row: Row): AgentOutput {
+type AgentOutputRow = typeof agentOutputs.$inferSelect;
+
+function mapAgentOutputRow(row: AgentOutputRow): AgentOutput {
 	return {
-		id: row.id as number,
-		decisionId: row.decision_id as string,
-		agentType: row.agent_type as string,
+		id: row.id,
+		decisionId: row.decisionId,
+		agentType: row.agentType,
 		vote: row.vote as AgentVote,
-		confidence: row.confidence as number,
-		reasoningSummary: row.reasoning_summary as string | null,
-		fullReasoning: row.full_reasoning as string | null,
-		tokensUsed: row.tokens_used as number | null,
-		latencyMs: row.latency_ms as number | null,
-		metadata: parseJson<Record<string, unknown>>(row.metadata, {}),
-		createdAt: row.created_at as string,
+		confidence: Number(row.confidence),
+		reasoningSummary: row.reasoningSummary,
+		fullReasoning: row.fullReasoning,
+		tokensUsed: row.tokensUsed,
+		latencyMs: row.latencyMs,
+		createdAt: row.createdAt.toISOString(),
 	};
 }
 
@@ -74,105 +65,98 @@ function mapAgentOutputRow(row: Row): AgentOutput {
 // Repository
 // ============================================
 
-/**
- * Agent outputs repository
- */
 export class AgentOutputsRepository {
-	private readonly table = "agent_outputs";
+	private db: Database;
 
-	constructor(private readonly client: TursoClient) {}
+	constructor(db?: Database) {
+		this.db = db ?? getDb();
+	}
 
-	/**
-	 * Create a new agent output
-	 */
 	async create(input: CreateAgentOutputInput): Promise<AgentOutput> {
-		try {
-			const result = await this.client.run(
-				`INSERT INTO ${this.table} (
-          decision_id, agent_type, vote, confidence,
-          reasoning_summary, full_reasoning, tokens_used, latency_ms, metadata
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-				[
-					input.decisionId,
-					input.agentType,
-					input.vote,
-					input.confidence,
-					input.reasoningSummary ?? null,
-					input.fullReasoning ?? null,
-					input.tokensUsed ?? null,
-					input.latencyMs ?? null,
-					toJson(input.metadata ?? {}),
-				]
-			);
+		const [row] = await this.db
+			.insert(agentOutputs)
+			.values({
+				decisionId: input.decisionId,
+				agentType: input.agentType as typeof agentOutputs.$inferInsert.agentType,
+				vote: input.vote as typeof agentOutputs.$inferInsert.vote,
+				confidence: String(input.confidence),
+				reasoningSummary: input.reasoningSummary ?? null,
+				fullReasoning: input.fullReasoning ?? null,
+				tokensUsed: input.tokensUsed ?? null,
+				latencyMs: input.latencyMs ?? null,
+			})
+			.returning();
 
-			return this.findById(Number(result.lastInsertRowid)) as Promise<AgentOutput>;
-		} catch (error) {
-			throw RepositoryError.fromSqliteError(this.table, error as Error);
-		}
+		return mapAgentOutputRow(row);
 	}
 
-	/**
-	 * Create multiple agent outputs for a decision
-	 */
 	async createMany(inputs: CreateAgentOutputInput[]): Promise<AgentOutput[]> {
-		const outputs: AgentOutput[] = [];
-
-		for (const input of inputs) {
-			const output = await this.create(input);
-			outputs.push(output);
+		if (inputs.length === 0) {
+			return [];
 		}
 
-		return outputs;
+		const values = inputs.map((input) => ({
+			decisionId: input.decisionId,
+			agentType: input.agentType as typeof agentOutputs.$inferInsert.agentType,
+			vote: input.vote as typeof agentOutputs.$inferInsert.vote,
+			confidence: String(input.confidence),
+			reasoningSummary: input.reasoningSummary ?? null,
+			fullReasoning: input.fullReasoning ?? null,
+			tokensUsed: input.tokensUsed ?? null,
+			latencyMs: input.latencyMs ?? null,
+		}));
+
+		const rows = await this.db.insert(agentOutputs).values(values).returning();
+
+		return rows.map(mapAgentOutputRow);
 	}
 
-	/**
-	 * Find agent output by ID
-	 */
-	async findById(id: number): Promise<AgentOutput | null> {
-		const row = await this.client.get<Row>(`SELECT * FROM ${this.table} WHERE id = ?`, [id]);
+	async findById(id: string): Promise<AgentOutput | null> {
+		const [row] = await this.db
+			.select()
+			.from(agentOutputs)
+			.where(eq(agentOutputs.id, id))
+			.limit(1);
 
 		return row ? mapAgentOutputRow(row) : null;
 	}
 
-	/**
-	 * Find agent outputs by decision ID
-	 */
 	async findByDecision(decisionId: string): Promise<AgentOutput[]> {
-		const rows = await this.client.execute<Row>(
-			`SELECT * FROM ${this.table} WHERE decision_id = ? ORDER BY created_at ASC`,
-			[decisionId]
-		);
+		const rows = await this.db
+			.select()
+			.from(agentOutputs)
+			.where(eq(agentOutputs.decisionId, decisionId))
+			.orderBy(agentOutputs.createdAt);
 
 		return rows.map(mapAgentOutputRow);
 	}
 
-	/**
-	 * Find agent output by decision and agent type
-	 */
 	async findByDecisionAndAgent(decisionId: string, agentType: string): Promise<AgentOutput | null> {
-		const row = await this.client.get<Row>(
-			`SELECT * FROM ${this.table} WHERE decision_id = ? AND agent_type = ?`,
-			[decisionId, agentType]
-		);
+		const [row] = await this.db
+			.select()
+			.from(agentOutputs)
+			.where(
+				and(
+					eq(agentOutputs.decisionId, decisionId),
+					eq(agentOutputs.agentType, agentType as typeof agentOutputs.$inferInsert.agentType)
+				)
+			)
+			.limit(1);
 
 		return row ? mapAgentOutputRow(row) : null;
 	}
 
-	/**
-	 * Find agent outputs by agent type
-	 */
 	async findByAgentType(agentType: string, limit = 50): Promise<AgentOutput[]> {
-		const rows = await this.client.execute<Row>(
-			`SELECT * FROM ${this.table} WHERE agent_type = ? ORDER BY created_at DESC LIMIT ?`,
-			[agentType, limit]
-		);
+		const rows = await this.db
+			.select()
+			.from(agentOutputs)
+			.where(eq(agentOutputs.agentType, agentType as typeof agentOutputs.$inferInsert.agentType))
+			.orderBy(desc(agentOutputs.createdAt))
+			.limit(limit);
 
 		return rows.map(mapAgentOutputRow);
 	}
 
-	/**
-	 * Get vote summary for a decision
-	 */
 	async getVoteSummary(decisionId: string): Promise<{
 		approvals: number;
 		rejections: number;
@@ -181,36 +165,34 @@ export class AgentOutputsRepository {
 		totalTokens: number;
 		totalLatencyMs: number;
 	}> {
-		const row = await this.client.get<Row>(
-			`SELECT
-        SUM(CASE WHEN vote = 'APPROVE' THEN 1 ELSE 0 END) as approvals,
-        SUM(CASE WHEN vote = 'REJECT' THEN 1 ELSE 0 END) as rejections,
-        SUM(CASE WHEN vote = 'ABSTAIN' THEN 1 ELSE 0 END) as abstentions,
-        AVG(confidence) as avg_confidence,
-        COALESCE(SUM(tokens_used), 0) as total_tokens,
-        COALESCE(SUM(latency_ms), 0) as total_latency_ms
-       FROM ${this.table} WHERE decision_id = ?`,
-			[decisionId]
-		);
+		const [row] = await this.db
+			.select({
+				approvals: sql<number>`SUM(CASE WHEN ${agentOutputs.vote} = 'APPROVE' THEN 1 ELSE 0 END)::int`,
+				rejections: sql<number>`SUM(CASE WHEN ${agentOutputs.vote} = 'REJECT' THEN 1 ELSE 0 END)::int`,
+				abstentions: sql<number>`SUM(CASE WHEN ${agentOutputs.vote} = 'ABSTAIN' THEN 1 ELSE 0 END)::int`,
+				avgConfidence: sql<string>`AVG(${agentOutputs.confidence}::numeric)`,
+				totalTokens: sql<number>`COALESCE(SUM(${agentOutputs.tokensUsed}), 0)::int`,
+				totalLatencyMs: sql<number>`COALESCE(SUM(${agentOutputs.latencyMs}), 0)::int`,
+			})
+			.from(agentOutputs)
+			.where(eq(agentOutputs.decisionId, decisionId));
 
 		return {
-			approvals: (row?.approvals as number) ?? 0,
-			rejections: (row?.rejections as number) ?? 0,
-			abstentions: (row?.abstentions as number) ?? 0,
-			avgConfidence: (row?.avg_confidence as number) ?? 0,
-			totalTokens: (row?.total_tokens as number) ?? 0,
-			totalLatencyMs: (row?.total_latency_ms as number) ?? 0,
+			approvals: row?.approvals ?? 0,
+			rejections: row?.rejections ?? 0,
+			abstentions: row?.abstentions ?? 0,
+			avgConfidence: row?.avgConfidence ? Number(row.avgConfidence) : 0,
+			totalTokens: row?.totalTokens ?? 0,
+			totalLatencyMs: row?.totalLatencyMs ?? 0,
 		};
 	}
 
-	/**
-	 * Delete outputs for a decision
-	 */
 	async deleteByDecision(decisionId: string): Promise<number> {
-		const result = await this.client.run(`DELETE FROM ${this.table} WHERE decision_id = ?`, [
-			decisionId,
-		]);
+		const result = await this.db
+			.delete(agentOutputs)
+			.where(eq(agentOutputs.decisionId, decisionId))
+			.returning({ id: agentOutputs.id });
 
-		return result.changes;
+		return result.length;
 	}
 }
