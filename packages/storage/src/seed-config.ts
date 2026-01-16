@@ -12,12 +12,12 @@
  *   bun run packages/storage/src/seed-config.ts --env=PAPER  # Seed only PAPER
  *
  * Environment:
- *   TURSO_DATABASE_URL=http://localhost:8080  # Use HTTP connection
+ *   DATABASE_URL=postgresql://user:pass@localhost:5432/cream
  *
  * @see docs/plans/22-self-service-dashboard.md (Phase 1)
  */
 
-import { createContext, getDefaultGlobalModel } from "@cream/domain";
+import { getDefaultGlobalModel } from "@cream/domain";
 import { log } from "./logger.js";
 import {
 	AGENT_TYPES,
@@ -27,7 +27,6 @@ import {
 import { ConstraintsConfigRepository } from "./repositories/constraints-config.js";
 import { TradingConfigRepository, type TradingEnvironment } from "./repositories/trading-config.js";
 import { UniverseConfigsRepository } from "./repositories/universe-configs.js";
-import { createTursoClient } from "./turso.js";
 
 /** Extracted from packages/config/configs/default.yaml and apps/worker/src/index.ts */
 function getDefaultTradingConfig() {
@@ -206,14 +205,11 @@ async function main(): Promise<void> {
 		log.warn({}, "Force mode enabled - existing configs will be replaced");
 	}
 
-	// createTursoClient reads TURSO_DATABASE_URL and handles HTTP/local automatically
-	const ctx = createContext("BACKTEST", "manual");
-	const client = await createTursoClient(ctx);
-
-	const tradingRepo = new TradingConfigRepository(client);
-	const agentRepo = new AgentConfigsRepository(client);
-	const universeRepo = new UniverseConfigsRepository(client);
-	const constraintsRepo = new ConstraintsConfigRepository(client);
+	// Repositories use getDb() internally via Drizzle (reads DATABASE_URL)
+	const tradingRepo = new TradingConfigRepository();
+	const agentRepo = new AgentConfigsRepository();
+	const universeRepo = new UniverseConfigsRepository();
+	const constraintsRepo = new ConstraintsConfigRepository();
 
 	const results: SeedResult[] = [];
 
