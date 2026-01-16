@@ -22,6 +22,12 @@ import log from "../logger.js";
 const app = new OpenAPIHono();
 
 // ============================================
+// Worker Service URL
+// ============================================
+
+const WORKER_URL = Bun.env.WORKER_URL ?? "http://localhost:3002";
+
+// ============================================
 // Schema Definitions
 // ============================================
 
@@ -280,7 +286,7 @@ const triggerServiceRoute = createRoute({
 app.openapi(triggerServiceRoute, async (c) => {
 	const { service } = c.req.valid("param");
 	const body = await c.req.json().catch(() => ({}));
-	const { symbols, priority = "normal" } = TriggerRequestSchema.parse(body);
+	const { priority = "normal" } = TriggerRequestSchema.parse(body);
 	const environment = requireEnv();
 
 	try {
@@ -300,39 +306,78 @@ app.openapi(triggerServiceRoute, async (c) => {
 			});
 		}
 
-		// Create a new run record
+		// Create a new run record with 'running' status
 		const runId = `run-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
 		const now = new Date().toISOString();
 
 		await db.run(
 			`INSERT INTO indicator_sync_runs
 			 (id, run_type, started_at, status, symbols_processed, symbols_failed, environment, error_message)
-			 VALUES (?, ?, ?, 'pending', 0, 0, ?, ?)`,
-			[
-				runId,
-				service,
-				now,
-				environment,
-				symbols ? JSON.stringify({ symbols, priority }) : JSON.stringify({ priority }),
-			]
+			 VALUES (?, ?, ?, 'running', 0, 0, ?, NULL)`,
+			[runId, service, now, environment]
 		);
 
-		log.info(
-			{
-				runId,
-				service,
-				symbolsCount: symbols?.length ?? "all",
-				priority,
-				environment,
-			},
-			"Worker service trigger request created"
-		);
+		log.info({ runId, service, priority, environment }, "Worker service trigger starting");
+
+		// Call the worker's trigger endpoint (fire and forget with background update)
+		const workerUrl = `${WORKER_URL}/trigger/${service}`;
+
+		// Execute async - don't wait for completion
+		(async () => {
+			try {
+				const response = await fetch(workerUrl, {
+					method: "POST",
+					headers: { "Content-Type": "application/json" },
+				});
+
+				const result = (await response.json()) as {
+					success: boolean;
+					message: string;
+					processed?: number;
+					failed?: number;
+					durationMs?: number;
+					error?: string;
+				};
+
+				const completedAt = new Date().toISOString();
+				const status = result.success ? "completed" : "failed";
+
+				await db.run(
+					`UPDATE indicator_sync_runs
+					 SET status = ?, completed_at = ?, symbols_processed = ?, symbols_failed = ?, error_message = ?
+					 WHERE id = ?`,
+					[
+						status,
+						completedAt,
+						result.processed ?? 0,
+						result.failed ?? 0,
+						result.error ?? null,
+						runId,
+					]
+				);
+
+				log.info(
+					{ runId, service, status, processed: result.processed, failed: result.failed },
+					"Worker service trigger completed"
+				);
+			} catch (error) {
+				const errorMessage = error instanceof Error ? error.message : "Unknown error";
+				log.error({ runId, service, error: errorMessage }, "Worker service trigger failed");
+
+				await db.run(
+					`UPDATE indicator_sync_runs
+					 SET status = 'failed', completed_at = ?, error_message = ?
+					 WHERE id = ?`,
+					[new Date().toISOString(), errorMessage, runId]
+				);
+			}
+		})();
 
 		return c.json(
 			{
 				runId,
 				status: "started" as const,
-				message: `${ServiceDisplayNames[service]} trigger queued`,
+				message: `${ServiceDisplayNames[service]} triggered`,
 			},
 			202
 		);

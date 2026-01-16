@@ -48,6 +48,7 @@ import {
 	loadConfig,
 	log,
 	reloadConfig,
+	type TriggerResult,
 	validateHelixDBOrExit,
 } from "./shared/index.js";
 
@@ -134,6 +135,133 @@ async function runMacroWatch(): Promise<void> {
 async function compileNewspaper(): Promise<void> {
 	state.lastRun.newspaper = new Date();
 	await state.newspaper.compile(getInstruments());
+}
+
+// ============================================
+// Service Trigger Handlers (for HTTP API)
+// ============================================
+
+async function triggerMacroWatch(): Promise<TriggerResult> {
+	const startTime = Date.now();
+	try {
+		state.lastRun.macroWatch = new Date();
+		const entries = await state.macroWatch.run(getInstruments());
+		return {
+			success: true,
+			message: `MacroWatch completed with ${entries.length} entries`,
+			processed: entries.length,
+			failed: 0,
+			durationMs: Date.now() - startTime,
+		};
+	} catch (error) {
+		return {
+			success: false,
+			message: "MacroWatch failed",
+			error: error instanceof Error ? error.message : "Unknown error",
+			durationMs: Date.now() - startTime,
+		};
+	}
+}
+
+async function triggerNewspaper(): Promise<TriggerResult> {
+	const startTime = Date.now();
+	try {
+		state.lastRun.newspaper = new Date();
+		await state.newspaper.compile(getInstruments());
+		return {
+			success: true,
+			message: "Newspaper compilation completed",
+			durationMs: Date.now() - startTime,
+		};
+	} catch (error) {
+		return {
+			success: false,
+			message: "Newspaper compilation failed",
+			error: error instanceof Error ? error.message : "Unknown error",
+			durationMs: Date.now() - startTime,
+		};
+	}
+}
+
+async function triggerFilingsSync(): Promise<TriggerResult> {
+	const startTime = Date.now();
+	try {
+		state.lastRun.filingsSync = new Date();
+		const result = await state.filingsSync?.sync(getInstruments(), state.environment);
+		if (result) {
+			return {
+				success: true,
+				message: `Filings sync completed: ${result.filingsIngested} filings, ${result.chunksCreated} chunks`,
+				processed: result.filingsIngested,
+				durationMs: result.durationMs,
+			};
+		}
+		return {
+			success: true,
+			message: "Filings sync completed (no result)",
+			durationMs: Date.now() - startTime,
+		};
+	} catch (error) {
+		return {
+			success: false,
+			message: "Filings sync failed",
+			error: error instanceof Error ? error.message : "Unknown error",
+			durationMs: Date.now() - startTime,
+		};
+	}
+}
+
+async function triggerIndicatorJob(
+	jobName: "shortInterest" | "sentiment" | "corporateActions"
+): Promise<TriggerResult> {
+	const startTime = Date.now();
+	try {
+		if (!state.indicatorScheduler) {
+			return {
+				success: false,
+				message: "Indicator scheduler not initialized",
+				durationMs: Date.now() - startTime,
+			};
+		}
+		const result = await state.indicatorScheduler.triggerJob(jobName);
+		return {
+			success: result.failed === 0,
+			message: `${jobName} job completed: ${result.processed} processed, ${result.failed} failed`,
+			processed: result.processed,
+			failed: result.failed,
+			durationMs: result.durationMs,
+			error: result.errors?.length ? result.errors[0]?.error : undefined,
+		};
+	} catch (error) {
+		return {
+			success: false,
+			message: `${jobName} job failed`,
+			error: error instanceof Error ? error.message : "Unknown error",
+			durationMs: Date.now() - startTime,
+		};
+	}
+}
+
+async function triggerShortInterest(): Promise<TriggerResult> {
+	return triggerIndicatorJob("shortInterest");
+}
+
+async function triggerSentiment(): Promise<TriggerResult> {
+	return triggerIndicatorJob("sentiment");
+}
+
+async function triggerCorporateActions(): Promise<TriggerResult> {
+	return triggerIndicatorJob("corporateActions");
+}
+
+async function triggerFundamentals(): Promise<TriggerResult> {
+	// Fundamentals uses a different mechanism - same as short interest for now
+	// This is a placeholder - fundamentals batch job may need special handling
+	return {
+		success: false,
+		message: "Fundamentals trigger not yet implemented via HTTP API",
+		durationMs: 0,
+	};
 }
 
 // ============================================
@@ -252,6 +380,15 @@ async function main() {
 		getSynthesisScheduler: () => state.synthesisScheduler,
 		getStartedAt: () => state.startedAt,
 		onReload: handleReloadConfig,
+		triggers: {
+			triggerMacroWatch,
+			triggerNewspaper,
+			triggerFilingsSync,
+			triggerShortInterest,
+			triggerSentiment,
+			triggerCorporateActions,
+			triggerFundamentals,
+		},
 	});
 	healthServer.start();
 

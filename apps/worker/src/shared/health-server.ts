@@ -1,13 +1,49 @@
 /**
  * Health Server
  *
- * HTTP endpoint for health checks and runtime status.
+ * HTTP endpoint for health checks, runtime status, and service triggers.
  */
 
 import type { RuntimeEnvironment } from "@cream/config";
 import type { JobState } from "../contexts/indicators/index.js";
 import type { IndicatorSynthesisScheduler } from "../contexts/synthesis/index.js";
 import { log } from "./logger.js";
+
+// ============================================
+// Service Trigger Types
+// ============================================
+
+export type WorkerService =
+	| "macro_watch"
+	| "newspaper"
+	| "filings_sync"
+	| "short_interest"
+	| "sentiment"
+	| "corporate_actions"
+	| "fundamentals";
+
+export interface TriggerResult {
+	success: boolean;
+	message: string;
+	processed?: number;
+	failed?: number;
+	durationMs?: number;
+	error?: string;
+}
+
+export interface ServiceTriggers {
+	triggerMacroWatch: () => Promise<TriggerResult>;
+	triggerNewspaper: () => Promise<TriggerResult>;
+	triggerFilingsSync: () => Promise<TriggerResult>;
+	triggerShortInterest: () => Promise<TriggerResult>;
+	triggerSentiment: () => Promise<TriggerResult>;
+	triggerCorporateActions: () => Promise<TriggerResult>;
+	triggerFundamentals: () => Promise<TriggerResult>;
+}
+
+// ============================================
+// Health Server Deps
+// ============================================
 
 export interface HealthServerDeps {
 	getEnvironment: () => RuntimeEnvironment;
@@ -31,6 +67,7 @@ export interface HealthServerDeps {
 	getSynthesisScheduler: () => IndicatorSynthesisScheduler | null;
 	getStartedAt: () => Date;
 	onReload: () => Promise<void>;
+	triggers?: ServiceTriggers;
 }
 
 const DEFAULT_PORT = 3002;
@@ -62,10 +99,49 @@ export function createHealthServer(deps: HealthServerDeps, port?: number) {
 		};
 	}
 
+	const serviceTriggerMap: Record<WorkerService, (() => Promise<TriggerResult>) | undefined> = {
+		macro_watch: deps.triggers?.triggerMacroWatch,
+		newspaper: deps.triggers?.triggerNewspaper,
+		filings_sync: deps.triggers?.triggerFilingsSync,
+		short_interest: deps.triggers?.triggerShortInterest,
+		sentiment: deps.triggers?.triggerSentiment,
+		corporate_actions: deps.triggers?.triggerCorporateActions,
+		fundamentals: deps.triggers?.triggerFundamentals,
+	};
+
+	async function handleTrigger(service: WorkerService): Promise<Response> {
+		const trigger = serviceTriggerMap[service];
+		if (!trigger) {
+			return new Response(JSON.stringify({ error: "Service triggers not configured" }), {
+				status: 503,
+				headers: { "Content-Type": "application/json" },
+			});
+		}
+
+		try {
+			log.info({ service }, "Service trigger requested via HTTP");
+			const result = await trigger();
+			log.info({ service, result }, "Service trigger completed");
+
+			return new Response(JSON.stringify(result), {
+				status: result.success ? 200 : 500,
+				headers: { "Content-Type": "application/json" },
+			});
+		} catch (error) {
+			const message = error instanceof Error ? error.message : "Unknown error";
+			log.error({ service, error: message }, "Service trigger failed");
+
+			return new Response(JSON.stringify({ success: false, message, error: message }), {
+				status: 500,
+				headers: { "Content-Type": "application/json" },
+			});
+		}
+	}
+
 	function start() {
 		Bun.serve({
 			port: healthPort,
-			fetch(req) {
+			async fetch(req) {
 				const url = new URL(req.url);
 
 				if (url.pathname === "/health" || url.pathname === "/") {
@@ -85,6 +161,34 @@ export function createHealthServer(deps: HealthServerDeps, port?: number) {
 						});
 					}
 					return new Response("Method not allowed", { status: 405 });
+				}
+
+				// Service trigger endpoints: POST /trigger/:service
+				const triggerMatch = url.pathname.match(/^\/trigger\/([a-z_]+)$/);
+				if (triggerMatch) {
+					if (req.method !== "POST") {
+						return new Response("Method not allowed", { status: 405 });
+					}
+
+					const service = triggerMatch[1] as WorkerService;
+					const validServices: WorkerService[] = [
+						"macro_watch",
+						"newspaper",
+						"filings_sync",
+						"short_interest",
+						"sentiment",
+						"corporate_actions",
+						"fundamentals",
+					];
+
+					if (!validServices.includes(service)) {
+						return new Response(JSON.stringify({ error: `Unknown service: ${service}` }), {
+							status: 400,
+							headers: { "Content-Type": "application/json" },
+						});
+					}
+
+					return handleTrigger(service);
 				}
 
 				return new Response("Not found", { status: 404 });

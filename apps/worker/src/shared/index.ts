@@ -17,5 +17,11 @@ export {
 	validateHelixDBAtStartup,
 	validateHelixDBOrExit,
 } from "./database.js";
-export { createHealthServer, type HealthServerDeps } from "./health-server.js";
+export {
+	createHealthServer,
+	type HealthServerDeps,
+	type ServiceTriggers,
+	type TriggerResult,
+	type WorkerService,
+} from "./health-server.js";
 export { log } from "./logger.js";
