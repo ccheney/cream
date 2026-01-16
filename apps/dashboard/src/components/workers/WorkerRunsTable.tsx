@@ -9,7 +9,7 @@
  */
 
 import { formatDistanceToNow } from "date-fns";
-import { memo, useState } from "react";
+import { Fragment, memo, useState } from "react";
 import { ChevronIcon } from "@/components/ui/collapsible/ChevronIcon";
 import type { WorkerRun, WorkerService } from "@/hooks/queries";
 import { cn } from "@/lib/utils";
@@ -174,9 +174,8 @@ function WorkerRunsTableComponent({ runs, isLoading }: WorkerRunsTableProps) {
 						{runs.map((run) => {
 							const isExpanded = expandedRows.has(run.id);
 							return (
-								<>
+								<Fragment key={run.id}>
 									<tr
-										key={run.id}
 										className={cn(
 											"hover:bg-cream-50 dark:hover:bg-night-750 transition-colors cursor-pointer",
 											isExpanded && "bg-cream-50 dark:bg-night-750"
@@ -203,13 +202,13 @@ function WorkerRunsTableComponent({ runs, isLoading }: WorkerRunsTableProps) {
 										</td>
 									</tr>
 									{isExpanded && (
-										<tr key={`${run.id}-detail`}>
+										<tr>
 											<td colSpan={6} className="p-0">
 												<RunDetailPanel runId={run.id} service={run.service} />
 											</td>
 										</tr>
 									)}
-								</>
+								</Fragment>
 							);
 						})}
 					</tbody>

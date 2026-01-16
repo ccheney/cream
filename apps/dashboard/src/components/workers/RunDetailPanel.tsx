@@ -286,7 +286,7 @@ export function RunDetailPanel({ runId, service }: RunDetailPanelProps) {
 	const { data, isLoading, error } = useWorkerRunDetails(runId, true);
 
 	return (
-		<div className="px-6 py-4 bg-cream-25 dark:bg-night-850 border-t border-cream-200 dark:border-night-700">
+		<div className="px-6 py-4 bg-cream-50 dark:bg-night-800 border-t border-cream-200 dark:border-night-700">
 			{isLoading && <LoadingState />}
 			{error && <ErrorState message={error instanceof Error ? error.message : "Unknown error"} />}
 			{data && <RunDetailsContent data={data.data} service={service} />}
