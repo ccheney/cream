@@ -1,39 +1,20 @@
 /**
- * Positions Repository
+ * Positions Repository (Drizzle ORM)
  *
  * Data access for positions table.
- *
- * @see docs/plans/ui/04-data-requirements.md
  */
-
-import type { Row, TursoClient } from "../turso.js";
-import {
-	type PaginatedResult,
-	type PaginationOptions,
-	paginate,
-	parseJson,
-	query,
-	RepositoryError,
-	toJson,
-} from "./base.js";
+import { and, count, desc, eq, sql, sum } from "drizzle-orm";
+import { getDb, type Database } from "../db";
+import { positions } from "../schema/core-trading";
+import { RepositoryError } from "./base";
 
 // ============================================
 // Types
 // ============================================
 
-/**
- * Position side
- */
 export type PositionSide = "LONG" | "SHORT";
-
-/**
- * Position status
- */
 export type PositionStatus = "open" | "closed" | "pending";
 
-/**
- * Position entity
- */
 export interface Position {
 	id: string;
 	symbol: string;
@@ -56,11 +37,8 @@ export interface Position {
 	updatedAt: string;
 }
 
-/**
- * Create position input
- */
 export interface CreatePositionInput {
-	id: string;
+	id?: string;
 	symbol: string;
 	side: PositionSide;
 	quantity: number;
@@ -72,9 +50,6 @@ export interface CreatePositionInput {
 	environment: string;
 }
 
-/**
- * Position filter options
- */
 export interface PositionFilters {
 	symbol?: string;
 	side?: PositionSide;
@@ -84,30 +59,32 @@ export interface PositionFilters {
 }
 
 // ============================================
-// Row Mapper
+// Row Mapping
 // ============================================
 
-function mapPositionRow(row: Row): Position {
+type PositionRow = typeof positions.$inferSelect;
+
+function mapPositionRow(row: PositionRow): Position {
 	return {
-		id: row.id as string,
-		symbol: row.symbol as string,
+		id: row.id,
+		symbol: row.symbol,
 		side: row.side as PositionSide,
-		quantity: row.qty as number,
-		avgEntryPrice: row.avg_entry as number,
-		currentPrice: row.current_price as number | null,
-		unrealizedPnl: row.unrealized_pnl as number | null,
-		unrealizedPnlPct: row.unrealized_pnl_pct as number | null,
-		realizedPnl: row.realized_pnl as number | null,
-		marketValue: row.market_value as number | null,
-		costBasis: row.cost_basis as number,
-		thesisId: row.thesis_id as string | null,
-		decisionId: row.decision_id as string | null,
+		quantity: Number(row.qty),
+		avgEntryPrice: Number(row.avgEntry),
+		currentPrice: row.currentPrice ? Number(row.currentPrice) : null,
+		unrealizedPnl: row.unrealizedPnl ? Number(row.unrealizedPnl) : null,
+		unrealizedPnlPct: row.unrealizedPnlPct ? Number(row.unrealizedPnlPct) : null,
+		realizedPnl: row.realizedPnl ? Number(row.realizedPnl) : null,
+		marketValue: row.marketValue ? Number(row.marketValue) : null,
+		costBasis: row.costBasis ? Number(row.costBasis) : 0,
+		thesisId: row.thesisId,
+		decisionId: row.decisionId,
 		status: row.status as PositionStatus,
-		metadata: parseJson<Record<string, unknown>>(row.metadata, {}),
-		environment: row.environment as string,
-		openedAt: row.opened_at as string,
-		closedAt: row.closed_at as string | null,
-		updatedAt: row.updated_at as string,
+		metadata: (row.metadata as Record<string, unknown>) ?? {},
+		environment: row.environment,
+		openedAt: row.openedAt.toISOString(),
+		closedAt: row.closedAt?.toISOString() ?? null,
+		updatedAt: row.updatedAt.toISOString(),
 	};
 }
 
@@ -115,144 +92,135 @@ function mapPositionRow(row: Row): Position {
 // Repository
 // ============================================
 
-/**
- * Positions repository
- */
 export class PositionsRepository {
-	private readonly table = "positions";
+	private db: Database;
 
-	constructor(private readonly client: TursoClient) {}
-
-	/**
-	 * Create a new position
-	 */
-	async create(input: CreatePositionInput): Promise<Position> {
-		const now = new Date().toISOString();
-		const costBasis = input.quantity * input.avgEntryPrice;
-
-		try {
-			await this.client.run(
-				`INSERT INTO ${this.table} (
-          id, symbol, side, qty, avg_entry,
-          current_price, cost_basis, thesis_id, decision_id,
-          status, metadata, environment, opened_at, updated_at
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'open', ?, ?, ?, ?)`,
-				[
-					input.id,
-					input.symbol,
-					input.side,
-					input.quantity,
-					input.avgEntryPrice,
-					input.currentPrice ?? input.avgEntryPrice,
-					costBasis,
-					input.thesisId ?? null,
-					input.decisionId ?? null,
-					toJson(input.metadata ?? {}),
-					input.environment,
-					now,
-					now,
-				]
-			);
-		} catch (error) {
-			throw RepositoryError.fromSqliteError(this.table, error as Error);
-		}
-
-		return this.findById(input.id) as Promise<Position>;
+	constructor(db?: Database) {
+		this.db = db ?? getDb();
 	}
 
-	/**
-	 * Find position by ID
-	 */
+	async create(input: CreatePositionInput): Promise<Position> {
+		const costBasis = input.quantity * input.avgEntryPrice;
+
+		const [row] = await this.db
+			.insert(positions)
+			.values({
+				symbol: input.symbol,
+				side: input.side,
+				qty: String(input.quantity),
+				avgEntry: String(input.avgEntryPrice),
+				currentPrice:
+					input.currentPrice != null
+						? String(input.currentPrice)
+						: String(input.avgEntryPrice),
+				costBasis: String(costBasis),
+				thesisId: input.thesisId ?? null,
+				decisionId: input.decisionId ?? null,
+				status: "open",
+				metadata: input.metadata ?? {},
+				environment: input.environment as "BACKTEST" | "PAPER" | "LIVE",
+			})
+			.returning();
+
+		return mapPositionRow(row);
+	}
+
 	async findById(id: string): Promise<Position | null> {
-		const row = await this.client.get<Row>(`SELECT * FROM ${this.table} WHERE id = ?`, [id]);
+		const [row] = await this.db.select().from(positions).where(eq(positions.id, id)).limit(1);
 
 		return row ? mapPositionRow(row) : null;
 	}
 
-	/**
-	 * Find position by ID, throw if not found
-	 */
 	async findByIdOrThrow(id: string): Promise<Position> {
 		const position = await this.findById(id);
 		if (!position) {
-			throw RepositoryError.notFound(this.table, id);
+			throw RepositoryError.notFound("positions", id);
 		}
 		return position;
 	}
 
-	/**
-	 * Find positions with filters
-	 */
 	async findMany(
 		filters: PositionFilters = {},
-		pagination?: PaginationOptions
-	): Promise<PaginatedResult<Position>> {
-		const builder = query().orderBy("opened_at", "DESC");
+		pagination?: { limit?: number; offset?: number },
+	): Promise<{ data: Position[]; total: number; limit: number; offset: number }> {
+		const conditions = [];
 
 		if (filters.symbol) {
-			builder.eq("symbol", filters.symbol);
+			conditions.push(eq(positions.symbol, filters.symbol));
 		}
 		if (filters.side) {
-			builder.eq("side", filters.side);
+			conditions.push(eq(positions.side, filters.side));
 		}
 		if (filters.status) {
-			builder.eq("status", filters.status);
+			conditions.push(eq(positions.status, filters.status));
 		}
 		if (filters.environment) {
-			builder.eq("environment", filters.environment);
+			conditions.push(
+				eq(positions.environment, filters.environment as "BACKTEST" | "PAPER" | "LIVE"),
+			);
 		}
 		if (filters.thesisId) {
-			builder.eq("thesis_id", filters.thesisId);
+			conditions.push(eq(positions.thesisId, filters.thesisId));
 		}
 
-		const { sql, args } = builder.build(`SELECT * FROM ${this.table}`);
-		const baseSql = sql.split(" LIMIT ")[0] ?? sql;
-		const countSql = baseSql.replace("SELECT *", "SELECT COUNT(*) as count");
+		const whereClause = conditions.length > 0 ? and(...conditions) : undefined;
+		const limit = pagination?.limit ?? 20;
+		const offset = pagination?.offset ?? 0;
 
-		const result = await paginate<Row>(
-			this.client,
-			baseSql,
-			countSql,
-			args.slice(0, -2),
-			pagination
-		);
+		const [countResult] = await this.db
+			.select({ count: count() })
+			.from(positions)
+			.where(whereClause);
+
+		const rows = await this.db
+			.select()
+			.from(positions)
+			.where(whereClause)
+			.orderBy(desc(positions.openedAt))
+			.limit(limit)
+			.offset(offset);
 
 		return {
-			...result,
-			data: result.data.map(mapPositionRow),
+			data: rows.map(mapPositionRow),
+			total: countResult?.count ?? 0,
+			limit,
+			offset,
 		};
 	}
 
-	/**
-	 * Find open positions
-	 */
 	async findOpen(environment: string): Promise<Position[]> {
-		const rows = await this.client.execute<Row>(
-			`SELECT * FROM ${this.table} WHERE environment = ? AND status = 'open' ORDER BY opened_at DESC`,
-			[environment]
-		);
+		const rows = await this.db
+			.select()
+			.from(positions)
+			.where(
+				and(
+					eq(positions.environment, environment as "BACKTEST" | "PAPER" | "LIVE"),
+					eq(positions.status, "open"),
+				),
+			)
+			.orderBy(desc(positions.openedAt));
 
 		return rows.map(mapPositionRow);
 	}
 
-	/**
-	 * Find position by symbol
-	 */
 	async findBySymbol(symbol: string, environment: string): Promise<Position | null> {
-		const row = await this.client.get<Row>(
-			`SELECT * FROM ${this.table} WHERE symbol = ? AND environment = ? AND status = 'open'`,
-			[symbol, environment]
-		);
+		const [row] = await this.db
+			.select()
+			.from(positions)
+			.where(
+				and(
+					eq(positions.symbol, symbol),
+					eq(positions.environment, environment as "BACKTEST" | "PAPER" | "LIVE"),
+					eq(positions.status, "open"),
+				),
+			)
+			.limit(1);
 
 		return row ? mapPositionRow(row) : null;
 	}
 
-	/**
-	 * Update position price
-	 */
 	async updatePrice(id: string, currentPrice: number): Promise<Position> {
 		const position = await this.findByIdOrThrow(id);
-		const now = new Date().toISOString();
 
 		const marketValue = position.quantity * currentPrice;
 		const unrealizedPnl =
@@ -261,86 +229,79 @@ export class PositionsRepository {
 				: position.costBasis - marketValue;
 		const unrealizedPnlPct = (unrealizedPnl / position.costBasis) * 100;
 
-		await this.client.run(
-			`UPDATE ${this.table} SET
-        current_price = ?,
-        market_value = ?,
-        unrealized_pnl = ?,
-        unrealized_pnl_pct = ?,
-        updated_at = ?
-       WHERE id = ?`,
-			[currentPrice, marketValue, unrealizedPnl, unrealizedPnlPct, now, id]
-		);
+		const [row] = await this.db
+			.update(positions)
+			.set({
+				currentPrice: String(currentPrice),
+				marketValue: String(marketValue),
+				unrealizedPnl: String(unrealizedPnl),
+				unrealizedPnlPct: String(unrealizedPnlPct),
+				updatedAt: new Date(),
+			})
+			.where(eq(positions.id, id))
+			.returning();
 
-		return this.findByIdOrThrow(id);
+		return mapPositionRow(row);
 	}
 
-	/**
-	 * Update position quantity (partial close or add)
-	 */
 	async updateQuantity(id: string, newQuantity: number, avgPrice: number): Promise<Position> {
 		const position = await this.findByIdOrThrow(id);
-		const now = new Date().toISOString();
 
-		// Calculate new average entry price
 		const oldValue = position.quantity * position.avgEntryPrice;
 		const changeValue = (newQuantity - position.quantity) * avgPrice;
 		const newAvgEntry = (oldValue + changeValue) / newQuantity;
 		const newCostBasis = newQuantity * newAvgEntry;
 
-		await this.client.run(
-			`UPDATE ${this.table} SET
-        qty = ?,
-        avg_entry = ?,
-        cost_basis = ?,
-        updated_at = ?
-       WHERE id = ?`,
-			[newQuantity, newAvgEntry, newCostBasis, now, id]
-		);
+		const [row] = await this.db
+			.update(positions)
+			.set({
+				qty: String(newQuantity),
+				avgEntry: String(newAvgEntry),
+				costBasis: String(newCostBasis),
+				updatedAt: new Date(),
+			})
+			.where(eq(positions.id, id))
+			.returning();
 
-		return this.findByIdOrThrow(id);
+		return mapPositionRow(row);
 	}
 
-	/**
-	 * Close position
-	 */
 	async close(id: string, exitPrice: number): Promise<Position> {
 		const position = await this.findByIdOrThrow(id);
-		const now = new Date().toISOString();
 
 		const realizedPnl =
 			position.side === "LONG"
 				? (exitPrice - position.avgEntryPrice) * position.quantity
 				: (position.avgEntryPrice - exitPrice) * position.quantity;
 
-		await this.client.run(
-			`UPDATE ${this.table} SET
-        status = 'closed',
-        current_price = ?,
-        realized_pnl = ?,
-        unrealized_pnl = 0,
-        unrealized_pnl_pct = 0,
-        closed_at = ?,
-        updated_at = ?
-       WHERE id = ?`,
-			[exitPrice, realizedPnl, now, now, id]
-		);
+		const now = new Date();
 
-		return this.findByIdOrThrow(id);
+		const [row] = await this.db
+			.update(positions)
+			.set({
+				status: "closed",
+				currentPrice: String(exitPrice),
+				realizedPnl: String(realizedPnl),
+				unrealizedPnl: "0",
+				unrealizedPnlPct: "0",
+				closedAt: now,
+				updatedAt: now,
+			})
+			.where(eq(positions.id, id))
+			.returning();
+
+		return mapPositionRow(row);
 	}
 
-	/**
-	 * Delete position
-	 */
 	async delete(id: string): Promise<boolean> {
-		const result = await this.client.run(`DELETE FROM ${this.table} WHERE id = ?`, [id]);
+		const result = await this.db
+			.delete(positions)
+			.where(eq(positions.id, id))
+			.returning({ id: positions.id });
 
-		return result.changes > 0;
+		return result.length > 0;
 	}
 
-	/**
-	 * Get portfolio summary
-	 */
 	async getPortfolioSummary(environment: string): Promise<{
 		totalPositions: number;
 		longPositions: number;
@@ -349,26 +310,50 @@ export class PositionsRepository {
 		totalUnrealizedPnl: number;
 		totalCostBasis: number;
 	}> {
-		const row = await this.client.get<Row>(
-			`SELECT
-        COUNT(*) as total_positions,
-        SUM(CASE WHEN side = 'LONG' THEN 1 ELSE 0 END) as long_positions,
-        SUM(CASE WHEN side = 'SHORT' THEN 1 ELSE 0 END) as short_positions,
-        COALESCE(SUM(market_value), 0) as total_market_value,
-        COALESCE(SUM(unrealized_pnl), 0) as total_unrealized_pnl,
-        COALESCE(SUM(cost_basis), 0) as total_cost_basis
-       FROM ${this.table}
-       WHERE environment = ? AND status = 'open'`,
-			[environment]
-		);
+		const rows = await this.db
+			.select({
+				count: count(),
+				side: positions.side,
+				totalMarketValue: sql<string>`COALESCE(SUM(${positions.marketValue}::numeric), 0)`,
+				totalUnrealizedPnl: sql<string>`COALESCE(SUM(${positions.unrealizedPnl}::numeric), 0)`,
+				totalCostBasis: sql<string>`COALESCE(SUM(${positions.costBasis}::numeric), 0)`,
+			})
+			.from(positions)
+			.where(
+				and(
+					eq(positions.environment, environment as "BACKTEST" | "PAPER" | "LIVE"),
+					eq(positions.status, "open"),
+				),
+			)
+			.groupBy(positions.side);
+
+		let totalPositions = 0;
+		let longPositions = 0;
+		let shortPositions = 0;
+		let totalMarketValue = 0;
+		let totalUnrealizedPnl = 0;
+		let totalCostBasis = 0;
+
+		for (const row of rows) {
+			totalPositions += row.count;
+			totalMarketValue += Number(row.totalMarketValue);
+			totalUnrealizedPnl += Number(row.totalUnrealizedPnl);
+			totalCostBasis += Number(row.totalCostBasis);
+
+			if (row.side === "LONG") {
+				longPositions = row.count;
+			} else if (row.side === "SHORT") {
+				shortPositions = row.count;
+			}
+		}
 
 		return {
-			totalPositions: (row?.total_positions as number) ?? 0,
-			longPositions: (row?.long_positions as number) ?? 0,
-			shortPositions: (row?.short_positions as number) ?? 0,
-			totalMarketValue: (row?.total_market_value as number) ?? 0,
-			totalUnrealizedPnl: (row?.total_unrealized_pnl as number) ?? 0,
-			totalCostBasis: (row?.total_cost_basis as number) ?? 0,
+			totalPositions,
+			longPositions,
+			shortPositions,
+			totalMarketValue,
+			totalUnrealizedPnl,
+			totalCostBasis,
 		};
 	}
 }

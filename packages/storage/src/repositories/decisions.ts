@@ -1,21 +1,16 @@
 /**
- * Decisions Repository
+ * Decisions Repository (Drizzle ORM)
  *
  * Data access for trading decisions table.
- *
- * @see docs/plans/ui/04-data-requirements.md
  */
+import { and, asc, count, desc, eq, gte, inArray, lte, sql } from "drizzle-orm";
+import { getDb, type Database } from "../db";
+import { decisions } from "../schema/core-trading";
+import { RepositoryError } from "./base";
 
-import type { Row, TursoClient } from "../turso.js";
-import {
-	type PaginatedResult,
-	type PaginationOptions,
-	paginate,
-	parseJson,
-	query,
-	RepositoryError,
-	toJson,
-} from "./base.js";
+// ============================================
+// Types
+// ============================================
 
 export type DecisionStatus =
 	| "pending"
@@ -27,7 +22,6 @@ export type DecisionStatus =
 	| "cancelled";
 
 export type DecisionAction = "BUY" | "SELL" | "HOLD" | "CLOSE";
-
 export type DecisionDirection = "LONG" | "SHORT" | "FLAT";
 
 export interface Decision {
@@ -56,13 +50,13 @@ export interface Decision {
 }
 
 export interface CreateDecisionInput {
-	id: string;
+	id?: string;
 	cycleId: string;
 	symbol: string;
 	action: DecisionAction;
 	direction: DecisionDirection;
 	size: number;
-	sizeUnit: string;
+	sizeUnit?: string;
 	entryPrice?: number | null;
 	stopPrice?: number | null;
 	targetPrice?: number | null;
@@ -89,85 +83,86 @@ export interface DecisionFilters {
 	toDate?: string;
 }
 
-function mapDecisionRow(row: Row): Decision {
+// ============================================
+// Row Mapping
+// ============================================
+
+type DecisionRow = typeof decisions.$inferSelect;
+
+function mapDecisionRow(row: DecisionRow): Decision {
 	return {
-		id: row.id as string,
-		cycleId: row.cycle_id as string,
-		symbol: row.symbol as string,
+		id: row.id,
+		cycleId: row.cycleId,
+		symbol: row.symbol,
 		action: row.action as DecisionAction,
 		direction: row.direction as DecisionDirection,
-		size: row.size as number,
-		sizeUnit: row.size_unit as string,
-		entryPrice: row.entry_price as number | null,
-		stopPrice: row.stop_price as number | null,
-		targetPrice: row.target_price as number | null,
+		size: Number(row.size),
+		sizeUnit: row.sizeUnit,
+		entryPrice: row.entryPrice ? Number(row.entryPrice) : null,
+		stopPrice: row.stopPrice ? Number(row.stopPrice) : null,
+		targetPrice: row.targetPrice ? Number(row.targetPrice) : null,
 		status: row.status as DecisionStatus,
-		strategyFamily: row.strategy_family as string | null,
-		timeHorizon: row.time_horizon as string | null,
-		rationale: row.rationale as string | null,
-		bullishFactors: parseJson<string[]>(row.bullish_factors, []),
-		bearishFactors: parseJson<string[]>(row.bearish_factors, []),
-		confidenceScore: row.confidence_score as number | null,
-		riskScore: row.risk_score as number | null,
-		metadata: parseJson<Record<string, unknown>>(row.metadata, {}),
-		environment: row.environment as string,
-		createdAt: row.created_at as string,
-		updatedAt: row.updated_at as string,
+		strategyFamily: row.strategyFamily,
+		timeHorizon: row.timeHorizon,
+		rationale: row.rationale,
+		bullishFactors: (row.bullishFactors as string[]) ?? [],
+		bearishFactors: (row.bearishFactors as string[]) ?? [],
+		confidenceScore: row.confidenceScore ? Number(row.confidenceScore) : null,
+		riskScore: row.riskScore ? Number(row.riskScore) : null,
+		metadata: (row.metadata as Record<string, unknown>) ?? {},
+		environment: row.environment,
+		createdAt: row.createdAt.toISOString(),
+		updatedAt: row.updatedAt.toISOString(),
 	};
 }
 
-export class DecisionsRepository {
-	private readonly table = "decisions";
+// ============================================
+// Repository
+// ============================================
 
-	constructor(private readonly client: TursoClient) {}
+export class DecisionsRepository {
+	private db: Database;
+
+	constructor(db?: Database) {
+		this.db = db ?? getDb();
+	}
 
 	async create(input: CreateDecisionInput): Promise<Decision> {
-		const now = new Date().toISOString();
+		const [row] = await this.db
+			.insert(decisions)
+			.values({
+				cycleId: input.cycleId,
+				symbol: input.symbol,
+				action: input.action,
+				direction: input.direction,
+				size: String(input.size),
+				sizeUnit: input.sizeUnit ?? "SHARES",
+				entryPrice: input.entryPrice != null ? String(input.entryPrice) : null,
+				stopPrice: input.stopPrice != null ? String(input.stopPrice) : null,
+				targetPrice: input.targetPrice != null ? String(input.targetPrice) : null,
+				status: input.status ?? "pending",
+				strategyFamily: input.strategyFamily ?? null,
+				timeHorizon: input.timeHorizon ?? null,
+				rationale: input.rationale ?? null,
+				bullishFactors: input.bullishFactors ?? [],
+				bearishFactors: input.bearishFactors ?? [],
+				confidenceScore:
+					input.confidenceScore != null ? String(input.confidenceScore) : null,
+				riskScore: input.riskScore != null ? String(input.riskScore) : null,
+				metadata: input.metadata ?? {},
+				environment: input.environment as "BACKTEST" | "PAPER" | "LIVE",
+			})
+			.returning();
 
-		try {
-			await this.client.run(
-				`INSERT INTO ${this.table} (
-          id, cycle_id, symbol, action, direction,
-          size, size_unit, entry_price, stop_price, target_price,
-          status, strategy_family, time_horizon, rationale,
-          bullish_factors, bearish_factors,
-          confidence_score, risk_score, metadata,
-          environment, created_at, updated_at
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-				[
-					input.id,
-					input.cycleId,
-					input.symbol,
-					input.action,
-					input.direction,
-					input.size,
-					input.sizeUnit,
-					input.entryPrice ?? null,
-					input.stopPrice ?? null,
-					input.targetPrice ?? null,
-					input.status ?? "pending",
-					input.strategyFamily ?? null,
-					input.timeHorizon ?? null,
-					input.rationale ?? null,
-					toJson(input.bullishFactors ?? []),
-					toJson(input.bearishFactors ?? []),
-					input.confidenceScore ?? null,
-					input.riskScore ?? null,
-					toJson(input.metadata ?? {}),
-					input.environment,
-					now,
-					now,
-				]
-			);
-		} catch (error) {
-			throw RepositoryError.fromSqliteError(this.table, error as Error);
-		}
-
-		return this.findById(input.id) as Promise<Decision>;
+		return mapDecisionRow(row);
 	}
 
 	async findById(id: string): Promise<Decision | null> {
-		const row = await this.client.get<Row>(`SELECT * FROM ${this.table} WHERE id = ?`, [id]);
+		const [row] = await this.db
+			.select()
+			.from(decisions)
+			.where(eq(decisions.id, id))
+			.limit(1);
 
 		return row ? mapDecisionRow(row) : null;
 	}
@@ -175,200 +170,179 @@ export class DecisionsRepository {
 	async findByIdOrThrow(id: string): Promise<Decision> {
 		const decision = await this.findById(id);
 		if (!decision) {
-			throw RepositoryError.notFound(this.table, id);
+			throw RepositoryError.notFound("decisions", id);
 		}
 		return decision;
 	}
 
 	async findMany(
 		filters: DecisionFilters = {},
-		pagination?: PaginationOptions
-	): Promise<PaginatedResult<Decision>> {
-		const builder = query().orderBy("created_at", "DESC");
+		pagination?: { limit?: number; offset?: number },
+	): Promise<{ data: Decision[]; total: number; limit: number; offset: number }> {
+		const conditions = [];
 
 		if (filters.symbol) {
-			builder.eq("symbol", filters.symbol);
+			conditions.push(eq(decisions.symbol, filters.symbol));
 		}
 		if (filters.status) {
 			if (Array.isArray(filters.status)) {
-				builder.where("status", "IN", filters.status);
+				conditions.push(inArray(decisions.status, filters.status));
 			} else {
-				builder.eq("status", filters.status);
+				conditions.push(eq(decisions.status, filters.status));
 			}
 		}
 		if (filters.action) {
-			builder.eq("action", filters.action);
+			conditions.push(eq(decisions.action, filters.action));
 		}
 		if (filters.direction) {
-			builder.eq("direction", filters.direction);
+			conditions.push(eq(decisions.direction, filters.direction));
 		}
 		if (filters.environment) {
-			builder.eq("environment", filters.environment);
+			conditions.push(
+				eq(decisions.environment, filters.environment as "BACKTEST" | "PAPER" | "LIVE"),
+			);
 		}
 		if (filters.cycleId) {
-			builder.eq("cycle_id", filters.cycleId);
+			conditions.push(eq(decisions.cycleId, filters.cycleId));
 		}
 		if (filters.fromDate) {
-			builder.where("created_at", ">=", filters.fromDate);
+			conditions.push(gte(decisions.createdAt, new Date(filters.fromDate)));
 		}
 		if (filters.toDate) {
-			builder.where("created_at", "<=", filters.toDate);
+			conditions.push(lte(decisions.createdAt, new Date(filters.toDate)));
 		}
 
-		const { sql, args } = builder.build(`SELECT * FROM ${this.table}`);
-		const baseSql = sql.split(" LIMIT ")[0] ?? sql;
-		const countSql = baseSql.replace("SELECT *", "SELECT COUNT(*) as count");
+		const whereClause = conditions.length > 0 ? and(...conditions) : undefined;
+		const limit = pagination?.limit ?? 20;
+		const offset = pagination?.offset ?? 0;
 
-		const result = await paginate<Row>(
-			this.client,
-			baseSql,
-			countSql,
-			args.slice(0, -2),
-			pagination
-		);
+		const [countResult] = await this.db
+			.select({ count: count() })
+			.from(decisions)
+			.where(whereClause);
+
+		const rows = await this.db
+			.select()
+			.from(decisions)
+			.where(whereClause)
+			.orderBy(desc(decisions.createdAt))
+			.limit(limit)
+			.offset(offset);
 
 		return {
-			...result,
-			data: result.data.map(mapDecisionRow),
+			data: rows.map(mapDecisionRow),
+			total: countResult?.count ?? 0,
+			limit,
+			offset,
 		};
 	}
 
 	async findBySymbol(symbol: string, limit = 20): Promise<Decision[]> {
-		const rows = await this.client.execute<Row>(
-			`SELECT * FROM ${this.table} WHERE symbol = ? ORDER BY created_at DESC LIMIT ?`,
-			[symbol, limit]
-		);
+		const rows = await this.db
+			.select()
+			.from(decisions)
+			.where(eq(decisions.symbol, symbol))
+			.orderBy(desc(decisions.createdAt))
+			.limit(limit);
 
 		return rows.map(mapDecisionRow);
 	}
 
 	async findByCycle(cycleId: string): Promise<Decision[]> {
-		const rows = await this.client.execute<Row>(
-			`SELECT * FROM ${this.table} WHERE cycle_id = ? ORDER BY created_at DESC`,
-			[cycleId]
-		);
+		const rows = await this.db
+			.select()
+			.from(decisions)
+			.where(eq(decisions.cycleId, cycleId))
+			.orderBy(desc(decisions.createdAt));
 
 		return rows.map(mapDecisionRow);
 	}
 
 	async findRecent(environment: string, limit = 10): Promise<Decision[]> {
-		const rows = await this.client.execute<Row>(
-			`SELECT * FROM ${this.table} WHERE environment = ? ORDER BY created_at DESC LIMIT ?`,
-			[environment, limit]
-		);
+		const rows = await this.db
+			.select()
+			.from(decisions)
+			.where(eq(decisions.environment, environment as "BACKTEST" | "PAPER" | "LIVE"))
+			.orderBy(desc(decisions.createdAt))
+			.limit(limit);
 
 		return rows.map(mapDecisionRow);
 	}
 
 	async updateStatus(id: string, status: DecisionStatus): Promise<Decision> {
-		const now = new Date().toISOString();
+		const [row] = await this.db
+			.update(decisions)
+			.set({ status, updatedAt: new Date() })
+			.where(eq(decisions.id, id))
+			.returning();
 
-		const result = await this.client.run(
-			`UPDATE ${this.table} SET status = ?, updated_at = ? WHERE id = ?`,
-			[status, now, id]
-		);
-
-		if (result.changes === 0) {
-			throw RepositoryError.notFound(this.table, id);
+		if (!row) {
+			throw RepositoryError.notFound("decisions", id);
 		}
 
-		return this.findByIdOrThrow(id);
+		return mapDecisionRow(row);
 	}
 
 	async update(
 		id: string,
-		updates: Partial<Omit<CreateDecisionInput, "id" | "cycleId" | "environment">>
+		updates: Partial<Omit<CreateDecisionInput, "id" | "cycleId" | "environment">>,
 	): Promise<Decision> {
-		const now = new Date().toISOString();
-		const fields: string[] = ["updated_at = ?"];
-		const args: unknown[] = [now];
+		const updateData: Partial<typeof decisions.$inferInsert> = {
+			updatedAt: new Date(),
+		};
 
-		if (updates.symbol !== undefined) {
-			fields.push("symbol = ?");
-			args.push(updates.symbol);
-		}
-		if (updates.action !== undefined) {
-			fields.push("action = ?");
-			args.push(updates.action);
-		}
-		if (updates.direction !== undefined) {
-			fields.push("direction = ?");
-			args.push(updates.direction);
-		}
-		if (updates.size !== undefined) {
-			fields.push("size = ?");
-			args.push(updates.size);
-		}
-		if (updates.sizeUnit !== undefined) {
-			fields.push("size_unit = ?");
-			args.push(updates.sizeUnit);
-		}
-		if (updates.entryPrice !== undefined) {
-			fields.push("entry_price = ?");
-			args.push(updates.entryPrice);
-		}
-		if (updates.stopPrice !== undefined) {
-			fields.push("stop_price = ?");
-			args.push(updates.stopPrice);
-		}
-		if (updates.targetPrice !== undefined) {
-			fields.push("target_price = ?");
-			args.push(updates.targetPrice);
-		}
-		if (updates.status !== undefined) {
-			fields.push("status = ?");
-			args.push(updates.status);
-		}
-		if (updates.rationale !== undefined) {
-			fields.push("rationale = ?");
-			args.push(updates.rationale);
-		}
-		if (updates.bullishFactors !== undefined) {
-			fields.push("bullish_factors = ?");
-			args.push(toJson(updates.bullishFactors));
-		}
-		if (updates.bearishFactors !== undefined) {
-			fields.push("bearish_factors = ?");
-			args.push(toJson(updates.bearishFactors));
-		}
-		if (updates.confidenceScore !== undefined) {
-			fields.push("confidence_score = ?");
-			args.push(updates.confidenceScore);
-		}
-		if (updates.riskScore !== undefined) {
-			fields.push("risk_score = ?");
-			args.push(updates.riskScore);
-		}
-		if (updates.metadata !== undefined) {
-			fields.push("metadata = ?");
-			args.push(toJson(updates.metadata));
+		if (updates.symbol !== undefined) updateData.symbol = updates.symbol;
+		if (updates.action !== undefined) updateData.action = updates.action;
+		if (updates.direction !== undefined) updateData.direction = updates.direction;
+		if (updates.size !== undefined) updateData.size = String(updates.size);
+		if (updates.sizeUnit !== undefined)
+			updateData.sizeUnit = updates.sizeUnit as "SHARES" | "CONTRACTS" | "NOTIONAL";
+		if (updates.entryPrice !== undefined)
+			updateData.entryPrice = updates.entryPrice != null ? String(updates.entryPrice) : null;
+		if (updates.stopPrice !== undefined)
+			updateData.stopPrice = updates.stopPrice != null ? String(updates.stopPrice) : null;
+		if (updates.targetPrice !== undefined)
+			updateData.targetPrice =
+				updates.targetPrice != null ? String(updates.targetPrice) : null;
+		if (updates.status !== undefined) updateData.status = updates.status;
+		if (updates.rationale !== undefined) updateData.rationale = updates.rationale;
+		if (updates.bullishFactors !== undefined) updateData.bullishFactors = updates.bullishFactors;
+		if (updates.bearishFactors !== undefined) updateData.bearishFactors = updates.bearishFactors;
+		if (updates.confidenceScore !== undefined)
+			updateData.confidenceScore =
+				updates.confidenceScore != null ? String(updates.confidenceScore) : null;
+		if (updates.riskScore !== undefined)
+			updateData.riskScore = updates.riskScore != null ? String(updates.riskScore) : null;
+		if (updates.metadata !== undefined) updateData.metadata = updates.metadata;
+
+		const [row] = await this.db
+			.update(decisions)
+			.set(updateData)
+			.where(eq(decisions.id, id))
+			.returning();
+
+		if (!row) {
+			throw RepositoryError.notFound("decisions", id);
 		}
 
-		args.push(id);
-
-		const result = await this.client.run(
-			`UPDATE ${this.table} SET ${fields.join(", ")} WHERE id = ?`,
-			args
-		);
-
-		if (result.changes === 0) {
-			throw RepositoryError.notFound(this.table, id);
-		}
-
-		return this.findByIdOrThrow(id);
+		return mapDecisionRow(row);
 	}
 
 	async delete(id: string): Promise<boolean> {
-		const result = await this.client.run(`DELETE FROM ${this.table} WHERE id = ?`, [id]);
+		const result = await this.db
+			.delete(decisions)
+			.where(eq(decisions.id, id))
+			.returning({ id: decisions.id });
 
-		return result.changes > 0;
+		return result.length > 0;
 	}
 
 	async countByStatus(environment: string): Promise<Record<DecisionStatus, number>> {
-		const rows = await this.client.execute<{ status: string; count: number }>(
-			`SELECT status, COUNT(*) as count FROM ${this.table} WHERE environment = ? GROUP BY status`,
-			[environment]
-		);
+		const rows = await this.db
+			.select({ status: decisions.status, count: count() })
+			.from(decisions)
+			.where(eq(decisions.environment, environment as "BACKTEST" | "PAPER" | "LIVE"))
+			.groupBy(decisions.status);
 
 		const result: Record<string, number> = {
 			pending: 0,

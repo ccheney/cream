@@ -1,39 +1,19 @@
 /**
- * Orders Repository
+ * Orders Repository (Drizzle ORM)
  *
  * Data access for orders table.
- *
- * @see docs/plans/ui/04-data-requirements.md
  */
-
-import type { Row, TursoClient } from "../turso.js";
-import {
-	type PaginatedResult,
-	type PaginationOptions,
-	paginate,
-	parseJson,
-	query,
-	RepositoryError,
-	toJson,
-} from "./base.js";
+import { and, count, desc, eq, gte, inArray, lte, sql } from "drizzle-orm";
+import { getDb, type Database } from "../db";
+import { orders } from "../schema/core-trading";
+import { RepositoryError } from "./base";
 
 // ============================================
 // Types
 // ============================================
 
-/**
- * Order side
- */
 export type OrderSide = "BUY" | "SELL";
-
-/**
- * Order type
- */
 export type OrderType = "MARKET" | "LIMIT" | "STOP" | "STOP_LIMIT";
-
-/**
- * Order status
- */
 export type OrderStatus =
 	| "pending"
 	| "submitted"
@@ -43,15 +23,8 @@ export type OrderStatus =
 	| "cancelled"
 	| "rejected"
 	| "expired";
+export type TimeInForce = "day" | "gtc" | "ioc" | "fok";
 
-/**
- * Time in force
- */
-export type TimeInForce = "DAY" | "GTC" | "IOC" | "FOK";
-
-/**
- * Order entity
- */
 export interface Order {
 	id: string;
 	decisionId: string | null;
@@ -66,21 +39,16 @@ export interface Order {
 	status: OrderStatus;
 	timeInForce: TimeInForce;
 	brokerOrderId: string | null;
-	brokerStatus: string | null;
-	metadata: Record<string, unknown>;
+	commission: number | null;
 	environment: string;
 	createdAt: string;
 	submittedAt: string | null;
 	filledAt: string | null;
 	cancelledAt: string | null;
-	updatedAt: string;
 }
 
-/**
- * Create order input
- */
 export interface CreateOrderInput {
-	id: string;
+	id?: string;
 	decisionId?: string | null;
 	symbol: string;
 	side: OrderSide;
@@ -89,13 +57,9 @@ export interface CreateOrderInput {
 	limitPrice?: number | null;
 	stopPrice?: number | null;
 	timeInForce?: TimeInForce;
-	metadata?: Record<string, unknown>;
 	environment: string;
 }
 
-/**
- * Order filter options
- */
 export interface OrderFilters {
 	symbol?: string;
 	side?: OrderSide;
@@ -108,32 +72,32 @@ export interface OrderFilters {
 }
 
 // ============================================
-// Row Mapper
+// Row Mapping
 // ============================================
 
-function mapOrderRow(row: Row): Order {
+type OrderRow = typeof orders.$inferSelect;
+
+function mapOrderRow(row: OrderRow): Order {
 	return {
-		id: row.id as string,
-		decisionId: row.decision_id as string | null,
-		symbol: row.symbol as string,
+		id: row.id,
+		decisionId: row.decisionId,
+		symbol: row.symbol,
 		side: row.side as OrderSide,
-		quantity: row.qty as number,
-		filledQuantity: (row.filled_qty as number) ?? 0,
-		orderType: row.type as OrderType,
-		limitPrice: row.limit_price as number | null,
-		stopPrice: row.stop_price as number | null,
-		avgFillPrice: row.avg_fill_price as number | null,
+		quantity: Number(row.qty),
+		filledQuantity: Number(row.filledQty ?? 0),
+		orderType: row.orderType as OrderType,
+		limitPrice: row.limitPrice ? Number(row.limitPrice) : null,
+		stopPrice: row.stopPrice ? Number(row.stopPrice) : null,
+		avgFillPrice: row.filledAvgPrice ? Number(row.filledAvgPrice) : null,
 		status: row.status as OrderStatus,
-		timeInForce: (row.time_in_force as TimeInForce) ?? "DAY",
-		brokerOrderId: row.broker_order_id as string | null,
-		brokerStatus: row.broker_status as string | null,
-		metadata: parseJson<Record<string, unknown>>(row.metadata, {}),
-		environment: row.environment as string,
-		createdAt: row.created_at as string,
-		submittedAt: row.submitted_at as string | null,
-		filledAt: row.filled_at as string | null,
-		cancelledAt: row.cancelled_at as string | null,
-		updatedAt: row.updated_at as string,
+		timeInForce: row.timeInForce as TimeInForce,
+		brokerOrderId: row.brokerOrderId,
+		commission: row.commission ? Number(row.commission) : null,
+		environment: row.environment,
+		createdAt: row.createdAt.toISOString(),
+		submittedAt: row.submittedAt?.toISOString() ?? null,
+		filledAt: row.filledAt?.toISOString() ?? null,
+		cancelledAt: row.cancelledAt?.toISOString() ?? null,
 	};
 }
 
@@ -141,272 +105,230 @@ function mapOrderRow(row: Row): Order {
 // Repository
 // ============================================
 
-/**
- * Orders repository
- */
 export class OrdersRepository {
-	private readonly table = "orders";
+	private db: Database;
 
-	constructor(private readonly client: TursoClient) {}
-
-	/**
-	 * Create a new order
-	 */
-	async create(input: CreateOrderInput): Promise<Order> {
-		const now = new Date().toISOString();
-
-		try {
-			await this.client.run(
-				`INSERT INTO ${this.table} (
-          id, decision_id, symbol, side, qty,
-          type, limit_price, stop_price, status, time_in_force,
-          metadata, environment, created_at, updated_at
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'pending', ?, ?, ?, ?, ?)`,
-				[
-					input.id,
-					input.decisionId ?? null,
-					input.symbol,
-					input.side,
-					input.quantity,
-					input.orderType,
-					input.limitPrice ?? null,
-					input.stopPrice ?? null,
-					input.timeInForce ?? "DAY",
-					toJson(input.metadata ?? {}),
-					input.environment,
-					now,
-					now,
-				]
-			);
-		} catch (error) {
-			throw RepositoryError.fromSqliteError(this.table, error as Error);
-		}
-
-		return this.findById(input.id) as Promise<Order>;
+	constructor(db?: Database) {
+		this.db = db ?? getDb();
 	}
 
-	/**
-	 * Find order by ID
-	 */
+	async create(input: CreateOrderInput): Promise<Order> {
+		const [row] = await this.db
+			.insert(orders)
+			.values({
+				decisionId: input.decisionId ?? null,
+				symbol: input.symbol,
+				side: input.side,
+				qty: String(input.quantity),
+				orderType: input.orderType,
+				limitPrice: input.limitPrice != null ? String(input.limitPrice) : null,
+				stopPrice: input.stopPrice != null ? String(input.stopPrice) : null,
+				status: "pending",
+				timeInForce: input.timeInForce ?? "day",
+				environment: input.environment as "BACKTEST" | "PAPER" | "LIVE",
+			})
+			.returning();
+
+		return mapOrderRow(row);
+	}
+
 	async findById(id: string): Promise<Order | null> {
-		const row = await this.client.get<Row>(`SELECT * FROM ${this.table} WHERE id = ?`, [id]);
+		const [row] = await this.db.select().from(orders).where(eq(orders.id, id)).limit(1);
 
 		return row ? mapOrderRow(row) : null;
 	}
 
-	/**
-	 * Find order by ID, throw if not found
-	 */
 	async findByIdOrThrow(id: string): Promise<Order> {
 		const order = await this.findById(id);
 		if (!order) {
-			throw RepositoryError.notFound(this.table, id);
+			throw RepositoryError.notFound("orders", id);
 		}
 		return order;
 	}
 
-	/**
-	 * Find order by broker order ID
-	 */
 	async findByBrokerOrderId(brokerOrderId: string): Promise<Order | null> {
-		const row = await this.client.get<Row>(
-			`SELECT * FROM ${this.table} WHERE broker_order_id = ?`,
-			[brokerOrderId]
-		);
+		const [row] = await this.db
+			.select()
+			.from(orders)
+			.where(eq(orders.brokerOrderId, brokerOrderId))
+			.limit(1);
 
 		return row ? mapOrderRow(row) : null;
 	}
 
-	/**
-	 * Find orders with filters
-	 */
 	async findMany(
 		filters: OrderFilters = {},
-		pagination?: PaginationOptions
-	): Promise<PaginatedResult<Order>> {
-		const builder = query().orderBy("created_at", "DESC");
+		pagination?: { limit?: number; offset?: number },
+	): Promise<{ data: Order[]; total: number; limit: number; offset: number }> {
+		const conditions = [];
 
 		if (filters.symbol) {
-			builder.eq("symbol", filters.symbol);
+			conditions.push(eq(orders.symbol, filters.symbol));
 		}
 		if (filters.side) {
-			builder.eq("side", filters.side);
+			conditions.push(eq(orders.side, filters.side));
 		}
 		if (filters.orderType) {
-			builder.eq("type", filters.orderType);
+			conditions.push(eq(orders.orderType, filters.orderType));
 		}
 		if (filters.status) {
 			if (Array.isArray(filters.status)) {
-				builder.where("status", "IN", filters.status);
+				conditions.push(inArray(orders.status, filters.status));
 			} else {
-				builder.eq("status", filters.status);
+				conditions.push(eq(orders.status, filters.status));
 			}
 		}
 		if (filters.decisionId) {
-			builder.eq("decision_id", filters.decisionId);
+			conditions.push(eq(orders.decisionId, filters.decisionId));
 		}
 		if (filters.environment) {
-			builder.eq("environment", filters.environment);
+			conditions.push(
+				eq(orders.environment, filters.environment as "BACKTEST" | "PAPER" | "LIVE"),
+			);
 		}
 		if (filters.fromDate) {
-			builder.where("created_at", ">=", filters.fromDate);
+			conditions.push(gte(orders.createdAt, new Date(filters.fromDate)));
 		}
 		if (filters.toDate) {
-			builder.where("created_at", "<=", filters.toDate);
+			conditions.push(lte(orders.createdAt, new Date(filters.toDate)));
 		}
 
-		const { sql, args } = builder.build(`SELECT * FROM ${this.table}`);
-		const baseSql = sql.split(" LIMIT ")[0] ?? sql;
-		const countSql = baseSql.replace("SELECT *", "SELECT COUNT(*) as count");
+		const whereClause = conditions.length > 0 ? and(...conditions) : undefined;
+		const limit = pagination?.limit ?? 20;
+		const offset = pagination?.offset ?? 0;
 
-		const result = await paginate<Row>(
-			this.client,
-			baseSql,
-			countSql,
-			args.slice(0, -2),
-			pagination
-		);
+		const [countResult] = await this.db
+			.select({ count: count() })
+			.from(orders)
+			.where(whereClause);
+
+		const rows = await this.db
+			.select()
+			.from(orders)
+			.where(whereClause)
+			.orderBy(desc(orders.createdAt))
+			.limit(limit)
+			.offset(offset);
 
 		return {
-			...result,
-			data: result.data.map(mapOrderRow),
+			data: rows.map(mapOrderRow),
+			total: countResult?.count ?? 0,
+			limit,
+			offset,
 		};
 	}
 
-	/**
-	 * Find orders by decision
-	 */
 	async findByDecision(decisionId: string): Promise<Order[]> {
-		const rows = await this.client.execute<Row>(
-			`SELECT * FROM ${this.table} WHERE decision_id = ? ORDER BY created_at DESC`,
-			[decisionId]
-		);
+		const rows = await this.db
+			.select()
+			.from(orders)
+			.where(eq(orders.decisionId, decisionId))
+			.orderBy(desc(orders.createdAt));
 
 		return rows.map(mapOrderRow);
 	}
 
-	/**
-	 * Find active orders (pending, submitted, accepted, partially_filled)
-	 */
 	async findActive(environment: string): Promise<Order[]> {
-		const rows = await this.client.execute<Row>(
-			`SELECT * FROM ${this.table}
-       WHERE environment = ? AND status IN ('pending', 'submitted', 'accepted', 'partially_filled')
-       ORDER BY created_at DESC`,
-			[environment]
-		);
+		const rows = await this.db
+			.select()
+			.from(orders)
+			.where(
+				and(
+					eq(orders.environment, environment as "BACKTEST" | "PAPER" | "LIVE"),
+					inArray(orders.status, ["pending", "submitted", "accepted", "partially_filled"]),
+				),
+			)
+			.orderBy(desc(orders.createdAt));
 
 		return rows.map(mapOrderRow);
 	}
 
-	/**
-	 * Find recent orders
-	 */
 	async findRecent(environment: string, limit = 20): Promise<Order[]> {
-		const rows = await this.client.execute<Row>(
-			`SELECT * FROM ${this.table} WHERE environment = ? ORDER BY created_at DESC LIMIT ?`,
-			[environment, limit]
-		);
+		const rows = await this.db
+			.select()
+			.from(orders)
+			.where(eq(orders.environment, environment as "BACKTEST" | "PAPER" | "LIVE"))
+			.orderBy(desc(orders.createdAt))
+			.limit(limit);
 
 		return rows.map(mapOrderRow);
 	}
 
-	/**
-	 * Update order status
-	 */
 	async updateStatus(
 		id: string,
 		status: OrderStatus,
 		brokerOrderId?: string,
-		brokerStatus?: string
 	): Promise<Order> {
-		const now = new Date().toISOString();
-		const fields: string[] = ["status = ?", "updated_at = ?"];
-		const args: unknown[] = [status, now];
+		const updateData: Partial<typeof orders.$inferInsert> = { status };
 
 		if (brokerOrderId !== undefined) {
-			fields.push("broker_order_id = ?");
-			args.push(brokerOrderId);
-		}
-		if (brokerStatus !== undefined) {
-			fields.push("broker_status = ?");
-			args.push(brokerStatus);
+			updateData.brokerOrderId = brokerOrderId;
 		}
 
-		// Set timestamp fields based on status
 		if (status === "submitted") {
-			fields.push("submitted_at = ?");
-			args.push(now);
+			updateData.submittedAt = new Date();
 		} else if (status === "filled") {
-			fields.push("filled_at = ?");
-			args.push(now);
+			updateData.filledAt = new Date();
 		} else if (status === "cancelled") {
-			fields.push("cancelled_at = ?");
-			args.push(now);
+			updateData.cancelledAt = new Date();
 		}
 
-		args.push(id);
+		const [row] = await this.db
+			.update(orders)
+			.set(updateData)
+			.where(eq(orders.id, id))
+			.returning();
 
-		const result = await this.client.run(
-			`UPDATE ${this.table} SET ${fields.join(", ")} WHERE id = ?`,
-			args
-		);
-
-		if (result.changes === 0) {
-			throw RepositoryError.notFound(this.table, id);
+		if (!row) {
+			throw RepositoryError.notFound("orders", id);
 		}
 
-		return this.findByIdOrThrow(id);
+		return mapOrderRow(row);
 	}
 
-	/**
-	 * Update fill information
-	 */
 	async updateFill(id: string, filledQty: number, avgFillPrice: number): Promise<Order> {
 		const order = await this.findByIdOrThrow(id);
-		const now = new Date().toISOString();
 
 		const status: OrderStatus = filledQty >= order.quantity ? "filled" : "partially_filled";
 
-		const fields = ["filled_qty = ?", "avg_fill_price = ?", "status = ?", "updated_at = ?"];
-		const args = [filledQty, avgFillPrice, status, now];
+		const updateData: Partial<typeof orders.$inferInsert> = {
+			filledQty: String(filledQty),
+			filledAvgPrice: String(avgFillPrice),
+			status,
+		};
 
 		if (status === "filled") {
-			fields.push("filled_at = ?");
-			args.push(now);
+			updateData.filledAt = new Date();
 		}
 
-		args.push(id);
+		const [row] = await this.db
+			.update(orders)
+			.set(updateData)
+			.where(eq(orders.id, id))
+			.returning();
 
-		await this.client.run(`UPDATE ${this.table} SET ${fields.join(", ")} WHERE id = ?`, args);
-
-		return this.findByIdOrThrow(id);
+		return mapOrderRow(row);
 	}
 
-	/**
-	 * Cancel order
-	 */
 	async cancel(id: string): Promise<Order> {
 		return this.updateStatus(id, "cancelled");
 	}
 
-	/**
-	 * Delete order
-	 */
 	async delete(id: string): Promise<boolean> {
-		const result = await this.client.run(`DELETE FROM ${this.table} WHERE id = ?`, [id]);
+		const result = await this.db
+			.delete(orders)
+			.where(eq(orders.id, id))
+			.returning({ id: orders.id });
 
-		return result.changes > 0;
+		return result.length > 0;
 	}
 
-	/**
-	 * Count orders by status
-	 */
 	async countByStatus(environment: string): Promise<Record<OrderStatus, number>> {
-		const rows = await this.client.execute<{ status: string; count: number }>(
-			`SELECT status, COUNT(*) as count FROM ${this.table} WHERE environment = ? GROUP BY status`,
-			[environment]
-		);
+		const rows = await this.db
+			.select({ status: orders.status, count: count() })
+			.from(orders)
+			.where(eq(orders.environment, environment as "BACKTEST" | "PAPER" | "LIVE"))
+			.groupBy(orders.status);
 
 		const result: Record<string, number> = {
 			pending: 0,
