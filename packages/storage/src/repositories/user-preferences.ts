@@ -1,58 +1,31 @@
 /**
- * User Preferences Repository
+ * User Preferences Repository (Drizzle ORM)
  *
  * Data access for user_preferences table. Manages user dashboard preferences
  * including theme, chart settings, notification settings, and UI state.
  *
  * @see apps/dashboard-api/src/routes/preferences.ts
  */
-
-import type { Row, TursoClient } from "../turso.js";
-import { fromBoolean, parseJson, RepositoryError, toBoolean, toJson } from "./base.js";
+import { eq } from "drizzle-orm";
+import { getDb, type Database } from "../db";
+import { userPreferences, type NotificationSettings } from "../schema/user-settings";
 
 // ============================================
 // Types
 // ============================================
 
-/**
- * Theme options
- */
 export type Theme = "light" | "dark" | "system";
 
-/**
- * Chart timeframe options
- */
 export type ChartTimeframe = "1D" | "1W" | "1M" | "3M" | "6M" | "1Y" | "ALL";
 
-/**
- * Portfolio view options
- */
 export type PortfolioView = "table" | "cards";
 
-/**
- * Date format options
- */
 export type DateFormat = "MM/DD/YYYY" | "DD/MM/YYYY" | "YYYY-MM-DD";
 
-/**
- * Time format options
- */
 export type TimeFormat = "12h" | "24h";
 
-/**
- * Notification settings
- */
-export interface NotificationSettings {
-	emailAlerts: boolean;
-	pushNotifications: boolean;
-	tradeConfirmations: boolean;
-	dailySummary: boolean;
-	riskAlerts: boolean;
-}
+export type { NotificationSettings };
 
-/**
- * User preferences entity
- */
 export interface UserPreferences {
 	id: string;
 	userId: string;
@@ -69,11 +42,7 @@ export interface UserPreferences {
 	updatedAt: string;
 }
 
-/**
- * Create user preferences input
- */
 export interface CreateUserPreferencesInput {
-	id: string;
 	userId: string;
 	theme?: Theme;
 	chartTimeframe?: ChartTimeframe;
@@ -86,9 +55,6 @@ export interface CreateUserPreferencesInput {
 	currency?: string;
 }
 
-/**
- * Update user preferences input (partial)
- */
 export interface UpdateUserPreferencesInput {
 	theme?: Theme;
 	chartTimeframe?: ChartTimeframe;
@@ -126,27 +92,26 @@ const DEFAULT_PREFERENCES: Omit<UserPreferences, "id" | "userId" | "createdAt" |
 };
 
 // ============================================
-// Row Mapper
+// Row Mapping
 // ============================================
 
-function mapUserPreferencesRow(row: Row): UserPreferences {
+type UserPreferencesRow = typeof userPreferences.$inferSelect;
+
+function mapUserPreferencesRow(row: UserPreferencesRow): UserPreferences {
 	return {
-		id: row.id as string,
-		userId: row.user_id as string,
+		id: row.id,
+		userId: row.userId,
 		theme: row.theme as Theme,
-		chartTimeframe: row.chart_timeframe as ChartTimeframe,
-		feedFilters: parseJson<string[]>(row.feed_filters, []),
-		sidebarCollapsed: toBoolean(row.sidebar_collapsed),
-		notificationSettings: parseJson<NotificationSettings>(
-			row.notification_settings,
-			DEFAULT_NOTIFICATION_SETTINGS
-		),
-		defaultPortfolioView: row.default_portfolio_view as PortfolioView,
-		dateFormat: row.date_format as DateFormat,
-		timeFormat: row.time_format as TimeFormat,
-		currency: row.currency as string,
-		createdAt: row.created_at as string,
-		updatedAt: row.updated_at as string,
+		chartTimeframe: row.chartTimeframe as ChartTimeframe,
+		feedFilters: (row.feedFilters as string[]) ?? [],
+		sidebarCollapsed: row.sidebarCollapsed,
+		notificationSettings: (row.notificationSettings as NotificationSettings) ?? DEFAULT_NOTIFICATION_SETTINGS,
+		defaultPortfolioView: row.defaultPortfolioView as PortfolioView,
+		dateFormat: row.dateFormat as DateFormat,
+		timeFormat: row.timeFormat as TimeFormat,
+		currency: row.currency,
+		createdAt: row.createdAt.toISOString(),
+		updatedAt: row.updatedAt.toISOString(),
 	};
 }
 
@@ -154,223 +119,155 @@ function mapUserPreferencesRow(row: Row): UserPreferences {
 // Repository
 // ============================================
 
-/**
- * User preferences repository
- */
 export class UserPreferencesRepository {
-	private readonly table = "user_preferences";
+	private db: Database;
 
-	constructor(private readonly client: TursoClient) {}
+	constructor(db?: Database) {
+		this.db = db ?? getDb();
+	}
 
-	/**
-	 * Create new user preferences
-	 */
 	async create(input: CreateUserPreferencesInput): Promise<UserPreferences> {
-		const now = new Date().toISOString();
 		const notificationSettings = {
 			...DEFAULT_NOTIFICATION_SETTINGS,
 			...(input.notificationSettings ?? {}),
 		};
 
-		try {
-			await this.client.run(
-				`INSERT INTO ${this.table} (
-          id, user_id, theme, chart_timeframe, feed_filters,
-          sidebar_collapsed, notification_settings, default_portfolio_view,
-          date_format, time_format, currency, created_at, updated_at
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-				[
-					input.id,
-					input.userId,
-					input.theme ?? DEFAULT_PREFERENCES.theme,
-					input.chartTimeframe ?? DEFAULT_PREFERENCES.chartTimeframe,
-					toJson(input.feedFilters ?? DEFAULT_PREFERENCES.feedFilters),
-					fromBoolean(input.sidebarCollapsed ?? DEFAULT_PREFERENCES.sidebarCollapsed),
-					toJson(notificationSettings),
-					input.defaultPortfolioView ?? DEFAULT_PREFERENCES.defaultPortfolioView,
-					input.dateFormat ?? DEFAULT_PREFERENCES.dateFormat,
-					input.timeFormat ?? DEFAULT_PREFERENCES.timeFormat,
-					input.currency ?? DEFAULT_PREFERENCES.currency,
-					now,
-					now,
-				]
-			);
-		} catch (error) {
-			throw RepositoryError.fromSqliteError(this.table, error as Error);
-		}
+		const [row] = await this.db
+			.insert(userPreferences)
+			.values({
+				userId: input.userId,
+				theme: (input.theme ?? DEFAULT_PREFERENCES.theme) as typeof userPreferences.$inferInsert.theme,
+				chartTimeframe: (input.chartTimeframe ?? DEFAULT_PREFERENCES.chartTimeframe) as typeof userPreferences.$inferInsert.chartTimeframe,
+				feedFilters: input.feedFilters ?? DEFAULT_PREFERENCES.feedFilters,
+				sidebarCollapsed: input.sidebarCollapsed ?? DEFAULT_PREFERENCES.sidebarCollapsed,
+				notificationSettings,
+				defaultPortfolioView: (input.defaultPortfolioView ?? DEFAULT_PREFERENCES.defaultPortfolioView) as typeof userPreferences.$inferInsert.defaultPortfolioView,
+				dateFormat: (input.dateFormat ?? DEFAULT_PREFERENCES.dateFormat) as typeof userPreferences.$inferInsert.dateFormat,
+				timeFormat: (input.timeFormat ?? DEFAULT_PREFERENCES.timeFormat) as typeof userPreferences.$inferInsert.timeFormat,
+				currency: input.currency ?? DEFAULT_PREFERENCES.currency,
+			})
+			.returning();
 
-		return this.findById(input.id) as Promise<UserPreferences>;
+		return mapUserPreferencesRow(row);
 	}
 
-	/**
-	 * Find preferences by ID
-	 */
 	async findById(id: string): Promise<UserPreferences | null> {
-		const row = await this.client.get<Row>(`SELECT * FROM ${this.table} WHERE id = ?`, [id]);
+		const [row] = await this.db
+			.select()
+			.from(userPreferences)
+			.where(eq(userPreferences.id, id))
+			.limit(1);
 
 		return row ? mapUserPreferencesRow(row) : null;
 	}
 
-	/**
-	 * Find preferences by user ID
-	 */
 	async findByUserId(userId: string): Promise<UserPreferences | null> {
-		const row = await this.client.get<Row>(`SELECT * FROM ${this.table} WHERE user_id = ?`, [
-			userId,
-		]);
+		const [row] = await this.db
+			.select()
+			.from(userPreferences)
+			.where(eq(userPreferences.userId, userId))
+			.limit(1);
 
 		return row ? mapUserPreferencesRow(row) : null;
 	}
 
-	/**
-	 * Get or create preferences for a user
-	 * Returns existing preferences or creates new ones with defaults
-	 */
 	async getOrCreate(userId: string): Promise<UserPreferences> {
 		const existing = await this.findByUserId(userId);
-
 		if (existing) {
 			return existing;
 		}
 
-		// Create new preferences with defaults
-		const id = `pref_${userId}_${Date.now()}`;
-		return this.create({ id, userId });
+		return this.create({ userId });
 	}
 
-	/**
-	 * Update user preferences
-	 */
 	async update(userId: string, input: UpdateUserPreferencesInput): Promise<UserPreferences> {
 		const existing = await this.findByUserId(userId);
 
 		if (!existing) {
-			throw RepositoryError.notFound(this.table, userId);
+			throw new Error(`User preferences not found: ${userId}`);
 		}
 
-		const now = new Date().toISOString();
-		const updateFields: string[] = [];
-		const updateValues: unknown[] = [];
+		const updates: Record<string, unknown> = {
+			updatedAt: new Date(),
+		};
 
 		if (input.theme !== undefined) {
-			updateFields.push("theme = ?");
-			updateValues.push(input.theme);
+			updates.theme = input.theme;
 		}
 		if (input.chartTimeframe !== undefined) {
-			updateFields.push("chart_timeframe = ?");
-			updateValues.push(input.chartTimeframe);
+			updates.chartTimeframe = input.chartTimeframe;
 		}
 		if (input.feedFilters !== undefined) {
-			updateFields.push("feed_filters = ?");
-			updateValues.push(toJson(input.feedFilters));
+			updates.feedFilters = input.feedFilters;
 		}
 		if (input.sidebarCollapsed !== undefined) {
-			updateFields.push("sidebar_collapsed = ?");
-			updateValues.push(fromBoolean(input.sidebarCollapsed));
+			updates.sidebarCollapsed = input.sidebarCollapsed;
 		}
 		if (input.notificationSettings !== undefined) {
-			// Merge with existing notification settings
 			const mergedSettings = {
 				...existing.notificationSettings,
 				...input.notificationSettings,
 			};
-			updateFields.push("notification_settings = ?");
-			updateValues.push(toJson(mergedSettings));
+			updates.notificationSettings = mergedSettings;
 		}
 		if (input.defaultPortfolioView !== undefined) {
-			updateFields.push("default_portfolio_view = ?");
-			updateValues.push(input.defaultPortfolioView);
+			updates.defaultPortfolioView = input.defaultPortfolioView;
 		}
 		if (input.dateFormat !== undefined) {
-			updateFields.push("date_format = ?");
-			updateValues.push(input.dateFormat);
+			updates.dateFormat = input.dateFormat;
 		}
 		if (input.timeFormat !== undefined) {
-			updateFields.push("time_format = ?");
-			updateValues.push(input.timeFormat);
+			updates.timeFormat = input.timeFormat;
 		}
 		if (input.currency !== undefined) {
-			updateFields.push("currency = ?");
-			updateValues.push(input.currency);
+			updates.currency = input.currency;
 		}
 
-		if (updateFields.length > 0) {
-			updateFields.push("updated_at = ?");
-			updateValues.push(now);
-			updateValues.push(existing.id);
+		const [row] = await this.db
+			.update(userPreferences)
+			.set(updates)
+			.where(eq(userPreferences.id, existing.id))
+			.returning();
 
-			try {
-				await this.client.run(
-					`UPDATE ${this.table} SET ${updateFields.join(", ")} WHERE id = ?`,
-					updateValues
-				);
-			} catch (error) {
-				throw RepositoryError.fromSqliteError(this.table, error as Error);
-			}
-		}
-
-		return this.findById(existing.id) as Promise<UserPreferences>;
+		return mapUserPreferencesRow(row);
 	}
 
-	/**
-	 * Reset preferences to defaults
-	 */
 	async reset(userId: string): Promise<UserPreferences> {
 		const existing = await this.findByUserId(userId);
 
 		if (!existing) {
-			throw RepositoryError.notFound(this.table, userId);
+			throw new Error(`User preferences not found: ${userId}`);
 		}
 
-		const now = new Date().toISOString();
+		const [row] = await this.db
+			.update(userPreferences)
+			.set({
+				theme: DEFAULT_PREFERENCES.theme as typeof userPreferences.$inferInsert.theme,
+				chartTimeframe: DEFAULT_PREFERENCES.chartTimeframe as typeof userPreferences.$inferInsert.chartTimeframe,
+				feedFilters: DEFAULT_PREFERENCES.feedFilters,
+				sidebarCollapsed: DEFAULT_PREFERENCES.sidebarCollapsed,
+				notificationSettings: DEFAULT_PREFERENCES.notificationSettings,
+				defaultPortfolioView: DEFAULT_PREFERENCES.defaultPortfolioView as typeof userPreferences.$inferInsert.defaultPortfolioView,
+				dateFormat: DEFAULT_PREFERENCES.dateFormat as typeof userPreferences.$inferInsert.dateFormat,
+				timeFormat: DEFAULT_PREFERENCES.timeFormat as typeof userPreferences.$inferInsert.timeFormat,
+				currency: DEFAULT_PREFERENCES.currency,
+				updatedAt: new Date(),
+			})
+			.where(eq(userPreferences.id, existing.id))
+			.returning();
 
-		try {
-			await this.client.run(
-				`UPDATE ${this.table} SET
-          theme = ?,
-          chart_timeframe = ?,
-          feed_filters = ?,
-          sidebar_collapsed = ?,
-          notification_settings = ?,
-          default_portfolio_view = ?,
-          date_format = ?,
-          time_format = ?,
-          currency = ?,
-          updated_at = ?
-        WHERE id = ?`,
-				[
-					DEFAULT_PREFERENCES.theme,
-					DEFAULT_PREFERENCES.chartTimeframe,
-					toJson(DEFAULT_PREFERENCES.feedFilters),
-					fromBoolean(DEFAULT_PREFERENCES.sidebarCollapsed),
-					toJson(DEFAULT_PREFERENCES.notificationSettings),
-					DEFAULT_PREFERENCES.defaultPortfolioView,
-					DEFAULT_PREFERENCES.dateFormat,
-					DEFAULT_PREFERENCES.timeFormat,
-					DEFAULT_PREFERENCES.currency,
-					now,
-					existing.id,
-				]
-			);
-		} catch (error) {
-			throw RepositoryError.fromSqliteError(this.table, error as Error);
-		}
-
-		return this.findById(existing.id) as Promise<UserPreferences>;
+		return mapUserPreferencesRow(row);
 	}
 
-	/**
-	 * Delete user preferences
-	 */
 	async delete(userId: string): Promise<boolean> {
-		const result = await this.client.run(`DELETE FROM ${this.table} WHERE user_id = ?`, [userId]);
+		const result = await this.db
+			.delete(userPreferences)
+			.where(eq(userPreferences.userId, userId))
+			.returning({ id: userPreferences.id });
 
-		return result.changes > 0;
+		return result.length > 0;
 	}
 
-	/**
-	 * Get default preferences (without persisting)
-	 */
 	getDefaults(): Omit<UserPreferences, "id" | "userId" | "createdAt" | "updatedAt"> {
 		return { ...DEFAULT_PREFERENCES };
 	}

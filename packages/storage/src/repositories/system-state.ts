@@ -1,28 +1,20 @@
 /**
- * System State Repository
+ * System State Repository (Drizzle ORM)
  *
  * Data access for system_state table - persists system status per environment.
  */
-
-import type { Row, TursoClient } from "../turso.js";
+import { eq } from "drizzle-orm";
+import { getDb, type Database } from "../db";
+import { systemState } from "../schema/dashboard";
 
 // ============================================
 // Types
 // ============================================
 
-/**
- * System status
- */
-export type SystemStatus = "STOPPED" | "ACTIVE" | "PAUSED";
+export type SystemStatus = "stopped" | "active" | "paused";
 
-/**
- * Cycle phase
- */
 export type SystemCyclePhase = "observe" | "orient" | "decide" | "act" | "complete";
 
-/**
- * System state entity
- */
 export interface SystemState {
 	environment: string;
 	status: SystemStatus;
@@ -35,9 +27,6 @@ export interface SystemState {
 	updatedAt: string;
 }
 
-/**
- * Update system state input
- */
 export interface UpdateSystemStateInput {
 	status?: SystemStatus;
 	lastCycleId?: string | null;
@@ -49,20 +38,22 @@ export interface UpdateSystemStateInput {
 }
 
 // ============================================
-// Row Mapper
+// Row Mapping
 // ============================================
 
-function mapSystemStateRow(row: Row): SystemState {
+type SystemStateRow = typeof systemState.$inferSelect;
+
+function mapSystemStateRow(row: SystemStateRow): SystemState {
 	return {
-		environment: row.environment as string,
-		status: (row.status as string).toUpperCase() as SystemStatus,
-		lastCycleId: row.last_cycle_id as string | null,
-		lastCycleTime: row.last_cycle_time as string | null,
-		currentPhase: row.current_phase as SystemCyclePhase | null,
-		phaseStartedAt: row.phase_started_at as string | null,
-		nextCycleAt: row.next_cycle_at as string | null,
-		errorMessage: row.error_message as string | null,
-		updatedAt: row.updated_at as string,
+		environment: row.environment,
+		status: row.status as SystemStatus,
+		lastCycleId: row.lastCycleId,
+		lastCycleTime: row.lastCycleTime?.toISOString() ?? null,
+		currentPhase: row.currentPhase as SystemCyclePhase | null,
+		phaseStartedAt: row.phaseStartedAt?.toISOString() ?? null,
+		nextCycleAt: row.nextCycleAt?.toISOString() ?? null,
+		errorMessage: row.errorMessage,
+		updatedAt: row.updatedAt.toISOString(),
 	};
 }
 
@@ -70,104 +61,82 @@ function mapSystemStateRow(row: Row): SystemState {
 // Repository
 // ============================================
 
-/**
- * System state repository
- */
 export class SystemStateRepository {
-	private readonly table = "system_state";
+	private db: Database;
 
-	constructor(private readonly client: TursoClient) {}
+	constructor(db?: Database) {
+		this.db = db ?? getDb();
+	}
 
-	/**
-	 * Get system state for an environment, creating default if not exists
-	 */
 	async getOrCreate(environment: string): Promise<SystemState> {
 		const existing = await this.findByEnvironment(environment);
 		if (existing) {
 			return existing;
 		}
 
-		// Create default state
-		await this.client.run(
-			`INSERT INTO ${this.table} (environment, status, updated_at)
-       VALUES (?, 'STOPPED', datetime('now'))`,
-			[environment]
-		);
+		const [row] = await this.db
+			.insert(systemState)
+			.values({
+				environment: environment as typeof systemState.$inferInsert.environment,
+				status: "stopped",
+			})
+			.returning();
 
-		return this.findByEnvironment(environment) as Promise<SystemState>;
+		return mapSystemStateRow(row);
 	}
 
-	/**
-	 * Find system state by environment
-	 */
 	async findByEnvironment(environment: string): Promise<SystemState | null> {
-		const row = await this.client.get<Row>(`SELECT * FROM ${this.table} WHERE environment = ?`, [
-			environment,
-		]);
+		const [row] = await this.db
+			.select()
+			.from(systemState)
+			.where(eq(systemState.environment, environment as typeof systemState.$inferSelect.environment))
+			.limit(1);
 
 		return row ? mapSystemStateRow(row) : null;
 	}
 
-	/**
-	 * Update system state for an environment.
-	 * Uses INSERT OR REPLACE (upsert) to ensure the row exists.
-	 */
 	async update(environment: string, input: UpdateSystemStateInput): Promise<SystemState> {
-		// First ensure the row exists
 		await this.getOrCreate(environment);
 
-		const setClauses: string[] = ["updated_at = datetime('now')"];
-		const args: unknown[] = [];
+		const updates: Record<string, unknown> = {
+			updatedAt: new Date(),
+		};
 
 		if (input.status !== undefined) {
-			setClauses.push("status = ?");
-			args.push(input.status);
+			updates.status = input.status;
 		}
 		if (input.lastCycleId !== undefined) {
-			setClauses.push("last_cycle_id = ?");
-			args.push(input.lastCycleId);
+			updates.lastCycleId = input.lastCycleId;
 		}
 		if (input.lastCycleTime !== undefined) {
-			setClauses.push("last_cycle_time = ?");
-			args.push(input.lastCycleTime);
+			updates.lastCycleTime = input.lastCycleTime ? new Date(input.lastCycleTime) : null;
 		}
 		if (input.currentPhase !== undefined) {
-			setClauses.push("current_phase = ?");
-			args.push(input.currentPhase);
+			updates.currentPhase = input.currentPhase;
 		}
 		if (input.phaseStartedAt !== undefined) {
-			setClauses.push("phase_started_at = ?");
-			args.push(input.phaseStartedAt);
+			updates.phaseStartedAt = input.phaseStartedAt ? new Date(input.phaseStartedAt) : null;
 		}
 		if (input.nextCycleAt !== undefined) {
-			setClauses.push("next_cycle_at = ?");
-			args.push(input.nextCycleAt);
+			updates.nextCycleAt = input.nextCycleAt ? new Date(input.nextCycleAt) : null;
 		}
 		if (input.errorMessage !== undefined) {
-			setClauses.push("error_message = ?");
-			args.push(input.errorMessage);
+			updates.errorMessage = input.errorMessage;
 		}
 
-		args.push(environment);
+		const [row] = await this.db
+			.update(systemState)
+			.set(updates)
+			.where(eq(systemState.environment, environment as typeof systemState.$inferSelect.environment))
+			.returning();
 
-		await this.client.run(
-			`UPDATE ${this.table} SET ${setClauses.join(", ")} WHERE environment = ?`,
-			args
-		);
-
-		return this.findByEnvironment(environment) as Promise<SystemState>;
+		return mapSystemStateRow(row);
 	}
 
-	/**
-	 * Set system status
-	 */
 	async setStatus(environment: string, status: SystemStatus): Promise<SystemState> {
 		return this.update(environment, { status });
 	}
 
-	/**
-	 * Update cycle information
-	 */
 	async updateCycle(
 		environment: string,
 		cycleId: string,
@@ -182,9 +151,6 @@ export class SystemStateRepository {
 		});
 	}
 
-	/**
-	 * Clear cycle state (when cycle completes or is cancelled)
-	 */
 	async clearCycle(environment: string): Promise<SystemState> {
 		return this.update(environment, {
 			currentPhase: null,
@@ -192,16 +158,10 @@ export class SystemStateRepository {
 		});
 	}
 
-	/**
-	 * Set error state
-	 */
 	async setError(environment: string, errorMessage: string): Promise<SystemState> {
 		return this.update(environment, { errorMessage });
 	}
 
-	/**
-	 * Clear error state
-	 */
 	async clearError(environment: string): Promise<SystemState> {
 		return this.update(environment, { errorMessage: null });
 	}
