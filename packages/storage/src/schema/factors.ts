@@ -6,6 +6,7 @@
  */
 import { sql } from "drizzle-orm";
 import {
+	check,
 	index,
 	integer,
 	jsonb,
@@ -40,7 +41,10 @@ export const hypotheses = pgTable(
 		createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
 		updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
 	},
-	(table) => [index("idx_hypotheses_status").on(table.status)]
+	(table) => [
+		index("idx_hypotheses_status").on(table.status),
+		index("idx_hypotheses_parent").on(table.parentHypothesisId),
+	]
 );
 
 // factors: Factor definitions and lifecycle
@@ -104,6 +108,35 @@ export const factors = pgTable(
 		lastUpdated: timestamp("last_updated", { withTimezone: true }).notNull().defaultNow(),
 	},
 	(table) => [
+		check("positive_version", sql`${table.version} >= 1`),
+		check(
+			"valid_originality",
+			sql`${table.originalityScore} IS NULL OR (${table.originalityScore}::numeric >= 0 AND ${table.originalityScore}::numeric <= 1)`
+		),
+		check(
+			"valid_alignment",
+			sql`${table.hypothesisAlignment} IS NULL OR (${table.hypothesisAlignment}::numeric >= 0 AND ${table.hypothesisAlignment}::numeric <= 1)`
+		),
+		check(
+			"valid_stage1_ic",
+			sql`${table.stage1Ic} IS NULL OR (${table.stage1Ic}::numeric >= -1 AND ${table.stage1Ic}::numeric <= 1)`
+		),
+		check(
+			"valid_stage1_drawdown",
+			sql`${table.stage1MaxDrawdown} IS NULL OR (${table.stage1MaxDrawdown}::numeric >= 0 AND ${table.stage1MaxDrawdown}::numeric <= 1)`
+		),
+		check(
+			"valid_current_weight",
+			sql`${table.currentWeight}::numeric >= 0 AND ${table.currentWeight}::numeric <= 1`
+		),
+		check(
+			"valid_last_ic",
+			sql`${table.lastIc} IS NULL OR (${table.lastIc}::numeric >= -1 AND ${table.lastIc}::numeric <= 1)`
+		),
+		check(
+			"non_negative_decay",
+			sql`${table.decayRate} IS NULL OR ${table.decayRate}::numeric >= 0`
+		),
 		index("idx_factors_status").on(table.status),
 		index("idx_factors_hypothesis").on(table.hypothesisId),
 		index("idx_factors_active")
@@ -129,6 +162,9 @@ export const factorPerformance = pgTable(
 		createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
 	},
 	(table) => [
+		check("valid_ic", sql`${table.ic}::numeric >= -1 AND ${table.ic}::numeric <= 1`),
+		check("valid_weight", sql`${table.weight}::numeric >= 0 AND ${table.weight}::numeric <= 1`),
+		check("non_negative_signals", sql`${table.signalCount} >= 0`),
 		unique("factor_performance_factor_date").on(table.factorId, table.date),
 		index("idx_factor_perf_factor_date").on(table.factorId, table.date),
 	]
@@ -147,7 +183,13 @@ export const factorCorrelations = pgTable(
 		correlation: numeric("correlation", { precision: 5, scale: 4 }).notNull(),
 		computedAt: timestamp("computed_at", { withTimezone: true }).notNull().defaultNow(),
 	},
-	(table) => [primaryKey({ columns: [table.factorId1, table.factorId2] })]
+	(table) => [
+		check(
+			"valid_correlation",
+			sql`${table.correlation}::numeric >= -1 AND ${table.correlation}::numeric <= 1`
+		),
+		primaryKey({ columns: [table.factorId1, table.factorId2] }),
+	]
 );
 
 // research_runs: Track research pipeline executions
@@ -177,14 +219,24 @@ export const researchRuns = pgTable(
 );
 
 // factor_weights: Current factor weights
-export const factorWeights = pgTable("factor_weights", {
-	factorId: uuid("factor_id")
-		.primaryKey()
-		.references(() => factors.factorId, { onDelete: "cascade" }),
-	weight: numeric("weight", { precision: 6, scale: 4 }).notNull().default("0.0"),
-	lastIc: numeric("last_ic", { precision: 6, scale: 4 }),
-	lastUpdated: timestamp("last_updated", { withTimezone: true }).notNull().defaultNow(),
-});
+export const factorWeights = pgTable(
+	"factor_weights",
+	{
+		factorId: uuid("factor_id")
+			.primaryKey()
+			.references(() => factors.factorId, { onDelete: "cascade" }),
+		weight: numeric("weight", { precision: 6, scale: 4 }).notNull().default("0.0"),
+		lastIc: numeric("last_ic", { precision: 6, scale: 4 }),
+		lastUpdated: timestamp("last_updated", { withTimezone: true }).notNull().defaultNow(),
+	},
+	(table) => [
+		check("valid_weight", sql`${table.weight}::numeric >= 0 AND ${table.weight}::numeric <= 1`),
+		check(
+			"valid_last_ic",
+			sql`${table.lastIc} IS NULL OR (${table.lastIc}::numeric >= -1 AND ${table.lastIc}::numeric <= 1)`
+		),
+	]
+);
 
 // paper_signals: Paper trading signals for factors
 export const paperSignals = pgTable(
@@ -205,6 +257,8 @@ export const paperSignals = pgTable(
 		createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
 	},
 	(table) => [
+		check("positive_entry", sql`${table.entryPrice} IS NULL OR ${table.entryPrice}::numeric > 0`),
+		check("positive_exit", sql`${table.exitPrice} IS NULL OR ${table.exitPrice}::numeric > 0`),
 		unique("paper_signals_factor_date_symbol").on(table.factorId, table.signalDate, table.symbol),
 		index("idx_paper_signals_factor").on(table.factorId),
 		index("idx_paper_signals_date").on(table.signalDate),

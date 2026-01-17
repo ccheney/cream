@@ -1,5 +1,5 @@
 {
-  "id": "6bf4964d-2acb-4bd8-a3de-96e9c3c37695",
+  "id": "4c89a94d-9646-4384-afeb-536eb28d34a0",
   "prevId": "00000000-0000-0000-0000-000000000000",
   "version": "7",
   "dialect": "postgresql",
@@ -53,13 +53,13 @@
         },
         "access_token_expires_at": {
           "name": "access_token_expires_at",
-          "type": "bigint",
+          "type": "timestamp with time zone",
           "primaryKey": false,
           "notNull": false
         },
         "refresh_token_expires_at": {
           "name": "refresh_token_expires_at",
-          "type": "bigint",
+          "type": "timestamp with time zone",
           "primaryKey": false,
           "notNull": false
         },
@@ -77,17 +77,17 @@
         },
         "created_at": {
           "name": "created_at",
-          "type": "bigint",
+          "type": "timestamp with time zone",
           "primaryKey": false,
           "notNull": true,
-          "default": "(extract(epoch from now()) * 1000)::bigint"
+          "default": "now()"
         },
         "updated_at": {
           "name": "updated_at",
-          "type": "bigint",
+          "type": "timestamp with time zone",
           "primaryKey": false,
           "notNull": true,
-          "default": "(extract(epoch from now()) * 1000)::bigint"
+          "default": "now()"
         }
       },
       "indexes": {
@@ -999,7 +999,28 @@
       "compositePrimaryKeys": {},
       "uniqueConstraints": {},
       "policies": {},
-      "checkConstraints": {},
+      "checkConstraints": {
+        "positive_nav": {
+          "name": "positive_nav",
+          "value": "\"backtest_equity\".\"nav\"::numeric > 0"
+        },
+        "non_negative_cash": {
+          "name": "non_negative_cash",
+          "value": "\"backtest_equity\".\"cash\"::numeric >= 0"
+        },
+        "positive_equity": {
+          "name": "positive_equity",
+          "value": "\"backtest_equity\".\"equity\"::numeric > 0"
+        },
+        "non_negative_drawdown": {
+          "name": "non_negative_drawdown",
+          "value": "\"backtest_equity\".\"drawdown\" IS NULL OR \"backtest_equity\".\"drawdown\"::numeric >= 0"
+        },
+        "valid_drawdown_pct": {
+          "name": "valid_drawdown_pct",
+          "value": "\"backtest_equity\".\"drawdown_pct\" IS NULL OR (\"backtest_equity\".\"drawdown_pct\"::numeric >= 0 AND \"backtest_equity\".\"drawdown_pct\"::numeric <= 1)"
+        }
+      },
       "isRLSEnabled": false
     },
     "public.backtest_trades": {
@@ -1160,7 +1181,20 @@
       "compositePrimaryKeys": {},
       "uniqueConstraints": {},
       "policies": {},
-      "checkConstraints": {},
+      "checkConstraints": {
+        "positive_qty": {
+          "name": "positive_qty",
+          "value": "\"backtest_trades\".\"qty\"::numeric > 0"
+        },
+        "positive_price": {
+          "name": "positive_price",
+          "value": "\"backtest_trades\".\"price\"::numeric > 0"
+        },
+        "non_negative_commission": {
+          "name": "non_negative_commission",
+          "value": "\"backtest_trades\".\"commission\" IS NULL OR \"backtest_trades\".\"commission\"::numeric >= 0"
+        }
+      },
       "isRLSEnabled": false
     },
     "public.backtests": {
@@ -1380,7 +1414,28 @@
       "compositePrimaryKeys": {},
       "uniqueConstraints": {},
       "policies": {},
-      "checkConstraints": {},
+      "checkConstraints": {
+        "positive_capital": {
+          "name": "positive_capital",
+          "value": "\"backtests\".\"initial_capital\"::numeric > 0"
+        },
+        "valid_date_range": {
+          "name": "valid_date_range",
+          "value": "\"backtests\".\"end_date\" > \"backtests\".\"start_date\""
+        },
+        "valid_win_rate": {
+          "name": "valid_win_rate",
+          "value": "\"backtests\".\"win_rate\" IS NULL OR (\"backtests\".\"win_rate\"::numeric >= 0 AND \"backtests\".\"win_rate\"::numeric <= 1)"
+        },
+        "valid_max_drawdown": {
+          "name": "valid_max_drawdown",
+          "value": "\"backtests\".\"max_drawdown\" IS NULL OR (\"backtests\".\"max_drawdown\"::numeric >= 0 AND \"backtests\".\"max_drawdown\"::numeric <= 1)"
+        },
+        "non_negative_trades": {
+          "name": "non_negative_trades",
+          "value": "\"backtests\".\"total_trades\" IS NULL OR \"backtests\".\"total_trades\" >= 0"
+        }
+      },
       "isRLSEnabled": false
     },
     "public.candles": {
@@ -3320,7 +3375,7 @@
           "name": "created_at",
           "type": "timestamp with time zone",
           "primaryKey": false,
-          "notNull": false,
+          "notNull": true,
           "default": "now()"
         }
       },
@@ -3420,7 +3475,28 @@
       "compositePrimaryKeys": {},
       "uniqueConstraints": {},
       "policies": {},
-      "checkConstraints": {},
+      "checkConstraints": {
+        "valid_confidence": {
+          "name": "valid_confidence",
+          "value": "\"external_events\".\"confidence\"::numeric >= 0 AND \"external_events\".\"confidence\"::numeric <= 1"
+        },
+        "valid_importance": {
+          "name": "valid_importance",
+          "value": "\"external_events\".\"importance\" >= 1 AND \"external_events\".\"importance\" <= 10"
+        },
+        "valid_sentiment_score": {
+          "name": "valid_sentiment_score",
+          "value": "\"external_events\".\"sentiment_score\"::numeric >= -1 AND \"external_events\".\"sentiment_score\"::numeric <= 1"
+        },
+        "valid_importance_score": {
+          "name": "valid_importance_score",
+          "value": "\"external_events\".\"importance_score\"::numeric >= 0 AND \"external_events\".\"importance_score\"::numeric <= 1"
+        },
+        "valid_surprise_score": {
+          "name": "valid_surprise_score",
+          "value": "\"external_events\".\"surprise_score\"::numeric >= 0 AND \"external_events\".\"surprise_score\"::numeric <= 1"
+        }
+      },
       "isRLSEnabled": false
     },
     "public.factor_correlations": {
@@ -3493,7 +3569,12 @@
       },
       "uniqueConstraints": {},
       "policies": {},
-      "checkConstraints": {},
+      "checkConstraints": {
+        "valid_correlation": {
+          "name": "valid_correlation",
+          "value": "\"factor_correlations\".\"correlation\"::numeric >= -1 AND \"factor_correlations\".\"correlation\"::numeric <= 1"
+        }
+      },
       "isRLSEnabled": false
     },
     "public.factor_performance": {
@@ -3609,7 +3690,20 @@
         }
       },
       "policies": {},
-      "checkConstraints": {},
+      "checkConstraints": {
+        "valid_ic": {
+          "name": "valid_ic",
+          "value": "\"factor_performance\".\"ic\"::numeric >= -1 AND \"factor_performance\".\"ic\"::numeric <= 1"
+        },
+        "valid_weight": {
+          "name": "valid_weight",
+          "value": "\"factor_performance\".\"weight\"::numeric >= 0 AND \"factor_performance\".\"weight\"::numeric <= 1"
+        },
+        "non_negative_signals": {
+          "name": "non_negative_signals",
+          "value": "\"factor_performance\".\"signal_count\" >= 0"
+        }
+      },
       "isRLSEnabled": false
     },
     "public.factor_weights": {
@@ -3662,7 +3756,16 @@
       "compositePrimaryKeys": {},
       "uniqueConstraints": {},
       "policies": {},
-      "checkConstraints": {},
+      "checkConstraints": {
+        "valid_weight": {
+          "name": "valid_weight",
+          "value": "\"factor_weights\".\"weight\"::numeric >= 0 AND \"factor_weights\".\"weight\"::numeric <= 1"
+        },
+        "valid_last_ic": {
+          "name": "valid_last_ic",
+          "value": "\"factor_weights\".\"last_ic\" IS NULL OR (\"factor_weights\".\"last_ic\"::numeric >= -1 AND \"factor_weights\".\"last_ic\"::numeric <= 1)"
+        }
+      },
       "isRLSEnabled": false
     },
     "public.factors": {
@@ -3969,7 +4072,40 @@
         }
       },
       "policies": {},
-      "checkConstraints": {},
+      "checkConstraints": {
+        "positive_version": {
+          "name": "positive_version",
+          "value": "\"factors\".\"version\" >= 1"
+        },
+        "valid_originality": {
+          "name": "valid_originality",
+          "value": "\"factors\".\"originality_score\" IS NULL OR (\"factors\".\"originality_score\"::numeric >= 0 AND \"factors\".\"originality_score\"::numeric <= 1)"
+        },
+        "valid_alignment": {
+          "name": "valid_alignment",
+          "value": "\"factors\".\"hypothesis_alignment\" IS NULL OR (\"factors\".\"hypothesis_alignment\"::numeric >= 0 AND \"factors\".\"hypothesis_alignment\"::numeric <= 1)"
+        },
+        "valid_stage1_ic": {
+          "name": "valid_stage1_ic",
+          "value": "\"factors\".\"stage1_ic\" IS NULL OR (\"factors\".\"stage1_ic\"::numeric >= -1 AND \"factors\".\"stage1_ic\"::numeric <= 1)"
+        },
+        "valid_stage1_drawdown": {
+          "name": "valid_stage1_drawdown",
+          "value": "\"factors\".\"stage1_max_drawdown\" IS NULL OR (\"factors\".\"stage1_max_drawdown\"::numeric >= 0 AND \"factors\".\"stage1_max_drawdown\"::numeric <= 1)"
+        },
+        "valid_current_weight": {
+          "name": "valid_current_weight",
+          "value": "\"factors\".\"current_weight\"::numeric >= 0 AND \"factors\".\"current_weight\"::numeric <= 1"
+        },
+        "valid_last_ic": {
+          "name": "valid_last_ic",
+          "value": "\"factors\".\"last_ic\" IS NULL OR (\"factors\".\"last_ic\"::numeric >= -1 AND \"factors\".\"last_ic\"::numeric <= 1)"
+        },
+        "non_negative_decay": {
+          "name": "non_negative_decay",
+          "value": "\"factors\".\"decay_rate\" IS NULL OR \"factors\".\"decay_rate\"::numeric >= 0"
+        }
+      },
       "isRLSEnabled": false
     },
     "public.features": {
@@ -4135,7 +4271,12 @@
       "compositePrimaryKeys": {},
       "uniqueConstraints": {},
       "policies": {},
-      "checkConstraints": {},
+      "checkConstraints": {
+        "valid_quality_score": {
+          "name": "valid_quality_score",
+          "value": "\"features\".\"quality_score\" IS NULL OR (\"features\".\"quality_score\"::numeric >= 0 AND \"features\".\"quality_score\"::numeric <= 1)"
+        }
+      },
       "isRLSEnabled": false
     },
     "public.filing_sync_runs": {
@@ -4846,6 +4987,21 @@
           "concurrently": false,
           "method": "btree",
           "with": {}
+        },
+        "idx_hypotheses_parent": {
+          "name": "idx_hypotheses_parent",
+          "columns": [
+            {
+              "expression": "parent_hypothesis_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
         }
       },
       "foreignKeys": {},
@@ -5153,7 +5309,28 @@
         }
       },
       "policies": {},
-      "checkConstraints": {},
+      "checkConstraints": {
+        "valid_ic_value": {
+          "name": "valid_ic_value",
+          "value": "\"indicator_ic_history\".\"ic_value\"::numeric >= -1 AND \"indicator_ic_history\".\"ic_value\"::numeric <= 1"
+        },
+        "non_negative_ic_std": {
+          "name": "non_negative_ic_std",
+          "value": "\"indicator_ic_history\".\"ic_std\"::numeric >= 0"
+        },
+        "non_negative_decisions": {
+          "name": "non_negative_decisions",
+          "value": "\"indicator_ic_history\".\"decisions_used_in\" >= 0"
+        },
+        "non_negative_correct": {
+          "name": "non_negative_correct",
+          "value": "\"indicator_ic_history\".\"decisions_correct\" >= 0"
+        },
+        "correct_lte_used": {
+          "name": "correct_lte_used",
+          "value": "\"indicator_ic_history\".\"decisions_correct\" <= \"indicator_ic_history\".\"decisions_used_in\""
+        }
+      },
       "isRLSEnabled": false
     },
     "public.indicator_paper_signals": {
@@ -5532,7 +5709,20 @@
         }
       },
       "policies": {},
-      "checkConstraints": {},
+      "checkConstraints": {
+        "valid_ic": {
+          "name": "valid_ic",
+          "value": "\"indicator_trials\".\"information_coefficient\" IS NULL OR (\"indicator_trials\".\"information_coefficient\"::numeric >= -1 AND \"indicator_trials\".\"information_coefficient\"::numeric <= 1)"
+        },
+        "valid_max_drawdown": {
+          "name": "valid_max_drawdown",
+          "value": "\"indicator_trials\".\"max_drawdown\" IS NULL OR (\"indicator_trials\".\"max_drawdown\"::numeric >= 0 AND \"indicator_trials\".\"max_drawdown\"::numeric <= 1)"
+        },
+        "positive_trial": {
+          "name": "positive_trial",
+          "value": "\"indicator_trials\".\"trial_number\" >= 1"
+        }
+      },
       "isRLSEnabled": false
     },
     "public.indicators": {
@@ -5742,6 +5932,36 @@
           "method": "btree",
           "with": {}
         },
+        "idx_indicators_similar_to": {
+          "name": "idx_indicators_similar_to",
+          "columns": [
+            {
+              "expression": "similar_to",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "idx_indicators_replaces": {
+          "name": "idx_indicators_replaces",
+          "columns": [
+            {
+              "expression": "replaces",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
         "idx_indicators_active": {
           "name": "idx_indicators_active",
           "columns": [
@@ -5833,7 +6053,7 @@
           "name": "created_at",
           "type": "timestamp with time zone",
           "primaryKey": false,
-          "notNull": false,
+          "notNull": true,
           "default": "now()"
         }
       },
@@ -5930,7 +6150,7 @@
           "name": "created_at",
           "type": "timestamp with time zone",
           "primaryKey": false,
-          "notNull": false,
+          "notNull": true,
           "default": "now()"
         }
       },
@@ -6504,7 +6724,16 @@
         }
       },
       "policies": {},
-      "checkConstraints": {},
+      "checkConstraints": {
+        "positive_entry": {
+          "name": "positive_entry",
+          "value": "\"paper_signals\".\"entry_price\" IS NULL OR \"paper_signals\".\"entry_price\"::numeric > 0"
+        },
+        "positive_exit": {
+          "name": "positive_exit",
+          "value": "\"paper_signals\".\"exit_price\" IS NULL OR \"paper_signals\".\"exit_price\"::numeric > 0"
+        }
+      },
       "isRLSEnabled": false
     },
     "public.parity_validation_history": {
@@ -7251,7 +7480,7 @@
           "name": "created_at",
           "type": "timestamp with time zone",
           "primaryKey": false,
-          "notNull": false,
+          "notNull": true,
           "default": "now()"
         }
       },
@@ -7355,7 +7584,7 @@
           "name": "created_at",
           "type": "timestamp with time zone",
           "primaryKey": false,
-          "notNull": false,
+          "notNull": true,
           "default": "now()"
         }
       },
@@ -7395,7 +7624,12 @@
       "compositePrimaryKeys": {},
       "uniqueConstraints": {},
       "policies": {},
-      "checkConstraints": {},
+      "checkConstraints": {
+        "valid_confidence": {
+          "name": "valid_confidence",
+          "value": "\"prediction_market_signals\".\"confidence\" IS NULL OR (\"prediction_market_signals\".\"confidence\"::numeric >= 0 AND \"prediction_market_signals\".\"confidence\"::numeric <= 1)"
+        }
+      },
       "isRLSEnabled": false
     },
     "public.prediction_market_snapshots": {
@@ -7451,7 +7685,7 @@
           "name": "created_at",
           "type": "timestamp with time zone",
           "primaryKey": false,
-          "notNull": false,
+          "notNull": true,
           "default": "now()"
         }
       },
@@ -7696,7 +7930,20 @@
       "compositePrimaryKeys": {},
       "uniqueConstraints": {},
       "policies": {},
-      "checkConstraints": {},
+      "checkConstraints": {
+        "valid_confidence": {
+          "name": "valid_confidence",
+          "value": "\"regime_labels\".\"confidence\"::numeric >= 0 AND \"regime_labels\".\"confidence\"::numeric <= 1"
+        },
+        "valid_trend_strength": {
+          "name": "valid_trend_strength",
+          "value": "\"regime_labels\".\"trend_strength\" IS NULL OR (\"regime_labels\".\"trend_strength\"::numeric >= 0 AND \"regime_labels\".\"trend_strength\"::numeric <= 1)"
+        },
+        "valid_correlation": {
+          "name": "valid_correlation",
+          "value": "\"regime_labels\".\"correlation_to_market\" IS NULL OR (\"regime_labels\".\"correlation_to_market\"::numeric >= -1 AND \"regime_labels\".\"correlation_to_market\"::numeric <= 1)"
+        }
+      },
       "isRLSEnabled": false
     },
     "public.research_runs": {
@@ -8033,7 +8280,7 @@
         },
         "expires_at": {
           "name": "expires_at",
-          "type": "bigint",
+          "type": "timestamp with time zone",
           "primaryKey": false,
           "notNull": true
         },
@@ -8063,17 +8310,17 @@
         },
         "created_at": {
           "name": "created_at",
-          "type": "bigint",
+          "type": "timestamp with time zone",
           "primaryKey": false,
           "notNull": true,
-          "default": "(extract(epoch from now()) * 1000)::bigint"
+          "default": "now()"
         },
         "updated_at": {
           "name": "updated_at",
-          "type": "bigint",
+          "type": "timestamp with time zone",
           "primaryKey": false,
           "notNull": true,
-          "default": "(extract(epoch from now()) * 1000)::bigint"
+          "default": "now()"
         }
       },
       "indexes": {
@@ -8614,7 +8861,20 @@
       "compositePrimaryKeys": {},
       "uniqueConstraints": {},
       "policies": {},
-      "checkConstraints": {},
+      "checkConstraints": {
+        "valid_conviction": {
+          "name": "valid_conviction",
+          "value": "\"thesis_state\".\"conviction\" IS NULL OR (\"thesis_state\".\"conviction\"::numeric >= 0 AND \"thesis_state\".\"conviction\"::numeric <= 1)"
+        },
+        "positive_entry_price": {
+          "name": "positive_entry_price",
+          "value": "\"thesis_state\".\"entry_price\" IS NULL OR \"thesis_state\".\"entry_price\"::numeric > 0"
+        },
+        "positive_exit_price": {
+          "name": "positive_exit_price",
+          "value": "\"thesis_state\".\"exit_price\" IS NULL OR \"thesis_state\".\"exit_price\"::numeric > 0"
+        }
+      },
       "isRLSEnabled": false
     },
     "public.thesis_state_history": {
@@ -8756,7 +9016,16 @@
       "compositePrimaryKeys": {},
       "uniqueConstraints": {},
       "policies": {},
-      "checkConstraints": {},
+      "checkConstraints": {
+        "valid_conviction": {
+          "name": "valid_conviction",
+          "value": "\"thesis_state_history\".\"conviction_at_transition\" IS NULL OR (\"thesis_state_history\".\"conviction_at_transition\"::numeric >= 0 AND \"thesis_state_history\".\"conviction_at_transition\"::numeric <= 1)"
+        },
+        "positive_price": {
+          "name": "positive_price",
+          "value": "\"thesis_state_history\".\"price_at_transition\" IS NULL OR \"thesis_state_history\".\"price_at_transition\"::numeric > 0"
+        }
+      },
       "isRLSEnabled": false
     },
     "public.ticker_changes": {
@@ -9682,17 +9951,17 @@
         },
         "created_at": {
           "name": "created_at",
-          "type": "bigint",
+          "type": "timestamp with time zone",
           "primaryKey": false,
           "notNull": true,
-          "default": "(extract(epoch from now()) * 1000)::bigint"
+          "default": "now()"
         },
         "updated_at": {
           "name": "updated_at",
-          "type": "bigint",
+          "type": "timestamp with time zone",
           "primaryKey": false,
           "notNull": true,
-          "default": "(extract(epoch from now()) * 1000)::bigint"
+          "default": "now()"
         }
       },
       "indexes": {
@@ -9928,23 +10197,23 @@
         },
         "expires_at": {
           "name": "expires_at",
-          "type": "bigint",
+          "type": "timestamp with time zone",
           "primaryKey": false,
           "notNull": true
         },
         "created_at": {
           "name": "created_at",
-          "type": "bigint",
+          "type": "timestamp with time zone",
           "primaryKey": false,
           "notNull": true,
-          "default": "(extract(epoch from now()) * 1000)::bigint"
+          "default": "now()"
         },
         "updated_at": {
           "name": "updated_at",
-          "type": "bigint",
+          "type": "timestamp with time zone",
           "primaryKey": false,
           "notNull": true,
-          "default": "(extract(epoch from now()) * 1000)::bigint"
+          "default": "now()"
         }
       },
       "indexes": {
@@ -10073,7 +10342,12 @@
         "agent_complete",
         "decision",
         "order",
-        "error"
+        "error",
+        "progress",
+        "tool_call",
+        "tool_result",
+        "reasoning_delta",
+        "text_delta"
       ]
     },
     "public.cycle_phase": {

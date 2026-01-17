@@ -6,6 +6,7 @@
 import { sql } from "drizzle-orm";
 import {
 	boolean,
+	check,
 	index,
 	integer,
 	jsonb,
@@ -98,6 +99,17 @@ export const backtests = pgTable(
 		createdBy: text("created_by"),
 	},
 	(table) => [
+		check("positive_capital", sql`${table.initialCapital}::numeric > 0`),
+		check("valid_date_range", sql`${table.endDate} > ${table.startDate}`),
+		check(
+			"valid_win_rate",
+			sql`${table.winRate} IS NULL OR (${table.winRate}::numeric >= 0 AND ${table.winRate}::numeric <= 1)`
+		),
+		check(
+			"valid_max_drawdown",
+			sql`${table.maxDrawdown} IS NULL OR (${table.maxDrawdown}::numeric >= 0 AND ${table.maxDrawdown}::numeric <= 1)`
+		),
+		check("non_negative_trades", sql`${table.totalTrades} IS NULL OR ${table.totalTrades} >= 0`),
 		index("idx_backtests_status").on(table.status),
 		index("idx_backtests_start_date").on(table.startDate),
 		index("idx_backtests_created_at").on(table.createdAt),
@@ -123,6 +135,12 @@ export const backtestTrades = pgTable(
 		decisionRationale: text("decision_rationale"),
 	},
 	(table) => [
+		check("positive_qty", sql`${table.qty}::numeric > 0`),
+		check("positive_price", sql`${table.price}::numeric > 0`),
+		check(
+			"non_negative_commission",
+			sql`${table.commission} IS NULL OR ${table.commission}::numeric >= 0`
+		),
 		index("idx_backtest_trades_backtest_id").on(table.backtestId),
 		index("idx_backtest_trades_timestamp").on(table.timestamp),
 		index("idx_backtest_trades_symbol").on(table.symbol),
@@ -151,6 +169,17 @@ export const backtestEquity = pgTable(
 		}),
 	},
 	(table) => [
+		check("positive_nav", sql`${table.nav}::numeric > 0`),
+		check("non_negative_cash", sql`${table.cash}::numeric >= 0`),
+		check("positive_equity", sql`${table.equity}::numeric > 0`),
+		check(
+			"non_negative_drawdown",
+			sql`${table.drawdown} IS NULL OR ${table.drawdown}::numeric >= 0`
+		),
+		check(
+			"valid_drawdown_pct",
+			sql`${table.drawdownPct} IS NULL OR (${table.drawdownPct}::numeric >= 0 AND ${table.drawdownPct}::numeric <= 1)`
+		),
 		index("idx_backtest_equity_backtest_id").on(table.backtestId),
 		index("idx_backtest_equity_timestamp").on(table.timestamp),
 		index("idx_backtest_equity_bt_ts").on(table.backtestId, table.timestamp),

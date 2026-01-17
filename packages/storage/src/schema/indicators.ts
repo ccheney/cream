@@ -9,6 +9,7 @@
 import { sql } from "drizzle-orm";
 import {
 	boolean,
+	check,
 	index,
 	integer,
 	jsonb,
@@ -60,6 +61,8 @@ export const indicators = pgTable(
 		index("idx_indicators_status").on(table.status),
 		index("idx_indicators_category").on(table.category),
 		index("idx_indicators_code_hash").on(table.codeHash),
+		index("idx_indicators_similar_to").on(table.similarTo),
+		index("idx_indicators_replaces").on(table.replaces),
 		index("idx_indicators_active")
 			.on(table.status)
 			.where(sql`${table.status} IN ('paper', 'production')`),
@@ -89,6 +92,15 @@ export const indicatorTrials = pgTable(
 		createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
 	},
 	(table) => [
+		check(
+			"valid_ic",
+			sql`${table.informationCoefficient} IS NULL OR (${table.informationCoefficient}::numeric >= -1 AND ${table.informationCoefficient}::numeric <= 1)`
+		),
+		check(
+			"valid_max_drawdown",
+			sql`${table.maxDrawdown} IS NULL OR (${table.maxDrawdown}::numeric >= 0 AND ${table.maxDrawdown}::numeric <= 1)`
+		),
+		check("positive_trial", sql`${table.trialNumber} >= 1`),
 		unique("indicator_trials_indicator_trial").on(table.indicatorId, table.trialNumber),
 		index("idx_trials_indicator").on(table.indicatorId),
 	]
@@ -110,6 +122,14 @@ export const indicatorIcHistory = pgTable(
 		createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
 	},
 	(table) => [
+		check(
+			"valid_ic_value",
+			sql`${table.icValue}::numeric >= -1 AND ${table.icValue}::numeric <= 1`
+		),
+		check("non_negative_ic_std", sql`${table.icStd}::numeric >= 0`),
+		check("non_negative_decisions", sql`${table.decisionsUsedIn} >= 0`),
+		check("non_negative_correct", sql`${table.decisionsCorrect} >= 0`),
+		check("correct_lte_used", sql`${table.decisionsCorrect} <= ${table.decisionsUsedIn}`),
 		unique("indicator_ic_history_indicator_date").on(table.indicatorId, table.date),
 		index("idx_ic_history_indicator_date").on(table.indicatorId, table.date),
 	]

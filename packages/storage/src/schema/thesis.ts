@@ -5,6 +5,7 @@
  */
 import { sql } from "drizzle-orm";
 import {
+	check,
 	index,
 	integer,
 	numeric,
@@ -47,6 +48,18 @@ export const thesisState = pgTable(
 		closedAt: timestamp("closed_at", { withTimezone: true }),
 	},
 	(table) => [
+		check(
+			"valid_conviction",
+			sql`${table.conviction} IS NULL OR (${table.conviction}::numeric >= 0 AND ${table.conviction}::numeric <= 1)`
+		),
+		check(
+			"positive_entry_price",
+			sql`${table.entryPrice} IS NULL OR ${table.entryPrice}::numeric > 0`
+		),
+		check(
+			"positive_exit_price",
+			sql`${table.exitPrice} IS NULL OR ${table.exitPrice}::numeric > 0`
+		),
 		index("idx_thesis_state_instrument").on(table.instrumentId),
 		index("idx_thesis_state_state").on(table.state),
 		index("idx_thesis_state_environment").on(table.environment),
@@ -85,6 +98,14 @@ export const thesisStateHistory = pgTable(
 		createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
 	},
 	(table) => [
+		check(
+			"valid_conviction",
+			sql`${table.convictionAtTransition} IS NULL OR (${table.convictionAtTransition}::numeric >= 0 AND ${table.convictionAtTransition}::numeric <= 1)`
+		),
+		check(
+			"positive_price",
+			sql`${table.priceAtTransition} IS NULL OR ${table.priceAtTransition}::numeric > 0`
+		),
 		index("idx_thesis_history_thesis_id").on(table.thesisId),
 		index("idx_thesis_history_created_at").on(table.createdAt),
 		index("idx_thesis_history_thesis_created").on(table.thesisId, table.createdAt),

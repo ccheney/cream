@@ -5,7 +5,7 @@ CREATE TYPE "public"."backtest_status" AS ENUM('pending', 'running', 'completed'
 CREATE TYPE "public"."chart_timeframe" AS ENUM('1D', '1W', '1M', '3M', '6M', '1Y', 'ALL');--> statement-breakpoint
 CREATE TYPE "public"."config_status" AS ENUM('draft', 'testing', 'active', 'archived');--> statement-breakpoint
 CREATE TYPE "public"."corporate_action_type" AS ENUM('split', 'dividend', 'merger', 'spinoff');--> statement-breakpoint
-CREATE TYPE "public"."cycle_event_type" AS ENUM('phase_change', 'agent_start', 'agent_complete', 'decision', 'order', 'error');--> statement-breakpoint
+CREATE TYPE "public"."cycle_event_type" AS ENUM('phase_change', 'agent_start', 'agent_complete', 'decision', 'order', 'error', 'progress', 'tool_call', 'tool_result', 'reasoning_delta', 'text_delta');--> statement-breakpoint
 CREATE TYPE "public"."cycle_phase" AS ENUM('observe', 'orient', 'decide', 'act', 'complete');--> statement-breakpoint
 CREATE TYPE "public"."cycle_status" AS ENUM('running', 'completed', 'failed');--> statement-breakpoint
 CREATE TYPE "public"."date_format" AS ENUM('MM/DD/YYYY', 'DD/MM/YYYY', 'YYYY-MM-DD');--> statement-breakpoint
@@ -57,12 +57,12 @@ CREATE TABLE "account" (
 	"access_token" text,
 	"refresh_token" text,
 	"id_token" text,
-	"access_token_expires_at" bigint,
-	"refresh_token_expires_at" bigint,
+	"access_token_expires_at" timestamp with time zone,
+	"refresh_token_expires_at" timestamp with time zone,
 	"scope" text,
 	"password" text,
-	"created_at" bigint DEFAULT (extract(epoch from now()) * 1000)::bigint NOT NULL,
-	"updated_at" bigint DEFAULT (extract(epoch from now()) * 1000)::bigint NOT NULL
+	"created_at" timestamp with time zone DEFAULT now() NOT NULL,
+	"updated_at" timestamp with time zone DEFAULT now() NOT NULL
 );
 --> statement-breakpoint
 CREATE TABLE "agent_configs" (
@@ -140,7 +140,12 @@ CREATE TABLE "backtest_equity" (
 	"drawdown" numeric(14, 2),
 	"drawdown_pct" numeric(8, 4),
 	"day_return_pct" numeric(8, 4),
-	"cumulative_return_pct" numeric(8, 4)
+	"cumulative_return_pct" numeric(8, 4),
+	CONSTRAINT "positive_nav" CHECK ("backtest_equity"."nav"::numeric > 0),
+	CONSTRAINT "non_negative_cash" CHECK ("backtest_equity"."cash"::numeric >= 0),
+	CONSTRAINT "positive_equity" CHECK ("backtest_equity"."equity"::numeric > 0),
+	CONSTRAINT "non_negative_drawdown" CHECK ("backtest_equity"."drawdown" IS NULL OR "backtest_equity"."drawdown"::numeric >= 0),
+	CONSTRAINT "valid_drawdown_pct" CHECK ("backtest_equity"."drawdown_pct" IS NULL OR ("backtest_equity"."drawdown_pct"::numeric >= 0 AND "backtest_equity"."drawdown_pct"::numeric <= 1))
 );
 --> statement-breakpoint
 CREATE TABLE "backtest_trades" (
@@ -154,7 +159,10 @@ CREATE TABLE "backtest_trades" (
 	"commission" numeric(10, 4) DEFAULT '0',
 	"pnl" numeric(14, 2),
 	"pnl_pct" numeric(8, 4),
-	"decision_rationale" text
+	"decision_rationale" text,
+	CONSTRAINT "positive_qty" CHECK ("backtest_trades"."qty"::numeric > 0),
+	CONSTRAINT "positive_price" CHECK ("backtest_trades"."price"::numeric > 0),
+	CONSTRAINT "non_negative_commission" CHECK ("backtest_trades"."commission" IS NULL OR "backtest_trades"."commission"::numeric >= 0)
 );
 --> statement-breakpoint
 CREATE TABLE "backtests" (
@@ -183,7 +191,12 @@ CREATE TABLE "backtests" (
 	"created_at" timestamp with time zone DEFAULT now() NOT NULL,
 	"started_at" timestamp with time zone,
 	"completed_at" timestamp with time zone,
-	"created_by" text
+	"created_by" text,
+	CONSTRAINT "positive_capital" CHECK ("backtests"."initial_capital"::numeric > 0),
+	CONSTRAINT "valid_date_range" CHECK ("backtests"."end_date" > "backtests"."start_date"),
+	CONSTRAINT "valid_win_rate" CHECK ("backtests"."win_rate" IS NULL OR ("backtests"."win_rate"::numeric >= 0 AND "backtests"."win_rate"::numeric <= 1)),
+	CONSTRAINT "valid_max_drawdown" CHECK ("backtests"."max_drawdown" IS NULL OR ("backtests"."max_drawdown"::numeric >= 0 AND "backtests"."max_drawdown"::numeric <= 1)),
+	CONSTRAINT "non_negative_trades" CHECK ("backtests"."total_trades" IS NULL OR "backtests"."total_trades" >= 0)
 );
 --> statement-breakpoint
 CREATE TABLE "candles" (
@@ -399,7 +412,12 @@ CREATE TABLE "external_events" (
 	"surprise_score" numeric(5, 4) NOT NULL,
 	"related_instruments" jsonb NOT NULL,
 	"original_content" text NOT NULL,
-	"created_at" timestamp with time zone DEFAULT now()
+	"created_at" timestamp with time zone DEFAULT now() NOT NULL,
+	CONSTRAINT "valid_confidence" CHECK ("external_events"."confidence"::numeric >= 0 AND "external_events"."confidence"::numeric <= 1),
+	CONSTRAINT "valid_importance" CHECK ("external_events"."importance" >= 1 AND "external_events"."importance" <= 10),
+	CONSTRAINT "valid_sentiment_score" CHECK ("external_events"."sentiment_score"::numeric >= -1 AND "external_events"."sentiment_score"::numeric <= 1),
+	CONSTRAINT "valid_importance_score" CHECK ("external_events"."importance_score"::numeric >= 0 AND "external_events"."importance_score"::numeric <= 1),
+	CONSTRAINT "valid_surprise_score" CHECK ("external_events"."surprise_score"::numeric >= 0 AND "external_events"."surprise_score"::numeric <= 1)
 );
 --> statement-breakpoint
 CREATE TABLE "factor_correlations" (
@@ -407,7 +425,8 @@ CREATE TABLE "factor_correlations" (
 	"factor_id_2" uuid NOT NULL,
 	"correlation" numeric(5, 4) NOT NULL,
 	"computed_at" timestamp with time zone DEFAULT now() NOT NULL,
-	CONSTRAINT "factor_correlations_factor_id_1_factor_id_2_pk" PRIMARY KEY("factor_id_1","factor_id_2")
+	CONSTRAINT "factor_correlations_factor_id_1_factor_id_2_pk" PRIMARY KEY("factor_id_1","factor_id_2"),
+	CONSTRAINT "valid_correlation" CHECK ("factor_correlations"."correlation"::numeric >= -1 AND "factor_correlations"."correlation"::numeric <= 1)
 );
 --> statement-breakpoint
 CREATE TABLE "factor_performance" (
@@ -420,14 +439,19 @@ CREATE TABLE "factor_performance" (
 	"weight" numeric(6, 4) DEFAULT '0.0' NOT NULL,
 	"signal_count" integer DEFAULT 0 NOT NULL,
 	"created_at" timestamp with time zone DEFAULT now() NOT NULL,
-	CONSTRAINT "factor_performance_factor_date" UNIQUE("factor_id","date")
+	CONSTRAINT "factor_performance_factor_date" UNIQUE("factor_id","date"),
+	CONSTRAINT "valid_ic" CHECK ("factor_performance"."ic"::numeric >= -1 AND "factor_performance"."ic"::numeric <= 1),
+	CONSTRAINT "valid_weight" CHECK ("factor_performance"."weight"::numeric >= 0 AND "factor_performance"."weight"::numeric <= 1),
+	CONSTRAINT "non_negative_signals" CHECK ("factor_performance"."signal_count" >= 0)
 );
 --> statement-breakpoint
 CREATE TABLE "factor_weights" (
 	"factor_id" uuid PRIMARY KEY NOT NULL,
 	"weight" numeric(6, 4) DEFAULT '0.0' NOT NULL,
 	"last_ic" numeric(6, 4),
-	"last_updated" timestamp with time zone DEFAULT now() NOT NULL
+	"last_updated" timestamp with time zone DEFAULT now() NOT NULL,
+	CONSTRAINT "valid_weight" CHECK ("factor_weights"."weight"::numeric >= 0 AND "factor_weights"."weight"::numeric <= 1),
+	CONSTRAINT "valid_last_ic" CHECK ("factor_weights"."last_ic" IS NULL OR ("factor_weights"."last_ic"::numeric >= -1 AND "factor_weights"."last_ic"::numeric <= 1))
 );
 --> statement-breakpoint
 CREATE TABLE "factors" (
@@ -467,7 +491,15 @@ CREATE TABLE "factors" (
 	"promoted_at" timestamp with time zone,
 	"retired_at" timestamp with time zone,
 	"last_updated" timestamp with time zone DEFAULT now() NOT NULL,
-	CONSTRAINT "factors_name_unique" UNIQUE("name")
+	CONSTRAINT "factors_name_unique" UNIQUE("name"),
+	CONSTRAINT "positive_version" CHECK ("factors"."version" >= 1),
+	CONSTRAINT "valid_originality" CHECK ("factors"."originality_score" IS NULL OR ("factors"."originality_score"::numeric >= 0 AND "factors"."originality_score"::numeric <= 1)),
+	CONSTRAINT "valid_alignment" CHECK ("factors"."hypothesis_alignment" IS NULL OR ("factors"."hypothesis_alignment"::numeric >= 0 AND "factors"."hypothesis_alignment"::numeric <= 1)),
+	CONSTRAINT "valid_stage1_ic" CHECK ("factors"."stage1_ic" IS NULL OR ("factors"."stage1_ic"::numeric >= -1 AND "factors"."stage1_ic"::numeric <= 1)),
+	CONSTRAINT "valid_stage1_drawdown" CHECK ("factors"."stage1_max_drawdown" IS NULL OR ("factors"."stage1_max_drawdown"::numeric >= 0 AND "factors"."stage1_max_drawdown"::numeric <= 1)),
+	CONSTRAINT "valid_current_weight" CHECK ("factors"."current_weight"::numeric >= 0 AND "factors"."current_weight"::numeric <= 1),
+	CONSTRAINT "valid_last_ic" CHECK ("factors"."last_ic" IS NULL OR ("factors"."last_ic"::numeric >= -1 AND "factors"."last_ic"::numeric <= 1)),
+	CONSTRAINT "non_negative_decay" CHECK ("factors"."decay_rate" IS NULL OR "factors"."decay_rate"::numeric >= 0)
 );
 --> statement-breakpoint
 CREATE TABLE "features" (
@@ -480,7 +512,8 @@ CREATE TABLE "features" (
 	"normalized_value" numeric(8, 6),
 	"parameters" jsonb,
 	"quality_score" numeric(4, 3),
-	"computed_at" timestamp with time zone DEFAULT now() NOT NULL
+	"computed_at" timestamp with time zone DEFAULT now() NOT NULL,
+	CONSTRAINT "valid_quality_score" CHECK ("features"."quality_score" IS NULL OR ("features"."quality_score"::numeric >= 0 AND "features"."quality_score"::numeric <= 1))
 );
 --> statement-breakpoint
 CREATE TABLE "filing_sync_runs" (
@@ -589,7 +622,12 @@ CREATE TABLE "indicator_ic_history" (
 	"decisions_used_in" integer DEFAULT 0 NOT NULL,
 	"decisions_correct" integer DEFAULT 0 NOT NULL,
 	"created_at" timestamp with time zone DEFAULT now() NOT NULL,
-	CONSTRAINT "indicator_ic_history_indicator_date" UNIQUE("indicator_id","date")
+	CONSTRAINT "indicator_ic_history_indicator_date" UNIQUE("indicator_id","date"),
+	CONSTRAINT "valid_ic_value" CHECK ("indicator_ic_history"."ic_value"::numeric >= -1 AND "indicator_ic_history"."ic_value"::numeric <= 1),
+	CONSTRAINT "non_negative_ic_std" CHECK ("indicator_ic_history"."ic_std"::numeric >= 0),
+	CONSTRAINT "non_negative_decisions" CHECK ("indicator_ic_history"."decisions_used_in" >= 0),
+	CONSTRAINT "non_negative_correct" CHECK ("indicator_ic_history"."decisions_correct" >= 0),
+	CONSTRAINT "correct_lte_used" CHECK ("indicator_ic_history"."decisions_correct" <= "indicator_ic_history"."decisions_used_in")
 );
 --> statement-breakpoint
 CREATE TABLE "indicator_paper_signals" (
@@ -629,7 +667,10 @@ CREATE TABLE "indicator_trials" (
 	"sortino_ratio" numeric(8, 4),
 	"selected" boolean DEFAULT false NOT NULL,
 	"created_at" timestamp with time zone DEFAULT now() NOT NULL,
-	CONSTRAINT "indicator_trials_indicator_trial" UNIQUE("indicator_id","trial_number")
+	CONSTRAINT "indicator_trials_indicator_trial" UNIQUE("indicator_id","trial_number"),
+	CONSTRAINT "valid_ic" CHECK ("indicator_trials"."information_coefficient" IS NULL OR ("indicator_trials"."information_coefficient"::numeric >= -1 AND "indicator_trials"."information_coefficient"::numeric <= 1)),
+	CONSTRAINT "valid_max_drawdown" CHECK ("indicator_trials"."max_drawdown" IS NULL OR ("indicator_trials"."max_drawdown"::numeric >= 0 AND "indicator_trials"."max_drawdown"::numeric <= 1)),
+	CONSTRAINT "positive_trial" CHECK ("indicator_trials"."trial_number" >= 1)
 );
 --> statement-breakpoint
 CREATE TABLE "indicators" (
@@ -670,7 +711,7 @@ CREATE TABLE "macro_watch_entries" (
 	"symbols" jsonb NOT NULL,
 	"source" text NOT NULL,
 	"metadata" jsonb,
-	"created_at" timestamp with time zone DEFAULT now()
+	"created_at" timestamp with time zone DEFAULT now() NOT NULL
 );
 --> statement-breakpoint
 CREATE TABLE "morning_newspapers" (
@@ -679,7 +720,7 @@ CREATE TABLE "morning_newspapers" (
 	"compiled_at" timestamp with time zone NOT NULL,
 	"sections" jsonb NOT NULL,
 	"raw_entry_ids" jsonb NOT NULL,
-	"created_at" timestamp with time zone DEFAULT now(),
+	"created_at" timestamp with time zone DEFAULT now() NOT NULL,
 	CONSTRAINT "morning_newspapers_date_unique" UNIQUE("date")
 );
 --> statement-breakpoint
@@ -736,7 +777,9 @@ CREATE TABLE "paper_signals" (
 	"actual_return" numeric(8, 4),
 	"predicted_return" numeric(8, 4),
 	"created_at" timestamp with time zone DEFAULT now() NOT NULL,
-	CONSTRAINT "paper_signals_factor_date_symbol" UNIQUE("factor_id","signal_date","symbol")
+	CONSTRAINT "paper_signals_factor_date_symbol" UNIQUE("factor_id","signal_date","symbol"),
+	CONSTRAINT "positive_entry" CHECK ("paper_signals"."entry_price" IS NULL OR "paper_signals"."entry_price"::numeric > 0),
+	CONSTRAINT "positive_exit" CHECK ("paper_signals"."exit_price" IS NULL OR "paper_signals"."exit_price"::numeric > 0)
 );
 --> statement-breakpoint
 CREATE TABLE "parity_validation_history" (
@@ -817,7 +860,7 @@ CREATE TABLE "prediction_market_arbitrage" (
 	"detected_at" timestamp with time zone NOT NULL,
 	"resolved_at" timestamp with time zone,
 	"resolution_price" numeric(6, 4),
-	"created_at" timestamp with time zone DEFAULT now()
+	"created_at" timestamp with time zone DEFAULT now() NOT NULL
 );
 --> statement-breakpoint
 CREATE TABLE "prediction_market_signals" (
@@ -827,7 +870,8 @@ CREATE TABLE "prediction_market_signals" (
 	"confidence" numeric(4, 3),
 	"computed_at" timestamp with time zone NOT NULL,
 	"inputs" jsonb NOT NULL,
-	"created_at" timestamp with time zone DEFAULT now()
+	"created_at" timestamp with time zone DEFAULT now() NOT NULL,
+	CONSTRAINT "valid_confidence" CHECK ("prediction_market_signals"."confidence" IS NULL OR ("prediction_market_signals"."confidence"::numeric >= 0 AND "prediction_market_signals"."confidence"::numeric <= 1))
 );
 --> statement-breakpoint
 CREATE TABLE "prediction_market_snapshots" (
@@ -838,7 +882,7 @@ CREATE TABLE "prediction_market_snapshots" (
 	"market_question" text,
 	"snapshot_time" timestamp with time zone NOT NULL,
 	"data" jsonb NOT NULL,
-	"created_at" timestamp with time zone DEFAULT now()
+	"created_at" timestamp with time zone DEFAULT now() NOT NULL
 );
 --> statement-breakpoint
 CREATE TABLE "regime_labels" (
@@ -853,7 +897,10 @@ CREATE TABLE "regime_labels" (
 	"correlation_to_market" numeric(4, 3),
 	"model_name" text DEFAULT 'hmm_regime' NOT NULL,
 	"model_version" text,
-	"computed_at" timestamp with time zone DEFAULT now() NOT NULL
+	"computed_at" timestamp with time zone DEFAULT now() NOT NULL,
+	CONSTRAINT "valid_confidence" CHECK ("regime_labels"."confidence"::numeric >= 0 AND "regime_labels"."confidence"::numeric <= 1),
+	CONSTRAINT "valid_trend_strength" CHECK ("regime_labels"."trend_strength" IS NULL OR ("regime_labels"."trend_strength"::numeric >= 0 AND "regime_labels"."trend_strength"::numeric <= 1)),
+	CONSTRAINT "valid_correlation" CHECK ("regime_labels"."correlation_to_market" IS NULL OR ("regime_labels"."correlation_to_market"::numeric >= -1 AND "regime_labels"."correlation_to_market"::numeric <= 1))
 );
 --> statement-breakpoint
 CREATE TABLE "research_runs" (
@@ -890,13 +937,13 @@ CREATE TABLE "sentiment_indicators" (
 --> statement-breakpoint
 CREATE TABLE "session" (
 	"id" uuid PRIMARY KEY DEFAULT uuidv7() NOT NULL,
-	"expires_at" bigint NOT NULL,
+	"expires_at" timestamp with time zone NOT NULL,
 	"token" text NOT NULL,
 	"ip_address" text,
 	"user_agent" text,
 	"user_id" uuid NOT NULL,
-	"created_at" bigint DEFAULT (extract(epoch from now()) * 1000)::bigint NOT NULL,
-	"updated_at" bigint DEFAULT (extract(epoch from now()) * 1000)::bigint NOT NULL,
+	"created_at" timestamp with time zone DEFAULT now() NOT NULL,
+	"updated_at" timestamp with time zone DEFAULT now() NOT NULL,
 	CONSTRAINT "session_token_unique" UNIQUE("token")
 );
 --> statement-breakpoint
@@ -948,7 +995,10 @@ CREATE TABLE "thesis_state" (
 	"notes" text,
 	"last_updated" timestamp with time zone DEFAULT now() NOT NULL,
 	"created_at" timestamp with time zone DEFAULT now() NOT NULL,
-	"closed_at" timestamp with time zone
+	"closed_at" timestamp with time zone,
+	CONSTRAINT "valid_conviction" CHECK ("thesis_state"."conviction" IS NULL OR ("thesis_state"."conviction"::numeric >= 0 AND "thesis_state"."conviction"::numeric <= 1)),
+	CONSTRAINT "positive_entry_price" CHECK ("thesis_state"."entry_price" IS NULL OR "thesis_state"."entry_price"::numeric > 0),
+	CONSTRAINT "positive_exit_price" CHECK ("thesis_state"."exit_price" IS NULL OR "thesis_state"."exit_price"::numeric > 0)
 );
 --> statement-breakpoint
 CREATE TABLE "thesis_state_history" (
@@ -961,7 +1011,9 @@ CREATE TABLE "thesis_state_history" (
 	"price_at_transition" numeric(12, 4),
 	"conviction_at_transition" numeric(4, 3),
 	"notes" text,
-	"created_at" timestamp with time zone DEFAULT now() NOT NULL
+	"created_at" timestamp with time zone DEFAULT now() NOT NULL,
+	CONSTRAINT "valid_conviction" CHECK ("thesis_state_history"."conviction_at_transition" IS NULL OR ("thesis_state_history"."conviction_at_transition"::numeric >= 0 AND "thesis_state_history"."conviction_at_transition"::numeric <= 1)),
+	CONSTRAINT "positive_price" CHECK ("thesis_state_history"."price_at_transition" IS NULL OR "thesis_state_history"."price_at_transition"::numeric > 0)
 );
 --> statement-breakpoint
 CREATE TABLE "ticker_changes" (
@@ -1055,8 +1107,8 @@ CREATE TABLE "user" (
 	"email_verified" boolean DEFAULT false NOT NULL,
 	"image" text,
 	"two_factor_enabled" boolean DEFAULT false,
-	"created_at" bigint DEFAULT (extract(epoch from now()) * 1000)::bigint NOT NULL,
-	"updated_at" bigint DEFAULT (extract(epoch from now()) * 1000)::bigint NOT NULL,
+	"created_at" timestamp with time zone DEFAULT now() NOT NULL,
+	"updated_at" timestamp with time zone DEFAULT now() NOT NULL,
 	CONSTRAINT "user_email_unique" UNIQUE("email")
 );
 --> statement-breakpoint
@@ -1081,9 +1133,9 @@ CREATE TABLE "verification" (
 	"id" uuid PRIMARY KEY DEFAULT uuidv7() NOT NULL,
 	"identifier" text NOT NULL,
 	"value" text NOT NULL,
-	"expires_at" bigint NOT NULL,
-	"created_at" bigint DEFAULT (extract(epoch from now()) * 1000)::bigint NOT NULL,
-	"updated_at" bigint DEFAULT (extract(epoch from now()) * 1000)::bigint NOT NULL
+	"expires_at" timestamp with time zone NOT NULL,
+	"created_at" timestamp with time zone DEFAULT now() NOT NULL,
+	"updated_at" timestamp with time zone DEFAULT now() NOT NULL
 );
 --> statement-breakpoint
 ALTER TABLE "account" ADD CONSTRAINT "account_user_id_user_id_fk" FOREIGN KEY ("user_id") REFERENCES "public"."user"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
@@ -1204,6 +1256,7 @@ CREATE INDEX "idx_filings_symbol_date" ON "filings" USING btree ("symbol","filed
 CREATE INDEX "idx_fundamental_symbol_date" ON "fundamental_indicators" USING btree ("symbol","date");--> statement-breakpoint
 CREATE INDEX "idx_fundamental_symbol" ON "fundamental_indicators" USING btree ("symbol");--> statement-breakpoint
 CREATE INDEX "idx_hypotheses_status" ON "hypotheses" USING btree ("status");--> statement-breakpoint
+CREATE INDEX "idx_hypotheses_parent" ON "hypotheses" USING btree ("parent_hypothesis_id");--> statement-breakpoint
 CREATE INDEX "idx_index_constituents_pit" ON "index_constituents" USING btree ("index_id","date_added","date_removed");--> statement-breakpoint
 CREATE INDEX "idx_index_constituents_symbol" ON "index_constituents" USING btree ("symbol","index_id");--> statement-breakpoint
 CREATE INDEX "idx_index_constituents_current" ON "index_constituents" USING btree ("index_id","date_removed");--> statement-breakpoint
@@ -1219,6 +1272,8 @@ CREATE INDEX "idx_trials_indicator" ON "indicator_trials" USING btree ("indicato
 CREATE INDEX "idx_indicators_status" ON "indicators" USING btree ("status");--> statement-breakpoint
 CREATE INDEX "idx_indicators_category" ON "indicators" USING btree ("category");--> statement-breakpoint
 CREATE INDEX "idx_indicators_code_hash" ON "indicators" USING btree ("code_hash");--> statement-breakpoint
+CREATE INDEX "idx_indicators_similar_to" ON "indicators" USING btree ("similar_to");--> statement-breakpoint
+CREATE INDEX "idx_indicators_replaces" ON "indicators" USING btree ("replaces");--> statement-breakpoint
 CREATE INDEX "idx_indicators_active" ON "indicators" USING btree ("status") WHERE "indicators"."status" IN ('paper', 'production');--> statement-breakpoint
 CREATE INDEX "idx_macro_watch_timestamp" ON "macro_watch_entries" USING btree ("timestamp");--> statement-breakpoint
 CREATE INDEX "idx_macro_watch_category" ON "macro_watch_entries" USING btree ("category");--> statement-breakpoint

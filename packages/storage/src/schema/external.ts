@@ -6,6 +6,7 @@
  */
 import { sql } from "drizzle-orm";
 import {
+	check,
 	index,
 	integer,
 	jsonb,
@@ -40,7 +41,7 @@ export const predictionMarketSnapshots = pgTable(
 		marketQuestion: text("market_question"),
 		snapshotTime: timestamp("snapshot_time", { withTimezone: true }).notNull(),
 		data: jsonb("data").$type<Record<string, unknown>>().notNull(),
-		createdAt: timestamp("created_at", { withTimezone: true }).defaultNow(),
+		createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
 	},
 	(table) => [
 		index("idx_pm_snapshots_platform").on(table.platform),
@@ -60,9 +61,13 @@ export const predictionMarketSignals = pgTable(
 		confidence: numeric("confidence", { precision: 4, scale: 3 }),
 		computedAt: timestamp("computed_at", { withTimezone: true }).notNull(),
 		inputs: jsonb("inputs").$type<Record<string, unknown>>().notNull(),
-		createdAt: timestamp("created_at", { withTimezone: true }).defaultNow(),
+		createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
 	},
 	(table) => [
+		check(
+			"valid_confidence",
+			sql`${table.confidence} IS NULL OR (${table.confidence}::numeric >= 0 AND ${table.confidence}::numeric <= 1)`
+		),
 		index("idx_pm_signals_type").on(table.signalType),
 		index("idx_pm_signals_time").on(table.computedAt),
 	]
@@ -88,7 +93,7 @@ export const predictionMarketArbitrage = pgTable(
 		detectedAt: timestamp("detected_at", { withTimezone: true }).notNull(),
 		resolvedAt: timestamp("resolved_at", { withTimezone: true }),
 		resolutionPrice: numeric("resolution_price", { precision: 6, scale: 4 }),
-		createdAt: timestamp("created_at", { withTimezone: true }).defaultNow(),
+		createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
 	},
 	(table) => [
 		index("idx_pm_arbitrage_divergence").on(table.divergencePct),
@@ -129,9 +134,26 @@ export const externalEvents = pgTable(
 		}).notNull(),
 		relatedInstruments: jsonb("related_instruments").$type<string[]>().notNull(),
 		originalContent: text("original_content").notNull(),
-		createdAt: timestamp("created_at", { withTimezone: true }).defaultNow(),
+		createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
 	},
 	(table) => [
+		check(
+			"valid_confidence",
+			sql`${table.confidence}::numeric >= 0 AND ${table.confidence}::numeric <= 1`
+		),
+		check("valid_importance", sql`${table.importance} >= 1 AND ${table.importance} <= 10`),
+		check(
+			"valid_sentiment_score",
+			sql`${table.sentimentScore}::numeric >= -1 AND ${table.sentimentScore}::numeric <= 1`
+		),
+		check(
+			"valid_importance_score",
+			sql`${table.importanceScore}::numeric >= 0 AND ${table.importanceScore}::numeric <= 1`
+		),
+		check(
+			"valid_surprise_score",
+			sql`${table.surpriseScore}::numeric >= 0 AND ${table.surpriseScore}::numeric <= 1`
+		),
 		index("idx_external_events_event_time").on(table.eventTime),
 		index("idx_external_events_source_type").on(table.sourceType),
 		index("idx_external_events_event_type").on(table.eventType),
@@ -224,7 +246,7 @@ export const macroWatchEntries = pgTable(
 		symbols: jsonb("symbols").$type<string[]>().notNull(),
 		source: text("source").notNull(),
 		metadata: jsonb("metadata").$type<Record<string, unknown>>(),
-		createdAt: timestamp("created_at", { withTimezone: true }).defaultNow(),
+		createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
 	},
 	(table) => [
 		index("idx_macro_watch_timestamp").on(table.timestamp),
@@ -249,7 +271,7 @@ export const morningNewspapers = pgTable(
 			}>()
 			.notNull(),
 		rawEntryIds: jsonb("raw_entry_ids").$type<string[]>().notNull(),
-		createdAt: timestamp("created_at", { withTimezone: true }).defaultNow(),
+		createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
 	},
 	(table) => [index("idx_morning_newspapers_date").on(table.date)]
 );

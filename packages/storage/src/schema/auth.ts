@@ -20,8 +20,8 @@ export const user = pgTable(
 		email_verified: boolean("email_verified").notNull().default(false),
 		image: text("image"),
 		two_factor_enabled: boolean("two_factor_enabled").default(false),
-		created_at: timestamp("created_at").notNull().defaultNow(),
-		updated_at: timestamp("updated_at")
+		created_at: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+		updated_at: timestamp("updated_at", { withTimezone: true })
 			.notNull()
 			.defaultNow()
 			.$onUpdate(() => new Date()),
@@ -37,15 +37,15 @@ export const session = pgTable(
 	"session",
 	{
 		id: uuid("id").primaryKey().default(sql`uuidv7()`),
-		expires_at: timestamp("expires_at").notNull(),
+		expires_at: timestamp("expires_at", { withTimezone: true }).notNull(),
 		token: text("token").notNull().unique(),
 		ip_address: text("ip_address"),
 		user_agent: text("user_agent"),
 		user_id: uuid("user_id")
 			.notNull()
 			.references(() => user.id, { onDelete: "cascade" }),
-		created_at: timestamp("created_at").notNull().defaultNow(),
-		updated_at: timestamp("updated_at")
+		created_at: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+		updated_at: timestamp("updated_at", { withTimezone: true })
 			.notNull()
 			.defaultNow()
 			.$onUpdate(() => new Date()),
@@ -70,12 +70,12 @@ export const account = pgTable(
 		access_token: text("access_token"),
 		refresh_token: text("refresh_token"),
 		id_token: text("id_token"),
-		access_token_expires_at: timestamp("access_token_expires_at"),
-		refresh_token_expires_at: timestamp("refresh_token_expires_at"),
+		access_token_expires_at: timestamp("access_token_expires_at", { withTimezone: true }),
+		refresh_token_expires_at: timestamp("refresh_token_expires_at", { withTimezone: true }),
 		scope: text("scope"),
 		password: text("password"),
-		created_at: timestamp("created_at").notNull().defaultNow(),
-		updated_at: timestamp("updated_at")
+		created_at: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+		updated_at: timestamp("updated_at", { withTimezone: true })
 			.notNull()
 			.defaultNow()
 			.$onUpdate(() => new Date()),
@@ -94,9 +94,9 @@ export const verification = pgTable(
 		id: uuid("id").primaryKey().default(sql`uuidv7()`),
 		identifier: text("identifier").notNull(),
 		value: text("value").notNull(),
-		expires_at: timestamp("expires_at").notNull(),
-		created_at: timestamp("created_at").notNull().defaultNow(),
-		updated_at: timestamp("updated_at")
+		expires_at: timestamp("expires_at", { withTimezone: true }).notNull(),
+		created_at: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+		updated_at: timestamp("updated_at", { withTimezone: true })
 			.notNull()
 			.defaultNow()
 			.$onUpdate(() => new Date()),

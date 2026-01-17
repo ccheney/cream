@@ -124,6 +124,10 @@ export const features = pgTable(
 		computedAt: timestamp("computed_at", { withTimezone: true }).notNull().defaultNow(),
 	},
 	(table) => [
+		check(
+			"valid_quality_score",
+			sql`${table.qualityScore} IS NULL OR (${table.qualityScore}::numeric >= 0 AND ${table.qualityScore}::numeric <= 1)`
+		),
 		uniqueIndex("idx_features_symbol_ts_indicator").on(
 			table.symbol,
 			table.timestamp,
@@ -164,6 +168,18 @@ export const regimeLabels = pgTable(
 		computedAt: timestamp("computed_at", { withTimezone: true }).notNull().defaultNow(),
 	},
 	(table) => [
+		check(
+			"valid_confidence",
+			sql`${table.confidence}::numeric >= 0 AND ${table.confidence}::numeric <= 1`
+		),
+		check(
+			"valid_trend_strength",
+			sql`${table.trendStrength} IS NULL OR (${table.trendStrength}::numeric >= 0 AND ${table.trendStrength}::numeric <= 1)`
+		),
+		check(
+			"valid_correlation",
+			sql`${table.correlationToMarket} IS NULL OR (${table.correlationToMarket}::numeric >= -1 AND ${table.correlationToMarket}::numeric <= 1)`
+		),
 		uniqueIndex("idx_regime_labels_symbol_ts_tf").on(
 			table.symbol,
 			table.timestamp,
