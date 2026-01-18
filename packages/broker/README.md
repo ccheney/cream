@@ -1,13 +1,12 @@
 # @cream/broker
 
-Broker integration for the Cream trading system. Unified API across BACKTEST, PAPER, and LIVE environments.
+Broker integration for the Cream trading system. Unified API across PAPER and LIVE environments.
 
 ## Overview
 
 Manages trading operations through:
 
 - **AlpacaClient** - Type-safe Alpaca Markets API wrapper
-- **BacktestAdapter** - In-memory simulated broker
 - **Environment-Aware Factory** - Auto-selects adapter based on context
 
 ## Key Components
@@ -46,19 +45,7 @@ import { createContext } from "@cream/domain";
 
 const ctx = createContext("PAPER", "scheduled");
 const client = createBrokerClient(ctx);
-// Auto-uses AlpacaClient for PAPER, BacktestAdapter for BACKTEST
-```
-
-### Backtest Adapter (`src/adapters/backtest.ts`)
-
-```typescript
-import { createBacktestAdapter } from "@cream/broker";
-
-const backtest = createBacktestAdapter({
-  initialCash: 100000,
-  fillMode: "immediate",
-  slippageBps: 5,
-});
+// Auto-uses AlpacaClient for PAPER and LIVE
 ```
 
 ## Features
@@ -73,7 +60,7 @@ const backtest = createBacktestAdapter({
 ```bash
 ALPACA_KEY=your_api_key
 ALPACA_SECRET=your_api_secret
-CREAM_ENV=BACKTEST|PAPER|LIVE
+CREAM_ENV=PAPER|LIVE
 ```
 
 ## Error Handling

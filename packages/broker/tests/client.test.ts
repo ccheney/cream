@@ -64,13 +64,6 @@ describe("createAlpacaClient", () => {
 			environment: "LIVE",
 		});
 		expect(liveClient.getEnvironment()).toBe("LIVE");
-
-		const backtestClient = createAlpacaClient({
-			apiKey: "key",
-			apiSecret: "secret",
-			environment: "BACKTEST",
-		});
-		expect(backtestClient.getEnvironment()).toBe("BACKTEST");
 	});
 });
 

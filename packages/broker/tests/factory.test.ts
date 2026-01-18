@@ -7,26 +7,6 @@ import { createTestContext } from "@cream/domain";
 import { createBrokerClient } from "../src/factory.js";
 
 describe("createBrokerClient factory", () => {
-	describe("BACKTEST environment", () => {
-		test("creates backtest adapter for BACKTEST environment", () => {
-			const ctx = createTestContext("BACKTEST");
-			const client = createBrokerClient(ctx);
-			expect(client.getEnvironment()).toBe("BACKTEST");
-		});
-
-		test("creates backtest adapter with configuration", async () => {
-			const ctx = createTestContext("BACKTEST");
-			const client = createBrokerClient(ctx, {
-				backtest: {
-					initialCash: 50000,
-				},
-			});
-
-			const account = await client.getAccount();
-			expect(account.cash).toBe(50000);
-		});
-	});
-
 	describe("PAPER environment", () => {
 		test("throws error for PAPER without credentials", () => {
 			const savedKey = Bun.env.ALPACA_KEY;
@@ -65,13 +45,6 @@ describe("createBrokerClient factory", () => {
 				apiSecret: "test-secret",
 			});
 			expect(client.getEnvironment()).toBe("LIVE");
-		});
-	});
-
-	describe("Error handling", () => {
-		test("throws error for unknown environment", () => {
-			const ctx = createTestContext("UNKNOWN" as "BACKTEST");
-			expect(() => createBrokerClient(ctx)).toThrow("Unknown environment");
 		});
 	});
 });
