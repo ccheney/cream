@@ -56,7 +56,6 @@ export { default as decisionsRoutes } from "./decisions.js";
 export { default as economicCalendarRoutes } from "./economic-calendar.js";
 export { default as factorZooRoutes } from "./factor-zoo.js";
 export { default as filingsRoutes } from "./filings.js";
-export { default as indicatorsRoutes } from "./indicators.js";
 export { default as marketRoutes } from "./market.js";
 export { default as optionsRoutes } from "./options.js";
 export { default as portfolioRoutes } from "./portfolio.js";

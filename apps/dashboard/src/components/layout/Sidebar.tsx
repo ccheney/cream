@@ -13,7 +13,6 @@
 import {
 	Activity,
 	BarChart3,
-	Beaker,
 	Bot,
 	Briefcase,
 	CalendarDays,
@@ -81,7 +80,6 @@ export const NAV_ITEMS: NavItem[] = NAV_GROUPS.flat();
 
 export const EXPERIMENT_ITEMS: NavItem[] = [
 	{ href: "/risk", label: "Risk", icon: ShieldAlert },
-	{ href: "/indicators", label: "Indicators", icon: Beaker },
 	{ href: "/theses", label: "Theses", icon: BarChart3 },
 ];
 

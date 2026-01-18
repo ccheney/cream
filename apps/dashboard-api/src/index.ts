@@ -34,8 +34,6 @@ import {
 	agentsRoutes,
 	aiRoutes,
 	alertsRoutes,
-	batchStatusRoutes,
-	batchTriggerRoutes,
 	calendarRoutes,
 	configRoutes,
 	cyclesRoutes,
@@ -43,7 +41,6 @@ import {
 	economicCalendarRoutes,
 	factorZooRoutes,
 	filingsRoutes,
-	indicatorsRoutes,
 	marketRoutes,
 	optionsRoutes,
 	portfolioRoutes,
@@ -219,7 +216,6 @@ app.use("/api/market/*", requireAuth());
 app.use("/api/risk/*", requireAuth());
 app.use("/api/theses/*", requireAuth());
 app.use("/api/preferences/*", requireAuth());
-app.use("/api/indicators/*", requireAuth());
 app.use("/api/factor-zoo/*", requireAuth());
 app.use("/api/options/*", requireAuth());
 app.use("/api/filings/*", requireAuth());
@@ -248,9 +244,6 @@ app.route("/api/options", optionsRoutes);
 app.route("/api/risk", riskRoutes);
 app.route("/api/theses", thesesRoutes);
 app.route("/api/preferences", preferencesRoutes);
-app.route("/api/indicators", indicatorsRoutes);
-app.route("/api/indicators", batchStatusRoutes);
-app.route("/api/indicators", batchTriggerRoutes);
 app.route("/api/factor-zoo", factorZooRoutes);
 app.route("/api/filings", filingsRoutes);
 app.route("/api/snapshots", snapshotsRoutes);
