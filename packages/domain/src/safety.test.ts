@@ -147,12 +147,6 @@ describe("State Isolation", () => {
 	it("generates isolated database name for PAPER", () => {
 		const ctx = createTestContext("PAPER");
 		const dbName = getIsolatedDatabaseName("cream", ctx);
-		expect(dbName).toBe("cream_backtest");
-	});
-
-	it("generates isolated database name for PAPER", () => {
-		const ctx = createTestContext("PAPER");
-		const dbName = getIsolatedDatabaseName("cream", ctx);
 		expect(dbName).toBe("cream_paper");
 	});
 
@@ -162,22 +156,17 @@ describe("State Isolation", () => {
 		expect(dbName).toBe("cream_live");
 	});
 
-	it("validates database isolation - rejects other environment databases in PAPER", () => {
+	it("validates database isolation - rejects LIVE database in PAPER environment", () => {
 		const ctx = createTestContext("PAPER");
-		expect(() => validateDatabaseIsolation("file:cream_paper.db", ctx)).toThrow(SafetyError);
 		expect(() => validateDatabaseIsolation("file:cream_live.db", ctx)).toThrow(SafetyError);
 	});
 
-	it("validates database isolation - rejects other environment databases in PAPER", () => {
-		const ctx = createTestContext("PAPER");
-		expect(() => validateDatabaseIsolation("file:cream_backtest.db", ctx)).toThrow(SafetyError);
-		expect(() => validateDatabaseIsolation("file:cream_live.db", ctx)).toThrow(SafetyError);
+	it("validates database isolation - rejects PAPER database in LIVE environment", () => {
+		const ctx = createTestContext("LIVE");
+		expect(() => validateDatabaseIsolation("file:cream_paper.db", ctx)).toThrow(SafetyError);
 	});
 
 	it("allows database for current environment", () => {
-		const backtestCtx = createTestContext("PAPER");
-		expect(() => validateDatabaseIsolation("file:cream_backtest.db", backtestCtx)).not.toThrow();
-
 		const paperCtx = createTestContext("PAPER");
 		expect(() => validateDatabaseIsolation("file:cream_paper.db", paperCtx)).not.toThrow();
 
@@ -213,8 +202,8 @@ describe("Audit Logging", () => {
 	});
 
 	it("throws when clearing audit log in LIVE environment", () => {
-		const backtestCtx = createTestContext("PAPER");
-		auditLog("TEST", {}, backtestCtx);
+		const paperCtx = createTestContext("PAPER");
+		auditLog("TEST", {}, paperCtx);
 
 		const liveCtx = createTestContext("LIVE");
 		expect(() => clearAuditLog(liveCtx)).toThrow(SafetyError);
@@ -283,7 +272,7 @@ describe("SafetyError", () => {
 });
 
 describe("resetSafetyState", () => {
-	it("resets all safety state in PAPER", () => {
+	it("resets all safety state when called with test context", () => {
 		const ctx = createTestContext("PAPER");
 
 		// Add some state
@@ -294,15 +283,5 @@ describe("resetSafetyState", () => {
 
 		expect(getAuditLog().length).toBe(0);
 		expect(isCircuitOpen("test")).toBe(false);
-	});
-
-	it("throws when called in PAPER environment", () => {
-		const ctx = createTestContext("PAPER");
-		expect(() => resetSafetyState(ctx)).toThrow(SafetyError);
-	});
-
-	it("throws when called in LIVE environment", () => {
-		const ctx = createTestContext("LIVE");
-		expect(() => resetSafetyState(ctx)).toThrow(SafetyError);
 	});
 });

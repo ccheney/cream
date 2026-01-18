@@ -16,7 +16,7 @@
  */
 
 import type { ExecutionContext } from "./context";
-import { env, isTest, isLive } from "./env";
+import { env, isLive, isTest } from "./env";
 
 // ============================================
 // Order ID Namespacing
@@ -224,7 +224,7 @@ export function getIsolatedDatabaseName(baseName: string, ctx: ExecutionContext)
  */
 export function validateDatabaseIsolation(dbUrl: string, ctx: ExecutionContext): void {
 	// Check for cross-environment database access
-	const environments = ["backtest", "paper", "live"];
+	const environments = ["paper", "live"];
 	for (const otherEnv of environments) {
 		if (otherEnv !== ctx.environment.toLowerCase()) {
 			if (dbUrl.includes(`_${otherEnv}`)) {

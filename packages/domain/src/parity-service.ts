@@ -73,10 +73,10 @@ export interface ParityValidationRepository {
 }
 
 /**
- * Interface for retrieving performance metrics from backtests/live.
+ * Interface for retrieving performance metrics from research/live.
  */
 export interface MetricsProvider {
-	getBacktestMetrics(entityId: string): Promise<ParityPerformanceMetrics | null>;
+	getResearchMetrics(entityId: string): Promise<ParityPerformanceMetrics | null>;
 	getLiveMetrics(
 		entityId: string,
 		environment: ParityEnvironment
@@ -87,7 +87,7 @@ export interface MetricsProvider {
  * Interface for retrieving version registries.
  */
 export interface VersionRegistryProvider {
-	getBacktestRegistry(): Promise<VersionRegistry>;
+	getResearchRegistry(): Promise<VersionRegistry>;
 	getLiveRegistry(environment: ParityEnvironment): Promise<VersionRegistry>;
 }
 
@@ -126,16 +126,16 @@ export class ParityValidationService {
 		environment: ParityEnvironment = "PAPER"
 	): Promise<ParityValidationResult> {
 		// Get metrics from providers if available
-		let backtestMetrics: ParityPerformanceMetrics | undefined;
+		let researchMetrics: ParityPerformanceMetrics | undefined;
 		let liveMetrics: ParityPerformanceMetrics | undefined;
-		let backtestRegistry: VersionRegistry | undefined;
+		let researchRegistry: VersionRegistry | undefined;
 		let liveRegistry: VersionRegistry | undefined;
 
 		if (this.metricsProvider) {
-			const bt = await this.metricsProvider.getBacktestMetrics(indicatorId);
+			const bt = await this.metricsProvider.getResearchMetrics(indicatorId);
 			const live = await this.metricsProvider.getLiveMetrics(indicatorId, environment);
 			if (bt) {
-				backtestMetrics = bt;
+				researchMetrics = bt;
 			}
 			if (live) {
 				liveMetrics = live;
@@ -143,14 +143,14 @@ export class ParityValidationService {
 		}
 
 		if (this.registryProvider) {
-			backtestRegistry = await this.registryProvider.getBacktestRegistry();
+			researchRegistry = await this.registryProvider.getResearchRegistry();
 			liveRegistry = await this.registryProvider.getLiveRegistry(environment);
 		}
 
 		const result = runParityValidation({
-			backtestMetrics,
+			researchMetrics,
 			liveMetrics,
-			backtestRegistry,
+			researchRegistry,
 			liveRegistry,
 		});
 
@@ -174,14 +174,14 @@ export class ParityValidationService {
 		factorId: string,
 		environment: ParityEnvironment = "PAPER"
 	): Promise<ParityValidationResult> {
-		let backtestMetrics: ParityPerformanceMetrics | undefined;
+		let researchMetrics: ParityPerformanceMetrics | undefined;
 		let liveMetrics: ParityPerformanceMetrics | undefined;
 
 		if (this.metricsProvider) {
-			const bt = await this.metricsProvider.getBacktestMetrics(factorId);
+			const bt = await this.metricsProvider.getResearchMetrics(factorId);
 			const live = await this.metricsProvider.getLiveMetrics(factorId, environment);
 			if (bt) {
-				backtestMetrics = bt;
+				researchMetrics = bt;
 			}
 			if (live) {
 				liveMetrics = live;
@@ -189,7 +189,7 @@ export class ParityValidationService {
 		}
 
 		const result = runParityValidation({
-			backtestMetrics,
+			researchMetrics,
 			liveMetrics,
 		});
 
@@ -213,16 +213,16 @@ export class ParityValidationService {
 		targetEnvironment: ParityEnvironment
 	): Promise<ParityValidationResult> {
 		// Config validation primarily checks version registries
-		let backtestRegistry: VersionRegistry | undefined;
+		let researchRegistry: VersionRegistry | undefined;
 		let liveRegistry: VersionRegistry | undefined;
 
 		if (this.registryProvider) {
-			backtestRegistry = await this.registryProvider.getBacktestRegistry();
+			researchRegistry = await this.registryProvider.getResearchRegistry();
 			liveRegistry = await this.registryProvider.getLiveRegistry(sourceEnvironment);
 		}
 
 		const result = runParityValidation({
-			backtestRegistry,
+			researchRegistry,
 			liveRegistry,
 		});
 

@@ -1,7 +1,7 @@
 /**
  * Research-to-Production Feature Parity Validation
  *
- * Implements validation mechanisms to ensure backtesting features match
+ * Implements validation mechanisms to ensure research features match
  * live trading capabilities, preventing look-ahead bias and ensuring
  * statistical parity.
  *
@@ -58,32 +58,32 @@ export interface VersionComparisonResult {
 	/** Indicators with mismatched versions */
 	mismatches: Array<{
 		indicatorId: string;
-		backtestVersion: string;
+		researchVersion: string;
 		liveVersion: string;
 	}>;
 	/** Indicators missing from live */
 	missingFromLive: string[];
-	/** Indicators missing from backtest */
-	missingFromBacktest: string[];
+	/** Indicators missing from research */
+	missingFromResearch: string[];
 }
 
 /**
- * Compare indicator versions between backtest and live registries.
+ * Compare indicator versions between research and live registries.
  */
 export function compareVersionRegistries(
-	backtest: VersionRegistry,
+	research: VersionRegistry,
 	live: VersionRegistry
 ): VersionComparisonResult {
 	const mismatches: VersionComparisonResult["mismatches"] = [];
 	const missingFromLive: string[] = [];
-	const missingFromBacktest: string[] = [];
+	const missingFromResearch: string[] = [];
 
-	const backtestIds = new Set(Object.keys(backtest.indicators));
+	const researchIds = new Set(Object.keys(research.indicators));
 	const liveIds = new Set(Object.keys(live.indicators));
 
-	for (const id of backtestIds) {
-		const backtestIndicator = backtest.indicators[id];
-		if (!backtestIndicator) {
+	for (const id of researchIds) {
+		const researchIndicator = research.indicators[id];
+		if (!researchIndicator) {
 			continue;
 		}
 
@@ -91,10 +91,10 @@ export function compareVersionRegistries(
 			missingFromLive.push(id);
 		} else {
 			const liveIndicator = live.indicators[id];
-			if (liveIndicator && backtestIndicator.version !== liveIndicator.version) {
+			if (liveIndicator && researchIndicator.version !== liveIndicator.version) {
 				mismatches.push({
 					indicatorId: id,
-					backtestVersion: backtestIndicator.version,
+					researchVersion: researchIndicator.version,
 					liveVersion: liveIndicator.version,
 				});
 			}
@@ -102,17 +102,17 @@ export function compareVersionRegistries(
 	}
 
 	for (const id of liveIds) {
-		if (!backtestIds.has(id)) {
-			missingFromBacktest.push(id);
+		if (!researchIds.has(id)) {
+			missingFromResearch.push(id);
 		}
 	}
 
 	return {
 		match:
-			mismatches.length === 0 && missingFromLive.length === 0 && missingFromBacktest.length === 0,
+			mismatches.length === 0 && missingFromLive.length === 0 && missingFromResearch.length === 0,
 		mismatches,
 		missingFromLive,
-		missingFromBacktest,
+		missingFromResearch,
 	};
 }
 
@@ -290,9 +290,9 @@ export interface FillModelComparisonResult {
 	matchedFills: number;
 	/** Statistics */
 	stats: {
-		avgSlippageBacktest: number;
+		avgSlippageResearch: number;
 		avgSlippageLive: number;
-		fillRateBacktest: number;
+		fillRateResearch: number;
 		fillRateLive: number;
 		avgLatencyMs?: number;
 	};
@@ -300,20 +300,20 @@ export interface FillModelComparisonResult {
 	discrepancies: Array<{
 		orderId: string;
 		field: string;
-		backtestValue: number | string;
+		researchValue: number | string;
 		liveValue: number | string;
 	}>;
 }
 
 /**
- * Compare backtest fill model against live trading fills.
+ * Compare research fill model against live trading fills.
  *
- * @param backtestFills - Fills from backtest simulation
+ * @param researchFills - Fills from research simulation
  * @param liveFills - Actual fills from live/paper trading
  * @param tolerance - Acceptable difference in slippage (basis points)
  */
 export function compareFillModels(
-	backtestFills: FillRecord[],
+	researchFills: FillRecord[],
 	liveFills: FillRecord[],
 	tolerance: { slippageBps: number; fillRatePct: number } = {
 		slippageBps: 10,
@@ -322,17 +322,17 @@ export function compareFillModels(
 ): FillModelComparisonResult {
 	const discrepancies: FillModelComparisonResult["discrepancies"] = [];
 
-	const backtestSlippages = backtestFills
+	const researchSlippages = researchFills
 		.map((f) => f.slippageBps)
 		.filter((s): s is number => s !== undefined);
-	const avgSlippageBacktest =
-		backtestSlippages.length > 0
-			? backtestSlippages.reduce((a, b) => a + b, 0) / backtestSlippages.length
+	const avgSlippageResearch =
+		researchSlippages.length > 0
+			? researchSlippages.reduce((a, b) => a + b, 0) / researchSlippages.length
 			: 0;
 
-	const backtestFillRate =
-		backtestFills.length > 0
-			? backtestFills.filter((f) => f.filledQty > 0).length / backtestFills.length
+	const researchFillRate =
+		researchFills.length > 0
+			? researchFills.filter((f) => f.filledQty > 0).length / researchFills.length
 			: 0;
 
 	const liveSlippages = liveFills
@@ -344,20 +344,20 @@ export function compareFillModels(
 	const liveFillRate =
 		liveFills.length > 0 ? liveFills.filter((f) => f.filledQty > 0).length / liveFills.length : 0;
 
-	if (Math.abs(avgSlippageBacktest - avgSlippageLive) > tolerance.slippageBps) {
+	if (Math.abs(avgSlippageResearch - avgSlippageLive) > tolerance.slippageBps) {
 		discrepancies.push({
 			orderId: "aggregate",
 			field: "avgSlippage",
-			backtestValue: avgSlippageBacktest,
+			researchValue: avgSlippageResearch,
 			liveValue: avgSlippageLive,
 		});
 	}
 
-	if (Math.abs((backtestFillRate - liveFillRate) * 100) > tolerance.fillRatePct) {
+	if (Math.abs((researchFillRate - liveFillRate) * 100) > tolerance.fillRatePct) {
 		discrepancies.push({
 			orderId: "aggregate",
 			field: "fillRate",
-			backtestValue: backtestFillRate,
+			researchValue: researchFillRate,
 			liveValue: liveFillRate,
 		});
 	}
@@ -365,10 +365,10 @@ export function compareFillModels(
 	const liveByOrderId = new Map(liveFills.map((f) => [f.orderId, f]));
 	let matchedFills = 0;
 
-	for (const btFill of backtestFills) {
-		const liveFill = liveByOrderId.get(btFill.orderId);
+	for (const researchFill of researchFills) {
+		const liveFill = liveByOrderId.get(researchFill.orderId);
 		if (liveFill) {
-			const btSlip = btFill.slippageBps ?? 0;
+			const btSlip = researchFill.slippageBps ?? 0;
 			const liveSlip = liveFill.slippageBps ?? 0;
 
 			if (Math.abs(btSlip - liveSlip) <= tolerance.slippageBps) {
@@ -377,16 +377,16 @@ export function compareFillModels(
 		}
 	}
 
-	const matchScore = backtestFills.length > 0 ? matchedFills / backtestFills.length : 1;
+	const matchScore = researchFills.length > 0 ? matchedFills / researchFills.length : 1;
 
 	return {
 		matchScore,
-		totalFills: backtestFills.length,
+		totalFills: researchFills.length,
 		matchedFills,
 		stats: {
-			avgSlippageBacktest,
+			avgSlippageResearch,
 			avgSlippageLive,
-			fillRateBacktest: backtestFillRate,
+			fillRateResearch: researchFillRate,
 			fillRateLive: liveFillRate,
 		},
 		discrepancies,
@@ -434,7 +434,7 @@ export interface StatisticalParityResult {
 	/** Metric-by-metric comparison */
 	metricComparisons: Array<{
 		metric: keyof ParityPerformanceMetrics;
-		backtestValue: number;
+		researchValue: number;
 		liveValue: number;
 		differencePercent: number;
 		withinTolerance: boolean;
@@ -461,14 +461,14 @@ export const DEFAULT_METRIC_TOLERANCES: Record<keyof ParityPerformanceMetrics, n
 };
 
 /**
- * Compare performance metrics between backtest and live trading.
+ * Compare performance metrics between research and live trading.
  *
- * @param backtest - Metrics from backtesting
+ * @param research - Metrics from research
  * @param live - Metrics from live/paper trading
  * @param tolerances - Per-metric tolerance (percentage difference allowed)
  */
 export function comparePerformanceMetrics(
-	backtest: ParityPerformanceMetrics,
+	research: ParityPerformanceMetrics,
 	live: ParityPerformanceMetrics,
 	tolerances: Partial<Record<keyof ParityPerformanceMetrics, number>> = {}
 ): StatisticalParityResult {
@@ -490,16 +490,16 @@ export function comparePerformanceMetrics(
 	];
 
 	for (const metric of metrics) {
-		const btValue = backtest[metric];
+		const researchValue = research[metric];
 		const liveValue = live[metric];
 
 		let diffPct: number;
-		if (btValue === 0 && liveValue === 0) {
+		if (researchValue === 0 && liveValue === 0) {
 			diffPct = 0;
-		} else if (btValue === 0) {
-			diffPct = 100; // Infinite difference if backtest is 0 but live isn't
+		} else if (researchValue === 0) {
+			diffPct = 100; // Infinite difference if research is 0 but live isn't
 		} else {
-			diffPct = Math.abs((liveValue - btValue) / btValue) * 100;
+			diffPct = Math.abs((liveValue - researchValue) / researchValue) * 100;
 		}
 
 		const tolerance = mergedTolerances[metric];
@@ -511,7 +511,7 @@ export function comparePerformanceMetrics(
 
 		metricComparisons.push({
 			metric,
-			backtestValue: btValue,
+			researchValue: researchValue,
 			liveValue,
 			differencePercent: diffPct,
 			withinTolerance: withinTol,
@@ -678,13 +678,13 @@ export interface ParityValidationResult {
  * @param params - Validation parameters
  */
 export function runParityValidation(params: {
-	backtestRegistry?: VersionRegistry;
+	researchRegistry?: VersionRegistry;
 	liveRegistry?: VersionRegistry;
 	candles?: ParityCandle[];
 	decisionTimestamp?: string;
-	backtestFills?: FillRecord[];
+	researchFills?: FillRecord[];
 	liveFills?: FillRecord[];
-	backtestMetrics?: ParityPerformanceMetrics;
+	researchMetrics?: ParityPerformanceMetrics;
 	liveMetrics?: ParityPerformanceMetrics;
 	historicalData?: DataSourceMetadata;
 	realtimeData?: DataSourceMetadata;
@@ -700,8 +700,8 @@ export function runParityValidation(params: {
 	let dataConsistency: DataConsistencyResult | undefined;
 
 	// Version comparison
-	if (params.backtestRegistry && params.liveRegistry) {
-		versionComparison = compareVersionRegistries(params.backtestRegistry, params.liveRegistry);
+	if (params.researchRegistry && params.liveRegistry) {
+		versionComparison = compareVersionRegistries(params.researchRegistry, params.liveRegistry);
 
 		if (!versionComparison.match) {
 			if (versionComparison.mismatches.length > 0) {
@@ -714,9 +714,9 @@ export function runParityValidation(params: {
 					`Indicators missing from live: ${versionComparison.missingFromLive.join(", ")}`
 				);
 			}
-			if (versionComparison.missingFromBacktest.length > 0) {
+			if (versionComparison.missingFromResearch.length > 0) {
 				warnings.push(
-					`Indicators missing from backtest: ${versionComparison.missingFromBacktest.join(", ")}`
+					`Indicators missing from research: ${versionComparison.missingFromResearch.join(", ")}`
 				);
 			}
 		}
@@ -738,8 +738,8 @@ export function runParityValidation(params: {
 	}
 
 	// Fill model comparison
-	if (params.backtestFills && params.liveFills) {
-		fillModelComparison = compareFillModels(params.backtestFills, params.liveFills);
+	if (params.researchFills && params.liveFills) {
+		fillModelComparison = compareFillModels(params.researchFills, params.liveFills);
 
 		if (fillModelComparison.matchScore < 0.8) {
 			warnings.push(
@@ -749,14 +749,14 @@ export function runParityValidation(params: {
 
 		for (const d of fillModelComparison.discrepancies) {
 			warnings.push(
-				`Fill discrepancy in ${d.field}: backtest=${d.backtestValue}, live=${d.liveValue}`
+				`Fill discrepancy in ${d.field}: research=${d.researchValue}, live=${d.liveValue}`
 			);
 		}
 	}
 
 	// Statistical parity
-	if (params.backtestMetrics && params.liveMetrics) {
-		statisticalParity = comparePerformanceMetrics(params.backtestMetrics, params.liveMetrics);
+	if (params.researchMetrics && params.liveMetrics) {
+		statisticalParity = comparePerformanceMetrics(params.researchMetrics, params.liveMetrics);
 
 		if (statisticalParity.recommendation === "REJECT") {
 			blockingIssues.push(statisticalParity.reason);

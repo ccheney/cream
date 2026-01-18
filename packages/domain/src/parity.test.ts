@@ -33,7 +33,7 @@ describe("compareVersionRegistries", () => {
 		expect(result.match).toBe(true);
 		expect(result.mismatches).toHaveLength(0);
 		expect(result.missingFromLive).toHaveLength(0);
-		expect(result.missingFromBacktest).toHaveLength(0);
+		expect(result.missingFromResearch).toHaveLength(0);
 	});
 
 	test("detects version mismatches", () => {
@@ -59,7 +59,7 @@ describe("compareVersionRegistries", () => {
 		expect(result.mismatches).toHaveLength(1);
 		expect(result.mismatches[0]).toEqual({
 			indicatorId: "sma",
-			backtestVersion: "1.0.0",
+			researchVersion: "1.0.0",
 			liveVersion: "2.0.0",
 		});
 	});
@@ -109,18 +109,9 @@ describe("compareVersionRegistries", () => {
 		const result = compareVersionRegistries(paper, live);
 
 		expect(result.match).toBe(false);
-		expect(result.missingFromBacktest).toContain("macd");
+		expect(result.missingFromResearch).toContain("macd");
 	});
 
-	test("rejects BACKTEST as environment", () => {
-		const { VersionRegistrySchema } = require("./parity");
-		const invalidRegistry = {
-			createdAt: "2026-01-04T00:00:00Z",
-			environment: "BACKTEST",
-			indicators: {},
-		};
-		expect(VersionRegistrySchema.safeParse(invalidRegistry).success).toBe(false);
-	});
 });
 
 describe("checkLookAheadBias", () => {
@@ -264,7 +255,7 @@ describe("validateAdjustedData", () => {
 
 describe("compareFillModels", () => {
 	test("returns high match score for similar fills", () => {
-		const backtestFills: FillRecord[] = [
+		const researchFills: FillRecord[] = [
 			{
 				orderId: "order-1",
 				symbol: "AAPL",
@@ -292,7 +283,7 @@ describe("compareFillModels", () => {
 			},
 		];
 
-		const result = compareFillModels(backtestFills, liveFills);
+		const result = compareFillModels(researchFills, liveFills);
 
 		expect(result.matchScore).toBeGreaterThanOrEqual(0.8);
 		expect(result.totalFills).toBe(1);
@@ -300,7 +291,7 @@ describe("compareFillModels", () => {
 	});
 
 	test("detects slippage discrepancies", () => {
-		const backtestFills: FillRecord[] = [
+		const researchFills: FillRecord[] = [
 			{
 				orderId: "order-1",
 				symbol: "AAPL",
@@ -324,14 +315,14 @@ describe("compareFillModels", () => {
 			},
 		];
 
-		const result = compareFillModels(backtestFills, liveFills);
+		const result = compareFillModels(researchFills, liveFills);
 
 		expect(result.discrepancies.length).toBeGreaterThan(0);
-		expect(result.stats.avgSlippageLive).toBeGreaterThan(result.stats.avgSlippageBacktest);
+		expect(result.stats.avgSlippageLive).toBeGreaterThan(result.stats.avgSlippageResearch);
 	});
 
 	test("calculates fill rates correctly", () => {
-		const backtestFills: FillRecord[] = [
+		const researchFills: FillRecord[] = [
 			{
 				orderId: "1",
 				symbol: "AAPL",
@@ -369,9 +360,9 @@ describe("compareFillModels", () => {
 			},
 		];
 
-		const result = compareFillModels(backtestFills, liveFills);
+		const result = compareFillModels(researchFills, liveFills);
 
-		expect(result.stats.fillRateBacktest).toBe(0.5);
+		expect(result.stats.fillRateResearch).toBe(0.5);
 		expect(result.stats.fillRateLive).toBe(1);
 	});
 });
@@ -539,7 +530,7 @@ describe("validateDataConsistency", () => {
 describe("runParityValidation", () => {
 	test("approves when all checks pass", () => {
 		const result = runParityValidation({
-			backtestRegistry: {
+			researchRegistry: {
 				createdAt: "2026-01-04T00:00:00Z",
 				environment: "PAPER",
 				indicators: {
@@ -573,7 +564,7 @@ describe("runParityValidation", () => {
 
 	test("blocks on version mismatches", () => {
 		const result = runParityValidation({
-			backtestRegistry: {
+			researchRegistry: {
 				createdAt: "2026-01-04T00:00:00Z",
 				environment: "PAPER",
 				indicators: {
@@ -616,7 +607,7 @@ describe("runParityValidation", () => {
 
 	test("needs investigation when fill model diverges", () => {
 		const result = runParityValidation({
-			backtestFills: [
+			researchFills: [
 				{
 					orderId: "1",
 					symbol: "AAPL",
