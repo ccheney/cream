@@ -25,14 +25,6 @@ plugins:
       - target=ts
       - import_extension=js
 
-  # Python - Uses protoc built-in Python plugin via BSR
-  - remote: buf.build/protocolbuffers/python
-    out: ../schema-gen/python
-
-  # Python type stubs
-  - remote: buf.build/protocolbuffers/pyi
-    out: ../schema-gen/python
-
   # Rust - Prost for message types
   # Note: Not compiling well-known types - we use prost-types crate instead
   - remote: buf.build/community/neoeinstein-prost
