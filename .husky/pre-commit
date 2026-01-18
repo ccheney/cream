@@ -12,9 +12,6 @@ STAGED_FILES_LIST=$(echo "$STAGED_FILES" | tr '\n' ' ')
 # Check if any TypeScript/JavaScript files are staged
 HAS_TS_FILES=$(echo "$STAGED_FILES" | grep -E '\.(ts|tsx|js|jsx)$' || true)
 
-# Check if any Python files are staged
-HAS_PY_FILES=$(echo "$STAGED_FILES" | grep -E '\.py$' || true)
-
 # Check if any Rust files are staged
 HAS_RS_FILES=$(echo "$STAGED_FILES" | grep -E '\.rs$' || true)
 
@@ -34,37 +31,12 @@ if [ -n "$HAS_TS_FILES" ]; then
   }
 fi
 
-# 3. Ruff: Format Python (all Python dirs, if they exist)
-if [ -d "packages/research" ]; then
-  echo "🐍 Ruff: Formatting Python files..."
-  ruff format packages/research 2>/dev/null || true
-
-  # 4. Ruff: Lint Python with auto-fix
-  echo "🐍 Ruff: Linting Python files..."
-  ruff check --fix packages/research 2>/dev/null || true
-
-  # 5. Mypy: Type checking Python (if Python files are staged)
-  if [ -n "$HAS_PY_FILES" ]; then
-    echo "🐍 Mypy: Running type checker..."
-    # Run mypy on each Python project that has staged files
-    for dir in packages/research; do
-      if [ -d "$dir" ] && echo "$STAGED_FILES" | grep -q "^$dir/"; then
-        echo "  → Checking $dir..."
-        (cd "$dir" && uv run mypy . 2>/dev/null) || {
-          echo "❌ Python type errors found in $dir. Please fix them before committing."
-          exit 1
-        }
-      fi
-    done
-  fi
-fi
-
-# 6. Cargo: Format Rust (if Rust files exist)
+# 3. Cargo: Format Rust (if Rust files exist)
 if [ -d "apps/execution-engine" ]; then
   echo "🦀 Cargo: Formatting Rust files..."
   cargo fmt --all 2>/dev/null || true
 
-  # 7. Clippy: Lint Rust (includes type checking)
+  # 4. Clippy: Lint Rust (includes type checking)
   # Use -D clippy::correctness for actual bugs, allow style/complexity lints
   echo "🦀 Clippy: Checking Rust files..."
   cargo clippy --all-targets --all-features -- \
@@ -76,7 +48,7 @@ if [ -d "apps/execution-engine" ]; then
   }
 fi
 
-# 8. Dependency validation (if package.json files are staged)
+# 5. Dependency validation (if package.json files are staged)
 if [ -n "$HAS_PKG_FILES" ]; then
   echo "📦 Validating package dependencies..."
   bun run lint:deps || {

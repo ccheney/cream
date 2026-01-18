@@ -36,7 +36,6 @@
         "NODE_ENV",
         "LOG_LEVEL",
         "DATABASE_URL",
-        "DATABASE_URL_BACKTEST",
         "DATABASE_URL_PAPER",
         "DATABASE_URL_LIVE",
         "TEST_DATABASE_URL",

@@ -22,7 +22,7 @@ import { createNodeLogger, type LifecycleLogger } from "@cream/logger";
 const log: LifecycleLogger = createNodeLogger({
   service: "update-indicator-exports",
   level: "info",
-  environment: Bun.env.CREAM_ENV ?? "BACKTEST",
+  environment: Bun.env.CREAM_ENV ?? "PAPER",
   pretty: true,
 });
 

@@ -27,7 +27,7 @@ import { eq } from "drizzle-orm";
 const log: LifecycleLogger = createNodeLogger({
   service: "fetch-indicator-metadata",
   level: "info",
-  environment: Bun.env.CREAM_ENV ?? "BACKTEST",
+  environment: Bun.env.CREAM_ENV ?? "PAPER",
   pretty: true,
 });
 

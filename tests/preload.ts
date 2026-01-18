@@ -6,7 +6,7 @@
  * values at module load time.
  */
 Bun.env.NODE_ENV = "test";
-Bun.env.CREAM_ENV = Bun.env.CREAM_ENV || "BACKTEST";
+Bun.env.CREAM_ENV = Bun.env.CREAM_ENV || "PAPER";
 
 // Set a dummy secret for better-auth so it doesn't throw during imports
 // The actual auth is mocked in tests

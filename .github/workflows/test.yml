@@ -33,7 +33,6 @@ jobs:
     outputs:
       typescript: ${{ steps.filter.outputs.typescript }}
       rust: ${{ steps.filter.outputs.rust }}
-      python: ${{ steps.filter.outputs.python }}
     steps:
       - name: Checkout
         uses: actions/checkout@v6
@@ -55,10 +54,6 @@ jobs:
               - 'apps/execution-engine/**'
               - '**/Cargo.toml'
               - '**/Cargo.lock'
-            python:
-              - 'packages/research/**'
-              - '**/pyproject.toml'
-              - 'ruff.toml'
 
   # ============================================
   # TypeScript Unit Tests

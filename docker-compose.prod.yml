@@ -67,7 +67,6 @@ services:
 
   # ==========================================
   # Dashboard API - Hono REST + WebSocket
-  # Includes Python runtime for VectorBT backtest execution
   # ==========================================
   dashboard-api:
     build:
@@ -80,11 +79,6 @@ services:
       - DATABASE_URL=${DATABASE_URL}
       - ALLOWED_ORIGINS=https://${DASHBOARD_HOST:-cream.broker}
       - HELIX_URL=${HELIX_URL:-}
-      # Python backtest execution
-      - PYTHONPATH=/app/packages/research
-      - BACKTEST_TEMP_DIR=/tmp/backtest
-    volumes:
-      - backtest_temp:/tmp/backtest
     restart: unless-stopped
     networks:
       - cream-network
@@ -133,8 +127,6 @@ volumes:
     name: cream_caddy_config
   caddy_logs:
     name: cream_caddy_logs
-  backtest_temp:
-    name: cream_backtest_temp
 
 # ==========================================
 # Networks

@@ -5,8 +5,9 @@
 # Services:
 # - postgres: PostgreSQL 18 with TimescaleDB, pg_stat_statements
 # - helix: Graph + Vector database (HelixDB)
-# - otel-collector: OpenTelemetry trace/metrics collection
 # - redis: In-memory cache for rate limiting
+# - openobserve: Observability platform (traces, metrics, logs)
+# - otel-collector: OpenTelemetry Collector for ingestion
 # - dashboard: React/Next.js frontend (port 3000)
 # - dashboard-api: Hono/Bun API server (port 3001)
 #
@@ -16,6 +17,9 @@
 #   docker compose logs -f      # View logs
 #   docker compose down         # Stop all services
 #   docker compose down -v      # Stop and remove volumes
+#
+# OpenObserve UI: http://localhost:5080
+# OTEL Collector: grpc://localhost:4317, http://localhost:4318
 
 services:
   # PostgreSQL with TimescaleDB - Primary database
@@ -120,7 +124,7 @@ services:
   # Redis - In-memory cache for rate limiting and session storage
   # https://redis.io/
   redis:
-    image: redis:7-alpine
+    image: redis:8-alpine
     container_name: cream-redis
     ports:
       - "6379:6379"     # Redis default port
@@ -180,7 +184,6 @@ services:
       - NODE_ENV=production
       - CREAM_ENV=${CREAM_ENV:-PAPER}
       - DATABASE_URL=postgresql://cream:${POSTGRES_PASSWORD:-cream_dev_password}@postgres:5432/cream
-      - DATABASE_URL_BACKTEST=postgresql://cream:${POSTGRES_PASSWORD:-cream_dev_password}@postgres:5432/cream_backtest
       - DATABASE_URL_PAPER=postgresql://cream:${POSTGRES_PASSWORD:-cream_dev_password}@postgres:5432/cream_paper
       - HELIX_URL=http://helix:6969
       - RUST_GRPC_URL=execution-engine:50053
@@ -192,16 +195,16 @@ services:
       - ALPACA_KEY=${ALPACA_KEY:-}
       - ALPACA_SECRET=${ALPACA_SECRET:-}
       - GOOGLE_GENERATIVE_AI_API_KEY=${GOOGLE_GENERATIVE_AI_API_KEY:-}
-      # Python backtest execution
-      - PYTHONPATH=/app/packages/research
-      - BACKTEST_TEMP_DIR=/tmp/backtest
-    volumes:
-      # Temp directory for Parquet files (backtest data)
-      - backtest_temp:/tmp/backtest
+      # OpenTelemetry (OpenObserve)
+      - OTEL_ENABLED=${OTEL_ENABLED:-true}
+      - OTEL_EXPORTER_OTLP_ENDPOINT=http://otel-collector:4318
+      - OTEL_SERVICE_NAME=cream-dashboard-api
     depends_on:
       postgres:
         condition: service_healthy
       redis:
+        condition: service_healthy
+      otel-collector:
         condition: service_healthy
     healthcheck:
       test: ["CMD", "bun", "-e", "fetch('http://localhost:3001/health').then(r => process.exit(r.ok ? 0 : 1)).catch(() => process.exit(1))"]
@@ -212,6 +215,66 @@ services:
     networks:
       - cream-network
     restart: unless-stopped
+
+  # ===========================================
+  # OpenObserve Observability Stack
+  # ===========================================
+  # Lightweight observability platform for traces, metrics, and logs.
+  # UI: http://localhost:5080
+  # OTEL Collector: grpc://localhost:4317, http://localhost:4318
+  #
+  # Default credentials (first run only):
+  # - Email: ${ZO_ROOT_USER_EMAIL:-root@cream.local}
+  # - Password: ${ZO_ROOT_USER_PASSWORD:-DollaDollaBillYall!!}
+
+  # OpenObserve - Observability platform
+  # https://openobserve.ai/docs
+  openobserve:
+    image: public.ecr.aws/zinclabs/openobserve:v0.50.0-rc3
+    container_name: cream-openobserve
+    restart: unless-stopped
+    ports:
+      - "5080:5080"   # Web UI + HTTP API
+      - "5081:5081"   # OTLP gRPC (native)
+    environment:
+      - ZO_ROOT_USER_EMAIL=${ZO_ROOT_USER_EMAIL:-root@cream.local}
+      - ZO_ROOT_USER_PASSWORD=${ZO_ROOT_USER_PASSWORD:-CreamDev123!}
+      - ZO_DATA_DIR=/data
+      - ZO_TELEMETRY=false
+      - ZO_WEB_URL=http://localhost:5080
+    volumes:
+      - openobserve_data:/data
+    networks:
+      - cream-network
+
+  # OpenTelemetry Collector - Ingestion gateway
+  # Receives OTLP and forwards to OpenObserve
+  otel-collector:
+    image: otel/opentelemetry-collector-contrib:0.116.1
+    container_name: cream-otel-collector
+    restart: unless-stopped
+    command:
+      - --config=/etc/otel-collector-config.yaml
+    ports:
+      - "4317:4317"   # OTLP gRPC
+      - "4318:4318"   # OTLP HTTP
+      - "13133:13133" # Health check
+    environment:
+      # Base64 encoded credentials: root@cream.local:CreamDev123!
+      # Override ZO_AUTH_TOKEN if using custom credentials
+      - ZO_AUTH_TOKEN=${ZO_AUTH_TOKEN:-cm9vdEBjcmVhbS5sb2NhbDpDcmVhbURldjEyMyE=}
+    volumes:
+      - ./docker/openobserve/otel-collector-config.yaml:/etc/otel-collector-config.yaml:ro
+    depends_on:
+      - openobserve
+    healthcheck:
+      test: ["CMD", "wget", "-q", "--spider", "http://127.0.0.1:13133/"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 30s
+    networks:
+      - cream-network
 
 networks:
   cream-network:
@@ -225,5 +288,5 @@ volumes:
     name: cream-helix-data
   redis_data:
     name: cream-redis-data
-  backtest_temp:
-    name: cream-backtest-temp
+  openobserve_data:
+    name: cream-openobserve-data
