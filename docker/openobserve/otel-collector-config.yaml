@@ -1,0 +1,94 @@
+# OpenTelemetry Collector Configuration for OpenObserve
+# Receives OTLP telemetry and exports to OpenObserve
+#
+# Endpoints:
+#   - gRPC: 0.0.0.0:4317
+#   - HTTP: 0.0.0.0:4318
+#   - Health: 0.0.0.0:13133
+
+receivers:
+  otlp:
+    protocols:
+      grpc:
+        endpoint: 0.0.0.0:4317
+      http:
+        endpoint: 0.0.0.0:4318
+
+processors:
+  batch:
+    send_batch_size: 10000
+    send_batch_max_size: 11000
+    timeout: 10s
+
+  resourcedetection:
+    detectors: [env, system]
+    timeout: 2s
+    override: false
+
+  memory_limiter:
+    check_interval: 1s
+    limit_percentage: 75
+    spike_limit_percentage: 15
+
+extensions:
+  health_check:
+    endpoint: 0.0.0.0:13133
+  pprof:
+    endpoint: 0.0.0.0:1777
+
+exporters:
+  otlphttp/openobserve:
+    endpoint: http://openobserve:5080/api/default
+    headers:
+      Authorization: Basic ${env:ZO_AUTH_TOKEN}
+      stream-name: default
+    tls:
+      insecure: true
+
+  otlphttp/openobserve_traces:
+    endpoint: http://openobserve:5080/api/default
+    headers:
+      Authorization: Basic ${env:ZO_AUTH_TOKEN}
+      stream-name: traces
+    tls:
+      insecure: true
+
+  otlphttp/openobserve_metrics:
+    endpoint: http://openobserve:5080/api/default
+    headers:
+      Authorization: Basic ${env:ZO_AUTH_TOKEN}
+      stream-name: metrics
+    tls:
+      insecure: true
+
+  otlphttp/openobserve_logs:
+    endpoint: http://openobserve:5080/api/default
+    headers:
+      Authorization: Basic ${env:ZO_AUTH_TOKEN}
+      stream-name: logs
+    tls:
+      insecure: true
+
+service:
+  telemetry:
+    logs:
+      level: info
+      encoding: json
+  extensions:
+    - health_check
+    - pprof
+  pipelines:
+    traces:
+      receivers: [otlp]
+      processors: [memory_limiter, resourcedetection, batch]
+      exporters: [otlphttp/openobserve_traces]
+
+    metrics:
+      receivers: [otlp]
+      processors: [memory_limiter, resourcedetection, batch]
+      exporters: [otlphttp/openobserve_metrics]
+
+    logs:
+      receivers: [otlp]
+      processors: [memory_limiter, resourcedetection, batch]
+      exporters: [otlphttp/openobserve_logs]
