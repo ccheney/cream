@@ -243,7 +243,7 @@ export function calculateLiquidityAbsorptionRatio(
 
 	// Get the most recent bar's result
 	const lastBarResult = barResults[barResults.length - 1];
-	if (lastBarResult === null) {
+	if (!lastBarResult) {
 		return null;
 	}
 
