@@ -34,7 +34,7 @@ export const AGENT_TYPES: AgentType[] = [
 	"critic",
 ];
 
-export type AgentEnvironment = "BACKTEST" | "PAPER" | "LIVE";
+export type AgentEnvironment = "PAPER" | "LIVE";
 
 export interface AgentConfig {
 	id: string;

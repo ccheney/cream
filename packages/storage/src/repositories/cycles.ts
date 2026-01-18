@@ -5,7 +5,7 @@
  *
  * @see docs/plans/ui/40-streaming-data-integration.md
  */
-import { and, count, desc, eq, inArray } from "drizzle-orm";
+import { and, avg, count, desc, eq, gte, inArray, lte, sql } from "drizzle-orm";
 import { type Database, getDb } from "../db";
 import { cycleEvents, cycles } from "../schema/core-trading";
 import { RepositoryError } from "./base";
@@ -359,7 +359,7 @@ export class CyclesRepository {
 		const now = new Date();
 
 		const values: typeof cycles.$inferInsert = {
-			environment: input.environment as "BACKTEST" | "PAPER" | "LIVE",
+			environment: input.environment as "PAPER" | "LIVE",
 			status: "running",
 			startedAt: now,
 			totalSymbols: input.totalSymbols ?? 0,
@@ -461,7 +461,7 @@ export class CyclesRepository {
 		const conditions = [];
 
 		if (options?.environment) {
-			conditions.push(eq(cycles.environment, options.environment as "BACKTEST" | "PAPER" | "LIVE"));
+			conditions.push(eq(cycles.environment, options.environment as "PAPER" | "LIVE"));
 		}
 		if (options?.status) {
 			conditions.push(eq(cycles.status, options.status));
@@ -497,7 +497,7 @@ export class CyclesRepository {
 		const rows = await this.db
 			.select()
 			.from(cycles)
-			.where(eq(cycles.environment, environment as "BACKTEST" | "PAPER" | "LIVE"))
+			.where(eq(cycles.environment, environment as "PAPER" | "LIVE"))
 			.orderBy(desc(cycles.startedAt))
 			.limit(limit);
 
@@ -671,4 +671,95 @@ export class CyclesRepository {
 			errorStack: stack,
 		});
 	}
+
+	async getCycleAnalytics(filters: CycleAnalyticsFilters = {}): Promise<CycleAnalytics> {
+		const conditions = this.buildFilterConditions(filters);
+		const whereClause = conditions.length > 0 ? and(...conditions) : undefined;
+
+		const [statusCounts, avgStats] = await Promise.all([
+			this.db
+				.select({ status: cycles.status, count: count() })
+				.from(cycles)
+				.where(whereClause)
+				.groupBy(cycles.status),
+			this.db
+				.select({
+					total: count(),
+					avgDuration: avg(cycles.durationMs),
+					totalDecisions: sql<string>`SUM(${cycles.decisionsCount})`.as("total_decisions"),
+					totalOrders: sql<string>`SUM(${cycles.ordersCount})`.as("total_orders"),
+					approvedCount: sql<number>`COUNT(*) FILTER (WHERE ${cycles.approved} = true)`.as(
+						"approved_count"
+					),
+				})
+				.from(cycles)
+				.where(whereClause),
+		]);
+
+		const statusDistribution: Record<string, number> = {
+			running: 0,
+			completed: 0,
+			failed: 0,
+		};
+		for (const row of statusCounts) {
+			statusDistribution[row.status] = row.count;
+		}
+
+		const total = avgStats[0]?.total ?? 0;
+		const completed = statusDistribution.completed ?? 0;
+		const approved = Number(avgStats[0]?.approvedCount ?? 0);
+
+		const completionRate = total > 0 ? (completed / total) * 100 : 0;
+		const approvalRate = completed > 0 ? (approved / completed) * 100 : 0;
+
+		return {
+			totalCycles: total,
+			completionRate,
+			approvalRate,
+			avgDurationMs: avgStats[0]?.avgDuration ? Number(avgStats[0].avgDuration) : null,
+			totalDecisions: avgStats[0]?.totalDecisions ? Number(avgStats[0].totalDecisions) : 0,
+			totalOrders: avgStats[0]?.totalOrders ? Number(avgStats[0].totalOrders) : 0,
+			statusDistribution,
+		};
+	}
+
+	private buildFilterConditions(filters: CycleAnalyticsFilters) {
+		const conditions = [];
+
+		if (filters.environment) {
+			conditions.push(eq(cycles.environment, filters.environment as "PAPER" | "LIVE"));
+		}
+		if (filters.status) {
+			conditions.push(eq(cycles.status, filters.status));
+		}
+		if (filters.fromDate) {
+			conditions.push(gte(cycles.startedAt, new Date(filters.fromDate)));
+		}
+		if (filters.toDate) {
+			conditions.push(lte(cycles.startedAt, new Date(filters.toDate)));
+		}
+
+		return conditions;
+	}
+}
+
+// ============================================
+// Analytics Types
+// ============================================
+
+export interface CycleAnalyticsFilters {
+	environment?: string;
+	status?: CycleStatus;
+	fromDate?: string;
+	toDate?: string;
+}
+
+export interface CycleAnalytics {
+	totalCycles: number;
+	completionRate: number;
+	approvalRate: number;
+	avgDurationMs: number | null;
+	totalDecisions: number;
+	totalOrders: number;
+	statusDistribution: Record<string, number>;
 }

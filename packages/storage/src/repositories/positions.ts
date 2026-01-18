@@ -116,7 +116,7 @@ export class PositionsRepository {
 				decisionId: input.decisionId ?? null,
 				status: "open",
 				metadata: input.metadata ?? {},
-				environment: input.environment as "BACKTEST" | "PAPER" | "LIVE",
+				environment: input.environment as "PAPER" | "LIVE",
 			})
 			.returning();
 
@@ -157,7 +157,7 @@ export class PositionsRepository {
 		}
 		if (filters.environment) {
 			conditions.push(
-				eq(positions.environment, filters.environment as "BACKTEST" | "PAPER" | "LIVE")
+				eq(positions.environment, filters.environment as "PAPER" | "LIVE")
 			);
 		}
 		if (filters.thesisId) {
@@ -195,7 +195,7 @@ export class PositionsRepository {
 			.from(positions)
 			.where(
 				and(
-					eq(positions.environment, environment as "BACKTEST" | "PAPER" | "LIVE"),
+					eq(positions.environment, environment as "PAPER" | "LIVE"),
 					eq(positions.status, "open")
 				)
 			)
@@ -211,7 +211,7 @@ export class PositionsRepository {
 			.where(
 				and(
 					eq(positions.symbol, symbol),
-					eq(positions.environment, environment as "BACKTEST" | "PAPER" | "LIVE"),
+					eq(positions.environment, environment as "PAPER" | "LIVE"),
 					eq(positions.status, "open")
 				)
 			)
@@ -331,7 +331,7 @@ export class PositionsRepository {
 			.from(positions)
 			.where(
 				and(
-					eq(positions.environment, environment as "BACKTEST" | "PAPER" | "LIVE"),
+					eq(positions.environment, environment as "PAPER" | "LIVE"),
 					eq(positions.status, "open")
 				)
 			)

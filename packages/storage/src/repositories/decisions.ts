@@ -3,7 +3,7 @@
  *
  * Data access for trading decisions table.
  */
-import { and, count, desc, eq, gte, ilike, inArray, lte, or } from "drizzle-orm";
+import { and, avg, count, desc, eq, gte, ilike, inArray, lte, or, sql } from "drizzle-orm";
 import { type Database, getDb } from "../db";
 import { decisions } from "../schema/core-trading";
 import { RepositoryError } from "./base";
@@ -149,7 +149,7 @@ export class DecisionsRepository {
 				confidenceScore: input.confidenceScore != null ? String(input.confidenceScore) : null,
 				riskScore: input.riskScore != null ? String(input.riskScore) : null,
 				metadata: input.metadata ?? {},
-				environment: input.environment as "BACKTEST" | "PAPER" | "LIVE",
+				environment: input.environment as "PAPER" | "LIVE",
 			})
 			.returning();
 
@@ -197,7 +197,7 @@ export class DecisionsRepository {
 		}
 		if (filters.environment) {
 			conditions.push(
-				eq(decisions.environment, filters.environment as "BACKTEST" | "PAPER" | "LIVE")
+				eq(decisions.environment, filters.environment as "PAPER" | "LIVE")
 			);
 		}
 		if (filters.cycleId) {
@@ -260,7 +260,7 @@ export class DecisionsRepository {
 		const rows = await this.db
 			.select()
 			.from(decisions)
-			.where(eq(decisions.environment, environment as "BACKTEST" | "PAPER" | "LIVE"))
+			.where(eq(decisions.environment, environment as "PAPER" | "LIVE"))
 			.orderBy(desc(decisions.createdAt))
 			.limit(limit);
 
@@ -362,7 +362,7 @@ export class DecisionsRepository {
 		const rows = await this.db
 			.select({ status: decisions.status, count: count() })
 			.from(decisions)
-			.where(eq(decisions.environment, environment as "BACKTEST" | "PAPER" | "LIVE"))
+			.where(eq(decisions.environment, environment as "PAPER" | "LIVE"))
 			.groupBy(decisions.status);
 
 		const result: Record<string, number> = {
@@ -399,4 +399,208 @@ export class DecisionsRepository {
 			action: r.action as DecisionAction,
 		}));
 	}
+
+	async getDecisionAnalytics(filters: DecisionFilters = {}): Promise<DecisionAnalytics> {
+		const conditions = this.buildFilterConditions(filters);
+		const whereClause = conditions.length > 0 ? and(...conditions) : undefined;
+
+		const [statusCounts, actionCounts, directionCounts, avgScores] = await Promise.all([
+			this.db
+				.select({ status: decisions.status, count: count() })
+				.from(decisions)
+				.where(whereClause)
+				.groupBy(decisions.status),
+			this.db
+				.select({ action: decisions.action, count: count() })
+				.from(decisions)
+				.where(whereClause)
+				.groupBy(decisions.action),
+			this.db
+				.select({ direction: decisions.direction, count: count() })
+				.from(decisions)
+				.where(whereClause)
+				.groupBy(decisions.direction),
+			this.db
+				.select({
+					avgConfidence: avg(decisions.confidenceScore),
+					avgRisk: avg(decisions.riskScore),
+					total: count(),
+				})
+				.from(decisions)
+				.where(whereClause),
+		]);
+
+		const statusDistribution: Record<string, number> = {};
+		for (const row of statusCounts) {
+			statusDistribution[row.status] = row.count;
+		}
+
+		const actionDistribution: Record<string, number> = {};
+		for (const row of actionCounts) {
+			actionDistribution[row.action] = row.count;
+		}
+
+		const directionDistribution: Record<string, number> = {};
+		for (const row of directionCounts) {
+			directionDistribution[row.direction] = row.count;
+		}
+
+		const total = avgScores[0]?.total ?? 0;
+		const executed = statusDistribution.executed ?? 0;
+		const approved = statusDistribution.approved ?? 0;
+		const executionRate = total > 0 ? ((executed + approved) / total) * 100 : 0;
+
+		return {
+			totalDecisions: total,
+			executionRate,
+			statusDistribution,
+			actionDistribution,
+			directionDistribution,
+			avgConfidence: avgScores[0]?.avgConfidence ? Number(avgScores[0].avgConfidence) : null,
+			avgRisk: avgScores[0]?.avgRisk ? Number(avgScores[0].avgRisk) : null,
+		};
+	}
+
+	async getConfidenceCalibration(
+		filters: DecisionFilters = {}
+	): Promise<ConfidenceCalibrationBin[]> {
+		const conditions = this.buildFilterConditions(filters);
+		const whereClause = conditions.length > 0 ? and(...conditions) : undefined;
+
+		const rows = await this.db
+			.select({
+				confidenceBin: sql<string>`
+					CASE
+						WHEN ${decisions.confidenceScore}::numeric < 0.2 THEN '0-20'
+						WHEN ${decisions.confidenceScore}::numeric < 0.4 THEN '20-40'
+						WHEN ${decisions.confidenceScore}::numeric < 0.6 THEN '40-60'
+						WHEN ${decisions.confidenceScore}::numeric < 0.8 THEN '60-80'
+						ELSE '80-100'
+					END
+				`.as("confidence_bin"),
+				total: count(),
+				executed:
+					sql<number>`COUNT(*) FILTER (WHERE ${decisions.status} IN ('executed', 'approved'))`.as(
+						"executed"
+					),
+			})
+			.from(decisions)
+			.where(and(whereClause, sql`${decisions.confidenceScore} IS NOT NULL`))
+			.groupBy(
+				sql`CASE
+					WHEN ${decisions.confidenceScore}::numeric < 0.2 THEN '0-20'
+					WHEN ${decisions.confidenceScore}::numeric < 0.4 THEN '20-40'
+					WHEN ${decisions.confidenceScore}::numeric < 0.6 THEN '40-60'
+					WHEN ${decisions.confidenceScore}::numeric < 0.8 THEN '60-80'
+					ELSE '80-100'
+				END`
+			)
+			.orderBy(sql.raw(`"confidence_bin" ASC`));
+
+		return rows.map((row) => ({
+			bin: row.confidenceBin,
+			total: row.total,
+			executed: Number(row.executed),
+			executionRate: row.total > 0 ? (Number(row.executed) / row.total) * 100 : 0,
+		}));
+	}
+
+	async getStrategyBreakdown(filters: DecisionFilters = {}): Promise<StrategyBreakdownItem[]> {
+		const conditions = this.buildFilterConditions(filters);
+		const whereClause = conditions.length > 0 ? and(...conditions) : undefined;
+
+		const rows = await this.db
+			.select({
+				strategyFamily: sql<string>`COALESCE(${decisions.strategyFamily}, 'Unknown')`.as(
+					"strategy_family"
+				),
+				total: count(),
+				executed:
+					sql<number>`COUNT(*) FILTER (WHERE ${decisions.status} IN ('executed', 'approved'))`.as(
+						"executed"
+					),
+				avgConfidence: avg(decisions.confidenceScore),
+				avgRisk: avg(decisions.riskScore),
+			})
+			.from(decisions)
+			.where(whereClause)
+			.groupBy(sql`COALESCE(${decisions.strategyFamily}, 'Unknown')`)
+			.orderBy(desc(count()));
+
+		return rows.map((row) => ({
+			strategyFamily: row.strategyFamily,
+			count: row.total,
+			executedCount: Number(row.executed),
+			approvalRate: row.total > 0 ? (Number(row.executed) / row.total) * 100 : 0,
+			avgConfidence: row.avgConfidence ? Number(row.avgConfidence) : null,
+			avgRisk: row.avgRisk ? Number(row.avgRisk) : null,
+		}));
+	}
+
+	private buildFilterConditions(filters: DecisionFilters) {
+		const conditions = [];
+
+		if (filters.symbol) {
+			conditions.push(eq(decisions.symbol, filters.symbol));
+		}
+		if (filters.status) {
+			if (Array.isArray(filters.status)) {
+				conditions.push(inArray(decisions.status, filters.status));
+			} else {
+				conditions.push(eq(decisions.status, filters.status));
+			}
+		}
+		if (filters.action) {
+			conditions.push(eq(decisions.action, filters.action));
+		}
+		if (filters.direction) {
+			conditions.push(eq(decisions.direction, filters.direction));
+		}
+		if (filters.environment) {
+			conditions.push(
+				eq(decisions.environment, filters.environment as "PAPER" | "LIVE")
+			);
+		}
+		if (filters.cycleId) {
+			conditions.push(eq(decisions.cycleId, filters.cycleId));
+		}
+		if (filters.fromDate) {
+			conditions.push(gte(decisions.createdAt, new Date(filters.fromDate)));
+		}
+		if (filters.toDate) {
+			conditions.push(lte(decisions.createdAt, new Date(filters.toDate)));
+		}
+
+		return conditions;
+	}
+}
+
+// ============================================
+// Analytics Types
+// ============================================
+
+export interface DecisionAnalytics {
+	totalDecisions: number;
+	executionRate: number;
+	statusDistribution: Record<string, number>;
+	actionDistribution: Record<string, number>;
+	directionDistribution: Record<string, number>;
+	avgConfidence: number | null;
+	avgRisk: number | null;
+}
+
+export interface ConfidenceCalibrationBin {
+	bin: string;
+	total: number;
+	executed: number;
+	executionRate: number;
+}
+
+export interface StrategyBreakdownItem {
+	strategyFamily: string;
+	count: number;
+	executedCount: number;
+	approvalRate: number;
+	avgConfidence: number | null;
+	avgRisk: number | null;
 }

@@ -16,7 +16,7 @@ import { RepositoryError } from "./base";
 // ============================================
 
 export type TradingConfigStatus = "draft" | "testing" | "active" | "archived";
-export type TradingEnvironment = "BACKTEST" | "PAPER" | "LIVE";
+export type TradingEnvironment = "PAPER" | "LIVE";
 
 export interface TradingConfig {
 	id: string;

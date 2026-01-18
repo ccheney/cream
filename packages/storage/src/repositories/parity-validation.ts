@@ -15,7 +15,7 @@ import { parityValidationHistory } from "../schema/audit";
 
 export type ParityEntityType = "indicator" | "factor" | "config";
 
-export type ParityEnvironment = "BACKTEST" | "PAPER" | "LIVE";
+export type ParityEnvironment = "PAPER" | "LIVE";
 
 export type ParityRecommendation = "APPROVE_FOR_LIVE" | "NEEDS_INVESTIGATION" | "NOT_READY";
 

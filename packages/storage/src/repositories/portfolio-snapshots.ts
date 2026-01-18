@@ -111,7 +111,7 @@ export class PortfolioSnapshotsRepository {
 			.insert(portfolioSnapshots)
 			.values({
 				timestamp,
-				environment: input.environment as "BACKTEST" | "PAPER" | "LIVE",
+				environment: input.environment as "PAPER" | "LIVE",
 				nav: String(input.nav),
 				cash: String(input.cash),
 				equity: String(input.equity),
@@ -151,7 +151,7 @@ export class PortfolioSnapshotsRepository {
 
 		if (filters.environment) {
 			conditions.push(
-				eq(portfolioSnapshots.environment, filters.environment as "BACKTEST" | "PAPER" | "LIVE")
+				eq(portfolioSnapshots.environment, filters.environment as "PAPER" | "LIVE")
 			);
 		}
 		if (filters.fromDate) {
@@ -194,7 +194,7 @@ export class PortfolioSnapshotsRepository {
 		const [row] = await this.db
 			.select()
 			.from(portfolioSnapshots)
-			.where(eq(portfolioSnapshots.environment, environment as "BACKTEST" | "PAPER" | "LIVE"))
+			.where(eq(portfolioSnapshots.environment, environment as "PAPER" | "LIVE"))
 			.orderBy(desc(portfolioSnapshots.timestamp))
 			.limit(1);
 
@@ -208,7 +208,7 @@ export class PortfolioSnapshotsRepository {
 		limit = 1000
 	): Promise<{ timestamp: string; nav: number; pnlPct: number }[]> {
 		const conditions = [
-			eq(portfolioSnapshots.environment, environment as "BACKTEST" | "PAPER" | "LIVE"),
+			eq(portfolioSnapshots.environment, environment as "PAPER" | "LIVE"),
 		];
 
 		if (fromDate) {
@@ -252,7 +252,7 @@ export class PortfolioSnapshotsRepository {
 		const fromDate = new Date();
 		fromDate.setDate(fromDate.getDate() - days);
 
-		const envType = environment as "BACKTEST" | "PAPER" | "LIVE";
+		const envType = environment as "PAPER" | "LIVE";
 
 		// Get aggregates
 		const [aggRow] = await this.db
@@ -330,7 +330,7 @@ export class PortfolioSnapshotsRepository {
 			.from(portfolioSnapshots)
 			.where(
 				and(
-					eq(portfolioSnapshots.environment, environment as "BACKTEST" | "PAPER" | "LIVE"),
+					eq(portfolioSnapshots.environment, environment as "PAPER" | "LIVE"),
 					gte(portfolioSnapshots.timestamp, startOfDay),
 					lte(portfolioSnapshots.timestamp, endOfDay)
 				)
@@ -345,7 +345,7 @@ export class PortfolioSnapshotsRepository {
 		const [row] = await this.db
 			.select()
 			.from(portfolioSnapshots)
-			.where(eq(portfolioSnapshots.environment, environment as "BACKTEST" | "PAPER" | "LIVE"))
+			.where(eq(portfolioSnapshots.environment, environment as "PAPER" | "LIVE"))
 			.orderBy(portfolioSnapshots.timestamp)
 			.limit(1);
 

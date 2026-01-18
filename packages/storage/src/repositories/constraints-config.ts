@@ -14,7 +14,7 @@ import { RepositoryError } from "./base";
 // ============================================
 
 export type ConstraintsConfigStatus = "draft" | "testing" | "active" | "archived";
-export type ConstraintsEnvironment = "BACKTEST" | "PAPER" | "LIVE";
+export type ConstraintsEnvironment = "PAPER" | "LIVE";
 
 export interface PerInstrumentLimits {
 	maxShares: number;

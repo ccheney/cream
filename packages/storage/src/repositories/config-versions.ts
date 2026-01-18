@@ -68,7 +68,7 @@ export class ConfigVersionsRepository {
 		const [row] = await this.db
 			.insert(configVersions)
 			.values({
-				environment: input.environment as "BACKTEST" | "PAPER" | "LIVE",
+				environment: input.environment as "PAPER" | "LIVE",
 				configJson: input.config,
 				description: input.description ?? null,
 				active: false,
@@ -106,7 +106,7 @@ export class ConfigVersionsRepository {
 			.from(configVersions)
 			.where(
 				and(
-					eq(configVersions.environment, environment as "BACKTEST" | "PAPER" | "LIVE"),
+					eq(configVersions.environment, environment as "PAPER" | "LIVE"),
 					eq(configVersions.active, true)
 				)
 			)
@@ -131,7 +131,7 @@ export class ConfigVersionsRepository {
 		const rows = await this.db
 			.select()
 			.from(configVersions)
-			.where(eq(configVersions.environment, environment as "BACKTEST" | "PAPER" | "LIVE"))
+			.where(eq(configVersions.environment, environment as "PAPER" | "LIVE"))
 			.orderBy(desc(configVersions.createdAt))
 			.limit(limit);
 
@@ -147,7 +147,7 @@ export class ConfigVersionsRepository {
 			.set({ active: false, deactivatedAt: now })
 			.where(
 				and(
-					eq(configVersions.environment, config.environment as "BACKTEST" | "PAPER" | "LIVE"),
+					eq(configVersions.environment, config.environment as "PAPER" | "LIVE"),
 					eq(configVersions.active, true)
 				)
 			);

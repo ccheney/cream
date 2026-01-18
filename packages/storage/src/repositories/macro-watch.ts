@@ -252,6 +252,26 @@ export class MacroWatchRepository {
 		return rows.map(mapEntryRow);
 	}
 
+	async findByCreatedAtRange(
+		startTime: string,
+		endTime: string,
+		limit = 100
+	): Promise<MacroWatchEntry[]> {
+		const rows = await this.db
+			.select()
+			.from(macroWatchEntries)
+			.where(
+				and(
+					gte(macroWatchEntries.createdAt, new Date(startTime)),
+					lte(macroWatchEntries.createdAt, new Date(endTime))
+				)
+			)
+			.orderBy(desc(macroWatchEntries.timestamp))
+			.limit(limit);
+
+		return rows.map(mapEntryRow);
+	}
+
 	async countByCategory(sinceTime: string): Promise<Record<MacroWatchCategory, number>> {
 		const rows = await this.db
 			.select({

@@ -16,7 +16,6 @@ import * as schema from "./schema";
 
 // Environment-to-database mapping
 const DATABASE_URLS: Record<string, string | undefined> = {
-	BACKTEST: Bun.env.DATABASE_URL_BACKTEST ?? Bun.env.DATABASE_URL,
 	PAPER: Bun.env.DATABASE_URL_PAPER ?? Bun.env.DATABASE_URL,
 	LIVE: Bun.env.DATABASE_URL,
 };
@@ -33,7 +32,7 @@ function getDatabaseUrl(): string {
 		return TEST_DATABASE_URL;
 	}
 
-	const env = Bun.env.CREAM_ENV ?? "BACKTEST";
+	const env = Bun.env.CREAM_ENV ?? "PAPER";
 	const url = DATABASE_URLS[env];
 
 	if (!url) {

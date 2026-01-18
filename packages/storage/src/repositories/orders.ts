@@ -125,7 +125,7 @@ export class OrdersRepository {
 				stopPrice: input.stopPrice != null ? String(input.stopPrice) : null,
 				status: "pending",
 				timeInForce: input.timeInForce ?? "day",
-				environment: input.environment as "BACKTEST" | "PAPER" | "LIVE",
+				environment: input.environment as "PAPER" | "LIVE",
 			})
 			.returning();
 
@@ -185,7 +185,7 @@ export class OrdersRepository {
 			conditions.push(eq(orders.decisionId, filters.decisionId));
 		}
 		if (filters.environment) {
-			conditions.push(eq(orders.environment, filters.environment as "BACKTEST" | "PAPER" | "LIVE"));
+			conditions.push(eq(orders.environment, filters.environment as "PAPER" | "LIVE"));
 		}
 		if (filters.fromDate) {
 			conditions.push(gte(orders.createdAt, new Date(filters.fromDate)));
@@ -232,7 +232,7 @@ export class OrdersRepository {
 			.from(orders)
 			.where(
 				and(
-					eq(orders.environment, environment as "BACKTEST" | "PAPER" | "LIVE"),
+					eq(orders.environment, environment as "PAPER" | "LIVE"),
 					inArray(orders.status, ["pending", "submitted", "accepted", "partial_fill"])
 				)
 			)
@@ -245,7 +245,7 @@ export class OrdersRepository {
 		const rows = await this.db
 			.select()
 			.from(orders)
-			.where(eq(orders.environment, environment as "BACKTEST" | "PAPER" | "LIVE"))
+			.where(eq(orders.environment, environment as "PAPER" | "LIVE"))
 			.orderBy(desc(orders.createdAt))
 			.limit(limit);
 
@@ -316,7 +316,7 @@ export class OrdersRepository {
 		const rows = await this.db
 			.select({ status: orders.status, count: count() })
 			.from(orders)
-			.where(eq(orders.environment, environment as "BACKTEST" | "PAPER" | "LIVE"))
+			.where(eq(orders.environment, environment as "PAPER" | "LIVE"))
 			.groupBy(orders.status);
 
 		const result: Record<string, number> = {

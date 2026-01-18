@@ -63,7 +63,7 @@ bun run db:seed
 ## Configuration
 
 ```bash
-CREAM_ENV=BACKTEST|PAPER|LIVE
+CREAM_ENV=PAPER|LIVE
 DATABASE_URL=postgresql://user:pass@localhost:5432/cream
 ```
 

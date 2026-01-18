@@ -15,7 +15,7 @@ import { RepositoryError } from "./base";
 
 export type UniverseSource = "static" | "index" | "screener";
 export type UniverseConfigStatus = "draft" | "testing" | "active" | "archived";
-export type UniverseEnvironment = "BACKTEST" | "PAPER" | "LIVE";
+export type UniverseEnvironment = "PAPER" | "LIVE";
 
 export interface UniverseConfig {
 	id: string;

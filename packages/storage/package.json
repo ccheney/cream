@@ -29,10 +29,11 @@
     "test": "CREAM_ENV=BACKTEST bun test",
     "lint": "biome check src/",
     "format": "biome format --write src/",
-    "clean": "rm -rf dist coverage drizzle",
+    "clean": "rm -rf dist coverage",
     "db:generate": "bun --bun x drizzle-kit generate",
     "db:migrate": "bun --bun x drizzle-kit migrate",
     "db:push": "bun --bun x drizzle-kit push",
+    "db:reset": "bun run scripts/db-reset.ts",
     "db:seed": "bun run src/seed.ts",
     "db:studio": "bun --bun x drizzle-kit studio"
   },

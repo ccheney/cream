@@ -3,7 +3,7 @@
  * Database Seed Script for Runtime Configuration
  *
  * Initializes the database with sensible default configurations for
- * BACKTEST, PAPER, and LIVE environments. Safe to run multiple times
+ * PAPER and LIVE environments. Safe to run multiple times
  * (idempotent) - only seeds if no active config exists.
  *
  * Usage:
@@ -88,14 +88,14 @@ function parseArgs(): SeedOptions {
 
 	// Parse --env flag
 	const envArg = args.find((arg) => arg.startsWith("--env="));
-	let environments: TradingEnvironment[] = ["BACKTEST", "PAPER", "LIVE"];
+	let environments: TradingEnvironment[] = ["PAPER", "LIVE"];
 
 	if (envArg) {
 		const envValue = envArg.split("=")[1]?.toUpperCase() as TradingEnvironment;
-		if (["BACKTEST", "PAPER", "LIVE"].includes(envValue)) {
+		if (["PAPER", "LIVE"].includes(envValue)) {
 			environments = [envValue];
 		} else {
-			log.error({ envValue }, "Invalid environment. Must be BACKTEST, PAPER, or LIVE.");
+			log.error({ envValue }, "Invalid environment. Must be PAPER or LIVE.");
 			process.exit(1);
 		}
 	}

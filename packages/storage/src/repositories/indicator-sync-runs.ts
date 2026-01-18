@@ -14,7 +14,16 @@ import { indicatorSyncRuns } from "../schema/indicators";
 // Types
 // ============================================
 
-export type SyncRunType = "fundamentals" | "short_interest" | "sentiment" | "corporate_actions";
+export type SyncRunType =
+	| "fundamentals"
+	| "short_interest"
+	| "sentiment"
+	| "corporate_actions"
+	| "macro_watch"
+	| "newspaper"
+	| "filings_sync"
+	| "prediction_markets"
+	| "indicator_synthesis";
 
 export type SyncRunStatus = "running" | "completed" | "failed";
 
@@ -227,6 +236,11 @@ export class IndicatorSyncRunsRepository {
 			short_interest: null,
 			sentiment: null,
 			corporate_actions: null,
+			macro_watch: null,
+			newspaper: null,
+			filings_sync: null,
+			prediction_markets: null,
+			indicator_synthesis: null,
 		};
 
 		for (const row of lastCompletedRows) {
