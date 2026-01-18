@@ -14,7 +14,7 @@ package cream.v1;
 // Trading environment
 enum Environment {
   ENVIRONMENT_UNSPECIFIED = 0;
-  ENVIRONMENT_BACKTEST = 1;
+  reserved 1; // BACKTEST removed
   ENVIRONMENT_PAPER = 2;
   ENVIRONMENT_LIVE = 3;
 }

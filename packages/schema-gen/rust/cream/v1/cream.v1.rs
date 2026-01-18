@@ -68,7 +68,6 @@ pub struct RiskLevels {
 #[repr(i32)]
 pub enum Environment {
     Unspecified = 0,
-    Backtest = 1,
     Paper = 2,
     Live = 3,
 }
@@ -80,7 +79,6 @@ impl Environment {
     pub fn as_str_name(&self) -> &'static str {
         match self {
             Self::Unspecified => "ENVIRONMENT_UNSPECIFIED",
-            Self::Backtest => "ENVIRONMENT_BACKTEST",
             Self::Paper => "ENVIRONMENT_PAPER",
             Self::Live => "ENVIRONMENT_LIVE",
         }
@@ -89,7 +87,6 @@ impl Environment {
     pub fn from_str_name(value: &str) -> ::core::option::Option<Self> {
         match value {
             "ENVIRONMENT_UNSPECIFIED" => Some(Self::Unspecified),
-            "ENVIRONMENT_BACKTEST" => Some(Self::Backtest),
             "ENVIRONMENT_PAPER" => Some(Self::Paper),
             "ENVIRONMENT_LIVE" => Some(Self::Live),
             _ => None,

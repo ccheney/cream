@@ -9,7 +9,6 @@ DESCRIPTOR: _descriptor.FileDescriptor
 class Environment(int, metaclass=_enum_type_wrapper.EnumTypeWrapper):
     __slots__ = ()
     ENVIRONMENT_UNSPECIFIED: _ClassVar[Environment]
-    ENVIRONMENT_BACKTEST: _ClassVar[Environment]
     ENVIRONMENT_PAPER: _ClassVar[Environment]
     ENVIRONMENT_LIVE: _ClassVar[Environment]
 
@@ -97,7 +96,6 @@ class MarketStatus(int, metaclass=_enum_type_wrapper.EnumTypeWrapper):
     MARKET_STATUS_AFTER_HOURS: _ClassVar[MarketStatus]
     MARKET_STATUS_CLOSED: _ClassVar[MarketStatus]
 ENVIRONMENT_UNSPECIFIED: Environment
-ENVIRONMENT_BACKTEST: Environment
 ENVIRONMENT_PAPER: Environment
 ENVIRONMENT_LIVE: Environment
 ACTION_UNSPECIFIED: Action
