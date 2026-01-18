@@ -245,7 +245,7 @@ export const fetchPredictionMarketsStep = createStep({
 		// Create context at step boundary
 		const ctx = createStepContext();
 
-		// In backtest mode, return empty context
+		// In test mode, return empty context
 		if (isTest(ctx)) {
 			return {
 				signals: {

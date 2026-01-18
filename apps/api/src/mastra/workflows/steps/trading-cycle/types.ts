@@ -84,8 +84,6 @@ export interface WorkflowInput {
 	/** ExecutionContext with environment and source */
 	context: ExecutionContext;
 	instruments?: string[];
-	/** Force stub mode even in PAPER/LIVE (for testing) */
-	forceStub?: boolean;
 	/** Use draft config instead of active config (for testing new settings) */
 	useDraftConfig?: boolean;
 	/** External context from gatherExternalContext step */

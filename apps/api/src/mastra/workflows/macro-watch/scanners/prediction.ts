@@ -47,9 +47,15 @@ const SIGNAL_CONFIG: Record<
 		format: (v) => `${(v * 100).toFixed(1)}%`,
 		symbols: ["SPY", "TLT", "GLD"],
 		context: (v) => {
-			if (v >= 0.8) return "Markets strongly expect rate cuts — bullish for equities and bonds";
-			if (v >= 0.5) return "Rate cuts likely — generally supportive of risk assets";
-			if (v >= 0.3) return "Rate cuts possible but uncertain — mixed signal";
+			if (v >= 0.8) {
+				return "Markets strongly expect rate cuts — bullish for equities and bonds";
+			}
+			if (v >= 0.5) {
+				return "Rate cuts likely — generally supportive of risk assets";
+			}
+			if (v >= 0.3) {
+				return "Rate cuts possible but uncertain — mixed signal";
+			}
 			return "Rate cuts unlikely — hawkish environment";
 		},
 		order: 1,
@@ -60,8 +66,12 @@ const SIGNAL_CONFIG: Record<
 		format: (v) => `${(v * 100).toFixed(1)}%`,
 		symbols: ["SPY", "TLT", "GLD"],
 		context: (v) => {
-			if (v >= 0.5) return "Rate hikes expected — bearish for duration, watch growth stocks";
-			if (v >= 0.2) return "Some hike risk — may pressure rate-sensitive sectors";
+			if (v >= 0.5) {
+				return "Rate hikes expected — bearish for duration, watch growth stocks";
+			}
+			if (v >= 0.2) {
+				return "Some hike risk — may pressure rate-sensitive sectors";
+			}
 			return "Hikes unlikely — dovish environment";
 		},
 		order: 2,
@@ -72,9 +82,15 @@ const SIGNAL_CONFIG: Record<
 		format: (v) => `${(v * 100).toFixed(1)}%`,
 		symbols: ["SPY", "IWM", "HYG"],
 		context: (v) => {
-			if (v >= 0.5) return "High recession risk — favor defensive sectors, quality over growth";
-			if (v >= 0.3) return "Elevated recession concerns — consider reducing cyclical exposure";
-			if (v >= 0.15) return "Moderate recession risk — normal late-cycle positioning";
+			if (v >= 0.5) {
+				return "High recession risk — favor defensive sectors, quality over growth";
+			}
+			if (v >= 0.3) {
+				return "Elevated recession concerns — consider reducing cyclical exposure";
+			}
+			if (v >= 0.15) {
+				return "Moderate recession risk — normal late-cycle positioning";
+			}
 			return "Low recession probability — constructive for risk assets";
 		},
 		order: 3,
@@ -85,9 +101,12 @@ const SIGNAL_CONFIG: Record<
 		format: (v) => `${(v * 100).toFixed(1)}%`,
 		symbols: ["VIX", "SPY"],
 		context: (v) => {
-			if (v >= 0.5)
+			if (v >= 0.5) {
 				return "High uncertainty — expect elevated volatility, size positions conservatively";
-			if (v >= 0.3) return "Moderate uncertainty — normal risk management applies";
+			}
+			if (v >= 0.3) {
+				return "Moderate uncertainty — normal risk management applies";
+			}
 			return "Low uncertainty — markets have high conviction in current trends";
 		},
 		order: 4,
@@ -98,8 +117,12 @@ const SIGNAL_CONFIG: Record<
 		format: (v) => `${(v * 100).toFixed(1)}%`,
 		symbols: ["SPY", "QQQ"],
 		context: (v) => {
-			if (v >= 0.5) return "High policy uncertainty — binary event risk elevated";
-			if (v >= 0.3) return "Moderate policy risk — monitor upcoming Fed/regulatory events";
+			if (v >= 0.5) {
+				return "High policy uncertainty — binary event risk elevated";
+			}
+			if (v >= 0.3) {
+				return "Moderate policy risk — monitor upcoming Fed/regulatory events";
+			}
 			return "Low policy risk — outcomes largely priced in";
 		},
 		order: 5,
@@ -110,9 +133,12 @@ const SIGNAL_CONFIG: Record<
 		format: (v) => `${(v * 100).toFixed(1)}%`,
 		symbols: ["SPY", "TLT"],
 		context: (v) => {
-			if (v >= 0.5)
+			if (v >= 0.5) {
 				return "Shutdown likely — short-term volatility risk, typically buying opportunity";
-			if (v >= 0.2) return "Shutdown possible — watch for resolution headlines";
+			}
+			if (v >= 0.2) {
+				return "Shutdown possible — watch for resolution headlines";
+			}
 			return "Shutdown unlikely — political risk contained";
 		},
 		order: 6,
@@ -123,9 +149,12 @@ const SIGNAL_CONFIG: Record<
 		format: (v) => `${(v * 100).toFixed(1)}%`,
 		symbols: ["EEM", "FXI", "SPY"],
 		context: (v) => {
-			if (v >= 0.5)
+			if (v >= 0.5) {
 				return "High tariff risk — negative for EM, importers, and global supply chains";
-			if (v >= 0.3) return "Elevated trade tensions — monitor China-exposed names";
+			}
+			if (v >= 0.3) {
+				return "Elevated trade tensions — monitor China-exposed names";
+			}
 			return "Trade risk contained — globalization headwinds manageable";
 		},
 		order: 7,
@@ -136,9 +165,15 @@ const SIGNAL_CONFIG: Record<
 		format: (v) => `${(v * 100).toFixed(1)}%`,
 		symbols: ["TLT", "TIPS", "SPY"],
 		context: (v) => {
-			if (v >= 0.6) return "Markets expect hot CPI — hawkish repricing risk";
-			if (v >= 0.4) return "Slight upside CPI risk — inflation concerns persist";
-			if (v <= 0.4) return "CPI may come in soft — supportive of rate cut narrative";
+			if (v >= 0.6) {
+				return "Markets expect hot CPI — hawkish repricing risk";
+			}
+			if (v >= 0.4) {
+				return "Slight upside CPI risk — inflation concerns persist";
+			}
+			if (v <= 0.4) {
+				return "CPI may come in soft — supportive of rate cut narrative";
+			}
 			return "CPI expectations balanced";
 		},
 		order: 8,
@@ -149,8 +184,12 @@ const SIGNAL_CONFIG: Record<
 		format: (v) => `${(v * 100).toFixed(1)}%`,
 		symbols: ["SPY", "IWM"],
 		context: (v) => {
-			if (v >= 0.6) return "Strong GDP expected — cyclicals may outperform";
-			if (v <= 0.4) return "Weak GDP risk — defensive positioning warranted";
+			if (v >= 0.6) {
+				return "Strong GDP expected — cyclicals may outperform";
+			}
+			if (v <= 0.4) {
+				return "Weak GDP risk — defensive positioning warranted";
+			}
 			return "GDP expectations in line with consensus";
 		},
 		order: 9,
@@ -276,13 +315,7 @@ export async function scanPredictionDeltas(): Promise<MacroWatchEntry[]> {
 				},
 			},
 		];
-	} catch (error) {
-		// Log error but don't fail - prediction scan is best-effort
-		console.error(
-			"[scanPredictionDeltas] Error:",
-			error instanceof Error ? error.message : String(error)
-		);
-	}
+	} catch (_error) {}
 
 	return [];
 }

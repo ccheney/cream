@@ -7,7 +7,7 @@
  * - Sequential OODA loop: Observe → Orient → Analysts → Debate → Trader → Consensus → Act
  * - Uses Mastra workflow primitives (.then() chaining)
  * - State management via MinimalStateSchema
- * - STUB mode for backtest, LLM mode for paper/live
+ * - STUB mode for tests, LLM mode for paper/live
  *
  * @see docs/plans/21-mastra-workflow-refactor.md
  */

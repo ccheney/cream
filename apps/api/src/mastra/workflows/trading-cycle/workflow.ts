@@ -99,12 +99,9 @@ const orientStep = createStep({
 	outputSchema: AnyOutputSchema,
 	stateSchema: MinimalStateSchema,
 	execute: async ({ inputData, state, setState }) => {
-		// Determine execution mode based on environment
-		// Use STUB mode when forced (for testing) or when not in PAPER/LIVE
-		// PAPER/LIVE use LLM (real agent reasoning)
-		const env = Bun.env.CREAM_ENV ?? "PAPER";
-		const forceStub = inputData.forceStub ?? false;
-		const mode = forceStub ? "STUB" : "LLM";
+		// Determine execution mode: STUB for testing (NODE_ENV=test), LLM for real agent reasoning
+		const isTest = process.env.NODE_ENV === "test";
+		const mode = isTest ? "STUB" : "LLM";
 		await setState({ ...state, mode });
 
 		// Fetch today's morning newspaper if available (LLM mode only)

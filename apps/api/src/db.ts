@@ -380,8 +380,8 @@ export async function validateHelixDBAtStartup(
 		maxLatencyMs?: number;
 	} = {}
 ): Promise<HealthCheckResult> {
-	const isBacktestEnv = isTest(ctx);
-	const { failFast = !isBacktestEnv, maxLatencyMs = 5000 } = options;
+	const isTestEnv = isTest(ctx);
+	const { failFast = !isTestEnv, maxLatencyMs = 5000 } = options;
 
 	log.info({ environment: ctx.environment }, "HelixDB validating connection");
 

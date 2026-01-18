@@ -251,7 +251,6 @@ async function gatherSnapshotData(
 ): Promise<SnapshotData> {
 	// Create Alpaca client for market data
 	let alpacaClient: AlpacaMarketDataClient | null = null;
-	const creamEnv = requireEnv();
 
 	if (isAlpacaConfigured()) {
 		try {
@@ -457,7 +456,6 @@ function getExecutionClient(): ExecutionServiceClient {
  */
 async function fetchPositions(errors: string[], warnings: string[]): Promise<Position[]> {
 	try {
-
 		// Fetch from execution engine gRPC
 		const client = getExecutionClient();
 		const result = await client.getPositions({});
@@ -715,7 +713,7 @@ export async function buildSnapshotForUniverse(): Promise<SnapshotBuilderResult>
 }
 
 /**
- * Build a snapshot at a specific point in time (for backtesting).
+ * Build a snapshot at a specific point in time (for historical analysis).
  *
  * Convenience wrapper for historical snapshot building.
  */

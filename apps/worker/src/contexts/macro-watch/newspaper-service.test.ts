@@ -47,7 +47,9 @@ const mockGetPreviousTradingDay = mock(() => Promise.resolve("2026-01-14"));
 const mockCalendarService = {
 	getPreviousTradingDay: mockGetPreviousTradingDay,
 };
-const mockGetCalendarService = mock<() => typeof mockCalendarService | null>(() => mockCalendarService);
+const mockGetCalendarService = mock<() => typeof mockCalendarService | null>(
+	() => mockCalendarService
+);
 
 mock.module("@cream/api", () => ({
 	getMacroWatchRepo: mockGetMacroWatchRepo,

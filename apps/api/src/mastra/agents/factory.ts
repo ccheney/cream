@@ -12,6 +12,7 @@ import {
 	analyzeContentTool,
 	extractNewsContextTool,
 	fredEconomicCalendarTool,
+	getAcademicPaperTool,
 	getGreeksTool,
 	getMarketSnapshotsTool,
 	getOptionChainTool,
@@ -21,6 +22,8 @@ import {
 	graphragQueryTool,
 	helixQueryTool,
 	recalcIndicatorTool,
+	searchAcademicPapersTool,
+	searchExternalPapersTool,
 } from "@cream/agents";
 import { type GlobalModel, getFullModelId, getModelId as getGlobalModelId } from "@cream/domain";
 import { createNodeLogger } from "@cream/logger";
@@ -53,6 +56,9 @@ const TOOL_INSTANCES: Record<string, Tool<any, any>> = {
 	analyze_content: analyzeContentTool,
 	get_prediction_signals: getPredictionSignalsTool,
 	get_market_snapshots: getMarketSnapshotsTool,
+	search_academic_papers: searchAcademicPapersTool,
+	search_external_papers: searchExternalPapersTool,
+	get_academic_paper: getAcademicPaperTool,
 };
 
 /**

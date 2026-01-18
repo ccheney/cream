@@ -232,7 +232,6 @@ export const ApprovalSchema = z.object({
 export const WorkflowInputSchema = z.object({
 	cycleId: z.string(),
 	instruments: z.array(z.string()).default(["AAPL", "MSFT", "GOOGL"]),
-	forceStub: z.boolean().optional(),
 	useDraftConfig: z.boolean().optional(),
 	externalContext: ExternalContextSchema.optional(),
 });
