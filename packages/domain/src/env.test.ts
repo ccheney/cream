@@ -32,7 +32,6 @@ describe("CreamEnvironment", () => {
 		expect(() => CreamEnvironment.parse("PRODUCTION")).toThrow();
 		expect(() => CreamEnvironment.parse("")).toThrow();
 		expect(() => CreamEnvironment.parse("paper")).toThrow(); // case-sensitive
-		expect(() => CreamEnvironment.parse("BACKTEST")).toThrow(); // removed
 	});
 });
 
@@ -314,11 +313,6 @@ describe("requireEnv", () => {
 	it("throws for lowercase value", () => {
 		Bun.env.CREAM_ENV = "paper";
 		expect(() => requireEnv()).toThrow('Invalid CREAM_ENV value: "paper"');
-	});
-
-	it("throws for removed BACKTEST value", () => {
-		Bun.env.CREAM_ENV = "BACKTEST";
-		expect(() => requireEnv()).toThrow('Invalid CREAM_ENV value: "BACKTEST"');
 	});
 
 	it("returns PAPER when set", () => {

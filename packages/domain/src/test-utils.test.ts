@@ -106,17 +106,14 @@ describe("usage patterns", () => {
 
 	test("testing environment-specific behavior pattern", () => {
 		// Test that something behaves differently per environment
-		const backtestCtx = createTestContext("PAPER");
 		const paperCtx = createTestContext("PAPER");
 		const liveCtx = createTestContext("LIVE");
 
-		// All have same source
-		expect(backtestCtx.source).toBe("test");
+		// All have same source (test)
 		expect(paperCtx.source).toBe("test");
 		expect(liveCtx.source).toBe("test");
 
 		// But different environments
-		expect(backtestCtx.environment).not.toBe(paperCtx.environment);
 		expect(paperCtx.environment).not.toBe(liveCtx.environment);
 	});
 

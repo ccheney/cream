@@ -299,14 +299,6 @@ describe("MarketSnapshotSchema", () => {
 		}
 	});
 
-	test("rejects BACKTEST environment", () => {
-		const result = MarketSnapshotSchema.safeParse({
-			...validMarketSnapshot,
-			environment: "BACKTEST",
-		});
-		expect(result.success).toBe(false);
-	});
-
 	test("accepts all regime values", () => {
 		const regimes = [
 			"BULL_TREND",

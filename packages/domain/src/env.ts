@@ -213,7 +213,6 @@ export const env: EnvConfig = parseEnv();
  * Check if context is a test execution (source="test")
  *
  * Use this to return stub data or skip real API calls during unit tests.
- * This replaces the old `isBacktest()` pattern.
  *
  * @param ctx - ExecutionContext containing source info
  */

@@ -28,23 +28,17 @@ describe("createContext", () => {
 	});
 
 	test("sets environment correctly", () => {
-		const backtestCtx = createContext("PAPER", "test");
+		const testCtx = createContext("PAPER", "test");
 		const paperCtx = createContext("PAPER", "scheduled");
 		const liveCtx = createContext("LIVE", "scheduled");
 
-		expect(backtestCtx.environment).toBe("PAPER");
+		expect(testCtx.environment).toBe("PAPER");
 		expect(paperCtx.environment).toBe("PAPER");
 		expect(liveCtx.environment).toBe("LIVE");
 	});
 
 	test("sets source correctly for all valid sources", () => {
-		const sources: ExecutionSource[] = [
-			"test",
-			"backtest",
-			"dashboard-test",
-			"scheduled",
-			"manual",
-		];
+		const sources: ExecutionSource[] = ["test", "dashboard-test", "scheduled", "manual"];
 
 		for (const source of sources) {
 			const ctx = createContext("PAPER", source);
@@ -96,11 +90,10 @@ describe("createContext", () => {
 describe("ExecutionSource validation", () => {
 	test("EXECUTION_SOURCES contains all valid sources", () => {
 		expect(EXECUTION_SOURCES).toContain("test");
-		expect(EXECUTION_SOURCES).toContain("backtest");
 		expect(EXECUTION_SOURCES).toContain("dashboard-test");
 		expect(EXECUTION_SOURCES).toContain("scheduled");
 		expect(EXECUTION_SOURCES).toContain("manual");
-		expect(EXECUTION_SOURCES).toHaveLength(5);
+		expect(EXECUTION_SOURCES).toHaveLength(4);
 	});
 
 	test("EXECUTION_SOURCES is readonly at compile time", () => {
@@ -108,14 +101,13 @@ describe("ExecutionSource validation", () => {
 		// TypeScript prevents mutation at compile time, not runtime
 		// This test verifies the array exists and has the expected structure
 		expect(Array.isArray(EXECUTION_SOURCES)).toBe(true);
-		expect(EXECUTION_SOURCES.length).toBe(5);
+		expect(EXECUTION_SOURCES.length).toBe(4);
 	});
 });
 
 describe("isValidExecutionSource", () => {
 	test("returns true for valid sources", () => {
 		expect(isValidExecutionSource("test")).toBe(true);
-		expect(isValidExecutionSource("backtest")).toBe(true);
 		expect(isValidExecutionSource("dashboard-test")).toBe(true);
 		expect(isValidExecutionSource("scheduled")).toBe(true);
 		expect(isValidExecutionSource("manual")).toBe(true);
@@ -185,16 +177,6 @@ describe("Real-world usage patterns", () => {
 		expect(ctx.environment).toBe("LIVE");
 		expect(ctx.source).toBe("scheduled");
 		expect(ctx.configId).toBe(activeConfigId);
-	});
-
-	test("backtest context pattern", () => {
-		// Pattern used for historical backtesting
-		const backtestId = "backtest-xyz789";
-		const ctx = createContext("PAPER", "backtest", backtestId);
-
-		expect(ctx.environment).toBe("PAPER");
-		expect(ctx.source).toBe("backtest");
-		expect(ctx.configId).toBe(backtestId);
 	});
 
 	test("manual CLI context pattern", () => {

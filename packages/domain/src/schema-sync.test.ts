@@ -224,13 +224,6 @@ describe("DecisionPlan Schema Sync", () => {
 			}
 		});
 
-		it("rejects BACKTEST as environment", async () => {
-			const example = await loadProtoExample("decision_plan.json");
-			const invalid = { ...example, environment: "BACKTEST" };
-
-			const result = DecisionPlanSchema.safeParse(invalid);
-			expect(result.success).toBe(false);
-		});
 	});
 
 	describe("Missing Required Fields", () => {

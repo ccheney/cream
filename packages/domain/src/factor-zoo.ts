@@ -145,7 +145,7 @@ export const FactorSchema = z.object({
 	originalityScore: z.number().min(0).max(1).nullable(),
 	hypothesisAlignment: z.number().min(0).max(1).nullable(),
 
-	// Stage 1 validation (backtesting)
+	// Stage 1 validation (research)
 	stage1Sharpe: z.number().nullable(),
 	stage1Ic: z.number().nullable(),
 	stage1MaxDrawdown: z.number().nullable(),
