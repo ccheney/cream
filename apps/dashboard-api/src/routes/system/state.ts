@@ -129,9 +129,6 @@ export const systemState: SystemState = {
 		// This is a sync getter but we need async - callers should use getSystemState()
 		return "stopped" as SystemStatus;
 	},
-	set status(_value: SystemStatus) {
-		// No-op, use setSystemStatus() instead
-	},
 	environment: requireEnv() as Environment,
 	lastCycleId: null,
 	lastCycleTime: null,
