@@ -5,6 +5,27 @@ use serde::{Deserialize, Serialize};
 
 use crate::models::Direction;
 
+/// Result of checking if stop or target was triggered.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum TriggerResult {
+    /// No trigger occurred.
+    None,
+    /// Stop-loss was triggered.
+    StopLoss {
+        /// Price at which stop was triggered.
+        price: Decimal,
+        /// Timestamp of trigger.
+        timestamp: String,
+    },
+    /// Take-profit was triggered.
+    TakeProfit {
+        /// Price at which target was triggered.
+        price: Decimal,
+        /// Timestamp of trigger.
+        timestamp: String,
+    },
+}
+
 /// Denomination of stop/target price levels.
 #[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "SCREAMING_SNAKE_CASE")]

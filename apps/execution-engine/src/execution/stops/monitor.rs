@@ -3,8 +3,7 @@
 use rust_decimal::Decimal;
 use std::collections::HashMap;
 
-use super::simulator::TriggerResult;
-use super::types::{StopTargetLevels, StopsConfig};
+use super::types::{StopTargetLevels, StopsConfig, TriggerResult};
 use crate::models::Direction;
 
 /// Position being monitored for stop/target triggers.

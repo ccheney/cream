@@ -140,7 +140,6 @@ impl MassCancelConfig {
             heartbeat_timeout_seconds: 10,
         }
     }
-
 }
 
 /// Event emitted by the disconnect handler.

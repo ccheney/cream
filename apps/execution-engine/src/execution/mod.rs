@@ -37,7 +37,7 @@ pub use reconciliation::{
 pub use recovery::{PortfolioRecovery, RecoveryConfig, RecoveryError, RecoveryResult};
 pub use state::{OrderStateManager, TimeoutResult};
 pub use stops::{
-    BacktestStopsSimulator, BracketOrder, BracketOrderBuilder, Candle, EnforcementMethod,
+    BracketOrder, BracketOrderBuilder, EnforcementMethod,
     EntryOrderSpec, MonitoredPosition, PriceMonitor, RiskLevelDenomination, SameBarPriority,
     StopOrderSpec, StopTargetLevels, StopTargetValidator, StopsConfig, StopsEnforcer, StopsError,
     TakeProfitOrderSpec, TriggerResult, supports_bracket_orders,

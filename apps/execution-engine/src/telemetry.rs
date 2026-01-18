@@ -1,6 +1,6 @@
 //! OpenTelemetry Tracing Setup
 //!
-//! Initializes OpenTelemetry with OTLP exporter for OpenObserve.
+//! Initializes OpenTelemetry with OTLP exporter for `OpenObserve`.
 //!
 //! # Configuration
 //!
@@ -23,7 +23,7 @@
 use opentelemetry::trace::TracerProvider;
 use opentelemetry_otlp::WithExportConfig;
 use opentelemetry_sdk::trace::SdkTracerProvider;
-use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt, EnvFilter, Registry};
+use tracing_subscriber::{EnvFilter, Registry, layer::SubscriberExt, util::SubscriberInitExt};
 
 /// Guard that shuts down the tracer provider on drop.
 pub struct TelemetryGuard {
@@ -32,10 +32,10 @@ pub struct TelemetryGuard {
 
 impl Drop for TelemetryGuard {
     fn drop(&mut self) {
-        if let Some(provider) = self.provider.take() {
-            if let Err(e) = provider.shutdown() {
-                eprintln!("Error shutting down tracer provider: {e:?}");
-            }
+        if let Some(provider) = self.provider.take()
+            && let Err(e) = provider.shutdown()
+        {
+            eprintln!("Error shutting down tracer provider: {e:?}");
         }
     }
 }
@@ -57,8 +57,7 @@ pub fn init_telemetry() -> TelemetryGuard {
         .map(|v| v == "development")
         .unwrap_or(false);
 
-    let env_filter = EnvFilter::try_from_default_env()
-        .unwrap_or_else(|_| EnvFilter::new("info"));
+    let env_filter = EnvFilter::try_from_default_env().unwrap_or_else(|_| EnvFilter::new("info"));
 
     if !otel_enabled {
         // Console-only tracing
@@ -75,8 +74,8 @@ pub fn init_telemetry() -> TelemetryGuard {
     let endpoint = std::env::var("OTEL_EXPORTER_OTLP_ENDPOINT")
         .unwrap_or_else(|_| "http://localhost:4317".to_string());
 
-    let service_name = std::env::var("OTEL_SERVICE_NAME")
-        .unwrap_or_else(|_| "cream-execution-engine".to_string());
+    let service_name =
+        std::env::var("OTEL_SERVICE_NAME").unwrap_or_else(|_| "cream-execution-engine".to_string());
 
     // Build OTLP exporter
     let exporter = match opentelemetry_otlp::SpanExporter::builder()

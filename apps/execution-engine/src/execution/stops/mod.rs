@@ -9,7 +9,6 @@
 mod bracket;
 mod error;
 mod monitor;
-mod simulator;
 mod types;
 mod validator;
 
@@ -17,15 +16,14 @@ use rust_decimal::Decimal;
 
 use crate::models::Environment;
 
-// Re-export all public types for backwards compatibility
+// Re-export all public types
 pub use bracket::{
     BracketOrder, BracketOrderBuilder, EntryOrderSpec, StopOrderSpec, TakeProfitOrderSpec,
     supports_bracket_orders,
 };
 pub use error::StopsError;
 pub use monitor::{MonitoredPosition, PriceMonitor};
-pub use simulator::{BacktestStopsSimulator, Candle, TriggerResult};
-pub use types::{RiskLevelDenomination, SameBarPriority, StopTargetLevels, StopsConfig};
+pub use types::{RiskLevelDenomination, SameBarPriority, StopTargetLevels, StopsConfig, TriggerResult};
 pub use validator::StopTargetValidator;
 
 /// Method used for stop/target enforcement.
@@ -46,8 +44,6 @@ pub struct StopsEnforcer {
     config: StopsConfig,
     /// Validator.
     validator: StopTargetValidator,
-    /// Backtest simulator.
-    backtest_simulator: BacktestStopsSimulator,
     /// Price monitor for real-time enforcement.
     price_monitor: PriceMonitor,
 }
@@ -61,7 +57,6 @@ impl StopsEnforcer {
             environment,
             config: config.clone(),
             validator: StopTargetValidator::default(),
-            backtest_simulator: BacktestStopsSimulator::with_config(config.clone()),
             price_monitor: PriceMonitor::with_config(config),
         }
     }
@@ -73,7 +68,6 @@ impl StopsEnforcer {
             environment,
             config: config.clone(),
             validator: StopTargetValidator::default(),
-            backtest_simulator: BacktestStopsSimulator::with_config(config.clone()),
             price_monitor: PriceMonitor::with_config(config),
         }
     }
@@ -146,16 +140,6 @@ impl StopsEnforcer {
     #[must_use]
     pub fn check_price(&self, instrument_id: &str, price: Decimal) -> Vec<(String, TriggerResult)> {
         self.price_monitor.check_price(instrument_id, price)
-    }
-
-    /// Simulate stops through candles (backtest mode).
-    #[must_use]
-    pub fn simulate_backtest(
-        &self,
-        candles: &[Candle],
-        levels: &StopTargetLevels,
-    ) -> TriggerResult {
-        self.backtest_simulator.simulate(candles, levels)
     }
 
     /// Get the current environment.
