@@ -3,6 +3,7 @@
  */
 
 // Set required environment variables before imports
+Bun.env.NODE_ENV = "test";
 Bun.env.CREAM_ENV = "PAPER";
 
 import { describe, expect, test } from "bun:test";

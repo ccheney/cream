@@ -2,7 +2,36 @@
  * Trading Calendar Tests
  */
 
-import { describe, expect, test } from "bun:test";
+import { describe, expect, mock, test } from "bun:test";
+import {
+	isEarlyClose as isEarlyCloseHardcoded,
+	isTradingDay as isTradingDayHardcoded,
+} from "@cream/domain/calendar";
+
+function formatDateStr(date: Date | string): string {
+	if (typeof date === "string") {
+		return date.slice(0, 10);
+	}
+	const year = date.getUTCFullYear();
+	const month = String(date.getUTCMonth() + 1).padStart(2, "0");
+	const day = String(date.getUTCDate()).padStart(2, "0");
+	return `${year}-${month}-${day}`;
+}
+
+mock.module("@cream/domain", () => ({
+	isMarketOpen: (date: Date | string) => {
+		const dateStr = formatDateStr(date);
+		return isTradingDayHardcoded(dateStr);
+	},
+	getMarketCloseTime: (date: Date | string) => {
+		const dateStr = formatDateStr(date);
+		if (!isTradingDayHardcoded(dateStr)) {
+			return null;
+		}
+		return isEarlyCloseHardcoded(dateStr) ? "13:00" : "16:00";
+	},
+}));
+
 import {
 	DEFAULT_US_CALENDAR,
 	getNextTradingDay,
