@@ -9,13 +9,13 @@ coverageDir = "coverage"
 preload = ["./test-setup.ts"]
 
 # Standard tier thresholds (70/65/70)
-coverageThreshold = { line = 70, branch = 65, function = 70 }
+coverageThreshold = { line = 0.70, branch = 0.65, function = 0.70 }
 
 # Coverage reporters
 coverageReporter = ["text", "lcov"]
 
 # Patterns to exclude from coverage
-coverageIgnorePatterns = [
+coveragePathIgnorePatterns = [
   "**/*.test.ts",
   "**/*.spec.ts",
   "**/*.d.ts",

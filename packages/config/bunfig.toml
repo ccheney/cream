@@ -10,13 +10,13 @@ coverage = true
 coverageDir = "coverage"
 
 # Core tier thresholds (80/75/80)
-coverageThreshold = { line = 80, branch = 75, function = 80 }
+coverageThreshold = { line = 0.80, branch = 0.75, function = 0.80 }
 
 # Coverage reporters
 coverageReporter = ["text", "lcov"]
 
 # Patterns to exclude from coverage
-coverageIgnorePatterns = [
+coveragePathIgnorePatterns = [
   "**/*.test.ts",
   "**/*.spec.ts",
   "**/*.d.ts",
