@@ -184,4 +184,3 @@ export interface ThesisFilters {
 	limit?: number;
 	offset?: number;
 }
-

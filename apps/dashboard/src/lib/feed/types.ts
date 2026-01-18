@@ -191,4 +191,3 @@ export interface CycleResultData {
 	symbol?: string;
 	decisionsCount?: number;
 }
-

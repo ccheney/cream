@@ -84,10 +84,7 @@ export default function FeedPage() {
 	const parentRef = useRef<HTMLDivElement>(null);
 
 	// Subscribe to feed-relevant channels when page mounts
-	const feedChannels = useMemo(
-		() => ["cycles", "agents", "alerts", "orders", "trades"],
-		[]
-	);
+	const feedChannels = useMemo(() => ["cycles", "agents", "alerts", "orders", "trades"], []);
 	useEffect(() => {
 		if (connected) {
 			subscribe(feedChannels);

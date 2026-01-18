@@ -37,10 +37,10 @@ pub use reconciliation::{
 pub use recovery::{PortfolioRecovery, RecoveryConfig, RecoveryError, RecoveryResult};
 pub use state::{OrderStateManager, TimeoutResult};
 pub use stops::{
-    BracketOrder, BracketOrderBuilder, EnforcementMethod,
-    EntryOrderSpec, MonitoredPosition, PriceMonitor, RiskLevelDenomination, SameBarPriority,
-    StopOrderSpec, StopTargetLevels, StopTargetValidator, StopsConfig, StopsEnforcer, StopsError,
-    TakeProfitOrderSpec, TriggerResult, supports_bracket_orders,
+    BracketOrder, BracketOrderBuilder, EnforcementMethod, EntryOrderSpec, MonitoredPosition,
+    PriceMonitor, RiskLevelDenomination, SameBarPriority, StopOrderSpec, StopTargetLevels,
+    StopTargetValidator, StopsConfig, StopsEnforcer, StopsError, TakeProfitOrderSpec,
+    TriggerResult, supports_bracket_orders,
 };
 pub use tactics::{
     AdaptiveConfig, AggressiveLimitConfig, IcebergConfig, MarketState, OrderPurpose,

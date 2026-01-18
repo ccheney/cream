@@ -11,7 +11,6 @@ import {
 	isEarlyClose,
 	isTradingDay as isTradingDayHardcoded,
 	REGULAR_CLOSE,
-	REGULAR_OPEN,
 } from "./calendar/hardcoded";
 import type { CalendarService, MarketClock, TradingSession } from "./calendar/types";
 
@@ -22,7 +21,9 @@ const EARLY_CLOSE_MINUTES = 13 * 60;
 const AFTER_HOURS_END_MINUTES = 20 * 60;
 
 function formatDateStr(date: Date | string): string {
-	if (typeof date === "string") return date.slice(0, 10);
+	if (typeof date === "string") {
+		return date.slice(0, 10);
+	}
 	const year = date.getUTCFullYear();
 	const month = String(date.getUTCMonth() + 1).padStart(2, "0");
 	const day = String(date.getUTCDate()).padStart(2, "0");
@@ -38,7 +39,9 @@ function getETMinutes(date: Date): number {
 
 function toDate(date: Date | string): Date {
 	if (typeof date === "string") {
-		if (date.length === 10) return new Date(`${date}T12:00:00Z`);
+		if (date.length === 10) {
+			return new Date(`${date}T12:00:00Z`);
+		}
 		return new Date(date);
 	}
 	return date;
@@ -47,19 +50,31 @@ function toDate(date: Date | string): Date {
 function getTradingSessionFromHardcoded(datetime: Date | string): TradingSession {
 	const dateObj = toDate(datetime);
 	const dateStr = formatDateStr(dateObj);
-	if (!isTradingDayHardcoded(dateStr)) return "CLOSED";
+	if (!isTradingDayHardcoded(dateStr)) {
+		return "CLOSED";
+	}
 	const etMinutes = getETMinutes(dateObj);
 	const closeMinutes = isEarlyClose(dateStr) ? EARLY_CLOSE_MINUTES : REGULAR_CLOSE_MINUTES;
-	if (etMinutes < PRE_MARKET_START_MINUTES || etMinutes >= AFTER_HOURS_END_MINUTES) return "CLOSED";
-	if (etMinutes < RTH_START_MINUTES) return "PRE_MARKET";
-	if (etMinutes < closeMinutes) return "RTH";
-	if (isEarlyClose(dateStr)) return "CLOSED";
+	if (etMinutes < PRE_MARKET_START_MINUTES || etMinutes >= AFTER_HOURS_END_MINUTES) {
+		return "CLOSED";
+	}
+	if (etMinutes < RTH_START_MINUTES) {
+		return "PRE_MARKET";
+	}
+	if (etMinutes < closeMinutes) {
+		return "RTH";
+	}
+	if (isEarlyClose(dateStr)) {
+		return "CLOSED";
+	}
 	return "AFTER_HOURS";
 }
 
 function getMarketCloseTimeFromHardcoded(date: Date | string): string | null {
 	const dateStr = formatDateStr(date);
-	if (!isTradingDayHardcoded(dateStr)) return null;
+	if (!isTradingDayHardcoded(dateStr)) {
+		return null;
+	}
 	return isEarlyClose(dateStr) ? EARLY_CLOSE : REGULAR_CLOSE;
 }
 
@@ -85,7 +100,8 @@ const mockCalendarService: CalendarService = {
 		nextOpen: new Date(),
 		nextClose: new Date(),
 	}),
-	getCalendarRange: async (start, end) => generateCalendarRange(formatDateStr(start), formatDateStr(end)),
+	getCalendarRange: async (start, end) =>
+		generateCalendarRange(formatDateStr(start), formatDateStr(end)),
 	isTradingDaySync: (date) => isTradingDayHardcoded(formatDateStr(date)),
 	getTradingSessionSync: (datetime) => getTradingSessionFromHardcoded(datetime),
 	getMarketCloseTimeSync: (date) => getMarketCloseTimeFromHardcoded(date),

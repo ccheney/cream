@@ -2,11 +2,7 @@
  * Portfolio and account types (positions, trades, performance, risk).
  */
 
-import type {
-	DecisionSummary,
-	Position,
-	ThesisDetail,
-} from "./trading";
+import type { DecisionSummary, Position, ThesisDetail } from "./trading";
 
 export interface PortfolioSummary {
 	nav: number;

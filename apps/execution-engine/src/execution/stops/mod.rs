@@ -23,7 +23,9 @@ pub use bracket::{
 };
 pub use error::StopsError;
 pub use monitor::{MonitoredPosition, PriceMonitor};
-pub use types::{RiskLevelDenomination, SameBarPriority, StopTargetLevels, StopsConfig, TriggerResult};
+pub use types::{
+    RiskLevelDenomination, SameBarPriority, StopTargetLevels, StopsConfig, TriggerResult,
+};
 pub use validator::StopTargetValidator;
 
 /// Method used for stop/target enforcement.

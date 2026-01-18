@@ -223,7 +223,6 @@ describe("DecisionPlan Schema Sync", () => {
 				expect(result.success).toBe(true);
 			}
 		});
-
 	});
 
 	describe("Missing Required Fields", () => {

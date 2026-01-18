@@ -192,7 +192,8 @@ export const SEED_PAPERS: PaperInput[] = [
 	},
 	{
 		paperId: "heston-1993",
-		title: "A Closed-Form Solution for Options with Stochastic Volatility with Applications to Bond and Currency Options",
+		title:
+			"A Closed-Form Solution for Options with Stochastic Volatility with Applications to Bond and Currency Options",
 		authors: "Steven L. Heston",
 		abstract:
 			"I use a new technique to derive a closed-form solution for the price of a European call option on an asset with stochastic volatility. The model allows arbitrary correlation between volatility and spot-asset returns. I introduce stochastic interest rates and show how to apply the model to bond options and foreign currency options.",
@@ -202,7 +203,8 @@ export const SEED_PAPERS: PaperInput[] = [
 	},
 	{
 		paperId: "engle-1982",
-		title: "Autoregressive Conditional Heteroscedasticity with Estimates of the Variance of United Kingdom Inflation",
+		title:
+			"Autoregressive Conditional Heteroscedasticity with Estimates of the Variance of United Kingdom Inflation",
 		authors: "Robert F. Engle",
 		abstract:
 			"Traditional econometric models assume a constant one-period forecast variance. To generalize this implausible assumption, a new class of stochastic processes called autoregressive conditional heteroscedastic (ARCH) processes are introduced. These are mean zero, serially uncorrelated processes with nonconstant variances conditional on the past, but constant unconditional variances.",
@@ -312,7 +314,6 @@ export const SEED_PAPERS: PaperInput[] = [
 		publicationYear: 1956,
 		citationCount: 3000,
 	},
-
 ];
 
 // ============================================

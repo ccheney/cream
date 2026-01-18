@@ -19,7 +19,9 @@ resetCalendarService();
 const moduleIsPolluted = (() => {
 	resetCalendarService();
 	const service = getCalendarService();
-	if (service !== null) return true;
+	if (service !== null) {
+		return true;
+	}
 	try {
 		requireCalendarService();
 		return true;

@@ -111,7 +111,6 @@ describe("compareVersionRegistries", () => {
 		expect(result.match).toBe(false);
 		expect(result.missingFromResearch).toContain("macd");
 	});
-
 });
 
 describe("checkLookAheadBias", () => {
