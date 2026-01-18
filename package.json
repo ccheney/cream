@@ -21,7 +21,7 @@
     "check": "biome check --write .",
     "format:ts": "biome format --write .",
     "format:rust": "cargo fmt --all",
-    "lint": "bun run lint:ts && bun run lint:rust && bun run lint:deps",
+    "lint": "turbo run lint && bun run lint:deps",
     "lint:deps": "bun packages/config/src/bin/validate-deps.ts",
     "lint:ts": "biome check .",
     "lint:rust": "cargo clippy --all-targets --all-features -- -D warnings",

@@ -2,7 +2,10 @@
   "extends": ["//"],
   "tasks": {
     "build": {
-      "outputs": []
+      "outputs": ["target/release/**"]
+    },
+    "lint": {
+      "inputs": ["src/**/*.rs", "Cargo.toml", "Cargo.lock"]
     }
   }
 }
