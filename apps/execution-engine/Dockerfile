@@ -10,7 +10,7 @@
 # ============================================
 # Stage 1: Build
 # ============================================
-FROM rust:1.87-slim-bookworm AS builder
+FROM rust:1.92-slim-bookworm AS builder
 
 # Install build dependencies
 RUN apt-get update && apt-get install -y \
@@ -74,7 +74,7 @@ HEALTHCHECK --interval=10s --timeout=5s --start-period=5s --retries=3 \
     CMD nc -z localhost 50051 || exit 1
 
 # Set environment for test mode
-ENV CREAM_ENV=BACKTEST
+ENV CREAM_ENV=PAPER
 ENV RUST_LOG=info,execution_engine=debug
 
 # Run the server

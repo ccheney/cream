@@ -33,8 +33,8 @@ impl Default for StopsConfigExternal {
 impl StopsConfigExternal {
     /// Check if stops enforcement is enabled based on environment.
     ///
-    /// Stops are enabled by default in all environments.
-    /// In BACKTEST, uses simulation; in PAPER/LIVE, uses bracket orders or price monitoring.
+    /// Stops are enabled by default in PAPER/LIVE environments.
+    /// Uses bracket orders or price monitoring depending on instrument type.
     #[must_use]
     pub const fn is_enabled_for_env(&self, _env: &crate::models::Environment) -> bool {
         self.enabled
@@ -143,7 +143,6 @@ mod tests {
         // Stops should be enabled for all environments
         assert!(config.is_enabled_for_env(&Environment::Paper));
         assert!(config.is_enabled_for_env(&Environment::Live));
-        assert!(config.is_enabled_for_env(&Environment::Backtest));
 
         // Explicitly disabled config
         let disabled_config = StopsConfigExternal {
@@ -152,6 +151,5 @@ mod tests {
         };
         assert!(!disabled_config.is_enabled_for_env(&Environment::Paper));
         assert!(!disabled_config.is_enabled_for_env(&Environment::Live));
-        assert!(!disabled_config.is_enabled_for_env(&Environment::Backtest));
     }
 }

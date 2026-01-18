@@ -43,16 +43,10 @@ impl Default for ReconciliationConfig {
 impl ReconciliationConfig {
     /// Check if reconciliation is enabled based on environment.
     ///
-    /// Reconciliation is enabled by default in PAPER/LIVE modes,
-    /// disabled in BACKTEST mode since there's no broker to reconcile with.
+    /// Reconciliation is enabled by default in PAPER/LIVE modes.
     #[must_use]
-    #[allow(clippy::missing_const_for_fn)] // Method call prevents const
-    pub fn is_enabled_for_env(&self, env: &crate::models::Environment) -> bool {
-        if !self.enabled {
-            return false;
-        }
-        // Disable reconciliation for backtest mode
-        !env.is_backtest()
+    pub const fn is_enabled_for_env(&self, _env: &crate::models::Environment) -> bool {
+        self.enabled
     }
 
     /// Convert to the internal `ReconciliationConfig` type used by the reconciliation module.
@@ -189,9 +183,6 @@ mod tests {
         // Reconciliation should be enabled for PAPER and LIVE
         assert!(config.is_enabled_for_env(&Environment::Paper));
         assert!(config.is_enabled_for_env(&Environment::Live));
-
-        // Reconciliation should be disabled for BACKTEST
-        assert!(!config.is_enabled_for_env(&Environment::Backtest));
 
         // Explicitly disabled config
         let disabled_config = ReconciliationConfig {

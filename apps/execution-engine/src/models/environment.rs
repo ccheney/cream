@@ -2,12 +2,10 @@
 
 use serde::{Deserialize, Serialize};
 
-/// Trading environment (BACKTEST, PAPER, or LIVE).
+/// Trading environment (PAPER or LIVE).
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
 #[serde(rename_all = "SCREAMING_SNAKE_CASE")]
 pub enum Environment {
-    /// Historical simulation mode - no real orders.
-    Backtest,
     /// Paper trading mode - simulated orders with live data.
     Paper,
     /// Live trading mode - real orders with real money.
@@ -27,18 +25,12 @@ impl Environment {
         matches!(self, Self::Paper)
     }
 
-    /// Returns true if this is a backtest environment.
-    #[must_use]
-    pub const fn is_backtest(&self) -> bool {
-        matches!(self, Self::Backtest)
-    }
-
     /// Returns the Alpaca base URL for this environment.
     #[must_use]
     pub const fn alpaca_base_url(&self) -> &'static str {
         match self {
             Self::Live => "https://api.alpaca.markets",
-            Self::Paper | Self::Backtest => "https://paper-api.alpaca.markets",
+            Self::Paper => "https://paper-api.alpaca.markets",
         }
     }
 
@@ -55,7 +47,6 @@ impl Environment {
 impl std::fmt::Display for Environment {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            Self::Backtest => write!(f, "BACKTEST"),
             Self::Paper => write!(f, "PAPER"),
             Self::Live => write!(f, "LIVE"),
         }
@@ -67,10 +58,9 @@ impl std::str::FromStr for Environment {
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         match s.to_uppercase().as_str() {
-            "BACKTEST" => Ok(Self::Backtest),
             "PAPER" => Ok(Self::Paper),
             "LIVE" => Ok(Self::Live),
-            _ => Err(format!("Invalid environment: {s}")),
+            _ => Err(format!("Invalid environment: {s}. Must be PAPER or LIVE.")),
         }
     }
 }
@@ -83,7 +73,6 @@ mod tests {
     fn test_environment_is_live() {
         assert!(Environment::Live.is_live());
         assert!(!Environment::Paper.is_live());
-        assert!(!Environment::Backtest.is_live());
     }
 
     #[test]
@@ -106,10 +95,6 @@ mod tests {
         );
         assert_eq!(
             Environment::Paper.alpaca_data_url(),
-            "https://data.alpaca.markets"
-        );
-        assert_eq!(
-            Environment::Backtest.alpaca_data_url(),
             "https://data.alpaca.markets"
         );
     }

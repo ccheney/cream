@@ -34,23 +34,17 @@ impl Default for PersistenceConfig {
 impl PersistenceConfig {
     /// Check if persistence is enabled based on environment.
     ///
-    /// Persistence is enabled by default in PAPER/LIVE modes,
-    /// disabled in BACKTEST mode to avoid I/O overhead.
+    /// Persistence is enabled by default in PAPER/LIVE modes.
     #[must_use]
-    #[allow(clippy::missing_const_for_fn)] // Method call prevents const
-    pub fn is_enabled_for_env(&self, env: &crate::models::Environment) -> bool {
-        if !self.enabled {
-            return false;
-        }
-        // Disable persistence for backtest unless explicitly enabled
-        !env.is_backtest()
+    pub const fn is_enabled_for_env(&self, _env: &crate::models::Environment) -> bool {
+        self.enabled
     }
 
     /// Resolve the database URL based on environment.
     ///
     /// Priority:
     /// 1. Config file `database_url` if set
-    /// 2. Environment-specific variable (`DATABASE_URL_BACKTEST`, `DATABASE_URL_PAPER`)
+    /// 2. Environment-specific variable (`DATABASE_URL_PAPER` for PAPER mode)
     /// 3. Generic `DATABASE_URL`
     ///
     /// # Errors
@@ -69,7 +63,6 @@ impl PersistenceConfig {
 
         // Then check environment-specific variables
         let env_var = match env {
-            crate::models::Environment::Backtest => "DATABASE_URL_BACKTEST",
             crate::models::Environment::Paper => "DATABASE_URL_PAPER",
             crate::models::Environment::Live => "DATABASE_URL",
         };

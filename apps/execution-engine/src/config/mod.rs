@@ -265,7 +265,7 @@ fn validate_config(config: &Config) -> Result<(), ConfigError> {
     }
 
     // Validate environment mode
-    let valid_modes = ["BACKTEST", "PAPER", "LIVE"];
+    let valid_modes = ["PAPER", "LIVE"];
     if !valid_modes.contains(&config.environment.mode.as_str()) {
         return Err(ConfigError::ValidationError(format!(
             "environment.mode must be one of: {valid_modes:?}"

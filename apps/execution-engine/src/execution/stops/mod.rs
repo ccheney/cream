@@ -1,8 +1,8 @@
 //! Stop-loss and take-profit enforcement.
 //!
-//! This module implements stop and target enforcement for different environments:
-//! - LIVE/PAPER: Bracket orders (OCO) for stocks, price monitoring for options
-//! - BACKTEST: Deterministic simulation using candle high/low data
+//! This module implements stop and target enforcement for PAPER/LIVE environments:
+//! - Bracket orders (OCO) for stocks
+//! - Price monitoring for options
 //!
 //! Reference: docs/plans/07-execution.md (Stops and Targets section)
 
@@ -35,8 +35,6 @@ pub enum EnforcementMethod {
     BracketOrder,
     /// Use real-time price monitoring.
     PriceMonitoring,
-    /// Use backtest simulation with candle data.
-    BacktestSimulation,
 }
 
 /// Unified stops enforcer that handles all environments.
@@ -91,15 +89,10 @@ impl StopsEnforcer {
     /// Determine enforcement method for an instrument.
     #[must_use]
     pub fn enforcement_method(&self, instrument_id: &str) -> EnforcementMethod {
-        match self.environment {
-            Environment::Backtest => EnforcementMethod::BacktestSimulation,
-            Environment::Paper | Environment::Live => {
-                if self.config.use_bracket_orders && supports_bracket_orders(instrument_id) {
-                    EnforcementMethod::BracketOrder
-                } else {
-                    EnforcementMethod::PriceMonitoring
-                }
-            }
+        if self.config.use_bracket_orders && supports_bracket_orders(instrument_id) {
+            EnforcementMethod::BracketOrder
+        } else {
+            EnforcementMethod::PriceMonitoring
         }
     }
 
@@ -201,16 +194,7 @@ mod tests {
     }
 
     #[test]
-    fn test_enforcer_enforcement_method_backtest() {
-        let enforcer = StopsEnforcer::new(Environment::Backtest);
-        assert_eq!(
-            enforcer.enforcement_method("AAPL"),
-            EnforcementMethod::BacktestSimulation
-        );
-    }
-
-    #[test]
-    fn test_enforcer_enforcement_method_live_stock() {
+    fn test_enforcer_enforcement_method_stock() {
         let enforcer = StopsEnforcer::new(Environment::Live);
         assert_eq!(
             enforcer.enforcement_method("AAPL"),
@@ -219,11 +203,20 @@ mod tests {
     }
 
     #[test]
-    fn test_enforcer_enforcement_method_live_option() {
+    fn test_enforcer_enforcement_method_option() {
         let enforcer = StopsEnforcer::new(Environment::Live);
         assert_eq!(
             enforcer.enforcement_method("AAPL240119C00150000"),
             EnforcementMethod::PriceMonitoring
+        );
+    }
+
+    #[test]
+    fn test_enforcer_enforcement_method_paper() {
+        let enforcer = StopsEnforcer::new(Environment::Paper);
+        assert_eq!(
+            enforcer.enforcement_method("AAPL"),
+            EnforcementMethod::BracketOrder
         );
     }
 

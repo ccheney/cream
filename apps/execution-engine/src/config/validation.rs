@@ -56,7 +56,6 @@ impl StartupValidation {
 /// configuration. It ensures that:
 ///
 /// - PAPER and LIVE modes have required broker credentials
-/// - BACKTEST mode can run without credentials
 /// - Clear error messages are provided for missing configuration
 ///
 /// # Arguments
@@ -84,67 +83,50 @@ pub fn validate_startup_environment(
     config: &Config,
     environment: Environment,
 ) -> Result<StartupValidation, StartupValidationError> {
-    match environment {
-        Environment::Backtest => {
-            // Backtest mode requires no credentials
-            let mut warnings = Vec::new();
+    // Paper and Live modes require Alpaca credentials
+    let mut missing = Vec::new();
 
-            if !config.brokers.alpaca.api_key.is_empty() {
-                warnings.push(
-                    "Alpaca credentials configured but not used in BACKTEST mode".to_string(),
-                );
-            }
-
-            Ok(StartupValidation::ok_with_warnings(warnings))
-        }
-
-        Environment::Paper | Environment::Live => {
-            // Paper and Live modes require Alpaca credentials
-            let mut missing = Vec::new();
-
-            if config.brokers.alpaca.api_key.is_empty() {
-                missing.push("ALPACA_KEY");
-            }
-
-            if config.brokers.alpaca.api_secret.is_empty() {
-                missing.push("ALPACA_SECRET");
-            }
-
-            if !missing.is_empty() {
-                let env_name = if environment.is_live() {
-                    "LIVE"
-                } else {
-                    "PAPER"
-                };
-                return Err(StartupValidationError::MissingCredentials {
-                    environment: env_name.to_string(),
-                    details: format!(
-                        "Required environment variables not set: {}. \
-                         Set these in your environment or config.yaml.",
-                        missing.join(", ")
-                    ),
-                });
-            }
-
-            // Additional validation for LIVE mode
-            if environment.is_live() {
-                let mut warnings = Vec::new();
-
-                // Warn if using paper API URL in live mode
-                if config.brokers.alpaca.base_url.contains("paper") {
-                    warnings.push(
-                        "LIVE mode configured but using paper API URL. \
-                         This may indicate misconfiguration."
-                            .to_string(),
-                    );
-                }
-
-                return Ok(StartupValidation::ok_with_warnings(warnings));
-            }
-
-            Ok(StartupValidation::ok())
-        }
+    if config.brokers.alpaca.api_key.is_empty() {
+        missing.push("ALPACA_KEY");
     }
+
+    if config.brokers.alpaca.api_secret.is_empty() {
+        missing.push("ALPACA_SECRET");
+    }
+
+    if !missing.is_empty() {
+        let env_name = if environment.is_live() {
+            "LIVE"
+        } else {
+            "PAPER"
+        };
+        return Err(StartupValidationError::MissingCredentials {
+            environment: env_name.to_string(),
+            details: format!(
+                "Required environment variables not set: {}. \
+                 Set these in your environment or config.yaml.",
+                missing.join(", ")
+            ),
+        });
+    }
+
+    // Additional validation for LIVE mode
+    if environment.is_live() {
+        let mut warnings = Vec::new();
+
+        // Warn if using paper API URL in live mode
+        if config.brokers.alpaca.base_url.contains("paper") {
+            warnings.push(
+                "LIVE mode configured but using paper API URL. \
+                 This may indicate misconfiguration."
+                    .to_string(),
+            );
+        }
+
+        return Ok(StartupValidation::ok_with_warnings(warnings));
+    }
+
+    Ok(StartupValidation::ok())
 }
 
 /// Validate that required credentials are present, returning a detailed error message.
@@ -165,10 +147,6 @@ pub fn require_credentials(
     api_secret: &str,
     environment: Environment,
 ) -> Result<(), String> {
-    if environment.is_backtest() {
-        return Ok(());
-    }
-
     if api_key.is_empty() || api_secret.is_empty() {
         let env_name = if environment.is_live() {
             "LIVE"
@@ -233,33 +211,6 @@ mod tests {
     }
 
     #[test]
-    fn test_backtest_no_credentials_required() {
-        let config = make_config_with_credentials("", "");
-        let result = validate_startup_environment(&config, Environment::Backtest);
-
-        assert!(result.is_ok());
-        let validation = match result {
-            Ok(v) => v,
-            Err(e) => panic!("backtest should validate without credentials: {e}"),
-        };
-        assert!(validation.valid);
-    }
-
-    #[test]
-    fn test_backtest_with_credentials_warns() {
-        let config = make_config_with_credentials("key", "secret");
-        let result = validate_startup_environment(&config, Environment::Backtest);
-
-        assert!(result.is_ok());
-        let validation = match result {
-            Ok(v) => v,
-            Err(e) => panic!("backtest with credentials should validate: {e}"),
-        };
-        assert!(validation.valid);
-        assert!(!validation.warnings.is_empty());
-    }
-
-    #[test]
     fn test_paper_requires_credentials() {
         let config = make_config_with_credentials("", "");
         let result = validate_startup_environment(&config, Environment::Paper);
@@ -313,12 +264,6 @@ mod tests {
         };
         assert!(!validation.warnings.is_empty());
         assert!(validation.warnings[0].contains("paper"));
-    }
-
-    #[test]
-    fn test_require_credentials_backtest_ok() {
-        let result = require_credentials("", "", Environment::Backtest);
-        assert!(result.is_ok());
     }
 
     #[test]

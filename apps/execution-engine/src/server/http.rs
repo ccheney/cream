@@ -120,7 +120,7 @@ async fn check_constraints(
 pub struct SubmitOrdersRequest {
     /// Cycle ID.
     pub cycle_id: String,
-    /// Environment (BACKTEST, PAPER, LIVE).
+    /// Environment (PAPER, LIVE).
     pub environment: String,
     /// Decision plan.
     pub plan: DecisionPlan,

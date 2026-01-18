@@ -12,7 +12,7 @@
 //!
 //! # Environment Variables
 //!
-//! - `CREAM_ENV`: BACKTEST | PAPER | LIVE (default: PAPER)
+//! - `CREAM_ENV`: PAPER | LIVE (default: PAPER)
 //! - `ALPACA_KEY`: Broker API key (required for PAPER/LIVE)
 //! - `ALPACA_SECRET`: Broker API secret (required for PAPER/LIVE)
 //! - `RUST_LOG`: Log level (default: info)
@@ -27,7 +27,6 @@
 //!
 //! # Environment-Based Adapter Selection
 //!
-//! - **BACKTEST**: Uses `BacktestAdapter` for deterministic order simulation
 //! - **PAPER/LIVE**: Uses `AlpacaAdapter` with required credentials
 
 use std::net::SocketAddr;
@@ -41,6 +40,7 @@ use execution_engine::{
     execution::{PortfolioRecovery, ReconciliationManager, fetch_broker_state},
     safety::ConnectionMonitor,
     server::create_router,
+    telemetry::init_telemetry,
 };
 use tokio::net::TcpListener;
 use tokio::signal;
@@ -72,21 +72,9 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         }
     };
 
-    // Initialize tracing (console logging only)
-    // Hide target in local dev (Turborepo prefixes with package name)
-    // Show target in production for log aggregation context
-    let is_development = std::env::var("NODE_ENV")
-        .map(|v| v == "development")
-        .unwrap_or(false);
-
-    tracing_subscriber::fmt()
-        .with_env_filter(
-            tracing_subscriber::EnvFilter::try_from_default_env()
-                .unwrap_or_else(|_| tracing_subscriber::EnvFilter::new("info")),
-        )
-        .with_target(!is_development)
-        .with_ansi(is_development) // Force ANSI colors in dev (Turborepo pipes stdout)
-        .init();
+    // Initialize tracing with OpenTelemetry (exports to OpenObserve)
+    // The guard must be held for the lifetime of the application
+    let _telemetry_guard = init_telemetry();
 
     tracing::info!("Starting Cream Execution Engine");
     tracing::info!(
@@ -297,15 +285,14 @@ fn parse_config_path(args: &[String]) -> Option<&str> {
 /// Components created during server initialization that may be needed for background tasks.
 struct ServerComponents {
     execution_server: ExecutionServer,
-    /// Adapter for reconciliation (None in BACKTEST mode)
+    /// Adapter for reconciliation (None if persistence disabled)
     adapter_for_reconciliation: Option<Arc<AlpacaAdapter>>,
-    /// State manager for reconciliation (None in BACKTEST mode)
+    /// State manager for reconciliation (None if persistence disabled)
     state_manager_for_reconciliation: Option<Arc<OrderStateManager>>,
 }
 
 /// Create execution server with the appropriate broker adapter based on environment.
 ///
-/// - BACKTEST: Uses `AlpacaAdapter` with mock credentials (no real API calls made)
 /// - PAPER/LIVE: Uses `AlpacaAdapter` with validated credentials
 ///
 /// Returns the execution server and optional components needed for background tasks.
@@ -316,32 +303,26 @@ async fn create_execution_server(
     state_manager: OrderStateManager,
     validator: ConstraintValidator,
 ) -> Result<ServerComponents, Box<dyn std::error::Error>> {
-    let (api_key, api_secret) = if env == Environment::Backtest {
-        // In BACKTEST mode, use placeholder credentials since no real API calls are made
-        tracing::info!("Using AlpacaAdapter with mock credentials for BACKTEST mode");
-        ("backtest-key".to_string(), "backtest-secret".to_string())
-    } else {
-        let key = config.brokers.alpaca.api_key.clone();
-        let secret = config.brokers.alpaca.api_secret.clone();
+    let key = config.brokers.alpaca.api_key.clone();
+    let secret = config.brokers.alpaca.api_secret.clone();
 
-        // Credentials already validated by validate_startup_environment
-        // but we double-check here for safety
-        if key.is_empty() || secret.is_empty() {
-            return Err(format!(
-                "Alpaca credentials required for {env} mode. \
-                 Set ALPACA_KEY and ALPACA_SECRET environment variables."
-            )
-            .into());
-        }
+    // Credentials already validated by validate_startup_environment
+    // but we double-check here for safety
+    if key.is_empty() || secret.is_empty() {
+        return Err(format!(
+            "Alpaca credentials required for {env} mode. \
+             Set ALPACA_KEY and ALPACA_SECRET environment variables."
+        )
+        .into());
+    }
 
-        tracing::info!(
-            environment = %env,
-            "AlpacaAdapter initialized for {} trading",
-            if env.is_live() { "LIVE" } else { "PAPER" }
-        );
+    tracing::info!(
+        environment = %env,
+        "AlpacaAdapter initialized for {} trading",
+        if env.is_live() { "LIVE" } else { "PAPER" }
+    );
 
-        (key, secret)
-    };
+    let (api_key, api_secret) = (key, secret);
 
     // Get circuit breaker config for Alpaca
     let circuit_config = config.circuit_breaker.alpaca_config();
@@ -428,7 +409,7 @@ async fn create_execution_server(
         } else {
             tracing::info!(
                 environment = %env,
-                "Crash recovery disabled (BACKTEST mode or explicitly disabled)"
+                "Crash recovery disabled for this environment"
             );
         }
 
@@ -457,7 +438,7 @@ async fn create_execution_server(
     } else {
         tracing::info!(
             environment = %env,
-            "State persistence disabled (BACKTEST mode or explicitly disabled)"
+            "State persistence disabled for this environment"
         );
         let gateway = ExecutionGateway::new(adapter, state_manager, validator, circuit_config);
         Ok(ServerComponents {

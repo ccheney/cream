@@ -187,9 +187,8 @@ pub fn convert_order_type(order_type: crate::models::OrderType) -> i32 {
 /// Convert internal Environment to proto Environment i32.
 pub const fn environment_to_proto(env: Environment) -> i32 {
     match env {
-        Environment::Backtest => 1, // ENVIRONMENT_BACKTEST
-        Environment::Paper => 2,    // ENVIRONMENT_PAPER
-        Environment::Live => 3,     // ENVIRONMENT_LIVE
+        Environment::Paper => 2, // ENVIRONMENT_PAPER
+        Environment::Live => 3,  // ENVIRONMENT_LIVE
     }
 }
 
@@ -234,7 +233,6 @@ mod tests {
 
     #[test]
     fn test_environment_to_proto() {
-        assert_eq!(environment_to_proto(Environment::Backtest), 1);
         assert_eq!(environment_to_proto(Environment::Paper), 2);
         assert_eq!(environment_to_proto(Environment::Live), 3);
     }

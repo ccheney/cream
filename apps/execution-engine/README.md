@@ -9,11 +9,10 @@ The execution engine runs as a standalone service with multiple API surfaces:
 - **HTTP/REST** (port 50051): Health checks and JSON endpoints for basic operations
 - **gRPC** (port 50053): Structured execution and market data services
 
-It operates in three environments:
+It operates in two environments:
 
 | Environment | Purpose | Broker | Credentials |
 |---|---|---|---|
-| **BACKTEST** | Historical simulation | Simulated | None required |
 | **PAPER** | Paper trading (dry-run) | Alpaca Paper | ALPACA_KEY, ALPACA_SECRET |
 | **LIVE** | Real money trading | Alpaca Live | ALPACA_KEY, ALPACA_SECRET |
 
@@ -40,15 +39,8 @@ It operates in three environments:
   - `order.rs` - Order and fill types
   - `decision.rs` - DecisionPlan structures (mirrored from TypeScript agents)
   - `constraint.rs` - Constraint request/response types
-  - `environment.rs` - BACKTEST/PAPER/LIVE enum
+  - `environment.rs` - PAPER/LIVE enum
 
-- **`backtest/`** - Simulation engine for backtesting
-  - `fill_engine.rs` - Configurable fill models (slippage, volume impact)
-  - `commission.rs` - Commission and regulatory fee calculation
-  - `triggers.rs` - Stop/target trigger detection with candle analysis
-  - `multi_leg.rs` - Options spread simulation
-  - `slippage.rs` - Slippage models
-  - `metrics.rs` - Performance metrics
 
 - **`options/`** - Options trading support
   - Greeks calculation (delta, gamma, vega, theta)
@@ -150,24 +142,23 @@ cargo run --bin execution-engine
 cargo run --bin execution-engine -- --config /path/to/config.yaml
 
 # Set environment
-CREAM_ENV=BACKTEST cargo run --bin execution-engine
 CREAM_ENV=PAPER ALPACA_KEY=... ALPACA_SECRET=... cargo run --bin execution-engine
 ```
 
 ### Testing
 
 ```bash
-# Run all tests (requires CREAM_ENV=BACKTEST)
-CREAM_ENV=BACKTEST cargo test -p execution-engine
+# Run all tests (requires CREAM_ENV=PAPER)
+CREAM_ENV=PAPER cargo test -p execution-engine
 
 # Run specific test module
-CREAM_ENV=BACKTEST cargo test -p execution-engine backtest::
+CREAM_ENV=PAPER cargo test -p execution-engine risk::
 
 # Run with output
-CREAM_ENV=BACKTEST cargo test -p execution-engine -- --nocapture
+CREAM_ENV=PAPER cargo test -p execution-engine -- --nocapture
 
 # Run integration tests
-CREAM_ENV=BACKTEST cargo test -p execution-engine --test tactics_integration_test
+CREAM_ENV=PAPER cargo test -p execution-engine --test tactics_integration_test
 ```
 
 ### Coverage
@@ -236,7 +227,7 @@ Content-Type: application/json
 
 | Variable | Required for | Description |
 |---|---|---|
-| `CREAM_ENV` | All | BACKTEST, PAPER, or LIVE |
+| `CREAM_ENV` | All | PAPER or LIVE |
 | `ALPACA_KEY` | PAPER, LIVE | Alpaca API key |
 | `ALPACA_SECRET` | PAPER, LIVE | Alpaca API secret |
 
@@ -300,14 +291,12 @@ Content-Type: application/json
 
 ### Determinism
 
-- In BACKTEST mode, order fills are deterministic based on candle data
 - Slippage models are parameterized (fixed BPS, spread-based, volume impact)
 - Commission includes SEC, TAF, and ORF regulatory fees
-- Same-bar stop/target triggers have configurable priority (stop_first, target_first, high_low_order)
+- Stop/target triggers have configurable priority (stop_first, target_first, high_low_order)
 
 ### Persistence
 
-- BACKTEST mode: no persistence (in-memory only)
 - PAPER/LIVE modes: SQLite-backed persistence in `./data/orders.db`
 - Periodic snapshots on configurable interval (default 60s)
 - Enables crash recovery on service restart
@@ -400,7 +389,6 @@ See `Cargo.toml` for complete dependency list and versions.
 - Use `proptest` for property-based testing
 - Use `wiremock` for HTTP mock servers
 - Integration tests use `testcontainers` for real infrastructure when needed
-- BACKTEST mode uses internal simulation (no mocks needed)
 
 ## Related Documentation
 

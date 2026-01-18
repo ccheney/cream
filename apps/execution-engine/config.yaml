@@ -142,7 +142,6 @@ circuit_breaker:
 # Persistence Configuration
 # State persistence for crash recovery using shared PostgreSQL database.
 # Database URL is resolved from environment variables:
-#   BACKTEST: DATABASE_URL_BACKTEST || DATABASE_URL
 #   PAPER:    DATABASE_URL_PAPER || DATABASE_URL
 #   LIVE:     DATABASE_URL
 persistence:
@@ -155,6 +154,6 @@ persistence:
 # Environment Configuration
 # Runtime environment settings
 environment:
-  # Trading environment: BACKTEST, PAPER, or LIVE
+  # Trading environment: PAPER or LIVE
   # Override with CREAM_ENV environment variable
   mode: ${CREAM_ENV:-PAPER}

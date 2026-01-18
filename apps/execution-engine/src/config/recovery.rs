@@ -42,16 +42,10 @@ impl Default for RecoveryConfig {
 impl RecoveryConfig {
     /// Check if recovery is enabled based on environment.
     ///
-    /// Recovery is enabled by default in PAPER/LIVE modes,
-    /// disabled in BACKTEST mode since there's no state to recover.
+    /// Recovery is enabled by default in PAPER/LIVE modes.
     #[must_use]
-    #[allow(clippy::missing_const_for_fn)] // Method call prevents const
-    pub fn is_enabled_for_env(&self, env: &crate::models::Environment) -> bool {
-        if !self.enabled {
-            return false;
-        }
-        // Disable recovery for backtest mode
-        !env.is_backtest()
+    pub const fn is_enabled_for_env(&self, _env: &crate::models::Environment) -> bool {
+        self.enabled
     }
 
     /// Convert to the internal `RecoveryConfig` type used by the recovery module.
@@ -132,9 +126,6 @@ mod tests {
         // Recovery should be enabled for PAPER and LIVE
         assert!(config.is_enabled_for_env(&Environment::Paper));
         assert!(config.is_enabled_for_env(&Environment::Live));
-
-        // Recovery should be disabled for BACKTEST
-        assert!(!config.is_enabled_for_env(&Environment::Backtest));
 
         // Explicitly disabled config
         let disabled_config = RecoveryConfig {

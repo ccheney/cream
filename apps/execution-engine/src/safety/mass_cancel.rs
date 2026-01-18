@@ -141,17 +141,6 @@ impl MassCancelConfig {
         }
     }
 
-    /// Create a disabled configuration for BACKTEST.
-    #[must_use]
-    pub const fn backtest() -> Self {
-        Self {
-            enabled: false,
-            grace_period_seconds: 0,
-            gtc_policy: GtcOrderPolicy::Include,
-            heartbeat_interval_ms: 30_000,
-            heartbeat_timeout_seconds: 10,
-        }
-    }
 }
 
 /// Event emitted by the disconnect handler.
@@ -415,13 +404,6 @@ mod tests {
             ..Default::default()
         };
         assert!(config.validate(Environment::Paper).is_ok());
-    }
-
-    #[test]
-    fn test_backtest_config() {
-        let config = MassCancelConfig::backtest();
-        assert!(!config.enabled);
-        assert!(config.validate(Environment::Backtest).is_ok());
     }
 
     #[test]

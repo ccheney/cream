@@ -170,7 +170,7 @@ pub struct StateSnapshot {
 pub struct StatePersistence {
     /// Database connection pool.
     pool: PgPool,
-    /// Environment (PAPER/LIVE/BACKTEST).
+    /// Environment (PAPER/LIVE).
     environment: String,
 }
 
