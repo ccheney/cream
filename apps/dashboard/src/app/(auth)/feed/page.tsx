@@ -33,7 +33,6 @@ const FEED_TO_STORE_TYPE: Partial<Record<EventType, StoreEventType>> = {
 	alert: "system_alert",
 	agent: "agent_decision",
 	cycle: "market_event",
-	backtest: "market_event",
 	system: "market_event",
 };
 
@@ -49,7 +48,6 @@ const EVENT_TYPES: EventType[] = [
 	"alert",
 	"agent",
 	"cycle",
-	"backtest",
 	"system",
 ];
 
@@ -65,7 +63,6 @@ const EVENT_TYPE_LABELS: Record<EventType, string> = {
 	alert: "Alerts",
 	agent: "Agents",
 	cycle: "Cycles",
-	backtest: "Backtest",
 	system: "System",
 };
 
@@ -88,7 +85,7 @@ export default function FeedPage() {
 
 	// Subscribe to feed-relevant channels when page mounts
 	const feedChannels = useMemo(
-		() => ["cycles", "agents", "alerts", "orders", "trades", "backtests"],
+		() => ["cycles", "agents", "alerts", "orders", "trades"],
 		[]
 	);
 	useEffect(() => {
@@ -330,11 +327,6 @@ export default function FeedPage() {
 					label={EVENT_TYPE_LABELS.alert}
 					active={filters.alert}
 					onClick={() => toggleFilter("alert")}
-				/>
-				<FilterChip
-					label={EVENT_TYPE_LABELS.backtest}
-					active={filters.backtest}
-					onClick={() => toggleFilter("backtest")}
 				/>
 				<FilterChip
 					label={EVENT_TYPE_LABELS.system}

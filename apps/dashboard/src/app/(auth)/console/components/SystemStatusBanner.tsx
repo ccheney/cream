@@ -4,7 +4,6 @@ import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip
 import type { SystemStatusBannerProps } from "../types";
 
 const ENV_DESCRIPTIONS: Record<string, string> = {
-	BACKTEST: "Historical simulation mode - no real orders",
 	PAPER: "Paper trading mode - simulated orders with live data",
 	LIVE: "Live trading mode - real orders with real money",
 };
@@ -17,7 +16,6 @@ const STATUS_DESCRIPTIONS: Record<string, string> = {
 };
 
 const ENV_COLORS = {
-	BACKTEST: "bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400",
 	PAPER: "bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-400",
 	LIVE: "bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400",
 } as const;

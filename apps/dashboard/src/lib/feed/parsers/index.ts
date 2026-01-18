@@ -13,14 +13,6 @@ export {
 	normalizeAgentToolResult,
 	normalizeAlert,
 } from "./agent";
-export {
-	normalizeBacktestCompleted,
-	normalizeBacktestEquity,
-	normalizeBacktestError,
-	normalizeBacktestProgress,
-	normalizeBacktestStarted,
-	normalizeBacktestTrade,
-} from "./backtest";
 export { normalizeCycleProgress, normalizeCycleResult } from "./cycle";
 export { normalizeDecision, normalizeDecisionPlan } from "./decision";
 export {

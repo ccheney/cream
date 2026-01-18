@@ -45,4 +45,3 @@ export const isProduction = config.environment === "LIVE";
 
 /** Check if running in paper trading mode */
 export const isPaper = config.environment === "PAPER";
-

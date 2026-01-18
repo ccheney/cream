@@ -68,23 +68,6 @@ function tradeToMarker(trade: Trade): TradeMarker {
 	};
 }
 
-export function backtestTradeToMarker(trade: {
-	timestamp: string;
-	action: "BUY" | "SELL";
-	price: number;
-}): TradeMarker {
-	const isBuy = trade.action === "BUY";
-
-	return {
-		time: trade.timestamp,
-		position: isBuy ? "belowBar" : "aboveBar",
-		color: isBuy ? CHART_COLORS.profit : CHART_COLORS.loss,
-		shape: isBuy ? "arrowUp" : "arrowDown",
-		text: `${isBuy ? "BUY" : "SELL"} @${trade.price.toFixed(2)}`,
-		size: 1,
-	};
-}
-
 /**
  * Converts trades to chart annotations.
  *

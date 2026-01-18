@@ -44,10 +44,6 @@ interface WebSocketContextValue {
 	subscribeOptions: (contracts: string[]) => void;
 	/** Unsubscribe from options contracts */
 	unsubscribeOptions: (contracts: string[]) => void;
-	/** Subscribe to a backtest for progress updates */
-	subscribeBacktest: (backtestId: string) => void;
-	/** Unsubscribe from backtest progress updates */
-	unsubscribeBacktest: (backtestId: string) => void;
 	/** Connect manually */
 	connect: () => void;
 	/** Disconnect manually */
@@ -120,8 +116,6 @@ export function WebSocketProvider({ children }: WebSocketProviderProps) {
 		unsubscribeSymbols,
 		subscribeOptions,
 		unsubscribeOptions,
-		subscribeBacktest,
-		unsubscribeBacktest,
 		connect,
 		disconnect,
 		lastError,
@@ -157,8 +151,6 @@ export function WebSocketProvider({ children }: WebSocketProviderProps) {
 			unsubscribeSymbols,
 			subscribeOptions,
 			unsubscribeOptions,
-			subscribeBacktest,
-			unsubscribeBacktest,
 			connect,
 			disconnect,
 			lastError,
@@ -176,8 +168,6 @@ export function WebSocketProvider({ children }: WebSocketProviderProps) {
 			unsubscribeSymbols,
 			subscribeOptions,
 			unsubscribeOptions,
-			subscribeBacktest,
-			unsubscribeBacktest,
 			connect,
 			disconnect,
 			lastError,

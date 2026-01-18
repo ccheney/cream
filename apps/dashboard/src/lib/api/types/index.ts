@@ -89,7 +89,6 @@ export type {
 export type {
 	Account,
 	AccountStatus,
-	BacktestDetail,
 	CorrelationMatrix,
 	EquityPoint,
 	ExposureMetrics,
@@ -128,13 +127,7 @@ export type {
 // Trading types
 export type {
 	AgentOutput,
-	BacktestMetrics,
-	BacktestStatus,
-	BacktestStrategyConfig,
-	BacktestSummary,
-	BacktestTrade,
 	Citation,
-	CreateBacktestRequest,
 	CreateThesisRequest,
 	Decision,
 	DecisionAction,

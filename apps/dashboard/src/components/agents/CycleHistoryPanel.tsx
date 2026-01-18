@@ -139,7 +139,7 @@ export interface CycleHistoryPanelProps {
 	/** Callback when a cycle is selected for viewing */
 	onSelectCycle: (cycleId: string) => void;
 	/** Environment filter */
-	environment?: "BACKTEST" | "PAPER" | "LIVE";
+	environment?: "PAPER" | "LIVE";
 }
 
 export const CycleHistoryPanel = memo(function CycleHistoryPanel({

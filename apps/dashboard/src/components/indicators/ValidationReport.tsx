@@ -20,7 +20,7 @@ interface ValidationReportProps {
 			startDate: string;
 			endDate: string;
 			durationDays: number;
-			backtestedSharpe: number;
+			researchSharpe: number;
 			realizedSharpe: number;
 			ratio: number;
 		};
@@ -137,10 +137,10 @@ export function ValidationReport({ report, isLoading }: ValidationReportProps) {
 						<div className="grid grid-cols-3 gap-4">
 							<div className="bg-cream-50 dark:bg-night-750 rounded-lg p-3">
 								<div className="text-xs text-stone-500 dark:text-night-300 mb-1">
-									Backtested Sharpe
+									Research Sharpe
 								</div>
 								<div className="text-lg font-mono font-semibold text-stone-900 dark:text-night-50">
-									{report.paperTrading.backtestedSharpe.toFixed(2)}
+									{report.paperTrading.researchSharpe.toFixed(2)}
 								</div>
 							</div>
 							<div className="bg-cream-50 dark:bg-night-750 rounded-lg p-3">

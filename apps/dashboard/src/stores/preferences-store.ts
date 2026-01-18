@@ -48,7 +48,6 @@ export type FeedEventType =
 	| "alert"
 	| "agent"
 	| "cycle"
-	| "backtest"
 	| "system";
 
 export interface FeedPreferences {
@@ -128,7 +127,6 @@ const defaultFeedPreferences: FeedPreferences = {
 		alert: true,
 		agent: true,
 		cycle: true,
-		backtest: true,
 		system: false, // Hidden by default
 	},
 	symbolFilter: "",

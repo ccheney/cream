@@ -15,12 +15,6 @@ import {
 	normalizeAgentToolResult,
 	normalizeAggregate,
 	normalizeAlert,
-	normalizeBacktestCompleted,
-	normalizeBacktestEquity,
-	normalizeBacktestError,
-	normalizeBacktestProgress,
-	normalizeBacktestStarted,
-	normalizeBacktestTrade,
 	normalizeCycleProgress,
 	normalizeCycleResult,
 	normalizeDecision,
@@ -41,12 +35,6 @@ import type {
 	AgentToolResultData,
 	AggregateData,
 	AlertData,
-	BacktestCompletedData,
-	BacktestEquityData,
-	BacktestErrorData,
-	BacktestProgressData,
-	BacktestStartedData,
-	BacktestTradeData,
 	CycleProgressData,
 	CycleResultData,
 	DecisionData,
@@ -124,24 +112,6 @@ export function normalizeEvent(message: WebSocketMessage): NormalizedEvent | nul
 
 		case "decision_plan":
 			return normalizeDecisionPlan(data as DecisionPlanData, timestamp);
-
-		case "backtest:started":
-			return normalizeBacktestStarted(data as BacktestStartedData, timestamp);
-
-		case "backtest:progress":
-			return normalizeBacktestProgress(data as BacktestProgressData, timestamp);
-
-		case "backtest:trade":
-			return normalizeBacktestTrade(data as BacktestTradeData, timestamp);
-
-		case "backtest:equity":
-			return normalizeBacktestEquity(data as BacktestEquityData, timestamp);
-
-		case "backtest:completed":
-			return normalizeBacktestCompleted(data as BacktestCompletedData, timestamp);
-
-		case "backtest:error":
-			return normalizeBacktestError(data as BacktestErrorData, timestamp);
 
 		default:
 			if (IGNORED_MESSAGE_TYPES.has(message.type)) {

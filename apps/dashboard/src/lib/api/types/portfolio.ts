@@ -2,10 +2,7 @@
  * Portfolio and account types (positions, trades, performance, risk).
  */
 
-import type { FullRuntimeConfig } from "./config";
 import type {
-	BacktestMetrics,
-	BacktestStatus,
 	DecisionSummary,
 	Position,
 	ThesisDetail,
@@ -178,19 +175,6 @@ export interface LimitStatus {
 	limit: number;
 	utilization: number;
 	status: LimitStatusType;
-}
-
-export interface BacktestDetail {
-	id: string;
-	name: string;
-	startDate: string;
-	endDate: string;
-	initialCapital: number;
-	status: BacktestStatus;
-	metrics: BacktestMetrics | null;
-	createdAt: string;
-	config: FullRuntimeConfig;
-	errorMessage: string | null;
 }
 
 export type { Position, DecisionSummary, ThesisDetail };

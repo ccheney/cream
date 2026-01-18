@@ -172,15 +172,6 @@ export const queryKeys = {
 		unread: () => [...queryKeys.alerts.all, "unread"] as const,
 	},
 
-	// Backtests
-	backtests: {
-		all: ["backtests"] as const,
-		list: () => [...queryKeys.backtests.all] as const,
-		detail: (id: string) => [...queryKeys.backtests.all, id] as const,
-		trades: (id: string) => [...queryKeys.backtests.all, id, "trades"] as const,
-		equity: (id: string) => [...queryKeys.backtests.all, id, "equity"] as const,
-	},
-
 	// Theses
 	theses: {
 		all: ["theses"] as const,

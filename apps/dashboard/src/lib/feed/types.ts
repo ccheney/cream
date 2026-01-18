@@ -22,7 +22,6 @@ export type EventType =
 	| "alert"
 	| "agent"
 	| "cycle"
-	| "backtest"
 	| "system";
 
 export type EventColor = "profit" | "loss" | "neutral" | "accent";
@@ -52,7 +51,6 @@ export const EVENT_ICONS: Record<EventType, string> = {
 	alert: "⚠",
 	agent: "◈",
 	cycle: "↻",
-	backtest: "▶",
 	system: "⚙",
 };
 
@@ -68,7 +66,6 @@ export const EVENT_TYPE_COLORS: Record<EventType, string> = {
 	alert: "text-amber-500",
 	agent: "text-indigo-500",
 	cycle: "text-teal-500",
-	backtest: "text-sky-500",
 	system: "text-gray-500",
 };
 
@@ -195,36 +192,3 @@ export interface CycleResultData {
 	decisionsCount?: number;
 }
 
-export interface BacktestStartedData {
-	backtestId?: string;
-	symbol?: string;
-}
-
-export interface BacktestProgressData {
-	backtestId?: string;
-	progress?: number;
-	currentDate?: string;
-}
-
-export interface BacktestTradeData {
-	symbol?: string;
-	side?: string;
-	quantity?: number;
-	price?: number;
-}
-
-export interface BacktestEquityData {
-	equity?: number;
-	date?: string;
-}
-
-export interface BacktestCompletedData {
-	backtestId?: string;
-	totalReturn?: number;
-	sharpe?: number;
-}
-
-export interface BacktestErrorData {
-	backtestId?: string;
-	error?: string;
-}

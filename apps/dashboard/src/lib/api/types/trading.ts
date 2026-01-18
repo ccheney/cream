@@ -1,5 +1,5 @@
 /**
- * Trading types (orders, decisions, theses, backtests).
+ * Trading types (orders, decisions, theses).
  */
 
 export type DecisionAction = "BUY" | "SELL" | "HOLD" | "CLOSE";
@@ -185,67 +185,3 @@ export interface ThesisFilters {
 	offset?: number;
 }
 
-export type BacktestStatus = "pending" | "running" | "completed" | "failed";
-
-export interface BacktestMetrics {
-	finalNav: number;
-	totalReturn: number;
-	totalReturnPct: number;
-	sharpeRatio: number;
-	sortinoRatio: number;
-	maxDrawdown: number;
-	maxDrawdownPct: number;
-	winRate: number;
-	profitFactor: number;
-	totalTrades: number;
-	avgTradeDuration: number;
-	bestTrade: { symbol: string; pnl: number };
-	worstTrade: { symbol: string; pnl: number };
-}
-
-export interface BacktestSummary {
-	id: string;
-	name: string;
-	startDate: string;
-	endDate: string;
-	initialCapital: number;
-	status: BacktestStatus;
-	metrics: BacktestMetrics | null;
-	createdAt: string;
-}
-
-export interface BacktestTrade {
-	id: string;
-	timestamp: string;
-	symbol: string;
-	action: "BUY" | "SELL";
-	side: "LONG" | "SHORT";
-	qty: number;
-	price: number;
-	pnl: number | null;
-	cumulativePnl: number;
-}
-
-export interface BacktestStrategyConfig {
-	type: "sma_crossover" | "rsi_oversold_overbought" | "bollinger_breakout" | "macd_crossover";
-	fastPeriod?: number;
-	slowPeriod?: number;
-	signalPeriod?: number;
-	period?: number;
-	oversold?: number;
-	overbought?: number;
-	stdDev?: number;
-}
-
-export interface CreateBacktestRequest {
-	name: string;
-	startDate: string;
-	endDate: string;
-	initialCapital: number;
-	universe?: string[];
-	config?: {
-		strategy?: BacktestStrategyConfig;
-		timeframe?: "1Min" | "5Min" | "15Min" | "1Hour" | "1Day";
-		slippageBps?: number;
-	};
-}

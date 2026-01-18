@@ -7,7 +7,7 @@
  * 1. Critical (blocking): System status, user session
  * 2. Important (eager): Portfolio summary, alerts
  * 3. Deferred (lazy): Historical data, full position list
- * 4. On-demand: Decision details, backtest data
+ * 4. On-demand: Decision details
  *
  * @see docs/plans/ui/08-realtime.md lines 86-93
  */
