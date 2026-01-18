@@ -4,7 +4,7 @@ Research-to-production parity validation for the Cream trading system.
 
 ## Overview
 
-Ensures backtesting features match live trading capabilities:
+Ensures research features match live trading capabilities:
 
 - **Version Control** - Indicator version matching
 - **Look-Ahead Bias** - Data sequencing validation
@@ -40,9 +40,9 @@ const result = await service.validateConfigPromotion("PAPER", "LIVE");
 import { runParityValidation, comparePerformanceMetrics } from "@cream/validation";
 
 const result = runParityValidation({
-  backtestMetrics,
+  researchMetrics,
   liveMetrics,
-  backtestRegistry,
+  researchRegistry,
   liveRegistry,
 });
 

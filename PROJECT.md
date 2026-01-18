@@ -180,7 +180,7 @@ flowchart TB
 Approved orders flow to the execution engine:
 
 1. **Final validation** — One last constraint check before submission
-2. **Order routing** — Sent to the broker (live/paper) or the backtest simulator
+2. **Order routing** — Sent to the broker (live/paper)
 3. **State persistence** — Decision records stored with embeddings for future retrieval
 4. **Monitoring** — Stop-loss and take-profit enforcement, mass cancel on disconnect
 
@@ -249,7 +249,7 @@ The same codebase runs in both modes with identical agent reasoning.
 
 Cream maintains two databases with distinct purposes:
 
-The **relational database** handles structured data — decisions, orders, positions, configuration, backtest results. It's the system of record for what happened.
+The **relational database** handles structured data — decisions, orders, positions, configuration. It's the system of record for what happened.
 
 The **graph + vector database** handles semantic data — document embeddings, decision context vectors, relationship graphs. It's the system of memory for why things happened.
 

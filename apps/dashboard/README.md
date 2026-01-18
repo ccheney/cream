@@ -36,7 +36,6 @@ Comprehensive trading control center providing:
 - `/config` - Configuration management
 - `/risk` - Risk metrics
 - `/options` - Options analytics
-- `/backtest/[id]` - Backtest results
 
 ## Configuration
 

@@ -105,7 +105,7 @@ const rsi = calculateRSI(bars, 14);           // RSIResult | null
 const sma = calculateSMA(bars, 20);           // number | null
 const atr = calculateATR(bars, 14);           // number | null
 
-// Series calculations (for charts/backtesting)
+// Series calculations (for charts/analysis)
 import {
   calculateRSISeries,
   calculateSMASeries,

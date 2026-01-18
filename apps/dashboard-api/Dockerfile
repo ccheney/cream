@@ -1,8 +1,8 @@
 # syntax=docker/dockerfile:1
 # Dashboard API (Hono) Dockerfile
 #
-# Multi-stage build for production Hono API deployment with Python backtest support.
-# Uses oven/bun as the runtime with Python 3.12 for VectorBT backtesting.
+# Multi-stage build for production Hono API deployment with Python research support.
+# Uses oven/bun as the runtime with Python 3.12 for research analysis.
 #
 # Build: docker build -t cream-dashboard-api -f apps/dashboard-api/Dockerfile .
 # Run:   docker run -p 3001:3001 -e TURSO_DATABASE_URL=... cream-dashboard-api

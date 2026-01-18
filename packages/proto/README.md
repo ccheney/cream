@@ -15,7 +15,7 @@ Source .proto files that define the contract layer between services:
 ### common.proto
 
 Shared types and enums:
-- `Environment` - BACKTEST, PAPER, LIVE
+- `Environment` - PAPER, LIVE
 - `Action` - BUY, SELL, HOLD, etc.
 - `Direction` - LONG, SHORT, FLAT
 - `InstrumentType` - EQUITY, OPTION, ETF

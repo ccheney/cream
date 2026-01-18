@@ -7,7 +7,7 @@ REST + WebSocket API server for the Cream trading dashboard. Built with Hono and
 Provides the backend for the trading dashboard:
 
 - **REST API** - 14 route modules for dashboard features
-- **WebSocket Server** - Real-time streaming (quotes, trades, backtest results)
+- **WebSocket Server** - Real-time streaming (quotes, trades, cycle results)
 - **Authentication** - Google OAuth with better-auth + TOTP 2FA
 - **Event Broadcasting** - Publishes domain events to connected clients
 
@@ -24,7 +24,6 @@ Provides the backend for the trading dashboard:
 | `/api/market` | OHLCV data, quotes |
 | `/api/options` | Options chain, Greeks |
 | `/api/risk` | Risk metrics, VaR |
-| `/api/backtests` | Backtest runs and results |
 | `/api/theses` | Trading theses |
 | `/api/indicators` | Technical indicators |
 | `/api/filings` | SEC EDGAR filings |
@@ -32,7 +31,7 @@ Provides the backend for the trading dashboard:
 ## WebSocket Channels
 
 - **quote** - Stock/options quotes
-- **backtest** - Backtest progress/results
+- **cycles** - Trading cycle progress/results
 - **system** - Health checks, alerts, orders
 
 ## Authentication

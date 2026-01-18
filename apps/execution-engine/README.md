@@ -20,10 +20,9 @@ It operates in two environments:
 
 ### Core Modules
 
-- **`execution/`** - Order routing, broker adapters (Alpaca/Backtest), state management
+- **`execution/`** - Order routing, broker adapters, state management
   - `gateway.rs` - Unified broker interface
   - `alpaca.rs` - Alpaca Markets integration
-  - `backtest.rs` - Simulated order execution
   - `state.rs` - Order state tracking
   - `persistence.rs` - State snapshots and crash recovery
   - `reconciliation.rs` - Periodic broker state sync
