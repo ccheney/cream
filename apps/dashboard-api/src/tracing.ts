@@ -24,7 +24,6 @@ let sdk: NodeSDK | null = null;
 
 export function initTracing(): void {
 	if (!otelEnabled) {
-		console.log("[tracing] OpenTelemetry disabled (OTEL_ENABLED=false)");
 		return;
 	}
 
@@ -45,7 +44,6 @@ export function initTracing(): void {
 	});
 
 	sdk.start();
-	console.log(`[tracing] OpenTelemetry initialized: ${serviceName} -> ${otelEndpoint}`);
 }
 
 export function shutdownTracing(): Promise<void> {
