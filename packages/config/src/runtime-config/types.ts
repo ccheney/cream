@@ -48,6 +48,7 @@ export interface RuntimeTradingConfig {
 // ============================================
 
 export type RuntimeAgentType =
+	| "grounding_agent"
 	| "news_analyst"
 	| "fundamentals_analyst"
 	| "bullish_researcher"

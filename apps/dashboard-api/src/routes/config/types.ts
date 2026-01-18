@@ -20,6 +20,7 @@ export const ConfigStatusSchema = z.enum(["draft", "testing", "active", "archive
 export const UniverseSourceSchema = z.enum(["static", "index", "screener"]);
 
 export const AgentTypeSchema = z.enum([
+	"grounding_agent",
 	"news_analyst",
 	"fundamentals_analyst",
 	"bullish_researcher",
