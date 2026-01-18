@@ -227,7 +227,7 @@ jobs:
         run: bun install
 
       - name: Run Biome lint
-        run: bunx biome check .
+        run: bun run lint
 
       - name: Validate package dependencies
         run: bun run lint:deps
