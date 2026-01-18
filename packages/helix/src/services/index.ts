@@ -25,29 +25,6 @@ export {
 	type ExtractedEvent,
 } from "./event-ingestion.js";
 export {
-	calculateHypothesisQualityScore,
-	createHypothesisIngestionService,
-	type HypothesisIngestionOptions,
-	type HypothesisIngestionResult,
-	HypothesisIngestionService,
-	type HypothesisInput,
-	type HypothesisUpdateInput,
-	type SimilarHypothesis,
-} from "./hypothesis-ingestion.js";
-export {
-	calculateIndicatorQualityScore,
-	createIndicatorIngestionService,
-	DEFAULT_VALIDATION_THRESHOLDS,
-	type IndicatorIngestionOptions,
-	type IndicatorIngestionResult,
-	IndicatorIngestionService,
-	type IndicatorInput,
-	type IndicatorUpdateInput,
-	meetsValidationThresholds,
-	type SimilarIndicator,
-	type ValidationThresholds,
-} from "./indicator-ingestion.js";
-export {
 	type CompanySensitivity,
 	calculateRollingCorrelation,
 	correlationToSensitivity,

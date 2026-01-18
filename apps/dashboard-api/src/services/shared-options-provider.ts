@@ -17,6 +17,7 @@ import {
 	timeToExpiry,
 } from "@cream/marketdata";
 import log from "../logger.js";
+import { getCachedQuote } from "../streaming/market-data.js";
 import {
 	getSharedOptionsWebSocket,
 	isOptionsWebSocketConnected,
@@ -225,13 +226,11 @@ export class SharedOptionsDataProvider implements OptionsDataProvider {
 	}
 
 	/**
-	 * Get underlying stock price.
-	 * In production, this would use the stock WebSocket or REST API.
+	 * Get underlying stock price from the shared stock WebSocket cache.
 	 */
-	private async getUnderlyingPrice(_underlying: string): Promise<number> {
-		// TODO: Get from shared stock WebSocket or REST API
-		// For now, return 0 which will result in null IV calculations
-		return 0;
+	private async getUnderlyingPrice(underlying: string): Promise<number> {
+		const cached = getCachedQuote(underlying);
+		return cached?.last ?? 0;
 	}
 
 	/**

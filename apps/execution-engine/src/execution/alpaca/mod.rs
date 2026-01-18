@@ -412,10 +412,13 @@ impl AlpacaAdapter {
         })
     }
 
-    /// Build tactic selection context from a decision.
+    /// Wide spread threshold in basis points (0.5% = 50 bps).
+    const WIDE_SPREAD_THRESHOLD_BPS: u32 = 50;
+
+    /// Build tactic selection context from a decision with market data.
     ///
-    /// Maps decision attributes to tactic selection criteria.
-    fn build_tactic_context(decision: &Decision) -> TacticSelectionContext {
+    /// Fetches ADV and quote data to determine optimal execution tactic.
+    async fn build_tactic_context(&self, decision: &Decision) -> TacticSelectionContext {
         // Map time horizon to urgency
         let urgency = match decision.time_horizon {
             TimeHorizon::Intraday => TacticUrgency::High,
@@ -426,17 +429,14 @@ impl AlpacaAdapter {
         // Map action to order purpose
         let order_purpose = match decision.action {
             Action::Sell | Action::Close => OrderPurpose::Exit,
-            // Buy, Hold, NoTrade default to Entry (Hold/NoTrade shouldn't be called)
             Action::Buy | Action::Hold | Action::NoTrade => OrderPurpose::Entry,
         };
 
-        // TODO: Get actual ADV from market data
-        // For now, default to small order (<1% ADV)
-        let size_pct_adv = Decimal::new(5, 3); // 0.5%
+        // Calculate order size as percentage of ADV
+        let size_pct_adv = self.calculate_size_pct_adv(decision).await;
 
-        // TODO: Get actual market state from bid/ask spread
-        // For now, default to normal market
-        let market_state = MarketState::Normal;
+        // Determine market state from bid/ask spread
+        let market_state = self.determine_market_state(decision).await;
 
         TacticSelectionContext {
             size_pct_adv,
@@ -446,9 +446,148 @@ impl AlpacaAdapter {
         }
     }
 
+    /// Calculate order size as a percentage of average daily volume.
+    async fn calculate_size_pct_adv(&self, decision: &Decision) -> Decimal {
+        let default_size_pct = Decimal::new(5, 3); // 0.5% default
+
+        // Get order quantity in shares
+        let order_qty = match decision.size.unit {
+            crate::models::SizeUnit::Shares | crate::models::SizeUnit::Contracts => {
+                decision.size.quantity
+            }
+            // For dollar-based or percentage-based sizing, we can't easily compute ADV %
+            // without knowing the current price and account equity
+            _ => return default_size_pct,
+        };
+
+        // Calculate start date for ADV lookback (20 trading days ≈ 30 calendar days)
+        let end = chrono::Utc::now();
+        let start = end - chrono::Duration::days(30);
+        let start_str = start.format("%Y-%m-%dT%H:%M:%SZ").to_string();
+        let end_str = end.format("%Y-%m-%dT%H:%M:%SZ").to_string();
+
+        // Fetch daily bars for ADV calculation
+        let symbols = vec![decision.instrument_id.clone()];
+        let bars_result = self
+            .get_bars(&symbols, "1Day", Some(&start_str), Some(&end_str), None)
+            .await;
+
+        let adv = match bars_result {
+            Ok(response) => {
+                if let Some(bars) = response.bars.get(&decision.instrument_id) {
+                    if bars.is_empty() {
+                        tracing::warn!(
+                            instrument = %decision.instrument_id,
+                            "No bars returned for ADV calculation, using default"
+                        );
+                        return default_size_pct;
+                    }
+                    // Calculate average daily volume
+                    let total_volume: i64 = bars.iter().map(|b| b.v).sum();
+                    #[allow(clippy::cast_precision_loss)]
+                    let avg_volume = total_volume as f64 / bars.len() as f64;
+                    Decimal::from_f64_retain(avg_volume).unwrap_or(Decimal::ZERO)
+                } else {
+                    tracing::warn!(
+                        instrument = %decision.instrument_id,
+                        "No bars found for instrument, using default ADV"
+                    );
+                    return default_size_pct;
+                }
+            }
+            Err(e) => {
+                tracing::warn!(
+                    instrument = %decision.instrument_id,
+                    error = %e,
+                    "Failed to fetch bars for ADV calculation, using default"
+                );
+                return default_size_pct;
+            }
+        };
+
+        if adv.is_zero() {
+            return default_size_pct;
+        }
+
+        // Calculate size as percentage of ADV
+        let size_pct = order_qty / adv;
+
+        tracing::debug!(
+            instrument = %decision.instrument_id,
+            order_qty = %order_qty,
+            adv = %adv,
+            size_pct_adv = %size_pct,
+            "Calculated order size as percentage of ADV"
+        );
+
+        size_pct
+    }
+
+    /// Determine market state from current bid/ask spread.
+    async fn determine_market_state(&self, decision: &Decision) -> MarketState {
+        let symbols = vec![decision.instrument_id.clone()];
+        let quotes_result = self.get_quotes(&symbols).await;
+
+        match quotes_result {
+            Ok(response) => {
+                if let Some(quote) = response.quotes.get(&decision.instrument_id) {
+                    let bid = quote.bp;
+                    let ask = quote.ap;
+
+                    if bid <= 0.0 || ask <= 0.0 || ask < bid {
+                        tracing::warn!(
+                            instrument = %decision.instrument_id,
+                            bid = bid,
+                            ask = ask,
+                            "Invalid quote data, assuming normal market"
+                        );
+                        return MarketState::Normal;
+                    }
+
+                    let mid = f64::midpoint(bid, ask);
+                    let spread = ask - bid;
+                    let spread_bps = (spread / mid) * 10_000.0;
+
+                    let threshold = f64::from(Self::WIDE_SPREAD_THRESHOLD_BPS);
+
+                    let state = if spread_bps >= threshold {
+                        MarketState::WideSpread
+                    } else {
+                        MarketState::Normal
+                    };
+
+                    tracing::debug!(
+                        instrument = %decision.instrument_id,
+                        bid = bid,
+                        ask = ask,
+                        spread_bps = spread_bps,
+                        market_state = ?state,
+                        "Determined market state from bid/ask spread"
+                    );
+
+                    state
+                } else {
+                    tracing::warn!(
+                        instrument = %decision.instrument_id,
+                        "No quote found for instrument, assuming normal market"
+                    );
+                    MarketState::Normal
+                }
+            }
+            Err(e) => {
+                tracing::warn!(
+                    instrument = %decision.instrument_id,
+                    error = %e,
+                    "Failed to fetch quote for market state, assuming normal"
+                );
+                MarketState::Normal
+            }
+        }
+    }
+
     /// Select and log the execution tactic for a decision.
-    fn select_tactic(&self, decision: &Decision) -> (TacticType, TacticConfig) {
-        let context = Self::build_tactic_context(decision);
+    async fn select_tactic(&self, decision: &Decision) -> (TacticType, TacticConfig) {
+        let context = self.build_tactic_context(decision).await;
         let tactic = self.tactic_selector.select(&context);
 
         tracing::info!(
@@ -490,7 +629,7 @@ impl AlpacaAdapter {
     /// Submit a single order to Alpaca with tactic-aware execution.
     async fn submit_single_order(&self, decision: &Decision) -> Result<OrderState, AlpacaError> {
         // Select execution tactic
-        let (tactic, _config) = self.select_tactic(decision);
+        let (tactic, _config) = self.select_tactic(decision).await;
 
         // Build base order request
         let mut order_request = AlpacaOrderRequest::from_decision(decision);
