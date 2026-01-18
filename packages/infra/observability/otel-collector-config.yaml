@@ -1,5 +1,7 @@
-# OpenTelemetry Collector Configuration for OpenObserve
-# Receives OTLP telemetry and exports to OpenObserve
+# OpenTelemetry Collector Configuration
+#
+# Receives OTLP telemetry from applications and exports to OpenObserve.
+# Used in both local development and production environments.
 #
 # Endpoints:
 #   - gRPC: 0.0.0.0:4317
