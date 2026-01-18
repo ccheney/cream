@@ -23,7 +23,6 @@ import { z } from "zod/v4";
  * - decisions: Trading decisions from agents
  * - agents: Agent output and reasoning
  * - cycles: Trading cycle progress
- * - backtests: Backtest progress and results
  * - alerts: System alerts and notifications
  * - system: System status updates
  * - portfolio: Portfolio value and position updates
@@ -38,7 +37,6 @@ export const Channel = z.enum([
 	"decisions",
 	"agents",
 	"cycles",
-	"backtests",
 	"alerts",
 	"system",
 	"portfolio",
@@ -70,7 +68,6 @@ export const CHANNEL_DESCRIPTIONS: Record<Channel, string> = {
 	decisions: "Trading decisions from agents",
 	agents: "Agent output and reasoning",
 	cycles: "Trading cycle progress",
-	backtests: "Backtest progress and results",
 	alerts: "System alerts and notifications",
 	system: "System status updates",
 	portfolio: "Portfolio value and position updates",

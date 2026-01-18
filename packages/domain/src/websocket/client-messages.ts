@@ -171,42 +171,6 @@ export const AcknowledgeAlertMessageSchema = z.object({
 export type AcknowledgeAlertMessage = z.infer<typeof AcknowledgeAlertMessageSchema>;
 
 // ============================================
-// Subscribe Backtest Message
-// ============================================
-
-/**
- * Subscribe to backtest progress updates for a specific backtest.
- *
- * @example
- * { type: "subscribe_backtest", backtestId: "backtest-uuid" }
- */
-export const SubscribeBacktestMessageSchema = z.object({
-	type: z.literal("subscribe_backtest"),
-	/** Backtest ID to subscribe to */
-	backtestId: z.string().min(1),
-});
-
-export type SubscribeBacktestMessage = z.infer<typeof SubscribeBacktestMessageSchema>;
-
-// ============================================
-// Unsubscribe Backtest Message
-// ============================================
-
-/**
- * Unsubscribe from backtest progress updates.
- *
- * @example
- * { type: "unsubscribe_backtest", backtestId: "backtest-uuid" }
- */
-export const UnsubscribeBacktestMessageSchema = z.object({
-	type: z.literal("unsubscribe_backtest"),
-	/** Backtest ID to unsubscribe from */
-	backtestId: z.string().min(1),
-});
-
-export type UnsubscribeBacktestMessage = z.infer<typeof UnsubscribeBacktestMessageSchema>;
-
-// ============================================
 // Client Message Union
 // ============================================
 
@@ -220,8 +184,6 @@ export const ClientMessageSchema = z.discriminatedUnion("type", [
 	UnsubscribeSymbolsMessageSchema,
 	SubscribeOptionsMessageSchema,
 	UnsubscribeOptionsMessageSchema,
-	SubscribeBacktestMessageSchema,
-	UnsubscribeBacktestMessageSchema,
 	PingMessageSchema,
 	RequestStateMessageSchema,
 	AcknowledgeAlertMessageSchema,
