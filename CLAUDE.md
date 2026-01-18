@@ -72,7 +72,7 @@ uv pip install -e ".[dev]" # Install Python dev dependencies
 bun run db:migrate  # Run PostgreSQL migrations via Drizzle
 
 # Testing, Linting, formatting, type checking
-bun test # run all tests
+bun run test # run all tests via turbo
 bun run check # TypeScript linting & formatting
 bun run lint # All linters for TS + Rust + Python
 bun run format # All formatters for TS + Rust + Python
