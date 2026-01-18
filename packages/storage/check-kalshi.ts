@@ -5,19 +5,14 @@ async function main() {
 	const repo = new PredictionMarketsRepository(db);
 
 	const kalshiSnapshots = await repo.findSnapshots({ platform: "kalshi" }, 5);
-	console.log("Kalshi Snapshots:", kalshiSnapshots.length);
-	kalshiSnapshots.forEach((s) =>
-		console.log("  - " + s.marketTicker + " (" + s.snapshotTime + ")")
-	);
+	kalshiSnapshots.forEach((_s) => {});
 
 	const polySnapshots = await repo.findSnapshots({ platform: "polymarket" }, 5);
-	console.log("\nPolymarket Snapshots:", polySnapshots.length);
-	polySnapshots.forEach((s) => console.log("  - " + s.marketTicker + " (" + s.snapshotTime + ")"));
+	polySnapshots.forEach((_s) => {});
 
 	process.exit(0);
 }
 
-main().catch((e) => {
-	console.error("Error:", e.message);
+main().catch((_e) => {
 	process.exit(1);
 });

@@ -5,27 +5,19 @@ async function main() {
 	const db = getDb();
 	const repo = new PredictionMarketsRepository(db);
 
-	console.log("=== Prediction Markets Data Check ===\n");
-
-	const stats = await repo.getStats();
-	console.log("Stats:", JSON.stringify(stats, null, 2));
+	const _stats = await repo.getStats();
 
 	const signals = await repo.getLatestSignals();
-	console.log("\nLatest Signals:", signals.length);
-	for (const s of signals.slice(0, 5)) {
-		console.log(`  - ${s.signalType}: ${s.signalValue} (${s.computedAt})`);
+	for (const _s of signals.slice(0, 5)) {
 	}
 
 	const snapshots = await repo.findSnapshots({}, 5);
-	console.log("\nLatest Snapshots:", snapshots.length);
-	for (const s of snapshots) {
-		console.log(`  - ${s.platform}/${s.marketTicker} (${s.snapshotTime})`);
+	for (const _s of snapshots) {
 	}
 
 	process.exit(0);
 }
 
-main().catch((e) => {
-	console.error("Error:", e.message);
+main().catch((_e) => {
 	process.exit(1);
 });
