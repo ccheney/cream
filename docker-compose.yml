@@ -36,7 +36,6 @@ services:
       POSTGRES_DB: cream
     volumes:
       - postgres_data:/var/lib/postgresql/data
-      - ./docker/postgres/init.sql:/docker-entrypoint-initdb.d/init.sql
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U cream -d cream"]
       interval: 10s
@@ -171,7 +170,6 @@ services:
 
   # Dashboard API - Hono/Bun API Server
   # REST API and WebSocket server for dashboard
-  # Includes Python runtime for VectorBT backtest execution
   dashboard-api:
     build:
       context: .

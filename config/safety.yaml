@@ -67,13 +67,6 @@ environments:
       grace_period_seconds: 60
       gtc_policy: "include"
 
-  # BACKTEST: Disabled (no broker connection)
-  backtest:
-    mass_cancel:
-      enabled: false
-      grace_period_seconds: 0
-      gtc_policy: "include"
-
 # ============================================
 # Emergency Procedures
 # ============================================
