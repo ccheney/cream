@@ -4,16 +4,15 @@
  * NYSE holiday schedule, trading sessions, and option expiration dates.
  * Includes session validation for DecisionPlan actions.
  *
- * This module delegates to CalendarService when initialized, falling back to
- * hardcoded data for backward compatibility.
+ * This module delegates to CalendarService which must be initialized
+ * via initCalendarService() before use.
  *
  * @see docs/plans/02-data-layer.md - Session and Calendar Handling
  * @see docs/plans/07-execution.md - Trading Calendar Feasibility
  */
 
 import { z } from "zod";
-import { getCalendarService } from "./calendar/factory.js";
-import { HardcodedCalendarService } from "./calendar/service.js";
+import { requireCalendarService } from "./calendar/factory.js";
 import type { CalendarService } from "./calendar/types.js";
 
 // Re-export CalendarService types for convenience
@@ -23,25 +22,12 @@ export type { CalendarDay, CalendarService, MarketClock } from "./calendar/types
 // Service Resolution
 // ============================================
 
-/** Lazy fallback service instance */
-let fallbackService: CalendarService | null = null;
-
 /**
- * Get the calendar service, creating a fallback if not initialized.
- * This ensures backward compatibility for code that doesn't explicitly
- * initialize the CalendarService.
+ * Get the calendar service.
+ * Throws if not initialized via initCalendarService().
  */
 function resolveCalendarService(): CalendarService {
-	const service = getCalendarService();
-	if (service) {
-		return service;
-	}
-
-	// Create fallback hardcoded service (safe to create synchronously)
-	if (!fallbackService) {
-		fallbackService = new HardcodedCalendarService();
-	}
-	return fallbackService;
+	return requireCalendarService();
 }
 
 // ============================================
@@ -110,7 +96,7 @@ export type ActionForSession = z.infer<typeof ActionForSession>;
  * Configuration for session validation
  */
 export interface SessionValidationConfig {
-	/** Override to always consider market open (for testing/backtesting) */
+	/** Override to always consider market open (for testing/simulation) */
 	alwaysOpen?: boolean;
 	/** Allow equity extended hours trading */
 	allowExtendedHours?: boolean;

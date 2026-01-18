@@ -7,24 +7,25 @@ import {
 	CalendarConfigError,
 	createCalendarService,
 	getCalendarService,
-	initCalendarService,
 	isCalendarServiceAvailable,
 	requireCalendarService,
 	resetCalendarService,
 } from "./factory";
-import { HardcodedCalendarService } from "./service";
 
 // Reset singleton at file load time to clear any pollution from other test files
 resetCalendarService();
 
-// Detect if module mocking from other test files has polluted the getCalendarService function
-// This can happen when running the full test suite because bun's mock.module() can affect
-// module exports globally before this test file's describe blocks run
+// Detect if module mocking from other test files has polluted factory functions
 const moduleIsPolluted = (() => {
 	resetCalendarService();
 	const service = getCalendarService();
-	// If we get a non-null service after reset, something is wrong
-	return service !== null;
+	if (service !== null) return true;
+	try {
+		requireCalendarService();
+		return true;
+	} catch {
+		return false;
+	}
 })();
 
 describe("CalendarService Factory", () => {
@@ -32,30 +33,17 @@ describe("CalendarService Factory", () => {
 
 	beforeEach(() => {
 		resetCalendarService();
-		// Set PAPER mode for most tests
 		Bun.env.CREAM_ENV = "PAPER";
 	});
 
 	afterEach(() => {
 		resetCalendarService();
-		// Restore original env
 		Bun.env.CREAM_ENV = originalEnv.CREAM_ENV;
 		Bun.env.ALPACA_KEY = originalEnv.ALPACA_KEY;
 		Bun.env.ALPACA_SECRET = originalEnv.ALPACA_SECRET;
 	});
 
 	describe("createCalendarService", () => {
-		it("creates HardcodedCalendarService in PAPER mode", async () => {
-			const service = await createCalendarService({ mode: "PAPER" });
-			expect(service).toBeInstanceOf(HardcodedCalendarService);
-		});
-
-		it("uses CREAM_ENV if mode not specified", async () => {
-			Bun.env.CREAM_ENV = "PAPER";
-			const service = await createCalendarService();
-			expect(service).toBeInstanceOf(HardcodedCalendarService);
-		});
-
 		it("throws CalendarConfigError in PAPER mode without ALPACA_KEY", async () => {
 			delete Bun.env.ALPACA_KEY;
 			delete Bun.env.ALPACA_SECRET;
@@ -86,21 +74,26 @@ describe("CalendarService Factory", () => {
 				expect(configError.message).toContain("PAPER");
 			}
 		});
+
+		it("throws CalendarConfigError when only ALPACA_KEY is present", async () => {
+			Bun.env.ALPACA_KEY = "test-key";
+			delete Bun.env.ALPACA_SECRET;
+
+			try {
+				await createCalendarService({ mode: "PAPER" });
+				expect.unreachable("Should have thrown");
+			} catch (error) {
+				expect(error).toBeInstanceOf(CalendarConfigError);
+				const configError = error as CalendarConfigError;
+				expect(configError.missingVar).toBe("ALPACA_SECRET");
+			}
+		});
 	});
 
-	// Skip singleton tests if module is polluted by other test files' mock.module() calls
-	// These tests pass individually but can fail when running the full test suite
 	describe.skipIf(moduleIsPolluted)("singleton management", () => {
 		describe("getCalendarService", () => {
 			it("returns null before initialization", () => {
 				expect(getCalendarService()).toBeNull();
-			});
-
-			it("returns service after initialization", async () => {
-				await initCalendarService({ mode: "PAPER" });
-				const service = getCalendarService();
-				expect(service).not.toBeNull();
-				expect(service).toBeInstanceOf(HardcodedCalendarService);
 			});
 		});
 
@@ -108,74 +101,23 @@ describe("CalendarService Factory", () => {
 			it("throws if not initialized", () => {
 				expect(() => requireCalendarService()).toThrow("not initialized");
 			});
-
-			it("returns service after initialization", async () => {
-				await initCalendarService({ mode: "PAPER" });
-				const service = requireCalendarService();
-				expect(service).toBeInstanceOf(HardcodedCalendarService);
-			});
-		});
-
-		describe("initCalendarService", () => {
-			it("initializes the singleton", async () => {
-				const service = await initCalendarService({ mode: "PAPER" });
-				expect(service).toBeInstanceOf(HardcodedCalendarService);
-				expect(getCalendarService()).toBe(service);
-			});
-
-			it("returns existing instance on repeated calls", async () => {
-				const first = await initCalendarService({ mode: "PAPER" });
-				const second = await initCalendarService({ mode: "PAPER" });
-				expect(first).toBe(second);
-			});
-
-			it("handles concurrent initialization calls", async () => {
-				const [first, second, third] = await Promise.all([
-					initCalendarService({ mode: "PAPER" }),
-					initCalendarService({ mode: "PAPER" }),
-					initCalendarService({ mode: "PAPER" }),
-				]);
-
-				expect(first).toBe(second);
-				expect(second).toBe(third);
-			});
 		});
 
 		describe("resetCalendarService", () => {
-			it("clears the singleton", async () => {
-				await initCalendarService({ mode: "PAPER" });
-				expect(getCalendarService()).not.toBeNull();
-
-				resetCalendarService();
-				expect(getCalendarService()).toBeNull();
-			});
-
 			it("does not throw if not initialized", () => {
 				expect(() => resetCalendarService()).not.toThrow();
-			});
-
-			it("allows reinitialization after reset", async () => {
-				const first = await initCalendarService({ mode: "PAPER" });
-				resetCalendarService();
-				const second = await initCalendarService({ mode: "PAPER" });
-
-				expect(first).not.toBe(second);
 			});
 		});
 	});
 
 	describe("isCalendarServiceAvailable", () => {
-		it("returns true for PAPER mode", () => {
-			expect(isCalendarServiceAvailable({ mode: "PAPER" })).toBe(true);
-		});
-
-		it("returns false for PAPER mode without credentials", () => {
+		it("returns false without credentials", () => {
 			delete Bun.env.ALPACA_KEY;
 			delete Bun.env.ALPACA_SECRET;
 			expect(isCalendarServiceAvailable({ mode: "PAPER" })).toBe(false);
 		});
 
-		it("returns true for PAPER mode with credentials", () => {
+		it("returns true with credentials", () => {
 			Bun.env.ALPACA_KEY = "test-key";
 			Bun.env.ALPACA_SECRET = "test-secret";
 			expect(isCalendarServiceAvailable({ mode: "PAPER" })).toBe(true);
@@ -192,6 +134,12 @@ describe("CalendarService Factory", () => {
 				})
 			).toBe(true);
 		});
+
+		it("returns false with only one credential", () => {
+			Bun.env.ALPACA_KEY = "test-key";
+			delete Bun.env.ALPACA_SECRET;
+			expect(isCalendarServiceAvailable({ mode: "PAPER" })).toBe(false);
+		});
 	});
 
 	describe("CalendarConfigError", () => {
@@ -206,9 +154,10 @@ describe("CalendarService Factory", () => {
 			expect(error.mode).toBe("LIVE");
 		});
 
-		it("message suggests PAPER mode", () => {
+		it("message contains mode and missing var", () => {
 			const error = new CalendarConfigError("ALPACA_KEY", "PAPER");
 			expect(error.message).toContain("PAPER");
+			expect(error.message).toContain("ALPACA_KEY");
 		});
 	});
 });

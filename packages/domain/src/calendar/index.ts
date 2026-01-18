@@ -56,14 +56,10 @@ export {
 } from "./hardcoded";
 // Service implementations
 export {
-	// PAPER/LIVE modes
 	AlpacaCalendarService,
 	type AlpacaCalendarServiceConfig,
 	CalendarServiceError,
 	createAlpacaCalendarService,
-	// Testing mode
-	createHardcodedCalendarService,
-	HardcodedCalendarService,
 } from "./service";
 export {
 	// Types

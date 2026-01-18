@@ -1,9 +1,8 @@
 /**
  * Calendar Service Factory
  *
- * Environment-aware factory for creating CalendarService instances.
- * - Tests (NODE_ENV=test): Returns HardcodedCalendarService (no API calls)
- * - PAPER/LIVE: Returns AlpacaCalendarService (requires credentials)
+ * Factory for creating CalendarService instances.
+ * Creates AlpacaCalendarService which requires credentials.
  *
  * @see docs/plans/02-data-layer.md - Session and Calendar Handling
  */
@@ -13,7 +12,6 @@ import {
 	AlpacaCalendarService,
 	type AlpacaCalendarServiceConfig,
 	CalendarServiceError,
-	HardcodedCalendarService,
 } from "./service";
 import type { CalendarService } from "./types";
 
@@ -31,10 +29,8 @@ export interface CalendarServiceFactoryOptions {
 	alpacaKey?: string;
 	/** Alpaca API secret (uses ALPACA_SECRET if not provided) */
 	alpacaSecret?: string;
-	/** Years to preload for PAPER/LIVE modes (default: current + next year) */
+	/** Years to preload (default: current + next year) */
 	preloadYears?: number[];
-	/** Force use of hardcoded calendar (useful for tests) */
-	useHardcoded?: boolean;
 }
 
 // ============================================
@@ -157,7 +153,7 @@ export async function initCalendarService(
  * ```ts
  * // In tests
  * resetCalendarService();
- * await initCalendarService({ useHardcoded: true });
+ * await initCalendarService();
  * ```
  */
 export function resetCalendarService(): void {
@@ -172,13 +168,11 @@ export function resetCalendarService(): void {
 /**
  * Create a new CalendarService instance.
  *
- * Routes to the appropriate implementation based on environment:
- * - Tests (NODE_ENV=test) or useHardcoded: HardcodedCalendarService (synchronous, no network)
- * - PAPER/LIVE: AlpacaCalendarService (requires API credentials)
+ * Creates AlpacaCalendarService which requires API credentials.
  *
  * @param options - Factory options
  * @returns Initialized CalendarService
- * @throws CalendarConfigError if PAPER/LIVE mode without credentials
+ * @throws CalendarConfigError if credentials are missing
  *
  * @example
  * ```ts
@@ -198,12 +192,6 @@ export async function createCalendarService(
 ): Promise<CalendarService> {
 	const mode = options.mode ?? requireEnv();
 
-	// Use hardcoded calendar for tests or when explicitly requested
-	if (options.useHardcoded || Bun.env.NODE_ENV === "test") {
-		return new HardcodedCalendarService();
-	}
-
-	// PAPER/LIVE modes require Alpaca credentials
 	const apiKey = options.alpacaKey ?? Bun.env.ALPACA_KEY;
 	const apiSecret = options.alpacaSecret ?? Bun.env.ALPACA_SECRET;
 
@@ -234,15 +222,9 @@ export async function createCalendarService(
  * Check if CalendarService is available for the current environment.
  *
  * @param options - Factory options
- * @returns true if service can be created
+ * @returns true if service can be created (credentials present)
  */
 export function isCalendarServiceAvailable(options: CalendarServiceFactoryOptions = {}): boolean {
-	// Always available for tests or when hardcoded is requested
-	if (options.useHardcoded || Bun.env.NODE_ENV === "test") {
-		return true;
-	}
-
-	// PAPER/LIVE require credentials
 	const apiKey = options.alpacaKey ?? Bun.env.ALPACA_KEY;
 	const apiSecret = options.alpacaSecret ?? Bun.env.ALPACA_SECRET;
 
