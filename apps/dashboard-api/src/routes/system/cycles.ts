@@ -240,9 +240,6 @@ app.openapi(triggerCycleRoute, async (c) => {
 		broadcastCycleResult({ type: "cycle_result", data: resultData });
 	};
 
-	// TODO: Streaming callbacks not yet supported in v2 workflow
-	// Will be added in future iteration with Mastra event bus pattern
-
 	const runCycle = async () => {
 		const startTime = Date.now();
 		cycleState.status = "running";
