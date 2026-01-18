@@ -44,6 +44,3 @@ export {
 } from "./IndicatorSnapshotPanel";
 export { IndicatorValue, type IndicatorValueProps } from "./IndicatorValue";
 export { PaperTradingSection } from "./PaperTradingSection";
-// Synthesis components
-export { SynthesisHistoryTable } from "./SynthesisHistoryTable";
-export { SynthesisStatusCard } from "./SynthesisStatusCard";

@@ -277,22 +277,6 @@ describe("liveProtection", () => {
 		expect(res.status).toBe(200);
 	});
 
-	it("passes through in BACKTEST environment", async () => {
-		Bun.env.CREAM_ENV = "BACKTEST";
-
-		const app = new Hono<{ Variables: SessionVariables }>();
-		app.use("/*", async (c, next) => {
-			c.set("session", null);
-			c.set("user", null);
-			await next();
-		});
-		app.use("/*", liveProtection());
-		app.get("/test", () => new Response("ok"));
-
-		const res = await app.request("/test");
-
-		expect(res.status).toBe(200);
-	});
 
 	it("returns 401 when not authenticated in LIVE", async () => {
 		Bun.env.CREAM_ENV = "LIVE";

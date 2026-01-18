@@ -8,6 +8,10 @@
  * @see docs/plans/ui/06-websocket.md
  */
 
+import { initTracing, shutdownTracing } from "./tracing.js";
+
+initTracing();
+
 import { type CreamEnvironment, initCalendarService } from "@cream/domain";
 import { createRoute, OpenAPIHono, z } from "@hono/zod-openapi";
 import { cors } from "hono/cors";
@@ -30,11 +34,11 @@ import {
 	agentsRoutes,
 	aiRoutes,
 	alertsRoutes,
-	backtestRoutes,
 	batchStatusRoutes,
 	batchTriggerRoutes,
 	calendarRoutes,
 	configRoutes,
+	cyclesRoutes,
 	decisionsRoutes,
 	economicCalendarRoutes,
 	filingsRoutes,
@@ -43,7 +47,7 @@ import {
 	optionsRoutes,
 	portfolioRoutes,
 	preferencesRoutes,
-	researchRoutes,
+	factorZooRoutes,
 	riskRoutes,
 	searchRoutes,
 	snapshotsRoutes,
@@ -210,13 +214,13 @@ app.use("/api/portfolio/*", requireAuth());
 app.use("/api/alerts/*", requireAuth());
 app.use("/api/agents/*", requireAuth());
 app.use("/api/config/*", requireAuth());
+app.use("/api/cycles/*", requireAuth());
 app.use("/api/market/*", requireAuth());
 app.use("/api/risk/*", requireAuth());
-app.use("/api/backtests/*", requireAuth());
 app.use("/api/theses/*", requireAuth());
 app.use("/api/preferences/*", requireAuth());
 app.use("/api/indicators/*", requireAuth());
-app.use("/api/research/*", requireAuth());
+app.use("/api/factor-zoo/*", requireAuth());
 app.use("/api/options/*", requireAuth());
 app.use("/api/filings/*", requireAuth());
 app.use("/api/snapshots/*", requireAuth());
@@ -229,7 +233,6 @@ app.use("/api/search/*", requireAuth());
 app.use("/api/decisions/*", liveProtection());
 app.use("/api/portfolio/*", liveProtection());
 app.use("/api/config/*", liveProtection());
-app.use("/api/backtests/*", liveProtection());
 app.use("/api/theses/*", liveProtection());
 
 app.route("/api/calendar", calendarRoutes);
@@ -239,16 +242,16 @@ app.route("/api/portfolio", portfolioRoutes);
 app.route("/api/alerts", alertsRoutes);
 app.route("/api/agents", agentsRoutes);
 app.route("/api/config", configRoutes);
+app.route("/api/cycles", cyclesRoutes);
 app.route("/api/market", marketRoutes);
 app.route("/api/options", optionsRoutes);
 app.route("/api/risk", riskRoutes);
-app.route("/api/backtests", backtestRoutes);
 app.route("/api/theses", thesesRoutes);
 app.route("/api/preferences", preferencesRoutes);
 app.route("/api/indicators", indicatorsRoutes);
 app.route("/api/indicators", batchStatusRoutes);
 app.route("/api/indicators", batchTriggerRoutes);
-app.route("/api/research", researchRoutes);
+app.route("/api/factor-zoo", factorZooRoutes);
 app.route("/api/filings", filingsRoutes);
 app.route("/api/snapshots", snapshotsRoutes);
 app.route("/api/economic-calendar", economicCalendarRoutes);
@@ -329,8 +332,8 @@ if (import.meta.main) {
 			);
 		});
 
-	// Initialize CalendarService (non-blocking, falls back to hardcoded for BACKTEST)
-	const creamEnv = (Bun.env.CREAM_ENV as CreamEnvironment | undefined) ?? "BACKTEST";
+	// Initialize CalendarService (non-blocking, falls back to hardcoded if API unavailable)
+	const creamEnv = (Bun.env.CREAM_ENV as CreamEnvironment | undefined) ?? "PAPER";
 	initCalendarService({
 		mode: creamEnv,
 		alpacaKey: Bun.env.ALPACA_KEY,
@@ -412,7 +415,7 @@ if (import.meta.main) {
 	log.info({ port, url: `http://localhost:${port}` }, "Dashboard API server ready");
 
 	// Graceful shutdown
-	const gracefulShutdown = (signal: string) => {
+	const gracefulShutdown = async (signal: string) => {
 		log.info({ signal }, "Received shutdown signal, initiating graceful shutdown");
 		resetEventPublisher();
 		shutdownMarketDataStreaming();
@@ -420,6 +423,7 @@ if (import.meta.main) {
 		shutdownSharedOptionsWebSocket();
 		closeAllConnections("Server shutting down");
 		closeDb();
+		await shutdownTracing();
 		server.stop();
 		log.info("Dashboard API server shutdown complete");
 		process.exit(0);

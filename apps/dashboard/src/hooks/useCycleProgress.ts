@@ -139,7 +139,7 @@ export function useCycleProgress(cycleId: string | null): UseCycleProgressReturn
 
 					setResult({
 						cycleId: resultData.cycleId,
-						environment: resultData.environment as "BACKTEST" | "PAPER" | "LIVE",
+						environment: resultData.environment as "PAPER" | "LIVE",
 						status: resultData.status,
 						result: resultData.result,
 						error: resultData.error,

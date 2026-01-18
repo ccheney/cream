@@ -199,6 +199,25 @@ export const queryKeys = {
 				? ([...queryKeys.cycles.all, "list", filters] as const)
 				: ([...queryKeys.cycles.all, "list"] as const),
 		full: (id: string) => [...queryKeys.cycles.all, id, "full"] as const,
+		analytics: {
+			all: [...["cycles"], "analytics"] as const,
+			summary: (filters?: Record<string, unknown>) =>
+				filters
+					? ([...["cycles"], "analytics", "summary", filters] as const)
+					: ([...["cycles"], "analytics", "summary"] as const),
+			decisions: (filters?: Record<string, unknown>) =>
+				filters
+					? ([...["cycles"], "analytics", "decisions", filters] as const)
+					: ([...["cycles"], "analytics", "decisions"] as const),
+			calibration: (filters?: Record<string, unknown>) =>
+				filters
+					? ([...["cycles"], "analytics", "calibration", filters] as const)
+					: ([...["cycles"], "analytics", "calibration"] as const),
+			strategies: (filters?: Record<string, unknown>) =>
+				filters
+					? ([...["cycles"], "analytics", "strategies", filters] as const)
+					: ([...["cycles"], "analytics", "strategies"] as const),
+		},
 	},
 
 	// Workers

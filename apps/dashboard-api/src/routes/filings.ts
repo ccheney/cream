@@ -16,7 +16,7 @@ import { getDrizzleDb, getFilingSyncRunsRepo, getFilingsRepo } from "../db.js";
 // ============================================
 
 const FilingTypeSchema = z.enum(["10-K", "10-Q", "8-K", "DEF14A"]);
-const EnvironmentSchema = z.enum(["BACKTEST", "PAPER", "LIVE"]);
+const EnvironmentSchema = z.enum(["PAPER", "LIVE"]);
 
 const TriggerSyncRequestSchema = z.object({
 	symbols: z.array(z.string()).min(1).describe("Stock symbols to sync filings for"),

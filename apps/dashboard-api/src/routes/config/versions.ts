@@ -58,7 +58,7 @@ const rollbackRoute = createRoute({
 	path: "/rollback",
 	request: {
 		query: z.object({
-			env: z.enum(["BACKTEST", "PAPER", "LIVE"]).optional().openapi({
+			env: z.enum(["PAPER", "LIVE"]).optional().openapi({
 				description: "Trading environment (default: PAPER)",
 			}),
 		}),

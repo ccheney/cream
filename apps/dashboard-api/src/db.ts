@@ -28,6 +28,7 @@ import {
 	OrdersRepository,
 	PortfolioSnapshotsRepository,
 	PositionsRepository,
+	PredictionMarketsRepository,
 	RegimeLabelsRepository,
 	SentimentRepository,
 	ShortInterestRepository,
@@ -263,6 +264,13 @@ export function getSentimentRepo(): SentimentRepository {
  */
 export function getCorporateActionsRepo(): CorporateActionsRepository {
 	return new CorporateActionsRepository();
+}
+
+/**
+ * Get prediction markets repository
+ */
+export function getPredictionMarketsRepo(): PredictionMarketsRepository {
+	return new PredictionMarketsRepository();
 }
 
 // ============================================

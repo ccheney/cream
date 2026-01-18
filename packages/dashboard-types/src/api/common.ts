@@ -11,7 +11,7 @@ import { z } from "zod";
 // ============================================
 
 export const SystemStatusSchema = z.object({
-	environment: z.enum(["BACKTEST", "PAPER", "LIVE"]),
+	environment: z.enum(["PAPER", "LIVE"]),
 	status: z.enum(["running", "paused", "stopped", "error"]),
 	uptime: z.number(),
 	version: z.string(),

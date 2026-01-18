@@ -10,7 +10,7 @@ import { z } from "zod";
 // Environment
 // ============================================
 
-export const EnvironmentSchema = z.enum(["BACKTEST", "PAPER", "LIVE"]);
+export const EnvironmentSchema = z.enum(["PAPER", "LIVE"]);
 export type Environment = z.infer<typeof EnvironmentSchema>;
 
 // ============================================

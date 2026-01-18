@@ -66,7 +66,7 @@ async function getService() {
 	let service = getCalendarService();
 	if (!service) {
 		// Initialize with hardcoded service as fallback
-		await initCalendarService({ mode: "BACKTEST" });
+		await initCalendarService({ mode: "PAPER" });
 		service = getCalendarService();
 	}
 	if (!service) {

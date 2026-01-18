@@ -31,23 +31,6 @@ export {
 	type AgentType,
 	AgentTypeSchema,
 } from "./agents.js";
-// Backtest types
-export {
-	type BacktestDetail,
-	BacktestDetailSchema,
-	type BacktestEquityPoint,
-	BacktestEquityPointSchema,
-	type BacktestMetrics,
-	BacktestMetricsSchema,
-	type BacktestStatus,
-	BacktestStatusSchema,
-	type BacktestSummary,
-	BacktestSummarySchema,
-	type BacktestTrade,
-	type BacktestTradeAction,
-	BacktestTradeActionSchema,
-	BacktestTradeSchema,
-} from "./backtest.js";
 // Common/System types
 export {
 	type Alert,

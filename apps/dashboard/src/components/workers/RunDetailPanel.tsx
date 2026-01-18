@@ -12,6 +12,7 @@ import {
 	type IndicatorEntry,
 	type MacroWatchEntry,
 	type NewspaperData,
+	type PredictionMarketSignal,
 	type RunDetailsData,
 	useWorkerRunDetails,
 	type WorkerService,
@@ -93,6 +94,20 @@ function MacroWatchDetails({ entries }: { entries: MacroWatchEntry[] }) {
 // Newspaper Details
 // ============================================
 
+const sectionLabels: Record<string, string> = {
+	macro: "Macro",
+	universe: "Universe",
+	predictionMarkets: "Prediction Markets",
+	economicCalendar: "Economic Calendar",
+};
+
+const sectionColors: Record<string, string> = {
+	macro: "border-blue-200 dark:border-blue-800",
+	universe: "border-emerald-200 dark:border-emerald-800",
+	predictionMarkets: "border-purple-200 dark:border-purple-800",
+	economicCalendar: "border-amber-200 dark:border-amber-800",
+};
+
 function NewspaperDetails({ newspaper }: { newspaper: NewspaperData | null }) {
 	if (!newspaper) {
 		return (
@@ -102,11 +117,13 @@ function NewspaperDetails({ newspaper }: { newspaper: NewspaperData | null }) {
 		);
 	}
 
-	const sections = newspaper.sections as Record<string, unknown>;
-	const sectionNames = Object.keys(sections).filter((k) => sections[k]);
+	const sections = newspaper.sections as Record<string, string[]>;
+	const sectionEntries = Object.entries(sections).filter(
+		([, bullets]) => Array.isArray(bullets) && bullets.length > 0
+	);
 
 	return (
-		<div className="space-y-2">
+		<div className="space-y-3">
 			<div className="flex items-center gap-4 text-sm">
 				<span className="text-stone-600 dark:text-night-300">
 					Date:{" "}
@@ -125,15 +142,27 @@ function NewspaperDetails({ newspaper }: { newspaper: NewspaperData | null }) {
 					</span>
 				</span>
 			</div>
-			{sectionNames.length > 0 && (
-				<div className="flex flex-wrap gap-1.5">
-					{sectionNames.map((section) => (
-						<span
-							key={section}
-							className="inline-flex px-2 py-0.5 rounded text-xs font-medium bg-cream-100 dark:bg-night-700 text-stone-600 dark:text-night-300"
+			{sectionEntries.length > 0 && (
+				<div className="space-y-3 max-h-96 overflow-y-auto">
+					{sectionEntries.map(([sectionKey, bullets]) => (
+						<div
+							key={sectionKey}
+							className={`border-l-2 pl-3 ${sectionColors[sectionKey] ?? "border-stone-200 dark:border-night-600"}`}
 						>
-							{section}
-						</span>
+							<div className="text-xs font-medium text-stone-500 dark:text-night-400 uppercase tracking-wide mb-1.5">
+								{sectionLabels[sectionKey] ?? sectionKey} ({bullets.length})
+							</div>
+							<ul className="space-y-1">
+								{bullets.map((bullet, idx) => (
+									<li
+										key={idx}
+										className="text-sm text-stone-700 dark:text-night-200 leading-relaxed"
+									>
+										{bullet}
+									</li>
+								))}
+							</ul>
+						</div>
 					))}
 				</div>
 			)}
@@ -255,6 +284,86 @@ function IndicatorDetails({
 }
 
 // ============================================
+// Prediction Markets Details
+// ============================================
+
+const platformColors: Record<string, string> = {
+	kalshi: "bg-cyan-100 dark:bg-cyan-900/30 text-cyan-700 dark:text-cyan-300",
+	polymarket: "bg-indigo-100 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-300",
+};
+
+function PredictionMarketsDetails({
+	signals,
+	snapshotCount,
+	platforms,
+}: {
+	signals: PredictionMarketSignal[];
+	snapshotCount: number;
+	platforms: string[];
+}) {
+	if (signals.length === 0) {
+		return (
+			<div className="text-sm text-stone-500 dark:text-night-400 italic">
+				No signals computed during this run
+			</div>
+		);
+	}
+
+	const formatPercent = (value: number): string => {
+		return `${(value * 100).toFixed(1)}%`;
+	};
+
+	return (
+		<div className="space-y-3">
+			<div className="flex items-center gap-4 text-sm">
+				<span className="text-stone-600 dark:text-night-300">
+					Signals:{" "}
+					<span className="font-medium text-stone-900 dark:text-night-50">{signals.length}</span>
+				</span>
+				<span className="text-stone-600 dark:text-night-300">
+					Snapshots:{" "}
+					<span className="font-medium text-stone-900 dark:text-night-50">{snapshotCount}</span>
+				</span>
+				<div className="flex items-center gap-1.5">
+					{platforms.map((platform) => (
+						<span
+							key={platform}
+							className={`inline-flex px-1.5 py-0.5 rounded text-xs font-medium capitalize ${
+								platformColors[platform] ??
+								"bg-stone-100 dark:bg-night-700 text-stone-600 dark:text-night-300"
+							}`}
+						>
+							{platform}
+						</span>
+					))}
+				</div>
+			</div>
+
+			<div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
+				{signals.map((signal) => (
+					<div
+						key={signal.signalType}
+						className="p-2.5 rounded bg-cream-50 dark:bg-night-750 border border-cream-100 dark:border-night-700"
+					>
+						<div className="text-xs text-stone-500 dark:text-night-400 mb-1">
+							{signal.signalType}
+						</div>
+						<div className="text-lg font-semibold text-stone-900 dark:text-night-50 font-mono">
+							{formatPercent(signal.signalValue)}
+						</div>
+						{signal.confidence !== null && (
+							<div className="text-xs text-stone-400 dark:text-night-500 mt-0.5">
+								Confidence: {formatPercent(signal.confidence)}
+							</div>
+						)}
+					</div>
+				))}
+			</div>
+		</div>
+	);
+}
+
+// ============================================
 // Loading State
 // ============================================
 
@@ -301,6 +410,14 @@ function RunDetailsContent({ data, service }: { data: RunDetailsData; service: W
 			return <NewspaperDetails newspaper={data.newspaper} />;
 		case "indicators":
 			return <IndicatorDetails entries={data.entries} service={service} />;
+		case "prediction_markets":
+			return (
+				<PredictionMarketsDetails
+					signals={data.signals}
+					snapshotCount={data.snapshotCount}
+					platforms={data.platforms}
+				/>
+			);
 		case "empty":
 			return (
 				<div className="text-sm text-stone-500 dark:text-night-400 italic">{data.message}</div>

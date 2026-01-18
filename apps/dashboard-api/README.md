@@ -43,14 +43,13 @@ Provides the backend for the trading dashboard:
 
 | Environment | Auth | MFA |
 |-------------|------|-----|
-| BACKTEST | No | No |
 | PAPER | Yes | No |
 | LIVE | Yes | Yes |
 
 ## Configuration
 
 ```bash
-CREAM_ENV=BACKTEST|PAPER|LIVE
+CREAM_ENV=PAPER|LIVE
 DATABASE_URL=postgresql://user:pass@localhost:5432/cream
 PORT=3001
 ALLOWED_ORIGINS=http://localhost:3000

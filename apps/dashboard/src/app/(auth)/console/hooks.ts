@@ -136,7 +136,7 @@ export function useCycleManagement(
 
 		triggerCycle.mutate(
 			{
-				environment: statusData.environment as "BACKTEST" | "PAPER" | "LIVE",
+				environment: statusData.environment as "PAPER" | "LIVE",
 				useDraftConfig,
 			},
 			{

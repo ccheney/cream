@@ -10,7 +10,7 @@
 # ===========================================
 # Stage 1: Dependencies
 # ===========================================
-FROM oven/bun:1.3 AS deps
+FROM oven/bun:1.3.6 AS deps
 WORKDIR /app
 
 # Copy workspace configuration
@@ -38,7 +38,7 @@ RUN bun install --frozen-lockfile
 # ===========================================
 # Stage 2: Builder
 # ===========================================
-FROM oven/bun:1.3 AS builder
+FROM oven/bun:1.3.6 AS builder
 WORKDIR /app
 
 # Copy node_modules from deps stage
@@ -109,7 +109,7 @@ RUN python -m venv /opt/venv && \
 # ===========================================
 # Stage 4: Production Runner
 # ===========================================
-FROM oven/bun:1.3-debian AS runner
+FROM oven/bun:1.3.6-debian AS runner
 WORKDIR /app
 
 ENV NODE_ENV=production
@@ -144,8 +144,8 @@ ENV PYTHONDONTWRITEBYTECODE=1
 ENV PYTHONUNBUFFERED=1
 
 # Create temp directory for Parquet files with proper permissions
-RUN mkdir -p /tmp/backtest && chown api:nodejs /tmp/backtest
-ENV BACKTEST_TEMP_DIR="/tmp/backtest"
+RUN mkdir -p /tmp/research && chown api:nodejs /tmp/research
+ENV RESEARCH_TEMP_DIR="/tmp/research"
 
 USER api
 

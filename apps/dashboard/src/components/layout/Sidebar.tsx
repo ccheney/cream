@@ -11,6 +11,7 @@
 "use client";
 
 import {
+	Activity,
 	BarChart3,
 	Beaker,
 	Bot,
@@ -19,11 +20,11 @@ import {
 	ChevronLeft,
 	Cog,
 	FileText,
-	FlaskConical,
 	Grid2x2,
 	LineChart,
 	LogOut,
 	Moon,
+	RefreshCw,
 	Rss,
 	Settings,
 	ShieldAlert,
@@ -63,6 +64,7 @@ export const NAV_GROUPS: NavItem[][] = [
 		{ href: "/console", label: "Console", icon: Terminal },
 		{ href: "/agents", label: "Agents", icon: Bot },
 		{ href: "/decisions", label: "Decisions", icon: FileText },
+		{ href: "/cycles", label: "Cycles", icon: RefreshCw },
 	],
 	[
 		{ href: "/calendar", label: "Calendar", icon: CalendarDays },
@@ -71,6 +73,7 @@ export const NAV_GROUPS: NavItem[][] = [
 	[
 		{ href: "/workers", label: "Workers", icon: Cog },
 		{ href: "/config", label: "Config", icon: Settings },
+		{ href: "/observability", label: "Observability", icon: Activity },
 	],
 ];
 
@@ -78,7 +81,6 @@ export const NAV_ITEMS: NavItem[] = NAV_GROUPS.flat();
 
 export const EXPERIMENT_ITEMS: NavItem[] = [
 	{ href: "/risk", label: "Risk", icon: ShieldAlert },
-	{ href: "/backtest", label: "Backtest", icon: FlaskConical },
 	{ href: "/indicators", label: "Indicators", icon: Beaker },
 	{ href: "/theses", label: "Theses", icon: BarChart3 },
 ];

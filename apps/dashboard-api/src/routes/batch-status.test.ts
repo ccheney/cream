@@ -52,7 +52,7 @@ const mockSyncRuns = [
 ];
 
 beforeAll(() => {
-	Bun.env.CREAM_ENV = "BACKTEST";
+	Bun.env.CREAM_ENV = "PAPER";
 });
 
 // Mock repository

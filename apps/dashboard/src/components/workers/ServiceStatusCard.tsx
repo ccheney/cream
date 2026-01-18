@@ -9,8 +9,72 @@
 import { formatDistanceToNow } from "date-fns";
 import { Clock, Play } from "lucide-react";
 import { memo, useEffect, useState } from "react";
-import type { ServiceStatus } from "@/hooks/queries";
+import type { ServiceStatus, WorkerService } from "@/hooks/queries";
 import { cn } from "@/lib/utils";
+
+// ============================================
+// Data Source Configuration
+// ============================================
+
+interface DataSource {
+	label: string;
+	color: string;
+}
+
+const DATA_SOURCES: Record<WorkerService, DataSource[]> = {
+	macro_watch: [
+		{
+			label: "Benzinga",
+			color: "bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-300",
+		},
+	],
+	newspaper: [
+		{
+			label: "Benzinga",
+			color: "bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-300",
+		},
+	],
+	filings_sync: [
+		{
+			label: "SEC EDGAR",
+			color: "bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300",
+		},
+	],
+	short_interest: [
+		{
+			label: "FINRA",
+			color: "bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-300",
+		},
+	],
+	sentiment: [
+		{
+			label: "Alpaca",
+			color: "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300",
+		},
+	],
+	corporate_actions: [
+		{
+			label: "Alpaca",
+			color: "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300",
+		},
+	],
+	prediction_markets: [
+		{
+			label: "Polymarket",
+			color: "bg-indigo-100 text-indigo-800 dark:bg-indigo-900/30 dark:text-indigo-300",
+		},
+		{
+			label: "Kalshi",
+			color: "bg-cyan-100 text-cyan-800 dark:bg-cyan-900/30 dark:text-cyan-300",
+		},
+	],
+	indicator_synthesis: [
+		{
+			label: "Mastra",
+			color: "bg-rose-100 text-rose-800 dark:bg-rose-900/30 dark:text-rose-300",
+		},
+	],
+};
 
 // ============================================
 // Status Dot Component
@@ -102,8 +166,9 @@ function ServiceStatusCardComponent({
 	disabled = false,
 	isPending = false,
 }: ServiceStatusCardProps) {
-	const { displayName, status, lastRun, nextRun } = service;
+	const { name, displayName, status, lastRun, nextRun } = service;
 	const countdown = useCountdown(nextRun);
+	const dataSources = DATA_SOURCES[name] ?? [];
 
 	const getDotStatus = (): DotStatus => {
 		if (status === "running") {
@@ -146,6 +211,22 @@ function ServiceStatusCardComponent({
 					</div>
 				)}
 			</div>
+
+			{dataSources.length > 0 && (
+				<div className="flex flex-wrap gap-1.5 mb-3">
+					{dataSources.map((source) => (
+						<span
+							key={source.label}
+							className={cn(
+								"inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium",
+								source.color
+							)}
+						>
+							{source.label}
+						</span>
+					))}
+				</div>
+			)}
 
 			<div className="flex items-center justify-between">
 				<span className="text-sm text-stone-500 dark:text-night-300">{getLastRunText()}</span>

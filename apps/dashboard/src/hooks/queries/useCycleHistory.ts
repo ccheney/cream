@@ -64,7 +64,7 @@ export interface FullCycleResponse {
 }
 
 export interface CycleListFilters {
-	environment?: "BACKTEST" | "PAPER" | "LIVE";
+	environment?: "PAPER" | "LIVE";
 	status?: "running" | "completed" | "failed";
 	page?: number;
 	pageSize?: number;

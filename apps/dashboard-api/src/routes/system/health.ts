@@ -114,9 +114,9 @@ async function checkExecution(): Promise<ServiceHealth> {
 	try {
 		const host = Bun.env.EXECUTION_ENGINE_HOST ?? "localhost";
 		const port = Bun.env.EXECUTION_ENGINE_PORT ?? "50053";
-		const isConfigured = Bun.env.EXECUTION_ENGINE_HOST || Bun.env.CREAM_ENV !== "BACKTEST";
+		const isConfigured = Boolean(Bun.env.EXECUTION_ENGINE_HOST);
 		if (!isConfigured) {
-			return { status: "degraded", message: "Not configured (BACKTEST mode)" };
+			return { status: "degraded", message: "Not configured" };
 		}
 		return {
 			status: "ok",

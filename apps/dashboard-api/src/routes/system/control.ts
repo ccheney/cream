@@ -21,7 +21,7 @@ const app = new OpenAPIHono();
 // Helper Functions
 // ============================================
 
-type Environment = "BACKTEST" | "PAPER" | "LIVE";
+type Environment = "PAPER" | "LIVE";
 
 async function getSystemStatusResponse(environmentOverride?: string) {
 	const state = await getSystemState(environmentOverride);

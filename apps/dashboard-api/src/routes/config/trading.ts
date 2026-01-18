@@ -267,7 +267,6 @@ app.openapi(promoteToRoute, async (c) => {
 	const { targetEnvironment } = c.req.valid("json");
 
 	const validPromotions: Record<TradingEnvironment, TradingEnvironment[]> = {
-		BACKTEST: ["PAPER"],
 		PAPER: ["LIVE"],
 		LIVE: [],
 	};
@@ -275,7 +274,7 @@ app.openapi(promoteToRoute, async (c) => {
 	if (!validPromotions[sourceEnvironment].includes(targetEnvironment)) {
 		return c.json(
 			{
-				error: `Cannot promote from ${sourceEnvironment} to ${targetEnvironment}. Valid paths: BACKTEST → PAPER → LIVE`,
+				error: `Cannot promote from ${sourceEnvironment} to ${targetEnvironment}. Valid paths: PAPER → LIVE`,
 				code: "INVALID_PROMOTION_PATH",
 			},
 			400

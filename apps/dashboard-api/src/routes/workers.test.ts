@@ -99,7 +99,7 @@ const mockRuns: MockRun[] = [
 let insertedRuns: MockRun[] = [];
 
 beforeAll(() => {
-	Bun.env.CREAM_ENV = "BACKTEST";
+	Bun.env.CREAM_ENV = "PAPER";
 });
 
 beforeEach(() => {

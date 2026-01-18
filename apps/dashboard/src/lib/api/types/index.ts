@@ -38,6 +38,15 @@ export type {
 	ValidationError,
 	ValidationResult,
 } from "./config";
+// Cycle analytics types
+export type {
+	AnalyticsPeriod,
+	ConfidenceCalibrationBin,
+	CycleAnalyticsFilters,
+	CycleAnalyticsSummary,
+	DecisionAnalytics,
+	StrategyBreakdownItem,
+} from "./cycles";
 // Market data types
 export type {
 	Candle,

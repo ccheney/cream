@@ -7,18 +7,18 @@
 
 /**
  * Get NEXT_PUBLIC_CREAM_ENV for client-side code.
- * Defaults to BACKTEST for local development.
+ * Defaults to PAPER for local development.
  */
-function getClientEnv(): "BACKTEST" | "PAPER" | "LIVE" {
+function getClientEnv(): "PAPER" | "LIVE" {
 	const env = process.env.NEXT_PUBLIC_CREAM_ENV;
 	if (!env) {
-		// Default to BACKTEST for local development
-		return "BACKTEST";
+		// Default to PAPER for local development
+		return "PAPER";
 	}
-	if (!["BACKTEST", "PAPER", "LIVE"].includes(env)) {
-		return "BACKTEST";
+	if (!["PAPER", "LIVE"].includes(env)) {
+		return "PAPER";
 	}
-	return env as "BACKTEST" | "PAPER" | "LIVE";
+	return env as "PAPER" | "LIVE";
 }
 
 export const config = {
@@ -46,5 +46,3 @@ export const isProduction = config.environment === "LIVE";
 /** Check if running in paper trading mode */
 export const isPaper = config.environment === "PAPER";
 
-/** Check if running in backtest mode */
-export const isBacktest = config.environment === "BACKTEST";

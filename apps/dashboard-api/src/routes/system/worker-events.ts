@@ -102,7 +102,7 @@ const CycleProgressEventSchema = z.object({
 	timestamp: z.string(),
 });
 
-const EnvironmentSchema = z.enum(["BACKTEST", "PAPER", "LIVE"]);
+const EnvironmentSchema = z.enum(["PAPER", "LIVE"]);
 
 const CycleResultEventSchema = z.object({
 	type: z.literal("cycle-result"),

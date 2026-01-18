@@ -66,4 +66,4 @@ export interface TwoFactorVerifyResponse {
 	success: boolean;
 }
 
-export type Environment = "BACKTEST" | "PAPER" | "LIVE";
+export type Environment = "PAPER" | "LIVE";

@@ -10,7 +10,7 @@ import type { SystemState as DbSystemState, SystemStatus } from "@cream/storage"
 import { getSystemStateRepo } from "../../db.js";
 import type { RunningCycleState, SystemState } from "./types.js";
 
-type Environment = "BACKTEST" | "PAPER" | "LIVE";
+type Environment = "PAPER" | "LIVE";
 
 /**
  * In-memory cache for volatile state (running cycles, trigger times).

@@ -9,6 +9,7 @@ import type { CyclePhase, CycleProgressData, CycleResultData } from "@cream/doma
 import { reconstructStreamingState } from "@cream/storage";
 import { createRoute, OpenAPIHono, z } from "@hono/zod-openapi";
 import { getCyclesRepo, getDecisionsRepo, getRuntimeConfigService } from "../../db.js";
+import log from "../../logger.js";
 import {
 	flushSync,
 	queueAgentComplete,
@@ -157,9 +158,7 @@ app.openapi(triggerCycleRoute, async (c) => {
 			: await configService.getActiveConfig(environment);
 		configVersion = config.trading.id;
 	} catch {
-		if (environment !== "BACKTEST") {
-			return c.json({ error: "No configuration found for environment. Run db:seed first." }, 400);
-		}
+		return c.json({ error: "No configuration found for environment. Run db:seed first." }, 400);
 	}
 
 	// Create cycle in database first - DB generates UUID via uuidv7()
@@ -568,20 +567,36 @@ app.openapi(triggerCycleRoute, async (c) => {
 
 			// Persist decisions from workflow result to database
 			if (workflowResult.decisionPlan?.decisions?.length) {
-				try {
-					const decisionsRepo = await getDecisionsRepo();
-					const status = workflowResult.approved ? "approved" : "rejected";
+				log.info(
+					{
+						cycleId,
+						decisionCount: workflowResult.decisionPlan.decisions.length,
+						decisions: workflowResult.decisionPlan.decisions.map((d) => ({
+							id: d.decisionId,
+							symbol: d.instrumentId,
+							action: d.action,
+							size: d.size,
+						})),
+					},
+					"Persisting decisions from workflow"
+				);
 
-					const validSizeUnits = ["SHARES", "CONTRACTS", "DOLLARS", "PCT_EQUITY"] as const;
-					type SizeUnit = (typeof validSizeUnits)[number];
+				const decisionsRepo = await getDecisionsRepo();
+				const status = workflowResult.approved ? "approved" : "rejected";
 
-					for (const decision of workflowResult.decisionPlan.decisions) {
-						const sizeUnit: SizeUnit | undefined = validSizeUnits.includes(
-							decision.size.unit as SizeUnit
-						)
-							? (decision.size.unit as SizeUnit)
-							: undefined;
+				const validSizeUnits = ["SHARES", "CONTRACTS", "DOLLARS", "PCT_EQUITY"] as const;
+				type SizeUnit = (typeof validSizeUnits)[number];
 
+				let persistedCount = 0;
+
+				for (const decision of workflowResult.decisionPlan.decisions) {
+					const sizeUnit: SizeUnit | undefined = validSizeUnits.includes(
+						decision.size.unit as SizeUnit
+					)
+						? (decision.size.unit as SizeUnit)
+						: undefined;
+
+					try {
 						await decisionsRepo.create({
 							id: decision.decisionId,
 							cycleId,
@@ -598,10 +613,26 @@ app.openapi(triggerCycleRoute, async (c) => {
 							bearishFactors: decision.rationale?.bearishFactors ?? [],
 							environment,
 						});
+						persistedCount++;
+					} catch (err) {
+						log.error(
+							{
+								decisionId: decision.decisionId,
+								symbol: decision.instrumentId,
+								size: decision.size,
+								error: err instanceof Error ? err.message : String(err),
+							},
+							"Failed to persist decision"
+						);
 					}
-				} catch {
-					// Non-critical - log but don't fail the cycle
 				}
+
+				log.info(
+					{ cycleId, persistedCount, total: workflowResult.decisionPlan.decisions.length },
+					"Decision persistence complete"
+				);
+			} else {
+				log.info({ cycleId }, "No decisions in workflow result to persist");
 			}
 
 			const durationMs = Date.now() - startTime;

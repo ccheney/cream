@@ -21,6 +21,7 @@ import {
 	getFilingsRepo,
 	getIndicatorSyncRunsRepo,
 	getMacroWatchRepo,
+	getPredictionMarketsRepo,
 	getSentimentRepo,
 	getShortInterestRepo,
 } from "../db.js";
@@ -46,6 +47,8 @@ const WorkerServiceSchema = z.enum([
 	"short_interest",
 	"sentiment",
 	"corporate_actions",
+	"prediction_markets",
+	"indicator_synthesis",
 ]);
 
 const RunStatusSchema = z.enum(["running", "completed", "failed"]);
@@ -57,6 +60,8 @@ const ServiceDisplayNames: Record<z.infer<typeof WorkerServiceSchema>, string> =
 	short_interest: "Short Interest",
 	sentiment: "Sentiment",
 	corporate_actions: "Corporate Actions",
+	prediction_markets: "Prediction Markets",
+	indicator_synthesis: "Indicator Synthesis",
 };
 
 const LastRunSchema = z.object({
@@ -124,6 +129,8 @@ function mapRunTypeToService(runType: string): WorkerService | null {
 		macro_watch: "macro_watch",
 		newspaper: "newspaper",
 		filings_sync: "filings_sync",
+		prediction_markets: "prediction_markets",
+		indicator_synthesis: "indicator_synthesis",
 	};
 	return mapping[runType] ?? null;
 }
@@ -199,6 +206,8 @@ app.openapi(getWorkerStatusRoute, async (c) => {
 			"short_interest",
 			"sentiment",
 			"corporate_actions",
+			"prediction_markets",
+			"indicator_synthesis",
 		];
 
 		// Get running services
@@ -250,6 +259,9 @@ app.openapi(getWorkerStatusRoute, async (c) => {
 							next_run: string | null;
 						}
 					>;
+					synthesis_scheduler?: {
+						next_run: string | null;
+					};
 				};
 
 				if (health.next_run) {
@@ -257,6 +269,7 @@ app.openapi(getWorkerStatusRoute, async (c) => {
 					nextRunByService.set("macro_watch", health.next_run.trading_cycle);
 					nextRunByService.set("newspaper", health.next_run.trading_cycle);
 					nextRunByService.set("filings_sync", health.next_run.filings_sync);
+					nextRunByService.set("prediction_markets", health.next_run.prediction_markets);
 				}
 
 				if (health.indicator_batch_jobs) {
@@ -270,6 +283,10 @@ app.openapi(getWorkerStatusRoute, async (c) => {
 					if (jobs.corporateActions?.next_run) {
 						nextRunByService.set("corporate_actions", jobs.corporateActions.next_run);
 					}
+				}
+
+				if (health.synthesis_scheduler?.next_run) {
+					nextRunByService.set("indicator_synthesis", health.synthesis_scheduler.next_run);
 				}
 			}
 		} catch {
@@ -614,12 +631,25 @@ const IndicatorEntrySchema = z.object({
 	values: z.record(z.string(), z.union([z.string(), z.number(), z.null()])),
 });
 
+const PredictionMarketSignalSchema = z.object({
+	signalType: z.string(),
+	signalValue: z.number(),
+	confidence: z.number().nullable(),
+	computedAt: z.string(),
+});
+
 const RunDetailsResponseSchema = z.object({
 	run: WorkerRunSchema,
 	data: z.union([
 		z.object({ type: z.literal("macro_watch"), entries: z.array(MacroWatchEntrySchema) }),
 		z.object({ type: z.literal("newspaper"), newspaper: NewspaperSchema.nullable() }),
 		z.object({ type: z.literal("indicators"), entries: z.array(IndicatorEntrySchema) }),
+		z.object({
+			type: z.literal("prediction_markets"),
+			signals: z.array(PredictionMarketSignalSchema),
+			snapshotCount: z.number(),
+			platforms: z.array(z.string()),
+		}),
 		z.object({ type: z.literal("empty"), message: z.string() }),
 	]),
 });
@@ -673,13 +703,8 @@ app.openapi(getRunDetailsRoute, async (c) => {
 		switch (run.service) {
 			case "macro_watch": {
 				const macroWatchRepo = getMacroWatchRepo();
-				// Macro watch entries are collected over time before the run.
-				// Query by timestamp within the last 24 hours to match what the job processed.
-				const twentyFourHoursAgo = new Date(new Date(startedAt).getTime() - 24 * 60 * 60 * 1000);
-				const entries = await macroWatchRepo.findEntries(
-					{ fromTime: twentyFourHoursAgo.toISOString() },
-					100
-				);
+				// Query entries created during this specific run's time window
+				const entries = await macroWatchRepo.findByCreatedAtRange(startedAt, completedAt, 100);
 
 				return c.json(
 					{
@@ -837,6 +862,65 @@ app.openapi(getRunDetailsRoute, async (c) => {
 					200
 				);
 			}
+
+			case "prediction_markets": {
+				const predictionMarketsRepo = getPredictionMarketsRepo();
+				const signals = await predictionMarketsRepo.findSignals(
+					{ fromTime: startedAt, toTime: completedAt },
+					50
+				);
+				const snapshots = await predictionMarketsRepo.findSnapshots(
+					{ fromTime: startedAt, toTime: completedAt },
+					100
+				);
+
+				// Get unique platforms from snapshots
+				const platforms = [...new Set(snapshots.map((s) => s.platform))];
+
+				// Format signal types for display
+				const signalTypeLabels: Record<string, string> = {
+					fed_cut_probability: "Fed Cut Probability",
+					fed_hike_probability: "Fed Hike Probability",
+					recession_12m: "Recession (12m)",
+					macro_uncertainty: "Macro Uncertainty",
+					policy_event_risk: "Policy Event Risk",
+					cpi_surprise: "CPI Surprise",
+					gdp_surprise: "GDP Surprise",
+					shutdown_probability: "Shutdown Probability",
+					tariff_escalation: "Tariff Escalation",
+				};
+
+				return c.json(
+					{
+						run,
+						data: {
+							type: "prediction_markets" as const,
+							signals: signals.map((s) => ({
+								signalType: signalTypeLabels[s.signalType] ?? s.signalType,
+								signalValue: s.signalValue,
+								confidence: s.confidence,
+								computedAt: s.computedAt,
+							})),
+							snapshotCount: snapshots.length,
+							platforms,
+						},
+					},
+					200
+				);
+			}
+
+			case "indicator_synthesis":
+				return c.json(
+					{
+						run,
+						data: {
+							type: "empty" as const,
+							message:
+								"Synthesis workflow generates new indicators — check Indicator Lab for results",
+						},
+					},
+					200
+				);
 
 			default:
 				return c.json(

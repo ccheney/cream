@@ -20,7 +20,9 @@ export type WorkerService =
 	| "filings_sync"
 	| "short_interest"
 	| "sentiment"
-	| "corporate_actions";
+	| "corporate_actions"
+	| "prediction_markets"
+	| "indicator_synthesis";
 
 export type RunStatus = "pending" | "running" | "completed" | "failed";
 
@@ -101,10 +103,23 @@ export interface IndicatorEntry {
 	values: Record<string, string | number | null>;
 }
 
+export interface PredictionMarketSignal {
+	signalType: string;
+	signalValue: number;
+	confidence: number | null;
+	computedAt: string;
+}
+
 export type RunDetailsData =
 	| { type: "macro_watch"; entries: MacroWatchEntry[] }
 	| { type: "newspaper"; newspaper: NewspaperData | null }
 	| { type: "indicators"; entries: IndicatorEntry[] }
+	| {
+			type: "prediction_markets";
+			signals: PredictionMarketSignal[];
+			snapshotCount: number;
+			platforms: string[];
+	  }
 	| { type: "empty"; message: string };
 
 export interface RunDetailsResponse {

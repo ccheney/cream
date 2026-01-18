@@ -11,7 +11,7 @@ import { z } from "@hono/zod-openapi";
 // Base Schemas
 // ============================================
 
-export const EnvironmentSchema = z.enum(["BACKTEST", "PAPER", "LIVE"]);
+export const EnvironmentSchema = z.enum(["PAPER", "LIVE"]);
 
 export const GlobalModelSchema = z.string();
 
@@ -230,7 +230,7 @@ export function getEnvironment(c: {
 	req: { query: (key: string) => string | undefined };
 }): TradingEnvironment {
 	const env = c.req.query("env") ?? "PAPER";
-	if (env !== "BACKTEST" && env !== "PAPER" && env !== "LIVE") {
+	if (env !== "PAPER" && env !== "LIVE") {
 		return "PAPER";
 	}
 	return env;

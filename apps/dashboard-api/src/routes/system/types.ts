@@ -11,7 +11,7 @@ import { z } from "@hono/zod-openapi";
 // Zod Schemas
 // ============================================
 
-export const EnvironmentSchema = z.enum(["BACKTEST", "PAPER", "LIVE"]);
+export const EnvironmentSchema = z.enum(["PAPER", "LIVE"]);
 
 export const SystemStatusValue = z.enum(["running", "paused", "stopped"]);
 
@@ -179,7 +179,7 @@ export const FullCycleResponseSchema = z.object({
 export interface CycleState {
 	cycleId: string;
 	status: "queued" | "running" | "completed" | "failed";
-	environment: "BACKTEST" | "PAPER" | "LIVE";
+	environment: "PAPER" | "LIVE";
 	startedAt: string;
 	completedAt: string | null;
 	error: string | null;
@@ -192,7 +192,7 @@ export type RunningCycleState = CycleState;
 
 export interface SystemState {
 	status: "running" | "paused" | "stopped";
-	environment: "BACKTEST" | "PAPER" | "LIVE";
+	environment: "PAPER" | "LIVE";
 	lastCycleId: string | null;
 	lastCycleTime: string | null;
 	startedAt: Date | null;

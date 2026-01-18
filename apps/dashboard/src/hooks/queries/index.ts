@@ -38,15 +38,6 @@ export {
 	useUnacknowledgedAlertCount,
 	useUpdateAlertSettings,
 } from "./useAlerts";
-// Backtest
-export {
-	useBacktest,
-	useBacktestEquity,
-	useBacktests,
-	useBacktestTrades,
-	useCreateBacktest,
-	useDeleteBacktest,
-} from "./useBacktest";
 // Batch Status
 export {
 	type BatchStatusFilters,
@@ -74,6 +65,14 @@ export {
 	useUpdateUniverseConfig,
 	useValidateDraft,
 } from "./useConfig";
+// Cycle Analytics
+export {
+	type CycleAnalyticsFilters,
+	useConfidenceCalibration,
+	useCycleAnalyticsSummary,
+	useDecisionAnalytics,
+	useStrategyBreakdown,
+} from "./useCycleAnalytics";
 // Cycle History
 export {
 	type CycleListFilters,
@@ -170,15 +169,6 @@ export {
 	searchKeys,
 	useGlobalSearch,
 } from "./useSearch";
-// Synthesis
-export {
-	synthesisKeys,
-	type TriggerSynthesisInput,
-	type TriggerSynthesisResult,
-	useSynthesisHistory,
-	useSynthesisStatus,
-	useTriggerSynthesis,
-} from "./useSynthesis";
 // System
 export {
 	useChangeEnvironment,
@@ -207,6 +197,7 @@ export {
 	type LastRun,
 	type MacroWatchEntry,
 	type NewspaperData,
+	type PredictionMarketSignal,
 	type RunDetailsData,
 	type RunDetailsResponse,
 	type RunStatus,

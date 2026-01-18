@@ -19,7 +19,7 @@ interface MockRun {
 let mockSyncRuns: MockRun[] = [];
 
 beforeAll(() => {
-	Bun.env.CREAM_ENV = "BACKTEST";
+	Bun.env.CREAM_ENV = "PAPER";
 });
 
 beforeEach(() => {
@@ -192,7 +192,7 @@ describe("Batch Trigger Routes", () => {
 				status: "running",
 				symbolsProcessed: 50,
 				symbolsFailed: 0,
-				environment: "BACKTEST",
+				environment: "PAPER",
 				errorMessage: null,
 			});
 
@@ -219,7 +219,7 @@ describe("Batch Trigger Routes", () => {
 				status: "pending",
 				symbolsProcessed: 0,
 				symbolsFailed: 0,
-				environment: "BACKTEST",
+				environment: "PAPER",
 				errorMessage: null,
 			});
 
@@ -242,7 +242,7 @@ describe("Batch Trigger Routes", () => {
 				status: "running",
 				symbolsProcessed: 25,
 				symbolsFailed: 0,
-				environment: "BACKTEST",
+				environment: "PAPER",
 				errorMessage: null,
 			});
 
@@ -272,7 +272,7 @@ describe("Batch Trigger Routes", () => {
 				status: "completed",
 				symbolsProcessed: 100,
 				symbolsFailed: 0,
-				environment: "BACKTEST",
+				environment: "PAPER",
 				errorMessage: null,
 			});
 
@@ -292,7 +292,7 @@ describe("Batch Trigger Routes", () => {
 				status: "failed",
 				symbolsProcessed: 0,
 				symbolsFailed: 100,
-				environment: "BACKTEST",
+				environment: "PAPER",
 				errorMessage: "API error",
 			});
 
