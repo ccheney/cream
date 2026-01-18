@@ -57,6 +57,7 @@ const DEFAULT_AGENT_CONFIGS: Record<
 		enabled: boolean;
 	}
 > = {
+	grounding_agent: { enabled: true },
 	news_analyst: { enabled: true },
 	fundamentals_analyst: { enabled: true },
 	bullish_researcher: { enabled: true },

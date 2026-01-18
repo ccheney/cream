@@ -35,7 +35,7 @@ export const sizeUnitEnum = pgEnum("size_unit", ["SHARES", "CONTRACTS", "DOLLARS
 
 // Agent-related enums
 export const agentTypeEnum = pgEnum("agent_type", [
-	"technical",
+	"grounding_agent",
 	"news_analyst",
 	"fundamentals_analyst",
 	"bullish_researcher",

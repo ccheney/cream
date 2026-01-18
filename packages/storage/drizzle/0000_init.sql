@@ -1,7 +1,6 @@
-CREATE TYPE "public"."agent_type" AS ENUM('technical', 'news_analyst', 'fundamentals_analyst', 'bullish_researcher', 'bearish_researcher', 'trader', 'risk_manager', 'critic');--> statement-breakpoint
+CREATE TYPE "public"."agent_type" AS ENUM('grounding_agent', 'news_analyst', 'fundamentals_analyst', 'bullish_researcher', 'bearish_researcher', 'trader', 'risk_manager', 'critic');--> statement-breakpoint
 CREATE TYPE "public"."agent_vote" AS ENUM('APPROVE', 'REJECT', 'ABSTAIN');--> statement-breakpoint
 CREATE TYPE "public"."alert_severity" AS ENUM('info', 'warning', 'error', 'critical');--> statement-breakpoint
-CREATE TYPE "public"."backtest_status" AS ENUM('pending', 'running', 'completed', 'failed');--> statement-breakpoint
 CREATE TYPE "public"."chart_timeframe" AS ENUM('1D', '1W', '1M', '3M', '6M', '1Y', 'ALL');--> statement-breakpoint
 CREATE TYPE "public"."config_status" AS ENUM('draft', 'testing', 'active', 'archived');--> statement-breakpoint
 CREATE TYPE "public"."corporate_action_type" AS ENUM('split', 'dividend', 'merger', 'spinoff');--> statement-breakpoint
@@ -128,75 +127,6 @@ CREATE TABLE "audit_log" (
 	"user_agent" text,
 	"environment" "environment" DEFAULT 'LIVE' NOT NULL,
 	"created_at" timestamp with time zone DEFAULT now() NOT NULL
-);
---> statement-breakpoint
-CREATE TABLE "backtest_equity" (
-	"id" serial PRIMARY KEY NOT NULL,
-	"backtest_id" uuid NOT NULL,
-	"timestamp" timestamp with time zone NOT NULL,
-	"nav" numeric(16, 2) NOT NULL,
-	"cash" numeric(16, 2) NOT NULL,
-	"equity" numeric(16, 2) NOT NULL,
-	"drawdown" numeric(14, 2),
-	"drawdown_pct" numeric(8, 4),
-	"day_return_pct" numeric(8, 4),
-	"cumulative_return_pct" numeric(8, 4),
-	CONSTRAINT "positive_nav" CHECK ("backtest_equity"."nav"::numeric > 0),
-	CONSTRAINT "non_negative_cash" CHECK ("backtest_equity"."cash"::numeric >= 0),
-	CONSTRAINT "positive_equity" CHECK ("backtest_equity"."equity"::numeric > 0),
-	CONSTRAINT "non_negative_drawdown" CHECK ("backtest_equity"."drawdown" IS NULL OR "backtest_equity"."drawdown"::numeric >= 0),
-	CONSTRAINT "valid_drawdown_pct" CHECK ("backtest_equity"."drawdown_pct" IS NULL OR ("backtest_equity"."drawdown_pct"::numeric >= 0 AND "backtest_equity"."drawdown_pct"::numeric <= 1))
-);
---> statement-breakpoint
-CREATE TABLE "backtest_trades" (
-	"id" serial PRIMARY KEY NOT NULL,
-	"backtest_id" uuid NOT NULL,
-	"timestamp" timestamp with time zone NOT NULL,
-	"symbol" text NOT NULL,
-	"action" text NOT NULL,
-	"qty" numeric(14, 4) NOT NULL,
-	"price" numeric(12, 4) NOT NULL,
-	"commission" numeric(10, 4) DEFAULT '0',
-	"pnl" numeric(14, 2),
-	"pnl_pct" numeric(8, 4),
-	"decision_rationale" text,
-	CONSTRAINT "positive_qty" CHECK ("backtest_trades"."qty"::numeric > 0),
-	CONSTRAINT "positive_price" CHECK ("backtest_trades"."price"::numeric > 0),
-	CONSTRAINT "non_negative_commission" CHECK ("backtest_trades"."commission" IS NULL OR "backtest_trades"."commission"::numeric >= 0)
-);
---> statement-breakpoint
-CREATE TABLE "backtests" (
-	"id" uuid PRIMARY KEY DEFAULT uuidv7() NOT NULL,
-	"name" text NOT NULL,
-	"description" text,
-	"start_date" timestamp with time zone NOT NULL,
-	"end_date" timestamp with time zone NOT NULL,
-	"initial_capital" numeric(16, 2) NOT NULL,
-	"universe" text,
-	"config_json" jsonb,
-	"status" "backtest_status" DEFAULT 'pending' NOT NULL,
-	"progress_pct" numeric(5, 2) DEFAULT '0',
-	"total_return" numeric(8, 4),
-	"cagr" numeric(8, 4),
-	"sharpe_ratio" numeric(8, 4),
-	"sortino_ratio" numeric(8, 4),
-	"calmar_ratio" numeric(8, 4),
-	"max_drawdown" numeric(8, 4),
-	"win_rate" numeric(5, 4),
-	"profit_factor" numeric(8, 4),
-	"total_trades" integer,
-	"avg_trade_pnl" numeric(14, 2),
-	"metrics_json" jsonb,
-	"error_message" text,
-	"created_at" timestamp with time zone DEFAULT now() NOT NULL,
-	"started_at" timestamp with time zone,
-	"completed_at" timestamp with time zone,
-	"created_by" text,
-	CONSTRAINT "positive_capital" CHECK ("backtests"."initial_capital"::numeric > 0),
-	CONSTRAINT "valid_date_range" CHECK ("backtests"."end_date" > "backtests"."start_date"),
-	CONSTRAINT "valid_win_rate" CHECK ("backtests"."win_rate" IS NULL OR ("backtests"."win_rate"::numeric >= 0 AND "backtests"."win_rate"::numeric <= 1)),
-	CONSTRAINT "valid_max_drawdown" CHECK ("backtests"."max_drawdown" IS NULL OR ("backtests"."max_drawdown"::numeric >= 0 AND "backtests"."max_drawdown"::numeric <= 1)),
-	CONSTRAINT "non_negative_trades" CHECK ("backtests"."total_trades" IS NULL OR "backtests"."total_trades" >= 0)
 );
 --> statement-breakpoint
 CREATE TABLE "candles" (
@@ -1141,8 +1071,6 @@ CREATE TABLE "verification" (
 ALTER TABLE "account" ADD CONSTRAINT "account_user_id_user_id_fk" FOREIGN KEY ("user_id") REFERENCES "public"."user"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "agent_outputs" ADD CONSTRAINT "agent_outputs_decision_id_decisions_id_fk" FOREIGN KEY ("decision_id") REFERENCES "public"."decisions"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "alert_settings" ADD CONSTRAINT "alert_settings_user_id_user_id_fk" FOREIGN KEY ("user_id") REFERENCES "public"."user"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "backtest_equity" ADD CONSTRAINT "backtest_equity_backtest_id_backtests_id_fk" FOREIGN KEY ("backtest_id") REFERENCES "public"."backtests"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "backtest_trades" ADD CONSTRAINT "backtest_trades_backtest_id_backtests_id_fk" FOREIGN KEY ("backtest_id") REFERENCES "public"."backtests"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "cycle_events" ADD CONSTRAINT "cycle_events_cycle_id_cycles_id_fk" FOREIGN KEY ("cycle_id") REFERENCES "public"."cycles"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "factor_correlations" ADD CONSTRAINT "factor_correlations_factor_id_1_factors_factor_id_fk" FOREIGN KEY ("factor_id_1") REFERENCES "public"."factors"("factor_id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "factor_correlations" ADD CONSTRAINT "factor_correlations_factor_id_2_factors_factor_id_fk" FOREIGN KEY ("factor_id_2") REFERENCES "public"."factors"("factor_id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
@@ -1182,16 +1110,6 @@ CREATE INDEX "idx_audit_log_user_id" ON "audit_log" USING btree ("user_id");--> 
 CREATE INDEX "idx_audit_log_timestamp" ON "audit_log" USING btree ("timestamp");--> statement-breakpoint
 CREATE INDEX "idx_audit_log_action" ON "audit_log" USING btree ("action");--> statement-breakpoint
 CREATE INDEX "idx_audit_log_environment" ON "audit_log" USING btree ("environment");--> statement-breakpoint
-CREATE INDEX "idx_backtest_equity_backtest_id" ON "backtest_equity" USING btree ("backtest_id");--> statement-breakpoint
-CREATE INDEX "idx_backtest_equity_timestamp" ON "backtest_equity" USING btree ("timestamp");--> statement-breakpoint
-CREATE INDEX "idx_backtest_equity_bt_ts" ON "backtest_equity" USING btree ("backtest_id","timestamp");--> statement-breakpoint
-CREATE INDEX "idx_backtest_trades_backtest_id" ON "backtest_trades" USING btree ("backtest_id");--> statement-breakpoint
-CREATE INDEX "idx_backtest_trades_timestamp" ON "backtest_trades" USING btree ("timestamp");--> statement-breakpoint
-CREATE INDEX "idx_backtest_trades_symbol" ON "backtest_trades" USING btree ("symbol");--> statement-breakpoint
-CREATE INDEX "idx_backtest_trades_bt_ts" ON "backtest_trades" USING btree ("backtest_id","timestamp");--> statement-breakpoint
-CREATE INDEX "idx_backtests_status" ON "backtests" USING btree ("status");--> statement-breakpoint
-CREATE INDEX "idx_backtests_start_date" ON "backtests" USING btree ("start_date");--> statement-breakpoint
-CREATE INDEX "idx_backtests_created_at" ON "backtests" USING btree ("created_at");--> statement-breakpoint
 CREATE UNIQUE INDEX "idx_candles_symbol_timeframe_ts" ON "candles" USING btree ("symbol","timeframe","timestamp");--> statement-breakpoint
 CREATE INDEX "idx_candles_timestamp" ON "candles" USING btree ("timestamp");--> statement-breakpoint
 CREATE INDEX "idx_candles_symbol" ON "candles" USING btree ("symbol");--> statement-breakpoint

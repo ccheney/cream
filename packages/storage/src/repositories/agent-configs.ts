@@ -16,6 +16,7 @@ import { RepositoryError } from "./base";
 // ============================================
 
 export type AgentType =
+	| "grounding_agent"
 	| "news_analyst"
 	| "fundamentals_analyst"
 	| "bullish_researcher"
@@ -25,6 +26,7 @@ export type AgentType =
 	| "critic";
 
 export const AGENT_TYPES: AgentType[] = [
+	"grounding_agent",
 	"news_analyst",
 	"fundamentals_analyst",
 	"bullish_researcher",
