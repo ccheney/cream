@@ -122,17 +122,3 @@ export function getCurrentEnvironment(): Environment {
 	return requireEnv() as Environment;
 }
 
-// Legacy export for backwards compatibility during migration
-// TODO: Remove once all routes are updated to use the new functions
-export const systemState: SystemState = {
-	get status() {
-		// This is a sync getter but we need async - callers should use getSystemState()
-		return "stopped" as SystemStatus;
-	},
-	environment: requireEnv() as Environment,
-	lastCycleId: null,
-	lastCycleTime: null,
-	startedAt: null,
-	runningCycles: volatileState.runningCycles,
-	lastTriggerTime: volatileState.lastTriggerTime,
-};

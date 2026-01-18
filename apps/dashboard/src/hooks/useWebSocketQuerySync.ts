@@ -141,12 +141,6 @@ export interface UseWebSocketQuerySyncOptions {
 	/** Debounce invalidations in ms (default: 100) */
 	debounceMs?: number;
 
-	/** Enable debug logging */
-	debug?: boolean;
-
-	/** Custom query key prefix */
-	queryKeyPrefix?: string;
-
 	/** Callback for cycle progress updates (for Zustand store) */
 	onCycleProgress?: (payload: CycleProgressPayload) => void;
 
@@ -346,7 +340,7 @@ function createInvalidationBatcher(queryClient: QueryClient, debounceMs: number)
 export function useWebSocketQuerySync(
 	options: UseWebSocketQuerySyncOptions = {}
 ): UseWebSocketQuerySyncReturn {
-	const { debounceMs = 100, debug = false, onCycleProgress, onError } = options;
+	const { debounceMs = 100, onCycleProgress, onError } = options;
 
 	const queryClient = useQueryClient();
 
@@ -380,12 +374,7 @@ export function useWebSocketQuerySync(
 				const message = parseServerMessage(raw);
 
 				if (!message) {
-					if (debug) {
-					}
 					return;
-				}
-
-				if (debug) {
 				}
 
 				// Skip heartbeat
@@ -467,17 +456,14 @@ export function useWebSocketQuerySync(
 					}
 
 					default:
-						if (debug) {
-						}
+						break;
 				}
 			} catch (err) {
 				const error = err instanceof Error ? err : new Error(String(err));
-				if (debug) {
-				}
 				onErrorRef.current?.(error);
 			}
 		},
-		[queryClient, debug]
+		[queryClient]
 	);
 
 	// Manual invalidation by type

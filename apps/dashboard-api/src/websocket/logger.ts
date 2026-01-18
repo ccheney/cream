@@ -7,6 +7,8 @@
  * @see docs/plans/ui/08-realtime.md lines 130-139
  */
 
+import logger from "../logger.js";
+
 export type LogLevel = "debug" | "info" | "warn" | "error";
 
 export type WebSocketEventType =
@@ -165,12 +167,16 @@ export function createWebSocketLogger(config: Partial<LoggerConfig> = {}): WebSo
 
 		switch (entry.level) {
 			case "error":
+				logger.error(entry, entry.message);
 				break;
 			case "warn":
+				logger.warn(entry, entry.message);
 				break;
 			case "debug":
+				logger.debug(entry, entry.message);
 				break;
 			default:
+				logger.info(entry, entry.message);
 		}
 	};
 

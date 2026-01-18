@@ -85,9 +85,6 @@ export function WebSocketProvider({ children }: WebSocketProviderProps) {
 	// Handle incoming WebSocket messages
 	const handleMessage = useCallback((data: unknown) => {
 		const message = data as WSMessage;
-		// Debug: Log options-related messages
-		if (message.type?.startsWith("options")) {
-		}
 		// Track last message for consumers
 		setLastMessage(message);
 		// Route to TanStack Query invalidation handler
