@@ -68,7 +68,6 @@ export function extractFeatures(
 	}
 
 	for (let i = config.volatilityPeriod; i < candles.length; i++) {
-		// Returns array is offset by 1 from candles array due to diff calculation
 		const returnIdx = i - 1;
 		const candle = candles[i];
 		if (!candle) {
@@ -81,7 +80,9 @@ export function extractFeatures(
 		const volatility = calculateStd(recentReturns);
 
 		const recentVolumes = candles.slice(i - config.volumePeriod + 1, i + 1).map((c) => c.volume);
-		const volumeZScore = calculateZScore(candle.volume, recentVolumes);
+		const volumeMean = calculateMean(recentVolumes);
+		const volumeStd = calculateStd(recentVolumes);
+		const volumeZScore = volumeStd > 0.0001 ? (candle.volume - volumeMean) / volumeStd : 0;
 
 		const trendStrength = volatility > 0.0001 ? returns / volatility : 0;
 
@@ -113,10 +114,10 @@ export function getMinimumCandleCount(
 
 export function calculateStd(values: number[]): number {
 	if (values.length === 0) {
-		return 0;
+		throw new Error("Cannot calculate standard deviation of empty array");
 	}
 	if (values.length === 1) {
-		return 0;
+		throw new Error("Cannot calculate standard deviation with single value");
 	}
 
 	const mean = values.reduce((a, b) => a + b, 0) / values.length;
@@ -127,7 +128,7 @@ export function calculateStd(values: number[]): number {
 
 export function calculateMean(values: number[]): number {
 	if (values.length === 0) {
-		return 0;
+		throw new Error("Cannot calculate mean of empty array");
 	}
 	return values.reduce((a, b) => a + b, 0) / values.length;
 }
@@ -136,7 +137,7 @@ export function calculateZScore(value: number, sample: number[]): number {
 	const mean = calculateMean(sample);
 	const std = calculateStd(sample);
 	if (std < 0.0001) {
-		return 0; // Avoid division by near-zero
+		throw new Error("Cannot calculate z-score: standard deviation is near zero");
 	}
 	return (value - mean) / std;
 }
@@ -147,7 +148,10 @@ export function normalizeFeatures(features: RegimeFeatures[]): {
 	stds: number[];
 } {
 	if (features.length === 0) {
-		return { normalized: [], means: [0, 0, 0, 0], stds: [1, 1, 1, 1] };
+		throw new Error("Cannot normalize empty feature array");
+	}
+	if (features.length < 2) {
+		throw new Error("Cannot normalize features: need at least 2 samples for standard deviation");
 	}
 
 	const returns = features.map((f) => f.returns);

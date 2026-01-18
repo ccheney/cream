@@ -23,8 +23,6 @@ export const AGENT_TYPES = [
 	"trader",
 	"risk_manager",
 	"critic",
-	"idea_agent",
-	"indicator_researcher",
 ] as const;
 
 export type AgentType = (typeof AGENT_TYPES)[number];

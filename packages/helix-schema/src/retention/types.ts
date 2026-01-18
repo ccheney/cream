@@ -14,7 +14,7 @@ import { z } from "zod/v4";
 /**
  * Environment for retention decisions
  */
-export const ForgettingEnvironment = z.enum(["LIVE", "PAPER", "BACKTEST"]);
+export const ForgettingEnvironment = z.enum(["LIVE", "PAPER"]);
 export type ForgettingEnvironment = z.infer<typeof ForgettingEnvironment>;
 
 /**

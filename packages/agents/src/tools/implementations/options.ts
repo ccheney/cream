@@ -4,7 +4,7 @@
  * Get option chain and Greeks using gRPC MarketDataService.
  */
 
-import { type ExecutionContext, isBacktest } from "@cream/domain";
+import { type ExecutionContext, isTest } from "@cream/domain";
 import { getMarketDataClient } from "../clients.js";
 import type { Greeks, OptionChainResponse, OptionContract, OptionExpiration } from "../types.js";
 
@@ -60,14 +60,14 @@ export function parseOSISymbol(
  * @param ctx - ExecutionContext
  * @param underlying - Underlying symbol
  * @returns Option chain with expirations and strikes
- * @throws Error if gRPC call fails or backtest mode is used
+ * @throws Error if gRPC call fails or test mode is used
  */
 export async function getOptionChain(
 	ctx: ExecutionContext,
 	underlying: string
 ): Promise<OptionChainResponse> {
-	if (isBacktest(ctx)) {
-		throw new Error("getOptionChain is not available in BACKTEST mode");
+	if (isTest(ctx)) {
+		throw new Error("getOptionChain is not available in test mode");
 	}
 
 	const client = getMarketDataClient();
@@ -158,8 +158,8 @@ export async function getOptionChain(
  * @throws Error if contract not found, invalid symbol, or gRPC fails
  */
 export async function getGreeks(ctx: ExecutionContext, contractSymbol: string): Promise<Greeks> {
-	if (isBacktest(ctx)) {
-		throw new Error("getGreeks is not available in BACKTEST mode");
+	if (isTest(ctx)) {
+		throw new Error("getGreeks is not available in test mode");
 	}
 
 	// Parse the OSI symbol to extract components

@@ -251,13 +251,13 @@ describe("Indicator type", () => {
 			embedding_text:
 				"Adaptive RSI performs better in trending markets. Mean reversion is stronger in low volatility regimes, adaptation improves signal quality",
 			generated_at: "2026-01-06T12:00:00Z",
-			environment: "BACKTEST",
+			environment: "PAPER",
 		};
 
 		expect(indicator.indicator_id).toBe("ind-001");
 		expect(indicator.category).toBe("momentum");
 		expect(indicator.status).toBe("staging");
-		expect(indicator.environment).toBe("BACKTEST");
+		expect(indicator.environment).toBe("PAPER");
 	});
 
 	it("accepts Indicator with optional fields", () => {

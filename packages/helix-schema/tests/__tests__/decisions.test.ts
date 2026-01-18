@@ -36,9 +36,9 @@ describe("shouldSummarize", () => {
 });
 
 describe("shouldDelete", () => {
-	it("returns true for low scores in PAPER/BACKTEST", () => {
+	it("returns true for low scores in PAPER", () => {
 		expect(shouldDelete(0.01, "PAPER")).toBe(true);
-		expect(shouldDelete(0.04, "BACKTEST")).toBe(true);
+		expect(shouldDelete(0.04, "PAPER")).toBe(true);
 	});
 
 	it("returns false for LIVE environment", () => {
@@ -47,7 +47,7 @@ describe("shouldDelete", () => {
 
 	it("returns false for scores at or above threshold", () => {
 		expect(shouldDelete(0.05, "PAPER")).toBe(false);
-		expect(shouldDelete(0.5, "BACKTEST")).toBe(false);
+		expect(shouldDelete(0.5, "PAPER")).toBe(false);
 	});
 
 	it("returns false for infinite score", () => {
@@ -85,12 +85,12 @@ describe("getForgettingDecision", () => {
 		expect(decision.reason).toContain("summarization threshold");
 	});
 
-	it("marks very old unused BACKTEST nodes for deletion", () => {
+	it("marks very old unused PAPER nodes for deletion", () => {
 		const node = createNodeInfo({
 			createdAt: daysAgo(2000),
 			accessCount: 0,
 			edgeCount: 0,
-			environment: "BACKTEST",
+			environment: "PAPER",
 		});
 
 		const decision = getForgettingDecision(node);

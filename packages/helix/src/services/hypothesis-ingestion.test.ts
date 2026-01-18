@@ -47,7 +47,7 @@ function createMockHypothesisInput(overrides: Partial<HypothesisInput> = {}): Hy
 		implementationHints:
 			"Use rolling z-score normalization for momentum signals. Consider industry-neutral construction.",
 		author: "idea-agent",
-		environment: "BACKTEST",
+		environment: "PAPER",
 		...overrides,
 	};
 }
@@ -373,12 +373,6 @@ describe("hypothesis status lifecycle", () => {
 // ============================================
 
 describe("environment handling", () => {
-	test("handles BACKTEST environment", () => {
-		const input = createMockHypothesisInput({ environment: "BACKTEST" });
-		const node = toHypothesisNode(input);
-		expect(node.environment).toBe("BACKTEST");
-	});
-
 	test("handles PAPER environment", () => {
 		const input = createMockHypothesisInput({ environment: "PAPER" });
 		const node = toHypothesisNode(input);

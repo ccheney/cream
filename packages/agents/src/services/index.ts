@@ -32,17 +32,3 @@ export {
 	type QualifyingFactor,
 	type WeightUpdateResult,
 } from "./factor-zoo";
-export {
-	createIdeaAgent,
-	type HelixClient,
-	IdeaAgent,
-	type IdeaAgentDependencies,
-	type IdeaGenerationResult,
-	type LLMProvider,
-} from "./idea-agent";
-export {
-	createResearchTriggerService,
-	type MarketBetaProvider,
-	type ResearchTriggerDependencies,
-	ResearchTriggerService,
-} from "./research-trigger";

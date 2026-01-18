@@ -39,7 +39,7 @@ function createMockIndicatorInput(overrides: Partial<IndicatorInput> = {}): Indi
 		deflatedSharpe: 1.2,
 		probabilityOfOverfit: 0.15,
 		informationCoefficient: 0.05,
-		environment: "BACKTEST",
+		environment: "PAPER",
 		...overrides,
 	};
 }
@@ -471,12 +471,6 @@ describe("indicator status lifecycle", () => {
 // ============================================
 
 describe("environment handling", () => {
-	test("handles BACKTEST environment", () => {
-		const input = createMockIndicatorInput({ environment: "BACKTEST" });
-		const node = toIndicatorNode(input);
-		expect(node.environment).toBe("BACKTEST");
-	});
-
 	test("handles PAPER environment", () => {
 		const input = createMockIndicatorInput({ environment: "PAPER" });
 		const node = toIndicatorNode(input);

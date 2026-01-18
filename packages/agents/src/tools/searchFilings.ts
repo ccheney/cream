@@ -5,7 +5,7 @@
  * Supports filtering by symbol and filing type.
  */
 
-import { type ExecutionContext, isBacktest } from "@cream/domain";
+import { type ExecutionContext, isTest } from "@cream/domain";
 import { createHelixClientFromEnv, type HelixClient } from "@cream/helix";
 import type { FilingChunk } from "@cream/helix-schema";
 
@@ -84,7 +84,7 @@ export async function searchFilings(
 	params: SearchFilingsParams
 ): Promise<SearchFilingsResult> {
 	// In backtest mode, return empty results for consistent/fast execution
-	if (isBacktest(ctx)) {
+	if (isTest(ctx)) {
 		return {
 			chunks: [],
 			totalFound: 0,

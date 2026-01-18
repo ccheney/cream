@@ -5,7 +5,7 @@
  */
 
 import type { Position as BrokerPosition } from "@cream/broker";
-import { type ExecutionContext, isBacktest } from "@cream/domain";
+import { type ExecutionContext, isTest } from "@cream/domain";
 import { GrpcError } from "@cream/domain/grpc";
 import { getBrokerClient, getExecutionClient } from "../clients.js";
 import type { PortfolioPosition, PortfolioStateResponse } from "../types.js";
@@ -19,11 +19,11 @@ import type { PortfolioPosition, PortfolioStateResponse } from "../types.js";
  *
  * @param ctx - ExecutionContext
  * @returns Portfolio state including positions and buying power
- * @throws Error if gRPC call fails and broker is unavailable, or in backtest mode
+ * @throws Error if gRPC call fails and broker is unavailable, or in test mode
  */
 export async function getPortfolioState(ctx: ExecutionContext): Promise<PortfolioStateResponse> {
-	if (isBacktest(ctx)) {
-		throw new Error("getPortfolioState is not available in BACKTEST mode");
+	if (isTest(ctx)) {
+		throw new Error("getPortfolioState is not available in test mode");
 	}
 
 	// Try gRPC first

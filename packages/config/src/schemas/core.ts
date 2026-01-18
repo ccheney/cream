@@ -16,7 +16,7 @@ import { z } from "zod";
 /**
  * Trading environment
  */
-export const CreamEnvironment = z.enum(["BACKTEST", "PAPER", "LIVE"]);
+export const CreamEnvironment = z.enum(["PAPER", "LIVE"]);
 export type CreamEnvironment = z.infer<typeof CreamEnvironment>;
 
 // ============================================
@@ -74,7 +74,6 @@ export const CoreConfigSchema = z.object({
 	/**
 	 * Trading environment
 	 *
-	 * - BACKTEST: Historical simulation
 	 * - PAPER: Live data, simulated orders
 	 * - LIVE: Real trading with real money
 	 */

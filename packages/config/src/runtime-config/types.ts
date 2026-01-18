@@ -10,9 +10,9 @@ import type { GlobalModel } from "@cream/domain";
 // Environment Types
 // ============================================
 
-export type TradingEnvironment = "BACKTEST" | "PAPER" | "LIVE";
+export type TradingEnvironment = "PAPER" | "LIVE";
 
-export type RuntimeEnvironment = "BACKTEST" | "PAPER" | "LIVE";
+export type RuntimeEnvironment = "PAPER" | "LIVE";
 
 // ============================================
 // Trading Config Types

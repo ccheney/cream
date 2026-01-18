@@ -3,7 +3,7 @@
  */
 
 // Set required environment variables before imports
-Bun.env.CREAM_ENV = "BACKTEST";
+Bun.env.CREAM_ENV = "PAPER";
 
 import { afterEach, beforeEach, describe, expect, mock, test } from "bun:test";
 import type { PredictionMarketsConfig } from "@cream/config";

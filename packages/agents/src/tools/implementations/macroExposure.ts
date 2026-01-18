@@ -6,7 +6,7 @@
  * interest rates, commodities, currencies, and economic indicators.
  */
 
-import { type ExecutionContext, isBacktest } from "@cream/domain";
+import { type ExecutionContext, isTest } from "@cream/domain";
 import {
 	createMacroGraphBuilder,
 	type MacroCategory,
@@ -132,7 +132,7 @@ export async function getCompanyMacroExposure(
 ): Promise<CompanyMacroExposureResult> {
 	const startTime = performance.now();
 
-	if (isBacktest(ctx)) {
+	if (isTest(ctx)) {
 		return {
 			symbol: symbol.toUpperCase(),
 			exposures: [],
@@ -190,7 +190,7 @@ export async function getPortfolioMacroExposure(
 ): Promise<PortfolioMacroExposureResult> {
 	const startTime = performance.now();
 
-	if (isBacktest(ctx) || symbols.length === 0) {
+	if (isTest(ctx) || symbols.length === 0) {
 		return {
 			symbols,
 			aggregatedExposures: [],
@@ -278,7 +278,7 @@ export async function getCompaniesAffectedByMacro(
 
 	const predefined = PREDEFINED_MACRO_ENTITIES.find((p) => p.entity_id === macroEntityId);
 
-	if (isBacktest(ctx)) {
+	if (isTest(ctx)) {
 		return {
 			macroEntityId,
 			name: predefined?.name ?? macroEntityId,

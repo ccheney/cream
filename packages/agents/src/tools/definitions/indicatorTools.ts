@@ -170,7 +170,7 @@ export const IngestIndicatorInputSchema = z.object({
 	deflatedSharpe: z.number().optional().describe("Deflated Sharpe from backtesting"),
 	probabilityOfOverfit: z.number().optional().describe("Probability of backtest overfitting"),
 	informationCoefficient: z.number().optional().describe("IC with forward returns"),
-	environment: z.enum(["BACKTEST", "PAPER", "LIVE"]).describe("Trading environment"),
+	environment: z.enum(["PAPER", "LIVE"]).describe("Trading environment"),
 });
 
 export const IngestIndicatorOutputSchema = z.object({

@@ -5,7 +5,7 @@
  * papers from HelixDB and external sources (Semantic Scholar).
  */
 
-import { type ExecutionContext, isBacktest } from "@cream/domain";
+import { type ExecutionContext, isTest } from "@cream/domain";
 import { createSemanticScholarClient, type SemanticScholarPaper } from "@cream/external-context";
 import { createPaperIngestionService, type PaperInput } from "@cream/helix";
 import { getHelixClient } from "../clients.js";
@@ -76,7 +76,7 @@ export async function searchAcademicPapers(
 	const startTime = performance.now();
 
 	// In backtest mode, return empty results
-	if (isBacktest(ctx)) {
+	if (isTest(ctx)) {
 		return {
 			query,
 			papers: [],
@@ -126,7 +126,7 @@ export async function getAcademicPaper(
 	const startTime = performance.now();
 
 	// In backtest mode, return not found
-	if (isBacktest(ctx)) {
+	if (isTest(ctx)) {
 		return {
 			found: false,
 			paper: null,
@@ -189,7 +189,7 @@ export async function searchExternalPapers(
 	const startTime = performance.now();
 
 	// In backtest mode, return empty results
-	if (isBacktest(ctx)) {
+	if (isTest(ctx)) {
 		return {
 			topic,
 			papers: [],
@@ -274,7 +274,7 @@ export async function ingestSemanticScholarPapers(
 	const startTime = performance.now();
 
 	// In backtest mode, skip ingestion
-	if (isBacktest(ctx)) {
+	if (isTest(ctx)) {
 		return {
 			topic,
 			papersIngested: 0,

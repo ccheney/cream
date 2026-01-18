@@ -3,7 +3,7 @@
  */
 
 // Set required environment variables before imports
-Bun.env.CREAM_ENV = "BACKTEST";
+Bun.env.CREAM_ENV = "PAPER";
 
 import { beforeEach, describe, expect, mock, test } from "bun:test";
 import {
@@ -105,8 +105,16 @@ function createAllAgentConfigs(): RuntimeAgentConfig[] {
 // Mock Repositories
 // ============================================
 
+/**
+ * Creates a partial test double for repository interfaces.
+ * These mocks implement all methods used by the service under test.
+ */
+function testDouble<T>(partial: Partial<T>): T {
+	return partial as T;
+}
+
 function createMockTradingConfigRepo(): TradingConfigRepository {
-	return {
+	return testDouble<TradingConfigRepository>({
 		getActive: mock(() => Promise.resolve(createMockTradingConfig())),
 		getDraft: mock(() => Promise.resolve(null)),
 		saveDraft: mock(() => Promise.resolve(createMockTradingConfig({ status: "draft" }))),
@@ -116,24 +124,24 @@ function createMockTradingConfigRepo(): TradingConfigRepository {
 		getNextVersion: mock(() => Promise.resolve(2)),
 		create: mock(() => Promise.resolve(createMockTradingConfig())),
 		promote: mock(() => Promise.resolve(createMockTradingConfig())),
-	} as unknown as TradingConfigRepository;
+	});
 }
 
 function createMockAgentConfigsRepo(): AgentConfigsRepository {
-	return {
+	return testDouble<AgentConfigsRepository>({
 		getAll: mock(() => Promise.resolve(createAllAgentConfigs())),
 		upsert: mock(() => Promise.resolve(createMockAgentConfig("technical_analyst"))),
 		cloneToEnvironment: mock(() => Promise.resolve()),
-	} as unknown as AgentConfigsRepository;
+	});
 }
 
 function createMockUniverseConfigsRepo(): UniverseConfigsRepository {
-	return {
+	return testDouble<UniverseConfigsRepository>({
 		getActive: mock(() => Promise.resolve(createMockUniverseConfig())),
 		getDraft: mock(() => Promise.resolve(null)),
 		saveDraft: mock(() => Promise.resolve(createMockUniverseConfig({ status: "draft" }))),
 		setStatus: mock(() => Promise.resolve(createMockUniverseConfig())),
-	} as unknown as UniverseConfigsRepository;
+	});
 }
 
 // ============================================

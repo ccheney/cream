@@ -165,15 +165,6 @@ describe("hasComplianceOverride", () => {
 		expect(hasComplianceOverride(node, 100)).toBe(false);
 	});
 
-	it("returns false for BACKTEST environment", () => {
-		const node = createNodeInfo({
-			nodeType: "TradeDecision",
-			environment: "BACKTEST",
-		});
-
-		expect(hasComplianceOverride(node, 100)).toBe(false);
-	});
-
 	it("returns false for non-trade node types in LIVE", () => {
 		const node = createNodeInfo({
 			nodeType: "NewsItem",

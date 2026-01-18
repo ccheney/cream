@@ -678,11 +678,23 @@ export const IndicatorCategory = z.enum([
 export type IndicatorCategory = z.infer<typeof IndicatorCategory>;
 
 /**
+ * IC Range schema for expected information coefficient bounds.
+ * Uses object with min/max instead of tuple for LLM structured output compatibility.
+ */
+export const ICRangeSchema = z.object({
+	/** Minimum expected IC */
+	min: z.number().min(0).max(1),
+	/** Maximum expected IC */
+	max: z.number().min(0).max(1),
+});
+export type ICRange = z.infer<typeof ICRangeSchema>;
+
+/**
  * Expected properties for an indicator hypothesis
  */
 export const ExpectedPropertiesSchema = z.object({
-	/** Expected information coefficient range [min, max] */
-	expectedICRange: z.tuple([z.number().min(0).max(1), z.number().min(0).max(1)]),
+	/** Expected information coefficient range */
+	expectedICRange: ICRangeSchema,
 	/** Maximum acceptable correlation with existing indicators */
 	maxCorrelationWithExisting: z.number().min(0).max(1),
 	/** Target timeframe for the indicator */

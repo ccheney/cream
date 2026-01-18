@@ -135,8 +135,8 @@ describe("Feature Extraction", () => {
 			expect(calculateMean([1, 2, 3, 4, 5])).toBe(3);
 		});
 
-		it("returns 0 for empty array", () => {
-			expect(calculateMean([])).toBe(0);
+		it("throws for empty array", () => {
+			expect(() => calculateMean([])).toThrow("Cannot calculate mean of empty array");
 		});
 	});
 
@@ -146,12 +146,14 @@ describe("Feature Extraction", () => {
 			expect(std).toBeCloseTo(2, 1);
 		});
 
-		it("returns 0 for single element", () => {
-			expect(calculateStd([5])).toBe(0);
+		it("throws for single element", () => {
+			expect(() => calculateStd([5])).toThrow(
+				"Cannot calculate standard deviation with single value"
+			);
 		});
 
-		it("returns 0 for empty array", () => {
-			expect(calculateStd([])).toBe(0);
+		it("throws for empty array", () => {
+			expect(() => calculateStd([])).toThrow("Cannot calculate standard deviation of empty array");
 		});
 	});
 
@@ -162,9 +164,11 @@ describe("Feature Extraction", () => {
 			expect(zScore).toBeGreaterThan(1);
 		});
 
-		it("returns 0 for zero std", () => {
+		it("throws for zero std", () => {
 			const sample = [5, 5, 5, 5, 5];
-			expect(calculateZScore(6, sample)).toBe(0);
+			expect(() => calculateZScore(6, sample)).toThrow(
+				"Cannot calculate z-score: standard deviation is near zero"
+			);
 		});
 	});
 
@@ -346,22 +350,24 @@ describe("Regime Transition Detector", () => {
 		});
 
 		// First observation
-		let transition = detector.update("AAPL", "BULL_TREND", "2024-01-01", 0.8);
-		expect(transition).toBeNull();
+		let result = detector.update("AAPL", "BULL_TREND", "2024-01-01", 0.8);
+		expect(result.kind).toBe("initialized");
 
 		// Same regime
-		transition = detector.update("AAPL", "BULL_TREND", "2024-01-02", 0.8);
-		expect(transition).toBeNull();
+		result = detector.update("AAPL", "BULL_TREND", "2024-01-02", 0.8);
+		expect(result.kind).toBe("unchanged");
 
 		// Different regime (first signal)
-		transition = detector.update("AAPL", "BEAR_TREND", "2024-01-03", 0.7);
-		expect(transition).toBeNull();
+		result = detector.update("AAPL", "BEAR_TREND", "2024-01-03", 0.7);
+		expect(result.kind).toBe("pending_confirmation");
 
 		// Different regime (confirmed)
-		transition = detector.update("AAPL", "BEAR_TREND", "2024-01-04", 0.7);
-		expect(transition).not.toBeNull();
-		expect(transition!.fromRegime).toBe("BULL_TREND");
-		expect(transition!.toRegime).toBe("BEAR_TREND");
+		result = detector.update("AAPL", "BEAR_TREND", "2024-01-04", 0.7);
+		expect(result.kind).toBe("transition");
+		if (result.kind === "transition") {
+			expect(result.transition.fromRegime).toBe("BULL_TREND");
+			expect(result.transition.toRegime).toBe("BEAR_TREND");
+		}
 	});
 
 	it("tracks current regime", () => {
@@ -399,11 +405,15 @@ describe("Regime Transition Detector", () => {
 		detector.update("AAPL", "BULL_TREND", "2024-01-01", 0.8);
 
 		// Low confidence transition should be ignored
-		let transition = detector.update("AAPL", "BEAR_TREND", "2024-01-02", 0.3);
-		expect(transition).toBeNull();
+		let result = detector.update("AAPL", "BEAR_TREND", "2024-01-02", 0.3);
+		expect(result.kind).toBe("low_confidence");
+		if (result.kind === "low_confidence") {
+			expect(result.confidence).toBe(0.3);
+			expect(result.threshold).toBe(0.5);
+		}
 
-		transition = detector.update("AAPL", "BEAR_TREND", "2024-01-03", 0.3);
-		expect(transition).toBeNull();
+		result = detector.update("AAPL", "BEAR_TREND", "2024-01-03", 0.3);
+		expect(result.kind).toBe("low_confidence");
 
 		expect(detector.getCurrentRegime("AAPL")).toBe("BULL_TREND");
 	});

@@ -8,7 +8,7 @@ const originalAlpacaSecret = Bun.env.ALPACA_SECRET;
 const originalCreamEnv = Bun.env.CREAM_ENV;
 
 // Set required environment variables before imports
-Bun.env.CREAM_ENV = "BACKTEST";
+Bun.env.CREAM_ENV = "PAPER";
 Bun.env.ALPACA_KEY = "test-api-key";
 Bun.env.ALPACA_SECRET = "test-api-secret";
 

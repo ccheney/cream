@@ -5,7 +5,7 @@
  * Uses FRED_RELEASES registry to filter to key market-moving events.
  */
 
-import { type ExecutionContext, isBacktest } from "@cream/domain";
+import { type ExecutionContext, isTest } from "@cream/domain";
 import { FRED_RELEASES, getReleaseById, type ReleaseImpact } from "@cream/universe";
 import { log } from "../../logger.js";
 import { getFREDClient } from "../clients.js";
@@ -75,7 +75,7 @@ export async function getEconomicCalendar(
 	endDate: string
 ): Promise<EconomicEvent[]> {
 	// In backtest mode, return empty array for consistent/fast execution
-	if (isBacktest(ctx)) {
+	if (isTest(ctx)) {
 		return [];
 	}
 
@@ -190,7 +190,7 @@ export async function getMacroIndicators(
 	seriesIds?: string[]
 ): Promise<Record<string, MacroIndicatorValue>> {
 	// In backtest mode, return empty object for consistent/fast execution
-	if (isBacktest(ctx)) {
+	if (isTest(ctx)) {
 		return {};
 	}
 

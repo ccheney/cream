@@ -2,8 +2,7 @@
  * Market Data Factory
  *
  * Environment-aware factory for creating market data adapters.
- * - BACKTEST: Uses mock adapters with deterministic fixture data
- * - PAPER/LIVE: Uses Alpaca for unified market data
+ * Uses Alpaca for unified market data in both PAPER and LIVE environments.
  *
  * @see docs/plans/31-alpaca-data-consolidation.md
  */
@@ -89,12 +88,12 @@ export interface MarketDataAdapter {
 }
 
 // ============================================
-// Mock Adapter (for BACKTEST)
+// Mock Adapter (for testing)
 // ============================================
 
 /**
  * Mock adapter that generates deterministic fixture data.
- * Used in BACKTEST mode for reproducible testing.
+ * Used in test mode for reproducible testing.
  */
 export class MockMarketDataAdapter implements MarketDataAdapter {
 	private readonly baseTimestamp = Date.UTC(2026, 0, 6, 14, 30, 0); // 2026-01-06 14:30 UTC
@@ -226,8 +225,7 @@ export class MarketDataConfigError extends Error {
 		public readonly missingVar: string
 	) {
 		super(
-			`Market data provider "${provider}" requires ${missingVar} environment variable. ` +
-				`Set ${missingVar} or use CREAM_ENV=BACKTEST for mock data.`
+			`Market data provider "${provider}" requires ${missingVar} environment variable.`
 		);
 		this.name = "MarketDataConfigError";
 	}
@@ -236,12 +234,11 @@ export class MarketDataConfigError extends Error {
 /**
  * Create a market data adapter based on the current environment.
  *
- * - BACKTEST: Returns MockMarketDataAdapter with deterministic fixture data
- * - PAPER/LIVE: Returns AlpacaMarketDataAdapter with real market data
+ * Both PAPER and LIVE use AlpacaMarketDataAdapter with real market data.
  *
  * @param env - Optional environment override (uses CREAM_ENV if not provided)
  * @returns Market data adapter
- * @throws MarketDataConfigError if PAPER/LIVE mode and API keys are missing
+ * @throws MarketDataConfigError if API keys are missing
  *
  * @example
  * ```ts
@@ -250,10 +247,9 @@ export class MarketDataConfigError extends Error {
  * ```
  */
 export function createMarketDataAdapter(env?: CreamEnvironment): MarketDataAdapter {
-	const environment = env ?? requireEnv();
-
-	if (environment === "BACKTEST") {
-		return new MockMarketDataAdapter();
+	// Environment validation (will use CREAM_ENV if not provided)
+	if (!env) {
+		requireEnv();
 	}
 
 	// PAPER/LIVE mode requires Alpaca API keys

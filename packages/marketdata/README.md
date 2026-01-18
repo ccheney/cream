@@ -7,7 +7,7 @@ Market data aggregation and processing for the Cream trading system.
 Central data layer providing:
 
 - **Provider Clients** - Alpaca, Alpha Vantage
-- **Environment-Aware Adapters** - Mock (BACKTEST), Real (PAPER/LIVE)
+- **Environment-Aware Adapters** - Real data providers (PAPER/LIVE)
 - **Data Validation** - Staleness, gaps, anomalies
 - **Feature Snapshots** - Candles, indicators, regime
 - **Option Chain Scanner** - Filtering and scoring

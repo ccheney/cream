@@ -15,23 +15,11 @@ export {
 	BULLISH_RESEARCHER_CONFIG,
 	CRITIC_CONFIG,
 	FUNDAMENTALS_ANALYST_CONFIG,
-	IDEA_AGENT_CONFIG,
-	INDICATOR_RESEARCHER_CONFIG as INDICATOR_RESEARCHER_MASTRA_CONFIG,
+	GROUNDING_AGENT_CONFIG,
 	NEWS_ANALYST_CONFIG,
 	RISK_MANAGER_CONFIG,
 	TRADER_CONFIG,
 } from "./configs/index.js";
-// Re-export specialized agents (not part of trading network)
-export {
-	buildResearcherPrompt,
-	getIndicatorResearcherConfig,
-	INDICATOR_RESEARCHER_SYSTEM_PROMPT,
-	type IndicatorResearcherConfig,
-	indicatorResearcher,
-	parseResearcherResponse,
-	type ResearcherInput,
-	type ResearcherOutput,
-} from "./indicatorResearcher.js";
 // Re-export registry
 export {
 	AGENT_CONFIGS,

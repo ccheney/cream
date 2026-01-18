@@ -429,9 +429,9 @@ describe("GraphRAG Integration", () => {
 	});
 });
 
-describe("BACKTEST Mode Behavior", () => {
+describe("Test Mode Behavior", () => {
 	it("should be tested via unit tests in graphrag.test.ts", () => {
-		// BACKTEST mode is tested in the unit tests
+		// Test mode is tested in the unit tests
 		// This is a placeholder to document that behavior is covered
 		expect(true).toBe(true);
 	});

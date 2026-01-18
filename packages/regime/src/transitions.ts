@@ -17,6 +17,13 @@ export interface RegimeTransition {
 	previousRegimeDuration: number;
 }
 
+export type TransitionUpdateResult =
+	| { kind: "transition"; transition: RegimeTransition }
+	| { kind: "initialized"; regime: RegimeLabel }
+	| { kind: "unchanged" }
+	| { kind: "low_confidence"; confidence: number; threshold: number }
+	| { kind: "pending_confirmation"; count: number; required: number };
+
 export interface RegimeState {
 	currentRegime: RegimeLabel;
 	regimeStartTime: string;
@@ -58,7 +65,7 @@ export class RegimeTransitionDetector {
 		regime: RegimeLabel,
 		timestamp: string,
 		confidence: number
-	): RegimeTransition | null {
+	): TransitionUpdateResult {
 		let state = this.states.get(instrumentId);
 		if (!state) {
 			state = {
@@ -68,17 +75,21 @@ export class RegimeTransitionDetector {
 				history: [],
 			};
 			this.states.set(instrumentId, state);
-			return null;
+			return { kind: "initialized", regime };
 		}
 
 		if (regime === state.currentRegime) {
 			state.observationCount++;
 			this.pendingTransitions.delete(instrumentId);
-			return null;
+			return { kind: "unchanged" };
 		}
 
 		if (confidence < this.config.minTransitionConfidence) {
-			return null;
+			return {
+				kind: "low_confidence",
+				confidence,
+				threshold: this.config.minTransitionConfidence,
+			};
 		}
 
 		let pending = this.pendingTransitions.get(instrumentId);
@@ -116,10 +127,14 @@ export class RegimeTransitionDetector {
 			state.observationCount = 1;
 			this.pendingTransitions.delete(instrumentId);
 
-			return transition;
+			return { kind: "transition", transition };
 		}
 
-		return null;
+		return {
+			kind: "pending_confirmation",
+			count: pending.count,
+			required: this.config.minConfirmationObservations,
+		};
 	}
 
 	getCurrentRegime(instrumentId: string): RegimeLabel | null {

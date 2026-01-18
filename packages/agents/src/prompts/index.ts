@@ -16,13 +16,11 @@ export { RISK_MANAGER_PROMPT } from "./riskManager.js";
 export { SELF_CHECK_PROMPT } from "./selfCheck.js";
 export { TRADER_PROMPT } from "./trader.js";
 
-import { INDICATOR_RESEARCHER_SYSTEM_PROMPT } from "../agents/indicatorResearcher.js";
 import { BEARISH_RESEARCHER_PROMPT } from "./bearishResearcher.js";
 import { BULLISH_RESEARCHER_PROMPT } from "./bullishResearcher.js";
 import { CRITIC_PROMPT } from "./critic.js";
 import { FUNDAMENTALS_ANALYST_PROMPT } from "./fundamentalsAnalyst.js";
 import { GROUNDING_AGENT_PROMPT } from "./groundingAgent.js";
-import { IDEA_AGENT_SYSTEM_PROMPT } from "./idea-agent.js";
 import { NEWS_ANALYST_PROMPT } from "./newsAnalyst.js";
 import { RISK_MANAGER_PROMPT } from "./riskManager.js";
 import { TRADER_PROMPT } from "./trader.js";
@@ -40,8 +38,6 @@ export const AGENT_PROMPTS: Record<AgentType, string> = {
 	trader: TRADER_PROMPT,
 	risk_manager: RISK_MANAGER_PROMPT,
 	critic: CRITIC_PROMPT,
-	idea_agent: IDEA_AGENT_SYSTEM_PROMPT,
-	indicator_researcher: INDICATOR_RESEARCHER_SYSTEM_PROMPT,
 };
 
 export function getAgentPrompt(agentType: AgentType): string {
@@ -55,12 +51,3 @@ export function getAgentPrompt(agentType: AgentType): string {
 export function getAllAgentPrompts(): Record<AgentType, string> {
 	return { ...AGENT_PROMPTS };
 }
-
-// Re-export idea agent prompts
-export {
-	buildFactorZooSummary,
-	buildIdeaAgentUserPrompt,
-	type HypothesisMemory,
-	IDEA_AGENT_SYSTEM_PROMPT,
-	type IdeaContext,
-} from "./idea-agent.js";

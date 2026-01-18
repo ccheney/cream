@@ -6,7 +6,7 @@
  * and discovers connected Company nodes via graph edges.
  */
 
-import { type ExecutionContext, isBacktest } from "@cream/domain";
+import { type ExecutionContext, isTest } from "@cream/domain";
 import {
 	type GraphRAGSearchResult,
 	searchGraphContext,
@@ -32,7 +32,7 @@ export interface GraphRAGQueryParams {
 export type GraphRAGQueryResult = GraphRAGSearchResult;
 
 /**
- * Empty result for BACKTEST mode.
+ * Empty result for test mode.
  */
 function emptyResult(_query: string): GraphRAGQueryResult {
 	return {
@@ -78,7 +78,7 @@ export async function graphragQuery(
 	ctx: ExecutionContext,
 	params: GraphRAGQueryParams
 ): Promise<GraphRAGQueryResult> {
-	if (isBacktest(ctx)) {
+	if (isTest(ctx)) {
 		return emptyResult(params.query);
 	}
 

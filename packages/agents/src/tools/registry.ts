@@ -4,8 +4,6 @@
  * Central registry for all agent tools.
  */
 
-import { checkIndicatorTrigger } from "./checkIndicatorTrigger.js";
-import { implementIndicator } from "./claudeCodeIndicator.js";
 import {
 	analyzeContent,
 	extractNewsContext,
@@ -34,8 +32,6 @@ export const TOOL_REGISTRY = {
 	search_filings: searchFilings,
 	graphrag_query: graphragQuery,
 	helix_query: helixQuery,
-	check_indicator_trigger: checkIndicatorTrigger,
-	implement_indicator: implementIndicator,
 	// External context extraction tools
 	extract_news_context: extractNewsContext,
 	analyze_content: analyzeContent,

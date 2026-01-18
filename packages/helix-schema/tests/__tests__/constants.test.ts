@@ -46,15 +46,14 @@ describe("Constants", () => {
 });
 
 describe("ForgettingEnvironment", () => {
-	it("accepts LIVE, PAPER, BACKTEST", () => {
+	it("accepts LIVE, PAPER", () => {
 		expect(ForgettingEnvironment.parse("LIVE")).toBe("LIVE");
 		expect(ForgettingEnvironment.parse("PAPER")).toBe("PAPER");
-		expect(ForgettingEnvironment.parse("BACKTEST")).toBe("BACKTEST");
 	});
 
 	it("rejects invalid environments", () => {
-		const result = ForgettingEnvironment.safeParse("INVALID");
-		expect(result.success).toBe(false);
+		expect(ForgettingEnvironment.safeParse("INVALID").success).toBe(false);
+		expect(ForgettingEnvironment.safeParse("BACKTEST").success).toBe(false);
 	});
 });
 

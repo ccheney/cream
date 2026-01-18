@@ -193,9 +193,9 @@ function initializeClusters(data: number[][], k: number, seed: number): GMMClust
 		clusters.push({
 			index: c,
 			mean: center,
-			variance: new Array(d).fill(1), // Start with unit variance
+			variance: new Array(d).fill(1),
 			weight: 1 / k,
-			regime: "RANGE", // Default, will be assigned later
+			regime: "RANGE",
 		});
 	}
 

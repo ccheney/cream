@@ -3,7 +3,7 @@
  */
 
 // Set required environment variables before imports
-Bun.env.CREAM_ENV = "BACKTEST";
+Bun.env.CREAM_ENV = "PAPER";
 
 import { describe, expect, test } from "bun:test";
 import type { ExecutionContext } from "@cream/domain";
@@ -87,13 +87,13 @@ const mockSearchResult: GraphRAGSearchResult = {
 // ============================================
 
 describe("graphragQuery", () => {
-	describe("BACKTEST mode", () => {
-		test("returns empty results in BACKTEST mode", async () => {
-			// Import after setting CREAM_ENV=BACKTEST
+	describe("test mode", () => {
+		test("returns empty results in test mode", async () => {
+			// Import after setting CREAM_ENV=PAPER (with source="test")
 			const { graphragQuery } = await import("./graphrag.js");
 
 			const ctx: ExecutionContext = {
-				environment: "BACKTEST",
+				environment: "PAPER",
 				source: "test",
 				traceId: "test-trace",
 			};
@@ -111,11 +111,11 @@ describe("graphragQuery", () => {
 			expect(result.executionTimeMs).toBe(0);
 		});
 
-		test("returns empty results even with symbol filter in BACKTEST mode", async () => {
+		test("returns empty results even with symbol filter in test mode", async () => {
 			const { graphragQuery } = await import("./graphrag.js");
 
 			const ctx: ExecutionContext = {
-				environment: "BACKTEST",
+				environment: "PAPER",
 				source: "test",
 				traceId: "test-trace",
 			};
@@ -136,7 +136,7 @@ describe("graphragQuery", () => {
 			const { graphragQuery } = await import("./graphrag.js");
 
 			const ctx: ExecutionContext = {
-				environment: "BACKTEST",
+				environment: "PAPER",
 				source: "test",
 				traceId: "test-trace",
 			};
@@ -153,7 +153,7 @@ describe("graphragQuery", () => {
 			const { graphragQuery } = await import("./graphrag.js");
 
 			const ctx: ExecutionContext = {
-				environment: "BACKTEST",
+				environment: "PAPER",
 				source: "test",
 				traceId: "test-trace",
 			};
@@ -171,7 +171,7 @@ describe("graphragQuery", () => {
 			const { graphragQuery } = await import("./graphrag.js");
 
 			const ctx: ExecutionContext = {
-				environment: "BACKTEST",
+				environment: "PAPER",
 				source: "test",
 				traceId: "test-trace",
 			};

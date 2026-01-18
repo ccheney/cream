@@ -71,7 +71,7 @@ export interface CBRRetrievalOptions {
 	/** Maximum age of cases in days (default: unlimited) */
 	maxAgeDays?: number;
 	/** Environment filter (default: current environment) */
-	environment?: "BACKTEST" | "PAPER" | "LIVE";
+	environment?: "PAPER" | "LIVE";
 }
 
 /**

@@ -7,7 +7,7 @@
  * @see docs/plans/18-prediction-markets.md
  */
 
-import { createContext, isBacktest, requireEnv } from "@cream/domain";
+import { createContext, isTest, requireEnv } from "@cream/domain";
 import { createTool } from "@mastra/core/tools";
 import { z } from "zod";
 
@@ -171,7 +171,7 @@ Updated every 15 minutes.`,
 		const ctx = createToolContext();
 
 		// In backtest mode, return empty results
-		if (isBacktest(ctx)) {
+		if (isTest(ctx)) {
 			return {
 				signals: [],
 				summary: {},
@@ -271,7 +271,7 @@ Updated every 15 minutes.`,
 		const ctx = createToolContext();
 
 		// In backtest mode, return empty results
-		if (isBacktest(ctx)) {
+		if (isTest(ctx)) {
 			return {
 				snapshots: [],
 				count: 0,

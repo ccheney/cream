@@ -6,7 +6,7 @@
  */
 
 import { timestampDate } from "@bufbuild/protobuf/wkt";
-import { type ExecutionContext, isBacktest } from "@cream/domain";
+import { type ExecutionContext, isTest } from "@cream/domain";
 import {
 	type Candle,
 	calculateATR,
@@ -134,8 +134,8 @@ export async function recalcIndicator(
 	symbol: string,
 	params: Record<string, number> = {}
 ): Promise<IndicatorResult> {
-	if (isBacktest(ctx)) {
-		throw new Error("recalcIndicator is not available in BACKTEST mode");
+	if (isTest(ctx)) {
+		throw new Error("recalcIndicator is not available in test mode");
 	}
 
 	// Validate indicator name

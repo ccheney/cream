@@ -5,7 +5,7 @@
  */
 
 // Set required environment variables before imports
-Bun.env.CREAM_ENV = "BACKTEST";
+Bun.env.CREAM_ENV = "PAPER";
 
 import { afterEach, beforeEach, describe, expect, mock, test } from "bun:test";
 import type { ExecutionContext } from "@cream/domain";
@@ -17,11 +17,12 @@ import { getEconomicCalendar, getMacroIndicators } from "./fred.js";
 // ============================================
 
 function createTestContext(
-	environment: "BACKTEST" | "PAPER" | "LIVE" = "BACKTEST"
+	environment: "PAPER" | "LIVE" = "PAPER",
+	source: "test" | "runtime" = "test"
 ): ExecutionContext {
 	return {
 		environment,
-		source: "test",
+		source,
 		traceId: "test-trace-123",
 	};
 }
@@ -55,21 +56,21 @@ describe("getEconomicCalendar", () => {
 		resetFREDClient();
 	});
 
-	describe("BACKTEST mode", () => {
-		test("returns empty array in backtest mode", async () => {
-			const ctx = createTestContext("BACKTEST");
+	describe("test mode", () => {
+		test("returns empty array in test mode", async () => {
+			const ctx = createTestContext("PAPER", "test");
 			const events = await getEconomicCalendar(ctx, "2025-01-01", "2025-01-31");
 			expect(events).toEqual([]);
 		});
 
-		test("does not call FRED API in backtest mode", async () => {
+		test("does not call FRED API in test mode", async () => {
 			const mockGetReleaseDates = mock(() => Promise.resolve({ release_dates: [] }));
 			setFREDClientForTesting({
 				getReleaseDates: mockGetReleaseDates,
 				getObservations: mock(() => Promise.resolve({ observations: [] })),
 			} as any);
 
-			const ctx = createTestContext("BACKTEST");
+			const ctx = createTestContext("PAPER", "test");
 			await getEconomicCalendar(ctx, "2025-01-01", "2025-01-31");
 
 			expect(mockGetReleaseDates).not.toHaveBeenCalled();
@@ -186,21 +187,21 @@ describe("getMacroIndicators", () => {
 		resetFREDClient();
 	});
 
-	describe("BACKTEST mode", () => {
-		test("returns empty object in backtest mode", async () => {
-			const ctx = createTestContext("BACKTEST");
+	describe("test mode", () => {
+		test("returns empty object in test mode", async () => {
+			const ctx = createTestContext("PAPER", "test");
 			const indicators = await getMacroIndicators(ctx);
 			expect(indicators).toEqual({});
 		});
 
-		test("does not call FRED API in backtest mode", async () => {
+		test("does not call FRED API in test mode", async () => {
 			const mockGetObservations = mock(() => Promise.resolve({ observations: [] }));
 			setFREDClientForTesting({
 				getReleaseDates: mock(() => Promise.resolve({ release_dates: [] })),
 				getObservations: mockGetObservations,
 			} as any);
 
-			const ctx = createTestContext("BACKTEST");
+			const ctx = createTestContext("PAPER", "test");
 			await getMacroIndicators(ctx);
 
 			expect(mockGetObservations).not.toHaveBeenCalled();

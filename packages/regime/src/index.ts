@@ -71,6 +71,7 @@ export {
 	type RegimeTransition,
 	RegimeTransitionDetector,
 	type TransitionDetectorConfig,
+	type TransitionUpdateResult,
 } from "./transitions";
 
 /**

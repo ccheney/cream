@@ -25,18 +25,13 @@ export interface ImmutabilityCheckResult {
  *
  * LIVE trade decisions are always immutable after execution.
  * PAPER trades may be modified for debugging.
- * BACKTEST data is freely modifiable.
  */
 export function checkImmutability(params: {
 	entityType: AuditEntityType;
-	environment: "BACKTEST" | "PAPER" | "LIVE";
+	environment: "PAPER" | "LIVE";
 	status?: string;
 	executedAt?: string;
 }): ImmutabilityCheckResult {
-	// BACKTEST data is never immutable
-	if (params.environment === "BACKTEST") {
-		return { immutable: false };
-	}
 
 	// LIVE trade decisions are immutable after creation
 	if (
@@ -66,7 +61,7 @@ export function checkImmutability(params: {
 export function requireMutable(params: {
 	entityType: AuditEntityType;
 	entityId: string;
-	environment: "BACKTEST" | "PAPER" | "LIVE";
+	environment: "PAPER" | "LIVE";
 	status?: string;
 	executedAt?: string;
 }): void {

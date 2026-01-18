@@ -5,7 +5,7 @@
  * Provides peer companies, competitors, and supply chain dependencies.
  */
 
-import { type ExecutionContext, isBacktest } from "@cream/domain";
+import { type ExecutionContext, isTest } from "@cream/domain";
 import { createCompanyGraphBuilder } from "@cream/helix";
 import { getHelixClient } from "../clients.js";
 
@@ -52,7 +52,7 @@ export interface CompanyRelationshipsResult {
 // ============================================
 
 /**
- * Empty result for BACKTEST mode
+ * Empty result for test mode
  */
 function emptyResult(symbol: string): CompanyRelationshipsResult {
 	return {
@@ -97,7 +97,7 @@ export async function getCompanyRelationships(
 	ctx: ExecutionContext,
 	symbol: string
 ): Promise<CompanyRelationshipsResult> {
-	if (isBacktest(ctx)) {
+	if (isTest(ctx)) {
 		return emptyResult(symbol);
 	}
 
@@ -138,7 +138,7 @@ export async function getSectorPeers(
 	ctx: ExecutionContext,
 	symbol: string
 ): Promise<{ symbol: string; peers: string[] }> {
-	if (isBacktest(ctx)) {
+	if (isTest(ctx)) {
 		return { symbol, peers: [] };
 	}
 
@@ -164,7 +164,7 @@ export async function getSupplyChain(
 	suppliers: DependencyResult[];
 	customers: DependencyResult[];
 }> {
-	if (isBacktest(ctx)) {
+	if (isTest(ctx)) {
 		return { symbol, suppliers: [], customers: [] };
 	}
 

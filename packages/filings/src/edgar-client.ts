@@ -108,21 +108,18 @@ export class EdgarClient {
 	 * @returns Array of filings matching the criteria
 	 */
 	async getFilings(params: GetFilingsParams): Promise<Filing[]> {
-		// Get company info
 		const company = await this.lookupCompany(params.tickerOrCik);
 		if (!company) {
-			return [];
+			throw new Error(`Company not found: ${params.tickerOrCik}`);
 		}
 
-		// Get submissions which includes filings
 		const submissions = await this.client.getCompanySubmissions(company.cik);
 		const recentFilings = submissions.filings?.recent;
 
 		if (!recentFilings) {
-			return [];
+			throw new Error(`No filings found for company: ${params.tickerOrCik}`);
 		}
 
-		// Parse filings from parallel arrays
 		const filings: Filing[] = [];
 		const forms = recentFilings.form as string[] | undefined;
 		const accessionNumbers = recentFilings.accessionNumber as string[] | undefined;
@@ -130,7 +127,7 @@ export class EdgarClient {
 		const primaryDocuments = recentFilings.primaryDocument as string[] | undefined;
 
 		if (!forms || !accessionNumbers || !filingDates) {
-			return [];
+			throw new Error(`Invalid filing data structure for company: ${params.tickerOrCik}`);
 		}
 
 		const formTypeSet = params.filingTypes ? new Set(params.filingTypes) : null;

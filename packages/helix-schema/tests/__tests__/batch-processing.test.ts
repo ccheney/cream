@@ -47,8 +47,8 @@ describe("filterForSummarization", () => {
 describe("filterForDeletion", () => {
 	it("returns only deletion candidates", () => {
 		const nodes = [
-			createNodeInfo({ id: "new", createdAt: daysAgo(7), environment: "BACKTEST" }),
-			createNodeInfo({ id: "ancient", createdAt: daysAgo(3000), environment: "BACKTEST" }),
+			createNodeInfo({ id: "new", createdAt: daysAgo(7), environment: "PAPER" }),
+			createNodeInfo({ id: "ancient", createdAt: daysAgo(3000), environment: "PAPER" }),
 		];
 
 		const decisions = batchGetForgettingDecisions(nodes);
@@ -63,7 +63,7 @@ describe("calculateForgettingMetrics", () => {
 		const nodes = [
 			createNodeInfo({ id: "n1", createdAt: daysAgo(7), environment: "PAPER" }),
 			createNodeInfo({ id: "n2", createdAt: daysAgo(365), environment: "PAPER" }),
-			createNodeInfo({ id: "n3", createdAt: daysAgo(1000), environment: "BACKTEST" }),
+			createNodeInfo({ id: "n3", createdAt: daysAgo(1000), environment: "PAPER" }),
 			createNodeInfo({
 				id: "n4",
 				nodeType: "TradeDecision",

@@ -13,7 +13,7 @@
 /**
  * Trading environment
  */
-export type Environment = "BACKTEST" | "PAPER" | "LIVE";
+export type Environment = "PAPER" | "LIVE";
 
 /**
  * Trading action

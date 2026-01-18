@@ -77,7 +77,7 @@ export const AuditLogEntrySchema = z.object({
 	entityId: z.string(),
 
 	/** Environment where operation occurred */
-	environment: z.enum(["BACKTEST", "PAPER", "LIVE"]),
+	environment: z.enum(["PAPER", "LIVE"]),
 
 	/** State before the operation (for UPDATE/DELETE) */
 	beforeState: z.unknown().optional(),
@@ -128,7 +128,7 @@ export const AuditTrailQuerySchema = z.object({
 	operation: z.nativeEnum(AuditOperationType).optional(),
 
 	/** Filter by environment */
-	environment: z.enum(["BACKTEST", "PAPER", "LIVE"]).optional(),
+	environment: z.enum(["PAPER", "LIVE"]).optional(),
 
 	/** Start timestamp (inclusive) */
 	startTime: z.string().datetime().optional(),

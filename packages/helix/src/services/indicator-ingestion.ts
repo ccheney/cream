@@ -45,7 +45,7 @@ export interface IndicatorInput {
 	probabilityOfOverfit?: number;
 	/** Information Coefficient */
 	informationCoefficient?: number;
-	/** Environment (BACKTEST, PAPER, LIVE) */
+	/** Environment (PAPER, LIVE) */
 	environment: string;
 }
 
@@ -156,7 +156,7 @@ function toIndicatorNode(input: IndicatorInput): Indicator {
 		probability_of_overfit: input.probabilityOfOverfit,
 		information_coefficient: input.informationCoefficient,
 		generated_at: new Date().toISOString(),
-		environment: input.environment as "BACKTEST" | "PAPER" | "LIVE",
+		environment: input.environment as "PAPER" | "LIVE",
 	};
 }
 

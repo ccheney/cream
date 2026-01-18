@@ -4,7 +4,7 @@
  * Query HelixDB for memory/graph data.
  */
 
-import { type ExecutionContext, isBacktest } from "@cream/domain";
+import { type ExecutionContext, isTest } from "@cream/domain";
 import { getHelixClient } from "../clients.js";
 import type { HelixQueryResult } from "../types.js";
 
@@ -17,15 +17,15 @@ import type { HelixQueryResult } from "../types.js";
  * @param queryName - HelixQL query name (registered in HelixDB)
  * @param params - Query parameters
  * @returns Query result with nodes and edges
- * @throws Error if HelixDB query fails or backtest mode is used
+ * @throws Error if HelixDB query fails or test mode is used
  */
 export async function helixQuery(
 	ctx: ExecutionContext,
 	queryName: string,
 	params: Record<string, unknown> = {}
 ): Promise<HelixQueryResult> {
-	if (isBacktest(ctx)) {
-		throw new Error("helixQuery is not available in BACKTEST mode");
+	if (isTest(ctx)) {
+		throw new Error("helixQuery is not available in test mode");
 	}
 
 	const client = getHelixClient();

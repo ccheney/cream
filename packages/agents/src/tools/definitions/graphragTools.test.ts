@@ -3,7 +3,7 @@
  */
 
 // Set required environment variables before imports
-Bun.env.CREAM_ENV = "BACKTEST";
+Bun.env.CREAM_ENV = "PAPER";
 
 import { describe, expect, test } from "bun:test";
 import {
@@ -50,7 +50,7 @@ describe("graphragQueryTool", () => {
 		expect(graphragQueryTool.outputSchema).toBeDefined();
 	});
 
-	test("returns empty results in BACKTEST mode", async () => {
+	test("returns empty results in test mode", async () => {
 		const result = (await graphragQueryTool.execute({
 			query: "semiconductor supply chain constraints",
 			limit: 10,
@@ -64,7 +64,7 @@ describe("graphragQueryTool", () => {
 		expect(result.executionTimeMs).toBe(0);
 	});
 
-	test("handles symbol filter in BACKTEST mode", async () => {
+	test("handles symbol filter in test mode", async () => {
 		const result = (await graphragQueryTool.execute({
 			query: "revenue growth",
 			symbol: "AAPL",

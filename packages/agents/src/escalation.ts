@@ -476,12 +476,8 @@ export function createEscalationService(options: {
 		);
 	}
 
-	// Always add console logger in development
-	if (
-		options.environment === "development" ||
-		options.environment === "BACKTEST" ||
-		channels.length === 0
-	) {
+	// Always add console logger in development or if no other channels configured
+	if (options.environment === "development" || channels.length === 0) {
 		channels.push(new ConsoleNotificationChannel());
 	}
 

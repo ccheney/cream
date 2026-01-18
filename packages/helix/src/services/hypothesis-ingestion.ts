@@ -51,7 +51,7 @@ export interface HypothesisInput {
 	implementationHints?: string;
 	/** Agent that generated the hypothesis */
 	author: string;
-	/** Environment (BACKTEST, PAPER, LIVE) */
+	/** Environment (PAPER, LIVE) */
 	environment: string;
 }
 
@@ -140,7 +140,7 @@ function toHypothesisNode(input: HypothesisInput): ResearchHypothesis {
 		implementation_hints: input.implementationHints,
 		author: input.author,
 		created_at: new Date().toISOString(),
-		environment: input.environment as "BACKTEST" | "PAPER" | "LIVE",
+		environment: input.environment as "PAPER" | "LIVE",
 	};
 }
 
@@ -286,7 +286,7 @@ export class HypothesisIngestionService {
 				factor_id: hypothesis.factor_id ?? "",
 				author: hypothesis.author,
 				validated_at: hypothesis.validated_at ?? "",
-				environment: "BACKTEST", // Default for now
+				environment: "PAPER", // Default for now
 				embedding,
 				embedding_model_version: DEFAULT_EMBEDDING_CONFIG.model,
 			});

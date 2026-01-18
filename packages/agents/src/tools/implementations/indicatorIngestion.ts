@@ -5,7 +5,7 @@
  * indicators from HelixDB.
  */
 
-import { type ExecutionContext, isBacktest } from "@cream/domain";
+import { type ExecutionContext, isTest } from "@cream/domain";
 import { createIndicatorIngestionService, type IndicatorInput } from "@cream/helix";
 import type { IndicatorCategory, IndicatorStatus } from "@cream/helix-schema";
 import { getHelixClient } from "../clients.js";
@@ -70,7 +70,7 @@ export async function searchSimilarIndicators(
 	const startTime = performance.now();
 
 	// In backtest mode, return empty results
-	if (isBacktest(ctx)) {
+	if (isTest(ctx)) {
 		return {
 			query,
 			indicators: [],
@@ -129,7 +129,7 @@ export async function searchIndicatorsByCategory(
 	const startTime = performance.now();
 
 	// In backtest mode, return empty results
-	if (isBacktest(ctx)) {
+	if (isTest(ctx)) {
 		return {
 			category,
 			query,
@@ -184,7 +184,7 @@ export async function getIndicator(
 	const startTime = performance.now();
 
 	// In backtest mode, return not found
-	if (isBacktest(ctx)) {
+	if (isTest(ctx)) {
 		return {
 			found: false,
 			indicator: null,
@@ -253,7 +253,7 @@ export async function getValidatedIndicators(
 	const startTime = performance.now();
 
 	// In backtest mode, return empty results
-	if (isBacktest(ctx)) {
+	if (isTest(ctx)) {
 		return {
 			indicators: [],
 			totalFound: 0,
@@ -298,7 +298,7 @@ export async function ingestIndicator(
 	const startTime = performance.now();
 
 	// In backtest mode, skip ingestion
-	if (isBacktest(ctx)) {
+	if (isTest(ctx)) {
 		return {
 			success: false,
 			indicatorId: indicator.indicatorId,

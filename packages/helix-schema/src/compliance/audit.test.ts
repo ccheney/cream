@@ -208,10 +208,10 @@ describe("AuditLogger", () => {
 });
 
 describe("checkImmutability", () => {
-	test("BACKTEST data is never immutable", () => {
+	test("PAPER data is not immutable", () => {
 		const result = checkImmutability({
 			entityType: AuditEntityType.DECISION_PLAN,
-			environment: "BACKTEST",
+			environment: "PAPER",
 		});
 
 		expect(result.immutable).toBe(false);

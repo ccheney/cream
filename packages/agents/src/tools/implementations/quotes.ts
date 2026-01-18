@@ -5,7 +5,7 @@
  */
 
 import { timestampDate } from "@bufbuild/protobuf/wkt";
-import { type ExecutionContext, isBacktest } from "@cream/domain";
+import { type ExecutionContext, isTest } from "@cream/domain";
 import { getMarketDataClient } from "../clients.js";
 import type { Quote } from "../types.js";
 
@@ -17,11 +17,11 @@ import type { Quote } from "../types.js";
  * @param ctx - ExecutionContext
  * @param instruments - Array of instrument symbols
  * @returns Array of quotes
- * @throws Error if gRPC call fails or backtest mode is used
+ * @throws Error if gRPC call fails or test mode is used
  */
 export async function getQuotes(ctx: ExecutionContext, instruments: string[]): Promise<Quote[]> {
-	if (isBacktest(ctx)) {
-		throw new Error("getQuotes is not available in BACKTEST mode - use historical data instead");
+	if (isTest(ctx)) {
+		throw new Error("getQuotes is not available in test mode - use historical data instead");
 	}
 
 	const client = getMarketDataClient();

@@ -156,7 +156,7 @@ export interface FilingSyncConfig {
 	/** Trigger source for tracking */
 	triggerSource: "scheduled" | "manual" | "dashboard";
 	/** Environment */
-	environment: "BACKTEST" | "PAPER" | "LIVE";
+	environment: "PAPER" | "LIVE";
 }
 
 /**

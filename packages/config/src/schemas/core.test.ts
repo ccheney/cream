@@ -8,7 +8,6 @@ import {
 
 describe("CreamEnvironment", () => {
 	it("accepts valid environment values", () => {
-		expect(CreamEnvironment.parse("BACKTEST")).toBe("BACKTEST");
 		expect(CreamEnvironment.parse("PAPER")).toBe("PAPER");
 		expect(CreamEnvironment.parse("LIVE")).toBe("LIVE");
 	});
@@ -16,6 +15,7 @@ describe("CreamEnvironment", () => {
 	it("rejects invalid environment values", () => {
 		expect(() => CreamEnvironment.parse("PRODUCTION")).toThrow();
 		expect(() => CreamEnvironment.parse("DEV")).toThrow();
+		expect(() => CreamEnvironment.parse("BACKTEST")).toThrow();
 	});
 });
 

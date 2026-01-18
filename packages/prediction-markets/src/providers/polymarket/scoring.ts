@@ -19,6 +19,44 @@ function calculateFedRateProbabilities(
 	}
 
 	for (const market of fedMarkets) {
+		const questionLower = market.payload.marketQuestion.toLowerCase();
+		const yesOutcome = market.payload.outcomes.find((o) => o.outcome.toLowerCase() === "yes");
+		const noOutcome = market.payload.outcomes.find((o) => o.outcome.toLowerCase() === "no");
+
+		// Check if this is a rate cut market (question contains "cut" or "decrease")
+		const isCutMarket =
+			questionLower.includes("cut") ||
+			questionLower.includes("decrease") ||
+			questionLower.includes("lower");
+
+		// Check if this is a rate hike market (question contains "hike" or "increase")
+		const isHikeMarket =
+			questionLower.includes("hike") ||
+			questionLower.includes("increase") ||
+			questionLower.includes("raise");
+
+		// Check if this is a "no cuts" market (negation)
+		const isNoCutsMarket = questionLower.includes("no") && isCutMarket;
+
+		if (yesOutcome) {
+			if (isCutMarket && !isNoCutsMarket) {
+				// "Fed rate cut?" with Yes outcome = probability of cut
+				scores.fedCutProbability = Math.max(scores.fedCutProbability ?? 0, yesOutcome.probability);
+			} else if (isNoCutsMarket) {
+				// "No Fed rate cuts?" with Yes = probability of NO cuts, so No outcome = probability of cuts
+				if (noOutcome) {
+					scores.fedCutProbability = Math.max(scores.fedCutProbability ?? 0, noOutcome.probability);
+				}
+			} else if (isHikeMarket) {
+				// "Fed rate hike?" with Yes outcome = probability of hike
+				scores.fedHikeProbability = Math.max(
+					scores.fedHikeProbability ?? 0,
+					yesOutcome.probability
+				);
+			}
+		}
+
+		// Also check outcome names for explicit "cut"/"hike" labels (Kalshi style)
 		for (const outcome of market.payload.outcomes) {
 			const outcomeLower = outcome.outcome.toLowerCase();
 

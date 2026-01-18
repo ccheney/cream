@@ -5,7 +5,7 @@
  * using structured outputs via @cream/external-context with Gemini.
  */
 
-import { type ExecutionContext, isBacktest } from "@cream/domain";
+import { type ExecutionContext, isTest } from "@cream/domain";
 import {
 	type ContentScores,
 	type ContentSourceType,
@@ -78,7 +78,7 @@ export async function extractNewsContext(
 	const { symbols, limit = 10, dryRun = false } = params;
 
 	// In backtest mode, return empty result for consistent/fast execution
-	if (isBacktest(ctx)) {
+	if (isTest(ctx)) {
 		return {
 			events: [],
 			stats: { inputCount: 0, successCount: 0, errorCount: 0, processingTimeMs: 0 },
@@ -158,7 +158,7 @@ export async function analyzeContent(
 	const { content, sourceType, symbols = [], dryRun = false } = params;
 
 	// In backtest mode, return empty result
-	if (isBacktest(ctx)) {
+	if (isTest(ctx)) {
 		return {
 			extraction: null,
 			scores: null,

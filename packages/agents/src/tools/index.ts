@@ -7,23 +7,6 @@
  * @see docs/plans/05-agents.md
  */
 
-// Indicator trigger detection tool
-export {
-	type CheckIndicatorTriggerInput,
-	type CheckIndicatorTriggerOutput,
-	checkIndicatorTrigger,
-} from "./checkIndicatorTrigger.js";
-// Claude Code indicator implementation tool
-export {
-	buildImplementationPrompt,
-	type ClaudeCodeConfig,
-	claudeCodeIndicator,
-	type ImplementIndicatorInput,
-	ImplementIndicatorInputSchema,
-	type ImplementIndicatorOutput,
-	ImplementIndicatorOutputSchema,
-	implementIndicator,
-} from "./claudeCodeIndicator.js";
 // Mastra tool definitions
 export {
 	// External context tools
@@ -35,19 +18,6 @@ export {
 	CheckFactorDecayInputSchema,
 	type CheckFactorDecayOutput,
 	CheckFactorDecayOutputSchema,
-	// Check Indicator Trigger tool (Orient phase synthesis triggering)
-	type CheckIndicatorTriggerInput as CheckIndicatorTriggerToolInput,
-	CheckIndicatorTriggerInputSchema,
-	type CheckIndicatorTriggerOutput as CheckIndicatorTriggerToolOutput,
-	CheckIndicatorTriggerOutputSchema,
-	type CheckResearchStatusInput,
-	CheckResearchStatusInputSchema,
-	type CheckResearchStatusOutput,
-	CheckResearchStatusOutputSchema,
-	type CheckTriggerConditionsInput,
-	CheckTriggerConditionsInputSchema,
-	type CheckTriggerConditionsOutput,
-	CheckTriggerConditionsOutputSchema,
 	type ComputeMegaAlphaForSymbolsInput,
 	ComputeMegaAlphaForSymbolsInputSchema,
 	type ComputeMegaAlphaForSymbolsOutput,
@@ -58,16 +28,10 @@ export {
 	ComputeMegaAlphaOutputSchema,
 	ContentScoresSchema,
 	createCheckFactorDecayTool,
-	createCheckIndicatorTriggerTool,
-	createCheckResearchStatusTool,
-	createCheckTriggerConditionsTool,
 	createComputeMegaAlphaForSymbolsTool,
 	createComputeMegaAlphaTool,
 	createGetCurrentWeightsTool,
 	createGetFactorZooStatsTool,
-	// Research trigger tools
-	createTriggerResearchTool,
-	// Factor Zoo tools
 	createUpdateDailyWeightsTool,
 	// Data tools
 	ExtractedEventSchema,
@@ -127,10 +91,6 @@ export {
 	SearchFilingsOutputSchema,
 	searchFilingsTool,
 	setPredictionMarketsRepoProvider,
-	type TriggerResearchInput,
-	TriggerResearchInputSchema,
-	type TriggerResearchOutput,
-	TriggerResearchOutputSchema,
 	type UpdateDailyWeightsInput,
 	UpdateDailyWeightsInputSchema,
 	type UpdateDailyWeightsOutput,
