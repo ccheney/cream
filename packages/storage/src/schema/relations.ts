@@ -14,7 +14,6 @@ import {
 	positionHistory,
 	positions,
 } from "./core-trading";
-import { backtestEquity, backtests, backtestTrades } from "./dashboard";
 import {
 	factorCorrelations,
 	factorPerformance,
@@ -92,28 +91,6 @@ export const cycleEventsRelations = relations(cycleEvents, ({ one }) => ({
 	cycle: one(cycles, {
 		fields: [cycleEvents.cycleId],
 		references: [cycles.id],
-	}),
-}));
-
-// Backtests relations
-export const backtestsRelations = relations(backtests, ({ many }) => ({
-	trades: many(backtestTrades),
-	equity: many(backtestEquity),
-}));
-
-// Backtest trades relations
-export const backtestTradesRelations = relations(backtestTrades, ({ one }) => ({
-	backtest: one(backtests, {
-		fields: [backtestTrades.backtestId],
-		references: [backtests.id],
-	}),
-}));
-
-// Backtest equity relations
-export const backtestEquityRelations = relations(backtestEquity, ({ one }) => ({
-	backtest: one(backtests, {
-		fields: [backtestEquity.backtestId],
-		references: [backtests.id],
 	}),
 }));
 

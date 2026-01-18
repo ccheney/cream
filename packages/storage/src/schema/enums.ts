@@ -7,7 +7,7 @@
 import { pgEnum } from "drizzle-orm/pg-core";
 
 // Environment enum (used across all environment-scoped tables)
-export const environmentEnum = pgEnum("environment", ["BACKTEST", "PAPER", "LIVE"]);
+export const environmentEnum = pgEnum("environment", ["PAPER", "LIVE"]);
 
 // Decision-related enums
 export const decisionActionEnum = pgEnum("decision_action", [
@@ -200,14 +200,6 @@ export const externalEventSourceEnum = pgEnum("external_event_source", [
 ]);
 
 export const sentimentEnum = pgEnum("sentiment", ["positive", "negative", "neutral"]);
-
-// Backtest-related enums
-export const backtestStatusEnum = pgEnum("backtest_status", [
-	"pending",
-	"running",
-	"completed",
-	"failed",
-]);
 
 // System state enums
 export const systemStatusEnum = pgEnum("system_status", ["stopped", "running", "paused", "error"]);

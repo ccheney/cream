@@ -78,7 +78,7 @@ export const decisions = pgTable(
 		closedAt: timestamp("closed_at", { withTimezone: true }),
 	},
 	(table) => [
-		check("positive_size", sql`${table.size}::numeric > 0`),
+		check("non_negative_size", sql`${table.size}::numeric >= 0`),
 		check(
 			"valid_confidence",
 			sql`${table.confidenceScore} IS NULL OR (${table.confidenceScore}::numeric >= 0 AND ${table.confidenceScore}::numeric <= 1)`
