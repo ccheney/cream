@@ -1042,6 +1042,9 @@ describe("Agent Tool Wiring", () => {
 				"extract_news_context",
 				"analyze_content",
 				"graphrag_query",
+				"search_academic_papers",
+				"search_external_papers",
+				"get_academic_paper",
 			];
 
 			for (const agentType of AGENT_TYPES) {
