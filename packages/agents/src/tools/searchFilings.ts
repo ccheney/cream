@@ -83,7 +83,7 @@ export async function searchFilings(
 	ctx: ExecutionContext,
 	params: SearchFilingsParams
 ): Promise<SearchFilingsResult> {
-	// In backtest mode, return empty results for consistent/fast execution
+	// In test mode, return empty results for consistent/fast execution
 	if (isTest(ctx)) {
 		return {
 			chunks: [],

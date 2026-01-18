@@ -9,6 +9,19 @@
 
 // Mastra tool definitions
 export {
+	// Academic paper tools
+	getAcademicPaperTool,
+	GetPaperInputSchema,
+	GetPaperOutputSchema,
+	ingestAcademicPapersTool,
+	IngestPapersInputSchema,
+	IngestPapersOutputSchema,
+	searchAcademicPapersTool,
+	SearchPapersInputSchema,
+	SearchPapersOutputSchema,
+	searchExternalPapersTool,
+	SearchExternalPapersInputSchema,
+	SearchExternalPapersOutputSchema,
 	// External context tools
 	AnalyzeContentInputSchema,
 	AnalyzeContentOutputSchema,

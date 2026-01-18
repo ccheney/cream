@@ -170,7 +170,7 @@ Updated every 15 minutes.`,
 	execute: async (): Promise<z.infer<typeof GetPredictionSignalsOutputSchema>> => {
 		const ctx = createToolContext();
 
-		// In backtest mode, return empty results
+		// In test mode, return empty results
 		if (isTest(ctx)) {
 			return {
 				signals: [],
@@ -270,7 +270,7 @@ Updated every 15 minutes.`,
 	execute: async (inputData): Promise<z.infer<typeof GetMarketSnapshotsOutputSchema>> => {
 		const ctx = createToolContext();
 
-		// In backtest mode, return empty results
+		// In test mode, return empty results
 		if (isTest(ctx)) {
 			return {
 				snapshots: [],

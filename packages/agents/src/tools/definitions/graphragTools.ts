@@ -13,9 +13,11 @@ import { graphragQuery } from "../implementations/graphrag.js";
 
 /**
  * Create ExecutionContext for tool invocation.
+ * Uses "test" source when running under NODE_ENV=test to skip external API calls.
  */
 function createToolContext() {
-	return createContext(requireEnv(), "scheduled");
+	const source = Bun.env.NODE_ENV === "test" ? "test" : "scheduled";
+	return createContext(requireEnv(), source);
 }
 
 // ============================================

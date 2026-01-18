@@ -191,8 +191,8 @@ export const GetFactorContextOutputSchema = z.object({
 		.describe("Recent performance metrics"),
 	validation: z
 		.object({
-			stage1Sharpe: z.number().nullable().describe("Backtest Sharpe ratio (null if not validated)"),
-			stage2PBO: z.number().nullable().describe("Probability of Backtest Overfitting"),
+			stage1Sharpe: z.number().nullable().describe("Research Sharpe ratio (null if not validated)"),
+			stage2PBO: z.number().nullable().describe("Probability of Overfitting (PBO)"),
 			stage2WFE: z.number().nullable().describe("Walk-Forward Efficiency"),
 			paperValidationPassed: z.boolean().describe("Whether factor passed paper trading validation"),
 		})

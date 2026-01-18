@@ -62,7 +62,7 @@ const FOMC_RELEASE_ID = FRED_RELEASES.FOMC.id;
  * Get economic calendar events from FRED.
  *
  * Fetches upcoming and recent economic data releases from the FRED API.
- * Returns empty array in backtest mode or if FRED API is unavailable.
+ * Returns empty array in test mode or if FRED API is unavailable.
  *
  * @param ctx - ExecutionContext
  * @param startDate - Start date (YYYY-MM-DD format)
@@ -74,7 +74,7 @@ export async function getEconomicCalendar(
 	startDate: string,
 	endDate: string
 ): Promise<EconomicEvent[]> {
-	// In backtest mode, return empty array for consistent/fast execution
+	// In test mode, return empty array for consistent/fast execution
 	if (isTest(ctx)) {
 		return [];
 	}
@@ -179,7 +179,7 @@ export interface MacroIndicatorValue {
  * Get latest macro economic indicators from FRED.
  *
  * Fetches the most recent values for key economic indicators.
- * Returns empty object in backtest mode or if FRED API is unavailable.
+ * Returns empty object in test mode or if FRED API is unavailable.
  *
  * @param ctx - ExecutionContext
  * @param seriesIds - Optional list of FRED series IDs (defaults to key indicators)
@@ -189,7 +189,7 @@ export async function getMacroIndicators(
 	ctx: ExecutionContext,
 	seriesIds?: string[]
 ): Promise<Record<string, MacroIndicatorValue>> {
-	// In backtest mode, return empty object for consistent/fast execution
+	// In test mode, return empty object for consistent/fast execution
 	if (isTest(ctx)) {
 		return {};
 	}

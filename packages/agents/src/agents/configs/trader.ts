@@ -22,5 +22,8 @@ export const TRADER_CONFIG: AgentConfig = {
 		"helix_query",
 		"google_search",
 		"get_prediction_signals",
+		"search_academic_papers",
+		"search_external_papers",
+		"get_academic_paper",
 	],
 };

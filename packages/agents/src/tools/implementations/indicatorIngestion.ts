@@ -69,7 +69,7 @@ export async function searchSimilarIndicators(
 }> {
 	const startTime = performance.now();
 
-	// In backtest mode, return empty results
+	// In test mode, return empty results
 	if (isTest(ctx)) {
 		return {
 			query,
@@ -128,7 +128,7 @@ export async function searchIndicatorsByCategory(
 }> {
 	const startTime = performance.now();
 
-	// In backtest mode, return empty results
+	// In test mode, return empty results
 	if (isTest(ctx)) {
 		return {
 			category,
@@ -183,7 +183,7 @@ export async function getIndicator(
 }> {
 	const startTime = performance.now();
 
-	// In backtest mode, return not found
+	// In test mode, return not found
 	if (isTest(ctx)) {
 		return {
 			found: false,
@@ -252,7 +252,7 @@ export async function getValidatedIndicators(
 }> {
 	const startTime = performance.now();
 
-	// In backtest mode, return empty results
+	// In test mode, return empty results
 	if (isTest(ctx)) {
 		return {
 			indicators: [],
@@ -297,7 +297,7 @@ export async function ingestIndicator(
 }> {
 	const startTime = performance.now();
 
-	// In backtest mode, skip ingestion
+	// In test mode, skip ingestion
 	if (isTest(ctx)) {
 		return {
 			success: false,
@@ -305,7 +305,7 @@ export async function ingestIndicator(
 			duplicateFound: false,
 			similarIndicators: [],
 			executionTimeMs: performance.now() - startTime,
-			errors: ["Backtest mode - ingestion skipped"],
+			errors: ["Test mode - ingestion skipped"],
 		};
 	}
 

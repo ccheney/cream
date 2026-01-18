@@ -75,7 +75,7 @@ export async function searchAcademicPapers(
 }> {
 	const startTime = performance.now();
 
-	// In backtest mode, return empty results
+	// In test mode, return empty results
 	if (isTest(ctx)) {
 		return {
 			query,
@@ -125,7 +125,7 @@ export async function getAcademicPaper(
 }> {
 	const startTime = performance.now();
 
-	// In backtest mode, return not found
+	// In test mode, return not found
 	if (isTest(ctx)) {
 		return {
 			found: false,
@@ -188,12 +188,12 @@ export async function searchExternalPapers(
 }> {
 	const startTime = performance.now();
 
-	// In backtest mode, return empty results
+	// In test mode, return empty results
 	if (isTest(ctx)) {
 		return {
 			topic,
 			papers: [],
-			source: "Semantic Scholar (backtest mode - skipped)",
+			source: "Semantic Scholar (test mode - skipped)",
 			executionTimeMs: performance.now() - startTime,
 		};
 	}
@@ -273,13 +273,13 @@ export async function ingestSemanticScholarPapers(
 }> {
 	const startTime = performance.now();
 
-	// In backtest mode, skip ingestion
+	// In test mode, skip ingestion
 	if (isTest(ctx)) {
 		return {
 			topic,
 			papersIngested: 0,
 			duplicatesSkipped: 0,
-			errors: ["Backtest mode - ingestion skipped"],
+			errors: ["Test mode - ingestion skipped"],
 			executionTimeMs: performance.now() - startTime,
 		};
 	}

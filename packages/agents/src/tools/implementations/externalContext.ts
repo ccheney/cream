@@ -77,7 +77,7 @@ export async function extractNewsContext(
 ): Promise<ExtractNewsContextResult> {
 	const { symbols, limit = 10, dryRun = false } = params;
 
-	// In backtest mode, return empty result for consistent/fast execution
+	// In test mode, return empty result for consistent/fast execution
 	if (isTest(ctx)) {
 		return {
 			events: [],
@@ -157,7 +157,7 @@ export async function analyzeContent(
 ): Promise<AnalyzeContentResult> {
 	const { content, sourceType, symbols = [], dryRun = false } = params;
 
-	// In backtest mode, return empty result
+	// In test mode, return empty result
 	if (isTest(ctx)) {
 		return {
 			extraction: null,

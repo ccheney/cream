@@ -167,8 +167,8 @@ export const IngestIndicatorInputSchema = z.object({
 	generatedInRegime: z.string().optional().describe("Market regime when generated"),
 	codeHash: z.string().optional().describe("SHA256 hash of indicator code"),
 	astSignature: z.string().optional().describe("AST signature for structural deduplication"),
-	deflatedSharpe: z.number().optional().describe("Deflated Sharpe from backtesting"),
-	probabilityOfOverfit: z.number().optional().describe("Probability of backtest overfitting"),
+	deflatedSharpe: z.number().optional().describe("Deflated Sharpe from research testing"),
+	probabilityOfOverfit: z.number().optional().describe("Probability of overfitting (PBO)"),
 	informationCoefficient: z.number().optional().describe("IC with forward returns"),
 	environment: z.enum(["PAPER", "LIVE"]).describe("Trading environment"),
 });
