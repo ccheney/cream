@@ -262,7 +262,7 @@ services:
       # Override ZO_AUTH_TOKEN if using custom credentials
       - ZO_AUTH_TOKEN=${ZO_AUTH_TOKEN:-cm9vdEBjcmVhbS5sb2NhbDpDcmVhbURldjEyMyE=}
     volumes:
-      - ./docker/openobserve/otel-collector-config.yaml:/etc/otel-collector-config.yaml:ro
+      - ./packages/infra/observability/otel-collector-config.yaml:/etc/otel-collector-config.yaml:ro
     depends_on:
       - openobserve
     healthcheck:
