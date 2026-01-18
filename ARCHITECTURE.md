@@ -293,12 +293,6 @@ Every decision is validated against:
 
 ```mermaid
 flowchart LR
-    subgraph BACKTEST
-        B1[Mock Broker]
-        B2[No Market Feed]
-        B3[Safety OFF]
-    end
-
     subgraph PAPER
         P1[Paper Account]
         P2[Live Data]
@@ -314,7 +308,6 @@ flowchart LR
 
 | Environment | Auth Required | Real Money | Safety Checks |
 |-------------|---------------|------------|---------------|
-| BACKTEST | No | No | Disabled |
 | PAPER | Yes | No | Optional |
 | LIVE | Yes + MFA | Yes | Required |
 

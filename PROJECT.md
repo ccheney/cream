@@ -232,17 +232,16 @@ The agent layer and execution layer communicate through typed schemas ensuring d
 
 ---
 
-## Three Operating Modes
+## Two Operating Modes
 
 A single environment variable (`CREAM_ENV`) switches the entire system:
 
 | Mode | Agents | Market Data | Execution |
 |------|--------|-------------|-----------|
-| **BACKTEST** | Stub (no LLM calls) | Historical fixtures | Simulated fills |
 | **PAPER** | Full LLM reasoning | Live market data | Paper orders |
 | **LIVE** | Full LLM reasoning | Live market data | Real money |
 
-The same codebase runs in all three modes. Backtesting uses deterministic stubs for speed; paper and live trading use the full agent network.
+The same codebase runs in both modes with identical agent reasoning.
 
 ---
 

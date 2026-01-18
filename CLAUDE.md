@@ -4,7 +4,12 @@ Cream is an agentic trading system for US equities and options combining LLM rea
 
 ## Environment
 
-Single switch controls environment: `CREAM_ENV=BACKTEST|PAPER|LIVE`
+Single switch controls environment: `CREAM_ENV=PAPER|LIVE`
+
+- **PAPER**: Paper trading with simulated orders but real market data
+- **LIVE**: Live trading with real orders and real money
+
+Tests use `NODE_ENV=test` with `CREAM_ENV=PAPER` and `ctx.source="test"` to identify test contexts.
 
 ## Tech Stack
 
@@ -48,7 +53,7 @@ packages/
   metrics/              # Risk-adjusted performance metrics
   prediction-markets/   # Kalshi integration
   regime/               # Market regime classification
-  research/             # Python backtesting (VectorBT subprocess runner)
+  research/             # Python research tools (VectorBT)
   schema/               # Protobuf definitions (.proto files)
   schema-gen/           # Generated Protobuf stubs (TS/Rust)
   storage/              # PostgreSQL + Drizzle ORM repositories
