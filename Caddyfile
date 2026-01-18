@@ -139,6 +139,39 @@
 }
 
 # ============================================
+# OpenObserve (Observability UI)
+# ============================================
+{$OBSERVE_HOST:observe.cream.broker} {
+	reverse_proxy openobserve:5080 {
+		health_uri /healthz
+		health_interval 30s
+		health_timeout 10s
+		health_status 200
+	}
+
+	# Compression
+	encode gzip zstd
+
+	# Security headers
+	header {
+		X-Frame-Options "DENY"
+		X-Content-Type-Options "nosniff"
+		X-XSS-Protection "1; mode=block"
+		Referrer-Policy "strict-origin-when-cross-origin"
+		-Server
+	}
+
+	# Logging
+	log {
+		output file /var/log/caddy/observe.log {
+			roll_size 100mb
+			roll_keep 5
+		}
+		format json
+	}
+}
+
+# ============================================
 # Local Development (HTTP only)
 # ============================================
 :8080 {

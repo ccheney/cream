@@ -32,12 +32,15 @@ services:
     environment:
       - DASHBOARD_HOST=${DASHBOARD_HOST:-cream.broker}
       - API_HOST=${API_HOST:-api.cream.broker}
+      - OBSERVE_HOST=${OBSERVE_HOST:-observe.cream.broker}
       - DASHBOARD_UPSTREAM=dashboard:3000
       - API_UPSTREAM=dashboard-api:3001
     depends_on:
       dashboard:
         condition: service_healthy
       dashboard-api:
+        condition: service_healthy
+      openobserve:
         condition: service_healthy
     restart: unless-stopped
     networks:
@@ -79,6 +82,13 @@ services:
       - DATABASE_URL=${DATABASE_URL}
       - ALLOWED_ORIGINS=https://${DASHBOARD_HOST:-cream.broker}
       - HELIX_URL=${HELIX_URL:-}
+      # OpenTelemetry
+      - OTEL_ENABLED=${OTEL_ENABLED:-true}
+      - OTEL_EXPORTER_OTLP_ENDPOINT=http://otel-collector:4318
+      - OTEL_SERVICE_NAME=cream-dashboard-api
+    depends_on:
+      otel-collector:
+        condition: service_healthy
     restart: unless-stopped
     networks:
       - cream-network
@@ -104,12 +114,69 @@ services:
       - CREAM_ENV=${CREAM_ENV:-PAPER}
       - DATABASE_URL=${DATABASE_URL}
       - HELIX_URL=${HELIX_URL:-}
+      # OpenTelemetry
+      - OTEL_ENABLED=${OTEL_ENABLED:-true}
+      - OTEL_EXPORTER_OTLP_ENDPOINT=http://otel-collector:4318
+      - OTEL_SERVICE_NAME=cream-worker
     depends_on:
       dashboard-api:
+        condition: service_healthy
+      otel-collector:
         condition: service_healthy
     restart: unless-stopped
     networks:
       - cream-network
+
+  # ==========================================
+  # OpenObserve - Observability Platform
+  # ==========================================
+  # Web UI: https://${OBSERVE_HOST:-observe.cream.broker}
+  # Credentials configured via ZO_ROOT_USER_EMAIL and ZO_ROOT_USER_PASSWORD
+  openobserve:
+    image: public.ecr.aws/zinclabs/openobserve:v0.50.0-rc3
+    container_name: cream-openobserve
+    restart: unless-stopped
+    environment:
+      - ZO_DATA_DIR=/data
+      - ZO_ROOT_USER_EMAIL=${ZO_ROOT_USER_EMAIL:-admin@cream.broker}
+      - ZO_ROOT_USER_PASSWORD=${ZO_ROOT_USER_PASSWORD}
+      - ZO_TELEMETRY=false
+      - ZO_WEB_URL=https://${OBSERVE_HOST:-observe.cream.broker}
+    volumes:
+      - openobserve_data:/data
+    networks:
+      - cream-network
+    healthcheck:
+      test: ["CMD", "wget", "-q", "--spider", "http://127.0.0.1:5080/healthz"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+
+  # ==========================================
+  # OpenTelemetry Collector
+  # ==========================================
+  # Receives OTLP from services and forwards to OpenObserve
+  otel-collector:
+    image: otel/opentelemetry-collector-contrib:0.116.1
+    container_name: cream-otel-collector
+    restart: unless-stopped
+    command:
+      - --config=/etc/otel-collector-config.yaml
+    environment:
+      - ZO_AUTH_TOKEN=${ZO_AUTH_TOKEN}
+    volumes:
+      - ./packages/infra/observability/otel-collector-config.yaml:/etc/otel-collector-config.yaml:ro
+    depends_on:
+      openobserve:
+        condition: service_healthy
+    networks:
+      - cream-network
+    healthcheck:
+      test: ["CMD", "wget", "-q", "--spider", "http://127.0.0.1:13133/"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
 
   # ==========================================
   # PostgreSQL Database
@@ -127,6 +194,8 @@ volumes:
     name: cream_caddy_config
   caddy_logs:
     name: cream_caddy_logs
+  openobserve_data:
+    name: cream_openobserve_data
 
 # ==========================================
 # Networks
