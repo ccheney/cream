@@ -304,42 +304,6 @@ export const ThesisUpdateSchema = z.object({
 	reason: z.string().optional(),
 });
 
-export const ResearchTriggerResultSchema = z.object({
-	triggered: z.boolean(),
-	trigger: z
-		.object({
-			type: z.string(),
-			severity: z.string(),
-			reason: z.string(),
-		})
-		.optional(),
-	hypothesis: z
-		.object({
-			hypothesisId: z.string(),
-			title: z.string(),
-		})
-		.optional(),
-});
-
-export const IndicatorTriggerResultSchema = z.object({
-	shouldTrigger: z.boolean(),
-	triggerReason: z.string().nullable(),
-	conditions: z.object({
-		regimeGapDetected: z.boolean(),
-		currentRegime: z.string(),
-		regimeGapDetails: z.string().optional(),
-		closestIndicatorSimilarity: z.number(),
-		rollingIC30Day: z.number(),
-		icDecayDays: z.number(),
-		existingIndicatorsUnderperforming: z.boolean(),
-		daysSinceLastAttempt: z.number(),
-		activeIndicatorCount: z.number(),
-		maxIndicatorCapacity: z.number(),
-	}),
-	summary: z.string(),
-	recommendation: z.string(),
-});
-
 export const WorkflowResultSchema = z.object({
 	cycleId: z.string(),
 	approved: z.boolean(),
@@ -353,8 +317,6 @@ export const WorkflowResultSchema = z.object({
 	mode: z.enum(["STUB", "LLM"]),
 	configVersion: z.string().nullable(),
 	thesisUpdates: z.array(ThesisUpdateSchema).optional(),
-	researchTrigger: ResearchTriggerResultSchema.optional(),
-	indicatorTrigger: IndicatorTriggerResultSchema.optional(),
 	thesisMemoryIngestion: z
 		.object({
 			ingested: z.number(),

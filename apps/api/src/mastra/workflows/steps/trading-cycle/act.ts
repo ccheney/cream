@@ -7,7 +7,7 @@
 import { create } from "@bufbuild/protobuf";
 import { timestampFromDate } from "@bufbuild/protobuf/wkt";
 import type { ExecutionContext } from "@cream/domain";
-import { isBacktest } from "@cream/domain";
+import { isTest } from "@cream/domain";
 import {
 	Action,
 	Environment,
@@ -89,8 +89,6 @@ function toProtobufStrategyFamily(family: string): StrategyFamily {
  */
 function toProtobufEnvironment(env: string): Environment {
 	switch (env.toUpperCase()) {
-		case "BACKTEST":
-			return Environment.BACKTEST;
 		case "PAPER":
 			return Environment.PAPER;
 		case "LIVE":
@@ -161,7 +159,7 @@ function toProtobufDecisionPlan(
 /**
  * Check constraints for the trading plan.
  *
- * In BACKTEST mode, returns a simple pass/fail based on approval.
+ * In test mode (source: "test"), returns a simple pass/fail based on approval.
  * In PAPER/LIVE mode, calls the Rust execution engine for constraint validation.
  */
 export async function checkConstraints(
@@ -173,7 +171,7 @@ export async function checkConstraints(
 		return { passed: false, violations: ["Plan not approved by agents"] };
 	}
 
-	if (ctx && isBacktest(ctx)) {
+	if (ctx && isTest(ctx)) {
 		return { passed: true, violations: [] };
 	}
 
@@ -211,7 +209,7 @@ export async function checkConstraints(
 /**
  * Submit orders for approved decisions.
  *
- * In BACKTEST mode, returns mock order IDs without executing.
+ * In test mode (source: "test"), returns mock order IDs without executing.
  * In PAPER/LIVE mode, calls the Rust execution engine to submit orders.
  */
 export async function submitOrders(
@@ -230,7 +228,7 @@ export async function submitOrders(
 		return { submitted: true, orderIds: [], errors: [] };
 	}
 
-	if (ctx && isBacktest(ctx)) {
+	if (ctx && isTest(ctx)) {
 		const mockOrderIds = actionableDecisions.map(
 			(d) => `mock-${d.instrumentId}-${cycleId}-${Date.now()}`
 		);

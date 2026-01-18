@@ -11,7 +11,7 @@ import { createDefaultPredictionMarketsConfig, type PredictionMarketsConfig } fr
 import {
 	createContext,
 	type ExecutionContext,
-	isBacktest,
+	isTest,
 	type PredictionMarketScores,
 	requireEnv,
 } from "@cream/domain";
@@ -246,7 +246,7 @@ export const fetchPredictionMarketsStep = createStep({
 		const ctx = createStepContext();
 
 		// In backtest mode, return empty context
-		if (isBacktest(ctx)) {
+		if (isTest(ctx)) {
 			return {
 				signals: {
 					platforms: [],
@@ -280,21 +280,44 @@ export const fetchPredictionMarketsStep = createStep({
 			// Fetch all market data
 			const marketData = await client.getAllMarketData(inputData.marketTypes);
 
-			// Store data to database (non-blocking)
-			Promise.all([
-				storeMarketSnapshots(marketData.events).catch((err) => {
-					log.warn(
-						{ error: err instanceof Error ? err.message : String(err) },
-						"Failed to store prediction market snapshots"
-					);
-				}),
-				storeComputedSignals(marketData.signals, marketData.scores).catch((err) => {
-					log.warn(
-						{ error: err instanceof Error ? err.message : String(err) },
-						"Failed to store prediction market signals"
-					);
-				}),
+			log.info(
+				{ eventCount: marketData.events.length, platforms: marketData.signals.platforms },
+				"Fetched prediction market data"
+			);
+
+			// Store data to database
+			const [snapshotResult, signalResult] = await Promise.allSettled([
+				storeMarketSnapshots(marketData.events),
+				storeComputedSignals(marketData.signals, marketData.scores),
 			]);
+
+			if (snapshotResult.status === "rejected") {
+				log.warn(
+					{
+						error:
+							snapshotResult.reason instanceof Error
+								? snapshotResult.reason.message
+								: String(snapshotResult.reason),
+					},
+					"Failed to store prediction market snapshots"
+				);
+			} else {
+				log.info({ count: marketData.events.length }, "Stored prediction market snapshots");
+			}
+
+			if (signalResult.status === "rejected") {
+				log.warn(
+					{
+						error:
+							signalResult.reason instanceof Error
+								? signalResult.reason.message
+								: String(signalResult.reason),
+					},
+					"Failed to store prediction market signals"
+				);
+			} else {
+				log.info("Stored prediction market signals");
+			}
 
 			// Compute numeric scores for agent context
 			const numericScores = toNumericScores(marketData.scores);
@@ -339,7 +362,7 @@ export async function getLatestPredictionMarketSignals(): Promise<PredictionMark
 	// Create context to check environment
 	const ctx = createStepContext();
 
-	if (isBacktest(ctx)) {
+	if (isTest(ctx)) {
 		return null;
 	}
 

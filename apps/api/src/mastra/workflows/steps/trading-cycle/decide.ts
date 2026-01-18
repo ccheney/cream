@@ -1,7 +1,7 @@
 /**
  * Decide Phase - Stub Agents
  *
- * Stub agent implementations for BACKTEST mode.
+ * Stub agent implementations for test mode.
  * These provide deterministic, fast responses without LLM calls.
  */
 

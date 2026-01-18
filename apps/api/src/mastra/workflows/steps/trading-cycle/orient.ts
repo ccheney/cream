@@ -4,25 +4,15 @@
  * Memory context loading and regime classification for the trading cycle workflow.
  */
 
-import {
-	type CheckIndicatorTriggerInput,
-	type CheckIndicatorTriggerOutput,
-	checkIndicatorTrigger as evaluateIndicatorTrigger,
-} from "@cream/agents";
 import type { ExecutionContext } from "@cream/domain";
-import { isBacktest } from "@cream/domain";
+import { isTest } from "@cream/domain";
 import { generateSituationBrief, type MarketSnapshot as HelixMarketSnapshot } from "@cream/helix";
 import { classifyRegime, type RegimeClassification } from "@cream/regime";
 
-import { getIndicatorsRepo, getRegimeLabelsRepo } from "../../../../db.js";
-import {
-	type IndicatorSynthesisInput,
-	indicatorSynthesisWorkflow,
-} from "../../indicator-synthesis/index.js";
+import { getRegimeLabelsRepo } from "../../../../db.js";
 import { getEmbeddingClient, getHelixOrchestrator } from "./helix.js";
 import { log } from "./logger.js";
 import type {
-	IndicatorTriggerResult,
 	MarketSnapshot,
 	MemoryContext,
 	MorningNewspaperContext,
@@ -58,7 +48,7 @@ export async function loadMemoryContext(
 		};
 	}
 
-	if (ctx && isBacktest(ctx)) {
+	if (ctx && isTest(ctx)) {
 		return {
 			relevantCases: [],
 			regimeLabels,
@@ -247,228 +237,4 @@ export async function computeAndStoreRegimes(
 	}
 
 	return regimeLabels;
-}
-
-// ============================================
-// Indicator Trigger Detection
-// ============================================
-
-/**
- * Covered regimes for indicator synthesis gap detection.
- * These are the regimes that existing indicators are designed for.
- */
-const COVERED_REGIMES = new Set(["BULL_TREND", "BEAR_TREND", "RANGE"]);
-
-/**
- * Check if indicator synthesis should be triggered during the Orient phase.
- *
- * Evaluates trigger conditions:
- * - Regime gap: Current regime lacks indicator coverage
- * - IC decay: Existing indicators underperforming (IC < 0.02 for 5+ days)
- *
- * Blocking conditions:
- * - 30-day cooldown since last generation attempt
- * - Similarity threshold: Closest indicator > 0.7 similarity
- * - Capacity: At or above max indicator limit (default 20)
- *
- * @param regimeLabels - Current regime classifications keyed by symbol
- * @param ctx - Execution context for environment detection
- * @returns Indicator trigger result or null for BACKTEST
- *
- * @see docs/plans/36-dynamic-indicator-synthesis-workflow.md
- */
-export async function checkIndicatorTrigger(
-	regimeLabels: Record<string, RegimeData>,
-	ctx?: ExecutionContext
-): Promise<IndicatorTriggerResult | null> {
-	// Skip in BACKTEST mode
-	if (ctx && isBacktest(ctx)) {
-		return null;
-	}
-
-	try {
-		const indicatorsRepo = await getIndicatorsRepo();
-
-		// Get active indicators (paper + production)
-		const activeIndicators = await indicatorsRepo.findActive();
-		const activeIndicatorCount = activeIndicators.length;
-
-		// Determine primary regime from classified regimes
-		const regimes = Object.values(regimeLabels).map((r) => r.regime.toUpperCase());
-		const primaryRegime = regimes[0] ?? "RANGE";
-
-		// Detect regime gap - check if primary regime is covered by existing indicators
-		const regimeGapDetected = !COVERED_REGIMES.has(primaryRegime);
-		const regimeGapDetails = regimeGapDetected
-			? `No indicators designed for ${primaryRegime} regime`
-			: undefined;
-
-		// Get IC history from last 30 days for all active indicators
-		// We aggregate across all indicators to detect portfolio-wide underperformance
-		const thirtyDaysAgo = new Date();
-		thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
-		const startDate = thirtyDaysAgo.toISOString().split("T")[0];
-
-		const icHistory: { date: string; icValue: number }[] = [];
-
-		for (const indicator of activeIndicators) {
-			const history = await indicatorsRepo.findICHistoryByIndicatorId(indicator.id, {
-				startDate,
-				limit: 30,
-			});
-
-			for (const entry of history) {
-				icHistory.push({
-					date: entry.date,
-					icValue: entry.icValue,
-				});
-			}
-		}
-
-		// Sort IC history by date (newest first)
-		icHistory.sort((a, b) => b.date.localeCompare(a.date));
-
-		// Find last generation attempt timestamp
-		// Use the most recent generatedAt from any active indicator
-		let lastAttemptAt: string | null = null;
-		for (const indicator of activeIndicators) {
-			if (indicator.generatedAt && (!lastAttemptAt || indicator.generatedAt > lastAttemptAt)) {
-				lastAttemptAt = indicator.generatedAt;
-			}
-		}
-
-		// Build tool input
-		const toolInput: CheckIndicatorTriggerInput = {
-			regimeGapDetected,
-			currentRegime: primaryRegime,
-			regimeGapDetails,
-			// Default to 1.0 (high similarity) if no similarity check available
-			// TODO: Implement AST similarity check for actual value
-			closestIndicatorSimilarity: 1.0,
-			icHistory,
-			lastAttemptAt,
-			activeIndicatorCount,
-			maxIndicatorCapacity: 20,
-		};
-
-		// Execute the evaluation
-		const result: CheckIndicatorTriggerOutput = await evaluateIndicatorTrigger(toolInput);
-
-		log.info(
-			{
-				shouldTrigger: result.shouldTrigger,
-				recommendation: result.recommendation,
-				currentRegime: primaryRegime,
-				activeIndicatorCount,
-				regimeGapDetected,
-			},
-			"Indicator trigger check completed"
-		);
-
-		// Map to IndicatorTriggerResult
-		return {
-			shouldTrigger: result.shouldTrigger,
-			triggerReason: result.evaluation.shouldTrigger ? result.evaluation.summary : null,
-			conditions: result.evaluation.conditions,
-			summary: result.evaluation.summary,
-			recommendation: result.recommendation,
-		};
-	} catch (error) {
-		log.warn(
-			{ error: error instanceof Error ? error.message : String(error) },
-			"Failed to check indicator trigger"
-		);
-		return null;
-	}
-}
-
-// ============================================
-// Async Workflow Launch
-// ============================================
-
-/**
- * Spawn the indicator synthesis workflow asynchronously (fire-and-forget).
- *
- * This function does NOT block the trading cycle. The synthesis workflow
- * runs in the background while the hourly OODA loop continues.
- *
- * @param triggerResult - Result from checkIndicatorTrigger
- * @param cycleId - Current trading cycle ID
- * @returns void (non-blocking)
- *
- * @see docs/plans/36-dynamic-indicator-synthesis-workflow.md Phase 3, Step 3.1
- */
-export function maybeSpawnIndicatorSynthesis(
-	triggerResult: IndicatorTriggerResult | null,
-	cycleId: string
-): void {
-	if (!triggerResult?.shouldTrigger) {
-		return;
-	}
-
-	log.info(
-		{
-			cycleId,
-			triggerReason: triggerResult.triggerReason,
-			currentRegime: triggerResult.conditions.currentRegime,
-			regimeGapDetected: triggerResult.conditions.regimeGapDetected,
-			rollingIC30Day: triggerResult.conditions.rollingIC30Day,
-			icDecayDays: triggerResult.conditions.icDecayDays,
-			activeIndicatorCount: triggerResult.conditions.activeIndicatorCount,
-			recommendation: triggerResult.recommendation,
-		},
-		"Spawning indicator synthesis workflow"
-	);
-
-	const workflowInput: IndicatorSynthesisInput = {
-		triggerReason: triggerResult.triggerReason ?? "Unknown trigger",
-		currentRegime: triggerResult.conditions.currentRegime,
-		regimeGapDetails: triggerResult.conditions.regimeGapDetails,
-		rollingIC30Day: triggerResult.conditions.rollingIC30Day,
-		icDecayDays: triggerResult.conditions.icDecayDays,
-		cycleId,
-	};
-
-	indicatorSynthesisWorkflow
-		.createRun()
-		.then((run) => run.start({ inputData: workflowInput }))
-		.then((workflowResult) => {
-			if (workflowResult.status === "success") {
-				// Access result from successful workflow
-				const output = (workflowResult as { result?: Record<string, unknown> }).result as
-					| {
-							success?: boolean;
-							status?: string;
-							indicatorName?: string;
-					  }
-					| undefined;
-
-				log.info(
-					{
-						cycleId,
-						success: output?.success,
-						status: output?.status,
-						indicatorName: output?.indicatorName,
-					},
-					"Indicator synthesis workflow completed"
-				);
-			} else {
-				log.warn(
-					{
-						cycleId,
-						status: workflowResult.status,
-					},
-					"Indicator synthesis workflow ended with non-success status"
-				);
-			}
-		})
-		.catch((error) => {
-			log.error(
-				{
-					cycleId,
-					error: error instanceof Error ? error.message : String(error),
-				},
-				"Indicator synthesis workflow failed"
-			);
-		});
 }

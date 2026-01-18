@@ -6,7 +6,7 @@
  */
 
 import type { ExecutionContext } from "@cream/domain";
-import { createCalendarService, isBacktest } from "@cream/domain";
+import { createCalendarService, isTest } from "@cream/domain";
 import {
 	createLiquidityCalculator,
 	createPriceCalculator,
@@ -90,7 +90,7 @@ class MarketDataProviderAdapter implements MarketDataProvider {
 /**
  * Fetch market snapshot for the given instruments.
  *
- * In BACKTEST mode, uses deterministic fixture data for reproducible behavior.
+ * In test mode (source: "test"), uses deterministic fixture data for reproducible behavior.
  * In PAPER/LIVE mode, fetches real market data via the market data adapter
  * and calculates indicators via IndicatorService.
  *
@@ -102,7 +102,7 @@ export async function fetchMarketSnapshot(
 	instruments: string[],
 	ctx?: ExecutionContext
 ): Promise<MarketSnapshot> {
-	if (ctx && isBacktest(ctx)) {
+	if (ctx && isTest(ctx)) {
 		return fetchFixtureSnapshot(instruments);
 	}
 
@@ -248,7 +248,7 @@ async function fetchIndicators(
 }
 
 /**
- * Fetch market snapshot using deterministic fixture data (for BACKTEST mode).
+ * Fetch market snapshot using deterministic fixture data (for test mode).
  */
 export function fetchFixtureSnapshot(instruments: string[]): MarketSnapshot {
 	const timestamp = FIXTURE_TIMESTAMP;

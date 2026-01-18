@@ -1,19 +1,18 @@
 /**
  * Thesis Lifecycle Management
  *
- * Thesis state transitions, research triggers, and memory ingestion.
+ * Thesis state transitions and memory ingestion.
  */
 
-import { createResearchTriggerService } from "@cream/agents";
 import type { CloseReason, ThesisStateRepository } from "@cream/storage";
 import {
 	ingestClosedThesis,
 	type ThesisIngestionInput,
 } from "../../../../../workflows/steps/thesisMemoryIngestion.js";
-import { getFactorZooRepo, getHelixClient, getThesisStateRepo } from "../../../../db.js";
+import { getHelixClient, getThesisStateRepo } from "../../../../db.js";
 import { getEmbeddingClient } from "./helix.js";
 import { log } from "./logger.js";
-import type { ResearchTriggerResult, ThesisUpdate } from "./types.js";
+import type { ThesisUpdate } from "./types.js";
 
 // ============================================
 // Thesis Processing
@@ -179,65 +178,6 @@ export function mapDecisionToCloseReason(decision: {
 		return "TIME_DECAY";
 	}
 	return "MANUAL";
-}
-
-// ============================================
-// Research Triggers
-// ============================================
-
-/**
- * Check for research triggers and optionally spawn IdeaAgent.
- */
-export async function checkResearchTriggersAndSpawnIdea(
-	regimeLabels: Record<string, { regime: string; confidence: number }>,
-	environment: string
-): Promise<ResearchTriggerResult> {
-	if (environment === "BACKTEST") {
-		return { triggered: false };
-	}
-
-	try {
-		const factorZooRepo = await getFactorZooRepo();
-		const triggerService = createResearchTriggerService({ factorZoo: factorZooRepo });
-
-		const activeRegimes = Object.values(regimeLabels).map((r) => r.regime);
-		const primaryRegime = activeRegimes[0] ?? "RANGE";
-
-		const result = await triggerService.shouldTriggerResearch({
-			currentRegime: primaryRegime,
-			activeRegimes,
-			activeFactorIds: [],
-			timestamp: new Date().toISOString(),
-		});
-
-		if (!result.shouldTrigger || !result.trigger) {
-			return { triggered: false };
-		}
-
-		log.info(
-			{
-				triggerType: result.trigger.type,
-				severity: result.trigger.severity,
-				suggestedFocus: result.trigger.suggestedFocus,
-			},
-			"Research trigger detected"
-		);
-
-		return {
-			triggered: true,
-			trigger: {
-				type: result.trigger.type,
-				severity: result.trigger.severity,
-				reason: result.trigger.suggestedFocus,
-			},
-		};
-	} catch (error) {
-		log.warn(
-			{ error: error instanceof Error ? error.message : String(error) },
-			"Failed to check research triggers"
-		);
-		return { triggered: false };
-	}
 }
 
 // ============================================

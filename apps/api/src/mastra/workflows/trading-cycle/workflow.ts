@@ -100,11 +100,11 @@ const orientStep = createStep({
 	stateSchema: MinimalStateSchema,
 	execute: async ({ inputData, state, setState }) => {
 		// Determine execution mode based on environment
-		// BACKTEST always uses STUB (no LLM calls for speed)
+		// Use STUB mode when forced (for testing) or when not in PAPER/LIVE
 		// PAPER/LIVE use LLM (real agent reasoning)
-		const env = Bun.env.CREAM_ENV ?? "BACKTEST";
+		const env = Bun.env.CREAM_ENV ?? "PAPER";
 		const forceStub = inputData.forceStub ?? false;
-		const mode = env === "BACKTEST" || forceStub ? "STUB" : "LLM";
+		const mode = forceStub ? "STUB" : "LLM";
 		await setState({ ...state, mode });
 
 		// Fetch today's morning newspaper if available (LLM mode only)

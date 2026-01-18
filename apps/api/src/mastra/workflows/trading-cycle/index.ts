@@ -27,7 +27,6 @@ export type {
 	QuoteData,
 	RegimeData,
 	Research,
-	ResearchTriggerResult,
 	SentimentAnalysis,
 	ThesisUpdate,
 	WorkflowDecisionPlan,

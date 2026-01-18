@@ -280,45 +280,6 @@ export interface ThesisUpdate {
 	reason?: string;
 }
 
-/**
- * Research trigger result
- */
-export interface ResearchTriggerResult {
-	triggered: boolean;
-	trigger?: {
-		type: string;
-		severity: string;
-		reason: string;
-	};
-	hypothesis?: {
-		hypothesisId: string;
-		title: string;
-	};
-}
-
-/**
- * Indicator trigger result from checkIndicatorTrigger
- * @see docs/plans/36-dynamic-indicator-synthesis-workflow.md
- */
-export interface IndicatorTriggerResult {
-	shouldTrigger: boolean;
-	triggerReason: string | null;
-	conditions: {
-		regimeGapDetected: boolean;
-		currentRegime: string;
-		regimeGapDetails?: string;
-		closestIndicatorSimilarity: number;
-		rollingIC30Day: number;
-		icDecayDays: number;
-		existingIndicatorsUnderperforming: boolean;
-		daysSinceLastAttempt: number;
-		activeIndicatorCount: number;
-		maxIndicatorCapacity: number;
-	};
-	summary: string;
-	recommendation: string;
-}
-
 // ============================================
 // Workflow Result
 // ============================================
@@ -333,10 +294,6 @@ export interface WorkflowResult {
 	configVersion: string | null;
 	/** Thesis lifecycle updates made during this cycle */
 	thesisUpdates?: ThesisUpdate[];
-	/** Research trigger detection result */
-	researchTrigger?: ResearchTriggerResult;
-	/** Indicator synthesis trigger detection result */
-	indicatorTrigger?: IndicatorTriggerResult;
 	/** Thesis memory ingestion result */
 	thesisMemoryIngestion?: { ingested: number; errors: string[] };
 }

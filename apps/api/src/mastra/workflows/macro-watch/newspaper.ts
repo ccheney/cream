@@ -78,7 +78,36 @@ export function compileNewspaper(
 		.map((e) => `• ${e.headline}`);
 
 	// Build prediction markets section
-	const predictionHeadlines = predictionEntries.slice(0, 5).map((e) => `• ${e.headline}`);
+	// Prefer comprehensive summaries over individual entries
+	const predictionHeadlines: string[] = [];
+
+	// First, check for a comprehensive summary entry
+	const comprehensiveEntry = predictionEntries.find((e) => {
+		const metadata = e.metadata as Record<string, unknown> | undefined;
+		return metadata?.isComprehensive === true;
+	});
+
+	if (comprehensiveEntry) {
+		// Use the comprehensive summary with detailed breakdown
+		const metadata = comprehensiveEntry.metadata as Record<string, unknown>;
+		predictionHeadlines.push(`• ${comprehensiveEntry.headline}`);
+		if (typeof metadata.details === "string") {
+			const details = metadata.details.split("\n").filter((l: string) => l.trim());
+			for (const detail of details) {
+				predictionHeadlines.push(detail);
+			}
+		}
+	} else {
+		// Fallback: use individual entries (legacy behavior)
+		// Deduplicate by headline to avoid duplicates
+		const seenHeadlines = new Set<string>();
+		for (const entry of predictionEntries.slice(0, 5)) {
+			if (!seenHeadlines.has(entry.headline)) {
+				seenHeadlines.add(entry.headline);
+				predictionHeadlines.push(`• ${entry.headline}`);
+			}
+		}
+	}
 
 	// Build economic calendar section
 	const economicHeadlines = economicEntries.slice(0, 5).map((e) => `• ${e.headline}`);
