@@ -47,7 +47,7 @@ const mockGetPreviousTradingDay = mock(() => Promise.resolve("2026-01-14"));
 const mockCalendarService = {
 	getPreviousTradingDay: mockGetPreviousTradingDay,
 };
-const mockGetCalendarService = mock(() => mockCalendarService);
+const mockGetCalendarService = mock<() => typeof mockCalendarService | null>(() => mockCalendarService);
 
 mock.module("@cream/api", () => ({
 	getMacroWatchRepo: mockGetMacroWatchRepo,
@@ -154,9 +154,7 @@ describe("NewspaperService", () => {
 		});
 
 		test("handles calendar service not available", async () => {
-			mockGetCalendarService.mockReturnValueOnce(
-				null as unknown as { getPreviousTradingDay: ReturnType<typeof mock> }
-			);
+			mockGetCalendarService.mockReturnValueOnce(null);
 
 			await service.compile(["AAPL"]);
 

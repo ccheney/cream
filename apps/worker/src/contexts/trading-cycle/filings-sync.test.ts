@@ -24,10 +24,20 @@ mock.module("@cream/filings", () => ({
 	createFilingsIngestionService: mockCreateFilingsIngestionService,
 }));
 
-const mockDb = {
+type Database = Parameters<typeof createFilingsSyncService>[0];
+
+/**
+ * Test double for Database. The FilingsSyncService delegates to createFilingsIngestionService
+ * which is mocked above, so the actual database methods are never called during tests.
+ */
+function testDouble<T>(partial: Partial<T>): T {
+	return partial as T;
+}
+
+const mockDb = testDouble<Database>({
 	execute: mock(() => Promise.resolve({ rows: [] })),
 	batch: mock(() => Promise.resolve([])),
-} as unknown as Parameters<typeof createFilingsSyncService>[0];
+});
 
 describe("FilingsSyncService", () => {
 	let service: FilingsSyncService;
@@ -145,7 +155,7 @@ describe("FilingsSyncService", () => {
 		});
 
 		test("handles different environments", async () => {
-			const environments: RuntimeEnvironment[] = ["BACKTEST", "PAPER", "LIVE"];
+			const environments: RuntimeEnvironment[] = ["PAPER", "LIVE"];
 
 			for (const env of environments) {
 				mockSyncFilings.mockClear();

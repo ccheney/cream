@@ -6,7 +6,6 @@
 
 import type { RuntimeEnvironment } from "@cream/config";
 import type { JobState } from "../contexts/indicators/index.js";
-import type { IndicatorSynthesisScheduler } from "../contexts/synthesis/index.js";
 import { log } from "./logger.js";
 
 // ============================================
@@ -19,7 +18,8 @@ export type WorkerService =
 	| "filings_sync"
 	| "short_interest"
 	| "sentiment"
-	| "corporate_actions";
+	| "corporate_actions"
+	| "prediction_markets";
 
 export interface TriggerResult {
 	success: boolean;
@@ -37,6 +37,7 @@ export interface ServiceTriggers {
 	triggerShortInterest: () => Promise<TriggerResult>;
 	triggerSentiment: () => Promise<TriggerResult>;
 	triggerCorporateActions: () => Promise<TriggerResult>;
+	triggerPredictionMarkets: () => Promise<TriggerResult>;
 }
 
 // ============================================
@@ -71,7 +72,6 @@ export interface HealthServerDeps {
 		newspaper: boolean;
 	};
 	getIndicatorJobStatus: () => Record<string, JobState> | null;
-	getSynthesisScheduler: () => IndicatorSynthesisScheduler | null;
 	getStartedAt: () => Date;
 	onReload: () => Promise<void>;
 	triggers?: ServiceTriggers;
@@ -85,7 +85,6 @@ export function createHealthServer(deps: HealthServerDeps, port?: number) {
 	function buildHealthResponse() {
 		const intervals = deps.getIntervals();
 		const indicatorJobs = deps.getIndicatorJobStatus();
-		const synthesisScheduler = deps.getSynthesisScheduler();
 		const startedAt = deps.getStartedAt();
 		const nextRun = deps.getNextRun();
 
@@ -103,7 +102,6 @@ export function createHealthServer(deps: HealthServerDeps, port?: number) {
 			next_run: nextRun ? formatNextRun(nextRun) : null,
 			running: deps.getRunningStatus(),
 			indicator_batch_jobs: formatIndicatorJobs(indicatorJobs),
-			synthesis_scheduler: formatSynthesisScheduler(synthesisScheduler),
 			started_at: startedAt.toISOString(),
 		};
 	}
@@ -115,6 +113,7 @@ export function createHealthServer(deps: HealthServerDeps, port?: number) {
 		short_interest: deps.triggers?.triggerShortInterest,
 		sentiment: deps.triggers?.triggerSentiment,
 		corporate_actions: deps.triggers?.triggerCorporateActions,
+		prediction_markets: deps.triggers?.triggerPredictionMarkets,
 	};
 
 	async function handleTrigger(service: WorkerService): Promise<Response> {
@@ -186,6 +185,7 @@ export function createHealthServer(deps: HealthServerDeps, port?: number) {
 						"short_interest",
 						"sentiment",
 						"corporate_actions",
+						"prediction_markets",
 					];
 
 					if (!validServices.includes(service)) {
@@ -252,20 +252,4 @@ function formatIndicatorJobs(jobs: Record<string, JobState> | null) {
 			},
 		])
 	);
-}
-
-function formatSynthesisScheduler(scheduler: IndicatorSynthesisScheduler | null) {
-	if (!scheduler) {
-		return { enabled: false };
-	}
-
-	const state = scheduler.getState();
-	return {
-		enabled: true,
-		last_run: state.lastRun?.toISOString() ?? null,
-		next_run: state.nextRun?.toISOString() ?? null,
-		run_count: state.runCount,
-		last_trigger_result: state.lastTriggerResult,
-		last_error: state.lastError,
-	};
 }

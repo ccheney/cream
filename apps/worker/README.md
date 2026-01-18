@@ -41,7 +41,7 @@ Runs three critical workflows:
 ### Environment Variables
 
 ```bash
-CREAM_ENV=BACKTEST|PAPER|LIVE
+CREAM_ENV=PAPER|LIVE
 DATABASE_URL=postgresql://user:pass@localhost:5432/cream
 HELIX_HOST=localhost
 HELIX_PORT=6969

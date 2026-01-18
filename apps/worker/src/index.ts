@@ -8,12 +8,16 @@
  * Run 'bun run db:seed' to initialize configuration before starting.
  */
 
+import { initTracing, shutdownTracing } from "./tracing.js";
+
+initTracing();
+
 import type { FullRuntimeConfig, RuntimeEnvironment } from "@cream/config";
 import {
 	type CreamEnvironment,
 	createContext,
 	initCalendarService,
-	isBacktest,
+	isTest,
 	requireEnv,
 	validateEnvironmentOrExit,
 } from "@cream/domain";
@@ -30,10 +34,6 @@ import {
 	type NewspaperService,
 } from "./contexts/macro-watch/index.js";
 import { createSchedulerManager, type SchedulerManager } from "./contexts/scheduling/index.js";
-import {
-	createIndicatorSynthesisScheduler,
-	type IndicatorSynthesisScheduler,
-} from "./contexts/synthesis/index.js";
 import {
 	type CycleTriggerService,
 	createCycleTriggerServiceFromEnv,
@@ -82,7 +82,6 @@ interface WorkerState {
 	// Schedulers
 	schedulerManager: SchedulerManager | null;
 	indicatorScheduler: IndicatorBatchScheduler | null;
-	synthesisScheduler: IndicatorSynthesisScheduler | null;
 }
 
 let state: WorkerState;
@@ -333,6 +332,26 @@ async function triggerCorporateActions(): Promise<TriggerResult> {
 	return triggerIndicatorJob("corporateActions");
 }
 
+async function triggerPredictionMarkets(): Promise<TriggerResult> {
+	const startTime = Date.now();
+	try {
+		state.lastRun.predictionMarkets = new Date();
+		await state.predictionMarkets.run();
+		return {
+			success: true,
+			message: "Prediction markets fetch completed",
+			durationMs: Date.now() - startTime,
+		};
+	} catch (error) {
+		return {
+			success: false,
+			message: "Prediction markets fetch failed",
+			error: error instanceof Error ? error.message : "Unknown error",
+			durationMs: Date.now() - startTime,
+		};
+	}
+}
+
 // ============================================
 // Configuration Reload
 // ============================================
@@ -357,7 +376,7 @@ async function main() {
 	const environment = requireEnv();
 
 	const startupCtx = createContext(environment, "scheduled");
-	if (!isBacktest(startupCtx)) {
+	if (!isTest(startupCtx)) {
 		validateEnvironmentOrExit(startupCtx, "worker", []);
 
 		if (!Bun.env.GOOGLE_GENERATIVE_AI_API_KEY) {
@@ -422,7 +441,6 @@ async function main() {
 
 		schedulerManager: null,
 		indicatorScheduler: null,
-		synthesisScheduler: null,
 	};
 
 	const intervals = getIntervals();
@@ -451,7 +469,6 @@ async function main() {
 			newspaper: state.newspaper.isRunning(),
 		}),
 		getIndicatorJobStatus,
-		getSynthesisScheduler: () => state.synthesisScheduler,
 		getStartedAt: () => state.startedAt,
 		onReload: handleReloadConfig,
 		triggers: {
@@ -461,6 +478,7 @@ async function main() {
 			triggerShortInterest,
 			triggerSentiment,
 			triggerCorporateActions,
+			triggerPredictionMarkets,
 		},
 	});
 	healthServer.start();
@@ -489,12 +507,6 @@ async function main() {
 			db,
 			getSymbols: getInstruments,
 		});
-
-		if (!isBacktest(startupCtx)) {
-			state.synthesisScheduler = createIndicatorSynthesisScheduler({ db });
-			state.synthesisScheduler.start();
-			log.info({}, "Indicator synthesis scheduler started");
-		}
 	}
 
 	process.on("SIGHUP", () => {
@@ -506,10 +518,10 @@ async function main() {
 		});
 	});
 
-	const shutdown = (): void => {
+	const shutdown = async (): Promise<void> => {
 		state.schedulerManager?.stop();
 		state.indicatorScheduler?.stop();
-		state.synthesisScheduler?.stop();
+		await shutdownTracing();
 		process.exit(0);
 	};
 

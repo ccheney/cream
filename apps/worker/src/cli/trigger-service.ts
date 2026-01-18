@@ -25,7 +25,7 @@ import {
 	type CreamEnvironment,
 	createContext,
 	initCalendarService,
-	isBacktest,
+	isTest,
 	requireEnv,
 } from "@cream/domain";
 
@@ -222,7 +222,7 @@ async function main(): Promise<void> {
 	const environment = requireEnv();
 	const ctx = createContext(environment, "manual");
 
-	if (!isBacktest(ctx)) {
+	if (!isTest(ctx)) {
 		await validateHelixDBOrExit(ctx);
 	}
 

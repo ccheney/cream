@@ -6,14 +6,23 @@ import { afterEach, beforeEach, describe, expect, mock, test } from "bun:test";
 import { IndicatorBatchScheduler } from "./batch-scheduler.js";
 import type { IndicatorSchedulerConfig, IndicatorSchedulerDependencies } from "./types.js";
 
+/**
+ * Creates a partial test double. The scheduler passes these dependencies to batch job
+ * classes that are never instantiated during these tests (we're testing scheduler state
+ * management, not job execution), so we don't need to implement the full interfaces.
+ */
+function testDouble<T>(partial: Partial<T>): T {
+	return partial as T;
+}
+
 const createMockDependencies = (): IndicatorSchedulerDependencies => ({
-	finraClient: {
+	finraClient: testDouble({
 		fetchShortInterest: mock(() => Promise.resolve([])),
-	} as unknown as IndicatorSchedulerDependencies["finraClient"],
-	sharesProvider: {
+	}),
+	sharesProvider: testDouble({
 		getSharesOutstanding: mock(() => Promise.resolve(1000000)),
-	} as unknown as IndicatorSchedulerDependencies["sharesProvider"],
-	sentimentProvider: {
+	}),
+	sentimentProvider: testDouble({
 		getSentiment: mock(() =>
 			Promise.resolve({
 				symbol: "AAPL",
@@ -22,22 +31,22 @@ const createMockDependencies = (): IndicatorSchedulerDependencies => ({
 				sentiment: 0.3,
 			})
 		),
-	} as unknown as IndicatorSchedulerDependencies["sentimentProvider"],
-	alpacaClient: {
+	}),
+	alpacaClient: testDouble({
 		getCorporateActions: mock(() => Promise.resolve([])),
-	} as unknown as IndicatorSchedulerDependencies["alpacaClient"],
-	shortInterestRepo: {
+	}),
+	shortInterestRepo: testDouble({
 		upsert: mock(() => Promise.resolve()),
 		getLatest: mock(() => Promise.resolve(null)),
-	} as unknown as IndicatorSchedulerDependencies["shortInterestRepo"],
-	sentimentRepo: {
+	}),
+	sentimentRepo: testDouble({
 		upsert: mock(() => Promise.resolve()),
 		getLatest: mock(() => Promise.resolve(null)),
-	} as unknown as IndicatorSchedulerDependencies["sentimentRepo"],
-	corporateActionsRepo: {
+	}),
+	corporateActionsRepo: testDouble({
 		upsert: mock(() => Promise.resolve()),
 		getLatest: mock(() => Promise.resolve(null)),
-	} as unknown as IndicatorSchedulerDependencies["corporateActionsRepo"],
+	}),
 	getSymbols: mock(() => ["AAPL", "MSFT", "GOOGL"]),
 });
 

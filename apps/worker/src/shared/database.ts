@@ -6,7 +6,7 @@
  */
 
 import { createRuntimeConfigService, type RuntimeConfigService } from "@cream/config";
-import { type ExecutionContext, isBacktest } from "@cream/domain";
+import { type ExecutionContext, isTest } from "@cream/domain";
 import { createHelixClientFromEnv, type HealthCheckResult, type HelixClient } from "@cream/helix";
 import {
 	AgentConfigsRepository,
@@ -112,7 +112,7 @@ export async function validateHelixDBAtStartup(
 		maxLatencyMs?: number;
 	} = {}
 ): Promise<HealthCheckResult> {
-	const isBacktestEnv = isBacktest(ctx);
+	const isBacktestEnv = isTest(ctx);
 	const { failFast = !isBacktestEnv, maxLatencyMs = 5000 } = options;
 
 	log.info({ environment: ctx.environment }, "Validating HelixDB connection");
@@ -142,7 +142,7 @@ export async function validateHelixDBAtStartup(
 
 export async function validateHelixDBOrExit(ctx: ExecutionContext): Promise<void> {
 	try {
-		await validateHelixDBAtStartup(ctx, { failFast: !isBacktest(ctx) });
+		await validateHelixDBAtStartup(ctx, { failFast: !isTest(ctx) });
 	} catch (error) {
 		if (error instanceof HelixDBValidationError) {
 			log.error(
