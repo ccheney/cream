@@ -29,15 +29,9 @@ type Database = Parameters<typeof createFilingsSyncService>[0];
 /**
  * Test double for Database. The FilingsSyncService delegates to createFilingsIngestionService
  * which is mocked above, so the actual database methods are never called during tests.
+ * Using unknown cast since Drizzle's Database type has complex generic constraints.
  */
-function testDouble<T>(partial: Partial<T>): T {
-	return partial as T;
-}
-
-const mockDb = testDouble<Database>({
-	execute: mock(() => Promise.resolve({ rows: [] })),
-	batch: mock(() => Promise.resolve([])),
-});
+const mockDb = {} as unknown as Database;
 
 describe("FilingsSyncService", () => {
 	let service: FilingsSyncService;

@@ -7,46 +7,19 @@ import { IndicatorBatchScheduler } from "./batch-scheduler.js";
 import type { IndicatorSchedulerConfig, IndicatorSchedulerDependencies } from "./types.js";
 
 /**
- * Creates a partial test double. The scheduler passes these dependencies to batch job
- * classes that are never instantiated during these tests (we're testing scheduler state
- * management, not job execution), so we don't need to implement the full interfaces.
+ * Creates mock dependencies for the scheduler.
+ * The scheduler passes these dependencies to batch job classes that are never
+ * instantiated during these tests (we're testing scheduler state management,
+ * not job execution), so we use unknown casts to satisfy TypeScript.
  */
-function testDouble<T>(partial: Partial<T>): T {
-	return partial as T;
-}
-
 const createMockDependencies = (): IndicatorSchedulerDependencies => ({
-	finraClient: testDouble({
-		fetchShortInterest: mock(() => Promise.resolve([])),
-	}),
-	sharesProvider: testDouble({
-		getSharesOutstanding: mock(() => Promise.resolve(1000000)),
-	}),
-	sentimentProvider: testDouble({
-		getSentiment: mock(() =>
-			Promise.resolve({
-				symbol: "AAPL",
-				bullishPercent: 0.6,
-				bearishPercent: 0.3,
-				sentiment: 0.3,
-			})
-		),
-	}),
-	alpacaClient: testDouble({
-		getCorporateActions: mock(() => Promise.resolve([])),
-	}),
-	shortInterestRepo: testDouble({
-		upsert: mock(() => Promise.resolve()),
-		getLatest: mock(() => Promise.resolve(null)),
-	}),
-	sentimentRepo: testDouble({
-		upsert: mock(() => Promise.resolve()),
-		getLatest: mock(() => Promise.resolve(null)),
-	}),
-	corporateActionsRepo: testDouble({
-		upsert: mock(() => Promise.resolve()),
-		getLatest: mock(() => Promise.resolve(null)),
-	}),
+	finraClient: {} as unknown as IndicatorSchedulerDependencies["finraClient"],
+	sharesProvider: {} as unknown as IndicatorSchedulerDependencies["sharesProvider"],
+	sentimentProvider: {} as unknown as IndicatorSchedulerDependencies["sentimentProvider"],
+	alpacaClient: {} as unknown as IndicatorSchedulerDependencies["alpacaClient"],
+	shortInterestRepo: {} as unknown as IndicatorSchedulerDependencies["shortInterestRepo"],
+	sentimentRepo: {} as unknown as IndicatorSchedulerDependencies["sentimentRepo"],
+	corporateActionsRepo: {} as unknown as IndicatorSchedulerDependencies["corporateActionsRepo"],
 	getSymbols: mock(() => ["AAPL", "MSFT", "GOOGL"]),
 });
 

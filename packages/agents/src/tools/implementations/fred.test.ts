@@ -18,7 +18,7 @@ import { getEconomicCalendar, getMacroIndicators } from "./fred.js";
 
 function createTestContext(
 	environment: "PAPER" | "LIVE" = "PAPER",
-	source: "test" | "runtime" = "test"
+	source: "test" | "manual" = "test"
 ): ExecutionContext {
 	return {
 		environment,
@@ -104,7 +104,7 @@ describe("getEconomicCalendar", () => {
 				getObservations: mock(() => Promise.resolve({ observations: [] })),
 			} as any);
 
-			const ctx = createTestContext("PAPER", "runtime");
+			const ctx = createTestContext("PAPER", "manual");
 			await getEconomicCalendar(ctx, "2025-01-01", "2025-01-31");
 
 			expect(mockGetReleaseDates).toHaveBeenCalledWith({
@@ -118,7 +118,7 @@ describe("getEconomicCalendar", () => {
 		});
 
 		test("filters to tracked releases only", async () => {
-			const ctx = createTestContext("PAPER", "runtime");
+			const ctx = createTestContext("PAPER", "manual");
 			const events = await getEconomicCalendar(ctx, "2025-02-01", "2025-02-28");
 
 			// Should only include tracked releases (CPI=9, Employment=10, PPI=50)
@@ -128,7 +128,7 @@ describe("getEconomicCalendar", () => {
 		});
 
 		test("transforms events correctly", async () => {
-			const ctx = createTestContext("PAPER", "runtime");
+			const ctx = createTestContext("PAPER", "manual");
 			const events = await getEconomicCalendar(ctx, "2025-02-01", "2025-02-28");
 
 			// Find CPI event (release_id 9 is high impact)
@@ -145,7 +145,7 @@ describe("getEconomicCalendar", () => {
 		});
 
 		test("classifies impact correctly", async () => {
-			const ctx = createTestContext("PAPER", "runtime");
+			const ctx = createTestContext("PAPER", "manual");
 			const events = await getEconomicCalendar(ctx, "2025-02-01", "2025-02-28");
 
 			// CPI (id=9) should be high impact
@@ -234,7 +234,7 @@ describe("getMacroIndicators", () => {
 				getObservations: mockGetObservations,
 			} as any);
 
-			const ctx = createTestContext("PAPER", "runtime");
+			const ctx = createTestContext("PAPER", "manual");
 			await getMacroIndicators(ctx);
 
 			// Should be called for each default series
@@ -255,7 +255,7 @@ describe("getMacroIndicators", () => {
 				getObservations: mockGetObservations,
 			} as any);
 
-			const ctx = createTestContext("PAPER", "runtime");
+			const ctx = createTestContext("PAPER", "manual");
 			const customSeries = ["CUSTOM1", "CUSTOM2"];
 			await getMacroIndicators(ctx, customSeries);
 
@@ -276,7 +276,7 @@ describe("getMacroIndicators", () => {
 				),
 			} as any);
 
-			const ctx = createTestContext("PAPER", "runtime");
+			const ctx = createTestContext("PAPER", "manual");
 			const result = await getMacroIndicators(ctx, ["TEST"]);
 
 			expect(result.TEST).toBeDefined();
@@ -297,7 +297,7 @@ describe("getMacroIndicators", () => {
 				),
 			} as any);
 
-			const ctx = createTestContext("PAPER", "runtime");
+			const ctx = createTestContext("PAPER", "manual");
 			const result = await getMacroIndicators(ctx, ["CPIAUCSL"]);
 
 			expect(result.CPIAUCSL).toBeDefined();
@@ -367,7 +367,7 @@ describe("getMacroIndicators", () => {
 				getObservations: mock(() => Promise.reject(new Error("Network error"))),
 			} as any);
 
-			const ctx = createTestContext("PAPER", "runtime");
+			const ctx = createTestContext("PAPER", "manual");
 			const result = await getMacroIndicators(ctx, ["ERROR"]);
 
 			// Should return empty object when all fetches fail
@@ -392,7 +392,7 @@ describe("getMacroIndicators", () => {
 				}),
 			} as any);
 
-			const ctx = createTestContext("PAPER", "runtime");
+			const ctx = createTestContext("PAPER", "manual");
 			const result = await getMacroIndicators(ctx, ["FAIL", "SUCCESS"]);
 
 			// Should still have the successful series
