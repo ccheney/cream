@@ -154,36 +154,3 @@ export interface AgentStreamChunk {
  * Supports both sync and async callbacks.
  */
 export type OnStreamChunk = (chunk: AgentStreamChunk) => void | Promise<void>;
-
-/**
- * Context for Idea Agent
- */
-export interface IdeaAgentContext {
-	/** Current market regime */
-	regime: string;
-	/** Uncovered market regimes */
-	gaps: string[];
-	/** Factors currently experiencing decay */
-	decayingFactors: Array<{ id: string; decayRate: number }>;
-	/** Factor Zoo summary stats */
-	factorZooSummary: string;
-	/** Research trigger details */
-	trigger: {
-		type: string;
-		severity: string;
-		suggestedFocus: string;
-		affectedFactors: string[];
-		detectedAt: string;
-	};
-	/** Similar past hypotheses from memory */
-	memoryResults?: Array<{
-		hypothesisId: string;
-		title: string;
-		status: "validated" | "rejected";
-		targetRegime: string;
-		ic?: number;
-		lessonsLearned?: string;
-	}>;
-	/** Agent configs for runtime settings */
-	agentConfigs?: Partial<Record<AgentType, AgentConfigEntry>>;
-}

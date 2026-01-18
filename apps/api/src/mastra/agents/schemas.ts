@@ -207,51 +207,6 @@ export const CriticOutputSchema = z.object({
 });
 
 // ============================================
-// Idea Agent Schemas
-// ============================================
-
-export const IdeaAgentOutputSchema = z.object({
-	hypothesis_id: z.string(),
-	title: z.string(),
-	economic_rationale: z.string(),
-	market_mechanism: z.enum([
-		"BEHAVIORAL_BIAS",
-		"STRUCTURAL_CONSTRAINT",
-		"INFORMATION_ASYMMETRY",
-		"LIQUIDITY_PREMIUM",
-		"RISK_PREMIUM",
-	]),
-	target_regime: z.enum(["BULL_TREND", "BEAR_TREND", "RANGE", "HIGH_VOL", "LOW_VOL"]),
-	expected_metrics: z.object({
-		ic_target: z.number(),
-		sharpe_target: z.number(),
-		decay_half_life_days: z.number(),
-	}),
-	falsification_criteria: z.array(z.string()),
-	required_features: z.array(z.string()),
-	parameter_count: z.number(),
-	related_literature: z.array(
-		z.object({
-			title: z.string(),
-			authors: z.string(),
-			url: z.string().nullable(),
-			relevance: z.string(),
-		})
-	),
-	originality_justification: z.string(),
-	similar_past_hypotheses: z.array(
-		z.object({
-			hypothesis_id: z.string(),
-			outcome: z.enum(["validated", "rejected"]),
-			lesson: z.string(),
-		})
-	),
-	implementation_hints: z.string(),
-});
-
-export type IdeaAgentOutput = z.infer<typeof IdeaAgentOutputSchema>;
-
-// ============================================
 // Grounding Agent Schemas
 // ============================================
 

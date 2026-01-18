@@ -4,7 +4,6 @@
  * Contains Bullish and Bearish researcher agents for the debate phase.
  */
 
-import type { AgentType } from "@cream/agents";
 import { z } from "zod";
 
 import type { AnalystOutputs } from "./analysts.js";
@@ -13,7 +12,6 @@ import { buildDatetimeContext, buildGroundingContext, buildIndicatorSummary } fr
 import { BearishResearchSchema, BullishResearchSchema } from "./schemas.js";
 import { createStreamChunkForwarder } from "./stream-forwarder.js";
 import type {
-	AgentConfigEntry,
 	AgentContext,
 	BearishResearchOutput,
 	BullishResearchOutput,
@@ -276,78 +274,4 @@ export async function runDebateParallelStreaming(
 	]);
 
 	return { bullish, bearish };
-}
-
-// ============================================
-// Idea Agent
-// ============================================
-
-import type { IdeaContext, ResearcherInput } from "@cream/agents";
-import { buildIdeaAgentUserPrompt, buildResearcherPrompt } from "@cream/agents";
-import type { ResearchTrigger } from "@cream/domain";
-import type { IndicatorHypothesis } from "@cream/indicators";
-import { IndicatorHypothesisSchema } from "@cream/indicators";
-
-import { type IdeaAgentOutput, IdeaAgentOutputSchema } from "./schemas.js";
-import type { IdeaAgentContext } from "./types.js";
-
-/** Idea Agent - Generates alpha factor hypotheses */
-export const ideaAgentAgent = createAgent("idea_agent");
-
-/** Indicator Researcher - Formulates indicator hypotheses */
-export const indicatorResearcherAgent = createAgent("indicator_researcher");
-
-/**
- * Run Idea Agent to generate alpha factor hypotheses.
- * Uses the shared buildIdeaAgentUserPrompt from @cream/agents for consistency.
- */
-export async function runIdeaAgent(context: IdeaAgentContext): Promise<IdeaAgentOutput> {
-	// Convert IdeaAgentContext to IdeaContext for the shared prompt builder
-	// IdeaAgentContext uses loose string types; cast to ResearchTrigger for type safety
-	const trigger: ResearchTrigger = {
-		type: context.trigger.type as ResearchTrigger["type"],
-		severity: context.trigger.severity as ResearchTrigger["severity"],
-		affectedFactors: context.trigger.affectedFactors,
-		suggestedFocus: context.trigger.suggestedFocus,
-		detectedAt: context.trigger.detectedAt,
-		metadata: {},
-	};
-
-	const ideaContext: IdeaContext = {
-		regime: context.regime,
-		gaps: context.gaps,
-		decayingFactors: context.decayingFactors,
-		factorZooSummary: context.factorZooSummary,
-		trigger,
-		memoryResults: context.memoryResults ?? [],
-	};
-
-	const prompt = buildIdeaAgentUserPrompt(ideaContext);
-
-	const settings = getAgentRuntimeSettings("idea_agent", context.agentConfigs);
-	const options = buildGenerateOptions(settings, { schema: IdeaAgentOutputSchema });
-
-	const response = await ideaAgentAgent.generate([{ role: "user", content: prompt }], options);
-
-	return response.object as IdeaAgentOutput;
-}
-
-/**
- * Run Indicator Researcher agent to formulate indicator hypotheses.
- */
-export async function runIndicatorResearcher(
-	input: ResearcherInput,
-	agentConfigs?: Partial<Record<AgentType, AgentConfigEntry>>
-): Promise<IndicatorHypothesis> {
-	const prompt = buildResearcherPrompt(input);
-
-	const settings = getAgentRuntimeSettings("indicator_researcher", agentConfigs);
-	const options = buildGenerateOptions(settings, { schema: IndicatorHypothesisSchema });
-
-	const response = await indicatorResearcherAgent.generate(
-		[{ role: "user", content: prompt }],
-		options
-	);
-
-	return response.object as IndicatorHypothesis;
 }
