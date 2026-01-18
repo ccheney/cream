@@ -20,7 +20,7 @@ export interface AuditLoggerConfig {
 	/** Whether to link entries with previous hash (blockchain-like) */
 	chainEntries: boolean;
 	/** Environment */
-	environment: "BACKTEST" | "PAPER" | "LIVE";
+	environment: "PAPER" | "LIVE";
 }
 
 /**
@@ -226,7 +226,7 @@ export class AuditLogger {
 		entityId?: string;
 		actorId?: string;
 		operation?: AuditOperationType;
-		environment?: "BACKTEST" | "PAPER" | "LIVE";
+		environment?: "PAPER" | "LIVE";
 		startTime?: string;
 		endTime?: string;
 		limit: number;
