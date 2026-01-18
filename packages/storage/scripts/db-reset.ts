@@ -62,35 +62,9 @@ async function main() {
 	await client.connect();
 
 	try {
-		// Create required extensions and functions
-		console.log("Creating extensions and functions...");
-
-		// Try pg_uuidv7 extension first, fallback to custom function
-		try {
-			await client.query("CREATE EXTENSION IF NOT EXISTS pg_uuidv7");
-			console.log("  ✓ pg_uuidv7 extension installed");
-		} catch {
-			console.log("  ⚠ pg_uuidv7 not available, creating fallback function...");
-			// Create a UUIDv7-compatible function using gen_random_uuid() as base
-			// This generates time-ordered UUIDs (not strictly UUIDv7 but compatible)
-			await client.query(`
-				CREATE OR REPLACE FUNCTION uuidv7() RETURNS uuid AS $$
-				DECLARE
-					unix_ts_ms bytea;
-					uuid_bytes bytea;
-				BEGIN
-					unix_ts_ms = substring(int8send(floor(extract(epoch from clock_timestamp()) * 1000)::bigint) from 3);
-					uuid_bytes = unix_ts_ms || gen_random_uuid()::text::bytea;
-					-- Set version to 7 and variant to RFC 4122
-					uuid_bytes = set_byte(uuid_bytes, 6, (get_byte(uuid_bytes, 6) & 15) | 112);
-					uuid_bytes = set_byte(uuid_bytes, 8, (get_byte(uuid_bytes, 8) & 63) | 128);
-					RETURN encode(substring(uuid_bytes from 1 for 16), 'hex')::uuid;
-				END;
-				$$ LANGUAGE plpgsql VOLATILE;
-			`);
-			console.log("  ✓ uuidv7() fallback function created");
-		}
-
+		console.log("Creating extensions...");
+		await client.query("CREATE EXTENSION IF NOT EXISTS pg_uuidv7");
+		console.log("  ✓ pg_uuidv7 extension installed");
 		console.log("✓ Database setup complete\n");
 	} finally {
 		await client.end();
