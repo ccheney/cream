@@ -62,7 +62,11 @@ export function ChartHeader({
 					>
 						Options →
 					</Link>
-					<IndicatorDrawerToggle isOpen={isIndicatorDrawerOpen} onClick={onIndicatorDrawerToggle} />
+					<IndicatorDrawerToggle
+						symbol={symbol}
+						isOpen={isIndicatorDrawerOpen}
+						onClick={onIndicatorDrawerToggle}
+					/>
 					<StreamToggleButton isOpen={isStreamOpen} onClick={onStreamToggle} />
 				</div>
 			</div>

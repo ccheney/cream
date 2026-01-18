@@ -9,8 +9,9 @@
 
 "use client";
 
-import { AlertCircle, Loader2 } from "lucide-react";
+import { AlertCircle } from "lucide-react";
 import { useEffect, useState } from "react";
+import { Skeleton } from "@/components/ui/skeleton";
 import { useIndicatorSnapshot } from "@/hooks/queries/useMarket";
 import type { DataQuality } from "@/lib/api/types";
 import { isOptionsMarketOpen } from "@/lib/market-hours";
@@ -118,6 +119,71 @@ const ALL_SECTIONS: IndicatorCategory[] = [
 	"corporate",
 ];
 
+function IndicatorSectionSkeleton() {
+	return (
+		<div className="rounded-lg border border-cream-200 dark:border-night-700 bg-cream-50/50 dark:bg-night-800/50">
+			{/* Header */}
+			<div className="flex items-center justify-between px-4 py-3">
+				<div className="flex items-center gap-2">
+					<Skeleton width={20} height={20} />
+					<Skeleton width={100} height={16} />
+				</div>
+				<Skeleton width={16} height={16} />
+			</div>
+			{/* Content */}
+			<div className="border-t border-cream-200 dark:border-night-700 px-4 py-3">
+				<div className="grid grid-cols-2 gap-3">
+					{Array.from({ length: 6 }, (_, i) => (
+						// biome-ignore lint/suspicious/noArrayIndexKey: Static skeleton count, index is stable
+						<div key={i} className="space-y-1">
+							<Skeleton width={60} height={12} />
+							<Skeleton width={80} height={20} />
+						</div>
+					))}
+				</div>
+			</div>
+		</div>
+	);
+}
+
+function IndicatorSnapshotSkeleton({
+	sections,
+	layout,
+	className,
+}: {
+	sections: IndicatorCategory[];
+	layout: "full" | "compact";
+	className?: string;
+}) {
+	const sectionCount = Math.min(sections.length, 3);
+
+	return (
+		// biome-ignore lint/a11y/useSemanticElements: div with role="status" is appropriate for loading skeletons
+		<div className={cn("space-y-4", className)} role="status" aria-label="Loading indicators">
+			{/* Header skeleton */}
+			<div className="flex items-center justify-between">
+				<Skeleton width={120} height={14} />
+				<Skeleton width={70} height={24} radius={9999} />
+			</div>
+
+			{/* Panels skeleton */}
+			<div
+				className={cn(
+					"grid gap-4",
+					layout === "full" ? "grid-cols-1 lg:grid-cols-2" : "grid-cols-1"
+				)}
+			>
+				{Array.from({ length: sectionCount }, (_, i) => (
+					// biome-ignore lint/suspicious/noArrayIndexKey: Static skeleton count, index is stable
+					<div key={i} className={layout === "full" && i === 0 ? "lg:col-span-2" : ""}>
+						<IndicatorSectionSkeleton />
+					</div>
+				))}
+			</div>
+		</div>
+	);
+}
+
 export function IndicatorSnapshotPanel({
 	symbol,
 	sections = ALL_SECTIONS,
@@ -142,18 +208,7 @@ export function IndicatorSnapshotPanel({
 	}, []);
 
 	if (isLoading) {
-		return (
-			<div
-				className={cn(
-					"flex items-center justify-center py-12",
-					"text-stone-400 dark:text-night-500",
-					className
-				)}
-			>
-				<Loader2 className="h-6 w-6 animate-spin mr-2" />
-				<span>Loading indicators...</span>
-			</div>
-		);
+		return <IndicatorSnapshotSkeleton sections={sections} layout={layout} className={className} />;
 	}
 
 	if (isError || !data) {

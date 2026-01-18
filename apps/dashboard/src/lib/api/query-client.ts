@@ -35,6 +35,8 @@ export const CACHE_TIMES = {
 	HISTORICAL: 1000 * 60 * 5,
 	/** Chart data - 1 minute */
 	CHART: 1000 * 60,
+	/** Economic calendar - 24 hours (events don't change frequently) */
+	ECONOMIC_CALENDAR: 1000 * 60 * 60 * 24,
 	/** Default - 30 seconds */
 	DEFAULT: 1000 * 30,
 } as const;
@@ -55,8 +57,10 @@ export const STALE_TIMES = {
 	DECISIONS: 1000 * 10,
 	/** Historical data - 2 minutes */
 	HISTORICAL: 1000 * 60 * 2,
-	/** Chart data - 30 seconds */
-	CHART: 1000 * 30,
+	/** Chart data - 60 seconds (aligned with backend indicator cache TTL) */
+	CHART: 1000 * 60,
+	/** Economic calendar - 24 hours (events don't change frequently) */
+	ECONOMIC_CALENDAR: 1000 * 60 * 60 * 24,
 	/** Default - 10 seconds */
 	DEFAULT: 1000 * 10,
 } as const;

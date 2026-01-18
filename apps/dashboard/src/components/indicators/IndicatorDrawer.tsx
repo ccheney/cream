@@ -10,9 +10,13 @@
 
 "use client";
 
+import { useQueryClient } from "@tanstack/react-query";
 import { AnimatePresence, motion } from "framer-motion";
 import { BarChart3, X } from "lucide-react";
-import { useEffect } from "react";
+import { useCallback, useEffect } from "react";
+import { get } from "@/lib/api/client";
+import { queryKeys } from "@/lib/api/query-client";
+import type { IndicatorSnapshot } from "@/lib/api/types";
 import { type IndicatorCategory, IndicatorSnapshotPanel } from "./IndicatorSnapshotPanel";
 
 interface IndicatorDrawerProps {
@@ -90,15 +94,33 @@ export function IndicatorDrawer({ symbol, isOpen, onClose, sections }: Indicator
 }
 
 interface IndicatorDrawerToggleProps {
+	symbol: string;
 	isOpen: boolean;
 	onClick: () => void;
 }
 
-export function IndicatorDrawerToggle({ isOpen, onClick }: IndicatorDrawerToggleProps) {
+export function IndicatorDrawerToggle({ symbol, isOpen, onClick }: IndicatorDrawerToggleProps) {
+	const queryClient = useQueryClient();
+
+	const handleMouseEnter = useCallback(() => {
+		if (!isOpen && symbol) {
+			queryClient.prefetchQuery({
+				queryKey: queryKeys.market.snapshot(symbol.toUpperCase()),
+				queryFn: async () => {
+					const { data } = await get<IndicatorSnapshot>(
+						`/api/market/snapshot/${symbol.toUpperCase()}`
+					);
+					return data;
+				},
+			});
+		}
+	}, [queryClient, symbol, isOpen]);
+
 	return (
 		<button
 			type="button"
 			onClick={onClick}
+			onMouseEnter={handleMouseEnter}
 			className={`flex items-center gap-2 px-3 py-1.5 text-sm font-medium rounded-md transition-colors ${
 				isOpen
 					? "bg-primary text-white"

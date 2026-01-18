@@ -211,6 +211,7 @@ function OptionsChainContent({ underlying }: { underlying: string }) {
 					{/* Right: Actions */}
 					<div className="flex items-center gap-2">
 						<IndicatorDrawerToggle
+							symbol={upperUnderlying}
 							isOpen={indicatorDrawerOpen}
 							onClick={() => setIndicatorDrawerOpen((o) => !o)}
 						/>
