@@ -589,6 +589,7 @@ export const tradingCycleWorkflow = createWorkflow({
 		cycleId: z.string(),
 		instruments: z.array(z.string()).default(["AAPL", "MSFT", "GOOGL"]),
 		forceStub: z.boolean().optional(),
+		useDraftConfig: z.boolean().optional(),
 	}),
 	outputSchema: WorkflowResultSchema,
 	stateSchema: MinimalStateSchema,

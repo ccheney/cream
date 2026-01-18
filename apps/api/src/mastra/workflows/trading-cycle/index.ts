@@ -20,7 +20,6 @@ export type {
 	Decision,
 	ExternalContext,
 	FundamentalsAnalysis,
-	IndicatorTriggerResult,
 	MarketSnapshot,
 	MemoryContext,
 	PredictionMarketSignals,
