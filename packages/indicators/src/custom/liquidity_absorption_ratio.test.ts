@@ -102,29 +102,6 @@ function generateBearishCandleWithWick(
 }
 
 /**
- * Generate bars with high absorption (large wicks relative to body)
- */
-function generateHighAbsorptionBars(count: number): OHLCVBar[] {
-	const bars: OHLCVBar[] = [];
-	const baseTime = Date.now() - count * 86400000;
-
-	for (let i = 0; i < count; i++) {
-		// Alternate between bullish and bearish candles with large wicks
-		const isBullish = i % 2 === 0;
-
-		if (isBullish) {
-			// Bullish candle with large upper wick (40% upper, 10% lower, 50% body)
-			bars.push(generateBullishCandleWithWick(0.4, 0.1, 100, 10, 1000000, baseTime + i * 86400000));
-		} else {
-			// Bearish candle with large lower wick (10% upper, 40% lower, 50% body)
-			bars.push(generateBearishCandleWithWick(0.1, 0.4, 100, 10, 1000000, baseTime + i * 86400000));
-		}
-	}
-
-	return bars;
-}
-
-/**
  * Generate bars with low absorption (small wicks relative to body)
  */
 function generateLowAbsorptionBars(count: number): OHLCVBar[] {

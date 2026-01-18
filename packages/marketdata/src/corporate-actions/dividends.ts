@@ -232,7 +232,7 @@ export function calculateDRIPShares(price: number, dividend: number, shares: num
  * Check if dividend is a special (non-regular) dividend.
  *
  * Special dividends (SC) are one-time payments and should be flagged
- * for different treatment in backtesting.
+ * for different treatment in historical analysis.
  */
 export function isSpecialDividend(dividend: DividendInfo): boolean {
 	return dividend.dividendType === "SC";

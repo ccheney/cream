@@ -150,8 +150,8 @@ export function validateLiveTradingSafety(): {
 	}
 
 	// Verify database isolation
-	if (env.DATABASE_URL?.includes("backtest") || env.DATABASE_URL?.includes("paper")) {
-		errors.push("LIVE trading detected but database URL appears to be for non-LIVE environment");
+	if (env.DATABASE_URL?.includes("paper")) {
+		errors.push("LIVE trading detected but database URL appears to be for PAPER environment");
 	}
 
 	return { approved: errors.length === 0, errors };

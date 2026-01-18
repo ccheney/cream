@@ -15,7 +15,6 @@ describe("CreamEnvironment", () => {
 	it("rejects invalid environment values", () => {
 		expect(() => CreamEnvironment.parse("PRODUCTION")).toThrow();
 		expect(() => CreamEnvironment.parse("DEV")).toThrow();
-		expect(() => CreamEnvironment.parse("BACKTEST")).toThrow();
 	});
 });
 

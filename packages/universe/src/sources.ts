@@ -53,7 +53,7 @@ export interface SourceResolutionResult {
  * Source resolver options
  */
 export interface SourceResolverOptions {
-	/** Point-in-time date for backtesting */
+	/** Point-in-time date for historical lookup */
 	asOfDate?: Date;
 }
 

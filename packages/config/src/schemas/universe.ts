@@ -62,7 +62,7 @@ export const IndexSourceSchema = z.object({
 	index_id: IndexId,
 	provider: UniverseProvider.default("alpaca"),
 	/**
-	 * Enable point-in-time data for survivorship-bias-free backtesting
+	 * Enable point-in-time data for survivorship-bias-free historical testing
 	 */
 	point_in_time: z.boolean().default(false),
 });

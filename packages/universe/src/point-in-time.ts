@@ -2,13 +2,11 @@
  * Point-in-Time Universe Resolver
  *
  * Provides survivorship-bias-free universe resolution by using historical
- * index compositions and ticker changes. Essential for accurate backtesting.
+ * index compositions and ticker changes. Essential for accurate historical testing.
  *
  * This resolver works with pre-populated cached data from the database.
  *
  * Impact of survivorship bias: 1-4% annual return inflation
- *
- * @see docs/plans/12-backtest.md - Survivorship Bias Prevention
  */
 
 import type { IndexId } from "@cream/config";
@@ -70,7 +68,7 @@ export interface DataValidationResult {
 }
 
 /**
- * Resolves universe at historical dates for survivorship-bias-free backtesting.
+ * Resolves universe at historical dates for survivorship-bias-free historical testing.
  *
  * This resolver works with pre-populated cached data.
  *

@@ -74,7 +74,6 @@ describe("MarketDataFactory", () => {
 			// Use explicit env parameter since requireEnv() caches at module load
 			expect(() => createMarketDataAdapter("LIVE")).toThrow(MarketDataConfigError);
 		});
-
 	});
 
 	describe("getMarketDataAdapter", () => {
