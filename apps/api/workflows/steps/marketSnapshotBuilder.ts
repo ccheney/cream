@@ -253,7 +253,7 @@ async function gatherSnapshotData(
 	let alpacaClient: AlpacaMarketDataClient | null = null;
 	const creamEnv = requireEnv();
 
-	if (creamEnv !== "BACKTEST" || isAlpacaConfigured()) {
+	if (isAlpacaConfigured()) {
 		try {
 			alpacaClient = createAlpacaClientFromEnv();
 		} catch (error) {
@@ -293,9 +293,9 @@ async function fetchMarketData(
 	const snapshots = new Map<string, InternalSnapshot>();
 	const creamEnv = requireEnv();
 
-	// In BACKTEST mode without API keys, use deterministic fixtures
-	if (creamEnv === "BACKTEST" && !isAlpacaConfigured()) {
-		warnings.push("BACKTEST mode without ALPACA_KEY: using fixture market data");
+	// In test mode without API keys, use deterministic fixtures
+	if (!isAlpacaConfigured()) {
+		warnings.push("No ALPACA_KEY configured: using fixture market data");
 
 		for (const symbol of symbols) {
 			snapshots.set(symbol, getSnapshotFixture(symbol));
@@ -383,7 +383,7 @@ async function fetchHistoricalCandles(
 	const candles = new Map<string, Candle[]>();
 	const requiredBars = getRequiredCandleCount(DEFAULT_RULE_BASED_CONFIG) + 10; // Extra buffer
 
-	// If no client available, use deterministic fixtures in BACKTEST mode
+	// If no client available, use deterministic fixtures
 	if (!alpacaClient) {
 		warnings.push("Using fixture historical candles (no Alpaca client available)");
 		for (const symbol of symbols) {
@@ -457,14 +457,6 @@ function getExecutionClient(): ExecutionServiceClient {
  */
 async function fetchPositions(errors: string[], warnings: string[]): Promise<Position[]> {
 	try {
-		// In BACKTEST mode, positions come from backtest state
-		// Note: env.CREAM_ENV is not in the domain env schema, so read directly from Bun.env
-		const environment = Bun.env.CREAM_ENV;
-
-		if (environment === "BACKTEST") {
-			warnings.push("Backtest mode: positions not fetched from broker");
-			return [];
-		}
 
 		// Fetch from execution engine gRPC
 		const client = getExecutionClient();

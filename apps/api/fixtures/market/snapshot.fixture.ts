@@ -4,7 +4,7 @@
  * Deterministic, realistic market snapshot data for testing.
  * Based on actual market data patterns from major US equities.
  *
- * Note: These are static fixtures used in BACKTEST mode to ensure
+ * Note: These are static fixtures used in test mode to ensure
  * deterministic test behavior. Prices and volumes are realistic
  * but do not represent any specific trading date.
  */

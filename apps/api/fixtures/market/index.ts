@@ -1,7 +1,7 @@
 /**
  * Market Test Fixtures
  *
- * Exports deterministic market data fixtures for use in BACKTEST mode.
+ * Exports deterministic market data fixtures for use in test mode.
  * These fixtures ensure reproducible test behavior without external API calls.
  *
  * @example

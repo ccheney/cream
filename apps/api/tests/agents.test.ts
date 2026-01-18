@@ -1,7 +1,7 @@
 /**
  * Agent Unit Tests
  *
- * Tests for all 10 agents in the trading network:
+ * Tests for all 8 agents in the trading network:
  * - Grounding Agent (web search for real-time context)
  * - News & Sentiment Analyst
  * - Fundamentals & Macro Analyst
@@ -10,8 +10,6 @@
  * - Trader
  * - Risk Manager
  * - Critic
- * - Idea Agent (alpha factor hypothesis generation)
- * - Indicator Researcher (indicator hypothesis formulation)
  *
  * Tests cover:
  * - Agent configuration and factory
@@ -42,26 +40,12 @@ import {
 	bullishResearcherAgent,
 	criticAgent,
 	fundamentalsAnalystAgent,
-	ideaAgentAgent,
-	indicatorResearcherAgent,
+	groundingAgent,
 	mastraAgents,
 	newsAnalystAgent,
 	riskManagerAgent,
 	traderAgent,
 } from "../src/mastra/agents/mastra-agents";
-
-import {
-	bearishResearcher,
-	bullishResearcher,
-	critic,
-	fundamentalsAnalyst,
-	ideaAgent,
-	indicatorResearcher,
-	newsAnalyst,
-	riskManager,
-	agents as stubAgents,
-	trader,
-} from "../src/mastra/agents/stub-agents";
 
 // ============================================
 // Zod Schemas (mirroring mastra-agents.ts)
@@ -385,8 +369,8 @@ function createValidAgentContext(): AgentContext {
 
 describe("Agent Configuration", () => {
 	describe("AGENT_TYPES", () => {
-		it("should have exactly 10 agent types", () => {
-			expect(AGENT_TYPES).toHaveLength(10);
+		it("should have exactly 8 agent types", () => {
+			expect(AGENT_TYPES).toHaveLength(8);
 		});
 
 		it("should include all expected agent types", () => {
@@ -399,8 +383,6 @@ describe("Agent Configuration", () => {
 				"trader",
 				"risk_manager",
 				"critic",
-				"idea_agent",
-				"indicator_researcher",
 			];
 			expect(AGENT_TYPES).toEqual(expectedTypes);
 		});
@@ -442,6 +424,11 @@ describe("Agent Configuration", () => {
 // ============================================
 
 describe("Mastra Agent Instances", () => {
+	it("should create grounding agent", () => {
+		expect(groundingAgent).toBeDefined();
+		expect(groundingAgent.id).toBe("grounding_agent");
+	});
+
 	it("should create news analyst agent", () => {
 		expect(newsAnalystAgent).toBeDefined();
 		expect(newsAnalystAgent.id).toBe("news_analyst");
@@ -477,23 +464,14 @@ describe("Mastra Agent Instances", () => {
 		expect(criticAgent.id).toBe("critic");
 	});
 
-	it("should create idea agent", () => {
-		expect(ideaAgentAgent).toBeDefined();
-		expect(ideaAgentAgent.id).toBe("idea_agent");
-	});
-
-	it("should create indicator researcher agent", () => {
-		expect(indicatorResearcherAgent).toBeDefined();
-		expect(indicatorResearcherAgent.id).toBe("indicator_researcher");
-	});
-
 	describe("Agent Registry", () => {
-		it("should have all 9 agents in registry", () => {
-			expect(Object.keys(mastraAgents)).toHaveLength(9);
+		it("should have all 8 agents in registry", () => {
+			expect(Object.keys(mastraAgents)).toHaveLength(8);
 		});
 
 		it("should have correct agent ids in registry", () => {
 			const expectedIds: AgentType[] = [
+				"grounding_agent",
 				"news_analyst",
 				"fundamentals_analyst",
 				"bullish_researcher",
@@ -501,78 +479,11 @@ describe("Mastra Agent Instances", () => {
 				"trader",
 				"risk_manager",
 				"critic",
-				"idea_agent",
-				"indicator_researcher",
 			];
 
 			for (const id of expectedIds) {
 				expect(mastraAgents[id]).toBeDefined();
 				expect(mastraAgents[id].id).toBe(id);
-			}
-		});
-	});
-});
-
-// ============================================
-// Stub Agent Tests
-// ============================================
-
-describe("Stub Agents", () => {
-	it("should create news analyst stub", () => {
-		expect(newsAnalyst).toBeDefined();
-		expect(newsAnalyst.id).toBe("news_analyst");
-	});
-
-	it("should create fundamentals analyst stub", () => {
-		expect(fundamentalsAnalyst).toBeDefined();
-		expect(fundamentalsAnalyst.id).toBe("fundamentals_analyst");
-	});
-
-	it("should create bullish researcher stub", () => {
-		expect(bullishResearcher).toBeDefined();
-		expect(bullishResearcher.id).toBe("bullish_researcher");
-	});
-
-	it("should create bearish researcher stub", () => {
-		expect(bearishResearcher).toBeDefined();
-		expect(bearishResearcher.id).toBe("bearish_researcher");
-	});
-
-	it("should create trader stub", () => {
-		expect(trader).toBeDefined();
-		expect(trader.id).toBe("trader");
-	});
-
-	it("should create risk manager stub", () => {
-		expect(riskManager).toBeDefined();
-		expect(riskManager.id).toBe("risk_manager");
-	});
-
-	it("should create critic stub", () => {
-		expect(critic).toBeDefined();
-		expect(critic.id).toBe("critic");
-	});
-
-	it("should create idea agent stub", () => {
-		expect(ideaAgent).toBeDefined();
-		expect(ideaAgent.id).toBe("idea_agent");
-	});
-
-	it("should create indicator researcher stub", () => {
-		expect(indicatorResearcher).toBeDefined();
-		expect(indicatorResearcher.id).toBe("indicator_researcher");
-	});
-
-	describe("Stub Agent Registry", () => {
-		it("should have all 9 agents in stub registry", () => {
-			expect(Object.keys(stubAgents)).toHaveLength(9);
-		});
-
-		it("should match Mastra config for all stubs", () => {
-			for (const [_key, stub] of Object.entries(stubAgents)) {
-				const config = AGENT_CONFIGS[stub.id];
-				expect(stub.name).toBe(config.name);
-				expect(stub.role).toBe(config.role);
 			}
 		});
 	});

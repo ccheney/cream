@@ -11,7 +11,7 @@
  *
  * Options:
  *   --dry-run       Show what would be ingested without actually ingesting
- *   --environment   Filter by environment (BACKTEST, PAPER, LIVE)
+ *   --environment   Filter by environment (PAPER, LIVE)
  *   --limit         Maximum number of theses to process
  *   --since         Only process theses closed after this date (ISO 8601)
  */
@@ -33,7 +33,7 @@ import {
 const log: LifecycleLogger = createNodeLogger({
 	service: "backfill-thesis-memory",
 	level: "info",
-	environment: Bun.env.CREAM_ENV ?? "BACKTEST",
+	environment: Bun.env.CREAM_ENV ?? "PAPER",
 	pretty: true,
 });
 
@@ -119,7 +119,7 @@ async function backfillThesisMemory(options: BackfillOptions): Promise<void> {
 	const regimeRepo = new RegimeLabelsRepository(db);
 
 	// Build filters
-	const environment = options.environment ?? "BACKTEST";
+	const environment = options.environment ?? "PAPER";
 
 	log.info({ environment, since: options.since, limit: options.limit }, "Fetching closed theses");
 
@@ -127,7 +127,7 @@ async function backfillThesisMemory(options: BackfillOptions): Promise<void> {
 	const result = await thesisRepo.findMany(
 		{
 			state: "CLOSED",
-			environment: environment as "BACKTEST" | "PAPER" | "LIVE",
+			environment: environment as "PAPER" | "LIVE",
 			closedAfter: options.since,
 		},
 		options.limit ? { page: 1, pageSize: options.limit } : undefined

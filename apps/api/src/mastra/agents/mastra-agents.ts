@@ -10,7 +10,7 @@
  * - prompts.ts: Prompt building functions
  * - factory.ts: Agent factory and utilities
  * - analysts.ts: News, Fundamentals analysts
- * - researchers.ts: Bullish/Bearish researchers, Idea Agent, Indicator Researcher
+ * - researchers.ts: Bullish/Bearish researchers
  * - trader.ts: Trader agent
  * - approvers.ts: Risk Manager and Critic agents
  * - consensus.ts: Consensus loop orchestration
@@ -32,17 +32,10 @@ export type {
 	CriticOutput,
 	DecisionPlan,
 	FundamentalsAnalysisOutput,
-	IdeaAgentContext,
 	OnStreamChunk,
 	RiskManagerOutput,
 	SentimentAnalysisOutput,
 } from "./types.js";
-
-// ============================================
-// Schemas
-// ============================================
-
-export type { IdeaAgentOutput } from "./schemas.js";
 
 // ============================================
 // Analysts
@@ -66,16 +59,12 @@ export {
 export {
 	bearishResearcherAgent,
 	bullishResearcherAgent,
-	ideaAgentAgent,
-	indicatorResearcherAgent,
 	runBearishResearcher,
 	runBearishResearcherStreaming,
 	runBullishResearcher,
 	runBullishResearcherStreaming,
 	runDebateParallel,
 	runDebateParallelStreaming,
-	runIdeaAgent,
-	runIndicatorResearcher,
 } from "./researchers.js";
 
 // ============================================
@@ -115,20 +104,23 @@ export {
 } from "./consensus.js";
 
 // ============================================
+// Grounding
+// ============================================
+
+export { groundingAgent, runGroundingAgent, runGroundingAgentStreaming } from "./grounding.js";
+
+// ============================================
 // Agent Registry
 // ============================================
 
 import { fundamentalsAnalystAgent, newsAnalystAgent } from "./analysts.js";
 import { criticAgent, riskManagerAgent } from "./approvers.js";
-import {
-	bearishResearcherAgent,
-	bullishResearcherAgent,
-	ideaAgentAgent,
-	indicatorResearcherAgent,
-} from "./researchers.js";
+import { groundingAgent } from "./grounding.js";
+import { bearishResearcherAgent, bullishResearcherAgent } from "./researchers.js";
 import { traderAgent } from "./trader.js";
 
 export const mastraAgents = {
+	grounding_agent: groundingAgent,
 	news_analyst: newsAnalystAgent,
 	fundamentals_analyst: fundamentalsAnalystAgent,
 	bullish_researcher: bullishResearcherAgent,
@@ -136,8 +128,6 @@ export const mastraAgents = {
 	trader: traderAgent,
 	risk_manager: riskManagerAgent,
 	critic: criticAgent,
-	idea_agent: ideaAgentAgent,
-	indicator_researcher: indicatorResearcherAgent,
 } as const;
 
 export type MastraAgentRegistry = typeof mastraAgents;

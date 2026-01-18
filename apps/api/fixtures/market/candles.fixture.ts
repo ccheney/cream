@@ -5,7 +5,7 @@
  * and regime classification. Data patterns simulate realistic market behavior
  * including trends, mean reversion, and volatility changes.
  *
- * Note: These are static fixtures used in BACKTEST mode to ensure
+ * Note: These are static fixtures used in test mode to ensure
  * deterministic test behavior.
  */
 

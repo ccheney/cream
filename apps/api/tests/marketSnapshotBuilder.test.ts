@@ -1,12 +1,12 @@
 /**
  * Market Snapshot Builder Workflow Step Tests
  *
- * Note: These tests run in BACKTEST mode with mock data to avoid
+ * Note: These tests run in PAPER mode with mock data to avoid
  * requiring real API keys in CI.
  */
 
 // Set environment BEFORE imports so cached env is correct
-Bun.env.CREAM_ENV = "BACKTEST";
+Bun.env.CREAM_ENV = "PAPER";
 // Clear Alpaca credentials to trigger fixture/mock data path
 const savedAlpacaKey = Bun.env.ALPACA_KEY;
 const savedAlpacaSecret = Bun.env.ALPACA_SECRET;
@@ -212,7 +212,7 @@ describe("Market Snapshot Builder", () => {
 			const result = await executeMarketSnapshotBuilder({ symbols: ["SPY"] });
 
 			if (result.success && result.snapshot) {
-				expect(result.snapshot.environment).toMatch(/^(BACKTEST|PAPER|LIVE)$/);
+				expect(result.snapshot.environment).toMatch(/^(PAPER|LIVE)$/);
 			}
 		});
 	});
@@ -243,7 +243,7 @@ describe("Market Snapshot Builder", () => {
 				symbols: ["INVALID_1", "INVALID_2", "INVALID_3"],
 			});
 
-			// In BACKTEST mode with mock data, invalid symbols will succeed with mock data
+			// In test mode with mock data, invalid symbols will succeed with mock data
 			// In PAPER/LIVE mode, they would fail
 			// Either way, result should be defined with proper structure
 			expect(result).toBeDefined();

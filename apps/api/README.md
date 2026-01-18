@@ -38,7 +38,7 @@ Located in `src/agents/`:
 
 - `observe.ts` - Market data snapshot
 - `orient.ts` - Memory context and regime computation
-- `decide.ts` - Stub agents for BACKTEST mode
+- `decide.ts` - Agent decision synthesis
 - `act.ts` - Constraint checking and order submission
 - `thesis.ts` - Thesis lifecycle management
 - `helix.ts` - HelixDB integration
@@ -51,7 +51,6 @@ Located in `src/agents/`:
 
 | Mode | Agents | Market Data | Execution |
 |------|--------|-------------|-----------|
-| BACKTEST | Stub (no LLM) | Deterministic fixtures | Mock orders |
 | PAPER | Real Mastra + Gemini | Live via adapters | Real orders (paper) |
 | LIVE | Real Mastra + Gemini | Live via adapters | Real orders |
 
@@ -60,7 +59,7 @@ Located in `src/agents/`:
 ### Environment Variables
 
 ```bash
-CREAM_ENV=BACKTEST|PAPER|LIVE
+CREAM_ENV=PAPER|LIVE
 DATABASE_URL=postgresql://user:pass@localhost:5432/cream
 HELIX_URL=http://localhost:6969
 GOOGLE_GENERATIVE_AI_API_KEY=...  # For LLM agents (PAPER/LIVE)
