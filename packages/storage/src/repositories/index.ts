@@ -43,14 +43,6 @@ export {
 	AuditLogRepository,
 	type CreateAuditLogInput,
 } from "./audit-log.js";
-export {
-	type Backtest,
-	type BacktestEquityPoint,
-	type BacktestStatus,
-	BacktestsRepository,
-	type BacktestTrade,
-	type CreateBacktestInput,
-} from "./backtests.js";
 // Base utilities
 export {
 	type Filter,
@@ -107,6 +99,8 @@ export {
 	type CreateCycleEventInput,
 	type CreateCycleInput,
 	type Cycle,
+	type CycleAnalytics,
+	type CycleAnalyticsFilters,
 	type CycleEvent,
 	type CycleEventType,
 	type CyclePhase,
@@ -123,13 +117,16 @@ export {
 } from "./cycles.js";
 // Repositories
 export {
+	type ConfidenceCalibrationBin,
 	type CreateDecisionInput,
 	type Decision,
 	type DecisionAction,
+	type DecisionAnalytics,
 	type DecisionDirection,
 	type DecisionFilters,
 	type DecisionStatus,
 	DecisionsRepository,
+	type StrategyBreakdownItem,
 } from "./decisions.js";
 // External events (migration 007)
 export {

@@ -168,21 +168,6 @@ export {
 } from "./mappings";
 
 // ============================================
-// Backtest Exports
-// ============================================
-
-export {
-	createHistoricalAdapterFromEnv,
-	type HistoricalAdapterConfig,
-	type HistoricalMarketSnapshot,
-	type HistoricalPredictionMarket,
-	HistoricalPredictionMarketAdapter,
-	type ProbabilityPoint,
-	type SignalAccuracyReport,
-	type SignalCorrelation,
-} from "./backtest";
-
-// ============================================
 // Streaming Exports
 // ============================================
 

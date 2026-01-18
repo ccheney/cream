@@ -6,10 +6,8 @@
 //! # Adapters
 //!
 //! - [`AlpacaAdapter`]: Production adapter for Alpaca Markets (PAPER/LIVE)
-//! - [`BacktestAdapter`]: Simulated adapter for backtesting (BACKTEST)
 
 mod alpaca;
-mod backtest;
 pub mod gateway;
 pub mod persistence;
 pub mod reconciliation;
@@ -23,7 +21,6 @@ pub use alpaca::{
     AlpacaOptionSnapshotsResponse, AlpacaQuote, AlpacaQuotesResponse, FeeBreakdown, OptionType,
     OptionsOrderValidator, Position as AlpacaPosition, RegulatoryFeeCalculator,
 };
-pub use backtest::{BacktestAdapter, RecordedOrder};
 pub use gateway::{
     BrokerAdapter, BrokerError, CancelOrderError, ExecutionGateway, MockBrokerAdapter,
     SubmitOrdersError,

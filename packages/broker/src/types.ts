@@ -1,4 +1,4 @@
-export type TradingEnvironment = "BACKTEST" | "PAPER" | "LIVE";
+export type TradingEnvironment = "PAPER" | "LIVE";
 
 export type OrderSide = "buy" | "sell";
 

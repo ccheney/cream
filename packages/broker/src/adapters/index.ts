@@ -2,11 +2,5 @@
  * Broker Adapters
  *
  * Environment-specific broker implementations.
+ * Currently all environments (PAPER, LIVE) use the Alpaca client.
  */
-
-export {
-	type BacktestAdapterConfig,
-	type BacktestUtils,
-	createBacktestAdapter,
-	createBacktestAdapterWithUtils,
-} from "./backtest.js";

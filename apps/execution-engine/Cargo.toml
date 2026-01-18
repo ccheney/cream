@@ -50,9 +50,15 @@ serde_yaml_bw = "2.5.1"
 thiserror = "2.0.17"
 anyhow = "1.0"
 
-# Logging
+# Logging and Tracing
 tracing = "0.1.44"
 tracing-subscriber = { version = "0.3.22", features = ["env-filter"] }
+
+# OpenTelemetry (OpenObserve integration)
+opentelemetry = { version = "0.28", features = ["trace"] }
+opentelemetry_sdk = { version = "0.28", features = ["rt-tokio"] }
+opentelemetry-otlp = { version = "0.28", features = ["grpc-tonic"] }
+tracing-opentelemetry = "0.29"
 
 # Time
 chrono = { version = "0.4.42", features = ["serde"] }

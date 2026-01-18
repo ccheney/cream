@@ -33,7 +33,6 @@
 #![warn(missing_docs)]
 #![warn(clippy::pedantic)]
 
-pub mod backtest;
 pub mod broker;
 pub mod config;
 pub mod error;
@@ -46,18 +45,13 @@ pub mod resilience;
 pub mod risk;
 pub mod safety;
 pub mod server;
+pub mod telemetry;
 
 // Re-export commonly used types
-pub use backtest::{
-    BacktestConfig, Candle, FillResult, MultiLegFillResult, SimOrder, SimPosition, SimTrade,
-    SimulationEngine, simulate_limit_order, simulate_market_order, simulate_multi_leg_order,
-    simulate_order,
-};
 pub use error::{ErrorCode, ExecutionError, HttpErrorResponse};
 pub use execution::{
-    AlpacaAdapter, BacktestAdapter, ExecutionGateway, MonitoredPosition, OrderStateManager,
-    StatePersistence, StopsEnforcer, TacticSelector, TacticType, TriggerResult, TwapConfig,
-    VwapConfig,
+    AlpacaAdapter, ExecutionGateway, MonitoredPosition, OrderStateManager, StatePersistence,
+    StopsEnforcer, TacticSelector, TacticType, TriggerResult, TwapConfig, VwapConfig,
 };
 pub use models::{
     ConstraintCheckRequest, ConstraintCheckResponse, DecisionPlan, Environment, ExecutionAck,

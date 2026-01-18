@@ -41,13 +41,6 @@
  * @see docs/plans/07-execution.md
  */
 
-// Adapters
-export {
-	type BacktestAdapterConfig,
-	type BacktestUtils,
-	createBacktestAdapter,
-	createBacktestAdapterWithUtils,
-} from "./adapters/index.js";
 // Client
 export { type AlpacaClient, type AlpacaClientConfig, createAlpacaClient } from "./client.js";
 // Factory

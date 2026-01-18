@@ -10,14 +10,12 @@
  * const ctx = createContext("PAPER", "scheduled");
  * const client = createBrokerClient(ctx);
  *
- * // ctx.environment=BACKTEST -> BacktestAdapter
  * // ctx.environment=PAPER -> AlpacaClient (paper endpoint)
  * // ctx.environment=LIVE -> AlpacaClient (live endpoint with safety checks)
  * ```
  */
 
 import type { ExecutionContext } from "@cream/domain";
-import { type BacktestAdapterConfig, createBacktestAdapter } from "./adapters/backtest.js";
 import type { AlpacaClient } from "./client.js";
 import { createAlpacaClient } from "./client.js";
 import { BrokerError } from "./types.js";
@@ -30,8 +28,6 @@ export interface BrokerClientConfig {
 	apiKey?: string;
 	/** Alpaca API secret (required for PAPER/LIVE) */
 	apiSecret?: string;
-	/** Backtest configuration (for BACKTEST environment) */
-	backtest?: BacktestAdapterConfig;
 }
 
 /**
@@ -48,48 +44,25 @@ export interface BrokerClientConfig {
  * // Create context at system boundary
  * const ctx = createContext("PAPER", "scheduled");
  * const client = createBrokerClient(ctx);
- *
- * // With backtest configuration
- * const backtestCtx = createContext("BACKTEST", "backtest");
- * const backtestClient = createBrokerClient(backtestCtx, {
- *   backtest: {
- *     initialCash: 100000,
- *     slippageBps: 5,
- *   },
- * });
  * ```
  */
 export function createBrokerClient(
 	ctx: ExecutionContext,
 	config: BrokerClientConfig = {}
 ): AlpacaClient {
-	switch (ctx.environment) {
-		case "BACKTEST":
-			return createBacktestAdapter(config.backtest);
+	const apiKey = config.apiKey ?? Bun.env.ALPACA_KEY;
+	const apiSecret = config.apiSecret ?? Bun.env.ALPACA_SECRET;
 
-		case "PAPER":
-		case "LIVE": {
-			const apiKey = config.apiKey ?? Bun.env.ALPACA_KEY;
-			const apiSecret = config.apiSecret ?? Bun.env.ALPACA_SECRET;
-
-			if (!apiKey || !apiSecret) {
-				throw new BrokerError(
-					`ALPACA_KEY and ALPACA_SECRET are required for ${ctx.environment} trading`,
-					"INVALID_CREDENTIALS"
-				);
-			}
-
-			return createAlpacaClient({
-				apiKey,
-				apiSecret,
-				environment: ctx.environment,
-			});
-		}
-
-		default:
-			throw new BrokerError(
-				`Unknown environment: ${ctx.environment}. Use BACKTEST, PAPER, or LIVE.`,
-				"ENVIRONMENT_MISMATCH"
-			);
+	if (!apiKey || !apiSecret) {
+		throw new BrokerError(
+			`ALPACA_KEY and ALPACA_SECRET are required for ${ctx.environment} trading`,
+			"INVALID_CREDENTIALS"
+		);
 	}
+
+	return createAlpacaClient({
+		apiKey,
+		apiSecret,
+		environment: ctx.environment,
+	});
 }
