@@ -106,9 +106,9 @@ const validDecisionPlan = {
 
 describe("Enums", () => {
 	it("validates Environment enum", () => {
-		expect(EnvironmentSchema.parse("BACKTEST")).toBe("BACKTEST");
 		expect(EnvironmentSchema.parse("PAPER")).toBe("PAPER");
 		expect(EnvironmentSchema.parse("LIVE")).toBe("LIVE");
+		expect(() => EnvironmentSchema.parse("BACKTEST")).toThrow();
 		expect(() => EnvironmentSchema.parse("INVALID")).toThrow();
 	});
 

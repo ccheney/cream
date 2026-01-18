@@ -28,9 +28,9 @@ import { createTestContext } from "./test-utils";
 
 describe("Order ID Namespacing", () => {
 	it("generates order ID with correct environment prefix", () => {
-		const ctx = createTestContext("BACKTEST");
+		const ctx = createTestContext("PAPER");
 		const orderId = generateOrderId(ctx);
-		expect(orderId).toStartWith("BACKTEST-");
+		expect(orderId).toStartWith("PAPER-");
 	});
 
 	it("generates order ID with PAPER prefix", () => {
@@ -46,7 +46,7 @@ describe("Order ID Namespacing", () => {
 	});
 
 	it("generates unique order IDs", () => {
-		const ctx = createTestContext("BACKTEST");
+		const ctx = createTestContext("PAPER");
 		const ids = new Set<string>();
 		for (let i = 0; i < 100; i++) {
 			ids.add(generateOrderId(ctx));
@@ -55,19 +55,19 @@ describe("Order ID Namespacing", () => {
 	});
 
 	it("validates order ID matches current context environment", () => {
-		const ctx = createTestContext("BACKTEST");
+		const ctx = createTestContext("PAPER");
 		const orderId = generateOrderId(ctx);
 		expect(() => validateOrderIdEnvironment(orderId, ctx)).not.toThrow();
 	});
 
 	it("rejects order ID from different environment", () => {
-		const ctx = createTestContext("BACKTEST");
+		const ctx = createTestContext("PAPER");
 		const wrongEnvId = "LIVE-12345678-abcd1234";
 		expect(() => validateOrderIdEnvironment(wrongEnvId, ctx)).toThrow(SafetyError);
 	});
 
 	it("includes traceId in SafetyError", () => {
-		const ctx = createTestContext("BACKTEST");
+		const ctx = createTestContext("PAPER");
 		const wrongEnvId = "LIVE-12345678-abcd1234";
 		try {
 			validateOrderIdEnvironment(wrongEnvId, ctx);
@@ -80,8 +80,8 @@ describe("Order ID Namespacing", () => {
 });
 
 describe("Broker Endpoint Validation", () => {
-	it("rejects production endpoint in BACKTEST environment", () => {
-		const ctx = createTestContext("BACKTEST");
+	it("rejects production endpoint in PAPER environment", () => {
+		const ctx = createTestContext("PAPER");
 		expect(() => validateBrokerEndpoint("https://api.alpaca.markets", ctx)).toThrow(SafetyError);
 	});
 
@@ -90,8 +90,8 @@ describe("Broker Endpoint Validation", () => {
 		expect(() => validateBrokerEndpoint("https://api.alpaca.markets", ctx)).toThrow(SafetyError);
 	});
 
-	it("accepts paper endpoint in BACKTEST environment", () => {
-		const ctx = createTestContext("BACKTEST");
+	it("accepts paper endpoint in PAPER environment", () => {
+		const ctx = createTestContext("PAPER");
 		expect(() => validateBrokerEndpoint("https://paper-api.alpaca.markets", ctx)).not.toThrow();
 	});
 
@@ -108,12 +108,12 @@ describe("Broker Endpoint Validation", () => {
 
 describe("Live Execution Guards", () => {
 	beforeEach(() => {
-		const ctx = createTestContext("BACKTEST");
+		const ctx = createTestContext("PAPER");
 		resetSafetyState(ctx);
 	});
 
-	it("isLiveConfirmed returns true in BACKTEST environment", () => {
-		const ctx = createTestContext("BACKTEST");
+	it("isLiveConfirmed returns true in PAPER environment", () => {
+		const ctx = createTestContext("PAPER");
 		expect(isLiveConfirmed(ctx)).toBe(true);
 	});
 
@@ -122,8 +122,8 @@ describe("Live Execution Guards", () => {
 		expect(isLiveConfirmed(ctx)).toBe(true);
 	});
 
-	it("requireLiveConfirmation does nothing in BACKTEST environment", () => {
-		const ctx = createTestContext("BACKTEST");
+	it("requireLiveConfirmation does nothing in PAPER environment", () => {
+		const ctx = createTestContext("PAPER");
 		expect(() => requireLiveConfirmation("wrong-token", ctx)).not.toThrow();
 	});
 
@@ -132,8 +132,8 @@ describe("Live Execution Guards", () => {
 		expect(() => requireLiveConfirmation("wrong-token", ctx)).not.toThrow();
 	});
 
-	it("preventAccidentalLiveExecution passes in BACKTEST environment", () => {
-		const ctx = createTestContext("BACKTEST");
+	it("preventAccidentalLiveExecution passes in PAPER environment", () => {
+		const ctx = createTestContext("PAPER");
 		expect(() => preventAccidentalLiveExecution(ctx)).not.toThrow();
 	});
 
@@ -144,8 +144,8 @@ describe("Live Execution Guards", () => {
 });
 
 describe("State Isolation", () => {
-	it("generates isolated database name for BACKTEST", () => {
-		const ctx = createTestContext("BACKTEST");
+	it("generates isolated database name for PAPER", () => {
+		const ctx = createTestContext("PAPER");
 		const dbName = getIsolatedDatabaseName("cream", ctx);
 		expect(dbName).toBe("cream_backtest");
 	});
@@ -162,8 +162,8 @@ describe("State Isolation", () => {
 		expect(dbName).toBe("cream_live");
 	});
 
-	it("validates database isolation - rejects other environment databases in BACKTEST", () => {
-		const ctx = createTestContext("BACKTEST");
+	it("validates database isolation - rejects other environment databases in PAPER", () => {
+		const ctx = createTestContext("PAPER");
 		expect(() => validateDatabaseIsolation("file:cream_paper.db", ctx)).toThrow(SafetyError);
 		expect(() => validateDatabaseIsolation("file:cream_live.db", ctx)).toThrow(SafetyError);
 	});
@@ -175,7 +175,7 @@ describe("State Isolation", () => {
 	});
 
 	it("allows database for current environment", () => {
-		const backtestCtx = createTestContext("BACKTEST");
+		const backtestCtx = createTestContext("PAPER");
 		expect(() => validateDatabaseIsolation("file:cream_backtest.db", backtestCtx)).not.toThrow();
 
 		const paperCtx = createTestContext("PAPER");
@@ -188,24 +188,24 @@ describe("State Isolation", () => {
 
 describe("Audit Logging", () => {
 	beforeEach(() => {
-		const ctx = createTestContext("BACKTEST");
+		const ctx = createTestContext("PAPER");
 		resetSafetyState(ctx);
 	});
 
 	it("logs operations with timestamp and traceId", () => {
-		const ctx = createTestContext("BACKTEST");
+		const ctx = createTestContext("PAPER");
 		auditLog("TEST_OPERATION", { key: "value" }, ctx);
 		const log = getAuditLog();
 		expect(log.length).toBe(1);
 		expect(log[0]?.operation).toBe("TEST_OPERATION");
 		expect(log[0]?.details.key).toBe("value");
 		expect(log[0]?.timestamp).toBeDefined();
-		expect(log[0]?.environment).toBe("BACKTEST");
+		expect(log[0]?.environment).toBe("PAPER");
 		expect(log[0]?.traceId).toBe(ctx.traceId);
 	});
 
-	it("clears audit log in BACKTEST environment", () => {
-		const ctx = createTestContext("BACKTEST");
+	it("clears audit log in PAPER environment", () => {
+		const ctx = createTestContext("PAPER");
 		auditLog("TEST", {}, ctx);
 		expect(getAuditLog().length).toBe(1);
 		clearAuditLog(ctx);
@@ -213,7 +213,7 @@ describe("Audit Logging", () => {
 	});
 
 	it("throws when clearing audit log in LIVE environment", () => {
-		const backtestCtx = createTestContext("BACKTEST");
+		const backtestCtx = createTestContext("PAPER");
 		auditLog("TEST", {}, backtestCtx);
 
 		const liveCtx = createTestContext("LIVE");
@@ -223,7 +223,7 @@ describe("Audit Logging", () => {
 
 describe("Circuit Breaker", () => {
 	beforeEach(() => {
-		const ctx = createTestContext("BACKTEST");
+		const ctx = createTestContext("PAPER");
 		resetSafetyState(ctx);
 	});
 
@@ -232,7 +232,7 @@ describe("Circuit Breaker", () => {
 	});
 
 	it("opens circuit after threshold failures", () => {
-		const ctx = createTestContext("BACKTEST");
+		const ctx = createTestContext("PAPER");
 		const error = new Error("Test failure");
 		for (let i = 0; i < 5; i++) {
 			recordCircuitFailure("test-circuit", error, ctx, 5);
@@ -241,7 +241,7 @@ describe("Circuit Breaker", () => {
 	});
 
 	it("resets circuit on success", () => {
-		const ctx = createTestContext("BACKTEST");
+		const ctx = createTestContext("PAPER");
 		const error = new Error("Test failure");
 		for (let i = 0; i < 5; i++) {
 			recordCircuitFailure("reset-test", error, ctx, 5);
@@ -253,7 +253,7 @@ describe("Circuit Breaker", () => {
 	});
 
 	it("throws when circuit is open", () => {
-		const ctx = createTestContext("BACKTEST");
+		const ctx = createTestContext("PAPER");
 		const error = new Error("Test failure");
 		for (let i = 0; i < 5; i++) {
 			recordCircuitFailure("throw-test", error, ctx, 5);
@@ -262,7 +262,7 @@ describe("Circuit Breaker", () => {
 	});
 
 	it("passes when circuit is closed", () => {
-		const ctx = createTestContext("BACKTEST");
+		const ctx = createTestContext("PAPER");
 		expect(() => requireCircuitClosed("closed-circuit", ctx)).not.toThrow();
 	});
 });
@@ -283,8 +283,8 @@ describe("SafetyError", () => {
 });
 
 describe("resetSafetyState", () => {
-	it("resets all safety state in BACKTEST", () => {
-		const ctx = createTestContext("BACKTEST");
+	it("resets all safety state in PAPER", () => {
+		const ctx = createTestContext("PAPER");
 
 		// Add some state
 		auditLog("TEST", {}, ctx);

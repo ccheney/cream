@@ -17,22 +17,22 @@ const UUID_V4_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[
 
 describe("createContext", () => {
 	test("generates valid UUID v4 traceId", () => {
-		const ctx = createContext("BACKTEST", "test");
+		const ctx = createContext("PAPER", "test");
 		expect(ctx.traceId).toMatch(UUID_V4_REGEX);
 	});
 
 	test("generates unique traceId for each call", () => {
-		const ctx1 = createContext("BACKTEST", "test");
-		const ctx2 = createContext("BACKTEST", "test");
+		const ctx1 = createContext("PAPER", "test");
+		const ctx2 = createContext("PAPER", "test");
 		expect(ctx1.traceId).not.toBe(ctx2.traceId);
 	});
 
 	test("sets environment correctly", () => {
-		const backtestCtx = createContext("BACKTEST", "test");
+		const backtestCtx = createContext("PAPER", "test");
 		const paperCtx = createContext("PAPER", "scheduled");
 		const liveCtx = createContext("LIVE", "scheduled");
 
-		expect(backtestCtx.environment).toBe("BACKTEST");
+		expect(backtestCtx.environment).toBe("PAPER");
 		expect(paperCtx.environment).toBe("PAPER");
 		expect(liveCtx.environment).toBe("LIVE");
 	});
@@ -47,7 +47,7 @@ describe("createContext", () => {
 		];
 
 		for (const source of sources) {
-			const ctx = createContext("BACKTEST", source);
+			const ctx = createContext("PAPER", source);
 			expect(ctx.source).toBe(source);
 		}
 	});
@@ -58,12 +58,12 @@ describe("createContext", () => {
 	});
 
 	test("configId is undefined when not provided", () => {
-		const ctx = createContext("BACKTEST", "test");
+		const ctx = createContext("PAPER", "test");
 		expect(ctx.configId).toBeUndefined();
 	});
 
 	test("returns frozen (immutable) object", () => {
-		const ctx = createContext("BACKTEST", "test");
+		const ctx = createContext("PAPER", "test");
 
 		expect(Object.isFrozen(ctx)).toBe(true);
 
@@ -75,7 +75,7 @@ describe("createContext", () => {
 	});
 
 	test("frozen object properties cannot be deleted", () => {
-		const ctx = createContext("BACKTEST", "test");
+		const ctx = createContext("PAPER", "test");
 
 		expect(() => {
 			// @ts-expect-error - Testing runtime immutability
@@ -84,7 +84,7 @@ describe("createContext", () => {
 	});
 
 	test("frozen object cannot have properties added", () => {
-		const ctx = createContext("BACKTEST", "test");
+		const ctx = createContext("PAPER", "test");
 
 		expect(() => {
 			// @ts-expect-error - Testing runtime immutability
@@ -139,21 +139,21 @@ describe("isValidExecutionSource", () => {
 
 describe("ExecutionContext type safety", () => {
 	test("context environment is typed as CreamEnvironment", () => {
-		const ctx = createContext("BACKTEST", "test");
+		const ctx = createContext("PAPER", "test");
 		// This is a compile-time check - if types are wrong, this won't compile
-		const env: "BACKTEST" | "PAPER" | "LIVE" = ctx.environment;
-		expect(env).toBe("BACKTEST");
+		const env: "PAPER" | "PAPER" | "LIVE" = ctx.environment;
+		expect(env).toBe("PAPER");
 	});
 
 	test("context source is typed as ExecutionSource", () => {
-		const ctx = createContext("BACKTEST", "test");
+		const ctx = createContext("PAPER", "test");
 		// Compile-time type check
 		const source: ExecutionSource = ctx.source;
 		expect(source).toBe("test");
 	});
 
 	test("context traceId is typed as string", () => {
-		const ctx = createContext("BACKTEST", "test");
+		const ctx = createContext("PAPER", "test");
 		const traceId: string = ctx.traceId;
 		expect(typeof traceId).toBe("string");
 	});
@@ -162,8 +162,8 @@ describe("ExecutionContext type safety", () => {
 describe("Real-world usage patterns", () => {
 	test("test context creation pattern", () => {
 		// Pattern used in test files
-		const ctx = createContext("BACKTEST", "test");
-		expect(ctx.environment).toBe("BACKTEST");
+		const ctx = createContext("PAPER", "test");
+		expect(ctx.environment).toBe("PAPER");
 		expect(ctx.source).toBe("test");
 	});
 
@@ -190,9 +190,9 @@ describe("Real-world usage patterns", () => {
 	test("backtest context pattern", () => {
 		// Pattern used for historical backtesting
 		const backtestId = "backtest-xyz789";
-		const ctx = createContext("BACKTEST", "backtest", backtestId);
+		const ctx = createContext("PAPER", "backtest", backtestId);
 
-		expect(ctx.environment).toBe("BACKTEST");
+		expect(ctx.environment).toBe("PAPER");
 		expect(ctx.source).toBe("backtest");
 		expect(ctx.configId).toBe(backtestId);
 	});

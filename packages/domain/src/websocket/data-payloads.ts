@@ -282,7 +282,7 @@ export const CycleResultDataSchema = z.object({
 	cycleId: z.string(),
 
 	/** Environment */
-	environment: z.enum(["BACKTEST", "PAPER", "LIVE"]),
+	environment: z.enum(["PAPER", "LIVE"]),
 
 	/** Final status */
 	status: z.enum(["completed", "failed"]),
@@ -382,7 +382,7 @@ export const SystemStatusDataSchema = z.object({
 	),
 
 	/** Current environment */
-	environment: z.enum(["BACKTEST", "PAPER", "LIVE"]),
+	environment: z.enum(["PAPER", "LIVE"]),
 
 	/** Active cycle ID (if any) */
 	activeCycleId: z.string().optional(),

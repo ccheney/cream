@@ -5,7 +5,6 @@
 import { describe, expect, it } from "bun:test";
 import {
 	ALL_RETENTION_POLICIES,
-	BACKTEST_RETENTION_POLICIES,
 	DURATIONS,
 	getCompliancePolicies,
 	getPoliciesForEnvironment,
@@ -146,24 +145,6 @@ describe("PAPER_RETENTION_POLICIES", () => {
 });
 
 // ============================================
-// BACKTEST Retention Policy Tests
-// ============================================
-
-describe("BACKTEST_RETENTION_POLICIES", () => {
-	it("TradeDecision has 120 days retention", () => {
-		const policy = BACKTEST_RETENTION_POLICIES.find((p) => p.nodeType === "TradeDecision");
-		expect(policy).toBeDefined();
-		expect(policy!.totalRetentionDays).toBe(DURATIONS.DAYS_120);
-	});
-
-	it("TradeLifecycleEvent has 37 days retention", () => {
-		const policy = BACKTEST_RETENTION_POLICIES.find((p) => p.nodeType === "TradeLifecycleEvent");
-		expect(policy).toBeDefined();
-		expect(policy!.totalRetentionDays).toBe(DURATIONS.DAYS_30 + DURATIONS.DAYS_7);
-	});
-});
-
-// ============================================
 // Policy Lookup Tests
 // ============================================
 
@@ -182,7 +163,7 @@ describe("getRetentionPolicy", () => {
 	});
 
 	it("returns undefined for unknown node type", () => {
-		const policy = getRetentionPolicy("NewsItem", "BACKTEST");
+		const policy = getRetentionPolicy("NewsItem" as RetentionNodeType, "PAPER");
 		expect(policy).toBeUndefined();
 	});
 });
@@ -265,12 +246,13 @@ describe("getTransitionDecision", () => {
 		expect(result.shouldDelete).toBe(false);
 	});
 
-	it("deletes BACKTEST TradeDecision after 120 days", () => {
+	it("deletes PAPER TradeDecision after retention expires", () => {
+		const paperPolicy = getRetentionPolicy("TradeDecision", "PAPER")!;
 		const nodeInfo: NodeAgeInfo = {
-			ageDays: DURATIONS.DAYS_120 + 1,
+			ageDays: paperPolicy.totalRetentionDays + 1,
 			currentTier: "WARM",
 			nodeType: "TradeDecision",
-			environment: "BACKTEST",
+			environment: "PAPER",
 		};
 
 		const result = getTransitionDecision(nodeInfo);
@@ -284,7 +266,7 @@ describe("getTransitionDecision", () => {
 			ageDays: 10,
 			currentTier: "HOT",
 			nodeType: "NewsItem" as RetentionNodeType,
-			environment: "BACKTEST",
+			environment: "PAPER",
 		};
 
 		const result = getTransitionDecision(nodeInfo);
@@ -324,8 +306,9 @@ describe("getTargetTier", () => {
 		expect(tier).toBe("COLD");
 	});
 
-	it("returns null for expired BACKTEST data", () => {
-		const tier = getTargetTier(DURATIONS.DAYS_120 + 1, "TradeDecision", "BACKTEST");
+	it("returns null for expired PAPER data", () => {
+		const paperPolicy = getRetentionPolicy("TradeDecision", "PAPER")!;
+		const tier = getTargetTier(paperPolicy.totalRetentionDays + 1, "TradeDecision", "PAPER");
 		expect(tier).toBeNull();
 	});
 
@@ -394,13 +377,9 @@ describe("ALL_RETENTION_POLICIES", () => {
 	it("has policies for all environments", () => {
 		expect(ALL_RETENTION_POLICIES.LIVE).toBeDefined();
 		expect(ALL_RETENTION_POLICIES.PAPER).toBeDefined();
-		expect(ALL_RETENTION_POLICIES.BACKTEST).toBeDefined();
 	});
 
 	it("LIVE has the most policies", () => {
 		expect(ALL_RETENTION_POLICIES.LIVE.length).toBeGreaterThan(ALL_RETENTION_POLICIES.PAPER.length);
-		expect(ALL_RETENTION_POLICIES.LIVE.length).toBeGreaterThan(
-			ALL_RETENTION_POLICIES.BACKTEST.length
-		);
 	});
 });

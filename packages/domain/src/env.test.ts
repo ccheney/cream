@@ -5,6 +5,7 @@
  */
 
 import { afterEach, beforeEach, describe, expect, it } from "bun:test";
+import { createContext } from "./context";
 import {
 	CreamEnvironment,
 	envSchema,
@@ -12,9 +13,9 @@ import {
 	getEnvDatabaseSuffix,
 	getEnvVarDocumentation,
 	getHelixUrl,
-	isBacktest,
 	isLive,
 	isPaper,
+	isTest,
 	requireEnv,
 	validateEnvironment,
 } from "./env";
@@ -22,7 +23,6 @@ import { createTestContext } from "./test-utils";
 
 describe("CreamEnvironment", () => {
 	it("accepts valid environment values", () => {
-		expect(CreamEnvironment.parse("BACKTEST")).toBe("BACKTEST");
 		expect(CreamEnvironment.parse("PAPER")).toBe("PAPER");
 		expect(CreamEnvironment.parse("LIVE")).toBe("LIVE");
 	});
@@ -31,7 +31,8 @@ describe("CreamEnvironment", () => {
 		expect(() => CreamEnvironment.parse("DEV")).toThrow();
 		expect(() => CreamEnvironment.parse("PRODUCTION")).toThrow();
 		expect(() => CreamEnvironment.parse("")).toThrow();
-		expect(() => CreamEnvironment.parse("backtest")).toThrow(); // case-sensitive
+		expect(() => CreamEnvironment.parse("paper")).toThrow(); // case-sensitive
+		expect(() => CreamEnvironment.parse("BACKTEST")).toThrow(); // removed
 	});
 });
 
@@ -158,20 +159,25 @@ describe("envSchema", () => {
 });
 
 describe("context-aware helper functions", () => {
-	describe("isBacktest", () => {
-		it("returns true for BACKTEST context", () => {
-			const ctx = createTestContext("BACKTEST");
-			expect(isBacktest(ctx)).toBe(true);
+	describe("isTest", () => {
+		it("returns true for test source", () => {
+			const ctx = createTestContext();
+			expect(isTest(ctx)).toBe(true);
 		});
 
-		it("returns false for PAPER context", () => {
-			const ctx = createTestContext("PAPER");
-			expect(isBacktest(ctx)).toBe(false);
+		it("returns false for scheduled source", () => {
+			const ctx = createContext("PAPER", "scheduled");
+			expect(isTest(ctx)).toBe(false);
 		});
 
-		it("returns false for LIVE context", () => {
-			const ctx = createTestContext("LIVE");
-			expect(isBacktest(ctx)).toBe(false);
+		it("returns false for manual source", () => {
+			const ctx = createContext("PAPER", "manual");
+			expect(isTest(ctx)).toBe(false);
+		});
+
+		it("returns false for dashboard-test source", () => {
+			const ctx = createContext("PAPER", "dashboard-test");
+			expect(isTest(ctx)).toBe(false);
 		});
 	});
 
@@ -179,11 +185,6 @@ describe("context-aware helper functions", () => {
 		it("returns true for PAPER context", () => {
 			const ctx = createTestContext("PAPER");
 			expect(isPaper(ctx)).toBe(true);
-		});
-
-		it("returns false for BACKTEST context", () => {
-			const ctx = createTestContext("BACKTEST");
-			expect(isPaper(ctx)).toBe(false);
 		});
 
 		it("returns false for LIVE context", () => {
@@ -198,11 +199,6 @@ describe("context-aware helper functions", () => {
 			expect(isLive(ctx)).toBe(true);
 		});
 
-		it("returns false for BACKTEST context", () => {
-			const ctx = createTestContext("BACKTEST");
-			expect(isLive(ctx)).toBe(false);
-		});
-
 		it("returns false for PAPER context", () => {
 			const ctx = createTestContext("PAPER");
 			expect(isLive(ctx)).toBe(false);
@@ -210,37 +206,26 @@ describe("context-aware helper functions", () => {
 	});
 
 	describe("getAlpacaBaseUrl", () => {
-		it("returns paper URL for BACKTEST context (when no override)", () => {
-			const ctx = createTestContext("BACKTEST");
+		it("returns paper URL for PAPER context (when no override)", () => {
+			const ctx = createTestContext("PAPER");
 			const url = getAlpacaBaseUrl(ctx);
 			// If ALPACA_BASE_URL is set, it will return that instead
 			expect(url).toMatch(/alpaca\.markets/);
 		});
 
-		it("returns paper URL for PAPER context (when no override)", () => {
-			const ctx = createTestContext("PAPER");
-			const url = getAlpacaBaseUrl(ctx);
-			expect(url).toMatch(/alpaca\.markets/);
-		});
-
-		it("returns different URLs for LIVE vs non-LIVE when no override", () => {
-			const backtestCtx = createTestContext("BACKTEST");
+		it("returns different URLs for LIVE vs PAPER when no override", () => {
+			const paperCtx = createTestContext("PAPER");
 			const liveCtx = createTestContext("LIVE");
-			const backtestUrl = getAlpacaBaseUrl(backtestCtx);
+			const paperUrl = getAlpacaBaseUrl(paperCtx);
 			const liveUrl = getAlpacaBaseUrl(liveCtx);
 			// Both should be valid Alpaca URLs
-			expect(backtestUrl).toMatch(/alpaca\.markets/);
+			expect(paperUrl).toMatch(/alpaca\.markets/);
 			expect(liveUrl).toMatch(/alpaca\.markets/);
 			// Note: If ALPACA_BASE_URL env var is set, both will be the same
 		});
 	});
 
 	describe("getEnvDatabaseSuffix", () => {
-		it("returns _backtest for BACKTEST context", () => {
-			const ctx = createTestContext("BACKTEST");
-			expect(getEnvDatabaseSuffix(ctx)).toBe("_backtest");
-		});
-
 		it("returns _paper for PAPER context", () => {
 			const ctx = createTestContext("PAPER");
 			expect(getEnvDatabaseSuffix(ctx)).toBe("_paper");
@@ -262,26 +247,6 @@ describe("getHelixUrl", () => {
 });
 
 describe("validateEnvironment", () => {
-	describe("BACKTEST environment", () => {
-		it("returns valid with no additional requirements", () => {
-			const ctx = createTestContext("BACKTEST");
-			const result = validateEnvironment(ctx, "test-service");
-			expect(result.valid).toBe(true);
-			expect(result.errors).toHaveLength(0);
-		});
-
-		it("returns errors for missing additional requirements", () => {
-			const ctx = createTestContext("BACKTEST");
-			// Use a key that definitely won't be set in any environment
-			const result = validateEnvironment(ctx, "test-service", [
-				"NONEXISTENT_TEST_KEY_12345_ABCDEF",
-			]);
-			expect(result.valid).toBe(false);
-			expect(result.errors.length).toBeGreaterThan(0);
-			expect(result.errors[0]).toContain("NONEXISTENT_TEST_KEY_12345_ABCDEF");
-		});
-	});
-
 	describe("PAPER environment", () => {
 		it("requires broker and OAuth credentials", () => {
 			const ctx = createTestContext("PAPER");
@@ -322,20 +287,13 @@ describe("getEnvVarDocumentation", () => {
 });
 
 describe("requireEnv", () => {
-	let originalProcessEnv: string | undefined;
 	let originalBunEnv: string | undefined;
 
 	beforeEach(() => {
-		originalProcessEnv = Bun.env.CREAM_ENV;
 		originalBunEnv = Bun.env.CREAM_ENV;
 	});
 
 	afterEach(() => {
-		if (originalProcessEnv !== undefined) {
-			Bun.env.CREAM_ENV = originalProcessEnv;
-		} else {
-			delete Bun.env.CREAM_ENV;
-		}
 		if (originalBunEnv !== undefined) {
 			Bun.env.CREAM_ENV = originalBunEnv;
 		} else {
@@ -345,36 +303,30 @@ describe("requireEnv", () => {
 
 	it("throws when CREAM_ENV not set", () => {
 		delete Bun.env.CREAM_ENV;
-		delete Bun.env.CREAM_ENV;
 		expect(() => requireEnv()).toThrow("CREAM_ENV environment variable is required");
 	});
 
 	it("throws for invalid value", () => {
 		Bun.env.CREAM_ENV = "INVALID";
-		Bun.env.CREAM_ENV = "INVALID";
 		expect(() => requireEnv()).toThrow('Invalid CREAM_ENV value: "INVALID"');
 	});
 
 	it("throws for lowercase value", () => {
-		Bun.env.CREAM_ENV = "backtest";
-		Bun.env.CREAM_ENV = "backtest";
-		expect(() => requireEnv()).toThrow('Invalid CREAM_ENV value: "backtest"');
+		Bun.env.CREAM_ENV = "paper";
+		expect(() => requireEnv()).toThrow('Invalid CREAM_ENV value: "paper"');
 	});
 
-	it("returns BACKTEST when set", () => {
+	it("throws for removed BACKTEST value", () => {
 		Bun.env.CREAM_ENV = "BACKTEST";
-		Bun.env.CREAM_ENV = "BACKTEST";
-		expect(requireEnv()).toBe("BACKTEST");
+		expect(() => requireEnv()).toThrow('Invalid CREAM_ENV value: "BACKTEST"');
 	});
 
 	it("returns PAPER when set", () => {
-		Bun.env.CREAM_ENV = "PAPER";
 		Bun.env.CREAM_ENV = "PAPER";
 		expect(requireEnv()).toBe("PAPER");
 	});
 
 	it("returns LIVE when set", () => {
-		Bun.env.CREAM_ENV = "LIVE";
 		Bun.env.CREAM_ENV = "LIVE";
 		expect(requireEnv()).toBe("LIVE");
 	});

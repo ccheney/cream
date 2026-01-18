@@ -1,7 +1,7 @@
 /**
  * Hardcoded NYSE Calendar Data (2024-2029)
  *
- * Static calendar data for BACKTEST mode where API calls are not available.
+ * Static calendar data for testing where API calls are not available.
  * This data is consolidated from existing implementations and official NYSE schedules.
  *
  * Sources:

@@ -238,7 +238,7 @@ export type IndicatorInsert = z.infer<typeof IndicatorInsertSchema>;
 export const CyclePhase = z.enum(["observe", "orient", "decide", "act", "complete", "failed"]);
 export type CyclePhase = z.infer<typeof CyclePhase>;
 
-export const Environment = z.enum(["BACKTEST", "PAPER", "LIVE"]);
+export const Environment = z.enum(["PAPER", "LIVE"]);
 export type Environment = z.infer<typeof Environment>;
 
 export const CycleLogInsertSchema = z.object({

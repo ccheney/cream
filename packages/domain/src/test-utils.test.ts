@@ -11,9 +11,9 @@ import { createTestContext, createTestContextWithConfig } from "./test-utils";
 const UUID_V4_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
 describe("createTestContext", () => {
-	test("defaults to BACKTEST environment", () => {
+	test("defaults to PAPER environment", () => {
 		const ctx = createTestContext();
-		expect(ctx.environment).toBe("BACKTEST");
+		expect(ctx.environment).toBe("PAPER");
 	});
 
 	test("source is always 'test'", () => {
@@ -57,13 +57,13 @@ describe("createTestContext", () => {
 
 describe("createTestContextWithConfig", () => {
 	test("sets configId correctly", () => {
-		const ctx = createTestContextWithConfig("BACKTEST", "config-v1.2.3");
+		const ctx = createTestContextWithConfig("PAPER", "config-v1.2.3");
 		expect(ctx.configId).toBe("config-v1.2.3");
 	});
 
-	test("defaults to BACKTEST environment", () => {
+	test("defaults to PAPER environment", () => {
 		const ctx = createTestContextWithConfig(undefined, "config-abc");
-		expect(ctx.environment).toBe("BACKTEST");
+		expect(ctx.environment).toBe("PAPER");
 	});
 
 	test("source is always 'test'", () => {
@@ -78,13 +78,13 @@ describe("createTestContextWithConfig", () => {
 	});
 
 	test("generates valid UUID v4 traceId", () => {
-		const ctx = createTestContextWithConfig("BACKTEST", "config");
+		const ctx = createTestContextWithConfig("PAPER", "config");
 		expect(ctx.traceId).toMatch(UUID_V4_REGEX);
 	});
 
 	test("each call generates unique traceId", () => {
-		const ctx1 = createTestContextWithConfig("BACKTEST", "config");
-		const ctx2 = createTestContextWithConfig("BACKTEST", "config");
+		const ctx1 = createTestContextWithConfig("PAPER", "config");
+		const ctx2 = createTestContextWithConfig("PAPER", "config");
 		expect(ctx1.traceId).not.toBe(ctx2.traceId);
 	});
 
@@ -96,17 +96,17 @@ describe("createTestContextWithConfig", () => {
 
 describe("usage patterns", () => {
 	test("typical unit test pattern", () => {
-		// Most unit tests just need default BACKTEST context
+		// Most unit tests just need default PAPER context
 		const ctx = createTestContext();
 
-		expect(ctx.environment).toBe("BACKTEST");
+		expect(ctx.environment).toBe("PAPER");
 		expect(ctx.source).toBe("test");
 		expect(ctx.traceId).toMatch(UUID_V4_REGEX);
 	});
 
 	test("testing environment-specific behavior pattern", () => {
 		// Test that something behaves differently per environment
-		const backtestCtx = createTestContext("BACKTEST");
+		const backtestCtx = createTestContext("PAPER");
 		const paperCtx = createTestContext("PAPER");
 		const liveCtx = createTestContext("LIVE");
 

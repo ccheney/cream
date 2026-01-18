@@ -2,7 +2,7 @@
  * Calendar Service Factory
  *
  * Environment-aware factory for creating CalendarService instances.
- * - BACKTEST: Returns HardcodedCalendarService (no API calls)
+ * - Tests (NODE_ENV=test): Returns HardcodedCalendarService (no API calls)
  * - PAPER/LIVE: Returns AlpacaCalendarService (requires credentials)
  *
  * @see docs/plans/02-data-layer.md - Session and Calendar Handling
@@ -33,6 +33,8 @@ export interface CalendarServiceFactoryOptions {
 	alpacaSecret?: string;
 	/** Years to preload for PAPER/LIVE modes (default: current + next year) */
 	preloadYears?: number[];
+	/** Force use of hardcoded calendar (useful for tests) */
+	useHardcoded?: boolean;
 }
 
 // ============================================
@@ -49,7 +51,7 @@ export class CalendarConfigError extends Error {
 	) {
 		super(
 			`CalendarService in ${mode} mode requires ${missingVar}. ` +
-				`Set ${missingVar} environment variable or use CREAM_ENV=BACKTEST for offline mode.`
+				`Set ${missingVar} environment variable.`
 		);
 		this.name = "CalendarConfigError";
 	}
@@ -91,7 +93,7 @@ export function getCalendarService(): CalendarService | null {
  * ```ts
  * await initCalendarService();
  * const service = requireCalendarService();
- * const session = await service.getTradingSession(new Date());
+ * const isOpen = await service.isMarketOpen();
  * ```
  */
 export function requireCalendarService(): CalendarService {
@@ -107,46 +109,42 @@ export function requireCalendarService(): CalendarService {
 /**
  * Initialize the singleton CalendarService.
  *
- * For PAPER/LIVE modes, this will preload calendar data from Alpaca.
- * Safe to call multiple times - returns existing instance if already initialized.
+ * Creates or returns the existing singleton instance. Safe to call multiple times.
+ * Returns immediately if already initialized.
  *
  * @param options - Factory options
- * @returns The initialized CalendarService
- * @throws CalendarConfigError if PAPER/LIVE mode without credentials
+ * @returns The singleton CalendarService
  *
  * @example
  * ```ts
- * // At app startup
+ * // Initialize at app startup
  * await initCalendarService();
  *
- * // Later in code
- * const service = getCalendarService();
+ * // Get instance anywhere
+ * const service = requireCalendarService();
  * ```
  */
 export async function initCalendarService(
 	options: CalendarServiceFactoryOptions = {}
 ): Promise<CalendarService> {
-	// Return existing instance if already initialized
+	// Return existing instance
 	if (calendarServiceInstance) {
 		return calendarServiceInstance;
 	}
 
-	// Return pending initialization if in progress
+	// Prevent concurrent initialization
 	if (initializationPromise) {
 		return initializationPromise;
 	}
 
-	// Start initialization
-	initializationPromise = (async () => {
-		try {
-			calendarServiceInstance = await createCalendarService(options);
-			return calendarServiceInstance;
-		} finally {
-			initializationPromise = null;
-		}
-	})();
+	initializationPromise = createCalendarService(options);
 
-	return initializationPromise;
+	try {
+		calendarServiceInstance = await initializationPromise;
+		return calendarServiceInstance;
+	} finally {
+		initializationPromise = null;
+	}
 }
 
 /**
@@ -159,7 +157,7 @@ export async function initCalendarService(
  * ```ts
  * // In tests
  * resetCalendarService();
- * await initCalendarService({ mode: "BACKTEST" });
+ * await initCalendarService({ useHardcoded: true });
  * ```
  */
 export function resetCalendarService(): void {
@@ -175,7 +173,7 @@ export function resetCalendarService(): void {
  * Create a new CalendarService instance.
  *
  * Routes to the appropriate implementation based on environment:
- * - BACKTEST: HardcodedCalendarService (synchronous, no network)
+ * - Tests (NODE_ENV=test) or useHardcoded: HardcodedCalendarService (synchronous, no network)
  * - PAPER/LIVE: AlpacaCalendarService (requires API credentials)
  *
  * @param options - Factory options
@@ -200,7 +198,8 @@ export async function createCalendarService(
 ): Promise<CalendarService> {
 	const mode = options.mode ?? requireEnv();
 
-	if (mode === "BACKTEST") {
+	// Use hardcoded calendar for tests or when explicitly requested
+	if (options.useHardcoded || Bun.env.NODE_ENV === "test") {
 		return new HardcodedCalendarService();
 	}
 
@@ -238,9 +237,8 @@ export async function createCalendarService(
  * @returns true if service can be created
  */
 export function isCalendarServiceAvailable(options: CalendarServiceFactoryOptions = {}): boolean {
-	const mode = options.mode ?? requireEnv();
-
-	if (mode === "BACKTEST") {
+	// Always available for tests or when hardcoded is requested
+	if (options.useHardcoded || Bun.env.NODE_ENV === "test") {
 		return true;
 	}
 

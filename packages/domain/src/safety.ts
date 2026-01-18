@@ -16,7 +16,7 @@
  */
 
 import type { ExecutionContext } from "./context";
-import { env, isBacktest, isLive } from "./env";
+import { env, isTest, isLive } from "./env";
 
 // ============================================
 // Order ID Namespacing
@@ -68,7 +68,7 @@ export function validateOrderIdEnvironment(orderId: string, ctx: ExecutionContex
  * Validate that the broker endpoint matches the execution context's environment
  *
  * LIVE: https://api.alpaca.markets
- * PAPER/BACKTEST: https://paper-api.alpaca.markets
+ * PAPER: https://paper-api.alpaca.markets
  *
  * @param endpoint - Broker API endpoint to validate
  * @param ctx - ExecutionContext containing environment info
@@ -205,7 +205,6 @@ export function validateEnvironmentConsistency(ctx: ExecutionContext): void {
  * Get the database name suffix for the given execution context's environment
  *
  * This ensures complete isolation between environments:
- * - BACKTEST uses: cream_backtest.db
  * - PAPER uses: cream_paper.db
  * - LIVE uses: cream_live.db
  *
@@ -467,15 +466,15 @@ export class SafetyError extends Error {
 /**
  * Reset safety state for testing
  *
- * Only works in BACKTEST environment
+ * Only works in test mode (source="test")
  *
  * @param ctx - ExecutionContext containing environment info
- * @throws {SafetyError} If not in BACKTEST environment
+ * @throws {SafetyError} If not in test mode
  */
 export function resetSafetyState(ctx: ExecutionContext): void {
-	if (!isBacktest(ctx)) {
+	if (!isTest(ctx)) {
 		throw new SafetyError(
-			"Safety state can only be reset in BACKTEST environment",
+			"Safety state can only be reset in test mode",
 			"AUDIT_LOG_PROTECTED",
 			ctx.traceId
 		);

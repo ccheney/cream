@@ -19,19 +19,17 @@ import type { CreamEnvironment } from "./env";
  * Source of the execution - identifies where the execution originated.
  *
  * - "test" - Unit/integration tests (bun test)
- * - "backtest" - Historical backtesting runs from dashboard
  * - "dashboard-test" - Manual OODA testing from dashboard UI
  * - "scheduled" - Hourly OODA loop worker
  * - "manual" - Manual CLI invocation
  */
-export type ExecutionSource = "test" | "backtest" | "dashboard-test" | "scheduled" | "manual";
+export type ExecutionSource = "test" | "dashboard-test" | "scheduled" | "manual";
 
 /**
  * All valid ExecutionSource values for validation
  */
 export const EXECUTION_SOURCES: readonly ExecutionSource[] = [
 	"test",
-	"backtest",
 	"dashboard-test",
 	"scheduled",
 	"manual",
@@ -41,7 +39,7 @@ export const EXECUTION_SOURCES: readonly ExecutionSource[] = [
  * ExecutionContext carries environment and tracing information through the system.
  *
  * Created at system boundaries and threaded through all operations. Enables:
- * - Dynamic environment selection (BACKTEST/PAPER/LIVE) per operation
+ * - Dynamic environment selection (PAPER/LIVE) per operation
  * - Request tracing via traceId (W3C TraceContext compatible)
  * - Config version tracking via optional configId
  *
@@ -91,8 +89,8 @@ export interface ExecutionContext {
  * - Worker entrypoints
  * - Test setup functions
  *
- * @param environment - Trading environment (BACKTEST, PAPER, LIVE)
- * @param source - Execution source (test, backtest, dashboard-test, scheduled, manual)
+ * @param environment - Trading environment (PAPER, LIVE)
+ * @param source - Execution source (test, dashboard-test, scheduled, manual)
  * @param configId - Optional runtime config version reference
  * @returns Frozen ExecutionContext object
  *
@@ -102,7 +100,7 @@ export interface ExecutionContext {
  * const ctx = createContext("PAPER", "dashboard-test", req.body.configVersion);
  *
  * // In test setup
- * const ctx = createContext("BACKTEST", "test");
+ * const ctx = createContext("PAPER", "test");
  *
  * // In worker
  * const ctx = createContext("LIVE", "scheduled", activeConfig.id);

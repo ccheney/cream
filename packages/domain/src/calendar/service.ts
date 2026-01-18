@@ -1,7 +1,7 @@
 /**
  * Calendar Service Implementations
  *
- * - HardcodedCalendarService: BACKTEST mode (static data, no API calls)
+ * - HardcodedCalendarService: Static data, no API calls (used for testing)
  * - AlpacaCalendarService: PAPER/LIVE modes (API with caching)
  *
  * @see docs/plans/02-data-layer.md - Session and Calendar Handling
@@ -99,7 +99,7 @@ function toDate(date: Date | string): Date {
  * Features:
  * - All methods are synchronous internally (wrapped in Promise.resolve)
  * - Uses hardcoded holiday/early close data from 2024-2029
- * - getClock() always returns { isOpen: true } for BACKTEST mode
+ * - getClock() always returns { isOpen: true } for deterministic testing
  * - No network calls
  *
  * @example
@@ -120,10 +120,10 @@ export class HardcodedCalendarService implements CalendarService {
 
 	/**
 	 * Check if the market is currently open.
-	 * In BACKTEST mode, this always returns true during valid trading sessions.
+	 * For HardcodedCalendarService, this always returns true during valid trading sessions.
 	 */
 	async isMarketOpen(): Promise<boolean> {
-		// In BACKTEST, we consider market always "open" for trading purposes
+		// For hardcoded service, we consider market always "open" for trading purposes
 		// The actual session logic handles RTH vs extended hours
 		return true;
 	}
@@ -178,14 +178,14 @@ export class HardcodedCalendarService implements CalendarService {
 	/**
 	 * Get the current market clock status.
 	 *
-	 * In BACKTEST mode, always returns isOpen: true with mock timestamps.
-	 * This allows backtests to execute trades at any point in the simulation.
+	 * For HardcodedCalendarService, always returns isOpen: true with mock timestamps.
+	 * This allows tests to execute trades at any point in the simulation.
 	 */
 	async getClock(): Promise<MarketClock> {
 		const now = new Date();
 		const dateStr = formatDateStr(now);
 
-		// In BACKTEST, market is always "open"
+		// For hardcoded service, market is always "open"
 		// We still provide realistic next open/close times
 		const nextTradingDay = isTradingDayStr(dateStr) ? dateStr : getNextTradingDayStr(dateStr);
 
@@ -281,7 +281,7 @@ export class HardcodedCalendarService implements CalendarService {
 /**
  * Create a new HardcodedCalendarService instance.
  *
- * @returns CalendarService for BACKTEST mode
+ * @returns CalendarService with static data (no API calls)
  */
 export function createHardcodedCalendarService(): CalendarService {
 	return new HardcodedCalendarService();

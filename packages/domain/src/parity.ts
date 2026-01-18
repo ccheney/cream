@@ -42,7 +42,7 @@ export const VersionRegistrySchema = z.object({
 	/** Timestamp when registry was created */
 	createdAt: z.string().datetime(),
 	/** Environment this registry applies to */
-	environment: z.enum(["BACKTEST", "PAPER", "LIVE"]),
+	environment: z.enum(["PAPER", "LIVE"]),
 	/** Map of indicator ID to version info */
 	indicators: z.record(z.string(), IndicatorVersionSchema),
 });

@@ -26,7 +26,7 @@ export type ParityEntityType = "indicator" | "factor" | "config";
 /**
  * Environment for validation.
  */
-export type ParityEnvironment = "BACKTEST" | "PAPER" | "LIVE";
+export type ParityEnvironment = "PAPER" | "LIVE";
 
 /**
  * Stored parity validation record.

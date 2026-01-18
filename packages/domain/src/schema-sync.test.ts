@@ -217,11 +217,19 @@ describe("DecisionPlan Schema Sync", () => {
 		it("accepts all valid environments", async () => {
 			const example = await loadProtoExample("decision_plan.json");
 
-			for (const env of ["BACKTEST", "PAPER", "LIVE"]) {
+			for (const env of ["PAPER", "LIVE"]) {
 				const valid = { ...example, environment: env };
 				const result = DecisionPlanSchema.safeParse(valid);
 				expect(result.success).toBe(true);
 			}
+		});
+
+		it("rejects BACKTEST as environment", async () => {
+			const example = await loadProtoExample("decision_plan.json");
+			const invalid = { ...example, environment: "BACKTEST" };
+
+			const result = DecisionPlanSchema.safeParse(invalid);
+			expect(result.success).toBe(false);
 		});
 	});
 

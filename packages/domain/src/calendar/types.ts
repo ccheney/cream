@@ -2,7 +2,7 @@
  * Calendar Service Types
  *
  * Type definitions for the CalendarService abstraction that provides
- * market calendar data from either hardcoded data (BACKTEST) or
+ * market calendar data from either hardcoded data (for testing) or
  * Alpaca API (PAPER/LIVE).
  *
  * @see docs/plans/02-data-layer.md - Session and Calendar Handling
@@ -106,7 +106,7 @@ export type AlpacaClockResponse = z.infer<typeof AlpacaClockResponseSchema>;
  * Calendar service for market hours and trading day operations.
  *
  * Implementations:
- * - HardcodedCalendarService: Uses static data for BACKTEST mode
+ * - HardcodedCalendarService: Uses static data for testing
  * - AlpacaCalendarService: Calls Alpaca API for PAPER/LIVE modes
  */
 export interface CalendarService {

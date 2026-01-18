@@ -21,7 +21,7 @@ export interface SnapshotLogEntry {
 	timestamp: string;
 	/** Trading cycle ID */
 	cycleId?: string;
-	/** Environment (BACKTEST, PAPER, LIVE) */
+	/** Environment (PAPER, LIVE) */
 	environment?: string;
 	/** Additional structured fields */
 	fields: Record<string, unknown>;

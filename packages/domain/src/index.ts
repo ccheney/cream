@@ -214,9 +214,9 @@ export {
 	getEnvDatabaseSuffix,
 	getEnvVarDocumentation,
 	getHelixUrl,
-	isBacktest,
 	isLive,
 	isPaper,
+	isTest,
 	requireEnv,
 	validateEnvironment,
 	validateEnvironmentOrExit,
@@ -471,33 +471,6 @@ export {
 //
 //   import { createExecutionClient, GrpcError } from "@cream/domain/grpc";
 //
-// Indicator synthesis types
-export {
-	type CreateIndicatorICHistoryInput,
-	CreateIndicatorICHistoryInputSchema,
-	type CreateIndicatorInput,
-	CreateIndicatorInputSchema,
-	type CreateIndicatorTrialInput,
-	CreateIndicatorTrialInputSchema,
-	type Indicator,
-	IndicatorCategory,
-	type IndicatorFilters,
-	IndicatorFiltersSchema,
-	type IndicatorICHistory,
-	IndicatorICHistorySchema,
-	IndicatorSchema,
-	IndicatorStatus,
-	type IndicatorTrial,
-	IndicatorTrialSchema,
-	type PaperTradingReport,
-	PaperTradingReportSchema,
-	type TrialParameters,
-	TrialParametersSchema,
-	type ValidationReport,
-	ValidationReportSchema,
-	type WalkForwardPeriod,
-	WalkForwardPeriodSchema,
-} from "./indicator-synthesis";
 // Global LLM model configuration
 export {
 	type GlobalModel,
@@ -685,40 +658,9 @@ export {
 	PredictionPlatform,
 	toNumericScores,
 } from "./prediction-markets";
-// Research trigger detection schemas
-export {
-	type AlphaDecayMetadata,
-	AlphaDecayMetadataSchema,
-	type BlockingCheckResult,
-	BlockingCheckResultSchema,
-	type BlockingConditions,
-	BlockingConditionsSchema,
-	DEFAULT_RESEARCH_TRIGGER_CONFIG,
-	type FactorCrowdingMetadata,
-	FactorCrowdingMetadataSchema,
-	type PerformanceDegradationMetadata,
-	PerformanceDegradationMetadataSchema,
-	type RegimeGapMetadata,
-	RegimeGapMetadataSchema,
-	type ResearchTrigger,
-	type ResearchTriggerConfig,
-	ResearchTriggerConfigSchema,
-	type ResearchTriggerDetectionType,
-	ResearchTriggerDetectionTypeSchema,
-	ResearchTriggerSchema,
-	type TriggerDetectionResult,
-	TriggerDetectionResultSchema,
-	type TriggerDetectionState,
-	TriggerDetectionStateSchema,
-	type TriggerMetadata,
-	TriggerMetadataSchema,
-	type TriggerSeverity,
-	TriggerSeveritySchema,
-} from "./research-trigger";
 // Retention policies and storage tier management
 export {
 	ALL_RETENTION_POLICIES,
-	BACKTEST_RETENTION_POLICIES,
 	DURATIONS,
 	getCompliancePolicies,
 	getPoliciesForEnvironment,

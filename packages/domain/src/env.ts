@@ -4,7 +4,7 @@
  * This module provides type-safe environment variable access with runtime validation.
  * All environment variables are validated at import time.
  *
- * IMPORTANT: Trading environment (BACKTEST/PAPER/LIVE) is NOT determined by environment
+ * IMPORTANT: Trading environment (PAPER/LIVE) is NOT determined by environment
  * variables. Instead, use ExecutionContext which is created at system boundaries
  * (HTTP handlers, worker entrypoints, test setup) and threaded through all operations.
  *
@@ -18,25 +18,25 @@ import { log } from "./logger.js";
 /**
  * Environment type - controls trading behavior and safety checks
  *
- * This is a pure type definition. The actual environment is determined
- * by ExecutionContext, not by environment variables.
+ * PAPER: Paper trading (simulated orders, real market data)
+ * LIVE: Live trading (real orders, real money)
+ *
+ * Tests use PAPER environment with source="test" in ExecutionContext.
  */
-export const CreamEnvironment = z.enum(["BACKTEST", "PAPER", "LIVE"]);
+export const CreamEnvironment = z.enum(["PAPER", "LIVE"]);
 export type CreamEnvironment = z.infer<typeof CreamEnvironment>;
 
 /**
  * Validates and returns CREAM_ENV from environment. Throws if not set or invalid.
  *
  * Use this at startup/system boundaries when transitioning from env var to ExecutionContext.
- * This replaces fallback patterns like `Bun.env.CREAM_ENV || "BACKTEST"`.
  *
  * @throws {Error} If CREAM_ENV is not set
- * @throws {Error} If CREAM_ENV is not one of: BACKTEST, PAPER, LIVE
+ * @throws {Error} If CREAM_ENV is not one of: PAPER, LIVE
  * @returns The validated CREAM_ENV value
  *
  * @example
  * ```ts
- * // Instead of: Bun.env.CREAM_ENV || "BACKTEST"
  * const env = requireEnv(); // Throws if not set
  *
  * // Then create context at system boundary
@@ -47,16 +47,12 @@ export function requireEnv(): CreamEnvironment {
 	const envValue = Bun.env.CREAM_ENV;
 
 	if (!envValue) {
-		throw new Error(
-			"CREAM_ENV environment variable is required. " + "Set it to one of: BACKTEST, PAPER, LIVE"
-		);
+		throw new Error("CREAM_ENV environment variable is required. Set it to one of: PAPER, LIVE");
 	}
 
 	const result = CreamEnvironment.safeParse(envValue);
 	if (!result.success) {
-		throw new Error(
-			`Invalid CREAM_ENV value: "${envValue}". Must be one of: BACKTEST, PAPER, LIVE`
-		);
+		throw new Error(`Invalid CREAM_ENV value: "${envValue}". Must be one of: PAPER, LIVE`);
 	}
 
 	return result.data;
@@ -214,12 +210,15 @@ export const env: EnvConfig = parseEnv();
 // ============================================
 
 /**
- * Check if context is BACKTEST environment
+ * Check if context is a test execution (source="test")
  *
- * @param ctx - ExecutionContext containing environment info
+ * Use this to return stub data or skip real API calls during unit tests.
+ * This replaces the old `isBacktest()` pattern.
+ *
+ * @param ctx - ExecutionContext containing source info
  */
-export function isBacktest(ctx: ExecutionContext): boolean {
-	return ctx.environment === "BACKTEST";
+export function isTest(ctx: ExecutionContext): boolean {
+	return ctx.source === "test";
 }
 
 /**
@@ -246,8 +245,8 @@ export function isLive(ctx: ExecutionContext): boolean {
 /**
  * Get the appropriate Alpaca base URL for the given context
  *
- * Paper/Backtest: https://paper-api.alpaca.markets
- * Live: https://api.alpaca.markets
+ * PAPER: https://paper-api.alpaca.markets
+ * LIVE: https://api.alpaca.markets
  *
  * @param ctx - ExecutionContext containing environment info
  * @see https://docs.alpaca.markets/docs/paper-trading
@@ -263,10 +262,10 @@ export function getAlpacaBaseUrl(ctx: ExecutionContext): string {
 /**
  * Get environment-specific database URL suffix for state isolation
  *
- * This ensures BACKTEST, PAPER, and LIVE data are never mixed.
+ * This ensures PAPER and LIVE data are never mixed.
  *
  * @param ctx - ExecutionContext containing environment info
- * @returns Suffix like "_backtest", "_paper", or "_live"
+ * @returns Suffix like "_paper" or "_live"
  */
 export function getEnvDatabaseSuffix(ctx: ExecutionContext): string {
 	return `_${ctx.environment.toLowerCase()}`;
@@ -294,13 +293,13 @@ export function hasWebSearchCapability(): boolean {
 
 /**
  * Get the LLM model ID from environment
- * Returns a default value for tests (BACKTEST environment)
- * @throws {Error} If LLM_MODEL_ID is not set and not in BACKTEST
+ * Returns a default value for tests (NODE_ENV=test)
+ * @throws {Error} If LLM_MODEL_ID is not set and not in test mode
  */
 export function getLLMModelId(): string {
 	if (!env.LLM_MODEL_ID) {
-		// Use default for tests (CREAM_ENV is not in env schema, check raw env)
-		if (Bun.env.CREAM_ENV === "BACKTEST") {
+		// Use default for tests
+		if (Bun.env.NODE_ENV === "test") {
 			return "llm-model-id";
 		}
 		throw new Error("LLM_MODEL_ID environment variable is required");
@@ -344,7 +343,6 @@ export interface EnvValidationResult {
  * Requirements for different trading environments
  */
 const ENVIRONMENT_REQUIREMENTS: Record<CreamEnvironment, (keyof EnvConfig)[]> = {
-	BACKTEST: [],
 	PAPER: ["ALPACA_KEY", "ALPACA_SECRET", "GOOGLE_CLIENT_ID", "GOOGLE_CLIENT_SECRET"],
 	LIVE: ["ALPACA_KEY", "ALPACA_SECRET", "GOOGLE_CLIENT_ID", "GOOGLE_CLIENT_SECRET"],
 };

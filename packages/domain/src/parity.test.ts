@@ -18,7 +18,7 @@ describe("compareVersionRegistries", () => {
 	test("returns match when registries are identical", () => {
 		const registry: VersionRegistry = {
 			createdAt: "2026-01-04T00:00:00Z",
-			environment: "BACKTEST",
+			environment: "PAPER",
 			indicators: {
 				sma: { id: "sma", version: "1.0.0", introducedAt: "2026-01-01T00:00:00Z" },
 				rsi: { id: "rsi", version: "2.1.0", introducedAt: "2026-01-01T00:00:00Z" },
@@ -37,9 +37,9 @@ describe("compareVersionRegistries", () => {
 	});
 
 	test("detects version mismatches", () => {
-		const backtest: VersionRegistry = {
+		const paper: VersionRegistry = {
 			createdAt: "2026-01-04T00:00:00Z",
-			environment: "BACKTEST",
+			environment: "PAPER",
 			indicators: {
 				sma: { id: "sma", version: "1.0.0", introducedAt: "2026-01-01T00:00:00Z" },
 			},
@@ -53,7 +53,7 @@ describe("compareVersionRegistries", () => {
 			},
 		};
 
-		const result = compareVersionRegistries(backtest, live);
+		const result = compareVersionRegistries(paper, live);
 
 		expect(result.match).toBe(false);
 		expect(result.mismatches).toHaveLength(1);
@@ -65,9 +65,9 @@ describe("compareVersionRegistries", () => {
 	});
 
 	test("detects missing indicators from live", () => {
-		const backtest: VersionRegistry = {
+		const paper: VersionRegistry = {
 			createdAt: "2026-01-04T00:00:00Z",
-			environment: "BACKTEST",
+			environment: "PAPER",
 			indicators: {
 				sma: { id: "sma", version: "1.0.0", introducedAt: "2026-01-01T00:00:00Z" },
 				atr: { id: "atr", version: "1.0.0", introducedAt: "2026-01-01T00:00:00Z" },
@@ -82,16 +82,16 @@ describe("compareVersionRegistries", () => {
 			},
 		};
 
-		const result = compareVersionRegistries(backtest, live);
+		const result = compareVersionRegistries(paper, live);
 
 		expect(result.match).toBe(false);
 		expect(result.missingFromLive).toContain("atr");
 	});
 
-	test("detects indicators missing from backtest", () => {
-		const backtest: VersionRegistry = {
+	test("detects indicators missing from paper", () => {
+		const paper: VersionRegistry = {
 			createdAt: "2026-01-04T00:00:00Z",
-			environment: "BACKTEST",
+			environment: "PAPER",
 			indicators: {
 				sma: { id: "sma", version: "1.0.0", introducedAt: "2026-01-01T00:00:00Z" },
 			},
@@ -106,10 +106,20 @@ describe("compareVersionRegistries", () => {
 			},
 		};
 
-		const result = compareVersionRegistries(backtest, live);
+		const result = compareVersionRegistries(paper, live);
 
 		expect(result.match).toBe(false);
 		expect(result.missingFromBacktest).toContain("macd");
+	});
+
+	test("rejects BACKTEST as environment", () => {
+		const { VersionRegistrySchema } = require("./parity");
+		const invalidRegistry = {
+			createdAt: "2026-01-04T00:00:00Z",
+			environment: "BACKTEST",
+			indicators: {},
+		};
+		expect(VersionRegistrySchema.safeParse(invalidRegistry).success).toBe(false);
 	});
 });
 
@@ -531,7 +541,7 @@ describe("runParityValidation", () => {
 		const result = runParityValidation({
 			backtestRegistry: {
 				createdAt: "2026-01-04T00:00:00Z",
-				environment: "BACKTEST",
+				environment: "PAPER",
 				indicators: {
 					sma: { id: "sma", version: "1.0.0", introducedAt: "2026-01-01T00:00:00Z" },
 				},
@@ -565,7 +575,7 @@ describe("runParityValidation", () => {
 		const result = runParityValidation({
 			backtestRegistry: {
 				createdAt: "2026-01-04T00:00:00Z",
-				environment: "BACKTEST",
+				environment: "PAPER",
 				indicators: {
 					sma: { id: "sma", version: "1.0.0", introducedAt: "2026-01-01T00:00:00Z" },
 				},

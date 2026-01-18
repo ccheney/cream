@@ -996,6 +996,8 @@ export const WorkerServiceNameSchema = z.enum([
 	"short_interest",
 	"sentiment",
 	"corporate_actions",
+	"prediction_markets",
+	"indicator_synthesis",
 ]);
 
 export type WorkerServiceName = z.infer<typeof WorkerServiceNameSchema>;

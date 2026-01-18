@@ -369,7 +369,7 @@ export const DecisionPlanSchema = z.object({
 		.string()
 		.datetime({ offset: true })
 		.describe("ISO-8601 timestamp with timezone offset"),
-	environment: z.enum(["BACKTEST", "PAPER", "LIVE"]),
+	environment: z.enum(["PAPER", "LIVE"]),
 	decisions: z.array(DecisionSchema),
 	portfolioNotes: z.string().optional(),
 });

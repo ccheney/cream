@@ -32,8 +32,8 @@ describe("CalendarService Factory", () => {
 
 	beforeEach(() => {
 		resetCalendarService();
-		// Set BACKTEST mode for most tests
-		Bun.env.CREAM_ENV = "BACKTEST";
+		// Set PAPER mode for most tests
+		Bun.env.CREAM_ENV = "PAPER";
 	});
 
 	afterEach(() => {
@@ -45,13 +45,13 @@ describe("CalendarService Factory", () => {
 	});
 
 	describe("createCalendarService", () => {
-		it("creates HardcodedCalendarService in BACKTEST mode", async () => {
-			const service = await createCalendarService({ mode: "BACKTEST" });
+		it("creates HardcodedCalendarService in PAPER mode", async () => {
+			const service = await createCalendarService({ mode: "PAPER" });
 			expect(service).toBeInstanceOf(HardcodedCalendarService);
 		});
 
 		it("uses CREAM_ENV if mode not specified", async () => {
-			Bun.env.CREAM_ENV = "BACKTEST";
+			Bun.env.CREAM_ENV = "PAPER";
 			const service = await createCalendarService();
 			expect(service).toBeInstanceOf(HardcodedCalendarService);
 		});
@@ -97,7 +97,7 @@ describe("CalendarService Factory", () => {
 			});
 
 			it("returns service after initialization", async () => {
-				await initCalendarService({ mode: "BACKTEST" });
+				await initCalendarService({ mode: "PAPER" });
 				const service = getCalendarService();
 				expect(service).not.toBeNull();
 				expect(service).toBeInstanceOf(HardcodedCalendarService);
@@ -110,7 +110,7 @@ describe("CalendarService Factory", () => {
 			});
 
 			it("returns service after initialization", async () => {
-				await initCalendarService({ mode: "BACKTEST" });
+				await initCalendarService({ mode: "PAPER" });
 				const service = requireCalendarService();
 				expect(service).toBeInstanceOf(HardcodedCalendarService);
 			});
@@ -118,22 +118,22 @@ describe("CalendarService Factory", () => {
 
 		describe("initCalendarService", () => {
 			it("initializes the singleton", async () => {
-				const service = await initCalendarService({ mode: "BACKTEST" });
+				const service = await initCalendarService({ mode: "PAPER" });
 				expect(service).toBeInstanceOf(HardcodedCalendarService);
 				expect(getCalendarService()).toBe(service);
 			});
 
 			it("returns existing instance on repeated calls", async () => {
-				const first = await initCalendarService({ mode: "BACKTEST" });
-				const second = await initCalendarService({ mode: "BACKTEST" });
+				const first = await initCalendarService({ mode: "PAPER" });
+				const second = await initCalendarService({ mode: "PAPER" });
 				expect(first).toBe(second);
 			});
 
 			it("handles concurrent initialization calls", async () => {
 				const [first, second, third] = await Promise.all([
-					initCalendarService({ mode: "BACKTEST" }),
-					initCalendarService({ mode: "BACKTEST" }),
-					initCalendarService({ mode: "BACKTEST" }),
+					initCalendarService({ mode: "PAPER" }),
+					initCalendarService({ mode: "PAPER" }),
+					initCalendarService({ mode: "PAPER" }),
 				]);
 
 				expect(first).toBe(second);
@@ -143,7 +143,7 @@ describe("CalendarService Factory", () => {
 
 		describe("resetCalendarService", () => {
 			it("clears the singleton", async () => {
-				await initCalendarService({ mode: "BACKTEST" });
+				await initCalendarService({ mode: "PAPER" });
 				expect(getCalendarService()).not.toBeNull();
 
 				resetCalendarService();
@@ -155,9 +155,9 @@ describe("CalendarService Factory", () => {
 			});
 
 			it("allows reinitialization after reset", async () => {
-				const first = await initCalendarService({ mode: "BACKTEST" });
+				const first = await initCalendarService({ mode: "PAPER" });
 				resetCalendarService();
-				const second = await initCalendarService({ mode: "BACKTEST" });
+				const second = await initCalendarService({ mode: "PAPER" });
 
 				expect(first).not.toBe(second);
 			});
@@ -165,8 +165,8 @@ describe("CalendarService Factory", () => {
 	});
 
 	describe("isCalendarServiceAvailable", () => {
-		it("returns true for BACKTEST mode", () => {
-			expect(isCalendarServiceAvailable({ mode: "BACKTEST" })).toBe(true);
+		it("returns true for PAPER mode", () => {
+			expect(isCalendarServiceAvailable({ mode: "PAPER" })).toBe(true);
 		});
 
 		it("returns false for PAPER mode without credentials", () => {
@@ -206,9 +206,9 @@ describe("CalendarService Factory", () => {
 			expect(error.mode).toBe("LIVE");
 		});
 
-		it("message suggests BACKTEST mode", () => {
+		it("message suggests PAPER mode", () => {
 			const error = new CalendarConfigError("ALPACA_KEY", "PAPER");
-			expect(error.message).toContain("BACKTEST");
+			expect(error.message).toContain("PAPER");
 		});
 	});
 });

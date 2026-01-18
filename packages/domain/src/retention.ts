@@ -92,7 +92,7 @@ export const STORAGE_TIER_SPECS: Record<StorageTier, StorageTierCharacteristics>
 /**
  * Trading environment for retention policies
  */
-export const RetentionEnvironment = z.enum(["LIVE", "PAPER", "BACKTEST"]);
+export const RetentionEnvironment = z.enum(["LIVE", "PAPER"]);
 export type RetentionEnvironment = z.infer<typeof RetentionEnvironment>;
 
 /**
@@ -305,38 +305,11 @@ export const PAPER_RETENTION_POLICIES: RetentionPolicy[] = [
 ];
 
 /**
- * BACKTEST environment retention policies (minimal retention)
- */
-export const BACKTEST_RETENTION_POLICIES: RetentionPolicy[] = [
-	{
-		nodeType: "TradeDecision",
-		environment: "BACKTEST",
-		periods: [
-			{ tier: "HOT", durationDays: DURATIONS.DAYS_30 },
-			{ tier: "WARM", durationDays: DURATIONS.DAYS_90 },
-		],
-		totalRetentionDays: DURATIONS.DAYS_120,
-		complianceRequired: false,
-	},
-	{
-		nodeType: "TradeLifecycleEvent",
-		environment: "BACKTEST",
-		periods: [
-			{ tier: "HOT", durationDays: DURATIONS.DAYS_7 },
-			{ tier: "WARM", durationDays: DURATIONS.DAYS_30 },
-		],
-		totalRetentionDays: DURATIONS.DAYS_30 + DURATIONS.DAYS_7,
-		complianceRequired: false,
-	},
-];
-
-/**
  * All retention policies indexed by environment
  */
 export const ALL_RETENTION_POLICIES: Record<RetentionEnvironment, RetentionPolicy[]> = {
 	LIVE: LIVE_RETENTION_POLICIES,
 	PAPER: PAPER_RETENTION_POLICIES,
-	BACKTEST: BACKTEST_RETENTION_POLICIES,
 };
 
 /**

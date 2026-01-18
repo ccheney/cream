@@ -272,7 +272,7 @@ describe("Clock Monitoring", () => {
 	});
 
 	it("resetClockMonitorState clears state", () => {
-		const ctx = createTestContext("BACKTEST");
+		const ctx = createTestContext("PAPER");
 		// Manually mutate state first
 		periodicClockCheck(ctx).catch(() => {}); // Ignore result
 
@@ -289,19 +289,19 @@ describe("Clock Monitoring", () => {
 
 describe("checkClockSkew", () => {
 	it("returns result with required fields", async () => {
-		const ctx = createTestContext("BACKTEST");
+		const ctx = createTestContext("PAPER");
 		const result = await checkClockSkew(ctx);
 
 		expect(result.ok).toBeDefined();
 		expect(result.skewMs).toBeDefined();
 		expect(result.checkedAt).toBeDefined();
-		// In BACKTEST mode, it skips the HTTP call and returns a warning
-		expect(result.warning).toContain("BACKTEST");
+		// In test mode, it skips the HTTP call and returns a warning
+		expect(result.warning).toContain("test mode");
 	});
 
 	it("respects custom thresholds", async () => {
-		const ctx = createTestContext("BACKTEST");
-		// In BACKTEST mode, thresholds don't apply (always skipped)
+		const ctx = createTestContext("PAPER");
+		// In test mode, thresholds don't apply (always skipped)
 		const result = await checkClockSkew(ctx, {
 			warnThresholdMs: 1000000,
 			errorThresholdMs: 2000000,
@@ -313,7 +313,7 @@ describe("checkClockSkew", () => {
 	});
 
 	it("includes checkedAt timestamp in ISO format", async () => {
-		const ctx = createTestContext("BACKTEST");
+		const ctx = createTestContext("PAPER");
 		const result = await checkClockSkew(ctx);
 
 		expect(result.checkedAt).toMatch(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}/);
@@ -326,7 +326,7 @@ describe("periodicClockCheck", () => {
 	});
 
 	it("updates monitor state after check", async () => {
-		const ctx = createTestContext("BACKTEST");
+		const ctx = createTestContext("PAPER");
 		await periodicClockCheck(ctx);
 
 		const state = getClockMonitorState();
@@ -336,7 +336,7 @@ describe("periodicClockCheck", () => {
 	});
 
 	it("increments counters on multiple checks", async () => {
-		const ctx = createTestContext("BACKTEST");
+		const ctx = createTestContext("PAPER");
 		await periodicClockCheck(ctx);
 		await periodicClockCheck(ctx);
 
@@ -345,11 +345,11 @@ describe("periodicClockCheck", () => {
 	});
 
 	it("tracks warning and error counts", async () => {
-		const ctx = createTestContext("BACKTEST");
+		const ctx = createTestContext("PAPER");
 		await periodicClockCheck(ctx);
 
 		const state = getClockMonitorState();
-		// In BACKTEST mode, there's always a warning about skipped check
+		// In test mode, there's always a warning about skipped check
 		expect(state.warningCount).toBeGreaterThanOrEqual(1);
 	});
 });

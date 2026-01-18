@@ -37,7 +37,7 @@ export {
 	requireCalendarService,
 	resetCalendarService,
 } from "./factory";
-// Hardcoded calendar data for BACKTEST mode
+// Hardcoded calendar data for testing
 export {
 	EARLY_CLOSE,
 	generateCalendarRange,
@@ -61,7 +61,7 @@ export {
 	type AlpacaCalendarServiceConfig,
 	CalendarServiceError,
 	createAlpacaCalendarService,
-	// BACKTEST mode
+	// Testing mode
 	createHardcodedCalendarService,
 	HardcodedCalendarService,
 } from "./service";

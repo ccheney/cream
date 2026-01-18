@@ -16,7 +16,7 @@
 import { z } from "zod";
 
 /** Trading environment */
-export const EnvironmentSchema = z.enum(["BACKTEST", "PAPER", "LIVE"]);
+export const EnvironmentSchema = z.enum(["PAPER", "LIVE"]);
 export type Environment = z.infer<typeof EnvironmentSchema>;
 
 /** Trading action expressing intent in terms of exposure */

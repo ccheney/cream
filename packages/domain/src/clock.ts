@@ -19,7 +19,7 @@
  */
 
 import type { ExecutionContext } from "./context";
-import { isBacktest } from "./env";
+import { isTest } from "./env";
 
 // ============================================
 // Configuration
@@ -85,7 +85,7 @@ export interface TimestampValidationResult {
 /**
  * Check system clock against reference time
  *
- * In backtest mode, always returns ok (historical data doesn't need clock sync).
+ * In test mode, always returns ok (tests don't need clock sync).
  *
  * @param ctx - ExecutionContext containing environment info
  * @param thresholds - Optional custom thresholds
@@ -97,13 +97,13 @@ export async function checkClockSkew(
 ): Promise<ClockCheckResult> {
 	const checkedAt = new Date().toISOString();
 
-	// Skip in backtest mode
-	if (isBacktest(ctx)) {
+	// Skip in test mode
+	if (isTest(ctx)) {
 		return {
 			ok: true,
 			skewMs: 0,
 			checkedAt,
-			warning: "Clock check skipped in BACKTEST mode",
+			warning: "Clock check skipped in test mode",
 		};
 	}
 

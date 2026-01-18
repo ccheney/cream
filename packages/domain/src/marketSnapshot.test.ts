@@ -289,7 +289,7 @@ describe("MarketSnapshotSchema", () => {
 	});
 
 	test("accepts all environment values", () => {
-		const envs = ["BACKTEST", "PAPER", "LIVE"] as const;
+		const envs = ["PAPER", "LIVE"] as const;
 		for (const env of envs) {
 			const result = MarketSnapshotSchema.safeParse({
 				...validMarketSnapshot,
@@ -297,6 +297,14 @@ describe("MarketSnapshotSchema", () => {
 			});
 			expect(result.success).toBe(true);
 		}
+	});
+
+	test("rejects BACKTEST environment", () => {
+		const result = MarketSnapshotSchema.safeParse({
+			...validMarketSnapshot,
+			environment: "BACKTEST",
+		});
+		expect(result.success).toBe(false);
 	});
 
 	test("accepts all regime values", () => {

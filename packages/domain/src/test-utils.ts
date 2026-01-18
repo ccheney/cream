@@ -8,11 +8,10 @@
  * ```ts
  * import { createTestContext } from "@cream/domain";
  *
- * // Default: BACKTEST environment, test source
+ * // Default: PAPER environment, test source
  * const ctx = createTestContext();
  *
  * // Override environment for specific tests
- * const paperCtx = createTestContext("PAPER");
  * const liveCtx = createTestContext("LIVE");
  * ```
  */
@@ -23,26 +22,25 @@ import type { CreamEnvironment } from "./env";
 /**
  * Creates an ExecutionContext suitable for tests.
  *
- * - Defaults to "BACKTEST" environment (safest for testing)
+ * - Defaults to "PAPER" environment
  * - Source is always "test" to identify test-originated contexts
  * - Each call generates a unique traceId
  *
- * @param environment - Override environment for testing PAPER/LIVE behavior
+ * @param environment - Override environment for testing LIVE behavior
  * @returns Frozen ExecutionContext with source="test"
  *
  * @example
  * ```ts
- * // Most tests use BACKTEST (default)
+ * // Most tests use PAPER (default)
  * const ctx = createTestContext();
- * expect(ctx.environment).toBe("BACKTEST");
+ * expect(ctx.environment).toBe("PAPER");
  * expect(ctx.source).toBe("test");
  *
  * // Test environment-specific behavior
- * const paperCtx = createTestContext("PAPER");
  * const liveCtx = createTestContext("LIVE");
  * ```
  */
-export function createTestContext(environment: CreamEnvironment = "BACKTEST"): ExecutionContext {
+export function createTestContext(environment: CreamEnvironment = "PAPER"): ExecutionContext {
 	return createContext(environment, "test");
 }
 
@@ -51,7 +49,7 @@ export function createTestContext(environment: CreamEnvironment = "BACKTEST"): E
  *
  * Useful for tests that need to verify config-aware behavior.
  *
- * @param environment - Trading environment (defaults to BACKTEST)
+ * @param environment - Trading environment (defaults to PAPER)
  * @param configId - Config version identifier
  * @returns Frozen ExecutionContext with source="test" and configId set
  *
@@ -62,7 +60,7 @@ export function createTestContext(environment: CreamEnvironment = "BACKTEST"): E
  * ```
  */
 export function createTestContextWithConfig(
-	environment: CreamEnvironment = "BACKTEST",
+	environment: CreamEnvironment = "PAPER",
 	configId: string
 ): ExecutionContext {
 	return createContext(environment, "test", configId);

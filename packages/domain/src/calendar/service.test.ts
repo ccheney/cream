@@ -1,7 +1,7 @@
 /**
  * Calendar Service Tests
  *
- * Tests for HardcodedCalendarService (BACKTEST) and AlpacaCalendarService (PAPER/LIVE).
+ * Tests for HardcodedCalendarService (testing) and AlpacaCalendarService (PAPER/LIVE).
  */
 
 import { afterEach, beforeEach, describe, expect, it, spyOn } from "bun:test";
@@ -128,13 +128,13 @@ describe("HardcodedCalendarService", () => {
 	});
 
 	describe("isMarketOpen", () => {
-		it("always returns true in BACKTEST mode", async () => {
+		it("always returns true for HardcodedCalendarService", async () => {
 			expect(await service.isMarketOpen()).toBe(true);
 		});
 	});
 
 	describe("getClock", () => {
-		it("returns isOpen: true in BACKTEST mode", async () => {
+		it("returns isOpen: true for HardcodedCalendarService", async () => {
 			const clock = await service.getClock();
 			expect(clock.isOpen).toBe(true);
 		});
