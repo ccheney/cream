@@ -12,6 +12,8 @@
       "outputs": [],
       "env": ["CREAM_ENV", "LLM_MODEL_ID"],
       "passThroughEnv": [
+        "CLAUDECODE",
+        "NODE_ENV",
         "CREAM_ENV",
         "LLM_MODEL_ID",
         "ALPACA_KEY",
