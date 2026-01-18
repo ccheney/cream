@@ -196,9 +196,7 @@ export class DecisionsRepository {
 			conditions.push(eq(decisions.direction, filters.direction));
 		}
 		if (filters.environment) {
-			conditions.push(
-				eq(decisions.environment, filters.environment as "PAPER" | "LIVE")
-			);
+			conditions.push(eq(decisions.environment, filters.environment as "PAPER" | "LIVE"));
 		}
 		if (filters.cycleId) {
 			conditions.push(eq(decisions.cycleId, filters.cycleId));
@@ -557,9 +555,7 @@ export class DecisionsRepository {
 			conditions.push(eq(decisions.direction, filters.direction));
 		}
 		if (filters.environment) {
-			conditions.push(
-				eq(decisions.environment, filters.environment as "PAPER" | "LIVE")
-			);
+			conditions.push(eq(decisions.environment, filters.environment as "PAPER" | "LIVE"));
 		}
 		if (filters.cycleId) {
 			conditions.push(eq(decisions.cycleId, filters.cycleId));

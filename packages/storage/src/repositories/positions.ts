@@ -156,9 +156,7 @@ export class PositionsRepository {
 			conditions.push(eq(positions.status, filters.status));
 		}
 		if (filters.environment) {
-			conditions.push(
-				eq(positions.environment, filters.environment as "PAPER" | "LIVE")
-			);
+			conditions.push(eq(positions.environment, filters.environment as "PAPER" | "LIVE"));
 		}
 		if (filters.thesisId) {
 			conditions.push(eq(positions.thesisId, filters.thesisId));

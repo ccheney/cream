@@ -4,15 +4,7 @@
  * alerts, system_state
  */
 import { sql } from "drizzle-orm";
-import {
-	boolean,
-	index,
-	jsonb,
-	pgTable,
-	text,
-	timestamp,
-	uuid,
-} from "drizzle-orm/pg-core";
+import { boolean, index, jsonb, pgTable, text, timestamp, uuid } from "drizzle-orm/pg-core";
 import { alertSeverityEnum, environmentEnum, systemStatusEnum } from "./enums";
 
 // alerts: System and trading alerts

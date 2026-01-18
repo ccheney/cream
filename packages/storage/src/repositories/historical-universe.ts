@@ -1,10 +1,8 @@
 /**
  * Historical Universe Repository (Drizzle ORM)
  *
- * Stores and retrieves point-in-time universe data for survivorship-bias-free backtesting.
+ * Stores and retrieves point-in-time universe data for survivorship-bias-free historical testing.
  * Tracks historical index compositions, ticker changes, and universe snapshots.
- *
- * @see docs/plans/12-backtest.md - Survivorship Bias Prevention
  */
 import { and, asc, desc, eq, gte, isNull, lte, or, sql } from "drizzle-orm";
 import { z } from "zod";

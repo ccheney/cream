@@ -12,7 +12,7 @@ CREATE TYPE "public"."date_format" AS ENUM('MM/DD/YYYY', 'DD/MM/YYYY', 'YYYY-MM-
 CREATE TYPE "public"."decision_action" AS ENUM('BUY', 'SELL', 'HOLD', 'CLOSE', 'INCREASE', 'REDUCE', 'NO_TRADE');--> statement-breakpoint
 CREATE TYPE "public"."decision_direction" AS ENUM('LONG', 'SHORT', 'FLAT');--> statement-breakpoint
 CREATE TYPE "public"."decision_status" AS ENUM('pending', 'approved', 'rejected', 'executed', 'cancelled', 'expired');--> statement-breakpoint
-CREATE TYPE "public"."environment" AS ENUM('BACKTEST', 'PAPER', 'LIVE');--> statement-breakpoint
+CREATE TYPE "public"."environment" AS ENUM('PAPER', 'LIVE');--> statement-breakpoint
 CREATE TYPE "public"."execution_recovery_status" AS ENUM('unknown', 'healthy', 'error', 'interrupted', 'needs_attention');--> statement-breakpoint
 CREATE TYPE "public"."external_event_source" AS ENUM('news', 'earnings', 'sec_filing', 'fed');--> statement-breakpoint
 CREATE TYPE "public"."factor_status" AS ENUM('research', 'stage1', 'stage2', 'paper', 'active', 'decaying', 'retired');--> statement-breakpoint

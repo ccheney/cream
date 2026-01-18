@@ -15,6 +15,13 @@
       "when": 1768714529414,
       "tag": "0001_allow-zero-size",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1737216000000,
+      "tag": "0002_drop-backtest-tables",
+      "breakpoints": true
     }
   ]
 }

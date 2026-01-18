@@ -150,9 +150,7 @@ export class PortfolioSnapshotsRepository {
 		const conditions = [];
 
 		if (filters.environment) {
-			conditions.push(
-				eq(portfolioSnapshots.environment, filters.environment as "PAPER" | "LIVE")
-			);
+			conditions.push(eq(portfolioSnapshots.environment, filters.environment as "PAPER" | "LIVE"));
 		}
 		if (filters.fromDate) {
 			conditions.push(gte(portfolioSnapshots.timestamp, new Date(filters.fromDate)));
@@ -207,9 +205,7 @@ export class PortfolioSnapshotsRepository {
 		toDate?: string,
 		limit = 1000
 	): Promise<{ timestamp: string; nav: number; pnlPct: number }[]> {
-		const conditions = [
-			eq(portfolioSnapshots.environment, environment as "PAPER" | "LIVE"),
-		];
+		const conditions = [eq(portfolioSnapshots.environment, environment as "PAPER" | "LIVE")];
 
 		if (fromDate) {
 			conditions.push(gte(portfolioSnapshots.timestamp, new Date(fromDate)));
