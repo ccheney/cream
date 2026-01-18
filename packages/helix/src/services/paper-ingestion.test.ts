@@ -236,7 +236,7 @@ describe("calculatePaperRelevanceScore", () => {
 
 describe("SEED_PAPERS", () => {
 	test("contains expected number of papers", () => {
-		expect(SEED_PAPERS.length).toBe(10);
+		expect(SEED_PAPERS.length).toBe(22);
 	});
 
 	test("all papers have required fields", () => {
@@ -273,15 +273,6 @@ describe("SEED_PAPERS", () => {
 		expect(momentum?.title).toContain("Winners");
 	});
 
-	test("contains machine learning finance papers", () => {
-		const ml = SEED_PAPERS.filter(
-			(p) =>
-				p.title.toLowerCase().includes("machine learning") ||
-				p.title.toLowerCase().includes("deep learning")
-		);
-		expect(ml.length).toBeGreaterThanOrEqual(2);
-	});
-
 	test("contains Black-Scholes paper", () => {
 		const bs = SEED_PAPERS.find(
 			(p) => p.authors.includes("Black") && p.authors.includes("Scholes")
@@ -300,7 +291,7 @@ describe("SEED_PAPERS", () => {
 	test("all papers have publication years", () => {
 		for (const paper of SEED_PAPERS) {
 			expect(paper.publicationYear).toBeDefined();
-			expect(paper.publicationYear).toBeGreaterThanOrEqual(1973);
+			expect(paper.publicationYear).toBeGreaterThanOrEqual(1952);
 			expect(paper.publicationYear).toBeLessThanOrEqual(new Date().getFullYear());
 		}
 	});

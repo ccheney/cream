@@ -33,7 +33,7 @@ function createMockHypothesisInput(overrides: Partial<HypothesisInput> = {}): Hy
 		expectedIc: 0.05,
 		expectedSharpe: 1.5,
 		falsificationCriteria: [
-			"IC < 0.02 over 3-month backtest",
+			"IC < 0.02 over 3-month historical test",
 			"No improvement over baseline momentum",
 		],
 		requiredFeatures: ["price_momentum_12m", "price_momentum_1m", "volatility_20d"],

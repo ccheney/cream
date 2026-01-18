@@ -41,7 +41,7 @@ export interface IndicatorInput {
 	astSignature?: string;
 	/** Deflated Sharpe Ratio from validation */
 	deflatedSharpe?: number;
-	/** Probability of Backtest Overfitting */
+	/** Probability of Overfitting (PBO) */
 	probabilityOfOverfit?: number;
 	/** Information Coefficient */
 	informationCoefficient?: number;

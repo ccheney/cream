@@ -176,7 +176,7 @@ export interface Indicator {
 	ast_signature?: string;
 	/** Deflated Sharpe Ratio from validation */
 	deflated_sharpe?: number;
-	/** Probability of Backtest Overfitting */
+	/** Probability of Overfitting (PBO) */
 	probability_of_overfit?: number;
 	/** Information Coefficient */
 	information_coefficient?: number;

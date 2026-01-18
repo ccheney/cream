@@ -66,10 +66,32 @@ export interface PaperIngestionOptions {
 
 /**
  * Foundational papers for seeding the knowledge base.
- * These are seminal works in factor investing and quantitative finance.
+ * These are seminal works in quantitative finance, organized by domain.
  */
 export const SEED_PAPERS: PaperInput[] = [
-	// Factor Investing Foundations
+	// ============================================
+	// Portfolio Theory & Asset Pricing
+	// ============================================
+	{
+		paperId: "markowitz-1952",
+		title: "Portfolio Selection",
+		authors: "Harry Markowitz",
+		abstract:
+			"The process of selecting a portfolio may be divided into two stages. The first stage starts with observation and experience and ends with beliefs about the future performances of available securities. The second stage starts with the relevant beliefs about future performances and ends with the choice of portfolio. This paper is concerned with the second stage. We first consider the rule that the investor does (or should) maximize discounted expected, or anticipated, returns. We next consider the rule that the investor does (or should) consider expected return a desirable thing and variance of return an undesirable thing.",
+		url: "https://doi.org/10.2307/2975974",
+		publicationYear: 1952,
+		citationCount: 45000,
+	},
+	{
+		paperId: "sharpe-1964",
+		title: "Capital Asset Prices: A Theory of Market Equilibrium under Conditions of Risk",
+		authors: "William F. Sharpe",
+		abstract:
+			"This paper derives conditions for equilibrium in capital asset markets by aggregating the portfolio decisions of individual investors according to mean-variance preferences. The resulting equilibrium prices of assets are shown to depend on their systematic risk as measured by the covariance of returns with the market portfolio. This relationship provides the foundation for the Capital Asset Pricing Model (CAPM).",
+		url: "https://doi.org/10.1111/j.1540-6261.1964.tb02865.x",
+		publicationYear: 1964,
+		citationCount: 20000,
+	},
 	{
 		paperId: "fama-french-1992",
 		title: "The Cross-Section of Expected Stock Returns",
@@ -79,16 +101,6 @@ export const SEED_PAPERS: PaperInput[] = [
 		url: "https://doi.org/10.1111/j.1540-6261.1992.tb04398.x",
 		publicationYear: 1992,
 		citationCount: 20000,
-	},
-	{
-		paperId: "jegadeesh-titman-1993",
-		title: "Returns to Buying Winners and Selling Losers: Implications for Stock Market Efficiency",
-		authors: "Narasimhan Jegadeesh, Sheridan Titman",
-		abstract:
-			"This paper documents that strategies which buy stocks that have performed well in the past and sell stocks that have performed poorly in the past generate significant positive returns over 3- to 12-month holding periods. We find that the profitability of these strategies are not due to their systematic risk or to delayed stock price reactions to common factors.",
-		url: "https://doi.org/10.1111/j.1540-6261.1993.tb04702.x",
-		publicationYear: 1993,
-		citationCount: 12000,
 	},
 	{
 		paperId: "fama-french-2015",
@@ -111,41 +123,151 @@ export const SEED_PAPERS: PaperInput[] = [
 		citationCount: 7500,
 	},
 
-	// Machine Learning in Finance
+	// ============================================
+	// Momentum & Market Anomalies
+	// ============================================
 	{
-		paperId: "gu-kelly-xiu-2020",
-		title: "Empirical Asset Pricing via Machine Learning",
-		authors: "Shihao Gu, Bryan Kelly, Dacheng Xiu",
+		paperId: "jegadeesh-titman-1993",
+		title: "Returns to Buying Winners and Selling Losers: Implications for Stock Market Efficiency",
+		authors: "Narasimhan Jegadeesh, Sheridan Titman",
 		abstract:
-			"We perform a comparative analysis of machine learning methods for the canonical problem of empirical asset pricing: measuring asset risk premiums. We demonstrate large economic gains to investors using machine learning forecasts, in some cases doubling the performance of leading regression-based strategies from the literature.",
-		url: "https://doi.org/10.1093/rfs/hhaa009",
-		publicationYear: 2020,
-		citationCount: 2500,
+			"This paper documents that strategies which buy stocks that have performed well in the past and sell stocks that have performed poorly in the past generate significant positive returns over 3- to 12-month holding periods. We find that the profitability of these strategies are not due to their systematic risk or to delayed stock price reactions to common factors.",
+		url: "https://doi.org/10.1111/j.1540-6261.1993.tb04702.x",
+		publicationYear: 1993,
+		citationCount: 12000,
 	},
 	{
-		paperId: "chen-pelger-zhu-2020",
-		title: "Deep Learning in Asset Pricing",
-		authors: "Luyang Chen, Markus Pelger, Jason Zhu",
+		paperId: "debondt-thaler-1985",
+		title: "Does the Stock Market Overreact?",
+		authors: "Werner F.M. De Bondt, Richard Thaler",
 		abstract:
-			"We use deep neural networks to estimate an asset pricing model for individual stock returns that takes advantage of the vast amount of conditioning information, while keeping a low-dimensional structure. Our approach is successful at explaining variation in returns and provides insights about the sources of asset pricing anomalies.",
-		url: "https://doi.org/10.1287/mnsc.2023.4695",
-		publicationYear: 2020,
-		citationCount: 800,
+			"Research in experimental psychology suggests that, in violation of Bayes rule, most people tend to overreact to unexpected and dramatic news events. This study of market efficiency investigates whether such behavior affects stock prices. The empirical evidence, based on CRSP monthly return data, is consistent with the overreaction hypothesis. Substantial weak form market inefficiencies are discovered.",
+		url: "https://doi.org/10.1111/j.1540-6261.1985.tb05004.x",
+		publicationYear: 1985,
+		citationCount: 8000,
+	},
+	{
+		paperId: "asness-moskowitz-pedersen-2013",
+		title: "Value and Momentum Everywhere",
+		authors: "Clifford S. Asness, Tobias J. Moskowitz, Lasse Heje Pedersen",
+		abstract:
+			"We find consistent value and momentum return premia across eight diverse markets and asset classes, and a strong common factor structure among their returns. Value and momentum returns correlate more strongly across asset classes than passive exposures to the asset classes, but value and momentum are negatively correlated with each other, both within and across asset classes.",
+		url: "https://doi.org/10.1111/jofi.12021",
+		publicationYear: 2013,
+		citationCount: 1355,
+	},
+	{
+		paperId: "mclean-pontiff-2016",
+		title: "Does Academic Research Destroy Stock Return Predictability?",
+		authors: "R. David McLean, Jeffrey Pontiff",
+		abstract:
+			"We study the out-of-sample and post-publication return predictability of 97 variables shown to predict cross-sectional stock returns. Portfolio returns are 26% lower out-of-sample and 58% lower post-publication. The out-of-sample decline is similar in magnitude to post-publication declines, suggesting that the publication process reveals overfit signals.",
+		url: "https://doi.org/10.1111/jofi.12365",
+		publicationYear: 2016,
+		citationCount: 1500,
 	},
 
-	// Market Microstructure
+	// ============================================
+	// Options Pricing & Volatility
+	// ============================================
+	{
+		paperId: "black-scholes-1973",
+		title: "The Pricing of Options and Corporate Liabilities",
+		authors: "Fischer Black, Myron Scholes",
+		abstract:
+			"If options are correctly priced in the market, it should not be possible to make sure profits by creating portfolios of long and short positions in options and their underlying stocks. Using this principle, a theoretical valuation formula for options is derived.",
+		url: "https://doi.org/10.1086/260062",
+		publicationYear: 1973,
+		citationCount: 35000,
+	},
+	{
+		paperId: "merton-1973",
+		title: "Theory of Rational Option Pricing",
+		authors: "Robert C. Merton",
+		abstract:
+			"The long history of the theory of option pricing began in 1900 when the French mathematician Louis Bachelier deduced an option pricing formula based on the assumption that stock prices follow a Brownian motion with zero drift. This paper extends the Black-Scholes model to include cases of stochastic interest rates and shows how to price options when the underlying asset pays dividends.",
+		url: "https://doi.org/10.2307/3003143",
+		publicationYear: 1973,
+		citationCount: 12000,
+	},
+	{
+		paperId: "heston-1993",
+		title: "A Closed-Form Solution for Options with Stochastic Volatility with Applications to Bond and Currency Options",
+		authors: "Steven L. Heston",
+		abstract:
+			"I use a new technique to derive a closed-form solution for the price of a European call option on an asset with stochastic volatility. The model allows arbitrary correlation between volatility and spot-asset returns. I introduce stochastic interest rates and show how to apply the model to bond options and foreign currency options.",
+		url: "https://doi.org/10.1093/rfs/6.2.327",
+		publicationYear: 1993,
+		citationCount: 10000,
+	},
+	{
+		paperId: "engle-1982",
+		title: "Autoregressive Conditional Heteroscedasticity with Estimates of the Variance of United Kingdom Inflation",
+		authors: "Robert F. Engle",
+		abstract:
+			"Traditional econometric models assume a constant one-period forecast variance. To generalize this implausible assumption, a new class of stochastic processes called autoregressive conditional heteroscedastic (ARCH) processes are introduced. These are mean zero, serially uncorrelated processes with nonconstant variances conditional on the past, but constant unconditional variances.",
+		url: "https://doi.org/10.2307/1912773",
+		publicationYear: 1982,
+		citationCount: 25000,
+	},
+	{
+		paperId: "bollerslev-1986",
+		title: "Generalized Autoregressive Conditional Heteroskedasticity",
+		authors: "Tim Bollerslev",
+		abstract:
+			"A natural generalization of the ARCH (Autoregressive Conditional Heteroskedastic) process introduced in Engle (1982) to allow for past conditional variances in the current conditional variance equation is proposed. Stationarity conditions and autocorrelation structure for this new class of parametric models are derived. Maximum likelihood estimation and testing are also considered.",
+		url: "https://doi.org/10.1016/0304-4076(86)90063-1",
+		publicationYear: 1986,
+		citationCount: 20000,
+	},
+
+	// ============================================
+	// Market Microstructure & Execution
+	// ============================================
 	{
 		paperId: "kyle-1985",
 		title: "Continuous Auctions and Insider Trading",
 		authors: "Albert S. Kyle",
 		abstract:
-			"A dynamic model of insider trading with sequential auctions, structured to resemble a sequential equilibrium, is used to examine the informational content of prices, the ## liquidity characteristics of a speculative market, and the value of private information to an insider. The analysis develops a theory of market depth and provides conditions under which markets are informationally efficient.",
+			"A dynamic model of insider trading with sequential auctions, structured to resemble a sequential equilibrium, is used to examine the informational content of prices, the liquidity characteristics of a speculative market, and the value of private information to an insider. The analysis develops a theory of market depth and provides conditions under which markets are informationally efficient.",
 		url: "https://doi.org/10.2307/1913210",
 		publicationYear: 1985,
 		citationCount: 10000,
 	},
+	{
+		paperId: "almgren-chriss-2001",
+		title: "Optimal Execution of Portfolio Transactions",
+		authors: "Robert Almgren, Neil Chriss",
+		abstract:
+			"We consider the execution of portfolio transactions with the aim of minimizing a combination of volatility risk and transaction costs arising from permanent and temporary market impact. For a simple linear cost model, we explicitly construct the efficient frontier in the space of time-dependent liquidation strategies, which have minimum expected cost for a given level of risk.",
+		url: "https://doi.org/10.21314/JOR.2001.041",
+		publicationYear: 2001,
+		citationCount: 3000,
+	},
+	{
+		paperId: "avellaneda-stoikov-2008",
+		title: "High-Frequency Trading in a Limit Order Book",
+		authors: "Marco Avellaneda, Sasha Stoikov",
+		abstract:
+			"We study a stock dealer's strategy for submitting bid and ask quotes in a limit order book. The agent faces inventory risk due to the diffusive nature of the stock's mid-price and transactions risk due to a Poisson arrival of market orders. We derive the optimal bid and ask quotes by computing a personal indifference valuation for the stock given current inventory, then calibrating quotes to the market's limit order book.",
+		url: "https://doi.org/10.1080/14697680701381228",
+		publicationYear: 2008,
+		citationCount: 528,
+	},
 
-	// Behavioral Finance
+	// ============================================
+	// Behavioral Finance & Decision Making
+	// ============================================
+	{
+		paperId: "kahneman-tversky-1979",
+		title: "Prospect Theory: An Analysis of Decision under Risk",
+		authors: "Daniel Kahneman, Amos Tversky",
+		abstract:
+			"This paper presents a critique of expected utility theory as a descriptive model of decision making under risk, and develops an alternative model, called prospect theory. Choices among risky prospects exhibit several pervasive effects that are inconsistent with the basic tenets of utility theory. People underweight outcomes that are merely probable in comparison with outcomes that are obtained with certainty.",
+		url: "https://doi.org/10.2307/1914185",
+		publicationYear: 1979,
+		citationCount: 37000,
+	},
 	{
 		paperId: "barberis-thaler-2003",
 		title: "A Survey of Behavioral Finance",
@@ -157,29 +279,40 @@ export const SEED_PAPERS: PaperInput[] = [
 		citationCount: 6000,
 	},
 
-	// Options and Volatility
+	// ============================================
+	// Risk Management
+	// ============================================
 	{
-		paperId: "black-scholes-1973",
-		title: "The Pricing of Options and Corporate Liabilities",
-		authors: "Fischer Black, Myron Scholes",
+		paperId: "artzner-1999",
+		title: "Coherent Measures of Risk",
+		authors: "Philippe Artzner, Freddy Delbaen, Jean-Marc Eber, David Heath",
 		abstract:
-			"If options are correctly priced in the market, it should not be possible to make sure profits by creating portfolios of long and short positions in options and their underlying stocks. Using this principle, a theoretical valuation formula for options is derived.",
-		url: "https://doi.org/10.1086/260062",
-		publicationYear: 1973,
-		citationCount: 35000,
+			"In this paper we study both market risks and nonmarket risks, without complete markets assumption, and propose a definition of coherent risk measures. We examine the measures of risk provided and the related actions required by banking regulators. We characterize coherent risk measures and present the representation theorem.",
+		url: "https://doi.org/10.1111/1467-9965.00068",
+		publicationYear: 1999,
+		citationCount: 8000,
+	},
+	{
+		paperId: "rockafellar-uryasev-2000",
+		title: "Optimization of Conditional Value-at-Risk",
+		authors: "R. Tyrrell Rockafellar, Stanislav Uryasev",
+		abstract:
+			"A new approach to optimizing or hedging a portfolio of financial instruments to reduce risk is presented and tested on applications. It focuses on minimizing Conditional Value-at-Risk (CVaR) rather than minimizing Value-at-Risk (VaR), but portfolios with low CVaR necessarily have low VaR as well. CVaR can be expressed as a linear programming problem for discrete distributions.",
+		url: "https://doi.org/10.21314/JOR.2000.038",
+		publicationYear: 2000,
+		citationCount: 6000,
+	},
+	{
+		paperId: "kelly-1956",
+		title: "A New Interpretation of Information Rate",
+		authors: "John L. Kelly Jr.",
+		abstract:
+			"If the input symbols to a communication channel represent the outcomes of a chance event on which bets are available at odds consistent with their probabilities, then the capacity of the channel can be related to the maximum rate of growth of the bettor's fortune. This maximum rate is achieved by a strategy that maximizes the expected value of the logarithm of wealth.",
+		url: "https://doi.org/10.1002/j.1538-7305.1956.tb03809.x",
+		publicationYear: 1956,
+		citationCount: 3000,
 	},
 
-	// Post-Publication Decay
-	{
-		paperId: "mclean-pontiff-2016",
-		title: "Does Academic Research Destroy Stock Return Predictability?",
-		authors: "R. David McLean, Jeffrey Pontiff",
-		abstract:
-			"We study the out-of-sample and post-publication return predictability of 97 variables shown to predict cross-sectional stock returns. Portfolio returns are 26% lower out-of-sample and 58% lower post-publication. The out-of-sample decline is similar in magnitude to post-publication declines, suggesting that the publication process reveals overfit signals.",
-		url: "https://doi.org/10.1111/jofi.12365",
-		publicationYear: 2016,
-		citationCount: 1500,
-	},
 ];
 
 // ============================================

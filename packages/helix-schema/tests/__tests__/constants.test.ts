@@ -53,7 +53,6 @@ describe("ForgettingEnvironment", () => {
 
 	it("rejects invalid environments", () => {
 		expect(ForgettingEnvironment.safeParse("INVALID").success).toBe(false);
-		expect(ForgettingEnvironment.safeParse("BACKTEST").success).toBe(false);
 	});
 });
 

@@ -32,7 +32,6 @@ export function checkImmutability(params: {
 	status?: string;
 	executedAt?: string;
 }): ImmutabilityCheckResult {
-
 	// LIVE trade decisions are immutable after creation
 	if (
 		params.environment === "LIVE" &&
