@@ -12,13 +12,15 @@ async function main() {
 
 	const signals = await repo.getLatestSignals();
 	console.log("\nLatest Signals:", signals.length);
-	signals
-		.slice(0, 5)
-		.forEach((s) => console.log(`  - ${s.signalType}: ${s.signalValue} (${s.computedAt})`));
+	for (const s of signals.slice(0, 5)) {
+		console.log(`  - ${s.signalType}: ${s.signalValue} (${s.computedAt})`);
+	}
 
 	const snapshots = await repo.findSnapshots({}, 5);
 	console.log("\nLatest Snapshots:", snapshots.length);
-	snapshots.forEach((s) => console.log(`  - ${s.platform}/${s.marketTicker} (${s.snapshotTime})`));
+	for (const s of snapshots) {
+		console.log(`  - ${s.platform}/${s.marketTicker} (${s.snapshotTime})`);
+	}
 
 	process.exit(0);
 }

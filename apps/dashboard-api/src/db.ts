@@ -12,7 +12,6 @@ import {
 	AlertSettingsRepository,
 	AlertsRepository,
 	AuditLogRepository,
-	BacktestsRepository,
 	ConfigVersionsRepository,
 	ConstraintsConfigRepository,
 	CorporateActionsRepository,
@@ -110,13 +109,6 @@ export function getAgentOutputsRepo(): AgentOutputsRepository {
  */
 export function getPortfolioSnapshotsRepo(): PortfolioSnapshotsRepository {
 	return new PortfolioSnapshotsRepository();
-}
-
-/**
- * Get backtests repository
- */
-export function getBacktestsRepo(): BacktestsRepository {
-	return new BacktestsRepository();
 }
 
 /**

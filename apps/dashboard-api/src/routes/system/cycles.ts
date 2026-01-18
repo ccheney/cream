@@ -258,7 +258,7 @@ app.openapi(triggerCycleRoute, async (c) => {
 				inputData: {
 					cycleId,
 					instruments: symbols,
-					forceStub: useDraftConfig, // draft config testing uses stub mode
+					useDraftConfig,
 				},
 			});
 

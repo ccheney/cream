@@ -23,10 +23,8 @@ import {
 	handleAlertsState,
 	handleOrdersState,
 	handlePortfolioState,
-	handleSubscribeBacktest,
 	handleSubscribeOptions,
 	handleSubscribeSymbols,
-	handleUnsubscribeBacktest,
 	handleUnsubscribeOptions,
 	handleUnsubscribeSymbols,
 } from "./handlers/index.js";
@@ -191,12 +189,6 @@ export function handleMessage(ws: WebSocketWithMetadata, rawMessage: string): vo
 			break;
 		case "unsubscribe_options":
 			handleUnsubscribeOptions(ws, message);
-			break;
-		case "subscribe_backtest":
-			handleSubscribeBacktest(ws, message);
-			break;
-		case "unsubscribe_backtest":
-			handleUnsubscribeBacktest(ws, message);
 			break;
 		case "ping":
 			handlePing(ws, message);

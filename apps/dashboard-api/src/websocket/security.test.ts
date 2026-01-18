@@ -84,7 +84,6 @@ describe("canAccessChannel", () => {
 			"decisions",
 			"agents",
 			"cycles",
-			"backtests",
 			"alerts",
 			"system",
 			"portfolio",

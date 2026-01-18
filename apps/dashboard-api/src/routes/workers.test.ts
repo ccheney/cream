@@ -245,7 +245,7 @@ describe("Workers Routes", () => {
 			const data = (await res.json()) as ApiResponse;
 			expect(data.services).toBeDefined();
 			expect(Array.isArray(data.services)).toBe(true);
-			expect(data.services.length).toBe(6);
+			expect(data.services.length).toBe(8);
 
 			const serviceNames = data.services.map((s: { name: string }) => s.name);
 			expect(serviceNames).toContain("macro_watch");
@@ -254,6 +254,8 @@ describe("Workers Routes", () => {
 			expect(serviceNames).toContain("short_interest");
 			expect(serviceNames).toContain("sentiment");
 			expect(serviceNames).toContain("corporate_actions");
+			expect(serviceNames).toContain("prediction_markets");
+			expect(serviceNames).toContain("indicator_synthesis");
 		});
 
 		test("includes display names for all services", async () => {

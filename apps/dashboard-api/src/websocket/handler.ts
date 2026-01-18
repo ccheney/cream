@@ -24,7 +24,6 @@ export {
 	broadcastIndicator,
 	broadcastOptionsQuote,
 	broadcastQuote,
-	broadcastToBacktest,
 	broadcastTrade,
 	closeAllConnections,
 	closeStaleConnections,

@@ -6,7 +6,6 @@
  */
 
 import log from "../logger.js";
-import { cleanupBacktestSubscriptions } from "./backtest-channel.js";
 import {
 	addConnection,
 	broadcast,
@@ -47,8 +46,6 @@ import {
 } from "./channels.js";
 import { handleMessage } from "./routing.js";
 import type { AuthResult, ConnectionMetadata, WebSocketWithMetadata } from "./types.js";
-
-export { broadcastToBacktest } from "./backtest-channel.js";
 
 /**
  * Validate authentication using better-auth session cookies.
@@ -118,7 +115,6 @@ export function handleClose(ws: WebSocketWithMetadata, code: number, reason: str
 		"WebSocket client disconnected"
 	);
 	removeConnection(metadata.connectionId);
-	cleanupBacktestSubscriptions(ws);
 }
 
 /**
@@ -128,7 +124,6 @@ export function handleError(ws: WebSocketWithMetadata, error: Error): void {
 	const metadata = ws.data;
 	log.error({ connectionId: metadata.connectionId, error: error.message }, "WebSocket error");
 	removeConnection(metadata.connectionId);
-	cleanupBacktestSubscriptions(ws);
 }
 
 /**

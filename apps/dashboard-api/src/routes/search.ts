@@ -60,7 +60,6 @@ const NAVIGATION_ITEMS = [
 		subtitle: "Indicator engine status",
 		url: "/indicators",
 	},
-	{ id: "nav-backtest", title: "Backtest", subtitle: "Backtesting engine", url: "/backtest" },
 	{ id: "nav-calendar", title: "Calendar", subtitle: "Market calendar", url: "/calendar" },
 	{ id: "nav-console", title: "Console", subtitle: "Agent console", url: "/console" },
 	{ id: "nav-agents", title: "Agents", subtitle: "Agent status and outputs", url: "/agents" },

@@ -1,47 +1,11 @@
 /**
  * Trading Handlers
  *
- * Handlers for trading cycle events, agent status, and backtest subscriptions.
+ * Handlers for trading cycle events and agent status.
  */
 
-import type { SubscribeBacktestMessage, UnsubscribeBacktestMessage } from "@cream/domain/websocket";
-import { subscribeToBacktest, unsubscribeFromBacktest } from "../backtest-channel.js";
 import { sendError, sendMessage } from "../channels.js";
 import type { WebSocketWithMetadata } from "../types.js";
-
-/**
- * Handle subscribe backtest message.
- * Subscribes the connection to receive progress updates for a specific backtest.
- */
-export function handleSubscribeBacktest(
-	ws: WebSocketWithMetadata,
-	message: SubscribeBacktestMessage
-): void {
-	const metadata = ws.data;
-
-	subscribeToBacktest(ws, message.backtestId);
-	metadata.channels.add("backtests");
-
-	sendMessage(ws, {
-		type: "subscribed",
-		channels: ["backtests"],
-	});
-}
-
-/**
- * Handle unsubscribe backtest message.
- */
-export function handleUnsubscribeBacktest(
-	ws: WebSocketWithMetadata,
-	message: UnsubscribeBacktestMessage
-): void {
-	unsubscribeFromBacktest(ws, message.backtestId);
-
-	sendMessage(ws, {
-		type: "unsubscribed",
-		channels: [],
-	});
-}
 
 /**
  * Handle agents state request.

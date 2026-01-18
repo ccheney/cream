@@ -277,7 +277,6 @@ describe("liveProtection", () => {
 		expect(res.status).toBe(200);
 	});
 
-
 	it("returns 401 when not authenticated in LIVE", async () => {
 		Bun.env.CREAM_ENV = "LIVE";
 

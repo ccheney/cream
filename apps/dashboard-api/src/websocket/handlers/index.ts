@@ -17,8 +17,4 @@ export {
 	handleUnsubscribeSymbols,
 } from "./market.js";
 export { handleOrdersState, handlePortfolioState } from "./portfolio.js";
-export {
-	handleAgentsState,
-	handleSubscribeBacktest,
-	handleUnsubscribeBacktest,
-} from "./trading.js";
+export { handleAgentsState } from "./trading.js";
