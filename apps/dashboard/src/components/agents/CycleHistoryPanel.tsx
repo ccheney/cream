@@ -192,6 +192,7 @@ export const CycleHistoryPanel = memo(function CycleHistoryPanel({
 					durationMs: tc.durationMs,
 					timestamp: tc.timestamp,
 				})),
+				sources: [],
 				reasoningText: state.reasoningText,
 				textOutput: state.textOutput,
 				error: state.error,

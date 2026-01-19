@@ -163,6 +163,10 @@ export interface AgentStreamChunk {
 		sourceType?: string;
 		url?: string;
 		title?: string;
+		/** Extracted domain from URL (e.g., "yahoo.com") */
+		domain?: string;
+		/** LogoKit URL for source logo */
+		logoUrl?: string;
 		providerMetadata?: Record<string, unknown>;
 	};
 	timestamp: string;

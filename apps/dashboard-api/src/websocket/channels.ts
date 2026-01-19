@@ -321,6 +321,13 @@ export function broadcastAgentTextDelta(message: ServerMessage): number {
 }
 
 /**
+ * Broadcast agent source to connections subscribed to cycles channel.
+ */
+export function broadcastAgentSource(message: ServerMessage): number {
+	return broadcast("cycles", message);
+}
+
+/**
  * Broadcast decision plan to connections subscribed to cycles channel.
  */
 export function broadcastDecisionPlan(message: ServerMessage): number {

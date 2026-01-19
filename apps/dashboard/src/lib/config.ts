@@ -34,8 +34,24 @@ export const config = {
 		/** Maximum reconnection attempts before giving up */
 		maxReconnectAttempts: 10,
 	},
+	logokit: {
+		/** LogoKit API key for company logos */
+		apiKey: process.env.NEXT_PUBLIC_LOGOKIT_API_KEY,
+	},
 	environment: getClientEnv(),
 } as const;
+
+/**
+ * Build LogoKit URL for a ticker symbol.
+ * Returns null if API key is not configured.
+ */
+export function buildTickerLogoUrl(ticker: string): string | null {
+	const apiKey = config.logokit.apiKey;
+	if (!apiKey || !ticker) {
+		return null;
+	}
+	return `https://img.logokit.com/${encodeURIComponent(ticker.toUpperCase())}?token=${apiKey}`;
+}
 
 /** Type-safe access to configuration */
 export type Config = typeof config;

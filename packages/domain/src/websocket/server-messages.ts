@@ -336,6 +336,47 @@ export const AgentTextDeltaMessageSchema = z.object({
 export type AgentTextDeltaMessage = z.infer<typeof AgentTextDeltaMessageSchema>;
 
 // ============================================
+// Agent Source Message
+// ============================================
+
+/**
+ * Agent source data schema for grounding citations.
+ */
+export const AgentSourceDataSchema = z.object({
+	/** Cycle ID */
+	cycleId: z.string(),
+	/** Agent type */
+	agentType: z.string(),
+	/** Source type: url or x (Twitter/X) */
+	sourceType: z.enum(["url", "x"]),
+	/** Full URL of the source */
+	url: z.string(),
+	/** Optional title of the source */
+	title: z.string().optional(),
+	/** Extracted domain (e.g., "yahoo.com") */
+	domain: z.string().optional(),
+	/** LogoKit URL for the source logo */
+	logoUrl: z.string().optional(),
+	/** Timestamp */
+	timestamp: z.string(),
+});
+
+export type AgentSourceData = z.infer<typeof AgentSourceDataSchema>;
+
+/**
+ * Agent source event - grounding citation from web/X search.
+ *
+ * @example
+ * { type: "agent_source", data: { agentType: "grounding", sourceType: "url", url: "...", domain: "yahoo.com", ... } }
+ */
+export const AgentSourceMessageSchema = z.object({
+	type: z.literal("agent_source"),
+	data: AgentSourceDataSchema,
+});
+
+export type AgentSourceMessage = z.infer<typeof AgentSourceMessageSchema>;
+
+// ============================================
 // Agent Status Message
 // ============================================
 
@@ -908,6 +949,7 @@ export const ServerMessageSchema = z.discriminatedUnion("type", [
 	AgentToolResultMessageSchema,
 	AgentReasoningMessageSchema,
 	AgentTextDeltaMessageSchema,
+	AgentSourceMessageSchema,
 	AgentStatusMessageSchema,
 	CycleProgressMessageSchema,
 	CycleResultMessageSchema,

@@ -5,8 +5,10 @@
 import Link from "next/link";
 import { memo } from "react";
 import { AnimatedNumber } from "@/components/ui/animated-number";
+import { SourceLogo } from "@/components/ui/source-logo";
 import { usePriceFlash } from "@/components/ui/use-price-flash";
 import type { StreamingPosition } from "@/hooks/usePortfolioStreaming";
+import { buildTickerLogoUrl } from "@/lib/config";
 
 export interface PositionRowProps {
 	position: StreamingPosition;
@@ -39,10 +41,13 @@ export const PositionRow = memo(function PositionRow({
 			: "animate-flash-loss"
 		: "";
 
+	const logoUrl = buildTickerLogoUrl(position.symbol);
+
 	return (
 		<tr className="hover:bg-cream-50 dark:hover:bg-night-750 transition-colors">
 			<td className="px-4 py-3 font-medium text-stone-900 dark:text-night-50">
 				<div className="flex items-center gap-2">
+					<SourceLogo logoUrl={logoUrl} domain={position.symbol} size="sm" fallback="company" />
 					<Link href={`/portfolio/positions/${position.id}`} className="hover:text-blue-600">
 						{position.symbol}
 					</Link>

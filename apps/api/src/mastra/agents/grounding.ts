@@ -7,6 +7,7 @@
  */
 
 import { xai } from "@ai-sdk/xai";
+import { env, getSourceLogoInfo } from "@cream/domain";
 import { generateText, streamText, type ToolSet } from "ai";
 import {
 	createGrokResponsesModel,
@@ -246,7 +247,8 @@ export async function runGroundingAgentStreaming(
 			}
 
 			case "source": {
-				if (chunk.sourceType === "url") {
+				if (chunk.sourceType === "url" && chunk.url) {
+					const logoInfo = getSourceLogoInfo(chunk.url, env.LOGOKIT_API_KEY);
 					await emitChunk({
 						type: "source",
 						agentType,
@@ -254,6 +256,8 @@ export async function runGroundingAgentStreaming(
 							sourceType: chunk.sourceType,
 							url: chunk.url,
 							title: chunk.title,
+							domain: logoInfo?.domain,
+							logoUrl: logoInfo?.logoUrl ?? undefined,
 						},
 					});
 				}

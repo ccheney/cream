@@ -248,6 +248,8 @@ export function createStreamChunkForwarder(
 				const sourceId = asNonEmptyString(payload.id);
 				const url = asNonEmptyString(payload.url);
 				const title = asNonEmptyString(payload.title);
+				const domain = asNonEmptyString(payload.domain);
+				const logoUrl = asNonEmptyString(payload.logoUrl);
 				const providerMetadata =
 					typeof payload.providerMetadata === "object" && payload.providerMetadata !== null
 						? (payload.providerMetadata as Record<string, unknown>)
@@ -256,7 +258,7 @@ export function createStreamChunkForwarder(
 				await onChunk({
 					...streamChunkBase,
 					type: "source",
-					payload: { sourceId, sourceType, url, title, providerMetadata },
+					payload: { sourceId, sourceType, url, title, domain, logoUrl, providerMetadata },
 				});
 				return;
 			}

@@ -466,6 +466,13 @@ export {
 	requiresRejectionOnFailure,
 	schemaToDescription,
 } from "./llm-parsing";
+// LogoKit URL utilities
+export {
+	buildLogoUrl,
+	buildTickerLogoUrl,
+	extractDomain,
+	getSourceLogoInfo,
+} from "./logokit";
 // Market snapshot schemas
 export {
 	type Bar,

@@ -56,9 +56,23 @@ export interface ToolCall {
 	timestamp: string;
 }
 
+export interface SourceEntry {
+	sourceId: string;
+	sourceType: "url" | "x";
+	url: string;
+	title?: string;
+	/** Extracted domain (e.g., "yahoo.com") */
+	domain?: string;
+	/** LogoKit URL for source logo */
+	logoUrl?: string;
+	timestamp: string;
+}
+
 export interface AgentStreamingState {
 	status: AgentStatus;
 	toolCalls: ToolCall[];
+	/** Grounding sources with logos */
+	sources: SourceEntry[];
 	reasoningText: string;
 	textOutput: string;
 	error?: string;
@@ -106,6 +120,8 @@ export interface AgentStreamingStoreState {
 export interface AgentStreamingStoreActions {
 	/** Add a tool call to an agent */
 	addToolCall: (agentType: AgentType, toolCall: ToolCall) => void;
+	/** Add a source to an agent (deduplicates by URL) */
+	addSource: (agentType: AgentType, source: SourceEntry) => void;
 	/** Update a tool call result */
 	updateToolCallResult: (
 		agentType: AgentType,
@@ -173,6 +189,7 @@ export const AGENT_TYPES: AgentType[] = [
 const createInitialAgentState = (): AgentStreamingState => ({
 	status: "idle",
 	toolCalls: [],
+	sources: [],
 	reasoningText: "",
 	textOutput: "",
 	lastUpdate: null,
@@ -296,6 +313,24 @@ export const useAgentStreamingStore = create<AgentStreamingStore>()(
 						status: "processing",
 						toolCalls: [...current.toolCalls, toolCall],
 						lastUpdate: toolCall.timestamp,
+					});
+					return { agents: newAgents };
+				});
+			},
+
+			addSource: (agentType, source) => {
+				set((state) => {
+					const newAgents = new Map(state.agents);
+					const current = newAgents.get(agentType) ?? createInitialAgentState();
+					// Deduplicate by URL
+					const exists = current.sources.some((s) => s.url === source.url);
+					if (exists) {
+						return state;
+					}
+					newAgents.set(agentType, {
+						...current,
+						sources: [...current.sources, source],
+						lastUpdate: source.timestamp,
 					});
 					return { agents: newAgents };
 				});
@@ -481,6 +516,7 @@ export const useAgentStreamingStore = create<AgentStreamingStore>()(
 					agentsMap.set(agentType as AgentType, {
 						status: state.status,
 						toolCalls: state.toolCalls,
+						sources: state.sources ?? [],
 						reasoningText: state.reasoningText,
 						textOutput: state.textOutput,
 						error: state.error,
@@ -567,6 +603,7 @@ export function useAgentStreamingActions() {
 	return useAgentStreamingStore(
 		useShallow((state) => ({
 			addToolCall: state.addToolCall,
+			addSource: state.addSource,
 			updateToolCallResult: state.updateToolCallResult,
 			appendReasoning: state.appendReasoning,
 			appendTextOutput: state.appendTextOutput,

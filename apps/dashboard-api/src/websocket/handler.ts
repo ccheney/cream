@@ -10,6 +10,7 @@ export {
 	broadcast,
 	broadcastAgentOutput,
 	broadcastAgentReasoning,
+	broadcastAgentSource,
 	broadcastAgentStatus,
 	broadcastAgentTextDelta,
 	broadcastAgentToolCall,

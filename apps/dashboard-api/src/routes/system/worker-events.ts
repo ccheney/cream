@@ -25,6 +25,7 @@ import {
 import {
 	broadcastAgentOutput,
 	broadcastAgentReasoning,
+	broadcastAgentSource,
 	broadcastAgentTextDelta,
 	broadcastAgentToolCall,
 	broadcastAgentToolResult,
@@ -78,7 +79,7 @@ const AgentEventSchema = z.object({
 	timestamp: z.string(),
 	// For agent-chunk: chunk data
 	chunkType: z
-		.enum(["text-delta", "reasoning-delta", "tool-call", "tool-result", "error"])
+		.enum(["text-delta", "reasoning-delta", "tool-call", "tool-result", "source", "error"])
 		.optional(),
 	text: z.string().optional(),
 	toolCallId: z.string().optional(),
@@ -86,6 +87,12 @@ const AgentEventSchema = z.object({
 	toolArgs: z.string().optional(),
 	result: z.string().optional(),
 	success: z.boolean().optional(),
+	// For source chunks
+	sourceType: z.enum(["url", "x"]).optional(),
+	url: z.string().optional(),
+	title: z.string().optional(),
+	domain: z.string().optional(),
+	logoUrl: z.string().optional(),
 	// For agent-complete/error
 	output: z.string().optional(),
 	error: z.string().optional(),
@@ -333,6 +340,20 @@ app.openapi(workerEventsRoute, async (c) => {
 							toolName: event.toolName ?? "unknown",
 							success: event.success ?? true,
 							resultSummary: event.result ?? "",
+						});
+					} else if (event.chunkType === "source" && event.url) {
+						broadcastAgentSource({
+							type: "agent_source",
+							data: {
+								cycleId: event.cycleId,
+								agentType: event.agentType,
+								sourceType: event.sourceType ?? "url",
+								url: event.url,
+								title: event.title,
+								domain: event.domain,
+								logoUrl: event.logoUrl,
+								timestamp: event.timestamp,
+							},
 						});
 					} else if (event.chunkType === "error" && event.error) {
 						broadcastAgentOutput({

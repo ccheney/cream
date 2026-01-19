@@ -19,6 +19,7 @@
 import { formatDistanceToNow } from "date-fns";
 import { AnimatePresence, motion } from "framer-motion";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { SourcePillList } from "@/components/ui/source-pill";
 import type { AgentStreamingState, AgentType, ToolCall } from "@/hooks/useAgentStreaming";
 import { type ThoughtType, useStatusNarrative } from "@/hooks/useStatusNarrative";
 
@@ -1282,6 +1283,42 @@ export function AgentStreamingDetail({ agentType, state, cycleId }: AgentStreami
 							</p>
 						</div>
 					</CollapsibleSection>
+				)}
+
+				{/* Sources Section (grounding citations) */}
+				{state.sources.length > 0 && (
+					<div className="px-4 py-3 border-t border-stone-200 dark:border-night-700 bg-stone-50/50 dark:bg-night-700/30">
+						<div className="flex items-center gap-2 mb-2">
+							<svg
+								className="w-4 h-4 text-stone-400"
+								fill="none"
+								viewBox="0 0 24 24"
+								stroke="currentColor"
+								aria-hidden="true"
+							>
+								<circle cx="12" cy="12" r="10" strokeWidth={2} />
+								<path strokeWidth={2} d="M2 12h20" />
+								<path
+									strokeWidth={2}
+									d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"
+								/>
+							</svg>
+							<span className="text-xs font-medium text-stone-500 dark:text-stone-400 uppercase tracking-wider">
+								Sources ({state.sources.length})
+							</span>
+						</div>
+						<SourcePillList
+							sources={state.sources.map((s) => ({
+								sourceId: s.sourceId,
+								sourceType: s.sourceType,
+								url: s.url,
+								domain: s.domain,
+								logoUrl: s.logoUrl,
+								title: s.title,
+							}))}
+							maxVisible={8}
+						/>
+					</div>
 				)}
 
 				{/* Error Section */}

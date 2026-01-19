@@ -11,8 +11,10 @@ import { format, formatDistanceToNow } from "date-fns";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { forwardRef, useEffect, useMemo, useRef, useState } from "react";
+import { SourceLogo } from "@/components/ui/source-logo";
 import { useDecisions } from "@/hooks/queries";
 import type { DecisionAction, DecisionStatus } from "@/lib/api/types";
+import { buildTickerLogoUrl } from "@/lib/config";
 
 const formatSizeUnit = (unit: string): string => {
 	const map: Record<string, string> = {
@@ -390,6 +392,8 @@ function DecisionCard({
 				}).format(price)
 			: "--";
 
+	const logoUrl = buildTickerLogoUrl(decision.symbol);
+
 	return (
 		<Link
 			href={`/decisions/${decision.id}`}
@@ -402,13 +406,12 @@ function DecisionCard({
 					>
 						{decision.action}
 					</span>
-					<div>
+					<div className="flex items-center gap-2">
+						<SourceLogo logoUrl={logoUrl} domain={decision.symbol} size="md" fallback="company" />
 						<span className="text-lg font-semibold text-stone-900 dark:text-night-50">
 							{decision.symbol}
 						</span>
-						<span className="ml-2 text-sm text-stone-500 dark:text-night-300">
-							{decision.direction}
-						</span>
+						<span className="text-sm text-stone-500 dark:text-night-300">{decision.direction}</span>
 					</div>
 				</div>
 				<div className="flex items-center gap-2">

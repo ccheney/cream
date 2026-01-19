@@ -141,6 +141,9 @@ const envSchema = z.object({
 		.optional()
 		.refine((val) => val === undefined || isValidUrl(val), { message: "Invalid URL format" })
 		.describe("Better Auth base URL for OAuth callbacks"),
+
+	// External Services
+	LOGOKIT_API_KEY: z.string().optional().describe("LogoKit API key for company logos"),
 });
 
 export type EnvConfig = z.infer<typeof envSchema>;
@@ -171,6 +174,7 @@ function parseEnv(): EnvConfig {
 		GOOGLE_CLIENT_ID: Bun.env.GOOGLE_CLIENT_ID,
 		GOOGLE_CLIENT_SECRET: Bun.env.GOOGLE_CLIENT_SECRET,
 		BETTER_AUTH_URL: Bun.env.BETTER_AUTH_URL,
+		LOGOKIT_API_KEY: Bun.env.LOGOKIT_API_KEY,
 	};
 
 	const result = envSchema.safeParse(rawEnv);
@@ -488,6 +492,7 @@ export function getEnvVarDocumentation(): Array<{
 		{ name: "GOOGLE_CLIENT_ID", required: "PAPER/LIVE", description: "Google OAuth client ID" },
 		{ name: "GOOGLE_CLIENT_SECRET", required: "PAPER/LIVE", description: "Google OAuth secret" },
 		{ name: "BETTER_AUTH_URL", required: "no", description: "Better Auth base URL for OAuth" },
+		{ name: "LOGOKIT_API_KEY", required: "no", description: "LogoKit API key for company logos" },
 	];
 }
 

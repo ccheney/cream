@@ -17,6 +17,7 @@ import {
 	AGENT_TYPES,
 	type AgentStreamingState,
 	type AgentType,
+	type SourceEntry,
 	type ToolCall,
 	useAgentStreamingActions,
 	useAllAgentStreaming,
@@ -91,12 +92,27 @@ interface AgentOutputMessage {
 	};
 }
 
+interface SourceMessage {
+	type: "agent_source";
+	data: {
+		cycleId: string;
+		agentType: AgentType;
+		sourceType: "url" | "x";
+		url: string;
+		title?: string;
+		domain?: string;
+		logoUrl?: string;
+		timestamp: string;
+	};
+}
+
 type AgentStreamMessage =
 	| ToolCallMessage
 	| ToolResultMessage
 	| ReasoningMessage
 	| TextDeltaMessage
-	| AgentOutputMessage;
+	| AgentOutputMessage
+	| SourceMessage;
 
 // ============================================
 // Options & Return Types
@@ -142,6 +158,7 @@ export function useAgentStreaming(options: UseAgentStreamingOptions = {}): UseAg
 		useAllAgentStreaming();
 	const {
 		addToolCall,
+		addSource,
 		updateToolCallResult,
 		appendReasoning,
 		appendTextOutput,
@@ -253,6 +270,21 @@ export function useAgentStreaming(options: UseAgentStreamingOptions = {}): UseAg
 					updateAgentStatus(agentType, status, outputData.error, startedAt);
 					break;
 				}
+
+				case "agent_source": {
+					const sourceData = message.data;
+					const source: SourceEntry = {
+						sourceId: `${sourceData.url}-${sourceData.timestamp}`,
+						sourceType: sourceData.sourceType,
+						url: sourceData.url,
+						title: sourceData.title,
+						domain: sourceData.domain,
+						logoUrl: sourceData.logoUrl,
+						timestamp: sourceData.timestamp,
+					};
+					addSource(agentType, source);
+					break;
+				}
 			}
 		},
 		[
@@ -260,6 +292,7 @@ export function useAgentStreaming(options: UseAgentStreamingOptions = {}): UseAg
 			setCycleId,
 			getAgent,
 			addToolCall,
+			addSource,
 			updateToolCallResult,
 			appendReasoning,
 			appendTextOutput,
@@ -279,7 +312,8 @@ export function useAgentStreaming(options: UseAgentStreamingOptions = {}): UseAg
 			message.type === "agent_tool_result" ||
 			message.type === "agent_reasoning" ||
 			message.type === "agent_text_delta" ||
-			message.type === "agent_output"
+			message.type === "agent_output" ||
+			message.type === "agent_source"
 		) {
 			handleMessage(message);
 		}
