@@ -28,9 +28,27 @@ const SUMMARIZE_ENDPOINT = `${config.api.baseUrl}/api/ai/summarize-reasoning`;
 // Types
 // ============================================
 
+/**
+ * Semantic thought types for agent reasoning display.
+ * Each maps to a specific color from the design system.
+ */
+export type ThoughtType =
+	| "observation" // stone - gathering facts, noting data
+	| "analysis" // violet - working through patterns
+	| "hypothesis" // indigo - forming predictions
+	| "concern" // orange - caution, uncertainty, caveats
+	| "insight" // pink - aha moments, realizations
+	| "synthesis" // amber - pulling together factors
+	| "conclusion" // emerald - final recommendation
+	| "question"; // teal - self-reflection, alternatives
+
 export interface UseStatusNarrativeResult {
 	/** Current status narrative text */
 	narrative: string;
+	/** The semantic type of the current reasoning */
+	type: ThoughtType;
+	/** Classification confidence (0-1) */
+	confidence: number;
 	/** Whether the narrative is currently being generated */
 	isGenerating: boolean;
 	/** Force a refresh of the narrative */
@@ -78,12 +96,24 @@ function extractKeyPhrase(reasoning: string): string {
 // API Integration
 // ============================================
 
+interface NarrativeResponse {
+	summary: string;
+	type: ThoughtType;
+	confidence: number;
+}
+
+const DEFAULT_RESPONSE: NarrativeResponse = {
+	summary: "Thinking...",
+	type: "observation",
+	confidence: 0.3,
+};
+
 /**
  * Fetch status narrative from API with fallback to local extraction.
  */
-async function fetchStatusNarrative(reasoning: string): Promise<string> {
+async function fetchStatusNarrative(reasoning: string): Promise<NarrativeResponse> {
 	if (reasoning.length < MIN_REASONING_LENGTH) {
-		return "Thinking...";
+		return DEFAULT_RESPONSE;
 	}
 
 	try {
@@ -97,11 +127,15 @@ async function fetchStatusNarrative(reasoning: string): Promise<string> {
 			throw new Error(`API returned ${res.status}`);
 		}
 
-		const data = (await res.json()) as { summary: string };
-		return data.summary;
+		const data = (await res.json()) as NarrativeResponse;
+		return data;
 	} catch {
 		// Fallback to local extraction
-		return extractKeyPhrase(reasoning);
+		return {
+			summary: extractKeyPhrase(reasoning),
+			type: "observation",
+			confidence: 0.3,
+		};
 	}
 }
 
@@ -114,11 +148,11 @@ async function fetchStatusNarrative(reasoning: string): Promise<string> {
  *
  * @param reasoningText - The current reasoning text to summarize
  * @param isStreaming - Whether the agent is currently streaming
- * @returns Status narrative and control functions
+ * @returns Status narrative with type classification and control functions
  *
  * @example
  * ```tsx
- * const { narrative, isGenerating } = useStatusNarrative(
+ * const { narrative, type, confidence, isGenerating } = useStatusNarrative(
  *   state.reasoningText,
  *   state.status === "processing"
  * );
@@ -129,6 +163,8 @@ export function useStatusNarrative(
 	isStreaming: boolean
 ): UseStatusNarrativeResult {
 	const [narrative, setNarrative] = useState("Thinking...");
+	const [type, setType] = useState<ThoughtType>("observation");
+	const [confidence, setConfidence] = useState(0.3);
 	const [isGenerating, setIsGenerating] = useState(false);
 	const lastReasoningRef = useRef("");
 	const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
@@ -137,6 +173,8 @@ export function useStatusNarrative(
 	const generateNarrative = useCallback(async (text: string) => {
 		if (!text || text.length < MIN_REASONING_LENGTH) {
 			setNarrative("Thinking...");
+			setType("observation");
+			setConfidence(0.3);
 			return;
 		}
 
@@ -147,8 +185,10 @@ export function useStatusNarrative(
 
 		setIsGenerating(true);
 		try {
-			const newNarrative = await fetchStatusNarrative(text);
-			setNarrative(newNarrative);
+			const response = await fetchStatusNarrative(text);
+			setNarrative(response.summary);
+			setType(response.type);
+			setConfidence(response.confidence);
 			lastReasoningRef.current = text;
 		} finally {
 			setIsGenerating(false);
@@ -195,11 +235,13 @@ export function useStatusNarrative(
 	useEffect(() => {
 		if (!reasoningText) {
 			setNarrative("Thinking...");
+			setType("observation");
+			setConfidence(0.3);
 			lastReasoningRef.current = "";
 		}
 	}, [reasoningText]);
 
-	return { narrative, isGenerating, refresh };
+	return { narrative, type, confidence, isGenerating, refresh };
 }
 
 export default useStatusNarrative;

@@ -20,8 +20,7 @@ import { formatDistanceToNow } from "date-fns";
 import { AnimatePresence, motion } from "framer-motion";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { AgentStreamingState, AgentType, ToolCall } from "@/hooks/useAgentStreaming";
-import { useStatusNarrative } from "@/hooks/useStatusNarrative";
-import { type ThoughtType, useThoughtClassification } from "@/hooks/useThoughtClassification";
+import { type ThoughtType, useStatusNarrative } from "@/hooks/useStatusNarrative";
 
 // ============================================
 // Constants
@@ -782,18 +781,13 @@ const THOUGHT_TYPE_STYLES: Record<
 function ThoughtSectionComponent({
 	section,
 	reducedMotion,
+	type,
 }: {
 	section: ThoughtSection;
 	reducedMotion: boolean;
+	type: ThoughtType;
 }) {
 	const [isExpanded, setIsExpanded] = useState(false);
-
-	// Use LLM-powered classification
-	const { type, isClassifying } = useThoughtClassification(
-		section.content,
-		section.title ?? undefined,
-		section.status === "complete"
-	);
 
 	const styles = THOUGHT_TYPE_STYLES[type];
 
@@ -838,7 +832,7 @@ function ThoughtSectionComponent({
 						)}
 					</span>
 					<span
-						className={`flex-shrink-0 text-[10px] font-semibold uppercase tracking-wider px-1.5 py-0.5 rounded ${styles.labelBg} ${styles.labelText} ${isClassifying ? "animate-pulse" : ""}`}
+						className={`flex-shrink-0 text-[10px] font-semibold uppercase tracking-wider px-1.5 py-0.5 rounded ${styles.labelBg} ${styles.labelText}`}
 					>
 						{styles.label}
 					</span>
@@ -983,10 +977,12 @@ function StreamingReasoning({
 	text,
 	isStreaming = false,
 	reducedMotion = false,
+	type = "observation",
 }: {
 	text: string;
 	isStreaming?: boolean;
 	reducedMotion?: boolean;
+	type?: ThoughtType;
 }) {
 	const containerRef = useRef<HTMLDivElement>(null);
 	const isNearBottomRef = useRef(true);
@@ -1026,6 +1022,7 @@ function StreamingReasoning({
 						key={section.key}
 						section={section}
 						reducedMotion={reducedMotion}
+						type={type}
 					/>
 				))
 			) : (
@@ -1063,11 +1060,12 @@ export function AgentStreamingDetail({ agentType, state, cycleId }: AgentStreami
 	const isStreaming = state.status === "processing";
 	const wasStreamingRef = useRef(false);
 
-	// Status narrative (LLM-generated or extracted)
-	const { narrative, isGenerating: isNarrativeGenerating } = useStatusNarrative(
-		state.reasoningText,
-		isStreaming
-	);
+	// Status narrative with type classification (LLM-generated or extracted)
+	const {
+		narrative,
+		type: reasoningType,
+		isGenerating: isNarrativeGenerating,
+	} = useStatusNarrative(state.reasoningText, isStreaming);
 
 	// Detect current reasoning phase
 	const currentPhase = useMemo(
@@ -1256,6 +1254,7 @@ export function AgentStreamingDetail({ agentType, state, cycleId }: AgentStreami
 						text={state.reasoningText}
 						isStreaming={isStreaming}
 						reducedMotion={reducedMotion}
+						type={reasoningType}
 					/>
 				</CollapsibleSection>
 

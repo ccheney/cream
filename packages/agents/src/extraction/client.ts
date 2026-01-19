@@ -307,9 +307,6 @@ export class ExtractionClient implements IExtractionClient {
 			const response = await this.client.models.generateContent({
 				model: this.model,
 				contents: "Hello",
-				config: {
-					maxOutputTokens: 10,
-				},
 			});
 			return (response.text?.length ?? 0) > 0;
 		} catch {

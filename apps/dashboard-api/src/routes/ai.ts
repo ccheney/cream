@@ -22,18 +22,6 @@ const app = new OpenAPIHono();
 // Schema
 // ============================================
 
-const SummarizeReasoningRequestSchema = z.object({
-	reasoning: z.string().describe("The current reasoning text to summarize"),
-});
-
-const SummarizeReasoningResponseSchema = z.object({
-	summary: z.string().describe("A short (max 8 words) summary of what the agent is doing"),
-});
-
-// ============================================
-// Thought Classification Schema
-// ============================================
-
 /**
  * Semantic thought types for agent reasoning display.
  * Each type maps to a specific color from the design system.
@@ -49,13 +37,13 @@ const ThoughtTypeSchema = z.enum([
 	"question", // teal - self-reflection, alternatives
 ]);
 
-const ClassifyThoughtRequestSchema = z.object({
-	content: z.string().describe("The thought section content to classify"),
-	title: z.string().optional().describe("Optional section title/header"),
+const SummarizeReasoningRequestSchema = z.object({
+	reasoning: z.string().describe("The current reasoning text to summarize"),
 });
 
-const ClassifyThoughtResponseSchema = z.object({
-	type: ThoughtTypeSchema.describe("The semantic type of this thought section"),
+const SummarizeReasoningResponseSchema = z.object({
+	summary: z.string().describe("A short (max 8 words) summary of what the agent is doing"),
+	type: ThoughtTypeSchema.describe("The semantic type of this reasoning"),
 	confidence: z.number().min(0).max(1).describe("Classification confidence (0-1)"),
 });
 
@@ -95,41 +83,58 @@ const summarizeReasoningRoute = createRoute({
 // Implementation
 // ============================================
 
-const STATUS_PROMPT = `Summarize what this AI agent is currently thinking about in a concise sentence (8-15 words). Use present continuous tense. Be specific about the domain concepts and data mentioned.
+const STATUS_PROMPT = `Analyze this AI agent's reasoning and provide:
+1. A concise summary (8-15 words) of what it's currently thinking about
+2. The semantic type of reasoning being done
+3. Your confidence in the classification (0-1)
 
-Examples of good summaries:
+## Summary Guidelines
+Use present continuous tense. Be specific about domain concepts and data.
+
+Good summaries:
 - "Analyzing RSI divergence patterns to identify potential reversal points..."
 - "Weighing earnings growth against macro headwinds for position sizing..."
 - "Checking Fed policy implications on rate-sensitive sectors..."
-- "Evaluating momentum signals across tech sector holdings..."
-- "Reviewing options Greeks to assess downside protection levels..."
-- "Assessing position sizing limits given current volatility regime..."
 
-Bad examples (too short or generic):
+Bad summaries:
 - "Thinking..."
 - "Analyzing data..."
 - "Processing..."
 
-Current reasoning (analyze the most recent content):
+## Reasoning Types
+- observation: Gathering facts, noting data, reading information
+- analysis: Working through patterns, examining relationships, evaluating data
+- hypothesis: Forming predictions, making assumptions, proposing theories
+- concern: Expressing caution, noting risks, identifying uncertainties
+- insight: Key realizations, aha moments, important discoveries
+- synthesis: Pulling together multiple factors, weighing tradeoffs
+- conclusion: Final recommendations, decisions, actionable outcomes
+- question: Self-reflection, considering alternatives, exploring "what if"
+
+Current reasoning:
 {reasoning}`;
 
 const SummaryOutputSchema = z.object({
 	summary: z.string().describe("A concise 8-15 word summary ending with ellipsis"),
+	type: ThoughtTypeSchema.describe("The semantic type of this reasoning"),
+	confidence: z.number().min(0).max(1).describe("Classification confidence (0-1)"),
 });
 
 app.openapi(summarizeReasoningRoute, async (c) => {
 	const { reasoning } = c.req.valid("json");
 
+	const defaultResponse = { summary: "Thinking...", type: "observation" as const, confidence: 0.3 };
+
 	// Return default for short/empty reasoning
 	if (!reasoning || reasoning.length < 50) {
-		return c.json({ summary: "Thinking..." });
+		return c.json(defaultResponse);
 	}
 
 	// Check if Google API key is available
 	if (!Bun.env.GOOGLE_GENERATIVE_AI_API_KEY) {
 		// Fallback: extract key phrases from reasoning without LLM
 		const summary = extractKeyPhrase(reasoning);
-		return c.json({ summary });
+		return c.json({ summary, type: "observation" as const, confidence: 0.3 });
 	}
 
 	try {
@@ -137,20 +142,23 @@ app.openapi(summarizeReasoningRoute, async (c) => {
 			model: google(getLLMModelId()),
 			prompt: STATUS_PROMPT.replace("{reasoning}", reasoning.slice(-500)),
 			output: Output.object({ schema: SummaryOutputSchema }),
-			maxOutputTokens: 25,
 		});
 
-		// Ensure it ends with ellipsis for consistency
+		// Ensure summary ends with ellipsis for consistency
 		let summary = output?.summary?.trim() ?? "Processing...";
 		if (!summary.endsWith("...")) {
 			summary = summary.replace(/[.!?]*$/, "...");
 		}
 
-		return c.json({ summary });
+		return c.json({
+			summary,
+			type: output?.type ?? ("observation" as const),
+			confidence: Math.min(1, Math.max(0, output?.confidence ?? 0.3)),
+		});
 	} catch (_error) {
 		// Fallback to simple extraction
 		const summary = extractKeyPhrase(reasoning);
-		return c.json({ summary });
+		return c.json({ summary, type: "observation" as const, confidence: 0.3 });
 	}
 });
 
@@ -190,98 +198,5 @@ function extractKeyPhrase(reasoning: string): string {
 
 	return "Processing...";
 }
-
-// ============================================
-// Thought Classification Route
-// ============================================
-
-const classifyThoughtRoute = createRoute({
-	method: "post",
-	path: "/classify-thought",
-	tags: ["AI"],
-	summary: "Classify a thought section into a semantic type",
-	description:
-		"Uses Gemini Flash to classify agent reasoning sections into semantic types (observation, analysis, hypothesis, concern, insight, synthesis, conclusion, question). Used for visual differentiation in the reasoning trace UI.",
-	request: {
-		body: {
-			content: {
-				"application/json": {
-					schema: ClassifyThoughtRequestSchema,
-				},
-			},
-		},
-	},
-	responses: {
-		200: {
-			description: "Successfully classified thought",
-			content: {
-				"application/json": {
-					schema: ClassifyThoughtResponseSchema,
-				},
-			},
-		},
-	},
-});
-
-const CLASSIFY_PROMPT = `Classify this AI agent thought into exactly ONE of these semantic types:
-
-- observation: Gathering facts, noting data, reading information
-- analysis: Working through patterns, examining relationships, evaluating data
-- hypothesis: Forming predictions, making assumptions, proposing theories
-- concern: Expressing caution, noting risks, identifying uncertainties or caveats
-- insight: Key realizations, aha moments, important discoveries
-- synthesis: Pulling together multiple factors, weighing tradeoffs, combining perspectives
-- conclusion: Final recommendations, decisions, actionable outcomes
-- question: Self-reflection, considering alternatives, exploring "what if" scenarios
-
-Title (if provided): {title}
-
-Content:
-{content}`;
-
-const ClassifyOutputSchema = z.object({
-	type: ThoughtTypeSchema.describe("The semantic type of this thought section"),
-	confidence: z.number().min(0).max(1).describe("Classification confidence (0-1)"),
-});
-
-app.openapi(classifyThoughtRoute, async (c) => {
-	const { content, title } = c.req.valid("json");
-
-	// Default for very short content
-	if (!content || content.length < 20) {
-		return c.json({ type: "observation" as const, confidence: 0.5 });
-	}
-
-	// Require Google API key
-	if (!Bun.env.GOOGLE_GENERATIVE_AI_API_KEY) {
-		return c.json({ type: "observation" as const, confidence: 0.3 });
-	}
-
-	try {
-		const prompt = CLASSIFY_PROMPT.replace("{title}", title || "(none)").replace(
-			"{content}",
-			content.slice(0, 400)
-		);
-
-		const result = await generateText({
-			model: google(getLLMModelId()),
-			prompt,
-			output: Output.object({ schema: ClassifyOutputSchema }),
-			maxOutputTokens: 512,
-		});
-
-		try {
-			const output = result.output;
-			return c.json({
-				type: output?.type ?? ("observation" as const),
-				confidence: Math.min(1, Math.max(0, output?.confidence ?? 0.3)),
-			});
-		} catch {
-			return c.json({ type: "observation" as const, confidence: 0.3 });
-		}
-	} catch {
-		return c.json({ type: "observation" as const, confidence: 0.3 });
-	}
-});
 
 export default app;
