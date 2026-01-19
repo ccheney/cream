@@ -47,9 +47,9 @@ function ApprovalCard({
 						Violations
 					</h4>
 					<ul className="space-y-2">
-						{approval.violations.map((violation: ApprovalViolation, idx: number) => (
+						{approval.violations.map((violation: ApprovalViolation) => (
 							<li
-								key={`violation-${idx}`}
+								key={`violation-${violation.constraint ?? ""}-${violation.severity ?? ""}`}
 								className="text-sm bg-white dark:bg-night-800 rounded p-2 border border-red-100 dark:border-red-900"
 							>
 								<div className="flex items-center gap-2 mb-1">
@@ -93,9 +93,9 @@ function ApprovalCard({
 						Required Changes
 					</h4>
 					<ul className="space-y-2">
-						{approval.requiredChanges.map((change: ApprovalRequiredChange, idx: number) => (
+						{approval.requiredChanges.map((change: ApprovalRequiredChange) => (
 							<li
-								key={`change-${idx}`}
+								key={`change-${change.change}`}
 								className="text-sm bg-white dark:bg-night-800 rounded p-2 border border-amber-100 dark:border-amber-900"
 							>
 								<p className="text-stone-700 dark:text-night-200">{change.change}</p>

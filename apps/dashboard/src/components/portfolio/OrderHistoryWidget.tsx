@@ -11,9 +11,9 @@
 "use client";
 
 import { memo, useState } from "react";
+import { Tab, TabList, TabPanel, Tabs } from "@/components/ui/tabs";
 import { useAllOrders } from "@/hooks/queries/useOrders";
 import type { AlpacaOrderStatus, Order } from "@/lib/api/types";
-import { Tab, TabList, TabPanel, Tabs } from "@/components/ui/tabs";
 
 type OrderStatusFilter = "all" | "open" | "filled" | "canceled";
 
@@ -22,7 +22,9 @@ function cn(...classes: (string | boolean | undefined | null)[]): string {
 }
 
 function formatPrice(price: number | null): string {
-	if (price === null) return "-";
+	if (price === null) {
+		return "-";
+	}
 	return price.toLocaleString("en-US", {
 		style: "currency",
 		currency: "USD",
@@ -105,7 +107,14 @@ function getStatusLabel(status: AlpacaOrderStatus): string {
 }
 
 function isOpenOrder(status: AlpacaOrderStatus): boolean {
-	return ["new", "accepted", "pending_new", "partially_filled", "pending_cancel", "pending_replace"].includes(status);
+	return [
+		"new",
+		"accepted",
+		"pending_new",
+		"partially_filled",
+		"pending_cancel",
+		"pending_replace",
+	].includes(status);
 }
 
 function isFilledOrder(status: AlpacaOrderStatus): boolean {
@@ -121,18 +130,15 @@ interface OrderRowProps {
 }
 
 const OrderRow = memo(function OrderRow({ order }: OrderRowProps) {
-	const sideColor = order.side === "buy"
-		? "text-green-600 dark:text-green-400"
-		: "text-red-600 dark:text-red-400";
+	const sideColor =
+		order.side === "buy" ? "text-green-600 dark:text-green-400" : "text-red-600 dark:text-red-400";
 
 	return (
 		<tr className="hover:bg-cream-50 dark:hover:bg-night-750 transition-colors">
 			<td className="px-4 py-3 font-mono text-sm font-medium text-stone-900 dark:text-night-50">
 				{order.symbol}
 			</td>
-			<td className={cn("px-4 py-3 text-sm font-medium uppercase", sideColor)}>
-				{order.side}
-			</td>
+			<td className={cn("px-4 py-3 text-sm font-medium uppercase", sideColor)}>{order.side}</td>
 			<td className="px-4 py-3 text-sm text-stone-900 dark:text-night-50 text-right font-mono">
 				{formatQty(order.filledQty)}/{formatQty(order.qty)}
 			</td>
@@ -171,7 +177,7 @@ interface OrdersTableProps {
 const OrdersTable = memo(function OrdersTable({
 	orders,
 	isLoading = false,
-	emptyMessage = "No orders"
+	emptyMessage = "No orders",
 }: OrdersTableProps) {
 	if (isLoading) {
 		return (
@@ -184,11 +190,7 @@ const OrdersTable = memo(function OrdersTable({
 	}
 
 	if (orders.length === 0) {
-		return (
-			<div className="p-8 text-center text-stone-400 dark:text-night-400">
-				{emptyMessage}
-			</div>
-		);
+		return <div className="p-8 text-center text-stone-400 dark:text-night-400">{emptyMessage}</div>;
 	}
 
 	return (
@@ -246,9 +248,7 @@ export const OrderHistoryWidget = memo(function OrderHistoryWidget({
 							{openOrders.length} pending
 						</div>
 					)}
-					<span className="text-sm text-stone-500 dark:text-night-300">
-						{orders.length} orders
-					</span>
+					<span className="text-sm text-stone-500 dark:text-night-300">{orders.length} orders</span>
 				</div>
 			</div>
 
@@ -271,11 +271,7 @@ export const OrderHistoryWidget = memo(function OrderHistoryWidget({
 					</TabList>
 
 					<TabPanel value="all">
-						<OrdersTable
-							orders={orders}
-							isLoading={isLoading}
-							emptyMessage="No orders found"
-						/>
+						<OrdersTable orders={orders} isLoading={isLoading} emptyMessage="No orders found" />
 					</TabPanel>
 
 					<TabPanel value="open">

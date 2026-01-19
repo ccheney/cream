@@ -21,12 +21,24 @@ export function useOrders(options: UseOrdersOptions = {}) {
 	const { enabled = true, ...filters } = options;
 
 	const params = new URLSearchParams();
-	if (filters.status) params.set("status", filters.status);
-	if (filters.limit) params.set("limit", String(filters.limit));
-	if (filters.direction) params.set("direction", filters.direction);
-	if (filters.symbols) params.set("symbols", filters.symbols);
-	if (filters.side) params.set("side", filters.side);
-	if (filters.nested !== undefined) params.set("nested", String(filters.nested));
+	if (filters.status) {
+		params.set("status", filters.status);
+	}
+	if (filters.limit) {
+		params.set("limit", String(filters.limit));
+	}
+	if (filters.direction) {
+		params.set("direction", filters.direction);
+	}
+	if (filters.symbols) {
+		params.set("symbols", filters.symbols);
+	}
+	if (filters.side) {
+		params.set("side", filters.side);
+	}
+	if (filters.nested !== undefined) {
+		params.set("nested", String(filters.nested));
+	}
 
 	const queryString = params.toString();
 	const url = queryString ? `/api/portfolio/orders?${queryString}` : "/api/portfolio/orders";
@@ -64,8 +76,12 @@ export function usePrefetchOrders() {
 
 	return async (filters: OrdersFilters = {}) => {
 		const params = new URLSearchParams();
-		if (filters.status) params.set("status", filters.status);
-		if (filters.limit) params.set("limit", String(filters.limit));
+		if (filters.status) {
+			params.set("status", filters.status);
+		}
+		if (filters.limit) {
+			params.set("limit", String(filters.limit));
+		}
 
 		const queryString = params.toString();
 		const url = queryString ? `/api/portfolio/orders?${queryString}` : "/api/portfolio/orders";

@@ -195,6 +195,7 @@ export const HistoryChart = memo(function HistoryChart({
 
 				{/* Data points with hit areas */}
 				{points.map((pt, i) => (
+					// biome-ignore lint/a11y/useSemanticElements: SVG <g> elements cannot be replaced with <button>
 					<g
 						key={pt.date}
 						role="button"
