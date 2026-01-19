@@ -54,22 +54,28 @@ pub struct Size {
     pub unit: SizeUnit,
 }
 
-/// Strategy family classification.
+/// Strategy family - position type classification.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "SCREAMING_SNAKE_CASE")]
 pub enum StrategyFamily {
-    /// Momentum-based strategies.
-    Momentum,
-    /// Mean reversion strategies.
-    MeanReversion,
-    /// Trend following strategies.
-    TrendFollowing,
-    /// Volatility-based strategies.
-    Volatility,
-    /// Event-driven strategies.
-    EventDriven,
-    /// Fundamental value strategies.
-    Fundamental,
+    /// Long equity position.
+    EquityLong,
+    /// Short equity position.
+    EquityShort,
+    /// Long option position.
+    OptionLong,
+    /// Short option position.
+    OptionShort,
+    /// Vertical spread (bull/bear spread).
+    VerticalSpread,
+    /// Iron condor strategy.
+    IronCondor,
+    /// Straddle (same strike call + put).
+    Straddle,
+    /// Strangle (different strike call + put).
+    Strangle,
+    /// Calendar spread (different expiration).
+    CalendarSpread,
 }
 
 /// Time horizon for the trade.
@@ -84,6 +90,49 @@ pub enum TimeHorizon {
     Position,
     /// Long-term (20+ days).
     LongTerm,
+}
+
+/// Thesis lifecycle state.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "SCREAMING_SNAKE_CASE")]
+pub enum ThesisState {
+    /// Watching the opportunity.
+    Watching,
+    /// Position entered.
+    Entered,
+    /// Adding to position.
+    Adding,
+    /// Managing existing position.
+    Managing,
+    /// Exiting position.
+    Exiting,
+    /// Position closed.
+    Closed,
+}
+
+/// Position intent for options orders.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum PositionIntent {
+    /// Buy to open a new position.
+    BuyToOpen,
+    /// Buy to close an existing position.
+    BuyToClose,
+    /// Sell to open a new position.
+    SellToOpen,
+    /// Sell to close an existing position.
+    SellToClose,
+}
+
+/// Option leg for multi-leg strategies.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct OptionLeg {
+    /// OCC option symbol (e.g., "AAPL250117P00190000").
+    pub symbol: String,
+    /// Quantity ratio - positive for buy, negative for sell.
+    pub ratio_qty: i32,
+    /// Position intent for the leg.
+    pub position_intent: PositionIntent,
 }
 
 /// A single trading decision.
@@ -109,6 +158,8 @@ pub struct Decision {
     pub strategy_family: StrategyFamily,
     /// Time horizon.
     pub time_horizon: TimeHorizon,
+    /// Thesis lifecycle state.
+    pub thesis_state: ThesisState,
     /// Bullish factors supporting the decision.
     pub bullish_factors: Vec<String>,
     /// Bearish factors considered.
@@ -117,6 +168,10 @@ pub struct Decision {
     pub rationale: String,
     /// Confidence score (0.0 to 1.0).
     pub confidence: Decimal,
+    /// Option legs for multi-leg strategies (empty for single-leg orders).
+    pub legs: Vec<OptionLeg>,
+    /// Net limit price for multi-leg orders (debit positive, credit negative).
+    pub net_limit_price: Option<Decimal>,
 }
 
 /// Complete decision plan from the agent network.

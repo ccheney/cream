@@ -31,7 +31,10 @@ pub fn decimal_to_i64(d: rust_decimal::Decimal) -> i64 {
 pub fn convert_decision_plan(
     proto: &proto::cream::v1::DecisionPlan,
 ) -> crate::models::DecisionPlan {
-    use crate::models::{Action, Decision, Direction, Size, SizeUnit, StrategyFamily, TimeHorizon};
+    use crate::models::{
+        Action, Decision, Direction, OptionLeg, PositionIntent, Size, SizeUnit, StrategyFamily,
+        ThesisState, TimeHorizon,
+    };
     use rust_decimal::Decimal;
 
     let decisions: Vec<Decision> = proto
@@ -47,15 +50,25 @@ pub fn convert_decision_plan(
                 Ok(proto::cream::v1::Action::Sell | proto::cream::v1::Action::Reduce) => {
                     Action::Sell
                 }
-                // Hold, NoTrade, and unknown actions default to Hold
+                Ok(proto::cream::v1::Action::Close) => Action::Close,
+                Ok(proto::cream::v1::Action::NoTrade) => Action::NoTrade,
+                // Hold and unknown actions default to Hold
                 _ => Action::Hold,
             };
 
-            // Derive direction from action (Buy = Long, Sell = Short)
-            let direction = match action {
-                Action::Buy => Direction::Long,
-                Action::Sell => Direction::Short,
-                Action::Hold | Action::Close | Action::NoTrade => Direction::Flat,
+            // Extract direction from proto (fallback to deriving from action)
+            let direction = match proto::cream::v1::Direction::try_from(d.direction) {
+                Ok(proto::cream::v1::Direction::Long) => Direction::Long,
+                Ok(proto::cream::v1::Direction::Short) => Direction::Short,
+                Ok(proto::cream::v1::Direction::Flat) => Direction::Flat,
+                _ => {
+                    // Fallback: derive from action
+                    match action {
+                        Action::Buy => Direction::Long,
+                        Action::Sell => Direction::Short,
+                        Action::Hold | Action::Close | Action::NoTrade => Direction::Flat,
+                    }
+                }
             };
 
             // Extract risk levels
@@ -69,43 +82,97 @@ pub fn convert_decision_plan(
                         )
                     });
 
-            // Extract size
+            // Extract size with new unit types
             let (quantity, unit) = d
                 .size
                 .as_ref()
                 .map_or((Decimal::ZERO, SizeUnit::Shares), |s| {
                     let unit = match proto::cream::v1::SizeUnit::try_from(s.unit) {
                         Ok(proto::cream::v1::SizeUnit::Contracts) => SizeUnit::Contracts,
+                        Ok(proto::cream::v1::SizeUnit::Dollars) => SizeUnit::Dollars,
+                        Ok(proto::cream::v1::SizeUnit::PctEquity) => SizeUnit::PctEquity,
                         // Shares and unknown units default to Shares
                         _ => SizeUnit::Shares,
                     };
                     (Decimal::from(s.quantity), unit)
                 });
 
-            // Extract strategy family
-            // Proto: Unspecified, Trend, MeanReversion, EventDriven, Volatility, RelativeValue
-            // Internal: Momentum, MeanReversion, TrendFollowing, Volatility, EventDriven, Fundamental
+            // Extract strategy family (position type)
             let strategy_family =
                 match proto::cream::v1::StrategyFamily::try_from(d.strategy_family) {
-                    Ok(proto::cream::v1::StrategyFamily::Trend) => StrategyFamily::TrendFollowing,
-                    Ok(proto::cream::v1::StrategyFamily::MeanReversion) => {
-                        StrategyFamily::MeanReversion
+                    Ok(proto::cream::v1::StrategyFamily::EquityLong) => StrategyFamily::EquityLong,
+                    Ok(proto::cream::v1::StrategyFamily::EquityShort) => StrategyFamily::EquityShort,
+                    Ok(proto::cream::v1::StrategyFamily::OptionLong) => StrategyFamily::OptionLong,
+                    Ok(proto::cream::v1::StrategyFamily::OptionShort) => StrategyFamily::OptionShort,
+                    Ok(proto::cream::v1::StrategyFamily::VerticalSpread) => {
+                        StrategyFamily::VerticalSpread
                     }
-                    Ok(proto::cream::v1::StrategyFamily::Volatility) => StrategyFamily::Volatility,
-                    Ok(proto::cream::v1::StrategyFamily::EventDriven) => {
-                        StrategyFamily::EventDriven
+                    Ok(proto::cream::v1::StrategyFamily::IronCondor) => StrategyFamily::IronCondor,
+                    Ok(proto::cream::v1::StrategyFamily::Straddle) => StrategyFamily::Straddle,
+                    Ok(proto::cream::v1::StrategyFamily::Strangle) => StrategyFamily::Strangle,
+                    Ok(proto::cream::v1::StrategyFamily::CalendarSpread) => {
+                        StrategyFamily::CalendarSpread
                     }
-                    Ok(proto::cream::v1::StrategyFamily::RelativeValue) => {
-                        StrategyFamily::Fundamental
-                    }
-                    _ => StrategyFamily::Momentum, // Default
+                    _ => StrategyFamily::EquityLong, // Default
                 };
+
+            // Extract time horizon from proto
+            let time_horizon = match proto::cream::v1::TimeHorizon::try_from(d.time_horizon) {
+                Ok(proto::cream::v1::TimeHorizon::Intraday) => TimeHorizon::Intraday,
+                Ok(proto::cream::v1::TimeHorizon::Swing) => TimeHorizon::Swing,
+                Ok(proto::cream::v1::TimeHorizon::Position) => TimeHorizon::Position,
+                _ => TimeHorizon::Swing, // Default
+            };
+
+            // Extract thesis state from proto
+            let thesis_state = match proto::cream::v1::ThesisState::try_from(d.thesis_state) {
+                Ok(proto::cream::v1::ThesisState::Watching) => ThesisState::Watching,
+                Ok(proto::cream::v1::ThesisState::Entered) => ThesisState::Entered,
+                Ok(proto::cream::v1::ThesisState::Adding) => ThesisState::Adding,
+                Ok(proto::cream::v1::ThesisState::Managing) => ThesisState::Managing,
+                Ok(proto::cream::v1::ThesisState::Exiting) => ThesisState::Exiting,
+                Ok(proto::cream::v1::ThesisState::Closed) => ThesisState::Closed,
+                _ => ThesisState::Watching, // Default
+            };
 
             // Extract limit price from order plan
             let limit_price = d.order_plan.as_ref().and_then(|op| {
                 op.entry_limit_price
                     .map(|p| Decimal::from_f64_retain(p).unwrap_or_default())
             });
+
+            // Convert option legs from proto
+            let legs: Vec<OptionLeg> = d
+                .legs
+                .iter()
+                .map(|leg| {
+                    let position_intent =
+                        match proto::cream::v1::PositionIntent::try_from(leg.position_intent) {
+                            Ok(proto::cream::v1::PositionIntent::BuyToOpen) => {
+                                PositionIntent::BuyToOpen
+                            }
+                            Ok(proto::cream::v1::PositionIntent::BuyToClose) => {
+                                PositionIntent::BuyToClose
+                            }
+                            Ok(proto::cream::v1::PositionIntent::SellToOpen) => {
+                                PositionIntent::SellToOpen
+                            }
+                            Ok(proto::cream::v1::PositionIntent::SellToClose) => {
+                                PositionIntent::SellToClose
+                            }
+                            _ => PositionIntent::BuyToOpen, // Default
+                        };
+                    OptionLeg {
+                        symbol: leg.symbol.clone(),
+                        ratio_qty: leg.ratio_qty,
+                        position_intent,
+                    }
+                })
+                .collect();
+
+            let net_limit_price = d
+                .net_limit_price
+                .map(|p| Decimal::from_f64_retain(p).unwrap_or_default());
 
             Decision {
                 decision_id: format!("{}-{}", proto.cycle_id, idx),
@@ -120,11 +187,14 @@ pub fn convert_decision_plan(
                 take_profit_level: take_profit,
                 limit_price,
                 strategy_family,
-                time_horizon: TimeHorizon::Swing, // Default
-                bullish_factors: vec![],          // Not in proto
-                bearish_factors: vec![],          // Not in proto
+                time_horizon,
+                thesis_state,
+                bullish_factors: d.bullish_factors.clone(),
+                bearish_factors: d.bearish_factors.clone(),
                 rationale: d.rationale.clone(),
                 confidence: Decimal::from_f64_retain(d.confidence).unwrap_or_default(),
+                legs,
+                net_limit_price,
             }
         })
         .collect();

@@ -13,7 +13,8 @@ pub use constraint::{
     OptionsLimits, PerInstrumentLimits, PortfolioLimits, SizingLimits, ViolationSeverity,
 };
 pub use decision::{
-    Action, Decision, DecisionPlan, Direction, Size, SizeUnit, StrategyFamily, TimeHorizon,
+    Action, Decision, DecisionPlan, Direction, OptionLeg, PositionIntent, Size, SizeUnit,
+    StrategyFamily, ThesisState, TimeHorizon,
 };
 pub use environment::Environment;
 pub use order::{
