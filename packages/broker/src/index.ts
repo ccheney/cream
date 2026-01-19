@@ -45,8 +45,8 @@
 export {
 	type AlpacaClient,
 	type AlpacaClientConfig,
-	type GetOrdersOptions,
 	createAlpacaClient,
+	type GetOrdersOptions,
 } from "./client.js";
 // Factory
 export { type BrokerClientConfig, createBrokerClient } from "./factory.js";

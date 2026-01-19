@@ -117,16 +117,8 @@ export const RationaleSchema = z.object({
 
 export const OptionLegSchema = z.object({
 	symbol: z.string().describe("OCC option symbol (e.g., AAPL250117P00190000)"),
-	ratioQty: z
-		.number()
-		.int()
-		.describe("Signed ratio: positive=buy, negative=sell"),
-	positionIntent: z.enum([
-		"BUY_TO_OPEN",
-		"BUY_TO_CLOSE",
-		"SELL_TO_OPEN",
-		"SELL_TO_CLOSE",
-	]),
+	ratioQty: z.number().int().describe("Signed ratio: positive=buy, negative=sell"),
+	positionIntent: z.enum(["BUY_TO_OPEN", "BUY_TO_CLOSE", "SELL_TO_OPEN", "SELL_TO_CLOSE"]),
 });
 
 export const DecisionSchema = z.object({
