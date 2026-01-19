@@ -8,7 +8,7 @@
  * Exit codes:
  * - 0: All versions valid
  * - 1: One or more version failures
- * - 2: Runtime not found (Bun, Rust, Python missing)
+ * - 2: Runtime not found (Bun or Rust missing)
  */
 
 import { exists } from "node:fs/promises";
@@ -18,12 +18,7 @@ import { parseArgs } from "node:util";
 import type { VersionConstraint } from "./types.js";
 import { colors } from "./colors.js";
 import { createLogger } from "./logger.js";
-import {
-  checkAllRuntimes,
-  checkTypeScriptPackages,
-  checkRustCrates,
-  checkPythonPackages,
-} from "./validators.js";
+import { checkAllRuntimes, checkTypeScriptPackages, checkRustCrates } from "./validators.js";
 import {
   print,
   printSectionHeader,
@@ -36,7 +31,7 @@ import {
 
 const log = createLogger();
 
-const REQUIRED_RUNTIMES = ["Bun", "Rust", "Python"];
+const REQUIRED_RUNTIMES = ["Bun", "Rust"];
 
 async function findProjectRoot(): Promise<string> {
   let rootDir = process.cwd();
@@ -94,17 +89,6 @@ async function main(): Promise<void> {
   } else {
     printResults(rustResults);
     allResults.push(...rustResults);
-  }
-
-  // Python packages
-  print("");
-  printSectionHeader("Python Packages");
-  const pyResults = await checkPythonPackages(rootDir);
-  if (pyResults.length === 0) {
-    printEmptySection("No pyproject.toml found or no packages to check");
-  } else {
-    printResults(pyResults);
-    allResults.push(...pyResults);
   }
 
   // Calculate and print summary

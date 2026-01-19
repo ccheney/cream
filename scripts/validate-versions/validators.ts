@@ -61,43 +61,8 @@ export async function checkRustVersion(): Promise<VersionConstraint> {
   };
 }
 
-export async function checkPythonVersion(): Promise<VersionConstraint> {
-  const output = await getCommandVersion("python3", ["--version"]);
-  // Output: "Python 3.15.2"
-  const match = output?.match(/Python (\d+\.\d+\.\d+)/);
-  const found = match ? match[1] : null;
-
-  return {
-    name: "Python",
-    required: ">= 3.13.0",
-    found,
-    status: found ? compareVersions(found, ">= 3.13.0") : "missing",
-    fix: found ? undefined : "brew install python@3.15 (or use pyenv)",
-  };
-}
-
-export async function checkUvVersion(): Promise<VersionConstraint> {
-  const output = await getCommandVersion("uv", ["--version"]);
-  // Output: "uv 0.5.x"
-  const match = output?.match(/uv (\d+\.\d+\.\d+)/);
-  const found = match ? match[1] : null;
-
-  return {
-    name: "uv (Python)",
-    required: ">= 0.5.0",
-    found,
-    status: found ? compareVersions(found, ">= 0.5.0") : "warn",
-    fix: "curl -LsSf https://astral.sh/uv/install.sh | sh",
-  };
-}
-
 export function checkAllRuntimes(): Promise<VersionConstraint[]> {
-  return Promise.all([
-    checkBunVersion(),
-    checkRustVersion(),
-    checkPythonVersion(),
-    checkUvVersion(),
-  ]);
+  return Promise.all([checkBunVersion(), checkRustVersion()]);
 }
 
 // Package validators
@@ -197,39 +162,3 @@ export async function checkRustCrates(rootDir: string): Promise<VersionConstrain
   return results;
 }
 
-const PYTHON_PACKAGE_REQUIREMENTS: Record<string, string> = {
-  polars: ">= 1.3.0",
-  pyarrow: ">= 15.0.0",
-  numpy: ">= 2.0.0",
-  pandas: ">= 2.0.0",
-};
-
-export async function checkPythonPackages(rootDir: string): Promise<VersionConstraint[]> {
-  const results: VersionConstraint[] = [];
-
-  const pyprojectPath = join(rootDir, "packages/research/pyproject.toml");
-  if (!(await exists(pyprojectPath))) {
-    return results;
-  }
-
-  const content = await Bun.file(pyprojectPath).text();
-
-  for (const [pkg, required] of Object.entries(PYTHON_PACKAGE_REQUIREMENTS)) {
-    // Match: "polars>=1.3" or "polars>=1.3.0"
-    const match = new RegExp(`"${pkg}[><=~^]*([\\d.]+)"`).exec(content);
-    const found = match?.[1];
-
-    if (found) {
-      const normalized = normalizeVersion(found);
-      results.push({
-        name: `${pkg} (Python)`,
-        required,
-        found: normalized,
-        status: compareVersions(normalized, required),
-        fix: `uv add "${pkg}>=${required.replace(">= ", "")}"`,
-      });
-    }
-  }
-
-  return results;
-}

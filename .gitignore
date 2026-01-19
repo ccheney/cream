@@ -45,19 +45,6 @@ target/
 *.profdata
 rust_out
 
-# Python
-__pycache__/
-*.py[cod]
-*$py.class
-.venv/
-venv/
-.uv/
-.ruff_cache/
-.pytest_cache/
-.mypy_cache/
-.coverage
-htmlcov/
-
 # Database files
 *.db
 *.db-wal

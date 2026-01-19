@@ -14,7 +14,6 @@ export interface VersionConfig {
   runtimes: Record<string, string>;
   typescript: Record<string, string>;
   rust: Record<string, string>;
-  python: Record<string, string>;
 }
 
 export interface CheckResult {

@@ -19,10 +19,6 @@ indent_size = 2
 [*.rs]
 indent_size = 4
 
-# Python
-[*.py]
-indent_size = 4
-
 # Markdown
 [*.md]
 trim_trailing_whitespace = false
