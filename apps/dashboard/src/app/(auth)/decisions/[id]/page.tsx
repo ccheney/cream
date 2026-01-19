@@ -15,6 +15,7 @@ import { useParams, useRouter } from "next/navigation";
 import { useDecisionDetail } from "@/hooks/queries";
 import {
 	AgentVotesGrid,
+	ApprovalSection,
 	CitationsSection,
 	DecisionDetails,
 	DecisionHeader,
@@ -42,6 +43,10 @@ export default function DecisionDetailPage(): React.ReactElement {
 		<div className="space-y-6">
 			<DecisionHeader decision={decision} onBack={() => router.back()} />
 			<DecisionDetails decision={decision} />
+			<ApprovalSection
+				riskApproval={decision.riskApproval}
+				criticApproval={decision.criticApproval}
+			/>
 			<AgentVotesGrid outputs={decision.agentOutputs} />
 			<CitationsSection citations={decision.citations} />
 			<ExecutionSection execution={decision.execution} />

@@ -113,10 +113,8 @@ export function useEconomicCalendar(options: UseEconomicCalendarOptions = {}) {
 			return data;
 		},
 		enabled,
-		staleTime: STALE_TIMES.HISTORICAL,
-		gcTime: CACHE_TIMES.HISTORICAL,
-		// Refetch every 5 minutes during market hours
-		refetchInterval: 5 * 60 * 1000,
+		staleTime: STALE_TIMES.ECONOMIC_CALENDAR,
+		gcTime: CACHE_TIMES.ECONOMIC_CALENDAR,
 	});
 }
 
@@ -131,8 +129,8 @@ export function useEconomicEvent(id: string, enabled = true) {
 			return data.event;
 		},
 		enabled: enabled && Boolean(id),
-		staleTime: STALE_TIMES.HISTORICAL,
-		gcTime: CACHE_TIMES.HISTORICAL,
+		staleTime: STALE_TIMES.ECONOMIC_CALENDAR,
+		gcTime: CACHE_TIMES.ECONOMIC_CALENDAR,
 	});
 }
 
@@ -173,7 +171,7 @@ export function useEventHistory(eventId: string | null) {
 			return data;
 		},
 		enabled: Boolean(eventId),
-		staleTime: STALE_TIMES.HISTORICAL,
-		gcTime: CACHE_TIMES.HISTORICAL,
+		staleTime: STALE_TIMES.ECONOMIC_CALENDAR,
+		gcTime: CACHE_TIMES.ECONOMIC_CALENDAR,
 	});
 }

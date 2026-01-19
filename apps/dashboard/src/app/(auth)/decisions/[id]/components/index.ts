@@ -6,6 +6,7 @@
 
 export { AgentVoteCard, type AgentVoteCardProps } from "./AgentVoteCard";
 export { AgentVotesGrid, type AgentVotesGridProps } from "./AgentVotesGrid";
+export { ApprovalSection, type ApprovalSectionProps } from "./ApprovalSection";
 export { BackButton, type BackButtonProps } from "./BackButton";
 export { CitationCard, type CitationCardProps } from "./CitationCard";
 export { CitationsSection, type CitationsSectionProps } from "./CitationsSection";

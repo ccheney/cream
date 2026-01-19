@@ -14,7 +14,7 @@
 import { AnimatePresence, motion } from "framer-motion";
 import { Calendar, Clock, ExternalLink, TrendingDown, TrendingUp, X } from "lucide-react";
 import { useEffect, useMemo } from "react";
-import { Sparkline } from "@/components/ui/sparkline";
+import { HistoryChart } from "@/components/ui/history-chart";
 import { useEventHistory } from "@/hooks/queries";
 import type { EconomicEvent, ImpactLevel } from "@/lib/api/types";
 import { useMediaQuery } from "@/lib/hooks/useMediaQuery";
@@ -228,8 +228,8 @@ export function EventDetailDrawer({ event, isOpen, onClose }: EventDetailDrawerP
 
 	const sourceUrl = event ? getSourceUrl(event.name) : null;
 
-	// Extract sparkline data from history
-	const sparklineData = history?.observations.map((obs) => obs.value) ?? [];
+	// Extract chart data from history
+	const chartData = useMemo(() => history?.observations ?? [], [history]);
 
 	return (
 		<AnimatePresence>
@@ -330,31 +330,21 @@ export function EventDetailDrawer({ event, isOpen, onClose }: EventDetailDrawerP
 								<h3 className="text-sm font-medium text-stone-700 dark:text-night-200 mb-3">
 									Historical Releases
 								</h3>
-								<div className="bg-cream-50 dark:bg-night-900 rounded-lg p-4">
+								<div className="bg-cream-50 dark:bg-night-900 rounded-lg p-3">
 									{isHistoryLoading ? (
-										<div className="h-12 flex items-center justify-center">
+										<div className="h-20 flex items-center justify-center">
 											<div className="w-4 h-4 border-2 border-amber-500 border-t-transparent rounded-full animate-spin" />
 										</div>
-									) : sparklineData.length > 1 ? (
-										<div className="flex flex-col gap-2">
-											<Sparkline
-												data={sparklineData}
-												width={isMobile ? 280 : DRAWER_WIDTH_DESKTOP - 64}
-												height={48}
-												showFill
-											/>
-											<div className="flex justify-between text-[10px] text-stone-500 dark:text-night-400">
-												<span>{history?.observations[0]?.date ?? ""}</span>
-												<span className="font-medium">
-													{history?.seriesId} ({history?.unit})
-												</span>
-												<span>
-													{history?.observations[history.observations.length - 1]?.date ?? ""}
-												</span>
-											</div>
-										</div>
+									) : chartData.length > 1 ? (
+										<HistoryChart
+											data={chartData}
+											seriesId={history?.seriesId ?? ""}
+											unit={history?.unit ?? ""}
+											width={isMobile ? 280 : DRAWER_WIDTH_DESKTOP - 56}
+											height={80}
+										/>
 									) : (
-										<div className="h-12 flex items-center justify-center">
+										<div className="h-20 flex items-center justify-center">
 											<span className="text-xs text-stone-400 dark:text-night-500">
 												No historical data available
 											</span>

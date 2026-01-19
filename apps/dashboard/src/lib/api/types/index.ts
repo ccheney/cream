@@ -127,6 +127,10 @@ export type {
 // Trading types
 export type {
 	AgentOutput,
+	AlpacaOrderStatus,
+	ApprovalDetail,
+	ApprovalRequiredChange,
+	ApprovalViolation,
 	Citation,
 	CreateThesisRequest,
 	Decision,
@@ -137,7 +141,12 @@ export type {
 	DecisionSummary,
 	Direction,
 	ExecutionDetail,
+	Order,
+	OrderSide,
+	OrdersFilters,
+	OrdersResponse,
 	OrderStatus,
+	OrderType,
 	Position,
 	SizeUnit,
 	StateTransition,
@@ -150,5 +159,6 @@ export type {
 	ThesisSummary,
 	ThesisTransitionRequest,
 	TimeHorizon,
+	TimeInForce,
 	UpdateThesisRequest,
 } from "./trading";

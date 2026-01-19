@@ -122,6 +122,10 @@ export const queryKeys = {
 		history: (period: string) => [...queryKeys.portfolio.all, "history", period] as const,
 		positions: () => [...queryKeys.portfolio.all, "positions"] as const,
 		position: (id: string) => [...queryKeys.portfolio.all, "positions", id] as const,
+		orders: (filters?: Record<string, unknown>) =>
+			filters
+				? ([...queryKeys.portfolio.all, "orders", filters] as const)
+				: ([...queryKeys.portfolio.all, "orders"] as const),
 	},
 
 	// Risk

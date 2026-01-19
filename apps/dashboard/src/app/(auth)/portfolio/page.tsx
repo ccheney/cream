@@ -19,6 +19,7 @@
 import { useState } from "react";
 import { AccountSummaryCard } from "@/components/portfolio/AccountSummaryCard";
 import { EquityCurveChart } from "@/components/portfolio/EquityCurveChart";
+import { OrderHistoryWidget } from "@/components/portfolio/OrderHistoryWidget";
 import { RiskMetricsBar } from "@/components/portfolio/RiskMetricsBar";
 import { StreamingPositionsTable } from "@/components/portfolio/StreamingPositionsTable";
 import { QueryErrorBoundary } from "@/components/QueryErrorBoundary";
@@ -160,6 +161,11 @@ export default function PortfolioPage() {
 					</QueryErrorBoundary>
 				</div>
 			</div>
+
+			{/* Order History - Full width */}
+			<QueryErrorBoundary title="Failed to load order history">
+				<OrderHistoryWidget limit={100} />
+			</QueryErrorBoundary>
 		</div>
 	);
 }

@@ -46,8 +46,10 @@ function mapInvalidationHintToQueryKey(hint: string): readonly unknown[] | null 
 			return queryKeys.portfolio.all;
 
 		case "orders":
-			// Orders are not in queryKeys, invalidate decisions as fallback
-			return queryKeys.decisions.all;
+			if (parts[1] === "recent") {
+				return queryKeys.portfolio.orders({ status: "all" });
+			}
+			return queryKeys.portfolio.orders();
 
 		case "decisions":
 			if (parts[1]) {
@@ -633,7 +635,7 @@ export function handleWSMessage(message: WSMessage): void {
 				queueInvalidations(message.invalidates);
 			} else {
 				// Fallback to default invalidation
-				queueInvalidations(["portfolio.positions", "portfolio.summary"]);
+				queueInvalidations(["orders", "portfolio.positions", "portfolio.summary"]);
 			}
 			break;
 		}

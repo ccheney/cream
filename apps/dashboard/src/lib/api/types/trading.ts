@@ -52,6 +52,61 @@ export type OrderStatus =
 	| "CANCELED"
 	| "REJECTED";
 
+export type AlpacaOrderStatus =
+	| "new"
+	| "accepted"
+	| "pending_new"
+	| "accepted_for_bidding"
+	| "stopped"
+	| "rejected"
+	| "suspended"
+	| "calculated"
+	| "pending_cancel"
+	| "pending_replace"
+	| "done_for_day"
+	| "canceled"
+	| "expired"
+	| "replaced"
+	| "partially_filled"
+	| "filled";
+
+export type OrderType = "market" | "limit" | "stop" | "stop_limit" | "trailing_stop";
+export type OrderSide = "buy" | "sell";
+export type TimeInForce = "day" | "gtc" | "opg" | "cls" | "ioc" | "fok";
+
+export interface Order {
+	id: string;
+	clientOrderId: string;
+	symbol: string;
+	qty: number;
+	filledQty: number;
+	side: OrderSide;
+	type: OrderType;
+	timeInForce: TimeInForce;
+	status: AlpacaOrderStatus;
+	limitPrice: number | null;
+	stopPrice: number | null;
+	filledAvgPrice: number | null;
+	createdAt: string;
+	updatedAt: string;
+	submittedAt: string | null;
+	filledAt: string | null;
+}
+
+export interface OrdersResponse {
+	orders: Order[];
+	count: number;
+}
+
+export interface OrdersFilters {
+	status?: "open" | "closed" | "all";
+	limit?: number;
+	direction?: "asc" | "desc";
+	symbols?: string;
+	side?: OrderSide;
+	nested?: boolean;
+}
+
 export interface ExecutionDetail {
 	orderId: string;
 	brokerOrderId: string;
@@ -74,6 +129,27 @@ export interface ThesisSummary {
 	title: string;
 }
 
+export interface ApprovalViolation {
+	constraint?: string;
+	current_value?: string | number;
+	limit?: string | number;
+	severity?: string;
+	affected_decisions?: string[];
+}
+
+export interface ApprovalRequiredChange {
+	decisionId: string;
+	change: string;
+	reason?: string;
+}
+
+export interface ApprovalDetail {
+	verdict: "APPROVE" | "REJECT";
+	notes?: string;
+	violations?: ApprovalViolation[];
+	requiredChanges?: ApprovalRequiredChange[];
+}
+
 export interface DecisionDetail extends Decision {
 	strategyFamily: string | null;
 	timeHorizon: TimeHorizon | null;
@@ -84,6 +160,8 @@ export interface DecisionDetail extends Decision {
 	citations: Citation[];
 	execution: ExecutionDetail | null;
 	thesis: ThesisSummary | null;
+	riskApproval?: ApprovalDetail;
+	criticApproval?: ApprovalDetail;
 }
 
 export interface DecisionFilters {

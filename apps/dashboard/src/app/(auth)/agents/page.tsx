@@ -157,7 +157,7 @@ export default function AgentsPage() {
 				</div>
 
 				{/* Detail Panel + Cycle History */}
-				<div className="lg:col-span-1 space-y-4">
+				<div className="lg:col-span-1 space-y-4 lg:sticky lg:top-0 lg:self-start">
 					{/* Streaming Detail */}
 					{selectedAgent && selectedState ? (
 						<AgentStreamingDetail

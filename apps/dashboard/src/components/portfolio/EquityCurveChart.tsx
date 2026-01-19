@@ -105,7 +105,7 @@ const getSeriesOptions = (isDark: boolean) => ({
 
 function transformData(data: PortfolioHistory): SingleValueData[] {
 	return data.timestamp.map((ts, i) => ({
-		time: (ts / 1000) as Time, // Convert ms to seconds for lightweight-charts
+		time: ts as Time, // Alpaca returns Unix epoch in seconds, which lightweight-charts expects
 		value: data.equity[i] ?? 0,
 	}));
 }
