@@ -192,7 +192,7 @@ impl ExecutionServiceImpl {
     /// Build extended constraint context with PDT information.
     ///
     /// Fetches account info and today's filled buy orders from the broker
-    /// to populate PDT status and positions_opened_today for day trade detection.
+    /// to populate PDT status and `positions_opened_today` for day trade detection.
     async fn build_pdt_context(&self) -> crate::risk::ExtendedConstraintContext {
         use crate::risk::constraints::{ExtendedConstraintContext, PdtInfo};
 
@@ -284,7 +284,9 @@ impl ExecutionService for ExecutionServiceImpl {
         let context = self.build_pdt_context().await;
 
         // Validate constraints with PDT context
-        let response = self.validator.validate_with_context(&internal_request, &context);
+        let response = self
+            .validator
+            .validate_with_context(&internal_request, &context);
 
         // Convert to proto response
         let proto_response = CheckConstraintsResponse {
@@ -424,12 +426,12 @@ impl ExecutionService for ExecutionServiceImpl {
         &self,
         _request: Request<GetAccountStateRequest>,
     ) -> Result<Response<GetAccountStateResponse>, Status> {
-        // Get account state (uses cache if fresh)
-        let account_info = self.get_cached_account().await?;
-
         // PDT constants from FINRA rules
         const PDT_EQUITY_THRESHOLD: f64 = 25_000.0;
         const MAX_DAY_TRADES: i32 = 3;
+
+        // Get account state (uses cache if fresh)
+        let account_info = self.get_cached_account().await?;
 
         let last_equity_f64: f64 = account_info.last_equity.to_string().parse().unwrap_or(0.0);
         let under_pdt_threshold = last_equity_f64 < PDT_EQUITY_THRESHOLD;

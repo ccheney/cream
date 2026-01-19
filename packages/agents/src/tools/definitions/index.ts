@@ -118,7 +118,6 @@ export {
 export {
 	GetEnrichedPortfolioStateInputSchema,
 	GetEnrichedPortfolioStateOutputSchema,
-	getEnrichedPortfolioStateTool,
 	GetGreeksInputSchema,
 	GetGreeksOutputSchema,
 	GetOptionChainInputSchema,
@@ -127,6 +126,7 @@ export {
 	GetPortfolioStateOutputSchema,
 	GetQuotesInputSchema,
 	GetQuotesOutputSchema,
+	getEnrichedPortfolioStateTool,
 	getGreeksTool,
 	getOptionChainTool,
 	getPortfolioStateTool,

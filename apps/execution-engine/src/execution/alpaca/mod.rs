@@ -941,21 +941,29 @@ impl AlpacaAdapter {
 
         // Get today's date at market open (4:00 AM ET = 9:00 AM UTC for regular session)
         let today = Utc::now().date_naive();
-        let today_start = format!("{:04}-{:02}-{:02}T00:00:00Z", today.year(), today.month(), today.day());
+        let today_start = format!(
+            "{:04}-{:02}-{:02}T00:00:00Z",
+            today.year(),
+            today.month(),
+            today.day()
+        );
 
         // Query filled orders from today
         // Alpaca's after parameter filters by created_at, and we filter filled orders
-        let path = format!(
-            "/v2/orders?status=filled&after={}&direction=desc&limit=500",
-            today_start
-        );
+        let path = format!("/v2/orders?status=filled&after={today_start}&direction=desc&limit=500");
 
         let responses: Vec<AlpacaOrderResponse> = self.request("GET", &path, None::<&()>).await?;
 
         // Filter for BUY orders that were filled today
-        let today_str = format!("{:04}-{:02}-{:02}", today.year(), today.month(), today.day());
+        let today_str = format!(
+            "{:04}-{:02}-{:02}",
+            today.year(),
+            today.month(),
+            today.day()
+        );
 
-        let symbols: Vec<String> = responses
+        // Deduplicate (a symbol could have multiple buy orders)
+        let unique_symbols: std::collections::HashSet<String> = responses
             .into_iter()
             .filter(|order| {
                 // Must be a buy order
@@ -968,9 +976,6 @@ impl AlpacaAdapter {
             })
             .map(|order| order.symbol)
             .collect();
-
-        // Deduplicate (a symbol could have multiple buy orders)
-        let unique_symbols: std::collections::HashSet<String> = symbols.into_iter().collect();
 
         tracing::debug!(
             symbols = ?unique_symbols,

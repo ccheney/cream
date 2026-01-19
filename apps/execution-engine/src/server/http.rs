@@ -125,10 +125,8 @@ async fn check_constraints(
 /// Build extended constraint context with PDT information.
 ///
 /// Fetches account info and today's filled buy orders from the broker
-/// to populate PDT status and positions_opened_today for day trade detection.
-async fn build_pdt_context(
-    server: &ExecutionServer,
-) -> crate::risk::ExtendedConstraintContext {
+/// to populate PDT status and `positions_opened_today` for day trade detection.
+async fn build_pdt_context(server: &ExecutionServer) -> crate::risk::ExtendedConstraintContext {
     use crate::risk::constraints::{ExtendedConstraintContext, PdtInfo};
 
     let mut context = ExtendedConstraintContext::default();

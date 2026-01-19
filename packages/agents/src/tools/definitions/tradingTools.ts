@@ -10,8 +10,8 @@ import { createTool } from "@mastra/core/tools";
 import { z } from "zod";
 import {
 	type Greeks,
-	getGreeks,
 	getEnrichedPortfolioState,
+	getGreeks,
 	getOptionChain,
 	getPortfolioState,
 	getQuotes,
@@ -189,9 +189,15 @@ const EnrichedPortfolioPositionSchema = z.object({
 		.number()
 		.describe("Unrealized profit/loss = marketValue - (quantity × averageCost)"),
 	positionId: z.string().nullable().describe("Internal position ID. Null if not in database"),
-	decisionId: z.string().nullable().describe("Decision ID that opened this position. Null if manual"),
+	decisionId: z
+		.string()
+		.nullable()
+		.describe("Decision ID that opened this position. Null if manual"),
 	openedAt: z.string().nullable().describe("Position open timestamp ISO 8601. Null if unknown"),
-	holdingDays: z.number().nullable().describe("Days position has been held. Null if openedAt unknown"),
+	holdingDays: z
+		.number()
+		.nullable()
+		.describe("Days position has been held. Null if openedAt unknown"),
 	strategy: PositionStrategySchema.nullable().describe(
 		"Strategy metadata from original decision. Null if no decision linked"
 	),
@@ -206,9 +212,9 @@ const EnrichedPortfolioPositionSchema = z.object({
 const GetEnrichedPortfolioStateInputSchema = z.object({});
 
 const GetEnrichedPortfolioStateOutputSchema = z.object({
-	positions: z.array(EnrichedPortfolioPositionSchema).describe(
-		"All current positions with full strategy, risk, and thesis metadata"
-	),
+	positions: z
+		.array(EnrichedPortfolioPositionSchema)
+		.describe("All current positions with full strategy, risk, and thesis metadata"),
 	buyingPower: z.number().describe("Available cash for new trades. Consider margin requirements"),
 	totalEquity: z.number().describe("Total account value = cash + positions market value"),
 	dayPnL: z.number().describe("Profit/loss for current trading day across all positions"),

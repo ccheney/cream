@@ -27,6 +27,7 @@ use super::types::ExtendedConstraintContext;
 /// - Provide better error messages to agents
 /// - Avoid wasted API calls
 /// - Give agents context to make better decisions
+#[must_use]
 pub fn check_pdt_constraints(
     request: &ConstraintCheckRequest,
     context: &ExtendedConstraintContext,
@@ -42,8 +43,9 @@ pub fn check_pdt_constraints(
         return None;
     };
 
-    let equity_threshold = Decimal::try_from(config.equity_threshold).unwrap_or(Decimal::new(25_000, 0));
-    let max_day_trades = config.max_day_trades as i32;
+    let equity_threshold =
+        Decimal::try_from(config.equity_threshold).unwrap_or_else(|_| Decimal::new(25_000, 0));
+    let max_day_trades = config.max_day_trades.cast_signed();
 
     // Check if account is PDT-restricted
     if !pdt.is_pdt_restricted(equity_threshold) {
@@ -81,7 +83,7 @@ pub fn check_pdt_constraints(
                 "day_trades_used={}, proposed={}, total={}",
                 pdt.day_trade_count, potential_day_trades, total_day_trades
             ),
-            limit: format!("max_day_trades={}", max_day_trades),
+            limit: format!("max_day_trades={max_day_trades}"),
         });
     }
 
@@ -94,12 +96,14 @@ pub fn check_pdt_constraints(
                 "This trade will use your last available day trade. After this, no more day trades \
                  are allowed until the rolling 5-day window resets or account equity reaches $25,000. \
                  Current day trades: {}/{}, equity: ${:.2}",
-                pdt.day_trade_count, max_day_trades, pdt.last_equity.round_dp(2)
+                pdt.day_trade_count,
+                max_day_trades,
+                pdt.last_equity.round_dp(2)
             ),
             instrument_id: String::new(),
             field_path: "plan.decisions".to_string(),
-            observed: format!("day_trades_after={}", total_day_trades),
-            limit: format!("max_day_trades={}", max_day_trades),
+            observed: format!("day_trades_after={total_day_trades}"),
+            limit: format!("max_day_trades={max_day_trades}"),
         });
     }
 
@@ -161,8 +165,9 @@ pub fn would_buy_create_pdt_risk(
         return false;
     };
 
-    let equity_threshold = Decimal::try_from(config.equity_threshold).unwrap_or(Decimal::new(25_000, 0));
-    let max_day_trades = config.max_day_trades as i32;
+    let equity_threshold =
+        Decimal::try_from(config.equity_threshold).unwrap_or_else(|_| Decimal::new(25_000, 0));
+    let max_day_trades = config.max_day_trades.cast_signed();
 
     // Account is not PDT restricted
     if !pdt.is_pdt_restricted(equity_threshold) {
@@ -234,15 +239,17 @@ mod tests {
         last_equity: Decimal,
         positions_opened_today: Vec<&str>,
     ) -> ExtendedConstraintContext {
-        let mut ctx = ExtendedConstraintContext::default();
-        ctx.pdt = Some(PdtInfo {
-            day_trade_count,
-            is_pattern_day_trader: false,
-            last_equity,
-            equity: last_equity,
-            daytrading_buying_power: Decimal::ZERO,
-            potential_day_trades: 0,
-        });
+        let mut ctx = ExtendedConstraintContext {
+            pdt: Some(PdtInfo {
+                day_trade_count,
+                is_pattern_day_trader: false,
+                last_equity,
+                equity: last_equity,
+                daytrading_buying_power: Decimal::ZERO,
+                potential_day_trades: 0,
+            }),
+            ..Default::default()
+        };
         for symbol in positions_opened_today {
             ctx.positions_opened_today.insert(symbol.to_string(), true);
         }
@@ -303,8 +310,9 @@ mod tests {
         let context = make_pdt_context(3, Decimal::new(20_000, 0), vec!["AAPL"]);
 
         let result = check_pdt_constraints(&request, &context, &config);
-        assert!(result.is_some());
-        let violation = result.unwrap();
+        let Some(violation) = result else {
+            panic!("expected PDT_LIMIT_EXCEEDED violation");
+        };
         assert_eq!(violation.code, "PDT_LIMIT_EXCEEDED");
         assert_eq!(violation.severity, ViolationSeverity::Error);
     }
@@ -323,8 +331,9 @@ mod tests {
         let context = make_pdt_context(2, Decimal::new(20_000, 0), vec!["AAPL"]);
 
         let result = check_pdt_constraints(&request, &context, &config);
-        assert!(result.is_some());
-        let violation = result.unwrap();
+        let Some(violation) = result else {
+            panic!("expected PDT_LIMIT_WARNING violation");
+        };
         assert_eq!(violation.code, "PDT_LIMIT_WARNING");
         assert_eq!(violation.severity, ViolationSeverity::Warning);
     }
@@ -381,8 +390,9 @@ mod tests {
         let context = make_pdt_context(2, Decimal::new(20_000, 0), vec!["AAPL", "MSFT"]);
 
         let result = check_pdt_constraints(&request, &context, &config);
-        assert!(result.is_some());
-        let violation = result.unwrap();
+        let Some(violation) = result else {
+            panic!("expected PDT_LIMIT_EXCEEDED violation for multiple day trades");
+        };
         assert_eq!(violation.code, "PDT_LIMIT_EXCEEDED");
     }
 }

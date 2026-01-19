@@ -29,7 +29,6 @@ export {
 	// Enriched portfolio tool
 	GetEnrichedPortfolioStateInputSchema,
 	GetEnrichedPortfolioStateOutputSchema,
-	getEnrichedPortfolioStateTool,
 	GetGreeksInputSchema,
 	GetGreeksOutputSchema,
 	GetMarketSnapshotsInputSchema,
@@ -53,6 +52,7 @@ export {
 	GraphRAGQueryOutputSchema,
 	// Academic paper tools
 	getAcademicPaperTool,
+	getEnrichedPortfolioStateTool,
 	getGreeksTool,
 	getMarketSnapshotsTool,
 	getOptionChainTool,
@@ -87,13 +87,13 @@ export {
 	type AnalyzeContentParams,
 	type AnalyzeContentResult,
 	analyzeContent,
-	enrichPositions,
 	type ExtractNewsContextParams,
 	type ExtractNewsContextResult,
+	enrichPositions,
 	extractNewsContext,
-	getEnrichedPortfolioState,
 	type GraphRAGQueryParams,
 	type GraphRAGQueryResult,
+	getEnrichedPortfolioState,
 	// FRED implementations
 	getFredEconomicCalendar,
 	getGreeks,

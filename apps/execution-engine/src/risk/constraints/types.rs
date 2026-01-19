@@ -106,7 +106,7 @@ impl PdtInfo {
 
     /// Check if the account would exceed the day trade limit with the proposed trades.
     #[must_use]
-    pub fn would_exceed_day_trade_limit(&self, max_day_trades: i32) -> bool {
+    pub const fn would_exceed_day_trade_limit(&self, max_day_trades: i32) -> bool {
         self.day_trade_count + self.potential_day_trades > max_day_trades
     }
 

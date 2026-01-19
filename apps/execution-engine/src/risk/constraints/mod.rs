@@ -59,7 +59,7 @@ impl ConstraintValidator {
 
     /// Create a new validator with all configuration options.
     #[must_use]
-    pub fn with_risk_limits(
+    pub const fn with_risk_limits(
         limits: ExposureLimits,
         risk_limits: RiskLimitsConfig,
         sizing_sanity_threshold: Decimal,

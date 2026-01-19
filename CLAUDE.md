@@ -82,8 +82,8 @@ buf generate # Protobuf → TS + Rust stubs
 ## Important
 
 - **Do Your Own Exploration** - Verify assumptions against actual codebase, tests, and documentation
-- **Use Context7 for Documentation** - Always query context7 for up-to-date library/API docs (Drizzle, PostgreSQL extensions, pg driver etc.)
-- **Ground Assumptions with Research** - Use web search to verify syntax, patterns, version compatibility, and best practices instead of making assumptions
+- **Use Context7 for Documentation** - Always query context7 for up-to-date library/API docs
+- **Ground Assumptions with Research** - Use web search to verify syntax, patterns, version compatibility, and best practices instead of making assumptions, always verify today's date.
 
 ## Code Conventions
 

@@ -302,14 +302,10 @@ export class PositionsRepository {
 			});
 
 			const hasDecisionData =
-				row.strategyFamily !== null ||
-				row.timeHorizon !== null ||
-				row.confidenceScore !== null;
+				row.strategyFamily !== null || row.timeHorizon !== null || row.confidenceScore !== null;
 
 			const hasThesisData =
-				row.thesisState !== null ||
-				row.thesisEntryThesis !== null ||
-				row.thesisConviction !== null;
+				row.thesisState !== null || row.thesisEntryThesis !== null || row.thesisConviction !== null;
 
 			return {
 				...basePosition,
