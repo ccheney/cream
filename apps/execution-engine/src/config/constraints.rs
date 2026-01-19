@@ -20,6 +20,9 @@ pub struct ConstraintsConfig {
     /// Per-trade risk limits.
     #[serde(default)]
     pub risk_limits: RiskLimitsConstraints,
+    /// Pattern Day Trader (PDT) constraints.
+    #[serde(default)]
+    pub pdt: PdtConstraints,
 }
 
 /// Per-instrument constraint limits.
@@ -216,6 +219,57 @@ const fn default_min_risk_reward_ratio() -> f64 {
 
 const fn default_sizing_sanity_threshold() -> f64 {
     3.0
+}
+
+/// Pattern Day Trader (PDT) constraint configuration.
+///
+/// FINRA Rule 4210 defines a pattern day trader as any customer who executes
+/// four or more day trades within five business days, provided the number of
+/// day trades represents more than 6% of total trades in that period.
+///
+/// Accounts with equity below $25,000 are restricted to 3 day trades per
+/// rolling 5 business day period.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct PdtConstraints {
+    /// Enable PDT constraint enforcement.
+    #[serde(default = "default_pdt_enabled")]
+    pub enabled: bool,
+    /// Minimum equity threshold to be exempt from PDT restrictions ($25,000).
+    #[serde(default = "default_pdt_equity_threshold")]
+    pub equity_threshold: f64,
+    /// Maximum day trades allowed in rolling 5-day period when under threshold.
+    #[serde(default = "default_max_day_trades")]
+    pub max_day_trades: u32,
+    /// Rolling window in business days for day trade counting.
+    #[serde(default = "default_rolling_window_days")]
+    pub rolling_window_days: u32,
+}
+
+impl Default for PdtConstraints {
+    fn default() -> Self {
+        Self {
+            enabled: default_pdt_enabled(),
+            equity_threshold: default_pdt_equity_threshold(),
+            max_day_trades: default_max_day_trades(),
+            rolling_window_days: default_rolling_window_days(),
+        }
+    }
+}
+
+const fn default_pdt_enabled() -> bool {
+    true
+}
+
+const fn default_pdt_equity_threshold() -> f64 {
+    25_000.0
+}
+
+const fn default_max_day_trades() -> u32 {
+    3
+}
+
+const fn default_rolling_window_days() -> u32 {
+    5
 }
 
 #[cfg(test)]

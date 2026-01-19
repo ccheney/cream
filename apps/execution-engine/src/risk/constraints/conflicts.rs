@@ -114,7 +114,6 @@ fn check_position_conflicts(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::risk::constraints::types::BuyingPowerInfo;
 
     fn empty_context() -> ExtendedConstraintContext {
         ExtendedConstraintContext::default()
@@ -188,12 +187,7 @@ mod tests {
             vec![(0, Action::Sell, Direction::Short)],
         );
 
-        let mut context = ExtendedConstraintContext {
-            buying_power: BuyingPowerInfo::default(),
-            current_positions: HashMap::new(),
-            greeks: None,
-            historical_position_sizes: vec![],
-        };
+        let mut context = ExtendedConstraintContext::default();
         context
             .current_positions
             .insert("AAPL".to_string(), Decimal::ZERO);

@@ -63,6 +63,60 @@ impl BuyingPowerInfo {
     }
 }
 
+/// Pattern Day Trader (PDT) status information.
+#[derive(Debug, Clone)]
+pub struct PdtInfo {
+    /// Current day trade count in rolling 5-day window.
+    pub day_trade_count: i32,
+    /// Whether the account is flagged as a pattern day trader.
+    pub is_pattern_day_trader: bool,
+    /// Previous day's closing equity (used for $25k threshold check).
+    pub last_equity: Decimal,
+    /// Current account equity.
+    pub equity: Decimal,
+    /// Day trading buying power (4x equity for PDT accounts).
+    pub daytrading_buying_power: Decimal,
+    /// Number of day trades this order would add (0 or 1 per position being closed same-day).
+    pub potential_day_trades: i32,
+}
+
+impl Default for PdtInfo {
+    fn default() -> Self {
+        Self {
+            day_trade_count: 0,
+            is_pattern_day_trader: false,
+            last_equity: Decimal::ZERO,
+            equity: Decimal::ZERO,
+            daytrading_buying_power: Decimal::ZERO,
+            potential_day_trades: 0,
+        }
+    }
+}
+
+impl PdtInfo {
+    /// Check if the account is PDT-restricted (under $25k and not already flagged as PDT).
+    ///
+    /// Per FINRA rules:
+    /// - Accounts under $25k equity cannot make more than 3 day trades in 5 business days
+    /// - Accounts flagged as PDT with <$25k are restricted to liquidation-only
+    #[must_use]
+    pub fn is_pdt_restricted(&self, equity_threshold: Decimal) -> bool {
+        self.last_equity < equity_threshold
+    }
+
+    /// Check if the account would exceed the day trade limit with the proposed trades.
+    #[must_use]
+    pub fn would_exceed_day_trade_limit(&self, max_day_trades: i32) -> bool {
+        self.day_trade_count + self.potential_day_trades > max_day_trades
+    }
+
+    /// Get remaining day trades available.
+    #[must_use]
+    pub fn remaining_day_trades(&self, max_day_trades: i32) -> i32 {
+        (max_day_trades - self.day_trade_count).max(0)
+    }
+}
+
 /// Extended request with optional Greeks and buying power.
 #[derive(Debug, Clone, Default)]
 pub struct ExtendedConstraintContext {
@@ -75,6 +129,10 @@ pub struct ExtendedConstraintContext {
     /// Historical position sizes for sizing sanity check.
     /// List of recent position notional values.
     pub historical_position_sizes: Vec<Decimal>,
+    /// Pattern Day Trader (PDT) status.
+    pub pdt: Option<PdtInfo>,
+    /// Symbols that were opened today (used for day trade detection).
+    pub positions_opened_today: HashMap<String, bool>,
 }
 
 /// Sizing sanity warning (not an error, just a warning).

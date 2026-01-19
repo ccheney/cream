@@ -10,6 +10,7 @@
 mod buying_power;
 mod conflicts;
 mod options;
+mod pdt;
 mod per_instrument;
 mod portfolio;
 pub mod risk_limits;
@@ -25,12 +26,15 @@ use crate::models::{
     ViolationSeverity,
 };
 
+pub use pdt::{check_pdt_constraints, would_buy_create_pdt_risk};
 pub use risk_limits::{
     RiskLimitsConfig, calculate_per_trade_risk, calculate_risk_reward_ratio,
     validate_per_trade_risk, validate_risk_reward_ratio,
 };
 pub use sizing_sanity::check_sizing_sanity;
-pub use types::{BuyingPowerInfo, ExtendedConstraintContext, GreeksSnapshot, SizingSanityWarning};
+pub use types::{
+    BuyingPowerInfo, ExtendedConstraintContext, GreeksSnapshot, PdtInfo, SizingSanityWarning,
+};
 
 /// Validates decision plans against risk constraints.
 #[derive(Debug, Clone)]
@@ -38,6 +42,7 @@ pub struct ConstraintValidator {
     limits: ExposureLimits,
     risk_limits: RiskLimitsConfig,
     sizing_sanity_threshold: Decimal,
+    pdt_config: crate::config::PdtConstraints,
 }
 
 impl ConstraintValidator {
@@ -48,20 +53,23 @@ impl ConstraintValidator {
             limits,
             risk_limits: RiskLimitsConfig::default(),
             sizing_sanity_threshold: Decimal::new(30, 1), // 3.0
+            pdt_config: crate::config::PdtConstraints::default(),
         }
     }
 
     /// Create a new validator with all configuration options.
     #[must_use]
-    pub const fn with_risk_limits(
+    pub fn with_risk_limits(
         limits: ExposureLimits,
         risk_limits: RiskLimitsConfig,
         sizing_sanity_threshold: Decimal,
+        pdt_config: crate::config::PdtConstraints,
     ) -> Self {
         Self {
             limits,
             risk_limits,
             sizing_sanity_threshold,
+            pdt_config,
         }
     }
 
@@ -123,7 +131,9 @@ impl ConstraintValidator {
             Decimal::try_from(constraints.risk_limits.sizing_sanity_threshold)
                 .unwrap_or_else(|_| Decimal::new(30, 1));
 
-        Self::with_risk_limits(limits, risk_limits, sizing_sanity_threshold)
+        let pdt_config = constraints.pdt.clone();
+
+        Self::with_risk_limits(limits, risk_limits, sizing_sanity_threshold, pdt_config)
     }
 
     /// Validate a decision plan against constraints.
@@ -284,6 +294,11 @@ impl ConstraintValidator {
         if let Some(greeks) = &context.greeks {
             let greeks_violations = options::check_greeks_limits(greeks, &self.limits);
             violations.extend(greeks_violations);
+        }
+
+        // Check PDT constraints
+        if let Some(v) = pdt::check_pdt_constraints(request, context, &self.pdt_config) {
+            violations.push(v);
         }
 
         if violations.is_empty() {
