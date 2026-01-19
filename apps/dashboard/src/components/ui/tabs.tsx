@@ -17,6 +17,7 @@ import {
 	type ReactNode,
 	useCallback,
 	useContext,
+	useEffect,
 	useId,
 	useState,
 } from "react";
@@ -224,9 +225,9 @@ export const Tab = forwardRef<HTMLButtonElement, TabProps>(
 		const isActive = activeTab === value;
 
 		// Register this tab on mount
-		useState(() => {
+		useEffect(() => {
 			registerTab(value);
-		});
+		}, [registerTab, value]);
 
 		return (
 			<button
