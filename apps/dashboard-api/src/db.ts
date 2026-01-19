@@ -17,7 +17,6 @@ import {
 	CorporateActionsRepository,
 	CyclesRepository,
 	DecisionsRepository,
-	FactorZooRepository,
 	FilingSyncRunsRepository,
 	FilingsRepository,
 	FundamentalsRepository,
@@ -123,13 +122,6 @@ export function getConfigVersionsRepo(): ConfigVersionsRepository {
  */
 export function getThesesRepo(): ThesisStateRepository {
 	return new ThesisStateRepository();
-}
-
-/**
- * Get factor zoo repository
- */
-export function getFactorZooRepo(): FactorZooRepository {
-	return new FactorZooRepository();
 }
 
 /**

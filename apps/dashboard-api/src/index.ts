@@ -39,7 +39,6 @@ import {
 	cyclesRoutes,
 	decisionsRoutes,
 	economicCalendarRoutes,
-	factorZooRoutes,
 	filingsRoutes,
 	marketRoutes,
 	optionsRoutes,
@@ -216,7 +215,6 @@ app.use("/api/market/*", requireAuth());
 app.use("/api/risk/*", requireAuth());
 app.use("/api/theses/*", requireAuth());
 app.use("/api/preferences/*", requireAuth());
-app.use("/api/factor-zoo/*", requireAuth());
 app.use("/api/options/*", requireAuth());
 app.use("/api/filings/*", requireAuth());
 app.use("/api/snapshots/*", requireAuth());
@@ -244,7 +242,6 @@ app.route("/api/options", optionsRoutes);
 app.route("/api/risk", riskRoutes);
 app.route("/api/theses", thesesRoutes);
 app.route("/api/preferences", preferencesRoutes);
-app.route("/api/factor-zoo", factorZooRoutes);
 app.route("/api/filings", filingsRoutes);
 app.route("/api/snapshots", snapshotsRoutes);
 app.route("/api/economic-calendar", economicCalendarRoutes);
