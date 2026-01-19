@@ -133,7 +133,6 @@ export const FactorSchema = z.object({
 	author: z.string(),
 
 	// Implementation
-	pythonModule: z.string().nullable(),
 	typescriptModule: z.string().nullable(),
 
 	// Complexity metrics (AlphaForge regularization)

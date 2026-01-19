@@ -28,7 +28,6 @@ function createMockFactor(overrides: Partial<Factor> = {}): Factor {
 		status: "active",
 		version: 1,
 		author: "test",
-		pythonModule: null,
 		typescriptModule: null,
 		symbolicLength: null,
 		parameterCount: null,

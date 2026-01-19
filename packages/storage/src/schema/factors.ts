@@ -57,7 +57,6 @@ export const factors = pgTable(
 		status: factorStatusEnum("status").notNull().default("research"),
 		version: integer("version").notNull().default(1),
 		author: text("author").notNull().default("claude-code"),
-		pythonModule: text("python_module"),
 		typescriptModule: text("typescript_module"),
 		symbolicLength: integer("symbolic_length"),
 		parameterCount: integer("parameter_count"),
