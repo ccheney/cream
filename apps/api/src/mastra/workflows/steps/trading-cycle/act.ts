@@ -10,12 +10,17 @@ import type { ExecutionContext } from "@cream/domain";
 import { isTest } from "@cream/domain";
 import {
 	Action,
+	Direction,
 	Environment,
 	InstrumentSchema,
 	InstrumentType,
+	OptionLegSchema,
+	PositionIntent,
 	SizeSchema,
 	SizeUnit,
 	StrategyFamily,
+	ThesisState,
+	TimeHorizon,
 } from "@cream/schema-gen/cream/v1/common";
 import {
 	DecisionPlanSchema,
@@ -46,7 +51,7 @@ function toProtobufAction(action: Decision["action"]): Action {
 		case "HOLD":
 			return Action.HOLD;
 		case "CLOSE":
-			return Action.SELL; // CLOSE maps to SELL in proto
+			return Action.CLOSE;
 		default:
 			return Action.UNSPECIFIED;
 	}
@@ -61,6 +66,10 @@ function toProtobufSizeUnit(unit: string): SizeUnit {
 			return SizeUnit.SHARES;
 		case "CONTRACTS":
 			return SizeUnit.CONTRACTS;
+		case "DOLLARS":
+			return SizeUnit.DOLLARS;
+		case "PCT_EQUITY":
+			return SizeUnit.PCT_EQUITY;
 		default:
 			return SizeUnit.UNSPECIFIED;
 	}
@@ -71,16 +80,98 @@ function toProtobufSizeUnit(unit: string): SizeUnit {
  */
 function toProtobufStrategyFamily(family: string): StrategyFamily {
 	switch (family.toUpperCase()) {
-		case "TREND":
-			return StrategyFamily.TREND;
-		case "MEAN_REVERSION":
-			return StrategyFamily.MEAN_REVERSION;
-		case "EVENT_DRIVEN":
-			return StrategyFamily.EVENT_DRIVEN;
-		case "VOLATILITY":
-			return StrategyFamily.VOLATILITY;
+		case "EQUITY_LONG":
+			return StrategyFamily.EQUITY_LONG;
+		case "EQUITY_SHORT":
+			return StrategyFamily.EQUITY_SHORT;
+		case "OPTION_LONG":
+			return StrategyFamily.OPTION_LONG;
+		case "OPTION_SHORT":
+			return StrategyFamily.OPTION_SHORT;
+		case "VERTICAL_SPREAD":
+			return StrategyFamily.VERTICAL_SPREAD;
+		case "IRON_CONDOR":
+			return StrategyFamily.IRON_CONDOR;
+		case "STRADDLE":
+			return StrategyFamily.STRADDLE;
+		case "STRANGLE":
+			return StrategyFamily.STRANGLE;
+		case "CALENDAR_SPREAD":
+			return StrategyFamily.CALENDAR_SPREAD;
 		default:
 			return StrategyFamily.UNSPECIFIED;
+	}
+}
+
+/**
+ * Map workflow direction string to protobuf Direction enum
+ */
+function toProtobufDirection(direction: Decision["direction"]): Direction {
+	switch (direction) {
+		case "LONG":
+			return Direction.LONG;
+		case "SHORT":
+			return Direction.SHORT;
+		case "FLAT":
+			return Direction.FLAT;
+		default:
+			return Direction.UNSPECIFIED;
+	}
+}
+
+/**
+ * Map workflow time horizon string to protobuf TimeHorizon enum
+ */
+function toProtobufTimeHorizon(horizon: string): TimeHorizon {
+	switch (horizon.toUpperCase()) {
+		case "INTRADAY":
+			return TimeHorizon.INTRADAY;
+		case "SWING":
+			return TimeHorizon.SWING;
+		case "POSITION":
+			return TimeHorizon.POSITION;
+		default:
+			return TimeHorizon.UNSPECIFIED;
+	}
+}
+
+/**
+ * Map workflow thesis state string to protobuf ThesisState enum
+ */
+function toProtobufThesisState(state: string): ThesisState {
+	switch (state.toUpperCase()) {
+		case "WATCHING":
+			return ThesisState.WATCHING;
+		case "ENTERED":
+			return ThesisState.ENTERED;
+		case "ADDING":
+			return ThesisState.ADDING;
+		case "MANAGING":
+			return ThesisState.MANAGING;
+		case "EXITING":
+			return ThesisState.EXITING;
+		case "CLOSED":
+			return ThesisState.CLOSED;
+		default:
+			return ThesisState.UNSPECIFIED;
+	}
+}
+
+/**
+ * Map workflow position intent string to protobuf PositionIntent enum
+ */
+function toProtobufPositionIntent(intent: string): PositionIntent {
+	switch (intent.toUpperCase()) {
+		case "BUY_TO_OPEN":
+			return PositionIntent.BUY_TO_OPEN;
+		case "BUY_TO_CLOSE":
+			return PositionIntent.BUY_TO_CLOSE;
+		case "SELL_TO_OPEN":
+			return PositionIntent.SELL_TO_OPEN;
+		case "SELL_TO_CLOSE":
+			return PositionIntent.SELL_TO_CLOSE;
+		default:
+			return PositionIntent.UNSPECIFIED;
 	}
 }
 
@@ -101,10 +192,8 @@ function toProtobufEnvironment(env: string): Environment {
 /**
  * Convert a workflow Decision to protobuf Decision
  *
- * Note: The workflow uses percentage-based sizing (PCT_EQUITY) but the proto
- * expects absolute quantities (SHARES/CONTRACTS). We pass the percentage value
- * as quantity (x100 for precision) with UNSPECIFIED unit to signal this.
- * The Rust execution engine should handle the conversion to actual shares.
+ * Now supports all size units including PCT_EQUITY and DOLLARS directly.
+ * Also supports multi-leg options strategies with legs and netLimitPrice.
  */
 function toProtobufDecision(decision: Decision) {
 	// Convert percentage to a scaled integer (e.g., 5.5% -> 55)
@@ -114,10 +203,14 @@ function toProtobufDecision(decision: Decision) {
 			? Math.round(decision.size.value * 10)
 			: Math.round(decision.size.value);
 
-	const sizeUnit =
-		decision.size.unit.toUpperCase() === "PCT_EQUITY"
-			? SizeUnit.UNSPECIFIED // Signal percentage-based sizing
-			: toProtobufSizeUnit(decision.size.unit);
+	// Convert option legs for multi-leg strategies
+	const legs = (decision.legs ?? []).map((leg) =>
+		create(OptionLegSchema, {
+			symbol: leg.symbol,
+			ratioQty: leg.ratioQty,
+			positionIntent: toProtobufPositionIntent(leg.positionIntent),
+		})
+	);
 
 	return create(DecisionSchema, {
 		instrument: create(InstrumentSchema, {
@@ -127,12 +220,19 @@ function toProtobufDecision(decision: Decision) {
 		action: toProtobufAction(decision.action),
 		size: create(SizeSchema, {
 			quantity: scaledQuantity,
-			unit: sizeUnit,
+			unit: toProtobufSizeUnit(decision.size.unit),
 			targetPositionQuantity: 0, // Calculated by execution engine
 		}),
 		strategyFamily: toProtobufStrategyFamily(decision.strategyFamily),
 		rationale: decision.rationale?.summary ?? "",
 		confidence: 0.8, // Default confidence - not tracked in workflow
+		direction: toProtobufDirection(decision.direction),
+		timeHorizon: toProtobufTimeHorizon(decision.timeHorizon),
+		thesisState: toProtobufThesisState(decision.thesisState),
+		bullishFactors: decision.rationale?.bullishFactors ?? [],
+		bearishFactors: decision.rationale?.bearishFactors ?? [],
+		legs,
+		netLimitPrice: decision.netLimitPrice,
 	});
 }
 

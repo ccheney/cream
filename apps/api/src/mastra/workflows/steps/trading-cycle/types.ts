@@ -210,6 +210,18 @@ export interface Research {
 // Decision Types
 // ============================================
 
+/**
+ * Option leg for multi-leg strategies (spreads, iron condors, etc.)
+ */
+export interface OptionLeg {
+	/** OCC option symbol (e.g., "AAPL250117P00190000") */
+	symbol: string;
+	/** Signed ratio: positive=buy, negative=sell */
+	ratioQty: number;
+	/** Position intent for the leg */
+	positionIntent: "BUY_TO_OPEN" | "BUY_TO_CLOSE" | "SELL_TO_OPEN" | "SELL_TO_CLOSE";
+}
+
 export interface Decision {
 	decisionId: string;
 	instrumentId: string;
@@ -226,6 +238,10 @@ export interface Decision {
 		memoryReferences: string[];
 	};
 	thesisState: string;
+	/** Option legs for multi-leg strategies (empty for single-leg orders) */
+	legs?: OptionLeg[];
+	/** Net limit price for multi-leg orders (debit positive, credit negative) */
+	netLimitPrice?: number;
 }
 
 export interface WorkflowDecisionPlan {

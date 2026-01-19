@@ -115,6 +115,20 @@ export const RationaleSchema = z.object({
 	memoryReferences: z.array(z.string()),
 });
 
+export const OptionLegSchema = z.object({
+	symbol: z.string().describe("OCC option symbol (e.g., AAPL250117P00190000)"),
+	ratioQty: z
+		.number()
+		.int()
+		.describe("Signed ratio: positive=buy, negative=sell"),
+	positionIntent: z.enum([
+		"BUY_TO_OPEN",
+		"BUY_TO_CLOSE",
+		"SELL_TO_OPEN",
+		"SELL_TO_CLOSE",
+	]),
+});
+
 export const DecisionSchema = z.object({
 	decisionId: z.string(),
 	instrumentId: z.string(),
@@ -137,6 +151,14 @@ export const DecisionSchema = z.object({
 	timeHorizon: z.enum(["INTRADAY", "SWING", "POSITION"]),
 	rationale: RationaleSchema,
 	thesisState: z.enum(["WATCHING", "ENTERED", "ADDING", "MANAGING", "EXITING", "CLOSED"]),
+	legs: z
+		.array(OptionLegSchema)
+		.optional()
+		.describe("Option legs for multi-leg strategies (e.g., spreads, iron condors)"),
+	netLimitPrice: z
+		.number()
+		.optional()
+		.describe("Net limit price for multi-leg orders (debit positive, credit negative)"),
 });
 
 export const DecisionPlanSchema = z.object({
@@ -147,10 +169,10 @@ export const DecisionPlanSchema = z.object({
 });
 
 // ============================================
-// Risk Manager Schemas
+// Shared Approval Schemas
 // ============================================
 
-export const ConstraintViolationSchema = z.object({
+export const ApprovalViolationSchema = z.object({
 	constraint: z.string(),
 	current_value: z.union([z.string(), z.number()]),
 	limit: z.union([z.string(), z.number()]),
@@ -158,53 +180,28 @@ export const ConstraintViolationSchema = z.object({
 	affected_decisions: z.array(z.string()),
 });
 
-export const RequiredChangeSchema = z.object({
+export const ApprovalRequiredChangeSchema = z.object({
 	decisionId: z.string(),
 	change: z.string(),
 	reason: z.string(),
 });
 
-export const RiskManagerOutputSchema = z.object({
+export const ApprovalOutputSchema = z.object({
 	verdict: z.enum(["APPROVE", "REJECT"]),
-	violations: z.array(ConstraintViolationSchema),
-	required_changes: z.array(RequiredChangeSchema),
-	risk_notes: z.string(),
+	violations: z.array(ApprovalViolationSchema),
+	required_changes: z.array(ApprovalRequiredChangeSchema),
+	notes: z.string(),
 });
 
-// ============================================
-// Critic Schemas
-// ============================================
+// Risk Manager uses the shared approval schema
+export const RiskManagerOutputSchema = ApprovalOutputSchema;
 
-export const InconsistencySchema = z.object({
-	decisionId: z.string(),
-	issue: z.string(),
-	expected: z.string(),
-	found: z.string(),
-});
+// Critic uses the shared approval schema
+export const CriticOutputSchema = ApprovalOutputSchema;
 
-export const MissingJustificationSchema = z.object({
-	decisionId: z.string(),
-	missing: z.string(),
-});
-
-export const HallucinationFlagSchema = z.object({
-	decisionId: z.string(),
-	claim: z.string(),
-	evidence_status: z.enum(["NOT_FOUND", "CONTRADICTED"]),
-});
-
-export const CriticRequiredChangeSchema = z.object({
-	decisionId: z.string(),
-	change: z.string(),
-});
-
-export const CriticOutputSchema = z.object({
-	verdict: z.enum(["APPROVE", "REJECT"]),
-	inconsistencies: z.array(InconsistencySchema),
-	missing_justifications: z.array(MissingJustificationSchema),
-	hallucination_flags: z.array(HallucinationFlagSchema),
-	required_changes: z.array(CriticRequiredChangeSchema),
-});
+// Legacy exports for backwards compatibility
+export const ConstraintViolationSchema = ApprovalViolationSchema;
+export const RequiredChangeSchema = ApprovalRequiredChangeSchema;
 
 // ============================================
 // Grounding Agent Schemas
