@@ -706,7 +706,7 @@ impl AlpacaAdapter {
     /// # Alpaca API Constraints
     ///
     /// - Max 4 legs per order
-    /// - ratio_qty GCD must be 1
+    /// - `ratio_qty` GCD must be 1
     /// - Order type: only `limit` for multi-leg
     /// - Time in force: `day` only for options
     ///
@@ -715,12 +715,13 @@ impl AlpacaAdapter {
     /// Returns an error if the decision doesn't have valid multi-leg data or if
     /// the API call fails.
     async fn submit_multi_leg_order(&self, decision: &Decision) -> Result<OrderState, AlpacaError> {
-        let order_request = AlpacaMultiLegOrderRequest::from_decision(decision).ok_or_else(|| {
-            AlpacaError::InvalidOrder(
-                "Decision missing required multi-leg order data (legs or net_limit_price)"
-                    .to_string(),
-            )
-        })?;
+        let order_request =
+            AlpacaMultiLegOrderRequest::from_decision(decision).ok_or_else(|| {
+                AlpacaError::InvalidOrder(
+                    "Decision missing required multi-leg order data (legs or net_limit_price)"
+                        .to_string(),
+                )
+            })?;
 
         tracing::info!(
             decision_id = %decision.decision_id,
@@ -738,7 +739,7 @@ impl AlpacaAdapter {
     }
 
     /// Determine if a decision should be routed as a multi-leg order.
-    fn is_multi_leg_order(decision: &Decision) -> bool {
+    const fn is_multi_leg_order(decision: &Decision) -> bool {
         !decision.legs.is_empty()
             && matches!(
                 decision.strategy_family,

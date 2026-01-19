@@ -83,7 +83,9 @@ impl From<AlpacaError> for BrokerError {
                 Self::Http(msg)
             }
             AlpacaError::Api { code, message } => Self::Api { code, message },
-            AlpacaError::OrderRejected(msg) => Self::OrderRejected(msg),
+            AlpacaError::OrderRejected(msg) | AlpacaError::InvalidOrder(msg) => {
+                Self::OrderRejected(msg)
+            }
             AlpacaError::AuthenticationFailed => Self::AuthenticationFailed,
             AlpacaError::RateLimited { retry_after_secs } => Self::RateLimited { retry_after_secs },
             AlpacaError::EnvironmentMismatch { expected, actual } => {
@@ -92,7 +94,6 @@ impl From<AlpacaError> for BrokerError {
             AlpacaError::MaxRetriesExceeded { attempts: _ } => {
                 Self::Http("Max retries exceeded".to_string())
             }
-            AlpacaError::InvalidOrder(msg) => Self::OrderRejected(msg),
         }
     }
 }

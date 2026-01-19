@@ -28,6 +28,7 @@ pub fn decimal_to_i64(d: rust_decimal::Decimal) -> i64 {
 }
 
 /// Convert proto `DecisionPlan` to internal format.
+#[allow(clippy::too_many_lines)]
 pub fn convert_decision_plan(
     proto: &proto::cream::v1::DecisionPlan,
 ) -> crate::models::DecisionPlan {
@@ -100,10 +101,13 @@ pub fn convert_decision_plan(
             // Extract strategy family (position type)
             let strategy_family =
                 match proto::cream::v1::StrategyFamily::try_from(d.strategy_family) {
-                    Ok(proto::cream::v1::StrategyFamily::EquityLong) => StrategyFamily::EquityLong,
-                    Ok(proto::cream::v1::StrategyFamily::EquityShort) => StrategyFamily::EquityShort,
+                    Ok(proto::cream::v1::StrategyFamily::EquityShort) => {
+                        StrategyFamily::EquityShort
+                    }
                     Ok(proto::cream::v1::StrategyFamily::OptionLong) => StrategyFamily::OptionLong,
-                    Ok(proto::cream::v1::StrategyFamily::OptionShort) => StrategyFamily::OptionShort,
+                    Ok(proto::cream::v1::StrategyFamily::OptionShort) => {
+                        StrategyFamily::OptionShort
+                    }
                     Ok(proto::cream::v1::StrategyFamily::VerticalSpread) => {
                         StrategyFamily::VerticalSpread
                     }
@@ -113,26 +117,24 @@ pub fn convert_decision_plan(
                     Ok(proto::cream::v1::StrategyFamily::CalendarSpread) => {
                         StrategyFamily::CalendarSpread
                     }
-                    _ => StrategyFamily::EquityLong, // Default
+                    _ => StrategyFamily::EquityLong,
                 };
 
             // Extract time horizon from proto
             let time_horizon = match proto::cream::v1::TimeHorizon::try_from(d.time_horizon) {
                 Ok(proto::cream::v1::TimeHorizon::Intraday) => TimeHorizon::Intraday,
-                Ok(proto::cream::v1::TimeHorizon::Swing) => TimeHorizon::Swing,
                 Ok(proto::cream::v1::TimeHorizon::Position) => TimeHorizon::Position,
-                _ => TimeHorizon::Swing, // Default
+                _ => TimeHorizon::Swing,
             };
 
             // Extract thesis state from proto
             let thesis_state = match proto::cream::v1::ThesisState::try_from(d.thesis_state) {
-                Ok(proto::cream::v1::ThesisState::Watching) => ThesisState::Watching,
                 Ok(proto::cream::v1::ThesisState::Entered) => ThesisState::Entered,
                 Ok(proto::cream::v1::ThesisState::Adding) => ThesisState::Adding,
                 Ok(proto::cream::v1::ThesisState::Managing) => ThesisState::Managing,
                 Ok(proto::cream::v1::ThesisState::Exiting) => ThesisState::Exiting,
                 Ok(proto::cream::v1::ThesisState::Closed) => ThesisState::Closed,
-                _ => ThesisState::Watching, // Default
+                _ => ThesisState::Watching,
             };
 
             // Extract limit price from order plan

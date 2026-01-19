@@ -150,7 +150,7 @@ pub(super) struct AlpacaMultiLegOrderLeg {
     pub(super) ratio_qty: String,
     /// Order side (buy/sell)
     pub(super) side: String,
-    /// Position intent (buy_to_open, sell_to_open, etc.)
+    /// Position intent (`buy_to_open`, `sell_to_open`, etc.)
     pub(super) position_intent: AlpacaPositionIntent,
 }
 
@@ -158,9 +158,9 @@ pub(super) struct AlpacaMultiLegOrderLeg {
 ///
 /// Alpaca API constraints:
 /// - Max 4 legs
-/// - ratio_qty GCD must be 1
+/// - `ratio_qty` GCD must be 1
 /// - type: only "limit" for multi-leg
-/// - time_in_force: "day" only for options
+/// - `time_in_force`: "day" only for options
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub(super) struct AlpacaMultiLegOrderRequest {
     /// Order class (always "mleg" for multi-leg)
