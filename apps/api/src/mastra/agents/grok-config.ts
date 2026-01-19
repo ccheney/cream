@@ -1,8 +1,8 @@
 /**
  * Grok Search Configuration for the Grounding Agent.
  *
- * Configures xAI's live search parameters for web, news, and X.com searches.
- * Uses providerOptions.xai.searchParameters with the Vercel AI SDK.
+ * Configures xAI's live search tools for web, news, and X.com searches.
+ * Uses xai.tools API for streaming tool call visibility.
  */
 
 import { xai } from "@ai-sdk/xai";
@@ -83,4 +83,38 @@ export function createGrokSearchConfig(options: GrokSearchOptions = {}) {
 	}
 
 	return { searchParameters };
+}
+
+export interface GrokToolsOptions {
+	fromDate?: string;
+	toDate?: string;
+}
+
+export type GrokTools = {
+	web_search: ReturnType<typeof xai.tools.webSearch>;
+	x_search: ReturnType<typeof xai.tools.xSearch>;
+};
+
+/**
+ * Create xAI tools for streaming tool call visibility.
+ * Uses xai.tools API which emits tool-call events that can be displayed in UI.
+ */
+export function createGrokTools(options: GrokToolsOptions = {}): GrokTools {
+	const { fromDate, toDate } = options;
+
+	return {
+		web_search: xai.tools.webSearch(),
+		x_search: xai.tools.xSearch({
+			...(fromDate && { fromDate }),
+			...(toDate && { toDate }),
+		}),
+	};
+}
+
+/**
+ * Get the Grok responses model for use with xai.tools.
+ * The responses model is required for server-side tool execution.
+ */
+export function createGrokResponsesModel(): LanguageModel {
+	return xai.responses(getGrokModelId());
 }

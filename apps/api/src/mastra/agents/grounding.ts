@@ -7,8 +7,14 @@
  */
 
 import { xai } from "@ai-sdk/xai";
-import { generateText, streamText } from "ai";
-import { createGrokSearchConfig, DEFAULT_TRADING_SOURCES, getGrokModelId } from "./grok-config.js";
+import { generateText, streamText, type ToolSet } from "ai";
+import {
+	createGrokResponsesModel,
+	createGrokSearchConfig,
+	createGrokTools,
+	DEFAULT_TRADING_SOURCES,
+	getGrokModelId,
+} from "./grok-config.js";
 import { buildDatetimeContext } from "./prompts.js";
 import { type GroundingOutput, GroundingOutputSchema } from "./schemas.js";
 import type { AgentContext, AgentStreamChunk, OnStreamChunk } from "./types.js";
@@ -157,7 +163,8 @@ export async function runGroundingAgent(context: AgentContext): Promise<Groundin
 
 /**
  * Run Grounding Agent with streaming.
- * Streams text deltas to the UI via onChunk callback.
+ * Streams text deltas and tool calls to the UI via onChunk callback.
+ * Uses xai.tools API to expose search operations for UI display.
  */
 export async function runGroundingAgentStreaming(
 	context: AgentContext,
@@ -180,33 +187,78 @@ export async function runGroundingAgentStreaming(
 	});
 
 	const response = streamText({
-		model: xai(getGrokModelId()),
+		model: createGrokResponsesModel(),
 		prompt,
-		providerOptions: getGrokProviderOptions(),
+		tools: createGrokTools() as unknown as ToolSet,
 	});
 
 	let fullText = "";
+	const toolArgsAccumulator = new Map<string, string>();
 
 	for await (const chunk of response.fullStream) {
-		if (chunk.type === "text-delta") {
-			const textChunk = chunk as { type: "text-delta"; text: string };
-			fullText += textChunk.text;
-			await emitChunk({
-				type: "text-delta",
-				agentType,
-				payload: { text: textChunk.text },
-			});
-		} else if (chunk.type === "source") {
-			const source = chunk as { type: "source"; sourceType?: string; url?: string; title?: string };
-			await emitChunk({
-				type: "source",
-				agentType,
-				payload: {
-					sourceType: source.sourceType,
-					url: source.url,
-					title: source.title,
-				},
-			});
+		switch (chunk.type) {
+			case "text-delta": {
+				fullText += chunk.text;
+				await emitChunk({
+					type: "text-delta",
+					agentType,
+					payload: { text: chunk.text },
+				});
+				break;
+			}
+
+			case "tool-input-start": {
+				toolArgsAccumulator.set(chunk.id, "");
+				await emitChunk({
+					type: "tool-call",
+					agentType,
+					payload: {
+						toolCallId: chunk.id,
+						toolName: chunk.toolName,
+						toolArgs: {},
+					},
+				});
+				break;
+			}
+
+			case "tool-input-delta": {
+				const existing = toolArgsAccumulator.get(chunk.id) ?? "";
+				toolArgsAccumulator.set(chunk.id, existing + chunk.delta);
+				break;
+			}
+
+			case "tool-call": {
+				const toolArgs =
+					typeof chunk.input === "object" && chunk.input !== null
+						? (chunk.input as Record<string, unknown>)
+						: {};
+				await emitChunk({
+					type: "tool-call",
+					agentType,
+					payload: {
+						toolCallId: chunk.toolCallId,
+						toolName: chunk.toolName,
+						toolArgs,
+					},
+				});
+				toolArgsAccumulator.delete(chunk.toolCallId);
+				break;
+			}
+
+			case "source": {
+				if (chunk.sourceType === "url") {
+					await emitChunk({
+						type: "source",
+						agentType,
+						payload: {
+							sourceType: chunk.sourceType,
+							url: chunk.url,
+							title: chunk.title,
+						},
+					});
+				}
+				break;
+			}
 		}
 	}
 
