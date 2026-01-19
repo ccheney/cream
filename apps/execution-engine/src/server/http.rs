@@ -254,7 +254,8 @@ mod tests {
     use super::*;
     use crate::execution::{AlpacaAdapter, OrderStateManager};
     use crate::models::{
-        Action, Decision, DecisionPlan, Direction, Size, SizeUnit, StrategyFamily, TimeHorizon,
+        Action, Decision, DecisionPlan, Direction, Size, SizeUnit, StrategyFamily, ThesisState,
+        TimeHorizon,
     };
     use crate::risk::ConstraintValidator;
     use axum::body::Body;
@@ -291,12 +292,15 @@ mod tests {
                 stop_loss_level: Decimal::new(145, 0),
                 take_profit_level: Decimal::new(160, 0),
                 limit_price: Some(Decimal::new(150, 0)),
-                strategy_family: StrategyFamily::Momentum,
+                strategy_family: StrategyFamily::EquityLong,
                 time_horizon: TimeHorizon::Swing,
+                thesis_state: ThesisState::Watching,
                 bullish_factors: vec!["Test".to_string()],
                 bearish_factors: vec![],
                 rationale: "Test".to_string(),
                 confidence: Decimal::new(75, 2),
+                legs: vec![],
+                net_limit_price: None,
             }],
             risk_manager_approved: true,
             critic_approved: true,

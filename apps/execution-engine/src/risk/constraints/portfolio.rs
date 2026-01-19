@@ -162,7 +162,7 @@ mod tests {
     use super::*;
     use crate::models::{
         DecisionPlan, ExposureLimits, OptionsLimits, PerInstrumentLimits, PortfolioLimits, Size,
-        SizingLimits, StrategyFamily, TimeHorizon,
+        SizingLimits, StrategyFamily, ThesisState, TimeHorizon,
     };
 
     fn make_decision(instrument_id: &str, quantity: Decimal, direction: Direction) -> Decision {
@@ -178,12 +178,15 @@ mod tests {
             stop_loss_level: Decimal::new(95, 0),
             take_profit_level: Decimal::new(110, 0),
             limit_price: Some(Decimal::new(100, 0)),
-            strategy_family: StrategyFamily::Momentum,
+            strategy_family: StrategyFamily::EquityLong,
             time_horizon: TimeHorizon::Swing,
+            thesis_state: ThesisState::Watching,
             bullish_factors: vec!["Strong momentum".to_string()],
             bearish_factors: vec![],
             rationale: "Test trade".to_string(),
             confidence: Decimal::new(75, 2),
+            legs: vec![],
+            net_limit_price: None,
         }
     }
 
