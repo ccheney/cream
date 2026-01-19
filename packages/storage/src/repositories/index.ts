@@ -140,8 +140,6 @@ export {
 	type ExtractedEntity,
 	type Sentiment,
 } from "./external-events.js";
-// Factor Zoo (migration 009) - Alpha factor lifecycle management
-export { FactorZooRepository } from "./factor-zoo.js";
 export {
 	type Feature,
 	type FeatureInsert,
