@@ -8,5 +8,5 @@
  * @deprecated Import from "./client/index.js" instead. This file re-exports for backward compatibility.
  */
 
-export type { AlpacaClient, AlpacaClientConfig } from "./client/index.js";
+export type { AlpacaClient, AlpacaClientConfig, GetOrdersOptions } from "./client/index.js";
 export { createAlpacaClient } from "./client/index.js";

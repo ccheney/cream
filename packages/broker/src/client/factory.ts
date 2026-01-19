@@ -17,7 +17,7 @@ import type {
 } from "./alpaca-types.js";
 import { createRequestFn } from "./http.js";
 import { mapAccount, mapOrder, mapPosition } from "./mappers.js";
-import type { AlpacaClient, AlpacaClientConfig } from "./types.js";
+import type { AlpacaClient, AlpacaClientConfig, GetOrdersOptions } from "./types.js";
 
 /**
  * Create an Alpaca broker client.
@@ -193,8 +193,31 @@ export function createAlpacaClient(config: AlpacaClientConfig): AlpacaClient {
 			}
 		},
 
-		async getOrders(status: "open" | "closed" | "all" = "open"): Promise<Order[]> {
-			const data = await request<AlpacaOrderResponse[]>("GET", `/v2/orders?status=${status}`);
+		async getOrders(options: GetOrdersOptions = {}): Promise<Order[]> {
+			const params = new URLSearchParams();
+
+			params.set("status", options.status ?? "open");
+
+			if (options.limit !== undefined) {
+				params.set("limit", String(Math.min(options.limit, 500)));
+			}
+			if (options.direction !== undefined) {
+				params.set("direction", options.direction);
+			}
+			if (options.symbols !== undefined) {
+				const symbolsStr = Array.isArray(options.symbols)
+					? options.symbols.join(",")
+					: options.symbols;
+				params.set("symbols", symbolsStr);
+			}
+			if (options.side !== undefined) {
+				params.set("side", options.side);
+			}
+			if (options.nested !== undefined) {
+				params.set("nested", String(options.nested));
+			}
+
+			const data = await request<AlpacaOrderResponse[]>("GET", `/v2/orders?${params.toString()}`);
 			return data.map(mapOrder);
 		},
 

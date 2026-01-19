@@ -42,7 +42,12 @@
  */
 
 // Client
-export { type AlpacaClient, type AlpacaClientConfig, createAlpacaClient } from "./client.js";
+export {
+	type AlpacaClient,
+	type AlpacaClientConfig,
+	type GetOrdersOptions,
+	createAlpacaClient,
+} from "./client.js";
 // Factory
 export { type BrokerClientConfig, createBrokerClient } from "./factory.js";
 // Portfolio History

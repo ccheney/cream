@@ -7,6 +7,24 @@
 import type { Account, Order, OrderRequest, Position, TradingEnvironment } from "../types.js";
 
 /**
+ * Options for filtering orders.
+ */
+export interface GetOrdersOptions {
+	/** Filter by status: open, closed, or all (default: open) */
+	status?: "open" | "closed" | "all";
+	/** Maximum number of orders to return (default: 100, max: 500) */
+	limit?: number;
+	/** Sort direction: asc or desc (default: desc) */
+	direction?: "asc" | "desc";
+	/** Filter by symbols (comma-separated or array) */
+	symbols?: string | string[];
+	/** Filter by side */
+	side?: "buy" | "sell";
+	/** Include nested bracket order legs */
+	nested?: boolean;
+}
+
+/**
  * Alpaca client configuration.
  */
 export interface AlpacaClientConfig {
@@ -63,9 +81,11 @@ export interface AlpacaClient {
 	getOrder(orderId: string): Promise<Order | null>;
 
 	/**
-	 * Get all orders (optionally filtered by status).
+	 * Get orders with optional filtering.
+	 *
+	 * @param options - Filter options (status, limit, direction, symbols, side, nested)
 	 */
-	getOrders(status?: "open" | "closed" | "all"): Promise<Order[]>;
+	getOrders(options?: GetOrdersOptions): Promise<Order[]>;
 
 	/**
 	 * Close a position.

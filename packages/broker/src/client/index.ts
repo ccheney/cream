@@ -5,4 +5,4 @@
  */
 
 export { createAlpacaClient } from "./factory.js";
-export type { AlpacaClient, AlpacaClientConfig } from "./types.js";
+export type { AlpacaClient, AlpacaClientConfig, GetOrdersOptions } from "./types.js";
