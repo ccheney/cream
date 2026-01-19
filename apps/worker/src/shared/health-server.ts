@@ -145,8 +145,10 @@ export function createHealthServer(deps: HealthServerDeps, port?: number) {
 		}
 	}
 
+	let server: ReturnType<typeof Bun.serve> | null = null;
+
 	function start() {
-		Bun.serve({
+		server = Bun.serve({
 			port: healthPort,
 			async fetch(req) {
 				const url = new URL(req.url);
@@ -205,7 +207,15 @@ export function createHealthServer(deps: HealthServerDeps, port?: number) {
 		log.info({ port: healthPort }, "Health endpoint listening");
 	}
 
-	return { start, buildHealthResponse };
+	function stop() {
+		if (server) {
+			server.stop(true);
+			server = null;
+			log.info({ port: healthPort }, "Health endpoint stopped");
+		}
+	}
+
+	return { start, stop, buildHealthResponse };
 }
 
 function formatLastRun(lastRun: {

@@ -43,6 +43,7 @@ export const config = {
 
 /**
  * Build LogoKit URL for a ticker symbol.
+ * Uses /ticker/ path for stock symbol lookup.
  * Returns null if API key is not configured.
  */
 export function buildTickerLogoUrl(ticker: string): string | null {
@@ -50,7 +51,7 @@ export function buildTickerLogoUrl(ticker: string): string | null {
 	if (!apiKey || !ticker) {
 		return null;
 	}
-	return `https://img.logokit.com/${encodeURIComponent(ticker.toUpperCase())}?token=${apiKey}`;
+	return `https://img.logokit.com/ticker/${encodeURIComponent(ticker.toUpperCase())}?token=${apiKey}`;
 }
 
 /** Type-safe access to configuration */

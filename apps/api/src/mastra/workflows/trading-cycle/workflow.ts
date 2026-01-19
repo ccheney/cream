@@ -19,6 +19,7 @@ import { createStep, createWorkflow } from "@mastra/core/workflows";
 import { z } from "zod";
 
 import type { AgentStreamChunk, ToolResultEntry } from "../../agents/types.js";
+import type { ThesisUpdate } from "../steps/trading-cycle/types.js";
 import { WorkflowResultSchema } from "./schemas.js";
 
 const log = createNodeLogger({ service: "trading-cycle", level: "info" });
@@ -733,7 +734,7 @@ const consensusStep = createStep({
 
 const actStep = createStep({
 	id: "act",
-	description: "Submit orders",
+	description: "Submit orders and process thesis state",
 	inputSchema: AnyInputSchema,
 	outputSchema: WorkflowResultSchema,
 	stateSchema: MinimalStateSchema,
@@ -750,6 +751,65 @@ const actStep = createStep({
 				orderSubmission = await submitOrders(true, decisionPlan, inputData.cycleId);
 			} else {
 				orderSubmission.errors = constraintCheck.violations;
+			}
+		}
+
+		// Process thesis state transitions and ingest closed theses to HelixDB
+		// This runs even if orders weren't submitted to capture HOLD → EXITING etc.
+		if (decisionPlan && state.mode === "LLM") {
+			try {
+				const { processThesisForDecision, ingestClosedThesesForCycle } = await import(
+					"../steps/trading-cycle/thesis.js"
+				);
+				const { getThesisStateRepo } = await import("../../../db.js");
+				const { requireEnv } = await import("@cream/domain");
+				const environment = requireEnv();
+				const repo = await getThesisStateRepo();
+
+				// Process each decision's thesis state
+				const thesisUpdates: ThesisUpdate[] = [];
+
+				for (const decision of decisionPlan.decisions) {
+					const latestQuote = inputData.snapshot?.quotes?.[decision.instrumentId];
+					const currentPrice = latestQuote?.price ?? decision.size?.value;
+
+					const update = await processThesisForDecision(
+						repo,
+						decision,
+						environment,
+						inputData.cycleId,
+						currentPrice
+					);
+
+					if (update) {
+						thesisUpdates.push(update);
+						log.debug(
+							{ thesisId: update.thesisId, from: update.fromState, to: update.toState },
+							"Thesis state updated"
+						);
+					}
+				}
+
+				// Ingest closed theses to HelixDB for memory retrieval
+				if (thesisUpdates.some((u) => u.toState === "CLOSED")) {
+					const ingestionResult = await ingestClosedThesesForCycle(
+						inputData.cycleId,
+						environment,
+						thesisUpdates
+					);
+
+					if (ingestionResult.ingested > 0) {
+						log.info(
+							{ cycleId: inputData.cycleId, ingested: ingestionResult.ingested },
+							"Closed theses ingested to HelixDB"
+						);
+					}
+				}
+			} catch (error) {
+				log.error(
+					{ error: error instanceof Error ? error.message : String(error) },
+					"Thesis processing failed"
+				);
 			}
 		}
 

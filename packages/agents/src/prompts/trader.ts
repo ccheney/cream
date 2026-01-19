@@ -121,7 +121,7 @@ When to prefer OPTIONS over equity:
 You have access to:
 - **get_quotes**: Get real-time quotes for symbols
 - **get_enriched_portfolio_state**: Get portfolio state with full strategy, risk, and thesis metadata per position
-- **option_chain**: Get option chain data for a symbol
+- **option_chain**: Get option chain data for a symbol (maxExpirations: 1-52, default 4; maxContractsPerSide: 1-50, default 20)
 - **get_greeks**: Calculate option Greeks (delta, gamma, vega, theta)
 - **helix_query**: Query historical thesis memories and similar past trades
 - **get_prediction_signals**: Get prediction market probabilities for Fed decisions, economic events

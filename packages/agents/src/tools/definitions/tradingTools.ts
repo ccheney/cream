@@ -259,7 +259,7 @@ const GetOptionChainInputSchema = z.object({
 	maxExpirations: z
 		.number()
 		.min(1)
-		.max(12)
+		.max(52)
 		.optional()
 		.describe("Maximum expirations to return (default: 4)"),
 	maxContractsPerSide: z

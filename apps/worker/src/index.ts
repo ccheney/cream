@@ -45,6 +45,7 @@ import {
 import {
 	createHealthServer,
 	getDbClient,
+	getHelixClient,
 	loadConfig,
 	log,
 	recordRunComplete,
@@ -435,6 +436,7 @@ async function main() {
 		macroWatch: (() => {
 			const service = createMacroWatchService();
 			service.setDbProvider(getDbClient);
+			service.setHelixProvider(getHelixClient);
 			return service;
 		})(),
 		newspaper: createNewspaperService(),
@@ -519,6 +521,7 @@ async function main() {
 	});
 
 	const shutdown = async (): Promise<void> => {
+		healthServer.stop();
 		state.schedulerManager?.stop();
 		state.indicatorScheduler?.stop();
 		await shutdownTracing();
@@ -529,6 +532,13 @@ async function main() {
 	process.on("SIGTERM", shutdown);
 }
 
-main().catch((_error) => {
+main().catch((error) => {
+	log.error(
+		{
+			error: error instanceof Error ? error.message : String(error),
+			stack: error instanceof Error ? error.stack : undefined,
+		},
+		"Worker crashed"
+	);
 	process.exit(1);
 });

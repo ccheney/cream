@@ -1,125 +1,15 @@
 {
-  "$schema": "./config.hx.schema.json",
-  "version": "1.0.0",
-  "description": "HelixDB configuration for Cream Trading System",
-
-  "embedding": {
-    "provider": "gemini",
-    "model": "gemini-embedding-001",
-    "dimensions": 3072,
-    "batch_size": 100,
-    "max_tokens": 2048
+  "bm25": true,
+  "db_max_size_gb": 20,
+  "embedding_model": "gemini:gemini-embedding-001",
+  "graph_config": {
+    "secondary_indices": []
   },
-
-  "vector_index": {
-    "algorithm": "hnsw",
-    "parameters": {
-      "m": 16,
-      "ef_construction": 128,
-      "ef_search": 64
-    },
-    "distance_metric": "cosine"
-  },
-
-  "retrieval": {
-    "trade_memory": {
-      "top_k": 10,
-      "filters": {
-        "same_instrument": true,
-        "same_regime": true
-      }
-    },
-    "documents": {
-      "top_k": 5,
-      "date_range_days": 90
-    }
-  },
-
-  "graph_traversal": {
-    "max_depth": 2,
-    "max_neighbors_per_node": 100,
-    "max_nodes_per_level": 50,
-    "relevance_threshold": 0.7,
-    "scoring": {
-      "recency_boost_days": 30,
-      "recency_multiplier": 1.5,
-      "hub_penalty_threshold": 500,
-      "hub_penalty_multiplier": 0.5
-    },
-    "edge_weights": {
-      "INFLUENCED_DECISION": {
-        "attribute": "confidence_score",
-        "min_threshold": 0.6
-      },
-      "DEPENDS_ON": {
-        "attribute": "strength"
-      },
-      "AFFECTED_BY": {
-        "attribute": "sensitivity"
-      },
-      "MENTIONED_IN": {
-        "type_weights": {
-          "PRIMARY": 1.0,
-          "SECONDARY": 0.7,
-          "PEER_COMPARISON": 0.5
-        }
-      }
-    }
-  },
-
-  "hybrid_search": {
-    "rrf_constant": 60,
-    "methods": ["vector_similarity", "graph_traversal"]
-  },
-
-  "embedding_staleness": {
-    "max_age_days": 90,
-    "check_on_query": false,
-    "batch_reembed_enabled": true
-  },
-
-  "performance_targets": {
-    "vector_search_latency_ms": 2,
-    "graph_traversal_latency_ms": 1,
-    "recall_at_k10": 0.90
-  },
-
-  "tuning_profiles": {
-    "balanced": {
-      "vector_index": {
-        "m": 16,
-        "ef_construction": 128,
-        "ef_search": 64
-      },
-      "expected_recall": [0.90, 0.95],
-      "expected_latency_p50_ms": 2
-    },
-    "max_recall": {
-      "vector_index": {
-        "m": 24,
-        "ef_construction": 256,
-        "ef_search": 128
-      },
-      "expected_recall": [0.95, 0.98],
-      "expected_latency_p50_ms": 4
-    },
-    "low_latency": {
-      "vector_index": {
-        "m": 12,
-        "ef_construction": 100,
-        "ef_search": 32
-      },
-      "expected_recall": [0.85, 0.92],
-      "expected_latency_p50_ms": 0.5
-    },
-    "memory_constrained": {
-      "vector_index": {
-        "m": 8,
-        "ef_construction": 64,
-        "ef_search": 32
-      },
-      "expected_recall": [0.80, 0.88],
-      "expected_latency_p50_ms": 1
-    }
+  "mcp": true,
+  "vector_config": {
+    "db_max_size": 20,
+    "ef_construction": 128,
+    "ef_search": 768,
+    "m": 16
   }
 }

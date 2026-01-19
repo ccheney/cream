@@ -229,10 +229,26 @@ export async function runGroundingAgentStreaming(
 			}
 
 			case "tool-call": {
-				const toolArgs =
-					typeof chunk.input === "object" && chunk.input !== null
-						? (chunk.input as Record<string, unknown>)
-						: {};
+				// Prefer chunk.input if available, otherwise try to use accumulated args
+				let toolArgs: Record<string, unknown> = {};
+				if (typeof chunk.input === "object" && chunk.input !== null) {
+					toolArgs = chunk.input as Record<string, unknown>;
+				} else {
+					// Fallback to accumulated args from tool-input-delta events
+					const accumulatedArgsText = toolArgsAccumulator.get(chunk.toolCallId);
+					if (accumulatedArgsText) {
+						try {
+							const parsed = JSON.parse(accumulatedArgsText) as unknown;
+							if (typeof parsed === "object" && parsed !== null && !Array.isArray(parsed)) {
+								toolArgs = parsed as Record<string, unknown>;
+							}
+						} catch {
+							if (accumulatedArgsText.length > 0) {
+								toolArgs = { _raw: accumulatedArgsText };
+							}
+						}
+					}
+				}
 				await emitChunk({
 					type: "tool-call",
 					agentType,
@@ -247,13 +263,17 @@ export async function runGroundingAgentStreaming(
 			}
 
 			case "source": {
+				// xAI uses discriminated union: sourceType "url" has url, "document" does not
 				if (chunk.sourceType === "url" && chunk.url) {
-					const logoInfo = getSourceLogoInfo(chunk.url, env.LOGOKIT_API_KEY);
+					// Map to our internal types: "url" for web, "x" for X.com posts
+					const isXPost = chunk.url.includes("x.com") || chunk.url.includes("twitter.com");
+					const sourceType: "url" | "x" = isXPost ? "x" : "url";
+					const logoInfo = !isXPost ? getSourceLogoInfo(chunk.url, env.LOGOKIT_API_KEY) : null;
 					await emitChunk({
 						type: "source",
 						agentType,
 						payload: {
-							sourceType: chunk.sourceType,
+							sourceType,
 							url: chunk.url,
 							title: chunk.title,
 							domain: logoInfo?.domain,

@@ -32,13 +32,13 @@ export function buildLogoUrl(domain: string, apiKey: string | undefined): string
 
 /**
  * Build LogoKit URL for a ticker symbol.
- * LogoKit supports direct ticker lookups for stocks/ETFs.
+ * Uses /ticker/ path for stock symbol lookup.
  */
 export function buildTickerLogoUrl(ticker: string, apiKey: string | undefined): string | null {
 	if (!apiKey || !ticker) {
 		return null;
 	}
-	return `https://img.logokit.com/${encodeURIComponent(ticker.toUpperCase())}?token=${apiKey}`;
+	return `https://img.logokit.com/ticker/${encodeURIComponent(ticker.toUpperCase())}?token=${apiKey}`;
 }
 
 /**

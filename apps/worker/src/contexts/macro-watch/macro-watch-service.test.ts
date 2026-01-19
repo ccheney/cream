@@ -108,7 +108,7 @@ describe("MacroWatchService", () => {
 			const firstRun = service.run(["AAPL"]);
 			const secondResult = await service.run(["MSFT"]);
 
-			expect(secondResult).toEqual({ entries: [], saved: 0 });
+			expect(secondResult).toEqual({ entries: [], saved: 0, helixIngested: 0 });
 
 			await firstRun;
 			expect(mockRunMacroWatch).toHaveBeenCalledTimes(1);
@@ -119,7 +119,7 @@ describe("MacroWatchService", () => {
 
 			const result = await service.run(["AAPL"]);
 
-			expect(result).toEqual({ entries: [], saved: 0 });
+			expect(result).toEqual({ entries: [], saved: 0, helixIngested: 0 });
 			expect(service.isRunning()).toBe(false);
 		});
 

@@ -5,6 +5,7 @@
 // Vector Insertion Queries
 // ============================================
 
+#[model("gemini:gemini-embedding-001:RETRIEVAL_DOCUMENT")]
 QUERY InsertTradeDecision(
     decision_id: String,
     cycle_id: String,
@@ -38,6 +39,7 @@ QUERY InsertTradeDecision(
     )
     RETURN decision
 
+#[model("gemini:gemini-embedding-001:RETRIEVAL_DOCUMENT")]
 QUERY InsertExternalEvent(
     event_id: String,
     event_type: String,
@@ -57,6 +59,7 @@ QUERY InsertExternalEvent(
     )
     RETURN event
 
+#[model("gemini:gemini-embedding-001:RETRIEVAL_DOCUMENT")]
 QUERY InsertFilingChunk(
     chunk_id: String,
     filing_id: String,
@@ -80,6 +83,7 @@ QUERY InsertFilingChunk(
     )
     RETURN chunk
 
+#[model("gemini:gemini-embedding-001:RETRIEVAL_DOCUMENT")]
 QUERY InsertTranscriptChunk(
     chunk_id: String,
     transcript_id: String,
@@ -103,6 +107,7 @@ QUERY InsertTranscriptChunk(
     )
     RETURN chunk
 
+#[model("gemini:gemini-embedding-001:RETRIEVAL_DOCUMENT")]
 QUERY InsertNewsItem(
     item_id: String,
     headline: String,
@@ -124,6 +129,7 @@ QUERY InsertNewsItem(
     )
     RETURN item
 
+#[model("gemini:gemini-embedding-001:RETRIEVAL_DOCUMENT")]
 QUERY InsertThesisMemory(
     thesis_id: String,
     instrument_id: String,
@@ -163,6 +169,7 @@ QUERY InsertThesisMemory(
     )
     RETURN thesis
 
+#[model("gemini:gemini-embedding-001:RETRIEVAL_DOCUMENT")]
 QUERY InsertIndicator(
     indicator_id: String,
     name: String,
@@ -200,6 +207,7 @@ QUERY InsertIndicator(
     )
     RETURN indicator
 
+#[model("gemini:gemini-embedding-001:RETRIEVAL_DOCUMENT")]
 QUERY InsertResearchHypothesis(
     hypothesis_id: String,
     title: String,
@@ -251,6 +259,7 @@ QUERY InsertResearchHypothesis(
     )
     RETURN hypothesis
 
+#[model("gemini:gemini-embedding-001:RETRIEVAL_DOCUMENT")]
 QUERY InsertAcademicPaper(
     paper_id: String,
     title: String,
@@ -278,6 +287,7 @@ QUERY InsertAcademicPaper(
 // Node Insertion Queries
 // ============================================
 
+#[model("gemini:gemini-embedding-001:RETRIEVAL_DOCUMENT")]
 QUERY InsertLifecycleEvent(
     event_id: String,
     decision_id: String,
@@ -296,6 +306,7 @@ QUERY InsertLifecycleEvent(
     })
     RETURN event
 
+#[model("gemini:gemini-embedding-001:RETRIEVAL_DOCUMENT")]
 QUERY InsertCompany(
     symbol: String,
     name: String,
@@ -312,6 +323,7 @@ QUERY InsertCompany(
     })
     RETURN company
 
+#[model("gemini:gemini-embedding-001:RETRIEVAL_DOCUMENT")]
 QUERY InsertMacroEntity(
     entity_id: String,
     name: String,
@@ -330,50 +342,61 @@ QUERY InsertMacroEntity(
 // Vector Search Queries
 // ============================================
 
+#[model("gemini:gemini-embedding-001:RETRIEVAL_QUERY")]
 QUERY SearchSimilarDecisions(query_text: String, limit: I64) =>
     results <- SearchV<TradeDecision>(Embed(query_text), limit)
     RETURN results
 
+#[model("gemini:gemini-embedding-001:RETRIEVAL_QUERY")]
 QUERY SearchDecisionsByInstrument(query_text: String, instrument_id: String, limit: I64) =>
     results <- SearchV<TradeDecision>(Embed(query_text), limit)
         ::WHERE(_::{instrument_id}::EQ(instrument_id))
     RETURN results
 
+#[model("gemini:gemini-embedding-001:RETRIEVAL_QUERY")]
 QUERY SearchFilings(query: String, limit: I64) =>
     results <- SearchV<FilingChunk>(Embed(query), limit)
     RETURN results
 
+#[model("gemini:gemini-embedding-001:RETRIEVAL_QUERY")]
 QUERY SearchFilingsByCompany(query: String, company_symbol: String, limit: I64) =>
     results <- SearchV<FilingChunk>(Embed(query), limit)
         ::WHERE(_::{company_symbol}::EQ(company_symbol))
     RETURN results
 
+#[model("gemini:gemini-embedding-001:RETRIEVAL_QUERY")]
 QUERY SearchTranscripts(query: String, limit: I64) =>
     results <- SearchV<TranscriptChunk>(Embed(query), limit)
     RETURN results
 
+#[model("gemini:gemini-embedding-001:RETRIEVAL_QUERY")]
 QUERY SearchTranscriptsByCompany(query: String, company_symbol: String, limit: I64) =>
     results <- SearchV<TranscriptChunk>(Embed(query), limit)
         ::WHERE(_::{company_symbol}::EQ(company_symbol))
     RETURN results
 
+#[model("gemini:gemini-embedding-001:RETRIEVAL_QUERY")]
 QUERY SearchNews(query: String, limit: I64) =>
     results <- SearchV<NewsItem>(Embed(query), limit)
     RETURN results
 
+#[model("gemini:gemini-embedding-001:RETRIEVAL_QUERY")]
 QUERY SearchExternalEvents(query: String, limit: I64) =>
     results <- SearchV<ExternalEvent>(Embed(query), limit)
     RETURN results
 
+#[model("gemini:gemini-embedding-001:RETRIEVAL_QUERY")]
 QUERY SearchExternalEventsByType(query: String, event_type: String, limit: I64) =>
     results <- SearchV<ExternalEvent>(Embed(query), limit)
         ::WHERE(_::{event_type}::EQ(event_type))
     RETURN results
 
+#[model("gemini:gemini-embedding-001:RETRIEVAL_QUERY")]
 QUERY SearchSimilarTheses(query_text: String, limit: I64) =>
     results <- SearchV<ThesisMemory>(Embed(query_text), limit)
     RETURN results
 
+#[model("gemini:gemini-embedding-001:RETRIEVAL_QUERY")]
 QUERY SearchThesesByOutcome(query_text: String, outcome: String, limit: I64) =>
     results <- SearchV<ThesisMemory>(Embed(query_text), limit)
         ::WHERE(_::{outcome}::EQ(outcome))
@@ -462,15 +485,18 @@ QUERY GetThesisById(thesis_id: String) =>
 // Indicator Search Queries
 // ============================================
 
+#[model("gemini:gemini-embedding-001:RETRIEVAL_QUERY")]
 QUERY SearchSimilarIndicators(query_text: String, limit: I64) =>
     results <- SearchV<Indicator>(Embed(query_text), limit)
     RETURN results
 
+#[model("gemini:gemini-embedding-001:RETRIEVAL_QUERY")]
 QUERY SearchIndicatorsByCategory(query_text: String, category: String, limit: I64) =>
     results <- SearchV<Indicator>(Embed(query_text), limit)
         ::WHERE(_::{category}::EQ(category))
     RETURN results
 
+#[model("gemini:gemini-embedding-001:RETRIEVAL_QUERY")]
 QUERY SearchIndicatorsByStatus(query_text: String, status: String, limit: I64) =>
     results <- SearchV<Indicator>(Embed(query_text), limit)
         ::WHERE(_::{status}::EQ(status))
@@ -480,19 +506,26 @@ QUERY GetIndicatorById(indicator_id: String) =>
     indicator <- V<Indicator>::WHERE(_::{indicator_id}::EQ(indicator_id))
     RETURN indicator
 
+QUERY GetIndicatorByCodeHash(code_hash: String) =>
+    indicator <- V<Indicator>::WHERE(_::{code_hash}::EQ(code_hash))
+    RETURN indicator
+
 // ============================================
 // Research Hypothesis Search Queries
 // ============================================
 
+#[model("gemini:gemini-embedding-001:RETRIEVAL_QUERY")]
 QUERY SearchSimilarHypotheses(query_text: String, limit: I64) =>
     results <- SearchV<ResearchHypothesis>(Embed(query_text), limit)
     RETURN results
 
+#[model("gemini:gemini-embedding-001:RETRIEVAL_QUERY")]
 QUERY SearchHypothesesByStatus(query_text: String, status: String, limit: I64) =>
     results <- SearchV<ResearchHypothesis>(Embed(query_text), limit)
         ::WHERE(_::{status}::EQ(status))
     RETURN results
 
+#[model("gemini:gemini-embedding-001:RETRIEVAL_QUERY")]
 QUERY SearchHypothesesByMechanism(query_text: String, market_mechanism: String, limit: I64) =>
     results <- SearchV<ResearchHypothesis>(Embed(query_text), limit)
         ::WHERE(_::{market_mechanism}::EQ(market_mechanism))
@@ -506,6 +539,7 @@ QUERY GetHypothesisById(hypothesis_id: String) =>
 // Academic Paper Search Queries
 // ============================================
 
+#[model("gemini:gemini-embedding-001:RETRIEVAL_QUERY")]
 QUERY SearchAcademicPapers(query_text: String, limit: I64) =>
     results <- SearchV<AcademicPaper>(Embed(query_text), limit)
     RETURN results
@@ -583,6 +617,7 @@ QUERY GetCitingHypotheses(paper_id: String) =>
 
 // Unified cross-type vector search with graph traversal
 // Returns filings, transcripts, news, events and their connected companies
+#[model("gemini:gemini-embedding-001:RETRIEVAL_QUERY")]
 QUERY SearchGraphContext(query: String, limit: I64) =>
     filing_chunks <- SearchV<FilingChunk>(Embed(query), limit)
     transcript_chunks <- SearchV<TranscriptChunk>(Embed(query), limit)
@@ -596,6 +631,7 @@ QUERY SearchGraphContext(query: String, limit: I64) =>
 
 // Filtered search with related company traversal
 // First finds results for a specific company, then discovers related companies
+#[model("gemini:gemini-embedding-001:RETRIEVAL_QUERY")]
 QUERY SearchGraphContextByCompany(query: String, company_symbol: String, limit: I64) =>
     company <- N<Company>::WHERE(_::{symbol}::EQ(company_symbol))
     filing_chunks <- SearchV<FilingChunk>(Embed(query), limit)

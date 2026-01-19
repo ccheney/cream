@@ -25,7 +25,10 @@ export interface EdgarClientConfig {
 	timeout?: number;
 }
 
-const DEFAULT_USER_AGENT = "Cream/1.0 (chris@cheney.dev)";
+if (!Bun.env.OPERATOR_EMAIL) {
+	throw new Error("OPERATOR_EMAIL environment variable is required for SEC EDGAR API requests");
+}
+const DEFAULT_USER_AGENT = `Cream/1.0 (${Bun.env.OPERATOR_EMAIL})`;
 
 // ============================================
 // Parameters

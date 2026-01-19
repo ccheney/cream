@@ -23,6 +23,7 @@ import {
 import {
 	broadcastAgentOutput,
 	broadcastAgentReasoning,
+	broadcastAgentSource,
 	broadcastAgentTextDelta,
 	broadcastAgentToolCall,
 	broadcastAgentToolResult,
@@ -591,6 +592,27 @@ app.openapi(triggerCycleRoute, async (c) => {
 									toolName: resolvedToolName,
 									toolArgs: resolvedToolArgs,
 								});
+							} else if (chunkType === "source") {
+								const sourceType = innerPayload?.sourceType as "url" | "x" | undefined;
+								const url = innerPayload?.url as string | undefined;
+								const title = innerPayload?.title as string | undefined;
+								const domain = innerPayload?.domain as string | undefined;
+								const logoUrl = innerPayload?.logoUrl as string | undefined;
+								if (url) {
+									broadcastAgentSource({
+										type: "agent_source",
+										data: {
+											cycleId,
+											agentType,
+											sourceType: sourceType ?? "url",
+											url,
+											title,
+											domain,
+											logoUrl,
+											timestamp: ts,
+										},
+									});
+								}
 							} else if (chunkType === "error" && errorText) {
 								broadcastAgentOutput({
 									type: "agent_output",
