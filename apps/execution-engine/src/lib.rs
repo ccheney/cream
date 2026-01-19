@@ -49,82 +49,34 @@ pub mod application;
 pub mod infrastructure;
 
 // =============================================================================
-// Legacy modules (to be removed after full migration)
-// =============================================================================
-
-pub mod broker;
-pub mod config;
-pub mod error;
-pub mod execution;
-pub mod feed;
-pub mod models;
-pub mod options;
-pub mod pricing;
-pub mod resilience;
-pub mod risk;
-pub mod safety;
-pub mod server;
-pub mod telemetry;
-
-// =============================================================================
 // Re-exports from Clean Architecture
 // =============================================================================
 
 // Domain re-exports
 pub use domain::order_execution::{
     aggregate::Order,
-    value_objects::{OrderSide, OrderStatus, OrderType, TimeInForce},
+    value_objects::{OrderPurpose, OrderSide, OrderStatus, OrderType, TimeInForce},
 };
 pub use domain::risk_management::services::RiskValidationService;
 pub use domain::shared::{BrokerId, InstrumentId, Money, OrderId, Quantity, Symbol, Timestamp};
 
 // Application re-exports
-pub use application::ports::{BrokerPort, EventPublisherPort, PriceFeedPort, RiskRepositoryPort};
+pub use application::dto::{CreateOrderDto, OrderDto, SubmitOrdersRequestDto};
+pub use application::ports::{
+    BrokerError, BrokerPort, EventPublisherPort, InMemoryRiskRepository, NoOpEventPublisher,
+    PriceFeedPort, RiskRepositoryPort,
+};
 pub use application::use_cases::{
     CancelOrdersUseCase, MonitorStopsUseCase, ReconcileUseCase, SubmitOrdersUseCase,
     ValidateRiskUseCase,
 };
 
 // Infrastructure re-exports
-pub use infrastructure::broker::alpaca::{AlpacaBrokerAdapter, AlpacaConfig, AlpacaError};
+pub use infrastructure::broker::alpaca::{
+    AlpacaBrokerAdapter, AlpacaConfig, AlpacaEnvironment, AlpacaError,
+};
 pub use infrastructure::config::Container;
+pub use infrastructure::grpc::{ExecutionServiceAdapter, create_execution_service};
+pub use infrastructure::http::{AppState, create_router};
 pub use infrastructure::persistence::InMemoryOrderRepository;
 pub use infrastructure::price_feed::{AlpacaPriceFeedAdapter, MockPriceFeed};
-
-// =============================================================================
-// Legacy re-exports (for backward compatibility during migration)
-// =============================================================================
-
-pub use error::{ErrorCode, ExecutionError, HttpErrorResponse};
-pub use execution::{
-    AlpacaAdapter, ExecutionGateway, MonitoredPosition as LegacyMonitoredPosition,
-    OrderStateManager, StatePersistence, StopsEnforcer, StopsPriceMonitor,
-    TacticSelector as LegacyTacticSelector, TacticType as LegacyTacticType,
-    TriggerResult as LegacyTriggerResult, TwapConfig as LegacyTwapConfig,
-    VwapConfig as LegacyVwapConfig, run_price_monitor,
-};
-pub use models::{
-    ConstraintCheckRequest, ConstraintCheckResponse, DecisionPlan, Environment, ExecutionAck,
-    OrderState, SubmitOrdersRequest,
-};
-pub use options::{
-    AssignmentRisk, AssignmentRiskLevel, EarlyExerciseAlert, EarlyExerciseRisk, Greeks,
-    MultiLegOrder, MultiLegPosition, MultiLegValidationResult,
-    OptionContract as LegacyOptionContract, OptionLeg, OptionStyle, OptionType as LegacyOptionType,
-    PositionLimits, PositionTracker, aggregate_greeks, assess_early_exercise_risk,
-    calculate_assignment_risk, calculate_portfolio_greeks, validate_leg_ratios,
-    validate_multi_leg_order,
-};
-pub use pricing::{
-    IvError, IvSolver, IvSolverConfig, LegDirection, OptionKind, OptionsStrategy, StrategyBuilder,
-    StrategyBuilderConfig, StrategyError, StrategyLeg, StrategyType,
-};
-pub use risk::{
-    ConstraintValidator, PositionSizer, PositionSizerConfig, SizingError, SizingInput,
-    SizingResult, SizingUnit,
-};
-pub use safety::{
-    ConnectionMonitor, DisconnectHandler, GtcOrderPolicy, MassCancelConfig, MassCancelEvent,
-    MassCancelResult, SafetyError,
-};
-pub use server::ExecutionServer;

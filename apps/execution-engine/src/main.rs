@@ -1,50 +1,37 @@
 //! Execution Engine Binary
 //!
-//! Starts the Cream execution engine with proper service initialization,
-//! observability, and graceful shutdown.
+//! Starts the Cream execution engine using Clean Architecture.
 //!
 //! # Usage
 //!
 //! ```bash
 //! cargo run --bin execution-engine
-//! cargo run --bin execution-engine -- --config /path/to/config.yaml
 //! ```
 //!
 //! # Environment Variables
 //!
 //! - `CREAM_ENV`: PAPER | LIVE (default: PAPER)
-//! - `ALPACA_KEY`: Broker API key (required for PAPER/LIVE)
-//! - `ALPACA_SECRET`: Broker API secret (required for PAPER/LIVE)
+//! - `ALPACA_KEY`: Broker API key (required)
+//! - `ALPACA_SECRET`: Broker API secret (required)
+//! - `HTTP_PORT`: HTTP server port (default: 50051)
+//! - `GRPC_PORT`: gRPC server port (default: 50052)
 //! - `RUST_LOG`: Log level (default: info)
-//!
-//! # Endpoints
-//!
-//! - HTTP (default 50051):
-//!   - `GET /health` - Health check
-//!   - `POST /v1/check-constraints` - Validate decision plan constraints
-//!   - `POST /v1/submit-orders` - Submit orders from decision plan
-//!   - `POST /v1/order-state` - Get current order states
-//!
-//! # Environment-Based Adapter Selection
-//!
-//! - **PAPER/LIVE**: Uses `AlpacaAdapter` with required credentials
 
 use std::net::SocketAddr;
 use std::sync::Arc;
 use std::time::Duration;
 
-use execution_engine::{
-    AlpacaAdapter, ConstraintValidator, Environment, ExecutionGateway, ExecutionServer,
-    OrderStateManager, StatePersistence, StopsEnforcer, StopsPriceMonitor,
-    config::{Config, load_config, validate_startup_environment},
-    execution::{PortfolioRecovery, ReconciliationManager, fetch_broker_state},
-    feed::{AlpacaFeed, create_alpaca_feed_channel},
-    options::{RollConfig, RollingManager},
-    run_price_monitor,
-    safety::ConnectionMonitor,
-    server::{TlsConfigBuilder, create_router},
-    telemetry::init_telemetry,
+use execution_engine::application::ports::{InMemoryRiskRepository, NoOpEventPublisher};
+use execution_engine::application::use_cases::{
+    CancelOrdersUseCase, SubmitOrdersUseCase, ValidateRiskUseCase,
 };
+use execution_engine::infrastructure::broker::alpaca::{
+    AlpacaBrokerAdapter, AlpacaConfig, AlpacaEnvironment,
+};
+use execution_engine::infrastructure::grpc::create_execution_service;
+use execution_engine::infrastructure::http::{AppState, create_router};
+use execution_engine::infrastructure::persistence::InMemoryOrderRepository;
+use execution_engine::infrastructure::price_feed::MockPriceFeed;
 use tokio::net::TcpListener;
 use tokio::signal;
 use tokio::sync::broadcast;
@@ -53,189 +40,122 @@ use tokio::sync::broadcast;
 const SHUTDOWN_TIMEOUT: Duration = Duration::from_secs(30);
 
 #[tokio::main]
-#[allow(clippy::too_many_lines)]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
-    // Load .env file from current directory (symlinked to project root)
-    // Falls back to searching parent directories if symlink doesn't exist
+    // Load .env file
     if dotenvy::dotenv().is_err() {
         load_dotenv_from_ancestors();
     }
 
-    // Parse command line arguments
-    let args: Vec<String> = std::env::args().collect();
-    let config_path = parse_config_path(&args);
+    // Initialize tracing
+    tracing_subscriber::fmt()
+        .with_env_filter(
+            tracing_subscriber::EnvFilter::from_default_env()
+                .add_directive("execution_engine=info".parse().unwrap())
+                .add_directive("tower_http=info".parse().unwrap()),
+        )
+        .init();
 
-    // Load configuration
-    let config = match load_config(config_path) {
-        Ok(cfg) => Arc::new(cfg),
-        Err(e) => {
-            eprintln!("Failed to load configuration: {e}");
-            eprintln!("Hint: Ensure config.yaml exists or use --config <path>");
-            std::process::exit(1);
-        }
+    tracing::info!("Starting Cream Execution Engine (Clean Architecture)");
+
+    // Parse environment
+    let env = std::env::var("CREAM_ENV")
+        .unwrap_or_else(|_| "PAPER".to_string())
+        .to_uppercase();
+    let environment = match env.as_str() {
+        "LIVE" => AlpacaEnvironment::Live,
+        _ => AlpacaEnvironment::Paper,
     };
 
-    // Initialize tracing with OpenTelemetry (exports to OpenObserve)
-    // The guard must be held for the lifetime of the application
-    let _telemetry_guard = init_telemetry();
+    // Get credentials
+    let api_key = std::env::var("ALPACA_KEY").unwrap_or_default();
+    let api_secret = std::env::var("ALPACA_SECRET").unwrap_or_default();
 
-    tracing::info!("Starting Cream Execution Engine");
+    if api_key.is_empty() || api_secret.is_empty() {
+        tracing::error!("ALPACA_KEY and ALPACA_SECRET environment variables are required");
+        std::process::exit(1);
+    }
+
+    // Parse ports
+    let http_port: u16 = std::env::var("HTTP_PORT")
+        .unwrap_or_else(|_| "50051".to_string())
+        .parse()
+        .unwrap_or(50051);
+    let grpc_port: u16 = std::env::var("GRPC_PORT")
+        .unwrap_or_else(|_| "50052".to_string())
+        .parse()
+        .unwrap_or(50052);
+
     tracing::info!(
-        environment = %config.environment.mode,
-        http_port = config.server.http_port,
-        grpc_port = config.server.grpc_port,
+        environment = %env,
+        http_port = http_port,
+        grpc_port = grpc_port,
         "Configuration loaded"
     );
 
     // Create shutdown channel
     let (shutdown_tx, _) = broadcast::channel::<()>(1);
 
-    // Parse environment from config
-    let cream_env = config
-        .environment
-        .mode
-        .parse::<Environment>()
-        .map_err(|e| format!("Invalid environment mode: {e}"))?;
-
-    // Validate environment configuration at startup
-    match validate_startup_environment(&config, cream_env) {
-        Ok(validation) => {
-            for warning in &validation.warnings {
-                tracing::warn!("{}", warning);
-            }
-        }
+    // Create Alpaca broker adapter
+    let alpaca_config = AlpacaConfig::new(api_key, api_secret, environment);
+    let broker = match AlpacaBrokerAdapter::new(alpaca_config) {
+        Ok(adapter) => Arc::new(adapter),
         Err(e) => {
-            tracing::error!("{}", e);
-            eprintln!("\nStartup failed: {e}");
+            tracing::error!("Failed to create Alpaca adapter: {e}");
             std::process::exit(1);
         }
-    }
+    };
 
-    // Create execution components based on environment
-    let state_manager = OrderStateManager::new();
-    let validator = ConstraintValidator::from_config(&config);
-
-    // Create the appropriate broker adapter and execution server
-    let components = create_execution_server(&config, cream_env, state_manager, validator).await?;
-
-    // Spawn reconciliation background task if enabled
-    let shutdown_rx = shutdown_tx.subscribe();
-    if let (Some(adapter), Some(state_manager)) = (
-        &components.adapter_for_reconciliation,
-        &components.state_manager_for_reconciliation,
-    ) {
-        let recon_config = config.reconciliation.to_reconciliation_config();
-        let recon_manager = ReconciliationManager::new(recon_config, Arc::clone(state_manager));
-        let interval_secs = config.reconciliation.interval_secs;
-        let adapter_clone = Arc::clone(adapter);
-
-        tracing::info!(
-            interval_secs = interval_secs,
-            "Starting periodic reconciliation background task"
-        );
-
-        tokio::spawn(async move {
-            reconciliation_loop(adapter_clone, recon_manager, interval_secs, shutdown_rx).await;
-        });
-    }
-
-    // Spawn connection monitor for mass cancel on disconnect if enabled
-    let safety_enabled = config.safety.is_enabled_for_env(&cream_env);
-    if safety_enabled {
-        if let (Some(adapter), Some(state_manager)) = (
-            &components.adapter_for_reconciliation,
-            &components.state_manager_for_reconciliation,
-        ) {
-            let mass_cancel_config = config.safety.to_mass_cancel_config();
-            let monitor = ConnectionMonitor::new(
-                Arc::clone(adapter),
-                mass_cancel_config,
-                Arc::clone(state_manager),
-            );
-            let shutdown_rx = shutdown_tx.subscribe();
-
-            tracing::info!(
-                grace_period_secs = config.safety.grace_period_seconds,
-                heartbeat_interval_ms = config.safety.heartbeat_interval_ms,
-                "Starting connection monitor for mass cancel on disconnect"
-            );
-
-            tokio::spawn(async move {
-                monitor.run(shutdown_rx).await;
-            });
-        } else {
-            tracing::info!(
-                "Connection monitor disabled (adapter/state_manager not available in this mode)"
-            );
-        }
-    } else {
-        tracing::info!(
-            environment = %cream_env,
-            "Connection monitor disabled for this environment"
-        );
-    }
-
-    // Start AlpacaFeed and StopsPriceMonitor for options stop/target enforcement
-    // (options don't support bracket orders, so we monitor prices and close manually)
-    let feed_config = &config.feeds.alpaca;
-    if !feed_config.api_key.is_empty() && !feed_config.api_secret.is_empty() {
-        let (feed_tx, feed_rx) = create_alpaca_feed_channel(None);
-
-        // Create and spawn the AlpacaFeed
-        let feed = AlpacaFeed::from_config(feed_config, feed_tx);
-        let feed_symbols = feed_config.symbols.clone();
-        let feed_shutdown_tx = shutdown_tx.clone();
-        tokio::spawn(async move {
-            let _shutdown_rx = feed_shutdown_tx.subscribe();
-            if let Err(e) = feed.start(feed_symbols).await {
-                tracing::error!(error = %e, "AlpacaFeed failed");
-            }
-        });
-
-        // Create and spawn the StopsPriceMonitor
-        let price_monitor = Arc::new(StopsPriceMonitor::new(
-            components.stops_enforcer.clone(),
-            components.adapter_for_price_monitor.clone(),
-        ));
-        let monitor_shutdown_rx = shutdown_tx.subscribe();
-        tokio::spawn(async move {
-            run_price_monitor(price_monitor, feed_rx, monitor_shutdown_rx).await;
-        });
-
-        tracing::info!(
-            symbols = ?config.feeds.alpaca.symbols,
-            "Started AlpacaFeed and StopsPriceMonitor for options stop/target enforcement"
-        );
-    } else {
-        tracing::info!("AlpacaFeed disabled (no API credentials in feeds config)");
-    }
-
-    // Start RollingManager for options position rolling
-    let rolling_manager = RollingManager::new(
-        RollConfig::default(),
-        components.adapter_for_price_monitor.clone(),
+    tracing::info!(
+        environment = %env,
+        "AlpacaBrokerAdapter initialized for {} trading",
+        if environment.is_live() { "LIVE" } else { "PAPER" }
     );
-    let rolling_shutdown_rx = shutdown_tx.subscribe();
-    tokio::spawn(async move {
-        rolling_manager.run(rolling_shutdown_rx).await;
-    });
-    tracing::info!("Started RollingManager for options position rolling evaluation");
+
+    // Create repositories and ports
+    let risk_repo = Arc::new(InMemoryRiskRepository::new());
+    let order_repo = Arc::new(InMemoryOrderRepository::new());
+    let event_publisher = Arc::new(NoOpEventPublisher);
+    let _price_feed = Arc::new(MockPriceFeed::new());
+
+    // Create use cases
+    let submit_orders = Arc::new(SubmitOrdersUseCase::new(
+        Arc::clone(&broker),
+        Arc::clone(&risk_repo),
+        Arc::clone(&order_repo),
+        Arc::clone(&event_publisher),
+    ));
+
+    let validate_risk = Arc::new(ValidateRiskUseCase::new(
+        Arc::clone(&risk_repo),
+        Arc::clone(&order_repo),
+    ));
+
+    let cancel_orders = Arc::new(CancelOrdersUseCase::new(
+        Arc::clone(&broker),
+        Arc::clone(&order_repo),
+        Arc::clone(&event_publisher),
+    ));
 
     // Create HTTP router
-    let app = create_router(components.execution_server);
+    let http_state = AppState {
+        submit_orders: Arc::clone(&submit_orders),
+        validate_risk: Arc::clone(&validate_risk),
+        cancel_orders: Arc::clone(&cancel_orders),
+        order_repo: Arc::clone(&order_repo),
+        version: env!("CARGO_PKG_VERSION").to_string(),
+    };
+    let app = create_router(http_state);
 
     // Build HTTP server address
-    let http_addr: SocketAddr =
-        format!("{}:{}", config.server.bind_address, config.server.http_port).parse()?;
+    let http_addr: SocketAddr = format!("0.0.0.0:{http_port}").parse()?;
 
     tracing::info!(%http_addr, "HTTP server starting");
     tracing::info!("Endpoints:");
     tracing::info!("  GET  /health");
-    tracing::info!("  GET  /v1/feed-health");
-    tracing::info!("  GET  /v1/circuit-breaker");
-    tracing::info!("  POST /v1/check-constraints");
-    tracing::info!("  POST /v1/submit-orders");
-    tracing::info!("  POST /v1/order-state");
+    tracing::info!("  POST /api/v1/check-constraints");
+    tracing::info!("  POST /api/v1/submit-orders");
+    tracing::info!("  POST /api/v1/orders");
+    tracing::info!("  POST /api/v1/cancel-orders");
 
     // Start HTTP server with graceful shutdown
     let listener = TcpListener::bind(http_addr).await?;
@@ -249,63 +169,33 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         }
     });
 
-    // Start gRPC server for MarketDataService and ExecutionService
-    let grpc_addr: SocketAddr =
-        format!("{}:{}", config.server.bind_address, config.server.grpc_port).parse()?;
+    // Start gRPC server
+    let grpc_addr: SocketAddr = format!("0.0.0.0:{grpc_port}").parse()?;
 
-    // Initialize TLS configuration from environment
-    let tls_config = TlsConfigBuilder::from_env().build().map_err(|e| {
-        tracing::error!("Failed to load TLS configuration: {e}");
-        e
-    })?;
-
-    if tls_config.is_some() {
-        tracing::info!(%grpc_addr, "gRPC server starting with TLS");
-    } else {
-        tracing::info!(%grpc_addr, "gRPC server starting (no TLS)");
-    }
+    tracing::info!(%grpc_addr, "gRPC server starting");
     tracing::info!("gRPC services:");
-    tracing::info!("  MarketDataService - GetSnapshot, GetOptionChain, SubscribeMarketData");
     tracing::info!("  ExecutionService - CheckConstraints, SubmitOrder, GetOrderState, etc.");
 
     let grpc_shutdown_tx = shutdown_tx.clone();
+    let grpc_submit = Arc::clone(&submit_orders);
+    let grpc_validate = Arc::clone(&validate_risk);
+    let grpc_cancel = Arc::clone(&cancel_orders);
+    let grpc_order_repo = Arc::clone(&order_repo);
+    let grpc_broker = Arc::clone(&broker);
+
     let grpc_handle = tokio::spawn(async move {
         let mut shutdown_rx = grpc_shutdown_tx.subscribe();
 
-        // Build gRPC services (market data fetched on-demand via REST API)
-        let (execution_service, market_data_service) =
-            match execution_engine::server::build_grpc_services() {
-                Ok(services) => services,
-                Err(e) => {
-                    tracing::error!("Failed to build gRPC services: {e}");
-                    return;
-                }
-            };
+        let execution_service = create_execution_service(
+            grpc_submit,
+            grpc_validate,
+            grpc_cancel,
+            grpc_order_repo,
+            grpc_broker,
+        );
 
-        // Build server with or without TLS
-        let mut builder = tonic::transport::Server::builder();
-
-        if let Some(tls) = tls_config {
-            match tls.build_server_config() {
-                Ok(server_tls_config) => {
-                    builder = match builder.tls_config(server_tls_config) {
-                        Ok(b) => b,
-                        Err(e) => {
-                            tracing::error!("Failed to apply TLS config: {e}");
-                            return;
-                        }
-                    };
-                }
-                Err(e) => {
-                    tracing::error!("Failed to build TLS server config: {e}");
-                    return;
-                }
-            }
-        }
-
-        let server = builder
+        let server = tonic::transport::Server::builder()
             .add_service(execution_service)
-            .add_service(market_data_service)
             .serve_with_shutdown(grpc_addr, async move {
                 let _ = shutdown_rx.recv().await;
                 tracing::info!("gRPC server shutting down");
@@ -333,14 +223,11 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 }
 
 /// Load .env file from current directory or any ancestor directory.
-/// Searches upward until it finds a .env file or reaches the filesystem root.
 fn load_dotenv_from_ancestors() {
-    // First try current directory (standard dotenvy behavior)
     if dotenvy::dotenv().is_ok() {
         return;
     }
 
-    // Walk up parent directories looking for .env
     if let Ok(cwd) = std::env::current_dir() {
         let mut dir = cwd.as_path();
         while let Some(parent) = dir.parent() {
@@ -354,275 +241,8 @@ fn load_dotenv_from_ancestors() {
     }
 }
 
-/// Parse config path from command line arguments.
-fn parse_config_path(args: &[String]) -> Option<&str> {
-    for (i, arg) in args.iter().enumerate() {
-        if (arg == "--config" || arg == "-c") && i + 1 < args.len() {
-            return Some(&args[i + 1]);
-        }
-    }
-    None
-}
-
-/// Components created during server initialization that may be needed for background tasks.
-struct ServerComponents {
-    execution_server: ExecutionServer,
-    /// Adapter for reconciliation (None if persistence disabled)
-    adapter_for_reconciliation: Option<Arc<AlpacaAdapter>>,
-    /// State manager for reconciliation (None if persistence disabled)
-    state_manager_for_reconciliation: Option<Arc<OrderStateManager>>,
-    /// Stops enforcer for price monitoring (shared with gateway)
-    stops_enforcer: Arc<tokio::sync::RwLock<StopsEnforcer>>,
-    /// Adapter for price monitor (shared with gateway)
-    adapter_for_price_monitor: Arc<AlpacaAdapter>,
-}
-
-/// Create execution server with the appropriate broker adapter based on environment.
-///
-/// - PAPER/LIVE: Uses `AlpacaAdapter` with validated credentials
-///
-/// Returns the execution server and optional components needed for background tasks.
-#[allow(clippy::too_many_lines)]
-async fn create_execution_server(
-    config: &Config,
-    env: Environment,
-    state_manager: OrderStateManager,
-    validator: ConstraintValidator,
-) -> Result<ServerComponents, Box<dyn std::error::Error>> {
-    let key = config.brokers.alpaca.api_key.clone();
-    let secret = config.brokers.alpaca.api_secret.clone();
-
-    // Credentials already validated by validate_startup_environment
-    // but we double-check here for safety
-    if key.is_empty() || secret.is_empty() {
-        return Err(format!(
-            "Alpaca credentials required for {env} mode. \
-             Set ALPACA_KEY and ALPACA_SECRET environment variables."
-        )
-        .into());
-    }
-
-    tracing::info!(
-        environment = %env,
-        "AlpacaAdapter initialized for {} trading",
-        if env.is_live() { "LIVE" } else { "PAPER" }
-    );
-
-    let (api_key, api_secret) = (key, secret);
-
-    // Get circuit breaker config for Alpaca
-    let circuit_config = config.circuit_breaker.alpaca_config();
-    tracing::info!(
-        failure_threshold = %circuit_config.failure_rate_threshold,
-        wait_duration_secs = circuit_config.wait_duration_in_open.as_secs(),
-        "Circuit breaker configured for Alpaca"
-    );
-
-    let adapter = AlpacaAdapter::new(api_key, api_secret, env)?;
-
-    // Initialize persistence if enabled for this environment
-    let persistence_enabled = config.persistence.is_enabled_for_env(&env);
-    let recovery_enabled = config.recovery.is_enabled_for_env(&env);
-    let reconciliation_enabled = config.reconciliation.is_enabled_for_env(&env);
-
-    if persistence_enabled {
-        let database_url = config
-            .persistence
-            .resolve_database_url(&env)
-            .map_err(|e| format!("Failed to resolve database URL: {e}"))?;
-
-        let persistence = StatePersistence::with_max_connections(
-            &database_url,
-            &env.to_string(),
-            config.persistence.max_connections,
-        )
-        .await
-        .map_err(|e| format!("Failed to initialize persistence: {e}"))?;
-
-        tracing::info!(
-            max_connections = config.persistence.max_connections,
-            snapshot_interval_secs = config.persistence.snapshot_interval_secs,
-            "PostgreSQL state persistence initialized"
-        );
-
-        let persistence_arc = Arc::new(persistence);
-        let state_manager_arc = Arc::new(state_manager);
-        let adapter_arc = Arc::new(adapter);
-
-        // Run crash recovery before accepting requests
-        if recovery_enabled {
-            tracing::info!("Starting crash recovery...");
-
-            let recovery_config = config.recovery.to_recovery_config();
-            let recovery = PortfolioRecovery::new(
-                recovery_config,
-                Arc::clone(&persistence_arc),
-                Arc::clone(&state_manager_arc),
-            );
-
-            match recovery.recover(&adapter_arc).await {
-                Ok(result) => {
-                    tracing::info!(
-                        orders_loaded = result.orders_loaded,
-                        positions_loaded = result.positions_loaded,
-                        orphans_resolved = result.orphans_resolved,
-                        positions_synced = result.positions_synced,
-                        duration_ms = result.duration_ms,
-                        "Crash recovery completed successfully"
-                    );
-                    for warning in &result.warnings {
-                        tracing::warn!("Recovery warning: {}", warning);
-                    }
-                }
-                Err(e) => {
-                    tracing::error!("Crash recovery failed: {}", e);
-
-                    // In LIVE mode, refuse to start without successful recovery
-                    if env.is_live() {
-                        return Err(format!(
-                            "LIVE mode requires successful recovery. Recovery failed: {e}"
-                        )
-                        .into());
-                    }
-
-                    // In PAPER mode, warn but continue
-                    tracing::warn!(
-                        "Continuing without successful recovery in PAPER mode. \
-                         Order states may be inconsistent."
-                    );
-                }
-            }
-        } else {
-            tracing::info!(
-                environment = %env,
-                "Crash recovery disabled for this environment"
-            );
-        }
-
-        // Use the Arc-based constructor since we need to keep references for reconciliation
-        let stops_config = config.stops.to_stops_config();
-        let gateway = ExecutionGateway::with_all_arcs(
-            Arc::clone(&adapter_arc),
-            "Alpaca",
-            Arc::clone(&state_manager_arc),
-            validator,
-            circuit_config,
-            Arc::clone(&persistence_arc),
-            env,
-            stops_config,
-        );
-
-        // Get stops enforcer from gateway for price monitor
-        let stops_enforcer = gateway.stops_enforcer();
-
-        // Return components needed for reconciliation if enabled
-        let (adapter_for_recon, state_manager_for_recon) = if reconciliation_enabled {
-            (Some(Arc::clone(&adapter_arc)), Some(state_manager_arc))
-        } else {
-            (None, None)
-        };
-
-        Ok(ServerComponents {
-            execution_server: ExecutionServer::new(gateway),
-            adapter_for_reconciliation: adapter_for_recon,
-            state_manager_for_reconciliation: state_manager_for_recon,
-            stops_enforcer,
-            adapter_for_price_monitor: adapter_arc,
-        })
-    } else {
-        tracing::info!(
-            environment = %env,
-            "State persistence disabled for this environment"
-        );
-        let adapter_arc = Arc::new(adapter);
-        let stops_config = config.stops.to_stops_config();
-        let stops_enforcer_inner = StopsEnforcer::with_config(env, stops_config);
-        let gateway = ExecutionGateway::with_stops(
-            AlpacaAdapter::new(
-                config.brokers.alpaca.api_key.clone(),
-                config.brokers.alpaca.api_secret.clone(),
-                env,
-            )?,
-            state_manager,
-            validator,
-            circuit_config,
-            stops_enforcer_inner,
-        );
-
-        // Get stops enforcer from gateway for price monitor
-        let stops_enforcer = gateway.stops_enforcer();
-
-        Ok(ServerComponents {
-            execution_server: ExecutionServer::new(gateway),
-            adapter_for_reconciliation: None,
-            state_manager_for_reconciliation: None,
-            stops_enforcer,
-            adapter_for_price_monitor: adapter_arc,
-        })
-    }
-}
-
-/// Background task that periodically reconciles local state with broker state.
-async fn reconciliation_loop(
-    adapter: Arc<AlpacaAdapter>,
-    recon_manager: ReconciliationManager,
-    interval_secs: u64,
-    mut shutdown_rx: broadcast::Receiver<()>,
-) {
-    let mut interval = tokio::time::interval(Duration::from_secs(interval_secs));
-
-    // Skip the first tick (immediate) to allow server to fully start
-    interval.tick().await;
-
-    loop {
-        tokio::select! {
-            _ = interval.tick() => {
-                tracing::debug!("Starting periodic reconciliation");
-
-                // Fetch broker state
-                let broker_state = match fetch_broker_state(&adapter).await {
-                    Ok(state) => state,
-                    Err(e) => {
-                        tracing::error!("Failed to fetch broker state for reconciliation: {}", e);
-                        continue;
-                    }
-                };
-
-                // Run reconciliation
-                let report = recon_manager.reconcile(broker_state).await;
-
-                if report.has_critical() {
-                    tracing::error!(
-                        discrepancy_count = report.discrepancies.len(),
-                        orphan_count = report.orphaned_orders.len(),
-                        "Reconciliation detected critical discrepancies"
-                    );
-                } else if !report.discrepancies.is_empty() || !report.orphaned_orders.is_empty() {
-                    tracing::warn!(
-                        discrepancy_count = report.discrepancies.len(),
-                        orphan_count = report.orphaned_orders.len(),
-                        duration_ms = report.duration_ms,
-                        "Reconciliation completed with discrepancies"
-                    );
-                } else {
-                    tracing::info!(
-                        orders_compared = report.orders_compared,
-                        positions_compared = report.positions_compared,
-                        duration_ms = report.duration_ms,
-                        "Reconciliation completed successfully"
-                    );
-                }
-            }
-            _ = shutdown_rx.recv() => {
-                tracing::info!("Reconciliation loop shutting down");
-                break;
-            }
-        }
-    }
-}
-
 /// Wait for shutdown signal (SIGTERM or SIGINT).
-#[allow(clippy::expect_used)] // Signal handler failure is unrecoverable; panic is appropriate
+#[allow(clippy::expect_used)]
 async fn shutdown_signal(shutdown_tx: broadcast::Sender<()>) {
     let ctrl_c = async {
         signal::ctrl_c()
@@ -650,7 +270,6 @@ async fn shutdown_signal(shutdown_tx: broadcast::Sender<()>) {
         }
     }
 
-    // Notify all listeners about shutdown
     let _ = shutdown_tx.send(());
 
     tracing::info!(
