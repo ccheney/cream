@@ -23,7 +23,10 @@ pub use grpc::{
     ExecutionServiceImpl, MarketDataServiceImpl, build_grpc_services,
     build_grpc_services_with_feed, run_grpc_server, run_grpc_server_with_tls,
 };
-pub use http::{ExecutionServer, create_router};
+pub use http::{
+    CheckConstraintsRequest, CheckConstraintsResponse, ExecutionServer, SubmitOrdersRequest,
+    SubmitOrdersResponse, create_router,
+};
 pub use tls::{
     TlsConfig, TlsConfigBuilder, TlsError, get_tls_config, init_tls_config, is_tls_enabled,
 };

@@ -72,7 +72,7 @@ pub struct CheckConstraintsRequest {
 }
 
 /// Response from constraint check.
-#[derive(Debug, Serialize)]
+#[derive(Debug, Serialize, Deserialize)]
 pub struct CheckConstraintsResponse {
     /// Whether constraints passed.
     pub ok: bool,
@@ -197,7 +197,7 @@ pub struct SubmitOrdersRequest {
 }
 
 /// Response from order submission.
-#[derive(Debug, Serialize)]
+#[derive(Debug, Serialize, Deserialize)]
 pub struct SubmitOrdersResponse {
     /// Cycle ID.
     pub cycle_id: String,
