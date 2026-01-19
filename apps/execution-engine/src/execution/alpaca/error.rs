@@ -58,6 +58,10 @@ pub enum AlpacaError {
         /// Number of attempts made before giving up.
         attempts: u32,
     },
+
+    /// Invalid order request.
+    #[error("Invalid order: {0}")]
+    InvalidOrder(String),
 }
 
 impl From<reqwest::Error> for AlpacaError {
@@ -88,6 +92,7 @@ impl From<AlpacaError> for BrokerError {
             AlpacaError::MaxRetriesExceeded { attempts: _ } => {
                 Self::Http("Max retries exceeded".to_string())
             }
+            AlpacaError::InvalidOrder(msg) => Self::OrderRejected(msg),
         }
     }
 }

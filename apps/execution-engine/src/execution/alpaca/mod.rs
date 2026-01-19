@@ -42,8 +42,8 @@ use super::tactics::{
 };
 
 use api_types::{
-    AlpacaAccountResponse, AlpacaErrorResponse, AlpacaOrderRequest, AlpacaOrderResponse,
-    AlpacaPositionResponse,
+    AlpacaAccountResponse, AlpacaErrorResponse, AlpacaMultiLegOrderRequest, AlpacaOrderRequest,
+    AlpacaOrderResponse, AlpacaPositionResponse,
 };
 
 /// Alpaca Markets API adapter.
@@ -390,7 +390,14 @@ impl AlpacaAdapter {
         let mut errors = Vec::new();
 
         for decision in &request.plan.decisions {
-            match self.submit_single_order(decision).await {
+            // Route to appropriate submission method based on order type
+            let result = if Self::is_multi_leg_order(decision) {
+                self.submit_multi_leg_order(decision).await
+            } else {
+                self.submit_single_order(decision).await
+            };
+
+            match result {
                 Ok(order_state) => orders.push(order_state),
                 Err(e) => {
                     errors.push(ExecutionError {
@@ -689,6 +696,58 @@ impl AlpacaAdapter {
             .await?;
 
         Ok(OrderState::from_alpaca_response(&response))
+    }
+
+    /// Submit a multi-leg options order to Alpaca.
+    ///
+    /// Multi-leg orders (Level 3 Options) support strategies like vertical spreads,
+    /// iron condors, straddles, and strangles.
+    ///
+    /// # Alpaca API Constraints
+    ///
+    /// - Max 4 legs per order
+    /// - ratio_qty GCD must be 1
+    /// - Order type: only `limit` for multi-leg
+    /// - Time in force: `day` only for options
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the decision doesn't have valid multi-leg data or if
+    /// the API call fails.
+    async fn submit_multi_leg_order(&self, decision: &Decision) -> Result<OrderState, AlpacaError> {
+        let order_request = AlpacaMultiLegOrderRequest::from_decision(decision).ok_or_else(|| {
+            AlpacaError::InvalidOrder(
+                "Decision missing required multi-leg order data (legs or net_limit_price)"
+                    .to_string(),
+            )
+        })?;
+
+        tracing::info!(
+            decision_id = %decision.decision_id,
+            strategy_family = ?decision.strategy_family,
+            leg_count = order_request.legs.len(),
+            limit_price = %order_request.limit_price,
+            "Submitting multi-leg order to Alpaca"
+        );
+
+        let response: AlpacaOrderResponse = self
+            .request("POST", "/v2/orders", Some(&order_request))
+            .await?;
+
+        Ok(OrderState::from_alpaca_response(&response))
+    }
+
+    /// Determine if a decision should be routed as a multi-leg order.
+    fn is_multi_leg_order(decision: &Decision) -> bool {
+        !decision.legs.is_empty()
+            && matches!(
+                decision.strategy_family,
+                crate::models::StrategyFamily::VerticalSpread
+                    | crate::models::StrategyFamily::IronCondor
+                    | crate::models::StrategyFamily::Straddle
+                    | crate::models::StrategyFamily::Strangle
+                    | crate::models::StrategyFamily::CalendarSpread
+            )
     }
 
     /// Get current order status from Alpaca.

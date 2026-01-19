@@ -104,6 +104,9 @@ pub(super) enum OrderClass {
     Oto,
     /// One-cancels-other (two exits)
     Oco,
+    /// Multi-leg options order
+    #[serde(rename = "mleg")]
+    MultiLeg,
 }
 
 /// Helper to skip serializing `order_class` when it's simple.
@@ -111,6 +114,111 @@ pub(super) enum OrderClass {
 #[allow(clippy::trivially_copy_pass_by_ref)]
 pub(super) fn is_simple_order(class: &OrderClass) -> bool {
     *class == OrderClass::Simple
+}
+
+// ============================================================================
+// Multi-Leg Order Types (Level 3 Options)
+// ============================================================================
+
+/// Position intent for options orders (Alpaca API format)
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub(super) enum AlpacaPositionIntent {
+    BuyToOpen,
+    BuyToClose,
+    SellToOpen,
+    SellToClose,
+}
+
+impl From<crate::models::PositionIntent> for AlpacaPositionIntent {
+    fn from(intent: crate::models::PositionIntent) -> Self {
+        match intent {
+            crate::models::PositionIntent::BuyToOpen => Self::BuyToOpen,
+            crate::models::PositionIntent::BuyToClose => Self::BuyToClose,
+            crate::models::PositionIntent::SellToOpen => Self::SellToOpen,
+            crate::models::PositionIntent::SellToClose => Self::SellToClose,
+        }
+    }
+}
+
+/// Single leg for multi-leg options order request
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub(super) struct AlpacaMultiLegOrderLeg {
+    /// OCC option symbol (e.g., "AAPL250117P00190000")
+    pub(super) symbol: String,
+    /// Quantity ratio (always positive in request, use side for direction)
+    pub(super) ratio_qty: String,
+    /// Order side (buy/sell)
+    pub(super) side: String,
+    /// Position intent (buy_to_open, sell_to_open, etc.)
+    pub(super) position_intent: AlpacaPositionIntent,
+}
+
+/// Multi-leg options order request (Level 3 Options)
+///
+/// Alpaca API constraints:
+/// - Max 4 legs
+/// - ratio_qty GCD must be 1
+/// - type: only "limit" for multi-leg
+/// - time_in_force: "day" only for options
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub(super) struct AlpacaMultiLegOrderRequest {
+    /// Order class (always "mleg" for multi-leg)
+    pub(super) order_class: String,
+    /// Total quantity (contracts)
+    pub(super) qty: String,
+    /// Order type (only "limit" supported for multi-leg)
+    #[serde(rename = "type")]
+    pub(super) order_type: String,
+    /// Net limit price for the spread (debit positive, credit negative)
+    pub(super) limit_price: String,
+    /// Time in force (only "day" for options)
+    pub(super) time_in_force: String,
+    /// Order legs (2-4 legs)
+    pub(super) legs: Vec<AlpacaMultiLegOrderLeg>,
+    /// Optional client order ID
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub(super) client_order_id: Option<String>,
+}
+
+impl AlpacaMultiLegOrderRequest {
+    /// Create a multi-leg order request from a decision with legs.
+    ///
+    /// Returns None if the decision doesn't have valid multi-leg data.
+    pub(super) fn from_decision(decision: &Decision) -> Option<Self> {
+        // Must have legs for multi-leg order
+        if decision.legs.is_empty() || decision.legs.len() > 4 {
+            return None;
+        }
+
+        // Multi-leg orders require a net limit price
+        let limit_price = decision.net_limit_price?;
+
+        let legs: Vec<AlpacaMultiLegOrderLeg> = decision
+            .legs
+            .iter()
+            .map(|leg| {
+                // ratio_qty in our model: positive = buy, negative = sell
+                let side = if leg.ratio_qty >= 0 { "buy" } else { "sell" };
+                AlpacaMultiLegOrderLeg {
+                    symbol: leg.symbol.clone(),
+                    ratio_qty: leg.ratio_qty.unsigned_abs().to_string(),
+                    side: side.to_string(),
+                    position_intent: leg.position_intent.into(),
+                }
+            })
+            .collect();
+
+        Some(Self {
+            order_class: "mleg".to_string(),
+            qty: decision.size.quantity.to_string(),
+            order_type: "limit".to_string(),
+            limit_price: limit_price.to_string(),
+            time_in_force: "day".to_string(),
+            legs,
+            client_order_id: Some(decision.decision_id.clone()),
+        })
+    }
 }
 
 #[derive(Debug, Serialize, Deserialize)]
