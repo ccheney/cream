@@ -146,8 +146,6 @@ pub mod execution_service_client {
                 .insert(GrpcMethod::new("cream.v1.ExecutionService", "SubmitOrder"));
             self.inner.unary(req, path, codec).await
         }
-        /** Get order state by order ID
-*/
         pub async fn get_order_state(
             &mut self,
             request: impl tonic::IntoRequest<super::GetOrderStateRequest>,
@@ -303,8 +301,6 @@ pub mod execution_service_server {
             tonic::Response<super::SubmitOrderResponse>,
             tonic::Status,
         >;
-        /** Get order state by order ID
-*/
         async fn get_order_state(
             &self,
             request: tonic::Request<super::GetOrderStateRequest>,

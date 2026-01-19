@@ -125,14 +125,26 @@ message AccountState {
   // Current margin used
   double margin_used = 4;
 
-  // Day trade count (for PDT rule)
+  // Day trade count (for PDT rule) - used in rolling 5-day window
   int32 day_trade_count = 5;
 
-  // Whether pattern day trader rules apply
+  // Whether pattern day trader rules apply (account flagged as PDT)
   bool is_pdt_restricted = 6;
 
   // Timestamp of state snapshot
   google.protobuf.Timestamp as_of = 7;
+
+  // Previous day's equity (used for $25k PDT threshold check)
+  double last_equity = 8;
+
+  // Day trading buying power (4x equity for PDT accounts)
+  double daytrading_buying_power = 9;
+
+  // Remaining day trades available (max 3 when under $25k)
+  int32 remaining_day_trades = 10;
+
+  // Whether account is under the $25k PDT threshold
+  bool under_pdt_threshold = 11;
 }
 
 // ============================================

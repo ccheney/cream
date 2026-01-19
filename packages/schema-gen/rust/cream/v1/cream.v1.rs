@@ -1443,15 +1443,27 @@ pub struct AccountState {
     /// Current margin used
     #[prost(double, tag="4")]
     pub margin_used: f64,
-    /// Day trade count (for PDT rule)
+    /// Day trade count (for PDT rule) - used in rolling 5-day window
     #[prost(int32, tag="5")]
     pub day_trade_count: i32,
-    /// Whether pattern day trader rules apply
+    /// Whether pattern day trader rules apply (account flagged as PDT)
     #[prost(bool, tag="6")]
     pub is_pdt_restricted: bool,
     /// Timestamp of state snapshot
     #[prost(message, optional, tag="7")]
     pub as_of: ::core::option::Option<::prost_types::Timestamp>,
+    /// Previous day's equity (used for $25k PDT threshold check)
+    #[prost(double, tag="8")]
+    pub last_equity: f64,
+    /// Day trading buying power (4x equity for PDT accounts)
+    #[prost(double, tag="9")]
+    pub daytrading_buying_power: f64,
+    /// Remaining day trades available (max 3 when under $25k)
+    #[prost(int32, tag="10")]
+    pub remaining_day_trades: i32,
+    /// Whether account is under the $25k PDT threshold
+    #[prost(bool, tag="11")]
+    pub under_pdt_threshold: bool,
 }
 // ============================================
 // Positions
