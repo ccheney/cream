@@ -1,150 +1,131 @@
 /**
  * Grounding Agent for web search context gathering.
  *
- * This agent uses ONLY google_search (native Gemini grounding) to perform
- * web searches and gather real-time context for trading analysis.
- *
- * Due to Gemini's limitation where native grounding tools cannot be combined
- * with custom function tools, this agent runs separately and early in the
- * OODA cycle. Its output is passed to downstream agents via their prompts.
+ * Uses xAI Grok's live search to perform web, news, and X.com searches
+ * for real-time trading context. Bypasses Mastra's agent framework for
+ * direct AI SDK calls since Grok's search is via providerOptions, not tools.
  */
 
-import { buildGenerateOptions, createAgent, getAgentRuntimeSettings } from "./factory.js";
+import { xai } from "@ai-sdk/xai";
+import { generateText, streamText } from "ai";
+import { createGrokSearchConfig, DEFAULT_TRADING_SOURCES, GROK_MODEL } from "./grok-config.js";
 import { buildDatetimeContext } from "./prompts.js";
 import { type GroundingOutput, GroundingOutputSchema } from "./schemas.js";
-import { createStreamChunkForwarder } from "./stream-forwarder.js";
-import type { AgentContext, OnStreamChunk } from "./types.js";
+import type { AgentContext, AgentStreamChunk, OnStreamChunk } from "./types.js";
 
-// ============================================
-// Agent Instance
-// ============================================
-
-/** Web Grounding Agent - Performs Google searches for real-time context */
-export const groundingAgent = createAgent("grounding_agent");
-
-// ============================================
-// Prompt Building
-// ============================================
+/**
+ * Get provider options for Grok search.
+ * The xAI provider accepts searchParameters but TypeScript's strict JSON
+ * types in SharedV3ProviderOptions don't allow our typed config structure.
+ */
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function getGrokProviderOptions(): any {
+	return {
+		xai: createGrokSearchConfig({
+			sources: DEFAULT_TRADING_SOURCES,
+			maxSearchResults: 20,
+		}),
+	};
+}
 
 /**
  * Build the grounding prompt for a set of symbols.
- * Instructs the agent on what to search for.
+ * Includes X.com cashtag search guidance.
  */
 export function buildGroundingPrompt(symbols: string[]): string {
 	const symbolList = symbols.join(", ");
+	const cashtags = symbols.map((s) => `$${s}`).join(" ");
+
 	const symbolQueries = symbols
 		.map(
 			(s) => `
 For ${s}:
-- Search for "${s} stock news today"
-- Search for "${s} analyst rating outlook"
-- Search for "${s} earnings expectations"
-- Search for "${s} risks concerns"`
+- Web: "${s} stock news today"
+- Web: "${s} analyst rating outlook"
+- Web: "${s} earnings expectations"
+- X cashtag: "$${s}" (primary - trader sentiment, breaking news)
+- X text: "${s} stock" (broader discussion)`
 		)
 		.join("\n");
 
-	return `${buildDatetimeContext({ googleSearchVerification: true })}## Grounding Task
+	return `${buildDatetimeContext()}## Grounding Task
 
-Gather real-time web context for these trading symbols: ${symbolList}
+Gather real-time web, news, and X.com context for: ${symbolList}
+
+### Cashtag Reference
+Search these cashtags on X: ${cashtags}
 
 ### Per-Symbol Searches
 ${symbolQueries}
 
 ### Global/Macro Searches
-- Search for "stock market today sentiment"
-- Search for "Fed interest rate policy outlook"
-- Search for "economic data releases this week"
+- Web: "stock market today sentiment", "Fed interest rate policy"
+- News: Financial news for market context
+- X cashtags: "$SPY $QQQ" (index sentiment)
+- X text: "Fed FOMC market" (policy reactions)
+
+### X.com Search Priority
+
+1. **Cashtags first** ($TSLA, $AAPL) - these are how traders tag stock discussion
+2. High-engagement posts (many reposts/likes) often signal breaking news
+3. Note sentiment divergence between X and traditional news sources
 
 ### Output Requirements
 
-After performing searches, synthesize findings into the structured output format:
-- perSymbol: Array of objects, one per symbol. Each object must include:
-  - symbol: The ticker symbol (e.g., "AAPL")
-  - news: Array of concise bullet points for headlines and developments
-  - fundamentals: Array of valuation context and analyst views
-  - bullCase: Array of bullish catalysts and opportunities
-  - bearCase: Array of bearish risks and concerns
-- global: Market-wide context for macro and events
-- sources: List key sources with URLs, titles, and relevance
+Synthesize into structured JSON:
+- perSymbol: Array with symbol, news[], fundamentals[], bullCase[], bearCase[]
+- global: { macro: [], events: [] }
+- sources: Array with url, title, relevance, sourceType (url/x/news)
 
-Focus on:
-1. Information from the last 24-48 hours when available
-2. Trading-relevant facts (not opinions or speculation)
-3. Concrete catalysts and risks
-4. Keep each bullet point to 1-2 sentences
-
-If a search returns no relevant results for a category, use an empty array.`;
-}
-
-// ============================================
-// Execution Functions
-// ============================================
-
-/**
- * Run Grounding Agent (non-streaming).
- */
-export async function runGroundingAgent(context: AgentContext): Promise<GroundingOutput> {
-	const prompt = buildGroundingPrompt(context.symbols);
-
-	const settings = getAgentRuntimeSettings("grounding_agent", context.agentConfigs);
-	const options = buildGenerateOptions(
-		settings,
-		{ schema: GroundingOutputSchema },
-		{ useTwoStepExtraction: true }
-	);
-
-	const response = await groundingAgent.generate([{ role: "user", content: prompt }], options);
-
-	const result = response.object as GroundingOutput | undefined;
-	return (
-		result ?? {
-			perSymbol: [],
-			global: { macro: [], events: [] },
-			sources: [],
-		}
-	);
+For X.com sources, include the post URL and note if it was a cashtag result.`;
 }
 
 /**
- * Run Grounding Agent with streaming.
- * Streams tool calls and results to the UI via onChunk callback.
+ * Parse and validate the grounding output from the model response.
  */
-export async function runGroundingAgentStreaming(
-	context: AgentContext,
-	onChunk: OnStreamChunk
-): Promise<GroundingOutput> {
-	const prompt = buildGroundingPrompt(context.symbols);
+function parseGroundingOutput(text: string): GroundingOutput {
+	const jsonMatch = text.match(/```json\s*([\s\S]*?)\s*```/);
+	const jsonText = jsonMatch?.[1] ?? text;
 
-	const settings = getAgentRuntimeSettings("grounding_agent", context.agentConfigs);
-	const options = buildGenerateOptions(
-		settings,
-		{ schema: GroundingOutputSchema },
-		{ useTwoStepExtraction: true }
-	);
+	const cleanedText = jsonText.trim();
 
-	const stream = await groundingAgent.stream([{ role: "user", content: prompt }], options);
-	const forwardChunk = createStreamChunkForwarder("grounding_agent", onChunk);
+	const parsed = JSON.parse(cleanedText) as unknown;
+	return GroundingOutputSchema.parse(parsed);
+}
 
-	for await (const chunk of stream.fullStream) {
-		await forwardChunk(chunk as { type: string; payload?: Record<string, unknown> });
+/**
+ * Append Grok citations to the sources array.
+ */
+function appendCitations(
+	output: GroundingOutput,
+	sources: Array<{ sourceType?: string; url?: string; title?: string } | string> | undefined
+): GroundingOutput {
+	if (!sources?.length) {
+		return output;
 	}
 
-	const result = (await stream.object) as GroundingOutput | undefined;
-	return (
-		result ?? {
-			perSymbol: [],
-			global: { macro: [], events: [] },
-			sources: [],
+	for (const source of sources) {
+		if (typeof source === "string") {
+			output.sources.push({
+				url: source,
+				title: "Grok citation",
+				relevance: "Auto-cited by search",
+			});
+		} else if (source.url) {
+			output.sources.push({
+				url: source.url,
+				title: source.title ?? "Grok citation",
+				relevance: "Auto-cited by search",
+				sourceType: source.sourceType as "url" | "x" | "news" | undefined,
+			});
 		}
-	);
+	}
+
+	return output;
 }
 
-// ============================================
-// Empty/Stub Output
-// ============================================
-
 /**
- * Create an empty grounding output for STUB mode or when grounding is skipped.
+ * Create an empty grounding output for STUB mode or when grounding fails.
  */
 export function createEmptyGroundingOutput(): GroundingOutput {
 	return {
@@ -152,4 +133,95 @@ export function createEmptyGroundingOutput(): GroundingOutput {
 		global: { macro: [], events: [] },
 		sources: [],
 	};
+}
+
+/**
+ * Run Grounding Agent (non-streaming).
+ */
+export async function runGroundingAgent(context: AgentContext): Promise<GroundingOutput> {
+	const prompt = buildGroundingPrompt(context.symbols);
+
+	const response = await generateText({
+		model: xai(GROK_MODEL),
+		prompt,
+		providerOptions: getGrokProviderOptions(),
+	});
+
+	try {
+		const parsed = parseGroundingOutput(response.text);
+		return appendCitations(parsed, response.sources);
+	} catch {
+		return createEmptyGroundingOutput();
+	}
+}
+
+/**
+ * Run Grounding Agent with streaming.
+ * Streams text deltas to the UI via onChunk callback.
+ */
+export async function runGroundingAgentStreaming(
+	context: AgentContext,
+	onChunk: OnStreamChunk
+): Promise<GroundingOutput> {
+	const prompt = buildGroundingPrompt(context.symbols);
+	const agentType = "grounding_agent";
+
+	const emitChunk = (chunk: Omit<AgentStreamChunk, "timestamp">) => {
+		return onChunk({
+			...chunk,
+			timestamp: new Date().toISOString(),
+		} as AgentStreamChunk);
+	};
+
+	await emitChunk({
+		type: "start",
+		agentType,
+		payload: {},
+	});
+
+	const response = streamText({
+		model: xai(GROK_MODEL),
+		prompt,
+		providerOptions: getGrokProviderOptions(),
+	});
+
+	let fullText = "";
+
+	for await (const chunk of response.fullStream) {
+		if (chunk.type === "text-delta") {
+			const textChunk = chunk as { type: "text-delta"; text: string };
+			fullText += textChunk.text;
+			await emitChunk({
+				type: "text-delta",
+				agentType,
+				payload: { text: textChunk.text },
+			});
+		} else if (chunk.type === "source") {
+			const source = chunk as { type: "source"; sourceType?: string; url?: string; title?: string };
+			await emitChunk({
+				type: "source",
+				agentType,
+				payload: {
+					sourceType: source.sourceType,
+					url: source.url,
+					title: source.title,
+				},
+			});
+		}
+	}
+
+	await emitChunk({
+		type: "finish",
+		agentType,
+		payload: {},
+	});
+
+	try {
+		const parsed = parseGroundingOutput(fullText);
+		const finalResponse = await response;
+		const sources = await finalResponse.sources;
+		return appendCitations(parsed, sources);
+	} catch {
+		return createEmptyGroundingOutput();
+	}
 }
