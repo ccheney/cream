@@ -310,7 +310,10 @@ const groundingStep = createStep({
 			externalContext: inputData.externalContext,
 			overnightBrief: inputData.overnightBrief,
 			recentEvents: inputData.recentEvents ?? [],
+			regimeLabels: inputData.regimeLabels,
+			predictionMarketSignals: inputData.predictionMarketSignals,
 			agentConfigs: inputData.agentConfigs,
+			memory: inputData.memory,
 		};
 
 		// Emit start event
@@ -463,9 +466,12 @@ const debateStep = createStep({
 			snapshots: inputData.snapshot ?? {},
 			indicators: inputData.snapshot?.indicators ?? {},
 			externalContext: inputData.externalContext,
+			overnightBrief: inputData.overnightBrief,
 			recentEvents: inputData.recentEvents ?? [],
-			memory: inputData.memory,
+			regimeLabels: inputData.regimeLabels,
+			predictionMarketSignals: inputData.predictionMarketSignals,
 			agentConfigs: inputData.agentConfigs,
+			memory: inputData.memory,
 			groundingOutput: inputData.groundingOutput,
 		};
 		const analystOutputs = {
@@ -547,9 +553,13 @@ const traderStep = createStep({
 			snapshots: inputData.snapshot ?? {},
 			indicators: inputData.snapshot?.indicators ?? {},
 			externalContext: inputData.externalContext,
+			overnightBrief: inputData.overnightBrief,
 			recentEvents: inputData.recentEvents ?? [],
-			memory: inputData.memory,
+			regimeLabels: inputData.regimeLabels,
+			predictionMarketSignals: inputData.predictionMarketSignals,
 			agentConfigs: inputData.agentConfigs,
+			memory: inputData.memory,
+			groundingOutput: inputData.groundingOutput,
 		};
 		const debateOutputs = {
 			bullish: bullishResearch,
