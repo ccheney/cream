@@ -41,8 +41,7 @@ pub fn convert_decision_plan(
     let decisions: Vec<Decision> = proto
         .decisions
         .iter()
-        .enumerate()
-        .map(|(idx, d)| {
+        .map(|d| {
             // Convert action from proto enum
             let action = match proto::cream::v1::Action::try_from(d.action) {
                 Ok(proto::cream::v1::Action::Buy | proto::cream::v1::Action::Increase) => {
@@ -176,12 +175,14 @@ pub fn convert_decision_plan(
                 .net_limit_price
                 .map(|p| Decimal::from_f64_retain(p).unwrap_or_default());
 
+            let instrument_id = d
+                .instrument
+                .as_ref()
+                .map_or(String::new(), |i| i.instrument_id.clone());
+
             Decision {
-                decision_id: format!("{}-{}", proto.cycle_id, idx),
-                instrument_id: d
-                    .instrument
-                    .as_ref()
-                    .map_or(String::new(), |i| i.instrument_id.clone()),
+                decision_id: format!("{}-{}", proto.cycle_id, instrument_id.to_lowercase()),
+                instrument_id,
                 action,
                 direction,
                 size: Size { quantity, unit },
@@ -201,8 +202,15 @@ pub fn convert_decision_plan(
         })
         .collect();
 
+    // Generate plan_id from cycle_id: "cycle-2026-01-19-14-00" -> "plan-2026-01-19-14-00"
+    let plan_id = if proto.cycle_id.starts_with("cycle-") {
+        format!("plan-{}", &proto.cycle_id["cycle-".len()..])
+    } else {
+        format!("plan-{}", proto.cycle_id)
+    };
+
     crate::models::DecisionPlan {
-        plan_id: proto.cycle_id.clone(), // Use cycle_id as plan_id
+        plan_id,
         cycle_id: proto.cycle_id.clone(),
         timestamp: proto
             .as_of_timestamp
@@ -371,5 +379,268 @@ mod tests {
             convert_order_type(OrderType::Stop),
             proto::cream::v1::OrderType::Market as i32
         );
+    }
+
+    // ============================================
+    // convert_decision_plan Integration Tests
+    // ============================================
+
+    fn make_proto_decision_plan() -> proto::cream::v1::DecisionPlan {
+        proto::cream::v1::DecisionPlan {
+            cycle_id: "cycle-2026-01-19-14-00".to_string(),
+            as_of_timestamp: Some(prost_types::Timestamp {
+                seconds: 1737295200, // 2026-01-19T14:00:00Z
+                nanos: 0,
+            }),
+            environment: proto::cream::v1::Environment::Paper as i32,
+            decisions: vec![proto::cream::v1::Decision {
+                instrument: Some(proto::cream::v1::Instrument {
+                    instrument_id: "AAPL".to_string(),
+                    instrument_type: proto::cream::v1::InstrumentType::Equity as i32,
+                    option_contract: None,
+                }),
+                action: proto::cream::v1::Action::Buy as i32,
+                size: Some(proto::cream::v1::Size {
+                    quantity: 5000,
+                    unit: proto::cream::v1::SizeUnit::Dollars as i32,
+                    target_position_quantity: 0,
+                }),
+                order_plan: Some(proto::cream::v1::OrderPlan {
+                    entry_order_type: proto::cream::v1::OrderType::Limit as i32,
+                    entry_limit_price: Some(238.50),
+                    exit_order_type: proto::cream::v1::OrderType::Market as i32,
+                    time_in_force: proto::cream::v1::TimeInForce::Day as i32,
+                    execution_tactic: None,
+                    execution_params: None,
+                }),
+                risk_levels: Some(proto::cream::v1::RiskLevels {
+                    stop_loss_level: 228.50,
+                    take_profit_level: 253.50,
+                    denomination: proto::cream::v1::RiskDenomination::UnderlyingPrice as i32,
+                }),
+                strategy_family: proto::cream::v1::StrategyFamily::EquityLong as i32,
+                rationale: "AAPL showing relative strength".to_string(),
+                confidence: 0.72,
+                references: None,
+                direction: proto::cream::v1::Direction::Long as i32,
+                time_horizon: proto::cream::v1::TimeHorizon::Swing as i32,
+                thesis_state: proto::cream::v1::ThesisState::Watching as i32,
+                bullish_factors: vec![
+                    "Strong Q4 earnings beat".to_string(),
+                    "RSI at 42 suggesting oversold".to_string(),
+                ],
+                bearish_factors: vec!["China revenue concerns".to_string()],
+                legs: vec![],
+                net_limit_price: None,
+            }],
+            portfolio_notes: Some("Single instrument entry".to_string()),
+        }
+    }
+
+    #[test]
+    fn test_convert_decision_plan_generates_plan_id_from_cycle_id() {
+        let proto = make_proto_decision_plan();
+        let result = convert_decision_plan(&proto);
+
+        // cycle-2026-01-19-14-00 -> plan-2026-01-19-14-00
+        assert_eq!(result.plan_id, "plan-2026-01-19-14-00");
+        assert_eq!(result.cycle_id, "cycle-2026-01-19-14-00");
+    }
+
+    #[test]
+    fn test_convert_decision_plan_generates_decision_id_from_instrument() {
+        let proto = make_proto_decision_plan();
+        let result = convert_decision_plan(&proto);
+
+        // decision_id = {cycle_id}-{instrument_id.lowercase}
+        assert_eq!(result.decisions[0].decision_id, "cycle-2026-01-19-14-00-aapl");
+        assert_eq!(result.decisions[0].instrument_id, "AAPL");
+    }
+
+    #[test]
+    fn test_convert_decision_plan_maps_action_correctly() {
+        use crate::models::Action;
+
+        let mut proto = make_proto_decision_plan();
+        let result = convert_decision_plan(&proto);
+        assert_eq!(result.decisions[0].action, Action::Buy);
+
+        proto.decisions[0].action = proto::cream::v1::Action::Sell as i32;
+        let result = convert_decision_plan(&proto);
+        assert_eq!(result.decisions[0].action, Action::Sell);
+
+        proto.decisions[0].action = proto::cream::v1::Action::Close as i32;
+        let result = convert_decision_plan(&proto);
+        assert_eq!(result.decisions[0].action, Action::Close);
+
+        proto.decisions[0].action = proto::cream::v1::Action::Hold as i32;
+        let result = convert_decision_plan(&proto);
+        assert_eq!(result.decisions[0].action, Action::Hold);
+    }
+
+    #[test]
+    fn test_convert_decision_plan_maps_direction_correctly() {
+        use crate::models::Direction;
+
+        let mut proto = make_proto_decision_plan();
+        let result = convert_decision_plan(&proto);
+        assert_eq!(result.decisions[0].direction, Direction::Long);
+
+        proto.decisions[0].direction = proto::cream::v1::Direction::Short as i32;
+        let result = convert_decision_plan(&proto);
+        assert_eq!(result.decisions[0].direction, Direction::Short);
+
+        proto.decisions[0].direction = proto::cream::v1::Direction::Flat as i32;
+        let result = convert_decision_plan(&proto);
+        assert_eq!(result.decisions[0].direction, Direction::Flat);
+    }
+
+    #[test]
+    fn test_convert_decision_plan_maps_risk_levels() {
+        let proto = make_proto_decision_plan();
+        let result = convert_decision_plan(&proto);
+
+        assert_eq!(result.decisions[0].stop_loss_level, Decimal::new(22850, 2));
+        assert_eq!(result.decisions[0].take_profit_level, Decimal::new(25350, 2));
+    }
+
+    #[test]
+    fn test_convert_decision_plan_maps_size_with_dollars_unit() {
+        use crate::models::SizeUnit;
+
+        let proto = make_proto_decision_plan();
+        let result = convert_decision_plan(&proto);
+
+        assert_eq!(result.decisions[0].size.quantity, Decimal::from(5000));
+        assert_eq!(result.decisions[0].size.unit, SizeUnit::Dollars);
+    }
+
+    #[test]
+    fn test_convert_decision_plan_maps_bullish_bearish_factors() {
+        let proto = make_proto_decision_plan();
+        let result = convert_decision_plan(&proto);
+
+        assert_eq!(result.decisions[0].bullish_factors.len(), 2);
+        assert_eq!(result.decisions[0].bullish_factors[0], "Strong Q4 earnings beat");
+        assert_eq!(result.decisions[0].bearish_factors.len(), 1);
+        assert_eq!(result.decisions[0].bearish_factors[0], "China revenue concerns");
+    }
+
+    #[test]
+    fn test_convert_decision_plan_maps_confidence() {
+        let proto = make_proto_decision_plan();
+        let result = convert_decision_plan(&proto);
+
+        // f64 to Decimal conversion may have precision loss, use approximate comparison
+        let expected = Decimal::new(72, 2);
+        let diff = (result.decisions[0].confidence - expected).abs();
+        assert!(
+            diff < Decimal::new(1, 4),
+            "confidence should be ~0.72, got {}",
+            result.decisions[0].confidence
+        );
+    }
+
+    #[test]
+    fn test_convert_decision_plan_maps_limit_price_from_order_plan() {
+        let proto = make_proto_decision_plan();
+        let result = convert_decision_plan(&proto);
+
+        assert_eq!(result.decisions[0].limit_price, Some(Decimal::new(23850, 2)));
+    }
+
+    #[test]
+    fn test_convert_decision_plan_maps_strategy_family() {
+        use crate::models::StrategyFamily;
+
+        let mut proto = make_proto_decision_plan();
+        let result = convert_decision_plan(&proto);
+        assert_eq!(result.decisions[0].strategy_family, StrategyFamily::EquityLong);
+
+        proto.decisions[0].strategy_family = proto::cream::v1::StrategyFamily::IronCondor as i32;
+        let result = convert_decision_plan(&proto);
+        assert_eq!(result.decisions[0].strategy_family, StrategyFamily::IronCondor);
+
+        proto.decisions[0].strategy_family = proto::cream::v1::StrategyFamily::VerticalSpread as i32;
+        let result = convert_decision_plan(&proto);
+        assert_eq!(result.decisions[0].strategy_family, StrategyFamily::VerticalSpread);
+    }
+
+    #[test]
+    fn test_convert_decision_plan_maps_time_horizon() {
+        use crate::models::TimeHorizon;
+
+        let mut proto = make_proto_decision_plan();
+        let result = convert_decision_plan(&proto);
+        assert_eq!(result.decisions[0].time_horizon, TimeHorizon::Swing);
+
+        proto.decisions[0].time_horizon = proto::cream::v1::TimeHorizon::Intraday as i32;
+        let result = convert_decision_plan(&proto);
+        assert_eq!(result.decisions[0].time_horizon, TimeHorizon::Intraday);
+    }
+
+    #[test]
+    fn test_convert_decision_plan_maps_thesis_state() {
+        use crate::models::ThesisState;
+
+        let mut proto = make_proto_decision_plan();
+        let result = convert_decision_plan(&proto);
+        assert_eq!(result.decisions[0].thesis_state, ThesisState::Watching);
+
+        proto.decisions[0].thesis_state = proto::cream::v1::ThesisState::Exiting as i32;
+        let result = convert_decision_plan(&proto);
+        assert_eq!(result.decisions[0].thesis_state, ThesisState::Exiting);
+    }
+
+    #[test]
+    fn test_convert_decision_plan_with_option_legs() {
+        use crate::models::PositionIntent;
+
+        let mut proto = make_proto_decision_plan();
+        proto.decisions[0].strategy_family = proto::cream::v1::StrategyFamily::IronCondor as i32;
+        proto.decisions[0].legs = vec![
+            proto::cream::v1::OptionLeg {
+                symbol: "SPY260221P00540000".to_string(),
+                ratio_qty: 5,
+                position_intent: proto::cream::v1::PositionIntent::BuyToOpen as i32,
+                contract: None,
+            },
+            proto::cream::v1::OptionLeg {
+                symbol: "SPY260221P00550000".to_string(),
+                ratio_qty: -5,
+                position_intent: proto::cream::v1::PositionIntent::SellToOpen as i32,
+                contract: None,
+            },
+        ];
+        proto.decisions[0].net_limit_price = Some(1.50);
+
+        let result = convert_decision_plan(&proto);
+
+        assert_eq!(result.decisions[0].legs.len(), 2);
+        assert_eq!(result.decisions[0].legs[0].symbol, "SPY260221P00540000");
+        assert_eq!(result.decisions[0].legs[0].ratio_qty, 5);
+        assert_eq!(result.decisions[0].legs[0].position_intent, PositionIntent::BuyToOpen);
+        assert_eq!(result.decisions[0].legs[1].ratio_qty, -5);
+        assert_eq!(result.decisions[0].legs[1].position_intent, PositionIntent::SellToOpen);
+        assert_eq!(result.decisions[0].net_limit_price, Some(Decimal::new(150, 2)));
+    }
+
+    #[test]
+    fn test_convert_decision_plan_defaults_approval_flags_to_true() {
+        let proto = make_proto_decision_plan();
+        let result = convert_decision_plan(&proto);
+
+        // Proto doesn't have approval flags, so they default to true
+        // (requiring explicit constraint check before execution)
+        assert!(result.risk_manager_approved);
+        assert!(result.critic_approved);
+    }
+
+    #[test]
+    fn test_convert_decision_plan_maps_portfolio_notes_to_plan_rationale() {
+        let proto = make_proto_decision_plan();
+        let result = convert_decision_plan(&proto);
+
+        assert_eq!(result.plan_rationale, "Single instrument entry");
     }
 }
