@@ -17,7 +17,6 @@ Tests use `NODE_ENV=test` with `CREAM_ENV=PAPER` and `ctx.source="test"` to iden
 |-------|------------|
 | TypeScript | Bun |
 | Rust | Edition 2024 |
-| Python | via uv |
 | Databases | PostgreSQL (Drizzle ORM), HelixDB |
 | Serialization | Protobuf (Buf CLI) + Zod |
 | Monorepo | Turborepo |
@@ -53,7 +52,6 @@ packages/
   metrics/              # Risk-adjusted performance metrics
   prediction-markets/   # Kalshi integration
   regime/               # Market regime classification
-  research/             # Python research tools (VectorBT)
   schema/               # Protobuf definitions (.proto files)
   schema-gen/           # Generated Protobuf stubs (TS/Rust)
   storage/              # PostgreSQL + Drizzle ORM repositories
@@ -68,14 +66,13 @@ packages/
 # Development
 bun install # Install TS dependencies
 cargo build --workspace # Build all Rust packages
-uv pip install -e ".[dev]" # Install Python dev dependencies
 bun run db:migrate  # Run PostgreSQL migrations via Drizzle
 
 # Testing, Linting, formatting, type checking
 bun run test # run all tests via turbo
 bun run check # TypeScript linting & formatting
-bun run lint # All linters for TS + Rust + Python
-bun run format # All formatters for TS + Rust + Python
+bun run lint # All linters for TS + Rust
+bun run format # All formatters for TS + Rust
 bun run typecheck # TypeScript type checking
 
 # Code Generation
