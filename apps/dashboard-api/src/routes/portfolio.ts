@@ -9,6 +9,8 @@
 import {
 	type AlpacaClient,
 	type Account as BrokerAccount,
+	type GetOrdersOptions,
+	type Order as BrokerOrder,
 	type PortfolioHistory as BrokerPortfolioHistory,
 	type Position as BrokerPosition,
 	createAlpacaClient,
@@ -252,6 +254,39 @@ const AlpacaPortfolioHistorySchema = z.object({
 	profitLossPct: z.array(z.number()),
 	timeframe: PortfolioHistoryTimeframeSchema,
 	baseValue: z.number(),
+});
+
+const OrderSchema = z.object({
+	id: z.string(),
+	clientOrderId: z.string(),
+	symbol: z.string(),
+	qty: z.number(),
+	filledQty: z.number(),
+	side: z.enum(["buy", "sell"]),
+	type: z.enum(["market", "limit", "stop", "stop_limit", "trailing_stop"]),
+	timeInForce: z.enum(["day", "gtc", "opg", "cls", "ioc", "fok"]),
+	status: z.string(),
+	limitPrice: z.number().nullable().optional(),
+	stopPrice: z.number().nullable().optional(),
+	filledAvgPrice: z.number().nullable().optional(),
+	createdAt: z.string(),
+	updatedAt: z.string(),
+	submittedAt: z.string().nullable().optional(),
+	filledAt: z.string().nullable().optional(),
+});
+
+const OrdersQuerySchema = z.object({
+	status: z.enum(["open", "closed", "all"]).optional().default("all"),
+	limit: z.coerce.number().min(1).max(500).optional().default(100),
+	direction: z.enum(["asc", "desc"]).optional().default("desc"),
+	symbols: z.string().optional(),
+	side: z.enum(["buy", "sell"]).optional(),
+	nested: z.coerce.boolean().optional(),
+});
+
+const OrdersResponseSchema = z.object({
+	orders: z.array(OrderSchema),
+	count: z.number(),
 });
 
 // ============================================
@@ -1082,6 +1117,91 @@ app.openapi(historyRoute, async (c) => {
 		const message = error instanceof Error ? error.message : "Unknown error";
 		log.error({ error: message }, "Failed to fetch Alpaca portfolio history");
 		throw new HTTPException(503, { message: `Failed to fetch portfolio history: ${message}` });
+	}
+});
+
+// GET /api/portfolio/orders
+const ordersRoute = createRoute({
+	method: "get",
+	path: "/orders",
+	request: {
+		query: OrdersQuerySchema,
+	},
+	responses: {
+		200: {
+			content: { "application/json": { schema: OrdersResponseSchema } },
+			description: "Orders from Alpaca",
+		},
+		503: {
+			content: {
+				"application/json": {
+					schema: z.object({ error: z.string() }),
+				},
+			},
+			description: "Trading service unavailable",
+		},
+	},
+	tags: ["Portfolio"],
+});
+
+// @ts-expect-error - Hono OpenAPI multi-response type inference limitation
+app.openapi(ordersRoute, async (c) => {
+	const query = c.req.valid("query");
+
+	try {
+		const client = getBrokerClient();
+
+		const options: GetOrdersOptions = {
+			status: query.status,
+			limit: query.limit,
+			direction: query.direction,
+			nested: query.nested,
+		};
+
+		if (query.symbols) {
+			options.symbols = query.symbols.split(",").map((s) => s.trim());
+		}
+		if (query.side) {
+			options.side = query.side;
+		}
+
+		const orders = await client.getOrders(options);
+
+		log.debug(
+			{ status: query.status, count: orders.length, limit: query.limit },
+			"Fetched orders from Alpaca"
+		);
+
+		const mappedOrders = orders.map((order: BrokerOrder) => ({
+			id: order.id,
+			clientOrderId: order.clientOrderId,
+			symbol: order.symbol,
+			qty: order.qty,
+			filledQty: order.filledQty,
+			side: order.side,
+			type: order.type,
+			timeInForce: order.timeInForce,
+			status: order.status,
+			limitPrice: order.limitPrice ?? null,
+			stopPrice: order.stopPrice ?? null,
+			filledAvgPrice: order.filledAvgPrice ?? null,
+			createdAt: order.createdAt,
+			updatedAt: order.updatedAt,
+			submittedAt: order.submittedAt ?? null,
+			filledAt: order.filledAt ?? null,
+		}));
+
+		return c.json({
+			orders: mappedOrders,
+			count: mappedOrders.length,
+		});
+	} catch (error) {
+		if (error instanceof HTTPException) {
+			throw error;
+		}
+		const message = error instanceof Error ? error.message : "Unknown error";
+		log.error({ error: message }, "Failed to fetch orders from Alpaca");
+		throw new HTTPException(503, { message: `Failed to fetch orders: ${message}` });
 	}
 });
 

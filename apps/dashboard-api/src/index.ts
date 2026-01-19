@@ -377,6 +377,7 @@ if (import.meta.main) {
 
 	const server = Bun.serve({
 		port,
+		idleTimeout: 60,
 		async fetch(req, server) {
 			const url = new URL(req.url);
 

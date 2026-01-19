@@ -67,6 +67,27 @@ const ExecutionDetailSchema = z.object({
 	}),
 });
 
+const ApprovalViolationSchema = z.object({
+	constraint: z.string().optional(),
+	current_value: z.union([z.string(), z.number()]).optional(),
+	limit: z.union([z.string(), z.number()]).optional(),
+	severity: z.string().optional(),
+	affected_decisions: z.array(z.string()).optional(),
+});
+
+const ApprovalRequiredChangeSchema = z.object({
+	decisionId: z.string(),
+	change: z.string(),
+	reason: z.string().optional(),
+});
+
+const ApprovalDetailSchema = z.object({
+	verdict: z.enum(["APPROVE", "REJECT"]),
+	notes: z.string().optional(),
+	violations: z.array(ApprovalViolationSchema).optional(),
+	requiredChanges: z.array(ApprovalRequiredChangeSchema).optional(),
+});
+
 const DecisionDetailSchema = DecisionSchema.extend({
 	strategyFamily: z.string().nullable(),
 	timeHorizon: z.string().nullable(),
@@ -76,6 +97,8 @@ const DecisionDetailSchema = DecisionSchema.extend({
 	agentOutputs: z.array(AgentOutputSchema),
 	citations: z.array(CitationSchema),
 	execution: ExecutionDetailSchema.nullable(),
+	riskApproval: ApprovalDetailSchema.optional(),
+	criticApproval: ApprovalDetailSchema.optional(),
 });
 
 const PaginatedDecisionsSchema = z.object({
@@ -233,6 +256,42 @@ app.openapi(detailRoute, async (c) => {
 		// HelixDB unavailable - continue with empty citations
 	}
 
+	// Extract approval metadata
+	const metadata = decision.metadata as {
+		riskApproval?: {
+			verdict: "APPROVE" | "REJECT";
+			notes?: string;
+			violations?: Array<{
+				constraint?: string;
+				current_value?: string | number;
+				limit?: string | number;
+				severity?: string;
+				affected_decisions?: string[];
+			}>;
+			requiredChanges?: Array<{
+				decisionId: string;
+				change: string;
+				reason?: string;
+			}>;
+		};
+		criticApproval?: {
+			verdict: "APPROVE" | "REJECT";
+			notes?: string;
+			violations?: Array<{
+				constraint?: string;
+				current_value?: string | number;
+				limit?: string | number;
+				severity?: string;
+				affected_decisions?: string[];
+			}>;
+			requiredChanges?: Array<{
+				decisionId: string;
+				change: string;
+				reason?: string;
+			}>;
+		};
+	} | null;
+
 	return c.json({
 		id: decision.id,
 		cycleId: decision.cycleId,
@@ -279,6 +338,8 @@ app.openapi(detailRoute, async (c) => {
 					},
 				}
 			: null,
+		riskApproval: metadata?.riskApproval,
+		criticApproval: metadata?.criticApproval,
 	});
 });
 

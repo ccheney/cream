@@ -274,6 +274,24 @@ app.openapi(triggerCycleRoute, async (c) => {
 				critic: "critic",
 			};
 
+			// Approval type for risk manager and critic
+			type ApprovalResult = {
+				verdict: "APPROVE" | "REJECT";
+				notes?: string;
+				violations?: Array<{
+					constraint: string;
+					current_value: string | number;
+					limit: string | number;
+					severity: "CRITICAL" | "WARNING";
+					affected_decisions: string[];
+				}>;
+				required_changes?: Array<{
+					decisionId: string;
+					change: string;
+					reason: string;
+				}>;
+			};
+
 			// Track workflow result
 			let workflowResult: {
 				cycleId: string;
@@ -302,44 +320,135 @@ app.openapi(triggerCycleRoute, async (c) => {
 					}>;
 					portfolioNotes: string;
 				};
+				riskApproval?: ApprovalResult;
+				criticApproval?: ApprovalResult;
 				mode: "STUB" | "LLM";
 				configVersion: string | null;
 			} | null = null;
+
+			// Helper to check if an object is an agent event
+			const isAgentEvent = (obj: unknown): obj is Record<string, unknown> => {
+				if (!obj || typeof obj !== "object") {
+					return false;
+				}
+				const o = obj as Record<string, unknown>;
+				return (
+					o.type === "agent-start" ||
+					o.type === "agent-chunk" ||
+					o.type === "agent-complete" ||
+					o.type === "agent-error"
+				);
+			};
+
+			// Helper to extract agent event from various possible payload structures
+			const extractAgentEvent = (
+				payload: Record<string, unknown>
+			): Record<string, unknown> | null => {
+				// Check nested properties first (most common patterns)
+				// payload.output (common Mastra pattern)
+				if (payload.output && isAgentEvent(payload.output)) {
+					return payload.output as Record<string, unknown>;
+				}
+				// payload.data (alternative nesting)
+				if (payload.data && isAgentEvent(payload.data)) {
+					return payload.data as Record<string, unknown>;
+				}
+				// payload.value (another alternative)
+				if (payload.value && isAgentEvent(payload.value)) {
+					return payload.value as Record<string, unknown>;
+				}
+				// Check payload directly last (if writer.write() data is the payload itself)
+				if (isAgentEvent(payload)) {
+					return payload;
+				}
+				return null;
+			};
+
+			// Track unique event types for debugging
+			const seenEventTypes = new Set<string>();
+			const seenStepNames = new Set<string>();
 
 			// Process stream events
 			for await (const event of stream.fullStream) {
 				// Cast to access properties - Mastra runtime emits more event types than TS types declare
 				const evt = event as unknown as Record<string, unknown>;
 
-				// Extract agent event from stream
-				// With writer.write(), events come as workflow-step-output with data in payload.output
-				let agentEvt: Record<string, unknown> | null = null;
-
-				// Helper to check if an object is an agent event
-				const isAgentEvent = (obj: unknown): obj is Record<string, unknown> => {
-					if (!obj || typeof obj !== "object") {
-						return false;
+				// Debug: track all event types to understand stream content
+				const evtType = evt.type as string | undefined;
+				if (evtType && !seenEventTypes.has(evtType)) {
+					seenEventTypes.add(evtType);
+					const payload = evt.payload as Record<string, unknown> | undefined;
+					const stepName = payload?.stepName as string | undefined;
+					if (stepName) {
+						seenStepNames.add(stepName);
 					}
-					const o = obj as Record<string, unknown>;
-					return (
-						o.type === "agent-start" ||
-						o.type === "agent-chunk" ||
-						o.type === "agent-complete" ||
-						o.type === "agent-error"
+					log.info(
+						{
+							cycleId,
+							eventType: evtType,
+							stepName,
+							payloadKeys: payload ? Object.keys(payload) : [],
+						},
+						"Stream event type observed"
 					);
-				};
+				}
+
+				// Extract agent event from stream
+				let agentEvt: Record<string, unknown> | null = null;
 
 				// Primary path: workflow-step-output from writer.write()
 				if (evt.type === "workflow-step-output" && evt.payload) {
 					const payload = evt.payload as Record<string, unknown>;
-					// writer.write() puts data in payload.output
-					if (isAgentEvent(payload.output)) {
-						agentEvt = payload.output as Record<string, unknown>;
+					const stepName = payload.stepName as string | undefined;
+
+					// Log the first workflow-step-output from each step
+					if (stepName && !seenStepNames.has(`output-${stepName}`)) {
+						seenStepNames.add(`output-${stepName}`);
+						const outputType = (payload.output as Record<string, unknown> | undefined)?.type;
+						log.info(
+							{
+								cycleId,
+								stepName,
+								outputType,
+								hasOutput: !!payload.output,
+								outputKeys: payload.output ? Object.keys(payload.output as object) : [],
+							},
+							"First workflow-step-output from step"
+						);
+					}
+
+					agentEvt = extractAgentEvent(payload);
+
+					// Debug: log unmatched workflow-step-output events to diagnose missing agents
+					if (!agentEvt && payload.output) {
+						const output = payload.output as Record<string, unknown>;
+						if (output.type && typeof output.type === "string") {
+							log.debug(
+								{
+									cycleId,
+									eventType: evt.type,
+									outputType: output.type,
+									outputKeys: Object.keys(output),
+								},
+								"Unmatched workflow-step-output event"
+							);
+						}
 					}
 				}
-				// Fallback: direct agent event (unlikely but supported)
-				else if (isAgentEvent(evt)) {
-					agentEvt = evt;
+
+				// Fallback paths if not already found
+				if (!agentEvt) {
+					// Direct agent event (unlikely but supported)
+					if (isAgentEvent(evt)) {
+						agentEvt = evt;
+					}
+				}
+				if (!agentEvt) {
+					// Check if event contains payload with agent event data (for non-workflow-step-output events)
+					const evtPayload = (evt as { payload?: unknown }).payload;
+					if (evtPayload && typeof evtPayload === "object") {
+						agentEvt = extractAgentEvent(evtPayload as Record<string, unknown>);
+					}
 				}
 
 				// Handle agent events
@@ -355,10 +464,25 @@ app.openapi(triggerCycleRoute, async (c) => {
 
 					const agentType = agentTypeMap[agentEvent.agent ?? ""];
 					if (!agentType) {
+						// Log unmapped agent types to help diagnose missing agents
+						if (agentEvent.agent) {
+							log.debug(
+								{
+									cycleId,
+									agent: agentEvent.agent,
+									eventType: agentEvent.type,
+									availableAgents: Object.keys(agentTypeMap),
+								},
+								"Agent event with unmapped agent type"
+							);
+						}
 						continue;
 					}
 
 					const ts = agentEvent.timestamp ?? new Date().toISOString();
+
+					// Use original agent name for DB (matches enum), mapped name for WebSocket
+					const dbAgentType = agentEvent.agent;
 
 					switch (agentEvent.type) {
 						case "agent-start":
@@ -372,7 +496,7 @@ app.openapi(triggerCycleRoute, async (c) => {
 									timestamp: ts,
 								},
 							});
-							queueAgentStart(cycleId, agentType);
+							queueAgentStart(cycleId, dbAgentType);
 							break;
 
 						case "agent-chunk": {
@@ -399,7 +523,7 @@ app.openapi(triggerCycleRoute, async (c) => {
 										timestamp: ts,
 									},
 								});
-								queueTextDelta(cycleId, agentType, textContent);
+								queueTextDelta(cycleId, dbAgentType, textContent);
 							} else if (chunkType === "reasoning-delta" && textContent) {
 								// reasoning-delta is the AgentStreamChunk type for reasoning output
 								broadcastAgentReasoning({
@@ -411,7 +535,7 @@ app.openapi(triggerCycleRoute, async (c) => {
 										timestamp: ts,
 									},
 								});
-								queueReasoningDelta(cycleId, agentType, textContent);
+								queueReasoningDelta(cycleId, dbAgentType, textContent);
 							} else if (chunkType === "tool-result" || result !== undefined) {
 								const resolvedToolCallId = toolCallId ?? `tc_${Date.now()}`;
 								const resolvedToolName = String(toolName ?? "unknown");
@@ -429,7 +553,7 @@ app.openapi(triggerCycleRoute, async (c) => {
 										timestamp: ts,
 									},
 								});
-								queueToolResult(cycleId, agentType, {
+								queueToolResult(cycleId, dbAgentType, {
 									toolCallId: resolvedToolCallId,
 									toolName: resolvedToolName,
 									success: resolvedSuccess,
@@ -453,7 +577,7 @@ app.openapi(triggerCycleRoute, async (c) => {
 										timestamp: ts,
 									},
 								});
-								queueToolCall(cycleId, agentType, {
+								queueToolCall(cycleId, dbAgentType, {
 									toolCallId: resolvedToolCallId,
 									toolName: resolvedToolName,
 									toolArgs: resolvedToolArgs,
@@ -485,7 +609,7 @@ app.openapi(triggerCycleRoute, async (c) => {
 									timestamp: ts,
 								},
 							});
-							queueAgentComplete(cycleId, agentType, { output: agentEvent.data?.output });
+							queueAgentComplete(cycleId, dbAgentType, { output: agentEvent.data?.output });
 							break;
 
 						case "agent-error":
@@ -533,8 +657,12 @@ app.openapi(triggerCycleRoute, async (c) => {
 
 			// Always get the result from stream.result - this is the authoritative source
 			// The workflow-finish event contains usage stats, not the workflow output
+			// stream.result returns a wrapper object with {status, steps, input, result, traceId}
+			// The actual workflow output is in the .result property
 			if (stream.result) {
-				workflowResult = (await stream.result) as unknown as NonNullable<typeof workflowResult>;
+				const rawResult = await stream.result;
+				const actualResult = (rawResult as { result?: unknown }).result;
+				workflowResult = actualResult as unknown as NonNullable<typeof workflowResult>;
 			}
 
 			// Fallback if no result
@@ -593,6 +721,39 @@ app.openapi(triggerCycleRoute, async (c) => {
 						? (decision.size.unit as SizeUnit)
 						: undefined;
 
+					// Build approval metadata for this decision
+					const approvalMetadata: Record<string, unknown> = {};
+
+					if (workflowResult.riskApproval) {
+						const decisionViolations = workflowResult.riskApproval.violations?.filter((v) =>
+							v.affected_decisions?.includes(decision.decisionId)
+						);
+						const decisionChanges = workflowResult.riskApproval.required_changes?.filter(
+							(c) => c.decisionId === decision.decisionId
+						);
+						approvalMetadata.riskApproval = {
+							verdict: workflowResult.riskApproval.verdict,
+							notes: workflowResult.riskApproval.notes,
+							violations: decisionViolations?.length ? decisionViolations : undefined,
+							requiredChanges: decisionChanges?.length ? decisionChanges : undefined,
+						};
+					}
+
+					if (workflowResult.criticApproval) {
+						const decisionViolations = workflowResult.criticApproval.violations?.filter((v) =>
+							v.affected_decisions?.includes(decision.decisionId)
+						);
+						const decisionChanges = workflowResult.criticApproval.required_changes?.filter(
+							(c) => c.decisionId === decision.decisionId
+						);
+						approvalMetadata.criticApproval = {
+							verdict: workflowResult.criticApproval.verdict,
+							notes: workflowResult.criticApproval.notes,
+							violations: decisionViolations?.length ? decisionViolations : undefined,
+							requiredChanges: decisionChanges?.length ? decisionChanges : undefined,
+						};
+					}
+
 					try {
 						await decisionsRepo.create({
 							id: decision.decisionId,
@@ -609,6 +770,7 @@ app.openapi(triggerCycleRoute, async (c) => {
 							bullishFactors: decision.rationale?.bullishFactors ?? [],
 							bearishFactors: decision.rationale?.bearishFactors ?? [],
 							environment,
+							metadata: approvalMetadata,
 						});
 						persistedCount++;
 					} catch (err) {
@@ -863,6 +1025,16 @@ app.openapi(cycleFullRoute, async (c) => {
 	// Reconstruct streaming state from events
 	const events = await cyclesRepo.findStreamingEvents(id);
 	const streamingState = reconstructStreamingState(events);
+
+	// If cycle is complete, ensure all agents are marked complete
+	// (handles case where agent_complete events weren't captured)
+	if (cycle.status === "completed" || cycle.status === "failed") {
+		for (const agent of Object.values(streamingState.agents)) {
+			if (agent.status === "processing") {
+				agent.status = "complete";
+			}
+		}
+	}
 
 	return c.json({
 		cycle: {

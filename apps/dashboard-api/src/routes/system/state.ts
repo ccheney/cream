@@ -121,4 +121,3 @@ export function setLastTriggerTime(environment: string, time: number): void {
 export function getCurrentEnvironment(): Environment {
 	return requireEnv() as Environment;
 }
-

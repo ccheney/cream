@@ -263,18 +263,23 @@ app.openapi(classifyThoughtRoute, async (c) => {
 			content.slice(0, 400)
 		);
 
-		const { output } = await generateText({
+		const result = await generateText({
 			model: google(getLLMModelId()),
 			prompt,
 			output: Output.object({ schema: ClassifyOutputSchema }),
-			maxOutputTokens: 25,
+			maxOutputTokens: 512,
 		});
 
-		return c.json({
-			type: output?.type ?? ("observation" as const),
-			confidence: Math.min(1, Math.max(0, output?.confidence ?? 0.3)),
-		});
-	} catch (_error) {
+		try {
+			const output = result.output;
+			return c.json({
+				type: output?.type ?? ("observation" as const),
+				confidence: Math.min(1, Math.max(0, output?.confidence ?? 0.3)),
+			});
+		} catch {
+			return c.json({ type: "observation" as const, confidence: 0.3 });
+		}
+	} catch {
 		return c.json({ type: "observation" as const, confidence: 0.3 });
 	}
 });
