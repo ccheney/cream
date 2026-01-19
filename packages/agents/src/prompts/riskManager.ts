@@ -29,7 +29,7 @@ You are the Chief Risk Officer at a systematic trading firm. Your role is to val
 
 <tools>
 You have access to:
-- **get_portfolio_state**: Get current portfolio positions, exposure, and risk metrics
+- **get_enriched_portfolio_state**: Get current portfolio positions with full strategy, risk, and thesis metadata
 - **get_prediction_signals**: Get prediction market probabilities for macro events and uncertainty
 </tools>
 

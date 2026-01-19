@@ -52,8 +52,8 @@ Categories:
 - **Market Data** - get_quotes, get_market_snapshots, get_option_chain
 - **Technical** - recalc_indicator, check_indicator_trigger
 - **Fundamentals** - search_filings, graphrag_query
-- **External** - google_search, extract_news_context, analyze_content
-- **Portfolio** - get_portfolio_state
+- **External** - extract_news_context, analyze_content
+- **Portfolio** - get_enriched_portfolio_state
 
 ### graphrag_query
 

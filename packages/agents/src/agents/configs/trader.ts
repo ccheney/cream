@@ -16,11 +16,10 @@ export const TRADER_CONFIG: AgentConfig = {
 	],
 	tools: [
 		"get_quotes",
-		"get_portfolio_state",
+		"get_enriched_portfolio_state",
 		"option_chain",
 		"get_greeks",
 		"helix_query",
-		"google_search",
 		"get_prediction_signals",
 		"search_academic_papers",
 		"search_external_papers",

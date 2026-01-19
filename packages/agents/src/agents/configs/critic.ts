@@ -14,5 +14,5 @@ export const CRITIC_CONFIG: AgentConfig = {
 		"Logic consistency checker",
 		"Anti-hallucination focused",
 	],
-	tools: ["google_search"],
+	tools: [],
 };
