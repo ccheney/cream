@@ -190,7 +190,11 @@ export interface GenerateOptions {
 	requestContext: RequestContext;
 	instructions?: string;
 	abortSignal?: AbortSignal;
-	maxSteps?: number;
+	/**
+	 * Maximum number of LLM call steps. Set high to avoid restricting the OODA loop.
+	 * Mastra defaults to 1, which breaks tool-calling agents.
+	 */
+	maxSteps: number;
 	/**
 	 * Provider-specific options for the underlying AI SDK model call.
 	 * Used to enable Gemini 3 thinking (reasoning) streaming.
@@ -233,6 +237,7 @@ export function buildGenerateOptions(
 			: structuredOutput,
 		requestContext: createRequestContext(settings.model),
 		instructions: settings.systemPromptOverride ?? undefined,
+		maxSteps: 100,
 		providerOptions: {
 			google: {
 				thinkingConfig: {
