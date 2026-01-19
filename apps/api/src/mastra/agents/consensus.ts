@@ -123,7 +123,6 @@ export async function runConsensusLoop(
 			debateOutputs,
 			portfolioState,
 			constraints,
-			context.factorZoo,
 			context.agentConfigs
 		);
 
@@ -210,7 +209,6 @@ export async function runConsensusLoopStreaming(
 			onChunk,
 			portfolioState,
 			constraints,
-			context.factorZoo,
 			context.agentConfigs
 		);
 

@@ -19,7 +19,6 @@ import { createStreamChunkForwarder } from "./stream-forwarder.js";
 import type { DebateOutputs } from "./trader.js";
 import type {
 	AgentConfigEntry,
-	AgentContext,
 	CriticOutput,
 	DecisionPlan,
 	OnStreamChunk,
@@ -123,24 +122,14 @@ function buildRiskIndicatorsSummary(indicators?: Record<string, IndicatorSnapsho
 
 /**
  * Run Risk Manager agent to validate plan.
- * Considers Factor Zoo decay alerts and risk indicators.
  */
 export async function runRiskManager(
 	plan: DecisionPlan,
 	portfolioState?: Record<string, unknown>,
 	constraints?: Record<string, unknown>,
-	factorZooContext?: AgentContext["factorZoo"],
 	agentConfigs?: Partial<Record<AgentType, AgentConfigEntry>>,
 	indicators?: Record<string, IndicatorSnapshot>
 ): Promise<RiskManagerOutput> {
-	const decayRiskSection = factorZooContext?.decayAlerts.length
-		? `
-Factor Zoo Risk Alerts:
-${factorZooContext.decayAlerts.map((a) => `- ${a.factorId}: ${a.alertType} (${a.severity}) - ${a.recommendation}`).join("\n")}
-
-NOTE: Decaying factors indicate reduced signal reliability. Consider this when validating positions that rely on quantitative signals.`
-		: "";
-
 	const riskIndicatorsSummary = buildRiskIndicatorsSummary(indicators);
 
 	const portfolioStateProvided = Boolean(portfolioState && Object.keys(portfolioState).length > 0);
@@ -163,7 +152,7 @@ TOOL USE (required):
 - If prediction market signals are not provided in prompt, call get_prediction_signals to validate event-risk rules.
 Portfolio state provided in prompt: ${portfolioStateProvided ? "yes" : "no"}
 Constraints provided in prompt: ${constraintsProvided ? "yes" : "no"}
-${riskIndicatorsSummary}${decayRiskSection}
+${riskIndicatorsSummary}
 RISK VALIDATION GUIDANCE:
 - High volatility (IV > 50%, RV > 30%) warrants smaller position sizes
 - Bid-ask spread thresholds are session-aware: RTH > 0.5% is wide, pre/post-market > 3% is wide
@@ -223,7 +212,6 @@ CONSISTENCY VALIDATION GUIDANCE:
 
 /**
  * Run both approval agents in parallel.
- * Passes Factor Zoo context and indicators to both Risk Manager and Critic for comprehensive validation.
  */
 export async function runApprovalParallel(
 	plan: DecisionPlan,
@@ -231,7 +219,6 @@ export async function runApprovalParallel(
 	debateOutputs: DebateOutputs,
 	portfolioState?: Record<string, unknown>,
 	constraints?: Record<string, unknown>,
-	factorZooContext?: AgentContext["factorZoo"],
 	agentConfigs?: Partial<Record<AgentType, AgentConfigEntry>>,
 	indicators?: Record<string, IndicatorSnapshot>
 ): Promise<{
@@ -239,7 +226,7 @@ export async function runApprovalParallel(
 	critic: CriticOutput;
 }> {
 	const [riskManager, critic] = await Promise.all([
-		runRiskManager(plan, portfolioState, constraints, factorZooContext, agentConfigs, indicators),
+		runRiskManager(plan, portfolioState, constraints, agentConfigs, indicators),
 		runCritic(plan, analystOutputs, debateOutputs, agentConfigs, indicators),
 	]);
 
@@ -258,19 +245,10 @@ export async function runRiskManagerStreaming(
 	onChunk: OnStreamChunk,
 	portfolioState?: Record<string, unknown>,
 	constraints?: Record<string, unknown>,
-	factorZooContext?: AgentContext["factorZoo"],
 	agentConfigs?: Partial<Record<AgentType, AgentConfigEntry>>,
 	indicators?: Record<string, IndicatorSnapshot>,
 	abortSignal?: AbortSignal
 ): Promise<RiskManagerOutput> {
-	const decayRiskSection = factorZooContext?.decayAlerts.length
-		? `
-Factor Zoo Risk Alerts:
-${factorZooContext.decayAlerts.map((a) => `- ${a.factorId}: ${a.alertType} (${a.severity}) - ${a.recommendation}`).join("\n")}
-
-NOTE: Decaying factors indicate reduced signal reliability. Consider this when validating positions that rely on quantitative signals.`
-		: "";
-
 	const riskIndicatorsSummary = buildRiskIndicatorsSummary(indicators);
 
 	const portfolioStateProvided = Boolean(portfolioState && Object.keys(portfolioState).length > 0);
@@ -293,7 +271,7 @@ TOOL USE (required):
 - If prediction market signals are not provided in prompt, call get_prediction_signals to validate event-risk rules.
 Portfolio state provided in prompt: ${portfolioStateProvided ? "yes" : "no"}
 Constraints provided in prompt: ${constraintsProvided ? "yes" : "no"}
-${riskIndicatorsSummary}${decayRiskSection}
+${riskIndicatorsSummary}
 RISK VALIDATION GUIDANCE:
 - High volatility (IV > 50%, RV > 30%) warrants smaller position sizes
 - Bid-ask spread thresholds are session-aware: RTH > 0.5% is wide, pre/post-market > 3% is wide
@@ -437,7 +415,6 @@ CONSISTENCY VALIDATION GUIDANCE:
 
 /**
  * Run both approval agents in parallel with streaming.
- * Passes indicators to both Risk Manager and Critic for comprehensive validation.
  */
 export async function runApprovalParallelStreaming(
 	plan: DecisionPlan,
@@ -446,7 +423,6 @@ export async function runApprovalParallelStreaming(
 	onChunk: OnStreamChunk,
 	portfolioState?: Record<string, unknown>,
 	constraints?: Record<string, unknown>,
-	factorZooContext?: AgentContext["factorZoo"],
 	agentConfigs?: Partial<Record<AgentType, AgentConfigEntry>>,
 	indicators?: Record<string, IndicatorSnapshot>,
 	abortSignal?: AbortSignal
@@ -460,7 +436,6 @@ export async function runApprovalParallelStreaming(
 			onChunk,
 			portfolioState,
 			constraints,
-			factorZooContext,
 			agentConfigs,
 			indicators,
 			abortSignal

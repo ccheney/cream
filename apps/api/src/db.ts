@@ -19,7 +19,6 @@ import {
 	type Database,
 	DecisionsRepository,
 	ExternalEventsRepository,
-	FactorZooRepository,
 	getDb,
 	IndicatorsRepository,
 	MacroWatchRepository,
@@ -232,13 +231,6 @@ export function getRegimeLabelsRepo(): RegimeLabelsRepository {
  */
 export function getDecisionsRepo(): DecisionsRepository {
 	return new DecisionsRepository();
-}
-
-/**
- * Get factor zoo repository
- */
-export function getFactorZooRepo(): FactorZooRepository {
-	return new FactorZooRepository();
 }
 
 /**

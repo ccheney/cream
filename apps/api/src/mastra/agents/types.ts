@@ -54,35 +54,6 @@ export interface AgentContext {
 			reasoning?: string;
 		}
 	>;
-	/** Factor Zoo context - active factors and their current weights */
-	factorZoo?: {
-		/** Current Mega-Alpha signal value (normalized -1 to 1) */
-		megaAlpha: number;
-		/** Active factors with their weights and recent performance */
-		activeFactors: Array<{
-			factorId: string;
-			name: string;
-			weight: number;
-			recentIC: number;
-			isDecaying: boolean;
-		}>;
-		/** Decay alerts for factors showing degradation */
-		decayAlerts: Array<{
-			factorId: string;
-			alertType: string;
-			severity: string;
-			currentValue: number;
-			threshold: number;
-			recommendation: string;
-		}>;
-		/** Factor Zoo summary stats */
-		stats: {
-			totalFactors: number;
-			activeCount: number;
-			decayingCount: number;
-			averageIC: number;
-		};
-	};
 	/** Prediction market signals (Fed rate, recession probability, etc.) */
 	predictionMarketSignals?: {
 		fedCutProbability?: number;

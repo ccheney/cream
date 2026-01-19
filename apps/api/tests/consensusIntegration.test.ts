@@ -79,7 +79,6 @@ interface MockAgentConfig {
 	riskDelay?: number;
 	criticDelay?: number;
 	riskViolations?: RiskManagerOutput["violations"];
-	criticInconsistencies?: CriticOutput["inconsistencies"];
 }
 
 function createMockApprovalFunction(config: MockAgentConfig) {
@@ -121,27 +120,23 @@ function createMockApprovalFunction(config: MockAgentConfig) {
 			? createApprovedCriticOutput()
 			: {
 					verdict: "REJECT",
-					inconsistencies: config.criticInconsistencies ?? [
+					violations: [
 						{
-							decisionId: "dec-1",
-							issue: "Rationale doesn't match market conditions",
-							expected: "Bearish signals acknowledged",
-							found: "Only bullish factors listed",
+							constraint: "rationale_consistency",
+							current_value: "Only bullish factors listed",
+							limit: "Bearish signals acknowledged",
+							severity: "WARNING",
+							affected_decisions: ["dec-1"],
 						},
 					],
-					missing_justifications: [
-						{
-							decisionId: "dec-1",
-							missing: "Risk-reward calculation",
-						},
-					],
-					hallucination_flags: [],
 					required_changes: [
 						{
 							decisionId: "dec-1",
 							change: "Add risk-reward analysis to rationale",
+							reason: "Missing risk-reward calculation",
 						},
 					],
+					notes: "Rationale doesn't match market conditions",
 				};
 
 		return { riskManager, critic };
@@ -321,22 +316,23 @@ describe("Consensus Loop Integration", () => {
 								? createApprovedCriticOutput()
 								: {
 										verdict: "REJECT",
-										inconsistencies: [
+										violations: [
 											{
-												decisionId: "dec-1",
-												issue: "Missing risk-reward ratio",
-												expected: "3:1 minimum",
-												found: "Not specified",
+												constraint: "risk_reward_ratio",
+												current_value: "Not specified",
+												limit: "3:1 minimum",
+												severity: "WARNING",
+												affected_decisions: ["dec-1"],
 											},
 										],
-										missing_justifications: [],
-										hallucination_flags: [],
 										required_changes: [
 											{
 												decisionId: "dec-1",
 												change: "Add explicit risk-reward calculation",
+												reason: "Missing risk-reward ratio",
 											},
 										],
+										notes: "Missing risk-reward ratio documentation",
 									},
 					};
 				},
@@ -445,15 +441,17 @@ describe("Consensus Loop Integration", () => {
 							? createApprovedCriticOutput()
 							: {
 									verdict: "REJECT",
-									inconsistencies: [],
-									missing_justifications: [
+									violations: [
 										{
-											decisionId: "dec-1",
-											missing: "Volatility acknowledgment",
+											constraint: "volatility_acknowledgment",
+											current_value: "Not acknowledged",
+											limit: "Must acknowledge volatility",
+											severity: "WARNING",
+											affected_decisions: ["dec-1"],
 										},
 									],
-									hallucination_flags: [],
 									required_changes: [],
+									notes: "Missing volatility acknowledgment",
 								},
 					};
 				},

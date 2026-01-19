@@ -11,7 +11,7 @@ import { buildGenerateOptions, createAgent, getAgentRuntimeSettings } from "./fa
 
 const log = createNodeLogger({ service: "trader-agent", level: "info" });
 
-import { buildDatetimeContext, buildFactorZooContext, buildIndicatorContext } from "./prompts.js";
+import { buildDatetimeContext, buildIndicatorContext } from "./prompts.js";
 import { DecisionPlanSchema } from "./schemas.js";
 import { createStreamChunkForwarder } from "./stream-forwarder.js";
 import type {
@@ -47,14 +47,12 @@ export interface DebateOutputs {
 
 /**
  * Run Trader agent to synthesize DecisionPlan.
- * Incorporates Factor Zoo signals (Mega-Alpha) and comprehensive indicators when available.
  */
 export async function runTrader(
 	context: AgentContext,
 	debateOutputs: DebateOutputs,
 	portfolioState?: Record<string, unknown>
 ): Promise<DecisionPlan> {
-	const factorZooContext = buildFactorZooContext(context.factorZoo);
 	const indicatorContext = buildIndicatorContext(context.indicators);
 
 	const portfolioStateProvided = Boolean(portfolioState && Object.keys(portfolioState).length > 0);
@@ -66,7 +64,7 @@ ${JSON.stringify(debateOutputs.bullish, null, 2)}
 
 Bearish Research:
 ${JSON.stringify(debateOutputs.bearish, null, 2)}
-${factorZooContext}${indicatorContext}
+${indicatorContext}
 Current Portfolio State:
 ${JSON.stringify(portfolioState ?? {}, null, 2)}
 
@@ -82,17 +80,7 @@ POSITION SIZING GUIDANCE from indicators:
 - Use ATR for stop-loss distance calculations (ATR multiples)
 - Consider volatility (realized_vol, ATM IV) for position sizing
 - Liquidity metrics (bid_ask_spread, volume_ratio) inform execution
-- Short interest > 20% signals potential squeeze risk
-${
-	context.factorZoo
-		? `
-FACTOR ZOO SIGNALS:
-- Mega-Alpha signal (${context.factorZoo.megaAlpha.toFixed(3)}) represents ${context.factorZoo.stats.activeCount} active factors
-- Use Mega-Alpha direction to inform overall market stance
-- Weight position sizing by signal strength
-- Be cautious of factors showing decay (IC degradation)`
-		: ""
-}`;
+- Short interest > 20% signals potential squeeze risk`;
 
 	const settings = getAgentRuntimeSettings("trader", context.agentConfigs);
 	const options = buildGenerateOptions(settings, { schema: DecisionPlanSchema });
@@ -115,7 +103,6 @@ export async function runTraderStreaming(
 	onChunk: OnStreamChunk,
 	portfolioState?: Record<string, unknown>
 ): Promise<DecisionPlan> {
-	const factorZooContext = buildFactorZooContext(context.factorZoo);
 	const indicatorContext = buildIndicatorContext(context.indicators);
 
 	const portfolioStateProvided = Boolean(portfolioState && Object.keys(portfolioState).length > 0);
@@ -127,7 +114,7 @@ ${JSON.stringify(debateOutputs.bullish, null, 2)}
 
 Bearish Research:
 ${JSON.stringify(debateOutputs.bearish, null, 2)}
-${factorZooContext}${indicatorContext}
+${indicatorContext}
 Current Portfolio State:
 ${JSON.stringify(portfolioState ?? {}, null, 2)}
 
@@ -143,17 +130,7 @@ POSITION SIZING GUIDANCE from indicators:
 - Use ATR for stop-loss distance calculations (ATR multiples)
 - Consider volatility (realized_vol, ATM IV) for position sizing
 - Liquidity metrics (bid_ask_spread, volume_ratio) inform execution
-- Short interest > 20% signals potential squeeze risk
-${
-	context.factorZoo
-		? `
-FACTOR ZOO SIGNALS:
-- Mega-Alpha signal (${context.factorZoo.megaAlpha.toFixed(3)}) represents ${context.factorZoo.stats.activeCount} active factors
-- Use Mega-Alpha direction to inform overall market stance
-- Weight position sizing by signal strength
-- Be cautious of factors showing decay (IC degradation)`
-		: ""
-}`;
+- Short interest > 20% signals potential squeeze risk`;
 
 	const settings = getAgentRuntimeSettings("trader", context.agentConfigs);
 	const options = buildGenerateOptions(
