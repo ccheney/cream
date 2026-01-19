@@ -150,8 +150,8 @@ impl StopsPriceMonitor {
                     "Submitting market order to close options position"
                 );
 
-                // Submit the close order
-                match self.adapter.submit_single_order(&decision).await {
+                // Submit the close order (options use contracts, not PCT_EQUITY, so no equity needed)
+                match self.adapter.submit_single_order(&decision, None).await {
                     Ok(order_state) => {
                         info!(
                             position_id = %position_id,

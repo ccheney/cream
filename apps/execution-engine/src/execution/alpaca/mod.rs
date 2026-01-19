@@ -388,6 +388,24 @@ impl AlpacaAdapter {
             );
         }
 
+        // Fetch account equity once for PCT_EQUITY conversions
+        let account_equity = match self.get_account().await {
+            Ok(account) => {
+                tracing::debug!(
+                    equity = %account.equity,
+                    "Fetched account equity for position sizing"
+                );
+                Some(account.equity)
+            }
+            Err(e) => {
+                tracing::warn!(
+                    error = %e,
+                    "Failed to fetch account equity - PCT_EQUITY sizing will use raw values"
+                );
+                None
+            }
+        };
+
         let mut orders = Vec::new();
         let mut errors = Vec::new();
 
@@ -396,7 +414,7 @@ impl AlpacaAdapter {
             let result = if Self::is_multi_leg_order(decision) {
                 self.submit_multi_leg_order(decision).await
             } else {
-                self.submit_single_order(decision).await
+                self.submit_single_order(decision, account_equity).await
             };
 
             match result {
@@ -625,6 +643,11 @@ impl AlpacaAdapter {
 
     /// Submit a single order to Alpaca with tactic-aware execution.
     ///
+    /// # Arguments
+    ///
+    /// * `decision` - The trading decision to execute
+    /// * `account_equity` - Account equity for PCT_EQUITY sizing conversion
+    ///
     /// # Errors
     ///
     /// Returns an error if order submission fails.
@@ -632,12 +655,13 @@ impl AlpacaAdapter {
     pub async fn submit_single_order(
         &self,
         decision: &Decision,
+        account_equity: Option<Decimal>,
     ) -> Result<OrderState, AlpacaError> {
         // Select execution tactic
         let (tactic, config) = self.select_tactic(decision).await;
 
         // Build base order request
-        let mut order_request = AlpacaOrderRequest::from_decision(decision);
+        let mut order_request = AlpacaOrderRequest::from_decision(decision, account_equity);
 
         // Apply tactic-specific modifications
         match tactic {
