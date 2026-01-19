@@ -208,13 +208,13 @@ export interface DecisionPlan {
 }
 
 // ============================================
-// Risk Manager Output
+// Shared Approval Types
 // ============================================
 
 export type ViolationSeverity = "CRITICAL" | "WARNING";
 export type ApprovalVerdict = "APPROVE" | "REJECT";
 
-export interface ConstraintViolation {
+export interface ApprovalViolation {
 	constraint: string;
 	current_value: string | number;
 	limit: string | number;
@@ -222,55 +222,28 @@ export interface ConstraintViolation {
 	affected_decisions: string[];
 }
 
-export interface RequiredChange {
+export interface ApprovalRequiredChange {
 	decisionId: string;
 	change: string;
 	reason: string;
 }
 
-export interface RiskManagerOutput {
+export interface ApprovalOutput {
 	verdict: ApprovalVerdict;
-	violations: ConstraintViolation[];
-	required_changes: RequiredChange[];
-	risk_notes: string;
+	violations: ApprovalViolation[];
+	required_changes: ApprovalRequiredChange[];
+	notes: string;
 }
 
-// ============================================
-// Critic Output
-// ============================================
+// Risk Manager uses the shared approval output type
+export type RiskManagerOutput = ApprovalOutput;
 
-export type EvidenceStatus = "NOT_FOUND" | "CONTRADICTED";
+// Critic uses the shared approval output type
+export type CriticOutput = ApprovalOutput;
 
-export interface Inconsistency {
-	decisionId: string;
-	issue: string;
-	expected: string;
-	found: string;
-}
-
-export interface MissingJustification {
-	decisionId: string;
-	missing: string;
-}
-
-export interface HallucinationFlag {
-	decisionId: string;
-	claim: string;
-	evidence_status: EvidenceStatus;
-}
-
-export interface CriticRequiredChange {
-	decisionId: string;
-	change: string;
-}
-
-export interface CriticOutput {
-	verdict: ApprovalVerdict;
-	inconsistencies: Inconsistency[];
-	missing_justifications: MissingJustification[];
-	hallucination_flags: HallucinationFlag[];
-	required_changes: CriticRequiredChange[];
-}
+// Legacy type aliases for backwards compatibility
+export type ConstraintViolation = ApprovalViolation;
+export type RequiredChange = ApprovalRequiredChange;
 
 // ============================================
 // Consensus Types

@@ -412,18 +412,18 @@ export class ConsensusGate {
 			}
 		}
 
-		// Critic issues
+		// Critic issues (violations, required changes, notes)
 		if (criticOutput.verdict === "REJECT") {
-			for (const inconsistency of criticOutput.inconsistencies) {
-				reasons.push(`[Critic] ${inconsistency.decisionId}: ${inconsistency.issue}`);
-			}
-			for (const missing of criticOutput.missing_justifications) {
-				reasons.push(`[Critic] ${missing.decisionId}: Missing ${missing.missing}`);
-			}
-			for (const hallucination of criticOutput.hallucination_flags) {
+			for (const violation of criticOutput.violations) {
 				reasons.push(
-					`[Critic] ${hallucination.decisionId}: Hallucination - ${hallucination.claim}`
+					`[Critic] ${violation.affected_decisions.join(", ")}: ${violation.constraint} (${violation.current_value} vs ${violation.limit})`
 				);
+			}
+			for (const change of criticOutput.required_changes) {
+				reasons.push(`[Critic] ${change.decisionId}: ${change.change}`);
+			}
+			if (criticOutput.notes) {
+				reasons.push(`[Critic] ${criticOutput.notes}`);
 			}
 		}
 
@@ -455,20 +455,19 @@ export function createApprovedRiskOutput(notes = ""): RiskManagerOutput {
 		verdict: "APPROVE",
 		violations: [],
 		required_changes: [],
-		risk_notes: notes,
+		notes,
 	};
 }
 
 /**
  * Create an approved CriticOutput
  */
-export function createApprovedCriticOutput(): CriticOutput {
+export function createApprovedCriticOutput(notes = ""): CriticOutput {
 	return {
 		verdict: "APPROVE",
-		inconsistencies: [],
-		missing_justifications: [],
-		hallucination_flags: [],
+		violations: [],
 		required_changes: [],
+		notes,
 	};
 }
 
@@ -480,7 +479,7 @@ export function createTimeoutRiskOutput(): RiskManagerOutput {
 		verdict: "REJECT",
 		violations: [],
 		required_changes: [],
-		risk_notes: "Agent timed out - default to REJECT for safety",
+		notes: "Agent timed out - default to REJECT for safety",
 	};
 }
 
@@ -490,10 +489,9 @@ export function createTimeoutRiskOutput(): RiskManagerOutput {
 export function createTimeoutCriticOutput(): CriticOutput {
 	return {
 		verdict: "REJECT",
-		inconsistencies: [],
-		missing_justifications: [],
-		hallucination_flags: [],
+		violations: [],
 		required_changes: [],
+		notes: "Agent timed out - default to REJECT for safety",
 	};
 }
 

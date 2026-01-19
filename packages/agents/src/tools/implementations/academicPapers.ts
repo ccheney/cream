@@ -207,7 +207,7 @@ export async function searchExternalPapers(
 
 	return {
 		topic,
-		papers: papers.map(formatSemanticScholarPaper),
+		papers: papers?.map(formatSemanticScholarPaper) ?? [],
 		source: "Semantic Scholar",
 		executionTimeMs: performance.now() - startTime,
 	};
