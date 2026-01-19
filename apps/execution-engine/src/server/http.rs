@@ -109,12 +109,82 @@ async fn check_constraints(
         plan: req.plan,
     };
 
-    let result = server.gateway.check_constraints(&check_request);
+    // Build extended context with PDT info
+    let context = build_pdt_context(&server).await;
+
+    let result = server
+        .gateway
+        .check_constraints_with_context(&check_request, &context);
 
     Ok(Json(CheckConstraintsResponse {
         ok: result.ok,
         violations: result.violations,
     }))
+}
+
+/// Build extended constraint context with PDT information.
+///
+/// Fetches account info and today's filled buy orders from the broker
+/// to populate PDT status and positions_opened_today for day trade detection.
+async fn build_pdt_context(
+    server: &ExecutionServer,
+) -> crate::risk::ExtendedConstraintContext {
+    use crate::risk::constraints::{ExtendedConstraintContext, PdtInfo};
+
+    let mut context = ExtendedConstraintContext::default();
+
+    // Fetch account info and today's buys in parallel
+    let (account_result, todays_buys_result) = tokio::join!(
+        server.gateway.broker().get_account(),
+        server.gateway.broker().get_todays_filled_buys()
+    );
+
+    // Populate PDT status from account info
+    match account_result {
+        Ok(account_info) => {
+            context.pdt = Some(PdtInfo {
+                day_trade_count: account_info.daytrade_count,
+                is_pattern_day_trader: account_info.pattern_day_trader,
+                last_equity: account_info.last_equity,
+                equity: account_info.equity,
+                daytrading_buying_power: account_info.daytrading_buying_power,
+                potential_day_trades: 0, // Calculated during constraint check
+            });
+            tracing::debug!(
+                day_trade_count = account_info.daytrade_count,
+                last_equity = %account_info.last_equity,
+                "PDT context populated from broker"
+            );
+        }
+        Err(e) => {
+            tracing::warn!(
+                error = %e,
+                "Failed to fetch account info for PDT context, using defaults"
+            );
+        }
+    }
+
+    // Populate positions_opened_today from today's filled buy orders
+    match todays_buys_result {
+        Ok(symbols) => {
+            for symbol in symbols {
+                context.positions_opened_today.insert(symbol, true);
+            }
+            tracing::debug!(
+                count = context.positions_opened_today.len(),
+                symbols = ?context.positions_opened_today.keys().collect::<Vec<_>>(),
+                "Populated positions_opened_today for PDT tracking"
+            );
+        }
+        Err(e) => {
+            tracing::warn!(
+                error = %e,
+                "Failed to fetch today's filled buys for PDT context"
+            );
+        }
+    }
+
+    context
 }
 
 /// Request to submit orders.

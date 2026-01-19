@@ -63,6 +63,8 @@ mod tests {
                 margin_used: Decimal::ZERO,
                 daytrade_count: 0,
                 pattern_day_trader: false,
+                last_equity: Decimal::ZERO,
+                daytrading_buying_power: Decimal::ZERO,
             },
             fetched_at: Instant::now(),
         };

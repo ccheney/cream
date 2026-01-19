@@ -188,6 +188,69 @@ impl ExecutionServiceImpl {
 
         Ok(positions)
     }
+
+    /// Build extended constraint context with PDT information.
+    ///
+    /// Fetches account info and today's filled buy orders from the broker
+    /// to populate PDT status and positions_opened_today for day trade detection.
+    async fn build_pdt_context(&self) -> crate::risk::ExtendedConstraintContext {
+        use crate::risk::constraints::{ExtendedConstraintContext, PdtInfo};
+
+        let mut context = ExtendedConstraintContext::default();
+
+        // Fetch account info and today's buys in parallel
+        let (account_result, todays_buys_result) = tokio::join!(
+            self.alpaca.get_account(),
+            self.alpaca.get_todays_filled_buys()
+        );
+
+        // Populate PDT status from account info
+        match account_result {
+            Ok(account_info) => {
+                context.pdt = Some(PdtInfo {
+                    day_trade_count: account_info.daytrade_count,
+                    is_pattern_day_trader: account_info.pattern_day_trader,
+                    last_equity: account_info.last_equity,
+                    equity: account_info.equity,
+                    daytrading_buying_power: account_info.daytrading_buying_power,
+                    potential_day_trades: 0, // Calculated during constraint check
+                });
+                tracing::debug!(
+                    day_trade_count = account_info.daytrade_count,
+                    last_equity = %account_info.last_equity,
+                    "PDT context populated from broker"
+                );
+            }
+            Err(e) => {
+                tracing::warn!(
+                    error = %e,
+                    "Failed to fetch account info for PDT context, using defaults"
+                );
+            }
+        }
+
+        // Populate positions_opened_today from today's filled buy orders
+        match todays_buys_result {
+            Ok(symbols) => {
+                for symbol in symbols {
+                    context.positions_opened_today.insert(symbol, true);
+                }
+                tracing::debug!(
+                    count = context.positions_opened_today.len(),
+                    symbols = ?context.positions_opened_today.keys().collect::<Vec<_>>(),
+                    "Populated positions_opened_today for PDT tracking"
+                );
+            }
+            Err(e) => {
+                tracing::warn!(
+                    error = %e,
+                    "Failed to fetch today's filled buys for PDT context"
+                );
+            }
+        }
+
+        context
+    }
 }
 
 #[tonic::async_trait]
@@ -217,8 +280,11 @@ impl ExecutionService for ExecutionServiceImpl {
             plan: convert_decision_plan(&decision_plan),
         };
 
-        // Validate constraints
-        let response = self.validator.validate(&internal_request);
+        // Build extended context with PDT info
+        let context = self.build_pdt_context().await;
+
+        // Validate constraints with PDT context
+        let response = self.validator.validate_with_context(&internal_request, &context);
 
         // Convert to proto response
         let proto_response = CheckConstraintsResponse {
@@ -361,6 +427,18 @@ impl ExecutionService for ExecutionServiceImpl {
         // Get account state (uses cache if fresh)
         let account_info = self.get_cached_account().await?;
 
+        // PDT constants from FINRA rules
+        const PDT_EQUITY_THRESHOLD: f64 = 25_000.0;
+        const MAX_DAY_TRADES: i32 = 3;
+
+        let last_equity_f64: f64 = account_info.last_equity.to_string().parse().unwrap_or(0.0);
+        let under_pdt_threshold = last_equity_f64 < PDT_EQUITY_THRESHOLD;
+        let remaining_day_trades = if under_pdt_threshold {
+            (MAX_DAY_TRADES - account_info.daytrade_count).max(0)
+        } else {
+            -1 // Unlimited when above threshold (use -1 to signal unlimited)
+        };
+
         let account_state = AccountState {
             account_id: account_info.account_id,
             equity: account_info.equity.to_string().parse().unwrap_or(0.0),
@@ -369,6 +447,14 @@ impl ExecutionService for ExecutionServiceImpl {
             day_trade_count: account_info.daytrade_count,
             is_pdt_restricted: account_info.pattern_day_trader,
             as_of: Some(prost_types::Timestamp::from(std::time::SystemTime::now())),
+            last_equity: last_equity_f64,
+            daytrading_buying_power: account_info
+                .daytrading_buying_power
+                .to_string()
+                .parse()
+                .unwrap_or(0.0),
+            remaining_day_trades,
+            under_pdt_threshold,
         };
 
         Ok(Response::new(GetAccountStateResponse {
