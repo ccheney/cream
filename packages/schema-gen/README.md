@@ -7,7 +7,6 @@ Generated Protobuf stubs for the Cream trading system.
 Contains compiled Protobuf code generated from `packages/proto`:
 
 - **TypeScript/JavaScript** - `ts/` → `dist/`
-- **Python** - `python/`
 - **Rust** - `rust/`
 
 ## Proto Files (Source: packages/proto)
@@ -34,13 +33,6 @@ import { ExecutionService } from "@cream/schema-gen/execution";
 ```rust
 use cream_schema_gen::decision::DecisionPlan;
 use cream_schema_gen::execution::execution_service_client::ExecutionServiceClient;
-```
-
-### Python
-
-```python
-from cream_schema_gen.decision_pb2 import DecisionPlan
-from cream_schema_gen.execution_pb2_grpc import ExecutionServiceStub
 ```
 
 ## Regenerating

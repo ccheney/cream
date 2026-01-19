@@ -12,7 +12,7 @@
     "lint": "buf lint",
     "breaking": "buf breaking --against '../../.git#branch=master,subdir=packages/proto'",
     "generate": "buf generate",
-    "clean": "rm -rf ../schema-gen/ts ../schema-gen/python ../schema-gen/rust",
+    "clean": "rm -rf ../schema-gen/ts ../schema-gen/rust",
     "build": "bun run lint && bun run generate"
   },
   "devDependencies": {

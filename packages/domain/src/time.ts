@@ -13,7 +13,7 @@
  * ## Why ISO-8601 Strings Instead of Protobuf Timestamp
  * 1. JSON-friendly: No special serialization needed
  * 2. Human-readable: Easy to debug and log
- * 3. Cross-language: Same format in TypeScript, Rust, Python
+ * 3. Cross-language: Same format in TypeScript and Rust
  * 4. Avoids BigInt: Protobuf Timestamp uses int64 seconds which causes friction
  *
  * ## Why Not JavaScript Date Directly

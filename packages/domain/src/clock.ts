@@ -7,7 +7,7 @@
  * ## Why Clock Sync Matters
  * - Trading systems require accurate timestamps for order execution
  * - Clock skew can cause data synchronization issues
- * - Multi-component systems (TS, Rust, Python) need consistent time
+ * - Multi-component systems (TS, Rust) need consistent time
  *
  * ## NTP/PTP Setup (Recommended)
  * For production deployments, ensure system clock is synced:
