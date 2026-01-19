@@ -87,7 +87,11 @@ export async function runGroundingAgent(context: AgentContext): Promise<Groundin
 	const prompt = buildGroundingPrompt(context.symbols);
 
 	const settings = getAgentRuntimeSettings("grounding_agent", context.agentConfigs);
-	const options = buildGenerateOptions(settings, { schema: GroundingOutputSchema });
+	const options = buildGenerateOptions(
+		settings,
+		{ schema: GroundingOutputSchema },
+		{ useTwoStepExtraction: true }
+	);
 
 	const response = await groundingAgent.generate([{ role: "user", content: prompt }], options);
 
@@ -112,7 +116,11 @@ export async function runGroundingAgentStreaming(
 	const prompt = buildGroundingPrompt(context.symbols);
 
 	const settings = getAgentRuntimeSettings("grounding_agent", context.agentConfigs);
-	const options = buildGenerateOptions(settings, { schema: GroundingOutputSchema });
+	const options = buildGenerateOptions(
+		settings,
+		{ schema: GroundingOutputSchema },
+		{ useTwoStepExtraction: true }
+	);
 
 	const stream = await groundingAgent.stream([{ role: "user", content: prompt }], options);
 	const forwardChunk = createStreamChunkForwarder("grounding_agent", onChunk);

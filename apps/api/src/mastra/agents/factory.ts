@@ -228,11 +228,12 @@ export interface GenerateOptions {
  * Build generation options with runtime context and optional instruction override.
  * Uses model's default temperature (1.0).
  *
- * structuredOutput.model: Two-step approach for combining tools with structured output.
- * The main agent runs with tools and generates natural language. A secondary model
- * (Gemini Flash) then extracts structured data from that response.
- * This is required because Gemini doesn't support combining response_format with tools.
- * @see https://mastra.ai/docs/agents/structured-output
+ * Gemini 3 Flash supports structured output + tools natively, so no secondary
+ * model extraction is needed for most agents.
+ * @see https://ai.google.dev/gemini-api/docs/gemini-3
+ *
+ * For agents that only use provider-defined tools (like google_search), use
+ * useTwoStepExtraction: true to enable secondary model extraction.
  *
  * Note: Gemini 3 thinking is enabled to stream reasoning ("thoughts") to the UI.
  * Gemini 3 also requires thought_signature handling for multi-turn tool calling when
@@ -242,13 +243,13 @@ export interface GenerateOptions {
  */
 export function buildGenerateOptions(
 	settings: AgentRuntimeSettings,
-	structuredOutput: { schema: z.ZodType }
+	structuredOutput: { schema: z.ZodType },
+	options?: { useTwoStepExtraction?: boolean }
 ): GenerateOptions {
 	return {
-		structuredOutput: {
-			...structuredOutput,
-			model: getFullModelId(),
-		},
+		structuredOutput: options?.useTwoStepExtraction
+			? { ...structuredOutput, model: getFullModelId() }
+			: structuredOutput,
 		requestContext: createRequestContext(settings.model),
 		instructions: settings.systemPromptOverride ?? undefined,
 		providerOptions: {

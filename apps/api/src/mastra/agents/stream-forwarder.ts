@@ -8,11 +8,19 @@
  *
  * Our UI only understands "tool-call" + "tool-result", so we synthesize/upgrade
  * tool-call chunks from the streaming input events to ensure tool calls surface.
+ *
+ * Additionally handles:
+ * - source: Google Search grounding citations with URLs and titles
+ * - start/finish: Stream lifecycle events
+ * - Various boundary events (text-start, reasoning-end, etc.) - silently ignored
  */
 
 import type { AgentType } from "@cream/agents";
+import { createNodeLogger } from "@cream/logger";
 
 import type { AgentStreamChunk, OnStreamChunk } from "./types.js";
+
+const log = createNodeLogger({ service: "stream-forwarder", level: "debug" });
 
 type MastraStreamChunk = { type: string; payload?: Record<string, unknown> };
 
@@ -195,6 +203,82 @@ export function createStreamChunkForwarder(agentType: AgentType, onChunk: OnStre
 					payload: { error: err },
 				});
 				return;
+			}
+
+			// Source chunks contain grounding citations (Google Search results)
+			case "source": {
+				const sourceType = asNonEmptyString(payload.sourceType);
+				// Only forward URL sources (main type from Google Search grounding)
+				if (sourceType !== "url") {
+					return;
+				}
+				const sourceId = asNonEmptyString(payload.id);
+				const url = asNonEmptyString(payload.url);
+				const title = asNonEmptyString(payload.title);
+				const providerMetadata =
+					typeof payload.providerMetadata === "object" && payload.providerMetadata !== null
+						? (payload.providerMetadata as Record<string, unknown>)
+						: undefined;
+
+				await onChunk({
+					...streamChunkBase,
+					type: "source",
+					payload: { sourceId, sourceType, url, title, providerMetadata },
+				});
+				return;
+			}
+
+			// Lifecycle events - forward start/finish for UI status updates
+			case "start": {
+				await onChunk({
+					...streamChunkBase,
+					type: "start",
+					payload: {},
+				});
+				return;
+			}
+
+			case "finish": {
+				await onChunk({
+					...streamChunkBase,
+					type: "finish",
+					payload: {},
+				});
+				return;
+			}
+
+			// Boundary events - these mark start/end of text/reasoning blocks
+			// We don't need to forward these as UI tracks via delta events
+			case "text-start":
+			case "text-end":
+			case "reasoning-start":
+			case "reasoning-end":
+			// Step events - internal lifecycle, not needed for UI
+			case "step-start":
+			case "start-step":
+			case "step-finish":
+			case "finish-step":
+			// Object streaming - handled via final stream.object, not needed incrementally
+			case "object":
+			case "object-result":
+			// Raw provider data - not useful for UI
+			case "raw":
+			// File chunks - not used in our agents
+			case "file": {
+				// Known chunk types that we intentionally don't forward
+				return;
+			}
+
+			default: {
+				// Log truly unhandled chunk types for debugging
+				log.debug(
+					{
+						agentType,
+						chunkType: chunk.type,
+						payloadKeys: Object.keys(payload),
+					},
+					"Unhandled stream chunk type"
+				);
 			}
 		}
 	};

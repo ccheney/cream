@@ -70,16 +70,16 @@ function extractRejectionReasons(riskManager: RiskManagerOutput, critic: CriticO
 	}
 
 	if (critic.verdict === "REJECT") {
-		for (const inconsistency of critic.inconsistencies) {
+		for (const violation of critic.violations) {
 			reasons.push(
-				`Logic: ${inconsistency.issue} - expected ${inconsistency.expected}, found ${inconsistency.found}`
+				`Critic: ${violation.constraint} (${violation.current_value} vs ${violation.limit}) - ${violation.severity}`
 			);
 		}
-		for (const missing of critic.missing_justifications) {
-			reasons.push(`Missing justification: ${missing.missing}`);
+		for (const change of critic.required_changes) {
+			reasons.push(`Critic change required: ${change.change} (${change.reason})`);
 		}
-		for (const hallucination of critic.hallucination_flags) {
-			reasons.push(`Hallucination: ${hallucination.claim} (${hallucination.evidence_status})`);
+		if (critic.notes) {
+			reasons.push(`Critic notes: ${critic.notes}`);
 		}
 	}
 

@@ -313,6 +313,8 @@ export const WorkflowResultSchema = z.object({
 		errors: z.array(z.string()),
 	}),
 	decisionPlan: DecisionPlanSchema.optional(),
+	riskApproval: ApprovalSchema.optional(),
+	criticApproval: ApprovalSchema.optional(),
 	mode: z.enum(["STUB", "LLM"]),
 	configVersion: z.string().nullable(),
 	thesisUpdates: z.array(ThesisUpdateSchema).optional(),

@@ -133,9 +133,27 @@ export interface AgentRuntimeSettings {
 
 /**
  * Streaming chunk type for WebSocket emission.
+ *
+ * Chunk types map to AI SDK fullStream events:
+ * - text-delta: Incremental text content
+ * - reasoning-delta: Incremental reasoning/thinking content
+ * - tool-call: Tool invocation with name and args
+ * - tool-result: Tool execution result
+ * - source: Grounding source (Google Search citation with URL, title)
+ * - start: Stream start lifecycle event
+ * - finish: Stream finish lifecycle event
+ * - error: Error event
  */
 export interface AgentStreamChunk {
-	type: "text-delta" | "tool-call" | "tool-result" | "reasoning-delta" | "finish" | "error";
+	type:
+		| "text-delta"
+		| "tool-call"
+		| "tool-result"
+		| "reasoning-delta"
+		| "source"
+		| "start"
+		| "finish"
+		| "error";
 	agentType: AgentType;
 	payload: {
 		text?: string;
@@ -145,6 +163,12 @@ export interface AgentStreamChunk {
 		result?: unknown;
 		success?: boolean;
 		error?: string;
+		/** Source fields for grounding citations */
+		sourceId?: string;
+		sourceType?: string;
+		url?: string;
+		title?: string;
+		providerMetadata?: Record<string, unknown>;
 	};
 	timestamp: string;
 }

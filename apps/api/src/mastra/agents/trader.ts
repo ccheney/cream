@@ -5,8 +5,12 @@
  */
 
 import type { AgentType } from "@cream/agents";
+import { createNodeLogger } from "@cream/logger";
 
 import { buildGenerateOptions, createAgent, getAgentRuntimeSettings } from "./factory.js";
+
+const log = createNodeLogger({ service: "trader-agent", level: "info" });
+
 import { buildDatetimeContext, buildFactorZooContext, buildIndicatorContext } from "./prompts.js";
 import { DecisionPlanSchema } from "./schemas.js";
 import { createStreamChunkForwarder } from "./stream-forwarder.js";
@@ -152,7 +156,11 @@ FACTOR ZOO SIGNALS:
 }`;
 
 	const settings = getAgentRuntimeSettings("trader", context.agentConfigs);
-	const options = buildGenerateOptions(settings, { schema: DecisionPlanSchema });
+	const options = buildGenerateOptions(
+		settings,
+		{ schema: DecisionPlanSchema },
+		{ useTwoStepExtraction: true }
+	);
 
 	const stream = await traderAgent.stream([{ role: "user", content: prompt }], options);
 	const forwardChunk = createStreamChunkForwarder("trader", onChunk);
@@ -161,7 +169,43 @@ FACTOR ZOO SIGNALS:
 		await forwardChunk(chunk as { type: string; payload?: Record<string, unknown> });
 	}
 
-	return (await stream.object) as DecisionPlan;
+	let result: DecisionPlan | undefined;
+	try {
+		result = (await stream.object) as DecisionPlan | undefined;
+	} catch (err) {
+		log.error({ err }, "[trader] Error awaiting stream.object");
+	}
+
+	if (!result) {
+		const streamText = await stream.text;
+		const streamUsage = await stream.usage;
+		const response = await stream.response;
+		// AI SDK exposes reasoning via stream.reasoning for models with thinking mode
+		// ReasoningChunk[] contains { type: "thinking", textDelta: string } entries
+		const reasoningChunks =
+			"reasoning" in stream
+				? await (
+						stream as unknown as { reasoning: Promise<Array<{ type: string; textDelta?: string }>> }
+					).reasoning
+				: undefined;
+		const reasoningText = reasoningChunks
+			?.filter((c) => c.textDelta)
+			.map((c) => c.textDelta)
+			.join("");
+		log.error(
+			{
+				streamText: streamText || "(empty)",
+				streamTextLength: streamText?.length ?? 0,
+				reasoningText: reasoningText?.slice(0, 2000) || "(empty)",
+				reasoningTextLength: reasoningText?.length ?? 0,
+				streamUsage,
+				responseStatus: response?.status,
+			},
+			"[trader] Structured output undefined after streaming"
+		);
+	}
+
+	return result as DecisionPlan;
 }
 
 // ============================================

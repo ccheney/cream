@@ -572,6 +572,8 @@ const actStep = createStep({
 			iterations: state.iterations ?? 1,
 			orderSubmission,
 			decisionPlan,
+			riskApproval: inputData.riskApproval,
+			criticApproval: inputData.criticApproval,
 			mode: state.mode ?? "STUB",
 			configVersion: null,
 		};
