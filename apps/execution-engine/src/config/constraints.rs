@@ -17,6 +17,9 @@ pub struct ConstraintsConfig {
     /// Buying power requirements.
     #[serde(default)]
     pub buying_power: BuyingPowerConstraints,
+    /// Per-trade risk limits.
+    #[serde(default)]
+    pub risk_limits: RiskLimitsConstraints,
 }
 
 /// Per-instrument constraint limits.
@@ -177,6 +180,42 @@ const fn default_min_buying_power_ratio() -> f64 {
 
 const fn default_margin_buffer() -> f64 {
     0.10
+}
+
+/// Per-trade risk limit constraints.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct RiskLimitsConstraints {
+    /// Maximum percentage of account equity at risk per trade.
+    #[serde(default = "default_max_per_trade_risk_pct")]
+    pub max_per_trade_risk_pct: f64,
+    /// Minimum risk-reward ratio for new positions.
+    #[serde(default = "default_min_risk_reward_ratio")]
+    pub min_risk_reward_ratio: f64,
+    /// Sizing sanity threshold multiplier (reject if position > multiplier * median).
+    #[serde(default = "default_sizing_sanity_threshold")]
+    pub sizing_sanity_threshold: f64,
+}
+
+impl Default for RiskLimitsConstraints {
+    fn default() -> Self {
+        Self {
+            max_per_trade_risk_pct: default_max_per_trade_risk_pct(),
+            min_risk_reward_ratio: default_min_risk_reward_ratio(),
+            sizing_sanity_threshold: default_sizing_sanity_threshold(),
+        }
+    }
+}
+
+const fn default_max_per_trade_risk_pct() -> f64 {
+    2.0
+}
+
+const fn default_min_risk_reward_ratio() -> f64 {
+    1.5
+}
+
+const fn default_sizing_sanity_threshold() -> f64 {
+    3.0
 }
 
 #[cfg(test)]

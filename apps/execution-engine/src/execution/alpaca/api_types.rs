@@ -273,40 +273,48 @@ impl AlpacaOrderRequest {
         };
 
         // Determine order class and legs based on stop/target levels
+        // Options don't support bracket orders on Alpaca - use price monitoring instead
+        let supports_bracket =
+            crate::execution::stops::supports_bracket_orders(&decision.instrument_id);
         let has_stop = decision.stop_loss_level > Decimal::ZERO;
         let has_target = decision.take_profit_level > Decimal::ZERO;
 
-        let (order_class, take_profit, stop_loss) = match (has_stop, has_target) {
-            // Both stop and target: bracket order
-            (true, true) => (
-                OrderClass::Bracket,
-                Some(TakeProfitLeg {
-                    limit_price: decision.take_profit_level.to_string(),
-                }),
-                Some(StopLossLeg {
-                    stop_price: decision.stop_loss_level.to_string(),
-                    limit_price: None, // Use stop market order for stop loss
-                }),
-            ),
-            // Only stop loss: OTO (one-triggers-other)
-            (true, false) => (
-                OrderClass::Oto,
-                None,
-                Some(StopLossLeg {
-                    stop_price: decision.stop_loss_level.to_string(),
-                    limit_price: None,
-                }),
-            ),
-            // Only take profit: OTO with take profit
-            (false, true) => (
-                OrderClass::Oto,
-                Some(TakeProfitLeg {
-                    limit_price: decision.take_profit_level.to_string(),
-                }),
-                None,
-            ),
-            // No stop or target: simple order
-            (false, false) => (OrderClass::Simple, None, None),
+        let (order_class, take_profit, stop_loss) = if supports_bracket {
+            match (has_stop, has_target) {
+                // Both stop and target: bracket order
+                (true, true) => (
+                    OrderClass::Bracket,
+                    Some(TakeProfitLeg {
+                        limit_price: decision.take_profit_level.to_string(),
+                    }),
+                    Some(StopLossLeg {
+                        stop_price: decision.stop_loss_level.to_string(),
+                        limit_price: None, // Use stop market order for stop loss
+                    }),
+                ),
+                // Only stop loss: OTO (one-triggers-other)
+                (true, false) => (
+                    OrderClass::Oto,
+                    None,
+                    Some(StopLossLeg {
+                        stop_price: decision.stop_loss_level.to_string(),
+                        limit_price: None,
+                    }),
+                ),
+                // Only take profit: OTO with take profit
+                (false, true) => (
+                    OrderClass::Oto,
+                    Some(TakeProfitLeg {
+                        limit_price: decision.take_profit_level.to_string(),
+                    }),
+                    None,
+                ),
+                // No stop or target: simple order
+                (false, false) => (OrderClass::Simple, None, None),
+            }
+        } else {
+            // Options: submit as simple order, price monitoring will be set up separately
+            (OrderClass::Simple, None, None)
         };
 
         Self {

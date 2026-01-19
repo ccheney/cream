@@ -11,6 +11,7 @@
 
 mod config;
 mod error;
+mod manager;
 mod orders;
 mod partial_fills;
 mod quantity;
@@ -22,6 +23,9 @@ pub use config::RollConfig;
 
 // Errors
 pub use error::RollError;
+
+// Manager
+pub use manager::{RollingManager, TrackedPosition};
 
 // Roll orders
 pub use orders::{RollLeg, RollOrder, RollOrderBuilder, RollOrderType};

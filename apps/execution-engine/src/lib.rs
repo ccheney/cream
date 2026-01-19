@@ -51,7 +51,8 @@ pub mod telemetry;
 pub use error::{ErrorCode, ExecutionError, HttpErrorResponse};
 pub use execution::{
     AlpacaAdapter, ExecutionGateway, MonitoredPosition, OrderStateManager, StatePersistence,
-    StopsEnforcer, TacticSelector, TacticType, TriggerResult, TwapConfig, VwapConfig,
+    StopsEnforcer, StopsPriceMonitor, TacticSelector, TacticType, TriggerResult, TwapConfig,
+    VwapConfig, run_price_monitor,
 };
 pub use models::{
     ConstraintCheckRequest, ConstraintCheckResponse, DecisionPlan, Environment, ExecutionAck,

@@ -25,7 +25,7 @@ use serde::{Deserialize, Serialize};
 use thiserror::Error;
 use tokio::sync::mpsc;
 
-use crate::models::{Environment, OrderStatus, TimeInForce};
+use crate::models::Environment;
 
 /// Errors that can occur during mass cancel operations.
 #[derive(Debug, Error)]
@@ -351,23 +351,6 @@ impl DisconnectHandler {
     }
 }
 
-/// Filter orders for mass cancel based on GTC policy.
-#[allow(dead_code)]
-pub fn filter_orders_for_cancel(
-    orders: &[(String, TimeInForce, OrderStatus)],
-    gtc_policy: GtcOrderPolicy,
-) -> Vec<String> {
-    orders
-        .iter()
-        .filter(|(_, _, status)| status.is_active())
-        .filter(|(_, tif, _)| match gtc_policy {
-            GtcOrderPolicy::Include => true,
-            GtcOrderPolicy::Exclude => *tif != TimeInForce::Gtc,
-        })
-        .map(|(id, _, _)| id.clone())
-        .collect()
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -403,46 +386,6 @@ mod tests {
             ..Default::default()
         };
         assert!(config.validate(Environment::Paper).is_ok());
-    }
-
-    #[test]
-    fn test_filter_orders_include_gtc() {
-        let orders = vec![
-            ("O1".to_string(), TimeInForce::Day, OrderStatus::Accepted),
-            ("O2".to_string(), TimeInForce::Gtc, OrderStatus::Accepted),
-            ("O3".to_string(), TimeInForce::Day, OrderStatus::Filled), // Terminal
-            (
-                "O4".to_string(),
-                TimeInForce::Ioc,
-                OrderStatus::PartiallyFilled,
-            ),
-        ];
-
-        let result = filter_orders_for_cancel(&orders, GtcOrderPolicy::Include);
-        assert_eq!(result.len(), 3);
-        assert!(result.contains(&"O1".to_string()));
-        assert!(result.contains(&"O2".to_string()));
-        assert!(result.contains(&"O4".to_string()));
-    }
-
-    #[test]
-    fn test_filter_orders_exclude_gtc() {
-        let orders = vec![
-            ("O1".to_string(), TimeInForce::Day, OrderStatus::Accepted),
-            ("O2".to_string(), TimeInForce::Gtc, OrderStatus::Accepted),
-            ("O3".to_string(), TimeInForce::Day, OrderStatus::Filled), // Terminal
-            (
-                "O4".to_string(),
-                TimeInForce::Ioc,
-                OrderStatus::PartiallyFilled,
-            ),
-        ];
-
-        let result = filter_orders_for_cancel(&orders, GtcOrderPolicy::Exclude);
-        assert_eq!(result.len(), 2);
-        assert!(result.contains(&"O1".to_string()));
-        assert!(result.contains(&"O4".to_string()));
-        assert!(!result.contains(&"O2".to_string())); // GTC excluded
     }
 
     #[test]

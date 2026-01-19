@@ -114,7 +114,6 @@ pub struct RecoveryResult {
 }
 
 impl RecoveryResult {
-    #[allow(dead_code)]
     const fn success() -> Self {
         Self {
             success: true,

@@ -35,11 +35,14 @@ use std::time::Duration;
 
 use execution_engine::{
     AlpacaAdapter, ConstraintValidator, Environment, ExecutionGateway, ExecutionServer,
-    OrderStateManager, StatePersistence,
+    OrderStateManager, StatePersistence, StopsEnforcer, StopsPriceMonitor,
     config::{Config, load_config, validate_startup_environment},
     execution::{PortfolioRecovery, ReconciliationManager, fetch_broker_state},
+    feed::{AlpacaFeed, create_alpaca_feed_channel},
+    options::{RollConfig, RollingManager},
+    run_price_monitor,
     safety::ConnectionMonitor,
-    server::create_router,
+    server::{TlsConfigBuilder, create_router},
     telemetry::init_telemetry,
 };
 use tokio::net::TcpListener;
@@ -172,6 +175,52 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         );
     }
 
+    // Start AlpacaFeed and StopsPriceMonitor for options stop/target enforcement
+    // (options don't support bracket orders, so we monitor prices and close manually)
+    let feed_config = &config.feeds.alpaca;
+    if !feed_config.api_key.is_empty() && !feed_config.api_secret.is_empty() {
+        let (feed_tx, feed_rx) = create_alpaca_feed_channel(None);
+
+        // Create and spawn the AlpacaFeed
+        let feed = AlpacaFeed::from_config(feed_config, feed_tx);
+        let feed_symbols = feed_config.symbols.clone();
+        let feed_shutdown_tx = shutdown_tx.clone();
+        tokio::spawn(async move {
+            let _shutdown_rx = feed_shutdown_tx.subscribe();
+            if let Err(e) = feed.start(feed_symbols).await {
+                tracing::error!(error = %e, "AlpacaFeed failed");
+            }
+        });
+
+        // Create and spawn the StopsPriceMonitor
+        let price_monitor = Arc::new(StopsPriceMonitor::new(
+            components.stops_enforcer.clone(),
+            components.adapter_for_price_monitor.clone(),
+        ));
+        let monitor_shutdown_rx = shutdown_tx.subscribe();
+        tokio::spawn(async move {
+            run_price_monitor(price_monitor, feed_rx, monitor_shutdown_rx).await;
+        });
+
+        tracing::info!(
+            symbols = ?config.feeds.alpaca.symbols,
+            "Started AlpacaFeed and StopsPriceMonitor for options stop/target enforcement"
+        );
+    } else {
+        tracing::info!("AlpacaFeed disabled (no API credentials in feeds config)");
+    }
+
+    // Start RollingManager for options position rolling
+    let rolling_manager = RollingManager::new(
+        RollConfig::default(),
+        components.adapter_for_price_monitor.clone(),
+    );
+    let rolling_shutdown_rx = shutdown_tx.subscribe();
+    tokio::spawn(async move {
+        rolling_manager.run(rolling_shutdown_rx).await;
+    });
+    tracing::info!("Started RollingManager for options position rolling evaluation");
+
     // Create HTTP router
     let app = create_router(components.execution_server);
 
@@ -182,6 +231,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     tracing::info!(%http_addr, "HTTP server starting");
     tracing::info!("Endpoints:");
     tracing::info!("  GET  /health");
+    tracing::info!("  GET  /v1/feed-health");
+    tracing::info!("  GET  /v1/circuit-breaker");
     tracing::info!("  POST /v1/check-constraints");
     tracing::info!("  POST /v1/submit-orders");
     tracing::info!("  POST /v1/order-state");
@@ -202,7 +253,17 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let grpc_addr: SocketAddr =
         format!("{}:{}", config.server.bind_address, config.server.grpc_port).parse()?;
 
-    tracing::info!(%grpc_addr, "gRPC server starting");
+    // Initialize TLS configuration from environment
+    let tls_config = TlsConfigBuilder::from_env().build().map_err(|e| {
+        tracing::error!("Failed to load TLS configuration: {e}");
+        e
+    })?;
+
+    if tls_config.is_some() {
+        tracing::info!(%grpc_addr, "gRPC server starting with TLS");
+    } else {
+        tracing::info!(%grpc_addr, "gRPC server starting (no TLS)");
+    }
     tracing::info!("gRPC services:");
     tracing::info!("  MarketDataService - GetSnapshot, GetOptionChain, SubscribeMarketData");
     tracing::info!("  ExecutionService - CheckConstraints, SubmitOrder, GetOrderState, etc.");
@@ -221,7 +282,28 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 }
             };
 
-        let server = tonic::transport::Server::builder()
+        // Build server with or without TLS
+        let mut builder = tonic::transport::Server::builder();
+
+        if let Some(tls) = tls_config {
+            match tls.build_server_config() {
+                Ok(server_tls_config) => {
+                    builder = match builder.tls_config(server_tls_config) {
+                        Ok(b) => b,
+                        Err(e) => {
+                            tracing::error!("Failed to apply TLS config: {e}");
+                            return;
+                        }
+                    };
+                }
+                Err(e) => {
+                    tracing::error!("Failed to build TLS server config: {e}");
+                    return;
+                }
+            }
+        }
+
+        let server = builder
             .add_service(execution_service)
             .add_service(market_data_service)
             .serve_with_shutdown(grpc_addr, async move {
@@ -289,6 +371,10 @@ struct ServerComponents {
     adapter_for_reconciliation: Option<Arc<AlpacaAdapter>>,
     /// State manager for reconciliation (None if persistence disabled)
     state_manager_for_reconciliation: Option<Arc<OrderStateManager>>,
+    /// Stops enforcer for price monitoring (shared with gateway)
+    stops_enforcer: Arc<tokio::sync::RwLock<StopsEnforcer>>,
+    /// Adapter for price monitor (shared with gateway)
+    adapter_for_price_monitor: Arc<AlpacaAdapter>,
 }
 
 /// Create execution server with the appropriate broker adapter based on environment.
@@ -414,6 +500,7 @@ async fn create_execution_server(
         }
 
         // Use the Arc-based constructor since we need to keep references for reconciliation
+        let stops_config = config.stops.to_stops_config();
         let gateway = ExecutionGateway::with_all_arcs(
             Arc::clone(&adapter_arc),
             "Alpaca",
@@ -421,11 +508,16 @@ async fn create_execution_server(
             validator,
             circuit_config,
             Arc::clone(&persistence_arc),
+            env,
+            stops_config,
         );
+
+        // Get stops enforcer from gateway for price monitor
+        let stops_enforcer = gateway.stops_enforcer();
 
         // Return components needed for reconciliation if enabled
         let (adapter_for_recon, state_manager_for_recon) = if reconciliation_enabled {
-            (Some(adapter_arc), Some(state_manager_arc))
+            (Some(Arc::clone(&adapter_arc)), Some(state_manager_arc))
         } else {
             (None, None)
         };
@@ -434,17 +526,38 @@ async fn create_execution_server(
             execution_server: ExecutionServer::new(gateway),
             adapter_for_reconciliation: adapter_for_recon,
             state_manager_for_reconciliation: state_manager_for_recon,
+            stops_enforcer,
+            adapter_for_price_monitor: adapter_arc,
         })
     } else {
         tracing::info!(
             environment = %env,
             "State persistence disabled for this environment"
         );
-        let gateway = ExecutionGateway::new(adapter, state_manager, validator, circuit_config);
+        let adapter_arc = Arc::new(adapter);
+        let stops_config = config.stops.to_stops_config();
+        let stops_enforcer_inner = StopsEnforcer::with_config(env, stops_config);
+        let gateway = ExecutionGateway::with_stops(
+            AlpacaAdapter::new(
+                config.brokers.alpaca.api_key.clone(),
+                config.brokers.alpaca.api_secret.clone(),
+                env,
+            )?,
+            state_manager,
+            validator,
+            circuit_config,
+            stops_enforcer_inner,
+        );
+
+        // Get stops enforcer from gateway for price monitor
+        let stops_enforcer = gateway.stops_enforcer();
+
         Ok(ServerComponents {
             execution_server: ExecutionServer::new(gateway),
             adapter_for_reconciliation: None,
             state_manager_for_reconciliation: None,
+            stops_enforcer,
+            adapter_for_price_monitor: adapter_arc,
         })
     }
 }

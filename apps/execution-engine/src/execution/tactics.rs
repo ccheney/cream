@@ -456,6 +456,419 @@ pub enum OrderPurpose {
     StopLoss,
 }
 
+// ============================================================================
+// Execution Slice Types
+// ============================================================================
+
+/// A single TWAP execution slice.
+#[derive(Debug, Clone)]
+pub struct TwapSlice {
+    /// Quantity for this slice.
+    pub quantity: Decimal,
+    /// Slice number (0-indexed).
+    pub slice_number: usize,
+    /// Scheduled execution time.
+    pub scheduled_time: DateTime<Utc>,
+}
+
+/// TWAP executor for time-weighted average price execution.
+///
+/// Splits a large order into equal-sized slices distributed evenly across a time window.
+#[derive(Debug, Clone)]
+pub struct TwapExecutor {
+    /// Total quantity to execute.
+    total_qty: Decimal,
+    /// Number of slices.
+    num_slices: usize,
+    /// Slices executed so far.
+    executed_slices: usize,
+    /// Quantity per slice.
+    qty_per_slice: Decimal,
+    /// Start time of execution.
+    start_time: DateTime<Utc>,
+    /// Execution schedule.
+    schedule: Vec<DateTime<Utc>>,
+    /// Configuration.
+    config: TwapConfig,
+}
+
+impl TwapExecutor {
+    /// Create a new TWAP executor.
+    #[must_use]
+    pub fn new(total_qty: Decimal, config: TwapConfig) -> Self {
+        let num_slices = config.calculate_slice_count() as usize;
+        let qty_per_slice = config.calculate_slice_quantity(total_qty);
+        let start_time = Utc::now();
+        let schedule = config.calculate_schedule(start_time);
+
+        Self {
+            total_qty,
+            num_slices,
+            executed_slices: 0,
+            qty_per_slice,
+            start_time,
+            schedule,
+            config,
+        }
+    }
+
+    /// Returns the next slice to execute, if any remain and it's time.
+    #[must_use]
+    pub fn next_slice(&mut self) -> Option<TwapSlice> {
+        if self.executed_slices >= self.num_slices {
+            return None;
+        }
+
+        let now = Utc::now();
+        let scheduled_time = self.schedule[self.executed_slices];
+
+        // Only return slice if it's time
+        if now < scheduled_time {
+            return None;
+        }
+
+        let slice = TwapSlice {
+            quantity: self.qty_per_slice,
+            slice_number: self.executed_slices,
+            scheduled_time,
+        };
+
+        self.executed_slices += 1;
+        Some(slice)
+    }
+
+    /// Check if there's a slice ready to execute now.
+    #[must_use]
+    pub fn has_ready_slice(&self) -> bool {
+        if self.executed_slices >= self.num_slices {
+            return false;
+        }
+
+        let now = Utc::now();
+        let scheduled_time = self.schedule[self.executed_slices];
+        now >= scheduled_time
+    }
+
+    /// Get the remaining quantity to execute.
+    #[must_use]
+    pub fn remaining_qty(&self) -> Decimal {
+        let executed_qty = self.qty_per_slice * Decimal::from(self.executed_slices);
+        self.total_qty - executed_qty
+    }
+
+    /// Check if execution is complete.
+    #[must_use]
+    pub const fn is_complete(&self) -> bool {
+        self.executed_slices >= self.num_slices
+    }
+
+    /// Check if the execution window has ended.
+    #[must_use]
+    pub fn is_window_ended(&self) -> bool {
+        self.config.is_window_ended(self.start_time)
+    }
+
+    /// Get the configuration.
+    #[must_use]
+    pub const fn config(&self) -> &TwapConfig {
+        &self.config
+    }
+}
+
+/// A single VWAP execution slice.
+#[derive(Debug, Clone)]
+pub struct VwapSlice {
+    /// Quantity for this slice.
+    pub quantity: Decimal,
+    /// Participation rate (0.0 to 1.0).
+    pub participation_rate: Decimal,
+}
+
+/// VWAP executor for volume-weighted average price execution.
+///
+/// Participates proportionally to market volume.
+#[derive(Debug, Clone)]
+pub struct VwapExecutor {
+    /// Total quantity to execute.
+    total_qty: Decimal,
+    /// Quantity filled so far.
+    filled_qty: Decimal,
+    /// Configuration.
+    config: VwapConfig,
+}
+
+impl VwapExecutor {
+    /// Create a new VWAP executor.
+    #[must_use]
+    pub const fn new(total_qty: Decimal, config: VwapConfig) -> Self {
+        Self {
+            total_qty,
+            filled_qty: Decimal::ZERO,
+            config,
+        }
+    }
+
+    /// Calculate the next slice based on recent market volume.
+    #[must_use]
+    pub fn next_slice(&self, recent_volume: Decimal) -> Option<VwapSlice> {
+        if self.is_complete() {
+            return None;
+        }
+
+        let remaining = self.remaining_qty();
+        let quantity = self
+            .config
+            .calculate_participation_quantity(recent_volume, remaining);
+
+        if quantity == Decimal::ZERO {
+            return None;
+        }
+
+        Some(VwapSlice {
+            quantity,
+            participation_rate: self.config.max_pct_volume,
+        })
+    }
+
+    /// Record a fill.
+    pub fn record_fill(&mut self, filled_qty: Decimal) {
+        self.filled_qty += filled_qty;
+    }
+
+    /// Get the remaining quantity to execute.
+    #[must_use]
+    pub fn remaining_qty(&self) -> Decimal {
+        self.total_qty - self.filled_qty
+    }
+
+    /// Check if execution is complete.
+    #[must_use]
+    pub fn is_complete(&self) -> bool {
+        self.remaining_qty() <= Decimal::ZERO
+    }
+
+    /// Check if the execution window has ended.
+    #[must_use]
+    pub fn is_window_ended(&self) -> bool {
+        self.config.is_window_ended()
+    }
+}
+
+/// A single Iceberg execution slice (the visible "peak").
+#[derive(Debug, Clone)]
+pub struct IcebergPeak {
+    /// Quantity for this peak.
+    pub quantity: Decimal,
+    /// Peak number.
+    pub peak_number: usize,
+}
+
+/// Iceberg executor for hidden order execution.
+///
+/// Shows only a small visible portion of the total order, replenishing on fills.
+#[derive(Debug, Clone)]
+pub struct IcebergExecutor {
+    /// Total hidden quantity.
+    total_qty: Decimal,
+    /// Visible "peak" size.
+    display_qty: Decimal,
+    /// Quantity filled so far.
+    filled_qty: Decimal,
+    /// Peak number.
+    peak_number: usize,
+    /// Configuration.
+    config: IcebergConfig,
+}
+
+impl IcebergExecutor {
+    /// Create a new Iceberg executor.
+    #[must_use]
+    pub fn new(total_qty: Decimal, config: IcebergConfig) -> Self {
+        let display_qty = Decimal::from(config.display_size);
+
+        Self {
+            total_qty,
+            display_qty,
+            filled_qty: Decimal::ZERO,
+            peak_number: 0,
+            config,
+        }
+    }
+
+    /// Get the first peak to display.
+    #[must_use]
+    pub fn first_peak(&self) -> IcebergPeak {
+        let quantity = self.display_qty.min(self.total_qty);
+        IcebergPeak {
+            quantity,
+            peak_number: 0,
+        }
+    }
+
+    /// Called when current peak is filled - returns next peak order if any.
+    #[must_use]
+    pub fn on_fill(&mut self, filled: Decimal) -> Option<IcebergPeak> {
+        self.filled_qty += filled;
+        self.peak_number += 1;
+
+        if self.is_complete() {
+            return None;
+        }
+
+        let remaining = self.remaining_qty();
+        let next_display = self.display_qty.min(remaining);
+
+        Some(IcebergPeak {
+            quantity: next_display,
+            peak_number: self.peak_number,
+        })
+    }
+
+    /// Get the remaining quantity to execute.
+    #[must_use]
+    pub fn remaining_qty(&self) -> Decimal {
+        self.total_qty - self.filled_qty
+    }
+
+    /// Check if execution is complete.
+    #[must_use]
+    pub fn is_complete(&self) -> bool {
+        self.remaining_qty() <= Decimal::ZERO
+    }
+
+    /// Get the configuration.
+    #[must_use]
+    pub const fn config(&self) -> &IcebergConfig {
+        &self.config
+    }
+}
+
+/// Sub-tactic for adaptive execution.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum SubTactic {
+    /// Use passive limit orders.
+    PassiveLimit,
+    /// Use aggressive limit orders.
+    AggressiveLimit,
+}
+
+/// Market context for adaptive urgency evaluation.
+#[derive(Debug, Clone)]
+pub struct MarketContext {
+    /// Price move since execution start (basis points).
+    pub price_move_bps: Decimal,
+    /// Whether price moved against our position.
+    pub is_adverse_move: bool,
+    /// Current volume vs expected volume ratio.
+    pub volume_vs_expected: Decimal,
+    /// Current spread in basis points.
+    pub spread_bps: Decimal,
+    /// Time remaining as percentage (0.0 to 1.0).
+    pub time_remaining_pct: Decimal,
+}
+
+/// Adaptive executor for dynamic tactic switching.
+///
+/// Dynamically switches between passive and aggressive based on market conditions.
+#[derive(Debug, Clone)]
+pub struct AdaptiveExecutor {
+    /// Total quantity to execute.
+    total_qty: Decimal,
+    /// Quantity filled so far.
+    filled_qty: Decimal,
+    /// Current urgency level (0.0 = passive, 1.0 = aggressive).
+    urgency: Decimal,
+    /// Configuration.
+    config: AdaptiveConfig,
+}
+
+impl AdaptiveExecutor {
+    /// Create a new Adaptive executor.
+    #[must_use]
+    pub fn new(total_qty: Decimal, config: AdaptiveConfig) -> Self {
+        // Initialize urgency based on configured urgency level
+        let initial_urgency = match config.urgency {
+            Urgency::Patient => Decimal::new(10, 2), // 0.10
+            Urgency::Normal => Decimal::new(30, 2),  // 0.30
+            Urgency::Urgent => Decimal::new(60, 2),  // 0.60
+        };
+
+        Self {
+            total_qty,
+            filled_qty: Decimal::ZERO,
+            urgency: initial_urgency,
+            config,
+        }
+    }
+
+    /// Evaluate and update urgency based on market context.
+    pub fn evaluate_urgency(&mut self, ctx: &MarketContext) {
+        let mut urgency_delta = Decimal::ZERO;
+
+        // Price moved against us - increase urgency
+        if ctx.is_adverse_move && ctx.price_move_bps.abs() > Decimal::new(50, 0) {
+            urgency_delta += Decimal::new(20, 2); // +20%
+        }
+
+        // Liquidity declining - increase urgency
+        if ctx.volume_vs_expected < Decimal::new(70, 2) {
+            urgency_delta += Decimal::new(15, 2); // +15%
+        }
+
+        // Spread widening - decrease urgency (wait for better conditions)
+        if ctx.spread_bps > Decimal::from(self.config.spread_threshold_bps) {
+            urgency_delta -= Decimal::new(10, 2); // -10%
+        }
+
+        // Time running out - increase urgency
+        if ctx.time_remaining_pct < Decimal::new(20, 2) {
+            urgency_delta += Decimal::new(30, 2); // +30%
+        }
+
+        // Update urgency, clamping to [0.0, 1.0]
+        self.urgency = (self.urgency + urgency_delta)
+            .max(Decimal::ZERO)
+            .min(Decimal::ONE);
+    }
+
+    /// Select the current sub-tactic based on urgency.
+    #[must_use]
+    pub fn select_sub_tactic(&self) -> SubTactic {
+        if self.urgency > Decimal::new(50, 2) {
+            SubTactic::AggressiveLimit
+        } else {
+            SubTactic::PassiveLimit
+        }
+    }
+
+    /// Record a fill.
+    pub fn record_fill(&mut self, filled_qty: Decimal) {
+        self.filled_qty += filled_qty;
+    }
+
+    /// Get the remaining quantity to execute.
+    #[must_use]
+    pub fn remaining_qty(&self) -> Decimal {
+        self.total_qty - self.filled_qty
+    }
+
+    /// Check if execution is complete.
+    #[must_use]
+    pub fn is_complete(&self) -> bool {
+        self.remaining_qty() <= Decimal::ZERO
+    }
+
+    /// Get current urgency level.
+    #[must_use]
+    pub const fn urgency(&self) -> Decimal {
+        self.urgency
+    }
+}
+
+// ============================================================================
+// Tactic Selection
+// ============================================================================
+
 /// Tactic selector for choosing the best execution tactic.
 #[derive(Debug, Clone)]
 pub struct TacticSelector {

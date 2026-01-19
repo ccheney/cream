@@ -8,13 +8,19 @@
 
 use std::sync::Arc;
 
+use tokio::sync::RwLock;
+
 use crate::execution::persistence::StatePersistence;
 use crate::execution::state::OrderStateManager;
+use crate::execution::stops::{
+    MonitoredPosition, StopTargetLevels, StopsConfig, StopsEnforcer, supports_bracket_orders,
+};
 use crate::models::{
-    ConstraintCheckRequest, ConstraintCheckResponse, OrderState, SubmitOrdersRequest,
+    ConstraintCheckRequest, ConstraintCheckResponse, Environment, OrderState, SubmitOrdersRequest,
 };
 use crate::resilience::{CircuitBreaker, CircuitBreakerConfig};
 use crate::risk::ConstraintValidator;
+use rust_decimal::Decimal;
 
 use super::{BrokerAdapter, BrokerError, CancelOrderError, SubmitOrdersError};
 
@@ -36,6 +42,7 @@ pub struct ExecutionGateway<B: BrokerAdapter> {
     validator: Arc<ConstraintValidator>,
     circuit_breaker: Arc<CircuitBreaker>,
     persistence: Option<Arc<StatePersistence>>,
+    stops_enforcer: Arc<RwLock<StopsEnforcer>>,
 }
 
 impl<B: BrokerAdapter> ExecutionGateway<B> {
@@ -54,6 +61,58 @@ impl<B: BrokerAdapter> ExecutionGateway<B> {
         validator: ConstraintValidator,
         circuit_config: CircuitBreakerConfig,
     ) -> Self {
+        Self::with_stops(
+            broker,
+            state_manager,
+            validator,
+            circuit_config,
+            StopsEnforcer::new(Environment::Paper),
+        )
+    }
+
+    /// Create a new execution gateway with circuit breaker protection and custom environment.
+    ///
+    /// # Arguments
+    ///
+    /// * `broker` - The broker adapter for order routing
+    /// * `state_manager` - Order state manager for tracking order lifecycle
+    /// * `validator` - Constraint validator for risk checks
+    /// * `circuit_config` - Circuit breaker configuration for broker resilience
+    /// * `environment` - Trading environment (PAPER/LIVE)
+    #[must_use]
+    pub fn with_environment(
+        broker: B,
+        state_manager: OrderStateManager,
+        validator: ConstraintValidator,
+        circuit_config: CircuitBreakerConfig,
+        environment: Environment,
+    ) -> Self {
+        Self::with_stops(
+            broker,
+            state_manager,
+            validator,
+            circuit_config,
+            StopsEnforcer::new(environment),
+        )
+    }
+
+    /// Create a new execution gateway with custom stops configuration.
+    ///
+    /// # Arguments
+    ///
+    /// * `broker` - The broker adapter for order routing
+    /// * `state_manager` - Order state manager for tracking order lifecycle
+    /// * `validator` - Constraint validator for risk checks
+    /// * `circuit_config` - Circuit breaker configuration for broker resilience
+    /// * `stops_enforcer` - Pre-configured stops enforcer
+    #[must_use]
+    pub fn with_stops(
+        broker: B,
+        state_manager: OrderStateManager,
+        validator: ConstraintValidator,
+        circuit_config: CircuitBreakerConfig,
+        stops_enforcer: StopsEnforcer,
+    ) -> Self {
         let broker_name = broker.broker_name();
         Self {
             broker: Arc::new(broker),
@@ -61,6 +120,7 @@ impl<B: BrokerAdapter> ExecutionGateway<B> {
             validator: Arc::new(validator),
             circuit_breaker: Arc::new(CircuitBreaker::new(broker_name, circuit_config)),
             persistence: None,
+            stops_enforcer: Arc::new(RwLock::new(stops_enforcer)),
         }
     }
 
@@ -88,6 +148,7 @@ impl<B: BrokerAdapter> ExecutionGateway<B> {
             validator: Arc::new(validator),
             circuit_breaker: Arc::new(CircuitBreaker::new(broker_name, circuit_config)),
             persistence: Some(Arc::new(persistence)),
+            stops_enforcer: Arc::new(RwLock::new(StopsEnforcer::new(Environment::Paper))),
         }
     }
 
@@ -118,6 +179,7 @@ impl<B: BrokerAdapter> ExecutionGateway<B> {
             validator: Arc::new(validator),
             circuit_breaker: Arc::new(CircuitBreaker::new(broker_name, circuit_config)),
             persistence: Some(persistence),
+            stops_enforcer: Arc::new(RwLock::new(StopsEnforcer::new(Environment::Paper))),
         }
     }
 
@@ -134,7 +196,10 @@ impl<B: BrokerAdapter> ExecutionGateway<B> {
     /// * `validator` - Constraint validator (wrapped internally)
     /// * `circuit_config` - Circuit breaker configuration
     /// * `persistence` - Arc-wrapped state persistence manager
+    /// * `environment` - Trading environment (PAPER/LIVE)
+    /// * `stops_config` - Stops enforcement configuration
     #[must_use]
+    #[allow(clippy::too_many_arguments)]
     pub fn with_all_arcs(
         broker: Arc<B>,
         broker_name: &'static str,
@@ -142,6 +207,8 @@ impl<B: BrokerAdapter> ExecutionGateway<B> {
         validator: ConstraintValidator,
         circuit_config: CircuitBreakerConfig,
         persistence: Arc<StatePersistence>,
+        environment: Environment,
+        stops_config: StopsConfig,
     ) -> Self {
         Self {
             broker,
@@ -149,6 +216,10 @@ impl<B: BrokerAdapter> ExecutionGateway<B> {
             validator: Arc::new(validator),
             circuit_breaker: Arc::new(CircuitBreaker::new(broker_name, circuit_config)),
             persistence: Some(persistence),
+            stops_enforcer: Arc::new(RwLock::new(StopsEnforcer::with_config(
+                environment,
+                stops_config,
+            ))),
         }
     }
 
@@ -192,6 +263,12 @@ impl<B: BrokerAdapter> ExecutionGateway<B> {
     #[must_use]
     pub fn circuit_breaker_metrics(&self) -> crate::resilience::CircuitBreakerMetrics {
         self.circuit_breaker.metrics()
+    }
+
+    /// Get a clone of the stops enforcer for external use (e.g., price monitoring).
+    #[must_use]
+    pub fn stops_enforcer(&self) -> Arc<RwLock<StopsEnforcer>> {
+        Arc::clone(&self.stops_enforcer)
     }
 
     /// Check constraints for a decision plan using default context.
@@ -264,6 +341,11 @@ impl<B: BrokerAdapter> ExecutionGateway<B> {
                 self.circuit_breaker.record_success();
                 self.store_and_persist_orders(&ack.orders).await;
 
+                // Register options positions with stop/target levels for price monitoring
+                // (stocks use bracket orders, options need price-based monitoring)
+                self.register_options_for_monitoring(&request, &ack.orders)
+                    .await;
+
                 tracing::info!(
                     cycle_id = %request.cycle_id,
                     submitted_count = ack.orders.len(),
@@ -282,6 +364,78 @@ impl<B: BrokerAdapter> ExecutionGateway<B> {
                     "Broker submission failed, circuit breaker recorded failure"
                 );
                 Err(SubmitOrdersError::BrokerError(e.to_string()))
+            }
+        }
+    }
+
+    /// Register options positions for price monitoring.
+    ///
+    /// Options don't support bracket orders on Alpaca, so we use price monitoring
+    /// to enforce stop/target levels instead.
+    #[allow(clippy::significant_drop_tightening)]
+    async fn register_options_for_monitoring(
+        &self,
+        request: &SubmitOrdersRequest,
+        orders: &[OrderState],
+    ) {
+        // Collect positions to monitor first, then acquire lock briefly
+        let mut positions_to_monitor = Vec::new();
+
+        for decision in &request.plan.decisions {
+            // Skip if this isn't an option or has no stop/target levels
+            if supports_bracket_orders(&decision.instrument_id) {
+                continue;
+            }
+
+            let has_stop = decision.stop_loss_level > Decimal::ZERO;
+            let has_target = decision.take_profit_level > Decimal::ZERO;
+            if !has_stop && !has_target {
+                continue;
+            }
+
+            // Find the corresponding order
+            let order = orders
+                .iter()
+                .find(|o| o.instrument_id == decision.instrument_id);
+
+            if let Some(order) = order {
+                let levels = StopTargetLevels::new(
+                    decision.stop_loss_level,
+                    decision.take_profit_level,
+                    decision.limit_price.unwrap_or(decision.stop_loss_level), // Use limit or stop as entry proxy
+                    decision.direction,
+                );
+
+                let monitored = MonitoredPosition {
+                    position_id: order.order_id.clone(),
+                    instrument_id: order.instrument_id.clone(),
+                    levels,
+                    active: true,
+                };
+
+                positions_to_monitor.push((
+                    monitored,
+                    order.order_id.clone(),
+                    order.instrument_id.clone(),
+                    decision.stop_loss_level,
+                    decision.take_profit_level,
+                ));
+            }
+        }
+
+        // Acquire lock only for the brief insertion phase
+        if !positions_to_monitor.is_empty() {
+            let mut enforcer = self.stops_enforcer.write().await;
+            for (monitored, order_id, instrument_id, stop_loss, take_profit) in positions_to_monitor
+            {
+                enforcer.monitor_position(monitored);
+                tracing::info!(
+                    order_id = %order_id,
+                    instrument_id = %instrument_id,
+                    stop_loss = %stop_loss,
+                    take_profit = %take_profit,
+                    "Registered options position for price monitoring"
+                );
             }
         }
     }
@@ -483,7 +637,6 @@ impl<B: BrokerAdapter> ExecutionGateway<B> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::execution::AlpacaAdapter;
     use crate::execution::gateway::MockBrokerAdapter;
     use crate::models::{
         Action, Decision, DecisionPlan, Direction, Environment, Size, SizeUnit, StrategyFamily,
@@ -497,19 +650,6 @@ mod tests {
         let validator = ConstraintValidator::with_defaults();
 
         ExecutionGateway::with_defaults(mock, state_manager, validator)
-    }
-
-    #[allow(dead_code)]
-    fn make_alpaca_gateway() -> ExecutionGateway<AlpacaAdapter> {
-        let alpaca =
-            match AlpacaAdapter::new("test".to_string(), "test".to_string(), Environment::Paper) {
-                Ok(a) => a,
-                Err(e) => panic!("should create test alpaca adapter: {e}"),
-            };
-        let state_manager = OrderStateManager::new();
-        let validator = ConstraintValidator::with_defaults();
-
-        ExecutionGateway::with_defaults(alpaca, state_manager, validator)
     }
 
     fn make_valid_request() -> ConstraintCheckRequest {
@@ -717,6 +857,7 @@ mod tests {
                 CircuitBreakerConfig::default(),
             )),
             persistence: Some(persistence_arc),
+            stops_enforcer: Arc::new(RwLock::new(StopsEnforcer::new(Environment::Paper))),
         };
 
         let request = SubmitOrdersRequest {

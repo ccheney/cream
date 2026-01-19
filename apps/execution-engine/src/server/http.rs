@@ -46,6 +46,8 @@ pub fn create_router(server: ExecutionServer) -> Router {
         .route("/v1/check-constraints", post(check_constraints))
         .route("/v1/submit-orders", post(submit_orders))
         .route("/v1/order-state", post(get_order_state))
+        .route("/v1/feed-health", get(feed_health))
+        .route("/v1/circuit-breaker", get(circuit_breaker_status))
         .with_state(server)
 }
 
@@ -208,6 +210,65 @@ async fn get_order_state(
     let orders = server.gateway.get_order_states(&req.order_ids);
 
     Json(GetOrderStateResponse { orders })
+}
+
+/// Feed health response.
+#[derive(Debug, Serialize)]
+pub struct FeedHealthResponse {
+    /// Whether feed is configured and enabled.
+    pub enabled: bool,
+    /// Feed status description.
+    pub status: String,
+}
+
+/// Feed health endpoint.
+///
+/// Returns basic feed configuration status. For detailed feed metrics,
+/// the feed health tracker would need to be shared from the `AlpacaFeed` task.
+async fn feed_health() -> Json<FeedHealthResponse> {
+    // Check if feed is configured via environment
+    let api_key = std::env::var("ALPACA_KEY").unwrap_or_default();
+    let api_secret = std::env::var("ALPACA_SECRET").unwrap_or_default();
+
+    let enabled = !api_key.is_empty() && !api_secret.is_empty();
+    let status = if enabled {
+        "Feed configured and running".to_string()
+    } else {
+        "Feed disabled (no API credentials)".to_string()
+    };
+
+    Json(FeedHealthResponse { enabled, status })
+}
+
+/// Circuit breaker status response.
+#[derive(Debug, Serialize)]
+pub struct CircuitBreakerResponse {
+    /// Current state (CLOSED, OPEN, `HALF_OPEN`).
+    pub state: String,
+    /// Whether broker calls are permitted.
+    pub is_broker_available: bool,
+    /// Total calls count.
+    pub total_calls: u64,
+    /// Total failures count.
+    pub total_failures: u64,
+    /// Current failure rate (0.0-1.0).
+    pub failure_rate: f64,
+}
+
+/// Circuit breaker status endpoint.
+async fn circuit_breaker_status(
+    State(server): State<ExecutionServer>,
+) -> Json<CircuitBreakerResponse> {
+    let state = server.gateway.circuit_breaker_state();
+    let metrics = server.gateway.circuit_breaker_metrics();
+
+    Json(CircuitBreakerResponse {
+        state: format!("{state:?}"),
+        is_broker_available: server.gateway.is_broker_available(),
+        total_calls: metrics.total_calls,
+        total_failures: metrics.total_failures,
+        failure_rate: metrics.failure_rate,
+    })
 }
 
 /// API error type with rich error details.

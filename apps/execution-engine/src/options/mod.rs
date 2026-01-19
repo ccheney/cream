@@ -55,6 +55,9 @@ pub use rolling::{
     RollTimingRecommendation,
     RollTimingResult,
     RollTriggerResult,
+    // Manager
+    RollingManager,
+    TrackedPosition,
     // Roll orders
     calculate_roll_quantity,
     // Roll timing

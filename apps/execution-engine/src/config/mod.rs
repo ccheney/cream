@@ -41,7 +41,7 @@ pub use brokers::{AlpacaConfig, BrokersConfig};
 pub use circuit_breaker::{CircuitBreakerConfig, CircuitBreakerSettings};
 pub use constraints::{
     BuyingPowerConstraints, ConstraintsConfig, OptionsConstraints, PerInstrumentConstraints,
-    PortfolioConstraints,
+    PortfolioConstraints, RiskLimitsConstraints,
 };
 pub use environment::EnvironmentConfig;
 pub use feeds::{AlpacaFeedConfig, FeedsConfig};

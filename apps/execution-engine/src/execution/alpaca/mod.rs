@@ -34,11 +34,13 @@ use crate::models::{
     Action, Decision, Environment, ExecutionAck, ExecutionError, OrderState, SubmitOrdersRequest,
     TimeHorizon,
 };
+use crate::options::validate_leg_ratios;
 
 use super::gateway::BrokerError;
 use super::tactics::{
-    AggressiveLimitConfig, MarketState, OrderPurpose, PassiveLimitConfig, TacticConfig,
-    TacticSelectionContext, TacticSelector, TacticType, TacticUrgency,
+    AdaptiveConfig, AdaptiveExecutor, AggressiveLimitConfig, IcebergConfig, IcebergExecutor,
+    MarketState, OrderPurpose, PassiveLimitConfig, SubTactic, TacticConfig, TacticSelectionContext,
+    TacticSelector, TacticType, TacticUrgency, TwapConfig, TwapExecutor, VwapConfig, VwapExecutor,
 };
 
 use api_types::{
@@ -612,44 +614,32 @@ impl AlpacaAdapter {
             TacticType::AggressiveLimit => {
                 TacticConfig::aggressive_limit(AggressiveLimitConfig::default())
             }
-            TacticType::Iceberg => {
-                tracing::warn!("Iceberg tactic not fully implemented, using aggressive limit");
-                TacticConfig::aggressive_limit(AggressiveLimitConfig::default())
-            }
-            TacticType::Twap => {
-                tracing::warn!("TWAP tactic not fully implemented, using aggressive limit");
-                TacticConfig::aggressive_limit(AggressiveLimitConfig::default())
-            }
-            TacticType::Vwap => {
-                tracing::warn!("VWAP tactic not fully implemented, using aggressive limit");
-                TacticConfig::aggressive_limit(AggressiveLimitConfig::default())
-            }
-            TacticType::Adaptive => {
-                tracing::warn!("Adaptive tactic not fully implemented, using aggressive limit");
-                TacticConfig::aggressive_limit(AggressiveLimitConfig::default())
-            }
+            TacticType::Iceberg => TacticConfig::iceberg(IcebergConfig::default()),
+            TacticType::Twap => TacticConfig::twap(TwapConfig::default()),
+            TacticType::Vwap => TacticConfig::vwap(VwapConfig::default()),
+            TacticType::Adaptive => TacticConfig::adaptive(AdaptiveConfig::default()),
         };
 
         (tactic, config)
     }
 
     /// Submit a single order to Alpaca with tactic-aware execution.
-    async fn submit_single_order(&self, decision: &Decision) -> Result<OrderState, AlpacaError> {
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if order submission fails.
+    #[allow(clippy::too_many_lines)]
+    pub async fn submit_single_order(
+        &self,
+        decision: &Decision,
+    ) -> Result<OrderState, AlpacaError> {
         // Select execution tactic
-        let (tactic, _config) = self.select_tactic(decision).await;
+        let (tactic, config) = self.select_tactic(decision).await;
 
         // Build base order request
         let mut order_request = AlpacaOrderRequest::from_decision(decision);
 
         // Apply tactic-specific modifications
-        // Note: For PassiveLimit/AggressiveLimit, we need current bid/ask prices
-        // which we don't have in this context. For now, we'll use the decision's
-        // limit_price if provided, or let Alpaca default to market order.
-        //
-        // Full implementation would:
-        // 1. Query current quote via get_quote()
-        // 2. Apply tactic pricing logic (PassiveLimitConfig::calculate_buy_price etc)
-        // 3. Set time_in_force based on tactic requirements
         match tactic {
             TacticType::PassiveLimit => {
                 // Passive orders should be day orders with limit price
@@ -672,22 +662,105 @@ impl AlpacaAdapter {
                     "Submitting aggressive order"
                 );
             }
-            _ => {
-                // Other tactics fall back to default behavior
-                tracing::debug!(
-                    decision_id = %decision.decision_id,
-                    tactic = ?tactic,
-                    "Using default order parameters for tactic"
-                );
+            TacticType::Twap => {
+                // TWAP: Time-weighted sliced execution
+                if let Some(twap_config) = config.twap {
+                    let mut executor = TwapExecutor::new(decision.size.quantity, twap_config);
+                    if let Some(slice) = executor.next_slice() {
+                        // Submit first slice, subsequent slices require orchestration
+                        order_request.qty = Some(slice.quantity.to_string());
+                        order_request.time_in_force = "day".to_string();
+
+                        tracing::info!(
+                            decision_id = %decision.decision_id,
+                            slice_number = slice.slice_number,
+                            slice_qty = %slice.quantity,
+                            remaining_qty = %executor.remaining_qty(),
+                            "Submitting TWAP slice (orchestration required for subsequent slices)"
+                        );
+                    }
+                }
+            }
+            TacticType::Vwap => {
+                // VWAP: Volume-weighted participation
+                if let Some(vwap_config) = config.vwap {
+                    let executor = VwapExecutor::new(decision.size.quantity, vwap_config);
+
+                    // For VWAP, we need market volume data to determine slice size
+                    // For now, use a conservative initial participation rate
+                    let initial_volume_estimate = decision.size.quantity * Decimal::from(10);
+                    if let Some(slice) = executor.next_slice(initial_volume_estimate) {
+                        order_request.qty = Some(slice.quantity.to_string());
+                        order_request.time_in_force = "day".to_string();
+
+                        tracing::info!(
+                            decision_id = %decision.decision_id,
+                            slice_qty = %slice.quantity,
+                            participation_rate = %slice.participation_rate,
+                            remaining_qty = %executor.remaining_qty(),
+                            "Submitting VWAP slice (orchestration required for subsequent slices)"
+                        );
+                    }
+                }
+            }
+            TacticType::Iceberg => {
+                // Iceberg: Show visible peak, hide total size
+                if let Some(iceberg_config) = config.iceberg {
+                    let executor = IcebergExecutor::new(decision.size.quantity, iceberg_config);
+                    let peak = executor.first_peak();
+
+                    // Submit only the visible peak
+                    order_request.qty = Some(peak.quantity.to_string());
+                    order_request.time_in_force = "day".to_string();
+
+                    tracing::info!(
+                        decision_id = %decision.decision_id,
+                        peak_number = peak.peak_number,
+                        visible_qty = %peak.quantity,
+                        total_qty = %decision.size.quantity,
+                        hidden_qty = %(decision.size.quantity - peak.quantity),
+                        "Submitting Iceberg peak (orchestration required for replenishment)"
+                    );
+                }
+            }
+            TacticType::Adaptive => {
+                // Adaptive: Dynamic tactic switching based on market conditions
+                if let Some(adaptive_config) = config.adaptive {
+                    let executor = AdaptiveExecutor::new(decision.size.quantity, adaptive_config);
+                    let sub_tactic = executor.select_sub_tactic();
+
+                    match sub_tactic {
+                        SubTactic::PassiveLimit => {
+                            order_request.time_in_force = "day".to_string();
+                            tracing::info!(
+                                decision_id = %decision.decision_id,
+                                urgency = %executor.urgency(),
+                                sub_tactic = ?sub_tactic,
+                                "Adaptive executor selected passive limit"
+                            );
+                        }
+                        SubTactic::AggressiveLimit => {
+                            if order_request.limit_price.is_some() {
+                                order_request.time_in_force = "ioc".to_string();
+                            }
+                            tracing::info!(
+                                decision_id = %decision.decision_id,
+                                urgency = %executor.urgency(),
+                                sub_tactic = ?sub_tactic,
+                                "Adaptive executor selected aggressive limit"
+                            );
+                        }
+                    }
+                }
             }
         }
 
-        // Store tactic info for tracking (would be in order metadata in full impl)
         tracing::info!(
             decision_id = %decision.decision_id,
             tactic = ?tactic,
             order_type = %order_request.order_type,
             time_in_force = %order_request.time_in_force,
+            qty = ?order_request.qty,
             "Submitting order to Alpaca"
         );
 
@@ -696,6 +769,74 @@ impl AlpacaAdapter {
             .await?;
 
         Ok(OrderState::from_alpaca_response(&response))
+    }
+
+    /// Validate a multi-leg decision before submission to Alpaca.
+    ///
+    /// Checks Alpaca Level 3 Options requirements:
+    /// - At least 2 legs
+    /// - Maximum 4 legs
+    /// - Leg ratios in simplest form (GCD must be 1)
+    /// - All legs have same underlying
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if validation fails.
+    fn validate_multi_leg_decision(decision: &Decision) -> Result<(), AlpacaError> {
+        // Check minimum legs
+        if decision.legs.len() < 2 {
+            return Err(AlpacaError::InvalidOrder(
+                "Multi-leg order requires at least 2 legs".to_string(),
+            ));
+        }
+
+        // Check maximum legs (Alpaca limit is 4)
+        if decision.legs.len() > 4 {
+            return Err(AlpacaError::InvalidOrder(
+                "Multi-leg order cannot exceed 4 legs".to_string(),
+            ));
+        }
+
+        // Validate leg ratios are in simplest form (GCD must be 1)
+        let ratios: Vec<u32> = decision
+            .legs
+            .iter()
+            .map(|l| l.ratio_qty.unsigned_abs())
+            .collect();
+        let (ratios_valid, gcd) = validate_leg_ratios(&ratios);
+        if !ratios_valid && gcd > 1 {
+            return Err(AlpacaError::InvalidOrder(format!(
+                "Leg ratios {ratios:?} not in simplest form (GCD = {gcd}). Divide all ratios by {gcd}."
+            )));
+        }
+
+        // Check all ratios are non-zero
+        if decision.legs.iter().any(|l| l.ratio_qty == 0) {
+            return Err(AlpacaError::InvalidOrder(
+                "All leg ratios must be non-zero".to_string(),
+            ));
+        }
+
+        // Check all legs have same underlying (extract from OCC symbol)
+        let underlyings: std::collections::HashSet<String> = decision
+            .legs
+            .iter()
+            .filter_map(|l| extract_underlying_from_occ(&l.symbol))
+            .collect();
+        if underlyings.len() > 1 {
+            return Err(AlpacaError::InvalidOrder(format!(
+                "All legs must have same underlying, found: {underlyings:?}"
+            )));
+        }
+
+        tracing::debug!(
+            decision_id = %decision.decision_id,
+            leg_count = decision.legs.len(),
+            ratios = ?ratios,
+            "Multi-leg order validation passed"
+        );
+
+        Ok(())
     }
 
     /// Submit a multi-leg options order to Alpaca.
@@ -715,6 +856,9 @@ impl AlpacaAdapter {
     /// Returns an error if the decision doesn't have valid multi-leg data or if
     /// the API call fails.
     async fn submit_multi_leg_order(&self, decision: &Decision) -> Result<OrderState, AlpacaError> {
+        // Validate multi-leg order before submission (Alpaca Level 3 Options requirements)
+        Self::validate_multi_leg_decision(decision)?;
+
         let order_request =
             AlpacaMultiLegOrderRequest::from_decision(decision).ok_or_else(|| {
                 AlpacaError::InvalidOrder(
@@ -962,6 +1106,34 @@ impl AlpacaAdapter {
 
         self.data_request(&query).await
     }
+}
+
+/// Extract underlying symbol from OCC option symbol.
+///
+/// OCC format: ROOT + YYMMDD + C/P + STRIKE (8 digits)
+/// Example: AAPL250117P00190000 -> AAPL
+///
+/// Returns `None` if the symbol doesn't appear to be valid OCC format.
+fn extract_underlying_from_occ(occ_symbol: &str) -> Option<String> {
+    // OCC symbols have minimum length: ROOT (1-6) + YYMMDD (6) + C/P (1) + STRIKE (8) = 16+
+    if occ_symbol.len() < 16 {
+        return None;
+    }
+
+    // Find where the date starts (6 digits before the C/P)
+    // The underlying is everything before the date
+    // Work backwards from the end: 8 digits for strike, 1 for C/P, 6 for date
+    let suffix_len = 8 + 1 + 6; // strike + put/call + date
+    if occ_symbol.len() <= suffix_len {
+        return None;
+    }
+
+    let underlying = &occ_symbol[..occ_symbol.len() - suffix_len];
+    if underlying.is_empty() {
+        return None;
+    }
+
+    Some(underlying.to_string())
 }
 
 // Implement BrokerAdapter trait for AlpacaAdapter

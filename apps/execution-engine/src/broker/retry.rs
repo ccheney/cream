@@ -210,18 +210,6 @@ const RETRYABLE_STATUS_CODES: &[u16] = &[
     524, // Cloudflare: A Timeout Occurred
 ];
 
-/// HTTP status codes that are never retryable.
-#[allow(dead_code)]
-const NON_RETRYABLE_STATUS_CODES: &[u16] = &[
-    400, // Bad Request
-    401, // Unauthorized
-    403, // Forbidden
-    404, // Not Found
-    405, // Method Not Allowed
-    422, // Unprocessable Entity
-    451, // Unavailable For Legal Reasons
-];
-
 /// Check if an HTTP status code is retryable.
 #[must_use]
 pub fn is_retryable_status(status_code: u16) -> bool {

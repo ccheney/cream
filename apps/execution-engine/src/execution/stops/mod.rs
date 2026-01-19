@@ -9,6 +9,7 @@
 mod bracket;
 mod error;
 mod monitor;
+mod price_monitor;
 mod types;
 mod validator;
 
@@ -23,6 +24,7 @@ pub use bracket::{
 };
 pub use error::StopsError;
 pub use monitor::{MonitoredPosition, PriceMonitor};
+pub use price_monitor::{StopsPriceMonitor, run_price_monitor};
 pub use types::{
     RiskLevelDenomination, SameBarPriority, StopTargetLevels, StopsConfig, TriggerResult,
 };

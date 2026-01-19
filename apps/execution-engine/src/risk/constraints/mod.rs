@@ -36,13 +36,33 @@ pub use types::{BuyingPowerInfo, ExtendedConstraintContext, GreeksSnapshot, Sizi
 #[derive(Debug, Clone)]
 pub struct ConstraintValidator {
     limits: ExposureLimits,
+    risk_limits: RiskLimitsConfig,
+    sizing_sanity_threshold: Decimal,
 }
 
 impl ConstraintValidator {
     /// Create a new validator with the given limits.
     #[must_use]
-    pub const fn new(limits: ExposureLimits) -> Self {
-        Self { limits }
+    pub fn new(limits: ExposureLimits) -> Self {
+        Self {
+            limits,
+            risk_limits: RiskLimitsConfig::default(),
+            sizing_sanity_threshold: Decimal::new(30, 1), // 3.0
+        }
+    }
+
+    /// Create a new validator with all configuration options.
+    #[must_use]
+    pub const fn with_risk_limits(
+        limits: ExposureLimits,
+        risk_limits: RiskLimitsConfig,
+        sizing_sanity_threshold: Decimal,
+    ) -> Self {
+        Self {
+            limits,
+            risk_limits,
+            sizing_sanity_threshold,
+        }
     }
 
     /// Create a validator with default limits.
@@ -94,7 +114,16 @@ impl ConstraintValidator {
             sizing: SizingLimits::default(),
         };
 
-        Self::new(limits)
+        let risk_limits = RiskLimitsConfig {
+            max_per_trade_risk_pct: constraints.risk_limits.max_per_trade_risk_pct,
+            min_risk_reward_ratio: constraints.risk_limits.min_risk_reward_ratio,
+        };
+
+        let sizing_sanity_threshold =
+            Decimal::try_from(constraints.risk_limits.sizing_sanity_threshold)
+                .unwrap_or_else(|_| Decimal::new(30, 1));
+
+        Self::with_risk_limits(limits, risk_limits, sizing_sanity_threshold)
     }
 
     /// Validate a decision plan against constraints.
@@ -183,6 +212,41 @@ impl ConstraintValidator {
 
             if let Some(v) = per_instrument::check_confidence_valid(decision, idx) {
                 violations.push(v);
+            }
+
+            // Per-trade risk validation
+            if let Some(v) =
+                validate_per_trade_risk(decision, request.account_equity, &self.risk_limits)
+            {
+                violations.push(v);
+            }
+
+            // Risk-reward ratio validation
+            if let Some(v) = validate_risk_reward_ratio(decision, &self.risk_limits) {
+                violations.push(v);
+            }
+
+            // Sizing sanity check (only if historical data is available)
+            if !context.historical_position_sizes.is_empty()
+                && let Some(warning) = check_sizing_sanity(
+                    notional,
+                    &context.historical_position_sizes,
+                    self.sizing_sanity_threshold,
+                )
+            {
+                violations.push(ConstraintViolation {
+                    code: "SIZING_SANITY_WARNING".to_string(),
+                    severity: ViolationSeverity::Warning,
+                    message: warning.message,
+                    instrument_id: decision.instrument_id.clone(),
+                    field_path: "decision.size".to_string(),
+                    observed: format!("${}", warning.proposed_notional.round_dp(2)),
+                    limit: format!(
+                        "<= {}x typical (${})",
+                        warning.threshold,
+                        warning.typical_size.round_dp(2)
+                    ),
+                });
             }
         }
 

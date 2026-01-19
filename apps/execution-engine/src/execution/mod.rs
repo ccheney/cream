@@ -39,11 +39,12 @@ pub use state::{OrderStateManager, TimeoutResult};
 pub use stops::{
     BracketOrder, BracketOrderBuilder, EnforcementMethod, EntryOrderSpec, MonitoredPosition,
     PriceMonitor, RiskLevelDenomination, SameBarPriority, StopOrderSpec, StopTargetLevels,
-    StopTargetValidator, StopsConfig, StopsEnforcer, StopsError, TakeProfitOrderSpec,
-    TriggerResult, supports_bracket_orders,
+    StopTargetValidator, StopsConfig, StopsEnforcer, StopsError, StopsPriceMonitor,
+    TakeProfitOrderSpec, TriggerResult, run_price_monitor, supports_bracket_orders,
 };
 pub use tactics::{
-    AdaptiveConfig, AggressiveLimitConfig, IcebergConfig, MarketState, OrderPurpose,
-    PassiveLimitConfig, SliceType, TacticConfig, TacticSelectionContext, TacticSelector,
-    TacticType, TacticUrgency, TwapConfig, Urgency, VwapConfig,
+    AdaptiveConfig, AdaptiveExecutor, AggressiveLimitConfig, IcebergConfig, IcebergExecutor,
+    IcebergPeak, MarketContext, MarketState, OrderPurpose, PassiveLimitConfig, SliceType,
+    SubTactic, TacticConfig, TacticSelectionContext, TacticSelector, TacticType, TacticUrgency,
+    TwapConfig, TwapExecutor, TwapSlice, Urgency, VwapConfig, VwapExecutor, VwapSlice,
 };
