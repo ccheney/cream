@@ -2,36 +2,55 @@
 //!
 //! Deterministic execution engine for the Cream trading system.
 //!
-//! # Architecture
+//! # Architecture (Clean Architecture + DDD + Hexagonal)
 //!
-//! The execution engine handles:
-//! - **Validation**: Validates `DecisionPlans` from TypeScript agents
-//! - **Risk Checks**: Enforces position limits, drawdown constraints
-//! - **Order Routing**: Routes orders to brokers (Alpaca)
-//! - **Position Management**: Tracks positions and P&L
+//! The execution engine follows Clean Architecture principles with Domain-Driven Design:
 //!
-//! # Modules
+//! ## Layers (inside → outside)
 //!
-//! - [`models`]: Core domain types (orders, decisions, constraints)
-//! - [`risk`]: Constraint validation and risk checks
-//! - [`execution`]: Order routing and state management
-//! - [`server`]: gRPC service implementation
+//! - **Domain**: Core business logic (aggregates, value objects, domain events)
+//!   - `order_execution`: Order aggregate, status lifecycle, fills
+//!   - `risk_management`: Risk policies, validation, constraints
+//!   - `execution_tactics`: TWAP, VWAP, Iceberg execution strategies
+//!   - `stop_enforcement`: Price monitoring, stop/target triggers
+//!   - `option_position`: Options spreads, Greeks, position tracking
+//!
+//! - **Application**: Use cases and orchestration
+//!   - `ports`: Interfaces for external systems (BrokerPort, PriceFeedPort)
+//!   - `use_cases`: SubmitOrders, ValidateRisk, CancelOrders, MonitorStops, Reconcile
+//!   - `dto`: Data transfer objects for API boundaries
+//!
+//! - **Infrastructure**: Adapters (implementations)
+//!   - `broker`: Alpaca broker adapter
+//!   - `persistence`: Order repository (in-memory, PostgreSQL)
+//!   - `price_feed`: Market data adapters
+//!   - `config`: Dependency injection container
 //!
 //! # Coverage
 //!
 //! Coverage threshold: 90% (Critical tier)
 //! See: docs/plans/14-testing.md
-//!
-//! Run coverage:
-//! ```bash
-//! cargo cov       # Generate lcov.info
-//! cargo cov-html  # Generate HTML report
-//! cargo cov-check # Verify >= 80% coverage
-//! ```
 
 #![forbid(unsafe_code)]
 #![warn(missing_docs)]
 #![warn(clippy::pedantic)]
+
+// =============================================================================
+// Clean Architecture Layers
+// =============================================================================
+
+/// Domain layer - Core business logic with no external dependencies.
+pub mod domain;
+
+/// Application layer - Use cases and port definitions.
+pub mod application;
+
+/// Infrastructure layer - Adapters and external integrations.
+pub mod infrastructure;
+
+// =============================================================================
+// Legacy modules (to be removed after full migration)
+// =============================================================================
 
 pub mod broker;
 pub mod config;
@@ -47,12 +66,42 @@ pub mod safety;
 pub mod server;
 pub mod telemetry;
 
-// Re-export commonly used types
+// =============================================================================
+// Re-exports from Clean Architecture
+// =============================================================================
+
+// Domain re-exports
+pub use domain::order_execution::{
+    aggregate::Order,
+    value_objects::{OrderSide, OrderStatus, OrderType, TimeInForce},
+};
+pub use domain::risk_management::services::RiskValidationService;
+pub use domain::shared::{BrokerId, InstrumentId, Money, OrderId, Quantity, Symbol, Timestamp};
+
+// Application re-exports
+pub use application::ports::{BrokerPort, EventPublisherPort, PriceFeedPort, RiskRepositoryPort};
+pub use application::use_cases::{
+    CancelOrdersUseCase, MonitorStopsUseCase, ReconcileUseCase, SubmitOrdersUseCase,
+    ValidateRiskUseCase,
+};
+
+// Infrastructure re-exports
+pub use infrastructure::broker::alpaca::{AlpacaBrokerAdapter, AlpacaConfig, AlpacaError};
+pub use infrastructure::config::Container;
+pub use infrastructure::persistence::InMemoryOrderRepository;
+pub use infrastructure::price_feed::{AlpacaPriceFeedAdapter, MockPriceFeed};
+
+// =============================================================================
+// Legacy re-exports (for backward compatibility during migration)
+// =============================================================================
+
 pub use error::{ErrorCode, ExecutionError, HttpErrorResponse};
 pub use execution::{
-    AlpacaAdapter, ExecutionGateway, MonitoredPosition, OrderStateManager, StatePersistence,
-    StopsEnforcer, StopsPriceMonitor, TacticSelector, TacticType, TriggerResult, TwapConfig,
-    VwapConfig, run_price_monitor,
+    AlpacaAdapter, ExecutionGateway, MonitoredPosition as LegacyMonitoredPosition,
+    OrderStateManager, StatePersistence, StopsEnforcer, StopsPriceMonitor,
+    TacticSelector as LegacyTacticSelector, TacticType as LegacyTacticType,
+    TriggerResult as LegacyTriggerResult, TwapConfig as LegacyTwapConfig,
+    VwapConfig as LegacyVwapConfig, run_price_monitor,
 };
 pub use models::{
     ConstraintCheckRequest, ConstraintCheckResponse, DecisionPlan, Environment, ExecutionAck,
@@ -60,10 +109,11 @@ pub use models::{
 };
 pub use options::{
     AssignmentRisk, AssignmentRiskLevel, EarlyExerciseAlert, EarlyExerciseRisk, Greeks,
-    MultiLegOrder, MultiLegPosition, MultiLegValidationResult, OptionContract, OptionLeg,
-    OptionStyle, OptionType, PositionLimits, PositionTracker, aggregate_greeks,
-    assess_early_exercise_risk, calculate_assignment_risk, calculate_portfolio_greeks,
-    validate_leg_ratios, validate_multi_leg_order,
+    MultiLegOrder, MultiLegPosition, MultiLegValidationResult,
+    OptionContract as LegacyOptionContract, OptionLeg, OptionStyle, OptionType as LegacyOptionType,
+    PositionLimits, PositionTracker, aggregate_greeks, assess_early_exercise_risk,
+    calculate_assignment_risk, calculate_portfolio_greeks, validate_leg_ratios,
+    validate_multi_leg_order,
 };
 pub use pricing::{
     IvError, IvSolver, IvSolverConfig, LegDirection, OptionKind, OptionsStrategy, StrategyBuilder,
