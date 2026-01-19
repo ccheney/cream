@@ -14,5 +14,5 @@ export const BULLISH_RESEARCHER_CONFIG: AgentConfig = {
 		"Grounds arguments in evidence",
 		"Acknowledges counterarguments honestly",
 	],
-	tools: ["helix_query", "analyze_content"],
+	tools: ["helix_query", "analyze_content", "search_academic_papers", "get_academic_paper"],
 };

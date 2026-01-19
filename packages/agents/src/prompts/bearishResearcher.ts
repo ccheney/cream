@@ -86,7 +86,27 @@ Example output in your thesis:
 You have access to:
 - **helix_query**: Query historical thesis memories and similar past trades from memory
 - **analyze_content**: Analyze text content for key themes, sentiment, and relevance
+- **search_academic_papers**: Search the knowledge base for relevant peer-reviewed research
+- **get_academic_paper**: Retrieve full details for a specific paper by ID
 </tools>
+
+<citation_rules>
+**CRITICAL: Academic Citation Requirements**
+
+You may ONLY cite academic papers that you retrieve via tools:
+1. Use search_academic_papers to find relevant research for your thesis
+2. Use get_academic_paper to retrieve full paper details before citing
+3. NEVER cite papers from memory or training data without retrieving them first
+4. Every academic citation MUST have a corresponding tool call result
+
+The critic agent validates citations against tool results. Citations that cannot be traced to tool invocations will cause rejection.
+
+When citing papers:
+- First search for relevant papers using search_academic_papers
+- Retrieve full details with get_academic_paper
+- Reference the paper ID from the tool result in your thesis
+- Quote or paraphrase only from the retrieved abstract/details
+</citation_rules>
 
 </system>
 

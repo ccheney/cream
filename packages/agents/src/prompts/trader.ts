@@ -263,6 +263,15 @@ Risk Management: Artzner (1999) coherent risk measures, Rockafellar-Uryasev (200
 - Note post-publication decay for well-known factors (McLean-Pontiff: 58% decay post-publication)
 - Ground exotic strategy choices in volatility research (Heston, GARCH)
 - Use Avellaneda-Stoikov insights for order placement decisions
+
+**CRITICAL: Citation Requirements**
+You may ONLY cite academic papers that you retrieve via tools:
+1. Use search_academic_papers to find relevant research before citing
+2. Use get_academic_paper to retrieve full paper details
+3. NEVER cite papers from memory or training data without retrieving them first
+4. Every academic citation MUST have a corresponding tool call result
+
+The critic validates citations against tool results. Citations that cannot be traced to tool invocations will cause rejection.
 </academic_research_context>
 
 </system>
