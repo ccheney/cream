@@ -8,8 +8,10 @@
 //! - Options vertical spreads
 //! - PDT-aware position closes
 //! - Portfolio rebalancing (multi-decision)
-//! - No-trade cycles (HOLD/NO_TRADE only)
+//! - No-trade cycles (`HOLD`/`NO_TRADE` only)
 //! - Rejected plans (risk manager rejection)
+
+#![allow(clippy::expect_used, clippy::unwrap_used, clippy::unreadable_literal)]
 
 use axum::body::Body;
 use axum::http::{Request, StatusCode};
@@ -63,8 +65,14 @@ fn test_load_equity_swing_trade_fixture() {
     let decision = &plan.decisions[0];
     assert_eq!(decision.instrument_id, "AAPL");
     assert_eq!(decision.action, execution_engine::models::Action::Buy);
-    assert_eq!(decision.direction, execution_engine::models::Direction::Long);
-    assert_eq!(decision.size.unit, execution_engine::models::SizeUnit::Dollars);
+    assert_eq!(
+        decision.direction,
+        execution_engine::models::Direction::Long
+    );
+    assert_eq!(
+        decision.size.unit,
+        execution_engine::models::SizeUnit::Dollars
+    );
     assert_eq!(decision.stop_loss_level, Decimal::new(22850, 2));
     assert!(!decision.bullish_factors.is_empty());
 }
@@ -93,8 +101,14 @@ fn test_load_pdt_close_position_fixture() {
 
     let decision = &plan.decisions[0];
     assert_eq!(decision.action, execution_engine::models::Action::Close);
-    assert_eq!(decision.thesis_state, execution_engine::models::ThesisState::Exiting);
-    assert_eq!(decision.time_horizon, execution_engine::models::TimeHorizon::Intraday);
+    assert_eq!(
+        decision.thesis_state,
+        execution_engine::models::ThesisState::Exiting
+    );
+    assert_eq!(
+        decision.time_horizon,
+        execution_engine::models::TimeHorizon::Intraday
+    );
 }
 
 #[test]
@@ -106,16 +120,28 @@ fn test_load_portfolio_rebalance_fixture() {
 
     // First decision: MSFT buy (adding)
     assert_eq!(plan.decisions[0].instrument_id, "MSFT");
-    assert_eq!(plan.decisions[0].action, execution_engine::models::Action::Buy);
-    assert_eq!(plan.decisions[0].thesis_state, execution_engine::models::ThesisState::Adding);
+    assert_eq!(
+        plan.decisions[0].action,
+        execution_engine::models::Action::Buy
+    );
+    assert_eq!(
+        plan.decisions[0].thesis_state,
+        execution_engine::models::ThesisState::Adding
+    );
 
     // Second decision: GOOGL trim (sell)
     assert_eq!(plan.decisions[1].instrument_id, "GOOGL");
-    assert_eq!(plan.decisions[1].action, execution_engine::models::Action::Sell);
+    assert_eq!(
+        plan.decisions[1].action,
+        execution_engine::models::Action::Sell
+    );
 
     // Third decision: AMZN hold
     assert_eq!(plan.decisions[2].instrument_id, "AMZN");
-    assert_eq!(plan.decisions[2].action, execution_engine::models::Action::Hold);
+    assert_eq!(
+        plan.decisions[2].action,
+        execution_engine::models::Action::Hold
+    );
 
     // Only 2 tradeable decisions (HOLD doesn't count)
     assert_eq!(plan.tradeable_count(), 2);
@@ -131,8 +157,14 @@ fn test_load_no_trade_cycle_fixture() {
     // All decisions are HOLD or NO_TRADE
     assert_eq!(plan.tradeable_count(), 0);
 
-    assert_eq!(plan.decisions[0].action, execution_engine::models::Action::Hold);
-    assert_eq!(plan.decisions[1].action, execution_engine::models::Action::NoTrade);
+    assert_eq!(
+        plan.decisions[0].action,
+        execution_engine::models::Action::Hold
+    );
+    assert_eq!(
+        plan.decisions[1].action,
+        execution_engine::models::Action::NoTrade
+    );
 }
 
 #[test]
@@ -170,7 +202,10 @@ async fn test_check_constraints_equity_swing_trade() {
         .body(Body::from(body))
         .expect("should build request");
 
-    let response = app.oneshot(http_request).await.expect("request should succeed");
+    let response = app
+        .oneshot(http_request)
+        .await
+        .expect("request should succeed");
     assert_eq!(response.status(), StatusCode::OK);
 
     let body_bytes = axum::body::to_bytes(response.into_body(), usize::MAX)
@@ -192,9 +227,15 @@ async fn test_check_constraints_equity_swing_trade() {
         .any(|v| v.code == "INSUFFICIENT_RISK_REWARD");
 
     // Mock adapter has no buying power - this is expected
-    assert!(buying_power_violation, "Expected buying power violation with mock adapter");
+    assert!(
+        buying_power_violation,
+        "Expected buying power violation with mock adapter"
+    );
     // Risk/reward should be valid (1.5:1 ratio)
-    assert!(!risk_reward_violation, "Risk/reward should pass with 1.5:1 ratio");
+    assert!(
+        !risk_reward_violation,
+        "Risk/reward should pass with 1.5:1 ratio"
+    );
 }
 
 #[tokio::test]
@@ -218,7 +259,10 @@ async fn test_check_constraints_options_spread() {
         .body(Body::from(body))
         .expect("should build request");
 
-    let response = app.oneshot(http_request).await.expect("request should succeed");
+    let response = app
+        .oneshot(http_request)
+        .await
+        .expect("request should succeed");
     assert_eq!(response.status(), StatusCode::OK);
 }
 
@@ -243,7 +287,10 @@ async fn test_check_constraints_portfolio_rebalance() {
         .body(Body::from(body))
         .expect("should build request");
 
-    let response = app.oneshot(http_request).await.expect("request should succeed");
+    let response = app
+        .oneshot(http_request)
+        .await
+        .expect("request should succeed");
     assert_eq!(response.status(), StatusCode::OK);
 }
 
@@ -268,7 +315,10 @@ async fn test_check_constraints_no_trade_cycle() {
         .body(Body::from(body))
         .expect("should build request");
 
-    let response = app.oneshot(http_request).await.expect("request should succeed");
+    let response = app
+        .oneshot(http_request)
+        .await
+        .expect("request should succeed");
     assert_eq!(response.status(), StatusCode::OK);
 
     let body_bytes = axum::body::to_bytes(response.into_body(), usize::MAX)
@@ -300,7 +350,10 @@ async fn test_submit_orders_equity_swing_trade() {
         .body(Body::from(body))
         .expect("should build request");
 
-    let response = app.oneshot(http_request).await.expect("request should succeed");
+    let response = app
+        .oneshot(http_request)
+        .await
+        .expect("request should succeed");
     assert_eq!(response.status(), StatusCode::OK);
 
     let body_bytes = axum::body::to_bytes(response.into_body(), usize::MAX)
@@ -332,7 +385,10 @@ async fn test_submit_orders_no_trade_cycle() {
         .body(Body::from(body))
         .expect("should build request");
 
-    let response = app.oneshot(http_request).await.expect("request should succeed");
+    let response = app
+        .oneshot(http_request)
+        .await
+        .expect("request should succeed");
     assert_eq!(response.status(), StatusCode::OK);
 
     let body_bytes = axum::body::to_bytes(response.into_body(), usize::MAX)
@@ -373,7 +429,10 @@ async fn test_check_constraints_exceeds_position_size() {
         .body(Body::from(body))
         .expect("should build request");
 
-    let response = app.oneshot(http_request).await.expect("request should succeed");
+    let response = app
+        .oneshot(http_request)
+        .await
+        .expect("request should succeed");
     assert_eq!(response.status(), StatusCode::OK);
 
     let body_bytes = axum::body::to_bytes(response.into_body(), usize::MAX)
@@ -411,7 +470,10 @@ async fn test_check_constraints_missing_stop_loss() {
         .body(Body::from(body))
         .expect("should build request");
 
-    let response = app.oneshot(http_request).await.expect("request should succeed");
+    let response = app
+        .oneshot(http_request)
+        .await
+        .expect("request should succeed");
     assert_eq!(response.status(), StatusCode::OK);
 
     let body_bytes = axum::body::to_bytes(response.into_body(), usize::MAX)
@@ -452,8 +514,14 @@ fn test_decision_plan_json_round_trip() {
         let deserialized: DecisionPlan = serde_json::from_str(&serialized)
             .unwrap_or_else(|e| panic!("Failed to deserialize {fixture}: {e}"));
 
-        assert_eq!(original.plan_id, deserialized.plan_id, "plan_id mismatch in {fixture}");
-        assert_eq!(original.cycle_id, deserialized.cycle_id, "cycle_id mismatch in {fixture}");
+        assert_eq!(
+            original.plan_id, deserialized.plan_id,
+            "plan_id mismatch in {fixture}"
+        );
+        assert_eq!(
+            original.cycle_id, deserialized.cycle_id,
+            "cycle_id mismatch in {fixture}"
+        );
         assert_eq!(
             original.decisions.len(),
             deserialized.decisions.len(),
@@ -476,12 +544,18 @@ fn test_load_short_sell_entry_fixture() {
     let decision = &plan.decisions[0];
     assert_eq!(decision.instrument_id, "NFLX");
     assert_eq!(decision.action, execution_engine::models::Action::Sell);
-    assert_eq!(decision.direction, execution_engine::models::Direction::Short);
+    assert_eq!(
+        decision.direction,
+        execution_engine::models::Direction::Short
+    );
     assert_eq!(
         decision.strategy_family,
         execution_engine::models::StrategyFamily::EquityShort
     );
-    assert_eq!(decision.size.unit, execution_engine::models::SizeUnit::Shares);
+    assert_eq!(
+        decision.size.unit,
+        execution_engine::models::SizeUnit::Shares
+    );
     assert_eq!(decision.size.quantity, Decimal::new(30, 0));
 }
 
@@ -492,8 +566,14 @@ fn test_load_buy_to_cover_fixture() {
     let decision = &plan.decisions[0];
     assert_eq!(decision.instrument_id, "NFLX");
     assert_eq!(decision.action, execution_engine::models::Action::Close);
-    assert_eq!(decision.direction, execution_engine::models::Direction::Flat);
-    assert_eq!(decision.thesis_state, execution_engine::models::ThesisState::Exiting);
+    assert_eq!(
+        decision.direction,
+        execution_engine::models::Direction::Flat
+    );
+    assert_eq!(
+        decision.thesis_state,
+        execution_engine::models::ThesisState::Exiting
+    );
 }
 
 #[tokio::test]
@@ -515,7 +595,10 @@ async fn test_submit_orders_short_sell() {
         .body(Body::from(body))
         .expect("should build request");
 
-    let response = app.oneshot(http_request).await.expect("request should succeed");
+    let response = app
+        .oneshot(http_request)
+        .await
+        .expect("request should succeed");
     assert_eq!(response.status(), StatusCode::OK);
 }
 
@@ -535,7 +618,10 @@ fn test_load_single_leg_call_fixture() {
         decision.strategy_family,
         execution_engine::models::StrategyFamily::OptionLong
     );
-    assert_eq!(decision.size.unit, execution_engine::models::SizeUnit::Contracts);
+    assert_eq!(
+        decision.size.unit,
+        execution_engine::models::SizeUnit::Contracts
+    );
     assert_eq!(decision.size.quantity, Decimal::new(3, 0));
     // Single-leg: no legs array
     assert!(decision.legs.is_empty());
@@ -575,7 +661,10 @@ async fn test_submit_orders_single_leg_call() {
         .body(Body::from(body))
         .expect("should build request");
 
-    let response = app.oneshot(http_request).await.expect("request should succeed");
+    let response = app
+        .oneshot(http_request)
+        .await
+        .expect("request should succeed");
     assert_eq!(response.status(), StatusCode::OK);
 }
 
@@ -590,13 +679,19 @@ fn test_pct_equity_sizing_in_portfolio_rebalance() {
     // First decision uses PCT_EQUITY
     let msft_decision = &plan.decisions[0];
     assert_eq!(msft_decision.instrument_id, "MSFT");
-    assert_eq!(msft_decision.size.unit, execution_engine::models::SizeUnit::PctEquity);
+    assert_eq!(
+        msft_decision.size.unit,
+        execution_engine::models::SizeUnit::PctEquity
+    );
     assert_eq!(msft_decision.size.quantity, Decimal::new(30, 0)); // 30%
 
     // Second decision also uses PCT_EQUITY
     let googl_decision = &plan.decisions[1];
     assert_eq!(googl_decision.instrument_id, "GOOGL");
-    assert_eq!(googl_decision.size.unit, execution_engine::models::SizeUnit::PctEquity);
+    assert_eq!(
+        googl_decision.size.unit,
+        execution_engine::models::SizeUnit::PctEquity
+    );
     assert_eq!(googl_decision.size.quantity, Decimal::new(15, 0)); // 15%
 }
 
@@ -698,7 +793,10 @@ async fn test_check_constraints_iron_condor() {
         .body(Body::from(body))
         .expect("should build request");
 
-    let response = app.oneshot(http_request).await.expect("request should succeed");
+    let response = app
+        .oneshot(http_request)
+        .await
+        .expect("request should succeed");
     assert_eq!(response.status(), StatusCode::OK);
 }
 
@@ -721,7 +819,10 @@ async fn test_submit_orders_iron_condor() {
         .body(Body::from(body))
         .expect("should build request");
 
-    let response = app.oneshot(http_request).await.expect("request should succeed");
+    let response = app
+        .oneshot(http_request)
+        .await
+        .expect("request should succeed");
     assert_eq!(response.status(), StatusCode::OK);
 
     let body_bytes = axum::body::to_bytes(response.into_body(), usize::MAX)
@@ -752,7 +853,10 @@ async fn test_submit_orders_butterfly_spread() {
         .body(Body::from(body))
         .expect("should build request");
 
-    let response = app.oneshot(http_request).await.expect("request should succeed");
+    let response = app
+        .oneshot(http_request)
+        .await
+        .expect("request should succeed");
     assert_eq!(response.status(), StatusCode::OK);
 
     let body_bytes = axum::body::to_bytes(response.into_body(), usize::MAX)

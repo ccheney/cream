@@ -646,7 +646,7 @@ impl AlpacaAdapter {
     /// # Arguments
     ///
     /// * `decision` - The trading decision to execute
-    /// * `account_equity` - Account equity for PCT_EQUITY sizing conversion
+    /// * `account_equity` - Account equity for `PCT_EQUITY` sizing conversion
     ///
     /// # Errors
     ///

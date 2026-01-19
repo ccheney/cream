@@ -314,6 +314,7 @@ function createValidDecisionPlan(): DecisionPlan {
 					memoryReferences: ["mem-001"],
 				},
 				thesisState: "ENTERED",
+				confidence: 0.75,
 			},
 		],
 		portfolioNotes: "Initiating new position in tech sector",

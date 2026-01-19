@@ -389,7 +389,7 @@ mod tests {
         proto::cream::v1::DecisionPlan {
             cycle_id: "cycle-2026-01-19-14-00".to_string(),
             as_of_timestamp: Some(prost_types::Timestamp {
-                seconds: 1737295200, // 2026-01-19T14:00:00Z
+                seconds: 1_737_295_200, // 2026-01-19T14:00:00Z
                 nanos: 0,
             }),
             environment: proto::cream::v1::Environment::Paper as i32,
@@ -453,7 +453,10 @@ mod tests {
         let result = convert_decision_plan(&proto);
 
         // decision_id = {cycle_id}-{instrument_id.lowercase}
-        assert_eq!(result.decisions[0].decision_id, "cycle-2026-01-19-14-00-aapl");
+        assert_eq!(
+            result.decisions[0].decision_id,
+            "cycle-2026-01-19-14-00-aapl"
+        );
         assert_eq!(result.decisions[0].instrument_id, "AAPL");
     }
 
@@ -501,7 +504,10 @@ mod tests {
         let result = convert_decision_plan(&proto);
 
         assert_eq!(result.decisions[0].stop_loss_level, Decimal::new(22850, 2));
-        assert_eq!(result.decisions[0].take_profit_level, Decimal::new(25350, 2));
+        assert_eq!(
+            result.decisions[0].take_profit_level,
+            Decimal::new(25350, 2)
+        );
     }
 
     #[test]
@@ -521,9 +527,15 @@ mod tests {
         let result = convert_decision_plan(&proto);
 
         assert_eq!(result.decisions[0].bullish_factors.len(), 2);
-        assert_eq!(result.decisions[0].bullish_factors[0], "Strong Q4 earnings beat");
+        assert_eq!(
+            result.decisions[0].bullish_factors[0],
+            "Strong Q4 earnings beat"
+        );
         assert_eq!(result.decisions[0].bearish_factors.len(), 1);
-        assert_eq!(result.decisions[0].bearish_factors[0], "China revenue concerns");
+        assert_eq!(
+            result.decisions[0].bearish_factors[0],
+            "China revenue concerns"
+        );
     }
 
     #[test]
@@ -546,7 +558,10 @@ mod tests {
         let proto = make_proto_decision_plan();
         let result = convert_decision_plan(&proto);
 
-        assert_eq!(result.decisions[0].limit_price, Some(Decimal::new(23850, 2)));
+        assert_eq!(
+            result.decisions[0].limit_price,
+            Some(Decimal::new(23850, 2))
+        );
     }
 
     #[test]
@@ -555,15 +570,25 @@ mod tests {
 
         let mut proto = make_proto_decision_plan();
         let result = convert_decision_plan(&proto);
-        assert_eq!(result.decisions[0].strategy_family, StrategyFamily::EquityLong);
+        assert_eq!(
+            result.decisions[0].strategy_family,
+            StrategyFamily::EquityLong
+        );
 
         proto.decisions[0].strategy_family = proto::cream::v1::StrategyFamily::IronCondor as i32;
         let result = convert_decision_plan(&proto);
-        assert_eq!(result.decisions[0].strategy_family, StrategyFamily::IronCondor);
+        assert_eq!(
+            result.decisions[0].strategy_family,
+            StrategyFamily::IronCondor
+        );
 
-        proto.decisions[0].strategy_family = proto::cream::v1::StrategyFamily::VerticalSpread as i32;
+        proto.decisions[0].strategy_family =
+            proto::cream::v1::StrategyFamily::VerticalSpread as i32;
         let result = convert_decision_plan(&proto);
-        assert_eq!(result.decisions[0].strategy_family, StrategyFamily::VerticalSpread);
+        assert_eq!(
+            result.decisions[0].strategy_family,
+            StrategyFamily::VerticalSpread
+        );
     }
 
     #[test]
@@ -619,10 +644,19 @@ mod tests {
         assert_eq!(result.decisions[0].legs.len(), 2);
         assert_eq!(result.decisions[0].legs[0].symbol, "SPY260221P00540000");
         assert_eq!(result.decisions[0].legs[0].ratio_qty, 5);
-        assert_eq!(result.decisions[0].legs[0].position_intent, PositionIntent::BuyToOpen);
+        assert_eq!(
+            result.decisions[0].legs[0].position_intent,
+            PositionIntent::BuyToOpen
+        );
         assert_eq!(result.decisions[0].legs[1].ratio_qty, -5);
-        assert_eq!(result.decisions[0].legs[1].position_intent, PositionIntent::SellToOpen);
-        assert_eq!(result.decisions[0].net_limit_price, Some(Decimal::new(150, 2)));
+        assert_eq!(
+            result.decisions[0].legs[1].position_intent,
+            PositionIntent::SellToOpen
+        );
+        assert_eq!(
+            result.decisions[0].net_limit_price,
+            Some(Decimal::new(150, 2))
+        );
     }
 
     #[test]

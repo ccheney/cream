@@ -253,8 +253,8 @@ impl AlpacaOrderRequest {
     /// # Arguments
     ///
     /// * `decision` - The trading decision
-    /// * `account_equity` - Account equity for PCT_EQUITY conversion. If None and
-    ///   the decision uses PCT_EQUITY sizing, the conversion will fail gracefully
+    /// * `account_equity` - Account equity for `PCT_EQUITY` conversion. If None and
+    ///   the decision uses `PCT_EQUITY` sizing, the conversion will fail gracefully
     ///   by using a placeholder value (logs a warning).
     pub(super) fn from_decision(decision: &Decision, account_equity: Option<Decimal>) -> Self {
         let side = match decision.direction {
@@ -270,25 +270,28 @@ impl AlpacaOrderRequest {
             crate::models::SizeUnit::PctEquity => {
                 // Convert percentage of equity to dollar amount
                 // quantity is the percentage (e.g., 5 = 5% of equity)
-                if let Some(equity) = account_equity {
-                    let pct = decision.size.quantity / Decimal::from(100);
-                    let dollar_amount = equity * pct;
-                    tracing::debug!(
-                        decision_id = %decision.decision_id,
-                        pct = %decision.size.quantity,
-                        equity = %equity,
-                        notional = %dollar_amount,
-                        "Converted PCT_EQUITY to dollar amount"
-                    );
-                    (None, Some(dollar_amount.round_dp(2).to_string()))
-                } else {
-                    tracing::warn!(
-                        decision_id = %decision.decision_id,
-                        pct = %decision.size.quantity,
-                        "PCT_EQUITY sizing without account equity context - using raw value"
-                    );
-                    (None, Some(decision.size.quantity.to_string()))
-                }
+                account_equity.map_or_else(
+                    || {
+                        tracing::warn!(
+                            decision_id = %decision.decision_id,
+                            pct = %decision.size.quantity,
+                            "PCT_EQUITY sizing without account equity context - using raw value"
+                        );
+                        (None, Some(decision.size.quantity.to_string()))
+                    },
+                    |equity| {
+                        let pct = decision.size.quantity / Decimal::from(100);
+                        let dollar_amount = equity * pct;
+                        tracing::debug!(
+                            decision_id = %decision.decision_id,
+                            pct = %decision.size.quantity,
+                            equity = %equity,
+                            notional = %dollar_amount,
+                            "Converted PCT_EQUITY to dollar amount"
+                        );
+                        (None, Some(dollar_amount.round_dp(2).to_string()))
+                    },
+                )
             }
         };
 
@@ -726,7 +729,9 @@ pub(super) fn parse_time_in_force(tif: &str) -> TimeInForce {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::models::{Action, Direction, Size, SizeUnit, StrategyFamily, ThesisState, TimeHorizon};
+    use crate::models::{
+        Action, Direction, Size, SizeUnit, StrategyFamily, ThesisState, TimeHorizon,
+    };
 
     #[test]
     fn test_parse_order_status() {
@@ -749,7 +754,10 @@ mod tests {
             instrument_id: "AAPL".to_string(),
             action: Action::Buy,
             direction: Direction::Long,
-            size: Size { quantity, unit: size_unit },
+            size: Size {
+                quantity,
+                unit: size_unit,
+            },
             stop_loss_level: Decimal::new(150, 0),
             take_profit_level: Decimal::new(180, 0),
             limit_price: Some(Decimal::new(160, 0)),

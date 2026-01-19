@@ -49,9 +49,7 @@ function createDecision(overrides: Partial<Decision> = {}): Decision {
 }
 
 // Helper to create a minimal valid decision plan
-function createDecisionPlan(
-	overrides: Partial<WorkflowDecisionPlan> = {}
-): WorkflowDecisionPlan {
+function createDecisionPlan(overrides: Partial<WorkflowDecisionPlan> = {}): WorkflowDecisionPlan {
 	return {
 		cycleId: "cycle-001",
 		timestamp: "2024-01-15T10:00:00Z",
@@ -77,10 +75,7 @@ import {
 	RiskLevelsSchema,
 	SizeSchema,
 } from "@cream/schema-gen/cream/v1/common";
-import {
-	DecisionPlanSchema,
-	DecisionSchema,
-} from "@cream/schema-gen/cream/v1/decision";
+import { DecisionPlanSchema, DecisionSchema } from "@cream/schema-gen/cream/v1/decision";
 
 // Re-implement the conversion functions for testing (mirrors act.ts implementation)
 function toProtobufAction(action: Decision["action"]): Action {
@@ -263,16 +258,11 @@ function toProtobufDecision(decision: Decision) {
 	});
 }
 
-function toProtobufDecisionPlan(
-	plan: WorkflowDecisionPlan,
-	ctx?: { environment: string }
-) {
+function toProtobufDecisionPlan(plan: WorkflowDecisionPlan, ctx?: { environment: string }) {
 	return create(DecisionPlanSchema, {
 		cycleId: plan.cycleId,
 		asOfTimestamp: timestampFromDate(new Date(plan.timestamp)),
-		environment: ctx
-			? toProtobufEnvironment(ctx.environment)
-			: Environment.UNSPECIFIED,
+		environment: ctx ? toProtobufEnvironment(ctx.environment) : Environment.UNSPECIFIED,
 		decisions: plan.decisions.map(toProtobufDecision),
 		portfolioNotes: plan.portfolioNotes,
 	});
@@ -412,9 +402,7 @@ describe("toProtobufDecision", () => {
 		test("uses UNDERLYING_PRICE denomination for equity strategies", () => {
 			const decision = createDecision({ strategyFamily: "EQUITY_LONG" });
 			const result = toProtobufDecision(decision);
-			expect(result.riskLevels?.denomination).toBe(
-				RiskDenomination.UNDERLYING_PRICE
-			);
+			expect(result.riskLevels?.denomination).toBe(RiskDenomination.UNDERLYING_PRICE);
 		});
 
 		test("uses OPTION_PRICE denomination for option strategies", () => {
@@ -462,10 +450,7 @@ describe("toProtobufDecision", () => {
 				},
 			});
 			const result = toProtobufDecision(decision);
-			expect(result.bullishFactors).toEqual([
-				"RSI oversold",
-				"Support level holding",
-			]);
+			expect(result.bullishFactors).toEqual(["RSI oversold", "Support level holding"]);
 		});
 
 		test("maps rationale.bearishFactors to bearishFactors", () => {
@@ -479,10 +464,7 @@ describe("toProtobufDecision", () => {
 				},
 			});
 			const result = toProtobufDecision(decision);
-			expect(result.bearishFactors).toEqual([
-				"Earnings miss risk",
-				"Sector weakness",
-			]);
+			expect(result.bearishFactors).toEqual(["Earnings miss risk", "Sector weakness"]);
 		});
 
 		test("handles undefined rationale gracefully", () => {
@@ -660,9 +642,9 @@ describe("toProtobufDecision", () => {
 			});
 			const result = toProtobufDecision(decision);
 			expect(result.legs).toHaveLength(1);
-			expect(result.legs[0].symbol).toBe("AAPL250117C00190000");
-			expect(result.legs[0].ratioQty).toBe(1);
-			expect(result.legs[0].positionIntent).toBe(PositionIntent.BUY_TO_OPEN);
+			expect(result.legs[0]!.symbol).toBe("AAPL250117C00190000");
+			expect(result.legs[0]!.ratioQty).toBe(1);
+			expect(result.legs[0]!.positionIntent).toBe(PositionIntent.BUY_TO_OPEN);
 		});
 
 		test("converts vertical spread legs correctly", () => {
@@ -684,10 +666,10 @@ describe("toProtobufDecision", () => {
 			});
 			const result = toProtobufDecision(decision);
 			expect(result.legs).toHaveLength(2);
-			expect(result.legs[0].ratioQty).toBe(1);
-			expect(result.legs[0].positionIntent).toBe(PositionIntent.BUY_TO_OPEN);
-			expect(result.legs[1].ratioQty).toBe(-1);
-			expect(result.legs[1].positionIntent).toBe(PositionIntent.SELL_TO_OPEN);
+			expect(result.legs[0]!.ratioQty).toBe(1);
+			expect(result.legs[0]!.positionIntent).toBe(PositionIntent.BUY_TO_OPEN);
+			expect(result.legs[1]!.ratioQty).toBe(-1);
+			expect(result.legs[1]!.positionIntent).toBe(PositionIntent.SELL_TO_OPEN);
 		});
 
 		test("converts iron condor legs correctly", () => {
@@ -746,7 +728,7 @@ describe("toProtobufDecision", () => {
 				],
 			});
 			const result = toProtobufDecision(decision);
-			expect(result.legs[0].positionIntent).toBe(PositionIntent.BUY_TO_CLOSE);
+			expect(result.legs[0]!.positionIntent).toBe(PositionIntent.BUY_TO_CLOSE);
 		});
 
 		test("converts position intent SELL_TO_CLOSE correctly", () => {
@@ -761,7 +743,7 @@ describe("toProtobufDecision", () => {
 				],
 			});
 			const result = toProtobufDecision(decision);
-			expect(result.legs[0].positionIntent).toBe(PositionIntent.SELL_TO_CLOSE);
+			expect(result.legs[0]!.positionIntent).toBe(PositionIntent.SELL_TO_CLOSE);
 		});
 	});
 
@@ -863,7 +845,7 @@ describe("toProtobufDecisionPlan", () => {
 			});
 			const result = toProtobufDecisionPlan(plan);
 			expect(result.decisions).toHaveLength(1);
-			expect(result.decisions[0].instrument?.instrumentId).toBe("AAPL");
+			expect(result.decisions[0]!.instrument?.instrumentId).toBe("AAPL");
 		});
 
 		test("converts multiple decisions correctly", () => {
@@ -876,12 +858,12 @@ describe("toProtobufDecisionPlan", () => {
 			});
 			const result = toProtobufDecisionPlan(plan);
 			expect(result.decisions).toHaveLength(3);
-			expect(result.decisions[0].instrument?.instrumentId).toBe("AAPL");
-			expect(result.decisions[0].action).toBe(Action.BUY);
-			expect(result.decisions[1].instrument?.instrumentId).toBe("MSFT");
-			expect(result.decisions[1].action).toBe(Action.SELL);
-			expect(result.decisions[2].instrument?.instrumentId).toBe("GOOGL");
-			expect(result.decisions[2].action).toBe(Action.HOLD);
+			expect(result.decisions[0]!.instrument?.instrumentId).toBe("AAPL");
+			expect(result.decisions[0]!.action).toBe(Action.BUY);
+			expect(result.decisions[1]!.instrument?.instrumentId).toBe("MSFT");
+			expect(result.decisions[1]!.action).toBe(Action.SELL);
+			expect(result.decisions[2]!.instrument?.instrumentId).toBe("GOOGL");
+			expect(result.decisions[2]!.action).toBe(Action.HOLD);
 		});
 
 		test("handles empty decisions array", () => {
@@ -897,9 +879,7 @@ describe("toProtobufDecisionPlan", () => {
 				portfolioNotes: "Reducing exposure due to elevated VIX",
 			});
 			const result = toProtobufDecisionPlan(plan);
-			expect(result.portfolioNotes).toBe(
-				"Reducing exposure due to elevated VIX"
-			);
+			expect(result.portfolioNotes).toBe("Reducing exposure due to elevated VIX");
 		});
 
 		test("handles empty portfolioNotes", () => {
@@ -963,10 +943,7 @@ describe("complex scenarios", () => {
 						"AI chip dominance",
 						"Positive earnings revisions",
 					],
-					bearishFactors: [
-						"High valuation multiples",
-						"China export restrictions",
-					],
+					bearishFactors: ["High valuation multiples", "China export restrictions"],
 					decisionLogic: "Technical breakout with fundamental support",
 					memoryReferences: ["case-nvda-2024-01"],
 				},
@@ -981,9 +958,7 @@ describe("complex scenarios", () => {
 			expect(result.size?.unit).toBe(SizeUnit.SHARES);
 			expect(result.riskLevels?.stopLossLevel).toBe(480.0);
 			expect(result.riskLevels?.takeProfitLevel).toBe(550.0);
-			expect(result.riskLevels?.denomination).toBe(
-				RiskDenomination.UNDERLYING_PRICE
-			);
+			expect(result.riskLevels?.denomination).toBe(RiskDenomination.UNDERLYING_PRICE);
 			expect(result.strategyFamily).toBe(StrategyFamily.EQUITY_LONG);
 			expect(result.timeHorizon).toBe(TimeHorizon.SWING);
 			expect(result.thesisState).toBe(ThesisState.ENTERED);
@@ -1034,10 +1009,10 @@ describe("complex scenarios", () => {
 			expect(result.size?.quantity).toBe(5);
 			expect(result.riskLevels?.denomination).toBe(RiskDenomination.OPTION_PRICE);
 			expect(result.legs).toHaveLength(2);
-			expect(result.legs[0].symbol).toBe("AAPL250221C00190000");
-			expect(result.legs[0].ratioQty).toBe(1);
-			expect(result.legs[1].symbol).toBe("AAPL250221C00200000");
-			expect(result.legs[1].ratioQty).toBe(-1);
+			expect(result.legs[0]!.symbol).toBe("AAPL250221C00190000");
+			expect(result.legs[0]!.ratioQty).toBe(1);
+			expect(result.legs[1]!.symbol).toBe("AAPL250221C00200000");
+			expect(result.legs[1]!.ratioQty).toBe(-1);
 			expect(result.netLimitPrice).toBe(4.25);
 		});
 	});
@@ -1217,8 +1192,7 @@ describe("complex scenarios", () => {
 						strategyFamily: "EQUITY_LONG",
 					}),
 				],
-				portfolioNotes:
-					"Mixed positioning: adding equity exposure while collecting premium",
+				portfolioNotes: "Mixed positioning: adding equity exposure while collecting premium",
 			});
 
 			const result = toProtobufDecisionPlan(plan, { environment: "PAPER" });
@@ -1231,10 +1205,10 @@ describe("complex scenarios", () => {
 			);
 
 			const [equityDecision, condorDecision, holdDecision] = result.decisions;
-			expect(equityDecision.strategyFamily).toBe(StrategyFamily.EQUITY_LONG);
-			expect(condorDecision.strategyFamily).toBe(StrategyFamily.IRON_CONDOR);
-			expect(condorDecision.legs).toHaveLength(4);
-			expect(holdDecision.action).toBe(Action.HOLD);
+			expect(equityDecision!.strategyFamily).toBe(StrategyFamily.EQUITY_LONG);
+			expect(condorDecision!.strategyFamily).toBe(StrategyFamily.IRON_CONDOR);
+			expect(condorDecision!.legs).toHaveLength(4);
+			expect(holdDecision!.action).toBe(Action.HOLD);
 		});
 	});
 });

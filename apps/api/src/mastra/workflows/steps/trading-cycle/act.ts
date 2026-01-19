@@ -217,7 +217,8 @@ function toProtobufDecision(decision: Decision) {
 
 	// Create risk levels from stopLoss and takeProfit
 	// For options strategies, use OPTION_PRICE denomination; for equities, use UNDERLYING_PRICE
-	const isOptionsStrategy = decision.strategyFamily.toUpperCase().includes("OPTION") ||
+	const isOptionsStrategy =
+		decision.strategyFamily.toUpperCase().includes("OPTION") ||
 		decision.strategyFamily.toUpperCase().includes("SPREAD") ||
 		decision.strategyFamily.toUpperCase().includes("CONDOR") ||
 		decision.strategyFamily.toUpperCase().includes("STRADDLE") ||
