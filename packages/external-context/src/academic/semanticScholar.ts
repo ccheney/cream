@@ -108,10 +108,12 @@ const PAPER_FIELDS = [
 
 /**
  * Rate limiting: Wait time between requests (ms)
- * Public API: 1000 requests/second shared among all users
- * With API key: 100 requests/second dedicated
+ * With API key: 1 request/second (1000ms)
+ * Without API key: 5000 requests/5 minutes shared pool (~600ms to be safe)
+ * @see https://www.semanticscholar.org/product/api
  */
-const REQUEST_DELAY_MS = 100;
+const REQUEST_DELAY_WITH_KEY_MS = 1000;
+const REQUEST_DELAY_NO_KEY_MS = 600;
 
 // ============================================
 // Semantic Scholar Client
@@ -142,10 +144,11 @@ export class SemanticScholarClient {
 	 * Rate limit helper - ensures we don't exceed API limits
 	 */
 	private async rateLimit(): Promise<void> {
+		const delay = this.config.apiKey ? REQUEST_DELAY_WITH_KEY_MS : REQUEST_DELAY_NO_KEY_MS;
 		const now = Date.now();
 		const elapsed = now - this.lastRequestTime;
-		if (elapsed < REQUEST_DELAY_MS) {
-			await new Promise((resolve) => setTimeout(resolve, REQUEST_DELAY_MS - elapsed));
+		if (elapsed < delay) {
+			await new Promise((resolve) => setTimeout(resolve, delay - elapsed));
 		}
 		this.lastRequestTime = Date.now();
 	}
@@ -155,8 +158,11 @@ export class SemanticScholarClient {
 	 */
 	private async request<T>(url: string): Promise<T> {
 		let lastError: Error | null = null;
+		let attempt = 0;
+		let rateLimitAttempts = 0;
+		const maxRateLimitAttempts = 5;
 
-		for (let attempt = 0; attempt < this.config.retries; attempt++) {
+		while (attempt < this.config.retries) {
 			await this.rateLimit();
 
 			try {
@@ -181,10 +187,17 @@ export class SemanticScholarClient {
 
 				if (!response.ok) {
 					if (response.status === 429) {
-						// Rate limited - wait and retry
+						rateLimitAttempts++;
+						if (rateLimitAttempts >= maxRateLimitAttempts) {
+							throw new Error("Rate limited too many times by Semantic Scholar");
+						}
+						// Rate limited - wait and retry without counting against retries
 						const retryAfter = response.headers.get("Retry-After");
 						const waitMs = retryAfter ? Number.parseInt(retryAfter, 10) * 1000 : 5000;
-						log.warn({ attempt, waitMs }, "Rate limited by Semantic Scholar, waiting...");
+						log.warn(
+							{ rateLimitAttempts, maxRateLimitAttempts, waitMs },
+							"Rate limited by Semantic Scholar, waiting..."
+						);
 						await new Promise((resolve) => setTimeout(resolve, waitMs));
 						continue;
 					}
@@ -201,8 +214,10 @@ export class SemanticScholarClient {
 					log.warn({ attempt, error: lastError.message }, "Semantic Scholar request failed");
 				}
 
+				attempt++;
+
 				// Exponential backoff
-				if (attempt < this.config.retries - 1) {
+				if (attempt < this.config.retries) {
 					const backoffMs = Math.min(1000 * 2 ** attempt, 10000);
 					await new Promise((resolve) => setTimeout(resolve, backoffMs));
 				}

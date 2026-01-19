@@ -1118,26 +1118,206 @@ export interface TransformedFeatures {
 	[feature: string]: number;
 }
 
+// ============================================================
+// NORMALIZATION HELPER FUNCTIONS
+// ============================================================
+
+/**
+ * Calculate mean of an array of numbers
+ */
+function mean(values: number[]): number {
+	if (values.length === 0) {
+		return 0;
+	}
+	return values.reduce((sum, v) => sum + v, 0) / values.length;
+}
+
+/**
+ * Calculate standard deviation of an array of numbers
+ */
+function stdDev(values: number[], valueMean?: number): number {
+	if (values.length < 2) {
+		return 0;
+	}
+	const m = valueMean ?? mean(values);
+	const squaredDiffs = values.map((v) => (v - m) ** 2);
+	return Math.sqrt(squaredDiffs.reduce((sum, v) => sum + v, 0) / (values.length - 1));
+}
+
+/**
+ * Calculate median of an array of numbers
+ */
+function median(values: number[]): number {
+	if (values.length === 0) {
+		return 0;
+	}
+	const sorted = values.toSorted((a, b) => a - b);
+	const mid = Math.floor(sorted.length / 2);
+	if (sorted.length % 2 === 0) {
+		return ((sorted[mid - 1] ?? 0) + (sorted[mid] ?? 0)) / 2;
+	}
+	return sorted[mid] ?? 0;
+}
+
+/**
+ * Calculate interquartile range (IQR = Q3 - Q1)
+ */
+function iqr(values: number[]): number {
+	if (values.length < 4) {
+		return 0;
+	}
+	const sorted = values.toSorted((a, b) => a - b);
+	const q1Index = Math.floor(sorted.length * 0.25);
+	const q3Index = Math.floor(sorted.length * 0.75);
+	const q1 = sorted[q1Index] ?? 0;
+	const q3 = sorted[q3Index] ?? 0;
+	return q3 - q1;
+}
+
+/**
+ * Z-score normalization: (x - mean) / stddev
+ * Centers data around 0 with unit variance
+ */
+function normalizeZScore(value: number, values: number[]): number | null {
+	const m = mean(values);
+	const s = stdDev(values, m);
+	if (s === 0) {
+		return null;
+	}
+	return (value - m) / s;
+}
+
+/**
+ * Min-max normalization: (x - min) / (max - min)
+ * Scales data to [0, 1] range
+ */
+function normalizeMinMax(value: number, values: number[]): number | null {
+	const min = Math.min(...values);
+	const max = Math.max(...values);
+	const range = max - min;
+	if (range === 0) {
+		return null;
+	}
+	return (value - min) / range;
+}
+
+/**
+ * Robust normalization: (x - median) / IQR
+ * Uses median and IQR, resistant to outliers
+ */
+function normalizeRobust(value: number, values: number[]): number | null {
+	const med = median(values);
+	const interquartileRange = iqr(values);
+	if (interquartileRange === 0) {
+		return null;
+	}
+	return (value - med) / interquartileRange;
+}
+
+/**
+ * Clip value to be within threshold standard deviations from mean
+ */
+function clipOutliers(value: number, values: number[], threshold: number): number {
+	const m = mean(values);
+	const s = stdDev(values, m);
+	if (s === 0) {
+		return value;
+	}
+	const lower = m - threshold * s;
+	const upper = m + threshold * s;
+	return Math.max(lower, Math.min(upper, value));
+}
+
+/**
+ * Extract a feature series from candles
+ */
+function extractFeatureSeries(
+	candles: OHLCVBar[],
+	feature: "close" | "return" | "volume" | "high_low_range"
+): number[] {
+	switch (feature) {
+		case "close":
+			return candles.map((c) => c.close);
+		case "return": {
+			const returns: number[] = [];
+			for (let i = 1; i < candles.length; i++) {
+				const prev = candles[i - 1];
+				const curr = candles[i];
+				if (prev && curr && prev.close !== 0) {
+					returns.push((curr.close - prev.close) / prev.close);
+				}
+			}
+			return returns;
+		}
+		case "volume":
+			return candles.map((c) => c.volume);
+		case "high_low_range":
+			return candles.map((c) => (c.close !== 0 ? (c.high - c.low) / c.close : 0));
+		default:
+			return [];
+	}
+}
+
 /**
  * Apply transforms (normalization) to indicator values
  *
- * NOTE: This is a stub implementation. Returns input values unchanged.
- * Full implementation requires historical data for normalization.
+ * Normalizes key features from candle data using the specified method.
+ * Supports z-score, min-max, and robust (median/IQR) normalization.
  *
- * @param candles - Input candles
- * @param timeframe - Timeframe identifier
+ * @param candles - Input candles (oldest first)
+ * @param timeframe - Timeframe identifier for naming
  * @param config - Transform configuration
- * @returns Transformed feature values
+ * @returns Transformed feature values with keys like "zscore_close_{timeframe}"
  */
 export function applyTransforms(
 	candles: OHLCVBar[],
-	_timeframe: string,
-	_config: Partial<TransformConfig> = {}
+	timeframe: string,
+	config: Partial<TransformConfig> = {}
 ): TransformedFeatures {
-	// Stub implementation - returns empty structure
-	// TODO: Implement zscore/minmax/robust normalization
-	if (candles.length === 0) {
+	const fullConfig = { ...DEFAULT_TRANSFORM_CONFIG, ...config };
+	const { method, lookbackPeriod, clipOutliers: shouldClip, clipThreshold } = fullConfig;
+
+	if (candles.length < 2) {
 		return {};
 	}
-	return {};
+
+	const result: TransformedFeatures = {};
+
+	const features = ["close", "return", "volume", "high_low_range"] as const;
+
+	for (const feature of features) {
+		const series = extractFeatureSeries(candles, feature);
+		if (series.length < lookbackPeriod) {
+			continue;
+		}
+
+		const lookbackValues = series.slice(-lookbackPeriod);
+		let currentValue = series[series.length - 1];
+		if (currentValue === undefined) {
+			continue;
+		}
+
+		if (shouldClip) {
+			currentValue = clipOutliers(currentValue, lookbackValues, clipThreshold);
+		}
+
+		let normalizedValue: number | null = null;
+		switch (method) {
+			case "zscore":
+				normalizedValue = normalizeZScore(currentValue, lookbackValues);
+				break;
+			case "minmax":
+				normalizedValue = normalizeMinMax(currentValue, lookbackValues);
+				break;
+			case "robust":
+				normalizedValue = normalizeRobust(currentValue, lookbackValues);
+				break;
+		}
+
+		if (normalizedValue !== null && Number.isFinite(normalizedValue)) {
+			result[`${method}_${feature}_${lookbackPeriod}_${timeframe}`] = normalizedValue;
+		}
+	}
+
+	return result;
 }
