@@ -15,15 +15,6 @@ import {
 	positions,
 } from "./core-trading";
 import {
-	factorCorrelations,
-	factorPerformance,
-	factors,
-	factorWeights,
-	hypotheses,
-	paperSignals,
-	researchRuns,
-} from "./factors";
-import {
 	indicatorIcHistory,
 	indicatorPaperSignals,
 	indicators,
@@ -132,88 +123,6 @@ export const indicatorPaperSignalsRelations = relations(indicatorPaperSignals, (
 	indicator: one(indicators, {
 		fields: [indicatorPaperSignals.indicatorId],
 		references: [indicators.id],
-	}),
-}));
-
-// Hypotheses relations
-export const hypothesesRelations = relations(hypotheses, ({ many, one }) => ({
-	factors: many(factors),
-	researchRuns: many(researchRuns),
-	parentHypothesis: one(hypotheses, {
-		fields: [hypotheses.parentHypothesisId],
-		references: [hypotheses.hypothesisId],
-		relationName: "childHypotheses",
-	}),
-}));
-
-// Factors relations
-export const factorsRelations = relations(factors, ({ one, many }) => ({
-	hypothesis: one(hypotheses, {
-		fields: [factors.hypothesisId],
-		references: [hypotheses.hypothesisId],
-	}),
-	performance: many(factorPerformance),
-	paperSignals: many(paperSignals),
-	weights: one(factorWeights, {
-		fields: [factors.factorId],
-		references: [factorWeights.factorId],
-	}),
-	correlationsAsFirst: many(factorCorrelations, {
-		relationName: "factorCorrelation1",
-	}),
-	correlationsAsSecond: many(factorCorrelations, {
-		relationName: "factorCorrelation2",
-	}),
-	researchRuns: many(researchRuns),
-}));
-
-// Factor performance relations
-export const factorPerformanceRelations = relations(factorPerformance, ({ one }) => ({
-	factor: one(factors, {
-		fields: [factorPerformance.factorId],
-		references: [factors.factorId],
-	}),
-}));
-
-// Factor correlations relations
-export const factorCorrelationsRelations = relations(factorCorrelations, ({ one }) => ({
-	factor1: one(factors, {
-		fields: [factorCorrelations.factorId1],
-		references: [factors.factorId],
-		relationName: "factorCorrelation1",
-	}),
-	factor2: one(factors, {
-		fields: [factorCorrelations.factorId2],
-		references: [factors.factorId],
-		relationName: "factorCorrelation2",
-	}),
-}));
-
-// Research runs relations
-export const researchRunsRelations = relations(researchRuns, ({ one }) => ({
-	hypothesis: one(hypotheses, {
-		fields: [researchRuns.hypothesisId],
-		references: [hypotheses.hypothesisId],
-	}),
-	factor: one(factors, {
-		fields: [researchRuns.factorId],
-		references: [factors.factorId],
-	}),
-}));
-
-// Factor weights relations
-export const factorWeightsRelations = relations(factorWeights, ({ one }) => ({
-	factor: one(factors, {
-		fields: [factorWeights.factorId],
-		references: [factors.factorId],
-	}),
-}));
-
-// Paper signals relations
-export const paperSignalsRelations = relations(paperSignals, ({ one }) => ({
-	factor: one(factors, {
-		fields: [paperSignals.factorId],
-		references: [factors.factorId],
 	}),
 }));
 

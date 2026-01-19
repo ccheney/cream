@@ -129,45 +129,6 @@ export const indicatorCategoryEnum = pgEnum("indicator_category", [
 	"sentiment",
 ]);
 
-// Factor-related enums
-export const factorStatusEnum = pgEnum("factor_status", [
-	"research",
-	"stage1",
-	"stage2",
-	"paper",
-	"active",
-	"decaying",
-	"retired",
-]);
-
-export const hypothesisStatusEnum = pgEnum("hypothesis_status", [
-	"proposed",
-	"testing",
-	"validated",
-	"rejected",
-]);
-
-export const researchTriggerTypeEnum = pgEnum("research_trigger_type", [
-	"scheduled",
-	"decay_detected",
-	"regime_change",
-	"manual",
-	"refinement",
-]);
-
-export const researchPhaseEnum = pgEnum("research_phase", [
-	"idea",
-	"implementation",
-	"stage1",
-	"stage2",
-	"translation",
-	"equivalence",
-	"paper",
-	"promotion",
-	"completed",
-	"failed",
-]);
-
 // Universe-related enums
 export const universeSourceEnum = pgEnum("universe_source", ["static", "index", "screener"]);
 

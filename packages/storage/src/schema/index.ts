@@ -22,8 +22,6 @@ export * from "./dashboard";
 export * from "./enums";
 // External Data
 export * from "./external";
-// Factors
-export * from "./factors";
 // Indicators
 export * from "./indicators";
 // Market Data
