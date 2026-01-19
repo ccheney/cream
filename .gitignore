@@ -84,3 +84,4 @@ lcov.info
 .kalshi-key-pkcs8.pem
 apps/execution-engine/.env
 tmp-ooda-traces/
+ooda-dump/
