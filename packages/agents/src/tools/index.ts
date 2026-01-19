@@ -26,6 +26,10 @@ export {
 	FREDCalendarOutputSchema,
 	fredEconomicCalendarTool,
 	fredMacroIndicatorsTool,
+	// Enriched portfolio tool
+	GetEnrichedPortfolioStateInputSchema,
+	GetEnrichedPortfolioStateOutputSchema,
+	getEnrichedPortfolioStateTool,
 	GetGreeksInputSchema,
 	GetGreeksOutputSchema,
 	GetMarketSnapshotsInputSchema,
@@ -83,9 +87,11 @@ export {
 	type AnalyzeContentParams,
 	type AnalyzeContentResult,
 	analyzeContent,
+	enrichPositions,
 	type ExtractNewsContextParams,
 	type ExtractNewsContextResult,
 	extractNewsContext,
+	getEnrichedPortfolioState,
 	type GraphRAGQueryParams,
 	type GraphRAGQueryResult,
 	// FRED implementations
@@ -113,13 +119,19 @@ export {
 // Re-export types
 export type {
 	EconomicEvent,
+	EnrichedPortfolioPosition,
+	EnrichedPortfolioStateResponse,
 	Greeks,
 	HelixQueryResult,
 	IndicatorResult,
 	OptionChainResponse,
 	OptionContract,
 	OptionExpiration,
+	PdtStatus,
 	PortfolioPosition,
 	PortfolioStateResponse,
+	PositionRiskParams,
+	PositionStrategy,
+	PositionThesisContext,
 	Quote,
 } from "./types.js";

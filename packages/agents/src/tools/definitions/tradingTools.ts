@@ -11,6 +11,7 @@ import { z } from "zod";
 import {
 	type Greeks,
 	getGreeks,
+	getEnrichedPortfolioState,
 	getOptionChain,
 	getPortfolioState,
 	getQuotes,
@@ -18,6 +19,7 @@ import {
 	type PortfolioStateResponse,
 	type Quote,
 } from "../index.js";
+import type { EnrichedPortfolioStateResponse } from "../types.js";
 
 /**
  * Create ExecutionContext for tool invocation.
@@ -79,12 +81,36 @@ const PortfolioPositionSchema = z.object({
 		.describe("Unrealized profit/loss = marketValue - (quantity × averageCost)"),
 });
 
+const PdtStatusSchema = z.object({
+	dayTradeCount: z
+		.number()
+		.describe("Day trades used in rolling 5-day window. Limit is 3 when under $25k"),
+	remainingDayTrades: z
+		.number()
+		.describe("Day trades remaining. -1 means unlimited (account above $25k)"),
+	isPatternDayTrader: z
+		.boolean()
+		.describe("Whether broker has flagged account as pattern day trader"),
+	isUnderThreshold: z
+		.boolean()
+		.describe("Whether account is under $25k PDT threshold (restricts day trades to 3)"),
+	lastEquity: z.number().describe("Previous day's closing equity. Used for PDT threshold check"),
+	daytradingBuyingPower: z
+		.number()
+		.describe(
+			"Day trading buying power (4x equity for PDT accounts, otherwise same as buying power)"
+		),
+});
+
 const GetPortfolioStateOutputSchema = z.object({
 	positions: z.array(PortfolioPositionSchema).describe("All current positions in the portfolio"),
 	buyingPower: z.number().describe("Available cash for new trades. Consider margin requirements"),
 	totalEquity: z.number().describe("Total account value = cash + positions market value"),
 	dayPnL: z.number().describe("Profit/loss for current trading day across all positions"),
 	totalPnL: z.number().describe("All-time realized + unrealized profit/loss"),
+	pdt: PdtStatusSchema.describe(
+		"Pattern Day Trader status. CRITICAL: Check remainingDayTrades before selling same-day positions"
+	),
 });
 
 export const getPortfolioStateTool = createTool({
@@ -99,6 +125,122 @@ export const getPortfolioStateTool = createTool({
 	execute: async (): Promise<PortfolioStateResponse> => {
 		const ctx = createToolContext();
 		return getPortfolioState(ctx);
+	},
+});
+
+// ============================================
+// Get Enriched Portfolio State Tool
+// ============================================
+
+const PositionStrategySchema = z.object({
+	strategyFamily: z
+		.string()
+		.nullable()
+		.describe("Strategy family (equity, options, spreads). Null if not recorded"),
+	timeHorizon: z
+		.string()
+		.nullable()
+		.describe("Intended holding period (intraday, swing, position). Null if not recorded"),
+	confidenceScore: z
+		.number()
+		.nullable()
+		.describe("Confidence score (0-1) from original decision. Null if not recorded"),
+	riskScore: z
+		.number()
+		.nullable()
+		.describe("Risk score (0-1) from original decision. Null if not recorded"),
+	rationale: z
+		.string()
+		.nullable()
+		.describe("Full rationale text from the decision. Null if not recorded"),
+	bullishFactors: z.array(z.string()).describe("Bullish factors from the original decision"),
+	bearishFactors: z.array(z.string()).describe("Bearish factors from the original decision"),
+});
+
+const PositionRiskParamsSchema = z.object({
+	stopPrice: z.number().nullable().describe("Stop-loss price level. Null if not set"),
+	targetPrice: z.number().nullable().describe("Take-profit price level. Null if not set"),
+	entryPrice: z.number().nullable().describe("Planned entry price from decision. Null if not set"),
+});
+
+const PositionThesisContextSchema = z.object({
+	thesisId: z.string().nullable().describe("Thesis ID linking to thesis_state. Null if not linked"),
+	state: z
+		.string()
+		.nullable()
+		.describe("Current thesis state (OPEN, SCALING, REDUCING, CLOSED). Null if not linked"),
+	entryThesis: z
+		.string()
+		.nullable()
+		.describe("Original thesis rationale for entering. Null if not recorded"),
+	invalidationConditions: z
+		.string()
+		.nullable()
+		.describe("Conditions that would invalidate the thesis. Null if not recorded"),
+	conviction: z.number().nullable().describe("Thesis conviction score (0-1). Null if not recorded"),
+});
+
+const EnrichedPortfolioPositionSchema = z.object({
+	symbol: z.string().describe("Ticker symbol of held position"),
+	quantity: z.number().describe("Number of shares held. Positive = long, negative = short"),
+	averageCost: z.number().describe("Average cost basis per share including commissions"),
+	marketValue: z.number().describe("Current position value = quantity × current price"),
+	unrealizedPnL: z
+		.number()
+		.describe("Unrealized profit/loss = marketValue - (quantity × averageCost)"),
+	positionId: z.string().nullable().describe("Internal position ID. Null if not in database"),
+	decisionId: z.string().nullable().describe("Decision ID that opened this position. Null if manual"),
+	openedAt: z.string().nullable().describe("Position open timestamp ISO 8601. Null if unknown"),
+	holdingDays: z.number().nullable().describe("Days position has been held. Null if openedAt unknown"),
+	strategy: PositionStrategySchema.nullable().describe(
+		"Strategy metadata from original decision. Null if no decision linked"
+	),
+	riskParams: PositionRiskParamsSchema.nullable().describe(
+		"Risk parameters (stops/targets) from original decision. Null if no decision linked"
+	),
+	thesis: PositionThesisContextSchema.nullable().describe(
+		"Thesis context from thesis_state. Null if no thesis linked"
+	),
+});
+
+const GetEnrichedPortfolioStateInputSchema = z.object({});
+
+const GetEnrichedPortfolioStateOutputSchema = z.object({
+	positions: z.array(EnrichedPortfolioPositionSchema).describe(
+		"All current positions with full strategy, risk, and thesis metadata"
+	),
+	buyingPower: z.number().describe("Available cash for new trades. Consider margin requirements"),
+	totalEquity: z.number().describe("Total account value = cash + positions market value"),
+	dayPnL: z.number().describe("Profit/loss for current trading day across all positions"),
+	totalPnL: z.number().describe("All-time realized + unrealized profit/loss"),
+	pdt: PdtStatusSchema.describe(
+		"Pattern Day Trader status. CRITICAL: Check remainingDayTrades before selling same-day positions"
+	),
+});
+
+export const getEnrichedPortfolioStateTool = createTool({
+	id: "get_enriched_portfolio_state",
+	description: `Get enriched portfolio state with full strategy, risk, and thesis context for each position.
+
+This tool provides comprehensive position awareness including:
+- **Strategy metadata**: strategyFamily, timeHorizon, confidence/risk scores, rationale, factors
+- **Risk parameters**: stopPrice, targetPrice, entryPrice from the original decision
+- **Thesis context**: entryThesis, invalidationConditions, conviction, current thesis state
+- **Position age**: openedAt timestamp and holdingDays count
+
+Use this tool when you need to:
+- Check if positions are approaching stop/target levels
+- Honor the intended timeHorizon for positions
+- Assess whether invalidation conditions have been met
+- Review the original thesis and conviction for existing positions
+- Determine position age for swing vs intraday decisions
+
+Note: Positions opened manually or before decision tracking will have null metadata fields.`,
+	inputSchema: GetEnrichedPortfolioStateInputSchema,
+	outputSchema: GetEnrichedPortfolioStateOutputSchema,
+	execute: async (): Promise<EnrichedPortfolioStateResponse> => {
+		const ctx = createToolContext();
+		return getEnrichedPortfolioState(ctx);
 	},
 });
 
@@ -230,6 +372,8 @@ Requires OSI-format symbol (ROOT + YYMMDD + C/P + strike*1000 padded).`,
 
 // Re-export schemas for testing
 export {
+	GetEnrichedPortfolioStateInputSchema,
+	GetEnrichedPortfolioStateOutputSchema,
 	GetGreeksInputSchema,
 	GetGreeksOutputSchema,
 	GetOptionChainInputSchema,

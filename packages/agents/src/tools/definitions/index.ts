@@ -116,6 +116,9 @@ export {
 } from "./predictionMarketTools.js";
 // Trading tools (quotes, portfolio, options)
 export {
+	GetEnrichedPortfolioStateInputSchema,
+	GetEnrichedPortfolioStateOutputSchema,
+	getEnrichedPortfolioStateTool,
 	GetGreeksInputSchema,
 	GetGreeksOutputSchema,
 	GetOptionChainInputSchema,

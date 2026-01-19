@@ -8,7 +8,13 @@ import type { Position as BrokerPosition } from "@cream/broker";
 import { type ExecutionContext, isTest } from "@cream/domain";
 import { GrpcError } from "@cream/domain/grpc";
 import { getBrokerClient, getExecutionClient } from "../clients.js";
-import type { PortfolioPosition, PortfolioStateResponse } from "../types.js";
+import type {
+	EnrichedPortfolioStateResponse,
+	PdtStatus,
+	PortfolioPosition,
+	PortfolioStateResponse,
+} from "../types.js";
+import { enrichPositions } from "./positionEnrichment.js";
 
 /**
  * Get current portfolio state
@@ -52,12 +58,23 @@ export async function getPortfolioState(ctx: ExecutionContext): Promise<Portfoli
 			};
 		});
 
+		// Build PDT status from account state
+		const pdt: PdtStatus = {
+			dayTradeCount: accountState?.dayTradeCount ?? 0,
+			remainingDayTrades: accountState?.remainingDayTrades ?? -1,
+			isPatternDayTrader: accountState?.isPdtRestricted ?? false,
+			isUnderThreshold: accountState?.underPdtThreshold ?? false,
+			lastEquity: accountState?.lastEquity ?? 0,
+			daytradingBuyingPower: accountState?.daytradingBuyingPower ?? 0,
+		};
+
 		return {
 			positions: mappedPositions,
 			buyingPower: accountState?.buyingPower ?? 0,
 			totalEquity: accountState?.equity ?? 0,
 			dayPnL: 0, // Would need day P&L tracking in account state
 			totalPnL,
+			pdt,
 		};
 	} catch (error) {
 		// gRPC failed - try broker client as fallback
@@ -95,11 +112,62 @@ async function getPortfolioStateFromBroker(ctx: ExecutionContext): Promise<Portf
 		};
 	});
 
+	// PDT threshold constant from FINRA rules
+	const PDT_EQUITY_THRESHOLD = 25_000;
+	const MAX_DAY_TRADES = 3;
+
+	const isUnderThreshold = account.lastEquity < PDT_EQUITY_THRESHOLD;
+	const remainingDayTrades = isUnderThreshold
+		? Math.max(0, MAX_DAY_TRADES - account.daytradeCount)
+		: -1; // Unlimited when above threshold
+
+	// Build PDT status from broker account data
+	const pdt: PdtStatus = {
+		dayTradeCount: account.daytradeCount,
+		remainingDayTrades,
+		isPatternDayTrader: account.patternDayTrader,
+		isUnderThreshold,
+		lastEquity: account.lastEquity,
+		daytradingBuyingPower: account.daytradingBuyingPower,
+	};
+
 	return {
 		positions: mappedPositions,
 		buyingPower: account.buyingPower,
 		totalEquity: account.equity,
 		dayPnL: account.equity - account.lastEquity,
 		totalPnL,
+		pdt,
+	};
+}
+
+/**
+ * Get enriched portfolio state with strategy, risk, and thesis metadata
+ *
+ * This extends getPortfolioState by joining position data with decisions and thesis_state
+ * tables to provide full context for each position including:
+ * - Strategy metadata (strategyFamily, timeHorizon, confidence/risk scores)
+ * - Risk parameters (stopPrice, targetPrice, entryPrice)
+ * - Thesis context (entryThesis, invalidationConditions, conviction)
+ * - Position age (openedAt, holdingDays)
+ *
+ * @param ctx - ExecutionContext
+ * @returns Enriched portfolio state with full position metadata
+ * @throws Error if gRPC/broker unavailable or in test mode
+ */
+export async function getEnrichedPortfolioState(
+	ctx: ExecutionContext
+): Promise<EnrichedPortfolioStateResponse> {
+	const baseState = await getPortfolioState(ctx);
+
+	const enrichedPositions = await enrichPositions(baseState.positions, ctx);
+
+	return {
+		positions: enrichedPositions,
+		buyingPower: baseState.buyingPower,
+		totalEquity: baseState.totalEquity,
+		dayPnL: baseState.dayPnL,
+		totalPnL: baseState.totalPnL,
+		pdt: baseState.pdt,
 	};
 }

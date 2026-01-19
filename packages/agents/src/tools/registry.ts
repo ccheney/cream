@@ -7,6 +7,7 @@
 import {
 	analyzeContent,
 	extractNewsContext,
+	getEnrichedPortfolioState,
 	getFredEconomicCalendar,
 	getGreeks,
 	getMacroIndicators,
@@ -26,6 +27,7 @@ import { searchFilings } from "./searchFilings.js";
 export const TOOL_REGISTRY = {
 	get_quotes: getQuotes,
 	get_portfolio_state: getPortfolioState,
+	get_enriched_portfolio_state: getEnrichedPortfolioState,
 	option_chain: getOptionChain,
 	get_greeks: getGreeks,
 	recalc_indicator: recalcIndicator,

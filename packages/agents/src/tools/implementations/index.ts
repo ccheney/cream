@@ -33,5 +33,6 @@ export {
 export { helixQuery } from "./helix.js";
 export { recalcIndicator } from "./indicators.js";
 export { getGreeks, getOptionChain, parseOSISymbol } from "./options.js";
-export { getPortfolioState } from "./portfolio.js";
+export { getEnrichedPortfolioState, getPortfolioState } from "./portfolio.js";
+export { enrichPositions } from "./positionEnrichment.js";
 export { getQuotes } from "./quotes.js";
