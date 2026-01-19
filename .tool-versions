@@ -2,5 +2,4 @@ bun 1.3.6
 rust 1.92.0
 hcloud 1.58.0
 opentofu 1.11.2
-uv 0.9.18
 postgres 18.1

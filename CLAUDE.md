@@ -20,10 +20,10 @@ Tests use `NODE_ENV=test` with `CREAM_ENV=PAPER` and `ctx.source="test"` to iden
 | Databases | PostgreSQL (Drizzle ORM), HelixDB |
 | Serialization | Protobuf (Buf CLI) + Zod |
 | Monorepo | Turborepo |
-| Linting | Biome, Clippy, Ruff |
+| Linting | Biome, Clippy |
 | Infra | OpenTofu |
 
-**Tooling**: asdf manages versions via `.tool-versions` (bun, rust, uv, hcloud, opentofu).
+**Tooling**: asdf manages versions via `.tool-versions` (bun, rust, hcloud, opentofu, postgres).
 
 ## Structure
 
