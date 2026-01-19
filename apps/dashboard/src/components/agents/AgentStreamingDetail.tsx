@@ -788,8 +788,18 @@ function ThoughtSectionComponent({
 	type: ThoughtType;
 }) {
 	const [isExpanded, setIsExpanded] = useState(false);
+	// Capture the type when section first receives a non-default type or completes
+	const [capturedType, setCapturedType] = useState<ThoughtType | null>(null);
 
-	const styles = THOUGHT_TYPE_STYLES[type];
+	// Lock in the type when section completes or gets a meaningful type
+	useEffect(() => {
+		if (capturedType === null && (section.status === "complete" || type !== "observation")) {
+			setCapturedType(type);
+		}
+	}, [capturedType, section.status, type]);
+
+	const displayType = capturedType ?? type;
+	const styles = THOUGHT_TYPE_STYLES[displayType];
 
 	// Status indicator
 	const statusIcon =
