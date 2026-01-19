@@ -88,6 +88,21 @@ const ApprovalDetailSchema = z.object({
 	requiredChanges: z.array(ApprovalRequiredChangeSchema).optional(),
 });
 
+const StopLossSchema = z.object({
+	price: z.number(),
+	type: z.enum(["FIXED", "TRAILING"]),
+});
+
+const TakeProfitSchema = z.object({
+	price: z.number(),
+});
+
+const OptionLegSchema = z.object({
+	symbol: z.string(),
+	ratioQty: z.number(),
+	positionIntent: z.enum(["BUY_TO_OPEN", "BUY_TO_CLOSE", "SELL_TO_OPEN", "SELL_TO_CLOSE"]),
+});
+
 const DecisionDetailSchema = DecisionSchema.extend({
 	strategyFamily: z.string().nullable(),
 	timeHorizon: z.string().nullable(),
@@ -99,6 +114,15 @@ const DecisionDetailSchema = DecisionSchema.extend({
 	execution: ExecutionDetailSchema.nullable(),
 	riskApproval: ApprovalDetailSchema.optional(),
 	criticApproval: ApprovalDetailSchema.optional(),
+	// Full decision metadata
+	stopLoss: StopLossSchema.nullable(),
+	takeProfit: TakeProfitSchema.nullable(),
+	thesisState: z.string().nullable(),
+	decisionLogic: z.string().nullable(),
+	memoryReferences: z.array(z.string()),
+	legs: z.array(OptionLegSchema),
+	netLimitPrice: z.number().nullable(),
+	originalAction: z.string().nullable(),
 });
 
 const PaginatedDecisionsSchema = z.object({
@@ -256,7 +280,7 @@ app.openapi(detailRoute, async (c) => {
 		// HelixDB unavailable - continue with empty citations
 	}
 
-	// Extract approval metadata
+	// Extract full decision metadata
 	const metadata = decision.metadata as {
 		riskApproval?: {
 			verdict: "APPROVE" | "REJECT";
@@ -290,6 +314,19 @@ app.openapi(detailRoute, async (c) => {
 				reason?: string;
 			}>;
 		};
+		// Full decision details
+		stopLoss?: { price: number; type: "FIXED" | "TRAILING" };
+		takeProfit?: { price: number };
+		thesisState?: string;
+		decisionLogic?: string;
+		memoryReferences?: string[];
+		legs?: Array<{
+			symbol: string;
+			ratioQty: number;
+			positionIntent: "BUY_TO_OPEN" | "BUY_TO_CLOSE" | "SELL_TO_OPEN" | "SELL_TO_CLOSE";
+		}>;
+		netLimitPrice?: number;
+		originalAction?: string;
 	} | null;
 
 	return c.json({
@@ -340,6 +377,15 @@ app.openapi(detailRoute, async (c) => {
 			: null,
 		riskApproval: metadata?.riskApproval,
 		criticApproval: metadata?.criticApproval,
+		// Full decision details from metadata
+		stopLoss: metadata?.stopLoss ?? null,
+		takeProfit: metadata?.takeProfit ?? null,
+		thesisState: metadata?.thesisState ?? null,
+		decisionLogic: metadata?.decisionLogic ?? null,
+		memoryReferences: metadata?.memoryReferences ?? [],
+		legs: metadata?.legs ?? [],
+		netLimitPrice: metadata?.netLimitPrice ?? null,
+		originalAction: metadata?.originalAction ?? null,
 	});
 });
 

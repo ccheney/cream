@@ -150,6 +150,21 @@ export interface ApprovalDetail {
 	requiredChanges?: ApprovalRequiredChange[];
 }
 
+export interface StopLoss {
+	price: number;
+	type: "FIXED" | "TRAILING";
+}
+
+export interface TakeProfit {
+	price: number;
+}
+
+export interface OptionLeg {
+	symbol: string;
+	ratioQty: number;
+	positionIntent: "BUY_TO_OPEN" | "BUY_TO_CLOSE" | "SELL_TO_OPEN" | "SELL_TO_CLOSE";
+}
+
 export interface DecisionDetail extends Decision {
 	strategyFamily: string | null;
 	timeHorizon: TimeHorizon | null;
@@ -162,6 +177,15 @@ export interface DecisionDetail extends Decision {
 	thesis: ThesisSummary | null;
 	riskApproval?: ApprovalDetail;
 	criticApproval?: ApprovalDetail;
+	// Full decision details
+	stopLoss: StopLoss | null;
+	takeProfit: TakeProfit | null;
+	thesisState: string | null;
+	decisionLogic: string | null;
+	memoryReferences: string[];
+	legs: OptionLeg[];
+	netLimitPrice: number | null;
+	originalAction: string | null;
 }
 
 export interface DecisionFilters {
