@@ -8,7 +8,7 @@
 
 import { xai } from "@ai-sdk/xai";
 import { generateText, streamText } from "ai";
-import { createGrokSearchConfig, DEFAULT_TRADING_SOURCES, GROK_MODEL } from "./grok-config.js";
+import { createGrokSearchConfig, DEFAULT_TRADING_SOURCES, getGrokModelId } from "./grok-config.js";
 import { buildDatetimeContext } from "./prompts.js";
 import { type GroundingOutput, GroundingOutputSchema } from "./schemas.js";
 import type { AgentContext, AgentStreamChunk, OnStreamChunk } from "./types.js";
@@ -18,7 +18,7 @@ import type { AgentContext, AgentStreamChunk, OnStreamChunk } from "./types.js";
  * The xAI provider accepts searchParameters but TypeScript's strict JSON
  * types in SharedV3ProviderOptions don't allow our typed config structure.
  */
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
+// biome-ignore lint/suspicious/noExplicitAny: xAI provider options aren't fully typed in AI SDK
 function getGrokProviderOptions(): any {
 	return {
 		xai: createGrokSearchConfig({
@@ -142,7 +142,7 @@ export async function runGroundingAgent(context: AgentContext): Promise<Groundin
 	const prompt = buildGroundingPrompt(context.symbols);
 
 	const response = await generateText({
-		model: xai(GROK_MODEL),
+		model: xai(getGrokModelId()),
 		prompt,
 		providerOptions: getGrokProviderOptions(),
 	});
@@ -180,7 +180,7 @@ export async function runGroundingAgentStreaming(
 	});
 
 	const response = streamText({
-		model: xai(GROK_MODEL),
+		model: xai(getGrokModelId()),
 		prompt,
 		providerOptions: getGrokProviderOptions(),
 	});

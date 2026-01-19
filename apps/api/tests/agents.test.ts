@@ -1001,9 +1001,10 @@ describe("Agent Context", () => {
 
 describe("Agent Tool Wiring", () => {
 	describe("Tool Configuration", () => {
-		it("should have all agents with at least one tool configured", () => {
+		it("should have all agents with at least one tool configured (except grounding_agent and critic)", () => {
+			const noToolAgents = ["grounding_agent", "critic"];
 			for (const agentType of AGENT_TYPES) {
-				if (agentType === "grounding_agent") {
+				if (noToolAgents.includes(agentType)) {
 					continue;
 				}
 				const config = AGENT_CONFIGS[agentType];
@@ -1013,9 +1014,9 @@ describe("Agent Tool Wiring", () => {
 
 		it("should have valid tool names for all agents", () => {
 			const validToolNames = [
-				"google_search",
 				"get_quotes",
 				"get_portfolio_state",
+				"get_enriched_portfolio_state",
 				"option_chain",
 				"get_greeks",
 				"recalc_indicator",

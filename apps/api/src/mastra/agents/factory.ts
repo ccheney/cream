@@ -13,6 +13,7 @@ import {
 	extractNewsContextTool,
 	fredEconomicCalendarTool,
 	getAcademicPaperTool,
+	getEnrichedPortfolioStateTool,
 	getGreeksTool,
 	getMarketSnapshotsTool,
 	getOptionChainTool,
@@ -46,6 +47,7 @@ import type { AgentConfigEntry, AgentRuntimeSettings } from "./types.js";
 const TOOL_INSTANCES: Record<string, Tool<any, any>> = {
 	get_quotes: getQuotesTool,
 	get_portfolio_state: getPortfolioStateTool,
+	get_enriched_portfolio_state: getEnrichedPortfolioStateTool,
 	option_chain: getOptionChainTool,
 	get_greeks: getGreeksTool,
 	recalc_indicator: recalcIndicatorTool,
@@ -114,34 +116,13 @@ export function createAgent(agentType: AgentType): Agent {
 
 	// biome-ignore lint/suspicious/noExplicitAny: Mastra tools have varying generic types
 	const tools: Record<string, any> = {};
-	const shouldEnableNativeGoogleSearch =
-		config.tools.includes("google_search") &&
-		config.tools.filter((t) => t !== "google_search").length === 0;
-
-	if (config.tools.includes("google_search") && !shouldEnableNativeGoogleSearch) {
-		// Gemini does not support combining provider-defined tools (google_search, url_context, etc.)
-		// with custom function tools in the same request. The Google provider drops function tools
-		// when any provider tool is present, which makes agents appear to "never call tools".
-		//
-		// See: https://github.com/vercel/ai/issues/8258
-		log.debug(
-			{ agentType },
-			"Skipping native google_search tool because it cannot be combined with function tools on Gemini"
-		);
-	}
 
 	for (const toolName of config.tools) {
-		if (toolName === "google_search") {
-			if (shouldEnableNativeGoogleSearch) {
-				tools.google_search = google.tools.googleSearch({});
-			}
+		const tool = TOOL_INSTANCES[toolName];
+		if (tool) {
+			tools[toolName] = tool;
 		} else {
-			const tool = TOOL_INSTANCES[toolName];
-			if (tool) {
-				tools[toolName] = tool;
-			} else {
-				log.warn({ toolName, agentType }, "Tool not found in TOOL_INSTANCES for agent");
-			}
+			log.warn({ toolName, agentType }, "Tool not found in TOOL_INSTANCES for agent");
 		}
 	}
 
@@ -232,8 +213,8 @@ export interface GenerateOptions {
  * model extraction is needed for most agents.
  * @see https://ai.google.dev/gemini-api/docs/gemini-3
  *
- * For agents that only use provider-defined tools (like google_search), use
- * useTwoStepExtraction: true to enable secondary model extraction.
+ * For agents that need two-step extraction, use useTwoStepExtraction: true to
+ * enable secondary model extraction.
  *
  * Note: Gemini 3 thinking is enabled to stream reasoning ("thoughts") to the UI.
  * Gemini 3 also requires thought_signature handling for multi-turn tool calling when

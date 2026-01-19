@@ -679,7 +679,7 @@ export function buildGroundingContext(
 ## Web Grounding Context
 No grounding data available for this cycle.
 
-IMPORTANT: You do not have access to google_search. If you need current information that is not provided, note this as uncertainty in your analysis.
+IMPORTANT: If you need current information that is not provided, note this as uncertainty in your analysis.
 `;
 	}
 
@@ -768,7 +768,6 @@ IMPORTANT: You do not have access to google_search. If you need current informat
 ${content}
 
 IMPORTANT: Use this grounded context for real-time information.
-You do not have access to google_search - it is not available to you.
 If critical information is missing from the grounding context, note this as uncertainty in your analysis.
 `;
 }

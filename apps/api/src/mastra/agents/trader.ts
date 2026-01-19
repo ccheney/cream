@@ -72,7 +72,7 @@ Cycle ID: ${context.cycleId}
 Symbols: ${context.symbols.join(", ")}
 
 TOOL USE (required):
-- If Current Portfolio State is empty, call get_portfolio_state before producing the final plan.
+- If Current Portfolio State is empty, call get_enriched_portfolio_state before producing the final plan.
 - Call get_quotes with instruments=[Symbols] to confirm current prices/liquidity before sizing.
 Portfolio state provided in prompt: ${portfolioStateProvided ? "yes" : "no"}
 
@@ -127,7 +127,7 @@ Cycle ID: ${context.cycleId}
 Symbols: ${context.symbols.join(", ")}
 
 TOOL USE (required):
-- If Current Portfolio State is empty, call get_portfolio_state before producing the final plan.
+- If Current Portfolio State is empty, call get_enriched_portfolio_state before producing the final plan.
 - Call get_quotes with instruments=[Symbols] to confirm current prices/liquidity before sizing.
 Portfolio state provided in prompt: ${portfolioStateProvided ? "yes" : "no"}
 

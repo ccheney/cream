@@ -46,10 +46,17 @@ function getGrokModel(): string {
 	return model;
 }
 
-export const GROK_MODEL = getGrokModel();
+let _grokModel: string | null = null;
+
+export function getGrokModelId(): string {
+	if (!_grokModel) {
+		_grokModel = getGrokModel();
+	}
+	return _grokModel;
+}
 
 export function createGrokModel(): LanguageModel {
-	return xai(GROK_MODEL);
+	return xai(getGrokModelId());
 }
 
 export const DEFAULT_TRADING_SOURCES: GrokSearchSource[] = [

@@ -148,8 +148,8 @@ Risk Constraints:
 ${JSON.stringify(constraints ?? {}, null, 2)}
 
 TOOL USE (required):
-- If Current Portfolio State is empty, call get_portfolio_state before issuing a verdict.
-- If Risk Constraints are missing, call get_portfolio_state to infer position count/exposure and be conservative.
+- If Current Portfolio State is empty, call get_enriched_portfolio_state before issuing a verdict.
+- If Risk Constraints are missing, call get_enriched_portfolio_state to infer position count/exposure and be conservative.
 - If prediction market signals are not provided in prompt, call get_prediction_signals to validate event-risk rules.
 Portfolio state provided in prompt: ${portfolioStateProvided ? "yes" : "no"}
 Constraints provided in prompt: ${constraintsProvided ? "yes" : "no"}
@@ -272,8 +272,8 @@ Risk Constraints:
 ${JSON.stringify(constraints ?? {}, null, 2)}
 
 TOOL USE (required):
-- If Current Portfolio State is empty, call get_portfolio_state before issuing a verdict.
-- If Risk Constraints are missing, call get_portfolio_state to infer position count/exposure and be conservative.
+- If Current Portfolio State is empty, call get_enriched_portfolio_state before issuing a verdict.
+- If Risk Constraints are missing, call get_enriched_portfolio_state to infer position count/exposure and be conservative.
 - If prediction market signals are not provided in prompt, call get_prediction_signals to validate event-risk rules.
 Portfolio state provided in prompt: ${portfolioStateProvided ? "yes" : "no"}
 Constraints provided in prompt: ${constraintsProvided ? "yes" : "no"}
