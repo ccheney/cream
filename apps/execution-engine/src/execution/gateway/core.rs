@@ -271,6 +271,12 @@ impl<B: BrokerAdapter> ExecutionGateway<B> {
         Arc::clone(&self.stops_enforcer)
     }
 
+    /// Get a reference to the broker adapter for account/position queries.
+    #[must_use]
+    pub fn broker(&self) -> &B {
+        &self.broker
+    }
+
     /// Check constraints for a decision plan using default context.
     ///
     /// Note: This uses zero buying power by default. For production use,

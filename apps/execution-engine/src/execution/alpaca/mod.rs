@@ -927,6 +927,60 @@ impl AlpacaAdapter {
             .collect())
     }
 
+    /// Get symbols that were bought today (for PDT day trade detection).
+    ///
+    /// Returns a list of symbols where a BUY order was filled today.
+    /// This is used to determine if selling these symbols would constitute
+    /// a day trade (buying and selling the same security on the same day).
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the API call fails.
+    pub async fn get_todays_filled_buys(&self) -> Result<Vec<String>, AlpacaError> {
+        use chrono::{Datelike, Utc};
+
+        // Get today's date at market open (4:00 AM ET = 9:00 AM UTC for regular session)
+        let today = Utc::now().date_naive();
+        let today_start = format!("{:04}-{:02}-{:02}T00:00:00Z", today.year(), today.month(), today.day());
+
+        // Query filled orders from today
+        // Alpaca's after parameter filters by created_at, and we filter filled orders
+        let path = format!(
+            "/v2/orders?status=filled&after={}&direction=desc&limit=500",
+            today_start
+        );
+
+        let responses: Vec<AlpacaOrderResponse> = self.request("GET", &path, None::<&()>).await?;
+
+        // Filter for BUY orders that were filled today
+        let today_str = format!("{:04}-{:02}-{:02}", today.year(), today.month(), today.day());
+
+        let symbols: Vec<String> = responses
+            .into_iter()
+            .filter(|order| {
+                // Must be a buy order
+                order.side.to_lowercase() == "buy"
+                    // Must have been filled
+                    && order.filled_at.as_ref().is_some_and(|filled_at| {
+                        // Check if filled_at starts with today's date
+                        filled_at.starts_with(&today_str)
+                    })
+            })
+            .map(|order| order.symbol)
+            .collect();
+
+        // Deduplicate (a symbol could have multiple buy orders)
+        let unique_symbols: std::collections::HashSet<String> = symbols.into_iter().collect();
+
+        tracing::debug!(
+            symbols = ?unique_symbols,
+            count = unique_symbols.len(),
+            "Found symbols bought today for PDT tracking"
+        );
+
+        Ok(unique_symbols.into_iter().collect())
+    }
+
     /// Cancel an order.
     ///
     /// # Errors
@@ -949,9 +1003,11 @@ impl AlpacaAdapter {
         let response: AlpacaAccountResponse =
             self.request("GET", "/v2/account", None::<&()>).await?;
 
+        let equity = response.equity.parse().unwrap_or(Decimal::ZERO);
+
         Ok(AccountInfo {
             account_id: response.id,
-            equity: response.equity.parse().unwrap_or(Decimal::ZERO),
+            equity,
             buying_power: response.buying_power.parse().unwrap_or(Decimal::ZERO),
             cash: response.cash.parse().unwrap_or(Decimal::ZERO),
             margin_used: response
@@ -961,6 +1017,16 @@ impl AlpacaAdapter {
                 .unwrap_or(Decimal::ZERO),
             daytrade_count: response.daytrade_count.unwrap_or(0),
             pattern_day_trader: response.pattern_day_trader.unwrap_or(false),
+            last_equity: response
+                .last_equity
+                .as_ref()
+                .and_then(|e| e.parse().ok())
+                .unwrap_or(equity), // Fall back to current equity if not provided
+            daytrading_buying_power: response
+                .daytrading_buying_power
+                .as_ref()
+                .and_then(|bp| bp.parse().ok())
+                .unwrap_or(Decimal::ZERO),
         })
     }
 

@@ -469,6 +469,12 @@ pub(super) struct AlpacaAccountResponse {
     pub(super) daytrade_count: Option<i32>,
     #[serde(default)]
     pub(super) pattern_day_trader: Option<bool>,
+    /// Previous day's equity (used for PDT $25k threshold check).
+    #[serde(default)]
+    pub(super) last_equity: Option<String>,
+    /// Day trading buying power (4x equity for PDT accounts).
+    #[serde(default)]
+    pub(super) daytrading_buying_power: Option<String>,
 }
 
 #[derive(Debug, Serialize, Deserialize)]

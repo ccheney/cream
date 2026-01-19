@@ -21,6 +21,10 @@ pub struct AccountInfo {
     pub daytrade_count: i32,
     /// Whether account is flagged as pattern day trader.
     pub pattern_day_trader: bool,
+    /// Previous day's closing equity (for PDT $25k threshold check).
+    pub last_equity: Decimal,
+    /// Day trading buying power (4x equity for PDT accounts, Reg T otherwise).
+    pub daytrading_buying_power: Decimal,
 }
 
 /// Position information.
