@@ -94,7 +94,7 @@ const observeStep = createStep({
 
 const orientStep = createStep({
 	id: "orient",
-	description: "Load memory, compute regimes, and fetch overnight brief",
+	description: "Load memory, compute regimes, fetch prediction signals, and overnight brief",
 	inputSchema: AnyInputSchema,
 	outputSchema: AnyOutputSchema,
 	stateSchema: MinimalStateSchema,
@@ -104,29 +104,182 @@ const orientStep = createStep({
 		const mode = isTest ? "STUB" : "LLM";
 		await setState({ ...state, mode });
 
-		// Fetch today's morning newspaper if available (LLM mode only)
+		// Default empty context for STUB mode
 		let overnightBrief: string | null = null;
-		if (mode === "LLM") {
-			try {
-				const { getMacroWatchRepo } = await import("../../../db.js");
-				const { formatNewspaperForLLM } = await import("../macro-watch/newspaper.js");
-				const repo = await getMacroWatchRepo();
-				const today = new Date().toISOString().slice(0, 10);
-				const newspaper = await repo.getNewspaperByDate(today);
+		let regimeLabels: Record<string, { regime: string; confidence: number; reasoning?: string }> =
+			{};
+		let memory: Record<string, unknown> = {};
+		let predictionMarketSignals: Record<string, unknown> | undefined;
+		let agentConfigs:
+			| Record<string, { enabled: boolean; systemPromptOverride?: string | null }>
+			| undefined;
+		let recentEvents: Array<{
+			id: string;
+			sourceType: string;
+			eventType: string;
+			eventTime: string;
+			sentiment: string;
+			summary: string;
+			importanceScore: number;
+			relatedInstruments: string[];
+		}> = [];
 
-				if (newspaper) {
-					overnightBrief = formatNewspaperForLLM(newspaper.sections);
-					log.info({ date: today }, "Morning newspaper injected into Orient phase");
-				}
-			} catch (error) {
-				log.warn(
-					{ error: error instanceof Error ? error.message : String(error) },
-					"Failed to fetch morning newspaper"
+		if (mode === "LLM") {
+			// Load all context data in parallel for efficiency
+			const [
+				newspaperResult,
+				regimesResult,
+				predictionResult,
+				configResult,
+				eventsResult,
+				memoryResult,
+			] = await Promise.allSettled([
+				// 1. Morning newspaper
+				(async () => {
+					const { getMacroWatchRepo } = await import("../../../db.js");
+					const { formatNewspaperForLLM } = await import("../macro-watch/newspaper.js");
+					const repo = await getMacroWatchRepo();
+					const today = new Date().toISOString().slice(0, 10);
+					const newspaper = await repo.getNewspaperByDate(today);
+					if (newspaper) {
+						log.info({ date: today }, "Morning newspaper injected into Orient phase");
+						return formatNewspaperForLLM(newspaper.sections);
+					}
+					return null;
+				})(),
+
+				// 2. Regime classifications
+				(async () => {
+					const { computeAndStoreRegimes } = await import("../steps/trading-cycle/orient.js");
+					return computeAndStoreRegimes(inputData.snapshot);
+				})(),
+
+				// 3. Prediction market signals
+				(async () => {
+					const { getLatestPredictionMarketSignals } = await import(
+						"../../steps/fetchPredictionMarkets.js"
+					);
+					const pmContext = await getLatestPredictionMarketSignals();
+					if (pmContext) {
+						return {
+							fedCutProbability: pmContext.signals.fedCutProbability,
+							fedHikeProbability: pmContext.signals.fedHikeProbability,
+							recessionProbability12m: pmContext.signals.recessionProbability12m,
+							macroUncertaintyIndex: pmContext.signals.macroUncertaintyIndex,
+							policyEventRisk: pmContext.signals.policyEventRisk,
+							marketConfidence: pmContext.signals.marketConfidence,
+							cpiSurpriseDirection: pmContext.scores.cpiSurpriseDirection,
+							gdpSurpriseDirection: pmContext.scores.gdpSurpriseDirection,
+							timestamp: pmContext.signals.timestamp,
+							platforms: pmContext.signals.platforms,
+						};
+					}
+					return undefined;
+				})(),
+
+				// 4. Runtime config and agent configs
+				(async () => {
+					const { loadRuntimeConfig, buildAgentConfigs } = await import(
+						"../steps/trading-cycle/config.js"
+					);
+					const { createContext, requireEnv } = await import("@cream/domain");
+					const ctx = createContext(requireEnv(), "scheduled");
+					const runtimeConfig = await loadRuntimeConfig(ctx, inputData.useDraftConfig ?? false);
+					return buildAgentConfigs(runtimeConfig);
+				})(),
+
+				// 5. Recent external events from database
+				(async () => {
+					const { getExternalEventsRepo } = await import("../../../db.js");
+					const repo = getExternalEventsRepo();
+					const events = await repo.findRecent(24, 50); // Last 24 hours, max 50 events
+					return events.map((e) => ({
+						id: e.id,
+						sourceType: e.sourceType,
+						eventType: e.eventType,
+						eventTime: e.eventTime, // Already a string from the repository
+						sentiment: e.sentiment ?? "NEUTRAL",
+						summary: e.summary ?? "",
+						importanceScore: e.importanceScore ?? 0.5,
+						relatedInstruments: e.relatedInstruments ?? [],
+					}));
+				})(),
+
+				// 6. Memory context (HelixDB retrieval)
+				(async () => {
+					const { loadMemoryContext } = await import("../steps/trading-cycle/orient.js");
+					const { createContext, requireEnv } = await import("@cream/domain");
+					const ctx = createContext(requireEnv(), "scheduled");
+					const memoryCtx = await loadMemoryContext(inputData.snapshot, ctx);
+					return { relevantCases: memoryCtx.relevantCases };
+				})(),
+			]);
+
+			// Extract results, using defaults on failure
+			if (newspaperResult.status === "fulfilled" && newspaperResult.value) {
+				overnightBrief = newspaperResult.value;
+			} else if (newspaperResult.status === "rejected") {
+				log.warn({ error: String(newspaperResult.reason) }, "Failed to fetch morning newspaper");
+			}
+
+			if (regimesResult.status === "fulfilled") {
+				regimeLabels = regimesResult.value;
+				log.debug({ count: Object.keys(regimeLabels).length }, "Computed regime classifications");
+			} else {
+				log.warn({ error: String(regimesResult.reason) }, "Failed to compute regimes");
+			}
+
+			if (predictionResult.status === "fulfilled" && predictionResult.value) {
+				predictionMarketSignals = predictionResult.value;
+				log.debug(
+					{ platforms: predictionMarketSignals.platforms },
+					"Loaded prediction market signals"
 				);
+			} else if (predictionResult.status === "rejected") {
+				log.warn(
+					{ error: String(predictionResult.reason) },
+					"Failed to load prediction market signals"
+				);
+			}
+
+			if (configResult.status === "fulfilled" && configResult.value) {
+				agentConfigs = configResult.value;
+				log.debug({ agentCount: Object.keys(agentConfigs).length }, "Loaded agent configs");
+			} else if (configResult.status === "rejected") {
+				log.warn({ error: String(configResult.reason) }, "Failed to load agent configs");
+			}
+
+			if (eventsResult.status === "fulfilled") {
+				recentEvents = eventsResult.value;
+				log.debug({ count: recentEvents.length }, "Loaded recent external events");
+			} else {
+				log.warn({ error: String(eventsResult.reason) }, "Failed to load recent events");
+			}
+
+			if (memoryResult.status === "fulfilled") {
+				memory = memoryResult.value;
+				log.debug(
+					{
+						caseCount:
+							(memoryResult.value as { relevantCases: unknown[] }).relevantCases?.length ?? 0,
+					},
+					"Loaded memory context"
+				);
+			} else {
+				log.warn({ error: String(memoryResult.reason) }, "Failed to load memory context");
 			}
 		}
 
-		return { ...inputData, mode, overnightBrief };
+		return {
+			...inputData,
+			mode,
+			overnightBrief,
+			regimeLabels,
+			memory,
+			predictionMarketSignals,
+			agentConfigs,
+			recentEvents,
+		};
 	},
 });
 
@@ -156,7 +309,8 @@ const groundingStep = createStep({
 			indicators: inputData.snapshot?.indicators ?? {},
 			externalContext: inputData.externalContext,
 			overnightBrief: inputData.overnightBrief,
-			recentEvents: [],
+			recentEvents: inputData.recentEvents ?? [],
+			agentConfigs: inputData.agentConfigs,
 		};
 
 		// Emit start event
@@ -223,9 +377,13 @@ const analystsStep = createStep({
 			snapshots: inputData.snapshot ?? {},
 			indicators: inputData.snapshot?.indicators ?? {},
 			externalContext: inputData.externalContext,
-			overnightBrief: inputData.overnightBrief, // Pass overnight newspaper
-			recentEvents: [],
-			groundingOutput: inputData.groundingOutput, // Pass grounding context
+			overnightBrief: inputData.overnightBrief,
+			recentEvents: inputData.recentEvents ?? [],
+			regimeLabels: inputData.regimeLabels,
+			predictionMarketSignals: inputData.predictionMarketSignals,
+			agentConfigs: inputData.agentConfigs,
+			memory: inputData.memory,
+			groundingOutput: inputData.groundingOutput,
 		};
 
 		// Emit start events
@@ -305,8 +463,10 @@ const debateStep = createStep({
 			snapshots: inputData.snapshot ?? {},
 			indicators: inputData.snapshot?.indicators ?? {},
 			externalContext: inputData.externalContext,
-			recentEvents: [],
-			groundingOutput: inputData.groundingOutput, // Pass grounding context
+			recentEvents: inputData.recentEvents ?? [],
+			memory: inputData.memory,
+			agentConfigs: inputData.agentConfigs,
+			groundingOutput: inputData.groundingOutput,
 		};
 		const analystOutputs = {
 			news: inputData.newsAnalysis ?? [],
@@ -387,7 +547,9 @@ const traderStep = createStep({
 			snapshots: inputData.snapshot ?? {},
 			indicators: inputData.snapshot?.indicators ?? {},
 			externalContext: inputData.externalContext,
-			recentEvents: [],
+			recentEvents: inputData.recentEvents ?? [],
+			memory: inputData.memory,
+			agentConfigs: inputData.agentConfigs,
 		};
 		const debateOutputs = {
 			bullish: bullishResearch,
@@ -499,7 +661,11 @@ const consensusStep = createStep({
 			inputData.decisionPlan,
 			analystOutputs,
 			debateOutputs,
-			onChunk
+			onChunk,
+			undefined, // portfolioState
+			undefined, // constraints
+			inputData.agentConfigs,
+			inputData.snapshot?.indicators
 		);
 
 		// Emit complete events
