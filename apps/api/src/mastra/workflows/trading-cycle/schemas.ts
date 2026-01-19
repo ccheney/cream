@@ -190,6 +190,21 @@ export const ResearchSchema = z.object({
 // Decision Types
 // ============================================
 
+export const StopLossSchema = z.object({
+	price: z.number(),
+	type: z.enum(["FIXED", "TRAILING"]),
+});
+
+export const TakeProfitSchema = z.object({
+	price: z.number(),
+});
+
+export const OptionLegSchema = z.object({
+	symbol: z.string().describe("OCC option symbol (e.g., AAPL250117P00190000)"),
+	ratioQty: z.number().int().describe("Signed ratio: positive=buy, negative=sell"),
+	positionIntent: z.enum(["BUY_TO_OPEN", "BUY_TO_CLOSE", "SELL_TO_OPEN", "SELL_TO_CLOSE"]),
+});
+
 export const DecisionSchema = z.object({
 	decisionId: z.string(),
 	instrumentId: z.string(),
@@ -199,6 +214,8 @@ export const DecisionSchema = z.object({
 		value: z.number(),
 		unit: z.string(),
 	}),
+	stopLoss: StopLossSchema.optional(),
+	takeProfit: TakeProfitSchema.optional(),
 	strategyFamily: z.string(),
 	timeHorizon: z.string(),
 	rationale: z.object({
@@ -209,6 +226,8 @@ export const DecisionSchema = z.object({
 		memoryReferences: z.array(z.string()),
 	}),
 	thesisState: z.string(),
+	legs: z.array(OptionLegSchema).optional(),
+	netLimitPrice: z.number().optional(),
 });
 
 export const DecisionPlanSchema = z.object({

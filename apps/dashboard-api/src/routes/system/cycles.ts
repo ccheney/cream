@@ -307,6 +307,8 @@ app.openapi(triggerCycleRoute, async (c) => {
 						action: "BUY" | "SELL" | "HOLD" | "CLOSE";
 						direction: "LONG" | "SHORT" | "FLAT";
 						size: { value: number; unit: string };
+						stopLoss?: { price: number; type: "FIXED" | "TRAILING" };
+						takeProfit?: { price: number };
 						strategyFamily: string;
 						timeHorizon: string;
 						rationale: {
@@ -755,6 +757,21 @@ app.openapi(triggerCycleRoute, async (c) => {
 					}
 
 					try {
+						// Build complete metadata including approval data and full decision details
+						const fullMetadata: Record<string, unknown> = {
+							...approvalMetadata,
+							// Store full decision for complete audit trail
+							stopLoss: decision.stopLoss ?? null,
+							takeProfit: decision.takeProfit ?? null,
+							thesisState: decision.thesisState ?? null,
+							decisionLogic: decision.rationale?.decisionLogic ?? null,
+							memoryReferences: decision.rationale?.memoryReferences ?? [],
+							legs: decision.legs ?? [],
+							netLimitPrice: decision.netLimitPrice ?? null,
+							// Preserve original action if it was CLOSE
+							originalAction: decision.action,
+						};
+
 						await decisionsRepo.create({
 							id: decision.decisionId,
 							cycleId,
@@ -769,8 +786,10 @@ app.openapi(triggerCycleRoute, async (c) => {
 							rationale: decision.rationale?.summary ?? null,
 							bullishFactors: decision.rationale?.bullishFactors ?? [],
 							bearishFactors: decision.rationale?.bearishFactors ?? [],
+							stopPrice: decision.stopLoss?.price ?? null,
+							targetPrice: decision.takeProfit?.price ?? null,
 							environment,
-							metadata: approvalMetadata,
+							metadata: fullMetadata,
 						});
 						persistedCount++;
 					} catch (err) {

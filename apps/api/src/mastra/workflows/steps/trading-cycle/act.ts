@@ -16,6 +16,8 @@ import {
 	InstrumentType,
 	OptionLegSchema,
 	PositionIntent,
+	RiskDenomination,
+	RiskLevelsSchema,
 	SizeSchema,
 	SizeUnit,
 	StrategyFamily,
@@ -194,6 +196,7 @@ function toProtobufEnvironment(env: string): Environment {
  *
  * Now supports all size units including PCT_EQUITY and DOLLARS directly.
  * Also supports multi-leg options strategies with legs and netLimitPrice.
+ * Maps stopLoss/takeProfit to protobuf RiskLevels.
  */
 function toProtobufDecision(decision: Decision) {
 	// Convert percentage to a scaled integer (e.g., 5.5% -> 55)
@@ -212,6 +215,22 @@ function toProtobufDecision(decision: Decision) {
 		})
 	);
 
+	// Create risk levels from stopLoss and takeProfit
+	// For options strategies, use OPTION_PRICE denomination; for equities, use UNDERLYING_PRICE
+	const isOptionsStrategy = decision.strategyFamily.toUpperCase().includes("OPTION") ||
+		decision.strategyFamily.toUpperCase().includes("SPREAD") ||
+		decision.strategyFamily.toUpperCase().includes("CONDOR") ||
+		decision.strategyFamily.toUpperCase().includes("STRADDLE") ||
+		decision.strategyFamily.toUpperCase().includes("STRANGLE");
+
+	const riskLevels = create(RiskLevelsSchema, {
+		stopLossLevel: decision.stopLoss?.price ?? 0,
+		takeProfitLevel: decision.takeProfit?.price ?? 0,
+		denomination: isOptionsStrategy
+			? RiskDenomination.OPTION_PRICE
+			: RiskDenomination.UNDERLYING_PRICE,
+	});
+
 	return create(DecisionSchema, {
 		instrument: create(InstrumentSchema, {
 			instrumentId: decision.instrumentId,
@@ -223,6 +242,7 @@ function toProtobufDecision(decision: Decision) {
 			unit: toProtobufSizeUnit(decision.size.unit),
 			targetPositionQuantity: 0, // Calculated by execution engine
 		}),
+		riskLevels,
 		strategyFamily: toProtobufStrategyFamily(decision.strategyFamily),
 		rationale: decision.rationale?.summary ?? "",
 		confidence: 0.8, // Default confidence - not tracked in workflow

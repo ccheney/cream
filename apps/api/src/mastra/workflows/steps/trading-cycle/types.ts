@@ -211,6 +211,24 @@ export interface Research {
 // ============================================
 
 /**
+ * Stop loss configuration for a decision.
+ */
+export interface StopLoss {
+	/** Stop loss price level */
+	price: number;
+	/** Stop type: FIXED or TRAILING */
+	type: "FIXED" | "TRAILING";
+}
+
+/**
+ * Take profit configuration for a decision.
+ */
+export interface TakeProfit {
+	/** Take profit price level */
+	price: number;
+}
+
+/**
  * Option leg for multi-leg strategies (spreads, iron condors, etc.)
  */
 export interface OptionLeg {
@@ -228,6 +246,10 @@ export interface Decision {
 	action: "BUY" | "SELL" | "HOLD" | "CLOSE";
 	direction: "LONG" | "SHORT" | "FLAT";
 	size: { value: number; unit: string };
+	/** Stop loss level (required for actionable decisions) */
+	stopLoss?: StopLoss;
+	/** Take profit level (required for actionable decisions) */
+	takeProfit?: TakeProfit;
 	strategyFamily: string;
 	timeHorizon: string;
 	rationale: {
