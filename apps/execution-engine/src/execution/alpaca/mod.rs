@@ -1122,8 +1122,9 @@ impl AlpacaAdapter {
             });
         }
 
-        // Build query parameters
-        let symbols_param = symbols.join(",");
+        // Normalize symbols (remove whitespace from OCC option symbols)
+        let normalized: Vec<String> = symbols.iter().map(|s| normalize_symbol(s)).collect();
+        let symbols_param = normalized.join(",");
         let mut query = format!("/v2/stocks/bars?symbols={symbols_param}&timeframe={timeframe}");
 
         if let Some(s) = start {
@@ -1166,7 +1167,9 @@ impl AlpacaAdapter {
             });
         }
 
-        let symbols_param = symbols.join(",");
+        // Normalize symbols (remove whitespace from OCC option symbols)
+        let normalized: Vec<String> = symbols.iter().map(|s| normalize_symbol(s)).collect();
+        let symbols_param = normalized.join(",");
         let query = format!("/v2/stocks/quotes/latest?symbols={symbols_param}");
 
         tracing::debug!(
@@ -1201,6 +1204,17 @@ impl AlpacaAdapter {
 
         self.data_request(&query).await
     }
+}
+
+/// Normalize a symbol for Alpaca API calls.
+///
+/// OCC option symbols may contain spaces (e.g., `AAPL  260123C00255000`), but
+/// Alpaca's market data API requires compact symbols without spaces.
+///
+/// This function removes all whitespace from symbols, which is safe for both
+/// equities (no effect) and options (normalizes OCC format).
+fn normalize_symbol(symbol: &str) -> String {
+    symbol.chars().filter(|c| !c.is_whitespace()).collect()
 }
 
 /// Extract underlying symbol from OCC option symbol.
@@ -1347,5 +1361,28 @@ mod tests {
         let response = result.expect("should succeed");
         assert!(response.bars.is_empty());
         assert!(response.next_page_token.is_none());
+    }
+
+    #[test]
+    fn test_normalize_symbol() {
+        // Equity symbols should pass through unchanged
+        assert_eq!(normalize_symbol("AAPL"), "AAPL");
+        assert_eq!(normalize_symbol("SPY"), "SPY");
+
+        // OCC option symbols with spaces should have whitespace removed
+        assert_eq!(
+            normalize_symbol("AAPL  260123C00255000"),
+            "AAPL260123C00255000"
+        );
+        assert_eq!(
+            normalize_symbol("GOOGL 260123C00330000"),
+            "GOOGL260123C00330000"
+        );
+
+        // Already compact OCC symbols should pass through unchanged
+        assert_eq!(
+            normalize_symbol("AAPL260123C00255000"),
+            "AAPL260123C00255000"
+        );
     }
 }
