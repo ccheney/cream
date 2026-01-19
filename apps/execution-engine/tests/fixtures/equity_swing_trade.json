@@ -1,0 +1,40 @@
+{
+  "plan_id": "plan-2026-01-19-14-00-001",
+  "cycle_id": "cycle-2026-01-19-14-00",
+  "timestamp": "2026-01-19T14:00:00Z",
+  "decisions": [
+    {
+      "decision_id": "cycle-2026-01-19-14-00-aapl",
+      "instrument_id": "AAPL",
+      "action": "BUY",
+      "direction": "LONG",
+      "size": {
+        "quantity": "5000",
+        "unit": "DOLLARS"
+      },
+      "stop_loss_level": "228.50",
+      "take_profit_level": "253.50",
+      "limit_price": "238.50",
+      "strategy_family": "EQUITY_LONG",
+      "time_horizon": "SWING",
+      "thesis_state": "WATCHING",
+      "bullish_factors": [
+        "Strong Q4 earnings beat: EPS $2.40 vs $2.15 expected",
+        "Services revenue grew 18% YoY",
+        "RSI(14) at 42 suggesting oversold bounce potential",
+        "Support held at $232 with increasing volume"
+      ],
+      "bearish_factors": [
+        "iPhone revenue declined 2% in Greater China",
+        "Broader tech sector weakness amid rate concerns"
+      ],
+      "rationale": "AAPL showing relative strength post-earnings with services momentum offsetting hardware concerns. Technical setup favorable for swing entry with defined risk at $225 support.",
+      "confidence": "0.72",
+      "legs": [],
+      "net_limit_price": null
+    }
+  ],
+  "risk_manager_approved": true,
+  "critic_approved": true,
+  "plan_rationale": "Single instrument entry: AAPL swing trade capitalizing on post-earnings momentum. Position sized at 5% of portfolio with 5.7% stop loss for 1.2R risk."
+}

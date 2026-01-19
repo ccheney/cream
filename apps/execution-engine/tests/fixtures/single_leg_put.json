@@ -1,0 +1,36 @@
+{
+  "plan_id": "plan-2026-01-19-14-00-010",
+  "cycle_id": "cycle-2026-01-19-14-00",
+  "timestamp": "2026-01-19T14:00:00Z",
+  "decisions": [
+    {
+      "decision_id": "cycle-2026-01-19-14-00-spy-put",
+      "instrument_id": "SPY260220P00560000",
+      "action": "BUY",
+      "direction": "LONG",
+      "size": {
+        "quantity": "2",
+        "unit": "CONTRACTS"
+      },
+      "stop_loss_level": "0",
+      "take_profit_level": "0",
+      "limit_price": "4.25",
+      "strategy_family": "OPTION_LONG",
+      "time_horizon": "INTRADAY",
+      "thesis_state": "WATCHING",
+      "bullish_factors": [],
+      "bearish_factors": [
+        "FOMC announcement at 2pm - elevated event risk",
+        "VIX term structure inverting - near-term fear",
+        "SPY struggling at resistance near $575"
+      ],
+      "rationale": "Buying SPY Feb 20 2026 $560 puts as portfolio hedge ahead of FOMC. Protective position to offset long equity exposure. Max loss is premium ($850 for 2 contracts).",
+      "confidence": "0.60",
+      "legs": [],
+      "net_limit_price": null
+    }
+  ],
+  "risk_manager_approved": true,
+  "critic_approved": true,
+  "plan_rationale": "Portfolio hedge: SPY puts to protect against downside risk during FOMC. Not a directional bet - insurance against adverse move. Position sized as ~1% of portfolio."
+}

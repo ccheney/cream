@@ -1,0 +1,93 @@
+{
+  "plan_id": "plan-2026-01-19-14-00-004",
+  "cycle_id": "cycle-2026-01-19-14-00",
+  "timestamp": "2026-01-19T14:00:00Z",
+  "decisions": [
+    {
+      "decision_id": "cycle-2026-01-19-14-00-msft-add",
+      "instrument_id": "MSFT",
+      "action": "BUY",
+      "direction": "LONG",
+      "size": {
+        "quantity": "30",
+        "unit": "PCT_EQUITY"
+      },
+      "stop_loss_level": "405.00",
+      "take_profit_level": "465.00",
+      "limit_price": "428.75",
+      "strategy_family": "EQUITY_LONG",
+      "time_horizon": "POSITION",
+      "thesis_state": "ADDING",
+      "bullish_factors": [
+        "Azure revenue growth accelerating to 32% YoY",
+        "Copilot enterprise adoption exceeding expectations",
+        "Breaking out of 3-month consolidation pattern"
+      ],
+      "bearish_factors": [
+        "Gaming segment revenue flat"
+      ],
+      "rationale": "Adding to existing MSFT position on cloud strength. Position trade with 5.5% stop and 8.5% target.",
+      "confidence": "0.78",
+      "legs": [],
+      "net_limit_price": null
+    },
+    {
+      "decision_id": "cycle-2026-01-19-14-00-googl-trim",
+      "instrument_id": "GOOGL",
+      "action": "SELL",
+      "direction": "LONG",
+      "size": {
+        "quantity": "15",
+        "unit": "PCT_EQUITY"
+      },
+      "stop_loss_level": "0",
+      "take_profit_level": "0",
+      "limit_price": "178.50",
+      "strategy_family": "EQUITY_LONG",
+      "time_horizon": "POSITION",
+      "thesis_state": "MANAGING",
+      "bullish_factors": [
+        "Search revenue still growing 12% YoY"
+      ],
+      "bearish_factors": [
+        "AI Overviews cannibalization concerns",
+        "DOJ antitrust remedies pending",
+        "Cloud growth decelerated to 28% from 35%"
+      ],
+      "rationale": "Trimming GOOGL position by 50% to reduce exposure ahead of DOJ ruling. Reallocating to MSFT cloud play.",
+      "confidence": "0.70",
+      "legs": [],
+      "net_limit_price": null
+    },
+    {
+      "decision_id": "cycle-2026-01-19-14-00-amzn-hold",
+      "instrument_id": "AMZN",
+      "action": "HOLD",
+      "direction": "LONG",
+      "size": {
+        "quantity": "0",
+        "unit": "SHARES"
+      },
+      "stop_loss_level": "195.00",
+      "take_profit_level": "240.00",
+      "limit_price": null,
+      "strategy_family": "EQUITY_LONG",
+      "time_horizon": "POSITION",
+      "thesis_state": "MANAGING",
+      "bullish_factors": [
+        "AWS margins expanding",
+        "Advertising revenue growing 25%"
+      ],
+      "bearish_factors": [
+        "Retail margins compressed by wage increases"
+      ],
+      "rationale": "Maintaining AMZN position - thesis intact, no action needed this cycle.",
+      "confidence": "0.75",
+      "legs": [],
+      "net_limit_price": null
+    }
+  ],
+  "risk_manager_approved": true,
+  "critic_approved": true,
+  "plan_rationale": "Portfolio rebalancing: Rotating from GOOGL (regulatory risk) to MSFT (cloud momentum). Net exposure unchanged. AMZN held with existing stops."
+}

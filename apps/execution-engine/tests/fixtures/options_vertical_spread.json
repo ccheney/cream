@@ -1,0 +1,51 @@
+{
+  "plan_id": "plan-2026-01-19-14-00-002",
+  "cycle_id": "cycle-2026-01-19-14-00",
+  "timestamp": "2026-01-19T14:00:00Z",
+  "decisions": [
+    {
+      "decision_id": "cycle-2026-01-19-14-00-spy-spread",
+      "instrument_id": "SPY260221C00580000",
+      "action": "BUY",
+      "direction": "LONG",
+      "size": {
+        "quantity": "5",
+        "unit": "CONTRACTS"
+      },
+      "stop_loss_level": "565.00",
+      "take_profit_level": "595.00",
+      "limit_price": null,
+      "strategy_family": "VERTICAL_SPREAD",
+      "time_horizon": "SWING",
+      "thesis_state": "WATCHING",
+      "bullish_factors": [
+        "SPY above 20-day and 50-day moving averages",
+        "IV Rank at 22nd percentile - cheap options",
+        "Prediction markets showing 68% probability of soft landing",
+        "Breadth improving: 72% of S&P above 50-day MA"
+      ],
+      "bearish_factors": [
+        "FOMC meeting in 2 weeks - potential volatility",
+        "VIX term structure in contango but flattening"
+      ],
+      "rationale": "SPY bull call spread 580/590 for Feb 21 expiry. Defined risk bullish exposure with favorable IV environment. Max loss $750, max gain $250 per contract.",
+      "confidence": "0.65",
+      "legs": [
+        {
+          "symbol": "SPY260221C00580000",
+          "ratio_qty": 1,
+          "position_intent": "buy_to_open"
+        },
+        {
+          "symbol": "SPY260221C00590000",
+          "ratio_qty": -1,
+          "position_intent": "sell_to_open"
+        }
+      ],
+      "net_limit_price": "1.50"
+    }
+  ],
+  "risk_manager_approved": true,
+  "critic_approved": true,
+  "plan_rationale": "Options spread entry: SPY bull call spread with defined max loss of $750. IV environment favorable for debit spreads. Position sized for 0.75% portfolio risk."
+}

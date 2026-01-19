@@ -1,0 +1,39 @@
+{
+  "plan_id": "plan-2026-01-19-14-00-006",
+  "cycle_id": "cycle-2026-01-19-14-00",
+  "timestamp": "2026-01-19T14:00:00Z",
+  "decisions": [
+    {
+      "decision_id": "cycle-2026-01-19-14-00-tsla-rejected",
+      "instrument_id": "TSLA",
+      "action": "BUY",
+      "direction": "LONG",
+      "size": {
+        "quantity": "25000",
+        "unit": "DOLLARS"
+      },
+      "stop_loss_level": "380.00",
+      "take_profit_level": "480.00",
+      "limit_price": "420.00",
+      "strategy_family": "EQUITY_LONG",
+      "time_horizon": "SWING",
+      "thesis_state": "WATCHING",
+      "bullish_factors": [
+        "FSD v13 release driving sentiment",
+        "Cybertruck production ramp"
+      ],
+      "bearish_factors": [
+        "EV competition intensifying",
+        "Margin compression in auto segment",
+        "High beta in risk-off environment"
+      ],
+      "rationale": "TSLA showing momentum but position size would exceed single-name concentration limit.",
+      "confidence": "0.55",
+      "legs": [],
+      "net_limit_price": null
+    }
+  ],
+  "risk_manager_approved": false,
+  "critic_approved": true,
+  "plan_rationale": "REJECTED by Risk Manager: Position size of $25,000 (25% of equity) exceeds maximum single-instrument allocation of 15%. Confidence level of 55% also below threshold for concentrated positions."
+}

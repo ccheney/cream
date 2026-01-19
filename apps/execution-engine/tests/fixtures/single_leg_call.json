@@ -1,0 +1,40 @@
+{
+  "plan_id": "plan-2026-01-19-14-00-009",
+  "cycle_id": "cycle-2026-01-19-14-00",
+  "timestamp": "2026-01-19T14:00:00Z",
+  "decisions": [
+    {
+      "decision_id": "cycle-2026-01-19-14-00-aapl-call",
+      "instrument_id": "AAPL260321C00250000",
+      "action": "BUY",
+      "direction": "LONG",
+      "size": {
+        "quantity": "3",
+        "unit": "CONTRACTS"
+      },
+      "stop_loss_level": "235.00",
+      "take_profit_level": "270.00",
+      "limit_price": "8.50",
+      "strategy_family": "OPTION_LONG",
+      "time_horizon": "SWING",
+      "thesis_state": "WATCHING",
+      "bullish_factors": [
+        "AAPL breaking out of 3-month consolidation",
+        "Services revenue momentum accelerating",
+        "IV Rank at 18th percentile - cheap options",
+        "March expiry gives 60 DTE for thesis to play out"
+      ],
+      "bearish_factors": [
+        "Broader market uncertainty ahead of FOMC",
+        "China revenue concerns persist"
+      ],
+      "rationale": "Buying AAPL Mar 21 2026 $250 calls. Stock at $242, OTM call gives leveraged upside exposure. Max loss is premium paid ($2,550 for 3 contracts). Target exit if AAPL reaches $270 or IV spikes.",
+      "confidence": "0.70",
+      "legs": [],
+      "net_limit_price": null
+    }
+  ],
+  "risk_manager_approved": true,
+  "critic_approved": true,
+  "plan_rationale": "Single-leg call purchase: AAPL bullish thesis with defined risk via options. Low IV environment makes calls attractive. Position sized for max loss of ~2.5% of portfolio."
+}

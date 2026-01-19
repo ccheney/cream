@@ -1,0 +1,36 @@
+{
+  "plan_id": "plan-2026-01-19-14-00-003",
+  "cycle_id": "cycle-2026-01-19-14-00",
+  "timestamp": "2026-01-19T14:00:00Z",
+  "decisions": [
+    {
+      "decision_id": "cycle-2026-01-19-14-00-nvda-close",
+      "instrument_id": "NVDA",
+      "action": "CLOSE",
+      "direction": "FLAT",
+      "size": {
+        "quantity": "50",
+        "unit": "SHARES"
+      },
+      "stop_loss_level": "0",
+      "take_profit_level": "0",
+      "limit_price": "875.00",
+      "strategy_family": "EQUITY_LONG",
+      "time_horizon": "INTRADAY",
+      "thesis_state": "EXITING",
+      "bullish_factors": [],
+      "bearish_factors": [
+        "Take profit target reached at $875",
+        "RSI(14) at 78 - overbought territory",
+        "Unusual put volume detected at $850 strike"
+      ],
+      "rationale": "Closing NVDA long position opened this morning at $845. Target reached with 3.5% gain. Position was opened today - this close would count as a day trade.",
+      "confidence": "0.85",
+      "legs": [],
+      "net_limit_price": null
+    }
+  ],
+  "risk_manager_approved": true,
+  "critic_approved": true,
+  "plan_rationale": "PDT-AWARE: This is a same-day close that will count as 1 day trade. Current day trade count: 2 of 3 allowed. Proceeding as profit target was hit."
+}

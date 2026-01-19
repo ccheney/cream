@@ -319,6 +319,12 @@ app.openapi(triggerCycleRoute, async (c) => {
 							memoryReferences: string[];
 						};
 						thesisState: string;
+						legs?: Array<{
+							symbol: string;
+							ratioQty: number;
+							positionIntent: "BUY_TO_OPEN" | "BUY_TO_CLOSE" | "SELL_TO_OPEN" | "SELL_TO_CLOSE";
+						}>;
+						netLimitPrice?: number;
 					}>;
 					portfolioNotes: string;
 				};

@@ -1,0 +1,52 @@
+{
+  "plan_id": "plan-2026-01-19-11-00-012",
+  "cycle_id": "cycle-2026-01-19-11-00",
+  "timestamp": "2026-01-19T11:00:00Z",
+  "decisions": [
+    {
+      "decision_id": "cycle-2026-01-19-11-00-qqq-butterfly",
+      "instrument_id": "QQQ",
+      "action": "BUY",
+      "direction": "LONG",
+      "size": {
+        "quantity": "10",
+        "unit": "CONTRACTS"
+      },
+      "stop_loss_level": "0",
+      "take_profit_level": "0",
+      "limit_price": null,
+      "strategy_family": "VERTICAL_SPREAD",
+      "time_horizon": "SWING",
+      "thesis_state": "WATCHING",
+      "bullish_factors": [
+        "QQQ consolidating near $490 level for past week",
+        "NVDA earnings in 10 days - expect pinning action until then",
+        "Low realized vol vs implied - butterfly theta decay favorable"
+      ],
+      "bearish_factors": [],
+      "rationale": "Long call butterfly centered at $490 anticipating QQQ pins near current level into Feb expiration. Max profit $10 per spread (width) - $2.15 debit = $7.85 x 10 = $7,850 if QQQ closes at exactly $490. Max loss limited to $2.15 debit x 10 = $2,150. Breakevens at $482.15 and $497.85. Risk/reward ~3.6:1.",
+      "confidence": "0.55",
+      "legs": [
+        {
+          "symbol": "QQQ260228C00480000",
+          "ratio_qty": 10,
+          "position_intent": "buy_to_open"
+        },
+        {
+          "symbol": "QQQ260228C00490000",
+          "ratio_qty": -20,
+          "position_intent": "sell_to_open"
+        },
+        {
+          "symbol": "QQQ260228C00500000",
+          "ratio_qty": 10,
+          "position_intent": "buy_to_open"
+        }
+      ],
+      "net_limit_price": "2.15"
+    }
+  ],
+  "risk_manager_approved": true,
+  "critic_approved": true,
+  "plan_rationale": "Butterfly spread for pinning thesis: QQQ has been range-bound $485-$495 for 8 sessions. Expecting continued consolidation ahead of major tech earnings. Low-cost, defined-risk strategy to profit from time decay and lack of movement. Position sized at ~2% portfolio risk."
+}
