@@ -5,7 +5,8 @@
  */
 import { and, count, desc, eq, sql } from "drizzle-orm";
 import { type Database, getDb } from "../db";
-import { positions } from "../schema/core-trading";
+import { decisions, positions } from "../schema/core-trading";
+import { thesisState } from "../schema/thesis";
 import { RepositoryError } from "./base";
 
 // ============================================
@@ -56,6 +57,30 @@ export interface PositionFilters {
 	status?: PositionStatus;
 	environment?: string;
 	thesisId?: string;
+}
+
+export interface PositionWithMetadata extends Position {
+	strategy: {
+		strategyFamily: string | null;
+		timeHorizon: string | null;
+		confidenceScore: number | null;
+		riskScore: number | null;
+		rationale: string | null;
+		bullishFactors: string[];
+		bearishFactors: string[];
+	} | null;
+	riskParams: {
+		stopPrice: number | null;
+		targetPrice: number | null;
+		entryPrice: number | null;
+	} | null;
+	thesis: {
+		thesisId: string | null;
+		state: string | null;
+		entryThesis: string | null;
+		invalidationConditions: string | null;
+		conviction: number | null;
+	} | null;
 }
 
 // ============================================
@@ -200,6 +225,123 @@ export class PositionsRepository {
 			.orderBy(desc(positions.openedAt));
 
 		return rows.map(mapPositionRow);
+	}
+
+	async findOpenWithMetadata(environment: string): Promise<PositionWithMetadata[]> {
+		const rows = await this.db
+			.select({
+				// Position fields
+				id: positions.id,
+				symbol: positions.symbol,
+				side: positions.side,
+				qty: positions.qty,
+				avgEntry: positions.avgEntry,
+				currentPrice: positions.currentPrice,
+				unrealizedPnl: positions.unrealizedPnl,
+				unrealizedPnlPct: positions.unrealizedPnlPct,
+				realizedPnl: positions.realizedPnl,
+				marketValue: positions.marketValue,
+				costBasis: positions.costBasis,
+				thesisId: positions.thesisId,
+				decisionId: positions.decisionId,
+				status: positions.status,
+				metadata: positions.metadata,
+				environment: positions.environment,
+				openedAt: positions.openedAt,
+				closedAt: positions.closedAt,
+				updatedAt: positions.updatedAt,
+				// Decision fields for strategy
+				strategyFamily: decisions.strategyFamily,
+				timeHorizon: decisions.timeHorizon,
+				confidenceScore: decisions.confidenceScore,
+				riskScore: decisions.riskScore,
+				rationale: decisions.rationale,
+				bullishFactors: decisions.bullishFactors,
+				bearishFactors: decisions.bearishFactors,
+				stopPrice: decisions.stopPrice,
+				targetPrice: decisions.targetPrice,
+				entryPrice: decisions.entryPrice,
+				// Thesis fields
+				thesisState: thesisState.state,
+				thesisEntryThesis: thesisState.entryThesis,
+				thesisInvalidationConditions: thesisState.invalidationConditions,
+				thesisConviction: thesisState.conviction,
+			})
+			.from(positions)
+			.leftJoin(decisions, eq(positions.decisionId, decisions.id))
+			.leftJoin(thesisState, eq(positions.thesisId, thesisState.thesisId))
+			.where(
+				and(
+					eq(positions.environment, environment as "PAPER" | "LIVE"),
+					eq(positions.status, "open")
+				)
+			)
+			.orderBy(desc(positions.openedAt));
+
+		return rows.map((row) => {
+			const basePosition = mapPositionRow({
+				id: row.id,
+				symbol: row.symbol,
+				side: row.side,
+				qty: row.qty,
+				avgEntry: row.avgEntry,
+				currentPrice: row.currentPrice,
+				unrealizedPnl: row.unrealizedPnl,
+				unrealizedPnlPct: row.unrealizedPnlPct,
+				realizedPnl: row.realizedPnl,
+				marketValue: row.marketValue,
+				costBasis: row.costBasis,
+				thesisId: row.thesisId,
+				decisionId: row.decisionId,
+				status: row.status,
+				metadata: row.metadata,
+				environment: row.environment,
+				openedAt: row.openedAt,
+				closedAt: row.closedAt,
+				updatedAt: row.updatedAt,
+			});
+
+			const hasDecisionData =
+				row.strategyFamily !== null ||
+				row.timeHorizon !== null ||
+				row.confidenceScore !== null;
+
+			const hasThesisData =
+				row.thesisState !== null ||
+				row.thesisEntryThesis !== null ||
+				row.thesisConviction !== null;
+
+			return {
+				...basePosition,
+				strategy: hasDecisionData
+					? {
+							strategyFamily: row.strategyFamily,
+							timeHorizon: row.timeHorizon,
+							confidenceScore: row.confidenceScore ? Number(row.confidenceScore) : null,
+							riskScore: row.riskScore ? Number(row.riskScore) : null,
+							rationale: row.rationale,
+							bullishFactors: (row.bullishFactors as string[]) ?? [],
+							bearishFactors: (row.bearishFactors as string[]) ?? [],
+						}
+					: null,
+				riskParams: hasDecisionData
+					? {
+							stopPrice: row.stopPrice ? Number(row.stopPrice) : null,
+							targetPrice: row.targetPrice ? Number(row.targetPrice) : null,
+							entryPrice: row.entryPrice ? Number(row.entryPrice) : null,
+						}
+					: null,
+				thesis: hasThesisData
+					? {
+							thesisId: row.thesisId,
+							state: row.thesisState,
+							entryThesis: row.thesisEntryThesis,
+							invalidationConditions: row.thesisInvalidationConditions,
+							conviction: row.thesisConviction ? Number(row.thesisConviction) : null,
+						}
+					: null,
+			};
+		});
 	}
 
 	async findBySymbol(symbol: string, environment: string): Promise<Position | null> {

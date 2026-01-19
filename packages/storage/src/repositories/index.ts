@@ -264,6 +264,7 @@ export {
 	type PositionSide,
 	type PositionStatus,
 	PositionsRepository,
+	type PositionWithMetadata,
 } from "./positions.js";
 // Prediction markets (migration 006)
 export {
