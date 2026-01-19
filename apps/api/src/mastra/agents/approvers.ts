@@ -23,6 +23,7 @@ import type {
 	DecisionPlan,
 	OnStreamChunk,
 	RiskManagerOutput,
+	ToolResultEntry,
 } from "./types.js";
 
 // Re-export for convenience
@@ -171,16 +172,18 @@ RISK VALIDATION GUIDANCE:
 
 /**
  * Run Critic agent to check logical consistency.
- * Validates that plan claims are supported by indicator signals.
+ * Validates that plan claims are supported by indicator signals and tool results.
  */
 export async function runCritic(
 	plan: DecisionPlan,
 	analystOutputs: AnalystOutputs,
 	debateOutputs: DebateOutputs,
 	agentConfigs?: Partial<Record<AgentType, AgentConfigEntry>>,
-	indicators?: Record<string, IndicatorSnapshot>
+	indicators?: Record<string, IndicatorSnapshot>,
+	toolResults?: ToolResultEntry[]
 ): Promise<CriticOutput> {
 	const indicatorSummary = buildIndicatorSummary(indicators);
+	const toolResultsSummary = buildToolResultsSummary(toolResults);
 
 	const prompt = `${buildDatetimeContext()}Validate the logical consistency of this trading plan:
 
@@ -194,13 +197,14 @@ Fundamentals: ${JSON.stringify(analystOutputs.fundamentals, null, 2)}
 Debate Outputs:
 Bullish: ${JSON.stringify(debateOutputs.bullish, null, 2)}
 Bearish: ${JSON.stringify(debateOutputs.bearish, null, 2)}
-${indicatorSummary ? `\n${indicatorSummary}` : ""}
+${indicatorSummary ? `\n${indicatorSummary}` : ""}${toolResultsSummary}
 CONSISTENCY VALIDATION GUIDANCE:
 - Verify bullish claims align with technical signals (RSI, MACD, trend)
 - Check if bearish concerns are reflected in options sentiment (P/C ratio, IV)
 - Ensure position direction matches the weight of evidence from indicators
 - Flag contradictions between plan rationale and quantitative signals
-- Verify that size/conviction aligns with signal strength and agreement`;
+- Verify that size/conviction aligns with signal strength and agreement
+- Citations (academic papers, external data) must trace back to tool results above`;
 
 	const settings = getAgentRuntimeSettings("critic", agentConfigs);
 	const options = buildGenerateOptions(settings, { schema: CriticOutputSchema });
@@ -220,14 +224,15 @@ export async function runApprovalParallel(
 	portfolioState?: Record<string, unknown>,
 	constraints?: Record<string, unknown>,
 	agentConfigs?: Partial<Record<AgentType, AgentConfigEntry>>,
-	indicators?: Record<string, IndicatorSnapshot>
+	indicators?: Record<string, IndicatorSnapshot>,
+	toolResults?: ToolResultEntry[]
 ): Promise<{
 	riskManager: RiskManagerOutput;
 	critic: CriticOutput;
 }> {
 	const [riskManager, critic] = await Promise.all([
 		runRiskManager(plan, portfolioState, constraints, agentConfigs, indicators),
-		runCritic(plan, analystOutputs, debateOutputs, agentConfigs, indicators),
+		runCritic(plan, analystOutputs, debateOutputs, agentConfigs, indicators, toolResults),
 	]);
 
 	return { riskManager, critic };
@@ -247,7 +252,8 @@ export async function runRiskManagerStreaming(
 	constraints?: Record<string, unknown>,
 	agentConfigs?: Partial<Record<AgentType, AgentConfigEntry>>,
 	indicators?: Record<string, IndicatorSnapshot>,
-	abortSignal?: AbortSignal
+	abortSignal?: AbortSignal,
+	toolResults?: ToolResultEntry[]
 ): Promise<RiskManagerOutput> {
 	const riskIndicatorsSummary = buildRiskIndicatorsSummary(indicators);
 
@@ -297,7 +303,9 @@ RISK VALIDATION GUIDANCE:
 	}
 
 	try {
-		const forwardChunk = createStreamChunkForwarder("risk_manager", onChunk);
+		const forwardChunk = createStreamChunkForwarder("risk_manager", onChunk, {
+			toolResultsAccumulator: toolResults,
+		});
 		for await (const chunk of stream.fullStream) {
 			// Check if aborted during streaming
 			if (abortSignal?.aborted) {
@@ -330,8 +338,37 @@ RISK VALIDATION GUIDANCE:
 }
 
 /**
+ * Build a summary of tool results for audit validation.
+ * Groups by agent and tool name for clarity.
+ */
+function buildToolResultsSummary(toolResults?: ToolResultEntry[]): string {
+	if (!toolResults || toolResults.length === 0) {
+		return "";
+	}
+
+	const lines: string[] = ["\nTool Results from Agents (for citation validation):"];
+
+	// Group by agent
+	const byAgent = new Map<string, ToolResultEntry[]>();
+	for (const entry of toolResults) {
+		const existing = byAgent.get(entry.agentType) ?? [];
+		existing.push(entry);
+		byAgent.set(entry.agentType, existing);
+	}
+
+	for (const [agentType, entries] of byAgent) {
+		lines.push(`\n## ${agentType}:`);
+		for (const entry of entries) {
+			lines.push(`- ${entry.toolName}: ${JSON.stringify(entry.result)}`);
+		}
+	}
+
+	return lines.join("\n");
+}
+
+/**
  * Run Critic agent with streaming.
- * Validates that plan claims are supported by indicator signals.
+ * Validates that plan claims are supported by indicator signals and tool results.
  */
 export async function runCriticStreaming(
 	plan: DecisionPlan,
@@ -340,9 +377,11 @@ export async function runCriticStreaming(
 	onChunk: OnStreamChunk,
 	agentConfigs?: Partial<Record<AgentType, AgentConfigEntry>>,
 	indicators?: Record<string, IndicatorSnapshot>,
-	abortSignal?: AbortSignal
+	abortSignal?: AbortSignal,
+	toolResults?: ToolResultEntry[]
 ): Promise<CriticOutput> {
 	const indicatorSummary = buildIndicatorSummary(indicators);
+	const toolResultsSummary = buildToolResultsSummary(toolResults);
 
 	const prompt = `${buildDatetimeContext()}Validate the logical consistency of this trading plan:
 
@@ -356,13 +395,14 @@ Fundamentals: ${JSON.stringify(analystOutputs.fundamentals, null, 2)}
 Debate Outputs:
 Bullish: ${JSON.stringify(debateOutputs.bullish, null, 2)}
 Bearish: ${JSON.stringify(debateOutputs.bearish, null, 2)}
-${indicatorSummary ? `\n${indicatorSummary}` : ""}
+${indicatorSummary ? `\n${indicatorSummary}` : ""}${toolResultsSummary}
 CONSISTENCY VALIDATION GUIDANCE:
 - Verify bullish claims align with technical signals (RSI, MACD, trend)
 - Check if bearish concerns are reflected in options sentiment (P/C ratio, IV)
 - Ensure position direction matches the weight of evidence from indicators
 - Flag contradictions between plan rationale and quantitative signals
-- Verify that size/conviction aligns with signal strength and agreement`;
+- Verify that size/conviction aligns with signal strength and agreement
+- Citations (academic papers, external data) must trace back to tool results above`;
 
 	const settings = getAgentRuntimeSettings("critic", agentConfigs);
 	const options = buildGenerateOptions(settings, { schema: CriticOutputSchema });
@@ -381,7 +421,9 @@ CONSISTENCY VALIDATION GUIDANCE:
 	}
 
 	try {
-		const forwardChunk = createStreamChunkForwarder("critic", onChunk);
+		const forwardChunk = createStreamChunkForwarder("critic", onChunk, {
+			toolResultsAccumulator: toolResults,
+		});
 		for await (const chunk of stream.fullStream) {
 			// Check if aborted during streaming
 			if (abortSignal?.aborted) {
@@ -425,7 +467,8 @@ export async function runApprovalParallelStreaming(
 	constraints?: Record<string, unknown>,
 	agentConfigs?: Partial<Record<AgentType, AgentConfigEntry>>,
 	indicators?: Record<string, IndicatorSnapshot>,
-	abortSignal?: AbortSignal
+	abortSignal?: AbortSignal,
+	toolResults?: ToolResultEntry[]
 ): Promise<{
 	riskManager: RiskManagerOutput;
 	critic: CriticOutput;
@@ -438,7 +481,8 @@ export async function runApprovalParallelStreaming(
 			constraints,
 			agentConfigs,
 			indicators,
-			abortSignal
+			abortSignal,
+			toolResults
 		),
 		runCriticStreaming(
 			plan,
@@ -447,7 +491,8 @@ export async function runApprovalParallelStreaming(
 			onChunk,
 			agentConfigs,
 			indicators,
-			abortSignal
+			abortSignal,
+			toolResults
 		),
 	]);
 

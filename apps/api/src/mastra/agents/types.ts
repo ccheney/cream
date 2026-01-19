@@ -88,8 +88,11 @@ export interface AgentContext {
 			url: string;
 			title: string;
 			relevance: string;
+			sourceType?: "url" | "x" | "news";
 		}>;
 	};
+	/** Accumulated tool results from all agents for audit trail */
+	toolResults?: ToolResultEntry[];
 }
 
 /**
@@ -100,6 +103,27 @@ export interface AgentContext {
 export interface AgentRuntimeSettings {
 	model?: string;
 	systemPromptOverride?: string | null;
+}
+
+/**
+ * Accumulated tool result for audit trail.
+ * Captures tool invocations and results from agent execution.
+ */
+export interface ToolResultEntry {
+	/** Agent that invoked the tool */
+	agentType: AgentType;
+	/** Tool call ID for correlation */
+	toolCallId: string;
+	/** Name of the tool invoked */
+	toolName: string;
+	/** Arguments passed to the tool */
+	toolArgs: Record<string, unknown>;
+	/** Result returned by the tool */
+	result: unknown;
+	/** Whether the tool execution succeeded */
+	success: boolean;
+	/** Timestamp of the tool result */
+	timestamp: string;
 }
 
 /**

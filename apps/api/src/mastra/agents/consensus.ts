@@ -123,7 +123,9 @@ export async function runConsensusLoop(
 			debateOutputs,
 			portfolioState,
 			constraints,
-			context.agentConfigs
+			context.agentConfigs,
+			context.indicators,
+			context.toolResults
 		);
 
 		riskManager = approval.riskManager;
@@ -209,7 +211,10 @@ export async function runConsensusLoopStreaming(
 			onChunk,
 			portfolioState,
 			constraints,
-			context.agentConfigs
+			context.agentConfigs,
+			context.indicators,
+			undefined, // abortSignal
+			context.toolResults
 		);
 
 		riskManager = approval.riskManager;

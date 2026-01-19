@@ -1,16 +1,6 @@
 /**
  * Agent Unit Tests
  *
- * Tests for all 8 agents in the trading network:
- * - Grounding Agent (web search for real-time context)
- * - News & Sentiment Analyst
- * - Fundamentals & Macro Analyst
- * - Bullish Researcher
- * - Bearish Researcher
- * - Trader
- * - Risk Manager
- * - Critic
- *
  * Tests cover:
  * - Agent configuration and factory
  * - Output schema validation
@@ -40,7 +30,6 @@ import {
 	bullishResearcherAgent,
 	criticAgent,
 	fundamentalsAnalystAgent,
-	groundingAgent,
 	mastraAgents,
 	newsAnalystAgent,
 	riskManagerAgent,
@@ -424,11 +413,6 @@ describe("Agent Configuration", () => {
 // ============================================
 
 describe("Mastra Agent Instances", () => {
-	it("should create grounding agent", () => {
-		expect(groundingAgent).toBeDefined();
-		expect(groundingAgent.id).toBe("grounding_agent");
-	});
-
 	it("should create news analyst agent", () => {
 		expect(newsAnalystAgent).toBeDefined();
 		expect(newsAnalystAgent.id).toBe("news_analyst");
@@ -465,13 +449,12 @@ describe("Mastra Agent Instances", () => {
 	});
 
 	describe("Agent Registry", () => {
-		it("should have all 8 agents in registry", () => {
-			expect(Object.keys(mastraAgents)).toHaveLength(8);
+		it("should have all Mastra agents in registry", () => {
+			expect(Object.keys(mastraAgents)).toHaveLength(7);
 		});
 
 		it("should have correct agent ids in registry", () => {
 			const expectedIds: AgentType[] = [
-				"grounding_agent",
 				"news_analyst",
 				"fundamentals_analyst",
 				"bullish_researcher",
@@ -1020,6 +1003,9 @@ describe("Agent Tool Wiring", () => {
 	describe("Tool Configuration", () => {
 		it("should have all agents with at least one tool configured", () => {
 			for (const agentType of AGENT_TYPES) {
+				if (agentType === "grounding_agent") {
+					continue;
+				}
 				const config = AGENT_CONFIGS[agentType];
 				expect(config.tools.length).toBeGreaterThan(0);
 			}

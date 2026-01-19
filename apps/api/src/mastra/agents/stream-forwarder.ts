@@ -18,7 +18,7 @@
 import type { AgentType } from "@cream/agents";
 import { createNodeLogger } from "@cream/logger";
 
-import type { AgentStreamChunk, OnStreamChunk } from "./types.js";
+import type { AgentStreamChunk, OnStreamChunk, ToolResultEntry } from "./types.js";
 
 const log = createNodeLogger({ service: "stream-forwarder", level: "debug" });
 
@@ -42,8 +42,21 @@ function safeParseJsonObject(text: string): Record<string, unknown> | undefined 
 	return undefined;
 }
 
-export function createStreamChunkForwarder(agentType: AgentType, onChunk: OnStreamChunk) {
+/**
+ * Options for stream chunk forwarder.
+ */
+export interface StreamForwarderOptions {
+	/** Optional array to accumulate tool results for audit trail */
+	toolResultsAccumulator?: ToolResultEntry[];
+}
+
+export function createStreamChunkForwarder(
+	agentType: AgentType,
+	onChunk: OnStreamChunk,
+	options?: StreamForwarderOptions
+) {
 	const toolArgsById: ToolCallArgsAccumulator = new Map();
+	const toolResultsAccumulator = options?.toolResultsAccumulator;
 
 	return async (chunk: MastraStreamChunk): Promise<void> => {
 		const timestamp = new Date().toISOString();
@@ -89,6 +102,11 @@ export function createStreamChunkForwarder(agentType: AgentType, onChunk: OnStre
 						? (payload.args as Record<string, unknown>)
 						: {};
 
+				// Store args for later retrieval in tool-result (for non-streaming tool calls)
+				if (toolCallId && Object.keys(toolArgs).length > 0) {
+					toolArgsById.set(toolCallId, { toolName, argsText: JSON.stringify(toolArgs) });
+				}
+
 				await onChunk({
 					...streamChunkBase,
 					type: "tool-call",
@@ -98,13 +116,28 @@ export function createStreamChunkForwarder(agentType: AgentType, onChunk: OnStre
 			}
 
 			case "tool-result": {
-				const toolCallId = asNonEmptyString(payload.toolCallId);
+				const toolCallId = asNonEmptyString(payload.toolCallId) ?? "unknown";
 				const toolName = asNonEmptyString(payload.toolName) ?? "unknown";
 				const result = payload.result;
 				const isError = payload.isError === true;
 
-				if (toolCallId) {
+				// Get args from accumulator before deleting
+				const storedToolCall = toolArgsById.get(toolCallId);
+				if (toolCallId !== "unknown") {
 					toolArgsById.delete(toolCallId);
+				}
+
+				// Accumulate tool result for audit trail if accumulator provided
+				if (toolResultsAccumulator) {
+					toolResultsAccumulator.push({
+						agentType,
+						toolCallId,
+						toolName,
+						toolArgs: storedToolCall ? (safeParseJsonObject(storedToolCall.argsText) ?? {}) : {},
+						result,
+						success: !isError,
+						timestamp,
+					});
 				}
 
 				await onChunk({
@@ -205,11 +238,11 @@ export function createStreamChunkForwarder(agentType: AgentType, onChunk: OnStre
 				return;
 			}
 
-			// Source chunks contain grounding citations (Google Search results)
+			// Source chunks contain grounding citations (Grok/Google Search results)
 			case "source": {
 				const sourceType = asNonEmptyString(payload.sourceType);
-				// Only forward URL sources (main type from Google Search grounding)
-				if (sourceType !== "url") {
+				// Forward url sources (web/news) and x sources (X.com posts)
+				if (sourceType !== "url" && sourceType !== "x") {
 					return;
 				}
 				const sourceId = asNonEmptyString(payload.id);

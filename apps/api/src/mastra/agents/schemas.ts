@@ -221,11 +221,17 @@ export const GlobalGroundingSchema = z.object({
 
 /**
  * Source reference from grounding search.
+ * Matches Grok's citation response format:
+ * { sourceType: "url" | "x", url: string, title: string }
  */
 export const GroundingSourceSchema = z.object({
 	url: z.string().describe("Source URL"),
 	title: z.string().describe("Source title or headline"),
 	relevance: z.string().describe("Why this source is relevant"),
+	sourceType: z
+		.enum(["url", "x", "news"])
+		.optional()
+		.describe("Source type from Grok (url for web/news, x for X posts)"),
 });
 
 /**

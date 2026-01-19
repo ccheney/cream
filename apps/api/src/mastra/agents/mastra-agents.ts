@@ -35,6 +35,7 @@ export type {
 	OnStreamChunk,
 	RiskManagerOutput,
 	SentimentAnalysisOutput,
+	ToolResultEntry,
 } from "./types.js";
 
 // ============================================
@@ -107,7 +108,11 @@ export {
 // Grounding
 // ============================================
 
-export { groundingAgent, runGroundingAgent, runGroundingAgentStreaming } from "./grounding.js";
+export {
+	createEmptyGroundingOutput,
+	runGroundingAgent,
+	runGroundingAgentStreaming,
+} from "./grounding.js";
 
 // ============================================
 // Agent Registry
@@ -115,12 +120,10 @@ export { groundingAgent, runGroundingAgent, runGroundingAgentStreaming } from ".
 
 import { fundamentalsAnalystAgent, newsAnalystAgent } from "./analysts.js";
 import { criticAgent, riskManagerAgent } from "./approvers.js";
-import { groundingAgent } from "./grounding.js";
 import { bearishResearcherAgent, bullishResearcherAgent } from "./researchers.js";
 import { traderAgent } from "./trader.js";
 
 export const mastraAgents = {
-	grounding_agent: groundingAgent,
 	news_analyst: newsAnalystAgent,
 	fundamentals_analyst: fundamentalsAnalystAgent,
 	bullish_researcher: bullishResearcherAgent,

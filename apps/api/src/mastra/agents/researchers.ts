@@ -162,6 +162,11 @@ export async function runBullishResearcherStreaming(
 	analystOutputs: AnalystOutputs,
 	onChunk: OnStreamChunk
 ): Promise<BullishResearchOutput[]> {
+	// Initialize toolResults accumulator if not present
+	if (!context.toolResults) {
+		context.toolResults = [];
+	}
+
 	// Build compact indicator summary for momentum/trend signals
 	const indicatorSummary = buildIndicatorSummary(context.indicators);
 
@@ -195,7 +200,9 @@ Weight technical factors alongside fundamental drivers.`;
 	const options = buildGenerateOptions(settings, { schema: z.array(BullishResearchSchema) });
 
 	const stream = await bullishResearcherAgent.stream([{ role: "user", content: prompt }], options);
-	const forwardChunk = createStreamChunkForwarder("bullish_researcher", onChunk);
+	const forwardChunk = createStreamChunkForwarder("bullish_researcher", onChunk, {
+		toolResultsAccumulator: context.toolResults,
+	});
 
 	for await (const chunk of stream.fullStream) {
 		await forwardChunk(chunk as { type: string; payload?: Record<string, unknown> });
@@ -213,6 +220,11 @@ export async function runBearishResearcherStreaming(
 	analystOutputs: AnalystOutputs,
 	onChunk: OnStreamChunk
 ): Promise<BearishResearchOutput[]> {
+	// Initialize toolResults accumulator if not present
+	if (!context.toolResults) {
+		context.toolResults = [];
+	}
+
 	// Build compact indicator summary for momentum/trend signals
 	const indicatorSummary = buildIndicatorSummary(context.indicators);
 
@@ -247,7 +259,9 @@ Weight technical factors alongside fundamental headwinds.`;
 	const options = buildGenerateOptions(settings, { schema: z.array(BearishResearchSchema) });
 
 	const stream = await bearishResearcherAgent.stream([{ role: "user", content: prompt }], options);
-	const forwardChunk = createStreamChunkForwarder("bearish_researcher", onChunk);
+	const forwardChunk = createStreamChunkForwarder("bearish_researcher", onChunk, {
+		toolResultsAccumulator: context.toolResults,
+	});
 
 	for await (const chunk of stream.fullStream) {
 		await forwardChunk(chunk as { type: string; payload?: Record<string, unknown> });

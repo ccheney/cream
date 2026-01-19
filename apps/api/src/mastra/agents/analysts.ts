@@ -208,6 +208,11 @@ export async function runNewsAnalystStreaming(
 	context: AgentContext,
 	onChunk: OnStreamChunk
 ): Promise<SentimentAnalysisOutput[]> {
+	// Initialize toolResults accumulator if not present
+	if (!context.toolResults) {
+		context.toolResults = [];
+	}
+
 	const newsEvents = (context.recentEvents ?? []).filter(
 		(e) => e.sourceType === "news" || e.sourceType === "press_release"
 	);
@@ -244,7 +249,9 @@ If event_risk is true, pay special attention to potential catalysts.`;
 	const options = buildGenerateOptions(settings, { schema: z.array(SentimentAnalysisSchema) });
 
 	const stream = await newsAnalystAgent.stream([{ role: "user", content: prompt }], options);
-	const forwardChunk = createStreamChunkForwarder("news_analyst", onChunk);
+	const forwardChunk = createStreamChunkForwarder("news_analyst", onChunk, {
+		toolResultsAccumulator: context.toolResults,
+	});
 
 	for await (const chunk of stream.fullStream) {
 		await forwardChunk(chunk as { type: string; payload?: Record<string, unknown> });
@@ -261,6 +268,11 @@ export async function runFundamentalsAnalystStreaming(
 	context: AgentContext,
 	onChunk: OnStreamChunk
 ): Promise<FundamentalsAnalysisOutput[]> {
+	// Initialize toolResults accumulator if not present
+	if (!context.toolResults) {
+		context.toolResults = [];
+	}
+
 	const fundamentalEvents = (context.recentEvents ?? []).filter(
 		(e) =>
 			e.sourceType === "macro" ||
@@ -340,7 +352,9 @@ ${
 		[{ role: "user", content: prompt }],
 		options
 	);
-	const forwardChunk = createStreamChunkForwarder("fundamentals_analyst", onChunk);
+	const forwardChunk = createStreamChunkForwarder("fundamentals_analyst", onChunk, {
+		toolResultsAccumulator: context.toolResults,
+	});
 
 	for await (const chunk of stream.fullStream) {
 		await forwardChunk(chunk as { type: string; payload?: Record<string, unknown> });

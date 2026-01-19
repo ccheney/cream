@@ -103,6 +103,11 @@ export async function runTraderStreaming(
 	onChunk: OnStreamChunk,
 	portfolioState?: Record<string, unknown>
 ): Promise<DecisionPlan> {
+	// Initialize toolResults accumulator if not present
+	if (!context.toolResults) {
+		context.toolResults = [];
+	}
+
 	const indicatorContext = buildIndicatorContext(context.indicators);
 
 	const portfolioStateProvided = Boolean(portfolioState && Object.keys(portfolioState).length > 0);
@@ -140,7 +145,9 @@ POSITION SIZING GUIDANCE from indicators:
 	);
 
 	const stream = await traderAgent.stream([{ role: "user", content: prompt }], options);
-	const forwardChunk = createStreamChunkForwarder("trader", onChunk);
+	const forwardChunk = createStreamChunkForwarder("trader", onChunk, {
+		toolResultsAccumulator: context.toolResults,
+	});
 
 	for await (const chunk of stream.fullStream) {
 		await forwardChunk(chunk as { type: string; payload?: Record<string, unknown> });

@@ -18,7 +18,7 @@ import type { ToolStream } from "@mastra/core/tools";
 import { createStep, createWorkflow } from "@mastra/core/workflows";
 import { z } from "zod";
 
-import type { AgentStreamChunk } from "../../agents/types.js";
+import type { AgentStreamChunk, ToolResultEntry } from "../../agents/types.js";
 import { WorkflowResultSchema } from "./schemas.js";
 
 const log = createNodeLogger({ service: "trading-cycle", level: "info" });
@@ -374,6 +374,8 @@ const analystsStep = createStep({
 
 		// LLM mode - use streaming agents
 		const { runAnalystsParallelStreaming } = await import("../../agents/analysts.js");
+		// Initialize toolResults accumulator for audit trail
+		const toolResults: ToolResultEntry[] = [];
 		const context = {
 			cycleId,
 			symbols,
@@ -387,6 +389,7 @@ const analystsStep = createStep({
 			agentConfigs: inputData.agentConfigs,
 			memory: inputData.memory,
 			groundingOutput: inputData.groundingOutput,
+			toolResults,
 		};
 
 		// Emit start events
@@ -432,7 +435,7 @@ const analystsStep = createStep({
 			timestamp: new Date().toISOString(),
 		});
 
-		return { ...inputData, newsAnalysis: news, fundamentalsAnalysis: fundamentals };
+		return { ...inputData, newsAnalysis: news, fundamentalsAnalysis: fundamentals, toolResults };
 	},
 });
 
@@ -460,6 +463,8 @@ const debateStep = createStep({
 
 		// LLM mode - use streaming agents
 		const { runDebateParallelStreaming } = await import("../../agents/researchers.js");
+		// Continue accumulating toolResults from previous steps
+		const toolResults: ToolResultEntry[] = inputData.toolResults ?? [];
 		const context = {
 			cycleId,
 			symbols,
@@ -473,6 +478,7 @@ const debateStep = createStep({
 			agentConfigs: inputData.agentConfigs,
 			memory: inputData.memory,
 			groundingOutput: inputData.groundingOutput,
+			toolResults,
 		};
 		const analystOutputs = {
 			news: inputData.newsAnalysis ?? [],
@@ -522,7 +528,7 @@ const debateStep = createStep({
 			timestamp: new Date().toISOString(),
 		});
 
-		return { ...inputData, bullishResearch: bullish, bearishResearch: bearish };
+		return { ...inputData, bullishResearch: bullish, bearishResearch: bearish, toolResults };
 	},
 });
 
@@ -547,6 +553,8 @@ const traderStep = createStep({
 
 		// LLM mode - use streaming trader agent
 		const { runTraderStreaming } = await import("../../agents/trader.js");
+		// Continue accumulating toolResults from previous steps
+		const toolResults: ToolResultEntry[] = inputData.toolResults ?? [];
 		const context = {
 			cycleId,
 			symbols: inputData.instruments ?? [],
@@ -560,6 +568,7 @@ const traderStep = createStep({
 			agentConfigs: inputData.agentConfigs,
 			memory: inputData.memory,
 			groundingOutput: inputData.groundingOutput,
+			toolResults,
 		};
 		const debateOutputs = {
 			bullish: bullishResearch,
@@ -597,7 +606,7 @@ const traderStep = createStep({
 		});
 
 		await setState({ ...state, iterations: 0 });
-		return { ...inputData, decisionPlan };
+		return { ...inputData, decisionPlan, toolResults };
 	},
 });
 
@@ -675,7 +684,9 @@ const consensusStep = createStep({
 			undefined, // portfolioState
 			undefined, // constraints
 			inputData.agentConfigs,
-			inputData.snapshot?.indicators
+			inputData.snapshot?.indicators,
+			undefined, // abortSignal
+			inputData.toolResults // tool results from previous steps for audit validation
 		);
 
 		// Emit complete events
