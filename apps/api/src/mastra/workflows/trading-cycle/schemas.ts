@@ -226,6 +226,7 @@ export const DecisionSchema = z.object({
 		memoryReferences: z.array(z.string()),
 	}),
 	thesisState: z.string(),
+	confidence: z.number().min(0).max(1),
 	legs: z.array(OptionLegSchema).optional(),
 	netLimitPrice: z.number().optional(),
 });

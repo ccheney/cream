@@ -245,7 +245,7 @@ function toProtobufDecision(decision: Decision) {
 		riskLevels,
 		strategyFamily: toProtobufStrategyFamily(decision.strategyFamily),
 		rationale: decision.rationale?.summary ?? "",
-		confidence: 0.8, // Default confidence - not tracked in workflow
+		confidence: decision.confidence,
 		direction: toProtobufDirection(decision.direction),
 		timeHorizon: toProtobufTimeHorizon(decision.timeHorizon),
 		thesisState: toProtobufThesisState(decision.thesisState),

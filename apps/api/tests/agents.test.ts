@@ -155,6 +155,7 @@ const DecisionSchema = z.object({
 	timeHorizon: z.enum(["INTRADAY", "SWING", "POSITION"]),
 	rationale: RationaleSchema,
 	thesisState: z.enum(["WATCHING", "ENTERED", "ADDING", "MANAGING", "EXITING", "CLOSED"]),
+	confidence: z.number().min(0).max(1),
 });
 
 const DecisionPlanSchema = z.object({

@@ -260,6 +260,8 @@ export interface Decision {
 		memoryReferences: string[];
 	};
 	thesisState: string;
+	/** Confidence score [0.0, 1.0] representing conviction in this decision */
+	confidence: number;
 	/** Option legs for multi-leg strategies (empty for single-leg orders) */
 	legs?: OptionLeg[];
 	/** Net limit price for multi-leg orders (debit positive, credit negative) */

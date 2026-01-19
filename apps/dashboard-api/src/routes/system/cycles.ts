@@ -319,6 +319,7 @@ app.openapi(triggerCycleRoute, async (c) => {
 							memoryReferences: string[];
 						};
 						thesisState: string;
+						confidence: number;
 						legs?: Array<{
 							symbol: string;
 							ratioQty: number;

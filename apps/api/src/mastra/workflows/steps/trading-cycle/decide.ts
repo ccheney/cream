@@ -99,6 +99,7 @@ export async function runTraderAgentStub(
 				memoryReferences: [],
 			},
 			thesisState: "WATCHING",
+			confidence: br.conviction_level,
 		})),
 		portfolioNotes: "No new positions. Monitoring for clearer setups.",
 	};
