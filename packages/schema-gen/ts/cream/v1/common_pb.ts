@@ -15,7 +15,7 @@ import type { Message } from "@bufbuild/protobuf";
  * Describes the file cream/v1/common.proto.
  */
 export const file_cream_v1_common: GenFile = /*@__PURE__*/
-  fileDesc("ChVjcmVhbS92MS9jb21tb24ucHJvdG8SCGNyZWFtLnYxInMKDk9wdGlvbkNvbnRyYWN0EhIKCnVuZGVybHlpbmcYASABKAkSEgoKZXhwaXJhdGlvbhgCIAEoCRIOCgZzdHJpa2UYAyABKAESKQoLb3B0aW9uX3R5cGUYBCABKA4yFC5jcmVhbS52MS5PcHRpb25UeXBlIokBCgpJbnN0cnVtZW50EhUKDWluc3RydW1lbnRfaWQYASABKAkSMQoPaW5zdHJ1bWVudF90eXBlGAIgASgOMhguY3JlYW0udjEuSW5zdHJ1bWVudFR5cGUSMQoPb3B0aW9uX2NvbnRyYWN0GAMgASgLMhguY3JlYW0udjEuT3B0aW9uQ29udHJhY3QiXAoEU2l6ZRIQCghxdWFudGl0eRgBIAEoBRIgCgR1bml0GAIgASgOMhIuY3JlYW0udjEuU2l6ZVVuaXQSIAoYdGFyZ2V0X3Bvc2l0aW9uX3F1YW50aXR5GAMgASgFInIKClJpc2tMZXZlbHMSFwoPc3RvcF9sb3NzX2xldmVsGAEgASgBEhkKEXRha2VfcHJvZml0X2xldmVsGAIgASgBEjAKDGRlbm9taW5hdGlvbhgDIAEoDjIaLmNyZWFtLnYxLlJpc2tEZW5vbWluYXRpb24qXQoLRW52aXJvbm1lbnQSGwoXRU5WSVJPTk1FTlRfVU5TUEVDSUZJRUQQABIVChFFTlZJUk9OTUVOVF9QQVBFUhACEhQKEEVOVklST05NRU5UX0xJVkUQAyIECAEQASqPAQoGQWN0aW9uEhYKEkFDVElPTl9VTlNQRUNJRklFRBAAEg4KCkFDVElPTl9CVVkQARIPCgtBQ1RJT05fU0VMTBACEg8KC0FDVElPTl9IT0xEEAMSEwoPQUNUSU9OX0lOQ1JFQVNFEAQSEQoNQUNUSU9OX1JFRFVDRRAFEhMKD0FDVElPTl9OT19UUkFERRAGKmMKCURpcmVjdGlvbhIZChVESVJFQ1RJT05fVU5TUEVDSUZJRUQQABISCg5ESVJFQ1RJT05fTE9ORxABEhMKD0RJUkVDVElPTl9TSE9SVBACEhIKDkRJUkVDVElPTl9GTEFUEAMqaQoOSW5zdHJ1bWVudFR5cGUSHwobSU5TVFJVTUVOVF9UWVBFX1VOU1BFQ0lGSUVEEAASGgoWSU5TVFJVTUVOVF9UWVBFX0VRVUlUWRABEhoKFklOU1RSVU1FTlRfVFlQRV9PUFRJT04QAipUCgpPcHRpb25UeXBlEhsKF09QVElPTl9UWVBFX1VOU1BFQ0lGSUVEEAASFAoQT1BUSU9OX1RZUEVfQ0FMTBABEhMKD09QVElPTl9UWVBFX1BVVBACKlQKCFNpemVVbml0EhkKFVNJWkVfVU5JVF9VTlNQRUNJRklFRBAAEhQKEFNJWkVfVU5JVF9TSEFSRVMQARIXChNTSVpFX1VOSVRfQ09OVFJBQ1RTEAIqVAoJT3JkZXJUeXBlEhoKFk9SREVSX1RZUEVfVU5TUEVDSUZJRUQQABIUChBPUkRFUl9UWVBFX0xJTUlUEAESFQoRT1JERVJfVFlQRV9NQVJLRVQQAiq2AQoLVGltZUluRm9yY2USHQoZVElNRV9JTl9GT1JDRV9VTlNQRUNJRklFRBAAEhUKEVRJTUVfSU5fRk9SQ0VfREFZEAESFQoRVElNRV9JTl9GT1JDRV9HVEMQAhIVChFUSU1FX0lOX0ZPUkNFX0lPQxADEhUKEVRJTUVfSU5fRk9SQ0VfRk9LEAQSFQoRVElNRV9JTl9GT1JDRV9PUEcQBRIVChFUSU1FX0lOX0ZPUkNFX0NMUxAGKoEBChBSaXNrRGVub21pbmF0aW9uEiEKHVJJU0tfREVOT01JTkFUSU9OX1VOU1BFQ0lGSUVEEAASJgoiUklTS19ERU5PTUlOQVRJT05fVU5ERVJMWUlOR19QUklDRRABEiIKHlJJU0tfREVOT01JTkFUSU9OX09QVElPTl9QUklDRRACKtYBCg5TdHJhdGVneUZhbWlseRIfChtTVFJBVEVHWV9GQU1JTFlfVU5TUEVDSUZJRUQQABIZChVTVFJBVEVHWV9GQU1JTFlfVFJFTkQQARIiCh5TVFJBVEVHWV9GQU1JTFlfTUVBTl9SRVZFUlNJT04QAhIgChxTVFJBVEVHWV9GQU1JTFlfRVZFTlRfRFJJVkVOEAMSHgoaU1RSQVRFR1lfRkFNSUxZX1ZPTEFUSUxJVFkQBBIiCh5TVFJBVEVHWV9GQU1JTFlfUkVMQVRJVkVfVkFMVUUQBSqwAQoGUmVnaW1lEhYKElJFR0lNRV9VTlNQRUNJRklFRBAAEhUKEVJFR0lNRV9CVUxMX1RSRU5EEAESFQoRUkVHSU1FX0JFQVJfVFJFTkQQAhIWChJSRUdJTUVfUkFOR0VfQk9VTkQQAxIaChZSRUdJTUVfSElHSF9WT0xBVElMSVRZEAQSGQoVUkVHSU1FX0xPV19WT0xBVElMSVRZEAUSEQoNUkVHSU1FX0NSSVNJUxAGKpwBCgxNYXJrZXRTdGF0dXMSHQoZTUFSS0VUX1NUQVRVU19VTlNQRUNJRklFRBAAEhwKGE1BUktFVF9TVEFUVVNfUFJFX01BUktFVBABEhYKEk1BUktFVF9TVEFUVVNfT1BFThACEh0KGU1BUktFVF9TVEFUVVNfQUZURVJfSE9VUlMQAxIYChRNQVJLRVRfU1RBVFVTX0NMT1NFRBAEQpQBCgxjb20uY3JlYW0udjFCC0NvbW1vblByb3RvUAFaNmdpdGh1Yi5jb20vY3JlYW0tdHJhZGluZy9jcmVhbS9nZW4vZ28vY3JlYW0vdjE7Y3JlYW12MaICA0NYWKoCCENyZWFtLlYxygIIQ3JlYW1cVjHiAhRDcmVhbVxWMVxHUEJNZXRhZGF0YeoCCUNyZWFtOjpWMWIGcHJvdG8z");
+  fileDesc("ChVjcmVhbS92MS9jb21tb24ucHJvdG8SCGNyZWFtLnYxInMKDk9wdGlvbkNvbnRyYWN0EhIKCnVuZGVybHlpbmcYASABKAkSEgoKZXhwaXJhdGlvbhgCIAEoCRIOCgZzdHJpa2UYAyABKAESKQoLb3B0aW9uX3R5cGUYBCABKA4yFC5jcmVhbS52MS5PcHRpb25UeXBlIokBCgpJbnN0cnVtZW50EhUKDWluc3RydW1lbnRfaWQYASABKAkSMQoPaW5zdHJ1bWVudF90eXBlGAIgASgOMhguY3JlYW0udjEuSW5zdHJ1bWVudFR5cGUSMQoPb3B0aW9uX2NvbnRyYWN0GAMgASgLMhguY3JlYW0udjEuT3B0aW9uQ29udHJhY3QiXAoEU2l6ZRIQCghxdWFudGl0eRgBIAEoBRIgCgR1bml0GAIgASgOMhIuY3JlYW0udjEuU2l6ZVVuaXQSIAoYdGFyZ2V0X3Bvc2l0aW9uX3F1YW50aXR5GAMgASgFInIKClJpc2tMZXZlbHMSFwoPc3RvcF9sb3NzX2xldmVsGAEgASgBEhkKEXRha2VfcHJvZml0X2xldmVsGAIgASgBEjAKDGRlbm9taW5hdGlvbhgDIAEoDjIaLmNyZWFtLnYxLlJpc2tEZW5vbWluYXRpb24ijQEKCU9wdGlvbkxlZxIOCgZzeW1ib2wYASABKAkSEQoJcmF0aW9fcXR5GAIgASgFEjEKD3Bvc2l0aW9uX2ludGVudBgDIAEoDjIYLmNyZWFtLnYxLlBvc2l0aW9uSW50ZW50EioKCGNvbnRyYWN0GAQgASgLMhguY3JlYW0udjEuT3B0aW9uQ29udHJhY3QqXQoLRW52aXJvbm1lbnQSGwoXRU5WSVJPTk1FTlRfVU5TUEVDSUZJRUQQABIVChFFTlZJUk9OTUVOVF9QQVBFUhACEhQKEEVOVklST05NRU5UX0xJVkUQAyIECAEQASqhAQoGQWN0aW9uEhYKEkFDVElPTl9VTlNQRUNJRklFRBAAEg4KCkFDVElPTl9CVVkQARIPCgtBQ1RJT05fU0VMTBACEg8KC0FDVElPTl9IT0xEEAMSEwoPQUNUSU9OX0lOQ1JFQVNFEAQSEQoNQUNUSU9OX1JFRFVDRRAFEhMKD0FDVElPTl9OT19UUkFERRAGEhAKDEFDVElPTl9DTE9TRRAHKmMKCURpcmVjdGlvbhIZChVESVJFQ1RJT05fVU5TUEVDSUZJRUQQABISCg5ESVJFQ1RJT05fTE9ORxABEhMKD0RJUkVDVElPTl9TSE9SVBACEhIKDkRJUkVDVElPTl9GTEFUEAMqaQoOSW5zdHJ1bWVudFR5cGUSHwobSU5TVFJVTUVOVF9UWVBFX1VOU1BFQ0lGSUVEEAASGgoWSU5TVFJVTUVOVF9UWVBFX0VRVUlUWRABEhoKFklOU1RSVU1FTlRfVFlQRV9PUFRJT04QAipUCgpPcHRpb25UeXBlEhsKF09QVElPTl9UWVBFX1VOU1BFQ0lGSUVEEAASFAoQT1BUSU9OX1RZUEVfQ0FMTBABEhMKD09QVElPTl9UWVBFX1BVVBACKoUBCghTaXplVW5pdBIZChVTSVpFX1VOSVRfVU5TUEVDSUZJRUQQABIUChBTSVpFX1VOSVRfU0hBUkVTEAESFwoTU0laRV9VTklUX0NPTlRSQUNUUxACEhUKEVNJWkVfVU5JVF9ET0xMQVJTEAMSGAoUU0laRV9VTklUX1BDVF9FUVVJVFkQBCpUCglPcmRlclR5cGUSGgoWT1JERVJfVFlQRV9VTlNQRUNJRklFRBAAEhQKEE9SREVSX1RZUEVfTElNSVQQARIVChFPUkRFUl9UWVBFX01BUktFVBACKrYBCgtUaW1lSW5Gb3JjZRIdChlUSU1FX0lOX0ZPUkNFX1VOU1BFQ0lGSUVEEAASFQoRVElNRV9JTl9GT1JDRV9EQVkQARIVChFUSU1FX0lOX0ZPUkNFX0dUQxACEhUKEVRJTUVfSU5fRk9SQ0VfSU9DEAMSFQoRVElNRV9JTl9GT1JDRV9GT0sQBBIVChFUSU1FX0lOX0ZPUkNFX09QRxAFEhUKEVRJTUVfSU5fRk9SQ0VfQ0xTEAYqgQEKEFJpc2tEZW5vbWluYXRpb24SIQodUklTS19ERU5PTUlOQVRJT05fVU5TUEVDSUZJRUQQABImCiJSSVNLX0RFTk9NSU5BVElPTl9VTkRFUkxZSU5HX1BSSUNFEAESIgoeUklTS19ERU5PTUlOQVRJT05fT1BUSU9OX1BSSUNFEAIq3gIKDlN0cmF0ZWd5RmFtaWx5Eh8KG1NUUkFURUdZX0ZBTUlMWV9VTlNQRUNJRklFRBAAEh8KG1NUUkFURUdZX0ZBTUlMWV9FUVVJVFlfTE9ORxABEiAKHFNUUkFURUdZX0ZBTUlMWV9FUVVJVFlfU0hPUlQQAhIfChtTVFJBVEVHWV9GQU1JTFlfT1BUSU9OX0xPTkcQAxIgChxTVFJBVEVHWV9GQU1JTFlfT1BUSU9OX1NIT1JUEAQSIwofU1RSQVRFR1lfRkFNSUxZX1ZFUlRJQ0FMX1NQUkVBRBAFEh8KG1NUUkFURUdZX0ZBTUlMWV9JUk9OX0NPTkRPUhAGEhwKGFNUUkFURUdZX0ZBTUlMWV9TVFJBRERMRRAHEhwKGFNUUkFURUdZX0ZBTUlMWV9TVFJBTkdMRRAIEiMKH1NUUkFURUdZX0ZBTUlMWV9DQUxFTkRBUl9TUFJFQUQQCSp5CgtUaW1lSG9yaXpvbhIcChhUSU1FX0hPUklaT05fVU5TUEVDSUZJRUQQABIZChVUSU1FX0hPUklaT05fSU5UUkFEQVkQARIWChJUSU1FX0hPUklaT05fU1dJTkcQAhIZChVUSU1FX0hPUklaT05fUE9TSVRJT04QAyrHAQoLVGhlc2lzU3RhdGUSHAoYVEhFU0lTX1NUQVRFX1VOU1BFQ0lGSUVEEAASGQoVVEhFU0lTX1NUQVRFX1dBVENISU5HEAESGAoUVEhFU0lTX1NUQVRFX0VOVEVSRUQQAhIXChNUSEVTSVNfU1RBVEVfQURESU5HEAMSGQoVVEhFU0lTX1NUQVRFX01BTkFHSU5HEAQSGAoUVEhFU0lTX1NUQVRFX0VYSVRJTkcQBRIXChNUSEVTSVNfU1RBVEVfQ0xPU0VEEAYqsAEKBlJlZ2ltZRIWChJSRUdJTUVfVU5TUEVDSUZJRUQQABIVChFSRUdJTUVfQlVMTF9UUkVORBABEhUKEVJFR0lNRV9CRUFSX1RSRU5EEAISFgoSUkVHSU1FX1JBTkdFX0JPVU5EEAMSGgoWUkVHSU1FX0hJR0hfVk9MQVRJTElUWRAEEhkKFVJFR0lNRV9MT1dfVk9MQVRJTElUWRAFEhEKDVJFR0lNRV9DUklTSVMQBiqcAQoMTWFya2V0U3RhdHVzEh0KGU1BUktFVF9TVEFUVVNfVU5TUEVDSUZJRUQQABIcChhNQVJLRVRfU1RBVFVTX1BSRV9NQVJLRVQQARIWChJNQVJLRVRfU1RBVFVTX09QRU4QAhIdChlNQVJLRVRfU1RBVFVTX0FGVEVSX0hPVVJTEAMSGAoUTUFSS0VUX1NUQVRVU19DTE9TRUQQBCq5AQoOUG9zaXRpb25JbnRlbnQSHwobUE9TSVRJT05fSU5URU5UX1VOU1BFQ0lGSUVEEAASHwobUE9TSVRJT05fSU5URU5UX0JVWV9UT19PUEVOEAESIAocUE9TSVRJT05fSU5URU5UX0JVWV9UT19DTE9TRRACEiAKHFBPU0lUSU9OX0lOVEVOVF9TRUxMX1RPX09QRU4QAxIhCh1QT1NJVElPTl9JTlRFTlRfU0VMTF9UT19DTE9TRRAEQpQBCgxjb20uY3JlYW0udjFCC0NvbW1vblByb3RvUAFaNmdpdGh1Yi5jb20vY3JlYW0tdHJhZGluZy9jcmVhbS9nZW4vZ28vY3JlYW0vdjE7Y3JlYW12MaICA0NYWKoCCENyZWFtLlYxygIIQ3JlYW1cVjHiAhRDcmVhbVxWMVxHUEJNZXRhZGF0YeoCCUNyZWFtOjpWMWIGcHJvdG8z");
 
 /**
  * Option contract details
@@ -165,6 +165,48 @@ export const RiskLevelsSchema: GenMessage<RiskLevels> = /*@__PURE__*/
   messageDesc(file_cream_v1_common, 3);
 
 /**
+ * Option leg for multi-leg strategies
+ *
+ * @generated from message cream.v1.OptionLeg
+ */
+export type OptionLeg = Message<"cream.v1.OptionLeg"> & {
+  /**
+   * OCC option symbol (e.g., "AAPL250117P00190000")
+   *
+   * @generated from field: string symbol = 1;
+   */
+  symbol: string;
+
+  /**
+   * Quantity ratio - positive for buy, negative for sell
+   *
+   * @generated from field: int32 ratio_qty = 2;
+   */
+  ratioQty: number;
+
+  /**
+   * Position intent for the leg
+   *
+   * @generated from field: cream.v1.PositionIntent position_intent = 3;
+   */
+  positionIntent: PositionIntent;
+
+  /**
+   * Parsed contract details
+   *
+   * @generated from field: cream.v1.OptionContract contract = 4;
+   */
+  contract?: OptionContract;
+};
+
+/**
+ * Describes the message cream.v1.OptionLeg.
+ * Use `create(OptionLegSchema)` to create a new message.
+ */
+export const OptionLegSchema: GenMessage<OptionLeg> = /*@__PURE__*/
+  messageDesc(file_cream_v1_common, 4);
+
+/**
  * Trading environment
  *
  * @generated from enum cream.v1.Environment
@@ -244,6 +286,13 @@ export enum Action {
    * @generated from enum value: ACTION_NO_TRADE = 6;
    */
   NO_TRADE = 6,
+
+  /**
+   * Close an existing position
+   *
+   * @generated from enum value: ACTION_CLOSE = 7;
+   */
+  CLOSE = 7,
 }
 
 /**
@@ -361,6 +410,16 @@ export enum SizeUnit {
    * @generated from enum value: SIZE_UNIT_CONTRACTS = 2;
    */
   CONTRACTS = 2,
+
+  /**
+   * @generated from enum value: SIZE_UNIT_DOLLARS = 3;
+   */
+  DOLLARS = 3,
+
+  /**
+   * @generated from enum value: SIZE_UNIT_PCT_EQUITY = 4;
+   */
+  PCT_EQUITY = 4,
 }
 
 /**
@@ -484,7 +543,7 @@ export const RiskDenominationSchema: GenEnum<RiskDenomination> = /*@__PURE__*/
   enumDesc(file_cream_v1_common, 8);
 
 /**
- * Strategy family
+ * Strategy family - position type classification
  *
  * @generated from enum cream.v1.StrategyFamily
  */
@@ -495,29 +554,49 @@ export enum StrategyFamily {
   UNSPECIFIED = 0,
 
   /**
-   * @generated from enum value: STRATEGY_FAMILY_TREND = 1;
+   * @generated from enum value: STRATEGY_FAMILY_EQUITY_LONG = 1;
    */
-  TREND = 1,
+  EQUITY_LONG = 1,
 
   /**
-   * @generated from enum value: STRATEGY_FAMILY_MEAN_REVERSION = 2;
+   * @generated from enum value: STRATEGY_FAMILY_EQUITY_SHORT = 2;
    */
-  MEAN_REVERSION = 2,
+  EQUITY_SHORT = 2,
 
   /**
-   * @generated from enum value: STRATEGY_FAMILY_EVENT_DRIVEN = 3;
+   * @generated from enum value: STRATEGY_FAMILY_OPTION_LONG = 3;
    */
-  EVENT_DRIVEN = 3,
+  OPTION_LONG = 3,
 
   /**
-   * @generated from enum value: STRATEGY_FAMILY_VOLATILITY = 4;
+   * @generated from enum value: STRATEGY_FAMILY_OPTION_SHORT = 4;
    */
-  VOLATILITY = 4,
+  OPTION_SHORT = 4,
 
   /**
-   * @generated from enum value: STRATEGY_FAMILY_RELATIVE_VALUE = 5;
+   * @generated from enum value: STRATEGY_FAMILY_VERTICAL_SPREAD = 5;
    */
-  RELATIVE_VALUE = 5,
+  VERTICAL_SPREAD = 5,
+
+  /**
+   * @generated from enum value: STRATEGY_FAMILY_IRON_CONDOR = 6;
+   */
+  IRON_CONDOR = 6,
+
+  /**
+   * @generated from enum value: STRATEGY_FAMILY_STRADDLE = 7;
+   */
+  STRADDLE = 7,
+
+  /**
+   * @generated from enum value: STRATEGY_FAMILY_STRANGLE = 8;
+   */
+  STRANGLE = 8,
+
+  /**
+   * @generated from enum value: STRATEGY_FAMILY_CALENDAR_SPREAD = 9;
+   */
+  CALENDAR_SPREAD = 9,
 }
 
 /**
@@ -525,6 +604,87 @@ export enum StrategyFamily {
  */
 export const StrategyFamilySchema: GenEnum<StrategyFamily> = /*@__PURE__*/
   enumDesc(file_cream_v1_common, 9);
+
+/**
+ * Time horizon for the trade
+ *
+ * @generated from enum cream.v1.TimeHorizon
+ */
+export enum TimeHorizon {
+  /**
+   * @generated from enum value: TIME_HORIZON_UNSPECIFIED = 0;
+   */
+  UNSPECIFIED = 0,
+
+  /**
+   * @generated from enum value: TIME_HORIZON_INTRADAY = 1;
+   */
+  INTRADAY = 1,
+
+  /**
+   * @generated from enum value: TIME_HORIZON_SWING = 2;
+   */
+  SWING = 2,
+
+  /**
+   * @generated from enum value: TIME_HORIZON_POSITION = 3;
+   */
+  POSITION = 3,
+}
+
+/**
+ * Describes the enum cream.v1.TimeHorizon.
+ */
+export const TimeHorizonSchema: GenEnum<TimeHorizon> = /*@__PURE__*/
+  enumDesc(file_cream_v1_common, 10);
+
+/**
+ * Thesis lifecycle state
+ *
+ * @generated from enum cream.v1.ThesisState
+ */
+export enum ThesisState {
+  /**
+   * @generated from enum value: THESIS_STATE_UNSPECIFIED = 0;
+   */
+  UNSPECIFIED = 0,
+
+  /**
+   * @generated from enum value: THESIS_STATE_WATCHING = 1;
+   */
+  WATCHING = 1,
+
+  /**
+   * @generated from enum value: THESIS_STATE_ENTERED = 2;
+   */
+  ENTERED = 2,
+
+  /**
+   * @generated from enum value: THESIS_STATE_ADDING = 3;
+   */
+  ADDING = 3,
+
+  /**
+   * @generated from enum value: THESIS_STATE_MANAGING = 4;
+   */
+  MANAGING = 4,
+
+  /**
+   * @generated from enum value: THESIS_STATE_EXITING = 5;
+   */
+  EXITING = 5,
+
+  /**
+   * @generated from enum value: THESIS_STATE_CLOSED = 6;
+   */
+  CLOSED = 6,
+}
+
+/**
+ * Describes the enum cream.v1.ThesisState.
+ */
+export const ThesisStateSchema: GenEnum<ThesisState> = /*@__PURE__*/
+  enumDesc(file_cream_v1_common, 11);
 
 /**
  * Regime classification
@@ -572,7 +732,7 @@ export enum Regime {
  * Describes the enum cream.v1.Regime.
  */
 export const RegimeSchema: GenEnum<Regime> = /*@__PURE__*/
-  enumDesc(file_cream_v1_common, 10);
+  enumDesc(file_cream_v1_common, 12);
 
 /**
  * Market hours status
@@ -610,5 +770,43 @@ export enum MarketStatus {
  * Describes the enum cream.v1.MarketStatus.
  */
 export const MarketStatusSchema: GenEnum<MarketStatus> = /*@__PURE__*/
-  enumDesc(file_cream_v1_common, 11);
+  enumDesc(file_cream_v1_common, 13);
+
+/**
+ * Position intent for options orders
+ *
+ * @generated from enum cream.v1.PositionIntent
+ */
+export enum PositionIntent {
+  /**
+   * @generated from enum value: POSITION_INTENT_UNSPECIFIED = 0;
+   */
+  UNSPECIFIED = 0,
+
+  /**
+   * @generated from enum value: POSITION_INTENT_BUY_TO_OPEN = 1;
+   */
+  BUY_TO_OPEN = 1,
+
+  /**
+   * @generated from enum value: POSITION_INTENT_BUY_TO_CLOSE = 2;
+   */
+  BUY_TO_CLOSE = 2,
+
+  /**
+   * @generated from enum value: POSITION_INTENT_SELL_TO_OPEN = 3;
+   */
+  SELL_TO_OPEN = 3,
+
+  /**
+   * @generated from enum value: POSITION_INTENT_SELL_TO_CLOSE = 4;
+   */
+  SELL_TO_CLOSE = 4,
+}
+
+/**
+ * Describes the enum cream.v1.PositionIntent.
+ */
+export const PositionIntentSchema: GenEnum<PositionIntent> = /*@__PURE__*/
+  enumDesc(file_cream_v1_common, 14);
 

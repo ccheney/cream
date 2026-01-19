@@ -32,6 +32,7 @@ enum Action {
   ACTION_INCREASE = 4; // Increase exposure in direction
   ACTION_REDUCE = 5;   // Reduce exposure magnitude
   ACTION_NO_TRADE = 6; // Remain flat
+  ACTION_CLOSE = 7;    // Close an existing position
 }
 
 // Direction derived from action and position
@@ -61,6 +62,8 @@ enum SizeUnit {
   SIZE_UNIT_UNSPECIFIED = 0;
   SIZE_UNIT_SHARES = 1;
   SIZE_UNIT_CONTRACTS = 2;
+  SIZE_UNIT_DOLLARS = 3;
+  SIZE_UNIT_PCT_EQUITY = 4;
 }
 
 // Order type
@@ -88,14 +91,37 @@ enum RiskDenomination {
   RISK_DENOMINATION_OPTION_PRICE = 2;
 }
 
-// Strategy family
+// Strategy family - position type classification
 enum StrategyFamily {
   STRATEGY_FAMILY_UNSPECIFIED = 0;
-  STRATEGY_FAMILY_TREND = 1;
-  STRATEGY_FAMILY_MEAN_REVERSION = 2;
-  STRATEGY_FAMILY_EVENT_DRIVEN = 3;
-  STRATEGY_FAMILY_VOLATILITY = 4;
-  STRATEGY_FAMILY_RELATIVE_VALUE = 5;
+  STRATEGY_FAMILY_EQUITY_LONG = 1;
+  STRATEGY_FAMILY_EQUITY_SHORT = 2;
+  STRATEGY_FAMILY_OPTION_LONG = 3;
+  STRATEGY_FAMILY_OPTION_SHORT = 4;
+  STRATEGY_FAMILY_VERTICAL_SPREAD = 5;
+  STRATEGY_FAMILY_IRON_CONDOR = 6;
+  STRATEGY_FAMILY_STRADDLE = 7;
+  STRATEGY_FAMILY_STRANGLE = 8;
+  STRATEGY_FAMILY_CALENDAR_SPREAD = 9;
+}
+
+// Time horizon for the trade
+enum TimeHorizon {
+  TIME_HORIZON_UNSPECIFIED = 0;
+  TIME_HORIZON_INTRADAY = 1;
+  TIME_HORIZON_SWING = 2;
+  TIME_HORIZON_POSITION = 3;
+}
+
+// Thesis lifecycle state
+enum ThesisState {
+  THESIS_STATE_UNSPECIFIED = 0;
+  THESIS_STATE_WATCHING = 1;
+  THESIS_STATE_ENTERED = 2;
+  THESIS_STATE_ADDING = 3;
+  THESIS_STATE_MANAGING = 4;
+  THESIS_STATE_EXITING = 5;
+  THESIS_STATE_CLOSED = 6;
 }
 
 // ============================================
@@ -171,4 +197,28 @@ enum MarketStatus {
   MARKET_STATUS_OPEN = 2;
   MARKET_STATUS_AFTER_HOURS = 3;
   MARKET_STATUS_CLOSED = 4;
+}
+
+// Position intent for options orders
+enum PositionIntent {
+  POSITION_INTENT_UNSPECIFIED = 0;
+  POSITION_INTENT_BUY_TO_OPEN = 1;
+  POSITION_INTENT_BUY_TO_CLOSE = 2;
+  POSITION_INTENT_SELL_TO_OPEN = 3;
+  POSITION_INTENT_SELL_TO_CLOSE = 4;
+}
+
+// Option leg for multi-leg strategies
+message OptionLeg {
+  // OCC option symbol (e.g., "AAPL250117P00190000")
+  string symbol = 1;
+
+  // Quantity ratio - positive for buy, negative for sell
+  int32 ratio_qty = 2;
+
+  // Position intent for the leg
+  PositionIntent position_intent = 3;
+
+  // Parsed contract details
+  OptionContract contract = 4;
 }

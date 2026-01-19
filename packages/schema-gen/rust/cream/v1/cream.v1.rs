@@ -59,6 +59,22 @@ pub struct RiskLevels {
     #[prost(enumeration="RiskDenomination", tag="3")]
     pub denomination: i32,
 }
+/// Option leg for multi-leg strategies
+#[derive(Clone, PartialEq, ::prost::Message)]
+pub struct OptionLeg {
+    /// OCC option symbol (e.g., "AAPL250117P00190000")
+    #[prost(string, tag="1")]
+    pub symbol: ::prost::alloc::string::String,
+    /// Quantity ratio - positive for buy, negative for sell
+    #[prost(int32, tag="2")]
+    pub ratio_qty: i32,
+    /// Position intent for the leg
+    #[prost(enumeration="PositionIntent", tag="3")]
+    pub position_intent: i32,
+    /// Parsed contract details
+    #[prost(message, optional, tag="4")]
+    pub contract: ::core::option::Option<OptionContract>,
+}
 // ============================================
 // Environment
 // ============================================
@@ -114,6 +130,8 @@ pub enum Action {
     Reduce = 5,
     /// Remain flat
     NoTrade = 6,
+    /// Close an existing position
+    Close = 7,
 }
 impl Action {
     /// String value of the enum field names used in the ProtoBuf definition.
@@ -129,6 +147,7 @@ impl Action {
             Self::Increase => "ACTION_INCREASE",
             Self::Reduce => "ACTION_REDUCE",
             Self::NoTrade => "ACTION_NO_TRADE",
+            Self::Close => "ACTION_CLOSE",
         }
     }
     /// Creates an enum from field names used in the ProtoBuf definition.
@@ -141,6 +160,7 @@ impl Action {
             "ACTION_INCREASE" => Some(Self::Increase),
             "ACTION_REDUCE" => Some(Self::Reduce),
             "ACTION_NO_TRADE" => Some(Self::NoTrade),
+            "ACTION_CLOSE" => Some(Self::Close),
             _ => None,
         }
     }
@@ -245,6 +265,8 @@ pub enum SizeUnit {
     Unspecified = 0,
     Shares = 1,
     Contracts = 2,
+    Dollars = 3,
+    PctEquity = 4,
 }
 impl SizeUnit {
     /// String value of the enum field names used in the ProtoBuf definition.
@@ -256,6 +278,8 @@ impl SizeUnit {
             Self::Unspecified => "SIZE_UNIT_UNSPECIFIED",
             Self::Shares => "SIZE_UNIT_SHARES",
             Self::Contracts => "SIZE_UNIT_CONTRACTS",
+            Self::Dollars => "SIZE_UNIT_DOLLARS",
+            Self::PctEquity => "SIZE_UNIT_PCT_EQUITY",
         }
     }
     /// Creates an enum from field names used in the ProtoBuf definition.
@@ -264,6 +288,8 @@ impl SizeUnit {
             "SIZE_UNIT_UNSPECIFIED" => Some(Self::Unspecified),
             "SIZE_UNIT_SHARES" => Some(Self::Shares),
             "SIZE_UNIT_CONTRACTS" => Some(Self::Contracts),
+            "SIZE_UNIT_DOLLARS" => Some(Self::Dollars),
+            "SIZE_UNIT_PCT_EQUITY" => Some(Self::PctEquity),
             _ => None,
         }
     }
@@ -375,16 +401,20 @@ impl RiskDenomination {
         }
     }
 }
-/// Strategy family
+/// Strategy family - position type classification
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, PartialOrd, Ord, ::prost::Enumeration)]
 #[repr(i32)]
 pub enum StrategyFamily {
     Unspecified = 0,
-    Trend = 1,
-    MeanReversion = 2,
-    EventDriven = 3,
-    Volatility = 4,
-    RelativeValue = 5,
+    EquityLong = 1,
+    EquityShort = 2,
+    OptionLong = 3,
+    OptionShort = 4,
+    VerticalSpread = 5,
+    IronCondor = 6,
+    Straddle = 7,
+    Strangle = 8,
+    CalendarSpread = 9,
 }
 impl StrategyFamily {
     /// String value of the enum field names used in the ProtoBuf definition.
@@ -394,22 +424,105 @@ impl StrategyFamily {
     pub fn as_str_name(&self) -> &'static str {
         match self {
             Self::Unspecified => "STRATEGY_FAMILY_UNSPECIFIED",
-            Self::Trend => "STRATEGY_FAMILY_TREND",
-            Self::MeanReversion => "STRATEGY_FAMILY_MEAN_REVERSION",
-            Self::EventDriven => "STRATEGY_FAMILY_EVENT_DRIVEN",
-            Self::Volatility => "STRATEGY_FAMILY_VOLATILITY",
-            Self::RelativeValue => "STRATEGY_FAMILY_RELATIVE_VALUE",
+            Self::EquityLong => "STRATEGY_FAMILY_EQUITY_LONG",
+            Self::EquityShort => "STRATEGY_FAMILY_EQUITY_SHORT",
+            Self::OptionLong => "STRATEGY_FAMILY_OPTION_LONG",
+            Self::OptionShort => "STRATEGY_FAMILY_OPTION_SHORT",
+            Self::VerticalSpread => "STRATEGY_FAMILY_VERTICAL_SPREAD",
+            Self::IronCondor => "STRATEGY_FAMILY_IRON_CONDOR",
+            Self::Straddle => "STRATEGY_FAMILY_STRADDLE",
+            Self::Strangle => "STRATEGY_FAMILY_STRANGLE",
+            Self::CalendarSpread => "STRATEGY_FAMILY_CALENDAR_SPREAD",
         }
     }
     /// Creates an enum from field names used in the ProtoBuf definition.
     pub fn from_str_name(value: &str) -> ::core::option::Option<Self> {
         match value {
             "STRATEGY_FAMILY_UNSPECIFIED" => Some(Self::Unspecified),
-            "STRATEGY_FAMILY_TREND" => Some(Self::Trend),
-            "STRATEGY_FAMILY_MEAN_REVERSION" => Some(Self::MeanReversion),
-            "STRATEGY_FAMILY_EVENT_DRIVEN" => Some(Self::EventDriven),
-            "STRATEGY_FAMILY_VOLATILITY" => Some(Self::Volatility),
-            "STRATEGY_FAMILY_RELATIVE_VALUE" => Some(Self::RelativeValue),
+            "STRATEGY_FAMILY_EQUITY_LONG" => Some(Self::EquityLong),
+            "STRATEGY_FAMILY_EQUITY_SHORT" => Some(Self::EquityShort),
+            "STRATEGY_FAMILY_OPTION_LONG" => Some(Self::OptionLong),
+            "STRATEGY_FAMILY_OPTION_SHORT" => Some(Self::OptionShort),
+            "STRATEGY_FAMILY_VERTICAL_SPREAD" => Some(Self::VerticalSpread),
+            "STRATEGY_FAMILY_IRON_CONDOR" => Some(Self::IronCondor),
+            "STRATEGY_FAMILY_STRADDLE" => Some(Self::Straddle),
+            "STRATEGY_FAMILY_STRANGLE" => Some(Self::Strangle),
+            "STRATEGY_FAMILY_CALENDAR_SPREAD" => Some(Self::CalendarSpread),
+            _ => None,
+        }
+    }
+}
+/// Time horizon for the trade
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, PartialOrd, Ord, ::prost::Enumeration)]
+#[repr(i32)]
+pub enum TimeHorizon {
+    Unspecified = 0,
+    Intraday = 1,
+    Swing = 2,
+    Position = 3,
+}
+impl TimeHorizon {
+    /// String value of the enum field names used in the ProtoBuf definition.
+    ///
+    /// The values are not transformed in any way and thus are considered stable
+    /// (if the ProtoBuf definition does not change) and safe for programmatic use.
+    pub fn as_str_name(&self) -> &'static str {
+        match self {
+            Self::Unspecified => "TIME_HORIZON_UNSPECIFIED",
+            Self::Intraday => "TIME_HORIZON_INTRADAY",
+            Self::Swing => "TIME_HORIZON_SWING",
+            Self::Position => "TIME_HORIZON_POSITION",
+        }
+    }
+    /// Creates an enum from field names used in the ProtoBuf definition.
+    pub fn from_str_name(value: &str) -> ::core::option::Option<Self> {
+        match value {
+            "TIME_HORIZON_UNSPECIFIED" => Some(Self::Unspecified),
+            "TIME_HORIZON_INTRADAY" => Some(Self::Intraday),
+            "TIME_HORIZON_SWING" => Some(Self::Swing),
+            "TIME_HORIZON_POSITION" => Some(Self::Position),
+            _ => None,
+        }
+    }
+}
+/// Thesis lifecycle state
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, PartialOrd, Ord, ::prost::Enumeration)]
+#[repr(i32)]
+pub enum ThesisState {
+    Unspecified = 0,
+    Watching = 1,
+    Entered = 2,
+    Adding = 3,
+    Managing = 4,
+    Exiting = 5,
+    Closed = 6,
+}
+impl ThesisState {
+    /// String value of the enum field names used in the ProtoBuf definition.
+    ///
+    /// The values are not transformed in any way and thus are considered stable
+    /// (if the ProtoBuf definition does not change) and safe for programmatic use.
+    pub fn as_str_name(&self) -> &'static str {
+        match self {
+            Self::Unspecified => "THESIS_STATE_UNSPECIFIED",
+            Self::Watching => "THESIS_STATE_WATCHING",
+            Self::Entered => "THESIS_STATE_ENTERED",
+            Self::Adding => "THESIS_STATE_ADDING",
+            Self::Managing => "THESIS_STATE_MANAGING",
+            Self::Exiting => "THESIS_STATE_EXITING",
+            Self::Closed => "THESIS_STATE_CLOSED",
+        }
+    }
+    /// Creates an enum from field names used in the ProtoBuf definition.
+    pub fn from_str_name(value: &str) -> ::core::option::Option<Self> {
+        match value {
+            "THESIS_STATE_UNSPECIFIED" => Some(Self::Unspecified),
+            "THESIS_STATE_WATCHING" => Some(Self::Watching),
+            "THESIS_STATE_ENTERED" => Some(Self::Entered),
+            "THESIS_STATE_ADDING" => Some(Self::Adding),
+            "THESIS_STATE_MANAGING" => Some(Self::Managing),
+            "THESIS_STATE_EXITING" => Some(Self::Exiting),
+            "THESIS_STATE_CLOSED" => Some(Self::Closed),
             _ => None,
         }
     }
@@ -492,6 +605,42 @@ impl MarketStatus {
         }
     }
 }
+/// Position intent for options orders
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, PartialOrd, Ord, ::prost::Enumeration)]
+#[repr(i32)]
+pub enum PositionIntent {
+    Unspecified = 0,
+    BuyToOpen = 1,
+    BuyToClose = 2,
+    SellToOpen = 3,
+    SellToClose = 4,
+}
+impl PositionIntent {
+    /// String value of the enum field names used in the ProtoBuf definition.
+    ///
+    /// The values are not transformed in any way and thus are considered stable
+    /// (if the ProtoBuf definition does not change) and safe for programmatic use.
+    pub fn as_str_name(&self) -> &'static str {
+        match self {
+            Self::Unspecified => "POSITION_INTENT_UNSPECIFIED",
+            Self::BuyToOpen => "POSITION_INTENT_BUY_TO_OPEN",
+            Self::BuyToClose => "POSITION_INTENT_BUY_TO_CLOSE",
+            Self::SellToOpen => "POSITION_INTENT_SELL_TO_OPEN",
+            Self::SellToClose => "POSITION_INTENT_SELL_TO_CLOSE",
+        }
+    }
+    /// Creates an enum from field names used in the ProtoBuf definition.
+    pub fn from_str_name(value: &str) -> ::core::option::Option<Self> {
+        match value {
+            "POSITION_INTENT_UNSPECIFIED" => Some(Self::Unspecified),
+            "POSITION_INTENT_BUY_TO_OPEN" => Some(Self::BuyToOpen),
+            "POSITION_INTENT_BUY_TO_CLOSE" => Some(Self::BuyToClose),
+            "POSITION_INTENT_SELL_TO_OPEN" => Some(Self::SellToOpen),
+            "POSITION_INTENT_SELL_TO_CLOSE" => Some(Self::SellToClose),
+            _ => None,
+        }
+    }
+}
 // ============================================
 // Order Planning
 // ============================================
@@ -557,7 +706,7 @@ pub struct Decision {
     /// Risk levels (mandatory - always required)
     #[prost(message, optional, tag="5")]
     pub risk_levels: ::core::option::Option<RiskLevels>,
-    /// Strategy family
+    /// Strategy family (position type)
     #[prost(enumeration="StrategyFamily", tag="6")]
     pub strategy_family: i32,
     /// Human-readable rationale for the decision
@@ -569,6 +718,27 @@ pub struct Decision {
     /// Supporting references
     #[prost(message, optional, tag="9")]
     pub references: ::core::option::Option<References>,
+    /// Direction of the position
+    #[prost(enumeration="Direction", tag="10")]
+    pub direction: i32,
+    /// Time horizon for the trade
+    #[prost(enumeration="TimeHorizon", tag="11")]
+    pub time_horizon: i32,
+    /// Current thesis state
+    #[prost(enumeration="ThesisState", tag="12")]
+    pub thesis_state: i32,
+    /// Bullish factors supporting the decision
+    #[prost(string, repeated, tag="13")]
+    pub bullish_factors: ::prost::alloc::vec::Vec<::prost::alloc::string::String>,
+    /// Bearish factors considered
+    #[prost(string, repeated, tag="14")]
+    pub bearish_factors: ::prost::alloc::vec::Vec<::prost::alloc::string::String>,
+    /// Option legs for multi-leg strategies (empty for single-leg orders)
+    #[prost(message, repeated, tag="15")]
+    pub legs: ::prost::alloc::vec::Vec<OptionLeg>,
+    /// Net limit price for multi-leg orders (debit positive, credit negative)
+    #[prost(double, optional, tag="16")]
+    pub net_limit_price: ::core::option::Option<f64>,
 }
 // ============================================
 // DecisionPlan

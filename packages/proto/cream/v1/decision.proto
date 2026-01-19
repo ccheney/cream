@@ -73,7 +73,7 @@ message Decision {
   // Risk levels (mandatory - always required)
   RiskLevels risk_levels = 5;
 
-  // Strategy family
+  // Strategy family (position type)
   StrategyFamily strategy_family = 6;
 
   // Human-readable rationale for the decision
@@ -84,6 +84,27 @@ message Decision {
 
   // Supporting references
   References references = 9;
+
+  // Direction of the position
+  Direction direction = 10;
+
+  // Time horizon for the trade
+  TimeHorizon time_horizon = 11;
+
+  // Current thesis state
+  ThesisState thesis_state = 12;
+
+  // Bullish factors supporting the decision
+  repeated string bullish_factors = 13;
+
+  // Bearish factors considered
+  repeated string bearish_factors = 14;
+
+  // Option legs for multi-leg strategies (empty for single-leg orders)
+  repeated OptionLeg legs = 15;
+
+  // Net limit price for multi-leg orders (debit positive, credit negative)
+  optional double net_limit_price = 16;
 }
 
 // ============================================

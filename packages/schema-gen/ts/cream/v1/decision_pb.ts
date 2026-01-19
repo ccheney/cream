@@ -9,7 +9,7 @@
 
 import type { GenFile, GenMessage } from "@bufbuild/protobuf/codegenv1";
 import { fileDesc, messageDesc } from "@bufbuild/protobuf/codegenv1";
-import type { Action, Environment, Instrument, OrderType, RiskLevels, Size, StrategyFamily, TimeInForce } from "./common_pb.js";
+import type { Action, Direction, Environment, Instrument, OptionLeg, OrderType, RiskLevels, Size, StrategyFamily, ThesisState, TimeHorizon, TimeInForce } from "./common_pb.js";
 import { file_cream_v1_common } from "./common_pb.js";
 import type { Timestamp } from "@bufbuild/protobuf/wkt";
 import { file_google_protobuf_struct, file_google_protobuf_timestamp } from "@bufbuild/protobuf/wkt";
@@ -19,7 +19,7 @@ import type { JsonObject, Message } from "@bufbuild/protobuf";
  * Describes the file cream/v1/decision.proto.
  */
 export const file_cream_v1_decision: GenFile = /*@__PURE__*/
-  fileDesc("ChdjcmVhbS92MS9kZWNpc2lvbi5wcm90bxIIY3JlYW0udjEiswIKCU9yZGVyUGxhbhItChBlbnRyeV9vcmRlcl90eXBlGAEgASgOMhMuY3JlYW0udjEuT3JkZXJUeXBlEh4KEWVudHJ5X2xpbWl0X3ByaWNlGAIgASgBSACIAQESLAoPZXhpdF9vcmRlcl90eXBlGAMgASgOMhMuY3JlYW0udjEuT3JkZXJUeXBlEiwKDXRpbWVfaW5fZm9yY2UYBCABKA4yFS5jcmVhbS52MS5UaW1lSW5Gb3JjZRIdChBleGVjdXRpb25fdGFjdGljGAUgASgJSAGIAQESMQoQZXhlY3V0aW9uX3BhcmFtcxgGIAEoCzIXLmdvb2dsZS5wcm90b2J1Zi5TdHJ1Y3RCFAoSX2VudHJ5X2xpbWl0X3ByaWNlQhMKEV9leGVjdXRpb25fdGFjdGljIlEKClJlZmVyZW5jZXMSFwoPdXNlZF9pbmRpY2F0b3JzGAEgAygJEhcKD21lbW9yeV9jYXNlX2lkcxgCIAMoCRIRCglldmVudF9pZHMYAyADKAkizAIKCERlY2lzaW9uEigKCmluc3RydW1lbnQYASABKAsyFC5jcmVhbS52MS5JbnN0cnVtZW50EiAKBmFjdGlvbhgCIAEoDjIQLmNyZWFtLnYxLkFjdGlvbhIcCgRzaXplGAMgASgLMg4uY3JlYW0udjEuU2l6ZRInCgpvcmRlcl9wbGFuGAQgASgLMhMuY3JlYW0udjEuT3JkZXJQbGFuEikKC3Jpc2tfbGV2ZWxzGAUgASgLMhQuY3JlYW0udjEuUmlza0xldmVscxIxCg9zdHJhdGVneV9mYW1pbHkYBiABKA4yGC5jcmVhbS52MS5TdHJhdGVneUZhbWlseRIRCglyYXRpb25hbGUYByABKAkSEgoKY29uZmlkZW5jZRgIIAEoARIoCgpyZWZlcmVuY2VzGAkgASgLMhQuY3JlYW0udjEuUmVmZXJlbmNlcyLaAQoMRGVjaXNpb25QbGFuEhAKCGN5Y2xlX2lkGAEgASgJEjMKD2FzX29mX3RpbWVzdGFtcBgCIAEoCzIaLmdvb2dsZS5wcm90b2J1Zi5UaW1lc3RhbXASKgoLZW52aXJvbm1lbnQYAyABKA4yFS5jcmVhbS52MS5FbnZpcm9ubWVudBIlCglkZWNpc2lvbnMYBCADKAsyEi5jcmVhbS52MS5EZWNpc2lvbhIcCg9wb3J0Zm9saW9fbm90ZXMYBSABKAlIAIgBAUISChBfcG9ydGZvbGlvX25vdGVzIn0KFFJpc2tWYWxpZGF0aW9uUmVzdWx0Eg0KBXZhbGlkGAEgASgIEg4KBmVycm9ycxgCIAMoCRIQCgh3YXJuaW5ncxgDIAMoCRIeChFyaXNrX3Jld2FyZF9yYXRpbxgEIAEoAUgAiAEBQhQKEl9yaXNrX3Jld2FyZF9yYXRpbyKAAQocRGVjaXNpb25QbGFuVmFsaWRhdGlvblJlc3VsdBIPCgdzdWNjZXNzGAEgASgIEi0KDWRlY2lzaW9uX3BsYW4YAiABKAsyFi5jcmVhbS52MS5EZWNpc2lvblBsYW4SDgoGZXJyb3JzGAMgAygJEhAKCHdhcm5pbmdzGAQgAygJQpYBCgxjb20uY3JlYW0udjFCDURlY2lzaW9uUHJvdG9QAVo2Z2l0aHViLmNvbS9jcmVhbS10cmFkaW5nL2NyZWFtL2dlbi9nby9jcmVhbS92MTtjcmVhbXYxogIDQ1hYqgIIQ3JlYW0uVjHKAghDcmVhbVxWMeICFENyZWFtXFYxXEdQQk1ldGFkYXRh6gIJQ3JlYW06OlYxYgZwcm90bzM", [file_cream_v1_common, file_google_protobuf_struct, file_google_protobuf_timestamp]);
+  fileDesc("ChdjcmVhbS92MS9kZWNpc2lvbi5wcm90bxIIY3JlYW0udjEiswIKCU9yZGVyUGxhbhItChBlbnRyeV9vcmRlcl90eXBlGAEgASgOMhMuY3JlYW0udjEuT3JkZXJUeXBlEh4KEWVudHJ5X2xpbWl0X3ByaWNlGAIgASgBSACIAQESLAoPZXhpdF9vcmRlcl90eXBlGAMgASgOMhMuY3JlYW0udjEuT3JkZXJUeXBlEiwKDXRpbWVfaW5fZm9yY2UYBCABKA4yFS5jcmVhbS52MS5UaW1lSW5Gb3JjZRIdChBleGVjdXRpb25fdGFjdGljGAUgASgJSAGIAQESMQoQZXhlY3V0aW9uX3BhcmFtcxgGIAEoCzIXLmdvb2dsZS5wcm90b2J1Zi5TdHJ1Y3RCFAoSX2VudHJ5X2xpbWl0X3ByaWNlQhMKEV9leGVjdXRpb25fdGFjdGljIlEKClJlZmVyZW5jZXMSFwoPdXNlZF9pbmRpY2F0b3JzGAEgAygJEhcKD21lbW9yeV9jYXNlX2lkcxgCIAMoCRIRCglldmVudF9pZHMYAyADKAki1QQKCERlY2lzaW9uEigKCmluc3RydW1lbnQYASABKAsyFC5jcmVhbS52MS5JbnN0cnVtZW50EiAKBmFjdGlvbhgCIAEoDjIQLmNyZWFtLnYxLkFjdGlvbhIcCgRzaXplGAMgASgLMg4uY3JlYW0udjEuU2l6ZRInCgpvcmRlcl9wbGFuGAQgASgLMhMuY3JlYW0udjEuT3JkZXJQbGFuEikKC3Jpc2tfbGV2ZWxzGAUgASgLMhQuY3JlYW0udjEuUmlza0xldmVscxIxCg9zdHJhdGVneV9mYW1pbHkYBiABKA4yGC5jcmVhbS52MS5TdHJhdGVneUZhbWlseRIRCglyYXRpb25hbGUYByABKAkSEgoKY29uZmlkZW5jZRgIIAEoARIoCgpyZWZlcmVuY2VzGAkgASgLMhQuY3JlYW0udjEuUmVmZXJlbmNlcxImCglkaXJlY3Rpb24YCiABKA4yEy5jcmVhbS52MS5EaXJlY3Rpb24SKwoMdGltZV9ob3Jpem9uGAsgASgOMhUuY3JlYW0udjEuVGltZUhvcml6b24SKwoMdGhlc2lzX3N0YXRlGAwgASgOMhUuY3JlYW0udjEuVGhlc2lzU3RhdGUSFwoPYnVsbGlzaF9mYWN0b3JzGA0gAygJEhcKD2JlYXJpc2hfZmFjdG9ycxgOIAMoCRIhCgRsZWdzGA8gAygLMhMuY3JlYW0udjEuT3B0aW9uTGVnEhwKD25ldF9saW1pdF9wcmljZRgQIAEoAUgAiAEBQhIKEF9uZXRfbGltaXRfcHJpY2Ui2gEKDERlY2lzaW9uUGxhbhIQCghjeWNsZV9pZBgBIAEoCRIzCg9hc19vZl90aW1lc3RhbXAYAiABKAsyGi5nb29nbGUucHJvdG9idWYuVGltZXN0YW1wEioKC2Vudmlyb25tZW50GAMgASgOMhUuY3JlYW0udjEuRW52aXJvbm1lbnQSJQoJZGVjaXNpb25zGAQgAygLMhIuY3JlYW0udjEuRGVjaXNpb24SHAoPcG9ydGZvbGlvX25vdGVzGAUgASgJSACIAQFCEgoQX3BvcnRmb2xpb19ub3RlcyJ9ChRSaXNrVmFsaWRhdGlvblJlc3VsdBINCgV2YWxpZBgBIAEoCBIOCgZlcnJvcnMYAiADKAkSEAoId2FybmluZ3MYAyADKAkSHgoRcmlza19yZXdhcmRfcmF0aW8YBCABKAFIAIgBAUIUChJfcmlza19yZXdhcmRfcmF0aW8igAEKHERlY2lzaW9uUGxhblZhbGlkYXRpb25SZXN1bHQSDwoHc3VjY2VzcxgBIAEoCBItCg1kZWNpc2lvbl9wbGFuGAIgASgLMhYuY3JlYW0udjEuRGVjaXNpb25QbGFuEg4KBmVycm9ycxgDIAMoCRIQCgh3YXJuaW5ncxgEIAMoCUKWAQoMY29tLmNyZWFtLnYxQg1EZWNpc2lvblByb3RvUAFaNmdpdGh1Yi5jb20vY3JlYW0tdHJhZGluZy9jcmVhbS9nZW4vZ28vY3JlYW0vdjE7Y3JlYW12MaICA0NYWKoCCENyZWFtLlYxygIIQ3JlYW1cVjHiAhRDcmVhbVxWMVxHUEJNZXRhZGF0YeoCCUNyZWFtOjpWMWIGcHJvdG8z", [file_cream_v1_common, file_google_protobuf_struct, file_google_protobuf_timestamp]);
 
 /**
  * Order execution plan
@@ -154,7 +154,7 @@ export type Decision = Message<"cream.v1.Decision"> & {
   riskLevels?: RiskLevels;
 
   /**
-   * Strategy family
+   * Strategy family (position type)
    *
    * @generated from field: cream.v1.StrategyFamily strategy_family = 6;
    */
@@ -180,6 +180,55 @@ export type Decision = Message<"cream.v1.Decision"> & {
    * @generated from field: cream.v1.References references = 9;
    */
   references?: References;
+
+  /**
+   * Direction of the position
+   *
+   * @generated from field: cream.v1.Direction direction = 10;
+   */
+  direction: Direction;
+
+  /**
+   * Time horizon for the trade
+   *
+   * @generated from field: cream.v1.TimeHorizon time_horizon = 11;
+   */
+  timeHorizon: TimeHorizon;
+
+  /**
+   * Current thesis state
+   *
+   * @generated from field: cream.v1.ThesisState thesis_state = 12;
+   */
+  thesisState: ThesisState;
+
+  /**
+   * Bullish factors supporting the decision
+   *
+   * @generated from field: repeated string bullish_factors = 13;
+   */
+  bullishFactors: string[];
+
+  /**
+   * Bearish factors considered
+   *
+   * @generated from field: repeated string bearish_factors = 14;
+   */
+  bearishFactors: string[];
+
+  /**
+   * Option legs for multi-leg strategies (empty for single-leg orders)
+   *
+   * @generated from field: repeated cream.v1.OptionLeg legs = 15;
+   */
+  legs: OptionLeg[];
+
+  /**
+   * Net limit price for multi-leg orders (debit positive, credit negative)
+   *
+   * @generated from field: optional double net_limit_price = 16;
+   */
+  netLimitPrice?: number;
 };
 
 /**
