@@ -46,7 +46,7 @@ function broadcastEvent(event: AlpacaWsEvent): void {
 			log.debug("Shared Options WebSocket connected");
 			break;
 		case "authenticated":
-			log.info("Shared Options WebSocket authenticated");
+			log.debug("Shared Options WebSocket authenticated");
 			break;
 		case "disconnected":
 			// Code 1000 is normal close (server idle timeout) - log at debug level

@@ -204,13 +204,13 @@ export async function initTradingUpdatesStreaming(): Promise<void> {
 		tradingStream.on((event) => {
 			switch (event.type) {
 				case "connected":
-					log.info("Connected to Alpaca trading stream");
+					log.debug("Connected to Alpaca trading stream");
 					break;
 				case "authenticated":
-					log.info("Authenticated with Alpaca trading stream");
+					log.debug("Authenticated with Alpaca trading stream");
 					break;
 				case "listening":
-					log.info({ streams: event.streams }, "Subscribed to Alpaca trading streams");
+					log.debug({ streams: event.streams }, "Subscribed to Alpaca trading streams");
 					break;
 				case "trade_update":
 					handleTradeUpdate(event).catch((error) => {
@@ -224,10 +224,23 @@ export async function initTradingUpdatesStreaming(): Promise<void> {
 					log.error({ message: event.message }, "Alpaca trading stream error");
 					break;
 				case "disconnected":
-					log.warn({ reason: event.reason }, "Alpaca trading stream disconnected");
+					// Code 1000 is normal close (server idle timeout) - log at debug level
+					if (event.reason.includes("code 1000")) {
+						log.debug(
+							{ reason: event.reason },
+							"Alpaca trading stream disconnected (idle timeout)"
+						);
+					} else {
+						log.warn({ reason: event.reason }, "Alpaca trading stream disconnected");
+					}
 					break;
 				case "reconnecting":
-					log.info({ attempt: event.attempt }, "Reconnecting to Alpaca trading stream");
+					// First few reconnect attempts are expected after idle timeout
+					if (event.attempt <= 2) {
+						log.debug({ attempt: event.attempt }, "Reconnecting to Alpaca trading stream");
+					} else {
+						log.info({ attempt: event.attempt }, "Reconnecting to Alpaca trading stream");
+					}
 					break;
 			}
 		});
