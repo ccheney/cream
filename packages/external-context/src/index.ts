@@ -49,7 +49,6 @@ export {
 } from "./linking/index.js";
 // Parsers
 export {
-	type AlphaVantageEconomicIndicator,
 	calculateMacroSurprise,
 	type EconomicCalendarEvent,
 	extractTranscriptSections,
@@ -67,7 +66,6 @@ export {
 	MACRO_INDICATORS,
 	type MacroIndicatorType,
 	type NewsParserConfig,
-	parseAlphaVantageIndicator,
 	parseEconomicCalendarEvents,
 	parseFREDObservations,
 	parseFREDReleaseDates,

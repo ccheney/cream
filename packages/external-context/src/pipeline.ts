@@ -12,15 +12,11 @@
 import { randomUUID } from "node:crypto";
 import { EntityLinker, type EntityLinkerConfig } from "./linking/index.js";
 import {
-	parseAlphaVantageIndicator,
 	parseEconomicCalendarEvents,
 	parseNewsArticles,
 	parseTranscript,
 } from "./parsers/index.js";
-import type {
-	AlphaVantageEconomicIndicator,
-	EconomicCalendarEvent,
-} from "./parsers/macroParser.js";
+import type { EconomicCalendarEvent } from "./parsers/macroParser.js";
 import {
 	computeImportanceScore,
 	computeSentimentFromExtraction,
@@ -126,17 +122,9 @@ export class ExtractionPipeline {
 	/**
 	 * Process macro releases through the pipeline
 	 */
-	async processMacroReleases(
-		releases: AlphaVantageEconomicIndicator | EconomicCalendarEvent[]
-	): Promise<PipelineResult> {
+	async processMacroReleases(releases: EconomicCalendarEvent[]): Promise<PipelineResult> {
 		const startTime = Date.now();
-		let parsed: ParsedMacroRelease[];
-
-		if (Array.isArray(releases)) {
-			parsed = parseEconomicCalendarEvents(releases);
-		} else {
-			parsed = parseAlphaVantageIndicator(releases);
-		}
+		const parsed = parseEconomicCalendarEvents(releases);
 
 		return this.processItems(
 			parsed.map((p) => ({

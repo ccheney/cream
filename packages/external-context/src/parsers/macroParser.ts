@@ -1,7 +1,7 @@
 /**
  * Macro Release Parser
  *
- * Parses Alpha Vantage and FRED macro data sources into normalized format.
+ * Parses FRED macro data sources into normalized format.
  */
 
 import {
@@ -13,19 +13,6 @@ import {
 	type ReleaseImpact,
 } from "@cream/universe";
 import type { ParsedMacroRelease } from "../types.js";
-
-/**
- * Alpha Vantage economic indicator response
- */
-export interface AlphaVantageEconomicIndicator {
-	name: string;
-	interval: string;
-	unit: string;
-	data: Array<{
-		date: string;
-		value: string;
-	}>;
-}
 
 /**
  * Known macro indicators with metadata
@@ -56,55 +43,6 @@ export const MACRO_INDICATORS = {
 } as const;
 
 export type MacroIndicatorType = keyof typeof MACRO_INDICATORS;
-
-/**
- * Parse Alpha Vantage economic indicator response
- */
-export function parseAlphaVantageIndicator(
-	response: AlphaVantageEconomicIndicator,
-	indicatorType?: MacroIndicatorType
-): ParsedMacroRelease[] {
-	const results: ParsedMacroRelease[] = [];
-
-	if (!response.data || !Array.isArray(response.data)) {
-		return results;
-	}
-
-	// Get metadata
-	const metadata = indicatorType ? MACRO_INDICATORS[indicatorType] : null;
-
-	for (let i = 0; i < response.data.length; i++) {
-		const item = response.data[i];
-		if (!item || !item.date || item.value === ".") {
-			continue;
-		}
-
-		const value = parseFloat(item.value);
-		if (Number.isNaN(value)) {
-			continue;
-		}
-
-		const date = parseDate(item.date);
-		if (!date) {
-			continue;
-		}
-
-		// Get previous value if available
-		const nextItem = response.data[i + 1];
-		const previousValue = nextItem ? parseFloat(nextItem.value) : undefined;
-
-		results.push({
-			indicator: metadata?.name ?? response.name ?? "Unknown",
-			value,
-			previousValue: Number.isNaN(previousValue ?? NaN) ? undefined : previousValue,
-			date,
-			unit: metadata?.unit ?? response.unit ?? undefined,
-			source: "Alpha Vantage",
-		});
-	}
-
-	return results;
-}
 
 /**
  * Economic calendar event structure

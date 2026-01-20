@@ -16,7 +16,6 @@ import {
 	getExecutiveComments,
 	groupByIndicator,
 	isMacroReleaseSignificant,
-	parseAlphaVantageIndicator,
 	parseEconomicCalendarEvents,
 	parseFREDObservations,
 	parseFREDReleaseDates,
@@ -405,27 +404,6 @@ describe("Transcript Parser", () => {
 });
 
 describe("Macro Parser", () => {
-	it("should parse Alpha Vantage indicator", () => {
-		const response = {
-			name: "Real GDP",
-			interval: "quarterly",
-			unit: "billions USD",
-			data: [
-				{ date: "2026-01-01", value: "28000" },
-				{ date: "2025-10-01", value: "27500" },
-			],
-		};
-
-		const results = parseAlphaVantageIndicator(response);
-		expect(results).toHaveLength(2);
-		const firstResult = results[0];
-		if (firstResult) {
-			expect(firstResult.indicator).toBe("Real GDP");
-			expect(firstResult.value).toBe(28000);
-			expect(firstResult.previousValue).toBe(27500);
-		}
-	});
-
 	it("should parse economic calendar events", () => {
 		const events = [
 			{
@@ -491,46 +469,6 @@ describe("Macro Parser", () => {
 			expect(gdpGroup).toHaveLength(2);
 			expect(cpiGroup).toHaveLength(1);
 		}
-	});
-
-	it("should return empty array for empty Alpha Vantage data", () => {
-		const response = {
-			name: "Real GDP",
-			interval: "quarterly",
-			unit: "billions USD",
-			data: [],
-		};
-
-		const results = parseAlphaVantageIndicator(response);
-		expect(results).toHaveLength(0);
-	});
-
-	it("should return empty array for null/undefined Alpha Vantage data", () => {
-		const response = {
-			name: "Real GDP",
-			interval: "quarterly",
-			unit: "billions USD",
-			data: undefined as unknown as { date: string; value: string }[],
-		};
-
-		const results = parseAlphaVantageIndicator(response);
-		expect(results).toHaveLength(0);
-	});
-
-	it("should skip Alpha Vantage entries with invalid dates", () => {
-		const response = {
-			name: "Real GDP",
-			interval: "quarterly",
-			unit: "billions USD",
-			data: [
-				{ date: "", value: "28000" },
-				{ date: "2026-01-01", value: "27500" },
-			],
-		};
-
-		const results = parseAlphaVantageIndicator(response);
-		expect(results).toHaveLength(1);
-		expect(results[0]?.value).toBe(27500);
 	});
 
 	it("should skip events with null actual values", () => {

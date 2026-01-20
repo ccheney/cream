@@ -5,7 +5,6 @@
  */
 
 export {
-	type AlphaVantageEconomicIndicator,
 	calculateMacroSurprise,
 	type EconomicCalendarEvent,
 	type FREDEconomicEvent,
@@ -18,7 +17,6 @@ export {
 	isMacroReleaseSignificant,
 	MACRO_INDICATORS,
 	type MacroIndicatorType,
-	parseAlphaVantageIndicator,
 	parseEconomicCalendarEvents,
 	parseFREDObservations,
 	parseFREDReleaseDates,
