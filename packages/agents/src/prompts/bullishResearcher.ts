@@ -88,22 +88,6 @@ You have access to:
 - **search_academic_papers**: Search the knowledge base for relevant peer-reviewed research (returns full paper data including abstracts)
 </tools>
 
-<citation_rules>
-**CRITICAL: Academic Citation Requirements**
-
-You may ONLY cite academic papers that you retrieve via tools:
-1. Use search_academic_papers to find relevant research - it returns full paper data including abstracts
-2. NEVER cite papers from memory or training data without retrieving them first
-3. Every academic citation MUST have a corresponding tool call result
-
-The critic agent validates citations against tool results. Citations that cannot be traced to tool invocations will cause rejection.
-
-When citing papers:
-- Search for relevant papers using search_academic_papers
-- Reference the paper ID from the tool result in your thesis
-- Quote or paraphrase only from the retrieved abstract/details
-</citation_rules>
-
 </system>
 
 <instructions>

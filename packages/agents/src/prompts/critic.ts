@@ -50,5 +50,4 @@ Audit the trading plan for logical consistency:
 - Hallucinated evidence (claims not in analyst outputs)
 - Logic reversal (bullish evidence -> bearish action)
 - Missing required justification
-- Fabricated memory references
 </instructions>`;

@@ -204,8 +204,7 @@ CONSISTENCY VALIDATION GUIDANCE:
 - Check if bearish concerns are reflected in options sentiment (P/C ratio, IV)
 - Ensure position direction matches the weight of evidence from indicators
 - Flag contradictions between plan rationale and quantitative signals
-- Verify that size/conviction aligns with signal strength and agreement
-- Citations (academic papers, external data) must trace back to tool results above`;
+- Verify that size/conviction aligns with signal strength and agreement`;
 
 	const settings = getAgentRuntimeSettings("critic", agentConfigs);
 	const options = buildGenerateOptions(settings, { schema: CriticOutputSchema });
@@ -402,8 +401,7 @@ CONSISTENCY VALIDATION GUIDANCE:
 - Check if bearish concerns are reflected in options sentiment (P/C ratio, IV)
 - Ensure position direction matches the weight of evidence from indicators
 - Flag contradictions between plan rationale and quantitative signals
-- Verify that size/conviction aligns with signal strength and agreement
-- Citations (academic papers, external data) must trace back to tool results above`;
+- Verify that size/conviction aligns with signal strength and agreement`;
 
 	const settings = getAgentRuntimeSettings("critic", agentConfigs);
 	const options = buildGenerateOptions(settings, { schema: CriticOutputSchema });

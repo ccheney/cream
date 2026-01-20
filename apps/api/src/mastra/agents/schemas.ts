@@ -112,7 +112,7 @@ export const RationaleSchema = z.object({
 	bullishFactors: z.array(z.string()),
 	bearishFactors: z.array(z.string()),
 	decisionLogic: z.string(),
-	memoryReferences: z.array(z.string()),
+	memoryReferences: z.array(z.string()).optional().default([]),
 });
 
 export const OptionLegSchema = z.object({

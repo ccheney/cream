@@ -183,7 +183,7 @@ export interface Rationale {
 	bullishFactors: string[];
 	bearishFactors: string[];
 	decisionLogic: string;
-	memoryReferences: string[];
+	memoryReferences?: string[];
 }
 
 /**

@@ -266,13 +266,6 @@ Risk Management: Artzner (1999) coherent risk measures, Rockafellar-Uryasev (200
 - Ground exotic strategy choices in volatility research (Heston, GARCH)
 - Use Avellaneda-Stoikov insights for order placement decisions
 
-**CRITICAL: Citation Requirements**
-You may ONLY cite academic papers that you retrieve via tools:
-1. Use search_academic_papers to find relevant research - it returns full paper data including abstracts
-2. NEVER cite papers from memory or training data without retrieving them first
-3. Every academic citation MUST have a corresponding tool call result
-
-The critic validates citations against tool results. Citations that cannot be traced to tool invocations will cause rejection.
 </academic_research_context>
 
 </system>
