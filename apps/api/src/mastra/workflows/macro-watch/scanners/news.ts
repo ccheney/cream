@@ -6,9 +6,12 @@
  * @see docs/plans/42-overnight-macro-watch.md
  */
 
+import { createNodeLogger } from "@cream/logger";
 import { createAlpacaClientFromEnv, isAlpacaConfigured } from "@cream/marketdata";
 
 import type { MacroWatchEntry, MacroWatchSession } from "../schemas.js";
+
+const log = createNodeLogger({ service: "macro-watch-news", level: "info" });
 
 /**
  * Major indices and macro symbols to always include in news.
@@ -56,14 +59,7 @@ function getCurrentSession(): MacroWatchSession {
  * Major symbols array for API calls (Alpaca limits symbols per request).
  * Prioritized subset of MAJOR_SYMBOLS for direct fetching.
  */
-const MAJOR_SYMBOLS_FOR_FETCH = [
-	...MAJOR_INDEX_ETFS,
-	"VIX",
-	"TLT",
-	"GLD",
-	"USO",
-	"EEM",
-];
+const MAJOR_SYMBOLS_FOR_FETCH = [...MAJOR_INDEX_ETFS, "VIX", "TLT", "GLD", "USO", "EEM"];
 
 /**
  * Scan Alpaca news for universe symbols and major indices since the given time.
@@ -77,6 +73,7 @@ const MAJOR_SYMBOLS_FOR_FETCH = [
  */
 export async function scanNews(symbols: string[], since: string): Promise<MacroWatchEntry[]> {
 	if (!isAlpacaConfigured()) {
+		log.warn({}, "Alpaca not configured, skipping news scan");
 		return [];
 	}
 
@@ -166,8 +163,11 @@ export async function scanNews(symbols: string[], since: string): Promise<MacroW
 				});
 			}
 		}
-	} catch {
-		// Return empty on error - news scan is best-effort
+	} catch (error) {
+		log.error(
+			{ error: error instanceof Error ? error.message : String(error) },
+			"News scan failed"
+		);
 	}
 
 	return entries;

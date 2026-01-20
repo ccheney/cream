@@ -7,7 +7,11 @@
  * @see docs/plans/42-overnight-macro-watch.md
  */
 
+import { createNodeLogger } from "@cream/logger";
+
 import type { MacroWatchEntry, MacroWatchSession } from "../schemas.js";
+
+const log = createNodeLogger({ service: "macro-watch-prediction", level: "info" });
 
 /**
  * Determine the macro watch session based on current time.
@@ -315,7 +319,12 @@ export async function scanPredictionDeltas(): Promise<MacroWatchEntry[]> {
 				},
 			},
 		];
-	} catch (_error) {}
+	} catch (error) {
+		log.error(
+			{ error: error instanceof Error ? error.message : String(error) },
+			"Prediction scan failed"
+		);
+	}
 
 	return [];
 }

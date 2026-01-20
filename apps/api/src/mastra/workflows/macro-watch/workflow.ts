@@ -7,7 +7,7 @@
  * Scanner Phases (run in parallel):
  * 1. News scan - Alpaca news API
  * 2. Prediction scan - Kalshi/Polymarket delta changes
- * 3. Economic scan - Alpha Vantage economic calendar
+ * 3. Economic scan - FRED economic calendar
  * 4. Movers scan - Alpaca screener pre-market movers
  *
  * @see docs/plans/42-overnight-macro-watch.md
@@ -43,8 +43,6 @@ export async function runMacroWatch(
 	symbols: string[],
 	since: string
 ): Promise<{ entries: MacroWatchEntry[]; totalCount: number; timestamp: string }> {
-	log.info({ symbolCount: symbols.length, since }, "Starting MacroWatch workflow");
-
 	// Run scanners in parallel for efficiency
 	const [newsEntries, predictionEntries, economicEntries, moverEntries] = await Promise.all([
 		scanNews(symbols, since),

@@ -6,9 +6,12 @@
  * @see docs/plans/42-overnight-macro-watch.md
  */
 
+import { createNodeLogger } from "@cream/logger";
 import { createAlpacaScreenerFromEnv, isAlpacaScreenerConfigured } from "@cream/marketdata";
 
 import type { MacroWatchEntry, MacroWatchSession } from "../schemas.js";
+
+const log = createNodeLogger({ service: "macro-watch-movers", level: "info" });
 
 /**
  * Determine the macro watch session based on current time.
@@ -73,6 +76,7 @@ function isAllowedExchange(exchange: string | undefined): boolean {
  */
 export async function scanMovers(universeSymbols: string[]): Promise<MacroWatchEntry[]> {
 	if (!isAlpacaScreenerConfigured()) {
+		log.warn({}, "Alpaca Screener not configured, skipping movers scan");
 		return [];
 	}
 
@@ -193,8 +197,11 @@ export async function scanMovers(universeSymbols: string[]): Promise<MacroWatchE
 				},
 			});
 		}
-	} catch {
-		// Return empty on error - movers scan is best-effort
+	} catch (error) {
+		log.error(
+			{ error: error instanceof Error ? error.message : String(error) },
+			"Movers scan failed"
+		);
 	}
 
 	return entries;

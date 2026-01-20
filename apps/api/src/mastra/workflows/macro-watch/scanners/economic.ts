@@ -1,12 +1,17 @@
 /**
  * Economic Calendar Scanner
  *
- * Checks Alpha Vantage for upcoming economic releases.
+ * Scans for upcoming economic releases using cached FRED data.
+ * Generates MacroWatchEntry items for high-impact releases in the next 24 hours.
  *
  * @see docs/plans/42-overnight-macro-watch.md
  */
 
+import { createNodeLogger } from "@cream/logger";
+
 import type { MacroWatchEntry, MacroWatchSession } from "../schemas.js";
+
+const log = createNodeLogger({ service: "macro-watch-economic", level: "info" });
 
 /**
  * Determine the macro watch session based on current time.
@@ -25,54 +30,35 @@ function getCurrentSession(): MacroWatchSession {
 }
 
 /**
- * Key economic indicators and their release patterns.
+ * Symbols affected by different types of economic releases.
  */
-const ECONOMIC_INDICATORS = [
-	{
-		name: "CPI",
-		description: "Consumer Price Index",
-		releaseDay: "2nd Tuesday",
-		releaseTime: "8:30 AM ET",
-		marketImpact: "HIGH",
-	},
-	{
-		name: "NFP",
-		description: "Non-Farm Payrolls",
-		releaseDay: "1st Friday",
-		releaseTime: "8:30 AM ET",
-		marketImpact: "HIGH",
-	},
-	{
-		name: "FOMC",
-		description: "Federal Reserve Rate Decision",
-		releaseDay: "Wednesday after meeting",
-		releaseTime: "2:00 PM ET",
-		marketImpact: "HIGH",
-	},
-	{
-		name: "GDP",
-		description: "Gross Domestic Product",
-		releaseDay: "4th week",
-		releaseTime: "8:30 AM ET",
-		marketImpact: "MEDIUM",
-	},
-	{
-		name: "ISM",
-		description: "ISM Manufacturing PMI",
-		releaseDay: "1st business day",
-		releaseTime: "10:00 AM ET",
-		marketImpact: "MEDIUM",
-	},
-] as const;
+const RELEASE_SYMBOLS: Record<string, string[]> = {
+	"Consumer Price Index": ["SPY", "QQQ", "TLT", "GLD"],
+	"Employment Situation": ["SPY", "QQQ", "IWM"],
+	"Gross Domestic Product": ["SPY", "QQQ", "IWM"],
+	"Federal Open Market Committee": ["SPY", "QQQ", "TLT", "GLD"],
+	"Retail Sales": ["SPY", "XRT", "AMZN"],
+	"Industrial Production and Capacity Utilization": ["SPY", "XLI"],
+	"Personal Income and Outlays": ["SPY", "XLY"],
+	"Treasury Constant Maturity Rates": ["TLT", "IEF", "BND"],
+	"Housing Starts": ["XHB", "ITB"],
+	"Manufacturers' Shipments, Inventories, and Orders": ["XLI", "CAT"],
+	"Producer Price Index": ["SPY", "XLI"],
+	"Job Openings and Labor Turnover Survey": ["SPY", "QQQ"],
+};
 
 /**
- * Scan for upcoming economic releases.
+ * Get symbols for a given release name, with fallback to broad market.
+ */
+function getSymbolsForRelease(releaseName: string): string[] {
+	return RELEASE_SYMBOLS[releaseName] ?? ["SPY", "QQQ"];
+}
+
+/**
+ * Scan for upcoming economic releases in the next 24 hours.
  *
- * Note: This is a simplified implementation using static calendar.
- * Full implementation would:
- * 1. Fetch economic calendar from Alpha Vantage or other provider
- * 2. Check for releases within next 24 hours
- * 3. Generate entries for high-impact releases
+ * Uses the cached FRED economic calendar data to find high-impact
+ * releases and generates MacroWatchEntry items.
  *
  * @returns Array of MacroWatchEntry for upcoming economic releases
  */
@@ -80,127 +66,50 @@ export async function scanEconomicCalendar(): Promise<MacroWatchEntry[]> {
 	const entries: MacroWatchEntry[] = [];
 	const session = getCurrentSession();
 	const now = new Date();
-	const tomorrow = new Date(now.getTime() + 24 * 60 * 60 * 1000);
+
+	log.info({}, "Scanning economic calendar from database cache");
 
 	try {
-		// Dynamic import to avoid circular dependencies
-		const { createAlphaVantageClientFromEnv, isAlphaVantageConfigured } = await import(
-			"@cream/marketdata"
+		const { EconomicCalendarRepository, getDb } = await import("@cream/storage");
+
+		const db = getDb();
+		const repo = new EconomicCalendarRepository(db);
+
+		const upcomingEvents = await repo.getUpcomingHighImpactEvents(24);
+
+		if (upcomingEvents.length === 0) {
+			log.info({}, "No upcoming high-impact economic events in next 24 hours");
+			return [];
+		}
+
+		for (const event of upcomingEvents) {
+			const symbols = getSymbolsForRelease(event.releaseName);
+
+			entries.push({
+				timestamp: now.toISOString(),
+				session,
+				category: "ECONOMIC",
+				headline: `Upcoming: ${event.releaseName} release at ${event.releaseTime} ET (HIGH impact)`,
+				symbols,
+				source: "FRED Economic Calendar",
+				metadata: {
+					releaseId: event.releaseId,
+					releaseName: event.releaseName,
+					releaseDate: event.releaseDate,
+					releaseTime: event.releaseTime,
+					impact: event.impact,
+					previous: event.previous,
+					forecast: event.forecast,
+				},
+			});
+		}
+
+		log.info({ entryCount: entries.length }, "Economic scan complete");
+	} catch (error) {
+		log.error(
+			{ error: error instanceof Error ? error.message : String(error) },
+			"Economic scan failed"
 		);
-
-		// Only attempt API calls if Alpha Vantage is configured
-		if (isAlphaVantageConfigured()) {
-			try {
-				const avClient = createAlphaVantageClientFromEnv();
-
-				// Fetch latest economic data to check for recent releases
-				const fedFundsRate = await avClient.getFederalFundsRate();
-				const treasuryYield = await avClient.getTreasuryYield("10year");
-
-				// Check if there was a recent Fed rate change
-				if (fedFundsRate.data.length >= 2) {
-					const latest = fedFundsRate.data[0];
-					const previous = fedFundsRate.data[1];
-
-					if (latest && previous && latest.value !== previous.value) {
-						entries.push({
-							timestamp: now.toISOString(),
-							session,
-							category: "ECONOMIC",
-							headline: `Fed Funds Rate: ${latest.value}% (prev: ${previous.value}%)`,
-							symbols: ["SPY", "QQQ", "TLT"],
-							source: "Alpha Vantage",
-							metadata: {
-								indicator: "FEDERAL_FUNDS_RATE",
-								current: latest.value,
-								previous: previous.value,
-								date: latest.date,
-							},
-						});
-					}
-				}
-
-				// Check for treasury yield changes
-				if (treasuryYield.data.length >= 2) {
-					const latest = treasuryYield.data[0];
-					const previous = treasuryYield.data[1];
-
-					if (latest && previous) {
-						const delta = Number(latest.value) - Number(previous.value);
-						// Report significant yield changes (>5bps)
-						if (Math.abs(delta) > 0.05) {
-							entries.push({
-								timestamp: now.toISOString(),
-								session,
-								category: "ECONOMIC",
-								headline: `10Y Treasury: ${latest.value}% (${delta > 0 ? "+" : ""}${(delta * 100).toFixed(1)}bps)`,
-								symbols: ["TLT", "IEF", "BND"],
-								source: "Alpha Vantage",
-								metadata: {
-									indicator: "TREASURY_YIELD_10Y",
-									current: latest.value,
-									previous: previous.value,
-									delta,
-									date: latest.date,
-								},
-							});
-						}
-					}
-				}
-			} catch {
-				// Alpha Vantage API error (rate limited, invalid key, etc.) - use static calendar check
-			}
-		}
-
-		// Static calendar check for high-impact releases
-		const dayOfWeek = now.getDay();
-		const dayOfMonth = now.getDate();
-		const tomorrowDayOfWeek = tomorrow.getDay();
-
-		// Check for known release patterns
-		for (const indicator of ECONOMIC_INDICATORS) {
-			let releasesSoon = false;
-
-			// Friday = NFP release (first Friday of month)
-			if (indicator.name === "NFP" && tomorrowDayOfWeek === 5 && dayOfMonth <= 7) {
-				releasesSoon = true;
-			}
-
-			// Tuesday = CPI release (around 10th-14th of month)
-			if (
-				indicator.name === "CPI" &&
-				tomorrowDayOfWeek === 2 &&
-				dayOfMonth >= 10 &&
-				dayOfMonth <= 14
-			) {
-				releasesSoon = true;
-			}
-
-			// Wednesday = FOMC (check meeting schedule)
-			// ISM = First business day (Monday or Tuesday if Monday is holiday)
-			if (indicator.name === "ISM" && dayOfMonth <= 3 && (dayOfWeek === 1 || dayOfWeek === 2)) {
-				releasesSoon = true;
-			}
-
-			if (releasesSoon) {
-				entries.push({
-					timestamp: now.toISOString(),
-					session,
-					category: "ECONOMIC",
-					headline: `Upcoming: ${indicator.description} release tomorrow (${indicator.marketImpact} impact)`,
-					symbols: ["SPY", "QQQ"],
-					source: "Economic Calendar",
-					metadata: {
-						indicator: indicator.name,
-						description: indicator.description,
-						expectedTime: indicator.releaseTime,
-						marketImpact: indicator.marketImpact,
-					},
-				});
-			}
-		}
-	} catch {
-		// Return empty on error - economic scan is best-effort
 	}
 
 	return entries;
