@@ -16,9 +16,11 @@ import { log } from "../../shared/logger.js";
 import {
 	calculateNext6AMESTMs,
 	calculateNext15MinMs,
+	calculateNextEconCalendarSyncMs,
 	calculateNextHourMs,
 	getNext6AMESTDate,
 	getNext15MinDate,
+	getNextEconCalendarSyncDate,
 	getNextHourDate,
 } from "./time-calculator.js";
 
@@ -31,12 +33,14 @@ export type JobName =
 	| "predictionMarkets"
 	| "filingsSync"
 	| "macroWatch"
-	| "newspaper";
+	| "newspaper"
+	| "economicCalendar";
 
 export interface SchedulerTimers {
 	tradingCycle: ReturnType<typeof setTimeout> | null;
 	predictionMarkets: ReturnType<typeof setTimeout> | null;
 	filingsSync: ReturnType<typeof setTimeout> | null;
+	economicCalendar: ReturnType<typeof setTimeout> | null;
 }
 
 export interface SchedulerIntervals {
@@ -48,6 +52,7 @@ export interface NextRunTimes {
 	tradingCycle: Date | null;
 	predictionMarkets: Date | null;
 	filingsSync: Date | null;
+	economicCalendar: Date | null;
 }
 
 export interface SchedulerHandlers {
@@ -56,6 +61,7 @@ export interface SchedulerHandlers {
 	runFilingsSync: () => Promise<void>;
 	runMacroWatch?: () => Promise<void>;
 	compileNewspaper?: () => Promise<void>;
+	runEconomicCalendarSync?: () => Promise<void>;
 }
 
 // ============================================
@@ -70,12 +76,14 @@ export class SchedulerManager {
 		tradingCycle: null,
 		predictionMarkets: null,
 		filingsSync: null,
+		economicCalendar: null,
 	};
 
 	private nextRun: NextRunTimes = {
 		tradingCycle: null,
 		predictionMarkets: null,
 		filingsSync: null,
+		economicCalendar: null,
 	};
 
 	private readonly handlers: SchedulerHandlers;
@@ -94,12 +102,14 @@ export class SchedulerManager {
 		const msUntilHour = calculateNextHourMs();
 		const msUntil15Min = calculateNext15MinMs();
 		const msUntil6AM = calculateNext6AMESTMs();
+		const msUntilEconCal = calculateNextEconCalendarSyncMs();
 
 		log.info(
 			{
 				tradingCycleMinutes: Math.round(msUntilHour / 60000),
 				predictionsMinutes: Math.round(msUntil15Min / 60000),
 				filingsHours: Math.round(msUntil6AM / 3600000),
+				econCalendarHours: Math.round(msUntilEconCal / 3600000),
 			},
 			"Scheduler started"
 		);
@@ -107,6 +117,7 @@ export class SchedulerManager {
 		this.scheduleTradingCycle();
 		this.schedulePredictionMarkets();
 		this.scheduleFilingsSync();
+		this.scheduleEconomicCalendarSync();
 	}
 
 	stop(): void {
@@ -124,6 +135,11 @@ export class SchedulerManager {
 			clearTimeout(this.timers.filingsSync);
 			clearInterval(this.timers.filingsSync);
 			this.timers.filingsSync = null;
+		}
+		if (this.timers.economicCalendar) {
+			clearTimeout(this.timers.economicCalendar);
+			clearInterval(this.timers.economicCalendar);
+			this.timers.economicCalendar = null;
 		}
 	}
 
@@ -266,6 +282,37 @@ export class SchedulerManager {
 				this.nextRun.filingsSync = new Date(Date.now() + FILINGS_SYNC_INTERVAL_MS);
 			}, FILINGS_SYNC_INTERVAL_MS);
 		}, msUntil6AM);
+	}
+
+	private scheduleEconomicCalendarSync(): void {
+		if (!this.handlers.runEconomicCalendarSync) {
+			return;
+		}
+
+		const ECON_CAL_INTERVAL_MS = 12 * 60 * 60 * 1000; // 12 hours
+		const msUntilNext = calculateNextEconCalendarSyncMs();
+		this.nextRun.economicCalendar = getNextEconCalendarSyncDate();
+
+		this.timers.economicCalendar = setTimeout(() => {
+			this.handlers.runEconomicCalendarSync?.().catch((error) => {
+				log.error(
+					{ error: error instanceof Error ? error.message : String(error) },
+					"Economic calendar sync failed"
+				);
+			});
+			// Update next run time after execution
+			this.nextRun.economicCalendar = new Date(Date.now() + ECON_CAL_INTERVAL_MS);
+			this.timers.economicCalendar = setInterval(() => {
+				this.handlers.runEconomicCalendarSync?.().catch((error) => {
+					log.error(
+						{ error: error instanceof Error ? error.message : String(error) },
+						"Economic calendar sync failed"
+					);
+				});
+				// Update next run time after each interval execution
+				this.nextRun.economicCalendar = new Date(Date.now() + ECON_CAL_INTERVAL_MS);
+			}, ECON_CAL_INTERVAL_MS);
+		}, msUntilNext);
 	}
 }
 

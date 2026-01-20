@@ -1,15 +1,19 @@
 /**
  * Economic Calendar Service
  *
- * Service for fetching economic calendar events from FRED API.
- * Provides filtering by country, impact level, and category.
- * Includes in-memory caching to reduce API calls.
+ * Service for fetching economic calendar events from the database cache.
+ * Falls back to FRED API if cache is stale or empty.
  *
  * @see docs/plans/41-economic-calendar-page.md
  */
 
 import { type EconomicEvent, getFredEconomicCalendar } from "@cream/agents";
 import { createContext, requireEnv } from "@cream/domain";
+import {
+	type CreateEconomicCalendarEventInput,
+	type EconomicCalendarEvent,
+	EconomicCalendarRepository,
+} from "@cream/storage";
 import { createFREDClientFromEnv, getReleaseById } from "@cream/universe";
 import log from "../logger.js";
 
@@ -65,17 +69,8 @@ export interface EventHistoryResult {
 // Cache Configuration
 // ============================================
 
-/** Cache TTL: 24 hours (economic events don't change frequently) */
-const CACHE_TTL_MS = 24 * 60 * 60 * 1000;
-
-/** Maximum cache entries to prevent unbounded memory growth */
-const MAX_CACHE_ENTRIES = 100;
-
-interface CacheEntry {
-	data: TransformedEvent[];
-	timestamp: number;
-	country: string;
-}
+/** Cache is considered stale after 12 hours */
+const CACHE_STALE_HOURS = 12;
 
 // ============================================
 // Service
@@ -83,9 +78,12 @@ interface CacheEntry {
 
 export class EconomicCalendarService {
 	private static instance: EconomicCalendarService;
+	private repo: EconomicCalendarRepository;
+	private refreshing = false;
 
-	/** In-memory cache: key = "country:start:end" */
-	private cache = new Map<string, CacheEntry>();
+	constructor() {
+		this.repo = new EconomicCalendarRepository();
+	}
 
 	static getInstance(): EconomicCalendarService {
 		if (!EconomicCalendarService.instance) {
@@ -96,42 +94,97 @@ export class EconomicCalendarService {
 
 	/**
 	 * Fetch economic calendar events with filters.
-	 * Uses in-memory cache with 24-hour TTL to reduce API calls.
+	 * Uses database cache, refreshing if stale or empty.
 	 */
 	async getEvents(filters: EconomicCalendarFilters): Promise<EconomicCalendarResult> {
 		const { start, end, country = "US", impact } = filters;
-		const cacheKey = this.getCacheKey(country, start, end);
 
-		// Check cache first
-		const cached = this.getFromCache(cacheKey);
-		if (cached) {
-			log.debug({ cacheKey, count: cached.length }, "Economic calendar cache hit");
-			return this.buildResult(cached, start, end, impact);
+		const isStale = await this.repo.isCacheStale(CACHE_STALE_HOURS);
+
+		if (isStale && !this.refreshing) {
+			this.triggerRefresh(start, end).catch((error) => {
+				log.error(
+					{ error: error instanceof Error ? error.message : String(error) },
+					"Background cache refresh failed"
+				);
+			});
 		}
 
 		try {
-			// Create execution context for FRED API call
-			const ctx = createContext(requireEnv(), "scheduled");
+			const events = await this.repo.getEvents(start, end, {
+				impact,
+				country,
+			});
 
-			// Fetch from FRED (US economic data only)
-			const events = await getFredEconomicCalendar(ctx, start, end);
+			if (events.length === 0 && isStale) {
+				log.debug({}, "Cache empty, fetching from FRED directly");
+				const freshEvents = await this.fetchAndCacheEvents(start, end);
+				return this.buildResult(freshEvents, start, end, country, impact);
+			}
 
-			// Transform events
-			const transformed = events.map((e) => this.transformEvent(e, country));
-
-			// Store in cache (before filtering by impact)
-			this.setInCache(cacheKey, transformed, country);
-
-			log.debug({ cacheKey, count: transformed.length }, "Economic calendar cached");
-
-			return this.buildResult(transformed, start, end, impact);
+			const transformed = events.map((e) => this.transformCachedEvent(e));
+			return this.buildResult(transformed, start, end, country, impact);
 		} catch (error) {
 			log.error(
 				{ error: error instanceof Error ? error.message : String(error) },
-				"Failed to fetch economic calendar"
+				"Failed to fetch economic calendar from cache"
 			);
 			throw error;
 		}
+	}
+
+	/**
+	 * Trigger a background refresh of the cache.
+	 */
+	private async triggerRefresh(start: string, end: string): Promise<void> {
+		if (this.refreshing) {
+			return;
+		}
+
+		this.refreshing = true;
+		log.info({}, "Triggering economic calendar cache refresh");
+
+		try {
+			await this.fetchAndCacheEvents(start, end);
+			log.info({}, "Economic calendar cache refresh complete");
+		} finally {
+			this.refreshing = false;
+		}
+	}
+
+	/**
+	 * Fetch events from FRED and store in cache.
+	 */
+	private async fetchAndCacheEvents(start: string, end: string): Promise<TransformedEvent[]> {
+		const ctx = createContext(requireEnv(), "manual");
+		const events = await getFredEconomicCalendar(ctx, start, end);
+
+		const eventsToUpsert: CreateEconomicCalendarEventInput[] = events.map(
+			(event: EconomicEvent) => {
+				const match = event.id.match(/^fred-(\d+)-/);
+				const releaseId = match?.[1] ? Number.parseInt(match[1], 10) : 0;
+
+				return {
+					releaseId,
+					releaseName: event.name,
+					releaseDate: event.date,
+					releaseTime: event.time,
+					impact: event.impact,
+					country: "US",
+					actual: event.actual,
+					previous: event.previous,
+					forecast: event.forecast,
+					unit: null,
+					fetchedAt: new Date().toISOString(),
+				};
+			}
+		);
+
+		if (eventsToUpsert.length > 0) {
+			await this.repo.upsertEvents(eventsToUpsert);
+		}
+
+		return events.map((e: EconomicEvent) => this.transformFredEvent(e, "US"));
 	}
 
 	/**
@@ -141,17 +194,16 @@ export class EconomicCalendarService {
 		events: TransformedEvent[],
 		start: string,
 		end: string,
+		_country: string,
 		impact?: ImpactLevel[]
 	): EconomicCalendarResult {
 		let filtered = events;
 
-		// Filter by impact if specified
 		if (impact && impact.length > 0) {
 			const impactSet = new Set(impact);
 			filtered = events.filter((e) => impactSet.has(e.impact));
 		}
 
-		// Sort by date/time
 		const sorted = filtered.toSorted((a, b) => {
 			const dateCompare = a.date.localeCompare(b.date);
 			if (dateCompare !== 0) {
@@ -172,65 +224,38 @@ export class EconomicCalendarService {
 	}
 
 	/**
-	 * Generate cache key from country and date range.
+	 * Transform cached event to API format.
 	 */
-	private getCacheKey(country: string, start: string, end: string): string {
-		return `${country}:${start}:${end}`;
-	}
-
-	/**
-	 * Get data from cache if not expired.
-	 */
-	private getFromCache(key: string): TransformedEvent[] | null {
-		const entry = this.cache.get(key);
-		if (!entry) {
-			return null;
-		}
-
-		// Check if expired
-		if (Date.now() - entry.timestamp > CACHE_TTL_MS) {
-			this.cache.delete(key);
-			return null;
-		}
-
-		return entry.data;
-	}
-
-	/**
-	 * Store data in cache with LRU eviction.
-	 */
-	private setInCache(key: string, data: TransformedEvent[], country: string): void {
-		// Evict oldest entries if at capacity
-		if (this.cache.size >= MAX_CACHE_ENTRIES) {
-			const oldestKey = this.cache.keys().next().value;
-			if (oldestKey) {
-				this.cache.delete(oldestKey);
-			}
-		}
-
-		this.cache.set(key, {
-			data,
-			timestamp: Date.now(),
-			country,
-		});
-	}
-
-	/**
-	 * Clear the cache (for testing or manual refresh).
-	 */
-	clearCache(): void {
-		this.cache.clear();
-		log.info("Economic calendar cache cleared");
-	}
-
-	/**
-	 * Get cache statistics (for monitoring).
-	 */
-	getCacheStats(): { size: number; maxSize: number; ttlMs: number } {
+	private transformCachedEvent(event: EconomicCalendarEvent): TransformedEvent {
 		return {
-			size: this.cache.size,
-			maxSize: MAX_CACHE_ENTRIES,
-			ttlMs: CACHE_TTL_MS,
+			id: `fred-${event.releaseId}-${event.releaseDate}`,
+			name: event.releaseName,
+			date: event.releaseDate,
+			time: event.releaseTime,
+			country: event.country,
+			impact: event.impact,
+			actual: event.actual,
+			previous: event.previous,
+			forecast: event.forecast,
+			unit: event.unit,
+		};
+	}
+
+	/**
+	 * Transform FRED event to API format.
+	 */
+	private transformFredEvent(event: EconomicEvent, country: string): TransformedEvent {
+		return {
+			id: event.id,
+			name: event.name,
+			date: event.date,
+			time: event.time,
+			country,
+			impact: event.impact,
+			actual: event.actual,
+			previous: event.previous,
+			forecast: event.forecast,
+			unit: null,
 		};
 	}
 
@@ -238,8 +263,7 @@ export class EconomicCalendarService {
 	 * Get a single event by ID.
 	 */
 	async getEvent(id: string): Promise<TransformedEvent | null> {
-		// Parse ID to extract date info: format is "YYYY-MM-DD-event-name"
-		const dateMatch = id.match(/^(\d{4}-\d{2}-\d{2})-/);
+		const dateMatch = id.match(/^fred-\d+-(\d{4}-\d{2}-\d{2})$/);
 		const date = dateMatch?.[1];
 		if (!date) {
 			return null;
@@ -251,21 +275,19 @@ export class EconomicCalendarService {
 	}
 
 	/**
-	 * Transform FRED event to our format.
+	 * Get cache statistics.
 	 */
-	private transformEvent(event: EconomicEvent, country: string): TransformedEvent {
-		// FRED events already have the correct format
+	async getCacheStats(): Promise<{
+		totalEvents: number;
+		lastFetchedAt: string | null;
+		isStale: boolean;
+	}> {
+		const stats = await this.repo.getStats();
+		const isStale = await this.repo.isCacheStale(CACHE_STALE_HOURS);
 		return {
-			id: event.id,
-			name: event.name,
-			date: event.date,
-			time: event.time,
-			country, // FRED is US-only, but allow override for consistency
-			impact: event.impact,
-			actual: event.actual,
-			previous: event.previous,
-			forecast: event.forecast,
-			unit: null, // FRED doesn't provide unit info
+			totalEvents: stats.totalEvents,
+			lastFetchedAt: stats.lastFetchedAt,
+			isStale,
 		};
 	}
 
@@ -274,7 +296,6 @@ export class EconomicCalendarService {
 	 * Returns the last 12 observations for the release's primary series.
 	 */
 	async getEventHistory(eventId: string): Promise<EventHistoryResult | null> {
-		// Parse release ID from event ID: "fred-{releaseId}-{date}"
 		const match = eventId.match(/^fred-(\d+)-/);
 		if (!match) {
 			log.warn({ eventId }, "Invalid event ID format for history lookup");
@@ -289,7 +310,6 @@ export class EconomicCalendarService {
 			return null;
 		}
 
-		// Get the primary series for this release (first in the list)
 		const primarySeriesId = releaseMeta.series[0];
 		if (!primarySeriesId) {
 			log.warn({ releaseId }, "No series defined for release");
@@ -300,10 +320,9 @@ export class EconomicCalendarService {
 			const client = createFREDClientFromEnv();
 			const response = await client.getObservations(primarySeriesId, {
 				sort_order: "desc",
-				limit: 12, // Last 12 observations for sparkline
+				limit: 12,
 			});
 
-			// Filter and transform observations
 			const observations: HistoricalObservation[] = [];
 			for (const obs of response.observations) {
 				if (obs.value !== null) {
@@ -317,10 +336,8 @@ export class EconomicCalendarService {
 				}
 			}
 
-			// Reverse to get chronological order (oldest first)
 			observations.reverse();
 
-			// Get series metadata for unit info
 			const SERIES_UNITS: Record<string, string> = {
 				CPIAUCSL: "index",
 				CPILFESL: "index",

@@ -23,6 +23,10 @@ import {
 } from "@cream/domain";
 
 import {
+	createEconomicCalendarService,
+	type EconomicCalendarService,
+} from "./contexts/economic-calendar/index.js";
+import {
 	type IndicatorBatchScheduler,
 	type JobState,
 	startIndicatorScheduler,
@@ -70,6 +74,7 @@ interface WorkerState {
 		filingsSync: Date | null;
 		macroWatch: Date | null;
 		newspaper: Date | null;
+		economicCalendar: Date | null;
 	};
 	startedAt: Date;
 
@@ -79,6 +84,7 @@ interface WorkerState {
 	filingsSync: FilingsSyncService | null;
 	macroWatch: MacroWatchService;
 	newspaper: NewspaperService;
+	economicCalendar: EconomicCalendarService;
 
 	// Schedulers
 	schedulerManager: SchedulerManager | null;
@@ -202,6 +208,35 @@ async function compileNewspaper(): Promise<void> {
 			success: result.compiled,
 			message: result.message,
 			processed: result.entryCount,
+		});
+	} catch (error) {
+		await recordRunComplete({
+			db,
+			runId,
+			success: false,
+			message: error instanceof Error ? error.message : "Unknown error",
+		});
+		throw error;
+	}
+}
+
+async function runEconomicCalendarSync(): Promise<void> {
+	state.lastRun.economicCalendar = new Date();
+	const db = await getDbClient();
+	const { runId } = await recordRunStart({
+		db,
+		service: "economic_calendar",
+		environment: state.environment,
+	});
+
+	try {
+		const result = await state.economicCalendar.refresh();
+		await recordRunComplete({
+			db,
+			runId,
+			success: true,
+			message: `${result.eventsUpserted} events cached, ${result.eventsOldDeleted} old events deleted`,
+			processed: result.eventsUpserted,
 		});
 	} catch (error) {
 		await recordRunComplete({
@@ -430,6 +465,7 @@ async function main() {
 			filingsSync: null,
 			macroWatch: null,
 			newspaper: null,
+			economicCalendar: null,
 		},
 		startedAt: new Date(),
 
@@ -443,6 +479,11 @@ async function main() {
 			return service;
 		})(),
 		newspaper: createNewspaperService(),
+		economicCalendar: (() => {
+			const service = createEconomicCalendarService();
+			service.setDbProvider(getDbClient);
+			return service;
+		})(),
 
 		schedulerManager: null,
 		indicatorScheduler: null,
@@ -503,6 +544,7 @@ async function main() {
 				runFilingsSync,
 				runMacroWatch,
 				compileNewspaper,
+				runEconomicCalendarSync,
 			},
 			getIntervals
 		);

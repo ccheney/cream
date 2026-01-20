@@ -275,3 +275,31 @@ export const morningNewspapers = pgTable(
 	},
 	(table) => [index("idx_morning_newspapers_date").on(table.date)]
 );
+
+// economic_calendar_cache: Cached FRED economic calendar events
+export const economicCalendarCache = pgTable(
+	"economic_calendar_cache",
+	{
+		id: uuid("id").primaryKey().default(sql`uuidv7()`),
+		releaseId: integer("release_id").notNull(),
+		releaseName: text("release_name").notNull(),
+		releaseDate: text("release_date").notNull(),
+		releaseTime: text("release_time").notNull(),
+		impact: text("impact").$type<"high" | "medium" | "low">().notNull(),
+		country: text("country").notNull().default("US"),
+		actual: text("actual"),
+		previous: text("previous"),
+		forecast: text("forecast"),
+		unit: text("unit"),
+		fetchedAt: timestamp("fetched_at", { withTimezone: true }).notNull(),
+		createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+		updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+	},
+	(table) => [
+		index("idx_econ_cal_release_id").on(table.releaseId),
+		index("idx_econ_cal_release_date").on(table.releaseDate),
+		index("idx_econ_cal_impact").on(table.impact),
+		index("idx_econ_cal_fetched_at").on(table.fetchedAt),
+		sql`CREATE UNIQUE INDEX IF NOT EXISTS "idx_econ_cal_release_date_unique" ON ${table} (${table.releaseId}, ${table.releaseDate})`,
+	]
+);

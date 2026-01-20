@@ -22,7 +22,8 @@ export type SyncRunType =
 	| "macro_watch"
 	| "newspaper"
 	| "filings_sync"
-	| "prediction_markets";
+	| "prediction_markets"
+	| "economic_calendar";
 
 export type SyncRunStatus = "running" | "completed" | "failed";
 
@@ -239,6 +240,7 @@ export class IndicatorSyncRunsRepository {
 			newspaper: null,
 			filings_sync: null,
 			prediction_markets: null,
+			economic_calendar: null,
 		};
 
 		for (const row of lastCompletedRows) {

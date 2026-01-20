@@ -115,7 +115,7 @@ export {
 	STREAMING_EVENT_TYPES,
 	type UpdateCycleInput,
 } from "./cycles.js";
-// Repositories
+// Decisions
 export {
 	type ConfidenceCalibrationBin,
 	type CreateDecisionInput,
@@ -128,6 +128,14 @@ export {
 	DecisionsRepository,
 	type StrategyBreakdownItem,
 } from "./decisions.js";
+// Economic calendar cache (migration 006)
+export {
+	type CreateEconomicCalendarEventInput,
+	type EconomicCalendarEvent,
+	type EconomicCalendarFilters,
+	EconomicCalendarRepository,
+	type ImpactLevel as EconomicImpactLevel,
+} from "./economic-calendar.js";
 // External events (migration 007)
 export {
 	type ContentSourceType,

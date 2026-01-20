@@ -17,6 +17,8 @@ export {
 export {
 	calculateNext6AMESTMs,
 	calculateNext15MinMs,
+	calculateNextEconCalendarSyncMs,
 	calculateNextHourMs,
+	getNextEconCalendarSyncDate,
 	TIMEZONE,
 } from "./time-calculator.js";

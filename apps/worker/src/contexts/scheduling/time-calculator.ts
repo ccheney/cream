@@ -109,3 +109,64 @@ export function getNext6AMESTDate(): Date {
 
 	return next6AM;
 }
+
+/**
+ * Calculate milliseconds until next 6 AM or 6 PM EST.
+ * Used for economic calendar sync which runs twice per day.
+ */
+export function calculateNextEconCalendarSyncMs(): number {
+	const now = new Date();
+
+	const estOptions: Intl.DateTimeFormatOptions = {
+		timeZone: TIMEZONE,
+		hour: "numeric",
+		hour12: false,
+	};
+	const estHour = parseInt(new Intl.DateTimeFormat("en-US", estOptions).format(now), 10);
+
+	const nextSync = new Date(now);
+
+	if (estHour < 6) {
+		// Before 6 AM - next sync is 6 AM today
+		nextSync.setUTCHours(11, 0, 0, 0);
+	} else if (estHour < 18) {
+		// Between 6 AM and 6 PM - next sync is 6 PM today
+		nextSync.setUTCHours(23, 0, 0, 0);
+	} else {
+		// After 6 PM - next sync is 6 AM tomorrow
+		nextSync.setDate(nextSync.getDate() + 1);
+		nextSync.setUTCHours(11, 0, 0, 0);
+	}
+
+	return nextSync.getTime() - now.getTime();
+}
+
+/**
+ * Calculate the actual Date of the next 6 AM or 6 PM EST.
+ */
+export function getNextEconCalendarSyncDate(): Date {
+	const now = new Date();
+
+	const estOptions: Intl.DateTimeFormatOptions = {
+		timeZone: TIMEZONE,
+		hour: "numeric",
+		hour12: false,
+	};
+	const estHour = parseInt(new Intl.DateTimeFormat("en-US", estOptions).format(now), 10);
+
+	const nextSync = new Date(now);
+
+	if (estHour < 6) {
+		// Before 6 AM - next sync is 6 AM today
+		nextSync.setUTCHours(11, 0, 0, 0);
+	} else if (estHour < 18) {
+		// Between 6 AM and 6 PM - next sync is 6 PM today
+		nextSync.setUTCHours(23, 0, 0, 0);
+	} else {
+		// After 6 PM - next sync is 6 AM tomorrow
+		nextSync.setDate(nextSync.getDate() + 1);
+		nextSync.setUTCHours(11, 0, 0, 0);
+	}
+
+	return nextSync;
+}

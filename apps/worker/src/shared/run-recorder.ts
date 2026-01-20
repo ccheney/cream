@@ -13,7 +13,8 @@ export type WorkerService =
 	| "filings_sync"
 	| "short_interest"
 	| "sentiment"
-	| "corporate_actions";
+	| "corporate_actions"
+	| "economic_calendar";
 
 export type RunStatus = "pending" | "running" | "completed" | "failed";
 
