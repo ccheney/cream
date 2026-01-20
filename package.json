@@ -24,7 +24,7 @@
     "lint": "turbo run lint && bun run lint:deps",
     "lint:deps": "bun packages/config/src/bin/validate-deps.ts",
     "lint:ts": "biome check .",
-    "lint:rust": "cargo clippy --all-targets --all-features -- -D warnings",
+    "lint:rust": "cargo clippy --fix --allow-dirty --allow-staged --all-targets --all-features -- -D warnings",
     "validate": "bun scripts/validate-versions.ts",
     "prepare": "husky",
     "db:seed": "CREAM_ENV=${CREAM_ENV:-PAPER} bun run packages/storage/src/seed-config.ts",

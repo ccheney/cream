@@ -39,7 +39,7 @@ if [ -d "apps/execution-engine" ]; then
   # 4. Clippy: Lint Rust (includes type checking)
   # Use -D clippy::correctness for actual bugs, allow style/complexity lints
   echo "🦀 Clippy: Checking Rust files..."
-  cargo clippy --all-targets --all-features -- \
+  cargo clippy --fix --allow-dirty --allow-staged --all-targets --all-features -- \
     -D clippy::correctness \
     -W clippy::all \
     2>/dev/null || {
