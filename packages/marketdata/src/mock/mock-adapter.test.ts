@@ -137,30 +137,6 @@ describe("MockAdapter", () => {
 		});
 	});
 
-	describe("Macro Data", () => {
-		it("should return real GDP data", async () => {
-			const gdp = await adapter.getRealGDP();
-			expect(gdp).toHaveProperty("name");
-			expect(gdp).toHaveProperty("data");
-			expect(gdp.data.length).toBeGreaterThan(0);
-		});
-
-		it("should return federal funds rate data", async () => {
-			const rate = await adapter.getFederalFundsRate();
-			expect(rate).toHaveProperty("name");
-			expect(rate).toHaveProperty("data");
-			expect(rate.data.length).toBeGreaterThan(0);
-		});
-
-		it("should return latest macro value", async () => {
-			const gdpValue = await adapter.getLatestMacroValue("realGDP");
-			expect(gdpValue).toBeGreaterThan(0);
-
-			const rateValue = await adapter.getLatestMacroValue("federalFundsRate");
-			expect(rateValue).toBeGreaterThan(0);
-		});
-	});
-
 	describe("Snapshot Builder", () => {
 		it("should build a market snapshot", async () => {
 			const snapshot = await adapter.buildSnapshot("AAPL");
@@ -303,9 +279,4 @@ describe("Fixture Registry", () => {
 		expect(mockData.alpaca.orders).toBeDefined();
 	});
 
-	it("should have alphavantage fixtures", () => {
-		expect(mockData.alphavantage).toBeDefined();
-		expect(mockData.alphavantage.realGDP).toBeDefined();
-		expect(mockData.alphavantage.federalFundsRate).toBeDefined();
-	});
 });

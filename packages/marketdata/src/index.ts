@@ -10,7 +10,6 @@
  * import {
  *   createAlpacaClientFromEnv,
  *   createAlpacaStocksClientFromEnv,
- *   createAlphaVantageClientFromEnv,
  * } from "@cream/marketdata";
  *
  * // Alpaca REST API (candles, quotes, options)
@@ -28,10 +27,6 @@
  *   }
  * });
  * ws.subscribe("quotes", ["AAPL", "MSFT"]);
- *
- * // Macro indicators
- * const av = createAlphaVantageClientFromEnv();
- * const yields = await av.getTreasuryYield("10year", "daily");
  * ```
  *
  * @see docs/plans/31-alpaca-data-consolidation.md

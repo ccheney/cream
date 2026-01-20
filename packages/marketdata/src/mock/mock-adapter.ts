@@ -68,9 +68,6 @@ import alpacaOrders from "../../fixtures/alpaca/orders.json";
 import alpacaPositions from "../../fixtures/alpaca/positions.json";
 import quoteAAPL from "../../fixtures/alpaca/quote-AAPL.json";
 import tradesAAPL from "../../fixtures/alpaca/trades-AAPL.json";
-// Alpha Vantage fixtures
-import avFederalFundsRate from "../../fixtures/alphavantage/federal-funds-rate.json";
-import avRealGDP from "../../fixtures/alphavantage/real-gdp.json";
 
 // ============================================
 // Fixture Registry
@@ -97,10 +94,6 @@ export const mockData = {
 		account: alpacaAccount,
 		positions: alpacaPositions,
 		orders: alpacaOrders,
-	},
-	alphavantage: {
-		realGDP: avRealGDP,
-		federalFundsRate: avFederalFundsRate,
 	},
 } as const;
 
@@ -506,44 +499,6 @@ export class MockAdapter {
 		}
 
 		return orders;
-	}
-
-	// ============================================
-	// Macro Data (Alpha Vantage)
-	// ============================================
-
-	/**
-	 * Get real GDP data.
-	 */
-	async getRealGDP(): Promise<MockMacroIndicator> {
-		await this.maybeThrowError();
-		await this.simulateLatency();
-
-		return mockData.alphavantage.realGDP as MockMacroIndicator;
-	}
-
-	/**
-	 * Get federal funds rate data.
-	 */
-	async getFederalFundsRate(): Promise<MockMacroIndicator> {
-		await this.maybeThrowError();
-		await this.simulateLatency();
-
-		return mockData.alphavantage.federalFundsRate as MockMacroIndicator;
-	}
-
-	/**
-	 * Get latest macro indicator value.
-	 */
-	async getLatestMacroValue(indicator: "realGDP" | "federalFundsRate"): Promise<number | null> {
-		const data =
-			indicator === "realGDP" ? await this.getRealGDP() : await this.getFederalFundsRate();
-
-		if (!data.data?.[0]) {
-			return null;
-		}
-
-		return parseFloat(data.data[0].value);
 	}
 
 	// ============================================
