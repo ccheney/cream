@@ -35,8 +35,6 @@ export {
 	GetMarketSnapshotsOutputSchema,
 	GetOptionChainInputSchema,
 	GetOptionChainOutputSchema,
-	GetPaperInputSchema,
-	GetPaperOutputSchema,
 	GetPortfolioStateInputSchema,
 	GetPortfolioStateOutputSchema,
 	// Prediction market tools
@@ -51,7 +49,6 @@ export {
 	type GraphRAGQueryOutput,
 	GraphRAGQueryOutputSchema,
 	// Academic paper tools
-	getAcademicPaperTool,
 	getEnrichedPortfolioStateTool,
 	getGreeksTool,
 	getMarketSnapshotsTool,

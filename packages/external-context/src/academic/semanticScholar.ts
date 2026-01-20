@@ -23,6 +23,11 @@ export interface SemanticScholarPaper {
 	title: string;
 	/** Abstract text */
 	abstract?: string;
+	/** AI-generated TLDR summary (when available, mainly CS/biomedical papers) */
+	tldr?: {
+		model: string;
+		text: string;
+	};
 	/** Publication year */
 	year?: number;
 	/** Number of citations */
@@ -90,12 +95,14 @@ const DEFAULT_CONFIG: Required<SemanticScholarConfig> = {
 };
 
 /**
- * Fields to request from the API
+ * Fields to request from the API.
+ * Includes tldr for AI-generated summaries when available.
  */
 const PAPER_FIELDS = [
 	"paperId",
 	"title",
 	"abstract",
+	"tldr",
 	"year",
 	"citationCount",
 	"influentialCitationCount",

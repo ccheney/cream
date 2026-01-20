@@ -571,7 +571,8 @@ export class PaperIngestionService {
 	}
 
 	/**
-	 * Search for similar papers by text query
+	 * Search for similar papers by text query.
+	 * Returns full paper data including abstract for LLM consumption.
 	 */
 	async searchPapers(
 		queryText: string,
@@ -581,27 +582,36 @@ export class PaperIngestionService {
 			paperId: string;
 			title: string;
 			authors: string;
-			similarity: number;
+			abstract: string;
+			url?: string;
+			publicationYear?: number;
 			citationCount: number;
+			similarity: number;
 		}>
 	> {
 		try {
-			const result = await this.client.query<
-				Array<{
+			const result = await this.client.query<{
+				results: Array<{
 					paper_id: string;
 					title: string;
 					authors: string;
-					similarity: number;
+					paper_abstract: string;
+					url?: string;
+					publication_year?: number;
 					citation_count: number;
-				}>
-			>("SearchAcademicPapers", { query_text: queryText, limit });
+					score?: number;
+				}>;
+			}>("SearchAcademicPapers", { query_text: queryText, limit });
 
-			return result.data.map((r) => ({
+			return result.data.results.map((r) => ({
 				paperId: r.paper_id,
 				title: r.title,
 				authors: r.authors,
-				similarity: r.similarity,
+				abstract: r.paper_abstract,
+				url: r.url || undefined,
+				publicationYear: r.publication_year || undefined,
 				citationCount: r.citation_count,
+				similarity: r.score ?? 0,
 			}));
 		} catch {
 			return [];

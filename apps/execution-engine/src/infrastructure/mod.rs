@@ -20,5 +20,6 @@ pub mod broker;
 pub mod config;
 pub mod grpc;
 pub mod http;
+pub mod marketdata;
 pub mod persistence;
 pub mod price_feed;

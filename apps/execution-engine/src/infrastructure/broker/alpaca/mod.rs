@@ -7,7 +7,7 @@
 //! - Multi-leg options support
 
 mod adapter;
-mod api_types;
+pub mod api_types;
 mod config;
 mod error;
 mod http_client;

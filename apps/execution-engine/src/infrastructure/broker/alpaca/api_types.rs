@@ -175,6 +175,229 @@ pub struct AlpacaErrorResponse {
 }
 
 // ============================================================================
+// Market Data Types
+// ============================================================================
+
+/// Stock snapshot response from Alpaca Market Data API.
+#[derive(Debug, Clone, Deserialize)]
+pub struct AlpacaSnapshotsResponse {
+    /// Map of symbol to snapshot.
+    pub snapshots: std::collections::HashMap<String, AlpacaSnapshot>,
+}
+
+/// Snapshot for a single symbol.
+#[derive(Debug, Clone, Deserialize)]
+pub struct AlpacaSnapshot {
+    /// Latest quote.
+    #[serde(rename = "latestQuote")]
+    pub latest_quote: Option<AlpacaQuote>,
+    /// Latest trade.
+    #[serde(rename = "latestTrade")]
+    pub latest_trade: Option<AlpacaTrade>,
+    /// Daily bar.
+    #[serde(rename = "dailyBar")]
+    pub daily_bar: Option<AlpacaBar>,
+    /// Previous daily bar.
+    #[serde(rename = "prevDailyBar")]
+    pub prev_daily_bar: Option<AlpacaBar>,
+}
+
+/// Quote from Alpaca.
+#[derive(Debug, Clone, Deserialize)]
+pub struct AlpacaQuote {
+    /// Bid price.
+    pub bp: f64,
+    /// Ask price.
+    pub ap: f64,
+    /// Bid size.
+    pub bs: i32,
+    /// Ask size.
+    #[serde(rename = "as")]
+    pub ask_size: i32,
+    /// Timestamp.
+    pub t: String,
+}
+
+/// Trade from Alpaca.
+#[derive(Debug, Clone, Deserialize)]
+pub struct AlpacaTrade {
+    /// Trade price.
+    pub p: f64,
+    /// Trade size.
+    pub s: i32,
+    /// Timestamp.
+    pub t: String,
+}
+
+/// Bar (OHLCV) from Alpaca.
+#[derive(Debug, Clone, Deserialize)]
+pub struct AlpacaBar {
+    /// Open price.
+    pub o: f64,
+    /// High price.
+    pub h: f64,
+    /// Low price.
+    pub l: f64,
+    /// Close price.
+    pub c: f64,
+    /// Volume.
+    pub v: i64,
+}
+
+/// Option snapshots response from Alpaca.
+#[derive(Debug, Clone, Deserialize)]
+pub struct AlpacaOptionSnapshotsResponse {
+    /// Map of OCC symbol to option snapshot.
+    pub snapshots: std::collections::HashMap<String, AlpacaOptionSnapshot>,
+}
+
+/// Option snapshot from Alpaca.
+#[derive(Debug, Clone, Deserialize)]
+pub struct AlpacaOptionSnapshot {
+    /// Latest quote.
+    #[serde(rename = "latestQuote")]
+    pub latest_quote: Option<AlpacaOptionQuote>,
+    /// Latest trade.
+    #[serde(rename = "latestTrade")]
+    pub latest_trade: Option<AlpacaOptionTrade>,
+    /// Greeks.
+    pub greeks: Option<AlpacaGreeks>,
+    /// Implied volatility.
+    #[serde(rename = "impliedVolatility")]
+    pub implied_volatility: Option<f64>,
+}
+
+/// Option quote from Alpaca.
+#[derive(Debug, Clone, Deserialize)]
+pub struct AlpacaOptionQuote {
+    /// Bid price.
+    pub bp: f64,
+    /// Ask price.
+    pub ap: f64,
+    /// Bid size.
+    pub bs: i32,
+    /// Ask size.
+    #[serde(rename = "as")]
+    pub ask_size: i32,
+    /// Timestamp.
+    pub t: String,
+}
+
+/// Option trade from Alpaca.
+#[derive(Debug, Clone, Deserialize)]
+pub struct AlpacaOptionTrade {
+    /// Trade price.
+    pub p: f64,
+    /// Trade size.
+    pub s: i32,
+    /// Timestamp.
+    pub t: String,
+}
+
+/// Greeks from Alpaca.
+#[derive(Debug, Clone, Deserialize)]
+pub struct AlpacaGreeks {
+    /// Delta.
+    pub delta: Option<f64>,
+    /// Gamma.
+    pub gamma: Option<f64>,
+    /// Theta.
+    pub theta: Option<f64>,
+    /// Vega.
+    pub vega: Option<f64>,
+    /// Rho.
+    pub rho: Option<f64>,
+}
+
+/// Parse an OCC option symbol to extract contract details.
+///
+/// OCC format: AAPL  240119C00150000
+/// - Root symbol (6 chars, space-padded)
+/// - Expiration (YYMMDD)
+/// - Type (C/P)
+/// - Strike (8 digits, strike * 1000)
+#[derive(Debug, Clone)]
+pub struct ParsedOptionContract {
+    /// Underlying symbol.
+    pub underlying: String,
+    /// Expiration date (YYYY-MM-DD).
+    pub expiration: String,
+    /// Option type.
+    pub option_type: ParsedOptionType,
+    /// Strike price.
+    pub strike: rust_decimal::Decimal,
+}
+
+/// Parsed option type.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum ParsedOptionType {
+    /// Call option.
+    Call,
+    /// Put option.
+    Put,
+}
+
+impl ParsedOptionContract {
+    /// Parse an OCC symbol into contract details.
+    ///
+    /// Returns `None` if the symbol is not a valid OCC format.
+    #[must_use]
+    pub fn from_occ_symbol(symbol: &str) -> Option<Self> {
+        // OCC symbols are typically 21 characters
+        if symbol.len() < 15 {
+            return None;
+        }
+
+        // Find where the date starts (after the underlying symbol)
+        // The underlying is space-padded to 6 chars, but may be shorter
+        let underlying_end = symbol.chars().position(|c| c.is_ascii_digit()).unwrap_or(6);
+        let underlying = symbol[..underlying_end].trim().to_string();
+
+        if underlying.is_empty() {
+            return None;
+        }
+
+        // Rest of string should be: YYMMDD + C/P + 8 digits
+        let rest = &symbol[underlying_end..];
+        if rest.len() < 15 {
+            return None;
+        }
+
+        // Parse expiration (YYMMDD)
+        let exp_str = &rest[..6];
+        let year = exp_str[..2].parse::<i32>().ok()?;
+        let month = exp_str[2..4].parse::<u32>().ok()?;
+        let day = exp_str[4..6].parse::<u32>().ok()?;
+
+        if month > 12 || day > 31 {
+            return None;
+        }
+
+        let expiration = format!("20{year:02}-{month:02}-{day:02}");
+
+        // Parse option type
+        let type_char = rest.chars().nth(6)?;
+        let option_type = match type_char {
+            'C' => ParsedOptionType::Call,
+            'P' => ParsedOptionType::Put,
+            _ => return None,
+        };
+
+        // Parse strike (8 digits, strike * 1000)
+        let strike_str = &rest[7..15];
+        let strike_int: i64 = strike_str.parse().ok()?;
+        let strike = rust_decimal::Decimal::new(strike_int, 3); // Divide by 1000
+
+        Some(Self {
+            underlying,
+            expiration,
+            option_type,
+            strike,
+        })
+    }
+}
+
+// ============================================================================
 // Helper Functions
 // ============================================================================
 
@@ -262,5 +485,47 @@ mod tests {
         assert_eq!(ack.status, OrderStatus::PartiallyFilled);
         assert_eq!(ack.filled_qty, Decimal::new(50, 0));
         assert_eq!(ack.avg_fill_price, Some(Decimal::new(15025, 2)));
+    }
+
+    #[test]
+    fn parse_occ_symbol_call() {
+        let contract = ParsedOptionContract::from_occ_symbol("AAPL  240119C00150000").unwrap();
+        assert_eq!(contract.underlying, "AAPL");
+        assert_eq!(contract.expiration, "2024-01-19");
+        assert_eq!(contract.option_type, ParsedOptionType::Call);
+        assert_eq!(contract.strike, Decimal::new(150, 0));
+    }
+
+    #[test]
+    fn parse_occ_symbol_put() {
+        let contract = ParsedOptionContract::from_occ_symbol("MSFT  251220P00400000").unwrap();
+        assert_eq!(contract.underlying, "MSFT");
+        assert_eq!(contract.expiration, "2025-12-20");
+        assert_eq!(contract.option_type, ParsedOptionType::Put);
+        assert_eq!(contract.strike, Decimal::new(400, 0));
+    }
+
+    #[test]
+    fn parse_occ_symbol_fractional_strike() {
+        let contract = ParsedOptionContract::from_occ_symbol("SPY   240215C00500500").unwrap();
+        assert_eq!(contract.underlying, "SPY");
+        assert_eq!(contract.strike, Decimal::new(5005, 1)); // 500.5
+    }
+
+    #[test]
+    fn parse_occ_symbol_short_underlying() {
+        let contract = ParsedOptionContract::from_occ_symbol("F     260115C00012000").unwrap();
+        assert_eq!(contract.underlying, "F");
+        assert_eq!(contract.strike, Decimal::new(12, 0));
+    }
+
+    #[test]
+    fn parse_occ_symbol_invalid_too_short() {
+        assert!(ParsedOptionContract::from_occ_symbol("AAPL").is_none());
+    }
+
+    #[test]
+    fn parse_occ_symbol_invalid_type() {
+        assert!(ParsedOptionContract::from_occ_symbol("AAPL  240119X00150000").is_none());
     }
 }

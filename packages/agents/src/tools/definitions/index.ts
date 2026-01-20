@@ -8,9 +8,6 @@
 
 // Academic paper tools
 export {
-	GetPaperInputSchema,
-	GetPaperOutputSchema,
-	getAcademicPaperTool,
 	IngestPapersInputSchema,
 	IngestPapersOutputSchema,
 	ingestAcademicPapersTool,

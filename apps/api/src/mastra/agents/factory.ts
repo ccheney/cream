@@ -12,7 +12,6 @@ import {
 	analyzeContentTool,
 	extractNewsContextTool,
 	fredEconomicCalendarTool,
-	getAcademicPaperTool,
 	getEnrichedPortfolioStateTool,
 	getGreeksTool,
 	getMarketSnapshotsTool,
@@ -60,7 +59,6 @@ const TOOL_INSTANCES: Record<string, Tool<any, any>> = {
 	get_market_snapshots: getMarketSnapshotsTool,
 	search_academic_papers: searchAcademicPapersTool,
 	search_external_papers: searchExternalPapersTool,
-	get_academic_paper: getAcademicPaperTool,
 };
 
 /**

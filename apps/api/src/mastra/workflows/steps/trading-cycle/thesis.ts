@@ -12,7 +12,7 @@ import {
 import { getHelixClient, getThesisStateRepo } from "../../../../db.js";
 import { getEmbeddingClient } from "./helix.js";
 import { log } from "./logger.js";
-import type { ThesisUpdate } from "./types.js";
+import type { StopLoss, TakeProfit, ThesisUpdate } from "./types.js";
 
 // ============================================
 // Thesis Processing
@@ -28,8 +28,8 @@ export async function processThesisForDecision(
 		instrumentId: string;
 		action: string;
 		direction?: string;
-		stopLoss?: number;
-		takeProfit?: number;
+		stopLoss?: StopLoss;
+		takeProfit?: TakeProfit;
 		rationale?: { summary?: string };
 	},
 	environment: string,
@@ -37,27 +37,29 @@ export async function processThesisForDecision(
 	currentPrice?: number
 ): Promise<ThesisUpdate | null> {
 	const { instrumentId, action, stopLoss, takeProfit, rationale } = decision;
+	const stopPrice = stopLoss?.price;
+	const targetPrice = takeProfit?.price;
 
 	try {
 		const activeThesis = await repo.findActiveForInstrument(instrumentId, environment);
 
 		if (action === "BUY" || action === "SELL") {
 			if (!activeThesis) {
-				const thesisId = `thesis-${cycleId}-${instrumentId}`;
-				await repo.create({
-					thesisId,
+				const thesis = await repo.create({
 					instrumentId,
 					state: "WATCHING",
 					entryThesis: rationale?.summary ?? `${action} signal detected`,
-					invalidationConditions: stopLoss ? `Stop loss at ${stopLoss}` : undefined,
+					invalidationConditions: stopPrice ? `Stop loss at ${stopPrice}` : undefined,
 					conviction: 0.7,
-					currentStop: stopLoss,
-					currentTarget: takeProfit,
+					currentStop: stopPrice,
+					currentTarget: targetPrice,
 					environment,
+					notes: { cycleId },
 				});
+				const thesisId = thesis.thesisId;
 
-				if (currentPrice && stopLoss) {
-					await repo.enterPosition(thesisId, currentPrice, stopLoss, takeProfit, cycleId);
+				if (currentPrice && stopPrice) {
+					await repo.enterPosition(thesisId, currentPrice, stopPrice, targetPrice, cycleId);
 					return {
 						thesisId,
 						instrumentId,
@@ -78,12 +80,12 @@ export async function processThesisForDecision(
 				};
 			}
 
-			if (activeThesis.state === "WATCHING" && currentPrice && stopLoss) {
+			if (activeThesis.state === "WATCHING" && currentPrice && stopPrice) {
 				await repo.enterPosition(
 					activeThesis.thesisId,
 					currentPrice,
-					stopLoss,
-					takeProfit,
+					stopPrice,
+					targetPrice,
 					cycleId
 				);
 				return {
@@ -124,16 +126,15 @@ export async function processThesisForDecision(
 				reason: closeReason,
 			};
 		} else if (action === "HOLD" && !activeThesis) {
-			const thesisId = `thesis-${cycleId}-${instrumentId}`;
-			await repo.create({
-				thesisId,
+			const thesis = await repo.create({
 				instrumentId,
 				state: "WATCHING",
 				entryThesis: rationale?.summary ?? "Monitoring for entry opportunity",
 				environment,
+				notes: { cycleId },
 			});
 			return {
-				thesisId,
+				thesisId: thesis.thesisId,
 				instrumentId,
 				fromState: null,
 				toState: "WATCHING",

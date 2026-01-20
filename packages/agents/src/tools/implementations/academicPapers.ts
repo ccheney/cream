@@ -25,20 +25,10 @@ function getSemanticScholarClient() {
 // ============================================
 
 /**
- * Paper search result from HelixDB
+ * Paper search result from HelixDB.
+ * Includes full paper data for LLM consumption.
  */
 export interface AcademicPaperSearchResult {
-	paperId: string;
-	title: string;
-	authors: string;
-	similarity: number;
-	citationCount: number;
-}
-
-/**
- * Full paper details
- */
-export interface AcademicPaperDetails {
 	paperId: string;
 	title: string;
 	authors: string;
@@ -46,6 +36,7 @@ export interface AcademicPaperDetails {
 	url?: string;
 	publicationYear?: number;
 	citationCount: number;
+	similarity: number;
 }
 
 /**
@@ -106,68 +97,13 @@ export async function searchAcademicPapers(
 			paperId: r.paperId,
 			title: r.title,
 			authors: r.authors,
-			similarity: r.similarity,
+			abstract: r.abstract,
+			url: r.url,
+			publicationYear: r.publicationYear,
 			citationCount: r.citationCount,
+			similarity: r.similarity,
 		})),
 		totalFound: results.length,
-		executionTimeMs: performance.now() - startTime,
-	};
-}
-
-// ============================================
-// Get Paper Details
-// ============================================
-
-/**
- * Get full details for a specific academic paper
- *
- * @param ctx - Execution context
- * @param paperId - Paper identifier
- * @returns Full paper details or null if not found
- */
-export async function getAcademicPaper(
-	ctx: ExecutionContext,
-	paperId: string
-): Promise<{
-	found: boolean;
-	paper: AcademicPaperDetails | null;
-	executionTimeMs: number;
-}> {
-	const startTime = performance.now();
-
-	// In test mode, return not found
-	if (isTest(ctx)) {
-		return {
-			found: false,
-			paper: null,
-			executionTimeMs: performance.now() - startTime,
-		};
-	}
-
-	const client = getHelixClient();
-	const service = createPaperIngestionService(client);
-
-	const paper = await service.getPaperById(paperId);
-
-	if (!paper) {
-		return {
-			found: false,
-			paper: null,
-			executionTimeMs: performance.now() - startTime,
-		};
-	}
-
-	return {
-		found: true,
-		paper: {
-			paperId: paper.paperId,
-			title: paper.title,
-			authors: paper.authors,
-			abstract: paper.abstract,
-			url: paper.url,
-			publicationYear: paper.publicationYear,
-			citationCount: paper.citationCount,
-		},
 		executionTimeMs: performance.now() - startTime,
 	};
 }

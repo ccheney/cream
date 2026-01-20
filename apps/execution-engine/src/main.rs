@@ -14,7 +14,7 @@
 //! - `ALPACA_KEY`: Broker API key (required)
 //! - `ALPACA_SECRET`: Broker API secret (required)
 //! - `HTTP_PORT`: HTTP server port (default: 50051)
-//! - `GRPC_PORT`: gRPC server port (default: 50052)
+//! - `GRPC_PORT`: gRPC server port (default: 50053)
 //! - `RUST_LOG`: Log level (default: info)
 
 use std::net::SocketAddr;
@@ -28,8 +28,11 @@ use execution_engine::application::use_cases::{
 use execution_engine::infrastructure::broker::alpaca::{
     AlpacaBrokerAdapter, AlpacaConfig, AlpacaEnvironment,
 };
-use execution_engine::infrastructure::grpc::create_execution_service;
+use execution_engine::infrastructure::grpc::{
+    create_execution_service, create_market_data_service,
+};
 use execution_engine::infrastructure::http::{AppState, create_router};
+use execution_engine::infrastructure::marketdata::AlpacaMarketDataAdapter;
 use execution_engine::infrastructure::persistence::InMemoryOrderRepository;
 use tokio::net::TcpListener;
 use tokio::signal;
@@ -43,7 +46,7 @@ const SHUTDOWN_TIMEOUT: Duration = Duration::from_secs(30);
 const DEFAULT_HTTP_PORT: u16 = 50051;
 
 /// Default gRPC server port.
-const DEFAULT_GRPC_PORT: u16 = 50052;
+const DEFAULT_GRPC_PORT: u16 = 50053;
 
 /// Parsed configuration from environment variables.
 struct EngineConfig {
@@ -99,6 +102,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     log_config(&config);
 
     let broker = create_broker(&config)?;
+    let market_data = create_market_data(&config)?;
     let use_cases = create_use_cases(&broker);
     let (shutdown_tx, _) = broadcast::channel::<()>(1);
 
@@ -107,6 +111,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         &config,
         &use_cases,
         Arc::clone(&broker),
+        Arc::clone(&market_data),
         shutdown_tx.clone(),
     );
 
@@ -214,6 +219,27 @@ fn create_broker(
     Ok(Arc::new(broker))
 }
 
+/// Create the Alpaca market data adapter.
+fn create_market_data(
+    config: &EngineConfig,
+) -> Result<Arc<AlpacaMarketDataAdapter>, Box<dyn std::error::Error>> {
+    let alpaca_config = AlpacaConfig::new(
+        config.api_key.clone(),
+        config.api_secret.clone(),
+        config.environment,
+    );
+
+    let market_data = AlpacaMarketDataAdapter::new(&alpaca_config)?;
+
+    tracing::info!(
+        environment = config.environment_name(),
+        "AlpacaMarketDataAdapter initialized for {} trading",
+        config.environment_name()
+    );
+
+    Ok(Arc::new(market_data))
+}
+
 /// Create all application use cases with their dependencies.
 fn create_use_cases(broker: &Arc<AlpacaBrokerAdapter>) -> UseCases {
     let risk_repo = Arc::new(InMemoryRiskRepository::new());
@@ -295,6 +321,7 @@ fn start_grpc_server(
     config: &EngineConfig,
     use_cases: &UseCases,
     broker: Arc<AlpacaBrokerAdapter>,
+    market_data: Arc<AlpacaMarketDataAdapter>,
     shutdown_tx: broadcast::Sender<()>,
 ) -> JoinHandle<()> {
     let grpc_addr: SocketAddr = format!("0.0.0.0:{}", config.grpc_port)
@@ -304,6 +331,7 @@ fn start_grpc_server(
     tracing::info!(%grpc_addr, "gRPC server starting");
     tracing::info!("gRPC services:");
     tracing::info!("  ExecutionService - CheckConstraints, SubmitOrder, GetOrderState, etc.");
+    tracing::info!("  MarketDataService - GetSnapshot, GetOptionChain, SubscribeMarketData");
 
     let grpc_submit = Arc::clone(&use_cases.submit_orders);
     let grpc_validate = Arc::clone(&use_cases.validate_risk);
@@ -321,8 +349,11 @@ fn start_grpc_server(
             broker,
         );
 
+        let market_data_service = create_market_data_service(market_data);
+
         let server = tonic::transport::Server::builder()
             .add_service(execution_service)
+            .add_service(market_data_service)
             .serve_with_shutdown(grpc_addr, async move {
                 let _ = shutdown_rx.recv().await;
                 tracing::info!("gRPC server shutting down");

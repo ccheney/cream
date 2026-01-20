@@ -2,8 +2,10 @@
 //!
 //! Tonic-based gRPC service that delegates to application use cases.
 
+mod market_data_service;
 mod service;
 
+pub use market_data_service::{MarketDataServiceAdapter, create_market_data_service};
 pub use service::{ExecutionServiceAdapter, create_execution_service};
 
 /// Include generated protobuf code.
