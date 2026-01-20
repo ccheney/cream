@@ -22,11 +22,18 @@ use crate::application::ports::{BrokerPort, EventPublisherPort, RiskRepositoryPo
 use crate::application::use_cases::{
     CancelOrdersUseCase, SubmitOrdersUseCase, ValidateRiskUseCase,
 };
+use crate::domain::order_execution::aggregate::{CreateOrderCommand, Order};
 use crate::domain::order_execution::repository::OrderRepository;
 use crate::domain::order_execution::value_objects::{
     CancelReason, OrderPurpose, OrderSide, OrderType, TimeInForce,
 };
-use crate::domain::shared::OrderId;
+use crate::domain::risk_management::aggregate::RiskPolicy;
+use crate::domain::risk_management::services::RiskValidationService;
+use crate::domain::risk_management::value_objects::{
+    ExposureLimits, OptionsLimits, PdtStatus, PerInstrumentLimits, PortfolioLimits,
+    PositionContext, RiskContext, SizingLimits, ViolationSeverity as DomainSeverity,
+};
+use crate::domain::shared::{InstrumentId, Money, OrderId, Quantity, Symbol};
 
 /// gRPC `ExecutionService` adapter using Clean Architecture.
 pub struct ExecutionServiceAdapter<B, R, O, E>
@@ -105,13 +112,7 @@ where
         &self,
         request: Request<CheckConstraintsRequest>,
     ) -> Result<Response<CheckConstraintsResponse>, Status> {
-        use super::proto::cream::v1::{ConstraintCheck, ConstraintViolation, ViolationSeverity};
-        use crate::domain::order_execution::aggregate::{CreateOrderCommand, Order};
-        use crate::domain::risk_management::services::RiskValidationService;
-        use crate::domain::risk_management::value_objects::{
-            PdtStatus, PositionContext, RiskContext,
-        };
-        use crate::domain::shared::{InstrumentId, Money, Quantity, Symbol};
+        use super::proto::cream::v1::{ConstraintViolation, ViolationSeverity};
 
         let req = request.into_inner();
 
@@ -130,26 +131,15 @@ where
         }
 
         // Build RiskContext from request
-        let mut risk_context = if let Some(ref account) = req.account_state {
-            let equity = Money::usd(account.equity);
-            let buying_power = Money::usd(account.buying_power);
-            let mut ctx = RiskContext::new(equity, buying_power);
-            ctx.day_trades_remaining = account.remaining_day_trades as u8;
-            ctx.pdt_status = if account.is_pdt_restricted {
-                PdtStatus::Restricted
-            } else {
-                PdtStatus::NotApplicable
-            };
-            ctx
-        } else {
-            // Use defaults from broker if no account state provided
-            match self.broker.get_buying_power().await {
-                Ok(bp) => {
+        let mut risk_context = match req.account_state.as_ref() {
+            Some(account) => build_risk_context_from_account(account),
+            None => self.broker.get_buying_power().await.map_or_else(
+                |_| RiskContext::default(),
+                |bp| {
                     let money = Money::new(bp);
                     RiskContext::new(money, money)
-                }
-                Err(_) => RiskContext::default(),
-            }
+                },
+            ),
         };
 
         // Add positions to context
@@ -171,40 +161,7 @@ where
         let orders: Vec<Order> = decision_plan
             .decisions
             .iter()
-            .filter_map(|d| {
-                let instrument = d.instrument.as_ref()?;
-                let size = d.size.as_ref()?;
-
-                // Skip HOLD decisions (action = 0)
-                if d.action == 0 {
-                    return None;
-                }
-
-                // Get limit price from order_plan or use a default for market orders
-                let limit_price = d
-                    .order_plan
-                    .as_ref()
-                    .and_then(|p| p.entry_limit_price)
-                    .map(Money::usd);
-
-                let command = CreateOrderCommand {
-                    symbol: Symbol::new(&instrument.instrument_id),
-                    side: convert_action_to_side(d.action),
-                    order_type: if limit_price.is_some() {
-                        crate::domain::order_execution::value_objects::OrderType::Limit
-                    } else {
-                        crate::domain::order_execution::value_objects::OrderType::Market
-                    },
-                    quantity: Quantity::from_i64(i64::from(size.quantity)),
-                    limit_price,
-                    stop_price: None,
-                    time_in_force: TimeInForce::Day,
-                    purpose: OrderPurpose::Entry,
-                    legs: vec![],
-                };
-
-                Order::new(command).ok()
-            })
+            .filter_map(convert_decision_to_order)
             .collect();
 
         // If no actionable orders, approve immediately
@@ -219,115 +176,21 @@ where
             }));
         }
 
-        // Build RiskPolicy from runtime constraints if provided
-        use crate::domain::risk_management::aggregate::RiskPolicy;
-        use crate::domain::risk_management::value_objects::{
-            ExposureLimits, OptionsLimits, PerInstrumentLimits, PortfolioLimits, SizingLimits,
-            ViolationSeverity as DomainSeverity,
-        };
-
-        let policy = if let Some(ref c) = req.constraints {
-            // Create policy from runtime constraints
-            let per_instrument = PerInstrumentLimits {
-                max_units: c.max_shares as u32,
-                max_notional_cents: c.max_notional_cents,
-                max_pct_equity_bps: c.max_pct_equity_bps as u32,
-            };
-
-            let portfolio = PortfolioLimits {
-                max_gross_notional_cents: c.max_notional_cents * 10, // Scale up for portfolio
-                max_net_notional_cents: c.max_notional_cents * 5,
-                max_pct_equity_gross_bps: c.max_gross_pct_equity_bps as u32,
-                max_pct_equity_net_bps: c.max_net_pct_equity_bps as u32,
-            };
-
-            let options = OptionsLimits {
-                max_delta_notional_cents: c.max_delta_notional_cents,
-                max_gamma_scaled: c.max_gamma_scaled,
-                max_vega_cents: c.max_vega_cents,
-                max_theta_cents: c.max_theta_cents,
-            };
-
-            let limits = ExposureLimits {
-                per_instrument,
-                portfolio,
-                options,
-                sizing: SizingLimits::default(),
-            };
-
-            RiskPolicy::new("runtime", "Runtime Constraints", limits)
-        } else {
-            RiskPolicy::default()
-        };
-
-        // Validate using RiskValidationService with the policy
+        let policy = build_risk_policy_from_constraints(req.constraints.as_ref());
         let service = RiskValidationService::new(policy);
         let result = service.validate(&orders, &risk_context);
 
-        // Convert domain violations to proto violations
         let violations: Vec<ConstraintViolation> = result
             .violations
             .iter()
-            .map(|v| {
-                let severity_int = match v.severity {
-                    DomainSeverity::Warning => ViolationSeverity::Warning.into(),
-                    DomainSeverity::Error => ViolationSeverity::Error.into(),
-                    DomainSeverity::Critical => ViolationSeverity::Critical.into(),
-                };
-
-                // Parse observed/limit strings to f64 if possible
-                let observed_value = v.observed.as_ref().and_then(|s| {
-                    s.trim_start_matches('$')
-                        .replace(',', "")
-                        .parse::<f64>()
-                        .ok()
-                });
-                let limit_value = v.limit.as_ref().and_then(|s| {
-                    s.trim_start_matches('$')
-                        .replace(',', "")
-                        .parse::<f64>()
-                        .ok()
-                });
-
-                ConstraintViolation {
-                    code: v.code.clone(),
-                    severity: severity_int,
-                    message: v.message.clone(),
-                    instrument_id: v.instrument_id.clone(),
-                    field_path: v.field_path.clone(),
-                    observed_value,
-                    limit_value,
-                    constraint_name: v.code.clone(), // Use code as constraint name
-                }
-            })
+            .map(convert_domain_violation_to_proto)
             .collect();
 
-        // Build constraint checks summary
-        let checks: Vec<ConstraintCheck> = vec![
-            ConstraintCheck {
-                name: "per_instrument_limits".to_string(),
-                result: if result.passed { 1 } else { 2 }, // PASSED = 1, FAILED = 2
-                description: "Per-instrument position and notional limits".to_string(),
-                actual_value: None,
-                threshold: None,
-            },
-            ConstraintCheck {
-                name: "portfolio_limits".to_string(),
-                result: if result.passed { 1 } else { 2 },
-                description: "Portfolio-level exposure limits".to_string(),
-                actual_value: None,
-                threshold: None,
-            },
-            ConstraintCheck {
-                name: "buying_power".to_string(),
-                result: if result.passed { 1 } else { 2 },
-                description: "Sufficient buying power for orders".to_string(),
-                actual_value: None,
-                threshold: None,
-            },
-        ];
+        let checks = build_constraint_checks(result.passed);
 
-        let rejection_reason = if !result.passed {
+        let rejection_reason = if result.passed {
+            None
+        } else {
             Some(
                 violations
                     .iter()
@@ -336,8 +199,6 @@ where
                     .collect::<Vec<_>>()
                     .join("; "),
             )
-        } else {
-            None
         };
 
         tracing::info!(
@@ -555,6 +416,152 @@ where
         };
 
         Ok(Response::new(response))
+    }
+}
+
+fn build_risk_context_from_account(account: &super::proto::cream::v1::AccountState) -> RiskContext {
+    let equity = Money::usd(account.equity);
+    let buying_power = Money::usd(account.buying_power);
+    let mut ctx = RiskContext::new(equity, buying_power);
+    ctx.day_trades_remaining = u8::try_from(account.remaining_day_trades).unwrap_or(0);
+    ctx.pdt_status = if account.is_pdt_restricted {
+        PdtStatus::Restricted
+    } else {
+        PdtStatus::NotApplicable
+    };
+    ctx
+}
+
+fn convert_decision_to_order(d: &super::proto::cream::v1::Decision) -> Option<Order> {
+    let instrument = d.instrument.as_ref()?;
+    let size = d.size.as_ref()?;
+
+    if d.action == 0 {
+        return None;
+    }
+
+    let limit_price = d
+        .order_plan
+        .as_ref()
+        .and_then(|p| p.entry_limit_price)
+        .map(Money::usd);
+
+    let command = CreateOrderCommand {
+        symbol: Symbol::new(&instrument.instrument_id),
+        side: convert_action_to_side(d.action),
+        order_type: if limit_price.is_some() {
+            OrderType::Limit
+        } else {
+            OrderType::Market
+        },
+        quantity: Quantity::from_i64(i64::from(size.quantity)),
+        limit_price,
+        stop_price: None,
+        time_in_force: TimeInForce::Day,
+        purpose: OrderPurpose::Entry,
+        legs: vec![],
+    };
+
+    Order::new(command).ok()
+}
+
+fn build_risk_policy_from_constraints(
+    constraints: Option<&super::proto::cream::v1::RiskConstraints>,
+) -> RiskPolicy {
+    constraints.map_or_else(RiskPolicy::default, |c| {
+        let per_instrument = PerInstrumentLimits {
+            max_units: u32::try_from(c.max_shares).unwrap_or(0),
+            max_notional_cents: c.max_notional_cents,
+            max_pct_equity_bps: u32::try_from(c.max_pct_equity_bps).unwrap_or(0),
+        };
+
+        let portfolio = PortfolioLimits {
+            max_gross_notional_cents: c.max_notional_cents * 10,
+            max_net_notional_cents: c.max_notional_cents * 5,
+            max_pct_equity_gross_bps: u32::try_from(c.max_gross_pct_equity_bps).unwrap_or(0),
+            max_pct_equity_net_bps: u32::try_from(c.max_net_pct_equity_bps).unwrap_or(0),
+        };
+
+        let options = OptionsLimits {
+            max_delta_notional_cents: c.max_delta_notional_cents,
+            max_gamma_scaled: c.max_gamma_scaled,
+            max_vega_cents: c.max_vega_cents,
+            max_theta_cents: c.max_theta_cents,
+        };
+
+        let limits = ExposureLimits {
+            per_instrument,
+            portfolio,
+            options,
+            sizing: SizingLimits::default(),
+        };
+
+        RiskPolicy::new("runtime", "Runtime Constraints", limits)
+    })
+}
+
+fn build_constraint_checks(passed: bool) -> Vec<super::proto::cream::v1::ConstraintCheck> {
+    use super::proto::cream::v1::ConstraintCheck;
+    let result_code = if passed { 1 } else { 2 };
+
+    vec![
+        ConstraintCheck {
+            name: "per_instrument_limits".to_string(),
+            result: result_code,
+            description: "Per-instrument position and notional limits".to_string(),
+            actual_value: None,
+            threshold: None,
+        },
+        ConstraintCheck {
+            name: "portfolio_limits".to_string(),
+            result: result_code,
+            description: "Portfolio-level exposure limits".to_string(),
+            actual_value: None,
+            threshold: None,
+        },
+        ConstraintCheck {
+            name: "buying_power".to_string(),
+            result: result_code,
+            description: "Sufficient buying power for orders".to_string(),
+            actual_value: None,
+            threshold: None,
+        },
+    ]
+}
+
+fn convert_domain_violation_to_proto(
+    v: &crate::domain::risk_management::value_objects::ConstraintViolation,
+) -> super::proto::cream::v1::ConstraintViolation {
+    use super::proto::cream::v1::ViolationSeverity;
+
+    let severity_int = match v.severity {
+        DomainSeverity::Warning => ViolationSeverity::Warning.into(),
+        DomainSeverity::Error => ViolationSeverity::Error.into(),
+        DomainSeverity::Critical => ViolationSeverity::Critical.into(),
+    };
+
+    let observed_value = v.observed.as_ref().and_then(|s: &String| {
+        s.trim_start_matches('$')
+            .replace(',', "")
+            .parse::<f64>()
+            .ok()
+    });
+    let limit_value = v.limit.as_ref().and_then(|s: &String| {
+        s.trim_start_matches('$')
+            .replace(',', "")
+            .parse::<f64>()
+            .ok()
+    });
+
+    super::proto::cream::v1::ConstraintViolation {
+        code: v.code.clone(),
+        severity: severity_int,
+        message: v.message.clone(),
+        instrument_id: v.instrument_id.clone(),
+        field_path: v.field_path.clone(),
+        observed_value,
+        limit_value,
+        constraint_name: v.code.clone(),
     }
 }
 
