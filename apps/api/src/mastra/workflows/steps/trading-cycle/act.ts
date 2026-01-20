@@ -9,6 +9,7 @@ import { timestampFromDate } from "@bufbuild/protobuf/wkt";
 import type { RuntimeConstraintsConfig } from "@cream/config";
 import type { ExecutionContext } from "@cream/domain";
 import { isTest } from "@cream/domain";
+import { createNodeLogger } from "@cream/logger";
 import {
 	Action,
 	Direction,
@@ -16,6 +17,7 @@ import {
 	InstrumentSchema,
 	InstrumentType,
 	OptionLegSchema,
+	OrderType,
 	PositionIntent,
 	RiskDenomination,
 	RiskLevelsSchema,
@@ -24,7 +26,10 @@ import {
 	StrategyFamily,
 	ThesisState,
 	TimeHorizon,
+	TimeInForce,
 } from "@cream/schema-gen/cream/v1/common";
+
+const log = createNodeLogger({ service: "act-step" });
 import {
 	DecisionPlanSchema,
 	DecisionSchema,
@@ -390,29 +395,82 @@ export async function submitOrders(
 	const errors: string[] = [];
 
 	for (const decision of actionableDecisions) {
+		// Determine order type and limit price based on decision data
+		// - For options/spreads with netLimitPrice: use LIMIT order
+		// - For equities: use MARKET order (stopLoss/takeProfit are for exits, not entries)
+		const hasNetLimitPrice =
+			decision.netLimitPrice !== undefined && decision.netLimitPrice !== null;
+		const orderType = hasNetLimitPrice ? OrderType.LIMIT : OrderType.MARKET;
+		const limitPrice = hasNetLimitPrice ? decision.netLimitPrice : undefined;
+
+		const side = decision.action === "BUY" ? OrderSide.BUY : OrderSide.SELL;
+
+		log.info(
+			{
+				cycleId,
+				decisionId: decision.decisionId,
+				instrumentId: decision.instrumentId,
+				action: decision.action,
+				side: side === OrderSide.BUY ? "BUY" : "SELL",
+				quantity: decision.size.value,
+				orderType: orderType === OrderType.LIMIT ? "LIMIT" : "MARKET",
+				limitPrice,
+			},
+			"Submitting order to execution engine"
+		);
+
 		try {
 			const response = await client.submitOrder({
 				instrument: create(InstrumentSchema, {
 					instrumentId: decision.instrumentId,
 					instrumentType: InstrumentType.EQUITY,
 				}),
-				side: decision.action === "BUY" ? OrderSide.BUY : OrderSide.SELL,
+				side,
 				quantity: decision.size.value,
-				orderType: 1,
-				timeInForce: 0,
+				orderType,
+				timeInForce: TimeInForce.DAY,
+				limitPrice,
 				clientOrderId: decision.decisionId,
 				cycleId,
 			});
 
 			if (response.orderId) {
 				orderIds.push(response.orderId);
+				log.info(
+					{
+						cycleId,
+						decisionId: decision.decisionId,
+						instrumentId: decision.instrumentId,
+						orderId: response.orderId,
+						status: response.status,
+					},
+					"Order submitted successfully to Alpaca"
+				);
 			}
 			if (response.errorMessage) {
 				errors.push(`${decision.instrumentId}: ${response.errorMessage}`);
+				log.error(
+					{
+						cycleId,
+						decisionId: decision.decisionId,
+						instrumentId: decision.instrumentId,
+						errorMessage: response.errorMessage,
+					},
+					"Order rejected by Alpaca"
+				);
 			}
 		} catch (error) {
 			const message = error instanceof ExecutionEngineError ? error.message : String(error);
 			errors.push(`${decision.instrumentId}: ${message}`);
+			log.error(
+				{
+					cycleId,
+					decisionId: decision.decisionId,
+					instrumentId: decision.instrumentId,
+					error: message,
+				},
+				"Failed to submit order to execution engine"
+			);
 		}
 	}
 
