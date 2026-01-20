@@ -50,7 +50,12 @@ export function UniverseSection() {
 					onFormChange={editor.updateFormData}
 				/>
 
-				<IncludeExcludeLists universe={universe} />
+				<IncludeExcludeLists
+					universe={universe}
+					editing={editor.editing}
+					formData={editor.formData}
+					onFormChange={editor.updateFormData}
+				/>
 			</div>
 		</div>
 	);
@@ -91,24 +96,61 @@ function SourceSection({ universe, editing, formData, onFormChange }: SectionPro
 						)}
 					</label>
 				</div>
-				{universe.source === "static" && (
+				{(formData.source ?? universe.source) === "static" && (
 					<div>
-						<div className="block text-sm text-stone-600 dark:text-night-200 dark:text-night-400 mb-1">
+						<label
+							htmlFor="static-symbols"
+							className="block text-sm text-stone-600 dark:text-night-200 dark:text-night-400 mb-1"
+						>
 							Static Symbols
-						</div>
-						<div className="text-stone-900 dark:text-night-50">
-							{universe.staticSymbols?.join(", ") || "None"}
-						</div>
+						</label>
+						{editing ? (
+							<textarea
+								id="static-symbols"
+								rows={3}
+								defaultValue={(formData.staticSymbols ?? universe.staticSymbols)?.join(", ") || ""}
+								onChange={(e) => {
+									const symbols = e.target.value
+										.split(",")
+										.map((s) => s.trim().toUpperCase())
+										.filter(Boolean);
+									onFormChange({ staticSymbols: symbols.length > 0 ? symbols : null });
+								}}
+								placeholder="AAPL, MSFT, GOOGL, ..."
+								className="w-full px-3 py-2 border border-cream-200 dark:border-night-600 rounded-md bg-white dark:bg-night-700 text-stone-900 dark:text-night-50"
+							/>
+						) : (
+							<div className="text-stone-900 dark:text-night-50">
+								{universe.staticSymbols?.join(", ") || "None"}
+							</div>
+						)}
 					</div>
 				)}
-				{universe.source === "index" && (
+				{(formData.source ?? universe.source) === "index" && (
 					<div>
-						<div className="block text-sm text-stone-600 dark:text-night-200 dark:text-night-400 mb-1">
+						<label
+							htmlFor="index-source"
+							className="block text-sm text-stone-600 dark:text-night-200 dark:text-night-400 mb-1"
+						>
 							Index Source
-						</div>
-						<div className="text-stone-900 dark:text-night-50">
-							{universe.indexSource || "None"}
-						</div>
+						</label>
+						{editing ? (
+							<select
+								id="index-source"
+								value={formData.indexSource ?? universe.indexSource ?? "SPY"}
+								onChange={(e) => onFormChange({ indexSource: e.target.value })}
+								className="w-full px-3 py-2 border border-cream-200 dark:border-night-600 rounded-md bg-white dark:bg-night-700 text-stone-900 dark:text-night-50"
+							>
+								<option value="SPY">S&P 500 (SPY)</option>
+								<option value="QQQ">Nasdaq 100 (QQQ)</option>
+								<option value="IWM">Russell 2000 (IWM)</option>
+								<option value="DIA">Dow Jones (DIA)</option>
+							</select>
+						) : (
+							<div className="text-stone-900 dark:text-night-50">
+								{universe.indexSource || "None"}
+							</div>
+						)}
 					</div>
 				)}
 			</div>
@@ -196,28 +238,64 @@ function FiltersSection({ universe, editing, formData, onFormChange }: SectionPr
 	);
 }
 
-interface IncludeExcludeListsProps {
-	universe: RuntimeUniverseConfig;
-}
-
-function IncludeExcludeLists({ universe }: IncludeExcludeListsProps) {
+function IncludeExcludeLists({ universe, editing, formData, onFormChange }: SectionProps) {
 	return (
 		<div className="grid grid-cols-2 gap-6">
 			<div>
-				<h3 className="text-sm font-medium text-stone-900 dark:text-night-50 mb-2">
+				<label
+					htmlFor="include-list"
+					className="text-sm font-medium text-stone-900 dark:text-night-50 mb-2 block"
+				>
 					Always Include
-				</h3>
-				<div className="text-sm text-stone-600 dark:text-night-200 dark:text-night-400">
-					{universe.includeList.length > 0 ? universe.includeList.join(", ") : "None"}
-				</div>
+				</label>
+				{editing ? (
+					<textarea
+						id="include-list"
+						rows={2}
+						defaultValue={(formData.includeList ?? universe.includeList).join(", ")}
+						onChange={(e) => {
+							const symbols = e.target.value
+								.split(",")
+								.map((s) => s.trim().toUpperCase())
+								.filter(Boolean);
+							onFormChange({ includeList: symbols });
+						}}
+						placeholder="AAPL, MSFT, ..."
+						className="w-full px-3 py-2 border border-cream-200 dark:border-night-600 rounded-md bg-white dark:bg-night-700 text-stone-900 dark:text-night-50 text-sm"
+					/>
+				) : (
+					<div className="text-sm text-stone-600 dark:text-night-200 dark:text-night-400">
+						{universe.includeList.length > 0 ? universe.includeList.join(", ") : "None"}
+					</div>
+				)}
 			</div>
 			<div>
-				<h3 className="text-sm font-medium text-stone-900 dark:text-night-50 mb-2">
+				<label
+					htmlFor="exclude-list"
+					className="text-sm font-medium text-stone-900 dark:text-night-50 mb-2 block"
+				>
 					Always Exclude
-				</h3>
-				<div className="text-sm text-stone-600 dark:text-night-200 dark:text-night-400">
-					{universe.excludeList.length > 0 ? universe.excludeList.join(", ") : "None"}
-				</div>
+				</label>
+				{editing ? (
+					<textarea
+						id="exclude-list"
+						rows={2}
+						defaultValue={(formData.excludeList ?? universe.excludeList).join(", ")}
+						onChange={(e) => {
+							const symbols = e.target.value
+								.split(",")
+								.map((s) => s.trim().toUpperCase())
+								.filter(Boolean);
+							onFormChange({ excludeList: symbols });
+						}}
+						placeholder="GME, AMC, ..."
+						className="w-full px-3 py-2 border border-cream-200 dark:border-night-600 rounded-md bg-white dark:bg-night-700 text-stone-900 dark:text-night-50 text-sm"
+					/>
+				) : (
+					<div className="text-sm text-stone-600 dark:text-night-200 dark:text-night-400">
+						{universe.excludeList.length > 0 ? universe.excludeList.join(", ") : "None"}
+					</div>
+				)}
 			</div>
 		</div>
 	);
