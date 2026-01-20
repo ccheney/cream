@@ -52,36 +52,132 @@ export interface AgentConfig {
 // News & Sentiment Analyst Output
 // ============================================
 
+/** Event types aligned with domain EventType from @cream/domain */
 export type EventType =
 	| "EARNINGS"
-	| "GUIDANCE"
-	| "M&A"
-	| "REGULATORY"
-	| "PRODUCT"
 	| "MACRO"
-	| "ANALYST"
-	| "SOCIAL";
+	| "NEWS"
+	| "SENTIMENT_SPIKE"
+	| "SEC_FILING"
+	| "DIVIDEND"
+	| "SPLIT"
+	| "M_AND_A"
+	| "ANALYST_RATING"
+	| "CONFERENCE"
+	| "GUIDANCE"
+	| "PREDICTION_MARKET"
+	| "OTHER";
 
 export type ImpactDirection = "BULLISH" | "BEARISH" | "NEUTRAL" | "UNCERTAIN";
 export type ImpactMagnitude = "HIGH" | "MEDIUM" | "LOW";
 export type SentimentType = "BULLISH" | "BEARISH" | "NEUTRAL" | "MIXED";
+export type SentimentDirection = "BULLISH" | "BEARISH" | "NEUTRAL" | "MIXED";
 export type DurationExpectation = "INTRADAY" | "DAYS" | "WEEKS" | "PERSISTENT";
+export type NewsVolumeLevel = "HIGH" | "MODERATE" | "LOW";
 
+/** Analysis of an individual news item from the pipeline */
+export interface NewsItemAnalysis {
+	/** News item ID from NewsContext */
+	news_id: string;
+	/** Headline text */
+	headline: string;
+	/** Source (Reuters, Bloomberg, etc.) */
+	source: string;
+	/** Publication timestamp */
+	published_at: string;
+	/** LLM-derived sentiment score (-1 to 1) */
+	sentiment_score: number;
+	/** Sentiment direction classification */
+	sentiment_direction: SentimentDirection;
+	/** Relevance score (0 to 1) */
+	relevance_score: number;
+	/** Related ticker symbols */
+	tickers: string[];
+	/** Agent's assessment of this news item's market impact */
+	impact_assessment: string;
+}
+
+/** Analysis of an event from recentEvents */
 export interface EventImpact {
+	/** Event ID for cross-referencing */
 	event_id: string;
+	/** Event type aligned with domain EventType */
 	event_type: EventType;
+	/** When the event occurred */
+	event_time?: string;
+	/** Source type (news, press_release, macro, transcript) */
+	source_type: string;
+	/** Importance score from input (0 to 1) */
+	importance_score: number;
+	/** Assessed impact direction */
 	impact_direction: ImpactDirection;
+	/** Assessed impact magnitude */
 	impact_magnitude: ImpactMagnitude;
+	/** Reasoning for the impact assessment */
 	reasoning: string;
 }
 
+/** Source citation from grounding context */
+export interface SourceCitation {
+	/** Source URL */
+	url: string;
+	/** Source title or headline */
+	title: string;
+	/** Why this source is relevant */
+	relevance: string;
+	/** Source type from grounding (url for web/news, x for X posts) */
+	source_type?: "url" | "x" | "news";
+}
+
+/** Enriched sentiment analysis output capturing full input data richness */
 export interface SentimentAnalysisOutput {
+	/** Instrument being analyzed */
 	instrument_id: string;
+
+	/** Individual news items analyzed with assessments */
+	news_items: NewsItemAnalysis[];
+
+	/** Events analyzed with impact assessments */
 	event_impacts: EventImpact[];
+
+	/** Bullish catalysts synthesized from grounding and news */
+	bullish_catalysts: string[];
+
+	/** Bearish risks synthesized from grounding and news */
+	bearish_risks: string[];
+
+	/** Overall sentiment assessment */
 	overall_sentiment: SentimentType;
+
+	/** Sentiment strength/confidence (0 to 1) */
 	sentiment_strength: number;
+
+	/** News volume assessment based on news_volume indicator */
+	news_volume_assessment: NewsVolumeLevel;
+
+	/** Event risk flag based on event_risk indicator */
+	event_risk_flag: boolean;
+
+	/** Expected duration of sentiment impact */
 	duration_expectation: DurationExpectation;
+
+	/** Sources cited from grounding context */
+	sources: SourceCitation[];
+
+	/** Event IDs referenced in analysis */
 	linked_event_ids: string[];
+
+	/** News item IDs referenced in analysis */
+	linked_news_ids: string[];
+
+	/** Key themes identified across news and events */
+	key_themes: string[];
+
+	/** Divergences between indicators and news content */
+	divergences?: string[];
+
+	/** Summary synthesis of sentiment analysis */
+	summary: string;
 }
 
 // ============================================
@@ -230,7 +326,7 @@ export interface DecisionPlan {
 // ============================================
 
 export type ViolationSeverity = "CRITICAL" | "WARNING";
-export type ApprovalVerdict = "APPROVE" | "REJECT";
+export type ApprovalVerdict = "APPROVE" | "PARTIAL_APPROVE" | "REJECT";
 
 export interface ApprovalViolation {
 	constraint: string;
@@ -248,6 +344,10 @@ export interface ApprovalRequiredChange {
 
 export interface ApprovalOutput {
 	verdict: ApprovalVerdict;
+	/** Decision IDs that passed validation (required for PARTIAL_APPROVE) */
+	approvedDecisionIds: string[];
+	/** Decision IDs that failed validation (required for PARTIAL_APPROVE/REJECT) */
+	rejectedDecisionIds: string[];
 	violations: ApprovalViolation[];
 	required_changes: ApprovalRequiredChange[];
 	notes: string;

@@ -10,30 +10,107 @@ import { z } from "zod";
 // Sentiment Analysis Schemas
 // ============================================
 
-export const EventImpactSchema = z.object({
-	event_id: z.string(),
-	event_type: z.enum([
-		"EARNINGS",
-		"GUIDANCE",
-		"M&A",
-		"REGULATORY",
-		"PRODUCT",
-		"MACRO",
-		"ANALYST",
-		"SOCIAL",
-	]),
-	impact_direction: z.enum(["BULLISH", "BEARISH", "NEUTRAL", "UNCERTAIN"]),
-	impact_magnitude: z.enum(["HIGH", "MEDIUM", "LOW"]),
-	reasoning: z.string(),
+/** Event types aligned with domain EventType from @cream/domain */
+export const EventTypeSchema = z.enum([
+	"EARNINGS",
+	"MACRO",
+	"NEWS",
+	"SENTIMENT_SPIKE",
+	"SEC_FILING",
+	"DIVIDEND",
+	"SPLIT",
+	"M_AND_A",
+	"ANALYST_RATING",
+	"CONFERENCE",
+	"GUIDANCE",
+	"PREDICTION_MARKET",
+	"OTHER",
+]);
+
+export const SentimentDirectionSchema = z.enum(["BULLISH", "BEARISH", "NEUTRAL", "MIXED"]);
+export const ImpactDirectionSchema = z.enum(["BULLISH", "BEARISH", "NEUTRAL", "UNCERTAIN"]);
+export const ImpactMagnitudeSchema = z.enum(["HIGH", "MEDIUM", "LOW"]);
+export const NewsVolumeLevelSchema = z.enum(["HIGH", "MODERATE", "LOW"]);
+export const DurationExpectationSchema = z.enum(["INTRADAY", "DAYS", "WEEKS", "PERSISTENT"]);
+
+/** Analysis of an individual news item from the pipeline */
+export const NewsItemAnalysisSchema = z.object({
+	news_id: z.string().describe("News item ID from NewsContext"),
+	headline: z.string().describe("Headline text"),
+	source: z.string().describe("Source (Reuters, Bloomberg, etc.)"),
+	published_at: z.string().describe("Publication timestamp"),
+	sentiment_score: z.number().min(-1).max(1).describe("LLM-derived sentiment score (-1 to 1)"),
+	sentiment_direction: SentimentDirectionSchema.describe("Sentiment direction classification"),
+	relevance_score: z.number().min(0).max(1).describe("Relevance score (0 to 1)"),
+	tickers: z.array(z.string()).describe("Related ticker symbols"),
+	impact_assessment: z.string().describe("Agent's assessment of this news item's market impact"),
 });
 
+/** Analysis of an event from recentEvents */
+export const EventImpactSchema = z.object({
+	event_id: z.string().describe("Event ID for cross-referencing"),
+	event_type: EventTypeSchema.describe("Event type aligned with domain EventType"),
+	event_time: z.string().optional().describe("When the event occurred"),
+	source_type: z.string().describe("Source type (news, press_release, macro, transcript)"),
+	importance_score: z.number().min(0).max(1).describe("Importance score from input (0 to 1)"),
+	impact_direction: ImpactDirectionSchema.describe("Assessed impact direction"),
+	impact_magnitude: ImpactMagnitudeSchema.describe("Assessed impact magnitude"),
+	reasoning: z.string().describe("Reasoning for the impact assessment"),
+});
+
+/** Source citation from grounding context */
+export const SourceCitationSchema = z.object({
+	url: z.string().describe("Source URL"),
+	title: z.string().describe("Source title or headline"),
+	relevance: z.string().describe("Why this source is relevant"),
+	source_type: z
+		.enum(["url", "x", "news"])
+		.optional()
+		.describe("Source type from grounding (url for web/news, x for X posts)"),
+});
+
+/** Enriched sentiment analysis output capturing full input data richness */
 export const SentimentAnalysisSchema = z.object({
-	instrument_id: z.string(),
-	event_impacts: z.array(EventImpactSchema),
-	overall_sentiment: z.enum(["BULLISH", "BEARISH", "NEUTRAL", "MIXED"]),
-	sentiment_strength: z.number().min(0).max(1),
-	duration_expectation: z.enum(["INTRADAY", "DAYS", "WEEKS", "PERSISTENT"]),
-	linked_event_ids: z.array(z.string()),
+	instrument_id: z.string().describe("Instrument being analyzed"),
+
+	news_items: z
+		.array(NewsItemAnalysisSchema)
+		.describe("Individual news items analyzed with assessments"),
+
+	event_impacts: z.array(EventImpactSchema).describe("Events analyzed with impact assessments"),
+
+	bullish_catalysts: z
+		.array(z.string())
+		.describe("Bullish catalysts synthesized from grounding and news"),
+
+	bearish_risks: z.array(z.string()).describe("Bearish risks synthesized from grounding and news"),
+
+	overall_sentiment: SentimentDirectionSchema.describe("Overall sentiment assessment"),
+
+	sentiment_strength: z.number().min(0).max(1).describe("Sentiment strength/confidence (0 to 1)"),
+
+	news_volume_assessment: NewsVolumeLevelSchema.describe(
+		"News volume assessment based on news_volume indicator"
+	),
+
+	event_risk_flag: z.boolean().describe("Event risk flag based on event_risk indicator"),
+
+	duration_expectation: DurationExpectationSchema.describe("Expected duration of sentiment impact"),
+
+	sources: z.array(SourceCitationSchema).describe("Sources cited from grounding context"),
+
+	linked_event_ids: z.array(z.string()).describe("Event IDs referenced in analysis"),
+
+	linked_news_ids: z.array(z.string()).describe("News item IDs referenced in analysis"),
+
+	key_themes: z.array(z.string()).describe("Key themes identified across news and events"),
+
+	divergences: z
+		.array(z.string())
+		.optional()
+		.describe("Divergences between indicators and news content"),
+
+	summary: z.string().describe("Summary synthesis of sentiment analysis"),
 });
 
 // ============================================
@@ -180,7 +257,13 @@ export const ApprovalRequiredChangeSchema = z.object({
 });
 
 export const ApprovalOutputSchema = z.object({
-	verdict: z.enum(["APPROVE", "REJECT"]),
+	verdict: z.enum(["APPROVE", "PARTIAL_APPROVE", "REJECT"]),
+	approvedDecisionIds: z
+		.array(z.string())
+		.describe("Decision IDs that passed validation (required for PARTIAL_APPROVE)"),
+	rejectedDecisionIds: z
+		.array(z.string())
+		.describe("Decision IDs that failed validation (required for PARTIAL_APPROVE/REJECT)"),
 	violations: z.array(ApprovalViolationSchema),
 	required_changes: z.array(ApprovalRequiredChangeSchema),
 	notes: z.string(),
