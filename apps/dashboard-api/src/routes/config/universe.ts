@@ -45,7 +45,7 @@ app.openapi(getUniverseRoute, async (c) => {
 	const environment = getEnvironment(c);
 	try {
 		const service = await getRuntimeConfigService();
-		const config = await service.getActiveConfig(environment);
+		const config = await service.getDraft(environment);
 		return c.json(config.universe, 200);
 	} catch (err) {
 		if (err instanceof RuntimeConfigError && err.code === "NOT_SEEDED") {

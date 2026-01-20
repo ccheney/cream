@@ -11,7 +11,9 @@
  * - notifications: Alert preferences
  */
 
+import Link from "next/link";
 import { notFound, useParams, useRouter } from "next/navigation";
+import { useActiveConfig, useDraftConfig } from "@/hooks/queries";
 import {
 	AgentsSection,
 	ConstraintsSection,
@@ -24,14 +26,23 @@ export default function ConfigSectionPage() {
 	const params = useParams();
 	const router = useRouter();
 	const section = params.section as string;
+	const { data: activeConfig } = useActiveConfig();
+	const { data: draftConfig } = useDraftConfig();
 
 	if (!VALID_SECTIONS.includes(section as Section)) {
 		notFound();
 	}
 
+	const hasDraftChanges =
+		activeConfig && draftConfig && JSON.stringify(activeConfig) !== JSON.stringify(draftConfig);
+
 	return (
 		<div className="space-y-6">
-			<PageHeader section={section} onBack={() => router.back()} />
+			<PageHeader
+				section={section}
+				onBack={() => router.back()}
+				hasDraftChanges={hasDraftChanges}
+			/>
 			<SectionContent section={section as Section} />
 		</div>
 	);
@@ -40,22 +51,38 @@ export default function ConfigSectionPage() {
 interface PageHeaderProps {
 	section: string;
 	onBack: () => void;
+	hasDraftChanges?: boolean;
 }
 
-function PageHeader({ section, onBack }: PageHeaderProps) {
+function PageHeader({ section, onBack, hasDraftChanges }: PageHeaderProps) {
 	return (
-		<div className="flex items-center gap-4">
-			<button
-				type="button"
-				onClick={onBack}
-				className="p-2 text-stone-500 dark:text-night-300 hover:text-stone-700 dark:text-night-100 dark:text-night-400 dark:hover:text-night-100"
-				aria-label="Go back"
-			>
-				<BackArrowIcon />
-			</button>
-			<h1 className="text-2xl font-semibold text-stone-900 dark:text-night-50 capitalize">
-				{section} Configuration
-			</h1>
+		<div className="flex items-center justify-between">
+			<div className="flex items-center gap-4">
+				<button
+					type="button"
+					onClick={onBack}
+					className="p-2 text-stone-500 dark:text-night-300 hover:text-stone-700 dark:text-night-100 dark:text-night-400 dark:hover:text-night-100"
+					aria-label="Go back"
+				>
+					<BackArrowIcon />
+				</button>
+				<h1 className="text-2xl font-semibold text-stone-900 dark:text-night-50 capitalize">
+					{section} Configuration
+				</h1>
+				{hasDraftChanges && (
+					<span className="px-2 py-0.5 text-xs font-medium bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-400 rounded">
+						Draft
+					</span>
+				)}
+			</div>
+			{hasDraftChanges && (
+				<Link
+					href="/config/promote"
+					className="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-md hover:bg-blue-700"
+				>
+					Review & Promote
+				</Link>
+			)}
 		</div>
 	);
 }
