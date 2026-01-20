@@ -156,6 +156,7 @@ where
 
 #[cfg(test)]
 mod tests {
+    #![allow(clippy::items_after_statements, clippy::significant_drop_tightening)]
     use super::*;
     use crate::application::ports::{BrokerError, NoOpEventPublisher, OrderAck};
     use crate::domain::order_execution::aggregate::{CreateOrderCommand, Order};

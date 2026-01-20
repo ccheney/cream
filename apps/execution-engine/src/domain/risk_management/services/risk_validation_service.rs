@@ -372,6 +372,7 @@ impl RiskValidationService {
 
 #[cfg(test)]
 mod tests {
+    #![allow(clippy::default_trait_access)]
     use super::*;
     use crate::domain::order_execution::aggregate::{CreateOrderCommand, Order};
     use crate::domain::order_execution::value_objects::{OrderPurpose, OrderType, TimeInForce};

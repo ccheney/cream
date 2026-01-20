@@ -415,6 +415,11 @@ fn convert_to_proto_order_type(order_type: OrderType) -> i32 {
 
 #[cfg(test)]
 mod tests {
+    #![allow(
+        clippy::float_cmp,
+        clippy::significant_drop_tightening,
+        clippy::too_many_lines
+    )]
     use super::*;
     use crate::application::ports::{BrokerError, OrderAck};
     use crate::domain::order_execution::aggregate::Order;

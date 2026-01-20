@@ -1,5 +1,22 @@
 // Allow unwrap/expect in tests - tests should panic on unexpected errors
-#![cfg_attr(test, allow(clippy::unwrap_used, clippy::expect_used))]
+// Allow test-specific patterns and pedantic lints in test code
+#![cfg_attr(
+    test,
+    allow(
+        clippy::unwrap_used,
+        clippy::expect_used,
+        clippy::float_cmp,
+        clippy::significant_drop_tightening,
+        clippy::too_many_lines,
+        clippy::match_same_arms,
+        clippy::needless_pass_by_value,
+        clippy::needless_collect,
+        clippy::option_if_let_else,
+        clippy::default_trait_access,
+        clippy::items_after_statements,
+        clippy::or_fun_call
+    )
+)]
 
 //! Execution Engine - Rust Core Library
 //!

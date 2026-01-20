@@ -3,8 +3,18 @@
 //! Tests the full execution flow from fixture JSON → HTTP API → use cases → domain.
 
 // Allow dead_code for fixture types that capture full JSON structure
-// Allow unwrap in tests - tests should panic on unexpected errors
-#![allow(dead_code, clippy::unwrap_used)]
+// Allow test-specific patterns and pedantic lints in test code
+#![allow(
+    dead_code,
+    clippy::unwrap_used,
+    clippy::float_cmp,
+    clippy::significant_drop_tightening,
+    clippy::too_many_lines,
+    clippy::match_same_arms,
+    clippy::needless_pass_by_value,
+    clippy::needless_collect,
+    clippy::ref_option
+)]
 
 use std::collections::HashMap;
 use std::sync::Arc;
