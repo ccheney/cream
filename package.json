@@ -11,10 +11,10 @@
   "scripts": {
     "dev": "set -a && . .env 2>/dev/null && set +a && NODE_ENV=development CREAM_ENV=${CREAM_ENV:-PAPER} turbo run dev",
     "build": "turbo run build",
-    "test": "CLAUDECODE=1 NODE_ENV=test CREAM_ENV=PAPER turbo run test --output-logs=errors-only --filter='!./apps/dashboard'",
-    "test:ts": "CLAUDECODE=1 NODE_ENV=test CREAM_ENV=PAPER turbo run test --output-logs=errors-only --filter='!./apps/dashboard' --filter='!@cream/execution-engine'",
+    "test": "NODE_ENV=test CREAM_ENV=PAPER turbo run test --filter='!./apps/dashboard'",
+    "test:ts": "NODE_ENV=test CREAM_ENV=PAPER turbo run test --filter='!./apps/dashboard' --filter='!@cream/execution-engine'",
     "test:rs": "CREAM_ENV=PAPER turbo run test --filter=@cream/execution-engine",
-    "test:e2e": "CLAUDECODE=1 CREAM_ENV=PAPER bun test ./**/tests/integration/*.test.ts --timeout 120000 && cd apps/dashboard && bun run test:e2e",
+    "test:e2e": "CREAM_ENV=PAPER bun test ./**/tests/integration/*.test.ts --timeout 120000 && cd apps/dashboard && bun run test:e2e",
     "typecheck": "turbo run typecheck",
     "clean": "turbo run clean && rm -rf node_modules",
     "format": "bun run format:ts && bun run format:rust",
@@ -28,10 +28,8 @@
     "validate": "bun scripts/validate-versions.ts",
     "prepare": "husky",
     "db:seed": "CREAM_ENV=${CREAM_ENV:-PAPER} bun run packages/storage/src/seed-config.ts",
-    "db:generate": "bun --cwd packages/storage run db:generate",
-    "db:migrate": "bun --cwd packages/storage run db:migrate",
-    "db:push": "bun --cwd packages/storage run db:push",
-    "db:studio": "bun --cwd packages/storage run db:studio"
+    "db:push": "CREAM_ENV=${CREAM_ENV:-PAPER} bun --cwd packages/storage run db:push",
+    "db:studio": "cd packages/storage && bun run db:studio"
   },
   "devDependencies": {
     "@biomejs/biome": "2.3.11",

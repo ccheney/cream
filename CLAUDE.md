@@ -66,7 +66,7 @@ packages/
 # Development
 bun install # Install TS dependencies
 cargo build --workspace # Build all Rust packages
-bun run db:migrate  # Run PostgreSQL migrations via Drizzle
+CREAM_ENV=PAPER bun run db:push  # Sync schema to database via Drizzle
 
 # Testing, Linting, formatting, type checking
 bun run test # run all tests via turbo
