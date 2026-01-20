@@ -25,10 +25,12 @@ export interface EdgarClientConfig {
 	timeout?: number;
 }
 
-if (!Bun.env.OPERATOR_EMAIL) {
-	throw new Error("OPERATOR_EMAIL environment variable is required for SEC EDGAR API requests");
+function getDefaultUserAgent(): string {
+	if (!Bun.env.OPERATOR_EMAIL) {
+		throw new Error("OPERATOR_EMAIL environment variable is required for SEC EDGAR API requests");
+	}
+	return `Cream/1.0 (${Bun.env.OPERATOR_EMAIL})`;
 }
-const DEFAULT_USER_AGENT = `Cream/1.0 (${Bun.env.OPERATOR_EMAIL})`;
 
 // ============================================
 // Parameters
@@ -67,7 +69,7 @@ export class EdgarClient {
 
 	constructor(config?: EdgarClientConfig) {
 		const toolkitConfig: ToolkitConfig = {
-			userAgent: config?.userAgent ?? DEFAULT_USER_AGENT,
+			userAgent: config?.userAgent ?? getDefaultUserAgent(),
 			rateLimitDelay: config?.rateLimitDelay ?? 0.1,
 			timeout: config?.timeout ?? 30000,
 		};
@@ -188,7 +190,7 @@ export class EdgarClient {
 		const url = this.getFilingUrl(filing);
 		const response = await fetch(url, {
 			headers: {
-				"User-Agent": DEFAULT_USER_AGENT,
+				"User-Agent": getDefaultUserAgent(),
 			},
 		});
 
