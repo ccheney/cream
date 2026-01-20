@@ -25,6 +25,7 @@
   },
   "scripts": {
     "build": "bun build ./src/index.ts --outdir ./dist --target bun",
+    "dev": "bun --bun x drizzle-kit studio",
     "typecheck": "tsgo --noEmit",
     "test": "bun test",
     "lint": "biome check src/",
@@ -32,8 +33,7 @@
     "clean": "rm -rf dist coverage",
     "db:push": "bun --bun x drizzle-kit push",
     "db:reset": "bun run scripts/db-reset.ts",
-    "db:seed": "bun run src/seed.ts",
-    "db:studio": "bun --bun x drizzle-kit studio"
+    "db:seed": "bun run src/seed.ts"
   },
   "dependencies": {
     "@cream/config": "workspace:*",

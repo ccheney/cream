@@ -29,7 +29,7 @@
     "prepare": "husky",
     "db:seed": "CREAM_ENV=${CREAM_ENV:-PAPER} bun run packages/storage/src/seed-config.ts",
     "db:push": "CREAM_ENV=${CREAM_ENV:-PAPER} bun --cwd packages/storage run db:push",
-    "db:studio": "cd packages/storage && bun run db:studio"
+    "db:studio": "bun --cwd packages/storage run dev"
   },
   "devDependencies": {
     "@biomejs/biome": "2.3.11",
