@@ -108,7 +108,9 @@ where
         use super::proto::cream::v1::{ConstraintCheck, ConstraintViolation, ViolationSeverity};
         use crate::domain::order_execution::aggregate::{CreateOrderCommand, Order};
         use crate::domain::risk_management::services::RiskValidationService;
-        use crate::domain::risk_management::value_objects::{PdtStatus, PositionContext, RiskContext};
+        use crate::domain::risk_management::value_objects::{
+            PdtStatus, PositionContext, RiskContext,
+        };
         use crate::domain::shared::{InstrumentId, Money, Quantity, Symbol};
 
         let req = request.into_inner();
@@ -1727,7 +1729,11 @@ mod tests {
         assert!(
             inner.approved,
             "Expected approved but got violations: {:?}",
-            inner.violations.iter().map(|v| &v.message).collect::<Vec<_>>()
+            inner
+                .violations
+                .iter()
+                .map(|v| &v.message)
+                .collect::<Vec<_>>()
         );
     }
 
