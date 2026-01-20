@@ -12,7 +12,7 @@ use crate::domain::order_execution::aggregate::{CreateOrderCommand, Order};
 use crate::domain::order_execution::errors::OrderError;
 use crate::domain::order_execution::repository::OrderRepository;
 use crate::domain::risk_management::services::RiskValidationService;
-use crate::domain::shared::{Money, OrderId, Quantity, Symbol};
+use crate::domain::shared::{Money, Quantity, Symbol};
 
 /// Use case for submitting orders to the broker.
 pub struct SubmitOrdersUseCase<B, R, O, E>
@@ -185,7 +185,7 @@ mod tests {
     use crate::domain::order_execution::value_objects::{
         OrderPurpose, OrderSide, OrderStatus, OrderType, TimeInForce,
     };
-    use crate::domain::shared::BrokerId;
+    use crate::domain::shared::{BrokerId, OrderId};
     use async_trait::async_trait;
     use rust_decimal::Decimal;
     use std::collections::HashMap;
@@ -356,5 +356,328 @@ mod tests {
 
         assert!(response.submitted.is_empty());
         assert!(!response.rejected.is_empty());
+    }
+
+    #[tokio::test]
+    async fn submit_orders_invalid_order_dto() {
+        let broker = Arc::new(MockBroker { should_fail: false });
+        let risk_repo = Arc::new(InMemoryRiskRepository::new());
+        let order_repo = Arc::new(MockOrderRepo::new());
+        let event_publisher = Arc::new(NoOpEventPublisher);
+
+        let use_case = SubmitOrdersUseCase::new(broker, risk_repo, order_repo, event_publisher);
+
+        // Create order with invalid quantity
+        let invalid_dto = CreateOrderDto {
+            client_order_id: "test-order-1".to_string(),
+            symbol: "AAPL".to_string(),
+            side: OrderSide::Buy,
+            order_type: OrderType::Limit,
+            quantity: Decimal::new(100, 0),
+            limit_price: Some(Decimal::new(-10, 0)), // Invalid negative price
+            time_in_force: TimeInForce::Day,
+            purpose: OrderPurpose::Entry,
+        };
+
+        let request = SubmitOrdersRequestDto {
+            orders: vec![invalid_dto],
+            validate_risk: false,
+        };
+
+        let response = use_case.execute(request).await;
+
+        // Should fail during order creation
+        assert!(response.submitted.is_empty());
+        assert!(!response.risk_violations.is_empty());
+    }
+
+    #[tokio::test]
+    async fn submit_orders_with_risk_validation() {
+        let broker = Arc::new(MockBroker { should_fail: false });
+        let risk_repo = Arc::new(InMemoryRiskRepository::new());
+        let order_repo = Arc::new(MockOrderRepo::new());
+        let event_publisher = Arc::new(NoOpEventPublisher);
+
+        let use_case = SubmitOrdersUseCase::new(broker, risk_repo, order_repo, event_publisher);
+
+        let request = SubmitOrdersRequestDto {
+            orders: vec![create_order_dto()],
+            validate_risk: true, // Enable risk validation
+        };
+
+        let response = use_case.execute(request).await;
+
+        // Should pass (no active policy configured)
+        assert!(!response.submitted.is_empty());
+    }
+
+    use crate::domain::risk_management::errors::RiskError;
+    use crate::domain::risk_management::value_objects::Exposure;
+    use crate::domain::shared::InstrumentId;
+
+    // Failing risk repo to test error paths
+    struct FailingRiskRepo;
+
+    #[async_trait]
+    impl RiskRepositoryPort for FailingRiskRepo {
+        async fn save_policy(
+            &self,
+            _policy: &crate::domain::risk_management::aggregate::RiskPolicy,
+        ) -> Result<(), RiskError> {
+            Err(RiskError::PolicyNotFound {
+                policy_id: "test".to_string(),
+            })
+        }
+        async fn find_policy_by_id(
+            &self,
+            _id: &str,
+        ) -> Result<Option<crate::domain::risk_management::aggregate::RiskPolicy>, RiskError>
+        {
+            Err(RiskError::PolicyNotFound {
+                policy_id: "test".to_string(),
+            })
+        }
+        async fn find_active_policy(
+            &self,
+        ) -> Result<Option<crate::domain::risk_management::aggregate::RiskPolicy>, RiskError>
+        {
+            Err(RiskError::PolicyNotFound {
+                policy_id: "test".to_string(),
+            })
+        }
+        async fn list_policies(
+            &self,
+        ) -> Result<Vec<crate::domain::risk_management::aggregate::RiskPolicy>, RiskError> {
+            Ok(vec![])
+        }
+        async fn delete_policy(&self, _id: &str) -> Result<(), RiskError> {
+            Ok(())
+        }
+        async fn get_portfolio_exposure(&self) -> Result<Exposure, RiskError> {
+            Ok(Exposure::default())
+        }
+        async fn get_instrument_exposure(
+            &self,
+            _instrument_id: &InstrumentId,
+        ) -> Result<Exposure, RiskError> {
+            Ok(Exposure::default())
+        }
+        async fn get_portfolio_greeks(
+            &self,
+        ) -> Result<crate::domain::risk_management::value_objects::Greeks, RiskError> {
+            Ok(crate::domain::risk_management::value_objects::Greeks::ZERO)
+        }
+        async fn get_buying_power(&self) -> Result<Decimal, RiskError> {
+            Ok(Decimal::new(100_000, 0))
+        }
+        async fn get_day_trade_count(&self) -> Result<u32, RiskError> {
+            Ok(0)
+        }
+        async fn build_risk_context(
+            &self,
+        ) -> Result<crate::domain::risk_management::value_objects::RiskContext, RiskError> {
+            Err(RiskError::PolicyNotFound {
+                policy_id: "context".to_string(),
+            })
+        }
+    }
+
+    #[tokio::test]
+    async fn submit_orders_risk_policy_load_error() {
+        let broker = Arc::new(MockBroker { should_fail: false });
+        let risk_repo = Arc::new(FailingRiskRepo);
+        let order_repo = Arc::new(MockOrderRepo::new());
+        let event_publisher = Arc::new(NoOpEventPublisher);
+
+        let use_case = SubmitOrdersUseCase::new(broker, risk_repo, order_repo, event_publisher);
+
+        let request = SubmitOrdersRequestDto {
+            orders: vec![create_order_dto()],
+            validate_risk: true,
+        };
+
+        let response = use_case.execute(request).await;
+
+        // Should fail due to risk policy load error
+        assert!(!response.risk_violations.is_empty());
+        assert!(response.risk_violations[0].contains("Failed to load risk policy"));
+    }
+
+    // Risk repo that has policy but fails to build context
+    struct RiskRepoWithPolicyButFailingContext;
+
+    #[async_trait]
+    impl RiskRepositoryPort for RiskRepoWithPolicyButFailingContext {
+        async fn save_policy(
+            &self,
+            _policy: &crate::domain::risk_management::aggregate::RiskPolicy,
+        ) -> Result<(), RiskError> {
+            Ok(())
+        }
+        async fn find_policy_by_id(
+            &self,
+            _id: &str,
+        ) -> Result<Option<crate::domain::risk_management::aggregate::RiskPolicy>, RiskError>
+        {
+            Ok(None)
+        }
+        async fn find_active_policy(
+            &self,
+        ) -> Result<Option<crate::domain::risk_management::aggregate::RiskPolicy>, RiskError>
+        {
+            Ok(Some(
+                crate::domain::risk_management::aggregate::RiskPolicy::default(),
+            ))
+        }
+        async fn list_policies(
+            &self,
+        ) -> Result<Vec<crate::domain::risk_management::aggregate::RiskPolicy>, RiskError> {
+            Ok(vec![])
+        }
+        async fn delete_policy(&self, _id: &str) -> Result<(), RiskError> {
+            Ok(())
+        }
+        async fn get_portfolio_exposure(&self) -> Result<Exposure, RiskError> {
+            Ok(Exposure::default())
+        }
+        async fn get_instrument_exposure(
+            &self,
+            _instrument_id: &InstrumentId,
+        ) -> Result<Exposure, RiskError> {
+            Ok(Exposure::default())
+        }
+        async fn get_portfolio_greeks(
+            &self,
+        ) -> Result<crate::domain::risk_management::value_objects::Greeks, RiskError> {
+            Ok(crate::domain::risk_management::value_objects::Greeks::ZERO)
+        }
+        async fn get_buying_power(&self) -> Result<Decimal, RiskError> {
+            Ok(Decimal::new(100_000, 0))
+        }
+        async fn get_day_trade_count(&self) -> Result<u32, RiskError> {
+            Ok(0)
+        }
+        async fn build_risk_context(
+            &self,
+        ) -> Result<crate::domain::risk_management::value_objects::RiskContext, RiskError> {
+            Err(RiskError::PolicyNotFound {
+                policy_id: "context".to_string(),
+            })
+        }
+    }
+
+    #[tokio::test]
+    async fn submit_orders_risk_context_build_error() {
+        let broker = Arc::new(MockBroker { should_fail: false });
+        let risk_repo = Arc::new(RiskRepoWithPolicyButFailingContext);
+        let order_repo = Arc::new(MockOrderRepo::new());
+        let event_publisher = Arc::new(NoOpEventPublisher);
+
+        let use_case = SubmitOrdersUseCase::new(broker, risk_repo, order_repo, event_publisher);
+
+        let request = SubmitOrdersRequestDto {
+            orders: vec![create_order_dto()],
+            validate_risk: true,
+        };
+
+        let response = use_case.execute(request).await;
+
+        // Should fail due to risk context build error
+        assert!(!response.risk_violations.is_empty());
+        assert!(response.risk_violations[0].contains("Failed to build risk context"));
+    }
+
+    // Failing order repo to test save error path
+    struct FailingSaveOrderRepo;
+
+    #[async_trait]
+    impl OrderRepository for FailingSaveOrderRepo {
+        async fn save(&self, _order: &Order) -> Result<(), OrderError> {
+            Err(OrderError::NotFound {
+                order_id: "save-failed".to_string(),
+            })
+        }
+
+        async fn find_by_id(&self, _id: &OrderId) -> Result<Option<Order>, OrderError> {
+            Ok(None)
+        }
+
+        async fn find_by_broker_id(
+            &self,
+            _broker_id: &BrokerId,
+        ) -> Result<Option<Order>, OrderError> {
+            Ok(None)
+        }
+
+        async fn find_by_status(&self, _status: OrderStatus) -> Result<Vec<Order>, OrderError> {
+            Ok(vec![])
+        }
+
+        async fn find_active(&self) -> Result<Vec<Order>, OrderError> {
+            Ok(vec![])
+        }
+
+        async fn exists(&self, _id: &OrderId) -> Result<bool, OrderError> {
+            Ok(false)
+        }
+
+        async fn delete(&self, _id: &OrderId) -> Result<(), OrderError> {
+            Ok(())
+        }
+    }
+
+    #[tokio::test]
+    async fn submit_orders_save_error_still_returns_success() {
+        let broker = Arc::new(MockBroker { should_fail: false });
+        let risk_repo = Arc::new(InMemoryRiskRepository::new());
+        let order_repo = Arc::new(FailingSaveOrderRepo);
+        let event_publisher = Arc::new(NoOpEventPublisher);
+
+        let use_case = SubmitOrdersUseCase::new(broker, risk_repo, order_repo, event_publisher);
+
+        let request = SubmitOrdersRequestDto {
+            orders: vec![create_order_dto()],
+            validate_risk: false,
+        };
+
+        let response = use_case.execute(request).await;
+
+        // Save error is logged but order is still reported as submitted
+        assert!(!response.submitted.is_empty());
+    }
+
+    // Failing event publisher to test publish error path
+    struct FailingEventPublisher;
+
+    #[async_trait]
+    impl EventPublisherPort for FailingEventPublisher {
+        async fn publish_order_events(
+            &self,
+            _events: Vec<crate::domain::order_execution::events::OrderEvent>,
+        ) -> Result<(), EventPublishError> {
+            Err(EventPublishError::PublishFailed {
+                message: "Publish failed".to_string(),
+            })
+        }
+    }
+
+    #[tokio::test]
+    async fn submit_orders_publish_error_still_returns_success() {
+        let broker = Arc::new(MockBroker { should_fail: false });
+        let risk_repo = Arc::new(InMemoryRiskRepository::new());
+        let order_repo = Arc::new(MockOrderRepo::new());
+        let event_publisher = Arc::new(FailingEventPublisher);
+
+        let use_case = SubmitOrdersUseCase::new(broker, risk_repo, order_repo, event_publisher);
+
+        let request = SubmitOrdersRequestDto {
+            orders: vec![create_order_dto()],
+            validate_risk: false,
+        };
+
+        let response = use_case.execute(request).await;
+
+        // Publish error is logged but order is still reported as submitted
+        assert!(!response.submitted.is_empty());
     }
 }

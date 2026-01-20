@@ -485,4 +485,83 @@ mod tests {
         assert_eq!(parsed.order_id(), state.order_id());
         assert_eq!(parsed.order_qty(), state.order_qty());
     }
+
+    #[test]
+    fn timeout_config_scale_in_purpose() {
+        let config = PartialFillTimeoutConfig::default();
+        // ScaleIn should have same timeout as Entry
+        assert_eq!(config.timeout_for_purpose(OrderPurpose::ScaleIn), 300);
+        assert_eq!(
+            config.action_for_purpose(OrderPurpose::ScaleIn),
+            PartialFillTimeoutAction::KeepPartial
+        );
+    }
+
+    #[test]
+    fn timeout_config_scale_out_purpose() {
+        let config = PartialFillTimeoutConfig::default();
+        // ScaleOut should have same timeout as Exit
+        assert_eq!(config.timeout_for_purpose(OrderPurpose::ScaleOut), 60);
+        assert_eq!(
+            config.action_for_purpose(OrderPurpose::ScaleOut),
+            PartialFillTimeoutAction::ResubmitMarket
+        );
+    }
+
+    #[test]
+    fn timeout_config_bracket_leg_purpose() {
+        let config = PartialFillTimeoutConfig::default();
+        // BracketLeg should have same timeout as Exit
+        assert_eq!(config.timeout_for_purpose(OrderPurpose::BracketLeg), 60);
+        assert_eq!(
+            config.action_for_purpose(OrderPurpose::BracketLeg),
+            PartialFillTimeoutAction::ResubmitMarket
+        );
+    }
+
+    #[test]
+    fn timeout_config_take_profit_purpose() {
+        let config = PartialFillTimeoutConfig::default();
+        assert_eq!(config.timeout_for_purpose(OrderPurpose::TakeProfit), 120);
+        assert_eq!(
+            config.action_for_purpose(OrderPurpose::TakeProfit),
+            PartialFillTimeoutAction::ResubmitMarket // Uses on_exit_timeout
+        );
+    }
+
+    #[test]
+    fn partial_fill_state_last_fill_at() {
+        let mut state = PartialFillState::new(
+            OrderId::new("ord-1"),
+            Quantity::from_i64(100),
+            OrderPurpose::Entry,
+        );
+
+        assert!(state.last_fill_at().is_none());
+
+        state.apply_fill(make_fill("f1", 50, 150.00)).unwrap();
+        assert!(state.last_fill_at().is_some());
+    }
+
+    #[test]
+    fn partial_fill_state_created_at() {
+        let state = PartialFillState::new(
+            OrderId::new("ord-1"),
+            Quantity::from_i64(100),
+            OrderPurpose::Entry,
+        );
+
+        assert!(state.created_at().unix_seconds() > 0);
+    }
+
+    #[test]
+    fn fill_percentage_zero_order_qty() {
+        let state = PartialFillState::new(
+            OrderId::new("ord-1"),
+            Quantity::ZERO, // Zero order quantity
+            OrderPurpose::Entry,
+        );
+
+        assert_eq!(state.fill_percentage(), Decimal::ZERO);
+    }
 }

@@ -1,6 +1,5 @@
 //! Fill report from broker execution.
 
-use rust_decimal::Decimal;
 use serde::{Deserialize, Serialize};
 
 use crate::domain::shared::{Money, Quantity, Timestamp};
@@ -83,6 +82,7 @@ pub enum LiquidityType {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use rust_decimal::Decimal;
 
     fn make_fill() -> FillReport {
         FillReport::new(

@@ -136,4 +136,35 @@ mod tests {
         let parsed: OrderPurpose = serde_json::from_str("\"BRACKET_LEG\"").unwrap();
         assert_eq!(parsed, OrderPurpose::BracketLeg);
     }
+
+    #[test]
+    fn order_purpose_display_all() {
+        assert_eq!(format!("{}", OrderPurpose::Entry), "ENTRY");
+        assert_eq!(format!("{}", OrderPurpose::Exit), "EXIT");
+        assert_eq!(format!("{}", OrderPurpose::TakeProfit), "TAKE_PROFIT");
+        assert_eq!(format!("{}", OrderPurpose::BracketLeg), "BRACKET_LEG");
+        assert_eq!(format!("{}", OrderPurpose::ScaleIn), "SCALE_IN");
+        assert_eq!(format!("{}", OrderPurpose::ScaleOut), "SCALE_OUT");
+    }
+
+    #[test]
+    fn order_purpose_urgency_all() {
+        assert_eq!(OrderPurpose::StopLoss.urgency_level(), 10);
+        assert_eq!(OrderPurpose::TakeProfit.urgency_level(), 7);
+        assert_eq!(OrderPurpose::Exit.urgency_level(), 6);
+        assert_eq!(OrderPurpose::BracketLeg.urgency_level(), 5);
+        assert_eq!(OrderPurpose::ScaleOut.urgency_level(), 4);
+        assert_eq!(OrderPurpose::Entry.urgency_level(), 2);
+        assert_eq!(OrderPurpose::ScaleIn.urgency_level(), 1);
+    }
+
+    #[test]
+    fn order_purpose_bracket_leg_is_exit() {
+        assert!(OrderPurpose::BracketLeg.is_exit());
+    }
+
+    #[test]
+    fn order_purpose_scale_in_not_exit() {
+        assert!(!OrderPurpose::ScaleIn.is_exit());
+    }
 }

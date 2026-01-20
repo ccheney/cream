@@ -89,6 +89,8 @@ mod tests {
     #[test]
     fn order_type_display() {
         assert_eq!(format!("{}", OrderType::Market), "MARKET");
+        assert_eq!(format!("{}", OrderType::Limit), "LIMIT");
+        assert_eq!(format!("{}", OrderType::Stop), "STOP");
         assert_eq!(format!("{}", OrderType::StopLimit), "STOP_LIMIT");
     }
 

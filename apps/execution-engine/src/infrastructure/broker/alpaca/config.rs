@@ -161,4 +161,56 @@ mod tests {
         .with_timeout(Duration::from_secs(60));
         assert_eq!(config.timeout, Duration::from_secs(60));
     }
+
+    #[test]
+    fn config_with_retry() {
+        let retry = RetryConfig {
+            max_attempts: 5,
+            initial_backoff: Duration::from_millis(200),
+            max_backoff: Duration::from_secs(30),
+            multiplier: 3.0,
+        };
+        let config = AlpacaConfig::new(
+            "key".to_string(),
+            "secret".to_string(),
+            AlpacaEnvironment::Paper,
+        )
+        .with_retry(retry.clone());
+        assert_eq!(config.retry.max_attempts, 5);
+    }
+
+    #[test]
+    fn config_trading_base_url() {
+        let config = AlpacaConfig::new(
+            "key".to_string(),
+            "secret".to_string(),
+            AlpacaEnvironment::Paper,
+        );
+        assert!(config.trading_base_url().contains("paper"));
+    }
+
+    #[test]
+    fn config_data_base_url() {
+        let config = AlpacaConfig::new(
+            "key".to_string(),
+            "secret".to_string(),
+            AlpacaEnvironment::Paper,
+        );
+        assert!(config.data_base_url().contains("data.alpaca"));
+    }
+
+    #[test]
+    fn environment_display() {
+        assert_eq!(format!("{}", AlpacaEnvironment::Paper), "PAPER");
+        assert_eq!(format!("{}", AlpacaEnvironment::Live), "LIVE");
+    }
+
+    #[test]
+    fn retry_config_default() {
+        let retry = RetryConfig::default();
+        assert_eq!(retry.max_attempts, 3);
+        assert_eq!(retry.initial_backoff, Duration::from_millis(100));
+        assert_eq!(retry.max_backoff, Duration::from_secs(10));
+        assert_eq!(retry.multiplier, 2.0);
+    }
 }

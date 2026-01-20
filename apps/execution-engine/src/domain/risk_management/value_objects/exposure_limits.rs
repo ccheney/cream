@@ -191,13 +191,18 @@ mod tests {
     fn portfolio_limits_default() {
         let limits = PortfolioLimits::default();
         assert_eq!(limits.max_gross_notional(), Decimal::new(50_000_000, 2));
+        assert_eq!(limits.max_net_notional(), Decimal::new(25_000_000, 2));
         assert_eq!(limits.max_pct_equity_gross(), Decimal::new(20_000, 4)); // 2.0 = 200%
+        assert_eq!(limits.max_pct_equity_net(), Decimal::new(10_000, 4)); // 1.0 = 100%
     }
 
     #[test]
     fn options_limits_default() {
         let limits = OptionsLimits::default();
         assert_eq!(limits.max_delta_notional(), Decimal::new(10_000_000, 2));
+        assert_eq!(limits.max_gamma(), Decimal::new(1_000_000, 3));
+        assert_eq!(limits.max_vega(), Decimal::new(500_000, 2));
+        assert_eq!(limits.max_theta(), Decimal::new(-50_000, 2));
     }
 
     #[test]

@@ -595,4 +595,396 @@ mod tests {
         assert!(response.orders.is_empty());
         assert_eq!(response.not_found.len(), 2);
     }
+
+    #[tokio::test]
+    async fn submit_orders_endpoint() {
+        let state = create_test_state();
+        let app = create_router(state);
+
+        let body = serde_json::json!({
+            "request_id": "req-123",
+            "cycle_id": "cycle-123",
+            "risk_policy_id": "default",
+            "account_equity": "100000",
+            "decisions": [{
+                "symbol": "AAPL",
+                "side": "BUY",
+                "quantity": "100"
+            }]
+        });
+
+        let response = app
+            .oneshot(
+                Request::builder()
+                    .method("POST")
+                    .uri("/api/v1/submit-orders")
+                    .header("content-type", "application/json")
+                    .body(Body::from(serde_json::to_vec(&body).unwrap()))
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+
+        assert_eq!(response.status(), StatusCode::OK);
+    }
+
+    #[tokio::test]
+    async fn cancel_orders_endpoint() {
+        let state = create_test_state();
+        let app = create_router(state);
+
+        let body = serde_json::json!({
+            "order_ids": ["order-1", "order-2"],
+            "reason": "USER_REQUESTED"
+        });
+
+        let response = app
+            .oneshot(
+                Request::builder()
+                    .method("POST")
+                    .uri("/api/v1/cancel-orders")
+                    .header("content-type", "application/json")
+                    .body(Body::from(serde_json::to_vec(&body).unwrap()))
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+
+        assert_eq!(response.status(), StatusCode::OK);
+    }
+
+    #[tokio::test]
+    async fn cancel_orders_no_reason() {
+        let state = create_test_state();
+        let app = create_router(state);
+
+        let body = serde_json::json!({
+            "order_ids": ["order-1"]
+        });
+
+        let response = app
+            .oneshot(
+                Request::builder()
+                    .method("POST")
+                    .uri("/api/v1/cancel-orders")
+                    .header("content-type", "application/json")
+                    .body(Body::from(serde_json::to_vec(&body).unwrap()))
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+
+        assert_eq!(response.status(), StatusCode::OK);
+    }
+
+    #[tokio::test]
+    async fn check_constraints_endpoint() {
+        let state = create_test_state();
+        let app = create_router(state);
+
+        let body = serde_json::json!({
+            "request_id": "req-123",
+            "cycle_id": "cycle-123",
+            "risk_policy_id": "default",
+            "account_equity": "100000",
+            "decisions": [{
+                "symbol": "AAPL",
+                "side": "BUY",
+                "quantity": "100"
+            }],
+            "include_portfolio_context": false
+        });
+
+        let response = app
+            .oneshot(
+                Request::builder()
+                    .method("POST")
+                    .uri("/api/v1/check-constraints")
+                    .header("content-type", "application/json")
+                    .body(Body::from(serde_json::to_vec(&body).unwrap()))
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+
+        assert_eq!(response.status(), StatusCode::OK);
+    }
+
+    #[tokio::test]
+    async fn app_state_clone() {
+        let state = create_test_state();
+        let cloned = state.clone();
+        assert_eq!(cloned.version, state.version);
+    }
+
+    #[tokio::test]
+    async fn get_order_state_with_existing_order() {
+        use crate::domain::order_execution::aggregate::{CreateOrderCommand, Order};
+        use crate::domain::order_execution::value_objects::{
+            OrderPurpose, OrderSide, OrderType, TimeInForce,
+        };
+        use crate::domain::shared::{Quantity, Symbol};
+
+        let state = create_test_state();
+
+        // Create and save an order
+        let cmd = CreateOrderCommand {
+            symbol: Symbol::new("AAPL"),
+            side: OrderSide::Buy,
+            order_type: OrderType::Market,
+            quantity: Quantity::new(rust_decimal::Decimal::new(100, 0)),
+            limit_price: None,
+            stop_price: None,
+            time_in_force: TimeInForce::Day,
+            purpose: OrderPurpose::Entry,
+            legs: vec![],
+        };
+        let order = Order::new(cmd).unwrap();
+        let order_id = order.id().to_string();
+        state.order_repo.save(&order).await.unwrap();
+
+        let app = create_router(state);
+
+        let body = serde_json::json!({
+            "order_ids": [order_id]
+        });
+
+        let response = app
+            .oneshot(
+                Request::builder()
+                    .method("POST")
+                    .uri("/api/v1/orders")
+                    .header("content-type", "application/json")
+                    .body(Body::from(serde_json::to_vec(&body).unwrap()))
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+
+        assert_eq!(response.status(), StatusCode::OK);
+
+        let body = axum::body::to_bytes(response.into_body(), usize::MAX)
+            .await
+            .unwrap();
+        let response: GetOrderStateResponse = serde_json::from_slice(&body).unwrap();
+
+        assert_eq!(response.orders.len(), 1);
+        assert!(response.not_found.is_empty());
+        assert_eq!(response.orders[0].symbol, "AAPL");
+    }
+
+    #[tokio::test]
+    async fn submit_orders_with_multiple_decisions() {
+        let state = create_test_state();
+        let app = create_router(state);
+
+        let body = serde_json::json!({
+            "request_id": "req-multi",
+            "cycle_id": "cycle-multi",
+            "risk_policy_id": "default",
+            "account_equity": "100000",
+            "decisions": [
+                {
+                    "symbol": "AAPL",
+                    "side": "BUY",
+                    "quantity": "50"
+                },
+                {
+                    "symbol": "MSFT",
+                    "side": "BUY",
+                    "quantity": "30"
+                }
+            ]
+        });
+
+        let response = app
+            .oneshot(
+                Request::builder()
+                    .method("POST")
+                    .uri("/api/v1/submit-orders")
+                    .header("content-type", "application/json")
+                    .body(Body::from(serde_json::to_vec(&body).unwrap()))
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+
+        assert_eq!(response.status(), StatusCode::OK);
+
+        let body = axum::body::to_bytes(response.into_body(), usize::MAX)
+            .await
+            .unwrap();
+        let response: SubmitOrdersResponse = serde_json::from_slice(&body).unwrap();
+
+        // Both orders should be processed
+        assert_eq!(response.orders.len(), 2);
+    }
+
+    #[tokio::test]
+    async fn submit_orders_with_limit_order() {
+        let state = create_test_state();
+        let app = create_router(state);
+
+        let body = serde_json::json!({
+            "request_id": "req-limit",
+            "cycle_id": "cycle-limit",
+            "risk_policy_id": "default",
+            "account_equity": "100000",
+            "decisions": [{
+                "symbol": "AAPL",
+                "side": "BUY",
+                "order_type": "LIMIT",
+                "quantity": "100",
+                "limit_price": "150.00"
+            }]
+        });
+
+        let response = app
+            .oneshot(
+                Request::builder()
+                    .method("POST")
+                    .uri("/api/v1/submit-orders")
+                    .header("content-type", "application/json")
+                    .body(Body::from(serde_json::to_vec(&body).unwrap()))
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+
+        assert_eq!(response.status(), StatusCode::OK);
+    }
+
+    #[tokio::test]
+    async fn check_constraints_with_multiple_decisions() {
+        let state = create_test_state();
+        let app = create_router(state);
+
+        let body = serde_json::json!({
+            "request_id": "req-multi",
+            "cycle_id": "cycle-multi",
+            "risk_policy_id": "default",
+            "account_equity": "100000",
+            "decisions": [
+                {
+                    "symbol": "AAPL",
+                    "side": "BUY",
+                    "quantity": "50"
+                },
+                {
+                    "symbol": "MSFT",
+                    "side": "SELL",
+                    "quantity": "30"
+                }
+            ],
+            "include_portfolio_context": true
+        });
+
+        let response = app
+            .oneshot(
+                Request::builder()
+                    .method("POST")
+                    .uri("/api/v1/check-constraints")
+                    .header("content-type", "application/json")
+                    .body(Body::from(serde_json::to_vec(&body).unwrap()))
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+
+        assert_eq!(response.status(), StatusCode::OK);
+    }
+
+    #[tokio::test]
+    async fn cancel_orders_multiple() {
+        let state = create_test_state();
+        let app = create_router(state);
+
+        let body = serde_json::json!({
+            "order_ids": ["order-1", "order-2", "order-3"],
+            "reason": "POSITION_LIQUIDATION"
+        });
+
+        let response = app
+            .oneshot(
+                Request::builder()
+                    .method("POST")
+                    .uri("/api/v1/cancel-orders")
+                    .header("content-type", "application/json")
+                    .body(Body::from(serde_json::to_vec(&body).unwrap()))
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+
+        assert_eq!(response.status(), StatusCode::OK);
+
+        let body = axum::body::to_bytes(response.into_body(), usize::MAX)
+            .await
+            .unwrap();
+        let response: CancelOrdersResponse = serde_json::from_slice(&body).unwrap();
+
+        assert_eq!(response.results.len(), 3);
+    }
+
+    #[tokio::test]
+    async fn health_check_returns_version() {
+        let state = create_test_state();
+        let app = create_router(state);
+
+        let response = app
+            .oneshot(
+                Request::builder()
+                    .uri("/health")
+                    .body(Body::empty())
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+
+        assert_eq!(response.status(), StatusCode::OK);
+
+        let body = axum::body::to_bytes(response.into_body(), usize::MAX)
+            .await
+            .unwrap();
+        let response: HealthResponse = serde_json::from_slice(&body).unwrap();
+
+        assert_eq!(response.status, "healthy");
+        assert_eq!(response.version, "1.0.0-test");
+    }
+
+    #[tokio::test]
+    async fn submit_orders_empty_decisions() {
+        let state = create_test_state();
+        let app = create_router(state);
+
+        let body = serde_json::json!({
+            "request_id": "req-empty",
+            "cycle_id": "cycle-empty",
+            "risk_policy_id": "default",
+            "account_equity": "100000",
+            "decisions": []
+        });
+
+        let response = app
+            .oneshot(
+                Request::builder()
+                    .method("POST")
+                    .uri("/api/v1/submit-orders")
+                    .header("content-type", "application/json")
+                    .body(Body::from(serde_json::to_vec(&body).unwrap()))
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+
+        assert_eq!(response.status(), StatusCode::OK);
+
+        let body = axum::body::to_bytes(response.into_body(), usize::MAX)
+            .await
+            .unwrap();
+        let response: SubmitOrdersResponse = serde_json::from_slice(&body).unwrap();
+
+        // Empty decisions should result in success with no orders
+        assert!(response.orders.is_empty());
+    }
 }

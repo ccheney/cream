@@ -267,4 +267,25 @@ mod tests {
         let parsed: RiskContext = serde_json::from_str(&json).unwrap();
         assert_eq!(parsed.equity, ctx.equity);
     }
+
+    #[test]
+    fn position_context_with_greeks() {
+        let pos = PositionContext::new(
+            InstrumentId::new("AAPL250117C00200000"),
+            Quantity::from_i64(10),
+            Money::usd(500.0),
+            Money::usd(400.0),
+        )
+        .with_greeks(Greeks::default());
+
+        assert!(pos.greeks.is_some());
+    }
+
+    #[test]
+    fn risk_context_default() {
+        let ctx = RiskContext::default();
+        assert_eq!(ctx.equity, Money::ZERO);
+        assert_eq!(ctx.buying_power, Money::ZERO);
+        assert!(ctx.positions.is_empty());
+    }
 }

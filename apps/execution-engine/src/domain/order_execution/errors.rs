@@ -179,4 +179,25 @@ mod tests {
         });
         assert!(!err.to_string().is_empty());
     }
+
+    #[test]
+    fn order_error_invalid_parameters_display() {
+        let err = OrderError::InvalidParameters {
+            field: "quantity".to_string(),
+            message: "must be positive".to_string(),
+        };
+        let msg = format!("{err}");
+        assert!(msg.contains("quantity"));
+        assert!(msg.contains("positive"));
+    }
+
+    #[test]
+    fn order_error_duplicate_order_id_display() {
+        let err = OrderError::DuplicateOrderId {
+            order_id: "ord-dup".to_string(),
+        };
+        let msg = format!("{err}");
+        assert!(msg.contains("ord-dup"));
+        assert!(msg.contains("Duplicate"));
+    }
 }

@@ -132,4 +132,28 @@ mod tests {
         let parsed: Exposure = serde_json::from_str(&json).unwrap();
         assert_eq!(parsed, exp);
     }
+
+    #[test]
+    fn exposure_new_const() {
+        let exp = Exposure::new(
+            Money::usd(13000.0),
+            Money::usd(7000.0),
+            Money::usd(10000.0),
+            Money::usd(3000.0),
+        );
+
+        assert_eq!(exp.gross, Money::usd(13000.0));
+        assert_eq!(exp.net, Money::usd(7000.0));
+        assert_eq!(exp.long, Money::usd(10000.0));
+        assert_eq!(exp.short, Money::usd(3000.0));
+    }
+
+    #[test]
+    fn exposure_default() {
+        let exp = Exposure::default();
+        assert_eq!(exp.gross, Money::ZERO);
+        assert_eq!(exp.net, Money::ZERO);
+        assert_eq!(exp.long, Money::ZERO);
+        assert_eq!(exp.short, Money::ZERO);
+    }
 }

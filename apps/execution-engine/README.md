@@ -380,7 +380,7 @@ See `Cargo.toml` for complete dependency list and versions.
 - **Strict error handling** - no `.unwrap()` in production paths
 - **Trait-based adapters** - support multiple brokers/feeds
 - **Configuration-driven** - behavior configurable without code changes
-- **Comprehensive testing** - 90% coverage threshold
+- **Comprehensive testing** - 100% coverage threshold
 
 ### Testing Strategy
 

@@ -340,4 +340,75 @@ mod tests {
         let parsed: ConstraintResult = serde_json::from_str(&json).unwrap();
         assert_eq!(parsed.passed, r.passed);
     }
+
+    #[test]
+    fn constraint_violation_critical() {
+        let v = ConstraintViolation::critical("CRITICAL_CODE", "Critical message");
+        assert_eq!(v.severity, ViolationSeverity::Critical);
+        assert_eq!(v.code, "CRITICAL_CODE");
+    }
+
+    #[test]
+    fn constraint_result_has_critical() {
+        let r = ConstraintResult::from_violations(vec![ConstraintViolation::critical(
+            "CRIT",
+            "critical violation",
+        )]);
+        assert!(!r.passed); // Critical fails
+        assert!(r.has_critical());
+        assert!(!r.has_errors());
+    }
+
+    #[test]
+    fn constraint_result_add_critical_fails() {
+        let mut r = ConstraintResult::success();
+        assert!(r.passed);
+        r.add_violation(ConstraintViolation::critical("CRIT", "critical"));
+        assert!(!r.passed);
+    }
+
+    #[test]
+    fn violation_severity_display() {
+        assert_eq!(ViolationSeverity::Warning.to_string(), "WARNING");
+        assert_eq!(ViolationSeverity::Error.to_string(), "ERROR");
+        assert_eq!(ViolationSeverity::Critical.to_string(), "CRITICAL");
+    }
+
+    #[test]
+    fn constraint_violation_display_no_instrument() {
+        let v = ConstraintViolation::warning("WARN_CODE", "Warning message");
+        let display = format!("{v}");
+        assert!(display.contains("WARNING"));
+        assert!(display.contains("WARN_CODE"));
+        assert!(!display.contains("instrument"));
+    }
+
+    #[test]
+    fn constraint_result_default() {
+        let r = ConstraintResult::default();
+        assert!(r.passed);
+        assert!(r.violations.is_empty());
+    }
+
+    #[test]
+    fn constraint_result_merge_both_passing() {
+        let mut r1 = ConstraintResult::success();
+        r1.add_violation(ConstraintViolation::warning("W1", "msg1"));
+
+        let mut r2 = ConstraintResult::success();
+        r2.add_violation(ConstraintViolation::warning("W2", "msg2"));
+
+        r1.merge(r2);
+        assert!(r1.passed); // Still passing (only warnings)
+        assert_eq!(r1.violations.len(), 2);
+    }
+
+    #[test]
+    fn violation_severity_serde() {
+        let v = ViolationSeverity::Critical;
+        let json = serde_json::to_string(&v).unwrap();
+        assert_eq!(json, "\"CRITICAL\"");
+        let parsed: ViolationSeverity = serde_json::from_str(&json).unwrap();
+        assert_eq!(parsed, ViolationSeverity::Critical);
+    }
 }

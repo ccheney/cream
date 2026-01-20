@@ -151,4 +151,20 @@ mod tests {
         let parsed: RiskPolicy = serde_json::from_str(&json).unwrap();
         assert_eq!(parsed.id(), policy.id());
     }
+
+    #[test]
+    fn risk_policy_timestamps() {
+        let policy = RiskPolicy::default();
+        // Timestamps should be non-zero (set to now())
+        assert!(policy.created_at().unix_seconds() > 0);
+        assert!(policy.updated_at().unix_seconds() > 0);
+    }
+
+    #[test]
+    fn risk_policy_default_policy() {
+        let policy = RiskPolicy::default_policy();
+        assert_eq!(policy.id(), "default");
+        assert_eq!(policy.name(), "Default Risk Policy");
+        assert!(!policy.is_active());
+    }
 }

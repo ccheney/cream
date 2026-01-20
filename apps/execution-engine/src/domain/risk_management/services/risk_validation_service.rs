@@ -8,9 +8,8 @@ use crate::domain::order_execution::aggregate::Order;
 use crate::domain::order_execution::value_objects::OrderSide;
 use crate::domain::risk_management::aggregate::RiskPolicy;
 use crate::domain::risk_management::value_objects::{
-    ConstraintResult, ConstraintViolation, RiskContext, ViolationSeverity,
+    ConstraintResult, ConstraintViolation, RiskContext,
 };
-use crate::domain::shared::Money;
 
 /// Risk Validation Service - validates orders against risk constraints.
 pub struct RiskValidationService {
@@ -378,7 +377,7 @@ mod tests {
     use crate::domain::order_execution::aggregate::{CreateOrderCommand, Order};
     use crate::domain::order_execution::value_objects::{OrderPurpose, OrderType, TimeInForce};
     use crate::domain::risk_management::value_objects::PositionContext;
-    use crate::domain::shared::{InstrumentId, Quantity, Symbol};
+    use crate::domain::shared::{InstrumentId, Money, Quantity, Symbol};
 
     fn make_order(symbol: &str, side: OrderSide, qty: i64, price: f64) -> Order {
         Order::new(CreateOrderCommand {
@@ -538,5 +537,274 @@ mod tests {
         let new_policy = RiskPolicy::new("custom", "Custom Policy", Default::default());
         service.set_policy(new_policy);
         assert_eq!(service.policy().id(), "custom");
+    }
+
+    #[test]
+    fn validate_per_instrument_pct_equity_exceeded() {
+        let service = RiskValidationService::with_default_policy();
+        // Order that exceeds 10% of equity: $15,000 / $100,000 = 15%
+        let order = make_order("AAPL", OrderSide::Buy, 100, 150.0);
+        let context = make_context(100_000.0, 200_000.0);
+
+        let result = service.validate_per_instrument(&order, &context);
+        assert!(!result.passed);
+        assert!(
+            result
+                .violations
+                .iter()
+                .any(|v| v.code == "PER_INSTRUMENT_PCT_EQUITY_EXCEEDED")
+        );
+    }
+
+    #[test]
+    fn validate_portfolio_net_notional_exceeded() {
+        let service = RiskValidationService::with_default_policy();
+        // Buy order for $400,000 notional (exceeds $200,000 net limit)
+        let order = make_order("AAPL", OrderSide::Buy, 3000, 150.0);
+        let context = make_context(1_000_000.0, 2_000_000.0);
+
+        let result = service.validate_portfolio(&[order], &context);
+        assert!(!result.passed);
+        assert!(
+            result
+                .violations
+                .iter()
+                .any(|v| v.code == "PORTFOLIO_NET_NOTIONAL_EXCEEDED")
+        );
+    }
+
+    #[test]
+    fn validate_portfolio_pct_equity_exceeded() {
+        let service = RiskValidationService::with_default_policy();
+        // Order that exceeds gross % of equity limit (200%)
+        // $210k / $100k = 210% > 200%
+        let order = make_order("AAPL", OrderSide::Buy, 1400, 150.0);
+        let context = make_context(100_000.0, 500_000.0);
+
+        let result = service.validate_portfolio(&[order], &context);
+        assert!(!result.passed);
+        assert!(
+            result
+                .violations
+                .iter()
+                .any(|v| v.code == "PORTFOLIO_GROSS_PCT_EQUITY_EXCEEDED")
+        );
+    }
+
+    #[test]
+    fn validate_options_gamma_exceeded() {
+        let service = RiskValidationService::with_default_policy();
+
+        let mut context = make_context(100_000.0, 200_000.0);
+        context.current_greeks = crate::domain::risk_management::value_objects::Greeks::new(
+            Decimal::ZERO,
+            Decimal::new(20_000, 0), // Exceeds gamma limit
+            Decimal::ZERO,
+            Decimal::ZERO,
+            Decimal::ZERO,
+        );
+
+        let result = service.validate_options_greeks(&[], &context);
+        assert!(result.has_warnings());
+        assert!(
+            result
+                .violations
+                .iter()
+                .any(|v| v.code == "OPTIONS_GAMMA_EXCEEDED")
+        );
+    }
+
+    #[test]
+    fn validate_options_vega_exceeded() {
+        let service = RiskValidationService::with_default_policy();
+
+        let mut context = make_context(100_000.0, 200_000.0);
+        // Greeks::new(delta, gamma, vega, theta, rho)
+        // max_vega is $5,000 (5000.00 decimal), so we exceed with 6000
+        context.current_greeks = crate::domain::risk_management::value_objects::Greeks::new(
+            Decimal::ZERO,         // delta
+            Decimal::ZERO,         // gamma
+            Decimal::new(6000, 0), // vega - exceeds $5,000 limit
+            Decimal::ZERO,         // theta
+            Decimal::ZERO,         // rho
+        );
+
+        let result = service.validate_options_greeks(&[], &context);
+        assert!(result.has_warnings());
+        assert!(
+            result
+                .violations
+                .iter()
+                .any(|v| v.code == "OPTIONS_VEGA_EXCEEDED")
+        );
+    }
+
+    #[test]
+    fn validate_options_theta_exceeded() {
+        let service = RiskValidationService::with_default_policy();
+
+        let mut context = make_context(100_000.0, 200_000.0);
+        // Greeks::new(delta, gamma, vega, theta, rho)
+        // max_theta is -$500 (-500.00 decimal), so theta of -600 exceeds it
+        context.current_greeks = crate::domain::risk_management::value_objects::Greeks::new(
+            Decimal::ZERO,         // delta
+            Decimal::ZERO,         // gamma
+            Decimal::ZERO,         // vega
+            Decimal::new(-600, 0), // theta - exceeds -$500 limit
+            Decimal::ZERO,         // rho
+        );
+
+        let result = service.validate_options_greeks(&[], &context);
+        assert!(result.has_warnings());
+        assert!(
+            result
+                .violations
+                .iter()
+                .any(|v| v.code == "OPTIONS_THETA_EXCEEDED")
+        );
+    }
+
+    #[test]
+    fn validate_pdt_not_restricted() {
+        let service = RiskValidationService::with_default_policy();
+        let order = make_order("AAPL", OrderSide::Sell, 100, 150.0);
+
+        let mut context = make_context(50_000.0, 100_000.0);
+        context.pdt_status =
+            crate::domain::risk_management::value_objects::PdtStatus::NotApplicable;
+        context.add_position(
+            "AAPL",
+            PositionContext::new(
+                InstrumentId::new("AAPL"),
+                Quantity::from_i64(100),
+                Money::usd(15000.0),
+                Money::usd(14000.0),
+            ),
+        );
+
+        let result = service.validate_pdt(&[order], &context);
+        assert!(result.passed); // No violation when not restricted
+    }
+
+    #[test]
+    fn validate_pdt_opening_trade() {
+        let service = RiskValidationService::with_default_policy();
+        let order = make_order("AAPL", OrderSide::Buy, 100, 150.0); // Opening new position
+
+        let mut context = make_context(20_000.0, 40_000.0);
+        context.pdt_status = crate::domain::risk_management::value_objects::PdtStatus::Restricted;
+        context.day_trades_remaining = 0;
+        // No existing position - this is an opening trade, not a day trade
+
+        let result = service.validate_pdt(&[order], &context);
+        assert!(result.passed); // Opening trade is not a day trade
+    }
+
+    #[test]
+    fn validate_per_instrument_sell_reduces_position() {
+        let service = RiskValidationService::with_default_policy();
+        let order = make_order("AAPL", OrderSide::Sell, 50, 150.0);
+
+        let mut context = make_context(100_000.0, 200_000.0);
+        context.add_position(
+            "AAPL",
+            PositionContext::new(
+                InstrumentId::new("AAPL"),
+                Quantity::from_i64(100), // Long 100 shares
+                Money::usd(15000.0),
+                Money::usd(14000.0),
+            ),
+        );
+
+        let result = service.validate_per_instrument(&order, &context);
+        assert!(result.passed); // Selling 50 of 100 shares is fine
+    }
+
+    #[test]
+    fn validate_portfolio_with_sell_orders() {
+        let service = RiskValidationService::with_default_policy();
+        let buy_order = make_order("AAPL", OrderSide::Buy, 100, 150.0); // $15,000
+        let sell_order = make_order("MSFT", OrderSide::Sell, 50, 300.0); // $15,000
+
+        let context = make_context(100_000.0, 200_000.0);
+
+        let result = service.validate_portfolio(&[buy_order, sell_order], &context);
+        assert!(result.passed);
+    }
+
+    fn make_market_order(symbol: &str, side: OrderSide, qty: i64) -> Order {
+        Order::new(CreateOrderCommand {
+            symbol: Symbol::new(symbol),
+            side,
+            order_type: OrderType::Market,
+            quantity: Quantity::from_i64(qty),
+            limit_price: None, // Market orders have no limit price
+            stop_price: None,
+            time_in_force: TimeInForce::Day,
+            purpose: OrderPurpose::Entry,
+            legs: vec![],
+        })
+        .unwrap()
+    }
+
+    #[test]
+    fn validate_buying_power_market_order_skipped() {
+        let service = RiskValidationService::with_default_policy();
+        let order = make_market_order("AAPL", OrderSide::Buy, 100);
+
+        let context = make_context(100_000.0, 1_000.0); // Very low buying power
+
+        // Market orders without limit_price are skipped in buying power check
+        let result = service.validate_buying_power(&[order], &context);
+        assert!(result.passed);
+    }
+
+    #[test]
+    fn validate_buying_power_sell_order_not_counted() {
+        let service = RiskValidationService::with_default_policy();
+        let order = make_order("AAPL", OrderSide::Sell, 1000, 150.0); // $150,000 sell
+
+        let context = make_context(100_000.0, 100.0); // Very low buying power
+
+        // Sell orders don't require buying power
+        let result = service.validate_buying_power(&[order], &context);
+        assert!(result.passed);
+    }
+
+    #[test]
+    fn validate_per_instrument_market_order_no_notional_check() {
+        let service = RiskValidationService::with_default_policy();
+        let order = make_market_order("AAPL", OrderSide::Buy, 100);
+
+        let context = make_context(100_000.0, 200_000.0);
+
+        // Market orders skip notional checks (no limit_price)
+        let result = service.validate_per_instrument(&order, &context);
+        assert!(result.passed);
+    }
+
+    #[test]
+    fn validate_per_instrument_zero_equity() {
+        let service = RiskValidationService::with_default_policy();
+        // Large order to trigger notional limit ($75,000 > $50,000 max)
+        let order = make_order("AAPL", OrderSide::Buy, 500, 150.0);
+
+        let context = make_context(0.0, 200_000.0); // Zero equity
+
+        // Zero equity skips pct_equity check but still fails on notional
+        let result = service.validate_per_instrument(&order, &context);
+        assert!(!result.passed); // Fails on notional
+    }
+
+    #[test]
+    fn validate_portfolio_zero_equity() {
+        let service = RiskValidationService::with_default_policy();
+        let order = make_order("AAPL", OrderSide::Buy, 100, 150.0);
+
+        let context = make_context(0.0, 200_000.0); // Zero equity
+
+        // Zero equity skips pct_equity_gross check
+        let result = service.validate_portfolio(&[order], &context);
+        assert!(result.passed);
     }
 }

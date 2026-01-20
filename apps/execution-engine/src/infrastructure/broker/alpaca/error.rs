@@ -143,4 +143,52 @@ mod tests {
         let broker_err: BrokerError = err.into();
         assert!(matches!(broker_err, BrokerError::OrderNotFound { .. }));
     }
+
+    #[test]
+    fn alpaca_error_to_broker_error_network() {
+        let err = AlpacaError::Network("timeout".to_string());
+        let broker_err: BrokerError = err.into();
+        assert!(matches!(broker_err, BrokerError::ConnectionError { .. }));
+    }
+
+    #[test]
+    fn alpaca_error_to_broker_error_json_parse() {
+        let err = AlpacaError::JsonParse("invalid json".to_string());
+        let broker_err: BrokerError = err.into();
+        assert!(matches!(broker_err, BrokerError::ConnectionError { .. }));
+    }
+
+    #[test]
+    fn alpaca_error_to_broker_error_api() {
+        let err = AlpacaError::Api {
+            code: "400".to_string(),
+            message: "bad request".to_string(),
+        };
+        let broker_err: BrokerError = err.into();
+        assert!(matches!(broker_err, BrokerError::Unknown { .. }));
+    }
+
+    #[test]
+    fn alpaca_error_to_broker_error_invalid_order() {
+        let err = AlpacaError::InvalidOrder("invalid symbol".to_string());
+        let broker_err: BrokerError = err.into();
+        assert!(matches!(broker_err, BrokerError::OrderRejected { .. }));
+    }
+
+    #[test]
+    fn alpaca_error_to_broker_error_env_mismatch() {
+        let err = AlpacaError::EnvironmentMismatch {
+            expected: "paper".to_string(),
+            actual: "live".to_string(),
+        };
+        let broker_err: BrokerError = err.into();
+        assert!(matches!(broker_err, BrokerError::Unknown { .. }));
+    }
+
+    #[test]
+    fn alpaca_error_to_broker_error_max_retries() {
+        let err = AlpacaError::MaxRetriesExceeded { attempts: 5 };
+        let broker_err: BrokerError = err.into();
+        assert!(matches!(broker_err, BrokerError::ConnectionError { .. }));
+    }
 }

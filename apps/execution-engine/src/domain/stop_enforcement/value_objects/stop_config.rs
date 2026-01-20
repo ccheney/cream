@@ -156,4 +156,18 @@ mod tests {
         let parsed: StopsConfig = serde_json::from_str(&json).unwrap();
         assert_eq!(parsed, config);
     }
+
+    #[test]
+    fn stops_config_new() {
+        let config = StopsConfig::new(
+            SameBarPriority::TargetFirst,
+            200,
+            Some(Decimal::new(2, 0)),
+            false,
+        );
+        assert_eq!(config.same_bar_priority, SameBarPriority::TargetFirst);
+        assert_eq!(config.monitoring_interval_ms, 200);
+        assert_eq!(config.min_risk_reward_ratio, Some(Decimal::new(2, 0)));
+        assert!(!config.use_bracket_orders);
+    }
 }

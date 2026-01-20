@@ -217,7 +217,7 @@ mod tests {
 
         assert!(!executor.is_complete());
 
-        executor.on_fill(Decimal::new(100, 0));
+        let _ = executor.on_fill(Decimal::new(100, 0));
         assert!(executor.is_complete());
     }
 
@@ -226,7 +226,7 @@ mod tests {
         let config = test_config();
         let mut executor = IcebergExecutor::new(Decimal::new(100, 0), config);
 
-        executor.on_fill(Decimal::new(100, 0));
+        let _ = executor.on_fill(Decimal::new(100, 0));
         assert!(executor.is_complete());
 
         let next = executor.on_fill(Decimal::new(0, 0));

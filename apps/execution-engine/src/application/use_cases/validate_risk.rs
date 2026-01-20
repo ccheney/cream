@@ -147,7 +147,7 @@ mod tests {
         OrderPurpose, OrderSide, OrderStatus, OrderType, TimeInForce,
     };
     use crate::domain::risk_management::aggregate::RiskPolicy;
-    use crate::domain::shared::{BrokerId, Money, Quantity, Symbol};
+    use crate::domain::shared::{BrokerId, Quantity, Symbol};
     use async_trait::async_trait;
     use rust_decimal::Decimal;
     use std::collections::HashMap;
@@ -305,5 +305,307 @@ mod tests {
         let result = use_case.validate_order(&order).await.unwrap();
 
         assert!(result.passed);
+    }
+
+    #[tokio::test]
+    async fn validate_multiple_orders() {
+        let risk_repo = Arc::new(InMemoryRiskRepository::new());
+        let order_repo = Arc::new(MockOrderRepo::new());
+
+        let use_case = ValidateRiskUseCase::new(risk_repo, order_repo);
+
+        let order1 = create_test_order("order-1");
+        let order2 = create_test_order("order-2");
+        let orders = vec![order1, order2];
+
+        let result = use_case.validate_orders(&orders).await.unwrap();
+        assert!(result.passed);
+    }
+
+    #[tokio::test]
+    async fn validate_with_portfolio_context() {
+        let risk_repo = Arc::new(InMemoryRiskRepository::new());
+        let order_repo = Arc::new(MockOrderRepo::new());
+
+        // Add active policy
+        let mut policy = RiskPolicy::default();
+        policy.activate();
+        risk_repo.save_policy(&policy).await.unwrap();
+
+        let order = create_test_order("order-1");
+        let order_id = order.id().to_string();
+        order_repo.add_order(order);
+
+        let use_case = ValidateRiskUseCase::new(risk_repo, order_repo);
+
+        let request = ConstraintCheckRequestDto {
+            order_ids: vec![order_id.clone()],
+            include_portfolio_context: true,
+        };
+
+        let response = use_case.execute(request).await.unwrap();
+        assert!(!response.per_order_results.is_empty());
+        assert!(response.per_order_results.contains_key(&order_id));
+    }
+
+    #[tokio::test]
+    async fn validate_orders_with_policy() {
+        let risk_repo = Arc::new(InMemoryRiskRepository::new());
+        let order_repo = Arc::new(MockOrderRepo::new());
+
+        // Add active policy
+        let mut policy = RiskPolicy::default();
+        policy.activate();
+        risk_repo.save_policy(&policy).await.unwrap();
+
+        let use_case = ValidateRiskUseCase::new(risk_repo, order_repo);
+
+        let order = create_test_order("order-1");
+        let result = use_case.validate_orders(&[order]).await.unwrap();
+        assert!(result.passed);
+    }
+
+    use crate::domain::risk_management::errors::RiskError;
+    use crate::domain::risk_management::value_objects::{Exposure, Greeks, RiskContext};
+    use crate::domain::shared::InstrumentId;
+
+    // Failing risk repo for error path testing
+    struct FailingRiskRepo;
+
+    #[async_trait]
+    impl crate::application::ports::RiskRepositoryPort for FailingRiskRepo {
+        async fn save_policy(&self, _policy: &RiskPolicy) -> Result<(), RiskError> {
+            Ok(())
+        }
+        async fn find_policy_by_id(&self, _id: &str) -> Result<Option<RiskPolicy>, RiskError> {
+            Ok(None)
+        }
+        async fn find_active_policy(&self) -> Result<Option<RiskPolicy>, RiskError> {
+            Err(RiskError::PolicyNotFound {
+                policy_id: "test".to_string(),
+            })
+        }
+        async fn list_policies(&self) -> Result<Vec<RiskPolicy>, RiskError> {
+            Ok(vec![])
+        }
+        async fn delete_policy(&self, _id: &str) -> Result<(), RiskError> {
+            Ok(())
+        }
+        async fn get_portfolio_exposure(&self) -> Result<Exposure, RiskError> {
+            Ok(Exposure::default())
+        }
+        async fn get_instrument_exposure(
+            &self,
+            _instrument_id: &InstrumentId,
+        ) -> Result<Exposure, RiskError> {
+            Ok(Exposure::default())
+        }
+        async fn get_portfolio_greeks(&self) -> Result<Greeks, RiskError> {
+            Ok(Greeks::ZERO)
+        }
+        async fn get_buying_power(&self) -> Result<Decimal, RiskError> {
+            Ok(Decimal::new(100_000, 0))
+        }
+        async fn get_day_trade_count(&self) -> Result<u32, RiskError> {
+            Ok(0)
+        }
+        async fn build_risk_context(&self) -> Result<RiskContext, RiskError> {
+            Err(RiskError::PolicyNotFound {
+                policy_id: "context".to_string(),
+            })
+        }
+    }
+
+    #[tokio::test]
+    async fn validate_risk_policy_load_error() {
+        let risk_repo = Arc::new(FailingRiskRepo);
+        let order_repo = Arc::new(MockOrderRepo::new());
+
+        let order = create_test_order("order-1");
+        let order_id = order.id().to_string();
+        order_repo.add_order(order);
+
+        let use_case = ValidateRiskUseCase::new(risk_repo, order_repo);
+
+        let request = ConstraintCheckRequestDto {
+            order_ids: vec![order_id],
+            include_portfolio_context: false,
+        };
+
+        let result = use_case.execute(request).await;
+        assert!(result.is_err());
+        assert!(result.unwrap_err().contains("Failed to load risk policy"));
+    }
+
+    #[tokio::test]
+    async fn validate_order_policy_load_error() {
+        let risk_repo = Arc::new(FailingRiskRepo);
+        let order_repo = Arc::new(MockOrderRepo::new());
+
+        let use_case = ValidateRiskUseCase::new(risk_repo, order_repo);
+
+        let order = create_test_order("order-1");
+        let result = use_case.validate_order(&order).await;
+
+        assert!(result.is_err());
+        assert!(result.unwrap_err().contains("Failed to load risk policy"));
+    }
+
+    #[tokio::test]
+    async fn validate_orders_policy_load_error() {
+        let risk_repo = Arc::new(FailingRiskRepo);
+        let order_repo = Arc::new(MockOrderRepo::new());
+
+        let use_case = ValidateRiskUseCase::new(risk_repo, order_repo);
+
+        let order = create_test_order("order-1");
+        let result = use_case.validate_orders(&[order]).await;
+
+        assert!(result.is_err());
+        assert!(result.unwrap_err().contains("Failed to load risk policy"));
+    }
+
+    // Risk repo with policy but failing context build
+    struct PolicyOkContextFailRepo;
+
+    #[async_trait]
+    impl crate::application::ports::RiskRepositoryPort for PolicyOkContextFailRepo {
+        async fn save_policy(&self, _policy: &RiskPolicy) -> Result<(), RiskError> {
+            Ok(())
+        }
+        async fn find_policy_by_id(&self, _id: &str) -> Result<Option<RiskPolicy>, RiskError> {
+            Ok(None)
+        }
+        async fn find_active_policy(&self) -> Result<Option<RiskPolicy>, RiskError> {
+            Ok(Some(RiskPolicy::default()))
+        }
+        async fn list_policies(&self) -> Result<Vec<RiskPolicy>, RiskError> {
+            Ok(vec![])
+        }
+        async fn delete_policy(&self, _id: &str) -> Result<(), RiskError> {
+            Ok(())
+        }
+        async fn get_portfolio_exposure(&self) -> Result<Exposure, RiskError> {
+            Ok(Exposure::default())
+        }
+        async fn get_instrument_exposure(
+            &self,
+            _instrument_id: &InstrumentId,
+        ) -> Result<Exposure, RiskError> {
+            Ok(Exposure::default())
+        }
+        async fn get_portfolio_greeks(&self) -> Result<Greeks, RiskError> {
+            Ok(Greeks::ZERO)
+        }
+        async fn get_buying_power(&self) -> Result<Decimal, RiskError> {
+            Ok(Decimal::new(100_000, 0))
+        }
+        async fn get_day_trade_count(&self) -> Result<u32, RiskError> {
+            Ok(0)
+        }
+        async fn build_risk_context(&self) -> Result<RiskContext, RiskError> {
+            Err(RiskError::PolicyNotFound {
+                policy_id: "context".to_string(),
+            })
+        }
+    }
+
+    #[tokio::test]
+    async fn validate_risk_context_build_error() {
+        let risk_repo = Arc::new(PolicyOkContextFailRepo);
+        let order_repo = Arc::new(MockOrderRepo::new());
+
+        let order = create_test_order("order-1");
+        let order_id = order.id().to_string();
+        order_repo.add_order(order);
+
+        let use_case = ValidateRiskUseCase::new(risk_repo, order_repo);
+
+        let request = ConstraintCheckRequestDto {
+            order_ids: vec![order_id],
+            include_portfolio_context: false,
+        };
+
+        let result = use_case.execute(request).await;
+        assert!(result.is_err());
+        assert!(result.unwrap_err().contains("Failed to build risk context"));
+    }
+
+    #[tokio::test]
+    async fn validate_order_context_build_error() {
+        let risk_repo = Arc::new(PolicyOkContextFailRepo);
+        let order_repo = Arc::new(MockOrderRepo::new());
+
+        let use_case = ValidateRiskUseCase::new(risk_repo, order_repo);
+
+        let order = create_test_order("order-1");
+        let result = use_case.validate_order(&order).await;
+
+        assert!(result.is_err());
+        assert!(result.unwrap_err().contains("Failed to build risk context"));
+    }
+
+    #[tokio::test]
+    async fn validate_orders_context_build_error() {
+        let risk_repo = Arc::new(PolicyOkContextFailRepo);
+        let order_repo = Arc::new(MockOrderRepo::new());
+
+        let use_case = ValidateRiskUseCase::new(risk_repo, order_repo);
+
+        let order = create_test_order("order-1");
+        let result = use_case.validate_orders(&[order]).await;
+
+        assert!(result.is_err());
+        assert!(result.unwrap_err().contains("Failed to build risk context"));
+    }
+
+    // Failing order repo for error path testing
+    struct FailingOrderRepo;
+
+    #[async_trait]
+    impl OrderRepository for FailingOrderRepo {
+        async fn save(&self, _order: &Order) -> Result<(), OrderError> {
+            Ok(())
+        }
+        async fn find_by_id(&self, _id: &OrderId) -> Result<Option<Order>, OrderError> {
+            Err(OrderError::NotFound {
+                order_id: "find-failed".to_string(),
+            })
+        }
+        async fn find_by_broker_id(
+            &self,
+            _broker_id: &BrokerId,
+        ) -> Result<Option<Order>, OrderError> {
+            Ok(None)
+        }
+        async fn find_by_status(&self, _status: OrderStatus) -> Result<Vec<Order>, OrderError> {
+            Ok(vec![])
+        }
+        async fn find_active(&self) -> Result<Vec<Order>, OrderError> {
+            Ok(vec![])
+        }
+        async fn exists(&self, _id: &OrderId) -> Result<bool, OrderError> {
+            Ok(false)
+        }
+        async fn delete(&self, _id: &OrderId) -> Result<(), OrderError> {
+            Ok(())
+        }
+    }
+
+    #[tokio::test]
+    async fn validate_risk_order_load_error() {
+        let risk_repo = Arc::new(InMemoryRiskRepository::new());
+        let order_repo = Arc::new(FailingOrderRepo);
+
+        let use_case = ValidateRiskUseCase::new(risk_repo, order_repo);
+
+        let request = ConstraintCheckRequestDto {
+            order_ids: vec!["order-1".to_string()],
+            include_portfolio_context: false,
+        };
+
+        let result = use_case.execute(request).await;
+        assert!(result.is_err());
+        assert!(result.unwrap_err().contains("Failed to load order"));
     }
 }

@@ -259,4 +259,32 @@ mod tests {
         let inner = s.into_inner();
         assert_eq!(inner, "AAPL");
     }
+
+    #[test]
+    fn symbol_as_ref() {
+        let s = Symbol::new("AAPL");
+        let s_ref: &str = s.as_ref();
+        assert_eq!(s_ref, "AAPL");
+    }
+
+    #[test]
+    fn symbol_option_underlying_various_root_lengths() {
+        // Test 1-char root
+        let s1 = Symbol::new("A250117P00100000");
+        assert_eq!(s1.underlying().as_str(), "A");
+
+        // Test 2-char root
+        let s2 = Symbol::new("GE250117C00050000");
+        assert_eq!(s2.underlying().as_str(), "GE");
+
+        // Test 3-char root
+        let s3 = Symbol::new("SPY250117P00400000");
+        assert_eq!(s3.underlying().as_str(), "SPY");
+
+        // Test 6-char root (max)
+        let s4 = Symbol::new("GOOGL1250117C00150000");
+        // This is 21 chars, the underlying extraction should work
+        // The underlying should be everything before the date pattern
+        assert!(s4.underlying().as_str().len() <= 6);
+    }
 }

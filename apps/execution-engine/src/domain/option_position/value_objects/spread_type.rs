@@ -129,4 +129,37 @@ mod tests {
         let parsed: SpreadType = serde_json::from_str(&json).unwrap();
         assert_eq!(parsed, SpreadType::IronCondor);
     }
+
+    #[test]
+    fn spread_type_display_all() {
+        assert_eq!(SpreadType::Calendar.to_string(), "Calendar");
+        assert_eq!(SpreadType::Diagonal.to_string(), "Diagonal");
+        assert_eq!(SpreadType::Butterfly.to_string(), "Butterfly");
+        assert_eq!(SpreadType::IronButterfly.to_string(), "Iron Butterfly");
+        assert_eq!(SpreadType::Straddle.to_string(), "Straddle");
+        assert_eq!(SpreadType::Strangle.to_string(), "Strangle");
+        assert_eq!(SpreadType::Custom.to_string(), "Custom");
+    }
+
+    #[test]
+    fn spread_type_leg_count_all() {
+        assert_eq!(SpreadType::Calendar.typical_leg_count(), 2);
+        assert_eq!(SpreadType::Diagonal.typical_leg_count(), 2);
+        assert_eq!(SpreadType::Straddle.typical_leg_count(), 2);
+        assert_eq!(SpreadType::Strangle.typical_leg_count(), 2);
+        assert_eq!(SpreadType::IronButterfly.typical_leg_count(), 4);
+        assert_eq!(SpreadType::Custom.typical_leg_count(), 0);
+    }
+
+    #[test]
+    fn spread_type_butterfly_defined_risk() {
+        assert!(SpreadType::Butterfly.is_defined_risk());
+        assert!(SpreadType::IronButterfly.is_defined_risk());
+    }
+
+    #[test]
+    fn spread_type_single_not_multi_expiry() {
+        assert!(!SpreadType::Single.is_multi_expiry());
+        assert!(!SpreadType::Straddle.is_multi_expiry());
+    }
 }

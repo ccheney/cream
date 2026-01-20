@@ -232,4 +232,118 @@ mod tests {
             OrderStatus::PartiallyFilled
         ));
     }
+
+    #[test]
+    fn transition_error_reason_canceled() {
+        let reason =
+            OrderStateMachine::transition_error_reason(OrderStatus::Canceled, OrderStatus::Filled);
+        assert!(reason.contains("canceled"));
+    }
+
+    #[test]
+    fn transition_error_reason_rejected() {
+        let reason = OrderStateMachine::transition_error_reason(
+            OrderStatus::Rejected,
+            OrderStatus::Accepted,
+        );
+        assert!(reason.contains("rejected"));
+    }
+
+    #[test]
+    fn transition_error_reason_expired() {
+        let reason =
+            OrderStateMachine::transition_error_reason(OrderStatus::Expired, OrderStatus::Filled);
+        assert!(reason.contains("expired"));
+    }
+
+    #[test]
+    fn transition_error_reason_default() {
+        let reason =
+            OrderStateMachine::transition_error_reason(OrderStatus::New, OrderStatus::Filled);
+        assert!(reason.contains("Invalid transition"));
+    }
+
+    #[test]
+    fn valid_next_states_from_pending_new() {
+        let states = OrderStateMachine::valid_next_states(OrderStatus::PendingNew);
+        assert!(states.contains(&OrderStatus::Accepted));
+        assert!(states.contains(&OrderStatus::Rejected));
+        assert!(states.contains(&OrderStatus::Canceled));
+    }
+
+    #[test]
+    fn valid_next_states_from_accepted() {
+        let states = OrderStateMachine::valid_next_states(OrderStatus::Accepted);
+        assert!(states.contains(&OrderStatus::PartiallyFilled));
+        assert!(states.contains(&OrderStatus::Filled));
+        assert!(states.contains(&OrderStatus::PendingCancel));
+        assert!(states.contains(&OrderStatus::Canceled));
+        assert!(states.contains(&OrderStatus::Expired));
+    }
+
+    #[test]
+    fn valid_next_states_from_partially_filled() {
+        let states = OrderStateMachine::valid_next_states(OrderStatus::PartiallyFilled);
+        assert!(states.contains(&OrderStatus::PartiallyFilled));
+        assert!(states.contains(&OrderStatus::Filled));
+        assert!(states.contains(&OrderStatus::PendingCancel));
+        assert!(states.contains(&OrderStatus::Canceled));
+        assert!(states.contains(&OrderStatus::Expired));
+    }
+
+    #[test]
+    fn valid_next_states_from_pending_cancel() {
+        let states = OrderStateMachine::valid_next_states(OrderStatus::PendingCancel);
+        assert!(states.contains(&OrderStatus::Canceled));
+        assert!(states.contains(&OrderStatus::Filled));
+        assert!(states.contains(&OrderStatus::PartiallyFilled));
+    }
+
+    #[test]
+    fn new_to_pending_new_valid() {
+        assert!(OrderStateMachine::is_valid_transition(
+            OrderStatus::New,
+            OrderStatus::PendingNew
+        ));
+    }
+
+    #[test]
+    fn accepted_to_pending_cancel_valid() {
+        assert!(OrderStateMachine::is_valid_transition(
+            OrderStatus::Accepted,
+            OrderStatus::PendingCancel
+        ));
+    }
+
+    #[test]
+    fn accepted_to_expired_valid() {
+        assert!(OrderStateMachine::is_valid_transition(
+            OrderStatus::Accepted,
+            OrderStatus::Expired
+        ));
+    }
+
+    #[test]
+    fn partially_filled_to_pending_cancel_valid() {
+        assert!(OrderStateMachine::is_valid_transition(
+            OrderStatus::PartiallyFilled,
+            OrderStatus::PendingCancel
+        ));
+    }
+
+    #[test]
+    fn partially_filled_to_expired_valid() {
+        assert!(OrderStateMachine::is_valid_transition(
+            OrderStatus::PartiallyFilled,
+            OrderStatus::Expired
+        ));
+    }
+
+    #[test]
+    fn pending_cancel_to_canceled_valid() {
+        assert!(OrderStateMachine::is_valid_transition(
+            OrderStatus::PendingCancel,
+            OrderStatus::Canceled
+        ));
+    }
 }

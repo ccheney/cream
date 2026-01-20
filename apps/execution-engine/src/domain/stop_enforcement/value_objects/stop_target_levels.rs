@@ -265,4 +265,38 @@ mod tests {
             PositionDirection::Short
         );
     }
+
+    #[test]
+    fn stop_target_levels_risk_short() {
+        let levels = StopTargetLevels::for_short(
+            Decimal::new(100, 0),
+            Decimal::new(105, 0),
+            Decimal::new(90, 0),
+        );
+        // For short: stop_loss - entry_price = 105 - 100 = 5
+        assert_eq!(levels.risk(), Decimal::new(5, 0));
+    }
+
+    #[test]
+    fn stop_target_levels_reward_short() {
+        let levels = StopTargetLevels::for_short(
+            Decimal::new(100, 0),
+            Decimal::new(105, 0),
+            Decimal::new(90, 0),
+        );
+        // For short: entry_price - take_profit = 100 - 90 = 10
+        assert_eq!(levels.reward(), Decimal::new(10, 0));
+    }
+
+    #[test]
+    fn stop_target_levels_risk_reward_ratio_zero_risk() {
+        let levels = StopTargetLevels::new(
+            Decimal::new(100, 0), // stop at entry price = zero risk
+            Decimal::new(110, 0),
+            Decimal::new(100, 0),
+            PositionDirection::Long,
+        );
+        // When risk is zero, ratio should be None
+        assert!(levels.risk_reward_ratio().is_none());
+    }
 }

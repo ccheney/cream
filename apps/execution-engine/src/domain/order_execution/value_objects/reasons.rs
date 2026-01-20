@@ -228,4 +228,55 @@ mod tests {
         let parsed: CancelReason = serde_json::from_str(&json).unwrap();
         assert_eq!(parsed, reason);
     }
+
+    #[test]
+    fn reject_reason_invalid_quantity() {
+        let reason = RejectReason::invalid_quantity("zero quantity");
+        assert_eq!(reason.code, "INVALID_QUANTITY");
+        assert!(reason.message.contains("zero quantity"));
+    }
+
+    #[test]
+    fn reject_reason_invalid_price() {
+        let reason = RejectReason::invalid_price("negative");
+        assert_eq!(reason.code, "INVALID_PRICE");
+        assert!(reason.message.contains("negative"));
+    }
+
+    #[test]
+    fn reject_reason_rate_limited() {
+        let reason = RejectReason::rate_limited();
+        assert_eq!(reason.code, "RATE_LIMITED");
+    }
+
+    #[test]
+    fn reject_reason_broker_error() {
+        let reason = RejectReason::broker_error("Connection timeout");
+        assert_eq!(reason.code, "BROKER_ERROR");
+        assert_eq!(reason.message, "Connection timeout");
+    }
+
+    #[test]
+    fn cancel_reason_partial_fill_timeout() {
+        let reason = CancelReason::partial_fill_timeout();
+        assert_eq!(reason.code, "PARTIAL_FILL_TIMEOUT");
+    }
+
+    #[test]
+    fn cancel_reason_stop_triggered() {
+        let reason = CancelReason::stop_triggered();
+        assert_eq!(reason.code, "STOP_TRIGGERED");
+    }
+
+    #[test]
+    fn cancel_reason_disconnect_safety() {
+        let reason = CancelReason::disconnect_safety();
+        assert_eq!(reason.code, "DISCONNECT_SAFETY");
+    }
+
+    #[test]
+    fn cancel_reason_replaced() {
+        let reason = CancelReason::replaced();
+        assert_eq!(reason.code, "REPLACED");
+    }
 }

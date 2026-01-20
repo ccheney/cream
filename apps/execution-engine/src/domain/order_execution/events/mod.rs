@@ -249,4 +249,165 @@ mod tests {
 
         assert_eq!(event.reason.code, "INSUFFICIENT_BUYING_POWER");
     }
+
+    #[test]
+    fn order_event_order_id_all_variants() {
+        // Test order_id() for all variants
+        let ts = Timestamp::now();
+
+        let submitted = OrderEvent::Submitted(OrderSubmitted {
+            order_id: OrderId::new("ord-submitted"),
+            symbol: Symbol::new("AAPL"),
+            side: OrderSide::Buy,
+            quantity: Quantity::from_i64(100),
+            limit_price: None,
+            occurred_at: ts,
+        });
+        assert_eq!(submitted.order_id().as_str(), "ord-submitted");
+
+        let accepted = OrderEvent::Accepted(OrderAccepted {
+            order_id: OrderId::new("ord-accepted"),
+            broker_order_id: BrokerId::new("brk-1"),
+            occurred_at: ts,
+        });
+        assert_eq!(accepted.order_id().as_str(), "ord-accepted");
+
+        let partial = OrderEvent::PartiallyFilled(OrderPartiallyFilled {
+            order_id: OrderId::new("ord-partial"),
+            fill_quantity: Quantity::from_i64(50),
+            fill_price: Money::usd(100.0),
+            cumulative_quantity: Quantity::from_i64(50),
+            leaves_quantity: Quantity::from_i64(50),
+            vwap: Money::usd(100.0),
+            occurred_at: ts,
+        });
+        assert_eq!(partial.order_id().as_str(), "ord-partial");
+
+        let filled = OrderEvent::Filled(OrderFilled {
+            order_id: OrderId::new("ord-filled"),
+            total_quantity: Quantity::from_i64(100),
+            average_price: Money::usd(100.0),
+            occurred_at: ts,
+        });
+        assert_eq!(filled.order_id().as_str(), "ord-filled");
+
+        let canceled = OrderEvent::Canceled(OrderCanceled {
+            order_id: OrderId::new("ord-canceled"),
+            reason: CancelReason::user_requested(),
+            filled_quantity: Quantity::from_i64(0),
+            occurred_at: ts,
+        });
+        assert_eq!(canceled.order_id().as_str(), "ord-canceled");
+
+        let rejected = OrderEvent::Rejected(OrderRejected {
+            order_id: OrderId::new("ord-rejected"),
+            reason: RejectReason::insufficient_buying_power(),
+            occurred_at: ts,
+        });
+        assert_eq!(rejected.order_id().as_str(), "ord-rejected");
+    }
+
+    #[test]
+    fn order_event_occurred_at_all_variants() {
+        let ts = Timestamp::now();
+
+        let submitted = OrderEvent::Submitted(OrderSubmitted {
+            order_id: OrderId::new("ord-1"),
+            symbol: Symbol::new("AAPL"),
+            side: OrderSide::Buy,
+            quantity: Quantity::from_i64(100),
+            limit_price: None,
+            occurred_at: ts,
+        });
+        let _ = submitted.occurred_at();
+
+        let accepted = OrderEvent::Accepted(OrderAccepted {
+            order_id: OrderId::new("ord-1"),
+            broker_order_id: BrokerId::new("brk-1"),
+            occurred_at: ts,
+        });
+        let _ = accepted.occurred_at();
+
+        let partial = OrderEvent::PartiallyFilled(OrderPartiallyFilled {
+            order_id: OrderId::new("ord-1"),
+            fill_quantity: Quantity::from_i64(50),
+            fill_price: Money::usd(100.0),
+            cumulative_quantity: Quantity::from_i64(50),
+            leaves_quantity: Quantity::from_i64(50),
+            vwap: Money::usd(100.0),
+            occurred_at: ts,
+        });
+        let _ = partial.occurred_at();
+
+        let filled = OrderEvent::Filled(OrderFilled {
+            order_id: OrderId::new("ord-1"),
+            total_quantity: Quantity::from_i64(100),
+            average_price: Money::usd(100.0),
+            occurred_at: ts,
+        });
+        let _ = filled.occurred_at();
+
+        let canceled = OrderEvent::Canceled(OrderCanceled {
+            order_id: OrderId::new("ord-1"),
+            reason: CancelReason::user_requested(),
+            filled_quantity: Quantity::from_i64(0),
+            occurred_at: ts,
+        });
+        let _ = canceled.occurred_at();
+
+        let rejected = OrderEvent::Rejected(OrderRejected {
+            order_id: OrderId::new("ord-1"),
+            reason: RejectReason::insufficient_buying_power(),
+            occurred_at: ts,
+        });
+        let _ = rejected.occurred_at();
+    }
+
+    #[test]
+    fn order_event_type_all_variants() {
+        let ts = Timestamp::now();
+
+        let submitted = OrderEvent::Submitted(OrderSubmitted {
+            order_id: OrderId::new("ord-1"),
+            symbol: Symbol::new("AAPL"),
+            side: OrderSide::Buy,
+            quantity: Quantity::from_i64(100),
+            limit_price: None,
+            occurred_at: ts,
+        });
+        assert_eq!(submitted.event_type(), "ORDER_SUBMITTED");
+
+        let accepted = OrderEvent::Accepted(OrderAccepted {
+            order_id: OrderId::new("ord-1"),
+            broker_order_id: BrokerId::new("brk-1"),
+            occurred_at: ts,
+        });
+        assert_eq!(accepted.event_type(), "ORDER_ACCEPTED");
+
+        let partial = OrderEvent::PartiallyFilled(OrderPartiallyFilled {
+            order_id: OrderId::new("ord-1"),
+            fill_quantity: Quantity::from_i64(50),
+            fill_price: Money::usd(100.0),
+            cumulative_quantity: Quantity::from_i64(50),
+            leaves_quantity: Quantity::from_i64(50),
+            vwap: Money::usd(100.0),
+            occurred_at: ts,
+        });
+        assert_eq!(partial.event_type(), "ORDER_PARTIALLY_FILLED");
+
+        let canceled = OrderEvent::Canceled(OrderCanceled {
+            order_id: OrderId::new("ord-1"),
+            reason: CancelReason::user_requested(),
+            filled_quantity: Quantity::from_i64(0),
+            occurred_at: ts,
+        });
+        assert_eq!(canceled.event_type(), "ORDER_CANCELED");
+
+        let rejected = OrderEvent::Rejected(OrderRejected {
+            order_id: OrderId::new("ord-1"),
+            reason: RejectReason::insufficient_buying_power(),
+            occurred_at: ts,
+        });
+        assert_eq!(rejected.event_type(), "ORDER_REJECTED");
+    }
 }

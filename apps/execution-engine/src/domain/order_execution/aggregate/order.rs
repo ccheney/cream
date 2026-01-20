@@ -780,4 +780,344 @@ mod tests {
         assert!(multi_leg_order.is_multi_leg());
         assert_eq!(multi_leg_order.legs().len(), 2);
     }
+
+    #[test]
+    fn order_purpose_is_correct() {
+        let mut cmd = make_create_command();
+        cmd.purpose = OrderPurpose::StopLoss;
+        let order = Order::new(cmd).unwrap();
+        assert_eq!(order.partial_fill().order_purpose(), OrderPurpose::StopLoss);
+    }
+
+    #[test]
+    fn order_stop_limit_requires_both_prices() {
+        let cmd = CreateOrderCommand {
+            symbol: Symbol::new("AAPL"),
+            side: OrderSide::Sell,
+            order_type: OrderType::StopLimit,
+            quantity: Quantity::from_i64(100),
+            limit_price: Some(Money::usd(140.0)),
+            stop_price: None,
+            time_in_force: TimeInForce::Day,
+            purpose: OrderPurpose::StopLoss,
+            legs: vec![],
+        };
+
+        let result = Order::new(cmd);
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn order_stop_price_accessor() {
+        let cmd = CreateOrderCommand {
+            symbol: Symbol::new("AAPL"),
+            side: OrderSide::Sell,
+            order_type: OrderType::Stop,
+            quantity: Quantity::from_i64(100),
+            limit_price: None,
+            stop_price: Some(Money::usd(140.0)),
+            time_in_force: TimeInForce::Day,
+            purpose: OrderPurpose::StopLoss,
+            legs: vec![],
+        };
+
+        let order = Order::new(cmd).unwrap();
+        assert_eq!(
+            order.stop_price().unwrap().amount(),
+            rust_decimal::Decimal::new(140, 0)
+        );
+    }
+
+    #[test]
+    fn order_timestamps() {
+        let order = Order::new(make_create_command()).unwrap();
+        assert!(order.created_at().unix_seconds() > 0);
+        assert!(order.updated_at().unix_seconds() > 0);
+    }
+
+    #[test]
+    fn order_apply_fill_fails_for_new_order() {
+        let mut order = Order::new(make_create_command()).unwrap();
+        let result = order.apply_fill(make_fill(50, 150.0));
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn order_apply_fill_exceeds_remaining() {
+        let mut order = Order::new(make_create_command()).unwrap();
+        order.accept(BrokerId::new("broker-123")).unwrap();
+
+        let result = order.apply_fill(make_fill(150, 150.0)); // More than 100 quantity
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn order_reject_fails_for_accepted_order() {
+        let mut order = Order::new(make_create_command()).unwrap();
+        order.accept(BrokerId::new("broker-123")).unwrap();
+
+        let result = order.reject(RejectReason::insufficient_buying_power());
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn order_expire_fails_for_filled_order() {
+        let mut order = Order::new(make_create_command()).unwrap();
+        order.accept(BrokerId::new("broker-123")).unwrap();
+        order.apply_fill(make_fill(100, 150.0)).unwrap();
+
+        let result = order.expire();
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn order_reconstitute() {
+        let id = OrderId::new("ord-recon");
+        let symbol = Symbol::new("AAPL");
+        let quantity = Quantity::from_i64(100);
+        let partial_fill = PartialFillState::new(id.clone(), quantity, OrderPurpose::Entry);
+        let created_at = Timestamp::now();
+        let updated_at = Timestamp::now();
+
+        let order = Order::reconstitute(
+            id.clone(),
+            symbol.clone(),
+            OrderSide::Buy,
+            OrderType::Limit,
+            quantity,
+            Some(Money::usd(150.0)),
+            None,
+            TimeInForce::Day,
+            OrderStatus::Accepted,
+            partial_fill,
+            Some(BrokerId::new("broker-recon")),
+            vec![],
+            created_at,
+            updated_at,
+        );
+
+        assert_eq!(order.id().as_str(), "ord-recon");
+        assert_eq!(order.symbol().as_str(), "AAPL");
+        assert_eq!(order.status(), OrderStatus::Accepted);
+        assert_eq!(order.broker_order_id().unwrap().as_str(), "broker-recon");
+        assert!(order.pending_events().is_empty()); // Reconstituted orders have no events
+    }
+
+    #[test]
+    fn order_multi_leg_accept_updates_legs() {
+        let mut cmd = make_create_command();
+        cmd.legs = vec![
+            OrderLine::new(
+                0,
+                "AAPL250117P00190000".into(),
+                OrderSide::Buy,
+                Quantity::from_i64(10),
+            ),
+            OrderLine::new(
+                1,
+                "AAPL250117P00185000".into(),
+                OrderSide::Sell,
+                Quantity::from_i64(10),
+            ),
+        ];
+
+        let mut order = Order::new(cmd).unwrap();
+        assert!(order.is_multi_leg());
+
+        order.accept(BrokerId::new("broker-123")).unwrap();
+
+        // Check that legs are updated
+        for leg in order.legs() {
+            assert_eq!(leg.status(), OrderStatus::Accepted);
+        }
+    }
+
+    #[test]
+    fn order_cancel_from_pending_cancel() {
+        let mut order = Order::new(make_create_command()).unwrap();
+        order.accept(BrokerId::new("broker-123")).unwrap();
+        // PendingCancel status would typically be set by transition
+        // Test cancel from accepted which is also cancelable
+        order.cancel(CancelReason::user_requested()).unwrap();
+        assert_eq!(order.status(), OrderStatus::Canceled);
+    }
+
+    #[test]
+    fn order_apply_fill_from_partially_filled() {
+        let mut order = Order::new(make_create_command()).unwrap();
+        order.accept(BrokerId::new("broker-123")).unwrap();
+
+        // First partial fill
+        order.apply_fill(make_fill(30, 149.0)).unwrap();
+        assert_eq!(order.status(), OrderStatus::PartiallyFilled);
+
+        // Second fill from PartiallyFilled status
+        order.apply_fill(make_fill(30, 150.0)).unwrap();
+        assert_eq!(order.status(), OrderStatus::PartiallyFilled);
+        assert_eq!(order.partial_fill().cum_qty(), Quantity::from_i64(60));
+    }
+
+    #[test]
+    fn order_invalid_stop_price_validation() {
+        let cmd = CreateOrderCommand {
+            symbol: Symbol::new("AAPL"),
+            side: OrderSide::Sell,
+            order_type: OrderType::Stop,
+            quantity: Quantity::from_i64(100),
+            limit_price: None,
+            stop_price: Some(Money::usd(-10.0)), // Invalid negative price
+            time_in_force: TimeInForce::Day,
+            purpose: OrderPurpose::StopLoss,
+            legs: vec![],
+        };
+
+        let result = Order::new(cmd);
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn order_invalid_limit_price_validation() {
+        let cmd = CreateOrderCommand {
+            symbol: Symbol::new("AAPL"),
+            side: OrderSide::Buy,
+            order_type: OrderType::Limit,
+            quantity: Quantity::from_i64(100),
+            limit_price: Some(Money::usd(-5.0)), // Invalid negative price
+            stop_price: None,
+            time_in_force: TimeInForce::Day,
+            purpose: OrderPurpose::Entry,
+            legs: vec![],
+        };
+
+        let result = Order::new(cmd);
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn order_invalid_symbol_validation() {
+        let cmd = CreateOrderCommand {
+            symbol: Symbol::new(""), // Invalid empty symbol
+            side: OrderSide::Buy,
+            order_type: OrderType::Market,
+            quantity: Quantity::from_i64(100),
+            limit_price: None,
+            stop_price: None,
+            time_in_force: TimeInForce::Day,
+            purpose: OrderPurpose::Entry,
+            legs: vec![],
+        };
+
+        let result = Order::new(cmd);
+        assert!(result.is_err());
+        let err = result.unwrap_err();
+        match err {
+            OrderError::InvalidParameters { field, .. } => {
+                assert_eq!(field, "symbol");
+            }
+            _ => panic!("Expected InvalidParameters error"),
+        }
+    }
+
+    #[test]
+    fn order_invalid_quantity_validation() {
+        let cmd = CreateOrderCommand {
+            symbol: Symbol::new("AAPL"),
+            side: OrderSide::Buy,
+            order_type: OrderType::Market,
+            quantity: Quantity::ZERO, // Invalid zero quantity
+            limit_price: None,
+            stop_price: None,
+            time_in_force: TimeInForce::Day,
+            purpose: OrderPurpose::Entry,
+            legs: vec![],
+        };
+
+        let result = Order::new(cmd);
+        assert!(result.is_err());
+        let err = result.unwrap_err();
+        match err {
+            OrderError::InvalidParameters { field, .. } => {
+                assert_eq!(field, "quantity");
+            }
+            _ => panic!("Expected InvalidParameters error"),
+        }
+    }
+
+    #[test]
+    fn order_cancel_with_legs() {
+        use crate::domain::shared::InstrumentId;
+
+        let leg = OrderLine::new(
+            0,
+            InstrumentId::new("AAPL250117C00200000"),
+            OrderSide::Buy,
+            Quantity::from_i64(1),
+        );
+
+        let cmd = CreateOrderCommand {
+            symbol: Symbol::new("AAPL250117C00200000"),
+            side: OrderSide::Buy,
+            order_type: OrderType::Limit,
+            quantity: Quantity::from_i64(1),
+            limit_price: Some(Money::usd(5.0)),
+            stop_price: None,
+            time_in_force: TimeInForce::Day,
+            purpose: OrderPurpose::Entry,
+            legs: vec![leg],
+        };
+
+        let mut order = Order::new(cmd).unwrap();
+        assert!(order.accept(BrokerId::new("broker-123")).is_ok());
+
+        // Cancel the order with legs
+        assert!(order.cancel(CancelReason::user_requested()).is_ok());
+        assert_eq!(order.status(), OrderStatus::Canceled);
+    }
+
+    #[test]
+    fn order_reject_with_legs() {
+        use crate::domain::shared::InstrumentId;
+
+        let leg = OrderLine::new(
+            0,
+            InstrumentId::new("AAPL250117C00200000"),
+            OrderSide::Buy,
+            Quantity::from_i64(1),
+        );
+
+        let cmd = CreateOrderCommand {
+            symbol: Symbol::new("AAPL250117C00200000"),
+            side: OrderSide::Buy,
+            order_type: OrderType::Limit,
+            quantity: Quantity::from_i64(1),
+            limit_price: Some(Money::usd(5.0)),
+            stop_price: None,
+            time_in_force: TimeInForce::Day,
+            purpose: OrderPurpose::Entry,
+            legs: vec![leg],
+        };
+
+        let mut order = Order::new(cmd).unwrap();
+
+        // Reject the order with legs
+        assert!(
+            order
+                .reject(RejectReason::insufficient_buying_power())
+                .is_ok()
+        );
+        assert_eq!(order.status(), OrderStatus::Rejected);
+    }
+
+    #[test]
+    fn order_state_transition_coverage() {
+        let cmd = make_create_command();
+        let mut order = Order::new(cmd).unwrap();
+
+        // Test New -> Accepted -> PartiallyFilled -> Filled sequence
+        assert!(order.accept(BrokerId::new("broker-123")).is_ok());
+        assert!(order.apply_fill(make_fill(50, 150.0)).is_ok());
+        assert_eq!(order.status(), OrderStatus::PartiallyFilled);
+        assert!(order.apply_fill(make_fill(50, 150.0)).is_ok());
+        assert_eq!(order.status(), OrderStatus::Filled);
+    }
 }

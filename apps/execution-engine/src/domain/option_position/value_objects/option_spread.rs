@@ -111,9 +111,7 @@ impl OptionSpread {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::domain::option_position::value_objects::{
-        LegType, OptionContract, OptionRight, PositionSide,
-    };
+    use crate::domain::option_position::value_objects::{LegType, OptionContract, OptionRight};
     use crate::domain::shared::Symbol;
     use chrono::NaiveDate;
 

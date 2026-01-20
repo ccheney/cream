@@ -307,4 +307,38 @@ mod tests {
         let monitor = PriceMonitor::with_config(config);
         assert_eq!(monitor.monitoring_interval_ms(), 50);
     }
+
+    #[test]
+    fn price_monitor_default() {
+        let monitor = PriceMonitor::default();
+        assert_eq!(monitor.active_count(), 0);
+        assert_eq!(monitor.monitoring_interval_ms(), 100);
+    }
+
+    #[test]
+    fn price_monitor_config_getter() {
+        let config = StopsConfig::fast_monitoring();
+        let monitor = PriceMonitor::with_config(config);
+        assert_eq!(monitor.config().monitoring_interval_ms, 50);
+    }
+
+    #[test]
+    fn price_monitor_positions_iterator() {
+        let mut monitor = PriceMonitor::new();
+        monitor.add_position(make_long_position("pos-1", "AAPL"));
+        monitor.add_position(make_long_position("pos-2", "MSFT"));
+
+        let positions: Vec<_> = monitor.positions().collect();
+        assert_eq!(positions.len(), 2);
+    }
+
+    #[test]
+    fn price_monitor_short_no_trigger_in_safe_zone() {
+        let mut monitor = PriceMonitor::new();
+        monitor.add_position(make_short_position("pos-1", "AAPL"));
+
+        // Price in safe zone for short position (between stop and target)
+        let triggers = monitor.check_price(&InstrumentId::new("AAPL"), Decimal::new(98, 0));
+        assert!(triggers.is_empty());
+    }
 }

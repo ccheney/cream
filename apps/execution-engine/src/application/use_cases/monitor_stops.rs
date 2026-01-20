@@ -3,12 +3,10 @@
 use std::sync::Arc;
 
 use crate::application::ports::{BrokerPort, PriceFeedPort};
-use crate::domain::order_execution::value_objects::{
-    CancelReason, OrderPurpose, OrderSide, OrderType, TimeInForce,
-};
+use crate::domain::order_execution::value_objects::{OrderPurpose, OrderSide};
 use crate::domain::shared::{OrderId, Symbol};
 use crate::domain::stop_enforcement::{
-    MonitoredPosition, PriceMonitor, StopTargetLevels, StopsConfig, TriggerResult,
+    MonitoredPosition, PriceMonitor, StopsConfig, TriggerResult,
 };
 
 /// Result of a stop trigger.
@@ -130,7 +128,7 @@ where
         trigger_type: &str,
     ) -> StopTriggerResult {
         // Get position info for exit order
-        let position = match self.monitor.get_position(position_id) {
+        let _position = match self.monitor.get_position(position_id) {
             Some(p) => p,
             None => {
                 return StopTriggerResult {
@@ -144,7 +142,7 @@ where
         };
 
         // Determine exit order parameters based on trigger type
-        let (exit_side, purpose) = match trigger_type {
+        let (exit_side, _purpose) = match trigger_type {
             "stop_loss" => (OrderSide::Sell, OrderPurpose::StopLoss),
             "take_profit" => (OrderSide::Sell, OrderPurpose::Exit),
             _ => (OrderSide::Sell, OrderPurpose::Exit),
@@ -199,7 +197,7 @@ mod tests {
     use crate::application::ports::{BrokerError, OrderAck, PriceFeedError, Quote};
     use crate::domain::order_execution::value_objects::OrderStatus;
     use crate::domain::shared::{BrokerId, InstrumentId};
-    use crate::domain::stop_enforcement::value_objects::PositionDirection;
+    use crate::domain::stop_enforcement::StopTargetLevels;
     use async_trait::async_trait;
     use rust_decimal::Decimal;
     use std::collections::HashMap;
@@ -398,5 +396,195 @@ mod tests {
 
         use_case.remove_position(&OrderId::new("pos-1"));
         assert_eq!(use_case.active_count(), 0);
+    }
+
+    #[tokio::test]
+    async fn monitor_stops_with_config() {
+        let broker = Arc::new(MockBroker::new());
+        let price_feed = Arc::new(MockPriceFeed::new());
+        let config = StopsConfig::default();
+
+        let use_case = MonitorStopsUseCase::with_config(broker, price_feed, config);
+        assert!(use_case.monitoring_interval_ms() > 0);
+    }
+
+    #[tokio::test]
+    async fn monitor_stops_monitoring_interval() {
+        let broker = Arc::new(MockBroker::new());
+        let price_feed = Arc::new(MockPriceFeed::new());
+
+        let use_case = MonitorStopsUseCase::new(broker, price_feed);
+        // Default interval should be reasonable
+        assert!(use_case.monitoring_interval_ms() >= 100);
+    }
+
+    #[tokio::test]
+    async fn monitor_stops_price_fetch_error_continues() {
+        // Test that price fetch error doesn't crash - just skips that instrument
+        let broker = Arc::new(MockBroker::new());
+        let price_feed = Arc::new(MockPriceFeed::new());
+        // Don't set price for "AAPL" - will cause DataUnavailable error
+
+        let mut use_case = MonitorStopsUseCase::new(broker, price_feed);
+        use_case.add_position(create_long_position("pos-1", "AAPL"));
+
+        // Should not panic, just skip the position with missing price
+        let results = use_case.check_and_trigger().await;
+        assert!(results.is_empty());
+    }
+
+    #[tokio::test]
+    async fn monitor_stops_multiple_positions_one_triggers() {
+        let broker = Arc::new(MockBroker::new());
+        let price_feed = Arc::new(MockPriceFeed::new());
+
+        // AAPL will trigger stop loss (94 < 95)
+        price_feed.set_price("AAPL", Decimal::new(94, 0));
+        // MSFT will not trigger (100 is between 95 and 110)
+        price_feed.set_price("MSFT", Decimal::new(100, 0));
+
+        let mut use_case = MonitorStopsUseCase::new(broker.clone(), price_feed);
+        use_case.add_position(create_long_position("pos-1", "AAPL"));
+        use_case.add_position(create_long_position("pos-2", "MSFT"));
+
+        let results = use_case.check_and_trigger().await;
+        assert_eq!(results.len(), 1);
+        assert_eq!(results[0].trigger_type, "stop_loss");
+
+        // Verify one order was submitted for AAPL exit
+        let submitted = broker.submitted_orders.read().unwrap();
+        assert_eq!(submitted.len(), 1);
+    }
+
+    // Mock broker that fails on submit
+    struct FailingBroker;
+
+    #[async_trait]
+    impl BrokerPort for FailingBroker {
+        async fn submit_order(
+            &self,
+            _request: crate::application::ports::SubmitOrderRequest,
+        ) -> Result<OrderAck, BrokerError> {
+            Err(BrokerError::ConnectionError {
+                message: "Broker unavailable".to_string(),
+            })
+        }
+
+        async fn cancel_order(
+            &self,
+            _request: crate::application::ports::CancelOrderRequest,
+        ) -> Result<(), BrokerError> {
+            Ok(())
+        }
+
+        async fn get_order(&self, _broker_order_id: &BrokerId) -> Result<OrderAck, BrokerError> {
+            Ok(OrderAck {
+                broker_order_id: BrokerId::new("test"),
+                client_order_id: OrderId::new("test"),
+                status: OrderStatus::Accepted,
+                filled_qty: Decimal::ZERO,
+                avg_fill_price: None,
+            })
+        }
+
+        async fn get_open_orders(&self) -> Result<Vec<OrderAck>, BrokerError> {
+            Ok(vec![])
+        }
+
+        async fn get_buying_power(&self) -> Result<Decimal, BrokerError> {
+            Ok(Decimal::new(100_000, 0))
+        }
+
+        async fn get_position(
+            &self,
+            _instrument_id: &InstrumentId,
+        ) -> Result<Option<Decimal>, BrokerError> {
+            Ok(None)
+        }
+    }
+
+    #[tokio::test]
+    async fn monitor_stops_broker_submit_error() {
+        let broker = Arc::new(FailingBroker);
+        let price_feed = Arc::new(MockPriceFeed::new());
+        price_feed.set_price("AAPL", Decimal::new(94, 0)); // Triggers stop loss
+
+        let mut use_case = MonitorStopsUseCase::new(broker, price_feed);
+        use_case.add_position(create_long_position("pos-1", "AAPL"));
+
+        let results = use_case.check_and_trigger().await;
+        assert_eq!(results.len(), 1);
+        assert!(results[0].error.is_some());
+        assert!(
+            results[0]
+                .error
+                .as_ref()
+                .unwrap()
+                .contains("Failed to submit exit order")
+        );
+        assert!(results[0].exit_order_id.is_none());
+    }
+
+    fn create_short_position(position_id: &str, instrument_id: &str) -> MonitoredPosition {
+        let levels = StopTargetLevels::for_short(
+            Decimal::new(100, 0), // Entry at 100
+            Decimal::new(105, 0), // Stop at 105 (above entry)
+            Decimal::new(90, 0),  // Target at 90 (below entry)
+        );
+        MonitoredPosition::new(
+            OrderId::new(position_id),
+            InstrumentId::new(instrument_id),
+            levels,
+        )
+    }
+
+    #[tokio::test]
+    async fn monitor_stops_short_position_stop_loss() {
+        let broker = Arc::new(MockBroker::new());
+        let price_feed = Arc::new(MockPriceFeed::new());
+        price_feed.set_price("AAPL", Decimal::new(106, 0)); // Above stop at 105
+
+        let mut use_case = MonitorStopsUseCase::new(broker.clone(), price_feed);
+        use_case.add_position(create_short_position("pos-1", "AAPL"));
+
+        let results = use_case.check_and_trigger().await;
+        assert_eq!(results.len(), 1);
+        assert_eq!(results[0].trigger_type, "stop_loss");
+    }
+
+    #[tokio::test]
+    async fn monitor_stops_short_position_take_profit() {
+        let broker = Arc::new(MockBroker::new());
+        let price_feed = Arc::new(MockPriceFeed::new());
+        price_feed.set_price("AAPL", Decimal::new(89, 0)); // Below target at 90
+
+        let mut use_case = MonitorStopsUseCase::new(broker.clone(), price_feed);
+        use_case.add_position(create_short_position("pos-1", "AAPL"));
+
+        let results = use_case.check_and_trigger().await;
+        assert_eq!(results.len(), 1);
+        assert_eq!(results[0].trigger_type, "take_profit");
+    }
+
+    #[tokio::test]
+    async fn stop_trigger_result_fields() {
+        let result = StopTriggerResult {
+            position_id: "pos-123".to_string(),
+            trigger_type: "stop_loss".to_string(),
+            trigger_price: Decimal::new(95, 0),
+            exit_order_id: Some("exit-pos-123".to_string()),
+            error: None,
+        };
+
+        assert_eq!(result.position_id, "pos-123");
+        assert_eq!(result.trigger_type, "stop_loss");
+        assert_eq!(result.trigger_price, Decimal::new(95, 0));
+        assert!(result.exit_order_id.is_some());
+        assert!(result.error.is_none());
+
+        // Test Clone and Debug
+        let cloned = result.clone();
+        assert_eq!(cloned.position_id, result.position_id);
+        let _debug = format!("{:?}", result);
     }
 }

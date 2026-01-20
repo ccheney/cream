@@ -480,4 +480,314 @@ mod tests {
         assert_eq!(result.reconciled, 1);
         assert!(!result.order_results[0].actions.is_empty());
     }
+
+    #[tokio::test]
+    async fn reconcile_empty_orders() {
+        let broker = Arc::new(MockBroker::new(vec![]));
+        let order_repo = Arc::new(MockOrderRepo::new());
+
+        let use_case = ReconcileUseCase::new(broker, order_repo);
+        let result = use_case.execute().await;
+
+        assert_eq!(result.total_checked, 0);
+        assert!(result.is_success());
+    }
+
+    #[tokio::test]
+    async fn reconcile_order_without_broker_id_skipped() {
+        let command = CreateOrderCommand {
+            symbol: Symbol::new("AAPL"),
+            side: OrderSide::Buy,
+            order_type: OrderType::Market,
+            quantity: Quantity::from_i64(100),
+            limit_price: None,
+            stop_price: None,
+            time_in_force: TimeInForce::Day,
+            purpose: OrderPurpose::Entry,
+            legs: vec![],
+        };
+        let order = Order::new(command).unwrap();
+
+        let broker = Arc::new(MockBroker::new(vec![]));
+        let order_repo = Arc::new(MockOrderRepo::new());
+        order_repo.add_order(order);
+
+        let use_case = ReconcileUseCase::new(broker, order_repo);
+        let result = use_case.execute().await;
+
+        // Order without broker_id is skipped (total_checked is 1 but no results)
+        assert_eq!(result.total_checked, 1);
+        assert!(result.order_results.is_empty());
+    }
+
+    #[tokio::test]
+    async fn reconcile_with_status_mismatch() {
+        let order = create_order_with_broker("broker-1");
+        let order_id = order.id().clone();
+
+        let broker_orders = vec![OrderAck {
+            broker_order_id: BrokerId::new("broker-1"),
+            client_order_id: order_id,
+            status: OrderStatus::Canceled, // Different from local Accepted
+            filled_qty: Decimal::ZERO,
+            avg_fill_price: None,
+        }];
+
+        let broker = Arc::new(MockBroker::new(broker_orders));
+        let order_repo = Arc::new(MockOrderRepo::new());
+        order_repo.add_order(order);
+
+        let use_case = ReconcileUseCase::new(broker, order_repo);
+        let result = use_case.execute().await;
+
+        assert_eq!(result.mismatches, 1);
+        assert!(!result.order_results[0].status_match);
+    }
+
+    #[test]
+    fn reconciliation_result_is_success() {
+        let result = ReconciliationResult {
+            total_checked: 5,
+            mismatches: 0,
+            reconciled: 0,
+            order_results: vec![],
+            errors: vec![],
+        };
+        assert!(result.is_success());
+
+        let result_with_mismatches = ReconciliationResult {
+            total_checked: 5,
+            mismatches: 1,
+            reconciled: 0,
+            order_results: vec![],
+            errors: vec![],
+        };
+        assert!(!result_with_mismatches.is_success());
+
+        let result_with_errors = ReconciliationResult {
+            total_checked: 5,
+            mismatches: 0,
+            reconciled: 0,
+            order_results: vec![],
+            errors: vec!["error".to_string()],
+        };
+        assert!(!result_with_errors.is_success());
+    }
+
+    #[tokio::test]
+    async fn reconcile_single_order_success() {
+        let order = create_order_with_broker("broker-1");
+        let broker_id = BrokerId::new("broker-1");
+        let order_id = order.id().clone();
+
+        let broker_orders = vec![OrderAck {
+            broker_order_id: broker_id.clone(),
+            client_order_id: order_id,
+            status: OrderStatus::Accepted,
+            filled_qty: Decimal::ZERO,
+            avg_fill_price: None,
+        }];
+
+        let broker = Arc::new(MockBroker::new(broker_orders));
+        let order_repo = Arc::new(MockOrderRepo::new());
+        order_repo.add_order(order);
+
+        let use_case = ReconcileUseCase::new(broker, order_repo);
+        let result = use_case.reconcile_order(&broker_id).await;
+
+        assert!(result.is_ok());
+        let reconciliation = result.unwrap();
+        assert!(reconciliation.status_match);
+        assert!(reconciliation.qty_match);
+        assert!(reconciliation.actions.is_empty());
+    }
+
+    #[tokio::test]
+    async fn reconcile_single_order_with_fill_correction() {
+        let order = create_order_with_broker("broker-1");
+        let broker_id = BrokerId::new("broker-1");
+        let order_id = order.id().clone();
+
+        let broker_orders = vec![OrderAck {
+            broker_order_id: broker_id.clone(),
+            client_order_id: order_id,
+            status: OrderStatus::PartiallyFilled,
+            filled_qty: Decimal::new(50, 0), // Broker shows 50 filled
+            avg_fill_price: Some(Decimal::new(150, 0)),
+        }];
+
+        let broker = Arc::new(MockBroker::new(broker_orders));
+        let order_repo = Arc::new(MockOrderRepo::new());
+        order_repo.add_order(order);
+
+        let use_case = ReconcileUseCase::new(broker, order_repo);
+        let result = use_case.reconcile_order(&broker_id).await;
+
+        assert!(result.is_ok());
+        let reconciliation = result.unwrap();
+        assert!(!reconciliation.actions.is_empty());
+        assert!(reconciliation.actions[0].contains("Applied fill: 50"));
+    }
+
+    #[tokio::test]
+    async fn reconcile_single_order_not_found_locally() {
+        let broker_id = BrokerId::new("broker-1");
+
+        let broker_orders = vec![OrderAck {
+            broker_order_id: broker_id.clone(),
+            client_order_id: OrderId::new("ord-1"),
+            status: OrderStatus::Accepted,
+            filled_qty: Decimal::ZERO,
+            avg_fill_price: None,
+        }];
+
+        let broker = Arc::new(MockBroker::new(broker_orders));
+        let order_repo = Arc::new(MockOrderRepo::new()); // Empty
+
+        let use_case = ReconcileUseCase::new(broker, order_repo);
+        let result = use_case.reconcile_order(&broker_id).await;
+
+        assert!(result.is_err());
+        assert!(result.unwrap_err().contains("Order not found locally"));
+    }
+
+    #[tokio::test]
+    async fn reconcile_single_order_not_found_at_broker() {
+        let order = create_order_with_broker("broker-1");
+        let broker_id = BrokerId::new("broker-unknown");
+
+        let broker = Arc::new(MockBroker::new(vec![])); // Empty
+        let order_repo = Arc::new(MockOrderRepo::new());
+        order_repo.add_order(order);
+
+        let use_case = ReconcileUseCase::new(broker, order_repo);
+        let result = use_case.reconcile_order(&broker_id).await;
+
+        assert!(result.is_err());
+        assert!(result.unwrap_err().contains("Failed to get broker order"));
+    }
+
+    struct FailingBroker;
+
+    #[async_trait]
+    impl BrokerPort for FailingBroker {
+        async fn submit_order(
+            &self,
+            _request: crate::application::ports::SubmitOrderRequest,
+        ) -> Result<OrderAck, BrokerError> {
+            Err(BrokerError::Unknown {
+                message: "Failed".to_string(),
+            })
+        }
+
+        async fn cancel_order(
+            &self,
+            _request: crate::application::ports::CancelOrderRequest,
+        ) -> Result<(), BrokerError> {
+            Err(BrokerError::Unknown {
+                message: "Failed".to_string(),
+            })
+        }
+
+        async fn get_order(&self, _broker_order_id: &BrokerId) -> Result<OrderAck, BrokerError> {
+            Err(BrokerError::Unknown {
+                message: "Failed".to_string(),
+            })
+        }
+
+        async fn get_open_orders(&self) -> Result<Vec<OrderAck>, BrokerError> {
+            Err(BrokerError::Unknown {
+                message: "Broker unavailable".to_string(),
+            })
+        }
+
+        async fn get_buying_power(&self) -> Result<Decimal, BrokerError> {
+            Err(BrokerError::Unknown {
+                message: "Failed".to_string(),
+            })
+        }
+
+        async fn get_position(
+            &self,
+            _instrument_id: &InstrumentId,
+        ) -> Result<Option<Decimal>, BrokerError> {
+            Err(BrokerError::Unknown {
+                message: "Failed".to_string(),
+            })
+        }
+    }
+
+    #[tokio::test]
+    async fn reconcile_execute_broker_error() {
+        let broker = Arc::new(FailingBroker);
+        let order_repo = Arc::new(MockOrderRepo::new());
+
+        let use_case = ReconcileUseCase::new(broker, order_repo);
+        let result = use_case.execute().await;
+
+        assert!(!result.errors.is_empty());
+        assert!(result.errors[0].contains("Failed to load broker orders"));
+    }
+
+    struct FailingOrderRepo;
+
+    #[async_trait]
+    impl OrderRepository for FailingOrderRepo {
+        async fn save(&self, _order: &Order) -> Result<(), OrderError> {
+            Err(OrderError::NotFound {
+                order_id: "Failed".to_string(),
+            })
+        }
+
+        async fn find_by_id(&self, _id: &OrderId) -> Result<Option<Order>, OrderError> {
+            Err(OrderError::NotFound {
+                order_id: "Failed".to_string(),
+            })
+        }
+
+        async fn find_by_broker_id(
+            &self,
+            _broker_id: &BrokerId,
+        ) -> Result<Option<Order>, OrderError> {
+            Err(OrderError::NotFound {
+                order_id: "Failed".to_string(),
+            })
+        }
+
+        async fn find_by_status(&self, _status: OrderStatus) -> Result<Vec<Order>, OrderError> {
+            Err(OrderError::NotFound {
+                order_id: "Failed".to_string(),
+            })
+        }
+
+        async fn find_active(&self) -> Result<Vec<Order>, OrderError> {
+            Err(OrderError::NotFound {
+                order_id: "Repo unavailable".to_string(),
+            })
+        }
+
+        async fn delete(&self, _id: &OrderId) -> Result<(), OrderError> {
+            Err(OrderError::NotFound {
+                order_id: "Failed".to_string(),
+            })
+        }
+
+        async fn exists(&self, _id: &OrderId) -> Result<bool, OrderError> {
+            Err(OrderError::NotFound {
+                order_id: "Failed".to_string(),
+            })
+        }
+    }
+
+    #[tokio::test]
+    async fn reconcile_execute_repo_error() {
+        let broker = Arc::new(MockBroker::new(vec![]));
+        let order_repo = Arc::new(FailingOrderRepo);
+
+        let use_case = ReconcileUseCase::new(broker, order_repo);
+        let result = use_case.execute().await;
+
+        assert!(!result.errors.is_empty());
+        assert!(result.errors[0].contains("Failed to load local orders"));
+    }
 }

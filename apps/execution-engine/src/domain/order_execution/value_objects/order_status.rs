@@ -185,4 +185,39 @@ mod tests {
         let parsed: OrderStatus = serde_json::from_str("\"FILLED\"").unwrap();
         assert_eq!(parsed, OrderStatus::Filled);
     }
+
+    #[test]
+    fn order_status_display_all() {
+        assert_eq!(format!("{}", OrderStatus::New), "NEW");
+        assert_eq!(format!("{}", OrderStatus::PendingNew), "PENDING_NEW");
+        assert_eq!(format!("{}", OrderStatus::Accepted), "ACCEPTED");
+        assert_eq!(format!("{}", OrderStatus::Filled), "FILLED");
+        assert_eq!(format!("{}", OrderStatus::Canceled), "CANCELED");
+        assert_eq!(format!("{}", OrderStatus::Rejected), "REJECTED");
+        assert_eq!(format!("{}", OrderStatus::Expired), "EXPIRED");
+    }
+
+    #[test]
+    fn order_status_fix_tag_value_all() {
+        assert_eq!(OrderStatus::PendingCancel.fix_tag_value(), '6');
+        assert_eq!(OrderStatus::Rejected.fix_tag_value(), '8');
+        assert_eq!(OrderStatus::PendingNew.fix_tag_value(), 'A');
+        assert_eq!(OrderStatus::Expired.fix_tag_value(), 'C');
+        assert_eq!(OrderStatus::Accepted.fix_tag_value(), '1');
+    }
+
+    #[test]
+    fn order_status_pending_cancel_not_cancelable() {
+        assert!(!OrderStatus::PendingCancel.is_cancelable());
+    }
+
+    #[test]
+    fn order_status_rejected_not_active() {
+        assert!(!OrderStatus::Rejected.is_active());
+    }
+
+    #[test]
+    fn order_status_expired_not_active() {
+        assert!(!OrderStatus::Expired.is_active());
+    }
 }

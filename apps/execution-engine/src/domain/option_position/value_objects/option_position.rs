@@ -256,4 +256,40 @@ mod tests {
             position.position_id().as_str()
         );
     }
+
+    #[test]
+    fn option_position_spread_mut() {
+        let mut position =
+            OptionPosition::new(OrderId::new("pos-1"), test_spread(), Decimal::new(500, 2));
+
+        let spread = position.spread_mut();
+        assert_eq!(spread.spread_type(), SpreadType::Single);
+    }
+
+    #[test]
+    fn option_position_entry_time() {
+        let position =
+            OptionPosition::new(OrderId::new("pos-1"), test_spread(), Decimal::new(500, 2));
+
+        // Entry time should be recent
+        assert!(position.entry_time().unix_seconds() > 0);
+    }
+
+    #[test]
+    fn option_position_greeks() {
+        let position =
+            OptionPosition::new(OrderId::new("pos-1"), test_spread(), Decimal::new(500, 2));
+
+        let greeks = position.greeks();
+        // Default greeks should be zero
+        assert_eq!(greeks.delta, Decimal::ZERO);
+    }
+
+    #[test]
+    fn option_position_unrealized_pnl_pct_zero_entry() {
+        let mut position = OptionPosition::new(OrderId::new("pos-1"), test_spread(), Decimal::ZERO);
+
+        position.update_price(Decimal::new(100, 2));
+        assert!(position.unrealized_pnl_pct().is_none());
+    }
 }

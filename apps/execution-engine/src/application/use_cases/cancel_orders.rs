@@ -374,4 +374,175 @@ mod tests {
         assert_eq!(results.len(), 2);
         assert!(results.iter().all(|r| r.success));
     }
+
+    #[tokio::test]
+    async fn cancel_terminal_order() {
+        let broker = Arc::new(MockBroker { should_fail: false });
+        let order_repo = Arc::new(MockOrderRepo::new());
+        let event_publisher = Arc::new(NoOpEventPublisher);
+
+        // Create a filled order (terminal state)
+        let mut order = create_open_order("order-1");
+        use crate::domain::order_execution::value_objects::FillReport;
+        let fill = FillReport::new(
+            "fill-1".to_string(),
+            Quantity::new(Decimal::new(100, 0)),
+            Money::new(Decimal::new(150, 0)),
+            crate::domain::shared::Timestamp::now(),
+            "TEST",
+        );
+        order.apply_fill(fill).unwrap();
+        let order_id = order.id().to_string();
+        order_repo.add_order(order);
+
+        let use_case = CancelOrdersUseCase::new(broker, order_repo, event_publisher);
+
+        let result = use_case
+            .cancel_by_client_id(&order_id, CancelReason::user_requested())
+            .await;
+
+        assert!(!result.success);
+        assert!(result.error.unwrap().contains("terminal state"));
+    }
+
+    #[tokio::test]
+    async fn cancel_multiple_orders() {
+        let broker = Arc::new(MockBroker { should_fail: false });
+        let order_repo = Arc::new(MockOrderRepo::new());
+        let event_publisher = Arc::new(NoOpEventPublisher);
+
+        let order1 = create_open_order("order-1");
+        let order2 = create_open_order("order-2");
+        let id1 = order1.id().to_string();
+        let id2 = order2.id().to_string();
+        order_repo.add_order(order1);
+        order_repo.add_order(order2);
+
+        let use_case = CancelOrdersUseCase::new(broker, order_repo, event_publisher);
+
+        let results = use_case
+            .cancel_orders(&[id1, id2], CancelReason::timeout())
+            .await;
+
+        assert_eq!(results.len(), 2);
+        assert!(results.iter().all(|r| r.success));
+    }
+
+    #[tokio::test]
+    async fn cancel_order_without_broker_id() {
+        let broker = Arc::new(MockBroker { should_fail: false });
+        let order_repo = Arc::new(MockOrderRepo::new());
+        let event_publisher = Arc::new(NoOpEventPublisher);
+
+        // Create order without broker id (not yet submitted)
+        let command = CreateOrderCommand {
+            symbol: Symbol::new("AAPL"),
+            side: OrderSide::Buy,
+            order_type: OrderType::Market,
+            quantity: Quantity::new(Decimal::new(100, 0)),
+            limit_price: None,
+            stop_price: None,
+            time_in_force: TimeInForce::Day,
+            purpose: OrderPurpose::Entry,
+            legs: vec![],
+        };
+        let order = Order::new(command).unwrap();
+        let order_id = order.id().to_string();
+        order_repo.add_order(order);
+
+        let use_case = CancelOrdersUseCase::new(broker, order_repo, event_publisher);
+
+        let result = use_case
+            .cancel_by_client_id(&order_id, CancelReason::user_requested())
+            .await;
+
+        // Should still succeed as we cancel by client_id when no broker_id
+        assert!(result.success);
+    }
+
+    #[tokio::test]
+    async fn cancel_all_empty() {
+        let broker = Arc::new(MockBroker { should_fail: false });
+        let order_repo = Arc::new(MockOrderRepo::new());
+        let event_publisher = Arc::new(NoOpEventPublisher);
+
+        let use_case = CancelOrdersUseCase::new(broker, order_repo, event_publisher);
+
+        let results = use_case.cancel_all(CancelReason::end_of_day()).await;
+
+        assert!(results.is_empty());
+    }
+
+    // Failing order repo to test error paths
+    struct FailingOrderRepo;
+
+    #[async_trait]
+    impl OrderRepository for FailingOrderRepo {
+        async fn save(&self, _order: &Order) -> Result<(), OrderError> {
+            Err(OrderError::NotFound {
+                order_id: "save-failed".to_string(),
+            })
+        }
+
+        async fn find_by_id(&self, _id: &OrderId) -> Result<Option<Order>, OrderError> {
+            Err(OrderError::NotFound {
+                order_id: "find-failed".to_string(),
+            })
+        }
+
+        async fn find_by_broker_id(
+            &self,
+            _broker_id: &BrokerId,
+        ) -> Result<Option<Order>, OrderError> {
+            Ok(None)
+        }
+
+        async fn find_by_status(&self, _status: OrderStatus) -> Result<Vec<Order>, OrderError> {
+            Ok(vec![])
+        }
+
+        async fn find_active(&self) -> Result<Vec<Order>, OrderError> {
+            Err(OrderError::NotFound {
+                order_id: "find-active-failed".to_string(),
+            })
+        }
+
+        async fn exists(&self, _id: &OrderId) -> Result<bool, OrderError> {
+            Ok(false)
+        }
+
+        async fn delete(&self, _id: &OrderId) -> Result<(), OrderError> {
+            Ok(())
+        }
+    }
+
+    #[tokio::test]
+    async fn cancel_order_repo_find_error() {
+        let broker = Arc::new(MockBroker { should_fail: false });
+        let order_repo = Arc::new(FailingOrderRepo);
+        let event_publisher = Arc::new(NoOpEventPublisher);
+
+        let use_case = CancelOrdersUseCase::new(broker, order_repo, event_publisher);
+
+        let result = use_case
+            .cancel_by_client_id("order-1", CancelReason::user_requested())
+            .await;
+
+        assert!(!result.success);
+        assert!(result.error.unwrap().contains("Failed to load order"));
+    }
+
+    #[tokio::test]
+    async fn cancel_all_repo_find_active_error() {
+        let broker = Arc::new(MockBroker { should_fail: false });
+        let order_repo = Arc::new(FailingOrderRepo);
+        let event_publisher = Arc::new(NoOpEventPublisher);
+
+        let use_case = CancelOrdersUseCase::new(broker, order_repo, event_publisher);
+
+        let results = use_case.cancel_all(CancelReason::end_of_day()).await;
+
+        // Should return empty vec when find_active fails
+        assert!(results.is_empty());
+    }
 }

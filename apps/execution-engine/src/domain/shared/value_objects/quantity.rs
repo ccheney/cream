@@ -301,4 +301,34 @@ mod tests {
         let d: Decimal = q.into();
         assert_eq!(d, Decimal::new(100, 0));
     }
+
+    #[test]
+    fn quantity_as_i64() {
+        let q = Quantity::new(Decimal::new(1005, 1)); // 100.5
+        assert_eq!(q.as_i64(), 100); // Truncates to 100
+    }
+
+    #[test]
+    fn quantity_as_i64_negative() {
+        let q = Quantity::new(Decimal::new(-505, 1)); // -50.5
+        assert_eq!(q.as_i64(), -50);
+    }
+
+    #[test]
+    fn quantity_default() {
+        let q = Quantity::default();
+        assert!(q.is_zero());
+        assert_eq!(q, Quantity::ZERO);
+    }
+
+    #[test]
+    fn quantity_partial_ord() {
+        let a = Quantity::from_i64(100);
+        let b = Quantity::from_i64(50);
+        let c = Quantity::from_i64(100);
+
+        assert!(a.partial_cmp(&b) == Some(Ordering::Greater));
+        assert!(b.partial_cmp(&a) == Some(Ordering::Less));
+        assert!(a.partial_cmp(&c) == Some(Ordering::Equal));
+    }
 }

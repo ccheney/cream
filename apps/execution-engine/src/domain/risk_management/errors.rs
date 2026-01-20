@@ -114,4 +114,33 @@ mod tests {
         let msg = format!("{err}");
         assert!(msg.contains("PDT"));
     }
+
+    #[test]
+    fn risk_error_policy_not_found_display() {
+        let err = RiskError::PolicyNotFound {
+            policy_id: "policy-abc".to_string(),
+        };
+        let msg = format!("{err}");
+        assert!(msg.contains("policy-abc"));
+        assert!(msg.contains("not found"));
+    }
+
+    #[test]
+    fn risk_error_invalid_configuration_display() {
+        let err = RiskError::InvalidConfiguration {
+            field: "max_loss_pct".to_string(),
+            message: "must be between 0 and 1".to_string(),
+        };
+        let msg = format!("{err}");
+        assert!(msg.contains("max_loss_pct"));
+        assert!(msg.contains("between 0 and 1"));
+    }
+
+    #[test]
+    fn risk_error_is_std_error() {
+        let err: Box<dyn std::error::Error> = Box::new(RiskError::PolicyNotFound {
+            policy_id: "test".to_string(),
+        });
+        assert!(!err.to_string().is_empty());
+    }
 }

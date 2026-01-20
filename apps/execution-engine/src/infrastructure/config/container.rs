@@ -122,8 +122,7 @@ where
 mod tests {
     use super::*;
     use crate::application::ports::{
-        BrokerError, EventPublishError, InMemoryRiskRepository, NoOpEventPublisher, OrderAck,
-        PriceFeedError, Quote,
+        BrokerError, InMemoryRiskRepository, NoOpEventPublisher, OrderAck, PriceFeedError, Quote,
     };
     use crate::domain::order_execution::aggregate::Order;
     use crate::domain::order_execution::errors::OrderError;

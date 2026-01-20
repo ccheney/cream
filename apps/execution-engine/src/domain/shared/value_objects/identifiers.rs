@@ -170,4 +170,18 @@ mod tests {
 
         assert_eq!(set.len(), 2);
     }
+
+    #[test]
+    fn order_id_as_ref() {
+        let id = OrderId::new("ord-123");
+        let id_ref: &str = id.as_ref();
+        assert_eq!(id_ref, "ord-123");
+    }
+
+    #[test]
+    fn broker_id_as_ref() {
+        let id = BrokerId::new("broker-123");
+        let id_ref: &str = id.as_ref();
+        assert_eq!(id_ref, "broker-123");
+    }
 }

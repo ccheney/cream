@@ -1,16 +1,12 @@
 //! Alpaca broker adapter implementing BrokerPort.
 
-use std::sync::Arc;
-
 use async_trait::async_trait;
 use rust_decimal::Decimal;
 
 use crate::application::ports::{
     BrokerError, BrokerPort, CancelOrderRequest, OrderAck, SubmitOrderRequest,
 };
-use crate::domain::order_execution::value_objects::{
-    OrderSide, OrderStatus, OrderType, TimeInForce,
-};
+use crate::domain::order_execution::value_objects::{OrderSide, OrderType, TimeInForce};
 use crate::domain::shared::{BrokerId, InstrumentId};
 
 use super::api_types::{

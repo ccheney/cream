@@ -263,13 +263,13 @@ mod tests {
 
         assert_eq!(executor.remaining_qty(), Decimal::new(300, 0));
 
-        executor.next_slice();
+        let _ = executor.next_slice();
         assert_eq!(executor.remaining_qty(), Decimal::new(200, 0));
 
-        executor.next_slice();
+        let _ = executor.next_slice();
         assert_eq!(executor.remaining_qty(), Decimal::new(100, 0));
 
-        executor.next_slice();
+        let _ = executor.next_slice();
         assert_eq!(executor.remaining_qty(), Decimal::ZERO);
     }
 

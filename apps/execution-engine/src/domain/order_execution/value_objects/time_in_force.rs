@@ -104,4 +104,22 @@ mod tests {
         let parsed: TimeInForce = serde_json::from_str("\"IOC\"").unwrap();
         assert_eq!(parsed, TimeInForce::Ioc);
     }
+
+    #[test]
+    fn time_in_force_display_all() {
+        assert_eq!(format!("{}", TimeInForce::Day), "DAY");
+        assert_eq!(format!("{}", TimeInForce::Ioc), "IOC");
+        assert_eq!(format!("{}", TimeInForce::Opg), "OPG");
+        assert_eq!(format!("{}", TimeInForce::Cls), "CLS");
+    }
+
+    #[test]
+    fn time_in_force_gtc_not_immediate() {
+        assert!(!TimeInForce::Gtc.is_immediate());
+    }
+
+    #[test]
+    fn time_in_force_fok_not_session_specific() {
+        assert!(!TimeInForce::Fok.is_session_specific());
+    }
 }

@@ -173,4 +173,32 @@ mod tests {
         let parsed: Timestamp = serde_json::from_str(&json).unwrap();
         assert_eq!(parsed, ts);
     }
+
+    #[test]
+    fn timestamp_unix_millis() {
+        let ts = Timestamp::parse("2026-01-19T12:00:00Z").unwrap();
+        assert_eq!(ts.unix_millis(), 1768824000000);
+    }
+
+    #[test]
+    fn timestamp_default() {
+        let ts = Timestamp::default();
+        assert!(ts.unix_seconds() > 0);
+    }
+
+    #[test]
+    fn timestamp_new_from_datetime() {
+        use chrono::TimeZone;
+        let dt = Utc.with_ymd_and_hms(2026, 1, 19, 12, 0, 0).unwrap();
+        let ts = Timestamp::new(dt);
+        assert_eq!(ts.unix_seconds(), 1768824000);
+    }
+
+    #[test]
+    fn timestamp_to_rfc3339() {
+        let ts = Timestamp::parse("2026-01-19T12:00:00Z").unwrap();
+        let rfc = ts.to_rfc3339();
+        assert!(rfc.contains("2026-01-19"));
+        assert!(rfc.contains("12:00:00"));
+    }
 }
