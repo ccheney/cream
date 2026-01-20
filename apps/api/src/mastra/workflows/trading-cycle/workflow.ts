@@ -327,7 +327,7 @@ const groundingStep = createStep({
 	stateSchema: MinimalStateSchema,
 	execute: async ({ inputData, state, writer }) => {
 		const mode = state.mode ?? "STUB";
-		const symbols = inputData.instruments ?? [];
+		const symbols = inputData.instruments as string[];
 		const cycleId = inputData.cycleId;
 
 		if (mode === "STUB") {
@@ -394,7 +394,7 @@ const analystsStep = createStep({
 	stateSchema: MinimalStateSchema,
 	execute: async ({ inputData, state, writer }) => {
 		const mode = state.mode ?? "STUB";
-		const symbols = inputData.instruments ?? [];
+		const symbols = inputData.instruments as string[];
 		const cycleId = inputData.cycleId;
 
 		if (mode === "STUB") {
@@ -483,7 +483,7 @@ const debateStep = createStep({
 	stateSchema: MinimalStateSchema,
 	execute: async ({ inputData, state, writer }) => {
 		const mode = state.mode ?? "STUB";
-		const symbols = inputData.instruments ?? [];
+		const symbols = inputData.instruments as string[];
 		const cycleId = inputData.cycleId;
 
 		if (mode === "STUB") {
@@ -593,7 +593,7 @@ const traderStep = createStep({
 		const toolResults: ToolResultEntry[] = inputData.toolResults ?? [];
 		const context = {
 			cycleId,
-			symbols: inputData.instruments ?? [],
+			symbols: inputData.instruments as string[],
 			snapshots: inputData.snapshot ?? {},
 			indicators: inputData.snapshot?.indicators ?? {},
 			externalContext: inputData.externalContext,
@@ -927,7 +927,7 @@ export const tradingCycleWorkflow = createWorkflow({
 	description: "Hourly OODA trading cycle with 8-agent consensus",
 	inputSchema: z.object({
 		cycleId: z.string(),
-		instruments: z.array(z.string()).default(["AAPL", "MSFT", "GOOGL"]),
+		instruments: z.array(z.string()).min(1, "At least one instrument is required"),
 		forceStub: z.boolean().optional(),
 		useDraftConfig: z.boolean().optional(),
 	}),

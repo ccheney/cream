@@ -152,12 +152,25 @@ app.openapi(triggerCycleRoute, async (c) => {
 	const startedAt = new Date().toISOString();
 
 	let configVersion: string | null = null;
+	let resolvedSymbols: string[];
 	try {
 		const configService = await getRuntimeConfigService();
 		const config = useDraftConfig
 			? await configService.getDraft(environment)
 			: await configService.getActiveConfig(environment);
 		configVersion = config.trading.id;
+		// Always use symbols from runtime config - request symbols override is just for testing
+		resolvedSymbols = symbols ?? config.universe.staticSymbols ?? [];
+		if (resolvedSymbols.length === 0) {
+			return c.json(
+				{ error: "No symbols configured in universe. Configure staticSymbols first." },
+				400
+			);
+		}
+		log.info(
+			{ symbolCount: resolvedSymbols.length, symbols: resolvedSymbols, fromRequest: !!symbols },
+			"Resolved symbols for trading cycle"
+		);
 	} catch {
 		return c.json({ error: "No configuration found for environment. Run db:seed first." }, 400);
 	}
@@ -169,7 +182,7 @@ app.openapi(triggerCycleRoute, async (c) => {
 	try {
 		const cycle = await cyclesRepo.start(
 			environment,
-			symbols?.length ?? 0,
+			resolvedSymbols.length,
 			configVersion ?? undefined
 		);
 		cycleId = cycle.id;
@@ -255,7 +268,7 @@ app.openapi(triggerCycleRoute, async (c) => {
 			const stream = await run.stream({
 				inputData: {
 					cycleId,
-					instruments: symbols,
+					instruments: resolvedSymbols,
 					useDraftConfig,
 				},
 			});
