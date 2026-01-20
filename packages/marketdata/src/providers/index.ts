@@ -81,24 +81,3 @@ export {
 	createAlpacaStocksClientFromEnv,
 	createAlpacaWebSocketClientFromEnv,
 } from "./alpaca-websocket";
-// Alpha Vantage
-export {
-	ALPHA_VANTAGE_RATE_LIMITS,
-	AlphaVantageClient,
-	type AlphaVantageClientConfig,
-	createAlphaVantageClientFromEnv,
-	type EconomicDataPoint,
-	EconomicDataPointSchema,
-	type EconomicIndicatorResponse,
-	EconomicIndicatorResponseSchema,
-	type EconomicIndicatorType,
-	type EconomicInterval,
-	type FederalFundsRateResponse,
-	FederalFundsRateResponseSchema,
-	INDICATOR_METADATA,
-	type IndicatorMetadata,
-	isAlphaVantageConfigured,
-	type TreasuryMaturity,
-	type TreasuryYieldResponse,
-	TreasuryYieldResponseSchema,
-} from "./alphavantage";
