@@ -450,9 +450,14 @@ export function createNoTradePlan(cycleId: string, reason: string): DecisionPlan
 /**
  * Create an approved RiskManagerOutput
  */
-export function createApprovedRiskOutput(notes = ""): RiskManagerOutput {
+export function createApprovedRiskOutput(
+	notes = "",
+	decisionIds: string[] = []
+): RiskManagerOutput {
 	return {
 		verdict: "APPROVE",
+		approvedDecisionIds: decisionIds,
+		rejectedDecisionIds: [],
 		violations: [],
 		required_changes: [],
 		notes,
@@ -462,9 +467,11 @@ export function createApprovedRiskOutput(notes = ""): RiskManagerOutput {
 /**
  * Create an approved CriticOutput
  */
-export function createApprovedCriticOutput(notes = ""): CriticOutput {
+export function createApprovedCriticOutput(notes = "", decisionIds: string[] = []): CriticOutput {
 	return {
 		verdict: "APPROVE",
+		approvedDecisionIds: decisionIds,
+		rejectedDecisionIds: [],
 		violations: [],
 		required_changes: [],
 		notes,
@@ -477,6 +484,8 @@ export function createApprovedCriticOutput(notes = ""): CriticOutput {
 export function createTimeoutRiskOutput(): RiskManagerOutput {
 	return {
 		verdict: "REJECT",
+		approvedDecisionIds: [],
+		rejectedDecisionIds: [],
 		violations: [],
 		required_changes: [],
 		notes: "Agent timed out - default to REJECT for safety",
@@ -489,6 +498,8 @@ export function createTimeoutRiskOutput(): RiskManagerOutput {
 export function createTimeoutCriticOutput(): CriticOutput {
 	return {
 		verdict: "REJECT",
+		approvedDecisionIds: [],
+		rejectedDecisionIds: [],
 		violations: [],
 		required_changes: [],
 		notes: "Agent timed out - default to REJECT for safety",
