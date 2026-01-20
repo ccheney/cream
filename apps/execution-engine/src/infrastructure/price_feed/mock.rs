@@ -45,16 +45,11 @@ impl MockPriceFeed {
     }
 
     /// Check if a symbol is subscribed.
-    ///
-    /// # Panics
-    ///
-    /// Panics if the `RwLock` is poisoned.
     #[must_use]
-    #[allow(clippy::unwrap_used)]
     pub fn is_subscribed(&self, symbol: &str) -> bool {
         self.subscriptions
             .read()
-            .unwrap()
+            .unwrap_or_else(std::sync::PoisonError::into_inner)
             .contains(&symbol.to_string())
     }
 }

@@ -5,5 +5,5 @@
 mod order;
 mod order_line;
 
-pub use order::{CreateOrderCommand, Order};
+pub use order::{CreateOrderCommand, Order, ReconstitutedOrderParams};
 pub use order_line::OrderLine;

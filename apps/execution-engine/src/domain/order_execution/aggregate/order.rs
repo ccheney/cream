@@ -17,6 +17,42 @@ use crate::domain::order_execution::value_objects::{
 };
 use crate::domain::shared::{BrokerId, Money, OrderId, Quantity, Symbol, Timestamp};
 
+/// Parameters for reconstituting an Order from storage.
+///
+/// Used by repositories to rebuild aggregates from persisted state.
+/// No domain events are generated during reconstitution.
+#[derive(Debug, Clone)]
+pub struct ReconstitutedOrderParams {
+    /// Order identifier.
+    pub id: OrderId,
+    /// Symbol being traded.
+    pub symbol: Symbol,
+    /// Order side (buy/sell).
+    pub side: OrderSide,
+    /// Order type.
+    pub order_type: OrderType,
+    /// Total quantity.
+    pub quantity: Quantity,
+    /// Limit price (for limit orders).
+    pub limit_price: Option<Money>,
+    /// Stop price (for stop orders).
+    pub stop_price: Option<Money>,
+    /// Time in force policy.
+    pub time_in_force: TimeInForce,
+    /// Current order status.
+    pub status: OrderStatus,
+    /// Partial fill state tracking FIX protocol invariants.
+    pub partial_fill: PartialFillState,
+    /// Broker-assigned order ID.
+    pub broker_order_id: Option<BrokerId>,
+    /// Order legs for multi-leg orders.
+    pub legs: Vec<OrderLine>,
+    /// Creation timestamp.
+    pub created_at: Timestamp,
+    /// Last update timestamp.
+    pub updated_at: Timestamp,
+}
+
 /// Command to create a new order.
 #[derive(Debug, Clone)]
 pub struct CreateOrderCommand {
@@ -105,6 +141,9 @@ impl CreateOrderCommand {
 /// Order Aggregate Root.
 ///
 /// Manages the complete lifecycle of an order with FIX protocol semantics.
+// Allow `order_type` field name: follows FIX protocol terminology (tag 40 OrdType).
+// Using `kind` or `type` would diverge from the industry standard naming convention
+// that traders and developers expect when working with order management systems.
 #[allow(clippy::struct_field_names)]
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Order {
@@ -171,40 +210,28 @@ impl Order {
     }
 
     /// Reconstitute an order from stored state (no events generated).
+    ///
+    /// This is a factory method for rebuilding aggregates from persistence.
+    /// It bypasses normal creation logic and does not emit domain events,
+    /// as the aggregate is being restored to a known valid state.
     #[must_use]
-    #[allow(clippy::too_many_arguments)]
-    pub const fn reconstitute(
-        id: OrderId,
-        symbol: Symbol,
-        side: OrderSide,
-        order_type: OrderType,
-        quantity: Quantity,
-        limit_price: Option<Money>,
-        stop_price: Option<Money>,
-        time_in_force: TimeInForce,
-        status: OrderStatus,
-        partial_fill: PartialFillState,
-        broker_order_id: Option<BrokerId>,
-        legs: Vec<OrderLine>,
-        created_at: Timestamp,
-        updated_at: Timestamp,
-    ) -> Self {
+    pub fn reconstitute(params: ReconstitutedOrderParams) -> Self {
         Self {
-            id,
-            symbol,
-            side,
-            order_type,
-            quantity,
-            limit_price,
-            stop_price,
-            time_in_force,
-            status,
-            partial_fill,
-            broker_order_id,
-            legs,
+            id: params.id,
+            symbol: params.symbol,
+            side: params.side,
+            order_type: params.order_type,
+            quantity: params.quantity,
+            limit_price: params.limit_price,
+            stop_price: params.stop_price,
+            time_in_force: params.time_in_force,
+            status: params.status,
+            partial_fill: params.partial_fill,
+            broker_order_id: params.broker_order_id,
+            legs: params.legs,
             events: Vec::new(),
-            created_at,
-            updated_at,
+            created_at: params.created_at,
+            updated_at: params.updated_at,
         }
     }
 
@@ -880,22 +907,22 @@ mod tests {
         let created_at = Timestamp::now();
         let updated_at = Timestamp::now();
 
-        let order = Order::reconstitute(
+        let order = Order::reconstitute(ReconstitutedOrderParams {
             id,
             symbol,
-            OrderSide::Buy,
-            OrderType::Limit,
+            side: OrderSide::Buy,
+            order_type: OrderType::Limit,
             quantity,
-            Some(Money::usd(150.0)),
-            None,
-            TimeInForce::Day,
-            OrderStatus::Accepted,
+            limit_price: Some(Money::usd(150.0)),
+            stop_price: None,
+            time_in_force: TimeInForce::Day,
+            status: OrderStatus::Accepted,
             partial_fill,
-            Some(BrokerId::new("broker-recon")),
-            vec![],
+            broker_order_id: Some(BrokerId::new("broker-recon")),
+            legs: vec![],
             created_at,
             updated_at,
-        );
+        });
 
         assert_eq!(order.id().as_str(), "ord-recon");
         assert_eq!(order.symbol().as_str(), "AAPL");

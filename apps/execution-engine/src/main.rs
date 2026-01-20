@@ -31,36 +31,124 @@ use execution_engine::infrastructure::broker::alpaca::{
 use execution_engine::infrastructure::grpc::create_execution_service;
 use execution_engine::infrastructure::http::{AppState, create_router};
 use execution_engine::infrastructure::persistence::InMemoryOrderRepository;
-use execution_engine::infrastructure::price_feed::MockPriceFeed;
 use tokio::net::TcpListener;
 use tokio::signal;
 use tokio::sync::broadcast;
+use tokio::task::JoinHandle;
 
 /// Graceful shutdown timeout.
 const SHUTDOWN_TIMEOUT: Duration = Duration::from_secs(30);
 
-#[tokio::main]
-#[allow(clippy::too_many_lines)]
-async fn main() -> Result<(), Box<dyn std::error::Error>> {
-    // Load .env file
-    if dotenvy::dotenv().is_err() {
-        load_dotenv_from_ancestors();
-    }
+/// Default HTTP server port.
+const DEFAULT_HTTP_PORT: u16 = 50051;
 
-    // Initialize tracing
-    // Static directive strings are guaranteed to parse successfully
-    #[allow(clippy::unwrap_used)]
-    tracing_subscriber::fmt()
-        .with_env_filter(
-            tracing_subscriber::EnvFilter::from_default_env()
-                .add_directive("execution_engine=info".parse().unwrap())
-                .add_directive("tower_http=info".parse().unwrap()),
-        )
-        .init();
+/// Default gRPC server port.
+const DEFAULT_GRPC_PORT: u16 = 50052;
+
+/// Parsed configuration from environment variables.
+struct EngineConfig {
+    environment: AlpacaEnvironment,
+    http_port: u16,
+    grpc_port: u16,
+    api_key: String,
+    api_secret: String,
+}
+
+impl EngineConfig {
+    const fn environment_name(&self) -> &'static str {
+        if self.environment.is_live() {
+            "LIVE"
+        } else {
+            "PAPER"
+        }
+    }
+}
+
+/// Concrete type alias for the submit orders use case.
+type ConcreteSubmitOrdersUseCase = SubmitOrdersUseCase<
+    AlpacaBrokerAdapter,
+    InMemoryRiskRepository,
+    InMemoryOrderRepository,
+    NoOpEventPublisher,
+>;
+
+/// Concrete type alias for the validate risk use case.
+type ConcreteValidateRiskUseCase =
+    ValidateRiskUseCase<InMemoryRiskRepository, InMemoryOrderRepository>;
+
+/// Concrete type alias for the cancel orders use case.
+type ConcreteCancelOrdersUseCase =
+    CancelOrdersUseCase<AlpacaBrokerAdapter, InMemoryOrderRepository, NoOpEventPublisher>;
+
+/// Application use cases wired together for dependency injection.
+struct UseCases {
+    submit_orders: Arc<ConcreteSubmitOrdersUseCase>,
+    validate_risk: Arc<ConcreteValidateRiskUseCase>,
+    cancel_orders: Arc<ConcreteCancelOrdersUseCase>,
+    order_repo: Arc<InMemoryOrderRepository>,
+}
+
+#[tokio::main]
+async fn main() -> Result<(), Box<dyn std::error::Error>> {
+    load_dotenv();
+    init_tracing();
 
     tracing::info!("Starting Cream Execution Engine (Clean Architecture)");
 
-    // Parse environment
+    let config = parse_config()?;
+    log_config(&config);
+
+    let broker = create_broker(&config)?;
+    let use_cases = create_use_cases(&broker);
+    let (shutdown_tx, _) = broadcast::channel::<()>(1);
+
+    let http_handle = start_http_server(&config, &use_cases, shutdown_tx.clone()).await?;
+    let grpc_handle = start_grpc_server(
+        &config,
+        &use_cases,
+        Arc::clone(&broker),
+        shutdown_tx.clone(),
+    );
+
+    tracing::info!("Execution engine ready");
+
+    await_shutdown(http_handle, grpc_handle).await;
+
+    tracing::info!("Execution engine stopped");
+    Ok(())
+}
+
+/// Load .env file from current or ancestor directories.
+fn load_dotenv() {
+    if dotenvy::dotenv().is_err() {
+        load_dotenv_from_ancestors();
+    }
+}
+
+/// Initialize the tracing subscriber with environment filter.
+///
+/// Uses static directive strings that are compile-time constants guaranteed to parse.
+#[allow(clippy::expect_used)]
+fn init_tracing() {
+    tracing_subscriber::fmt()
+        .with_env_filter(
+            tracing_subscriber::EnvFilter::from_default_env()
+                .add_directive(
+                    "execution_engine=info"
+                        .parse()
+                        .expect("static directive 'execution_engine=info' is valid"),
+                )
+                .add_directive(
+                    "tower_http=info"
+                        .parse()
+                        .expect("static directive 'tower_http=info' is valid"),
+                ),
+        )
+        .init();
+}
+
+/// Parse configuration from environment variables.
+fn parse_config() -> Result<EngineConfig, Box<dyn std::error::Error>> {
     let env = std::env::var("CREAM_ENV")
         .unwrap_or_else(|_| "PAPER".to_string())
         .to_uppercase();
@@ -69,60 +157,71 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         _ => AlpacaEnvironment::Paper,
     };
 
-    // Get credentials
     let api_key = std::env::var("ALPACA_KEY").unwrap_or_default();
     let api_secret = std::env::var("ALPACA_SECRET").unwrap_or_default();
 
     if api_key.is_empty() || api_secret.is_empty() {
-        tracing::error!("ALPACA_KEY and ALPACA_SECRET environment variables are required");
-        std::process::exit(1);
+        return Err("ALPACA_KEY and ALPACA_SECRET environment variables are required".into());
     }
 
-    // Parse ports
     let http_port: u16 = std::env::var("HTTP_PORT")
-        .unwrap_or_else(|_| "50051".to_string())
+        .unwrap_or_else(|_| DEFAULT_HTTP_PORT.to_string())
         .parse()
-        .unwrap_or(50051);
-    let grpc_port: u16 = std::env::var("GRPC_PORT")
-        .unwrap_or_else(|_| "50052".to_string())
-        .parse()
-        .unwrap_or(50052);
+        .unwrap_or(DEFAULT_HTTP_PORT);
 
+    let grpc_port: u16 = std::env::var("GRPC_PORT")
+        .unwrap_or_else(|_| DEFAULT_GRPC_PORT.to_string())
+        .parse()
+        .unwrap_or(DEFAULT_GRPC_PORT);
+
+    Ok(EngineConfig {
+        environment,
+        http_port,
+        grpc_port,
+        api_key,
+        api_secret,
+    })
+}
+
+/// Log the parsed configuration.
+fn log_config(config: &EngineConfig) {
     tracing::info!(
-        environment = %env,
-        http_port = http_port,
-        grpc_port = grpc_port,
+        environment = config.environment_name(),
+        http_port = config.http_port,
+        grpc_port = config.grpc_port,
         "Configuration loaded"
     );
+}
 
-    // Create shutdown channel
-    let (shutdown_tx, _) = broadcast::channel::<()>(1);
-
-    // Create Alpaca broker adapter
-    let alpaca_config = AlpacaConfig::new(api_key, api_secret, environment);
-    let broker = match AlpacaBrokerAdapter::new(&alpaca_config) {
-        Ok(adapter) => Arc::new(adapter),
-        Err(e) => {
-            tracing::error!("Failed to create Alpaca adapter: {e}");
-            std::process::exit(1);
-        }
-    };
-
-    tracing::info!(
-        environment = %env,
-        "AlpacaBrokerAdapter initialized for {} trading",
-        if environment.is_live() { "LIVE" } else { "PAPER" }
+/// Create the Alpaca broker adapter.
+fn create_broker(
+    config: &EngineConfig,
+) -> Result<Arc<AlpacaBrokerAdapter>, Box<dyn std::error::Error>> {
+    let alpaca_config = AlpacaConfig::new(
+        config.api_key.clone(),
+        config.api_secret.clone(),
+        config.environment,
     );
 
-    // Create repositories and ports
+    let broker = AlpacaBrokerAdapter::new(&alpaca_config)?;
+
+    tracing::info!(
+        environment = config.environment_name(),
+        "AlpacaBrokerAdapter initialized for {} trading",
+        config.environment_name()
+    );
+
+    Ok(Arc::new(broker))
+}
+
+/// Create all application use cases with their dependencies.
+fn create_use_cases(broker: &Arc<AlpacaBrokerAdapter>) -> UseCases {
     let risk_repo = Arc::new(InMemoryRiskRepository::new());
     let order_repo = Arc::new(InMemoryOrderRepository::new());
     let event_publisher = Arc::new(NoOpEventPublisher);
-    let _price_feed = Arc::new(MockPriceFeed::new());
 
-    // Create use cases
     let submit_orders = Arc::new(SubmitOrdersUseCase::new(
-        Arc::clone(&broker),
+        Arc::clone(broker),
         Arc::clone(&risk_repo),
         Arc::clone(&order_repo),
         Arc::clone(&event_publisher),
@@ -134,23 +233,35 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     ));
 
     let cancel_orders = Arc::new(CancelOrdersUseCase::new(
-        Arc::clone(&broker),
+        Arc::clone(broker),
         Arc::clone(&order_repo),
         Arc::clone(&event_publisher),
     ));
 
-    // Create HTTP router
+    UseCases {
+        submit_orders,
+        validate_risk,
+        cancel_orders,
+        order_repo,
+    }
+}
+
+/// Start the HTTP server with graceful shutdown support.
+async fn start_http_server(
+    config: &EngineConfig,
+    use_cases: &UseCases,
+    shutdown_tx: broadcast::Sender<()>,
+) -> Result<JoinHandle<()>, Box<dyn std::error::Error>> {
     let http_state = AppState {
-        submit_orders: Arc::clone(&submit_orders),
-        validate_risk: Arc::clone(&validate_risk),
-        cancel_orders: Arc::clone(&cancel_orders),
-        order_repo: Arc::clone(&order_repo),
+        submit_orders: Arc::clone(&use_cases.submit_orders),
+        validate_risk: Arc::clone(&use_cases.validate_risk),
+        cancel_orders: Arc::clone(&use_cases.cancel_orders),
+        order_repo: Arc::clone(&use_cases.order_repo),
         version: env!("CARGO_PKG_VERSION").to_string(),
     };
     let app = create_router(http_state);
 
-    // Build HTTP server address
-    let http_addr: SocketAddr = format!("0.0.0.0:{http_port}").parse()?;
+    let http_addr: SocketAddr = format!("0.0.0.0:{}", config.http_port).parse()?;
 
     tracing::info!(%http_addr, "HTTP server starting");
     tracing::info!("Endpoints:");
@@ -160,41 +271,54 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     tracing::info!("  POST /api/v1/orders");
     tracing::info!("  POST /api/v1/cancel-orders");
 
-    // Start HTTP server with graceful shutdown
     let listener = TcpListener::bind(http_addr).await?;
     let http_server =
-        axum::serve(listener, app).with_graceful_shutdown(shutdown_signal(shutdown_tx.clone()));
+        axum::serve(listener, app).with_graceful_shutdown(shutdown_signal(shutdown_tx));
 
-    // Spawn HTTP server task
-    let http_handle = tokio::spawn(async move {
+    let handle = tokio::spawn(async move {
         if let Err(e) = http_server.await {
             tracing::error!("HTTP server error: {e}");
         }
     });
 
-    // Start gRPC server
-    let grpc_addr: SocketAddr = format!("0.0.0.0:{grpc_port}").parse()?;
+    Ok(handle)
+}
+
+/// Start the gRPC server with graceful shutdown support.
+///
+/// # Panics
+///
+/// Panics if the address format is invalid. The format `0.0.0.0:{port}` is a static
+/// pattern with a validated port number, so this cannot fail in practice.
+#[allow(clippy::expect_used)]
+fn start_grpc_server(
+    config: &EngineConfig,
+    use_cases: &UseCases,
+    broker: Arc<AlpacaBrokerAdapter>,
+    shutdown_tx: broadcast::Sender<()>,
+) -> JoinHandle<()> {
+    let grpc_addr: SocketAddr = format!("0.0.0.0:{}", config.grpc_port)
+        .parse()
+        .expect("static address format '0.0.0.0:{port}' with u16 port is always valid");
 
     tracing::info!(%grpc_addr, "gRPC server starting");
     tracing::info!("gRPC services:");
     tracing::info!("  ExecutionService - CheckConstraints, SubmitOrder, GetOrderState, etc.");
 
-    let grpc_shutdown_tx = shutdown_tx.clone();
-    let grpc_submit = Arc::clone(&submit_orders);
-    let grpc_validate = Arc::clone(&validate_risk);
-    let grpc_cancel = Arc::clone(&cancel_orders);
-    let grpc_order_repo = Arc::clone(&order_repo);
-    let grpc_broker = Arc::clone(&broker);
+    let grpc_submit = Arc::clone(&use_cases.submit_orders);
+    let grpc_validate = Arc::clone(&use_cases.validate_risk);
+    let grpc_cancel = Arc::clone(&use_cases.cancel_orders);
+    let grpc_order_repo = Arc::clone(&use_cases.order_repo);
 
-    let grpc_handle = tokio::spawn(async move {
-        let mut shutdown_rx = grpc_shutdown_tx.subscribe();
+    tokio::spawn(async move {
+        let mut shutdown_rx = shutdown_tx.subscribe();
 
         let execution_service = create_execution_service(
             grpc_submit,
             grpc_validate,
             grpc_cancel,
             grpc_order_repo,
-            grpc_broker,
+            broker,
         );
 
         let server = tonic::transport::Server::builder()
@@ -207,11 +331,11 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         if let Err(e) = server.await {
             tracing::error!("gRPC server error: {e}");
         }
-    });
+    })
+}
 
-    tracing::info!("Execution engine ready");
-
-    // Wait for all servers to complete
+/// Wait for either server to stop.
+async fn await_shutdown(http_handle: JoinHandle<()>, grpc_handle: JoinHandle<()>) {
     tokio::select! {
         _ = http_handle => {
             tracing::info!("HTTP server stopped");
@@ -220,9 +344,6 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             tracing::info!("gRPC server stopped");
         }
     }
-
-    tracing::info!("Execution engine stopped");
-    Ok(())
 }
 
 /// Load .env file from current directory or any ancestor directory.
@@ -245,18 +366,25 @@ fn load_dotenv_from_ancestors() {
 }
 
 /// Wait for shutdown signal (SIGTERM or SIGINT).
+///
+/// # Panics
+///
+/// Panics if signal handlers cannot be installed. This is intentional because:
+/// - Signal handlers are critical for graceful shutdown
+/// - Failure to install handlers means the process cannot respond to termination signals
+/// - It is better to fail fast during startup than to have an unresponsive process
 #[allow(clippy::expect_used)]
 async fn shutdown_signal(shutdown_tx: broadcast::Sender<()>) {
     let ctrl_c = async {
         signal::ctrl_c()
             .await
-            .expect("Failed to install Ctrl+C handler");
+            .expect("signal handler installation is critical for graceful shutdown");
     };
 
     #[cfg(unix)]
     let terminate = async {
         signal::unix::signal(signal::unix::SignalKind::terminate())
-            .expect("Failed to install SIGTERM handler")
+            .expect("SIGTERM handler installation is critical for graceful shutdown")
             .recv()
             .await;
     };

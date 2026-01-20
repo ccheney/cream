@@ -54,7 +54,6 @@ pub enum LegType {
 }
 
 /// A single leg of an options spread.
-#[allow(clippy::struct_field_names)]
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct Leg {
     /// The option contract.
@@ -63,8 +62,8 @@ pub struct Leg {
     side: PositionSide,
     /// Number of contracts.
     quantity: Decimal,
-    /// Leg type in the spread.
-    leg_type: LegType,
+    /// Role of this leg in the spread (primary, secondary, wing, body).
+    kind: LegType,
     /// Current Greeks for this leg.
     greeks: Greeks,
 }
@@ -76,27 +75,27 @@ impl Leg {
         contract: OptionContract,
         side: PositionSide,
         quantity: Decimal,
-        leg_type: LegType,
+        kind: LegType,
     ) -> Self {
         Self {
             contract,
             side,
             quantity,
-            leg_type,
+            kind,
             greeks: Greeks::ZERO,
         }
     }
 
     /// Create a long leg.
     #[must_use]
-    pub const fn long(contract: OptionContract, quantity: Decimal, leg_type: LegType) -> Self {
-        Self::new(contract, PositionSide::Long, quantity, leg_type)
+    pub const fn long(contract: OptionContract, quantity: Decimal, kind: LegType) -> Self {
+        Self::new(contract, PositionSide::Long, quantity, kind)
     }
 
     /// Create a short leg.
     #[must_use]
-    pub const fn short(contract: OptionContract, quantity: Decimal, leg_type: LegType) -> Self {
-        Self::new(contract, PositionSide::Short, quantity, leg_type)
+    pub const fn short(contract: OptionContract, quantity: Decimal, kind: LegType) -> Self {
+        Self::new(contract, PositionSide::Short, quantity, kind)
     }
 
     /// Get the contract.
@@ -117,10 +116,10 @@ impl Leg {
         self.quantity
     }
 
-    /// Get the leg type.
+    /// Get the leg kind (role in spread).
     #[must_use]
-    pub const fn leg_type(&self) -> LegType {
-        self.leg_type
+    pub const fn kind(&self) -> LegType {
+        self.kind
     }
 
     /// Get the Greeks.
@@ -195,7 +194,7 @@ mod tests {
 
         assert_eq!(leg.side(), PositionSide::Long);
         assert_eq!(leg.quantity(), Decimal::new(10, 0));
-        assert_eq!(leg.leg_type(), LegType::Primary);
+        assert_eq!(leg.kind(), LegType::Primary);
     }
 
     #[test]
@@ -222,7 +221,7 @@ mod tests {
         leg.update_greeks(Greeks::with_delta(Decimal::new(50, 2))); // 0.50 delta
 
         let position_greeks = leg.position_greeks();
-        // 0.50 × 10 = 5.00
+        // 0.50 x 10 = 5.00
         assert_eq!(position_greeks.delta, Decimal::new(500, 2));
     }
 
@@ -232,7 +231,7 @@ mod tests {
         leg.update_greeks(Greeks::with_delta(Decimal::new(50, 2))); // 0.50 delta
 
         let position_greeks = leg.position_greeks();
-        // 0.50 × -10 = -5.00
+        // 0.50 x -10 = -5.00
         assert_eq!(position_greeks.delta, Decimal::new(-500, 2));
     }
 
@@ -240,7 +239,7 @@ mod tests {
     fn leg_notional() {
         let leg = Leg::long(test_contract(), Decimal::new(10, 0), LegType::Primary);
         let notional = leg.notional(Decimal::new(150, 0));
-        // $150 × 100 × 10 = $150,000
+        // $150 x 100 x 10 = $150,000
         assert_eq!(notional, Decimal::new(150_000, 0));
     }
 
@@ -248,7 +247,7 @@ mod tests {
     fn leg_notional_short() {
         let leg = Leg::short(test_contract(), Decimal::new(10, 0), LegType::Secondary);
         let notional = leg.notional(Decimal::new(150, 0));
-        // $150 × 100 × 10 × -1 = -$150,000
+        // $150 x 100 x 10 x -1 = -$150,000
         assert_eq!(notional, Decimal::new(-150_000, 0));
     }
 

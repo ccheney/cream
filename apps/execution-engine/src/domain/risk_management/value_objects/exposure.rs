@@ -52,10 +52,10 @@ impl Exposure {
         }
 
         ExposurePercent {
-            gross_pct: self.gross.amount() / equity_val,
-            net_pct: self.net.amount() / equity_val,
-            long_pct: self.long.amount() / equity_val,
-            short_pct: self.short.amount().abs() / equity_val,
+            gross: self.gross.amount() / equity_val,
+            net: self.net.amount() / equity_val,
+            long: self.long.amount() / equity_val,
+            short: self.short.amount().abs() / equity_val,
         }
     }
 
@@ -72,17 +72,16 @@ impl Exposure {
 }
 
 /// Exposure as percentage of equity.
-#[allow(clippy::struct_field_names)]
 #[derive(Debug, Clone, PartialEq, Eq, Default, Serialize, Deserialize)]
 pub struct ExposurePercent {
-    /// Gross exposure %.
-    pub gross_pct: Decimal,
-    /// Net exposure %.
-    pub net_pct: Decimal,
-    /// Long exposure %.
-    pub long_pct: Decimal,
-    /// Short exposure %.
-    pub short_pct: Decimal,
+    /// Gross exposure as decimal ratio (e.g., 0.5 = 50%).
+    pub gross: Decimal,
+    /// Net exposure as decimal ratio (e.g., 0.2 = 20%).
+    pub net: Decimal,
+    /// Long exposure as decimal ratio.
+    pub long: Decimal,
+    /// Short exposure as decimal ratio.
+    pub short: Decimal,
 }
 
 #[cfg(test)]
@@ -104,8 +103,8 @@ mod tests {
         let exp = Exposure::from_long_short(Money::usd(10000.0), Money::usd(0.0));
         let pct = exp.as_pct_of_equity(Money::usd(50000.0));
 
-        assert_eq!(pct.gross_pct, Decimal::new(2, 1)); // 0.2 = 20%
-        assert_eq!(pct.long_pct, Decimal::new(2, 1));
+        assert_eq!(pct.gross, Decimal::new(2, 1)); // 0.2 = 20%
+        assert_eq!(pct.long, Decimal::new(2, 1));
     }
 
     #[test]
@@ -113,7 +112,7 @@ mod tests {
         let exp = Exposure::from_long_short(Money::usd(10000.0), Money::usd(0.0));
         let pct = exp.as_pct_of_equity(Money::ZERO);
 
-        assert_eq!(pct.gross_pct, Decimal::ZERO);
+        assert_eq!(pct.gross, Decimal::ZERO);
     }
 
     #[test]

@@ -25,13 +25,23 @@ impl Money {
 
     /// Create a Money value from a USD amount (as f64).
     ///
+    /// This is a convenience constructor for tests and initialization with literal values.
+    /// For production code handling user input, prefer `Decimal::try_from()` with proper
+    /// error handling.
+    ///
     /// # Panics
     ///
-    /// Panics if the f64 cannot be converted to Decimal.
+    /// Panics if the f64 cannot be converted to Decimal. This can happen with:
+    /// - `f64::INFINITY` or `f64::NEG_INFINITY`
+    /// - `f64::NAN`
+    /// - Values exceeding Decimal's range
     #[must_use]
     #[allow(clippy::expect_used)]
     pub fn usd(amount: f64) -> Self {
-        Self(Decimal::try_from(amount).expect("valid f64"))
+        Self(
+            Decimal::try_from(amount)
+                .unwrap_or_else(|_| panic!("f64 value {amount} cannot be converted to Decimal")),
+        )
     }
 
     /// Create a Money value from cents (integer).

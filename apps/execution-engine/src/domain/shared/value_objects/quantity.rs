@@ -45,6 +45,14 @@ impl Quantity {
     }
 
     /// Get the integer portion (truncated).
+    ///
+    /// # Note on Truncation
+    ///
+    /// This method casts i128 to i64, which may truncate values exceeding `i64::MAX`.
+    /// This is acceptable for order quantities in this domain because:
+    /// - Maximum order quantity is validated to 100,000 shares (see `validate_for_order`)
+    /// - Real-world order quantities never approach `i64::MAX` (~9.2 quintillion)
+    /// - The truncation would only occur for astronomically large invalid quantities
     #[must_use]
     #[allow(clippy::cast_possible_truncation)]
     pub const fn as_i64(&self) -> i64 {

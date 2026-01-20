@@ -149,11 +149,9 @@ impl RiskRepositoryPort for InMemoryRiskRepository {
         );
         context.current_exposure = self.get_portfolio_exposure().await?;
         context.current_greeks = self.get_portfolio_greeks().await?;
-        #[allow(clippy::cast_possible_truncation)]
-        {
-            context.day_trades_remaining =
-                3u8.saturating_sub(self.get_day_trade_count().await? as u8);
-        }
+        let day_trade_count = self.get_day_trade_count().await?;
+        let day_trades_used = u8::try_from(day_trade_count).unwrap_or(u8::MAX);
+        context.day_trades_remaining = 3u8.saturating_sub(day_trades_used);
         Ok(context)
     }
 }

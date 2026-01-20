@@ -132,9 +132,7 @@ impl PriceFeedPort for AlpacaPriceFeedAdapter {
         let ask =
             Decimal::try_from(response.quote.ap).map_err(|_| PriceFeedError::DataUnavailable)?;
 
-        #[allow(clippy::cast_precision_loss)]
         let bid_size = Decimal::from(response.quote.bs);
-        #[allow(clippy::cast_precision_loss)]
         let ask_size = Decimal::from(response.quote.ask_size);
 
         Ok(Quote::new(symbol.clone(), bid, ask, bid_size, ask_size))
@@ -157,9 +155,7 @@ impl PriceFeedPort for AlpacaPriceFeedAdapter {
                 let ask = Decimal::try_from(quote_data.ap)
                     .map_err(|_| PriceFeedError::DataUnavailable)?;
 
-                #[allow(clippy::cast_precision_loss)]
                 let bid_size = Decimal::from(quote_data.bs);
-                #[allow(clippy::cast_precision_loss)]
                 let ask_size = Decimal::from(quote_data.ask_size);
 
                 quotes.push(Quote::new(symbol.clone(), bid, ask, bid_size, ask_size));

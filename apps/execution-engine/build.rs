@@ -8,9 +8,13 @@
 //! 2. `LLVM_PROFILE_FILE` environment variable
 //! 3. `cargo-llvm-cov` ignore comments
 //!
-//! Note: Build scripts intentionally panic on failure since they must halt
-//! the build process when prerequisites are missing.
-
+//! # Panics Policy
+//!
+//! Build scripts intentionally use `.expect()` and panic on failure because:
+//! - Build scripts MUST halt the build process when prerequisites are missing
+//! - There is no caller to propagate errors to - the build system handles panics
+//! - Descriptive panic messages guide developers to fix configuration issues
+//! - This is the idiomatic pattern for Cargo build scripts
 #![allow(clippy::expect_used)]
 
 use prost::Message;

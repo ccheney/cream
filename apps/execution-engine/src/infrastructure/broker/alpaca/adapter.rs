@@ -112,7 +112,7 @@ impl BrokerPort for AlpacaBrokerAdapter {
 
         let response: AlpacaOrderResponse = self
             .client
-            .post("/v2/orders", &alpaca_request)
+            .post("/v2/orders", alpaca_request)
             .await
             .map_err(BrokerError::from)?;
 

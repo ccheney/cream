@@ -53,11 +53,8 @@ where
     /// Execute the use case.
     pub async fn execute(&self, request: SubmitOrdersRequestDto) -> SubmitOrdersResponseDto {
         // 1. Create domain orders
-        let orders_result: Result<Vec<Order>, OrderError> = request
-            .orders
-            .iter()
-            .map(|dto| self.create_order(dto))
-            .collect();
+        let orders_result: Result<Vec<Order>, OrderError> =
+            request.orders.iter().map(Self::create_order).collect();
 
         let mut orders = match orders_result {
             Ok(orders) => orders,
@@ -109,8 +106,7 @@ where
     }
 
     /// Create a domain Order from DTO.
-    #[allow(clippy::unused_self)]
-    fn create_order(&self, dto: &CreateOrderDto) -> Result<Order, OrderError> {
+    fn create_order(dto: &CreateOrderDto) -> Result<Order, OrderError> {
         let command = CreateOrderCommand {
             symbol: Symbol::new(&dto.symbol),
             side: dto.side,

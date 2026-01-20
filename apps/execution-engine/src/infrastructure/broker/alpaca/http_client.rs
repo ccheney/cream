@@ -45,25 +45,26 @@ impl AlpacaHttpClient {
 
     /// Make a GET request to the trading API.
     pub async fn get<T: DeserializeOwned>(&self, path: &str) -> Result<T, AlpacaError> {
-        self.request("GET", &self.trading_base_url, path, None::<&()>)
+        self.request("GET", &self.trading_base_url, path, None)
             .await
     }
 
     /// Make a POST request to the trading API.
-    #[allow(clippy::future_not_send)]
-    pub async fn post<T: DeserializeOwned, B: Serialize>(
+    pub async fn post<T: DeserializeOwned, B: Serialize + Send>(
         &self,
         path: &str,
-        body: &B,
+        body: B,
     ) -> Result<T, AlpacaError> {
-        self.request("POST", &self.trading_base_url, path, Some(body))
+        let body_json =
+            serde_json::to_value(&body).map_err(|e| AlpacaError::JsonParse(e.to_string()))?;
+        self.request("POST", &self.trading_base_url, path, Some(body_json))
             .await
     }
 
     /// Make a DELETE request to the trading API.
     pub async fn delete(&self, path: &str) -> Result<(), AlpacaError> {
         let _: serde_json::Value = self
-            .request("DELETE", &self.trading_base_url, path, None::<&()>)
+            .request("DELETE", &self.trading_base_url, path, None)
             .await?;
         Ok(())
     }
@@ -73,49 +74,22 @@ impl AlpacaHttpClient {
     /// Reserved for market data API access (quotes, bars, etc.).
     #[allow(dead_code)]
     pub async fn data_get<T: DeserializeOwned>(&self, path: &str) -> Result<T, AlpacaError> {
-        self.request("GET", &self.data_base_url, path, None::<&()>)
-            .await
+        self.request("GET", &self.data_base_url, path, None).await
     }
 
     /// Internal request implementation with retry logic.
-    #[allow(clippy::future_not_send, clippy::too_many_lines)]
-    async fn request<T: DeserializeOwned, B: Serialize>(
+    async fn request<T: DeserializeOwned>(
         &self,
         method: &str,
         base_url: &str,
         path: &str,
-        body: Option<&B>,
+        body: Option<serde_json::Value>,
     ) -> Result<T, AlpacaError> {
         let url = format!("{base_url}{path}");
         let mut backoff = ExponentialBackoff::new(&self.retry_config);
 
         loop {
-            let request = match method {
-                "GET" => self
-                    .client
-                    .get(&url)
-                    .header("APCA-API-KEY-ID", &self.api_key)
-                    .header("APCA-API-SECRET-KEY", &self.api_secret),
-                "POST" => {
-                    let mut req = self
-                        .client
-                        .post(&url)
-                        .header("APCA-API-KEY-ID", &self.api_key)
-                        .header("APCA-API-SECRET-KEY", &self.api_secret);
-                    if let Some(b) = body {
-                        req = req.json(b);
-                    }
-                    req
-                }
-                "DELETE" => self
-                    .client
-                    .delete(&url)
-                    .header("APCA-API-KEY-ID", &self.api_key)
-                    .header("APCA-API-SECRET-KEY", &self.api_secret),
-                _ => {
-                    return Err(AlpacaError::Http(format!("Unsupported method: {method}")));
-                }
-            };
+            let request = self.build_request(method, &url, body.as_ref())?;
 
             let response = match request.send().await {
                 Ok(resp) => resp,
@@ -139,90 +113,173 @@ impl AlpacaHttpClient {
             let status = response.status();
 
             if status.is_success() {
-                let text = response
-                    .text()
-                    .await
-                    .map_err(|e| AlpacaError::Network(e.to_string()))?;
-                if text.is_empty() {
-                    return serde_json::from_str("null")
-                        .map_err(|e| AlpacaError::JsonParse(e.to_string()));
-                }
-                return serde_json::from_str(&text)
-                    .map_err(|e| AlpacaError::JsonParse(e.to_string()));
+                return Self::parse_success_response(response).await;
             }
 
-            // Handle error response
-            let retry_after = response
-                .headers()
-                .get("Retry-After")
-                .and_then(|v| v.to_str().ok())
-                .and_then(|v| v.parse::<u64>().ok());
-
-            let error_body = response.text().await.unwrap_or_default();
-
-            let (error_code, error_message) =
-                match serde_json::from_str::<AlpacaErrorResponse>(&error_body) {
-                    Ok(err) => (
-                        err.code.unwrap_or_else(|| status.as_u16().to_string()),
-                        err.message,
-                    ),
-                    Err(_) => (status.as_u16().to_string(), error_body),
-                };
-
-            // Categorize and handle error
-            match categorize_status(status) {
-                ErrorCategory::RateLimited => {
-                    let delay = retry_after
-                        .map(Duration::from_secs)
-                        .or_else(|| backoff.next_backoff());
-                    if let Some(delay) = delay {
-                        tracing::warn!(
-                            code = %error_code,
-                            delay_ms = delay.as_millis(),
-                            "Rate limited, retrying"
-                        );
-                        tokio::time::sleep(delay).await;
-                        continue;
-                    }
-                    return Err(AlpacaError::RateLimited {
-                        retry_after_secs: retry_after.unwrap_or(60),
-                    });
+            match self
+                .handle_error_response(response, status, path, &mut backoff)
+                .await
+            {
+                ErrorAction::Retry(delay) => {
+                    tokio::time::sleep(delay).await;
                 }
-                ErrorCategory::Retryable => {
-                    if let Some(delay) = backoff.next_backoff() {
-                        tracing::warn!(
-                            code = %error_code,
-                            message = %error_message,
-                            delay_ms = delay.as_millis(),
-                            "Retryable error, retrying"
-                        );
-                        tokio::time::sleep(delay).await;
-                        continue;
-                    }
-                    return Err(AlpacaError::MaxRetriesExceeded {
-                        attempts: backoff.attempt,
-                    });
-                }
-                ErrorCategory::NonRetryable => {
-                    return match status {
-                        StatusCode::UNAUTHORIZED | StatusCode::FORBIDDEN => {
-                            Err(AlpacaError::AuthenticationFailed)
-                        }
-                        StatusCode::NOT_FOUND => Err(AlpacaError::OrderNotFound {
-                            order_id: path.to_string(),
-                        }),
-                        StatusCode::UNPROCESSABLE_ENTITY => {
-                            Err(AlpacaError::OrderRejected(error_message))
-                        }
-                        _ => Err(AlpacaError::Api {
-                            code: error_code,
-                            message: error_message,
-                        }),
-                    };
-                }
+                ErrorAction::Fail(err) => return Err(err),
             }
         }
     }
+
+    /// Build a request with authentication headers.
+    fn build_request(
+        &self,
+        method: &str,
+        url: &str,
+        body: Option<&serde_json::Value>,
+    ) -> Result<reqwest::RequestBuilder, AlpacaError> {
+        let request = match method {
+            "GET" => self.client.get(url),
+            "POST" => {
+                let mut req = self.client.post(url);
+                if let Some(b) = body {
+                    req = req.json(b);
+                }
+                req
+            }
+            "DELETE" => self.client.delete(url),
+            _ => return Err(AlpacaError::Http(format!("Unsupported method: {method}"))),
+        };
+
+        Ok(request
+            .header("APCA-API-KEY-ID", &self.api_key)
+            .header("APCA-API-SECRET-KEY", &self.api_secret))
+    }
+
+    /// Parse a successful response body.
+    async fn parse_success_response<T: DeserializeOwned>(
+        response: reqwest::Response,
+    ) -> Result<T, AlpacaError> {
+        let text = response
+            .text()
+            .await
+            .map_err(|e| AlpacaError::Network(e.to_string()))?;
+
+        let json_str = if text.is_empty() { "null" } else { &text };
+        serde_json::from_str(json_str).map_err(|e| AlpacaError::JsonParse(e.to_string()))
+    }
+
+    /// Handle an error response and determine retry behavior.
+    async fn handle_error_response(
+        &self,
+        response: reqwest::Response,
+        status: StatusCode,
+        path: &str,
+        backoff: &mut ExponentialBackoff,
+    ) -> ErrorAction {
+        let retry_after = response
+            .headers()
+            .get("Retry-After")
+            .and_then(|v| v.to_str().ok())
+            .and_then(|v| v.parse::<u64>().ok());
+
+        let error_body = response.text().await.unwrap_or_default();
+        let (error_code, error_message) = Self::parse_error_body(&error_body, status);
+
+        match categorize_status(status) {
+            ErrorCategory::RateLimited => {
+                Self::handle_rate_limited(retry_after, backoff, &error_code)
+            }
+            ErrorCategory::Retryable => {
+                Self::handle_retryable(backoff, &error_code, &error_message)
+            }
+            ErrorCategory::NonRetryable => ErrorAction::Fail(Self::map_non_retryable_error(
+                status,
+                path,
+                error_code,
+                error_message,
+            )),
+        }
+    }
+
+    /// Parse error body into code and message.
+    fn parse_error_body(error_body: &str, status: StatusCode) -> (String, String) {
+        match serde_json::from_str::<AlpacaErrorResponse>(error_body) {
+            Ok(err) => (
+                err.code.unwrap_or_else(|| status.as_u16().to_string()),
+                err.message,
+            ),
+            Err(_) => (status.as_u16().to_string(), error_body.to_string()),
+        }
+    }
+
+    /// Handle rate-limited responses.
+    fn handle_rate_limited(
+        retry_after: Option<u64>,
+        backoff: &mut ExponentialBackoff,
+        error_code: &str,
+    ) -> ErrorAction {
+        let delay = retry_after
+            .map(Duration::from_secs)
+            .or_else(|| backoff.next_backoff());
+
+        if let Some(delay) = delay {
+            tracing::warn!(
+                code = %error_code,
+                delay_ms = delay.as_millis(),
+                "Rate limited, retrying"
+            );
+            return ErrorAction::Retry(delay);
+        }
+
+        ErrorAction::Fail(AlpacaError::RateLimited {
+            retry_after_secs: retry_after.unwrap_or(60),
+        })
+    }
+
+    /// Handle retryable error responses.
+    fn handle_retryable(
+        backoff: &mut ExponentialBackoff,
+        error_code: &str,
+        error_message: &str,
+    ) -> ErrorAction {
+        if let Some(delay) = backoff.next_backoff() {
+            tracing::warn!(
+                code = %error_code,
+                message = %error_message,
+                delay_ms = delay.as_millis(),
+                "Retryable error, retrying"
+            );
+            return ErrorAction::Retry(delay);
+        }
+
+        ErrorAction::Fail(AlpacaError::MaxRetriesExceeded {
+            attempts: backoff.attempt,
+        })
+    }
+
+    /// Map non-retryable status codes to specific errors.
+    fn map_non_retryable_error(
+        status: StatusCode,
+        path: &str,
+        error_code: String,
+        error_message: String,
+    ) -> AlpacaError {
+        match status {
+            StatusCode::UNAUTHORIZED | StatusCode::FORBIDDEN => AlpacaError::AuthenticationFailed,
+            StatusCode::NOT_FOUND => AlpacaError::OrderNotFound {
+                order_id: path.to_string(),
+            },
+            StatusCode::UNPROCESSABLE_ENTITY => AlpacaError::OrderRejected(error_message),
+            _ => AlpacaError::Api {
+                code: error_code,
+                message: error_message,
+            },
+        }
+    }
+}
+
+/// Action to take after handling an error response.
+enum ErrorAction {
+    Retry(Duration),
+    Fail(AlpacaError),
 }
 
 /// Error category for determining retry behavior.
