@@ -31,6 +31,10 @@ export interface EquityCurveChartProps {
 	period?: PortfolioHistoryPeriod;
 	onPeriodChange?: (period: PortfolioHistoryPeriod) => void;
 	isLoading?: boolean;
+	/** Current live equity to append as the latest point (real-time) */
+	liveEquity?: number;
+	/** Whether live data is streaming */
+	isStreaming?: boolean;
 }
 
 interface PeriodConfig {
@@ -103,11 +107,23 @@ const getSeriesOptions = (isDark: boolean) => ({
 // Data Transformation
 // ============================================
 
-function transformData(data: PortfolioHistory): SingleValueData[] {
-	return data.timestamp.map((ts, i) => ({
+function transformData(data: PortfolioHistory, liveEquity?: number): SingleValueData[] {
+	const chartData = data.timestamp.map((ts, i) => ({
 		time: ts as Time, // Alpaca returns Unix epoch in seconds, which lightweight-charts expects
 		value: data.equity[i] ?? 0,
 	}));
+
+	// Append live equity as the current point if available
+	if (liveEquity !== undefined && liveEquity > 0) {
+		const now = Math.floor(Date.now() / 1000) as Time; // Current time in Unix seconds
+		// Only append if it's after the last data point
+		const lastTime = chartData[chartData.length - 1]?.time;
+		if (!lastTime || now > lastTime) {
+			chartData.push({ time: now, value: liveEquity });
+		}
+	}
+
+	return chartData;
 }
 
 // ============================================
@@ -119,6 +135,8 @@ export const EquityCurveChart = memo(function EquityCurveChart({
 	period = "1M",
 	onPeriodChange,
 	isLoading = false,
+	liveEquity,
+	isStreaming = false,
 }: EquityCurveChartProps) {
 	const containerRef = useRef<HTMLDivElement>(null);
 	const chartRef = useRef<IChartApi | null>(null);
@@ -178,16 +196,16 @@ export const EquityCurveChart = memo(function EquityCurveChart({
 		seriesRef.current.applyOptions(getSeriesOptions(isDark));
 	}, [isDark]);
 
-	// Update data when it changes
+	// Update data when it changes (including live equity updates)
 	useEffect(() => {
 		if (!seriesRef.current || !data) {
 			return;
 		}
 
-		const chartData = transformData(data);
+		const chartData = transformData(data, liveEquity);
 		seriesRef.current.setData(chartData);
 		chartRef.current?.timeScale().fitContent();
-	}, [data]);
+	}, [data, liveEquity]);
 
 	// Handle resize
 	useEffect(() => {
@@ -218,9 +236,17 @@ export const EquityCurveChart = memo(function EquityCurveChart({
 	return (
 		<div className="bg-white dark:bg-night-800 rounded-lg border border-cream-200 dark:border-night-700 p-5">
 			<div className="flex items-center justify-between mb-4">
-				<h2 className="text-sm font-medium text-stone-500 dark:text-night-400 uppercase tracking-wide">
-					Equity Curve
-				</h2>
+				<div className="flex items-center gap-2">
+					<h2 className="text-sm font-medium text-stone-500 dark:text-night-400 uppercase tracking-wide">
+						Equity Curve
+					</h2>
+					{isStreaming && (
+						<div className="flex items-center gap-1.5 text-xs text-green-600 dark:text-green-400">
+							<span className="w-2 h-2 rounded-full bg-green-500 animate-pulse" />
+							Live
+						</div>
+					)}
+				</div>
 				<div className="flex gap-1">
 					{PERIODS.map((p) => (
 						<button

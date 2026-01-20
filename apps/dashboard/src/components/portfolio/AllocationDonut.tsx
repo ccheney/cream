@@ -11,6 +11,7 @@
 
 import { memo, useMemo } from "react";
 import { Cell, Pie, PieChart, ResponsiveContainer, Tooltip } from "recharts";
+import type { StreamingPosition } from "@/hooks/usePortfolioStreaming";
 import type { Account, Position } from "@/lib/api/types";
 import { CHART_COLORS } from "@/lib/chart-config";
 
@@ -19,8 +20,14 @@ import { CHART_COLORS } from "@/lib/chart-config";
 // ============================================
 
 export interface AllocationDonutProps {
-	positions: Position[];
-	account: Account;
+	/** Positions to display - can be regular or streaming positions */
+	positions: Position[] | StreamingPosition[];
+	/** Account data for cash balance */
+	account?: Account;
+	/** Whether positions are streaming (shows live indicator) */
+	isStreaming?: boolean;
+	/** Loading state */
+	isLoading?: boolean;
 }
 
 interface SectorAllocation {
@@ -373,15 +380,27 @@ function CustomTooltip({ active, payload }: CustomTooltipProps) {
 // ============================================
 
 /**
+ * Type guard to check if position is a streaming position
+ */
+function isStreamingPosition(
+	position: Position | StreamingPosition
+): position is StreamingPosition {
+	return "liveMarketValue" in position;
+}
+
+/**
  * AllocationDonut - Sector breakdown donut chart
  */
 export const AllocationDonut = memo(function AllocationDonut({
 	positions,
 	account,
+	isStreaming = false,
+	isLoading = false,
 }: AllocationDonutProps) {
-	// Calculate sector allocations
+	// Calculate sector allocations using live market value when available
 	const sectorData = useMemo((): SectorAllocation[] => {
-		if (positions.length === 0 && account.cash === 0) {
+		const cash = account?.cash ?? 0;
+		if (positions.length === 0 && cash === 0) {
 			return [];
 		}
 
@@ -391,18 +410,22 @@ export const AllocationDonut = memo(function AllocationDonut({
 		for (const position of positions) {
 			const sector = getSector(position.symbol);
 			const current = sectorMap.get(sector) ?? { value: 0, symbols: [] };
-			current.value += Math.abs(position.marketValue);
+			// Use live market value if available (streaming positions)
+			const marketValue = isStreamingPosition(position)
+				? position.liveMarketValue
+				: position.marketValue;
+			current.value += Math.abs(marketValue);
 			current.symbols.push(position.symbol);
 			sectorMap.set(sector, current);
 		}
 
 		// Add cash if present
-		if (account.cash > 0) {
-			sectorMap.set("Cash", { value: account.cash, symbols: [] });
+		if (cash > 0) {
+			sectorMap.set("Cash", { value: cash, symbols: [] });
 		}
 
 		// Calculate total portfolio value
-		const totalValue = account.portfolioValue || account.equity || account.cash;
+		const totalValue = account?.portfolioValue || account?.equity || cash;
 
 		// Convert to array and calculate percentages
 		const allocations: SectorAllocation[] = [];
@@ -421,13 +444,35 @@ export const AllocationDonut = memo(function AllocationDonut({
 		return allocations.toSorted((a, b) => b.value - a.value);
 	}, [positions, account]);
 
+	// Loading state
+	if (isLoading) {
+		return (
+			<div className="bg-white dark:bg-night-800 rounded-lg border border-cream-200 dark:border-night-700 p-5">
+				<h2 className="text-sm font-medium text-stone-500 dark:text-night-400 uppercase tracking-wide mb-4">
+					Allocation
+				</h2>
+				<div className="flex flex-col items-center gap-4">
+					<div className="h-32 w-32 rounded-full border-8 border-cream-100 dark:border-night-700 animate-pulse" />
+					<div className="w-full space-y-2">
+						{["", "", "", ""].map((_, i) => (
+							<div key={i} className="flex items-center justify-between">
+								<div className="h-4 w-20 bg-cream-100 dark:bg-night-700 rounded animate-pulse" />
+								<div className="h-4 w-12 bg-cream-100 dark:bg-night-700 rounded animate-pulse" />
+							</div>
+						))}
+					</div>
+				</div>
+			</div>
+		);
+	}
+
 	// Empty state
 	if (sectorData.length === 0) {
 		return (
-			<div className="bg-white dark:bg-night-800 rounded-lg border border-cream-200 dark:border-night-700 p-6">
-				<h3 className="text-sm font-medium text-stone-500 dark:text-night-300 mb-4">
-					Sector Allocation
-				</h3>
+			<div className="bg-white dark:bg-night-800 rounded-lg border border-cream-200 dark:border-night-700 p-5">
+				<h2 className="text-sm font-medium text-stone-500 dark:text-night-400 uppercase tracking-wide mb-4">
+					Allocation
+				</h2>
 				<div className="flex items-center justify-center h-48 text-stone-400 dark:text-night-500">
 					No positions
 				</div>
@@ -436,10 +481,21 @@ export const AllocationDonut = memo(function AllocationDonut({
 	}
 
 	return (
-		<div className="bg-white dark:bg-night-800 rounded-lg border border-cream-200 dark:border-night-700 p-6">
-			<h3 className="text-sm font-medium text-stone-500 dark:text-night-300 mb-4">
-				Sector Allocation
-			</h3>
+		<div className="bg-white dark:bg-night-800 rounded-lg border border-cream-200 dark:border-night-700 p-5">
+			<div className="flex items-center justify-between mb-4">
+				<h2 className="text-sm font-medium text-stone-500 dark:text-night-400 uppercase tracking-wide">
+					Allocation
+				</h2>
+				{isStreaming && (
+					<output
+						className="flex items-center gap-1.5 text-xs text-green-600 dark:text-green-400"
+						aria-label="Live streaming"
+					>
+						<span className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse" />
+						Live
+					</output>
+				)}
+			</div>
 
 			<div className="flex items-center gap-6">
 				{/* Donut Chart */}

@@ -18,6 +18,7 @@
 
 import { useState } from "react";
 import { AccountSummaryCard } from "@/components/portfolio/AccountSummaryCard";
+import { AllocationDonut } from "@/components/portfolio/AllocationDonut";
 import { EquityCurveChart } from "@/components/portfolio/EquityCurveChart";
 import { OrderHistoryWidget } from "@/components/portfolio/OrderHistoryWidget";
 import { RiskMetricsBar } from "@/components/portfolio/RiskMetricsBar";
@@ -32,38 +33,8 @@ import {
 } from "@/hooks/queries";
 import { useAccountStreaming } from "@/hooks/useAccountStreaming";
 import { usePortfolioStreaming } from "@/hooks/usePortfolioStreaming";
+import { useRiskMetricsStreaming } from "@/hooks/useRiskMetricsStreaming";
 import type { PortfolioHistoryPeriod } from "@/lib/api/types";
-
-// ============================================
-// Placeholder Components
-// ============================================
-
-/**
- * Placeholder for AllocationDonut component (cream-g6svw)
- * Donut chart with sector list
- */
-function AllocationDonutPlaceholder() {
-	return (
-		<div className="bg-white dark:bg-night-800 rounded-lg border border-cream-200 dark:border-night-700 p-5">
-			<h2 className="text-sm font-medium text-stone-500 dark:text-night-400 uppercase tracking-wide mb-4">
-				Allocation
-			</h2>
-			<div className="flex flex-col items-center gap-4">
-				<div className="h-32 w-32 rounded-full border-8 border-cream-100 dark:border-night-700 flex items-center justify-center">
-					<span className="text-stone-400 dark:text-night-500 text-sm">Chart</span>
-				</div>
-				<div className="w-full space-y-2">
-					{["Technology", "Healthcare", "Financials", "Other"].map((sector) => (
-						<div key={sector} className="flex items-center justify-between text-sm">
-							<span className="text-stone-600 dark:text-night-300">{sector}</span>
-							<div className="h-4 w-12 bg-cream-100 dark:bg-night-700 rounded animate-pulse" />
-						</div>
-					))}
-				</div>
-			</div>
-		</div>
-	);
-}
 
 // ============================================
 // Main Page Component
@@ -81,6 +52,13 @@ export default function PortfolioPage() {
 		positions: positions ?? [],
 		cash: summary?.cash,
 		enabled: true,
+	});
+
+	// Stream risk metrics in real-time using portfolio state
+	const streamingRiskMetrics = useRiskMetricsStreaming({
+		performanceMetrics,
+		portfolioState,
+		initialEquity: account?.equity ?? 100000,
 	});
 
 	const formatCurrency = (value: number) =>
@@ -124,6 +102,8 @@ export default function PortfolioPage() {
 						isStreaming={accountStreaming.isStreaming}
 						performanceMetrics={performanceMetrics}
 						isPerformanceLoading={isPerformanceLoading}
+						liveDayPnl={portfolioState.liveDayPnl}
+						liveDayPnlPct={portfolioState.liveDayPnlPct}
 					/>
 				</QueryErrorBoundary>
 
@@ -133,6 +113,8 @@ export default function PortfolioPage() {
 						period={chartPeriod}
 						onPeriodChange={setChartPeriod}
 						isLoading={isHistoryLoading}
+						liveEquity={portfolioState.liveNav}
+						isStreaming={portfolioState.isStreaming}
 					/>
 				</QueryErrorBoundary>
 			</div>
@@ -150,14 +132,23 @@ export default function PortfolioPage() {
 					</QueryErrorBoundary>
 
 					<QueryErrorBoundary title="Failed to load risk metrics">
-						<RiskMetricsBar metrics={performanceMetrics} isLoading={isPerformanceLoading} />
+						<RiskMetricsBar
+							metrics={performanceMetrics}
+							streamingMetrics={streamingRiskMetrics}
+							isLoading={isPerformanceLoading}
+						/>
 					</QueryErrorBoundary>
 				</div>
 
 				{/* Allocation Donut - 1/3 width on large screens */}
 				<div className="lg:col-span-1">
 					<QueryErrorBoundary title="Failed to load allocation">
-						<AllocationDonutPlaceholder />
+						<AllocationDonut
+							positions={streamingPositions}
+							account={account}
+							isStreaming={portfolioState.isStreaming}
+							isLoading={isPositionsLoading || isAccountLoading}
+						/>
 					</QueryErrorBoundary>
 				</div>
 			</div>

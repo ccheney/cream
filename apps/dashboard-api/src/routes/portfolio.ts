@@ -458,59 +458,102 @@ const positionsRoute = createRoute({
 });
 
 app.openapi(positionsRoute, async (c) => {
-	const repo = await getPositionsRepo();
-	const result = await repo.findMany({
-		environment: getCurrentEnvironment(),
-		status: "open",
-	});
-
-	// Fetch Alpaca positions for lastdayPrice when available
-	let alpacaPositionMap = new Map<string, { lastdayPrice: number; currentPrice: number }>();
-
-	if (isAlpacaConfigured()) {
-		try {
-			const client = getBrokerClient();
-			const alpacaPositions = await client.getPositions();
-			alpacaPositionMap = new Map(
-				alpacaPositions.map((ap) => [
-					ap.symbol,
-					{ lastdayPrice: ap.lastdayPrice, currentPrice: ap.currentPrice },
-				])
-			);
-			log.debug(
-				{ positionCount: alpacaPositions.length },
-				"Fetched Alpaca positions for lastdayPrice"
-			);
-		} catch (error) {
-			log.warn(
-				{ error: error instanceof Error ? error.message : String(error) },
-				"Failed to fetch Alpaca positions, lastdayPrice will be null"
-			);
-		}
-	}
-
-	return c.json(
-		result.data.map((p) => {
-			const alpacaData = alpacaPositionMap.get(p.symbol);
-			const currentPrice = alpacaData?.currentPrice ?? p.currentPrice ?? 0;
-			const marketValue = p.marketValue ?? currentPrice * p.quantity;
-			return {
+	// Primary source: Alpaca positions (real-time, authoritative)
+	// Secondary source: DB positions (for metadata like thesisId, openedAt)
+	if (!isAlpacaConfigured()) {
+		// Fall back to DB-only if Alpaca not configured
+		const repo = await getPositionsRepo();
+		const result = await repo.findMany({
+			environment: getCurrentEnvironment(),
+			status: "open",
+		});
+		return c.json(
+			result.data.map((p) => ({
 				id: p.id,
 				symbol: p.symbol,
 				side: p.side === "long" ? "LONG" : "SHORT",
 				qty: p.quantity,
 				avgEntry: p.avgEntryPrice,
-				currentPrice,
-				lastdayPrice: alpacaData?.lastdayPrice ?? null,
-				marketValue,
+				currentPrice: p.currentPrice ?? 0,
+				lastdayPrice: null,
+				marketValue: p.marketValue ?? (p.currentPrice ?? 0) * p.quantity,
 				unrealizedPnl: p.unrealizedPnl ?? 0,
 				unrealizedPnlPct: p.unrealizedPnlPct ?? 0,
 				thesisId: p.thesisId,
 				daysHeld: calculateDaysHeld(p.openedAt),
 				openedAt: p.openedAt,
-			};
-		})
-	);
+			}))
+		);
+	}
+
+	try {
+		const client = getBrokerClient();
+		const alpacaPositions = await client.getPositions();
+
+		// Fetch DB positions for metadata enrichment (thesisId, openedAt, etc)
+		const repo = await getPositionsRepo();
+		const dbResult = await repo.findMany({
+			environment: getCurrentEnvironment(),
+			status: "open",
+		});
+		const dbPositionMap = new Map(dbResult.data.map((p) => [p.symbol, p]));
+
+		log.debug(
+			{ alpacaCount: alpacaPositions.length, dbCount: dbResult.data.length },
+			"Fetched positions from Alpaca and DB"
+		);
+
+		return c.json(
+			alpacaPositions.map((ap) => {
+				const dbPosition = dbPositionMap.get(ap.symbol);
+				return {
+					// Use DB id if available, otherwise generate from symbol
+					id: dbPosition?.id ?? `alpaca-${ap.symbol}`,
+					symbol: ap.symbol,
+					side: ap.side === "long" ? "LONG" : "SHORT",
+					qty: ap.qty,
+					avgEntry: ap.avgEntryPrice,
+					currentPrice: ap.currentPrice,
+					lastdayPrice: ap.lastdayPrice,
+					marketValue: ap.marketValue,
+					unrealizedPnl: ap.unrealizedPl,
+					unrealizedPnlPct: ap.unrealizedPlpc * 100, // Convert from decimal to percentage
+					// Metadata from DB if available
+					thesisId: dbPosition?.thesisId ?? null,
+					daysHeld: dbPosition ? calculateDaysHeld(dbPosition.openedAt) : 0,
+					openedAt: dbPosition?.openedAt ?? new Date().toISOString(),
+				};
+			})
+		);
+	} catch (error) {
+		log.error(
+			{ error: error instanceof Error ? error.message : String(error) },
+			"Failed to fetch Alpaca positions"
+		);
+		// Fall back to DB-only on error
+		const repo = await getPositionsRepo();
+		const result = await repo.findMany({
+			environment: getCurrentEnvironment(),
+			status: "open",
+		});
+		return c.json(
+			result.data.map((p) => ({
+				id: p.id,
+				symbol: p.symbol,
+				side: p.side === "long" ? "LONG" : "SHORT",
+				qty: p.quantity,
+				avgEntry: p.avgEntryPrice,
+				currentPrice: p.currentPrice ?? 0,
+				lastdayPrice: null,
+				marketValue: p.marketValue ?? (p.currentPrice ?? 0) * p.quantity,
+				unrealizedPnl: p.unrealizedPnl ?? 0,
+				unrealizedPnlPct: p.unrealizedPnlPct ?? 0,
+				thesisId: p.thesisId,
+				daysHeld: calculateDaysHeld(p.openedAt),
+				openedAt: p.openedAt,
+			}))
+		);
+	}
 });
 
 // GET /api/portfolio/positions/:id
@@ -681,17 +724,7 @@ const performanceRoute = createRoute({
 });
 
 app.openapi(performanceRoute, async (c) => {
-	const [snapshotsRepo, decisionsRepo, ordersRepo] = await Promise.all([
-		getPortfolioSnapshotsRepo(),
-		getDecisionsRepo(),
-		getOrdersRepo(),
-	]);
-
-	// Get all snapshots for calculations
-	const snapshots = await snapshotsRepo.findMany(
-		{ environment: getCurrentEnvironment() },
-		{ page: 1, pageSize: 1000 }
-	);
+	const [decisionsRepo, ordersRepo] = await Promise.all([getDecisionsRepo(), getOrdersRepo()]);
 
 	// Get executed decisions for trade statistics (kept for potential future use)
 	const _decisions = await decisionsRepo.findMany(
@@ -704,25 +737,6 @@ app.openapi(performanceRoute, async (c) => {
 		{ status: "filled", environment: getCurrentEnvironment() },
 		{ limit: 1000, offset: 0 }
 	);
-
-	// Calculate period boundaries
-	const now = new Date();
-	const todayStart = new Date(now);
-	todayStart.setHours(0, 0, 0, 0);
-
-	const weekStart = new Date(now);
-	weekStart.setDate(weekStart.getDate() - 7);
-
-	const monthStart = new Date(now);
-	monthStart.setMonth(monthStart.getMonth() - 1);
-
-	const threeMonthStart = new Date(now);
-	threeMonthStart.setMonth(threeMonthStart.getMonth() - 3);
-
-	const ytdStart = new Date(now.getFullYear(), 0, 1);
-
-	const oneYearStart = new Date(now);
-	oneYearStart.setFullYear(oneYearStart.getFullYear() - 1);
 
 	// Calculate P&L from filled orders (BUY is entry, SELL is exit)
 	// Group orders by symbol to calculate realized P&L per trade
@@ -774,45 +788,223 @@ app.openapi(performanceRoute, async (c) => {
 		}
 	}
 
-	// Helper to calculate period metrics with P&L data
-	const calcPeriodMetrics = (
-		startDate: Date
-	): {
+	// Calculate period metrics from Alpaca portfolio history
+	interface PeriodMetrics {
 		return: number;
 		returnPct: number;
 		trades: number;
 		winRate: number;
-	} => {
-		const periodSnapshots = snapshots.data.filter((s) => new Date(s.timestamp) >= startDate);
+	}
+	const defaultMetrics: PeriodMetrics = { return: 0, returnPct: 0, trades: 0, winRate: 0 };
 
-		const firstNav = periodSnapshots[0]?.nav ?? 100000;
-		const lastNav = periodSnapshots[periodSnapshots.length - 1]?.nav ?? firstNav;
-		const periodReturn = lastNav - firstNav;
-		const returnPct = firstNav > 0 ? (periodReturn / firstNav) * 100 : 0;
-
-		// Filter trades in this period
+	// Helper to calculate trade stats for a period
+	const calcTradeStats = (startDate: Date) => {
 		const periodTrades = tradePnLs.filter((t) => new Date(t.timestamp) >= startDate);
 		const periodWins = periodTrades.filter((t) => t.pnl > 0).length;
 		const trades = periodTrades.length;
 		const winRate = trades > 0 ? (periodWins / trades) * 100 : 0;
-
-		return { return: periodReturn, returnPct, trades, winRate };
+		return { trades, winRate };
 	};
 
-	// Calculate max drawdown and current drawdown
+	// Fetch Alpaca portfolio history for each period
+	let periodMetrics = {
+		today: { ...defaultMetrics },
+		week: { ...defaultMetrics },
+		month: { ...defaultMetrics },
+		threeMonth: { ...defaultMetrics },
+		ytd: { ...defaultMetrics },
+		oneYear: { ...defaultMetrics },
+		total: { ...defaultMetrics },
+	};
+
+	let equityHistory: number[] = [];
+
+	if (isAlpacaConfigured()) {
+		try {
+			const apiKey = Bun.env.ALPACA_KEY as string;
+			const apiSecret = Bun.env.ALPACA_SECRET as string;
+			const config = { apiKey, apiSecret, environment: getCurrentEnvironment() };
+
+			// Fetch current account for real-time equity
+			const client = getBrokerClient();
+			const currentAccount = await client.getAccount();
+			const currentEquity = currentAccount.equity;
+
+			// Helper to fetch history with error logging
+			const fetchHistory = async (
+				period: "1D" | "1W" | "1M" | "3M" | "1A" | "all",
+				timeframe: "1H" | "1D"
+			) => {
+				try {
+					const result = await getPortfolioHistory(config, { period, timeframe });
+					log.debug(
+						{
+							period,
+							dataPoints: result.equity?.length ?? 0,
+							baseValue: result.baseValue,
+						},
+						"Fetched portfolio history"
+					);
+					return result;
+				} catch (error) {
+					log.warn(
+						{ period, error: error instanceof Error ? error.message : String(error) },
+						"Failed to fetch portfolio history for period"
+					);
+					return null;
+				}
+			};
+
+			// Fetch history for different periods in parallel
+			const [dayHistory, weekHistory, monthHistory, threeMonthHistory, ytdHistory, allHistory] =
+				await Promise.all([
+					fetchHistory("1D", "1H"),
+					fetchHistory("1W", "1D"),
+					fetchHistory("1M", "1D"),
+					fetchHistory("3M", "1D"),
+					fetchHistory("1A", "1D"),
+					fetchHistory("all", "1D"),
+				]);
+
+			// Helper to calculate returns using CURRENT equity vs historical base value
+			// Uses the FIRST equity value in the history array for reliability
+			// (Alpaca's baseValue can be inconsistent for new accounts)
+			const calcReturns = (
+				history: BrokerPortfolioHistory | null,
+				overrideBase?: number
+			): { return: number; returnPct: number } => {
+				if (!history && !overrideBase) {
+					log.debug("No history data available");
+					return { return: 0, returnPct: 0 };
+				}
+
+				// Use override base if provided, otherwise use first equity value from history
+				// This is more reliable than baseValue for periods that may be incomplete
+				let baseValue = overrideBase;
+				if (!baseValue && history) {
+					// Use the first equity value in the array (start of period)
+					baseValue = history.equity?.[0] ?? history.baseValue ?? 0;
+				}
+
+				if (!baseValue || baseValue === 0) {
+					log.debug("Base value is 0 or undefined");
+					return { return: 0, returnPct: 0 };
+				}
+
+				// Use CURRENT account equity instead of last historical point
+				// This includes today's unrealized P&L
+				const periodReturn = currentEquity - baseValue;
+				const returnPct = (currentEquity / baseValue - 1) * 100;
+
+				log.debug(
+					{ baseValue, currentEquity, periodReturn, returnPct },
+					"Calculated period return using current equity"
+				);
+
+				return { return: periodReturn, returnPct };
+			};
+
+			// For Today, use lastEquity from account (most reliable for intraday)
+			const lastEquity = currentAccount.lastEquity;
+
+			// Calculate period boundaries for trade stats
+			const now = new Date();
+			const todayStart = new Date(now);
+			todayStart.setHours(0, 0, 0, 0);
+			const weekStart = new Date(now);
+			weekStart.setDate(weekStart.getDate() - 7);
+			const monthStart = new Date(now);
+			monthStart.setMonth(monthStart.getMonth() - 1);
+			const threeMonthStart = new Date(now);
+			threeMonthStart.setMonth(threeMonthStart.getMonth() - 3);
+			const ytdStart = new Date(now.getFullYear(), 0, 1);
+			const oneYearStart = new Date(now);
+			oneYearStart.setFullYear(oneYearStart.getFullYear() - 1);
+
+			// Combine Alpaca returns with trade statistics
+			// Today uses lastEquity (previous close) for accurate intraday calculation
+			const todayReturns = calcReturns(dayHistory, lastEquity);
+			const weekReturns = calcReturns(weekHistory);
+			const monthReturns = calcReturns(monthHistory);
+			const threeMonthReturns = calcReturns(threeMonthHistory);
+			const ytdReturns = calcReturns(ytdHistory);
+			const allReturns = calcReturns(allHistory);
+
+			periodMetrics = {
+				today: { ...todayReturns, ...calcTradeStats(todayStart) },
+				week: { ...weekReturns, ...calcTradeStats(weekStart) },
+				month: { ...monthReturns, ...calcTradeStats(monthStart) },
+				threeMonth: { ...threeMonthReturns, ...calcTradeStats(threeMonthStart) },
+				ytd: { ...ytdReturns, ...calcTradeStats(ytdStart) },
+				oneYear: { ...allReturns, ...calcTradeStats(oneYearStart) }, // Use all history for 1Y
+				total: { ...allReturns, ...calcTradeStats(new Date(0)) },
+			};
+
+			// Use the longest history for volatility/drawdown calculations
+			// Include current equity to capture today's changes
+			equityHistory = [...(allHistory?.equity ?? monthHistory?.equity ?? [])];
+			if (currentEquity > 0) {
+				equityHistory.push(currentEquity);
+			}
+
+			log.debug(
+				{
+					todayReturn: periodMetrics.today.return,
+					weekReturn: periodMetrics.week.return,
+					monthReturn: periodMetrics.month.return,
+				},
+				"Calculated period returns from Alpaca history"
+			);
+		} catch (error) {
+			log.warn(
+				{ error: error instanceof Error ? error.message : String(error) },
+				"Failed to fetch Alpaca portfolio history for performance metrics"
+			);
+		}
+	}
+
+	// Calculate max drawdown and current drawdown from equity history
+	// IMPORTANT: Include current real-time equity to capture intraday drawdowns
 	let peak = 0;
 	let maxDrawdown = 0;
 	let currentDrawdown = 0;
 
-	for (const s of snapshots.data) {
-		peak = Math.max(peak, s.nav);
-		const drawdown = peak - s.nav;
+	// First, find historical peak from recorded equity
+	for (const equity of equityHistory) {
+		peak = Math.max(peak, equity);
+		const drawdown = peak - equity;
 		maxDrawdown = Math.max(maxDrawdown, drawdown);
-		currentDrawdown = drawdown; // Last value is current
 	}
 
-	const maxDrawdownPct = peak > 0 ? (maxDrawdown / peak) * 100 : 0;
-	const currentDrawdownPct = peak > 0 ? (currentDrawdown / peak) * 100 : 0;
+	// Now calculate current drawdown using REAL-TIME equity (includes today's unrealized P&L)
+	// We need to fetch current equity if we're in the Alpaca-configured block
+	let currentEquityForDD = equityHistory[equityHistory.length - 1] ?? 0;
+	if (isAlpacaConfigured()) {
+		try {
+			const client = getBrokerClient();
+			const account = await client.getAccount();
+			currentEquityForDD = account.equity;
+			// Update peak if current equity is higher than historical peak
+			peak = Math.max(peak, currentEquityForDD);
+			// Update max drawdown if current drawdown is worse
+			const currentDD = peak - currentEquityForDD;
+			maxDrawdown = Math.max(maxDrawdown, currentDD);
+			currentDrawdown = currentDD;
+			log.debug(
+				{ peak, currentEquity: currentEquityForDD, currentDrawdown, maxDrawdown },
+				"Calculated drawdown with real-time equity"
+			);
+		} catch {
+			// Fall back to last historical equity
+			currentDrawdown = peak > 0 ? peak - currentEquityForDD : 0;
+		}
+	} else {
+		currentDrawdown = peak > 0 ? peak - currentEquityForDD : 0;
+	}
+
+	// Express drawdowns as negative percentages (e.g., -1.17% not 1.17%)
+	const maxDrawdownPct = peak > 0 ? -(maxDrawdown / peak) * 100 : 0;
+	const currentDrawdownPct = peak > 0 ? -(currentDrawdown / peak) * 100 : 0;
 
 	// Calculate overall win/loss statistics from trade P&Ls
 	const wins = tradePnLs.filter((t) => t.pnl > 0);
@@ -827,9 +1019,7 @@ app.openapi(performanceRoute, async (c) => {
 	const profitFactor = totalLosses > 0 ? totalWins / totalLosses : 0;
 
 	// Calculate Sharpe and Sortino from daily returns
-	// Extract NAV values and calculate daily returns
-	const navValues = snapshots.data.map((s) => s.nav);
-	const dailyReturns = calculateReturns(navValues);
+	const dailyReturns = calculateReturns(equityHistory);
 
 	// Use daily config (252 trading days per year)
 	const dailyConfig = {
@@ -855,13 +1045,13 @@ app.openapi(performanceRoute, async (c) => {
 
 	return c.json({
 		periods: {
-			today: calcPeriodMetrics(todayStart),
-			week: calcPeriodMetrics(weekStart),
-			month: calcPeriodMetrics(monthStart),
-			threeMonth: calcPeriodMetrics(threeMonthStart),
-			ytd: calcPeriodMetrics(ytdStart),
-			oneYear: calcPeriodMetrics(oneYearStart),
-			total: calcPeriodMetrics(new Date(0)),
+			today: periodMetrics.today,
+			week: periodMetrics.week,
+			month: periodMetrics.month,
+			threeMonth: periodMetrics.threeMonth,
+			ytd: periodMetrics.ytd,
+			oneYear: periodMetrics.oneYear,
+			total: periodMetrics.total,
 		},
 		volatility: {
 			daily: dailyVolatility,

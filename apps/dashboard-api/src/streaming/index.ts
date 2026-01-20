@@ -46,3 +46,9 @@ export {
 	onOptionsEvent,
 	shutdownSharedOptionsWebSocket,
 } from "./shared-options-ws.js";
+// Trading updates streaming (Alpaca trade_updates WebSocket)
+export {
+	initTradingUpdatesStreaming,
+	isTradingUpdatesConnected,
+	shutdownTradingUpdatesStreaming,
+} from "./trading-updates.js";

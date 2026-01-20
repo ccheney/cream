@@ -2,45 +2,103 @@
  * Portfolio Handlers
  *
  * Handlers for portfolio state requests and position updates.
+ * Fetches real-time data from Alpaca, enriched with DB metadata.
  */
 
+import { createAlpacaClient } from "@cream/broker";
 import { requireEnv } from "@cream/domain";
 import { sendError, sendMessage } from "../channels.js";
 import type { WebSocketWithMetadata } from "../types.js";
 
+function isAlpacaConfigured(): boolean {
+	return Boolean(Bun.env.ALPACA_KEY && Bun.env.ALPACA_SECRET);
+}
+
 /**
  * Handle portfolio state request.
- * Returns current positions and portfolio summary.
+ * Returns current positions and portfolio summary from Alpaca.
  */
 export async function handlePortfolioState(ws: WebSocketWithMetadata): Promise<void> {
 	try {
-		const { getPositionsRepo } = await import("../../db.js");
-		const positionsRepo = await getPositionsRepo();
 		const environment = requireEnv();
-		const positionsResult = await positionsRepo.findMany({
+
+		if (!isAlpacaConfigured()) {
+			// Fall back to DB-only if Alpaca not configured
+			const { getPositionsRepo } = await import("../../db.js");
+			const positionsRepo = await getPositionsRepo();
+			const positionsResult = await positionsRepo.findMany({
+				environment,
+				status: "open",
+			});
+
+			const positions = positionsResult.data.map((p) => ({
+				symbol: p.symbol,
+				quantity: p.quantity,
+				marketValue: p.marketValue ?? p.quantity * (p.avgEntryPrice ?? 0),
+				unrealizedPnl: p.unrealizedPnl ?? 0,
+				unrealizedPnlPercent: p.unrealizedPnlPct ?? 0,
+				costBasis: p.avgEntryPrice ?? 0,
+			}));
+
+			const totalValue = positions.reduce((sum, p) => sum + p.marketValue, 0);
+
+			sendMessage(ws, {
+				type: "portfolio",
+				data: {
+					totalValue,
+					cash: 0,
+					buyingPower: 0,
+					dailyPnl: 0,
+					dailyPnlPercent: 0,
+					openPositions: positions.length,
+					positions,
+					timestamp: new Date().toISOString(),
+				},
+			});
+			return;
+		}
+
+		// Fetch from Alpaca (primary source)
+		const client = createAlpacaClient({
+			apiKey: Bun.env.ALPACA_KEY as string,
+			apiSecret: Bun.env.ALPACA_SECRET as string,
 			environment,
-			status: "open",
 		});
 
-		const positions = positionsResult.data.map((p) => ({
+		const [alpacaPositions, account] = await Promise.all([
+			client.getPositions(),
+			client.getAccount(),
+		]);
+
+		const positions = alpacaPositions.map((p) => ({
 			symbol: p.symbol,
-			quantity: p.quantity,
-			marketValue: p.marketValue ?? p.quantity * (p.avgEntryPrice ?? 0),
-			unrealizedPnl: p.unrealizedPnl ?? 0,
-			unrealizedPnlPercent: p.unrealizedPnlPct ?? 0,
-			costBasis: p.avgEntryPrice ?? 0,
+			quantity: p.qty,
+			marketValue: p.marketValue,
+			unrealizedPnl: p.unrealizedPl,
+			unrealizedPnlPercent: p.unrealizedPlpc * 100,
+			costBasis: p.avgEntryPrice,
+			currentPrice: p.currentPrice,
+			lastdayPrice: p.lastdayPrice,
 		}));
 
+		// Calculate daily P&L from position changes
+		const dailyPnl = alpacaPositions.reduce((sum, p) => {
+			const dayChange = (p.currentPrice - p.lastdayPrice) * p.qty * (p.side === "long" ? 1 : -1);
+			return sum + dayChange;
+		}, 0);
+
 		const totalValue = positions.reduce((sum, p) => sum + p.marketValue, 0);
+		const totalCostBasis = positions.reduce((sum, p) => sum + p.costBasis * p.quantity, 0);
+		const dailyPnlPercent = totalCostBasis > 0 ? (dailyPnl / totalCostBasis) * 100 : 0;
 
 		sendMessage(ws, {
 			type: "portfolio",
 			data: {
 				totalValue,
-				cash: 0,
-				buyingPower: 0,
-				dailyPnl: 0,
-				dailyPnlPercent: 0,
+				cash: account.cash,
+				buyingPower: account.buyingPower,
+				dailyPnl,
+				dailyPnlPercent,
 				openPositions: positions.length,
 				positions,
 				timestamp: new Date().toISOString(),

@@ -55,9 +55,11 @@ import {
 	initMarketDataStreaming,
 	initOptionsDataStreaming,
 	initSharedOptionsWebSocket,
+	initTradingUpdatesStreaming,
 	shutdownMarketDataStreaming,
 	shutdownOptionsDataStreaming,
 	shutdownSharedOptionsWebSocket,
+	shutdownTradingUpdatesStreaming,
 } from "./streaming/index.js";
 import {
 	closeAllConnections,
@@ -363,6 +365,14 @@ if (import.meta.main) {
 			);
 		});
 
+	// Initialize trading updates streaming (Alpaca trade_updates for order/position updates)
+	initTradingUpdatesStreaming().catch((error) => {
+		log.warn(
+			{ error: error instanceof Error ? error.message : String(error) },
+			"Trading updates streaming initialization failed"
+		);
+	});
+
 	// Start event publisher for broadcasting events to WebSocket clients
 	const publisher = getEventPublisher();
 	publisher.start().catch((error) => {
@@ -412,6 +422,7 @@ if (import.meta.main) {
 		shutdownMarketDataStreaming();
 		shutdownOptionsDataStreaming();
 		shutdownSharedOptionsWebSocket();
+		shutdownTradingUpdatesStreaming();
 		closeAllConnections("Server shutting down");
 		closeDb();
 		await shutdownTracing();

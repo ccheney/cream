@@ -9,7 +9,7 @@
  * @see docs/plans/ui/03-views.md Section 5: Portfolio Dashboard
  */
 
-import { memo } from "react";
+import { memo, useMemo } from "react";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import type { Account, PerformanceMetrics } from "@/lib/api/types";
 import { PerformanceGrid } from "./PerformanceGrid";
@@ -24,6 +24,10 @@ export interface AccountSummaryCardProps {
 	isStreaming?: boolean;
 	performanceMetrics?: PerformanceMetrics;
 	isPerformanceLoading?: boolean;
+	/** Live streaming day P&L - overrides API data when available */
+	liveDayPnl?: number;
+	/** Live streaming day P&L percentage - overrides API data when available */
+	liveDayPnlPct?: number;
 }
 
 interface MetricItemProps {
@@ -109,10 +113,37 @@ export const AccountSummaryCard = memo(function AccountSummaryCard({
 	isStreaming = false,
 	performanceMetrics,
 	isPerformanceLoading = false,
+	liveDayPnl,
+	liveDayPnlPct,
 }: AccountSummaryCardProps) {
 	// Calculate margin used percentage
 	const marginUsed =
 		account && account.equity > 0 ? (account.maintenanceMargin / account.equity) * 100 : 0;
+
+	// Merge live streaming data with API performance metrics
+	const mergedMetrics = useMemo((): PerformanceMetrics | undefined => {
+		if (!performanceMetrics) {
+			return undefined;
+		}
+
+		// If we have live day P&L, override the "today" period
+		if (liveDayPnl !== undefined || liveDayPnlPct !== undefined) {
+			return {
+				...performanceMetrics,
+				periods: {
+					...performanceMetrics.periods,
+					today: {
+						return: liveDayPnl ?? performanceMetrics.periods?.today?.return ?? 0,
+						returnPct: liveDayPnlPct ?? performanceMetrics.periods?.today?.returnPct ?? 0,
+						trades: performanceMetrics.periods?.today?.trades ?? 0,
+						winRate: performanceMetrics.periods?.today?.winRate ?? 0,
+					},
+				},
+			};
+		}
+
+		return performanceMetrics;
+	}, [performanceMetrics, liveDayPnl, liveDayPnlPct]);
 
 	// Determine margin status variant
 	const marginVariant: MetricItemProps["variant"] =
@@ -200,7 +231,7 @@ export const AccountSummaryCard = memo(function AccountSummaryCard({
 					<span className="text-xs text-stone-400 dark:text-night-500 uppercase tracking-wide">
 						Returns
 					</span>
-					<PerformanceGrid metrics={performanceMetrics} isLoading={isPerformanceLoading} />
+					<PerformanceGrid metrics={mergedMetrics} isLoading={isPerformanceLoading} />
 				</div>
 			</div>
 		</div>

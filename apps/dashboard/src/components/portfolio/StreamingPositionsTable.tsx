@@ -49,6 +49,10 @@ interface SortState {
 const ROW_HEIGHT = 48;
 const OVERSCAN = 5;
 
+// Grid template for consistent column widths (7 columns)
+const GRID_TEMPLATE =
+	"minmax(100px, 1.5fr) minmax(60px, 1fr) minmax(80px, 1.2fr) minmax(80px, 1.2fr) minmax(80px, 1.2fr) minmax(90px, 1.3fr) minmax(80px, 1.2fr)";
+
 // ============================================
 // Helpers
 // ============================================
@@ -86,20 +90,18 @@ const SortableHeader = memo(function SortableHeader({
 	const icon = isActive ? (currentSort.direction === "asc" ? "↑" : "↓") : "";
 
 	return (
-		<th
+		<button
+			type="button"
 			className={`px-4 py-3 font-medium cursor-pointer hover:bg-cream-100 dark:hover:bg-night-700 transition-colors select-none ${
-				align === "right" ? "text-right" : "text-left"
-			}`}
+				align === "right" ? "text-right justify-end" : "text-left justify-start"
+			} flex items-center gap-1`}
 			onClick={() => onSort(field)}
-			scope="col"
-			aria-sort={isActive ? (currentSort.direction === "asc" ? "ascending" : "descending") : "none"}
+			aria-label={`Sort by ${label}`}
 		>
-			<span className="inline-flex items-center gap-1">
-				{align === "right" && <span className="w-3">{icon}</span>}
-				{label}
-				{align === "left" && <span className="w-3">{icon}</span>}
-			</span>
-		</th>
+			{align === "right" && <span className="w-3 text-xs">{icon}</span>}
+			<span>{label}</span>
+			{align === "left" && <span className="w-3 text-xs">{icon}</span>}
+		</button>
 	);
 });
 
@@ -121,18 +123,21 @@ const VirtualizedRow = memo(function VirtualizedRow({ position, style }: Virtual
 		: "";
 
 	return (
-		<tr
-			className="hover:bg-cream-50 dark:hover:bg-night-750 transition-colors absolute left-0 right-0"
-			style={style}
+		<div
+			className="grid hover:bg-cream-50 dark:hover:bg-night-750 transition-colors absolute left-0 right-0 border-b border-cream-100 dark:border-night-700"
+			style={{ ...style, gridTemplateColumns: GRID_TEMPLATE }}
+			role="row"
 		>
 			{/* Symbol */}
-			<td className="px-4 py-3 font-medium text-stone-900 dark:text-night-50">
+			<div
+				className="px-4 py-3 font-medium text-stone-900 dark:text-night-50 flex items-center"
+				role="cell"
+			>
 				<div className="flex items-center gap-2">
 					<Link href={`/portfolio/positions/${position.id}`} className="hover:text-blue-600">
 						{position.symbol}
 					</Link>
 					{position.isStreaming && (
-						// biome-ignore lint/a11y/useSemanticElements: role="status" for live region accessibility
 						<span
 							className="w-2 h-2 rounded-full bg-green-500 animate-pulse"
 							title="Live streaming"
@@ -141,10 +146,13 @@ const VirtualizedRow = memo(function VirtualizedRow({ position, style }: Virtual
 						/>
 					)}
 				</div>
-			</td>
+			</div>
 
 			{/* Quantity */}
-			<td className="px-4 py-3 text-right font-mono text-stone-900 dark:text-night-50">
+			<div
+				className="px-4 py-3 text-right font-mono text-stone-900 dark:text-night-50 flex items-center justify-end"
+				role="cell"
+			>
 				<span
 					className={`px-2 py-0.5 text-xs font-medium rounded ${
 						position.side === "LONG"
@@ -154,15 +162,21 @@ const VirtualizedRow = memo(function VirtualizedRow({ position, style }: Virtual
 				>
 					{position.qty}
 				</span>
-			</td>
+			</div>
 
 			{/* Avg Entry */}
-			<td className="px-4 py-3 text-right font-mono text-stone-900 dark:text-night-50">
+			<div
+				className="px-4 py-3 text-right font-mono text-stone-900 dark:text-night-50 flex items-center justify-end"
+				role="cell"
+			>
 				{formatCurrency(position.avgEntry)}
-			</td>
+			</div>
 
 			{/* Current Price (flashes on update) */}
-			<td className={`px-4 py-3 text-right ${pnlFlashClasses} rounded`}>
+			<div
+				className={`px-4 py-3 text-right flex items-center justify-end ${pnlFlashClasses} rounded`}
+				role="cell"
+			>
 				<AnimatedNumber
 					value={position.livePrice}
 					format="currency"
@@ -170,10 +184,13 @@ const VirtualizedRow = memo(function VirtualizedRow({ position, style }: Virtual
 					className="font-mono text-stone-900 dark:text-night-50"
 					animationThreshold={0.001}
 				/>
-			</td>
+			</div>
 
 			{/* Day P&L */}
-			<td className={`px-4 py-3 text-right font-mono ${dayPnlColor}`}>
+			<div
+				className={`px-4 py-3 text-right font-mono flex items-center justify-end ${dayPnlColor}`}
+				role="cell"
+			>
 				{position.liveDayPnl >= 0 ? "+" : ""}
 				<AnimatedNumber
 					value={position.liveDayPnl}
@@ -182,10 +199,13 @@ const VirtualizedRow = memo(function VirtualizedRow({ position, style }: Virtual
 					className="inline"
 					animationThreshold={1}
 				/>
-			</td>
+			</div>
 
 			{/* Unrealized P&L */}
-			<td className={`px-4 py-3 text-right font-mono ${pnlColor}`}>
+			<div
+				className={`px-4 py-3 text-right font-mono flex items-center justify-end ${pnlColor}`}
+				role="cell"
+			>
 				{position.liveUnrealizedPnl >= 0 ? "+" : ""}
 				<AnimatedNumber
 					value={position.liveUnrealizedPnl}
@@ -194,13 +214,16 @@ const VirtualizedRow = memo(function VirtualizedRow({ position, style }: Virtual
 					className="inline"
 					animationThreshold={1}
 				/>
-			</td>
+			</div>
 
 			{/* % Change */}
-			<td className={`px-4 py-3 text-right font-mono ${pnlColor}`}>
+			<div
+				className={`px-4 py-3 text-right font-mono flex items-center justify-end ${pnlColor}`}
+				role="cell"
+			>
 				{formatPct(position.liveUnrealizedPnlPct)}
-			</td>
-		</tr>
+			</div>
+		</div>
 	);
 });
 
@@ -319,81 +342,77 @@ export const StreamingPositionsTable = memo(function StreamingPositionsTable({
 					))}
 				</div>
 			) : positions.length > 0 ? (
-				<div className="overflow-x-auto">
-					{/* Table header (sticky) */}
-					<table className="w-full">
-						<thead className="bg-cream-50 dark:bg-night-750">
-							<tr className="text-sm text-stone-500 dark:text-night-300">
-								<SortableHeader
-									label="Symbol"
-									field="symbol"
-									currentSort={sortState}
-									onSort={handleSort}
-									align="left"
-								/>
-								<SortableHeader
-									label="Qty"
-									field="qty"
-									currentSort={sortState}
-									onSort={handleSort}
-								/>
-								<SortableHeader
-									label="Avg Entry"
-									field="avgEntry"
-									currentSort={sortState}
-									onSort={handleSort}
-								/>
-								<SortableHeader
-									label="Current"
-									field="livePrice"
-									currentSort={sortState}
-									onSort={handleSort}
-								/>
-								<SortableHeader
-									label="Day P&L"
-									field="liveDayPnl"
-									currentSort={sortState}
-									onSort={handleSort}
-								/>
-								<SortableHeader
-									label="Unrealized"
-									field="liveUnrealizedPnl"
-									currentSort={sortState}
-									onSort={handleSort}
-								/>
-								<SortableHeader
-									label="% Change"
-									field="liveUnrealizedPnlPct"
-									currentSort={sortState}
-									onSort={handleSort}
-								/>
-							</tr>
-						</thead>
-					</table>
+				<div role="table" aria-label="Open positions">
+					{/* Column headers */}
+					<div
+						className="grid bg-cream-50 dark:bg-night-750 text-sm text-stone-500 dark:text-night-300 border-b border-cream-200 dark:border-night-700"
+						style={{ gridTemplateColumns: GRID_TEMPLATE }}
+						role="row"
+					>
+						<SortableHeader
+							label="Symbol"
+							field="symbol"
+							currentSort={sortState}
+							onSort={handleSort}
+							align="left"
+						/>
+						<SortableHeader label="Qty" field="qty" currentSort={sortState} onSort={handleSort} />
+						<SortableHeader
+							label="Avg Entry"
+							field="avgEntry"
+							currentSort={sortState}
+							onSort={handleSort}
+						/>
+						<SortableHeader
+							label="Current"
+							field="livePrice"
+							currentSort={sortState}
+							onSort={handleSort}
+						/>
+						<SortableHeader
+							label="Day P&L"
+							field="liveDayPnl"
+							currentSort={sortState}
+							onSort={handleSort}
+						/>
+						<SortableHeader
+							label="Unrealized"
+							field="liveUnrealizedPnl"
+							currentSort={sortState}
+							onSort={handleSort}
+						/>
+						<SortableHeader
+							label="% Change"
+							field="liveUnrealizedPnlPct"
+							currentSort={sortState}
+							onSort={handleSort}
+						/>
+					</div>
 
-					{/* Virtualized table body */}
-					<div ref={parentRef} className="overflow-auto" style={{ maxHeight: "400px" }}>
+					{/* Virtualized rows */}
+					<div
+						ref={parentRef}
+						className="overflow-auto"
+						style={{ maxHeight: "400px" }}
+						role="rowgroup"
+					>
 						<div style={{ height: totalSize, position: "relative" }}>
-							<table className="w-full">
-								<tbody>
-									{virtualItems.map((virtualItem) => {
-										const position = sortedPositions[virtualItem.index];
-										if (!position) {
-											return null;
-										}
-										return (
-											<VirtualizedRow
-												key={position.id}
-												position={position}
-												style={{
-													height: `${virtualItem.size}px`,
-													transform: `translateY(${virtualItem.start}px)`,
-												}}
-											/>
-										);
-									})}
-								</tbody>
-							</table>
+							{virtualItems.map((virtualItem) => {
+								const position = sortedPositions[virtualItem.index];
+								if (!position) {
+									return null;
+								}
+								return (
+									<VirtualizedRow
+										key={position.id}
+										position={position}
+										style={{
+											height: `${virtualItem.size}px`,
+											transform: `translateY(${virtualItem.start}px)`,
+										}}
+									/>
+								);
+							})}
 						</div>
 					</div>
 				</div>
