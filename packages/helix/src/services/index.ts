@@ -25,13 +25,6 @@ export {
 	type ExtractedEvent,
 } from "./event-ingestion.js";
 export {
-	createIndicatorIngestionService,
-	type IndicatorIngestionOptions,
-	type IndicatorIngestionResult,
-	IndicatorIngestionService,
-	type IndicatorInput,
-} from "./indicator-ingestion.js";
-export {
 	type CompanySensitivity,
 	calculateRollingCorrelation,
 	correlationToSensitivity,

@@ -77,20 +77,6 @@ export type MentionType = "PRIMARY" | "SECONDARY" | "PEER_COMPARISON";
 export type DocumentType = "FILING" | "TRANSCRIPT" | "NEWS";
 
 // ============================================
-// Indicator Synthesis Enums
-// ============================================
-
-/**
- * Technical indicator category
- */
-export type IndicatorCategory = "momentum" | "trend" | "volatility" | "volume" | "custom";
-
-/**
- * Indicator lifecycle status
- */
-export type IndicatorStatus = "staging" | "paper" | "production" | "retired";
-
-// ============================================
 // Research Hypothesis Enums
 // ============================================
 

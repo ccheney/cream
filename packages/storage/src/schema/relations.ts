@@ -14,12 +14,6 @@ import {
 	positionHistory,
 	positions,
 } from "./core-trading";
-import {
-	indicatorIcHistory,
-	indicatorPaperSignals,
-	indicators,
-	indicatorTrials,
-} from "./indicators";
 import { thesisState, thesisStateHistory } from "./thesis";
 import { alertSettings, userPreferences } from "./user-settings";
 
@@ -82,47 +76,6 @@ export const cycleEventsRelations = relations(cycleEvents, ({ one }) => ({
 	cycle: one(cycles, {
 		fields: [cycleEvents.cycleId],
 		references: [cycles.id],
-	}),
-}));
-
-// Indicator relations
-export const indicatorsRelations = relations(indicators, ({ many, one }) => ({
-	trials: many(indicatorTrials),
-	icHistory: many(indicatorIcHistory),
-	paperSignals: many(indicatorPaperSignals),
-	similarTo: one(indicators, {
-		fields: [indicators.similarTo],
-		references: [indicators.id],
-		relationName: "similarIndicators",
-	}),
-	replaces: one(indicators, {
-		fields: [indicators.replaces],
-		references: [indicators.id],
-		relationName: "replacedIndicators",
-	}),
-}));
-
-// Indicator trials relations
-export const indicatorTrialsRelations = relations(indicatorTrials, ({ one }) => ({
-	indicator: one(indicators, {
-		fields: [indicatorTrials.indicatorId],
-		references: [indicators.id],
-	}),
-}));
-
-// Indicator IC history relations
-export const indicatorIcHistoryRelations = relations(indicatorIcHistory, ({ one }) => ({
-	indicator: one(indicators, {
-		fields: [indicatorIcHistory.indicatorId],
-		references: [indicators.id],
-	}),
-}));
-
-// Indicator paper signals relations
-export const indicatorPaperSignalsRelations = relations(indicatorPaperSignals, ({ one }) => ({
-	indicator: one(indicators, {
-		fields: [indicatorPaperSignals.indicatorId],
-		references: [indicators.id],
 	}),
 }));
 

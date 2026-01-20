@@ -68,12 +68,6 @@ const DATA_SOURCES: Record<WorkerService, DataSource[]> = {
 			color: "bg-cyan-100 text-cyan-800 dark:bg-cyan-900/30 dark:text-cyan-300",
 		},
 	],
-	indicator_synthesis: [
-		{
-			label: "Mastra",
-			color: "bg-rose-100 text-rose-800 dark:bg-rose-900/30 dark:text-rose-300",
-		},
-	],
 };
 
 // ============================================

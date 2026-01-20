@@ -27,7 +27,6 @@ const serviceDisplayNames: Record<WorkerService, string> = {
 	sentiment: "Sentiment",
 	corporate_actions: "Corporate Actions",
 	prediction_markets: "Prediction Markets",
-	indicator_synthesis: "Indicator Synthesis",
 };
 
 // ============================================

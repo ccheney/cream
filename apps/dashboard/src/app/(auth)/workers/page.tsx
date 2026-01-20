@@ -33,7 +33,6 @@ const triggerLabels: Record<WorkerService, string> = {
 	sentiment: "Trigger",
 	corporate_actions: "Trigger",
 	prediction_markets: "Fetch",
-	indicator_synthesis: "Run",
 };
 
 // ============================================

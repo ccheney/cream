@@ -20,7 +20,6 @@ import {
 	DecisionsRepository,
 	ExternalEventsRepository,
 	getDb,
-	IndicatorsRepository,
 	MacroWatchRepository,
 	OrdersRepository,
 	PositionsRepository,
@@ -231,13 +230,6 @@ export function getRegimeLabelsRepo(): RegimeLabelsRepository {
  */
 export function getDecisionsRepo(): DecisionsRepository {
 	return new DecisionsRepository();
-}
-
-/**
- * Get indicators repository
- */
-export function getIndicatorsRepo(): IndicatorsRepository {
-	return new IndicatorsRepository();
 }
 
 /**

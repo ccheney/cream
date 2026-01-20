@@ -12,8 +12,6 @@ import type {
 	ExternalEventType,
 	FilingType,
 	HypothesisStatus,
-	IndicatorCategory,
-	IndicatorStatus,
 	MacroFrequency,
 	MarketCapBucket,
 	MarketMechanism,
@@ -142,51 +140,6 @@ export interface MacroEntity {
 }
 
 // ============================================
-// Indicator Synthesis Nodes
-// ============================================
-
-/**
- * Indicator node - synthesized technical indicators
- *
- * Stores metadata and embeddings for generated indicators,
- * enabling semantic similarity search and relationship tracking.
- *
- * @see docs/plans/19-dynamic-indicator-synthesis.md
- */
-export interface Indicator {
-	/** Unique identifier (matches PostgreSQL indicators.id) */
-	indicator_id: string;
-	/** Human-readable name (e.g., "RSI_Adaptive_14") */
-	name: string;
-	/** Indicator category */
-	category: IndicatorCategory;
-	/** Lifecycle status */
-	status: IndicatorStatus;
-	/** Economic hypothesis driving the indicator */
-	hypothesis: string;
-	/** Economic rationale for why this indicator should work */
-	economic_rationale: string;
-	/** Combined text for semantic embedding (hypothesis + economic_rationale) */
-	embedding_text: string; // Embedded field
-	/** Market regime label when indicator was generated */
-	generated_in_regime?: string;
-	/** Code hash for deduplication (SHA256) */
-	code_hash?: string;
-	/** AST signature for structural similarity */
-	ast_signature?: string;
-	/** Deflated Sharpe Ratio from validation */
-	deflated_sharpe?: number;
-	/** Probability of Overfitting (PBO) */
-	probability_of_overfit?: number;
-	/** Information Coefficient */
-	information_coefficient?: number;
-	/** Generation timestamp (ISO 8601) */
-	generated_at: string;
-	/** Environment where indicator was generated */
-	environment: Environment;
-}
-
-// ============================================
 // Research Hypothesis Nodes
 // ============================================
 
@@ -281,7 +234,6 @@ export type NodeType =
 	| NewsItem
 	| Company
 	| MacroEntity
-	| Indicator
 	| ThesisMemoryNode
 	| ResearchHypothesis
 	| AcademicPaper;
@@ -298,7 +250,6 @@ export const NODE_TYPES = [
 	"NewsItem",
 	"Company",
 	"MacroEntity",
-	"Indicator",
 	"ThesisMemory",
 	"ResearchHypothesis",
 	"AcademicPaper",
@@ -322,7 +273,6 @@ export const EMBEDDED_FIELDS: Record<NodeTypeName, string[]> = {
 	NewsItem: ["headline", "body_text"],
 	Company: [],
 	MacroEntity: [],
-	Indicator: ["embedding_text"],
 	ThesisMemory: ["entry_thesis"],
 	ResearchHypothesis: ["economic_rationale"],
 	AcademicPaper: ["paper_abstract"],

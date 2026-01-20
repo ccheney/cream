@@ -752,115 +752,6 @@ export const OrderUpdateMessageSchema = z.object({
 export type OrderUpdateMessage = z.infer<typeof OrderUpdateMessageSchema>;
 
 // ============================================
-// Synthesis Progress Message
-// ============================================
-
-/**
- * Synthesis phase enumeration.
- */
-export const SynthesisPhaseSchema = z.enum([
-	"gathering_context",
-	"generating_hypothesis",
-	"implementing",
-	"validating",
-	"initiating_paper_trading",
-]);
-
-export type SynthesisPhase = z.infer<typeof SynthesisPhaseSchema>;
-
-/**
- * Synthesis progress data - triggered during indicator synthesis workflow.
- */
-export const SynthesisProgressDataSchema = z.object({
-	/** Cycle ID that triggered synthesis */
-	cycleId: z.string(),
-	/** Current synthesis phase */
-	phase: SynthesisPhaseSchema,
-	/** Indicator name (if hypothesis generated) */
-	indicatorName: z.string().optional(),
-	/** Progress percentage (0-100) */
-	progress: z.number().min(0).max(100).optional(),
-	/** Human-readable status message */
-	message: z.string(),
-	/** Timestamp */
-	timestamp: z.string(),
-});
-
-export type SynthesisProgressData = z.infer<typeof SynthesisProgressDataSchema>;
-
-/**
- * Synthesis progress message - broadcasted during indicator synthesis.
- *
- * @example
- * { type: "synthesis_progress", data: { cycleId: "...", phase: "implementing", progress: 50, ... } }
- */
-export const SynthesisProgressMessageSchema = z.object({
-	type: z.literal("synthesis_progress"),
-	data: SynthesisProgressDataSchema,
-});
-
-export type SynthesisProgressMessage = z.infer<typeof SynthesisProgressMessageSchema>;
-
-// ============================================
-// Synthesis Complete Message
-// ============================================
-
-/**
- * Synthesis result status.
- */
-export const SynthesisStatusSchema = z.enum([
-	"paper_trading_started",
-	"validation_failed",
-	"implementation_failed",
-	"hypothesis_failed",
-	"error",
-]);
-
-export type SynthesisStatus = z.infer<typeof SynthesisStatusSchema>;
-
-/**
- * Synthesis complete data - triggered when indicator synthesis finishes.
- */
-export const SynthesisCompleteDataSchema = z.object({
-	/** Cycle ID that triggered synthesis */
-	cycleId: z.string(),
-	/** Whether synthesis succeeded */
-	success: z.boolean(),
-	/** Indicator ID (if created) */
-	indicatorId: z.string().optional(),
-	/** Indicator name (if created) */
-	indicatorName: z.string().optional(),
-	/** Final status */
-	status: SynthesisStatusSchema,
-	/** Human-readable result message */
-	message: z.string(),
-	/** Phase completion flags */
-	phases: z.object({
-		hypothesisGenerated: z.boolean(),
-		implementationSucceeded: z.boolean(),
-		validationPassed: z.boolean(),
-		paperTradingStarted: z.boolean(),
-	}),
-	/** Timestamp */
-	timestamp: z.string(),
-});
-
-export type SynthesisCompleteData = z.infer<typeof SynthesisCompleteDataSchema>;
-
-/**
- * Synthesis complete message - broadcasted when indicator synthesis finishes.
- *
- * @example
- * { type: "synthesis_complete", data: { cycleId: "...", success: true, indicatorName: "...", ... } }
- */
-export const SynthesisCompleteMessageSchema = z.object({
-	type: z.literal("synthesis_complete"),
-	data: SynthesisCompleteDataSchema,
-});
-
-export type SynthesisCompleteMessage = z.infer<typeof SynthesisCompleteMessageSchema>;
-
-// ============================================
 // Worker Run Update Message
 // ============================================
 
@@ -882,7 +773,6 @@ export const WorkerServiceNameSchema = z.enum([
 	"sentiment",
 	"corporate_actions",
 	"prediction_markets",
-	"indicator_synthesis",
 ]);
 
 export type WorkerServiceName = z.infer<typeof WorkerServiceNameSchema>;
@@ -963,8 +853,6 @@ export const ServerMessageSchema = z.discriminatedUnion("type", [
 	AccountUpdateMessageSchema,
 	PositionUpdateMessageSchema,
 	OrderUpdateMessageSchema,
-	SynthesisProgressMessageSchema,
-	SynthesisCompleteMessageSchema,
 	WorkerRunUpdateMessageSchema,
 ]);
 

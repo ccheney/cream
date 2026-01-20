@@ -21,8 +21,7 @@ export type WorkerService =
 	| "short_interest"
 	| "sentiment"
 	| "corporate_actions"
-	| "prediction_markets"
-	| "indicator_synthesis";
+	| "prediction_markets";
 
 export type RunStatus = "pending" | "running" | "completed" | "failed";
 

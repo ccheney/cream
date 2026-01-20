@@ -255,7 +255,6 @@ describe("Workers Routes", () => {
 			expect(serviceNames).toContain("sentiment");
 			expect(serviceNames).toContain("corporate_actions");
 			expect(serviceNames).toContain("prediction_markets");
-			expect(serviceNames).toContain("indicator_synthesis");
 		});
 
 		test("includes display names for all services", async () => {

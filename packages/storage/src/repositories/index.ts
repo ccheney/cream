@@ -195,24 +195,6 @@ export {
 	type SyncRunType,
 	type UpdateIndicatorSyncRunInput,
 } from "./indicator-sync-runs.js";
-// Indicator synthesis (migration 008)
-export {
-	type CreateIndicatorICHistoryInput,
-	type CreateIndicatorInput,
-	type CreateIndicatorTrialInput,
-	type ICHistoryFilters,
-	type Indicator,
-	type IndicatorCategory,
-	type IndicatorFilters,
-	type IndicatorICHistory,
-	type IndicatorStatus,
-	IndicatorsRepository,
-	type IndicatorTrial,
-	type PaperTradingReport,
-	type TrialParameters,
-	type ValidationReport,
-	type WalkForwardPeriod,
-} from "./indicators.js";
 // Macro watch (migration 018) - overnight macro watch entries and newspapers
 export {
 	type CreateMacroWatchEntryInput,

@@ -48,7 +48,6 @@ const WorkerServiceSchema = z.enum([
 	"sentiment",
 	"corporate_actions",
 	"prediction_markets",
-	"indicator_synthesis",
 ]);
 
 const RunStatusSchema = z.enum(["running", "completed", "failed"]);
@@ -61,7 +60,6 @@ const ServiceDisplayNames: Record<z.infer<typeof WorkerServiceSchema>, string> =
 	sentiment: "Sentiment",
 	corporate_actions: "Corporate Actions",
 	prediction_markets: "Prediction Markets",
-	indicator_synthesis: "Indicator Synthesis",
 };
 
 const LastRunSchema = z.object({
@@ -130,7 +128,6 @@ function mapRunTypeToService(runType: string): WorkerService | null {
 		newspaper: "newspaper",
 		filings_sync: "filings_sync",
 		prediction_markets: "prediction_markets",
-		indicator_synthesis: "indicator_synthesis",
 	};
 	return mapping[runType] ?? null;
 }
@@ -207,7 +204,6 @@ app.openapi(getWorkerStatusRoute, async (c) => {
 			"sentiment",
 			"corporate_actions",
 			"prediction_markets",
-			"indicator_synthesis",
 		];
 
 		// Get running services
@@ -259,9 +255,6 @@ app.openapi(getWorkerStatusRoute, async (c) => {
 							next_run: string | null;
 						}
 					>;
-					synthesis_scheduler?: {
-						next_run: string | null;
-					};
 				};
 
 				if (health.next_run) {
@@ -283,10 +276,6 @@ app.openapi(getWorkerStatusRoute, async (c) => {
 					if (jobs.corporateActions?.next_run) {
 						nextRunByService.set("corporate_actions", jobs.corporateActions.next_run);
 					}
-				}
-
-				if (health.synthesis_scheduler?.next_run) {
-					nextRunByService.set("indicator_synthesis", health.synthesis_scheduler.next_run);
 				}
 			}
 		} catch {
@@ -908,19 +897,6 @@ app.openapi(getRunDetailsRoute, async (c) => {
 					200
 				);
 			}
-
-			case "indicator_synthesis":
-				return c.json(
-					{
-						run,
-						data: {
-							type: "empty" as const,
-							message:
-								"Synthesis workflow generates new indicators — check Indicator Lab for results",
-						},
-					},
-					200
-				);
 
 			default:
 				return c.json(

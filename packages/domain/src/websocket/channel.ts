@@ -26,7 +26,6 @@ import { z } from "zod/v4";
  * - alerts: System alerts and notifications
  * - system: System status updates
  * - portfolio: Portfolio value and position updates
- * - synthesis: Indicator synthesis workflow progress and results
  */
 export const Channel = z.enum([
 	"quotes",
@@ -41,7 +40,6 @@ export const Channel = z.enum([
 	"system",
 	"portfolio",
 	"filings",
-	"synthesis",
 	"workers",
 ]);
 
@@ -72,7 +70,6 @@ export const CHANNEL_DESCRIPTIONS: Record<Channel, string> = {
 	system: "System status updates",
 	portfolio: "Portfolio value and position updates",
 	filings: "SEC filings sync progress and results",
-	synthesis: "Indicator synthesis workflow progress and results",
 	workers: "Worker service status and run updates",
 };
 

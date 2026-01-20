@@ -21,7 +21,6 @@ import {
 	FilingsRepository,
 	FundamentalsRepository,
 	IndicatorSyncRunsRepository,
-	IndicatorsRepository,
 	MacroWatchRepository,
 	OrdersRepository,
 	PortfolioSnapshotsRepository,
@@ -199,13 +198,6 @@ export function getFilingSyncRunsRepo(): FilingSyncRunsRepository {
  */
 export function getSystemStateRepo(): SystemStateRepository {
 	return new SystemStateRepository();
-}
-
-/**
- * Get indicators repository
- */
-export function getIndicatorsRepo(): IndicatorsRepository {
-	return new IndicatorsRepository();
 }
 
 /**

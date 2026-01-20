@@ -113,22 +113,6 @@ export const corporateActionTypeEnum = pgEnum("corporate_action_type", [
 
 export const regimeEnum = pgEnum("regime", ["trending_up", "trending_down", "ranging", "volatile"]);
 
-// Indicator-related enums
-export const indicatorStatusEnum = pgEnum("indicator_status", [
-	"staging",
-	"paper",
-	"production",
-	"retired",
-]);
-
-export const indicatorCategoryEnum = pgEnum("indicator_category", [
-	"momentum",
-	"trend",
-	"volatility",
-	"volume",
-	"sentiment",
-]);
-
 // Universe-related enums
 export const universeSourceEnum = pgEnum("universe_source", ["static", "index", "screener"]);
 

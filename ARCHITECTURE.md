@@ -162,7 +162,6 @@ flowchart LR
 | SEC Filings | Daily 6 AM ET | Ingest 10-K, 10-Q, 8-K documents |
 | Corporate Actions | Daily 6 AM ET | Dividends, splits, spinoffs |
 | Short Interest | Daily 6 PM ET | FINRA short interest data |
-| Indicator Synthesis | Daily 6 AM ET (Mon-Fri) | Generate new indicators via agents |
 
 ---
 

@@ -111,29 +111,6 @@ N::MacroEntity {
 }
 
 // ============================================
-// Indicator Synthesis - Vector Types
-// ============================================
-
-// Synthesized technical indicators with embedded hypotheses
-V::Indicator {
-    INDEX indicator_id: String,
-    name: String,
-    INDEX category: String,
-    INDEX status: String,
-    hypothesis: String,
-    economic_rationale: String,
-    embedding_text: String,
-    generated_in_regime: String,
-    code_hash: String,
-    ast_signature: String,
-    deflated_sharpe: F64,
-    probability_of_overfit: F64,
-    information_coefficient: F64,
-    generated_at: Date DEFAULT NOW,
-    INDEX environment: String
-}
-
-// ============================================
 // Research Pipeline - Vector Types
 // ============================================
 

@@ -19,8 +19,6 @@ export type {
 	ExternalEventType,
 	FilingType,
 	HypothesisStatus,
-	IndicatorCategory,
-	IndicatorStatus,
 	InfluenceType,
 	MacroFrequency,
 	MarketCapBucket,
@@ -39,7 +37,6 @@ export type {
 	Company,
 	ExternalEvent,
 	FilingChunk,
-	Indicator,
 	MacroEntity,
 	NewsItem,
 	NodeType,
@@ -60,7 +57,6 @@ export type {
 	AffectedByEdge,
 	CitesPaperEdge,
 	DependsOnEdge,
-	DerivedFromEdge,
 	FiledByEdge,
 	GeneratedFactorEdge,
 	HasEventEdge,
@@ -71,10 +67,8 @@ export type {
 	MentionsCompanyEdge,
 	RelatedToEdge,
 	RelatesToMacroEdge,
-	SimilarToEdge,
 	ThesisIncludesEdge,
 	TranscriptForEdge,
-	UsedInDecisionEdge,
 } from "./edge-types.js";
 
 // ============================================

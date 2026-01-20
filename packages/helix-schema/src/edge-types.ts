@@ -116,59 +116,6 @@ export interface MentionedInEdge {
 }
 
 // ============================================
-// Indicator Synthesis Edges
-// ============================================
-
-/**
- * SIMILAR_TO edge - similarity between indicators
- *
- * Connects indicators that are semantically or structurally similar,
- * used for deduplication and evolution tracking.
- */
-export interface SimilarToEdge {
-	source_id: string; // Indicator.indicator_id
-	target_id: string; // Indicator.indicator_id
-	/** Semantic similarity score from embedding distance (0.0 to 1.0) */
-	similarity_score: number;
-	/** AST structural similarity score (0.0 to 1.0) */
-	ast_similarity?: number;
-	/** Timestamp when similarity was computed */
-	computed_at: string;
-}
-
-/**
- * USED_IN_DECISION edge - indicator usage in trade decisions
- *
- * Tracks which indicators contributed to trading decisions,
- * enabling attribution analysis and IC tracking.
- */
-export interface UsedInDecisionEdge {
-	source_id: string; // Indicator.indicator_id
-	target_id: string; // TradeDecision.decision_id
-	/** Signal value at decision time */
-	signal_value: number;
-	/** Whether the indicator signal aligned with decision outcome */
-	contributed_to_outcome?: boolean;
-	/** Weight given to this indicator in the decision */
-	decision_weight?: number;
-}
-
-/**
- * DERIVED_FROM edge - indicator lineage tracking
- *
- * Tracks when one indicator is derived from or replaces another,
- * enabling evolution tracking and retirement analysis.
- */
-export interface DerivedFromEdge {
-	source_id: string; // Indicator.indicator_id (new indicator)
-	target_id: string; // Indicator.indicator_id (parent indicator)
-	/** Type of derivation */
-	derivation_type: "EVOLVED" | "REPLACED" | "ENSEMBLE";
-	/** Timestamp of derivation */
-	derived_at: string;
-}
-
-// ============================================
 // Research Hypothesis Edges
 // ============================================
 

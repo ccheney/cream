@@ -1,18 +1,14 @@
 /**
  * Indicator Tables
  *
- * indicators, indicator_trials, indicator_ic_history,
  * fundamental_indicators, short_interest_indicators, sentiment_indicators,
- * options_indicators_cache, corporate_actions_indicators, indicator_sync_runs,
- * indicator_paper_signals
+ * options_indicators_cache, corporate_actions_indicators, indicator_sync_runs
  */
 import { sql } from "drizzle-orm";
 import {
 	boolean,
-	check,
 	index,
 	integer,
-	jsonb,
 	numeric,
 	pgTable,
 	text,
@@ -20,120 +16,7 @@ import {
 	unique,
 	uuid,
 } from "drizzle-orm/pg-core";
-import {
-	environmentEnum,
-	indicatorCategoryEnum,
-	indicatorStatusEnum,
-	syncRunStatusEnum,
-} from "./enums";
-
-// indicators: Indicator synthesis tracking
-export const indicators = pgTable(
-	"indicators",
-	{
-		id: uuid("id").primaryKey().default(sql`uuidv7()`),
-		name: text("name").notNull().unique(),
-		category: indicatorCategoryEnum("category").notNull(),
-		status: indicatorStatusEnum("status").notNull().default("staging"),
-		hypothesis: text("hypothesis").notNull(),
-		economicRationale: text("economic_rationale").notNull(),
-		generatedAt: timestamp("generated_at", { withTimezone: true }).notNull(),
-		generatedBy: text("generated_by").notNull(),
-		codeHash: text("code_hash"),
-		astSignature: text("ast_signature"),
-		validationReport: text("validation_report"),
-		paperTradingStart: timestamp("paper_trading_start", { withTimezone: true }),
-		paperTradingEnd: timestamp("paper_trading_end", { withTimezone: true }),
-		paperTradingReport: text("paper_trading_report"),
-		promotedAt: timestamp("promoted_at", { withTimezone: true }),
-		prUrl: text("pr_url"),
-		mergedAt: timestamp("merged_at", { withTimezone: true }),
-		retiredAt: timestamp("retired_at", { withTimezone: true }),
-		retirementReason: text("retirement_reason"),
-		similarTo: uuid("similar_to"),
-		replaces: uuid("replaces"),
-		parityReport: text("parity_report"),
-		parityValidatedAt: timestamp("parity_validated_at", { withTimezone: true }),
-		createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
-		updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
-	},
-	(table) => [
-		index("idx_indicators_status").on(table.status),
-		index("idx_indicators_category").on(table.category),
-		index("idx_indicators_code_hash").on(table.codeHash),
-		index("idx_indicators_similar_to").on(table.similarTo),
-		index("idx_indicators_replaces").on(table.replaces),
-		index("idx_indicators_active")
-			.on(table.status)
-			.where(sql`${table.status} IN ('paper', 'production')`),
-	]
-);
-
-// indicator_trials: Trial runs for indicators
-export const indicatorTrials = pgTable(
-	"indicator_trials",
-	{
-		id: uuid("id").primaryKey().default(sql`uuidv7()`),
-		indicatorId: uuid("indicator_id")
-			.notNull()
-			.references(() => indicators.id, { onDelete: "cascade" }),
-		trialNumber: integer("trial_number").notNull(),
-		hypothesis: text("hypothesis").notNull(),
-		parameters: jsonb("parameters").$type<Record<string, unknown>>().notNull(),
-		sharpeRatio: numeric("sharpe_ratio", { precision: 8, scale: 4 }),
-		informationCoefficient: numeric("information_coefficient", {
-			precision: 6,
-			scale: 4,
-		}),
-		maxDrawdown: numeric("max_drawdown", { precision: 6, scale: 4 }),
-		calmarRatio: numeric("calmar_ratio", { precision: 8, scale: 4 }),
-		sortinoRatio: numeric("sortino_ratio", { precision: 8, scale: 4 }),
-		selected: boolean("selected").notNull().default(false),
-		createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
-	},
-	(table) => [
-		check(
-			"valid_ic",
-			sql`${table.informationCoefficient} IS NULL OR (${table.informationCoefficient}::numeric >= -1 AND ${table.informationCoefficient}::numeric <= 1)`
-		),
-		check(
-			"valid_max_drawdown",
-			sql`${table.maxDrawdown} IS NULL OR (${table.maxDrawdown}::numeric >= 0 AND ${table.maxDrawdown}::numeric <= 1)`
-		),
-		check("positive_trial", sql`${table.trialNumber} >= 1`),
-		unique("indicator_trials_indicator_trial").on(table.indicatorId, table.trialNumber),
-		index("idx_trials_indicator").on(table.indicatorId),
-	]
-);
-
-// indicator_ic_history: Information coefficient history
-export const indicatorIcHistory = pgTable(
-	"indicator_ic_history",
-	{
-		id: uuid("id").primaryKey().default(sql`uuidv7()`),
-		indicatorId: uuid("indicator_id")
-			.notNull()
-			.references(() => indicators.id, { onDelete: "cascade" }),
-		date: timestamp("date", { withTimezone: true }).notNull(),
-		icValue: numeric("ic_value", { precision: 6, scale: 4 }).notNull(),
-		icStd: numeric("ic_std", { precision: 6, scale: 4 }).notNull(),
-		decisionsUsedIn: integer("decisions_used_in").notNull().default(0),
-		decisionsCorrect: integer("decisions_correct").notNull().default(0),
-		createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
-	},
-	(table) => [
-		check(
-			"valid_ic_value",
-			sql`${table.icValue}::numeric >= -1 AND ${table.icValue}::numeric <= 1`
-		),
-		check("non_negative_ic_std", sql`${table.icStd}::numeric >= 0`),
-		check("non_negative_decisions", sql`${table.decisionsUsedIn} >= 0`),
-		check("non_negative_correct", sql`${table.decisionsCorrect} >= 0`),
-		check("correct_lte_used", sql`${table.decisionsCorrect} <= ${table.decisionsUsedIn}`),
-		unique("indicator_ic_history_indicator_date").on(table.indicatorId, table.date),
-		index("idx_ic_history_indicator_date").on(table.indicatorId, table.date),
-	]
-);
+import { environmentEnum, syncRunStatusEnum } from "./enums";
 
 // fundamental_indicators: Computed from market data
 export const fundamentalIndicators = pgTable(
@@ -297,28 +180,5 @@ export const indicatorSyncRuns = pgTable(
 		index("idx_indicator_sync_runs_type").on(table.runType),
 		index("idx_indicator_sync_runs_status").on(table.status),
 		index("idx_indicator_sync_runs_started").on(table.startedAt),
-	]
-);
-
-// indicator_paper_signals: Paper trading signal recording
-export const indicatorPaperSignals = pgTable(
-	"indicator_paper_signals",
-	{
-		id: uuid("id").primaryKey().default(sql`uuidv7()`),
-		indicatorId: uuid("indicator_id")
-			.notNull()
-			.references(() => indicators.id, { onDelete: "cascade" }),
-		symbol: text("symbol").notNull(),
-		signalDate: timestamp("signal_date", { withTimezone: true }).notNull(),
-		signal: numeric("signal", { precision: 5, scale: 4 }).notNull(),
-		outcome: numeric("outcome", { precision: 8, scale: 4 }),
-		outcomeDate: timestamp("outcome_date", { withTimezone: true }),
-		createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
-	},
-	(table) => [
-		unique("indicator_paper_signals_unique").on(table.indicatorId, table.symbol, table.signalDate),
-		index("idx_ind_paper_signals_indicator").on(table.indicatorId),
-		index("idx_ind_paper_signals_symbol").on(table.symbol),
-		index("idx_ind_paper_signals_date").on(table.signalDate),
 	]
 );

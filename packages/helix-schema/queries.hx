@@ -170,44 +170,6 @@ QUERY InsertThesisMemory(
     RETURN thesis
 
 #[model("gemini:gemini-embedding-001:RETRIEVAL_DOCUMENT")]
-QUERY InsertIndicator(
-    indicator_id: String,
-    name: String,
-    category: String,
-    status: String,
-    hypothesis: String,
-    economic_rationale: String,
-    embedding_text: String,
-    generated_in_regime: String,
-    code_hash: String,
-    ast_signature: String,
-    deflated_sharpe: F64,
-    probability_of_overfit: F64,
-    information_coefficient: F64,
-    environment: String
-) =>
-    indicator <- AddV<Indicator>(
-        Embed(embedding_text),
-        {
-            indicator_id: indicator_id,
-            name: name,
-            category: category,
-            status: status,
-            hypothesis: hypothesis,
-            economic_rationale: economic_rationale,
-            embedding_text: embedding_text,
-            generated_in_regime: generated_in_regime,
-            code_hash: code_hash,
-            ast_signature: ast_signature,
-            deflated_sharpe: deflated_sharpe,
-            probability_of_overfit: probability_of_overfit,
-            information_coefficient: information_coefficient,
-            environment: environment
-        }
-    )
-    RETURN indicator
-
-#[model("gemini:gemini-embedding-001:RETRIEVAL_DOCUMENT")]
 QUERY InsertResearchHypothesis(
     hypothesis_id: String,
     title: String,
@@ -482,35 +444,6 @@ QUERY GetThesisById(thesis_id: String) =>
     RETURN thesis
 
 // ============================================
-// Indicator Search Queries
-// ============================================
-
-#[model("gemini:gemini-embedding-001:RETRIEVAL_QUERY")]
-QUERY SearchSimilarIndicators(query_text: String, limit: I64) =>
-    results <- SearchV<Indicator>(Embed(query_text), limit)
-    RETURN results
-
-#[model("gemini:gemini-embedding-001:RETRIEVAL_QUERY")]
-QUERY SearchIndicatorsByCategory(query_text: String, category: String, limit: I64) =>
-    results <- SearchV<Indicator>(Embed(query_text), limit)
-        ::WHERE(_::{category}::EQ(category))
-    RETURN results
-
-#[model("gemini:gemini-embedding-001:RETRIEVAL_QUERY")]
-QUERY SearchIndicatorsByStatus(query_text: String, status: String, limit: I64) =>
-    results <- SearchV<Indicator>(Embed(query_text), limit)
-        ::WHERE(_::{status}::EQ(status))
-    RETURN results
-
-QUERY GetIndicatorById(indicator_id: String) =>
-    indicator <- V<Indicator>::WHERE(_::{indicator_id}::EQ(indicator_id))
-    RETURN indicator
-
-QUERY GetIndicatorByCodeHash(code_hash: String) =>
-    indicator <- V<Indicator>::WHERE(_::{code_hash}::EQ(code_hash))
-    RETURN indicator
-
-// ============================================
 // Research Hypothesis Search Queries
 // ============================================
 
@@ -549,30 +482,6 @@ QUERY GetPaperById(paper_id: String) =>
     RETURN paper
 
 // ============================================
-// Indicator Graph Traversal Queries
-// ============================================
-
-QUERY GetSimilarIndicators(indicator_id: String) =>
-    indicator <- V<Indicator>::WHERE(_::{indicator_id}::EQ(indicator_id))
-    similar <- indicator::Out<SIMILAR_TO>
-    RETURN similar
-
-QUERY GetIndicatorsUsedInDecision(decision_id: String) =>
-    decision <- V<TradeDecision>::WHERE(_::{decision_id}::EQ(decision_id))
-    indicators <- decision::In<USED_IN_DECISION>
-    RETURN indicators
-
-QUERY GetDerivedIndicators(indicator_id: String) =>
-    indicator <- V<Indicator>::WHERE(_::{indicator_id}::EQ(indicator_id))
-    derived <- indicator::In<DERIVED_FROM>
-    RETURN derived
-
-QUERY GetSourceIndicator(indicator_id: String) =>
-    indicator <- V<Indicator>::WHERE(_::{indicator_id}::EQ(indicator_id))
-    source <- indicator::Out<DERIVED_FROM>
-    RETURN source
-
-// ============================================
 // Hypothesis Graph Traversal Queries
 // ============================================
 
@@ -590,16 +499,6 @@ QUERY GetImprovedHypotheses(hypothesis_id: String) =>
     hypothesis <- V<ResearchHypothesis>::WHERE(_::{hypothesis_id}::EQ(hypothesis_id))
     improved <- hypothesis::In<IMPROVES_ON>
     RETURN improved
-
-QUERY GetHypothesisIndicator(hypothesis_id: String) =>
-    hypothesis <- V<ResearchHypothesis>::WHERE(_::{hypothesis_id}::EQ(hypothesis_id))
-    indicator <- hypothesis::Out<GENERATED_FACTOR>
-    RETURN indicator
-
-QUERY GetIndicatorHypothesis(indicator_id: String) =>
-    indicator <- V<Indicator>::WHERE(_::{indicator_id}::EQ(indicator_id))
-    hypothesis <- indicator::In<GENERATED_FACTOR>
-    RETURN hypothesis
 
 QUERY GetHypothesisPapers(hypothesis_id: String) =>
     hypothesis <- V<ResearchHypothesis>::WHERE(_::{hypothesis_id}::EQ(hypothesis_id))
