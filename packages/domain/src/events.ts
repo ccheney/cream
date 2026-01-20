@@ -17,14 +17,7 @@ import { Iso8601Schema } from "./time";
 /**
  * Data source for external events
  */
-export const DataSource = z.enum([
-	"ALPACA",
-	"BENZINGA",
-	"SEC_EDGAR",
-	"SOCIAL",
-	"INTERNAL",
-	"FRED",
-]);
+export const DataSource = z.enum(["ALPACA", "BENZINGA", "SEC_EDGAR", "SOCIAL", "INTERNAL", "FRED"]);
 export type DataSource = z.infer<typeof DataSource>;
 
 // ============================================

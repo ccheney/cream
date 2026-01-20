@@ -194,7 +194,6 @@ export async function runGroundingAgentStreaming(
 	});
 
 	let fullText = "";
-	const toolArgsAccumulator = new Map<string, string>();
 
 	for await (const chunk of response.fullStream) {
 		switch (chunk.type) {
@@ -205,60 +204,6 @@ export async function runGroundingAgentStreaming(
 					agentType,
 					payload: { text: chunk.text },
 				});
-				break;
-			}
-
-			case "tool-input-start": {
-				toolArgsAccumulator.set(chunk.id, "");
-				await emitChunk({
-					type: "tool-call",
-					agentType,
-					payload: {
-						toolCallId: chunk.id,
-						toolName: chunk.toolName,
-						toolArgs: {},
-					},
-				});
-				break;
-			}
-
-			case "tool-input-delta": {
-				const existing = toolArgsAccumulator.get(chunk.id) ?? "";
-				toolArgsAccumulator.set(chunk.id, existing + chunk.delta);
-				break;
-			}
-
-			case "tool-call": {
-				// Prefer chunk.input if available, otherwise try to use accumulated args
-				let toolArgs: Record<string, unknown> = {};
-				if (typeof chunk.input === "object" && chunk.input !== null) {
-					toolArgs = chunk.input as Record<string, unknown>;
-				} else {
-					// Fallback to accumulated args from tool-input-delta events
-					const accumulatedArgsText = toolArgsAccumulator.get(chunk.toolCallId);
-					if (accumulatedArgsText) {
-						try {
-							const parsed = JSON.parse(accumulatedArgsText) as unknown;
-							if (typeof parsed === "object" && parsed !== null && !Array.isArray(parsed)) {
-								toolArgs = parsed as Record<string, unknown>;
-							}
-						} catch {
-							if (accumulatedArgsText.length > 0) {
-								toolArgs = { _raw: accumulatedArgsText };
-							}
-						}
-					}
-				}
-				await emitChunk({
-					type: "tool-call",
-					agentType,
-					payload: {
-						toolCallId: chunk.toolCallId,
-						toolName: chunk.toolName,
-						toolArgs,
-					},
-				});
-				toolArgsAccumulator.delete(chunk.toolCallId);
 				break;
 			}
 

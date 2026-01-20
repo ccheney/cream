@@ -278,5 +278,4 @@ describe("Fixture Registry", () => {
 		expect(mockData.alpaca.positions).toBeDefined();
 		expect(mockData.alpaca.orders).toBeDefined();
 	});
-
 });
