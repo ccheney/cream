@@ -10,6 +10,16 @@ import { createSemanticScholarClient, type SemanticScholarPaper } from "@cream/e
 import { createPaperIngestionService, type PaperInput } from "@cream/helix";
 import { getHelixClient } from "../clients.js";
 
+// Singleton client to maintain rate limiting state across all tool calls
+let semanticScholarClient: ReturnType<typeof createSemanticScholarClient> | null = null;
+
+function getSemanticScholarClient() {
+	if (!semanticScholarClient) {
+		semanticScholarClient = createSemanticScholarClient();
+	}
+	return semanticScholarClient;
+}
+
 // ============================================
 // Types
 // ============================================
@@ -198,7 +208,7 @@ export async function searchExternalPapers(
 		};
 	}
 
-	const client = createSemanticScholarClient();
+	const client = getSemanticScholarClient();
 
 	const papers = await client.searchFinancePapers(topic, {
 		limit,
@@ -285,7 +295,7 @@ export async function ingestSemanticScholarPapers(
 	}
 
 	// Step 1: Search Semantic Scholar
-	const s2Client = createSemanticScholarClient();
+	const s2Client = getSemanticScholarClient();
 	const papers = await s2Client.searchFinancePapers(topic, { limit });
 
 	if (papers.length === 0) {
