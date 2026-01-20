@@ -226,6 +226,7 @@ mock.module("../db.js", () => ({
 	getSentimentRepo: () => ({}),
 	getCorporateActionsRepo: () => ({}),
 	getFilingsRepo: () => ({}),
+	getPredictionMarketsRepo: () => ({}),
 }));
 
 // Mock the websocket channel
@@ -245,7 +246,7 @@ describe("Workers Routes", () => {
 			const data = (await res.json()) as ApiResponse;
 			expect(data.services).toBeDefined();
 			expect(Array.isArray(data.services)).toBe(true);
-			expect(data.services.length).toBe(8);
+			expect(data.services.length).toBe(7);
 
 			const serviceNames = data.services.map((s: { name: string }) => s.name);
 			expect(serviceNames).toContain("macro_watch");
