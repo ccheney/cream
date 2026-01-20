@@ -105,7 +105,6 @@ const envSchema = z.object({
 	HELIX_PORT: z.coerce.number().optional().describe("HelixDB port (alternative to HELIX_URL)"),
 
 	// Market Data Providers (Alpaca is unified provider via ALPACA_KEY/ALPACA_SECRET)
-	ALPHAVANTAGE_KEY: z.string().optional().describe("Alpha Vantage API key for macro indicators"),
 	FRED_API_KEY: z.string().optional().describe("FRED API key for economic data"),
 
 	// Broker Credentials
@@ -160,7 +159,6 @@ function parseEnv(): EnvConfig {
 		HELIX_URL: Bun.env.HELIX_URL,
 		HELIX_HOST: Bun.env.HELIX_HOST,
 		HELIX_PORT: Bun.env.HELIX_PORT,
-		ALPHAVANTAGE_KEY: Bun.env.ALPHAVANTAGE_KEY,
 		FRED_API_KEY: Bun.env.FRED_API_KEY,
 		ALPACA_KEY: Bun.env.ALPACA_KEY,
 		ALPACA_SECRET: Bun.env.ALPACA_SECRET,
@@ -462,11 +460,6 @@ export function getEnvVarDocumentation(): Array<{
 		{ name: "HELIX_URL", required: "no", description: "HelixDB server URL" },
 		{ name: "HELIX_HOST", required: "no", description: "HelixDB host (alternative to HELIX_URL)" },
 		{ name: "HELIX_PORT", required: "no", description: "HelixDB port (alternative to HELIX_URL)" },
-		{
-			name: "ALPHAVANTAGE_KEY",
-			required: "no",
-			description: "Alpha Vantage API key for macro data",
-		},
 		{ name: "FRED_API_KEY", required: "no", description: "FRED API key for economic data" },
 		{ name: "ALPACA_KEY", required: "PAPER/LIVE", description: "Alpaca API key" },
 		{ name: "ALPACA_SECRET", required: "PAPER/LIVE", description: "Alpaca API secret" },
