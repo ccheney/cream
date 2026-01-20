@@ -1003,8 +1003,8 @@ describe("Agent Context", () => {
 
 describe("Agent Tool Wiring", () => {
 	describe("Tool Configuration", () => {
-		it("should have all agents with at least one tool configured (except grounding_agent and critic)", () => {
-			const noToolAgents = ["grounding_agent", "critic"];
+		it("should have all agents with at least one tool configured (except grounding_agent, news_analyst, and critic)", () => {
+			const noToolAgents = ["grounding_agent", "news_analyst", "critic"];
 			for (const agentType of AGENT_TYPES) {
 				if (noToolAgents.includes(agentType)) {
 					continue;

@@ -30,7 +30,6 @@ import type {
 	ExtractionResult,
 	IExtractionClient,
 	NewsArticle,
-	ParsedMacroRelease,
 	ParsedTranscript,
 	TranscriptInput,
 } from "./types.js";
