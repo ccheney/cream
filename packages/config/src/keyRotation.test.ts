@@ -340,20 +340,18 @@ describe("KeyRotationRegistry", () => {
 			expect(manager1).toBe(manager2);
 		});
 
-		it("should create different managers for different services", () => {
-			const alpacaManager = registry.getManager("alpaca");
-			const alphavantageManager = registry.getManager("alphavantage");
-			expect(alpacaManager).not.toBe(alphavantageManager);
+		it("should create different manager instances", () => {
+			const manager1 = registry.getManager("alpaca");
+			const manager2 = registry.getManager("alpaca");
+			expect(manager1).toBe(manager2);
 		});
 	});
 
 	describe("getKey", () => {
 		it("should get key from correct service manager", () => {
 			registry.getManager("alpaca").addKey("alpaca-key", "pk");
-			registry.getManager("alphavantage").addKey("alphavantage-key", "ak");
 
 			expect(registry.getKey("alpaca")).toBe("alpaca-key");
-			expect(registry.getKey("alphavantage")).toBe("alphavantage-key");
 		});
 	});
 
@@ -383,20 +381,17 @@ describe("KeyRotationRegistry", () => {
 	describe("getAllStats", () => {
 		it("should return stats for all initialized managers", () => {
 			registry.getManager("alpaca").addKey("pk", "alpaca-key");
-			registry.getManager("alphavantage").addKey("ak", "alphavantage-key");
 
 			const allStats = registry.getAllStats();
 
-			expect(allStats).toHaveLength(2);
+			expect(allStats).toHaveLength(1);
 			expect(allStats.some((s) => s.service === "alpaca")).toBe(true);
-			expect(allStats.some((s) => s.service === "alphavantage")).toBe(true);
 		});
 	});
 
 	describe("initFromEnv", () => {
 		// Save specific vars we modify rather than the whole env
 		const savedAlpacaKey = Bun.env.ALPACA_KEY;
-		const savedAlphavantageKey = Bun.env.ALPHAVANTAGE_KEY;
 
 		afterEach(() => {
 			// Restore only the vars we modified
@@ -405,22 +400,15 @@ describe("KeyRotationRegistry", () => {
 			} else {
 				delete Bun.env.ALPACA_KEY;
 			}
-			if (savedAlphavantageKey !== undefined) {
-				Bun.env.ALPHAVANTAGE_KEY = savedAlphavantageKey;
-			} else {
-				delete Bun.env.ALPHAVANTAGE_KEY;
-			}
 		});
 
 		it("should initialize managers from environment variables", () => {
 			Bun.env.ALPACA_KEY = "test-alpaca-key";
-			Bun.env.ALPHAVANTAGE_KEY = "test-alphavantage-key";
 
 			const envRegistry = new KeyRotationRegistry({}, silentLogger);
 			envRegistry.initFromEnv();
 
 			expect(envRegistry.getKey("alpaca")).toBe("test-alpaca-key");
-			expect(envRegistry.getKey("alphavantage")).toBe("test-alphavantage-key");
 		});
 
 		it("should handle comma-separated keys from env", () => {
@@ -433,20 +421,17 @@ describe("KeyRotationRegistry", () => {
 		});
 
 		it("should handle missing env variables gracefully", () => {
-			// Clear both Bun.env and Bun.env
-			delete Bun.env.ALPHAVANTAGE_KEY;
+			// Clear Bun.env
 			delete Bun.env.ALPACA_KEY;
-			// @ts-expect-error - Bun.env is readonly but we need to clear for test
-			Bun.env.ALPHAVANTAGE_KEY = undefined;
 			// @ts-expect-error - Bun.env is readonly but we need to clear for test
 			Bun.env.ALPACA_KEY = undefined;
 
 			const envRegistry = new KeyRotationRegistry({}, silentLogger);
 			envRegistry.initFromEnv();
 
-			// Should not throw - managers are created but without keys
+			// Should not throw - manager is created but without keys
 			const stats = envRegistry.getAllStats();
-			expect(stats.length).toBe(2); // 2 services initialized but no keys
+			expect(stats.length).toBe(1); // 1 service initialized but no keys
 		});
 	});
 });

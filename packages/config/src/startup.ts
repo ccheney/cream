@@ -91,7 +91,6 @@ export function sanitizeEnv(envConfig: EnvConfig): Record<string, string> {
 	const allFields = [
 		"DATABASE_URL",
 		"HELIX_URL",
-		"ALPHAVANTAGE_KEY",
 		"ALPACA_KEY",
 		"ALPACA_SECRET",
 		"ALPACA_BASE_URL",

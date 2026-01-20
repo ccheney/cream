@@ -38,8 +38,6 @@ export class KeyRotationRegistry {
 	 * Supports comma-separated keys for rotation.
 	 */
 	initFromEnv(): void {
-		this.getManager("alphavantage").addKeysFromEnv(Bun.env.ALPHAVANTAGE_KEY, "ALPHAVANTAGE_KEY");
-
 		this.getManager("alpaca").addKeysFromEnv(Bun.env.ALPACA_KEY, "ALPACA_KEY");
 	}
 
