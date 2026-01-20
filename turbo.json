@@ -1,33 +1,53 @@
 {
-  "$schema": "./node_modules/turbo/schema.json",
+  "$schema": "https://turborepo.com/schema.json",
   "ui": "stream",
+  "globalDependencies": [".env", "bun.lock", "biome.json", "packages/tsconfig/base.json"],
+  "globalEnv": ["NODE_ENV", "CREAM_ENV"],
   "tasks": {
     "build": {
       "dependsOn": ["^build"],
+      "inputs": [
+        "$TURBO_DEFAULT$",
+        "tsconfig.json"
+      ],
       "outputs": ["dist/**", ".next/**", "!.next/cache/**", "target/**"],
       "env": ["CREAM_ENV"]
     },
     "test": {
-      "dependsOn": ["^build", "build"],
+      "dependsOn": ["^build"],
+      "inputs": [
+        "$TURBO_DEFAULT$",
+        "**/*.test.ts",
+        "**/*.test.tsx",
+        "tests/**"
+      ],
       "outputs": [],
+      "outputLogs": "errors-only",
       "env": ["CREAM_ENV", "LLM_MODEL_ID"],
       "passThroughEnv": [
         "CLAUDECODE",
         "NODE_ENV",
         "CREAM_ENV",
-        "LLM_MODEL_ID",
-        "ALPACA_KEY",
-        "ALPACA_SECRET",
-        "KALSHI_API_KEY_ID",
-        "KALSHI_PRIVATE_KEY_PATH"
+        "LLM_*",
+        "ALPACA_*",
+        "KALSHI_*"
       ]
     },
     "lint": {
       "dependsOn": ["^build"],
+      "inputs": [
+        "$TURBO_DEFAULT$",
+        "biome.json",
+        "tsconfig.json"
+      ],
       "outputs": []
     },
     "typecheck": {
       "dependsOn": ["^build"],
+      "inputs": [
+        "$TURBO_DEFAULT$",
+        "tsconfig.json"
+      ],
       "outputs": []
     },
     "dev": {
@@ -37,33 +57,18 @@
         "CREAM_ENV",
         "NODE_ENV",
         "LOG_LEVEL",
-        "DATABASE_URL",
-        "DATABASE_URL_PAPER",
-        "DATABASE_URL_LIVE",
+        "DATABASE_URL*",
         "TEST_DATABASE_URL",
-        "HELIX_URL",
-        "HELIX_HOST",
-        "HELIX_PORT",
-        "ALPACA_KEY",
-        "ALPACA_SECRET",
-        "ALPACA_BASE_URL",
-        "ALPHAVANTAGE_KEY",
+        "HELIX_*",
+        "ALPACA_*",
         "FRED_API_KEY",
         "ANTHROPIC_API_KEY",
-        "GOOGLE_GENERATIVE_AI_API_KEY",
-        "LLM_PROVIDER",
-        "LLM_MODEL_ID",
-        "GOOGLE_CLIENT_ID",
-        "GOOGLE_CLIENT_SECRET",
+        "GOOGLE_*",
+        "LLM_*",
         "BETTER_AUTH_URL",
-        "KALSHI_API_KEY_ID",
-        "KALSHI_PRIVATE_KEY_PATH",
-        "POLYMARKET_API_KEY",
-        "POLYMARKET_SECRET",
-        "POLYMARKET_PASSPHRASE",
-        "FINRA_CLIENT_ID",
-        "FINRA_CLIENT_SECRET",
-        "ALPHAVANTAGE_TIER",
+        "KALSHI_*",
+        "POLYMARKET_*",
+        "FINRA_*",
         "ALLOWED_ORIGINS",
         "DASHBOARD_API_URL",
         "WORKER_INTERNAL_SECRET"
