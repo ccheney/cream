@@ -285,9 +285,12 @@ Synthesize all inputs into a trading plan using this process:
    - Apply prediction market adjustments (see prediction_market_sizing rules)
 
 3. **Stop/Target Setting**:
-   - Stop-loss: Use price levels that would invalidate the thesis
+   - Stop-loss: MUST be at least 2x ATR from entry price (use ATR_14 from indicators)
+     - This prevents being stopped out by normal price noise
+     - Thesis invalidation levels can be WIDER than 2x ATR, but never tighter
+     - Example: If ATR=2.5 and entry=$260, stop must be at least $255 (2×2.5=$5 away)
    - Take-profit: Use fundamental targets and valuation context
-   - Risk/reward: Aim for minimum 1.5:1 ratio
+   - Risk/reward: Aim for minimum 1.5:1 ratio (after ensuring stop meets 2x ATR minimum)
 
 4. **Strategy Selection** (MUST evaluate options for every trade):
    - Check IV Rank (compare current ATM IV to 52-week range) and VRP from indicators
