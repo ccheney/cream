@@ -13,6 +13,7 @@ use crate::domain::risk_management::{
 use crate::domain::shared::{InstrumentId, Money};
 
 /// Port for risk data persistence and retrieval.
+
 #[async_trait]
 pub trait RiskRepositoryPort: Send + Sync {
     /// Save a risk policy.
@@ -69,33 +70,51 @@ impl InMemoryRiskRepository {
 #[async_trait]
 impl RiskRepositoryPort for InMemoryRiskRepository {
     async fn save_policy(&self, policy: &RiskPolicy) -> Result<(), RiskError> {
-        let mut policies = self.policies.write().unwrap();
+        let mut policies = self
+            .policies
+            .write()
+            .unwrap_or_else(std::sync::PoisonError::into_inner);
         policies.insert(policy.id().to_string(), policy.clone());
+        drop(policies);
         Ok(())
     }
 
     async fn find_policy_by_id(&self, id: &str) -> Result<Option<RiskPolicy>, RiskError> {
-        let policies = self.policies.read().unwrap();
+        let policies = self
+            .policies
+            .read()
+            .unwrap_or_else(std::sync::PoisonError::into_inner);
         Ok(policies.get(id).cloned())
     }
 
     async fn find_active_policy(&self) -> Result<Option<RiskPolicy>, RiskError> {
-        let policies = self.policies.read().unwrap();
+        let policies = self
+            .policies
+            .read()
+            .unwrap_or_else(std::sync::PoisonError::into_inner);
         Ok(policies.values().find(|p| p.is_active()).cloned())
     }
 
     async fn list_policies(&self) -> Result<Vec<RiskPolicy>, RiskError> {
-        let policies = self.policies.read().unwrap();
+        let policies = self
+            .policies
+            .read()
+            .unwrap_or_else(std::sync::PoisonError::into_inner);
         Ok(policies.values().cloned().collect())
     }
 
     async fn delete_policy(&self, id: &str) -> Result<(), RiskError> {
-        let mut policies = self.policies.write().unwrap();
-        policies
-            .remove(id)
-            .ok_or_else(|| RiskError::PolicyNotFound {
-                policy_id: id.to_string(),
-            })?;
+        {
+            let mut policies = self
+                .policies
+                .write()
+                .unwrap_or_else(std::sync::PoisonError::into_inner);
+            policies
+                .remove(id)
+                .ok_or_else(|| RiskError::PolicyNotFound {
+                    policy_id: id.to_string(),
+                })?;
+        }
         Ok(())
     }
 
@@ -130,7 +149,11 @@ impl RiskRepositoryPort for InMemoryRiskRepository {
         );
         context.current_exposure = self.get_portfolio_exposure().await?;
         context.current_greeks = self.get_portfolio_greeks().await?;
-        context.day_trades_remaining = 3u8.saturating_sub(self.get_day_trade_count().await? as u8);
+        #[allow(clippy::cast_possible_truncation)]
+        {
+            context.day_trades_remaining =
+                3u8.saturating_sub(self.get_day_trade_count().await? as u8);
+        }
         Ok(context)
     }
 }

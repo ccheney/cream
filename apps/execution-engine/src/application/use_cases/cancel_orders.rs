@@ -36,8 +36,8 @@ where
     O: OrderRepository,
     E: EventPublisherPort,
 {
-    /// Create a new CancelOrdersUseCase.
-    pub fn new(broker: Arc<B>, order_repo: Arc<O>, event_publisher: Arc<E>) -> Self {
+    /// Create a new `CancelOrdersUseCase`.
+    pub const fn new(broker: Arc<B>, order_repo: Arc<O>, event_publisher: Arc<E>) -> Self {
         Self {
             broker,
             order_repo,
@@ -67,7 +67,7 @@ where
                 return CancelResult {
                     order_id: client_order_id.to_string(),
                     success: false,
-                    error: Some(format!("Failed to load order: {}", e)),
+                    error: Some(format!("Failed to load order: {e}")),
                 };
             }
         };
@@ -82,17 +82,16 @@ where
         }
 
         // 3. Cancel at broker
-        let cancel_request = if let Some(broker_id) = order.broker_order_id() {
-            CancelOrderRequest::by_broker_id(broker_id.clone())
-        } else {
-            CancelOrderRequest::by_client_id(order_id.clone())
-        };
+        let cancel_request = order.broker_order_id().map_or_else(
+            || CancelOrderRequest::by_client_id(order_id.clone()),
+            |broker_id| CancelOrderRequest::by_broker_id(broker_id.clone()),
+        );
 
         if let Err(e) = self.broker.cancel_order(cancel_request).await {
             return CancelResult {
                 order_id: client_order_id.to_string(),
                 success: false,
-                error: Some(format!("Broker cancel failed: {}", e)),
+                error: Some(format!("Broker cancel failed: {e}")),
             };
         }
 
@@ -101,7 +100,7 @@ where
             return CancelResult {
                 order_id: client_order_id.to_string(),
                 success: false,
-                error: Some(format!("Failed to update order state: {}", e)),
+                error: Some(format!("Failed to update order state: {e}")),
             };
         }
 
@@ -230,7 +229,10 @@ mod tests {
         }
 
         fn add_order(&self, order: Order) {
-            let mut orders = self.orders.write().unwrap();
+            let mut orders = self
+                .orders
+                .write()
+                .unwrap_or_else(std::sync::PoisonError::into_inner);
             orders.insert(order.id().to_string(), order);
         }
     }
@@ -238,13 +240,19 @@ mod tests {
     #[async_trait]
     impl OrderRepository for MockOrderRepo {
         async fn save(&self, order: &Order) -> Result<(), OrderError> {
-            let mut orders = self.orders.write().unwrap();
+            let mut orders = self
+                .orders
+                .write()
+                .unwrap_or_else(std::sync::PoisonError::into_inner);
             orders.insert(order.id().to_string(), order.clone());
             Ok(())
         }
 
         async fn find_by_id(&self, id: &OrderId) -> Result<Option<Order>, OrderError> {
-            let orders = self.orders.read().unwrap();
+            let orders = self
+                .orders
+                .read()
+                .unwrap_or_else(std::sync::PoisonError::into_inner);
             Ok(orders.get(id.as_str()).cloned())
         }
 
@@ -256,7 +264,10 @@ mod tests {
         }
 
         async fn find_by_status(&self, status: OrderStatus) -> Result<Vec<Order>, OrderError> {
-            let orders = self.orders.read().unwrap();
+            let orders = self
+                .orders
+                .read()
+                .unwrap_or_else(std::sync::PoisonError::into_inner);
             Ok(orders
                 .values()
                 .filter(|o| o.status() == status)
@@ -265,7 +276,10 @@ mod tests {
         }
 
         async fn find_active(&self) -> Result<Vec<Order>, OrderError> {
-            let orders = self.orders.read().unwrap();
+            let orders = self
+                .orders
+                .read()
+                .unwrap_or_else(std::sync::PoisonError::into_inner);
             Ok(orders
                 .values()
                 .filter(|o| !o.status().is_terminal())
@@ -274,12 +288,18 @@ mod tests {
         }
 
         async fn exists(&self, id: &OrderId) -> Result<bool, OrderError> {
-            let orders = self.orders.read().unwrap();
+            let orders = self
+                .orders
+                .read()
+                .unwrap_or_else(std::sync::PoisonError::into_inner);
             Ok(orders.contains_key(id.as_str()))
         }
 
         async fn delete(&self, id: &OrderId) -> Result<(), OrderError> {
-            let mut orders = self.orders.write().unwrap();
+            let mut orders = self
+                .orders
+                .write()
+                .unwrap_or_else(std::sync::PoisonError::into_inner);
             orders.remove(id.as_str());
             Ok(())
         }

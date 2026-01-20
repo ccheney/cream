@@ -1,6 +1,6 @@
 //! Execution Tactics Bounded Context
 //!
-//! This module implements various execution tactics (PASSIVE_LIMIT, TWAP, VWAP, etc.)
+//! This module implements various execution tactics (`PASSIVE_LIMIT`, TWAP, VWAP, etc.)
 //! to optimize order fills while minimizing market impact.
 
 pub mod errors;

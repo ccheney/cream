@@ -48,14 +48,14 @@ impl FillReport {
 
     /// Add liquidity type to the fill.
     #[must_use]
-    pub fn with_liquidity(mut self, liquidity: LiquidityType) -> Self {
+    pub const fn with_liquidity(mut self, liquidity: LiquidityType) -> Self {
         self.liquidity = Some(liquidity);
         self
     }
 
     /// Add commission to the fill.
     #[must_use]
-    pub fn with_commission(mut self, commission: Money) -> Self {
+    pub const fn with_commission(mut self, commission: Money) -> Self {
         self.commission = Some(commission);
         self
     }

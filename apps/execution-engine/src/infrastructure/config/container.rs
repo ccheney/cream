@@ -42,7 +42,7 @@ where
     P: PriceFeedPort + 'static,
 {
     /// Create a new container with all dependencies.
-    pub fn new(
+    pub const fn new(
         broker: Arc<B>,
         risk_repo: Arc<R>,
         order_repo: Arc<O>,
@@ -59,31 +59,37 @@ where
     }
 
     /// Get the broker port.
+    #[must_use]
     pub fn broker(&self) -> Arc<B> {
         Arc::clone(&self.broker)
     }
 
     /// Get the risk repository port.
+    #[must_use]
     pub fn risk_repo(&self) -> Arc<R> {
         Arc::clone(&self.risk_repo)
     }
 
     /// Get the order repository.
+    #[must_use]
     pub fn order_repo(&self) -> Arc<O> {
         Arc::clone(&self.order_repo)
     }
 
     /// Get the event publisher port.
+    #[must_use]
     pub fn event_publisher(&self) -> Arc<E> {
         Arc::clone(&self.event_publisher)
     }
 
     /// Get the price feed port.
+    #[must_use]
     pub fn price_feed(&self) -> Arc<P> {
         Arc::clone(&self.price_feed)
     }
 
     /// Create a `SubmitOrdersUseCase`.
+    #[must_use]
     pub fn submit_orders_use_case(&self) -> SubmitOrdersUseCase<B, R, O, E> {
         SubmitOrdersUseCase::new(
             Arc::clone(&self.broker),
@@ -94,11 +100,13 @@ where
     }
 
     /// Create a `ValidateRiskUseCase`.
+    #[must_use]
     pub fn validate_risk_use_case(&self) -> ValidateRiskUseCase<R, O> {
         ValidateRiskUseCase::new(Arc::clone(&self.risk_repo), Arc::clone(&self.order_repo))
     }
 
     /// Create a `CancelOrdersUseCase`.
+    #[must_use]
     pub fn cancel_orders_use_case(&self) -> CancelOrdersUseCase<B, O, E> {
         CancelOrdersUseCase::new(
             Arc::clone(&self.broker),
@@ -108,11 +116,13 @@ where
     }
 
     /// Create a `MonitorStopsUseCase`.
+    #[must_use]
     pub fn monitor_stops_use_case(&self) -> MonitorStopsUseCase<B, P> {
         MonitorStopsUseCase::new(Arc::clone(&self.broker), Arc::clone(&self.price_feed))
     }
 
     /// Create a `ReconcileUseCase`.
+    #[must_use]
     pub fn reconcile_use_case(&self) -> ReconcileUseCase<B, O> {
         ReconcileUseCase::new(Arc::clone(&self.broker), Arc::clone(&self.order_repo))
     }
@@ -195,13 +205,19 @@ mod tests {
     #[async_trait]
     impl OrderRepository for MockOrderRepo {
         async fn save(&self, order: &Order) -> Result<(), OrderError> {
-            let mut orders = self.orders.write().unwrap();
+            let mut orders = self
+                .orders
+                .write()
+                .unwrap_or_else(std::sync::PoisonError::into_inner);
             orders.insert(order.id().to_string(), order.clone());
             Ok(())
         }
 
         async fn find_by_id(&self, id: &OrderId) -> Result<Option<Order>, OrderError> {
-            let orders = self.orders.read().unwrap();
+            let orders = self
+                .orders
+                .read()
+                .unwrap_or_else(std::sync::PoisonError::into_inner);
             Ok(orders.get(id.as_str()).cloned())
         }
 
@@ -216,7 +232,10 @@ mod tests {
             &self,
             status: crate::domain::order_execution::value_objects::OrderStatus,
         ) -> Result<Vec<Order>, OrderError> {
-            let orders = self.orders.read().unwrap();
+            let orders = self
+                .orders
+                .read()
+                .unwrap_or_else(std::sync::PoisonError::into_inner);
             Ok(orders
                 .values()
                 .filter(|o| o.status() == status)
@@ -225,7 +244,10 @@ mod tests {
         }
 
         async fn find_active(&self) -> Result<Vec<Order>, OrderError> {
-            let orders = self.orders.read().unwrap();
+            let orders = self
+                .orders
+                .read()
+                .unwrap_or_else(std::sync::PoisonError::into_inner);
             Ok(orders
                 .values()
                 .filter(|o| !o.status().is_terminal())
@@ -234,12 +256,18 @@ mod tests {
         }
 
         async fn exists(&self, id: &OrderId) -> Result<bool, OrderError> {
-            let orders = self.orders.read().unwrap();
+            let orders = self
+                .orders
+                .read()
+                .unwrap_or_else(std::sync::PoisonError::into_inner);
             Ok(orders.contains_key(id.as_str()))
         }
 
         async fn delete(&self, id: &OrderId) -> Result<(), OrderError> {
-            let mut orders = self.orders.write().unwrap();
+            let mut orders = self
+                .orders
+                .write()
+                .unwrap_or_else(std::sync::PoisonError::into_inner);
             orders.remove(id.as_str());
             Ok(())
         }

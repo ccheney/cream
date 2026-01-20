@@ -10,8 +10,10 @@ use std::fmt;
 /// - Stop-loss orders need immediate execution
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
 #[serde(rename_all = "SCREAMING_SNAKE_CASE")]
+#[derive(Default)]
 pub enum OrderPurpose {
     /// Entry order (opening a position).
+    #[default]
     Entry,
     /// Exit order (closing a position for profit/loss).
     Exit,
@@ -61,12 +63,6 @@ impl OrderPurpose {
             Self::Entry => 2,      // Low urgency
             Self::ScaleIn => 1,    // Lowest urgency
         }
-    }
-}
-
-impl Default for OrderPurpose {
-    fn default() -> Self {
-        Self::Entry
     }
 }
 

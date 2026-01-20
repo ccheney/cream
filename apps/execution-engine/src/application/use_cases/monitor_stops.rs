@@ -40,7 +40,7 @@ where
     B: BrokerPort,
     P: PriceFeedPort,
 {
-    /// Create a new MonitorStopsUseCase with default config.
+    /// Create a new `MonitorStopsUseCase` with default config.
     pub fn new(broker: Arc<B>, price_feed: Arc<P>) -> Self {
         Self {
             broker,
@@ -128,28 +128,25 @@ where
         trigger_type: &str,
     ) -> StopTriggerResult {
         // Get position info for exit order
-        let _position = match self.monitor.get_position(position_id) {
-            Some(p) => p,
-            None => {
-                return StopTriggerResult {
-                    position_id: position_id.to_string(),
-                    trigger_type: trigger_type.to_string(),
-                    trigger_price,
-                    exit_order_id: None,
-                    error: Some("Position not found".to_string()),
-                };
-            }
+        let Some(_position) = self.monitor.get_position(position_id) else {
+            return StopTriggerResult {
+                position_id: position_id.to_string(),
+                trigger_type: trigger_type.to_string(),
+                trigger_price,
+                exit_order_id: None,
+                error: Some("Position not found".to_string()),
+            };
         };
 
         // Determine exit order parameters based on trigger type
         let (exit_side, _purpose) = match trigger_type {
             "stop_loss" => (OrderSide::Sell, OrderPurpose::StopLoss),
-            "take_profit" => (OrderSide::Sell, OrderPurpose::Exit),
+            // take_profit or any other trigger type defaults to Exit
             _ => (OrderSide::Sell, OrderPurpose::Exit),
         };
 
         // Build and submit exit order
-        let exit_order_id = format!("exit-{}", position_id);
+        let exit_order_id = format!("exit-{position_id}");
         let request = crate::application::ports::SubmitOrderRequest::market(
             OrderId::new(&exit_order_id),
             symbol.clone(),
@@ -175,18 +172,20 @@ where
                 trigger_type: trigger_type.to_string(),
                 trigger_price,
                 exit_order_id: None,
-                error: Some(format!("Failed to submit exit order: {}", e)),
+                error: Some(format!("Failed to submit exit order: {e}")),
             },
         }
     }
 
     /// Get the number of actively monitored positions.
+    #[must_use]
     pub fn active_count(&self) -> usize {
         self.monitor.active_count()
     }
 
     /// Get the monitoring interval in milliseconds.
-    pub fn monitoring_interval_ms(&self) -> u64 {
+    #[must_use]
+    pub const fn monitoring_interval_ms(&self) -> u64 {
         self.monitor.monitoring_interval_ms()
     }
 }
@@ -221,7 +220,10 @@ mod tests {
             &self,
             request: crate::application::ports::SubmitOrderRequest,
         ) -> Result<OrderAck, BrokerError> {
-            let mut orders = self.submitted_orders.write().unwrap();
+            let mut orders = self
+                .submitted_orders
+                .write()
+                .unwrap_or_else(std::sync::PoisonError::into_inner);
             orders.push(request.clone());
             Ok(OrderAck {
                 broker_order_id: BrokerId::new("exit-broker-123"),
@@ -273,7 +275,10 @@ mod tests {
         }
 
         fn set_price(&self, symbol: &str, price: Decimal) {
-            let mut prices = self.prices.write().unwrap();
+            let mut prices = self
+                .prices
+                .write()
+                .unwrap_or_else(std::sync::PoisonError::into_inner);
             prices.insert(symbol.to_string(), price);
         }
     }
@@ -281,7 +286,10 @@ mod tests {
     #[async_trait]
     impl PriceFeedPort for MockPriceFeed {
         async fn get_quote(&self, symbol: &Symbol) -> Result<Quote, PriceFeedError> {
-            let prices = self.prices.read().unwrap();
+            let prices = self
+                .prices
+                .read()
+                .unwrap_or_else(std::sync::PoisonError::into_inner);
             let price = prices
                 .get(symbol.as_str())
                 .copied()
@@ -315,7 +323,10 @@ mod tests {
             &self,
             instrument_id: &InstrumentId,
         ) -> Result<Decimal, PriceFeedError> {
-            let prices = self.prices.read().unwrap();
+            let prices = self
+                .prices
+                .read()
+                .unwrap_or_else(std::sync::PoisonError::into_inner);
             prices
                 .get(instrument_id.as_str())
                 .copied()
@@ -364,7 +375,10 @@ mod tests {
         assert!(results[0].exit_order_id.is_some());
 
         // Verify order was submitted
-        let submitted = broker.submitted_orders.read().unwrap();
+        let submitted = broker
+            .submitted_orders
+            .read()
+            .unwrap_or_else(std::sync::PoisonError::into_inner);
         assert_eq!(submitted.len(), 1);
     }
 
@@ -452,7 +466,10 @@ mod tests {
         assert_eq!(results[0].trigger_type, "stop_loss");
 
         // Verify one order was submitted for AAPL exit
-        let submitted = broker.submitted_orders.read().unwrap();
+        let submitted = broker
+            .submitted_orders
+            .read()
+            .unwrap_or_else(std::sync::PoisonError::into_inner);
         assert_eq!(submitted.len(), 1);
     }
 
@@ -585,6 +602,6 @@ mod tests {
         // Test Clone and Debug
         let cloned = result.clone();
         assert_eq!(cloned.position_id, result.position_id);
-        let _debug = format!("{:?}", result);
+        let _debug = format!("{result:?}");
     }
 }

@@ -6,8 +6,10 @@ use std::fmt;
 /// Time in force specifying order validity duration.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
 #[serde(rename_all = "SCREAMING_SNAKE_CASE")]
+#[derive(Default)]
 pub enum TimeInForce {
     /// Valid for current trading day only.
+    #[default]
     Day,
     /// Good-til-canceled (broker-specific limit: typically 30-90 days).
     Gtc,
@@ -38,12 +40,6 @@ impl TimeInForce {
     #[must_use]
     pub const fn is_session_specific(&self) -> bool {
         matches!(self, Self::Opg | Self::Cls)
-    }
-}
-
-impl Default for TimeInForce {
-    fn default() -> Self {
-        Self::Day
     }
 }
 

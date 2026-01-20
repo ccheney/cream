@@ -206,7 +206,7 @@ mod tests {
 
         assert_eq!(executor.remaining_qty(), Decimal::new(500, 0));
 
-        executor.on_fill(Decimal::new(150, 0));
+        let _ = executor.on_fill(Decimal::new(150, 0));
         assert_eq!(executor.remaining_qty(), Decimal::new(350, 0));
     }
 

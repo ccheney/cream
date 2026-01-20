@@ -20,7 +20,7 @@ pub struct MonitoredPosition {
 impl MonitoredPosition {
     /// Create a new monitored position.
     #[must_use]
-    pub fn new(
+    pub const fn new(
         position_id: OrderId,
         instrument_id: InstrumentId,
         levels: StopTargetLevels,
@@ -35,19 +35,19 @@ impl MonitoredPosition {
 
     /// Get the position ID.
     #[must_use]
-    pub fn position_id(&self) -> &OrderId {
+    pub const fn position_id(&self) -> &OrderId {
         &self.position_id
     }
 
     /// Get the instrument ID.
     #[must_use]
-    pub fn instrument_id(&self) -> &InstrumentId {
+    pub const fn instrument_id(&self) -> &InstrumentId {
         &self.instrument_id
     }
 
     /// Get the stop/target levels.
     #[must_use]
-    pub fn levels(&self) -> &StopTargetLevels {
+    pub const fn levels(&self) -> &StopTargetLevels {
         &self.levels
     }
 
@@ -58,17 +58,17 @@ impl MonitoredPosition {
     }
 
     /// Activate monitoring.
-    pub fn activate(&mut self) {
+    pub const fn activate(&mut self) {
         self.active = true;
     }
 
     /// Deactivate monitoring.
-    pub fn deactivate(&mut self) {
+    pub const fn deactivate(&mut self) {
         self.active = false;
     }
 
     /// Update the stop/target levels.
-    pub fn update_levels(&mut self, levels: StopTargetLevels) {
+    pub const fn update_levels(&mut self, levels: StopTargetLevels) {
         self.levels = levels;
     }
 }
@@ -133,7 +133,7 @@ mod tests {
             PositionDirection::Long,
         );
 
-        position.update_levels(new_levels.clone());
+        position.update_levels(new_levels);
         assert_eq!(position.levels().stop_loss, Decimal::new(90, 0));
         assert_eq!(position.levels().take_profit, Decimal::new(120, 0));
     }

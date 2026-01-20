@@ -105,6 +105,7 @@ impl CreateOrderCommand {
 /// Order Aggregate Root.
 ///
 /// Manages the complete lifecycle of an order with FIX protocol semantics.
+#[allow(clippy::struct_field_names)]
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Order {
     id: OrderId,
@@ -171,7 +172,8 @@ impl Order {
 
     /// Reconstitute an order from stored state (no events generated).
     #[must_use]
-    pub fn reconstitute(
+    #[allow(clippy::too_many_arguments)]
+    pub const fn reconstitute(
         id: OrderId,
         symbol: Symbol,
         side: OrderSide,
@@ -212,13 +214,13 @@ impl Order {
 
     /// Get the order ID.
     #[must_use]
-    pub fn id(&self) -> &OrderId {
+    pub const fn id(&self) -> &OrderId {
         &self.id
     }
 
     /// Get the symbol.
     #[must_use]
-    pub fn symbol(&self) -> &Symbol {
+    pub const fn symbol(&self) -> &Symbol {
         &self.symbol
     }
 
@@ -236,19 +238,19 @@ impl Order {
 
     /// Get the quantity.
     #[must_use]
-    pub fn quantity(&self) -> Quantity {
+    pub const fn quantity(&self) -> Quantity {
         self.quantity
     }
 
     /// Get the limit price.
     #[must_use]
-    pub fn limit_price(&self) -> Option<Money> {
+    pub const fn limit_price(&self) -> Option<Money> {
         self.limit_price
     }
 
     /// Get the stop price.
     #[must_use]
-    pub fn stop_price(&self) -> Option<Money> {
+    pub const fn stop_price(&self) -> Option<Money> {
         self.stop_price
     }
 
@@ -266,13 +268,13 @@ impl Order {
 
     /// Get the partial fill state.
     #[must_use]
-    pub fn partial_fill(&self) -> &PartialFillState {
+    pub const fn partial_fill(&self) -> &PartialFillState {
         &self.partial_fill
     }
 
     /// Get the broker order ID.
     #[must_use]
-    pub fn broker_order_id(&self) -> Option<&BrokerId> {
+    pub const fn broker_order_id(&self) -> Option<&BrokerId> {
         self.broker_order_id.as_ref()
     }
 
@@ -284,7 +286,7 @@ impl Order {
 
     /// Check if this is a multi-leg order.
     #[must_use]
-    pub fn is_multi_leg(&self) -> bool {
+    pub const fn is_multi_leg(&self) -> bool {
         !self.legs.is_empty()
     }
 
@@ -497,20 +499,19 @@ impl Order {
     // ========================================================================
 
     fn ensure_can_transition_to(&self, target: OrderStatus) -> Result<(), OrderError> {
-        let valid = match (self.status, target) {
-            (OrderStatus::New, OrderStatus::Accepted) => true,
-            (OrderStatus::New, OrderStatus::Rejected) => true,
-            (OrderStatus::New, OrderStatus::Canceled) => true,
-            (OrderStatus::PendingNew, OrderStatus::Accepted) => true,
-            (OrderStatus::PendingNew, OrderStatus::Rejected) => true,
-            (OrderStatus::Accepted, OrderStatus::PartiallyFilled) => true,
-            (OrderStatus::Accepted, OrderStatus::Filled) => true,
-            (OrderStatus::Accepted, OrderStatus::Canceled) => true,
-            (OrderStatus::PartiallyFilled, OrderStatus::PartiallyFilled) => true,
-            (OrderStatus::PartiallyFilled, OrderStatus::Filled) => true,
-            (OrderStatus::PartiallyFilled, OrderStatus::Canceled) => true,
-            _ => false,
-        };
+        let valid = matches!(
+            (self.status, target),
+            (
+                OrderStatus::New,
+                OrderStatus::Accepted | OrderStatus::Rejected | OrderStatus::Canceled
+            ) | (
+                OrderStatus::PendingNew,
+                OrderStatus::Accepted | OrderStatus::Rejected
+            ) | (
+                OrderStatus::Accepted | OrderStatus::PartiallyFilled,
+                OrderStatus::PartiallyFilled | OrderStatus::Filled | OrderStatus::Canceled
+            )
+        );
 
         if valid {
             Ok(())
@@ -880,8 +881,8 @@ mod tests {
         let updated_at = Timestamp::now();
 
         let order = Order::reconstitute(
-            id.clone(),
-            symbol.clone(),
+            id,
+            symbol,
             OrderSide::Buy,
             OrderType::Limit,
             quantity,

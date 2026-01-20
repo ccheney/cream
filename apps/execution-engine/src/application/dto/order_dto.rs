@@ -82,7 +82,9 @@ impl OrderDto {
         let partial_fill = order.partial_fill();
         Self {
             order_id: order.id().to_string(),
-            broker_id: order.broker_order_id().map(|id| id.to_string()),
+            broker_id: order
+                .broker_order_id()
+                .map(std::string::ToString::to_string),
             symbol: order.symbol().to_string(),
             side: order.side(),
             order_type: order.order_type(),
@@ -138,7 +140,7 @@ pub struct SubmitOrdersResponseDto {
 impl SubmitOrdersResponseDto {
     /// Create a successful response.
     #[must_use]
-    pub fn success(submitted: Vec<OrderResponseDto>) -> Self {
+    pub const fn success(submitted: Vec<OrderResponseDto>) -> Self {
         Self {
             submitted,
             rejected: vec![],
@@ -149,7 +151,7 @@ impl SubmitOrdersResponseDto {
 
     /// Create a failed response with risk violations.
     #[must_use]
-    pub fn risk_rejected(violations: Vec<String>) -> Self {
+    pub const fn risk_rejected(violations: Vec<String>) -> Self {
         Self {
             submitted: vec![],
             rejected: vec![],
@@ -160,7 +162,10 @@ impl SubmitOrdersResponseDto {
 
     /// Create a partial success response.
     #[must_use]
-    pub fn partial(submitted: Vec<OrderResponseDto>, rejected: Vec<OrderResponseDto>) -> Self {
+    pub const fn partial(
+        submitted: Vec<OrderResponseDto>,
+        rejected: Vec<OrderResponseDto>,
+    ) -> Self {
         let success = !submitted.is_empty() && rejected.is_empty();
         Self {
             submitted,

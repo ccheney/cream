@@ -24,6 +24,10 @@ pub struct AlpacaPriceFeedAdapter {
 
 impl AlpacaPriceFeedAdapter {
     /// Create a new Alpaca price feed adapter.
+    ///
+    /// # Errors
+    ///
+    /// Returns error if API credentials are missing or HTTP client creation fails.
     pub fn new(config: &AlpacaConfig) -> Result<Self, AlpacaError> {
         if config.api_key.is_empty() || config.api_secret.is_empty() {
             return Err(AlpacaError::AuthenticationFailed);
@@ -166,14 +170,24 @@ impl PriceFeedPort for AlpacaPriceFeedAdapter {
     }
 
     async fn subscribe(&self, symbol: &Symbol) -> Result<(), PriceFeedError> {
-        let mut subscriptions = self.subscriptions.write().unwrap();
-        subscriptions.insert(symbol.as_str().to_string());
+        {
+            let mut subscriptions = self
+                .subscriptions
+                .write()
+                .unwrap_or_else(std::sync::PoisonError::into_inner);
+            subscriptions.insert(symbol.as_str().to_string());
+        }
         Ok(())
     }
 
     async fn unsubscribe(&self, symbol: &Symbol) -> Result<(), PriceFeedError> {
-        let mut subscriptions = self.subscriptions.write().unwrap();
-        subscriptions.remove(symbol.as_str());
+        {
+            let mut subscriptions = self
+                .subscriptions
+                .write()
+                .unwrap_or_else(std::sync::PoisonError::into_inner);
+            subscriptions.remove(symbol.as_str());
+        }
         Ok(())
     }
 

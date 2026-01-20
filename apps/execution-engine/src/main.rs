@@ -40,6 +40,7 @@ use tokio::sync::broadcast;
 const SHUTDOWN_TIMEOUT: Duration = Duration::from_secs(30);
 
 #[tokio::main]
+#[allow(clippy::too_many_lines)]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
     // Load .env file
     if dotenvy::dotenv().is_err() {
@@ -47,6 +48,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     }
 
     // Initialize tracing
+    // Static directive strings are guaranteed to parse successfully
+    #[allow(clippy::unwrap_used)]
     tracing_subscriber::fmt()
         .with_env_filter(
             tracing_subscriber::EnvFilter::from_default_env()
@@ -97,7 +100,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     // Create Alpaca broker adapter
     let alpaca_config = AlpacaConfig::new(api_key, api_secret, environment);
-    let broker = match AlpacaBrokerAdapter::new(alpaca_config) {
+    let broker = match AlpacaBrokerAdapter::new(&alpaca_config) {
         Ok(adapter) => Arc::new(adapter),
         Err(e) => {
             tracing::error!("Failed to create Alpaca adapter: {e}");

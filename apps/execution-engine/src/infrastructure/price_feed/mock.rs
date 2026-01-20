@@ -28,18 +28,29 @@ impl MockPriceFeed {
 
     /// Set the price for a symbol.
     pub fn set_price(&self, symbol: &str, price: Decimal) {
-        let mut prices = self.prices.write().unwrap();
+        let mut prices = self
+            .prices
+            .write()
+            .unwrap_or_else(std::sync::PoisonError::into_inner);
         prices.insert(symbol.to_string(), price);
     }
 
     /// Get the subscribed symbols.
     #[must_use]
     pub fn subscriptions(&self) -> Vec<String> {
-        self.subscriptions.read().unwrap().clone()
+        self.subscriptions
+            .read()
+            .unwrap_or_else(std::sync::PoisonError::into_inner)
+            .clone()
     }
 
     /// Check if a symbol is subscribed.
+    ///
+    /// # Panics
+    ///
+    /// Panics if the `RwLock` is poisoned.
     #[must_use]
+    #[allow(clippy::unwrap_used)]
     pub fn is_subscribed(&self, symbol: &str) -> bool {
         self.subscriptions
             .read()
@@ -51,11 +62,16 @@ impl MockPriceFeed {
 #[async_trait]
 impl PriceFeedPort for MockPriceFeed {
     async fn get_quote(&self, symbol: &Symbol) -> Result<Quote, PriceFeedError> {
-        let prices = self.prices.read().unwrap();
-        let price = prices
-            .get(symbol.as_str())
-            .copied()
-            .unwrap_or(Decimal::new(100, 0));
+        let price = {
+            let prices = self
+                .prices
+                .read()
+                .unwrap_or_else(std::sync::PoisonError::into_inner);
+            prices
+                .get(symbol.as_str())
+                .copied()
+                .unwrap_or_else(|| Decimal::new(100, 0))
+        };
 
         // Simulate bid/ask spread of 0.01
         let spread = Decimal::new(1, 2);
@@ -80,16 +96,26 @@ impl PriceFeedPort for MockPriceFeed {
     }
 
     async fn subscribe(&self, symbol: &Symbol) -> Result<(), PriceFeedError> {
-        let mut subscriptions = self.subscriptions.write().unwrap();
-        if !subscriptions.contains(&symbol.as_str().to_string()) {
-            subscriptions.push(symbol.as_str().to_string());
+        {
+            let mut subscriptions = self
+                .subscriptions
+                .write()
+                .unwrap_or_else(std::sync::PoisonError::into_inner);
+            if !subscriptions.contains(&symbol.as_str().to_string()) {
+                subscriptions.push(symbol.as_str().to_string());
+            }
         }
         Ok(())
     }
 
     async fn unsubscribe(&self, symbol: &Symbol) -> Result<(), PriceFeedError> {
-        let mut subscriptions = self.subscriptions.write().unwrap();
-        subscriptions.retain(|s| s != symbol.as_str());
+        {
+            let mut subscriptions = self
+                .subscriptions
+                .write()
+                .unwrap_or_else(std::sync::PoisonError::into_inner);
+            subscriptions.retain(|s| s != symbol.as_str());
+        }
         Ok(())
     }
 
@@ -97,7 +123,10 @@ impl PriceFeedPort for MockPriceFeed {
         &self,
         instrument_id: &InstrumentId,
     ) -> Result<Decimal, PriceFeedError> {
-        let prices = self.prices.read().unwrap();
+        let prices = self
+            .prices
+            .read()
+            .unwrap_or_else(std::sync::PoisonError::into_inner);
         prices
             .get(instrument_id.as_str())
             .copied()

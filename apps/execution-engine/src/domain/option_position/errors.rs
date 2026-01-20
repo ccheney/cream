@@ -7,23 +7,38 @@ use thiserror::Error;
 pub enum OptionPositionError {
     /// Invalid option contract.
     #[error("Invalid option contract: {message}")]
-    InvalidContract { message: String },
+    InvalidContract {
+        /// Error details.
+        message: String,
+    },
 
     /// Invalid spread configuration.
     #[error("Invalid spread configuration: {message}")]
-    InvalidSpread { message: String },
+    InvalidSpread {
+        /// Error details.
+        message: String,
+    },
 
     /// Position not found.
     #[error("Position not found: {position_id}")]
-    PositionNotFound { position_id: String },
+    PositionNotFound {
+        /// The missing position ID.
+        position_id: String,
+    },
 
     /// Invalid leg configuration.
     #[error("Invalid leg: {message}")]
-    InvalidLeg { message: String },
+    InvalidLeg {
+        /// Error details.
+        message: String,
+    },
 
     /// Greeks calculation error.
     #[error("Greeks calculation error: {message}")]
-    GreeksError { message: String },
+    GreeksError {
+        /// Error details.
+        message: String,
+    },
 }
 
 #[cfg(test)]

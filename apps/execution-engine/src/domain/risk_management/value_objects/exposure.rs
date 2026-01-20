@@ -72,6 +72,7 @@ impl Exposure {
 }
 
 /// Exposure as percentage of equity.
+#[allow(clippy::struct_field_names)]
 #[derive(Debug, Clone, PartialEq, Eq, Default, Serialize, Deserialize)]
 pub struct ExposurePercent {
     /// Gross exposure %.

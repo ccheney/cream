@@ -5,19 +5,15 @@ use serde::{Deserialize, Serialize};
 /// Urgency level for adaptive tactics.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "lowercase")]
+#[derive(Default)]
 pub enum Urgency {
     /// Start passive, only cross after extended time.
     Patient,
     /// Passive initially, cross if spread narrows or time elapses.
+    #[default]
     Normal,
     /// Aggressive from start, re-price frequently.
     Urgent,
-}
-
-impl Default for Urgency {
-    fn default() -> Self {
-        Self::Normal
-    }
 }
 
 /// Configuration for ADAPTIVE tactic.

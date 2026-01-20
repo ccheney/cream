@@ -29,6 +29,7 @@ impl Money {
     ///
     /// Panics if the f64 cannot be converted to Decimal.
     #[must_use]
+    #[allow(clippy::expect_used)]
     pub fn usd(amount: f64) -> Self {
         Self(Decimal::try_from(amount).expect("valid f64"))
     }
@@ -230,9 +231,9 @@ mod tests {
 
     #[test]
     fn money_round() {
-        let m = Money::new(Decimal::new(150555, 3)); // 150.555
+        let m = Money::new(Decimal::new(150_555, 3)); // 150.555
         let rounded = m.round();
-        assert_eq!(rounded.amount(), Decimal::new(15056, 2)); // 150.56
+        assert_eq!(rounded.amount(), Decimal::new(15_056, 2)); // 150.56
     }
 
     #[test]

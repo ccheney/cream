@@ -1,6 +1,6 @@
-//! gRPC ExecutionService implementation.
+//! gRPC `ExecutionService` implementation.
 //!
-//! Implements the ExecutionService gRPC service using Clean Architecture use cases.
+//! Implements the `ExecutionService` gRPC service using Clean Architecture use cases.
 
 use std::pin::Pin;
 use std::sync::Arc;
@@ -28,7 +28,7 @@ use crate::domain::order_execution::value_objects::{
 };
 use crate::domain::shared::OrderId;
 
-/// gRPC ExecutionService adapter using Clean Architecture.
+/// gRPC `ExecutionService` adapter using Clean Architecture.
 pub struct ExecutionServiceAdapter<B, R, O, E>
 where
     B: BrokerPort,
@@ -51,8 +51,8 @@ where
     O: OrderRepository,
     E: EventPublisherPort,
 {
-    /// Create a new ExecutionService adapter.
-    pub fn new(
+    /// Create a new `ExecutionService` adapter.
+    pub const fn new(
         submit_orders: Arc<SubmitOrdersUseCase<B, R, O, E>>,
         validate_risk: Arc<ValidateRiskUseCase<R, O>>,
         cancel_orders: Arc<CancelOrdersUseCase<B, O, E>>,
@@ -69,7 +69,7 @@ where
     }
 }
 
-/// Create an ExecutionService gRPC server.
+/// Create an `ExecutionService` gRPC server.
 pub fn create_execution_service<B, R, O, E>(
     submit_orders: Arc<SubmitOrdersUseCase<B, R, O, E>>,
     validate_risk: Arc<ValidateRiskUseCase<R, O>>,
@@ -131,8 +131,7 @@ where
                     quantity: rust_decimal::Decimal::from(size.quantity),
                     limit_price: order_plan
                         .entry_limit_price
-                        .map(rust_decimal::Decimal::from_f64_retain)
-                        .flatten(),
+                        .and_then(rust_decimal::Decimal::from_f64_retain),
                     time_in_force: TimeInForce::Day,
                     purpose: OrderPurpose::Entry,
                 })
@@ -171,8 +170,7 @@ where
             quantity: rust_decimal::Decimal::from(req.quantity),
             limit_price: req
                 .limit_price
-                .map(rust_decimal::Decimal::from_f64_retain)
-                .flatten(),
+                .and_then(rust_decimal::Decimal::from_f64_retain),
             time_in_force: TimeInForce::Day,
             purpose: OrderPurpose::Entry,
         };
@@ -305,8 +303,7 @@ where
                     filled_quantity: dto.filled_qty.to_string().parse().unwrap_or(0),
                     avg_fill_price: dto
                         .avg_fill_price
-                        .map(|p| p.to_string().parse().unwrap_or(0.0))
-                        .unwrap_or(0.0),
+                        .map_or(0.0, |p| p.to_string().parse().unwrap_or(0.0)),
                     limit_price: dto
                         .limit_price
                         .map(|p| p.to_string().parse().unwrap_or(0.0)),
@@ -359,8 +356,8 @@ where
 fn convert_action_to_side(action: i32) -> OrderSide {
     use super::proto::cream::v1::Action;
     match Action::try_from(action) {
-        Ok(Action::Buy) => OrderSide::Buy,
         Ok(Action::Sell) => OrderSide::Sell,
+        // Buy or unrecognized defaults to Buy
         _ => OrderSide::Buy,
     }
 }
@@ -368,8 +365,8 @@ fn convert_action_to_side(action: i32) -> OrderSide {
 fn convert_proto_side(side: i32) -> OrderSide {
     use super::proto::cream::v1::OrderSide as ProtoSide;
     match ProtoSide::try_from(side) {
-        Ok(ProtoSide::Buy) => OrderSide::Buy,
         Ok(ProtoSide::Sell) => OrderSide::Sell,
+        // Buy or unrecognized defaults to Buy
         _ => OrderSide::Buy,
     }
 }
@@ -377,8 +374,8 @@ fn convert_proto_side(side: i32) -> OrderSide {
 fn convert_proto_order_type(order_type: i32) -> OrderType {
     use super::proto::cream::v1::OrderType as ProtoOrderType;
     match ProtoOrderType::try_from(order_type) {
-        Ok(ProtoOrderType::Market) => OrderType::Market,
         Ok(ProtoOrderType::Limit) => OrderType::Limit,
+        // Market or unrecognized defaults to Market
         _ => OrderType::Market,
     }
 }
@@ -390,14 +387,12 @@ fn convert_to_proto_status(
     use crate::domain::order_execution::value_objects::OrderStatus;
     match status {
         OrderStatus::New => ProtoStatus::New.into(),
-        OrderStatus::PendingNew => ProtoStatus::Pending.into(),
+        OrderStatus::PendingNew | OrderStatus::PendingCancel => ProtoStatus::Pending.into(),
         OrderStatus::Accepted => ProtoStatus::Accepted.into(),
         OrderStatus::PartiallyFilled => ProtoStatus::PartialFill.into(),
         OrderStatus::Filled => ProtoStatus::Filled.into(),
-        OrderStatus::Canceled => ProtoStatus::Cancelled.into(),
+        OrderStatus::Canceled | OrderStatus::Expired => ProtoStatus::Cancelled.into(),
         OrderStatus::Rejected => ProtoStatus::Rejected.into(),
-        OrderStatus::Expired => ProtoStatus::Cancelled.into(), // Map expired to cancelled
-        OrderStatus::PendingCancel => ProtoStatus::Pending.into(), // Map to pending
     }
 }
 
@@ -413,8 +408,8 @@ fn convert_to_proto_order_type(order_type: OrderType) -> i32 {
     use super::proto::cream::v1::OrderType as ProtoOrderType;
     match order_type {
         OrderType::Market => ProtoOrderType::Market.into(),
-        OrderType::Limit => ProtoOrderType::Limit.into(),
-        OrderType::Stop | OrderType::StopLimit => ProtoOrderType::Limit.into(), // Fallback
+        // Limit, Stop, and StopLimit all map to Limit in proto
+        OrderType::Limit | OrderType::Stop | OrderType::StopLimit => ProtoOrderType::Limit.into(),
     }
 }
 
@@ -493,13 +488,19 @@ mod tests {
     #[async_trait]
     impl OrderRepository for MockOrderRepo {
         async fn save(&self, order: &Order) -> Result<(), OrderError> {
-            let mut orders = self.orders.write().unwrap();
+            let mut orders = self
+                .orders
+                .write()
+                .unwrap_or_else(std::sync::PoisonError::into_inner);
             orders.insert(order.id().to_string(), order.clone());
             Ok(())
         }
 
         async fn find_by_id(&self, id: &OrderId) -> Result<Option<Order>, OrderError> {
-            let orders = self.orders.read().unwrap();
+            let orders = self
+                .orders
+                .read()
+                .unwrap_or_else(std::sync::PoisonError::into_inner);
             Ok(orders.get(id.as_str()).cloned())
         }
 
@@ -511,7 +512,10 @@ mod tests {
         }
 
         async fn find_by_status(&self, status: OrderStatus) -> Result<Vec<Order>, OrderError> {
-            let orders = self.orders.read().unwrap();
+            let orders = self
+                .orders
+                .read()
+                .unwrap_or_else(std::sync::PoisonError::into_inner);
             Ok(orders
                 .values()
                 .filter(|o| o.status() == status)
@@ -520,17 +524,26 @@ mod tests {
         }
 
         async fn find_active(&self) -> Result<Vec<Order>, OrderError> {
-            let orders = self.orders.read().unwrap();
+            let orders = self
+                .orders
+                .read()
+                .unwrap_or_else(std::sync::PoisonError::into_inner);
             Ok(orders.values().cloned().collect())
         }
 
         async fn exists(&self, id: &OrderId) -> Result<bool, OrderError> {
-            let orders = self.orders.read().unwrap();
+            let orders = self
+                .orders
+                .read()
+                .unwrap_or_else(std::sync::PoisonError::into_inner);
             Ok(orders.contains_key(id.as_str()))
         }
 
         async fn delete(&self, id: &OrderId) -> Result<(), OrderError> {
-            let mut orders = self.orders.write().unwrap();
+            let mut orders = self
+                .orders
+                .write()
+                .unwrap_or_else(std::sync::PoisonError::into_inner);
             orders.remove(id.as_str());
             Ok(())
         }

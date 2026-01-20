@@ -27,7 +27,7 @@ pub struct OrderLine {
 impl OrderLine {
     /// Create a new order line.
     #[must_use]
-    pub fn new(
+    pub const fn new(
         leg_index: u32,
         instrument_id: InstrumentId,
         side: OrderSide,
@@ -52,7 +52,7 @@ impl OrderLine {
 
     /// Get the instrument ID.
     #[must_use]
-    pub fn instrument_id(&self) -> &InstrumentId {
+    pub const fn instrument_id(&self) -> &InstrumentId {
         &self.instrument_id
     }
 
@@ -64,19 +64,19 @@ impl OrderLine {
 
     /// Get the quantity.
     #[must_use]
-    pub fn quantity(&self) -> Quantity {
+    pub const fn quantity(&self) -> Quantity {
         self.quantity
     }
 
     /// Get the filled quantity.
     #[must_use]
-    pub fn filled_quantity(&self) -> Quantity {
+    pub const fn filled_quantity(&self) -> Quantity {
         self.filled_quantity
     }
 
     /// Get the average fill price.
     #[must_use]
-    pub fn avg_fill_price(&self) -> Money {
+    pub const fn avg_fill_price(&self) -> Money {
         self.avg_fill_price
     }
 
@@ -105,17 +105,17 @@ impl OrderLine {
     }
 
     /// Mark the leg as accepted.
-    pub fn accept(&mut self) {
+    pub const fn accept(&mut self) {
         self.status = OrderStatus::Accepted;
     }
 
     /// Mark the leg as canceled.
-    pub fn cancel(&mut self) {
+    pub const fn cancel(&mut self) {
         self.status = OrderStatus::Canceled;
     }
 
     /// Mark the leg as rejected.
-    pub fn reject(&mut self) {
+    pub const fn reject(&mut self) {
         self.status = OrderStatus::Rejected;
     }
 }

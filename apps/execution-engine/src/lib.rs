@@ -1,3 +1,6 @@
+// Allow unwrap/expect in tests - tests should panic on unexpected errors
+#![cfg_attr(test, allow(clippy::unwrap_used, clippy::expect_used))]
+
 //! Execution Engine - Rust Core Library
 //!
 //! Deterministic execution engine for the Cream trading system.
@@ -16,13 +19,13 @@
 //!   - `option_position`: Options spreads, Greeks, position tracking
 //!
 //! - **Application**: Use cases and orchestration
-//!   - `ports`: Interfaces for external systems (BrokerPort, PriceFeedPort)
-//!   - `use_cases`: SubmitOrders, ValidateRisk, CancelOrders, MonitorStops, Reconcile
+//!   - `ports`: Interfaces for external systems (`BrokerPort`, `PriceFeedPort`)
+//!   - `use_cases`: `SubmitOrders`, `ValidateRisk`, `CancelOrders`, `MonitorStops`, Reconcile
 //!   - `dto`: Data transfer objects for API boundaries
 //!
 //! - **Infrastructure**: Adapters (implementations)
 //!   - `broker`: Alpaca broker adapter
-//!   - `persistence`: Order repository (in-memory, PostgreSQL)
+//!   - `persistence`: Order repository (in-memory, `PostgreSQL`)
 //!   - `price_feed`: Market data adapters
 //!   - `config`: Dependency injection container
 //!

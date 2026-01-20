@@ -17,13 +17,13 @@ pub enum Environment {
 impl Environment {
     /// Returns true if this is a live trading environment.
     #[must_use]
-    pub const fn is_live(&self) -> bool {
+    pub const fn is_live(self) -> bool {
         matches!(self, Self::Live)
     }
 
     /// Returns true if this is a paper trading environment.
     #[must_use]
-    pub const fn is_paper(&self) -> bool {
+    pub const fn is_paper(self) -> bool {
         matches!(self, Self::Paper)
     }
 }
@@ -73,13 +73,13 @@ impl ExecutionAck {
 
     /// Check if all orders were successfully submitted.
     #[must_use]
-    pub fn all_accepted(&self) -> bool {
+    pub const fn all_accepted(&self) -> bool {
         self.orders_rejected == 0 && self.errors.is_empty()
     }
 
     /// Check if any orders failed.
     #[must_use]
-    pub fn has_failures(&self) -> bool {
+    pub const fn has_failures(&self) -> bool {
         self.orders_rejected > 0 || !self.errors.is_empty()
     }
 }

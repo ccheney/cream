@@ -31,51 +31,78 @@ impl InMemoryOrderRepository {
     /// Get the number of orders in the repository.
     #[must_use]
     pub fn len(&self) -> usize {
-        self.orders.read().unwrap().len()
+        self.orders
+            .read()
+            .unwrap_or_else(std::sync::PoisonError::into_inner)
+            .len()
     }
 
     /// Check if the repository is empty.
     #[must_use]
     pub fn is_empty(&self) -> bool {
-        self.orders.read().unwrap().is_empty()
+        self.orders
+            .read()
+            .unwrap_or_else(std::sync::PoisonError::into_inner)
+            .is_empty()
     }
 
     /// Clear all orders from the repository.
     pub fn clear(&self) {
-        let mut orders = self.orders.write().unwrap();
+        let mut orders = self
+            .orders
+            .write()
+            .unwrap_or_else(std::sync::PoisonError::into_inner);
         orders.clear();
     }
 
     /// Add an order to the repository (for test setup).
     pub fn add(&self, order: Order) {
-        let mut orders = self.orders.write().unwrap();
+        let mut orders = self
+            .orders
+            .write()
+            .unwrap_or_else(std::sync::PoisonError::into_inner);
         orders.insert(order.id().to_string(), order);
     }
 }
 
 #[async_trait]
+
 impl OrderRepository for InMemoryOrderRepository {
     async fn save(&self, order: &Order) -> Result<(), OrderError> {
-        let mut orders = self.orders.write().unwrap();
-        orders.insert(order.id().to_string(), order.clone());
+        {
+            let mut orders = self
+                .orders
+                .write()
+                .unwrap_or_else(std::sync::PoisonError::into_inner);
+            orders.insert(order.id().to_string(), order.clone());
+        }
         Ok(())
     }
 
     async fn find_by_id(&self, id: &OrderId) -> Result<Option<Order>, OrderError> {
-        let orders = self.orders.read().unwrap();
+        let orders = self
+            .orders
+            .read()
+            .unwrap_or_else(std::sync::PoisonError::into_inner);
         Ok(orders.get(id.as_str()).cloned())
     }
 
     async fn find_by_broker_id(&self, broker_id: &BrokerId) -> Result<Option<Order>, OrderError> {
-        let orders = self.orders.read().unwrap();
+        let orders = self
+            .orders
+            .read()
+            .unwrap_or_else(std::sync::PoisonError::into_inner);
         Ok(orders
             .values()
-            .find(|o| o.broker_order_id().map(|b| b == broker_id).unwrap_or(false))
+            .find(|o| o.broker_order_id().is_some_and(|b| b == broker_id))
             .cloned())
     }
 
     async fn find_by_status(&self, status: OrderStatus) -> Result<Vec<Order>, OrderError> {
-        let orders = self.orders.read().unwrap();
+        let orders = self
+            .orders
+            .read()
+            .unwrap_or_else(std::sync::PoisonError::into_inner);
         Ok(orders
             .values()
             .filter(|o| o.status() == status)
@@ -84,7 +111,10 @@ impl OrderRepository for InMemoryOrderRepository {
     }
 
     async fn find_active(&self) -> Result<Vec<Order>, OrderError> {
-        let orders = self.orders.read().unwrap();
+        let orders = self
+            .orders
+            .read()
+            .unwrap_or_else(std::sync::PoisonError::into_inner);
         Ok(orders
             .values()
             .filter(|o| !o.status().is_terminal())
@@ -93,13 +123,21 @@ impl OrderRepository for InMemoryOrderRepository {
     }
 
     async fn delete(&self, id: &OrderId) -> Result<(), OrderError> {
-        let mut orders = self.orders.write().unwrap();
-        orders.remove(id.as_str());
+        {
+            let mut orders = self
+                .orders
+                .write()
+                .unwrap_or_else(std::sync::PoisonError::into_inner);
+            orders.remove(id.as_str());
+        }
         Ok(())
     }
 
     async fn exists(&self, id: &OrderId) -> Result<bool, OrderError> {
-        let orders = self.orders.read().unwrap();
+        let orders = self
+            .orders
+            .read()
+            .unwrap_or_else(std::sync::PoisonError::into_inner);
         Ok(orders.contains_key(id.as_str()))
     }
 }

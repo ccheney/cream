@@ -8,37 +8,29 @@ use crate::domain::order_execution::value_objects::OrderPurpose;
 /// Urgency level for tactic selection.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "lowercase")]
+#[derive(Default)]
 pub enum TacticUrgency {
     /// Low urgency, optimize for best price.
     Low,
     /// Normal urgency, balance price and execution.
+    #[default]
     Normal,
     /// High urgency, prioritize execution over price.
     High,
 }
 
-impl Default for TacticUrgency {
-    fn default() -> Self {
-        Self::Normal
-    }
-}
-
 /// Market state for tactic selection.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
+#[derive(Default)]
 pub enum MarketState {
     /// Normal market conditions.
+    #[default]
     Normal,
     /// Volatile market (high price swings).
     Volatile,
     /// Wide spread (illiquid).
     WideSpread,
-}
-
-impl Default for MarketState {
-    fn default() -> Self {
-        Self::Normal
-    }
 }
 
 /// Context for tactic selection.
@@ -117,7 +109,7 @@ impl MarketContext {
 
     /// Create a neutral market context (no urgency modifiers).
     #[must_use]
-    pub fn neutral() -> Self {
+    pub const fn neutral() -> Self {
         Self {
             price_move_bps: Decimal::ZERO,
             is_adverse_move: false,

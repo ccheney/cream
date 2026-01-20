@@ -7,7 +7,10 @@ use thiserror::Error;
 pub enum TacticError {
     /// Invalid configuration provided.
     #[error("Invalid tactic configuration: {message}")]
-    InvalidConfiguration { message: String },
+    InvalidConfiguration {
+        /// Error details.
+        message: String,
+    },
 
     /// Execution window has ended.
     #[error("Execution window has ended")]
@@ -19,11 +22,19 @@ pub enum TacticError {
 
     /// Invalid quantity for slice.
     #[error("Invalid slice quantity: {quantity}")]
-    InvalidSliceQuantity { quantity: String },
+    InvalidSliceQuantity {
+        /// The invalid quantity value.
+        quantity: String,
+    },
 
     /// Tactic mismatch.
     #[error("Tactic mismatch: expected {expected}, got {actual}")]
-    TacticMismatch { expected: String, actual: String },
+    TacticMismatch {
+        /// Expected tactic type.
+        expected: String,
+        /// Actual tactic type.
+        actual: String,
+    },
 }
 
 #[cfg(test)]

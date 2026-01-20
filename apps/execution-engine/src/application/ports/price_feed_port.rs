@@ -73,11 +73,17 @@ impl Quote {
 pub enum PriceFeedError {
     /// Connection error.
     #[error("Price feed connection error: {message}")]
-    ConnectionError { message: String },
+    ConnectionError {
+        /// Error details.
+        message: String,
+    },
 
     /// Symbol not found.
     #[error("Symbol not found: {symbol}")]
-    SymbolNotFound { symbol: String },
+    SymbolNotFound {
+        /// The unknown symbol.
+        symbol: String,
+    },
 
     /// Data unavailable.
     #[error("Price data unavailable")]
@@ -85,7 +91,10 @@ pub enum PriceFeedError {
 
     /// Subscription error.
     #[error("Subscription error: {message}")]
-    SubscriptionError { message: String },
+    SubscriptionError {
+        /// Error details.
+        message: String,
+    },
 }
 
 /// Port for receiving market data.

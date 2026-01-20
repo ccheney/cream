@@ -65,7 +65,7 @@ impl OptionSpread {
 
     /// Get the number of legs.
     #[must_use]
-    pub fn leg_count(&self) -> usize {
+    pub const fn leg_count(&self) -> usize {
         self.legs.len()
     }
 

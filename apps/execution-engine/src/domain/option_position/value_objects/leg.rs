@@ -54,6 +54,7 @@ pub enum LegType {
 }
 
 /// A single leg of an options spread.
+#[allow(clippy::struct_field_names)]
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct Leg {
     /// The option contract.
@@ -71,7 +72,7 @@ pub struct Leg {
 impl Leg {
     /// Create a new leg.
     #[must_use]
-    pub fn new(
+    pub const fn new(
         contract: OptionContract,
         side: PositionSide,
         quantity: Decimal,
@@ -88,19 +89,19 @@ impl Leg {
 
     /// Create a long leg.
     #[must_use]
-    pub fn long(contract: OptionContract, quantity: Decimal, leg_type: LegType) -> Self {
+    pub const fn long(contract: OptionContract, quantity: Decimal, leg_type: LegType) -> Self {
         Self::new(contract, PositionSide::Long, quantity, leg_type)
     }
 
     /// Create a short leg.
     #[must_use]
-    pub fn short(contract: OptionContract, quantity: Decimal, leg_type: LegType) -> Self {
+    pub const fn short(contract: OptionContract, quantity: Decimal, leg_type: LegType) -> Self {
         Self::new(contract, PositionSide::Short, quantity, leg_type)
     }
 
     /// Get the contract.
     #[must_use]
-    pub fn contract(&self) -> &OptionContract {
+    pub const fn contract(&self) -> &OptionContract {
         &self.contract
     }
 
@@ -129,7 +130,7 @@ impl Leg {
     }
 
     /// Update the Greeks.
-    pub fn update_greeks(&mut self, greeks: Greeks) {
+    pub const fn update_greeks(&mut self, greeks: Greeks) {
         self.greeks = greeks;
     }
 

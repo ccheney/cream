@@ -37,7 +37,7 @@ pub struct SubmitOrderRequest {
 impl SubmitOrderRequest {
     /// Create a market order request.
     #[must_use]
-    pub fn market(
+    pub const fn market(
         client_order_id: OrderId,
         symbol: Symbol,
         side: OrderSide,
@@ -58,7 +58,7 @@ impl SubmitOrderRequest {
 
     /// Create a limit order request.
     #[must_use]
-    pub fn limit(
+    pub const fn limit(
         client_order_id: OrderId,
         symbol: Symbol,
         side: OrderSide,
@@ -80,14 +80,14 @@ impl SubmitOrderRequest {
 
     /// Set time in force.
     #[must_use]
-    pub fn with_time_in_force(mut self, tif: TimeInForce) -> Self {
+    pub const fn with_time_in_force(mut self, tif: TimeInForce) -> Self {
         self.time_in_force = tif;
         self
     }
 
     /// Enable extended hours.
     #[must_use]
-    pub fn with_extended_hours(mut self) -> Self {
+    pub const fn with_extended_hours(mut self) -> Self {
         self.extended_hours = true;
         self
     }
@@ -105,7 +105,7 @@ pub struct CancelOrderRequest {
 impl CancelOrderRequest {
     /// Create a cancel request by broker ID.
     #[must_use]
-    pub fn by_broker_id(broker_order_id: BrokerId) -> Self {
+    pub const fn by_broker_id(broker_order_id: BrokerId) -> Self {
         Self {
             broker_order_id: Some(broker_order_id),
             client_order_id: None,
@@ -114,7 +114,7 @@ impl CancelOrderRequest {
 
     /// Create a cancel request by client ID.
     #[must_use]
-    pub fn by_client_id(client_order_id: OrderId) -> Self {
+    pub const fn by_client_id(client_order_id: OrderId) -> Self {
         Self {
             broker_order_id: None,
             client_order_id: Some(client_order_id),
@@ -142,15 +142,24 @@ pub struct OrderAck {
 pub enum BrokerError {
     /// Connection error.
     #[error("Broker connection error: {message}")]
-    ConnectionError { message: String },
+    ConnectionError {
+        /// Error details.
+        message: String,
+    },
 
     /// Order rejected by broker.
     #[error("Order rejected: {reason}")]
-    OrderRejected { reason: String },
+    OrderRejected {
+        /// Rejection reason.
+        reason: String,
+    },
 
     /// Order not found.
     #[error("Order not found: {order_id}")]
-    OrderNotFound { order_id: String },
+    OrderNotFound {
+        /// The missing order ID.
+        order_id: String,
+    },
 
     /// Insufficient funds.
     #[error("Insufficient buying power")]
@@ -162,7 +171,10 @@ pub enum BrokerError {
 
     /// Unknown error.
     #[error("Broker error: {message}")]
-    Unknown { message: String },
+    Unknown {
+        /// Error details.
+        message: String,
+    },
 }
 
 /// Port for broker interactions.

@@ -146,7 +146,6 @@ impl PriceMonitor {
     }
 
     /// Get all monitored positions.
-    #[must_use]
     pub fn positions(&self) -> impl Iterator<Item = &MonitoredPosition> {
         self.positions.values()
     }

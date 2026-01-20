@@ -2,6 +2,10 @@
 //!
 //! Tests the full execution flow from fixture JSON → HTTP API → use cases → domain.
 
+// Allow dead_code for fixture types that capture full JSON structure
+// Allow unwrap in tests - tests should panic on unexpected errors
+#![allow(dead_code, clippy::unwrap_used)]
+
 use std::collections::HashMap;
 use std::sync::Arc;
 
@@ -178,13 +182,13 @@ struct MockBroker {
 }
 
 impl MockBroker {
-    fn new() -> Self {
+    const fn new() -> Self {
         Self {
             accept_orders: true,
         }
     }
 
-    fn rejecting() -> Self {
+    const fn rejecting() -> Self {
         Self {
             accept_orders: false,
         }
@@ -196,7 +200,7 @@ impl BrokerPort for MockBroker {
     async fn submit_order(&self, request: SubmitOrderRequest) -> Result<OrderAck, BrokerError> {
         if self.accept_orders {
             Ok(OrderAck {
-                broker_order_id: BrokerId::new(&format!("broker-{}", request.client_order_id)),
+                broker_order_id: BrokerId::new(format!("broker-{}", request.client_order_id)),
                 client_order_id: request.client_order_id,
                 status: OrderStatus::Accepted,
                 filled_qty: Decimal::ZERO,
@@ -304,10 +308,9 @@ fn load_fixture(name: &str) -> FixturePlan {
         env!("CARGO_MANIFEST_DIR"),
         name
     );
-    let content = std::fs::read_to_string(&path)
-        .unwrap_or_else(|_| panic!("Failed to read fixture: {}", path));
-    serde_json::from_str(&content)
-        .unwrap_or_else(|e| panic!("Failed to parse fixture {}: {}", name, e))
+    let content =
+        std::fs::read_to_string(&path).unwrap_or_else(|_| panic!("Failed to read fixture: {path}"));
+    serde_json::from_str(&content).unwrap_or_else(|e| panic!("Failed to parse fixture {name}: {e}"))
 }
 
 fn convert_action_to_side(action: &str, strategy_family: &str) -> OrderSide {
@@ -328,7 +331,10 @@ fn convert_action_to_side(action: &str, strategy_family: &str) -> OrderSide {
     }
 }
 
-fn convert_strategy_to_order_type(_strategy: &str, limit_price: &Option<String>) -> OrderType {
+const fn convert_strategy_to_order_type(
+    _strategy: &str,
+    limit_price: &Option<String>,
+) -> OrderType {
     if limit_price.is_some() {
         OrderType::Limit
     } else {
@@ -1031,18 +1037,15 @@ async fn e2e_all_fixtures_parseable() {
         let fixture = load_fixture(name);
         assert!(
             !fixture.plan_id.is_empty(),
-            "Fixture {} should have plan_id",
-            name
+            "Fixture {name} should have plan_id"
         );
         assert!(
             !fixture.cycle_id.is_empty(),
-            "Fixture {} should have cycle_id",
-            name
+            "Fixture {name} should have cycle_id"
         );
         assert!(
             !fixture.decisions.is_empty(),
-            "Fixture {} should have decisions",
-            name
+            "Fixture {name} should have decisions"
         );
     }
 }

@@ -45,31 +45,31 @@ impl PartialFillState {
 
     /// Get the order ID.
     #[must_use]
-    pub fn order_id(&self) -> &OrderId {
+    pub const fn order_id(&self) -> &OrderId {
         &self.order_id
     }
 
     /// Get the original order quantity (FIX tag 38: `OrderQty`).
     #[must_use]
-    pub fn order_qty(&self) -> Quantity {
+    pub const fn order_qty(&self) -> Quantity {
         self.order_qty
     }
 
     /// Get the cumulative filled quantity (FIX tag 14: `CumQty`).
     #[must_use]
-    pub fn cum_qty(&self) -> Quantity {
+    pub const fn cum_qty(&self) -> Quantity {
         self.cum_qty
     }
 
     /// Get the remaining quantity to fill (FIX tag 151: `LeavesQty`).
     #[must_use]
-    pub fn leaves_qty(&self) -> Quantity {
+    pub const fn leaves_qty(&self) -> Quantity {
         self.leaves_qty
     }
 
     /// Get the volume-weighted average fill price (FIX tag 6: `AvgPx`).
     #[must_use]
-    pub fn avg_px(&self) -> Money {
+    pub const fn avg_px(&self) -> Money {
         self.avg_px
     }
 
@@ -81,19 +81,19 @@ impl PartialFillState {
 
     /// Get the timestamp of the last fill.
     #[must_use]
-    pub fn last_fill_at(&self) -> Option<Timestamp> {
+    pub const fn last_fill_at(&self) -> Option<Timestamp> {
         self.last_fill_at
     }
 
     /// Get the order purpose.
     #[must_use]
-    pub fn order_purpose(&self) -> OrderPurpose {
+    pub const fn order_purpose(&self) -> OrderPurpose {
         self.order_purpose
     }
 
     /// Get the creation timestamp.
     #[must_use]
-    pub fn created_at(&self) -> Timestamp {
+    pub const fn created_at(&self) -> Timestamp {
         self.created_at
     }
 

@@ -19,7 +19,7 @@ pub struct RiskValidationService {
 impl RiskValidationService {
     /// Create a new risk validation service with the given policy.
     #[must_use]
-    pub fn new(policy: RiskPolicy) -> Self {
+    pub const fn new(policy: RiskPolicy) -> Self {
         Self { policy }
     }
 
@@ -72,8 +72,7 @@ impl RiskValidationService {
         // Get current position for this instrument
         let current_qty = context
             .get_position(order.symbol().as_str())
-            .map(|p| p.quantity.amount())
-            .unwrap_or(Decimal::ZERO);
+            .map_or(Decimal::ZERO, |p| p.quantity.amount());
 
         // Calculate new quantity after order
         let order_qty = order.quantity().amount();
@@ -120,23 +119,23 @@ impl RiskValidationService {
         }
 
         // Check max % of equity
-        if context.equity.amount() > Decimal::ZERO {
-            if let Some(limit_price) = order.limit_price() {
-                let notional = limit_price.amount() * order_qty;
-                let pct_equity = notional / context.equity.amount();
-                if pct_equity > limits.max_pct_equity() {
-                    result.add_violation(
-                        ConstraintViolation::error(
-                            "PER_INSTRUMENT_PCT_EQUITY_EXCEEDED",
-                            format!(
-                                "Order exceeds max % of equity: {:.1}% > {:.1}%",
-                                pct_equity * Decimal::from(100),
-                                limits.max_pct_equity() * Decimal::from(100)
-                            ),
-                        )
-                        .with_instrument(order.symbol().as_str()),
-                    );
-                }
+        if context.equity.amount() > Decimal::ZERO
+            && let Some(limit_price) = order.limit_price()
+        {
+            let notional = limit_price.amount() * order_qty;
+            let pct_equity = notional / context.equity.amount();
+            if pct_equity > limits.max_pct_equity() {
+                result.add_violation(
+                    ConstraintViolation::error(
+                        "PER_INSTRUMENT_PCT_EQUITY_EXCEEDED",
+                        format!(
+                            "Order exceeds max % of equity: {:.1}% > {:.1}%",
+                            pct_equity * Decimal::from(100),
+                            limits.max_pct_equity() * Decimal::from(100)
+                        ),
+                    )
+                    .with_instrument(order.symbol().as_str()),
+                );
             }
         }
 
@@ -361,7 +360,7 @@ impl RiskValidationService {
 
     /// Get the current policy.
     #[must_use]
-    pub fn policy(&self) -> &RiskPolicy {
+    pub const fn policy(&self) -> &RiskPolicy {
         &self.policy
     }
 

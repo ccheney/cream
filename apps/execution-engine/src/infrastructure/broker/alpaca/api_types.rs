@@ -45,19 +45,15 @@ pub struct AlpacaOrderRequest {
     pub extended_hours: Option<bool>,
 }
 
-/// Cancel request for Alpaca API.
-#[derive(Debug, Clone)]
-pub struct AlpacaCancelRequest {
-    /// Broker order ID.
-    pub broker_order_id: String,
-}
-
 // ============================================================================
 // Order Response Types
 // ============================================================================
 
 /// Order response from Alpaca API.
+///
+/// Contains all fields from Alpaca's API for debugging and future use.
 #[derive(Debug, Clone, Deserialize)]
+#[allow(dead_code)]
 pub struct AlpacaOrderResponse {
     /// Broker order ID.
     pub id: String,
@@ -117,7 +113,10 @@ impl AlpacaOrderResponse {
 // ============================================================================
 
 /// Account response from Alpaca API.
+///
+/// Contains all fields from Alpaca's API for debugging and future use.
 #[derive(Debug, Clone, Deserialize)]
+#[allow(dead_code)]
 pub struct AlpacaAccountResponse {
     /// Account ID.
     pub id: String,
@@ -140,7 +139,10 @@ pub struct AlpacaAccountResponse {
 // ============================================================================
 
 /// Position response from Alpaca API.
+///
+/// Contains all fields from Alpaca's API for debugging and future use.
 #[derive(Debug, Clone, Deserialize)]
+#[allow(dead_code)]
 pub struct AlpacaPositionResponse {
     /// Symbol.
     pub symbol: String,
@@ -179,16 +181,15 @@ pub struct AlpacaErrorResponse {
 /// Parse Alpaca order status string to domain `OrderStatus`.
 fn parse_order_status(status: &str) -> OrderStatus {
     match status.to_lowercase().as_str() {
-        "new" | "pending_new" => OrderStatus::New,
-        "accepted" | "accepted_for_bidding" => OrderStatus::Accepted,
+        "accepted" | "accepted_for_bidding" | "replaced" | "pending_replace" => {
+            OrderStatus::Accepted
+        }
         "partially_filled" => OrderStatus::PartiallyFilled,
         "filled" => OrderStatus::Filled,
-        "done_for_day" => OrderStatus::Expired,
+        "done_for_day" | "expired" => OrderStatus::Expired,
         "canceled" | "pending_cancel" => OrderStatus::Canceled,
-        "expired" => OrderStatus::Expired,
         "rejected" => OrderStatus::Rejected,
-        "replaced" | "pending_replace" => OrderStatus::Accepted,
-        "stopped" | "suspended" | "calculated" => OrderStatus::New,
+        // new, pending_new, stopped, suspended, calculated, and unknown -> New
         _ => OrderStatus::New,
     }
 }

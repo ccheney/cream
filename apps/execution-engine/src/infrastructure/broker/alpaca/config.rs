@@ -14,7 +14,7 @@ pub enum AlpacaEnvironment {
 impl AlpacaEnvironment {
     /// Get the base URL for the trading API.
     #[must_use]
-    pub fn trading_base_url(&self) -> &'static str {
+    pub const fn trading_base_url(&self) -> &'static str {
         match self {
             Self::Paper => "https://paper-api.alpaca.markets",
             Self::Live => "https://api.alpaca.markets",
@@ -23,7 +23,7 @@ impl AlpacaEnvironment {
 
     /// Get the base URL for the market data API.
     #[must_use]
-    pub fn data_base_url(&self) -> &'static str {
+    pub const fn data_base_url(&self) -> &'static str {
         "https://data.alpaca.markets"
     }
 
@@ -60,6 +60,7 @@ pub struct AlpacaConfig {
 
 impl AlpacaConfig {
     /// Create a new configuration.
+    #[must_use]
     pub fn new(api_key: String, api_secret: String, environment: AlpacaEnvironment) -> Self {
         Self {
             api_key,
@@ -79,20 +80,20 @@ impl AlpacaConfig {
 
     /// Set the retry configuration.
     #[must_use]
-    pub fn with_retry(mut self, retry: RetryConfig) -> Self {
+    pub const fn with_retry(mut self, retry: RetryConfig) -> Self {
         self.retry = retry;
         self
     }
 
     /// Get the trading API base URL.
     #[must_use]
-    pub fn trading_base_url(&self) -> &'static str {
+    pub const fn trading_base_url(&self) -> &'static str {
         self.environment.trading_base_url()
     }
 
     /// Get the data API base URL.
     #[must_use]
-    pub fn data_base_url(&self) -> &'static str {
+    pub const fn data_base_url(&self) -> &'static str {
         self.environment.data_base_url()
     }
 }
@@ -175,7 +176,7 @@ mod tests {
             "secret".to_string(),
             AlpacaEnvironment::Paper,
         )
-        .with_retry(retry.clone());
+        .with_retry(retry);
         assert_eq!(config.retry.max_attempts, 5);
     }
 

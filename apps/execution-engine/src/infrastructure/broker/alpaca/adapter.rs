@@ -1,4 +1,4 @@
-//! Alpaca broker adapter implementing BrokerPort.
+//! Alpaca broker adapter implementing `BrokerPort`.
 
 use async_trait::async_trait;
 use rust_decimal::Decimal;
@@ -27,8 +27,12 @@ pub struct AlpacaBrokerAdapter {
 
 impl AlpacaBrokerAdapter {
     /// Create a new Alpaca broker adapter.
-    pub fn new(config: AlpacaConfig) -> Result<Self, AlpacaError> {
-        let client = AlpacaHttpClient::new(&config)?;
+    ///
+    /// # Errors
+    ///
+    /// Returns error if HTTP client creation fails.
+    pub fn new(config: &AlpacaConfig) -> Result<Self, AlpacaError> {
+        let client = AlpacaHttpClient::new(config)?;
         Ok(Self {
             client,
             environment: config.environment,

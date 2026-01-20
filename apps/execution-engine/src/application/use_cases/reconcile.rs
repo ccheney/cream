@@ -50,7 +50,7 @@ pub struct ReconciliationResult {
 impl ReconciliationResult {
     /// Check if reconciliation was fully successful.
     #[must_use]
-    pub fn is_success(&self) -> bool {
+    pub const fn is_success(&self) -> bool {
         self.mismatches == 0 && self.errors.is_empty()
     }
 }
@@ -70,8 +70,8 @@ where
     B: BrokerPort,
     O: OrderRepository,
 {
-    /// Create a new ReconcileUseCase.
-    pub fn new(broker: Arc<B>, order_repo: Arc<O>) -> Self {
+    /// Create a new `ReconcileUseCase`.
+    pub const fn new(broker: Arc<B>, order_repo: Arc<O>) -> Self {
         Self { broker, order_repo }
     }
 
@@ -91,7 +91,7 @@ where
             Err(e) => {
                 result
                     .errors
-                    .push(format!("Failed to load local orders: {}", e));
+                    .push(format!("Failed to load local orders: {e}"));
                 return result;
             }
         };
@@ -102,7 +102,7 @@ where
             Err(e) => {
                 result
                     .errors
-                    .push(format!("Failed to load broker orders: {}", e));
+                    .push(format!("Failed to load broker orders: {e}"));
                 return result;
             }
         };
@@ -129,15 +129,13 @@ where
             let broker_order = broker_map.get(order.id().as_str());
 
             let local_filled = order.partial_fill().cum_qty().amount();
-            let broker_filled = broker_order.map(|o| o.filled_qty).unwrap_or(Decimal::ZERO);
+            let broker_filled = broker_order.map_or(Decimal::ZERO, |o| o.filled_qty);
 
             let mut reconciliation = OrderReconciliation {
                 order_id: order.id().to_string(),
                 broker_order_id: broker_id.to_string(),
                 local_status: order.status(),
-                broker_status: broker_order
-                    .map(|o| o.status)
-                    .unwrap_or(OrderStatus::Canceled),
+                broker_status: broker_order.map_or(OrderStatus::Canceled, |o| o.status),
                 status_match: false,
                 local_filled_qty: local_filled,
                 broker_filled_qty: broker_filled,
@@ -146,9 +144,7 @@ where
             };
 
             // Check status match
-            reconciliation.status_match = broker_order
-                .map(|o| o.status == order.status())
-                .unwrap_or(false);
+            reconciliation.status_match = broker_order.is_some_and(|o| o.status == order.status());
 
             // Check quantity match
             reconciliation.qty_match = broker_filled == local_filled;
@@ -177,7 +173,7 @@ where
                     } else {
                         reconciliation
                             .actions
-                            .push(format!("Applied fill: {} @ {}", fill_qty, fill_price));
+                            .push(format!("Applied fill: {fill_qty} @ {fill_price}"));
                     }
                 }
 
@@ -206,6 +202,10 @@ where
     }
 
     /// Reconcile a single order by ID.
+    ///
+    /// # Errors
+    ///
+    /// Returns error if broker or repository operations fail.
     pub async fn reconcile_order(
         &self,
         broker_order_id: &BrokerId,
@@ -215,14 +215,14 @@ where
             .broker
             .get_order(broker_order_id)
             .await
-            .map_err(|e| format!("Failed to get broker order: {}", e))?;
+            .map_err(|e| format!("Failed to get broker order: {e}"))?;
 
         // Find local order
         let mut order = self
             .order_repo
             .find_by_broker_id(broker_order_id)
             .await
-            .map_err(|e| format!("Failed to find local order: {}", e))?
+            .map_err(|e| format!("Failed to find local order: {e}"))?
             .ok_or_else(|| "Order not found locally".to_string())?;
 
         let local_filled = order.partial_fill().cum_qty().amount();
@@ -254,17 +254,17 @@ where
 
             order
                 .apply_fill(fill_report)
-                .map_err(|e| format!("Failed to apply fill: {}", e))?;
+                .map_err(|e| format!("Failed to apply fill: {e}"))?;
 
             reconciliation
                 .actions
-                .push(format!("Applied fill: {} @ {}", fill_qty, fill_price));
+                .push(format!("Applied fill: {fill_qty} @ {fill_price}"));
 
             // Save
             self.order_repo
                 .save(&order)
                 .await
-                .map_err(|e| format!("Failed to save order: {}", e))?;
+                .map_err(|e| format!("Failed to save order: {e}"))?;
         }
 
         Ok(reconciliation)
@@ -316,7 +316,10 @@ mod tests {
         }
 
         async fn get_order(&self, broker_order_id: &BrokerId) -> Result<OrderAck, BrokerError> {
-            let orders = self.orders.read().unwrap();
+            let orders = self
+                .orders
+                .read()
+                .unwrap_or_else(std::sync::PoisonError::into_inner);
             orders
                 .iter()
                 .find(|o| &o.broker_order_id == broker_order_id)
@@ -327,7 +330,10 @@ mod tests {
         }
 
         async fn get_open_orders(&self) -> Result<Vec<OrderAck>, BrokerError> {
-            let orders = self.orders.read().unwrap();
+            let orders = self
+                .orders
+                .read()
+                .unwrap_or_else(std::sync::PoisonError::into_inner);
             Ok(orders.clone())
         }
 
@@ -355,7 +361,10 @@ mod tests {
         }
 
         fn add_order(&self, order: Order) {
-            let mut orders = self.orders.write().unwrap();
+            let mut orders = self
+                .orders
+                .write()
+                .unwrap_or_else(std::sync::PoisonError::into_inner);
             orders.insert(order.id().to_string(), order);
         }
     }
@@ -363,13 +372,19 @@ mod tests {
     #[async_trait]
     impl OrderRepository for MockOrderRepo {
         async fn save(&self, order: &Order) -> Result<(), OrderError> {
-            let mut orders = self.orders.write().unwrap();
+            let mut orders = self
+                .orders
+                .write()
+                .unwrap_or_else(std::sync::PoisonError::into_inner);
             orders.insert(order.id().to_string(), order.clone());
             Ok(())
         }
 
         async fn find_by_id(&self, id: &OrderId) -> Result<Option<Order>, OrderError> {
-            let orders = self.orders.read().unwrap();
+            let orders = self
+                .orders
+                .read()
+                .unwrap_or_else(std::sync::PoisonError::into_inner);
             Ok(orders.get(id.as_str()).cloned())
         }
 
@@ -377,15 +392,21 @@ mod tests {
             &self,
             broker_id: &BrokerId,
         ) -> Result<Option<Order>, OrderError> {
-            let orders = self.orders.read().unwrap();
+            let orders = self
+                .orders
+                .read()
+                .unwrap_or_else(std::sync::PoisonError::into_inner);
             Ok(orders
                 .values()
-                .find(|o| o.broker_order_id().map(|b| b == broker_id).unwrap_or(false))
+                .find(|o| o.broker_order_id().is_some_and(|b| b == broker_id))
                 .cloned())
         }
 
         async fn find_by_status(&self, status: OrderStatus) -> Result<Vec<Order>, OrderError> {
-            let orders = self.orders.read().unwrap();
+            let orders = self
+                .orders
+                .read()
+                .unwrap_or_else(std::sync::PoisonError::into_inner);
             Ok(orders
                 .values()
                 .filter(|o| o.status() == status)
@@ -394,7 +415,10 @@ mod tests {
         }
 
         async fn find_active(&self) -> Result<Vec<Order>, OrderError> {
-            let orders = self.orders.read().unwrap();
+            let orders = self
+                .orders
+                .read()
+                .unwrap_or_else(std::sync::PoisonError::into_inner);
             Ok(orders
                 .values()
                 .filter(|o| !o.status().is_terminal())
@@ -403,13 +427,19 @@ mod tests {
         }
 
         async fn delete(&self, id: &OrderId) -> Result<(), OrderError> {
-            let mut orders = self.orders.write().unwrap();
+            let mut orders = self
+                .orders
+                .write()
+                .unwrap_or_else(std::sync::PoisonError::into_inner);
             orders.remove(id.as_str());
             Ok(())
         }
 
         async fn exists(&self, id: &OrderId) -> Result<bool, OrderError> {
-            let orders = self.orders.read().unwrap();
+            let orders = self
+                .orders
+                .read()
+                .unwrap_or_else(std::sync::PoisonError::into_inner);
             Ok(orders.contains_key(id.as_str()))
         }
     }

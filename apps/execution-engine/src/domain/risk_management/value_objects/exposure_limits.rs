@@ -142,7 +142,7 @@ impl OptionsLimits {
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct SizingLimits {
     /// Multiplier for flagging unusually large positions (scaled by 10).
-    /// Positions > multiplier * typical_size trigger warnings.
+    /// Positions > multiplier * `typical_size` trigger warnings.
     pub sanity_threshold_multiplier_scaled: u32,
 }
 

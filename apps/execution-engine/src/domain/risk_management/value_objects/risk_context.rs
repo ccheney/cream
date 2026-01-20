@@ -115,7 +115,7 @@ impl PositionContext {
 
     /// Add Greeks to the position.
     #[must_use]
-    pub fn with_greeks(mut self, greeks: Greeks) -> Self {
+    pub const fn with_greeks(mut self, greeks: Greeks) -> Self {
         self.greeks = Some(greeks);
         self
     }
@@ -173,21 +173,21 @@ mod tests {
 
     #[test]
     fn risk_context_new() {
-        let ctx = RiskContext::new(Money::usd(100000.0), Money::usd(200000.0));
-        assert_eq!(ctx.equity, Money::usd(100000.0));
-        assert_eq!(ctx.buying_power, Money::usd(200000.0));
+        let ctx = RiskContext::new(Money::usd(100_000.0), Money::usd(200_000.0));
+        assert_eq!(ctx.equity, Money::usd(100_000.0));
+        assert_eq!(ctx.buying_power, Money::usd(200_000.0));
     }
 
     #[test]
     fn risk_context_add_position() {
-        let mut ctx = RiskContext::new(Money::usd(100000.0), Money::usd(200000.0));
+        let mut ctx = RiskContext::new(Money::usd(100_000.0), Money::usd(200_000.0));
         ctx.add_position(
             "AAPL",
             PositionContext::new(
                 InstrumentId::new("AAPL"),
                 Quantity::from_i64(100),
-                Money::usd(15000.0),
-                Money::usd(14000.0),
+                Money::usd(15_000.0),
+                Money::usd(14_000.0),
             ),
         );
 
@@ -200,8 +200,8 @@ mod tests {
         let pos = PositionContext::new(
             InstrumentId::new("AAPL"),
             Quantity::from_i64(100),
-            Money::usd(15000.0),
-            Money::usd(14000.0),
+            Money::usd(15_000.0),
+            Money::usd(14_000.0),
         );
 
         assert_eq!(pos.unrealized_pnl, Money::usd(1000.0));
@@ -212,8 +212,8 @@ mod tests {
         let long = PositionContext::new(
             InstrumentId::new("AAPL"),
             Quantity::from_i64(100),
-            Money::usd(15000.0),
-            Money::usd(14000.0),
+            Money::usd(15_000.0),
+            Money::usd(14_000.0),
         );
         assert!(long.is_long());
         assert!(!long.is_short());
@@ -221,7 +221,7 @@ mod tests {
         let short = PositionContext::new(
             InstrumentId::new("AAPL"),
             Quantity::from_i64(-100),
-            Money::usd(15000.0),
+            Money::usd(15_000.0),
             Money::usd(16000.0),
         );
         assert!(!short.is_long());
@@ -237,13 +237,13 @@ mod tests {
 
     #[test]
     fn risk_context_total_pending_notional() {
-        let mut ctx = RiskContext::new(Money::usd(100000.0), Money::usd(200000.0));
+        let mut ctx = RiskContext::new(Money::usd(100_000.0), Money::usd(200_000.0));
         ctx.add_pending_order(
             "AAPL",
             PendingOrderContext {
                 instrument_id: InstrumentId::new("AAPL"),
                 quantity: Quantity::from_i64(100),
-                notional: Money::usd(15000.0),
+                notional: Money::usd(15_000.0),
                 is_buy: true,
             },
         );
@@ -262,7 +262,7 @@ mod tests {
 
     #[test]
     fn risk_context_serde() {
-        let ctx = RiskContext::new(Money::usd(100000.0), Money::usd(200000.0));
+        let ctx = RiskContext::new(Money::usd(100_000.0), Money::usd(200_000.0));
         let json = serde_json::to_string(&ctx).unwrap();
         let parsed: RiskContext = serde_json::from_str(&json).unwrap();
         assert_eq!(parsed.equity, ctx.equity);

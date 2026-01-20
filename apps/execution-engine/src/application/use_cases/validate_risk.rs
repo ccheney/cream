@@ -26,8 +26,8 @@ where
     R: RiskRepositoryPort,
     O: OrderRepository,
 {
-    /// Create a new ValidateRiskUseCase.
-    pub fn new(risk_repo: Arc<R>, order_repo: Arc<O>) -> Self {
+    /// Create a new `ValidateRiskUseCase`.
+    pub const fn new(risk_repo: Arc<R>, order_repo: Arc<O>) -> Self {
         Self {
             risk_repo,
             order_repo,
@@ -35,6 +35,10 @@ where
     }
 
     /// Execute the use case.
+    ///
+    /// # Errors
+    ///
+    /// Returns error if orders cannot be loaded or risk validation fails.
     pub async fn execute(
         &self,
         request: ConstraintCheckRequestDto,
@@ -45,8 +49,8 @@ where
             let id = OrderId::new(order_id);
             match self.order_repo.find_by_id(&id).await {
                 Ok(Some(order)) => orders.push(order),
-                Ok(None) => return Err(format!("Order not found: {}", order_id)),
-                Err(e) => return Err(format!("Failed to load order {}: {}", order_id, e)),
+                Ok(None) => return Err(format!("Order not found: {order_id}")),
+                Err(e) => return Err(format!("Failed to load order {order_id}: {e}")),
             }
         }
 
@@ -58,7 +62,7 @@ where
                     RiskValidationDto::passed(),
                 ));
             }
-            Err(e) => return Err(format!("Failed to load risk policy: {}", e)),
+            Err(e) => return Err(format!("Failed to load risk policy: {e}")),
         };
 
         // 3. Get risk context
@@ -66,7 +70,7 @@ where
             .risk_repo
             .build_risk_context()
             .await
-            .map_err(|e| format!("Failed to build risk context: {}", e))?;
+            .map_err(|e| format!("Failed to build risk context: {e}"))?;
 
         // 4. Validate
         let service = RiskValidationService::new(policy);
@@ -91,12 +95,16 @@ where
     }
 
     /// Validate a single order.
+    ///
+    /// # Errors
+    ///
+    /// Returns error if risk policy or context cannot be loaded.
     pub async fn validate_order(&self, order: &Order) -> Result<RiskValidationDto, String> {
         // Get active risk policy
         let policy = match self.risk_repo.find_active_policy().await {
             Ok(Some(policy)) => policy,
             Ok(None) => return Ok(RiskValidationDto::passed()),
-            Err(e) => return Err(format!("Failed to load risk policy: {}", e)),
+            Err(e) => return Err(format!("Failed to load risk policy: {e}")),
         };
 
         // Get risk context
@@ -104,22 +112,26 @@ where
             .risk_repo
             .build_risk_context()
             .await
-            .map_err(|e| format!("Failed to build risk context: {}", e))?;
+            .map_err(|e| format!("Failed to build risk context: {e}"))?;
 
         // Validate
         let service = RiskValidationService::new(policy);
-        let result = service.validate(&[order.clone()], &context);
+        let result = service.validate(std::slice::from_ref(order), &context);
 
         Ok(RiskValidationDto::from(result))
     }
 
     /// Validate multiple orders.
+    ///
+    /// # Errors
+    ///
+    /// Returns error if risk policy or context cannot be loaded.
     pub async fn validate_orders(&self, orders: &[Order]) -> Result<RiskValidationDto, String> {
         // Get active risk policy
         let policy = match self.risk_repo.find_active_policy().await {
             Ok(Some(policy)) => policy,
             Ok(None) => return Ok(RiskValidationDto::passed()),
-            Err(e) => return Err(format!("Failed to load risk policy: {}", e)),
+            Err(e) => return Err(format!("Failed to load risk policy: {e}")),
         };
 
         // Get risk context
@@ -127,7 +139,7 @@ where
             .risk_repo
             .build_risk_context()
             .await
-            .map_err(|e| format!("Failed to build risk context: {}", e))?;
+            .map_err(|e| format!("Failed to build risk context: {e}"))?;
 
         // Validate
         let service = RiskValidationService::new(policy);
@@ -166,7 +178,10 @@ mod tests {
         }
 
         fn add_order(&self, order: Order) {
-            let mut orders = self.orders.write().unwrap();
+            let mut orders = self
+                .orders
+                .write()
+                .unwrap_or_else(std::sync::PoisonError::into_inner);
             orders.insert(order.id().to_string(), order);
         }
     }
@@ -174,13 +189,19 @@ mod tests {
     #[async_trait]
     impl OrderRepository for MockOrderRepo {
         async fn save(&self, order: &Order) -> Result<(), OrderError> {
-            let mut orders = self.orders.write().unwrap();
+            let mut orders = self
+                .orders
+                .write()
+                .unwrap_or_else(std::sync::PoisonError::into_inner);
             orders.insert(order.id().to_string(), order.clone());
             Ok(())
         }
 
         async fn find_by_id(&self, id: &OrderId) -> Result<Option<Order>, OrderError> {
-            let orders = self.orders.read().unwrap();
+            let orders = self
+                .orders
+                .read()
+                .unwrap_or_else(std::sync::PoisonError::into_inner);
             Ok(orders.get(id.as_str()).cloned())
         }
 
@@ -192,7 +213,10 @@ mod tests {
         }
 
         async fn find_by_status(&self, status: OrderStatus) -> Result<Vec<Order>, OrderError> {
-            let orders = self.orders.read().unwrap();
+            let orders = self
+                .orders
+                .read()
+                .unwrap_or_else(std::sync::PoisonError::into_inner);
             Ok(orders
                 .values()
                 .filter(|o| o.status() == status)
@@ -201,17 +225,26 @@ mod tests {
         }
 
         async fn find_active(&self) -> Result<Vec<Order>, OrderError> {
-            let orders = self.orders.read().unwrap();
+            let orders = self
+                .orders
+                .read()
+                .unwrap_or_else(std::sync::PoisonError::into_inner);
             Ok(orders.values().cloned().collect())
         }
 
         async fn exists(&self, id: &OrderId) -> Result<bool, OrderError> {
-            let orders = self.orders.read().unwrap();
+            let orders = self
+                .orders
+                .read()
+                .unwrap_or_else(std::sync::PoisonError::into_inner);
             Ok(orders.contains_key(id.as_str()))
         }
 
         async fn delete(&self, id: &OrderId) -> Result<(), OrderError> {
-            let mut orders = self.orders.write().unwrap();
+            let mut orders = self
+                .orders
+                .write()
+                .unwrap_or_else(std::sync::PoisonError::into_inner);
             orders.remove(id.as_str());
             Ok(())
         }
@@ -314,11 +347,11 @@ mod tests {
 
         let use_case = ValidateRiskUseCase::new(risk_repo, order_repo);
 
-        let order1 = create_test_order("order-1");
-        let order2 = create_test_order("order-2");
-        let orders = vec![order1, order2];
+        let first = create_test_order("order-1");
+        let second = create_test_order("order-2");
+        let batch = vec![first, second];
 
-        let result = use_case.validate_orders(&orders).await.unwrap();
+        let result = use_case.validate_orders(&batch).await.unwrap();
         assert!(result.passed);
     }
 

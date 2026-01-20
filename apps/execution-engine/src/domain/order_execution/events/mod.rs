@@ -28,7 +28,7 @@ pub enum OrderEvent {
 impl OrderEvent {
     /// Get the order ID for this event.
     #[must_use]
-    pub fn order_id(&self) -> &OrderId {
+    pub const fn order_id(&self) -> &OrderId {
         match self {
             Self::Submitted(e) => &e.order_id,
             Self::Accepted(e) => &e.order_id,
@@ -41,7 +41,7 @@ impl OrderEvent {
 
     /// Get the timestamp when this event occurred.
     #[must_use]
-    pub fn occurred_at(&self) -> Timestamp {
+    pub const fn occurred_at(&self) -> Timestamp {
         match self {
             Self::Submitted(e) => e.occurred_at,
             Self::Accepted(e) => e.occurred_at,

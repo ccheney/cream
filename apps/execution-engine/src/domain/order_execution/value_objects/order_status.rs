@@ -82,14 +82,13 @@ impl OrderStatus {
     pub const fn fix_tag_value(&self) -> char {
         match self {
             Self::New => '0',
-            Self::PartiallyFilled => '1',
+            Self::PartiallyFilled | Self::Accepted => '1', // Both map to '1' in FIX
             Self::Filled => '2',
             Self::Canceled => '4',
             Self::PendingCancel => '6',
             Self::Rejected => '8',
             Self::PendingNew => 'A',
             Self::Expired => 'C',
-            Self::Accepted => '1', // Same as New in FIX
         }
     }
 }

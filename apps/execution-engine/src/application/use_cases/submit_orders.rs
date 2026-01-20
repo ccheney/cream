@@ -35,8 +35,8 @@ where
     O: OrderRepository,
     E: EventPublisherPort,
 {
-    /// Create a new SubmitOrdersUseCase.
-    pub fn new(
+    /// Create a new `SubmitOrdersUseCase`.
+    pub const fn new(
         broker: Arc<B>,
         risk_repo: Arc<R>,
         order_repo: Arc<O>,
@@ -67,10 +67,10 @@ where
         };
 
         // 2. Validate risk if requested
-        if request.validate_risk {
-            if let Err(violations) = self.validate_risk(&orders).await {
-                return SubmitOrdersResponseDto::risk_rejected(violations);
-            }
+        if request.validate_risk
+            && let Err(violations) = self.validate_risk(&orders).await
+        {
+            return SubmitOrdersResponseDto::risk_rejected(violations);
         }
 
         // 3. Submit orders to broker
@@ -109,6 +109,7 @@ where
     }
 
     /// Create a domain Order from DTO.
+    #[allow(clippy::unused_self)]
     fn create_order(&self, dto: &CreateOrderDto) -> Result<Order, OrderError> {
         let command = CreateOrderCommand {
             symbol: Symbol::new(&dto.symbol),
@@ -258,13 +259,19 @@ mod tests {
     #[async_trait]
     impl OrderRepository for MockOrderRepo {
         async fn save(&self, order: &Order) -> Result<(), OrderError> {
-            let mut orders = self.orders.write().unwrap();
+            let mut orders = self
+                .orders
+                .write()
+                .unwrap_or_else(std::sync::PoisonError::into_inner);
             orders.insert(order.id().to_string(), order.clone());
             Ok(())
         }
 
         async fn find_by_id(&self, id: &OrderId) -> Result<Option<Order>, OrderError> {
-            let orders = self.orders.read().unwrap();
+            let orders = self
+                .orders
+                .read()
+                .unwrap_or_else(std::sync::PoisonError::into_inner);
             Ok(orders.get(id.as_str()).cloned())
         }
 
@@ -276,7 +283,10 @@ mod tests {
         }
 
         async fn find_by_status(&self, status: OrderStatus) -> Result<Vec<Order>, OrderError> {
-            let orders = self.orders.read().unwrap();
+            let orders = self
+                .orders
+                .read()
+                .unwrap_or_else(std::sync::PoisonError::into_inner);
             Ok(orders
                 .values()
                 .filter(|o| o.status() == status)
@@ -285,7 +295,10 @@ mod tests {
         }
 
         async fn find_active(&self) -> Result<Vec<Order>, OrderError> {
-            let orders = self.orders.read().unwrap();
+            let orders = self
+                .orders
+                .read()
+                .unwrap_or_else(std::sync::PoisonError::into_inner);
             Ok(orders
                 .values()
                 .filter(|o| !o.status().is_terminal())
@@ -294,12 +307,18 @@ mod tests {
         }
 
         async fn exists(&self, id: &OrderId) -> Result<bool, OrderError> {
-            let orders = self.orders.read().unwrap();
+            let orders = self
+                .orders
+                .read()
+                .unwrap_or_else(std::sync::PoisonError::into_inner);
             Ok(orders.contains_key(id.as_str()))
         }
 
         async fn delete(&self, id: &OrderId) -> Result<(), OrderError> {
-            let mut orders = self.orders.write().unwrap();
+            let mut orders = self
+                .orders
+                .write()
+                .unwrap_or_else(std::sync::PoisonError::into_inner);
             orders.remove(id.as_str());
             Ok(())
         }

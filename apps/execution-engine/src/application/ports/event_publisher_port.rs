@@ -11,15 +11,24 @@ use crate::domain::order_execution::events::OrderEvent;
 pub enum EventPublishError {
     /// Connection error.
     #[error("Event publish connection error: {message}")]
-    ConnectionError { message: String },
+    ConnectionError {
+        /// Error details.
+        message: String,
+    },
 
     /// Serialization error.
     #[error("Event serialization error: {message}")]
-    SerializationError { message: String },
+    SerializationError {
+        /// Error details.
+        message: String,
+    },
 
     /// Publishing failed.
     #[error("Event publish failed: {message}")]
-    PublishFailed { message: String },
+    PublishFailed {
+        /// Error details.
+        message: String,
+    },
 }
 
 /// Port for publishing domain events.

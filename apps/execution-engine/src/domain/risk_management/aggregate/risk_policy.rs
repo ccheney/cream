@@ -57,7 +57,7 @@ impl RiskPolicy {
 
     /// Get the exposure limits.
     #[must_use]
-    pub fn limits(&self) -> &ExposureLimits {
+    pub const fn limits(&self) -> &ExposureLimits {
         &self.limits
     }
 
@@ -140,7 +140,7 @@ mod tests {
         let mut new_limits = ExposureLimits::default();
         new_limits.per_instrument.max_units = 500;
 
-        policy.update_limits(new_limits.clone());
+        policy.update_limits(new_limits);
         assert_eq!(policy.limits().per_instrument.max_units, 500);
     }
 

@@ -62,7 +62,7 @@ impl From<ConstraintResult> for RiskValidationDto {
 impl RiskValidationDto {
     /// Create a passed validation.
     #[must_use]
-    pub fn passed() -> Self {
+    pub const fn passed() -> Self {
         Self {
             passed: true,
             violations: vec![],
@@ -71,7 +71,7 @@ impl RiskValidationDto {
 
     /// Create a failed validation.
     #[must_use]
-    pub fn failed(violations: Vec<ViolationDto>) -> Self {
+    pub const fn failed(violations: Vec<ViolationDto>) -> Self {
         Self {
             passed: false,
             violations,
@@ -109,7 +109,7 @@ impl ConstraintCheckResponseDto {
 
     /// Create a response with per-order results.
     #[must_use]
-    pub fn with_per_order(
+    pub const fn with_per_order(
         result: RiskValidationDto,
         per_order: std::collections::HashMap<String, RiskValidationDto>,
     ) -> Self {

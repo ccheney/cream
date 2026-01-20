@@ -13,34 +13,30 @@ pub struct OrderStateMachine;
 impl OrderStateMachine {
     /// Check if a state transition is valid.
     #[must_use]
-    pub fn is_valid_transition(from: OrderStatus, to: OrderStatus) -> bool {
+    pub const fn is_valid_transition(from: OrderStatus, to: OrderStatus) -> bool {
         matches!(
             (from, to),
             // From New
-            (OrderStatus::New, OrderStatus::PendingNew)
-                | (OrderStatus::New, OrderStatus::Accepted)
-                | (OrderStatus::New, OrderStatus::Rejected)
-                | (OrderStatus::New, OrderStatus::Canceled)
-                // From PendingNew
-                | (OrderStatus::PendingNew, OrderStatus::Accepted)
-                | (OrderStatus::PendingNew, OrderStatus::Rejected)
-                | (OrderStatus::PendingNew, OrderStatus::Canceled)
-                // From Accepted
-                | (OrderStatus::Accepted, OrderStatus::PartiallyFilled)
-                | (OrderStatus::Accepted, OrderStatus::Filled)
-                | (OrderStatus::Accepted, OrderStatus::PendingCancel)
-                | (OrderStatus::Accepted, OrderStatus::Canceled)
-                | (OrderStatus::Accepted, OrderStatus::Expired)
-                // From PartiallyFilled
-                | (OrderStatus::PartiallyFilled, OrderStatus::PartiallyFilled)
-                | (OrderStatus::PartiallyFilled, OrderStatus::Filled)
-                | (OrderStatus::PartiallyFilled, OrderStatus::PendingCancel)
-                | (OrderStatus::PartiallyFilled, OrderStatus::Canceled)
-                | (OrderStatus::PartiallyFilled, OrderStatus::Expired)
-                // From PendingCancel
-                | (OrderStatus::PendingCancel, OrderStatus::Canceled)
-                | (OrderStatus::PendingCancel, OrderStatus::Filled)
-                | (OrderStatus::PendingCancel, OrderStatus::PartiallyFilled)
+            (
+                OrderStatus::New,
+                OrderStatus::PendingNew
+                    | OrderStatus::Accepted
+                    | OrderStatus::Rejected
+                    | OrderStatus::Canceled
+            ) | (
+                OrderStatus::PendingNew,
+                OrderStatus::Accepted | OrderStatus::Rejected | OrderStatus::Canceled
+            ) | (
+                OrderStatus::Accepted | OrderStatus::PartiallyFilled,
+                OrderStatus::PartiallyFilled
+                    | OrderStatus::Filled
+                    | OrderStatus::PendingCancel
+                    | OrderStatus::Canceled
+                    | OrderStatus::Expired
+            ) | (
+                OrderStatus::PendingCancel,
+                OrderStatus::Canceled | OrderStatus::Filled | OrderStatus::PartiallyFilled
+            )
         )
     }
 
@@ -88,14 +84,7 @@ impl OrderStateMachine {
                 OrderStatus::Rejected,
                 OrderStatus::Canceled,
             ],
-            OrderStatus::Accepted => vec![
-                OrderStatus::PartiallyFilled,
-                OrderStatus::Filled,
-                OrderStatus::PendingCancel,
-                OrderStatus::Canceled,
-                OrderStatus::Expired,
-            ],
-            OrderStatus::PartiallyFilled => vec![
+            OrderStatus::Accepted | OrderStatus::PartiallyFilled => vec![
                 OrderStatus::PartiallyFilled,
                 OrderStatus::Filled,
                 OrderStatus::PendingCancel,

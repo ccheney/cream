@@ -46,7 +46,8 @@ impl Quantity {
 
     /// Get the integer portion (truncated).
     #[must_use]
-    pub fn as_i64(&self) -> i64 {
+    #[allow(clippy::cast_possible_truncation)]
+    pub const fn as_i64(&self) -> i64 {
         let divisor = 10i128.pow(self.0.scale());
         let result = self.0.mantissa() / divisor;
         result as i64

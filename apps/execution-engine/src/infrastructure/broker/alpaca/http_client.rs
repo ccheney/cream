@@ -50,6 +50,7 @@ impl AlpacaHttpClient {
     }
 
     /// Make a POST request to the trading API.
+    #[allow(clippy::future_not_send)]
     pub async fn post<T: DeserializeOwned, B: Serialize>(
         &self,
         path: &str,
@@ -68,12 +69,16 @@ impl AlpacaHttpClient {
     }
 
     /// Make a GET request to the data API.
+    ///
+    /// Reserved for market data API access (quotes, bars, etc.).
+    #[allow(dead_code)]
     pub async fn data_get<T: DeserializeOwned>(&self, path: &str) -> Result<T, AlpacaError> {
         self.request("GET", &self.data_base_url, path, None::<&()>)
             .await
     }
 
     /// Internal request implementation with retry logic.
+    #[allow(clippy::future_not_send, clippy::too_many_lines)]
     async fn request<T: DeserializeOwned, B: Serialize>(
         &self,
         method: &str,
@@ -81,7 +86,7 @@ impl AlpacaHttpClient {
         path: &str,
         body: Option<&B>,
     ) -> Result<T, AlpacaError> {
-        let url = format!("{}{}", base_url, path);
+        let url = format!("{base_url}{path}");
         let mut backoff = ExponentialBackoff::new(&self.retry_config);
 
         loop {
@@ -108,7 +113,7 @@ impl AlpacaHttpClient {
                     .header("APCA-API-KEY-ID", &self.api_key)
                     .header("APCA-API-SECRET-KEY", &self.api_secret),
                 _ => {
-                    return Err(AlpacaError::Http(format!("Unsupported method: {}", method)));
+                    return Err(AlpacaError::Http(format!("Unsupported method: {method}")));
                 }
             };
 
@@ -228,7 +233,7 @@ enum ErrorCategory {
 }
 
 /// Categorize HTTP status code for retry handling.
-fn categorize_status(status: StatusCode) -> ErrorCategory {
+const fn categorize_status(status: StatusCode) -> ErrorCategory {
     match status.as_u16() {
         429 => ErrorCategory::RateLimited,
         408 | 500 | 502 | 503 | 504 => ErrorCategory::Retryable,
@@ -246,7 +251,7 @@ struct ExponentialBackoff {
 }
 
 impl ExponentialBackoff {
-    fn new(config: &RetryConfig) -> Self {
+    const fn new(config: &RetryConfig) -> Self {
         Self {
             attempt: 0,
             max_attempts: config.max_attempts,

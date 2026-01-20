@@ -7,19 +7,31 @@ use thiserror::Error;
 pub enum StopEnforcementError {
     /// Position not found.
     #[error("Position not found: {position_id}")]
-    PositionNotFound { position_id: String },
+    PositionNotFound {
+        /// The missing position ID.
+        position_id: String,
+    },
 
     /// Invalid stop/target configuration.
     #[error("Invalid stop/target levels: {message}")]
-    InvalidLevels { message: String },
+    InvalidLevels {
+        /// Error details.
+        message: String,
+    },
 
     /// Position already being monitored.
     #[error("Position already monitored: {position_id}")]
-    AlreadyMonitored { position_id: String },
+    AlreadyMonitored {
+        /// The already monitored position ID.
+        position_id: String,
+    },
 
     /// Monitoring failed.
     #[error("Monitoring error: {message}")]
-    MonitoringError { message: String },
+    MonitoringError {
+        /// Error details.
+        message: String,
+    },
 }
 
 #[cfg(test)]

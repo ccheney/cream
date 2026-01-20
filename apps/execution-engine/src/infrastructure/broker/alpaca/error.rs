@@ -78,7 +78,7 @@ impl From<AlpacaError> for BrokerError {
                 Self::ConnectionError { message: msg }
             }
             AlpacaError::Api { code, message } => Self::Unknown {
-                message: format!("{}: {}", code, message),
+                message: format!("{code}: {message}"),
             },
             AlpacaError::OrderRejected(msg) | AlpacaError::InvalidOrder(msg) => {
                 Self::OrderRejected { reason: msg }
@@ -88,13 +88,10 @@ impl From<AlpacaError> for BrokerError {
             },
             AlpacaError::RateLimited { .. } => Self::RateLimited,
             AlpacaError::EnvironmentMismatch { expected, actual } => Self::Unknown {
-                message: format!(
-                    "Environment mismatch: expected {}, got {}",
-                    expected, actual
-                ),
+                message: format!("Environment mismatch: expected {expected}, got {actual}"),
             },
             AlpacaError::MaxRetriesExceeded { attempts } => Self::ConnectionError {
-                message: format!("Max retries exceeded after {} attempts", attempts),
+                message: format!("Max retries exceeded after {attempts} attempts"),
             },
             AlpacaError::OrderNotFound { order_id } => Self::OrderNotFound { order_id },
         }

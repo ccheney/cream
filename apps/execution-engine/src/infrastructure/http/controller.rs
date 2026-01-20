@@ -94,7 +94,7 @@ where
 {
     Json(HealthResponse {
         status: "healthy".to_string(),
-        version: state.version.clone(),
+        version: state.version,
     })
 }
 
@@ -160,7 +160,9 @@ where
                 })
                 .collect();
 
-            let per_order = if !result.per_order_results.is_empty() {
+            let per_order = if result.per_order_results.is_empty() {
+                None
+            } else {
                 Some(
                     result
                         .per_order_results
@@ -187,8 +189,6 @@ where
                         })
                         .collect(),
                 )
-            } else {
-                None
             };
 
             (
@@ -273,7 +273,9 @@ where
         })
         .collect();
 
-    let risk_violations = if !result.risk_violations.is_empty() {
+    let risk_violations = if result.risk_violations.is_empty() {
+        None
+    } else {
         Some(
             result
                 .risk_violations
@@ -288,8 +290,6 @@ where
                 })
                 .collect(),
         )
-    } else {
-        None
     };
 
     (
@@ -469,13 +469,19 @@ mod tests {
     #[async_trait]
     impl OrderRepository for MockOrderRepo {
         async fn save(&self, order: &Order) -> Result<(), OrderError> {
-            let mut orders = self.orders.write().unwrap();
+            let mut orders = self
+                .orders
+                .write()
+                .unwrap_or_else(std::sync::PoisonError::into_inner);
             orders.insert(order.id().to_string(), order.clone());
             Ok(())
         }
 
         async fn find_by_id(&self, id: &OrderId) -> Result<Option<Order>, OrderError> {
-            let orders = self.orders.read().unwrap();
+            let orders = self
+                .orders
+                .read()
+                .unwrap_or_else(std::sync::PoisonError::into_inner);
             Ok(orders.get(id.as_str()).cloned())
         }
 
@@ -487,7 +493,10 @@ mod tests {
         }
 
         async fn find_by_status(&self, status: OrderStatus) -> Result<Vec<Order>, OrderError> {
-            let orders = self.orders.read().unwrap();
+            let orders = self
+                .orders
+                .read()
+                .unwrap_or_else(std::sync::PoisonError::into_inner);
             Ok(orders
                 .values()
                 .filter(|o| o.status() == status)
@@ -496,17 +505,26 @@ mod tests {
         }
 
         async fn find_active(&self) -> Result<Vec<Order>, OrderError> {
-            let orders = self.orders.read().unwrap();
+            let orders = self
+                .orders
+                .read()
+                .unwrap_or_else(std::sync::PoisonError::into_inner);
             Ok(orders.values().cloned().collect())
         }
 
         async fn exists(&self, id: &OrderId) -> Result<bool, OrderError> {
-            let orders = self.orders.read().unwrap();
+            let orders = self
+                .orders
+                .read()
+                .unwrap_or_else(std::sync::PoisonError::into_inner);
             Ok(orders.contains_key(id.as_str()))
         }
 
         async fn delete(&self, id: &OrderId) -> Result<(), OrderError> {
-            let mut orders = self.orders.write().unwrap();
+            let mut orders = self
+                .orders
+                .write()
+                .unwrap_or_else(std::sync::PoisonError::into_inner);
             orders.remove(id.as_str());
             Ok(())
         }

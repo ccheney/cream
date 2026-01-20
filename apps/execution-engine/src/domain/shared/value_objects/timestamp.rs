@@ -10,7 +10,7 @@ use std::fmt;
 pub struct Timestamp(DateTime<Utc>);
 
 impl Timestamp {
-    /// Create a new Timestamp from a DateTime<Utc>.
+    /// Create a new Timestamp from a `DateTime`<Utc>.
     #[must_use]
     pub const fn new(dt: DateTime<Utc>) -> Self {
         Self(dt)
@@ -32,7 +32,7 @@ impl Timestamp {
         Ok(Self(dt.with_timezone(&Utc)))
     }
 
-    /// Get the inner DateTime<Utc>.
+    /// Get the inner `DateTime`<Utc>.
     #[must_use]
     pub const fn as_datetime(&self) -> DateTime<Utc> {
         self.0
@@ -46,13 +46,13 @@ impl Timestamp {
 
     /// Get the Unix timestamp in seconds.
     #[must_use]
-    pub fn unix_seconds(&self) -> i64 {
+    pub const fn unix_seconds(&self) -> i64 {
         self.0.timestamp()
     }
 
     /// Get the Unix timestamp in milliseconds.
     #[must_use]
-    pub fn unix_millis(&self) -> i64 {
+    pub const fn unix_millis(&self) -> i64 {
         self.0.timestamp_millis()
     }
 
@@ -133,7 +133,7 @@ mod tests {
     #[test]
     fn timestamp_unix_seconds() {
         let ts = Timestamp::parse("2026-01-19T12:00:00Z").unwrap();
-        assert_eq!(ts.unix_seconds(), 1768824000);
+        assert_eq!(ts.unix_seconds(), 1_768_824_000);
     }
 
     #[test]
@@ -177,7 +177,7 @@ mod tests {
     #[test]
     fn timestamp_unix_millis() {
         let ts = Timestamp::parse("2026-01-19T12:00:00Z").unwrap();
-        assert_eq!(ts.unix_millis(), 1768824000000);
+        assert_eq!(ts.unix_millis(), 1_768_824_000_000);
     }
 
     #[test]
@@ -191,7 +191,7 @@ mod tests {
         use chrono::TimeZone;
         let dt = Utc.with_ymd_and_hms(2026, 1, 19, 12, 0, 0).unwrap();
         let ts = Timestamp::new(dt);
-        assert_eq!(ts.unix_seconds(), 1768824000);
+        assert_eq!(ts.unix_seconds(), 1_768_824_000);
     }
 
     #[test]

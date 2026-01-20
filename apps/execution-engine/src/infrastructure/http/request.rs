@@ -49,15 +49,15 @@ pub struct DecisionRequest {
     pub purpose: OrderPurpose,
 }
 
-fn default_order_type() -> OrderType {
+const fn default_order_type() -> OrderType {
     OrderType::Market
 }
 
-fn default_tif() -> TimeInForce {
+const fn default_tif() -> TimeInForce {
     TimeInForce::Day
 }
 
-fn default_purpose() -> OrderPurpose {
+const fn default_purpose() -> OrderPurpose {
     OrderPurpose::Entry
 }
 

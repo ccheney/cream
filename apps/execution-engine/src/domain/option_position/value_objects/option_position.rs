@@ -40,18 +40,18 @@ impl OptionPosition {
 
     /// Get the position ID.
     #[must_use]
-    pub fn position_id(&self) -> &OrderId {
+    pub const fn position_id(&self) -> &OrderId {
         &self.position_id
     }
 
     /// Get the spread.
     #[must_use]
-    pub fn spread(&self) -> &OptionSpread {
+    pub const fn spread(&self) -> &OptionSpread {
         &self.spread
     }
 
     /// Get mutable spread.
-    pub fn spread_mut(&mut self) -> &mut OptionSpread {
+    pub const fn spread_mut(&mut self) -> &mut OptionSpread {
         &mut self.spread
     }
 
@@ -80,18 +80,18 @@ impl OptionPosition {
     }
 
     /// Update the current market price.
-    pub fn update_price(&mut self, price: Decimal) {
+    pub const fn update_price(&mut self, price: Decimal) {
         self.current_price = price;
     }
 
     /// Close the position.
-    pub fn close(&mut self) {
+    pub const fn close(&mut self) {
         self.is_open = false;
     }
 
     /// Get the spread type.
     #[must_use]
-    pub fn spread_type(&self) -> SpreadType {
+    pub const fn spread_type(&self) -> SpreadType {
         self.spread.spread_type()
     }
 

@@ -6,8 +6,10 @@ use std::fmt;
 /// Type of options spread.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
+#[derive(Default)]
 pub enum SpreadType {
     /// Single option (not a spread).
+    #[default]
     Single,
     /// Vertical spread (same expiry, different strikes).
     Vertical,
@@ -27,12 +29,6 @@ pub enum SpreadType {
     Strangle,
     /// Custom/unclassified spread.
     Custom,
-}
-
-impl Default for SpreadType {
-    fn default() -> Self {
-        Self::Single
-    }
 }
 
 impl fmt::Display for SpreadType {

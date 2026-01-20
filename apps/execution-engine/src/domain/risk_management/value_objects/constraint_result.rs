@@ -28,7 +28,7 @@ impl fmt::Display for ViolationSeverity {
 /// A single constraint violation.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct ConstraintViolation {
-    /// Violation code (e.g., "PER_INSTRUMENT_NOTIONAL_EXCEEDED").
+    /// Violation code (e.g., "`PER_INSTRUMENT_NOTIONAL_EXCEEDED`").
     pub code: String,
     /// Violation severity.
     pub severity: ViolationSeverity,
@@ -132,7 +132,7 @@ pub struct ConstraintResult {
 impl ConstraintResult {
     /// Create a successful result with no violations.
     #[must_use]
-    pub fn success() -> Self {
+    pub const fn success() -> Self {
         Self {
             passed: true,
             violations: Vec::new(),
@@ -141,7 +141,7 @@ impl ConstraintResult {
 
     /// Create a failed result with violations.
     #[must_use]
-    pub fn failure(violations: Vec<ConstraintViolation>) -> Self {
+    pub const fn failure(violations: Vec<ConstraintViolation>) -> Self {
         Self {
             passed: false,
             violations,

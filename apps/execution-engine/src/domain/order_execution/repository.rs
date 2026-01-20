@@ -14,6 +14,7 @@ use crate::domain::shared::{BrokerId, OrderId};
 ///
 /// This is a domain interface (port) that is implemented by
 /// infrastructure adapters (Postgres, in-memory, etc.).
+
 #[async_trait]
 pub trait OrderRepository: Send + Sync {
     /// Save an order (insert or update).
@@ -90,8 +91,14 @@ mod tests {
     #[async_trait]
     impl OrderRepository for InMemoryOrderRepository {
         async fn save(&self, order: &Order) -> Result<(), OrderError> {
-            let mut orders = self.orders.write().unwrap();
-            let mut index = self.broker_index.write().unwrap();
+            let mut orders = self
+                .orders
+                .write()
+                .unwrap_or_else(std::sync::PoisonError::into_inner);
+            let mut index = self
+                .broker_index
+                .write()
+                .unwrap_or_else(std::sync::PoisonError::into_inner);
 
             if let Some(broker_id) = order.broker_order_id() {
                 index.insert(
@@ -104,7 +111,10 @@ mod tests {
         }
 
         async fn find_by_id(&self, id: &OrderId) -> Result<Option<Order>, OrderError> {
-            let orders = self.orders.read().unwrap();
+            let orders = self
+                .orders
+                .read()
+                .unwrap_or_else(std::sync::PoisonError::into_inner);
             Ok(orders.get(id.as_str()).cloned())
         }
 
@@ -112,8 +122,14 @@ mod tests {
             &self,
             broker_id: &BrokerId,
         ) -> Result<Option<Order>, OrderError> {
-            let index = self.broker_index.read().unwrap();
-            let orders = self.orders.read().unwrap();
+            let index = self
+                .broker_index
+                .read()
+                .unwrap_or_else(std::sync::PoisonError::into_inner);
+            let orders = self
+                .orders
+                .read()
+                .unwrap_or_else(std::sync::PoisonError::into_inner);
 
             if let Some(order_id) = index.get(broker_id.as_str()) {
                 Ok(orders.get(order_id).cloned())
@@ -123,7 +139,10 @@ mod tests {
         }
 
         async fn find_by_status(&self, status: OrderStatus) -> Result<Vec<Order>, OrderError> {
-            let orders = self.orders.read().unwrap();
+            let orders = self
+                .orders
+                .read()
+                .unwrap_or_else(std::sync::PoisonError::into_inner);
             Ok(orders
                 .values()
                 .filter(|o| o.status() == status)
@@ -132,7 +151,10 @@ mod tests {
         }
 
         async fn find_active(&self) -> Result<Vec<Order>, OrderError> {
-            let orders = self.orders.read().unwrap();
+            let orders = self
+                .orders
+                .read()
+                .unwrap_or_else(std::sync::PoisonError::into_inner);
             Ok(orders
                 .values()
                 .filter(|o| o.status().is_active())
@@ -141,7 +163,10 @@ mod tests {
         }
 
         async fn delete(&self, id: &OrderId) -> Result<(), OrderError> {
-            let mut orders = self.orders.write().unwrap();
+            let mut orders = self
+                .orders
+                .write()
+                .unwrap_or_else(std::sync::PoisonError::into_inner);
             orders
                 .remove(id.as_str())
                 .ok_or_else(|| OrderError::NotFound {
@@ -151,7 +176,10 @@ mod tests {
         }
 
         async fn exists(&self, id: &OrderId) -> Result<bool, OrderError> {
-            let orders = self.orders.read().unwrap();
+            let orders = self
+                .orders
+                .read()
+                .unwrap_or_else(std::sync::PoisonError::into_inner);
             Ok(orders.contains_key(id.as_str()))
         }
     }

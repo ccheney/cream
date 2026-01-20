@@ -6,6 +6,7 @@ use super::aggregate::RiskPolicy;
 use super::errors::RiskError;
 
 /// Repository trait for Risk Policy persistence.
+
 #[async_trait]
 pub trait RiskPolicyRepository: Send + Sync {
     /// Save a risk policy.
@@ -45,28 +46,43 @@ mod tests {
     #[async_trait]
     impl RiskPolicyRepository for InMemoryRiskPolicyRepository {
         async fn save(&self, policy: &RiskPolicy) -> Result<(), RiskError> {
-            let mut policies = self.policies.write().unwrap();
+            let mut policies = self
+                .policies
+                .write()
+                .unwrap_or_else(std::sync::PoisonError::into_inner);
             policies.insert(policy.id().to_string(), policy.clone());
             Ok(())
         }
 
         async fn find_by_id(&self, id: &str) -> Result<Option<RiskPolicy>, RiskError> {
-            let policies = self.policies.read().unwrap();
+            let policies = self
+                .policies
+                .read()
+                .unwrap_or_else(std::sync::PoisonError::into_inner);
             Ok(policies.get(id).cloned())
         }
 
         async fn find_active(&self) -> Result<Option<RiskPolicy>, RiskError> {
-            let policies = self.policies.read().unwrap();
+            let policies = self
+                .policies
+                .read()
+                .unwrap_or_else(std::sync::PoisonError::into_inner);
             Ok(policies.values().find(|p| p.is_active()).cloned())
         }
 
         async fn list_all(&self) -> Result<Vec<RiskPolicy>, RiskError> {
-            let policies = self.policies.read().unwrap();
+            let policies = self
+                .policies
+                .read()
+                .unwrap_or_else(std::sync::PoisonError::into_inner);
             Ok(policies.values().cloned().collect())
         }
 
         async fn delete(&self, id: &str) -> Result<(), RiskError> {
-            let mut policies = self.policies.write().unwrap();
+            let mut policies = self
+                .policies
+                .write()
+                .unwrap_or_else(std::sync::PoisonError::into_inner);
             policies
                 .remove(id)
                 .ok_or_else(|| RiskError::PolicyNotFound {
