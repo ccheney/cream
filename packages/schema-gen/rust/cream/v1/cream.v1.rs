@@ -1263,8 +1263,8 @@ pub enum DataSource {
     Unspecified = 0,
     /// Reserved (formerly FMP)
     Reserved1 = 1,
-    /// Alpha Vantage
-    AlphaVantage = 2,
+    /// Reserved (formerly Alpha Vantage)
+    Reserved2 = 2,
     /// Reserved (formerly Polygon)
     Reserved3 = 3,
     /// Benzinga
@@ -1277,6 +1277,8 @@ pub enum DataSource {
     Internal = 7,
     /// Alpaca Markets
     Alpaca = 8,
+    /// FRED (Federal Reserve Economic Data)
+    Fred = 9,
 }
 impl DataSource {
     /// String value of the enum field names used in the ProtoBuf definition.
@@ -1287,13 +1289,14 @@ impl DataSource {
         match self {
             Self::Unspecified => "DATA_SOURCE_UNSPECIFIED",
             Self::Reserved1 => "DATA_SOURCE_RESERVED_1",
-            Self::AlphaVantage => "DATA_SOURCE_ALPHA_VANTAGE",
+            Self::Reserved2 => "DATA_SOURCE_RESERVED_2",
             Self::Reserved3 => "DATA_SOURCE_RESERVED_3",
             Self::Benzinga => "DATA_SOURCE_BENZINGA",
             Self::SecEdgar => "DATA_SOURCE_SEC_EDGAR",
             Self::Social => "DATA_SOURCE_SOCIAL",
             Self::Internal => "DATA_SOURCE_INTERNAL",
             Self::Alpaca => "DATA_SOURCE_ALPACA",
+            Self::Fred => "DATA_SOURCE_FRED",
         }
     }
     /// Creates an enum from field names used in the ProtoBuf definition.
@@ -1301,13 +1304,14 @@ impl DataSource {
         match value {
             "DATA_SOURCE_UNSPECIFIED" => Some(Self::Unspecified),
             "DATA_SOURCE_RESERVED_1" => Some(Self::Reserved1),
-            "DATA_SOURCE_ALPHA_VANTAGE" => Some(Self::AlphaVantage),
+            "DATA_SOURCE_RESERVED_2" => Some(Self::Reserved2),
             "DATA_SOURCE_RESERVED_3" => Some(Self::Reserved3),
             "DATA_SOURCE_BENZINGA" => Some(Self::Benzinga),
             "DATA_SOURCE_SEC_EDGAR" => Some(Self::SecEdgar),
             "DATA_SOURCE_SOCIAL" => Some(Self::Social),
             "DATA_SOURCE_INTERNAL" => Some(Self::Internal),
             "DATA_SOURCE_ALPACA" => Some(Self::Alpaca),
+            "DATA_SOURCE_FRED" => Some(Self::Fred),
             _ => None,
         }
     }
