@@ -276,7 +276,11 @@ export interface WorkflowDecisionPlan {
 }
 
 export interface Approval {
-	verdict: "APPROVE" | "REJECT";
+	verdict: "APPROVE" | "PARTIAL_APPROVE" | "REJECT";
+	/** Decision IDs that passed validation (for PARTIAL_APPROVE) */
+	approvedDecisionIds?: string[];
+	/** Decision IDs that failed validation (for PARTIAL_APPROVE/REJECT) */
+	rejectedDecisionIds?: string[];
 	violations?: unknown[];
 	required_changes?: unknown[];
 	notes?: string;

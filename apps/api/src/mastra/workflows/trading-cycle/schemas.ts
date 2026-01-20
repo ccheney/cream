@@ -239,7 +239,9 @@ export const DecisionPlanSchema = z.object({
 });
 
 export const ApprovalSchema = z.object({
-	verdict: z.enum(["APPROVE", "REJECT"]),
+	verdict: z.enum(["APPROVE", "PARTIAL_APPROVE", "REJECT"]),
+	approvedDecisionIds: z.array(z.string()).optional(),
+	rejectedDecisionIds: z.array(z.string()).optional(),
 	violations: z.array(ConstraintViolationSchema).optional(),
 	required_changes: z.array(RequiredChangeSchema).optional(),
 	notes: z.string().optional(),

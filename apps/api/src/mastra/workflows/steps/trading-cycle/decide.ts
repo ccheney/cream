@@ -109,18 +109,22 @@ export async function runTraderAgentStub(
 // Approver Stubs
 // ============================================
 
-export async function runRiskManagerStub(_plan: WorkflowDecisionPlan): Promise<Approval> {
+export async function runRiskManagerStub(plan: WorkflowDecisionPlan): Promise<Approval> {
 	return {
 		verdict: "APPROVE",
+		approvedDecisionIds: plan.decisions.map((d) => d.decisionId),
+		rejectedDecisionIds: [],
 		violations: [],
 		required_changes: [],
 		notes: "HOLD decisions carry no new risk.",
 	};
 }
 
-export async function runCriticStub(_plan: WorkflowDecisionPlan): Promise<Approval> {
+export async function runCriticStub(plan: WorkflowDecisionPlan): Promise<Approval> {
 	return {
 		verdict: "APPROVE",
+		approvedDecisionIds: plan.decisions.map((d) => d.decisionId),
+		rejectedDecisionIds: [],
 		violations: [],
 		required_changes: [],
 		notes: "Plan is logically consistent.",

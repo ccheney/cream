@@ -19,7 +19,7 @@ import { createStep, createWorkflow } from "@mastra/core/workflows";
 import { z } from "zod";
 
 import type { AgentStreamChunk, ToolResultEntry } from "../../agents/types.js";
-import type { ThesisUpdate } from "../steps/trading-cycle/types.js";
+import type { Decision, ThesisUpdate } from "../steps/trading-cycle/types.js";
 import { WorkflowResultSchema } from "./schemas.js";
 
 const log = createNodeLogger({ service: "trading-cycle", level: "info" });
@@ -750,7 +750,6 @@ const consensusStep = createStep({
 		// Handle case where agents may return undefined (LLM structured output failure)
 		const riskVerdict = riskManager?.verdict ?? "REJECT";
 		const criticVerdict = critic?.verdict ?? "REJECT";
-		const approved = riskVerdict === "APPROVE" && criticVerdict === "APPROVE";
 
 		if (!riskManager || !critic) {
 			log.warn(
@@ -759,9 +758,55 @@ const consensusStep = createStep({
 			);
 		}
 
+		// Handle partial approvals - filter decisions to only approved ones
+		let filteredDecisionPlan = inputData.decisionPlan;
+		let approved = false;
+
+		if (riskVerdict === "APPROVE" && criticVerdict === "APPROVE") {
+			approved = true;
+		} else if (riskVerdict === "PARTIAL_APPROVE" || criticVerdict === "PARTIAL_APPROVE") {
+			// Get intersection of approved decisions from both agents
+			const riskApproved = new Set(riskManager?.approvedDecisionIds ?? []);
+			const criticApproved = new Set(critic?.approvedDecisionIds ?? []);
+
+			// If one agent fully approved, use the other's partial list
+			// Otherwise, take intersection of both partial approvals
+			let finalApprovedIds: Set<string>;
+			if (riskVerdict === "APPROVE") {
+				finalApprovedIds = criticApproved;
+			} else if (criticVerdict === "APPROVE") {
+				finalApprovedIds = riskApproved;
+			} else {
+				// Both partial - take intersection
+				finalApprovedIds = new Set([...riskApproved].filter((id) => criticApproved.has(id)));
+			}
+
+			if (finalApprovedIds.size > 0 && filteredDecisionPlan) {
+				const filteredDecisions = filteredDecisionPlan.decisions.filter((d: Decision) =>
+					finalApprovedIds.has(d.decisionId)
+				);
+				if (filteredDecisions.length > 0) {
+					filteredDecisionPlan = {
+						...filteredDecisionPlan,
+						decisions: filteredDecisions,
+						portfolioNotes: `${filteredDecisionPlan.portfolioNotes} [Partial approval: ${filteredDecisions.length}/${inputData.decisionPlan?.decisions.length} trades approved]`,
+					};
+					approved = true;
+					log.info(
+						{
+							approved: filteredDecisions.length,
+							rejected: (inputData.decisionPlan?.decisions.length ?? 0) - filteredDecisions.length,
+						},
+						"Partial approval - filtered decision plan"
+					);
+				}
+			}
+		}
+
 		await setState({ ...state, approved, iterations });
 		return {
 			...inputData,
+			decisionPlan: filteredDecisionPlan,
 			approved,
 			iterations,
 			riskApproval: riskManager ?? {
