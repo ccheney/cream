@@ -21,6 +21,9 @@ export function getDefaultConstraints(environment: RuntimeEnvironment): RuntimeC
 			maxConcentration: 0.25,
 			maxCorrelation: 0.7,
 			maxDrawdown: 0.15,
+			maxRiskPerTrade: 0.02,
+			maxSectorExposure: 0.3,
+			maxPositions: 10,
 		},
 		options: {
 			maxDelta: 100,

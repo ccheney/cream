@@ -111,6 +111,17 @@ where
             .decision_plan
             .ok_or_else(|| Status::invalid_argument("decision_plan is required"))?;
 
+        // Extract constraints if provided (uses defaults if None)
+        let constraints = req.constraints;
+        if let Some(ref c) = constraints {
+            tracing::debug!(
+                max_positions = c.max_positions,
+                max_risk_per_trade_bps = c.max_risk_per_trade_bps,
+                max_sector_exposure_bps = c.max_sector_exposure_bps,
+                "Runtime constraints received"
+            );
+        }
+
         // Convert proto decisions to CreateOrderDto
         let _orders: Vec<CreateOrderDto> = decision_plan
             .decisions
@@ -139,7 +150,8 @@ where
             .collect();
 
         // For constraint checking, return passed for now
-        // Real implementation would validate via use case
+        // TODO: Implement actual validation using runtime constraints
+        // Real implementation would validate via use case with constraints
         let response = CheckConstraintsResponse {
             approved: true,
             checks: vec![],
@@ -962,6 +974,7 @@ mod tests {
             decision_plan: None, // Missing
             account_state: None,
             positions: vec![],
+            constraints: None,
         });
 
         let result = service.check_constraints(request).await;
@@ -1030,6 +1043,7 @@ mod tests {
             }),
             account_state: None,
             positions: vec![],
+            constraints: None,
         });
 
         let response = service.check_constraints(request).await.unwrap();
@@ -1482,6 +1496,7 @@ mod tests {
             }),
             account_state: None,
             positions: vec![],
+            constraints: None,
         });
 
         let response = service.check_constraints(request).await.unwrap();
@@ -1531,6 +1546,7 @@ mod tests {
             }),
             account_state: None,
             positions: vec![],
+            constraints: None,
         });
 
         let response = service.check_constraints(request).await.unwrap();

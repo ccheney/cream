@@ -174,6 +174,15 @@ export const constraintsConfig = pgTable(
 		maxCorrelation: numeric("max_correlation", { precision: 4, scale: 3 }).notNull().default("0.7"),
 		maxDrawdown: numeric("max_drawdown", { precision: 4, scale: 3 }).notNull().default("0.15"),
 
+		// Position limits
+		maxRiskPerTrade: numeric("max_risk_per_trade", { precision: 4, scale: 3 })
+			.notNull()
+			.default("0.02"),
+		maxSectorExposure: numeric("max_sector_exposure", { precision: 4, scale: 3 })
+			.notNull()
+			.default("0.30"),
+		maxPositions: integer("max_positions").notNull().default(10),
+
 		// Options greeks limits
 		maxDelta: numeric("max_delta", { precision: 8, scale: 2 }).notNull().default("100"),
 		maxGamma: numeric("max_gamma", { precision: 8, scale: 2 }).notNull().default("50"),

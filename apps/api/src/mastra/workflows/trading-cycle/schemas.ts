@@ -275,6 +275,34 @@ export const WorkflowStateSchema = z.object({
 	memoryContext: MemoryContextSchema.optional(),
 	regimeLabels: z.record(z.string(), RegimeDataSchema).optional(),
 
+	// Runtime constraints (loaded in Orient phase)
+	constraints: z
+		.object({
+			perInstrument: z.object({
+				maxShares: z.number(),
+				maxContracts: z.number(),
+				maxNotional: z.number(),
+				maxPctEquity: z.number(),
+			}),
+			portfolio: z.object({
+				maxGrossExposure: z.number(),
+				maxNetExposure: z.number(),
+				maxConcentration: z.number(),
+				maxCorrelation: z.number(),
+				maxDrawdown: z.number(),
+				maxRiskPerTrade: z.number(),
+				maxSectorExposure: z.number(),
+				maxPositions: z.number(),
+			}),
+			options: z.object({
+				maxDelta: z.number(),
+				maxGamma: z.number(),
+				maxVega: z.number(),
+				maxTheta: z.number(),
+			}),
+		})
+		.optional(),
+
 	// DECIDE - Analysis phase
 	newsAnalysis: z.array(SentimentAnalysisSchema).optional(),
 	fundamentalsAnalysis: z.array(FundamentalsAnalysisSchema).optional(),

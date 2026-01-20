@@ -1345,6 +1345,50 @@ impl Sentiment {
         }
     }
 }
+// ============================================
+// Risk Constraints (runtime configuration)
+// ============================================
+
+/// Runtime risk constraints passed from the workflow
+#[derive(Clone, Copy, PartialEq, Eq, Hash, ::prost::Message)]
+pub struct RiskConstraints {
+    /// Per-instrument limits
+    #[prost(int32, tag="1")]
+    pub max_shares: i32,
+    #[prost(int32, tag="2")]
+    pub max_contracts: i32,
+    #[prost(int64, tag="3")]
+    pub max_notional_cents: i64,
+    /// basis points (100 = 1%)
+    #[prost(int32, tag="4")]
+    pub max_pct_equity_bps: i32,
+    /// Portfolio limits
+    #[prost(int32, tag="5")]
+    pub max_gross_pct_equity_bps: i32,
+    #[prost(int32, tag="6")]
+    pub max_net_pct_equity_bps: i32,
+    #[prost(int32, tag="7")]
+    pub max_risk_per_trade_bps: i32,
+    #[prost(int32, tag="8")]
+    pub max_sector_exposure_bps: i32,
+    #[prost(int32, tag="9")]
+    pub max_positions: i32,
+    #[prost(int32, tag="10")]
+    pub max_concentration_bps: i32,
+    #[prost(int32, tag="11")]
+    pub max_correlation_bps: i32,
+    #[prost(int32, tag="12")]
+    pub max_drawdown_bps: i32,
+    /// Options Greeks limits
+    #[prost(int64, tag="13")]
+    pub max_delta_notional_cents: i64,
+    #[prost(int64, tag="14")]
+    pub max_gamma_scaled: i64,
+    #[prost(int64, tag="15")]
+    pub max_vega_cents: i64,
+    #[prost(int64, tag="16")]
+    pub max_theta_cents: i64,
+}
 /// Individual constraint check result
 #[derive(Clone, PartialEq, ::prost::Message)]
 pub struct ConstraintCheck {
@@ -1376,6 +1420,9 @@ pub struct CheckConstraintsRequest {
     /// Current positions
     #[prost(message, repeated, tag="3")]
     pub positions: ::prost::alloc::vec::Vec<Position>,
+    /// Runtime risk constraints (optional - uses defaults if not provided)
+    #[prost(message, optional, tag="4")]
+    pub constraints: ::core::option::Option<RiskConstraints>,
 }
 /// Response from constraint validation
 #[derive(Clone, PartialEq, ::prost::Message)]

@@ -29,6 +29,9 @@ export interface PortfolioLimits {
 	maxConcentration: number;
 	maxCorrelation: number;
 	maxDrawdown: number;
+	maxRiskPerTrade: number;
+	maxSectorExposure: number;
+	maxPositions: number;
 }
 
 export interface OptionsLimits {
@@ -61,6 +64,9 @@ export interface CreateConstraintsConfigInput {
 	maxConcentration?: number;
 	maxCorrelation?: number;
 	maxDrawdown?: number;
+	maxRiskPerTrade?: number;
+	maxSectorExposure?: number;
+	maxPositions?: number;
 	maxDelta?: number;
 	maxGamma?: number;
 	maxVega?: number;
@@ -78,6 +84,9 @@ export interface UpdateConstraintsConfigInput {
 	maxConcentration?: number;
 	maxCorrelation?: number;
 	maxDrawdown?: number;
+	maxRiskPerTrade?: number;
+	maxSectorExposure?: number;
+	maxPositions?: number;
 	maxDelta?: number;
 	maxGamma?: number;
 	maxVega?: number;
@@ -108,6 +117,9 @@ function mapConstraintsConfigRow(row: ConstraintsConfigRow): ConstraintsConfig {
 			maxConcentration: Number(row.maxConcentration),
 			maxCorrelation: Number(row.maxCorrelation),
 			maxDrawdown: Number(row.maxDrawdown),
+			maxRiskPerTrade: Number(row.maxRiskPerTrade),
+			maxSectorExposure: Number(row.maxSectorExposure),
+			maxPositions: row.maxPositions,
 		},
 
 		options: {
@@ -148,6 +160,9 @@ export class ConstraintsConfigRepository {
 				maxConcentration: String(input.maxConcentration ?? 0.25),
 				maxCorrelation: String(input.maxCorrelation ?? 0.7),
 				maxDrawdown: String(input.maxDrawdown ?? 0.15),
+				maxRiskPerTrade: String(input.maxRiskPerTrade ?? 0.02),
+				maxSectorExposure: String(input.maxSectorExposure ?? 0.3),
+				maxPositions: input.maxPositions ?? 10,
 				maxDelta: String(input.maxDelta ?? 100),
 				maxGamma: String(input.maxGamma ?? 50),
 				maxVega: String(input.maxVega ?? 1000),
@@ -254,6 +269,15 @@ export class ConstraintsConfigRepository {
 			}
 			if (input.maxDrawdown !== undefined) {
 				updateData.maxDrawdown = String(input.maxDrawdown);
+			}
+			if (input.maxRiskPerTrade !== undefined) {
+				updateData.maxRiskPerTrade = String(input.maxRiskPerTrade);
+			}
+			if (input.maxSectorExposure !== undefined) {
+				updateData.maxSectorExposure = String(input.maxSectorExposure);
+			}
+			if (input.maxPositions !== undefined) {
+				updateData.maxPositions = input.maxPositions;
 			}
 			if (input.maxDelta !== undefined) {
 				updateData.maxDelta = String(input.maxDelta);

@@ -6,6 +6,7 @@
 
 import { create } from "@bufbuild/protobuf";
 import { timestampFromDate } from "@bufbuild/protobuf/wkt";
+import type { RuntimeConstraintsConfig } from "@cream/config";
 import type { ExecutionContext } from "@cream/domain";
 import { isTest } from "@cream/domain";
 import {
@@ -29,6 +30,7 @@ import {
 	DecisionSchema,
 	type DecisionPlan as ProtobufDecisionPlan,
 } from "@cream/schema-gen/cream/v1/decision";
+import { RiskConstraintsSchema } from "@cream/schema-gen/cream/v1/execution";
 
 import {
 	ExecutionEngineError,
@@ -278,6 +280,31 @@ function toProtobufDecisionPlan(
 // ============================================
 
 /**
+ * Map TypeScript constraints to proto format for the execution engine.
+ * Values are converted to basis points (bps) or cents as needed.
+ */
+function mapConstraintsToProto(constraints: RuntimeConstraintsConfig) {
+	return create(RiskConstraintsSchema, {
+		maxShares: constraints.perInstrument.maxShares,
+		maxContracts: constraints.perInstrument.maxContracts,
+		maxNotionalCents: BigInt(Math.round(constraints.perInstrument.maxNotional * 100)),
+		maxPctEquityBps: Math.round(constraints.perInstrument.maxPctEquity * 10000),
+		maxGrossPctEquityBps: Math.round(constraints.portfolio.maxGrossExposure * 10000),
+		maxNetPctEquityBps: Math.round(constraints.portfolio.maxNetExposure * 10000),
+		maxRiskPerTradeBps: Math.round(constraints.portfolio.maxRiskPerTrade * 10000),
+		maxSectorExposureBps: Math.round(constraints.portfolio.maxSectorExposure * 10000),
+		maxPositions: constraints.portfolio.maxPositions,
+		maxConcentrationBps: Math.round(constraints.portfolio.maxConcentration * 10000),
+		maxCorrelationBps: Math.round(constraints.portfolio.maxCorrelation * 10000),
+		maxDrawdownBps: Math.round(constraints.portfolio.maxDrawdown * 10000),
+		maxDeltaNotionalCents: BigInt(Math.round(constraints.options.maxDelta * 100)),
+		maxGammaScaled: BigInt(Math.round(constraints.options.maxGamma * 10000)),
+		maxVegaCents: BigInt(Math.round(constraints.options.maxVega * 100)),
+		maxThetaCents: BigInt(Math.round(constraints.options.maxTheta * 100)),
+	});
+}
+
+/**
  * Check constraints for the trading plan.
  *
  * In test mode (source: "test"), returns a simple pass/fail based on approval.
@@ -286,7 +313,8 @@ function toProtobufDecisionPlan(
 export async function checkConstraints(
 	approved: boolean,
 	plan: WorkflowDecisionPlan,
-	ctx?: ExecutionContext
+	ctx?: ExecutionContext,
+	constraints?: RuntimeConstraintsConfig
 ): Promise<{ passed: boolean; violations: string[] }> {
 	if (!approved) {
 		return { passed: false, violations: ["Plan not approved by agents"] };
@@ -311,6 +339,7 @@ export async function checkConstraints(
 			decisionPlan,
 			accountState: accountResponse.accountState,
 			positions: positionsResponse.positions,
+			constraints: constraints ? mapConstraintsToProto(constraints) : undefined,
 		});
 
 		return {

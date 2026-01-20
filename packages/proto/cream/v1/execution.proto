@@ -12,6 +12,35 @@ import "cream/v1/decision.proto";
 import "google/protobuf/timestamp.proto";
 
 // ============================================
+// Risk Constraints (runtime configuration)
+// ============================================
+
+// Runtime risk constraints passed from the workflow
+message RiskConstraints {
+  // Per-instrument limits
+  int32 max_shares = 1;
+  int32 max_contracts = 2;
+  int64 max_notional_cents = 3;
+  int32 max_pct_equity_bps = 4;  // basis points (100 = 1%)
+
+  // Portfolio limits
+  int32 max_gross_pct_equity_bps = 5;
+  int32 max_net_pct_equity_bps = 6;
+  int32 max_risk_per_trade_bps = 7;
+  int32 max_sector_exposure_bps = 8;
+  int32 max_positions = 9;
+  int32 max_concentration_bps = 10;
+  int32 max_correlation_bps = 11;
+  int32 max_drawdown_bps = 12;
+
+  // Options Greeks limits
+  int64 max_delta_notional_cents = 13;
+  int64 max_gamma_scaled = 14;
+  int64 max_vega_cents = 15;
+  int64 max_theta_cents = 16;
+}
+
+// ============================================
 // Constraint Check
 // ============================================
 
@@ -51,6 +80,9 @@ message CheckConstraintsRequest {
 
   // Current positions
   repeated Position positions = 3;
+
+  // Runtime risk constraints (optional - uses defaults if not provided)
+  optional RiskConstraints constraints = 4;
 }
 
 // Response from constraint validation

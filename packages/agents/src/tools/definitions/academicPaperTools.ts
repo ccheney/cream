@@ -10,7 +10,6 @@ import { createContext, requireEnv } from "@cream/domain";
 import { createTool } from "@mastra/core/tools";
 import { z } from "zod";
 import {
-	getAcademicPaper,
 	ingestSemanticScholarPapers,
 	searchAcademicPapers,
 	searchExternalPapers,
@@ -27,7 +26,7 @@ function createToolContext() {
 // Schemas
 // ============================================
 
-const AcademicPaperSchema = z.object({
+const _AcademicPaperSchema = z.object({
 	paperId: z.string().describe("Unique paper identifier"),
 	title: z.string().describe("Paper title"),
 	authors: z.string().describe("Author names"),
@@ -41,8 +40,13 @@ const PaperSearchResultSchema = z.object({
 	paperId: z.string().describe("Paper identifier"),
 	title: z.string().describe("Paper title"),
 	authors: z.string().describe("Authors"),
-	similarity: z.number().describe("Semantic similarity score (0-1)"),
+	abstract: z
+		.string()
+		.describe("Paper abstract - use this for understanding the paper's contribution"),
+	url: z.string().optional().describe("URL to paper (DOI link)"),
+	publicationYear: z.number().optional().describe("Publication year"),
 	citationCount: z.number().describe("Citation count"),
+	similarity: z.number().describe("Semantic similarity score"),
 });
 
 const ExternalPaperSchema = z.object({
@@ -79,20 +83,6 @@ export const SearchPapersOutputSchema = z.object({
 	query: z.string().describe("Original search query"),
 	papers: z.array(PaperSearchResultSchema).describe("Matching papers ranked by relevance"),
 	totalFound: z.number().describe("Total number of matching papers"),
-	executionTimeMs: z.number().describe("Query execution time in milliseconds"),
-});
-
-export const GetPaperInputSchema = z.object({
-	paperId: z
-		.string()
-		.min(1)
-		.max(100)
-		.describe("Paper identifier (from search results or known ID)"),
-});
-
-export const GetPaperOutputSchema = z.object({
-	found: z.boolean().describe("Whether the paper was found"),
-	paper: AcademicPaperSchema.nullable().describe("Full paper details if found"),
 	executionTimeMs: z.number().describe("Query execution time in milliseconds"),
 });
 
@@ -166,25 +156,6 @@ Returns papers ranked by semantic similarity to your query.`,
 	execute: async (inputData) => {
 		const ctx = createToolContext();
 		return searchAcademicPapers(ctx, inputData.query, inputData.limit ?? 5);
-	},
-});
-
-/**
- * Get full details for a specific academic paper
- */
-export const getAcademicPaperTool = createTool({
-	id: "get_academic_paper",
-	description: `Retrieve full details for a specific academic paper by ID.
-
-Use this tool to:
-- Get the complete abstract for a paper found in search results
-- Access paper metadata (authors, year, citations)
-- Reference specific papers in hypothesis generation`,
-	inputSchema: GetPaperInputSchema,
-	outputSchema: GetPaperOutputSchema,
-	execute: async (inputData) => {
-		const ctx = createToolContext();
-		return getAcademicPaper(ctx, inputData.paperId);
 	},
 });
 

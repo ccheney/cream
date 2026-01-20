@@ -5,13 +5,14 @@
  */
 
 import type { AgentType } from "@cream/agents";
+import type { RuntimeConstraintsConfig } from "@cream/config";
 import { createNodeLogger } from "@cream/logger";
 
 import { buildGenerateOptions, createAgent, getAgentRuntimeSettings } from "./factory.js";
 
 const log = createNodeLogger({ service: "trader-agent", level: "info" });
 
-import { buildDatetimeContext, buildIndicatorContext } from "./prompts.js";
+import { buildConstraintsContext, buildDatetimeContext, buildIndicatorContext } from "./prompts.js";
 import { DecisionPlanSchema } from "./schemas.js";
 import { createStreamChunkForwarder } from "./stream-forwarder.js";
 import type {
@@ -51,14 +52,16 @@ export interface DebateOutputs {
 export async function runTrader(
 	context: AgentContext,
 	debateOutputs: DebateOutputs,
-	portfolioState?: Record<string, unknown>
+	portfolioState?: Record<string, unknown>,
+	constraints?: RuntimeConstraintsConfig
 ): Promise<DecisionPlan> {
 	const indicatorContext = buildIndicatorContext(context.indicators);
+	const constraintsContext = buildConstraintsContext(constraints);
 
 	const portfolioStateProvided = Boolean(portfolioState && Object.keys(portfolioState).length > 0);
 
 	const prompt = `${buildDatetimeContext()}Synthesize the debate into a concrete trading plan:
-
+${constraintsContext}
 Bullish Research:
 ${JSON.stringify(debateOutputs.bullish, null, 2)}
 
@@ -101,7 +104,8 @@ export async function runTraderStreaming(
 	context: AgentContext,
 	debateOutputs: DebateOutputs,
 	onChunk: OnStreamChunk,
-	portfolioState?: Record<string, unknown>
+	portfolioState?: Record<string, unknown>,
+	constraints?: RuntimeConstraintsConfig
 ): Promise<DecisionPlan> {
 	// Initialize toolResults accumulator if not present
 	if (!context.toolResults) {
@@ -109,11 +113,12 @@ export async function runTraderStreaming(
 	}
 
 	const indicatorContext = buildIndicatorContext(context.indicators);
+	const constraintsContext = buildConstraintsContext(constraints);
 
 	const portfolioStateProvided = Boolean(portfolioState && Object.keys(portfolioState).length > 0);
 
 	const prompt = `${buildDatetimeContext()}Synthesize the debate into a concrete trading plan:
-
+${constraintsContext}
 Bullish Research:
 ${JSON.stringify(debateOutputs.bullish, null, 2)}
 
@@ -210,10 +215,13 @@ export async function revisePlan(
 	_analystOutputs: AnalystOutputs,
 	debateOutputs: DebateOutputs,
 	agentConfigs?: Partial<Record<AgentType, AgentConfigEntry>>,
-	abortSignal?: AbortSignal
+	abortSignal?: AbortSignal,
+	constraints?: RuntimeConstraintsConfig
 ): Promise<DecisionPlan> {
-	const prompt = `${buildDatetimeContext()}Revise the following trading plan based on the rejection feedback:
+	const constraintsContext = buildConstraintsContext(constraints);
 
+	const prompt = `${buildDatetimeContext()}Revise the following trading plan based on the rejection feedback:
+${constraintsContext}
 Original Plan:
 ${JSON.stringify(originalPlan, null, 2)}
 

@@ -110,6 +110,9 @@ export interface RuntimePortfolioLimits {
 	maxConcentration: number;
 	maxCorrelation: number;
 	maxDrawdown: number;
+	maxRiskPerTrade: number;
+	maxSectorExposure: number;
+	maxPositions: number;
 }
 
 export interface RuntimeOptionsLimits {
@@ -253,6 +256,9 @@ export interface ConstraintsConfigRepository {
 			maxConcentration: number;
 			maxCorrelation: number;
 			maxDrawdown: number;
+			maxRiskPerTrade: number;
+			maxSectorExposure: number;
+			maxPositions: number;
 			maxDelta: number;
 			maxGamma: number;
 			maxVega: number;

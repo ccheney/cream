@@ -114,6 +114,32 @@ const orientStep = createStep({
 		let agentConfigs:
 			| Record<string, { enabled: boolean; systemPromptOverride?: string | null }>
 			| undefined;
+		let constraints:
+			| {
+					perInstrument: {
+						maxShares: number;
+						maxContracts: number;
+						maxNotional: number;
+						maxPctEquity: number;
+					};
+					portfolio: {
+						maxGrossExposure: number;
+						maxNetExposure: number;
+						maxConcentration: number;
+						maxCorrelation: number;
+						maxDrawdown: number;
+						maxRiskPerTrade: number;
+						maxSectorExposure: number;
+						maxPositions: number;
+					};
+					options: {
+						maxDelta: number;
+						maxGamma: number;
+						maxVega: number;
+						maxTheta: number;
+					};
+			  }
+			| undefined;
 		let recentEvents: Array<{
 			id: string;
 			sourceType: string;
@@ -186,7 +212,10 @@ const orientStep = createStep({
 					const { createContext, requireEnv } = await import("@cream/domain");
 					const ctx = createContext(requireEnv(), "scheduled");
 					const runtimeConfig = await loadRuntimeConfig(ctx, inputData.useDraftConfig ?? false);
-					return buildAgentConfigs(runtimeConfig);
+					return {
+						agentConfigs: buildAgentConfigs(runtimeConfig),
+						constraints: runtimeConfig?.constraints,
+					};
 				})(),
 
 				// 5. Recent external events from database
@@ -244,8 +273,13 @@ const orientStep = createStep({
 			}
 
 			if (configResult.status === "fulfilled" && configResult.value) {
-				agentConfigs = configResult.value;
-				log.debug({ agentCount: Object.keys(agentConfigs).length }, "Loaded agent configs");
+				agentConfigs = configResult.value.agentConfigs;
+				constraints = configResult.value.constraints;
+				log.debug(
+					{ agentCount: agentConfigs ? Object.keys(agentConfigs).length : 0 },
+					"Loaded agent configs"
+				);
+				log.debug({ hasConstraints: !!constraints }, "Loaded runtime constraints");
 			} else if (configResult.status === "rejected") {
 				log.warn({ error: String(configResult.reason) }, "Failed to load agent configs");
 			}
@@ -279,6 +313,7 @@ const orientStep = createStep({
 			memory,
 			predictionMarketSignals,
 			agentConfigs,
+			constraints,
 			recentEvents,
 		};
 	},
@@ -595,7 +630,13 @@ const traderStep = createStep({
 			});
 		};
 
-		const decisionPlan = await runTraderStreaming(context, debateOutputs, onChunk);
+		const decisionPlan = await runTraderStreaming(
+			context,
+			debateOutputs,
+			onChunk,
+			undefined, // portfolioState
+			inputData.constraints
+		);
 
 		// Emit complete event
 		await emitAgentEvent(writer, {
@@ -683,7 +724,7 @@ const consensusStep = createStep({
 			debateOutputs,
 			onChunk,
 			undefined, // portfolioState
-			undefined, // constraints
+			inputData.constraints,
 			inputData.agentConfigs,
 			inputData.snapshot?.indicators,
 			undefined, // abortSignal
@@ -746,7 +787,12 @@ const actStep = createStep({
 		let orderSubmission = { submitted: false, orderIds: [] as string[], errors: [] as string[] };
 
 		if (approved && decisionPlan) {
-			const constraintCheck = await checkConstraints(approved, decisionPlan);
+			const constraintCheck = await checkConstraints(
+				approved,
+				decisionPlan,
+				undefined, // ctx
+				inputData.constraints
+			);
 			if (constraintCheck.passed) {
 				orderSubmission = await submitOrders(true, decisionPlan, inputData.cycleId);
 			} else {
@@ -771,7 +817,7 @@ const actStep = createStep({
 
 				for (const decision of decisionPlan.decisions) {
 					const latestQuote = inputData.snapshot?.quotes?.[decision.instrumentId];
-					const currentPrice = latestQuote?.price ?? decision.size?.value;
+					const currentPrice = latestQuote?.price;
 
 					const update = await processThesisForDecision(
 						repo,

@@ -5,6 +5,8 @@
  * Handles plan revision when approvers reject.
  */
 
+import type { RuntimeConstraintsConfig } from "@cream/config";
+
 import type { AnalystOutputs } from "./analysts.js";
 import { runAnalystsParallel, runAnalystsParallelStreaming } from "./analysts.js";
 import { runApprovalParallel, runApprovalParallelStreaming } from "./approvers.js";
@@ -99,7 +101,7 @@ function extractRejectionReasons(riskManager: RiskManagerOutput, critic: CriticO
 export async function runConsensusLoop(
 	context: AgentContext,
 	portfolioState?: Record<string, unknown>,
-	constraints?: Record<string, unknown>
+	constraints?: RuntimeConstraintsConfig
 ): Promise<ConsensusResult> {
 	// Phase 1: Analysts
 	const analystOutputs = await runAnalystsParallel(context);
@@ -108,7 +110,7 @@ export async function runConsensusLoop(
 	const debateOutputs = await runDebateParallel(context, analystOutputs);
 
 	// Phase 3: Initial trading plan
-	let plan = await runTrader(context, debateOutputs, portfolioState);
+	let plan = await runTrader(context, debateOutputs, portfolioState, constraints);
 
 	// Phase 4: Approval loop with revisions
 	let revisionAttempts = 0;
@@ -158,7 +160,9 @@ export async function runConsensusLoop(
 			rejectionReasons,
 			analystOutputs,
 			debateOutputs,
-			context.agentConfigs
+			context.agentConfigs,
+			undefined, // abortSignal
+			constraints
 		);
 		revisionAttempts++;
 	}
@@ -186,7 +190,7 @@ export async function runConsensusLoopStreaming(
 	context: AgentContext,
 	onChunk: OnStreamChunk,
 	portfolioState?: Record<string, unknown>,
-	constraints?: Record<string, unknown>
+	constraints?: RuntimeConstraintsConfig
 ): Promise<ConsensusResult> {
 	// Phase 1: Analysts
 	const analystOutputs = await runAnalystsParallelStreaming(context, onChunk);
@@ -195,7 +199,7 @@ export async function runConsensusLoopStreaming(
 	const debateOutputs = await runDebateParallelStreaming(context, analystOutputs, onChunk);
 
 	// Phase 3: Initial trading plan
-	let plan = await runTraderStreaming(context, debateOutputs, onChunk, portfolioState);
+	let plan = await runTraderStreaming(context, debateOutputs, onChunk, portfolioState, constraints);
 
 	// Phase 4: Approval loop with revisions
 	let revisionAttempts = 0;
@@ -247,7 +251,9 @@ export async function runConsensusLoopStreaming(
 			rejectionReasons,
 			analystOutputs,
 			debateOutputs,
-			context.agentConfigs
+			context.agentConfigs,
+			undefined, // abortSignal
+			constraints
 		);
 		revisionAttempts++;
 	}

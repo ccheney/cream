@@ -5,6 +5,7 @@
  */
 
 import type { AgentType } from "@cream/agents";
+import type { RuntimeConstraintsConfig } from "@cream/config";
 import type { IndicatorSnapshot } from "@cream/indicators";
 
 import { createNodeLogger } from "@cream/logger";
@@ -127,7 +128,7 @@ function buildRiskIndicatorsSummary(indicators?: Record<string, IndicatorSnapsho
 export async function runRiskManager(
 	plan: DecisionPlan,
 	portfolioState?: Record<string, unknown>,
-	constraints?: Record<string, unknown>,
+	constraints?: RuntimeConstraintsConfig,
 	agentConfigs?: Partial<Record<AgentType, AgentConfigEntry>>,
 	indicators?: Record<string, IndicatorSnapshot>
 ): Promise<RiskManagerOutput> {
@@ -222,7 +223,7 @@ export async function runApprovalParallel(
 	analystOutputs: AnalystOutputs,
 	debateOutputs: DebateOutputs,
 	portfolioState?: Record<string, unknown>,
-	constraints?: Record<string, unknown>,
+	constraints?: RuntimeConstraintsConfig,
 	agentConfigs?: Partial<Record<AgentType, AgentConfigEntry>>,
 	indicators?: Record<string, IndicatorSnapshot>,
 	toolResults?: ToolResultEntry[]
@@ -249,7 +250,7 @@ export async function runRiskManagerStreaming(
 	plan: DecisionPlan,
 	onChunk: OnStreamChunk,
 	portfolioState?: Record<string, unknown>,
-	constraints?: Record<string, unknown>,
+	constraints?: RuntimeConstraintsConfig,
 	agentConfigs?: Partial<Record<AgentType, AgentConfigEntry>>,
 	indicators?: Record<string, IndicatorSnapshot>,
 	abortSignal?: AbortSignal,
@@ -464,7 +465,7 @@ export async function runApprovalParallelStreaming(
 	debateOutputs: DebateOutputs,
 	onChunk: OnStreamChunk,
 	portfolioState?: Record<string, unknown>,
-	constraints?: Record<string, unknown>,
+	constraints?: RuntimeConstraintsConfig,
 	agentConfigs?: Partial<Record<AgentType, AgentConfigEntry>>,
 	indicators?: Record<string, IndicatorSnapshot>,
 	abortSignal?: AbortSignal,

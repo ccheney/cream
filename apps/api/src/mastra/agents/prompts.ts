@@ -771,3 +771,47 @@ IMPORTANT: Use this grounded context for real-time information.
 If critical information is missing from the grounding context, note this as uncertainty in your analysis.
 `;
 }
+
+// ============================================
+// Constraints Context Builder
+// ============================================
+
+import type { RuntimeConstraintsConfig } from "@cream/config";
+
+/**
+ * Build constraints context section for agent prompts.
+ *
+ * Formats the runtime risk constraints for injection into agent prompts,
+ * so agents know the actual limits they must respect when sizing positions.
+ */
+export function buildConstraintsContext(constraints?: RuntimeConstraintsConfig | null): string {
+	if (!constraints) {
+		return `
+Risk Constraints:
+WARNING: No constraints loaded. Be conservative - use 2% max risk per trade, 10% max position size.
+`;
+	}
+
+	const { perInstrument, portfolio, options } = constraints;
+
+	return `
+Risk Constraints (ENFORCED - DO NOT EXCEED):
+
+Per-Trade Limits:
+- Max Risk Per Trade: ${(portfolio.maxRiskPerTrade * 100).toFixed(1)}% of portfolio
+- Max Position Size: ${(perInstrument.maxPctEquity * 100).toFixed(1)}% of equity
+- Max Notional: $${perInstrument.maxNotional.toLocaleString()}
+
+Portfolio Limits:
+- Max Positions: ${portfolio.maxPositions}
+- Max Sector Exposure: ${(portfolio.maxSectorExposure * 100).toFixed(0)}%
+- Max Gross Exposure: ${(portfolio.maxGrossExposure * 100).toFixed(0)}%
+- Max Drawdown: ${(portfolio.maxDrawdown * 100).toFixed(0)}%
+
+Options Greeks Limits:
+- Max Delta: ${options.maxDelta} | Max Gamma: ${options.maxGamma}
+- Max Vega: ${options.maxVega} | Max Theta: ${options.maxTheta}
+
+CRITICAL: Size ALL positions to stay within these limits.
+`;
+}
