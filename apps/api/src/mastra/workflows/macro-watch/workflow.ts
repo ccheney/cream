@@ -61,8 +61,10 @@ export async function runMacroWatch(
 		...moverEntries,
 	];
 
-	// Deduplicate by ID
-	const uniqueEntries = Array.from(new Map(allEntries.map((e) => [e.id, e])).values());
+	// Deduplicate by a composite key (headline + category + source) since IDs are generated at save time
+	const uniqueEntries = Array.from(
+		new Map(allEntries.map((e) => [`${e.headline}|${e.category}|${e.source}`, e])).values()
+	);
 
 	// Sort by timestamp descending
 	uniqueEntries.sort((a, b) => b.timestamp.localeCompare(a.timestamp));

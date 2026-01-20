@@ -53,7 +53,23 @@ function getCurrentSession(): MacroWatchSession {
 }
 
 /**
- * Scan Alpaca news for universe symbols since the given time.
+ * Major symbols array for API calls (Alpaca limits symbols per request).
+ * Prioritized subset of MAJOR_SYMBOLS for direct fetching.
+ */
+const MAJOR_SYMBOLS_FOR_FETCH = [
+	...MAJOR_INDEX_ETFS,
+	"VIX",
+	"TLT",
+	"GLD",
+	"USO",
+	"EEM",
+];
+
+/**
+ * Scan Alpaca news for universe symbols and major indices since the given time.
+ *
+ * Always fetches news for major indices regardless of universe - these are
+ * macro-relevant for all trading decisions.
  *
  * @param symbols - Universe symbols to filter news for
  * @param since - ISO timestamp to fetch news since
@@ -66,15 +82,18 @@ export async function scanNews(symbols: string[], since: string): Promise<MacroW
 
 	const entries: MacroWatchEntry[] = [];
 	const session = getCurrentSession();
+	const seenArticleIds = new Set<number>();
+	const universeSet = new Set(symbols.map((u) => u.toUpperCase()));
 
 	try {
 		const client = createAlpacaClientFromEnv();
 		const now = new Date().toISOString();
 
-		// Fetch news for universe symbols
-		const news = await client.getNews(symbols, 50, since, now);
+		// 1. Always fetch news for major indices (macro context for all users)
+		const majorNews = await client.getNews(MAJOR_SYMBOLS_FOR_FETCH, 30, since, now);
 
-		for (const article of news) {
+		for (const article of majorNews) {
+			seenArticleIds.add(article.id);
 			entries.push({
 				timestamp: article.created_at,
 				session,
@@ -86,28 +105,51 @@ export async function scanNews(symbols: string[], since: string): Promise<MacroW
 					articleId: article.id,
 					summary: article.summary,
 					url: article.url,
+					isMacro: true,
 				},
 			});
 		}
 
-		// Also fetch general market news (no symbol filter) for broader context
-		const generalNews = await client.getNews([], 20, since, now);
-		const universeSet = new Set(symbols.map((u) => u.toUpperCase()));
+		// 2. Fetch news for user's universe symbols (if any symbols provided)
+		if (symbols.length > 0) {
+			const universeNews = await client.getNews(symbols, 30, since, now);
 
-		// Track article IDs to avoid duplicates
-		const seenArticleIds = new Set(news.map((a) => a.id));
+			for (const article of universeNews) {
+				if (seenArticleIds.has(article.id)) {
+					continue;
+				}
+				seenArticleIds.add(article.id);
+				entries.push({
+					timestamp: article.created_at,
+					session,
+					category: "NEWS",
+					headline: article.headline,
+					symbols: article.symbols,
+					source: article.source,
+					metadata: {
+						articleId: article.id,
+						summary: article.summary,
+						url: article.url,
+						isMacro: false,
+					},
+				});
+			}
+		}
+
+		// 3. Fetch general market news for broader context
+		const generalNews = await client.getNews([], 20, since, now);
 
 		for (const article of generalNews) {
-			// Skip if already captured via symbol filter
 			if (seenArticleIds.has(article.id)) {
 				continue;
 			}
 
-			// Include if it mentions any universe symbol OR major indices/macro
+			// Include if it mentions any universe symbol or major indices
 			const mentionsUniverse = article.symbols.some((s) => universeSet.has(s.toUpperCase()));
 			const mentionsMajor = article.symbols.some((s) => MAJOR_SYMBOLS.has(s.toUpperCase()));
 
 			if (mentionsUniverse || mentionsMajor) {
+				seenArticleIds.add(article.id);
 				entries.push({
 					timestamp: article.created_at,
 					session,
@@ -122,7 +164,6 @@ export async function scanNews(symbols: string[], since: string): Promise<MacroW
 						isMacro: mentionsMajor && !mentionsUniverse,
 					},
 				});
-				seenArticleIds.add(article.id);
 			}
 		}
 	} catch {
