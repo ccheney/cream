@@ -221,6 +221,9 @@ async function compileNewspaper(): Promise<void> {
 async function triggerMacroWatch(): Promise<TriggerResult> {
 	const startTime = Date.now();
 	try {
+		// Reload config to get user's latest universe settings
+		await handleReloadConfig();
+
 		state.lastRun.macroWatch = new Date();
 		const { entries, saved } = await state.macroWatch.run(getInstruments());
 
