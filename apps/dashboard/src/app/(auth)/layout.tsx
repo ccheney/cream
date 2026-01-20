@@ -14,7 +14,7 @@
 
 import { Menu } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { GlobalSearch } from "@/components/GlobalSearch";
 import { MobileNav, NavDrawer, Sidebar } from "@/components/layout";
 import { AddSymbolModal } from "@/components/ui/add-symbol-modal";
@@ -35,6 +35,7 @@ export default function AuthLayout({ children }: { children: React.ReactNode }) 
 	const { connected, connectionState } = useWebSocketContext();
 	const { isMobile, isTablet, isLaptop, isDesktop } = useMediaQuery();
 	const { setCollapsed } = useSidebar();
+	const sidebarInitialized = useRef(false);
 	const [isDrawerOpen, setDrawerOpen] = useState(false);
 	const [isAddSymbolModalOpen, setAddSymbolModalOpen] = useState(false);
 	const watchlistSymbols = useWatchlistStore((s) => s.symbols);
@@ -73,8 +74,13 @@ export default function AuthLayout({ children }: { children: React.ReactNode }) 
 		}
 	}, [isDesktop, isLaptop]);
 
-	// Sync sidebar collapsed state with viewport size
+	// Set initial collapsed state based on viewport (laptop auto-collapses)
+	// Only runs once after hydration to avoid overriding user toggle preference
 	useEffect(() => {
+		if (sidebarInitialized.current) {
+			return;
+		}
+		sidebarInitialized.current = true;
 		setCollapsed(isLaptop);
 	}, [isLaptop, setCollapsed]);
 
