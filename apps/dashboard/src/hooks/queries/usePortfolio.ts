@@ -3,6 +3,7 @@ import { del, get, put } from "@/lib/api/client";
 import { CACHE_TIMES, queryKeys, STALE_TIMES } from "@/lib/api/query-client";
 import type {
 	Account,
+	ClosedTradesResponse,
 	EquityPoint,
 	PerformanceMetrics,
 	PortfolioHistory,
@@ -149,5 +150,33 @@ export function useModifyTarget() {
 			);
 			queryClient.invalidateQueries({ queryKey: queryKeys.portfolio.positions() });
 		},
+	});
+}
+
+export function useClosedTrades(options?: { symbol?: string; limit?: number }) {
+	return useQuery({
+		queryKey: [
+			...queryKeys.portfolio.all,
+			"closed-trades",
+			options?.symbol,
+			options?.limit,
+		] as const,
+		queryFn: async () => {
+			const params = new URLSearchParams();
+			if (options?.symbol) {
+				params.set("symbol", options.symbol);
+			}
+			if (options?.limit) {
+				params.set("limit", String(options.limit));
+			}
+			const queryString = params.toString();
+			const url = queryString
+				? `/api/portfolio/closed-trades?${queryString}`
+				: "/api/portfolio/closed-trades";
+			const { data } = await get<ClosedTradesResponse>(url);
+			return data;
+		},
+		staleTime: STALE_TIMES.PORTFOLIO,
+		gcTime: CACHE_TIMES.PORTFOLIO,
 	});
 }

@@ -289,6 +289,37 @@ const OrdersResponseSchema = z.object({
 	count: z.number(),
 });
 
+const ClosedTradeSchema = z.object({
+	id: z.string(),
+	symbol: z.string(),
+	side: z.enum(["LONG", "SHORT"]),
+	quantity: z.number(),
+	entryPrice: z.number(),
+	exitPrice: z.number(),
+	entryDate: z.string(),
+	exitDate: z.string(),
+	holdDays: z.number(),
+	realizedPnl: z.number(),
+	realizedPnlPct: z.number(),
+	entryOrderId: z.string().nullable(),
+	exitOrderId: z.string(),
+});
+
+const ClosedTradesQuerySchema = z.object({
+	symbol: z.string().optional(),
+	limit: z.coerce.number().min(1).max(500).optional().default(100),
+	offset: z.coerce.number().min(0).optional().default(0),
+});
+
+const ClosedTradesResponseSchema = z.object({
+	trades: z.array(ClosedTradeSchema),
+	count: z.number(),
+	totalRealizedPnl: z.number(),
+	winCount: z.number(),
+	lossCount: z.number(),
+	winRate: z.number(),
+});
+
 // ============================================
 // Helpers
 // ============================================
@@ -856,7 +887,7 @@ app.openapi(performanceRoute, async (c) => {
 			};
 
 			// Fetch history for different periods in parallel
-			const [dayHistory, weekHistory, monthHistory, threeMonthHistory, ytdHistory, allHistory] =
+			const [_dayHistory, weekHistory, monthHistory, threeMonthHistory, ytdHistory, allHistory] =
 				await Promise.all([
 					fetchHistory("1D", "1H"),
 					fetchHistory("1W", "1D"),
@@ -869,11 +900,13 @@ app.openapi(performanceRoute, async (c) => {
 			// Helper to calculate returns using CURRENT equity vs historical base value
 			// Uses the FIRST equity value in the history array for reliability
 			// (Alpaca's baseValue can be inconsistent for new accounts)
+			// fallbackBase is used when period-specific history has invalid data (e.g., 0)
 			const calcReturns = (
 				history: BrokerPortfolioHistory | null,
-				overrideBase?: number
+				overrideBase?: number,
+				fallbackBase?: number
 			): { return: number; returnPct: number } => {
-				if (!history && !overrideBase) {
+				if (!history && !overrideBase && !fallbackBase) {
 					log.debug("No history data available");
 					return { return: 0, returnPct: 0 };
 				}
@@ -883,7 +916,14 @@ app.openapi(performanceRoute, async (c) => {
 				let baseValue = overrideBase;
 				if (!baseValue && history) {
 					// Use the first equity value in the array (start of period)
-					baseValue = history.equity?.[0] ?? history.baseValue ?? 0;
+					const historyBase = history.equity?.[0] ?? history.baseValue ?? 0;
+					// Only use history base if it's valid (non-zero)
+					// Alpaca can return 0 for the first equity value in period-specific queries for new accounts
+					baseValue = historyBase > 0 ? historyBase : undefined;
+				}
+				// Fall back to allHistory base if period-specific base is invalid
+				if (!baseValue && fallbackBase && fallbackBase > 0) {
+					baseValue = fallbackBase;
 				}
 
 				if (!baseValue || baseValue === 0) {
@@ -921,14 +961,21 @@ app.openapi(performanceRoute, async (c) => {
 			const oneYearStart = new Date(now);
 			oneYearStart.setFullYear(oneYearStart.getFullYear() - 1);
 
-			// Combine Alpaca returns with trade statistics
-			// Today uses lastEquity (previous close) for accurate intraday calculation
-			const todayReturns = calcReturns(dayHistory, lastEquity);
-			const weekReturns = calcReturns(weekHistory);
-			const monthReturns = calcReturns(monthHistory);
-			const threeMonthReturns = calcReturns(threeMonthHistory);
-			const ytdReturns = calcReturns(ytdHistory);
-			const allReturns = calcReturns(allHistory);
+			// Get fallback base from allHistory (first valid non-zero equity value)
+			// This is used when period-specific queries return invalid data for new accounts
+			const fallbackBase = allHistory?.equity?.find((e) => e > 0) ?? allHistory?.baseValue ?? 0;
+
+			// Calculate Today's return using lastEquity (previous market close)
+			// Fall back to allHistory base if lastEquity is unavailable
+			const todayBase = lastEquity > 0 ? lastEquity : fallbackBase;
+			const todayReturn = todayBase > 0 ? currentEquity - todayBase : 0;
+			const todayReturnPct = todayBase > 0 ? (currentEquity / todayBase - 1) * 100 : 0;
+			const todayReturns = { return: todayReturn, returnPct: todayReturnPct };
+			const weekReturns = calcReturns(weekHistory, undefined, fallbackBase);
+			const monthReturns = calcReturns(monthHistory, undefined, fallbackBase);
+			const threeMonthReturns = calcReturns(threeMonthHistory, undefined, fallbackBase);
+			const ytdReturns = calcReturns(ytdHistory, undefined, fallbackBase);
+			const allReturns = calcReturns(allHistory, undefined, fallbackBase);
 
 			periodMetrics = {
 				today: { ...todayReturns, ...calcTradeStats(todayStart) },
@@ -1392,6 +1439,190 @@ app.openapi(ordersRoute, async (c) => {
 		const message = error instanceof Error ? error.message : "Unknown error";
 		log.error({ error: message }, "Failed to fetch orders from Alpaca");
 		throw new HTTPException(503, { message: `Failed to fetch orders: ${message}` });
+	}
+});
+
+// GET /api/portfolio/closed-trades
+const closedTradesRoute = createRoute({
+	method: "get",
+	path: "/closed-trades",
+	request: {
+		query: ClosedTradesQuerySchema,
+	},
+	responses: {
+		200: {
+			content: { "application/json": { schema: ClosedTradesResponseSchema } },
+			description: "Closed trades with realized P&L using FIFO matching",
+		},
+		503: {
+			content: {
+				"application/json": {
+					schema: z.object({ error: z.string() }),
+				},
+			},
+			description: "Service unavailable",
+		},
+	},
+	tags: ["Portfolio"],
+});
+
+interface FifoLot {
+	orderId: string;
+	date: string;
+	price: number;
+	remainingQty: number;
+}
+
+interface ClosedTrade {
+	id: string;
+	symbol: string;
+	side: "LONG" | "SHORT";
+	quantity: number;
+	entryPrice: number;
+	exitPrice: number;
+	entryDate: string;
+	exitDate: string;
+	holdDays: number;
+	realizedPnl: number;
+	realizedPnlPct: number;
+	entryOrderId: string | null;
+	exitOrderId: string;
+}
+
+// @ts-expect-error - Hono OpenAPI multi-response type inference limitation
+app.openapi(closedTradesRoute, async (c) => {
+	const query = c.req.valid("query");
+
+	try {
+		const ordersRepo = getOrdersRepo();
+
+		// Get all filled orders from our database
+		const { data: orders } = await ordersRepo.findMany({
+			status: "filled",
+			environment: getCurrentEnvironment(),
+			symbol: query.symbol,
+		});
+
+		// Sort by filled date ascending for FIFO processing
+		const sortedOrders = orders
+			.filter((o): o is typeof o & { filledAt: string } => o.filledAt !== null)
+			.toSorted((a, b) => new Date(a.filledAt).getTime() - new Date(b.filledAt).getTime());
+
+		// Group orders by symbol and process FIFO
+		const symbolLots = new Map<string, FifoLot[]>();
+		const closedTrades: ClosedTrade[] = [];
+
+		for (const order of sortedOrders) {
+			const symbol = order.symbol;
+			const qty = order.filledQuantity > 0 ? order.filledQuantity : order.quantity;
+			const price = order.avgFillPrice ?? 0;
+			const date = order.filledAt;
+			const orderId = order.brokerOrderId ?? order.id;
+
+			if (!symbolLots.has(symbol)) {
+				symbolLots.set(symbol, []);
+			}
+			const lots = symbolLots.get(symbol)!;
+
+			if (order.side === "buy") {
+				// Add to FIFO queue
+				lots.push({
+					orderId,
+					date,
+					price,
+					remainingQty: qty,
+				});
+			} else {
+				// Sell - match against FIFO lots
+				let sellQtyRemaining = qty;
+
+				while (sellQtyRemaining > 0 && lots.length > 0) {
+					const lot = lots[0];
+					if (!lot) {
+						break;
+					}
+
+					const matchQty = Math.min(sellQtyRemaining, lot.remainingQty);
+
+					// Calculate P&L for this matched portion
+					const entryValue = matchQty * lot.price;
+					const exitValue = matchQty * price;
+					const realizedPnl = exitValue - entryValue;
+					const realizedPnlPct = lot.price > 0 ? (realizedPnl / entryValue) * 100 : 0;
+
+					// Calculate hold time
+					const entryDate = new Date(lot.date);
+					const exitDate = new Date(date);
+					const holdDays = Math.max(
+						0,
+						Math.floor((exitDate.getTime() - entryDate.getTime()) / (1000 * 60 * 60 * 24))
+					);
+
+					closedTrades.push({
+						id: `${symbol}-${orderId}-${lot.orderId}`,
+						symbol,
+						side: "LONG",
+						quantity: matchQty,
+						entryPrice: lot.price,
+						exitPrice: price,
+						entryDate: lot.date,
+						exitDate: date,
+						holdDays,
+						realizedPnl,
+						realizedPnlPct,
+						entryOrderId: lot.orderId,
+						exitOrderId: orderId,
+					});
+
+					lot.remainingQty -= matchQty;
+					sellQtyRemaining -= matchQty;
+
+					// Remove exhausted lot
+					if (lot.remainingQty <= 0) {
+						lots.shift();
+					}
+				}
+			}
+		}
+
+		// Sort by exit date descending (most recent first)
+		closedTrades.sort((a, b) => new Date(b.exitDate).getTime() - new Date(a.exitDate).getTime());
+
+		// Calculate summary stats
+		const totalRealizedPnl = closedTrades.reduce((sum, t) => sum + t.realizedPnl, 0);
+		const winCount = closedTrades.filter((t) => t.realizedPnl > 0).length;
+		const lossCount = closedTrades.filter((t) => t.realizedPnl < 0).length;
+		const totalTrades = winCount + lossCount;
+		const winRate = totalTrades > 0 ? (winCount / totalTrades) * 100 : 0;
+
+		// Apply pagination
+		const paginatedTrades = closedTrades.slice(query.offset, query.offset + query.limit);
+
+		log.debug(
+			{
+				totalTrades: closedTrades.length,
+				totalRealizedPnl,
+				winRate,
+				symbol: query.symbol,
+			},
+			"Computed closed trades with FIFO matching"
+		);
+
+		return c.json({
+			trades: paginatedTrades,
+			count: closedTrades.length,
+			totalRealizedPnl,
+			winCount,
+			lossCount,
+			winRate,
+		});
+	} catch (error) {
+		if (error instanceof HTTPException) {
+			throw error;
+		}
+		const message = error instanceof Error ? error.message : "Unknown error";
+		log.error({ error: message }, "Failed to compute closed trades");
+		throw new HTTPException(503, { message: `Failed to compute closed trades: ${message}` });
 	}
 });
 

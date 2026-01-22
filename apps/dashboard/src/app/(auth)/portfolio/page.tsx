@@ -21,8 +21,8 @@ import { AccountSummaryCard } from "@/components/portfolio/AccountSummaryCard";
 import { AllocationDonut } from "@/components/portfolio/AllocationDonut";
 import { EquityCurveChart } from "@/components/portfolio/EquityCurveChart";
 import { OrderHistoryWidget } from "@/components/portfolio/OrderHistoryWidget";
+import { PositionsPanel } from "@/components/portfolio/PositionsPanel";
 import { RiskMetricsBar } from "@/components/portfolio/RiskMetricsBar";
-import { StreamingPositionsTable } from "@/components/portfolio/StreamingPositionsTable";
 import { QueryErrorBoundary } from "@/components/QueryErrorBoundary";
 import {
 	useAccount,
@@ -124,7 +124,7 @@ export default function PortfolioPage() {
 				{/* Streaming Positions Table + Risk Metrics - 2/3 width on large screens */}
 				<div className="lg:col-span-2 space-y-6">
 					<QueryErrorBoundary title="Failed to load positions">
-						<StreamingPositionsTable
+						<PositionsPanel
 							positions={streamingPositions}
 							isStreaming={portfolioState.isStreaming}
 							isLoading={isPositionsLoading}

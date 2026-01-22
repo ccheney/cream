@@ -77,6 +77,31 @@ export interface Trade {
 	pnl: number | null;
 }
 
+export interface ClosedTrade {
+	id: string;
+	symbol: string;
+	side: "LONG" | "SHORT";
+	quantity: number;
+	entryPrice: number;
+	exitPrice: number;
+	entryDate: string;
+	exitDate: string;
+	holdDays: number;
+	realizedPnl: number;
+	realizedPnlPct: number;
+	entryOrderId: string | null;
+	exitOrderId: string;
+}
+
+export interface ClosedTradesResponse {
+	trades: ClosedTrade[];
+	count: number;
+	totalRealizedPnl: number;
+	winCount: number;
+	lossCount: number;
+	winRate: number;
+}
+
 export interface PositionDetail extends Position {
 	trades: Trade[];
 	relatedDecisions: DecisionSummary[];

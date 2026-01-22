@@ -89,6 +89,8 @@ export type {
 export type {
 	Account,
 	AccountStatus,
+	ClosedTrade,
+	ClosedTradesResponse,
 	CorrelationMatrix,
 	EquityPoint,
 	ExposureMetrics,
