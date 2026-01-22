@@ -49,7 +49,7 @@ export class OutcomeScorer {
 			executionQuality,
 			planScore,
 			trade,
-			this.config
+			this.config,
 		);
 
 		generateOutcomeFlags(trade, realizedReturn, metrics, flags);
@@ -73,7 +73,7 @@ export class OutcomeScorer {
 	 */
 	scoreOutcomes(
 		trades: CompletedTrade[],
-		planScores?: Map<string, DecisionQualityScore>
+		planScores?: Map<string, DecisionQualityScore>,
 	): OutcomeScore[] {
 		return trades.map((trade) => this.scoreOutcome(trade, planScores?.get(trade.decisionId)));
 	}

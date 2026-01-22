@@ -185,7 +185,7 @@ export function buildOptionSymbol(
 	underlying: string,
 	expiration: string,
 	optionType: "call" | "put",
-	strike: number
+	strike: number,
 ): string {
 	// Pad underlying to 6 characters
 	const paddedUnderlying = underlying.padEnd(6, " ");

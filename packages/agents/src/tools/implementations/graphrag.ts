@@ -76,7 +76,7 @@ function emptyResult(_query: string): GraphRAGQueryResult {
  */
 export async function graphragQuery(
 	ctx: ExecutionContext,
-	params: GraphRAGQueryParams
+	params: GraphRAGQueryParams,
 ): Promise<GraphRAGQueryResult> {
 	if (isTest(ctx)) {
 		return emptyResult(params.query);

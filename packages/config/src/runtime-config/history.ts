@@ -32,7 +32,7 @@ function formatMilliseconds(ms: number): string {
 
 export function findChangedFields(
 	current: RuntimeTradingConfig,
-	previous: RuntimeTradingConfig
+	previous: RuntimeTradingConfig,
 ): string[] {
 	const changedFields: string[] = [];
 	const fieldsToCheck = [
@@ -63,7 +63,7 @@ export function findChangedFields(
 export function describeFieldChange(
 	field: string,
 	current: RuntimeTradingConfig,
-	previous: RuntimeTradingConfig
+	previous: RuntimeTradingConfig,
 ): string {
 	const base = FIELD_DESCRIPTIONS[field] ?? `Updated ${field}`;
 
@@ -90,7 +90,7 @@ export function describeFieldChange(
 export function generateChangeDescription(
 	changedFields: string[],
 	current: RuntimeTradingConfig,
-	previous?: RuntimeTradingConfig
+	previous?: RuntimeTradingConfig,
 ): string | undefined {
 	if (changedFields.length === 0) {
 		if (current.promotedFrom) {

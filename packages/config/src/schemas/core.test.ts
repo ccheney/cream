@@ -91,14 +91,14 @@ describe("CoreConfigSchema", () => {
 			CoreConfigSchema.parse({
 				...validCore,
 				iteration_cap: 0,
-			})
+			}),
 		).toThrow();
 
 		expect(() =>
 			CoreConfigSchema.parse({
 				...validCore,
 				iteration_cap: 11,
-			})
+			}),
 		).toThrow();
 	});
 

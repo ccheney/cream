@@ -57,7 +57,7 @@ describe("RuleBasedConfigSchema", () => {
 		expect(() =>
 			RuleBasedConfigSchema.parse({
 				volatility_percentile_high: 110,
-			})
+			}),
 		).toThrow();
 	});
 });
@@ -75,20 +75,20 @@ describe("HMMConfigSchema", () => {
 		expect(() =>
 			HMMConfigSchema.parse({
 				n_states: 1,
-			})
+			}),
 		).toThrow();
 
 		expect(() =>
 			HMMConfigSchema.parse({
 				n_states: 11,
-			})
+			}),
 		).toThrow();
 	});
 
 	it("validates retrain_frequency enum", () => {
 		expect(HMMConfigSchema.parse({ retrain_frequency: "daily" }).retrain_frequency).toBe("daily");
 		expect(HMMConfigSchema.parse({ retrain_frequency: "monthly" }).retrain_frequency).toBe(
-			"monthly"
+			"monthly",
 		);
 	});
 
@@ -105,7 +105,7 @@ describe("RegimeConfigSchema", () => {
 		expect(() =>
 			RegimeConfigSchema.parse({
 				classifier_type: "rule_based",
-			})
+			}),
 		).toThrow();
 
 		const config = RegimeConfigSchema.parse({
@@ -120,7 +120,7 @@ describe("RegimeConfigSchema", () => {
 		expect(() =>
 			RegimeConfigSchema.parse({
 				classifier_type: "hmm",
-			})
+			}),
 		).toThrow();
 
 		const config = RegimeConfigSchema.parse({
@@ -135,7 +135,7 @@ describe("RegimeConfigSchema", () => {
 		expect(() =>
 			RegimeConfigSchema.parse({
 				classifier_type: "ml_model",
-			})
+			}),
 		).toThrow();
 
 		const config = RegimeConfigSchema.parse({

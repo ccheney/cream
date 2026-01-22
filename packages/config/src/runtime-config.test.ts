@@ -24,7 +24,7 @@ import {
 // ============================================
 
 function createMockTradingConfig(
-	overrides: Partial<RuntimeTradingConfig> = {}
+	overrides: Partial<RuntimeTradingConfig> = {},
 ): RuntimeTradingConfig {
 	return {
 		id: "tc-001",
@@ -52,7 +52,7 @@ function createMockTradingConfig(
 
 function createMockAgentConfig(
 	agentType: RuntimeAgentType,
-	overrides: Partial<RuntimeAgentConfig> = {}
+	overrides: Partial<RuntimeAgentConfig> = {},
 ): RuntimeAgentConfig {
 	return {
 		id: `ac-${agentType}`,
@@ -67,7 +67,7 @@ function createMockAgentConfig(
 }
 
 function createMockUniverseConfig(
-	overrides: Partial<RuntimeUniverseConfig> = {}
+	overrides: Partial<RuntimeUniverseConfig> = {},
 ): RuntimeUniverseConfig {
 	return {
 		id: "uc-001",
@@ -190,10 +190,10 @@ describe("RuntimeConfigService", () => {
 	describe("getDraft", () => {
 		test("returns draft config when exists", async () => {
 			(tradingRepo.getDraft as ReturnType<typeof mock>).mockResolvedValue(
-				createMockTradingConfig({ status: "draft" })
+				createMockTradingConfig({ status: "draft" }),
 			);
 			(universeRepo.getDraft as ReturnType<typeof mock>).mockResolvedValue(
-				createMockUniverseConfig({ status: "draft" })
+				createMockUniverseConfig({ status: "draft" }),
 			);
 
 			const draft = await service.getDraft("PAPER");
@@ -337,10 +337,10 @@ describe("RuntimeConfigService", () => {
 	describe("promote", () => {
 		test("promotes draft to active", async () => {
 			(tradingRepo.getDraft as ReturnType<typeof mock>).mockResolvedValue(
-				createMockTradingConfig({ id: "tc-draft", status: "draft" })
+				createMockTradingConfig({ id: "tc-draft", status: "draft" }),
 			);
 			(universeRepo.getDraft as ReturnType<typeof mock>).mockResolvedValue(
-				createMockUniverseConfig({ id: "uc-draft", status: "draft" })
+				createMockUniverseConfig({ id: "uc-draft", status: "draft" }),
 			);
 
 			await service.promote("PAPER");
@@ -355,7 +355,7 @@ describe("RuntimeConfigService", () => {
 					status: "draft",
 					highConvictionPct: 0.3,
 					mediumConvictionPct: 0.5,
-				})
+				}),
 			);
 
 			await expect(service.promote("PAPER")).rejects.toThrow(RuntimeConfigError);
@@ -403,7 +403,7 @@ describe("RuntimeConfigService", () => {
 	describe("rollback", () => {
 		test("creates new version from old config", async () => {
 			(tradingRepo.findById as ReturnType<typeof mock>).mockResolvedValue(
-				createMockTradingConfig({ id: "tc-old", version: 1, environment: "PAPER" })
+				createMockTradingConfig({ id: "tc-old", version: 1, environment: "PAPER" }),
 			);
 
 			await service.rollback("PAPER", "tc-old");
@@ -420,7 +420,7 @@ describe("RuntimeConfigService", () => {
 
 		test("throws when version is from different environment", async () => {
 			(tradingRepo.findById as ReturnType<typeof mock>).mockResolvedValue(
-				createMockTradingConfig({ id: "tc-live", environment: "LIVE" })
+				createMockTradingConfig({ id: "tc-live", environment: "LIVE" }),
 			);
 
 			await expect(service.rollback("PAPER", "tc-live")).rejects.toThrow(RuntimeConfigError);

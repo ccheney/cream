@@ -72,7 +72,7 @@ const FOMC_RELEASE_ID = FRED_RELEASES.FOMC.id;
 export async function getEconomicCalendar(
 	ctx: ExecutionContext,
 	startDate: string,
-	endDate: string
+	endDate: string,
 ): Promise<EconomicEvent[]> {
 	// In test mode, return empty array for consistent/fast execution
 	if (isTest(ctx)) {
@@ -139,7 +139,7 @@ export async function getEconomicCalendar(
 	} catch (error) {
 		log.warn(
 			{ error: error instanceof Error ? error.message : String(error) },
-			"Failed to fetch FRED economic calendar"
+			"Failed to fetch FRED economic calendar",
 		);
 		return [];
 	}
@@ -187,7 +187,7 @@ export interface MacroIndicatorValue {
  */
 export async function getMacroIndicators(
 	ctx: ExecutionContext,
-	seriesIds?: string[]
+	seriesIds?: string[],
 ): Promise<Record<string, MacroIndicatorValue>> {
 	// In test mode, return empty object for consistent/fast execution
 	if (isTest(ctx)) {
@@ -248,7 +248,7 @@ export async function getMacroIndicators(
 		} catch (error) {
 			log.warn(
 				{ seriesId, error: error instanceof Error ? error.message : String(error) },
-				"Failed to fetch FRED series"
+				"Failed to fetch FRED series",
 			);
 			return null;
 		}

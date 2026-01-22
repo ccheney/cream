@@ -31,7 +31,7 @@ type SupportedIndicator = "RSI" | "SMA" | "EMA" | "ATR" | "BOLLINGER" | "STOCHAS
 function calculateIndicatorFromCandles(
 	indicator: SupportedIndicator,
 	candles: Candle[],
-	params: Record<string, number>
+	params: Record<string, number>,
 ): { values: number[]; timestamps: number[] } {
 	const results: { value: number; timestamp: number }[] = [];
 
@@ -132,7 +132,7 @@ export async function recalcIndicator(
 	ctx: ExecutionContext,
 	indicator: string,
 	symbol: string,
-	params: Record<string, number> = {}
+	params: Record<string, number> = {},
 ): Promise<IndicatorResult> {
 	if (isTest(ctx)) {
 		throw new Error("recalcIndicator is not available in test mode");
@@ -152,7 +152,7 @@ export async function recalcIndicator(
 
 	if (!supportedIndicators.includes(normalizedIndicator)) {
 		throw new Error(
-			`Unsupported indicator: ${indicator}. Supported: ${supportedIndicators.join(", ")}`
+			`Unsupported indicator: ${indicator}. Supported: ${supportedIndicators.join(", ")}`,
 		);
 	}
 

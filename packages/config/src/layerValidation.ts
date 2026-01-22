@@ -203,7 +203,7 @@ export class LayerValidator {
 	validateImport(
 		sourceFile: string,
 		importPath: string,
-		lineNumber?: number
+		lineNumber?: number,
 	): LayerViolation | null {
 		const sourceLayer = this.findLayerForFile(sourceFile);
 		const targetLayer = this.findLayerForImport(importPath);
@@ -277,7 +277,7 @@ export class LayerValidator {
 	 */
 	validateFile(
 		filePath: string,
-		imports: Array<{ path: string; line?: number }>
+		imports: Array<{ path: string; line?: number }>,
 	): LayerViolation[] {
 		const violations: LayerViolation[] = [];
 
@@ -298,7 +298,7 @@ export class LayerValidator {
 		files: Array<{
 			path: string;
 			imports: Array<{ path: string; line?: number }>;
-		}>
+		}>,
 	): LayerValidationResult {
 		const violations: LayerViolation[] = [];
 		let importsAnalyzed = 0;

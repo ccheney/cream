@@ -65,7 +65,7 @@ export function createRequestFn(config: HttpClientConfig): RequestFn {
 				const errorCode = mapHttpStatusToErrorCode(response.status, errorMessage);
 				log.error(
 					{ method, path, status: response.status, errorCode, latencyMs },
-					"Alpaca API error"
+					"Alpaca API error",
 				);
 				throw new BrokerError(errorMessage, errorCode);
 			}
@@ -86,7 +86,7 @@ export function createRequestFn(config: HttpClientConfig): RequestFn {
 			const latencyMs = Date.now() - startTime;
 			log.error(
 				{ method, path, error: error instanceof Error ? error.message : "Unknown", latencyMs },
-				"Alpaca API network error"
+				"Alpaca API network error",
 			);
 
 			throw new BrokerError(
@@ -94,7 +94,7 @@ export function createRequestFn(config: HttpClientConfig): RequestFn {
 				"NETWORK_ERROR",
 				undefined,
 				undefined,
-				error instanceof Error ? error : undefined
+				error instanceof Error ? error : undefined,
 			);
 		}
 	};

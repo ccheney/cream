@@ -226,7 +226,7 @@ export interface StartupAuditLog {
 export function createAuditLog(
 	service: string,
 	ctx: ExecutionContext,
-	result: StartupResult
+	result: StartupResult,
 ): StartupAuditLog {
 	return {
 		timestamp: new Date().toISOString(),
@@ -288,7 +288,7 @@ export function logStartupAudit(_audit: StartupAuditLog): void {}
  */
 export async function runStartupValidation(
 	service: string,
-	ctx: ExecutionContext
+	ctx: ExecutionContext,
 ): Promise<{ env: EnvConfig }> {
 	const result = await validateStartup(ctx);
 
@@ -326,7 +326,7 @@ export async function runStartupValidation(
  */
 export async function validateStartupNoExit(
 	service: string,
-	ctx: ExecutionContext
+	ctx: ExecutionContext,
 ): Promise<StartupResult & { audit: StartupAuditLog }> {
 	const result = await validateStartup(ctx);
 	const audit = createAuditLog(service, ctx, result);

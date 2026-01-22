@@ -25,7 +25,7 @@ export function estimateTimingContribution(trade: CompletedTrade): number {
 export function calculateAttribution(
 	trade: CompletedTrade,
 	realizedReturn: number,
-	config: OutcomeScoringConfig
+	config: OutcomeScoringConfig,
 ): ReturnAttribution {
 	const benchmarkReturn = trade.benchmarkReturn ?? 0;
 	const marketContribution = config.assumedBeta * benchmarkReturn;

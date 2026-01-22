@@ -186,7 +186,7 @@ export interface TradingConfigRepository {
 		environment: TradingEnvironment,
 		input: Partial<
 			Omit<RuntimeTradingConfig, "id" | "environment" | "createdAt" | "updatedAt" | "status">
-		>
+		>,
 	): Promise<RuntimeTradingConfig>;
 	setStatus(id: string, status: RuntimeTradingConfigStatus): Promise<RuntimeTradingConfig>;
 	getHistory(environment: TradingEnvironment, limit: number): Promise<RuntimeTradingConfig[]>;
@@ -221,11 +221,11 @@ export interface AgentConfigsRepository {
 		agentType: RuntimeAgentType,
 		config: Partial<
 			Omit<RuntimeAgentConfig, "id" | "environment" | "agentType" | "createdAt" | "updatedAt">
-		>
+		>,
 	): Promise<RuntimeAgentConfig>;
 	cloneToEnvironment(
 		source: TradingEnvironment,
-		target: TradingEnvironment
+		target: TradingEnvironment,
 	): Promise<void> | Promise<unknown[]>;
 }
 
@@ -236,7 +236,7 @@ export interface UniverseConfigsRepository {
 		environment: TradingEnvironment,
 		input: Partial<
 			Omit<RuntimeUniverseConfig, "id" | "environment" | "createdAt" | "updatedAt" | "status">
-		>
+		>,
 	): Promise<RuntimeUniverseConfig>;
 	setStatus(id: string, status: RuntimeUniverseConfigStatus): Promise<RuntimeUniverseConfig>;
 }
@@ -263,7 +263,7 @@ export interface ConstraintsConfigRepository {
 			maxGamma: number;
 			maxVega: number;
 			maxTheta: number;
-		}>
+		}>,
 	): Promise<RuntimeConstraintsConfig>;
 	setStatus(id: string, status: RuntimeConstraintsConfigStatus): Promise<RuntimeConstraintsConfig>;
 }

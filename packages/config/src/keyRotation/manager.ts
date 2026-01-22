@@ -31,7 +31,7 @@ export class KeyRotationManager {
 	constructor(
 		serviceName: ApiService,
 		config: Partial<KeyRotationConfig> = {},
-		logger?: KeyRotationLogger
+		logger?: KeyRotationLogger,
 	) {
 		this.serviceName = serviceName;
 		this.config = { ...DEFAULT_CONFIG, ...config };

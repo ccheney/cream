@@ -20,7 +20,7 @@ export function calculateOverallScore(
 	executionQuality: number,
 	planScore: DecisionQualityScore | undefined,
 	trade: CompletedTrade,
-	config: OutcomeScoringConfig
+	config: OutcomeScoringConfig,
 ): number {
 	const returnScore = normalizeReturnScore(realizedReturn);
 	const predictionScore = calculatePredictionScore(planScore, realizedReturn, trade);
@@ -47,7 +47,7 @@ function normalizeReturnScore(realizedReturn: number): number {
 function calculatePredictionScore(
 	planScore: DecisionQualityScore | undefined,
 	realizedReturn: number,
-	trade: CompletedTrade
+	trade: CompletedTrade,
 ): number {
 	if (!planScore) {
 		return 50;

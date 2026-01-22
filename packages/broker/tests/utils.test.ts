@@ -97,7 +97,7 @@ describe("validateLegRatios", () => {
 			validateLegRatios([
 				{ symbol: "A", ratio: 1 },
 				{ symbol: "B", ratio: -2 },
-			])
+			]),
 		).toBe(true);
 	});
 
@@ -107,7 +107,7 @@ describe("validateLegRatios", () => {
 				{ symbol: "A", ratio: 1 },
 				{ symbol: "B", ratio: -1 },
 				{ symbol: "C", ratio: 1 },
-			])
+			]),
 		).toBe(true);
 	});
 
@@ -116,7 +116,7 @@ describe("validateLegRatios", () => {
 			validateLegRatios([
 				{ symbol: "A", ratio: 2 },
 				{ symbol: "B", ratio: -4 },
-			])
+			]),
 		).toBe(false);
 	});
 

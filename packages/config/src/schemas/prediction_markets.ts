@@ -91,7 +91,7 @@ export const KalshiConfigSchema = z.object({
 	 * WebSocket configuration
 	 */
 	websocket: KalshiWebSocketConfigSchema.optional().transform((v) =>
-		KalshiWebSocketConfigSchema.parse(v ?? {})
+		KalshiWebSocketConfigSchema.parse(v ?? {}),
 	),
 });
 export type KalshiConfig = z.infer<typeof KalshiConfigSchema>;
@@ -166,7 +166,7 @@ export const SignalsConfigSchema = z.object({
 	 * Maximum market age filter
 	 */
 	max_market_age: MaxMarketAgeConfigSchema.optional().transform((v) =>
-		MaxMarketAgeConfigSchema.parse(v ?? {})
+		MaxMarketAgeConfigSchema.parse(v ?? {}),
 	),
 });
 export type SignalsConfig = z.infer<typeof SignalsConfigSchema>;
@@ -225,7 +225,7 @@ export const RiskThresholdsConfigSchema = z.object({
 	 * Pre-event position reduction settings
 	 */
 	pre_event_position_reduction: PreEventPositionReductionConfigSchema.optional().transform((v) =>
-		PreEventPositionReductionConfigSchema.parse(v ?? {})
+		PreEventPositionReductionConfigSchema.parse(v ?? {}),
 	),
 });
 export type RiskThresholdsConfig = z.infer<typeof RiskThresholdsConfigSchema>;
@@ -281,7 +281,7 @@ export const PredictionMarketsConfigSchema = z.object({
 	 * Polymarket API configuration
 	 */
 	polymarket: PolymarketConfigSchema.optional().transform((v) =>
-		PolymarketConfigSchema.parse(v ?? {})
+		PolymarketConfigSchema.parse(v ?? {}),
 	),
 
 	/**
@@ -293,7 +293,7 @@ export const PredictionMarketsConfigSchema = z.object({
 	 * Risk thresholds for macro uncertainty
 	 */
 	risk_thresholds: RiskThresholdsConfigSchema.optional().transform((v) =>
-		RiskThresholdsConfigSchema.parse(v ?? {})
+		RiskThresholdsConfigSchema.parse(v ?? {}),
 	),
 
 	/**

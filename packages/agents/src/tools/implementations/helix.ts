@@ -22,7 +22,7 @@ import type { HelixQueryResult } from "../types.js";
 export async function helixQuery(
 	ctx: ExecutionContext,
 	queryName: string,
-	params: Record<string, unknown> = {}
+	params: Record<string, unknown> = {},
 ): Promise<HelixQueryResult> {
 	if (isTest(ctx)) {
 		throw new Error("helixQuery is not available in test mode");

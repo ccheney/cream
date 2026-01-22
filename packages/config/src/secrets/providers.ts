@@ -61,7 +61,7 @@ export class EncryptedFileSecretsProvider implements SecretsProvider {
 	constructor(
 		filePath: string,
 		password: string,
-		encryptionConfig: Partial<FileEncryptionConfig> = {}
+		encryptionConfig: Partial<FileEncryptionConfig> = {},
 	) {
 		this.filePath = filePath;
 		this.password = password;
@@ -139,7 +139,7 @@ export class EncryptedFileSecretsProvider implements SecretsProvider {
 	static encrypt(
 		secrets: Record<string, string>,
 		password: string,
-		config: Partial<FileEncryptionConfig> = {}
+		config: Partial<FileEncryptionConfig> = {},
 	): string {
 		const fullConfig = { ...DEFAULT_ENCRYPTION_CONFIG, ...config };
 		const { saltLength, ivLength } = fullConfig;

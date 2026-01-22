@@ -142,7 +142,7 @@ export class DependencyValidator {
  * Create a dependency validator with default config.
  */
 export function createDependencyValidator(
-	config?: Partial<DependencyValidationConfig>
+	config?: Partial<DependencyValidationConfig>,
 ): DependencyValidator {
 	return new DependencyValidator(config);
 }
@@ -152,7 +152,7 @@ export function createDependencyValidator(
  */
 export async function validatePackageDependencies(
 	rootDir: string,
-	config?: Partial<DependencyValidationConfig>
+	config?: Partial<DependencyValidationConfig>,
 ): Promise<DependencyValidationResult> {
 	const validator = createDependencyValidator(config);
 	const packages = await scanPackages(rootDir);

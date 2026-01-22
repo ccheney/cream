@@ -67,7 +67,7 @@ export const SearchPapersInputSchema = z.object({
 		.min(5)
 		.max(500)
 		.describe(
-			"Search query describing the topic or research question (e.g., 'momentum factor returns post-publication decay')"
+			"Search query describing the topic or research question (e.g., 'momentum factor returns post-publication decay')",
 		),
 	limit: z
 		.number()
@@ -180,7 +180,7 @@ Note: This makes external API calls and may be rate-limited.`,
 			ctx,
 			inputData.topic,
 			inputData.limit ?? 5,
-			inputData.recentYearsOnly ?? false
+			inputData.recentYearsOnly ?? false,
 		);
 	},
 });

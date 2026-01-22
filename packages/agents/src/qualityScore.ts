@@ -154,7 +154,7 @@ export class QualityScoreService {
 		if (planScore) {
 			combinedOverall = Math.round(
 				planScore.overall * this.config.planWeight +
-					outcomeScore.outcomeScore * this.config.outcomeWeight
+					outcomeScore.outcomeScore * this.config.outcomeWeight,
 			);
 		} else {
 			combinedOverall = outcomeScore.outcomeScore;
@@ -206,7 +206,7 @@ export class QualityScoreService {
 
 		const totalEntries = this.feedbackHistory.length;
 		const directionCorrectCount = this.feedbackHistory.filter(
-			(f) => f.accuracy.directionCorrect
+			(f) => f.accuracy.directionCorrect,
 		).length;
 
 		const avgReturnError =
@@ -236,7 +236,7 @@ export class QualityScoreService {
 				: 0;
 
 		const overconfidentCount = this.feedbackHistory.filter(
-			(f) => f.preScore >= 70 && f.actualReturn < 0
+			(f) => f.preScore >= 70 && f.actualReturn < 0,
 		).length;
 
 		return {
@@ -281,7 +281,7 @@ export class QualityScoreService {
 
 	private combineRiskLevels(
 		planRisk: QualityScore["riskLevel"] | undefined,
-		outcome: OutcomeScore
+		outcome: OutcomeScore,
 	): QualityScore["riskLevel"] {
 		const outcomeRisk = this.deriveRiskFromOutcome(outcome);
 
@@ -296,7 +296,7 @@ export class QualityScoreService {
 
 	private calculatePredictionAccuracy(
 		planScore: DecisionQualityScore,
-		outcomeScore: OutcomeScore
+		outcomeScore: OutcomeScore,
 	): PredictionAccuracy {
 		const predictedPositive = planScore.expectedValue.netExpectedValue > 0;
 		const actualPositive = outcomeScore.realizedReturn > 0;
@@ -360,7 +360,7 @@ export interface FeedbackSummary {
 }
 
 export function createQualityScoreService(
-	config?: Partial<QualitySystemConfig>
+	config?: Partial<QualitySystemConfig>,
 ): QualityScoreService {
 	return new QualityScoreService(config);
 }

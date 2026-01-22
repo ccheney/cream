@@ -17,16 +17,16 @@ import {
 function createPackage(
 	name: string,
 	dependencies: string[] = [],
-	devDependencies: string[] = []
+	devDependencies: string[] = [],
 ): PackageInfo {
 	return {
 		name,
 		path: `packages/${name.replace("@cream/", "")}/package.json`,
 		dependencies: Object.fromEntries(
-			dependencies.map((d) => [d, d.startsWith("@cream/") ? "workspace:*" : "^1.0.0"])
+			dependencies.map((d) => [d, d.startsWith("@cream/") ? "workspace:*" : "^1.0.0"]),
 		),
 		devDependencies: Object.fromEntries(
-			devDependencies.map((d) => [d, d.startsWith("@cream/") ? "workspace:*" : "^1.0.0"])
+			devDependencies.map((d) => [d, d.startsWith("@cream/") ? "workspace:*" : "^1.0.0"]),
 		),
 		workspaceDependencies: [],
 	};

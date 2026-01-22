@@ -19,7 +19,7 @@ describe("PerInstrumentConstraintsSchema", () => {
 		expect(() =>
 			PerInstrumentConstraintsSchema.parse({
 				max_pct_equity: 1.5,
-			})
+			}),
 		).toThrow();
 	});
 
@@ -27,13 +27,13 @@ describe("PerInstrumentConstraintsSchema", () => {
 		expect(() =>
 			PerInstrumentConstraintsSchema.parse({
 				max_units: -100,
-			})
+			}),
 		).toThrow();
 
 		expect(() =>
 			PerInstrumentConstraintsSchema.parse({
 				max_notional: 0,
-			})
+			}),
 		).toThrow();
 	});
 });
@@ -58,7 +58,7 @@ describe("PortfolioConstraintsSchema", () => {
 		expect(() =>
 			PortfolioConstraintsSchema.parse({
 				max_gross_notional: 0,
-			})
+			}),
 		).toThrow();
 	});
 });
@@ -76,7 +76,7 @@ describe("OptionsGreeksConstraintsSchema", () => {
 		expect(() =>
 			OptionsGreeksConstraintsSchema.parse({
 				max_theta: 100,
-			})
+			}),
 		).toThrow();
 	});
 
@@ -84,7 +84,7 @@ describe("OptionsGreeksConstraintsSchema", () => {
 		expect(() =>
 			OptionsGreeksConstraintsSchema.parse({
 				max_delta_notional: -1000,
-			})
+			}),
 		).toThrow();
 	});
 });
@@ -99,7 +99,7 @@ describe("SizingConstraintsSchema", () => {
 		expect(() =>
 			SizingConstraintsSchema.parse({
 				sanity_threshold_multiplier: 0,
-			})
+			}),
 		).toThrow();
 	});
 });

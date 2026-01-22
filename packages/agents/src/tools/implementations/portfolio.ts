@@ -156,7 +156,7 @@ async function getPortfolioStateFromBroker(ctx: ExecutionContext): Promise<Portf
  * @throws Error if gRPC/broker unavailable or in test mode
  */
 export async function getEnrichedPortfolioState(
-	ctx: ExecutionContext
+	ctx: ExecutionContext,
 ): Promise<EnrichedPortfolioStateResponse> {
 	const baseState = await getPortfolioState(ctx);
 

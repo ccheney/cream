@@ -1,10 +1,10 @@
 {
-  "extends": "@cream/tsconfig/bun.json",
-  "compilerOptions": {
-    "outDir": "./dist",
-    "rootDir": ".",
-    "types": ["@types/bun"]
-  },
-  "include": ["src/**/*", "tests/**/*"],
-  "exclude": ["node_modules", "dist"]
+	"extends": "@cream/tsconfig/bun.json",
+	"compilerOptions": {
+		"outDir": "./dist",
+		"rootDir": ".",
+		"types": ["@types/bun"]
+	},
+	"include": ["src/**/*", "tests/**/*"],
+	"exclude": ["node_modules", "dist"]
 }

@@ -180,7 +180,7 @@ export class DecisionScorer {
 	scoreDecision(
 		decision: Decision,
 		portfolioValue: number,
-		context?: MarketContext
+		context?: MarketContext,
 	): DecisionQualityScore {
 		const flags: DecisionQualityFlag[] = [];
 		const recommendations: string[] = [];
@@ -202,7 +202,7 @@ export class DecisionScorer {
 				stopLoss * this.config.weights.stopLoss +
 				sizing * this.config.weights.sizing +
 				entryTiming * this.config.weights.entryTiming +
-				rationaleQuality * this.config.weights.rationaleQuality
+				rationaleQuality * this.config.weights.rationaleQuality,
 		);
 
 		const expectedValue = this.calculateExpectedValue(decision, currentPrice, context);
@@ -229,7 +229,7 @@ export class DecisionScorer {
 
 	scorePlan(plan: DecisionPlan, portfolioValue: number, context?: MarketContext): PlanQualityScore {
 		const decisionScores = plan.decisions.map((d) =>
-			this.scoreDecision(d, portfolioValue, context)
+			this.scoreDecision(d, portfolioValue, context),
 		);
 
 		const overallScores = decisionScores.map((s) => s.overall);
@@ -248,7 +248,7 @@ export class DecisionScorer {
 		const riskLevel = this.determineOverallRiskLevel(decisionScores, flagCounts);
 
 		const positiveEVCount = decisionScores.filter(
-			(s) => s.expectedValue.netExpectedValue > 0
+			(s) => s.expectedValue.netExpectedValue > 0,
 		).length;
 
 		return {
@@ -271,7 +271,7 @@ export class DecisionScorer {
 		decision: Decision,
 		currentPrice: number,
 		flags: DecisionQualityFlag[],
-		recommendations: string[]
+		recommendations: string[],
 	): number {
 		if (!decision.stopLoss || !decision.takeProfit) {
 			flags.push({
@@ -330,7 +330,7 @@ export class DecisionScorer {
 		decision: Decision,
 		currentPrice: number,
 		flags: DecisionQualityFlag[],
-		recommendations: string[]
+		recommendations: string[],
 	): number {
 		if (!decision.stopLoss) {
 			flags.push({
@@ -403,7 +403,7 @@ export class DecisionScorer {
 		portfolioValue: number,
 		currentPrice: number,
 		flags: DecisionQualityFlag[],
-		recommendations: string[]
+		recommendations: string[],
 	): number {
 		const size = decision.size;
 		let positionValue: number;
@@ -466,7 +466,7 @@ export class DecisionScorer {
 		decision: Decision,
 		context: MarketContext | undefined,
 		flags: DecisionQualityFlag[],
-		recommendations: string[]
+		recommendations: string[],
 	): number {
 		let score = 70;
 
@@ -521,7 +521,7 @@ export class DecisionScorer {
 	private scoreRationale(
 		decision: Decision,
 		flags: DecisionQualityFlag[],
-		recommendations: string[]
+		recommendations: string[],
 	): number {
 		let score = 0;
 		const rationale = decision.rationale;
@@ -566,7 +566,7 @@ export class DecisionScorer {
 	private calculateExpectedValue(
 		decision: Decision,
 		currentPrice: number,
-		context?: MarketContext
+		context?: MarketContext,
 	): ExpectedValue {
 		if (!decision.stopLoss || !decision.takeProfit) {
 			return {
@@ -627,7 +627,7 @@ export class DecisionScorer {
 	private determineRiskLevel(
 		score: number,
 		flags: DecisionQualityFlag[],
-		ev: ExpectedValue
+		ev: ExpectedValue,
 	): "LOW" | "MEDIUM" | "HIGH" | "EXTREME" {
 		const errorCount = flags.filter((f) => f.type === "ERROR").length;
 		const warningCount = flags.filter((f) => f.type === "WARNING").length;
@@ -649,7 +649,7 @@ export class DecisionScorer {
 
 	private determineOverallRiskLevel(
 		scores: DecisionQualityScore[],
-		flagCounts: Record<string, number>
+		flagCounts: Record<string, number>,
 	): "LOW" | "MEDIUM" | "HIGH" | "EXTREME" {
 		if (scores.some((s) => s.riskLevel === "EXTREME") || (flagCounts.ERROR ?? 0) > 0) {
 			return "EXTREME";
@@ -727,7 +727,7 @@ export function scoreDecision(
 	decision: Decision,
 	portfolioValue: number,
 	context?: MarketContext,
-	config?: Partial<DecisionScoringConfig>
+	config?: Partial<DecisionScoringConfig>,
 ): DecisionQualityScore {
 	const scorer = new DecisionScorer(config);
 	return scorer.scoreDecision(decision, portfolioValue, context);
@@ -737,7 +737,7 @@ export function scorePlan(
 	plan: DecisionPlan,
 	portfolioValue: number,
 	context?: MarketContext,
-	config?: Partial<DecisionScoringConfig>
+	config?: Partial<DecisionScoringConfig>,
 ): PlanQualityScore {
 	const scorer = new DecisionScorer(config);
 	return scorer.scorePlan(plan, portfolioValue, context);

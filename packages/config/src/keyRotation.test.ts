@@ -127,7 +127,7 @@ describe("KeyRotationManager", () => {
 			const healthManager = new KeyRotationManager(
 				"alpaca",
 				{ strategy: "healthiest" },
-				silentLogger
+				silentLogger,
 			);
 			healthManager.addKey("key1", "first");
 			healthManager.addKey("key2", "second");
@@ -148,7 +148,7 @@ describe("KeyRotationManager", () => {
 			const healthManager = new KeyRotationManager(
 				"alpaca",
 				{ strategy: "healthiest" },
-				silentLogger
+				silentLogger,
 			);
 			healthManager.addKey("key1", "first");
 			healthManager.addKey("key2", "second");
@@ -163,7 +163,7 @@ describe("KeyRotationManager", () => {
 			const rlManager = new KeyRotationManager(
 				"alpaca",
 				{ strategy: "rate-limit-aware" },
-				silentLogger
+				silentLogger,
 			);
 			rlManager.addKey("key1", "first");
 			rlManager.addKey("key2", "second");
@@ -180,7 +180,7 @@ describe("KeyRotationManager", () => {
 			const rlManager = new KeyRotationManager(
 				"alpaca",
 				{ strategy: "rate-limit-aware" },
-				silentLogger
+				silentLogger,
 			);
 			rlManager.addKey("key1", "first");
 			rlManager.addKey("key2", "second");
@@ -207,7 +207,7 @@ describe("KeyRotationManager", () => {
 			const strictManager = new KeyRotationManager(
 				"alpaca",
 				{ maxConsecutiveErrors: 2 },
-				silentLogger
+				silentLogger,
 			);
 			strictManager.addKey("test-key", "key1");
 
@@ -222,7 +222,7 @@ describe("KeyRotationManager", () => {
 			const strictManager = new KeyRotationManager(
 				"alpaca",
 				{ maxConsecutiveErrors: 2 },
-				silentLogger
+				silentLogger,
 			);
 			strictManager.addKey("key1", "first");
 			strictManager.addKey("key2", "second");
@@ -247,7 +247,7 @@ describe("KeyRotationManager", () => {
 			const autoRotateManager = new KeyRotationManager(
 				"alpaca",
 				{ autoRotateOnRateLimit: true, minRateLimitThreshold: 10 },
-				silentLogger
+				silentLogger,
 			);
 			autoRotateManager.addKey("key1", "first");
 			autoRotateManager.addKey("key2", "second");
@@ -297,7 +297,7 @@ describe("KeyRotationManager", () => {
 			const quickRecoveryManager = new KeyRotationManager(
 				"alpaca",
 				{ maxConsecutiveErrors: 1, unhealthyRetryMs: 50 },
-				silentLogger
+				silentLogger,
 			);
 			quickRecoveryManager.addKey("test-key", "key1");
 

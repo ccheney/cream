@@ -38,7 +38,7 @@ const RecalcIndicatorInputSchema = z.object({
 		.record(z.string(), z.number())
 		.optional()
 		.describe(
-			"Indicator parameters (e.g., { period: 14 } for RSI, { period: 20, stdDev: 2 } for Bollinger)"
+			"Indicator parameters (e.g., { period: 14 } for RSI, { period: 20, stdDev: 2 } for Bollinger)",
 		),
 });
 
@@ -142,7 +142,7 @@ Input notes:
 	inputSchema: FREDCalendarInputSchema,
 	outputSchema: FREDCalendarOutputSchema,
 	execute: async (
-		inputData
+		inputData,
 	): Promise<{ startDate: string; endDate: string; events: EconomicEvent[] }> => {
 		const nyFormatter = new Intl.DateTimeFormat("en-US", {
 			timeZone: "America/New_York",
@@ -225,7 +225,7 @@ const HelixQueryInputSchema = z.object({
 		.string()
 		.min(3)
 		.describe(
-			"Natural language query for semantic search over HelixDB memory (e.g., 'AAPL earnings guidance')"
+			"Natural language query for semantic search over HelixDB memory (e.g., 'AAPL earnings guidance')",
 		),
 	symbol: z.string().optional().describe("Optional company ticker symbol filter (e.g., 'AAPL')"),
 	limit: z

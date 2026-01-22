@@ -95,7 +95,7 @@ function emptyResult(symbol: string): CompanyRelationshipsResult {
  */
 export async function getCompanyRelationships(
 	ctx: ExecutionContext,
-	symbol: string
+	symbol: string,
 ): Promise<CompanyRelationshipsResult> {
 	if (isTest(ctx)) {
 		return emptyResult(symbol);
@@ -136,7 +136,7 @@ export async function getCompanyRelationships(
  */
 export async function getSectorPeers(
 	ctx: ExecutionContext,
-	symbol: string
+	symbol: string,
 ): Promise<{ symbol: string; peers: string[] }> {
 	if (isTest(ctx)) {
 		return { symbol, peers: [] };
@@ -158,7 +158,7 @@ export async function getSectorPeers(
  */
 export async function getSupplyChain(
 	ctx: ExecutionContext,
-	symbol: string
+	symbol: string,
 ): Promise<{
 	symbol: string;
 	suppliers: DependencyResult[];

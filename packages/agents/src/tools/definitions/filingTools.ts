@@ -29,7 +29,7 @@ const SearchFilingsInputSchema = z.object({
 		.array(z.enum(["10-K", "10-Q", "8-K", "DEF14A", "S-1", "S-3", "4", "SC 13G"]))
 		.optional()
 		.describe(
-			"Filter by filing type(s). Common types: 10-K (annual), 10-Q (quarterly), 8-K (current events)"
+			"Filter by filing type(s). Common types: 10-K (annual), 10-Q (quarterly), 8-K (current events)",
 		),
 	limit: z
 		.number()

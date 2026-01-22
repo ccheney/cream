@@ -128,7 +128,7 @@ export interface MacroFactorsResult {
  */
 export async function getCompanyMacroExposure(
 	ctx: ExecutionContext,
-	symbol: string
+	symbol: string,
 ): Promise<CompanyMacroExposureResult> {
 	const startTime = performance.now();
 
@@ -186,7 +186,7 @@ export async function getCompanyMacroExposure(
  */
 export async function getPortfolioMacroExposure(
 	ctx: ExecutionContext,
-	symbols: string[]
+	symbols: string[],
 ): Promise<PortfolioMacroExposureResult> {
 	const startTime = performance.now();
 
@@ -272,7 +272,7 @@ export async function getPortfolioMacroExposure(
  */
 export async function getCompaniesAffectedByMacro(
 	ctx: ExecutionContext,
-	macroEntityId: string
+	macroEntityId: string,
 ): Promise<CompaniesAffectedResult> {
 	const startTime = performance.now();
 

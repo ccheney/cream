@@ -43,7 +43,7 @@ describe("CreamConfigSchema", () => {
 					environment: "INVALID",
 					llm: { model_id: "gemini-3-pro-preview" },
 				},
-			})
+			}),
 		).toThrow();
 	});
 });

@@ -81,7 +81,7 @@ export class KeyRotationRegistry {
  * Create a key rotation registry initialized from environment variables.
  */
 export function createKeyRotationRegistry(
-	config?: Partial<KeyRotationConfig>
+	config?: Partial<KeyRotationConfig>,
 ): KeyRotationRegistry {
 	const registry = new KeyRotationRegistry(config);
 	registry.initFromEnv();

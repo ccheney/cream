@@ -81,7 +81,7 @@ function getHelixClient(): HelixClient {
  */
 export async function searchFilings(
 	ctx: ExecutionContext,
-	params: SearchFilingsParams
+	params: SearchFilingsParams,
 ): Promise<SearchFilingsResult> {
 	// In test mode, return empty results for consistent/fast execution
 	if (isTest(ctx)) {

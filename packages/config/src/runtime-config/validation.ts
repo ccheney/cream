@@ -18,7 +18,7 @@ import type {
 export function validateTradingConfig(
 	config: RuntimeTradingConfig,
 	errors: ValidationError[],
-	warnings: string[]
+	warnings: string[],
 ): void {
 	if (config.highConvictionPct <= config.mediumConvictionPct) {
 		errors.push({
@@ -70,7 +70,7 @@ export function validateTradingConfig(
 export function validateUniverseConfig(
 	config: RuntimeUniverseConfig,
 	errors: ValidationError[],
-	warnings: string[]
+	warnings: string[],
 ): void {
 	if (config.source === "static" && (!config.staticSymbols || config.staticSymbols.length === 0)) {
 		errors.push({
@@ -103,7 +103,7 @@ export function validateUniverseConfig(
 export function validateAgentConfigs(
 	agents: Record<RuntimeAgentType, RuntimeAgentConfig>,
 	errors: ValidationError[],
-	_warnings: string[]
+	_warnings: string[],
 ): void {
 	const enabledAgents = Object.values(agents).filter((a) => a.enabled);
 
@@ -119,7 +119,7 @@ export function validateAgentConfigs(
 export function validateConstraintsConfig(
 	config: RuntimeConstraintsConfig,
 	errors: ValidationError[],
-	warnings: string[]
+	warnings: string[],
 ): void {
 	if (config.perInstrument.maxShares < 1) {
 		errors.push({
@@ -165,14 +165,14 @@ export function validateConstraintsConfig(
 export function validateCrossConfig(
 	config: FullRuntimeConfig,
 	_errors: ValidationError[],
-	warnings: string[]
+	warnings: string[],
 ): void {
 	const enabledAgentCount = Object.values(config.agents).filter((a) => a.enabled).length;
 	const estimatedCycleTime = enabledAgentCount * config.trading.agentTimeoutMs;
 
 	if (estimatedCycleTime > config.trading.tradingCycleIntervalMs * 0.8) {
 		warnings.push(
-			`Cycle interval (${config.trading.tradingCycleIntervalMs}ms) may be too short for ${enabledAgentCount} agents`
+			`Cycle interval (${config.trading.tradingCycleIntervalMs}ms) may be too short for ${enabledAgentCount} agents`,
 		);
 	}
 }

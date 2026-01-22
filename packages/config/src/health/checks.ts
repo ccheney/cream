@@ -12,7 +12,7 @@ import type { HealthCheckDefinition, HealthCheckResult, HealthStatus } from "./t
 export function createHttpHealthCheck(
 	name: string,
 	url: string,
-	options: { expectedStatus?: number; timeout?: number } = {}
+	options: { expectedStatus?: number; timeout?: number } = {},
 ): HealthCheckDefinition {
 	const { expectedStatus = 200, timeout = 5000 } = options;
 
@@ -71,7 +71,7 @@ export function createHttpHealthCheck(
  */
 export function createMemoryHealthCheck(
 	name: string,
-	options: { warningThresholdMB?: number; criticalThresholdMB?: number } = {}
+	options: { warningThresholdMB?: number; criticalThresholdMB?: number } = {},
 ): HealthCheckDefinition {
 	const { warningThresholdMB = 500, criticalThresholdMB = 1000 } = options;
 
@@ -115,7 +115,7 @@ export function createMemoryHealthCheck(
  */
 export function createCustomHealthCheck(
 	name: string,
-	checkFn: () => Promise<{ healthy: boolean; message?: string; details?: Record<string, unknown> }>
+	checkFn: () => Promise<{ healthy: boolean; message?: string; details?: Record<string, unknown> }>,
 ): HealthCheckDefinition {
 	return {
 		name,

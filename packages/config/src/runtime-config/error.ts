@@ -13,7 +13,7 @@ export class RuntimeConfigError extends Error {
 			| "PROMOTION_FAILED"
 			| "ROLLBACK_FAILED",
 		public readonly environment?: RuntimeEnvironment,
-		public readonly details?: unknown
+		public readonly details?: unknown,
 	) {
 		super(message);
 		this.name = "RuntimeConfigError";
@@ -23,20 +23,20 @@ export class RuntimeConfigError extends Error {
 		return new RuntimeConfigError(
 			`No active config found for ${environment}. Run 'bun run db:seed' first.`,
 			"NOT_SEEDED",
-			environment
+			environment,
 		);
 	}
 
 	static validationFailed(
 		errors: ValidationError[],
-		environment?: RuntimeEnvironment
+		environment?: RuntimeEnvironment,
 	): RuntimeConfigError {
 		const errorMessages = errors.map((e) => `${e.field}: ${e.message}`).join("; ");
 		return new RuntimeConfigError(
 			`Config validation failed: ${errorMessages}`,
 			"VALIDATION_FAILED",
 			environment,
-			errors
+			errors,
 		);
 	}
 }

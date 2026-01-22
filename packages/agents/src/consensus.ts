@@ -197,7 +197,7 @@ export class ConsensusGate {
 		const rejectionReasons = this.collectRejectionReasons(
 			riskManagerOutput,
 			criticOutput,
-			timeoutStatus
+			timeoutStatus,
 		);
 
 		// Log the decision
@@ -269,7 +269,7 @@ export class ConsensusGate {
 		riskVerdict: ApprovalVerdict | "TIMEOUT",
 		criticVerdict: ApprovalVerdict | "TIMEOUT",
 		approved: boolean,
-		timeoutStatus: TimeoutStatus
+		timeoutStatus: TimeoutStatus,
 	): void {
 		const logData = {
 			cycleId,
@@ -385,7 +385,7 @@ export class ConsensusGate {
 	private collectRejectionReasons(
 		riskManagerOutput: RiskManagerOutput,
 		criticOutput: CriticOutput,
-		timeoutStatus: TimeoutStatus
+		timeoutStatus: TimeoutStatus,
 	): string[] {
 		const reasons: string[] = [];
 
@@ -404,7 +404,7 @@ export class ConsensusGate {
 		if (riskManagerOutput.verdict === "REJECT") {
 			for (const violation of riskManagerOutput.violations) {
 				reasons.push(
-					`[Risk] ${violation.constraint}: ${violation.current_value} exceeds ${violation.limit}`
+					`[Risk] ${violation.constraint}: ${violation.current_value} exceeds ${violation.limit}`,
 				);
 			}
 			for (const change of riskManagerOutput.required_changes) {
@@ -416,7 +416,7 @@ export class ConsensusGate {
 		if (criticOutput.verdict === "REJECT") {
 			for (const violation of criticOutput.violations) {
 				reasons.push(
-					`[Critic] ${violation.affected_decisions.join(", ")}: ${violation.constraint} (${violation.current_value} vs ${violation.limit})`
+					`[Critic] ${violation.affected_decisions.join(", ")}: ${violation.constraint} (${violation.current_value} vs ${violation.limit})`,
 				);
 			}
 			for (const change of criticOutput.required_changes) {
@@ -452,7 +452,7 @@ export function createNoTradePlan(cycleId: string, reason: string): DecisionPlan
  */
 export function createApprovedRiskOutput(
 	notes = "",
-	decisionIds: string[] = []
+	decisionIds: string[] = [],
 ): RiskManagerOutput {
 	return {
 		verdict: "APPROVE",
@@ -529,7 +529,7 @@ export type ActionType = "BUY" | "SELL" | "HOLD" | "CLOSE";
  */
 export function getFallbackAction(
 	originalAction: ActionType,
-	forceCloseOnFail = false
+	forceCloseOnFail = false,
 ): ActionType {
 	switch (originalAction) {
 		case "BUY":
@@ -565,7 +565,7 @@ export type AgentTimeoutResult<T> =
 export async function withAgentTimeout<T>(
 	promise: Promise<T>,
 	timeoutMs: number,
-	agentName: string
+	agentName: string,
 ): Promise<AgentTimeoutResult<T>> {
 	return new Promise((resolve) => {
 		let completed = false;
@@ -604,7 +604,7 @@ export async function withAgentTimeout<T>(
 export async function withAbortableTimeout<T>(
 	fn: (signal: AbortSignal) => Promise<T>,
 	timeoutMs: number,
-	agentName: string
+	agentName: string,
 ): Promise<AgentTimeoutResult<T>> {
 	const controller = new AbortController();
 	let completed = false;
@@ -649,7 +649,7 @@ export async function withAbortableTimeout<T>(
  */
 export type GetApprovalFn = (
 	plan: DecisionPlan,
-	signal: AbortSignal
+	signal: AbortSignal,
 ) => Promise<{ riskManager: RiskManagerOutput; critic: CriticOutput }>;
 
 /**
@@ -658,7 +658,7 @@ export type GetApprovalFn = (
 export type RevisePlanFn = (
 	plan: DecisionPlan,
 	rejectionReasons: string[],
-	signal: AbortSignal
+	signal: AbortSignal,
 ) => Promise<DecisionPlan>;
 
 /**
@@ -675,7 +675,7 @@ export async function runConsensusLoop(
 	gate: ConsensusGate,
 	initialPlan: DecisionPlan,
 	getApproval: GetApprovalFn,
-	revisePlan: RevisePlanFn
+	revisePlan: RevisePlanFn,
 ): Promise<ConsensusResult> {
 	gate.startCycle();
 	let currentPlan = initialPlan;
@@ -697,7 +697,7 @@ export async function runConsensusLoop(
 		const approvalResult = await withAbortableTimeout(
 			(signal) => getApproval(currentPlan, signal),
 			gate.getPerAgentTimeoutMs(),
-			"approval"
+			"approval",
 		);
 
 		let riskManager: RiskManagerOutput;
@@ -717,7 +717,7 @@ export async function runConsensusLoop(
 			timeoutStatus = "RISK_MANAGER_TIMEOUT"; // Use timeout status for now
 			log.error(
 				{ error: approvalResult.error, agent: approvalResult.agentName },
-				"Approval agents failed"
+				"Approval agents failed",
 			);
 		} else {
 			riskManager = approvalResult.result.riskManager;
@@ -731,7 +731,7 @@ export async function runConsensusLoop(
 				riskManagerOutput: riskManager,
 				criticOutput: critic,
 			},
-			timeoutStatus
+			timeoutStatus,
 		);
 
 		// If approved, return success
@@ -745,7 +745,7 @@ export async function runConsensusLoop(
 				...result,
 				plan: createNoTradePlan(
 					currentPlan.cycleId,
-					`Consensus not reached after ${gate.getMaxIterations()} iterations`
+					`Consensus not reached after ${gate.getMaxIterations()} iterations`,
 				),
 			};
 		}
@@ -754,7 +754,7 @@ export async function runConsensusLoop(
 		const reviseResult = await withAbortableTimeout(
 			(signal) => revisePlan(currentPlan, result.rejectionReasons, signal),
 			gate.getPerAgentTimeoutMs(),
-			"revisePlan"
+			"revisePlan",
 		);
 
 		if (reviseResult.timedOut) {
@@ -782,7 +782,7 @@ export async function runConsensusLoop(
  */
 export function wouldPassConsensus(
 	riskManagerOutput: RiskManagerOutput,
-	criticOutput: CriticOutput
+	criticOutput: CriticOutput,
 ): boolean {
 	return riskManagerOutput.verdict === "APPROVE" && criticOutput.verdict === "APPROVE";
 }

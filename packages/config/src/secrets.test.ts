@@ -524,7 +524,7 @@ describe("Factory Functions", () => {
 			expect(() =>
 				createSecretsManager("encrypted-file", {
 					password: "password",
-				})
+				}),
 			).toThrow("requires filePath and password");
 		});
 
@@ -532,14 +532,14 @@ describe("Factory Functions", () => {
 			expect(() =>
 				createSecretsManager("encrypted-file", {
 					filePath: "/tmp/secrets.enc",
-				})
+				}),
 			).toThrow("requires filePath and password");
 		});
 
 		it("should throw for unknown provider type", () => {
 			expect(() =>
 				// @ts-expect-error Testing invalid input
-				createSecretsManager("unknown", {})
+				createSecretsManager("unknown", {}),
 			).toThrow("Unknown provider type");
 		});
 	});

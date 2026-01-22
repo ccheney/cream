@@ -125,7 +125,7 @@ describe("TransformConfigSchema", () => {
 				TransformConfigSchema.parse({
 					name: "zscore",
 					params: { lookback: 100 },
-				})
+				}),
 			).toThrow();
 		});
 
@@ -136,7 +136,7 @@ describe("TransformConfigSchema", () => {
 					input: "close",
 					inputs: ["rsi_14"],
 					params: {},
-				})
+				}),
 			).toThrow();
 		});
 	});
@@ -192,7 +192,7 @@ describe("TransformConfigSchema", () => {
 					name: "zscore",
 					inputs: ["rsi"],
 					// missing params
-				})
+				}),
 			).toThrow();
 		});
 	});
@@ -242,7 +242,7 @@ describe("NormalizationConfigSchema", () => {
 						params: {},
 					},
 				],
-			})
+			}),
 		).toThrow();
 	});
 });

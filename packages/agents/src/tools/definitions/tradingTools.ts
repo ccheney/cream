@@ -98,7 +98,7 @@ const PdtStatusSchema = z.object({
 	daytradingBuyingPower: z
 		.number()
 		.describe(
-			"Day trading buying power (4x equity for PDT accounts, otherwise same as buying power)"
+			"Day trading buying power (4x equity for PDT accounts, otherwise same as buying power)",
 		),
 });
 
@@ -109,7 +109,7 @@ const GetPortfolioStateOutputSchema = z.object({
 	dayPnL: z.number().describe("Profit/loss for current trading day across all positions"),
 	totalPnL: z.number().describe("All-time realized + unrealized profit/loss"),
 	pdt: PdtStatusSchema.describe(
-		"Pattern Day Trader status. CRITICAL: Check remainingDayTrades before selling same-day positions"
+		"Pattern Day Trader status. CRITICAL: Check remainingDayTrades before selling same-day positions",
 	),
 });
 
@@ -199,13 +199,13 @@ const EnrichedPortfolioPositionSchema = z.object({
 		.nullable()
 		.describe("Days position has been held. Null if openedAt unknown"),
 	strategy: PositionStrategySchema.nullable().describe(
-		"Strategy metadata from original decision. Null if no decision linked"
+		"Strategy metadata from original decision. Null if no decision linked",
 	),
 	riskParams: PositionRiskParamsSchema.nullable().describe(
-		"Risk parameters (stops/targets) from original decision. Null if no decision linked"
+		"Risk parameters (stops/targets) from original decision. Null if no decision linked",
 	),
 	thesis: PositionThesisContextSchema.nullable().describe(
-		"Thesis context from thesis_state. Null if no thesis linked"
+		"Thesis context from thesis_state. Null if no thesis linked",
 	),
 });
 
@@ -220,7 +220,7 @@ const GetEnrichedPortfolioStateOutputSchema = z.object({
 	dayPnL: z.number().describe("Profit/loss for current trading day across all positions"),
 	totalPnL: z.number().describe("All-time realized + unrealized profit/loss"),
 	pdt: PdtStatusSchema.describe(
-		"Pattern Day Trader status. CRITICAL: Check remainingDayTrades before selling same-day positions"
+		"Pattern Day Trader status. CRITICAL: Check remainingDayTrades before selling same-day positions",
 	),
 });
 

@@ -106,7 +106,7 @@ export const CompaniesAffectedInputSchema = z.object({
 		.string()
 		.min(1)
 		.describe(
-			"Macro entity ID to query (e.g., 'fed_funds_rate', 'oil_wti', 'vix'). Use list_macro_factors to see available factors."
+			"Macro entity ID to query (e.g., 'fed_funds_rate', 'oil_wti', 'vix'). Use list_macro_factors to see available factors.",
 		),
 });
 
@@ -119,7 +119,7 @@ export const CompaniesAffectedOutputSchema = z.object({
 
 export const ListMacroFactorsInputSchema = z.object({
 	category: MacroCategorySchema.optional().describe(
-		"Optional category to filter by. If not provided, returns all factors."
+		"Optional category to filter by. If not provided, returns all factors.",
 	),
 });
 
@@ -289,7 +289,7 @@ This tool does not require database access and works in all modes.`,
 						"Real Estate": {},
 						Industrials: {},
 						"Communication Services": {},
-					}
+					},
 				),
 			};
 		}

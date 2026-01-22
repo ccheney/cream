@@ -13,7 +13,7 @@ export function generateOutcomeFlags(
 	trade: CompletedTrade,
 	realizedReturn: number,
 	metrics: OutcomeMetrics,
-	flags: OutcomeFlag[]
+	flags: OutcomeFlag[],
 ): void {
 	addProfitabilityFlags(realizedReturn, metrics, flags);
 	addMagnitudeFlags(realizedReturn, flags);
@@ -24,7 +24,7 @@ export function generateOutcomeFlags(
 function addProfitabilityFlags(
 	realizedReturn: number,
 	metrics: OutcomeMetrics,
-	flags: OutcomeFlag[]
+	flags: OutcomeFlag[],
 ): void {
 	if (realizedReturn > 0) {
 		flags.push({

@@ -53,7 +53,7 @@ export function getOutcomeSummary(scores: OutcomeScore[]): OutcomeSummary {
 			timingContribution: acc.timingContribution + s.attribution.timingContribution,
 			totalReturn: acc.totalReturn + s.attribution.totalReturn,
 		}),
-		{ ...EMPTY_ATTRIBUTION }
+		{ ...EMPTY_ATTRIBUTION },
 	);
 
 	const profitFactor = calculateProfitFactor(grossProfit, grossLoss);

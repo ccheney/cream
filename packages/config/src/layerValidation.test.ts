@@ -112,7 +112,7 @@ describe("LayerValidator", () => {
 			const violation = validator.validateImport(
 				"packages/domain/src/types.ts",
 				"@cream/storage",
-				42
+				42,
 			);
 
 			expect(violation?.lineNumber).toBe(42);
@@ -209,7 +209,7 @@ describe("LayerValidator", () => {
 
 			expect(validator.findLayerForFile("packages/domain/src/types.ts")?.name).toBe("domain");
 			expect(validator.findLayerForFile("packages/storage/src/client.ts")?.name).toBe(
-				"infrastructure"
+				"infrastructure",
 			);
 			expect(validator.findLayerForFile("apps/api/src/index.ts")?.name).toBe("presentation");
 		});

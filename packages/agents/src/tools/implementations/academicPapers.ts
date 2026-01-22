@@ -67,7 +67,7 @@ export interface ExternalPaperResult {
 export async function searchAcademicPapers(
 	ctx: ExecutionContext,
 	query: string,
-	limit: number
+	limit: number,
 ): Promise<{
 	query: string;
 	papers: AcademicPaperSearchResult[];
@@ -125,7 +125,7 @@ export async function searchExternalPapers(
 	ctx: ExecutionContext,
 	topic: string,
 	limit: number,
-	recentOnly: boolean
+	recentOnly: boolean,
 ): Promise<{
 	topic: string;
 	papers: ExternalPaperResult[];
@@ -209,7 +209,7 @@ function toPaperInput(paper: SemanticScholarPaper): PaperInput | null {
 export async function ingestSemanticScholarPapers(
 	ctx: ExecutionContext,
 	topic: string,
-	limit: number
+	limit: number,
 ): Promise<{
 	topic: string;
 	papersIngested: number;

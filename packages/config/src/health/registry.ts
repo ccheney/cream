@@ -43,7 +43,7 @@ export class HealthCheckRegistry {
 	 * Register a component for health checking.
 	 */
 	register(
-		component: Partial<ComponentHealthConfig> & { name: string; check: HealthCheckFn }
+		component: Partial<ComponentHealthConfig> & { name: string; check: HealthCheckFn },
 	): void {
 		const fullConfig: ComponentHealthConfig = {
 			name: component.name,
@@ -129,7 +129,7 @@ export class HealthCheckRegistry {
 	 */
 	async checkAll(): Promise<SystemHealth> {
 		const results = await Promise.all(
-			Array.from(this.components.keys()).map((name) => this.checkComponent(name))
+			Array.from(this.components.keys()).map((name) => this.checkComponent(name)),
 		);
 
 		return aggregateHealthResults(results, this.hasCriticalFailure(), this.startTime);
@@ -156,7 +156,7 @@ export class HealthCheckRegistry {
 					message: "Not yet checked",
 					responseTimeMs: 0,
 					timestamp: new Date().toISOString(),
-				}
+				},
 			);
 		}
 

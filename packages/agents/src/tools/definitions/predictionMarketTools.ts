@@ -85,7 +85,7 @@ interface PredictionMarketsRepo {
 			fromTime?: string;
 			toTime?: string;
 		},
-		limit?: number
+		limit?: number,
 	): Promise<
 		Array<{
 			id: string;
@@ -116,7 +116,7 @@ let repoProvider: (() => Promise<PredictionMarketsRepo>) | null = null;
  * Must be called before tools are used (typically at app startup).
  */
 export function setPredictionMarketsRepoProvider(
-	provider: () => Promise<PredictionMarketsRepo>
+	provider: () => Promise<PredictionMarketsRepo>,
 ): void {
 	repoProvider = provider;
 }
@@ -124,7 +124,7 @@ export function setPredictionMarketsRepoProvider(
 async function getRepo(): Promise<PredictionMarketsRepo> {
 	if (!repoProvider) {
 		throw new Error(
-			"PredictionMarketsRepo provider not set. Call setPredictionMarketsRepoProvider() at startup."
+			"PredictionMarketsRepo provider not set. Call setPredictionMarketsRepoProvider() at startup.",
 		);
 	}
 	return repoProvider();
@@ -288,7 +288,7 @@ Updated every 15 minutes.`,
 					platform: inputData.platform,
 					marketType: inputData.marketType,
 				},
-				inputData.limit ?? 20
+				inputData.limit ?? 20,
 			);
 		} else {
 			snapshots = await repo.getLatestSnapshots(inputData.platform);

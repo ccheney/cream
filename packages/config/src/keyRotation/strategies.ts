@@ -10,7 +10,7 @@ import type { ApiKey } from "./types.js";
  */
 export function selectRoundRobin(
 	keys: ApiKey[],
-	currentIndex: number
+	currentIndex: number,
 ): { key: ApiKey; nextIndex: number } | null {
 	if (keys.length === 0) {
 		return null;
@@ -53,7 +53,7 @@ export function selectRateLimitAware(keys: ApiKey[]): ApiKey {
 
 	if (withRateLimit.length > 0) {
 		return withRateLimit.reduce((best, k) =>
-			(k.rateLimitRemaining ?? 0) > (best.rateLimitRemaining ?? 0) ? k : best
+			(k.rateLimitRemaining ?? 0) > (best.rateLimitRemaining ?? 0) ? k : best,
 		);
 	}
 

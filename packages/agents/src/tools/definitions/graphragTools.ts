@@ -82,7 +82,7 @@ export const GraphRAGQueryInputSchema = z.object({
 		.string()
 		.min(3)
 		.describe(
-			"Natural language query for semantic search (e.g., 'semiconductor supply chain constraints')"
+			"Natural language query for semantic search (e.g., 'semiconductor supply chain constraints')",
 		),
 	limit: z.number().min(1).max(50).optional().describe("Maximum results per type (default: 10)"),
 	symbol: z.string().optional().describe("Filter to specific company ticker symbol (e.g., 'AAPL')"),

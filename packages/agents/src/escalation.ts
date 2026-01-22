@@ -352,7 +352,7 @@ export class EscalationService {
 
 		// Send notifications to all channels in parallel
 		const results = await Promise.all(
-			this.config.channels.map((channel) => channel.send(notification))
+			this.config.channels.map((channel) => channel.send(notification)),
 		);
 
 		// Log results
@@ -472,7 +472,7 @@ export function createEscalationService(options: {
 		channels.push(
 			new SlackWebhookChannel({
 				webhookUrl: options.slackWebhook,
-			})
+			}),
 		);
 	}
 
@@ -582,7 +582,7 @@ export class InterventionManager {
 
 	constructor(
 		escService: EscalationService,
-		defaultTimeoutMs = 300000 // 5 minutes
+		defaultTimeoutMs = 300000, // 5 minutes
 	) {
 		this.escService = escService;
 		this.defaultTimeoutMs = defaultTimeoutMs;
@@ -593,7 +593,7 @@ export class InterventionManager {
 	 * Returns a promise that resolves when the operator responds or timeout occurs.
 	 */
 	async requestIntervention(
-		request: Omit<InterventionRequest, "id" | "timestamp" | "deadline">
+		request: Omit<InterventionRequest, "id" | "timestamp" | "deadline">,
 	): Promise<InterventionResponse> {
 		const fullRequest: InterventionRequest = {
 			...request,
@@ -664,7 +664,7 @@ export class InterventionManager {
 						});
 					}
 				},
-				Math.min(timeout, 1000)
+				Math.min(timeout, 1000),
 			); // Cap at 1 second for testing, production would use full timeout
 		});
 	}

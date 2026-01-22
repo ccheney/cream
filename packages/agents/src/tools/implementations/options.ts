@@ -14,7 +14,7 @@ import type { Greeks, OptionChainResponse, OptionContract, OptionExpiration } fr
  * e.g., "AAPL  240119C00185000" -> { underlying: "AAPL", expiration: "2024-01-19", type: "call", strike: 185 }
  */
 export function parseOSISymbol(
-	osiSymbol: string
+	osiSymbol: string,
 ): { underlying: string; expiration: string; type: "call" | "put"; strike: number } | null {
 	// Remove all spaces and convert to uppercase
 	const normalized = osiSymbol.replace(/\s/g, "").toUpperCase();
@@ -64,7 +64,7 @@ export function parseOSISymbol(
  */
 export async function getOptionChain(
 	ctx: ExecutionContext,
-	underlying: string
+	underlying: string,
 ): Promise<OptionChainResponse> {
 	if (isTest(ctx)) {
 		throw new Error("getOptionChain is not available in test mode");
@@ -131,7 +131,7 @@ export async function getOptionChain(
 
 	// Sort expirations and convert to array
 	const sortedExpirations = Array.from(expirationMap.values()).sort((a, b) =>
-		a.expiration.localeCompare(b.expiration)
+		a.expiration.localeCompare(b.expiration),
 	);
 
 	// Sort calls/puts by strike

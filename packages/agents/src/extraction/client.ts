@@ -214,7 +214,7 @@ export class ExtractionClient implements IExtractionClient {
 	async extract(
 		content: string,
 		sourceType: ContentSourceType,
-		metadata?: Record<string, unknown>
+		metadata?: Record<string, unknown>,
 	): Promise<ExtractionResult> {
 		const systemPrompt = EXTRACTION_PROMPTS[sourceType];
 

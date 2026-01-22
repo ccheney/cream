@@ -36,7 +36,7 @@ export function parsePackageJson(content: string, path: string): PackageInfo | n
  */
 export async function scanPackages(
 	rootDir: string,
-	patterns: string[] = ["packages/*/package.json", "apps/*/package.json"]
+	patterns: string[] = ["packages/*/package.json", "apps/*/package.json"],
 ): Promise<PackageInfo[]> {
 	const packages: PackageInfo[] = [];
 

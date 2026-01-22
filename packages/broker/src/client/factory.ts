@@ -65,7 +65,7 @@ export function createAlpacaClient(config: AlpacaClientConfig): AlpacaClient {
 			if (!orderRequest.clientOrderId.includes("-LIVE-CONFIRMED-")) {
 				throw new BrokerError(
 					'LIVE orders require explicit confirmation. Include "-LIVE-CONFIRMED-" in clientOrderId or set requireLiveConfirmation: false',
-					"LIVE_PROTECTION"
+					"LIVE_PROTECTION",
 				);
 			}
 		}
@@ -156,7 +156,7 @@ export function createAlpacaClient(config: AlpacaClientConfig): AlpacaClient {
 					type: orderRequest.type,
 					environment,
 				},
-				"Submitting order"
+				"Submitting order",
 			);
 
 			const data = await request<AlpacaOrderResponse>("POST", "/v2/orders", payload);
@@ -169,7 +169,7 @@ export function createAlpacaClient(config: AlpacaClientConfig): AlpacaClient {
 					symbol: order.symbol,
 					status: order.status,
 				},
-				"Order submitted"
+				"Order submitted",
 			);
 
 			return order;
@@ -229,7 +229,7 @@ export function createAlpacaClient(config: AlpacaClientConfig): AlpacaClient {
 			const order = mapOrder(data);
 			log.info(
 				{ symbol, orderId: order.id, status: order.status },
-				"Position close order submitted"
+				"Position close order submitted",
 			);
 			return order;
 		},

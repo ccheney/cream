@@ -173,7 +173,7 @@ describe("IndicatorConfigSchema", () => {
 				name: "rsi",
 				params: {},
 				timeframes: [],
-			})
+			}),
 		).toThrow();
 	});
 
@@ -183,7 +183,7 @@ describe("IndicatorConfigSchema", () => {
 				name: "",
 				params: {},
 				timeframes: ["1h"],
-			})
+			}),
 		).toThrow();
 	});
 });
@@ -210,7 +210,7 @@ describe("RSIIndicatorConfigSchema", () => {
 				name: "sma",
 				params: {},
 				timeframes: ["1h"],
-			})
+			}),
 		).toThrow();
 	});
 });

@@ -16,7 +16,7 @@ import type { SecretsManagerConfig, SecretsProvider } from "./types.js";
  * Create a secrets manager with environment variables as the provider.
  */
 export function createEnvSecretsManager(
-	config?: Partial<Omit<SecretsManagerConfig, "provider">>
+	config?: Partial<Omit<SecretsManagerConfig, "provider">>,
 ): SecretsManager {
 	return new SecretsManager({
 		cacheTtlMs: config?.cacheTtlMs ?? 300000,
@@ -47,7 +47,7 @@ export interface CreateSecretsManagerOptions {
  */
 export function createSecretsManager(
 	providerType: "env" | "memory" | "encrypted-file",
-	options: CreateSecretsManagerOptions = {}
+	options: CreateSecretsManagerOptions = {},
 ): SecretsManager {
 	let provider: SecretsProvider;
 

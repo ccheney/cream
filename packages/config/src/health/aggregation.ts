@@ -56,7 +56,7 @@ export function countHealthStatuses(results: HealthCheckResult[]): {
  */
 export function determineOverallStatus(
 	counts: { healthyCount: number; degradedCount: number; unhealthyCount: number },
-	hasCriticalFailure: boolean
+	hasCriticalFailure: boolean,
 ): HealthStatus {
 	const { healthyCount, degradedCount, unhealthyCount } = counts;
 
@@ -78,7 +78,7 @@ export function determineOverallStatus(
 export function aggregateHealthResults(
 	results: HealthCheckResult[],
 	hasCriticalFailure: boolean,
-	startTime: number
+	startTime: number,
 ): SystemHealth {
 	const counts = countHealthStatuses(results);
 	const status = determineOverallStatus(counts, hasCriticalFailure);

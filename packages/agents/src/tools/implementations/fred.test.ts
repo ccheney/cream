@@ -18,7 +18,7 @@ import { getEconomicCalendar, getMacroIndicators } from "./fred.js";
 
 function createTestContext(
 	environment: "PAPER" | "LIVE" = "PAPER",
-	source: "test" | "manual" = "test"
+	source: "test" | "manual" = "test",
 ): ExecutionContext {
 	return {
 		environment,
@@ -227,7 +227,7 @@ describe("getMacroIndicators", () => {
 						{ date: "2025-01-15", value: "3.5" },
 						{ date: "2024-12-15", value: "3.4" },
 					],
-				})
+				}),
 			);
 			setFREDClientForTesting({
 				getReleaseDates: mock(() => Promise.resolve({ release_dates: [] })),
@@ -248,7 +248,7 @@ describe("getMacroIndicators", () => {
 						{ date: "2025-01-15", value: "100.5" },
 						{ date: "2024-12-15", value: "100.0" },
 					],
-				})
+				}),
 			);
 			setFREDClientForTesting({
 				getReleaseDates: mock(() => Promise.resolve({ release_dates: [] })),
@@ -272,7 +272,7 @@ describe("getMacroIndicators", () => {
 							{ date: "2025-01-15", value: "105.0" },
 							{ date: "2024-12-15", value: "100.0" },
 						],
-					})
+					}),
 				),
 			} as any);
 
@@ -293,7 +293,7 @@ describe("getMacroIndicators", () => {
 							{ date: "2025-01-15", value: "315.6" },
 							{ date: "2024-12-15", value: "314.1" },
 						],
-					})
+					}),
 				),
 			} as any);
 
@@ -316,7 +316,7 @@ describe("getMacroIndicators", () => {
 							{ date: "2025-01-15", value: "." },
 							{ date: "2024-12-15", value: "100.0" },
 						],
-					})
+					}),
 				),
 			} as any);
 
@@ -333,7 +333,7 @@ describe("getMacroIndicators", () => {
 				getObservations: mock(() =>
 					Promise.resolve({
 						observations: [],
-					})
+					}),
 				),
 			} as any);
 
@@ -349,7 +349,7 @@ describe("getMacroIndicators", () => {
 				getObservations: mock(() =>
 					Promise.resolve({
 						observations: [{ date: "2025-01-15", value: null }],
-					})
+					}),
 				),
 			} as any);
 

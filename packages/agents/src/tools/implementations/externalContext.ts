@@ -73,7 +73,7 @@ export interface AnalyzeContentResult {
  */
 export async function extractNewsContext(
 	ctx: ExecutionContext,
-	params: ExtractNewsContextParams
+	params: ExtractNewsContextParams,
 ): Promise<ExtractNewsContextResult> {
 	const { symbols, limit = 10, dryRun = false } = params;
 
@@ -153,7 +153,7 @@ export async function extractNewsContext(
  */
 export async function analyzeContent(
 	ctx: ExecutionContext,
-	params: AnalyzeContentParams
+	params: AnalyzeContentParams,
 ): Promise<AnalyzeContentResult> {
 	const { content, sourceType, symbols = [], dryRun = false } = params;
 
@@ -181,7 +181,7 @@ export async function analyzeContent(
 			sourceType,
 			new Date(),
 			"user_provided",
-			symbols
+			symbols,
 		);
 
 		if (!event) {

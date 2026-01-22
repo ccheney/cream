@@ -29,7 +29,7 @@ function calculateHoldingDays(openedAt: string): number {
  */
 function mapDbPositionToEnriched(
 	brokerPosition: PortfolioPosition,
-	dbPosition: PositionWithMetadata
+	dbPosition: PositionWithMetadata,
 ): EnrichedPortfolioPosition {
 	let strategy: PositionStrategy | null = null;
 	if (dbPosition.strategy) {
@@ -101,7 +101,7 @@ function createUnenrichedPosition(brokerPosition: PortfolioPosition): EnrichedPo
  */
 export async function enrichPositions(
 	brokerPositions: PortfolioPosition[],
-	ctx: ExecutionContext
+	ctx: ExecutionContext,
 ): Promise<EnrichedPortfolioPosition[]> {
 	if (brokerPositions.length === 0) {
 		return [];

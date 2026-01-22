@@ -79,7 +79,7 @@ describe("ETFHoldingsSourceSchema", () => {
 		expect(result.success).toBe(false);
 		if (!result.success) {
 			expect(
-				result.error.issues.some((i) => i.message.includes("Either etf_symbol or etf_symbols"))
+				result.error.issues.some((i) => i.message.includes("Either etf_symbol or etf_symbols")),
 			).toBe(true);
 		}
 	});

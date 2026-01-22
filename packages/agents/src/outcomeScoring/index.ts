@@ -60,7 +60,7 @@ export { DEFAULT_OUTCOME_SCORING_CONFIG } from "./types.js";
 export function scoreOutcome(
 	trade: CompletedTrade,
 	planScore?: DecisionQualityScore,
-	config?: Partial<OutcomeScoringConfig>
+	config?: Partial<OutcomeScoringConfig>,
 ): OutcomeScore {
 	const scorer = new OutcomeScorer(config);
 	return scorer.scoreOutcome(trade, planScore);
@@ -72,7 +72,7 @@ export function scoreOutcome(
 export function scoreOutcomes(
 	trades: CompletedTrade[],
 	planScores?: Map<string, DecisionQualityScore>,
-	config?: Partial<OutcomeScoringConfig>
+	config?: Partial<OutcomeScoringConfig>,
 ): OutcomeScore[] {
 	const scorer = new OutcomeScorer(config);
 	return scorer.scoreOutcomes(trades, planScores);

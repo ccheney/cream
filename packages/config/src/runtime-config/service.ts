@@ -33,7 +33,7 @@ export class RuntimeConfigService {
 		private readonly tradingConfigRepo: TradingConfigRepository,
 		private readonly agentConfigsRepo: AgentConfigsRepository,
 		private readonly universeConfigsRepo: UniverseConfigsRepository,
-		private readonly constraintsConfigRepo?: ConstraintsConfigRepository
+		private readonly constraintsConfigRepo?: ConstraintsConfigRepository,
 	) {}
 
 	async getActiveConfig(environment: RuntimeEnvironment): Promise<FullRuntimeConfig> {
@@ -110,7 +110,7 @@ export class RuntimeConfigService {
 				portfolio: Partial<RuntimePortfolioLimits>;
 				options: Partial<RuntimeOptionsLimits>;
 			}>;
-		}>
+		}>,
 	): Promise<FullRuntimeConfig> {
 		if (config.trading) {
 			await this.tradingConfigRepo.saveDraft(environment as TradingEnvironment, {
@@ -209,7 +209,7 @@ export class RuntimeConfigService {
 
 	async promoteToEnvironment(
 		sourceEnvironment: RuntimeEnvironment,
-		targetEnvironment: RuntimeEnvironment
+		targetEnvironment: RuntimeEnvironment,
 	): Promise<FullRuntimeConfig> {
 		const sourceConfig = await this.getActiveConfig(sourceEnvironment);
 
@@ -219,7 +219,7 @@ export class RuntimeConfigService {
 		}
 
 		const sourceTrading = await this.tradingConfigRepo.getActive(
-			sourceEnvironment as TradingEnvironment
+			sourceEnvironment as TradingEnvironment,
 		);
 		if (!sourceTrading) {
 			throw RuntimeConfigError.notSeeded(sourceEnvironment);
@@ -227,7 +227,7 @@ export class RuntimeConfigService {
 
 		const promotedTrading = await this.tradingConfigRepo.promote(
 			sourceTrading.id,
-			targetEnvironment as TradingEnvironment
+			targetEnvironment as TradingEnvironment,
 		);
 		await this.tradingConfigRepo.setStatus(promotedTrading.id, "active");
 
@@ -282,11 +282,11 @@ export class RuntimeConfigService {
 	async getHistory(environment: RuntimeEnvironment, limit = 20): Promise<ConfigHistoryEntry[]> {
 		const history = await this.tradingConfigRepo.getHistory(
 			environment as TradingEnvironment,
-			limit
+			limit,
 		);
 
 		const activeTradingConfig = await this.tradingConfigRepo.getActive(
-			environment as TradingEnvironment
+			environment as TradingEnvironment,
 		);
 
 		const [agentConfigs, universe, constraints] = await Promise.all([
@@ -331,7 +331,7 @@ export class RuntimeConfigService {
 			throw new RuntimeConfigError(
 				`Config version ${versionId} not found`,
 				"ROLLBACK_FAILED",
-				environment
+				environment,
 			);
 		}
 
@@ -339,12 +339,12 @@ export class RuntimeConfigService {
 			throw new RuntimeConfigError(
 				`Config ${versionId} belongs to ${config.environment}, not ${environment}`,
 				"ROLLBACK_FAILED",
-				environment
+				environment,
 			);
 		}
 
 		const nextVersion = await this.tradingConfigRepo.getNextVersion(
-			environment as TradingEnvironment
+			environment as TradingEnvironment,
 		);
 		const rollbackConfig = await this.tradingConfigRepo.create({
 			id: `tc_${environment.toLowerCase()}_v${nextVersion}_rollback_${Date.now()}`,
@@ -372,7 +372,7 @@ export class RuntimeConfigService {
 	}
 
 	private buildAgentsMap(
-		agentConfigs: RuntimeAgentConfig[]
+		agentConfigs: RuntimeAgentConfig[],
 	): Record<RuntimeAgentType, RuntimeAgentConfig> {
 		const agents: Partial<Record<RuntimeAgentType, RuntimeAgentConfig>> = {};
 		for (const config of agentConfigs) {
@@ -386,12 +386,12 @@ export function createRuntimeConfigService(
 	tradingConfigRepo: TradingConfigRepository,
 	agentConfigsRepo: AgentConfigsRepository,
 	universeConfigsRepo: UniverseConfigsRepository,
-	constraintsConfigRepo?: ConstraintsConfigRepository
+	constraintsConfigRepo?: ConstraintsConfigRepository,
 ): RuntimeConfigService {
 	return new RuntimeConfigService(
 		tradingConfigRepo,
 		agentConfigsRepo,
 		universeConfigsRepo,
-		constraintsConfigRepo
+		constraintsConfigRepo,
 	);
 }

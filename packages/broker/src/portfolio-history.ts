@@ -46,7 +46,7 @@ export class PortfolioHistoryError extends Error {
 	constructor(
 		message: string,
 		public readonly statusCode?: number,
-		public override readonly cause?: Error
+		public override readonly cause?: Error,
 	) {
 		super(message);
 		this.name = "PortfolioHistoryError";
@@ -55,7 +55,7 @@ export class PortfolioHistoryError extends Error {
 
 export async function getPortfolioHistory(
 	config: PortfolioHistoryClientConfig,
-	options: PortfolioHistoryOptions
+	options: PortfolioHistoryOptions,
 ): Promise<PortfolioHistory> {
 	const baseUrl =
 		config.environment === "LIVE"
@@ -91,7 +91,7 @@ export async function getPortfolioHistory(
 		const errorText = await response.text();
 		throw new PortfolioHistoryError(
 			`Failed to fetch portfolio history: ${response.status} ${errorText}`,
-			response.status
+			response.status,
 		);
 	}
 

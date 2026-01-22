@@ -91,7 +91,7 @@ export class SecretsManager {
 		await Promise.all(
 			keys.map(async (key) => {
 				results[key] = await this.get(key);
-			})
+			}),
 		);
 
 		return results;
@@ -181,7 +181,7 @@ export class SecretsManager {
 		key: string | undefined,
 		provider: string,
 		success: boolean,
-		error?: string
+		error?: string,
 	): void {
 		if (!this.config.auditEnabled) {
 			return;

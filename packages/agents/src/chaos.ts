@@ -347,7 +347,7 @@ export class ChaosEngine {
 
 	private selectFailure(): ChaosFailureType {
 		const failures = this.config.enabledFailures.filter(
-			(f) => f !== "slow_response" && f !== "corrupt_response"
+			(f) => f !== "slow_response" && f !== "corrupt_response",
 		);
 
 		if (failures.length === 0) {
@@ -405,7 +405,7 @@ export class ChaosEngine {
 	private logEvent(
 		type: ChaosFailureType,
 		operation: string,
-		details?: Record<string, unknown>
+		details?: Record<string, unknown>,
 	): void {
 		const event: ChaosEvent = {
 			type,
@@ -430,7 +430,7 @@ export class ChaosEngine {
  * Create a chaos middleware for wrapping API calls.
  */
 export function createChaosMiddleware(
-	engine: ChaosEngine
+	engine: ChaosEngine,
 ): <T>(fn: () => Promise<T>, operation: string) => Promise<T> {
 	return <T>(fn: () => Promise<T>, operation: string): Promise<T> => {
 		return engine.wrap(fn, operation);
@@ -449,7 +449,7 @@ export async function runWithChaos<T>(
 	engine: ChaosEngine,
 	fn: () => Promise<T>,
 	operation: string,
-	iterations: number
+	iterations: number,
 ): Promise<ChaosTestResult> {
 	const results: Array<{ success: boolean; error?: string; type?: ChaosFailureType }> = [];
 

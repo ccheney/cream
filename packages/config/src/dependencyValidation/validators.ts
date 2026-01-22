@@ -37,7 +37,7 @@ export function validateSelfReferences(packages: Map<string, PackageInfo>): Depe
  */
 export function validateMissingPackages(
 	packages: Map<string, PackageInfo>,
-	workspacePrefix: string
+	workspacePrefix: string,
 ): DependencyViolation[] {
 	const violations: DependencyViolation[] = [];
 
@@ -63,7 +63,7 @@ export function validateMissingPackages(
  */
 export function validateCircularDependencies(
 	cycles: string[][],
-	circularAsError: boolean
+	circularAsError: boolean,
 ): { circularDependencies: CircularDependency[]; violations: DependencyViolation[] } {
 	const circularDependencies: CircularDependency[] = [];
 	const violations: DependencyViolation[] = [];
@@ -100,7 +100,7 @@ export function validateCircularDependencies(
 export function runValidation(
 	packages: Map<string, PackageInfo>,
 	graph: DependencyGraph,
-	config: DependencyValidationConfig
+	config: DependencyValidationConfig,
 ): DependencyValidationResult {
 	const violations: DependencyViolation[] = [];
 
@@ -110,7 +110,7 @@ export function runValidation(
 	const cycles = graph.findAllCycles();
 	const { circularDependencies, violations: circularViolations } = validateCircularDependencies(
 		cycles,
-		config.circularAsError
+		config.circularAsError,
 	);
 	violations.push(...circularViolations);
 

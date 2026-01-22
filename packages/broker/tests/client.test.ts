@@ -23,7 +23,7 @@ describe("createAlpacaClient", () => {
 				apiKey: "",
 				apiSecret: "",
 				environment: "PAPER",
-			})
+			}),
 		).toThrow(BrokerError);
 	});
 
@@ -90,7 +90,7 @@ describe("BrokerError", () => {
 			"NETWORK_ERROR",
 			undefined,
 			undefined,
-			cause
+			cause,
 		);
 
 		expect(error.cause).toBe(cause);
@@ -132,7 +132,7 @@ describe("LIVE protection", () => {
 				side: "buy",
 				type: "market",
 				timeInForce: "day",
-			})
+			}),
 		).rejects.toThrow(BrokerError);
 	});
 
@@ -205,7 +205,7 @@ describe("Multi-leg order validation", () => {
 				side: "buy",
 				type: "market",
 				timeInForce: "day",
-			})
+			}),
 		).rejects.toThrow("maximum of 4 legs");
 	});
 
@@ -227,7 +227,7 @@ describe("Multi-leg order validation", () => {
 				side: "buy",
 				type: "market",
 				timeInForce: "day",
-			})
+			}),
 		).rejects.toThrow("simplified");
 	});
 });

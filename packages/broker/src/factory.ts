@@ -48,7 +48,7 @@ export interface BrokerClientConfig {
  */
 export function createBrokerClient(
 	ctx: ExecutionContext,
-	config: BrokerClientConfig = {}
+	config: BrokerClientConfig = {},
 ): AlpacaClient {
 	const apiKey = config.apiKey ?? Bun.env.ALPACA_KEY;
 	const apiSecret = config.apiSecret ?? Bun.env.ALPACA_SECRET;
@@ -56,7 +56,7 @@ export function createBrokerClient(
 	if (!apiKey || !apiSecret) {
 		throw new BrokerError(
 			`ALPACA_KEY and ALPACA_SECRET are required for ${ctx.environment} trading`,
-			"INVALID_CREDENTIALS"
+			"INVALID_CREDENTIALS",
 		);
 	}
 

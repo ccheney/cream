@@ -70,7 +70,7 @@ export function calculateExitSlippage(trade: CompletedTrade): number {
 export function calculateMetrics(
 	trade: CompletedTrade,
 	config: OutcomeScoringConfig,
-	flags: OutcomeFlag[]
+	flags: OutcomeFlag[],
 ): OutcomeMetrics {
 	const entrySlippagePct = calculateEntrySlippage(trade);
 	const exitSlippagePct = calculateExitSlippage(trade);
