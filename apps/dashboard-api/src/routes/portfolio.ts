@@ -388,12 +388,12 @@ app.openapi(summaryRoute, async (c) => {
 
 			log.debug(
 				{ todayPnl, todayPnlPct, positionCount: alpacaPositions.length },
-				"Calculated Day P&L from Alpaca positions"
+				"Calculated Day P&L from Alpaca positions",
 			);
 		} catch (error) {
 			log.warn(
 				{ error: error instanceof Error ? error.message : String(error) },
-				"Failed to fetch Alpaca positions for Day P&L, falling back to snapshots"
+				"Failed to fetch Alpaca positions for Day P&L, falling back to snapshots",
 			);
 			// Fall back to snapshot-based calculation below
 		}
@@ -408,7 +408,7 @@ app.openapi(summaryRoute, async (c) => {
 
 		const yesterdaySnapshot = await snapshotsRepo.findByDate(
 			getCurrentEnvironment(),
-			yesterdayEnd.toISOString().split("T")[0] ?? ""
+			yesterdayEnd.toISOString().split("T")[0] ?? "",
 		);
 
 		todayPnl = yesterdaySnapshot ? latestSnapshot.nav - yesterdaySnapshot.nav : 0;
@@ -513,7 +513,7 @@ app.openapi(positionsRoute, async (c) => {
 				thesisId: p.thesisId,
 				daysHeld: calculateDaysHeld(p.openedAt),
 				openedAt: p.openedAt,
-			}))
+			})),
 		);
 	}
 
@@ -531,7 +531,7 @@ app.openapi(positionsRoute, async (c) => {
 
 		log.debug(
 			{ alpacaCount: alpacaPositions.length, dbCount: dbResult.data.length },
-			"Fetched positions from Alpaca and DB"
+			"Fetched positions from Alpaca and DB",
 		);
 
 		return c.json(
@@ -554,12 +554,12 @@ app.openapi(positionsRoute, async (c) => {
 					daysHeld: dbPosition ? calculateDaysHeld(dbPosition.openedAt) : 0,
 					openedAt: dbPosition?.openedAt ?? new Date().toISOString(),
 				};
-			})
+			}),
 		);
 	} catch (error) {
 		log.error(
 			{ error: error instanceof Error ? error.message : String(error) },
-			"Failed to fetch Alpaca positions"
+			"Failed to fetch Alpaca positions",
 		);
 		// Fall back to DB-only on error
 		const repo = await getPositionsRepo();
@@ -582,7 +582,7 @@ app.openapi(positionsRoute, async (c) => {
 				thesisId: p.thesisId,
 				daysHeld: calculateDaysHeld(p.openedAt),
 				openedAt: p.openedAt,
-			}))
+			})),
 		);
 	}
 });
@@ -614,11 +614,23 @@ const positionDetailRoute = createRoute({
 // @ts-expect-error - Hono OpenAPI multi-response type inference limitation
 app.openapi(positionDetailRoute, async (c) => {
 	const { id } = c.req.valid("param");
-	const repo = await getPositionsRepo();
+	const [repo, decisionsRepo] = await Promise.all([getPositionsRepo(), getDecisionsRepo()]);
 
 	const position = await repo.findById(id);
 	if (!position) {
 		return c.json({ error: "Position not found" }, 404);
+	}
+
+	// Fetch stop/target from linked decision if available
+	let stop: number | null = null;
+	let target: number | null = null;
+
+	if (position.decisionId) {
+		const decision = await decisionsRepo.findById(position.decisionId);
+		if (decision) {
+			stop = decision.stopPrice;
+			target = decision.targetPrice;
+		}
 	}
 
 	return c.json({
@@ -628,9 +640,12 @@ app.openapi(positionDetailRoute, async (c) => {
 		qty: position.quantity,
 		avgEntry: position.avgEntryPrice,
 		currentPrice: position.currentPrice,
+		lastdayPrice: null,
 		marketValue: position.marketValue,
 		unrealizedPnl: position.unrealizedPnl,
 		unrealizedPnlPct: position.unrealizedPnlPct,
+		stop,
+		target,
 		thesisId: position.thesisId,
 		daysHeld: calculateDaysHeld(position.openedAt),
 		openedAt: position.openedAt,
@@ -667,7 +682,7 @@ app.openapi(equityCurveRoute, async (c) => {
 			fromDate: query.from,
 			toDate: query.to,
 		},
-		{ page: 1, pageSize: query.limit }
+		{ page: 1, pageSize: query.limit },
 	);
 
 	// Calculate peak NAV for drawdown calculation
@@ -685,7 +700,7 @@ app.openapi(equityCurveRoute, async (c) => {
 				drawdown,
 				drawdownPct,
 			};
-		})
+		}),
 	);
 });
 
@@ -719,7 +734,7 @@ app.openapi(equityRoute, async (c) => {
 			environment: getCurrentEnvironment(),
 			fromDate: fromDate.toISOString().split("T")[0],
 		},
-		{ page: 1, pageSize: days + 1 }
+		{ page: 1, pageSize: days + 1 },
 	);
 
 	// Calculate peak NAV for drawdown calculation
@@ -737,7 +752,7 @@ app.openapi(equityRoute, async (c) => {
 				drawdown,
 				drawdownPct,
 			};
-		})
+		}),
 	);
 });
 
@@ -760,13 +775,13 @@ app.openapi(performanceRoute, async (c) => {
 	// Get executed decisions for trade statistics (kept for potential future use)
 	const _decisions = await decisionsRepo.findMany(
 		{ status: "executed" },
-		{ limit: 1000, offset: 0 }
+		{ limit: 1000, offset: 0 },
 	);
 
 	// Get filled orders for P&L calculations
 	const orders = await ordersRepo.findMany(
 		{ status: "filled", environment: getCurrentEnvironment() },
-		{ limit: 1000, offset: 0 }
+		{ limit: 1000, offset: 0 },
 	);
 
 	// Calculate P&L from filled orders (BUY is entry, SELL is exit)
@@ -781,7 +796,7 @@ app.openapi(performanceRoute, async (c) => {
 	// Process orders chronologically to track position costs
 	const sortedOrders = orders.data.toSorted(
 		(a, b) =>
-			new Date(a.filledAt ?? a.createdAt).getTime() - new Date(b.filledAt ?? b.createdAt).getTime()
+			new Date(a.filledAt ?? a.createdAt).getTime() - new Date(b.filledAt ?? b.createdAt).getTime(),
 	);
 
 	for (const order of sortedOrders) {
@@ -864,7 +879,7 @@ app.openapi(performanceRoute, async (c) => {
 			// Helper to fetch history with error logging
 			const fetchHistory = async (
 				period: "1D" | "1W" | "1M" | "3M" | "1A" | "all",
-				timeframe: "1H" | "1D"
+				timeframe: "1H" | "1D",
 			) => {
 				try {
 					const result = await getPortfolioHistory(config, { period, timeframe });
@@ -874,13 +889,13 @@ app.openapi(performanceRoute, async (c) => {
 							dataPoints: result.equity?.length ?? 0,
 							baseValue: result.baseValue,
 						},
-						"Fetched portfolio history"
+						"Fetched portfolio history",
 					);
 					return result;
 				} catch (error) {
 					log.warn(
 						{ period, error: error instanceof Error ? error.message : String(error) },
-						"Failed to fetch portfolio history for period"
+						"Failed to fetch portfolio history for period",
 					);
 					return null;
 				}
@@ -904,7 +919,7 @@ app.openapi(performanceRoute, async (c) => {
 			const calcReturns = (
 				history: BrokerPortfolioHistory | null,
 				overrideBase?: number,
-				fallbackBase?: number
+				fallbackBase?: number,
 			): { return: number; returnPct: number } => {
 				if (!history && !overrideBase && !fallbackBase) {
 					log.debug("No history data available");
@@ -938,7 +953,7 @@ app.openapi(performanceRoute, async (c) => {
 
 				log.debug(
 					{ baseValue, currentEquity, periodReturn, returnPct },
-					"Calculated period return using current equity"
+					"Calculated period return using current equity",
 				);
 
 				return { return: periodReturn, returnPct };
@@ -1000,12 +1015,12 @@ app.openapi(performanceRoute, async (c) => {
 					weekReturn: periodMetrics.week.return,
 					monthReturn: periodMetrics.month.return,
 				},
-				"Calculated period returns from Alpaca history"
+				"Calculated period returns from Alpaca history",
 			);
 		} catch (error) {
 			log.warn(
 				{ error: error instanceof Error ? error.message : String(error) },
-				"Failed to fetch Alpaca portfolio history for performance metrics"
+				"Failed to fetch Alpaca portfolio history for performance metrics",
 			);
 		}
 	}
@@ -1039,7 +1054,7 @@ app.openapi(performanceRoute, async (c) => {
 			currentDrawdown = currentDD;
 			log.debug(
 				{ peak, currentEquity: currentEquityForDD, currentDrawdown, maxDrawdown },
-				"Calculated drawdown with real-time equity"
+				"Calculated drawdown with real-time equity",
 			);
 		} catch {
 			// Fall back to last historical equity
@@ -1167,7 +1182,7 @@ app.openapi(closePositionRoute, async (c) => {
 
 	log.info(
 		{ positionId: id, symbol: position.symbol, quantity: position.quantity, side: position.side },
-		"Closing position"
+		"Closing position",
 	);
 
 	try {
@@ -1195,7 +1210,7 @@ app.openapi(closePositionRoute, async (c) => {
 				symbol: position.symbol,
 				error: error instanceof Error ? error.message : String(error),
 			},
-			"Failed to create close order"
+			"Failed to create close order",
 		);
 		throw error;
 	}
@@ -1230,7 +1245,7 @@ app.openapi(accountRoute, async (c) => {
 
 		log.debug(
 			{ accountId: account.id, status: account.status, equity: account.equity },
-			"Fetched Alpaca account"
+			"Fetched Alpaca account",
 		);
 
 		return c.json({
@@ -1331,7 +1346,7 @@ app.openapi(historyRoute, async (c) => {
 				timeframe: timeframe as PortfolioHistoryTimeframe,
 				dateStart: start,
 				dateEnd: end,
-			}
+			},
 		);
 
 		// Cache the response
@@ -1339,7 +1354,7 @@ app.openapi(historyRoute, async (c) => {
 
 		log.debug(
 			{ period, timeframe, points: history.timestamp?.length ?? 0 },
-			"Fetched Alpaca portfolio history"
+			"Fetched Alpaca portfolio history",
 		);
 
 		return c.json(history);
@@ -1406,7 +1421,7 @@ app.openapi(ordersRoute, async (c) => {
 
 		log.debug(
 			{ status: query.status, count: orders.length, limit: query.limit },
-			"Fetched orders from Alpaca"
+			"Fetched orders from Alpaca",
 		);
 
 		const mappedOrders = orders.map((order: BrokerOrder) => ({
@@ -1555,7 +1570,7 @@ app.openapi(closedTradesRoute, async (c) => {
 					const exitDate = new Date(date);
 					const holdDays = Math.max(
 						0,
-						Math.floor((exitDate.getTime() - entryDate.getTime()) / (1000 * 60 * 60 * 24))
+						Math.floor((exitDate.getTime() - entryDate.getTime()) / (1000 * 60 * 60 * 24)),
 					);
 
 					closedTrades.push({
@@ -1605,7 +1620,7 @@ app.openapi(closedTradesRoute, async (c) => {
 				winRate,
 				symbol: query.symbol,
 			},
-			"Computed closed trades with FIFO matching"
+			"Computed closed trades with FIFO matching",
 		);
 
 		return c.json({

@@ -148,7 +148,7 @@ export interface ExposureWarning {
  */
 export function checkExposureWarnings(
 	metrics: ExposureMetrics,
-	limits: ExposureLimits = DEFAULT_EXPOSURE_LIMITS
+	limits: ExposureLimits = DEFAULT_EXPOSURE_LIMITS,
 ): ExposureWarning[] {
 	const warnings: ExposureWarning[] = [];
 

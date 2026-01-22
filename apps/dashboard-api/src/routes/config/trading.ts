@@ -277,7 +277,7 @@ app.openapi(promoteToRoute, async (c) => {
 				error: `Cannot promote from ${sourceEnvironment} to ${targetEnvironment}. Valid paths: PAPER → LIVE`,
 				code: "INVALID_PROMOTION_PATH",
 			},
-			400
+			400,
 		);
 	}
 

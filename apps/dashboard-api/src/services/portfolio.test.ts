@@ -26,8 +26,8 @@ mock.module("@cream/marketdata", () => ({
 							greeks: { delta: 0.5, gamma: 0.05, theta: -0.01, vega: 0.1 },
 						},
 					],
-				])
-			)
+				]),
+			),
 		),
 		getSnapshots: mock(() =>
 			Promise.resolve(
@@ -40,8 +40,8 @@ mock.module("@cream/marketdata", () => ({
 							latestTrade: { price: 155, size: 100, timestamp: new Date().toISOString() },
 						},
 					],
-				])
-			)
+				]),
+			),
 		),
 	}),
 	isAlpacaConfigured: () => true,
@@ -106,12 +106,12 @@ describe("PortfolioService", () => {
 						avgEntryPrice: 150,
 						environment: "PAPER",
 					},
-				])
+				]),
 			),
 		};
 
 		spyOn(db, "getPositionsRepo").mockReturnValue(
-			mockRepo as unknown as ReturnType<typeof db.getPositionsRepo>
+			mockRepo as unknown as ReturnType<typeof db.getPositionsRepo>,
 		);
 
 		const service = PortfolioService.getInstance();

@@ -127,7 +127,7 @@ app.openapi(triggerCycleRoute, async (c) => {
 	if (existingCycle && (existingCycle.status === "queued" || existingCycle.status === "running")) {
 		return c.json(
 			{ error: `Cycle already in progress for ${environment}`, cycleId: existingCycle.cycleId },
-			409
+			409,
 		);
 	}
 
@@ -144,7 +144,7 @@ app.openapi(triggerCycleRoute, async (c) => {
 					error: `Rate limited. Try again in ${Math.ceil(retryAfterMs / 1000)} seconds.`,
 					retryAfterMs,
 				},
-				429
+				429,
 			);
 		}
 	}
@@ -164,12 +164,12 @@ app.openapi(triggerCycleRoute, async (c) => {
 		if (resolvedSymbols.length === 0) {
 			return c.json(
 				{ error: "No symbols configured in universe. Configure staticSymbols first." },
-				400
+				400,
 			);
 		}
 		log.info(
 			{ symbolCount: resolvedSymbols.length, symbols: resolvedSymbols, fromRequest: !!symbols },
-			"Resolved symbols for trading cycle"
+			"Resolved symbols for trading cycle",
 		);
 	} catch {
 		return c.json({ error: "No configuration found for environment. Run db:seed first." }, 400);
@@ -183,7 +183,7 @@ app.openapi(triggerCycleRoute, async (c) => {
 		const cycle = await cyclesRepo.start(
 			environment,
 			resolvedSymbols.length,
-			configVersion ?? undefined
+			configVersion ?? undefined,
 		);
 		cycleId = cycle.id;
 	} catch (error) {
@@ -191,7 +191,7 @@ app.openapi(triggerCycleRoute, async (c) => {
 			{
 				error: `Failed to create cycle: ${error instanceof Error ? error.message : "Unknown error"}`,
 			},
-			500
+			500,
 		);
 	}
 
@@ -225,7 +225,7 @@ app.openapi(triggerCycleRoute, async (c) => {
 		status: "completed" | "failed",
 		durationMs: number,
 		workflowResult?: Awaited<ReturnType<typeof tradingCycleWorkflow.execute>>,
-		error?: string
+		error?: string,
 	) => {
 		const resultData: CycleResultData = {
 			cycleId,
@@ -365,7 +365,7 @@ app.openapi(triggerCycleRoute, async (c) => {
 
 			// Helper to extract agent event from various possible payload structures
 			const extractAgentEvent = (
-				payload: Record<string, unknown>
+				payload: Record<string, unknown>,
 			): Record<string, unknown> | null => {
 				// Check nested properties first (most common patterns)
 				// payload.output (common Mastra pattern)
@@ -412,7 +412,7 @@ app.openapi(triggerCycleRoute, async (c) => {
 							stepName,
 							payloadKeys: payload ? Object.keys(payload) : [],
 						},
-						"Stream event type observed"
+						"Stream event type observed",
 					);
 				}
 
@@ -436,7 +436,7 @@ app.openapi(triggerCycleRoute, async (c) => {
 								hasOutput: !!payload.output,
 								outputKeys: payload.output ? Object.keys(payload.output as object) : [],
 							},
-							"First workflow-step-output from step"
+							"First workflow-step-output from step",
 						);
 					}
 
@@ -453,7 +453,7 @@ app.openapi(triggerCycleRoute, async (c) => {
 									outputType: output.type,
 									outputKeys: Object.keys(output),
 								},
-								"Unmatched workflow-step-output event"
+								"Unmatched workflow-step-output event",
 							);
 						}
 					}
@@ -496,7 +496,7 @@ app.openapi(triggerCycleRoute, async (c) => {
 									eventType: agentEvent.type,
 									availableAgents: Object.keys(agentTypeMap),
 								},
-								"Agent event with unmapped agent type"
+								"Agent event with unmapped agent type",
 							);
 						}
 						continue;
@@ -747,7 +747,7 @@ app.openapi(triggerCycleRoute, async (c) => {
 							size: d.size,
 						})),
 					},
-					"Persisting decisions from workflow"
+					"Persisting decisions from workflow",
 				);
 
 				const decisionsRepo = await getDecisionsRepo();
@@ -760,7 +760,7 @@ app.openapi(triggerCycleRoute, async (c) => {
 
 				for (const decision of workflowResult.decisionPlan.decisions) {
 					const sizeUnit: SizeUnit | undefined = validSizeUnits.includes(
-						decision.size.unit as SizeUnit
+						decision.size.unit as SizeUnit,
 					)
 						? (decision.size.unit as SizeUnit)
 						: undefined;
@@ -770,10 +770,10 @@ app.openapi(triggerCycleRoute, async (c) => {
 
 					if (workflowResult.riskApproval) {
 						const decisionViolations = workflowResult.riskApproval.violations?.filter((v) =>
-							v.affected_decisions?.includes(decision.decisionId)
+							v.affected_decisions?.includes(decision.decisionId),
 						);
 						const decisionChanges = workflowResult.riskApproval.required_changes?.filter(
-							(c) => c.decisionId === decision.decisionId
+							(c) => c.decisionId === decision.decisionId,
 						);
 						approvalMetadata.riskApproval = {
 							verdict: workflowResult.riskApproval.verdict,
@@ -785,10 +785,10 @@ app.openapi(triggerCycleRoute, async (c) => {
 
 					if (workflowResult.criticApproval) {
 						const decisionViolations = workflowResult.criticApproval.violations?.filter((v) =>
-							v.affected_decisions?.includes(decision.decisionId)
+							v.affected_decisions?.includes(decision.decisionId),
 						);
 						const decisionChanges = workflowResult.criticApproval.required_changes?.filter(
-							(c) => c.decisionId === decision.decisionId
+							(c) => c.decisionId === decision.decisionId,
 						);
 						approvalMetadata.criticApproval = {
 							verdict: workflowResult.criticApproval.verdict,
@@ -842,14 +842,14 @@ app.openapi(triggerCycleRoute, async (c) => {
 								size: decision.size,
 								error: err instanceof Error ? err.message : String(err),
 							},
-							"Failed to persist decision"
+							"Failed to persist decision",
 						);
 					}
 				}
 
 				log.info(
 					{ cycleId, persistedCount, total: workflowResult.decisionPlan.decisions.length },
-					"Decision persistence complete"
+					"Decision persistence complete",
 				);
 			} else {
 				log.info({ cycleId }, "No decisions in workflow result to persist");
@@ -926,7 +926,7 @@ app.openapi(triggerCycleRoute, async (c) => {
 					cycleId,
 					cycleState.error,
 					error instanceof Error ? error.stack : undefined,
-					durationMs
+					durationMs,
 				);
 			} catch {
 				// Non-critical

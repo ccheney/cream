@@ -79,7 +79,7 @@ export type ShutdownLogCallback = (entry: ShutdownLogEntry) => void;
 export type GetConnectionsCallback = () => Map<string, ServerWebSocket<ConnectionMetadata>>;
 export type SendMessageCallback = (
 	ws: ServerWebSocket<ConnectionMetadata>,
-	message: Record<string, unknown>
+	message: Record<string, unknown>,
 ) => boolean;
 export type FlushQueuesCallback = () => Promise<void>;
 export type CleanupSubscriptionsCallback = () => Promise<void>;
@@ -165,7 +165,7 @@ export interface ShutdownManager {
  */
 export function createShutdownManager(
 	deps: ShutdownDependencies,
-	config: Partial<ShutdownConfig> = {}
+	config: Partial<ShutdownConfig> = {},
 ): ShutdownManager {
 	const fullConfig: ShutdownConfig = { ...DEFAULT_SHUTDOWN_CONFIG, ...config };
 
@@ -185,7 +185,7 @@ export function createShutdownManager(
 	const log = (
 		event: ShutdownEventType,
 		message: string,
-		metadata?: Record<string, unknown>
+		metadata?: Record<string, unknown>,
 	): void => {
 		if (!deps.onLog) {
 			return;
@@ -281,7 +281,7 @@ export function createShutdownManager(
 			`Drain timeout reached with ${deps.getConnections().size} connections`,
 			{
 				remainingConnections: deps.getConnections().size,
-			}
+			},
 		);
 	};
 
@@ -538,7 +538,7 @@ export function createHealthCheckHandler(manager: ShutdownManager) {
 				{
 					status: 503,
 					headers: { "Content-Type": "application/json" },
-				}
+				},
 			);
 		}
 
@@ -549,7 +549,7 @@ export function createHealthCheckHandler(manager: ShutdownManager) {
 			{
 				status: 200,
 				headers: { "Content-Type": "application/json" },
-			}
+			},
 		);
 	};
 }

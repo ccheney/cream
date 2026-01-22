@@ -136,7 +136,7 @@ function getFromDate(tradingDays: number): string {
  * ```
  */
 export async function calculateCorrelationMatrix(
-	options: CalculateCorrelationOptions
+	options: CalculateCorrelationOptions,
 ): Promise<CorrelationMatrix> {
 	const { symbols, lookbackDays = 60, threshold = 0.7 } = options;
 
@@ -187,7 +187,7 @@ export async function calculateCorrelationMatrix(
 			} catch {
 				// Skip symbols with fetch errors
 			}
-		})
+		}),
 	);
 
 	// Filter to symbols with data
@@ -299,7 +299,7 @@ const CACHE_TTL_MS = 60 * 60 * 1000; // 1 hour
  * Get cached correlation matrix or calculate new one.
  */
 export async function getCorrelationMatrix(
-	options: CalculateCorrelationOptions
+	options: CalculateCorrelationOptions,
 ): Promise<CorrelationMatrix> {
 	const cacheKey = options.symbols.sort().join(",");
 	const cached = correlationCache.get(cacheKey);

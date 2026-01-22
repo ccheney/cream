@@ -200,12 +200,12 @@ function handleAlpacaEvent(event: AlpacaWsEvent): void {
 			if (event.attempt <= 2) {
 				log.debug(
 					{ attempt: event.attempt, maxAttempts: MAX_RECONNECT_ATTEMPTS },
-					"Reconnecting to Alpaca WebSocket"
+					"Reconnecting to Alpaca WebSocket",
 				);
 			} else {
 				log.info(
 					{ attempt: event.attempt, maxAttempts: MAX_RECONNECT_ATTEMPTS },
-					"Reconnecting to Alpaca WebSocket"
+					"Reconnecting to Alpaca WebSocket",
 				);
 			}
 			break;
@@ -213,7 +213,7 @@ function handleAlpacaEvent(event: AlpacaWsEvent): void {
 		case "error":
 			log.error(
 				{ code: event.code, message: event.message, reconnectAttempts },
-				"Alpaca WebSocket error"
+				"Alpaca WebSocket error",
 			);
 			if (reconnectAttempts >= MAX_RECONNECT_ATTEMPTS) {
 				log.error("Max reconnect attempts reached, market data streaming disabled");

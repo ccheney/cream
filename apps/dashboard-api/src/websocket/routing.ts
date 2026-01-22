@@ -85,7 +85,7 @@ function handlePing(ws: WebSocketWithMetadata, _message: PingMessage): void {
  */
 async function handleRequestState(
 	ws: WebSocketWithMetadata,
-	message: RequestStateMessage
+	message: RequestStateMessage,
 ): Promise<void> {
 	const { channel } = message;
 

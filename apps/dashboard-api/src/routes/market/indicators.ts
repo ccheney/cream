@@ -109,7 +109,7 @@ app.openapi(priceIndicatorsRoute, async (c) => {
 				timestamp: new Date().toISOString(),
 				indicators: priceIndicators,
 			},
-			200
+			200,
 		);
 	} catch (error) {
 		const message = error instanceof Error ? error.message : "Unknown error";
@@ -188,7 +188,7 @@ app.openapi(legacyIndicatorsRoute, async (c) => {
 				macdSignal: price.macd_signal,
 				macdHist: price.macd_histogram,
 			},
-			200
+			200,
 		);
 	} catch (error) {
 		const message = error instanceof Error ? error.message : "Unknown error";

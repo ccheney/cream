@@ -158,7 +158,7 @@ function defaultKeyGenerator(c: Context): string {
  */
 function checkRateLimit(
 	key: string,
-	config: RateLimitConfig
+	config: RateLimitConfig,
 ): {
 	isLimited: boolean;
 	remaining: number;
@@ -271,7 +271,7 @@ export function rateLimit(config: Partial<RateLimitConfig> = {}): MiddlewareHand
 					limit: mergedConfig.maxRequests,
 					windowMs: mergedConfig.windowMs,
 				},
-				"Rate limit exceeded"
+				"Rate limit exceeded",
 			);
 
 			// Return 429 Too Many Requests
@@ -282,7 +282,7 @@ export function rateLimit(config: Partial<RateLimitConfig> = {}): MiddlewareHand
 					message: mergedConfig.message,
 					retryAfter: result.retryAfter,
 				},
-				429
+				429,
 			);
 		}
 

@@ -116,7 +116,7 @@ app.openapi(triggerBatchJobRoute, async (c) => {
 				priority,
 				environment,
 			},
-			"Batch job trigger request created"
+			"Batch job trigger request created",
 		);
 
 		return c.json(
@@ -131,7 +131,7 @@ app.openapi(triggerBatchJobRoute, async (c) => {
 						? `Triggered ${job_type} batch job for all symbols`
 						: `Triggered ${job_type} batch job for ${symbolsCount} symbols`,
 			},
-			202
+			202,
 		);
 	} catch (error) {
 		if (error instanceof HTTPException) {
@@ -214,7 +214,7 @@ app.openapi(cancelBatchJobRoute, async (c) => {
 				success: true,
 				message: `Job ${id} cancellation requested`,
 			},
-			200
+			200,
 		);
 	} catch (error) {
 		if (error instanceof HTTPException) {

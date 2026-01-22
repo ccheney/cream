@@ -183,7 +183,7 @@ app.openapi(listRoute, async (c) => {
 		{
 			limit: query.limit,
 			offset: query.offset,
-		}
+		},
 	);
 
 	const hasMore = result.offset + result.data.length < result.total;
@@ -435,7 +435,7 @@ app.openapi(agentsRoute, async (c) => {
 			reasoning: ao.reasoningSummary ?? "",
 			processingTimeMs: ao.latencyMs ?? 0,
 			createdAt: ao.createdAt,
-		}))
+		})),
 	);
 });
 
@@ -485,7 +485,7 @@ app.openapi(citationsRoute, async (c) => {
 				snippet: citation.snippet,
 				relevanceScore: citation.relevanceScore,
 				fetchedAt: citation.fetchedAt,
-			}))
+			})),
 		);
 	} catch {
 		// HelixDB unavailable - graceful degradation

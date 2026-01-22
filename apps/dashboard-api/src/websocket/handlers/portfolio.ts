@@ -107,7 +107,7 @@ export async function handlePortfolioState(ws: WebSocketWithMetadata): Promise<v
 	} catch (error) {
 		sendError(
 			ws,
-			`Failed to get portfolio state: ${error instanceof Error ? error.message : "Unknown error"}`
+			`Failed to get portfolio state: ${error instanceof Error ? error.message : "Unknown error"}`,
 		);
 	}
 }
@@ -168,7 +168,7 @@ export async function handleOrdersState(ws: WebSocketWithMetadata): Promise<void
 	} catch (error) {
 		sendError(
 			ws,
-			`Failed to get orders state: ${error instanceof Error ? error.message : "Unknown error"}`
+			`Failed to get orders state: ${error instanceof Error ? error.message : "Unknown error"}`,
 		);
 	}
 }

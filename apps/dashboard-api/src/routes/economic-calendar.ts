@@ -39,7 +39,7 @@ const EventsQuerySchema = z.object({
 		.transform((val) =>
 			val
 				? (val.split(",").filter((v) => ["high", "medium", "low"].includes(v)) as ImpactLevel[])
-				: undefined
+				: undefined,
 		),
 });
 
@@ -131,11 +131,11 @@ app.openapi(listEventsRoute, async (c) => {
 	} catch (error) {
 		log.error(
 			{ error: error instanceof Error ? error.message : String(error) },
-			"Failed to fetch economic calendar"
+			"Failed to fetch economic calendar",
 		);
 		return c.json(
 			{ error: "SERVICE_UNAVAILABLE", message: "Economic calendar service unavailable" },
-			503
+			503,
 		);
 	}
 });
@@ -184,11 +184,11 @@ app.openapi(getEventRoute, async (c) => {
 	} catch (error) {
 		log.error(
 			{ error: error instanceof Error ? error.message : String(error), id },
-			"Failed to fetch economic calendar event"
+			"Failed to fetch economic calendar event",
 		);
 		return c.json(
 			{ error: "SERVICE_UNAVAILABLE", message: "Economic calendar service unavailable" },
-			503
+			503,
 		);
 	}
 });
@@ -237,11 +237,11 @@ app.openapi(getEventHistoryRoute, async (c) => {
 	} catch (error) {
 		log.error(
 			{ error: error instanceof Error ? error.message : String(error), id },
-			"Failed to fetch event history"
+			"Failed to fetch event history",
 		);
 		return c.json(
 			{ error: "SERVICE_UNAVAILABLE", message: "Economic calendar service unavailable" },
-			503
+			503,
 		);
 	}
 });

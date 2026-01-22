@@ -44,7 +44,7 @@ export async function handleAlertsState(ws: WebSocketWithMetadata): Promise<void
 	} catch (error) {
 		sendError(
 			ws,
-			`Failed to get alerts state: ${error instanceof Error ? error.message : "Unknown error"}`
+			`Failed to get alerts state: ${error instanceof Error ? error.message : "Unknown error"}`,
 		);
 	}
 }
@@ -55,7 +55,7 @@ export async function handleAlertsState(ws: WebSocketWithMetadata): Promise<void
  */
 export async function handleAcknowledgeAlert(
 	ws: WebSocketWithMetadata,
-	message: AcknowledgeAlertMessage
+	message: AcknowledgeAlertMessage,
 ): Promise<void> {
 	const { alertId } = message;
 	const userId = ws.data.userId;
@@ -93,7 +93,7 @@ export async function handleAcknowledgeAlert(
 	} catch (error) {
 		sendError(
 			ws,
-			`Failed to acknowledge alert ${alertId}: ${error instanceof Error ? error.message : "Unknown error"}`
+			`Failed to acknowledge alert ${alertId}: ${error instanceof Error ? error.message : "Unknown error"}`,
 		);
 	}
 }

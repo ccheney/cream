@@ -82,7 +82,7 @@ function getStatusMessage(
 	_isOpen: boolean,
 	session: TradingSession,
 	nextOpen: Date,
-	nextClose: Date
+	nextClose: Date,
 ): string {
 	const now = new Date();
 
@@ -167,12 +167,12 @@ app.openapi(calendarRangeRoute, async (c) => {
 				close: day.close,
 				sessionOpen: day.sessionOpen,
 				sessionClose: day.sessionClose,
-			}))
+			})),
 		);
 	} catch (error) {
 		log.error(
 			{ error: error instanceof Error ? error.message : String(error) },
-			"Failed to fetch calendar range"
+			"Failed to fetch calendar range",
 		);
 		return c.json({ error: "SERVICE_UNAVAILABLE", message: "Calendar service unavailable" }, 503);
 	}
@@ -212,7 +212,7 @@ app.openapi(clockRoute, async (c) => {
 	} catch (error) {
 		log.error(
 			{ error: error instanceof Error ? error.message : String(error) },
-			"Failed to fetch market clock"
+			"Failed to fetch market clock",
 		);
 		return c.json({ error: "SERVICE_UNAVAILABLE", message: "Calendar service unavailable" }, 503);
 	}
@@ -258,7 +258,7 @@ app.openapi(statusRoute, async (c) => {
 	} catch (error) {
 		log.error(
 			{ error: error instanceof Error ? error.message : String(error) },
-			"Failed to fetch market status"
+			"Failed to fetch market status",
 		);
 		return c.json({ error: "SERVICE_UNAVAILABLE", message: "Calendar service unavailable" }, 503);
 	}

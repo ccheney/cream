@@ -85,7 +85,7 @@ const CorrelationMatrixSchema = z.object({
 			a: z.string(),
 			b: z.string(),
 			correlation: z.number(),
-		})
+		}),
 	),
 });
 
@@ -268,7 +268,7 @@ app.openapi(correlationRoute, async (c) => {
 				matrix: [],
 				highCorrelationPairs: [],
 			},
-			200
+			200,
 		);
 	}
 

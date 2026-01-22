@@ -491,7 +491,7 @@ export class AlpacaTradingStreamService {
 		// Exponential backoff: 1s, 2s, 4s, 8s, 16s, up to maxReconnectDelayMs (default 30s)
 		const delay = Math.min(
 			this.config.reconnectDelayMs * 2 ** (this.reconnectAttempts - 1),
-			this.config.maxReconnectDelayMs
+			this.config.maxReconnectDelayMs,
 		);
 
 		this.emit({ type: "reconnecting", attempt: this.reconnectAttempts });

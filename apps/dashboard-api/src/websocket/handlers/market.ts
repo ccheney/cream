@@ -27,7 +27,7 @@ import type { WebSocketWithMetadata } from "../types.js";
  */
 export function handleSubscribeSymbols(
 	ws: WebSocketWithMetadata,
-	message: SubscribeSymbolsMessage
+	message: SubscribeSymbolsMessage,
 ): void {
 	const metadata = ws.data;
 	const newSymbols: string[] = [];
@@ -76,7 +76,7 @@ export function handleSubscribeSymbols(
  */
 export function handleUnsubscribeSymbols(
 	ws: WebSocketWithMetadata,
-	message: UnsubscribeSymbolsMessage
+	message: UnsubscribeSymbolsMessage,
 ): void {
 	const metadata = ws.data;
 
@@ -96,7 +96,7 @@ export function handleUnsubscribeSymbols(
  */
 export function handleSubscribeOptions(
 	ws: WebSocketWithMetadata,
-	message: SubscribeOptionsMessage
+	message: SubscribeOptionsMessage,
 ): void {
 	const metadata = ws.data;
 	const newContracts: string[] = [];
@@ -147,7 +147,7 @@ export function handleSubscribeOptions(
  */
 export function handleUnsubscribeOptions(
 	ws: WebSocketWithMetadata,
-	message: UnsubscribeOptionsMessage
+	message: UnsubscribeOptionsMessage,
 ): void {
 	const metadata = ws.data;
 

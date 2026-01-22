@@ -55,7 +55,7 @@ class AlpacaMarketDataAdapter implements MarketDataProvider {
 			"1Hour",
 			from.toISOString().slice(0, 10),
 			to.toISOString().slice(0, 10),
-			limit
+			limit,
 		);
 
 		return bars.map((bar) => ({
@@ -322,7 +322,7 @@ async function initializeIndicatorService(): Promise<IndicatorService> {
 			enableCache: true,
 			bypassCache: false,
 			batchConcurrency: 5,
-		}
+		},
 	);
 
 	return service;

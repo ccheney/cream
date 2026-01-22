@@ -92,7 +92,7 @@ app.openapi(getBatchStatusRoute, async (c) => {
 				runType: type,
 				status: status,
 			},
-			limit
+			limit,
 		);
 
 		const summary = await repo.getSummary();
@@ -121,7 +121,7 @@ app.openapi(getBatchStatusRoute, async (c) => {
 					>,
 				},
 			},
-			200
+			200,
 		);
 	} catch (error) {
 		const message = error instanceof Error ? error.message : "Unknown error";
@@ -185,7 +185,7 @@ app.openapi(getSyncRunRoute, async (c) => {
 					environment: run.environment,
 				},
 			},
-			200
+			200,
 		);
 	} catch (error) {
 		if (error instanceof HTTPException) {

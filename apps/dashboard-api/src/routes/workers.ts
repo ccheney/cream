@@ -211,7 +211,7 @@ app.openapi(getWorkerStatusRoute, async (c) => {
 		const runningServices = new Set(
 			runningRuns
 				.map((run) => mapRunTypeToService(run.runType))
-				.filter((s): s is WorkerService => s !== null)
+				.filter((s): s is WorkerService => s !== null),
 		);
 
 		// Get last completed/failed run for each service
@@ -414,7 +414,7 @@ app.openapi(triggerServiceRoute, async (c) => {
 
 				log.info(
 					{ runId, service, status, processed: result.processed, failed: result.failed },
-					"Worker service trigger completed"
+					"Worker service trigger completed",
 				);
 
 				// Broadcast run completed via websocket
@@ -467,7 +467,7 @@ app.openapi(triggerServiceRoute, async (c) => {
 				status: "started" as const,
 				message: `${ServiceDisplayNames[service]} triggered`,
 			},
-			202
+			202,
 		);
 	} catch (error) {
 		if (error instanceof HTTPException) {
@@ -711,7 +711,7 @@ app.openapi(getRunDetailsRoute, async (c) => {
 							})),
 						},
 					},
-					200
+					200,
 				);
 			}
 
@@ -719,7 +719,7 @@ app.openapi(getRunDetailsRoute, async (c) => {
 				const macroWatchRepo = getMacroWatchRepo();
 				const newspaper = await macroWatchRepo.getNewspaperByCompiledAtRange(
 					startedAt,
-					completedAt
+					completedAt,
 				);
 
 				if (!newspaper) {
@@ -728,7 +728,7 @@ app.openapi(getRunDetailsRoute, async (c) => {
 							run,
 							data: { type: "empty" as const, message: "No newspaper compiled in this run" },
 						},
-						200
+						200,
 					);
 				}
 
@@ -746,7 +746,7 @@ app.openapi(getRunDetailsRoute, async (c) => {
 							},
 						},
 					},
-					200
+					200,
 				);
 			}
 
@@ -771,7 +771,7 @@ app.openapi(getRunDetailsRoute, async (c) => {
 							})),
 						},
 					},
-					200
+					200,
 				);
 			}
 
@@ -795,7 +795,7 @@ app.openapi(getRunDetailsRoute, async (c) => {
 							})),
 						},
 					},
-					200
+					200,
 				);
 			}
 
@@ -804,7 +804,7 @@ app.openapi(getRunDetailsRoute, async (c) => {
 				const entries = await corporateActionsRepo.findByCreatedAtRange(
 					startedAt,
 					completedAt,
-					100
+					100,
 				);
 
 				return c.json(
@@ -825,7 +825,7 @@ app.openapi(getRunDetailsRoute, async (c) => {
 							})),
 						},
 					},
-					200
+					200,
 				);
 			}
 
@@ -848,7 +848,7 @@ app.openapi(getRunDetailsRoute, async (c) => {
 							})),
 						},
 					},
-					200
+					200,
 				);
 			}
 
@@ -856,11 +856,11 @@ app.openapi(getRunDetailsRoute, async (c) => {
 				const predictionMarketsRepo = getPredictionMarketsRepo();
 				const signals = await predictionMarketsRepo.findSignals(
 					{ fromTime: startedAt, toTime: completedAt },
-					50
+					50,
 				);
 				const snapshots = await predictionMarketsRepo.findSnapshots(
 					{ fromTime: startedAt, toTime: completedAt },
-					100
+					100,
 				);
 
 				// Get unique platforms from snapshots
@@ -894,7 +894,7 @@ app.openapi(getRunDetailsRoute, async (c) => {
 							platforms,
 						},
 					},
-					200
+					200,
 				);
 			}
 
@@ -904,7 +904,7 @@ app.openapi(getRunDetailsRoute, async (c) => {
 						run,
 						data: { type: "empty" as const, message: "No data available for this service type" },
 					},
-					200
+					200,
 				);
 		}
 	} catch (error) {

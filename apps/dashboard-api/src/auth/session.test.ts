@@ -343,7 +343,7 @@ describe("liveProtection", () => {
 				requireMFA: true,
 				requireConfirmation: false,
 				auditLog: false,
-			})
+			}),
 		);
 		app.get("/test", () => new Response("ok"));
 
@@ -368,7 +368,7 @@ describe("liveProtection", () => {
 				requireMFA: true,
 				requireConfirmation: true,
 				auditLog: false,
-			})
+			}),
 		);
 		app.get("/test", () => new Response("ok"));
 		app.onError((err, c) => {
@@ -401,7 +401,7 @@ describe("liveProtection", () => {
 				requireMFA: true,
 				requireConfirmation: true,
 				auditLog: false,
-			})
+			}),
 		);
 		app.get("/test", () => new Response("ok"));
 
@@ -431,7 +431,7 @@ describe("liveProtection", () => {
 				requireConfirmation: false,
 				auditLog: false,
 				ipWhitelist: ["192.168.1.100"],
-			})
+			}),
 		);
 		app.get("/test", () => new Response("ok"));
 		app.onError((err, c) => {
@@ -467,7 +467,7 @@ describe("liveProtection", () => {
 				requireConfirmation: false,
 				auditLog: false,
 				ipWhitelist: ["192.168.1.100"],
-			})
+			}),
 		);
 		app.get("/test", () => new Response("ok"));
 

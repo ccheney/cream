@@ -27,7 +27,7 @@ import {
  * Create mock WebSocket.
  */
 function createMockWebSocket(
-	connectionId: string
+	connectionId: string,
 ): ServerWebSocket<ConnectionMetadata> & { closeCalls: Array<{ code: number; reason: string }> } {
 	const closeCalls: Array<{ code: number; reason: string }> = [];
 
@@ -235,7 +235,7 @@ describe("initiateShutdown", () => {
 
 		// Should have an error log about duplicate shutdown
 		const errorLog = deps.logs.find(
-			(l) => l.event === "shutdown.error" && l.message.includes("already in progress")
+			(l) => l.event === "shutdown.error" && l.message.includes("already in progress"),
 		);
 		expect(errorLog).toBeDefined();
 	});
@@ -365,7 +365,7 @@ describe("Connection Draining Phase", () => {
 		await manager.initiateShutdown("manual");
 
 		const timeoutLog = deps.logs.find(
-			(l) => l.event === "shutdown.timeout" && l.message.includes("Drain timeout")
+			(l) => l.event === "shutdown.timeout" && l.message.includes("Drain timeout"),
 		);
 		expect(timeoutLog).toBeDefined();
 	});
@@ -442,7 +442,7 @@ describe("Queue Flushing Phase", () => {
 		await manager.initiateShutdown("manual");
 
 		const flushLog = deps.logs.find(
-			(l) => l.event === "shutdown.queue_flushed" && l.message.includes("successfully")
+			(l) => l.event === "shutdown.queue_flushed" && l.message.includes("successfully"),
 		);
 		expect(flushLog).toBeDefined();
 	});
@@ -466,7 +466,7 @@ describe("Queue Flushing Phase", () => {
 		await manager.initiateShutdown("manual");
 
 		const errorLog = deps.logs.find(
-			(l) => l.event === "shutdown.error" && l.message.includes("flush")
+			(l) => l.event === "shutdown.error" && l.message.includes("flush"),
 		);
 		expect(errorLog).toBeDefined();
 	});
@@ -495,7 +495,7 @@ describe("Subscription Cleanup Phase", () => {
 		await manager.initiateShutdown("manual");
 
 		const cleanupLog = deps.logs.find(
-			(l) => l.event === "shutdown.subscriptions_closed" && l.message.includes("successfully")
+			(l) => l.event === "shutdown.subscriptions_closed" && l.message.includes("successfully"),
 		);
 		expect(cleanupLog).toBeDefined();
 	});
@@ -649,7 +649,7 @@ describe("forceShutdown", () => {
 		manager.forceShutdown();
 
 		const forceLog = deps.logs.find(
-			(l) => l.event === "shutdown.complete" && l.message.includes("Forced")
+			(l) => l.event === "shutdown.complete" && l.message.includes("Forced"),
 		);
 		expect(forceLog).toBeDefined();
 	});
@@ -817,7 +817,7 @@ describe("Edge Cases", () => {
 		await manager.initiateShutdown("manual");
 
 		const errorLog = deps.logs.find(
-			(l) => l.event === "shutdown.error" && l.message.includes("Flush")
+			(l) => l.event === "shutdown.error" && l.message.includes("Flush"),
 		);
 		expect(errorLog).toBeDefined();
 

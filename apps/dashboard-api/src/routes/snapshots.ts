@@ -178,7 +178,7 @@ function createEmptyMarketContext(): z.infer<typeof MarketContextSchema> {
 function determineDataQuality(
 	hasFundamentals: boolean,
 	hasShortInterest: boolean,
-	hasSentiment: boolean
+	hasSentiment: boolean,
 ): z.infer<typeof DataQualitySchema> {
 	const count = [hasFundamentals, hasShortInterest, hasSentiment].filter(Boolean).length;
 	if (count >= 2) {
@@ -303,8 +303,8 @@ app.openapi(getSnapshotRoute, async (c) => {
 						? Math.max(
 								0,
 								Math.floor(
-									(new Date(recentAction.exDate).getTime() - Date.now()) / (24 * 60 * 60 * 1000)
-								)
+									(new Date(recentAction.exDate).getTime() - Date.now()) / (24 * 60 * 60 * 1000),
+								),
 							)
 						: null,
 					dividend_growth: null,
@@ -341,7 +341,7 @@ app.openapi(getSnapshotRoute, async (c) => {
 				market,
 				metadata,
 			},
-			200
+			200,
 		);
 	} catch (error) {
 		const message = error instanceof Error ? error.message : "Unknown error";
@@ -473,8 +473,8 @@ app.openapi(batchSnapshotsRoute, async (c) => {
 											0,
 											Math.floor(
 												(new Date(recentAction.exDate).getTime() - Date.now()) /
-													(24 * 60 * 60 * 1000)
-											)
+													(24 * 60 * 60 * 1000),
+											),
 										)
 									: null,
 								dividend_growth: null,
@@ -516,7 +516,7 @@ app.openapi(batchSnapshotsRoute, async (c) => {
 					const message = error instanceof Error ? error.message : "Unknown error";
 					errors[symbol] = message;
 				}
-			})
+			}),
 		);
 
 		const executionTimeMs = Date.now() - startTime;
@@ -532,7 +532,7 @@ app.openapi(batchSnapshotsRoute, async (c) => {
 					execution_time_ms: executionTimeMs,
 				},
 			},
-			200
+			200,
 		);
 	} catch (error) {
 		const message = error instanceof Error ? error.message : "Unknown error";

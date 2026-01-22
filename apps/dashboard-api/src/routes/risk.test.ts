@@ -25,7 +25,7 @@ describe("Risk Routes", () => {
 						marketValue: 1500,
 						costBasis: 1400,
 					},
-				])
+				]),
 			),
 		};
 		const mockSnapshotsRepo = {
@@ -33,10 +33,10 @@ describe("Risk Routes", () => {
 		};
 
 		spyOn(db, "getPositionsRepo").mockReturnValue(
-			mockPositionsRepo as unknown as ReturnType<typeof db.getPositionsRepo>
+			mockPositionsRepo as unknown as ReturnType<typeof db.getPositionsRepo>,
 		);
 		spyOn(db, "getPortfolioSnapshotsRepo").mockReturnValue(
-			mockSnapshotsRepo as unknown as ReturnType<typeof db.getPortfolioSnapshotsRepo>
+			mockSnapshotsRepo as unknown as ReturnType<typeof db.getPortfolioSnapshotsRepo>,
 		);
 
 		const res = await app.request("/exposure");

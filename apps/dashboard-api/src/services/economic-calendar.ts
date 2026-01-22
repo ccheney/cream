@@ -105,7 +105,7 @@ export class EconomicCalendarService {
 			this.triggerRefresh(start, end).catch((error) => {
 				log.error(
 					{ error: error instanceof Error ? error.message : String(error) },
-					"Background cache refresh failed"
+					"Background cache refresh failed",
 				);
 			});
 		}
@@ -127,7 +127,7 @@ export class EconomicCalendarService {
 		} catch (error) {
 			log.error(
 				{ error: error instanceof Error ? error.message : String(error) },
-				"Failed to fetch economic calendar from cache"
+				"Failed to fetch economic calendar from cache",
 			);
 			throw error;
 		}
@@ -177,7 +177,7 @@ export class EconomicCalendarService {
 					unit: null,
 					fetchedAt: new Date().toISOString(),
 				};
-			}
+			},
 		);
 
 		if (eventsToUpsert.length > 0) {
@@ -195,7 +195,7 @@ export class EconomicCalendarService {
 		start: string,
 		end: string,
 		_country: string,
-		impact?: ImpactLevel[]
+		impact?: ImpactLevel[],
 	): EconomicCalendarResult {
 		let filtered = events;
 
@@ -365,7 +365,7 @@ export class EconomicCalendarService {
 		} catch (error) {
 			log.error(
 				{ error: error instanceof Error ? error.message : String(error), eventId },
-				"Failed to fetch event history"
+				"Failed to fetch event history",
 			);
 			return null;
 		}

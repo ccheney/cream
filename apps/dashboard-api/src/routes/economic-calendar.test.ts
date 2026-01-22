@@ -187,7 +187,7 @@ describe("Economic Calendar Routes", () => {
 		test("filters by country when provided", async () => {
 			// The mock doesn't actually filter, but we verify the param is accepted
 			const res = await economicCalendarRoutes.request(
-				"/?start=2025-01-15&end=2025-01-17&country=US"
+				"/?start=2025-01-15&end=2025-01-17&country=US",
 			);
 			expect(res.status).toBe(200);
 		});
@@ -205,7 +205,7 @@ describe("Economic Calendar Routes", () => {
 			});
 
 			const res = await economicCalendarRoutes.request(
-				"/?start=2025-01-15&end=2025-01-17&impact=high"
+				"/?start=2025-01-15&end=2025-01-17&impact=high",
 			);
 			expect(res.status).toBe(200);
 
@@ -225,7 +225,7 @@ describe("Economic Calendar Routes", () => {
 			});
 
 			const res = await economicCalendarRoutes.request(
-				"/?start=2025-01-15&end=2025-01-17&impact=high,medium"
+				"/?start=2025-01-15&end=2025-01-17&impact=high,medium",
 			);
 			expect(res.status).toBe(200);
 

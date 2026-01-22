@@ -93,7 +93,7 @@ function getFromDate(tradingDays: number): string {
 function calculatePortfolioReturns(
 	positions: PositionForExposure[],
 	returnsBySymbol: Record<string, number[]>,
-	nav: number
+	nav: number,
 ): number[] {
 	// Determine the length of aligned return series
 	const lengths = positions
@@ -143,7 +143,7 @@ function historicalVaR(
 	portfolioReturns: number[],
 	nav: number,
 	confidence: number,
-	holdingPeriod = 1
+	holdingPeriod = 1,
 ): number {
 	if (portfolioReturns.length < MIN_HISTORICAL_DATA_POINTS) {
 		return 0;
@@ -170,7 +170,7 @@ function parametricVaR(
 	portfolioReturns: number[],
 	nav: number,
 	confidence: number,
-	holdingPeriod = 1
+	holdingPeriod = 1,
 ): number {
 	if (portfolioReturns.length < 2) {
 		return 0;
@@ -265,7 +265,7 @@ export async function calculateVaR(options: CalculateVaROptions): Promise<VaRMet
 			} catch {
 				// Skip symbols with fetch errors
 			}
-		})
+		}),
 	);
 
 	// Calculate portfolio returns

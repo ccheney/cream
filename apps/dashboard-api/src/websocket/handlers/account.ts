@@ -61,7 +61,7 @@ function handleTradeUpdate(event: TradingStreamEvent): void {
 			event: event.data.event,
 			clientsSent: orderUpdateSent,
 		},
-		"Broadcasted order update"
+		"Broadcasted order update",
 	);
 
 	// For fill events, also broadcast position update
@@ -112,7 +112,7 @@ function handleTradeUpdate(event: TradingStreamEvent): void {
 				fillQty,
 				clientsSent: positionUpdateSent,
 			},
-			"Broadcasted position update"
+			"Broadcasted position update",
 		);
 	}
 }
@@ -170,7 +170,7 @@ export async function initAlpacaTradeStream(paper = true): Promise<void> {
 	} catch (error) {
 		log.error(
 			{ error: error instanceof Error ? error.message : String(error) },
-			"Failed to initialize Alpaca trade stream"
+			"Failed to initialize Alpaca trade stream",
 		);
 		throw error;
 	}

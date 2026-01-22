@@ -128,7 +128,7 @@ export class SharedOptionsDataProvider implements OptionsDataProvider {
 				optionInfo.strike,
 				tte,
 				optionInfo.type,
-				CONFIG.riskFreeRate
+				CONFIG.riskFreeRate,
 			);
 		}
 

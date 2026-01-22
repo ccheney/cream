@@ -124,11 +124,11 @@ export class PortfolioService {
 				} catch (error) {
 					log.warn(
 						{ symbol: pos.symbol, error: error instanceof Error ? error.message : String(error) },
-						"Failed to prep option"
+						"Failed to prep option",
 					);
 					return null;
 				}
-			})
+			}),
 		);
 		// Group by underlying to minimize API calls
 		const byUnderlying = new Map<string, typeof enrichedPositions>();
@@ -214,7 +214,7 @@ export class PortfolioService {
 			} catch (error) {
 				log.error(
 					{ underlying, error: error instanceof Error ? error.message : String(error) },
-					"Error fetching options"
+					"Error fetching options",
 				);
 				// Add with stale/db data
 				if (items) {

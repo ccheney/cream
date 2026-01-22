@@ -26,7 +26,7 @@ import { SubscriptionPriority } from "./types.js";
 export async function requestSubscription(
 	contract: string,
 	priority: SubscriptionPriority,
-	subscriberId: string
+	subscriberId: string,
 ): Promise<void> {
 	const upperContract = contract.toUpperCase();
 
@@ -118,7 +118,7 @@ export function releaseSubscription(contract: string, subscriberId: string): voi
 export async function requestBatchSubscription(
 	contracts: string[],
 	priority: SubscriptionPriority,
-	subscriberId: string
+	subscriberId: string,
 ): Promise<void> {
 	for (const contract of contracts) {
 		await requestSubscription(contract, priority, subscriberId);
@@ -140,7 +140,7 @@ export function releaseBatchSubscription(contracts: string[], subscriberId: stri
  */
 export async function setCriticalContracts(
 	contracts: string[],
-	subscriberId: string
+	subscriberId: string,
 ): Promise<void> {
 	for (const contract of contracts) {
 		await requestSubscription(contract, SubscriptionPriority.CRITICAL, subscriberId);

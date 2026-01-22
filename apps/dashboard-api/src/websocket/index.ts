@@ -83,7 +83,7 @@ export function handleOpen(ws: WebSocketWithMetadata): void {
 			userId: metadata.userId,
 			totalConnections: getConnectionCount(),
 		},
-		"WebSocket client connected"
+		"WebSocket client connected",
 	);
 
 	sendMessage(ws, {
@@ -111,7 +111,7 @@ export function handleClose(ws: WebSocketWithMetadata, code: number, reason: str
 			reason,
 			remainingConnections: getConnectionCount() - 1,
 		},
-		"WebSocket client disconnected"
+		"WebSocket client disconnected",
 	);
 	removeConnection(metadata.connectionId);
 }

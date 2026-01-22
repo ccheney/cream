@@ -118,7 +118,7 @@ export function getPoolIndex(pool: ConnectionPool): number {
  */
 export async function subscribeToPool(
 	pool: ConnectionPool,
-	entry: SubscriptionEntry
+	entry: SubscriptionEntry,
 ): Promise<void> {
 	const poolIndex = getPoolIndex(pool);
 	pool.contracts.add(entry.contract);

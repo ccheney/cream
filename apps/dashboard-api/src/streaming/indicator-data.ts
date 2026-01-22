@@ -90,7 +90,7 @@ function getIndicatorService(): IndicatorService | null {
 					"1Day",
 					startDate.toISOString().split("T")[0] ?? "",
 					endDate.toISOString().split("T")[0] ?? "",
-					limit
+					limit,
 				);
 				return bars.map((bar) => ({
 					timestamp: new Date(bar.timestamp).getTime(),
@@ -122,7 +122,7 @@ function getIndicatorService(): IndicatorService | null {
 			enableCache: true,
 			bypassCache: false,
 			batchConcurrency: 3,
-		}
+		},
 	);
 	return indicatorService;
 }
@@ -157,7 +157,7 @@ export async function initIndicatorDataStreaming(): Promise<void> {
 	} catch (error) {
 		log.warn(
 			{ error: error instanceof Error ? error.message : String(error) },
-			"Indicator data streaming initialization failed"
+			"Indicator data streaming initialization failed",
 		);
 	}
 }
@@ -211,14 +211,14 @@ function handleAlpacaEvent(event: AlpacaWsEvent): void {
 			reconnectAttempts = event.attempt;
 			log.info(
 				{ attempt: event.attempt, maxAttempts: MAX_RECONNECT_ATTEMPTS },
-				"Indicator streaming: reconnecting"
+				"Indicator streaming: reconnecting",
 			);
 			break;
 
 		case "error":
 			log.error(
 				{ code: event.code, message: event.message, reconnectAttempts },
-				"Indicator streaming: error"
+				"Indicator streaming: error",
 			);
 			if (reconnectAttempts >= MAX_RECONNECT_ATTEMPTS) {
 				log.error("Max reconnect attempts reached, indicator streaming disabled");
@@ -295,7 +295,7 @@ async function handleBarMessage(msg: AlpacaWsBarMessage): Promise<void> {
 	} catch (error) {
 		log.warn(
 			{ symbol, error: error instanceof Error ? error.message : String(error) },
-			"Failed to calculate indicators"
+			"Failed to calculate indicators",
 		);
 	}
 }

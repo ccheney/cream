@@ -334,14 +334,14 @@ export async function subscribeContracts(contracts: string[]): Promise<void> {
 	if (client?.isConnected()) {
 		log.info(
 			{ count: newContracts.length, contracts: newContracts.slice(0, 3) },
-			"Subscribing to options contracts via Alpaca WS"
+			"Subscribing to options contracts via Alpaca WS",
 		);
 		client.subscribe("quotes", newContracts);
 		client.subscribe("trades", newContracts);
 	} else {
 		log.warn(
 			{ count: newContracts.length },
-			"Cannot subscribe to options - Alpaca WS not connected"
+			"Cannot subscribe to options - Alpaca WS not connected",
 		);
 	}
 }

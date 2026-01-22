@@ -161,7 +161,7 @@ app.openapi(triggerSyncRoute, async (c) => {
 				error: `Rate limited. Try again in ${Math.ceil(retryAfterMs / 60000)} minutes.`,
 				retryAfterMs,
 			},
-			429
+			429,
 		);
 	}
 
@@ -210,7 +210,7 @@ app.openapi(triggerSyncRoute, async (c) => {
 					state.symbolsProcessed = progress.symbolsProcessed;
 					state.filingsIngested = progress.filingsIngested ?? 0;
 					state.chunksCreated = progress.chunksCreated ?? 0;
-				}
+				},
 			);
 
 			// Update final state

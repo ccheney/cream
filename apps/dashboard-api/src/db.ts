@@ -272,7 +272,7 @@ export function getRuntimeConfigService(): RuntimeConfigService {
 		tradingRepo,
 		agentRepo,
 		universeRepo,
-		constraintsRepo
+		constraintsRepo,
 	);
 	return runtimeConfigService;
 }

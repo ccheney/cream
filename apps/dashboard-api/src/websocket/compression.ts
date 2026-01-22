@@ -103,7 +103,7 @@ let metrics: CompressionMetrics = {
 export function recordCompressionStats(
 	originalSize: number,
 	compressedSize: number,
-	wasCompressed: boolean
+	wasCompressed: boolean,
 ): void {
 	metrics.totalMessages++;
 	metrics.totalBytesUncompressed += originalSize;

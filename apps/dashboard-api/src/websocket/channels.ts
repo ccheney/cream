@@ -75,7 +75,7 @@ export function removeConnection(connectionId: string): void {
  */
 export function sendMessage(
 	ws: WebSocketWithMetadata,
-	message: ServerMessage | Record<string, unknown>
+	message: ServerMessage | Record<string, unknown>,
 ): boolean {
 	try {
 		ws.send(JSON.stringify(message));
@@ -442,7 +442,7 @@ export function closeStaleConnections(): number {
 	if (closed > 0) {
 		log.info(
 			{ closedCount: closed, remainingConnections: connections.size },
-			"Closed stale WebSocket connections"
+			"Closed stale WebSocket connections",
 		);
 	}
 

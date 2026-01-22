@@ -200,7 +200,7 @@ app.openapi(workerEventsRoute, async (c) => {
 							event.environment,
 							event.instruments.length,
 							event.configVersion,
-							event.cycleId
+							event.cycleId,
 						);
 					} catch {
 						// Non-critical - continue even if DB fails

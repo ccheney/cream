@@ -127,7 +127,7 @@ export const DEFAULT_LIVE_PROTECTION: LiveProtectionOptions = {
  * Only applies restrictions when CREAM_ENV=LIVE.
  */
 export function liveProtection(
-	options: LiveProtectionOptions = DEFAULT_LIVE_PROTECTION
+	options: LiveProtectionOptions = DEFAULT_LIVE_PROTECTION,
 ): MiddlewareHandler<{ Variables: SessionVariables }> {
 	return async (c, next) => {
 		const env = requireEnv();

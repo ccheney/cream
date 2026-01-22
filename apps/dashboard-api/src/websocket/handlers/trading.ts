@@ -54,7 +54,7 @@ export async function handleAgentsState(ws: WebSocketWithMetadata): Promise<void
 	} catch (error) {
 		sendError(
 			ws,
-			`Failed to get agents state: ${error instanceof Error ? error.message : "Unknown error"}`
+			`Failed to get agents state: ${error instanceof Error ? error.message : "Unknown error"}`,
 		);
 	}
 }

@@ -125,7 +125,7 @@ app.openapi(candlesRoute, async (c) => {
 				from: fromStr,
 				to: toStr,
 			},
-			"Fetched candles from Alpaca"
+			"Fetched candles from Alpaca",
 		);
 
 		if (!bars || bars.length === 0) {
@@ -142,7 +142,7 @@ app.openapi(candlesRoute, async (c) => {
 			filteredBars = bars.filter((bar) => isMarketHours(new Date(bar.timestamp)));
 			log.debug(
 				{ symbol: upperSymbol, timeframe, beforeCount, afterCount: filteredBars.length },
-				"Applied market hours filter"
+				"Applied market hours filter",
 			);
 		}
 
@@ -164,7 +164,7 @@ app.openapi(candlesRoute, async (c) => {
 					firstTimestamp: first?.timestamp,
 					lastTimestamp: last?.timestamp,
 				},
-				"Returning candles"
+				"Returning candles",
 			);
 		}
 

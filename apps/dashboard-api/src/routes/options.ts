@@ -189,7 +189,7 @@ function classifyExpirationType(date: string): "weekly" | "monthly" | "quarterly
 
 function transformToContract(
 	contract: AlpacaOptionContract,
-	snapshot: AlpacaOptionSnapshot | undefined
+	snapshot: AlpacaOptionSnapshot | undefined,
 ): z.infer<typeof OptionsContractSchema> {
 	const lastPrice = snapshot?.latestTrade?.price ?? contract.closePrice ?? null;
 
@@ -242,7 +242,7 @@ app.openapi(chainRoute, async (c) => {
 	const cacheKey = `chain:${upperUnderlying}:${expiration ?? "all"}:${strikeRange}`;
 	const cached = getCached<z.infer<typeof OptionsChainResponseSchema>>(
 		cacheKey,
-		CHAIN_CACHE_TTL_MS
+		CHAIN_CACHE_TTL_MS,
 	);
 	if (cached) {
 		return c.json(cached, 200);
@@ -344,7 +344,7 @@ app.openapi(chainRoute, async (c) => {
 		if (underlyingPrice && chain.length > 0) {
 			const strikes = chain.map((r) => r.strike);
 			atmStrike = strikes.reduce((prev, curr) =>
-				Math.abs(curr - underlyingPrice) < Math.abs(prev - underlyingPrice) ? curr : prev
+				Math.abs(curr - underlyingPrice) < Math.abs(prev - underlyingPrice) ? curr : prev,
 			);
 		}
 

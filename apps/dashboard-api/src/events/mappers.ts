@@ -254,7 +254,7 @@ export function mapHealthCheckEvent(event: HealthCheckEvent): BroadcastEvent {
 						status: status === "connected" ? ("healthy" as const) : ("unhealthy" as const),
 						lastCheck: event.timestamp,
 					},
-				])
+				]),
 			),
 			environment: "PAPER" as const,
 			timestamp: event.timestamp,

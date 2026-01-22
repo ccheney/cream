@@ -129,7 +129,7 @@ const compareRoute = createRoute({
 								field: z.string(),
 								value1: z.unknown(),
 								value2: z.unknown(),
-							})
+							}),
 						),
 					}),
 				},

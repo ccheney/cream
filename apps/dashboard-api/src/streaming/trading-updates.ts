@@ -2,13 +2,15 @@
  * Trading Updates Streaming
  *
  * Connects to Alpaca's trade_updates WebSocket to receive real-time
- * order fills and position changes, then broadcasts to dashboard clients.
+ * order fills and position changes, then broadcasts to dashboard clients
+ * and persists position changes to the database.
  *
  * @see docs/plans/ui/40-streaming-data-integration.md
  */
 
-import { createAlpacaClient } from "@cream/broker";
+import { type Position as AlpacaPosition, createAlpacaClient } from "@cream/broker";
 import { requireEnv } from "@cream/domain";
+import { DecisionsRepository, PositionsRepository } from "@cream/storage";
 import log from "../logger.js";
 import {
 	AlpacaTradingStreamService,
@@ -70,8 +72,68 @@ function mapEventType(alpacaEvent: string): OrderEventType {
 }
 
 /**
+ * Sync position from Alpaca to database.
+ * Creates new position or updates existing one, linking to the most recent decision.
+ */
+async function syncPositionToDb(
+	position: AlpacaPosition,
+	environment: string,
+	filledAt?: string | null,
+): Promise<void> {
+	const positionsRepo = new PositionsRepository();
+	const existing = await positionsRepo.findBySymbol(position.symbol, environment);
+
+	if (existing) {
+		await positionsRepo.updatePrice(existing.id, position.currentPrice);
+		log.debug({ symbol: position.symbol, id: existing.id }, "Updated position in database");
+	} else {
+		// Look up the most recent decision for this symbol to link stop/target
+		const decisionsRepo = new DecisionsRepository();
+		const recentDecisions = await decisionsRepo.findMany(
+			{ symbol: position.symbol },
+			{ limit: 1, offset: 0 },
+		);
+		const decisionId = recentDecisions.data[0]?.id ?? null;
+
+		const created = await positionsRepo.create({
+			symbol: position.symbol,
+			side: position.side as "long" | "short",
+			quantity: Math.abs(position.qty),
+			avgEntryPrice: position.avgEntryPrice,
+			currentPrice: position.currentPrice,
+			decisionId,
+			environment,
+			openedAt: filledAt ? new Date(filledAt) : undefined,
+		});
+		log.info(
+			{
+				symbol: position.symbol,
+				id: created.id,
+				qty: position.qty,
+				decisionId,
+				openedAt: filledAt,
+			},
+			"Created position in database",
+		);
+	}
+}
+
+/**
+ * Close position in database when it no longer exists in Alpaca.
+ */
+async function closePositionInDb(symbol: string, environment: string): Promise<void> {
+	const positionsRepo = new PositionsRepository();
+	const existing = await positionsRepo.findBySymbol(symbol, environment);
+
+	if (existing) {
+		await positionsRepo.close(existing.id, existing.currentPrice ?? existing.avgEntryPrice);
+		log.info({ symbol, id: existing.id }, "Closed position in database");
+	}
+}
+
+/**
  * Handle trade update events from Alpaca.
- * Broadcasts position and order updates to WebSocket clients.
+ * Broadcasts position and order updates to WebSocket clients and persists to database.
  */
 async function handleTradeUpdate(event: TradingStreamEvent): Promise<void> {
 	if (event.type !== "trade_update") {
@@ -83,7 +145,7 @@ async function handleTradeUpdate(event: TradingStreamEvent): Promise<void> {
 
 	log.debug(
 		{ event: eventType, symbol: order.symbol, orderId: order.id },
-		"Received trade update from Alpaca"
+		"Received trade update from Alpaca",
 	);
 
 	// Broadcast order update using proper schema
@@ -119,6 +181,9 @@ async function handleTradeUpdate(event: TradingStreamEvent): Promise<void> {
 			const position = await client.getPosition(order.symbol);
 
 			if (position) {
+				// Persist position to database with actual fill timestamp
+				await syncPositionToDb(position, environment, order.filled_at);
+
 				broadcastPositionUpdate({
 					type: "position_update",
 					data: {
@@ -142,15 +207,17 @@ async function handleTradeUpdate(event: TradingStreamEvent): Promise<void> {
 						qty: position.qty,
 						avgEntry: position.avgEntryPrice,
 					},
-					"Broadcasted position update"
+					"Broadcasted position update",
 				);
 			} else if (eventType === "fill") {
-				// Position closed - broadcast as close event
+				// Position closed in Alpaca - close in database too
+				await closePositionInDb(order.symbol, environment);
+
 				broadcastPositionUpdate({
 					type: "position_update",
 					data: {
 						symbol: order.symbol,
-						side: "LONG", // Side doesn't matter for close
+						side: "LONG",
 						qty: 0,
 						avgEntry: 0,
 						marketValue: 0,
@@ -170,7 +237,7 @@ async function handleTradeUpdate(event: TradingStreamEvent): Promise<void> {
 					symbol: order.symbol,
 					error: error instanceof Error ? error.message : String(error),
 				},
-				"Failed to fetch position after fill"
+				"Failed to fetch position after fill",
 			);
 		}
 	}
@@ -216,7 +283,7 @@ export async function initTradingUpdatesStreaming(): Promise<void> {
 					handleTradeUpdate(event).catch((error) => {
 						log.error(
 							{ error: error instanceof Error ? error.message : String(error) },
-							"Error handling trade update"
+							"Error handling trade update",
 						);
 					});
 					break;
@@ -228,7 +295,7 @@ export async function initTradingUpdatesStreaming(): Promise<void> {
 					if (event.reason.includes("code 1000")) {
 						log.debug(
 							{ reason: event.reason },
-							"Alpaca trading stream disconnected (idle timeout)"
+							"Alpaca trading stream disconnected (idle timeout)",
 						);
 					} else {
 						log.warn({ reason: event.reason }, "Alpaca trading stream disconnected");
@@ -251,7 +318,7 @@ export async function initTradingUpdatesStreaming(): Promise<void> {
 	} catch (error) {
 		log.error(
 			{ error: error instanceof Error ? error.message : String(error) },
-			"Failed to initialize trading updates streaming"
+			"Failed to initialize trading updates streaming",
 		);
 		tradingStream = null;
 	}

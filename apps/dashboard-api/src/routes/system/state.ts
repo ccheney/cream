@@ -51,7 +51,7 @@ export async function getSystemState(environment?: string): Promise<SystemState>
  */
 export async function setSystemStatus(
 	status: SystemStatus,
-	environment?: string
+	environment?: string,
 ): Promise<DbSystemState> {
 	const env = environment ?? requireEnv();
 	const repo = await getSystemStateRepo();
@@ -65,7 +65,7 @@ export async function setSystemStatus(
 export async function updateCycleState(
 	environment: string,
 	cycleId: string,
-	phase: "observe" | "orient" | "decide" | "act" | "complete"
+	phase: "observe" | "orient" | "decide" | "act" | "complete",
 ): Promise<void> {
 	const repo = await getSystemStateRepo();
 	await repo.updateCycle(environment, cycleId, phase);

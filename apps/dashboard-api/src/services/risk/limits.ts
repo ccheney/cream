@@ -141,7 +141,7 @@ function calculateUtilization(current: number, limit: number): number {
 function calculatePerInstrumentLimits(
 	positions: PositionForExposure[],
 	nav: number,
-	constraints: PerInstrumentConstraints
+	constraints: PerInstrumentConstraints,
 ): LimitStatusItem[] {
 	const limits: LimitStatusItem[] = [];
 
@@ -210,14 +210,14 @@ function calculatePerInstrumentLimits(
 function calculatePortfolioLimits(
 	exposure: ExposureMetrics,
 	nav: number,
-	constraints: PortfolioConstraints
+	constraints: PortfolioConstraints,
 ): LimitStatusItem[] {
 	const limits: LimitStatusItem[] = [];
 
 	// Gross Notional
 	const grossNotionalUtil = calculateUtilization(
 		exposure.gross.current,
-		constraints.max_gross_notional
+		constraints.max_gross_notional,
 	);
 	limits.push({
 		name: "Gross Exposure",
@@ -231,7 +231,7 @@ function calculatePortfolioLimits(
 	// Net Notional
 	const netNotionalUtil = calculateUtilization(
 		Math.abs(exposure.net.current),
-		constraints.max_net_notional
+		constraints.max_net_notional,
 	);
 	limits.push({
 		name: "Net Exposure",
@@ -287,7 +287,7 @@ function calculatePortfolioLimits(
  */
 function calculateOptionsLimits(
 	greeks: PortfolioGreeks,
-	constraints: OptionsGreeksConstraints
+	constraints: OptionsGreeksConstraints,
 ): LimitStatusItem[] {
 	const limits: LimitStatusItem[] = [];
 

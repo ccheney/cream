@@ -92,7 +92,7 @@ export function canAccessChannel(_channel: Channel, session: Session | null): Au
 
 export function canAccessChannels(
 	channels: Channel[],
-	session: Session | null
+	session: Session | null,
 ): Map<Channel, AuthorizationResult> {
 	const results = new Map<Channel, AuthorizationResult>();
 	for (const channel of channels) {
@@ -337,7 +337,7 @@ export function getAuditLog(
 		success?: boolean;
 		since?: Date;
 	},
-	limit = 100
+	limit = 100,
 ): SecurityAuditEvent[] {
 	let filtered = auditLog;
 
@@ -374,7 +374,7 @@ export function clearAuditLog(): void {
  */
 export function checkConnectionSecurity(
 	session: Session | null,
-	origin: string | null
+	origin: string | null,
 ): { allowed: boolean; error?: string } {
 	if (!validateOrigin(origin)) {
 		logSecurityEvent({
@@ -425,7 +425,7 @@ export function checkConnectionSecurity(
 export function checkSubscriptionSecurity(
 	connectionId: string,
 	session: Session | null,
-	channels: Channel[]
+	channels: Channel[],
 ): { allowed: boolean; authorizedChannels: Channel[]; errors: string[] } {
 	const errors: string[] = [];
 
@@ -466,7 +466,7 @@ export function checkSubscriptionSecurity(
 export function checkSymbolSubscriptionSecurity(
 	connectionId: string,
 	userId: string,
-	newSymbols: string[]
+	newSymbols: string[],
 ): { allowed: boolean; error?: string } {
 	if (!symbolTracker.canSubscribe(connectionId, newSymbols.length)) {
 		logSecurityEvent({

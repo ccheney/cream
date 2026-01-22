@@ -149,7 +149,7 @@ describe("handleMessage", () => {
 
 		handleMessage(
 			ws as unknown as WebSocketWithMetadata,
-			JSON.stringify({ type: "subscribe", channels: ["orders", "alerts"] })
+			JSON.stringify({ type: "subscribe", channels: ["orders", "alerts"] }),
 		);
 
 		expect(ws.data.channels.has("orders")).toBe(true);
@@ -168,7 +168,7 @@ describe("handleMessage", () => {
 
 		handleMessage(
 			ws as unknown as WebSocketWithMetadata,
-			JSON.stringify({ type: "unsubscribe", channels: ["orders"] })
+			JSON.stringify({ type: "unsubscribe", channels: ["orders"] }),
 		);
 
 		expect(ws.data.channels.has("orders")).toBe(false);
@@ -181,7 +181,7 @@ describe("handleMessage", () => {
 
 		handleMessage(
 			ws as unknown as WebSocketWithMetadata,
-			JSON.stringify({ type: "subscribe_symbols", symbols: ["AAPL", "msft"] })
+			JSON.stringify({ type: "subscribe_symbols", symbols: ["AAPL", "msft"] }),
 		);
 
 		expect(ws.data.symbols.has("AAPL")).toBe(true);
@@ -234,7 +234,7 @@ describe("handleMessage", () => {
 
 		handleMessage(
 			ws as unknown as WebSocketWithMetadata,
-			JSON.stringify({ type: "subscribe", channels: ["invalid_channel"] })
+			JSON.stringify({ type: "subscribe", channels: ["invalid_channel"] }),
 		);
 
 		// Should send error for invalid channel

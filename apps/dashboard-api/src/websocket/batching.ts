@@ -259,7 +259,7 @@ export function createQuote(
 	bid: number,
 	ask: number,
 	last: number,
-	volume = 0
+	volume = 0,
 ): Quote {
 	return {
 		symbol,

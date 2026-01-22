@@ -109,7 +109,7 @@ app.use(
 		allowMethods: ["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"],
 		allowHeaders: ["Content-Type", "Authorization"],
 		credentials: true,
-	})
+	}),
 );
 
 // Request logging
@@ -320,7 +320,7 @@ if (import.meta.main) {
 		.catch((error: unknown) => {
 			log.warn(
 				{ error: error instanceof Error ? error.message : String(error) },
-				"Failed to clean up orphaned cycles"
+				"Failed to clean up orphaned cycles",
 			);
 		});
 
@@ -337,7 +337,7 @@ if (import.meta.main) {
 		.catch((error: unknown) => {
 			log.warn(
 				{ error: error instanceof Error ? error.message : String(error), mode: creamEnv },
-				"CalendarService initialization failed, using fallback"
+				"CalendarService initialization failed, using fallback",
 			);
 		});
 
@@ -348,7 +348,7 @@ if (import.meta.main) {
 	initMarketDataStreaming().catch((error) => {
 		log.warn(
 			{ error: error instanceof Error ? error.message : String(error) },
-			"Market data streaming initialization failed"
+			"Market data streaming initialization failed",
 		);
 	});
 
@@ -361,7 +361,7 @@ if (import.meta.main) {
 		.catch((error) => {
 			log.warn(
 				{ error: error instanceof Error ? error.message : String(error) },
-				"Options streaming initialization failed"
+				"Options streaming initialization failed",
 			);
 		});
 
@@ -369,7 +369,7 @@ if (import.meta.main) {
 	initTradingUpdatesStreaming().catch((error) => {
 		log.warn(
 			{ error: error instanceof Error ? error.message : String(error) },
-			"Trading updates streaming initialization failed"
+			"Trading updates streaming initialization failed",
 		);
 	});
 
@@ -378,7 +378,7 @@ if (import.meta.main) {
 	publisher.start().catch((error) => {
 		log.warn(
 			{ error: error instanceof Error ? error.message : String(error) },
-			"Event publisher failed to start"
+			"Event publisher failed to start",
 		);
 	});
 

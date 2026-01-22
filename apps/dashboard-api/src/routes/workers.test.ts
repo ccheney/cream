@@ -110,7 +110,7 @@ beforeEach(() => {
 const createMockIndicatorSyncRunsRepo = () => ({
 	findMany: async (
 		filters?: { runType?: string; status?: string },
-		limit = 20
+		limit = 20,
 	): Promise<MockRun[]> => {
 		const allRuns = [...mockRuns, ...insertedRuns];
 		let filtered = [...allRuns];
@@ -197,7 +197,7 @@ const createMockIndicatorSyncRunsRepo = () => ({
 			symbolsProcessed?: number;
 			symbolsFailed?: number;
 			errorMessage?: string;
-		}
+		},
 	): Promise<MockRun | null> => {
 		const allRuns = [...mockRuns, ...insertedRuns];
 		const run = allRuns.find((r) => r.id === id);
@@ -274,7 +274,7 @@ describe("Workers Routes", () => {
 			const data = (await res.json()) as ApiResponse;
 
 			const shortInterest = data.services.find(
-				(s: { name: string }) => s.name === "short_interest"
+				(s: { name: string }) => s.name === "short_interest",
 			);
 			expect(shortInterest.status).toBe("running");
 

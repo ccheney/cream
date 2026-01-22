@@ -186,7 +186,7 @@ export function createWebSocketLogger(config: Partial<LoggerConfig> = {}): WebSo
 		message: string,
 		connectionId?: string,
 		userId?: string,
-		metadata?: Record<string, unknown>
+		metadata?: Record<string, unknown>,
 	): LogEntry => ({
 		timestamp: getTimestamp(),
 		level,
@@ -213,8 +213,8 @@ export function createWebSocketLogger(config: Partial<LoggerConfig> = {}): WebSo
 					`Connection attempt from ${ip}`,
 					undefined,
 					userId,
-					{ ip, userAgent }
-				)
+					{ ip, userAgent },
+				),
 			);
 		},
 
@@ -226,8 +226,8 @@ export function createWebSocketLogger(config: Partial<LoggerConfig> = {}): WebSo
 					`Connection established: ${connectionId}`,
 					connectionId,
 					userId,
-					{ protocol }
-				)
+					{ protocol },
+				),
 			);
 		},
 
@@ -239,8 +239,8 @@ export function createWebSocketLogger(config: Partial<LoggerConfig> = {}): WebSo
 					`Connection failed from ${ip}: ${reason}`,
 					undefined,
 					userId,
-					{ ip, reason }
-				)
+					{ ip, reason },
+				),
 			);
 		},
 
@@ -252,8 +252,8 @@ export function createWebSocketLogger(config: Partial<LoggerConfig> = {}): WebSo
 					`Connection closed: ${connectionId} (duration: ${duration}ms)`,
 					connectionId,
 					userId,
-					{ duration, reason }
-				)
+					{ duration, reason },
+				),
 			);
 		},
 
@@ -265,8 +265,8 @@ export function createWebSocketLogger(config: Partial<LoggerConfig> = {}): WebSo
 					`Reconnection attempt ${attemptCount}`,
 					connectionId,
 					userId,
-					{ attemptCount }
-				)
+					{ attemptCount },
+				),
 			);
 		},
 
@@ -278,8 +278,8 @@ export function createWebSocketLogger(config: Partial<LoggerConfig> = {}): WebSo
 					`Received ${type} (${size} bytes)`,
 					connectionId,
 					undefined,
-					{ type, size }
-				)
+					{ type, size },
+				),
 			);
 		},
 
@@ -291,8 +291,8 @@ export function createWebSocketLogger(config: Partial<LoggerConfig> = {}): WebSo
 					`Sent ${type} (${size} bytes)`,
 					connectionId,
 					undefined,
-					{ type, size }
-				)
+					{ type, size },
+				),
 			);
 		},
 
@@ -308,8 +308,8 @@ export function createWebSocketLogger(config: Partial<LoggerConfig> = {}): WebSo
 					`Invalid message: ${error}`,
 					connectionId,
 					undefined,
-					{ error, raw: truncated }
-				)
+					{ error, raw: truncated },
+				),
 			);
 		},
 
@@ -321,8 +321,8 @@ export function createWebSocketLogger(config: Partial<LoggerConfig> = {}): WebSo
 					`Subscribed to channels: ${channels.join(", ")}`,
 					connectionId,
 					userId,
-					{ channels }
-				)
+					{ channels },
+				),
 			);
 		},
 
@@ -334,8 +334,8 @@ export function createWebSocketLogger(config: Partial<LoggerConfig> = {}): WebSo
 					`Unsubscribed from channels: ${channels.join(", ")}`,
 					connectionId,
 					undefined,
-					{ channels }
-				)
+					{ channels },
+				),
 			);
 		},
 
@@ -347,8 +347,8 @@ export function createWebSocketLogger(config: Partial<LoggerConfig> = {}): WebSo
 					`Subscribed to symbols: ${symbols.join(", ")}`,
 					connectionId,
 					undefined,
-					{ symbols }
-				)
+					{ symbols },
+				),
 			);
 		},
 
@@ -360,8 +360,8 @@ export function createWebSocketLogger(config: Partial<LoggerConfig> = {}): WebSo
 					`Unsubscribed from symbols: ${symbols.join(", ")}`,
 					connectionId,
 					undefined,
-					{ symbols }
-				)
+					{ symbols },
+				),
 			);
 		},
 
@@ -373,8 +373,8 @@ export function createWebSocketLogger(config: Partial<LoggerConfig> = {}): WebSo
 					`Authorization failed for channel ${channel}: ${reason}`,
 					undefined,
 					userId,
-					{ channel, reason }
-				)
+					{ channel, reason },
+				),
 			);
 		},
 
@@ -386,8 +386,8 @@ export function createWebSocketLogger(config: Partial<LoggerConfig> = {}): WebSo
 					`Rate limit exceeded: ${reason}`,
 					connectionId,
 					userId,
-					{ reason }
-				)
+					{ reason },
+				),
 			);
 		},
 
@@ -399,8 +399,8 @@ export function createWebSocketLogger(config: Partial<LoggerConfig> = {}): WebSo
 					`Broadcast error: ${error}`,
 					connectionId,
 					undefined,
-					{ error }
-				)
+					{ error },
+				),
 			);
 		},
 
@@ -416,8 +416,8 @@ export function createWebSocketLogger(config: Partial<LoggerConfig> = {}): WebSo
 					`Heartbeat pong received (latency: ${latency}ms)`,
 					connectionId,
 					undefined,
-					{ latency }
-				)
+					{ latency },
+				),
 			);
 		},
 

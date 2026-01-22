@@ -57,7 +57,7 @@ export function queueToolCall(
 		toolCallId: string;
 		toolName: string;
 		toolArgs: string;
-	}
+	},
 ): void {
 	queueEvent(cycleId, {
 		cycleId,
@@ -79,7 +79,7 @@ export function queueToolResult(
 		success: boolean;
 		resultSummary?: string;
 		durationMs?: number;
-	}
+	},
 ): void {
 	queueEvent(cycleId, {
 		cycleId,
@@ -130,7 +130,7 @@ export function queueAgentStart(cycleId: string, agentType: string): void {
 export function queueAgentComplete(
 	cycleId: string,
 	agentType: string,
-	data?: { output?: unknown }
+	data?: { output?: unknown },
 ): void {
 	queueEvent(cycleId, {
 		cycleId,

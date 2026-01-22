@@ -59,7 +59,7 @@ beforeAll(() => {
 const mockIndicatorSyncRunsRepo = {
 	findMany: async (
 		filters?: { runType?: string; status?: string },
-		limit = 20
+		limit = 20,
 	): Promise<typeof mockSyncRuns> => {
 		let filtered = [...mockSyncRuns];
 
