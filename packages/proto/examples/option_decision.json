@@ -1,32 +1,32 @@
 {
-  "instrument": {
-    "instrumentId": "AAPL250117C00200000",
-    "instrumentType": "OPTION",
-    "optionContract": {
-      "underlying": "AAPL",
-      "expiration": "2025-01-17",
-      "strike": 200,
-      "optionType": "CALL"
-    }
-  },
-  "action": "BUY",
-  "size": {
-    "quantity": 5,
-    "unit": "CONTRACTS",
-    "targetPositionQuantity": 5
-  },
-  "orderPlan": {
-    "entryOrderType": "LIMIT",
-    "entryLimitPrice": 5.50,
-    "exitOrderType": "MARKET",
-    "timeInForce": "DAY"
-  },
-  "riskLevels": {
-    "stopLossLevel": 2.75,
-    "takeProfitLevel": 11.0,
-    "denomination": "OPTION_PRICE"
-  },
-  "strategyFamily": "VOLATILITY",
-  "rationale": "Earnings play with defined risk",
-  "confidence": 0.65
+	"instrument": {
+		"instrumentId": "AAPL250117C00200000",
+		"instrumentType": "OPTION",
+		"optionContract": {
+			"underlying": "AAPL",
+			"expiration": "2025-01-17",
+			"strike": 200,
+			"optionType": "CALL"
+		}
+	},
+	"action": "BUY",
+	"size": {
+		"quantity": 5,
+		"unit": "CONTRACTS",
+		"targetPositionQuantity": 5
+	},
+	"orderPlan": {
+		"entryOrderType": "LIMIT",
+		"entryLimitPrice": 5.5,
+		"exitOrderType": "MARKET",
+		"timeInForce": "DAY"
+	},
+	"riskLevels": {
+		"stopLossLevel": 2.75,
+		"takeProfitLevel": 11.0,
+		"denomination": "OPTION_PRICE"
+	},
+	"strategyFamily": "VOLATILITY",
+	"rationale": "Earnings play with defined risk",
+	"confidence": 0.65
 }

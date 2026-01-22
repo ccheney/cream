@@ -1,33 +1,33 @@
 {
-  "cycleId": "cycle-2026-01-04-14",
-  "asOfTimestamp": "2026-01-04T14:00:00Z",
-  "environment": "PAPER",
-  "decisions": [
-    {
-      "instrument": {
-        "instrumentId": "AAPL",
-        "instrumentType": "EQUITY"
-      },
-      "action": "BUY",
-      "size": {
-        "quantity": 50,
-        "unit": "SHARES",
-        "targetPositionQuantity": 50
-      },
-      "orderPlan": {
-        "entryOrderType": "LIMIT",
-        "entryLimitPrice": 185.0,
-        "exitOrderType": "MARKET",
-        "timeInForce": "DAY"
-      },
-      "riskLevels": {
-        "stopLossLevel": 179.50,
-        "takeProfitLevel": 195.0,
-        "denomination": "UNDERLYING_PRICE"
-      },
-      "strategyFamily": "TREND",
-      "rationale": "Bullish momentum trade",
-      "confidence": 0.78
-    }
-  ]
+	"cycleId": "cycle-2026-01-04-14",
+	"asOfTimestamp": "2026-01-04T14:00:00Z",
+	"environment": "PAPER",
+	"decisions": [
+		{
+			"instrument": {
+				"instrumentId": "AAPL",
+				"instrumentType": "EQUITY"
+			},
+			"action": "BUY",
+			"size": {
+				"quantity": 50,
+				"unit": "SHARES",
+				"targetPositionQuantity": 50
+			},
+			"orderPlan": {
+				"entryOrderType": "LIMIT",
+				"entryLimitPrice": 185.0,
+				"exitOrderType": "MARKET",
+				"timeInForce": "DAY"
+			},
+			"riskLevels": {
+				"stopLossLevel": 179.5,
+				"takeProfitLevel": 195.0,
+				"denomination": "UNDERLYING_PRICE"
+			},
+			"strategyFamily": "TREND",
+			"rationale": "Bullish momentum trade",
+			"confidence": 0.78
+		}
+	]
 }

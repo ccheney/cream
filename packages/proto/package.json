@@ -1,21 +1,21 @@
 {
-  "name": "@cream/proto",
-  "version": "0.0.1",
-  "private": true,
-  "type": "module",
-  "description": "Protobuf schema definitions for Cream trading system",
-  "main": "index.ts",
-  "exports": {
-    ".": "./index.ts"
-  },
-  "scripts": {
-    "lint": "buf lint",
-    "breaking": "buf breaking --against '../../.git#branch=master,subdir=packages/proto'",
-    "generate": "buf generate",
-    "clean": "rm -rf ../schema-gen/ts ../schema-gen/rust",
-    "build": "bun run lint && bun run generate"
-  },
-  "devDependencies": {
-    "@bufbuild/protoc-gen-es": "2.10.2"
-  }
+	"name": "@cream/proto",
+	"version": "0.0.1",
+	"private": true,
+	"type": "module",
+	"description": "Protobuf schema definitions for Cream trading system",
+	"main": "index.ts",
+	"exports": {
+		".": "./index.ts"
+	},
+	"scripts": {
+		"lint": "buf lint",
+		"breaking": "buf breaking --against '../../.git#branch=master,subdir=packages/proto'",
+		"generate": "buf generate",
+		"clean": "rm -rf ../schema-gen/ts ../schema-gen/rust",
+		"build": "bun run lint && bun run generate"
+	},
+	"devDependencies": {
+		"@bufbuild/protoc-gen-es": "2.10.2"
+	}
 }

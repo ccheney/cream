@@ -1,48 +1,48 @@
 {
-  "name": "cream",
-  "version": "0.0.1",
-  "license": "AGPL-3.0-only",
-  "private": true,
-  "packageManager": "bun@1.3.0",
-  "workspaces": [
-    "apps/*",
-    "packages/*"
-  ],
-  "scripts": {
-    "dev": "set -a && . .env 2>/dev/null && set +a && NODE_ENV=development CREAM_ENV=${CREAM_ENV:-PAPER} turbo run dev",
-    "build": "turbo run build",
-    "test": "NODE_ENV=test CREAM_ENV=PAPER turbo run test --filter='!./apps/dashboard'",
-    "test:ts": "NODE_ENV=test CREAM_ENV=PAPER turbo run test --filter='!./apps/dashboard' --filter='!@cream/execution-engine'",
-    "test:rs": "CREAM_ENV=PAPER turbo run test --filter=@cream/execution-engine",
-    "test:e2e": "CREAM_ENV=PAPER bun test ./**/tests/integration/*.test.ts --timeout 120000 && cd apps/dashboard && bun run test:e2e",
-    "typecheck": "turbo run typecheck",
-    "clean": "turbo run clean && rm -rf node_modules",
-    "format": "bun run format:ts && bun run format:rust",
-    "check": "biome check --write .",
-    "format:ts": "biome format --write .",
-    "format:rust": "cargo fmt --all",
-    "lint": "turbo run lint && bun run lint:deps",
-    "lint:deps": "bun packages/config/src/bin/validate-deps.ts",
-    "lint:ts": "biome check .",
-    "lint:rust": "cargo clippy --fix --allow-dirty --allow-staged --all-targets --all-features -- -D warnings",
-    "validate": "bun scripts/validate-versions.ts",
-    "prepare": "husky",
-    "db:seed": "CREAM_ENV=${CREAM_ENV:-PAPER} bun run packages/storage/src/seed-config.ts",
-    "db:push": "CREAM_ENV=${CREAM_ENV:-PAPER} bun --cwd packages/storage run db:push",
-    "db:studio": "bun --cwd packages/storage run dev"
-  },
-  "devDependencies": {
-    "@biomejs/biome": "2.3.11",
-    "@typescript/native-preview": "7.0.0-dev.20260115.1",
-    "husky": "9.1.7",
-    "testcontainers": "11.11.0",
-    "turbo": "2.7.4"
-  },
-  "dependencies": {
-    "@google/genai": "1.37.0",
-    "@hookform/resolvers": "5.2.2",
-    "lucide-react": "0.562.0",
-    "react-hook-form": "7.71.1",
-    "zod": "4.3.5"
-  }
+	"name": "cream",
+	"version": "0.0.1",
+	"license": "AGPL-3.0-only",
+	"private": true,
+	"packageManager": "bun@1.3.0",
+	"workspaces": [
+		"apps/*",
+		"packages/*"
+	],
+	"scripts": {
+		"dev": "set -a && . .env 2>/dev/null && set +a && NODE_ENV=development CREAM_ENV=${CREAM_ENV:-PAPER} turbo run dev",
+		"build": "turbo run build",
+		"test": "NODE_ENV=test CREAM_ENV=PAPER turbo run test --filter='!./apps/dashboard'",
+		"test:ts": "NODE_ENV=test CREAM_ENV=PAPER turbo run test --filter='!./apps/dashboard' --filter='!@cream/execution-engine'",
+		"test:rs": "CREAM_ENV=PAPER turbo run test --filter=@cream/execution-engine",
+		"test:e2e": "CREAM_ENV=PAPER bun test ./**/tests/integration/*.test.ts --timeout 120000 && cd apps/dashboard && bun run test:e2e",
+		"typecheck": "turbo run typecheck",
+		"clean": "turbo run clean && rm -rf node_modules",
+		"format": "bun run format:ts && bun run format:rust",
+		"check": "biome check --write .",
+		"format:ts": "biome format --write .",
+		"format:rust": "cargo fmt --all",
+		"lint": "turbo run lint && bun run lint:deps",
+		"lint:deps": "bun packages/config/src/bin/validate-deps.ts",
+		"lint:ts": "biome check .",
+		"lint:rust": "cargo clippy --fix --allow-dirty --allow-staged --all-targets --all-features -- -D warnings",
+		"validate": "bun scripts/validate-versions.ts",
+		"prepare": "husky",
+		"db:seed": "CREAM_ENV=${CREAM_ENV:-PAPER} bun run packages/storage/src/seed-config.ts",
+		"db:push": "CREAM_ENV=${CREAM_ENV:-PAPER} bun --cwd packages/storage run db:push",
+		"db:studio": "bun --cwd packages/storage run dev"
+	},
+	"devDependencies": {
+		"@biomejs/biome": "2.3.11",
+		"@typescript/native-preview": "7.0.0-dev.20260115.1",
+		"husky": "9.1.7",
+		"testcontainers": "11.11.0",
+		"turbo": "2.7.4"
+	},
+	"dependencies": {
+		"@google/genai": "1.37.0",
+		"@hookform/resolvers": "5.2.2",
+		"lucide-react": "0.562.0",
+		"react-hook-form": "7.71.1",
+		"zod": "4.3.5"
+	}
 }

@@ -1,86 +1,64 @@
 {
-  "$schema": "https://turborepo.com/schema.json",
-  "ui": "stream",
-  "globalDependencies": [".env", "bun.lock", "biome.json", "packages/tsconfig/base.json"],
-  "globalEnv": ["NODE_ENV", "CREAM_ENV"],
-  "tasks": {
-    "build": {
-      "dependsOn": ["^build"],
-      "inputs": [
-        "$TURBO_DEFAULT$",
-        "tsconfig.json"
-      ],
-      "outputs": ["dist/**", ".next/**", "!.next/cache/**", "target/**"],
-      "env": ["CREAM_ENV"]
-    },
-    "test": {
-      "dependsOn": ["^build"],
-      "inputs": [
-        "$TURBO_DEFAULT$",
-        "**/*.test.ts",
-        "**/*.test.tsx",
-        "tests/**"
-      ],
-      "outputs": [],
-      "outputLogs": "errors-only",
-      "env": ["CREAM_ENV", "LLM_MODEL_ID"],
-      "passThroughEnv": [
-        "CLAUDECODE",
-        "NODE_ENV",
-        "CREAM_ENV",
-        "LLM_*",
-        "ALPACA_*",
-        "KALSHI_*"
-      ]
-    },
-    "lint": {
-      "dependsOn": ["^build"],
-      "inputs": [
-        "$TURBO_DEFAULT$",
-        "biome.json",
-        "tsconfig.json"
-      ],
-      "outputs": []
-    },
-    "typecheck": {
-      "dependsOn": ["^build"],
-      "inputs": [
-        "$TURBO_DEFAULT$",
-        "tsconfig.json"
-      ],
-      "outputs": []
-    },
-    "dev": {
-      "cache": false,
-      "persistent": true,
-      "passThroughEnv": [
-        "CREAM_ENV",
-        "NODE_ENV",
-        "LOG_LEVEL",
-        "DATABASE_URL*",
-        "TEST_DATABASE_URL",
-        "HELIX_*",
-        "ALPACA_*",
-        "FRED_API_KEY",
-        "ANTHROPIC_API_KEY",
-        "GOOGLE_*",
-        "LLM_*",
-        "BETTER_AUTH_URL",
-        "KALSHI_*",
-        "POLYMARKET_*",
-        "FINRA_*",
-        "ALLOWED_ORIGINS",
-        "DASHBOARD_API_URL",
-        "WORKER_INTERNAL_SECRET"
-      ]
-    },
-    "clean": {
-      "cache": false,
-      "outputs": []
-    },
-    "format": {
-      "cache": false,
-      "outputs": []
-    }
-  }
+	"$schema": "https://turborepo.com/schema.json",
+	"ui": "stream",
+	"globalDependencies": [".env", "bun.lock", "biome.json", "packages/tsconfig/base.json"],
+	"globalEnv": ["NODE_ENV", "CREAM_ENV"],
+	"tasks": {
+		"build": {
+			"dependsOn": ["^build"],
+			"inputs": ["$TURBO_DEFAULT$", "tsconfig.json"],
+			"outputs": ["dist/**", ".next/**", "!.next/cache/**", "target/**"],
+			"env": ["CREAM_ENV"]
+		},
+		"test": {
+			"dependsOn": ["^build"],
+			"inputs": ["$TURBO_DEFAULT$", "**/*.test.ts", "**/*.test.tsx", "tests/**"],
+			"outputs": [],
+			"outputLogs": "errors-only",
+			"env": ["CREAM_ENV", "LLM_MODEL_ID"],
+			"passThroughEnv": ["CLAUDECODE", "NODE_ENV", "CREAM_ENV", "LLM_*", "ALPACA_*", "KALSHI_*"]
+		},
+		"lint": {
+			"dependsOn": ["^build"],
+			"inputs": ["$TURBO_DEFAULT$", "biome.json", "tsconfig.json"],
+			"outputs": []
+		},
+		"typecheck": {
+			"dependsOn": ["^build"],
+			"inputs": ["$TURBO_DEFAULT$", "tsconfig.json"],
+			"outputs": []
+		},
+		"dev": {
+			"cache": false,
+			"persistent": true,
+			"passThroughEnv": [
+				"CREAM_ENV",
+				"NODE_ENV",
+				"LOG_LEVEL",
+				"DATABASE_URL*",
+				"TEST_DATABASE_URL",
+				"HELIX_*",
+				"ALPACA_*",
+				"FRED_API_KEY",
+				"ANTHROPIC_API_KEY",
+				"GOOGLE_*",
+				"LLM_*",
+				"BETTER_AUTH_URL",
+				"KALSHI_*",
+				"POLYMARKET_*",
+				"FINRA_*",
+				"ALLOWED_ORIGINS",
+				"DASHBOARD_API_URL",
+				"WORKER_INTERNAL_SECRET"
+			]
+		},
+		"clean": {
+			"cache": false,
+			"outputs": []
+		},
+		"format": {
+			"cache": false,
+			"outputs": []
+		}
+	}
 }

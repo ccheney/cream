@@ -1,48 +1,48 @@
 {
-  "name": "@cream/schema-gen",
-  "version": "0.0.1",
-  "private": true,
-  "type": "module",
-  "description": "Generated code from Protobuf schemas",
-  "scripts": {
-    "build": "tsc -p tsconfig.build.json",
-    "clean": "rm -rf dist",
-    "prebuild": "npm run clean",
-    "test": "echo 'No tests for generated files'"
-  },
-  "exports": {
-    "./cream/v1/common": {
-      "types": "./dist/cream/v1/common_pb.d.ts",
-      "import": "./dist/cream/v1/common_pb.js",
-      "default": "./dist/cream/v1/common_pb.js"
-    },
-    "./cream/v1/decision": {
-      "types": "./dist/cream/v1/decision_pb.d.ts",
-      "import": "./dist/cream/v1/decision_pb.js",
-      "default": "./dist/cream/v1/decision_pb.js"
-    },
-    "./cream/v1/events": {
-      "types": "./dist/cream/v1/events_pb.d.ts",
-      "import": "./dist/cream/v1/events_pb.js",
-      "default": "./dist/cream/v1/events_pb.js"
-    },
-    "./cream/v1/execution": {
-      "types": "./dist/cream/v1/execution_pb.d.ts",
-      "import": "./dist/cream/v1/execution_pb.js",
-      "default": "./dist/cream/v1/execution_pb.js"
-    },
-    "./cream/v1/market_snapshot": {
-      "types": "./dist/cream/v1/market_snapshot_pb.d.ts",
-      "import": "./dist/cream/v1/market_snapshot_pb.js",
-      "default": "./dist/cream/v1/market_snapshot_pb.js"
-    }
-  },
-  "dependencies": {
-    "@bufbuild/protobuf": "2.10.2",
-    "@connectrpc/connect": "2.1.1",
-    "@cream/proto": "workspace:*"
-  },
-  "devDependencies": {
-    "@typescript/native-preview": "7.0.0-dev.20260115.1"
-  }
+	"name": "@cream/schema-gen",
+	"version": "0.0.1",
+	"private": true,
+	"type": "module",
+	"description": "Generated code from Protobuf schemas",
+	"scripts": {
+		"build": "tsc -p tsconfig.build.json",
+		"clean": "rm -rf dist",
+		"prebuild": "npm run clean",
+		"test": "echo 'No tests for generated files'"
+	},
+	"exports": {
+		"./cream/v1/common": {
+			"types": "./dist/cream/v1/common_pb.d.ts",
+			"import": "./dist/cream/v1/common_pb.js",
+			"default": "./dist/cream/v1/common_pb.js"
+		},
+		"./cream/v1/decision": {
+			"types": "./dist/cream/v1/decision_pb.d.ts",
+			"import": "./dist/cream/v1/decision_pb.js",
+			"default": "./dist/cream/v1/decision_pb.js"
+		},
+		"./cream/v1/events": {
+			"types": "./dist/cream/v1/events_pb.d.ts",
+			"import": "./dist/cream/v1/events_pb.js",
+			"default": "./dist/cream/v1/events_pb.js"
+		},
+		"./cream/v1/execution": {
+			"types": "./dist/cream/v1/execution_pb.d.ts",
+			"import": "./dist/cream/v1/execution_pb.js",
+			"default": "./dist/cream/v1/execution_pb.js"
+		},
+		"./cream/v1/market_snapshot": {
+			"types": "./dist/cream/v1/market_snapshot_pb.d.ts",
+			"import": "./dist/cream/v1/market_snapshot_pb.js",
+			"default": "./dist/cream/v1/market_snapshot_pb.js"
+		}
+	},
+	"dependencies": {
+		"@bufbuild/protobuf": "2.10.2",
+		"@connectrpc/connect": "2.1.1",
+		"@cream/proto": "workspace:*"
+	},
+	"devDependencies": {
+		"@typescript/native-preview": "7.0.0-dev.20260115.1"
+	}
 }
