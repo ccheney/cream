@@ -75,7 +75,7 @@ export interface UsePortfolioStreamingResult {
  * ```
  */
 export function usePortfolioStreaming(
-	options: UsePortfolioStreamingOptions = {}
+	options: UsePortfolioStreamingOptions = {},
 ): UsePortfolioStreamingResult {
 	const { cash = 0, positions = [], enabled = true } = options;
 
@@ -201,7 +201,7 @@ export function usePortfolioStreaming(
 		(symbol: string): StreamingQuote | undefined => {
 			return quotes.get(symbol);
 		},
-		[quotes]
+		[quotes],
 	);
 
 	// Force refresh subscriptions

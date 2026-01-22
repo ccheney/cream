@@ -25,7 +25,7 @@ export default function OptionsPage() {
 			setIsNavigating(true);
 			router.push(`/options/${symbol.toUpperCase()}`);
 		},
-		[router]
+		[router],
 	);
 
 	const handleSearchSubmit = useCallback(
@@ -35,7 +35,7 @@ export default function OptionsPage() {
 				handleSymbolSelect(searchValue.trim());
 			}
 		},
-		[searchValue, handleSymbolSelect]
+		[searchValue, handleSymbolSelect],
 	);
 
 	return (
@@ -132,7 +132,7 @@ export default function OptionsPage() {
 							>
 								{symbol}
 							</button>
-						)
+						),
 					)}
 				</div>
 			</div>

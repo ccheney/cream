@@ -101,7 +101,7 @@ function polarToCartesian(
 	cx: number,
 	cy: number,
 	radius: number,
-	degrees: number
+	degrees: number,
 ): { x: number; y: number } {
 	const radians = degreesToRadians(degrees);
 	return {
@@ -119,7 +119,7 @@ function describeArc(
 	cy: number,
 	radius: number,
 	startAngle: number,
-	endAngle: number
+	endAngle: number,
 ): string {
 	const start = polarToCartesian(cx, cy, radius, endAngle);
 	const end = polarToCartesian(cx, cy, radius, startAngle);
@@ -222,20 +222,20 @@ function GaugeComponent({
 	// Memoize paths
 	const trackPath = useMemo(
 		() => describeArc(cx, cy, radius, startAngle, endAngle),
-		[cx, cy, radius]
+		[cx, cy, radius],
 	);
 
 	const valueAngle = useMemo(() => valueToAngle(displayValue, max), [displayValue, max]);
 
 	const valuePath = useMemo(
 		() => describeArc(cx, cy, radius, startAngle, valueAngle),
-		[cx, cy, radius, valueAngle]
+		[cx, cy, radius, valueAngle],
 	);
 
 	// Get color
 	const color = useMemo(
 		() => getGaugeColor((displayValue / max) * 100, thresholds),
-		[displayValue, max, thresholds]
+		[displayValue, max, thresholds],
 	);
 
 	// Format display value

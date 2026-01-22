@@ -30,7 +30,7 @@ export const OptionsPositionRow = memo(function OptionsPositionRow({
 		position.underlying,
 		position.expiration,
 		position.strike,
-		position.right
+		position.right,
 	);
 
 	// Color coding for calls vs puts

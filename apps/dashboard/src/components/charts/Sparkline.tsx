@@ -113,7 +113,7 @@ function getLastPoint(
 	data: number[],
 	width: number,
 	height: number,
-	padding = 2
+	padding = 2,
 ): { x: number; y: number } | null {
 	if (data.length === 0) {
 		return null;
@@ -144,7 +144,7 @@ function SparklineComponent({
 
 	const lastPoint = useMemo(
 		() => (showLastPoint ? getLastPoint(data, width, height) : null),
-		[data, width, height, showLastPoint]
+		[data, width, height, showLastPoint],
 	);
 
 	const resolvedColor = useMemo(() => {

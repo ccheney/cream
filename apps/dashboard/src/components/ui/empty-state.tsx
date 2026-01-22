@@ -246,7 +246,7 @@ export function EmptyState({
  * No positions empty state.
  */
 export function NoPositionsEmptyState(
-	props: Omit<EmptyStateProps, "icon" | "title"> & { title?: string }
+	props: Omit<EmptyStateProps, "icon" | "title"> & { title?: string },
 ) {
 	return (
 		<EmptyState
@@ -262,7 +262,7 @@ export function NoPositionsEmptyState(
  * No decisions empty state.
  */
 export function NoDecisionsEmptyState(
-	props: Omit<EmptyStateProps, "icon" | "title"> & { title?: string }
+	props: Omit<EmptyStateProps, "icon" | "title"> & { title?: string },
 ) {
 	return (
 		<EmptyState
@@ -278,7 +278,7 @@ export function NoDecisionsEmptyState(
  * No data empty state.
  */
 export function NoDataEmptyState(
-	props: Omit<EmptyStateProps, "icon" | "title"> & { title?: string }
+	props: Omit<EmptyStateProps, "icon" | "title"> & { title?: string },
 ) {
 	return (
 		<EmptyState
@@ -294,7 +294,7 @@ export function NoDataEmptyState(
  * Search no results empty state.
  */
 export function NoResultsEmptyState(
-	props: Omit<EmptyStateProps, "icon" | "title"> & { title?: string }
+	props: Omit<EmptyStateProps, "icon" | "title"> & { title?: string },
 ) {
 	return (
 		<EmptyState
@@ -310,7 +310,7 @@ export function NoResultsEmptyState(
  * No alerts empty state.
  */
 export function NoAlertsEmptyState(
-	props: Omit<EmptyStateProps, "icon" | "title"> & { title?: string }
+	props: Omit<EmptyStateProps, "icon" | "title"> & { title?: string },
 ) {
 	return (
 		<EmptyState
@@ -326,7 +326,7 @@ export function NoAlertsEmptyState(
  * Error empty state (for when an error results in no content).
  */
 export function ErrorEmptyState(
-	props: Omit<EmptyStateProps, "icon" | "title"> & { title?: string }
+	props: Omit<EmptyStateProps, "icon" | "title"> & { title?: string },
 ) {
 	return (
 		<EmptyState
@@ -342,7 +342,7 @@ export function ErrorEmptyState(
  * Offline empty state.
  */
 export function OfflineEmptyState(
-	props: Omit<EmptyStateProps, "icon" | "title"> & { title?: string }
+	props: Omit<EmptyStateProps, "icon" | "title"> & { title?: string },
 ) {
 	return (
 		<EmptyState

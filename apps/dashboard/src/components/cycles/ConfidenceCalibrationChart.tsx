@@ -115,7 +115,7 @@ export const ConfidenceCalibrationChart = memo(function ConfidenceCalibrationCha
 
 	const dataMap = new Map(data?.map((d) => [d.bin, d]) ?? []);
 	const orderedData = BIN_ORDER.map(
-		(bin) => dataMap.get(bin) ?? { bin, total: 0, executed: 0, executionRate: 0 }
+		(bin) => dataMap.get(bin) ?? { bin, total: 0, executed: 0, executionRate: 0 },
 	);
 	const maxRate = Math.max(...orderedData.map((d) => d.executionRate), 100);
 	const hasData = orderedData.some((d) => d.total > 0);

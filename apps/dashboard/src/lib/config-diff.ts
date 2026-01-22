@@ -41,7 +41,7 @@ export interface DiffResult {
 export function calculateDiff(
 	before: Record<string, unknown>,
 	after: Record<string, unknown>,
-	path: string[] = []
+	path: string[] = [],
 ): DiffResult {
 	const entries: DiffEntry[] = [];
 	const stats = { added: 0, removed: 0, changed: 0, unchanged: 0 };
@@ -83,7 +83,7 @@ export function calculateDiff(
 			const childResult = calculateDiff(
 				oldValue as Record<string, unknown>,
 				newValue as Record<string, unknown>,
-				currentPath
+				currentPath,
 			);
 
 			if (childResult.entries.length > 0) {
@@ -203,7 +203,7 @@ export function formatKeyPath(path: string[]): string {
 			key
 				.replace(/([A-Z])/g, " $1")
 				.replace(/^./, (s) => s.toUpperCase())
-				.trim()
+				.trim(),
 		)
 		.join(" → ");
 }
@@ -264,7 +264,7 @@ export function hasChanges(entry: DiffEntry): boolean {
 export function revertChange(
 	config: Record<string, unknown>,
 	path: string[],
-	oldValue: unknown
+	oldValue: unknown,
 ): Record<string, unknown> {
 	if (path.length === 0) {
 		return config;

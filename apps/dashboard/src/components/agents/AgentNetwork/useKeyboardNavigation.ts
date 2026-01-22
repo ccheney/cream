@@ -76,7 +76,7 @@ export function useKeyboardNavigation({
 			}
 			return null;
 		},
-		[expandedPhases]
+		[expandedPhases],
 	);
 
 	/** Get next phase that has agents */
@@ -91,7 +91,7 @@ export function useKeyboardNavigation({
 			}
 			return null;
 		},
-		[expandedPhases]
+		[expandedPhases],
 	);
 
 	const handleKeyDown = useCallback(
@@ -244,7 +244,7 @@ export function useKeyboardNavigation({
 			getPhaseForAgent,
 			getPreviousPhaseWithAgents,
 			getNextPhaseWithAgents,
-		]
+		],
 	);
 
 	return {

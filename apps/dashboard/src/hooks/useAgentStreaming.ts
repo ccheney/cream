@@ -224,7 +224,7 @@ export function useAgentStreaming(options: UseAgentStreamingOptions = {}): UseAg
 					const resultData = message.data;
 					const currentAgent = getAgent(agentType);
 					const existingToolCall = currentAgent?.toolCalls.some(
-						(tc) => tc.toolCallId === resultData.toolCallId
+						(tc) => tc.toolCallId === resultData.toolCallId,
 					);
 					// In case a tool result arrives without a prior tool-call event (provider/stream edge cases),
 					// create a placeholder tool call so the UI can still display the result.
@@ -297,7 +297,7 @@ export function useAgentStreaming(options: UseAgentStreamingOptions = {}): UseAg
 			appendReasoning,
 			appendTextOutput,
 			updateAgentStatus,
-		]
+		],
 	);
 
 	// Process incoming WebSocket messages
@@ -355,7 +355,7 @@ export function useAgentStreaming(options: UseAgentStreamingOptions = {}): UseAg
 			viewMode,
 			historicalCycleId,
 			clear,
-		]
+		],
 	);
 }
 

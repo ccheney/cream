@@ -201,7 +201,7 @@ export function useActiveCycle() {
 			phase: state.activeCycle?.phase,
 			progress: state.activeCycle?.progress ?? 0,
 			isRunning: state.activeCycle !== null && state.activeCycle.phase !== "complete",
-		}))
+		})),
 	);
 }
 
@@ -212,7 +212,7 @@ export function useAgentOutputs() {
 			getOutput: (agentType: string) => state.agentOutputs.get(agentType),
 			hasOutput: (agentType: string) => state.agentOutputs.has(agentType),
 			count: state.agentOutputs.size,
-		}))
+		})),
 	);
 }
 
@@ -245,7 +245,7 @@ export function useCycleActions() {
 			clearOutputs: state.clearOutputs,
 			completeCycle: state.completeCycle,
 			reset: state.reset,
-		}))
+		})),
 	);
 }
 

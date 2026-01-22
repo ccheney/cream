@@ -131,21 +131,21 @@ export function CalendarFilters({ filters, onFilterChange, className }: Calendar
 				: [...filters.impact, impact];
 			onFilterChange({ ...filters, impact: newImpact });
 		},
-		[filters, onFilterChange]
+		[filters, onFilterChange],
 	);
 
 	const setCountry = useCallback(
 		(country: string) => {
 			onFilterChange({ ...filters, country });
 		},
-		[filters, onFilterChange]
+		[filters, onFilterChange],
 	);
 
 	const setDateRange = useCallback(
 		(dateRange: CalendarFilterState["dateRange"]) => {
 			onFilterChange({ ...filters, dateRange });
 		},
-		[filters, onFilterChange]
+		[filters, onFilterChange],
 	);
 
 	const clearFilters = useCallback(() => {

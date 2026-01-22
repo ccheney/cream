@@ -338,7 +338,7 @@ function createInvalidationBatcher(queryClient: QueryClient, debounceMs: number)
  * ```
  */
 export function useWebSocketQuerySync(
-	options: UseWebSocketQuerySyncOptions = {}
+	options: UseWebSocketQuerySyncOptions = {},
 ): UseWebSocketQuerySyncReturn {
 	const { debounceMs = 100, onCycleProgress, onError } = options;
 
@@ -449,7 +449,7 @@ export function useWebSocketQuerySync(
 
 					case "error": {
 						const error = new Error(
-							typeof message.data === "string" ? message.data : "WebSocket error"
+							typeof message.data === "string" ? message.data : "WebSocket error",
 						);
 						onErrorRef.current?.(error);
 						break;
@@ -463,7 +463,7 @@ export function useWebSocketQuerySync(
 				onErrorRef.current?.(error);
 			}
 		},
-		[queryClient]
+		[queryClient],
 	);
 
 	// Manual invalidation by type
@@ -497,7 +497,7 @@ export function useWebSocketQuerySync(
 					break;
 			}
 		},
-		[queryClient]
+		[queryClient],
 	);
 
 	// Flush pending invalidations

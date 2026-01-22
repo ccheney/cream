@@ -223,7 +223,7 @@ export function useTriggerWorkerService() {
 		}) => {
 			const { data } = await post<TriggerResponse>(
 				`/api/workers/${service}/trigger`,
-				payload ?? {}
+				payload ?? {},
 			);
 			return data;
 		},

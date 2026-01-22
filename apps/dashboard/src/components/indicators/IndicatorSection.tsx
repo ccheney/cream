@@ -82,7 +82,7 @@ export function IndicatorSection({
 			className={cn(
 				"rounded-lg border border-cream-200 dark:border-night-700",
 				"bg-cream-50/50 dark:bg-night-800/50",
-				className
+				className,
 			)}
 		>
 			<button
@@ -91,7 +91,7 @@ export function IndicatorSection({
 				className={cn(
 					"flex w-full items-center justify-between px-4 py-3",
 					"text-left transition-colors",
-					"hover:bg-cream-100/50 dark:hover:bg-night-700/50"
+					"hover:bg-cream-100/50 dark:hover:bg-night-700/50",
 				)}
 			>
 				<div className="flex items-center gap-2">
@@ -105,7 +105,7 @@ export function IndicatorSection({
 				<ChevronDown
 					className={cn(
 						"h-4 w-4 text-stone-400 dark:text-night-500 transition-transform",
-						isOpen && "rotate-180"
+						isOpen && "rotate-180",
 					)}
 				/>
 			</button>

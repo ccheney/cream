@@ -96,7 +96,7 @@ const ContractCell = memo(function ContractCell({
 				onClick(contract, type);
 			}
 		},
-		[contract, type, onClick]
+		[contract, type, onClick],
 	);
 
 	if (!contract) {

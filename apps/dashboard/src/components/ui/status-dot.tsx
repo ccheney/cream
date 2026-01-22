@@ -120,7 +120,7 @@ export const StatusDot = forwardRef<HTMLSpanElement, StatusDotProps>(
 				className={cn(
 					"relative inline-flex items-center justify-center",
 					sizeStyles.container,
-					className
+					className,
 				)}
 				{...props}
 			>
@@ -133,7 +133,7 @@ export const StatusDot = forwardRef<HTMLSpanElement, StatusDotProps>(
 						isDotAnimated && config.animation,
 						glow && config.glowColor,
 						// GPU acceleration for animations
-						isDotAnimated && "will-change-transform"
+						isDotAnimated && "will-change-transform",
 					)}
 				/>
 				{/* Processing indicator uses a partial ring instead of filled dot */}
@@ -141,13 +141,13 @@ export const StatusDot = forwardRef<HTMLSpanElement, StatusDotProps>(
 					<span
 						className={cn(
 							"absolute inset-0 rounded-full border-2 border-transparent border-t-amber-500",
-							config.animation
+							config.animation,
 						)}
 					/>
 				)}
 			</span>
 		);
-	}
+	},
 );
 
 StatusDot.displayName = "StatusDot";

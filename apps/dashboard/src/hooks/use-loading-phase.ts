@@ -240,7 +240,7 @@ export const useLoadingPhaseStore = create<LoadingPhaseState>((set, get) => ({
 								});
 								throw error;
 							}
-						})
+						}),
 					);
 
 					markPhaseComplete(phase);
@@ -345,17 +345,17 @@ export function useLoadingPhase(): UseLoadingPhaseReturn {
 
 	const isPhaseComplete = useCallback(
 		(phase: LoadingPhase) => store.phases[phase].status === "complete",
-		[store.phases]
+		[store.phases],
 	);
 
 	const getPhaseStatus = useCallback(
 		(phase: LoadingPhase) => store.phases[phase].status,
-		[store.phases]
+		[store.phases],
 	);
 
 	const getPhaseError = useCallback(
 		(phase: LoadingPhase) => store.phases[phase].error,
-		[store.phases]
+		[store.phases],
 	);
 
 	return {
@@ -405,7 +405,7 @@ export interface UsePhaseLoaderOptions {
 export function usePhaseLoader(
 	phase: LoadingPhase,
 	loader: LoaderFn,
-	options: UsePhaseLoaderOptions = {}
+	options: UsePhaseLoaderOptions = {},
 ): void {
 	const { autoRegister = true, id } = options;
 	const store = useLoadingPhaseStore();
@@ -545,7 +545,7 @@ export function createSuspenseResource<T>(loader: () => Promise<T>) {
 		(e) => {
 			status = "error";
 			error = e instanceof Error ? e : new Error(String(e));
-		}
+		},
 	);
 
 	return {

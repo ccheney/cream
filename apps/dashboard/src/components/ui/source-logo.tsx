@@ -69,7 +69,7 @@ const FallbackIcon = memo(function FallbackIcon({ type, size, className }: Fallb
 		"border border-stone-200 dark:border-stone-700",
 		"text-stone-400 dark:text-stone-500",
 		sizeStyles.className,
-		className
+		className,
 	);
 
 	// X (Twitter) icon
@@ -153,7 +153,7 @@ const LoadingSkeleton = memo(function LoadingSkeleton({ size, className }: Loadi
 				"inline-block rounded animate-pulse",
 				"bg-stone-200 dark:bg-stone-700",
 				sizeStyles.className,
-				className
+				className,
 			)}
 			role="status"
 			aria-label="Loading logo"
@@ -192,7 +192,7 @@ export const SourceLogo = memo(function SourceLogo({
 	...props
 }: SourceLogoProps) {
 	const [status, setStatus] = useState<"loading" | "loaded" | "error">(
-		logoUrl ? "loading" : "error"
+		logoUrl ? "loading" : "error",
 	);
 
 	const sizeStyles = sizeConfig[size];
@@ -239,7 +239,7 @@ export const SourceLogo = memo(function SourceLogo({
 				"hover:grayscale-0 hover:opacity-100",
 				"transition-[filter,opacity] duration-150",
 				sizeStyles.className,
-				className
+				className,
 			)}
 			loading="lazy"
 			onError={() => setStatus("error")}

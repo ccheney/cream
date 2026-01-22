@@ -211,7 +211,7 @@ export function EventDetailDrawer({ event, isOpen, onClose }: EventDetailDrawerP
 
 	const drawerWidth = useMemo(
 		() => (isMobile ? DRAWER_WIDTH_MOBILE : DRAWER_WIDTH_DESKTOP),
-		[isMobile]
+		[isMobile],
 	);
 
 	// Close on ESC

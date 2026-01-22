@@ -151,7 +151,7 @@ export const TooltipTrigger = forwardRef<HTMLSpanElement, TooltipTriggerProps>(
 					ref.current = node;
 				}
 			},
-			[ref, triggerRef]
+			[ref, triggerRef],
 		);
 
 		return (
@@ -169,7 +169,7 @@ export const TooltipTrigger = forwardRef<HTMLSpanElement, TooltipTriggerProps>(
 				{children}
 			</span>
 		);
-	}
+	},
 );
 
 TooltipTrigger.displayName = "TooltipTrigger";
@@ -261,7 +261,7 @@ export const TooltipContent = forwardRef<HTMLDivElement, TooltipContentProps>(
 					ref.current = node;
 				}
 			},
-			[ref]
+			[ref],
 		);
 
 		if (!isOpen || typeof document === "undefined") {
@@ -289,7 +289,7 @@ export const TooltipContent = forwardRef<HTMLDivElement, TooltipContentProps>(
 					"z-tooltip",
 					// Transition for smooth appearance
 					"transition-[opacity,transform] duration-150 ease-out",
-					className
+					className,
 				)}
 				style={{
 					top: 0,
@@ -314,7 +314,8 @@ export const TooltipContent = forwardRef<HTMLDivElement, TooltipContentProps>(
 							"top-[-5px] left-1/2 -translate-x-1/2 border-t border-l",
 						adjustedPosition === "left" &&
 							"right-[-5px] top-1/2 -translate-y-1/2 border-t border-r",
-						adjustedPosition === "right" && "left-[-5px] top-1/2 -translate-y-1/2 border-b border-l"
+						adjustedPosition === "right" &&
+							"left-[-5px] top-1/2 -translate-y-1/2 border-b border-l",
 					)}
 					aria-hidden="true"
 				/>
@@ -322,7 +323,7 @@ export const TooltipContent = forwardRef<HTMLDivElement, TooltipContentProps>(
 		);
 
 		return createPortal(tooltipContent, document.body);
-	}
+	},
 );
 
 TooltipContent.displayName = "TooltipContent";

@@ -52,7 +52,7 @@ function generatePathData(
 	data: number[],
 	width: number,
 	height: number,
-	padding: number
+	padding: number,
 ): { linePath: string; fillPath: string } {
 	if (data.length < 2) {
 		return { linePath: "", fillPath: "" };
@@ -128,7 +128,7 @@ export const Sparkline = memo(function Sparkline({
 	// Generate SVG paths
 	const { linePath, fillPath } = useMemo(
 		() => generatePathData(data, width, height, PADDING),
-		[data, width, height]
+		[data, width, height],
 	);
 
 	// Colors based on trend

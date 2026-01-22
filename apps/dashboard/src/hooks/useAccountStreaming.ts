@@ -107,7 +107,7 @@ export function useAccountStreaming(initialAccount?: Account): AccountStreamingS
 
 			return { dayPnl, dayPnlPct };
 		},
-		[initialAccount?.lastEquity]
+		[initialAccount?.lastEquity],
 	);
 
 	// Compute streaming state, merging with initial data

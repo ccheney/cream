@@ -65,7 +65,7 @@ export const DecisionMetricsCard = memo(function DecisionMetricsCard({
 	}
 
 	const statusEntries = Object.entries(metrics?.statusDistribution ?? {}).toSorted(
-		([, a], [, b]) => b - a
+		([, a], [, b]) => b - a,
 	);
 	const total = metrics?.totalDecisions ?? 0;
 

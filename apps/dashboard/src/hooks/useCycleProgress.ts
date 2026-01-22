@@ -155,7 +155,7 @@ export function useCycleProgress(cycleId: string | null): UseCycleProgressReturn
 				}
 			}
 		},
-		[queryClient, markCycleFailed]
+		[queryClient, markCycleFailed],
 	);
 
 	// Process incoming WebSocket messages
@@ -211,7 +211,7 @@ export function useCycleProgress(cycleId: string | null): UseCycleProgressReturn
 			error,
 			isSubscribed,
 		}),
-		[status, progress, phase, currentStep, result, error, isSubscribed]
+		[status, progress, phase, currentStep, result, error, isSubscribed],
 	);
 }
 

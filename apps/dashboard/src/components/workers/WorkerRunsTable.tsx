@@ -54,7 +54,7 @@ function StatusBadge({ status }: { status: RunStatus }) {
 		<span
 			className={cn(
 				"inline-flex items-center gap-1.5 px-2 py-0.5 rounded text-xs font-medium",
-				statusStyles[status]
+				statusStyles[status],
 			)}
 		>
 			<span className={cn("w-1.5 h-1.5 rounded-full", statusDots[status])} />
@@ -179,7 +179,7 @@ function WorkerRunsTableComponent({ runs, isLoading }: WorkerRunsTableProps) {
 									<tr
 										className={cn(
 											"hover:bg-cream-50 dark:hover:bg-night-750 transition-colors cursor-pointer",
-											isExpanded && "bg-cream-50 dark:bg-night-750"
+											isExpanded && "bg-cream-50 dark:bg-night-750",
 										)}
 										onClick={() => toggleRow(run.id)}
 									>

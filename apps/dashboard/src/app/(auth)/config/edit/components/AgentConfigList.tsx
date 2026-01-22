@@ -30,7 +30,7 @@ export function AgentConfigList({ agents, onSave, onChange, isSaving }: AgentCon
 	function handleChange(
 		agentType: RuntimeAgentType,
 		field: keyof RuntimeAgentConfig,
-		value: unknown
+		value: unknown,
 	): void {
 		setFormData((prev) => ({
 			...prev,

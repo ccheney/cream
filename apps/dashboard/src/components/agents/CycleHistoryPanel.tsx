@@ -169,7 +169,7 @@ export const CycleHistoryPanel = memo(function CycleHistoryPanel({
 		(cycleId: string) => {
 			onSelectCycle(cycleId);
 		},
-		[onSelectCycle]
+		[onSelectCycle],
 	);
 
 	// Load into store when full cycle data arrives (must be in useEffect, not during render)
@@ -203,7 +203,7 @@ export const CycleHistoryPanel = memo(function CycleHistoryPanel({
 		loadHistoricalCycle(
 			selectedCycleId,
 			agentState,
-			fullCycle.cycle.currentPhase as Parameters<typeof loadHistoricalCycle>[2]
+			fullCycle.cycle.currentPhase as Parameters<typeof loadHistoricalCycle>[2],
 		);
 	}, [fullCycle, selectedCycleId, fullCycleLoading, loadHistoricalCycle]);
 

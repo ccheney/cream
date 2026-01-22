@@ -104,7 +104,7 @@ export function useAutoScroll(options: UseAutoScrollOptions = {}): UseAutoScroll
 				setNewItemCount((prev) => prev + count);
 			}
 		},
-		[isAutoScrolling, scrollToBottom]
+		[isAutoScrolling, scrollToBottom],
 	);
 
 	useEffect(() => {

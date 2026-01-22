@@ -227,7 +227,7 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps>(
 			style,
 			...props
 		},
-		ref
+		ref,
 	) => {
 		const variantStyle = VARIANT_STYLES[variant];
 		const sizeStyle = SIZE_STYLES[size];
@@ -344,7 +344,7 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps>(
 				</button>
 			</>
 		);
-	}
+	},
 );
 
 Button.displayName = "Button";

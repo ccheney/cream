@@ -68,7 +68,7 @@ export const ExpirationTabs = memo(function ExpirationTabs({
 		(date: string) => {
 			onSelect(date);
 		},
-		[onSelect]
+		[onSelect],
 	);
 
 	if (expirations.length === 0) {

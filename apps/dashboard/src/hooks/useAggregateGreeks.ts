@@ -42,7 +42,7 @@ const DEFAULT_THROTTLE_MS = 100;
 const DEFAULT_SPY_PRICE = 500;
 
 export function useAggregateGreeks(
-	options: UseAggregateGreeksOptions = {}
+	options: UseAggregateGreeksOptions = {},
 ): UseAggregateGreeksReturn {
 	const { throttleMs = DEFAULT_THROTTLE_MS, spyPrice: providedSpyPrice, enabled = true } = options;
 
@@ -58,7 +58,7 @@ export function useAggregateGreeks(
 	const positions = useMemo(() => positionsResponse?.positions ?? [], [positionsResponse]);
 	const underlyingPricesFromApi = useMemo(
 		() => positionsResponse?.underlyingPrices ?? {},
-		[positionsResponse]
+		[positionsResponse],
 	);
 
 	// Get unique underlyings for WebSocket quotes + SPY for conversion

@@ -64,7 +64,7 @@ export function Accordion({
 			}
 			onValueChange?.(newValue);
 		},
-		[type, value, isControlled, onValueChange]
+		[type, value, isControlled, onValueChange],
 	);
 
 	return (
@@ -121,14 +121,14 @@ export const AccordionTrigger = forwardRef<HTMLButtonElement, AccordionTriggerPr
 				className={cn(
 					"py-2 px-0 font-medium text-stone-900 dark:text-stone-100",
 					"hover:text-stone-600 dark:hover:text-stone-300",
-					className
+					className,
 				)}
 				{...props}
 			>
 				{children}
 			</CollapsibleTrigger>
 		);
-	}
+	},
 );
 
 /**
@@ -145,5 +145,5 @@ export const AccordionContent = forwardRef<HTMLDivElement, AccordionContentProps
 				<div className="pb-4 pt-1">{children}</div>
 			</CollapsibleContent>
 		);
-	}
+	},
 );

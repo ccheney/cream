@@ -139,7 +139,7 @@ const DEFAULT_HEARTBEAT: HeartbeatConfig = {
 export function calculateBackoffDelay(
 	attempt: number,
 	config: ReconnectionConfig,
-	enableJitter = false
+	enableJitter = false,
 ): number {
 	const baseDelay = config.initialDelay * config.backoffMultiplier ** attempt;
 	if (enableJitter) {
@@ -184,7 +184,7 @@ export function useWebSocket(options: UseWebSocketOptions): UseWebSocketReturn {
 			reconnection?.maxDelay,
 			reconnection?.backoffMultiplier,
 			reconnection,
-		]
+		],
 	);
 
 	const heartbeatConfig = useMemo<HeartbeatConfig>(
@@ -192,7 +192,7 @@ export function useWebSocket(options: UseWebSocketOptions): UseWebSocketReturn {
 			...DEFAULT_HEARTBEAT,
 			...heartbeat,
 		}),
-		[heartbeat?.pingInterval, heartbeat?.pongTimeout, heartbeat]
+		[heartbeat?.pingInterval, heartbeat?.pongTimeout, heartbeat],
 	);
 
 	// State
@@ -452,7 +452,7 @@ export function useWebSocket(options: UseWebSocketOptions): UseWebSocketReturn {
 		(type: string, payload: unknown): boolean => {
 			return send({ type, payload, timestamp: new Date().toISOString() });
 		},
-		[send]
+		[send],
 	);
 
 	// Subscribe to channels
@@ -466,7 +466,7 @@ export function useWebSocket(options: UseWebSocketOptions): UseWebSocketReturn {
 			// Send directly with correct schema format (not wrapped in payload)
 			send({ type: "subscribe", channels });
 		},
-		[send]
+		[send],
 	);
 
 	// Unsubscribe from channels
@@ -479,7 +479,7 @@ export function useWebSocket(options: UseWebSocketOptions): UseWebSocketReturn {
 			setSubscribedChannels(Array.from(subscribedChannelsRef.current));
 			send({ type: "unsubscribe", channels });
 		},
-		[send]
+		[send],
 	);
 
 	// Subscribe to symbols
@@ -492,7 +492,7 @@ export function useWebSocket(options: UseWebSocketOptions): UseWebSocketReturn {
 			setSubscribedSymbols(Array.from(subscribedSymbolsRef.current));
 			send({ type: "subscribe_symbols", symbols });
 		},
-		[send]
+		[send],
 	);
 
 	// Unsubscribe from symbols
@@ -505,7 +505,7 @@ export function useWebSocket(options: UseWebSocketOptions): UseWebSocketReturn {
 			setSubscribedSymbols(Array.from(subscribedSymbolsRef.current));
 			send({ type: "unsubscribe_symbols", symbols });
 		},
-		[send]
+		[send],
 	);
 
 	// Subscribe to options contracts
@@ -518,7 +518,7 @@ export function useWebSocket(options: UseWebSocketOptions): UseWebSocketReturn {
 			setSubscribedContracts(Array.from(subscribedContractsRef.current));
 			send({ type: "subscribe_options", contracts });
 		},
-		[send]
+		[send],
 	);
 
 	// Unsubscribe from options contracts
@@ -531,7 +531,7 @@ export function useWebSocket(options: UseWebSocketOptions): UseWebSocketReturn {
 			setSubscribedContracts(Array.from(subscribedContractsRef.current));
 			send({ type: "unsubscribe_options", contracts });
 		},
-		[send]
+		[send],
 	);
 
 	// Visibility change handler

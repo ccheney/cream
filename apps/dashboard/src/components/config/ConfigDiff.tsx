@@ -42,14 +42,14 @@ export function ConfigDiff<T extends ConfigType>({
 		() =>
 			calculateDiff(
 				before as unknown as Record<string, unknown>,
-				after as unknown as Record<string, unknown>
+				after as unknown as Record<string, unknown>,
 			),
-		[before, after]
+		[before, after],
 	);
 
 	const displayEntries = useMemo(
 		() => (showUnchanged ? diffResult.entries : filterChangesOnly(diffResult.entries)),
-		[diffResult.entries, showUnchanged]
+		[diffResult.entries, showUnchanged],
 	);
 
 	const hasChanges =
@@ -156,7 +156,7 @@ function TreeView<T extends ConfigType>({ entries, onRevert, after }: TreeViewPr
 		const newConfig = revertChange(
 			after as unknown as Record<string, unknown>,
 			entry.path,
-			entry.oldValue
+			entry.oldValue,
 		) as unknown as T;
 		onRevert(entry.path, entry.oldValue, newConfig);
 	};

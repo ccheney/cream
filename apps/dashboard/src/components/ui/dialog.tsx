@@ -189,7 +189,7 @@ export function Dialog({
 				{children}
 			</DialogPortalContent>
 		</DialogContext.Provider>,
-		document.body
+		document.body,
 	);
 }
 
@@ -250,7 +250,7 @@ export const DialogContent = forwardRef<HTMLDivElement, DialogContentProps>(
 					"border border-stone-200 dark:border-stone-700",
 					"animate-in fade-in-0 zoom-in-95 duration-200",
 					maxWidth,
-					className
+					className,
 				)}
 				onClick={(e) => e.stopPropagation()}
 				onKeyDown={(e) => e.stopPropagation()}
@@ -259,7 +259,7 @@ export const DialogContent = forwardRef<HTMLDivElement, DialogContentProps>(
 				{children}
 			</div>
 		);
-	}
+	},
 );
 
 DialogContent.displayName = "DialogContent";
@@ -276,7 +276,7 @@ export const DialogHeader = forwardRef<HTMLDivElement, DialogHeaderProps>(
 		<div ref={ref} className={cn("px-6 pt-6 pb-2", className)} {...props}>
 			{children}
 		</div>
-	)
+	),
 );
 
 DialogHeader.displayName = "DialogHeader";
@@ -302,7 +302,7 @@ export const DialogTitle = forwardRef<HTMLHeadingElement, DialogTitleProps>(
 				{children}
 			</h2>
 		);
-	}
+	},
 );
 
 DialogTitle.displayName = "DialogTitle";
@@ -328,7 +328,7 @@ export const DialogDescription = forwardRef<HTMLParagraphElement, DialogDescript
 				{children}
 			</p>
 		);
-	}
+	},
 );
 
 DialogDescription.displayName = "DialogDescription";
@@ -345,7 +345,7 @@ export const DialogBody = forwardRef<HTMLDivElement, HTMLAttributes<HTMLDivEleme
 		<div ref={ref} className={cn("px-6 py-4", className)} {...props}>
 			{children}
 		</div>
-	)
+	),
 );
 
 DialogBody.displayName = "DialogBody";
@@ -366,7 +366,7 @@ export const DialogFooter = forwardRef<HTMLDivElement, DialogFooterProps>(
 		>
 			{children}
 		</div>
-	)
+	),
 );
 
 DialogFooter.displayName = "DialogFooter";
@@ -396,14 +396,14 @@ export const DialogClose = forwardRef<HTMLButtonElement, DialogCloseProps>(
 					"bg-stone-100 dark:bg-stone-700",
 					"hover:bg-stone-200 dark:hover:bg-stone-600",
 					"focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500",
-					className
+					className,
 				)}
 				{...props}
 			>
 				{children}
 			</button>
 		);
-	}
+	},
 );
 
 DialogClose.displayName = "DialogClose";

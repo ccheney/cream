@@ -76,7 +76,8 @@ export default function PositionDetailPage() {
 				}).format(price)
 			: "--";
 
-	const formatPct = (value: number) => `${value >= 0 ? "+" : ""}${value.toFixed(2)}%`;
+	const formatPct = (value: number | null) =>
+		value !== null ? `${value >= 0 ? "+" : ""}${value.toFixed(2)}%` : "--";
 
 	const handleSaveStop = () => {
 		const value = parseFloat(stopValue);
@@ -194,10 +195,10 @@ export default function PositionDetailPage() {
 							<span className="text-sm text-stone-500 dark:text-night-300">Unrealized P&L</span>
 							<div
 								className={`text-xl font-semibold ${
-									position.unrealizedPnl >= 0 ? "text-green-600" : "text-red-600"
+									(position.unrealizedPnl ?? 0) >= 0 ? "text-green-600" : "text-red-600"
 								}`}
 							>
-								{position.unrealizedPnl >= 0 ? "+" : ""}
+								{(position.unrealizedPnl ?? 0) >= 0 ? "+" : ""}
 								{formatPrice(position.unrealizedPnl)}
 							</div>
 						</div>
@@ -205,7 +206,7 @@ export default function PositionDetailPage() {
 							<span className="text-sm text-stone-500 dark:text-night-300">P&L %</span>
 							<div
 								className={`text-xl font-semibold ${
-									position.unrealizedPnlPct >= 0 ? "text-green-600" : "text-red-600"
+									(position.unrealizedPnlPct ?? 0) >= 0 ? "text-green-600" : "text-red-600"
 								}`}
 							>
 								{formatPct(position.unrealizedPnlPct)}

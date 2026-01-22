@@ -97,7 +97,7 @@ export function useResetQueryStats() {
 		mutationFn: async () => {
 			const { data } = await post<{ success: boolean; message: string; timestamp: string }>(
 				"/api/admin/query-stats/reset",
-				{}
+				{},
 			);
 			return data;
 		},

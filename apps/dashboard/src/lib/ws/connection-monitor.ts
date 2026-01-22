@@ -41,7 +41,7 @@ export function calculateBackoff(
 	retryCount: number,
 	initialBackoff: number = DEFAULT_OPTIONS.initialBackoff,
 	maxBackoff: number = DEFAULT_OPTIONS.maxBackoff,
-	multiplier: number = DEFAULT_OPTIONS.backoffMultiplier
+	multiplier: number = DEFAULT_OPTIONS.backoffMultiplier,
 ): number {
 	const delay = initialBackoff * multiplier ** retryCount;
 	return Math.min(delay, maxBackoff);
@@ -220,7 +220,7 @@ export class ConnectionMonitor {
 			this._retryCount,
 			this.options.initialBackoff,
 			this.options.maxBackoff,
-			this.options.backoffMultiplier
+			this.options.backoffMultiplier,
 		);
 
 		this.startCountdown(delay, () => {

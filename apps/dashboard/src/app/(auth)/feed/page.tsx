@@ -180,7 +180,7 @@ export default function FeedPage() {
 		(type: FeedEventType) => {
 			updateFeed({ enabledEventTypes: { ...filters, [type]: !filters[type] } });
 		},
-		[filters, updateFeed]
+		[filters, updateFeed],
 	);
 
 	const clearEvents = useCallback(() => setEvents([]), []);
@@ -193,14 +193,14 @@ export default function FeedPage() {
 			}
 			updateFeed({ enabledEventTypes: next });
 		},
-		[filters, updateFeed]
+		[filters, updateFeed],
 	);
 
 	const setSymbolFilter = useCallback(
 		(value: string) => {
 			updateFeed({ symbolFilter: value });
 		},
-		[updateFeed]
+		[updateFeed],
 	);
 
 	return (

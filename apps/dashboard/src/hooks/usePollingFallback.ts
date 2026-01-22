@@ -147,7 +147,7 @@ export function usePollingFallback(options: UsePollingFallbackOptions): UsePolli
 				startPollingEndpoint(endpoint as PollingEndpoint<unknown>);
 			}
 		},
-		[isPolling, startPollingEndpoint]
+		[isPolling, startPollingEndpoint],
 	);
 
 	const removeEndpoint = useCallback(
@@ -155,7 +155,7 @@ export function usePollingFallback(options: UsePollingFallbackOptions): UsePolli
 			stopPollingEndpoint(key);
 			endpointsRef.current.delete(key);
 		},
-		[stopPollingEndpoint]
+		[stopPollingEndpoint],
 	);
 
 	useEffect(() => {

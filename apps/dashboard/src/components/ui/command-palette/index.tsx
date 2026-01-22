@@ -132,7 +132,7 @@ export function CommandPalette({
 					break;
 			}
 		},
-		[filteredCommands, selectedIndex, close]
+		[filteredCommands, selectedIndex, close],
 	);
 
 	useEffect(() => {
@@ -178,7 +178,7 @@ export function CommandPalette({
 				close={close}
 			/>
 		</CommandContext.Provider>,
-		document.body
+		document.body,
 	);
 }
 

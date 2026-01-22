@@ -230,7 +230,7 @@ export const EquityCurveChart = memo(function EquityCurveChart({
 			setSelectedPeriod(newPeriod);
 			onPeriodChange?.(newPeriod);
 		},
-		[onPeriodChange]
+		[onPeriodChange],
 	);
 
 	return (

@@ -69,7 +69,7 @@ function deriveDecideStatus(phaseStatus: Record<OODAPhase, PhaseStatus>): PhaseS
 function derivePhaseStatus(
 	phase: OODAPhase,
 	agents: Map<NetworkAgentType, AgentStreamingState>,
-	currentPhase: OODAPhase | null
+	currentPhase: OODAPhase | null,
 ): PhaseStatus {
 	const config = PHASE_CONFIG.find((p) => p.phase === phase);
 	if (!config) {
@@ -268,7 +268,7 @@ export function AgentNetwork({
 				continue;
 			}
 			const hasActiveAgent = config.agents.some(
-				(agentType) => agents.get(agentType)?.status === "processing"
+				(agentType) => agents.get(agentType)?.status === "processing",
 			);
 			if (hasActiveAgent) {
 				return config.phase;
@@ -285,7 +285,7 @@ export function AgentNetwork({
 				continue;
 			}
 			const allComplete = config.agents.every(
-				(agentType) => agents.get(agentType)?.status === "complete"
+				(agentType) => agents.get(agentType)?.status === "complete",
 			);
 			if (allComplete) {
 				const nextPhase = PHASE_CONFIG[i + 1]?.phase;
@@ -370,7 +370,7 @@ export function AgentNetwork({
 		}
 
 		const processingAgent = Array.from(agents.entries()).find(
-			([_, state]) => state.status === "processing"
+			([_, state]) => state.status === "processing",
 		);
 
 		if (processingAgent) {
@@ -384,7 +384,7 @@ export function AgentNetwork({
 			setUserHasInteracted(true);
 			onAgentSelect(selectedAgent === agentType ? null : agentType);
 		},
-		[selectedAgent, onAgentSelect]
+		[selectedAgent, onAgentSelect],
 	);
 
 	// Render agents for a phase
@@ -417,7 +417,7 @@ export function AgentNetwork({
 				</div>
 			);
 		},
-		[agents, selectedAgent, handleAgentClick, compact]
+		[agents, selectedAgent, handleAgentClick, compact],
 	);
 
 	return (

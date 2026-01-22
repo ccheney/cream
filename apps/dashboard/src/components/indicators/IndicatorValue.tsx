@@ -30,7 +30,7 @@ export interface IndicatorValueProps {
 function formatValue(
 	value: number | string | null | undefined,
 	format: IndicatorValueProps["format"] = "number",
-	decimals = 2
+	decimals = 2,
 ): string {
 	if (value === null || value === undefined) {
 		return "--";
@@ -146,7 +146,7 @@ export function IndicatorValue({
 			<span
 				className={cn(
 					"uppercase tracking-wide text-stone-400 dark:text-night-400",
-					sizeClasses[size].label
+					sizeClasses[size].label,
 				)}
 			>
 				{label}
@@ -157,7 +157,7 @@ export function IndicatorValue({
 					sizeClasses[size].value,
 					isNull && "text-stone-300 dark:text-night-600",
 					!isNull && status && statusClasses[status],
-					!isNull && !status && !hasSignal && "text-stone-700 dark:text-night-200"
+					!isNull && !status && !hasSignal && "text-stone-700 dark:text-night-200",
 				)}
 				style={!status ? signalStyle : undefined}
 			>

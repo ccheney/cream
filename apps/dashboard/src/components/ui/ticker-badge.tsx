@@ -150,7 +150,7 @@ export const TickerBadge = memo(function TickerBadge({
 				"border border-stone-200 dark:border-stone-700",
 				sizeStyles.gap,
 				sizeStyles.padding,
-				className
+				className,
 			)}
 			{...props}
 		>

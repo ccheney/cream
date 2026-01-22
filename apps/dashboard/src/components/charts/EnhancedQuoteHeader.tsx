@@ -80,7 +80,7 @@ function formatPrice(price: number | null | undefined): string {
  */
 function calculateChange(
 	current: number | null,
-	previous: number | undefined
+	previous: number | undefined,
 ): { absolute: number; percent: number } | null {
 	if (current == null || previous == null || previous === 0) {
 		return null;
@@ -202,7 +202,7 @@ export const EnhancedQuoteHeader = memo(function EnhancedQuoteHeader({
 	// Calculate price change
 	const change = useMemo(
 		() => calculateChange(quote.last, quote.previousClose),
-		[quote.last, quote.previousClose]
+		[quote.last, quote.previousClose],
 	);
 
 	// Volume percentage of average

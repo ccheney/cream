@@ -210,7 +210,7 @@ function isPrefix(sequence: string[], shortcutKeys: string[]): boolean {
  * ```
  */
 export function useKeyboardShortcuts(
-	options: UseKeyboardShortcutsOptions = {}
+	options: UseKeyboardShortcutsOptions = {},
 ): UseKeyboardShortcutsReturn {
 	const { sequenceTimeout = DEFAULT_SEQUENCE_TIMEOUT, enabled = true, scope } = options;
 

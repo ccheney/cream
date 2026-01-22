@@ -71,7 +71,7 @@ const DEFAULT_PULL_THRESHOLD = 80;
  */
 export function useTouchGestures<T extends HTMLElement = HTMLDivElement>(
 	handlers: TouchGestureHandlers,
-	options: TouchGestureOptions = {}
+	options: TouchGestureOptions = {},
 ): UseTouchGesturesReturn<T> {
 	const {
 		swipeThreshold = DEFAULT_SWIPE_THRESHOLD,

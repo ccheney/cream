@@ -129,7 +129,7 @@ export const Tabs = forwardRef<HTMLDivElement, TabsProps>(
 				}
 				onValueChange?.(newValue);
 			},
-			[isControlled, onValueChange]
+			[isControlled, onValueChange],
 		);
 
 		const registerTab = useCallback((tabValue: string) => {
@@ -148,7 +148,7 @@ export const Tabs = forwardRef<HTMLDivElement, TabsProps>(
 				</div>
 			</TabsContext.Provider>
 		);
-	}
+	},
 );
 
 Tabs.displayName = "Tabs";
@@ -207,7 +207,7 @@ export const TabList = forwardRef<HTMLDivElement, TabListProps>(
 				{children}
 			</div>
 		);
-	}
+	},
 );
 
 TabList.displayName = "TabList";
@@ -247,7 +247,7 @@ export const Tab = forwardRef<HTMLButtonElement, TabProps>(
 					isActive
 						? "text-stone-900 dark:text-stone-100"
 						: "text-stone-500 dark:text-stone-400 hover:text-stone-700 dark:hover:text-stone-300",
-					className
+					className,
 				)}
 				{...props}
 			>
@@ -261,7 +261,7 @@ export const Tab = forwardRef<HTMLButtonElement, TabProps>(
 				)}
 			</button>
 		);
-	}
+	},
 );
 
 Tab.displayName = "Tab";
@@ -295,7 +295,7 @@ export const TabPanel = forwardRef<HTMLDivElement, TabPanelProps>(
 				{children}
 			</div>
 		);
-	}
+	},
 );
 
 TabPanel.displayName = "TabPanel";

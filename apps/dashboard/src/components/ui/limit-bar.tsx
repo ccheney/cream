@@ -124,7 +124,7 @@ export const LimitBar = forwardRef<HTMLDivElement, LimitBarProps>(
 			className,
 			...props
 		},
-		ref
+		ref,
 	) => {
 		const resolvedThresholds = { ...DEFAULT_THRESHOLDS, ...thresholds };
 		const sizeStyles = sizeConfig[size];
@@ -167,7 +167,7 @@ export const LimitBar = forwardRef<HTMLDivElement, LimitBarProps>(
 										? "text-red-600 dark:text-red-400"
 										: variant === "caution"
 											? "text-amber-600 dark:text-amber-400"
-											: "text-stone-700 dark:text-stone-300"
+											: "text-stone-700 dark:text-stone-300",
 								)}
 							>
 								{displayValue}
@@ -192,7 +192,7 @@ export const LimitBar = forwardRef<HTMLDivElement, LimitBarProps>(
 				</div>
 			</div>
 		);
-	}
+	},
 );
 
 LimitBar.displayName = "LimitBar";

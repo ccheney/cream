@@ -123,8 +123,8 @@ export const useWatchlistStore = create<WatchlistStore>()(
 		{
 			name: "cream-watchlist",
 			version: 1,
-		}
-	)
+		},
+	),
 );
 
 // ============================================
@@ -151,7 +151,7 @@ export function useWatchlist() {
 			hasSymbol: state.hasSymbol,
 			reorderSymbols: state.reorderSymbols,
 			clear: state.clear,
-		}))
+		})),
 	);
 }
 

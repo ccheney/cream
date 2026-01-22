@@ -126,7 +126,7 @@ export interface AgentStreamingStoreActions {
 	updateToolCallResult: (
 		agentType: AgentType,
 		toolCallId: string,
-		result: { success: boolean; resultSummary?: string; durationMs?: number }
+		result: { success: boolean; resultSummary?: string; durationMs?: number },
 	) => void;
 	/** Append reasoning text to an agent */
 	appendReasoning: (agentType: AgentType, text: string, timestamp: string) => void;
@@ -137,7 +137,7 @@ export interface AgentStreamingStoreActions {
 		agentType: AgentType,
 		status: AgentStatus,
 		error?: string,
-		startedAt?: string
+		startedAt?: string,
 	) => void;
 	/** Set the current cycle ID (clears state if different) */
 	setCycleId: (cycleId: string) => void;
@@ -161,7 +161,7 @@ export interface AgentStreamingStoreActions {
 	loadHistoricalCycle: (
 		cycleId: string,
 		streamingState: Record<string, AgentStreamingState>,
-		currentPhase?: OODAPhase | null
+		currentPhase?: OODAPhase | null,
 	) => void;
 	/** Return to live mode */
 	returnToLive: () => void;
@@ -253,7 +253,7 @@ const storage = createJSONStorage<PersistedState>(() => sessionStorage, {
 						return true;
 					});
 					return [agentType, { ...state, toolCalls: uniqueToolCalls }];
-				}
+				},
 			);
 			return {
 				...value,
@@ -282,7 +282,7 @@ export const useAgentStreamingStore = create<AgentStreamingStore>()(
 					const current = newAgents.get(agentType) ?? createInitialAgentState();
 					// Upsert by toolCallId (streaming can emit partial → final tool-call events)
 					const existingIndex = current.toolCalls.findIndex(
-						(tc) => tc.toolCallId === toolCall.toolCallId
+						(tc) => tc.toolCallId === toolCall.toolCallId,
 					);
 					if (existingIndex !== -1) {
 						const existing = current.toolCalls[existingIndex];
@@ -352,7 +352,7 @@ export const useAgentStreamingStore = create<AgentStreamingStore>()(
 									resultSummary: result.resultSummary,
 									durationMs: result.durationMs,
 								}
-							: tc
+							: tc,
 					);
 
 					newAgents.set(agentType, {
@@ -564,8 +564,8 @@ export const useAgentStreamingStore = create<AgentStreamingStore>()(
 				viewMode: state.viewMode,
 				historicalCycleId: state.historicalCycleId,
 			}),
-		}
-	)
+		},
+	),
 );
 
 // ============================================
@@ -595,7 +595,7 @@ export function useAllAgentStreaming() {
 			viewMode: state.viewMode,
 			historicalCycleId: state.historicalCycleId,
 			getAgent: state.getAgent,
-		}))
+		})),
 	);
 }
 
@@ -619,7 +619,7 @@ export function useAgentStreamingActions() {
 			loadHistoricalCycle: state.loadHistoricalCycle,
 			returnToLive: state.returnToLive,
 			isHistorical: state.isHistorical,
-		}))
+		})),
 	);
 }
 

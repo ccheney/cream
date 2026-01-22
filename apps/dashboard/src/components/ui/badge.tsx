@@ -148,7 +148,7 @@ export const Badge = forwardRef<HTMLSpanElement, BadgeProps>(
 					sizeStyles.gap,
 					variantStyles.bg,
 					variantStyles.text,
-					className
+					className,
 				)}
 				{...props}
 			>
@@ -161,7 +161,7 @@ export const Badge = forwardRef<HTMLSpanElement, BadgeProps>(
 				{children}
 			</span>
 		);
-	}
+	},
 );
 
 Badge.displayName = "Badge";

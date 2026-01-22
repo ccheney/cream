@@ -184,7 +184,7 @@ export const ConfirmationDialog = forwardRef<HTMLDivElement, ConfirmationDialogP
 			isLoading = false,
 			children,
 		},
-		_ref
+		_ref,
 	) => {
 		const [checkedItems, setCheckedItems] = useState<Record<string, boolean>>({});
 		const [isConfirming, setIsConfirming] = useState(false);
@@ -253,7 +253,7 @@ export const ConfirmationDialog = forwardRef<HTMLDivElement, ConfirmationDialogP
 												className={cn(
 													"h-4 w-4 rounded border-stone-300 dark:border-stone-600",
 													"text-blue-600 focus:ring-blue-500 focus:ring-offset-0",
-													"dark:bg-stone-700"
+													"dark:bg-stone-700",
 												)}
 											/>
 											<span className="text-sm text-stone-700 dark:text-stone-300">
@@ -285,7 +285,7 @@ export const ConfirmationDialog = forwardRef<HTMLDivElement, ConfirmationDialogP
 				</DialogContent>
 			</Dialog>
 		);
-	}
+	},
 );
 
 ConfirmationDialog.displayName = "ConfirmationDialog";

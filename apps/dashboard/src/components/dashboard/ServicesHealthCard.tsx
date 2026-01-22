@@ -104,7 +104,7 @@ function ServiceRow({ label, health }: Omit<ServiceRowProps, "name">) {
 						"text-xs font-medium",
 						health.status === "ok" && "text-green-600 dark:text-green-400",
 						health.status === "degraded" && "text-amber-600 dark:text-amber-400",
-						health.status === "error" && "text-red-600 dark:text-red-400"
+						health.status === "error" && "text-red-600 dark:text-red-400",
 					)}
 				>
 					{statusText}
@@ -265,7 +265,7 @@ export function ServicesHealthCard({
 										data.services.websocket.status === "ok" && "text-green-600 dark:text-green-400",
 										data.services.websocket.status === "degraded" &&
 											"text-amber-600 dark:text-amber-400",
-										data.services.websocket.status === "error" && "text-red-600 dark:text-red-400"
+										data.services.websocket.status === "error" && "text-red-600 dark:text-red-400",
 									)}
 								>
 									{data.services.websocket.status === "ok" ? "Healthy" : "Unhealthy"}

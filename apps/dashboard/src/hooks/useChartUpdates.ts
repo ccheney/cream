@@ -180,7 +180,7 @@ export function useChartUpdates(options: UseChartUpdatesOptions): UseChartUpdate
 						case "candles":
 							newData = applyCandleUpdate(
 								prev.data as OHLCVData[],
-								message.payload as CandleUpdate
+								message.payload as CandleUpdate,
 							);
 							newData = trimData(newData as OHLCVData[], maxDataPoints);
 							break;
@@ -188,7 +188,7 @@ export function useChartUpdates(options: UseChartUpdatesOptions): UseChartUpdate
 						case "equity":
 							newData = appendEquityPoint(
 								prev.data as EquityDataPoint[],
-								message.payload as EquityUpdate
+								message.payload as EquityUpdate,
 							);
 							newData = trimData(newData as EquityDataPoint[], maxDataPoints);
 							break;
@@ -198,7 +198,7 @@ export function useChartUpdates(options: UseChartUpdatesOptions): UseChartUpdate
 							newData = appendSparklineValue(
 								prev.data as number[],
 								sparklineUpdate.value,
-								sparklineUpdate.maxLength ?? maxDataPoints
+								sparklineUpdate.maxLength ?? maxDataPoints,
 							);
 							break;
 						}
@@ -224,7 +224,7 @@ export function useChartUpdates(options: UseChartUpdatesOptions): UseChartUpdate
 				onErrorRef.current?.(error);
 			}
 		},
-		[chartType, symbol, maxDataPoints]
+		[chartType, symbol, maxDataPoints],
 	);
 
 	// Reset handler
@@ -258,7 +258,7 @@ export function useChartUpdates(options: UseChartUpdatesOptions): UseChartUpdate
 
 function getInitialData(
 	chartType: ChartUpdateType,
-	initialData?: OHLCVData[] | EquityDataPoint[] | number[] | number
+	initialData?: OHLCVData[] | EquityDataPoint[] | number[] | number,
 ): OHLCVData[] | EquityDataPoint[] | number[] | number {
 	if (initialData !== undefined) {
 		return initialData;
@@ -287,7 +287,7 @@ function getInitialData(
  */
 export function useCandleUpdates(
 	symbol: string,
-	options?: Omit<UseChartUpdatesOptions, "chartType" | "symbol">
+	options?: Omit<UseChartUpdatesOptions, "chartType" | "symbol">,
 ) {
 	return useChartUpdates({
 		chartType: "candles",

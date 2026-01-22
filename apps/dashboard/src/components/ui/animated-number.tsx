@@ -79,7 +79,7 @@ function formatNumber(
 	format: NumberFormat,
 	decimals: number,
 	prefix?: string,
-	suffix?: string
+	suffix?: string,
 ): string {
 	let formatted: string;
 

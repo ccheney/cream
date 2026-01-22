@@ -70,7 +70,7 @@ export function useUniverseEditor(
 	updateMutation: {
 		mutate: (data: RuntimeUniverseConfig, options?: { onSuccess?: () => void }) => void;
 		isPending: boolean;
-	}
+	},
 ): EditorState<RuntimeUniverseConfig> & { isPending: boolean } {
 	const [editing, setEditing] = useState(false);
 	const [formData, setFormData] = useState<Partial<RuntimeUniverseConfig>>({});
@@ -115,7 +115,7 @@ export function useConstraintsEditor(
 	updateMutation: {
 		mutate: (data: ConstraintsConfig, options?: { onSuccess?: () => void }) => void;
 		isPending: boolean;
-	}
+	},
 ): EditorState<ConstraintsConfig> & { isPending: boolean } {
 	const [editing, setEditing] = useState(false);
 	const [formData, setFormData] = useState<Partial<ConstraintsConfig>>({});
@@ -161,10 +161,10 @@ export function useAgentEditor(
 	updateMutation: {
 		mutate: (
 			data: { agentType: string; config: Partial<AgentConfig> },
-			options?: { onSuccess?: () => void }
+			options?: { onSuccess?: () => void },
 		) => void;
 		isPending: boolean;
-	}
+	},
 ): EditorState<AgentConfig> & { isPending: boolean } {
 	const [editing, setEditing] = useState(false);
 	const [formData, setFormData] = useState<Partial<AgentConfig>>({});
@@ -185,7 +185,7 @@ export function useAgentEditor(
 		if (selectedAgent && formData && Object.keys(formData).length > 0) {
 			updateMutation.mutate(
 				{ agentType: selectedAgent, config: formData },
-				{ onSuccess: () => setEditing(false) }
+				{ onSuccess: () => setEditing(false) },
 			);
 		}
 	}, [selectedAgent, formData, updateMutation]);
@@ -210,7 +210,7 @@ export function useNotificationsEditor(
 	updateMutation: {
 		mutate: (data: AlertSettings, options?: { onSuccess?: () => void }) => void;
 		isPending: boolean;
-	}
+	},
 ): EditorState<AlertSettings> & { isPending: boolean } {
 	const [editing, setEditing] = useState(false);
 	const [formData, setFormData] = useState<Partial<AlertSettings>>({});

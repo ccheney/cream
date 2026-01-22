@@ -69,7 +69,7 @@ export function useAgentStatus(options: UseAgentStatusOptions = {}): UseAgentSta
 		(agentType: string): AgentStatus | undefined => {
 			return statuses.get(agentType);
 		},
-		[statuses]
+		[statuses],
 	);
 
 	// Convert to array for compatibility
@@ -137,7 +137,7 @@ export function useAgentStatus(options: UseAgentStatusOptions = {}): UseAgentSta
 			hasData,
 			refresh,
 		}),
-		[statuses, getStatus, statusArray, isSubscribed, hasData, refresh]
+		[statuses, getStatus, statusArray, isSubscribed, hasData, refresh],
 	);
 }
 

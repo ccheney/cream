@@ -67,7 +67,7 @@ export interface CellData {
 function useMatrixData(
 	data: CorrelationMatrix,
 	highlightThreshold: number,
-	_showDiagonal: boolean
+	_showDiagonal: boolean,
 ): {
 	keys: string[];
 	cells: CellData[][];

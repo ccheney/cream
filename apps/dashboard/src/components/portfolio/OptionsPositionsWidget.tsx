@@ -75,7 +75,7 @@ export const OptionsPositionsWidget = memo(function OptionsPositionsWidget({
 				}
 			}
 		},
-		[contractSymbols, updateContractPrice, updateUnderlyingPrice]
+		[contractSymbols, updateContractPrice, updateUnderlyingPrice],
 	);
 
 	const wsUrl = process.env.NEXT_PUBLIC_WS_URL ?? "ws://localhost:3001/ws";

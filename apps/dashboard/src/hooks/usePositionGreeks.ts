@@ -119,7 +119,7 @@ function calculateGreeks(
 	T: number, // Time to expiration in years
 	sigma: number, // IV
 	isCall: boolean,
-	r: number = DEFAULT_RISK_FREE_RATE
+	r: number = DEFAULT_RISK_FREE_RATE,
 ): PositionGreeks {
 	if (T <= 0) {
 		const intrinsicValue = isCall ? Math.max(S - K, 0) : Math.max(K - S, 0);
@@ -290,7 +290,7 @@ export function usePositionGreeks(options: UsePositionGreeksOptions): UsePositio
 				scheduleGreeksRecalc();
 			}
 		},
-		[scheduleGreeksRecalc]
+		[scheduleGreeksRecalc],
 	);
 
 	// Calculate streaming positions with greeks
@@ -314,7 +314,7 @@ export function usePositionGreeks(options: UsePositionGreeksOptions): UsePositio
 				pos.strike,
 				T,
 				defaultIV,
-				pos.right === "CALL"
+				pos.right === "CALL",
 			);
 
 			// Calculate P/L

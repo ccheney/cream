@@ -75,7 +75,7 @@ const OPACITY_VALUES: Record<StaleLevel, number> = {
  */
 export function useStaleData(
 	lastUpdatedAt?: Date,
-	options: UseStaleDataOptions = {}
+	options: UseStaleDataOptions = {},
 ): UseStaleDataReturn {
 	const {
 		staleThresholdMs = DEFAULT_STALE_THRESHOLD_MS,
@@ -137,7 +137,7 @@ export function useStaleData(
 				secondsSinceUpdate,
 			};
 		},
-		[staleThresholdMs, veryStaleThresholdMs, extremelyStaleThresholdMs]
+		[staleThresholdMs, veryStaleThresholdMs, extremelyStaleThresholdMs],
 	);
 
 	const markUpdated = () => {

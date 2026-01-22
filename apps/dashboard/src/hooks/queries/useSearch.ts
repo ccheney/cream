@@ -59,7 +59,7 @@ export function useGlobalSearch(query: string) {
 			}
 
 			const { data } = await get<SearchResponse>(
-				`/api/search?q=${encodeURIComponent(trimmedQuery)}&limit=20`
+				`/api/search?q=${encodeURIComponent(trimmedQuery)}&limit=20`,
 			);
 			return data;
 		},

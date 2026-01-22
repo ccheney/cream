@@ -191,7 +191,7 @@ export const FormItem = forwardRef<HTMLDivElement, FormItemProps>(
 				<div ref={ref} data-testid={testId} style={{ ...itemStyles, ...style }} {...props} />
 			</FormItemContext.Provider>
 		);
-	}
+	},
 );
 FormItem.displayName = "FormItem";
 
@@ -216,7 +216,7 @@ export const FormLabel = forwardRef<HTMLLabelElement, FormLabelProps>(
 				{...props}
 			/>
 		);
-	}
+	},
 );
 FormLabel.displayName = "FormLabel";
 
@@ -252,7 +252,7 @@ export const FormDescription = forwardRef<HTMLParagraphElement, FormDescriptionP
 				{...props}
 			/>
 		);
-	}
+	},
 );
 FormDescription.displayName = "FormDescription";
 
@@ -314,7 +314,7 @@ export const FormMessage = forwardRef<HTMLParagraphElement, FormErrorProps>(
 				<span>{body}</span>
 			</p>
 		);
-	}
+	},
 );
 FormMessage.displayName = "FormMessage";
 

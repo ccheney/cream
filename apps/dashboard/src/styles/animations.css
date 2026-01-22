@@ -12,27 +12,27 @@
    ============================================ */
 
 :root {
-  /* Duration tokens */
-  --duration-instant: 100ms;
-  --duration-fast: 150ms;
-  --duration-normal: 250ms;
-  --duration-slow: 400ms;
-  --duration-slower: 600ms;
+	/* Duration tokens */
+	--duration-instant: 100ms;
+	--duration-fast: 150ms;
+	--duration-normal: 250ms;
+	--duration-slow: 400ms;
+	--duration-slower: 600ms;
 
-  /* Easing tokens */
-  --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
-  --ease-in-out: cubic-bezier(0.65, 0, 0.35, 1);
-  --ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
+	/* Easing tokens */
+	--ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+	--ease-in-out: cubic-bezier(0.65, 0, 0.35, 1);
+	--ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
 
-  /* Animation-specific colors */
-  --shimmer-gradient: linear-gradient(
-    90deg,
-    transparent 0%,
-    rgba(255, 255, 255, 0.4) 50%,
-    transparent 100%
-  );
-  --profit-bg: rgba(34, 197, 94, 0.2); /* green-500/20 */
-  --loss-bg: rgba(239, 68, 68, 0.2); /* red-500/20 */
+	/* Animation-specific colors */
+	--shimmer-gradient: linear-gradient(
+		90deg,
+		transparent 0%,
+		rgba(255, 255, 255, 0.4) 50%,
+		transparent 100%
+	);
+	--profit-bg: rgba(34, 197, 94, 0.2); /* green-500/20 */
+	--loss-bg: rgba(239, 68, 68, 0.2); /* red-500/20 */
 }
 
 /* ============================================
@@ -44,12 +44,12 @@
  * Creates a gradient that sweeps across the element.
  */
 @keyframes shimmer {
-  0% {
-    background-position: -200% 0;
-  }
-  100% {
-    background-position: 200% 0;
-  }
+	0% {
+		background-position: -200% 0;
+	}
+	100% {
+		background-position: 200% 0;
+	}
 }
 
 /**
@@ -57,13 +57,13 @@
  * Fades opacity in and out.
  */
 @keyframes pulse {
-  0%,
-  100% {
-    opacity: 1;
-  }
-  50% {
-    opacity: 0.6;
-  }
+	0%,
+	100% {
+		opacity: 1;
+	}
+	50% {
+		opacity: 0.6;
+	}
 }
 
 /**
@@ -71,12 +71,12 @@
  * Continuous rotation.
  */
 @keyframes spin {
-  from {
-    transform: rotate(0deg);
-  }
-  to {
-    transform: rotate(360deg);
-  }
+	from {
+		transform: rotate(0deg);
+	}
+	to {
+		transform: rotate(360deg);
+	}
 }
 
 /**
@@ -84,12 +84,12 @@
  * Brief green background highlight.
  */
 @keyframes flash-profit {
-  0% {
-    background-color: var(--profit-bg);
-  }
-  100% {
-    background-color: transparent;
-  }
+	0% {
+		background-color: var(--profit-bg);
+	}
+	100% {
+		background-color: transparent;
+	}
 }
 
 /**
@@ -97,12 +97,12 @@
  * Brief red background highlight.
  */
 @keyframes flash-loss {
-  0% {
-    background-color: var(--loss-bg);
-  }
-  100% {
-    background-color: transparent;
-  }
+	0% {
+		background-color: var(--loss-bg);
+	}
+	100% {
+		background-color: transparent;
+	}
 }
 
 /**
@@ -110,12 +110,12 @@
  * Opacity transition from 0 to 1.
  */
 @keyframes fade-in {
-  from {
-    opacity: 0;
-  }
-  to {
-    opacity: 1;
-  }
+	from {
+		opacity: 0;
+	}
+	to {
+		opacity: 1;
+	}
 }
 
 /**
@@ -123,67 +123,67 @@
  * Opacity transition from 1 to 0.
  */
 @keyframes fade-out {
-  from {
-    opacity: 1;
-  }
-  to {
-    opacity: 0;
-  }
+	from {
+		opacity: 1;
+	}
+	to {
+		opacity: 0;
+	}
 }
 
 /**
  * Slide in from top animation.
  */
 @keyframes slide-in-top {
-  from {
-    transform: translateY(-100%);
-    opacity: 0;
-  }
-  to {
-    transform: translateY(0);
-    opacity: 1;
-  }
+	from {
+		transform: translateY(-100%);
+		opacity: 0;
+	}
+	to {
+		transform: translateY(0);
+		opacity: 1;
+	}
 }
 
 /**
  * Slide in from bottom animation.
  */
 @keyframes slide-in-bottom {
-  from {
-    transform: translateY(100%);
-    opacity: 0;
-  }
-  to {
-    transform: translateY(0);
-    opacity: 1;
-  }
+	from {
+		transform: translateY(100%);
+		opacity: 0;
+	}
+	to {
+		transform: translateY(0);
+		opacity: 1;
+	}
 }
 
 /**
  * Scale in animation (for modals, popovers).
  */
 @keyframes scale-in {
-  from {
-    transform: scale(0.95);
-    opacity: 0;
-  }
-  to {
-    transform: scale(1);
-    opacity: 1;
-  }
+	from {
+		transform: scale(0.95);
+		opacity: 0;
+	}
+	to {
+		transform: scale(1);
+		opacity: 1;
+	}
 }
 
 /**
  * Bounce animation (for emphasis).
  */
 @keyframes bounce {
-  0%,
-  100% {
-    transform: translateY(0);
-  }
-  50% {
-    transform: translateY(-10%);
-  }
+	0%,
+	100% {
+		transform: translateY(0);
+	}
+	50% {
+		transform: translateY(-10%);
+	}
 }
 
 /**
@@ -191,12 +191,12 @@
  * For success state indicators.
  */
 @keyframes checkmark-draw {
-  0% {
-    stroke-dashoffset: 50;
-  }
-  100% {
-    stroke-dashoffset: 0;
-  }
+	0% {
+		stroke-dashoffset: 50;
+	}
+	100% {
+		stroke-dashoffset: 0;
+	}
 }
 
 /**
@@ -204,15 +204,15 @@
  * Subtle opacity pulsing that feels alive.
  */
 @keyframes breathe {
-  0%,
-  100% {
-    opacity: 0.7;
-    transform: scale(1);
-  }
-  50% {
-    opacity: 1;
-    transform: scale(1.02);
-  }
+	0%,
+	100% {
+		opacity: 0.7;
+		transform: scale(1);
+	}
+	50% {
+		opacity: 1;
+		transform: scale(1.02);
+	}
 }
 
 /**
@@ -220,12 +220,12 @@
  * Horizontal gradient sweep.
  */
 @keyframes flow {
-  0% {
-    background-position: 0% 50%;
-  }
-  100% {
-    background-position: 200% 50%;
-  }
+	0% {
+		background-position: 0% 50%;
+	}
+	100% {
+		background-position: 200% 50%;
+	}
 }
 
 /**
@@ -233,15 +233,15 @@
  * More pronounced than standard pulse.
  */
 @keyframes pulse-scale {
-  0%,
-  100% {
-    opacity: 1;
-    transform: scale(1);
-  }
-  50% {
-    opacity: 0.7;
-    transform: scale(0.92);
-  }
+	0%,
+	100% {
+		opacity: 1;
+		transform: scale(1);
+	}
+	50% {
+		opacity: 0.7;
+		transform: scale(0.92);
+	}
 }
 
 /* ============================================
@@ -249,73 +249,73 @@
    ============================================ */
 
 .animate-shimmer {
-  animation: shimmer 1.5s infinite;
-  background: linear-gradient(
-    90deg,
-    var(--shimmer-base, #e7e5e4) 25%,
-    var(--shimmer-highlight, #f5f5f4) 50%,
-    var(--shimmer-base, #e7e5e4) 75%
-  );
-  background-size: 200% 100%;
+	animation: shimmer 1.5s infinite;
+	background: linear-gradient(
+		90deg,
+		var(--shimmer-base, #e7e5e4) 25%,
+		var(--shimmer-highlight, #f5f5f4) 50%,
+		var(--shimmer-base, #e7e5e4) 75%
+	);
+	background-size: 200% 100%;
 }
 
 .animate-pulse {
-  animation: pulse 2s ease-in-out infinite;
+	animation: pulse 2s ease-in-out infinite;
 }
 
 .animate-spin {
-  animation: spin 1s linear infinite;
+	animation: spin 1s linear infinite;
 }
 
 .animate-flash-profit {
-  animation: flash-profit 500ms ease-out;
+	animation: flash-profit 500ms ease-out;
 }
 
 .animate-flash-loss {
-  animation: flash-loss 500ms ease-out;
+	animation: flash-loss 500ms ease-out;
 }
 
 .animate-fade-in {
-  animation: fade-in var(--duration-normal) var(--ease-out);
+	animation: fade-in var(--duration-normal) var(--ease-out);
 }
 
 .animate-fade-out {
-  animation: fade-out var(--duration-normal) var(--ease-out);
+	animation: fade-out var(--duration-normal) var(--ease-out);
 }
 
 .animate-slide-in-top {
-  animation: slide-in-top var(--duration-normal) var(--ease-out);
+	animation: slide-in-top var(--duration-normal) var(--ease-out);
 }
 
 .animate-slide-in-bottom {
-  animation: slide-in-bottom var(--duration-normal) var(--ease-out);
+	animation: slide-in-bottom var(--duration-normal) var(--ease-out);
 }
 
 .animate-scale-in {
-  animation: scale-in var(--duration-fast) var(--ease-out);
+	animation: scale-in var(--duration-fast) var(--ease-out);
 }
 
 .animate-bounce {
-  animation: bounce 1s ease infinite;
+	animation: bounce 1s ease infinite;
 }
 
 .animate-checkmark {
-  stroke-dasharray: 50;
-  stroke-dashoffset: 50;
-  animation: checkmark-draw 300ms var(--ease-out) forwards;
+	stroke-dasharray: 50;
+	stroke-dashoffset: 50;
+	animation: checkmark-draw 300ms var(--ease-out) forwards;
 }
 
 .animate-breathe {
-  animation: breathe 3s ease-in-out infinite;
+	animation: breathe 3s ease-in-out infinite;
 }
 
 .animate-flow {
-  animation: flow 4s linear infinite;
-  background-size: 200% 100%;
+	animation: flow 4s linear infinite;
+	background-size: 200% 100%;
 }
 
 .animate-pulse-scale {
-  animation: pulse-scale 2s ease-in-out infinite;
+	animation: pulse-scale 2s ease-in-out infinite;
 }
 
 /* ============================================
@@ -323,28 +323,28 @@
    ============================================ */
 
 .duration-instant {
-  transition-duration: var(--duration-instant);
-  animation-duration: var(--duration-instant);
+	transition-duration: var(--duration-instant);
+	animation-duration: var(--duration-instant);
 }
 
 .duration-fast {
-  transition-duration: var(--duration-fast);
-  animation-duration: var(--duration-fast);
+	transition-duration: var(--duration-fast);
+	animation-duration: var(--duration-fast);
 }
 
 .duration-normal {
-  transition-duration: var(--duration-normal);
-  animation-duration: var(--duration-normal);
+	transition-duration: var(--duration-normal);
+	animation-duration: var(--duration-normal);
 }
 
 .duration-slow {
-  transition-duration: var(--duration-slow);
-  animation-duration: var(--duration-slow);
+	transition-duration: var(--duration-slow);
+	animation-duration: var(--duration-slow);
 }
 
 .duration-slower {
-  transition-duration: var(--duration-slower);
-  animation-duration: var(--duration-slower);
+	transition-duration: var(--duration-slower);
+	animation-duration: var(--duration-slower);
 }
 
 /* ============================================
@@ -352,18 +352,18 @@
    ============================================ */
 
 .ease-out-custom {
-  transition-timing-function: var(--ease-out);
-  animation-timing-function: var(--ease-out);
+	transition-timing-function: var(--ease-out);
+	animation-timing-function: var(--ease-out);
 }
 
 .ease-in-out-custom {
-  transition-timing-function: var(--ease-in-out);
-  animation-timing-function: var(--ease-in-out);
+	transition-timing-function: var(--ease-in-out);
+	animation-timing-function: var(--ease-in-out);
 }
 
 .ease-spring {
-  transition-timing-function: var(--ease-spring);
-  animation-timing-function: var(--ease-spring);
+	transition-timing-function: var(--ease-spring);
+	animation-timing-function: var(--ease-spring);
 }
 
 /* ============================================
@@ -371,43 +371,44 @@
    ============================================ */
 
 @media (prefers-reduced-motion: reduce) {
-  /* Disable all animations */
-  .animate-shimmer,
-  .animate-pulse,
-  .animate-spin,
-  .animate-flash-profit,
-  .animate-flash-loss,
-  .animate-fade-in,
-  .animate-fade-out,
-  .animate-slide-in-top,
-  .animate-slide-in-bottom,
-  .animate-scale-in,
-  .animate-bounce,
-  .animate-checkmark,
-  .animate-breathe,
-  .animate-flow,
-  .animate-pulse-scale {
-    animation: none;
-  }
+	/* Disable all animations */
+	.animate-shimmer,
+	.animate-pulse,
+	.animate-spin,
+	.animate-flash-profit,
+	.animate-flash-loss,
+	.animate-fade-in,
+	.animate-fade-out,
+	.animate-slide-in-top,
+	.animate-slide-in-bottom,
+	.animate-scale-in,
+	.animate-bounce,
+	.animate-checkmark,
+	.animate-breathe,
+	.animate-flow,
+	.animate-pulse-scale {
+		animation: none;
+	}
 
-  /* Reduce transition durations */
-  .duration-instant,
-  .duration-fast,
-  .duration-normal,
-  .duration-slow,
-  .duration-slower {
-    transition-duration: 0.01ms !important;
-  }
+	/* biome-ignore-all lint/complexity/noImportantStyles: !important required for a11y prefers-reduced-motion override */
+	/* Reduce transition durations */
+	.duration-instant,
+	.duration-fast,
+	.duration-normal,
+	.duration-slow,
+	.duration-slower {
+		transition-duration: 0.01ms !important;
+	}
 
-  /* Apply to all elements as fallback */
-  *,
-  *::before,
-  *::after {
-    animation-duration: 0.01ms !important;
-    animation-iteration-count: 1 !important;
-    transition-duration: 0.01ms !important;
-    scroll-behavior: auto !important;
-  }
+	/* Apply to all elements as fallback */
+	*,
+	*::before,
+	*::after {
+		animation-duration: 0.01ms !important;
+		animation-iteration-count: 1 !important;
+		transition-duration: 0.01ms !important;
+		scroll-behavior: auto !important;
+	}
 }
 
 /* ============================================
@@ -416,48 +417,48 @@
 
 /* Pause animation on hover (for debugging) */
 .animate-pause-on-hover:hover {
-  animation-play-state: paused;
+	animation-play-state: paused;
 }
 
 /* Run animation only once */
 .animate-once {
-  animation-iteration-count: 1;
+	animation-iteration-count: 1;
 }
 
 /* Animation fill mode utilities */
 .animate-fill-forwards {
-  animation-fill-mode: forwards;
+	animation-fill-mode: forwards;
 }
 
 .animate-fill-backwards {
-  animation-fill-mode: backwards;
+	animation-fill-mode: backwards;
 }
 
 .animate-fill-both {
-  animation-fill-mode: both;
+	animation-fill-mode: both;
 }
 
 /* Animation delay utilities */
 .animate-delay-100 {
-  animation-delay: 100ms;
+	animation-delay: 100ms;
 }
 
 .animate-delay-200 {
-  animation-delay: 200ms;
+	animation-delay: 200ms;
 }
 
 .animate-delay-300 {
-  animation-delay: 300ms;
+	animation-delay: 300ms;
 }
 
 .animate-delay-500 {
-  animation-delay: 500ms;
+	animation-delay: 500ms;
 }
 
 .animate-delay-700 {
-  animation-delay: 700ms;
+	animation-delay: 700ms;
 }
 
 .animate-delay-1000 {
-  animation-delay: 1000ms;
+	animation-delay: 1000ms;
 }

@@ -63,7 +63,7 @@ export function useThesisPageData(): ThesisPageData {
 export function useThesisPageState(
 	id: string,
 	invalidateThesis: ReturnType<typeof useInvalidateThesis>,
-	realizeThesis: ReturnType<typeof useRealizeThesis>
+	realizeThesis: ReturnType<typeof useRealizeThesis>,
 ): ThesisPageState & ThesisPageActions {
 	const [showInvalidateModal, setShowInvalidateModal] = useState(false);
 	const [showRealizeModal, setShowRealizeModal] = useState(false);

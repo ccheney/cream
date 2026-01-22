@@ -249,7 +249,7 @@ function ChartMarkersComponent({
 		(price: number | null, time: Time | null) => {
 			onCrosshairMove?.(price, time);
 		},
-		[onCrosshairMove]
+		[onCrosshairMove],
 	);
 
 	// Handle click on chart to detect marker clicks

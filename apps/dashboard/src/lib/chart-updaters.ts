@@ -124,7 +124,7 @@ export function trimData<T>(data: T[], maxLength: number): T[] {
  */
 export function appendEquityPoint(
 	data: EquityDataPoint[],
-	update: EquityUpdate
+	update: EquityUpdate,
 ): EquityDataPoint[] {
 	const newPoint: EquityDataPoint = {
 		time: update.timestamp,
@@ -139,7 +139,7 @@ export function appendEquityPoint(
  */
 export function updateLastEquityPoint(
 	data: EquityDataPoint[],
-	update: EquityUpdate
+	update: EquityUpdate,
 ): EquityDataPoint[] {
 	if (data.length === 0) {
 		return [{ time: update.timestamp, value: update.value, drawdown: update.drawdown }];
@@ -205,7 +205,7 @@ export function batchUpdateSparkline(data: number[], values: number[], maxLength
  */
 export function createThrottledUpdater<T>(
 	updateFn: (value: T) => void,
-	intervalMs = 100
+	intervalMs = 100,
 ): {
 	update: (value: T) => void;
 	flush: () => void;
@@ -323,7 +323,7 @@ export function sortByTimestamp<T extends { timestamp: string }>(updates: T[]): 
  */
 export function filterStaleUpdates<T extends { timestamp: string }>(
 	updates: T[],
-	maxAgeMs = 5000
+	maxAgeMs = 5000,
 ): T[] {
 	const now = Date.now();
 	return updates.filter((update) => {

@@ -36,7 +36,7 @@ export function UniverseConfigForm({
 
 	function handleChange<K extends keyof RuntimeUniverseConfig>(
 		field: K,
-		value: RuntimeUniverseConfig[K]
+		value: RuntimeUniverseConfig[K],
 	): void {
 		setFormData((prev) => ({ ...prev, [field]: value }));
 		onChange();

@@ -199,7 +199,7 @@ function formatDataValue(
 	value: number | string,
 	format: DataFormat,
 	decimals: number,
-	showSign: boolean
+	showSign: boolean,
 ): string {
 	const num = typeof value === "string" ? parseFloat(value) : value;
 

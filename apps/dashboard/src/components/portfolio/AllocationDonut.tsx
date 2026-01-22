@@ -383,7 +383,7 @@ function CustomTooltip({ active, payload }: CustomTooltipProps) {
  * Type guard to check if position is a streaming position
  */
 function isStreamingPosition(
-	position: Position | StreamingPosition
+	position: Position | StreamingPosition,
 ): position is StreamingPosition {
 	return "liveMarketValue" in position;
 }
@@ -454,8 +454,8 @@ export const AllocationDonut = memo(function AllocationDonut({
 				<div className="flex flex-col items-center gap-4">
 					<div className="h-32 w-32 rounded-full border-8 border-cream-100 dark:border-night-700 animate-pulse" />
 					<div className="w-full space-y-2">
-						{["", "", "", ""].map((_, i) => (
-							<div key={i} className="flex items-center justify-between">
+						{[1, 2, 3, 4].map((n) => (
+							<div key={`skeleton-${n}`} className="flex items-center justify-between">
 								<div className="h-4 w-20 bg-cream-100 dark:bg-night-700 rounded animate-pulse" />
 								<div className="h-4 w-12 bg-cream-100 dark:bg-night-700 rounded animate-pulse" />
 							</div>

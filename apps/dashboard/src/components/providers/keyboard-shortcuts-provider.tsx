@@ -346,7 +346,7 @@ export function KeyboardShortcutsProvider({
 			scope,
 			setScope,
 		}),
-		[register, unregister, getShortcuts, openHelp, closeHelp, isHelpOpen, scope]
+		[register, unregister, getShortcuts, openHelp, closeHelp, isHelpOpen, scope],
 	);
 
 	return (

@@ -24,7 +24,7 @@ import type { ButtonState, UseAsyncButtonOptions, UseAsyncButtonReturn } from ".
  */
 export function useAsyncButton<T>(
 	asyncFn: () => Promise<T>,
-	options: UseAsyncButtonOptions<T> = {}
+	options: UseAsyncButtonOptions<T> = {},
 ): UseAsyncButtonReturn {
 	const [state, setState] = useState<ButtonState>("idle");
 	const [error, setError] = useState<Error | null>(null);

@@ -107,7 +107,7 @@ function getROEVariant(value: number | null): "success" | "info" | "warning" | "
  * Get quality score badge variant
  */
 function getQualityVariant(
-	quality: "HIGH" | "MEDIUM" | "LOW" | null
+	quality: "HIGH" | "MEDIUM" | "LOW" | null,
 ): "success" | "info" | "warning" | "error" | "neutral" {
 	switch (quality) {
 		case "HIGH":
@@ -126,7 +126,7 @@ function getQualityVariant(
  * M-Score > -1.78 suggests earnings manipulation
  */
 function getMScoreVariant(
-	value: number | null
+	value: number | null,
 ): "success" | "info" | "warning" | "error" | "neutral" {
 	if (value === null) {
 		return "neutral";
@@ -145,7 +145,7 @@ function getMScoreVariant(
  * High accruals = lower earnings quality
  */
 function getAccrualsVariant(
-	value: number | null
+	value: number | null,
 ): "success" | "info" | "warning" | "error" | "neutral" {
 	if (value === null) {
 		return "neutral";

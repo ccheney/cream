@@ -160,7 +160,7 @@ async function fetchStatusNarrative(reasoning: string): Promise<NarrativeRespons
  */
 export function useStatusNarrative(
 	reasoningText: string,
-	isStreaming: boolean
+	isStreaming: boolean,
 ): UseStatusNarrativeResult {
 	const [narrative, setNarrative] = useState("Thinking...");
 	const [type, setType] = useState<ThoughtType>("observation");

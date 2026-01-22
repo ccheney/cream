@@ -130,7 +130,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
 			handleSignOut,
 			verifyTwoFactor,
 			refetch,
-		]
+		],
 	);
 
 	return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

@@ -72,7 +72,7 @@ export interface UseOptimisticUpdateReturn<TData, TVariables> {
 
 function useDebouncedCallback<TArgs extends unknown[]>(
 	callback: (...args: TArgs) => void,
-	delay: number
+	delay: number,
 ): (...args: TArgs) => void {
 	const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 	const callbackRef = useRef(callback);
@@ -92,7 +92,7 @@ function useDebouncedCallback<TArgs extends unknown[]>(
 				}, delay);
 			}
 		},
-		[delay]
+		[delay],
 	);
 }
 
@@ -122,7 +122,7 @@ function useDebouncedCallback<TArgs extends unknown[]>(
  * ```
  */
 export function useOptimisticUpdate<TData, TVariables>(
-	options: OptimisticUpdateOptions<TData, TVariables, OptimisticMutationContext<TData>>
+	options: OptimisticUpdateOptions<TData, TVariables, OptimisticMutationContext<TData>>,
 ): UseOptimisticUpdateReturn<TData, TVariables> {
 	const queryClient = useQueryClient();
 	const alert = useAlert();
@@ -213,7 +213,7 @@ export function useOptimisticUpdate<TData, TVariables>(
 	// Debounced mutate function
 	const debouncedMutate = useDebouncedCallback(
 		(variables: TVariables) => mutation.mutate(variables),
-		debounceMs
+		debounceMs,
 	);
 
 	return {
@@ -269,7 +269,7 @@ export function useOptimisticListUpdate<TItem extends { id: string }>(options: {
 			await queryClient.cancelQueries({ queryKey: options.queryKey });
 			const previousData = queryClient.getQueryData<TItem[]>(options.queryKey);
 			queryClient.setQueryData<TItem[]>(options.queryKey, (old) =>
-				(old || []).filter((item) => item.id !== id)
+				(old || []).filter((item) => item.id !== id),
 			);
 			return { previousData };
 		},
@@ -289,7 +289,7 @@ export function useOptimisticListUpdate<TItem extends { id: string }>(options: {
 			await queryClient.cancelQueries({ queryKey: options.queryKey });
 			const previousData = queryClient.getQueryData<TItem[]>(options.queryKey);
 			queryClient.setQueryData<TItem[]>(options.queryKey, (old) =>
-				(old || []).map((item) => (item.id === updates.id ? { ...item, ...updates } : item))
+				(old || []).map((item) => (item.id === updates.id ? { ...item, ...updates } : item)),
 			);
 			return { previousData };
 		},
@@ -339,7 +339,7 @@ export function useOptimisticListUpdate<TItem extends { id: string }>(options: {
 export function applyOptimisticUpdate<TData>(
 	queryClient: QueryClient,
 	queryKey: QueryKey,
-	newData: TData
+	newData: TData,
 ): () => void {
 	const previousData = queryClient.getQueryData<TData>(queryKey);
 	queryClient.setQueryData(queryKey, newData);

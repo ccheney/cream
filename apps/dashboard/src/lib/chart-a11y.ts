@@ -79,7 +79,7 @@ export function generateChartDescription(options: ChartDescriptionOptions): stri
 export function generateUpdateAnnouncement(
 	chartType: string,
 	newValue: number,
-	previousValue?: number
+	previousValue?: number,
 ): string {
 	const formatted = formatValue(newValue);
 
@@ -124,14 +124,14 @@ export function calculateStats(data: number[]): ChartStats {
 }
 
 export function calculateOHLCStats(
-	data: Array<{ close: number; time: string | number }>
+	data: Array<{ close: number; time: string | number }>,
 ): ChartStats {
 	const closes = data.map((d) => d.close);
 	return calculateStats(closes);
 }
 
 export function calculateEquityStats(
-	data: Array<{ value: number; time: string | number }>
+	data: Array<{ value: number; time: string | number }>,
 ): ChartStats {
 	const values = data.map((d) => d.value);
 	return calculateStats(values);
@@ -161,7 +161,7 @@ export interface KeyboardNavigationResult {
 export function handleDataPointNavigation(
 	event: KeyboardEvent,
 	currentIndex: number,
-	dataLength: number
+	dataLength: number,
 ): KeyboardNavigationResult {
 	switch (event.key) {
 		case KEYBOARD_KEYS.LEFT:
@@ -264,7 +264,7 @@ export function getFocusStyleString(): string {
  */
 export function createFocusTrap(container: HTMLElement): () => void {
 	const focusableElements = container.querySelectorAll<HTMLElement>(
-		'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])'
+		'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])',
 	);
 
 	const firstElement = focusableElements[0];
@@ -301,7 +301,7 @@ export function createFocusTrap(container: HTMLElement): () => void {
  */
 export function toAccessibleTableData<T extends Record<string, unknown>>(
 	data: T[],
-	columns: Array<{ key: keyof T; label: string; formatter?: (value: unknown) => string }>
+	columns: Array<{ key: keyof T; label: string; formatter?: (value: unknown) => string }>,
 ): {
 	headers: string[];
 	rows: string[][];
@@ -311,7 +311,7 @@ export function toAccessibleTableData<T extends Record<string, unknown>>(
 		columns.map((col) => {
 			const value = row[col.key];
 			return col.formatter ? col.formatter(value) : String(value ?? "");
-		})
+		}),
 	);
 
 	return { headers, rows };
@@ -322,7 +322,7 @@ export function toAccessibleTableData<T extends Record<string, unknown>>(
  */
 export function toCSV<T extends Record<string, unknown>>(
 	data: T[],
-	columns: Array<{ key: keyof T; label: string }>
+	columns: Array<{ key: keyof T; label: string }>,
 ): string {
 	const headers = columns.map((col) => `"${col.label}"`).join(",");
 	const rows = data.map((row) =>
@@ -333,7 +333,7 @@ export function toCSV<T extends Record<string, unknown>>(
 				// Escape quotes and wrap in quotes
 				return `"${str.replace(/"/g, '""')}"`;
 			})
-			.join(",")
+			.join(","),
 	);
 
 	return [headers, ...rows].join("\n");
@@ -348,7 +348,7 @@ export function toCSV<T extends Record<string, unknown>>(
  */
 export function checkContrastRatio(
 	foreground: string,
-	background: string
+	background: string,
 ): { ratio: number; passesAA: boolean; passesAAA: boolean } {
 	const fgLuminance = getRelativeLuminance(hexToRgb(foreground));
 	const bgLuminance = getRelativeLuminance(hexToRgb(background));

@@ -108,7 +108,7 @@ export function IndicatorDrawerToggle({ symbol, isOpen, onClick }: IndicatorDraw
 				queryKey: queryKeys.market.snapshot(symbol.toUpperCase()),
 				queryFn: async () => {
 					const { data } = await get<IndicatorSnapshot>(
-						`/api/market/snapshot/${symbol.toUpperCase()}`
+						`/api/market/snapshot/${symbol.toUpperCase()}`,
 					);
 					return data;
 				},

@@ -102,7 +102,7 @@ export function useCycleManagement(
 				environment?: string;
 				runningCycle?: { cycleId: string; phase?: string | null; startedAt: string } | null;
 		  }
-		| undefined
+		| undefined,
 ): UseCycleManagementResult {
 	const { cycle: activeCycle, isRunning: cycleIsRunning } = useActiveCycle();
 	const { setCycle, reset: resetCycle } = useCycleActions();
@@ -148,7 +148,7 @@ export function useCycleManagement(
 						startedAt: data.startedAt,
 					});
 				},
-			}
+			},
 		);
 	}, [statusData?.environment, useDraftConfig, triggerCycle, setCycle]);
 
@@ -228,7 +228,7 @@ export function formatPercent(value: number): string {
 export function getOODAPhaseStatus(
 	cardPhase: string,
 	currentPhase: CyclePhase | undefined,
-	isRunning: boolean
+	isRunning: boolean,
 ): "idle" | "active" | "complete" {
 	if (!isRunning || !currentPhase) {
 		return "idle";

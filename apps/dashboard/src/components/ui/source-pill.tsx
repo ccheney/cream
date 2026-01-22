@@ -166,7 +166,7 @@ export const SourcePill = memo(function SourcePill({
 				"no-underline",
 				sizeStyles.padding,
 				sizeStyles.fontSize,
-				className
+				className,
 			)}
 			{...props}
 		>
@@ -249,7 +249,7 @@ export const SourcePillList = memo(function SourcePillList({
 				<span
 					className={cn(
 						"text-stone-500 dark:text-stone-400",
-						size === "sm" ? "text-xs" : "text-sm"
+						size === "sm" ? "text-xs" : "text-sm",
 					)}
 				>
 					+{hiddenCount} more

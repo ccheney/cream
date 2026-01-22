@@ -25,7 +25,7 @@ export const CollapsibleTrigger = forwardRef<HTMLButtonElement, CollapsibleTrigg
 					"flex items-center justify-between w-full",
 					"text-left cursor-pointer",
 					"focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2",
-					className
+					className,
 				)}
 				{...props}
 			>
@@ -33,5 +33,5 @@ export const CollapsibleTrigger = forwardRef<HTMLButtonElement, CollapsibleTrigg
 				<ChevronIcon open={isOpen} />
 			</button>
 		);
-	}
+	},
 );

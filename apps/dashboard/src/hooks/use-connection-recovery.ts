@@ -207,7 +207,7 @@ export function getErrorMessage(error: ConnectionError): string {
 // ============================================
 
 export function useConnectionRecovery(
-	options: UseConnectionRecoveryOptions = {}
+	options: UseConnectionRecoveryOptions = {},
 ): UseConnectionRecoveryReturn {
 	const {
 		backoff: backoffConfig,
@@ -304,7 +304,7 @@ export function useConnectionRecovery(
 					if (showToasts) {
 						alert.warning(
 							"Connection Failed",
-							"Unable to reconnect after multiple attempts. Please refresh the page."
+							"Unable to reconnect after multiple attempts. Please refresh the page.",
 						);
 					}
 				}
@@ -343,7 +343,7 @@ export function useConnectionRecovery(
 			onMaxRetriesExceeded,
 			showToasts,
 			alert,
-		]
+		],
 	);
 
 	// Handle successful connection
@@ -371,7 +371,7 @@ export function useConnectionRecovery(
 			}
 			onDisconnect?.(connectionError);
 		},
-		[clearTimers, showToasts, alert, onDisconnect]
+		[clearTimers, showToasts, alert, onDisconnect],
 	);
 
 	// Handle error
@@ -391,7 +391,7 @@ export function useConnectionRecovery(
 				}
 			}
 		},
-		[showToasts, alert]
+		[showToasts, alert],
 	);
 
 	// Manual retry
@@ -499,7 +499,7 @@ export interface ConnectionStatusInfo {
 export function useConnectionStatusInfo(
 	state: ConnectionState,
 	retryCountdown: number | null,
-	retryAttempt: number
+	retryAttempt: number,
 ): ConnectionStatusInfo {
 	const isConnecting = state === "connecting" || state === "reconnecting";
 

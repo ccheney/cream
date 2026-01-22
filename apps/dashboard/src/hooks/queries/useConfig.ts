@@ -98,7 +98,7 @@ export function useSaveDraft(environment: Environment = "PAPER") {
 		mutationFn: async (updates: SaveDraftInput) => {
 			const { data } = await put<FullRuntimeConfig>(
 				`/api/config/draft?env=${environment}`,
-				updates
+				updates,
 			);
 			return data;
 		},
@@ -143,7 +143,7 @@ export function useRuntimeConfigHistory(environment: Environment = "PAPER", limi
 		queryKey: [...queryKeys.config.all, "history", environment, limit] as const,
 		queryFn: async () => {
 			const { data } = await get<ConfigHistoryEntry[]>(
-				`/api/config/history?env=${environment}&limit=${limit}`
+				`/api/config/history?env=${environment}&limit=${limit}`,
 			);
 			return data;
 		},

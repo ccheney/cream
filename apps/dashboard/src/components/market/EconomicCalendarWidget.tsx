@@ -123,7 +123,7 @@ function ImpactBadge({ impact }: { impact: ImpactLevel }) {
 			className={cn(
 				"inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-semibold uppercase",
 				config.bg,
-				config.text
+				config.text,
 			)}
 		>
 			<span className={cn("h-1.5 w-1.5 rounded-full", config.dotColor)} />
@@ -137,7 +137,7 @@ function EventRow({ event, compact }: { event: EconomicEvent; compact?: boolean 
 		<div
 			className={cn(
 				"flex items-start gap-3 py-2",
-				"border-b border-cream-200 dark:border-night-700 last:border-b-0"
+				"border-b border-cream-200 dark:border-night-700 last:border-b-0",
 			)}
 		>
 			<div className="flex-1 min-w-0">

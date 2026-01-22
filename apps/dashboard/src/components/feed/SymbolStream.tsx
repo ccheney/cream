@@ -106,7 +106,7 @@ export function SymbolStream({
 				total: prev.total + 1,
 			}));
 		},
-		[symbol, maxEvents]
+		[symbol, maxEvents],
 	);
 
 	// Process incoming WebSocket messages

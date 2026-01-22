@@ -48,7 +48,7 @@ function addSecurityHeaders(response: NextResponse): NextResponse {
 	if (isProduction) {
 		response.headers.set(
 			"Strict-Transport-Security",
-			"max-age=31536000; includeSubDomains; preload"
+			"max-age=31536000; includeSubDomains; preload",
 		);
 
 		// CSP in production (development needs unsafe-eval for HMR)
@@ -69,7 +69,7 @@ function addSecurityHeaders(response: NextResponse): NextResponse {
 				"object-src 'none'",
 				"base-uri 'self'",
 				"form-action 'self'",
-			].join("; ")
+			].join("; "),
 		);
 	}
 

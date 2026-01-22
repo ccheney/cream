@@ -148,7 +148,7 @@ export const PopoverTrigger = forwardRef<HTMLButtonElement, PopoverTriggerProps>
 					ref.current = node;
 				}
 			},
-			[ref, triggerRef]
+			[ref, triggerRef],
 		);
 
 		return (
@@ -165,7 +165,7 @@ export const PopoverTrigger = forwardRef<HTMLButtonElement, PopoverTriggerProps>
 				{children}
 			</button>
 		);
-	}
+	},
 );
 
 PopoverTrigger.displayName = "PopoverTrigger";
@@ -303,7 +303,7 @@ export const PopoverContent = forwardRef<HTMLDivElement, PopoverContentProps>(
 					ref.current = node;
 				}
 			},
-			[ref]
+			[ref],
 		);
 
 		if (!isOpen) {
@@ -321,7 +321,7 @@ export const PopoverContent = forwardRef<HTMLDivElement, PopoverContentProps>(
 					"bg-white dark:bg-stone-800 text-stone-900 dark:text-stone-100",
 					"rounded-lg shadow-lg border border-stone-200 dark:border-stone-700",
 					"animate-in fade-in-0 zoom-in-95 duration-150",
-					className
+					className,
 				)}
 				style={{
 					top: coords.top,
@@ -342,13 +342,14 @@ export const PopoverContent = forwardRef<HTMLDivElement, PopoverContentProps>(
 							"top-[-6px] left-1/2 -translate-x-1/2 border-t border-l",
 						adjustedPosition === "left" &&
 							"right-[-6px] top-1/2 -translate-y-1/2 border-t border-r",
-						adjustedPosition === "right" && "left-[-6px] top-1/2 -translate-y-1/2 border-b border-l"
+						adjustedPosition === "right" &&
+							"left-[-6px] top-1/2 -translate-y-1/2 border-b border-l",
 					)}
 					aria-hidden="true"
 				/>
 			</div>
 		);
-	}
+	},
 );
 
 PopoverContent.displayName = "PopoverContent";

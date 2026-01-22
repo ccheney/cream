@@ -86,7 +86,7 @@ function _getMACDColor(histogram: number | null, prevHistogram?: number | null):
  * Get momentum badge variant based on value
  */
 function getMomentumVariant(
-	value: number | null
+	value: number | null,
 ): "success" | "info" | "warning" | "error" | "neutral" {
 	if (value === null) {
 		return "neutral";

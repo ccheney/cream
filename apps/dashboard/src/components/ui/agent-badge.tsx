@@ -139,7 +139,7 @@ export const AgentBadge = forwardRef<HTMLSpanElement, AgentBadgeProps>(
 					sizeStyles.badge,
 					config.bgColor,
 					config.color,
-					className
+					className,
 				)}
 				title={config.label}
 				{...props}
@@ -147,7 +147,7 @@ export const AgentBadge = forwardRef<HTMLSpanElement, AgentBadgeProps>(
 				<span
 					className={cn(
 						"inline-flex items-center justify-center rounded-full font-semibold shrink-0",
-						sizeStyles.icon
+						sizeStyles.icon,
 					)}
 					aria-hidden="true"
 				>
@@ -156,7 +156,7 @@ export const AgentBadge = forwardRef<HTMLSpanElement, AgentBadgeProps>(
 				{showLabel && <span className={sizeStyles.text}>{config.label}</span>}
 			</span>
 		);
-	}
+	},
 );
 
 AgentBadge.displayName = "AgentBadge";

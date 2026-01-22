@@ -135,7 +135,7 @@ type ReasoningPhase = "gathering" | "analyzing" | "synthesizing" | "complete";
 function detectReasoningPhase(
 	reasoningText: string,
 	toolCallCount: number,
-	status: AgentStreamingState["status"]
+	status: AgentStreamingState["status"],
 ): ReasoningPhase {
 	if (status === "complete" || status === "error") {
 		return "complete";
@@ -910,7 +910,7 @@ function MarkdownContent({ content }: { content: string }) {
 					<div key={`bullet-${keyIndex++}`} className="flex items-start gap-2 my-1">
 						<span className="text-stone-400 mt-0.5">•</span>
 						<span>{parseInlineMarkdown(bulletMatch[1], keyIndex)}</span>
-					</div>
+					</div>,
 				);
 				continue;
 			}
@@ -919,7 +919,7 @@ function MarkdownContent({ content }: { content: string }) {
 			result.push(
 				<p key={`p-${keyIndex++}`} className="my-1">
 					{parseInlineMarkdown(line, keyIndex)}
-				</p>
+				</p>,
 			);
 		}
 
@@ -958,14 +958,14 @@ function parseInlineMarkdown(text: string, baseKey: number): React.ReactNode {
 					className="font-semibold text-stone-700 dark:text-stone-300"
 				>
 					{match[2]}
-				</strong>
+				</strong>,
 			);
 		} else if (match[3]) {
 			// Italic
 			parts.push(
 				<em key={`italic-${baseKey}-${partIndex++}`} className="italic">
 					{match[3]}
-				</em>
+				</em>,
 			);
 		}
 
@@ -1081,7 +1081,7 @@ export function AgentStreamingDetail({ agentType, state, cycleId }: AgentStreami
 	// Detect current reasoning phase
 	const currentPhase = useMemo(
 		() => detectReasoningPhase(state.reasoningText, state.toolCalls.length, state.status),
-		[state.reasoningText, state.toolCalls.length, state.status]
+		[state.reasoningText, state.toolCalls.length, state.status],
 	);
 
 	// Track duration while streaming (using backend timestamp)
@@ -1147,7 +1147,7 @@ export function AgentStreamingDetail({ agentType, state, cycleId }: AgentStreami
 				setReasoningOpen(false);
 			}
 		},
-		[reasoningOpen]
+		[reasoningOpen],
 	);
 
 	const statusLabel =

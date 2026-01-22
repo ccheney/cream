@@ -23,7 +23,7 @@ export default function ChartsPage() {
 			setIsNavigating(true);
 			router.push(`/charts/${symbol.toUpperCase()}`);
 		},
-		[router]
+		[router],
 	);
 
 	const handleSearchSubmit = useCallback(
@@ -33,7 +33,7 @@ export default function ChartsPage() {
 				handleSymbolSelect(searchValue.trim());
 			}
 		},
-		[searchValue, handleSymbolSelect]
+		[searchValue, handleSymbolSelect],
 	);
 
 	return (
@@ -130,7 +130,7 @@ export default function ChartsPage() {
 							>
 								{symbol}
 							</button>
-						)
+						),
 					)}
 				</div>
 			</div>

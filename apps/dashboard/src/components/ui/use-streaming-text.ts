@@ -40,7 +40,7 @@ export interface UseStreamingTextReturn {
 
 export function useStreamingText(
 	url: string | null,
-	options: UseStreamingTextOptions = {}
+	options: UseStreamingTextOptions = {},
 ): UseStreamingTextReturn {
 	const { autoConnect = false, debounceMs = 50, maxLength = 50000 } = options;
 
@@ -192,7 +192,7 @@ export function useManualStreaming(): UseManualStreamingReturn {
 				setStatus("processing");
 			}
 		},
-		[status]
+		[status],
 	);
 
 	const reset = useCallback(() => {

@@ -126,7 +126,7 @@ export function useModifyStop() {
 		onSuccess: (data, { positionId }) => {
 			queryClient.setQueryData(
 				queryKeys.portfolio.position(positionId),
-				(old: PositionDetail | undefined) => (old ? { ...old, stop: data.stop } : undefined)
+				(old: PositionDetail | undefined) => (old ? { ...old, stop: data.stop } : undefined),
 			);
 			queryClient.invalidateQueries({ queryKey: queryKeys.portfolio.positions() });
 		},
@@ -146,7 +146,7 @@ export function useModifyTarget() {
 		onSuccess: (data, { positionId }) => {
 			queryClient.setQueryData(
 				queryKeys.portfolio.position(positionId),
-				(old: PositionDetail | undefined) => (old ? { ...old, target: data.target } : undefined)
+				(old: PositionDetail | undefined) => (old ? { ...old, target: data.target } : undefined),
 			);
 			queryClient.invalidateQueries({ queryKey: queryKeys.portfolio.positions() });
 		},

@@ -44,7 +44,7 @@ export function useTickHistory(options: UseTickHistoryOptions = {}): UseTickHist
 
 			lastPriceRef.current = price;
 		},
-		[maxTicks]
+		[maxTicks],
 	);
 
 	const clearTicks = useCallback(() => {
@@ -91,7 +91,7 @@ export interface UseMultiTickHistoryResult {
  * ```
  */
 export function useMultiTickHistory(
-	options: UseTickHistoryOptions = {}
+	options: UseTickHistoryOptions = {},
 ): UseMultiTickHistoryResult {
 	const { maxTicks = 8 } = options;
 
@@ -128,7 +128,7 @@ export function useMultiTickHistory(
 
 			lastPricesRef.current.set(symbol, price);
 		},
-		[maxTicks]
+		[maxTicks],
 	);
 
 	const clearTicks = useCallback((symbol: string) => {

@@ -46,7 +46,7 @@ export default function AuthLayout({ children }: { children: React.ReactNode }) 
 		(symbol: string) => {
 			router.push(`/charts/${symbol}`);
 		},
-		[router]
+		[router],
 	);
 
 	const handleSymbolAdd = useCallback(() => {
@@ -57,7 +57,7 @@ export default function AuthLayout({ children }: { children: React.ReactNode }) 
 		(symbol: string) => {
 			addSymbol(symbol);
 		},
-		[addSymbol]
+		[addSymbol],
 	);
 
 	// Redirect to login if not authenticated

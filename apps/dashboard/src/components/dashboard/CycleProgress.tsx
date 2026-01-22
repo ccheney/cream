@@ -83,7 +83,7 @@ export function CycleProgress({ cycleId, onComplete, onError }: CycleProgressPro
 						className={cn(
 							"text-sm font-medium shrink-0",
 							colors.text,
-							status === "running" && "animate-pulse"
+							status === "running" && "animate-pulse",
 						)}
 					>
 						{phaseLabel}
@@ -111,7 +111,7 @@ export function CycleProgress({ cycleId, onComplete, onError }: CycleProgressPro
 					className={cn(
 						"h-full rounded-full transition-all duration-300 ease-out",
 						colors.bar,
-						status === "running" && "animate-pulse"
+						status === "running" && "animate-pulse",
 					)}
 					style={{ width: `${Math.min(100, Math.max(0, percentage))}%` }}
 				/>

@@ -84,7 +84,7 @@ function StatusDot({ status }: { status: DotStatus }) {
 				status === "idle" && "bg-stone-400 dark:bg-night-500",
 				status === "running" && "bg-amber-500 animate-pulse",
 				status === "success" && "bg-emerald-500",
-				status === "failed" && "bg-red-500"
+				status === "failed" && "bg-red-500",
 			)}
 		/>
 	);
@@ -213,7 +213,7 @@ function ServiceStatusCardComponent({
 							key={source.label}
 							className={cn(
 								"inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium",
-								source.color
+								source.color,
 							)}
 						>
 							{source.label}
@@ -232,7 +232,7 @@ function ServiceStatusCardComponent({
 						"inline-flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium rounded-md transition-colors",
 						isDisabled
 							? "bg-stone-100 dark:bg-night-700 text-stone-400 dark:text-night-500 cursor-not-allowed"
-							: "bg-cream-100 dark:bg-night-700 text-stone-700 dark:text-night-100 hover:bg-cream-200 dark:hover:bg-night-600"
+							: "bg-cream-100 dark:bg-night-700 text-stone-700 dark:text-night-100 hover:bg-cream-200 dark:hover:bg-night-600",
 					)}
 				>
 					<Play className={cn("w-3.5 h-3.5", isPending && "animate-spin")} />

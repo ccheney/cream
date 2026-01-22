@@ -76,7 +76,7 @@ export const AddSymbolModal = memo(function AddSymbolModal({
 
 			return null;
 		},
-		[existingSymbols]
+		[existingSymbols],
 	);
 
 	const handleChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
@@ -105,7 +105,7 @@ export const AddSymbolModal = memo(function AddSymbolModal({
 				handleSubmit();
 			}
 		},
-		[handleSubmit]
+		[handleSubmit],
 	);
 
 	const handleQuickSelect = useCallback(
@@ -117,7 +117,7 @@ export const AddSymbolModal = memo(function AddSymbolModal({
 			onAdd(sym);
 			handleClose();
 		},
-		[existingSymbols, onAdd, handleClose]
+		[existingSymbols, onAdd, handleClose],
 	);
 
 	const availablePopular = POPULAR_SYMBOLS.filter((s) => !existingSymbols.includes(s));

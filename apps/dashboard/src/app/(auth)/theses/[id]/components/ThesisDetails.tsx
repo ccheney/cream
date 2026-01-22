@@ -57,7 +57,7 @@ function CoreThesis({ text }: { text: string }) {
 
 interface KeyMetricsProps {
 	timeHorizon: string;
-	confidence: number;
+	confidence: number | null;
 	targetPrice: number | null;
 	stopPrice: number | null;
 }
@@ -73,7 +73,7 @@ function KeyMetrics({ timeHorizon, confidence, targetPrice, stopPrice }: KeyMetr
 			<MetricCard
 				icon={<Target className="w-5 h-5 text-stone-500 dark:text-night-300" />}
 				label="Confidence"
-				value={`${(confidence * 100).toFixed(0)}%`}
+				value={confidence != null ? `${(confidence * 100).toFixed(0)}%` : "--"}
 			/>
 			<MetricCard
 				icon={<TrendingUp className="w-5 h-5 text-green-500" />}

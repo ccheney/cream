@@ -21,53 +21,53 @@
  * Text: Stone colors - Warm, readable hierarchy
  */
 :root {
-  /* Primary — Warm amber-gold, the Cream signature */
-  --sx-color-primary: #D97706;
-  --sx-color-on-primary: #FFFFFF;
-  --sx-color-primary-container: #FEF3C7;
-  --sx-color-on-primary-container: #78350F;
+	/* Primary — Warm amber-gold, the Cream signature */
+	--sx-color-primary: #d97706;
+	--sx-color-on-primary: #ffffff;
+	--sx-color-primary-container: #fef3c7;
+	--sx-color-on-primary-container: #78350f;
 
-  /* Secondary — Stone, warm grays */
-  --sx-color-secondary: #7A746B;
-  --sx-color-on-secondary: #FFFFFF;
-  --sx-color-secondary-container: #F5F1EA;
-  --sx-color-on-secondary-container: #3D3832;
+	/* Secondary — Stone, warm grays */
+	--sx-color-secondary: #7a746b;
+	--sx-color-on-secondary: #ffffff;
+	--sx-color-secondary-container: #f5f1ea;
+	--sx-color-on-secondary-container: #3d3832;
 
-  /* Tertiary — Orange accent */
-  --sx-color-tertiary: #F97316;
-  --sx-color-on-tertiary: #FFFFFF;
-  --sx-color-tertiary-container: #FFEDD5;
-  --sx-color-on-tertiary-container: #7C2D12;
+	/* Tertiary — Orange accent */
+	--sx-color-tertiary: #f97316;
+	--sx-color-on-tertiary: #ffffff;
+	--sx-color-tertiary-container: #ffedd5;
+	--sx-color-on-tertiary-container: #7c2d12;
 
-  /* Surfaces — Cream palette */
-  --sx-color-surface: #FFFDF9;
-  --sx-color-surface-dim: #F5F1EA;
-  --sx-color-surface-bright: #FFFDF9;
-  --sx-color-on-surface: #3D3832;
-  --sx-color-surface-container: #FBF8F3;
-  --sx-color-surface-container-low: #FFFDF9;
-  --sx-color-surface-container-high: #F5F1EA;
+	/* Surfaces — Cream palette */
+	--sx-color-surface: #fffdf9;
+	--sx-color-surface-dim: #f5f1ea;
+	--sx-color-surface-bright: #fffdf9;
+	--sx-color-on-surface: #3d3832;
+	--sx-color-surface-container: #fbf8f3;
+	--sx-color-surface-container-low: #fffdf9;
+	--sx-color-surface-container-high: #f5f1ea;
 
-  /* Background */
-  --sx-color-background: #FFFDF9;
-  --sx-color-on-background: #1C1917;
+	/* Background */
+	--sx-color-background: #fffdf9;
+	--sx-color-on-background: #1c1917;
 
-  /* Outline & Borders */
-  --sx-color-outline: #A8A198;
-  --sx-color-outline-variant: #EBE5DA;
+	/* Outline & Borders */
+	--sx-color-outline: #a8a198;
+	--sx-color-outline-variant: #ebe5da;
 
-  /* Shadows & Tint */
-  --sx-color-shadow: rgba(28, 25, 23, 0.08);
-  --sx-color-surface-tint: #D97706;
+	/* Shadows & Tint */
+	--sx-color-shadow: rgba(28, 25, 23, 0.08);
+	--sx-color-surface-tint: #d97706;
 
-  /* Neutral — For disabled/muted states */
-  --sx-color-neutral: #7A746B;
-  --sx-color-neutral-variant: #A8A198;
+	/* Neutral — For disabled/muted states */
+	--sx-color-neutral: #7a746b;
+	--sx-color-neutral-variant: #a8a198;
 
-  /* Internal colors */
-  --sx-internal-color-gray-ripple-background: #EBE5DA;
-  --sx-internal-color-light-gray: #FBF8F3;
-  --sx-internal-color-text: #3D3832;
+	/* Internal colors */
+	--sx-internal-color-gray-ripple-background: #ebe5da;
+	--sx-internal-color-light-gray: #fbf8f3;
+	--sx-internal-color-text: #3d3832;
 }
 
 /*
@@ -81,53 +81,53 @@
  * Text: Night light scale - Warm, not cold white
  */
 .is-dark {
-  /* Primary — Lighter amber for dark mode contrast */
-  --sx-color-primary: #FBBF24;
-  --sx-color-on-primary: #78350F;
-  --sx-color-primary-container: #92400E;
-  --sx-color-on-primary-container: #FEF3C7;
+	/* Primary — Lighter amber for dark mode contrast */
+	--sx-color-primary: #fbbf24;
+	--sx-color-on-primary: #78350f;
+	--sx-color-primary-container: #92400e;
+	--sx-color-on-primary-container: #fef3c7;
 
-  /* Secondary — Night warm light scale */
-  --sx-color-secondary: #A8A29E;
-  --sx-color-on-secondary: #1C1917;
-  --sx-color-secondary-container: #46413D;
-  --sx-color-on-secondary-container: #E7E5E4;
+	/* Secondary — Night warm light scale */
+	--sx-color-secondary: #a8a29e;
+	--sx-color-on-secondary: #1c1917;
+	--sx-color-secondary-container: #46413d;
+	--sx-color-on-secondary-container: #e7e5e4;
 
-  /* Tertiary — Orange accent (lighter) */
-  --sx-color-tertiary: #FB923C;
-  --sx-color-on-tertiary: #7C2D12;
-  --sx-color-tertiary-container: #7C2D12;
-  --sx-color-on-tertiary-container: #FFEDD5;
+	/* Tertiary — Orange accent (lighter) */
+	--sx-color-tertiary: #fb923c;
+	--sx-color-on-tertiary: #7c2d12;
+	--sx-color-tertiary-container: #7c2d12;
+	--sx-color-on-tertiary-container: #ffedd5;
 
-  /* Surfaces — Night palette (warm charcoal) */
-  --sx-color-surface: #1F1C1A;
-  --sx-color-surface-dim: #141211;
-  --sx-color-surface-bright: #2D2926;
-  --sx-color-on-surface: #D6D3D1;
-  --sx-color-surface-container: #1F1C1A;
-  --sx-color-surface-container-low: #141211;
-  --sx-color-surface-container-high: #2D2926;
+	/* Surfaces — Night palette (warm charcoal) */
+	--sx-color-surface: #1f1c1a;
+	--sx-color-surface-dim: #141211;
+	--sx-color-surface-bright: #2d2926;
+	--sx-color-on-surface: #d6d3d1;
+	--sx-color-surface-container: #1f1c1a;
+	--sx-color-surface-container-low: #141211;
+	--sx-color-surface-container-high: #2d2926;
 
-  /* Background */
-  --sx-color-background: #141211;
-  --sx-color-on-background: #E7E5E4;
+	/* Background */
+	--sx-color-background: #141211;
+	--sx-color-on-background: #e7e5e4;
 
-  /* Outline & Borders */
-  --sx-color-outline: #5F5954;
-  --sx-color-outline-variant: #46413D;
+	/* Outline & Borders */
+	--sx-color-outline: #5f5954;
+	--sx-color-outline-variant: #46413d;
 
-  /* Shadows & Tint */
-  --sx-color-shadow: rgba(0, 0, 0, 0.3);
-  --sx-color-surface-tint: #FBBF24;
+	/* Shadows & Tint */
+	--sx-color-shadow: rgba(0, 0, 0, 0.3);
+	--sx-color-surface-tint: #fbbf24;
 
-  /* Neutral — For disabled/muted states */
-  --sx-color-neutral: #78716C;
-  --sx-color-neutral-variant: #5F5954;
+	/* Neutral — For disabled/muted states */
+	--sx-color-neutral: #78716c;
+	--sx-color-neutral-variant: #5f5954;
 
-  /* Internal colors */
-  --sx-internal-color-gray-ripple-background: #2D2926;
-  --sx-internal-color-light-gray: #1F1C1A;
-  --sx-internal-color-text: #D6D3D1;
+	/* Internal colors */
+	--sx-internal-color-gray-ripple-background: #2d2926;
+	--sx-internal-color-light-gray: #1f1c1a;
+	--sx-internal-color-text: #d6d3d1;
 }
 
 /* ============================================
@@ -136,93 +136,93 @@
 
 /* Compact header */
 .sx__calendar-header {
-  padding: 0.5rem 0.75rem;
-  gap: 0.5rem;
-  min-height: auto;
+	padding: 0.5rem 0.75rem;
+	gap: 0.5rem;
+	min-height: auto;
 }
 
 /* Smaller Today button */
 .sx__today-button {
-  padding: 0.25rem 0.625rem;
-  font-size: 0.75rem;
-  font-weight: 500;
-  border-radius: 0.375rem;
+	padding: 0.25rem 0.625rem;
+	font-size: 0.75rem;
+	font-weight: 500;
+	border-radius: 0.375rem;
 }
 
 /* Compact navigation arrows */
 .sx__forward-backward-navigation {
-  gap: 0.125rem;
+	gap: 0.125rem;
 }
 
 .sx__forward-backward-navigation button {
-  padding: 0.25rem;
-  width: 1.75rem;
-  height: 1.75rem;
+	padding: 0.25rem;
+	width: 1.75rem;
+	height: 1.75rem;
 }
 
 .sx__forward-backward-navigation svg {
-  width: 1rem;
-  height: 1rem;
+	width: 1rem;
+	height: 1rem;
 }
 
 /* Smaller month/year heading */
 .sx__range-heading {
-  font-size: 0.875rem;
-  font-weight: 600;
-  padding: 0 0.25rem;
+	font-size: 0.875rem;
+	font-weight: 600;
+	padding: 0 0.25rem;
 }
 
 /* Compact view selector - match date picker style */
 .sx__view-selection {
-  padding: 0.375rem 0.75rem;
-  font-size: 0.75rem;
-  border-radius: 0.375rem;
-  min-width: 5.5rem;
+	padding: 0.375rem 0.75rem;
+	font-size: 0.75rem;
+	border-radius: 0.375rem;
+	min-width: 5.5rem;
 }
 
 .sx__view-selection__selected-item {
-  font-size: 0.75rem;
-  gap: 0.375rem;
-  justify-content: space-between;
-  width: 100%;
+	font-size: 0.75rem;
+	gap: 0.375rem;
+	justify-content: space-between;
+	width: 100%;
 }
 
 .sx__view-selection svg {
-  width: 0.75rem;
-  height: 0.75rem;
+	width: 0.75rem;
+	height: 0.75rem;
 }
 
 /* Compact date picker */
 .sx__date-input {
-  padding: 0.375rem 0.75rem;
-  font-size: 0.75rem;
-  border-radius: 0.375rem;
-  min-width: 5.5rem;
+	padding: 0.375rem 0.75rem;
+	font-size: 0.75rem;
+	border-radius: 0.375rem;
+	min-width: 5.5rem;
 }
 
 .sx__date-input__chevron-wrapper svg {
-  width: 0.875rem;
-  height: 0.875rem;
+	width: 0.875rem;
+	height: 0.875rem;
 }
 
 /* Hide fieldset borders/labels for cleaner look */
 .sx__view-selection fieldset,
 .sx__date-input fieldset {
-  border: none;
-  padding: 0;
-  margin: 0;
+	border: none;
+	padding: 0;
+	margin: 0;
 }
 
 .sx__view-selection legend,
 .sx__date-input legend {
-  display: none;
+	display: none;
 }
 
 /* Compact dropdown menus */
 .sx__view-selection__options {
-  font-size: 0.75rem;
+	font-size: 0.75rem;
 }
 
 .sx__view-selection__option {
-  padding: 0.375rem 0.75rem;
+	padding: 0.375rem 0.75rem;
 }

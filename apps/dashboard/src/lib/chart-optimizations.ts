@@ -137,7 +137,7 @@ export function downsampleLTTB(data: Point[], options: DownsampleOptions): Point
 			}
 			// Calculate triangle area using cross product
 			const area = Math.abs(
-				(pointA.x - avgX) * (pointJ.y - pointA.y) - (pointA.x - pointJ.x) * (avgY - pointA.y)
+				(pointA.x - avgX) * (pointJ.y - pointA.y) - (pointA.x - pointJ.x) * (avgY - pointA.y),
 			);
 
 			if (area > maxArea) {
@@ -376,7 +376,7 @@ export function getVisibleWindow<T>(
 	data: T[],
 	startIndex: number,
 	endIndex: number,
-	overscan = 5
+	overscan = 5,
 ): T[] {
 	const start = Math.max(0, startIndex - overscan);
 	const end = Math.min(data.length, endIndex + overscan);
@@ -390,7 +390,7 @@ export function calculateVisibleRange(
 	containerWidth: number,
 	scrollLeft: number,
 	itemWidth: number,
-	totalItems: number
+	totalItems: number,
 ): { startIndex: number; endIndex: number } {
 	const startIndex = Math.floor(scrollLeft / itemWidth);
 	const visibleItems = Math.ceil(containerWidth / itemWidth);
@@ -458,7 +458,7 @@ export class LRUCache<K, V> {
 export function memoize<Args extends unknown[], Result>(
 	fn: (...args: Args) => Result,
 	keyFn?: (...args: Args) => string,
-	maxSize = 100
+	maxSize = 100,
 ): (...args: Args) => Result {
 	const cache = new LRUCache<string, Result>(maxSize);
 
@@ -486,7 +486,7 @@ export function memoize<Args extends unknown[], Result>(
 export async function processBatched<T, R>(
 	data: T[],
 	processor: (item: T) => R,
-	batchSize = 1000
+	batchSize = 1000,
 ): Promise<R[]> {
 	const results: R[] = [];
 
@@ -509,7 +509,7 @@ export async function processBatched<T, R>(
  */
 export function throttle<T extends (...args: unknown[]) => unknown>(
 	fn: T,
-	limit: number
+	limit: number,
 ): (...args: Parameters<T>) => void {
 	let inThrottle = false;
 	let lastArgs: Parameters<T> | null = null;

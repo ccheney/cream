@@ -31,7 +31,7 @@ export default function ConfigEditPage() {
 			await saveDraft.mutateAsync(updates);
 			setHasUnsavedChanges(false);
 		},
-		[saveDraft]
+		[saveDraft],
 	);
 
 	const handleValidate = useCallback(async () => {

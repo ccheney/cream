@@ -127,7 +127,7 @@ export function getErrorType(error: unknown): ApiErrorType {
  * Check if error is a response error with status code.
  */
 export function isResponseError(
-	error: unknown
+	error: unknown,
 ): error is { status?: number; statusCode?: number; message?: string } {
 	return (
 		typeof error === "object" && error !== null && ("status" in error || "statusCode" in error)
@@ -341,7 +341,7 @@ export class ErrorHandler {
  * ```
  */
 export function createQueryErrorHandler(
-	toastError: (message: string, options?: { title?: string }) => void
+	toastError: (message: string, options?: { title?: string }) => void,
 ) {
 	return (error: unknown) => {
 		const parsed = parseError(error);

@@ -32,7 +32,7 @@ export function ChartEmpty({
 }
 
 export function NoPositionsEmpty(
-	props: Omit<ChartEmptyProps, "icon" | "title">
+	props: Omit<ChartEmptyProps, "icon" | "title">,
 ): React.ReactElement {
 	return (
 		<ChartEmpty
@@ -45,7 +45,7 @@ export function NoPositionsEmpty(
 }
 
 export function NoDecisionsEmpty(
-	props: Omit<ChartEmptyProps, "icon" | "title">
+	props: Omit<ChartEmptyProps, "icon" | "title">,
 ): React.ReactElement {
 	return (
 		<ChartEmpty
@@ -69,7 +69,7 @@ export function NoTradesEmpty(props: Omit<ChartEmptyProps, "icon" | "title">): R
 }
 
 export function NoCorrelationEmpty(
-	props: Omit<ChartEmptyProps, "icon" | "title">
+	props: Omit<ChartEmptyProps, "icon" | "title">,
 ): React.ReactElement {
 	return (
 		<ChartEmpty

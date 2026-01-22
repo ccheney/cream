@@ -128,7 +128,7 @@ export function ErrorPanel({
 				onDismiss();
 			}
 		},
-		[dismissible, onDismiss]
+		[dismissible, onDismiss],
 	);
 
 	useEffect(() => {

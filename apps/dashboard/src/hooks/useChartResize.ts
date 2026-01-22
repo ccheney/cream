@@ -110,7 +110,7 @@ const DEFAULT_OPTIONS: Required<
  */
 export function debounce<T extends (...args: unknown[]) => unknown>(
 	fn: T,
-	delay: number
+	delay: number,
 ): (...args: Parameters<T>) => void {
 	let timeoutId: ReturnType<typeof setTimeout> | null = null;
 
@@ -157,7 +157,7 @@ export function clamp(value: number, min?: number, max?: number): number {
  */
 export function calculateDimensions(
 	containerWidth: number,
-	options: UseChartResizeOptions
+	options: UseChartResizeOptions,
 ): ChartDimensions {
 	const {
 		aspectRatio = DEFAULT_OPTIONS.aspectRatio,
@@ -330,7 +330,7 @@ export function useChartResize(options: UseChartResizeOptions = {}): UseChartRes
  * Hook for widescreen charts (16:9).
  */
 export function useWidescreenChart(
-	options?: Omit<UseChartResizeOptions, "aspectRatio">
+	options?: Omit<UseChartResizeOptions, "aspectRatio">,
 ): UseChartResizeReturn {
 	return useChartResize({
 		...options,
@@ -342,7 +342,7 @@ export function useWidescreenChart(
  * Hook for square charts (1:1).
  */
 export function useSquareChart(
-	options?: Omit<UseChartResizeOptions, "aspectRatio">
+	options?: Omit<UseChartResizeOptions, "aspectRatio">,
 ): UseChartResizeReturn {
 	return useChartResize({
 		...options,
@@ -355,7 +355,7 @@ export function useSquareChart(
  */
 export function useSparklineSize(
 	height = 32,
-	options?: Omit<UseChartResizeOptions, "fixedHeight">
+	options?: Omit<UseChartResizeOptions, "fixedHeight">,
 ): UseChartResizeReturn {
 	return useChartResize({
 		...options,
@@ -367,7 +367,7 @@ export function useSparklineSize(
  * Hook for ultrawide charts (21:9).
  */
 export function useUltrawideChart(
-	options?: Omit<UseChartResizeOptions, "aspectRatio">
+	options?: Omit<UseChartResizeOptions, "aspectRatio">,
 ): UseChartResizeReturn {
 	return useChartResize({
 		...options,

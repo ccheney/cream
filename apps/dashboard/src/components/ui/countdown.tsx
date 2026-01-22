@@ -49,7 +49,7 @@ const UPDATE_INTERVAL = 1000;
 function calculateCountdownState(
 	targetTime: Date,
 	warningThreshold: number,
-	criticalThreshold: number
+	criticalThreshold: number,
 ): CountdownState {
 	const now = Date.now();
 	const target = targetTime.getTime();
@@ -136,7 +136,7 @@ export function useCountdown(
 		onComplete?: () => void;
 		warningThreshold?: number;
 		criticalThreshold?: number;
-	} = {}
+	} = {},
 ): CountdownState {
 	const {
 		onComplete,
@@ -145,7 +145,7 @@ export function useCountdown(
 	} = options;
 
 	const [state, setState] = useState<CountdownState>(() =>
-		calculateCountdownState(targetTime, warningThreshold, criticalThreshold)
+		calculateCountdownState(targetTime, warningThreshold, criticalThreshold),
 	);
 
 	const onCompleteRef = useRef(onComplete);

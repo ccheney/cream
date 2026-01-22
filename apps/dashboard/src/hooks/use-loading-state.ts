@@ -72,7 +72,7 @@ export interface UseLoadingStateOptions {
  */
 export function useLoadingState(
 	key: LoadingKey,
-	options: UseLoadingStateOptions = {}
+	options: UseLoadingStateOptions = {},
 ): UseLoadingStateReturn {
 	const { autoCleanup = true, initialLoading = false, initialOptions } = options;
 
@@ -108,7 +108,7 @@ export function useLoadingState(
 		(opts?: LoadingOptions) => {
 			store.startLoading(key, opts);
 		},
-		[key, store]
+		[key, store],
 	);
 
 	const stopLoading = useCallback(() => {
@@ -119,7 +119,7 @@ export function useLoadingState(
 		(loading: boolean, opts?: LoadingOptions) => {
 			store.setLoading(key, loading, opts);
 		},
-		[key, store]
+		[key, store],
 	);
 
 	return {
@@ -169,7 +169,7 @@ export interface UseMultiLoadingStateReturn {
  */
 export function useMultiLoadingState(
 	keys: LoadingKey[],
-	options: { autoCleanup?: boolean } = {}
+	options: { autoCleanup?: boolean } = {},
 ): UseMultiLoadingStateReturn {
 	const { autoCleanup = true } = options;
 	const store = useLoadingStore();
@@ -199,14 +199,14 @@ export function useMultiLoadingState(
 		(key: LoadingKey, opts?: LoadingOptions) => {
 			store.startLoading(key, opts);
 		},
-		[store]
+		[store],
 	);
 
 	const stopLoading = useCallback(
 		(key: LoadingKey) => {
 			store.stopLoading(key);
 		},
-		[store]
+		[store],
 	);
 
 	const loadingKeys = keys.filter((key) => store.isLoading(key));
@@ -264,7 +264,7 @@ export function useGlobalLoadingState(): UseGlobalLoadingReturn {
 
 	const isLoadingByPrefix = useCallback(
 		(prefix: string) => store.isLoadingByPrefix(prefix),
-		[store]
+		[store],
 	);
 
 	const clearAll = useCallback(() => {
@@ -304,7 +304,7 @@ export function useGlobalLoadingState(): UseGlobalLoadingReturn {
 export function withLoading<T>(
 	fn: () => Promise<T>,
 	startLoading: () => void,
-	stopLoading: () => void
+	stopLoading: () => void,
 ): () => Promise<T> {
 	return async () => {
 		startLoading();

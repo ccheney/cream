@@ -112,13 +112,13 @@ export const OptionsChainTable = memo(function OptionsChainTable({
 				const row = chain.find(
 					(r) =>
 						(type === "call" && r.call?.symbol === contract.symbol) ||
-						(type === "put" && r.put?.symbol === contract.symbol)
+						(type === "put" && r.put?.symbol === contract.symbol),
 				);
 				const strike = row?.strike ?? 0;
 				onContractClick(contract, type, strike);
 			}
 		},
-		[chain, onContractClick]
+		[chain, onContractClick],
 	);
 
 	if (chain.length === 0) {

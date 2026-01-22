@@ -122,7 +122,7 @@ export interface MAOverlay {
  */
 export function calculateMAOverlays(
 	candles: OHLCVData[],
-	enabledMAs: string[] = ["sma20", "sma50", "sma200"]
+	enabledMAs: string[] = ["sma20", "sma50", "sma200"],
 ): MAOverlay[] {
 	const overlays: MAOverlay[] = [];
 

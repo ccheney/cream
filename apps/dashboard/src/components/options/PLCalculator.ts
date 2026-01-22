@@ -64,7 +64,7 @@ function blackScholes(
 	T: number,
 	sigma: number,
 	isCall: boolean,
-	r: number = DEFAULT_RISK_FREE_RATE
+	r: number = DEFAULT_RISK_FREE_RATE,
 ): number {
 	if (T <= 0) {
 		return isCall ? Math.max(0, S - K) : Math.max(0, K - S);
@@ -116,7 +116,7 @@ export function generatePLData(
 		rangePercent?: number;
 		points?: number;
 		dte?: number;
-	} = {}
+	} = {},
 ): PLDataPoint[] {
 	const { rangePercent = 20, points = 100, dte = 30 } = options;
 

@@ -119,7 +119,7 @@ function NewspaperDetails({ newspaper }: { newspaper: NewspaperData | null }) {
 
 	const sections = newspaper.sections as Record<string, string[]>;
 	const sectionEntries = Object.entries(sections).filter(
-		([, bullets]) => Array.isArray(bullets) && bullets.length > 0
+		([, bullets]) => Array.isArray(bullets) && bullets.length > 0,
 	);
 
 	return (

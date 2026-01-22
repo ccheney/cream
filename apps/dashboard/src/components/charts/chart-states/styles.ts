@@ -92,13 +92,13 @@ export const shimmerKeyframes = `
 `;
 
 export function handleButtonHover(
-	e: React.MouseEvent<HTMLButtonElement> | React.FocusEvent<HTMLButtonElement>
+	e: React.MouseEvent<HTMLButtonElement> | React.FocusEvent<HTMLButtonElement>,
 ): void {
 	e.currentTarget.style.backgroundColor = "#b45309"; // amber-700
 }
 
 export function handleButtonReset(
-	e: React.MouseEvent<HTMLButtonElement> | React.FocusEvent<HTMLButtonElement>
+	e: React.MouseEvent<HTMLButtonElement> | React.FocusEvent<HTMLButtonElement>,
 ): void {
 	e.currentTarget.style.backgroundColor = "#d97706"; // amber-600
 }

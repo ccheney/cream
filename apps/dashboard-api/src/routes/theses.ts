@@ -36,7 +36,7 @@ const ThesisSchema = z.object({
 	targetPrice: z.number().nullable(),
 	stopPrice: z.number().nullable(),
 	timeHorizon: z.enum(["INTRADAY", "SWING", "POSITION", "LONG_TERM"]),
-	confidence: z.number().min(0).max(1),
+	confidence: z.number().min(0).max(1).nullable(),
 	status: ThesisStatusSchema,
 	entryPrice: z.number().nullable(),
 	currentPrice: z.number().nullable(),
@@ -50,7 +50,7 @@ const ThesisSchema = z.object({
 			type: z.enum(["technical", "fundamental", "sentiment", "macro"]),
 			summary: z.string(),
 			weight: z.number(),
-		})
+		}),
 	),
 });
 
@@ -63,7 +63,7 @@ const CreateThesisSchema = z.object({
 	targetPrice: z.number().nullable(),
 	stopPrice: z.number().nullable(),
 	timeHorizon: z.enum(["INTRADAY", "SWING", "POSITION", "LONG_TERM"]),
-	confidence: z.number().min(0).max(1),
+	confidence: z.number().min(0).max(1).nullable(),
 	expiresAt: z.string().nullable(),
 });
 
@@ -131,7 +131,7 @@ function mapThesisToResponse(thesis: Thesis): z.infer<typeof ThesisSchema> {
 		targetPrice: thesis.currentTarget,
 		stopPrice: thesis.currentStop,
 		timeHorizon: (notes.timeHorizon as "INTRADAY" | "SWING" | "POSITION" | "LONG_TERM") ?? "SWING",
-		confidence: thesis.conviction ?? 0.5,
+		confidence: thesis.conviction,
 		status: mapStateToStatus(thesis.state),
 		entryPrice: thesis.entryPrice,
 		currentPrice: null, // Would need market data to populate
@@ -231,7 +231,7 @@ app.openapi(createThesisRoute, async (c) => {
 		state: "WATCHING",
 		entryThesis: body.thesis,
 		invalidationConditions: body.invalidationConditions.join("; "),
-		conviction: body.confidence,
+		conviction: body.confidence ?? undefined,
 		currentStop: body.stopPrice ?? undefined,
 		currentTarget: body.targetPrice ?? undefined,
 		environment: getCurrentEnvironment(),
@@ -326,8 +326,8 @@ app.openapi(updateRoute, async (c) => {
 		throw new HTTPException(404, { message: "Thesis not found" });
 	}
 
-	// Update conviction if provided
-	if (body.confidence !== undefined) {
+	// Update conviction if provided (and not null)
+	if (body.confidence !== undefined && body.confidence !== null) {
 		await repo.updateConviction(id, body.confidence);
 	}
 

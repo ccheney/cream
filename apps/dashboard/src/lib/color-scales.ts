@@ -99,7 +99,7 @@ export function createDivergingScale(
 	neutralColor: string,
 	positiveColor: string,
 	minValue = -1,
-	maxValue = 1
+	maxValue = 1,
 ): (value: number) => string {
 	const negativeRgb = hexToRgb(negativeColor);
 	const neutralRgb = hexToRgb(neutralColor);
@@ -133,7 +133,7 @@ export const correlationScale = createDivergingScale(
 	CORRELATION_COLORS.neutral,
 	CORRELATION_COLORS.positive,
 	-1,
-	1
+	1,
 );
 
 /**
@@ -174,7 +174,7 @@ export function createSequentialScale(
 	startColor: string,
 	endColor: string,
 	minValue = 0,
-	maxValue = 1
+	maxValue = 1,
 ): (value: number) => string {
 	const startRgb = hexToRgb(startColor);
 	const endRgb = hexToRgb(endColor);

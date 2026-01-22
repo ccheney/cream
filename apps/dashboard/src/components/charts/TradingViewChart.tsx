@@ -113,7 +113,7 @@ function TradingViewChartComponent({
 
 		const series = chart.addSeries(
 			CandlestickSeries,
-			DEFAULT_CANDLESTICK_OPTIONS
+			DEFAULT_CANDLESTICK_OPTIONS,
 		) as ISeriesApi<"Candlestick">;
 		seriesRef.current = series;
 

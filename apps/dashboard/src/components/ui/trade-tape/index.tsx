@@ -57,7 +57,7 @@ export const TradeTape = memo(function TradeTape({
 }: TradeTapeProps): React.ReactElement {
 	const displayTrades = useMemo(
 		() => (trades.length > maxTrades ? trades.slice(-maxTrades) : trades),
-		[trades, maxTrades]
+		[trades, maxTrades],
 	);
 
 	const { containerRef, isAutoScrolling, newItemCount, scrollToBottom, onNewItems, onScroll } =

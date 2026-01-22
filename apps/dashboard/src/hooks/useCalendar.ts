@@ -112,7 +112,7 @@ async function fetchCalendarRange(start: string, end: string): Promise<CalendarD
  * ```
  */
 export function useMarketClock(
-	options?: Omit<UseQueryOptions<MarketClockResponse>, "queryKey" | "queryFn">
+	options?: Omit<UseQueryOptions<MarketClockResponse>, "queryKey" | "queryFn">,
 ) {
 	return useQuery({
 		queryKey: queryKeys.calendar.clock(),
@@ -138,7 +138,7 @@ export function useMarketClock(
  * ```
  */
 export function useMarketStatus(
-	options?: Omit<UseQueryOptions<MarketStatusResponse>, "queryKey" | "queryFn">
+	options?: Omit<UseQueryOptions<MarketStatusResponse>, "queryKey" | "queryFn">,
 ) {
 	return useQuery({
 		queryKey: queryKeys.calendar.status(),
@@ -169,7 +169,7 @@ export function useMarketStatus(
 export function useCalendarRange(
 	start: string,
 	end: string,
-	options?: Omit<UseQueryOptions<CalendarDayResponse[]>, "queryKey" | "queryFn">
+	options?: Omit<UseQueryOptions<CalendarDayResponse[]>, "queryKey" | "queryFn">,
 ) {
 	return useQuery({
 		queryKey: queryKeys.calendar.range(start, end),

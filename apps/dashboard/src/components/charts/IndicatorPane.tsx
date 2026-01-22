@@ -233,7 +233,7 @@ function initRSI(chart: IChartApi, data: RSIData[]) {
 			data.map((d) => ({
 				time: d.time as Time,
 				value: d.value,
-			}))
+			})),
 		);
 	}
 
@@ -342,7 +342,7 @@ function initStochastic(chart: IChartApi, data: StochasticData[]) {
 			data.map((d) => ({
 				time: d.time as Time,
 				value: d.k,
-			}))
+			})),
 		);
 	}
 
@@ -359,7 +359,7 @@ function initStochastic(chart: IChartApi, data: StochasticData[]) {
 			data.map((d) => ({
 				time: d.time as Time,
 				value: d.d,
-			}))
+			})),
 		);
 	}
 
@@ -398,7 +398,7 @@ function initVolume(chart: IChartApi, data: VolumeData[]) {
 				time: d.time as Time,
 				value: d.value,
 				color: d.color ?? INDICATOR_COLORS.volume.up,
-			}))
+			})),
 		);
 	}
 }

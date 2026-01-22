@@ -80,7 +80,7 @@ function PerInstrumentLimits({
 }: PerInstrumentLimitsProps) {
 	function handlePerInstrumentChange(
 		field: keyof ConstraintsConfig["perInstrument"],
-		value: number
+		value: number,
 	): void {
 		onFormChange({
 			perInstrument: {

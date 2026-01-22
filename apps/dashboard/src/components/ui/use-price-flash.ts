@@ -23,7 +23,7 @@ const DEFAULT_FLASH_DURATION_MS = 1100; // 300ms in + 500ms hold + 300ms out
 export function usePriceFlash(
 	currentPrice: number,
 	previousPrice: number | undefined,
-	options: UsePriceFlashOptions = {}
+	options: UsePriceFlashOptions = {},
 ): UsePriceFlashReturn {
 	const { debounceMs = DEFAULT_DEBOUNCE_MS, flashDurationMs = DEFAULT_FLASH_DURATION_MS } = options;
 
@@ -57,7 +57,7 @@ export function usePriceFlash(
 
 			flashTimeoutRef.current = setTimeout(clearFlash, flashDurationMs);
 		},
-		[debounceMs, flashDurationMs, clearFlash]
+		[debounceMs, flashDurationMs, clearFlash],
 	);
 
 	useEffect(() => {

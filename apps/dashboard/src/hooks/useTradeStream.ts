@@ -91,7 +91,7 @@ export function useTradeStream({
 				timestamp: new Date(raw.t / 1e6), // Nanoseconds to milliseconds
 			};
 		},
-		[symbol]
+		[symbol],
 	);
 
 	/**
@@ -108,7 +108,7 @@ export function useTradeStream({
 				return next;
 			});
 		},
-		[maxTrades]
+		[maxTrades],
 	);
 
 	/**
@@ -152,7 +152,7 @@ export function useTradeStream({
 						type: "subscribe",
 						channel: "trades",
 						symbol: upperSymbol,
-					})
+					}),
 				);
 			};
 
@@ -193,7 +193,7 @@ export function useTradeStream({
 							type: "unsubscribe",
 							channel: "trades",
 							symbol: upperSymbol,
-						})
+						}),
 					);
 				}
 				wsRef.current.close();

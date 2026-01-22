@@ -132,7 +132,7 @@ function OptionsChainContent({ underlying }: { underlying: string }) {
 				}
 			}
 		},
-		[chainData?.chain, wsContextConnected, subscribeOptions, unsubscribeOptions]
+		[chainData?.chain, wsContextConnected, subscribeOptions, unsubscribeOptions],
 	);
 
 	useEffect(() => {

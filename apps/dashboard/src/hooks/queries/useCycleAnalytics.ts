@@ -45,7 +45,7 @@ export function useCycleAnalyticsSummary(filters: CycleAnalyticsFilters = {}) {
 		queryKey: queryKeys.cycles.analytics.summary(filters as Record<string, unknown>),
 		queryFn: async () => {
 			const { data } = await get<CycleAnalyticsSummary>(
-				`/api/cycles/analytics/summary${buildQueryString(filters)}`
+				`/api/cycles/analytics/summary${buildQueryString(filters)}`,
 			);
 			return data;
 		},
@@ -59,7 +59,7 @@ export function useDecisionAnalytics(filters: CycleAnalyticsFilters = {}) {
 		queryKey: queryKeys.cycles.analytics.decisions(filters as Record<string, unknown>),
 		queryFn: async () => {
 			const { data } = await get<DecisionAnalytics>(
-				`/api/cycles/analytics/decisions${buildQueryString(filters)}`
+				`/api/cycles/analytics/decisions${buildQueryString(filters)}`,
 			);
 			return data;
 		},
@@ -73,7 +73,7 @@ export function useConfidenceCalibration(filters: CycleAnalyticsFilters = {}) {
 		queryKey: queryKeys.cycles.analytics.calibration(filters as Record<string, unknown>),
 		queryFn: async () => {
 			const { data } = await get<ConfidenceCalibrationBin[]>(
-				`/api/cycles/analytics/calibration${buildQueryString(filters)}`
+				`/api/cycles/analytics/calibration${buildQueryString(filters)}`,
 			);
 			return data;
 		},
@@ -87,7 +87,7 @@ export function useStrategyBreakdown(filters: CycleAnalyticsFilters = {}) {
 		queryKey: queryKeys.cycles.analytics.strategies(filters as Record<string, unknown>),
 		queryFn: async () => {
 			const { data } = await get<StrategyBreakdownItem[]>(
-				`/api/cycles/analytics/strategies${buildQueryString(filters)}`
+				`/api/cycles/analytics/strategies${buildQueryString(filters)}`,
 			);
 			return data;
 		},

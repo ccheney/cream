@@ -122,7 +122,7 @@ function formatData(data: IndicatorDataPoint[]): Array<{ time: Time; value: numb
 function formatHistogramData(
 	data: IndicatorDataPoint[],
 	positiveColor: string,
-	negativeColor: string
+	negativeColor: string,
 ): Array<{ time: Time; value: number; color: string }> {
 	return data.map((d) => ({
 		time: d.time as Time,

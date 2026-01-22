@@ -183,8 +183,8 @@ export const useEventFeedStore = create<EventFeedStore>()(
 				return filtered;
 			},
 		})),
-		{ name: "event-feed-store" }
-	)
+		{ name: "event-feed-store" },
+	),
 );
 
 export const selectEventCount = (state: EventFeedStore): number => state.events.length;
@@ -231,13 +231,13 @@ export function subscribeToNewEvents(callback: (event: FeedEvent) => void): () =
 				lastEventId = latestEvent.id;
 				callback(latestEvent);
 			}
-		}
+		},
 	);
 }
 
 export function subscribeToEventType(
 	type: EventType,
-	callback: (event: FeedEvent) => void
+	callback: (event: FeedEvent) => void,
 ): () => void {
 	let lastEventId: string | null = null;
 
@@ -259,7 +259,7 @@ export function subscribeToEventType(
 				lastEventId = latestEvent.id;
 				callback(latestEvent);
 			}
-		}
+		},
 	);
 }
 

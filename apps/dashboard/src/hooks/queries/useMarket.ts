@@ -120,7 +120,7 @@ export function useQuote(symbol: string) {
 export function useCandles(
 	symbol: string,
 	timeframe: "1m" | "5m" | "15m" | "1h" | "4h" | "1d" = "1h",
-	limit = 500
+	limit = 500,
 ) {
 	const { connected, subscribeSymbols } = useWebSocketContext();
 
@@ -138,7 +138,7 @@ export function useCandles(
 		queryKey: [...queryKeys.market.all, "candles", symbol, timeframe, limit] as const,
 		queryFn: async () => {
 			const { data } = await get<Candle[]>(
-				`/api/market/candles/${symbol}?timeframe=${timeframe}&limit=${limit}`
+				`/api/market/candles/${symbol}?timeframe=${timeframe}&limit=${limit}`,
 			);
 			return data;
 		},
@@ -154,13 +154,13 @@ export function useCandles(
  */
 export function useIndicators(
 	symbol: string,
-	timeframe: "1m" | "5m" | "15m" | "1h" | "4h" | "1d" = "1h"
+	timeframe: "1m" | "5m" | "15m" | "1h" | "4h" | "1d" = "1h",
 ) {
 	return useQuery({
 		queryKey: [...queryKeys.market.all, "indicators", symbol, timeframe] as const,
 		queryFn: async () => {
 			const { data } = await get<Indicators>(
-				`/api/market/indicators/${symbol}?timeframe=${timeframe}`
+				`/api/market/indicators/${symbol}?timeframe=${timeframe}`,
 			);
 			return data;
 		},

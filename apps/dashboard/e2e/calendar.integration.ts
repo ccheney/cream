@@ -87,7 +87,7 @@ test.describe("Calendar Display", () => {
 	test("displays calendar component after load", async ({ page }) => {
 		// Wait for calendar to be visible
 		await expect(page.locator("[class*='sx-react-calendar']").or(page.locator("main"))).toBeVisible(
-			{ timeout: 10000 }
+			{ timeout: 10000 },
 		);
 	});
 

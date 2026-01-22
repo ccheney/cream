@@ -93,7 +93,7 @@ function getIVVariant(value: number | null): "success" | "info" | "warning" | "e
  * Positive skew = calls more expensive (bullish speculation)
  */
 function getSkewVariant(
-	value: number | null
+	value: number | null,
 ): "success" | "info" | "warning" | "error" | "neutral" {
 	if (value === null) {
 		return "neutral";

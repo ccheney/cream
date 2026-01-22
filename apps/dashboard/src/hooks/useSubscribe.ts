@@ -100,7 +100,7 @@ export interface UseSymbolSubscriptionReturn {
  */
 export function useSubscribe(
 	channels: Channel[],
-	options: UseSubscribeOptions = {}
+	options: UseSubscribeOptions = {},
 ): UseSubscribeReturn {
 	const { autoSubscribe = true, deps = [] } = options;
 
@@ -134,7 +134,7 @@ export function useSubscribe(
 		(channel: Channel) => {
 			return wsStore.subscribedChannels.includes(channel);
 		},
-		[wsStore.subscribedChannels]
+		[wsStore.subscribedChannels],
 	);
 
 	// Auto-subscribe on mount
@@ -179,7 +179,7 @@ export function useSubscribe(
  */
 export function useSymbolSubscription(
 	symbols: string[],
-	options: UseSymbolSubscriptionOptions = {}
+	options: UseSymbolSubscriptionOptions = {},
 ): UseSymbolSubscriptionReturn {
 	const { autoSubscribe = true, deps: _deps = [] } = options;
 	void _deps; // Reserved for future dependency tracking
@@ -214,7 +214,7 @@ export function useSymbolSubscription(
 		(symbol: string) => {
 			return wsStore.subscribedSymbols.includes(symbol);
 		},
-		[wsStore.subscribedSymbols]
+		[wsStore.subscribedSymbols],
 	);
 
 	// Handle symbol changes
@@ -232,7 +232,7 @@ export function useSymbolSubscription(
 
 		// Find symbols to remove
 		const toRemove = wsStore.subscribedSymbols.filter(
-			(s) => !newSymbols.has(s) && symbolsRef.current.includes(s)
+			(s) => !newSymbols.has(s) && symbolsRef.current.includes(s),
 		);
 
 		// Subscribe to new symbols

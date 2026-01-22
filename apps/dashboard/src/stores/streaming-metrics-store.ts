@@ -192,7 +192,7 @@ export function useStreamingMetrics() {
 			avgLatency: state.avgLatency,
 			reconnectAttempts: state.reconnectAttempts,
 			healthStatus: getHealthStatus(state),
-		}))
+		})),
 	);
 }
 

@@ -110,7 +110,6 @@ const DEFAULT_TIMEZONE = Intl.DateTimeFormat().resolvedOptions().timeZone;
 function convertToCalendarEvents(events: EconomicEvent[]): CalendarEvent[] {
 	return events.map((event) => {
 		const timeStr = event.time.slice(0, 5);
-		// biome-ignore lint/correctness/noUndeclaredVariables: Temporal is available via temporal-polyfill/global import
 		const start = Temporal.ZonedDateTime.from(`${event.date}T${timeStr}:00[${DEFAULT_TIMEZONE}]`);
 		const end = start.add({ minutes: 30 });
 
@@ -269,7 +268,7 @@ export function EconomicCalendar() {
 
 	const { start, end } = useMemo(
 		() => getDateRangeFromFilter(filters.dateRange),
-		[filters.dateRange]
+		[filters.dateRange],
 	);
 
 	const { data, isLoading, error, refetch } = useEconomicCalendar({

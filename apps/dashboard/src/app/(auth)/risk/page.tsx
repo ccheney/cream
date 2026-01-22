@@ -59,7 +59,7 @@ export default function RiskPage() {
 							? "--"
 							: exposure?.concentrationMax?.symbol
 								? `${exposure.concentrationMax.symbol} ${formatPct(
-										exposure.concentrationMax.pct ?? 0
+										exposure.concentrationMax.pct ?? 0,
 									)}`
 								: "0.0%"
 					}
@@ -175,7 +175,7 @@ export default function RiskPage() {
 function getStatus(
 	value: number,
 	warningThreshold: number,
-	criticalThreshold: number
+	criticalThreshold: number,
 ): "normal" | "warning" | "critical" {
 	if (value >= criticalThreshold) {
 		return "critical";

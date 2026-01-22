@@ -224,8 +224,8 @@ export const useUIStore = create<UIStore>()(
 		{
 			name: "cream-ui-preferences",
 			storage: createJSONStorage(() => localStorage),
-		}
-	)
+		},
+	),
 );
 
 // ============================================
@@ -251,7 +251,7 @@ export function useSidebar() {
 			collapsed: state.sidebarCollapsed,
 			toggle: state.toggleSidebar,
 			setCollapsed: state.setSidebarCollapsed,
-		}))
+		})),
 	);
 }
 
@@ -267,7 +267,7 @@ export function useRealTimeFeed() {
 			filters: state.realTimeFeedFilters,
 			setFilters: state.setFeedFilters,
 			toggleFilter: state.toggleFeedFilter,
-		}))
+		})),
 	);
 }
 
@@ -284,7 +284,7 @@ export function useChartPreferences() {
 			indicators: state.chartShowIndicators,
 			setIndicators: state.setChartIndicators,
 			toggleIndicator: state.toggleChartIndicator,
-		}))
+		})),
 	);
 }
 
@@ -298,7 +298,7 @@ export function useTablePreferences() {
 			setPageSize: state.setTablePageSize,
 			density: state.tableDensity,
 			setDensity: state.setTableDensity,
-		}))
+		})),
 	);
 }
 

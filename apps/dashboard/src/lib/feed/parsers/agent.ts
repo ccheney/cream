@@ -60,7 +60,7 @@ export function normalizeAgentToolCall(data: AgentToolCallData, timestamp: Date)
 
 export function normalizeAgentToolResult(
 	data: AgentToolResultData,
-	timestamp: Date
+	timestamp: Date,
 ): NormalizedEvent {
 	const agent = data.agentType || "agent";
 	const tool = data.toolName || "tool";
@@ -80,7 +80,7 @@ export function normalizeAgentToolResult(
 
 export function normalizeAgentReasoning(
 	data: AgentReasoningData,
-	timestamp: Date
+	timestamp: Date,
 ): NormalizedEvent {
 	const agent = data.agentType || "agent";
 	const text = data.text || "";
@@ -99,7 +99,7 @@ export function normalizeAgentReasoning(
 
 export function normalizeAgentTextDelta(
 	data: AgentTextDeltaData,
-	timestamp: Date
+	timestamp: Date,
 ): NormalizedEvent {
 	const agent = data.agentType || "agent";
 	const text = data.text || "";
@@ -134,7 +134,7 @@ export function normalizeAgentStatus(data: AgentStatusData, timestamp: Date): No
 
 export function normalizeAlert(
 	data: { severity?: string; title?: string; message?: string; symbol?: string },
-	timestamp: Date
+	timestamp: Date,
 ): NormalizedEvent {
 	return {
 		id: crypto.randomUUID(),

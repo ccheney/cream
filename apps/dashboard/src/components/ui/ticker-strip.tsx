@@ -191,7 +191,7 @@ export const TickerStrip = memo(function TickerStrip({
 				recordTick(newQuote.symbol, newQuote.last);
 			}
 		},
-		[recordTick]
+		[recordTick],
 	);
 
 	// Get lastMessage from context for quote updates

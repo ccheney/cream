@@ -5,6 +5,8 @@
  * Uses StreamingPositionsTable for open positions and ClosedTradesTable for closed trades.
  */
 
+// biome-ignore-all lint/a11y/useSemanticElements: Using div+role for virtualized table (react-window) - semantic elements don't work with virtualization
+
 "use client";
 
 import { memo, useState } from "react";
@@ -539,7 +541,7 @@ const ClosedTradesTableInner = memo(function ClosedTradesTableInner({
 		{
 			field: "exitDate",
 			direction: "desc",
-		}
+		},
 	);
 
 	const handleSort = useCallback((field: ClosedSortField) => {

@@ -11,7 +11,7 @@ import { type CollapsibleContentProps, cn } from "./types";
 export const CollapsibleContent = forwardRef<HTMLElement, CollapsibleContentProps>(
 	function CollapsibleContent(
 		{ children, animationDuration = 200, forceMount, className, style, ...props },
-		ref
+		ref,
 	) {
 		const { isOpen, contentId, triggerId } = useCollapsibleContext();
 		const contentRef = useRef<HTMLElement>(null);
@@ -72,7 +72,7 @@ export const CollapsibleContent = forwardRef<HTMLElement, CollapsibleContentProp
 					ref.current = node;
 				}
 			},
-			[ref]
+			[ref],
 		);
 
 		if (!forceMount && !isOpen && height === 0 && !isAnimating) {
@@ -96,5 +96,5 @@ export const CollapsibleContent = forwardRef<HTMLElement, CollapsibleContentProp
 				{children}
 			</section>
 		);
-	}
+	},
 );

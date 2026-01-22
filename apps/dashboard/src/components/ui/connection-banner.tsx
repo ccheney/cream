@@ -186,7 +186,7 @@ export function formatRetryTime(ms: number): string {
 export function getStatusMessage(
 	status: ConnectionStatus,
 	nextRetryIn: number,
-	retryCount: number
+	retryCount: number,
 ): { title: string; message: string } {
 	switch (status) {
 		case "disconnected":

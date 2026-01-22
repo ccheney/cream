@@ -294,7 +294,7 @@ export class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundarySt
 		// Reset when resetKeys change
 		if (this.state.hasError && this.props.resetKeys) {
 			const hasChanged = this.props.resetKeys.some(
-				(key, index) => key !== prevProps.resetKeys?.[index]
+				(key, index) => key !== prevProps.resetKeys?.[index],
 			);
 			if (hasChanged) {
 				this.reset();

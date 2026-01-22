@@ -100,7 +100,7 @@ function DataQualityBadge({ quality }: { quality: DataQuality }) {
 		<span
 			className={cn(
 				"inline-flex items-center rounded-full border px-2 py-0.5 text-xs font-medium",
-				className
+				className,
 			)}
 		>
 			{label}
@@ -170,7 +170,7 @@ function IndicatorSnapshotSkeleton({
 			<div
 				className={cn(
 					"grid gap-4",
-					layout === "full" ? "grid-cols-1 lg:grid-cols-2" : "grid-cols-1"
+					layout === "full" ? "grid-cols-1 lg:grid-cols-2" : "grid-cols-1",
 				)}
 			>
 				{Array.from({ length: sectionCount }, (_, i) => (
@@ -239,7 +239,7 @@ export function IndicatorSnapshotPanel({
 			<div
 				className={cn(
 					"grid gap-4",
-					layout === "full" ? "grid-cols-1 lg:grid-cols-2" : "grid-cols-1"
+					layout === "full" ? "grid-cols-1 lg:grid-cols-2" : "grid-cols-1",
 				)}
 			>
 				{sections.includes("price") && (

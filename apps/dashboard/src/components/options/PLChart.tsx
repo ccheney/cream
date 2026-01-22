@@ -197,7 +197,7 @@ function PLChartComponent({
 				}
 			}
 		},
-		[onPriceHover]
+		[onPriceHover],
 	);
 
 	if (legs.length === 0) {

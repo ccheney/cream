@@ -69,7 +69,7 @@ export function calculatePnLPercent(entryPrice: number, currentPrice: number): n
 export function calculatePnLFull(
 	entryPrice: number,
 	currentPrice: number,
-	quantity: number
+	quantity: number,
 ): PnLResult {
 	return {
 		absolute: calculatePnL(entryPrice, currentPrice, quantity),
@@ -128,7 +128,7 @@ export function calculateExposure(positions: Position[]): ExposureResult {
  */
 export function calculateExposurePercent(
 	positions: Position[],
-	nav: number
+	nav: number,
 ): {
 	gross: number;
 	net: number;
@@ -197,7 +197,7 @@ export function calculateMaxDrawdown(equityCurve: number[]): number {
 export function calculateSharpeRatio(
 	returns: number[],
 	riskFreeRate = 0.05,
-	periodsPerYear = 252
+	periodsPerYear = 252,
 ): number {
 	if (returns.length === 0) {
 		return 0;
@@ -223,7 +223,7 @@ export function calculateSharpeRatio(
 export function calculateSortinoRatio(
 	returns: number[],
 	riskFreeRate = 0.05,
-	periodsPerYear = 252
+	periodsPerYear = 252,
 ): number {
 	if (returns.length === 0) {
 		return 0;
@@ -253,7 +253,7 @@ export function calculateSortinoRatio(
  * Calculate total portfolio delta.
  */
 export function calculatePortfolioDelta(
-	deltas: { symbol: string; delta: number; quantity: number }[]
+	deltas: { symbol: string; delta: number; quantity: number }[],
 ): number {
 	return deltas.reduce((total, d) => total + d.delta * d.quantity, 0);
 }
@@ -262,7 +262,7 @@ export function calculatePortfolioDelta(
  * Calculate total portfolio theta (daily time decay).
  */
 export function calculatePortfolioTheta(
-	thetas: { symbol: string; theta: number; quantity: number }[]
+	thetas: { symbol: string; theta: number; quantity: number }[],
 ): number {
 	return thetas.reduce((total, t) => total + t.theta * t.quantity, 0);
 }

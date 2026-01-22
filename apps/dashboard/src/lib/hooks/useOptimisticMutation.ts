@@ -60,7 +60,7 @@ export interface OptimisticMutationResult<TData, TVariables> {
  * ```
  */
 export function useOptimisticMutation<TData, TVariables, TContext = unknown>(
-	options: OptimisticMutationOptions<TData, TVariables, TContext>
+	options: OptimisticMutationOptions<TData, TVariables, TContext>,
 ): OptimisticMutationResult<TData, TVariables> {
 	const {
 		mutationFn,
@@ -86,7 +86,7 @@ export function useOptimisticMutation<TData, TVariables, TContext = unknown>(
 			await queryClient.cancelQueries({ queryKey });
 			previousDataRef.current = queryClient.getQueryData<TData>(queryKey);
 			queryClient.setQueryData<TData>(queryKey, (currentData) =>
-				optimisticUpdate(currentData, variables)
+				optimisticUpdate(currentData, variables),
 			);
 			return { previousData: previousDataRef.current } as TContext;
 		},
@@ -177,7 +177,7 @@ export interface SimpleMutationOptions<TData, TVariables> {
  * ```
  */
 export function useSimpleMutation<TData, TVariables>(
-	options: SimpleMutationOptions<TData, TVariables>
+	options: SimpleMutationOptions<TData, TVariables>,
 ): OptimisticMutationResult<TData, TVariables> {
 	const {
 		mutationFn,

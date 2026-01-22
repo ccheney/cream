@@ -162,7 +162,7 @@ export const RelativeTime = forwardRef<HTMLTimeElement, RelativeTimeProps>(
 			className,
 			showTooltip = true,
 		},
-		ref
+		ref,
 	) => {
 		// Normalize and validate timestamp
 		const date = useMemo(() => normalizeTimestamp(timestamp), [timestamp]);
@@ -170,7 +170,7 @@ export const RelativeTime = forwardRef<HTMLTimeElement, RelativeTimeProps>(
 
 		// State for relative time string
 		const [relativeTime, setRelativeTime] = useState(() =>
-			isValidDate ? formatShortRelative(date) : "Invalid date"
+			isValidDate ? formatShortRelative(date) : "Invalid date",
 		);
 
 		// Auto-update effect
@@ -242,7 +242,7 @@ export const RelativeTime = forwardRef<HTMLTimeElement, RelativeTimeProps>(
 		}
 
 		return timeElement;
-	}
+	},
 );
 
 RelativeTime.displayName = "RelativeTime";

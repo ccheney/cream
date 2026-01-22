@@ -101,7 +101,7 @@ export const SystemHealthBadge = forwardRef<HTMLOutputElement, SystemHealthBadge
 			className,
 			...props
 		},
-		ref
+		ref,
 	) => {
 		const dotStatus = healthToStatusMap[status];
 		const displayLabel = label ?? healthLabels[status];
@@ -118,7 +118,7 @@ export const SystemHealthBadge = forwardRef<HTMLOutputElement, SystemHealthBadge
 			pill: cn(
 				"px-2 py-0.5 rounded-full",
 				"bg-stone-100 dark:bg-stone-800",
-				"border border-stone-200 dark:border-stone-700"
+				"border border-stone-200 dark:border-stone-700",
 			),
 			minimal: "opacity-80 hover:opacity-100 transition-opacity",
 		};
@@ -142,7 +142,7 @@ export const SystemHealthBadge = forwardRef<HTMLOutputElement, SystemHealthBadge
 					"inline-flex items-center",
 					sizeClasses[size],
 					variantClasses[variant],
-					className
+					className,
 				)}
 				{...props}
 			>
@@ -154,7 +154,7 @@ export const SystemHealthBadge = forwardRef<HTMLOutputElement, SystemHealthBadge
 				)}
 			</output>
 		);
-	}
+	},
 );
 
 SystemHealthBadge.displayName = "SystemHealthBadge";

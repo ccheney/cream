@@ -54,7 +54,7 @@ function getSecondsAgo(timestamp: Date | number): number {
 
 export function useRelativeTime(
 	timestamp: Date | number | undefined,
-	options: UseRelativeTimeOptions = {}
+	options: UseRelativeTimeOptions = {},
 ): RelativeTimeResult {
 	const { recentIntervalMs = 1000, olderIntervalMs = 30000, recentThresholdSec = 60 } = options;
 
@@ -99,7 +99,7 @@ export function useRelativeTime(
 
 export function useRelativeTimeBatch(
 	timestamps: Array<Date | number>,
-	options: UseRelativeTimeOptions = {}
+	options: UseRelativeTimeOptions = {},
 ): RelativeTimeResult[] {
 	const {
 		recentIntervalMs = 1000,
@@ -116,7 +116,7 @@ export function useRelativeTimeBatch(
 				secondsAgo: seconds,
 				isRecent: seconds < recentThresholdSec,
 			};
-		})
+		}),
 	);
 
 	useEffect(() => {
@@ -129,7 +129,7 @@ export function useRelativeTimeBatch(
 						secondsAgo: seconds,
 						isRecent: seconds < recentThresholdSec,
 					};
-				})
+				}),
 			);
 		};
 

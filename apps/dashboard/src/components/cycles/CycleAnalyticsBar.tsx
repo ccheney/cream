@@ -28,7 +28,7 @@ interface MetricConfig {
 	format: (cycleMetrics?: CycleAnalyticsSummary, decisionMetrics?: DecisionAnalytics) => string;
 	getVariant?: (
 		cycleMetrics?: CycleAnalyticsSummary,
-		decisionMetrics?: DecisionAnalytics
+		decisionMetrics?: DecisionAnalytics,
 	) => "default" | "positive" | "negative" | "warning";
 }
 

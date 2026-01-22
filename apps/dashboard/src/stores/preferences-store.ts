@@ -254,11 +254,11 @@ export const usePreferencesStore = create<PreferencesStore>()(
 						}
 						return persisted as PreferencesState;
 					},
-				}
-			)
+				},
+			),
 		),
-		{ name: "preferences-store" }
-	)
+		{ name: "preferences-store" },
+	),
 );
 
 // ============================================
@@ -312,7 +312,7 @@ export function subscribeToThemeChanges(): () => void {
 		() => {
 			const store = usePreferencesStore.getState();
 			applyTheme(store.getComputedTheme());
-		}
+		},
 	);
 
 	// Re-apply when OS theme changes while in 'system' mode

@@ -110,7 +110,7 @@ export function formatOccSymbol(
 	underlying: string,
 	expiration: string,
 	type: "C" | "P",
-	strike: number
+	strike: number,
 ): string {
 	const [year, month, day] = expiration.split("-");
 	const yy = year?.slice(2) ?? "00";

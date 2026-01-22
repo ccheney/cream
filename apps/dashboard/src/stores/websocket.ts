@@ -218,8 +218,8 @@ export const useWSStore = create<WSStore>()(
 				subscribedChannels: state.subscribedChannels,
 				subscribedSymbols: state.subscribedSymbols,
 			}),
-		}
-	)
+		},
+	),
 );
 
 // ============================================
@@ -310,7 +310,7 @@ export function useSubscriptionActions() {
 			subscribeSymbols: state.subscribeSymbols,
 			unsubscribeSymbols: state.unsubscribeSymbols,
 			clearSubscriptions: state.clearSubscriptions,
-		}))
+		})),
 	);
 }
 
@@ -328,7 +328,7 @@ export function useConnectionActions() {
 			incrementReconnectAttempts: state.incrementReconnectAttempts,
 			setLastError: state.setLastError,
 			reset: state.reset,
-		}))
+		})),
 	);
 }
 

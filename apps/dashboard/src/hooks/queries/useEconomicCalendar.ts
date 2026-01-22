@@ -108,7 +108,7 @@ export function useEconomicCalendar(options: UseEconomicCalendarOptions = {}) {
 			}
 
 			const { data } = await get<EconomicCalendarResponse>(
-				`/api/economic-calendar?${params.toString()}`
+				`/api/economic-calendar?${params.toString()}`,
 			);
 			return data;
 		},

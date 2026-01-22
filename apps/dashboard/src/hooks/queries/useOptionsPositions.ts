@@ -47,7 +47,7 @@ export function formatContractDisplay(
 	underlying: string,
 	expiration: string,
 	strike: number,
-	right: "CALL" | "PUT"
+	right: "CALL" | "PUT",
 ): string {
 	const date = new Date(expiration);
 	const month = date.toLocaleDateString("en-US", { month: "short" });

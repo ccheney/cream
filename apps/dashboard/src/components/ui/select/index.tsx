@@ -57,7 +57,7 @@ export const Select = forwardRef<HTMLDivElement, SelectProps>(function Select(
 		testId = "select",
 		className,
 	},
-	ref
+	ref,
 ) {
 	const [isOpen, setIsOpen] = useState(false);
 	const [searchQuery, setSearchQuery] = useState("");
@@ -70,7 +70,7 @@ export const Select = forwardRef<HTMLDivElement, SelectProps>(function Select(
 		}
 		const query = searchQuery.toLowerCase();
 		return options.filter(
-			(opt) => opt.label.toLowerCase().includes(query) || opt.value.toLowerCase().includes(query)
+			(opt) => opt.label.toLowerCase().includes(query) || opt.value.toLowerCase().includes(query),
 		);
 	}, [options, searchQuery]);
 
@@ -108,7 +108,7 @@ export const Select = forwardRef<HTMLDivElement, SelectProps>(function Select(
 				setIsOpen(false);
 			}
 		},
-		[multiple, values, onChange, onMultiChange]
+		[multiple, values, onChange, onMultiChange],
 	);
 
 	const handleSearchInputChange = useCallback(
@@ -118,7 +118,7 @@ export const Select = forwardRef<HTMLDivElement, SelectProps>(function Select(
 			onSearchChange?.(query);
 			setHighlightedIndex(-1);
 		},
-		[onSearchChange]
+		[onSearchChange],
 	);
 
 	const handleKeyDown = useCallback(
@@ -152,7 +152,7 @@ export const Select = forwardRef<HTMLDivElement, SelectProps>(function Select(
 					break;
 			}
 		},
-		[isOpen, filteredOptions, highlightedIndex, handleOptionClick]
+		[isOpen, filteredOptions, highlightedIndex, handleOptionClick],
 	);
 
 	const handleTriggerClick = useCallback((): void => {

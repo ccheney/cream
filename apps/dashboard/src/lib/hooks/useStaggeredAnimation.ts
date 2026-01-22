@@ -51,7 +51,7 @@ export const SLIDE_UP_KEYFRAMES = `
 `;
 
 export function useStaggeredAnimation(
-	options: UseStaggeredAnimationOptions = {}
+	options: UseStaggeredAnimationOptions = {},
 ): UseStaggeredAnimationReturn {
 	const {
 		staggerDelay = DEFAULT_STAGGER_DELAY,

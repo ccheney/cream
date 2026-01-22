@@ -109,7 +109,7 @@ function polarToCartesian(
 	centerX: number,
 	centerY: number,
 	radius: number,
-	angleInDegrees: number
+	angleInDegrees: number,
 ): { x: number; y: number } {
 	const angleInRadians = ((angleInDegrees - 90) * Math.PI) / 180;
 	return {
@@ -126,7 +126,7 @@ function describeArc(
 	centerY: number,
 	radius: number,
 	startAngle: number,
-	endAngle: number
+	endAngle: number,
 ): string {
 	const start = polarToCartesian(centerX, centerY, radius, endAngle);
 	const end = polarToCartesian(centerX, centerY, radius, startAngle);
@@ -213,7 +213,7 @@ export const Gauge = memo(function Gauge({
 	// Generate arc paths
 	const backgroundArc = useMemo(
 		() => describeArc(center, center, radius, START_ANGLE, END_ANGLE),
-		[center, radius]
+		[center, radius],
 	);
 
 	const valueArc = useMemo(() => {
@@ -311,7 +311,7 @@ export const RSIGauge = memo(function RSIGauge(props: Omit<GaugeProps, "variant"
  * StochasticGauge - Pre-configured gauge for Stochastic %K/%D
  */
 export const StochasticGauge = memo(function StochasticGauge(
-	props: Omit<GaugeProps, "variant" | "min" | "max">
+	props: Omit<GaugeProps, "variant" | "min" | "max">,
 ) {
 	return <Gauge {...props} variant="stochastic" min={0} max={100} />;
 });
@@ -320,7 +320,7 @@ export const StochasticGauge = memo(function StochasticGauge(
  * PercentBGauge - Pre-configured gauge for Bollinger %B
  */
 export const PercentBGauge = memo(function PercentBGauge(
-	props: Omit<GaugeProps, "variant" | "min" | "max" | "decimals">
+	props: Omit<GaugeProps, "variant" | "min" | "max" | "decimals">,
 ) {
 	return <Gauge {...props} variant="percentb" min={0} max={1} decimals={2} />;
 });

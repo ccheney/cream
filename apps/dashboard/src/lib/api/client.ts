@@ -61,7 +61,7 @@ export interface ApiResponse<T> {
  */
 function buildUrl(
 	path: string,
-	params?: Record<string, string | number | boolean | undefined>
+	params?: Record<string, string | number | boolean | undefined>,
 ): string {
 	const url = new URL(path, API_BASE_URL);
 
@@ -147,7 +147,7 @@ async function parseErrorResponse(response: Response): Promise<ApiErrorResponse 
  */
 export async function request<T>(
 	path: string,
-	options: RequestOptions = {}
+	options: RequestOptions = {},
 ): Promise<ApiResponse<T>> {
 	const { body, params, timeout = DEFAULT_TIMEOUT, rawError = false, ...init } = options;
 
@@ -230,7 +230,7 @@ export function get<T>(path: string, options?: RequestOptions): Promise<ApiRespo
 export function post<T>(
 	path: string,
 	body?: unknown,
-	options?: RequestOptions
+	options?: RequestOptions,
 ): Promise<ApiResponse<T>> {
 	return request<T>(path, { ...options, method: "POST", body });
 }
@@ -241,7 +241,7 @@ export function post<T>(
 export function put<T>(
 	path: string,
 	body?: unknown,
-	options?: RequestOptions
+	options?: RequestOptions,
 ): Promise<ApiResponse<T>> {
 	return request<T>(path, { ...options, method: "PUT", body });
 }
@@ -252,7 +252,7 @@ export function put<T>(
 export function patch<T>(
 	path: string,
 	body?: unknown,
-	options?: RequestOptions
+	options?: RequestOptions,
 ): Promise<ApiResponse<T>> {
 	return request<T>(path, { ...options, method: "PATCH", body });
 }

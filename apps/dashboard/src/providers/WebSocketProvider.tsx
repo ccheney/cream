@@ -168,7 +168,7 @@ export function WebSocketProvider({ children }: WebSocketProviderProps) {
 			connect,
 			disconnect,
 			lastError,
-		]
+		],
 	);
 
 	return <WebSocketContext.Provider value={value}>{children}</WebSocketContext.Provider>;

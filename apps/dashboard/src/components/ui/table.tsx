@@ -171,7 +171,7 @@ export const Table = forwardRef<HTMLTableElement, TableProps>(
 			className,
 			...props
 		},
-		ref
+		ref,
 	) => {
 		// Internal sort state (for uncontrolled mode)
 		const [internalSortColumn, setInternalSortColumn] = useState<string | null>(null);
@@ -201,7 +201,7 @@ export const Table = forwardRef<HTMLTableElement, TableProps>(
 
 				onSortChange?.(column, newDirection);
 			},
-			[sortColumn, sortDirection, isControlled, onSortChange]
+			[sortColumn, sortDirection, isControlled, onSortChange],
 		);
 
 		return (
@@ -219,7 +219,7 @@ export const Table = forwardRef<HTMLTableElement, TableProps>(
 						className={cn(
 							"w-full border-collapse text-sm",
 							variant === "compact" ? "text-[13px]" : "text-sm",
-							className
+							className,
 						)}
 						{...props}
 					>
@@ -228,7 +228,7 @@ export const Table = forwardRef<HTMLTableElement, TableProps>(
 				</div>
 			</TableContext.Provider>
 		);
-	}
+	},
 );
 
 Table.displayName = "Table";
@@ -248,13 +248,13 @@ export const TableHeader = forwardRef<HTMLTableSectionElement, TableHeaderProps>
 				"sticky top-0 z-10",
 				"bg-stone-50 dark:bg-stone-800/90",
 				"backdrop-blur-sm",
-				className
+				className,
 			)}
 			{...props}
 		>
 			{children}
 		</thead>
-	)
+	),
 );
 
 TableHeader.displayName = "TableHeader";
@@ -275,7 +275,7 @@ export const TableBody = forwardRef<HTMLTableSectionElement, TableBodyProps>(
 		>
 			{children}
 		</tbody>
-	)
+	),
 );
 
 TableBody.displayName = "TableBody";
@@ -297,13 +297,13 @@ export const TableRow = forwardRef<HTMLTableRowElement, TableRowProps>(
 				"even:bg-stone-50/50 dark:even:bg-stone-800/25",
 				selected && "bg-blue-50 dark:bg-blue-900/20",
 				clickable && "cursor-pointer",
-				className
+				className,
 			)}
 			{...props}
 		>
 			{children}
 		</tr>
-	)
+	),
 );
 
 TableRow.displayName = "TableRow";
@@ -346,7 +346,7 @@ export const TableHead = forwardRef<HTMLTableCellElement, TableHeadProps>(
 					"border-b border-stone-200 dark:border-stone-700",
 					numeric && "text-right tabular-nums",
 					isSortable && "cursor-pointer select-none hover:text-stone-900 dark:hover:text-stone-100",
-					className
+					className,
 				)}
 				onClick={isSortable ? handleClick : undefined}
 				onKeyDown={isSortable ? handleKeyDown : undefined}
@@ -367,7 +367,7 @@ export const TableHead = forwardRef<HTMLTableCellElement, TableHeadProps>(
 				</div>
 			</th>
 		);
-	}
+	},
 );
 
 TableHead.displayName = "TableHead";
@@ -392,14 +392,14 @@ export const TableCell = forwardRef<HTMLTableCellElement, TableCellProps>(
 					"text-stone-900 dark:text-stone-100",
 					numeric && "text-right font-mono tabular-nums",
 					truncate && "max-w-0 truncate",
-					className
+					className,
 				)}
 				{...props}
 			>
 				{children}
 			</td>
 		);
-	}
+	},
 );
 
 TableCell.displayName = "TableCell";
@@ -433,7 +433,7 @@ export const TableEmpty = forwardRef<HTMLTableRowElement, TableEmptyProps>(
 				</td>
 			</tr>
 		);
-	}
+	},
 );
 
 TableEmpty.displayName = "TableEmpty";

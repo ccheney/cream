@@ -34,7 +34,7 @@ export function timeToLocal(utcTimestamp: number): number {
 			d.getDate(),
 			d.getHours(),
 			d.getMinutes(),
-			d.getSeconds()
+			d.getSeconds(),
 		) / 1000
 	);
 }
@@ -225,7 +225,7 @@ export function useMAToggle(initialMAs: string[] = ["sma20", "sma50", "sma200"])
 
 	const toggleMA = useCallback((maId: string) => {
 		setEnabledMAs((prev) =>
-			prev.includes(maId) ? prev.filter((id) => id !== maId) : [...prev, maId]
+			prev.includes(maId) ? prev.filter((id) => id !== maId) : [...prev, maId],
 		);
 	}, []);
 
