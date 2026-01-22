@@ -25,7 +25,7 @@ function createMockClient(
 	options: {
 		queryFn?: (name: string, params?: Record<string, unknown>) => Promise<unknown>;
 		healthCheckFn?: () => Promise<HealthCheckResult>;
-	} = {}
+	} = {},
 ): HelixClient {
 	return {
 		query: mock(
@@ -33,7 +33,7 @@ function createMockClient(
 				(async () => ({
 					data: [],
 					executionTimeMs: 1,
-				}))
+				})),
 		),
 		isConnected: () => true,
 		healthCheck: mock(
@@ -41,7 +41,7 @@ function createMockClient(
 				(async () => ({
 					healthy: true,
 					latencyMs: 5,
-				}))
+				})),
 		),
 		close: mock(() => {}),
 		getConfig: () => ({
@@ -74,7 +74,7 @@ function createTestDecision(id: string, overrides: Partial<TradeDecision> = {}):
 function createTestLifecycleEvent(
 	id: string,
 	decisionId: string,
-	eventType: "FILL" | "CANCEL" | "CLOSE" = "FILL"
+	eventType: "FILL" | "CANCEL" | "CLOSE" = "FILL",
 ): TradeLifecycleEvent {
 	return {
 		event_id: id,
@@ -141,7 +141,7 @@ describe("HelixOrchestrator", () => {
 
 			expect(resultConfig.performanceTargets.retrievalMaxMs).toBe(100);
 			expect(resultConfig.performanceTargets.updateMaxMs).toBe(
-				DEFAULT_ORCHESTRATOR_CONFIG.performanceTargets.updateMaxMs
+				DEFAULT_ORCHESTRATOR_CONFIG.performanceTargets.updateMaxMs,
 			);
 		});
 	});

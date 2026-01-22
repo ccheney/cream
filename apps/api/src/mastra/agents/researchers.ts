@@ -40,7 +40,7 @@ export const bearishResearcherAgent = createAgent("bearish_researcher");
  */
 export async function runBullishResearcher(
 	context: AgentContext,
-	analystOutputs: AnalystOutputs
+	analystOutputs: AnalystOutputs,
 ): Promise<BullishResearchOutput[]> {
 	// Build compact indicator summary for momentum/trend signals
 	const indicatorSummary = buildIndicatorSummary(context.indicators);
@@ -76,7 +76,7 @@ Weight technical factors alongside fundamental drivers.`;
 
 	const response = await bullishResearcherAgent.generate(
 		[{ role: "user", content: prompt }],
-		options
+		options,
 	);
 
 	const result = response.object as BullishResearchOutput[] | undefined;
@@ -88,7 +88,7 @@ Weight technical factors alongside fundamental drivers.`;
  */
 export async function runBearishResearcher(
 	context: AgentContext,
-	analystOutputs: AnalystOutputs
+	analystOutputs: AnalystOutputs,
 ): Promise<BearishResearchOutput[]> {
 	// Build compact indicator summary for momentum/trend signals
 	const indicatorSummary = buildIndicatorSummary(context.indicators);
@@ -125,7 +125,7 @@ Weight technical factors alongside fundamental headwinds.`;
 
 	const response = await bearishResearcherAgent.generate(
 		[{ role: "user", content: prompt }],
-		options
+		options,
 	);
 
 	const result = response.object as BearishResearchOutput[] | undefined;
@@ -137,7 +137,7 @@ Weight technical factors alongside fundamental headwinds.`;
  */
 export async function runDebateParallel(
 	context: AgentContext,
-	analystOutputs: AnalystOutputs
+	analystOutputs: AnalystOutputs,
 ): Promise<{
 	bullish: BullishResearchOutput[];
 	bearish: BearishResearchOutput[];
@@ -160,7 +160,7 @@ export async function runDebateParallel(
 export async function runBullishResearcherStreaming(
 	context: AgentContext,
 	analystOutputs: AnalystOutputs,
-	onChunk: OnStreamChunk
+	onChunk: OnStreamChunk,
 ): Promise<BullishResearchOutput[]> {
 	// Initialize toolResults accumulator if not present
 	if (!context.toolResults) {
@@ -218,7 +218,7 @@ Weight technical factors alongside fundamental drivers.`;
 export async function runBearishResearcherStreaming(
 	context: AgentContext,
 	analystOutputs: AnalystOutputs,
-	onChunk: OnStreamChunk
+	onChunk: OnStreamChunk,
 ): Promise<BearishResearchOutput[]> {
 	// Initialize toolResults accumulator if not present
 	if (!context.toolResults) {
@@ -277,7 +277,7 @@ Weight technical factors alongside fundamental headwinds.`;
 export async function runDebateParallelStreaming(
 	context: AgentContext,
 	analystOutputs: AnalystOutputs,
-	onChunk: OnStreamChunk
+	onChunk: OnStreamChunk,
 ): Promise<{
 	bullish: BullishResearchOutput[];
 	bearish: BearishResearchOutput[];

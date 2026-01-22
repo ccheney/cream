@@ -113,7 +113,7 @@ export const DEFAULT_BATCH_SIZE = 50;
  */
 export async function executeHelixMemoryUpdate(
 	input: MemoryUpdateInput,
-	client?: HelixClient
+	client?: HelixClient,
 ): Promise<MemoryUpdateResult> {
 	const startTime = performance.now();
 	const errors: string[] = [];
@@ -129,7 +129,7 @@ export async function executeHelixMemoryUpdate(
 
 		if (decisionsResult.failed.length > 0) {
 			errors.push(
-				`Failed to upsert ${decisionsResult.failed.length} decisions: ${formatErrors(decisionsResult.failed)}`
+				`Failed to upsert ${decisionsResult.failed.length} decisions: ${formatErrors(decisionsResult.failed)}`,
 			);
 		}
 
@@ -138,20 +138,20 @@ export async function executeHelixMemoryUpdate(
 
 		if (lifecycleResult.failed.length > 0) {
 			errors.push(
-				`Failed to create ${lifecycleResult.failed.length} lifecycle events: ${formatErrors(lifecycleResult.failed)}`
+				`Failed to create ${lifecycleResult.failed.length} lifecycle events: ${formatErrors(lifecycleResult.failed)}`,
 			);
 		}
 
 		// Phase 3: Upsert external events
 		const eventsWithEmbeddings = prepareExternalEvents(
 			input.externalEvents,
-			input.embeddingModelVersion
+			input.embeddingModelVersion,
 		);
 		const externalEventsResult = await batchUpsertExternalEvents(helixClient, eventsWithEmbeddings);
 
 		if (externalEventsResult.failed.length > 0) {
 			errors.push(
-				`Failed to upsert ${externalEventsResult.failed.length} external events: ${formatErrors(externalEventsResult.failed)}`
+				`Failed to upsert ${externalEventsResult.failed.length} external events: ${formatErrors(externalEventsResult.failed)}`,
 			);
 		}
 
@@ -161,7 +161,7 @@ export async function executeHelixMemoryUpdate(
 
 		if (edgesResult.failed.length > 0) {
 			warnings.push(
-				`Failed to create ${edgesResult.failed.length} edges: ${formatErrors(edgesResult.failed)}`
+				`Failed to create ${edgesResult.failed.length} edges: ${formatErrors(edgesResult.failed)}`,
 			);
 		}
 
@@ -215,7 +215,7 @@ export async function executeHelixMemoryUpdate(
  */
 function prepareDecisions(
 	decisions: TradeDecisionInput[],
-	embeddingModelVersion?: string
+	embeddingModelVersion?: string,
 ): NodeWithEmbedding<TradeDecision>[] {
 	return decisions.map((d) => ({
 		node: d.decision,
@@ -229,7 +229,7 @@ function prepareDecisions(
  */
 function prepareExternalEvents(
 	events: ExternalEventInput[],
-	embeddingModelVersion?: string
+	embeddingModelVersion?: string,
 ): NodeWithEmbedding<ExternalEvent>[] {
 	return events.map((e) => ({
 		node: e.event,
@@ -303,7 +303,7 @@ function emptyBatchResult(): BatchMutationResult {
 export async function updateDecisionMemory(
 	decision: TradeDecision,
 	embedding?: number[],
-	client?: HelixClient
+	client?: HelixClient,
 ): Promise<MemoryUpdateResult> {
 	return executeHelixMemoryUpdate(
 		{
@@ -312,7 +312,7 @@ export async function updateDecisionMemory(
 			externalEvents: [],
 			influenceEdges: [],
 		},
-		client
+		client,
 	);
 }
 
@@ -323,7 +323,7 @@ export async function updateDecisionMemory(
  */
 export async function recordLifecycleEvents(
 	events: TradeLifecycleEvent[],
-	client?: HelixClient
+	client?: HelixClient,
 ): Promise<MemoryUpdateResult> {
 	return executeHelixMemoryUpdate(
 		{
@@ -332,7 +332,7 @@ export async function recordLifecycleEvents(
 			externalEvents: [],
 			influenceEdges: [],
 		},
-		client
+		client,
 	);
 }
 
@@ -344,7 +344,7 @@ export async function recordLifecycleEvents(
 export async function updateExternalEvents(
 	events: ExternalEventInput[],
 	influenceEdges: InfluenceEdgeInput[] = [],
-	client?: HelixClient
+	client?: HelixClient,
 ): Promise<MemoryUpdateResult> {
 	return executeHelixMemoryUpdate(
 		{
@@ -353,6 +353,6 @@ export async function updateExternalEvents(
 			externalEvents: events,
 			influenceEdges,
 		},
-		client
+		client,
 	);
 }

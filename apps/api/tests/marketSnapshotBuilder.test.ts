@@ -149,7 +149,7 @@ describe("Market Snapshot Builder", () => {
 
 			if (result.success && result.snapshot) {
 				expect(result.snapshot.regime).toMatch(
-					/^(BULL_TREND|BEAR_TREND|HIGH_VOLATILITY|LOW_VOLATILITY|RANGE_BOUND)$/
+					/^(BULL_TREND|BEAR_TREND|HIGH_VOLATILITY|LOW_VOLATILITY|RANGE_BOUND)$/,
 				);
 			}
 		});
@@ -312,7 +312,7 @@ describe("Market Snapshot Builder", () => {
 				result.metrics.marketDataFetchMs +
 					result.metrics.indicatorCalculationMs +
 					result.metrics.regimeClassificationMs +
-					result.metrics.positionFetchMs
+					result.metrics.positionFetchMs,
 			);
 		});
 	});

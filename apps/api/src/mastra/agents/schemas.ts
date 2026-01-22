@@ -90,7 +90,7 @@ export const SentimentAnalysisSchema = z.object({
 	sentiment_strength: z.number().min(0).max(1).describe("Sentiment strength/confidence (0 to 1)"),
 
 	news_volume_assessment: NewsVolumeLevelSchema.describe(
-		"News volume assessment based on news_volume indicator"
+		"News volume assessment based on news_volume indicator",
 	),
 
 	event_risk_flag: z.boolean().describe("Event risk flag based on event_risk indicator"),

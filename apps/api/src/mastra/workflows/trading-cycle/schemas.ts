@@ -179,7 +179,7 @@ export const ResearchSchema = z.object({
 			factor: z.string(),
 			source: z.string(),
 			strength: z.string(),
-		})
+		}),
 	),
 	conviction_level: z.number(),
 	memory_case_ids: z.array(z.string()),

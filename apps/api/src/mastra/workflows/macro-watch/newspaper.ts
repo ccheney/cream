@@ -49,7 +49,7 @@ export interface NewspaperContent {
  */
 export function compileNewspaper(
 	entries: MacroWatchEntry[],
-	universeSymbols: string[]
+	universeSymbols: string[],
 ): NewspaperSections {
 	const universeSet = new Set(universeSymbols.map((s) => s.toUpperCase()));
 
@@ -159,7 +159,7 @@ ${sections.economicCalendar.join("\n")}
  */
 export function createNewspaperContent(
 	entries: MacroWatchEntry[],
-	universeSymbols: string[]
+	universeSymbols: string[],
 ): NewspaperContent {
 	const sections = compileNewspaper(entries, universeSymbols);
 	const formattedSections = {
@@ -190,7 +190,7 @@ export function createNewspaperContent(
  */
 export function prepareNewspaperForStorage(
 	entries: MacroWatchEntry[],
-	universeSymbols: string[]
+	universeSymbols: string[],
 ): CreateMorningNewspaperInput {
 	const sections = compileNewspaper(entries, universeSymbols);
 	const now = new Date();
@@ -221,7 +221,7 @@ export function prepareNewspaperForStorage(
  */
 export function compileMorningNewspaper(
 	entries: MacroWatchEntry[],
-	universeSymbols: string[]
+	universeSymbols: string[],
 ): {
 	content: NewspaperContent;
 	storageInput: CreateMorningNewspaperInput;
@@ -231,7 +231,7 @@ export function compileMorningNewspaper(
 			entryCount: entries.length,
 			universeSize: universeSymbols.length,
 		},
-		"Compiling morning newspaper"
+		"Compiling morning newspaper",
 	);
 
 	const content = createNewspaperContent(entries, universeSymbols);
@@ -242,7 +242,7 @@ export function compileMorningNewspaper(
 			date: content.date,
 			entryCount: content.entryCount,
 		},
-		"Morning newspaper compiled"
+		"Morning newspaper compiled",
 	);
 
 	return { content, storageInput };

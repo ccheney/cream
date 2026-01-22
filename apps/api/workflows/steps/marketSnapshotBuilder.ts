@@ -151,7 +151,7 @@ const GRPC_CONFIG = {
  * @returns Snapshot builder result with complete market snapshot
  */
 export async function executeMarketSnapshotBuilder(
-	input: SnapshotBuilderInput
+	input: SnapshotBuilderInput,
 ): Promise<SnapshotBuilderResult> {
 	const startTime = performance.now();
 	const errors: string[] = [];
@@ -247,7 +247,7 @@ async function gatherSnapshotData(
 	symbols: string[],
 	input: SnapshotBuilderInput,
 	errors: string[],
-	warnings: string[]
+	warnings: string[],
 ): Promise<SnapshotData> {
 	// Create Alpaca client for market data
 	let alpacaClient: AlpacaMarketDataClient | null = null;
@@ -287,7 +287,7 @@ async function fetchMarketData(
 	symbols: string[],
 	_input: SnapshotBuilderInput,
 	errors: string[],
-	warnings: string[]
+	warnings: string[],
 ): Promise<Map<string, InternalSnapshot>> {
 	const snapshots = new Map<string, InternalSnapshot>();
 	const creamEnv = requireEnv();
@@ -307,7 +307,7 @@ async function fetchMarketData(
 	if (!isAlpacaConfigured()) {
 		throw new Error(
 			`ALPACA_KEY and ALPACA_SECRET are required in ${creamEnv} mode. ` +
-				"Set these environment variables to fetch live market data."
+				"Set these environment variables to fetch live market data.",
 		);
 	}
 
@@ -377,7 +377,7 @@ async function fetchHistoricalCandles(
 	symbols: string[],
 	alpacaClient: AlpacaMarketDataClient | null,
 	errors: string[],
-	warnings: string[]
+	warnings: string[],
 ): Promise<Map<string, Candle[]>> {
 	const candles = new Map<string, Candle[]>();
 	const requiredBars = getRequiredCandleCount(DEFAULT_RULE_BASED_CONFIG) + 10; // Extra buffer
@@ -418,7 +418,7 @@ async function fetchHistoricalCandles(
 				}));
 
 				return { symbol, candles: symbolCandles };
-			})
+			}),
 		);
 
 		for (const result of results) {
@@ -494,7 +494,7 @@ async function fetchPositions(errors: string[], warnings: string[]): Promise<Pos
 async function classifyMarketRegime(
 	historicalCandles: Map<string, Candle[]>,
 	errors: string[],
-	warnings: string[]
+	warnings: string[],
 ): Promise<Regime> {
 	try {
 		// Use SPY as market leader for regime classification
@@ -509,7 +509,7 @@ async function classifyMarketRegime(
 		const requiredCount = getRequiredCandleCount(DEFAULT_RULE_BASED_CONFIG);
 		if (spyCandles.length < requiredCount) {
 			warnings.push(
-				`Insufficient SPY candles for regime classification: ${spyCandles.length}/${requiredCount}`
+				`Insufficient SPY candles for regime classification: ${spyCandles.length}/${requiredCount}`,
 			);
 			return "RANGE_BOUND";
 		}
@@ -545,7 +545,7 @@ async function classifyMarketRegime(
 async function buildSymbolSnapshot(
 	symbol: string,
 	data: SnapshotData,
-	input: SnapshotBuilderInput
+	input: SnapshotBuilderInput,
 ): Promise<SymbolSnapshot> {
 	const marketSnapshot = data.marketSnapshots.get(symbol);
 
@@ -719,7 +719,7 @@ export async function buildSnapshotForUniverse(): Promise<SnapshotBuilderResult>
  */
 export async function buildHistoricalSnapshot(
 	asOf: string,
-	symbols?: string[]
+	symbols?: string[],
 ): Promise<SnapshotBuilderResult> {
 	return executeMarketSnapshotBuilder({ asOf, symbols });
 }

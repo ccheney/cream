@@ -215,7 +215,7 @@ function toProtobufDecision(decision: Decision) {
 			symbol: leg.symbol,
 			ratioQty: leg.ratioQty,
 			positionIntent: toProtobufPositionIntent(leg.positionIntent),
-		})
+		}),
 	);
 
 	const isOptionsStrategy =
@@ -1201,7 +1201,7 @@ describe("complex scenarios", () => {
 			expect(result.environment).toBe(Environment.PAPER);
 			expect(result.decisions).toHaveLength(3);
 			expect(result.portfolioNotes).toBe(
-				"Mixed positioning: adding equity exposure while collecting premium"
+				"Mixed positioning: adding equity exposure while collecting premium",
 			);
 
 			const [equityDecision, condorDecision, holdDecision] = result.decisions;

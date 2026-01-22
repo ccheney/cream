@@ -95,13 +95,13 @@ export async function scanMovers(universeSymbols: string[]): Promise<MacroWatchE
 			(m) =>
 				Math.abs(m.percent_change) >= SIGNIFICANT_MOVE_PCT &&
 				m.price >= MIN_PRICE &&
-				isCommonStock(m.symbol)
+				isCommonStock(m.symbol),
 		);
 		const priceFilteredLosers = movers.losers.filter(
 			(m) =>
 				Math.abs(m.percent_change) >= SIGNIFICANT_MOVE_PCT &&
 				m.price >= MIN_PRICE &&
-				isCommonStock(m.symbol)
+				isCommonStock(m.symbol),
 		);
 
 		// Get unique symbols that passed price filter for exchange lookup
@@ -200,7 +200,7 @@ export async function scanMovers(universeSymbols: string[]): Promise<MacroWatchE
 	} catch (error) {
 		log.error(
 			{ error: error instanceof Error ? error.message : String(error) },
-			"Movers scan failed"
+			"Movers scan failed",
 		);
 	}
 

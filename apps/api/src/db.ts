@@ -49,7 +49,7 @@ function toAgentPlatform(platform: StoragePredictionPlatform): AgentPredictionPl
 }
 
 function toStoragePlatform(
-	platform: AgentPredictionPlatform | undefined
+	platform: AgentPredictionPlatform | undefined,
 ): StoragePredictionPlatform | undefined {
 	return platform?.toLowerCase() as StoragePredictionPlatform | undefined;
 }
@@ -68,7 +68,7 @@ function toAgentMarketType(marketType: StoragePredictionMarketType): AgentPredic
 }
 
 function toStorageMarketType(
-	marketType: AgentPredictionMarketType | undefined
+	marketType: AgentPredictionMarketType | undefined,
 ): StoragePredictionMarketType | undefined {
 	if (!marketType) {
 		return undefined;
@@ -114,7 +114,7 @@ function createPredictionMarketsRepoAdapter(repo: PredictionMarketsRepository) {
 				fromTime?: string;
 				toTime?: string;
 			},
-			limit?: number
+			limit?: number,
 		) {
 			const storageFilters = {
 				platform: toStoragePlatform(filters.platform),
@@ -170,7 +170,7 @@ export function registerToolProviders(): void {
 	// Register prediction markets repo provider for agent tools
 	// Use adapter to convert between storage types (lowercase) and agent types (uppercase)
 	setPredictionMarketsRepoProvider(async () =>
-		createPredictionMarketsRepoAdapter(getPredictionMarketsRepo())
+		createPredictionMarketsRepoAdapter(getPredictionMarketsRepo()),
 	);
 
 	toolProvidersRegistered = true;
@@ -302,7 +302,7 @@ export function getHelixClient(): HelixClient | null {
 	} catch (error) {
 		log.error(
 			{ error: error instanceof Error ? error.message : "Unknown error" },
-			"HelixDB failed to create client"
+			"HelixDB failed to create client",
 		);
 		return null;
 	}
@@ -362,7 +362,7 @@ export async function validateHelixDBAtStartup(
 		failFast?: boolean;
 		/** Maximum allowed latency in ms. Default: 5000 */
 		maxLatencyMs?: number;
-	} = {}
+	} = {},
 ): Promise<HealthCheckResult> {
 	const isTestEnv = isTest(ctx);
 	const { failFast = !isTestEnv, maxLatencyMs = 5000 } = options;
@@ -382,7 +382,7 @@ export async function validateHelixDBAtStartup(
 				host: Bun.env.HELIX_HOST ?? "localhost",
 				port: Bun.env.HELIX_PORT ?? "6969",
 			},
-			"HelixDB health check failed"
+			"HelixDB health check failed",
 		);
 
 		if (failFast) {
@@ -413,7 +413,7 @@ export async function validateHelixDBOrExit(ctx: ExecutionContext): Promise<void
 		if (error instanceof HelixDBValidationError) {
 			log.error(
 				{ error: error.message, environment: ctx.environment },
-				"HelixDB validation failed for API service"
+				"HelixDB validation failed for API service",
 			);
 			process.exit(1);
 		}

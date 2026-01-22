@@ -37,7 +37,7 @@ import type {
 export async function loadMemoryContext(
 	snapshot: MarketSnapshot,
 	ctx?: ExecutionContext,
-	morningNewspaper?: MorningNewspaperContext
+	morningNewspaper?: MorningNewspaperContext,
 ): Promise<MemoryContext> {
 	const regimeLabels: Record<string, RegimeData> = {};
 	for (const symbol of snapshot.instruments) {
@@ -106,7 +106,7 @@ export async function loadMemoryContext(
 						usedFallback: result.usedFallback,
 						exceededTarget: result.exceededTarget,
 					},
-					"HelixDB retrieval completed"
+					"HelixDB retrieval completed",
 				);
 
 				for (const decision of result.data.decisions) {
@@ -123,7 +123,7 @@ export async function loadMemoryContext(
 		} catch (error) {
 			log.warn(
 				{ symbol, error: error instanceof Error ? error.message : String(error) },
-				"Failed to retrieve memories for symbol"
+				"Failed to retrieve memories for symbol",
 			);
 		}
 	}
@@ -136,7 +136,7 @@ export async function loadMemoryContext(
 				entryCount: morningNewspaper.entryCount,
 				compiledAt: morningNewspaper.compiledAt,
 			},
-			"Morning newspaper injected into memory context"
+			"Morning newspaper injected into memory context",
 		);
 	}
 
@@ -156,7 +156,7 @@ export async function loadMemoryContext(
  * Uses the rule-based classifier from @cream/regime.
  */
 export async function computeAndStoreRegimes(
-	snapshot: MarketSnapshot
+	snapshot: MarketSnapshot,
 ): Promise<Record<string, RegimeData>> {
 	const regimeLabels: Record<string, RegimeData> = {};
 

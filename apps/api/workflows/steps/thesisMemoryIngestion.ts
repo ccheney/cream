@@ -118,7 +118,7 @@ function validateForIngestion(thesis: Thesis): { valid: boolean; reason?: string
 function convertThesisToInput(
 	thesis: Thesis,
 	entryRegime: string,
-	exitRegime?: string
+	exitRegime?: string,
 ): ThesisMemoryInput {
 	// These fields are guaranteed present after validation
 	const entryThesis = thesis.entryThesis ?? "";
@@ -171,7 +171,7 @@ function convertThesisToInput(
 export async function ingestClosedThesis(
 	input: ThesisIngestionInput,
 	helixClient?: HelixClient,
-	embeddingClient?: EmbeddingClient
+	embeddingClient?: EmbeddingClient,
 ): Promise<ThesisIngestionResult> {
 	const startTime = performance.now();
 
@@ -239,7 +239,7 @@ export async function ingestClosedThesis(
 async function createThesisDecisionEdges(
 	client: HelixClient,
 	thesisId: string,
-	decisionIds: string[]
+	decisionIds: string[],
 ): Promise<void> {
 	for (const decisionId of decisionIds) {
 		await createThesisIncludesEdge(client, {
@@ -266,7 +266,7 @@ async function createThesisDecisionEdges(
 export async function batchIngestClosedTheses(
 	inputs: ThesisIngestionInput[],
 	helixClient?: HelixClient,
-	embeddingClient?: EmbeddingClient
+	embeddingClient?: EmbeddingClient,
 ): Promise<BatchIngestionResult> {
 	const startTime = performance.now();
 	const successful: string[] = [];
@@ -339,7 +339,7 @@ export async function onThesisClose(
 	thesis: Thesis,
 	entryRegime: string,
 	exitRegime?: string,
-	relatedDecisionIds?: string[]
+	relatedDecisionIds?: string[],
 ): Promise<ThesisIngestionResult> {
 	return ingestClosedThesis({
 		thesis,
@@ -378,7 +378,7 @@ export interface ThesisMemoryStats {
  */
 export async function getThesisMemoryStats(
 	client: HelixClient,
-	environment: string
+	environment: string,
 ): Promise<ThesisMemoryStats> {
 	const results = await client.query<ThesisMemoryStats>("GetThesisMemoryStats", { environment });
 

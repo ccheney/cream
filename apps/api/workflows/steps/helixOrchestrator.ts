@@ -163,7 +163,7 @@ export class HelixOrchestrator {
 
 	constructor(
 		private readonly client: HelixClient,
-		private readonly config: HelixOrchestratorConfig = DEFAULT_ORCHESTRATOR_CONFIG
+		private readonly config: HelixOrchestratorConfig = DEFAULT_ORCHESTRATOR_CONFIG,
 	) {}
 
 	// ============================================
@@ -369,7 +369,7 @@ export class HelixOrchestrator {
 	 * @returns Orchestrator result
 	 */
 	async recordLifecycle(
-		events: TradeLifecycleEvent[]
+		events: TradeLifecycleEvent[],
 	): Promise<OrchestratorResult<MemoryUpdateResult>> {
 		const startTime = performance.now();
 
@@ -604,7 +604,7 @@ export class HelixOrchestrator {
  */
 export function createHelixOrchestrator(
 	client: HelixClient,
-	config: Partial<HelixOrchestratorConfig> = {}
+	config: Partial<HelixOrchestratorConfig> = {},
 ): HelixOrchestrator {
 	const mergedConfig: HelixOrchestratorConfig = {
 		...DEFAULT_ORCHESTRATOR_CONFIG,

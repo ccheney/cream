@@ -83,7 +83,7 @@ interface MockAgentConfig {
 
 function createMockApprovalFunction(config: MockAgentConfig) {
 	return async (
-		_plan: DecisionPlan
+		_plan: DecisionPlan,
 	): Promise<{ riskManager: RiskManagerOutput; critic: CriticOutput }> => {
 		// Simulate async agent execution
 		if (config.riskDelay) {
@@ -185,7 +185,7 @@ describe("Consensus Loop Integration", () => {
 				gate,
 				plan,
 				createMockApprovalFunction({ riskApproves: true, criticApproves: true }),
-				createMockRevisionFunction()
+				createMockRevisionFunction(),
 			);
 
 			expect(result.approved).toBe(true);
@@ -206,7 +206,7 @@ describe("Consensus Loop Integration", () => {
 				gate,
 				originalPlan,
 				createMockApprovalFunction({ riskApproves: true, criticApproves: true }),
-				createMockRevisionFunction()
+				createMockRevisionFunction(),
 			);
 
 			expect(result.plan.decisions[0]?.size.value).toBe(7);
@@ -256,7 +256,7 @@ describe("Consensus Loop Integration", () => {
 						critic: createApprovedCriticOutput(),
 					};
 				},
-				createMockRevisionFunction()
+				createMockRevisionFunction(),
 			);
 
 			expect(result.approved).toBe(true);
@@ -289,7 +289,7 @@ describe("Consensus Loop Integration", () => {
 						critic: createApprovedCriticOutput(),
 					};
 				},
-				createMockRevisionFunction()
+				createMockRevisionFunction(),
 			);
 
 			expect(result.approved).toBe(true);
@@ -336,7 +336,7 @@ describe("Consensus Loop Integration", () => {
 									},
 					};
 				},
-				createMockRevisionFunction(["Added risk-reward analysis: 3:1 based on stop/target"])
+				createMockRevisionFunction(["Added risk-reward analysis: 3:1 based on stop/target"]),
 			);
 
 			expect(result.approved).toBe(true);
@@ -354,7 +354,7 @@ describe("Consensus Loop Integration", () => {
 				plan,
 				// Always reject
 				createMockApprovalFunction({ riskApproves: false, criticApproves: true }),
-				createMockRevisionFunction()
+				createMockRevisionFunction(),
 			);
 
 			expect(result.approved).toBe(false);
@@ -372,7 +372,7 @@ describe("Consensus Loop Integration", () => {
 				gate,
 				plan,
 				createMockApprovalFunction({ riskApproves: false, criticApproves: false }),
-				createMockRevisionFunction()
+				createMockRevisionFunction(),
 			);
 
 			expect(result.approved).toBe(false);
@@ -399,7 +399,7 @@ describe("Consensus Loop Integration", () => {
 						},
 					],
 				}),
-				createMockRevisionFunction()
+				createMockRevisionFunction(),
 			);
 
 			expect(result.approved).toBe(false);
@@ -455,7 +455,7 @@ describe("Consensus Loop Integration", () => {
 								},
 					};
 				},
-				createMockRevisionFunction()
+				createMockRevisionFunction(),
 			);
 
 			expect(result.approved).toBe(true);
@@ -481,7 +481,7 @@ describe("Consensus Loop Integration", () => {
 					criticApproves: true,
 					riskDelay: 50, // Takes 50ms but timeout is 10ms
 				}),
-				createMockRevisionFunction()
+				createMockRevisionFunction(),
 			);
 
 			expect(result.approved).toBe(false);
@@ -540,7 +540,7 @@ describe("Consensus Loop Integration", () => {
 				gate,
 				plan,
 				createMockApprovalFunction({ riskApproves: true, criticApproves: true }),
-				createMockRevisionFunction()
+				createMockRevisionFunction(),
 			);
 
 			expect(result.approved).toBe(true);
@@ -563,7 +563,7 @@ describe("Consensus Loop Integration", () => {
 				gate,
 				plan,
 				createMockApprovalFunction({ riskApproves: true, criticApproves: true }),
-				createMockRevisionFunction()
+				createMockRevisionFunction(),
 			);
 
 			expect(result.approved).toBe(true);
@@ -581,7 +581,7 @@ describe("Consensus Loop Integration", () => {
 				gate,
 				plan,
 				createMockApprovalFunction({ riskApproves: false, criticApproves: true }),
-				noOpRevision
+				noOpRevision,
 			);
 
 			// Should still fail after max iterations since plan never improves
@@ -596,7 +596,7 @@ describe("Consensus Loop Integration", () => {
 				gate,
 				plan,
 				createMockApprovalFunction({ riskApproves: true, criticApproves: true }),
-				createMockRevisionFunction()
+				createMockRevisionFunction(),
 			);
 
 			expect(result.approved).toBe(true);
@@ -618,7 +618,7 @@ describe("ConsensusResult Structure", () => {
 			gate,
 			plan,
 			createMockApprovalFunction({ riskApproves: true, criticApproves: true }),
-			createMockRevisionFunction()
+			createMockRevisionFunction(),
 		);
 
 		expect(result).toHaveProperty("approved");
@@ -640,7 +640,7 @@ describe("ConsensusResult Structure", () => {
 			gate,
 			plan,
 			createMockApprovalFunction({ riskApproves: false, criticApproves: true }),
-			createMockRevisionFunction()
+			createMockRevisionFunction(),
 		);
 
 		expect(result.approved).toBe(false);
@@ -663,7 +663,7 @@ describe("Consensus Loop Performance", () => {
 			gate,
 			plan,
 			createMockApprovalFunction({ riskApproves: true, criticApproves: true }),
-			createMockRevisionFunction()
+			createMockRevisionFunction(),
 		);
 
 		const elapsed = Date.now() - startTime;
@@ -687,7 +687,7 @@ describe("Consensus Loop Performance", () => {
 				criticApproves: true,
 				riskDelay: 5, // Small delay per iteration
 			}),
-			createMockRevisionFunction()
+			createMockRevisionFunction(),
 		);
 
 		const elapsed = Date.now() - startTime;

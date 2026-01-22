@@ -30,7 +30,14 @@ export const predictionMarketsWorkflow = createWorkflow({
 		/** Market types to fetch */
 		marketTypes: z
 			.array(
-				z.enum(["FED_RATE", "ECONOMIC_DATA", "RECESSION", "GEOPOLITICAL", "REGULATORY", "ELECTION"])
+				z.enum([
+					"FED_RATE",
+					"ECONOMIC_DATA",
+					"RECESSION",
+					"GEOPOLITICAL",
+					"REGULATORY",
+					"ELECTION",
+				]),
 			)
 			.optional()
 			.default(["FED_RATE", "ECONOMIC_DATA", "RECESSION"]),

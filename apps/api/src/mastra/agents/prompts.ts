@@ -120,7 +120,7 @@ export function interpretStochastic(stochasticK: number | null): string | null {
 export function interpretSMATrend(
 	sma20: number | null,
 	sma50: number | null,
-	sma200: number | null
+	sma200: number | null,
 ): string | null {
 	if (sma20 === null || sma50 === null) {
 		return null;
@@ -224,7 +224,7 @@ ${lines.join("\n")}
  * Includes Fed rate probabilities, recession risk, and policy event risk.
  */
 export function buildPredictionMarketContext(
-	predictionMarketSignals?: AgentContext["predictionMarketSignals"]
+	predictionMarketSignals?: AgentContext["predictionMarketSignals"],
 ): string {
 	if (!predictionMarketSignals) {
 		return "";
@@ -248,7 +248,7 @@ export function buildPredictionMarketContext(
 
 	if (predictionMarketSignals.recessionProbability12m !== undefined) {
 		lines.push(
-			`- 12-Month Recession Probability: ${(predictionMarketSignals.recessionProbability12m * 100).toFixed(1)}%`
+			`- 12-Month Recession Probability: ${(predictionMarketSignals.recessionProbability12m * 100).toFixed(1)}%`,
 		);
 	}
 
@@ -267,27 +267,27 @@ export function buildPredictionMarketContext(
 
 	if (predictionMarketSignals.policyEventRisk !== undefined) {
 		lines.push(
-			`- Policy Event Risk: ${(predictionMarketSignals.policyEventRisk * 100).toFixed(1)}%`
+			`- Policy Event Risk: ${(predictionMarketSignals.policyEventRisk * 100).toFixed(1)}%`,
 		);
 	}
 
 	if (predictionMarketSignals.cpiSurpriseDirection !== undefined) {
 		const cpiDir = predictionMarketSignals.cpiSurpriseDirection > 0 ? "HIGHER" : "LOWER";
 		lines.push(
-			`- CPI Surprise Direction: ${cpiDir} (${Math.abs(predictionMarketSignals.cpiSurpriseDirection * 100).toFixed(1)}%)`
+			`- CPI Surprise Direction: ${cpiDir} (${Math.abs(predictionMarketSignals.cpiSurpriseDirection * 100).toFixed(1)}%)`,
 		);
 	}
 
 	if (predictionMarketSignals.gdpSurpriseDirection !== undefined) {
 		const gdpDir = predictionMarketSignals.gdpSurpriseDirection > 0 ? "HIGHER" : "LOWER";
 		lines.push(
-			`- GDP Surprise Direction: ${gdpDir} (${Math.abs(predictionMarketSignals.gdpSurpriseDirection * 100).toFixed(1)}%)`
+			`- GDP Surprise Direction: ${gdpDir} (${Math.abs(predictionMarketSignals.gdpSurpriseDirection * 100).toFixed(1)}%)`,
 		);
 	}
 
 	if (predictionMarketSignals.marketConfidence !== undefined) {
 		lines.push(
-			`- Market Confidence: ${(predictionMarketSignals.marketConfidence * 100).toFixed(1)}%`
+			`- Market Confidence: ${(predictionMarketSignals.marketConfidence * 100).toFixed(1)}%`,
 		);
 	}
 
@@ -431,7 +431,7 @@ export function formatOptionsIndicators(options: IndicatorSnapshot["options"]): 
 	if (options.put_call_ratio_volume !== null) {
 		const pcSignal = interpretPutCallRatio(options.put_call_ratio_volume);
 		lines.push(
-			`  - Put/Call Volume Ratio: ${options.put_call_ratio_volume.toFixed(2)} [${pcSignal}]`
+			`  - Put/Call Volume Ratio: ${options.put_call_ratio_volume.toFixed(2)} [${pcSignal}]`,
 		);
 	}
 
@@ -487,14 +487,14 @@ export function formatValueIndicators(value: IndicatorSnapshot["value"]): string
  * Format short interest indicators for a single symbol.
  */
 export function formatShortInterestIndicators(
-	shortInterest: IndicatorSnapshot["short_interest"]
+	shortInterest: IndicatorSnapshot["short_interest"],
 ): string[] {
 	const lines: string[] = [];
 
 	if (shortInterest.short_pct_float !== null) {
 		const shortSignal = shortInterest.short_pct_float > 0.2 ? " [HIGH]" : "";
 		lines.push(
-			`  - Short Interest (% Float): ${(shortInterest.short_pct_float * 100).toFixed(1)}%${shortSignal}`
+			`  - Short Interest (% Float): ${(shortInterest.short_pct_float * 100).toFixed(1)}%${shortSignal}`,
 		);
 	}
 	if (shortInterest.days_to_cover !== null) {
@@ -573,7 +573,7 @@ export function buildSymbolIndicatorContext(symbol: string, snapshot: IndicatorS
 	if (snapshot.metadata.data_quality !== "COMPLETE") {
 		const missing = snapshot.metadata.missing_fields.join(", ");
 		sections.push(
-			`  Data Quality: ${snapshot.metadata.data_quality}${missing ? ` (missing: ${missing})` : ""}`
+			`  Data Quality: ${snapshot.metadata.data_quality}${missing ? ` (missing: ${missing})` : ""}`,
 		);
 	}
 
@@ -592,7 +592,7 @@ export function buildIndicatorContext(indicators?: AgentContext["indicators"]): 
 	}
 
 	const symbolSections = Object.entries(indicators).map(([symbol, snapshot]) =>
-		buildSymbolIndicatorContext(symbol, snapshot)
+		buildSymbolIndicatorContext(symbol, snapshot),
 	);
 
 	return `
@@ -672,7 +672,7 @@ import type { GroundingOutput } from "./schemas.js";
  */
 export function buildGroundingContext(
 	groundingOutput?: GroundingOutput | null,
-	symbol?: string
+	symbol?: string,
 ): string {
 	if (!groundingOutput) {
 		return `

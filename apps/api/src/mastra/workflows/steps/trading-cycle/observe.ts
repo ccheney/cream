@@ -50,7 +50,7 @@ class MarketDataProviderAdapter implements MarketDataProvider {
 			symbol,
 			"1h",
 			fromDate.toISOString().slice(0, 10),
-			toDate.toISOString().slice(0, 10)
+			toDate.toISOString().slice(0, 10),
 		);
 
 		return candles.slice(-limit).map(this.candleToBar);
@@ -100,7 +100,7 @@ class MarketDataProviderAdapter implements MarketDataProvider {
  */
 export async function fetchMarketSnapshot(
 	instruments: string[],
-	ctx?: ExecutionContext
+	ctx?: ExecutionContext,
 ): Promise<MarketSnapshot> {
 	if (ctx && isTest(ctx)) {
 		return fetchFixtureSnapshot(instruments);
@@ -183,7 +183,7 @@ export async function fetchMarketSnapshot(
 async function fetchIndicators(
 	instruments: string[],
 	adapter: MarketDataAdapter,
-	ctx?: ExecutionContext
+	ctx?: ExecutionContext,
 ): Promise<Record<string, IndicatorSnapshot>> {
 	const startTime = Date.now();
 
@@ -203,7 +203,7 @@ async function fetchIndicators(
 			includeOptionsIndicators: false, // Options require options data provider
 			enableCache: true,
 			bypassCache: false,
-		}
+		},
 	);
 
 	// Get current trading session for session-aware spread checks
@@ -237,7 +237,7 @@ async function fetchIndicators(
 				duration: Date.now() - startTime,
 				tradingSession,
 			},
-			"Fetched indicator snapshots"
+			"Fetched indicator snapshots",
 		);
 
 		return result;

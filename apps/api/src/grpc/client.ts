@@ -109,7 +109,7 @@ async function withRetry<T>(operation: () => Promise<T>, operationName: string):
 					delayMs: delay,
 					error: lastError.message,
 				},
-				"ExecutionEngine operation failed, retrying"
+				"ExecutionEngine operation failed, retrying",
 			);
 			await sleep(delay);
 		}
@@ -121,7 +121,7 @@ async function withRetry<T>(operation: () => Promise<T>, operationName: string):
 			`${operationName} failed: ${lastError.message}`,
 			lastError.code.toString(),
 			isRetryable(lastError),
-			lastError
+			lastError,
 		);
 	}
 
@@ -129,7 +129,7 @@ async function withRetry<T>(operation: () => Promise<T>, operationName: string):
 		`${operationName} failed: ${lastError?.message ?? "Unknown error"}`,
 		"UNKNOWN",
 		false,
-		lastError
+		lastError,
 	);
 }
 
@@ -141,37 +141,37 @@ export interface ExecutionEngineClient {
 	/** Validate a decision plan against risk constraints */
 	checkConstraints(
 		request: Partial<CheckConstraintsRequest>,
-		options?: CallOptions
+		options?: CallOptions,
 	): Promise<CheckConstraintsResponse>;
 
 	/** Submit an order for execution */
 	submitOrder(
 		request: Partial<SubmitOrderRequest>,
-		options?: CallOptions
+		options?: CallOptions,
 	): Promise<SubmitOrderResponse>;
 
 	/** Get current state of an order */
 	getOrderState(
 		request: Partial<GetOrderStateRequest>,
-		options?: CallOptions
+		options?: CallOptions,
 	): Promise<GetOrderStateResponse>;
 
 	/** Cancel an order */
 	cancelOrder(
 		request: Partial<CancelOrderRequest>,
-		options?: CallOptions
+		options?: CallOptions,
 	): Promise<CancelOrderResponse>;
 
 	/** Get current account state (equity, buying power, etc.) */
 	getAccountState(
 		request?: Partial<GetAccountStateRequest>,
-		options?: CallOptions
+		options?: CallOptions,
 	): Promise<GetAccountStateResponse>;
 
 	/** Get current positions */
 	getPositions(
 		request?: Partial<GetPositionsRequest>,
-		options?: CallOptions
+		options?: CallOptions,
 	): Promise<GetPositionsResponse>;
 }
 
@@ -196,7 +196,7 @@ class ExecutionEngineClientImpl implements ExecutionEngineClient {
 
 	async checkConstraints(
 		request: CheckConstraintsRequest,
-		options?: CallOptions
+		options?: CallOptions,
 	): Promise<CheckConstraintsResponse> {
 		return withRetry(
 			() =>
@@ -204,13 +204,13 @@ class ExecutionEngineClientImpl implements ExecutionEngineClient {
 					...this.defaultOptions,
 					...options,
 				}),
-			"checkConstraints"
+			"checkConstraints",
 		);
 	}
 
 	async submitOrder(
 		request: SubmitOrderRequest,
-		options?: CallOptions
+		options?: CallOptions,
 	): Promise<SubmitOrderResponse> {
 		return withRetry(
 			() =>
@@ -218,13 +218,13 @@ class ExecutionEngineClientImpl implements ExecutionEngineClient {
 					...this.defaultOptions,
 					...options,
 				}),
-			"submitOrder"
+			"submitOrder",
 		);
 	}
 
 	async getOrderState(
 		request: GetOrderStateRequest,
-		options?: CallOptions
+		options?: CallOptions,
 	): Promise<GetOrderStateResponse> {
 		return withRetry(
 			() =>
@@ -232,13 +232,13 @@ class ExecutionEngineClientImpl implements ExecutionEngineClient {
 					...this.defaultOptions,
 					...options,
 				}),
-			"getOrderState"
+			"getOrderState",
 		);
 	}
 
 	async cancelOrder(
 		request: CancelOrderRequest,
-		options?: CallOptions
+		options?: CallOptions,
 	): Promise<CancelOrderResponse> {
 		return withRetry(
 			() =>
@@ -246,13 +246,13 @@ class ExecutionEngineClientImpl implements ExecutionEngineClient {
 					...this.defaultOptions,
 					...options,
 				}),
-			"cancelOrder"
+			"cancelOrder",
 		);
 	}
 
 	async getAccountState(
 		request: GetAccountStateRequest,
-		options?: CallOptions
+		options?: CallOptions,
 	): Promise<GetAccountStateResponse> {
 		return withRetry(
 			() =>
@@ -260,13 +260,13 @@ class ExecutionEngineClientImpl implements ExecutionEngineClient {
 					...this.defaultOptions,
 					...options,
 				}),
-			"getAccountState"
+			"getAccountState",
 		);
 	}
 
 	async getPositions(
 		request: GetPositionsRequest,
-		options?: CallOptions
+		options?: CallOptions,
 	): Promise<GetPositionsResponse> {
 		return withRetry(
 			() =>
@@ -274,7 +274,7 @@ class ExecutionEngineClientImpl implements ExecutionEngineClient {
 					...this.defaultOptions,
 					...options,
 				}),
-			"getPositions"
+			"getPositions",
 		);
 	}
 
@@ -294,7 +294,7 @@ class ExecutionEngineClientImpl implements ExecutionEngineClient {
  */
 export function createExecutionEngineClient(
 	address = DEFAULT_ADDRESS,
-	timeoutMs = DEFAULT_TIMEOUT_MS
+	timeoutMs = DEFAULT_TIMEOUT_MS,
 ): ExecutionEngineClient {
 	return new ExecutionEngineClientImpl(address, timeoutMs);
 }

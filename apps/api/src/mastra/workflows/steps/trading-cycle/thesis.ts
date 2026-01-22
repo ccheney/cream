@@ -31,12 +31,13 @@ export async function processThesisForDecision(
 		stopLoss?: StopLoss;
 		takeProfit?: TakeProfit;
 		rationale?: { summary?: string };
+		confidence?: number;
 	},
 	environment: string,
 	cycleId: string,
-	currentPrice?: number
+	currentPrice?: number,
 ): Promise<ThesisUpdate | null> {
-	const { instrumentId, action, stopLoss, takeProfit, rationale } = decision;
+	const { instrumentId, action, stopLoss, takeProfit, rationale, confidence } = decision;
 	const stopPrice = stopLoss?.price;
 	const targetPrice = takeProfit?.price;
 
@@ -50,7 +51,7 @@ export async function processThesisForDecision(
 					state: "WATCHING",
 					entryThesis: rationale?.summary ?? `${action} signal detected`,
 					invalidationConditions: stopPrice ? `Stop loss at ${stopPrice}` : undefined,
-					conviction: 0.7,
+					conviction: confidence,
 					currentStop: stopPrice,
 					currentTarget: targetPrice,
 					environment,
@@ -86,7 +87,7 @@ export async function processThesisForDecision(
 					currentPrice,
 					stopPrice,
 					targetPrice,
-					cycleId
+					cycleId,
 				);
 				return {
 					thesisId: activeThesis.thesisId,
@@ -151,7 +152,7 @@ export async function processThesisForDecision(
 				action,
 				error: error instanceof Error ? error.message : String(error),
 			},
-			"Failed to process thesis for decision"
+			"Failed to process thesis for decision",
 		);
 		return null;
 	}
@@ -191,7 +192,7 @@ export function mapDecisionToCloseReason(decision: {
 export async function ingestClosedThesesForCycle(
 	cycleId: string,
 	_environment: string,
-	thesisUpdates: ThesisUpdate[]
+	thesisUpdates: ThesisUpdate[],
 ): Promise<{ ingested: number; errors: string[] }> {
 	const closedUpdates = thesisUpdates.filter((u) => u.toState === "CLOSED");
 	if (closedUpdates.length === 0) {

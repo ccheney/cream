@@ -144,7 +144,7 @@ export const PERFORMANCE_TARGETS = {
  */
 export async function executeHelixRetrieval(
 	input: RetrievalInput,
-	client?: HelixClient
+	client?: HelixClient,
 ): Promise<RetrievalResult> {
 	const startTime = performance.now();
 	const helixClient = client ?? createHelixClientFromEnv();
@@ -159,7 +159,7 @@ export async function executeHelixRetrieval(
 			helixClient,
 			input.queryEmbedding,
 			DEFAULT_RETRIEVAL_CONFIG.vectorTopK,
-			minSimilarity
+			minSimilarity,
 		);
 		const vectorSearchMs = performance.now() - vectorStart;
 
@@ -170,7 +170,7 @@ export async function executeHelixRetrieval(
 			input.instrumentId,
 			input.underlyingSymbol,
 			input.regime,
-			DEFAULT_RETRIEVAL_CONFIG.graphLimit
+			DEFAULT_RETRIEVAL_CONFIG.graphLimit,
 		);
 		const graphTraversalMs = performance.now() - graphStart;
 
@@ -235,7 +235,7 @@ async function performVectorSearch(
 	client: HelixClient,
 	embedding: number[],
 	topK: number,
-	minSimilarity: number
+	minSimilarity: number,
 ): Promise<RRFRetrievalResult<TradeDecision>[]> {
 	const response = await vectorSearch<TradeDecision>(client, embedding, {
 		topK,
@@ -267,7 +267,7 @@ async function performGraphTraversal(
 	instrumentId?: string,
 	underlyingSymbol?: string,
 	regime?: string,
-	limit = 50
+	limit = 50,
 ): Promise<RRFRetrievalResult<TradeDecision>[]> {
 	const results: Map<string, { node: TradeDecision; score: number }> = new Map();
 
@@ -328,7 +328,7 @@ async function performGraphTraversal(
 async function findDecisionsByInstrument(
 	client: HelixClient,
 	instrumentId: string,
-	limit: number
+	limit: number,
 ): Promise<TradeDecision[]> {
 	try {
 		const nodes = await getNodesByType<TradeDecision>(client, "TradeDecision", {
@@ -347,7 +347,7 @@ async function findDecisionsByInstrument(
 async function findDecisionsByUnderlying(
 	client: HelixClient,
 	underlyingSymbol: string,
-	limit: number
+	limit: number,
 ): Promise<TradeDecision[]> {
 	try {
 		const nodes = await getNodesByType<TradeDecision>(client, "TradeDecision", {
@@ -366,7 +366,7 @@ async function findDecisionsByUnderlying(
 async function findDecisionsByRegime(
 	client: HelixClient,
 	regime: string,
-	limit: number
+	limit: number,
 ): Promise<TradeDecision[]> {
 	try {
 		const nodes = await getNodesByType<TradeDecision>(client, "TradeDecision", {
@@ -389,7 +389,7 @@ async function findDecisionsByRegime(
 function fuseResults(
 	vectorResults: RRFRetrievalResult<TradeDecision>[],
 	graphResults: RRFRetrievalResult<TradeDecision>[],
-	topK: number
+	topK: number,
 ): RRFResult<TradeDecision>[] {
 	return fuseWithRRF(vectorResults, graphResults, {
 		k: DEFAULT_RETRIEVAL_CONFIG.rrfK,
@@ -431,7 +431,7 @@ function calculateSourceCounts(results: RRFResult<TradeDecision>[]): {
  */
 function createDecisionSummary(
 	decision: TradeDecision,
-	rrfResult: RRFResult<TradeDecision>
+	rrfResult: RRFResult<TradeDecision>,
 ): DecisionSummary {
 	// Truncate rationale to summary length
 	const maxLen = DEFAULT_RETRIEVAL_CONFIG.maxRationaleSummaryLength;
@@ -464,7 +464,7 @@ function createDecisionSummary(
 function getEmptyReason(
 	totalResults: number,
 	vectorCount: number,
-	graphCount: number
+	graphCount: number,
 ): string | undefined {
 	if (totalResults > 0) {
 		return undefined;
@@ -499,7 +499,7 @@ export async function retrieveSimilarDecisions(
 	symbol: string,
 	regime?: string,
 	topK = 5,
-	client?: HelixClient
+	client?: HelixClient,
 ): Promise<RetrievalResult> {
 	return executeHelixRetrieval(
 		{
@@ -509,7 +509,7 @@ export async function retrieveSimilarDecisions(
 			regime,
 			topK,
 		},
-		client
+		client,
 	);
 }
 
@@ -522,7 +522,7 @@ export async function retrieveRegimeDecisions(
 	queryEmbedding: number[],
 	regime: string,
 	topK = 10,
-	client?: HelixClient
+	client?: HelixClient,
 ): Promise<RetrievalResult> {
 	return executeHelixRetrieval(
 		{
@@ -530,7 +530,7 @@ export async function retrieveRegimeDecisions(
 			regime,
 			topK,
 		},
-		client
+		client,
 	);
 }
 
@@ -541,7 +541,7 @@ export async function retrieveVectorOnly(
 	queryEmbedding: number[],
 	topK = 10,
 	minSimilarity = 0.5,
-	client?: HelixClient
+	client?: HelixClient,
 ): Promise<RetrievalResult> {
 	return executeHelixRetrieval(
 		{
@@ -549,6 +549,6 @@ export async function retrieveVectorOnly(
 			topK,
 			minSimilarity,
 		},
-		client
+		client,
 	);
 }

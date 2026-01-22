@@ -19,7 +19,7 @@ import {
 // ============================================
 
 function createMockClient(
-	queryFn: (name: string, params?: Record<string, unknown>) => Promise<unknown> = async () => ({})
+	queryFn: (name: string, params?: Record<string, unknown>) => Promise<unknown> = async () => ({}),
 ): HelixClient {
 	return {
 		query: mock(queryFn),

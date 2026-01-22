@@ -39,7 +39,7 @@ export function getEmbeddingClient(): EmbeddingClient | null {
 	} catch (error) {
 		log.warn(
 			{ error: error instanceof Error ? error.message : String(error) },
-			"Failed to create embedding client"
+			"Failed to create embedding client",
 		);
 		return null;
 	}

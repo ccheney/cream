@@ -178,7 +178,7 @@ async function storeMarketSnapshots(events: PredictionMarketEvent[]): Promise<vo
 
 async function storeComputedSignals(
 	signals: MacroRiskSignals,
-	scores: PredictionMarketScores
+	scores: PredictionMarketScores,
 ): Promise<void> {
 	const repo = await getPredictionMarketsRepo();
 
@@ -232,7 +232,14 @@ export const fetchPredictionMarketsStep = createStep({
 	inputSchema: z.object({
 		marketTypes: z
 			.array(
-				z.enum(["FED_RATE", "ECONOMIC_DATA", "RECESSION", "GEOPOLITICAL", "REGULATORY", "ELECTION"])
+				z.enum([
+					"FED_RATE",
+					"ECONOMIC_DATA",
+					"RECESSION",
+					"GEOPOLITICAL",
+					"REGULATORY",
+					"ELECTION",
+				]),
 			)
 			.optional()
 			.default(["FED_RATE", "ECONOMIC_DATA", "RECESSION"]),
@@ -282,7 +289,7 @@ export const fetchPredictionMarketsStep = createStep({
 
 			log.info(
 				{ eventCount: marketData.events.length, platforms: marketData.signals.platforms },
-				"Fetched prediction market data"
+				"Fetched prediction market data",
 			);
 
 			// Store data to database
@@ -299,7 +306,7 @@ export const fetchPredictionMarketsStep = createStep({
 								? snapshotResult.reason.message
 								: String(snapshotResult.reason),
 					},
-					"Failed to store prediction market snapshots"
+					"Failed to store prediction market snapshots",
 				);
 			} else {
 				log.info({ count: marketData.events.length }, "Stored prediction market snapshots");
@@ -313,7 +320,7 @@ export const fetchPredictionMarketsStep = createStep({
 								? signalResult.reason.message
 								: String(signalResult.reason),
 					},
-					"Failed to store prediction market signals"
+					"Failed to store prediction market signals",
 				);
 			} else {
 				log.info("Stored prediction market signals");
@@ -333,7 +340,7 @@ export const fetchPredictionMarketsStep = createStep({
 		} catch (error) {
 			log.warn(
 				{ error: error instanceof Error ? error.message : String(error) },
-				"Failed to fetch prediction market data"
+				"Failed to fetch prediction market data",
 			);
 			return {
 				signals: {
@@ -440,7 +447,7 @@ export async function getLatestPredictionMarketSignals(): Promise<PredictionMark
 	} catch (error) {
 		log.warn(
 			{ error: error instanceof Error ? error.message : String(error) },
-			"Failed to get latest prediction market signals"
+			"Failed to get latest prediction market signals",
 		);
 		return null;
 	}

@@ -224,7 +224,7 @@ function toProtobufDecision(decision: Decision) {
 			symbol: leg.symbol,
 			ratioQty: leg.ratioQty,
 			positionIntent: toProtobufPositionIntent(leg.positionIntent),
-		})
+		}),
 	);
 
 	// Create risk levels from stopLoss and takeProfit
@@ -274,7 +274,7 @@ function toProtobufDecision(decision: Decision) {
  */
 function toProtobufDecisionPlan(
 	plan: WorkflowDecisionPlan,
-	ctx?: ExecutionContext
+	ctx?: ExecutionContext,
 ): ProtobufDecisionPlan {
 	return create(DecisionPlanSchema, {
 		cycleId: plan.cycleId,
@@ -324,7 +324,7 @@ export async function checkConstraints(
 	approved: boolean,
 	plan: WorkflowDecisionPlan,
 	ctx?: ExecutionContext,
-	constraints?: RuntimeConstraintsConfig
+	constraints?: RuntimeConstraintsConfig,
 ): Promise<{ passed: boolean; violations: string[] }> {
 	if (!approved) {
 		return { passed: false, violations: ["Plan not approved by agents"] };
@@ -405,7 +405,7 @@ export async function submitOrders(
 	constraintsPassed: boolean,
 	plan: WorkflowDecisionPlan,
 	cycleId: string,
-	ctx?: ExecutionContext
+	ctx?: ExecutionContext,
 ): Promise<{ submitted: boolean; orderIds: string[]; errors: string[] }> {
 	if (!constraintsPassed) {
 		return { submitted: false, orderIds: [], errors: ["Constraints not passed"] };
@@ -419,7 +419,7 @@ export async function submitOrders(
 
 	if (ctx && isTest(ctx)) {
 		const mockOrderIds = actionableDecisions.map(
-			(d) => `mock-${d.instrumentId}-${cycleId}-${Date.now()}`
+			(d) => `mock-${d.instrumentId}-${cycleId}-${Date.now()}`,
 		);
 		return { submitted: true, orderIds: mockOrderIds, errors: [] };
 	}
@@ -450,7 +450,7 @@ export async function submitOrders(
 				orderType: orderType === OrderType.LIMIT ? "LIMIT" : "MARKET",
 				limitPrice,
 			},
-			"Submitting order to execution engine"
+			"Submitting order to execution engine",
 		);
 
 		try {
@@ -492,7 +492,7 @@ export async function submitOrders(
 					await ordersRepo.updateStatus(
 						order.id,
 						toStorageOrderStatus(response.status),
-						response.orderId
+						response.orderId,
 					);
 
 					log.info(
@@ -504,7 +504,7 @@ export async function submitOrders(
 							internalOrderId: order.id,
 							status: response.status,
 						},
-						"Order submitted to Alpaca and persisted to database"
+						"Order submitted to Alpaca and persisted to database",
 					);
 				} catch (persistError) {
 					log.error(
@@ -515,7 +515,7 @@ export async function submitOrders(
 							orderId: response.orderId,
 							error: persistError instanceof Error ? persistError.message : String(persistError),
 						},
-						"Order submitted to Alpaca but failed to persist to database"
+						"Order submitted to Alpaca but failed to persist to database",
 					);
 				}
 			}
@@ -528,7 +528,7 @@ export async function submitOrders(
 						instrumentId: decision.instrumentId,
 						errorMessage: response.errorMessage,
 					},
-					"Order rejected by Alpaca"
+					"Order rejected by Alpaca",
 				);
 			}
 		} catch (error) {
@@ -541,7 +541,7 @@ export async function submitOrders(
 					instrumentId: decision.instrumentId,
 					error: message,
 				},
-				"Failed to submit order to execution engine"
+				"Failed to submit order to execution engine",
 			);
 		}
 	}

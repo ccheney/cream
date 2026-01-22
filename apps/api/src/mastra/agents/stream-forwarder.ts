@@ -53,7 +53,7 @@ export interface StreamForwarderOptions {
 export function createStreamChunkForwarder(
 	agentType: AgentType,
 	onChunk: OnStreamChunk,
-	options?: StreamForwarderOptions
+	options?: StreamForwarderOptions,
 ) {
 	const toolArgsById: ToolCallArgsAccumulator = new Map();
 	const toolResultsAccumulator = options?.toolResultsAccumulator;
@@ -312,7 +312,7 @@ export function createStreamChunkForwarder(
 						chunkType: chunk.type,
 						payloadKeys: Object.keys(payload),
 					},
-					"Unhandled stream chunk type"
+					"Unhandled stream chunk type",
 				);
 			}
 		}

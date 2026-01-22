@@ -41,7 +41,7 @@ const log = createNodeLogger({ service: "macro-watch", level: "info" });
  */
 export async function runMacroWatch(
 	symbols: string[],
-	since: string
+	since: string,
 ): Promise<{ entries: MacroWatchEntry[]; totalCount: number; timestamp: string }> {
 	// Run scanners in parallel for efficiency
 	const [newsEntries, predictionEntries, economicEntries, moverEntries] = await Promise.all([
@@ -61,7 +61,7 @@ export async function runMacroWatch(
 
 	// Deduplicate by a composite key (headline + category + source) since IDs are generated at save time
 	const uniqueEntries = Array.from(
-		new Map(allEntries.map((e) => [`${e.headline}|${e.category}|${e.source}`, e])).values()
+		new Map(allEntries.map((e) => [`${e.headline}|${e.category}|${e.source}`, e])).values(),
 	);
 
 	// Sort by timestamp descending
@@ -75,7 +75,7 @@ export async function runMacroWatch(
 			movers: moverEntries.length,
 			total: uniqueEntries.length,
 		},
-		"MacroWatch workflow complete"
+		"MacroWatch workflow complete",
 	);
 
 	return {

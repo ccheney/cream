@@ -166,7 +166,7 @@ export function createRequestContext(model?: string | null): RequestContext {
  */
 export function getAgentRuntimeSettings(
 	agentType: AgentType,
-	agentConfigs?: Partial<Record<AgentType, AgentConfigEntry>>
+	agentConfigs?: Partial<Record<AgentType, AgentConfigEntry>>,
 ): AgentRuntimeSettings {
 	const config = agentConfigs?.[agentType];
 	if (config) {
@@ -227,7 +227,7 @@ export interface GenerateOptions {
 export function buildGenerateOptions(
 	settings: AgentRuntimeSettings,
 	structuredOutput: { schema: z.ZodType },
-	options?: { useTwoStepExtraction?: boolean }
+	options?: { useTwoStepExtraction?: boolean },
 ): GenerateOptions {
 	return {
 		structuredOutput: options?.useTwoStepExtraction

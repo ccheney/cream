@@ -108,7 +108,7 @@ export async function scanEconomicCalendar(): Promise<MacroWatchEntry[]> {
 	} catch (error) {
 		log.error(
 			{ error: error instanceof Error ? error.message : String(error) },
-			"Economic scan failed"
+			"Economic scan failed",
 		);
 	}
 

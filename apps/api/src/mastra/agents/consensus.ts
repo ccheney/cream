@@ -74,7 +74,7 @@ function extractRejectionReasons(riskManager: RiskManagerOutput, critic: CriticO
 	if (critic.verdict === "REJECT") {
 		for (const violation of critic.violations) {
 			reasons.push(
-				`Critic: ${violation.constraint} (${violation.current_value} vs ${violation.limit}) - ${violation.severity}`
+				`Critic: ${violation.constraint} (${violation.current_value} vs ${violation.limit}) - ${violation.severity}`,
 			);
 		}
 		for (const change of critic.required_changes) {
@@ -101,7 +101,7 @@ function extractRejectionReasons(riskManager: RiskManagerOutput, critic: CriticO
 export async function runConsensusLoop(
 	context: AgentContext,
 	portfolioState?: Record<string, unknown>,
-	constraints?: RuntimeConstraintsConfig
+	constraints?: RuntimeConstraintsConfig,
 ): Promise<ConsensusResult> {
 	// Phase 1: Analysts
 	const analystOutputs = await runAnalystsParallel(context);
@@ -127,7 +127,7 @@ export async function runConsensusLoop(
 			constraints,
 			context.agentConfigs,
 			context.indicators,
-			context.toolResults
+			context.toolResults,
 		);
 
 		riskManager = approval.riskManager;
@@ -162,7 +162,7 @@ export async function runConsensusLoop(
 			debateOutputs,
 			context.agentConfigs,
 			undefined, // abortSignal
-			constraints
+			constraints,
 		);
 		revisionAttempts++;
 	}
@@ -190,7 +190,7 @@ export async function runConsensusLoopStreaming(
 	context: AgentContext,
 	onChunk: OnStreamChunk,
 	portfolioState?: Record<string, unknown>,
-	constraints?: RuntimeConstraintsConfig
+	constraints?: RuntimeConstraintsConfig,
 ): Promise<ConsensusResult> {
 	// Phase 1: Analysts
 	const analystOutputs = await runAnalystsParallelStreaming(context, onChunk);
@@ -218,7 +218,7 @@ export async function runConsensusLoopStreaming(
 			context.agentConfigs,
 			context.indicators,
 			undefined, // abortSignal
-			context.toolResults
+			context.toolResults,
 		);
 
 		riskManager = approval.riskManager;
@@ -253,7 +253,7 @@ export async function runConsensusLoopStreaming(
 			debateOutputs,
 			context.agentConfigs,
 			undefined, // abortSignal
-			constraints
+			constraints,
 		);
 		revisionAttempts++;
 	}

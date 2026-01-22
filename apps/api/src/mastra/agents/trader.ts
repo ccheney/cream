@@ -53,7 +53,7 @@ export async function runTrader(
 	context: AgentContext,
 	debateOutputs: DebateOutputs,
 	portfolioState?: Record<string, unknown>,
-	constraints?: RuntimeConstraintsConfig
+	constraints?: RuntimeConstraintsConfig,
 ): Promise<DecisionPlan> {
 	const indicatorContext = buildIndicatorContext(context.indicators);
 	const constraintsContext = buildConstraintsContext(constraints);
@@ -105,7 +105,7 @@ export async function runTraderStreaming(
 	debateOutputs: DebateOutputs,
 	onChunk: OnStreamChunk,
 	portfolioState?: Record<string, unknown>,
-	constraints?: RuntimeConstraintsConfig
+	constraints?: RuntimeConstraintsConfig,
 ): Promise<DecisionPlan> {
 	// Initialize toolResults accumulator if not present
 	if (!context.toolResults) {
@@ -146,7 +146,7 @@ POSITION SIZING GUIDANCE from indicators:
 	const options = buildGenerateOptions(
 		settings,
 		{ schema: DecisionPlanSchema },
-		{ useTwoStepExtraction: true }
+		{ useTwoStepExtraction: true },
 	);
 
 	const stream = await traderAgent.stream([{ role: "user", content: prompt }], options);
@@ -190,7 +190,7 @@ POSITION SIZING GUIDANCE from indicators:
 				streamUsage,
 				responseStatus: response?.status,
 			},
-			"[trader] Structured output undefined after streaming"
+			"[trader] Structured output undefined after streaming",
 		);
 	}
 
@@ -216,7 +216,7 @@ export async function revisePlan(
 	debateOutputs: DebateOutputs,
 	agentConfigs?: Partial<Record<AgentType, AgentConfigEntry>>,
 	abortSignal?: AbortSignal,
-	constraints?: RuntimeConstraintsConfig
+	constraints?: RuntimeConstraintsConfig,
 ): Promise<DecisionPlan> {
 	const constraintsContext = buildConstraintsContext(constraints);
 

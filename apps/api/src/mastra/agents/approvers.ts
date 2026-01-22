@@ -89,7 +89,7 @@ function buildRiskIndicatorsSummary(indicators?: Record<string, IndicatorSnapsho
 			const sessionTag = session !== "RTH" ? ` (${session})` : "";
 			const spreadWarning = isWide ? " [WIDE]" : "";
 			riskParts.push(
-				`Spread=${snapshot.liquidity.bid_ask_spread_pct.toFixed(4)}%${sessionTag}${spreadWarning}`
+				`Spread=${snapshot.liquidity.bid_ask_spread_pct.toFixed(4)}%${sessionTag}${spreadWarning}`,
 			);
 		}
 
@@ -99,7 +99,7 @@ function buildRiskIndicatorsSummary(indicators?: Record<string, IndicatorSnapsho
 			snapshot.short_interest.short_pct_float > 0.1
 		) {
 			riskParts.push(
-				`SI=${(snapshot.short_interest.short_pct_float * 100).toFixed(1)}% [ELEVATED]`
+				`SI=${(snapshot.short_interest.short_pct_float * 100).toFixed(1)}% [ELEVATED]`,
 			);
 		}
 
@@ -130,7 +130,7 @@ export async function runRiskManager(
 	portfolioState?: Record<string, unknown>,
 	constraints?: RuntimeConstraintsConfig,
 	agentConfigs?: Partial<Record<AgentType, AgentConfigEntry>>,
-	indicators?: Record<string, IndicatorSnapshot>
+	indicators?: Record<string, IndicatorSnapshot>,
 ): Promise<RiskManagerOutput> {
 	const riskIndicatorsSummary = buildRiskIndicatorsSummary(indicators);
 
@@ -181,7 +181,7 @@ export async function runCritic(
 	debateOutputs: DebateOutputs,
 	agentConfigs?: Partial<Record<AgentType, AgentConfigEntry>>,
 	indicators?: Record<string, IndicatorSnapshot>,
-	toolResults?: ToolResultEntry[]
+	toolResults?: ToolResultEntry[],
 ): Promise<CriticOutput> {
 	const indicatorSummary = buildIndicatorSummary(indicators);
 	const toolResultsSummary = buildToolResultsSummary(toolResults);
@@ -225,7 +225,7 @@ export async function runApprovalParallel(
 	constraints?: RuntimeConstraintsConfig,
 	agentConfigs?: Partial<Record<AgentType, AgentConfigEntry>>,
 	indicators?: Record<string, IndicatorSnapshot>,
-	toolResults?: ToolResultEntry[]
+	toolResults?: ToolResultEntry[],
 ): Promise<{
 	riskManager: RiskManagerOutput;
 	critic: CriticOutput;
@@ -253,7 +253,7 @@ export async function runRiskManagerStreaming(
 	agentConfigs?: Partial<Record<AgentType, AgentConfigEntry>>,
 	indicators?: Record<string, IndicatorSnapshot>,
 	abortSignal?: AbortSignal,
-	toolResults?: ToolResultEntry[]
+	toolResults?: ToolResultEntry[],
 ): Promise<RiskManagerOutput> {
 	const riskIndicatorsSummary = buildRiskIndicatorsSummary(indicators);
 
@@ -331,7 +331,7 @@ RISK VALIDATION GUIDANCE:
 		const response = await stream.response;
 		log.error(
 			{ streamText, streamUsage, responseHeaders: response?.headers },
-			"[risk_manager] Structured output undefined after streaming"
+			"[risk_manager] Structured output undefined after streaming",
 		);
 	}
 	return result as RiskManagerOutput;
@@ -378,7 +378,7 @@ export async function runCriticStreaming(
 	agentConfigs?: Partial<Record<AgentType, AgentConfigEntry>>,
 	indicators?: Record<string, IndicatorSnapshot>,
 	abortSignal?: AbortSignal,
-	toolResults?: ToolResultEntry[]
+	toolResults?: ToolResultEntry[],
 ): Promise<CriticOutput> {
 	const indicatorSummary = buildIndicatorSummary(indicators);
 	const toolResultsSummary = buildToolResultsSummary(toolResults);
@@ -448,7 +448,7 @@ CONSISTENCY VALIDATION GUIDANCE:
 		const response = await stream.response;
 		log.error(
 			{ streamText, streamUsage, responseHeaders: response?.headers },
-			"[critic] Structured output undefined after streaming"
+			"[critic] Structured output undefined after streaming",
 		);
 	}
 	return result as CriticOutput;
@@ -467,7 +467,7 @@ export async function runApprovalParallelStreaming(
 	agentConfigs?: Partial<Record<AgentType, AgentConfigEntry>>,
 	indicators?: Record<string, IndicatorSnapshot>,
 	abortSignal?: AbortSignal,
-	toolResults?: ToolResultEntry[]
+	toolResults?: ToolResultEntry[],
 ): Promise<{
 	riskManager: RiskManagerOutput;
 	critic: CriticOutput;
@@ -481,7 +481,7 @@ export async function runApprovalParallelStreaming(
 			agentConfigs,
 			indicators,
 			abortSignal,
-			toolResults
+			toolResults,
 		),
 		runCriticStreaming(
 			plan,
@@ -491,7 +491,7 @@ export async function runApprovalParallelStreaming(
 			agentConfigs,
 			indicators,
 			abortSignal,
-			toolResults
+			toolResults,
 		),
 	]);
 

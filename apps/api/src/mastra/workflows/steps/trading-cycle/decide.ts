@@ -29,7 +29,7 @@ export async function runNewsAnalystStub(instruments: string[]): Promise<Sentime
 }
 
 export async function runFundamentalsAnalystStub(
-	instruments: string[]
+	instruments: string[],
 ): Promise<FundamentalsAnalysis[]> {
 	return instruments.map((instrument) => ({
 		instrument_id: instrument,
@@ -78,7 +78,7 @@ export async function runBearishResearcherStub(instruments: string[]): Promise<R
 export async function runTraderAgentStub(
 	cycleId: string,
 	bullish: Research[],
-	_bearish: Research[]
+	_bearish: Research[],
 ): Promise<WorkflowDecisionPlan> {
 	return {
 		cycleId,

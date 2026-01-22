@@ -40,7 +40,7 @@ export type AgentType =
  */
 export async function loadRuntimeConfig(
 	ctx: ExecutionContext,
-	useDraft: boolean
+	useDraft: boolean,
 ): Promise<FullRuntimeConfig | null> {
 	try {
 		const service = await getRuntimeConfigService();
@@ -63,7 +63,7 @@ export async function loadRuntimeConfig(
  * Returns undefined if no config available.
  */
 export function buildAgentConfigs(
-	runtimeConfig: FullRuntimeConfig | null
+	runtimeConfig: FullRuntimeConfig | null,
 ): Record<AgentType, AgentConfigEntry> | undefined {
 	if (!runtimeConfig?.agents) {
 		return undefined;

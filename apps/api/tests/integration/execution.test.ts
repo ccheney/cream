@@ -166,7 +166,7 @@ describe("Execution Engine Integration", () => {
 			console.log("[Test] Docker or image not available, using mock tests");
 			// biome-ignore lint/suspicious/noConsole: Test diagnostic output
 			console.log(
-				`[Test] Docker available: ${dockerAvailable}, Image available: ${imageAvailable}`
+				`[Test] Docker available: ${dockerAvailable}, Image available: ${imageAvailable}`,
 			);
 		}
 	});

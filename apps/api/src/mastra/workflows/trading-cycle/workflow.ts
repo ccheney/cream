@@ -263,12 +263,12 @@ const orientStep = createStep({
 				predictionMarketSignals = predictionResult.value;
 				log.debug(
 					{ platforms: predictionMarketSignals.platforms },
-					"Loaded prediction market signals"
+					"Loaded prediction market signals",
 				);
 			} else if (predictionResult.status === "rejected") {
 				log.warn(
 					{ error: String(predictionResult.reason) },
-					"Failed to load prediction market signals"
+					"Failed to load prediction market signals",
 				);
 			}
 
@@ -277,7 +277,7 @@ const orientStep = createStep({
 				constraints = configResult.value.constraints;
 				log.debug(
 					{ agentCount: agentConfigs ? Object.keys(agentConfigs).length : 0 },
-					"Loaded agent configs"
+					"Loaded agent configs",
 				);
 				log.debug({ hasConstraints: !!constraints }, "Loaded runtime constraints");
 			} else if (configResult.status === "rejected") {
@@ -298,7 +298,7 @@ const orientStep = createStep({
 						caseCount:
 							(memoryResult.value as { relevantCases: unknown[] }).relevantCases?.length ?? 0,
 					},
-					"Loaded memory context"
+					"Loaded memory context",
 				);
 			} else {
 				log.warn({ error: String(memoryResult.reason) }, "Failed to load memory context");
@@ -635,7 +635,7 @@ const traderStep = createStep({
 			debateOutputs,
 			onChunk,
 			undefined, // portfolioState
-			inputData.constraints
+			inputData.constraints,
 		);
 
 		// Emit complete event
@@ -728,7 +728,7 @@ const consensusStep = createStep({
 			inputData.agentConfigs,
 			inputData.snapshot?.indicators,
 			undefined, // abortSignal
-			inputData.toolResults // tool results from previous steps for audit validation
+			inputData.toolResults, // tool results from previous steps for audit validation
 		);
 
 		// Emit complete events
@@ -754,7 +754,7 @@ const consensusStep = createStep({
 		if (!riskManager || !critic) {
 			log.warn(
 				{ hasRiskManager: !!riskManager, hasCritic: !!critic },
-				"[consensus] Agent returned undefined"
+				"[consensus] Agent returned undefined",
 			);
 		}
 
@@ -783,7 +783,7 @@ const consensusStep = createStep({
 
 			if (finalApprovedIds.size > 0 && filteredDecisionPlan) {
 				const filteredDecisions = filteredDecisionPlan.decisions.filter((d: Decision) =>
-					finalApprovedIds.has(d.decisionId)
+					finalApprovedIds.has(d.decisionId),
 				);
 				if (filteredDecisions.length > 0) {
 					filteredDecisionPlan = {
@@ -797,7 +797,7 @@ const consensusStep = createStep({
 							approved: filteredDecisions.length,
 							rejected: (inputData.decisionPlan?.decisions.length ?? 0) - filteredDecisions.length,
 						},
-						"Partial approval - filtered decision plan"
+						"Partial approval - filtered decision plan",
 					);
 				}
 			}
@@ -836,7 +836,7 @@ const actStep = createStep({
 				approved,
 				decisionPlan,
 				undefined, // ctx
-				inputData.constraints
+				inputData.constraints,
 			);
 			if (constraintCheck.passed) {
 				orderSubmission = await submitOrders(true, decisionPlan, inputData.cycleId);
@@ -869,14 +869,14 @@ const actStep = createStep({
 						decision,
 						environment,
 						inputData.cycleId,
-						currentPrice
+						currentPrice,
 					);
 
 					if (update) {
 						thesisUpdates.push(update);
 						log.debug(
 							{ thesisId: update.thesisId, from: update.fromState, to: update.toState },
-							"Thesis state updated"
+							"Thesis state updated",
 						);
 					}
 				}
@@ -886,20 +886,20 @@ const actStep = createStep({
 					const ingestionResult = await ingestClosedThesesForCycle(
 						inputData.cycleId,
 						environment,
-						thesisUpdates
+						thesisUpdates,
 					);
 
 					if (ingestionResult.ingested > 0) {
 						log.info(
 							{ cycleId: inputData.cycleId, ingested: ingestionResult.ingested },
-							"Closed theses ingested to HelixDB"
+							"Closed theses ingested to HelixDB",
 						);
 					}
 				}
 			} catch (error) {
 				log.error(
 					{ error: error instanceof Error ? error.message : String(error) },
-					"Thesis processing failed"
+					"Thesis processing failed",
 				);
 			}
 		}

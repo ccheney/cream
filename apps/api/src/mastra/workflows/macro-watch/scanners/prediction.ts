@@ -234,12 +234,12 @@ export async function scanPredictionDeltas(): Promise<MacroWatchEntry[]> {
 		const fourHoursAgo = new Date(now.getTime() - 4 * 60 * 60 * 1000);
 		const recentPredictionEntries = await macroWatchRepo.findEntries(
 			{ category: "PREDICTION", fromTime: fourHoursAgo.toISOString() },
-			5
+			5,
 		);
 
 		// Skip if we already have a recent comprehensive summary
 		const hasRecentSummary = recentPredictionEntries.some(
-			(e) => e.metadata && (e.metadata as Record<string, unknown>).isComprehensive === true
+			(e) => e.metadata && (e.metadata as Record<string, unknown>).isComprehensive === true,
 		);
 
 		if (hasRecentSummary) {
@@ -322,7 +322,7 @@ export async function scanPredictionDeltas(): Promise<MacroWatchEntry[]> {
 	} catch (error) {
 		log.error(
 			{ error: error instanceof Error ? error.message : String(error) },
-			"Prediction scan failed"
+			"Prediction scan failed",
 		);
 	}
 

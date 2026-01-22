@@ -52,7 +52,7 @@ export const fundamentalsAnalystAgent = createAgent("fundamentals_analyst");
  */
 export async function runNewsAnalyst(context: AgentContext): Promise<SentimentAnalysisOutput[]> {
 	const newsEvents = (context.recentEvents ?? []).filter(
-		(e) => e.sourceType === "news" || e.sourceType === "press_release"
+		(e) => e.sourceType === "news" || e.sourceType === "press_release",
 	);
 
 	// Build indicator context with sentiment signals
@@ -96,7 +96,7 @@ If event_risk is true, pay special attention to potential catalysts.`;
  * Run Fundamentals & Macro Analyst agent.
  */
 export async function runFundamentalsAnalyst(
-	context: AgentContext
+	context: AgentContext,
 ): Promise<FundamentalsAnalysisOutput[]> {
 	const fundamentalEvents = (context.recentEvents ?? []).filter(
 		(e) =>
@@ -104,7 +104,7 @@ export async function runFundamentalsAnalyst(
 			e.sourceType === "transcript" ||
 			e.eventType === "earnings" ||
 			e.eventType === "guidance" ||
-			e.eventType === "macro_release"
+			e.eventType === "macro_release",
 	);
 
 	const regimeContext = buildRegimeContext(context.regimeLabels);
@@ -175,7 +175,7 @@ ${
 
 	const response = await fundamentalsAnalystAgent.generate(
 		[{ role: "user", content: prompt }],
-		options
+		options,
 	);
 
 	const result = response.object as FundamentalsAnalysisOutput[] | undefined;
@@ -206,7 +206,7 @@ export async function runAnalystsParallel(context: AgentContext): Promise<{
  */
 export async function runNewsAnalystStreaming(
 	context: AgentContext,
-	onChunk: OnStreamChunk
+	onChunk: OnStreamChunk,
 ): Promise<SentimentAnalysisOutput[]> {
 	// Initialize toolResults accumulator if not present
 	if (!context.toolResults) {
@@ -214,7 +214,7 @@ export async function runNewsAnalystStreaming(
 	}
 
 	const newsEvents = (context.recentEvents ?? []).filter(
-		(e) => e.sourceType === "news" || e.sourceType === "press_release"
+		(e) => e.sourceType === "news" || e.sourceType === "press_release",
 	);
 
 	// Build indicator context with sentiment signals
@@ -266,7 +266,7 @@ If event_risk is true, pay special attention to potential catalysts.`;
  */
 export async function runFundamentalsAnalystStreaming(
 	context: AgentContext,
-	onChunk: OnStreamChunk
+	onChunk: OnStreamChunk,
 ): Promise<FundamentalsAnalysisOutput[]> {
 	// Initialize toolResults accumulator if not present
 	if (!context.toolResults) {
@@ -279,7 +279,7 @@ export async function runFundamentalsAnalystStreaming(
 			e.sourceType === "transcript" ||
 			e.eventType === "earnings" ||
 			e.eventType === "guidance" ||
-			e.eventType === "macro_release"
+			e.eventType === "macro_release",
 	);
 
 	const regimeContext = buildRegimeContext(context.regimeLabels);
@@ -350,7 +350,7 @@ ${
 
 	const stream = await fundamentalsAnalystAgent.stream(
 		[{ role: "user", content: prompt }],
-		options
+		options,
 	);
 	const forwardChunk = createStreamChunkForwarder("fundamentals_analyst", onChunk, {
 		toolResultsAccumulator: context.toolResults,
@@ -369,7 +369,7 @@ ${
  */
 export async function runAnalystsParallelStreaming(
 	context: AgentContext,
-	onChunk: OnStreamChunk
+	onChunk: OnStreamChunk,
 ): Promise<{
 	news: SentimentAnalysisOutput[];
 	fundamentals: FundamentalsAnalysisOutput[];

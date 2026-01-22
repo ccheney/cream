@@ -51,7 +51,7 @@ For ${s}:
 - Web: "${s} analyst rating outlook"
 - Web: "${s} earnings expectations"
 - X cashtag: "$${s}" (primary - trader sentiment, breaking news)
-- X text: "${s} stock" (broader discussion)`
+- X text: "${s} stock" (broader discussion)`,
 		)
 		.join("\n");
 
@@ -105,7 +105,7 @@ function parseGroundingOutput(text: string): GroundingOutput {
  */
 function appendCitations(
 	output: GroundingOutput,
-	sources: Array<{ sourceType?: string; url?: string; title?: string } | string> | undefined
+	sources: Array<{ sourceType?: string; url?: string; title?: string } | string> | undefined,
 ): GroundingOutput {
 	if (!sources?.length) {
 		return output;
@@ -169,7 +169,7 @@ export async function runGroundingAgent(context: AgentContext): Promise<Groundin
  */
 export async function runGroundingAgentStreaming(
 	context: AgentContext,
-	onChunk: OnStreamChunk
+	onChunk: OnStreamChunk,
 ): Promise<GroundingOutput> {
 	const prompt = buildGroundingPrompt(context.symbols);
 	const agentType = "grounding_agent";

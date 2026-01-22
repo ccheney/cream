@@ -21,7 +21,7 @@ app.use(
 	cors({
 		origin: ["http://localhost:3000", "http://localhost:3001"],
 		credentials: true,
-	})
+	}),
 );
 
 // Health check
@@ -38,7 +38,7 @@ app.get("/", (c) =>
 			agents: "/api/agents",
 			workflows: "/api/workflows",
 		},
-	})
+	}),
 );
 
 // Initialize Mastra server with OpenAPI enabled

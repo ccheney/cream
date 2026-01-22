@@ -130,7 +130,7 @@ async function backfillThesisMemory(options: BackfillOptions): Promise<void> {
 			environment: environment as "PAPER" | "LIVE",
 			closedAfter: options.since,
 		},
-		options.limit ? { page: 1, pageSize: options.limit } : undefined
+		options.limit ? { page: 1, pageSize: options.limit } : undefined,
 	);
 
 	const closedTheses = result.data;
@@ -171,7 +171,7 @@ async function backfillThesisMemory(options: BackfillOptions): Promise<void> {
 					realizedPnlPct: thesis.realizedPnlPct,
 					closeReason: thesis.closeReason,
 				},
-				"Would ingest thesis"
+				"Would ingest thesis",
 			);
 		}
 	}
@@ -191,7 +191,7 @@ async function backfillThesisMemory(options: BackfillOptions): Promise<void> {
 	} catch (error) {
 		log.error(
 			{ error: error instanceof Error ? error.message : String(error) },
-			"Failed to create HelixDB or embedding client - ensure HELIX_HOST and GOOGLE_GENAI_API_KEY are set"
+			"Failed to create HelixDB or embedding client - ensure HELIX_HOST and GOOGLE_GENAI_API_KEY are set",
 		);
 		return;
 	}
@@ -209,7 +209,7 @@ async function backfillThesisMemory(options: BackfillOptions): Promise<void> {
 			failed: batchResult.failed.length,
 			totalTimeSeconds: (batchResult.totalExecutionTimeMs / 1000).toFixed(2),
 		},
-		"Backfill results"
+		"Backfill results",
 	);
 
 	if (batchResult.failed.length > 0) {

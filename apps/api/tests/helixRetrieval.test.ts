@@ -23,7 +23,7 @@ function createMockClient(
 	queryFn: (name: string, params?: Record<string, unknown>) => Promise<unknown> = async () => ({
 		data: [],
 		executionTimeMs: 1,
-	})
+	}),
 ): HelixClient {
 	return {
 		query: mock(queryFn),
@@ -401,7 +401,7 @@ describe("HelixDB Retrieval (GraphRAG)", () => {
 			const result = await executeHelixRetrieval(input, client);
 
 			expect(result.decisions[0].rationaleSummary.length).toBeLessThanOrEqual(
-				DEFAULT_RETRIEVAL_CONFIG.maxRationaleSummaryLength
+				DEFAULT_RETRIEVAL_CONFIG.maxRationaleSummaryLength,
 			);
 			expect(result.decisions[0].rationaleSummary.endsWith("...")).toBe(true);
 		});
@@ -415,7 +415,7 @@ describe("HelixDB Retrieval (GraphRAG)", () => {
 				"AAPL",
 				"BULL_TREND",
 				5,
-				client
+				client,
 			);
 
 			expect(result.success).toBe(true);
@@ -427,7 +427,7 @@ describe("HelixDB Retrieval (GraphRAG)", () => {
 				createQueryEmbedding(),
 				"HIGH_VOLATILITY",
 				10,
-				client
+				client,
 			);
 
 			expect(result.success).toBe(true);

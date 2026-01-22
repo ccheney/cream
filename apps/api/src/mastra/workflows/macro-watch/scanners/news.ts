@@ -166,7 +166,7 @@ export async function scanNews(symbols: string[], since: string): Promise<MacroW
 	} catch (error) {
 		log.error(
 			{ error: error instanceof Error ? error.message : String(error) },
-			"News scan failed"
+			"News scan failed",
 		);
 	}
 
