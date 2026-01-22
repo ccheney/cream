@@ -22,6 +22,8 @@ export interface PredictionMarketsConfig {
 // Prediction Markets Service
 // ============================================
 
+const WORKFLOW_TIMEOUT_MS = 60_000; // 60 seconds
+
 export class PredictionMarketsService {
 	private running = false;
 	private readonly config: PredictionMarketsConfig;
@@ -46,13 +48,24 @@ export class PredictionMarketsService {
 
 		try {
 			const run = await predictionMarketsWorkflow.createRun();
-			await run.start({
-				inputData: {
-					marketTypes: [...this.config.marketTypes],
-				},
-			});
-		} catch (_error) {
-			// Error handling done in workflow
+			await Promise.race([
+				run.start({
+					inputData: {
+						marketTypes: [...this.config.marketTypes],
+					},
+				}),
+				new Promise((_, reject) =>
+					setTimeout(
+						() => reject(new Error("Prediction markets workflow timed out")),
+						WORKFLOW_TIMEOUT_MS
+					)
+				),
+			]);
+		} catch (error) {
+			log.warn(
+				{ error: error instanceof Error ? error.message : String(error) },
+				"Prediction markets workflow failed"
+			);
 		} finally {
 			this.running = false;
 		}

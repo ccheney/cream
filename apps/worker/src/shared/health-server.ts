@@ -150,6 +150,7 @@ export function createHealthServer(deps: HealthServerDeps, port?: number) {
 	function start() {
 		server = Bun.serve({
 			port: healthPort,
+			idleTimeout: 120,
 			async fetch(req) {
 				const url = new URL(req.url);
 
