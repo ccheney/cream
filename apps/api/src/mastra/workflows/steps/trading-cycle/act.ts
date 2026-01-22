@@ -36,8 +36,12 @@ import {
 	DecisionSchema,
 	type DecisionPlan as ProtobufDecisionPlan,
 } from "@cream/schema-gen/cream/v1/decision";
-import { RiskConstraintsSchema } from "@cream/schema-gen/cream/v1/execution";
-
+import {
+	OrderStatus as ProtoOrderStatus,
+	RiskConstraintsSchema,
+} from "@cream/schema-gen/cream/v1/execution";
+import type { OrderStatus as StorageOrderStatus } from "@cream/storage";
+import { getOrdersRepo } from "../../../../db.js";
 import {
 	ExecutionEngineError,
 	getExecutionEngineClient,
@@ -359,6 +363,35 @@ export async function checkConstraints(
 }
 
 // ============================================
+// Order Status Mapping
+// ============================================
+
+/**
+ * Map protobuf OrderStatus to storage OrderStatus
+ */
+function toStorageOrderStatus(protoStatus: ProtoOrderStatus): StorageOrderStatus {
+	switch (protoStatus) {
+		case ProtoOrderStatus.NEW:
+		case ProtoOrderStatus.PENDING:
+			return "pending";
+		case ProtoOrderStatus.ACCEPTED:
+			return "accepted";
+		case ProtoOrderStatus.PARTIAL_FILL:
+			return "partial_fill";
+		case ProtoOrderStatus.FILLED:
+			return "filled";
+		case ProtoOrderStatus.CANCELLED:
+			return "cancelled";
+		case ProtoOrderStatus.REJECTED:
+			return "rejected";
+		case ProtoOrderStatus.EXPIRED:
+			return "expired";
+		default:
+			return "submitted";
+	}
+}
+
+// ============================================
 // Order Submission
 // ============================================
 
@@ -437,16 +470,54 @@ export async function submitOrders(
 
 			if (response.orderId) {
 				orderIds.push(response.orderId);
-				log.info(
-					{
-						cycleId,
+
+				// Persist order to PostgreSQL
+				try {
+					const ordersRepo = getOrdersRepo();
+					const storageOrderType = orderType === OrderType.LIMIT ? "limit" : "market";
+					const storageSide = decision.action === "BUY" ? "buy" : "sell";
+
+					const order = await ordersRepo.create({
 						decisionId: decision.decisionId,
-						instrumentId: decision.instrumentId,
-						orderId: response.orderId,
-						status: response.status,
-					},
-					"Order submitted successfully to Alpaca"
-				);
+						symbol: decision.instrumentId,
+						side: storageSide,
+						quantity: decision.size.value,
+						orderType: storageOrderType,
+						limitPrice: limitPrice ?? null,
+						timeInForce: "day",
+						environment: ctx?.environment ?? "PAPER",
+					});
+
+					// Update with broker order ID and status
+					await ordersRepo.updateStatus(
+						order.id,
+						toStorageOrderStatus(response.status),
+						response.orderId
+					);
+
+					log.info(
+						{
+							cycleId,
+							decisionId: decision.decisionId,
+							instrumentId: decision.instrumentId,
+							orderId: response.orderId,
+							internalOrderId: order.id,
+							status: response.status,
+						},
+						"Order submitted to Alpaca and persisted to database"
+					);
+				} catch (persistError) {
+					log.error(
+						{
+							cycleId,
+							decisionId: decision.decisionId,
+							instrumentId: decision.instrumentId,
+							orderId: response.orderId,
+							error: persistError instanceof Error ? persistError.message : String(persistError),
+						},
+						"Order submitted to Alpaca but failed to persist to database"
+					);
+				}
 			}
 			if (response.errorMessage) {
 				errors.push(`${decision.instrumentId}: ${response.errorMessage}`);
