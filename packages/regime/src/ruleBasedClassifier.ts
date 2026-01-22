@@ -63,7 +63,7 @@ const STRONG_TREND_THRESHOLD_PCT = 0.02; // 2%
 
 export function classifyRegime(
 	input: RegimeInput,
-	config: RuleBasedConfig = DEFAULT_RULE_BASED_CONFIG
+	config: RuleBasedConfig = DEFAULT_RULE_BASED_CONFIG,
 ): RegimeClassification {
 	const { candles, historicalAtr = [] } = input;
 
@@ -92,7 +92,7 @@ export function classifyRegime(
 
 function applyRules(
 	metrics: RegimeClassification["metrics"],
-	config: RuleBasedConfig
+	config: RuleBasedConfig,
 ): RegimeClassification {
 	const { maDiff, maDiffPct, atrPercentile } = metrics;
 
@@ -178,13 +178,13 @@ function calculateConfidence(value: number, threshold: number, extreme: number):
 }
 
 export function createRuleBasedClassifier(
-	config: RuleBasedConfig = DEFAULT_RULE_BASED_CONFIG
+	config: RuleBasedConfig = DEFAULT_RULE_BASED_CONFIG,
 ): (input: RegimeInput) => RegimeClassification {
 	return (input: RegimeInput) => classifyRegime(input, config);
 }
 
 export function getRequiredCandleCount(
-	config: RuleBasedConfig = DEFAULT_RULE_BASED_CONFIG
+	config: RuleBasedConfig = DEFAULT_RULE_BASED_CONFIG,
 ): number {
 	// Need enough candles for slow MA + ATR period
 	return Math.max(config.trend_ma_slow, 14) + 1;
@@ -192,7 +192,7 @@ export function getRequiredCandleCount(
 
 export function hasEnoughData(
 	candles: OHLCVBar[],
-	config: RuleBasedConfig = DEFAULT_RULE_BASED_CONFIG
+	config: RuleBasedConfig = DEFAULT_RULE_BASED_CONFIG,
 ): boolean {
 	return candles.length >= getRequiredCandleCount(config);
 }

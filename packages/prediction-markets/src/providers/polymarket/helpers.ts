@@ -28,7 +28,7 @@ export function createRateLimiterState(): RateLimiterState {
  */
 export async function enforceRateLimit(
 	state: RateLimiterState,
-	rateLimit: number = POLYMARKET_RATE_LIMITS.gamma_markets
+	rateLimit: number = POLYMARKET_RATE_LIMITS.gamma_markets,
 ): Promise<void> {
 	const now = Date.now();
 	const elapsed = now - state.lastRequestTime;
@@ -80,7 +80,7 @@ export function parseNumericValue(value: string | number | null | undefined): nu
  * Get market type from search query
  */
 export function getMarketTypeFromQuery(
-	query: string
+	query: string,
 ): (typeof PredictionMarketType.options)[number] {
 	const queryLower = query.toLowerCase();
 

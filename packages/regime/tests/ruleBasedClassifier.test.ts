@@ -21,7 +21,7 @@ function createOHLCVBar(
 	high?: number,
 	low?: number,
 	volume = 1000000,
-	timestamp = Date.now()
+	timestamp = Date.now(),
 ): OHLCVBar {
 	const h = high ?? close * 1.01;
 	const l = low ?? close * 0.99;
@@ -39,7 +39,7 @@ function createOHLCVBar(
 function createTrendingOHLCVBars(
 	startPrice: number,
 	direction: "up" | "down",
-	count: number
+	count: number,
 ): OHLCVBar[] {
 	const candles: OHLCVBar[] = [];
 	let price = startPrice;
@@ -53,8 +53,8 @@ function createTrendingOHLCVBars(
 				price * 1.005, // Tighter range in trend
 				price * 0.995,
 				1000000,
-				Date.now() + i * 3600000
-			)
+				Date.now() + i * 3600000,
+			),
 		);
 	}
 
@@ -64,7 +64,7 @@ function createTrendingOHLCVBars(
 function createRangeBoundOHLCVBars(
 	centerPrice: number,
 	count: number,
-	volatility = 0.005 // 0.5% range
+	volatility = 0.005, // 0.5% range
 ): OHLCVBar[] {
 	const candles: OHLCVBar[] = [];
 
@@ -77,8 +77,8 @@ function createRangeBoundOHLCVBars(
 				price * (1 + volatility),
 				price * (1 - volatility),
 				1000000,
-				Date.now() + i * 3600000
-			)
+				Date.now() + i * 3600000,
+			),
 		);
 	}
 
@@ -99,8 +99,8 @@ function createHighVolatilityOHLCVBars(startPrice: number, count: number): OHLCV
 				price * 1.03, // Wide range
 				price * 0.97,
 				2000000, // Higher volume
-				Date.now() + i * 3600000
-			)
+				Date.now() + i * 3600000,
+			),
 		);
 	}
 
@@ -120,8 +120,8 @@ function createLowVolatilityOHLCVBars(price: number, count: number): OHLCVBar[] 
 				closePrice * 1.001, // Very tight range
 				closePrice * 0.999,
 				500000, // Lower volume
-				Date.now() + i * 3600000
-			)
+				Date.now() + i * 3600000,
+			),
 		);
 	}
 
@@ -347,7 +347,7 @@ describe("Rule-Based Regime Classifier", () => {
 					undefined,
 					undefined,
 					1000000,
-					candle.timestamp
+					candle.timestamp,
 				);
 			}
 			const weakResult = classifyRegime({ candles: weakOHLCVBars });
@@ -409,7 +409,7 @@ describe("Rule-Based Regime Classifier", () => {
 					candle.high * 0.85,
 					candle.low * 0.75,
 					3000000,
-					Date.now() + (40 + i) * 3600000
+					Date.now() + (40 + i) * 3600000,
 				);
 			}
 

@@ -54,7 +54,7 @@ export class MarketMatcher {
 	 */
 	findMatches(
 		marketsA: PredictionMarketEvent[],
-		marketsB: PredictionMarketEvent[]
+		marketsB: PredictionMarketEvent[],
 	): MatchedMarket[] {
 		const matches: MatchedMarket[] = [];
 
@@ -87,11 +87,11 @@ export class MarketMatcher {
 	 */
 	private calculateSimilarity(
 		marketA: PredictionMarketEvent,
-		marketB: PredictionMarketEvent
+		marketB: PredictionMarketEvent,
 	): number {
 		const questionSim = this.questionSimilarity(
 			marketA.payload.marketQuestion,
-			marketB.payload.marketQuestion
+			marketB.payload.marketQuestion,
 		);
 		const outcomeSim = this.outcomeSimilarity(marketA.payload.outcomes, marketB.payload.outcomes);
 		const temporalSim = this.temporalSimilarity(marketA.eventTime, marketB.eventTime);
@@ -145,7 +145,7 @@ export class MarketMatcher {
 				.toLowerCase()
 				.replace(/[^a-z0-9\s]/g, " ")
 				.split(/\s+/)
-				.filter((w) => w.length > 1 && !stopwords.has(w))
+				.filter((w) => w.length > 1 && !stopwords.has(w)),
 		);
 	}
 
@@ -154,7 +154,7 @@ export class MarketMatcher {
 	 */
 	private outcomeSimilarity(
 		outcomesA: PredictionMarketEvent["payload"]["outcomes"],
-		outcomesB: PredictionMarketEvent["payload"]["outcomes"]
+		outcomesB: PredictionMarketEvent["payload"]["outcomes"],
 	): number {
 		if (outcomesA.length === 0 || outcomesB.length === 0) {
 			return 0;
@@ -210,14 +210,14 @@ export class MarketMatcher {
 	 */
 	private calculatePriceDivergence(
 		marketA: PredictionMarketEvent,
-		marketB: PredictionMarketEvent
+		marketB: PredictionMarketEvent,
 	): number {
 		// For binary markets, compare Yes probabilities
 		const yesA = marketA.payload.outcomes.find(
-			(o) => o.outcome.toLowerCase() === "yes"
+			(o) => o.outcome.toLowerCase() === "yes",
 		)?.probability;
 		const yesB = marketB.payload.outcomes.find(
-			(o) => o.outcome.toLowerCase() === "yes"
+			(o) => o.outcome.toLowerCase() === "yes",
 		)?.probability;
 
 		if (yesA !== undefined && yesB !== undefined) {
@@ -230,7 +230,7 @@ export class MarketMatcher {
 
 		for (const outcomeA of marketA.payload.outcomes) {
 			const outcomeB = marketB.payload.outcomes.find(
-				(o) => o.outcome.toLowerCase() === outcomeA.outcome.toLowerCase()
+				(o) => o.outcome.toLowerCase() === outcomeA.outcome.toLowerCase(),
 			);
 			if (outcomeB) {
 				totalDiff += Math.abs(outcomeA.probability - outcomeB.probability);

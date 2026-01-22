@@ -68,7 +68,7 @@ describe("PolymarketClient event transformation", () => {
 							},
 						],
 					}),
-			} as Response)
+			} as Response),
 		);
 
 		const client = new PolymarketClient();
@@ -90,7 +90,7 @@ describe("PolymarketClient event transformation", () => {
 							},
 						],
 					}),
-			} as Response)
+			} as Response),
 		);
 
 		const client = new PolymarketClient();
@@ -121,7 +121,7 @@ describe("PolymarketClient event transformation", () => {
 							},
 						],
 					}),
-			} as Response)
+			} as Response),
 		);
 
 		const client = new PolymarketClient();

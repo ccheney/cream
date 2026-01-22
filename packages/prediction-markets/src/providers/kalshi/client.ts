@@ -126,7 +126,7 @@ export class KalshiClient implements PredictionMarketProvider {
 		if (!options.privateKeyPath && !options.privateKeyPem) {
 			throw new AuthenticationError(
 				"KALSHI",
-				"Either privateKeyPath or privateKeyPem must be provided"
+				"Either privateKeyPath or privateKeyPem must be provided",
 			);
 		}
 
@@ -146,7 +146,7 @@ export class KalshiClient implements PredictionMarketProvider {
 	 * Fetch markets by market types
 	 */
 	async fetchMarkets(
-		marketTypes: (typeof PredictionMarketType.options)[number][]
+		marketTypes: (typeof PredictionMarketType.options)[number][],
 	): Promise<PredictionMarketEvent[]> {
 		const seriesTickers = marketTypes.flatMap((type) => MARKET_TYPE_TO_SERIES[type] ?? []);
 		const events: PredictionMarketEvent[] = [];
@@ -159,7 +159,7 @@ export class KalshiClient implements PredictionMarketProvider {
 					undefined,
 					undefined,
 					undefined,
-					seriesTicker
+					seriesTicker,
 				);
 				const markets = response.data.markets ?? [];
 
@@ -219,7 +219,7 @@ export class KalshiClient implements PredictionMarketProvider {
 					if (outcomeLower.includes("hike") || outcomeLower.includes("increase")) {
 						scores.fedHikeProbability = Math.max(
 							scores.fedHikeProbability ?? 0,
-							outcome.probability
+							outcome.probability,
 						);
 					}
 				}
@@ -228,7 +228,7 @@ export class KalshiClient implements PredictionMarketProvider {
 
 		// Find recession markets
 		const recessionMarkets = events.filter((e) =>
-			e.payload.marketQuestion.toLowerCase().includes("recession")
+			e.payload.marketQuestion.toLowerCase().includes("recession"),
 		);
 		if (recessionMarkets.length > 0) {
 			// biome-ignore lint/style/noNonNullAssertion: length check ensures element exists
@@ -289,7 +289,7 @@ export class KalshiClient implements PredictionMarketProvider {
 	 */
 	private transformMarket(
 		market: KalshiMarket,
-		marketType: (typeof PredictionMarketType.options)[number]
+		marketType: (typeof PredictionMarketType.options)[number],
 	): PredictionMarketEvent {
 		const outcomes = [];
 
@@ -457,7 +457,7 @@ export function createKalshiClientFromEnv(): KalshiClient {
 	if (!privateKeyPath) {
 		throw new AuthenticationError(
 			"KALSHI",
-			"KALSHI_PRIVATE_KEY_PATH environment variable is required"
+			"KALSHI_PRIVATE_KEY_PATH environment variable is required",
 		);
 	}
 

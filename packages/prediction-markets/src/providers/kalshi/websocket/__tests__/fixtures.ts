@@ -98,7 +98,7 @@ export function createMockWebSocketProxy(state: MockWebSocketState): MockWebSock
  */
 export function createTrackedClient(
 	clients: KalshiWebSocketClient[],
-	config?: ConstructorParameters<typeof KalshiWebSocketClient>[0]
+	config?: ConstructorParameters<typeof KalshiWebSocketClient>[0],
 ): KalshiWebSocketClient {
 	const client = new KalshiWebSocketClient(config);
 	clients.push(client);
@@ -120,7 +120,7 @@ export function cleanupClients(clients: KalshiWebSocketClient[]): void {
  */
 export async function connectClient(
 	client: KalshiWebSocketClient,
-	mockWs: MockWebSocketInstance
+	mockWs: MockWebSocketInstance,
 ): Promise<void> {
 	const connectPromise = client.connect();
 	await new Promise((resolve) => setTimeout(resolve, 10));
@@ -135,7 +135,7 @@ export async function connectClient(
  */
 export function createTickerMessage(
 	ticker: string,
-	overrides: Record<string, unknown> = {}
+	overrides: Record<string, unknown> = {},
 ): { type: string; msg: Record<string, unknown> } {
 	return {
 		type: "ticker",
@@ -155,7 +155,7 @@ export function createTickerMessage(
  */
 export function createOrderbookDeltaMessage(
 	ticker: string,
-	overrides: Record<string, unknown> = {}
+	overrides: Record<string, unknown> = {},
 ): { type: string; msg: Record<string, unknown> } {
 	return {
 		type: "orderbook_delta",
@@ -175,7 +175,7 @@ export function createOrderbookDeltaMessage(
  */
 export function createTradeMessage(
 	ticker: string,
-	overrides: Record<string, unknown> = {}
+	overrides: Record<string, unknown> = {},
 ): { type: string; msg: Record<string, unknown> } {
 	return {
 		type: "trade",
@@ -197,7 +197,7 @@ export function createTradeMessage(
  */
 export function createMarketLifecycleMessage(
 	ticker: string,
-	status: string
+	status: string,
 ): { type: string; msg: Record<string, unknown> } {
 	return {
 		type: "market_lifecycle_v2",

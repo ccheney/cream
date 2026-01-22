@@ -27,7 +27,7 @@ describe("PolymarketClient.fetchMarketByTicker", () => {
 			Promise.resolve({
 				ok: true,
 				json: () => Promise.resolve(mockPolymarketMarket),
-			} as Response)
+			} as Response),
 		);
 
 		const client = new PolymarketClient();
@@ -44,7 +44,7 @@ describe("PolymarketClient.fetchMarketByTicker", () => {
 				ok: false,
 				status: 404,
 				statusText: "Not Found",
-			} as Response)
+			} as Response),
 		);
 
 		const client = new PolymarketClient();
@@ -58,7 +58,7 @@ describe("PolymarketClient.fetchMarketByTicker", () => {
 			Promise.resolve({
 				ok: true,
 				json: () => Promise.resolve({ invalid: "data" }),
-			} as Response)
+			} as Response),
 		);
 
 		const client = new PolymarketClient();
@@ -73,7 +73,7 @@ describe("PolymarketClient.fetchMarketByTicker", () => {
 				ok: false,
 				status: 500,
 				statusText: "Internal Server Error",
-			} as Response)
+			} as Response),
 		);
 
 		const client = new PolymarketClient();

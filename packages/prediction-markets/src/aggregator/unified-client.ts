@@ -119,7 +119,7 @@ export class UnifiedPredictionMarketClient {
 
 	constructor(
 		platformConfig: PredictionMarketsConfig,
-		unifiedConfig: Partial<UnifiedClientConfig> = {}
+		unifiedConfig: Partial<UnifiedClientConfig> = {},
 	) {
 		this.config = { ...DEFAULT_UNIFIED_CONFIG, ...unifiedConfig };
 		this.matcher = new MarketMatcher();
@@ -154,7 +154,7 @@ export class UnifiedPredictionMarketClient {
 	async getAllMarketData(
 		marketTypes: Array<
 			"FED_RATE" | "ECONOMIC_DATA" | "RECESSION" | "GEOPOLITICAL" | "REGULATORY" | "ELECTION"
-		> = ["FED_RATE", "ECONOMIC_DATA", "RECESSION"]
+		> = ["FED_RATE", "ECONOMIC_DATA", "RECESSION"],
 	): Promise<UnifiedMarketData> {
 		const allEvents: PredictionMarketEvent[] = [];
 
@@ -180,7 +180,7 @@ export class UnifiedPredictionMarketClient {
 
 		// Filter by liquidity
 		const filteredEvents = allEvents.filter(
-			(e) => (e.payload.liquidityScore ?? 0) >= this.config.minLiquidityScore
+			(e) => (e.payload.liquidityScore ?? 0) >= this.config.minLiquidityScore,
 		);
 
 		// Match markets across platforms
@@ -222,7 +222,7 @@ export class UnifiedPredictionMarketClient {
 	 * Get economic data markets for a specific indicator
 	 */
 	async getEconomicDataMarkets(
-		indicator: "CPI" | "GDP" | "NFP" | "PCE"
+		indicator: "CPI" | "GDP" | "NFP" | "PCE",
 	): Promise<EconomicDataMarket[]> {
 		const data = await this.getAllMarketData(["ECONOMIC_DATA"]);
 		return data.events
@@ -294,19 +294,19 @@ export class UnifiedPredictionMarketClient {
 
 		scores.fedCutProbability = avgOrValue(
 			kalshiScores.fedCutProbability,
-			polymarketScores.fedCutProbability
+			polymarketScores.fedCutProbability,
 		);
 		scores.fedHikeProbability = avgOrValue(
 			kalshiScores.fedHikeProbability,
-			polymarketScores.fedHikeProbability
+			polymarketScores.fedHikeProbability,
 		);
 		scores.recessionProbability12m = avgOrValue(
 			kalshiScores.recessionProbability12m,
-			polymarketScores.recessionProbability12m
+			polymarketScores.recessionProbability12m,
 		);
 		scores.macroUncertaintyIndex = avgOrValue(
 			kalshiScores.macroUncertaintyIndex,
-			polymarketScores.macroUncertaintyIndex
+			polymarketScores.macroUncertaintyIndex,
 		);
 
 		return scores;
@@ -317,13 +317,13 @@ export class UnifiedPredictionMarketClient {
 	 */
 	private calculateMacroRiskSignals(
 		events: PredictionMarketEvent[],
-		scores: PredictionMarketScores
+		scores: PredictionMarketScores,
 	): MacroRiskSignals {
 		const platforms = new Set(events.map((e) => e.payload.platform));
 
 		// Calculate policy event risk
 		const policyEvents = events.filter((e) =>
-			["FED_RATE", "GEOPOLITICAL", "REGULATORY"].includes(e.payload.marketType)
+			["FED_RATE", "GEOPOLITICAL", "REGULATORY"].includes(e.payload.marketType),
 		);
 		const policyEventRisk =
 			policyEvents.length > 0
@@ -393,7 +393,7 @@ export class UnifiedPredictionMarketClient {
 	 */
 	private toEconomicDataMarket(
 		event: PredictionMarketEvent,
-		indicator: string
+		indicator: string,
 	): EconomicDataMarket {
 		return {
 			ticker: event.payload.marketTicker,
@@ -418,7 +418,7 @@ export class UnifiedPredictionMarketClient {
  * Create a unified client from config
  */
 export function createUnifiedClient(
-	config: PredictionMarketsConfig
+	config: PredictionMarketsConfig,
 ): UnifiedPredictionMarketClient {
 	return new UnifiedPredictionMarketClient(config);
 }

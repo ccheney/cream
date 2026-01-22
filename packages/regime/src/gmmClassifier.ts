@@ -116,7 +116,7 @@ export function trainGMM(candles: OHLCVBar[], config: GMMConfig = DEFAULT_GMM_CO
 	const features = extractFeatures(candles, config.featureConfig);
 	if (features.length < config.k * 10) {
 		throw new Error(
-			`Insufficient data: need at least ${config.k * 10} samples, got ${features.length}`
+			`Insufficient data: need at least ${config.k * 10} samples, got ${features.length}`,
 		);
 	}
 
@@ -240,7 +240,7 @@ function computeResponsibilities(data: number[][], clusters: GMMCluster[]): numb
 function updateClusters(
 	data: number[][],
 	responsibilities: number[][],
-	clusters: GMMCluster[]
+	clusters: GMMCluster[],
 ): void {
 	const n = data.length;
 	const k = clusters.length;
@@ -404,7 +404,7 @@ export function classifyWithGMM(model: GMMModel, candles: OHLCVBar[]): GMMClassi
  */
 export function classifySeriesWithGMM(
 	model: GMMModel,
-	candles: OHLCVBar[]
+	candles: OHLCVBar[],
 ): Array<GMMClassification & { timestamp: string }> {
 	const features = extractFeatures(candles, model.config.featureConfig);
 	const results: Array<GMMClassification & { timestamp: string }> = [];

@@ -20,7 +20,7 @@ function signPssText(privateKeyPem: string, text: string): string {
 
 export function generateAuthHeaders(
 	apiKeyId: string,
-	privateKeyPem: string
+	privateKeyPem: string,
 ): Record<string, string> {
 	const timestamp = Date.now().toString();
 	const method = "GET";

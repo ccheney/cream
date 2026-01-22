@@ -104,7 +104,7 @@ describe("Source Resolvers", () => {
 			};
 
 			await expect(resolveSource(source)).rejects.toThrow(
-				'Index source "test-index" is not supported. Use static source with explicit tickers instead.'
+				'Index source "test-index" is not supported. Use static source with explicit tickers instead.',
 			);
 		});
 
@@ -119,7 +119,7 @@ describe("Source Resolvers", () => {
 			};
 
 			await expect(resolveSource(source)).rejects.toThrow(
-				'ETF holdings source "test-etf" is not supported. Use static source with explicit tickers instead.'
+				'ETF holdings source "test-etf" is not supported. Use static source with explicit tickers instead.',
 			);
 		});
 
@@ -134,7 +134,7 @@ describe("Source Resolvers", () => {
 			};
 
 			await expect(resolveSource(source)).rejects.toThrow(
-				'Screener source "test-screener" is not supported. Use static source with explicit tickers instead.'
+				'Screener source "test-screener" is not supported. Use static source with explicit tickers instead.',
 			);
 		});
 

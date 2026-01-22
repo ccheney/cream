@@ -90,7 +90,7 @@ export const ClobOrderbookSchema = z.object({
 			z.object({
 				price: z.string(),
 				size: z.string(),
-			})
+			}),
 		)
 		.optional(),
 	asks: z
@@ -98,7 +98,7 @@ export const ClobOrderbookSchema = z.object({
 			z.object({
 				price: z.string(),
 				size: z.string(),
-			})
+			}),
 		)
 		.optional(),
 });

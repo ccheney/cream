@@ -29,7 +29,7 @@ export function isAcceptablePerformance(metrics: PerformanceMetrics): boolean {
  * @returns "exceptional" (>3.0), "elite" (>2.0), "acceptable" (>1.0), or "poor"
  */
 export function gradePerformance(
-	metrics: PerformanceMetrics
+	metrics: PerformanceMetrics,
 ): "exceptional" | "elite" | "acceptable" | "poor" {
 	const { sharpe, sortino, calmar } = metrics;
 

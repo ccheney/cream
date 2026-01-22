@@ -21,7 +21,7 @@ export interface MessageHandlerContext {
 
 function notifySubscribers(
 	message: KalshiWebSocketMessage,
-	subscriptions: Map<string, Set<KalshiWebSocketCallback>>
+	subscriptions: Map<string, Set<KalshiWebSocketCallback>>,
 ): void {
 	for (const [key, callbacks] of subscriptions.entries()) {
 		if (key.startsWith(message.type)) {

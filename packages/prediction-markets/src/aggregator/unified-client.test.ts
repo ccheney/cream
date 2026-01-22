@@ -277,7 +277,7 @@ describe("UnifiedPredictionMarketClient", () => {
 
 		test("filters out low liquidity markets", async () => {
 			mockKalshiClient!.fetchMarkets.mockImplementation(() =>
-				Promise.resolve([...mockKalshiEvents, mockLowLiquidityEvent])
+				Promise.resolve([...mockKalshiEvents, mockLowLiquidityEvent]),
 			);
 
 			const client = new UnifiedPredictionMarketClient(baseConfig);
@@ -290,7 +290,7 @@ describe("UnifiedPredictionMarketClient", () => {
 
 		test("handles Kalshi fetch failure gracefully", async () => {
 			mockKalshiClient!.fetchMarkets.mockImplementation(() =>
-				Promise.reject(new Error("Kalshi API error"))
+				Promise.reject(new Error("Kalshi API error")),
 			);
 
 			const client = new UnifiedPredictionMarketClient(baseConfig);
@@ -303,7 +303,7 @@ describe("UnifiedPredictionMarketClient", () => {
 
 		test("handles Polymarket fetch failure gracefully", async () => {
 			mockPolymarketClient!.fetchMarkets.mockImplementation(() =>
-				Promise.reject(new Error("Polymarket API error"))
+				Promise.reject(new Error("Polymarket API error")),
 			);
 
 			const client = new UnifiedPredictionMarketClient(baseConfig);
@@ -411,7 +411,7 @@ describe("UnifiedPredictionMarketClient", () => {
 		test("returns empty array for GDP if no matching markets", async () => {
 			// Mock returns no GDP markets
 			mockKalshiClient!.fetchMarkets.mockImplementation(
-				() => Promise.resolve([mockKalshiEvents[1]!]) // Only CPI market
+				() => Promise.resolve([mockKalshiEvents[1]!]), // Only CPI market
 			);
 			mockPolymarketClient!.fetchMarkets.mockImplementation(() => Promise.resolve([]));
 

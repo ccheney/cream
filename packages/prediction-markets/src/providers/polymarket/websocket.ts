@@ -416,7 +416,7 @@ export class PolymarketWebSocketClient {
 	private scheduleReconnect(): void {
 		if (this.reconnectAttempts >= this.config.reconnect.maxRetries) {
 			const error = new Error(
-				`Max reconnection attempts (${this.config.reconnect.maxRetries}) reached`
+				`Max reconnection attempts (${this.config.reconnect.maxRetries}) reached`,
 			);
 			for (const cb of this.onErrorCallbacks) {
 				cb(error);
@@ -427,7 +427,7 @@ export class PolymarketWebSocketClient {
 		const delay = Math.min(
 			this.config.reconnect.initialDelayMs *
 				this.config.reconnect.backoffMultiplier ** this.reconnectAttempts,
-			this.config.reconnect.maxDelayMs
+			this.config.reconnect.maxDelayMs,
 		);
 
 		this.connectionState = "reconnecting";
@@ -484,7 +484,7 @@ export class PolymarketWebSocketClient {
 }
 
 export function createPolymarketWebSocketClient(
-	config?: PolymarketWebSocketConfig
+	config?: PolymarketWebSocketConfig,
 ): PolymarketWebSocketClient {
 	return new PolymarketWebSocketClient(config);
 }

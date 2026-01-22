@@ -42,19 +42,19 @@ export const mockKalshiEvent = {
 export const mockGetMarkets = mock(() =>
 	Promise.resolve({
 		data: { markets: [mockKalshiMarket] },
-	})
+	}),
 );
 
 export const mockGetMarket = mock(() =>
 	Promise.resolve({
 		data: { market: mockKalshiMarket },
-	})
+	}),
 );
 
 export const mockGetEvent = mock(() =>
 	Promise.resolve({
 		data: { event: mockKalshiEvent },
-	})
+	}),
 );
 
 // ============================================
@@ -86,17 +86,17 @@ export function resetToDefaultImplementations(): void {
 	mockGetMarkets.mockImplementation(() =>
 		Promise.resolve({
 			data: { markets: [mockKalshiMarket] },
-		})
+		}),
 	);
 	mockGetMarket.mockImplementation(() =>
 		Promise.resolve({
 			data: { market: mockKalshiMarket },
-		})
+		}),
 	);
 	mockGetEvent.mockImplementation(() =>
 		Promise.resolve({
 			data: { event: mockKalshiEvent },
-		})
+		}),
 	);
 }
 
@@ -108,6 +108,6 @@ export function createTestClient(): Promise<
 			new KalshiClient({
 				apiKeyId: "test-key",
 				privateKeyPem: "test-pem",
-			})
+			}),
 	);
 }

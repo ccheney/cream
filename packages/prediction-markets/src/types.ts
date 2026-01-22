@@ -41,7 +41,7 @@ export class PredictionMarketError extends Error {
 		message: string,
 		public readonly platform: PredictionPlatform | "AGGREGATOR",
 		public readonly code: string,
-		public override readonly cause?: Error
+		public override readonly cause?: Error,
 	) {
 		super(message, { cause });
 		this.name = "PredictionMarketError";
@@ -51,7 +51,7 @@ export class PredictionMarketError extends Error {
 export class RateLimitError extends PredictionMarketError {
 	constructor(
 		platform: PredictionPlatform,
-		public readonly retryAfterMs: number
+		public readonly retryAfterMs: number,
 	) {
 		super(`Rate limit exceeded for ${platform}`, platform, "RATE_LIMIT");
 	}
@@ -74,7 +74,7 @@ export class InsufficientDataError extends PredictionMarketError {
 		super(
 			`Insufficient data: need ${required} samples, got ${actual}`,
 			platform,
-			"INSUFFICIENT_DATA"
+			"INSUFFICIENT_DATA",
 		);
 	}
 }

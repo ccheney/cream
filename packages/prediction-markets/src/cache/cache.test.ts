@@ -107,7 +107,7 @@ describe("MarketCache", () => {
 			cache.setEvent("OTHER", createMockEvent("OTHER"));
 
 			const count = cache.invalidateEventsWhere((event) =>
-				event.payload.marketTicker.startsWith("KXFED")
+				event.payload.marketTicker.startsWith("KXFED"),
 			);
 
 			expect(count).toBe(2);

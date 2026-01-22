@@ -33,7 +33,7 @@ export function calculateLiquidityScore(market: PolymarketMarket): number {
 export function transformMarket(
 	market: PolymarketMarket,
 	marketType: (typeof PredictionMarketType.options)[number],
-	_event?: PolymarketEvent
+	_event?: PolymarketEvent,
 ): PredictionMarketEvent {
 	const outcomeNames = market.outcomes ?? ["Yes", "No"];
 	const outcomePrices = market.outcomePrices ?? [];
@@ -73,7 +73,7 @@ export function transformMarket(
  */
 export function transformEvent(
 	event: PolymarketEvent,
-	marketType: (typeof PredictionMarketType.options)[number]
+	marketType: (typeof PredictionMarketType.options)[number],
 ): PredictionMarketEvent | null {
 	const market = event.markets?.[0];
 	if (!market) {

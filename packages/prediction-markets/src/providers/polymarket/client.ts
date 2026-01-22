@@ -73,7 +73,7 @@ export class PolymarketClient implements PredictionMarketProvider {
 	}
 
 	async fetchMarkets(
-		marketTypes: (typeof PredictionMarketType.options)[number][]
+		marketTypes: (typeof PredictionMarketType.options)[number][],
 	): Promise<PredictionMarketEvent[]> {
 		const queries = this.collectSearchQueries(marketTypes);
 		const events = await this.fetchEventsForQueries(queries);
@@ -185,7 +185,7 @@ export class PolymarketClient implements PredictionMarketProvider {
 	}
 
 	private collectSearchQueries(
-		marketTypes: (typeof PredictionMarketType.options)[number][]
+		marketTypes: (typeof PredictionMarketType.options)[number][],
 	): Set<string> {
 		const queries = new Set<string>();
 

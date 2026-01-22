@@ -275,7 +275,7 @@ export function createStreamingServiceFromConfig(
 	options?: {
 		kalshiTickers?: string[];
 		polymarketAssetIds?: string[];
-	}
+	},
 ): UnifiedStreamingService {
 	return new UnifiedStreamingService({
 		kalshiEnabled: config.kalshi.enabled,

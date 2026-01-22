@@ -169,7 +169,7 @@ describe("FREDClient", () => {
 	describe("getReleaseDates", () => {
 		it("fetches release dates successfully", async () => {
 			globalThis.fetch = mock(() =>
-				Promise.resolve(new Response(JSON.stringify(mockReleaseDatesResponse), { status: 200 }))
+				Promise.resolve(new Response(JSON.stringify(mockReleaseDatesResponse), { status: 200 })),
 			);
 
 			const result = await client.getReleaseDates();
@@ -185,7 +185,7 @@ describe("FREDClient", () => {
 			globalThis.fetch = mock((url: string) => {
 				capturedUrl = url;
 				return Promise.resolve(
-					new Response(JSON.stringify(mockReleaseDatesResponse), { status: 200 })
+					new Response(JSON.stringify(mockReleaseDatesResponse), { status: 200 }),
 				);
 			});
 
@@ -201,7 +201,7 @@ describe("FREDClient", () => {
 			globalThis.fetch = mock((url: string) => {
 				capturedUrl = url;
 				return Promise.resolve(
-					new Response(JSON.stringify(mockReleaseDatesResponse), { status: 200 })
+					new Response(JSON.stringify(mockReleaseDatesResponse), { status: 200 }),
 				);
 			});
 
@@ -220,7 +220,7 @@ describe("FREDClient", () => {
 	describe("getReleases", () => {
 		it("fetches releases successfully", async () => {
 			globalThis.fetch = mock(() =>
-				Promise.resolve(new Response(JSON.stringify(mockReleasesResponse), { status: 200 }))
+				Promise.resolve(new Response(JSON.stringify(mockReleasesResponse), { status: 200 })),
 			);
 
 			const result = await client.getReleases();
@@ -234,7 +234,7 @@ describe("FREDClient", () => {
 	describe("getReleaseSeries", () => {
 		it("fetches series for a release", async () => {
 			globalThis.fetch = mock(() =>
-				Promise.resolve(new Response(JSON.stringify(mockReleaseSeriesResponse), { status: 200 }))
+				Promise.resolve(new Response(JSON.stringify(mockReleaseSeriesResponse), { status: 200 })),
 			);
 
 			const result = await client.getReleaseSeries(10);
@@ -250,7 +250,7 @@ describe("FREDClient", () => {
 			globalThis.fetch = mock((url: string) => {
 				capturedUrl = url;
 				return Promise.resolve(
-					new Response(JSON.stringify(mockReleaseSeriesResponse), { status: 200 })
+					new Response(JSON.stringify(mockReleaseSeriesResponse), { status: 200 }),
 				);
 			});
 
@@ -263,7 +263,7 @@ describe("FREDClient", () => {
 	describe("getObservations", () => {
 		it("fetches observations for a series", async () => {
 			globalThis.fetch = mock(() =>
-				Promise.resolve(new Response(JSON.stringify(mockObservationsResponse), { status: 200 }))
+				Promise.resolve(new Response(JSON.stringify(mockObservationsResponse), { status: 200 })),
 			);
 
 			const result = await client.getObservations("CPIAUCSL");
@@ -279,7 +279,7 @@ describe("FREDClient", () => {
 			globalThis.fetch = mock((url: string) => {
 				capturedUrl = url;
 				return Promise.resolve(
-					new Response(JSON.stringify(mockObservationsResponse), { status: 200 })
+					new Response(JSON.stringify(mockObservationsResponse), { status: 200 }),
 				);
 			});
 
@@ -297,7 +297,7 @@ describe("FREDClient", () => {
 	describe("getReleaseSchedule", () => {
 		it("fetches schedule for a specific release", async () => {
 			globalThis.fetch = mock(() =>
-				Promise.resolve(new Response(JSON.stringify(mockReleaseDatesResponse), { status: 200 }))
+				Promise.resolve(new Response(JSON.stringify(mockReleaseDatesResponse), { status: 200 })),
 			);
 
 			const result = await client.getReleaseSchedule(10);
@@ -312,7 +312,7 @@ describe("FREDClient", () => {
 			globalThis.fetch = mock((url: string) => {
 				capturedUrl = url;
 				return Promise.resolve(
-					new Response(JSON.stringify(mockReleaseDatesResponse), { status: 200 })
+					new Response(JSON.stringify(mockReleaseDatesResponse), { status: 200 }),
 				);
 			});
 
@@ -326,7 +326,7 @@ describe("FREDClient", () => {
 	describe("getLatestValue", () => {
 		it("returns latest value for a series", async () => {
 			globalThis.fetch = mock(() =>
-				Promise.resolve(new Response(JSON.stringify(mockObservationsResponse), { status: 200 }))
+				Promise.resolve(new Response(JSON.stringify(mockObservationsResponse), { status: 200 })),
 			);
 
 			const result = await client.getLatestValue("CPIAUCSL");
@@ -344,7 +344,7 @@ describe("FREDClient", () => {
 			};
 
 			globalThis.fetch = mock(() =>
-				Promise.resolve(new Response(JSON.stringify(emptyResponse), { status: 200 }))
+				Promise.resolve(new Response(JSON.stringify(emptyResponse), { status: 200 })),
 			);
 
 			const result = await client.getLatestValue("UNKNOWN");
@@ -367,7 +367,7 @@ describe("FREDClient", () => {
 			};
 
 			globalThis.fetch = mock(() =>
-				Promise.resolve(new Response(JSON.stringify(missingValueResponse), { status: 200 }))
+				Promise.resolve(new Response(JSON.stringify(missingValueResponse), { status: 200 })),
 			);
 
 			const result = await client.getLatestValue("CPIAUCSL");
@@ -381,7 +381,7 @@ describe("FREDClient", () => {
 			globalThis.fetch = mock((url: string) => {
 				capturedUrl = url;
 				return Promise.resolve(
-					new Response(JSON.stringify(mockObservationsResponse), { status: 200 })
+					new Response(JSON.stringify(mockObservationsResponse), { status: 200 }),
 				);
 			});
 
@@ -417,7 +417,7 @@ describe("FREDClient", () => {
 
 		it("throws VALIDATION_ERROR on invalid response", async () => {
 			globalThis.fetch = mock(() =>
-				Promise.resolve(new Response(JSON.stringify({ invalid: "data" }), { status: 200 }))
+				Promise.resolve(new Response(JSON.stringify({ invalid: "data" }), { status: 200 })),
 			);
 
 			try {
@@ -630,7 +630,7 @@ describe("createFREDClientFromEnv", () => {
 		delete Bun.env.FRED_API_KEY;
 
 		expect(() => createFREDClientFromEnv()).toThrow(
-			"FRED_API_KEY environment variable is required"
+			"FRED_API_KEY environment variable is required",
 		);
 	});
 });

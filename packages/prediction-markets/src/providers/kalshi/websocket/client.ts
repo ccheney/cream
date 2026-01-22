@@ -154,7 +154,7 @@ export class KalshiWebSocketClient {
 	subscribe(
 		channel: KalshiWebSocketChannel,
 		tickers: string[],
-		callback: KalshiWebSocketCallback
+		callback: KalshiWebSocketCallback,
 	): void {
 		addSubscription(
 			{ subscriptions: this.subscriptions, pendingSubscriptions: this.pendingSubscriptions },
@@ -162,21 +162,21 @@ export class KalshiWebSocketClient {
 			tickers,
 			callback,
 			this.connectionState,
-			(ch, t) => this.sendSubscription(ch, t)
+			(ch, t) => this.sendSubscription(ch, t),
 		);
 	}
 
 	unsubscribe(
 		channel: KalshiWebSocketChannel,
 		tickers: string[],
-		callback?: KalshiWebSocketCallback
+		callback?: KalshiWebSocketCallback,
 	): void {
 		removeSubscription(
 			{ subscriptions: this.subscriptions, pendingSubscriptions: this.pendingSubscriptions },
 			channel,
 			tickers,
 			callback,
-			(ch, t) => this.sendUnsubscribe(ch, t)
+			(ch, t) => this.sendUnsubscribe(ch, t),
 		);
 	}
 
@@ -223,7 +223,7 @@ export class KalshiWebSocketClient {
 	private scheduleReconnect(): void {
 		if (this.reconnectAttempts >= this.config.reconnect.maxRetries) {
 			const error = new Error(
-				`Max reconnection attempts (${this.config.reconnect.maxRetries}) reached`
+				`Max reconnection attempts (${this.config.reconnect.maxRetries}) reached`,
 			);
 			for (const cb of this.onErrorCallbacks) {
 				cb(error);
@@ -234,7 +234,7 @@ export class KalshiWebSocketClient {
 		const delay = Math.min(
 			this.config.reconnect.initialDelayMs *
 				this.config.reconnect.backoffMultiplier ** this.reconnectAttempts,
-			this.config.reconnect.maxDelayMs
+			this.config.reconnect.maxDelayMs,
 		);
 
 		this.connectionState = "reconnecting";
@@ -260,7 +260,7 @@ export class KalshiWebSocketClient {
 	private resubscribe(): void {
 		resubscribeAll(
 			{ subscriptions: this.subscriptions, pendingSubscriptions: this.pendingSubscriptions },
-			(ch, t) => this.sendSubscription(ch, t)
+			(ch, t) => this.sendSubscription(ch, t),
 		);
 	}
 

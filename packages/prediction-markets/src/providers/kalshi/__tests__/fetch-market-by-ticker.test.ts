@@ -32,7 +32,7 @@ describe("KalshiClient.fetchMarketByTicker", () => {
 		mockGetMarket.mockImplementation(() =>
 			Promise.resolve({
 				data: { market: { invalid: "data" } },
-			})
+			}),
 		);
 
 		const client = new KalshiClient({

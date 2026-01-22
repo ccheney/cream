@@ -362,7 +362,7 @@ export function getPrimarySector(marketQuestion: string): Sector | null {
 	};
 
 	const sorted = matches.sort(
-		(a, b) => volatilityOrder[b.volatilityExpectation] - volatilityOrder[a.volatilityExpectation]
+		(a, b) => volatilityOrder[b.volatilityExpectation] - volatilityOrder[a.volatilityExpectation],
 	);
 	return sorted[0]?.sector ?? null;
 }

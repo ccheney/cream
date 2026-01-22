@@ -64,7 +64,7 @@ export class RegimeTransitionDetector {
 		instrumentId: string,
 		regime: RegimeLabel,
 		timestamp: string,
-		confidence: number
+		confidence: number,
 	): TransitionUpdateResult {
 		let state = this.states.get(instrumentId);
 		if (!state) {
@@ -223,7 +223,7 @@ export function analyzeTransitions(transitions: RegimeTransition[]): {
 }
 
 export function calculateTransitionMatrix(
-	transitions: RegimeTransition[]
+	transitions: RegimeTransition[],
 ): Record<RegimeLabel, Record<RegimeLabel, number>> {
 	const regimes: RegimeLabel[] = ["BULL_TREND", "BEAR_TREND", "RANGE", "HIGH_VOL", "LOW_VOL"];
 

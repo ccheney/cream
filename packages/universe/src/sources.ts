@@ -84,22 +84,22 @@ export async function resolveStaticSource(source: StaticSource): Promise<SourceR
  */
 export async function resolveSource(
 	source: UniverseSource,
-	_options: SourceResolverOptions = {}
+	_options: SourceResolverOptions = {},
 ): Promise<SourceResolutionResult> {
 	switch (source.type) {
 		case "static":
 			return resolveStaticSource(source);
 		case "index":
 			throw new Error(
-				`Index source "${source.name}" is not supported. Use static source with explicit tickers instead.`
+				`Index source "${source.name}" is not supported. Use static source with explicit tickers instead.`,
 			);
 		case "etf_holdings":
 			throw new Error(
-				`ETF holdings source "${source.name}" is not supported. Use static source with explicit tickers instead.`
+				`ETF holdings source "${source.name}" is not supported. Use static source with explicit tickers instead.`,
 			);
 		case "screener":
 			throw new Error(
-				`Screener source "${source.name}" is not supported. Use static source with explicit tickers instead.`
+				`Screener source "${source.name}" is not supported. Use static source with explicit tickers instead.`,
 			);
 		default:
 			throw new Error(`Unknown source type: ${(source as { type: string }).type}`);

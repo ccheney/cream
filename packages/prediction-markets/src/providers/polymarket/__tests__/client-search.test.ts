@@ -27,7 +27,7 @@ describe("PolymarketClient.searchMarkets", () => {
 			Promise.resolve({
 				ok: true,
 				json: () => Promise.resolve({ events: [mockPolymarketEvent] }),
-			} as Response)
+			} as Response),
 		);
 
 		const client = new PolymarketClient();
@@ -42,7 +42,7 @@ describe("PolymarketClient.searchMarkets", () => {
 			Promise.resolve({
 				ok: true,
 				json: () => Promise.resolve({ not: "an array" }),
-			} as Response)
+			} as Response),
 		);
 
 		const client = new PolymarketClient();
@@ -62,7 +62,7 @@ describe("PolymarketClient.searchMarkets", () => {
 							{ invalid: "event" }, // Missing required fields
 						],
 					}),
-			} as Response)
+			} as Response),
 		);
 
 		const client = new PolymarketClient();

@@ -80,10 +80,10 @@ export class ArbitrageDetector {
 	 */
 	private createAlert(match: MatchedMarket): ArbitrageAlert | null {
 		const yesA = match.marketA.payload.outcomes.find(
-			(o) => o.outcome.toLowerCase() === "yes"
+			(o) => o.outcome.toLowerCase() === "yes",
 		)?.probability;
 		const yesB = match.marketB.payload.outcomes.find(
-			(o) => o.outcome.toLowerCase() === "yes"
+			(o) => o.outcome.toLowerCase() === "yes",
 		)?.probability;
 
 		if (yesA === undefined || yesB === undefined) {

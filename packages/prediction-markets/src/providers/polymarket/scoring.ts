@@ -11,7 +11,7 @@ import type { PredictionMarketEvent, PredictionMarketScores } from "@cream/domai
  */
 function calculateFedRateProbabilities(
 	events: PredictionMarketEvent[],
-	scores: PredictionMarketScores
+	scores: PredictionMarketScores,
 ): void {
 	const fedMarkets = events.filter((e) => e.payload.marketType === "FED_RATE");
 	if (fedMarkets.length === 0) {
@@ -51,7 +51,7 @@ function calculateFedRateProbabilities(
 				// "Fed rate hike?" with Yes outcome = probability of hike
 				scores.fedHikeProbability = Math.max(
 					scores.fedHikeProbability ?? 0,
-					yesOutcome.probability
+					yesOutcome.probability,
 				);
 			}
 		}
@@ -76,10 +76,10 @@ function calculateFedRateProbabilities(
  */
 function calculateRecessionProbability(
 	events: PredictionMarketEvent[],
-	scores: PredictionMarketScores
+	scores: PredictionMarketScores,
 ): void {
 	const recessionMarkets = events.filter((e) =>
-		e.payload.marketQuestion.toLowerCase().includes("recession")
+		e.payload.marketQuestion.toLowerCase().includes("recession"),
 	);
 
 	if (recessionMarkets.length === 0) {

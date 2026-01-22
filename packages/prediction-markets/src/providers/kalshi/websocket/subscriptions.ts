@@ -24,7 +24,7 @@ export function createSubscriptionKey(channel: string, tickers: string[]): strin
 export function createSubscribeCommand(
 	messageId: number,
 	channel: string,
-	tickers: string[]
+	tickers: string[],
 ): SubscribeCommand {
 	return {
 		id: messageId,
@@ -39,7 +39,7 @@ export function createSubscribeCommand(
 export function createUnsubscribeCommand(
 	messageId: number,
 	channel: string,
-	tickers: string[]
+	tickers: string[],
 ): UnsubscribeCommand {
 	return {
 		id: messageId,
@@ -57,7 +57,7 @@ export function addSubscription(
 	tickers: string[],
 	callback: KalshiWebSocketCallback,
 	connectionState: ConnectionState,
-	sendFn: (channel: string, tickers: string[]) => void
+	sendFn: (channel: string, tickers: string[]) => void,
 ): void {
 	const key = createSubscriptionKey(channel, tickers);
 
@@ -83,7 +83,7 @@ export function removeSubscription(
 	channel: KalshiWebSocketChannel,
 	tickers: string[],
 	callback: KalshiWebSocketCallback | undefined,
-	sendUnsubscribeFn: (channel: string, tickers: string[]) => void
+	sendUnsubscribeFn: (channel: string, tickers: string[]) => void,
 ): void {
 	const key = createSubscriptionKey(channel, tickers);
 
@@ -102,7 +102,7 @@ export function removeSubscription(
 
 export function resubscribeAll(
 	manager: SubscriptionManager,
-	sendFn: (channel: string, tickers: string[]) => void
+	sendFn: (channel: string, tickers: string[]) => void,
 ): void {
 	for (const [channel, tickers] of manager.pendingSubscriptions.entries()) {
 		if (tickers.size > 0) {

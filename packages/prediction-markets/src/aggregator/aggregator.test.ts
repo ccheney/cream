@@ -15,7 +15,7 @@ describe("MarketMatcher", () => {
 			expect(
 				DEFAULT_MATCHER_CONFIG.questionWeight +
 					DEFAULT_MATCHER_CONFIG.outcomeWeight +
-					DEFAULT_MATCHER_CONFIG.temporalWeight
+					DEFAULT_MATCHER_CONFIG.temporalWeight,
 			).toBeCloseTo(1);
 		});
 	});
@@ -156,7 +156,7 @@ describe("ArbitrageDetector", () => {
 		it("should have valid default values", () => {
 			expect(DEFAULT_ARBITRAGE_CONFIG.minDivergence).toBeGreaterThan(0);
 			expect(DEFAULT_ARBITRAGE_CONFIG.maxDivergence).toBeGreaterThan(
-				DEFAULT_ARBITRAGE_CONFIG.minDivergence
+				DEFAULT_ARBITRAGE_CONFIG.minDivergence,
 			);
 			expect(DEFAULT_ARBITRAGE_CONFIG.minLiquidity).toBeGreaterThanOrEqual(0);
 		});

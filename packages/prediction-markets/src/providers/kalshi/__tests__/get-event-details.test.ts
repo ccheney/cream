@@ -30,7 +30,7 @@ describe("KalshiClient.getEventDetails", () => {
 		mockGetEvent.mockImplementation(() =>
 			Promise.resolve({
 				data: { event: null },
-			})
+			}),
 		);
 
 		const client = new KalshiClient({
@@ -46,7 +46,7 @@ describe("KalshiClient.getEventDetails", () => {
 		mockGetEvent.mockImplementation(() =>
 			Promise.resolve({
 				data: { event: undefined },
-			})
+			}),
 		);
 
 		const client = new KalshiClient({
@@ -62,7 +62,7 @@ describe("KalshiClient.getEventDetails", () => {
 		mockGetEvent.mockImplementation(() =>
 			Promise.resolve({
 				data: { event: { invalid: "data" } },
-			})
+			}),
 		);
 
 		const client = new KalshiClient({

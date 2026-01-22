@@ -49,7 +49,7 @@ export { gradePerformance, isAcceptablePerformance } from "./utils.js";
 export function calculateMetricsForWindow(
 	equity: number[],
 	window: MetricsWindow,
-	config: MetricsConfig = DEFAULT_METRICS_CONFIG
+	config: MetricsConfig = DEFAULT_METRICS_CONFIG,
 ): PerformanceMetrics {
 	// Get the last N periods for this window
 	const windowEquity =
@@ -80,7 +80,7 @@ export function calculateMetricsForWindow(
 export function calculateAllMetrics(
 	equity: number[],
 	windows: MetricsWindow[] = DEFAULT_WINDOWS,
-	config: MetricsConfig = DEFAULT_METRICS_CONFIG
+	config: MetricsConfig = DEFAULT_METRICS_CONFIG,
 ): PerformanceMetrics[] {
 	return windows.map((window) => calculateMetricsForWindow(equity, window, config));
 }

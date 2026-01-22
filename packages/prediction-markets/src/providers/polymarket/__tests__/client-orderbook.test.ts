@@ -22,7 +22,7 @@ describe("PolymarketClient.getMidpoint", () => {
 			Promise.resolve({
 				ok: true,
 				json: () => Promise.resolve({ mid: "0.65" }),
-			} as Response)
+			} as Response),
 		);
 
 		const client = new PolymarketClient();
@@ -36,7 +36,7 @@ describe("PolymarketClient.getMidpoint", () => {
 			Promise.resolve({
 				ok: false,
 				status: 404,
-			} as Response)
+			} as Response),
 		);
 
 		const client = new PolymarketClient();
@@ -50,7 +50,7 @@ describe("PolymarketClient.getMidpoint", () => {
 			Promise.resolve({
 				ok: true,
 				json: () => Promise.resolve({ other: "data" }),
-			} as Response)
+			} as Response),
 		);
 
 		const client = new PolymarketClient();
@@ -97,7 +97,7 @@ describe("PolymarketClient.getOrderbook", () => {
 							{ price: "0.67", size: "1500" },
 						],
 					}),
-			} as Response)
+			} as Response),
 		);
 
 		const client = new PolymarketClient();
@@ -113,7 +113,7 @@ describe("PolymarketClient.getOrderbook", () => {
 			Promise.resolve({
 				ok: false,
 				status: 404,
-			} as Response)
+			} as Response),
 		);
 
 		const client = new PolymarketClient();

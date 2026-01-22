@@ -24,7 +24,7 @@ describe("KalshiClient transformMarket", () => {
 		mockGetMarkets.mockImplementation(() =>
 			Promise.resolve({
 				data: { markets: [marketWithPrices] },
-			})
+			}),
 		);
 
 		const client = new KalshiClient({
@@ -55,7 +55,7 @@ describe("KalshiClient transformMarket", () => {
 		mockGetMarkets.mockImplementation(() =>
 			Promise.resolve({
 				data: { markets: [marketWithOnlyBid] },
-			})
+			}),
 		);
 
 		const client = new KalshiClient({
@@ -79,7 +79,7 @@ describe("KalshiClient transformMarket", () => {
 		mockGetMarkets.mockImplementation(() =>
 			Promise.resolve({
 				data: { markets: [marketWithExpiration] },
-			})
+			}),
 		);
 
 		const client = new KalshiClient({
@@ -101,7 +101,7 @@ describe("KalshiClient transformMarket", () => {
 		mockGetMarkets.mockImplementation(() =>
 			Promise.resolve({
 				data: { markets: [marketWithoutExpiration] },
-			})
+			}),
 		);
 
 		const client = new KalshiClient({
@@ -123,7 +123,7 @@ describe("KalshiClient transformMarket", () => {
 		mockGetMarkets.mockImplementation(() =>
 			Promise.resolve({
 				data: { markets: [marketWithoutTimes] },
-			})
+			}),
 		);
 
 		const client = new KalshiClient({
@@ -144,7 +144,7 @@ describe("KalshiClient transformMarket", () => {
 		mockGetMarkets.mockImplementation(() =>
 			Promise.resolve({
 				data: { markets: [marketWithVolume] },
-			})
+			}),
 		);
 
 		const client = new KalshiClient({
@@ -168,7 +168,7 @@ describe("KalshiClient transformMarket", () => {
 		mockGetMarkets.mockImplementation(() =>
 			Promise.resolve({
 				data: { markets: [market] },
-			})
+			}),
 		);
 
 		const client = new KalshiClient({

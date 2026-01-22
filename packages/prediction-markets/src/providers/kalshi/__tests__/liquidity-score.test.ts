@@ -22,7 +22,7 @@ describe("KalshiClient calculateLiquidityScore", () => {
 		mockGetMarkets.mockImplementation(() =>
 			Promise.resolve({
 				data: { markets: [highLiquidityMarket] },
-			})
+			}),
 		);
 
 		const client = new KalshiClient({
@@ -46,7 +46,7 @@ describe("KalshiClient calculateLiquidityScore", () => {
 		mockGetMarkets.mockImplementation(() =>
 			Promise.resolve({
 				data: { markets: [lowLiquidityMarket] },
-			})
+			}),
 		);
 
 		const client = new KalshiClient({
@@ -70,7 +70,7 @@ describe("KalshiClient calculateLiquidityScore", () => {
 		mockGetMarkets.mockImplementation(() =>
 			Promise.resolve({
 				data: { markets: [noVolumeMarket] },
-			})
+			}),
 		);
 
 		const client = new KalshiClient({
@@ -94,7 +94,7 @@ describe("KalshiClient calculateLiquidityScore", () => {
 		mockGetMarkets.mockImplementation(() =>
 			Promise.resolve({
 				data: { markets: [zeroVolumeMarket] },
-			})
+			}),
 		);
 
 		const client = new KalshiClient({
@@ -117,7 +117,7 @@ describe("KalshiClient calculateLiquidityScore", () => {
 		mockGetMarkets.mockImplementation(() =>
 			Promise.resolve({
 				data: { markets: [noBidAskMarket] },
-			})
+			}),
 		);
 
 		const client = new KalshiClient({
@@ -141,7 +141,7 @@ describe("KalshiClient calculateLiquidityScore", () => {
 		mockGetMarkets.mockImplementation(() =>
 			Promise.resolve({
 				data: { markets: [superLiquidMarket] },
-			})
+			}),
 		);
 
 		const client = new KalshiClient({

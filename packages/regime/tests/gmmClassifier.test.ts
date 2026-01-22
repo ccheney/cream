@@ -35,7 +35,7 @@ function createOHLCVBar(
 	timestamp: string,
 	close: number,
 	volume = 1000000,
-	overrides: Partial<OHLCVBar> = {}
+	overrides: Partial<OHLCVBar> = {},
 ): OHLCVBar {
 	return {
 		timestamp: new Date(timestamp).getTime(),
@@ -52,7 +52,7 @@ function generateTrendingOHLCVBars(
 	startPrice: number,
 	direction: "up" | "down",
 	count: number,
-	volatility = 0.01
+	volatility = 0.01,
 ): OHLCVBar[] {
 	const candles: OHLCVBar[] = [];
 	let price = startPrice;
@@ -74,7 +74,7 @@ function generateTrendingOHLCVBars(
 function generateRangeBoundOHLCVBars(
 	basePrice: number,
 	count: number,
-	volatility = 0.01
+	volatility = 0.01,
 ): OHLCVBar[] {
 	const candles: OHLCVBar[] = [];
 	const baseDate = new Date("2024-01-01");
@@ -148,7 +148,7 @@ describe("Feature Extraction", () => {
 
 		it("throws for single element", () => {
 			expect(() => calculateStd([5])).toThrow(
-				"Cannot calculate standard deviation with single value"
+				"Cannot calculate standard deviation with single value",
 			);
 		});
 
@@ -167,7 +167,7 @@ describe("Feature Extraction", () => {
 		it("throws for zero std", () => {
 			const sample = [5, 5, 5, 5, 5];
 			expect(() => calculateZScore(6, sample)).toThrow(
-				"Cannot calculate z-score: standard deviation is near zero"
+				"Cannot calculate z-score: standard deviation is near zero",
 			);
 		});
 	});

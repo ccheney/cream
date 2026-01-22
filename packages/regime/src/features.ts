@@ -49,7 +49,7 @@ export const DEFAULT_FEATURE_CONFIG: FeatureExtractionConfig = {
  */
 export function extractFeatures(
 	candles: OHLCVBar[],
-	config: FeatureExtractionConfig = DEFAULT_FEATURE_CONFIG
+	config: FeatureExtractionConfig = DEFAULT_FEATURE_CONFIG,
 ): RegimeFeatures[] {
 	if (candles.length < config.volatilityPeriod + 1) {
 		return [];
@@ -100,14 +100,14 @@ export function extractFeatures(
 
 export function extractSingleFeature(
 	candles: OHLCVBar[],
-	config: FeatureExtractionConfig = DEFAULT_FEATURE_CONFIG
+	config: FeatureExtractionConfig = DEFAULT_FEATURE_CONFIG,
 ): RegimeFeatures | null {
 	const features = extractFeatures(candles, config);
 	return features[features.length - 1] ?? null;
 }
 
 export function getMinimumCandleCount(
-	config: FeatureExtractionConfig = DEFAULT_FEATURE_CONFIG
+	config: FeatureExtractionConfig = DEFAULT_FEATURE_CONFIG,
 ): number {
 	return Math.max(config.volatilityPeriod, config.volumePeriod) + 1;
 }
@@ -195,7 +195,7 @@ export function normalizeFeatures(features: RegimeFeatures[]): {
 export function normalizeFeatureVector(
 	feature: RegimeFeatures,
 	means: number[],
-	stds: number[]
+	stds: number[],
 ): number[] {
 	const meanReturns = means[0] ?? 0;
 	const meanVol = means[1] ?? 0;

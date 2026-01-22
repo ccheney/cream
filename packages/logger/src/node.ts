@@ -108,7 +108,7 @@ export function createNodeLogger(options: NodeLoggerOptions): LifecycleLogger {
 					customColors: "trace:gray,debug:gray,info:gray,warn:yellow,error:red,fatal:red",
 					singleLine: true,
 				},
-			})
+			}),
 		);
 	} else {
 		baseLogger = pino(loggerOptions);

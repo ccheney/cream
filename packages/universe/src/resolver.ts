@@ -129,7 +129,7 @@ function composeIntersection(sourceResults: SourceResolutionResult[]): ResolvedI
 	}
 
 	const symbolSets = sourceResults.map(
-		(result) => new Set(result.instruments.map((i) => i.symbol))
+		(result) => new Set(result.instruments.map((i) => i.symbol)),
 	);
 
 	const firstSet = symbolSets[0];
@@ -200,7 +200,7 @@ function composeIntersection(sourceResults: SourceResolutionResult[]): ResolvedI
  */
 function applyFilters(
 	instruments: ResolvedInstrument[],
-	filters: UniverseFilters | undefined
+	filters: UniverseFilters | undefined,
 ): { instruments: ResolvedInstrument[]; warnings: string[] } {
 	if (!filters) {
 		return { instruments, warnings: [] };
@@ -303,7 +303,7 @@ export interface DiversificationConfig {
  */
 function applyDiversification(
 	instruments: ResolvedInstrument[],
-	config: UniverseConfig
+	config: UniverseConfig,
 ): { instruments: ResolvedInstrument[]; warnings: string[] } {
 	const warnings: string[] = [];
 	let filtered = [...instruments];
@@ -362,7 +362,7 @@ function applyDiversification(
 		if (sectorsPresent.size < diversify.minSectorsRepresented) {
 			warnings.push(
 				`Warning: only ${sectorsPresent.size} sectors represented, ` +
-					`below minimum of ${diversify.minSectorsRepresented}`
+					`below minimum of ${diversify.minSectorsRepresented}`,
 			);
 		}
 	}
@@ -379,7 +379,7 @@ function applyDiversification(
  */
 function rankAndLimit(
 	instruments: ResolvedInstrument[],
-	maxInstruments: number
+	maxInstruments: number,
 ): ResolvedInstrument[] {
 	if (instruments.length <= maxInstruments) {
 		return instruments;
@@ -403,7 +403,7 @@ function rankAndLimit(
  */
 export async function resolveUniverse(
 	config: UniverseConfig,
-	options: UniverseResolverOptions = {}
+	options: UniverseResolverOptions = {},
 ): Promise<UniverseResolutionResult> {
 	const warnings: string[] = [];
 	const sourceResults: SourceResolutionResult[] = [];
@@ -476,7 +476,7 @@ export async function resolveUniverse(
  */
 export async function resolveUniverseSymbols(
 	config: UniverseConfig,
-	options: UniverseResolverOptions = {}
+	options: UniverseResolverOptions = {},
 ): Promise<string[]> {
 	const result = await resolveUniverse(config, options);
 	return result.instruments.map((i) => i.symbol);

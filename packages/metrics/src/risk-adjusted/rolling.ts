@@ -18,7 +18,7 @@ import { DEFAULT_METRICS_CONFIG, type MetricsConfig } from "./types.js";
 export function rollingSharpE(
 	returns: number[],
 	windowSize: number,
-	config: MetricsConfig = DEFAULT_METRICS_CONFIG
+	config: MetricsConfig = DEFAULT_METRICS_CONFIG,
 ): (number | null)[] {
 	const result: (number | null)[] = [];
 
@@ -45,7 +45,7 @@ export function rollingSharpE(
 export function rollingSortino(
 	returns: number[],
 	windowSize: number,
-	config: MetricsConfig = DEFAULT_METRICS_CONFIG
+	config: MetricsConfig = DEFAULT_METRICS_CONFIG,
 ): (number | null)[] {
 	const result: (number | null)[] = [];
 

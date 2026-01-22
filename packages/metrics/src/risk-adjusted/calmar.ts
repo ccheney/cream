@@ -25,7 +25,7 @@ import { DEFAULT_METRICS_CONFIG, type MetricsConfig } from "./types.js";
 export function calculateCalmar(
 	returns: number[],
 	equity: number[],
-	config: MetricsConfig = DEFAULT_METRICS_CONFIG
+	config: MetricsConfig = DEFAULT_METRICS_CONFIG,
 ): number | null {
 	if (returns.length < 2 || equity.length < 2) {
 		return null;

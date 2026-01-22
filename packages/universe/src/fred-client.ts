@@ -332,7 +332,7 @@ export function classifyReleaseImpact(releaseId: number): ReleaseImpact {
  * @returns Release metadata or undefined if not found
  */
 export function getReleaseById(
-	releaseId: number
+	releaseId: number,
 ): { key: FREDReleaseId; name: string; series: readonly string[] } | undefined {
 	for (const [key, release] of Object.entries(FRED_RELEASES)) {
 		if (release.id === releaseId) {
@@ -392,7 +392,7 @@ export class FREDClientError extends Error {
 	constructor(
 		message: string,
 		public readonly code: FREDErrorCode,
-		public override readonly cause?: unknown
+		public override readonly cause?: unknown,
 	) {
 		super(message, { cause });
 		this.name = "FREDClientError";
@@ -496,7 +496,7 @@ export class FREDClient {
 		};
 		this.rateLimiter = new RateLimiter(
 			FRED_RATE_LIMITS.free.maxRequests,
-			FRED_RATE_LIMITS.free.intervalMs
+			FRED_RATE_LIMITS.free.intervalMs,
 		);
 	}
 
@@ -506,7 +506,7 @@ export class FREDClient {
 	private async request<T>(
 		endpoint: string,
 		params: Record<string, string | number | boolean> = {},
-		schema: z.ZodType<T>
+		schema: z.ZodType<T>,
 	): Promise<T> {
 		// Acquire rate limit token
 		await this.rateLimiter.acquire();
@@ -559,7 +559,7 @@ export class FREDClient {
 				if (!response.ok) {
 					throw new FREDClientError(
 						`FRED API error: ${response.status} ${response.statusText}`,
-						"API_ERROR"
+						"API_ERROR",
 					);
 				}
 
@@ -571,7 +571,7 @@ export class FREDClient {
 					throw new FREDClientError(
 						`FRED API response validation failed: ${result.error.message}`,
 						"VALIDATION_ERROR",
-						result.error
+						result.error,
 					);
 				}
 
@@ -588,13 +588,13 @@ export class FREDClient {
 						lastError = new FREDClientError(
 							`FRED API request timed out after ${this.config.timeout}ms`,
 							"TIMEOUT",
-							error
+							error,
 						);
 					} else {
 						lastError = new FREDClientError(
 							`FRED API network error: ${error.message}`,
 							"NETWORK_ERROR",
-							error
+							error,
 						);
 					}
 				} else {
@@ -634,7 +634,7 @@ export class FREDClient {
 			order_by?: "release_date" | "release_id" | "release_name";
 			sort_order?: "asc" | "desc";
 			include_release_dates_with_no_data?: boolean;
-		} = {}
+		} = {},
 	): Promise<FREDReleaseDatesResponse> {
 		return this.request("/releases/dates", params, FREDReleaseDatesResponseSchema);
 	}
@@ -655,7 +655,7 @@ export class FREDClient {
 			offset?: number;
 			order_by?: "release_id" | "name" | "press_release" | "realtime_start" | "realtime_end";
 			sort_order?: "asc" | "desc";
-		} = {}
+		} = {},
 	): Promise<FREDReleasesResponse> {
 		return this.request("/releases", params, FREDReleasesResponseSchema);
 	}
@@ -691,12 +691,12 @@ export class FREDClient {
 			sort_order?: "asc" | "desc";
 			filter_variable?: string;
 			filter_value?: string;
-		} = {}
+		} = {},
 	): Promise<FREDReleaseSeriesResponse> {
 		return this.request(
 			`/release/series`,
 			{ release_id: releaseId, ...params },
-			FREDReleaseSeriesResponseSchema
+			FREDReleaseSeriesResponseSchema,
 		);
 	}
 
@@ -722,12 +722,12 @@ export class FREDClient {
 			units?: "lin" | "chg" | "ch1" | "pch" | "pc1" | "pca" | "cch" | "cca" | "log";
 			frequency?: "d" | "w" | "bw" | "m" | "q" | "sa" | "a";
 			aggregation_method?: "avg" | "sum" | "eop";
-		} = {}
+		} = {},
 	): Promise<FREDObservationsResponse> {
 		return this.request(
 			`/series/observations`,
 			{ series_id: seriesId, ...params },
-			FREDObservationsResponseSchema
+			FREDObservationsResponseSchema,
 		);
 	}
 
@@ -749,12 +749,12 @@ export class FREDClient {
 			offset?: number;
 			sort_order?: "asc" | "desc";
 			include_release_dates_with_no_data?: boolean;
-		} = {}
+		} = {},
 	): Promise<FREDReleaseDatesResponse> {
 		return this.request(
 			"/release/dates",
 			{ release_id: releaseId, ...params },
-			FREDReleaseDatesResponseSchema
+			FREDReleaseDatesResponseSchema,
 		);
 	}
 

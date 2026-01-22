@@ -28,7 +28,7 @@ describe("PolymarketClient.fetchMarkets", () => {
 			Promise.resolve({
 				ok: true,
 				json: () => Promise.resolve({ events: [mockPolymarketEvent] }),
-			} as Response)
+			} as Response),
 		);
 
 		const client = new PolymarketClient();
@@ -70,7 +70,7 @@ describe("PolymarketClient.fetchMarkets", () => {
 			Promise.resolve({
 				ok: true,
 				json: () => Promise.resolve({ events: [mockPolymarketEvent] }),
-			} as Response)
+			} as Response),
 		);
 
 		const client = new PolymarketClient({
@@ -86,7 +86,7 @@ describe("PolymarketClient.fetchMarkets", () => {
 			Promise.resolve({
 				ok: true,
 				json: () => Promise.resolve({ events: [mockPolymarketEvent] }),
-			} as Response)
+			} as Response),
 		);
 
 		const client = new PolymarketClient();

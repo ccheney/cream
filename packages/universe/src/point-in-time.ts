@@ -86,7 +86,7 @@ export class PointInTimeUniverseResolver {
 		private readonly constituentsRepo: IndexConstituentsRepository,
 		private readonly tickerChangesRepo: TickerChangesRepository,
 		private readonly snapshotsRepo: UniverseSnapshotsRepository,
-		config: PointInTimeResolverConfig = {}
+		config: PointInTimeResolverConfig = {},
 	) {
 		this.config = {
 			useCache: config.useCache ?? true,
@@ -122,12 +122,12 @@ export class PointInTimeUniverseResolver {
 				const snapshotDate = new Date(closestSnapshot.snapshotDate);
 				const targetDate = new Date(asOfDate);
 				const daysDiff = Math.abs(
-					(targetDate.getTime() - snapshotDate.getTime()) / (1000 * 60 * 60 * 24)
+					(targetDate.getTime() - snapshotDate.getTime()) / (1000 * 60 * 60 * 24),
 				);
 
 				if (daysDiff <= this.config.maxCacheAgeDays) {
 					warnings.push(
-						`Using snapshot from ${closestSnapshot.snapshotDate} (${Math.round(daysDiff)} days before target)`
+						`Using snapshot from ${closestSnapshot.snapshotDate} (${Math.round(daysDiff)} days before target)`,
 					);
 					return {
 						symbols: closestSnapshot.tickers,
@@ -153,7 +153,7 @@ export class PointInTimeUniverseResolver {
 			for (const symbol of constituents) {
 				const historicalSymbol = await this.tickerChangesRepo.resolveToHistoricalSymbol(
 					symbol,
-					asOfDate
+					asOfDate,
 				);
 
 				if (historicalSymbol !== symbol) {
@@ -197,7 +197,7 @@ export class PointInTimeUniverseResolver {
 		const directMembership = await this.constituentsRepo.wasInIndexOnDate(
 			indexId,
 			symbol,
-			asOfDate
+			asOfDate,
 		);
 		if (directMembership) {
 			return true;
@@ -205,7 +205,7 @@ export class PointInTimeUniverseResolver {
 
 		const historicalSymbol = await this.tickerChangesRepo.resolveToHistoricalSymbol(
 			symbol,
-			asOfDate
+			asOfDate,
 		);
 		if (historicalSymbol !== symbol) {
 			return this.constituentsRepo.wasInIndexOnDate(indexId, historicalSymbol, asOfDate);
@@ -230,7 +230,7 @@ export class PointInTimeUniverseResolver {
 
 		const tickerChanges = await this.tickerChangesRepo.getChangesInRange(
 			"1900-01-01",
-			"2100-12-31"
+			"2100-12-31",
 		);
 
 		const snapshotDates = await this.snapshotsRepo.listDates(indexId);
@@ -246,7 +246,7 @@ export class PointInTimeUniverseResolver {
 		const expected = expectedCounts[indexId];
 		if (expected && Math.abs(constituentCount - expected) > expected * 0.1) {
 			issues.push(
-				`Constituent count (${constituentCount}) differs significantly from expected (${expected})`
+				`Constituent count (${constituentCount}) differs significantly from expected (${expected})`,
 			);
 		}
 
@@ -298,12 +298,12 @@ export function createPointInTimeResolver(
 	constituentsRepo: IndexConstituentsRepository,
 	tickerChangesRepo: TickerChangesRepository,
 	snapshotsRepo: UniverseSnapshotsRepository,
-	config?: PointInTimeResolverConfig
+	config?: PointInTimeResolverConfig,
 ): PointInTimeUniverseResolver {
 	return new PointInTimeUniverseResolver(
 		constituentsRepo,
 		tickerChangesRepo,
 		snapshotsRepo,
-		config
+		config,
 	);
 }

@@ -104,7 +104,7 @@ describe("KalshiClient.fetchMarkets", () => {
 				data: {
 					markets: [{ invalid: "data" }, mockKalshiMarket],
 				},
-			})
+			}),
 		);
 
 		const client = new KalshiClient({
@@ -120,7 +120,7 @@ describe("KalshiClient.fetchMarkets", () => {
 		mockGetMarkets.mockImplementation(() =>
 			Promise.resolve({
 				data: { markets: [] },
-			})
+			}),
 		);
 
 		const client = new KalshiClient({
@@ -136,7 +136,7 @@ describe("KalshiClient.fetchMarkets", () => {
 		mockGetMarkets.mockImplementation(() =>
 			Promise.resolve({
 				data: { markets: null },
-			})
+			}),
 		);
 
 		const client = new KalshiClient({

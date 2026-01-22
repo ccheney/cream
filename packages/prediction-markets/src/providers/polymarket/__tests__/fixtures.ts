@@ -56,7 +56,7 @@ export function createFetchMock(): FetchMockContext {
 		Promise.resolve({
 			ok: true,
 			json: () => Promise.resolve([]),
-		} as Response)
+		} as Response),
 	);
 	global.fetch = mockFetch as unknown as typeof fetch;
 	return { originalFetch, mockFetch };

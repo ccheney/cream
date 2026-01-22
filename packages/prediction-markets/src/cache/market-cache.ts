@@ -169,7 +169,7 @@ export class MarketCache {
 	 */
 	async getOrFetchEvent(
 		ticker: string,
-		fetcher: () => Promise<PredictionMarketEvent | null>
+		fetcher: () => Promise<PredictionMarketEvent | null>,
 	): Promise<PredictionMarketEvent | null> {
 		const cached = this.getEvent(ticker);
 		if (cached) {
@@ -275,7 +275,7 @@ export class MarketCache {
 	 * Get or fetch scores
 	 */
 	async getOrFetchScores(
-		fetcher: () => Promise<PredictionMarketScores>
+		fetcher: () => Promise<PredictionMarketScores>,
 	): Promise<PredictionMarketScores> {
 		const cached = this.getScores();
 		if (cached) {
