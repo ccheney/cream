@@ -50,15 +50,15 @@ export const thesisState = pgTable(
 	(table) => [
 		check(
 			"valid_conviction",
-			sql`${table.conviction} IS NULL OR (${table.conviction}::numeric >= 0 AND ${table.conviction}::numeric <= 1)`
+			sql`${table.conviction} IS NULL OR (${table.conviction}::numeric >= 0 AND ${table.conviction}::numeric <= 1)`,
 		),
 		check(
 			"positive_entry_price",
-			sql`${table.entryPrice} IS NULL OR ${table.entryPrice}::numeric > 0`
+			sql`${table.entryPrice} IS NULL OR ${table.entryPrice}::numeric > 0`,
 		),
 		check(
 			"positive_exit_price",
-			sql`${table.exitPrice} IS NULL OR ${table.exitPrice}::numeric > 0`
+			sql`${table.exitPrice} IS NULL OR ${table.exitPrice}::numeric > 0`,
 		),
 		index("idx_thesis_state_instrument").on(table.instrumentId),
 		index("idx_thesis_state_state").on(table.state),
@@ -71,7 +71,7 @@ export const thesisState = pgTable(
 		index("idx_thesis_state_instrument_active")
 			.on(table.instrumentId, table.environment)
 			.where(sql`${table.state} != 'CLOSED'`),
-	]
+	],
 );
 
 // thesis_state_history: State transitions
@@ -100,14 +100,14 @@ export const thesisStateHistory = pgTable(
 	(table) => [
 		check(
 			"valid_conviction",
-			sql`${table.convictionAtTransition} IS NULL OR (${table.convictionAtTransition}::numeric >= 0 AND ${table.convictionAtTransition}::numeric <= 1)`
+			sql`${table.convictionAtTransition} IS NULL OR (${table.convictionAtTransition}::numeric >= 0 AND ${table.convictionAtTransition}::numeric <= 1)`,
 		),
 		check(
 			"positive_price",
-			sql`${table.priceAtTransition} IS NULL OR ${table.priceAtTransition}::numeric > 0`
+			sql`${table.priceAtTransition} IS NULL OR ${table.priceAtTransition}::numeric > 0`,
 		),
 		index("idx_thesis_history_thesis_id").on(table.thesisId),
 		index("idx_thesis_history_created_at").on(table.createdAt),
 		index("idx_thesis_history_thesis_created").on(table.thesisId, table.createdAt),
-	]
+	],
 );

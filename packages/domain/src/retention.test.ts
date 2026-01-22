@@ -118,7 +118,7 @@ describe("LIVE_RETENTION_POLICIES", () => {
 
 	it("ExternalEvent_SENTIMENT_SPIKE has 90 days retention", () => {
 		const policy = LIVE_RETENTION_POLICIES.find(
-			(p) => p.nodeType === "ExternalEvent_SENTIMENT_SPIKE"
+			(p) => p.nodeType === "ExternalEvent_SENTIMENT_SPIKE",
 		);
 		expect(policy).toBeDefined();
 		expect(policy!.totalRetentionDays).toBe(DURATIONS.DAYS_90);
@@ -190,7 +190,7 @@ describe("getCompliancePolicies", () => {
 	it("includes LIVE TradeDecision", () => {
 		const policies = getCompliancePolicies();
 		const hasTradeDecision = policies.some(
-			(p) => p.nodeType === "TradeDecision" && p.environment === "LIVE"
+			(p) => p.nodeType === "TradeDecision" && p.environment === "LIVE",
 		);
 		expect(hasTradeDecision).toBe(true);
 	});

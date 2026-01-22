@@ -33,7 +33,7 @@ export const alerts = pgTable(
 		index("idx_alerts_unack_env")
 			.on(table.environment, table.acknowledged)
 			.where(sql`${table.acknowledged} = false`),
-	]
+	],
 );
 
 // system_state: Current system state per environment

@@ -218,8 +218,8 @@ export class SentimentRepository {
 				and(
 					eq(sentimentIndicators.symbol, symbol),
 					gte(sentimentIndicators.date, dateStart),
-					lte(sentimentIndicators.date, dateEnd)
-				)
+					lte(sentimentIndicators.date, dateEnd),
+				),
 			)
 			.limit(1);
 
@@ -239,7 +239,7 @@ export class SentimentRepository {
 
 	async findBySymbol(
 		symbol: string,
-		options?: { startDate?: string; endDate?: string }
+		options?: { startDate?: string; endDate?: string },
 	): Promise<SentimentIndicators[]> {
 		const conditions = [eq(sentimentIndicators.symbol, symbol)];
 
@@ -262,7 +262,7 @@ export class SentimentRepository {
 
 	async findWithFilters(
 		filters: SentimentFilters,
-		pagination?: PaginationOptions
+		pagination?: PaginationOptions,
 	): Promise<PaginatedResult<SentimentIndicators>> {
 		const conditions = [];
 
@@ -342,8 +342,8 @@ export class SentimentRepository {
 					and(
 						gte(sentimentIndicators.date, dateStart),
 						lte(sentimentIndicators.date, dateEnd),
-						isNotNull(sentimentIndicators.sentimentScore)
-					)
+						isNotNull(sentimentIndicators.sentimentScore),
+					),
 				)
 				.orderBy(desc(sentimentIndicators.sentimentScore))
 				.limit(limit);
@@ -367,8 +367,8 @@ export class SentimentRepository {
 				latestDates,
 				and(
 					eq(sentimentIndicators.symbol, latestDates.symbol),
-					eq(sentimentIndicators.date, latestDates.maxDate)
-				)
+					eq(sentimentIndicators.date, latestDates.maxDate),
+				),
 			)
 			.where(isNotNull(sentimentIndicators.sentimentScore))
 			.orderBy(desc(sentimentIndicators.sentimentScore))
@@ -391,8 +391,8 @@ export class SentimentRepository {
 					and(
 						gte(sentimentIndicators.date, dateStart),
 						lte(sentimentIndicators.date, dateEnd),
-						isNotNull(sentimentIndicators.sentimentScore)
-					)
+						isNotNull(sentimentIndicators.sentimentScore),
+					),
 				)
 				.orderBy(sentimentIndicators.sentimentScore)
 				.limit(limit);
@@ -416,8 +416,8 @@ export class SentimentRepository {
 				latestDates,
 				and(
 					eq(sentimentIndicators.symbol, latestDates.symbol),
-					eq(sentimentIndicators.date, latestDates.maxDate)
-				)
+					eq(sentimentIndicators.date, latestDates.maxDate),
+				),
 			)
 			.where(isNotNull(sentimentIndicators.sentimentScore))
 			.orderBy(asc(sentimentIndicators.sentimentScore))
@@ -440,8 +440,8 @@ export class SentimentRepository {
 					and(
 						gte(sentimentIndicators.date, dateStart),
 						lte(sentimentIndicators.date, dateEnd),
-						eq(sentimentIndicators.eventRiskFlag, true)
-					)
+						eq(sentimentIndicators.eventRiskFlag, true),
+					),
 				)
 				.orderBy(desc(sentimentIndicators.sentimentScore));
 
@@ -464,8 +464,8 @@ export class SentimentRepository {
 				latestDates,
 				and(
 					eq(sentimentIndicators.symbol, latestDates.symbol),
-					eq(sentimentIndicators.date, latestDates.maxDate)
-				)
+					eq(sentimentIndicators.date, latestDates.maxDate),
+				),
 			)
 			.where(eq(sentimentIndicators.eventRiskFlag, true))
 			.orderBy(desc(sentimentIndicators.sentimentScore));
@@ -588,7 +588,7 @@ export class SentimentRepository {
 	async findByComputedAtRange(
 		startTime: string,
 		endTime: string,
-		limit = 100
+		limit = 100,
 	): Promise<SentimentIndicators[]> {
 		const rows = await this.db
 			.select()
@@ -596,8 +596,8 @@ export class SentimentRepository {
 			.where(
 				and(
 					gte(sentimentIndicators.computedAt, new Date(startTime)),
-					lte(sentimentIndicators.computedAt, new Date(endTime))
-				)
+					lte(sentimentIndicators.computedAt, new Date(endTime)),
+				),
 			)
 			.orderBy(sentimentIndicators.symbol)
 			.limit(limit);

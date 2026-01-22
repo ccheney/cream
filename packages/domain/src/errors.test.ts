@@ -481,7 +481,7 @@ describe("withRetry", () => {
 		});
 
 		await expect(withRetry(fn, { maxRetries: 2, initialDelayMs: 1 })).rejects.toThrow(
-			ServiceUnavailableError
+			ServiceUnavailableError,
 		);
 		expect(fn).toHaveBeenCalledTimes(3); // Initial + 2 retries
 	});

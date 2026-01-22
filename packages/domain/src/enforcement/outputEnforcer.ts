@@ -143,7 +143,7 @@ export interface TraderAgentInterface {
 	requestRevision(
 		originalPlan: string,
 		errors: PreflightError[],
-		context: MarketContext
+		context: MarketContext,
 	): Promise<string>;
 }
 
@@ -198,7 +198,7 @@ export class OutputEnforcer {
 	 */
 	parseAndValidateJSON(
 		response: string,
-		retryCallback?: (prompt: string) => Promise<string>
+		retryCallback?: (prompt: string) => Promise<string>,
 	): Promise<Result<DecisionPlan, ParseError>> {
 		return this.parseWithRetryInternal(response, retryCallback);
 	}
@@ -322,7 +322,7 @@ export class OutputEnforcer {
 	async requestPlanRevision(
 		originalResponse: string,
 		errors: PreflightError[],
-		context: MarketContext
+		context: MarketContext,
 	): Promise<Result<DecisionPlan, ParseError>> {
 		if (!this.options.traderAgent) {
 			return {
@@ -344,7 +344,7 @@ export class OutputEnforcer {
 			const revisedResponse = await this.options.traderAgent.requestRevision(
 				originalResponse,
 				errors,
-				context
+				context,
 			);
 
 			// Parse the revised plan (no further retries)
@@ -377,7 +377,7 @@ export class OutputEnforcer {
 	async enforce(
 		response: string,
 		context: MarketContext,
-		retryCallback?: (prompt: string) => Promise<string>
+		retryCallback?: (prompt: string) => Promise<string>,
 	): Promise<EnforcementResult> {
 		let attemptCount = 0;
 
@@ -438,7 +438,7 @@ export class OutputEnforcer {
 			const revisionResult = await this.requestPlanRevision(
 				response,
 				preflightResult.errors,
-				context
+				context,
 			);
 			attemptCount++;
 
@@ -490,7 +490,7 @@ export class OutputEnforcer {
 
 	private async parseWithRetryInternal(
 		response: string,
-		retryCallback?: (prompt: string) => Promise<string>
+		retryCallback?: (prompt: string) => Promise<string>,
 	): Promise<Result<DecisionPlan, ParseError>> {
 		const result = await parseWithRetry(response, this.options.schema, {
 			agentType: "TraderAgent",
@@ -516,7 +516,7 @@ export class OutputEnforcer {
 
 	private validateActionCompatibility(
 		decision: Decision,
-		currentPosition?: PositionInfo
+		currentPosition?: PositionInfo,
 	): PreflightError | null {
 		const instrumentId = decision.instrument.instrumentId;
 		const action = decision.action;
@@ -632,7 +632,7 @@ export function createOutputEnforcer(options?: EnforcementOptions): OutputEnforc
 export async function parseAndValidateJSON(
 	response: string,
 	retryCallback?: (prompt: string) => Promise<string>,
-	logger?: ParseLogger
+	logger?: ParseLogger,
 ): Promise<Result<DecisionPlan, ParseError>> {
 	const enforcer = createOutputEnforcer({ logger });
 	return enforcer.parseAndValidateJSON(response, retryCallback);
@@ -644,7 +644,7 @@ export async function parseAndValidateJSON(
 export function runPreflightChecks(
 	plan: DecisionPlan,
 	context: MarketContext,
-	logger?: ParseLogger
+	logger?: ParseLogger,
 ): PreflightResult {
 	const enforcer = createOutputEnforcer({ logger });
 	return enforcer.runPreflightChecks(plan, context);
@@ -655,7 +655,7 @@ export function runPreflightChecks(
  */
 export function createFallbackPlan(
 	cycleId: string,
-	currentPositions: Map<string, PositionInfo>
+	currentPositions: Map<string, PositionInfo>,
 ): DecisionPlan {
 	const decisions: Decision[] = [];
 

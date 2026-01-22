@@ -225,7 +225,7 @@ export const FIXTURE_EXECUTION_ACK: ExecutionAck = {
 export function validateContract<T>(
 	schema: z.ZodSchema<T>,
 	payload: unknown,
-	contractName: string
+	contractName: string,
 ): ContractValidationResult {
 	const result = schema.safeParse(payload);
 
@@ -265,18 +265,18 @@ export function validateAllContracts(): ContractValidationResult[] {
 	results.push(validateContract(AccountStateSchema, FIXTURE_ACCOUNT_STATE, "AccountState"));
 	results.push(validateContract(PositionSchema, FIXTURE_POSITION, "Position"));
 	results.push(
-		validateContract(ConstraintCheckSchema, FIXTURE_CONSTRAINT_CHECK, "ConstraintCheck")
+		validateContract(ConstraintCheckSchema, FIXTURE_CONSTRAINT_CHECK, "ConstraintCheck"),
 	);
 	results.push(validateContract(DecisionPlanSchema, FIXTURE_DECISION_PLAN, "DecisionPlan"));
 	results.push(
-		validateContract(SubmitOrderRequestSchema, FIXTURE_SUBMIT_ORDER_REQUEST, "SubmitOrderRequest")
+		validateContract(SubmitOrderRequestSchema, FIXTURE_SUBMIT_ORDER_REQUEST, "SubmitOrderRequest"),
 	);
 	results.push(
 		validateContract(
 			SubmitOrderResponseSchema,
 			FIXTURE_SUBMIT_ORDER_RESPONSE,
-			"SubmitOrderResponse"
-		)
+			"SubmitOrderResponse",
+		),
 	);
 	results.push(validateContract(ExecutionAckSchema, FIXTURE_EXECUTION_ACK, "ExecutionAck"));
 
@@ -399,13 +399,17 @@ export function validateHTTPContracts(): ContractValidationResult[] {
 		// Validate request schema if present
 		if (contract.requestSchema && contract.sampleRequest) {
 			results.push(
-				validateContract(contract.requestSchema, contract.sampleRequest, `${contractName} Request`)
+				validateContract(contract.requestSchema, contract.sampleRequest, `${contractName} Request`),
 			);
 		}
 
 		// Validate response schema
 		results.push(
-			validateContract(contract.responseSchema, contract.sampleResponse, `${contractName} Response`)
+			validateContract(
+				contract.responseSchema,
+				contract.sampleResponse,
+				`${contractName} Response`,
+			),
 		);
 	}
 

@@ -118,7 +118,7 @@ async function seedEnvironment(
 	agentRepo: AgentConfigsRepository,
 	universeRepo: UniverseConfigsRepository,
 	constraintsRepo: ConstraintsConfigRepository,
-	force: boolean
+	force: boolean,
 ): Promise<SeedResult> {
 	const result: SeedResult = {
 		environment,
@@ -219,13 +219,13 @@ async function main(): Promise<void> {
 				agentRepo,
 				universeRepo,
 				constraintsRepo,
-				options.force
+				options.force,
 			);
 			results.push(result);
 		} catch (error) {
 			log.error(
 				{ environment: env, error: error instanceof Error ? error.message : String(error) },
-				"Failed to seed environment"
+				"Failed to seed environment",
 			);
 			process.exit(1);
 		}
@@ -242,7 +242,7 @@ async function main(): Promise<void> {
 				universe: result.universe,
 				constraints: result.constraints,
 			},
-			"Environment seed summary"
+			"Environment seed summary",
 		);
 	}
 }

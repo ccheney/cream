@@ -167,7 +167,7 @@ export function getMostSimilarCase(ctx: MemoryContext): RetrievedCase | undefine
 	const withScores = ctx.retrievedCases.filter((c) => c.similarityScore !== undefined);
 	if (withScores.length > 0) {
 		return withScores.reduce((best, curr) =>
-			(curr.similarityScore ?? 0) > (best.similarityScore ?? 0) ? curr : best
+			(curr.similarityScore ?? 0) > (best.similarityScore ?? 0) ? curr : best,
 		);
 	}
 
@@ -188,7 +188,7 @@ export function calculateCaseStatistics(cases: RetrievedCase[]): CaseStatistics 
 	const wins = cases.filter((c) => c.keyOutcomes.result === "win").length;
 	const similarities = cases
 		.filter(
-			(c): c is RetrievedCase & { similarityScore: number } => c.similarityScore !== undefined
+			(c): c is RetrievedCase & { similarityScore: number } => c.similarityScore !== undefined,
 		)
 		.map((c) => c.similarityScore);
 

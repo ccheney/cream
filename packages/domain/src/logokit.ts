@@ -47,7 +47,7 @@ export function buildTickerLogoUrl(ticker: string, apiKey: string | undefined): 
  */
 export function getSourceLogoInfo(
 	url: string,
-	apiKey: string | undefined
+	apiKey: string | undefined,
 ): { domain: string; logoUrl: string | null } | null {
 	const domain = extractDomain(url);
 	if (!domain) {

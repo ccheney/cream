@@ -38,7 +38,7 @@ function getDatabaseUrl(): string {
 	if (!url) {
 		throw new Error(
 			`DATABASE_URL not configured for environment: ${env}. ` +
-				`Set DATABASE_URL_${env} or DATABASE_URL environment variable.`
+				`Set DATABASE_URL_${env} or DATABASE_URL environment variable.`,
 		);
 	}
 
@@ -124,7 +124,7 @@ export async function closeDb(): Promise<void> {
  * });
  */
 export async function withTransaction<T>(
-	fn: (tx: NodePgDatabase<typeof schema>) => Promise<T>
+	fn: (tx: NodePgDatabase<typeof schema>) => Promise<T>,
 ): Promise<T> {
 	const database = getDb();
 	return database.transaction(fn);

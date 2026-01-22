@@ -190,7 +190,7 @@ export class ShortInterestRepository {
 
 	async findBySymbolAndDate(
 		symbol: string,
-		settlementDate: string
+		settlementDate: string,
 	): Promise<ShortInterestIndicators | null> {
 		const dateStart = new Date(settlementDate);
 		dateStart.setHours(0, 0, 0, 0);
@@ -204,8 +204,8 @@ export class ShortInterestRepository {
 				and(
 					eq(shortInterestIndicators.symbol, symbol),
 					gte(shortInterestIndicators.settlementDate, dateStart),
-					lte(shortInterestIndicators.settlementDate, dateEnd)
-				)
+					lte(shortInterestIndicators.settlementDate, dateEnd),
+				),
 			)
 			.limit(1);
 
@@ -225,7 +225,7 @@ export class ShortInterestRepository {
 
 	async findBySymbol(
 		symbol: string,
-		options?: { startDate?: string; endDate?: string }
+		options?: { startDate?: string; endDate?: string },
 	): Promise<ShortInterestIndicators[]> {
 		const conditions = [eq(shortInterestIndicators.symbol, symbol)];
 
@@ -248,7 +248,7 @@ export class ShortInterestRepository {
 
 	async findWithFilters(
 		filters: ShortInterestFilters,
-		pagination?: PaginationOptions
+		pagination?: PaginationOptions,
 	): Promise<PaginatedResult<ShortInterestIndicators>> {
 		const conditions = [];
 
@@ -267,13 +267,13 @@ export class ShortInterestRepository {
 
 		if (filters.settlementDateGte) {
 			conditions.push(
-				gte(shortInterestIndicators.settlementDate, new Date(filters.settlementDateGte))
+				gte(shortInterestIndicators.settlementDate, new Date(filters.settlementDateGte)),
 			);
 		}
 
 		if (filters.settlementDateLte) {
 			conditions.push(
-				lte(shortInterestIndicators.settlementDate, new Date(filters.settlementDateLte))
+				lte(shortInterestIndicators.settlementDate, new Date(filters.settlementDateLte)),
 			);
 		}
 
@@ -312,7 +312,7 @@ export class ShortInterestRepository {
 
 	async findHighestShortInterest(
 		limit = 10,
-		minShortPctFloat?: number
+		minShortPctFloat?: number,
 	): Promise<ShortInterestIndicators[]> {
 		const latestDates = this.db
 			.select({
@@ -336,8 +336,8 @@ export class ShortInterestRepository {
 				latestDates,
 				and(
 					eq(shortInterestIndicators.symbol, latestDates.symbol),
-					eq(shortInterestIndicators.settlementDate, latestDates.maxDate)
-				)
+					eq(shortInterestIndicators.settlementDate, latestDates.maxDate),
+				),
 			)
 			.where(and(...conditions))
 			.orderBy(desc(shortInterestIndicators.shortPctFloat))
@@ -348,7 +348,7 @@ export class ShortInterestRepository {
 
 	async update(
 		id: string,
-		input: UpdateShortInterestInput
+		input: UpdateShortInterestInput,
 	): Promise<ShortInterestIndicators | null> {
 		const updates: Record<string, unknown> = {
 			fetchedAt: new Date(),
@@ -446,7 +446,7 @@ export class ShortInterestRepository {
 	async findByFetchedAtRange(
 		startTime: string,
 		endTime: string,
-		limit = 100
+		limit = 100,
 	): Promise<ShortInterestIndicators[]> {
 		const rows = await this.db
 			.select()
@@ -454,8 +454,8 @@ export class ShortInterestRepository {
 			.where(
 				and(
 					gte(shortInterestIndicators.fetchedAt, new Date(startTime)),
-					lte(shortInterestIndicators.fetchedAt, new Date(endTime))
-				)
+					lte(shortInterestIndicators.fetchedAt, new Date(endTime)),
+				),
 			)
 			.orderBy(shortInterestIndicators.symbol)
 			.limit(limit);

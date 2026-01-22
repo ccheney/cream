@@ -145,7 +145,7 @@ describe("ISO8601TimestampSchema", () => {
 	it("accepts valid timestamps", () => {
 		expect(ISO8601TimestampSchema.parse("2026-01-04T15:00:00Z")).toBe("2026-01-04T15:00:00Z");
 		expect(ISO8601TimestampSchema.parse("2026-01-04T15:00:00.000Z")).toBe(
-			"2026-01-04T15:00:00.000Z"
+			"2026-01-04T15:00:00.000Z",
 		);
 	});
 
@@ -219,7 +219,7 @@ describe("OptionContractSchema", () => {
 				expirationDate: "03-20-2026", // Wrong format
 				strike: 450.0,
 				right: "CALL",
-			})
+			}),
 		).toThrow();
 	});
 
@@ -298,7 +298,7 @@ describe("RiskLevelsSchema", () => {
 				stopLossLevel: 0,
 				takeProfitLevel: 100,
 				denomination: "UNDERLYING_PRICE",
-			})
+			}),
 		).toThrow();
 
 		expect(() =>
@@ -306,7 +306,7 @@ describe("RiskLevelsSchema", () => {
 				stopLossLevel: 100,
 				takeProfitLevel: -50,
 				denomination: "UNDERLYING_PRICE",
-			})
+			}),
 		).toThrow();
 	});
 });
@@ -394,14 +394,14 @@ describe("DecisionSchema", () => {
 			DecisionSchema.parse({
 				...validEquityDecision,
 				confidence: 1.5,
-			})
+			}),
 		).toThrow();
 
 		expect(() =>
 			DecisionSchema.parse({
 				...validEquityDecision,
 				confidence: -0.1,
-			})
+			}),
 		).toThrow();
 	});
 

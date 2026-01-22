@@ -182,7 +182,7 @@ export class InMemoryCalendarCache implements CalendarCache {
 				const endDate = `${year}-12-31`;
 				const days = await client.getCalendar(startDate, endDate);
 				this.setYear(year, days);
-			})
+			}),
 		);
 	}
 

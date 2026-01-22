@@ -15,7 +15,7 @@ export function logSnapshotStart(
 	logger: SnapshotLogger,
 	cycleId: string,
 	universeSize: number,
-	environment: string
+	environment: string,
 ): void {
 	logger.info({
 		level: "info",
@@ -35,7 +35,7 @@ export function logSnapshotStart(
  */
 export function logSnapshotComplete(
 	logger: SnapshotLogger,
-	metrics: SnapshotAssemblyMetrics
+	metrics: SnapshotAssemblyMetrics,
 ): void {
 	const level: LogLevel = metrics.validationErrors.length > 0 ? "warn" : "info";
 
@@ -90,7 +90,7 @@ export function logSnapshotError(
 	logger: SnapshotLogger,
 	cycleId: string,
 	error: Error | string,
-	context?: Record<string, unknown>
+	context?: Record<string, unknown>,
 ): void {
 	logger.error({
 		level: "error",
@@ -115,7 +115,7 @@ export function logDataSourceFetch(
 	source: string,
 	success: boolean,
 	durationMs: number,
-	recordCount?: number
+	recordCount?: number,
 ): void {
 	const level: LogLevel = success ? "debug" : "warn";
 
@@ -141,7 +141,7 @@ export function logValidationResult(
 	logger: SnapshotLogger,
 	cycleId: string,
 	valid: boolean,
-	errors: string[] = []
+	errors: string[] = [],
 ): void {
 	const level: LogLevel = valid ? "info" : "error";
 
@@ -168,7 +168,7 @@ export function extractSnapshotMetrics(
 	snapshot: MarketSnapshot,
 	cycleId: string,
 	performanceMetrics: SnapshotPerformanceMetrics,
-	sizeEstimate: SnapshotSizeEstimate
+	sizeEstimate: SnapshotSizeEstimate,
 ): SnapshotAssemblyMetrics {
 	const candleCount = (snapshot.symbols ?? []).reduce((sum, s) => sum + (s.bars?.length ?? 0), 0);
 	const positionCount = 0;

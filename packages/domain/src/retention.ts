@@ -321,7 +321,7 @@ export const ALL_RETENTION_POLICIES: Record<RetentionEnvironment, RetentionPolic
  */
 export function getRetentionPolicy(
 	nodeType: RetentionNodeType,
-	environment: RetentionEnvironment
+	environment: RetentionEnvironment,
 ): RetentionPolicy | undefined {
 	const policies = ALL_RETENTION_POLICIES[environment];
 	return policies.find((p) => p.nodeType === nodeType);
@@ -476,7 +476,7 @@ export function getTransitionDecision(nodeInfo: NodeAgeInfo): TierTransitionResu
 export function getTargetTier(
 	ageDays: number,
 	nodeType: RetentionNodeType,
-	environment: RetentionEnvironment
+	environment: RetentionEnvironment,
 ): StorageTier | null {
 	const policy = getRetentionPolicy(nodeType, environment);
 	if (!policy) {

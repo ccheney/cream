@@ -45,7 +45,7 @@ export class CalendarClientError extends Error {
 	constructor(
 		message: string,
 		public readonly code: CalendarErrorCode,
-		public override readonly cause?: Error
+		public override readonly cause?: Error,
 	) {
 		super(message);
 		this.name = "CalendarClientError";
@@ -189,7 +189,7 @@ export class AlpacaCalendarClient {
 		if (!validated.success) {
 			throw new CalendarClientError(
 				`Invalid calendar response: ${validated.error.message}`,
-				"VALIDATION_ERROR"
+				"VALIDATION_ERROR",
 			);
 		}
 
@@ -209,7 +209,7 @@ export class AlpacaCalendarClient {
 		if (!validated.success) {
 			throw new CalendarClientError(
 				`Invalid clock response: ${validated.error.message}`,
-				"VALIDATION_ERROR"
+				"VALIDATION_ERROR",
 			);
 		}
 
@@ -270,7 +270,7 @@ export class AlpacaCalendarClient {
 				throw new CalendarClientError(
 					`Network error: ${error instanceof Error ? error.message : "Unknown error"}`,
 					"NETWORK_ERROR",
-					error instanceof Error ? error : undefined
+					error instanceof Error ? error : undefined,
 				);
 			}
 		}
@@ -291,7 +291,7 @@ export class AlpacaCalendarClient {
  * @returns Configured client instance
  */
 export function createAlpacaCalendarClient(
-	config: AlpacaCalendarClientConfig
+	config: AlpacaCalendarClientConfig,
 ): AlpacaCalendarClient {
 	return new AlpacaCalendarClient(config);
 }

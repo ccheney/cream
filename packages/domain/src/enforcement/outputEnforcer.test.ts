@@ -396,7 +396,7 @@ describe("OutputEnforcer", () => {
 			const result = await enforcer.requestPlanRevision(
 				"original",
 				[{ type: "MARKET_CLOSED", message: "Market closed", severity: "ERROR" }],
-				createMarketContext()
+				createMarketContext(),
 			);
 
 			expect(result.ok).toBe(false);
@@ -415,7 +415,7 @@ describe("OutputEnforcer", () => {
 			const result = await enforcerWithAgent.requestPlanRevision(
 				"original",
 				[{ type: "MARKET_CLOSED", message: "Market closed", severity: "ERROR" }],
-				createMarketContext()
+				createMarketContext(),
 			);
 
 			expect(mockAgent.requestRevision).toHaveBeenCalledTimes(1);
@@ -433,7 +433,7 @@ describe("OutputEnforcer", () => {
 			const result = await enforcerWithAgent.requestPlanRevision(
 				"original",
 				[{ type: "MARKET_CLOSED", message: "Market closed", severity: "ERROR" }],
-				createMarketContext()
+				createMarketContext(),
 			);
 
 			expect(result.ok).toBe(false);

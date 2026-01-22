@@ -48,7 +48,7 @@ export const predictionMarketSnapshots = pgTable(
 		index("idx_pm_snapshots_ticker").on(table.marketTicker),
 		index("idx_pm_snapshots_type").on(table.marketType),
 		index("idx_pm_snapshots_time").on(table.snapshotTime),
-	]
+	],
 );
 
 // prediction_market_signals: Derived signals from prediction markets
@@ -66,11 +66,11 @@ export const predictionMarketSignals = pgTable(
 	(table) => [
 		check(
 			"valid_confidence",
-			sql`${table.confidence} IS NULL OR (${table.confidence}::numeric >= 0 AND ${table.confidence}::numeric <= 1)`
+			sql`${table.confidence} IS NULL OR (${table.confidence}::numeric >= 0 AND ${table.confidence}::numeric <= 1)`,
 		),
 		index("idx_pm_signals_type").on(table.signalType),
 		index("idx_pm_signals_time").on(table.computedAt),
-	]
+	],
 );
 
 // prediction_market_arbitrage: Cross-platform price divergences
@@ -101,7 +101,7 @@ export const predictionMarketArbitrage = pgTable(
 		index("idx_pm_arbitrage_unresolved")
 			.on(table.resolvedAt)
 			.where(sql`${table.resolvedAt} IS NULL`),
-	]
+	],
 );
 
 // external_events: Processed external events (news, earnings, etc.)
@@ -139,20 +139,20 @@ export const externalEvents = pgTable(
 	(table) => [
 		check(
 			"valid_confidence",
-			sql`${table.confidence}::numeric >= 0 AND ${table.confidence}::numeric <= 1`
+			sql`${table.confidence}::numeric >= 0 AND ${table.confidence}::numeric <= 1`,
 		),
 		check("valid_importance", sql`${table.importance} >= 1 AND ${table.importance} <= 10`),
 		check(
 			"valid_sentiment_score",
-			sql`${table.sentimentScore}::numeric >= -1 AND ${table.sentimentScore}::numeric <= 1`
+			sql`${table.sentimentScore}::numeric >= -1 AND ${table.sentimentScore}::numeric <= 1`,
 		),
 		check(
 			"valid_importance_score",
-			sql`${table.importanceScore}::numeric >= 0 AND ${table.importanceScore}::numeric <= 1`
+			sql`${table.importanceScore}::numeric >= 0 AND ${table.importanceScore}::numeric <= 1`,
 		),
 		check(
 			"valid_surprise_score",
-			sql`${table.surpriseScore}::numeric >= 0 AND ${table.surpriseScore}::numeric <= 1`
+			sql`${table.surpriseScore}::numeric >= 0 AND ${table.surpriseScore}::numeric <= 1`,
 		),
 		index("idx_external_events_event_time").on(table.eventTime),
 		index("idx_external_events_source_type").on(table.sourceType),
@@ -160,7 +160,7 @@ export const externalEvents = pgTable(
 		index("idx_external_events_processed_at").on(table.processedAt),
 		index("idx_external_events_sentiment").on(table.sentiment),
 		index("idx_external_events_importance").on(table.importanceScore),
-	]
+	],
 );
 
 // filings: SEC filings tracking
@@ -195,7 +195,7 @@ export const filings = pgTable(
 		index("idx_filings_status").on(table.status),
 		index("idx_filings_symbol_type").on(table.symbol, table.filingType),
 		index("idx_filings_symbol_date").on(table.symbol, table.filedDate),
-	]
+	],
 );
 
 // filing_sync_runs: Track sync job executions
@@ -231,7 +231,7 @@ export const filingSyncRuns = pgTable(
 		index("idx_filing_sync_runs_status").on(table.status),
 		index("idx_filing_sync_runs_environment").on(table.environment),
 		index("idx_filing_sync_runs_trigger").on(table.triggerSource),
-	]
+	],
 );
 
 // macro_watch_entries: Overnight macro watch entries
@@ -252,7 +252,7 @@ export const macroWatchEntries = pgTable(
 		index("idx_macro_watch_timestamp").on(table.timestamp),
 		index("idx_macro_watch_category").on(table.category),
 		index("idx_macro_watch_session").on(table.session),
-	]
+	],
 );
 
 // morning_newspapers: Compiled daily digests
@@ -273,7 +273,7 @@ export const morningNewspapers = pgTable(
 		rawEntryIds: jsonb("raw_entry_ids").$type<string[]>().notNull(),
 		createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
 	},
-	(table) => [index("idx_morning_newspapers_date").on(table.date)]
+	(table) => [index("idx_morning_newspapers_date").on(table.date)],
 );
 
 // economic_calendar_cache: Cached FRED economic calendar events
@@ -301,5 +301,5 @@ export const economicCalendarCache = pgTable(
 		index("idx_econ_cal_impact").on(table.impact),
 		index("idx_econ_cal_fetched_at").on(table.fetchedAt),
 		sql`CREATE UNIQUE INDEX IF NOT EXISTS "idx_econ_cal_release_date_unique" ON ${table} (${table.releaseId}, ${table.releaseDate})`,
-	]
+	],
 );

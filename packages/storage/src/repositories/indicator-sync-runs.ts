@@ -139,15 +139,18 @@ export class IndicatorSyncRunsRepository {
 		}
 		if (filters?.status) {
 			conditions.push(
-				eq(indicatorSyncRuns.status, filters.status as typeof indicatorSyncRuns.$inferSelect.status)
+				eq(
+					indicatorSyncRuns.status,
+					filters.status as typeof indicatorSyncRuns.$inferSelect.status,
+				),
 			);
 		}
 		if (filters?.environment) {
 			conditions.push(
 				eq(
 					indicatorSyncRuns.environment,
-					filters.environment as typeof indicatorSyncRuns.$inferSelect.environment
-				)
+					filters.environment as typeof indicatorSyncRuns.$inferSelect.environment,
+				),
 			);
 		}
 
@@ -273,7 +276,7 @@ export class IndicatorSyncRunsRepository {
 				inArray(indicatorSyncRuns.status, [
 					"completed" as typeof indicatorSyncRuns.$inferSelect.status,
 					"failed" as typeof indicatorSyncRuns.$inferSelect.status,
-				])
+				]),
 			)
 			.orderBy(indicatorSyncRuns.runType, desc(indicatorSyncRuns.startedAt));
 
@@ -292,15 +295,18 @@ export class IndicatorSyncRunsRepository {
 		}
 		if (filters?.status) {
 			conditions.push(
-				eq(indicatorSyncRuns.status, filters.status as typeof indicatorSyncRuns.$inferSelect.status)
+				eq(
+					indicatorSyncRuns.status,
+					filters.status as typeof indicatorSyncRuns.$inferSelect.status,
+				),
 			);
 		}
 		if (filters?.environment) {
 			conditions.push(
 				eq(
 					indicatorSyncRuns.environment,
-					filters.environment as typeof indicatorSyncRuns.$inferSelect.environment
-				)
+					filters.environment as typeof indicatorSyncRuns.$inferSelect.environment,
+				),
 			);
 		}
 

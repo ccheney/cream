@@ -383,7 +383,7 @@ export class ActionMappingError extends Error {
 		message: string,
 		public readonly action: Action,
 		public readonly currentPosition: number,
-		public readonly targetPosition: number
+		public readonly targetPosition: number,
 	) {
 		super(message);
 		this.name = "ActionMappingError";
@@ -413,7 +413,7 @@ export class ActionMappingError extends Error {
 export function mapActionToBrokerOrder(
 	action: Action,
 	currentPosition: number,
-	targetPosition: number
+	targetPosition: number,
 ): BrokerOrderMapping | null {
 	const positionDelta = targetPosition - currentPosition;
 
@@ -429,7 +429,7 @@ export function mapActionToBrokerOrder(
 				`BUY action requires flat position (currentPosition=${currentPosition})`,
 				action,
 				currentPosition,
-				targetPosition
+				targetPosition,
 			);
 		}
 		if (targetPosition <= 0) {
@@ -437,7 +437,7 @@ export function mapActionToBrokerOrder(
 				`BUY action requires positive target position (targetPosition=${targetPosition})`,
 				action,
 				currentPosition,
-				targetPosition
+				targetPosition,
 			);
 		}
 		return {
@@ -454,7 +454,7 @@ export function mapActionToBrokerOrder(
 				`SELL action requires flat position (currentPosition=${currentPosition})`,
 				action,
 				currentPosition,
-				targetPosition
+				targetPosition,
 			);
 		}
 		if (targetPosition >= 0) {
@@ -462,7 +462,7 @@ export function mapActionToBrokerOrder(
 				`SELL action requires negative target position (targetPosition=${targetPosition})`,
 				action,
 				currentPosition,
-				targetPosition
+				targetPosition,
 			);
 		}
 		return {
@@ -479,7 +479,7 @@ export function mapActionToBrokerOrder(
 				`INCREASE action requires existing position (currentPosition=${currentPosition})`,
 				action,
 				currentPosition,
-				targetPosition
+				targetPosition,
 			);
 		}
 
@@ -493,7 +493,7 @@ export function mapActionToBrokerOrder(
 				`INCREASE action requires target to extend position in same direction`,
 				action,
 				currentPosition,
-				targetPosition
+				targetPosition,
 			);
 		}
 
@@ -513,7 +513,7 @@ export function mapActionToBrokerOrder(
 				`REDUCE action requires existing position (currentPosition=${currentPosition})`,
 				action,
 				currentPosition,
-				targetPosition
+				targetPosition,
 			);
 		}
 
@@ -527,7 +527,7 @@ export function mapActionToBrokerOrder(
 				`REDUCE action requires target to decrease position magnitude towards flat`,
 				action,
 				currentPosition,
-				targetPosition
+				targetPosition,
 			);
 		}
 
@@ -545,7 +545,7 @@ export function mapActionToBrokerOrder(
 		`Unknown action: ${action}`,
 		action,
 		currentPosition,
-		targetPosition
+		targetPosition,
 	);
 }
 
@@ -559,7 +559,7 @@ export function mapActionToBrokerOrder(
  */
 export function deriveActionFromPositions(
 	currentPosition: number,
-	targetPosition: number
+	targetPosition: number,
 ): Action | null {
 	// No change
 	if (currentPosition === targetPosition) {
@@ -586,7 +586,7 @@ export function deriveActionFromPositions(
 			"Cannot flip from long to short in single action",
 			"REDUCE", // placeholder
 			currentPosition,
-			targetPosition
+			targetPosition,
 		);
 	} else {
 		// isShort
@@ -601,7 +601,7 @@ export function deriveActionFromPositions(
 			"Cannot flip from short to long in single action",
 			"REDUCE", // placeholder
 			currentPosition,
-			targetPosition
+			targetPosition,
 		);
 	}
 }

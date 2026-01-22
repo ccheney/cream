@@ -148,7 +148,7 @@ export class ExecutionError extends Error {
 			details?: ErrorDetails;
 			traceId?: string;
 			cause?: Error;
-		} = {}
+		} = {},
 	) {
 		super(message, { cause: options.cause });
 		this.name = this.constructor.name;
@@ -225,7 +225,7 @@ export class InvalidArgumentError extends ExecutionError {
 			details?: ErrorDetails;
 			traceId?: string;
 			cause?: Error;
-		} = {}
+		} = {},
 	) {
 		super(message, GrpcStatusCode.INVALID_ARGUMENT, {
 			retryable: false,
@@ -258,7 +258,7 @@ export class ConstraintViolationError extends ExecutionError {
 			details?: ErrorDetails;
 			traceId?: string;
 			cause?: Error;
-		} = {}
+		} = {},
 	) {
 		super(message, GrpcStatusCode.FAILED_PRECONDITION, {
 			retryable: false,
@@ -295,7 +295,7 @@ export class InsufficientFundsError extends ConstraintViolationError {
 			details?: ErrorDetails;
 			traceId?: string;
 			cause?: Error;
-		} = {}
+		} = {},
 	) {
 		const violation: ConstraintViolationDetails = {
 			constraintName: "BUYING_POWER",
@@ -335,7 +335,7 @@ export class NotFoundError extends ExecutionError {
 			details?: ErrorDetails;
 			traceId?: string;
 			cause?: Error;
-		} = {}
+		} = {},
 	) {
 		super(`${resourceType} not found: ${resourceId}`, GrpcStatusCode.NOT_FOUND, {
 			retryable: false,
@@ -371,7 +371,7 @@ export class ServiceUnavailableError extends ExecutionError {
 			details?: ErrorDetails;
 			traceId?: string;
 			cause?: Error;
-		} = {}
+		} = {},
 	) {
 		super(message ?? `Service unavailable: ${serviceName}`, GrpcStatusCode.UNAVAILABLE, {
 			retryable: true,
@@ -402,7 +402,7 @@ export class DeadlineExceededError extends ExecutionError {
 			details?: ErrorDetails;
 			traceId?: string;
 			cause?: Error;
-		} = {}
+		} = {},
 	) {
 		const message = operation
 			? `Operation '${operation}' exceeded ${timeoutMs}ms timeout`
@@ -436,7 +436,7 @@ export class PermissionDeniedError extends ExecutionError {
 			details?: ErrorDetails;
 			traceId?: string;
 			cause?: Error;
-		} = {}
+		} = {},
 	) {
 		super(message ?? `Permission denied: ${permission}`, GrpcStatusCode.PERMISSION_DENIED, {
 			retryable: false,
@@ -469,7 +469,7 @@ export class ResourceExhaustedError extends ExecutionError {
 			details?: ErrorDetails;
 			traceId?: string;
 			cause?: Error;
-		} = {}
+		} = {},
 	) {
 		super(`Resource exhausted: ${resource}`, GrpcStatusCode.RESOURCE_EXHAUSTED, {
 			retryable: true,
@@ -496,7 +496,7 @@ export class InternalError extends ExecutionError {
 			details?: ErrorDetails;
 			traceId?: string;
 			cause?: Error;
-		} = {}
+		} = {},
 	) {
 		super(message, GrpcStatusCode.INTERNAL, {
 			retryable: false,
@@ -558,7 +558,7 @@ export function mapGrpcError(error: GrpcError): ExecutionError {
 					constraintName: "UNKNOWN",
 					message: error.message,
 				},
-				{ details, traceId }
+				{ details, traceId },
 			);
 
 		case GrpcStatusCode.NOT_FOUND:
@@ -646,7 +646,7 @@ export function isRetryableError(error: unknown): boolean {
  */
 export function calculateRetryDelay(
 	attempt: number,
-	options: RetryOptions = DEFAULT_RETRY_OPTIONS
+	options: RetryOptions = DEFAULT_RETRY_OPTIONS,
 ): number {
 	// Exponential backoff
 	const exponentialDelay = options.initialDelayMs * options.backoffMultiplier ** attempt;
@@ -670,7 +670,7 @@ export function calculateRetryDelay(
  */
 export async function withRetry<T>(
 	fn: () => Promise<T>,
-	options: Partial<RetryOptions> = {}
+	options: Partial<RetryOptions> = {},
 ): Promise<T> {
 	const opts = { ...DEFAULT_RETRY_OPTIONS, ...options };
 	let lastError: Error | undefined;

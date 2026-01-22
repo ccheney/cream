@@ -183,7 +183,7 @@ export class OptionsIndicatorsCacheRepository {
 			.select()
 			.from(optionsIndicatorsCache)
 			.where(
-				and(eq(optionsIndicatorsCache.symbol, symbol), gt(optionsIndicatorsCache.expiresAt, now))
+				and(eq(optionsIndicatorsCache.symbol, symbol), gt(optionsIndicatorsCache.expiresAt, now)),
 			)
 			.limit(1);
 
@@ -213,8 +213,8 @@ export class OptionsIndicatorsCacheRepository {
 			.where(
 				and(
 					inArray(optionsIndicatorsCache.symbol, symbols),
-					gt(optionsIndicatorsCache.expiresAt, now)
-				)
+					gt(optionsIndicatorsCache.expiresAt, now),
+				),
 			);
 
 		const result = new Map<string, OptionsIndicatorsCache>();
@@ -232,7 +232,7 @@ export class OptionsIndicatorsCacheRepository {
 			.select({ count: count() })
 			.from(optionsIndicatorsCache)
 			.where(
-				and(eq(optionsIndicatorsCache.symbol, symbol), gt(optionsIndicatorsCache.expiresAt, now))
+				and(eq(optionsIndicatorsCache.symbol, symbol), gt(optionsIndicatorsCache.expiresAt, now)),
 			);
 
 		return (result?.count ?? 0) > 0;
@@ -276,7 +276,7 @@ export class OptionsIndicatorsCacheRepository {
 
 	async update(
 		symbol: string,
-		input: UpdateOptionsIndicatorsCacheInput
+		input: UpdateOptionsIndicatorsCacheInput,
 	): Promise<OptionsIndicatorsCache | null> {
 		const updates: Record<string, unknown> = {
 			timestamp: new Date(),

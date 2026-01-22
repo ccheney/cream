@@ -100,7 +100,7 @@ export class MarketDataServiceClient {
 	 */
 	private async executeWithRetry<T>(
 		operation: () => Promise<T>,
-		metadata: GrpcCallMetadata
+		metadata: GrpcCallMetadata,
 	): Promise<GrpcCallResult<T>> {
 		const backoff = new RetryBackoff();
 		let lastError: GrpcError | null = null;
@@ -121,7 +121,7 @@ export class MarketDataServiceClient {
 				if (this.config.enableLogging) {
 					log.warn(
 						{ requestId: metadata.requestId, attempt: attempt + 1, error: lastError.message },
-						"gRPC call attempt failed"
+						"gRPC call attempt failed",
 					);
 				}
 
@@ -145,14 +145,14 @@ export class MarketDataServiceClient {
 	 */
 	async getSnapshot(
 		input: GetSnapshotInput,
-		cycleId?: string
+		cycleId?: string,
 	): Promise<GrpcCallResult<GetSnapshotResponse>> {
 		const metadata = this.createMetadata(cycleId);
 
 		if (this.config.enableLogging) {
 			log.info(
 				{ requestId: metadata.requestId, symbolCount: input.symbols.length },
-				"gRPC getSnapshot"
+				"gRPC getSnapshot",
 			);
 		}
 
@@ -171,14 +171,14 @@ export class MarketDataServiceClient {
 	 */
 	async getOptionChain(
 		input: GetOptionChainInput,
-		cycleId?: string
+		cycleId?: string,
 	): Promise<GrpcCallResult<GetOptionChainResponse>> {
 		const metadata = this.createMetadata(cycleId);
 
 		if (this.config.enableLogging) {
 			log.info(
 				{ requestId: metadata.requestId, underlying: input.underlying },
-				"gRPC getOptionChain"
+				"gRPC getOptionChain",
 			);
 		}
 
@@ -201,14 +201,14 @@ export class MarketDataServiceClient {
 	 */
 	async *subscribeMarketData(
 		input: SubscribeMarketDataInput,
-		cycleId?: string
+		cycleId?: string,
 	): AsyncGenerator<GrpcCallResult<SubscribeMarketDataResponse>> {
 		const metadata = this.createMetadata(cycleId);
 
 		if (this.config.enableLogging) {
 			log.info(
 				{ requestId: metadata.requestId, symbolCount: input.symbols.length },
-				"gRPC subscribeMarketData"
+				"gRPC subscribeMarketData",
 			);
 		}
 
@@ -234,7 +234,7 @@ export class MarketDataServiceClient {
  */
 export function createMarketDataClient(
 	baseUrl: string,
-	options?: Partial<Omit<GrpcClientConfig, "baseUrl">>
+	options?: Partial<Omit<GrpcClientConfig, "baseUrl">>,
 ): MarketDataServiceClient {
 	return new MarketDataServiceClient({ baseUrl, ...options });
 }

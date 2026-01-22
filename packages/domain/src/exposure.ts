@@ -142,7 +142,7 @@ export const ExposureStatsSchema = z.object({
  */
 export function calculateExposureStats(
 	positions: Position[],
-	accountEquity: number
+	accountEquity: number,
 ): ExposureStats {
 	if (accountEquity <= 0) {
 		throw new Error("accountEquity must be positive");
@@ -257,7 +257,7 @@ export function calculateExposurePair(positions: Position[], accountEquity: numb
  */
 export function calculateExposureByInstrumentType(
 	positions: Position[],
-	accountEquity: number
+	accountEquity: number,
 ): BucketedExposure {
 	if (accountEquity <= 0) {
 		throw new Error("accountEquity must be positive");
@@ -297,7 +297,7 @@ export function calculateExposureByInstrumentType(
 export function calculateExposureByBucket(
 	positions: PositionWithMetadata[],
 	accountEquity: number,
-	bucketType: "sector" | "strategy" | "asset_class"
+	bucketType: "sector" | "strategy" | "asset_class",
 ): BucketedExposure {
 	if (accountEquity <= 0) {
 		throw new Error("accountEquity must be positive");
@@ -348,7 +348,7 @@ export function calculateExposureByBucket(
  */
 export function calculateExposureBySector(
 	positions: PositionWithMetadata[],
-	accountEquity: number
+	accountEquity: number,
 ): BucketedExposure {
 	return calculateExposureByBucket(positions, accountEquity, "sector");
 }
@@ -364,7 +364,7 @@ export function calculateExposureBySector(
  */
 export function calculateExposureByStrategy(
 	positions: PositionWithMetadata[],
-	accountEquity: number
+	accountEquity: number,
 ): BucketedExposure {
 	return calculateExposureByBucket(positions, accountEquity, "strategy");
 }
@@ -380,7 +380,7 @@ export function calculateExposureByStrategy(
  */
 export function calculateExposureByAssetClass(
 	positions: PositionWithMetadata[],
-	accountEquity: number
+	accountEquity: number,
 ): BucketedExposure {
 	return calculateExposureByBucket(positions, accountEquity, "asset_class");
 }
@@ -446,7 +446,7 @@ export interface ExposureValidationResult {
 export function validateExposure(
 	positions: Position[],
 	accountEquity: number,
-	limits: ExposureLimits = {}
+	limits: ExposureLimits = {},
 ): ExposureValidationResult {
 	const effectiveLimits = { ...DEFAULT_EXPOSURE_LIMITS, ...limits };
 	const stats = calculateExposureStats(positions, accountEquity);
@@ -504,7 +504,7 @@ export function validateExposure(
 export function validateSectorExposure(
 	positions: PositionWithMetadata[],
 	accountEquity: number,
-	maxSectorExposure: number = DEFAULT_EXPOSURE_LIMITS.maxSectorExposure
+	maxSectorExposure: number = DEFAULT_EXPOSURE_LIMITS.maxSectorExposure,
 ): ExposureViolation[] {
 	const violations: ExposureViolation[] = [];
 	const sectorExposure = calculateExposureBySector(positions, accountEquity);
@@ -548,7 +548,7 @@ export interface PositionWithDelta extends Position {
  */
 export function calculateDeltaAdjustedExposure(
 	positions: PositionWithDelta[],
-	accountEquity: number
+	accountEquity: number,
 ): ExposureStats {
 	if (accountEquity <= 0) {
 		throw new Error("accountEquity must be positive");

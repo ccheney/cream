@@ -130,7 +130,7 @@ export function calculateFixedFractional(input: SizingInput, riskPercent = 0.01)
  */
 export function calculateVolatilityTargeted(
 	input: VolatilitySizingInput,
-	targetRisk = 0.01
+	targetRisk = 0.01,
 ): SizingResult {
 	validateInput(input);
 
@@ -192,7 +192,7 @@ export function calculateVolatilityTargeted(
  */
 export function calculateFractionalKelly(
 	input: KellySizingInput,
-	maxRiskPercent = 0.02
+	maxRiskPercent = 0.02,
 ): SizingResult {
 	validateInput(input);
 
@@ -235,7 +235,7 @@ export function calculateFractionalKelly(
 
 	return calculateFixedFractional(
 		{ accountEquity, price, stopLoss, takeProfit, multiplier },
-		kellyRisk
+		kellyRisk,
 	);
 }
 
@@ -299,7 +299,7 @@ export function calculateAdaptiveAdjustment(conditions: MarketConditions): numbe
  */
 export function calculateLiquidityLimit(
 	averageDailyVolume: number,
-	maxParticipation = 0.05
+	maxParticipation = 0.05,
 ): number {
 	if (averageDailyVolume <= 0) {
 		throw new Error("averageDailyVolume must be positive");
@@ -334,7 +334,7 @@ export interface OptionsSizingInput extends SizingInput {
  */
 export function calculateDeltaAdjustedSize(
 	input: OptionsSizingInput,
-	targetDeltaExposure: number
+	targetDeltaExposure: number,
 ): SizingResult {
 	validateInput(input);
 

@@ -366,7 +366,7 @@ describe("parseWithRetry - logging", () => {
 
 		// Should have logged the retry
 		const retryLogs = logger.calls.info.filter(
-			(call) => typeof call[0] === "string" && call[0].includes("retry")
+			(call) => typeof call[0] === "string" && call[0].includes("retry"),
 		);
 		expect(retryLogs.length).toBeGreaterThan(0);
 	});
@@ -399,7 +399,7 @@ describe("generateRetryPrompt", () => {
 		const prompt = generateRetryPrompt(
 			"Generate trading decision",
 			"Missing field: action",
-			"DecisionPlan schema"
+			"DecisionPlan schema",
 		);
 
 		expect(prompt).toContain("Generate trading decision");
@@ -416,7 +416,7 @@ describe("generateRetryPrompt", () => {
 		const prompt = generateRetryPrompt(
 			"Task",
 			"Error",
-			"a valid JSON object with action and symbol"
+			"a valid JSON object with action and symbol",
 		);
 
 		expect(prompt).toContain("action and symbol");

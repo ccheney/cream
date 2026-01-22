@@ -51,7 +51,7 @@ describe("RiskLevelsSchema", () => {
 				stopLossLevel: -10,
 				takeProfitLevel: 110.0,
 				denomination: "UNDERLYING_PRICE",
-			})
+			}),
 		).toThrow();
 	});
 
@@ -61,7 +61,7 @@ describe("RiskLevelsSchema", () => {
 				stopLossLevel: 95.0,
 				takeProfitLevel: -10,
 				denomination: "UNDERLYING_PRICE",
-			})
+			}),
 		).toThrow();
 	});
 
@@ -71,7 +71,7 @@ describe("RiskLevelsSchema", () => {
 				stopLossLevel: 100.0,
 				takeProfitLevel: 100.0,
 				denomination: "UNDERLYING_PRICE",
-			})
+			}),
 		).toThrow();
 	});
 
@@ -80,7 +80,7 @@ describe("RiskLevelsSchema", () => {
 			RiskLevelsSchema.parse({
 				stopLossLevel: 95.0,
 				takeProfitLevel: 110.0,
-			})
+			}),
 		).toThrow();
 	});
 });

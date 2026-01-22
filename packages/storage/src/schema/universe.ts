@@ -39,7 +39,7 @@ export const indexConstituents = pgTable(
 		index("idx_index_constituents_symbol").on(table.symbol, table.indexId),
 		index("idx_index_constituents_current").on(table.indexId, table.dateRemoved),
 		uniqueIndex("idx_index_constituents_unique").on(table.indexId, table.symbol, table.dateAdded),
-	]
+	],
 );
 
 // ticker_changes: Symbol renames, mergers, spinoffs
@@ -62,7 +62,7 @@ export const tickerChanges = pgTable(
 		index("idx_ticker_changes_new").on(table.newSymbol, table.changeDate),
 		index("idx_ticker_changes_date").on(table.changeDate),
 		uniqueIndex("idx_ticker_changes_unique").on(table.oldSymbol, table.newSymbol, table.changeDate),
-	]
+	],
 );
 
 // universe_snapshots: Point-in-time universe composition
@@ -81,5 +81,5 @@ export const universeSnapshots = pgTable(
 	(table) => [
 		uniqueIndex("idx_universe_snapshots_pit").on(table.indexId, table.snapshotDate),
 		index("idx_universe_snapshots_date").on(table.snapshotDate),
-	]
+	],
 );

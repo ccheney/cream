@@ -82,7 +82,7 @@ describe("AlpacaCalendarClient", () => {
 						"APCA-API-KEY-ID": "test-key",
 						"APCA-API-SECRET-KEY": "test-secret",
 					}),
-				})
+				}),
 			);
 		});
 
@@ -95,23 +95,23 @@ describe("AlpacaCalendarClient", () => {
 
 			expect(fetchSpy).toHaveBeenCalledWith(
 				"https://paper-api.alpaca.markets/v2/calendar?start=2026-01-05&end=2026-01-06",
-				expect.any(Object)
+				expect.any(Object),
 			);
 		});
 
 		it("throws CalendarClientError on invalid response", async () => {
 			fetchSpy.mockResolvedValueOnce(
-				new Response(JSON.stringify([{ invalid: "data" }]), { status: 200 })
+				new Response(JSON.stringify([{ invalid: "data" }]), { status: 200 }),
 			);
 
 			await expect(client.getCalendar("2026-01-01", "2026-01-31")).rejects.toThrow(
-				CalendarClientError
+				CalendarClientError,
 			);
 		});
 
 		it("throws CalendarClientError on 401", async () => {
 			fetchSpy.mockResolvedValueOnce(
-				new Response(JSON.stringify({ message: "Unauthorized" }), { status: 401 })
+				new Response(JSON.stringify({ message: "Unauthorized" }), { status: 401 }),
 			);
 
 			try {
@@ -157,13 +157,13 @@ describe("AlpacaCalendarClient", () => {
 
 			expect(fetchSpy).toHaveBeenCalledWith(
 				"https://paper-api.alpaca.markets/v2/clock",
-				expect.any(Object)
+				expect.any(Object),
 			);
 		});
 
 		it("throws CalendarClientError on invalid response", async () => {
 			fetchSpy.mockResolvedValueOnce(
-				new Response(JSON.stringify({ invalid: "data" }), { status: 200 })
+				new Response(JSON.stringify({ invalid: "data" }), { status: 200 }),
 			);
 
 			await expect(client.getClock()).rejects.toThrow(CalendarClientError);
@@ -244,7 +244,7 @@ describe("AlpacaCalendarClient", () => {
 
 			expect(fetchSpy).toHaveBeenCalledWith(
 				expect.stringContaining("paper-api.alpaca.markets"),
-				expect.any(Object)
+				expect.any(Object),
 			);
 		});
 
@@ -260,7 +260,7 @@ describe("AlpacaCalendarClient", () => {
 
 			expect(fetchSpy).toHaveBeenCalledWith(
 				expect.stringContaining("api.alpaca.markets"),
-				expect.any(Object)
+				expect.any(Object),
 			);
 		});
 	});

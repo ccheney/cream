@@ -36,7 +36,7 @@ export class RepositoryError extends Error {
 		message: string,
 		public readonly code: RepositoryErrorCode,
 		public readonly table?: string,
-		public override readonly cause?: Error
+		public override readonly cause?: Error,
 	) {
 		super(message);
 		this.name = "RepositoryError";
@@ -50,7 +50,7 @@ export class RepositoryError extends Error {
 		return new RepositoryError(
 			`${table} with ${key} '${value}' already exists`,
 			"DUPLICATE_KEY",
-			table
+			table,
 		);
 	}
 
@@ -59,7 +59,7 @@ export class RepositoryError extends Error {
 			`Constraint violation in ${table}: ${message}`,
 			"CONSTRAINT_VIOLATION",
 			table,
-			cause
+			cause,
 		);
 	}
 
@@ -78,7 +78,7 @@ export class RepositoryError extends Error {
 			`Query error in ${table}: ${error.message}`,
 			"QUERY_ERROR",
 			table,
-			error
+			error,
 		);
 	}
 }

@@ -114,7 +114,7 @@ export class UniverseConfigsRepository {
 			throw new RepositoryError(
 				"Failed to create universe config",
 				"CONSTRAINT_VIOLATION",
-				"universe_configs"
+				"universe_configs",
 			);
 		}
 		return mapUniverseConfigRow(row);
@@ -143,7 +143,7 @@ export class UniverseConfigsRepository {
 			.select()
 			.from(universeConfigs)
 			.where(
-				and(eq(universeConfigs.environment, environment), eq(universeConfigs.status, "active"))
+				and(eq(universeConfigs.environment, environment), eq(universeConfigs.status, "active")),
 			)
 			.limit(1);
 
@@ -156,7 +156,7 @@ export class UniverseConfigsRepository {
 			throw new RepositoryError(
 				`No active universe config found for environment '${environment}'. Run seed script.`,
 				"NOT_FOUND",
-				"universe_configs"
+				"universe_configs",
 			);
 		}
 		return config;
@@ -175,7 +175,7 @@ export class UniverseConfigsRepository {
 
 	async saveDraft(
 		environment: UniverseEnvironment,
-		input: UpdateUniverseConfigInput & { id?: string }
+		input: UpdateUniverseConfigInput & { id?: string },
 	): Promise<UniverseConfig> {
 		const existingDraft = await this.getDraft(environment);
 
@@ -243,8 +243,8 @@ export class UniverseConfigsRepository {
 				.where(
 					and(
 						eq(universeConfigs.environment, config.environment),
-						eq(universeConfigs.status, "active")
-					)
+						eq(universeConfigs.status, "active"),
+					),
 				);
 		}
 
@@ -274,7 +274,7 @@ export class UniverseConfigsRepository {
 			throw new RepositoryError(
 				"Cannot delete active universe config",
 				"CONSTRAINT_VIOLATION",
-				"universe_configs"
+				"universe_configs",
 			);
 		}
 

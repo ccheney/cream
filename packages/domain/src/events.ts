@@ -459,7 +459,7 @@ export function createEarningsEvent(
 	eventId: string,
 	eventTime: string,
 	payload: EarningsEventPayload,
-	options: Partial<TypedEarningsEvent> = {}
+	options: Partial<TypedEarningsEvent> = {},
 ): TypedEarningsEvent {
 	return {
 		eventId,
@@ -478,7 +478,7 @@ export function createMacroEvent(
 	eventId: string,
 	eventTime: string,
 	payload: MacroEventPayload,
-	options: Partial<TypedMacroEvent> = {}
+	options: Partial<TypedMacroEvent> = {},
 ): TypedMacroEvent {
 	return {
 		eventId,
@@ -498,7 +498,7 @@ export function createNewsEvent(
 	eventTime: string,
 	payload: NewsEventPayload,
 	relatedInstrumentIds: string[],
-	options: Partial<TypedNewsEvent> = {}
+	options: Partial<TypedNewsEvent> = {},
 ): TypedNewsEvent {
 	return {
 		eventId,

@@ -61,7 +61,7 @@ export function createTestContext(environment: CreamEnvironment = "PAPER"): Exec
  */
 export function createTestContextWithConfig(
 	environment: CreamEnvironment = "PAPER",
-	configId: string
+	configId: string,
 ): ExecutionContext {
 	return createContext(environment, "test", configId);
 }

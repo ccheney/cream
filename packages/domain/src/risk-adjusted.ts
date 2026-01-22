@@ -265,7 +265,7 @@ export function calculateCurrentDrawdown(equity: number[]): number {
  */
 export function calculateSharpe(
 	returns: number[],
-	config: MetricsConfig = DEFAULT_METRICS_CONFIG
+	config: MetricsConfig = DEFAULT_METRICS_CONFIG,
 ): number | null {
 	if (returns.length < 2) {
 		return null;
@@ -309,7 +309,7 @@ export function calculateSharpe(
  */
 export function calculateSortino(
 	returns: number[],
-	config: MetricsConfig = DEFAULT_METRICS_CONFIG
+	config: MetricsConfig = DEFAULT_METRICS_CONFIG,
 ): number | null {
 	if (returns.length < 2) {
 		return null;
@@ -354,7 +354,7 @@ export function calculateSortino(
 export function calculateCalmar(
 	returns: number[],
 	equity: number[],
-	config: MetricsConfig = DEFAULT_METRICS_CONFIG
+	config: MetricsConfig = DEFAULT_METRICS_CONFIG,
 ): number | null {
 	if (returns.length < 2 || equity.length < 2) {
 		return null;
@@ -392,7 +392,7 @@ export function calculateCalmar(
 export function calculateMetricsForWindow(
 	equity: number[],
 	window: MetricsWindow,
-	config: MetricsConfig = DEFAULT_METRICS_CONFIG
+	config: MetricsConfig = DEFAULT_METRICS_CONFIG,
 ): PerformanceMetrics {
 	// Get the last N periods for this window
 	const windowEquity =
@@ -423,7 +423,7 @@ export function calculateMetricsForWindow(
 export function calculateAllMetrics(
 	equity: number[],
 	windows: MetricsWindow[] = DEFAULT_WINDOWS,
-	config: MetricsConfig = DEFAULT_METRICS_CONFIG
+	config: MetricsConfig = DEFAULT_METRICS_CONFIG,
 ): PerformanceMetrics[] {
 	return windows.map((window) => calculateMetricsForWindow(equity, window, config));
 }
@@ -443,7 +443,7 @@ export function calculateAllMetrics(
 export function rollingSharpE(
 	returns: number[],
 	windowSize: number,
-	config: MetricsConfig = DEFAULT_METRICS_CONFIG
+	config: MetricsConfig = DEFAULT_METRICS_CONFIG,
 ): (number | null)[] {
 	const result: (number | null)[] = [];
 
@@ -470,7 +470,7 @@ export function rollingSharpE(
 export function rollingSortino(
 	returns: number[],
 	windowSize: number,
-	config: MetricsConfig = DEFAULT_METRICS_CONFIG
+	config: MetricsConfig = DEFAULT_METRICS_CONFIG,
 ): (number | null)[] {
 	const result: (number | null)[] = [];
 
@@ -537,7 +537,7 @@ export function isAcceptablePerformance(metrics: PerformanceMetrics): boolean {
  * @returns "exceptional" (>3.0), "elite" (>2.0), "acceptable" (>1.0), or "poor"
  */
 export function gradePerformance(
-	metrics: PerformanceMetrics
+	metrics: PerformanceMetrics,
 ): "exceptional" | "elite" | "acceptable" | "poor" {
 	const { sharpe, sortino, calmar } = metrics;
 

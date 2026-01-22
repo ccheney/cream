@@ -555,7 +555,7 @@ export function isPassiveAction(action: ActionForSession): boolean {
 export function getAllowedSessions(
 	instrumentType: InstrumentTypeForSession,
 	action: ActionForSession,
-	config: SessionValidationConfig = {}
+	config: SessionValidationConfig = {},
 ): TradingSession[] {
 	// HOLD is always allowed (no market interaction)
 	if (isPassiveAction(action)) {
@@ -619,7 +619,7 @@ export function validateSessionForAction(
 	action: ActionForSession,
 	instrumentType: InstrumentTypeForSession,
 	datetime: Date | string,
-	config: SessionValidationConfig = {}
+	config: SessionValidationConfig = {},
 ): SessionValidationResult {
 	// Override: always consider market open
 	if (config.alwaysOpen) {

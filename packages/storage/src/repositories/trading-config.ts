@@ -196,7 +196,7 @@ export class TradingConfigRepository {
 			throw new RepositoryError(
 				"Failed to create trading config",
 				"CONSTRAINT_VIOLATION",
-				"trading_config"
+				"trading_config",
 			);
 		}
 		return mapTradingConfigRow(row);
@@ -236,7 +236,7 @@ export class TradingConfigRepository {
 			throw new RepositoryError(
 				`No active trading config found for environment '${environment}'. Run seed script.`,
 				"NOT_FOUND",
-				"trading_config"
+				"trading_config",
 			);
 		}
 		return config;
@@ -255,7 +255,7 @@ export class TradingConfigRepository {
 
 	async saveDraft(
 		environment: TradingEnvironment,
-		input: UpdateTradingConfigInput & { id?: string; version?: number }
+		input: UpdateTradingConfigInput & { id?: string; version?: number },
 	): Promise<TradingConfig> {
 		const existingDraft = await this.getDraft(environment);
 
@@ -331,7 +331,10 @@ export class TradingConfigRepository {
 				.update(tradingConfig)
 				.set({ status: "archived", updatedAt: new Date() })
 				.where(
-					and(eq(tradingConfig.environment, config.environment), eq(tradingConfig.status, "active"))
+					and(
+						eq(tradingConfig.environment, config.environment),
+						eq(tradingConfig.status, "active"),
+					),
 				);
 		}
 
@@ -356,7 +359,7 @@ export class TradingConfigRepository {
 
 	async compare(
 		id1: string,
-		id2: string
+		id2: string,
 	): Promise<{
 		config1: TradingConfig;
 		config2: TradingConfig;
@@ -403,7 +406,7 @@ export class TradingConfigRepository {
 			throw new RepositoryError(
 				`Cannot promote config with status '${source.status}'. Only active configs can be promoted.`,
 				"CONSTRAINT_VIOLATION",
-				"trading_config"
+				"trading_config",
 			);
 		}
 
@@ -438,7 +441,7 @@ export class TradingConfigRepository {
 			throw new RepositoryError(
 				"Cannot delete active trading config",
 				"CONSTRAINT_VIOLATION",
-				"trading_config"
+				"trading_config",
 			);
 		}
 

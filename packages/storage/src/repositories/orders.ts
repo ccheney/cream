@@ -161,7 +161,7 @@ export class OrdersRepository {
 
 	async findMany(
 		filters: OrderFilters = {},
-		pagination?: { limit?: number; offset?: number }
+		pagination?: { limit?: number; offset?: number },
 	): Promise<{ data: Order[]; total: number; limit: number; offset: number }> {
 		const conditions = [];
 
@@ -233,8 +233,8 @@ export class OrdersRepository {
 			.where(
 				and(
 					eq(orders.environment, environment as "PAPER" | "LIVE"),
-					inArray(orders.status, ["pending", "submitted", "accepted", "partial_fill"])
-				)
+					inArray(orders.status, ["pending", "submitted", "accepted", "partial_fill"]),
+				),
 			)
 			.orderBy(desc(orders.createdAt));
 

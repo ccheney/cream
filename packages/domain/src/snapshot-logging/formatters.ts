@@ -32,7 +32,7 @@ export function createLogEntry(
 	message: string,
 	fields: Record<string, unknown> = {},
 	cycleId?: string,
-	environment?: string
+	environment?: string,
 ): SnapshotLogEntry {
 	return {
 		level,
@@ -65,19 +65,19 @@ export function formatSnapshotDiff(diff: SnapshotDiffResult): string {
 
 	if (diff.summary.symbolsAdded.length > 0) {
 		parts.push(
-			`  - ${diff.summary.symbolsAdded.length} symbols added: ${diff.summary.symbolsAdded.slice(0, 5).join(", ")}`
+			`  - ${diff.summary.symbolsAdded.length} symbols added: ${diff.summary.symbolsAdded.slice(0, 5).join(", ")}`,
 		);
 	}
 
 	if (diff.summary.symbolsRemoved.length > 0) {
 		parts.push(
-			`  - ${diff.summary.symbolsRemoved.length} symbols removed: ${diff.summary.symbolsRemoved.slice(0, 5).join(", ")}`
+			`  - ${diff.summary.symbolsRemoved.length} symbols removed: ${diff.summary.symbolsRemoved.slice(0, 5).join(", ")}`,
 		);
 	}
 
 	if (diff.summary.symbolsModified.length > 0) {
 		parts.push(
-			`  - ${diff.summary.symbolsModified.length} symbols modified: ${diff.summary.symbolsModified.slice(0, 5).join(", ")}`
+			`  - ${diff.summary.symbolsModified.length} symbols modified: ${diff.summary.symbolsModified.slice(0, 5).join(", ")}`,
 		);
 	}
 

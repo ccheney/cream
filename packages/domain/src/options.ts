@@ -47,7 +47,7 @@ export class OSIError extends Error {
 	constructor(
 		message: string,
 		public readonly code: OSIErrorCode,
-		public readonly input?: string
+		public readonly input?: string,
 	) {
 		super(message);
 		this.name = "OSIError";
@@ -156,7 +156,7 @@ export function parseOSI(osi: string): OSIParseResult {
 			error: new OSIError(
 				`OSI symbol must be 15-21 characters, got ${normalized.length}`,
 				"INVALID_LENGTH",
-				osi
+				osi,
 			),
 		};
 	}
@@ -188,7 +188,7 @@ export function parseOSI(osi: string): OSIParseResult {
 			error: new OSIError(
 				`Invalid symbol "${symbolPart}": must be 1-6 uppercase letters`,
 				"INVALID_SYMBOL",
-				osi
+				osi,
 			),
 		};
 	}
@@ -237,7 +237,7 @@ export function parseOSI(osi: string): OSIParseResult {
 			error: new OSIError(
 				`Invalid strike price "${strikeDollarsPart}.${strikeCentsPart}"`,
 				"INVALID_STRIKE",
-				osi
+				osi,
 			),
 		};
 	}
@@ -303,7 +303,7 @@ export function toOSI(contract: OptionContract): string {
 	if (symbol.length > 6) {
 		throw new OSIError(
 			`Symbol "${validated.underlyingSymbol}" exceeds 6 characters`,
-			"INVALID_SYMBOL"
+			"INVALID_SYMBOL",
 		);
 	}
 
@@ -312,7 +312,7 @@ export function toOSI(contract: OptionContract): string {
 	if (dateParts.length !== 3) {
 		throw new OSIError(
 			`Invalid expiration date format "${validated.expirationDate}"`,
-			"INVALID_DATE"
+			"INVALID_DATE",
 		);
 	}
 
@@ -323,7 +323,7 @@ export function toOSI(contract: OptionContract): string {
 	if (!yearStr || !monthStr || !dayStr) {
 		throw new OSIError(
 			`Invalid expiration date format "${validated.expirationDate}"`,
-			"INVALID_DATE"
+			"INVALID_DATE",
 		);
 	}
 
@@ -347,7 +347,7 @@ export function toOSI(contract: OptionContract): string {
 	if (strikeDollarsStr.length > 5) {
 		throw new OSIError(
 			`Strike price ${validated.strike} exceeds maximum ($99,999)`,
-			"INVALID_STRIKE"
+			"INVALID_STRIKE",
 		);
 	}
 

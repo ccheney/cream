@@ -49,6 +49,7 @@ export interface CreatePositionInput {
 	decisionId?: string | null;
 	metadata?: Record<string, unknown>;
 	environment: string;
+	openedAt?: Date;
 }
 
 export interface PositionFilters {
@@ -142,6 +143,7 @@ export class PositionsRepository {
 				status: "open",
 				metadata: input.metadata ?? {},
 				environment: input.environment as "PAPER" | "LIVE",
+				...(input.openedAt && { openedAt: input.openedAt }),
 			})
 			.returning();
 
@@ -167,7 +169,7 @@ export class PositionsRepository {
 
 	async findMany(
 		filters: PositionFilters = {},
-		pagination?: { limit?: number; offset?: number }
+		pagination?: { limit?: number; offset?: number },
 	): Promise<{ data: Position[]; total: number; limit: number; offset: number }> {
 		const conditions = [];
 
@@ -219,8 +221,8 @@ export class PositionsRepository {
 			.where(
 				and(
 					eq(positions.environment, environment as "PAPER" | "LIVE"),
-					eq(positions.status, "open")
-				)
+					eq(positions.status, "open"),
+				),
 			)
 			.orderBy(desc(positions.openedAt));
 
@@ -273,8 +275,8 @@ export class PositionsRepository {
 			.where(
 				and(
 					eq(positions.environment, environment as "PAPER" | "LIVE"),
-					eq(positions.status, "open")
-				)
+					eq(positions.status, "open"),
+				),
 			)
 			.orderBy(desc(positions.openedAt));
 
@@ -348,8 +350,8 @@ export class PositionsRepository {
 				and(
 					eq(positions.symbol, symbol),
 					eq(positions.environment, environment as "PAPER" | "LIVE"),
-					eq(positions.status, "open")
-				)
+					eq(positions.status, "open"),
+				),
 			)
 			.limit(1);
 
@@ -439,6 +441,22 @@ export class PositionsRepository {
 		return mapPositionRow(row);
 	}
 
+	async updateOpenedAt(id: string, openedAt: Date): Promise<Position> {
+		const [row] = await this.db
+			.update(positions)
+			.set({
+				openedAt,
+				updatedAt: new Date(),
+			})
+			.where(eq(positions.id, id))
+			.returning();
+
+		if (!row) {
+			throw RepositoryError.notFound("positions", id);
+		}
+		return mapPositionRow(row);
+	}
+
 	async delete(id: string): Promise<boolean> {
 		const result = await this.db
 			.delete(positions)
@@ -468,8 +486,8 @@ export class PositionsRepository {
 			.where(
 				and(
 					eq(positions.environment, environment as "PAPER" | "LIVE"),
-					eq(positions.status, "open")
-				)
+					eq(positions.status, "open"),
+				),
 			)
 			.groupBy(positions.side);
 

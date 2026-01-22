@@ -143,18 +143,18 @@ export class AlertsRepository {
 
 	async findMany(
 		filters: AlertFilters = {},
-		pagination?: PaginationOptions
+		pagination?: PaginationOptions,
 	): Promise<PaginatedResult<Alert>> {
 		const conditions = [];
 
 		if (filters.severity) {
 			if (Array.isArray(filters.severity)) {
 				conditions.push(
-					inArray(alerts.severity, filters.severity as (typeof alerts.$inferSelect.severity)[])
+					inArray(alerts.severity, filters.severity as (typeof alerts.$inferSelect.severity)[]),
 				);
 			} else {
 				conditions.push(
-					eq(alerts.severity, filters.severity as typeof alerts.$inferSelect.severity)
+					eq(alerts.severity, filters.severity as typeof alerts.$inferSelect.severity),
 				);
 			}
 		}
@@ -170,7 +170,7 @@ export class AlertsRepository {
 		}
 		if (filters.environment) {
 			conditions.push(
-				eq(alerts.environment, filters.environment as typeof alerts.$inferSelect.environment)
+				eq(alerts.environment, filters.environment as typeof alerts.$inferSelect.environment),
 			);
 		}
 		if (filters.fromDate) {
@@ -213,12 +213,12 @@ export class AlertsRepository {
 			.where(
 				and(
 					eq(alerts.environment, environment as typeof alerts.$inferSelect.environment),
-					eq(alerts.acknowledged, false)
-				)
+					eq(alerts.acknowledged, false),
+				),
 			)
 			.orderBy(
 				sql`CASE ${alerts.severity} WHEN 'critical' THEN 0 WHEN 'warning' THEN 1 ELSE 2 END`,
-				desc(alerts.createdAt)
+				desc(alerts.createdAt),
 			)
 			.limit(limit);
 
@@ -283,8 +283,8 @@ export class AlertsRepository {
 			.where(
 				and(
 					eq(alerts.environment, environment as typeof alerts.$inferSelect.environment),
-					eq(alerts.acknowledged, false)
-				)
+					eq(alerts.acknowledged, false),
+				),
 			)
 			.returning({ id: alerts.id });
 
@@ -313,7 +313,7 @@ export class AlertsRepository {
 
 	async countBySeverity(
 		environment: string,
-		acknowledgedOnly = false
+		acknowledgedOnly = false,
 	): Promise<Record<AlertSeverity, number>> {
 		const conditions = [
 			eq(alerts.environment, environment as typeof alerts.$inferSelect.environment),

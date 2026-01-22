@@ -166,10 +166,10 @@ describe("Storage Schemas", () => {
 
 		it("rejects confidence out of range", () => {
 			expect(DecisionInsertSchema.safeParse({ ...validDecision, confidence: 1.5 }).success).toBe(
-				false
+				false,
 			);
 			expect(DecisionInsertSchema.safeParse({ ...validDecision, confidence: -0.5 }).success).toBe(
-				false
+				false,
 			);
 		});
 	});

@@ -170,9 +170,9 @@ export const syncTriggerSourceEnum = pgEnum("sync_trigger_source", [
 // Thesis state enums
 export const thesisStateEnum = pgEnum("thesis_state_value", [
 	"WATCHING",
-	"STAGED",
-	"OPEN",
-	"SCALING",
+	"ENTERED",
+	"ADDING",
+	"MANAGING",
 	"EXITING",
 	"CLOSED",
 ]);

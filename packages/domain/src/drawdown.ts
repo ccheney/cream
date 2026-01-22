@@ -133,7 +133,7 @@ export function calculateRecoveryNeeded(drawdownPct: number): number {
  * Get risk level from drawdown percentage
  */
 export function getRiskLevel(
-	drawdownPct: number
+	drawdownPct: number,
 ): "optimal" | "normal" | "elevated" | "high" | "critical" {
 	if (drawdownPct < DRAWDOWN_THRESHOLDS.optimal) {
 		return "optimal";
@@ -484,7 +484,7 @@ export const DEFAULT_DRAWDOWN_ALERT_CONFIG: DrawdownAlertConfig = {
  */
 export function checkDrawdownAlert(
 	stats: DrawdownStats,
-	config: DrawdownAlertConfig = DEFAULT_DRAWDOWN_ALERT_CONFIG
+	config: DrawdownAlertConfig = DEFAULT_DRAWDOWN_ALERT_CONFIG,
 ): {
 	shouldAlert: boolean;
 	reasons: string[];
@@ -493,19 +493,19 @@ export function checkDrawdownAlert(
 
 	if (stats.currentDrawdown >= config.currentDrawdownThreshold) {
 		reasons.push(
-			`Current drawdown (${(stats.currentDrawdown * 100).toFixed(2)}%) exceeds threshold (${(config.currentDrawdownThreshold * 100).toFixed(0)}%)`
+			`Current drawdown (${(stats.currentDrawdown * 100).toFixed(2)}%) exceeds threshold (${(config.currentDrawdownThreshold * 100).toFixed(0)}%)`,
 		);
 	}
 
 	if (stats.maxDrawdown >= config.maxDrawdownThreshold) {
 		reasons.push(
-			`Max drawdown (${(stats.maxDrawdown * 100).toFixed(2)}%) exceeds threshold (${(config.maxDrawdownThreshold * 100).toFixed(0)}%)`
+			`Max drawdown (${(stats.maxDrawdown * 100).toFixed(2)}%) exceeds threshold (${(config.maxDrawdownThreshold * 100).toFixed(0)}%)`,
 		);
 	}
 
 	if (stats.drawdownDuration >= config.durationThreshold) {
 		reasons.push(
-			`Drawdown duration (${stats.drawdownDuration} periods) exceeds threshold (${config.durationThreshold})`
+			`Drawdown duration (${stats.drawdownDuration} periods) exceeds threshold (${config.durationThreshold})`,
 		);
 	}
 

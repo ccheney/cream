@@ -55,7 +55,7 @@ export function validateOrderIdEnvironment(orderId: string, ctx: ExecutionContex
 		throw new SafetyError(
 			`Order ID ${orderId} does not belong to ${expectedPrefix} environment`,
 			"ORDER_ID_ENVIRONMENT_MISMATCH",
-			ctx.traceId
+			ctx.traceId,
 		);
 	}
 }
@@ -79,7 +79,7 @@ export function validateBrokerEndpoint(endpoint: string, ctx: ExecutionContext):
 		throw new SafetyError(
 			`LIVE environment requires production broker endpoint, got: ${endpoint}`,
 			"BROKER_ENDPOINT_MISMATCH",
-			ctx.traceId
+			ctx.traceId,
 		);
 	}
 
@@ -87,7 +87,7 @@ export function validateBrokerEndpoint(endpoint: string, ctx: ExecutionContext):
 		throw new SafetyError(
 			`${ctx.environment} environment should not use production broker endpoint: ${endpoint}`,
 			"BROKER_ENDPOINT_MISMATCH",
-			ctx.traceId
+			ctx.traceId,
 		);
 	}
 }
@@ -118,7 +118,7 @@ export function requireLiveConfirmation(confirmationToken: string, ctx: Executio
 		throw new SafetyError(
 			"LIVE environment requires confirmation token: I_UNDERSTAND_THIS_IS_REAL_MONEY",
 			"LIVE_CONFIRMATION_REQUIRED",
-			ctx.traceId
+			ctx.traceId,
 		);
 	}
 
@@ -130,7 +130,7 @@ export function requireLiveConfirmation(confirmationToken: string, ctx: Executio
 			environment: ctx.environment,
 			traceId: ctx.traceId,
 		},
-		ctx
+		ctx,
 	);
 }
 
@@ -159,7 +159,7 @@ export function preventAccidentalLiveExecution(ctx: ExecutionContext): void {
 		throw new SafetyError(
 			"LIVE execution blocked: Call requireLiveConfirmation() first",
 			"LIVE_CONFIRMATION_NOT_GRANTED",
-			ctx.traceId
+			ctx.traceId,
 		);
 	}
 }
@@ -192,7 +192,7 @@ export function validateEnvironmentConsistency(ctx: ExecutionContext): void {
 				configId: ctx.configId,
 				liveConfirmed: liveConfirmationGranted,
 			},
-			ctx
+			ctx,
 		);
 	}
 }
@@ -231,7 +231,7 @@ export function validateDatabaseIsolation(dbUrl: string, ctx: ExecutionContext):
 				throw new SafetyError(
 					`Database isolation violation: ${ctx.environment} environment accessing ${otherEnv} database`,
 					"DATABASE_ISOLATION_VIOLATION",
-					ctx.traceId
+					ctx.traceId,
 				);
 			}
 		}
@@ -264,7 +264,7 @@ interface AuditLogEntry {
 export function auditLog(
 	operation: string,
 	details: Record<string, unknown>,
-	ctx: ExecutionContext
+	ctx: ExecutionContext,
 ): void {
 	const entry: AuditLogEntry = {
 		timestamp: new Date().toISOString(),
@@ -295,7 +295,7 @@ export function clearAuditLog(ctx: ExecutionContext): void {
 		throw new SafetyError(
 			"Cannot clear audit log in LIVE environment",
 			"AUDIT_LOG_PROTECTED",
-			ctx.traceId
+			ctx.traceId,
 		);
 	}
 	auditLogEntries.length = 0;
@@ -331,7 +331,7 @@ export function recordCircuitFailure(
 	circuitName: string,
 	error: Error,
 	ctx: ExecutionContext,
-	threshold = DEFAULT_FAILURE_THRESHOLD
+	threshold = DEFAULT_FAILURE_THRESHOLD,
 ): void {
 	let state = circuitBreakers.get(circuitName);
 	if (!state) {
@@ -355,7 +355,7 @@ export function recordCircuitFailure(
 			threshold,
 			error: error.message,
 		},
-		ctx
+		ctx,
 	);
 
 	if (state.failureCount >= threshold) {
@@ -368,7 +368,7 @@ export function recordCircuitFailure(
 				circuit: circuitName,
 				failureCount: state.failureCount,
 			},
-			ctx
+			ctx,
 		);
 	}
 }
@@ -381,7 +381,7 @@ export function recordCircuitFailure(
  */
 export function isCircuitOpen(
 	circuitName: string,
-	resetTimeoutMs = DEFAULT_RESET_TIMEOUT_MS
+	resetTimeoutMs = DEFAULT_RESET_TIMEOUT_MS,
 ): boolean {
 	const state = circuitBreakers.get(circuitName);
 	if (!state || !state.isOpen) {
@@ -425,7 +425,7 @@ export function requireCircuitClosed(circuitName: string, ctx: ExecutionContext)
 		throw new SafetyError(
 			`Circuit breaker '${circuitName}' is open - operations blocked`,
 			"CIRCUIT_BREAKER_OPEN",
-			ctx.traceId
+			ctx.traceId,
 		);
 	}
 }
@@ -452,7 +452,7 @@ export class SafetyError extends Error {
 	constructor(
 		message: string,
 		public readonly code: SafetyErrorCode,
-		public readonly traceId?: string
+		public readonly traceId?: string,
 	) {
 		super(message);
 		this.name = "SafetyError";
@@ -476,7 +476,7 @@ export function resetSafetyState(ctx: ExecutionContext): void {
 		throw new SafetyError(
 			"Safety state can only be reset in test mode",
 			"AUDIT_LOG_PROTECTED",
-			ctx.traceId
+			ctx.traceId,
 		);
 	}
 

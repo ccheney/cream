@@ -79,7 +79,7 @@ export const tradingConfig = pgTable(
 	(table) => [
 		check(
 			"valid_kelly",
-			sql`${table.kellyFraction}::numeric > 0 AND ${table.kellyFraction}::numeric <= 1`
+			sql`${table.kellyFraction}::numeric > 0 AND ${table.kellyFraction}::numeric <= 1`,
 		),
 		index("idx_trading_config_environment").on(table.environment),
 		index("idx_trading_config_status").on(table.status),
@@ -88,7 +88,7 @@ export const tradingConfig = pgTable(
 		uniqueIndex("idx_trading_config_env_active")
 			.on(table.environment)
 			.where(sql`${table.status} = 'active'`),
-	]
+	],
 );
 
 // agent_configs: Per-agent configuration
@@ -107,7 +107,7 @@ export const agentConfigs = pgTable(
 		index("idx_agent_configs_environment").on(table.environment),
 		index("idx_agent_configs_agent_type").on(table.agentType),
 		uniqueIndex("idx_agent_configs_env_agent").on(table.environment, table.agentType),
-	]
+	],
 );
 
 // universe_configs: Trading universe configuration
@@ -145,7 +145,7 @@ export const universeConfigs = pgTable(
 		uniqueIndex("idx_universe_configs_env_active")
 			.on(table.environment)
 			.where(sql`${table.status} = 'active'`),
-	]
+	],
 );
 
 // constraints_config: Risk limits configuration
@@ -202,5 +202,5 @@ export const constraintsConfig = pgTable(
 		uniqueIndex("idx_constraints_config_env_active")
 			.on(table.environment)
 			.where(sql`${table.status} = 'active'`),
-	]
+	],
 );

@@ -63,11 +63,11 @@ export interface ParityValidationRepository {
 	create(input: CreateParityValidationInput): Promise<ParityValidationRecord>;
 	findByEntity(
 		entityType: ParityEntityType,
-		entityId: string
+		entityId: string,
 	): Promise<ParityValidationRecord | null>;
 	findLatestByEntity(
 		entityType: ParityEntityType,
-		entityId: string
+		entityId: string,
 	): Promise<ParityValidationRecord | null>;
 	findByEnvironment(environment: ParityEnvironment): Promise<ParityValidationRecord[]>;
 }
@@ -79,7 +79,7 @@ export interface MetricsProvider {
 	getResearchMetrics(entityId: string): Promise<ParityPerformanceMetrics | null>;
 	getLiveMetrics(
 		entityId: string,
-		environment: ParityEnvironment
+		environment: ParityEnvironment,
 	): Promise<ParityPerformanceMetrics | null>;
 }
 
@@ -123,7 +123,7 @@ export class ParityValidationService {
 	 */
 	async validateIndicator(
 		indicatorId: string,
-		environment: ParityEnvironment = "PAPER"
+		environment: ParityEnvironment = "PAPER",
 	): Promise<ParityValidationResult> {
 		// Get metrics from providers if available
 		let researchMetrics: ParityPerformanceMetrics | undefined;
@@ -172,7 +172,7 @@ export class ParityValidationService {
 	 */
 	async validateFactor(
 		factorId: string,
-		environment: ParityEnvironment = "PAPER"
+		environment: ParityEnvironment = "PAPER",
 	): Promise<ParityValidationResult> {
 		let researchMetrics: ParityPerformanceMetrics | undefined;
 		let liveMetrics: ParityPerformanceMetrics | undefined;
@@ -210,7 +210,7 @@ export class ParityValidationService {
 	 */
 	async validateConfigPromotion(
 		sourceEnvironment: ParityEnvironment,
-		targetEnvironment: ParityEnvironment
+		targetEnvironment: ParityEnvironment,
 	): Promise<ParityValidationResult> {
 		// Config validation primarily checks version registries
 		let researchRegistry: VersionRegistry | undefined;
@@ -243,7 +243,7 @@ export class ParityValidationService {
 	 */
 	async getLatestValidation(
 		entityType: ParityEntityType,
-		entityId: string
+		entityId: string,
 	): Promise<ParityValidationRecord | null> {
 		if (!this.repository) {
 			return null;
@@ -265,7 +265,7 @@ export class ParityValidationService {
 	 */
 	async requirePassingValidation(
 		entityType: ParityEntityType,
-		entityId: string
+		entityId: string,
 	): Promise<ParityValidationResult> {
 		const latest = await this.getLatestValidation(entityType, entityId);
 
@@ -279,7 +279,7 @@ export class ParityValidationService {
 				default:
 					throw new ParityValidationError(
 						`No validation found for ${entityType} ${entityId}`,
-						"NO_VALIDATION"
+						"NO_VALIDATION",
 					);
 			}
 		}
@@ -288,7 +288,7 @@ export class ParityValidationService {
 			throw new ParityValidationError(
 				`${entityType} ${entityId} has failing parity validation: ${latest.blockingIssues.join(", ")}`,
 				"VALIDATION_FAILED",
-				latest.fullReport
+				latest.fullReport,
 			);
 		}
 
@@ -310,7 +310,7 @@ export class ParityValidationError extends Error {
 	constructor(
 		message: string,
 		code: "VALIDATION_FAILED" | "NO_VALIDATION" | "NOT_READY",
-		report?: ParityValidationResult
+		report?: ParityValidationResult,
 	) {
 		super(message);
 		this.name = "ParityValidationError";
@@ -327,7 +327,7 @@ export class ParityValidationError extends Error {
  * Create a new parity validation service.
  */
 export function createParityValidationService(
-	config: ParityValidationServiceConfig = {}
+	config: ParityValidationServiceConfig = {},
 ): ParityValidationService {
 	return new ParityValidationService(config);
 }

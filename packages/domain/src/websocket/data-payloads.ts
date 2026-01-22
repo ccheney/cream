@@ -378,7 +378,7 @@ export const SystemStatusDataSchema = z.object({
 			status: SystemHealthStatus,
 			latencyMs: z.number().nonnegative().optional(),
 			lastCheck: z.string().datetime(),
-		})
+		}),
 	),
 
 	/** Current environment */
@@ -431,7 +431,7 @@ export const PortfolioDataSchema = z.object({
 			unrealizedPnl: z.number(),
 			unrealizedPnlPercent: z.number(),
 			costBasis: z.number(),
-		})
+		}),
 	),
 
 	/** ISO 8601 timestamp */

@@ -137,7 +137,7 @@ export class AgentConfigsRepository {
 			throw new RepositoryError(
 				`No config found for agent '${agentType}' in environment '${environment}'. Run seed script.`,
 				"NOT_FOUND",
-				"agent_configs"
+				"agent_configs",
 			);
 		}
 		return config;
@@ -185,7 +185,7 @@ export class AgentConfigsRepository {
 	async upsert(
 		environment: AgentEnvironment,
 		agentType: AgentType,
-		input: UpdateAgentConfigInput
+		input: UpdateAgentConfigInput,
 	): Promise<AgentConfig> {
 		const existing = await this.get(environment, agentType);
 
@@ -239,7 +239,7 @@ export class AgentConfigsRepository {
 
 	async cloneToEnvironment(
 		sourceEnvironment: AgentEnvironment,
-		targetEnvironment: AgentEnvironment
+		targetEnvironment: AgentEnvironment,
 	): Promise<AgentConfig[]> {
 		const sourceConfigs = await this.getAll(sourceEnvironment);
 		const results: AgentConfig[] = [];

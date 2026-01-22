@@ -354,7 +354,7 @@ export function createPool<T>(config: PoolConfig<T>): ConnectionPool<T> {
 			promises.push(
 				createConnection().then((conn) => {
 					available.push(conn);
-				})
+				}),
 			);
 		}
 		await Promise.all(promises);

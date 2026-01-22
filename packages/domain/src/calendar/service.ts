@@ -79,7 +79,7 @@ function toDate(date: Date | string): Date {
 export class CalendarServiceError extends Error {
 	constructor(
 		message: string,
-		public readonly code: "NOT_INITIALIZED" | "API_UNAVAILABLE" | "CACHE_MISS"
+		public readonly code: "NOT_INITIALIZED" | "API_UNAVAILABLE" | "CACHE_MISS",
 	) {
 		super(message);
 		this.name = "CalendarServiceError";
@@ -126,7 +126,7 @@ export class AlpacaCalendarService implements CalendarService {
 	constructor(
 		config: AlpacaCalendarServiceConfig,
 		client?: AlpacaCalendarClient,
-		cache?: CalendarCache
+		cache?: CalendarCache,
 	) {
 		this.client = client ?? createAlpacaCalendarClient(config);
 		this.cache = cache ?? createCalendarCache();
@@ -146,7 +146,7 @@ export class AlpacaCalendarService implements CalendarService {
 			if (error instanceof CalendarClientError) {
 				throw new CalendarServiceError(
 					`Failed to initialize calendar service: ${error.message}`,
-					"API_UNAVAILABLE"
+					"API_UNAVAILABLE",
 				);
 			}
 			throw error;
@@ -253,7 +253,7 @@ export class AlpacaCalendarService implements CalendarService {
 
 		throw new CalendarServiceError(
 			`Unable to find next trading day after ${dateStr}`,
-			"CACHE_MISS"
+			"CACHE_MISS",
 		);
 	}
 
@@ -277,7 +277,7 @@ export class AlpacaCalendarService implements CalendarService {
 
 		throw new CalendarServiceError(
 			`Unable to find previous trading day before ${dateStr}`,
-			"CACHE_MISS"
+			"CACHE_MISS",
 		);
 	}
 
@@ -298,7 +298,7 @@ export class AlpacaCalendarService implements CalendarService {
 			if (error instanceof CalendarClientError) {
 				throw new CalendarServiceError(
 					`Alpaca Calendar API unavailable: ${error.message}`,
-					"API_UNAVAILABLE"
+					"API_UNAVAILABLE",
 				);
 			}
 			throw error;
@@ -408,7 +408,7 @@ export class AlpacaCalendarService implements CalendarService {
 			if (!data) {
 				throw new CalendarServiceError(
 					`Failed to load calendar data for year ${year}`,
-					"API_UNAVAILABLE"
+					"API_UNAVAILABLE",
 				);
 			}
 			return data;
@@ -419,7 +419,7 @@ export class AlpacaCalendarService implements CalendarService {
 			if (error instanceof CalendarClientError) {
 				throw new CalendarServiceError(
 					`Alpaca Calendar API unavailable: ${error.message}`,
-					"API_UNAVAILABLE"
+					"API_UNAVAILABLE",
 				);
 			}
 			throw error;
@@ -435,7 +435,7 @@ export class AlpacaCalendarService implements CalendarService {
 		if (!cached) {
 			throw new CalendarServiceError(
 				`Calendar data for year ${year} not preloaded. Call initialize() first.`,
-				"NOT_INITIALIZED"
+				"NOT_INITIALIZED",
 			);
 		}
 		return cached;
@@ -463,7 +463,7 @@ function parseTimeToMinutes(time: string): number {
  * @returns Initialized CalendarService
  */
 export async function createAlpacaCalendarService(
-	config: AlpacaCalendarServiceConfig
+	config: AlpacaCalendarServiceConfig,
 ): Promise<CalendarService> {
 	const service = new AlpacaCalendarService(config);
 	await service.initialize(config.preloadYears);

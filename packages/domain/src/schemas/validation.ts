@@ -235,7 +235,7 @@ export function sanitizeString(value: string): string {
  */
 export function validated<T, R>(
 	schema: z.ZodType<T>,
-	fn: (data: T) => R | Promise<R>
+	fn: (data: T) => R | Promise<R>,
 ): (data: unknown) => Promise<R> {
 	return async (data: unknown) => {
 		const parsed = schema.parse(data);
@@ -248,7 +248,7 @@ export function validated<T, R>(
  */
 export function validatedSafe<T, R>(
 	schema: z.ZodType<T>,
-	fn: (data: T) => R | Promise<R>
+	fn: (data: T) => R | Promise<R>,
 ): (data: unknown) => Promise<ParseResult<R>> {
 	return async (data: unknown) => {
 		const result = safeParse(schema, data);
@@ -396,7 +396,7 @@ export function coerceDate() {
  */
 export function partialExcept<T extends z.ZodRawShape, K extends keyof T>(
 	schema: z.ZodObject<T>,
-	required: K[]
+	required: K[],
 ) {
 	const shape = schema.shape;
 	const entries = Object.entries(shape) as [string, z.ZodType<unknown>][];

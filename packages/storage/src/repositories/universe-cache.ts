@@ -83,8 +83,8 @@ export class UniverseCacheRepository {
 				and(
 					eq(universeCache.sourceType, sourceType),
 					eq(universeCache.sourceId, sourceId),
-					gt(universeCache.expiresAt, now)
-				)
+					gt(universeCache.expiresAt, now),
+				),
 			)
 			.limit(1);
 

@@ -109,7 +109,7 @@ export interface ExecutionContext {
 export function createContext(
 	environment: CreamEnvironment,
 	source: ExecutionSource,
-	configId?: string
+	configId?: string,
 ): ExecutionContext {
 	const context: ExecutionContext = {
 		environment,

@@ -145,7 +145,7 @@ export class PortfolioSnapshotsRepository {
 
 	async findMany(
 		filters: PortfolioSnapshotFilters = {},
-		pagination?: PaginationOptions
+		pagination?: PaginationOptions,
 	): Promise<PaginatedResult<PortfolioSnapshot>> {
 		const conditions = [];
 
@@ -203,7 +203,7 @@ export class PortfolioSnapshotsRepository {
 		environment: string,
 		fromDate?: string,
 		toDate?: string,
-		limit = 1000
+		limit = 1000,
 	): Promise<{ timestamp: string; nav: number; pnlPct: number }[]> {
 		const conditions = [eq(portfolioSnapshots.environment, environment as "PAPER" | "LIVE")];
 
@@ -234,7 +234,7 @@ export class PortfolioSnapshotsRepository {
 
 	async getPerformanceMetrics(
 		environment: string,
-		days = 30
+		days = 30,
 	): Promise<{
 		startNav: number;
 		endNav: number;
@@ -261,8 +261,8 @@ export class PortfolioSnapshotsRepository {
 			.where(
 				and(
 					eq(portfolioSnapshots.environment, envType),
-					gte(portfolioSnapshots.timestamp, fromDate)
-				)
+					gte(portfolioSnapshots.timestamp, fromDate),
+				),
 			);
 
 		// Get start NAV
@@ -272,8 +272,8 @@ export class PortfolioSnapshotsRepository {
 			.where(
 				and(
 					eq(portfolioSnapshots.environment, envType),
-					gte(portfolioSnapshots.timestamp, fromDate)
-				)
+					gte(portfolioSnapshots.timestamp, fromDate),
+				),
 			)
 			.orderBy(portfolioSnapshots.timestamp)
 			.limit(1);
@@ -328,8 +328,8 @@ export class PortfolioSnapshotsRepository {
 				and(
 					eq(portfolioSnapshots.environment, environment as "PAPER" | "LIVE"),
 					gte(portfolioSnapshots.timestamp, startOfDay),
-					lte(portfolioSnapshots.timestamp, endOfDay)
-				)
+					lte(portfolioSnapshots.timestamp, endOfDay),
+				),
 			)
 			.orderBy(desc(portfolioSnapshots.timestamp))
 			.limit(1);

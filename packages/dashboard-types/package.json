@@ -1,35 +1,37 @@
 {
-  "name": "@cream/dashboard-types",
-  "version": "0.0.1",
-  "description": "Shared TypeScript types for dashboard and dashboard-api",
-  "type": "module",
-  "exports": {
-    ".": {
-      "types": "./src/index.ts",
-      "import": "./src/index.ts"
-    },
-    "./api": {
-      "types": "./src/api.ts",
-      "import": "./src/api.ts"
-    },
-    "./websocket": {
-      "types": "./src/websocket.ts",
-      "import": "./src/websocket.ts"
-    }
-  },
-  "main": "./src/index.ts",
-  "types": "./src/index.ts",
-  "files": ["dist"],
-  "scripts": {
-    "build": "bun build ./src/index.ts --outdir ./dist --target node && tsc --emitDeclarationOnly",
-    "typecheck": "tsgo --noEmit"
-  },
-  "dependencies": {
-    "@cream/indicators": "workspace:*",
-    "zod": "4.3.5"
-  },
-  "devDependencies": {
-    "@cream/tsconfig": "workspace:*",
-    "@typescript/native-preview": "7.0.0-dev.20260115.1"
-  }
+	"name": "@cream/dashboard-types",
+	"version": "0.0.1",
+	"description": "Shared TypeScript types for dashboard and dashboard-api",
+	"type": "module",
+	"exports": {
+		".": {
+			"types": "./src/index.ts",
+			"import": "./src/index.ts"
+		},
+		"./api": {
+			"types": "./src/api.ts",
+			"import": "./src/api.ts"
+		},
+		"./websocket": {
+			"types": "./src/websocket.ts",
+			"import": "./src/websocket.ts"
+		}
+	},
+	"main": "./src/index.ts",
+	"types": "./src/index.ts",
+	"files": [
+		"dist"
+	],
+	"scripts": {
+		"build": "bun build ./src/index.ts --outdir ./dist --target node && tsc --emitDeclarationOnly",
+		"typecheck": "tsgo --noEmit"
+	},
+	"dependencies": {
+		"@cream/indicators": "workspace:*",
+		"zod": "4.3.5"
+	},
+	"devDependencies": {
+		"@cream/tsconfig": "workspace:*",
+		"@typescript/native-preview": "7.0.0-dev.20260115.1"
+	}
 }

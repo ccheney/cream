@@ -315,26 +315,26 @@ export function validateRiskLevels(decision: Decision, entryPrice: number): Risk
 		if (stopLossLevel >= entryPrice) {
 			result.valid = false;
 			result.errors.push(
-				`LONG position: stopLossLevel (${stopLossLevel}) must be below entryPrice (${entryPrice})`
+				`LONG position: stopLossLevel (${stopLossLevel}) must be below entryPrice (${entryPrice})`,
 			);
 		}
 		if (takeProfitLevel <= entryPrice) {
 			result.valid = false;
 			result.errors.push(
-				`LONG position: takeProfitLevel (${takeProfitLevel}) must be above entryPrice (${entryPrice})`
+				`LONG position: takeProfitLevel (${takeProfitLevel}) must be above entryPrice (${entryPrice})`,
 			);
 		}
 	} else if (direction === "SHORT") {
 		if (stopLossLevel <= entryPrice) {
 			result.valid = false;
 			result.errors.push(
-				`SHORT position: stopLossLevel (${stopLossLevel}) must be above entryPrice (${entryPrice})`
+				`SHORT position: stopLossLevel (${stopLossLevel}) must be above entryPrice (${entryPrice})`,
 			);
 		}
 		if (takeProfitLevel >= entryPrice) {
 			result.valid = false;
 			result.errors.push(
-				`SHORT position: takeProfitLevel (${takeProfitLevel}) must be below entryPrice (${entryPrice})`
+				`SHORT position: takeProfitLevel (${takeProfitLevel}) must be below entryPrice (${entryPrice})`,
 			);
 		}
 	}
@@ -342,14 +342,14 @@ export function validateRiskLevels(decision: Decision, entryPrice: number): Risk
 	// Check minimum risk-reward ratio (1.5:1)
 	if (result.riskRewardRatio !== null && result.riskRewardRatio < 1.5) {
 		result.warnings.push(
-			`Risk-reward ratio (${result.riskRewardRatio.toFixed(2)}) is below minimum 1.5:1`
+			`Risk-reward ratio (${result.riskRewardRatio.toFixed(2)}) is below minimum 1.5:1`,
 		);
 	}
 
 	// Check maximum stop distance (stop loss not > 5x profit target)
 	if (riskAmount > rewardAmount * 5) {
 		result.warnings.push(
-			`Stop distance (${riskAmount.toFixed(2)}) exceeds 5x profit target (${rewardAmount.toFixed(2)})`
+			`Stop distance (${riskAmount.toFixed(2)}) exceeds 5x profit target (${rewardAmount.toFixed(2)})`,
 		);
 	}
 
@@ -387,7 +387,7 @@ export type DecisionPlan = z.infer<typeof DecisionPlanSchema>;
  */
 export function validateDecisionPlan(
 	plan: unknown,
-	entryPrices?: Map<string, number>
+	entryPrices?: Map<string, number>,
 ): {
 	success: boolean;
 	data?: DecisionPlan;

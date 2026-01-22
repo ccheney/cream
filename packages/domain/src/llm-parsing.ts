@@ -251,7 +251,7 @@ export function generateSchemaExample<T>(_schema: ZodSchema<T>): string {
 export function generateRetryPrompt(
 	originalTask: string,
 	error: string,
-	schemaDescription: string
+	schemaDescription: string,
 ): string {
 	return `Your previous output was invalid. Error: ${error}
 
@@ -287,7 +287,7 @@ IMPORTANT:
 export async function parseWithRetry<T>(
 	rawOutput: string,
 	schema: ZodSchema<T>,
-	options: ParseOptions = {}
+	options: ParseOptions = {},
 ): Promise<ParseResult<T>> {
 	const {
 		agentType,
@@ -337,7 +337,7 @@ export async function parseWithRetry<T>(
 	const retryPrompt = generateRetryPrompt(
 		taskContext,
 		firstAttempt.error ?? "Unknown error",
-		schemaToDescription(schema)
+		schemaToDescription(schema),
 	);
 
 	logger.info("Invoking retry callback with enhanced prompt", {
@@ -357,7 +357,7 @@ export async function parseWithRetry<T>(
 		return createFailureResult(
 			attempts,
 			`Retry callback failed: ${String(callbackError)}`,
-			agentType
+			agentType,
 		);
 	}
 
@@ -391,7 +391,7 @@ export async function parseWithRetry<T>(
 export function parseOnce<T>(
 	rawOutput: string,
 	schema: ZodSchema<T>,
-	options: Omit<ParseOptions, "retryCallback"> = {}
+	options: Omit<ParseOptions, "retryCallback"> = {},
 ): ParseResult<T> {
 	const { agentType, logger = defaultLogger, redactSecrets = true } = options;
 	const logOutput = redactSecrets ? redactSensitiveData(rawOutput) : rawOutput;
@@ -437,7 +437,7 @@ interface AttemptResult {
 function attemptParse<T>(
 	rawOutput: string,
 	schema: ZodSchema<T>,
-	attemptNumber: 1 | 2
+	attemptNumber: 1 | 2,
 ): AttemptResult {
 	const timestamp = new Date().toISOString();
 
@@ -535,7 +535,7 @@ export function cleanLLMOutput(output: string): string {
 function createFailureResult<T>(
 	attempts: ParseAttempt[],
 	finalError: string,
-	agentType?: AgentType
+	agentType?: AgentType,
 ): ParseResult<T> {
 	let agentAction: "REJECT" | "SKIP" = "REJECT";
 

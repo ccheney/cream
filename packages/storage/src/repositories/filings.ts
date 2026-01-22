@@ -222,7 +222,7 @@ export class FilingsRepository {
 
 	async findMany(
 		filters: FilingFilters = {},
-		pagination?: PaginationOptions
+		pagination?: PaginationOptions,
 	): Promise<PaginatedResult<Filing>> {
 		const conditions = [];
 
@@ -234,19 +234,19 @@ export class FilingsRepository {
 				conditions.push(
 					inArray(
 						filings.filingType,
-						filters.filingType as (typeof filings.$inferSelect.filingType)[]
-					)
+						filters.filingType as (typeof filings.$inferSelect.filingType)[],
+					),
 				);
 			} else {
 				conditions.push(
-					eq(filings.filingType, filters.filingType as typeof filings.$inferSelect.filingType)
+					eq(filings.filingType, filters.filingType as typeof filings.$inferSelect.filingType),
 				);
 			}
 		}
 		if (filters.status) {
 			if (Array.isArray(filters.status)) {
 				conditions.push(
-					inArray(filings.status, filters.status as (typeof filings.$inferSelect.status)[])
+					inArray(filings.status, filters.status as (typeof filings.$inferSelect.status)[]),
 				);
 			} else {
 				conditions.push(eq(filings.status, filters.status as typeof filings.$inferSelect.status));
@@ -428,7 +428,7 @@ export class FilingsRepository {
 			.select()
 			.from(filings)
 			.where(
-				and(gte(filings.createdAt, new Date(startTime)), lte(filings.createdAt, new Date(endTime)))
+				and(gte(filings.createdAt, new Date(startTime)), lte(filings.createdAt, new Date(endTime))),
 			)
 			.orderBy(desc(filings.filedDate))
 			.limit(limit);
@@ -503,7 +503,7 @@ export class FilingSyncRunsRepository {
 
 	async complete(
 		id: string,
-		stats: { filingsIngested: number; chunksCreated: number }
+		stats: { filingsIngested: number; chunksCreated: number },
 	): Promise<void> {
 		await this.db
 			.update(filingSyncRuns)

@@ -48,18 +48,18 @@ export const candles = pgTable(
           ${table.high}::numeric >= ${table.open}::numeric AND
           ${table.high}::numeric >= ${table.close}::numeric AND
           ${table.low}::numeric <= ${table.open}::numeric AND
-          ${table.low}::numeric <= ${table.close}::numeric`
+          ${table.low}::numeric <= ${table.close}::numeric`,
 		),
 		check("positive_volume", sql`${table.volume}::numeric >= 0`),
 		uniqueIndex("idx_candles_symbol_timeframe_ts").on(
 			table.symbol,
 			table.timeframe,
-			table.timestamp
+			table.timestamp,
 		),
 		index("idx_candles_timestamp").on(table.timestamp),
 		index("idx_candles_symbol").on(table.symbol),
 		index("idx_candles_timeframe").on(table.timeframe),
-	]
+	],
 );
 
 // corporate_actions: Splits, dividends, mergers
@@ -83,7 +83,7 @@ export const corporateActions = pgTable(
 		index("idx_corporate_actions_ex_date").on(table.exDate),
 		index("idx_corporate_actions_type").on(table.actionType),
 		uniqueIndex("idx_corporate_actions_unique").on(table.symbol, table.actionType, table.exDate),
-	]
+	],
 );
 
 // universe_cache: Cached universe resolution
@@ -105,7 +105,7 @@ export const universeCache = pgTable(
 		uniqueIndex("idx_universe_cache_source").on(table.sourceType, table.sourceId),
 		index("idx_universe_cache_expires").on(table.expiresAt),
 		index("idx_universe_cache_hash").on(table.sourceHash),
-	]
+	],
 );
 
 // features: Computed indicators
@@ -126,22 +126,22 @@ export const features = pgTable(
 	(table) => [
 		check(
 			"valid_quality_score",
-			sql`${table.qualityScore} IS NULL OR (${table.qualityScore}::numeric >= 0 AND ${table.qualityScore}::numeric <= 1)`
+			sql`${table.qualityScore} IS NULL OR (${table.qualityScore}::numeric >= 0 AND ${table.qualityScore}::numeric <= 1)`,
 		),
 		uniqueIndex("idx_features_symbol_ts_indicator").on(
 			table.symbol,
 			table.timestamp,
 			table.timeframe,
-			table.indicatorName
+			table.indicatorName,
 		),
 		index("idx_features_symbol_indicator_ts").on(
 			table.symbol,
 			table.indicatorName,
-			table.timestamp
+			table.timestamp,
 		),
 		index("idx_features_timestamp").on(table.timestamp),
 		index("idx_features_indicator").on(table.indicatorName),
-	]
+	],
 );
 
 // regime_labels: Market regime classifications
@@ -170,25 +170,25 @@ export const regimeLabels = pgTable(
 	(table) => [
 		check(
 			"valid_confidence",
-			sql`${table.confidence}::numeric >= 0 AND ${table.confidence}::numeric <= 1`
+			sql`${table.confidence}::numeric >= 0 AND ${table.confidence}::numeric <= 1`,
 		),
 		check(
 			"valid_trend_strength",
-			sql`${table.trendStrength} IS NULL OR (${table.trendStrength}::numeric >= 0 AND ${table.trendStrength}::numeric <= 1)`
+			sql`${table.trendStrength} IS NULL OR (${table.trendStrength}::numeric >= 0 AND ${table.trendStrength}::numeric <= 1)`,
 		),
 		check(
 			"valid_correlation",
-			sql`${table.correlationToMarket} IS NULL OR (${table.correlationToMarket}::numeric >= -1 AND ${table.correlationToMarket}::numeric <= 1)`
+			sql`${table.correlationToMarket} IS NULL OR (${table.correlationToMarket}::numeric >= -1 AND ${table.correlationToMarket}::numeric <= 1)`,
 		),
 		uniqueIndex("idx_regime_labels_symbol_ts_tf").on(
 			table.symbol,
 			table.timestamp,
-			table.timeframe
+			table.timeframe,
 		),
 		index("idx_regime_labels_symbol_ts").on(table.symbol, table.timestamp),
 		index("idx_regime_labels_regime").on(table.regime),
 		index("idx_regime_labels_market")
 			.on(table.symbol, table.timestamp)
 			.where(sql`${table.symbol} = '_MARKET'`),
-	]
+	],
 );

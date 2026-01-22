@@ -300,43 +300,43 @@ export function validateSnapshotSize(snapshot: MarketSnapshot): SnapshotSizeVali
 	// Check against limits
 	if (estimate.bytes > SNAPSHOT_SIZE_LIMITS.MAX_BYTES) {
 		errors.push(
-			`Snapshot size (${formatBytes(estimate.bytes)}) exceeds maximum limit (${formatBytes(SNAPSHOT_SIZE_LIMITS.MAX_BYTES)})`
+			`Snapshot size (${formatBytes(estimate.bytes)}) exceeds maximum limit (${formatBytes(SNAPSHOT_SIZE_LIMITS.MAX_BYTES)})`,
 		);
 	}
 
 	if (estimate.bytes > SNAPSHOT_SIZE_LIMITS.WARNING_BYTES) {
 		warnings.push(
-			`Snapshot size (${formatBytes(estimate.bytes)}) approaching maximum limit (${formatBytes(SNAPSHOT_SIZE_LIMITS.MAX_BYTES)})`
+			`Snapshot size (${formatBytes(estimate.bytes)}) approaching maximum limit (${formatBytes(SNAPSHOT_SIZE_LIMITS.MAX_BYTES)})`,
 		);
 	}
 
 	if (!estimate.withinTarget) {
 		warnings.push(
-			`Snapshot size (${formatBytes(estimate.bytes)}) exceeds target (${formatBytes(SNAPSHOT_SIZE_LIMITS.TARGET_BYTES)})`
+			`Snapshot size (${formatBytes(estimate.bytes)}) exceeds target (${formatBytes(SNAPSHOT_SIZE_LIMITS.TARGET_BYTES)})`,
 		);
 	}
 
 	// Check token count
 	if (estimate.tokens > TOKEN_ESTIMATION.MAX_TOKENS) {
 		warnings.push(
-			`Token count (~${estimate.tokens}) exceeds maximum (${TOKEN_ESTIMATION.MAX_TOKENS})`
+			`Token count (~${estimate.tokens}) exceeds maximum (${TOKEN_ESTIMATION.MAX_TOKENS})`,
 		);
 	} else if (estimate.tokens > TOKEN_ESTIMATION.TARGET_TOKENS) {
 		warnings.push(
-			`Token count (~${estimate.tokens}) exceeds target (${TOKEN_ESTIMATION.TARGET_TOKENS})`
+			`Token count (~${estimate.tokens}) exceeds target (${TOKEN_ESTIMATION.TARGET_TOKENS})`,
 		);
 	}
 
 	// Generate recommendations based on breakdown
 	if (estimate.breakdown.bars > estimate.bytes * 0.5) {
 		recommendations.push(
-			`Consider reducing candle history - bars use ${formatPercent(estimate.breakdown.bars / estimate.bytes)} of snapshot`
+			`Consider reducing candle history - bars use ${formatPercent(estimate.breakdown.bars / estimate.bytes)} of snapshot`,
 		);
 	}
 
 	if (snapshot.symbols && snapshot.symbols.length > TRUNCATION_LIMITS.MAX_SYMBOLS) {
 		recommendations.push(
-			`Consider limiting universe to ${TRUNCATION_LIMITS.MAX_SYMBOLS} symbols (current: ${snapshot.symbols.length})`
+			`Consider limiting universe to ${TRUNCATION_LIMITS.MAX_SYMBOLS} symbols (current: ${snapshot.symbols.length})`,
 		);
 	}
 
@@ -364,7 +364,7 @@ export function validateSnapshotSize(snapshot: MarketSnapshot): SnapshotSizeVali
  */
 export function truncateSnapshot(
 	snapshot: MarketSnapshot,
-	options: TruncationOptions = {}
+	options: TruncationOptions = {},
 ): MarketSnapshot {
 	const maxCandles = options.maxCandles ?? TRUNCATION_LIMITS.MAX_CANDLES;
 	const maxSymbols = options.maxSymbols ?? TRUNCATION_LIMITS.MAX_SYMBOLS;
@@ -412,7 +412,7 @@ export function truncateSnapshot(
 export function truncateArray<T>(
 	array: T[],
 	maxLength: number,
-	keepMostRecent = true
+	keepMostRecent = true,
 ): { result: T[]; removed: number } {
 	if (array.length <= maxLength) {
 		return { result: array, removed: 0 };
@@ -502,23 +502,23 @@ export class PerformanceTracker {
 
 		if (totalMs > PERFORMANCE_LIMITS.MAX_ASSEMBLY_MS) {
 			warnings.push(
-				`Total assembly time (${totalMs.toFixed(0)}ms) exceeds maximum (${PERFORMANCE_LIMITS.MAX_ASSEMBLY_MS}ms)`
+				`Total assembly time (${totalMs.toFixed(0)}ms) exceeds maximum (${PERFORMANCE_LIMITS.MAX_ASSEMBLY_MS}ms)`,
 			);
 		} else if (totalMs > PERFORMANCE_LIMITS.TARGET_ASSEMBLY_MS) {
 			warnings.push(
-				`Total assembly time (${totalMs.toFixed(0)}ms) exceeds target (${PERFORMANCE_LIMITS.TARGET_ASSEMBLY_MS}ms)`
+				`Total assembly time (${totalMs.toFixed(0)}ms) exceeds target (${PERFORMANCE_LIMITS.TARGET_ASSEMBLY_MS}ms)`,
 			);
 		}
 
 		if (validationMs > PERFORMANCE_LIMITS.TARGET_VALIDATION_MS) {
 			warnings.push(
-				`Validation time (${validationMs.toFixed(0)}ms) exceeds target (${PERFORMANCE_LIMITS.TARGET_VALIDATION_MS}ms)`
+				`Validation time (${validationMs.toFixed(0)}ms) exceeds target (${PERFORMANCE_LIMITS.TARGET_VALIDATION_MS}ms)`,
 			);
 		}
 
 		if (serializationMs > PERFORMANCE_LIMITS.TARGET_SERIALIZATION_MS) {
 			warnings.push(
-				`Serialization time (${serializationMs.toFixed(0)}ms) exceeds target (${PERFORMANCE_LIMITS.TARGET_SERIALIZATION_MS}ms)`
+				`Serialization time (${serializationMs.toFixed(0)}ms) exceeds target (${PERFORMANCE_LIMITS.TARGET_SERIALIZATION_MS}ms)`,
 			);
 		}
 

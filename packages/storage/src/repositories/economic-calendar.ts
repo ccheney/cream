@@ -94,7 +94,7 @@ export class EconomicCalendarRepository {
 	async getEvents(
 		startDate: string,
 		endDate: string,
-		filters?: Omit<EconomicCalendarFilters, "startDate" | "endDate">
+		filters?: Omit<EconomicCalendarFilters, "startDate" | "endDate">,
 	): Promise<EconomicCalendarEvent[]> {
 		const conditions = [
 			gte(economicCalendarCache.releaseDate, startDate),
@@ -105,8 +105,8 @@ export class EconomicCalendarRepository {
 			conditions.push(
 				sql`${economicCalendarCache.impact} IN (${sql.join(
 					filters.impact.map((i) => sql`${i}`),
-					sql`, `
-				)})`
+					sql`, `,
+				)})`,
 			);
 		}
 
@@ -224,8 +224,8 @@ export class EconomicCalendarRepository {
 				and(
 					gte(economicCalendarCache.releaseDate, todayStr),
 					lte(economicCalendarCache.releaseDate, futureDateStr),
-					eq(economicCalendarCache.impact, "high")
-				)
+					eq(economicCalendarCache.impact, "high"),
+				),
 			)
 			.orderBy(economicCalendarCache.releaseDate, economicCalendarCache.releaseTime);
 

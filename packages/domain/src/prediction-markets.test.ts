@@ -74,7 +74,7 @@ describe("PredictionOutcomeSchema", () => {
 				outcome: "Test",
 				probability: 1.5,
 				price: 0.5,
-			})
+			}),
 		).toThrow();
 
 		expect(() =>
@@ -82,7 +82,7 @@ describe("PredictionOutcomeSchema", () => {
 				outcome: "Test",
 				probability: -0.1,
 				price: 0.5,
-			})
+			}),
 		).toThrow();
 	});
 });

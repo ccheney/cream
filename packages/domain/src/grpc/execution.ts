@@ -78,7 +78,7 @@ export class ExecutionServiceClient {
 	 */
 	private async executeWithRetry<T>(
 		operation: () => Promise<T>,
-		metadata: GrpcCallMetadata
+		metadata: GrpcCallMetadata,
 	): Promise<GrpcCallResult<T>> {
 		const backoff = new RetryBackoff();
 		let lastError: GrpcError | null = null;
@@ -99,7 +99,7 @@ export class ExecutionServiceClient {
 				if (this.config.enableLogging) {
 					log.warn(
 						{ requestId: metadata.requestId, attempt: attempt + 1, error: lastError.message },
-						"gRPC call attempt failed"
+						"gRPC call attempt failed",
 					);
 				}
 
@@ -123,7 +123,7 @@ export class ExecutionServiceClient {
 	 */
 	async checkConstraints(
 		request: CheckConstraintsRequest,
-		cycleId?: string
+		cycleId?: string,
 	): Promise<GrpcCallResult<CheckConstraintsResponse>> {
 		const metadata = this.createMetadata(cycleId);
 
@@ -139,7 +139,7 @@ export class ExecutionServiceClient {
 	 */
 	async submitOrder(
 		request: SubmitOrderRequest,
-		cycleId?: string
+		cycleId?: string,
 	): Promise<GrpcCallResult<SubmitOrderResponse>> {
 		const metadata = this.createMetadata(cycleId);
 
@@ -155,7 +155,7 @@ export class ExecutionServiceClient {
 	 */
 	async getOrderState(
 		request: GetOrderStateRequest,
-		cycleId?: string
+		cycleId?: string,
 	): Promise<GrpcCallResult<GetOrderStateResponse>> {
 		const metadata = this.createMetadata(cycleId);
 
@@ -171,7 +171,7 @@ export class ExecutionServiceClient {
 	 */
 	async cancelOrder(
 		request: CancelOrderRequest,
-		cycleId?: string
+		cycleId?: string,
 	): Promise<GrpcCallResult<CancelOrderResponse>> {
 		const metadata = this.createMetadata(cycleId);
 
@@ -187,7 +187,7 @@ export class ExecutionServiceClient {
 	 */
 	async getAccountState(
 		request: GetAccountStateRequest = {} as GetAccountStateRequest,
-		cycleId?: string
+		cycleId?: string,
 	): Promise<GrpcCallResult<GetAccountStateResponse>> {
 		const metadata = this.createMetadata(cycleId);
 
@@ -203,7 +203,7 @@ export class ExecutionServiceClient {
 	 */
 	async getPositions(
 		request: GetPositionsRequest = {} as GetPositionsRequest,
-		cycleId?: string
+		cycleId?: string,
 	): Promise<GrpcCallResult<GetPositionsResponse>> {
 		const metadata = this.createMetadata(cycleId);
 
@@ -222,7 +222,7 @@ export class ExecutionServiceClient {
 	 */
 	async *streamExecutions(
 		cycleId?: string,
-		orderIds?: string[]
+		orderIds?: string[],
 	): AsyncGenerator<GrpcCallResult<StreamExecutionsResponse>> {
 		const metadata = this.createMetadata(cycleId);
 
@@ -251,7 +251,7 @@ export class ExecutionServiceClient {
  */
 export function createExecutionClient(
 	baseUrl: string,
-	options?: Partial<Omit<GrpcClientConfig, "baseUrl">>
+	options?: Partial<Omit<GrpcClientConfig, "baseUrl">>,
 ): ExecutionServiceClient {
 	return new ExecutionServiceClient({ baseUrl, ...options });
 }

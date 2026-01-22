@@ -251,7 +251,7 @@ export const ISO8601TimestampSchema = z
 	.string()
 	.regex(
 		/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d{3})?Z$/,
-		"Must be ISO-8601 format with UTC timezone (e.g., 2026-01-04T15:00:00Z)"
+		"Must be ISO-8601 format with UTC timezone (e.g., 2026-01-04T15:00:00Z)",
 	);
 export type ISO8601Timestamp = z.infer<typeof ISO8601TimestampSchema>;
 
@@ -311,23 +311,23 @@ export function validateRiskReward(decision: Decision, entryPrice: number): Risk
 	if (isLong) {
 		if (stopLossLevel >= entryPrice) {
 			errors.push(
-				`Long position: stopLossLevel (${stopLossLevel}) must be below entry (${entryPrice})`
+				`Long position: stopLossLevel (${stopLossLevel}) must be below entry (${entryPrice})`,
 			);
 		}
 		if (takeProfitLevel <= entryPrice) {
 			errors.push(
-				`Long position: takeProfitLevel (${takeProfitLevel}) must be above entry (${entryPrice})`
+				`Long position: takeProfitLevel (${takeProfitLevel}) must be above entry (${entryPrice})`,
 			);
 		}
 	} else if (isShort) {
 		if (stopLossLevel <= entryPrice) {
 			errors.push(
-				`Short position: stopLossLevel (${stopLossLevel}) must be above entry (${entryPrice})`
+				`Short position: stopLossLevel (${stopLossLevel}) must be above entry (${entryPrice})`,
 			);
 		}
 		if (takeProfitLevel >= entryPrice) {
 			errors.push(
-				`Short position: takeProfitLevel (${takeProfitLevel}) must be below entry (${entryPrice})`
+				`Short position: takeProfitLevel (${takeProfitLevel}) must be below entry (${entryPrice})`,
 			);
 		}
 	}
@@ -376,12 +376,12 @@ export function validateDecisionPlan(plan: unknown): DecisionPlanValidationResul
 
 		if (decision.instrument.instrumentType === "OPTION" && decision.size.unit !== "CONTRACTS") {
 			errors.push(
-				`${decision.instrument.instrumentId}: OPTIONS must use CONTRACTS unit, not ${decision.size.unit}`
+				`${decision.instrument.instrumentId}: OPTIONS must use CONTRACTS unit, not ${decision.size.unit}`,
 			);
 		}
 		if (decision.instrument.instrumentType === "EQUITY" && decision.size.unit !== "SHARES") {
 			errors.push(
-				`${decision.instrument.instrumentId}: EQUITY must use SHARES unit, not ${decision.size.unit}`
+				`${decision.instrument.instrumentId}: EQUITY must use SHARES unit, not ${decision.size.unit}`,
 			);
 		}
 	}

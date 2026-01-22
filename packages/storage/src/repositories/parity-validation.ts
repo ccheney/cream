@@ -113,7 +113,7 @@ export class ParityValidationRepository {
 
 	async findLatestByEntity(
 		entityType: ParityEntityType,
-		entityId: string
+		entityId: string,
 	): Promise<ParityValidationRecord | null> {
 		const [row] = await this.db
 			.select()
@@ -122,10 +122,10 @@ export class ParityValidationRepository {
 				and(
 					eq(
 						parityValidationHistory.entityType,
-						entityType as typeof parityValidationHistory.$inferSelect.entityType
+						entityType as typeof parityValidationHistory.$inferSelect.entityType,
 					),
-					eq(parityValidationHistory.entityId, entityId)
-				)
+					eq(parityValidationHistory.entityId, entityId),
+				),
 			)
 			.orderBy(desc(parityValidationHistory.validatedAt))
 			.limit(1);
@@ -135,7 +135,7 @@ export class ParityValidationRepository {
 
 	async findByEntity(
 		entityType: ParityEntityType,
-		entityId: string
+		entityId: string,
 	): Promise<ParityValidationRecord[]> {
 		const rows = await this.db
 			.select()
@@ -144,10 +144,10 @@ export class ParityValidationRepository {
 				and(
 					eq(
 						parityValidationHistory.entityType,
-						entityType as typeof parityValidationHistory.$inferSelect.entityType
+						entityType as typeof parityValidationHistory.$inferSelect.entityType,
 					),
-					eq(parityValidationHistory.entityId, entityId)
-				)
+					eq(parityValidationHistory.entityId, entityId),
+				),
 			)
 			.orderBy(desc(parityValidationHistory.validatedAt));
 
@@ -161,8 +161,8 @@ export class ParityValidationRepository {
 			.where(
 				eq(
 					parityValidationHistory.environment,
-					environment as typeof parityValidationHistory.$inferSelect.environment
-				)
+					environment as typeof parityValidationHistory.$inferSelect.environment,
+				),
 			)
 			.orderBy(desc(parityValidationHistory.validatedAt));
 
@@ -194,7 +194,7 @@ export class ParityValidationRepository {
 							ROW_NUMBER() OVER (PARTITION BY entity_type, entity_id ORDER BY validated_at DESC) as rn
 						FROM ${parityValidationHistory}
 					) sub WHERE rn <= ${keepLast}
-				)`
+				)`,
 			)
 			.returning({ id: parityValidationHistory.id });
 

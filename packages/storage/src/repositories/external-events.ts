@@ -230,7 +230,7 @@ export class ExternalEventsRepository {
 
 	async findMany(
 		filters: ExternalEventFilters = {},
-		pagination?: PaginationOptions
+		pagination?: PaginationOptions,
 	): Promise<PaginatedResult<ExternalEvent>> {
 		const conditions = [];
 
@@ -239,15 +239,15 @@ export class ExternalEventsRepository {
 				conditions.push(
 					inArray(
 						externalEvents.sourceType,
-						filters.sourceType as (typeof externalEvents.$inferSelect.sourceType)[]
-					)
+						filters.sourceType as (typeof externalEvents.$inferSelect.sourceType)[],
+					),
 				);
 			} else {
 				conditions.push(
 					eq(
 						externalEvents.sourceType,
-						filters.sourceType as typeof externalEvents.$inferSelect.sourceType
-					)
+						filters.sourceType as typeof externalEvents.$inferSelect.sourceType,
+					),
 				);
 			}
 		}
@@ -263,15 +263,15 @@ export class ExternalEventsRepository {
 				conditions.push(
 					inArray(
 						externalEvents.sentiment,
-						filters.sentiment as (typeof externalEvents.$inferSelect.sentiment)[]
-					)
+						filters.sentiment as (typeof externalEvents.$inferSelect.sentiment)[],
+					),
 				);
 			} else {
 				conditions.push(
 					eq(
 						externalEvents.sentiment,
-						filters.sentiment as typeof externalEvents.$inferSelect.sentiment
-					)
+						filters.sentiment as typeof externalEvents.$inferSelect.sentiment,
+					),
 				);
 			}
 		}
@@ -366,7 +366,7 @@ export class ExternalEventsRepository {
 			.select()
 			.from(externalEvents)
 			.where(
-				eq(externalEvents.sourceType, "macro" as typeof externalEvents.$inferSelect.sourceType)
+				eq(externalEvents.sourceType, "macro" as typeof externalEvents.$inferSelect.sourceType),
 			)
 			.orderBy(desc(externalEvents.eventTime))
 			.limit(limit);
@@ -376,7 +376,7 @@ export class ExternalEventsRepository {
 
 	async getSymbolSentiment(
 		symbol: string,
-		hours = 24
+		hours = 24,
 	): Promise<{ avgSentiment: number; count: number }> {
 		const cutoff = new Date(Date.now() - hours * 60 * 60 * 1000);
 
@@ -389,8 +389,8 @@ export class ExternalEventsRepository {
 			.where(
 				and(
 					arrayContains(externalEvents.relatedInstruments, [symbol]),
-					gte(externalEvents.eventTime, cutoff)
-				)
+					gte(externalEvents.eventTime, cutoff),
+				),
 			);
 
 		return {

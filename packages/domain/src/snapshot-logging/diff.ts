@@ -15,7 +15,7 @@ function diffSymbolSnapshots(
 	current: SymbolSnapshot,
 	symbol: string,
 	includeBars: boolean,
-	includeQuotes: boolean
+	includeQuotes: boolean,
 ): SnapshotDiffEntry[] {
 	const diffs: SnapshotDiffEntry[] = [];
 
@@ -88,7 +88,7 @@ function diffSymbolSnapshots(
 export function diffSnapshots(
 	previous: MarketSnapshot,
 	current: MarketSnapshot,
-	options: SnapshotDiffOptions = {}
+	options: SnapshotDiffOptions = {},
 ): SnapshotDiffResult {
 	const { includeBars = false, includeQuotes = false, maxDiffs = 100 } = options;
 
@@ -157,7 +157,7 @@ export function diffSnapshots(
 			currSymbol,
 			symbol,
 			includeBars,
-			includeQuotes
+			includeQuotes,
 		);
 		if (symbolDiffs.length > 0) {
 			summary.symbolsModified.push(symbol);

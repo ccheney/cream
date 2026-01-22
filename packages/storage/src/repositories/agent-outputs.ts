@@ -136,8 +136,8 @@ export class AgentOutputsRepository {
 			.where(
 				and(
 					eq(agentOutputs.decisionId, decisionId),
-					eq(agentOutputs.agentType, agentType as typeof agentOutputs.$inferInsert.agentType)
-				)
+					eq(agentOutputs.agentType, agentType as typeof agentOutputs.$inferInsert.agentType),
+				),
 			)
 			.limit(1);
 

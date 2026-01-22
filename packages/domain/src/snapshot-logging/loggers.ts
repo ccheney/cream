@@ -15,25 +15,25 @@ export function createConsoleLogger(): SnapshotLogger {
 		debug(entry) {
 			log.debug(
 				{ cycleId: entry.cycleId, environment: entry.environment, ...entry.fields },
-				entry.message
+				entry.message,
 			);
 		},
 		info(entry) {
 			log.info(
 				{ cycleId: entry.cycleId, environment: entry.environment, ...entry.fields },
-				entry.message
+				entry.message,
 			);
 		},
 		warn(entry) {
 			log.warn(
 				{ cycleId: entry.cycleId, environment: entry.environment, ...entry.fields },
-				entry.message
+				entry.message,
 			);
 		},
 		error(entry) {
 			log.error(
 				{ cycleId: entry.cycleId, environment: entry.environment, ...entry.fields },
-				entry.message
+				entry.message,
 			);
 		},
 	};

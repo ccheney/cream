@@ -494,7 +494,7 @@ describe("ExpirationEvaluationSchema", () => {
 				priority: 0,
 				explanation: "test",
 				isForced: false,
-			}).success
+			}).success,
 		).toBe(false);
 
 		expect(
@@ -505,7 +505,7 @@ describe("ExpirationEvaluationSchema", () => {
 				priority: 11,
 				explanation: "test",
 				isForced: false,
-			}).success
+			}).success,
 		).toBe(false);
 
 		expect(
@@ -516,7 +516,7 @@ describe("ExpirationEvaluationSchema", () => {
 				priority: 5,
 				explanation: "test",
 				isForced: false,
-			}).success
+			}).success,
 		).toBe(true);
 	});
 });

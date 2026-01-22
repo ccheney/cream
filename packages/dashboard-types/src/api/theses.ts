@@ -27,7 +27,7 @@ export const ThesisSchema = z.object({
 	direction: ThesisDirectionSchema,
 	status: ThesisStatusSchema,
 	timeHorizon: z.string(),
-	confidence: z.number(),
+	confidence: z.number().nullable(),
 	targetPrice: z.number().nullable(),
 	stopPrice: z.number().nullable(),
 	catalysts: z.array(z.string()),

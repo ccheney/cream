@@ -33,7 +33,7 @@ export const ConfigSchema = z.object({
 				type: z.string(),
 				index: z.string().optional(),
 				symbols: z.array(z.string()).optional(),
-			})
+			}),
 		),
 		filters: z.object({
 			optionableOnly: z.boolean(),

@@ -140,14 +140,14 @@ describe("RetrievedCaseSchema", () => {
 			RetrievedCaseSchema.safeParse({
 				...validCase,
 				similarityScore: 1.5,
-			}).success
+			}).success,
 		).toBe(false);
 
 		expect(
 			RetrievedCaseSchema.safeParse({
 				...validCase,
 				similarityScore: -0.1,
-			}).success
+			}).success,
 		).toBe(false);
 	});
 });
@@ -202,7 +202,7 @@ describe("CaseStatisticsSchema", () => {
 			CaseStatisticsSchema.safeParse({
 				totalCases: 10,
 				winRate: 1.5,
-			}).success
+			}).success,
 		).toBe(false);
 	});
 });

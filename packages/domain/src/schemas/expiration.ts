@@ -318,7 +318,7 @@ export const DEFAULT_EXPIRATION_POLICY: ExpirationPolicyConfig = {
  */
 export function getMinimumDTE(
 	positionType: PositionTypeForDTE,
-	config: MinimumDTEConfig = DEFAULT_EXPIRATION_POLICY.minimumDTE
+	config: MinimumDTEConfig = DEFAULT_EXPIRATION_POLICY.minimumDTE,
 ): number {
 	switch (positionType) {
 		case "LONG_OPTION":
@@ -343,7 +343,7 @@ export function getMinimumDTE(
 export function classifyMoneyness(
 	underlyingPrice: number,
 	strike: number,
-	right: "CALL" | "PUT"
+	right: "CALL" | "PUT",
 ): Moneyness {
 	const distance = right === "CALL" ? underlyingPrice - strike : strike - underlyingPrice;
 	const absDistance = Math.abs(distance);
@@ -377,7 +377,7 @@ export function classifyMoneyness(
 export function checkPinRisk(
 	underlyingPrice: number,
 	strike: number,
-	config: PinRiskConfig = DEFAULT_EXPIRATION_POLICY.pinRisk
+	config: PinRiskConfig = DEFAULT_EXPIRATION_POLICY.pinRisk,
 ): boolean {
 	const threshold =
 		underlyingPrice >= config.highPriceThreshold ? config.thresholdHighPrice : config.threshold;
@@ -395,7 +395,7 @@ export function checkPinRisk(
  */
 export function getPinRiskThreshold(
 	underlyingPrice: number,
-	config: PinRiskConfig = DEFAULT_EXPIRATION_POLICY.pinRisk
+	config: PinRiskConfig = DEFAULT_EXPIRATION_POLICY.pinRisk,
 ): number {
 	return underlyingPrice >= config.highPriceThreshold
 		? config.thresholdHighPrice

@@ -114,7 +114,7 @@ export class FeaturesRepository {
 	async getAtTimestamp(
 		symbol: string,
 		timestamp: string,
-		timeframe: Timeframe
+		timeframe: Timeframe,
 	): Promise<Feature[]> {
 		const ts = new Date(timestamp);
 		const rows = await this.db
@@ -124,8 +124,8 @@ export class FeaturesRepository {
 				and(
 					eq(features.symbol, symbol),
 					eq(features.timestamp, ts),
-					eq(features.timeframe, timeframe as typeof features.$inferSelect.timeframe)
-				)
+					eq(features.timeframe, timeframe as typeof features.$inferSelect.timeframe),
+				),
 			);
 
 		return rows.map(mapFeatureRow);
@@ -136,7 +136,7 @@ export class FeaturesRepository {
 		indicatorName: string,
 		timeframe: Timeframe,
 		startTime: string,
-		endTime: string
+		endTime: string,
 	): Promise<Feature[]> {
 		const rows = await this.db
 			.select()
@@ -147,8 +147,8 @@ export class FeaturesRepository {
 					eq(features.indicatorName, indicatorName),
 					eq(features.timeframe, timeframe as typeof features.$inferSelect.timeframe),
 					gte(features.timestamp, new Date(startTime)),
-					lte(features.timestamp, new Date(endTime))
-				)
+					lte(features.timestamp, new Date(endTime)),
+				),
 			)
 			.orderBy(features.timestamp);
 
@@ -158,7 +158,7 @@ export class FeaturesRepository {
 	async getLatest(
 		symbol: string,
 		timeframe: Timeframe,
-		indicatorNames?: string[]
+		indicatorNames?: string[],
 	): Promise<Feature[]> {
 		const [latest] = await this.db
 			.select({ timestamp: sql<Date>`MAX(${features.timestamp})` })
@@ -166,8 +166,8 @@ export class FeaturesRepository {
 			.where(
 				and(
 					eq(features.symbol, symbol),
-					eq(features.timeframe, timeframe as typeof features.$inferSelect.timeframe)
-				)
+					eq(features.timeframe, timeframe as typeof features.$inferSelect.timeframe),
+				),
 			);
 
 		if (!latest?.timestamp) {
@@ -199,8 +199,8 @@ export class FeaturesRepository {
 			.where(
 				and(
 					eq(features.symbol, symbol),
-					eq(features.timeframe, timeframe as typeof features.$inferSelect.timeframe)
-				)
+					eq(features.timeframe, timeframe as typeof features.$inferSelect.timeframe),
+				),
 			)
 			.orderBy(features.indicatorName);
 

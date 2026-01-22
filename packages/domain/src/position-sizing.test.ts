@@ -50,7 +50,7 @@ describe("calculateFixedFractional", () => {
 	test("handles options with multiplier", () => {
 		const result = calculateFixedFractional(
 			{ ...baseInput, price: 5, stopLoss: 4, multiplier: 100 },
-			0.01
+			0.01,
 		);
 		// Risk per contract = $1 * 100 = $100
 		// Max risk = $1000, Quantity = 10 contracts
@@ -125,7 +125,7 @@ describe("calculateVolatilityTargeted", () => {
 		// Very high ATR relative to account
 		const result = calculateVolatilityTargeted(
 			{ accountEquity: 100, price: 100, stopLoss: 95, atr: 50 },
-			0.01
+			0.01,
 		);
 		// Max risk = $1, ATR stop = 50 * 2 = 100
 		// Quantity = 1 / 100 = 0
@@ -138,7 +138,7 @@ describe("calculateVolatilityTargeted", () => {
 	test("returns zero quantity with risk-reward ratio when takeProfit provided", () => {
 		const result = calculateVolatilityTargeted(
 			{ accountEquity: 100, price: 100, stopLoss: 95, atr: 50, takeProfit: 110 },
-			0.01
+			0.01,
 		);
 		expect(result.quantity).toBe(0);
 		expect(result.riskRewardRatio).toBe(2); // 10 reward / 5 risk
@@ -173,11 +173,11 @@ describe("calculateFractionalKelly", () => {
 		// Aggressive (0.5): 0.25 * 0.5 = 0.125, capped at 0.10
 		const conservative = calculateFractionalKelly(
 			{ ...baseInput, winRate: 0.55, payoffRatio: 1.5, kellyFraction: 0.25 },
-			0.1 // Max allowed risk percent
+			0.1, // Max allowed risk percent
 		);
 		const aggressive = calculateFractionalKelly(
 			{ ...baseInput, winRate: 0.55, payoffRatio: 1.5, kellyFraction: 0.5 },
-			0.1
+			0.1,
 		);
 		expect(aggressive.quantity).toBeGreaterThan(conservative.quantity);
 	});
@@ -200,10 +200,10 @@ describe("calculateFractionalKelly", () => {
 
 	test("throws on invalid kelly fraction", () => {
 		expect(() => calculateFractionalKelly({ ...baseInput, kellyFraction: 0 }, 0.02)).toThrow(
-			"kellyFraction must be between 0 and 1"
+			"kellyFraction must be between 0 and 1",
 		);
 		expect(() => calculateFractionalKelly({ ...baseInput, kellyFraction: 1.5 }, 0.02)).toThrow(
-			"kellyFraction must be between 0 and 1"
+			"kellyFraction must be between 0 and 1",
 		);
 	});
 });
@@ -319,10 +319,10 @@ describe("calculateDeltaAdjustedSize", () => {
 
 	test("throws on invalid underlying price", () => {
 		expect(() => calculateDeltaAdjustedSize({ ...baseInput, underlyingPrice: 0 }, 10000)).toThrow(
-			"underlyingPrice must be positive"
+			"underlyingPrice must be positive",
 		);
 		expect(() => calculateDeltaAdjustedSize({ ...baseInput, underlyingPrice: -50 }, 10000)).toThrow(
-			"underlyingPrice must be positive"
+			"underlyingPrice must be positive",
 		);
 	});
 
@@ -364,19 +364,19 @@ describe("DEFAULT_RISK_LIMITS", () => {
 describe("validateInput (via calculateFixedFractional)", () => {
 	test("throws on invalid price", () => {
 		expect(() =>
-			calculateFixedFractional({ accountEquity: 100000, price: 0, stopLoss: 95 }, 0.01)
+			calculateFixedFractional({ accountEquity: 100000, price: 0, stopLoss: 95 }, 0.01),
 		).toThrow("price must be positive");
 		expect(() =>
-			calculateFixedFractional({ accountEquity: 100000, price: -10, stopLoss: 95 }, 0.01)
+			calculateFixedFractional({ accountEquity: 100000, price: -10, stopLoss: 95 }, 0.01),
 		).toThrow("price must be positive");
 	});
 
 	test("throws on invalid stopLoss", () => {
 		expect(() =>
-			calculateFixedFractional({ accountEquity: 100000, price: 100, stopLoss: 0 }, 0.01)
+			calculateFixedFractional({ accountEquity: 100000, price: 100, stopLoss: 0 }, 0.01),
 		).toThrow("stopLoss must be positive");
 		expect(() =>
-			calculateFixedFractional({ accountEquity: 100000, price: 100, stopLoss: -5 }, 0.01)
+			calculateFixedFractional({ accountEquity: 100000, price: 100, stopLoss: -5 }, 0.01),
 		).toThrow("stopLoss must be positive");
 	});
 
@@ -384,14 +384,14 @@ describe("validateInput (via calculateFixedFractional)", () => {
 		expect(() =>
 			calculateFixedFractional(
 				{ accountEquity: 100000, price: 100, stopLoss: 95, multiplier: 0 },
-				0.01
-			)
+				0.01,
+			),
 		).toThrow("multiplier must be positive");
 		expect(() =>
 			calculateFixedFractional(
 				{ accountEquity: 100000, price: 100, stopLoss: 95, multiplier: -1 },
-				0.01
-			)
+				0.01,
+			),
 		).toThrow("multiplier must be positive");
 	});
 });

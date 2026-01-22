@@ -68,7 +68,7 @@ export const CorrelationMatrixSchema = z.object({
 			a: z.string(),
 			b: z.string(),
 			correlation: z.number(),
-		})
+		}),
 	),
 });
 

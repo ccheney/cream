@@ -136,8 +136,8 @@ export class RegimeLabelsRepository {
 			.where(
 				and(
 					eq(regimeLabels.symbol, symbol),
-					eq(regimeLabels.timeframe, timeframe as typeof regimeLabels.$inferSelect.timeframe)
-				)
+					eq(regimeLabels.timeframe, timeframe as typeof regimeLabels.$inferSelect.timeframe),
+				),
 			)
 			.orderBy(desc(regimeLabels.timestamp))
 			.limit(1);
@@ -164,7 +164,7 @@ export class RegimeLabelsRepository {
 		symbol: string,
 		timeframe: RegimeTimeframe,
 		startTime: string,
-		endTime: string
+		endTime: string,
 	): Promise<RegimeLabel[]> {
 		const rows = await this.db
 			.select()
@@ -174,8 +174,8 @@ export class RegimeLabelsRepository {
 					eq(regimeLabels.symbol, symbol),
 					eq(regimeLabels.timeframe, timeframe as typeof regimeLabels.$inferSelect.timeframe),
 					gte(regimeLabels.timestamp, new Date(startTime)),
-					lte(regimeLabels.timestamp, new Date(endTime))
-				)
+					lte(regimeLabels.timestamp, new Date(endTime)),
+				),
 			)
 			.orderBy(regimeLabels.timestamp);
 
@@ -185,7 +185,7 @@ export class RegimeLabelsRepository {
 	async getSymbolsInRegime(
 		regime: RegimeType,
 		timeframe: RegimeTimeframe,
-		minConfidence = 0.5
+		minConfidence = 0.5,
 	): Promise<string[]> {
 		const latestTimestamps = this.db
 			.select({
@@ -204,16 +204,16 @@ export class RegimeLabelsRepository {
 				latestTimestamps,
 				and(
 					eq(regimeLabels.symbol, latestTimestamps.symbol),
-					eq(regimeLabels.timestamp, latestTimestamps.maxTs)
-				)
+					eq(regimeLabels.timestamp, latestTimestamps.maxTs),
+				),
 			)
 			.where(
 				and(
 					eq(regimeLabels.regime, regime as typeof regimeLabels.$inferSelect.regime),
 					gte(regimeLabels.confidence, String(minConfidence)),
 					eq(regimeLabels.timeframe, timeframe as typeof regimeLabels.$inferSelect.timeframe),
-					ne(regimeLabels.symbol, MARKET_SYMBOL)
-				)
+					ne(regimeLabels.symbol, MARKET_SYMBOL),
+				),
 			);
 
 		return rows.map((r) => r.symbol);
@@ -229,8 +229,8 @@ export class RegimeLabelsRepository {
 			.where(
 				and(
 					eq(regimeLabels.timeframe, timeframe as typeof regimeLabels.$inferSelect.timeframe),
-					ne(regimeLabels.symbol, MARKET_SYMBOL)
-				)
+					ne(regimeLabels.symbol, MARKET_SYMBOL),
+				),
 			)
 			.groupBy(regimeLabels.symbol)
 			.as("latest");
@@ -245,8 +245,8 @@ export class RegimeLabelsRepository {
 				latestTimestamps,
 				and(
 					eq(regimeLabels.symbol, latestTimestamps.symbol),
-					eq(regimeLabels.timestamp, latestTimestamps.maxTs)
-				)
+					eq(regimeLabels.timestamp, latestTimestamps.maxTs),
+				),
 			)
 			.where(eq(regimeLabels.timeframe, timeframe as typeof regimeLabels.$inferSelect.timeframe))
 			.groupBy(regimeLabels.regime);
@@ -270,7 +270,7 @@ export class RegimeLabelsRepository {
 	async getRegimeAtDate(
 		symbol: string,
 		timeframe: RegimeTimeframe,
-		asOfDate: string
+		asOfDate: string,
 	): Promise<RegimeLabel | null> {
 		const [row] = await this.db
 			.select()
@@ -279,8 +279,8 @@ export class RegimeLabelsRepository {
 				and(
 					eq(regimeLabels.symbol, symbol),
 					eq(regimeLabels.timeframe, timeframe as typeof regimeLabels.$inferSelect.timeframe),
-					lte(regimeLabels.timestamp, new Date(asOfDate))
-				)
+					lte(regimeLabels.timestamp, new Date(asOfDate)),
+				),
 			)
 			.orderBy(desc(regimeLabels.timestamp))
 			.limit(1);

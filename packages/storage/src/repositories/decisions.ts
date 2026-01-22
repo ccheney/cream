@@ -175,7 +175,7 @@ export class DecisionsRepository {
 
 	async findMany(
 		filters: DecisionFilters = {},
-		pagination?: { limit?: number; offset?: number }
+		pagination?: { limit?: number; offset?: number },
 	): Promise<{ data: Decision[]; total: number; limit: number; offset: number }> {
 		const conditions = [];
 
@@ -281,7 +281,7 @@ export class DecisionsRepository {
 
 	async update(
 		id: string,
-		updates: Partial<Omit<CreateDecisionInput, "id" | "cycleId" | "environment">>
+		updates: Partial<Omit<CreateDecisionInput, "id" | "cycleId" | "environment">>,
 	): Promise<Decision> {
 		const updateData: Partial<typeof decisions.$inferInsert> = {
 			updatedAt: new Date(),
@@ -460,7 +460,7 @@ export class DecisionsRepository {
 	}
 
 	async getConfidenceCalibration(
-		filters: DecisionFilters = {}
+		filters: DecisionFilters = {},
 	): Promise<ConfidenceCalibrationBin[]> {
 		const conditions = this.buildFilterConditions(filters);
 		const whereClause = conditions.length > 0 ? and(...conditions) : undefined;
@@ -479,7 +479,7 @@ export class DecisionsRepository {
 				total: count(),
 				executed:
 					sql<number>`COUNT(*) FILTER (WHERE ${decisions.status} IN ('executed', 'approved'))`.as(
-						"executed"
+						"executed",
 					),
 			})
 			.from(decisions)
@@ -491,7 +491,7 @@ export class DecisionsRepository {
 					WHEN ${decisions.confidenceScore}::numeric < 0.6 THEN '40-60'
 					WHEN ${decisions.confidenceScore}::numeric < 0.8 THEN '60-80'
 					ELSE '80-100'
-				END`
+				END`,
 			)
 			.orderBy(sql.raw(`"confidence_bin" ASC`));
 
@@ -510,12 +510,12 @@ export class DecisionsRepository {
 		const rows = await this.db
 			.select({
 				strategyFamily: sql<string>`COALESCE(${decisions.strategyFamily}, 'Unknown')`.as(
-					"strategy_family"
+					"strategy_family",
 				),
 				total: count(),
 				executed:
 					sql<number>`COUNT(*) FILTER (WHERE ${decisions.status} IN ('executed', 'approved'))`.as(
-						"executed"
+						"executed",
 					),
 				avgConfidence: avg(decisions.confidenceScore),
 				avgRisk: avg(decisions.riskScore),

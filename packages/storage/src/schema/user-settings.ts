@@ -32,7 +32,7 @@ export const alertSettings = pgTable(
 		createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
 		updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
 	},
-	(table) => [index("idx_alert_settings_user_id").on(table.userId)]
+	(table) => [index("idx_alert_settings_user_id").on(table.userId)],
 );
 
 // Notification settings type
@@ -94,5 +94,5 @@ export const userPreferences = pgTable(
 	(table) => [
 		index("idx_user_preferences_user_id").on(table.userId),
 		index("idx_user_preferences_created_at").on(table.createdAt),
-	]
+	],
 );

@@ -56,7 +56,7 @@ export const fundamentalIndicators = pgTable(
 		unique("fundamental_indicators_symbol_date").on(table.symbol, table.date),
 		index("idx_fundamental_symbol_date").on(table.symbol, table.date),
 		index("idx_fundamental_symbol").on(table.symbol),
-	]
+	],
 );
 
 // short_interest_indicators: Bi-weekly batch from FINRA
@@ -80,7 +80,7 @@ export const shortInterestIndicators = pgTable(
 		unique("short_interest_symbol_date").on(table.symbol, table.settlementDate),
 		index("idx_short_interest_symbol").on(table.symbol, table.settlementDate),
 		index("idx_short_interest_settlement").on(table.settlementDate),
-	]
+	],
 );
 
 // sentiment_indicators: Nightly aggregation
@@ -107,7 +107,7 @@ export const sentimentIndicators = pgTable(
 		unique("sentiment_indicators_symbol_date").on(table.symbol, table.date),
 		index("idx_sentiment_symbol_date").on(table.symbol, table.date),
 		index("idx_sentiment_symbol").on(table.symbol),
-	]
+	],
 );
 
 // options_indicators_cache: Refreshed hourly
@@ -135,7 +135,7 @@ export const optionsIndicatorsCache = pgTable(
 	(table) => [
 		index("idx_options_cache_symbol").on(table.symbol),
 		index("idx_options_cache_expires").on(table.expiresAt),
-	]
+	],
 );
 
 // corporate_actions_indicators: Daily update
@@ -159,7 +159,7 @@ export const corporateActionsIndicators = pgTable(
 		unique("corp_actions_indicators_symbol_date").on(table.symbol, table.date),
 		index("idx_corp_actions_symbol").on(table.symbol, table.date),
 		index("idx_corp_actions_symbol_only").on(table.symbol),
-	]
+	],
 );
 
 // indicator_sync_runs: Tracking indicator sync jobs
@@ -180,5 +180,5 @@ export const indicatorSyncRuns = pgTable(
 		index("idx_indicator_sync_runs_type").on(table.runType),
 		index("idx_indicator_sync_runs_status").on(table.status),
 		index("idx_indicator_sync_runs_started").on(table.startedAt),
-	]
+	],
 );

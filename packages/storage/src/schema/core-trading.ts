@@ -81,11 +81,11 @@ export const decisions = pgTable(
 		check("non_negative_size", sql`${table.size}::numeric >= 0`),
 		check(
 			"valid_confidence",
-			sql`${table.confidenceScore} IS NULL OR (${table.confidenceScore}::numeric >= 0 AND ${table.confidenceScore}::numeric <= 1)`
+			sql`${table.confidenceScore} IS NULL OR (${table.confidenceScore}::numeric >= 0 AND ${table.confidenceScore}::numeric <= 1)`,
 		),
 		check(
 			"valid_risk",
-			sql`${table.riskScore} IS NULL OR (${table.riskScore}::numeric >= 0 AND ${table.riskScore}::numeric <= 1)`
+			sql`${table.riskScore} IS NULL OR (${table.riskScore}::numeric >= 0 AND ${table.riskScore}::numeric <= 1)`,
 		),
 		index("idx_decisions_cycle_id").on(table.cycleId),
 		index("idx_decisions_symbol").on(table.symbol),
@@ -93,7 +93,7 @@ export const decisions = pgTable(
 		index("idx_decisions_created_at").on(table.createdAt),
 		index("idx_decisions_symbol_created").on(table.symbol, table.createdAt),
 		index("idx_decisions_environment").on(table.environment),
-	]
+	],
 );
 
 // agent_outputs: Agent votes and reasoning
@@ -116,12 +116,12 @@ export const agentOutputs = pgTable(
 	(table) => [
 		check(
 			"valid_confidence",
-			sql`${table.confidence}::numeric >= 0 AND ${table.confidence}::numeric <= 1`
+			sql`${table.confidence}::numeric >= 0 AND ${table.confidence}::numeric <= 1`,
 		),
 		index("idx_agent_outputs_decision_id").on(table.decisionId),
 		index("idx_agent_outputs_agent_type").on(table.agentType),
 		index("idx_agent_outputs_decision_agent").on(table.decisionId, table.agentType),
-	]
+	],
 );
 
 // orders: Order submissions and lifecycle
@@ -156,7 +156,7 @@ export const orders = pgTable(
 		index("idx_orders_broker_order_id").on(table.brokerOrderId),
 		index("idx_orders_created_at").on(table.createdAt),
 		index("idx_orders_environment").on(table.environment),
-	]
+	],
 );
 
 // positions: Current open positions
@@ -194,7 +194,7 @@ export const positions = pgTable(
 		uniqueIndex("idx_positions_symbol_env_open")
 			.on(table.symbol, table.environment)
 			.where(sql`${table.closedAt} IS NULL`),
-	]
+	],
 );
 
 // position_history: Historical snapshots for P&L tracking
@@ -215,7 +215,7 @@ export const positionHistory = pgTable(
 		index("idx_position_history_position_id").on(table.positionId),
 		index("idx_position_history_timestamp").on(table.timestamp),
 		index("idx_position_history_position_ts").on(table.positionId, table.timestamp),
-	]
+	],
 );
 
 // portfolio_snapshots: Point-in-time portfolio state
@@ -245,7 +245,7 @@ export const portfolioSnapshots = pgTable(
 		unique("portfolio_snapshots_timestamp_env").on(table.timestamp, table.environment),
 		index("idx_portfolio_snapshots_timestamp").on(table.timestamp),
 		index("idx_portfolio_snapshots_environment").on(table.environment),
-	]
+	],
 );
 
 // config_versions: Version-controlled configuration
@@ -269,7 +269,7 @@ export const configVersions = pgTable(
 		uniqueIndex("idx_config_versions_env_active")
 			.on(table.environment)
 			.where(sql`${table.active} = true`),
-	]
+	],
 );
 
 // cycles: Complete OODA cycle history with results
@@ -329,7 +329,7 @@ export const cycles = pgTable(
 		index("idx_cycles_started_at").on(table.startedAt),
 		index("idx_cycles_env_status").on(table.environment, table.status),
 		index("idx_cycles_env_started").on(table.environment, table.startedAt),
-	]
+	],
 );
 
 // cycle_events: Detailed event log for each cycle
@@ -355,7 +355,7 @@ export const cycleEvents = pgTable(
 		index("idx_cycle_events_timestamp").on(table.timestamp),
 		index("idx_cycle_events_agent").on(table.cycleId, table.agentType),
 		index("idx_cycle_events_agent_event").on(table.cycleId, table.agentType, table.eventType),
-	]
+	],
 );
 
 // ============================================================================
@@ -390,7 +390,7 @@ export const executionOrderSnapshots = pgTable(
 	(table) => [
 		index("idx_exec_order_snapshots_broker_id").on(table.brokerOrderId),
 		index("idx_exec_order_snapshots_env_status").on(table.environment, table.status),
-	]
+	],
 );
 
 // execution_position_snapshots: Position state for crash recovery
@@ -403,7 +403,7 @@ export const executionPositionSnapshots = pgTable(
 		environment: environmentEnum("environment").notNull(),
 		updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
 	},
-	(table) => [index("idx_exec_position_snapshots_env").on(table.environment)]
+	(table) => [index("idx_exec_position_snapshots_env").on(table.environment)],
 );
 
 // execution_recovery_state: Recovery tracking for execution engine
@@ -418,5 +418,5 @@ export const executionRecoveryState = pgTable(
 		errorMessage: text("error_message"),
 		updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
 	},
-	() => []
+	() => [],
 );

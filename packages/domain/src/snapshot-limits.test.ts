@@ -271,7 +271,7 @@ describe("validateSnapshotSize", () => {
 		const snapshot = createMockMarketSnapshot(10, 10);
 		// Artificially set more symbols than limit
 		(snapshot as { symbols: SymbolSnapshot[] }).symbols = Array.from({ length: 60 }, (_, i) =>
-			createMockSymbolSnapshot(`SYM${i}`, 5)
+			createMockSymbolSnapshot(`SYM${i}`, 5),
 		);
 
 		const validation = validateSnapshotSize(snapshot);

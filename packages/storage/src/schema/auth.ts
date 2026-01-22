@@ -29,7 +29,7 @@ export const user = pgTable(
 	(table) => [
 		index("idx_user_email").on(table.email),
 		index("idx_user_created_at").on(table.created_at),
-	]
+	],
 );
 
 // session: User sessions
@@ -54,7 +54,7 @@ export const session = pgTable(
 		index("idx_session_user_id").on(table.user_id),
 		index("idx_session_token").on(table.token),
 		index("idx_session_expires_at").on(table.expires_at),
-	]
+	],
 );
 
 // account: OAuth provider accounts
@@ -84,7 +84,7 @@ export const account = pgTable(
 		index("idx_account_user_id").on(table.user_id),
 		index("idx_account_provider_id").on(table.provider_id),
 		index("idx_account_provider_account").on(table.provider_id, table.account_id),
-	]
+	],
 );
 
 // verification: Email/token verification
@@ -104,7 +104,7 @@ export const verification = pgTable(
 	(table) => [
 		index("idx_verification_identifier").on(table.identifier),
 		index("idx_verification_expires_at").on(table.expires_at),
-	]
+	],
 );
 
 // two_factor: Two-factor authentication secrets
@@ -121,5 +121,5 @@ export const twoFactor = pgTable(
 	(table) => [
 		index("idx_two_factor_user_id").on(table.user_id),
 		index("idx_two_factor_secret").on(table.secret),
-	]
+	],
 );

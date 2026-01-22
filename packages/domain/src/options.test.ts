@@ -207,7 +207,7 @@ describe("OSI Format Utilities", () => {
 					strike: 100,
 					right: "CALL",
 					multiplier: 100,
-				})
+				}),
 			).toThrow(OSIError);
 		});
 
@@ -219,7 +219,7 @@ describe("OSI Format Utilities", () => {
 					strike: 100000, // Exceeds 5-digit max
 					right: "CALL",
 					multiplier: 100,
-				})
+				}),
 			).toThrow(OSIError);
 		});
 	});

@@ -133,7 +133,7 @@ describe("CalendarService Factory", () => {
 					mode: "PAPER",
 					alpacaKey: "custom-key",
 					alpacaSecret: "custom-secret",
-				})
+				}),
 			).toBe(true);
 		});
 

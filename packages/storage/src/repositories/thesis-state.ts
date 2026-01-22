@@ -255,8 +255,8 @@ export class ThesisStateRepository {
 				and(
 					eq(thesisState.instrumentId, instrumentId),
 					eq(thesisState.environment, environment as typeof thesisState.$inferSelect.environment),
-					ne(thesisState.state, "CLOSED")
-				)
+					ne(thesisState.state, "CLOSED"),
+				),
 			)
 			.orderBy(desc(thesisState.createdAt))
 			.limit(1);
@@ -266,7 +266,7 @@ export class ThesisStateRepository {
 
 	async findMany(
 		filters: ThesisFilters = {},
-		pagination?: PaginationOptions
+		pagination?: PaginationOptions,
 	): Promise<PaginatedResult<Thesis>> {
 		const conditions = [];
 
@@ -275,20 +275,20 @@ export class ThesisStateRepository {
 		}
 		if (filters.state) {
 			conditions.push(
-				eq(thesisState.state, filters.state as typeof thesisState.$inferSelect.state)
+				eq(thesisState.state, filters.state as typeof thesisState.$inferSelect.state),
 			);
 		}
 		if (filters.states && filters.states.length > 0) {
 			conditions.push(
-				inArray(thesisState.state, filters.states as (typeof thesisState.$inferSelect.state)[])
+				inArray(thesisState.state, filters.states as (typeof thesisState.$inferSelect.state)[]),
 			);
 		}
 		if (filters.environment) {
 			conditions.push(
 				eq(
 					thesisState.environment,
-					filters.environment as typeof thesisState.$inferSelect.environment
-				)
+					filters.environment as typeof thesisState.$inferSelect.environment,
+				),
 			);
 		}
 		if (filters.closedAfter) {
@@ -334,8 +334,8 @@ export class ThesisStateRepository {
 			.where(
 				and(
 					eq(thesisState.environment, environment as typeof thesisState.$inferSelect.environment),
-					ne(thesisState.state, "CLOSED")
-				)
+					ne(thesisState.state, "CLOSED"),
+				),
 			)
 			.orderBy(desc(thesisState.createdAt));
 
@@ -349,8 +349,8 @@ export class ThesisStateRepository {
 			.where(
 				and(
 					eq(thesisState.environment, environment as typeof thesisState.$inferSelect.environment),
-					inArray(thesisState.state, states as (typeof thesisState.$inferSelect.state)[])
-				)
+					inArray(thesisState.state, states as (typeof thesisState.$inferSelect.state)[]),
+				),
 			)
 			.orderBy(desc(thesisState.createdAt));
 
@@ -396,7 +396,7 @@ export class ThesisStateRepository {
 		entryPrice: number,
 		stopLoss: number,
 		target?: number,
-		cycleId?: string
+		cycleId?: string,
 	): Promise<Thesis> {
 		const thesis = await this.findByIdOrThrow(thesisId);
 
@@ -436,7 +436,7 @@ export class ThesisStateRepository {
 		reason: CloseReason,
 		exitPrice?: number,
 		realizedPnl?: number,
-		cycleId?: string
+		cycleId?: string,
 	): Promise<Thesis> {
 		const thesis = await this.findByIdOrThrow(thesisId);
 
@@ -636,8 +636,8 @@ export class ThesisStateRepository {
 				and(
 					eq(thesisState.environment, envFilter),
 					eq(thesisState.state, "CLOSED"),
-					sql`${thesisState.entryDate} IS NOT NULL`
-				)
+					sql`${thesisState.entryDate} IS NOT NULL`,
+				),
 			);
 
 		const stateCounts = stateCountsResult[0];
@@ -660,7 +660,7 @@ export class ThesisStateRepository {
 
 	async search(
 		query: string,
-		limit = 5
+		limit = 5,
 	): Promise<Pick<Thesis, "thesisId" | "instrumentId" | "entryThesis">[]> {
 		const rows = await this.db
 			.select({
@@ -672,8 +672,8 @@ export class ThesisStateRepository {
 			.where(
 				or(
 					ilike(thesisState.instrumentId, `%${query}%`),
-					ilike(thesisState.entryThesis, `%${query}%`)
-				)
+					ilike(thesisState.entryThesis, `%${query}%`),
+				),
 			)
 			.orderBy(desc(thesisState.createdAt))
 			.limit(limit);

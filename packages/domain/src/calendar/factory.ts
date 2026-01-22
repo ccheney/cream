@@ -43,11 +43,11 @@ export interface CalendarServiceFactoryOptions {
 export class CalendarConfigError extends Error {
 	constructor(
 		public readonly missingVar: string,
-		public readonly mode: CreamEnvironment
+		public readonly mode: CreamEnvironment,
 	) {
 		super(
 			`CalendarService in ${mode} mode requires ${missingVar}. ` +
-				`Set ${missingVar} environment variable.`
+				`Set ${missingVar} environment variable.`,
 		);
 		this.name = "CalendarConfigError";
 	}
@@ -96,7 +96,7 @@ export function requireCalendarService(): CalendarService {
 	if (!calendarServiceInstance) {
 		throw new CalendarServiceError(
 			"CalendarService not initialized. Call initCalendarService() first.",
-			"NOT_INITIALIZED"
+			"NOT_INITIALIZED",
 		);
 	}
 	return calendarServiceInstance;
@@ -121,7 +121,7 @@ export function requireCalendarService(): CalendarService {
  * ```
  */
 export async function initCalendarService(
-	options: CalendarServiceFactoryOptions = {}
+	options: CalendarServiceFactoryOptions = {},
 ): Promise<CalendarService> {
 	// Return existing instance
 	if (calendarServiceInstance) {
@@ -188,7 +188,7 @@ export function resetCalendarService(): void {
  * ```
  */
 export async function createCalendarService(
-	options: CalendarServiceFactoryOptions = {}
+	options: CalendarServiceFactoryOptions = {},
 ): Promise<CalendarService> {
 	const mode = options.mode ?? requireEnv();
 

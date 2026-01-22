@@ -93,7 +93,7 @@ export interface TimestampValidationResult {
  */
 export async function checkClockSkew(
 	ctx: ExecutionContext,
-	thresholds: ClockSkewThresholds = DEFAULT_CLOCK_THRESHOLDS
+	thresholds: ClockSkewThresholds = DEFAULT_CLOCK_THRESHOLDS,
 ): Promise<ClockCheckResult> {
 	const checkedAt = new Date().toISOString();
 
@@ -200,7 +200,7 @@ export function validateTimestamp(
 		maxAgeMs?: number;
 		/** Tolerance for future timestamps in ms (default: 5000 = 5s) */
 		futureTolerance?: number;
-	} = {}
+	} = {},
 ): TimestampValidationResult {
 	const {
 		allowFuture = false,
@@ -237,12 +237,12 @@ export function validateTimestamp(
 	if (timestampMs > now + futureTolerance) {
 		if (allowFuture) {
 			result.warnings.push(
-				`Timestamp ${timestamp} is ${Math.round((timestampMs - now) / 1000)}s in the future`
+				`Timestamp ${timestamp} is ${Math.round((timestampMs - now) / 1000)}s in the future`,
 			);
 		} else {
 			result.valid = false;
 			result.errors.push(
-				`Timestamp ${timestamp} is ${Math.round((timestampMs - now) / 1000)}s in the future (beyond ${futureTolerance}ms tolerance)`
+				`Timestamp ${timestamp} is ${Math.round((timestampMs - now) / 1000)}s in the future (beyond ${futureTolerance}ms tolerance)`,
 			);
 		}
 	}
@@ -252,7 +252,7 @@ export function validateTimestamp(
 	if (ageMs > maxAgeMs) {
 		result.valid = false;
 		result.errors.push(
-			`Timestamp ${timestamp} is ${Math.round(ageMs / (24 * 60 * 60 * 1000))} days old (max: ${Math.round(maxAgeMs / (24 * 60 * 60 * 1000))} days)`
+			`Timestamp ${timestamp} is ${Math.round(ageMs / (24 * 60 * 60 * 1000))} days old (max: ${Math.round(maxAgeMs / (24 * 60 * 60 * 1000))} days)`,
 		);
 	}
 
@@ -272,7 +272,7 @@ export function validateTimestamp(
 export function validateTimestampConsistency(
 	timestamp1: string,
 	timestamp2: string,
-	maxDiffMs = DEFAULT_CLOCK_THRESHOLDS.componentSkewWarnMs
+	maxDiffMs = DEFAULT_CLOCK_THRESHOLDS.componentSkewWarnMs,
 ): { consistent: boolean; diffMs: number; warning?: string } {
 	const time1 = new Date(timestamp1).getTime();
 	const time2 = new Date(timestamp2).getTime();
@@ -431,7 +431,7 @@ let monitorState: ClockMonitorState = {
  */
 export async function periodicClockCheck(
 	ctx: ExecutionContext,
-	thresholds: ClockSkewThresholds = DEFAULT_CLOCK_THRESHOLDS
+	thresholds: ClockSkewThresholds = DEFAULT_CLOCK_THRESHOLDS,
 ): Promise<ClockCheckResult> {
 	const result = await checkClockSkew(ctx, thresholds);
 

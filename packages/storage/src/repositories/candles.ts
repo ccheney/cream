@@ -159,7 +159,7 @@ export class CandlesRepository {
 		symbol: string,
 		timeframe: Timeframe,
 		startTime: string,
-		endTime: string
+		endTime: string,
 	): Promise<Candle[]> {
 		const rows = await this.db
 			.select()
@@ -169,8 +169,8 @@ export class CandlesRepository {
 					eq(candles.symbol, symbol),
 					eq(candles.timeframe, timeframe),
 					gte(candles.timestamp, new Date(startTime)),
-					lte(candles.timestamp, new Date(endTime))
-				)
+					lte(candles.timestamp, new Date(endTime)),
+				),
 			)
 			.orderBy(asc(candles.timestamp));
 
@@ -228,8 +228,8 @@ export class CandlesRepository {
 				and(
 					eq(candles.symbol, symbol),
 					eq(candles.timeframe, timeframe),
-					lte(candles.timestamp, new Date(beforeDate))
-				)
+					lte(candles.timestamp, new Date(beforeDate)),
+				),
 			)
 			.returning({ id: candles.id });
 

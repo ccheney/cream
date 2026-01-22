@@ -115,7 +115,7 @@ export class AuditLogRepository {
 
 	async findMany(
 		filters: AuditLogFilters = {},
-		pagination?: PaginationOptions
+		pagination?: PaginationOptions,
 	): Promise<PaginatedResult<AuditLogEntry>> {
 		const conditions = [];
 
@@ -127,7 +127,7 @@ export class AuditLogRepository {
 		}
 		if (filters.environment) {
 			conditions.push(
-				eq(auditLog.environment, filters.environment as typeof auditLog.$inferSelect.environment)
+				eq(auditLog.environment, filters.environment as typeof auditLog.$inferSelect.environment),
 			);
 		}
 		if (filters.fromDate) {

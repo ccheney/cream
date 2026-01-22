@@ -337,7 +337,7 @@ describe("Helper Functions", () => {
 			const event = createEarningsEvent(
 				"550e8400-e29b-41d4-a716-446655440000",
 				"2026-01-05T10:00:00Z",
-				{ symbol: "AAPL", quarter: "Q1", year: 2026, transcriptAvailable: false }
+				{ symbol: "AAPL", quarter: "Q1", year: 2026, transcriptAvailable: false },
 			);
 			expect(event.eventType).toBe("EARNINGS");
 			expect(event.relatedInstrumentIds).toEqual(["AAPL"]);
@@ -349,7 +349,7 @@ describe("Helper Functions", () => {
 			const event = createMacroEvent(
 				"550e8400-e29b-41d4-a716-446655440000",
 				"2026-01-05T10:00:00Z",
-				{ indicatorName: "CPI", value: 3.2, unit: "", country: "US" }
+				{ indicatorName: "CPI", value: 3.2, unit: "", country: "US" },
 			);
 			expect(event.eventType).toBe("MACRO");
 			expect(event.relatedInstrumentIds).toEqual([]);
@@ -362,7 +362,7 @@ describe("Helper Functions", () => {
 				"550e8400-e29b-41d4-a716-446655440000",
 				"2026-01-05T10:00:00Z",
 				{ headline: "Test", body: "Content", source: "Reuters", entities: [], keyInsights: [] },
-				["AAPL"]
+				["AAPL"],
 			);
 			expect(event.eventType).toBe("NEWS");
 			expect(event.headline).toBe("Test");
@@ -373,20 +373,20 @@ describe("Helper Functions", () => {
 		const earningsEvent = createEarningsEvent(
 			"550e8400-e29b-41d4-a716-446655440000",
 			"2026-01-05T10:00:00Z",
-			{ symbol: "AAPL", quarter: "Q1", year: 2026, transcriptAvailable: false }
+			{ symbol: "AAPL", quarter: "Q1", year: 2026, transcriptAvailable: false },
 		);
 
 		const macroEvent = createMacroEvent(
 			"550e8400-e29b-41d4-a716-446655440000",
 			"2026-01-05T10:00:00Z",
-			{ indicatorName: "CPI", value: 3.2, unit: "", country: "US" }
+			{ indicatorName: "CPI", value: 3.2, unit: "", country: "US" },
 		);
 
 		const newsEvent = createNewsEvent(
 			"550e8400-e29b-41d4-a716-446655440000",
 			"2026-01-05T10:00:00Z",
 			{ headline: "Test", body: "Content", source: "Reuters", entities: [], keyInsights: [] },
-			["AAPL"]
+			["AAPL"],
 		);
 
 		it("isEarningsEvent should work", () => {
@@ -412,7 +412,7 @@ describe("Helper Functions", () => {
 				"550e8400-e29b-41d4-a716-446655440000",
 				"2026-01-05T10:00:00Z",
 				{ symbol: "AAPL", quarter: "Q1", year: 2026, transcriptAvailable: false },
-				{ surpriseScore: 0.5 }
+				{ surpriseScore: 0.5 },
 			);
 			expect(getEventSurpriseScore(event)).toBe(0.5);
 		});
@@ -427,7 +427,7 @@ describe("Helper Functions", () => {
 					year: 2026,
 					epsSurprisePct: 25,
 					transcriptAvailable: false,
-				}
+				},
 			);
 			expect(getEventSurpriseScore(event)).toBe(0.5); // 25/50 = 0.5
 		});
@@ -442,7 +442,7 @@ describe("Helper Functions", () => {
 					year: 2026,
 					epsSurprisePct: 100,
 					transcriptAvailable: false,
-				}
+				},
 			);
 			expect(getEventSurpriseScore(event)).toBe(1); // Capped at 1
 		});
@@ -457,7 +457,7 @@ describe("Helper Functions", () => {
 					surprisePct: 20,
 					unit: "jobs",
 					country: "US",
-				}
+				},
 			);
 			expect(getEventSurpriseScore(event)).toBe(0.4); // 20/50 = 0.4
 		});
@@ -472,7 +472,7 @@ describe("Helper Functions", () => {
 					surprisePct: 75,
 					unit: "%",
 					country: "US",
-				}
+				},
 			);
 			expect(getEventSurpriseScore(event)).toBe(1); // Capped at 1 (75/50 > 1)
 		});
@@ -487,7 +487,7 @@ describe("Helper Functions", () => {
 					surprisePct: -80,
 					unit: "%",
 					country: "US",
-				}
+				},
 			);
 			expect(getEventSurpriseScore(event)).toBe(-1); // Capped at -1
 		});
@@ -501,7 +501,7 @@ describe("Helper Functions", () => {
 					value: 2.5,
 					unit: "%",
 					country: "US",
-				}
+				},
 			);
 			expect(getEventSurpriseScore(event)).toBeUndefined();
 		});
@@ -511,7 +511,7 @@ describe("Helper Functions", () => {
 				"550e8400-e29b-41d4-a716-446655440000",
 				"2026-01-05T10:00:00Z",
 				{ headline: "Test", body: "Content", source: "Reuters", entities: [], keyInsights: [] },
-				["AAPL"]
+				["AAPL"],
 			);
 			expect(getEventSurpriseScore(event)).toBeUndefined();
 		});

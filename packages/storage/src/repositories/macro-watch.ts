@@ -186,8 +186,8 @@ export class MacroWatchRepository {
 			.where(
 				and(
 					gte(macroWatchEntries.timestamp, new Date(startTime)),
-					lte(macroWatchEntries.timestamp, new Date(endTime))
-				)
+					lte(macroWatchEntries.timestamp, new Date(endTime)),
+				),
 			)
 			.orderBy(desc(macroWatchEntries.timestamp));
 
@@ -201,16 +201,16 @@ export class MacroWatchRepository {
 			conditions.push(
 				eq(
 					macroWatchEntries.session,
-					filters.session as typeof macroWatchEntries.$inferSelect.session
-				)
+					filters.session as typeof macroWatchEntries.$inferSelect.session,
+				),
 			);
 		}
 		if (filters.category) {
 			conditions.push(
 				eq(
 					macroWatchEntries.category,
-					filters.category as typeof macroWatchEntries.$inferSelect.category
-				)
+					filters.category as typeof macroWatchEntries.$inferSelect.category,
+				),
 			);
 		}
 		if (filters.fromTime) {
@@ -235,7 +235,7 @@ export class MacroWatchRepository {
 		if (filters.symbols && filters.symbols.length > 0) {
 			const symbolSet = new Set(filters.symbols.map((s) => s.toUpperCase()));
 			results = results.filter((entry) =>
-				entry.symbols.some((s) => symbolSet.has(s.toUpperCase()))
+				entry.symbols.some((s) => symbolSet.has(s.toUpperCase())),
 			);
 		}
 
@@ -255,7 +255,7 @@ export class MacroWatchRepository {
 	async findByCreatedAtRange(
 		startTime: string,
 		endTime: string,
-		limit = 100
+		limit = 100,
 	): Promise<MacroWatchEntry[]> {
 		const rows = await this.db
 			.select()
@@ -263,8 +263,8 @@ export class MacroWatchRepository {
 			.where(
 				and(
 					gte(macroWatchEntries.createdAt, new Date(startTime)),
-					lte(macroWatchEntries.createdAt, new Date(endTime))
-				)
+					lte(macroWatchEntries.createdAt, new Date(endTime)),
+				),
 			)
 			.orderBy(desc(macroWatchEntries.timestamp))
 			.limit(limit);
@@ -396,7 +396,7 @@ export class MacroWatchRepository {
 
 	async getNewspaperByCompiledAtRange(
 		startTime: string,
-		endTime: string
+		endTime: string,
 	): Promise<MorningNewspaper | null> {
 		const [row] = await this.db
 			.select()
@@ -404,8 +404,8 @@ export class MacroWatchRepository {
 			.where(
 				and(
 					gte(morningNewspapers.compiledAt, new Date(startTime)),
-					lte(morningNewspapers.compiledAt, new Date(endTime))
-				)
+					lte(morningNewspapers.compiledAt, new Date(endTime)),
+				),
 			)
 			.orderBy(desc(morningNewspapers.compiledAt))
 			.limit(1);

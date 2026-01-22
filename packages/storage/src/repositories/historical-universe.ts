@@ -142,7 +142,7 @@ export class IndexConstituentsRepository {
 	}
 
 	async upsert(
-		constituent: Omit<IndexConstituent, "id" | "createdAt" | "updatedAt">
+		constituent: Omit<IndexConstituent, "id" | "createdAt" | "updatedAt">,
 	): Promise<void> {
 		await this.db
 			.insert(indexConstituents)
@@ -169,7 +169,7 @@ export class IndexConstituentsRepository {
 	}
 
 	async bulkInsert(
-		constituents: Omit<IndexConstituent, "id" | "createdAt" | "updatedAt">[]
+		constituents: Omit<IndexConstituent, "id" | "createdAt" | "updatedAt">[],
 	): Promise<number> {
 		if (constituents.length === 0) {
 			return 0;
@@ -193,8 +193,11 @@ export class IndexConstituentsRepository {
 				and(
 					eq(indexConstituents.indexId, indexId),
 					lte(indexConstituents.dateAdded, asOf),
-					or(isNull(indexConstituents.dateRemoved), sql`${indexConstituents.dateRemoved} > ${asOf}`)
-				)
+					or(
+						isNull(indexConstituents.dateRemoved),
+						sql`${indexConstituents.dateRemoved} > ${asOf}`,
+					),
+				),
 			)
 			.orderBy(asc(indexConstituents.symbol));
 
@@ -234,9 +237,9 @@ export class IndexConstituentsRepository {
 					lte(indexConstituents.dateAdded, dateObj),
 					or(
 						isNull(indexConstituents.dateRemoved),
-						sql`${indexConstituents.dateRemoved} > ${dateObj}`
-					)
-				)
+						sql`${indexConstituents.dateRemoved} > ${dateObj}`,
+					),
+				),
 			);
 
 		return (result?.cnt ?? 0) > 0;
@@ -245,7 +248,7 @@ export class IndexConstituentsRepository {
 	async getChangesInRange(
 		indexId: IndexId,
 		startDate: string,
-		endDate: string
+		endDate: string,
 	): Promise<{ additions: IndexConstituent[]; removals: IndexConstituent[] }> {
 		const start = new Date(startDate);
 		const end = new Date(endDate);
@@ -257,8 +260,8 @@ export class IndexConstituentsRepository {
 				and(
 					eq(indexConstituents.indexId, indexId),
 					gte(indexConstituents.dateAdded, start),
-					lte(indexConstituents.dateAdded, end)
-				)
+					lte(indexConstituents.dateAdded, end),
+				),
 			)
 			.orderBy(asc(indexConstituents.dateAdded));
 
@@ -269,8 +272,8 @@ export class IndexConstituentsRepository {
 				and(
 					eq(indexConstituents.indexId, indexId),
 					gte(indexConstituents.dateRemoved, start),
-					lte(indexConstituents.dateRemoved, end)
-				)
+					lte(indexConstituents.dateRemoved, end),
+				),
 			)
 			.orderBy(asc(indexConstituents.dateRemoved));
 
@@ -293,9 +296,9 @@ export class IndexConstituentsRepository {
 						lte(indexConstituents.dateAdded, asOf),
 						or(
 							isNull(indexConstituents.dateRemoved),
-							sql`${indexConstituents.dateRemoved} > ${asOf}`
-						)
-					)
+							sql`${indexConstituents.dateRemoved} > ${asOf}`,
+						),
+					),
 				);
 
 			return result?.cnt ?? 0;
@@ -392,7 +395,7 @@ export class TickerChangesRepository {
 				.select({ oldSymbol: tickerChanges.oldSymbol })
 				.from(tickerChanges)
 				.where(
-					and(eq(tickerChanges.newSymbol, historical), sql`${tickerChanges.changeDate} > ${asOf}`)
+					and(eq(tickerChanges.newSymbol, historical), sql`${tickerChanges.changeDate} > ${asOf}`),
 				)
 				.orderBy(asc(tickerChanges.changeDate))
 				.limit(1);
@@ -463,8 +466,8 @@ export class UniverseSnapshotsRepository {
 			.where(
 				and(
 					eq(universeSnapshots.indexId, indexId),
-					eq(universeSnapshots.snapshotDate, new Date(snapshotDate))
-				)
+					eq(universeSnapshots.snapshotDate, new Date(snapshotDate)),
+				),
 			)
 			.limit(1);
 
@@ -478,7 +481,7 @@ export class UniverseSnapshotsRepository {
 			.select()
 			.from(universeSnapshots)
 			.where(
-				and(eq(universeSnapshots.indexId, indexId), lte(universeSnapshots.snapshotDate, dateObj))
+				and(eq(universeSnapshots.indexId, indexId), lte(universeSnapshots.snapshotDate, dateObj)),
 			)
 			.orderBy(desc(universeSnapshots.snapshotDate))
 			.limit(1);
@@ -502,7 +505,7 @@ export class UniverseSnapshotsRepository {
 		const result = await this.db
 			.delete(universeSnapshots)
 			.where(
-				and(sql`${universeSnapshots.expiresAt} IS NOT NULL`, lte(universeSnapshots.expiresAt, now))
+				and(sql`${universeSnapshots.expiresAt} IS NOT NULL`, lte(universeSnapshots.expiresAt, now)),
 			)
 			.returning({ id: universeSnapshots.id });
 

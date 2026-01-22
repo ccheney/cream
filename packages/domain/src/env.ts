@@ -371,7 +371,7 @@ const ENVIRONMENT_REQUIREMENTS: Record<CreamEnvironment, (keyof EnvConfig)[]> = 
 export function validateEnvironment(
 	ctx: ExecutionContext,
 	serviceName: string,
-	additionalRequirements: (keyof EnvConfig)[] = []
+	additionalRequirements: (keyof EnvConfig)[] = [],
 ): EnvValidationResult {
 	const errors: string[] = [];
 	const warnings: string[] = [];
@@ -417,7 +417,7 @@ export function validateEnvironment(
 export function validateEnvironmentOrExit(
 	ctx: ExecutionContext,
 	serviceName: string,
-	additionalRequirements: (keyof EnvConfig)[] = []
+	additionalRequirements: (keyof EnvConfig)[] = [],
 ): void {
 	const result = validateEnvironment(ctx, serviceName, additionalRequirements);
 
@@ -430,7 +430,7 @@ export function validateEnvironmentOrExit(
 				source: ctx.source,
 				traceId: ctx.traceId,
 			},
-			"Environment validation failed"
+			"Environment validation failed",
 		);
 		process.exit(1);
 	}
@@ -441,7 +441,7 @@ export function validateEnvironmentOrExit(
 				serviceName,
 				warnings: result.warnings,
 			},
-			"Environment validation warnings"
+			"Environment validation warnings",
 		);
 	}
 }

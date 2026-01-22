@@ -21,7 +21,7 @@ export const auditLog = pgTable(
 		index("idx_audit_log_timestamp").on(table.timestamp),
 		index("idx_audit_log_action").on(table.action),
 		index("idx_audit_log_environment").on(table.environment),
-	]
+	],
 );
 
 // parity_validation_history: Research-to-production validation history
@@ -45,5 +45,5 @@ export const parityValidationHistory = pgTable(
 		index("idx_parity_history_environment").on(table.environment),
 		index("idx_parity_history_passed").on(table.passed),
 		index("idx_parity_history_validated_at").on(table.validatedAt),
-	]
+	],
 );

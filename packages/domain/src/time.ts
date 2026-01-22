@@ -73,7 +73,7 @@ export const Iso8601UtcSchema = z
 			const date = new Date(val);
 			return !Number.isNaN(date.getTime());
 		},
-		{ message: "Invalid date value" }
+		{ message: "Invalid date value" },
 	)
 	.refine((val) => new Date(val) >= UNIX_EPOCH, {
 		message: "Timestamp must be after Unix epoch (1970-01-01)",
@@ -104,7 +104,7 @@ export const DateOnlySchema = z
 			const date = new Date(year, month - 1, day);
 			return date.getFullYear() === year && date.getMonth() === month - 1 && date.getDate() === day;
 		},
-		{ message: "Invalid date value" }
+		{ message: "Invalid date value" },
 	);
 export type DateOnly = z.infer<typeof DateOnlySchema>;
 

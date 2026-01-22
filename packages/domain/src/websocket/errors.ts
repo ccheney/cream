@@ -292,7 +292,7 @@ export type EnhancedErrorMessage = z.infer<typeof EnhancedErrorMessageSchema>;
 export function createErrorDetails(
 	code: ErrorCode,
 	message?: string,
-	context?: ErrorDetails["context"]
+	context?: ErrorDetails["context"],
 ): ErrorDetails {
 	return {
 		code,
@@ -310,7 +310,7 @@ export function createErrorDetails(
 export function createErrorMessage(
 	code: ErrorCode,
 	message?: string,
-	context?: ErrorDetails["context"]
+	context?: ErrorDetails["context"],
 ): EnhancedErrorMessage {
 	return {
 		type: "error",
@@ -340,7 +340,7 @@ export function authError(reason: "failed" | "expired" | "invalid_token"): Enhan
  */
 export function channelError(
 	reason: "not_found" | "unauthorized" | "invalid",
-	channel: string
+	channel: string,
 ): EnhancedErrorMessage {
 	const codeMap = {
 		not_found: "CHANNEL_NOT_FOUND",
@@ -358,7 +358,7 @@ export function channelError(
  */
 export function messageError(
 	reason: "invalid_format" | "invalid_type" | "too_large" | "parse_error",
-	originalMessage?: unknown
+	originalMessage?: unknown,
 ): EnhancedErrorMessage {
 	const codeMap = {
 		invalid_format: "MESSAGE_INVALID_FORMAT",
@@ -375,7 +375,7 @@ export function messageError(
  */
 export function rateLimitError(
 	type: "general" | "messages" | "subscriptions",
-	retryAfterMs?: number
+	retryAfterMs?: number,
 ): EnhancedErrorMessage {
 	const codeMap = {
 		general: "RATE_LIMIT_EXCEEDED",
@@ -392,7 +392,7 @@ export function rateLimitError(
 export function limitError(
 	type: "connections" | "symbols" | "channels",
 	limit: number,
-	current: number
+	current: number,
 ): EnhancedErrorMessage {
 	const codeMap = {
 		connections: "LIMIT_MAX_CONNECTIONS",
@@ -411,7 +411,7 @@ export function limitError(
  */
 export function internalError(
 	type: "error" | "timeout" | "unavailable",
-	stack?: string
+	stack?: string,
 ): EnhancedErrorMessage {
 	const codeMap = {
 		error: "INTERNAL_ERROR",

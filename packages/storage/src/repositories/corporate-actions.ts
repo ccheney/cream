@@ -115,7 +115,7 @@ export class CorporateActionsRepository {
 	async getForSymbol(
 		symbol: string,
 		startDate?: string,
-		endDate?: string
+		endDate?: string,
 	): Promise<CorporateAction[]> {
 		const conditions = [eq(corporateActions.symbol, symbol)];
 
@@ -197,7 +197,7 @@ export class CorporateActionsRepository {
 	async findByCreatedAtRange(
 		startTime: string,
 		endTime: string,
-		limit = 100
+		limit = 100,
 	): Promise<CorporateAction[]> {
 		const rows = await this.db
 			.select()
@@ -205,8 +205,8 @@ export class CorporateActionsRepository {
 			.where(
 				and(
 					gte(corporateActions.createdAt, new Date(startTime)),
-					lte(corporateActions.createdAt, new Date(endTime))
-				)
+					lte(corporateActions.createdAt, new Date(endTime)),
+				),
 			)
 			.orderBy(desc(corporateActions.exDate), corporateActions.symbol)
 			.limit(limit);

@@ -93,7 +93,7 @@ export class SystemStateRepository {
 			.select()
 			.from(systemState)
 			.where(
-				eq(systemState.environment, environment as typeof systemState.$inferSelect.environment)
+				eq(systemState.environment, environment as typeof systemState.$inferSelect.environment),
 			)
 			.limit(1);
 
@@ -133,7 +133,7 @@ export class SystemStateRepository {
 			.update(systemState)
 			.set(updates)
 			.where(
-				eq(systemState.environment, environment as typeof systemState.$inferSelect.environment)
+				eq(systemState.environment, environment as typeof systemState.$inferSelect.environment),
 			)
 			.returning();
 
@@ -150,7 +150,7 @@ export class SystemStateRepository {
 	async updateCycle(
 		environment: string,
 		cycleId: string,
-		phase: SystemCyclePhase
+		phase: SystemCyclePhase,
 	): Promise<SystemState> {
 		const now = new Date().toISOString();
 		return this.update(environment, {

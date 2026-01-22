@@ -228,7 +228,7 @@ export class PredictionMarketsRepository {
 	async getSnapshots(
 		ticker: string,
 		startTime: string,
-		endTime: string
+		endTime: string,
 	): Promise<MarketSnapshot[]> {
 		const rows = await this.db
 			.select()
@@ -237,8 +237,8 @@ export class PredictionMarketsRepository {
 				and(
 					eq(predictionMarketSnapshots.marketTicker, ticker),
 					gte(predictionMarketSnapshots.snapshotTime, new Date(startTime)),
-					lte(predictionMarketSnapshots.snapshotTime, new Date(endTime))
-				)
+					lte(predictionMarketSnapshots.snapshotTime, new Date(endTime)),
+				),
 			)
 			.orderBy(desc(predictionMarketSnapshots.snapshotTime));
 
@@ -252,16 +252,16 @@ export class PredictionMarketsRepository {
 			conditions.push(
 				eq(
 					predictionMarketSnapshots.platform,
-					filters.platform as typeof predictionMarketSnapshots.$inferSelect.platform
-				)
+					filters.platform as typeof predictionMarketSnapshots.$inferSelect.platform,
+				),
 			);
 		}
 		if (filters.marketType) {
 			conditions.push(
 				eq(
 					predictionMarketSnapshots.marketType,
-					filters.marketType as typeof predictionMarketSnapshots.$inferSelect.marketType
-				)
+					filters.marketType as typeof predictionMarketSnapshots.$inferSelect.marketType,
+				),
 			);
 		}
 		if (filters.marketTicker) {
@@ -290,7 +290,7 @@ export class PredictionMarketsRepository {
 		const subqueryConditions = platform
 			? eq(
 					predictionMarketSnapshots.platform,
-					platform as typeof predictionMarketSnapshots.$inferSelect.platform
+					platform as typeof predictionMarketSnapshots.$inferSelect.platform,
 				)
 			: undefined;
 
@@ -311,8 +311,8 @@ export class PredictionMarketsRepository {
 				latestTimes,
 				and(
 					eq(predictionMarketSnapshots.marketTicker, latestTimes.marketTicker),
-					eq(predictionMarketSnapshots.snapshotTime, latestTimes.maxTime)
-				)
+					eq(predictionMarketSnapshots.snapshotTime, latestTimes.maxTime),
+				),
 			);
 
 		return rows.map((row) => mapSnapshotRow(row.prediction_market_snapshots));
@@ -409,8 +409,8 @@ export class PredictionMarketsRepository {
 				latestTimes,
 				and(
 					eq(predictionMarketSignals.signalType, latestTimes.signalType),
-					eq(predictionMarketSignals.computedAt, latestTimes.maxTime)
-				)
+					eq(predictionMarketSignals.computedAt, latestTimes.maxTime),
+				),
 			);
 
 		return rows.map((row) => mapSignalRow(row.prediction_market_signals));
@@ -480,7 +480,7 @@ export class PredictionMarketsRepository {
 			fromTime?: string;
 			toTime?: string;
 		} = {},
-		limit = 100
+		limit = 100,
 	): Promise<ArbitrageAlert[]> {
 		const conditions = [];
 
@@ -491,7 +491,7 @@ export class PredictionMarketsRepository {
 			conditions.push(
 				options.resolved
 					? isNotNull(predictionMarketArbitrage.resolvedAt)
-					: isNull(predictionMarketArbitrage.resolvedAt)
+					: isNull(predictionMarketArbitrage.resolvedAt),
 			);
 		}
 		if (options.fromTime) {
@@ -540,8 +540,8 @@ export class PredictionMarketsRepository {
 			.where(
 				and(
 					lte(predictionMarketArbitrage.createdAt, cutoff),
-					isNotNull(predictionMarketArbitrage.resolvedAt)
-				)
+					isNotNull(predictionMarketArbitrage.resolvedAt),
+				),
 			)
 			.returning({ id: predictionMarketArbitrage.id });
 

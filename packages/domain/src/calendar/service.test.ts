@@ -47,7 +47,7 @@ describe("AlpacaCalendarService", () => {
 		service = new AlpacaCalendarService(
 			{ apiKey: "test", apiSecret: "test", environment: "PAPER" },
 			mockClient,
-			cache
+			cache,
 		);
 	});
 
@@ -264,7 +264,7 @@ describe("AlpacaCalendarService", () => {
 
 			it("getTradingSessionSync throws", () => {
 				expect(() => service.getTradingSessionSync(new Date("2026-01-05T16:00:00Z"))).toThrow(
-					CalendarServiceError
+					CalendarServiceError,
 				);
 			});
 

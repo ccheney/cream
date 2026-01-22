@@ -200,7 +200,7 @@ export class ConstraintsConfigRepository {
 			.select()
 			.from(constraintsConfig)
 			.where(
-				and(eq(constraintsConfig.environment, environment), eq(constraintsConfig.status, "active"))
+				and(eq(constraintsConfig.environment, environment), eq(constraintsConfig.status, "active")),
 			)
 			.limit(1);
 
@@ -213,7 +213,7 @@ export class ConstraintsConfigRepository {
 			throw new RepositoryError(
 				`No active constraints config found for environment '${environment}'. Run seed script.`,
 				"NOT_FOUND",
-				"constraints_config"
+				"constraints_config",
 			);
 		}
 		return config;
@@ -224,7 +224,7 @@ export class ConstraintsConfigRepository {
 			.select()
 			.from(constraintsConfig)
 			.where(
-				and(eq(constraintsConfig.environment, environment), eq(constraintsConfig.status, "draft"))
+				and(eq(constraintsConfig.environment, environment), eq(constraintsConfig.status, "draft")),
 			)
 			.orderBy(desc(constraintsConfig.createdAt))
 			.limit(1);
@@ -234,7 +234,7 @@ export class ConstraintsConfigRepository {
 
 	async saveDraft(
 		environment: ConstraintsEnvironment,
-		input: UpdateConstraintsConfigInput & { id?: string }
+		input: UpdateConstraintsConfigInput & { id?: string },
 	): Promise<ConstraintsConfig> {
 		const existingDraft = await this.getDraft(environment);
 
@@ -317,8 +317,8 @@ export class ConstraintsConfigRepository {
 				.where(
 					and(
 						eq(constraintsConfig.environment, config.environment),
-						eq(constraintsConfig.status, "active")
-					)
+						eq(constraintsConfig.status, "active"),
+					),
 				);
 		}
 
@@ -348,7 +348,7 @@ export class ConstraintsConfigRepository {
 			throw new RepositoryError(
 				"Cannot delete active constraints config",
 				"CONSTRAINT_VIOLATION",
-				"constraints_config"
+				"constraints_config",
 			);
 		}
 

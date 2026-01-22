@@ -29,7 +29,7 @@ export class GrpcError extends Error {
 			details?: unknown;
 			requestId?: string;
 			cause?: Error;
-		}
+		},
 	) {
 		super(message, { cause: options?.cause });
 		this.name = "GrpcError";

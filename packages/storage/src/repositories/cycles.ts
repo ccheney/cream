@@ -282,12 +282,12 @@ export function reconstructStreamingState(events: CycleEvent[]): ReconstructedSt
 			const toolEvent = events.find(
 				(e) =>
 					e.eventType === "tool_call" &&
-					(e.data as { toolCallId?: string }).toolCallId === tc.toolCallId
+					(e.data as { toolCallId?: string }).toolCallId === tc.toolCallId,
 			);
 			return toolEvent?.agentType && agents[toolEvent.agentType] === agent;
 		});
 		agent.toolCalls = agentToolCalls.toSorted(
-			(a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime()
+			(a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime(),
 		);
 	}
 
@@ -565,13 +565,13 @@ export class CyclesRepository {
 
 	async findEvents(
 		cycleId: string,
-		options?: { eventType?: CycleEventType }
+		options?: { eventType?: CycleEventType },
 	): Promise<CycleEvent[]> {
 		const conditions = [eq(cycleEvents.cycleId, cycleId)];
 
 		if (options?.eventType) {
 			conditions.push(
-				eq(cycleEvents.eventType, options.eventType as typeof cycleEvents.$inferInsert.eventType)
+				eq(cycleEvents.eventType, options.eventType as typeof cycleEvents.$inferInsert.eventType),
 			);
 		}
 
@@ -593,9 +593,9 @@ export class CyclesRepository {
 					eq(cycleEvents.cycleId, cycleId),
 					inArray(
 						cycleEvents.eventType,
-						STREAMING_EVENT_TYPES as (typeof cycleEvents.$inferInsert.eventType)[]
-					)
-				)
+						STREAMING_EVENT_TYPES as (typeof cycleEvents.$inferInsert.eventType)[],
+					),
+				),
 			)
 			.orderBy(cycleEvents.timestamp);
 
@@ -608,7 +608,7 @@ export class CyclesRepository {
 		environment: string,
 		totalSymbols = 0,
 		configVersion?: string,
-		id?: string
+		id?: string,
 	): Promise<Cycle> {
 		return this.create({ id, environment, totalSymbols, configVersion });
 	}
@@ -618,7 +618,7 @@ export class CyclesRepository {
 		phase: CyclePhase,
 		completedSymbols: number,
 		progressPct: number,
-		message?: string
+		message?: string,
 	): Promise<void> {
 		await this.update(id, {
 			currentPhase: phase,
@@ -645,7 +645,7 @@ export class CyclesRepository {
 			decisions: DecisionSummary[];
 			orders: OrderSummary[];
 			durationMs: number;
-		}
+		},
 	): Promise<Cycle> {
 		return this.update(id, {
 			status: "completed",
@@ -689,7 +689,7 @@ export class CyclesRepository {
 					totalDecisions: sql<string>`SUM(${cycles.decisionsCount})`.as("total_decisions"),
 					totalOrders: sql<string>`SUM(${cycles.ordersCount})`.as("total_orders"),
 					approvedCount: sql<number>`COUNT(*) FILTER (WHERE ${cycles.approved} = true)`.as(
-						"approved_count"
+						"approved_count",
 					),
 				})
 				.from(cycles)

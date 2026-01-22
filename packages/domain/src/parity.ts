@@ -72,7 +72,7 @@ export interface VersionComparisonResult {
  */
 export function compareVersionRegistries(
 	research: VersionRegistry,
-	live: VersionRegistry
+	live: VersionRegistry,
 ): VersionComparisonResult {
 	const mismatches: VersionComparisonResult["mismatches"] = [];
 	const missingFromLive: string[] = [];
@@ -167,7 +167,7 @@ export interface LookAheadBiasResult {
  */
 export function checkLookAheadBias(
 	candles: ParityCandle[],
-	decisionTimestamp: string
+	decisionTimestamp: string,
 ): LookAheadBiasResult {
 	const violations: LookAheadBiasResult["violations"] = [];
 	const decisionTime = new Date(decisionTimestamp).getTime();
@@ -220,7 +220,7 @@ export function validateAdjustedData(
 		adjustedPrice: number;
 		splitFactor?: number;
 		dividendAdjustment?: number;
-	}>
+	}>,
 ): LookAheadBiasResult {
 	const violations: LookAheadBiasResult["violations"] = [];
 
@@ -318,7 +318,7 @@ export function compareFillModels(
 	tolerance: { slippageBps: number; fillRatePct: number } = {
 		slippageBps: 10,
 		fillRatePct: 5,
-	}
+	},
 ): FillModelComparisonResult {
 	const discrepancies: FillModelComparisonResult["discrepancies"] = [];
 
@@ -470,7 +470,7 @@ export const DEFAULT_METRIC_TOLERANCES: Record<keyof ParityPerformanceMetrics, n
 export function comparePerformanceMetrics(
 	research: ParityPerformanceMetrics,
 	live: ParityPerformanceMetrics,
-	tolerances: Partial<Record<keyof ParityPerformanceMetrics, number>> = {}
+	tolerances: Partial<Record<keyof ParityPerformanceMetrics, number>> = {},
 ): StatisticalParityResult {
 	const mergedTolerances = { ...DEFAULT_METRIC_TOLERANCES, ...tolerances };
 
@@ -595,7 +595,7 @@ export interface DataConsistencyResult {
 export function validateDataConsistency(
 	historical: DataSourceMetadata,
 	realtime: DataSourceMetadata,
-	delistedSymbols: string[] = []
+	delistedSymbols: string[] = [],
 ): DataConsistencyResult {
 	const issues: DataConsistencyResult["issues"] = [];
 	const recommendations: string[] = [];
@@ -607,7 +607,7 @@ export function validateDataConsistency(
 			severity: "warning",
 		});
 		recommendations.push(
-			`Consider using same provider (${realtime.provider}) for both historical and real-time data.`
+			`Consider using same provider (${realtime.provider}) for both historical and real-time data.`,
 		);
 	}
 
@@ -706,17 +706,17 @@ export function runParityValidation(params: {
 		if (!versionComparison.match) {
 			if (versionComparison.mismatches.length > 0) {
 				blockingIssues.push(
-					`Indicator version mismatches: ${versionComparison.mismatches.map((m) => m.indicatorId).join(", ")}`
+					`Indicator version mismatches: ${versionComparison.mismatches.map((m) => m.indicatorId).join(", ")}`,
 				);
 			}
 			if (versionComparison.missingFromLive.length > 0) {
 				blockingIssues.push(
-					`Indicators missing from live: ${versionComparison.missingFromLive.join(", ")}`
+					`Indicators missing from live: ${versionComparison.missingFromLive.join(", ")}`,
 				);
 			}
 			if (versionComparison.missingFromResearch.length > 0) {
 				warnings.push(
-					`Indicators missing from research: ${versionComparison.missingFromResearch.join(", ")}`
+					`Indicators missing from research: ${versionComparison.missingFromResearch.join(", ")}`,
 				);
 			}
 		}
@@ -743,13 +743,13 @@ export function runParityValidation(params: {
 
 		if (fillModelComparison.matchScore < 0.8) {
 			warnings.push(
-				`Fill model match score ${Math.round(fillModelComparison.matchScore * 100)}% is below 80% threshold`
+				`Fill model match score ${Math.round(fillModelComparison.matchScore * 100)}% is below 80% threshold`,
 			);
 		}
 
 		for (const d of fillModelComparison.discrepancies) {
 			warnings.push(
-				`Fill discrepancy in ${d.field}: research=${d.researchValue}, live=${d.liveValue}`
+				`Fill discrepancy in ${d.field}: research=${d.researchValue}, live=${d.liveValue}`,
 			);
 		}
 	}
@@ -770,7 +770,7 @@ export function runParityValidation(params: {
 		dataConsistency = validateDataConsistency(
 			params.historicalData,
 			params.realtimeData,
-			params.delistedSymbols
+			params.delistedSymbols,
 		);
 
 		for (const issue of dataConsistency.issues) {

@@ -28,7 +28,7 @@ function createPosition(
 	symbol: string,
 	quantity: number,
 	marketValue: number,
-	type: "EQUITY" | "OPTION" = "EQUITY"
+	type: "EQUITY" | "OPTION" = "EQUITY",
 ): Position {
 	const avgEntryPrice = Math.abs(marketValue / quantity);
 	return {
@@ -363,7 +363,7 @@ describe("formatExposureStats", () => {
 	test("formats stats as readable string", () => {
 		const stats = calculateExposureStats(
 			[createPosition("AAPL", 100, 70000), createPosition("TSLA", -50, -30000)],
-			100000
+			100000,
 		);
 
 		const formatted = formatExposureStats(stats);

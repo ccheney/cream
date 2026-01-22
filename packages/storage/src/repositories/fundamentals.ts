@@ -302,8 +302,8 @@ export class FundamentalsRepository {
 			.where(
 				and(
 					eq(fundamentalIndicators.symbol, symbol),
-					eq(fundamentalIndicators.date, new Date(date))
-				)
+					eq(fundamentalIndicators.date, new Date(date)),
+				),
 			)
 			.limit(1);
 
@@ -337,7 +337,7 @@ export class FundamentalsRepository {
 
 	async findBySymbol(
 		symbol: string,
-		filters?: { startDate?: string; endDate?: string }
+		filters?: { startDate?: string; endDate?: string },
 	): Promise<FundamentalIndicators[]> {
 		const conditions = [eq(fundamentalIndicators.symbol, symbol)];
 
@@ -359,7 +359,7 @@ export class FundamentalsRepository {
 
 	async findMany(
 		filters?: FundamentalFilters,
-		pagination?: PaginationOptions
+		pagination?: PaginationOptions,
 	): Promise<PaginatedResult<FundamentalIndicators>> {
 		const conditions = [];
 
@@ -419,8 +419,8 @@ export class FundamentalsRepository {
 				.where(
 					and(
 						eq(fundamentalIndicators.sector, sector),
-						eq(fundamentalIndicators.date, new Date(date))
-					)
+						eq(fundamentalIndicators.date, new Date(date)),
+					),
 				)
 				.orderBy(fundamentalIndicators.symbol);
 
@@ -438,7 +438,7 @@ export class FundamentalsRepository {
 
 	async update(
 		id: string,
-		input: UpdateFundamentalIndicatorsInput
+		input: UpdateFundamentalIndicatorsInput,
 	): Promise<FundamentalIndicators> {
 		const updateData: Partial<typeof fundamentalIndicators.$inferInsert> = {
 			computedAt: new Date(),
@@ -527,8 +527,8 @@ export class FundamentalsRepository {
 			.where(
 				and(
 					eq(fundamentalIndicators.symbol, symbol),
-					eq(fundamentalIndicators.date, new Date(date))
-				)
+					eq(fundamentalIndicators.date, new Date(date)),
+				),
 			)
 			.returning({ id: fundamentalIndicators.id });
 
