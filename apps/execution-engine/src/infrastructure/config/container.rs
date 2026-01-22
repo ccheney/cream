@@ -8,8 +8,8 @@ use crate::application::ports::{
     BrokerPort, EventPublisherPort, PriceFeedPort, RiskRepositoryPort,
 };
 use crate::application::use_cases::{
-    CancelOrdersUseCase, MonitorStopsUseCase, ReconcileUseCase, SubmitOrdersUseCase,
-    ValidateRiskUseCase,
+    CancelOrdersUseCase, MonitorStopsUseCase, ReconcileUseCase, RollOptionUseCase,
+    SubmitOrdersUseCase, ValidateRiskUseCase,
 };
 use crate::domain::order_execution::repository::OrderRepository;
 
@@ -125,6 +125,17 @@ where
     #[must_use]
     pub fn reconcile_use_case(&self) -> ReconcileUseCase<B, O> {
         ReconcileUseCase::new(Arc::clone(&self.broker), Arc::clone(&self.order_repo))
+    }
+
+    /// Create a `RollOptionUseCase`.
+    #[must_use]
+    pub fn roll_option_use_case(&self) -> RollOptionUseCase<B, R, O, E> {
+        RollOptionUseCase::new(
+            Arc::clone(&self.broker),
+            Arc::clone(&self.risk_repo),
+            Arc::clone(&self.order_repo),
+            Arc::clone(&self.event_publisher),
+        )
     }
 }
 
@@ -345,5 +356,6 @@ mod tests {
         let _ = container.cancel_orders_use_case();
         let _ = container.monitor_stops_use_case();
         let _ = container.reconcile_use_case();
+        let _ = container.roll_option_use_case();
     }
 }
