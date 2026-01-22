@@ -126,8 +126,9 @@ export const AccountSummaryCard = memo(function AccountSummaryCard({
 			return undefined;
 		}
 
-		// If we have live day P&L, override the "today" period
-		if (liveDayPnl !== undefined || liveDayPnlPct !== undefined) {
+		// If we have live day P&L from active streaming, override the "today" period
+		// Only override if streaming is active (isStreaming prop) to avoid using stale/zero values
+		if (isStreaming && (liveDayPnl !== undefined || liveDayPnlPct !== undefined)) {
 			return {
 				...performanceMetrics,
 				periods: {
@@ -143,7 +144,7 @@ export const AccountSummaryCard = memo(function AccountSummaryCard({
 		}
 
 		return performanceMetrics;
-	}, [performanceMetrics, liveDayPnl, liveDayPnlPct]);
+	}, [performanceMetrics, liveDayPnl, liveDayPnlPct, isStreaming]);
 
 	// Determine margin status variant
 	const marginVariant: MetricItemProps["variant"] =
@@ -204,16 +205,46 @@ export const AccountSummaryCard = memo(function AccountSummaryCard({
 				/>
 				<MetricItem
 					label="PDT Status"
-					tooltip="Pattern Day Trader status (requires $25k equity to day trade)"
-					value={account?.patternDayTrader ? "Yes" : "No"}
-					variant={account?.patternDayTrader ? "warning" : "default"}
+					tooltip={
+						account && account.equity >= 25000
+							? "Equity above $25k - no day trade restrictions apply"
+							: "Pattern Day Trader status (requires $25k equity for unlimited day trades)"
+					}
+					value={
+						account && account.equity >= 25000
+							? "Unrestricted"
+							: account?.patternDayTrader
+								? "Flagged"
+								: "No"
+					}
+					variant={
+						account && account.equity >= 25000
+							? "positive"
+							: account?.patternDayTrader
+								? "negative"
+								: "default"
+					}
 					isLoading={isLoading}
 				/>
 				<MetricItem
 					label="Day Trades"
-					tooltip="Number of day trades used in rolling 5-day period (limit: 3)"
-					value={`${account?.daytradeCount ?? 0}/3`}
-					variant={account && account.daytradeCount >= 3 ? "negative" : "default"}
+					tooltip={
+						account && account.equity >= 25000
+							? "Day trades in rolling 5-day period (no limit - equity above $25k)"
+							: "Day trades used in rolling 5-day period (limit: 3 for accounts under $25k)"
+					}
+					value={
+						account && account.equity >= 25000
+							? `${account.daytradeCount}`
+							: `${account?.daytradeCount ?? 0}/3`
+					}
+					variant={
+						account && account.equity >= 25000
+							? "default"
+							: account && account.daytradeCount >= 3
+								? "negative"
+								: "default"
+					}
 					isLoading={isLoading}
 				/>
 				<MetricItem
