@@ -263,7 +263,7 @@ export class AlpacaMarketDataClient {
 	 */
 	private async request<T>(
 		path: string,
-		params?: Record<string, string | number | boolean | undefined>
+		params?: Record<string, string | number | boolean | undefined>,
 	): Promise<T> {
 		return this.makeRequest<T>(this.baseUrl, path, params);
 	}
@@ -273,7 +273,7 @@ export class AlpacaMarketDataClient {
 	 */
 	private async tradingRequest<T>(
 		path: string,
-		params?: Record<string, string | number | boolean | undefined>
+		params?: Record<string, string | number | boolean | undefined>,
 	): Promise<T> {
 		return this.makeRequest<T>(this.tradingUrl, path, params);
 	}
@@ -284,7 +284,7 @@ export class AlpacaMarketDataClient {
 	private async makeRequest<T>(
 		baseUrl: string,
 		path: string,
-		params?: Record<string, string | number | boolean | undefined>
+		params?: Record<string, string | number | boolean | undefined>,
 	): Promise<T> {
 		const url = new URL(path, baseUrl);
 
@@ -325,7 +325,7 @@ export class AlpacaMarketDataClient {
 		try {
 			const response = await this.request<{ quotes: Record<string, unknown> }>(
 				"/v2/stocks/quotes/latest",
-				{ symbols: symbols.join(",") }
+				{ symbols: symbols.join(",") },
 			);
 
 			if (response?.quotes) {
@@ -379,7 +379,7 @@ export class AlpacaMarketDataClient {
 		timeframe: AlpacaTimeframe,
 		start: string,
 		end: string,
-		limit?: number
+		limit?: number,
 	): Promise<AlpacaBar[]> {
 		const bars: AlpacaBar[] = [];
 
@@ -533,7 +533,7 @@ export class AlpacaMarketDataClient {
 		try {
 			const response = await this.request<{ trades: Record<string, unknown> }>(
 				"/v2/stocks/trades/latest",
-				{ symbols: symbols.join(",") }
+				{ symbols: symbols.join(",") },
 			);
 
 			if (response?.trades) {
@@ -579,7 +579,7 @@ export class AlpacaMarketDataClient {
 	 */
 	async getOptionContracts(
 		underlying: string,
-		params?: OptionContractParams
+		params?: OptionContractParams,
 	): Promise<AlpacaOptionContract[]> {
 		const contracts: AlpacaOptionContract[] = [];
 
@@ -595,7 +595,7 @@ export class AlpacaMarketDataClient {
 					strike_price_gte: params?.strikePriceGte,
 					strike_price_lte: params?.strikePriceLte,
 					limit: params?.limit ?? 1000,
-				}
+				},
 			);
 
 			if (response?.option_contracts && Array.isArray(response.option_contracts)) {
@@ -854,7 +854,7 @@ export class AlpacaMarketDataClient {
 						expiration_date_gte: range.gte,
 						expiration_date_lte: range.lte,
 						limit: 10, // We only need 1 contract per expiration to discover it
-					}
+					},
 				);
 
 				if (response?.option_contracts && Array.isArray(response.option_contracts)) {
@@ -892,7 +892,7 @@ export class AlpacaMarketDataClient {
 				{
 					symbols: symbol,
 					types: "forward_split,reverse_split",
-				}
+				},
 			);
 
 			if (response?.corporate_actions) {
@@ -934,7 +934,7 @@ export class AlpacaMarketDataClient {
 				{
 					symbols: symbol,
 					types: "cash_dividend",
-				}
+				},
 			);
 
 			if (response?.corporate_actions) {
@@ -979,7 +979,7 @@ export class AlpacaMarketDataClient {
 		symbols: string[],
 		limit = 10,
 		start?: string,
-		end?: string
+		end?: string,
 	): Promise<AlpacaNewsArticle[]> {
 		const articles: AlpacaNewsArticle[] = [];
 

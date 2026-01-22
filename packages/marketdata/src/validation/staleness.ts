@@ -15,7 +15,7 @@ import type { Timeframe } from "../ingestion/candleIngestion";
 
 export const StalenessThresholdsSchema = z.record(
 	z.enum(["1m", "5m", "15m", "30m", "1h", "4h", "1d", "1w"]),
-	z.number().positive()
+	z.number().positive(),
 );
 
 export type StalenessThresholds = z.infer<typeof StalenessThresholdsSchema>;
@@ -63,7 +63,7 @@ export const DEFAULT_STALENESS_THRESHOLDS: StalenessThresholds = {
 export function checkStaleness(
 	lastTimestamp: string | null,
 	timeframe: Timeframe,
-	thresholds: StalenessThresholds = DEFAULT_STALENESS_THRESHOLDS
+	thresholds: StalenessThresholds = DEFAULT_STALENESS_THRESHOLDS,
 ): StalenessCheckResult {
 	const threshold = thresholds[timeframe] ?? DEFAULT_STALENESS_THRESHOLDS[timeframe];
 
@@ -106,7 +106,7 @@ export function checkStaleness(
 export function checkMultipleStaleness(
 	timestamps: Map<string, string | null>,
 	timeframe: Timeframe,
-	thresholds: StalenessThresholds = DEFAULT_STALENESS_THRESHOLDS
+	thresholds: StalenessThresholds = DEFAULT_STALENESS_THRESHOLDS,
 ): Map<string, StalenessCheckResult> {
 	const results = new Map<string, StalenessCheckResult>();
 
@@ -128,7 +128,7 @@ export function checkMultipleStaleness(
 export function getStaleSymbols(
 	timestamps: Map<string, string | null>,
 	timeframe: Timeframe,
-	thresholds: StalenessThresholds = DEFAULT_STALENESS_THRESHOLDS
+	thresholds: StalenessThresholds = DEFAULT_STALENESS_THRESHOLDS,
 ): string[] {
 	const stale: string[] = [];
 
@@ -148,7 +148,7 @@ export function getStaleSymbols(
 export function isFresh(
 	lastTimestamp: string | null,
 	timeframe: Timeframe,
-	thresholds: StalenessThresholds = DEFAULT_STALENESS_THRESHOLDS
+	thresholds: StalenessThresholds = DEFAULT_STALENESS_THRESHOLDS,
 ): boolean {
 	return !checkStaleness(lastTimestamp, timeframe, thresholds).isStale;
 }

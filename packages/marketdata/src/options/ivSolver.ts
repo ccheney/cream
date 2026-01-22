@@ -61,7 +61,7 @@ function blackScholesPrice(
 	T: number, // Time to expiry (years)
 	r: number, // Risk-free rate
 	sigma: number, // Volatility
-	optionType: OptionType
+	optionType: OptionType,
 ): number {
 	if (T <= 0) {
 		// At expiration, return intrinsic value
@@ -97,7 +97,7 @@ function blackScholesVega(
 	K: number, // Strike
 	T: number, // Time to expiry (years)
 	r: number, // Risk-free rate
-	sigma: number // Volatility
+	sigma: number, // Volatility
 ): number {
 	if (T <= 0 || sigma <= 0) {
 		return 0;
@@ -236,7 +236,7 @@ export function solveIVFromQuote(
 	strike: number,
 	timeToExpiration: number,
 	optionType: OptionType,
-	riskFreeRate = DEFAULT_RISK_FREE_RATE
+	riskFreeRate = DEFAULT_RISK_FREE_RATE,
 ): number | null {
 	// Use mid price
 	const midPrice = (bidPrice + askPrice) / 2;
@@ -341,7 +341,7 @@ export function buildOptionSymbol(
 	root: string,
 	expiry: string | Date,
 	type: OptionType,
-	strike: number
+	strike: number,
 ): string {
 	const expiryDate = typeof expiry === "string" ? new Date(expiry) : expiry;
 

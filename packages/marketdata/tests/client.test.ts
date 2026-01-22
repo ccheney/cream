@@ -112,7 +112,7 @@ describe("RestClient", () => {
 		expect(mockFetch).toHaveBeenCalled();
 		const options = getMockCallOptions(mockFetch);
 		expect((options?.headers as Record<string, string> | undefined)?.Authorization).toBe(
-			"Bearer test-key"
+			"Bearer test-key",
 		);
 	});
 

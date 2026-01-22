@@ -26,7 +26,7 @@ const DEFAULT_CONFIG: Required<NewsParserConfig> = {
  */
 export function parseNewsArticles(
 	articles: NewsArticle[],
-	config: NewsParserConfig = {}
+	config: NewsParserConfig = {},
 ): ParsedNews[] {
 	const cfg = { ...DEFAULT_CONFIG, ...config };
 	const results: ParsedNews[] = [];
@@ -46,7 +46,7 @@ export function parseNewsArticles(
  */
 export function parseNewsArticle(
 	article: NewsArticle,
-	config: Required<NewsParserConfig>
+	config: Required<NewsParserConfig>,
 ): ParsedNews | null {
 	// Validate required fields
 	if (!article.title || !article.text) {

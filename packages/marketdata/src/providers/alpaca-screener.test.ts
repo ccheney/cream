@@ -140,10 +140,10 @@ describe("AlpacaScreenerClient", () => {
 			const universeSet = new Set(universeSymbols.map((s) => s.toUpperCase()));
 
 			const universeGainers = allMovers.gainers.filter((m) =>
-				universeSet.has(m.symbol.toUpperCase())
+				universeSet.has(m.symbol.toUpperCase()),
 			);
 			const universeLosers = allMovers.losers.filter((m) =>
-				universeSet.has(m.symbol.toUpperCase())
+				universeSet.has(m.symbol.toUpperCase()),
 			);
 
 			expect(universeGainers).toHaveLength(1);

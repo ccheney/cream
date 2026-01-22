@@ -38,7 +38,7 @@ const DEFAULT_CONFIG: Required<SentimentScoringConfig> = {
 export function computeSentimentScore(
 	sentiment: Sentiment,
 	confidence = 1.0,
-	config: SentimentScoringConfig = {}
+	config: SentimentScoringConfig = {},
 ): number {
 	const cfg = { ...DEFAULT_CONFIG, ...config };
 
@@ -74,7 +74,7 @@ export function computeSentimentScore(
  */
 export function computeSentimentFromExtraction(
 	extraction: ExtractionResult,
-	config?: SentimentScoringConfig
+	config?: SentimentScoringConfig,
 ): number {
 	return computeSentimentScore(extraction.sentiment, extraction.confidence, config);
 }
@@ -85,7 +85,7 @@ export function computeSentimentFromExtraction(
 export function aggregateSentimentScores(
 	scores: number[],
 	method: "mean" | "median" | "weighted" = "mean",
-	weights?: number[]
+	weights?: number[],
 ): number {
 	if (scores.length === 0) {
 		return 0;
@@ -140,7 +140,7 @@ export function aggregateSentimentScores(
  * Classify sentiment score into category
  */
 export function classifySentimentScore(
-	score: number
+	score: number,
 ): "strong_bullish" | "bullish" | "neutral" | "bearish" | "strong_bearish" {
 	if (score >= 0.6) {
 		return "strong_bullish";

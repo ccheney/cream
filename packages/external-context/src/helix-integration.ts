@@ -66,7 +66,7 @@ export async function ingestExtractedEvents(
 		createMacroEdges?: boolean;
 		createCompanyEdges?: boolean;
 		batchSize?: number;
-	} = {}
+	} = {},
 ): Promise<EventIngestionResult> {
 	const service = createEventIngestionService(client);
 	const helixEvents = events.map(toHelixEvent);
@@ -83,7 +83,7 @@ export async function ingestExtractedEvent(
 		generateEmbeddings?: boolean;
 		createMacroEdges?: boolean;
 		createCompanyEdges?: boolean;
-	} = {}
+	} = {},
 ): Promise<EventIngestionResult> {
 	return ingestExtractedEvents(client, [event], options);
 }
@@ -99,7 +99,7 @@ export async function ingestExtractedEvent(
 export async function searchSimilarEvents(
 	client: HelixClient,
 	queryText: string,
-	limit = 10
+	limit = 10,
 ): Promise<Array<{ eventId: string; similarity: number; textSummary: string }>> {
 	const service = createEventIngestionService(client);
 	return service.searchSimilarEvents(queryText, limit);

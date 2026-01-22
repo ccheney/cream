@@ -149,7 +149,7 @@ export class RealtimeOptionsProvider implements OptionsDataProvider {
 	private constructor(
 		restClient: AlpacaMarketDataClient,
 		wsClient: AlpacaWebSocketClient,
-		config: RealtimeOptionsProviderConfig = {}
+		config: RealtimeOptionsProviderConfig = {},
 	) {
 		this.restClient = restClient;
 		this.wsClient = wsClient;
@@ -163,7 +163,7 @@ export class RealtimeOptionsProvider implements OptionsDataProvider {
 	 */
 	static async create(
 		restClient: AlpacaMarketDataClient,
-		config?: RealtimeOptionsProviderConfig
+		config?: RealtimeOptionsProviderConfig,
 	): Promise<RealtimeOptionsProvider> {
 		const wsClient = createAlpacaOptionsClientFromEnv();
 		return new RealtimeOptionsProvider(restClient, wsClient, config);
@@ -175,7 +175,7 @@ export class RealtimeOptionsProvider implements OptionsDataProvider {
 	static createWithClient(
 		restClient: AlpacaMarketDataClient,
 		wsClient: AlpacaWebSocketClient,
-		config?: RealtimeOptionsProviderConfig
+		config?: RealtimeOptionsProviderConfig,
 	): RealtimeOptionsProvider {
 		return new RealtimeOptionsProvider(restClient, wsClient, config);
 	}
@@ -254,7 +254,7 @@ export class RealtimeOptionsProvider implements OptionsDataProvider {
 				optionInfo.strike,
 				tte,
 				optionInfo.type,
-				this.config.riskFreeRate
+				this.config.riskFreeRate,
 			);
 		}
 
@@ -607,7 +607,7 @@ export class RealtimeOptionsProvider implements OptionsDataProvider {
  */
 export async function createRealtimeOptionsProvider(
 	restClient: AlpacaMarketDataClient,
-	config?: RealtimeOptionsProviderConfig
+	config?: RealtimeOptionsProviderConfig,
 ): Promise<RealtimeOptionsProvider> {
 	return RealtimeOptionsProvider.create(restClient, config);
 }

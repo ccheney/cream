@@ -50,7 +50,7 @@ export interface CandleDataSource {
 		symbol: string,
 		timeframe: Timeframe,
 		limit: number,
-		before?: number
+		before?: number,
 	): Promise<IndicatorCandle[]>;
 }
 
@@ -70,7 +70,7 @@ export interface ExternalEventSource {
 	getRecentEvents(
 		symbol: string,
 		lookbackHours: number,
-		limit: number
+		limit: number,
 	): Promise<ExternalEventSummary[]>;
 }
 
@@ -144,7 +144,7 @@ export async function buildSnapshot(
 	symbol: string,
 	timestamp: number,
 	sources: SnapshotDataSources,
-	options: BuildSnapshotOptions = {}
+	options: BuildSnapshotOptions = {},
 ): Promise<FeatureSnapshot> {
 	const config = { ...DEFAULT_SNAPSHOT_CONFIG, ...options.config };
 	const indicatorConfig = options.indicatorConfig ?? DEFAULT_PIPELINE_CONFIG;
@@ -179,7 +179,7 @@ export async function buildSnapshot(
 
 	if (!latestCandle) {
 		throw new Error(
-			`No candle data available for ${symbol} at ${new Date(timestamp).toISOString()}`
+			`No candle data available for ${symbol} at ${new Date(timestamp).toISOString()}`,
 		);
 	}
 
@@ -197,7 +197,7 @@ export async function buildSnapshot(
 		const transformResult = applyTransforms(
 			primaryCandles,
 			primaryTimeframe,
-			DEFAULT_TRANSFORM_CONFIG
+			DEFAULT_TRANSFORM_CONFIG,
 		);
 		normalized = transformResult ?? {};
 	}
@@ -210,7 +210,7 @@ export async function buildSnapshot(
 		recentEvents = await sources.events.getRecentEvents(
 			symbol,
 			config.eventLookbackHours,
-			config.maxEvents
+			config.maxEvents,
 		);
 	}
 
@@ -270,10 +270,10 @@ export async function buildSnapshots(
 	symbols: string[],
 	timestamp: number,
 	sources: SnapshotDataSources,
-	options: BuildSnapshotOptions = {}
+	options: BuildSnapshotOptions = {},
 ): Promise<Map<string, FeatureSnapshot>> {
 	const results = await Promise.allSettled(
-		symbols.map((symbol) => buildSnapshot(symbol, timestamp, sources, options))
+		symbols.map((symbol) => buildSnapshot(symbol, timestamp, sources, options)),
 	);
 
 	const snapshots = new Map<string, FeatureSnapshot>();
@@ -293,14 +293,14 @@ export async function buildSnapshots(
  * Create a mock candle data source for testing.
  */
 export function createMockCandleSource(
-	candlesBySymbol: Map<string, Map<Timeframe, IndicatorCandle[]>>
+	candlesBySymbol: Map<string, Map<Timeframe, IndicatorCandle[]>>,
 ): CandleDataSource {
 	return {
 		async getCandles(
 			symbol: string,
 			timeframe: Timeframe,
 			limit: number,
-			_before?: number
+			_before?: number,
 		): Promise<IndicatorCandle[]> {
 			const symbolCandles = candlesBySymbol.get(symbol);
 			if (!symbolCandles) {
@@ -321,13 +321,13 @@ export function createMockCandleSource(
  * Create a mock event source for testing.
  */
 export function createMockEventSource(
-	eventsBySymbol: Map<string, ExternalEventSummary[]>
+	eventsBySymbol: Map<string, ExternalEventSummary[]>,
 ): ExternalEventSource {
 	return {
 		async getRecentEvents(
 			symbol: string,
 			_lookbackHours: number,
-			limit: number
+			limit: number,
 		): Promise<ExternalEventSummary[]> {
 			const events = eventsBySymbol.get(symbol) ?? [];
 			return events.slice(0, limit);
@@ -339,7 +339,7 @@ export function createMockEventSource(
  * Create a mock universe source for testing.
  */
 export function createMockUniverseSource(
-	metadataBySymbol: Map<string, ResolvedInstrument>
+	metadataBySymbol: Map<string, ResolvedInstrument>,
 ): UniverseMetadataSource {
 	return {
 		async getMetadata(symbol: string): Promise<ResolvedInstrument | null> {

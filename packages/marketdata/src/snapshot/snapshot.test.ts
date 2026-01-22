@@ -682,7 +682,7 @@ describe("buildSnapshot", () => {
 		const sources = { candles: emptyCandleSource };
 
 		await expect(buildSnapshot("AAPL", Date.now(), sources)).rejects.toThrow(
-			"No candle data available"
+			"No candle data available",
 		);
 	});
 

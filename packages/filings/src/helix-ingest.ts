@@ -51,7 +51,7 @@ export interface FilingsIngestionResult {
  */
 export async function ingestFilingChunk(
 	client: HelixClient,
-	chunk: FilingChunkData
+	chunk: FilingChunkData,
 ): Promise<ChunkIngestionResult> {
 	try {
 		await client.query("InsertFilingChunk", {
@@ -84,7 +84,7 @@ export async function ingestFilingChunk(
  */
 export async function ingestChunk(
 	client: HelixClient,
-	chunk: FilingChunk
+	chunk: FilingChunk,
 ): Promise<ChunkIngestionResult> {
 	const chunkData: FilingChunkData = {
 		chunk_id: chunk.chunkId,
@@ -108,7 +108,7 @@ export async function ingestChunk(
  */
 export async function batchIngestFilingChunks(
 	client: HelixClient,
-	chunks: FilingChunkData[]
+	chunks: FilingChunkData[],
 ): Promise<BatchIngestionResult> {
 	const startTime = Date.now();
 	const successful: ChunkIngestionResult[] = [];
@@ -136,7 +136,7 @@ export async function batchIngestFilingChunks(
  */
 export async function batchIngestChunks(
 	client: HelixClient,
-	chunks: FilingChunk[]
+	chunks: FilingChunk[],
 ): Promise<BatchIngestionResult> {
 	const startTime = Date.now();
 	const successful: ChunkIngestionResult[] = [];
@@ -170,7 +170,7 @@ export async function batchIngestChunks(
 export async function ingestFilingChunks(
 	client: HelixClient,
 	filingChunks: FilingChunk[][],
-	onProgress?: (filingIndex: number, result: BatchIngestionResult) => void
+	onProgress?: (filingIndex: number, result: BatchIngestionResult) => void,
 ): Promise<FilingsIngestionResult> {
 	const startTime = Date.now();
 	let chunksIngested = 0;
@@ -211,7 +211,7 @@ export async function ingestFilingChunks(
  */
 export async function ingestChunksToHelix(
 	filingChunks: FilingChunk[][],
-	onProgress?: (filingIndex: number, result: BatchIngestionResult) => void
+	onProgress?: (filingIndex: number, result: BatchIngestionResult) => void,
 ): Promise<FilingsIngestionResult> {
 	const client = createHelixClientFromEnv();
 

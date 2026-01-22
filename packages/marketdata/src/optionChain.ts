@@ -233,7 +233,7 @@ export class OptionChainScanner {
 		client: AlpacaMarketDataClient,
 		cacheTtlMs = 5 * 60 * 1000, // 5 minutes
 		priceInvalidationPct = 0.01, // 1%
-		ivPercentileCalculator?: IVPercentileCalculator
+		ivPercentileCalculator?: IVPercentileCalculator,
 	) {
 		this.client = client;
 		this.cacheTtlMs = cacheTtlMs;
@@ -260,7 +260,7 @@ export class OptionChainScanner {
 	async scan(
 		underlying: string,
 		filter: OptionFilterCriteria,
-		greeksProvider?: GreeksProvider
+		greeksProvider?: GreeksProvider,
 	): Promise<OptionWithMarketData[]> {
 		// Check cache
 		const cached = this.getCached(underlying);
@@ -307,7 +307,7 @@ export class OptionChainScanner {
 	 */
 	private async enrichWithIVPercentile(
 		options: OptionWithMarketData[],
-		underlying: string
+		underlying: string,
 	): Promise<void> {
 		if (!this.ivPercentileCalculator) {
 			return;
@@ -356,7 +356,7 @@ export class OptionChainScanner {
 		underlying: string,
 		strategy: keyof typeof DEFAULT_FILTERS,
 		topN = 5,
-		greeksProvider?: GreeksProvider
+		greeksProvider?: GreeksProvider,
 	): Promise<OptionWithMarketData[]> {
 		const filter = DEFAULT_FILTERS[strategy];
 		if (!filter) {
@@ -416,7 +416,7 @@ export class OptionChainScanner {
 	private setCache(
 		underlying: string,
 		data: OptionWithMarketData[],
-		underlyingPrice: number
+		underlyingPrice: number,
 	): void {
 		this.cache.set(underlying, {
 			data,
@@ -468,7 +468,7 @@ export class OptionChainScanner {
 	 */
 	private async enrichWithGreeks(
 		options: OptionWithMarketData[],
-		provider: GreeksProvider
+		provider: GreeksProvider,
 	): Promise<void> {
 		const greeks = await provider(options.map((o) => o.ticker));
 
@@ -498,7 +498,7 @@ export class OptionChainScanner {
 	private filterAndRank(
 		options: OptionWithMarketData[],
 		filter: OptionFilterCriteria,
-		weights: ScoringWeights = DEFAULT_WEIGHTS
+		weights: ScoringWeights = DEFAULT_WEIGHTS,
 	): OptionWithMarketData[] {
 		// Apply filters
 		let filtered = options.filter((opt) => this.passesFilter(opt, filter));
@@ -622,7 +622,7 @@ export class OptionChainScanner {
 	private calculateOverallScore(
 		option: OptionWithMarketData,
 		filter: OptionFilterCriteria,
-		weights: ScoringWeights
+		weights: ScoringWeights,
 	): number {
 		let score = 0;
 
@@ -760,7 +760,7 @@ export function buildOptionTicker(
 	underlying: string,
 	expiration: string, // YYYY-MM-DD
 	type: OptionType,
-	strike: number
+	strike: number,
 ): string {
 	const date = new Date(expiration);
 	const yy = String(date.getFullYear()).slice(2);

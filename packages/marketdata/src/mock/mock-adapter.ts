@@ -199,7 +199,7 @@ export class MockApiError extends Error {
 	constructor(
 		public readonly errorType: ErrorType,
 		public readonly statusCode: number,
-		message: string
+		message: string,
 	) {
 		super(message);
 		this.name = "MockApiError";
@@ -234,7 +234,7 @@ async function simulateError(config: ErrorSimulationConfig): Promise<void> {
 	throw new MockApiError(
 		config.errorType,
 		config.statusCode ?? defaults.statusCode,
-		config.message ?? defaults.message
+		config.message ?? defaults.message,
 	);
 }
 
@@ -322,7 +322,7 @@ export class MockAdapter {
 		symbol: string,
 		timeframe: Timeframe,
 		startTs: number,
-		endTs: number
+		endTs: number,
 	): Promise<MockCandle[]> {
 		const candles = await this.getCandles(symbol, timeframe);
 		return candles.filter((c) => c.timestamp >= startTs && c.timestamp <= endTs);
@@ -334,7 +334,7 @@ export class MockAdapter {
 	async getRecentCandles(
 		symbol: string,
 		timeframe: Timeframe,
-		count: number
+		count: number,
 	): Promise<MockCandle[]> {
 		const candles = await this.getCandles(symbol, timeframe);
 		return candles.slice(-count);
@@ -451,7 +451,7 @@ export class MockAdapter {
 				marketValue: p.market_value,
 				unrealizedPl: p.unrealized_pl,
 				side: p.side as "long" | "short",
-			})
+			}),
 		);
 	}
 
@@ -491,7 +491,7 @@ export class MockAdapter {
 				limitPrice: o.limit_price ?? undefined,
 				filledQty: o.filled_qty,
 				filledAvgPrice: o.filled_avg_price ?? undefined,
-			})
+			}),
 		);
 
 		if (status) {
@@ -562,7 +562,7 @@ export class MockAdapter {
  */
 export async function getMockCandles(
 	symbol: string,
-	timeframe: Timeframe = "1h"
+	timeframe: Timeframe = "1h",
 ): Promise<MockCandle[]> {
 	const adapter = new MockAdapter();
 	return adapter.getCandles(symbol, timeframe);

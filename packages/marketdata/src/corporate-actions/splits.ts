@@ -133,7 +133,7 @@ export function calculateCumulativeAdjustmentFactor(splits: SplitAdjustment[]): 
  */
 export function getApplicableSplits(
 	splits: SplitAdjustment[],
-	candleDate: string
+	candleDate: string,
 ): SplitAdjustment[] {
 	const candleDateStr = candleDate.split("T")[0] ?? candleDate;
 	return splits.filter((split) => split.executionDate > candleDateStr);
@@ -162,7 +162,7 @@ export interface CandleWithTimestamp {
  */
 export function adjustCandleForSplits<T extends CandleWithTimestamp>(
 	candle: T,
-	splits: SplitAdjustment[]
+	splits: SplitAdjustment[],
 ): T & { splitAdjusted: boolean; adjustmentFactor: number } {
 	if (splits.length === 0) {
 		return {
@@ -195,7 +195,7 @@ export function adjustCandleForSplits<T extends CandleWithTimestamp>(
  */
 export function adjustCandlesForSplits<T extends CandleWithTimestamp>(
 	candles: T[],
-	splits: SplitAdjustment[]
+	splits: SplitAdjustment[],
 ): Array<T & { splitAdjusted: boolean; adjustmentFactor: number }> {
 	if (splits.length === 0) {
 		return candles.map((candle) => ({
@@ -207,7 +207,7 @@ export function adjustCandlesForSplits<T extends CandleWithTimestamp>(
 
 	// Sort splits by date (oldest first)
 	const sortedSplits = splits.toSorted(
-		(a, b) => new Date(a.executionDate).getTime() - new Date(b.executionDate).getTime()
+		(a, b) => new Date(a.executionDate).getTime() - new Date(b.executionDate).getTime(),
 	);
 
 	return candles.map((candle) => {

@@ -123,7 +123,7 @@ export function isTradingDay(date: Date): boolean {
 export function isMarketOpen(
 	timestamp: string | Date,
 	config = DEFAULT_US_CALENDAR,
-	includeExtended = false
+	includeExtended = false,
 ): boolean {
 	const date = typeof timestamp === "string" ? new Date(timestamp) : timestamp;
 
@@ -220,7 +220,7 @@ export function getTradingDaysBetween(start: Date, end: Date): number {
 export function isExpectedGap(
 	timestamp1: string,
 	timestamp2: string,
-	config = DEFAULT_US_CALENDAR
+	config = DEFAULT_US_CALENDAR,
 ): boolean {
 	const date1 = new Date(timestamp1);
 	const date2 = new Date(timestamp2);
@@ -243,10 +243,10 @@ export function isExpectedGap(
 
 	// Same day - check if gap crosses market close
 	const etTime1 = new Date(
-		date1.toLocaleString("en-US", { timeZone: config.regularHours.timezone })
+		date1.toLocaleString("en-US", { timeZone: config.regularHours.timezone }),
 	);
 	const etTime2 = new Date(
-		date2.toLocaleString("en-US", { timeZone: config.regularHours.timezone })
+		date2.toLocaleString("en-US", { timeZone: config.regularHours.timezone }),
 	);
 
 	const closeMinutes = config.regularHours.close.hour * 60 + config.regularHours.close.minute;

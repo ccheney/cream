@@ -190,7 +190,7 @@ describe("chunkParsedFiling", () => {
 	test("prepends section header to chunk text", () => {
 		const parsed = createMockParsedFiling({
 			risk_factors: "Risk factor content for testing the header prepending functionality. ".repeat(
-				5
+				5,
 			),
 		});
 

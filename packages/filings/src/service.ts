@@ -62,7 +62,7 @@ export class FilingsIngestionService {
 		private readonly filingsRepo: FilingsRepository,
 		private readonly syncRunsRepo: FilingSyncRunsRepository,
 		private readonly helixClient?: HelixClient,
-		config?: EdgarClientConfig
+		config?: EdgarClientConfig,
 	) {
 		this.edgarClient = new EdgarClient(config);
 	}
@@ -79,7 +79,7 @@ export class FilingsIngestionService {
 	 */
 	async syncFilings(
 		config: FilingSyncConfig,
-		onProgress?: ProgressCallback
+		onProgress?: ProgressCallback,
 	): Promise<FilingSyncResult> {
 		const startTime = Date.now();
 		const errors: string[] = [];
@@ -199,7 +199,7 @@ export class FilingsIngestionService {
 								await this.filingsRepo.markComplete(
 									filingId,
 									Object.keys(parsed.sections).length,
-									result.successful.length
+									result.successful.length,
 								);
 								filingsIngested++;
 								chunksCreated += result.successful.length;
@@ -342,7 +342,7 @@ export class FilingsIngestionService {
 export function createFilingsIngestionService(
 	db: Database,
 	helixClient?: HelixClient,
-	config?: EdgarClientConfig
+	config?: EdgarClientConfig,
 ): FilingsIngestionService {
 	const filingsRepo = new FilingsRepository(db);
 	const syncRunsRepo = new FilingSyncRunsRepository(db);

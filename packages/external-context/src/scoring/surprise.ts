@@ -44,7 +44,7 @@ export interface MetricExpectation {
 export function computeSurpriseScore(
 	actual: number,
 	expected: number,
-	config: SurpriseScoringConfig = {}
+	config: SurpriseScoringConfig = {},
 ): number {
 	const cfg = { ...DEFAULT_CONFIG, ...config };
 
@@ -68,7 +68,7 @@ export function computeSurpriseScore(
  */
 export function computeAggregatedSurprise(
 	dataPoints: Array<{ actual: number; expected: number; weight?: number }>,
-	config?: SurpriseScoringConfig
+	config?: SurpriseScoringConfig,
 ): number {
 	if (dataPoints.length === 0) {
 		return 0;
@@ -95,7 +95,7 @@ export function computeAggregatedSurprise(
 export function computeSurpriseFromExtraction(
 	extraction: ExtractionResult,
 	expectations: MetricExpectation[],
-	config?: SurpriseScoringConfig
+	config?: SurpriseScoringConfig,
 ): number {
 	const matches: Array<{ actual: number; expected: number; weight: number }> = [];
 
@@ -124,7 +124,7 @@ export function computeSurpriseFromExtraction(
  */
 function findMatchingExpectation(
 	dataPoint: DataPoint,
-	expectations: MetricExpectation[]
+	expectations: MetricExpectation[],
 ): MetricExpectation | null {
 	const normalizedMetric = dataPoint.metric.toLowerCase();
 
@@ -196,7 +196,7 @@ function computeEventBasedSurprise(extraction: ExtractionResult): number {
  * Classify surprise score
  */
 export function classifySurprise(
-	score: number
+	score: number,
 ): "big_beat" | "beat" | "inline" | "miss" | "big_miss" {
 	if (score >= 0.5) {
 		return "big_beat";

@@ -105,7 +105,7 @@ function zScore(value: number, mean: number, std: number): number {
  */
 export function detectVolumeAnomalies(
 	candles: Candle[],
-	config: AnomalyDetectionConfig = DEFAULT_ANOMALY_CONFIG
+	config: AnomalyDetectionConfig = DEFAULT_ANOMALY_CONFIG,
 ): Anomaly[] {
 	const anomalies: Anomaly[] = [];
 
@@ -155,7 +155,7 @@ export function detectVolumeAnomalies(
  */
 export function detectPriceSpikes(
 	candles: Candle[],
-	config: AnomalyDetectionConfig = DEFAULT_ANOMALY_CONFIG
+	config: AnomalyDetectionConfig = DEFAULT_ANOMALY_CONFIG,
 ): Anomaly[] {
 	const anomalies: Anomaly[] = [];
 
@@ -215,7 +215,7 @@ export function detectPriceSpikes(
 export function detectFlashCrashes(
 	candles: Candle[],
 	config: AnomalyDetectionConfig = DEFAULT_ANOMALY_CONFIG,
-	recoveryCandles = 5
+	recoveryCandles = 5,
 ): Anomaly[] {
 	const anomalies: Anomaly[] = [];
 
@@ -307,7 +307,7 @@ export function detectFlashCrashes(
  */
 export function detectAllAnomalies(
 	candles: Candle[],
-	config: AnomalyDetectionConfig = DEFAULT_ANOMALY_CONFIG
+	config: AnomalyDetectionConfig = DEFAULT_ANOMALY_CONFIG,
 ): AnomalyDetectionResult {
 	if (candles.length === 0) {
 		return {
@@ -349,7 +349,7 @@ export function detectAllAnomalies(
  */
 export function filterAnomalousCandles(candles: Candle[], anomalies: Anomaly[]): Candle[] {
 	const anomalousTimestamps = new Set(
-		anomalies.filter((a) => a.severity === "critical").map((a) => a.timestamp)
+		anomalies.filter((a) => a.severity === "critical").map((a) => a.timestamp),
 	);
 
 	return candles.filter((c) => !anomalousTimestamps.has(c.timestamp));

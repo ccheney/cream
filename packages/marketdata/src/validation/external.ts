@@ -83,7 +83,7 @@ export interface ExternalValidationResult {
 export function validatePrice(
 	price: unknown,
 	fieldName: string,
-	config: ExternalDataValidationConfig = DEFAULT_EXTERNAL_VALIDATION_CONFIG
+	config: ExternalDataValidationConfig = DEFAULT_EXTERNAL_VALIDATION_CONFIG,
 ): ExternalValidationIssue[] {
 	const issues: ExternalValidationIssue[] = [];
 
@@ -149,7 +149,7 @@ export function validateOHLC(
 	open: number,
 	high: number,
 	low: number,
-	close: number
+	close: number,
 ): ExternalValidationIssue[] {
 	const issues: ExternalValidationIssue[] = [];
 
@@ -207,7 +207,7 @@ export function validateOHLC(
 export function validatePriceChange(
 	prevClose: number,
 	currentOpen: number,
-	config: ExternalDataValidationConfig = DEFAULT_EXTERNAL_VALIDATION_CONFIG
+	config: ExternalDataValidationConfig = DEFAULT_EXTERNAL_VALIDATION_CONFIG,
 ): ExternalValidationIssue[] {
 	const issues: ExternalValidationIssue[] = [];
 
@@ -238,7 +238,7 @@ export function validatePriceChange(
  */
 export function validateVolume(
 	volume: unknown,
-	config: ExternalDataValidationConfig = DEFAULT_EXTERNAL_VALIDATION_CONFIG
+	config: ExternalDataValidationConfig = DEFAULT_EXTERNAL_VALIDATION_CONFIG,
 ): ExternalValidationIssue[] {
 	const issues: ExternalValidationIssue[] = [];
 
@@ -304,7 +304,7 @@ export function validateVolume(
  */
 export function validateTimestamp(
 	timestamp: unknown,
-	config: ExternalDataValidationConfig = DEFAULT_EXTERNAL_VALIDATION_CONFIG
+	config: ExternalDataValidationConfig = DEFAULT_EXTERNAL_VALIDATION_CONFIG,
 ): ExternalValidationIssue[] {
 	const issues: ExternalValidationIssue[] = [];
 
@@ -400,7 +400,7 @@ export interface RawCandle {
  */
 export function validateRawCandle(
 	candle: RawCandle,
-	config: ExternalDataValidationConfig = DEFAULT_EXTERNAL_VALIDATION_CONFIG
+	config: ExternalDataValidationConfig = DEFAULT_EXTERNAL_VALIDATION_CONFIG,
 ): ExternalValidationResult {
 	const issues: ExternalValidationIssue[] = [];
 
@@ -458,7 +458,7 @@ export function validateRawCandle(
  */
 export function validateRawCandles(
 	candles: RawCandle[],
-	config: ExternalDataValidationConfig = DEFAULT_EXTERNAL_VALIDATION_CONFIG
+	config: ExternalDataValidationConfig = DEFAULT_EXTERNAL_VALIDATION_CONFIG,
 ): {
 	valid: RawCandle[];
 	invalid: Array<{ index: number; candle: RawCandle; issues: ExternalValidationIssue[] }>;

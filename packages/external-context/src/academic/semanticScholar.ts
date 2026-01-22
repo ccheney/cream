@@ -203,7 +203,7 @@ export class SemanticScholarClient {
 						const waitMs = retryAfter ? Number.parseInt(retryAfter, 10) * 1000 : 5000;
 						log.warn(
 							{ rateLimitAttempts, maxRateLimitAttempts, waitMs },
-							"Rate limited by Semantic Scholar, waiting..."
+							"Rate limited by Semantic Scholar, waiting...",
 						);
 						await new Promise((resolve) => setTimeout(resolve, waitMs));
 						continue;
@@ -254,7 +254,7 @@ export class SemanticScholarClient {
 			openAccessOnly?: boolean;
 			/** Sort field and order */
 			sort?: "relevance" | "citationCount:desc" | "citationCount:asc" | "year:desc" | "year:asc";
-		} = {}
+		} = {},
 	): Promise<SemanticScholarPaper[]> {
 		const {
 			limit = 10,
@@ -313,7 +313,7 @@ export class SemanticScholarClient {
 		} catch (error) {
 			log.warn(
 				{ paperId, error: error instanceof Error ? error.message : String(error) },
-				"Failed to fetch paper"
+				"Failed to fetch paper",
 			);
 			return null;
 		}
@@ -338,7 +338,7 @@ export class SemanticScholarClient {
 	 */
 	async searchFinancePapers(
 		topic: string,
-		options: { limit?: number; recentYears?: number } = {}
+		options: { limit?: number; recentYears?: number } = {},
 	): Promise<SemanticScholarPaper[]> {
 		const { limit = 10, recentYears } = options;
 
@@ -361,7 +361,7 @@ export class SemanticScholarClient {
 	 */
 	async getRecommendations(
 		paperId: string,
-		options: { limit?: number } = {}
+		options: { limit?: number } = {},
 	): Promise<SemanticScholarPaper[]> {
 		const { limit = 10 } = options;
 
@@ -373,7 +373,7 @@ export class SemanticScholarClient {
 		} catch (error) {
 			log.warn(
 				{ paperId, error: error instanceof Error ? error.message : String(error) },
-				"Failed to fetch recommendations"
+				"Failed to fetch recommendations",
 			);
 			return [];
 		}

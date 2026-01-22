@@ -144,7 +144,7 @@ export interface FREDObservationEntry {
 export function parseFREDObservations(
 	seriesId: string,
 	observations: FREDObservationEntry[],
-	metadata?: FREDObservationMetadata
+	metadata?: FREDObservationMetadata,
 ): ParsedMacroRelease[] {
 	const results: ParsedMacroRelease[] = [];
 
@@ -229,7 +229,7 @@ function parseDate(dateStr: string): Date | null {
 export function calculateMacroSurprise(
 	actual: number,
 	estimate?: number,
-	previous?: number
+	previous?: number,
 ): number {
 	// If we have an estimate, use it for surprise calculation
 	if (estimate !== undefined && estimate !== 0) {
@@ -254,7 +254,7 @@ export function calculateMacroSurprise(
  */
 export function isMacroReleaseSignificant(
 	release: ParsedMacroRelease,
-	thresholdPercent = 0.5
+	thresholdPercent = 0.5,
 ): boolean {
 	if (release.previousValue === undefined) {
 		return true; // Assume significant if unknown
@@ -271,7 +271,7 @@ export function isMacroReleaseSignificant(
  */
 export function filterRecentMacroReleases(
 	releases: ParsedMacroRelease[],
-	maxAgeDays = 7
+	maxAgeDays = 7,
 ): ParsedMacroRelease[] {
 	const cutoff = new Date(Date.now() - maxAgeDays * 24 * 60 * 60 * 1000);
 	return releases.filter((r) => r.date >= cutoff);
@@ -281,7 +281,7 @@ export function filterRecentMacroReleases(
  * Group macro releases by indicator
  */
 export function groupByIndicator(
-	releases: ParsedMacroRelease[]
+	releases: ParsedMacroRelease[],
 ): Map<string, ParsedMacroRelease[]> {
 	const groups = Map.groupBy(releases, (r) => r.indicator);
 
@@ -290,7 +290,7 @@ export function groupByIndicator(
 	for (const [key, groupReleases] of groups) {
 		sortedGroups.set(
 			key,
-			groupReleases.toSorted((a, b) => b.date.getTime() - a.date.getTime())
+			groupReleases.toSorted((a, b) => b.date.getTime() - a.date.getTime()),
 		);
 	}
 
@@ -373,7 +373,7 @@ export interface FREDLatestValues {
  */
 export function parseFREDReleaseDates(
 	releaseDates: FREDReleaseDate[],
-	latestValues?: Map<number, FREDLatestValues>
+	latestValues?: Map<number, FREDLatestValues>,
 ): FREDEconomicEvent[] {
 	const events: FREDEconomicEvent[] = [];
 

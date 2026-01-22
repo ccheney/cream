@@ -64,7 +64,7 @@ export function computeImportanceScore(
 	source: string,
 	eventTime: Date,
 	targetSymbols: string[] = [],
-	config: ImportanceScoringConfig = {}
+	config: ImportanceScoringConfig = {},
 ): number {
 	const cfg = { ...DEFAULT_CONFIG, ...config };
 
@@ -137,7 +137,7 @@ export function computeRecencyScore(eventTime: Date, halfLifeHours: number): num
  */
 export function computeEntityRelevance(
 	extraction: ExtractionResult,
-	targetSymbols: string[]
+	targetSymbols: string[],
 ): number {
 	if (targetSymbols.length === 0) {
 		// No target symbols specified, use entity count as proxy
@@ -183,7 +183,7 @@ export function applyEventTypeBoost(baseScore: number, eventType: string): numbe
  * Classify importance score
  */
 export function classifyImportance(
-	score: number
+	score: number,
 ): "critical" | "high" | "medium" | "low" | "minimal" {
 	if (score >= 0.9) {
 		return "critical";

@@ -107,7 +107,7 @@ function createMockStorage(): CandleStorage & { candles: Candle[] } {
 				return null;
 			}
 			return matching.sort(
-				(a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()
+				(a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime(),
 			)[0]!;
 		}),
 	};
@@ -389,7 +389,7 @@ describe("aggregateCandles", () => {
 
 	it("throws error for invalid aggregation direction", () => {
 		expect(() => aggregateCandles(hourlyCandles, "1m")).toThrow(
-			"Cannot aggregate to smaller timeframe"
+			"Cannot aggregate to smaller timeframe",
 		);
 	});
 

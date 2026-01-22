@@ -176,7 +176,7 @@ export function shouldInterpolate(gap: GapInfo, maxInterpolateCandles = 1): bool
 export function interpolateCandle(
 	prev: Candle,
 	next: Candle,
-	timestamp: string
+	timestamp: string,
 ): InterpolatedCandle {
 	// Linear interpolation between prev.close and next.open
 	const midPrice = (prev.close + next.open) / 2;
@@ -208,7 +208,7 @@ export function interpolateCandle(
  */
 export function fillGaps(
 	candles: Candle[],
-	maxInterpolateCandles = 1
+	maxInterpolateCandles = 1,
 ): (Candle | InterpolatedCandle)[] {
 	if (candles.length < 2) {
 		return candles;
@@ -238,7 +238,7 @@ export function fillGaps(
 				const interpolated = interpolateCandle(
 					prev,
 					curr,
-					new Date(interpolatedTime).toISOString()
+					new Date(interpolatedTime).toISOString(),
 				);
 				result.push(interpolated);
 			}

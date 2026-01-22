@@ -22,7 +22,7 @@ function createCandle(
 	timestamp: string,
 	close: number,
 	volume = 1000000,
-	overrides: Partial<Candle> = {}
+	overrides: Partial<Candle> = {},
 ): Candle {
 	return {
 		symbol: "AAPL",
@@ -40,7 +40,7 @@ function createCandle(
 function createCandleSeries(
 	count: number,
 	startPrice = 100,
-	intervalMs = 3600000 // 1 hour
+	intervalMs = 3600000, // 1 hour
 ): Candle[] {
 	const candles: Candle[] = [];
 	const baseTime = Date.now() - count * intervalMs;
@@ -53,8 +53,8 @@ function createCandleSeries(
 			createCandle(
 				new Date(baseTime + i * intervalMs).toISOString(),
 				price,
-				1000000 + (i % 10) * 10000 // Deterministic volume variation
-			)
+				1000000 + (i % 10) * 10000, // Deterministic volume variation
+			),
 		);
 	}
 
@@ -140,7 +140,7 @@ describe("Gap Detection", () => {
 			// Create a 3-hour gap
 			candles[2] = createCandle(
 				new Date(new Date(candles[1]!.timestamp).getTime() + 3 * 3600000).toISOString(),
-				100
+				100,
 			);
 
 			const result = detectGaps(candles);
@@ -304,7 +304,7 @@ describe("Combined Validation", () => {
 			const candles = createCandleSeries(50);
 			// Make last candle old
 			candles[candles.length - 1]!.timestamp = new Date(
-				Date.now() - 5 * 60 * 60 * 1000
+				Date.now() - 5 * 60 * 60 * 1000,
 			).toISOString();
 
 			const result = validateCandleData(candles);
@@ -317,7 +317,7 @@ describe("Combined Validation", () => {
 			const candles = createCandleSeries(20);
 			// Create a gap
 			candles[10]!.timestamp = new Date(
-				new Date(candles[9]!.timestamp).getTime() + 5 * 3600000
+				new Date(candles[9]!.timestamp).getTime() + 5 * 3600000,
 			).toISOString();
 
 			// Disable calendar awareness so gap is detected regardless of day-of-week
@@ -363,7 +363,7 @@ describe("Combined Validation", () => {
 			const candles = createCandleSeries(5);
 			// Old data
 			candles[candles.length - 1]!.timestamp = new Date(
-				Date.now() - 10 * 60 * 60 * 1000
+				Date.now() - 10 * 60 * 60 * 1000,
 			).toISOString();
 
 			const score = getQualityScore(candles);

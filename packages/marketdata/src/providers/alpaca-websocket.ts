@@ -468,7 +468,7 @@ export class AlpacaWebSocketClient {
 	 */
 	subscribe(
 		channel: "trades" | "quotes" | "bars" | "dailyBars" | "updatedBars" | "statuses" | "news",
-		symbols: string[]
+		symbols: string[],
 	): void {
 		if (!this.isConnected()) {
 			throw new Error("Not authenticated. Call connect() first.");
@@ -497,7 +497,7 @@ export class AlpacaWebSocketClient {
 	 */
 	unsubscribe(
 		channel: "trades" | "quotes" | "bars" | "dailyBars" | "updatedBars" | "statuses" | "news",
-		symbols: string[]
+		symbols: string[],
 	): void {
 		if (!this.isConnected()) {
 			throw new Error("Not authenticated");
@@ -625,7 +625,7 @@ export class AlpacaWebSocketClient {
 	 */
 	private handleMessage(
 		data: string | ArrayBuffer | Buffer,
-		connectResolve?: (value: undefined) => void
+		connectResolve?: (value: undefined) => void,
 	): void {
 		// Update lastPongTime on any message activity (replaces explicit pong handling)
 		this.lastPongTime = Date.now();
@@ -978,7 +978,7 @@ export function createAlpacaNewsClientFromEnv(): AlpacaWebSocketClient {
  */
 export function createAlpacaWebSocketClientFromEnv(
 	market: AlpacaWsMarket = "stocks",
-	feed: AlpacaWsFeed = "sip"
+	feed: AlpacaWsFeed = "sip",
 ): AlpacaWebSocketClient {
 	const apiKey = Bun.env.ALPACA_KEY;
 	const apiSecret = Bun.env.ALPACA_SECRET;

@@ -241,7 +241,7 @@ export class IVPercentileCalculator {
 export function calculateIVPercentile(
 	currentIV: number,
 	historicalIVs: number[],
-	minObservations = 20
+	minObservations = 20,
 ): number | undefined {
 	if (historicalIVs.length < minObservations) {
 		return undefined;
@@ -267,7 +267,7 @@ export function calculateIVPercentile(
 export function calculateIVRank(
 	currentIV: number,
 	historicalIVs: number[],
-	minObservations = 2
+	minObservations = 2,
 ): number | undefined {
 	if (historicalIVs.length < minObservations) {
 		return undefined;
@@ -300,7 +300,7 @@ export function calculateIVRank(
  * @param vixDataFetcher - Function to fetch VIX historical data
  */
 export function createVixProxyProvider(
-	vixDataFetcher: (lookbackDays: number) => Promise<IVObservation[]>
+	vixDataFetcher: (lookbackDays: number) => Promise<IVObservation[]>,
 ): IVHistoryProvider {
 	return async (symbol: string, lookbackDays: number): Promise<IVObservation[]> => {
 		// VIX is only a valid proxy for SPY/SPX options

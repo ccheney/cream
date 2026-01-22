@@ -93,7 +93,7 @@ export class ExtractionPipeline {
 				source: p.source,
 				symbols: p.symbols,
 			})),
-			startTime
+			startTime,
 		);
 	}
 
@@ -114,7 +114,7 @@ export class ExtractionPipeline {
 				source: "transcript",
 				symbols: [p.symbol],
 			})),
-			startTime
+			startTime,
 		);
 	}
 
@@ -133,7 +133,7 @@ export class ExtractionPipeline {
 				source: p.source,
 				symbols: undefined,
 			})),
-			startTime
+			startTime,
 		);
 	}
 
@@ -145,7 +145,7 @@ export class ExtractionPipeline {
 		sourceType: ContentSourceType,
 		eventTime: Date = new Date(),
 		source = "unknown",
-		symbols?: string[]
+		symbols?: string[],
 	): Promise<ExtractedEvent | null> {
 		try {
 			// Stage 1: Extract using LLM
@@ -188,7 +188,7 @@ export class ExtractionPipeline {
 			source: string;
 			symbols?: string[];
 		}>,
-		startTime: number
+		startTime: number,
 	): Promise<PipelineResult> {
 		const events: ExtractedEvent[] = [];
 		const errors: Array<{ content: string; error: string }> = [];
@@ -200,7 +200,7 @@ export class ExtractionPipeline {
 					item.sourceType,
 					item.eventTime,
 					item.source,
-					item.symbols
+					item.symbols,
 				);
 				if (event) {
 					events.push(event);
@@ -235,7 +235,7 @@ export class ExtractionPipeline {
 		extraction: ExtractionResult,
 		sourceType: ContentSourceType,
 		source: string,
-		eventTime: Date
+		eventTime: Date,
 	): ContentScores {
 		const sentimentScore = computeSentimentFromExtraction(extraction);
 		const importanceScore = computeImportanceScore(
@@ -243,7 +243,7 @@ export class ExtractionPipeline {
 			sourceType,
 			source,
 			eventTime,
-			this.config.targetSymbols ?? []
+			this.config.targetSymbols ?? [],
 		);
 		const surpriseScore = computeSurpriseFromExtraction(extraction, this.config.expectations ?? []);
 

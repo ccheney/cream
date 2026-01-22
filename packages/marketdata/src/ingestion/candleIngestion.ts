@@ -103,7 +103,7 @@ export interface CandleStorage {
 export class CandleIngestionService {
 	constructor(
 		private alpacaClient: AlpacaMarketDataClient,
-		private storage: CandleStorage
+		private storage: CandleStorage,
 	) {}
 
 	/**
@@ -129,7 +129,7 @@ export class CandleIngestionService {
 				alpacaTimeframe,
 				options.from,
 				options.to,
-				50000
+				50000,
 			);
 
 			if (bars.length === 0) {
@@ -148,7 +148,7 @@ export class CandleIngestionService {
 				const gaps = this.detectGaps(
 					candles,
 					TIMEFRAME_MINUTES[options.timeframe],
-					options.maxGapMinutes ?? TIMEFRAME_MINUTES[options.timeframe] * 2
+					options.maxGapMinutes ?? TIMEFRAME_MINUTES[options.timeframe] * 2,
 				);
 				result.gaps = gaps;
 			}
@@ -170,7 +170,7 @@ export class CandleIngestionService {
 	async ingestUniverse(
 		symbols: string[],
 		options: IngestionOptions,
-		concurrency = 5
+		concurrency = 5,
 	): Promise<Map<string, IngestionResult>> {
 		const results = new Map<string, IngestionResult>();
 
@@ -204,7 +204,7 @@ export class CandleIngestionService {
 		symbol: string,
 		timeframe: Timeframe,
 		startDate: string,
-		endDate?: string
+		endDate?: string,
 	): Promise<IngestionResult> {
 		const end = endDate ?? new Date().toISOString().split("T")[0] ?? "";
 		return this.ingestSymbol(symbol, {
@@ -267,7 +267,7 @@ export class CandleIngestionService {
 	private detectGaps(
 		candles: Candle[],
 		expectedIntervalMinutes: number,
-		maxGapMinutes: number
+		maxGapMinutes: number,
 	): GapInfo[] {
 		const gaps: GapInfo[] = [];
 
@@ -315,7 +315,7 @@ export interface StalenessResult {
 export function checkStaleness(
 	lastCandle: Candle | null,
 	timeframe: Timeframe,
-	maxStaleMinutes?: number
+	maxStaleMinutes?: number,
 ): StalenessResult {
 	const defaultMaxStale = TIMEFRAME_MINUTES[timeframe] * 2;
 	const threshold = maxStaleMinutes ?? defaultMaxStale;
@@ -368,7 +368,7 @@ export function aggregateCandles(candles: Candle[], targetTimeframe: Timeframe):
 
 	if (targetMinutes <= sourceMinutes) {
 		throw new Error(
-			`Cannot aggregate to smaller timeframe: ${firstCandle.timeframe} -> ${targetTimeframe}`
+			`Cannot aggregate to smaller timeframe: ${firstCandle.timeframe} -> ${targetTimeframe}`,
 		);
 	}
 

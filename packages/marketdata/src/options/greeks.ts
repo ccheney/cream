@@ -155,7 +155,7 @@ function calculateD1D2(
 	K: number, // Strike price
 	T: number, // Time to expiration
 	r: number, // Risk-free rate
-	sigma: number // Volatility
+	sigma: number, // Volatility
 ): { d1: number; d2: number } {
 	// Handle edge case: at or near expiration
 	if (T <= 0) {
@@ -393,7 +393,7 @@ export function calculateMoneyness(spotPrice: number, strike: number): number {
 export function getMoneyStatus(
 	spotPrice: number,
 	strike: number,
-	optionType: OptionType
+	optionType: OptionType,
 ): "ITM" | "ATM" | "OTM" {
 	const threshold = 0.02; // 2% threshold for ATM
 	const ratio = spotPrice / strike;

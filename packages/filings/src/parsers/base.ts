@@ -57,7 +57,7 @@ export class FilingParser {
 
 	constructor(
 		protected filing: Filing,
-		html: string
+		html: string,
 	) {
 		// Load HTML in forgiving mode (xml: false handles malformed HTML)
 		this.$ = cheerio.load(html, { xml: false });
@@ -93,7 +93,7 @@ export class FilingParser {
 	 * @returns Map of section names to content
 	 */
 	extractSections(
-		sectionPatterns: Record<string, RegExp> = COMMON_SECTIONS
+		sectionPatterns: Record<string, RegExp> = COMMON_SECTIONS,
 	): Record<string, string> {
 		const text = this.extractText();
 		const sections: Record<string, string> = {};

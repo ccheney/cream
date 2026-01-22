@@ -142,7 +142,7 @@ export interface ValidationResult {
  */
 export function validateCandleData(
 	candles: Candle[],
-	config: ValidationConfig = DEFAULT_VALIDATION_CONFIG
+	config: ValidationConfig = DEFAULT_VALIDATION_CONFIG,
 ): ValidationResult {
 	const issues: ValidationIssue[] = [];
 	let qualityScore = 100;
@@ -201,7 +201,7 @@ export function validateCandleData(
 		const staleness = checkStaleness(
 			lastCandle.timestamp,
 			timeframe,
-			config.stalenessThresholds ?? DEFAULT_STALENESS_THRESHOLDS
+			config.stalenessThresholds ?? DEFAULT_STALENESS_THRESHOLDS,
 		);
 
 		stalenessResult = {
@@ -238,9 +238,9 @@ export function validateCandleData(
 					return !isExpectedGap(
 						gap.previousTimestamp,
 						new Date(
-							new Date(gap.previousTimestamp).getTime() + gap.gapMinutes * 60000
+							new Date(gap.previousTimestamp).getTime() + gap.gapMinutes * 60000,
 						).toISOString(),
-						config.calendarConfig ?? DEFAULT_US_CALENDAR
+						config.calendarConfig ?? DEFAULT_US_CALENDAR,
 					);
 				});
 			}
@@ -315,7 +315,7 @@ export function validateCandleData(
  */
 export function isValidCandleData(
 	candles: Candle[],
-	config: ValidationConfig = DEFAULT_VALIDATION_CONFIG
+	config: ValidationConfig = DEFAULT_VALIDATION_CONFIG,
 ): boolean {
 	return validateCandleData(candles, config).isValid;
 }
@@ -325,7 +325,7 @@ export function isValidCandleData(
  */
 export function getQualityScore(
 	candles: Candle[],
-	config: ValidationConfig = DEFAULT_VALIDATION_CONFIG
+	config: ValidationConfig = DEFAULT_VALIDATION_CONFIG,
 ): number {
 	return validateCandleData(candles, config).qualityScore;
 }

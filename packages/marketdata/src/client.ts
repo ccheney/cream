@@ -188,13 +188,13 @@ export class RestClient {
 	async request<S extends z.ZodTypeAny>(
 		path: string,
 		options: RequestOptions,
-		schema: S
+		schema: S,
 	): Promise<z.output<S>>;
 	async request(path: string, options?: RequestOptions): Promise<unknown>;
 	async request<S extends z.ZodTypeAny>(
 		path: string,
 		options: RequestOptions = {},
-		schema?: S
+		schema?: S,
 	): Promise<z.output<S> | unknown> {
 		const url = this.buildUrl(path, options.params);
 		const headers = this.buildHeaders(options.headers);
@@ -239,7 +239,7 @@ export class RestClient {
 					const latencyMs = Date.now() - startTime;
 					log.error(
 						{ method, path, status: lastError.status, error: lastError.message, latencyMs },
-						"Market data API error"
+						"Market data API error",
 					);
 					throw lastError;
 				}
@@ -247,12 +247,12 @@ export class RestClient {
 				// Exponential backoff
 				const delay = Math.min(
 					retryConfig.initialDelayMs * retryConfig.backoffMultiplier ** attempt,
-					retryConfig.maxDelayMs
+					retryConfig.maxDelayMs,
 				);
 
 				log.warn(
 					{ method, path, attempt: attempt + 1, delayMs: delay, error: lastError.message },
-					"Market data API retry"
+					"Market data API retry",
 				);
 
 				await this.sleep(delay);
@@ -268,7 +268,7 @@ export class RestClient {
 	async get<S extends z.ZodTypeAny>(
 		path: string,
 		params: Record<string, string | number | boolean | undefined>,
-		schema: S
+		schema: S,
 	): Promise<z.output<S>>;
 	/**
 	 * Make a GET request with explicit type hint (no validation).
@@ -279,12 +279,12 @@ export class RestClient {
 	 */
 	async get(
 		path: string,
-		params?: Record<string, string | number | boolean | undefined>
+		params?: Record<string, string | number | boolean | undefined>,
 	): Promise<unknown>;
 	async get<S extends z.ZodTypeAny>(
 		path: string,
 		params?: Record<string, string | number | boolean | undefined>,
-		schema?: S
+		schema?: S,
 	): Promise<z.output<S> | unknown> {
 		if (schema) {
 			return this.request(path, { method: "GET", params }, schema);
@@ -300,7 +300,7 @@ export class RestClient {
 	async post<S extends z.ZodTypeAny>(
 		path: string,
 		body?: unknown,
-		schema?: S
+		schema?: S,
 	): Promise<z.output<S> | unknown> {
 		if (schema) {
 			return this.request(path, { method: "POST", body }, schema);
@@ -318,7 +318,7 @@ export class RestClient {
 			headers: Record<string, string>;
 			body?: string;
 			timeout: number;
-		}
+		},
 	): Promise<Response> {
 		const controller = new AbortController();
 		const timeoutId = setTimeout(() => controller.abort(), options.timeout);
@@ -351,7 +351,7 @@ export class RestClient {
 	 */
 	private buildUrl(
 		path: string,
-		params?: Record<string, string | number | boolean | undefined>
+		params?: Record<string, string | number | boolean | undefined>,
 	): string {
 		const url = new URL(path, this.config.baseUrl);
 

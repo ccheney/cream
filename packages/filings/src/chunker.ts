@@ -135,7 +135,7 @@ function getSectionDisplayName(sectionKey: string): string {
 export function splitTextWithOverlap(
 	text: string,
 	maxSize = MAX_CHUNK_SIZE,
-	overlap = CHUNK_OVERLAP
+	overlap = CHUNK_OVERLAP,
 ): string[] {
 	// Single chunk if fits
 	if (text.length <= maxSize) {

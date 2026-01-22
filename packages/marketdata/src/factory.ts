@@ -57,7 +57,7 @@ export interface MarketDataAdapter {
 		symbol: string,
 		timeframe: "1m" | "5m" | "15m" | "1h" | "1d",
 		from: string,
-		to: string
+		to: string,
 	): Promise<AdapterCandle[]>;
 
 	/**
@@ -110,7 +110,7 @@ export class MockMarketDataAdapter implements MarketDataAdapter {
 		symbol: string,
 		timeframe: "1m" | "5m" | "15m" | "1h" | "1d",
 		_from: string,
-		_to: string
+		_to: string,
 	): Promise<AdapterCandle[]> {
 		const candles: AdapterCandle[] = [];
 		const intervalMs = this.getIntervalMs(timeframe);
@@ -222,7 +222,7 @@ export { AlpacaMarketDataAdapter } from "./adapters/alpaca-adapter.js";
 export class MarketDataConfigError extends Error {
 	constructor(
 		public readonly provider: string,
-		public readonly missingVar: string
+		public readonly missingVar: string,
 	) {
 		super(`Market data provider "${provider}" requires ${missingVar} environment variable.`);
 		this.name = "MarketDataConfigError";

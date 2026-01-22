@@ -170,7 +170,7 @@ describe("buildOptionTicker", () => {
 			original.underlying,
 			original.expiration,
 			original.type,
-			original.strike
+			original.strike,
 		);
 		const parsed = parseOptionTicker(ticker);
 		expect(parsed).toEqual(original);

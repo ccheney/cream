@@ -26,7 +26,7 @@ const DEFAULT_CONFIG: Required<TranscriptParserConfig> = {
  */
 export function parseTranscript(
 	transcript: TranscriptInput,
-	config: TranscriptParserConfig = {}
+	config: TranscriptParserConfig = {},
 ): ParsedTranscript | null {
 	const cfg = { ...DEFAULT_CONFIG, ...config };
 
@@ -63,7 +63,7 @@ export function parseTranscript(
  */
 function parseTranscriptContent(
 	content: string,
-	config: Required<TranscriptParserConfig>
+	config: Required<TranscriptParserConfig>,
 ): TranscriptSpeaker[] {
 	const speakers: TranscriptSpeaker[] = [];
 
@@ -141,7 +141,7 @@ function parseTranscriptContent(
  */
 function finalizeSpeaker(
 	speaker: { speaker: string; role?: string; text: string[] },
-	config: Required<TranscriptParserConfig>
+	config: Required<TranscriptParserConfig>,
 ): TranscriptSpeaker {
 	const text = speaker.text.join(" ").trim();
 
@@ -174,7 +174,8 @@ export function extractTranscriptSections(transcript: ParsedTranscript): {
 
 	// Find Q&A section start (usually marked by "Operator" or "Question")
 	let qaStart = speakers.findIndex(
-		(s) => s.speaker.toLowerCase().includes("operator") && s.text.toLowerCase().includes("question")
+		(s) =>
+			s.speaker.toLowerCase().includes("operator") && s.text.toLowerCase().includes("question"),
 	);
 
 	if (qaStart === -1) {
@@ -182,7 +183,7 @@ export function extractTranscriptSections(transcript: ParsedTranscript): {
 		qaStart = speakers.findIndex(
 			(s) =>
 				s.text.toLowerCase().includes("questions and answers") ||
-				s.text.toLowerCase().includes("q&a session")
+				s.text.toLowerCase().includes("q&a session"),
 		);
 	}
 
@@ -203,6 +204,6 @@ export function extractTranscriptSections(transcript: ParsedTranscript): {
 export function getExecutiveComments(transcript: ParsedTranscript): TranscriptSpeaker[] {
 	const executiveRoles = ["ceo", "cfo", "coo", "president", "chief"];
 	return transcript.speakers.filter(
-		(s) => s.role && executiveRoles.some((role) => s.role?.toLowerCase().includes(role))
+		(s) => s.role && executiveRoles.some((role) => s.role?.toLowerCase().includes(role)),
 	);
 }

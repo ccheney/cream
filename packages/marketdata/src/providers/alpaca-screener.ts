@@ -110,7 +110,7 @@ export class AlpacaScreenerClient {
 	private async request<T>(
 		path: string,
 		params?: Record<string, string | number | boolean | undefined>,
-		baseUrl?: string
+		baseUrl?: string,
 	): Promise<T> {
 		const url = new URL(path, baseUrl ?? this.baseUrl);
 
@@ -146,7 +146,7 @@ export class AlpacaScreenerClient {
 			const response = await this.request<Record<string, unknown>>(
 				`/v2/assets/${symbol}`,
 				undefined,
-				ALPACA_TRADING_BASE_URL
+				ALPACA_TRADING_BASE_URL,
 			);
 
 			const parsed = AssetInfoSchema.safeParse(response);
@@ -210,7 +210,7 @@ export class AlpacaScreenerClient {
 				{
 					by: by.toUpperCase(),
 					top: Math.min(top, 50),
-				}
+				},
 			);
 
 			const parsed = MostActivesResponseSchema.safeParse(response);
@@ -292,14 +292,14 @@ export class AlpacaScreenerClient {
 	 */
 	async getPreMarketMovers(
 		universeSymbols: string[],
-		topMarketWide = 5
+		topMarketWide = 5,
 	): Promise<{ gainers: Mover[]; losers: Mover[] }> {
 		const allMovers = await this.getMarketMovers(50);
 		const universeSet = new Set(universeSymbols.map((s) => s.toUpperCase()));
 
 		// Filter to universe symbols
 		const universeGainers = allMovers.gainers.filter((m) =>
-			universeSet.has(m.symbol.toUpperCase())
+			universeSet.has(m.symbol.toUpperCase()),
 		);
 		const universeLosers = allMovers.losers.filter((m) => universeSet.has(m.symbol.toUpperCase()));
 

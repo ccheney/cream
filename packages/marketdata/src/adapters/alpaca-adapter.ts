@@ -72,7 +72,7 @@ export class AlpacaMarketDataAdapter implements MarketDataAdapter {
 		symbol: string,
 		timeframe: "1m" | "5m" | "15m" | "1h" | "1d",
 		from: string,
-		to: string
+		to: string,
 	): Promise<AdapterCandle[]> {
 		const alpacaTimeframe = TIMEFRAME_MAP[timeframe];
 

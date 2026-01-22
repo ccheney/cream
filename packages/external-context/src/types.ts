@@ -270,7 +270,7 @@ export interface IExtractionClient {
 	extract(
 		content: string,
 		sourceType: ContentSourceType,
-		metadata?: Record<string, unknown>
+		metadata?: Record<string, unknown>,
 	): Promise<ExtractionResult>;
 
 	/**

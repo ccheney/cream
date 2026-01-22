@@ -36,7 +36,7 @@ function blackScholesPrice(
 	T: number,
 	r: number,
 	sigma: number,
-	optionType: "CALL" | "PUT"
+	optionType: "CALL" | "PUT",
 ): number {
 	const greeks = calculateGreeks({
 		symbol: "TEST",
@@ -552,7 +552,7 @@ describe("buildOptionSymbol", () => {
 			original.root,
 			original.expiry,
 			original.type,
-			original.strike
+			original.strike,
 		);
 		const parsed = parseOptionSymbol(symbol);
 

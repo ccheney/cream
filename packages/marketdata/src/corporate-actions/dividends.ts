@@ -102,7 +102,7 @@ export function calculateDividendYield(dividend: number, price: number): number 
 export function calculateAnnualizedYield(
 	dividendPerPeriod: number,
 	frequency: number,
-	price: number
+	price: number,
 ): number {
 	if (price === 0 || frequency === 0) {
 		return 0;
@@ -134,7 +134,7 @@ export function getDividendsFromDate(dividends: DividendInfo[], date: string): D
 export function getDividendsInRange(
 	dividends: DividendInfo[],
 	startDate: string,
-	endDate: string
+	endDate: string,
 ): DividendInfo[] {
 	return dividends.filter((d) => d.exDividendDate >= startDate && d.exDividendDate <= endDate);
 }
@@ -167,7 +167,7 @@ export function sumDividends(dividends: DividendInfo[]): number {
 export function calculateDividendAdjustedReturn(
 	prevClose: number,
 	currClose: number,
-	dividends: DividendInfo[]
+	dividends: DividendInfo[],
 ): DividendAdjustedReturn {
 	if (prevClose === 0) {
 		return {
@@ -281,7 +281,7 @@ export function getUpcomingDividends(dividends: DividendInfo[], asOfDate?: Date)
 export function getDividendsGoingExWithin(
 	dividends: DividendInfo[],
 	days: number,
-	asOfDate?: Date
+	asOfDate?: Date,
 ): DividendInfo[] {
 	const today = asOfDate ?? new Date();
 	const futureDate = new Date(today);
