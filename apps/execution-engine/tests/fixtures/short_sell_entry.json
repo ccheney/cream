@@ -1,41 +1,38 @@
 {
-  "plan_id": "plan-2026-01-19-14-00-007",
-  "cycle_id": "cycle-2026-01-19-14-00",
-  "timestamp": "2026-01-19T14:00:00Z",
-  "decisions": [
-    {
-      "decision_id": "cycle-2026-01-19-14-00-nflx-short",
-      "instrument_id": "NFLX",
-      "action": "SELL",
-      "direction": "SHORT",
-      "size": {
-        "quantity": "30",
-        "unit": "SHARES"
-      },
-      "stop_loss_level": "985.00",
-      "take_profit_level": "870.00",
-      "limit_price": "925.00",
-      "strategy_family": "EQUITY_SHORT",
-      "time_horizon": "SWING",
-      "thesis_state": "WATCHING",
-      "bullish_factors": [
-        "Strong subscriber growth in APAC",
-        "Ad-tier momentum"
-      ],
-      "bearish_factors": [
-        "Password sharing crackdown tailwinds exhausted",
-        "Content cost inflation resuming",
-        "RSI(14) at 74 - overbought territory",
-        "Breaking below 20-day MA after failed breakout",
-        "Streaming competition intensifying from Disney+, Max"
-      ],
-      "rationale": "NFLX showing signs of near-term exhaustion after strong run. Opening short position with defined risk. Entry on limit at $925, stop at $985 (6.5% risk), target at $870 (5.9% reward). R:R = 0.9:1 but high probability setup.",
-      "confidence": "0.65",
-      "legs": [],
-      "net_limit_price": null
-    }
-  ],
-  "risk_manager_approved": true,
-  "critic_approved": true,
-  "plan_rationale": "Short entry: NFLX showing technical exhaustion after extended rally. Position sized conservatively at 30 shares. Stop placed above recent swing high."
+	"plan_id": "plan-2026-01-19-14-00-007",
+	"cycle_id": "cycle-2026-01-19-14-00",
+	"timestamp": "2026-01-19T14:00:00Z",
+	"decisions": [
+		{
+			"decision_id": "cycle-2026-01-19-14-00-nflx-short",
+			"instrument_id": "NFLX",
+			"action": "SELL",
+			"direction": "SHORT",
+			"size": {
+				"quantity": "30",
+				"unit": "SHARES"
+			},
+			"stop_loss_level": "985.00",
+			"take_profit_level": "870.00",
+			"limit_price": "925.00",
+			"strategy_family": "EQUITY_SHORT",
+			"time_horizon": "SWING",
+			"thesis_state": "WATCHING",
+			"bullish_factors": ["Strong subscriber growth in APAC", "Ad-tier momentum"],
+			"bearish_factors": [
+				"Password sharing crackdown tailwinds exhausted",
+				"Content cost inflation resuming",
+				"RSI(14) at 74 - overbought territory",
+				"Breaking below 20-day MA after failed breakout",
+				"Streaming competition intensifying from Disney+, Max"
+			],
+			"rationale": "NFLX showing signs of near-term exhaustion after strong run. Opening short position with defined risk. Entry on limit at $925, stop at $985 (6.5% risk), target at $870 (5.9% reward). R:R = 0.9:1 but high probability setup.",
+			"confidence": "0.65",
+			"legs": [],
+			"net_limit_price": null
+		}
+	],
+	"risk_manager_approved": true,
+	"critic_approved": true,
+	"plan_rationale": "Short entry: NFLX showing technical exhaustion after extended rally. Position sized conservatively at 30 shares. Stop placed above recent swing high."
 }

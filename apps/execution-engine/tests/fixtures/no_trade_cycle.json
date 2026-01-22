@@ -1,62 +1,54 @@
 {
-  "plan_id": "plan-2026-01-19-14-00-005",
-  "cycle_id": "cycle-2026-01-19-14-00",
-  "timestamp": "2026-01-19T14:00:00Z",
-  "decisions": [
-    {
-      "decision_id": "cycle-2026-01-19-14-00-aapl-hold",
-      "instrument_id": "AAPL",
-      "action": "HOLD",
-      "direction": "LONG",
-      "size": {
-        "quantity": "0",
-        "unit": "SHARES"
-      },
-      "stop_loss_level": "225.00",
-      "take_profit_level": "255.00",
-      "limit_price": null,
-      "strategy_family": "EQUITY_LONG",
-      "time_horizon": "SWING",
-      "thesis_state": "ENTERED",
-      "bullish_factors": [
-        "Original thesis intact",
-        "Price action constructive within range"
-      ],
-      "bearish_factors": [],
-      "rationale": "Maintaining AAPL position - price consolidating as expected. No adjustment needed.",
-      "confidence": "0.70",
-      "legs": [],
-      "net_limit_price": null
-    },
-    {
-      "decision_id": "cycle-2026-01-19-14-00-spy-notrade",
-      "instrument_id": "SPY",
-      "action": "NO_TRADE",
-      "direction": "FLAT",
-      "size": {
-        "quantity": "0",
-        "unit": "SHARES"
-      },
-      "stop_loss_level": "0",
-      "take_profit_level": "0",
-      "limit_price": null,
-      "strategy_family": "EQUITY_LONG",
-      "time_horizon": "SWING",
-      "thesis_state": "WATCHING",
-      "bullish_factors": [
-        "Uptrend intact above 50-day MA"
-      ],
-      "bearish_factors": [
-        "FOMC uncertainty elevated",
-        "No clear entry signal this cycle"
-      ],
-      "rationale": "SPY on watchlist but no actionable setup. Waiting for pullback to 20-day MA or breakout above recent highs.",
-      "confidence": "0.50",
-      "legs": [],
-      "net_limit_price": null
-    }
-  ],
-  "risk_manager_approved": true,
-  "critic_approved": true,
-  "plan_rationale": "No new trades this cycle. Existing positions maintained with stops in place. Market in wait-and-see mode ahead of FOMC."
+	"plan_id": "plan-2026-01-19-14-00-005",
+	"cycle_id": "cycle-2026-01-19-14-00",
+	"timestamp": "2026-01-19T14:00:00Z",
+	"decisions": [
+		{
+			"decision_id": "cycle-2026-01-19-14-00-aapl-hold",
+			"instrument_id": "AAPL",
+			"action": "HOLD",
+			"direction": "LONG",
+			"size": {
+				"quantity": "0",
+				"unit": "SHARES"
+			},
+			"stop_loss_level": "225.00",
+			"take_profit_level": "255.00",
+			"limit_price": null,
+			"strategy_family": "EQUITY_LONG",
+			"time_horizon": "SWING",
+			"thesis_state": "ENTERED",
+			"bullish_factors": ["Original thesis intact", "Price action constructive within range"],
+			"bearish_factors": [],
+			"rationale": "Maintaining AAPL position - price consolidating as expected. No adjustment needed.",
+			"confidence": "0.70",
+			"legs": [],
+			"net_limit_price": null
+		},
+		{
+			"decision_id": "cycle-2026-01-19-14-00-spy-notrade",
+			"instrument_id": "SPY",
+			"action": "NO_TRADE",
+			"direction": "FLAT",
+			"size": {
+				"quantity": "0",
+				"unit": "SHARES"
+			},
+			"stop_loss_level": "0",
+			"take_profit_level": "0",
+			"limit_price": null,
+			"strategy_family": "EQUITY_LONG",
+			"time_horizon": "SWING",
+			"thesis_state": "WATCHING",
+			"bullish_factors": ["Uptrend intact above 50-day MA"],
+			"bearish_factors": ["FOMC uncertainty elevated", "No clear entry signal this cycle"],
+			"rationale": "SPY on watchlist but no actionable setup. Waiting for pullback to 20-day MA or breakout above recent highs.",
+			"confidence": "0.50",
+			"legs": [],
+			"net_limit_price": null
+		}
+	],
+	"risk_manager_approved": true,
+	"critic_approved": true,
+	"plan_rationale": "No new trades this cycle. Existing positions maintained with stops in place. Market in wait-and-see mode ahead of FOMC."
 }

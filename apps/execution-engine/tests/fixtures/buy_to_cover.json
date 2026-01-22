@@ -1,35 +1,35 @@
 {
-  "plan_id": "plan-2026-01-19-14-00-008",
-  "cycle_id": "cycle-2026-01-19-14-00",
-  "timestamp": "2026-01-19T14:00:00Z",
-  "decisions": [
-    {
-      "decision_id": "cycle-2026-01-19-14-00-nflx-cover",
-      "instrument_id": "NFLX",
-      "action": "CLOSE",
-      "direction": "FLAT",
-      "size": {
-        "quantity": "30",
-        "unit": "SHARES"
-      },
-      "stop_loss_level": "0",
-      "take_profit_level": "0",
-      "limit_price": "875.00",
-      "strategy_family": "EQUITY_SHORT",
-      "time_horizon": "SWING",
-      "thesis_state": "EXITING",
-      "bullish_factors": [],
-      "bearish_factors": [
-        "Target nearly reached - thesis played out",
-        "Risk of bounce from support level"
-      ],
-      "rationale": "Closing short NFLX position. Original entry at $925, current price near $875 target. Locking in ~5.4% gain. Buying to cover 30 shares at limit $875.",
-      "confidence": "0.85",
-      "legs": [],
-      "net_limit_price": null
-    }
-  ],
-  "risk_manager_approved": true,
-  "critic_approved": true,
-  "plan_rationale": "Closing profitable short position. Target reached, thesis complete. No new position being established."
+	"plan_id": "plan-2026-01-19-14-00-008",
+	"cycle_id": "cycle-2026-01-19-14-00",
+	"timestamp": "2026-01-19T14:00:00Z",
+	"decisions": [
+		{
+			"decision_id": "cycle-2026-01-19-14-00-nflx-cover",
+			"instrument_id": "NFLX",
+			"action": "CLOSE",
+			"direction": "FLAT",
+			"size": {
+				"quantity": "30",
+				"unit": "SHARES"
+			},
+			"stop_loss_level": "0",
+			"take_profit_level": "0",
+			"limit_price": "875.00",
+			"strategy_family": "EQUITY_SHORT",
+			"time_horizon": "SWING",
+			"thesis_state": "EXITING",
+			"bullish_factors": [],
+			"bearish_factors": [
+				"Target nearly reached - thesis played out",
+				"Risk of bounce from support level"
+			],
+			"rationale": "Closing short NFLX position. Original entry at $925, current price near $875 target. Locking in ~5.4% gain. Buying to cover 30 shares at limit $875.",
+			"confidence": "0.85",
+			"legs": [],
+			"net_limit_price": null
+		}
+	],
+	"risk_manager_approved": true,
+	"critic_approved": true,
+	"plan_rationale": "Closing profitable short position. Target reached, thesis complete. No new position being established."
 }

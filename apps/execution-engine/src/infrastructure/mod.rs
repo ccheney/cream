@@ -8,6 +8,7 @@
 //!   - `broker/`: Broker API adapters (Alpaca)
 //!   - `price_feed/`: Market data adapters
 //!   - `messaging/`: Event publishing adapters
+//!   - `websocket/`: Real-time market data WebSocket streams
 //!
 //! - **Driver Adapters (Inbound)**: Expose application to external world
 //!   - `http/`: REST API controllers
@@ -23,3 +24,4 @@ pub mod http;
 pub mod marketdata;
 pub mod persistence;
 pub mod price_feed;
+pub mod websocket;

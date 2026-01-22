@@ -22,6 +22,7 @@ use std::sync::Arc;
 use std::time::Duration;
 
 use execution_engine::application::ports::{InMemoryRiskRepository, NoOpEventPublisher};
+use execution_engine::application::services::{PositionMonitorConfig, PositionMonitorService};
 use execution_engine::application::use_cases::{
     CancelOrdersUseCase, SubmitOrdersUseCase, ValidateRiskUseCase,
 };
@@ -34,10 +35,13 @@ use execution_engine::infrastructure::grpc::{
 use execution_engine::infrastructure::http::{AppState, create_router};
 use execution_engine::infrastructure::marketdata::AlpacaMarketDataAdapter;
 use execution_engine::infrastructure::persistence::InMemoryOrderRepository;
+use execution_engine::infrastructure::price_feed::AlpacaPriceFeedAdapter;
+use execution_engine::infrastructure::websocket::{WebSocketConfig, WebSocketManager};
 use tokio::net::TcpListener;
 use tokio::signal;
 use tokio::sync::broadcast;
 use tokio::task::JoinHandle;
+use tokio_util::sync::CancellationToken;
 
 /// Graceful shutdown timeout.
 const SHUTDOWN_TIMEOUT: Duration = Duration::from_secs(30);
@@ -55,6 +59,7 @@ struct EngineConfig {
     grpc_port: u16,
     api_key: String,
     api_secret: String,
+    position_monitor_enabled: bool,
 }
 
 impl EngineConfig {
@@ -103,8 +108,38 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     let broker = create_broker(&config)?;
     let market_data = create_market_data(&config)?;
+    let price_feed = create_price_feed(&config)?;
     let use_cases = create_use_cases(&broker);
     let (shutdown_tx, _) = broadcast::channel::<()>(1);
+
+    // Create cancellation token for graceful shutdown coordination
+    let shutdown_token = CancellationToken::new();
+
+    // Create WebSocket manager for real-time quotes
+    let websocket_manager = create_websocket_manager(&config, shutdown_token.clone());
+
+    // Create and start position monitor
+    let position_monitor = create_position_monitor(
+        &config,
+        Arc::clone(&broker),
+        Arc::clone(&price_feed),
+        Arc::clone(&websocket_manager),
+        shutdown_token.clone(),
+    );
+
+    // Start WebSocket streams
+    if config.position_monitor_enabled {
+        tracing::info!("Starting WebSocket streams for position monitoring");
+        websocket_manager.connect_stock_stream();
+        websocket_manager.connect_options_stream();
+
+        // Start position monitor service
+        if let Err(e) = position_monitor.start().await {
+            tracing::warn!(error = %e, "Failed to start position monitor, continuing without it");
+        } else {
+            tracing::info!("Position monitor service started");
+        }
+    }
 
     let http_handle = start_http_server(&config, &use_cases, shutdown_tx.clone()).await?;
     let grpc_handle = start_grpc_server(
@@ -117,7 +152,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     tracing::info!("Execution engine ready");
 
-    await_shutdown(http_handle, grpc_handle).await;
+    await_shutdown(http_handle, grpc_handle, shutdown_token).await;
 
     tracing::info!("Execution engine stopped");
     Ok(())
@@ -179,12 +214,17 @@ fn parse_config() -> Result<EngineConfig, Box<dyn std::error::Error>> {
         .parse()
         .unwrap_or(DEFAULT_GRPC_PORT);
 
+    let position_monitor_enabled = std::env::var("POSITION_MONITOR_ENABLED")
+        .map(|v| v.to_lowercase() == "true" || v == "1")
+        .unwrap_or(true);
+
     Ok(EngineConfig {
         environment,
         http_port,
         grpc_port,
         api_key,
         api_secret,
+        position_monitor_enabled,
     })
 }
 
@@ -194,6 +234,7 @@ fn log_config(config: &EngineConfig) {
         environment = config.environment_name(),
         http_port = config.http_port,
         grpc_port = config.grpc_port,
+        position_monitor_enabled = config.position_monitor_enabled,
         "Configuration loaded"
     );
 }
@@ -238,6 +279,63 @@ fn create_market_data(
     );
 
     Ok(Arc::new(market_data))
+}
+
+/// Create the Alpaca price feed adapter for REST fallback.
+fn create_price_feed(
+    config: &EngineConfig,
+) -> Result<Arc<AlpacaPriceFeedAdapter>, Box<dyn std::error::Error>> {
+    let alpaca_config = AlpacaConfig::new(
+        config.api_key.clone(),
+        config.api_secret.clone(),
+        config.environment,
+    );
+
+    let price_feed = AlpacaPriceFeedAdapter::new(&alpaca_config)?;
+
+    tracing::info!(
+        environment = config.environment_name(),
+        "AlpacaPriceFeedAdapter initialized for REST fallback"
+    );
+
+    Ok(Arc::new(price_feed))
+}
+
+/// Create the WebSocket manager for real-time quotes.
+fn create_websocket_manager(
+    config: &EngineConfig,
+    shutdown: CancellationToken,
+) -> Arc<WebSocketManager> {
+    let ws_config = WebSocketConfig::new(
+        config.api_key.clone(),
+        config.api_secret.clone(),
+        config.environment,
+    );
+
+    let manager = WebSocketManager::new(ws_config, shutdown);
+    Arc::new(manager)
+}
+
+/// Create the position monitor service.
+fn create_position_monitor(
+    config: &EngineConfig,
+    broker: Arc<AlpacaBrokerAdapter>,
+    price_feed: Arc<AlpacaPriceFeedAdapter>,
+    websocket_manager: Arc<WebSocketManager>,
+    shutdown: CancellationToken,
+) -> PositionMonitorService<AlpacaBrokerAdapter, AlpacaPriceFeedAdapter> {
+    let monitor_config = PositionMonitorConfig {
+        enabled: config.position_monitor_enabled,
+        ..PositionMonitorConfig::default()
+    };
+
+    PositionMonitorService::with_config(
+        monitor_config,
+        broker,
+        price_feed,
+        websocket_manager,
+        shutdown,
+    )
 }
 
 /// Create all application use cases with their dependencies.
@@ -366,7 +464,11 @@ fn start_grpc_server(
 }
 
 /// Wait for either server to stop.
-async fn await_shutdown(http_handle: JoinHandle<()>, grpc_handle: JoinHandle<()>) {
+async fn await_shutdown(
+    http_handle: JoinHandle<()>,
+    grpc_handle: JoinHandle<()>,
+    shutdown_token: CancellationToken,
+) {
     tokio::select! {
         _ = http_handle => {
             tracing::info!("HTTP server stopped");
@@ -375,6 +477,10 @@ async fn await_shutdown(http_handle: JoinHandle<()>, grpc_handle: JoinHandle<()>
             tracing::info!("gRPC server stopped");
         }
     }
+
+    // Cancel WebSocket streams and position monitor
+    shutdown_token.cancel();
+    tracing::info!("Cancellation token triggered for background services");
 }
 
 /// Load .env file from current directory or any ancestor directory.

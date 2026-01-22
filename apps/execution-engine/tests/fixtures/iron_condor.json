@@ -1,53 +1,53 @@
 {
-  "plan_id": "plan-2026-01-19-10-00-011",
-  "cycle_id": "cycle-2026-01-19-10-00",
-  "timestamp": "2026-01-19T10:00:00Z",
-  "decisions": [
-    {
-      "decision_id": "cycle-2026-01-19-10-00-spy-iron-condor",
-      "instrument_id": "SPY",
-      "action": "BUY",
-      "direction": "LONG",
-      "size": {
-        "quantity": "5",
-        "unit": "CONTRACTS"
-      },
-      "stop_loss_level": "0",
-      "take_profit_level": "0",
-      "limit_price": null,
-      "strategy_family": "IRON_CONDOR",
-      "time_horizon": "SWING",
-      "thesis_state": "WATCHING",
-      "bullish_factors": [],
-      "bearish_factors": [],
-      "rationale": "Iron condor on SPY to collect premium in range-bound market. Max profit $1.50 credit x 5 contracts = $750 if SPY stays between $550-$590 at expiration. Max loss limited to $3.50 x 5 = $1,750 on either wing. Probability of profit ~65% based on current IV and delta.",
-      "confidence": "0.70",
-      "legs": [
-        {
-          "symbol": "SPY260221P00540000",
-          "ratio_qty": 5,
-          "position_intent": "buy_to_open"
-        },
-        {
-          "symbol": "SPY260221P00550000",
-          "ratio_qty": -5,
-          "position_intent": "sell_to_open"
-        },
-        {
-          "symbol": "SPY260221C00590000",
-          "ratio_qty": -5,
-          "position_intent": "sell_to_open"
-        },
-        {
-          "symbol": "SPY260221C00600000",
-          "ratio_qty": 5,
-          "position_intent": "buy_to_open"
-        }
-      ],
-      "net_limit_price": "1.50"
-    }
-  ],
-  "risk_manager_approved": true,
-  "critic_approved": true,
-  "plan_rationale": "Iron condor premium collection: SPY has been range-bound for 2 weeks between $555-$585. IV rank at 45th percentile - decent premium available. Defined risk spread with ~2:1 reward-to-risk on premium collected vs max loss per wing."
+	"plan_id": "plan-2026-01-19-10-00-011",
+	"cycle_id": "cycle-2026-01-19-10-00",
+	"timestamp": "2026-01-19T10:00:00Z",
+	"decisions": [
+		{
+			"decision_id": "cycle-2026-01-19-10-00-spy-iron-condor",
+			"instrument_id": "SPY",
+			"action": "BUY",
+			"direction": "LONG",
+			"size": {
+				"quantity": "5",
+				"unit": "CONTRACTS"
+			},
+			"stop_loss_level": "0",
+			"take_profit_level": "0",
+			"limit_price": null,
+			"strategy_family": "IRON_CONDOR",
+			"time_horizon": "SWING",
+			"thesis_state": "WATCHING",
+			"bullish_factors": [],
+			"bearish_factors": [],
+			"rationale": "Iron condor on SPY to collect premium in range-bound market. Max profit $1.50 credit x 5 contracts = $750 if SPY stays between $550-$590 at expiration. Max loss limited to $3.50 x 5 = $1,750 on either wing. Probability of profit ~65% based on current IV and delta.",
+			"confidence": "0.70",
+			"legs": [
+				{
+					"symbol": "SPY260221P00540000",
+					"ratio_qty": 5,
+					"position_intent": "buy_to_open"
+				},
+				{
+					"symbol": "SPY260221P00550000",
+					"ratio_qty": -5,
+					"position_intent": "sell_to_open"
+				},
+				{
+					"symbol": "SPY260221C00590000",
+					"ratio_qty": -5,
+					"position_intent": "sell_to_open"
+				},
+				{
+					"symbol": "SPY260221C00600000",
+					"ratio_qty": 5,
+					"position_intent": "buy_to_open"
+				}
+			],
+			"net_limit_price": "1.50"
+		}
+	],
+	"risk_manager_approved": true,
+	"critic_approved": true,
+	"plan_rationale": "Iron condor premium collection: SPY has been range-bound for 2 weeks between $555-$585. IV rank at 45th percentile - decent premium available. Defined risk spread with ~2:1 reward-to-risk on premium collected vs max loss per wing."
 }

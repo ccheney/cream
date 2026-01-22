@@ -1,12 +1,12 @@
 {
-  "$schema": "https://turborepo.com/schema.json",
-  "extends": ["//"],
-  "tasks": {
-    "build": {
-      "outputs": ["target/release/**"]
-    },
-    "lint": {
-      "inputs": ["src/**/*.rs", "Cargo.toml", "Cargo.lock"]
-    }
-  }
+	"$schema": "https://turborepo.com/schema.json",
+	"extends": ["//"],
+	"tasks": {
+		"build": {
+			"outputs": ["target/release/**"]
+		},
+		"lint": {
+			"inputs": ["src/**/*.rs", "Cargo.toml", "Cargo.lock"]
+		}
+	}
 }

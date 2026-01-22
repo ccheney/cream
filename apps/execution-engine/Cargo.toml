@@ -93,6 +93,12 @@ rayon = "1.11"
 alpaca-websocket = "0.3"
 alpaca-base = "0.25"
 
+# WebSocket client for real-time streams
+tokio-tungstenite = { version = "0.26", features = ["rustls-tls-webpki-roots"] }
+
+# Cancellation token for graceful shutdown
+tokio-util = { version = "0.7", features = ["rt"] }
+
 # Concurrency primitives
 parking_lot = "0.12"
 
