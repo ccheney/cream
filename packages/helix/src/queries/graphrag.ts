@@ -218,7 +218,7 @@ function extractString(value: { String: string } | string | null | undefined): s
  * Extract number value from HelixDB typed value wrapper.
  */
 function extractNumber(
-	value: { F64: number } | { U32: number } | number | null | undefined
+	value: { F64: number } | { U32: number } | number | null | undefined,
 ): number {
 	if (value === null || value === undefined) {
 		return 0;
@@ -358,7 +358,7 @@ function deduplicateCompanies(companies: CompanyResult[]): CompanyResult[] {
  */
 export async function searchGraphContext(
 	client: HelixClient,
-	options: GraphRAGSearchOptions
+	options: GraphRAGSearchOptions,
 ): Promise<GraphRAGSearchResult> {
 	const { query, limit = 10, symbol } = options;
 
@@ -372,7 +372,7 @@ export async function searchGraphContext(
 				query,
 				company_symbol: symbol,
 				limit,
-			}
+			},
 		);
 
 		const response = result.data;
@@ -469,7 +469,7 @@ export async function searchGraphContextByCompany(
 	client: HelixClient,
 	symbol: string,
 	query: string,
-	limit = 10
+	limit = 10,
 ): Promise<GraphRAGSearchResult> {
 	return searchGraphContext(client, { query, limit, symbol });
 }

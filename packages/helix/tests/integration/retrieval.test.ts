@@ -68,7 +68,7 @@ function createTradeDecisionNode(
 	id: string,
 	instrument: string,
 	action: string,
-	regime: string
+	regime: string,
 ): HelixNode {
 	return {
 		id,

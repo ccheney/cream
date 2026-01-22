@@ -583,7 +583,7 @@ describe("QueryWrapper", () => {
 		// Second call - cache hit
 		const result = await wrapper.execute(
 			async () => [4, 5, 6], // Should not be called
-			{ queryType: "vector", cacheKey: "cached" }
+			{ queryType: "vector", cacheKey: "cached" },
 		);
 
 		expect(result.data).toEqual([1, 2, 3]);

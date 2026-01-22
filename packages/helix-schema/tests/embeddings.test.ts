@@ -89,7 +89,7 @@ describe("extractEmbeddableText", () => {
 
 		const text = extractEmbeddableText("NewsItem", node);
 		expect(text).toBe(
-			"Apple Announces New Product\n\nApple Inc. today announced a new product line..."
+			"Apple Announces New Product\n\nApple Inc. today announced a new product line...",
 		);
 	});
 

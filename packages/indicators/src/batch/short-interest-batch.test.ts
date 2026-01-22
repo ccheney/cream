@@ -25,7 +25,7 @@ import {
 // ============================================
 
 function createMockFINRARecord(
-	overrides: Partial<FINRAShortInterestRecord> = {}
+	overrides: Partial<FINRAShortInterestRecord> = {},
 ): FINRAShortInterestRecord {
 	return {
 		symbolCode: "AAPL",
@@ -53,7 +53,7 @@ function createMockFINRAClient(records: FINRAShortInterestRecord[] = []): FINRAC
 }
 
 function createMockSharesProvider(
-	data: Map<string, { sharesOutstanding: number; floatShares: number | null }> = new Map()
+	data: Map<string, { sharesOutstanding: number; floatShares: number | null }> = new Map(),
 ): SharesOutstandingProvider {
 	return {
 		getSharesData: mock((symbol: string) => Promise.resolve(data.get(symbol) ?? null)),
@@ -106,7 +106,7 @@ function createMockRepository(): MockShortInterestRepository {
 				totalPages: 0,
 				hasNext: false,
 				hasPrev: false,
-			})
+			}),
 		),
 	};
 	// Cast to ShortInterestRepository to bypass private client property check

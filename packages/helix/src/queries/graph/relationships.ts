@@ -20,7 +20,7 @@ import type { GraphNode } from "./types.js";
  */
 export async function getInfluencingEvents(
 	client: HelixClient,
-	decisionId: string
+	decisionId: string,
 ): Promise<GraphNode[]> {
 	return getNeighbors(client, decisionId, {
 		edgeTypes: ["INFLUENCED_DECISION"],
@@ -37,7 +37,7 @@ export async function getInfluencingEvents(
  */
 export async function getInfluencedDecisions(
 	client: HelixClient,
-	eventId: string
+	eventId: string,
 ): Promise<GraphNode[]> {
 	return getNeighbors(client, eventId, {
 		edgeTypes: ["INFLUENCED_DECISION"],
@@ -54,7 +54,7 @@ export async function getInfluencedDecisions(
  */
 export async function getLifecycleEvents(
 	client: HelixClient,
-	decisionId: string
+	decisionId: string,
 ): Promise<GraphNode[]> {
 	return getNeighbors(client, decisionId, {
 		edgeTypes: ["HAS_EVENT"],

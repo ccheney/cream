@@ -104,7 +104,7 @@ export function shouldFollowEdge(edge: GraphEdge, options: Required<TraversalOpt
  */
 export function calculateRecencyBoost(
 	edge: GraphEdge,
-	options: Required<TraversalOptions>
+	options: Required<TraversalOptions>,
 ): number {
 	const props = edge.properties;
 
@@ -134,7 +134,7 @@ export function calculateRecencyBoost(
  */
 export function calculateHubPenalty(
 	edgeCount: number,
-	options: Required<TraversalOptions>
+	options: Required<TraversalOptions>,
 ): number {
 	if (edgeCount > options.hubPenaltyThreshold) {
 		return options.hubPenaltyMultiplier;
@@ -158,7 +158,7 @@ export function calculateHubPenalty(
 export function calculateEdgePriority(
 	edge: GraphEdge,
 	targetNodeEdgeCount: number,
-	options: Required<TraversalOptions>
+	options: Required<TraversalOptions>,
 ): number {
 	const baseWeight = getEdgeWeight(edge) ?? 0.5;
 	const recencyMultiplier = calculateRecencyBoost(edge, options);
@@ -176,7 +176,7 @@ export function calculateEdgePriority(
  */
 export function sortEdgesByPriority(
 	edges: Array<{ edge: GraphEdge; targetNodeEdgeCount: number }>,
-	options: Required<TraversalOptions>
+	options: Required<TraversalOptions>,
 ): Array<{ edge: GraphEdge; targetNodeEdgeCount: number; priority: number }> {
 	return edges
 		.map((e) => ({
@@ -203,7 +203,7 @@ export function sortEdgesByPriority(
 export function filterAndPrioritizeEdges(
 	edges: GraphEdge[],
 	targetNodeEdgeCounts: Map<string, number>,
-	options: Required<TraversalOptions>
+	options: Required<TraversalOptions>,
 ): GraphEdge[] {
 	const filtered = edges.filter((edge) => shouldFollowEdge(edge, options));
 

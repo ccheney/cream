@@ -15,7 +15,7 @@ import type { FreshnessInfo } from "./types.js";
  */
 export function isEmbeddingStale(
 	lastUpdate: Date,
-	thresholdMs: number = STALE_EMBEDDING_THRESHOLD_MS
+	thresholdMs: number = STALE_EMBEDDING_THRESHOLD_MS,
 ): boolean {
 	const ageMs = Date.now() - lastUpdate.getTime();
 	return ageMs > thresholdMs;
@@ -43,7 +43,7 @@ export function getEmbeddingAgeHours(lastUpdate: Date): number {
 export function validateFreshness(
 	lastEmbeddingUpdate: Date,
 	currentRegime?: string,
-	embeddingRegime?: string
+	embeddingRegime?: string,
 ): FreshnessInfo {
 	const isStale = isEmbeddingStale(lastEmbeddingUpdate);
 	const ageHours = getEmbeddingAgeHours(lastEmbeddingUpdate);

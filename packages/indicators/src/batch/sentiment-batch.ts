@@ -102,7 +102,7 @@ export interface SentimentDataProvider {
 	getSentimentData(
 		symbols: string[],
 		startDate: string,
-		endDate: string
+		endDate: string,
 	): Promise<ExtractedSentiment[]>;
 
 	/**
@@ -113,7 +113,7 @@ export interface SentimentDataProvider {
 	 */
 	getHistoricalSentiment(
 		symbol: string,
-		lookbackDays: number
+		lookbackDays: number,
 	): Promise<Array<{ date: string; score: number }>>;
 }
 
@@ -171,7 +171,7 @@ function sleep(ms: number): Promise<void> {
 export function computeSentimentScore(
 	sentiment: RawSentimentClassification,
 	confidence: number,
-	config: SentimentScoringConfig = {}
+	config: SentimentScoringConfig = {},
 ): number {
 	const {
 		bullishBase = 0.8,
@@ -210,7 +210,7 @@ export function computeSentimentScore(
 export function calculateRecencyWeight(
 	eventTime: Date,
 	referenceTime: Date,
-	halfLifeHours = 24
+	halfLifeHours = 24,
 ): number {
 	const ageMs = referenceTime.getTime() - eventTime.getTime();
 	const ageHours = ageMs / (1000 * 60 * 60);
@@ -224,7 +224,7 @@ export function calculateRecencyWeight(
  * @returns Weighted average score or null if no scores
  */
 export function aggregateSentimentScores(
-	scores: Array<{ score: number; weight: number }>
+	scores: Array<{ score: number; weight: number }>,
 ): number | null {
 	if (scores.length === 0) {
 		return null;
@@ -246,7 +246,7 @@ export function aggregateSentimentScores(
  * @returns Strength score (0-1) or null if no data
  */
 export function calculateSentimentStrength(
-	scores: Array<{ confidence: number; weight: number }>
+	scores: Array<{ confidence: number; weight: number }>,
 ): number | null {
 	if (scores.length === 0) {
 		return null;
@@ -276,7 +276,7 @@ export function calculateSentimentStrength(
  */
 export function calculateSentimentMomentum(
 	shortTermScores: number[],
-	longTermScores: number[]
+	longTermScores: number[],
 ): number | null {
 	if (shortTermScores.length === 0 || longTermScores.length === 0) {
 		return null;
@@ -305,7 +305,7 @@ export function detectEventRisk(sentiments: ExtractedSentiment[]): boolean {
 	];
 
 	return sentiments.some(
-		(s) => s.eventType && riskEventTypes.includes(s.eventType) && (s.importance ?? 0) >= 3
+		(s) => s.eventType && riskEventTypes.includes(s.eventType) && (s.importance ?? 0) >= 3,
 	);
 }
 
@@ -333,7 +333,7 @@ export class SentimentAggregationJob {
 		provider: SentimentDataProvider,
 		repo: SentimentRepository,
 		config?: SentimentBatchJobConfig,
-		scoringConfig?: SentimentScoringConfig
+		scoringConfig?: SentimentScoringConfig,
 	) {
 		this.provider = provider;
 		this.repo = repo;
@@ -440,7 +440,7 @@ export class SentimentAggregationJob {
 	private async aggregateSentiment(
 		symbol: string,
 		date: string,
-		sentimentData: ExtractedSentiment[]
+		sentimentData: ExtractedSentiment[],
 	): Promise<AggregatedSentiment> {
 		const referenceTime = new Date(date);
 		referenceTime.setHours(23, 59, 59, 999); // End of day
@@ -454,7 +454,7 @@ export class SentimentAggregationJob {
 			const score = computeSentimentScore(
 				sentiment.sentiment,
 				sentiment.confidence,
-				this.scoringConfig
+				this.scoringConfig,
 			);
 			const weight = calculateRecencyWeight(sentiment.eventTime, referenceTime);
 
@@ -511,7 +511,7 @@ export class SentimentAggregationJob {
 		try {
 			const historical = await this.provider.getHistoricalSentiment(
 				symbol,
-				this.config.longTermDays
+				this.config.longTermDays,
 			);
 
 			if (historical.length < this.config.shortTermDays) {
@@ -547,7 +547,7 @@ export class SentimentAggregationJob {
 	private async fetchSentimentWithRetry(
 		symbols: string[],
 		startDate: string,
-		endDate: string
+		endDate: string,
 	): Promise<ExtractedSentiment[]> {
 		let lastError: Error | null = null;
 

@@ -29,7 +29,7 @@ const OPTIONS_FETCH_TIMEOUT_MS = 5000;
 async function withTimeout<T>(
 	promise: Promise<T>,
 	timeoutMs: number,
-	label: string
+	label: string,
 ): Promise<T | null> {
 	const { promise: timeoutPromise, resolve } = Promise.withResolvers<T | null>();
 	const timer = setTimeout(() => {

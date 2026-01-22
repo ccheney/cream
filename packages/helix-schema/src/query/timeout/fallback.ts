@@ -21,7 +21,7 @@ export async function executeWithFallback<T>(
 	queryFn: QueryFunction<T>,
 	cache: QueryCache<T>,
 	options: QueryOptions,
-	config: TimeoutConfig = DEFAULT_TIMEOUT_CONFIG
+	config: TimeoutConfig = DEFAULT_TIMEOUT_CONFIG,
 ): Promise<QueryResult<T>> {
 	const timeoutMs = options.timeoutMs ?? getTimeoutForQueryType(options.queryType, config);
 	const cacheKey = options.cacheKey ?? `${options.queryType}:default`;

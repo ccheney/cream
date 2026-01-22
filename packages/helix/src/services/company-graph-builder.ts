@@ -133,7 +133,7 @@ export function getMarketCapBucket(marketCap: number | undefined): MarketCapBuck
  */
 async function upsertCompanyNode(
 	client: HelixClient,
-	company: Company
+	company: Company,
 ): Promise<{ success: boolean; error?: string }> {
 	try {
 		await client.query("upsertCompany", {
@@ -157,7 +157,7 @@ async function upsertCompanyNode(
  */
 async function batchUpsertCompanyNodes(
 	client: HelixClient,
-	companies: Company[]
+	companies: Company[],
 ): Promise<{ successful: number; failed: number; errors: string[] }> {
 	const errors: string[] = [];
 	let successful = 0;
@@ -285,7 +285,7 @@ function buildSectorPeerEdges(companies: CompanyData[], maxPeersPerCompany: numb
 function buildIndustryPeerEdges(
 	companies: CompanyData[],
 	maxPeersPerCompany: number,
-	existingEdges: Set<string>
+	existingEdges: Set<string>,
 ): EdgeInput[] {
 	const edges: EdgeInput[] = [];
 	const industryGroups = groupByIndustry(companies);
@@ -394,7 +394,7 @@ export function calculateReturns(prices: number[]): number[] {
 function buildCorrelationPeerEdges(
 	pairs: CorrelationPair[],
 	options: CorrelationAnalysisOptions,
-	existingEdges: Set<string>
+	existingEdges: Set<string>,
 ): EdgeInput[] {
 	const edges: EdgeInput[] = [];
 	const minCorrelation = options.minCorrelation ?? 0.7;
@@ -405,7 +405,7 @@ function buildCorrelationPeerEdges(
 
 	// Sort by absolute correlation (strongest first)
 	const sortedPairs = validPairs.toSorted(
-		(a, b) => Math.abs(b.correlation) - Math.abs(a.correlation)
+		(a, b) => Math.abs(b.correlation) - Math.abs(a.correlation),
 	);
 
 	// Track edges per symbol to respect limit
@@ -497,7 +497,7 @@ export class CompanyGraphBuilder {
 		companies: CompanyData[],
 		correlationPairs: CorrelationPair[] = [],
 		supplyChainRelationships: SupplyChainRelationship[] = [],
-		options: CompanyGraphBuildOptions = {}
+		options: CompanyGraphBuildOptions = {},
 	): Promise<CompanyGraphBuildResult> {
 		const startTime = performance.now();
 		const warnings: string[] = [];
@@ -527,7 +527,7 @@ export class CompanyGraphBuilder {
 		// Step 2: Build sector peer edges
 		const sectorPeerEdges = buildSectorPeerEdges(companies, maxPeersPerCompany);
 		const existingEdges = new Set(
-			sectorPeerEdges.map((e) => [e.sourceId, e.targetId].sort().join("->"))
+			sectorPeerEdges.map((e) => [e.sourceId, e.targetId].sort().join("->")),
 		);
 
 		// Step 3: Build industry peer edges (if enabled)
@@ -540,7 +540,7 @@ export class CompanyGraphBuilder {
 		const correlationEdges = buildCorrelationPeerEdges(
 			correlationPairs,
 			correlationOptions,
-			existingEdges
+			existingEdges,
 		);
 
 		// Step 5: Build supply chain edges
@@ -584,7 +584,7 @@ export class CompanyGraphBuilder {
 	async addRelationship(
 		sourceSymbol: string,
 		targetSymbol: string,
-		relationshipType: RelationshipType
+		relationshipType: RelationshipType,
 	): Promise<{ success: boolean; error?: string }> {
 		const result = await createEdge(this.client, {
 			sourceId: sourceSymbol,
@@ -602,7 +602,7 @@ export class CompanyGraphBuilder {
 		sourceSymbol: string,
 		targetSymbol: string,
 		dependencyType: DependencyType,
-		strength: number
+		strength: number,
 	): Promise<{ success: boolean; error?: string }> {
 		const result = await createEdge(this.client, {
 			sourceId: sourceSymbol,
@@ -621,7 +621,7 @@ export class CompanyGraphBuilder {
 	 */
 	async getRelatedCompanies(
 		symbol: string,
-		relationshipTypes?: RelationshipType[]
+		relationshipTypes?: RelationshipType[],
 	): Promise<{ symbol: string; relationshipType: RelationshipType }[]> {
 		try {
 			const result = await this.client.query<
@@ -649,7 +649,7 @@ export class CompanyGraphBuilder {
 	 * Get company dependencies (supply chain)
 	 */
 	async getCompanyDependencies(
-		symbol: string
+		symbol: string,
 	): Promise<{ symbol: string; dependencyType: DependencyType; strength: number }[]> {
 		try {
 			const result = await this.client.query<
@@ -670,7 +670,7 @@ export class CompanyGraphBuilder {
 	 * Get companies that depend on a given company
 	 */
 	async getDependentCompanies(
-		symbol: string
+		symbol: string,
 	): Promise<{ symbol: string; dependencyType: DependencyType; strength: number }[]> {
 		try {
 			const result = await this.client.query<
@@ -692,7 +692,7 @@ export class CompanyGraphBuilder {
 	 * Use this to import supply chain data from external sources (SEC filings, APIs)
 	 */
 	async addSupplyChainRelationships(
-		relationships: SupplyChainRelationship[]
+		relationships: SupplyChainRelationship[],
 	): Promise<{ successful: number; failed: number; errors: string[] }> {
 		const edges = buildSupplyChainEdges(relationships);
 		const batchResult = await batchCreateEdges(this.client, edges);
@@ -709,7 +709,7 @@ export class CompanyGraphBuilder {
 	 */
 	async addCorrelationRelationships(
 		pairs: CorrelationPair[],
-		options: CorrelationAnalysisOptions = {}
+		options: CorrelationAnalysisOptions = {},
 	): Promise<{ successful: number; failed: number; errors: string[] }> {
 		const existingEdges = new Set<string>();
 		const edges = buildCorrelationPeerEdges(pairs, options, existingEdges);

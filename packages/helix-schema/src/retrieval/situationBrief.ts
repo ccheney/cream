@@ -286,7 +286,7 @@ function percentile(sorted: number[], p: number): number {
  */
 export function generateSituationBrief(
 	input: SituationBriefInput,
-	config: SituationBriefConfig = DEFAULT_SITUATION_BRIEF_CONFIG
+	config: SituationBriefConfig = DEFAULT_SITUATION_BRIEF_CONFIG,
 ): SituationBrief {
 	const mergedConfig = { ...DEFAULT_SITUATION_BRIEF_CONFIG, ...config };
 
@@ -360,7 +360,7 @@ function formatTextSummary(
 	regime: SituationBriefRegime,
 	indicators: SituationBriefIndicator[],
 	position: SituationBriefPosition | undefined,
-	events: SituationBriefEvent[]
+	events: SituationBriefEvent[],
 ): string {
 	const parts: string[] = [];
 
@@ -385,7 +385,7 @@ function formatTextSummary(
 		parts.push(
 			`Position: ${position.direction} ${position.size} shares, ` +
 				`${pnlSign}$${position.unrealizedPnL.toFixed(2)} P&L, ` +
-				`held ${position.holdingDays} days.`
+				`held ${position.holdingDays} days.`,
 		);
 	}
 
@@ -415,7 +415,7 @@ function formatTextSummary(
  */
 export function calculateRetrievalStatistics(
 	returns: number[],
-	holdingDays: number[]
+	holdingDays: number[],
 ): RetrievalStatistics {
 	const totalCases = returns.length;
 

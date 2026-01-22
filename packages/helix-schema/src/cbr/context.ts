@@ -47,7 +47,7 @@ export async function retrieveMemoryContext(
 	client: HelixClient,
 	embeddingClient: EmbeddingClient,
 	snapshot: CBRMarketSnapshot,
-	options: CBRRetrievalOptions = {}
+	options: CBRRetrievalOptions = {},
 ): Promise<MemoryContext> {
 	const result = await retrieveSimilarCases(client, embeddingClient, snapshot, options);
 	return buildMemoryContext(result);

@@ -1,15 +1,15 @@
 {
-  "bm25": true,
-  "db_max_size_gb": 20,
-  "embedding_model": "gemini:gemini-embedding-001",
-  "graph_config": {
-    "secondary_indices": []
-  },
-  "mcp": true,
-  "vector_config": {
-    "db_max_size": 20,
-    "ef_construction": 128,
-    "ef_search": 768,
-    "m": 16
-  }
+	"bm25": true,
+	"db_max_size_gb": 20,
+	"embedding_model": "gemini:gemini-embedding-001",
+	"graph_config": {
+		"secondary_indices": []
+	},
+	"mcp": true,
+	"vector_config": {
+		"db_max_size": 20,
+		"ef_construction": 128,
+		"ef_search": 768,
+		"m": 16
+	}
 }

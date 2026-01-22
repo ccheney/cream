@@ -136,7 +136,7 @@ function buildTextSummary(event: ExtractedEvent): string {
 
 	// Add sentiment context
 	parts.push(
-		`Sentiment: ${event.extraction.sentiment} (confidence: ${event.extraction.confidence.toFixed(2)})`
+		`Sentiment: ${event.extraction.sentiment} (confidence: ${event.extraction.confidence.toFixed(2)})`,
 	);
 
 	// Add data points if relevant
@@ -252,7 +252,7 @@ export class EventIngestionService {
 	 */
 	async ingestEvents(
 		events: ExtractedEvent[],
-		options: EventIngestionOptions = {}
+		options: EventIngestionOptions = {},
 	): Promise<EventIngestionResult> {
 		const startTime = performance.now();
 		const warnings: string[] = [];
@@ -307,7 +307,7 @@ export class EventIngestionService {
 				}
 			} catch (error) {
 				warnings.push(
-					`Embedding generation failed: ${error instanceof Error ? error.message : "Unknown error"}`
+					`Embedding generation failed: ${error instanceof Error ? error.message : "Unknown error"}`,
 				);
 			}
 		}
@@ -318,7 +318,7 @@ export class EventIngestionService {
 				node: event,
 				embedding: embeddings.get(event.event_id),
 				embeddingModelVersion: DEFAULT_EMBEDDING_CONFIG.model,
-			})
+			}),
 		);
 
 		let eventsIngested = 0;
@@ -385,7 +385,7 @@ export class EventIngestionService {
 
 				if (result.failed.length > 0) {
 					warnings.push(
-						`${result.failed.length} edges failed to create in batch ${Math.floor(i / batchSize) + 1}`
+						`${result.failed.length} edges failed to create in batch ${Math.floor(i / batchSize) + 1}`,
 					);
 				}
 			}
@@ -406,7 +406,7 @@ export class EventIngestionService {
 	 */
 	async ingestEvent(
 		event: ExtractedEvent,
-		options: EventIngestionOptions = {}
+		options: EventIngestionOptions = {},
 	): Promise<EventIngestionResult> {
 		return this.ingestEvents([event], options);
 	}
@@ -416,7 +416,7 @@ export class EventIngestionService {
 	 */
 	async searchSimilarEvents(
 		queryText: string,
-		limit = 10
+		limit = 10,
 	): Promise<Array<{ eventId: string; similarity: number; textSummary: string }>> {
 		try {
 			const result = await this.client.query<
@@ -439,7 +439,7 @@ export class EventIngestionService {
 	async searchEventsByType(
 		queryText: string,
 		eventType: ExternalEventType,
-		limit = 10
+		limit = 10,
 	): Promise<Array<{ eventId: string; similarity: number; textSummary: string }>> {
 		try {
 			const result = await this.client.query<

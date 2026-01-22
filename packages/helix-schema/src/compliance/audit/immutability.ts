@@ -70,7 +70,7 @@ export function requireMutable(params: {
 		throw new ImmutabilityViolationError(
 			params.entityType,
 			params.entityId,
-			check.reason ?? "Entity is immutable"
+			check.reason ?? "Entity is immutable",
 		);
 	}
 }
@@ -82,7 +82,7 @@ export class ImmutabilityViolationError extends Error {
 	constructor(
 		public readonly entityType: AuditEntityType,
 		public readonly entityId: string,
-		public readonly reason: string
+		public readonly reason: string,
 	) {
 		super(`Cannot modify immutable ${entityType} ${entityId}: ${reason}`);
 		this.name = "ImmutabilityViolationError";

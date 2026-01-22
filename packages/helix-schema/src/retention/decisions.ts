@@ -22,7 +22,7 @@ import type { ForgettingDecision, NodeInfo } from "./types.js";
  */
 export function getForgettingDecision(
 	nodeInfo: NodeInfo,
-	referenceDate: Date = new Date()
+	referenceDate: Date = new Date(),
 ): ForgettingDecision {
 	const breakdown = calculateRetentionScore(nodeInfo, referenceDate);
 	const { finalScore } = breakdown;
@@ -60,7 +60,7 @@ export function getForgettingDecision(
  */
 export function batchGetForgettingDecisions(
 	nodes: NodeInfo[],
-	referenceDate: Date = new Date()
+	referenceDate: Date = new Date(),
 ): ForgettingDecision[] {
 	return nodes.map((node) => getForgettingDecision(node, referenceDate));
 }

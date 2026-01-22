@@ -56,7 +56,7 @@ export async function retrieveSimilarCases(
 	client: HelixClient,
 	embeddingClient: EmbeddingClient,
 	snapshot: CBRMarketSnapshot,
-	options: CBRRetrievalOptions = {}
+	options: CBRRetrievalOptions = {},
 ): Promise<CBRRetrievalResult> {
 	const opts = { ...DEFAULT_CBR_OPTIONS, ...options };
 	const startTime = performance.now();
@@ -85,11 +85,11 @@ export async function retrieveSimilarCases(
 		situationBrief,
 		opts.topK,
 		opts.minSimilarity,
-		filters
+		filters,
 	);
 
 	const cases = vectorResults.map((result) =>
-		convertToRetrievedCase(result.decision, result.similarity)
+		convertToRetrievedCase(result.decision, result.similarity),
 	);
 
 	let filteredCases = cases;
@@ -132,7 +132,7 @@ export async function executeVectorSearch(
 	queryText: string,
 	topK: number,
 	minSimilarity: number,
-	filters: Record<string, unknown>
+	filters: Record<string, unknown>,
 ): Promise<Array<{ decision: TradeDecision; similarity: number }>> {
 	try {
 		const result = await client.query<SearchSimilarDecisionsResult[]>("SearchSimilarDecisions", {

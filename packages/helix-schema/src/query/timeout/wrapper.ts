@@ -46,7 +46,7 @@ export class QueryWrapper<T = unknown> {
 			queryFn,
 			this.cache,
 			{ ...options, useCache: this.enableCache },
-			this.timeoutConfig
+			this.timeoutConfig,
 		);
 
 		if (this.enableMetrics) {

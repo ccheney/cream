@@ -62,7 +62,7 @@ describe("createTradeCohortSummary", () => {
 
 	it("throws for empty decisions", () => {
 		expect(() => createTradeCohortSummary("2024-Q3", "AAPL", "BULLISH", [])).toThrow(
-			"Cannot create summary"
+			"Cannot create summary",
 		);
 	});
 

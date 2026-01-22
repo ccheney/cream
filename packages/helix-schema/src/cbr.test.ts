@@ -68,19 +68,19 @@ function createMockDecision(overrides: Partial<TradeDecision> = {}): TradeDecisi
 interface HelixClient {
 	query<T = unknown>(
 		queryName: string,
-		params?: Record<string, unknown>
+		params?: Record<string, unknown>,
 	): Promise<{ data: T; executionTimeMs: number }>;
 }
 
 function createMockHelixClient(
-	overrides: Partial<{ query: HelixClient["query"] }> = {}
+	overrides: Partial<{ query: HelixClient["query"] }> = {},
 ): HelixClient {
 	return {
 		query: mock(() =>
 			Promise.resolve({
 				data: [] as unknown,
 				executionTimeMs: 10,
-			})
+			}),
 		) as HelixClient["query"],
 		...overrides,
 	};
@@ -94,14 +94,14 @@ function createMockEmbeddingClient(): EmbeddingClient {
 				model: "test-model",
 				generatedAt: new Date().toISOString(),
 				inputLength: 100,
-			})
+			}),
 		),
 		batchGenerateEmbeddings: mock(() =>
 			Promise.resolve({
 				embeddings: [],
 				processingTimeMs: 10,
 				apiCalls: 0,
-			})
+			}),
 		),
 		getConfig: mock(() => ({
 			model: "test-model",
@@ -467,7 +467,7 @@ describe("retrieveSimilarCases", () => {
 					},
 				],
 				executionTimeMs: 15,
-			})
+			}),
 		) as HelixClient["query"];
 
 		const client = createMockHelixClient({ query: queryMock });
@@ -505,7 +505,7 @@ describe("retrieveSimilarCases", () => {
 					},
 				],
 				executionTimeMs: 15,
-			})
+			}),
 		) as HelixClient["query"];
 
 		const client = createMockHelixClient({ query: queryMock });
@@ -545,7 +545,7 @@ describe("retainCase", () => {
 			Promise.resolve({
 				data: { decision_id: "dec-new" },
 				executionTimeMs: 20,
-			})
+			}),
 		) as HelixClient["query"];
 
 		const client = createMockHelixClient({ query: queryMock });
@@ -561,7 +561,7 @@ describe("retainCase", () => {
 				decision_id: "dec-new",
 				instrument_id: "AAPL",
 				regime_label: "BULL_TREND",
-			})
+			}),
 		);
 	});
 
@@ -584,7 +584,7 @@ describe("updateCaseOutcome", () => {
 			Promise.resolve({
 				data: { decision_id: "dec-123" },
 				executionTimeMs: 10,
-			})
+			}),
 		) as HelixClient["query"];
 
 		const client = createMockHelixClient({ query: queryMock });
@@ -600,7 +600,7 @@ describe("updateCaseOutcome", () => {
 			"UpdateDecisionOutcome",
 			expect.objectContaining({
 				decision_id: "dec-123",
-			})
+			}),
 		);
 	});
 

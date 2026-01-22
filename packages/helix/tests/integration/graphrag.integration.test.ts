@@ -25,7 +25,7 @@ function createFilingChunk(
 	id: string,
 	symbol: string,
 	text: string,
-	score: number
+	score: number,
 ): FilingChunkResult {
 	return {
 		id,
@@ -44,7 +44,7 @@ function createTranscriptChunk(
 	symbol: string,
 	speaker: string,
 	text: string,
-	score: number
+	score: number,
 ): TranscriptChunkResult {
 	return {
 		id,
@@ -63,7 +63,7 @@ function createNewsItem(
 	headline: string,
 	symbols: string,
 	sentiment: number,
-	score: number
+	score: number,
 ): NewsItemResult {
 	return {
 		id,
@@ -80,7 +80,7 @@ function createExternalEvent(
 	id: string,
 	eventType: string,
 	summary: string,
-	score: number
+	score: number,
 ): ExternalEventResult {
 	return {
 		id,
@@ -95,7 +95,7 @@ function createExternalEvent(
 function createCompany(
 	symbol: string,
 	name: string,
-	source: CompanyResult["source"]
+	source: CompanyResult["source"],
 ): CompanyResult {
 	return {
 		id: `comp-${symbol.toLowerCase()}`,
@@ -180,7 +180,7 @@ describe("GraphRAG Integration", () => {
 						"fc-1",
 						"TSM",
 						"Capacity constraints in advanced node production...",
-						0.95
+						0.95,
 					),
 					createFilingChunk("fc-2", "INTC", "Foundry capacity investments accelerating...", 0.88),
 				],
@@ -190,7 +190,7 @@ describe("GraphRAG Integration", () => {
 						"NVDA",
 						"Jensen Huang",
 						"Supply chain for AI chips remains tight...",
-						0.92
+						0.92,
 					),
 				],
 				newsItems: [
@@ -199,7 +199,7 @@ describe("GraphRAG Integration", () => {
 						"Semiconductor Industry Faces Capacity Constraints",
 						"TSM,INTC,NVDA",
 						-0.3,
-						0.85
+						0.85,
 					),
 				],
 				externalEvents: [
@@ -358,7 +358,7 @@ describe("GraphRAG Integration", () => {
 		it("respects limit parameter", async () => {
 			const client = createMockGraphRAGClient({
 				filingChunks: Array.from({ length: 20 }, (_, i) =>
-					createFilingChunk(`fc-${i}`, "AAPL", `Content ${i}`, 0.9 - i * 0.01)
+					createFilingChunk(`fc-${i}`, "AAPL", `Content ${i}`, 0.9 - i * 0.01),
 				),
 			});
 
@@ -373,7 +373,7 @@ describe("GraphRAG Integration", () => {
 		it("uses default limit of 10", async () => {
 			const client = createMockGraphRAGClient({
 				filingChunks: Array.from({ length: 20 }, (_, i) =>
-					createFilingChunk(`fc-${i}`, "AAPL", `Content ${i}`, 0.9 - i * 0.01)
+					createFilingChunk(`fc-${i}`, "AAPL", `Content ${i}`, 0.9 - i * 0.01),
 				),
 			});
 
@@ -441,13 +441,13 @@ describe("Performance Characteristics", () => {
 	it("returns results in reasonable time with mock client", async () => {
 		const client = createMockGraphRAGClient({
 			filingChunks: Array.from({ length: 100 }, (_, i) =>
-				createFilingChunk(`fc-${i}`, "AAPL", `Content ${i}`, 0.9)
+				createFilingChunk(`fc-${i}`, "AAPL", `Content ${i}`, 0.9),
 			),
 			transcriptChunks: Array.from({ length: 100 }, (_, i) =>
-				createTranscriptChunk(`tc-${i}`, "AAPL", "Speaker", `Content ${i}`, 0.85)
+				createTranscriptChunk(`tc-${i}`, "AAPL", "Speaker", `Content ${i}`, 0.85),
 			),
 			newsItems: Array.from({ length: 50 }, (_, i) =>
-				createNewsItem(`ni-${i}`, `Headline ${i}`, "AAPL", 0.5, 0.8)
+				createNewsItem(`ni-${i}`, `Headline ${i}`, "AAPL", 0.5, 0.8),
 			),
 		});
 

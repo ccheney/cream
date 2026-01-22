@@ -32,7 +32,7 @@ import {
 export async function correctiveRetrieval<T>(
 	retrieveFn: RetrievalFunction<T>,
 	initialParams: { k: number; minScore: number; query?: string },
-	options: CorrectiveRetrievalOptions = {}
+	options: CorrectiveRetrievalOptions = {},
 ): Promise<CorrectiveRetrievalResult<T>> {
 	const startTime = Date.now();
 
@@ -160,7 +160,7 @@ export async function correctiveRetrieval<T>(
  */
 export function withCorrectiveRetrieval<T>(
 	retrieveFn: RetrievalFunction<T>,
-	options: CorrectiveRetrievalOptions = {}
+	options: CorrectiveRetrievalOptions = {},
 ): (params: {
 	k: number;
 	minScore: number;

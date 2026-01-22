@@ -72,7 +72,7 @@ export async function upsertTradeDecision(
 	client: HelixClient,
 	decision: TradeDecision,
 	embedding?: number[],
-	embeddingModelVersion?: string
+	embeddingModelVersion?: string,
 ): Promise<MutationResult> {
 	try {
 		const params: Record<string, unknown> = {
@@ -101,7 +101,7 @@ export async function upsertTradeDecision(
  */
 export async function createLifecycleEvent(
 	client: HelixClient,
-	event: TradeLifecycleEvent
+	event: TradeLifecycleEvent,
 ): Promise<MutationResult> {
 	try {
 		await client.query("createLifecycleEvent", event as unknown as Record<string, unknown>);
@@ -128,7 +128,7 @@ export async function upsertExternalEvent(
 	client: HelixClient,
 	event: ExternalEvent,
 	embedding?: number[],
-	embeddingModelVersion?: string
+	embeddingModelVersion?: string,
 ): Promise<MutationResult> {
 	try {
 		const params: Record<string, unknown> = {
@@ -186,7 +186,7 @@ export async function createEdge(client: HelixClient, edge: EdgeInput): Promise<
  */
 export async function createInfluencedDecisionEdge(
 	client: HelixClient,
-	edge: InfluencedDecisionEdge
+	edge: InfluencedDecisionEdge,
 ): Promise<MutationResult> {
 	return createEdge(client, {
 		sourceId: edge.source_id,
@@ -204,7 +204,7 @@ export async function createInfluencedDecisionEdge(
  */
 export async function createHasEventEdge(
 	client: HelixClient,
-	edge: HasEventEdge
+	edge: HasEventEdge,
 ): Promise<MutationResult> {
 	return createEdge(client, {
 		sourceId: edge.source_id,
@@ -219,7 +219,7 @@ export async function createHasEventEdge(
  */
 export async function createThesisIncludesEdge(
 	client: HelixClient,
-	edge: ThesisIncludesEdge
+	edge: ThesisIncludesEdge,
 ): Promise<MutationResult> {
 	return createEdge(client, {
 		sourceId: edge.source_id,
@@ -240,11 +240,11 @@ export async function createThesisIncludesEdge(
  */
 export async function batchUpsertTradeDecisions(
 	client: HelixClient,
-	decisions: NodeWithEmbedding<TradeDecision>[]
+	decisions: NodeWithEmbedding<TradeDecision>[],
 ): Promise<BatchMutationResult> {
 	const startTime = performance.now();
 	const results = await Promise.allSettled(
-		decisions.map((d) => upsertTradeDecision(client, d.node, d.embedding, d.embeddingModelVersion))
+		decisions.map((d) => upsertTradeDecision(client, d.node, d.embedding, d.embeddingModelVersion)),
 	);
 
 	return processBatchResults(results, startTime);
@@ -255,7 +255,7 @@ export async function batchUpsertTradeDecisions(
  */
 export async function batchCreateLifecycleEvents(
 	client: HelixClient,
-	events: TradeLifecycleEvent[]
+	events: TradeLifecycleEvent[],
 ): Promise<BatchMutationResult> {
 	const startTime = performance.now();
 	const results = await Promise.allSettled(events.map((e) => createLifecycleEvent(client, e)));
@@ -268,11 +268,11 @@ export async function batchCreateLifecycleEvents(
  */
 export async function batchUpsertExternalEvents(
 	client: HelixClient,
-	events: NodeWithEmbedding<ExternalEvent>[]
+	events: NodeWithEmbedding<ExternalEvent>[],
 ): Promise<BatchMutationResult> {
 	const startTime = performance.now();
 	const results = await Promise.allSettled(
-		events.map((e) => upsertExternalEvent(client, e.node, e.embedding, e.embeddingModelVersion))
+		events.map((e) => upsertExternalEvent(client, e.node, e.embedding, e.embeddingModelVersion)),
 	);
 
 	return processBatchResults(results, startTime);
@@ -283,7 +283,7 @@ export async function batchUpsertExternalEvents(
  */
 export async function batchCreateEdges(
 	client: HelixClient,
-	edges: EdgeInput[]
+	edges: EdgeInput[],
 ): Promise<BatchMutationResult> {
 	const startTime = performance.now();
 	const results = await Promise.allSettled(edges.map((e) => createEdge(client, e)));
@@ -300,7 +300,7 @@ export async function batchCreateEdges(
  */
 function processBatchResults(
 	results: PromiseSettledResult<MutationResult>[],
-	startTime: number
+	startTime: number,
 ): BatchMutationResult {
 	const successful: MutationResult[] = [];
 	const failed: MutationResult[] = [];

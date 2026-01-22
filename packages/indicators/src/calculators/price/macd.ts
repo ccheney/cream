@@ -76,7 +76,7 @@ const DEFAULT_SETTINGS: MACDSettings = {
  */
 export function calculateMACD(
 	bars: OHLCVBar[],
-	settings: MACDSettings = DEFAULT_SETTINGS
+	settings: MACDSettings = DEFAULT_SETTINGS,
 ): MACDResult | null {
 	const { fastPeriod, slowPeriod, signalPeriod } = settings;
 
@@ -187,7 +187,7 @@ export function calculateMACD(
  */
 export function calculateMACDSeries(
 	bars: OHLCVBar[],
-	settings: MACDSettings = DEFAULT_SETTINGS
+	settings: MACDSettings = DEFAULT_SETTINGS,
 ): MACDResult[] {
 	const { fastPeriod, slowPeriod, signalPeriod } = settings;
 	const results: MACDResult[] = [];
@@ -311,7 +311,7 @@ export function calculateMACDSeries(
  */
 export function detectMACDCrossover(
 	current: MACDResult,
-	previous: MACDResult
+	previous: MACDResult,
 ): "bullish" | "bearish" | "none" {
 	const currentDiff = current.macdLine - current.signalLine;
 	const previousDiff = previous.macdLine - previous.signalLine;
@@ -331,7 +331,7 @@ export function detectMACDCrossover(
  */
 export function detectZeroLineCrossover(
 	current: MACDResult,
-	previous: MACDResult
+	previous: MACDResult,
 ): "bullish" | "bearish" | "none" {
 	if (previous.macdLine <= 0 && current.macdLine > 0) {
 		return "bullish";
@@ -359,7 +359,7 @@ export type MACDMomentum =
  */
 export function classifyMACDMomentum(
 	current: MACDResult,
-	previous: MACDResult | null = null
+	previous: MACDResult | null = null,
 ): MACDMomentum {
 	const histogram = current.histogram;
 

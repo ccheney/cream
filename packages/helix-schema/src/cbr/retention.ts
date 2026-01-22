@@ -25,7 +25,7 @@ import type { CaseRetentionResult, HelixClient } from "./types.js";
  */
 export async function retainCase(
 	client: HelixClient,
-	decision: TradeDecision
+	decision: TradeDecision,
 ): Promise<CaseRetentionResult> {
 	try {
 		await client.query("InsertTradeDecision", {
@@ -78,7 +78,7 @@ export async function updateCaseOutcome(
 		exitPrice?: number;
 		mae?: number;
 		mfe?: number;
-	}
+	},
 ): Promise<boolean> {
 	try {
 		const outcomeJson = JSON.stringify({

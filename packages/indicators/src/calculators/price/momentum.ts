@@ -175,7 +175,7 @@ export function calculateMultiPeriodMomentum(bars: OHLCVBar[]): MultiPeriodMomen
  */
 export function calculateCustomMomentumPeriods(
 	bars: OHLCVBar[],
-	periods: number[]
+	periods: number[],
 ): MultiPeriodMomentum | null {
 	const byPeriod = new Map<number, MomentumResult>();
 
@@ -244,7 +244,7 @@ export function classifyMomentum(roc: number): MomentumStrength {
  * Checks if all periods show consistent direction
  */
 export function detectMomentumTrend(
-	multiPeriod: MultiPeriodMomentum
+	multiPeriod: MultiPeriodMomentum,
 ): "uptrend" | "downtrend" | "mixed" {
 	const values = Array.from(multiPeriod.byPeriod.values());
 
@@ -275,7 +275,7 @@ export function detectMomentumTrend(
  */
 export function calculateMomentumAcceleration(
 	shortTermRoc: number,
-	longTermRoc: number
+	longTermRoc: number,
 ): "accelerating" | "decelerating" | "stable" {
 	// Acceleration = short-term momentum > long-term momentum (in same direction)
 

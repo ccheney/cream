@@ -70,7 +70,7 @@ export function calculateCoverageScore(resultCount: number, expectedCount: numbe
  */
 export function assessRetrievalQuality<T>(
 	results: RetrievalResult<T>[],
-	thresholds: QualityThresholds = DEFAULT_QUALITY_THRESHOLDS
+	thresholds: QualityThresholds = DEFAULT_QUALITY_THRESHOLDS,
 ): QualityAssessment {
 	const avgScore = calculateAvgScore(results);
 	const diversityScore = calculateDiversityScore(results);
@@ -80,25 +80,25 @@ export function assessRetrievalQuality<T>(
 
 	if (avgScore < thresholds.minAvgScore) {
 		correctionReasons.push(
-			`Average score ${avgScore.toFixed(3)} below threshold ${thresholds.minAvgScore}`
+			`Average score ${avgScore.toFixed(3)} below threshold ${thresholds.minAvgScore}`,
 		);
 	}
 
 	if (results.length < thresholds.minResultCount) {
 		correctionReasons.push(
-			`Result count ${results.length} below minimum ${thresholds.minResultCount}`
+			`Result count ${results.length} below minimum ${thresholds.minResultCount}`,
 		);
 	}
 
 	if (results.length >= 2 && diversityScore < thresholds.minDiversityScore) {
 		correctionReasons.push(
-			`Diversity score ${diversityScore.toFixed(3)} below threshold ${thresholds.minDiversityScore}`
+			`Diversity score ${diversityScore.toFixed(3)} below threshold ${thresholds.minDiversityScore}`,
 		);
 	}
 
 	if (coverageScore < thresholds.minCoverageScore) {
 		correctionReasons.push(
-			`Coverage score ${coverageScore.toFixed(3)} below threshold ${thresholds.minCoverageScore}`
+			`Coverage score ${coverageScore.toFixed(3)} below threshold ${thresholds.minCoverageScore}`,
 		);
 	}
 
@@ -137,7 +137,7 @@ export function shouldCorrect(quality: QualityAssessment): boolean {
  */
 export function assessRRFQuality<T>(
 	results: RRFResult<T>[],
-	thresholds: QualityThresholds = DEFAULT_QUALITY_THRESHOLDS
+	thresholds: QualityThresholds = DEFAULT_QUALITY_THRESHOLDS,
 ): QualityAssessment {
 	const retrievalResults: RetrievalResult<T>[] = results.map((r) => ({
 		node: r.node,
@@ -153,7 +153,7 @@ export function assessRRFQuality<T>(
  */
 export function shouldCorrectRRF<T>(
 	results: RRFResult<T>[],
-	thresholds: QualityThresholds = DEFAULT_QUALITY_THRESHOLDS
+	thresholds: QualityThresholds = DEFAULT_QUALITY_THRESHOLDS,
 ): boolean {
 	const quality = assessRRFQuality(results, thresholds);
 	return shouldCorrect(quality);

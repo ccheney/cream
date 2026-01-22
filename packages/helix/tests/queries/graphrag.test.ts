@@ -188,7 +188,7 @@ function createMockClient(responseOverrides: Record<string, unknown> = {}): Heli
 	return {
 		query: async <T = unknown>(
 			queryName: string,
-			_params?: Record<string, unknown>
+			_params?: Record<string, unknown>,
 		): Promise<QueryResult<T>> => {
 			if (queryName === "SearchGraphContext") {
 				return {
@@ -433,7 +433,7 @@ describe("searchGraphContext", () => {
 				...createMockClient(),
 				query: async <T = unknown>(
 					_queryName: string,
-					params?: Record<string, unknown>
+					params?: Record<string, unknown>,
 				): Promise<QueryResult<T>> => {
 					capturedLimit = params?.limit as number;
 					return {
@@ -472,7 +472,7 @@ describe("searchGraphContextByCompany", () => {
 			...createMockClient(),
 			query: async <T = unknown>(
 				_queryName: string,
-				params?: Record<string, unknown>
+				params?: Record<string, unknown>,
 			): Promise<QueryResult<T>> => {
 				capturedLimit = params?.limit as number;
 				return {

@@ -81,7 +81,7 @@ function calculateStdDev(values: number[], mean: number): number {
 export function calculateBollingerBands(
 	bars: OHLCVBar[],
 	period = 20,
-	multiplier = 2
+	multiplier = 2,
 ): BollingerBandsResult | null {
 	if (bars.length < period || period <= 0) {
 		return null;
@@ -137,7 +137,7 @@ export function calculateBollingerBands(
 export function calculateBollingerBandsSeries(
 	bars: OHLCVBar[],
 	period = 20,
-	multiplier = 2
+	multiplier = 2,
 ): BollingerBandsResult[] {
 	const results: BollingerBandsResult[] = [];
 
@@ -265,7 +265,7 @@ export function detectBollingerSqueeze(bandwidthHistory: number[], threshold = 1
  */
 export function detectBandWalking(
 	recentPercentB: number[],
-	walkThreshold = 0.8
+	walkThreshold = 0.8,
 ): "upper" | "lower" | null {
 	if (recentPercentB.length < 3) {
 		return null;

@@ -144,7 +144,7 @@ export class EmbeddingClient {
 
 	constructor(
 		config: EmbeddingConfig = DEFAULT_EMBEDDING_CONFIG,
-		retryConfig: RetryConfig = DEFAULT_RETRY_CONFIG
+		retryConfig: RetryConfig = DEFAULT_RETRY_CONFIG,
 	) {
 		const apiKey = Bun.env[config.apiKeyEnvVar];
 		if (!apiKey) {
@@ -244,7 +244,7 @@ export class EmbeddingClient {
 
 		if (!response.embeddings || response.embeddings.length !== texts.length) {
 			throw new Error(
-				`Embedding count mismatch: expected ${texts.length}, got ${response.embeddings?.length ?? 0}`
+				`Embedding count mismatch: expected ${texts.length}, got ${response.embeddings?.length ?? 0}`,
 			);
 		}
 
@@ -334,7 +334,7 @@ export const EMBEDDABLE_FIELDS: Record<string, string[]> = {
 export function extractEmbeddableText(
 	nodeType: string,
 	node: Record<string, unknown>,
-	fields?: string[]
+	fields?: string[],
 ): string {
 	const fieldsToEmbed = fields ?? EMBEDDABLE_FIELDS[nodeType] ?? [];
 	const texts: string[] = [];
@@ -381,7 +381,7 @@ export function createEmbeddingMetadata(model: string): EmbeddingMetadata {
 export function needsReembedding(
 	metadata: EmbeddingMetadata | undefined,
 	currentModel: string,
-	staleDays = 90
+	staleDays = 90,
 ): boolean {
 	// No existing embedding
 	if (!metadata) {
@@ -428,7 +428,7 @@ export interface BatchEmbeddingOptions {
 export async function batchEmbedWithProgress(
 	client: EmbeddingClient,
 	texts: string[],
-	options: BatchEmbeddingOptions = {}
+	options: BatchEmbeddingOptions = {},
 ): Promise<BatchEmbeddingResult> {
 	const { onProgress, concurrency = 1 } = options;
 	const config = client.getConfig();
@@ -464,7 +464,7 @@ export async function batchEmbedWithProgress(
 		for (let i = 0; i < batches.length; i += concurrency) {
 			const concurrentBatches = batches.slice(i, i + concurrency);
 			const results = await Promise.all(
-				concurrentBatches.map((batch) => client.batchGenerateEmbeddings(batch))
+				concurrentBatches.map((batch) => client.batchGenerateEmbeddings(batch)),
 			);
 
 			for (const result of results) {

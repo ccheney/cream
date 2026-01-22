@@ -15,7 +15,7 @@ import type { QueryFunction, TimeoutConfig } from "./types.js";
  */
 export function getTimeoutForQueryType(
 	queryType: QueryType,
-	config: TimeoutConfig = DEFAULT_TIMEOUT_CONFIG
+	config: TimeoutConfig = DEFAULT_TIMEOUT_CONFIG,
 ): number {
 	switch (queryType) {
 		case "vector":
@@ -38,7 +38,7 @@ export function getTimeoutForQueryType(
  */
 export async function withTimeout<T>(
 	queryFn: QueryFunction<T>,
-	timeoutMs: number
+	timeoutMs: number,
 ): Promise<{ data: T[]; timedOut: boolean; executionTimeMs: number }> {
 	const startTime = Date.now();
 
@@ -46,7 +46,7 @@ export async function withTimeout<T>(
 		const result = await Promise.race([
 			queryFn(),
 			new Promise<never>((_, reject) =>
-				setTimeout(() => reject(new Error("Query timeout")), timeoutMs)
+				setTimeout(() => reject(new Error("Query timeout")), timeoutMs),
 			),
 		]);
 

@@ -55,7 +55,7 @@ export function findIsolatedNodes(nodes: NodeConnectivity[]): GraphPruningAction
  */
 export function findHubsTooPrune(
 	nodes: NodeConnectivity[],
-	config: GraphPruningConfig = DEFAULT_PRUNING_CONFIG
+	config: GraphPruningConfig = DEFAULT_PRUNING_CONFIG,
 ): GraphPruningAction[] {
 	const actions: GraphPruningAction[] = [];
 
@@ -89,7 +89,7 @@ export function findHubsTooPrune(
 export function evaluateSubgraphForMerge(
 	subgraphNodeIds: string[],
 	maxSize = 5,
-	summaryNodeIdGenerator: () => string = () => `summary_${Date.now()}`
+	summaryNodeIdGenerator: () => string = () => `summary_${Date.now()}`,
 ): GraphPruningAction | null {
 	if (subgraphNodeIds.length >= maxSize || subgraphNodeIds.length <= 1) {
 		return null;

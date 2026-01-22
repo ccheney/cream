@@ -79,7 +79,7 @@ export interface AlpacaCorporateActionsClient {
 	getCorporateActionsForSymbols(
 		symbols: string[],
 		startDate: string,
-		endDate: string
+		endDate: string,
 	): Promise<AlpacaCorporateAction[]>;
 }
 
@@ -163,7 +163,7 @@ function daysBetween(date1: Date, date2: Date): number {
  * Map Alpaca action type to our internal ActionType
  */
 export function mapAlpacaActionType(
-	alpacaType: AlpacaActionType
+	alpacaType: AlpacaActionType,
 ): CorporateActionInsert["actionType"] {
 	const mapping: Record<AlpacaActionType, CorporateActionInsert["actionType"]> = {
 		Dividend: "dividend",
@@ -193,7 +193,7 @@ export function mapAlpacaActionType(
  */
 export function calculateTrailingDividendYield(
 	dividends: number[],
-	currentPrice: number | null
+	currentPrice: number | null,
 ): number | null {
 	if (currentPrice === null || currentPrice <= 0 || dividends.length === 0) {
 		return null;
@@ -212,7 +212,7 @@ export function calculateTrailingDividendYield(
  */
 export function calculateDaysToExDividend(
 	nextExDate: string | null,
-	referenceDate: Date = new Date()
+	referenceDate: Date = new Date(),
 ): number | null {
 	if (!nextExDate) {
 		return null;
@@ -232,7 +232,7 @@ export function calculateDaysToExDividend(
  */
 export function calculateDividendGrowth(
 	currentYearDividends: number,
-	priorYearDividends: number
+	priorYearDividends: number,
 ): number | null {
 	if (priorYearDividends <= 0) {
 		return null;
@@ -273,7 +273,7 @@ export function calculateSplitAdjustmentFactor(splitRatio: number, isReverse: bo
 export function hasPendingSplit(
 	actions: AlpacaCorporateAction[],
 	referenceDate: Date = new Date(),
-	daysAhead = 30
+	daysAhead = 30,
 ): boolean {
 	const futureDate = new Date(referenceDate);
 	futureDate.setDate(futureDate.getDate() + daysAhead);
@@ -303,7 +303,7 @@ export function calculateDividendIndicators(
 	dividends: Array<{ amount: number; exDate: string }>,
 	currentPrice: number | null,
 	upcomingExDate: string | null,
-	priorYearDividends: number
+	priorYearDividends: number,
 ): DividendIndicators {
 	const now = new Date();
 	const oneYearAgo = new Date(now);
@@ -348,7 +348,7 @@ export class CorporateActionsBatchJob {
 		client: AlpacaCorporateActionsClient,
 		repo: CorporateActionsRepository,
 		_priceProvider?: PriceProvider, // Reserved for future dividend yield calculation
-		config?: CorporateActionsBatchJobConfig
+		config?: CorporateActionsBatchJobConfig,
 	) {
 		this.client = client;
 		this.repo = repo;
@@ -481,7 +481,7 @@ export class CorporateActionsBatchJob {
 	private async fetchWithRetry(
 		symbols: string[],
 		startDate: string,
-		endDate: string
+		endDate: string,
 	): Promise<AlpacaCorporateAction[]> {
 		let lastError: Error | null = null;
 

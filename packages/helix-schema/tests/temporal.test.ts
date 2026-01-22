@@ -134,7 +134,7 @@ describe("matchesTemporalQuery", () => {
 
 		expect(matchesTemporalQuery(edge, { asOfTimestamp: APR_2024 })).toBe(false);
 		expect(matchesTemporalQuery(edge, { asOfTimestamp: APR_2024, includeExpired: true })).toBe(
-			true
+			true,
 		);
 	});
 
@@ -154,7 +154,7 @@ describe("matchesTemporalQuery", () => {
 			matchesTemporalQuery(edge, {
 				asOfTimestamp: FEB_2024,
 				knownAsOfTimestamp: FEB_2024,
-			})
+			}),
 		).toBe(false); // Didn't know yet
 
 		// Asking about Feb, but with knowledge as of Apr (when we knew)
@@ -162,7 +162,7 @@ describe("matchesTemporalQuery", () => {
 			matchesTemporalQuery(edge, {
 				asOfTimestamp: FEB_2024,
 				knownAsOfTimestamp: APR_2024,
-			})
+			}),
 		).toBe(true); // Knew about it by then
 	});
 });

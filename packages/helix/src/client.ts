@@ -49,7 +49,7 @@ export class HelixError extends Error {
 	constructor(
 		message: string,
 		public readonly code: HelixErrorCode,
-		public override readonly cause?: Error
+		public override readonly cause?: Error,
 	) {
 		super(message);
 		this.name = "HelixError";
@@ -174,7 +174,7 @@ export function createHelixClient(config: HelixClientConfig = {}): HelixClient {
 				throw new HelixError(
 					`Failed to connect to HelixDB at ${mergedConfig.host}:${mergedConfig.port}`,
 					"CONNECTION_FAILED",
-					error instanceof Error ? error : undefined
+					error instanceof Error ? error : undefined,
 				);
 			}
 		}
@@ -189,7 +189,7 @@ export function createHelixClient(config: HelixClientConfig = {}): HelixClient {
 	const executeWithRetry = async <T>(
 		queryName: string,
 		params: Record<string, unknown> | undefined,
-		attempt = 1
+		attempt = 1,
 	): Promise<QueryResult<T>> => {
 		const startTime = performance.now();
 
@@ -200,8 +200,8 @@ export function createHelixClient(config: HelixClientConfig = {}): HelixClient {
 				new Promise((_, reject) =>
 					setTimeout(
 						() => reject(new HelixError("Query timed out", "TIMEOUT")),
-						mergedConfig.timeout
-					)
+						mergedConfig.timeout,
+					),
 				),
 			]);
 
@@ -222,7 +222,7 @@ export function createHelixClient(config: HelixClientConfig = {}): HelixClient {
 			throw new HelixError(
 				`Query "${queryName}" failed: ${error instanceof Error ? error.message : "Unknown error"}`,
 				"QUERY_FAILED",
-				error instanceof Error ? error : undefined
+				error instanceof Error ? error : undefined,
 			);
 		}
 	};
@@ -230,7 +230,7 @@ export function createHelixClient(config: HelixClientConfig = {}): HelixClient {
 	return {
 		async query<T = unknown>(
 			queryName: string,
-			params?: Record<string, unknown>
+			params?: Record<string, unknown>,
 		): Promise<QueryResult<T>> {
 			return executeWithRetry<T>(queryName, params);
 		},

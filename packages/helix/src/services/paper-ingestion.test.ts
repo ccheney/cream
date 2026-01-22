@@ -260,14 +260,14 @@ describe("SEED_PAPERS", () => {
 
 	test("contains Fama-French papers", () => {
 		const famaFrench = SEED_PAPERS.filter(
-			(p) => p.authors.includes("Fama") || p.authors.includes("French")
+			(p) => p.authors.includes("Fama") || p.authors.includes("French"),
 		);
 		expect(famaFrench.length).toBeGreaterThanOrEqual(2);
 	});
 
 	test("contains momentum paper (Jegadeesh-Titman)", () => {
 		const momentum = SEED_PAPERS.find(
-			(p) => p.authors.includes("Jegadeesh") || p.authors.includes("Titman")
+			(p) => p.authors.includes("Jegadeesh") || p.authors.includes("Titman"),
 		);
 		expect(momentum).toBeDefined();
 		expect(momentum?.title).toContain("Winners");
@@ -275,7 +275,7 @@ describe("SEED_PAPERS", () => {
 
 	test("contains Black-Scholes paper", () => {
 		const bs = SEED_PAPERS.find(
-			(p) => p.authors.includes("Black") && p.authors.includes("Scholes")
+			(p) => p.authors.includes("Black") && p.authors.includes("Scholes"),
 		);
 		expect(bs).toBeDefined();
 		expect(bs?.title).toContain("Options");
@@ -283,7 +283,7 @@ describe("SEED_PAPERS", () => {
 
 	test("contains post-publication decay paper (McLean-Pontiff)", () => {
 		const decay = SEED_PAPERS.find(
-			(p) => p.authors.includes("McLean") || p.title.includes("Destroy")
+			(p) => p.authors.includes("McLean") || p.title.includes("Destroy"),
 		);
 		expect(decay).toBeDefined();
 	});

@@ -36,7 +36,7 @@ export function calculateCorrectionMetrics(entries: CorrectionLogEntry[]): Corre
 	const avgAttemptsPerCorrection = totalAttempts / entries.length;
 
 	const qualityImprovements = entries.map(
-		(e) => e.finalQuality.overallScore - e.initialQuality.overallScore
+		(e) => e.finalQuality.overallScore - e.initialQuality.overallScore,
 	);
 	const avgQualityImprovement = qualityImprovements.reduce((sum, i) => sum + i, 0) / entries.length;
 
@@ -67,7 +67,7 @@ export function calculateCorrectionMetrics(entries: CorrectionLogEntry[]): Corre
  */
 export function createCorrectionLogEntry<T>(
 	result: CorrectiveRetrievalResult<T>,
-	queryId?: string
+	queryId?: string,
 ): CorrectionLogEntry {
 	return {
 		timestamp: new Date(),

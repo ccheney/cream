@@ -88,7 +88,7 @@ export function instrumentsToCompanyData(instruments: ResolvedInstrument[]): Com
 export async function syncUniverseToGraph(
 	client: HelixClient,
 	instruments: ResolvedInstrument[],
-	options: UniverseSyncOptions = {}
+	options: UniverseSyncOptions = {},
 ): Promise<UniverseSyncResult> {
 	const builder = createCompanyGraphBuilder(client);
 	const companyData = instrumentsToCompanyData(instruments);
@@ -102,7 +102,7 @@ export async function syncUniverseToGraph(
 			includeIndustryPeers: options.includeIndustryPeers,
 			correlationOptions: options.correlationOptions,
 			batchSize: options.batchSize,
-		}
+		},
 	);
 
 	return {
@@ -118,7 +118,7 @@ export async function syncUniverseToGraph(
  */
 export async function syncCompaniesToGraph(
 	client: HelixClient,
-	companies: CompanyData[]
+	companies: CompanyData[],
 ): Promise<{ successful: number; failed: number; errors: string[] }> {
 	const builder = createCompanyGraphBuilder(client);
 

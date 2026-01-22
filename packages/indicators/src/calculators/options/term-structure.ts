@@ -83,7 +83,7 @@ function calculateDaysToExpiry(expiration: string, referenceDate: Date): number 
  */
 export function buildTermStructure(
 	chains: OptionsChain[],
-	referenceDate: Date = new Date()
+	referenceDate: Date = new Date(),
 ): TermStructurePoint[] {
 	const points: TermStructurePoint[] = [];
 
@@ -130,7 +130,7 @@ export function buildTermStructure(
  */
 export function calculateTermStructureSlope(
 	chains: OptionsChain[],
-	referenceDate: Date = new Date()
+	referenceDate: Date = new Date(),
 ): TermStructureResult | null {
 	if (chains.length < 2) {
 		return null;
@@ -186,7 +186,7 @@ export function calculateTermStructureSlope(
 export function calculateTermStructureSlopeSimple(
 	frontChain: OptionsChain,
 	backChain: OptionsChain,
-	referenceDate: Date = new Date()
+	referenceDate: Date = new Date(),
 ): TermStructureResult | null {
 	return calculateTermStructureSlope([frontChain, backChain], referenceDate);
 }
@@ -260,7 +260,7 @@ export function calculateWeightedAverageIV(points: TermStructurePoint[]): number
  */
 export function findTermStructureKinks(
 	points: TermStructurePoint[],
-	threshold = 0.02
+	threshold = 0.02,
 ): TermStructurePoint[] {
 	if (points.length < 3) {
 		return [];

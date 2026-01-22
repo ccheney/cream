@@ -37,7 +37,7 @@ import type { ForgettingEnvironment, NodeInfo, RetentionScoreBreakdown } from ".
  */
 export function calculateRecency(
 	ageDays: number,
-	decayConstant: number = DECAY_CONSTANT_DAYS
+	decayConstant: number = DECAY_CONSTANT_DAYS,
 ): number {
 	if (ageDays < 0) {
 		throw new Error("Age cannot be negative");
@@ -61,7 +61,7 @@ export function calculateRecency(
  */
 export function calculateFrequency(
 	accessCount: number,
-	scaleFactor: number = FREQUENCY_SCALE_FACTOR
+	scaleFactor: number = FREQUENCY_SCALE_FACTOR,
 ): number {
 	if (accessCount < 0) {
 		throw new Error("Access count cannot be negative");
@@ -129,10 +129,10 @@ export function hasComplianceOverride(nodeInfo: NodeInfo, ageDays: number): bool
  */
 export function calculateRetentionScore(
 	nodeInfo: NodeInfo,
-	referenceDate: Date = new Date()
+	referenceDate: Date = new Date(),
 ): RetentionScoreBreakdown {
 	const ageDays = Math.floor(
-		(referenceDate.getTime() - nodeInfo.createdAt.getTime()) / (1000 * 60 * 60 * 24)
+		(referenceDate.getTime() - nodeInfo.createdAt.getTime()) / (1000 * 60 * 60 * 24),
 	);
 
 	const baseScore = 1.0;
@@ -187,7 +187,7 @@ export function shouldSummarize(score: number, threshold = 0.1): boolean {
 export function shouldDelete(
 	score: number,
 	environment: ForgettingEnvironment,
-	threshold = 0.05
+	threshold = 0.05,
 ): boolean {
 	if (!Number.isFinite(score)) {
 		return false;

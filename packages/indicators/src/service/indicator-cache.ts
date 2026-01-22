@@ -120,7 +120,7 @@ class LRUCache<T> {
 	constructor(
 		private maxEntries: number,
 		private ttlMs: number,
-		private enableMetrics: boolean
+		private enableMetrics: boolean,
 	) {}
 
 	/**
@@ -421,7 +421,7 @@ export class IndicatorCache {
 
 	setFundamentals(
 		symbol: string,
-		data: { value: ValueIndicators; quality: QualityIndicators }
+		data: { value: ValueIndicators; quality: QualityIndicators },
 	): void {
 		this.setValue(symbol, data.value);
 		this.setQuality(symbol, data.quality);

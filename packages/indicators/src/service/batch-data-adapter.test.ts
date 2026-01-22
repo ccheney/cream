@@ -28,7 +28,7 @@ import {
 // ============================================================
 
 function createMockFundamentalsRepo(
-	data: Map<string, StorageFundamentalRow>
+	data: Map<string, StorageFundamentalRow>,
 ): StorageFundamentalsRepository {
 	return {
 		async findLatestBySymbol(symbol: string) {
@@ -38,7 +38,7 @@ function createMockFundamentalsRepo(
 }
 
 function createMockShortInterestRepo(
-	data: Map<string, StorageShortInterestRow>
+	data: Map<string, StorageShortInterestRow>,
 ): StorageShortInterestRepository {
 	return {
 		async findLatestBySymbol(symbol: string) {
@@ -48,7 +48,7 @@ function createMockShortInterestRepo(
 }
 
 function createMockSentimentRepo(
-	data: Map<string, StorageSentimentRow>
+	data: Map<string, StorageSentimentRow>,
 ): StorageSentimentRepository {
 	return {
 		async findLatestBySymbol(symbol: string) {
@@ -59,7 +59,7 @@ function createMockSentimentRepo(
 
 function createMockCorporateActionsRepo(
 	dividends: Map<string, StorageCorporateActionRow[]>,
-	splits: Map<string, StorageCorporateActionRow[]>
+	splits: Map<string, StorageCorporateActionRow[]>,
 ): StorageCorporateActionsRepository {
 	return {
 		async getForSymbol(symbol: string) {

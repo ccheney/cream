@@ -18,7 +18,7 @@ import type { GraphNode } from "./types.js";
  */
 export async function getNode<T = Record<string, unknown>>(
 	client: HelixClient,
-	nodeId: string
+	nodeId: string,
 ): Promise<GraphNode<T> | null> {
 	try {
 		const result = await client.query<GraphNode<T>>("getNode", { id: nodeId });
@@ -39,7 +39,7 @@ export async function getNode<T = Record<string, unknown>>(
 export async function getNodesByType<T = Record<string, unknown>>(
 	client: HelixClient,
 	nodeType: string,
-	options: { limit?: number; filters?: Record<string, unknown> } = {}
+	options: { limit?: number; filters?: Record<string, unknown> } = {},
 ): Promise<GraphNode<T>[]> {
 	const result = await client.query<GraphNode<T>[]>("getNodesByType", {
 		type: nodeType,
@@ -64,7 +64,7 @@ export async function getCompanyNodes(
 		"FilingChunk",
 		"TranscriptChunk",
 		"NewsItem",
-	]
+	],
 ): Promise<GraphNode[]> {
 	const result = await client.query<GraphNode[]>("getCompanyNodes", {
 		symbol: companySymbol,

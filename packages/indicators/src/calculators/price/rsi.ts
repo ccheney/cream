@@ -285,7 +285,7 @@ export function detectRSIDivergence(
 	priceHighs: [number, number],
 	priceLows: [number, number],
 	rsiHighs: [number, number],
-	rsiLows: [number, number]
+	rsiLows: [number, number],
 ): "bullish" | "bearish" | null {
 	// Bullish divergence: lower price lows, but higher RSI lows
 	if (priceLows[1] < priceLows[0] && rsiLows[1] > rsiLows[0]) {

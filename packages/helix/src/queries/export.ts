@@ -119,7 +119,7 @@ const EXPORT_VERSION = "1.0.0";
  */
 export async function exportData(
 	client: HelixClient,
-	options: ExportOptions = {}
+	options: ExportOptions = {},
 ): Promise<HelixExport> {
 	const config = client.getConfig();
 
@@ -184,7 +184,7 @@ export async function exportData(
 export async function importData(
 	client: HelixClient,
 	data: HelixExport,
-	options: ImportOptions = {}
+	options: ImportOptions = {},
 ): Promise<ImportResult> {
 	const opts = {
 		overwrite: false,
@@ -226,7 +226,7 @@ export async function importData(
 				result.nodesSkipped += batchResult.data.skipped;
 			} catch (error) {
 				result.errors.push(
-					`Failed to import ${nodeType} batch ${i}: ${error instanceof Error ? error.message : "Unknown error"}`
+					`Failed to import ${nodeType} batch ${i}: ${error instanceof Error ? error.message : "Unknown error"}`,
 				);
 			}
 		}
@@ -250,7 +250,7 @@ export async function importData(
 				result.edgesSkipped += batchResult.data.skipped;
 			} catch (error) {
 				result.errors.push(
-					`Failed to import ${edgeType} batch ${i}: ${error instanceof Error ? error.message : "Unknown error"}`
+					`Failed to import ${edgeType} batch ${i}: ${error instanceof Error ? error.message : "Unknown error"}`,
 				);
 			}
 		}
@@ -264,7 +264,7 @@ export async function importData(
  */
 export async function exportToJson(
 	client: HelixClient,
-	options: ExportOptions = {}
+	options: ExportOptions = {},
 ): Promise<string> {
 	const data = await exportData(client, options);
 	return JSON.stringify(data, null, 2);
@@ -276,7 +276,7 @@ export async function exportToJson(
 export async function importFromJson(
 	client: HelixClient,
 	json: string,
-	options: ImportOptions = {}
+	options: ImportOptions = {},
 ): Promise<ImportResult> {
 	const data = JSON.parse(json) as HelixExport;
 	return importData(client, data, options);
@@ -307,7 +307,7 @@ export async function importFromJson(
 export async function exportIncremental(
 	client: HelixClient,
 	since: string,
-	options: Omit<ExportOptions, "since"> = {}
+	options: Omit<ExportOptions, "since"> = {},
 ): Promise<IncrementalExport> {
 	const config = client.getConfig();
 	const exportTimestamp = new Date().toISOString();
@@ -463,7 +463,7 @@ export function validateExport(data: unknown): { valid: boolean; errors: string[
 	// Check version compatibility
 	if (typeof export_.version === "string" && !isCompatibleVersion(export_.version)) {
 		errors.push(
-			`Incompatible version: ${export_.version} (expected major version ${EXPORT_VERSION.split(".")[0]})`
+			`Incompatible version: ${export_.version} (expected major version ${EXPORT_VERSION.split(".")[0]})`,
 		);
 	}
 
@@ -552,7 +552,7 @@ export interface IGraphDatabase {
 	/** Export incremental changes */
 	exportIncremental(
 		since: string,
-		options?: Omit<ExportOptions, "since">
+		options?: Omit<ExportOptions, "since">,
 	): Promise<IncrementalExport>;
 
 	/** Import data */
@@ -580,7 +580,7 @@ export class HelixGraphDatabase implements IGraphDatabase {
 
 	async exportIncremental(
 		since: string,
-		options?: Omit<ExportOptions, "since">
+		options?: Omit<ExportOptions, "since">,
 	): Promise<IncrementalExport> {
 		return exportIncremental(this.client, since, options);
 	}

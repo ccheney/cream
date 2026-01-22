@@ -24,12 +24,12 @@ import {
 // ============================================
 
 function createMockClient(
-	options: { shouldFail?: boolean; failOnQuery?: string } = {}
+	options: { shouldFail?: boolean; failOnQuery?: string } = {},
 ): HelixClient {
 	return {
 		query: async <T = unknown>(
 			queryName: string,
-			_params?: Record<string, unknown>
+			_params?: Record<string, unknown>,
 		): Promise<QueryResult<T>> => {
 			if (options.shouldFail) {
 				throw new Error("Mock query failure");

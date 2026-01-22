@@ -18,7 +18,7 @@ import type { AccessRecord } from "./types.js";
 export function recordAccess(
 	existing: AccessRecord | undefined,
 	nodeId: string,
-	accessTime: Date = new Date()
+	accessTime: Date = new Date(),
 ): AccessRecord {
 	if (!existing) {
 		return {
@@ -45,7 +45,7 @@ export function recordAccess(
  */
 export function daysSinceLastAccess(
 	record: AccessRecord,
-	referenceDate: Date = new Date()
+	referenceDate: Date = new Date(),
 ): number {
 	const diffMs = referenceDate.getTime() - record.lastAccessedAt.getTime();
 	return Math.floor(diffMs / (1000 * 60 * 60 * 24));

@@ -22,7 +22,7 @@ export function createTradeCohortSummary(
 	instrumentId: string,
 	regimeLabel: string,
 	decisions: TradeDecisionInfo[],
-	maxNotableDecisions = 5
+	maxNotableDecisions = 5,
 ): TradeCohortSummary {
 	if (decisions.length === 0) {
 		throw new Error("Cannot create summary from empty decisions array");
@@ -45,7 +45,7 @@ export function createTradeCohortSummary(
 	const totalPnl = decisions.reduce((sum, d) => sum + d.realizedPnl, 0);
 
 	const sortedByAbsPnl = decisions.toSorted(
-		(a, b) => Math.abs(b.realizedPnl) - Math.abs(a.realizedPnl)
+		(a, b) => Math.abs(b.realizedPnl) - Math.abs(a.realizedPnl),
 	);
 	const notableDecisionIds = sortedByAbsPnl.slice(0, maxNotableDecisions).map((d) => d.decisionId);
 
@@ -74,7 +74,7 @@ export function createTradeCohortSummary(
  */
 export function groupDecisionsForSummarization(
 	decisions: TradeDecisionInfo[],
-	periodFormatter: (date: Date) => string = formatQuarterlyPeriod
+	periodFormatter: (date: Date) => string = formatQuarterlyPeriod,
 ): Map<string, TradeDecisionInfo[]> {
 	return Map.groupBy(decisions, (decision) => {
 		const period = periodFormatter(decision.createdAt);

@@ -155,7 +155,7 @@ export class FundamentalRepositoryAdapter implements FundamentalRepository {
 	constructor(private repo: StorageFundamentalsRepository) {}
 
 	async getLatest(
-		symbol: string
+		symbol: string,
 	): Promise<{ value: ValueIndicators; quality: QualityIndicators } | null> {
 		const row = await this.repo.findLatestBySymbol(symbol);
 		if (!row) {
@@ -241,7 +241,7 @@ export class SentimentRepositoryAdapter implements SentimentRepository {
 	}
 
 	private classifySentiment(
-		score: number | null
+		score: number | null,
 	): "STRONG_BULLISH" | "BULLISH" | "NEUTRAL" | "BEARISH" | "STRONG_BEARISH" | null {
 		if (score === null) {
 			return null;
@@ -316,7 +316,7 @@ export class CorporateActionsRepositoryAdapter implements CorporateActionsReposi
 
 	private calculateDaysUntilExDividend(
 		dividends: StorageCorporateActionRow[],
-		today: Date
+		today: Date,
 	): number | null {
 		const todayStr = toDateString(today);
 		const upcomingDividends = dividends.filter((d) => d.exDate > todayStr);
@@ -357,7 +357,7 @@ export class CorporateActionsRepositoryAdapter implements CorporateActionsReposi
  * Create a FundamentalRepository adapter from a storage repository
  */
 export function createFundamentalRepositoryAdapter(
-	repo: StorageFundamentalsRepository
+	repo: StorageFundamentalsRepository,
 ): FundamentalRepository {
 	return new FundamentalRepositoryAdapter(repo);
 }
@@ -366,7 +366,7 @@ export function createFundamentalRepositoryAdapter(
  * Create a ShortInterestRepository adapter from a storage repository
  */
 export function createShortInterestRepositoryAdapter(
-	repo: StorageShortInterestRepository
+	repo: StorageShortInterestRepository,
 ): ShortInterestRepository {
 	return new ShortInterestRepositoryAdapter(repo);
 }
@@ -375,7 +375,7 @@ export function createShortInterestRepositoryAdapter(
  * Create a SentimentRepository adapter from a storage repository
  */
 export function createSentimentRepositoryAdapter(
-	repo: StorageSentimentRepository
+	repo: StorageSentimentRepository,
 ): SentimentRepository {
 	return new SentimentRepositoryAdapter(repo);
 }
@@ -384,7 +384,7 @@ export function createSentimentRepositoryAdapter(
  * Create a CorporateActionsRepository adapter from a storage repository
  */
 export function createCorporateActionsRepositoryAdapter(
-	repo: StorageCorporateActionsRepository
+	repo: StorageCorporateActionsRepository,
 ): CorporateActionsRepository {
 	return new CorporateActionsRepositoryAdapter(repo);
 }

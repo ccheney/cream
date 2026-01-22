@@ -36,7 +36,7 @@ function createMockSentiment(overrides: Partial<ExtractedSentiment> = {}): Extra
 
 function createMockDataProvider(
 	sentimentData: ExtractedSentiment[] = [],
-	historicalData: Array<{ date: string; score: number }> = []
+	historicalData: Array<{ date: string; score: number }> = [],
 ): SentimentDataProvider {
 	return {
 		getSentimentData: mock(() => Promise.resolve(sentimentData)),
@@ -85,7 +85,7 @@ function createMockRepository(): MockSentimentRepository {
 				totalPages: 0,
 				hasNext: false,
 				hasPrev: false,
-			})
+			}),
 		),
 		findMostPositive: mock(() => Promise.resolve([])),
 		findMostNegative: mock(() => Promise.resolve([])),

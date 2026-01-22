@@ -154,7 +154,7 @@ export const DEFAULT_RETRIEVAL_OPTIONS: Required<ThesisMemoryRetrievalOptions> =
  */
 export function classifyOutcome(
 	pnlPercent: number,
-	scratchThreshold = SCRATCH_THRESHOLD_PERCENT
+	scratchThreshold = SCRATCH_THRESHOLD_PERCENT,
 ): ThesisOutcome {
 	if (Math.abs(pnlPercent) <= scratchThreshold) {
 		return "SCRATCH";
@@ -350,7 +350,7 @@ export function generateEmbeddingText(memory: ThesisMemory): string {
 export async function ingestThesisMemory(
 	client: HelixClient,
 	embeddingClient: EmbeddingClient,
-	memory: ThesisMemory
+	memory: ThesisMemory,
 ): Promise<void> {
 	// Generate embedding text
 	const embeddingText = generateEmbeddingText(memory);
@@ -379,7 +379,7 @@ export async function retrieveSimilarTheses(
 	client: HelixClient,
 	embeddingClient: EmbeddingClient,
 	query: string,
-	options: ThesisMemoryRetrievalOptions = {}
+	options: ThesisMemoryRetrievalOptions = {},
 ): Promise<ThesisMemoryResult[]> {
 	const opts = { ...DEFAULT_RETRIEVAL_OPTIONS, ...options };
 
@@ -408,7 +408,7 @@ export async function retrieveSimilarTheses(
 			top_k: opts.topK,
 			min_similarity: opts.minSimilarity,
 			...filters,
-		}
+		},
 	);
 
 	// Convert to ThesisMemoryResult
@@ -427,7 +427,7 @@ export async function retrieveWinningTheses(
 	client: HelixClient,
 	embeddingClient: EmbeddingClient,
 	query: string,
-	options: Omit<ThesisMemoryRetrievalOptions, "filterOutcome"> = {}
+	options: Omit<ThesisMemoryRetrievalOptions, "filterOutcome"> = {},
 ): Promise<ThesisMemoryResult[]> {
 	return retrieveSimilarTheses(client, embeddingClient, query, {
 		...options,
@@ -444,7 +444,7 @@ export async function retrieveLosingTheses(
 	client: HelixClient,
 	embeddingClient: EmbeddingClient,
 	query: string,
-	options: Omit<ThesisMemoryRetrievalOptions, "filterOutcome"> = {}
+	options: Omit<ThesisMemoryRetrievalOptions, "filterOutcome"> = {},
 ): Promise<ThesisMemoryResult[]> {
 	return retrieveSimilarTheses(client, embeddingClient, query, {
 		...options,

@@ -59,7 +59,7 @@ export interface Citation {
  */
 export async function getDecisionCitations(
 	client: HelixClient,
-	decisionId: string
+	decisionId: string,
 ): Promise<Citation[]> {
 	const citations: Citation[] = [];
 

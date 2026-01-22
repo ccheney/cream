@@ -727,7 +727,7 @@ export interface MultiTimeframeIndicators {
  */
 export function calculateMultiTimeframeIndicators(
 	candles: OHLCVBar[],
-	config: Partial<IndicatorPipelineConfig> = {}
+	config: Partial<IndicatorPipelineConfig> = {},
 ): MultiTimeframeIndicators {
 	if (candles.length === 0) {
 		return {};
@@ -874,7 +874,7 @@ function clipOutliers(value: number, values: number[], threshold: number): numbe
  */
 function extractFeatureSeries(
 	candles: OHLCVBar[],
-	feature: "close" | "return" | "volume" | "high_low_range"
+	feature: "close" | "return" | "volume" | "high_low_range",
 ): number[] {
 	switch (feature) {
 		case "close":
@@ -913,7 +913,7 @@ function extractFeatureSeries(
 export function applyTransforms(
 	candles: OHLCVBar[],
 	timeframe: string,
-	config: Partial<TransformConfig> = {}
+	config: Partial<TransformConfig> = {},
 ): TransformedFeatures {
 	const fullConfig = { ...DEFAULT_TRANSFORM_CONFIG, ...config };
 	const { method, lookbackPeriod, clipOutliers: shouldClip, clipThreshold } = fullConfig;

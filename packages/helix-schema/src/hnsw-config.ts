@@ -359,7 +359,7 @@ export function validateHnswConfig(config: HnswConfig): {
 	}
 	if (config.efSearch > config.efConstruction) {
 		warnings.push(
-			"efSearch > efConstruction provides diminishing returns (graph quality limits recall)"
+			"efSearch > efConstruction provides diminishing returns (graph quality limits recall)",
 		);
 	}
 

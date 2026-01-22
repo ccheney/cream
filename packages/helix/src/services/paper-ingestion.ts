@@ -407,7 +407,7 @@ export class PaperIngestionService {
 	 */
 	private async upsertPaper(
 		paper: AcademicPaper,
-		embedding?: number[]
+		embedding?: number[],
 	): Promise<{ success: boolean; error?: string }> {
 		try {
 			await this.client.query("InsertAcademicPaper", {
@@ -435,7 +435,7 @@ export class PaperIngestionService {
 	 */
 	async ingestPapers(
 		papers: PaperInput[],
-		options: PaperIngestionOptions = {}
+		options: PaperIngestionOptions = {},
 	): Promise<PaperIngestionResult> {
 		const startTime = performance.now();
 		const warnings: string[] = [];
@@ -520,7 +520,7 @@ export class PaperIngestionService {
 				}
 			} catch (error) {
 				warnings.push(
-					`Embedding generation failed: ${error instanceof Error ? error.message : "Unknown error"}`
+					`Embedding generation failed: ${error instanceof Error ? error.message : "Unknown error"}`,
 				);
 			}
 		}
@@ -558,7 +558,7 @@ export class PaperIngestionService {
 	 */
 	async ingestPaper(
 		paper: PaperInput,
-		options: PaperIngestionOptions = {}
+		options: PaperIngestionOptions = {},
 	): Promise<PaperIngestionResult> {
 		return this.ingestPapers([paper], options);
 	}
@@ -576,7 +576,7 @@ export class PaperIngestionService {
 	 */
 	async searchPapers(
 		queryText: string,
-		limit = 10
+		limit = 10,
 	): Promise<
 		Array<{
 			paperId: string;

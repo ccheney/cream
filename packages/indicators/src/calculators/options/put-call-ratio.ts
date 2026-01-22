@@ -127,7 +127,7 @@ export function calculatePutCallRatio(chain: OptionsChain): PutCallRatioResult {
  * @returns Aggregated P/C ratio
  */
 export function calculateAggregatedPutCallRatio(
-	chains: OptionsChain[]
+	chains: OptionsChain[],
 ): AggregatedPutCallRatio | null {
 	if (chains.length === 0) {
 		return null;
@@ -239,7 +239,7 @@ export function isExtremePCR(
 	ratio: number,
 	historicalMean: number,
 	historicalStd: number,
-	threshold = 2
+	threshold = 2,
 ): { isExtreme: boolean; zScore: number; direction: "high" | "low" | "normal" } {
 	if (historicalStd <= 0) {
 		return { isExtreme: false, zScore: 0, direction: "normal" };

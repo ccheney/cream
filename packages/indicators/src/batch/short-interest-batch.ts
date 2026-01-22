@@ -83,7 +83,7 @@ export interface FINRAClient {
 	 */
 	getShortInterestBySymbols(
 		symbols: string[],
-		settlementDate?: string
+		settlementDate?: string,
 	): Promise<FINRAShortInterestRecord[]>;
 
 	/**
@@ -148,7 +148,7 @@ function sleep(ms: number): Promise<void> {
  */
 export function calculateShortPctFloat(
 	shortInterest: number,
-	floatShares: number | null
+	floatShares: number | null,
 ): number | null {
 	if (floatShares === null || floatShares <= 0) {
 		return null;
@@ -169,7 +169,7 @@ export function calculateShortPctFloat(
  */
 export function calculateShortInterestRatio(
 	shortInterest: number,
-	avgDailyVolume: number | null
+	avgDailyVolume: number | null,
 ): number | null {
 	if (avgDailyVolume === null || avgDailyVolume <= 0) {
 		return null;
@@ -187,7 +187,7 @@ export function calculateShortInterestRatio(
  */
 export function calculateShortInterestMomentum(
 	current: number,
-	previous: number | null
+	previous: number | null,
 ): number | null {
 	if (previous === null || previous <= 0) {
 		return null;
@@ -220,7 +220,7 @@ export class ShortInterestBatchJob {
 		finra: FINRAClient,
 		repo: ShortInterestRepository,
 		sharesProvider?: SharesOutstandingProvider,
-		config?: ShortInterestBatchJobConfig
+		config?: ShortInterestBatchJobConfig,
 	) {
 		this.finra = finra;
 		this.repo = repo;
@@ -291,7 +291,7 @@ export class ShortInterestBatchJob {
 						processed++;
 						log.debug(
 							{ symbol: upperSymbol, processed, total: symbols.length },
-							"Processed symbol"
+							"Processed symbol",
 						);
 					} catch (error) {
 						failed++;
@@ -309,7 +309,7 @@ export class ShortInterestBatchJob {
 				const errorMessage = error instanceof Error ? error.message : String(error);
 				log.error(
 					{ batchIndex, batchSize: batch.length, error: errorMessage },
-					"Failed to fetch batch from FINRA"
+					"Failed to fetch batch from FINRA",
 				);
 
 				if (!this.config.continueOnError) {
@@ -348,7 +348,7 @@ export class ShortInterestBatchJob {
 			if (sharesData?.floatShares) {
 				shortPctFloat = calculateShortPctFloat(
 					finraRecord.currentShortPositionQuantity,
-					sharesData.floatShares
+					sharesData.floatShares,
 				);
 			}
 		}
@@ -356,12 +356,12 @@ export class ShortInterestBatchJob {
 		// Calculate additional metrics
 		const shortInterestRatio = calculateShortInterestRatio(
 			finraRecord.currentShortPositionQuantity,
-			finraRecord.averageDailyVolumeQuantity
+			finraRecord.averageDailyVolumeQuantity,
 		);
 
 		const shortInterestChange = calculateShortInterestMomentum(
 			finraRecord.currentShortPositionQuantity,
-			finraRecord.previousShortPositionQuantity
+			finraRecord.previousShortPositionQuantity,
 		);
 
 		// Build input for repository
@@ -385,7 +385,7 @@ export class ShortInterestBatchJob {
 	 */
 	private async fetchWithRetry(
 		symbols: string[],
-		settlementDate: string
+		settlementDate: string,
 	): Promise<FINRAShortInterestRecord[]> {
 		let lastError: Error | null = null;
 

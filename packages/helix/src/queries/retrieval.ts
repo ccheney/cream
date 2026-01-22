@@ -202,7 +202,7 @@ export async function retrieveTradeMemories(
 	client: HelixClient,
 	embedding: number[],
 	snapshot: MarketSnapshot,
-	options: TradeMemoryRetrievalOptions = {}
+	options: TradeMemoryRetrievalOptions = {},
 ): Promise<TradeMemoryRetrievalResult> {
 	const opts = { ...DEFAULT_OPTIONS, ...options };
 	const startTime = performance.now();
@@ -273,7 +273,7 @@ export async function retrieveTradeMemories(
 			node: r.node,
 			nodeId: r.nodeId,
 			score: r.rrfScore,
-		}))
+		})),
 	);
 
 	// 6. Corrective retrieval (if enabled and needed)
@@ -316,7 +316,7 @@ export async function retrieveTradeMemories(
 			}
 
 			return memory;
-		})
+		}),
 	);
 
 	// 8. Calculate statistics
@@ -430,7 +430,7 @@ export function formatTradeMemorySummary(result: TradeMemoryRetrievalResult): st
 	for (const memory of memories.slice(0, 5)) {
 		const d = memory.decision;
 		lines.push(
-			`- [${d.action}] ${d.instrument_id} (${d.regime_label}): ${d.rationale_text.slice(0, 100)}...`
+			`- [${d.action}] ${d.instrument_id} (${d.regime_label}): ${d.rationale_text.slice(0, 100)}...`,
 		);
 	}
 

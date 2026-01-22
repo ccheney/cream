@@ -137,7 +137,7 @@ export class NewsIngestionService {
 
 				const result = await this.client.query<Array<{ item_id: string; similarity: number }>>(
 					"SearchNews",
-					{ query: headline, limit: 1 }
+					{ query: headline, limit: 1 },
 				);
 
 				if (result.data.length > 0) {
@@ -159,7 +159,7 @@ export class NewsIngestionService {
 	 */
 	private async upsertNewsItem(
 		item: NewsItem,
-		embedding?: number[]
+		embedding?: number[],
 	): Promise<{ success: boolean; error?: string }> {
 		try {
 			await this.client.query("InsertNewsItem", {
@@ -187,7 +187,7 @@ export class NewsIngestionService {
 	 */
 	async ingestNews(
 		items: NewsItemInput[],
-		options: NewsIngestionOptions = {}
+		options: NewsIngestionOptions = {},
 	): Promise<NewsIngestionResult> {
 		const startTime = performance.now();
 		const warnings: string[] = [];
@@ -220,7 +220,7 @@ export class NewsIngestionService {
 		if (deduplicateByHeadline) {
 			duplicateIndices = await this.findDuplicates(
 				items.map((i) => i.headline),
-				deduplicationThreshold
+				deduplicationThreshold,
 			);
 			duplicatesSkipped = duplicateIndices.size;
 
@@ -276,7 +276,7 @@ export class NewsIngestionService {
 				}
 			} catch (error) {
 				warnings.push(
-					`Embedding generation failed: ${error instanceof Error ? error.message : "Unknown error"}`
+					`Embedding generation failed: ${error instanceof Error ? error.message : "Unknown error"}`,
 				);
 			}
 		}
@@ -334,7 +334,7 @@ export class NewsIngestionService {
 
 				if (result.failed.length > 0) {
 					warnings.push(
-						`${result.failed.length} edges failed to create in batch ${Math.floor(i / batchSize) + 1}`
+						`${result.failed.length} edges failed to create in batch ${Math.floor(i / batchSize) + 1}`,
 					);
 				}
 			}
@@ -356,7 +356,7 @@ export class NewsIngestionService {
 	 */
 	async ingestNewsItem(
 		item: NewsItemInput,
-		options: NewsIngestionOptions = {}
+		options: NewsIngestionOptions = {},
 	): Promise<NewsIngestionResult> {
 		return this.ingestNews([item], options);
 	}
@@ -366,7 +366,7 @@ export class NewsIngestionService {
 	 */
 	async searchSimilarNews(
 		queryText: string,
-		limit = 10
+		limit = 10,
 	): Promise<Array<{ itemId: string; similarity: number; headline: string; source: string }>> {
 		try {
 			const result = await this.client.query<
@@ -389,7 +389,7 @@ export class NewsIngestionService {
 	 */
 	async getNewsByCompany(
 		symbol: string,
-		limit = 20
+		limit = 20,
 	): Promise<
 		Array<{ itemId: string; headline: string; sentimentScore: number; publishedAt: string }>
 	> {
@@ -414,7 +414,7 @@ export class NewsIngestionService {
 	 */
 	async getCompanySentiment(
 		symbol: string,
-		daysBack = 7
+		daysBack = 7,
 	): Promise<{ avgSentiment: number; newsCount: number }> {
 		try {
 			const cutoffDate = new Date();
@@ -425,7 +425,7 @@ export class NewsIngestionService {
 				{
 					symbol,
 					since: cutoffDate.toISOString(),
-				}
+				},
 			);
 
 			if (result.data.length > 0) {

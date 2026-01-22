@@ -99,7 +99,7 @@ export interface TemporalQueryOptions {
  */
 export function isEdgeActiveAt(
 	edge: Partial<TemporalEdgeProperties>,
-	asOfTimestamp: number
+	asOfTimestamp: number,
 ): boolean {
 	// No temporal data - treat as always active
 	if (edge.valid_from === undefined) {
@@ -129,7 +129,7 @@ export function isEdgeActiveAt(
  */
 export function wasEdgeKnownAt(
 	edge: Partial<TemporalEdgeProperties>,
-	knownAsOfTimestamp: number
+	knownAsOfTimestamp: number,
 ): boolean {
 	// No recorded_at - treat as always known
 	if (edge.recorded_at === undefined) {
@@ -152,7 +152,7 @@ export function wasEdgeKnownAt(
  */
 export function matchesTemporalQuery(
 	edge: Partial<TemporalEdgeProperties>,
-	options: TemporalQueryOptions
+	options: TemporalQueryOptions,
 ): boolean {
 	// Check event time (when relationship existed)
 	if (options.asOfTimestamp !== undefined) {
@@ -202,7 +202,7 @@ export function matchesTemporalQuery(
  */
 export function createTemporalEdge(
 	validFrom: number = Date.now(),
-	validTo?: number
+	validTo?: number,
 ): TemporalEdgeProperties {
 	return {
 		valid_from: validFrom,
@@ -220,7 +220,7 @@ export function createTemporalEdge(
  */
 export function expireEdge(
 	edge: TemporalEdgeProperties,
-	expiredAt: number = Date.now()
+	expiredAt: number = Date.now(),
 ): TemporalEdgeProperties {
 	return {
 		...edge,
@@ -246,7 +246,7 @@ export function expireEdge(
  */
 export function addTemporalPropertiesToEdge(
 	existingEdge: Record<string, unknown>,
-	migrationTimestamp: number = Date.now()
+	migrationTimestamp: number = Date.now(),
 ): TemporalEdgeProperties {
 	// Try to extract created_at from existing edge
 	let validFrom = migrationTimestamp;
@@ -305,7 +305,7 @@ export interface TemporalEdgeStats {
  * @returns Statistics about temporal coverage
  */
 export function calculateTemporalStats(
-	edges: Array<Partial<TemporalEdgeProperties>>
+	edges: Array<Partial<TemporalEdgeProperties>>,
 ): TemporalEdgeStats {
 	const stats: TemporalEdgeStats = {
 		totalEdges: edges.length,

@@ -68,7 +68,7 @@ export function isGoldenCross(
 	prevFast: number,
 	prevSlow: number,
 	currFast: number,
-	currSlow: number
+	currSlow: number,
 ): boolean {
 	return prevFast <= prevSlow && currFast > currSlow;
 }
@@ -87,7 +87,7 @@ export function isDeathCross(
 	prevFast: number,
 	prevSlow: number,
 	currFast: number,
-	currSlow: number
+	currSlow: number,
 ): boolean {
 	return prevFast >= prevSlow && currFast < currSlow;
 }

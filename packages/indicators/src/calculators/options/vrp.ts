@@ -77,7 +77,7 @@ export interface VRPTermStructure {
 export function calculateRealizedVolatility(
 	bars: OHLCVBar[],
 	period = 20,
-	annualizationFactor = 252
+	annualizationFactor = 252,
 ): number | null {
 	if (bars.length < period + 1) {
 		return null;
@@ -129,7 +129,7 @@ export function calculateRealizedVolatility(
 export function calculateParkinsonVolatility(
 	bars: OHLCVBar[],
 	period = 20,
-	annualizationFactor = 252
+	annualizationFactor = 252,
 ): number | null {
 	if (bars.length < period) {
 		return null;
@@ -187,7 +187,7 @@ export function calculateVRP(
 	impliedVolatility: number,
 	bars: OHLCVBar[],
 	realizedVolPeriod = 20,
-	annualizationFactor = 252
+	annualizationFactor = 252,
 ): VRPResult | null {
 	if (impliedVolatility < 0) {
 		return null;
@@ -196,7 +196,7 @@ export function calculateVRP(
 	const realizedVolatility = calculateRealizedVolatility(
 		bars,
 		realizedVolPeriod,
-		annualizationFactor
+		annualizationFactor,
 	);
 
 	if (realizedVolatility === null) {
@@ -226,7 +226,7 @@ export function calculateVRPWithParkinson(
 	impliedVolatility: number,
 	bars: OHLCVBar[],
 	realizedVolPeriod = 20,
-	annualizationFactor = 252
+	annualizationFactor = 252,
 ): VRPResult | null {
 	if (impliedVolatility < 0) {
 		return null;
@@ -235,7 +235,7 @@ export function calculateVRPWithParkinson(
 	const realizedVolatility = calculateParkinsonVolatility(
 		bars,
 		realizedVolPeriod,
-		annualizationFactor
+		annualizationFactor,
 	);
 
 	if (realizedVolatility === null) {
@@ -269,7 +269,7 @@ export function calculateVRPWithParkinson(
 export function calculateVRPTermStructure(
 	ivByDays: Map<number, number>,
 	bars: OHLCVBar[],
-	symbol: string
+	symbol: string,
 ): VRPTermStructure | null {
 	if (ivByDays.size === 0) {
 		return null;
@@ -346,7 +346,7 @@ export function classifyVRPLevel(vrp: number): VRPLevel {
  */
 export function calculateVRPPercentile(
 	currentVRP: number,
-	historicalVRPs: number[]
+	historicalVRPs: number[],
 ): number | null {
 	if (historicalVRPs.length === 0) {
 		return null;

@@ -315,7 +315,7 @@ describe("calculateDividendIndicators", () => {
 			dividends,
 			100, // $100 stock price
 			formatDateStr(futureDate), // Future ex-date
-			1.8 // Prior year dividends
+			1.8, // Prior year dividends
 		);
 
 		expect(result.trailingDividendYield).toBe(0.02); // 2% yield ($2 / $100)

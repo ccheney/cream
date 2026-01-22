@@ -14,7 +14,7 @@ import type { TradeDecision } from "../node-types.js";
  */
 export function convertToRetrievedCase(
 	decision: TradeDecision,
-	similarityScore?: number
+	similarityScore?: number,
 ): RetrievedCase {
 	const keyOutcomes = parseRealizedOutcome(decision.realized_outcome);
 	const shortSummary = generateShortSummary(decision);

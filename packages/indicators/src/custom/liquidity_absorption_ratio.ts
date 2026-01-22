@@ -119,7 +119,7 @@ function getCandleMetrics(bar: OHLCVBar): CandleMetrics {
  */
 function calculateSingleBarAbsorptionRatio(
 	bar: OHLCVBar,
-	config: Required<LiquidityAbsorptionRatioConfig>
+	config: Required<LiquidityAbsorptionRatioConfig>,
 ): {
 	absorptionRatio: number;
 	upperWickVolume: number;
@@ -215,7 +215,7 @@ function calculateRollingStats(values: number[]): { mean: number; stdDev: number
  */
 export function calculateLiquidityAbsorptionRatio(
 	bars: OHLCVBar[],
-	config?: LiquidityAbsorptionRatioConfig
+	config?: LiquidityAbsorptionRatioConfig,
 ): LiquidityAbsorptionRatioResult | null {
 	// Default configuration
 	const fullConfig: Required<LiquidityAbsorptionRatioConfig> = {
@@ -290,7 +290,7 @@ export function calculateLiquidityAbsorptionRatio(
  */
 export function calculateLiquidityAbsorptionRatioSeries(
 	bars: OHLCVBar[],
-	config?: LiquidityAbsorptionRatioConfig
+	config?: LiquidityAbsorptionRatioConfig,
 ): Array<LiquidityAbsorptionRatioResult | null> {
 	const fullConfig: Required<LiquidityAbsorptionRatioConfig> = {
 		normalizationPeriod: config?.normalizationPeriod ?? 20,

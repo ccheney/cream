@@ -115,7 +115,7 @@ function calculateRawK(bars: OHLCVBar[]): number | null {
  */
 export function calculateStochastic(
 	bars: OHLCVBar[],
-	settings: Partial<StochasticSettings> = {}
+	settings: Partial<StochasticSettings> = {},
 ): StochasticResult | null {
 	const { kPeriod, dPeriod } = { ...DEFAULT_SETTINGS, ...settings };
 
@@ -171,7 +171,7 @@ export function calculateStochastic(
  */
 export function calculateSlowStochastic(
 	bars: OHLCVBar[],
-	settings: Partial<StochasticSettings> = {}
+	settings: Partial<StochasticSettings> = {},
 ): SlowStochasticResult | null {
 	const { kPeriod, dPeriod, slowKPeriod } = { ...DEFAULT_SETTINGS, ...settings };
 
@@ -238,7 +238,7 @@ export function calculateSlowStochastic(
  */
 export function calculateStochasticSeries(
 	bars: OHLCVBar[],
-	settings: Partial<StochasticSettings> = {}
+	settings: Partial<StochasticSettings> = {},
 ): StochasticResult[] {
 	const { kPeriod, dPeriod } = { ...DEFAULT_SETTINGS, ...settings };
 	const results: StochasticResult[] = [];
@@ -310,7 +310,7 @@ export function classifyStochastic(k: number): StochasticLevel {
  */
 export function detectStochasticCrossover(
 	current: StochasticResult,
-	previous: StochasticResult
+	previous: StochasticResult,
 ): "bullish" | "bearish" | "none" {
 	const currentDiff = current.k - current.d;
 	const previousDiff = previous.k - previous.d;
@@ -333,7 +333,7 @@ export function detectStochasticCrossover(
  */
 export function detectStochasticHook(
 	current: StochasticResult,
-	previous: StochasticResult
+	previous: StochasticResult,
 ): "bullish_hook" | "bearish_hook" | "none" {
 	// Bullish hook: crossing up through 20
 	if (previous.k <= 20 && current.k > 20) {

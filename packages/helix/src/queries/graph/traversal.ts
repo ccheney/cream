@@ -41,7 +41,7 @@ import { DEFAULT_TRAVERSAL_OPTIONS } from "./types.js";
 export async function traverse<T = Record<string, unknown>>(
 	client: HelixClient,
 	startNodeId: string,
-	options: TraversalOptions = {}
+	options: TraversalOptions = {},
 ): Promise<TraversalResponse<T>> {
 	const opts = { ...DEFAULT_TRAVERSAL_OPTIONS, ...options };
 
@@ -97,7 +97,7 @@ export async function traverse<T = Record<string, unknown>>(
 export async function weightedTraverse<T = Record<string, unknown>>(
 	client: HelixClient,
 	startNodeId: string,
-	options: TraversalOptions = {}
+	options: TraversalOptions = {},
 ): Promise<WeightedTraversalResponse<T>> {
 	const opts = { ...DEFAULT_TRAVERSAL_OPTIONS, ...options };
 	const startTime = performance.now();
@@ -122,7 +122,7 @@ export async function weightedTraverse<T = Record<string, unknown>>(
 	const totalEdges = allEdges.size;
 
 	const filteredEdges = Array.from(allEdges.values()).filter((edge) =>
-		shouldFollowEdge(edge, opts)
+		shouldFollowEdge(edge, opts),
 	);
 
 	const prioritizedEdges = filteredEdges.map((edge) => {
@@ -164,7 +164,7 @@ export async function weightedTraverse<T = Record<string, unknown>>(
 export async function getNeighbors<T = Record<string, unknown>>(
 	client: HelixClient,
 	nodeId: string,
-	options: Pick<TraversalOptions, "edgeTypes" | "direction" | "limit"> = {}
+	options: Pick<TraversalOptions, "edgeTypes" | "direction" | "limit"> = {},
 ): Promise<GraphNode<T>[]> {
 	const result = await traverse<T>(client, nodeId, {
 		maxDepth: 1,

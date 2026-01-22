@@ -56,7 +56,7 @@ function generateBullishCandleWithWick(
 	basePrice = 100,
 	totalRange = 10,
 	volume = 1000000,
-	timestamp = Date.now()
+	timestamp = Date.now(),
 ): OHLCVBar {
 	const low = basePrice;
 	const high = basePrice + totalRange;
@@ -83,7 +83,7 @@ function generateBearishCandleWithWick(
 	basePrice = 100,
 	totalRange = 10,
 	volume = 1000000,
-	timestamp = Date.now()
+	timestamp = Date.now(),
 ): OHLCVBar {
 	const low = basePrice;
 	const high = basePrice + totalRange;
@@ -115,12 +115,12 @@ function generateLowAbsorptionBars(count: number): OHLCVBar[] {
 		if (isBullish) {
 			// Bullish candle with small upper wick (5% upper, 5% lower, 90% body)
 			bars.push(
-				generateBullishCandleWithWick(0.05, 0.05, 100, 10, 1000000, baseTime + i * 86400000)
+				generateBullishCandleWithWick(0.05, 0.05, 100, 10, 1000000, baseTime + i * 86400000),
 			);
 		} else {
 			// Bearish candle with small lower wick (5% upper, 5% lower, 90% body)
 			bars.push(
-				generateBearishCandleWithWick(0.05, 0.05, 100, 10, 1000000, baseTime + i * 86400000)
+				generateBearishCandleWithWick(0.05, 0.05, 100, 10, 1000000, baseTime + i * 86400000),
 			);
 		}
 	}
@@ -417,8 +417,8 @@ describe("Z-score normalization", () => {
 				100,
 				10,
 				1000000,
-				Date.now()
-			)
+				Date.now(),
+			),
 		);
 
 		const result = calculateLiquidityAbsorptionRatio(bars);

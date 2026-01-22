@@ -215,7 +215,7 @@ export function calculateMultipleEMAs(bars: OHLCVBar[], periods: number[]): Mult
 export function detectEMACrossover(
 	bars: OHLCVBar[],
 	fastPeriod: number,
-	slowPeriod: number
+	slowPeriod: number,
 ): "bullish_crossover" | "bearish_crossover" | "no_crossover" | null {
 	if (bars.length < slowPeriod + 2) {
 		return null;

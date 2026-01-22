@@ -65,7 +65,7 @@ export interface VolatilityComparison {
 export function calculateCloseToCloseVolatility(
 	bars: OHLCVBar[],
 	period = 20,
-	annualizationFactor = 252
+	annualizationFactor = 252,
 ): VolatilityResult | null {
 	if (bars.length < period + 1) {
 		return null;
@@ -125,7 +125,7 @@ export function calculateCloseToCloseVolatility(
 export function calculateParkinsonVolatility(
 	bars: OHLCVBar[],
 	period = 20,
-	annualizationFactor = 252
+	annualizationFactor = 252,
 ): VolatilityResult | null {
 	if (bars.length < period) {
 		return null;
@@ -179,7 +179,7 @@ export function calculateParkinsonVolatility(
 export function calculateGarmanKlassVolatility(
 	bars: OHLCVBar[],
 	period = 20,
-	annualizationFactor = 252
+	annualizationFactor = 252,
 ): VolatilityResult | null {
 	if (bars.length < period) {
 		return null;
@@ -230,14 +230,14 @@ export function calculateGarmanKlassVolatility(
 export function calculateVolatilityComparison(
 	bars: OHLCVBar[],
 	period = 20,
-	annualizationFactor = 252
+	annualizationFactor = 252,
 ): VolatilityComparison {
 	const c2c = calculateCloseToCloseVolatility(bars, period, annualizationFactor);
 	const parkinson = calculateParkinsonVolatility(bars, period, annualizationFactor);
 	const gk = calculateGarmanKlassVolatility(bars, period, annualizationFactor);
 
 	const values = [c2c?.volatility, parkinson?.volatility, gk?.volatility].filter(
-		(v): v is number => v !== null && v !== undefined
+		(v): v is number => v !== null && v !== undefined,
 	);
 
 	const average = values.length > 0 ? values.reduce((sum, v) => sum + v, 0) / values.length : null;
@@ -260,7 +260,7 @@ export function calculateVolatilitySeries(
 	bars: OHLCVBar[],
 	period = 20,
 	method: VolatilityMethod = "close_to_close",
-	annualizationFactor = 252
+	annualizationFactor = 252,
 ): VolatilityResult[] {
 	const results: VolatilityResult[] = [];
 
@@ -324,7 +324,7 @@ export function classifyVolatility(volatility: number): VolatilityLevel {
  */
 export function calculateVolatilityPercentile(
 	currentVol: number,
-	historicalVols: number[]
+	historicalVols: number[],
 ): number | null {
 	if (historicalVols.length === 0) {
 		return null;
@@ -339,7 +339,7 @@ export function calculateVolatilityPercentile(
  */
 export function detectVolatilityRegimeChange(
 	recentVols: number[],
-	threshold = 0.5
+	threshold = 0.5,
 ): "increasing" | "decreasing" | "stable" {
 	if (recentVols.length < 3) {
 		return "stable";

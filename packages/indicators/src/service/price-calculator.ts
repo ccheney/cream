@@ -87,7 +87,7 @@ export class PriceCalculatorAdapter implements PriceCalculator {
 	}
 
 	private calculateMACDValues(
-		bars: OHLCVBar[]
+		bars: OHLCVBar[],
 	): Pick<PriceIndicators, "macd_line" | "macd_signal" | "macd_histogram"> {
 		const macd = calculateMACD(bars, { fastPeriod: 12, slowPeriod: 26, signalPeriod: 9 });
 
@@ -99,7 +99,7 @@ export class PriceCalculatorAdapter implements PriceCalculator {
 	}
 
 	private calculateBollingerValues(
-		bars: OHLCVBar[]
+		bars: OHLCVBar[],
 	): Pick<
 		PriceIndicators,
 		| "bollinger_upper"
@@ -120,7 +120,7 @@ export class PriceCalculatorAdapter implements PriceCalculator {
 	}
 
 	private calculateStochasticValues(
-		bars: OHLCVBar[]
+		bars: OHLCVBar[],
 	): Pick<PriceIndicators, "stochastic_k" | "stochastic_d"> {
 		const stoch = calculateStochastic(bars, { kPeriod: 14, dPeriod: 3 });
 
@@ -131,7 +131,7 @@ export class PriceCalculatorAdapter implements PriceCalculator {
 	}
 
 	private calculateMomentumValues(
-		bars: OHLCVBar[]
+		bars: OHLCVBar[],
 	): Pick<PriceIndicators, "momentum_1m" | "momentum_3m" | "momentum_6m" | "momentum_12m"> {
 		// Momentum periods in trading days
 		const mom1m = calculateMomentum(bars, 21);

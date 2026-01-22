@@ -385,7 +385,7 @@ export function getSectorDefaultSensitivities(sector: string): CompanySensitivit
  */
 async function upsertMacroEntity(
 	client: HelixClient,
-	entity: MacroEntity
+	entity: MacroEntity,
 ): Promise<{ success: boolean; error?: string }> {
 	try {
 		await client.query("upsertMacroEntity", {
@@ -408,7 +408,7 @@ async function upsertMacroEntity(
  */
 async function batchUpsertMacroEntities(
 	client: HelixClient,
-	entities: MacroEntity[]
+	entities: MacroEntity[],
 ): Promise<{ successful: number; failed: number; errors: string[] }> {
 	const errors: string[] = [];
 	let successful = 0;
@@ -510,7 +510,7 @@ export class MacroGraphBuilder {
 	async build(
 		sensitivities: CompanySensitivity[],
 		eventLinks: EventMacroLink[] = [],
-		options: MacroGraphBuildOptions = {}
+		options: MacroGraphBuildOptions = {},
 	): Promise<MacroGraphBuildResult> {
 		const startTime = performance.now();
 		const warnings: string[] = [];
@@ -562,7 +562,7 @@ export class MacroGraphBuilder {
 	async addCompanySensitivity(
 		companySymbol: string,
 		macroEntityId: string,
-		sensitivity: number
+		sensitivity: number,
 	): Promise<{ success: boolean; error?: string }> {
 		const result = await createEdge(this.client, {
 			sourceId: companySymbol,
@@ -580,7 +580,7 @@ export class MacroGraphBuilder {
 	 */
 	async addSectorDefaults(
 		companySymbol: string,
-		sector: string
+		sector: string,
 	): Promise<{ successful: number; failed: number }> {
 		const defaults = getSectorDefaultSensitivities(sector);
 		if (defaults.length === 0) {
@@ -606,7 +606,7 @@ export class MacroGraphBuilder {
 	 */
 	async linkEventToMacro(
 		eventId: string,
-		macroEntityId: string
+		macroEntityId: string,
 	): Promise<{ success: boolean; error?: string }> {
 		const result = await createEdge(this.client, {
 			sourceId: eventId,
@@ -621,12 +621,12 @@ export class MacroGraphBuilder {
 	 * Get companies affected by a macro entity
 	 */
 	async getCompaniesAffectedByMacro(
-		macroEntityId: string
+		macroEntityId: string,
 	): Promise<{ symbol: string; sensitivity: number }[]> {
 		try {
 			const result = await this.client.query<Array<{ source_symbol: string; sensitivity: number }>>(
 				"getCompaniesAffectedByMacro",
-				{ macro_entity_id: macroEntityId }
+				{ macro_entity_id: macroEntityId },
 			);
 
 			return result.data.map((r) => ({
@@ -642,7 +642,7 @@ export class MacroGraphBuilder {
 	 * Get macro factors affecting a company
 	 */
 	async getMacroFactorsForCompany(
-		companySymbol: string
+		companySymbol: string,
 	): Promise<{ entityId: string; name: string; sensitivity: number }[]> {
 		try {
 			const result = await this.client.query<

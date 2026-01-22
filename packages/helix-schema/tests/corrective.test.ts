@@ -161,7 +161,7 @@ describe("calculateDiversityScore", () => {
 		const highVariance = createResults([0.1, 0.3, 0.7, 0.9]);
 
 		expect(calculateDiversityScore(highVariance)).toBeGreaterThan(
-			calculateDiversityScore(lowVariance)
+			calculateDiversityScore(lowVariance),
 		);
 	});
 });
@@ -437,7 +437,7 @@ describe("correctiveRetrieval", () => {
 		const result = await correctiveRetrieval(
 			retrieveFn,
 			{ k: 10, minScore: 0 },
-			{ maxAttempts: 2 }
+			{ maxAttempts: 2 },
 		);
 
 		expect(result.attempts.length).toBe(2);
@@ -449,7 +449,7 @@ describe("correctiveRetrieval", () => {
 		const result = await correctiveRetrieval(
 			retrieveFn,
 			{ k: 10, minScore: 0 },
-			{ strategies: ["lower_threshold", "broaden"], maxAttempts: 2 }
+			{ strategies: ["lower_threshold", "broaden"], maxAttempts: 2 },
 		);
 
 		expect(result.attempts[0].strategy).toBe("lower_threshold");
@@ -470,7 +470,7 @@ describe("correctiveRetrieval", () => {
 		const result = await correctiveRetrieval(
 			retrieveFn,
 			{ k: 10, minScore: 0 },
-			{ maxAttempts: 2 }
+			{ maxAttempts: 2 },
 		);
 
 		// Should keep the better results from second attempt
@@ -483,7 +483,7 @@ describe("correctiveRetrieval", () => {
 		const result = await correctiveRetrieval(
 			retrieveFn,
 			{ k: 10, minScore: 0 },
-			{ maxAttempts: 1 }
+			{ maxAttempts: 1 },
 		);
 
 		expect(result.correctionTimeMs).toBeDefined();
@@ -543,7 +543,7 @@ describe("shouldCorrectRRF", () => {
 
 	it("returns false for high-quality RRF results", () => {
 		const results: RRFResult<{ id: string }>[] = Array.from({ length: 10 }, (_, i) =>
-			createRRFResult({ id: `${i}` }, `${i}`, 0.9 - i * 0.05)
+			createRRFResult({ id: `${i}` }, `${i}`, 0.9 - i * 0.05),
 		);
 
 		expect(shouldCorrectRRF(results)).toBe(false);

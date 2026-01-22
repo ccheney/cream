@@ -108,7 +108,7 @@ export interface SkewTermStructure {
 function findContractByDelta(
 	contracts: OptionsContract[],
 	targetDelta: number,
-	optionType: "call" | "put"
+	optionType: "call" | "put",
 ): OptionsContract | null {
 	if (contracts.length === 0) {
 		return null;
@@ -247,7 +247,7 @@ export function calculateNormalizedSkew(chain: OptionsChain, targetDelta = 0.25)
 export function calculateSkewTermStructure(
 	chains: OptionsChain[],
 	targetDelta = 0.25,
-	referenceDate: Date = new Date()
+	referenceDate: Date = new Date(),
 ): SkewTermStructure | null {
 	if (chains.length === 0) {
 		return null;
@@ -269,7 +269,7 @@ export function calculateSkewTermStructure(
 		const expiryDate = new Date(chain.expiration);
 		const daysToExpiry = Math.max(
 			0,
-			Math.ceil((expiryDate.getTime() - referenceDate.getTime()) / (1000 * 60 * 60 * 24))
+			Math.ceil((expiryDate.getTime() - referenceDate.getTime()) / (1000 * 60 * 60 * 24)),
 		);
 
 		expirations.push({

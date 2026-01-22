@@ -29,7 +29,7 @@ export interface VolumeSMAResult {
  */
 export function calculateVolumeSMA(
 	bars: OHLCVBar[],
-	config: { period: number } = { period: 20 }
+	config: { period: number } = { period: 20 },
 ): VolumeSMAResult | null {
 	const { period } = config;
 
@@ -67,7 +67,7 @@ export function calculateVolumeSMA(
  */
 export function calculateVolumeSMASeries(
 	bars: OHLCVBar[],
-	config: { period: number } = { period: 20 }
+	config: { period: number } = { period: 20 },
 ): VolumeSMAResult[] {
 	const { period } = config;
 	const results: VolumeSMAResult[] = [];

@@ -19,7 +19,7 @@ import type { ContradictionResult } from "./types.js";
 export function detectContradiction(
 	retrievedValue: number,
 	currentValue: number,
-	tolerance = 0.1
+	tolerance = 0.1,
 ): ContradictionResult {
 	if (currentValue === 0) {
 		return {
@@ -53,7 +53,7 @@ export function detectContradiction(
 export function resolveContradictions<T extends Record<string, unknown>>(
 	retrievedData: T,
 	currentData: Partial<T>,
-	contradictionFields: (keyof T)[]
+	contradictionFields: (keyof T)[],
 ): { resolved: T; contradictions: ContradictionResult[] } {
 	const resolved = { ...retrievedData };
 	const contradictions: ContradictionResult[] = [];

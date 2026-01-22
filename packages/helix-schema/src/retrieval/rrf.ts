@@ -152,7 +152,7 @@ export function calculateRRFScore(rank: number, k: number = DEFAULT_RRF_K): numb
  */
 export function assignRanks<T>(
 	results: RetrievalResult<T>[],
-	source: "vector" | "graph"
+	source: "vector" | "graph",
 ): RankedResult<T>[] {
 	// Sort by score descending
 	const sorted = results.toSorted((a, b) => b.score - a.score);
@@ -194,7 +194,7 @@ export function assignRanks<T>(
 export function fuseWithRRF<T>(
 	vectorResults: RetrievalResult<T>[],
 	graphResults: RetrievalResult<T>[],
-	options: RRFOptions = {}
+	options: RRFOptions = {},
 ): RRFResult<T>[] {
 	const { k = DEFAULT_RRF_K, topK = DEFAULT_TOP_K, minScore = 0 } = options;
 
@@ -272,7 +272,7 @@ export function fuseWithRRF<T>(
  */
 export function fuseMultipleWithRRF<T>(
 	resultSets: { method: string; results: RetrievalResult<T>[] }[],
-	options: RRFOptions = {}
+	options: RRFOptions = {},
 ): (RRFResult<T> & { sourcesByMethod: Record<string, number> })[] {
 	const { k = DEFAULT_RRF_K, topK = DEFAULT_TOP_K, minScore = 0 } = options;
 
@@ -335,7 +335,7 @@ export function fuseMultipleWithRRF<T>(
 		rrfScore: r.rrfScore,
 		sources: Object.keys(r.sourcesByMethod) as ("vector" | "graph")[],
 		ranks: Object.fromEntries(
-			Object.entries(r.sourcesByMethod).map(([method, rank]) => [method, rank])
+			Object.entries(r.sourcesByMethod).map(([method, rank]) => [method, rank]),
 		) as { vector?: number; graph?: number },
 		originalScores: {},
 		sourcesByMethod: r.sourcesByMethod,
@@ -359,7 +359,7 @@ export function fuseMultipleWithRRF<T>(
 export function calculateCombinedRRFScore(
 	vectorRank: number,
 	graphRank: number,
-	k: number = DEFAULT_RRF_K
+	k: number = DEFAULT_RRF_K,
 ): number {
 	return calculateRRFScore(vectorRank, k) + calculateRRFScore(graphRank, k);
 }
@@ -384,7 +384,7 @@ export function getMaxRRFScore(methodCount: number, k: number = DEFAULT_RRF_K): 
  */
 export function normalizeRRFScores<T>(
 	results: RRFResult<T>[],
-	methodCount = 2
+	methodCount = 2,
 ): (RRFResult<T> & { normalizedScore: number })[] {
 	const maxScore = getMaxRRFScore(methodCount);
 

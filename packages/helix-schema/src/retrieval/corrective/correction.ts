@@ -21,7 +21,7 @@ import {
  */
 export function calculateBroadenedK(
 	initialK: number,
-	factor: number = DEFAULT_BROADENING_FACTOR
+	factor: number = DEFAULT_BROADENING_FACTOR,
 ): number {
 	return Math.ceil(initialK * factor);
 }
@@ -35,7 +35,7 @@ export function calculateBroadenedK(
  */
 export function calculateLoweredThreshold(
 	initialThreshold: number,
-	reduction: number = THRESHOLD_REDUCTION_STEP
+	reduction: number = THRESHOLD_REDUCTION_STEP,
 ): number {
 	return Math.max(0, initialThreshold - reduction);
 }
@@ -67,7 +67,7 @@ export function generateExpansionTerms(query: string): string[] {
  */
 export function selectCorrectionStrategy(
 	quality: QualityAssessment,
-	attemptNumber: number
+	attemptNumber: number,
 ): CorrectionStrategy {
 	// First attempt: broaden (fastest, most likely to help)
 	if (attemptNumber === 1) {

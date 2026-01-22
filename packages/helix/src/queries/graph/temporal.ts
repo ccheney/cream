@@ -106,7 +106,10 @@ export function wasEdgeRecordedBy(edge: GraphEdge, knownAsOfTimestamp: number): 
  */
 export function filterEdgesByTime(
 	edges: GraphEdge[],
-	options: Pick<TemporalTraversalOptions, "asOfTimestamp" | "knownAsOfTimestamp" | "includeExpired">
+	options: Pick<
+		TemporalTraversalOptions,
+		"asOfTimestamp" | "knownAsOfTimestamp" | "includeExpired"
+	>,
 ): { filtered: GraphEdge[]; stats: TemporalTraversalResponse["temporalStats"] } {
 	const stats = {
 		beforeFiltering: edges.length,
@@ -191,7 +194,7 @@ export function filterEdgesByTime(
 export async function traverseAtTime<T = Record<string, unknown>>(
 	client: HelixClient,
 	startNodeId: string,
-	options: TemporalTraversalOptions = {}
+	options: TemporalTraversalOptions = {},
 ): Promise<TemporalTraversalResponse<T>> {
 	const startTime = performance.now();
 
@@ -220,17 +223,17 @@ export async function traverseAtTime<T = Record<string, unknown>>(
 
 	const { filtered: temporallyFiltered, stats: temporalStats } = filterEdgesByTime(
 		Array.from(allEdges.values()),
-		options
+		options,
 	);
 
 	const validEdgeIds = new Set(temporallyFiltered.map((e) => e.id));
 
 	const filteredPaths = weightedResult.paths.filter((path) =>
-		path.edges.every((edge) => validEdgeIds.has(edge.id))
+		path.edges.every((edge) => validEdgeIds.has(edge.id)),
 	);
 
 	const filteredPrioritizedEdges = weightedResult.prioritizedEdges.filter((pe) =>
-		validEdgeIds.has(pe.edge.id)
+		validEdgeIds.has(pe.edge.id),
 	);
 
 	const validNodeIds = new Set<string>();

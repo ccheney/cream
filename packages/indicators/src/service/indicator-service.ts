@@ -381,7 +381,7 @@ export class IndicatorService {
 				liquidity,
 				value,
 				shortInterest,
-				sentiment
+				sentiment,
 			);
 
 			const now = Date.now();
@@ -422,7 +422,7 @@ export class IndicatorService {
 					dataQuality,
 					failures: failures.length,
 				},
-				"Generated indicator snapshot"
+				"Generated indicator snapshot",
 			);
 
 			return snapshot;
@@ -480,7 +480,7 @@ export class IndicatorService {
 	 */
 	async getSnapshotsBatch(
 		symbols: string[],
-		options: BatchSnapshotOptions = {}
+		options: BatchSnapshotOptions = {},
 	): Promise<BatchSnapshotResult> {
 		const startTime = Date.now();
 		const concurrency = options.concurrency ?? this.config.batchConcurrency;
@@ -592,7 +592,7 @@ export class IndicatorService {
 				failed: errors.size,
 				executionTimeMs,
 			},
-			"Batch snapshot operation completed"
+			"Batch snapshot operation completed",
 		);
 
 		return {
@@ -658,7 +658,7 @@ export class IndicatorService {
 	// ============================================
 
 	private async fetchFundamentals(
-		symbol: string
+		symbol: string,
 	): Promise<{ value: ValueIndicators; quality: QualityIndicators }> {
 		if (!this.config.includeBatchIndicators || !this.deps.fundamentalRepo) {
 			return {
@@ -708,7 +708,7 @@ export class IndicatorService {
 	private calculateMissingFields(
 		price: PriceIndicators,
 		liquidity: LiquidityIndicators,
-		options: OptionsIndicators
+		options: OptionsIndicators,
 	): string[] {
 		const missing: string[] = [];
 
@@ -734,7 +734,7 @@ export class IndicatorService {
 		liquidity: LiquidityIndicators,
 		value: ValueIndicators,
 		shortInterest: ShortInterestIndicators,
-		sentiment: SentimentIndicators
+		sentiment: SentimentIndicators,
 	): DataQuality {
 		// Count how many indicator categories have data
 		let availableCategories = 0;
@@ -809,7 +809,7 @@ export class IndicatorService {
  */
 export function createIndicatorService(
 	marketData: MarketDataProvider,
-	config?: Partial<IndicatorServiceConfig>
+	config?: Partial<IndicatorServiceConfig>,
 ): IndicatorService {
 	return new IndicatorService({ marketData }, config);
 }

@@ -403,7 +403,7 @@ describe("filterAndPrioritizeEdges", () => {
 				id: `edge-${i}`,
 				type: "CUSTOM_EDGE",
 				properties: { weight: 0.5 + i * 0.001 },
-			})
+			}),
 		);
 
 		const opts = createOptions({ maxNeighborsPerNode: 10 });

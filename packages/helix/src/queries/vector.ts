@@ -82,7 +82,7 @@ const DEFAULT_OPTIONS: Required<VectorSearchOptions> = {
 export async function vectorSearch<T = Record<string, unknown>>(
 	client: HelixClient,
 	embedding: number[],
-	options: VectorSearchOptions = {}
+	options: VectorSearchOptions = {},
 ): Promise<VectorSearchResponse<T>> {
 	const opts = { ...DEFAULT_OPTIONS, ...options };
 
@@ -122,7 +122,7 @@ export async function vectorSearch<T = Record<string, unknown>>(
 export async function searchSimilarDecisions(
 	client: HelixClient,
 	rationaleEmbedding: number[],
-	options: Omit<VectorSearchOptions, "nodeType"> = {}
+	options: Omit<VectorSearchOptions, "nodeType"> = {},
 ): Promise<VectorSearchResponse> {
 	return vectorSearch(client, rationaleEmbedding, {
 		...options,
@@ -141,7 +141,7 @@ export async function searchSimilarDecisions(
 export async function searchSimilarNews(
 	client: HelixClient,
 	contentEmbedding: number[],
-	options: Omit<VectorSearchOptions, "nodeType"> = {}
+	options: Omit<VectorSearchOptions, "nodeType"> = {},
 ): Promise<VectorSearchResponse> {
 	return vectorSearch(client, contentEmbedding, {
 		...options,
@@ -160,7 +160,7 @@ export async function searchSimilarNews(
 export async function searchSimilarFilings(
 	client: HelixClient,
 	chunkEmbedding: number[],
-	options: Omit<VectorSearchOptions, "nodeType"> = {}
+	options: Omit<VectorSearchOptions, "nodeType"> = {},
 ): Promise<VectorSearchResponse> {
 	return vectorSearch(client, chunkEmbedding, {
 		...options,
@@ -179,7 +179,7 @@ export async function searchSimilarFilings(
 export async function searchSimilarTranscripts(
 	client: HelixClient,
 	chunkEmbedding: number[],
-	options: Omit<VectorSearchOptions, "nodeType"> = {}
+	options: Omit<VectorSearchOptions, "nodeType"> = {},
 ): Promise<VectorSearchResponse> {
 	return vectorSearch(client, chunkEmbedding, {
 		...options,
