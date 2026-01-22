@@ -43,7 +43,7 @@ function hasAlpacaCredentials(): boolean {
 }
 
 export function initIndicatorScheduler(
-	deps: IndicatorSchedulerInitDeps
+	deps: IndicatorSchedulerInitDeps,
 ): IndicatorSchedulerInitResult | null {
 	const hasAlpacaKeys = hasAlpacaCredentials();
 
@@ -81,7 +81,7 @@ export function initIndicatorScheduler(
 			corporateActionsRepo,
 			getSymbols: deps.getSymbols,
 		},
-		schedulerConfig
+		schedulerConfig,
 	);
 
 	return {
@@ -95,7 +95,7 @@ export function initIndicatorScheduler(
 }
 
 export function startIndicatorScheduler(
-	deps: IndicatorSchedulerInitDeps
+	deps: IndicatorSchedulerInitDeps,
 ): IndicatorBatchScheduler | null {
 	try {
 		const result = initIndicatorScheduler(deps);
@@ -110,7 +110,7 @@ export function startIndicatorScheduler(
 	} catch (error) {
 		log.error(
 			{ error: error instanceof Error ? error.message : String(error) },
-			"Failed to initialize indicator batch scheduler"
+			"Failed to initialize indicator batch scheduler",
 		);
 		return null;
 	}

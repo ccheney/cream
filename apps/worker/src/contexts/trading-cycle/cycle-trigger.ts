@@ -63,7 +63,7 @@ export class CycleTriggerService {
 				const errorBody = await response.text();
 				log.error(
 					{ status: response.status, body: errorBody },
-					"Failed to trigger trading cycle via dashboard-api"
+					"Failed to trigger trading cycle via dashboard-api",
 				);
 				return null;
 			}
@@ -71,7 +71,7 @@ export class CycleTriggerService {
 			const result = (await response.json()) as CycleTriggerResult;
 			log.info(
 				{ cycleId: result.cycleId, status: result.status },
-				"Trading cycle triggered successfully"
+				"Trading cycle triggered successfully",
 			);
 			return result;
 		} catch (error) {
@@ -80,7 +80,7 @@ export class CycleTriggerService {
 					error: error instanceof Error ? error.message : String(error),
 					dashboardApiUrl: this.config.dashboardApiUrl,
 				},
-				"Failed to reach dashboard-api for trading cycle trigger"
+				"Failed to reach dashboard-api for trading cycle trigger",
 			);
 			return null;
 		} finally {

@@ -101,7 +101,7 @@ export class EconomicCalendarService {
 			const eventsUpserted = await repo.upsertEvents(eventsToUpsert);
 
 			const deleteBeforeDate = new Date(
-				now.getTime() - (cfg.daysBehind + 30) * 24 * 60 * 60 * 1000
+				now.getTime() - (cfg.daysBehind + 30) * 24 * 60 * 60 * 1000,
 			);
 			const deleteBeforeDateStr = deleteBeforeDate.toISOString().split("T")[0] ?? "";
 			const eventsOldDeleted = await repo.clearOldEvents(deleteBeforeDateStr);
@@ -114,14 +114,14 @@ export class EconomicCalendarService {
 					eventsOldDeleted,
 					durationMs,
 				},
-				"Economic calendar refresh complete"
+				"Economic calendar refresh complete",
 			);
 
 			return { eventsUpserted, eventsOldDeleted, durationMs };
 		} catch (error) {
 			log.error(
 				{ error: error instanceof Error ? error.message : String(error) },
-				"Economic calendar refresh failed"
+				"Economic calendar refresh failed",
 			);
 			return { eventsUpserted: 0, eventsOldDeleted: 0, durationMs: Date.now() - startTime };
 		} finally {
@@ -139,7 +139,7 @@ export class EconomicCalendarService {
 }
 
 export function createEconomicCalendarService(
-	config: EconomicCalendarServiceConfig = {}
+	config: EconomicCalendarServiceConfig = {},
 ): EconomicCalendarService {
 	return new EconomicCalendarService(config);
 }

@@ -38,7 +38,7 @@ export class FilingsSyncService {
 
 	constructor(
 		db: Database,
-		config: FilingsSyncConfig = { filingTypes: ["10-K", "10-Q", "8-K"], limitPerSymbol: 5 }
+		config: FilingsSyncConfig = { filingTypes: ["10-K", "10-Q", "8-K"], limitPerSymbol: 5 },
 	) {
 		this.db = db;
 		this.config = config;
@@ -50,7 +50,7 @@ export class FilingsSyncService {
 
 	async sync(
 		symbols: string[],
-		environment: RuntimeEnvironment
+		environment: RuntimeEnvironment,
 	): Promise<FilingsSyncResult | null> {
 		if (this.running) {
 			log.info({}, "Skipping filings sync - previous run still in progress");
@@ -77,14 +77,14 @@ export class FilingsSyncService {
 					chunksCreated: result.chunksCreated,
 					durationMs: result.durationMs,
 				},
-				"Filings sync complete"
+				"Filings sync complete",
 			);
 
 			return result;
 		} catch (error) {
 			log.error(
 				{ error: error instanceof Error ? error.message : "Unknown error" },
-				"Filings sync failed"
+				"Filings sync failed",
 			);
 			return null;
 		} finally {
@@ -95,7 +95,7 @@ export class FilingsSyncService {
 
 export function createFilingsSyncService(
 	db: Database,
-	config?: FilingsSyncConfig
+	config?: FilingsSyncConfig,
 ): FilingsSyncService {
 	return new FilingsSyncService(db, config);
 }

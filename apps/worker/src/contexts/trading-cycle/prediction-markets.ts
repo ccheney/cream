@@ -29,7 +29,7 @@ export class PredictionMarketsService {
 	private readonly config: PredictionMarketsConfig;
 
 	constructor(
-		config: PredictionMarketsConfig = { marketTypes: ["FED_RATE", "ECONOMIC_DATA", "RECESSION"] }
+		config: PredictionMarketsConfig = { marketTypes: ["FED_RATE", "ECONOMIC_DATA", "RECESSION"] },
 	) {
 		this.config = config;
 	}
@@ -57,14 +57,14 @@ export class PredictionMarketsService {
 				new Promise((_, reject) =>
 					setTimeout(
 						() => reject(new Error("Prediction markets workflow timed out")),
-						WORKFLOW_TIMEOUT_MS
-					)
+						WORKFLOW_TIMEOUT_MS,
+					),
 				),
 			]);
 		} catch (error) {
 			log.warn(
 				{ error: error instanceof Error ? error.message : String(error) },
-				"Prediction markets workflow failed"
+				"Prediction markets workflow failed",
 			);
 		} finally {
 			this.running = false;
@@ -73,7 +73,7 @@ export class PredictionMarketsService {
 }
 
 export function createPredictionMarketsService(
-	config?: PredictionMarketsConfig
+	config?: PredictionMarketsConfig,
 ): PredictionMarketsService {
 	return new PredictionMarketsService(config);
 }

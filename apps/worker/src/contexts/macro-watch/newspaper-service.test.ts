@@ -33,7 +33,7 @@ const mockGetEntriesSinceClose = mock(() =>
 			metadata: null,
 			createdAt: new Date().toISOString(),
 		},
-	])
+	]),
 );
 
 const mockRepo = {
@@ -48,7 +48,7 @@ const mockCalendarService = {
 	getPreviousTradingDay: mockGetPreviousTradingDay,
 };
 const mockGetCalendarService = mock<() => typeof mockCalendarService | null>(
-	() => mockCalendarService
+	() => mockCalendarService,
 );
 
 mock.module("@cream/api", () => ({
@@ -134,9 +134,9 @@ describe("NewspaperService", () => {
 									getEntriesSinceClose: mock(() => Promise.resolve([])),
 									upsertNewspaper: mock(() => Promise.resolve()),
 								}),
-							100
-						)
-					)
+							100,
+						),
+					),
 			);
 
 			const firstCompile = service.compile(["AAPL"]);
@@ -166,7 +166,7 @@ describe("NewspaperService", () => {
 
 		test("handles errors gracefully", async () => {
 			mockGetMacroWatchRepo.mockImplementationOnce(() =>
-				Promise.reject(new Error("Database error"))
+				Promise.reject(new Error("Database error")),
 			);
 
 			await service.compile(["AAPL"]);

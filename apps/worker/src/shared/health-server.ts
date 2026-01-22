@@ -261,6 +261,6 @@ function formatIndicatorJobs(jobs: Record<string, JobState> | null) {
 						}
 					: null,
 			},
-		])
+		]),
 	);
 }

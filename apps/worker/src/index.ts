@@ -329,7 +329,7 @@ async function triggerFilingsSync(): Promise<TriggerResult> {
 }
 
 async function triggerIndicatorJob(
-	jobName: "shortInterest" | "sentiment" | "corporateActions"
+	jobName: "shortInterest" | "sentiment" | "corporateActions",
 ): Promise<TriggerResult> {
 	const startTime = Date.now();
 	try {
@@ -421,7 +421,7 @@ async function main() {
 		if (!Bun.env.GOOGLE_GENERATIVE_AI_API_KEY) {
 			log.warn(
 				{},
-				"GOOGLE_GENERATIVE_AI_API_KEY not configured. Agent execution will use stub agents."
+				"GOOGLE_GENERATIVE_AI_API_KEY not configured. Agent execution will use stub agents.",
 			);
 		}
 	}
@@ -437,7 +437,7 @@ async function main() {
 		.catch((error: unknown) => {
 			log.warn(
 				{ error: error instanceof Error ? error.message : String(error), mode: environment },
-				"CalendarService initialization failed, using fallback"
+				"CalendarService initialization failed, using fallback",
 			);
 		});
 
@@ -447,7 +447,7 @@ async function main() {
 	} catch (error) {
 		log.error(
 			{ error: error instanceof Error ? error.message : "Unknown error" },
-			"Failed to load config from database. Run 'bun run db:seed' to initialize."
+			"Failed to load config from database. Run 'bun run db:seed' to initialize.",
 		);
 		process.exit(1);
 	}
@@ -496,7 +496,7 @@ async function main() {
 			tradingCycleIntervalMs: intervals.tradingCycleIntervalMs,
 			predictionMarketsIntervalMs: intervals.predictionMarketsIntervalMs,
 		},
-		"Intervals configured"
+		"Intervals configured",
 	);
 	log.info({ instruments: getInstruments() }, "Instruments configured");
 
@@ -546,7 +546,7 @@ async function main() {
 				compileNewspaper,
 				runEconomicCalendarSync,
 			},
-			getIntervals
+			getIntervals,
 		);
 		state.schedulerManager.start();
 
@@ -560,7 +560,7 @@ async function main() {
 		handleReloadConfig().catch((error) => {
 			log.error(
 				{ error: error instanceof Error ? error.message : String(error) },
-				"Config reload failed"
+				"Config reload failed",
 			);
 		});
 	});
@@ -583,7 +583,7 @@ main().catch((error) => {
 			error: error instanceof Error ? error.message : String(error),
 			stack: error instanceof Error ? error.stack : undefined,
 		},
-		"Worker crashed"
+		"Worker crashed",
 	);
 	process.exit(1);
 });

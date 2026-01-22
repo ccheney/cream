@@ -24,7 +24,7 @@ const createMockDependencies = (): IndicatorSchedulerDependencies => ({
 });
 
 const createMockConfig = (
-	overrides: Partial<IndicatorSchedulerConfig> = {}
+	overrides: Partial<IndicatorSchedulerConfig> = {},
 ): IndicatorSchedulerConfig => ({
 	enabled: {
 		shortInterest: true,
@@ -168,7 +168,7 @@ describe("IndicatorBatchScheduler", () => {
 			const disabledScheduler = new IndicatorBatchScheduler(mockDeps, disabledConfig);
 
 			await expect(disabledScheduler.triggerJob("shortInterest")).rejects.toThrow(
-				"Job shortInterest is disabled"
+				"Job shortInterest is disabled",
 			);
 		});
 	});

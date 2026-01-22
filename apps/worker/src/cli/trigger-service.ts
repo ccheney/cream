@@ -134,7 +134,7 @@ async function runFilingsSync(symbols: string[], environment: RuntimeEnvironment
 				chunksCreated: result.chunksCreated,
 				durationMs: result.durationMs,
 			},
-			"Filings sync complete"
+			"Filings sync complete",
 		);
 
 		console.log("\n--- Filings Sync Results ---");
@@ -148,7 +148,7 @@ async function runFilingsSync(symbols: string[], environment: RuntimeEnvironment
 
 async function runIndicatorJob(
 	jobName: "shortInterest" | "sentiment" | "corporateActions",
-	symbols: string[]
+	symbols: string[],
 ): Promise<void> {
 	log.info({ job: jobName, symbols }, `Starting ${jobName} job`);
 
@@ -172,7 +172,7 @@ async function runIndicatorJob(
 				failed: result.failed,
 				durationMs: result.durationMs,
 			},
-			`${jobName} job complete`
+			`${jobName} job complete`,
 		);
 
 		console.log(`\n--- ${jobName} Results ---`);
@@ -234,7 +234,7 @@ async function main(): Promise<void> {
 	}).catch((error: unknown) => {
 		log.warn(
 			{ error: error instanceof Error ? error.message : String(error) },
-			"CalendarService initialization failed"
+			"CalendarService initialization failed",
 		);
 	});
 
@@ -245,7 +245,7 @@ async function main(): Promise<void> {
 	} catch (error) {
 		log.error(
 			{ error: error instanceof Error ? error.message : "Unknown error" },
-			"Failed to load config. Run 'bun run db:seed' first."
+			"Failed to load config. Run 'bun run db:seed' first.",
 		);
 		process.exit(1);
 	}

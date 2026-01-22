@@ -98,7 +98,7 @@ export class NewspaperService {
 					macroCount: content.sections.macro.length,
 					universeCount: content.sections.universe.length,
 				},
-				"Morning newspaper compiled"
+				"Morning newspaper compiled",
 			);
 
 			return {
@@ -109,7 +109,7 @@ export class NewspaperService {
 		} catch (error) {
 			log.error(
 				{ error: error instanceof Error ? error.message : String(error) },
-				"Newspaper compilation failed"
+				"Newspaper compilation failed",
 			);
 			return {
 				compiled: false,

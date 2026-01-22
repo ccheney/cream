@@ -80,7 +80,7 @@ export class AlpacaCorporateActionsAdapter implements AlpacaCorporateActionsClie
 	async getCorporateActionsForSymbols(
 		symbols: string[],
 		startDate: string,
-		endDate: string
+		endDate: string,
 	): Promise<AlpacaCorporateAction[]> {
 		const url = new URL(ALPACA_CORPORATE_ACTIONS_URL);
 		url.searchParams.set("symbols", symbols.join(","));
@@ -103,7 +103,7 @@ export class AlpacaCorporateActionsAdapter implements AlpacaCorporateActionsClie
 	}
 
 	private flattenCorporateActions(
-		actions: z.infer<typeof AlpacaCorporateActionsResponseSchema>["corporate_actions"]
+		actions: z.infer<typeof AlpacaCorporateActionsResponseSchema>["corporate_actions"],
 	): AlpacaCorporateAction[] {
 		const results: AlpacaCorporateAction[] = [];
 
@@ -113,7 +113,7 @@ export class AlpacaCorporateActionsAdapter implements AlpacaCorporateActionsClie
 				if (!exDate) {
 					log.warn(
 						{ typeKey, symbol: item.symbol },
-						"Skipping corporate action: missing ex_date/process_date"
+						"Skipping corporate action: missing ex_date/process_date",
 					);
 					continue;
 				}
@@ -193,7 +193,7 @@ export function createAlpacaCorporateActionsFromEnv(): AlpacaCorporateActionsAda
 	const apiSecret = Bun.env.ALPACA_SECRET;
 	if (!apiKey || !apiSecret) {
 		throw new Error(
-			"ALPACA_KEY and ALPACA_SECRET environment variables are required for corporate actions batch job"
+			"ALPACA_KEY and ALPACA_SECRET environment variables are required for corporate actions batch job",
 		);
 	}
 	return new AlpacaCorporateActionsAdapter(apiKey, apiSecret);

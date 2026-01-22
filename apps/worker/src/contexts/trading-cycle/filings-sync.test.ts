@@ -11,7 +11,7 @@ const mockSyncFilings = mock(() =>
 		filingsIngested: 15,
 		chunksCreated: 150,
 		durationMs: 5000,
-	})
+	}),
 );
 
 const mockIngestionService = {
@@ -101,7 +101,7 @@ describe("FilingsSyncService", () => {
 				expect.objectContaining({
 					filingTypes: ["8-K"],
 					limitPerSymbol: 2,
-				})
+				}),
 			);
 		});
 
@@ -125,9 +125,9 @@ describe("FilingsSyncService", () => {
 									chunksCreated: 100,
 									durationMs: 3000,
 								}),
-							100
-						)
-					)
+							100,
+						),
+					),
 			);
 
 			const firstSync = service.sync(["AAPL"], testEnvironment);
@@ -158,7 +158,7 @@ describe("FilingsSyncService", () => {
 				expect(mockSyncFilings).toHaveBeenCalledWith(
 					expect.objectContaining({
 						environment: env,
-					})
+					}),
 				);
 			}
 		});

@@ -55,7 +55,7 @@ export class IndicatorBatchScheduler {
 
 		if (this.config.enabled.shortInterest) {
 			this.scheduleJob("shortInterest", CRON_SCHEDULES.shortInterest, () =>
-				this.runShortInterestJob()
+				this.runShortInterestJob(),
 			);
 		}
 
@@ -65,7 +65,7 @@ export class IndicatorBatchScheduler {
 
 		if (this.config.enabled.corporateActions) {
 			this.scheduleJob("corporateActions", CRON_SCHEDULES.corporateActions, () =>
-				this.runCorporateActionsJob()
+				this.runCorporateActionsJob(),
 			);
 		}
 
@@ -77,7 +77,7 @@ export class IndicatorBatchScheduler {
 			}
 			log.info(
 				{ job: name, nextRun: nextRun?.toISOString() ?? "none" },
-				"Scheduled indicator batch job"
+				"Scheduled indicator batch job",
 			);
 		}
 	}
@@ -144,7 +144,7 @@ export class IndicatorBatchScheduler {
 	private scheduleJob(
 		name: JobName,
 		cronExpr: string,
-		handler: () => Promise<BatchJobResult>
+		handler: () => Promise<BatchJobResult>,
 	): void {
 		const errorHandler = (error: unknown) => {
 			const state = this.state.get(name);
@@ -162,7 +162,7 @@ export class IndicatorBatchScheduler {
 					blockedAt: new Date().toISOString(),
 					startedAt: job.currentRun()?.toISOString(),
 				},
-				"Job execution blocked - previous run still in progress"
+				"Job execution blocked - previous run still in progress",
 			);
 		};
 
@@ -179,7 +179,7 @@ export class IndicatorBatchScheduler {
 				} catch (error) {
 					errorHandler(error);
 				}
-			}
+			},
 		);
 
 		this.jobs.set(name, job);
@@ -191,7 +191,7 @@ export class IndicatorBatchScheduler {
 				this.deps.finraClient,
 				this.deps.shortInterestRepo,
 				this.deps.sharesProvider,
-				this.config.jobConfigs?.shortInterest
+				this.config.jobConfigs?.shortInterest,
 			);
 			return job.run(symbols);
 		});
@@ -202,7 +202,7 @@ export class IndicatorBatchScheduler {
 			const job = new SentimentAggregationJob(
 				this.deps.sentimentProvider,
 				this.deps.sentimentRepo,
-				this.config.jobConfigs?.sentiment
+				this.config.jobConfigs?.sentiment,
 			);
 			const today = new Date().toISOString().split("T")[0] ?? "";
 			return job.run(symbols, today);
@@ -215,7 +215,7 @@ export class IndicatorBatchScheduler {
 				this.deps.alpacaClient,
 				this.deps.corporateActionsRepo,
 				undefined,
-				this.config.jobConfigs?.corporateActions
+				this.config.jobConfigs?.corporateActions,
 			);
 			return job.run(symbols);
 		});
@@ -223,7 +223,7 @@ export class IndicatorBatchScheduler {
 
 	private async executeJob(
 		name: JobName,
-		runner: (symbols: string[]) => Promise<BatchJobResult>
+		runner: (symbols: string[]) => Promise<BatchJobResult>,
 	): Promise<BatchJobResult> {
 		const state = this.state.get(name);
 		if (!state) {
@@ -251,7 +251,7 @@ export class IndicatorBatchScheduler {
 					failed: result.failed,
 					durationMs: result.durationMs,
 				},
-				"Completed indicator batch job"
+				"Completed indicator batch job",
 			);
 
 			return result;

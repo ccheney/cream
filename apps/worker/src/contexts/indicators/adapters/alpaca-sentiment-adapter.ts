@@ -21,7 +21,7 @@ export class AlpacaSentimentAdapter implements SentimentDataProvider {
 	async getSentimentData(
 		symbols: string[],
 		startDate: string,
-		endDate: string
+		endDate: string,
 	): Promise<ExtractedSentiment[]> {
 		const results: ExtractedSentiment[] = [];
 
@@ -113,7 +113,7 @@ export class AlpacaSentimentAdapter implements SentimentDataProvider {
 		} catch (error) {
 			log.warn(
 				{ error: error instanceof Error ? error.message : String(error) },
-				"Failed to fetch sentiment data from Alpaca"
+				"Failed to fetch sentiment data from Alpaca",
 			);
 		}
 
@@ -122,7 +122,7 @@ export class AlpacaSentimentAdapter implements SentimentDataProvider {
 
 	async getHistoricalSentiment(
 		_symbol: string,
-		_lookbackDays: number
+		_lookbackDays: number,
 	): Promise<Array<{ date: string; score: number }>> {
 		return [];
 	}
@@ -133,7 +133,7 @@ export function createSentimentProviderFromEnv(): AlpacaSentimentAdapter {
 	const apiSecret = Bun.env.ALPACA_SECRET;
 	if (!apiKey || !apiSecret) {
 		throw new Error(
-			"ALPACA_KEY and ALPACA_SECRET environment variables are required for sentiment provider"
+			"ALPACA_KEY and ALPACA_SECRET environment variables are required for sentiment provider",
 		);
 	}
 	return new AlpacaSentimentAdapter(apiKey, apiSecret);

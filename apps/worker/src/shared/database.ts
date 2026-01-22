@@ -69,7 +69,7 @@ export function getHelixClient(): HelixClient | null {
 	} catch (error) {
 		log.error(
 			{ error: error instanceof Error ? error.message : "Unknown error" },
-			"Failed to create HelixDB client"
+			"Failed to create HelixDB client",
 		);
 		return null;
 	}
@@ -110,7 +110,7 @@ export async function validateHelixDBAtStartup(
 	options: {
 		failFast?: boolean;
 		maxLatencyMs?: number;
-	} = {}
+	} = {},
 ): Promise<HealthCheckResult> {
 	const isTestEnv = isTest(ctx);
 	const { failFast = !isTestEnv, maxLatencyMs = 5000 } = options;
@@ -147,7 +147,7 @@ export async function validateHelixDBOrExit(ctx: ExecutionContext): Promise<void
 		if (error instanceof HelixDBValidationError) {
 			log.error(
 				{ environment: ctx.environment, error: error.message },
-				"HelixDB validation failed for worker service. Please ensure HelixDB is running and restart."
+				"HelixDB validation failed for worker service. Please ensure HelixDB is running and restart.",
 			);
 			process.exit(1);
 		}

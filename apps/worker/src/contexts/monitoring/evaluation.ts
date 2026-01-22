@@ -56,7 +56,7 @@ export function buildExpiringPosition(
 	position: PortfolioPosition,
 	quote: UnderlyingQuote,
 	currentTime: string,
-	config: ExpirationPolicyConfig = DEFAULT_EXPIRATION_POLICY
+	config: ExpirationPolicyConfig = DEFAULT_EXPIRATION_POLICY,
 ): ExpiringPosition | null {
 	const dte = daysToExpiration(position.expirationDate, currentTime);
 
@@ -97,7 +97,7 @@ export function buildExpiringPosition(
 export function evaluateExpirationAction(
 	position: ExpiringPosition,
 	currentTime: string,
-	config: ExpirationPolicyConfig = DEFAULT_EXPIRATION_POLICY
+	config: ExpirationPolicyConfig = DEFAULT_EXPIRATION_POLICY,
 ): ExpirationEvaluation {
 	const minDTE = getMinimumDTE(position.positionType, config.minimumDTE);
 	const isLong = position.quantity > 0;
@@ -120,7 +120,7 @@ function evaluateExpirationDay(
 	config: ExpirationPolicyConfig,
 	etTimeMinutes: number,
 	isLong: boolean,
-	isShort: boolean
+	isShort: boolean,
 ): ExpirationEvaluation {
 	if (isPastCheckpoint("FORCE_CLOSE", etTimeMinutes)) {
 		return buildEvaluation(
@@ -130,7 +130,7 @@ function evaluateExpirationDay(
 			10,
 			`Force close triggered at ${EXPIRATION_CHECKPOINT_TIMES.FORCE_CLOSE} ET - all positions must be closed`,
 			true,
-			EXPIRATION_CHECKPOINT_TIMES.FORCE_CLOSE
+			EXPIRATION_CHECKPOINT_TIMES.FORCE_CLOSE,
 		);
 	}
 
@@ -147,7 +147,7 @@ function evaluateExpirationDay(
 				8,
 				`ITM ${position.right} - exercise allowed per configuration`,
 				false,
-				EXPIRATION_CHECKPOINT_TIMES.MARKET_CLOSE
+				EXPIRATION_CHECKPOINT_TIMES.MARKET_CLOSE,
 			);
 		}
 
@@ -158,7 +158,7 @@ function evaluateExpirationDay(
 			9,
 			`ITM ${position.right} at ${config.autoCloseITMTime} ET - auto-close to avoid exercise/assignment`,
 			true,
-			config.autoCloseITMTime
+			config.autoCloseITMTime,
 		);
 	}
 
@@ -171,7 +171,7 @@ function evaluateExpirationDay(
 			9,
 			`Short ${position.right} within $${threshold.toFixed(2)} of strike - pin risk at expiration`,
 			true,
-			EXPIRATION_CHECKPOINT_TIMES.FORCE_CLOSE
+			EXPIRATION_CHECKPOINT_TIMES.FORCE_CLOSE,
 		);
 	}
 
@@ -183,7 +183,7 @@ function evaluateExpirationDay(
 				"TIMELINE_TRIGGER",
 				3,
 				`Long OTM ${position.right} - letting expire worthless`,
-				false
+				false,
 			);
 		}
 
@@ -194,7 +194,7 @@ function evaluateExpirationDay(
 			7,
 			`Final warning at ${EXPIRATION_CHECKPOINT_TIMES.FINAL_WARNING} ET - close before force close at 3 PM`,
 			false,
-			EXPIRATION_CHECKPOINT_TIMES.FORCE_CLOSE
+			EXPIRATION_CHECKPOINT_TIMES.FORCE_CLOSE,
 		);
 	}
 
@@ -202,7 +202,7 @@ function evaluateExpirationDay(
 		position,
 		config,
 		getMinimumDTE(position.positionType, config.minimumDTE),
-		position.quantity < 0
+		position.quantity < 0,
 	);
 }
 
@@ -210,7 +210,7 @@ function evaluateApproachingExpiration(
 	position: ExpiringPosition,
 	config: ExpirationPolicyConfig,
 	minDTE: number,
-	isShort: boolean
+	isShort: boolean,
 ): ExpirationEvaluation {
 	if (position.dte <= minDTE) {
 		if (shouldLetExpireWorthless(position)) {
@@ -220,7 +220,7 @@ function evaluateApproachingExpiration(
 				"MINIMUM_DTE",
 				2,
 				`Long OTM ${position.right} at ${position.dte.toFixed(1)} DTE - letting expire worthless`,
-				false
+				false,
 			);
 		}
 
@@ -232,7 +232,7 @@ function evaluateApproachingExpiration(
 				"PIN_RISK",
 				9,
 				`Short ${position.right} at ${position.dte.toFixed(1)} DTE within $${threshold.toFixed(2)} of strike - close to avoid pin risk`,
-				true
+				true,
 			);
 		}
 
@@ -243,7 +243,7 @@ function evaluateApproachingExpiration(
 				"MINIMUM_DTE",
 				6,
 				`${position.positionType} at ${position.dte.toFixed(1)} DTE (minimum: ${minDTE}) - recommend rolling`,
-				false
+				false,
 			);
 		}
 
@@ -254,7 +254,7 @@ function evaluateApproachingExpiration(
 				"MINIMUM_DTE",
 				5,
 				`Long ITM ${position.right} at ${position.dte.toFixed(1)} DTE - close to capture remaining value`,
-				false
+				false,
 			);
 		}
 
@@ -264,7 +264,7 @@ function evaluateApproachingExpiration(
 			"MINIMUM_DTE",
 			4,
 			`${position.positionType} at ${position.dte.toFixed(1)} DTE (minimum: ${minDTE}) - recommend closing`,
-			false
+			false,
 		);
 	}
 
@@ -275,7 +275,7 @@ function evaluateApproachingExpiration(
 			"MINIMUM_DTE",
 			3,
 			`${position.positionType} approaching minimum DTE (${position.dte.toFixed(1)} vs ${minDTE}) - consider closing/rolling`,
-			false
+			false,
 		);
 	}
 
@@ -285,7 +285,7 @@ function evaluateApproachingExpiration(
 		"MINIMUM_DTE",
 		1,
 		`${position.positionType} at ${position.dte.toFixed(1)} DTE - monitoring`,
-		false
+		false,
 	);
 }
 
@@ -296,7 +296,7 @@ function buildEvaluation(
 	priority: number,
 	explanation: string,
 	isForced: boolean,
-	deadline?: string
+	deadline?: string,
 ): ExpirationEvaluation {
 	return {
 		position,

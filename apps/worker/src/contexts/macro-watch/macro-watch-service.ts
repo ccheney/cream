@@ -107,7 +107,7 @@ export class MacroWatchService {
 						if (ingestionResult.errors.length > 0) {
 							log.warn(
 								{ errors: ingestionResult.errors.slice(0, 5) },
-								"Some news items failed to ingest to HelixDB"
+								"Some news items failed to ingest to HelixDB",
 							);
 						}
 
@@ -118,12 +118,12 @@ export class MacroWatchService {
 								duplicatesSkipped: ingestionResult.duplicatesSkipped,
 								edgesCreated: ingestionResult.edgesCreated,
 							},
-							"News items ingested to HelixDB"
+							"News items ingested to HelixDB",
 						);
 					} catch (error) {
 						log.error(
 							{ error: error instanceof Error ? error.message : String(error) },
-							"HelixDB news ingestion failed"
+							"HelixDB news ingestion failed",
 						);
 					}
 				}
@@ -136,14 +136,14 @@ export class MacroWatchService {
 					helixIngested,
 					totalCount: result.totalCount,
 				},
-				"Macro watch cycle complete"
+				"Macro watch cycle complete",
 			);
 
 			return { entries: limitedEntries, saved, helixIngested };
 		} catch (error) {
 			log.error(
 				{ error: error instanceof Error ? error.message : String(error) },
-				"Macro watch failed"
+				"Macro watch failed",
 			);
 			return { entries: [], saved: 0, helixIngested: 0 };
 		} finally {

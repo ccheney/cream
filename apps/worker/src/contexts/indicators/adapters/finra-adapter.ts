@@ -68,7 +68,7 @@ export class FINRAClientAdapter implements FINRAClient {
 
 		if (!this.clientId || !this.clientSecret) {
 			throw new Error(
-				"FINRA credentials not configured. Set FINRA_CLIENT_ID and FINRA_CLIENT_SECRET."
+				"FINRA credentials not configured. Set FINRA_CLIENT_ID and FINRA_CLIENT_SECRET.",
 			);
 		}
 
@@ -233,7 +233,7 @@ export class FINRAClientAdapter implements FINRAClient {
 
 	async getShortInterestBySymbols(
 		symbols: string[],
-		settlementDate?: string
+		settlementDate?: string,
 	): Promise<FINRAShortInterestRecord[]> {
 		const filters: FINRAQueryRequest["compareFilters"] = [
 			{

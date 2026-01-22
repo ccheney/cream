@@ -111,7 +111,7 @@ export class SchedulerManager {
 				filingsHours: Math.round(msUntil6AM / 3600000),
 				econCalendarHours: Math.round(msUntilEconCal / 3600000),
 			},
-			"Scheduler started"
+			"Scheduler started",
 		);
 
 		this.scheduleTradingCycle();
@@ -231,7 +231,7 @@ export class SchedulerManager {
 			this.runTradingCycleWithGating().catch((error) => {
 				log.error(
 					{ error: error instanceof Error ? error.message : String(error) },
-					"Trading cycle with gating failed"
+					"Trading cycle with gating failed",
 				);
 			});
 			// Update next run time after execution
@@ -240,7 +240,7 @@ export class SchedulerManager {
 				this.runTradingCycleWithGating().catch((error) => {
 					log.error(
 						{ error: error instanceof Error ? error.message : String(error) },
-						"Trading cycle with gating failed"
+						"Trading cycle with gating failed",
 					);
 				});
 				// Update next run time after each interval execution
@@ -262,7 +262,7 @@ export class SchedulerManager {
 				this.handlers.runPredictionMarkets();
 				// Update next run time after each interval execution
 				this.nextRun.predictionMarkets = new Date(
-					Date.now() + intervals.predictionMarketsIntervalMs
+					Date.now() + intervals.predictionMarketsIntervalMs,
 				);
 			}, intervals.predictionMarketsIntervalMs);
 		}, msUntilNext15Min);
@@ -297,7 +297,7 @@ export class SchedulerManager {
 			this.handlers.runEconomicCalendarSync?.().catch((error) => {
 				log.error(
 					{ error: error instanceof Error ? error.message : String(error) },
-					"Economic calendar sync failed"
+					"Economic calendar sync failed",
 				);
 			});
 			// Update next run time after execution
@@ -306,7 +306,7 @@ export class SchedulerManager {
 				this.handlers.runEconomicCalendarSync?.().catch((error) => {
 					log.error(
 						{ error: error instanceof Error ? error.message : String(error) },
-						"Economic calendar sync failed"
+						"Economic calendar sync failed",
 					);
 				});
 				// Update next run time after each interval execution
@@ -318,7 +318,7 @@ export class SchedulerManager {
 
 export function createSchedulerManager(
 	handlers: SchedulerHandlers,
-	intervalProvider: () => SchedulerIntervals
+	intervalProvider: () => SchedulerIntervals,
 ): SchedulerManager {
 	return new SchedulerManager(handlers, intervalProvider);
 }

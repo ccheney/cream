@@ -28,7 +28,7 @@ const mockRunMacroWatch = mock(() =>
 			},
 		],
 		totalCount: 2,
-	})
+	}),
 );
 
 mock.module("@cream/api", () => ({
@@ -100,9 +100,9 @@ describe("MacroWatchService", () => {
 									entries: [],
 									totalCount: 0,
 								}),
-							100
-						)
-					)
+							100,
+						),
+					),
 			);
 
 			const firstRun = service.run(["AAPL"]);

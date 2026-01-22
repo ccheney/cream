@@ -52,7 +52,7 @@ export class ExpirationMonitor {
 	checkPositions(
 		positions: PortfolioPosition[],
 		quotes: Map<string, UnderlyingQuote>,
-		currentTime: string
+		currentTime: string,
 	): ExpirationEvaluation[] {
 		if (this.state.config.disabled) {
 			return [];
@@ -72,7 +72,7 @@ export class ExpirationMonitor {
 				position,
 				quote,
 				currentTime,
-				this.state.config
+				this.state.config,
 			);
 
 			if (!expiringPosition) {
@@ -128,7 +128,7 @@ export class ExpirationMonitor {
 	}
 
 	getMinutesUntilNextCheckpoint(
-		currentTime: string
+		currentTime: string,
 	): { checkpoint: string; minutes: number } | null {
 		const date = new Date(currentTime);
 		const etHour = date.getUTCHours() - 5;
@@ -157,7 +157,7 @@ export class ExpirationMonitor {
 }
 
 export function createExpirationMonitor(
-	config?: Partial<ExpirationPolicyConfig>
+	config?: Partial<ExpirationPolicyConfig>,
 ): ExpirationMonitor {
 	const fullConfig = config
 		? { ...DEFAULT_EXPIRATION_POLICY, ...config }
