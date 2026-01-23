@@ -1,4 +1,36 @@
-// Workflow registry - exports all workflows for Mastra configuration
-// Workflows will be added as they are migrated from apps/api
+/**
+ * Workflow Registry
+ *
+ * Exports all workflows for Mastra configuration.
+ *
+ * NOTE: Workflows are currently defined in apps/api and will be migrated
+ * incrementally. This registry serves as the target location.
+ *
+ * Pending Migrations:
+ * - tradingCycleWorkflow: 8-step OODA loop (observe → orient → grounding →
+ *   analysts → debate → trader → consensus → act)
+ * - predictionMarketsWorkflow: Kalshi/Polymarket data fetching
+ * - macroWatchWorkflow: Overnight macro scanning (news → predictions →
+ *   economic → movers → compile newspaper)
+ *
+ * @see docs/plans/53-mastra-v1-migration.md
+ */
 
-export {};
+// Trading Cycle Workflow
+// TODO: Migrate from apps/api/src/mastra/workflows/trading-cycle/
+// export { tradingCycleWorkflow } from "./trading-cycle/workflow.js";
+
+// Prediction Markets Workflow
+// TODO: Migrate from apps/api/src/mastra/workflows/prediction-markets.ts
+// export { predictionMarketsWorkflow } from "./prediction-markets/workflow.js";
+
+// MacroWatch Workflow
+// TODO: Migrate from apps/api/src/mastra/workflows/macro-watch/
+// export { macroWatchWorkflow } from "./macro-watch/workflow.js";
+
+// Temporary placeholder export to make this module valid
+export const WORKFLOWS_PENDING_MIGRATION = [
+	"tradingCycleWorkflow",
+	"predictionMarketsWorkflow",
+	"macroWatchWorkflow",
+] as const;
