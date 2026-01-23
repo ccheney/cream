@@ -86,8 +86,10 @@ function calculateRecessionProbability(
 		return;
 	}
 
-	// biome-ignore lint/style/noNonNullAssertion: length check ensures element exists
-	const market = recessionMarkets[0]!;
+	const [market] = recessionMarkets;
+	if (!market) {
+		return;
+	}
 	const yesOutcome = market.payload.outcomes.find((o) => o.outcome.toLowerCase() === "yes");
 
 	if (yesOutcome) {

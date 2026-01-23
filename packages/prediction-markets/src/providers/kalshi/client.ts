@@ -231,8 +231,10 @@ export class KalshiClient implements PredictionMarketProvider {
 			e.payload.marketQuestion.toLowerCase().includes("recession"),
 		);
 		if (recessionMarkets.length > 0) {
-			// biome-ignore lint/style/noNonNullAssertion: length check ensures element exists
-			const market = recessionMarkets[0]!;
+			const [market] = recessionMarkets;
+			if (!market) {
+				return scores;
+			}
 			const yesOutcome = market.payload.outcomes.find((o) => o.outcome.toLowerCase() === "yes");
 			if (yesOutcome) {
 				scores.recessionProbability12m = yesOutcome.probability;
