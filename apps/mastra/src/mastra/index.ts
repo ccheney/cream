@@ -31,7 +31,11 @@ import {
 // Scorers
 import { decisionQualityScorer, researchDepthScorer } from "./scorers/index.js";
 // Workflows
-import { macroWatchWorkflow, tradingCycleWorkflow } from "./workflows/index.js";
+import {
+	macroWatchWorkflow,
+	predictionMarketsWorkflow,
+	tradingCycleWorkflow,
+} from "./workflows/index.js";
 
 const otelEndpoint = Bun.env.OTEL_EXPORTER_OTLP_ENDPOINT ?? "http://localhost:4318";
 const observabilityEnabled = Bun.env.OTEL_ENABLED !== "false";
@@ -74,6 +78,7 @@ export const mastra = new Mastra({
 	},
 	workflows: {
 		tradingCycleWorkflow,
+		predictionMarketsWorkflow,
 		macroWatchWorkflow,
 	},
 	observability: observabilityEnabled
