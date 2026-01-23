@@ -7,21 +7,25 @@
 // @generated from file cream/v1/execution.proto (package cream.v1, syntax proto3)
 /* eslint-disable */
 
+import type { Message } from "@bufbuild/protobuf";
 import type { GenEnum, GenFile, GenMessage, GenService } from "@bufbuild/protobuf/codegenv1";
 import { enumDesc, fileDesc, messageDesc, serviceDesc } from "@bufbuild/protobuf/codegenv1";
+import type { Timestamp } from "@bufbuild/protobuf/wkt";
+import { file_google_protobuf_timestamp } from "@bufbuild/protobuf/wkt";
 import type { Environment, Instrument, OrderType, TimeInForce } from "./common_pb.js";
 import { file_cream_v1_common } from "./common_pb.js";
 import type { DecisionPlan } from "./decision_pb.js";
 import { file_cream_v1_decision } from "./decision_pb.js";
-import type { Timestamp } from "@bufbuild/protobuf/wkt";
-import { file_google_protobuf_timestamp } from "@bufbuild/protobuf/wkt";
-import type { Message } from "@bufbuild/protobuf";
 
 /**
  * Describes the file cream/v1/execution.proto.
  */
-export const file_cream_v1_execution: GenFile = /*@__PURE__*/
-  fileDesc("ChhjcmVhbS92MS9leGVjdXRpb24ucHJvdG8SCGNyZWFtLnYxItEDCg9SaXNrQ29uc3RyYWludHMSEgoKbWF4X3NoYXJlcxgBIAEoBRIVCg1tYXhfY29udHJhY3RzGAIgASgFEhoKEm1heF9ub3Rpb25hbF9jZW50cxgDIAEoAxIaChJtYXhfcGN0X2VxdWl0eV9icHMYBCABKAUSIAoYbWF4X2dyb3NzX3BjdF9lcXVpdHlfYnBzGAUgASgFEh4KFm1heF9uZXRfcGN0X2VxdWl0eV9icHMYBiABKAUSHgoWbWF4X3Jpc2tfcGVyX3RyYWRlX2JwcxgHIAEoBRIfChdtYXhfc2VjdG9yX2V4cG9zdXJlX2JwcxgIIAEoBRIVCg1tYXhfcG9zaXRpb25zGAkgASgFEh0KFW1heF9jb25jZW50cmF0aW9uX2JwcxgKIAEoBRIbChNtYXhfY29ycmVsYXRpb25fYnBzGAsgASgFEhgKEG1heF9kcmF3ZG93bl9icHMYDCABKAUSIAoYbWF4X2RlbHRhX25vdGlvbmFsX2NlbnRzGA0gASgDEhgKEG1heF9nYW1tYV9zY2FsZWQYDiABKAMSFgoObWF4X3ZlZ2FfY2VudHMYDyABKAMSFwoPbWF4X3RoZXRhX2NlbnRzGBAgASgDIrIBCg9Db25zdHJhaW50Q2hlY2sSDAoEbmFtZRgBIAEoCRIqCgZyZXN1bHQYAiABKA4yGi5jcmVhbS52MS5Db25zdHJhaW50UmVzdWx0EhMKC2Rlc2NyaXB0aW9uGAMgASgJEhkKDGFjdHVhbF92YWx1ZRgEIAEoAUgAiAEBEhYKCXRocmVzaG9sZBgFIAEoAUgBiAEBQg8KDV9hY3R1YWxfdmFsdWVCDAoKX3RocmVzaG9sZCLjAQoXQ2hlY2tDb25zdHJhaW50c1JlcXVlc3QSLQoNZGVjaXNpb25fcGxhbhgBIAEoCzIWLmNyZWFtLnYxLkRlY2lzaW9uUGxhbhItCg1hY2NvdW50X3N0YXRlGAIgASgLMhYuY3JlYW0udjEuQWNjb3VudFN0YXRlEiUKCXBvc2l0aW9ucxgDIAMoCzISLmNyZWFtLnYxLlBvc2l0aW9uEjMKC2NvbnN0cmFpbnRzGAQgASgLMhkuY3JlYW0udjEuUmlza0NvbnN0cmFpbnRzSACIAQFCDgoMX2NvbnN0cmFpbnRzIvABChhDaGVja0NvbnN0cmFpbnRzUmVzcG9uc2USEAoIYXBwcm92ZWQYASABKAgSKQoGY2hlY2tzGAIgAygLMhkuY3JlYW0udjEuQ29uc3RyYWludENoZWNrEjEKCnZpb2xhdGlvbnMYAyADKAsyHS5jcmVhbS52MS5Db25zdHJhaW50VmlvbGF0aW9uEjAKDHZhbGlkYXRlZF9hdBgEIAEoCzIaLmdvb2dsZS5wcm90b2J1Zi5UaW1lc3RhbXASHQoQcmVqZWN0aW9uX3JlYXNvbhgFIAEoCUgAiAEBQhMKEV9yZWplY3Rpb25fcmVhc29uIqwCChNDb25zdHJhaW50VmlvbGF0aW9uEgwKBGNvZGUYASABKAkSLQoIc2V2ZXJpdHkYAiABKA4yGy5jcmVhbS52MS5WaW9sYXRpb25TZXZlcml0eRIPCgdtZXNzYWdlGAMgASgJEhoKDWluc3RydW1lbnRfaWQYBCABKAlIAIgBARIXCgpmaWVsZF9wYXRoGAUgASgJSAGIAQESGwoOb2JzZXJ2ZWRfdmFsdWUYBiABKAFIAogBARIYCgtsaW1pdF92YWx1ZRgHIAEoAUgDiAEBEhcKD2NvbnN0cmFpbnRfbmFtZRgIIAEoCUIQCg5faW5zdHJ1bWVudF9pZEINCgtfZmllbGRfcGF0aEIRCg9fb2JzZXJ2ZWRfdmFsdWVCDgoMX2xpbWl0X3ZhbHVlIq0CCgxBY2NvdW50U3RhdGUSEgoKYWNjb3VudF9pZBgBIAEoCRIOCgZlcXVpdHkYAiABKAESFAoMYnV5aW5nX3Bvd2VyGAMgASgBEhMKC21hcmdpbl91c2VkGAQgASgBEhcKD2RheV90cmFkZV9jb3VudBgFIAEoBRIZChFpc19wZHRfcmVzdHJpY3RlZBgGIAEoCBIpCgVhc19vZhgHIAEoCzIaLmdvb2dsZS5wcm90b2J1Zi5UaW1lc3RhbXASEwoLbGFzdF9lcXVpdHkYCCABKAESHwoXZGF5dHJhZGluZ19idXlpbmdfcG93ZXIYCSABKAESHAoUcmVtYWluaW5nX2RheV90cmFkZXMYCiABKAUSGwoTdW5kZXJfcGR0X3RocmVzaG9sZBgLIAEoCCK9AQoIUG9zaXRpb24SKAoKaW5zdHJ1bWVudBgBIAEoCzIULmNyZWFtLnYxLkluc3RydW1lbnQSEAoIcXVhbnRpdHkYAiABKAUSFwoPYXZnX2VudHJ5X3ByaWNlGAMgASgBEhQKDG1hcmtldF92YWx1ZRgEIAEoARIWCg51bnJlYWxpemVkX3BubBgFIAEoARIaChJ1bnJlYWxpemVkX3BubF9wY3QYBiABKAESEgoKY29zdF9iYXNpcxgHIAEoASKfAgoSU3VibWl0T3JkZXJSZXF1ZXN0EigKCmluc3RydW1lbnQYASABKAsyFC5jcmVhbS52MS5JbnN0cnVtZW50EiEKBHNpZGUYAiABKA4yEy5jcmVhbS52MS5PcmRlclNpZGUSEAoIcXVhbnRpdHkYAyABKAUSJwoKb3JkZXJfdHlwZRgEIAEoDjITLmNyZWFtLnYxLk9yZGVyVHlwZRIYCgtsaW1pdF9wcmljZRgFIAEoAUgAiAEBEiwKDXRpbWVfaW5fZm9yY2UYBiABKA4yFS5jcmVhbS52MS5UaW1lSW5Gb3JjZRIXCg9jbGllbnRfb3JkZXJfaWQYByABKAkSEAoIY3ljbGVfaWQYCCABKAlCDgoMX2xpbWl0X3ByaWNlIscBChNTdWJtaXRPcmRlclJlc3BvbnNlEhAKCG9yZGVyX2lkGAEgASgJEhcKD2NsaWVudF9vcmRlcl9pZBgCIAEoCRIlCgZzdGF0dXMYAyABKA4yFS5jcmVhbS52MS5PcmRlclN0YXR1cxIwCgxzdWJtaXR0ZWRfYXQYBCABKAsyGi5nb29nbGUucHJvdG9idWYuVGltZXN0YW1wEhoKDWVycm9yX21lc3NhZ2UYBSABKAlIAIgBAUIQCg5fZXJyb3JfbWVzc2FnZSLKAQoMRXhlY3V0aW9uQWNrEhAKCGN5Y2xlX2lkGAEgASgJEioKC2Vudmlyb25tZW50GAIgASgOMhUuY3JlYW0udjEuRW52aXJvbm1lbnQSLAoIYWNrX3RpbWUYAyABKAsyGi5nb29nbGUucHJvdG9idWYuVGltZXN0YW1wEiQKBm9yZGVycxgEIAMoCzIULmNyZWFtLnYxLk9yZGVyU3RhdGUSKAoGZXJyb3JzGAUgAygLMhguY3JlYW0udjEuRXhlY3V0aW9uRXJyb3IimwUKCk9yZGVyU3RhdGUSEAoIb3JkZXJfaWQYASABKAkSFwoPYnJva2VyX29yZGVyX2lkGAIgASgJEhcKD2NsaWVudF9vcmRlcl9pZBgDIAEoCRIUCgxpc19tdWx0aV9sZWcYBCABKAgSJQoEbGVncxgFIAMoCzIXLmNyZWFtLnYxLk9yZGVyTGVnU3RhdGUSJQoGc3RhdHVzGAYgASgOMhUuY3JlYW0udjEuT3JkZXJTdGF0dXMSIQoEc2lkZRgHIAEoDjITLmNyZWFtLnYxLk9yZGVyU2lkZRInCgpvcmRlcl90eXBlGAggASgOMhMuY3JlYW0udjEuT3JkZXJUeXBlEigKCmluc3RydW1lbnQYCSABKAsyFC5jcmVhbS52MS5JbnN0cnVtZW50EhoKEnJlcXVlc3RlZF9xdWFudGl0eRgKIAEoBRIXCg9maWxsZWRfcXVhbnRpdHkYCyABKAUSFgoOYXZnX2ZpbGxfcHJpY2UYDCABKAESGAoLbGltaXRfcHJpY2UYDSABKAFIAIgBARIXCgpzdG9wX3ByaWNlGA4gASgBSAGIAQESLAoNdGltZV9pbl9mb3JjZRgPIAEoDjIVLmNyZWFtLnYxLlRpbWVJbkZvcmNlEjAKDHN1Ym1pdHRlZF9hdBgQIAEoCzIaLmdvb2dsZS5wcm90b2J1Zi5UaW1lc3RhbXASMgoObGFzdF91cGRhdGVfYXQYESABKAsyGi5nb29nbGUucHJvdG9idWYuVGltZXN0YW1wEhIKCmNvbW1pc3Npb24YEiABKAESEAoIY3ljbGVfaWQYEyABKAkSFgoOc3RhdHVzX21lc3NhZ2UYFCABKAlCDgoMX2xpbWl0X3ByaWNlQg0KC19zdG9wX3ByaWNlIt0CCg1PcmRlckxlZ1N0YXRlEg4KBmxlZ19pZBgBIAEoCRIoCgppbnN0cnVtZW50GAIgASgLMhQuY3JlYW0udjEuSW5zdHJ1bWVudBIhCgRzaWRlGAMgASgOMhMuY3JlYW0udjEuT3JkZXJTaWRlEhAKCHF1YW50aXR5GAQgASgFEicKCm9yZGVyX3R5cGUYBSABKA4yEy5jcmVhbS52MS5PcmRlclR5cGUSGAoLbGltaXRfcHJpY2UYBiABKAFIAIgBARIlCgZzdGF0dXMYByABKA4yFS5jcmVhbS52MS5PcmRlclN0YXR1cxIXCg9maWxsZWRfcXVhbnRpdHkYCCABKAUSFgoOYXZnX2ZpbGxfcHJpY2UYCSABKAESMgoObGFzdF91cGRhdGVfYXQYCiABKAsyGi5nb29nbGUucHJvdG9idWYuVGltZXN0YW1wQg4KDF9saW1pdF9wcmljZSKuAQoORXhlY3V0aW9uRXJyb3ISDAoEY29kZRgBIAEoCRIPCgdtZXNzYWdlGAIgASgJEhoKDWluc3RydW1lbnRfaWQYAyABKAlIAIgBARIVCghvcmRlcl9pZBgEIAEoCUgBiAEBEhEKCXJldHJ5YWJsZRgFIAEoCBIYChBzdWdnZXN0ZWRfYWN0aW9uGAYgASgJQhAKDl9pbnN0cnVtZW50X2lkQgsKCV9vcmRlcl9pZCIoChRHZXRPcmRlclN0YXRlUmVxdWVzdBIQCghvcmRlcl9pZBgBIAEoCSL8AwoVR2V0T3JkZXJTdGF0ZVJlc3BvbnNlEhAKCG9yZGVyX2lkGAEgASgJEhcKD2Jyb2tlcl9vcmRlcl9pZBgCIAEoCRIoCgppbnN0cnVtZW50GAMgASgLMhQuY3JlYW0udjEuSW5zdHJ1bWVudBIlCgZzdGF0dXMYBCABKA4yFS5jcmVhbS52MS5PcmRlclN0YXR1cxIhCgRzaWRlGAUgASgOMhMuY3JlYW0udjEuT3JkZXJTaWRlEicKCm9yZGVyX3R5cGUYBiABKA4yEy5jcmVhbS52MS5PcmRlclR5cGUSGgoScmVxdWVzdGVkX3F1YW50aXR5GAcgASgFEhcKD2ZpbGxlZF9xdWFudGl0eRgIIAEoBRIWCg5hdmdfZmlsbF9wcmljZRgJIAEoARIYCgtsaW1pdF9wcmljZRgKIAEoAUgAiAEBEhcKCnN0b3BfcHJpY2UYCyABKAFIAYgBARIwCgxzdWJtaXR0ZWRfYXQYDCABKAsyGi5nb29nbGUucHJvdG9idWYuVGltZXN0YW1wEjIKDmxhc3RfdXBkYXRlX2F0GA0gASgLMhouZ29vZ2xlLnByb3RvYnVmLlRpbWVzdGFtcBIWCg5zdGF0dXNfbWVzc2FnZRgOIAEoCUIOCgxfbGltaXRfcHJpY2VCDQoLX3N0b3BfcHJpY2UiJgoSQ2FuY2VsT3JkZXJSZXF1ZXN0EhAKCG9yZGVyX2lkGAEgASgJIo4BChNDYW5jZWxPcmRlclJlc3BvbnNlEhAKCGFjY2VwdGVkGAEgASgIEhAKCG9yZGVyX2lkGAIgASgJEiUKBnN0YXR1cxgDIAEoDjIVLmNyZWFtLnYxLk9yZGVyU3RhdHVzEhoKDWVycm9yX21lc3NhZ2UYBCABKAlIAIgBAUIQCg5fZXJyb3JfbWVzc2FnZSJQChdTdHJlYW1FeGVjdXRpb25zUmVxdWVzdBIVCghjeWNsZV9pZBgBIAEoCUgAiAEBEhEKCW9yZGVyX2lkcxgCIAMoCUILCglfY3ljbGVfaWQiRQoYU3RyZWFtRXhlY3V0aW9uc1Jlc3BvbnNlEikKCWV4ZWN1dGlvbhgBIAEoCzIWLmNyZWFtLnYxLkV4ZWN1dGlvbkFjayJAChZHZXRBY2NvdW50U3RhdGVSZXF1ZXN0EhcKCmFjY291bnRfaWQYASABKAlIAIgBAUINCgtfYWNjb3VudF9pZCJIChdHZXRBY2NvdW50U3RhdGVSZXNwb25zZRItCg1hY2NvdW50X3N0YXRlGAEgASgLMhYuY3JlYW0udjEuQWNjb3VudFN0YXRlIk4KE0dldFBvc2l0aW9uc1JlcXVlc3QSFwoKYWNjb3VudF9pZBgBIAEoCUgAiAEBEg8KB3N5bWJvbHMYAiADKAlCDQoLX2FjY291bnRfaWQiaAoUR2V0UG9zaXRpb25zUmVzcG9uc2USJQoJcG9zaXRpb25zGAEgAygLMhIuY3JlYW0udjEuUG9zaXRpb24SKQoFYXNfb2YYAiABKAsyGi5nb29nbGUucHJvdG9idWYuVGltZXN0YW1wKokBChBDb25zdHJhaW50UmVzdWx0EiEKHUNPTlNUUkFJTlRfUkVTVUxUX1VOU1BFQ0lGSUVEEAASGgoWQ09OU1RSQUlOVF9SRVNVTFRfUEFTUxABEhoKFkNPTlNUUkFJTlRfUkVTVUxUX0ZBSUwQAhIaChZDT05TVFJBSU5UX1JFU1VMVF9XQVJOEAMqswEKEVZpb2xhdGlvblNldmVyaXR5EiIKHlZJT0xBVElPTl9TRVZFUklUWV9VTlNQRUNJRklFRBAAEhsKF1ZJT0xBVElPTl9TRVZFUklUWV9JTkZPEAESHgoaVklPTEFUSU9OX1NFVkVSSVRZX1dBUk5JTkcQAhIcChhWSU9MQVRJT05fU0VWRVJJVFlfRVJST1IQAxIfChtWSU9MQVRJT05fU0VWRVJJVFlfQ1JJVElDQUwQBCr/AQoLT3JkZXJTdGF0dXMSHAoYT1JERVJfU1RBVFVTX1VOU1BFQ0lGSUVEEAASFAoQT1JERVJfU1RBVFVTX05FVxABEhgKFE9SREVSX1NUQVRVU19QRU5ESU5HEAISGQoVT1JERVJfU1RBVFVTX0FDQ0VQVEVEEAMSHQoZT1JERVJfU1RBVFVTX1BBUlRJQUxfRklMTBAEEhcKE09SREVSX1NUQVRVU19GSUxMRUQQBRIaChZPUkRFUl9TVEFUVVNfQ0FOQ0VMTEVEEAYSGQoVT1JERVJfU1RBVFVTX1JFSkVDVEVEEAcSGAoUT1JERVJfU1RBVFVTX0VYUElSRUQQCCpQCglPcmRlclNpZGUSGgoWT1JERVJfU0lERV9VTlNQRUNJRklFRBAAEhIKDk9SREVSX1NJREVfQlVZEAESEwoPT1JERVJfU0lERV9TRUxMEAIy2wQKEEV4ZWN1dGlvblNlcnZpY2USWQoQQ2hlY2tDb25zdHJhaW50cxIhLmNyZWFtLnYxLkNoZWNrQ29uc3RyYWludHNSZXF1ZXN0GiIuY3JlYW0udjEuQ2hlY2tDb25zdHJhaW50c1Jlc3BvbnNlEkoKC1N1Ym1pdE9yZGVyEhwuY3JlYW0udjEuU3VibWl0T3JkZXJSZXF1ZXN0Gh0uY3JlYW0udjEuU3VibWl0T3JkZXJSZXNwb25zZRJQCg1HZXRPcmRlclN0YXRlEh4uY3JlYW0udjEuR2V0T3JkZXJTdGF0ZVJlcXVlc3QaHy5jcmVhbS52MS5HZXRPcmRlclN0YXRlUmVzcG9uc2USSgoLQ2FuY2VsT3JkZXISHC5jcmVhbS52MS5DYW5jZWxPcmRlclJlcXVlc3QaHS5jcmVhbS52MS5DYW5jZWxPcmRlclJlc3BvbnNlElsKEFN0cmVhbUV4ZWN1dGlvbnMSIS5jcmVhbS52MS5TdHJlYW1FeGVjdXRpb25zUmVxdWVzdBoiLmNyZWFtLnYxLlN0cmVhbUV4ZWN1dGlvbnNSZXNwb25zZTABElYKD0dldEFjY291bnRTdGF0ZRIgLmNyZWFtLnYxLkdldEFjY291bnRTdGF0ZVJlcXVlc3QaIS5jcmVhbS52MS5HZXRBY2NvdW50U3RhdGVSZXNwb25zZRJNCgxHZXRQb3NpdGlvbnMSHS5jcmVhbS52MS5HZXRQb3NpdGlvbnNSZXF1ZXN0Gh4uY3JlYW0udjEuR2V0UG9zaXRpb25zUmVzcG9uc2VClwEKDGNvbS5jcmVhbS52MUIORXhlY3V0aW9uUHJvdG9QAVo2Z2l0aHViLmNvbS9jcmVhbS10cmFkaW5nL2NyZWFtL2dlbi9nby9jcmVhbS92MTtjcmVhbXYxogIDQ1hYqgIIQ3JlYW0uVjHKAghDcmVhbVxWMeICFENyZWFtXFYxXEdQQk1ldGFkYXRh6gIJQ3JlYW06OlYxYgZwcm90bzM", [file_cream_v1_common, file_cream_v1_decision, file_google_protobuf_timestamp]);
+export const file_cream_v1_execution: GenFile =
+	/*@__PURE__*/
+	fileDesc(
+		"ChhjcmVhbS92MS9leGVjdXRpb24ucHJvdG8SCGNyZWFtLnYxItEDCg9SaXNrQ29uc3RyYWludHMSEgoKbWF4X3NoYXJlcxgBIAEoBRIVCg1tYXhfY29udHJhY3RzGAIgASgFEhoKEm1heF9ub3Rpb25hbF9jZW50cxgDIAEoAxIaChJtYXhfcGN0X2VxdWl0eV9icHMYBCABKAUSIAoYbWF4X2dyb3NzX3BjdF9lcXVpdHlfYnBzGAUgASgFEh4KFm1heF9uZXRfcGN0X2VxdWl0eV9icHMYBiABKAUSHgoWbWF4X3Jpc2tfcGVyX3RyYWRlX2JwcxgHIAEoBRIfChdtYXhfc2VjdG9yX2V4cG9zdXJlX2JwcxgIIAEoBRIVCg1tYXhfcG9zaXRpb25zGAkgASgFEh0KFW1heF9jb25jZW50cmF0aW9uX2JwcxgKIAEoBRIbChNtYXhfY29ycmVsYXRpb25fYnBzGAsgASgFEhgKEG1heF9kcmF3ZG93bl9icHMYDCABKAUSIAoYbWF4X2RlbHRhX25vdGlvbmFsX2NlbnRzGA0gASgDEhgKEG1heF9nYW1tYV9zY2FsZWQYDiABKAMSFgoObWF4X3ZlZ2FfY2VudHMYDyABKAMSFwoPbWF4X3RoZXRhX2NlbnRzGBAgASgDIrIBCg9Db25zdHJhaW50Q2hlY2sSDAoEbmFtZRgBIAEoCRIqCgZyZXN1bHQYAiABKA4yGi5jcmVhbS52MS5Db25zdHJhaW50UmVzdWx0EhMKC2Rlc2NyaXB0aW9uGAMgASgJEhkKDGFjdHVhbF92YWx1ZRgEIAEoAUgAiAEBEhYKCXRocmVzaG9sZBgFIAEoAUgBiAEBQg8KDV9hY3R1YWxfdmFsdWVCDAoKX3RocmVzaG9sZCLjAQoXQ2hlY2tDb25zdHJhaW50c1JlcXVlc3QSLQoNZGVjaXNpb25fcGxhbhgBIAEoCzIWLmNyZWFtLnYxLkRlY2lzaW9uUGxhbhItCg1hY2NvdW50X3N0YXRlGAIgASgLMhYuY3JlYW0udjEuQWNjb3VudFN0YXRlEiUKCXBvc2l0aW9ucxgDIAMoCzISLmNyZWFtLnYxLlBvc2l0aW9uEjMKC2NvbnN0cmFpbnRzGAQgASgLMhkuY3JlYW0udjEuUmlza0NvbnN0cmFpbnRzSACIAQFCDgoMX2NvbnN0cmFpbnRzIvABChhDaGVja0NvbnN0cmFpbnRzUmVzcG9uc2USEAoIYXBwcm92ZWQYASABKAgSKQoGY2hlY2tzGAIgAygLMhkuY3JlYW0udjEuQ29uc3RyYWludENoZWNrEjEKCnZpb2xhdGlvbnMYAyADKAsyHS5jcmVhbS52MS5Db25zdHJhaW50VmlvbGF0aW9uEjAKDHZhbGlkYXRlZF9hdBgEIAEoCzIaLmdvb2dsZS5wcm90b2J1Zi5UaW1lc3RhbXASHQoQcmVqZWN0aW9uX3JlYXNvbhgFIAEoCUgAiAEBQhMKEV9yZWplY3Rpb25fcmVhc29uIqwCChNDb25zdHJhaW50VmlvbGF0aW9uEgwKBGNvZGUYASABKAkSLQoIc2V2ZXJpdHkYAiABKA4yGy5jcmVhbS52MS5WaW9sYXRpb25TZXZlcml0eRIPCgdtZXNzYWdlGAMgASgJEhoKDWluc3RydW1lbnRfaWQYBCABKAlIAIgBARIXCgpmaWVsZF9wYXRoGAUgASgJSAGIAQESGwoOb2JzZXJ2ZWRfdmFsdWUYBiABKAFIAogBARIYCgtsaW1pdF92YWx1ZRgHIAEoAUgDiAEBEhcKD2NvbnN0cmFpbnRfbmFtZRgIIAEoCUIQCg5faW5zdHJ1bWVudF9pZEINCgtfZmllbGRfcGF0aEIRCg9fb2JzZXJ2ZWRfdmFsdWVCDgoMX2xpbWl0X3ZhbHVlIq0CCgxBY2NvdW50U3RhdGUSEgoKYWNjb3VudF9pZBgBIAEoCRIOCgZlcXVpdHkYAiABKAESFAoMYnV5aW5nX3Bvd2VyGAMgASgBEhMKC21hcmdpbl91c2VkGAQgASgBEhcKD2RheV90cmFkZV9jb3VudBgFIAEoBRIZChFpc19wZHRfcmVzdHJpY3RlZBgGIAEoCBIpCgVhc19vZhgHIAEoCzIaLmdvb2dsZS5wcm90b2J1Zi5UaW1lc3RhbXASEwoLbGFzdF9lcXVpdHkYCCABKAESHwoXZGF5dHJhZGluZ19idXlpbmdfcG93ZXIYCSABKAESHAoUcmVtYWluaW5nX2RheV90cmFkZXMYCiABKAUSGwoTdW5kZXJfcGR0X3RocmVzaG9sZBgLIAEoCCK9AQoIUG9zaXRpb24SKAoKaW5zdHJ1bWVudBgBIAEoCzIULmNyZWFtLnYxLkluc3RydW1lbnQSEAoIcXVhbnRpdHkYAiABKAUSFwoPYXZnX2VudHJ5X3ByaWNlGAMgASgBEhQKDG1hcmtldF92YWx1ZRgEIAEoARIWCg51bnJlYWxpemVkX3BubBgFIAEoARIaChJ1bnJlYWxpemVkX3BubF9wY3QYBiABKAESEgoKY29zdF9iYXNpcxgHIAEoASKfAgoSU3VibWl0T3JkZXJSZXF1ZXN0EigKCmluc3RydW1lbnQYASABKAsyFC5jcmVhbS52MS5JbnN0cnVtZW50EiEKBHNpZGUYAiABKA4yEy5jcmVhbS52MS5PcmRlclNpZGUSEAoIcXVhbnRpdHkYAyABKAUSJwoKb3JkZXJfdHlwZRgEIAEoDjITLmNyZWFtLnYxLk9yZGVyVHlwZRIYCgtsaW1pdF9wcmljZRgFIAEoAUgAiAEBEiwKDXRpbWVfaW5fZm9yY2UYBiABKA4yFS5jcmVhbS52MS5UaW1lSW5Gb3JjZRIXCg9jbGllbnRfb3JkZXJfaWQYByABKAkSEAoIY3ljbGVfaWQYCCABKAlCDgoMX2xpbWl0X3ByaWNlIscBChNTdWJtaXRPcmRlclJlc3BvbnNlEhAKCG9yZGVyX2lkGAEgASgJEhcKD2NsaWVudF9vcmRlcl9pZBgCIAEoCRIlCgZzdGF0dXMYAyABKA4yFS5jcmVhbS52MS5PcmRlclN0YXR1cxIwCgxzdWJtaXR0ZWRfYXQYBCABKAsyGi5nb29nbGUucHJvdG9idWYuVGltZXN0YW1wEhoKDWVycm9yX21lc3NhZ2UYBSABKAlIAIgBAUIQCg5fZXJyb3JfbWVzc2FnZSLKAQoMRXhlY3V0aW9uQWNrEhAKCGN5Y2xlX2lkGAEgASgJEioKC2Vudmlyb25tZW50GAIgASgOMhUuY3JlYW0udjEuRW52aXJvbm1lbnQSLAoIYWNrX3RpbWUYAyABKAsyGi5nb29nbGUucHJvdG9idWYuVGltZXN0YW1wEiQKBm9yZGVycxgEIAMoCzIULmNyZWFtLnYxLk9yZGVyU3RhdGUSKAoGZXJyb3JzGAUgAygLMhguY3JlYW0udjEuRXhlY3V0aW9uRXJyb3IimwUKCk9yZGVyU3RhdGUSEAoIb3JkZXJfaWQYASABKAkSFwoPYnJva2VyX29yZGVyX2lkGAIgASgJEhcKD2NsaWVudF9vcmRlcl9pZBgDIAEoCRIUCgxpc19tdWx0aV9sZWcYBCABKAgSJQoEbGVncxgFIAMoCzIXLmNyZWFtLnYxLk9yZGVyTGVnU3RhdGUSJQoGc3RhdHVzGAYgASgOMhUuY3JlYW0udjEuT3JkZXJTdGF0dXMSIQoEc2lkZRgHIAEoDjITLmNyZWFtLnYxLk9yZGVyU2lkZRInCgpvcmRlcl90eXBlGAggASgOMhMuY3JlYW0udjEuT3JkZXJUeXBlEigKCmluc3RydW1lbnQYCSABKAsyFC5jcmVhbS52MS5JbnN0cnVtZW50EhoKEnJlcXVlc3RlZF9xdWFudGl0eRgKIAEoBRIXCg9maWxsZWRfcXVhbnRpdHkYCyABKAUSFgoOYXZnX2ZpbGxfcHJpY2UYDCABKAESGAoLbGltaXRfcHJpY2UYDSABKAFIAIgBARIXCgpzdG9wX3ByaWNlGA4gASgBSAGIAQESLAoNdGltZV9pbl9mb3JjZRgPIAEoDjIVLmNyZWFtLnYxLlRpbWVJbkZvcmNlEjAKDHN1Ym1pdHRlZF9hdBgQIAEoCzIaLmdvb2dsZS5wcm90b2J1Zi5UaW1lc3RhbXASMgoObGFzdF91cGRhdGVfYXQYESABKAsyGi5nb29nbGUucHJvdG9idWYuVGltZXN0YW1wEhIKCmNvbW1pc3Npb24YEiABKAESEAoIY3ljbGVfaWQYEyABKAkSFgoOc3RhdHVzX21lc3NhZ2UYFCABKAlCDgoMX2xpbWl0X3ByaWNlQg0KC19zdG9wX3ByaWNlIt0CCg1PcmRlckxlZ1N0YXRlEg4KBmxlZ19pZBgBIAEoCRIoCgppbnN0cnVtZW50GAIgASgLMhQuY3JlYW0udjEuSW5zdHJ1bWVudBIhCgRzaWRlGAMgASgOMhMuY3JlYW0udjEuT3JkZXJTaWRlEhAKCHF1YW50aXR5GAQgASgFEicKCm9yZGVyX3R5cGUYBSABKA4yEy5jcmVhbS52MS5PcmRlclR5cGUSGAoLbGltaXRfcHJpY2UYBiABKAFIAIgBARIlCgZzdGF0dXMYByABKA4yFS5jcmVhbS52MS5PcmRlclN0YXR1cxIXCg9maWxsZWRfcXVhbnRpdHkYCCABKAUSFgoOYXZnX2ZpbGxfcHJpY2UYCSABKAESMgoObGFzdF91cGRhdGVfYXQYCiABKAsyGi5nb29nbGUucHJvdG9idWYuVGltZXN0YW1wQg4KDF9saW1pdF9wcmljZSKuAQoORXhlY3V0aW9uRXJyb3ISDAoEY29kZRgBIAEoCRIPCgdtZXNzYWdlGAIgASgJEhoKDWluc3RydW1lbnRfaWQYAyABKAlIAIgBARIVCghvcmRlcl9pZBgEIAEoCUgBiAEBEhEKCXJldHJ5YWJsZRgFIAEoCBIYChBzdWdnZXN0ZWRfYWN0aW9uGAYgASgJQhAKDl9pbnN0cnVtZW50X2lkQgsKCV9vcmRlcl9pZCIoChRHZXRPcmRlclN0YXRlUmVxdWVzdBIQCghvcmRlcl9pZBgBIAEoCSL8AwoVR2V0T3JkZXJTdGF0ZVJlc3BvbnNlEhAKCG9yZGVyX2lkGAEgASgJEhcKD2Jyb2tlcl9vcmRlcl9pZBgCIAEoCRIoCgppbnN0cnVtZW50GAMgASgLMhQuY3JlYW0udjEuSW5zdHJ1bWVudBIlCgZzdGF0dXMYBCABKA4yFS5jcmVhbS52MS5PcmRlclN0YXR1cxIhCgRzaWRlGAUgASgOMhMuY3JlYW0udjEuT3JkZXJTaWRlEicKCm9yZGVyX3R5cGUYBiABKA4yEy5jcmVhbS52MS5PcmRlclR5cGUSGgoScmVxdWVzdGVkX3F1YW50aXR5GAcgASgFEhcKD2ZpbGxlZF9xdWFudGl0eRgIIAEoBRIWCg5hdmdfZmlsbF9wcmljZRgJIAEoARIYCgtsaW1pdF9wcmljZRgKIAEoAUgAiAEBEhcKCnN0b3BfcHJpY2UYCyABKAFIAYgBARIwCgxzdWJtaXR0ZWRfYXQYDCABKAsyGi5nb29nbGUucHJvdG9idWYuVGltZXN0YW1wEjIKDmxhc3RfdXBkYXRlX2F0GA0gASgLMhouZ29vZ2xlLnByb3RvYnVmLlRpbWVzdGFtcBIWCg5zdGF0dXNfbWVzc2FnZRgOIAEoCUIOCgxfbGltaXRfcHJpY2VCDQoLX3N0b3BfcHJpY2UiJgoSQ2FuY2VsT3JkZXJSZXF1ZXN0EhAKCG9yZGVyX2lkGAEgASgJIo4BChNDYW5jZWxPcmRlclJlc3BvbnNlEhAKCGFjY2VwdGVkGAEgASgIEhAKCG9yZGVyX2lkGAIgASgJEiUKBnN0YXR1cxgDIAEoDjIVLmNyZWFtLnYxLk9yZGVyU3RhdHVzEhoKDWVycm9yX21lc3NhZ2UYBCABKAlIAIgBAUIQCg5fZXJyb3JfbWVzc2FnZSJQChdTdHJlYW1FeGVjdXRpb25zUmVxdWVzdBIVCghjeWNsZV9pZBgBIAEoCUgAiAEBEhEKCW9yZGVyX2lkcxgCIAMoCUILCglfY3ljbGVfaWQiRQoYU3RyZWFtRXhlY3V0aW9uc1Jlc3BvbnNlEikKCWV4ZWN1dGlvbhgBIAEoCzIWLmNyZWFtLnYxLkV4ZWN1dGlvbkFjayJAChZHZXRBY2NvdW50U3RhdGVSZXF1ZXN0EhcKCmFjY291bnRfaWQYASABKAlIAIgBAUINCgtfYWNjb3VudF9pZCJIChdHZXRBY2NvdW50U3RhdGVSZXNwb25zZRItCg1hY2NvdW50X3N0YXRlGAEgASgLMhYuY3JlYW0udjEuQWNjb3VudFN0YXRlIk4KE0dldFBvc2l0aW9uc1JlcXVlc3QSFwoKYWNjb3VudF9pZBgBIAEoCUgAiAEBEg8KB3N5bWJvbHMYAiADKAlCDQoLX2FjY291bnRfaWQiaAoUR2V0UG9zaXRpb25zUmVzcG9uc2USJQoJcG9zaXRpb25zGAEgAygLMhIuY3JlYW0udjEuUG9zaXRpb24SKQoFYXNfb2YYAiABKAsyGi5nb29nbGUucHJvdG9idWYuVGltZXN0YW1wKokBChBDb25zdHJhaW50UmVzdWx0EiEKHUNPTlNUUkFJTlRfUkVTVUxUX1VOU1BFQ0lGSUVEEAASGgoWQ09OU1RSQUlOVF9SRVNVTFRfUEFTUxABEhoKFkNPTlNUUkFJTlRfUkVTVUxUX0ZBSUwQAhIaChZDT05TVFJBSU5UX1JFU1VMVF9XQVJOEAMqswEKEVZpb2xhdGlvblNldmVyaXR5EiIKHlZJT0xBVElPTl9TRVZFUklUWV9VTlNQRUNJRklFRBAAEhsKF1ZJT0xBVElPTl9TRVZFUklUWV9JTkZPEAESHgoaVklPTEFUSU9OX1NFVkVSSVRZX1dBUk5JTkcQAhIcChhWSU9MQVRJT05fU0VWRVJJVFlfRVJST1IQAxIfChtWSU9MQVRJT05fU0VWRVJJVFlfQ1JJVElDQUwQBCr/AQoLT3JkZXJTdGF0dXMSHAoYT1JERVJfU1RBVFVTX1VOU1BFQ0lGSUVEEAASFAoQT1JERVJfU1RBVFVTX05FVxABEhgKFE9SREVSX1NUQVRVU19QRU5ESU5HEAISGQoVT1JERVJfU1RBVFVTX0FDQ0VQVEVEEAMSHQoZT1JERVJfU1RBVFVTX1BBUlRJQUxfRklMTBAEEhcKE09SREVSX1NUQVRVU19GSUxMRUQQBRIaChZPUkRFUl9TVEFUVVNfQ0FOQ0VMTEVEEAYSGQoVT1JERVJfU1RBVFVTX1JFSkVDVEVEEAcSGAoUT1JERVJfU1RBVFVTX0VYUElSRUQQCCpQCglPcmRlclNpZGUSGgoWT1JERVJfU0lERV9VTlNQRUNJRklFRBAAEhIKDk9SREVSX1NJREVfQlVZEAESEwoPT1JERVJfU0lERV9TRUxMEAIy2wQKEEV4ZWN1dGlvblNlcnZpY2USWQoQQ2hlY2tDb25zdHJhaW50cxIhLmNyZWFtLnYxLkNoZWNrQ29uc3RyYWludHNSZXF1ZXN0GiIuY3JlYW0udjEuQ2hlY2tDb25zdHJhaW50c1Jlc3BvbnNlEkoKC1N1Ym1pdE9yZGVyEhwuY3JlYW0udjEuU3VibWl0T3JkZXJSZXF1ZXN0Gh0uY3JlYW0udjEuU3VibWl0T3JkZXJSZXNwb25zZRJQCg1HZXRPcmRlclN0YXRlEh4uY3JlYW0udjEuR2V0T3JkZXJTdGF0ZVJlcXVlc3QaHy5jcmVhbS52MS5HZXRPcmRlclN0YXRlUmVzcG9uc2USSgoLQ2FuY2VsT3JkZXISHC5jcmVhbS52MS5DYW5jZWxPcmRlclJlcXVlc3QaHS5jcmVhbS52MS5DYW5jZWxPcmRlclJlc3BvbnNlElsKEFN0cmVhbUV4ZWN1dGlvbnMSIS5jcmVhbS52MS5TdHJlYW1FeGVjdXRpb25zUmVxdWVzdBoiLmNyZWFtLnYxLlN0cmVhbUV4ZWN1dGlvbnNSZXNwb25zZTABElYKD0dldEFjY291bnRTdGF0ZRIgLmNyZWFtLnYxLkdldEFjY291bnRTdGF0ZVJlcXVlc3QaIS5jcmVhbS52MS5HZXRBY2NvdW50U3RhdGVSZXNwb25zZRJNCgxHZXRQb3NpdGlvbnMSHS5jcmVhbS52MS5HZXRQb3NpdGlvbnNSZXF1ZXN0Gh4uY3JlYW0udjEuR2V0UG9zaXRpb25zUmVzcG9uc2VClwEKDGNvbS5jcmVhbS52MUIORXhlY3V0aW9uUHJvdG9QAVo2Z2l0aHViLmNvbS9jcmVhbS10cmFkaW5nL2NyZWFtL2dlbi9nby9jcmVhbS92MTtjcmVhbXYxogIDQ1hYqgIIQ3JlYW0uVjHKAghDcmVhbVxWMeICFENyZWFtXFYxXEdQQk1ldGFkYXRh6gIJQ3JlYW06OlYxYgZwcm90bzM",
+		[file_cream_v1_common, file_cream_v1_decision, file_google_protobuf_timestamp],
+	);
 
 /**
  * Runtime risk constraints passed from the workflow
@@ -29,101 +33,102 @@ export const file_cream_v1_execution: GenFile = /*@__PURE__*/
  * @generated from message cream.v1.RiskConstraints
  */
 export type RiskConstraints = Message<"cream.v1.RiskConstraints"> & {
-  /**
-   * Per-instrument limits
-   *
-   * @generated from field: int32 max_shares = 1;
-   */
-  maxShares: number;
+	/**
+	 * Per-instrument limits
+	 *
+	 * @generated from field: int32 max_shares = 1;
+	 */
+	maxShares: number;
 
-  /**
-   * @generated from field: int32 max_contracts = 2;
-   */
-  maxContracts: number;
+	/**
+	 * @generated from field: int32 max_contracts = 2;
+	 */
+	maxContracts: number;
 
-  /**
-   * @generated from field: int64 max_notional_cents = 3;
-   */
-  maxNotionalCents: bigint;
+	/**
+	 * @generated from field: int64 max_notional_cents = 3;
+	 */
+	maxNotionalCents: bigint;
 
-  /**
-   * basis points (100 = 1%)
-   *
-   * @generated from field: int32 max_pct_equity_bps = 4;
-   */
-  maxPctEquityBps: number;
+	/**
+	 * basis points (100 = 1%)
+	 *
+	 * @generated from field: int32 max_pct_equity_bps = 4;
+	 */
+	maxPctEquityBps: number;
 
-  /**
-   * Portfolio limits
-   *
-   * @generated from field: int32 max_gross_pct_equity_bps = 5;
-   */
-  maxGrossPctEquityBps: number;
+	/**
+	 * Portfolio limits
+	 *
+	 * @generated from field: int32 max_gross_pct_equity_bps = 5;
+	 */
+	maxGrossPctEquityBps: number;
 
-  /**
-   * @generated from field: int32 max_net_pct_equity_bps = 6;
-   */
-  maxNetPctEquityBps: number;
+	/**
+	 * @generated from field: int32 max_net_pct_equity_bps = 6;
+	 */
+	maxNetPctEquityBps: number;
 
-  /**
-   * @generated from field: int32 max_risk_per_trade_bps = 7;
-   */
-  maxRiskPerTradeBps: number;
+	/**
+	 * @generated from field: int32 max_risk_per_trade_bps = 7;
+	 */
+	maxRiskPerTradeBps: number;
 
-  /**
-   * @generated from field: int32 max_sector_exposure_bps = 8;
-   */
-  maxSectorExposureBps: number;
+	/**
+	 * @generated from field: int32 max_sector_exposure_bps = 8;
+	 */
+	maxSectorExposureBps: number;
 
-  /**
-   * @generated from field: int32 max_positions = 9;
-   */
-  maxPositions: number;
+	/**
+	 * @generated from field: int32 max_positions = 9;
+	 */
+	maxPositions: number;
 
-  /**
-   * @generated from field: int32 max_concentration_bps = 10;
-   */
-  maxConcentrationBps: number;
+	/**
+	 * @generated from field: int32 max_concentration_bps = 10;
+	 */
+	maxConcentrationBps: number;
 
-  /**
-   * @generated from field: int32 max_correlation_bps = 11;
-   */
-  maxCorrelationBps: number;
+	/**
+	 * @generated from field: int32 max_correlation_bps = 11;
+	 */
+	maxCorrelationBps: number;
 
-  /**
-   * @generated from field: int32 max_drawdown_bps = 12;
-   */
-  maxDrawdownBps: number;
+	/**
+	 * @generated from field: int32 max_drawdown_bps = 12;
+	 */
+	maxDrawdownBps: number;
 
-  /**
-   * Options Greeks limits
-   *
-   * @generated from field: int64 max_delta_notional_cents = 13;
-   */
-  maxDeltaNotionalCents: bigint;
+	/**
+	 * Options Greeks limits
+	 *
+	 * @generated from field: int64 max_delta_notional_cents = 13;
+	 */
+	maxDeltaNotionalCents: bigint;
 
-  /**
-   * @generated from field: int64 max_gamma_scaled = 14;
-   */
-  maxGammaScaled: bigint;
+	/**
+	 * @generated from field: int64 max_gamma_scaled = 14;
+	 */
+	maxGammaScaled: bigint;
 
-  /**
-   * @generated from field: int64 max_vega_cents = 15;
-   */
-  maxVegaCents: bigint;
+	/**
+	 * @generated from field: int64 max_vega_cents = 15;
+	 */
+	maxVegaCents: bigint;
 
-  /**
-   * @generated from field: int64 max_theta_cents = 16;
-   */
-  maxThetaCents: bigint;
+	/**
+	 * @generated from field: int64 max_theta_cents = 16;
+	 */
+	maxThetaCents: bigint;
 };
 
 /**
  * Describes the message cream.v1.RiskConstraints.
  * Use `create(RiskConstraintsSchema)` to create a new message.
  */
-export const RiskConstraintsSchema: GenMessage<RiskConstraints> = /*@__PURE__*/
-  messageDesc(file_cream_v1_execution, 0);
+export const RiskConstraintsSchema: GenMessage<RiskConstraints> =
+	/*@__PURE__*/
+	messageDesc(file_cream_v1_execution, 0);
 
 /**
  * Individual constraint check result
@@ -131,48 +136,49 @@ export const RiskConstraintsSchema: GenMessage<RiskConstraints> = /*@__PURE__*/
  * @generated from message cream.v1.ConstraintCheck
  */
 export type ConstraintCheck = Message<"cream.v1.ConstraintCheck"> & {
-  /**
-   * Name of the constraint
-   *
-   * @generated from field: string name = 1;
-   */
-  name: string;
+	/**
+	 * Name of the constraint
+	 *
+	 * @generated from field: string name = 1;
+	 */
+	name: string;
 
-  /**
-   * Result of the check
-   *
-   * @generated from field: cream.v1.ConstraintResult result = 2;
-   */
-  result: ConstraintResult;
+	/**
+	 * Result of the check
+	 *
+	 * @generated from field: cream.v1.ConstraintResult result = 2;
+	 */
+	result: ConstraintResult;
 
-  /**
-   * Description of the constraint
-   *
-   * @generated from field: string description = 3;
-   */
-  description: string;
+	/**
+	 * Description of the constraint
+	 *
+	 * @generated from field: string description = 3;
+	 */
+	description: string;
 
-  /**
-   * Actual value that was checked
-   *
-   * @generated from field: optional double actual_value = 4;
-   */
-  actualValue?: number;
+	/**
+	 * Actual value that was checked
+	 *
+	 * @generated from field: optional double actual_value = 4;
+	 */
+	actualValue?: number;
 
-  /**
-   * Threshold that was applied
-   *
-   * @generated from field: optional double threshold = 5;
-   */
-  threshold?: number;
+	/**
+	 * Threshold that was applied
+	 *
+	 * @generated from field: optional double threshold = 5;
+	 */
+	threshold?: number;
 };
 
 /**
  * Describes the message cream.v1.ConstraintCheck.
  * Use `create(ConstraintCheckSchema)` to create a new message.
  */
-export const ConstraintCheckSchema: GenMessage<ConstraintCheck> = /*@__PURE__*/
-  messageDesc(file_cream_v1_execution, 1);
+export const ConstraintCheckSchema: GenMessage<ConstraintCheck> =
+	/*@__PURE__*/
+	messageDesc(file_cream_v1_execution, 1);
 
 /**
  * Request to validate a decision plan against constraints
@@ -180,41 +186,42 @@ export const ConstraintCheckSchema: GenMessage<ConstraintCheck> = /*@__PURE__*/
  * @generated from message cream.v1.CheckConstraintsRequest
  */
 export type CheckConstraintsRequest = Message<"cream.v1.CheckConstraintsRequest"> & {
-  /**
-   * Decision plan to validate
-   *
-   * @generated from field: cream.v1.DecisionPlan decision_plan = 1;
-   */
-  decisionPlan?: DecisionPlan;
+	/**
+	 * Decision plan to validate
+	 *
+	 * @generated from field: cream.v1.DecisionPlan decision_plan = 1;
+	 */
+	decisionPlan?: DecisionPlan;
 
-  /**
-   * Current account state
-   *
-   * @generated from field: cream.v1.AccountState account_state = 2;
-   */
-  accountState?: AccountState;
+	/**
+	 * Current account state
+	 *
+	 * @generated from field: cream.v1.AccountState account_state = 2;
+	 */
+	accountState?: AccountState;
 
-  /**
-   * Current positions
-   *
-   * @generated from field: repeated cream.v1.Position positions = 3;
-   */
-  positions: Position[];
+	/**
+	 * Current positions
+	 *
+	 * @generated from field: repeated cream.v1.Position positions = 3;
+	 */
+	positions: Position[];
 
-  /**
-   * Runtime risk constraints (optional - uses defaults if not provided)
-   *
-   * @generated from field: optional cream.v1.RiskConstraints constraints = 4;
-   */
-  constraints?: RiskConstraints;
+	/**
+	 * Runtime risk constraints (optional - uses defaults if not provided)
+	 *
+	 * @generated from field: optional cream.v1.RiskConstraints constraints = 4;
+	 */
+	constraints?: RiskConstraints;
 };
 
 /**
  * Describes the message cream.v1.CheckConstraintsRequest.
  * Use `create(CheckConstraintsRequestSchema)` to create a new message.
  */
-export const CheckConstraintsRequestSchema: GenMessage<CheckConstraintsRequest> = /*@__PURE__*/
-  messageDesc(file_cream_v1_execution, 2);
+export const CheckConstraintsRequestSchema: GenMessage<CheckConstraintsRequest> =
+	/*@__PURE__*/
+	messageDesc(file_cream_v1_execution, 2);
 
 /**
  * Response from constraint validation
@@ -222,48 +229,49 @@ export const CheckConstraintsRequestSchema: GenMessage<CheckConstraintsRequest> 
  * @generated from message cream.v1.CheckConstraintsResponse
  */
 export type CheckConstraintsResponse = Message<"cream.v1.CheckConstraintsResponse"> & {
-  /**
-   * Overall result
-   *
-   * @generated from field: bool approved = 1;
-   */
-  approved: boolean;
+	/**
+	 * Overall result
+	 *
+	 * @generated from field: bool approved = 1;
+	 */
+	approved: boolean;
 
-  /**
-   * Individual constraint results
-   *
-   * @generated from field: repeated cream.v1.ConstraintCheck checks = 2;
-   */
-  checks: ConstraintCheck[];
+	/**
+	 * Individual constraint results
+	 *
+	 * @generated from field: repeated cream.v1.ConstraintCheck checks = 2;
+	 */
+	checks: ConstraintCheck[];
 
-  /**
-   * Detailed violations (when not approved)
-   *
-   * @generated from field: repeated cream.v1.ConstraintViolation violations = 3;
-   */
-  violations: ConstraintViolation[];
+	/**
+	 * Detailed violations (when not approved)
+	 *
+	 * @generated from field: repeated cream.v1.ConstraintViolation violations = 3;
+	 */
+	violations: ConstraintViolation[];
 
-  /**
-   * Timestamp of validation
-   *
-   * @generated from field: google.protobuf.Timestamp validated_at = 4;
-   */
-  validatedAt?: Timestamp;
+	/**
+	 * Timestamp of validation
+	 *
+	 * @generated from field: google.protobuf.Timestamp validated_at = 4;
+	 */
+	validatedAt?: Timestamp;
 
-  /**
-   * Rejection reason (if not approved)
-   *
-   * @generated from field: optional string rejection_reason = 5;
-   */
-  rejectionReason?: string;
+	/**
+	 * Rejection reason (if not approved)
+	 *
+	 * @generated from field: optional string rejection_reason = 5;
+	 */
+	rejectionReason?: string;
 };
 
 /**
  * Describes the message cream.v1.CheckConstraintsResponse.
  * Use `create(CheckConstraintsResponseSchema)` to create a new message.
  */
-export const CheckConstraintsResponseSchema: GenMessage<CheckConstraintsResponse> = /*@__PURE__*/
-  messageDesc(file_cream_v1_execution, 3);
+export const CheckConstraintsResponseSchema: GenMessage<CheckConstraintsResponse> =
+	/*@__PURE__*/
+	messageDesc(file_cream_v1_execution, 3);
 
 /**
  * Detailed constraint violation
@@ -271,69 +279,70 @@ export const CheckConstraintsResponseSchema: GenMessage<CheckConstraintsResponse
  * @generated from message cream.v1.ConstraintViolation
  */
 export type ConstraintViolation = Message<"cream.v1.ConstraintViolation"> & {
-  /**
-   * Violation code (e.g., "MAX_POSITION_SIZE", "INSUFFICIENT_MARGIN")
-   *
-   * @generated from field: string code = 1;
-   */
-  code: string;
+	/**
+	 * Violation code (e.g., "MAX_POSITION_SIZE", "INSUFFICIENT_MARGIN")
+	 *
+	 * @generated from field: string code = 1;
+	 */
+	code: string;
 
-  /**
-   * Severity level
-   *
-   * @generated from field: cream.v1.ViolationSeverity severity = 2;
-   */
-  severity: ViolationSeverity;
+	/**
+	 * Severity level
+	 *
+	 * @generated from field: cream.v1.ViolationSeverity severity = 2;
+	 */
+	severity: ViolationSeverity;
 
-  /**
-   * Human-readable description
-   *
-   * @generated from field: string message = 3;
-   */
-  message: string;
+	/**
+	 * Human-readable description
+	 *
+	 * @generated from field: string message = 3;
+	 */
+	message: string;
 
-  /**
-   * Instrument that violated (if applicable)
-   *
-   * @generated from field: optional string instrument_id = 4;
-   */
-  instrumentId?: string;
+	/**
+	 * Instrument that violated (if applicable)
+	 *
+	 * @generated from field: optional string instrument_id = 4;
+	 */
+	instrumentId?: string;
 
-  /**
-   * Field path that violated (e.g., "size.quantity")
-   *
-   * @generated from field: optional string field_path = 5;
-   */
-  fieldPath?: string;
+	/**
+	 * Field path that violated (e.g., "size.quantity")
+	 *
+	 * @generated from field: optional string field_path = 5;
+	 */
+	fieldPath?: string;
 
-  /**
-   * Observed value that triggered violation
-   *
-   * @generated from field: optional double observed_value = 6;
-   */
-  observedValue?: number;
+	/**
+	 * Observed value that triggered violation
+	 *
+	 * @generated from field: optional double observed_value = 6;
+	 */
+	observedValue?: number;
 
-  /**
-   * Limit that was exceeded
-   *
-   * @generated from field: optional double limit_value = 7;
-   */
-  limitValue?: number;
+	/**
+	 * Limit that was exceeded
+	 *
+	 * @generated from field: optional double limit_value = 7;
+	 */
+	limitValue?: number;
 
-  /**
-   * Constraint name that was violated
-   *
-   * @generated from field: string constraint_name = 8;
-   */
-  constraintName: string;
+	/**
+	 * Constraint name that was violated
+	 *
+	 * @generated from field: string constraint_name = 8;
+	 */
+	constraintName: string;
 };
 
 /**
  * Describes the message cream.v1.ConstraintViolation.
  * Use `create(ConstraintViolationSchema)` to create a new message.
  */
-export const ConstraintViolationSchema: GenMessage<ConstraintViolation> = /*@__PURE__*/
-  messageDesc(file_cream_v1_execution, 4);
+export const ConstraintViolationSchema: GenMessage<ConstraintViolation> =
+	/*@__PURE__*/
+	messageDesc(file_cream_v1_execution, 4);
 
 /**
  * Current account state
@@ -341,90 +350,91 @@ export const ConstraintViolationSchema: GenMessage<ConstraintViolation> = /*@__P
  * @generated from message cream.v1.AccountState
  */
 export type AccountState = Message<"cream.v1.AccountState"> & {
-  /**
-   * Account identifier
-   *
-   * @generated from field: string account_id = 1;
-   */
-  accountId: string;
+	/**
+	 * Account identifier
+	 *
+	 * @generated from field: string account_id = 1;
+	 */
+	accountId: string;
 
-  /**
-   * Total account equity
-   *
-   * @generated from field: double equity = 2;
-   */
-  equity: number;
+	/**
+	 * Total account equity
+	 *
+	 * @generated from field: double equity = 2;
+	 */
+	equity: number;
 
-  /**
-   * Available cash for trading
-   *
-   * @generated from field: double buying_power = 3;
-   */
-  buyingPower: number;
+	/**
+	 * Available cash for trading
+	 *
+	 * @generated from field: double buying_power = 3;
+	 */
+	buyingPower: number;
 
-  /**
-   * Current margin used
-   *
-   * @generated from field: double margin_used = 4;
-   */
-  marginUsed: number;
+	/**
+	 * Current margin used
+	 *
+	 * @generated from field: double margin_used = 4;
+	 */
+	marginUsed: number;
 
-  /**
-   * Day trade count (for PDT rule) - used in rolling 5-day window
-   *
-   * @generated from field: int32 day_trade_count = 5;
-   */
-  dayTradeCount: number;
+	/**
+	 * Day trade count (for PDT rule) - used in rolling 5-day window
+	 *
+	 * @generated from field: int32 day_trade_count = 5;
+	 */
+	dayTradeCount: number;
 
-  /**
-   * Whether pattern day trader rules apply (account flagged as PDT)
-   *
-   * @generated from field: bool is_pdt_restricted = 6;
-   */
-  isPdtRestricted: boolean;
+	/**
+	 * Whether pattern day trader rules apply (account flagged as PDT)
+	 *
+	 * @generated from field: bool is_pdt_restricted = 6;
+	 */
+	isPdtRestricted: boolean;
 
-  /**
-   * Timestamp of state snapshot
-   *
-   * @generated from field: google.protobuf.Timestamp as_of = 7;
-   */
-  asOf?: Timestamp;
+	/**
+	 * Timestamp of state snapshot
+	 *
+	 * @generated from field: google.protobuf.Timestamp as_of = 7;
+	 */
+	asOf?: Timestamp;
 
-  /**
-   * Previous day's equity (used for $25k PDT threshold check)
-   *
-   * @generated from field: double last_equity = 8;
-   */
-  lastEquity: number;
+	/**
+	 * Previous day's equity (used for $25k PDT threshold check)
+	 *
+	 * @generated from field: double last_equity = 8;
+	 */
+	lastEquity: number;
 
-  /**
-   * Day trading buying power (4x equity for PDT accounts)
-   *
-   * @generated from field: double daytrading_buying_power = 9;
-   */
-  daytradingBuyingPower: number;
+	/**
+	 * Day trading buying power (4x equity for PDT accounts)
+	 *
+	 * @generated from field: double daytrading_buying_power = 9;
+	 */
+	daytradingBuyingPower: number;
 
-  /**
-   * Remaining day trades available (max 3 when under $25k)
-   *
-   * @generated from field: int32 remaining_day_trades = 10;
-   */
-  remainingDayTrades: number;
+	/**
+	 * Remaining day trades available (max 3 when under $25k)
+	 *
+	 * @generated from field: int32 remaining_day_trades = 10;
+	 */
+	remainingDayTrades: number;
 
-  /**
-   * Whether account is under the $25k PDT threshold
-   *
-   * @generated from field: bool under_pdt_threshold = 11;
-   */
-  underPdtThreshold: boolean;
+	/**
+	 * Whether account is under the $25k PDT threshold
+	 *
+	 * @generated from field: bool under_pdt_threshold = 11;
+	 */
+	underPdtThreshold: boolean;
 };
 
 /**
  * Describes the message cream.v1.AccountState.
  * Use `create(AccountStateSchema)` to create a new message.
  */
-export const AccountStateSchema: GenMessage<AccountState> = /*@__PURE__*/
-  messageDesc(file_cream_v1_execution, 5);
+export const AccountStateSchema: GenMessage<AccountState> =
+	/*@__PURE__*/
+	messageDesc(file_cream_v1_execution, 5);
 
 /**
  * Current position
@@ -432,62 +442,63 @@ export const AccountStateSchema: GenMessage<AccountState> = /*@__PURE__*/
  * @generated from message cream.v1.Position
  */
 export type Position = Message<"cream.v1.Position"> & {
-  /**
-   * Instrument
-   *
-   * @generated from field: cream.v1.Instrument instrument = 1;
-   */
-  instrument?: Instrument;
+	/**
+	 * Instrument
+	 *
+	 * @generated from field: cream.v1.Instrument instrument = 1;
+	 */
+	instrument?: Instrument;
 
-  /**
-   * Quantity held (signed: positive=long, negative=short)
-   *
-   * @generated from field: int32 quantity = 2;
-   */
-  quantity: number;
+	/**
+	 * Quantity held (signed: positive=long, negative=short)
+	 *
+	 * @generated from field: int32 quantity = 2;
+	 */
+	quantity: number;
 
-  /**
-   * Average entry price
-   *
-   * @generated from field: double avg_entry_price = 3;
-   */
-  avgEntryPrice: number;
+	/**
+	 * Average entry price
+	 *
+	 * @generated from field: double avg_entry_price = 3;
+	 */
+	avgEntryPrice: number;
 
-  /**
-   * Current market value
-   *
-   * @generated from field: double market_value = 4;
-   */
-  marketValue: number;
+	/**
+	 * Current market value
+	 *
+	 * @generated from field: double market_value = 4;
+	 */
+	marketValue: number;
 
-  /**
-   * Unrealized P&L
-   *
-   * @generated from field: double unrealized_pnl = 5;
-   */
-  unrealizedPnl: number;
+	/**
+	 * Unrealized P&L
+	 *
+	 * @generated from field: double unrealized_pnl = 5;
+	 */
+	unrealizedPnl: number;
 
-  /**
-   * Unrealized P&L percentage
-   *
-   * @generated from field: double unrealized_pnl_pct = 6;
-   */
-  unrealizedPnlPct: number;
+	/**
+	 * Unrealized P&L percentage
+	 *
+	 * @generated from field: double unrealized_pnl_pct = 6;
+	 */
+	unrealizedPnlPct: number;
 
-  /**
-   * Cost basis
-   *
-   * @generated from field: double cost_basis = 7;
-   */
-  costBasis: number;
+	/**
+	 * Cost basis
+	 *
+	 * @generated from field: double cost_basis = 7;
+	 */
+	costBasis: number;
 };
 
 /**
  * Describes the message cream.v1.Position.
  * Use `create(PositionSchema)` to create a new message.
  */
-export const PositionSchema: GenMessage<Position> = /*@__PURE__*/
-  messageDesc(file_cream_v1_execution, 6);
+export const PositionSchema: GenMessage<Position> =
+	/*@__PURE__*/
+	messageDesc(file_cream_v1_execution, 6);
 
 /**
  * Request to submit an order
@@ -495,69 +506,70 @@ export const PositionSchema: GenMessage<Position> = /*@__PURE__*/
  * @generated from message cream.v1.SubmitOrderRequest
  */
 export type SubmitOrderRequest = Message<"cream.v1.SubmitOrderRequest"> & {
-  /**
-   * Instrument to trade
-   *
-   * @generated from field: cream.v1.Instrument instrument = 1;
-   */
-  instrument?: Instrument;
+	/**
+	 * Instrument to trade
+	 *
+	 * @generated from field: cream.v1.Instrument instrument = 1;
+	 */
+	instrument?: Instrument;
 
-  /**
-   * Buy or sell
-   *
-   * @generated from field: cream.v1.OrderSide side = 2;
-   */
-  side: OrderSide;
+	/**
+	 * Buy or sell
+	 *
+	 * @generated from field: cream.v1.OrderSide side = 2;
+	 */
+	side: OrderSide;
 
-  /**
-   * Quantity
-   *
-   * @generated from field: int32 quantity = 3;
-   */
-  quantity: number;
+	/**
+	 * Quantity
+	 *
+	 * @generated from field: int32 quantity = 3;
+	 */
+	quantity: number;
 
-  /**
-   * Order type
-   *
-   * @generated from field: cream.v1.OrderType order_type = 4;
-   */
-  orderType: OrderType;
+	/**
+	 * Order type
+	 *
+	 * @generated from field: cream.v1.OrderType order_type = 4;
+	 */
+	orderType: OrderType;
 
-  /**
-   * Limit price (required for limit orders)
-   *
-   * @generated from field: optional double limit_price = 5;
-   */
-  limitPrice?: number;
+	/**
+	 * Limit price (required for limit orders)
+	 *
+	 * @generated from field: optional double limit_price = 5;
+	 */
+	limitPrice?: number;
 
-  /**
-   * Time in force
-   *
-   * @generated from field: cream.v1.TimeInForce time_in_force = 6;
-   */
-  timeInForce: TimeInForce;
+	/**
+	 * Time in force
+	 *
+	 * @generated from field: cream.v1.TimeInForce time_in_force = 6;
+	 */
+	timeInForce: TimeInForce;
 
-  /**
-   * Client order ID for tracking
-   *
-   * @generated from field: string client_order_id = 7;
-   */
-  clientOrderId: string;
+	/**
+	 * Client order ID for tracking
+	 *
+	 * @generated from field: string client_order_id = 7;
+	 */
+	clientOrderId: string;
 
-  /**
-   * Reference to decision cycle
-   *
-   * @generated from field: string cycle_id = 8;
-   */
-  cycleId: string;
+	/**
+	 * Reference to decision cycle
+	 *
+	 * @generated from field: string cycle_id = 8;
+	 */
+	cycleId: string;
 };
 
 /**
  * Describes the message cream.v1.SubmitOrderRequest.
  * Use `create(SubmitOrderRequestSchema)` to create a new message.
  */
-export const SubmitOrderRequestSchema: GenMessage<SubmitOrderRequest> = /*@__PURE__*/
-  messageDesc(file_cream_v1_execution, 7);
+export const SubmitOrderRequestSchema: GenMessage<SubmitOrderRequest> =
+	/*@__PURE__*/
+	messageDesc(file_cream_v1_execution, 7);
 
 /**
  * Response from order submission
@@ -565,48 +577,49 @@ export const SubmitOrderRequestSchema: GenMessage<SubmitOrderRequest> = /*@__PUR
  * @generated from message cream.v1.SubmitOrderResponse
  */
 export type SubmitOrderResponse = Message<"cream.v1.SubmitOrderResponse"> & {
-  /**
-   * Broker-assigned order ID
-   *
-   * @generated from field: string order_id = 1;
-   */
-  orderId: string;
+	/**
+	 * Broker-assigned order ID
+	 *
+	 * @generated from field: string order_id = 1;
+	 */
+	orderId: string;
 
-  /**
-   * Client order ID (echoed back)
-   *
-   * @generated from field: string client_order_id = 2;
-   */
-  clientOrderId: string;
+	/**
+	 * Client order ID (echoed back)
+	 *
+	 * @generated from field: string client_order_id = 2;
+	 */
+	clientOrderId: string;
 
-  /**
-   * Current order status
-   *
-   * @generated from field: cream.v1.OrderStatus status = 3;
-   */
-  status: OrderStatus;
+	/**
+	 * Current order status
+	 *
+	 * @generated from field: cream.v1.OrderStatus status = 3;
+	 */
+	status: OrderStatus;
 
-  /**
-   * Submission timestamp
-   *
-   * @generated from field: google.protobuf.Timestamp submitted_at = 4;
-   */
-  submittedAt?: Timestamp;
+	/**
+	 * Submission timestamp
+	 *
+	 * @generated from field: google.protobuf.Timestamp submitted_at = 4;
+	 */
+	submittedAt?: Timestamp;
 
-  /**
-   * Error message if rejected
-   *
-   * @generated from field: optional string error_message = 5;
-   */
-  errorMessage?: string;
+	/**
+	 * Error message if rejected
+	 *
+	 * @generated from field: optional string error_message = 5;
+	 */
+	errorMessage?: string;
 };
 
 /**
  * Describes the message cream.v1.SubmitOrderResponse.
  * Use `create(SubmitOrderResponseSchema)` to create a new message.
  */
-export const SubmitOrderResponseSchema: GenMessage<SubmitOrderResponse> = /*@__PURE__*/
-  messageDesc(file_cream_v1_execution, 8);
+export const SubmitOrderResponseSchema: GenMessage<SubmitOrderResponse> =
+	/*@__PURE__*/
+	messageDesc(file_cream_v1_execution, 8);
 
 /**
  * Order execution acknowledgment
@@ -614,48 +627,49 @@ export const SubmitOrderResponseSchema: GenMessage<SubmitOrderResponse> = /*@__P
  * @generated from message cream.v1.ExecutionAck
  */
 export type ExecutionAck = Message<"cream.v1.ExecutionAck"> & {
-  /**
-   * Decision cycle ID
-   *
-   * @generated from field: string cycle_id = 1;
-   */
-  cycleId: string;
+	/**
+	 * Decision cycle ID
+	 *
+	 * @generated from field: string cycle_id = 1;
+	 */
+	cycleId: string;
 
-  /**
-   * Environment the execution ran in
-   *
-   * @generated from field: cream.v1.Environment environment = 2;
-   */
-  environment: Environment;
+	/**
+	 * Environment the execution ran in
+	 *
+	 * @generated from field: cream.v1.Environment environment = 2;
+	 */
+	environment: Environment;
 
-  /**
-   * Timestamp of acknowledgment
-   *
-   * @generated from field: google.protobuf.Timestamp ack_time = 3;
-   */
-  ackTime?: Timestamp;
+	/**
+	 * Timestamp of acknowledgment
+	 *
+	 * @generated from field: google.protobuf.Timestamp ack_time = 3;
+	 */
+	ackTime?: Timestamp;
 
-  /**
-   * Orders that were executed
-   *
-   * @generated from field: repeated cream.v1.OrderState orders = 4;
-   */
-  orders: OrderState[];
+	/**
+	 * Orders that were executed
+	 *
+	 * @generated from field: repeated cream.v1.OrderState orders = 4;
+	 */
+	orders: OrderState[];
 
-  /**
-   * Errors encountered during execution
-   *
-   * @generated from field: repeated cream.v1.ExecutionError errors = 5;
-   */
-  errors: ExecutionError[];
+	/**
+	 * Errors encountered during execution
+	 *
+	 * @generated from field: repeated cream.v1.ExecutionError errors = 5;
+	 */
+	errors: ExecutionError[];
 };
 
 /**
  * Describes the message cream.v1.ExecutionAck.
  * Use `create(ExecutionAckSchema)` to create a new message.
  */
-export const ExecutionAckSchema: GenMessage<ExecutionAck> = /*@__PURE__*/
-  messageDesc(file_cream_v1_execution, 9);
+export const ExecutionAckSchema: GenMessage<ExecutionAck> =
+	/*@__PURE__*/
+	messageDesc(file_cream_v1_execution, 9);
 
 /**
  * Complete order state for tracking
@@ -663,153 +677,154 @@ export const ExecutionAckSchema: GenMessage<ExecutionAck> = /*@__PURE__*/
  * @generated from message cream.v1.OrderState
  */
 export type OrderState = Message<"cream.v1.OrderState"> & {
-  /**
-   * Internal order ID
-   *
-   * @generated from field: string order_id = 1;
-   */
-  orderId: string;
+	/**
+	 * Internal order ID
+	 *
+	 * @generated from field: string order_id = 1;
+	 */
+	orderId: string;
 
-  /**
-   * Broker-assigned order ID
-   *
-   * @generated from field: string broker_order_id = 2;
-   */
-  brokerOrderId: string;
+	/**
+	 * Broker-assigned order ID
+	 *
+	 * @generated from field: string broker_order_id = 2;
+	 */
+	brokerOrderId: string;
 
-  /**
-   * Client order ID
-   *
-   * @generated from field: string client_order_id = 3;
-   */
-  clientOrderId: string;
+	/**
+	 * Client order ID
+	 *
+	 * @generated from field: string client_order_id = 3;
+	 */
+	clientOrderId: string;
 
-  /**
-   * Whether this is a multi-leg order
-   *
-   * @generated from field: bool is_multi_leg = 4;
-   */
-  isMultiLeg: boolean;
+	/**
+	 * Whether this is a multi-leg order
+	 *
+	 * @generated from field: bool is_multi_leg = 4;
+	 */
+	isMultiLeg: boolean;
 
-  /**
-   * Leg states (for multi-leg orders)
-   *
-   * @generated from field: repeated cream.v1.OrderLegState legs = 5;
-   */
-  legs: OrderLegState[];
+	/**
+	 * Leg states (for multi-leg orders)
+	 *
+	 * @generated from field: repeated cream.v1.OrderLegState legs = 5;
+	 */
+	legs: OrderLegState[];
 
-  /**
-   * Current status
-   *
-   * @generated from field: cream.v1.OrderStatus status = 6;
-   */
-  status: OrderStatus;
+	/**
+	 * Current status
+	 *
+	 * @generated from field: cream.v1.OrderStatus status = 6;
+	 */
+	status: OrderStatus;
 
-  /**
-   * Order side
-   *
-   * @generated from field: cream.v1.OrderSide side = 7;
-   */
-  side: OrderSide;
+	/**
+	 * Order side
+	 *
+	 * @generated from field: cream.v1.OrderSide side = 7;
+	 */
+	side: OrderSide;
 
-  /**
-   * Order type
-   *
-   * @generated from field: cream.v1.OrderType order_type = 8;
-   */
-  orderType: OrderType;
+	/**
+	 * Order type
+	 *
+	 * @generated from field: cream.v1.OrderType order_type = 8;
+	 */
+	orderType: OrderType;
 
-  /**
-   * Instrument (for single-leg orders)
-   *
-   * @generated from field: cream.v1.Instrument instrument = 9;
-   */
-  instrument?: Instrument;
+	/**
+	 * Instrument (for single-leg orders)
+	 *
+	 * @generated from field: cream.v1.Instrument instrument = 9;
+	 */
+	instrument?: Instrument;
 
-  /**
-   * Requested quantity
-   *
-   * @generated from field: int32 requested_quantity = 10;
-   */
-  requestedQuantity: number;
+	/**
+	 * Requested quantity
+	 *
+	 * @generated from field: int32 requested_quantity = 10;
+	 */
+	requestedQuantity: number;
 
-  /**
-   * Filled quantity
-   *
-   * @generated from field: int32 filled_quantity = 11;
-   */
-  filledQuantity: number;
+	/**
+	 * Filled quantity
+	 *
+	 * @generated from field: int32 filled_quantity = 11;
+	 */
+	filledQuantity: number;
 
-  /**
-   * Average fill price
-   *
-   * @generated from field: double avg_fill_price = 12;
-   */
-  avgFillPrice: number;
+	/**
+	 * Average fill price
+	 *
+	 * @generated from field: double avg_fill_price = 12;
+	 */
+	avgFillPrice: number;
 
-  /**
-   * Limit price (if applicable)
-   *
-   * @generated from field: optional double limit_price = 13;
-   */
-  limitPrice?: number;
+	/**
+	 * Limit price (if applicable)
+	 *
+	 * @generated from field: optional double limit_price = 13;
+	 */
+	limitPrice?: number;
 
-  /**
-   * Stop price (if applicable)
-   *
-   * @generated from field: optional double stop_price = 14;
-   */
-  stopPrice?: number;
+	/**
+	 * Stop price (if applicable)
+	 *
+	 * @generated from field: optional double stop_price = 14;
+	 */
+	stopPrice?: number;
 
-  /**
-   * Time in force
-   *
-   * @generated from field: cream.v1.TimeInForce time_in_force = 15;
-   */
-  timeInForce: TimeInForce;
+	/**
+	 * Time in force
+	 *
+	 * @generated from field: cream.v1.TimeInForce time_in_force = 15;
+	 */
+	timeInForce: TimeInForce;
 
-  /**
-   * Submission timestamp
-   *
-   * @generated from field: google.protobuf.Timestamp submitted_at = 16;
-   */
-  submittedAt?: Timestamp;
+	/**
+	 * Submission timestamp
+	 *
+	 * @generated from field: google.protobuf.Timestamp submitted_at = 16;
+	 */
+	submittedAt?: Timestamp;
 
-  /**
-   * Last update timestamp
-   *
-   * @generated from field: google.protobuf.Timestamp last_update_at = 17;
-   */
-  lastUpdateAt?: Timestamp;
+	/**
+	 * Last update timestamp
+	 *
+	 * @generated from field: google.protobuf.Timestamp last_update_at = 17;
+	 */
+	lastUpdateAt?: Timestamp;
 
-  /**
-   * Commission charged
-   *
-   * @generated from field: double commission = 18;
-   */
-  commission: number;
+	/**
+	 * Commission charged
+	 *
+	 * @generated from field: double commission = 18;
+	 */
+	commission: number;
 
-  /**
-   * Reference to decision cycle
-   *
-   * @generated from field: string cycle_id = 19;
-   */
-  cycleId: string;
+	/**
+	 * Reference to decision cycle
+	 *
+	 * @generated from field: string cycle_id = 19;
+	 */
+	cycleId: string;
 
-  /**
-   * Status message from broker
-   *
-   * @generated from field: string status_message = 20;
-   */
-  statusMessage: string;
+	/**
+	 * Status message from broker
+	 *
+	 * @generated from field: string status_message = 20;
+	 */
+	statusMessage: string;
 };
 
 /**
  * Describes the message cream.v1.OrderState.
  * Use `create(OrderStateSchema)` to create a new message.
  */
-export const OrderStateSchema: GenMessage<OrderState> = /*@__PURE__*/
-  messageDesc(file_cream_v1_execution, 10);
+export const OrderStateSchema: GenMessage<OrderState> =
+	/*@__PURE__*/
+	messageDesc(file_cream_v1_execution, 10);
 
 /**
  * State of a single leg in a multi-leg order
@@ -817,83 +832,84 @@ export const OrderStateSchema: GenMessage<OrderState> = /*@__PURE__*/
  * @generated from message cream.v1.OrderLegState
  */
 export type OrderLegState = Message<"cream.v1.OrderLegState"> & {
-  /**
-   * Leg identifier within the order
-   *
-   * @generated from field: string leg_id = 1;
-   */
-  legId: string;
+	/**
+	 * Leg identifier within the order
+	 *
+	 * @generated from field: string leg_id = 1;
+	 */
+	legId: string;
 
-  /**
-   * Instrument for this leg
-   *
-   * @generated from field: cream.v1.Instrument instrument = 2;
-   */
-  instrument?: Instrument;
+	/**
+	 * Instrument for this leg
+	 *
+	 * @generated from field: cream.v1.Instrument instrument = 2;
+	 */
+	instrument?: Instrument;
 
-  /**
-   * Side for this leg (BUY or SELL)
-   *
-   * @generated from field: cream.v1.OrderSide side = 3;
-   */
-  side: OrderSide;
+	/**
+	 * Side for this leg (BUY or SELL)
+	 *
+	 * @generated from field: cream.v1.OrderSide side = 3;
+	 */
+	side: OrderSide;
 
-  /**
-   * Requested quantity for this leg
-   *
-   * @generated from field: int32 quantity = 4;
-   */
-  quantity: number;
+	/**
+	 * Requested quantity for this leg
+	 *
+	 * @generated from field: int32 quantity = 4;
+	 */
+	quantity: number;
 
-  /**
-   * Order type for this leg
-   *
-   * @generated from field: cream.v1.OrderType order_type = 5;
-   */
-  orderType: OrderType;
+	/**
+	 * Order type for this leg
+	 *
+	 * @generated from field: cream.v1.OrderType order_type = 5;
+	 */
+	orderType: OrderType;
 
-  /**
-   * Limit price for this leg (if applicable)
-   *
-   * @generated from field: optional double limit_price = 6;
-   */
-  limitPrice?: number;
+	/**
+	 * Limit price for this leg (if applicable)
+	 *
+	 * @generated from field: optional double limit_price = 6;
+	 */
+	limitPrice?: number;
 
-  /**
-   * Status of this leg
-   *
-   * @generated from field: cream.v1.OrderStatus status = 7;
-   */
-  status: OrderStatus;
+	/**
+	 * Status of this leg
+	 *
+	 * @generated from field: cream.v1.OrderStatus status = 7;
+	 */
+	status: OrderStatus;
 
-  /**
-   * Filled quantity for this leg
-   *
-   * @generated from field: int32 filled_quantity = 8;
-   */
-  filledQuantity: number;
+	/**
+	 * Filled quantity for this leg
+	 *
+	 * @generated from field: int32 filled_quantity = 8;
+	 */
+	filledQuantity: number;
 
-  /**
-   * Average fill price for this leg
-   *
-   * @generated from field: double avg_fill_price = 9;
-   */
-  avgFillPrice: number;
+	/**
+	 * Average fill price for this leg
+	 *
+	 * @generated from field: double avg_fill_price = 9;
+	 */
+	avgFillPrice: number;
 
-  /**
-   * Last update timestamp for this leg
-   *
-   * @generated from field: google.protobuf.Timestamp last_update_at = 10;
-   */
-  lastUpdateAt?: Timestamp;
+	/**
+	 * Last update timestamp for this leg
+	 *
+	 * @generated from field: google.protobuf.Timestamp last_update_at = 10;
+	 */
+	lastUpdateAt?: Timestamp;
 };
 
 /**
  * Describes the message cream.v1.OrderLegState.
  * Use `create(OrderLegStateSchema)` to create a new message.
  */
-export const OrderLegStateSchema: GenMessage<OrderLegState> = /*@__PURE__*/
-  messageDesc(file_cream_v1_execution, 11);
+export const OrderLegStateSchema: GenMessage<OrderLegState> =
+	/*@__PURE__*/
+	messageDesc(file_cream_v1_execution, 11);
 
 /**
  * Execution error
@@ -901,55 +917,56 @@ export const OrderLegStateSchema: GenMessage<OrderLegState> = /*@__PURE__*/
  * @generated from message cream.v1.ExecutionError
  */
 export type ExecutionError = Message<"cream.v1.ExecutionError"> & {
-  /**
-   * Error code
-   *
-   * @generated from field: string code = 1;
-   */
-  code: string;
+	/**
+	 * Error code
+	 *
+	 * @generated from field: string code = 1;
+	 */
+	code: string;
 
-  /**
-   * Human-readable error message
-   *
-   * @generated from field: string message = 2;
-   */
-  message: string;
+	/**
+	 * Human-readable error message
+	 *
+	 * @generated from field: string message = 2;
+	 */
+	message: string;
 
-  /**
-   * Instrument that caused the error (if applicable)
-   *
-   * @generated from field: optional string instrument_id = 3;
-   */
-  instrumentId?: string;
+	/**
+	 * Instrument that caused the error (if applicable)
+	 *
+	 * @generated from field: optional string instrument_id = 3;
+	 */
+	instrumentId?: string;
 
-  /**
-   * Order ID that caused the error (if applicable)
-   *
-   * @generated from field: optional string order_id = 4;
-   */
-  orderId?: string;
+	/**
+	 * Order ID that caused the error (if applicable)
+	 *
+	 * @generated from field: optional string order_id = 4;
+	 */
+	orderId?: string;
 
-  /**
-   * Whether this error is retryable
-   *
-   * @generated from field: bool retryable = 5;
-   */
-  retryable: boolean;
+	/**
+	 * Whether this error is retryable
+	 *
+	 * @generated from field: bool retryable = 5;
+	 */
+	retryable: boolean;
 
-  /**
-   * Suggested action
-   *
-   * @generated from field: string suggested_action = 6;
-   */
-  suggestedAction: string;
+	/**
+	 * Suggested action
+	 *
+	 * @generated from field: string suggested_action = 6;
+	 */
+	suggestedAction: string;
 };
 
 /**
  * Describes the message cream.v1.ExecutionError.
  * Use `create(ExecutionErrorSchema)` to create a new message.
  */
-export const ExecutionErrorSchema: GenMessage<ExecutionError> = /*@__PURE__*/
-  messageDesc(file_cream_v1_execution, 12);
+export const ExecutionErrorSchema: GenMessage<ExecutionError> =
+	/*@__PURE__*/
+	messageDesc(file_cream_v1_execution, 12);
 
 /**
  * Request to get order state
@@ -957,20 +974,21 @@ export const ExecutionErrorSchema: GenMessage<ExecutionError> = /*@__PURE__*/
  * @generated from message cream.v1.GetOrderStateRequest
  */
 export type GetOrderStateRequest = Message<"cream.v1.GetOrderStateRequest"> & {
-  /**
-   * Order ID to query (can be broker order ID or internal order ID)
-   *
-   * @generated from field: string order_id = 1;
-   */
-  orderId: string;
+	/**
+	 * Order ID to query (can be broker order ID or internal order ID)
+	 *
+	 * @generated from field: string order_id = 1;
+	 */
+	orderId: string;
 };
 
 /**
  * Describes the message cream.v1.GetOrderStateRequest.
  * Use `create(GetOrderStateRequestSchema)` to create a new message.
  */
-export const GetOrderStateRequestSchema: GenMessage<GetOrderStateRequest> = /*@__PURE__*/
-  messageDesc(file_cream_v1_execution, 13);
+export const GetOrderStateRequestSchema: GenMessage<GetOrderStateRequest> =
+	/*@__PURE__*/
+	messageDesc(file_cream_v1_execution, 13);
 
 /**
  * Response with order state
@@ -978,111 +996,112 @@ export const GetOrderStateRequestSchema: GenMessage<GetOrderStateRequest> = /*@_
  * @generated from message cream.v1.GetOrderStateResponse
  */
 export type GetOrderStateResponse = Message<"cream.v1.GetOrderStateResponse"> & {
-  /**
-   * Order ID
-   *
-   * @generated from field: string order_id = 1;
-   */
-  orderId: string;
+	/**
+	 * Order ID
+	 *
+	 * @generated from field: string order_id = 1;
+	 */
+	orderId: string;
 
-  /**
-   * Broker order ID
-   *
-   * @generated from field: string broker_order_id = 2;
-   */
-  brokerOrderId: string;
+	/**
+	 * Broker order ID
+	 *
+	 * @generated from field: string broker_order_id = 2;
+	 */
+	brokerOrderId: string;
 
-  /**
-   * Instrument
-   *
-   * @generated from field: cream.v1.Instrument instrument = 3;
-   */
-  instrument?: Instrument;
+	/**
+	 * Instrument
+	 *
+	 * @generated from field: cream.v1.Instrument instrument = 3;
+	 */
+	instrument?: Instrument;
 
-  /**
-   * Current status
-   *
-   * @generated from field: cream.v1.OrderStatus status = 4;
-   */
-  status: OrderStatus;
+	/**
+	 * Current status
+	 *
+	 * @generated from field: cream.v1.OrderStatus status = 4;
+	 */
+	status: OrderStatus;
 
-  /**
-   * Order side
-   *
-   * @generated from field: cream.v1.OrderSide side = 5;
-   */
-  side: OrderSide;
+	/**
+	 * Order side
+	 *
+	 * @generated from field: cream.v1.OrderSide side = 5;
+	 */
+	side: OrderSide;
 
-  /**
-   * Order type
-   *
-   * @generated from field: cream.v1.OrderType order_type = 6;
-   */
-  orderType: OrderType;
+	/**
+	 * Order type
+	 *
+	 * @generated from field: cream.v1.OrderType order_type = 6;
+	 */
+	orderType: OrderType;
 
-  /**
-   * Requested quantity
-   *
-   * @generated from field: int32 requested_quantity = 7;
-   */
-  requestedQuantity: number;
+	/**
+	 * Requested quantity
+	 *
+	 * @generated from field: int32 requested_quantity = 7;
+	 */
+	requestedQuantity: number;
 
-  /**
-   * Filled quantity
-   *
-   * @generated from field: int32 filled_quantity = 8;
-   */
-  filledQuantity: number;
+	/**
+	 * Filled quantity
+	 *
+	 * @generated from field: int32 filled_quantity = 8;
+	 */
+	filledQuantity: number;
 
-  /**
-   * Average fill price
-   *
-   * @generated from field: double avg_fill_price = 9;
-   */
-  avgFillPrice: number;
+	/**
+	 * Average fill price
+	 *
+	 * @generated from field: double avg_fill_price = 9;
+	 */
+	avgFillPrice: number;
 
-  /**
-   * Limit price (if applicable)
-   *
-   * @generated from field: optional double limit_price = 10;
-   */
-  limitPrice?: number;
+	/**
+	 * Limit price (if applicable)
+	 *
+	 * @generated from field: optional double limit_price = 10;
+	 */
+	limitPrice?: number;
 
-  /**
-   * Stop price (if applicable)
-   *
-   * @generated from field: optional double stop_price = 11;
-   */
-  stopPrice?: number;
+	/**
+	 * Stop price (if applicable)
+	 *
+	 * @generated from field: optional double stop_price = 11;
+	 */
+	stopPrice?: number;
 
-  /**
-   * Submission timestamp
-   *
-   * @generated from field: google.protobuf.Timestamp submitted_at = 12;
-   */
-  submittedAt?: Timestamp;
+	/**
+	 * Submission timestamp
+	 *
+	 * @generated from field: google.protobuf.Timestamp submitted_at = 12;
+	 */
+	submittedAt?: Timestamp;
 
-  /**
-   * Last update timestamp
-   *
-   * @generated from field: google.protobuf.Timestamp last_update_at = 13;
-   */
-  lastUpdateAt?: Timestamp;
+	/**
+	 * Last update timestamp
+	 *
+	 * @generated from field: google.protobuf.Timestamp last_update_at = 13;
+	 */
+	lastUpdateAt?: Timestamp;
 
-  /**
-   * Status message from broker
-   *
-   * @generated from field: string status_message = 14;
-   */
-  statusMessage: string;
+	/**
+	 * Status message from broker
+	 *
+	 * @generated from field: string status_message = 14;
+	 */
+	statusMessage: string;
 };
 
 /**
  * Describes the message cream.v1.GetOrderStateResponse.
  * Use `create(GetOrderStateResponseSchema)` to create a new message.
  */
-export const GetOrderStateResponseSchema: GenMessage<GetOrderStateResponse> = /*@__PURE__*/
-  messageDesc(file_cream_v1_execution, 14);
+export const GetOrderStateResponseSchema: GenMessage<GetOrderStateResponse> =
+	/*@__PURE__*/
+	messageDesc(file_cream_v1_execution, 14);
 
 /**
  * Request to cancel an order
@@ -1090,20 +1109,21 @@ export const GetOrderStateResponseSchema: GenMessage<GetOrderStateResponse> = /*
  * @generated from message cream.v1.CancelOrderRequest
  */
 export type CancelOrderRequest = Message<"cream.v1.CancelOrderRequest"> & {
-  /**
-   * Order ID to cancel (can be broker order ID or internal order ID)
-   *
-   * @generated from field: string order_id = 1;
-   */
-  orderId: string;
+	/**
+	 * Order ID to cancel (can be broker order ID or internal order ID)
+	 *
+	 * @generated from field: string order_id = 1;
+	 */
+	orderId: string;
 };
 
 /**
  * Describes the message cream.v1.CancelOrderRequest.
  * Use `create(CancelOrderRequestSchema)` to create a new message.
  */
-export const CancelOrderRequestSchema: GenMessage<CancelOrderRequest> = /*@__PURE__*/
-  messageDesc(file_cream_v1_execution, 15);
+export const CancelOrderRequestSchema: GenMessage<CancelOrderRequest> =
+	/*@__PURE__*/
+	messageDesc(file_cream_v1_execution, 15);
 
 /**
  * Response from cancel request
@@ -1111,41 +1131,42 @@ export const CancelOrderRequestSchema: GenMessage<CancelOrderRequest> = /*@__PUR
  * @generated from message cream.v1.CancelOrderResponse
  */
 export type CancelOrderResponse = Message<"cream.v1.CancelOrderResponse"> & {
-  /**
-   * Whether cancel request was accepted
-   *
-   * @generated from field: bool accepted = 1;
-   */
-  accepted: boolean;
+	/**
+	 * Whether cancel request was accepted
+	 *
+	 * @generated from field: bool accepted = 1;
+	 */
+	accepted: boolean;
 
-  /**
-   * Order ID that was canceled
-   *
-   * @generated from field: string order_id = 2;
-   */
-  orderId: string;
+	/**
+	 * Order ID that was canceled
+	 *
+	 * @generated from field: string order_id = 2;
+	 */
+	orderId: string;
 
-  /**
-   * Current order status after cancel request
-   *
-   * @generated from field: cream.v1.OrderStatus status = 3;
-   */
-  status: OrderStatus;
+	/**
+	 * Current order status after cancel request
+	 *
+	 * @generated from field: cream.v1.OrderStatus status = 3;
+	 */
+	status: OrderStatus;
 
-  /**
-   * Error message if cancel was rejected
-   *
-   * @generated from field: optional string error_message = 4;
-   */
-  errorMessage?: string;
+	/**
+	 * Error message if cancel was rejected
+	 *
+	 * @generated from field: optional string error_message = 4;
+	 */
+	errorMessage?: string;
 };
 
 /**
  * Describes the message cream.v1.CancelOrderResponse.
  * Use `create(CancelOrderResponseSchema)` to create a new message.
  */
-export const CancelOrderResponseSchema: GenMessage<CancelOrderResponse> = /*@__PURE__*/
-  messageDesc(file_cream_v1_execution, 16);
+export const CancelOrderResponseSchema: GenMessage<CancelOrderResponse> =
+	/*@__PURE__*/
+	messageDesc(file_cream_v1_execution, 16);
 
 /**
  * Request to stream executions
@@ -1153,27 +1174,28 @@ export const CancelOrderResponseSchema: GenMessage<CancelOrderResponse> = /*@__P
  * @generated from message cream.v1.StreamExecutionsRequest
  */
 export type StreamExecutionsRequest = Message<"cream.v1.StreamExecutionsRequest"> & {
-  /**
-   * Filter by cycle ID (optional)
-   *
-   * @generated from field: optional string cycle_id = 1;
-   */
-  cycleId?: string;
+	/**
+	 * Filter by cycle ID (optional)
+	 *
+	 * @generated from field: optional string cycle_id = 1;
+	 */
+	cycleId?: string;
 
-  /**
-   * Filter by order IDs (optional)
-   *
-   * @generated from field: repeated string order_ids = 2;
-   */
-  orderIds: string[];
+	/**
+	 * Filter by order IDs (optional)
+	 *
+	 * @generated from field: repeated string order_ids = 2;
+	 */
+	orderIds: string[];
 };
 
 /**
  * Describes the message cream.v1.StreamExecutionsRequest.
  * Use `create(StreamExecutionsRequestSchema)` to create a new message.
  */
-export const StreamExecutionsRequestSchema: GenMessage<StreamExecutionsRequest> = /*@__PURE__*/
-  messageDesc(file_cream_v1_execution, 17);
+export const StreamExecutionsRequestSchema: GenMessage<StreamExecutionsRequest> =
+	/*@__PURE__*/
+	messageDesc(file_cream_v1_execution, 17);
 
 /**
  * Response with execution update (streamed)
@@ -1181,20 +1203,21 @@ export const StreamExecutionsRequestSchema: GenMessage<StreamExecutionsRequest> 
  * @generated from message cream.v1.StreamExecutionsResponse
  */
 export type StreamExecutionsResponse = Message<"cream.v1.StreamExecutionsResponse"> & {
-  /**
-   * Execution acknowledgment
-   *
-   * @generated from field: cream.v1.ExecutionAck execution = 1;
-   */
-  execution?: ExecutionAck;
+	/**
+	 * Execution acknowledgment
+	 *
+	 * @generated from field: cream.v1.ExecutionAck execution = 1;
+	 */
+	execution?: ExecutionAck;
 };
 
 /**
  * Describes the message cream.v1.StreamExecutionsResponse.
  * Use `create(StreamExecutionsResponseSchema)` to create a new message.
  */
-export const StreamExecutionsResponseSchema: GenMessage<StreamExecutionsResponse> = /*@__PURE__*/
-  messageDesc(file_cream_v1_execution, 18);
+export const StreamExecutionsResponseSchema: GenMessage<StreamExecutionsResponse> =
+	/*@__PURE__*/
+	messageDesc(file_cream_v1_execution, 18);
 
 /**
  * Request for account state
@@ -1202,20 +1225,21 @@ export const StreamExecutionsResponseSchema: GenMessage<StreamExecutionsResponse
  * @generated from message cream.v1.GetAccountStateRequest
  */
 export type GetAccountStateRequest = Message<"cream.v1.GetAccountStateRequest"> & {
-  /**
-   * Account ID (uses default if not specified)
-   *
-   * @generated from field: optional string account_id = 1;
-   */
-  accountId?: string;
+	/**
+	 * Account ID (uses default if not specified)
+	 *
+	 * @generated from field: optional string account_id = 1;
+	 */
+	accountId?: string;
 };
 
 /**
  * Describes the message cream.v1.GetAccountStateRequest.
  * Use `create(GetAccountStateRequestSchema)` to create a new message.
  */
-export const GetAccountStateRequestSchema: GenMessage<GetAccountStateRequest> = /*@__PURE__*/
-  messageDesc(file_cream_v1_execution, 19);
+export const GetAccountStateRequestSchema: GenMessage<GetAccountStateRequest> =
+	/*@__PURE__*/
+	messageDesc(file_cream_v1_execution, 19);
 
 /**
  * Response with account state
@@ -1223,20 +1247,21 @@ export const GetAccountStateRequestSchema: GenMessage<GetAccountStateRequest> = 
  * @generated from message cream.v1.GetAccountStateResponse
  */
 export type GetAccountStateResponse = Message<"cream.v1.GetAccountStateResponse"> & {
-  /**
-   * Current account state
-   *
-   * @generated from field: cream.v1.AccountState account_state = 1;
-   */
-  accountState?: AccountState;
+	/**
+	 * Current account state
+	 *
+	 * @generated from field: cream.v1.AccountState account_state = 1;
+	 */
+	accountState?: AccountState;
 };
 
 /**
  * Describes the message cream.v1.GetAccountStateResponse.
  * Use `create(GetAccountStateResponseSchema)` to create a new message.
  */
-export const GetAccountStateResponseSchema: GenMessage<GetAccountStateResponse> = /*@__PURE__*/
-  messageDesc(file_cream_v1_execution, 20);
+export const GetAccountStateResponseSchema: GenMessage<GetAccountStateResponse> =
+	/*@__PURE__*/
+	messageDesc(file_cream_v1_execution, 20);
 
 /**
  * Request for positions
@@ -1244,27 +1269,28 @@ export const GetAccountStateResponseSchema: GenMessage<GetAccountStateResponse> 
  * @generated from message cream.v1.GetPositionsRequest
  */
 export type GetPositionsRequest = Message<"cream.v1.GetPositionsRequest"> & {
-  /**
-   * Account ID (uses default if not specified)
-   *
-   * @generated from field: optional string account_id = 1;
-   */
-  accountId?: string;
+	/**
+	 * Account ID (uses default if not specified)
+	 *
+	 * @generated from field: optional string account_id = 1;
+	 */
+	accountId?: string;
 
-  /**
-   * Filter by symbols (optional)
-   *
-   * @generated from field: repeated string symbols = 2;
-   */
-  symbols: string[];
+	/**
+	 * Filter by symbols (optional)
+	 *
+	 * @generated from field: repeated string symbols = 2;
+	 */
+	symbols: string[];
 };
 
 /**
  * Describes the message cream.v1.GetPositionsRequest.
  * Use `create(GetPositionsRequestSchema)` to create a new message.
  */
-export const GetPositionsRequestSchema: GenMessage<GetPositionsRequest> = /*@__PURE__*/
-  messageDesc(file_cream_v1_execution, 21);
+export const GetPositionsRequestSchema: GenMessage<GetPositionsRequest> =
+	/*@__PURE__*/
+	messageDesc(file_cream_v1_execution, 21);
 
 /**
  * Response with positions
@@ -1272,27 +1298,28 @@ export const GetPositionsRequestSchema: GenMessage<GetPositionsRequest> = /*@__P
  * @generated from message cream.v1.GetPositionsResponse
  */
 export type GetPositionsResponse = Message<"cream.v1.GetPositionsResponse"> & {
-  /**
-   * Current positions
-   *
-   * @generated from field: repeated cream.v1.Position positions = 1;
-   */
-  positions: Position[];
+	/**
+	 * Current positions
+	 *
+	 * @generated from field: repeated cream.v1.Position positions = 1;
+	 */
+	positions: Position[];
 
-  /**
-   * Timestamp of snapshot
-   *
-   * @generated from field: google.protobuf.Timestamp as_of = 2;
-   */
-  asOf?: Timestamp;
+	/**
+	 * Timestamp of snapshot
+	 *
+	 * @generated from field: google.protobuf.Timestamp as_of = 2;
+	 */
+	asOf?: Timestamp;
 };
 
 /**
  * Describes the message cream.v1.GetPositionsResponse.
  * Use `create(GetPositionsResponseSchema)` to create a new message.
  */
-export const GetPositionsResponseSchema: GenMessage<GetPositionsResponse> = /*@__PURE__*/
-  messageDesc(file_cream_v1_execution, 22);
+export const GetPositionsResponseSchema: GenMessage<GetPositionsResponse> =
+	/*@__PURE__*/
+	messageDesc(file_cream_v1_execution, 22);
 
 /**
  * Result of a constraint check
@@ -1300,32 +1327,33 @@ export const GetPositionsResponseSchema: GenMessage<GetPositionsResponse> = /*@_
  * @generated from enum cream.v1.ConstraintResult
  */
 export enum ConstraintResult {
-  /**
-   * @generated from enum value: CONSTRAINT_RESULT_UNSPECIFIED = 0;
-   */
-  UNSPECIFIED = 0,
+	/**
+	 * @generated from enum value: CONSTRAINT_RESULT_UNSPECIFIED = 0;
+	 */
+	UNSPECIFIED = 0,
 
-  /**
-   * @generated from enum value: CONSTRAINT_RESULT_PASS = 1;
-   */
-  PASS = 1,
+	/**
+	 * @generated from enum value: CONSTRAINT_RESULT_PASS = 1;
+	 */
+	PASS = 1,
 
-  /**
-   * @generated from enum value: CONSTRAINT_RESULT_FAIL = 2;
-   */
-  FAIL = 2,
+	/**
+	 * @generated from enum value: CONSTRAINT_RESULT_FAIL = 2;
+	 */
+	FAIL = 2,
 
-  /**
-   * @generated from enum value: CONSTRAINT_RESULT_WARN = 3;
-   */
-  WARN = 3,
+	/**
+	 * @generated from enum value: CONSTRAINT_RESULT_WARN = 3;
+	 */
+	WARN = 3,
 }
 
 /**
  * Describes the enum cream.v1.ConstraintResult.
  */
-export const ConstraintResultSchema: GenEnum<ConstraintResult> = /*@__PURE__*/
-  enumDesc(file_cream_v1_execution, 0);
+export const ConstraintResultSchema: GenEnum<ConstraintResult> =
+	/*@__PURE__*/
+	enumDesc(file_cream_v1_execution, 0);
 
 /**
  * Severity of constraint violation
@@ -1333,45 +1361,46 @@ export const ConstraintResultSchema: GenEnum<ConstraintResult> = /*@__PURE__*/
  * @generated from enum cream.v1.ViolationSeverity
  */
 export enum ViolationSeverity {
-  /**
-   * @generated from enum value: VIOLATION_SEVERITY_UNSPECIFIED = 0;
-   */
-  UNSPECIFIED = 0,
+	/**
+	 * @generated from enum value: VIOLATION_SEVERITY_UNSPECIFIED = 0;
+	 */
+	UNSPECIFIED = 0,
 
-  /**
-   * Informational, does not block
-   *
-   * @generated from enum value: VIOLATION_SEVERITY_INFO = 1;
-   */
-  INFO = 1,
+	/**
+	 * Informational, does not block
+	 *
+	 * @generated from enum value: VIOLATION_SEVERITY_INFO = 1;
+	 */
+	INFO = 1,
 
-  /**
-   * Warning, may proceed with caution
-   *
-   * @generated from enum value: VIOLATION_SEVERITY_WARNING = 2;
-   */
-  WARNING = 2,
+	/**
+	 * Warning, may proceed with caution
+	 *
+	 * @generated from enum value: VIOLATION_SEVERITY_WARNING = 2;
+	 */
+	WARNING = 2,
 
-  /**
-   * Error, blocks execution
-   *
-   * @generated from enum value: VIOLATION_SEVERITY_ERROR = 3;
-   */
-  ERROR = 3,
+	/**
+	 * Error, blocks execution
+	 *
+	 * @generated from enum value: VIOLATION_SEVERITY_ERROR = 3;
+	 */
+	ERROR = 3,
 
-  /**
-   * Critical, requires immediate attention
-   *
-   * @generated from enum value: VIOLATION_SEVERITY_CRITICAL = 4;
-   */
-  CRITICAL = 4,
+	/**
+	 * Critical, requires immediate attention
+	 *
+	 * @generated from enum value: VIOLATION_SEVERITY_CRITICAL = 4;
+	 */
+	CRITICAL = 4,
 }
 
 /**
  * Describes the enum cream.v1.ViolationSeverity.
  */
-export const ViolationSeveritySchema: GenEnum<ViolationSeverity> = /*@__PURE__*/
-  enumDesc(file_cream_v1_execution, 1);
+export const ViolationSeveritySchema: GenEnum<ViolationSeverity> =
+	/*@__PURE__*/
+	enumDesc(file_cream_v1_execution, 1);
 
 /**
  * Order status
@@ -1379,73 +1408,74 @@ export const ViolationSeveritySchema: GenEnum<ViolationSeverity> = /*@__PURE__*/
  * @generated from enum cream.v1.OrderStatus
  */
 export enum OrderStatus {
-  /**
-   * @generated from enum value: ORDER_STATUS_UNSPECIFIED = 0;
-   */
-  UNSPECIFIED = 0,
+	/**
+	 * @generated from enum value: ORDER_STATUS_UNSPECIFIED = 0;
+	 */
+	UNSPECIFIED = 0,
 
-  /**
-   * Order created but not yet sent to broker
-   *
-   * @generated from enum value: ORDER_STATUS_NEW = 1;
-   */
-  NEW = 1,
+	/**
+	 * Order created but not yet sent to broker
+	 *
+	 * @generated from enum value: ORDER_STATUS_NEW = 1;
+	 */
+	NEW = 1,
 
-  /**
-   * Sent to broker, awaiting acknowledgment
-   *
-   * @generated from enum value: ORDER_STATUS_PENDING = 2;
-   */
-  PENDING = 2,
+	/**
+	 * Sent to broker, awaiting acknowledgment
+	 *
+	 * @generated from enum value: ORDER_STATUS_PENDING = 2;
+	 */
+	PENDING = 2,
 
-  /**
-   * Accepted by broker
-   *
-   * @generated from enum value: ORDER_STATUS_ACCEPTED = 3;
-   */
-  ACCEPTED = 3,
+	/**
+	 * Accepted by broker
+	 *
+	 * @generated from enum value: ORDER_STATUS_ACCEPTED = 3;
+	 */
+	ACCEPTED = 3,
 
-  /**
-   * Partially filled
-   *
-   * @generated from enum value: ORDER_STATUS_PARTIAL_FILL = 4;
-   */
-  PARTIAL_FILL = 4,
+	/**
+	 * Partially filled
+	 *
+	 * @generated from enum value: ORDER_STATUS_PARTIAL_FILL = 4;
+	 */
+	PARTIAL_FILL = 4,
 
-  /**
-   * Completely filled
-   *
-   * @generated from enum value: ORDER_STATUS_FILLED = 5;
-   */
-  FILLED = 5,
+	/**
+	 * Completely filled
+	 *
+	 * @generated from enum value: ORDER_STATUS_FILLED = 5;
+	 */
+	FILLED = 5,
 
-  /**
-   * Cancelled by user or system
-   *
-   * @generated from enum value: ORDER_STATUS_CANCELLED = 6;
-   */
-  CANCELLED = 6,
+	/**
+	 * Cancelled by user or system
+	 *
+	 * @generated from enum value: ORDER_STATUS_CANCELLED = 6;
+	 */
+	CANCELLED = 6,
 
-  /**
-   * Rejected by broker
-   *
-   * @generated from enum value: ORDER_STATUS_REJECTED = 7;
-   */
-  REJECTED = 7,
+	/**
+	 * Rejected by broker
+	 *
+	 * @generated from enum value: ORDER_STATUS_REJECTED = 7;
+	 */
+	REJECTED = 7,
 
-  /**
-   * Expired (e.g., DAY order at close)
-   *
-   * @generated from enum value: ORDER_STATUS_EXPIRED = 8;
-   */
-  EXPIRED = 8,
+	/**
+	 * Expired (e.g., DAY order at close)
+	 *
+	 * @generated from enum value: ORDER_STATUS_EXPIRED = 8;
+	 */
+	EXPIRED = 8,
 }
 
 /**
  * Describes the enum cream.v1.OrderStatus.
  */
-export const OrderStatusSchema: GenEnum<OrderStatus> = /*@__PURE__*/
-  enumDesc(file_cream_v1_execution, 2);
+export const OrderStatusSchema: GenEnum<OrderStatus> =
+	/*@__PURE__*/
+	enumDesc(file_cream_v1_execution, 2);
 
 /**
  * Order side
@@ -1453,27 +1483,28 @@ export const OrderStatusSchema: GenEnum<OrderStatus> = /*@__PURE__*/
  * @generated from enum cream.v1.OrderSide
  */
 export enum OrderSide {
-  /**
-   * @generated from enum value: ORDER_SIDE_UNSPECIFIED = 0;
-   */
-  UNSPECIFIED = 0,
+	/**
+	 * @generated from enum value: ORDER_SIDE_UNSPECIFIED = 0;
+	 */
+	UNSPECIFIED = 0,
 
-  /**
-   * @generated from enum value: ORDER_SIDE_BUY = 1;
-   */
-  BUY = 1,
+	/**
+	 * @generated from enum value: ORDER_SIDE_BUY = 1;
+	 */
+	BUY = 1,
 
-  /**
-   * @generated from enum value: ORDER_SIDE_SELL = 2;
-   */
-  SELL = 2,
+	/**
+	 * @generated from enum value: ORDER_SIDE_SELL = 2;
+	 */
+	SELL = 2,
 }
 
 /**
  * Describes the enum cream.v1.OrderSide.
  */
-export const OrderSideSchema: GenEnum<OrderSide> = /*@__PURE__*/
-  enumDesc(file_cream_v1_execution, 3);
+export const OrderSideSchema: GenEnum<OrderSide> =
+	/*@__PURE__*/
+	enumDesc(file_cream_v1_execution, 3);
 
 /**
  * Execution engine service
@@ -1481,76 +1512,74 @@ export const OrderSideSchema: GenEnum<OrderSide> = /*@__PURE__*/
  * @generated from service cream.v1.ExecutionService
  */
 export const ExecutionService: GenService<{
-  /**
-   * Validate a decision plan against constraints
-   *
-   * @generated from rpc cream.v1.ExecutionService.CheckConstraints
-   */
-  checkConstraints: {
-    methodKind: "unary";
-    input: typeof CheckConstraintsRequestSchema;
-    output: typeof CheckConstraintsResponseSchema;
-  },
-  /**
-   * Submit an order for execution
-   *
-   * @generated from rpc cream.v1.ExecutionService.SubmitOrder
-   */
-  submitOrder: {
-    methodKind: "unary";
-    input: typeof SubmitOrderRequestSchema;
-    output: typeof SubmitOrderResponseSchema;
-  },
-  /**
-   * Get order state by order ID
-   *
-   * @generated from rpc cream.v1.ExecutionService.GetOrderState
-   */
-  getOrderState: {
-    methodKind: "unary";
-    input: typeof GetOrderStateRequestSchema;
-    output: typeof GetOrderStateResponseSchema;
-  },
-  /**
-   * Cancel an order
-   *
-   * @generated from rpc cream.v1.ExecutionService.CancelOrder
-   */
-  cancelOrder: {
-    methodKind: "unary";
-    input: typeof CancelOrderRequestSchema;
-    output: typeof CancelOrderResponseSchema;
-  },
-  /**
-   * Stream order execution updates
-   *
-   * @generated from rpc cream.v1.ExecutionService.StreamExecutions
-   */
-  streamExecutions: {
-    methodKind: "server_streaming";
-    input: typeof StreamExecutionsRequestSchema;
-    output: typeof StreamExecutionsResponseSchema;
-  },
-  /**
-   * Get current account state
-   *
-   * @generated from rpc cream.v1.ExecutionService.GetAccountState
-   */
-  getAccountState: {
-    methodKind: "unary";
-    input: typeof GetAccountStateRequestSchema;
-    output: typeof GetAccountStateResponseSchema;
-  },
-  /**
-   * Get current positions
-   *
-   * @generated from rpc cream.v1.ExecutionService.GetPositions
-   */
-  getPositions: {
-    methodKind: "unary";
-    input: typeof GetPositionsRequestSchema;
-    output: typeof GetPositionsResponseSchema;
-  },
-}> = /*@__PURE__*/
-  serviceDesc(file_cream_v1_execution, 0);
-
+	/**
+	 * Validate a decision plan against constraints
+	 *
+	 * @generated from rpc cream.v1.ExecutionService.CheckConstraints
+	 */
+	checkConstraints: {
+		methodKind: "unary";
+		input: typeof CheckConstraintsRequestSchema;
+		output: typeof CheckConstraintsResponseSchema;
+	};
+	/**
+	 * Submit an order for execution
+	 *
+	 * @generated from rpc cream.v1.ExecutionService.SubmitOrder
+	 */
+	submitOrder: {
+		methodKind: "unary";
+		input: typeof SubmitOrderRequestSchema;
+		output: typeof SubmitOrderResponseSchema;
+	};
+	/**
+	 * Get order state by order ID
+	 *
+	 * @generated from rpc cream.v1.ExecutionService.GetOrderState
+	 */
+	getOrderState: {
+		methodKind: "unary";
+		input: typeof GetOrderStateRequestSchema;
+		output: typeof GetOrderStateResponseSchema;
+	};
+	/**
+	 * Cancel an order
+	 *
+	 * @generated from rpc cream.v1.ExecutionService.CancelOrder
+	 */
+	cancelOrder: {
+		methodKind: "unary";
+		input: typeof CancelOrderRequestSchema;
+		output: typeof CancelOrderResponseSchema;
+	};
+	/**
+	 * Stream order execution updates
+	 *
+	 * @generated from rpc cream.v1.ExecutionService.StreamExecutions
+	 */
+	streamExecutions: {
+		methodKind: "server_streaming";
+		input: typeof StreamExecutionsRequestSchema;
+		output: typeof StreamExecutionsResponseSchema;
+	};
+	/**
+	 * Get current account state
+	 *
+	 * @generated from rpc cream.v1.ExecutionService.GetAccountState
+	 */
+	getAccountState: {
+		methodKind: "unary";
+		input: typeof GetAccountStateRequestSchema;
+		output: typeof GetAccountStateResponseSchema;
+	};
+	/**
+	 * Get current positions
+	 *
+	 * @generated from rpc cream.v1.ExecutionService.GetPositions
+	 */
+	getPositions: {
+		methodKind: "unary";
+		input: typeof GetPositionsRequestSchema;
+		output: typeof GetPositionsResponseSchema;
+	};
+}> = /*@__PURE__*/ serviceDesc(file_cream_v1_execution, 0);
