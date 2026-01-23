@@ -1,0 +1,67 @@
+{
+	"name": "@cream/mastra",
+	"version": "0.1.0",
+	"private": true,
+	"description": "Mastra v1 server with trading agents and workflows",
+	"type": "module",
+	"main": "dist/index.js",
+	"types": "src/index.ts",
+	"exports": {
+		".": {
+			"types": "./src/index.ts",
+			"bun": "./src/index.ts",
+			"import": "./dist/index.js",
+			"default": "./dist/index.js"
+		}
+	},
+	"scripts": {
+		"dev": "bunx --bun mastra dev",
+		"dev:hono": "bun run src/server.ts",
+		"build": "bun build src/index.ts --outdir dist --target bun --external pg --external pg-native --external @cream/schema-gen/*",
+		"start": "bun run src/server.ts",
+		"typecheck": "tsgo --noEmit",
+		"test": "bun test",
+		"lint": "biome check --fix src/",
+		"format": "biome format --write src/"
+	},
+	"dependencies": {
+		"@ai-sdk/google": "3.0.9",
+		"@ai-sdk/provider": "3.0.3",
+		"@ai-sdk/xai": "3.0.26",
+		"@bufbuild/protobuf": "2.10.2",
+		"@connectrpc/connect": "2.1.1",
+		"@connectrpc/connect-node": "2.1.1",
+		"@cream/agents": "workspace:*",
+		"@cream/broker": "workspace:*",
+		"@cream/config": "workspace:*",
+		"@cream/domain": "workspace:*",
+		"@cream/external-context": "workspace:*",
+		"@cream/helix": "workspace:*",
+		"@cream/helix-schema": "workspace:*",
+		"@cream/indicators": "workspace:*",
+		"@cream/logger": "workspace:*",
+		"@cream/marketdata": "workspace:*",
+		"@cream/prediction-markets": "workspace:*",
+		"@cream/regime": "workspace:*",
+		"@cream/schema-gen": "workspace:*",
+		"@cream/storage": "workspace:*",
+		"@cream/universe": "workspace:*",
+		"@hono/node-server": "1.19.9",
+		"@mastra/core": "latest",
+		"@mastra/hono": "latest",
+		"@mastra/observability": "latest",
+		"@mastra/otel-exporter": "latest",
+		"@opentelemetry/exporter-trace-otlp-proto": "0.210.0",
+		"ai": "6.0.37",
+		"drizzle-orm": "^0.45.1",
+		"hono": "4.11.4",
+		"zod": "4.3.5"
+	},
+	"devDependencies": {
+		"@cream/tsconfig": "workspace:*",
+		"@types/bun": "1.3.6",
+		"@typescript/native-preview": "7.0.0-dev.20260115.1",
+		"mastra": "latest",
+		"tsx": "4.21.0"
+	}
+}

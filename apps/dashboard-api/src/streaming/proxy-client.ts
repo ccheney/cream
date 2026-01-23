@@ -28,7 +28,7 @@ import log from "../logger.js";
 /**
  * URL of the Alpaca stream proxy service.
  */
-export const STREAM_PROXY_URL = Bun.env.STREAM_PROXY_URL ?? "http://localhost:50051";
+export const STREAM_PROXY_URL = Bun.env.STREAM_PROXY_URL ?? "http://localhost:50052";
 
 // Log configuration at module load
 log.info({ proxyUrl: STREAM_PROXY_URL }, "Proxy client configured");
