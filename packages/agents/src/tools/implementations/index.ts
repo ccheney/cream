@@ -5,6 +5,13 @@
  */
 
 export {
+	type AcademicPaperSearchResult,
+	type ExternalPaperResult,
+	ingestSemanticScholarPapers,
+	searchAcademicPapers,
+	searchExternalPapers,
+} from "./academicPapers.js";
+export {
 	type CompanyRelationshipsResult,
 	type DependencyResult,
 	getCompanyRelationships,

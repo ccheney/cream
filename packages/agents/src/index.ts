@@ -22,10 +22,11 @@ export * from "./prompts/index.js";
 export * from "./types.js";
 
 // ============================================
-// Tools
+// Tool Implementations (no @mastra dependencies)
 // ============================================
 
-export * from "./tools/index.js";
+export * from "./tools/implementations/index.js";
+export * from "./tools/types.js";
 
 // ============================================
 // Extraction

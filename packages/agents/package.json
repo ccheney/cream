@@ -9,6 +9,10 @@
 		".": {
 			"types": "./src/index.ts",
 			"import": "./src/index.ts"
+		},
+		"./implementations": {
+			"types": "./src/tools/implementations/index.ts",
+			"import": "./src/tools/implementations/index.ts"
 		}
 	},
 	"scripts": {
@@ -31,8 +35,7 @@
 		"@cream/marketdata": "workspace:*",
 		"@cream/storage": "workspace:*",
 		"@cream/universe": "workspace:*",
-		"@google/genai": "1.36.0",
-		"@mastra/core": "1.0.0-beta.21"
+		"@google/genai": "1.36.0"
 	},
 	"devDependencies": {
 		"@cream/tsconfig": "workspace:*",
