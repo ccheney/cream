@@ -16,6 +16,7 @@
  */
 
 export { analystsStep } from "./analysts.js";
+export { consensusStep } from "./consensus.js";
 export { debateStep } from "./debate.js";
 export { groundingStep } from "./grounding.js";
 export { observeStep } from "./observe.js";

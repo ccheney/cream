@@ -150,7 +150,7 @@ function buildTraderPrompt(
 function parseDecisionPlan(
 	cycleId: string,
 	text: string,
-	instruments: string[],
+	_instruments: string[],
 	warnings: string[],
 ): z.infer<typeof DecisionPlanSchema> | null {
 	const jsonMatch = text.match(/\{[\s\S]*\}/);
