@@ -32,6 +32,7 @@ coverage.xml
 
 # Claude Code
 .claude/
+.gemini/
 
 # Logs
 *.log
