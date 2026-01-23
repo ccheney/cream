@@ -226,6 +226,11 @@ impl OpraClient {
     ///
     /// This method connects to the WebSocket server, authenticates,
     /// and processes messages until cancelled or an unrecoverable error occurs.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if a connection attempt fails or the stream encounters
+    /// an unrecoverable error while processing messages.
     pub async fn run(self: Arc<Self>) -> Result<(), OpraClientError> {
         let mut reconnect_policy = ReconnectPolicy::new(self.config.reconnect.clone());
 

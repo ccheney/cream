@@ -150,6 +150,11 @@ impl HealthServer {
     }
 
     /// Run the health server until cancelled.
+    ///
+    /// # Errors
+    ///
+    /// Returns `HealthServerError` if binding fails or the HTTP server
+    /// encounters a fatal error while running.
     pub async fn run(self) -> Result<(), HealthServerError> {
         let app = Router::new()
             .route("/health", get(health_handler))
@@ -208,21 +213,23 @@ async fn readiness_handler(State(state): State<Arc<HealthServerState>>) -> impl 
 }
 
 async fn metrics_handler() -> impl IntoResponse {
-    match get_metrics_handle() {
-        Some(handle) => {
+    get_metrics_handle().map_or_else(
+        || {
+            (
+                StatusCode::SERVICE_UNAVAILABLE,
+                [("content-type", "text/plain")],
+                "Metrics not initialized".to_string(),
+            )
+        },
+        |handle| {
             let body = handle.render();
             (
                 StatusCode::OK,
                 [("content-type", "text/plain; version=0.0.4; charset=utf-8")],
                 body,
             )
-        }
-        None => (
-            StatusCode::SERVICE_UNAVAILABLE,
-            [("content-type", "text/plain")],
-            "Metrics not initialized".to_string(),
-        ),
-    }
+        },
+    )
 }
 
 fn build_health_response(state: &HealthServerState) -> HealthResponse {

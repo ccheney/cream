@@ -168,6 +168,11 @@ impl TradingClient {
     ///
     /// This method connects to the WebSocket server, authenticates,
     /// and processes messages until cancelled or an unrecoverable error occurs.
+    ///
+    /// # Errors
+    ///
+    /// Returns `TradingClientError` if the connection fails after exhausting
+    /// reconnect attempts or if a non-recoverable error occurs while streaming.
     pub async fn run(self: Arc<Self>) -> Result<(), TradingClientError> {
         let mut reconnect_policy = ReconnectPolicy::new(self.config.reconnect.clone());
 

@@ -148,7 +148,8 @@ impl FeedState {
             error_message: self.error_message.read().clone(),
             subscription_count: self.subscription_count.load(Ordering::Relaxed),
             reconnect_attempts: self.reconnect_attempts.load(Ordering::Relaxed),
-            messages_received: self.messages_received.load(Ordering::Relaxed) as i64,
+            messages_received: i64::try_from(self.messages_received.load(Ordering::Relaxed))
+                .unwrap_or(i64::MAX),
         }
     }
 }
@@ -548,10 +549,10 @@ impl StreamProxyService for StreamProxyServer {
 // Conversion Functions
 // =============================================================================
 
-const fn datetime_to_timestamp(dt: DateTime<Utc>) -> Timestamp {
+fn datetime_to_timestamp(dt: DateTime<Utc>) -> Timestamp {
     Timestamp {
         seconds: dt.timestamp(),
-        nanos: dt.timestamp_subsec_nanos() as i32,
+        nanos: i32::try_from(dt.timestamp_subsec_nanos()).unwrap_or(i32::MAX),
     }
 }
 
@@ -809,9 +810,10 @@ mod tests {
     fn datetime_conversion() {
         let dt = Utc::now();
         let ts = datetime_to_timestamp(dt);
+        let expected_nanos = i32::try_from(dt.timestamp_subsec_nanos()).unwrap_or(i32::MAX);
 
         assert_eq!(ts.seconds, dt.timestamp());
-        assert_eq!(ts.nanos, dt.timestamp_subsec_nanos() as i32);
+        assert_eq!(ts.nanos, expected_nanos);
     }
 
     #[test]

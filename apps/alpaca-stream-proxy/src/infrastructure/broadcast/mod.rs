@@ -73,7 +73,7 @@ pub struct OrderUpdateBroadcast {
 // =============================================================================
 
 /// Configuration for broadcast channel capacities.
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Copy)]
 pub struct BroadcastConfig {
     /// Capacity for stock quote channel.
     pub stock_quotes_capacity: usize,
@@ -134,6 +134,7 @@ impl From<BroadcastSettings> for BroadcastConfig {
 /// // hub.send_stock_quote(quote);
 /// ```
 #[derive(Debug)]
+#[allow(clippy::struct_field_names)]
 pub struct BroadcastHub {
     stock_quotes_tx: broadcast::Sender<StockQuoteBroadcast>,
     stock_trades_tx: broadcast::Sender<StockTradeBroadcast>,

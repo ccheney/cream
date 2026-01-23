@@ -73,10 +73,10 @@ impl JsonCodec {
 
         // Handle array format (most Alpaca messages)
         if trimmed.starts_with('[') {
-            self.decode_array(trimmed)
+            Self::decode_array(trimmed)
         } else if trimmed.starts_with('{') {
             // Handle single object format (some control messages)
-            let msg = self.decode_single_object(trimmed)?;
+            let msg = Self::decode_single_object(trimmed)?;
             Ok(vec![msg])
         } else {
             Err(CodecError::InvalidFormat(format!(
@@ -87,7 +87,7 @@ impl JsonCodec {
     }
 
     /// Decode a JSON array of messages.
-    fn decode_array(&self, text: &str) -> Result<Vec<AlpacaMessage>, CodecError> {
+    fn decode_array(text: &str) -> Result<Vec<AlpacaMessage>, CodecError> {
         // First try to parse as an array of raw values to inspect types
         let raw_array: Vec<serde_json::Value> = serde_json::from_str(text)?;
 
@@ -154,7 +154,7 @@ impl JsonCodec {
     }
 
     /// Decode a single JSON object message.
-    fn decode_single_object(&self, text: &str) -> Result<AlpacaMessage, CodecError> {
+    fn decode_single_object(text: &str) -> Result<AlpacaMessage, CodecError> {
         let value: serde_json::Value = serde_json::from_str(text)?;
 
         let msg_type = value

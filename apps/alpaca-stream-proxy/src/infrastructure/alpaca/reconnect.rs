@@ -120,9 +120,20 @@ impl ReconnectPolicy {
         let delay_with_jitter = self.apply_jitter(self.current_delay);
 
         // Calculate next delay (for subsequent calls)
-        let next_millis = (self.current_delay.as_millis() as f64 * self.config.multiplier) as u128;
+        #[allow(clippy::cast_precision_loss)]
+        let scaled = (self.current_delay.as_millis() as f64 * self.config.multiplier).round();
+        let next_millis = if scaled.is_finite() && scaled > 0.0 {
+            #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
+            {
+                scaled as u128
+            }
+        } else {
+            0
+        };
         let max_millis = self.config.max_delay.as_millis();
-        self.current_delay = Duration::from_millis(next_millis.min(max_millis) as u64);
+        let capped = next_millis.min(max_millis);
+        let capped_u64 = u64::try_from(capped).unwrap_or(u64::MAX);
+        self.current_delay = Duration::from_millis(capped_u64);
 
         Some(delay_with_jitter)
     }
@@ -151,13 +162,16 @@ impl ReconnectPolicy {
             return duration;
         }
 
+        #[allow(clippy::cast_precision_loss)]
         let base_millis = duration.as_millis() as f64;
         let jitter_range = base_millis * self.config.jitter_factor;
         let mut rng = rand::rng();
         let jitter: f64 = rng.random_range(-jitter_range..=jitter_range);
         let adjusted_millis = (base_millis + jitter).max(1.0);
 
-        Duration::from_millis(adjusted_millis as u64)
+        #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
+        let adjusted_u64 = adjusted_millis as u64;
+        Duration::from_millis(adjusted_u64)
     }
 }
 
@@ -304,11 +318,11 @@ mod tests {
             });
 
             let delay = test_policy.next_delay().unwrap();
-            let millis = delay.as_millis() as f64;
+            let millis = delay.as_millis();
 
             // Should be within ±10% of 1000ms
-            assert!(millis >= 900.0, "delay {millis}ms is below minimum 900ms");
-            assert!(millis <= 1100.0, "delay {millis}ms is above maximum 1100ms");
+            assert!(millis >= 900, "delay {millis}ms is below minimum 900ms");
+            assert!(millis <= 1100, "delay {millis}ms is above maximum 1100ms");
         }
     }
 

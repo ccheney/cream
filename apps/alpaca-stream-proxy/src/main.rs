@@ -51,10 +51,14 @@ use tonic::transport::Server;
 const SHUTDOWN_TIMEOUT: Duration = Duration::from_secs(30);
 
 #[tokio::main]
+#[allow(clippy::too_many_lines)]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
-    rustls::crypto::ring::default_provider()
+    if rustls::crypto::ring::default_provider()
         .install_default()
-        .expect("Failed to install rustls crypto provider");
+        .is_err()
+    {
+        tracing::debug!("Rustls crypto provider already installed");
+    }
 
     load_dotenv();
 
@@ -268,7 +272,8 @@ async fn handle_sip_events(
                 bars,
             } => {
                 let count = quotes.len() + trades.len() + bars.len();
-                feed_state.set_subscription_count(count as i32);
+                let count_i32 = i32::try_from(count).unwrap_or(i32::MAX);
+                feed_state.set_subscription_count(count_i32);
                 tracing::debug!(
                     quotes = quotes.len(),
                     trades = trades.len(),
@@ -315,7 +320,8 @@ async fn handle_opra_events(
             }
             OpraEvent::Subscribed { quotes, trades } => {
                 let count = quotes.len() + trades.len();
-                feed_state.set_subscription_count(count as i32);
+                let count_i32 = i32::try_from(count).unwrap_or(i32::MAX);
+                feed_state.set_subscription_count(count_i32);
                 tracing::debug!(
                     quotes = quotes.len(),
                     trades = trades.len(),
