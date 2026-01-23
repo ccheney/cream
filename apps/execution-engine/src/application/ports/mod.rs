@@ -8,6 +8,7 @@ mod broker_port;
 mod event_publisher_port;
 mod market_data_port;
 mod price_feed_port;
+mod quote_provider_port;
 mod risk_repository_port;
 
 pub use broker_port::{BrokerError, BrokerPort, CancelOrderRequest, OrderAck, SubmitOrderRequest};
@@ -17,4 +18,5 @@ pub use market_data_port::{
     OptionQuote, OptionType,
 };
 pub use price_feed_port::{PriceFeedError, PriceFeedPort, Quote};
+pub use quote_provider_port::QuoteProviderPort;
 pub use risk_repository_port::{InMemoryRiskRepository, RiskRepositoryPort};

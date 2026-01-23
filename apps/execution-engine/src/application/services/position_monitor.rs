@@ -15,13 +15,12 @@ use thiserror::Error;
 use tokio::sync::broadcast;
 use tokio_util::sync::CancellationToken;
 
-use crate::application::ports::{BrokerPort, PriceFeedPort, SubmitOrderRequest};
+use crate::application::ports::{BrokerPort, PriceFeedPort, QuoteProviderPort, SubmitOrderRequest};
 use crate::domain::order_execution::value_objects::OrderSide;
 use crate::domain::shared::{InstrumentId, OrderId, Symbol};
 use crate::domain::stop_enforcement::{
     MonitoredPosition, PositionDirection, PriceMonitor, StopsConfig, TriggerResult,
 };
-use crate::infrastructure::websocket::WebSocketManager;
 
 /// Configuration for the position monitor service.
 #[derive(Debug, Clone)]
@@ -250,10 +249,11 @@ impl Default for CircuitBreaker {
 }
 
 /// Position monitor service for real-time stop/target enforcement.
-pub struct PositionMonitorService<B, P>
+pub struct PositionMonitorService<B, P, Q>
 where
     B: BrokerPort,
     P: PriceFeedPort,
+    Q: QuoteProviderPort,
 {
     /// Configuration.
     config: PositionMonitorConfig,
@@ -261,8 +261,8 @@ where
     broker: Arc<B>,
     /// Price feed for REST fallback.
     price_feed: Arc<P>,
-    /// WebSocket manager for real-time quotes.
-    websocket_manager: Arc<WebSocketManager>,
+    /// Quote provider for real-time quotes (WebSocket or Proxy).
+    quote_provider: Arc<Q>,
     /// Price monitor domain service.
     monitor: Arc<RwLock<PriceMonitor>>,
     /// Mapping from symbol to position IDs monitoring that symbol.
@@ -275,17 +275,18 @@ where
     exit_tx: broadcast::Sender<ExitResult>,
 }
 
-impl<B, P> PositionMonitorService<B, P>
+impl<B, P, Q> PositionMonitorService<B, P, Q>
 where
     B: BrokerPort + Send + Sync + 'static,
     P: PriceFeedPort + Send + Sync + 'static,
+    Q: QuoteProviderPort + Send + Sync + 'static,
 {
     /// Create a new position monitor service.
     #[must_use]
     pub fn new(
         broker: Arc<B>,
         price_feed: Arc<P>,
-        websocket_manager: Arc<WebSocketManager>,
+        quote_provider: Arc<Q>,
         shutdown: CancellationToken,
     ) -> Self {
         let (exit_tx, _) = broadcast::channel(64);
@@ -294,7 +295,7 @@ where
             config: PositionMonitorConfig::default(),
             broker,
             price_feed,
-            websocket_manager,
+            quote_provider,
             monitor: Arc::new(RwLock::new(PriceMonitor::new())),
             symbol_positions: Arc::new(RwLock::new(HashMap::new())),
             circuit_breaker: Arc::new(CircuitBreaker::new()),
@@ -309,7 +310,7 @@ where
         config: PositionMonitorConfig,
         broker: Arc<B>,
         price_feed: Arc<P>,
-        websocket_manager: Arc<WebSocketManager>,
+        quote_provider: Arc<Q>,
         shutdown: CancellationToken,
     ) -> Self {
         let (exit_tx, _) = broadcast::channel(64);
@@ -318,7 +319,7 @@ where
             config,
             broker,
             price_feed,
-            websocket_manager,
+            quote_provider,
             monitor: Arc::new(RwLock::new(PriceMonitor::with_config(
                 StopsConfig::default(),
             ))),
@@ -357,7 +358,7 @@ where
 
     /// Start the WebSocket quote processor task.
     fn start_quote_processor(&self) {
-        let mut quote_rx = self.websocket_manager.quote_updates();
+        let mut quote_rx = self.quote_provider.quote_updates();
         let monitor = Arc::clone(&self.monitor);
         let symbol_positions = Arc::clone(&self.symbol_positions);
         let broker = Arc::clone(&self.broker);
@@ -443,7 +444,7 @@ where
         let broker = Arc::clone(&self.broker);
         let price_feed = Arc::clone(&self.price_feed);
         let circuit_breaker = Arc::clone(&self.circuit_breaker);
-        let websocket_manager = Arc::clone(&self.websocket_manager);
+        let quote_provider = Arc::clone(&self.quote_provider);
         let exit_tx = self.exit_tx.clone();
         let shutdown = self.shutdown.clone();
         let polling_interval = Duration::from_millis(self.config.polling_interval_ms);
@@ -455,7 +456,7 @@ where
                 tokio::select! {
                     _ = interval.tick() => {
                         // Only poll if WebSocket is disconnected
-                        if websocket_manager.is_connected() {
+                        if quote_provider.is_connected() {
                             continue;
                         }
 
@@ -547,14 +548,14 @@ where
 
         // Subscribe to WebSocket quotes
         if is_option {
-            self.websocket_manager
+            self.quote_provider
                 .subscribe_options_quotes(std::slice::from_ref(&symbol))
                 .await
                 .map_err(|e| PositionMonitorError::WebSocketError {
                     message: e.to_string(),
                 })?;
         } else {
-            self.websocket_manager
+            self.quote_provider
                 .subscribe_stock_quotes(std::slice::from_ref(&symbol))
                 .await
                 .map_err(|e| PositionMonitorError::WebSocketError {
@@ -605,12 +606,12 @@ where
                 let is_option = symbol.len() > 10;
                 if is_option {
                     let _ = self
-                        .websocket_manager
+                        .quote_provider
                         .unsubscribe_options_quotes(std::slice::from_ref(&symbol))
                         .await;
                 } else {
                     let _ = self
-                        .websocket_manager
+                        .quote_provider
                         .unsubscribe_stock_quotes(std::slice::from_ref(&symbol))
                         .await;
                 }
@@ -650,7 +651,7 @@ where
     /// Check if WebSocket is connected.
     #[must_use]
     pub fn is_websocket_connected(&self) -> bool {
-        self.websocket_manager.is_connected()
+        self.quote_provider.is_connected()
     }
 
     /// Get circuit breaker state.

@@ -677,6 +677,37 @@ async fn connect_and_run_options(
     }
 }
 
+// Implement QuoteProviderPort for WebSocketManager
+use crate::application::ports::QuoteProviderPort;
+use async_trait::async_trait;
+
+#[async_trait]
+impl QuoteProviderPort for WebSocketManager {
+    fn quote_updates(&self) -> broadcast::Receiver<QuoteUpdate> {
+        self.quote_updates()
+    }
+
+    async fn subscribe_stock_quotes(&self, symbols: &[String]) -> Result<(), WebSocketError> {
+        self.subscribe_stock_quotes(symbols).await
+    }
+
+    async fn subscribe_options_quotes(&self, symbols: &[String]) -> Result<(), WebSocketError> {
+        self.subscribe_options_quotes(symbols).await
+    }
+
+    async fn unsubscribe_stock_quotes(&self, symbols: &[String]) -> Result<(), WebSocketError> {
+        self.unsubscribe_stock_quotes(symbols).await
+    }
+
+    async fn unsubscribe_options_quotes(&self, symbols: &[String]) -> Result<(), WebSocketError> {
+        self.unsubscribe_options_quotes(symbols).await
+    }
+
+    fn is_connected(&self) -> bool {
+        self.is_connected()
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

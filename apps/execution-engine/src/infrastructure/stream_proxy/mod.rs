@@ -12,13 +12,15 @@
 //!
 //! # Usage
 //!
+//! ## Direct Client Usage
+//!
 //! ```ignore
 //! use cream_execution_engine::infrastructure::stream_proxy::{
 //!     StreamProxyClient, StreamProxyConfig,
 //! };
 //!
 //! // Connect to the proxy
-//! let config = StreamProxyConfig::new("http://localhost:50051");
+//! let config = StreamProxyConfig::new("http://localhost:50052");
 //! let client = StreamProxyClient::connect(&config).await?;
 //!
 //! // Stream stock quotes
@@ -28,20 +30,34 @@
 //!         println!("{}: bid={} ask={}", quote.symbol, quote.bid_price, quote.ask_price);
 //!     }
 //! }
+//! ```
 //!
-//! // Stream order updates for position monitoring
-//! let mut updates = client.stream_order_updates(&[], &[]).await?;
-//! while let Some(response) = updates.message().await? {
-//!     if let Some(update) = response.update {
-//!         println!("Order {}: {:?}", update.event_id, update.event);
-//!     }
+//! ## Quote Manager (WebSocketManager-compatible)
+//!
+//! ```ignore
+//! use cream_execution_engine::infrastructure::stream_proxy::{
+//!     ProxyQuoteManager, ProxyQuoteManagerConfig,
+//! };
+//!
+//! let config = ProxyQuoteManagerConfig::from_env();
+//! let mut manager = ProxyQuoteManager::new(config, shutdown_token);
+//! manager.connect().await?;
+//! manager.start_stock_stream();
+//!
+//! // Subscribe and receive quotes via broadcast channel
+//! manager.subscribe_stock_quotes(&["AAPL".to_string()]).await?;
+//! let mut rx = manager.quote_updates();
+//! while let Ok(quote) = rx.recv().await {
+//!     println!("{}: {}", quote.symbol, quote.mid_price());
 //! }
 //! ```
 
 mod client;
 mod config;
 mod error;
+mod quote_manager;
 
 pub use client::StreamProxyClient;
 pub use config::StreamProxyConfig;
 pub use error::StreamProxyError;
+pub use quote_manager::{ProxyQuoteManager, ProxyQuoteManagerConfig};

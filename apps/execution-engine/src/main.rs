@@ -10,12 +10,16 @@
 //!
 //! # Environment Variables
 //!
+//! ## Required
+//! - `ALPACA_KEY`: Broker API key
+//! - `ALPACA_SECRET`: Broker API secret
+//!
+//! ## Optional
 //! - `CREAM_ENV`: PAPER | LIVE (default: PAPER)
-//! - `ALPACA_KEY`: Broker API key (required)
-//! - `ALPACA_SECRET`: Broker API secret (required)
 //! - `HTTP_PORT`: HTTP server port (default: 50051)
 //! - `GRPC_PORT`: gRPC server port (default: 50053)
 //! - `POSITION_MONITOR_ENABLED`: Enable position monitoring (default: true)
+//! - `STREAM_PROXY_ENDPOINT`: Stream proxy gRPC endpoint (default: <http://localhost:50052>)
 //! - `RUST_LOG`: Log level (default: info)
 
 use std::net::SocketAddr;
@@ -37,7 +41,7 @@ use execution_engine::infrastructure::http::{AppState, create_router};
 use execution_engine::infrastructure::marketdata::AlpacaMarketDataAdapter;
 use execution_engine::infrastructure::persistence::InMemoryOrderRepository;
 use execution_engine::infrastructure::price_feed::AlpacaPriceFeedAdapter;
-use execution_engine::infrastructure::websocket::{WebSocketConfig, WebSocketManager};
+use execution_engine::infrastructure::stream_proxy::{ProxyQuoteManager, ProxyQuoteManagerConfig};
 use tokio::net::TcpListener;
 use tokio::signal;
 use tokio::sync::broadcast;
@@ -61,6 +65,7 @@ struct EngineConfig {
     api_key: String,
     api_secret: String,
     position_monitor_enabled: bool,
+    stream_proxy_endpoint: String,
 }
 
 impl EngineConfig {
@@ -121,23 +126,28 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     // Create cancellation token for graceful shutdown coordination
     let shutdown_token = CancellationToken::new();
 
-    // Create WebSocket manager for real-time quotes
-    let websocket_manager = create_websocket_manager(&config, shutdown_token.clone());
+    // Create quote provider for real-time quotes (connects to stream-proxy)
+    let quote_provider = create_quote_provider(&config, shutdown_token.clone()).await?;
 
     // Create and start position monitor
     let position_monitor = create_position_monitor(
         &config,
         Arc::clone(&broker),
         Arc::clone(&price_feed),
-        Arc::clone(&websocket_manager),
+        Arc::clone(&quote_provider),
         shutdown_token.clone(),
     );
 
-    // Start WebSocket streams
+    // Start quote streams and position monitor
     if config.position_monitor_enabled {
-        tracing::info!("Starting WebSocket streams for position monitoring");
-        websocket_manager.connect_stock_stream();
-        websocket_manager.connect_options_stream();
+        tracing::info!(
+            endpoint = %config.stream_proxy_endpoint,
+            "Starting quote streams via stream proxy"
+        );
+
+        // Start quote streams
+        quote_provider.start_stock_stream();
+        quote_provider.start_options_stream();
 
         // Start position monitor service
         if let Err(e) = position_monitor.start().await {
@@ -224,6 +234,9 @@ fn parse_config() -> Result<EngineConfig, Box<dyn std::error::Error>> {
         .map(|v| v.to_lowercase() != "false" && v != "0")
         .unwrap_or(true);
 
+    let stream_proxy_endpoint = std::env::var("STREAM_PROXY_ENDPOINT")
+        .unwrap_or_else(|_| "http://localhost:50052".to_string());
+
     Ok(EngineConfig {
         environment,
         http_port,
@@ -231,6 +244,7 @@ fn parse_config() -> Result<EngineConfig, Box<dyn std::error::Error>> {
         api_key,
         api_secret,
         position_monitor_enabled,
+        stream_proxy_endpoint,
     })
 }
 
@@ -307,19 +321,29 @@ fn create_price_feed(
     Ok(Arc::new(price_feed))
 }
 
-/// Create the WebSocket manager for real-time quotes.
-fn create_websocket_manager(
+/// Create the quote provider for real-time quotes (connects to stream-proxy).
+async fn create_quote_provider(
     config: &EngineConfig,
     shutdown: CancellationToken,
-) -> Arc<WebSocketManager> {
-    let ws_config = WebSocketConfig::new(
-        config.api_key.clone(),
-        config.api_secret.clone(),
-        config.environment,
-    );
+) -> Result<Arc<ProxyQuoteManager>, Box<dyn std::error::Error>> {
+    let proxy_config = ProxyQuoteManagerConfig {
+        endpoint: config.stream_proxy_endpoint.clone(),
+        enabled: config.position_monitor_enabled,
+    };
 
-    let manager = WebSocketManager::new(ws_config, shutdown);
-    Arc::new(manager)
+    let mut manager = ProxyQuoteManager::new(proxy_config, shutdown);
+
+    // Connect to the stream proxy
+    if config.position_monitor_enabled
+        && let Err(e) = manager.connect().await {
+            tracing::warn!(
+                error = %e,
+                endpoint = %config.stream_proxy_endpoint,
+                "Failed to connect to stream proxy, position monitoring may use REST fallback"
+            );
+        }
+
+    Ok(Arc::new(manager))
 }
 
 /// Create the position monitor service.
@@ -327,9 +351,9 @@ fn create_position_monitor(
     config: &EngineConfig,
     broker: Arc<AlpacaBrokerAdapter>,
     price_feed: Arc<AlpacaPriceFeedAdapter>,
-    websocket_manager: Arc<WebSocketManager>,
+    quote_provider: Arc<ProxyQuoteManager>,
     shutdown: CancellationToken,
-) -> PositionMonitorService<AlpacaBrokerAdapter, AlpacaPriceFeedAdapter> {
+) -> PositionMonitorService<AlpacaBrokerAdapter, AlpacaPriceFeedAdapter, ProxyQuoteManager> {
     let monitor_config = PositionMonitorConfig {
         enabled: config.position_monitor_enabled,
         ..PositionMonitorConfig::default()
@@ -339,7 +363,7 @@ fn create_position_monitor(
         monitor_config,
         broker,
         price_feed,
-        websocket_manager,
+        quote_provider,
         shutdown,
     )
 }
