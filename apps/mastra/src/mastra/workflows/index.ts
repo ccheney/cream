@@ -24,12 +24,7 @@ export { tradingCycleWorkflow } from "./trading-cycle/index.js";
 // export { predictionMarketsWorkflow } from "./prediction-markets/workflow.js";
 
 // MacroWatch Workflow
-// TODO: Migrate from apps/api/src/mastra/workflows/macro-watch/
-// export { macroWatchWorkflow } from "./macro-watch/workflow.js";
+export { macroWatchWorkflow } from "./macro-watch/index.js";
 
 // Temporary placeholder export to make this module valid
-export const WORKFLOWS_PENDING_MIGRATION = [
-	"tradingCycleWorkflow",
-	"predictionMarketsWorkflow",
-	"macroWatchWorkflow",
-] as const;
+export const WORKFLOWS_PENDING_MIGRATION = ["predictionMarketsWorkflow"] as const;
