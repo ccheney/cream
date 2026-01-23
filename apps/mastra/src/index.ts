@@ -15,3 +15,12 @@ export {
 	predictionMarketsWorkflow,
 	tradingCycleWorkflow,
 } from "./mastra/workflows/index.js";
+
+// Export MacroWatch utilities for direct use by workers
+export {
+	compileMorningNewspaper,
+	formatNewspaperForLLM,
+	type MacroWatchEntry,
+	type NewspaperContent,
+	runMacroWatch,
+} from "./mastra/workflows/macro-watch/index.js";

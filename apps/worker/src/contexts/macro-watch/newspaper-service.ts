@@ -5,8 +5,9 @@
  * Runs near market open (9:00-9:30 AM ET) before the first RTH OODA cycle.
  */
 
-import { compileMorningNewspaper, formatNewspaperForLLM, getMacroWatchRepo } from "@cream/api";
 import { getCalendarService } from "@cream/domain";
+import { compileMorningNewspaper, formatNewspaperForLLM } from "@cream/mastra";
+import { MacroWatchRepository } from "@cream/storage";
 
 import { log } from "../../shared/logger.js";
 
@@ -57,7 +58,7 @@ export class NewspaperService {
 			prevCloseTime.setUTCHours(21, 0, 0, 0); // 4 PM ET = 21:00 UTC
 
 			// Fetch all entries since previous close
-			const repo = await getMacroWatchRepo();
+			const repo = new MacroWatchRepository();
 			const entries = await repo.getEntriesSinceClose(prevCloseTime.toISOString());
 
 			if (entries.length === 0) {

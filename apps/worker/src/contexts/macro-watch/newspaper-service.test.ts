@@ -5,7 +5,7 @@
 import { afterEach, beforeEach, describe, expect, mock, test } from "bun:test";
 // Import the real compileMorningNewspaper BEFORE setting up module mocks
 // to prevent test isolation issues with other test files
-import { compileMorningNewspaper as realCompileMorningNewspaper } from "@cream/api";
+import { compileMorningNewspaper as realCompileMorningNewspaper } from "@cream/mastra";
 import { createNewspaperService, NewspaperService } from "./newspaper-service.js";
 
 const mockUpsertNewspaper = mock(() => Promise.resolve());
@@ -41,8 +41,6 @@ const mockRepo = {
 	upsertNewspaper: mockUpsertNewspaper,
 };
 
-const mockGetMacroWatchRepo = mock(() => Promise.resolve(mockRepo));
-
 const mockGetPreviousTradingDay = mock(() => Promise.resolve("2026-01-14"));
 const mockCalendarService = {
 	getPreviousTradingDay: mockGetPreviousTradingDay,
@@ -51,10 +49,17 @@ const mockGetCalendarService = mock<() => typeof mockCalendarService | null>(
 	() => mockCalendarService,
 );
 
-mock.module("@cream/api", () => ({
-	getMacroWatchRepo: mockGetMacroWatchRepo,
+mock.module("@cream/mastra", () => ({
 	// Pass through the real compileMorningNewspaper to avoid breaking other tests
 	compileMorningNewspaper: realCompileMorningNewspaper,
+}));
+
+mock.module("@cream/storage", () => ({
+	MacroWatchRepository: class {
+		constructor() {
+			Object.assign(this, mockRepo);
+		}
+	},
 }));
 
 mock.module("@cream/domain", () => ({
@@ -66,7 +71,6 @@ describe("NewspaperService", () => {
 
 	beforeEach(() => {
 		service = createNewspaperService();
-		mockGetMacroWatchRepo.mockClear();
 		mockGetEntriesSinceClose.mockClear();
 		mockUpsertNewspaper.mockClear();
 		mockGetCalendarService.mockClear();
@@ -74,7 +78,6 @@ describe("NewspaperService", () => {
 	});
 
 	afterEach(() => {
-		mockGetMacroWatchRepo.mockClear();
 		mockGetEntriesSinceClose.mockClear();
 		mockUpsertNewspaper.mockClear();
 		mockGetCalendarService.mockClear();
@@ -100,7 +103,6 @@ describe("NewspaperService", () => {
 			await service.compile(symbols);
 
 			expect(mockGetCalendarService).toHaveBeenCalled();
-			expect(mockGetMacroWatchRepo).toHaveBeenCalled();
 			expect(mockGetEntriesSinceClose).toHaveBeenCalled();
 			// compileMorningNewspaper is called (verified by upsertNewspaper being called with result)
 			expect(mockUpsertNewspaper).toHaveBeenCalled();
@@ -125,25 +127,17 @@ describe("NewspaperService", () => {
 		});
 
 		test("skips if already running", async () => {
-			mockGetMacroWatchRepo.mockImplementationOnce(
-				() =>
-					new Promise((resolve) =>
-						setTimeout(
-							() =>
-								resolve({
-									getEntriesSinceClose: mock(() => Promise.resolve([])),
-									upsertNewspaper: mock(() => Promise.resolve()),
-								}),
-							100,
-						),
-					),
+			mockGetEntriesSinceClose.mockImplementationOnce(
+				() => new Promise((resolve) => setTimeout(() => resolve([]), 100)),
 			);
 
 			const firstCompile = service.compile(["AAPL"]);
-			await service.compile(["MSFT"]);
+			const result = await service.compile(["MSFT"]);
+
+			expect(result.compiled).toBe(false);
+			expect(result.message).toBe("Already running");
 
 			await firstCompile;
-			expect(mockGetMacroWatchRepo).toHaveBeenCalledTimes(1);
 		});
 
 		test("skips when no entries available", async () => {
@@ -158,19 +152,21 @@ describe("NewspaperService", () => {
 		test("handles calendar service not available", async () => {
 			mockGetCalendarService.mockReturnValueOnce(null);
 
-			await service.compile(["AAPL"]);
+			const result = await service.compile(["AAPL"]);
 
-			expect(mockGetMacroWatchRepo).not.toHaveBeenCalled();
+			expect(result.compiled).toBe(false);
+			expect(result.message).toBe("CalendarService not available");
 			expect(service.getLastCompile()).toBeNull();
 		});
 
 		test("handles errors gracefully", async () => {
-			mockGetMacroWatchRepo.mockImplementationOnce(() =>
+			mockGetEntriesSinceClose.mockImplementationOnce(() =>
 				Promise.reject(new Error("Database error")),
 			);
 
-			await service.compile(["AAPL"]);
+			const result = await service.compile(["AAPL"]);
 
+			expect(result.compiled).toBe(false);
 			expect(service.isRunning()).toBe(false);
 			expect(service.getLastCompile()).toBeNull();
 		});

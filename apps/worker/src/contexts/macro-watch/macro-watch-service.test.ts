@@ -31,7 +31,7 @@ const mockRunMacroWatch = mock(() =>
 	}),
 );
 
-mock.module("@cream/api", () => ({
+mock.module("@cream/mastra", () => ({
 	runMacroWatch: mockRunMacroWatch,
 }));
 

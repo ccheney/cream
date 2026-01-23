@@ -271,7 +271,7 @@ export function logStartupAudit(_audit: StartupAuditLog): void {}
  *
  * @example
  * ```ts
- * // apps/api/src/main.ts
+ * // apps/mastra/src/server.ts
  * import { runStartupValidation } from "@cream/config/startup";
  * import { createContext } from "@cream/domain";
  *

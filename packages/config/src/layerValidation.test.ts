@@ -72,7 +72,7 @@ describe("LayerValidator", () => {
 			const validator = new LayerValidator();
 
 			// Application layer importing from presentation (not allowed)
-			const violation = validator.validateImport("packages/agents/src/workflow.ts", "apps/api");
+			const violation = validator.validateImport("packages/agents/src/workflow.ts", "apps/mastra");
 
 			expect(violation).not.toBeNull();
 			expect(violation?.severity).toBe("ERROR");
@@ -211,7 +211,7 @@ describe("LayerValidator", () => {
 			expect(validator.findLayerForFile("packages/storage/src/client.ts")?.name).toBe(
 				"infrastructure",
 			);
-			expect(validator.findLayerForFile("apps/api/src/index.ts")?.name).toBe("presentation");
+			expect(validator.findLayerForFile("apps/mastra/src/index.ts")?.name).toBe("presentation");
 		});
 
 		it("should return null for unknown path", () => {
@@ -442,7 +442,7 @@ describe("createLayerConfig", () => {
 });
 
 describe("DEFAULT_LAYERS", () => {
-	it("should define standard Clean Architecture layers", () => {
+	it("should define standard layers", () => {
 		expect(DEFAULT_LAYERS).toHaveLength(5);
 
 		const layerNames = DEFAULT_LAYERS.map((l) => l.name);
@@ -499,7 +499,7 @@ describe("Integration", () => {
 			},
 			// Presentation can depend on all
 			{
-				path: "apps/api/src/routes.ts",
+				path: "apps/mastra/src/routes.ts",
 				imports: [
 					{ path: "@cream/domain", line: 1 },
 					{ path: "@cream/agents", line: 2 },
@@ -525,7 +525,7 @@ describe("Integration", () => {
 			// Application importing from presentation - BAD!
 			{
 				path: "packages/agents/src/workflow.ts",
-				imports: [{ path: "apps/api", line: 10 }],
+				imports: [{ path: "apps/mastra", line: 10 }],
 			},
 		]);
 

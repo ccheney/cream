@@ -2,14 +2,9 @@
  * System Cycle Routes
  *
  * Endpoints for triggering and monitoring trading cycles.
- *
- * NOTE: When USE_MASTRA_APP=true, the worker calls Mastra API directly.
- * Dashboard-api continues to use embedded @cream/api for local triggers
- * (e.g., from the dashboard UI). Full proxy support to apps/mastra will
- * be added in a future iteration.
+ * Uses embedded tradingCycleWorkflow from @cream/mastra.
  */
 
-import { MASTRA_API_URL, USE_MASTRA_APP } from "@cream/config";
 import type { CyclePhase, CycleProgressData, CycleResultData } from "@cream/domain/websocket";
 import { tradingCycleWorkflow } from "@cream/mastra";
 import { reconstructStreamingState } from "@cream/storage";
@@ -55,14 +50,6 @@ import {
 } from "./types.js";
 
 const app = new OpenAPIHono();
-
-// Log feature flag status at module load
-if (USE_MASTRA_APP) {
-	log.info(
-		{ mastraApiUrl: MASTRA_API_URL },
-		"USE_MASTRA_APP enabled - worker will call Mastra API directly. Dashboard-api continues with embedded workflow.",
-	);
-}
 
 // ============================================
 // Internal Auth Helper

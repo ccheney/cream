@@ -82,6 +82,6 @@ Adds React/DOM support:
 
 ## Used By
 
-- `apps/api`, `apps/worker`, `apps/dashboard-api` → bun.json
+- `apps/mastra`, `apps/worker`, `apps/dashboard-api` → bun.json
 - `apps/dashboard` → react.json
 - `packages/*` → bun.json

@@ -16,10 +16,6 @@ import type {
 
 const log = createNodeLogger({ service: "newspaper", level: "info" });
 
-// ============================================
-// Types
-// ============================================
-
 /**
  * Compiled newspaper content ready for LLM consumption
  */
@@ -35,10 +31,6 @@ export interface NewspaperContent {
 	};
 	entryCount: number;
 }
-
-// ============================================
-// Newspaper Compiler
-// ============================================
 
 /**
  * Compile overnight entries into a morning newspaper.
@@ -201,13 +193,9 @@ export function prepareNewspaperForStorage(
 		date,
 		compiledAt: now.toISOString(),
 		sections,
-		rawEntryIds: entries.map((e) => e.id),
+		rawEntryIds: entries.map((e) => e.id).filter((id): id is string => id !== undefined),
 	};
 }
-
-// ============================================
-// Runner Function
-// ============================================
 
 /**
  * Compile the morning newspaper from overnight entries.

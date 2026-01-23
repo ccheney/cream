@@ -37,7 +37,7 @@ COPY packages/mocks/package.json ./packages/mocks/
 COPY packages/test-fixtures/package.json ./packages/test-fixtures/
 
 # Copy api and worker package.json
-COPY apps/api/package.json ./apps/api/
+COPY apps/mastra/package.json ./apps/mastra/
 COPY apps/worker/package.json ./apps/worker/
 
 # Install all dependencies
@@ -55,7 +55,7 @@ COPY --from=deps /app/node_modules ./node_modules
 # Copy source files
 COPY package.json bun.lock ./
 COPY packages ./packages
-COPY apps/api ./apps/api
+COPY apps/mastra ./apps/mastra
 COPY apps/worker ./apps/worker
 
 # Build dependencies in order
@@ -101,8 +101,8 @@ RUN bun run build
 WORKDIR /app/packages/agents
 RUN bun run build
 
-# Build the api (dependency of worker)
-WORKDIR /app/apps/api
+# Build the mastra package (dependency of worker)
+WORKDIR /app/apps/mastra
 RUN bun run build
 
 # Build the worker

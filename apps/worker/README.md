@@ -105,9 +105,8 @@ bun test
 
 ## Dependencies
 
-- `@cream/api` - Workflow definitions
+- `@cream/mastra` - Mastra workflows and agents
 - `@cream/config` - RuntimeConfigService
 - `@cream/domain` - ExecutionContext, gRPC clients
 - `@cream/filings` - SEC filing ingestion
 - `@cream/helix` - HelixDB client
-- `@mastra/core` - Workflow orchestration

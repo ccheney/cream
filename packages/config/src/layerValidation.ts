@@ -6,8 +6,6 @@
  * - UI importing from database layer
  * - Domain depending on infrastructure
  * - Cross-layer imports that bypass abstraction
- *
- * Based on Clean Architecture and Hexagonal Architecture principles.
  */
 
 // ============================================
@@ -116,11 +114,11 @@ export interface LayerValidationConfig {
 }
 
 // ============================================
-// Default Clean Architecture Layers
+// Default Layers
 // ============================================
 
 /**
- * Default layers following Clean Architecture principles.
+ * Default layer configuration.
  */
 export const DEFAULT_LAYERS: ArchitecturalLayer[] = [
 	{
@@ -163,7 +161,7 @@ export const DEFAULT_LAYERS: ArchitecturalLayer[] = [
 	{
 		name: "presentation",
 		description: "UI and external interfaces",
-		packages: ["apps/api", "apps/worker"],
+		packages: ["apps/mastra", "apps/worker"],
 		allowedDependencies: ["domain", "application", "infrastructure", "config"],
 		forbiddenDependencies: [],
 	},
@@ -476,7 +474,7 @@ export function parseImports(source: string): Array<{ path: string; line: number
 // ============================================
 
 /**
- * Create a layer validator with default Clean Architecture config.
+ * Create a layer validator with default config.
  */
 export function createLayerValidator(config?: Partial<LayerValidationConfig>): LayerValidator {
 	return new LayerValidator(config);

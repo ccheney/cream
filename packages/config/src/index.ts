@@ -24,8 +24,6 @@ export {
 	scanPackages,
 	validatePackageDependencies,
 } from "./dependencyValidation/index.js";
-// Feature Flags
-export { getAgentApiUrl, MASTRA_API_URL, USE_MASTRA_APP } from "./feature-flags";
 // Health Checks
 export {
 	type ComponentHealthConfig,

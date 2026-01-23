@@ -1,39 +1,29 @@
 /**
- * MacroWatch Workflow
+ * MacroWatch Runner
  *
- * Lightweight overnight scanning workflow that runs during market closed hours.
- * Accumulates macro developments for the morning newspaper compilation.
- *
- * Scanner Phases (run in parallel):
- * 1. News scan - Alpaca news API
- * 2. Prediction scan - Kalshi/Polymarket delta changes
- * 3. Economic scan - FRED economic calendar
- * 4. Movers scan - Alpaca screener pre-market movers
+ * Lightweight overnight scanning runner that runs during market closed hours.
+ * Executes all scanners in parallel and aggregates results.
  *
  * @see docs/plans/42-overnight-macro-watch.md
  */
 
 import { createNodeLogger } from "@cream/logger";
 
+import type { MacroWatchEntry } from "./entry-schemas.js";
 import {
 	scanEconomicCalendar,
 	scanMovers,
 	scanNews,
 	scanPredictionDeltas,
 } from "./scanners/index.js";
-import type { MacroWatchEntry } from "./schemas.js";
 
 const log = createNodeLogger({ service: "macro-watch", level: "info" });
-
-// ============================================
-// Runner Function
-// ============================================
 
 /**
  * Run the MacroWatch workflow.
  *
  * Executes all scanners in parallel and aggregates results into a single output.
- * This is the primary entry point for the MacroWatch workflow.
+ * This is the primary entry point for the MacroWatch runner.
  *
  * @param symbols - Universe symbols to scan for
  * @param since - ISO timestamp to scan from
@@ -75,7 +65,7 @@ export async function runMacroWatch(
 			movers: moverEntries.length,
 			total: uniqueEntries.length,
 		},
-		"MacroWatch workflow complete",
+		"MacroWatch runner complete",
 	);
 
 	return {

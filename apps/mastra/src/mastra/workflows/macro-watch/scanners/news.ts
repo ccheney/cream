@@ -9,7 +9,7 @@
 import { createNodeLogger } from "@cream/logger";
 import { createAlpacaClientFromEnv, isAlpacaConfigured } from "@cream/marketdata";
 
-import type { MacroWatchEntry, MacroWatchSession } from "../schemas.js";
+import type { MacroWatchEntry, MacroWatchSession } from "../entry-schemas.js";
 
 const log = createNodeLogger({ service: "macro-watch-news", level: "info" });
 

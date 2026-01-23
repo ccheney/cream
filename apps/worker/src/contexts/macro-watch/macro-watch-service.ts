@@ -6,8 +6,8 @@
  * Ingests news items to HelixDB for vector search.
  */
 
-import { type MacroWatchEntry, runMacroWatch } from "@cream/api";
 import { createNewsIngestionService, type HelixClient, type NewsItemInput } from "@cream/helix";
+import { type MacroWatchEntry, runMacroWatch } from "@cream/mastra";
 import { type Database, MacroWatchRepository } from "@cream/storage";
 
 import { log } from "../../shared/logger.js";

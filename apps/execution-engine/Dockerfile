@@ -5,7 +5,6 @@
 # Run:   docker run -p 50051:50051 cream/execution-engine:test
 #
 # Used by: testcontainers in integration tests
-# See: apps/api/tests/integration/execution.test.ts
 
 # ============================================
 # Stage 1: Build

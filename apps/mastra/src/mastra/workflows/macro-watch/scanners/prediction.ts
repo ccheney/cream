@@ -9,7 +9,7 @@
 
 import { createNodeLogger } from "@cream/logger";
 
-import type { MacroWatchEntry, MacroWatchSession } from "../schemas.js";
+import type { MacroWatchEntry, MacroWatchSession } from "../entry-schemas.js";
 
 const log = createNodeLogger({ service: "macro-watch-prediction", level: "info" });
 
@@ -39,9 +39,7 @@ const SIGNAL_CONFIG: Record<
 		shortName: string;
 		format: (value: number) => string;
 		symbols: string[];
-		/** Explanation of what this signal means for trading decisions */
 		context: (value: number) => string;
-		/** Order in which to display (lower = first) */
 		order: number;
 	}
 > = {
