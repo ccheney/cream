@@ -37,7 +37,7 @@ export const scanPredictionsStep = createStep({
 				timestamp: new Date().toISOString(),
 			});
 		} catch (err) {
-			errors.push("Predictions scan failed: " + (err instanceof Error ? err.message : String(err)));
+			errors.push(`Predictions scan failed: ${err instanceof Error ? err.message : String(err)}`);
 		}
 
 		return { cycleId, predictions, errors };

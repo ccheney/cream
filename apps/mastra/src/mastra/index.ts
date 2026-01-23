@@ -30,7 +30,6 @@ import {
 	trader,
 } from "./agents/index.js";
 // Scorers
-import { decisionQualityScorer, researchDepthScorer } from "./scorers/index.js";
 // Tools - prediction markets repository provider
 import {
 	type PredictionMarketsToolRepo,

@@ -7,10 +7,8 @@
  * @see docs/plans/53-mastra-v1-migration.md
  */
 
-import { requireEnv } from "@cream/domain";
 import { createAlpacaClientFromEnv, isAlpacaConfigured } from "@cream/marketdata";
 import { classifyRegime, DEFAULT_RULE_BASED_CONFIG, getRequiredCandleCount } from "@cream/regime";
-import { resolveUniverseSymbols } from "@cream/universe";
 import { createStep } from "@mastra/core/workflows";
 import { z } from "zod";
 

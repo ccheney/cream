@@ -38,7 +38,7 @@ export const scanEconomicStep = createStep({
 				timestamp: new Date().toISOString(),
 			});
 		} catch (err) {
-			errors.push("Economic scan failed: " + (err instanceof Error ? err.message : String(err)));
+			errors.push(`Economic scan failed: ${err instanceof Error ? err.message : String(err)}`);
 		}
 
 		return { cycleId, economic, errors };

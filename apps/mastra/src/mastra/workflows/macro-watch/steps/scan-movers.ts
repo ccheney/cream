@@ -47,7 +47,7 @@ export const scanMoversStep = createStep({
 				reason: "Earnings miss",
 			});
 		} catch (err) {
-			errors.push("Movers scan failed: " + (err instanceof Error ? err.message : String(err)));
+			errors.push(`Movers scan failed: ${err instanceof Error ? err.message : String(err)}`);
 		}
 
 		return { cycleId, gainers, losers, errors };

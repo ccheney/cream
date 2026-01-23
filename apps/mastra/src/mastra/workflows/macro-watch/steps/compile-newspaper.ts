@@ -46,12 +46,11 @@ export const compileNewspaperStep = createStep({
 		sections.push({
 			title: "Market Movers",
 			content: [
-				"Top Gainers: " +
-					gainers.map((g) => g.symbol + " +" + g.change.toFixed(1) + "%").join(", "),
-				"Top Losers: " + losers.map((l) => l.symbol + " " + l.change.toFixed(1) + "%").join(", "),
+				`Top Gainers: ${gainers.map((g) => `${g.symbol} +${g.change.toFixed(1)}%`).join(", ")}`,
+				`Top Losers: ${losers.map((l) => `${l.symbol} ${l.change.toFixed(1)}%`).join(", ")}`,
 			].join("\n"),
 			highlights: [...gainers.slice(0, 2), ...losers.slice(0, 2)].map(
-				(m) => m.symbol + ": " + m.reason,
+				(m) => `${m.symbol}: ${m.reason}`,
 			),
 		});
 
@@ -60,7 +59,7 @@ export const compileNewspaperStep = createStep({
 			sections.push({
 				title: "Prediction Markets",
 				content: predictions
-					.map((p) => p.market + ": " + (p.probability * 100).toFixed(0) + "%")
+					.map((p) => `${p.market}: ${(p.probability * 100).toFixed(0)}%`)
 					.join("\n"),
 				highlights: predictions.slice(0, 3).map((p) => p.market),
 			});
@@ -70,7 +69,7 @@ export const compileNewspaperStep = createStep({
 		if (economic.length > 0) {
 			sections.push({
 				title: "Economic Indicators",
-				content: economic.map((e) => e.indicator + ": " + e.value).join("\n"),
+				content: economic.map((e) => `${e.indicator}: ${e.value}`).join("\n"),
 				highlights: economic.slice(0, 3).map((e) => e.indicator),
 			});
 		}

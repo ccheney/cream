@@ -141,7 +141,7 @@ function refineRegimeClassifications(
 				reasoning: result.reasoning,
 			};
 		} catch (error) {
-			warnings.push("Regime classification failed for " + symbol + ": " + formatError(error));
+			warnings.push(`Regime classification failed for ${symbol}: ${formatError(error)}`);
 			regimeLabels[symbol] = inputRegimeLabels[symbol] ?? {
 				regime: "RANGE_BOUND",
 				confidence: 0.5,

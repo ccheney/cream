@@ -39,7 +39,7 @@ export const scanNewsStep = createStep({
 				symbols: ["SPY", "QQQ"],
 			});
 		} catch (err) {
-			errors.push("News scan failed: " + (err instanceof Error ? err.message : String(err)));
+			errors.push(`News scan failed: ${err instanceof Error ? err.message : String(err)}`);
 		}
 
 		return { cycleId, news, errors };
