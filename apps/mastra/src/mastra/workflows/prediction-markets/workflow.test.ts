@@ -24,6 +24,12 @@ mock.module("@cream/domain", () => ({
 	}),
 	requireEnv: () => "PAPER",
 	isTest: () => true,
+	calculateCaseStatistics: () => ({
+		total: 0,
+		byAction: {},
+		byRegime: {},
+		averageSimilarity: 0,
+	}),
 }));
 
 // Mock @cream/config

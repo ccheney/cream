@@ -37,6 +37,12 @@ mock.module("@cream/domain", () => ({
 	}),
 	requireEnv: () => "PAPER",
 	isTest: () => true,
+	calculateCaseStatistics: () => ({
+		total: 0,
+		byAction: {},
+		byRegime: {},
+		averageSimilarity: 0,
+	}),
 }));
 
 // Mock @cream/marketdata
@@ -62,6 +68,10 @@ mock.module("@cream/regime", () => ({
 // Mock @cream/universe
 mock.module("@cream/universe", () => ({
 	resolveUniverseSymbols: async () => ["AAPL", "MSFT"],
+	createFREDClient: () => ({
+		getObservations: async () => [],
+		getSeriesInfo: async () => null,
+	}),
 }));
 
 // Mock @cream/logger

@@ -27,6 +27,13 @@ mock.module("@cream/domain", () => ({
 		traceId: "test-trace",
 	}),
 	requireEnv: () => "PAPER",
+	isTest: () => true,
+	calculateCaseStatistics: () => ({
+		total: 0,
+		byAction: {},
+		byRegime: {},
+		averageSimilarity: 0,
+	}),
 }));
 
 describe("getQuotes tool", () => {
