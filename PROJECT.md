@@ -306,7 +306,8 @@ flowchart LR
 ```
 cream/
 ├── apps/
-│   ├── api/                  # Agent orchestration server
+│   ├── api/                  # Legacy agent server (being migrated)
+│   ├── mastra/               # Mastra v1.0 agent orchestration server
 │   ├── worker/               # Hourly scheduler
 │   ├── dashboard/            # Trading dashboard
 │   ├── dashboard-api/        # REST + WebSocket API

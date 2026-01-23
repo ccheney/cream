@@ -57,7 +57,8 @@ flowchart TB
 |---------|------|-------|----------|
 | **Dashboard** | Real-time trading UI, portfolio view, decision history | 3000 | HTTP |
 | **Dashboard API** | Gateway, authentication, data aggregation | 3001 | HTTP/WebSocket |
-| **API** | Agent orchestration, workflow engine | 4111 | HTTP |
+| **Mastra** | Agent orchestration, workflow engine (Mastra v1.0) | 4112 | HTTP |
+| **API** | Legacy agent server (being migrated) | 4111 | HTTP |
 | **Worker** | Hourly trading cycles, background jobs | 3002 | HTTP |
 | **Execution Engine** | Order validation, risk constraints, broker routing | 50051, 50053 | HTTP, gRPC |
 | **Stream Proxy** | Alpaca WebSocket multiplexer, market data distribution | 50052, 8082 | gRPC, HTTP |
