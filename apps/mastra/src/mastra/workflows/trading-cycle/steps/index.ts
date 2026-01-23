@@ -15,6 +15,7 @@
  * - act: Execute approved decisions
  */
 
+export { actStep } from "./act.js";
 export { analystsStep } from "./analysts.js";
 export { consensusStep } from "./consensus.js";
 export { debateStep } from "./debate.js";
