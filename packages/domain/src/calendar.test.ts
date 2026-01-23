@@ -2,7 +2,40 @@
  * Market Calendar Tests
  */
 
-import { describe, expect, mock, test } from "bun:test";
+import { afterEach, beforeEach, describe, expect, test } from "bun:test";
+import {
+	canStartCycle,
+	DEFAULT_CLOSE_TIME,
+	EARLY_CLOSE_TIME,
+	getAllHolidays,
+	getAllowedSessions,
+	getExpirationCycle,
+	getHoliday,
+	getMarketCloseTime,
+	getMinutesToClose,
+	getMonthlyExpiration,
+	getMonthlyExpirations,
+	getNextRTHStart,
+	getNextTradingDay,
+	getPreviousTradingDay,
+	getThirdFriday,
+	getTradingSession,
+	hasDailyOptions,
+	isDailyExpiration,
+	isEntryAction,
+	isExitAction,
+	isMarketOpen,
+	isMonthlyExpiration,
+	isPassiveAction,
+	isRTH,
+	isTradingPossible,
+	isWeeklyExpiration,
+	MIN_MINUTES_BEFORE_CLOSE,
+	NYSE_HOLIDAYS_2026,
+	NYSE_SESSIONS,
+	validateSessionForAction,
+} from "./calendar";
+import { setCalendarServiceForTests } from "./calendar/factory";
 import {
 	EARLY_CLOSE,
 	generateCalendarRange,
@@ -107,42 +140,13 @@ const mockCalendarService: CalendarService = {
 	getMarketCloseTimeSync: (date) => getMarketCloseTimeFromHardcoded(date),
 };
 
-mock.module("./calendar/factory.js", () => ({
-	requireCalendarService: () => mockCalendarService,
-}));
+beforeEach(() => {
+	setCalendarServiceForTests(mockCalendarService);
+});
 
-import {
-	canStartCycle,
-	DEFAULT_CLOSE_TIME,
-	EARLY_CLOSE_TIME,
-	getAllHolidays,
-	getAllowedSessions,
-	getExpirationCycle,
-	getHoliday,
-	getMarketCloseTime,
-	getMinutesToClose,
-	getMonthlyExpiration,
-	getMonthlyExpirations,
-	getNextRTHStart,
-	getNextTradingDay,
-	getPreviousTradingDay,
-	getThirdFriday,
-	getTradingSession,
-	hasDailyOptions,
-	isDailyExpiration,
-	isEntryAction,
-	isExitAction,
-	isMarketOpen,
-	isMonthlyExpiration,
-	isPassiveAction,
-	isRTH,
-	isTradingPossible,
-	isWeeklyExpiration,
-	MIN_MINUTES_BEFORE_CLOSE,
-	NYSE_HOLIDAYS_2026,
-	NYSE_SESSIONS,
-	validateSessionForAction,
-} from "./calendar";
+afterEach(() => {
+	setCalendarServiceForTests(null);
+});
 
 // ============================================
 // Holiday Tests

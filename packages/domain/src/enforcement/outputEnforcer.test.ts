@@ -55,6 +55,15 @@ function createValidDecisionPlan(): DecisionPlan {
 	};
 }
 
+function getFirstDecision() {
+	const plan = createValidDecisionPlan();
+	const decision = plan.decisions[0];
+	if (!decision) {
+		throw new Error("Expected decision to be defined");
+	}
+	return decision;
+}
+
 function createMarketContext(overrides: Partial<MarketContext> = {}): MarketContext {
 	return {
 		marketOpen: true,
@@ -254,7 +263,7 @@ describe("OutputEnforcer", () => {
 					...createValidDecisionPlan(),
 					decisions: [
 						{
-							...createValidDecisionPlan().decisions[0]!,
+							...getFirstDecision(),
 							action: "SELL",
 							size: {
 								quantity: 100,
@@ -279,7 +288,7 @@ describe("OutputEnforcer", () => {
 					...createValidDecisionPlan(),
 					decisions: [
 						{
-							...createValidDecisionPlan().decisions[0]!,
+							...getFirstDecision(),
 							action: "INCREASE",
 						},
 					],
@@ -298,7 +307,7 @@ describe("OutputEnforcer", () => {
 					...createValidDecisionPlan(),
 					decisions: [
 						{
-							...createValidDecisionPlan().decisions[0]!,
+							...getFirstDecision(),
 							action: "REDUCE",
 						},
 					],
@@ -317,7 +326,7 @@ describe("OutputEnforcer", () => {
 					...createValidDecisionPlan(),
 					decisions: [
 						{
-							...createValidDecisionPlan().decisions[0]!,
+							...getFirstDecision(),
 							action: "HOLD",
 						},
 					],
@@ -336,7 +345,7 @@ describe("OutputEnforcer", () => {
 					...createValidDecisionPlan(),
 					decisions: [
 						{
-							...createValidDecisionPlan().decisions[0]!,
+							...getFirstDecision(),
 							action: "NO_TRADE",
 							size: {
 								quantity: 0,
@@ -360,7 +369,7 @@ describe("OutputEnforcer", () => {
 					...createValidDecisionPlan(),
 					decisions: [
 						{
-							...createValidDecisionPlan().decisions[0]!,
+							...getFirstDecision(),
 							size: {
 								quantity: -100, // Invalid
 								unit: "SHARES",
@@ -478,7 +487,11 @@ describe("OutputEnforcer", () => {
 
 		it("should request revision and succeed if revised plan is valid", async () => {
 			const plan = createValidDecisionPlan();
-			plan.decisions[0]!.action = "INCREASE"; // Will fail preflight
+			const decision = plan.decisions[0];
+			if (!decision) {
+				throw new Error("Expected decision to be defined");
+			}
+			decision.action = "INCREASE"; // Will fail preflight
 
 			const revisedPlan = createValidDecisionPlan(); // Valid
 

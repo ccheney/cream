@@ -10,25 +10,11 @@ import {
 	isCalendarServiceAvailable,
 	requireCalendarService,
 	resetCalendarService,
+	setCalendarServiceForTests,
 } from "./factory";
 
 // Reset singleton at file load time to clear any pollution from other test files
 resetCalendarService();
-
-// Detect if module mocking from other test files has polluted factory functions
-const moduleIsPolluted = (() => {
-	resetCalendarService();
-	const service = getCalendarService();
-	if (service !== null) {
-		return true;
-	}
-	try {
-		requireCalendarService();
-		return true;
-	} catch {
-		return false;
-	}
-})();
 
 describe("CalendarService Factory", () => {
 	const originalEnv = { ...Bun.env };
@@ -92,10 +78,32 @@ describe("CalendarService Factory", () => {
 		});
 	});
 
-	describe.skipIf(moduleIsPolluted)("singleton management", () => {
+	describe("singleton management", () => {
 		describe("getCalendarService", () => {
-			it("returns null before initialization", () => {
-				expect(getCalendarService()).toBeNull();
+			it("clears the previously set singleton after reset", () => {
+				const sentinel = {
+					isMarketOpen: async () => false,
+					isTradingDay: async () => false,
+					getMarketCloseTime: async () => null,
+					getTradingSession: async () => "CLOSED",
+					isRTH: async () => false,
+					getNextTradingDay: async () => new Date(),
+					getPreviousTradingDay: async () => new Date(),
+					getClock: async () => ({
+						isOpen: false,
+						timestamp: new Date(),
+						nextOpen: new Date(),
+						nextClose: new Date(),
+					}),
+					getCalendarRange: async () => [],
+					isTradingDaySync: () => false,
+					getTradingSessionSync: () => "CLOSED",
+					getMarketCloseTimeSync: () => null,
+				};
+
+				setCalendarServiceForTests(sentinel);
+				resetCalendarService();
+				expect(getCalendarService()).not.toBe(sentinel);
 			});
 		});
 

@@ -23,13 +23,16 @@ const HAS_CREDENTIALS = Boolean(ALPACA_KEY && ALPACA_SECRET);
 // ============================================
 
 describe.skipIf(!HAS_CREDENTIALS)("AlpacaCalendarClient Integration", () => {
-	const client = HAS_CREDENTIALS
-		? createAlpacaCalendarClient({
-				apiKey: ALPACA_KEY!,
-				apiSecret: ALPACA_SECRET!,
-				environment: "PAPER",
-			})
-		: null;
+	const createClient = () => {
+		if (!ALPACA_KEY || !ALPACA_SECRET) {
+			throw new Error("ALPACA credentials are required for integration tests");
+		}
+		return createAlpacaCalendarClient({
+			apiKey: ALPACA_KEY,
+			apiSecret: ALPACA_SECRET,
+			environment: "PAPER",
+		});
+	};
 
 	describe("getCalendar", () => {
 		it("returns calendar days for a valid date range", async () => {
@@ -38,10 +41,10 @@ describe.skipIf(!HAS_CREDENTIALS)("AlpacaCalendarClient Integration", () => {
 			const nextWeek = new Date(today);
 			nextWeek.setDate(today.getDate() + 14); // Two weeks to ensure we get some trading days
 
-			const start = today.toISOString().split("T")[0]!;
-			const end = nextWeek.toISOString().split("T")[0]!;
+			const start = today.toISOString().slice(0, 10);
+			const end = nextWeek.toISOString().slice(0, 10);
 
-			const days = await client!.getCalendar(start, end);
+			const days = await createClient().getCalendar(start, end);
 
 			// Should return an array of calendar days
 			expect(Array.isArray(days)).toBe(true);
@@ -66,19 +69,24 @@ describe.skipIf(!HAS_CREDENTIALS)("AlpacaCalendarClient Integration", () => {
 
 		it("returns empty array for past range with no trading days", async () => {
 			// Query a weekend in the past
-			const days = await client!.getCalendar("2025-01-04", "2025-01-05"); // Saturday-Sunday
+			const days = await createClient().getCalendar("2025-01-04", "2025-01-05"); // Saturday-Sunday
 
 			expect(Array.isArray(days)).toBe(true);
 			expect(days.length).toBe(0);
 		});
 
 		it("returns sorted calendar days", async () => {
-			const days = await client!.getCalendar("2025-01-06", "2025-01-31");
+			const days = await createClient().getCalendar("2025-01-06", "2025-01-31");
 
 			// Check that dates are in ascending order
 			for (let i = 1; i < days.length; i++) {
-				const prevDate = days[i - 1]!.date;
-				const currDate = days[i]!.date;
+				const prev = days[i - 1];
+				const curr = days[i];
+				if (!prev || !curr) {
+					throw new Error("Expected calendar days to be defined");
+				}
+				const prevDate = prev.date;
+				const currDate = curr.date;
 				expect(currDate > prevDate).toBe(true);
 			}
 		});
@@ -87,7 +95,7 @@ describe.skipIf(!HAS_CREDENTIALS)("AlpacaCalendarClient Integration", () => {
 			const start = new Date("2025-06-01");
 			const end = new Date("2025-06-30");
 
-			const days = await client!.getCalendar(start, end);
+			const days = await createClient().getCalendar(start, end);
 
 			expect(Array.isArray(days)).toBe(true);
 			// June has roughly 20-22 trading days
@@ -98,7 +106,7 @@ describe.skipIf(!HAS_CREDENTIALS)("AlpacaCalendarClient Integration", () => {
 
 	describe("getClock", () => {
 		it("returns current market clock status", async () => {
-			const clock = await client!.getClock();
+			const clock = await createClient().getClock();
 
 			// Should have all required fields
 			expect(clock).toHaveProperty("isOpen");
@@ -121,7 +129,7 @@ describe.skipIf(!HAS_CREDENTIALS)("AlpacaCalendarClient Integration", () => {
 		});
 
 		it("nextOpen and nextClose are in the future", async () => {
-			const clock = await client!.getClock();
+			const clock = await createClient().getClock();
 			const now = Date.now();
 
 			// One of them should be in the future
@@ -137,7 +145,7 @@ describe.skipIf(!HAS_CREDENTIALS)("AlpacaCalendarClient Integration", () => {
 
 	describe("response schema validation", () => {
 		it("calendar response passes schema validation", async () => {
-			const days = await client!.getCalendar("2025-01-06", "2025-01-10");
+			const days = await createClient().getCalendar("2025-01-06", "2025-01-10");
 
 			for (const day of days) {
 				// Ensure no unexpected null values
@@ -156,7 +164,7 @@ describe.skipIf(!HAS_CREDENTIALS)("AlpacaCalendarClient Integration", () => {
 		});
 
 		it("clock response has valid ISO timestamp format", async () => {
-			const clock = await client!.getClock();
+			const clock = await createClient().getClock();
 
 			// Timestamps should be valid dates that can be serialized
 			expect(clock.timestamp.toISOString()).toMatch(/^\d{4}-\d{2}-\d{2}T/);

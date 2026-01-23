@@ -536,7 +536,10 @@ describe("formatJsonParseError", () => {
 		}
 
 		expect(error).toBeDefined();
-		const formatted = formatJsonParseError(error!, input);
+		if (!error) {
+			throw new Error("Expected JSON parse error");
+		}
+		const formatted = formatJsonParseError(error, input);
 
 		expect(formatted).toContain("syntax error");
 	});

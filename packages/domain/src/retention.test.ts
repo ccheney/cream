@@ -23,6 +23,13 @@ import {
 	validateCompliancePolicies,
 } from "./retention";
 
+const requirePolicy = (policy: RetentionPolicy | undefined, label: string): RetentionPolicy => {
+	if (!policy) {
+		throw new Error(`Expected ${label} policy to be defined`);
+	}
+	return policy;
+};
+
 // ============================================
 // Storage Tier Tests
 // ============================================
@@ -89,39 +96,48 @@ describe("DURATIONS", () => {
 
 describe("LIVE_RETENTION_POLICIES", () => {
 	it("TradeDecision requires 6+ years (permanent)", () => {
-		const policy = LIVE_RETENTION_POLICIES.find((p) => p.nodeType === "TradeDecision");
-		expect(policy).toBeDefined();
-		expect(policy!.totalRetentionDays).toBe(PERMANENT);
-		expect(policy!.complianceRequired).toBe(true);
+		const policy = requirePolicy(
+			LIVE_RETENTION_POLICIES.find((p) => p.nodeType === "TradeDecision"),
+			"LIVE TradeDecision",
+		);
+		expect(policy.totalRetentionDays).toBe(PERMANENT);
+		expect(policy.complianceRequired).toBe(true);
 	});
 
 	it("TradeDecision has HOT(2y) → WARM(4y) → COLD(permanent)", () => {
-		const policy = LIVE_RETENTION_POLICIES.find((p) => p.nodeType === "TradeDecision");
-		expect(policy!.periods.length).toBe(3);
-		expect(policy!.periods[0]).toEqual({ tier: "HOT", durationDays: DURATIONS.YEAR_2 });
-		expect(policy!.periods[1]).toEqual({ tier: "WARM", durationDays: DURATIONS.YEAR_4 });
-		expect(policy!.periods[2]).toEqual({ tier: "COLD", durationDays: PERMANENT });
+		const policy = requirePolicy(
+			LIVE_RETENTION_POLICIES.find((p) => p.nodeType === "TradeDecision"),
+			"LIVE TradeDecision",
+		);
+		expect(policy.periods.length).toBe(3);
+		expect(policy.periods[0]).toEqual({ tier: "HOT", durationDays: DURATIONS.YEAR_2 });
+		expect(policy.periods[1]).toEqual({ tier: "WARM", durationDays: DURATIONS.YEAR_4 });
+		expect(policy.periods[2]).toEqual({ tier: "COLD", durationDays: PERMANENT });
 	});
 
 	it("TradeLifecycleEvent requires 6+ years (permanent)", () => {
-		const policy = LIVE_RETENTION_POLICIES.find((p) => p.nodeType === "TradeLifecycleEvent");
-		expect(policy).toBeDefined();
-		expect(policy!.totalRetentionDays).toBe(PERMANENT);
-		expect(policy!.complianceRequired).toBe(true);
+		const policy = requirePolicy(
+			LIVE_RETENTION_POLICIES.find((p) => p.nodeType === "TradeLifecycleEvent"),
+			"LIVE TradeLifecycleEvent",
+		);
+		expect(policy.totalRetentionDays).toBe(PERMANENT);
+		expect(policy.complianceRequired).toBe(true);
 	});
 
 	it("ExternalEvent_MACRO has permanent retention", () => {
-		const policy = LIVE_RETENTION_POLICIES.find((p) => p.nodeType === "ExternalEvent_MACRO");
-		expect(policy).toBeDefined();
-		expect(policy!.totalRetentionDays).toBe(PERMANENT);
+		const policy = requirePolicy(
+			LIVE_RETENTION_POLICIES.find((p) => p.nodeType === "ExternalEvent_MACRO"),
+			"LIVE ExternalEvent_MACRO",
+		);
+		expect(policy.totalRetentionDays).toBe(PERMANENT);
 	});
 
 	it("ExternalEvent_SENTIMENT_SPIKE has 90 days retention", () => {
-		const policy = LIVE_RETENTION_POLICIES.find(
-			(p) => p.nodeType === "ExternalEvent_SENTIMENT_SPIKE",
+		const policy = requirePolicy(
+			LIVE_RETENTION_POLICIES.find((p) => p.nodeType === "ExternalEvent_SENTIMENT_SPIKE"),
+			"LIVE ExternalEvent_SENTIMENT_SPIKE",
 		);
-		expect(policy).toBeDefined();
-		expect(policy!.totalRetentionDays).toBe(DURATIONS.DAYS_90);
+		expect(policy.totalRetentionDays).toBe(DURATIONS.DAYS_90);
 	});
 });
 
@@ -131,16 +147,20 @@ describe("LIVE_RETENTION_POLICIES", () => {
 
 describe("PAPER_RETENTION_POLICIES", () => {
 	it("TradeDecision has ~3 years retention", () => {
-		const policy = PAPER_RETENTION_POLICIES.find((p) => p.nodeType === "TradeDecision");
-		expect(policy).toBeDefined();
-		expect(policy!.totalRetentionDays).toBe(DURATIONS.YEAR_3 + DURATIONS.DAYS_90);
-		expect(policy!.complianceRequired).toBe(false);
+		const policy = requirePolicy(
+			PAPER_RETENTION_POLICIES.find((p) => p.nodeType === "TradeDecision"),
+			"PAPER TradeDecision",
+		);
+		expect(policy.totalRetentionDays).toBe(DURATIONS.YEAR_3 + DURATIONS.DAYS_90);
+		expect(policy.complianceRequired).toBe(false);
 	});
 
 	it("TradeLifecycleEvent has ~1 year retention", () => {
-		const policy = PAPER_RETENTION_POLICIES.find((p) => p.nodeType === "TradeLifecycleEvent");
-		expect(policy).toBeDefined();
-		expect(policy!.totalRetentionDays).toBe(DURATIONS.YEAR_1 + DURATIONS.DAYS_90);
+		const policy = requirePolicy(
+			PAPER_RETENTION_POLICIES.find((p) => p.nodeType === "TradeLifecycleEvent"),
+			"PAPER TradeLifecycleEvent",
+		);
+		expect(policy.totalRetentionDays).toBe(DURATIONS.YEAR_1 + DURATIONS.DAYS_90);
 	});
 });
 
@@ -150,16 +170,17 @@ describe("PAPER_RETENTION_POLICIES", () => {
 
 describe("getRetentionPolicy", () => {
 	it("returns policy for LIVE TradeDecision", () => {
-		const policy = getRetentionPolicy("TradeDecision", "LIVE");
-		expect(policy).toBeDefined();
-		expect(policy!.environment).toBe("LIVE");
-		expect(policy!.nodeType).toBe("TradeDecision");
+		const policy = requirePolicy(getRetentionPolicy("TradeDecision", "LIVE"), "LIVE TradeDecision");
+		expect(policy.environment).toBe("LIVE");
+		expect(policy.nodeType).toBe("TradeDecision");
 	});
 
 	it("returns policy for PAPER TradeDecision", () => {
-		const policy = getRetentionPolicy("TradeDecision", "PAPER");
-		expect(policy).toBeDefined();
-		expect(policy!.environment).toBe("PAPER");
+		const policy = requirePolicy(
+			getRetentionPolicy("TradeDecision", "PAPER"),
+			"PAPER TradeDecision",
+		);
+		expect(policy.environment).toBe("PAPER");
 	});
 
 	it("returns undefined for unknown node type", () => {
@@ -247,7 +268,10 @@ describe("getTransitionDecision", () => {
 	});
 
 	it("deletes PAPER TradeDecision after retention expires", () => {
-		const paperPolicy = getRetentionPolicy("TradeDecision", "PAPER")!;
+		const paperPolicy = requirePolicy(
+			getRetentionPolicy("TradeDecision", "PAPER"),
+			"PAPER TradeDecision",
+		);
 		const nodeInfo: NodeAgeInfo = {
 			ageDays: paperPolicy.totalRetentionDays + 1,
 			currentTier: "WARM",
@@ -307,7 +331,10 @@ describe("getTargetTier", () => {
 	});
 
 	it("returns null for expired PAPER data", () => {
-		const paperPolicy = getRetentionPolicy("TradeDecision", "PAPER")!;
+		const paperPolicy = requirePolicy(
+			getRetentionPolicy("TradeDecision", "PAPER"),
+			"PAPER TradeDecision",
+		);
 		const tier = getTargetTier(paperPolicy.totalRetentionDays + 1, "TradeDecision", "PAPER");
 		expect(tier).toBeNull();
 	});
@@ -324,12 +351,15 @@ describe("getTargetTier", () => {
 
 describe("isSECCompliant", () => {
 	it("LIVE TradeDecision is SEC compliant", () => {
-		const policy = getRetentionPolicy("TradeDecision", "LIVE")!;
+		const policy = requirePolicy(getRetentionPolicy("TradeDecision", "LIVE"), "LIVE TradeDecision");
 		expect(isSECCompliant(policy)).toBe(true);
 	});
 
 	it("PAPER TradeDecision is NOT SEC compliant", () => {
-		const policy = getRetentionPolicy("TradeDecision", "PAPER")!;
+		const policy = requirePolicy(
+			getRetentionPolicy("TradeDecision", "PAPER"),
+			"PAPER TradeDecision",
+		);
 		expect(isSECCompliant(policy)).toBe(false);
 	});
 

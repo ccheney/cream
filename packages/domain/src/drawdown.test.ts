@@ -241,8 +241,12 @@ describe("DrawdownTracker", () => {
 
 		const history = tracker.getHistory();
 		expect(history.length).toBe(1);
-		expect(history[0]!.maxDrawdownPct).toBeCloseTo(0.1, 5);
-		expect(history[0]!.recovered).toBe(true);
+		const first = history[0];
+		if (!first) {
+			throw new Error("Expected drawdown history to have one entry");
+		}
+		expect(first.maxDrawdownPct).toBeCloseTo(0.1, 5);
+		expect(first.recovered).toBe(true);
 	});
 
 	it("should serialize and deserialize correctly", () => {

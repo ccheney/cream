@@ -207,7 +207,10 @@ describe("calculateSharpe", () => {
 		const returns = Array.from({ length: 100 }, (_, i) => 0.001 + Math.sin(i) * 0.0005);
 		const sharpe = calculateSharpe(returns, config);
 		expect(sharpe).not.toBeNull();
-		expect(sharpe!).toBeGreaterThan(0);
+		if (sharpe === null) {
+			throw new Error("Expected sharpe ratio to be defined");
+		}
+		expect(sharpe).toBeGreaterThan(0);
 	});
 
 	test("returns null for insufficient data", () => {
@@ -224,7 +227,10 @@ describe("calculateSharpe", () => {
 		const returns = Array.from({ length: 100 }, (_, i) => -0.001 - Math.sin(i) * 0.0005);
 		const sharpe = calculateSharpe(returns, config);
 		expect(sharpe).not.toBeNull();
-		expect(sharpe!).toBeLessThan(0);
+		if (sharpe === null) {
+			throw new Error("Expected sharpe ratio to be defined");
+		}
+		expect(sharpe).toBeLessThan(0);
 	});
 
 	test("annualization is correct", () => {
@@ -289,7 +295,10 @@ describe("calculateCalmar", () => {
 		const returns = calculateReturns(equity);
 		const calmar = calculateCalmar(returns, equity, config);
 		expect(calmar).not.toBeNull();
-		expect(calmar!).toBeGreaterThan(0);
+		if (calmar === null) {
+			throw new Error("Expected calmar ratio to be defined");
+		}
+		expect(calmar).toBeGreaterThan(0);
 	});
 
 	test("returns null for no drawdown", () => {
