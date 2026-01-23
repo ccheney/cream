@@ -31,7 +31,7 @@ function formatTimestamp(): string {
 function formatContext(context: LogContext): string {
 	const entries = Object.entries(context);
 	if (entries.length === 0) return "";
-	return " " + entries.map(([k, v]) => `${k}=${JSON.stringify(v)}`).join(" ");
+	return ` ${entries.map(([k, v]) => `${k}=${JSON.stringify(v)}`).join(" ")}`;
 }
 
 function log(level: string, color: string, context: LogContext, message: string): void {

@@ -6,7 +6,7 @@ import { colors } from "./colors.js";
 import type { CheckResult, VersionConstraint } from "./types.js";
 
 export function print(message: string): void {
-	process.stdout.write(message + "\n");
+	process.stdout.write(`${message}\n`);
 }
 
 function getStatusIcon(status: VersionConstraint["status"]): string {
@@ -52,7 +52,7 @@ export function printResults(results: VersionConstraint[]): void {
 }
 
 export function printSummary(results: CheckResult): void {
-	print("\n" + colors.bold("━".repeat(60)));
+	print(`\n${colors.bold("━".repeat(60))}`);
 	print(colors.bold("Summary"));
 	print(colors.bold("━".repeat(60)));
 

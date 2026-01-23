@@ -9,9 +9,9 @@ export function parseVersion(version: string): ParsedVersion | null {
 	const match = version.match(/^(\d+)\.(\d+)\.(\d+)(?:-(.+))?$/);
 	if (match) {
 		return {
-			major: parseInt(match[1]),
-			minor: parseInt(match[2]),
-			patch: parseInt(match[3]),
+			major: parseInt(match[1], 10),
+			minor: parseInt(match[2], 10),
+			patch: parseInt(match[3], 10),
 			prerelease: match[4] || null,
 		};
 	}
@@ -20,8 +20,8 @@ export function parseVersion(version: string): ParsedVersion | null {
 	const simple = version.match(/^(\d+)\.(\d+)$/);
 	if (simple) {
 		return {
-			major: parseInt(simple[1]),
-			minor: parseInt(simple[2]),
+			major: parseInt(simple[1], 10),
+			minor: parseInt(simple[2], 10),
 			patch: 0,
 			prerelease: null,
 		};
