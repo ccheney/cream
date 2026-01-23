@@ -3,6 +3,7 @@
  */
 
 import { describe, expect, test } from "bun:test";
+import { requireValue } from "@cream/test-utils";
 import {
 	CorporateActionsRepositoryAdapter,
 	createBatchRepositoryAdapters,
@@ -120,22 +121,22 @@ describe("FundamentalRepositoryAdapter", () => {
 		const result = await adapter.getLatest("AAPL");
 
 		expect(result).not.toBeNull();
-		expect(result!.value.pe_ratio_ttm).toBe(25.5);
-		expect(result!.value.pe_ratio_forward).toBe(22.3);
-		expect(result!.value.pb_ratio).toBe(8.2);
-		expect(result!.value.ev_ebitda).toBe(15.8);
-		expect(result!.value.earnings_yield).toBe(0.039);
-		expect(result!.value.dividend_yield).toBe(0.0052);
-		expect(result!.value.cape_10yr).toBe(28.5);
+		expect(requireValue(result, "result").value.pe_ratio_ttm).toBe(25.5);
+		expect(requireValue(result, "result").value.pe_ratio_forward).toBe(22.3);
+		expect(requireValue(result, "result").value.pb_ratio).toBe(8.2);
+		expect(requireValue(result, "result").value.ev_ebitda).toBe(15.8);
+		expect(requireValue(result, "result").value.earnings_yield).toBe(0.039);
+		expect(requireValue(result, "result").value.dividend_yield).toBe(0.0052);
+		expect(requireValue(result, "result").value.cape_10yr).toBe(28.5);
 
-		expect(result!.quality.gross_profitability).toBe(0.43);
-		expect(result!.quality.roe).toBe(0.85);
-		expect(result!.quality.roa).toBe(0.21);
-		expect(result!.quality.asset_growth).toBe(0.08);
-		expect(result!.quality.accruals_ratio).toBe(-0.02);
-		expect(result!.quality.cash_flow_quality).toBe(0.92);
-		expect(result!.quality.beneish_m_score).toBe(-2.5);
-		expect(result!.quality.earnings_quality).toBeNull();
+		expect(requireValue(result, "result").quality.gross_profitability).toBe(0.43);
+		expect(requireValue(result, "result").quality.roe).toBe(0.85);
+		expect(requireValue(result, "result").quality.roa).toBe(0.21);
+		expect(requireValue(result, "result").quality.asset_growth).toBe(0.08);
+		expect(requireValue(result, "result").quality.accruals_ratio).toBe(-0.02);
+		expect(requireValue(result, "result").quality.cash_flow_quality).toBe(0.92);
+		expect(requireValue(result, "result").quality.beneish_m_score).toBe(-2.5);
+		expect(requireValue(result, "result").quality.earnings_quality).toBeNull();
 	});
 
 	test("handles null values in fundamental row", async () => {
@@ -170,11 +171,11 @@ describe("FundamentalRepositoryAdapter", () => {
 		const result = await adapter.getLatest("TSLA");
 
 		expect(result).not.toBeNull();
-		expect(result!.value.pe_ratio_ttm).toBeNull();
-		expect(result!.value.pe_ratio_forward).toBe(45.0);
-		expect(result!.value.pb_ratio).toBeNull();
-		expect(result!.quality.gross_profitability).toBe(0.25);
-		expect(result!.quality.roe).toBeNull();
+		expect(requireValue(result, "result").value.pe_ratio_ttm).toBeNull();
+		expect(requireValue(result, "result").value.pe_ratio_forward).toBe(45.0);
+		expect(requireValue(result, "result").value.pb_ratio).toBeNull();
+		expect(requireValue(result, "result").quality.gross_profitability).toBe(0.25);
+		expect(requireValue(result, "result").quality.roe).toBeNull();
 	});
 });
 
@@ -222,11 +223,11 @@ describe("ShortInterestRepositoryAdapter", () => {
 		const result = await adapter.getLatest("GME");
 
 		expect(result).not.toBeNull();
-		expect(result!.short_interest_ratio).toBe(5.2);
-		expect(result!.days_to_cover).toBe(3.5);
-		expect(result!.short_pct_float).toBe(0.25);
-		expect(result!.short_interest_change).toBe(0.05);
-		expect(result!.settlement_date).toBe("2026-01-08");
+		expect(requireValue(result, "result").short_interest_ratio).toBe(5.2);
+		expect(requireValue(result, "result").days_to_cover).toBe(3.5);
+		expect(requireValue(result, "result").short_pct_float).toBe(0.25);
+		expect(requireValue(result, "result").short_interest_change).toBe(0.05);
+		expect(requireValue(result, "result").settlement_date).toBe("2026-01-08");
 	});
 
 	test("handles null values in short interest row", async () => {
@@ -249,9 +250,9 @@ describe("ShortInterestRepositoryAdapter", () => {
 		const result = await adapter.getLatest("AMC");
 
 		expect(result).not.toBeNull();
-		expect(result!.short_interest_ratio).toBeNull();
-		expect(result!.days_to_cover).toBeNull();
-		expect(result!.short_pct_float).toBe(0.15);
+		expect(requireValue(result, "result").short_interest_ratio).toBeNull();
+		expect(requireValue(result, "result").days_to_cover).toBeNull();
+		expect(requireValue(result, "result").short_pct_float).toBe(0.15);
 	});
 });
 
@@ -301,12 +302,12 @@ describe("SentimentRepositoryAdapter", () => {
 		const result = await adapter.getLatest("AAPL");
 
 		expect(result).not.toBeNull();
-		expect(result!.overall_score).toBe(0.65);
-		expect(result!.sentiment_strength).toBe(0.8);
-		expect(result!.news_volume).toBe(150);
-		expect(result!.sentiment_momentum).toBe(0.1);
-		expect(result!.event_risk).toBe(false);
-		expect(result!.classification).toBe("STRONG_BULLISH");
+		expect(requireValue(result, "result").overall_score).toBe(0.65);
+		expect(requireValue(result, "result").sentiment_strength).toBe(0.8);
+		expect(requireValue(result, "result").news_volume).toBe(150);
+		expect(requireValue(result, "result").sentiment_momentum).toBe(0.1);
+		expect(requireValue(result, "result").event_risk).toBe(false);
+		expect(requireValue(result, "result").classification).toBe("STRONG_BULLISH");
 	});
 
 	test("classifies sentiment correctly for different score ranges", async () => {
@@ -349,7 +350,7 @@ describe("SentimentRepositoryAdapter", () => {
 
 			const result = await adapter.getLatest("TEST");
 
-			expect(result!.classification).toBe(expected);
+			expect(requireValue(result, "result").classification).toBe(expected);
 		}
 	});
 
@@ -374,8 +375,8 @@ describe("SentimentRepositoryAdapter", () => {
 
 		const result = await adapter.getLatest("NULL");
 
-		expect(result!.overall_score).toBeNull();
-		expect(result!.classification).toBeNull();
+		expect(requireValue(result, "result").overall_score).toBeNull();
+		expect(requireValue(result, "result").classification).toBeNull();
 	});
 });
 
@@ -414,7 +415,7 @@ describe("CorporateActionsRepositoryAdapter", () => {
 			{
 				symbol: "AAPL",
 				actionType: "dividend",
-				exDate: sixMonthsAgo.toISOString().split("T")[0]!,
+				exDate: sixMonthsAgo.toISOString().slice(0, 10),
 				recordDate: null,
 				payDate: null,
 				ratio: null,
@@ -425,7 +426,7 @@ describe("CorporateActionsRepositoryAdapter", () => {
 			{
 				symbol: "AAPL",
 				actionType: "dividend",
-				exDate: nineMonthsAgo.toISOString().split("T")[0]!,
+				exDate: nineMonthsAgo.toISOString().slice(0, 10),
 				recordDate: null,
 				payDate: null,
 				ratio: null,
@@ -441,7 +442,7 @@ describe("CorporateActionsRepositoryAdapter", () => {
 		const result = await adapter.getLatest("AAPL");
 
 		expect(result).not.toBeNull();
-		expect(result!.trailing_dividend_yield).toBeCloseTo(0.47, 2);
+		expect(requireValue(result, "result").trailing_dividend_yield).toBeCloseTo(0.47, 2);
 	});
 
 	test("detects recent split within 6 months", async () => {
@@ -453,7 +454,7 @@ describe("CorporateActionsRepositoryAdapter", () => {
 			{
 				symbol: "GOOGL",
 				actionType: "split",
-				exDate: threeMonthsAgo.toISOString().split("T")[0]!,
+				exDate: threeMonthsAgo.toISOString().slice(0, 10),
 				recordDate: null,
 				payDate: null,
 				ratio: 20,
@@ -469,7 +470,7 @@ describe("CorporateActionsRepositoryAdapter", () => {
 		const result = await adapter.getLatest("GOOGL");
 
 		expect(result).not.toBeNull();
-		expect(result!.recent_split).toBe(true);
+		expect(requireValue(result, "result").recent_split).toBe(true);
 	});
 
 	test("does not detect old split as recent", async () => {
@@ -481,7 +482,7 @@ describe("CorporateActionsRepositoryAdapter", () => {
 			{
 				symbol: "TSLA",
 				actionType: "split",
-				exDate: oneYearAgo.toISOString().split("T")[0]!,
+				exDate: oneYearAgo.toISOString().slice(0, 10),
 				recordDate: null,
 				payDate: null,
 				ratio: 3,
@@ -497,7 +498,7 @@ describe("CorporateActionsRepositoryAdapter", () => {
 		const result = await adapter.getLatest("TSLA");
 
 		expect(result).not.toBeNull();
-		expect(result!.recent_split).toBe(false);
+		expect(requireValue(result, "result").recent_split).toBe(false);
 	});
 
 	test("calculates days until ex-dividend for upcoming dividend", async () => {
@@ -509,7 +510,7 @@ describe("CorporateActionsRepositoryAdapter", () => {
 			{
 				symbol: "MSFT",
 				actionType: "dividend",
-				exDate: tenDaysFromNow.toISOString().split("T")[0]!,
+				exDate: tenDaysFromNow.toISOString().slice(0, 10),
 				recordDate: null,
 				payDate: null,
 				ratio: null,
@@ -525,8 +526,8 @@ describe("CorporateActionsRepositoryAdapter", () => {
 		const result = await adapter.getLatest("MSFT");
 
 		expect(result).not.toBeNull();
-		expect(result!.ex_dividend_days).toBeGreaterThanOrEqual(9);
-		expect(result!.ex_dividend_days).toBeLessThanOrEqual(11);
+		expect(requireValue(result, "result").ex_dividend_days).toBeGreaterThanOrEqual(9);
+		expect(requireValue(result, "result").ex_dividend_days).toBeLessThanOrEqual(11);
 	});
 
 	test("returns null for ex_dividend_days when no upcoming dividends", async () => {
@@ -538,7 +539,7 @@ describe("CorporateActionsRepositoryAdapter", () => {
 			{
 				symbol: "IBM",
 				actionType: "dividend",
-				exDate: oneMonthAgo.toISOString().split("T")[0]!,
+				exDate: oneMonthAgo.toISOString().slice(0, 10),
 				recordDate: null,
 				payDate: null,
 				ratio: null,
@@ -554,7 +555,7 @@ describe("CorporateActionsRepositoryAdapter", () => {
 		const result = await adapter.getLatest("IBM");
 
 		expect(result).not.toBeNull();
-		expect(result!.ex_dividend_days).toBeNull();
+		expect(requireValue(result, "result").ex_dividend_days).toBeNull();
 	});
 });
 

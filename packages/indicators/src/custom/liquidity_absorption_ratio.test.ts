@@ -3,6 +3,7 @@
  */
 
 import { describe, expect, test } from "bun:test";
+import { requireValue } from "@cream/test-utils";
 import type { OHLCVBar } from "../types";
 import {
 	calculateLiquidityAbsorptionRatio,
@@ -185,10 +186,10 @@ describe("calculateLiquidityAbsorptionRatio", () => {
 			expect(result).not.toBeNull();
 			// For doji, body is 0 in the result (actual volume estimate)
 			// The minBodyFraction is used internally for absorption ratio calculation
-			expect(result!.bodyVolume).toBe(0);
+			expect(requireValue(result, "result").bodyVolume).toBe(0);
 			// But we still get a valid absorption ratio (not NaN or Infinity)
-			expect(Number.isFinite(result!.rawAbsorptionRatio)).toBe(true);
-			expect(Number.isFinite(result!.value)).toBe(true);
+			expect(Number.isFinite(requireValue(result, "result").rawAbsorptionRatio)).toBe(true);
+			expect(Number.isFinite(requireValue(result, "result").value)).toBe(true);
 		});
 
 		test("handles zero volume bars", () => {
@@ -208,9 +209,9 @@ describe("calculateLiquidityAbsorptionRatio", () => {
 
 			const result = calculateLiquidityAbsorptionRatio(bars);
 			expect(result).not.toBeNull();
-			expect(result!.upperWickVolume).toBe(0);
-			expect(result!.lowerWickVolume).toBe(0);
-			expect(result!.bodyVolume).toBe(0);
+			expect(requireValue(result, "result").upperWickVolume).toBe(0);
+			expect(requireValue(result, "result").lowerWickVolume).toBe(0);
+			expect(requireValue(result, "result").bodyVolume).toBe(0);
 		});
 
 		test("handles very small price ranges (returns null due to minRangeFraction)", () => {
@@ -245,15 +246,15 @@ describe("result structure", () => {
 		const result = calculateLiquidityAbsorptionRatio(bars);
 
 		expect(result).not.toBeNull();
-		expect(typeof result!.value).toBe("number");
-		expect(typeof result!.rawAbsorptionRatio).toBe("number");
-		expect(typeof result!.upperWickVolume).toBe("number");
-		expect(typeof result!.lowerWickVolume).toBe("number");
-		expect(typeof result!.bodyVolume).toBe("number");
-		expect(["upper", "lower"]).toContain(result!.trendOpposingWickDirection);
-		expect(typeof result!.rollingMean).toBe("number");
-		expect(typeof result!.rollingStdDev).toBe("number");
-		expect(typeof result!.timestamp).toBe("number");
+		expect(typeof requireValue(result, "result").value).toBe("number");
+		expect(typeof requireValue(result, "result").rawAbsorptionRatio).toBe("number");
+		expect(typeof requireValue(result, "result").upperWickVolume).toBe("number");
+		expect(typeof requireValue(result, "result").lowerWickVolume).toBe("number");
+		expect(typeof requireValue(result, "result").bodyVolume).toBe("number");
+		expect(["upper", "lower"]).toContain(requireValue(result, "result").trendOpposingWickDirection);
+		expect(typeof requireValue(result, "result").rollingMean).toBe("number");
+		expect(typeof requireValue(result, "result").rollingStdDev).toBe("number");
+		expect(typeof requireValue(result, "result").timestamp).toBe("number");
 	});
 
 	test("value is clamped to [-3, 3] range", () => {
@@ -261,8 +262,8 @@ describe("result structure", () => {
 		const result = calculateLiquidityAbsorptionRatio(bars);
 
 		expect(result).not.toBeNull();
-		expect(result!.value).toBeGreaterThanOrEqual(-3);
-		expect(result!.value).toBeLessThanOrEqual(3);
+		expect(requireValue(result, "result").value).toBeGreaterThanOrEqual(-3);
+		expect(requireValue(result, "result").value).toBeLessThanOrEqual(3);
 	});
 
 	test("volume components are non-negative", () => {
@@ -270,9 +271,9 @@ describe("result structure", () => {
 		const result = calculateLiquidityAbsorptionRatio(bars);
 
 		expect(result).not.toBeNull();
-		expect(result!.upperWickVolume).toBeGreaterThanOrEqual(0);
-		expect(result!.lowerWickVolume).toBeGreaterThanOrEqual(0);
-		expect(result!.bodyVolume).toBeGreaterThanOrEqual(0);
+		expect(requireValue(result, "result").upperWickVolume).toBeGreaterThanOrEqual(0);
+		expect(requireValue(result, "result").lowerWickVolume).toBeGreaterThanOrEqual(0);
+		expect(requireValue(result, "result").bodyVolume).toBeGreaterThanOrEqual(0);
 	});
 
 	test("rollingStdDev is positive", () => {
@@ -280,7 +281,7 @@ describe("result structure", () => {
 		const result = calculateLiquidityAbsorptionRatio(bars);
 
 		expect(result).not.toBeNull();
-		expect(result!.rollingStdDev).toBeGreaterThan(0);
+		expect(requireValue(result, "result").rollingStdDev).toBeGreaterThan(0);
 	});
 });
 
@@ -317,7 +318,7 @@ describe("absorption detection", () => {
 
 		const result = calculateLiquidityAbsorptionRatio(bars);
 		expect(result).not.toBeNull();
-		expect(result!.trendOpposingWickDirection).toBe("upper");
+		expect(requireValue(result, "result").trendOpposingWickDirection).toBe("upper");
 	});
 
 	test("identifies bearish candle trend-opposing wick as lower", () => {
@@ -348,7 +349,7 @@ describe("absorption detection", () => {
 
 		const result = calculateLiquidityAbsorptionRatio(bars);
 		expect(result).not.toBeNull();
-		expect(result!.trendOpposingWickDirection).toBe("lower");
+		expect(requireValue(result, "result").trendOpposingWickDirection).toBe("lower");
 	});
 
 	test("higher wick-to-body ratio produces higher raw absorption ratio", () => {
@@ -396,7 +397,9 @@ describe("absorption detection", () => {
 
 		expect(lowResult).not.toBeNull();
 		expect(highResult).not.toBeNull();
-		expect(highResult!.rawAbsorptionRatio).toBeGreaterThan(lowResult!.rawAbsorptionRatio);
+		expect(requireValue(highResult, "high result").rawAbsorptionRatio).toBeGreaterThan(
+			requireValue(lowResult, "low result").rawAbsorptionRatio,
+		);
 	});
 });
 
@@ -424,7 +427,7 @@ describe("Z-score normalization", () => {
 		const result = calculateLiquidityAbsorptionRatio(bars);
 		expect(result).not.toBeNull();
 		// The final high absorption bar should have a positive Z-score
-		expect(result!.value).toBeGreaterThan(0);
+		expect(requireValue(result, "result").value).toBeGreaterThan(0);
 	});
 
 	test("produces near-zero Z-score for average absorption", () => {
@@ -446,7 +449,7 @@ describe("Z-score normalization", () => {
 		const result = calculateLiquidityAbsorptionRatio(bars);
 		expect(result).not.toBeNull();
 		// Consistent bars should produce Z-score near 0
-		expect(Math.abs(result!.value)).toBeLessThan(1.5);
+		expect(Math.abs(requireValue(result, "result").value)).toBeLessThan(1.5);
 	});
 });
 
@@ -486,16 +489,16 @@ describe("golden value test", () => {
 		const result = calculateLiquidityAbsorptionRatio(bars);
 
 		expect(result).not.toBeNull();
-		expect(result!.timestamp).toBe(baseTime + 20 * 86400000);
-		expect(result!.trendOpposingWickDirection).toBe("upper");
+		expect(requireValue(result, "result").timestamp).toBe(baseTime + 20 * 86400000);
+		expect(requireValue(result, "result").trendOpposingWickDirection).toBe("upper");
 
 		// The raw absorption ratio should be higher than the previous bars
 		// Previous bars: upper wick / body ≈ 0.5263 / 10 ≈ 0.053
 		// Current bar: upper wick / body ≈ 8.18 / 10 ≈ 0.818
-		expect(result!.rawAbsorptionRatio).toBeGreaterThan(0.3);
+		expect(requireValue(result, "result").rawAbsorptionRatio).toBeGreaterThan(0.3);
 
 		// Z-score should be positive (higher than mean)
-		expect(result!.value).toBeGreaterThan(0);
+		expect(requireValue(result, "result").value).toBeGreaterThan(0);
 	});
 });
 
@@ -534,8 +537,12 @@ describe("calculateLiquidityAbsorptionRatioSeries", () => {
 
 		expect(lastSeriesResult).not.toBeNull();
 		expect(singleResult).not.toBeNull();
-		expect(lastSeriesResult!.value).toBe(singleResult!.value);
-		expect(lastSeriesResult!.rawAbsorptionRatio).toBe(singleResult!.rawAbsorptionRatio);
+		expect(requireValue(lastSeriesResult, "last series result").value).toBe(
+			requireValue(singleResult, "single result").value,
+		);
+		expect(requireValue(lastSeriesResult, "last series result").rawAbsorptionRatio).toBe(
+			requireValue(singleResult, "single result").rawAbsorptionRatio,
+		);
 	});
 });
 

@@ -6,6 +6,7 @@
 
 import { beforeEach, describe, expect, it, mock } from "bun:test";
 import type { CreateSentimentInput, SentimentRepository } from "@cream/storage";
+import { requireValue } from "@cream/test-utils";
 import {
 	aggregateSentimentScores,
 	calculateRecencyWeight,
@@ -211,7 +212,9 @@ describe("calculateSentimentStrength", () => {
 	it("returns higher strength for high confidence", () => {
 		const highConfidence = calculateSentimentStrength([{ confidence: 0.9, weight: 1.0 }]);
 		const lowConfidence = calculateSentimentStrength([{ confidence: 0.3, weight: 1.0 }]);
-		expect(highConfidence!).toBeGreaterThan(lowConfidence!);
+		const highValue = requireValue(highConfidence, "high confidence");
+		const lowValue = requireValue(lowConfidence, "low confidence");
+		expect(highValue).toBeGreaterThan(lowValue);
 	});
 
 	it("increases with volume (up to a point)", () => {
@@ -223,7 +226,9 @@ describe("calculateSentimentStrength", () => {
 			{ confidence: 0.8, weight: 1.0 },
 			{ confidence: 0.8, weight: 1.0 },
 		]);
-		expect(multipleEntries!).toBeGreaterThan(singleEntry!);
+		const multipleValue = requireValue(multipleEntries, "multiple entries");
+		const singleValue = requireValue(singleEntry, "single entry");
+		expect(multipleValue).toBeGreaterThan(singleValue);
 	});
 });
 
@@ -242,14 +247,14 @@ describe("calculateSentimentMomentum", () => {
 		const shortTerm = [0.6, 0.7, 0.8]; // Avg: 0.7
 		const longTerm = [0.3, 0.4, 0.5, 0.6, 0.7, 0.8]; // Avg: 0.55
 		const result = calculateSentimentMomentum(shortTerm, longTerm);
-		expect(result!).toBeGreaterThan(0);
+		expect(requireValue(result, "momentum result")).toBeGreaterThan(0);
 	});
 
 	it("returns negative for declining sentiment", () => {
 		const shortTerm = [0.2, 0.3, 0.4]; // Avg: 0.3
 		const longTerm = [0.5, 0.6, 0.7, 0.8, 0.9, 1.0]; // Avg: 0.75
 		const result = calculateSentimentMomentum(shortTerm, longTerm);
-		expect(result!).toBeLessThan(0);
+		expect(requireValue(result, "momentum result")).toBeLessThan(0);
 	});
 
 	it("returns zero for stable sentiment", () => {
@@ -345,9 +350,9 @@ describe("SentimentAggregationJob", () => {
 			const job = new SentimentAggregationJob(mockProvider, mockRepo);
 			await job.run(["AAPL"], "2024-01-15");
 
-			const upserted = mockRepo.upsertCalls[0];
-			expect(upserted?.sentimentScore).not.toBeNull();
-			expect(upserted!.sentimentScore!).toBeGreaterThan(0); // Bullish = positive
+			const upserted = requireValue(mockRepo.upsertCalls[0], "upserted sentiment");
+			const sentimentScore = requireValue(upserted.sentimentScore, "sentiment score");
+			expect(sentimentScore).toBeGreaterThan(0); // Bullish = positive
 		});
 
 		it("tracks news volume", async () => {
@@ -361,8 +366,8 @@ describe("SentimentAggregationJob", () => {
 			const job = new SentimentAggregationJob(mockProvider, mockRepo);
 			await job.run(["AAPL"], "2024-01-15");
 
-			const upserted = mockRepo.upsertCalls[0];
-			expect(upserted?.newsVolume).toBe(3);
+			const upserted = requireValue(mockRepo.upsertCalls[0], "upserted sentiment");
+			expect(upserted.newsVolume).toBe(3);
 		});
 
 		it("detects event risk", async () => {
@@ -402,11 +407,11 @@ describe("SentimentAggregationJob", () => {
 			const job = new SentimentAggregationJob(mockProvider, mockRepo);
 			await job.run(["AAPL"], "2024-01-15");
 
-			const upserted = mockRepo.upsertCalls[0];
-			expect(upserted?.newsSentiment).not.toBeNull();
-			expect(upserted!.newsSentiment!).toBeGreaterThan(0); // Bullish
-			expect(upserted?.socialSentiment).not.toBeNull();
-			expect(upserted!.socialSentiment!).toBeLessThan(0); // Bearish
+			const upserted = requireValue(mockRepo.upsertCalls[0], "upserted sentiment");
+			const newsSentiment = requireValue(upserted.newsSentiment, "news sentiment");
+			const socialSentiment = requireValue(upserted.socialSentiment, "social sentiment");
+			expect(newsSentiment).toBeGreaterThan(0); // Bullish
+			expect(socialSentiment).toBeLessThan(0); // Bearish
 		});
 
 		it("normalizes symbol to uppercase", async () => {
@@ -416,8 +421,8 @@ describe("SentimentAggregationJob", () => {
 			const job = new SentimentAggregationJob(mockProvider, mockRepo);
 			await job.run(["aapl"], "2024-01-15");
 
-			const upserted = mockRepo.upsertCalls[0];
-			expect(upserted?.symbol).toBe("AAPL");
+			const upserted = requireValue(mockRepo.upsertCalls[0], "upserted sentiment");
+			expect(upserted.symbol).toBe("AAPL");
 		});
 
 		it("processes multiple symbols successfully", async () => {
@@ -508,10 +513,10 @@ describe("SentimentAggregationJob", () => {
 			});
 			await job.run(["AAPL"], "2024-01-15");
 
-			const upserted = mockRepo.upsertCalls[0];
-			expect(upserted?.sentimentMomentum).not.toBeNull();
+			const upserted = requireValue(mockRepo.upsertCalls[0], "upserted sentiment");
+			const momentum = requireValue(upserted.sentimentMomentum, "sentiment momentum");
 			// Short-term avg (last 3) > long-term avg (all 7) = positive momentum
-			expect(upserted!.sentimentMomentum!).toBeGreaterThan(0);
+			expect(momentum).toBeGreaterThan(0);
 		});
 
 		it("returns null momentum when insufficient historical data", async () => {
@@ -527,8 +532,8 @@ describe("SentimentAggregationJob", () => {
 			});
 			await job.run(["AAPL"], "2024-01-15");
 
-			const upserted = mockRepo.upsertCalls[0];
-			expect(upserted?.sentimentMomentum).toBeNull();
+			const upserted = requireValue(mockRepo.upsertCalls[0], "upserted sentiment");
+			expect(upserted.sentimentMomentum).toBeNull();
 		});
 	});
 
@@ -572,9 +577,10 @@ describe("SentimentAggregationJob", () => {
 			const job = new SentimentAggregationJob(mockProvider, mockRepo);
 			await job.run(["AAPL"], "2024-01-15");
 
-			const upserted = mockRepo.upsertCalls[0];
+			const upserted = requireValue(mockRepo.upsertCalls[0], "upserted sentiment");
 			// Recent bullish event should dominate old bearish event
-			expect(upserted!.sentimentScore!).toBeGreaterThan(0);
+			const score = requireValue(upserted.sentimentScore, "sentiment score");
+			expect(score).toBeGreaterThan(0);
 		});
 	});
 

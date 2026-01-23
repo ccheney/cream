@@ -3,6 +3,7 @@
  */
 
 import { describe, expect, test } from "bun:test";
+import { requireValue } from "@cream/test-utils";
 import type { OHLCVBar } from "../types";
 import { createPriceCalculator, PriceCalculatorAdapter } from "./price-calculator";
 
@@ -169,7 +170,7 @@ describe("RSI Calculation", () => {
 		const result = adapter.calculate(bars);
 
 		expect(result.rsi_14).not.toBeNull();
-		expect(result.rsi_14!).toBeGreaterThan(50);
+		expect(requireValue(result.rsi_14, "rsi_14")).toBeGreaterThan(50);
 	});
 
 	test("RSI is low for strong downtrend", () => {
@@ -178,7 +179,7 @@ describe("RSI Calculation", () => {
 		const result = adapter.calculate(bars);
 
 		expect(result.rsi_14).not.toBeNull();
-		expect(result.rsi_14!).toBeLessThan(50);
+		expect(requireValue(result.rsi_14, "rsi_14")).toBeLessThan(50);
 	});
 });
 
@@ -193,15 +194,19 @@ describe("Moving Averages", () => {
 		const result = adapter.calculate(bars);
 
 		// In uptrend: price > SMA20 > SMA50 > SMA200
-		const currentPrice = bars[bars.length - 1]!.close;
+		const currentPrice = requireValue(bars[bars.length - 1], "last bar").close;
 
 		expect(result.sma_20).not.toBeNull();
 		expect(result.sma_50).not.toBeNull();
 		expect(result.sma_200).not.toBeNull();
 
-		expect(currentPrice).toBeGreaterThan(result.sma_20!);
-		expect(result.sma_20!).toBeGreaterThan(result.sma_50!);
-		expect(result.sma_50!).toBeGreaterThan(result.sma_200!);
+		expect(currentPrice).toBeGreaterThan(requireValue(result.sma_20, "sma_20"));
+		expect(requireValue(result.sma_20, "sma_20")).toBeGreaterThan(
+			requireValue(result.sma_50, "sma_50"),
+		);
+		expect(requireValue(result.sma_50, "sma_50")).toBeGreaterThan(
+			requireValue(result.sma_200, "sma_200"),
+		);
 	});
 
 	test("EMA is more responsive than SMA", () => {
@@ -238,15 +243,15 @@ describe("Moving Averages", () => {
 		}
 
 		const result = adapter.calculate(bars);
-		const currentPrice = bars[bars.length - 1]!.close; // 150
+		const currentPrice = requireValue(bars[bars.length - 1], "last bar").close; // 150
 
 		expect(result.ema_21).not.toBeNull();
 		expect(result.sma_20).not.toBeNull();
 
 		// EMA-21 should be closer to current price (150) than SMA-20
 		// because EMA weights recent prices more heavily
-		const emaDiff = Math.abs(currentPrice - result.ema_21!);
-		const smaDiff = Math.abs(currentPrice - result.sma_20!);
+		const emaDiff = Math.abs(currentPrice - requireValue(result.ema_21, "ema_21"));
+		const smaDiff = Math.abs(currentPrice - requireValue(result.sma_20, "sma_20"));
 
 		expect(emaDiff).toBeLessThan(smaDiff);
 	});
@@ -274,7 +279,7 @@ describe("MACD Calculation", () => {
 		const result = adapter.calculate(bars);
 
 		expect(result.macd_line).not.toBeNull();
-		expect(result.macd_line!).toBeGreaterThan(0);
+		expect(requireValue(result.macd_line, "macd_line")).toBeGreaterThan(0);
 	});
 });
 
@@ -292,8 +297,12 @@ describe("Bollinger Bands", () => {
 		expect(result.bollinger_middle).not.toBeNull();
 		expect(result.bollinger_upper).not.toBeNull();
 
-		expect(result.bollinger_lower!).toBeLessThan(result.bollinger_middle!);
-		expect(result.bollinger_middle!).toBeLessThan(result.bollinger_upper!);
+		expect(requireValue(result.bollinger_lower, "bollinger_lower")).toBeLessThan(
+			requireValue(result.bollinger_middle, "bollinger_middle"),
+		);
+		expect(requireValue(result.bollinger_middle, "bollinger_middle")).toBeLessThan(
+			requireValue(result.bollinger_upper, "bollinger_upper"),
+		);
 	});
 
 	test("percentB is 0-1 when price is within bands", () => {
@@ -303,8 +312,10 @@ describe("Bollinger Bands", () => {
 
 		expect(result.bollinger_percentb).not.toBeNull();
 		// percentB can be outside 0-1 if price breaks bands
-		expect(result.bollinger_percentb!).toBeGreaterThanOrEqual(-0.5);
-		expect(result.bollinger_percentb!).toBeLessThanOrEqual(1.5);
+		expect(requireValue(result.bollinger_percentb, "bollinger_percentb")).toBeGreaterThanOrEqual(
+			-0.5,
+		);
+		expect(requireValue(result.bollinger_percentb, "bollinger_percentb")).toBeLessThanOrEqual(1.5);
 	});
 
 	test("bandwidth is positive", () => {
@@ -313,7 +324,7 @@ describe("Bollinger Bands", () => {
 		const result = adapter.calculate(bars);
 
 		expect(result.bollinger_bandwidth).not.toBeNull();
-		expect(result.bollinger_bandwidth!).toBeGreaterThan(0);
+		expect(requireValue(result.bollinger_bandwidth, "bollinger_bandwidth")).toBeGreaterThan(0);
 	});
 });
 
@@ -330,10 +341,10 @@ describe("Stochastic Oscillator", () => {
 		expect(result.stochastic_k).not.toBeNull();
 		expect(result.stochastic_d).not.toBeNull();
 
-		expect(result.stochastic_k!).toBeGreaterThanOrEqual(0);
-		expect(result.stochastic_k!).toBeLessThanOrEqual(100);
-		expect(result.stochastic_d!).toBeGreaterThanOrEqual(0);
-		expect(result.stochastic_d!).toBeLessThanOrEqual(100);
+		expect(requireValue(result.stochastic_k, "stochastic_k")).toBeGreaterThanOrEqual(0);
+		expect(requireValue(result.stochastic_k, "stochastic_k")).toBeLessThanOrEqual(100);
+		expect(requireValue(result.stochastic_d, "stochastic_d")).toBeGreaterThanOrEqual(0);
+		expect(requireValue(result.stochastic_d, "stochastic_d")).toBeLessThanOrEqual(100);
 	});
 
 	test("stochastic is high in uptrend", () => {
@@ -342,7 +353,7 @@ describe("Stochastic Oscillator", () => {
 		const result = adapter.calculate(bars);
 
 		expect(result.stochastic_k).not.toBeNull();
-		expect(result.stochastic_k!).toBeGreaterThan(50);
+		expect(requireValue(result.stochastic_k, "stochastic_k")).toBeGreaterThan(50);
 	});
 });
 
@@ -359,8 +370,8 @@ describe("Momentum", () => {
 		expect(result.momentum_1m).not.toBeNull();
 		expect(result.momentum_3m).not.toBeNull();
 
-		expect(result.momentum_1m!).toBeGreaterThan(0);
-		expect(result.momentum_3m!).toBeGreaterThan(0);
+		expect(requireValue(result.momentum_1m, "momentum_1m")).toBeGreaterThan(0);
+		expect(requireValue(result.momentum_3m, "momentum_3m")).toBeGreaterThan(0);
 	});
 
 	test("momentum is negative for price decrease", () => {
@@ -369,7 +380,7 @@ describe("Momentum", () => {
 		const result = adapter.calculate(bars);
 
 		expect(result.momentum_1m).not.toBeNull();
-		expect(result.momentum_3m!).toBeLessThan(0);
+		expect(requireValue(result.momentum_3m, "momentum_3m")).toBeLessThan(0);
 	});
 
 	test("requires sufficient bars for each period", () => {
@@ -397,8 +408,8 @@ describe("Volatility", () => {
 		expect(result.realized_vol_20d).not.toBeNull();
 		expect(result.parkinson_vol_20d).not.toBeNull();
 
-		expect(result.realized_vol_20d!).toBeGreaterThan(0);
-		expect(result.parkinson_vol_20d!).toBeGreaterThan(0);
+		expect(requireValue(result.realized_vol_20d, "realized_vol_20d")).toBeGreaterThan(0);
+		expect(requireValue(result.parkinson_vol_20d, "parkinson_vol_20d")).toBeGreaterThan(0);
 	});
 
 	test("higher volatility for more volatile data", () => {
@@ -414,7 +425,9 @@ describe("Volatility", () => {
 		expect(highVolResult.realized_vol_20d).not.toBeNull();
 
 		// High volatility data should show higher volatility indicator
-		expect(highVolResult.realized_vol_20d!).toBeGreaterThan(lowVolResult.realized_vol_20d!);
+		const highVol = requireValue(highVolResult.realized_vol_20d, "high volatility");
+		const lowVol = requireValue(lowVolResult.realized_vol_20d, "low volatility");
+		expect(highVol).toBeGreaterThan(lowVol);
 	});
 
 	test("volatility is annualized", () => {
@@ -425,8 +438,8 @@ describe("Volatility", () => {
 		// Annualized vol should be roughly sqrt(252) * daily vol
 		// For 1% daily, expected ~15-16% annualized
 		expect(result.realized_vol_20d).not.toBeNull();
-		expect(result.realized_vol_20d!).toBeGreaterThan(0.05); // At least 5%
-		expect(result.realized_vol_20d!).toBeLessThan(0.5); // Less than 50%
+		expect(requireValue(result.realized_vol_20d, "realized_vol_20d")).toBeGreaterThan(0.05); // At least 5%
+		expect(requireValue(result.realized_vol_20d, "realized_vol_20d")).toBeLessThan(0.5); // Less than 50%
 	});
 });
 

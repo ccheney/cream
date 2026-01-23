@@ -3,6 +3,7 @@
  */
 
 import { describe, expect, test } from "bun:test";
+import { requireValue } from "@cream/test-utils";
 import type { OHLCVBar } from "./index";
 import { applyTransforms, DEFAULT_TRANSFORM_CONFIG } from "./index";
 
@@ -86,7 +87,7 @@ describe("applyTransforms - zscore", () => {
 
 		const zscore = result.zscore_close_20_1h;
 		expect(zscore).toBeDefined();
-		expect(zscore!).toBeGreaterThan(1);
+		expect(requireValue(zscore, "zscore")).toBeGreaterThan(1);
 	});
 
 	test("zscore normalizes to unit variance", () => {
@@ -207,7 +208,7 @@ describe("applyTransforms - robust", () => {
 
 		const normalized = result.robust_close_20_1h;
 		expect(normalized).toBeDefined();
-		expect(Math.abs(normalized!)).toBeLessThan(0.5);
+		expect(Math.abs(requireValue(normalized, "normalized"))).toBeLessThan(0.5);
 	});
 
 	test("robust normalization is resistant to outliers", () => {
@@ -225,7 +226,7 @@ describe("applyTransforms - robust", () => {
 
 		const normalized = result.robust_close_20_1h;
 		expect(normalized).toBeDefined();
-		expect(Math.abs(normalized!)).toBeLessThan(1);
+		expect(Math.abs(requireValue(normalized, "normalized"))).toBeLessThan(1);
 	});
 });
 
@@ -257,7 +258,9 @@ describe("applyTransforms - outlier clipping", () => {
 
 		expect(clipped).toBeDefined();
 		expect(unclipped).toBeDefined();
-		expect(Math.abs(clipped!)).toBeLessThanOrEqual(Math.abs(unclipped!));
+		expect(Math.abs(requireValue(clipped, "clipped"))).toBeLessThanOrEqual(
+			Math.abs(requireValue(unclipped, "unclipped")),
+		);
 	});
 });
 

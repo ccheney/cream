@@ -7,6 +7,7 @@
 
 import { describe, expect, mock, test } from "bun:test";
 import type { CorporateActionsRepository } from "@cream/storage";
+import { requireArrayItem } from "@cream/test-utils";
 import {
 	type AlpacaCorporateAction,
 	type AlpacaCorporateActionsClient,
@@ -104,7 +105,7 @@ describe("calculateDaysToExDividend", () => {
 		const now = new Date();
 		const futureDate = new Date(now);
 		futureDate.setDate(futureDate.getDate() + 10);
-		const exDateStr = futureDate.toISOString().split("T")[0]!;
+		const exDateStr = futureDate.toISOString().slice(0, 10);
 		const days = calculateDaysToExDividend(exDateStr, now);
 		// Allow for minor variance due to time-of-day
 		expect(days).toBeGreaterThanOrEqual(9);
@@ -113,7 +114,7 @@ describe("calculateDaysToExDividend", () => {
 
 	test("returns 0 or positive for same day", () => {
 		const now = new Date();
-		const exDateStr = now.toISOString().split("T")[0]!;
+		const exDateStr = now.toISOString().slice(0, 10);
 		const days = calculateDaysToExDividend(exDateStr, now);
 		// On same day, should be 0 or possibly -1/+1 due to timezone
 		expect(days === null || days >= 0).toBe(true);
@@ -123,7 +124,7 @@ describe("calculateDaysToExDividend", () => {
 		const now = new Date();
 		const pastDate = new Date(now);
 		pastDate.setDate(pastDate.getDate() - 10);
-		const exDateStr = pastDate.toISOString().split("T")[0]!;
+		const exDateStr = pastDate.toISOString().slice(0, 10);
 		const days = calculateDaysToExDividend(exDateStr, now);
 		expect(days).toBeNull();
 	});
@@ -136,7 +137,7 @@ describe("calculateDaysToExDividend", () => {
 		const now = new Date();
 		const futureDate = new Date(now);
 		futureDate.setDate(futureDate.getDate() + 30);
-		const exDateStr = futureDate.toISOString().split("T")[0]!;
+		const exDateStr = futureDate.toISOString().slice(0, 10);
 		const days = calculateDaysToExDividend(exDateStr, now);
 		expect(days).toBeGreaterThanOrEqual(29);
 		expect(days).toBeLessThanOrEqual(30);
@@ -208,7 +209,7 @@ describe("hasPendingSplit", () => {
 			{
 				corporate_action_type: "Split",
 				symbol: "AAPL",
-				ex_date: futureDate.toISOString().split("T")[0]!,
+				ex_date: futureDate.toISOString().slice(0, 10),
 				record_date: null,
 				payment_date: null,
 				value: 4,
@@ -224,7 +225,7 @@ describe("hasPendingSplit", () => {
 			{
 				corporate_action_type: "ReverseSplit",
 				symbol: "XYZ",
-				ex_date: futureDate.toISOString().split("T")[0]!,
+				ex_date: futureDate.toISOString().slice(0, 10),
 				record_date: null,
 				payment_date: null,
 				value: 0.1,
@@ -240,7 +241,7 @@ describe("hasPendingSplit", () => {
 			{
 				corporate_action_type: "Split",
 				symbol: "AAPL",
-				ex_date: pastDate.toISOString().split("T")[0]!,
+				ex_date: pastDate.toISOString().slice(0, 10),
 				record_date: null,
 				payment_date: null,
 				value: 4,
@@ -256,7 +257,7 @@ describe("hasPendingSplit", () => {
 			{
 				corporate_action_type: "Split",
 				symbol: "AAPL",
-				ex_date: farFutureDate.toISOString().split("T")[0]!,
+				ex_date: farFutureDate.toISOString().slice(0, 10),
 				record_date: null,
 				payment_date: null,
 				value: 4,
@@ -272,7 +273,7 @@ describe("hasPendingSplit", () => {
 			{
 				corporate_action_type: "Dividend",
 				symbol: "AAPL",
-				ex_date: futureDate.toISOString().split("T")[0]!,
+				ex_date: futureDate.toISOString().slice(0, 10),
 				record_date: null,
 				payment_date: null,
 				value: 0.25,
@@ -290,7 +291,7 @@ describe("calculateDividendIndicators", () => {
 	test("calculates all indicators correctly", () => {
 		// Use dates relative to today to ensure they're within trailing 12 months
 		const now = new Date();
-		const formatDateStr = (d: Date) => d.toISOString().split("T")[0]!;
+		const formatDateStr = (d: Date) => d.toISOString().slice(0, 10);
 
 		const q1 = new Date(now);
 		q1.setMonth(q1.getMonth() - 1);
@@ -338,7 +339,7 @@ describe("calculateDividendIndicators", () => {
 	});
 
 	test("handles null price", () => {
-		const dividends = [{ amount: 0.5, exDate: new Date().toISOString().split("T")[0]! }];
+		const dividends = [{ amount: 0.5, exDate: new Date().toISOString().slice(0, 10) }];
 		const result = calculateDividendIndicators(dividends, null, null, 0);
 
 		expect(result.trailingDividendYield).toBeNull();
@@ -350,8 +351,8 @@ describe("calculateDividendIndicators", () => {
 		const oldDate = new Date();
 		oldDate.setFullYear(oldDate.getFullYear() - 2);
 		const dividends = [
-			{ amount: 0.5, exDate: new Date().toISOString().split("T")[0]! },
-			{ amount: 10.0, exDate: oldDate.toISOString().split("T")[0]! }, // Old dividend should be excluded
+			{ amount: 0.5, exDate: new Date().toISOString().slice(0, 10) },
+			{ amount: 10.0, exDate: oldDate.toISOString().slice(0, 10) }, // Old dividend should be excluded
 		];
 
 		const result = calculateDividendIndicators(dividends, 100, null, 0);
@@ -499,7 +500,7 @@ describe("CorporateActionsBatchJob", () => {
 			expect(result.failed).toBe(1);
 			expect(result.processed).toBe(1);
 			expect(result.errors.length).toBe(1);
-			expect(result.errors[0]!.symbol).toBe("AAPL");
+			expect(requireArrayItem(result.errors, 0, "error").symbol).toBe("AAPL");
 		});
 
 		test("stops on error when continueOnError is false", async () => {
@@ -552,7 +553,10 @@ describe("CorporateActionsBatchJob", () => {
 
 			const calls = (repo.upsert as ReturnType<typeof mock>).mock.calls;
 			expect(calls.length).toBe(1);
-			const insert = calls[0]![0];
+			const insert = requireArrayItem(calls, 0, "upsert call")[0];
+			if (!insert) {
+				throw new Error("Expected insert payload");
+			}
 			expect(insert.actionType).toBe("dividend");
 			expect(insert.amount).toBe(0.24);
 			expect(insert.ratio).toBeNull();
@@ -579,7 +583,10 @@ describe("CorporateActionsBatchJob", () => {
 
 			const calls = (repo.upsert as ReturnType<typeof mock>).mock.calls;
 			expect(calls.length).toBe(1);
-			const insert = calls[0]![0];
+			const insert = requireArrayItem(calls, 0, "upsert call")[0];
+			if (!insert) {
+				throw new Error("Expected insert payload");
+			}
 			expect(insert.actionType).toBe("split");
 			expect(insert.ratio).toBe(4);
 			expect(insert.amount).toBeNull();
@@ -605,7 +612,10 @@ describe("CorporateActionsBatchJob", () => {
 
 			const calls = (repo.upsert as ReturnType<typeof mock>).mock.calls;
 			expect(calls.length).toBe(1);
-			const insert = calls[0]![0];
+			const insert = requireArrayItem(calls, 0, "upsert call")[0];
+			if (!insert) {
+				throw new Error("Expected insert payload");
+			}
 			expect(insert.actionType).toBe("reverse_split");
 			expect(insert.ratio).toBe(0.1);
 		});
@@ -630,7 +640,10 @@ describe("CorporateActionsBatchJob", () => {
 
 			const calls = (repo.upsert as ReturnType<typeof mock>).mock.calls;
 			expect(calls.length).toBe(1);
-			const insert = calls[0]![0];
+			const insert = requireArrayItem(calls, 0, "upsert call")[0];
+			if (!insert) {
+				throw new Error("Expected insert payload");
+			}
 			expect(insert.actionType).toBe("special_dividend");
 			expect(insert.amount).toBe(15.0);
 		});
@@ -715,7 +728,11 @@ describe("CorporateActionsBatchJob", () => {
 			await job.run(["AAPL"]);
 
 			const calls = (repo.upsert as ReturnType<typeof mock>).mock.calls;
-			expect(calls[0]![0].details).toBeNull();
+			const insert = requireArrayItem(calls, 0, "upsert call")[0];
+			if (!insert) {
+				throw new Error("Expected insert payload");
+			}
+			expect(insert.details).toBeNull();
 		});
 	});
 });

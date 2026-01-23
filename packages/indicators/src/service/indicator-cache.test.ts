@@ -3,6 +3,7 @@
  */
 
 import { beforeEach, describe, expect, test } from "bun:test";
+import { requireValue } from "@cream/test-utils";
 import {
 	createEmptyCorporateIndicators,
 	createEmptyLiquidityIndicators,
@@ -98,8 +99,8 @@ describe("IndicatorCache - Snapshots", () => {
 
 		const retrieved = cache.getSnapshot("AAPL");
 		expect(retrieved).not.toBeNull();
-		expect(retrieved!.symbol).toBe("AAPL");
-		expect(retrieved!.price.rsi_14).toBe(55.5);
+		expect(requireValue(retrieved, "retrieved").symbol).toBe("AAPL");
+		expect(requireValue(retrieved, "retrieved").price.rsi_14).toBe(55.5);
 	});
 
 	test("returns null for non-existent snapshot", () => {
@@ -140,8 +141,8 @@ describe("IndicatorCache - Price Indicators", () => {
 
 		const retrieved = cache.getPrice("AAPL");
 		expect(retrieved).not.toBeNull();
-		expect(retrieved!.rsi_14).toBe(65.2);
-		expect(retrieved!.sma_20).toBe(150.5);
+		expect(requireValue(retrieved, "retrieved").rsi_14).toBe(65.2);
+		expect(requireValue(retrieved, "retrieved").sma_20).toBe(150.5);
 	});
 
 	test("returns null for non-existent entry", () => {
@@ -172,8 +173,8 @@ describe("IndicatorCache - Liquidity Indicators", () => {
 
 		const retrieved = cache.getLiquidity("AAPL");
 		expect(retrieved).not.toBeNull();
-		expect(retrieved!.bid_ask_spread).toBe(0.02);
-		expect(retrieved!.vwap).toBe(151.25);
+		expect(requireValue(retrieved, "retrieved").bid_ask_spread).toBe(0.02);
+		expect(requireValue(retrieved, "retrieved").vwap).toBe(151.25);
 	});
 
 	test("hasLiquidity works correctly", () => {
@@ -202,7 +203,7 @@ describe("IndicatorCache - Options Indicators", () => {
 
 		const retrieved = cache.getOptions("AAPL");
 		expect(retrieved).not.toBeNull();
-		expect(retrieved!.atm_iv).toBe(0.35);
+		expect(requireValue(retrieved, "retrieved").atm_iv).toBe(0.35);
 	});
 
 	test("hasOptions works correctly", () => {
@@ -229,7 +230,7 @@ describe("IndicatorCache - Fundamentals", () => {
 
 		const retrieved = cache.getValue("AAPL");
 		expect(retrieved).not.toBeNull();
-		expect(retrieved!.pe_ratio_ttm).toBe(25.5);
+		expect(requireValue(retrieved, "retrieved").pe_ratio_ttm).toBe(25.5);
 	});
 
 	test("stores and retrieves quality indicators", () => {
@@ -238,7 +239,7 @@ describe("IndicatorCache - Fundamentals", () => {
 
 		const retrieved = cache.getQuality("AAPL");
 		expect(retrieved).not.toBeNull();
-		expect(retrieved!.roe).toBe(0.85);
+		expect(requireValue(retrieved, "retrieved").roe).toBe(0.85);
 	});
 
 	test("setFundamentals stores both value and quality", () => {
@@ -258,8 +259,8 @@ describe("IndicatorCache - Fundamentals", () => {
 
 		const fundamentals = cache.getFundamentals("AAPL");
 		expect(fundamentals).not.toBeNull();
-		expect(fundamentals!.value.pe_ratio_ttm).toBe(25.5);
-		expect(fundamentals!.quality.roe).toBe(0.85);
+		expect(requireValue(fundamentals, "fundamentals").value.pe_ratio_ttm).toBe(25.5);
+		expect(requireValue(fundamentals, "fundamentals").quality.roe).toBe(0.85);
 	});
 
 	test("getFundamentals returns null if either missing", () => {
@@ -288,7 +289,7 @@ describe("IndicatorCache - Sentiment", () => {
 
 		const retrieved = cache.getSentiment("AAPL");
 		expect(retrieved).not.toBeNull();
-		expect(retrieved!.overall_score).toBe(0.65);
+		expect(requireValue(retrieved, "retrieved").overall_score).toBe(0.65);
 	});
 
 	test("hasSentiment works correctly", () => {
@@ -317,7 +318,7 @@ describe("IndicatorCache - Short Interest", () => {
 
 		const retrieved = cache.getShortInterest("GME");
 		expect(retrieved).not.toBeNull();
-		expect(retrieved!.short_pct_float).toBe(0.25);
+		expect(requireValue(retrieved, "retrieved").short_pct_float).toBe(0.25);
 	});
 
 	test("hasShortInterest works correctly", () => {
@@ -346,8 +347,8 @@ describe("IndicatorCache - Corporate Actions", () => {
 
 		const retrieved = cache.getCorporate("AAPL");
 		expect(retrieved).not.toBeNull();
-		expect(retrieved!.trailing_dividend_yield).toBe(0.0052);
-		expect(retrieved!.recent_split).toBe(true);
+		expect(requireValue(retrieved, "retrieved").trailing_dividend_yield).toBe(0.0052);
+		expect(requireValue(retrieved, "retrieved").recent_split).toBe(true);
 	});
 
 	test("hasCorporate works correctly", () => {

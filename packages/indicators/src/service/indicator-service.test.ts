@@ -3,6 +3,7 @@
  */
 
 import { describe, expect, test } from "bun:test";
+import { requireValue } from "@cream/test-utils";
 import {
 	createEmptyCorporateIndicators,
 	createEmptyLiquidityIndicators,
@@ -567,7 +568,7 @@ describe("IndicatorService - Helper Methods", () => {
 		const metrics = service.getCacheMetrics();
 
 		expect(metrics).not.toBeNull();
-		expect(metrics!.snapshot.size).toBe(1);
+		expect(requireValue(metrics, "metrics").snapshot.size).toBe(1);
 	});
 
 	test("getCacheMetrics returns null when cache not configured", async () => {
@@ -808,12 +809,14 @@ describe("IndicatorService.getSnapshotsBatch", () => {
 		expect(result.metadata.successful).toBe(3);
 
 		// FAIL symbol gets partial data (empty price indicators due to no bars)
-		expect(result.snapshots.get("FAIL")).toBeDefined();
-		expect(result.snapshots.get("FAIL")!.price.rsi_14).toBeNull();
+		const failSnapshot = requireValue(result.snapshots.get("FAIL"), "FAIL snapshot");
+		expect(failSnapshot.price.rsi_14).toBeNull();
 
 		// Working symbols have full data
-		expect(result.snapshots.get("AAPL")!.price.rsi_14).toBe(55.5);
-		expect(result.snapshots.get("GOOG")!.price.rsi_14).toBe(55.5);
+		const aaplSnapshot = requireValue(result.snapshots.get("AAPL"), "AAPL snapshot");
+		const googSnapshot = requireValue(result.snapshots.get("GOOG"), "GOOG snapshot");
+		expect(aaplSnapshot.price.rsi_14).toBe(55.5);
+		expect(googSnapshot.price.rsi_14).toBe(55.5);
 	});
 
 	test("returns empty indicators when all market data fails (graceful handling)", async () => {
@@ -858,12 +861,14 @@ describe("IndicatorService.getSnapshotsBatch", () => {
 		expect(result.metadata.successful).toBe(2);
 
 		// Snapshots have empty price indicators (no market data)
-		expect(result.snapshots.get("AAPL")!.price.rsi_14).toBeNull();
-		expect(result.snapshots.get("MSFT")!.price.rsi_14).toBeNull();
+		const aaplSnapshot = requireValue(result.snapshots.get("AAPL"), "AAPL snapshot");
+		const msftSnapshot = requireValue(result.snapshots.get("MSFT"), "MSFT snapshot");
+		expect(aaplSnapshot.price.rsi_14).toBeNull();
+		expect(msftSnapshot.price.rsi_14).toBeNull();
 
 		// But batch indicators (fundamentals) still work
-		expect(result.snapshots.get("AAPL")!.value.pe_ratio_ttm).toBe(25.5);
-		expect(result.snapshots.get("MSFT")!.value.pe_ratio_ttm).toBe(25.5);
+		expect(aaplSnapshot.value.pe_ratio_ttm).toBe(25.5);
+		expect(msftSnapshot.value.pe_ratio_ttm).toBe(25.5);
 	});
 
 	test("includes execution time in metadata", async () => {

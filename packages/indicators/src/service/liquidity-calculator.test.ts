@@ -3,6 +3,7 @@
  */
 
 import { describe, expect, test } from "bun:test";
+import { requireValue } from "@cream/test-utils";
 import type { OHLCVBar, Quote } from "../types";
 import { createLiquidityCalculator, LiquidityCalculatorAdapter } from "./liquidity-calculator";
 
@@ -199,7 +200,7 @@ describe("Amihud Illiquidity Calculation", () => {
 		expect(result.amihud_illiquidity).toBeTypeOf("number");
 		expect(result.amihud_illiquidity).toBeGreaterThan(0);
 		// Very small number for liquid stocks
-		expect(result.amihud_illiquidity!).toBeLessThan(1);
+		expect(requireValue(result.amihud_illiquidity, "amihud_illiquidity")).toBeLessThan(1);
 	});
 
 	test("higher illiquidity for low volume", () => {
@@ -215,7 +216,11 @@ describe("Amihud Illiquidity Calculation", () => {
 		expect(lowVolResult.amihud_illiquidity).not.toBeNull();
 
 		// Lower volume = higher illiquidity
-		expect(lowVolResult.amihud_illiquidity!).toBeGreaterThan(highVolResult.amihud_illiquidity!);
+		expect(
+			requireValue(lowVolResult.amihud_illiquidity, "low vol amihud_illiquidity"),
+		).toBeGreaterThan(
+			requireValue(highVolResult.amihud_illiquidity, "high vol amihud_illiquidity"),
+		);
 	});
 });
 
@@ -294,7 +299,7 @@ describe("Volume Ratio Calculation", () => {
 		const result = adapter.calculate(bars, null);
 
 		expect(result.volume_ratio).not.toBeNull();
-		expect(result.volume_ratio!).toBeGreaterThan(1.5); // Should be significantly above average
+		expect(requireValue(result.volume_ratio, "volume_ratio")).toBeGreaterThan(1.5); // Should be significantly above average
 	});
 
 	test("low volume ratio for below-average volume", () => {
@@ -310,7 +315,7 @@ describe("Volume Ratio Calculation", () => {
 		const result = adapter.calculate(bars, null);
 
 		expect(result.volume_ratio).not.toBeNull();
-		expect(result.volume_ratio!).toBeLessThan(0.5);
+		expect(requireValue(result.volume_ratio, "volume_ratio")).toBeLessThan(0.5);
 	});
 });
 
@@ -423,7 +428,7 @@ describe("Integration", () => {
 		const prices = bars.map((b) => b.close);
 		const minPrice = Math.min(...prices);
 		const maxPrice = Math.max(...prices);
-		expect(result.vwap!).toBeGreaterThanOrEqual(minPrice);
-		expect(result.vwap!).toBeLessThanOrEqual(maxPrice);
+		expect(requireValue(result.vwap, "vwap")).toBeGreaterThanOrEqual(minPrice);
+		expect(requireValue(result.vwap, "vwap")).toBeLessThanOrEqual(maxPrice);
 	});
 });
