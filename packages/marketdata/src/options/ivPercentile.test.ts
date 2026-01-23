@@ -104,8 +104,8 @@ describe("InMemoryIVHistoryStore", () => {
 		const date2 = new Date(today);
 		date2.setDate(today.getDate() - 9);
 
-		store.addObservation("AAPL", { date: date1.toISOString().split("T")[0]!, iv: 0.25 });
-		store.addObservation("AAPL", { date: date2.toISOString().split("T")[0]!, iv: 0.26 });
+		store.addObservation("AAPL", { date: date1.toISOString().slice(0, 10), iv: 0.25 });
+		store.addObservation("AAPL", { date: date2.toISOString().slice(0, 10), iv: 0.26 });
 
 		const provider = store.getProvider();
 		const history = await provider("AAPL", 365);
@@ -124,9 +124,9 @@ describe("InMemoryIVHistoryStore", () => {
 		const date3 = new Date(today);
 		date3.setDate(today.getDate() - 8);
 
-		store.addObservation("AAPL", { date: date3.toISOString().split("T")[0]!, iv: 0.27 });
-		store.addObservation("AAPL", { date: date1.toISOString().split("T")[0]!, iv: 0.25 });
-		store.addObservation("AAPL", { date: date2.toISOString().split("T")[0]!, iv: 0.26 });
+		store.addObservation("AAPL", { date: date3.toISOString().slice(0, 10), iv: 0.27 });
+		store.addObservation("AAPL", { date: date1.toISOString().slice(0, 10), iv: 0.25 });
+		store.addObservation("AAPL", { date: date2.toISOString().slice(0, 10), iv: 0.26 });
 
 		const provider = store.getProvider();
 		const history = await provider("AAPL", 365);
@@ -143,8 +143,8 @@ describe("InMemoryIVHistoryStore", () => {
 		const oldDate = new Date(today);
 		oldDate.setDate(today.getDate() - 400);
 
-		store.addObservation("AAPL", { date: recentDate.toISOString().split("T")[0]!, iv: 0.25 });
-		store.addObservation("AAPL", { date: oldDate.toISOString().split("T")[0]!, iv: 0.2 });
+		store.addObservation("AAPL", { date: recentDate.toISOString().slice(0, 10), iv: 0.25 });
+		store.addObservation("AAPL", { date: oldDate.toISOString().slice(0, 10), iv: 0.2 });
 
 		const provider = store.getProvider();
 
@@ -168,9 +168,9 @@ describe("InMemoryIVHistoryStore", () => {
 		date3.setDate(today.getDate() - 8);
 
 		const history: IVObservation[] = [
-			{ date: date1.toISOString().split("T")[0]!, iv: 0.25 },
-			{ date: date2.toISOString().split("T")[0]!, iv: 0.26 },
-			{ date: date3.toISOString().split("T")[0]!, iv: 0.27 },
+			{ date: date1.toISOString().slice(0, 10), iv: 0.25 },
+			{ date: date2.toISOString().slice(0, 10), iv: 0.26 },
+			{ date: date3.toISOString().slice(0, 10), iv: 0.27 },
 		];
 
 		store.setHistory("AAPL", history);
@@ -195,7 +195,7 @@ describe("IVPercentileCalculator", () => {
 			const date = new Date(today);
 			date.setDate(today.getDate() - (100 - i));
 			store.addObservation("AAPL", {
-				date: date.toISOString().split("T")[0]!,
+				date: date.toISOString().slice(0, 10),
 				iv: 0.2 + i * 0.001, // 0.20 to 0.299
 			});
 		}

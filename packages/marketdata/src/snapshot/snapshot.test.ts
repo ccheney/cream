@@ -629,7 +629,10 @@ describe("buildSnapshot", () => {
 		// Primary timeframe should have at most 50 candles
 		const primaryCandles = snapshot.candles["1h"];
 		expect(primaryCandles).toBeDefined();
-		expect(primaryCandles!.length).toBeLessThanOrEqual(50);
+		if (!primaryCandles) {
+			throw new Error("Expected primary candles to be defined");
+		}
+		expect(primaryCandles.length).toBeLessThanOrEqual(50);
 	});
 
 	it("should include only specified timeframes", async () => {

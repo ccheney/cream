@@ -3,6 +3,7 @@
  */
 
 import { beforeEach, describe, expect, it, mock } from "bun:test";
+import { requireValue } from "@cream/test-utils";
 import type { AlpacaBar, AlpacaMarketDataClient } from "../providers/alpaca";
 import {
 	aggregateCandles,
@@ -106,9 +107,10 @@ function createMockStorage(): CandleStorage & { candles: Candle[] } {
 			if (matching.length === 0) {
 				return null;
 			}
-			return matching.sort(
+			const sorted = matching.sort(
 				(a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime(),
-			)[0]!;
+			);
+			return sorted[0] ?? null;
 		}),
 	};
 }
@@ -152,7 +154,7 @@ describe("CandleIngestionService", () => {
 			});
 
 			expect(storage.candles).toHaveLength(5);
-			const firstCandle = storage.candles[0]!;
+			const firstCandle = requireValue(storage.candles[0], "stored candle");
 			expect(firstCandle.symbol).toBe("AAPL");
 			expect(firstCandle.timeframe).toBe("1h");
 			expect(firstCandle.open).toBe(150.0);
@@ -367,7 +369,7 @@ describe("aggregateCandles", () => {
 		const result = aggregateCandles(hourlyCandles, "4h");
 
 		expect(result).toHaveLength(1);
-		const candle = result[0]!;
+		const candle = requireValue(result[0], "aggregated candle");
 		expect(candle.timeframe).toBe("4h");
 		expect(candle.open).toBe(150); // First candle's open
 		expect(candle.high).toBe(156); // Max high
@@ -384,7 +386,8 @@ describe("aggregateCandles", () => {
 			(150.5 * 1000000 + 152.0 * 1100000 + 153.5 * 1200000 + 154.5 * 1300000) /
 			(1000000 + 1100000 + 1200000 + 1300000);
 
-		expect(result[0]!.vwap).toBeCloseTo(expectedVWAP, 2);
+		const firstResult = requireValue(result[0], "aggregated candle");
+		expect(firstResult.vwap).toBeCloseTo(expectedVWAP, 2);
 	});
 
 	it("throws error for invalid aggregation direction", () => {

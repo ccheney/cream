@@ -3,6 +3,7 @@
  */
 
 import { beforeEach, describe, expect, it } from "bun:test";
+import { requireValue } from "@cream/test-utils";
 import {
 	createFailingMockAdapter,
 	createFlakeMockAdapter,
@@ -48,8 +49,8 @@ describe("MockAdapter", () => {
 				return;
 			}
 
-			const startTs = allCandles[2]!.timestamp;
-			const endTs = allCandles[5]!.timestamp;
+			const startTs = requireValue(allCandles[2], "start candle").timestamp;
+			const endTs = requireValue(allCandles[5], "end candle").timestamp;
 
 			const filtered = await adapter.getCandlesInRange("AAPL", "1h", startTs, endTs);
 			expect(filtered.length).toBeLessThanOrEqual(allCandles.length);

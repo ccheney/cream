@@ -631,7 +631,10 @@ describe("convergence verification", () => {
 
 		// All results should be identical
 		expect(results.length).toBe(10);
-		const first = results[0]!;
+		const first = results[0];
+		if (first === undefined) {
+			throw new Error("Expected implied volatility results");
+		}
 		for (const iv of results) {
 			expect(iv).toBe(first);
 		}

@@ -3,6 +3,7 @@
  */
 
 import { describe, expect, it } from "bun:test";
+import { requireValue } from "@cream/test-utils";
 import type {
 	AlpacaCorporateActionDividend,
 	AlpacaCorporateActionSplit,
@@ -173,7 +174,8 @@ describe("Stock Splits", () => {
 			const applicable = getApplicableSplits(splits, "2018-01-01");
 
 			expect(applicable.length).toBe(1);
-			expect(applicable[0]!.executionDate).toBe("2020-08-01");
+			const firstApplicable = requireValue(applicable[0], "applicable split");
+			expect(firstApplicable.executionDate).toBe("2020-08-01");
 		});
 
 		it("should return all splits for old candle", () => {
@@ -288,12 +290,14 @@ describe("Stock Splits", () => {
 			const adjusted = adjustCandlesForSplits(candles, splits);
 
 			// Old candle should be adjusted
-			expect(adjusted[0]!.close).toBe(102.5);
-			expect(adjusted[0]!.splitAdjusted).toBe(true);
+			const firstAdjusted = requireValue(adjusted[0], "adjusted candle");
+			expect(firstAdjusted.close).toBe(102.5);
+			expect(firstAdjusted.splitAdjusted).toBe(true);
 
 			// New candle should not be adjusted (after split)
-			expect(adjusted[1]!.close).toBe(105);
-			expect(adjusted[1]!.splitAdjusted).toBe(false);
+			const secondAdjusted = requireValue(adjusted[1], "adjusted candle");
+			expect(secondAdjusted.close).toBe(105);
+			expect(secondAdjusted.splitAdjusted).toBe(false);
 		});
 	});
 
@@ -413,7 +417,8 @@ describe("Dividends", () => {
 			const result = getDividendsFromDate(dividends, "2024-03-01");
 
 			expect(result.length).toBe(2);
-			expect(result[0]!.exDividendDate).toBe("2024-04-01");
+			const firstResult = requireValue(result[0], "dividend result");
+			expect(firstResult.exDividendDate).toBe("2024-04-01");
 		});
 	});
 
@@ -458,7 +463,8 @@ describe("Dividends", () => {
 			const result = getDividendsInRange(dividends, "2024-02-01", "2024-06-01");
 
 			expect(result.length).toBe(1);
-			expect(result[0]!.exDividendDate).toBe("2024-04-01");
+			const firstResult = requireValue(result[0], "dividend result");
+			expect(firstResult.exDividendDate).toBe("2024-04-01");
 		});
 	});
 
@@ -611,7 +617,8 @@ describe("Dividends", () => {
 			const result = getRegularDividends(dividends);
 
 			expect(result.length).toBe(1);
-			expect(result[0]!.dividendType).toBe("CD");
+			const firstResult = requireValue(result[0], "dividend result");
+			expect(firstResult.dividendType).toBe("CD");
 		});
 	});
 
@@ -645,7 +652,8 @@ describe("Dividends", () => {
 			const result = getSpecialDividends(dividends);
 
 			expect(result.length).toBe(1);
-			expect(result[0]!.dividendType).toBe("SC");
+			const firstResult = requireValue(result[0], "dividend result");
+			expect(firstResult.dividendType).toBe("SC");
 		});
 	});
 
@@ -680,7 +688,8 @@ describe("Dividends", () => {
 			const result = getUpcomingDividends(dividends, today);
 
 			expect(result.length).toBe(1);
-			expect(result[0]!.exDividendDate).toBe("2024-07-15");
+			const firstResult = requireValue(result[0], "dividend result");
+			expect(firstResult.exDividendDate).toBe("2024-07-15");
 		});
 	});
 
@@ -726,7 +735,8 @@ describe("Dividends", () => {
 			const result = getDividendsGoingExWithin(dividends, 10, today);
 
 			expect(result.length).toBe(1);
-			expect(result[0]!.exDividendDate).toBe("2024-06-05");
+			const firstResult = requireValue(result[0], "dividend result");
+			expect(firstResult.exDividendDate).toBe("2024-06-05");
 		});
 	});
 });

@@ -3,6 +3,7 @@
  */
 
 import { describe, expect, it } from "bun:test";
+import { requireArrayItem } from "@cream/test-utils";
 import type { Timeframe } from "../ingestion/candleIngestion";
 import {
 	detectAllAnomalies,
@@ -138,8 +139,9 @@ describe("Gap Detection", () => {
 		it("should detect gaps in candle data", () => {
 			const candles = createCandleSeries(5);
 			// Create a 3-hour gap
+			const previous = requireArrayItem(candles, 1, "candle");
 			candles[2] = createCandle(
-				new Date(new Date(candles[1]!.timestamp).getTime() + 3 * 3600000).toISOString(),
+				new Date(new Date(previous.timestamp).getTime() + 3 * 3600000).toISOString(),
 				100,
 			);
 
@@ -147,7 +149,11 @@ describe("Gap Detection", () => {
 
 			expect(result.hasGaps).toBe(true);
 			expect(result.gapCount).toBe(1);
-			expect(result.gaps[0]!.gapCandles).toBe(2);
+			const firstGap = result.gaps[0];
+			if (!firstGap) {
+				throw new Error("Expected a gap to be detected");
+			}
+			expect(firstGap.gapCandles).toBe(2);
 		});
 
 		it("should detect no gaps in continuous data", () => {
@@ -176,7 +182,8 @@ describe("Gap Detection", () => {
 			const filled = fillGaps(candles, 1);
 
 			expect(filled.length).toBe(3);
-			expect((filled[1] as any).interpolated).toBe(true);
+			const interpolated = requireArrayItem(filled, 1, "filled candle");
+			expect("interpolated" in interpolated && interpolated.interpolated).toBe(true);
 		});
 
 		it("should not fill multi-candle gaps by default", () => {
@@ -215,7 +222,7 @@ describe("Anomaly Detection", () => {
 		it("should detect volume spikes", () => {
 			const candles = createCandleSeries(30);
 			// Add a massive volume spike
-			candles[25]!.volume = 10000000; // 10x normal
+			requireArrayItem(candles, 25, "candle").volume = 10000000; // 10x normal
 
 			const anomalies = detectVolumeAnomalies(candles);
 
@@ -235,7 +242,9 @@ describe("Anomaly Detection", () => {
 	describe("detectPriceSpikes", () => {
 		it("should detect price spikes >10%", () => {
 			const candles = createCandleSeries(10);
-			candles[5]!.close = candles[4]!.close * 1.15; // 15% spike
+			const spikeCandle = requireArrayItem(candles, 5, "candle");
+			const priorCandle = requireArrayItem(candles, 4, "candle");
+			spikeCandle.close = priorCandle.close * 1.15; // 15% spike
 
 			const anomalies = detectPriceSpikes(candles);
 
@@ -245,7 +254,9 @@ describe("Anomaly Detection", () => {
 
 		it("should detect gap up/down", () => {
 			const candles = createCandleSeries(10);
-			candles[5]!.open = candles[4]!.close * 1.12; // 12% gap up
+			const gapCandle = requireArrayItem(candles, 5, "candle");
+			const priorCandle = requireArrayItem(candles, 4, "candle");
+			gapCandle.open = priorCandle.close * 1.12; // 12% gap up
 
 			const anomalies = detectPriceSpikes(candles);
 
@@ -256,12 +267,12 @@ describe("Anomaly Detection", () => {
 	describe("detectFlashCrashes", () => {
 		it("should detect flash crash pattern", () => {
 			const candles = createCandleSeries(20);
-			const basePrice = candles[10]!.close;
+			const basePrice = requireArrayItem(candles, 10, "candle").close;
 
 			// Create flash crash: 6% drop then recovery
-			candles[11]!.low = basePrice * 0.94;
-			candles[11]!.close = basePrice * 0.95;
-			candles[12]!.close = basePrice * 0.98; // Recovery
+			requireArrayItem(candles, 11, "candle").low = basePrice * 0.94;
+			requireArrayItem(candles, 11, "candle").close = basePrice * 0.95;
+			requireArrayItem(candles, 12, "candle").close = basePrice * 0.98; // Recovery
 
 			const anomalies = detectFlashCrashes(candles);
 
@@ -272,8 +283,10 @@ describe("Anomaly Detection", () => {
 	describe("detectAllAnomalies", () => {
 		it("should combine all anomaly types", () => {
 			const candles = createCandleSeries(30);
-			candles[25]!.volume = 10000000; // Volume spike
-			candles[20]!.close = candles[19]!.close * 1.15; // Price spike
+			requireArrayItem(candles, 25, "candle").volume = 10000000; // Volume spike
+			const priceSpike = requireArrayItem(candles, 20, "candle");
+			const priorCandle = requireArrayItem(candles, 19, "candle");
+			priceSpike.close = priorCandle.close * 1.15; // Price spike
 
 			const result = detectAllAnomalies(candles);
 
@@ -292,7 +305,8 @@ describe("Combined Validation", () => {
 		it("should return valid for good data", () => {
 			const candles = createCandleSeries(50);
 			// Make last candle recent
-			candles[candles.length - 1]!.timestamp = new Date().toISOString();
+			const lastIndex = candles.length - 1;
+			requireArrayItem(candles, lastIndex, "candle").timestamp = new Date().toISOString();
 
 			const result = validateCandleData(candles);
 
@@ -303,7 +317,8 @@ describe("Combined Validation", () => {
 		it("should detect stale data", () => {
 			const candles = createCandleSeries(50);
 			// Make last candle old
-			candles[candles.length - 1]!.timestamp = new Date(
+			const lastIndex = candles.length - 1;
+			requireArrayItem(candles, lastIndex, "candle").timestamp = new Date(
 				Date.now() - 5 * 60 * 60 * 1000,
 			).toISOString();
 
@@ -316,8 +331,9 @@ describe("Combined Validation", () => {
 		it("should detect gaps", () => {
 			const candles = createCandleSeries(20);
 			// Create a gap
-			candles[10]!.timestamp = new Date(
-				new Date(candles[9]!.timestamp).getTime() + 5 * 3600000,
+			const priorCandle = requireArrayItem(candles, 9, "candle");
+			requireArrayItem(candles, 10, "candle").timestamp = new Date(
+				new Date(priorCandle.timestamp).getTime() + 5 * 3600000,
 			).toISOString();
 
 			// Disable calendar awareness so gap is detected regardless of day-of-week
@@ -339,7 +355,8 @@ describe("Combined Validation", () => {
 	describe("isValidCandleData", () => {
 		it("should return true for valid data", () => {
 			const candles = createCandleSeries(50);
-			candles[candles.length - 1]!.timestamp = new Date().toISOString();
+			const lastIndex = candles.length - 1;
+			requireArrayItem(candles, lastIndex, "candle").timestamp = new Date().toISOString();
 
 			expect(isValidCandleData(candles)).toBe(true);
 		});
@@ -352,7 +369,8 @@ describe("Combined Validation", () => {
 	describe("getQualityScore", () => {
 		it("should return high score for good data", () => {
 			const candles = createCandleSeries(50);
-			candles[candles.length - 1]!.timestamp = new Date().toISOString();
+			const lastIndex = candles.length - 1;
+			requireArrayItem(candles, lastIndex, "candle").timestamp = new Date().toISOString();
 
 			const score = getQualityScore(candles);
 
@@ -362,7 +380,8 @@ describe("Combined Validation", () => {
 		it("should return low score for bad data", () => {
 			const candles = createCandleSeries(5);
 			// Old data
-			candles[candles.length - 1]!.timestamp = new Date(
+			const lastIndex = candles.length - 1;
+			requireArrayItem(candles, lastIndex, "candle").timestamp = new Date(
 				Date.now() - 10 * 60 * 60 * 1000,
 			).toISOString();
 
