@@ -603,7 +603,7 @@ describe("GrpcConfig Type", () => {
 	it("has required host and port", () => {
 		const config: GrpcConfig = {
 			host: "localhost",
-			port: 50051,
+			port: 50052,
 		};
 		expect(config.host).toBeDefined();
 		expect(config.port).toBeDefined();
@@ -612,7 +612,7 @@ describe("GrpcConfig Type", () => {
 	it("has optional fields", () => {
 		const config: GrpcConfig = {
 			host: "localhost",
-			port: 50051,
+			port: 50052,
 			useTls: true,
 			maxRetries: 5,
 			retryDelayMs: 2000,
@@ -641,7 +641,7 @@ describe("EventPublisherConfig Type", () => {
 	it("accepts all optional fields", () => {
 		const config: EventPublisherConfig = {
 			redis: { url: "redis://localhost:6379" },
-			grpc: { host: "localhost", port: 50051 },
+			grpc: { host: "localhost", port: 50052 },
 			database: { pollIntervalMs: 1000, tables: ["decisions"] },
 			enableInternalEvents: true,
 		};
