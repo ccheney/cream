@@ -248,6 +248,41 @@ export const ApprovalSchema = z.object({
 });
 
 // ============================================
+// Grounding Output Schemas
+// ============================================
+
+export const SymbolGroundingSchema = z.object({
+	symbol: z.string().describe("Stock ticker symbol"),
+	news: z.array(z.string()).describe("Key headlines and recent developments"),
+	fundamentals: z.array(z.string()).describe("Valuation context and analyst views"),
+	bullCase: z.array(z.string()).describe("Bullish catalysts and opportunities"),
+	bearCase: z.array(z.string()).describe("Bearish risks and concerns"),
+});
+
+export const GlobalGroundingSchema = z.object({
+	macro: z.array(z.string()).describe("Market-wide themes and Fed policy"),
+	events: z.array(z.string()).describe("Upcoming economic events and catalysts"),
+});
+
+export const GroundingSourceSchema = z.object({
+	url: z.string().describe("Source URL"),
+	title: z.string().describe("Source title or headline"),
+	relevance: z.string().describe("Why this source is relevant"),
+	sourceType: z
+		.enum(["url", "x", "news"])
+		.optional()
+		.describe("Source type (url for web, x for X posts, news for news sources)"),
+});
+
+export const GroundingOutputSchema = z.object({
+	perSymbol: z.array(SymbolGroundingSchema).describe("Grounding context for each symbol"),
+	global: GlobalGroundingSchema.describe("Market-wide grounding context"),
+	sources: z.array(GroundingSourceSchema).describe("Key sources referenced"),
+});
+
+export type GroundingOutput = z.infer<typeof GroundingOutputSchema>;
+
+// ============================================
 // Workflow Input Schema
 // ============================================
 
