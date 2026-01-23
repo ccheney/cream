@@ -28,12 +28,10 @@ import {
 	routingAgent,
 	trader,
 } from "./agents/index.js";
-
-// Workflows - will be populated as migration progresses
-// import * as workflows from "./workflows";
-
-// Scorers - will be populated as migration progresses
-// import * as scorers from "./scorers";
+// Scorers
+import { decisionQualityScorer, researchDepthScorer } from "./scorers/index.js";
+// Workflows
+import { tradingCycleWorkflow } from "./workflows/index.js";
 
 const otelEndpoint = Bun.env.OTEL_EXPORTER_OTLP_ENDPOINT ?? "http://localhost:4318";
 const observabilityEnabled = Bun.env.OTEL_ENABLED !== "false";
@@ -75,7 +73,7 @@ export const mastra = new Mastra({
 		routingAgent,
 	},
 	workflows: {
-		// Will be populated as workflows are migrated
+		tradingCycleWorkflow,
 	},
 	observability: observabilityEnabled
 		? new Observability({
