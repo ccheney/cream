@@ -9,6 +9,7 @@
 resolver = "2"
 members = [
     "apps/execution-engine",
+    "apps/alpaca-stream-proxy",
 ]
 
 [workspace.package]

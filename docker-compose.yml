@@ -140,6 +140,39 @@ services:
       - cream-network
     restart: unless-stopped
 
+  # Alpaca Stream Proxy - Market Data Multiplexer
+  # Maintains single connections to Alpaca WebSocket feeds and multiplexes to clients
+  alpaca-stream-proxy:
+    build:
+      context: .
+      dockerfile: apps/alpaca-stream-proxy/Dockerfile
+    container_name: cream-alpaca-stream-proxy
+    ports:
+      - "50052:50052"  # gRPC streaming server
+      - "8082:8082"    # Health check HTTP endpoint
+    environment:
+      - CREAM_ENV=${CREAM_ENV:-PAPER}
+      - ALPACA_API_KEY=${ALPACA_KEY:-}
+      - ALPACA_API_SECRET=${ALPACA_SECRET:-}
+      - STREAM_PROXY_GRPC_PORT=50052
+      - STREAM_PROXY_HEALTH_PORT=8082
+      - RUST_LOG=info,alpaca_stream_proxy=debug
+      # OpenTelemetry (optional)
+      - OTEL_EXPORTER_OTLP_ENDPOINT=http://otel-collector:4318
+      - OTEL_SERVICE_NAME=cream-alpaca-stream-proxy
+    depends_on:
+      otel-collector:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8082/healthz"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 15s
+    networks:
+      - cream-network
+    restart: unless-stopped
+
   # Dashboard - React/Next.js Frontend
   # Trading dashboard UI for monitoring and control
   dashboard:
@@ -187,6 +220,7 @@ services:
       - RUST_GRPC_URL=execution-engine:50053
       - MASTRA_API_URL=http://api:4111
       - REDIS_URL=redis://redis:6379
+      - ALPACA_STREAM_PROXY_URL=http://alpaca-stream-proxy:50052
       - JWT_SECRET=${JWT_SECRET:-development-secret-change-in-production}
       - JWT_REFRESH_SECRET=${JWT_REFRESH_SECRET:-development-refresh-secret}
       # Pass through API keys from host
@@ -203,6 +237,8 @@ services:
       redis:
         condition: service_healthy
       otel-collector:
+        condition: service_healthy
+      alpaca-stream-proxy:
         condition: service_healthy
     healthcheck:
       test: ["CMD", "bun", "-e", "fetch('http://localhost:3001/health').then(r => process.exit(r.ok ? 0 : 1)).catch(() => process.exit(1))"]

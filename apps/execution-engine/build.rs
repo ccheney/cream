@@ -54,6 +54,7 @@ fn main() {
         proto_root.join("cream/v1/events.proto"),
         proto_root.join("cream/v1/execution.proto"),
         proto_root.join("cream/v1/market_snapshot.proto"),
+        proto_root.join("cream/v1/stream_proxy.proto"),
     ];
 
     for proto in &proto_files {
@@ -82,7 +83,7 @@ fn main() {
         .expect("Failed to decode descriptor set");
 
     tonic_prost_build::configure()
-        .build_client(false)
+        .build_client(true)
         .build_server(true)
         .compile_fds(fds)
         .expect("Failed to compile protobuf definitions");

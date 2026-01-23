@@ -24,4 +24,5 @@ pub mod http;
 pub mod marketdata;
 pub mod persistence;
 pub mod price_feed;
+pub mod stream_proxy;
 pub mod websocket;

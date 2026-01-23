@@ -35,6 +35,11 @@
 			"types": "./dist/cream/v1/market_snapshot_pb.d.ts",
 			"import": "./dist/cream/v1/market_snapshot_pb.js",
 			"default": "./dist/cream/v1/market_snapshot_pb.js"
+		},
+		"./cream/v1/stream_proxy": {
+			"types": "./dist/cream/v1/stream_proxy_pb.d.ts",
+			"import": "./dist/cream/v1/stream_proxy_pb.js",
+			"default": "./dist/cream/v1/stream_proxy_pb.js"
 		}
 	},
 	"dependencies": {

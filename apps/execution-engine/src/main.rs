@@ -15,6 +15,7 @@
 //! - `ALPACA_SECRET`: Broker API secret (required)
 //! - `HTTP_PORT`: HTTP server port (default: 50051)
 //! - `GRPC_PORT`: gRPC server port (default: 50053)
+//! - `POSITION_MONITOR_ENABLED`: Enable position monitoring (default: true)
 //! - `RUST_LOG`: Log level (default: info)
 
 use std::net::SocketAddr;
@@ -220,8 +221,8 @@ fn parse_config() -> Result<EngineConfig, Box<dyn std::error::Error>> {
         .unwrap_or(DEFAULT_GRPC_PORT);
 
     let position_monitor_enabled = std::env::var("POSITION_MONITOR_ENABLED")
-        .map(|v| v.to_lowercase() == "true" || v == "1")
-        .unwrap_or(false);
+        .map(|v| v.to_lowercase() != "false" && v != "0")
+        .unwrap_or(true);
 
     Ok(EngineConfig {
         environment,

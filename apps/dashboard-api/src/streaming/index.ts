@@ -37,6 +37,19 @@ export {
 	subscribeContracts,
 	unsubscribeContract,
 } from "./options-data.js";
+// Alpaca stream proxy client (gRPC)
+export {
+	getConnectionStatus as getProxyConnectionStatus,
+	isProxyHealthy,
+	resetClient as resetProxyClient,
+	STREAM_PROXY_URL,
+	streamBars as proxyStreamBars,
+	streamOptionQuotes as proxyStreamOptionQuotes,
+	streamOptionTrades as proxyStreamOptionTrades,
+	streamOrderUpdates as proxyStreamOrderUpdates,
+	streamQuotes as proxyStreamQuotes,
+	streamTrades as proxyStreamTrades,
+} from "./proxy-client.js";
 // Shared Options WebSocket (single connection for Alpaca)
 export {
 	getSharedOptionsWebSocket,

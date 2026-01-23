@@ -2,7 +2,7 @@
  * Indicator Data Streaming Service
  *
  * Calculates and streams real-time indicator updates when new market data arrives.
- * Subscribes to bar updates from Alpaca WebSocket and recalculates price indicators.
+ * Subscribes to bar updates via alpaca-stream-proxy and recalculates price indicators.
  *
  * @see docs/plans/33-indicator-engine-v2.md
  */
@@ -13,28 +13,23 @@ import {
 	type PriceIndicators,
 } from "@cream/indicators";
 import {
-	AlpacaConnectionState,
 	type AlpacaMarketDataClient,
-	type AlpacaWebSocketClient,
-	type AlpacaWsBarMessage,
-	type AlpacaWsEvent,
 	createAlpacaClientFromEnv,
-	createAlpacaStocksClientFromEnv,
 	isAlpacaConfigured,
 } from "@cream/marketdata";
 import log from "../logger.js";
 import { broadcastIndicator } from "../websocket/channels.js";
+import { type StockBar, streamBars } from "./proxy-client.js";
 
 // ============================================
 // State
 // ============================================
 
 let alpacaRestClient: AlpacaMarketDataClient | null = null;
-let alpacaWsClient: AlpacaWebSocketClient | null = null;
 let indicatorService: IndicatorService | null = null;
 let isInitialized = false;
-let reconnectAttempts = 0;
-const MAX_RECONNECT_ATTEMPTS = 10;
+let proxyAbortController: AbortController | null = null;
+let proxyStreamRunning = false;
 
 /**
  * Active symbol subscriptions from dashboard clients.
@@ -133,32 +128,55 @@ function getIndicatorService(): IndicatorService | null {
 
 /**
  * Initialize the indicator data streaming service.
- * Connects to Alpaca WebSocket for bar updates and sets up indicator calculation.
+ * Sets up configuration but does NOT connect until first subscription.
  */
 export async function initIndicatorDataStreaming(): Promise<void> {
 	if (isInitialized) {
 		return;
 	}
 
-	if (!isAlpacaConfigured()) {
-		log.warn("ALPACA_KEY/ALPACA_SECRET not set, indicator data streaming disabled");
-		return;
+	isInitialized = true;
+	log.info("Indicator data streaming initialized (will connect on first subscription)");
+}
+
+/**
+ * Ensure the proxy bar stream is running.
+ * Called lazily when first subscription is requested.
+ */
+async function ensureConnected(): Promise<boolean> {
+	if (proxyStreamRunning) {
+		return true;
 	}
 
-	log.info("Initializing indicator data streaming with Alpaca");
+	proxyAbortController = new AbortController();
+	startProxyBarStream(proxyAbortController.signal);
 
+	proxyStreamRunning = true;
+	log.info("Indicator data streaming connected via proxy");
+	return true;
+}
+
+/**
+ * Start the proxy bar stream consumer for indicator calculation.
+ */
+async function startProxyBarStream(signal: AbortSignal): Promise<void> {
 	try {
-		alpacaWsClient = createAlpacaStocksClientFromEnv("sip");
-		alpacaWsClient.on(handleAlpacaEvent);
-		await alpacaWsClient.connect();
-		isInitialized = true;
-		reconnectAttempts = 0;
-		log.info("Indicator data streaming connected to Alpaca");
+		const symbols = Array.from(activeSymbols);
+		for await (const bar of streamBars(symbols, {
+			signal,
+			onReconnect: (attempt: number) => {
+				log.info({ attempt }, "Proxy indicator bars stream reconnecting");
+			},
+			onError: (error: Error) => {
+				log.error({ error: error.message }, "Proxy indicator bars stream error");
+			},
+		})) {
+			handleProxyBar(bar);
+		}
 	} catch (error) {
-		log.warn(
-			{ error: error instanceof Error ? error.message : String(error) },
-			"Indicator data streaming initialization failed",
-		);
+		if (!signal.aborted) {
+			log.error({ error }, "Proxy indicator bars stream failed");
+		}
 	}
 }
 
@@ -167,10 +185,14 @@ export async function initIndicatorDataStreaming(): Promise<void> {
  */
 export function shutdownIndicatorDataStreaming(): void {
 	log.info({ activeSymbols: activeSymbols.size }, "Shutting down indicator data streaming");
-	if (alpacaWsClient) {
-		alpacaWsClient.disconnect();
-		alpacaWsClient = null;
+
+	// Shutdown proxy stream
+	if (proxyAbortController) {
+		proxyAbortController.abort();
+		proxyAbortController = null;
 	}
+	proxyStreamRunning = false;
+
 	isInitialized = false;
 	activeSymbols.clear();
 	indicatorCache.clear();
@@ -178,62 +200,15 @@ export function shutdownIndicatorDataStreaming(): void {
 }
 
 // ============================================
-// Event Handlers
+// Proxy Bar Handler
 // ============================================
 
-function handleAlpacaEvent(event: AlpacaWsEvent): void {
-	switch (event.type) {
-		case "connected":
-			log.debug("Indicator streaming: Alpaca WebSocket connected");
-			break;
-
-		case "authenticated":
-			log.info({ activeSymbols: activeSymbols.size }, "Indicator streaming: authenticated");
-			if (activeSymbols.size > 0) {
-				const symbols = Array.from(activeSymbols);
-				alpacaWsClient?.subscribe("bars", symbols);
-			}
-			break;
-
-		case "subscribed":
-			log.debug({ subscriptions: event.subscriptions }, "Indicator streaming: subscribed");
-			break;
-
-		case "bar":
-			handleBarMessage(event.message);
-			break;
-
-		case "disconnected":
-			log.warn({ reason: event.reason }, "Indicator streaming: disconnected");
-			break;
-
-		case "reconnecting":
-			reconnectAttempts = event.attempt;
-			log.info(
-				{ attempt: event.attempt, maxAttempts: MAX_RECONNECT_ATTEMPTS },
-				"Indicator streaming: reconnecting",
-			);
-			break;
-
-		case "error":
-			log.error(
-				{ code: event.code, message: event.message, reconnectAttempts },
-				"Indicator streaming: error",
-			);
-			if (reconnectAttempts >= MAX_RECONNECT_ATTEMPTS) {
-				log.error("Max reconnect attempts reached, indicator streaming disabled");
-				isInitialized = false;
-			}
-			break;
-	}
-}
-
 /**
- * Handle bar messages from Alpaca.
+ * Handle bar messages from proxy stream.
  * Recalculates price indicators and broadcasts to subscribed clients.
  */
-async function handleBarMessage(msg: AlpacaWsBarMessage): Promise<void> {
-	const symbol = msg.S.toUpperCase();
+async function handleProxyBar(bar: StockBar): Promise<void> {
+	const symbol = bar.symbol.toUpperCase();
 
 	// Only process if we have subscribers
 	if (!activeSymbols.has(symbol)) {
@@ -330,9 +305,8 @@ export async function subscribeIndicatorSymbol(symbol: string): Promise<void> {
 			.catch(() => {});
 	}
 
-	if (alpacaWsClient?.isConnected()) {
-		alpacaWsClient.subscribe("bars", [upperSymbol]);
-	}
+	// Connect lazily on first subscription
+	await ensureConnected();
 }
 
 /**
@@ -367,9 +341,8 @@ export async function subscribeIndicatorSymbols(symbols: string[]): Promise<void
 		}
 	}
 
-	if (alpacaWsClient?.isConnected()) {
-		alpacaWsClient.subscribe("bars", newSymbols);
-	}
+	// Connect lazily on first subscription
+	await ensureConnected();
 }
 
 /**
@@ -384,10 +357,6 @@ export async function unsubscribeIndicatorSymbol(symbol: string): Promise<void> 
 
 	activeSymbols.delete(upperSymbol);
 	indicatorCache.delete(upperSymbol);
-
-	if (alpacaWsClient?.isConnected()) {
-		alpacaWsClient.unsubscribe("bars", [upperSymbol]);
-	}
 }
 
 /**
@@ -411,7 +380,7 @@ export function getActiveIndicatorSymbols(): string[] {
  * Check if indicator streaming is initialized and connected.
  */
 export function isIndicatorStreamingConnected(): boolean {
-	return isInitialized && alpacaWsClient?.getState() === AlpacaConnectionState.AUTHENTICATED;
+	return isInitialized && proxyStreamRunning;
 }
 
 // ============================================

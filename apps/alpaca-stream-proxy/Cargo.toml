@@ -1,0 +1,124 @@
+# Alpaca Stream Proxy - Market Data Multiplexer
+#
+# A gRPC proxy service that maintains single connections to Alpaca's
+# WebSocket feeds and multiplexes data to multiple clients.
+#
+# Build: cargo build -p alpaca-stream-proxy
+# Test:  cargo test -p alpaca-stream-proxy
+# Run:   cargo run -p alpaca-stream-proxy
+
+[package]
+name = "alpaca-stream-proxy"
+version = "0.1.0"
+edition = "2024"
+authors = ["Chris Cheney <chris@cheney.dev>"]
+description = "Alpaca market data stream proxy with gRPC multiplexing"
+license = "AGPL-3.0-only"
+repository = "https://github.com/ccheney/cream"
+
+[dependencies]
+# Async runtime
+tokio = { version = "1.49", features = ["full"] }
+
+# gRPC
+tonic = { version = "0.14.2", features = ["tls-ring", "tls-native-roots"] }
+tonic-types = "0.14.2"
+tonic-prost = "0.14.2"
+prost = "0.14.3"
+prost-types = "0.14.3"
+tokio-stream = "0.1.18"
+
+# WebSocket client
+tokio-tungstenite = { version = "0.28", features = ["rustls-tls-webpki-roots"] }
+
+# MessagePack for OPRA stream
+rmp-serde = "1.3"
+rmpv = { version = "1.3", features = ["with-serde"] }
+
+# Async utilities
+futures = "0.3.31"
+futures-util = "0.3.31"
+
+# Serialization
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+
+# Error handling
+thiserror = "2.0.18"
+anyhow = "1.0"
+
+# Logging and Tracing
+tracing = "0.1.44"
+tracing-subscriber = { version = "0.3.22", features = ["env-filter"] }
+
+# OpenTelemetry (OpenObserve integration)
+opentelemetry = { version = "0.31", features = ["trace"] }
+opentelemetry_sdk = { version = "0.31", features = ["rt-tokio"] }
+opentelemetry-otlp = { version = "0.31", features = ["grpc-tonic"] }
+tracing-opentelemetry = "0.32"
+
+# Prometheus metrics
+metrics = "0.24"
+metrics-exporter-prometheus = "0.16"
+
+# Time
+chrono = { version = "0.4.43", features = ["serde"] }
+
+# Decimal arithmetic (financial precision)
+rust_decimal = { version = "1.40", features = ["serde", "serde-with-str"] }
+
+# UUID for request IDs
+uuid = { version = "1.19", features = ["v4"] }
+
+# Random number generation (for jitter in backoff)
+rand = "0.9.2"
+
+# Configuration
+dotenvy = "0.15"
+
+# TLS crypto provider
+rustls = { version = "0.23.36", default-features = false, features = ["ring", "std"] }
+
+# Async trait for port definitions
+async-trait = "0.1.89"
+
+# Concurrency primitives
+parking_lot = "0.12"
+
+# Cancellation token for graceful shutdown
+tokio-util = { version = "0.7", features = ["rt"] }
+
+# HTTP server for health checks
+axum = "0.8.8"
+tower = "0.5.3"
+
+[dev-dependencies]
+tokio-test = "0.4.5"
+mockall = "0.14"
+proptest = "1.9"
+test-case = "3.3.1"
+tempfile = "3.24"
+
+[build-dependencies]
+tonic-prost-build = "0.14.2"
+prost = "0.14.3"
+prost-types = "0.14.3"
+
+[[bin]]
+name = "alpaca-stream-proxy"
+path = "src/main.rs"
+
+[lib]
+name = "alpaca_stream_proxy"
+path = "src/lib.rs"
+
+[lints.rust]
+unsafe_code = "forbid"
+missing_docs = "warn"
+unexpected_cfgs = { level = "warn", check-cfg = ['cfg(coverage)'] }
+
+[lints.clippy]
+pedantic = "warn"
+nursery = "warn"
+unwrap_used = "warn"
+expect_used = "warn"

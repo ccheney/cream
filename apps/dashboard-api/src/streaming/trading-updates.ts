@@ -1,7 +1,7 @@
 /**
  * Trading Updates Streaming
  *
- * Connects to Alpaca's trade_updates WebSocket to receive real-time
+ * Connects to alpaca-stream-proxy via gRPC to receive real-time
  * order fills and position changes, then broadcasts to dashboard clients
  * and persists position changes to the database.
  *
@@ -12,20 +12,12 @@ import { type Position as AlpacaPosition, createAlpacaClient } from "@cream/brok
 import { requireEnv } from "@cream/domain";
 import { DecisionsRepository, PositionsRepository } from "@cream/storage";
 import log from "../logger.js";
-import {
-	AlpacaTradingStreamService,
-	type TradingStreamEvent,
-} from "../services/alpaca-streaming.js";
 import { broadcastOrderUpdate, broadcastPositionUpdate } from "../websocket/channels.js";
+import { type OrderUpdate, streamOrderUpdates } from "./proxy-client.js";
 
-let tradingStream: AlpacaTradingStreamService | null = null;
-
-/**
- * Check if Alpaca credentials are configured.
- */
-function isAlpacaConfigured(): boolean {
-	return Boolean(Bun.env.ALPACA_KEY && Bun.env.ALPACA_SECRET);
-}
+// Proxy state
+let proxyAbortController: AbortController | null = null;
+let proxyStreamRunning = false;
 
 type OrderEventType =
 	| "new"
@@ -45,32 +37,6 @@ type OrderEventType =
 	| "order_replace_rejected"
 	| "order_cancel_rejected";
 
-const ORDER_EVENT_MAP: Record<string, OrderEventType> = {
-	new: "new",
-	fill: "fill",
-	partial_fill: "partial_fill",
-	canceled: "canceled",
-	expired: "expired",
-	done_for_day: "done_for_day",
-	replaced: "replaced",
-	rejected: "rejected",
-	pending_new: "pending_new",
-	stopped: "stopped",
-	pending_cancel: "pending_cancel",
-	pending_replace: "pending_replace",
-	calculated: "calculated",
-	suspended: "suspended",
-	order_replace_rejected: "order_replace_rejected",
-	order_cancel_rejected: "order_cancel_rejected",
-};
-
-/**
- * Map Alpaca event type to our schema event type.
- */
-function mapEventType(alpacaEvent: string): OrderEventType {
-	return ORDER_EVENT_MAP[alpacaEvent] ?? "new";
-}
-
 /**
  * Sync position from Alpaca to database.
  * Creates new position or updates existing one, linking to the most recent decision.
@@ -87,7 +53,6 @@ async function syncPositionToDb(
 		await positionsRepo.updatePrice(existing.id, position.currentPrice);
 		log.debug({ symbol: position.symbol, id: existing.id }, "Updated position in database");
 	} else {
-		// Look up the most recent decision for this symbol to link stop/target
 		const decisionsRepo = new DecisionsRepository();
 		const recentDecisions = await decisionsRepo.findMany(
 			{ symbol: position.symbol },
@@ -131,38 +96,67 @@ async function closePositionInDb(symbol: string, environment: string): Promise<v
 	}
 }
 
+// ============================================
+// Proxy Mode Handlers
+// ============================================
+
 /**
- * Handle trade update events from Alpaca.
- * Broadcasts position and order updates to WebSocket clients and persists to database.
+ * Map proxy OrderEvent enum to string event type.
  */
-async function handleTradeUpdate(event: TradingStreamEvent): Promise<void> {
-	if (event.type !== "trade_update") {
+function mapProxyEventType(event: number): OrderEventType {
+	const eventMap: Record<number, OrderEventType> = {
+		1: "new",
+		2: "fill",
+		3: "partial_fill",
+		4: "canceled",
+		5: "expired",
+		6: "rejected",
+		7: "pending_new",
+		8: "stopped",
+		9: "replaced",
+		10: "suspended",
+		11: "pending_cancel",
+		12: "pending_replace",
+		13: "calculated",
+		14: "done_for_day",
+	};
+	return eventMap[event] ?? "new";
+}
+
+/**
+ * Handle an order update from the proxy stream.
+ */
+async function handleProxyOrderUpdate(update: OrderUpdate): Promise<void> {
+	const order = update.order;
+	if (!order) {
+		log.warn("Received proxy order update without order details");
 		return;
 	}
 
-	const { data } = event;
-	const { event: eventType, order } = data;
+	const eventType = mapProxyEventType(update.event);
 
 	log.debug(
 		{ event: eventType, symbol: order.symbol, orderId: order.id },
-		"Received trade update from Alpaca",
+		"Received trade update from proxy",
 	);
 
-	// Broadcast order update using proper schema
+	// Broadcast order update
 	broadcastOrderUpdate({
 		type: "order_update",
 		data: {
 			orderId: order.id,
-			clientOrderId: order.client_order_id,
+			clientOrderId: order.clientOrderId,
 			symbol: order.symbol,
-			side: order.side,
-			orderType: order.order_type,
+			side: order.side === 1 ? "buy" : "sell",
+			orderType: order.orderType === 2 ? "market" : "limit",
 			status: order.status,
 			qty: order.qty,
-			filledQty: order.filled_qty,
-			filledAvgPrice: order.filled_avg_price,
-			event: mapEventType(eventType),
-			timestamp: order.updated_at,
+			filledQty: order.filledQty,
+			filledAvgPrice: order.filledAvgPrice,
+			event: eventType,
+			timestamp: update.timestamp
+				? new Date(Number(update.timestamp.seconds) * 1000).toISOString()
+				: new Date().toISOString(),
 		},
 		invalidates: ["portfolio.positions", "portfolio.orders"],
 	});
@@ -177,12 +171,13 @@ async function handleTradeUpdate(event: TradingStreamEvent): Promise<void> {
 				environment,
 			});
 
-			// Fetch the updated position
 			const position = await client.getPosition(order.symbol);
+			const filledAt = order.filledAt
+				? new Date(Number(order.filledAt.seconds) * 1000).toISOString()
+				: null;
 
 			if (position) {
-				// Persist position to database with actual fill timestamp
-				await syncPositionToDb(position, environment, order.filled_at);
+				await syncPositionToDb(position, environment, filledAt);
 
 				broadcastPositionUpdate({
 					type: "position_update",
@@ -207,10 +202,9 @@ async function handleTradeUpdate(event: TradingStreamEvent): Promise<void> {
 						qty: position.qty,
 						avgEntry: position.avgEntryPrice,
 					},
-					"Broadcasted position update",
+					"Broadcasted position update (proxy)",
 				);
 			} else if (eventType === "fill") {
-				// Position closed in Alpaca - close in database too
 				await closePositionInDb(order.symbol, environment);
 
 				broadcastPositionUpdate({
@@ -229,7 +223,7 @@ async function handleTradeUpdate(event: TradingStreamEvent): Promise<void> {
 					invalidates: ["portfolio.positions", "portfolio.summary"],
 				});
 
-				log.info({ symbol: order.symbol }, "Position closed, broadcasted removal");
+				log.info({ symbol: order.symbol }, "Position closed, broadcasted removal (proxy)");
 			}
 		} catch (error) {
 			log.warn(
@@ -237,107 +231,76 @@ async function handleTradeUpdate(event: TradingStreamEvent): Promise<void> {
 					symbol: order.symbol,
 					error: error instanceof Error ? error.message : String(error),
 				},
-				"Failed to fetch position after fill",
+				"Failed to fetch position after fill (proxy)",
 			);
 		}
 	}
 }
 
 /**
+ * Start the proxy order updates stream consumer.
+ */
+async function startProxyOrderStream(signal: AbortSignal): Promise<void> {
+	try {
+		for await (const update of streamOrderUpdates([], [], {
+			signal,
+			onReconnect: (attempt) => {
+				log.info({ attempt }, "Proxy order updates stream reconnecting");
+			},
+			onError: (error) => {
+				log.error({ error: error.message }, "Proxy order updates stream error");
+			},
+		})) {
+			handleProxyOrderUpdate(update).catch((error) => {
+				log.error(
+					{ error: error instanceof Error ? error.message : String(error) },
+					"Error handling proxy order update",
+				);
+			});
+		}
+	} catch (error) {
+		if (!signal.aborted) {
+			log.error({ error }, "Proxy order updates stream failed");
+		}
+	}
+}
+
+// ============================================
+// Initialization
+// ============================================
+
+/**
  * Initialize trading updates streaming.
- * Connects to Alpaca's trade_updates WebSocket.
  */
 export async function initTradingUpdatesStreaming(): Promise<void> {
-	if (!isAlpacaConfigured()) {
-		log.info("Alpaca not configured, skipping trading updates streaming");
+	if (proxyStreamRunning) {
+		log.warn("Trading updates proxy streaming already running");
 		return;
 	}
 
-	if (tradingStream) {
-		log.warn("Trading updates streaming already initialized");
-		return;
-	}
+	proxyAbortController = new AbortController();
+	startProxyOrderStream(proxyAbortController.signal);
+	proxyStreamRunning = true;
 
-	try {
-		const isPaper = Bun.env.CREAM_ENV !== "LIVE";
-
-		tradingStream = new AlpacaTradingStreamService({
-			apiKey: Bun.env.ALPACA_KEY as string,
-			apiSecret: Bun.env.ALPACA_SECRET as string,
-			paper: isPaper,
-		});
-
-		// Register event handler
-		tradingStream.on((event) => {
-			switch (event.type) {
-				case "connected":
-					log.debug("Connected to Alpaca trading stream");
-					break;
-				case "authenticated":
-					log.debug("Authenticated with Alpaca trading stream");
-					break;
-				case "listening":
-					log.debug({ streams: event.streams }, "Subscribed to Alpaca trading streams");
-					break;
-				case "trade_update":
-					handleTradeUpdate(event).catch((error) => {
-						log.error(
-							{ error: error instanceof Error ? error.message : String(error) },
-							"Error handling trade update",
-						);
-					});
-					break;
-				case "error":
-					log.error({ message: event.message }, "Alpaca trading stream error");
-					break;
-				case "disconnected":
-					// Code 1000 is normal close (server idle timeout) - log at debug level
-					if (event.reason.includes("code 1000")) {
-						log.debug(
-							{ reason: event.reason },
-							"Alpaca trading stream disconnected (idle timeout)",
-						);
-					} else {
-						log.warn({ reason: event.reason }, "Alpaca trading stream disconnected");
-					}
-					break;
-				case "reconnecting":
-					// First few reconnect attempts are expected after idle timeout
-					if (event.attempt <= 2) {
-						log.debug({ attempt: event.attempt }, "Reconnecting to Alpaca trading stream");
-					} else {
-						log.info({ attempt: event.attempt }, "Reconnecting to Alpaca trading stream");
-					}
-					break;
-			}
-		});
-
-		// Connect to the stream
-		await tradingStream.connect();
-		log.info({ paper: isPaper }, "Trading updates streaming initialized");
-	} catch (error) {
-		log.error(
-			{ error: error instanceof Error ? error.message : String(error) },
-			"Failed to initialize trading updates streaming",
-		);
-		tradingStream = null;
-	}
+	log.info("Trading updates streaming initialized via proxy");
 }
 
 /**
  * Check if trading updates streaming is connected.
  */
 export function isTradingUpdatesConnected(): boolean {
-	return tradingStream?.isConnected() ?? false;
+	return proxyStreamRunning;
 }
 
 /**
  * Shutdown trading updates streaming.
  */
 export function shutdownTradingUpdatesStreaming(): void {
-	if (tradingStream) {
-		tradingStream.disconnect();
-		tradingStream = null;
-		log.info("Trading updates streaming shutdown");
+	if (proxyAbortController) {
+		proxyAbortController.abort();
+		proxyAbortController = null;
 	}
+	proxyStreamRunning = false;
+
+	log.info("Trading updates streaming shutdown");
 }

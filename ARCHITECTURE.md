@@ -16,6 +16,7 @@ flowchart TB
         API[Dashboard API]
         Worker[Scheduler]
         Engine[Execution Engine]
+        Proxy[Stream Proxy]
     end
 
     subgraph Data["Data Layer"]
@@ -34,6 +35,7 @@ flowchart TB
     API --> SQL
     API --> Graph
     API -->|gRPC| Engine
+    API -->|gRPC| Proxy
     API --> LLM
     API --> Embed
     Worker --> SQL
@@ -42,6 +44,8 @@ flowchart TB
     Worker --> LLM
     Worker --> Embed
     Engine --> Broker
+    Engine -->|gRPC| Proxy
+    Proxy -->|WebSocket| Broker
     Services --> Cache
 ```
 
@@ -56,6 +60,7 @@ flowchart TB
 | **API** | Agent orchestration, workflow engine | 4111 | HTTP |
 | **Worker** | Hourly trading cycles, background jobs | 3002 | HTTP |
 | **Execution Engine** | Order validation, risk constraints, broker routing | 50051, 50053 | HTTP, gRPC |
+| **Stream Proxy** | Alpaca WebSocket multiplexer, market data distribution | 50052, 8082 | gRPC, HTTP |
 
 ---
 
@@ -341,21 +346,27 @@ flowchart LR
     Dashboard -->|HTTP| API
     Dashboard -->|WebSocket| API
     API -->|gRPC| Engine
+    API -->|gRPC| Proxy
     API -->|HTTPS| LLM
     API -->|HTTPS| Embed
     Worker -->|gRPC| Engine
     Worker -->|HTTPS| LLM
     Worker -->|HTTPS| Embed
     Engine -->|HTTPS| Broker
+    Engine -->|gRPC| Proxy
+    Proxy -->|WebSocket| Broker
 ```
 
 | From | To | Protocol | Purpose |
 |------|----|----------|---------|
 | Dashboard | API | HTTP/WebSocket | UI data, real-time updates |
 | API | Engine | gRPC | Position queries, account state |
+| API | Proxy | gRPC | Market data streaming (quotes, trades, bars) |
 | API | LLM | HTTPS | Agent streaming, direct inference |
 | API | Embeddings | HTTPS | Vector generation for queries |
 | Worker | Engine | gRPC | Constraint checks, order submission |
 | Worker | LLM | HTTPS | Agent inference |
 | Worker | Embeddings | HTTPS | Vector generation for storage |
-| Engine | Broker | HTTPS | Order execution, market data |
+| Engine | Broker | HTTPS | Order execution |
+| Engine | Proxy | gRPC | Market data for position monitoring |
+| Proxy | Broker | WebSocket | Single upstream connection to Alpaca |

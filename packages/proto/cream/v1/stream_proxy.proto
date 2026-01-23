@@ -1,0 +1,525 @@
+// Cream Trading System - Stream Proxy Schema
+// gRPC service definition for the Alpaca stream proxy
+//
+// NOTE: Using proto3 until Prost (Rust) supports Protobuf Editions.
+
+syntax = "proto3";
+
+package cream.v1;
+
+import "cream/v1/common.proto";
+import "cream/v1/execution.proto";
+import "google/protobuf/timestamp.proto";
+
+// ============================================
+// Stock Market Data Messages
+// ============================================
+
+// Real-time stock quote from SIP feed
+message StockQuote {
+  // Symbol (e.g., "AAPL")
+  string symbol = 1;
+
+  // Quote timestamp
+  google.protobuf.Timestamp timestamp = 2;
+
+  // Bid exchange code
+  string bid_exchange = 3;
+
+  // Bid price
+  double bid_price = 4;
+
+  // Bid size (shares)
+  int32 bid_size = 5;
+
+  // Ask exchange code
+  string ask_exchange = 6;
+
+  // Ask price
+  double ask_price = 7;
+
+  // Ask size (shares)
+  int32 ask_size = 8;
+
+  // Quote conditions
+  repeated string conditions = 9;
+
+  // Tape (A, B, or C)
+  string tape = 10;
+}
+
+// Real-time stock trade from SIP feed
+message StockTrade {
+  // Symbol (e.g., "AAPL")
+  string symbol = 1;
+
+  // Trade timestamp
+  google.protobuf.Timestamp timestamp = 2;
+
+  // Trade ID
+  int64 trade_id = 3;
+
+  // Exchange code where trade occurred
+  string exchange = 4;
+
+  // Trade price
+  double price = 5;
+
+  // Trade size (shares)
+  int32 size = 6;
+
+  // Trade conditions
+  repeated string conditions = 7;
+
+  // Tape (A, B, or C)
+  string tape = 8;
+}
+
+// Real-time stock bar (OHLCV)
+message StockBar {
+  // Symbol
+  string symbol = 1;
+
+  // Bar timestamp (start of bar)
+  google.protobuf.Timestamp timestamp = 2;
+
+  // Open price
+  double open = 3;
+
+  // High price
+  double high = 4;
+
+  // Low price
+  double low = 5;
+
+  // Close price
+  double close = 6;
+
+  // Volume
+  int64 volume = 7;
+
+  // VWAP (volume-weighted average price)
+  double vwap = 8;
+
+  // Number of trades in bar
+  int32 trade_count = 9;
+}
+
+// ============================================
+// Options Market Data Messages
+// ============================================
+
+// Real-time option quote from OPRA feed
+message OptionQuoteUpdate {
+  // OCC option symbol (e.g., "AAPL240315C00172500")
+  string symbol = 1;
+
+  // Quote timestamp
+  google.protobuf.Timestamp timestamp = 2;
+
+  // Bid exchange code
+  string bid_exchange = 3;
+
+  // Bid price
+  double bid_price = 4;
+
+  // Bid size (contracts)
+  int32 bid_size = 5;
+
+  // Ask exchange code
+  string ask_exchange = 6;
+
+  // Ask price
+  double ask_price = 7;
+
+  // Ask size (contracts)
+  int32 ask_size = 8;
+
+  // Quote condition
+  string condition = 9;
+}
+
+// Real-time option trade from OPRA feed
+message OptionTrade {
+  // OCC option symbol
+  string symbol = 1;
+
+  // Trade timestamp
+  google.protobuf.Timestamp timestamp = 2;
+
+  // Trade price
+  double price = 3;
+
+  // Trade size (contracts)
+  int32 size = 4;
+
+  // Exchange code
+  string exchange = 5;
+
+  // Trade condition
+  string condition = 6;
+}
+
+// ============================================
+// Order/Trade Update Messages
+// ============================================
+
+// Order update event types
+enum OrderEvent {
+  ORDER_EVENT_UNSPECIFIED = 0;
+  ORDER_EVENT_NEW = 1;
+  ORDER_EVENT_FILL = 2;
+  ORDER_EVENT_PARTIAL_FILL = 3;
+  ORDER_EVENT_CANCELED = 4;
+  ORDER_EVENT_EXPIRED = 5;
+  ORDER_EVENT_REJECTED = 6;
+  ORDER_EVENT_PENDING_NEW = 7;
+  ORDER_EVENT_STOPPED = 8;
+  ORDER_EVENT_REPLACED = 9;
+  ORDER_EVENT_SUSPENDED = 10;
+  ORDER_EVENT_PENDING_CANCEL = 11;
+  ORDER_EVENT_PENDING_REPLACE = 12;
+  ORDER_EVENT_CALCULATED = 13;
+  ORDER_EVENT_DONE_FOR_DAY = 14;
+  ORDER_EVENT_TRADE_BUST = 15;
+}
+
+// Asset class for orders
+enum AssetClass {
+  ASSET_CLASS_UNSPECIFIED = 0;
+  ASSET_CLASS_US_EQUITY = 1;
+  ASSET_CLASS_US_OPTION = 2;
+  ASSET_CLASS_CRYPTO = 3;
+}
+
+// Order class for complex orders
+enum OrderClass {
+  ORDER_CLASS_UNSPECIFIED = 0;
+  ORDER_CLASS_SIMPLE = 1;
+  ORDER_CLASS_BRACKET = 2;
+  ORDER_CLASS_OCO = 3;
+  ORDER_CLASS_OTO = 4;
+  ORDER_CLASS_MLEG = 5;
+}
+
+// Order leg for multi-leg orders
+message OrderUpdateLeg {
+  // Leg order ID
+  string id = 1;
+
+  // Symbol for this leg
+  string symbol = 2;
+
+  // Side for this leg
+  OrderSide side = 3;
+
+  // Quantity for this leg
+  string qty = 4;
+
+  // Filled quantity for this leg
+  string filled_qty = 5;
+
+  // Average fill price for this leg
+  string filled_avg_price = 6;
+
+  // Ratio quantity for spread orders
+  string ratio_qty = 7;
+
+  // Status of this leg
+  string status = 8;
+}
+
+// Order details in update
+message OrderDetails {
+  // Order ID
+  string id = 1;
+
+  // Client order ID
+  string client_order_id = 2;
+
+  // Symbol
+  string symbol = 3;
+
+  // Asset class
+  AssetClass asset_class = 4;
+
+  // Order class
+  OrderClass order_class = 5;
+
+  // Order type
+  OrderType order_type = 6;
+
+  // Side (buy/sell)
+  OrderSide side = 7;
+
+  // Time in force
+  TimeInForce time_in_force = 8;
+
+  // Quantity
+  string qty = 9;
+
+  // Filled quantity
+  string filled_qty = 10;
+
+  // Average fill price
+  string filled_avg_price = 11;
+
+  // Limit price
+  optional string limit_price = 12;
+
+  // Stop price
+  optional string stop_price = 13;
+
+  // Status
+  string status = 14;
+
+  // Extended hours
+  bool extended_hours = 15;
+
+  // Created at
+  google.protobuf.Timestamp created_at = 16;
+
+  // Updated at
+  google.protobuf.Timestamp updated_at = 17;
+
+  // Submitted at
+  google.protobuf.Timestamp submitted_at = 18;
+
+  // Filled at
+  optional google.protobuf.Timestamp filled_at = 19;
+
+  // Canceled at
+  optional google.protobuf.Timestamp canceled_at = 20;
+
+  // Expired at
+  optional google.protobuf.Timestamp expired_at = 21;
+
+  // Failed at
+  optional google.protobuf.Timestamp failed_at = 22;
+
+  // Legs for multi-leg orders
+  repeated OrderUpdateLeg legs = 23;
+
+  // Commission
+  optional string commission = 24;
+}
+
+// Real-time order update event
+message OrderUpdate {
+  // Event type
+  OrderEvent event = 1;
+
+  // Event ID (unique per event)
+  string event_id = 2;
+
+  // Event timestamp
+  google.protobuf.Timestamp timestamp = 3;
+
+  // Order details
+  OrderDetails order = 4;
+
+  // Execution ID (for fill events)
+  optional string execution_id = 5;
+
+  // Execution price (for fill events)
+  optional string price = 6;
+
+  // Execution quantity (for fill events)
+  optional string qty = 7;
+
+  // Position quantity after execution
+  optional string position_qty = 8;
+}
+
+// ============================================
+// Connection Status
+// ============================================
+
+// Connection state for upstream WebSocket
+enum ConnectionState {
+  CONNECTION_STATE_UNSPECIFIED = 0;
+  CONNECTION_STATE_DISCONNECTED = 1;
+  CONNECTION_STATE_CONNECTING = 2;
+  CONNECTION_STATE_AUTHENTICATING = 3;
+  CONNECTION_STATE_CONNECTED = 4;
+  CONNECTION_STATE_RECONNECTING = 5;
+  CONNECTION_STATE_ERROR = 6;
+}
+
+// Feed type
+enum FeedType {
+  FEED_TYPE_UNSPECIFIED = 0;
+  FEED_TYPE_SIP = 1;
+  FEED_TYPE_IEX = 2;
+  FEED_TYPE_OPRA = 3;
+  FEED_TYPE_INDICATIVE = 4;
+  FEED_TYPE_TRADE_UPDATES = 5;
+}
+
+// Status of a single feed connection
+message FeedStatus {
+  // Feed type
+  FeedType feed_type = 1;
+
+  // Connection state
+  ConnectionState state = 2;
+
+  // Last connected time
+  optional google.protobuf.Timestamp last_connected_at = 3;
+
+  // Last error message (if state is ERROR)
+  optional string error_message = 4;
+
+  // Number of active subscriptions
+  int32 subscription_count = 5;
+
+  // Number of reconnection attempts since last success
+  int32 reconnect_attempts = 6;
+
+  // Messages received since last reset
+  int64 messages_received = 7;
+}
+
+// Overall proxy connection status
+message ConnectionStatus {
+  // Proxy version
+  string version = 1;
+
+  // Proxy start time
+  google.protobuf.Timestamp started_at = 2;
+
+  // Current time
+  google.protobuf.Timestamp current_time = 3;
+
+  // Status of each feed
+  repeated FeedStatus feeds = 4;
+
+  // Total active gRPC client connections
+  int32 client_count = 5;
+
+  // Environment (PAPER or LIVE)
+  Environment environment = 6;
+}
+
+// ============================================
+// Stream Request/Response Messages
+// ============================================
+
+// Request to stream stock quotes
+message StreamQuotesRequest {
+  // Symbols to subscribe to (empty = all)
+  repeated string symbols = 1;
+}
+
+// Response containing a stock quote
+message StreamQuotesResponse {
+  // Quote data
+  StockQuote quote = 1;
+}
+
+// Request to stream stock trades
+message StreamTradesRequest {
+  // Symbols to subscribe to (empty = all)
+  repeated string symbols = 1;
+}
+
+// Response containing a stock trade
+message StreamTradesResponse {
+  // Trade data
+  StockTrade trade = 1;
+}
+
+// Request to stream stock bars
+message StreamBarsRequest {
+  // Symbols to subscribe to (empty = all)
+  repeated string symbols = 1;
+}
+
+// Response containing a stock bar
+message StreamBarsResponse {
+  // Bar data
+  StockBar bar = 1;
+}
+
+// Request to stream option quotes
+message StreamOptionQuotesRequest {
+  // OCC symbols to subscribe to
+  repeated string symbols = 1;
+
+  // Underlying symbols (subscribe to all options for these underlyings)
+  repeated string underlyings = 2;
+}
+
+// Response containing an option quote
+message StreamOptionQuotesResponse {
+  // Quote data
+  OptionQuoteUpdate quote = 1;
+}
+
+// Request to stream option trades
+message StreamOptionTradesRequest {
+  // OCC symbols to subscribe to
+  repeated string symbols = 1;
+
+  // Underlying symbols (subscribe to all options for these underlyings)
+  repeated string underlyings = 2;
+}
+
+// Response containing an option trade
+message StreamOptionTradesResponse {
+  // Trade data
+  OptionTrade trade = 1;
+}
+
+// Request to stream order updates
+message StreamOrderUpdatesRequest {
+  // Optional: filter by order IDs
+  repeated string order_ids = 1;
+
+  // Optional: filter by symbols
+  repeated string symbols = 2;
+}
+
+// Response containing an order update
+message StreamOrderUpdatesResponse {
+  // Order update event
+  OrderUpdate update = 1;
+}
+
+// Request for connection status
+message GetConnectionStatusRequest {}
+
+// Response with connection status
+message GetConnectionStatusResponse {
+  // Current connection status
+  ConnectionStatus status = 1;
+}
+
+// ============================================
+// gRPC Service
+// ============================================
+
+// StreamProxy service provides real-time market data and order updates
+// by proxying Alpaca WebSocket connections through a single gRPC interface.
+service StreamProxyService {
+  // Stream real-time stock quotes (SIP feed)
+  rpc StreamQuotes(StreamQuotesRequest) returns (stream StreamQuotesResponse);
+
+  // Stream real-time stock trades (SIP feed)
+  rpc StreamTrades(StreamTradesRequest) returns (stream StreamTradesResponse);
+
+  // Stream real-time stock bars (SIP feed)
+  rpc StreamBars(StreamBarsRequest) returns (stream StreamBarsResponse);
+
+  // Stream real-time option quotes (OPRA feed)
+  rpc StreamOptionQuotes(StreamOptionQuotesRequest) returns (stream StreamOptionQuotesResponse);
+
+  // Stream real-time option trades (OPRA feed)
+  rpc StreamOptionTrades(StreamOptionTradesRequest) returns (stream StreamOptionTradesResponse);
+
+  // Stream real-time order updates (trade updates)
+  rpc StreamOrderUpdates(StreamOrderUpdatesRequest) returns (stream StreamOrderUpdatesResponse);
+
+  // Get current connection status
+  rpc GetConnectionStatus(GetConnectionStatusRequest) returns (GetConnectionStatusResponse);
+}

@@ -19,6 +19,10 @@
         "turbo": "2.7.4",
       },
     },
+    "apps/alpaca-stream-proxy": {
+      "name": "@cream/alpaca-stream-proxy",
+      "version": "0.1.0",
+    },
     "apps/api": {
       "name": "@cream/api",
       "version": "0.1.0",
@@ -112,6 +116,8 @@
       "version": "0.1.0",
       "dependencies": {
         "@ai-sdk/google": "3.0.9",
+        "@connectrpc/connect": "2.1.1",
+        "@connectrpc/connect-node": "2.1.1",
         "@cream/agents": "workspace:*",
         "@cream/api": "workspace:*",
         "@cream/broker": "workspace:*",
@@ -124,6 +130,7 @@
         "@cream/logger": "workspace:*",
         "@cream/marketdata": "workspace:*",
         "@cream/metrics": "workspace:*",
+        "@cream/schema-gen": "workspace:*",
         "@cream/storage": "workspace:*",
         "@cream/universe": "workspace:*",
         "@hono/zod-openapi": "1.2.0",
@@ -608,6 +615,8 @@
     "@connectrpc/connect-node": ["@connectrpc/connect-node@2.1.1", "", { "peerDependencies": { "@bufbuild/protobuf": "^2.7.0", "@connectrpc/connect": "2.1.1" } }, "sha512-s3TfsI1XF+n+1z6MBS9rTnFsxxR4Rw5wmdEnkQINli81ESGxcsfaEet8duzq8LVuuCupmhUsgpRo0Nv9pZkufg=="],
 
     "@cream/agents": ["@cream/agents@workspace:packages/agents"],
+
+    "@cream/alpaca-stream-proxy": ["@cream/alpaca-stream-proxy@workspace:apps/alpaca-stream-proxy"],
 
     "@cream/api": ["@cream/api@workspace:apps/api"],
 

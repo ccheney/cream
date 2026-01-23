@@ -301,6 +301,9 @@ pub enum OrderType {
     Unspecified = 0,
     Limit = 1,
     Market = 2,
+    Stop = 3,
+    StopLimit = 4,
+    TrailingStop = 5,
 }
 impl OrderType {
     /// String value of the enum field names used in the ProtoBuf definition.
@@ -312,6 +315,9 @@ impl OrderType {
             Self::Unspecified => "ORDER_TYPE_UNSPECIFIED",
             Self::Limit => "ORDER_TYPE_LIMIT",
             Self::Market => "ORDER_TYPE_MARKET",
+            Self::Stop => "ORDER_TYPE_STOP",
+            Self::StopLimit => "ORDER_TYPE_STOP_LIMIT",
+            Self::TrailingStop => "ORDER_TYPE_TRAILING_STOP",
         }
     }
     /// Creates an enum from field names used in the ProtoBuf definition.
@@ -320,6 +326,9 @@ impl OrderType {
             "ORDER_TYPE_UNSPECIFIED" => Some(Self::Unspecified),
             "ORDER_TYPE_LIMIT" => Some(Self::Limit),
             "ORDER_TYPE_MARKET" => Some(Self::Market),
+            "ORDER_TYPE_STOP" => Some(Self::Stop),
+            "ORDER_TYPE_STOP_LIMIT" => Some(Self::StopLimit),
+            "ORDER_TYPE_TRAILING_STOP" => Some(Self::TrailingStop),
             _ => None,
         }
     }
@@ -2284,6 +2293,677 @@ pub struct GetOptionChainResponse {
     /// Option chain
     #[prost(message, optional, tag="1")]
     pub chain: ::core::option::Option<OptionChain>,
+}
+// ============================================
+// Stock Market Data Messages
+// ============================================
+
+/// Real-time stock quote from SIP feed
+#[derive(Clone, PartialEq, ::prost::Message)]
+pub struct StockQuote {
+    /// Symbol (e.g., "AAPL")
+    #[prost(string, tag="1")]
+    pub symbol: ::prost::alloc::string::String,
+    /// Quote timestamp
+    #[prost(message, optional, tag="2")]
+    pub timestamp: ::core::option::Option<::prost_types::Timestamp>,
+    /// Bid exchange code
+    #[prost(string, tag="3")]
+    pub bid_exchange: ::prost::alloc::string::String,
+    /// Bid price
+    #[prost(double, tag="4")]
+    pub bid_price: f64,
+    /// Bid size (shares)
+    #[prost(int32, tag="5")]
+    pub bid_size: i32,
+    /// Ask exchange code
+    #[prost(string, tag="6")]
+    pub ask_exchange: ::prost::alloc::string::String,
+    /// Ask price
+    #[prost(double, tag="7")]
+    pub ask_price: f64,
+    /// Ask size (shares)
+    #[prost(int32, tag="8")]
+    pub ask_size: i32,
+    /// Quote conditions
+    #[prost(string, repeated, tag="9")]
+    pub conditions: ::prost::alloc::vec::Vec<::prost::alloc::string::String>,
+    /// Tape (A, B, or C)
+    #[prost(string, tag="10")]
+    pub tape: ::prost::alloc::string::String,
+}
+/// Real-time stock trade from SIP feed
+#[derive(Clone, PartialEq, ::prost::Message)]
+pub struct StockTrade {
+    /// Symbol (e.g., "AAPL")
+    #[prost(string, tag="1")]
+    pub symbol: ::prost::alloc::string::String,
+    /// Trade timestamp
+    #[prost(message, optional, tag="2")]
+    pub timestamp: ::core::option::Option<::prost_types::Timestamp>,
+    /// Trade ID
+    #[prost(int64, tag="3")]
+    pub trade_id: i64,
+    /// Exchange code where trade occurred
+    #[prost(string, tag="4")]
+    pub exchange: ::prost::alloc::string::String,
+    /// Trade price
+    #[prost(double, tag="5")]
+    pub price: f64,
+    /// Trade size (shares)
+    #[prost(int32, tag="6")]
+    pub size: i32,
+    /// Trade conditions
+    #[prost(string, repeated, tag="7")]
+    pub conditions: ::prost::alloc::vec::Vec<::prost::alloc::string::String>,
+    /// Tape (A, B, or C)
+    #[prost(string, tag="8")]
+    pub tape: ::prost::alloc::string::String,
+}
+/// Real-time stock bar (OHLCV)
+#[derive(Clone, PartialEq, ::prost::Message)]
+pub struct StockBar {
+    /// Symbol
+    #[prost(string, tag="1")]
+    pub symbol: ::prost::alloc::string::String,
+    /// Bar timestamp (start of bar)
+    #[prost(message, optional, tag="2")]
+    pub timestamp: ::core::option::Option<::prost_types::Timestamp>,
+    /// Open price
+    #[prost(double, tag="3")]
+    pub open: f64,
+    /// High price
+    #[prost(double, tag="4")]
+    pub high: f64,
+    /// Low price
+    #[prost(double, tag="5")]
+    pub low: f64,
+    /// Close price
+    #[prost(double, tag="6")]
+    pub close: f64,
+    /// Volume
+    #[prost(int64, tag="7")]
+    pub volume: i64,
+    /// VWAP (volume-weighted average price)
+    #[prost(double, tag="8")]
+    pub vwap: f64,
+    /// Number of trades in bar
+    #[prost(int32, tag="9")]
+    pub trade_count: i32,
+}
+// ============================================
+// Options Market Data Messages
+// ============================================
+
+/// Real-time option quote from OPRA feed
+#[derive(Clone, PartialEq, ::prost::Message)]
+pub struct OptionQuoteUpdate {
+    /// OCC option symbol (e.g., "AAPL240315C00172500")
+    #[prost(string, tag="1")]
+    pub symbol: ::prost::alloc::string::String,
+    /// Quote timestamp
+    #[prost(message, optional, tag="2")]
+    pub timestamp: ::core::option::Option<::prost_types::Timestamp>,
+    /// Bid exchange code
+    #[prost(string, tag="3")]
+    pub bid_exchange: ::prost::alloc::string::String,
+    /// Bid price
+    #[prost(double, tag="4")]
+    pub bid_price: f64,
+    /// Bid size (contracts)
+    #[prost(int32, tag="5")]
+    pub bid_size: i32,
+    /// Ask exchange code
+    #[prost(string, tag="6")]
+    pub ask_exchange: ::prost::alloc::string::String,
+    /// Ask price
+    #[prost(double, tag="7")]
+    pub ask_price: f64,
+    /// Ask size (contracts)
+    #[prost(int32, tag="8")]
+    pub ask_size: i32,
+    /// Quote condition
+    #[prost(string, tag="9")]
+    pub condition: ::prost::alloc::string::String,
+}
+/// Real-time option trade from OPRA feed
+#[derive(Clone, PartialEq, ::prost::Message)]
+pub struct OptionTrade {
+    /// OCC option symbol
+    #[prost(string, tag="1")]
+    pub symbol: ::prost::alloc::string::String,
+    /// Trade timestamp
+    #[prost(message, optional, tag="2")]
+    pub timestamp: ::core::option::Option<::prost_types::Timestamp>,
+    /// Trade price
+    #[prost(double, tag="3")]
+    pub price: f64,
+    /// Trade size (contracts)
+    #[prost(int32, tag="4")]
+    pub size: i32,
+    /// Exchange code
+    #[prost(string, tag="5")]
+    pub exchange: ::prost::alloc::string::String,
+    /// Trade condition
+    #[prost(string, tag="6")]
+    pub condition: ::prost::alloc::string::String,
+}
+/// Order leg for multi-leg orders
+#[derive(Clone, PartialEq, Eq, Hash, ::prost::Message)]
+pub struct OrderUpdateLeg {
+    /// Leg order ID
+    #[prost(string, tag="1")]
+    pub id: ::prost::alloc::string::String,
+    /// Symbol for this leg
+    #[prost(string, tag="2")]
+    pub symbol: ::prost::alloc::string::String,
+    /// Side for this leg
+    #[prost(enumeration="OrderSide", tag="3")]
+    pub side: i32,
+    /// Quantity for this leg
+    #[prost(string, tag="4")]
+    pub qty: ::prost::alloc::string::String,
+    /// Filled quantity for this leg
+    #[prost(string, tag="5")]
+    pub filled_qty: ::prost::alloc::string::String,
+    /// Average fill price for this leg
+    #[prost(string, tag="6")]
+    pub filled_avg_price: ::prost::alloc::string::String,
+    /// Ratio quantity for spread orders
+    #[prost(string, tag="7")]
+    pub ratio_qty: ::prost::alloc::string::String,
+    /// Status of this leg
+    #[prost(string, tag="8")]
+    pub status: ::prost::alloc::string::String,
+}
+/// Order details in update
+#[derive(Clone, PartialEq, ::prost::Message)]
+pub struct OrderDetails {
+    /// Order ID
+    #[prost(string, tag="1")]
+    pub id: ::prost::alloc::string::String,
+    /// Client order ID
+    #[prost(string, tag="2")]
+    pub client_order_id: ::prost::alloc::string::String,
+    /// Symbol
+    #[prost(string, tag="3")]
+    pub symbol: ::prost::alloc::string::String,
+    /// Asset class
+    #[prost(enumeration="AssetClass", tag="4")]
+    pub asset_class: i32,
+    /// Order class
+    #[prost(enumeration="OrderClass", tag="5")]
+    pub order_class: i32,
+    /// Order type
+    #[prost(enumeration="OrderType", tag="6")]
+    pub order_type: i32,
+    /// Side (buy/sell)
+    #[prost(enumeration="OrderSide", tag="7")]
+    pub side: i32,
+    /// Time in force
+    #[prost(enumeration="TimeInForce", tag="8")]
+    pub time_in_force: i32,
+    /// Quantity
+    #[prost(string, tag="9")]
+    pub qty: ::prost::alloc::string::String,
+    /// Filled quantity
+    #[prost(string, tag="10")]
+    pub filled_qty: ::prost::alloc::string::String,
+    /// Average fill price
+    #[prost(string, tag="11")]
+    pub filled_avg_price: ::prost::alloc::string::String,
+    /// Limit price
+    #[prost(string, optional, tag="12")]
+    pub limit_price: ::core::option::Option<::prost::alloc::string::String>,
+    /// Stop price
+    #[prost(string, optional, tag="13")]
+    pub stop_price: ::core::option::Option<::prost::alloc::string::String>,
+    /// Status
+    #[prost(string, tag="14")]
+    pub status: ::prost::alloc::string::String,
+    /// Extended hours
+    #[prost(bool, tag="15")]
+    pub extended_hours: bool,
+    /// Created at
+    #[prost(message, optional, tag="16")]
+    pub created_at: ::core::option::Option<::prost_types::Timestamp>,
+    /// Updated at
+    #[prost(message, optional, tag="17")]
+    pub updated_at: ::core::option::Option<::prost_types::Timestamp>,
+    /// Submitted at
+    #[prost(message, optional, tag="18")]
+    pub submitted_at: ::core::option::Option<::prost_types::Timestamp>,
+    /// Filled at
+    #[prost(message, optional, tag="19")]
+    pub filled_at: ::core::option::Option<::prost_types::Timestamp>,
+    /// Canceled at
+    #[prost(message, optional, tag="20")]
+    pub canceled_at: ::core::option::Option<::prost_types::Timestamp>,
+    /// Expired at
+    #[prost(message, optional, tag="21")]
+    pub expired_at: ::core::option::Option<::prost_types::Timestamp>,
+    /// Failed at
+    #[prost(message, optional, tag="22")]
+    pub failed_at: ::core::option::Option<::prost_types::Timestamp>,
+    /// Legs for multi-leg orders
+    #[prost(message, repeated, tag="23")]
+    pub legs: ::prost::alloc::vec::Vec<OrderUpdateLeg>,
+    /// Commission
+    #[prost(string, optional, tag="24")]
+    pub commission: ::core::option::Option<::prost::alloc::string::String>,
+}
+/// Real-time order update event
+#[derive(Clone, PartialEq, ::prost::Message)]
+pub struct OrderUpdate {
+    /// Event type
+    #[prost(enumeration="OrderEvent", tag="1")]
+    pub event: i32,
+    /// Event ID (unique per event)
+    #[prost(string, tag="2")]
+    pub event_id: ::prost::alloc::string::String,
+    /// Event timestamp
+    #[prost(message, optional, tag="3")]
+    pub timestamp: ::core::option::Option<::prost_types::Timestamp>,
+    /// Order details
+    #[prost(message, optional, tag="4")]
+    pub order: ::core::option::Option<OrderDetails>,
+    /// Execution ID (for fill events)
+    #[prost(string, optional, tag="5")]
+    pub execution_id: ::core::option::Option<::prost::alloc::string::String>,
+    /// Execution price (for fill events)
+    #[prost(string, optional, tag="6")]
+    pub price: ::core::option::Option<::prost::alloc::string::String>,
+    /// Execution quantity (for fill events)
+    #[prost(string, optional, tag="7")]
+    pub qty: ::core::option::Option<::prost::alloc::string::String>,
+    /// Position quantity after execution
+    #[prost(string, optional, tag="8")]
+    pub position_qty: ::core::option::Option<::prost::alloc::string::String>,
+}
+/// Status of a single feed connection
+#[derive(Clone, PartialEq, Eq, Hash, ::prost::Message)]
+pub struct FeedStatus {
+    /// Feed type
+    #[prost(enumeration="FeedType", tag="1")]
+    pub feed_type: i32,
+    /// Connection state
+    #[prost(enumeration="ConnectionState", tag="2")]
+    pub state: i32,
+    /// Last connected time
+    #[prost(message, optional, tag="3")]
+    pub last_connected_at: ::core::option::Option<::prost_types::Timestamp>,
+    /// Last error message (if state is ERROR)
+    #[prost(string, optional, tag="4")]
+    pub error_message: ::core::option::Option<::prost::alloc::string::String>,
+    /// Number of active subscriptions
+    #[prost(int32, tag="5")]
+    pub subscription_count: i32,
+    /// Number of reconnection attempts since last success
+    #[prost(int32, tag="6")]
+    pub reconnect_attempts: i32,
+    /// Messages received since last reset
+    #[prost(int64, tag="7")]
+    pub messages_received: i64,
+}
+/// Overall proxy connection status
+#[derive(Clone, PartialEq, ::prost::Message)]
+pub struct ConnectionStatus {
+    /// Proxy version
+    #[prost(string, tag="1")]
+    pub version: ::prost::alloc::string::String,
+    /// Proxy start time
+    #[prost(message, optional, tag="2")]
+    pub started_at: ::core::option::Option<::prost_types::Timestamp>,
+    /// Current time
+    #[prost(message, optional, tag="3")]
+    pub current_time: ::core::option::Option<::prost_types::Timestamp>,
+    /// Status of each feed
+    #[prost(message, repeated, tag="4")]
+    pub feeds: ::prost::alloc::vec::Vec<FeedStatus>,
+    /// Total active gRPC client connections
+    #[prost(int32, tag="5")]
+    pub client_count: i32,
+    /// Environment (PAPER or LIVE)
+    #[prost(enumeration="Environment", tag="6")]
+    pub environment: i32,
+}
+// ============================================
+// Stream Request/Response Messages
+// ============================================
+
+/// Request to stream stock quotes
+#[derive(Clone, PartialEq, Eq, Hash, ::prost::Message)]
+pub struct StreamQuotesRequest {
+    /// Symbols to subscribe to (empty = all)
+    #[prost(string, repeated, tag="1")]
+    pub symbols: ::prost::alloc::vec::Vec<::prost::alloc::string::String>,
+}
+/// Response containing a stock quote
+#[derive(Clone, PartialEq, ::prost::Message)]
+pub struct StreamQuotesResponse {
+    /// Quote data
+    #[prost(message, optional, tag="1")]
+    pub quote: ::core::option::Option<StockQuote>,
+}
+/// Request to stream stock trades
+#[derive(Clone, PartialEq, Eq, Hash, ::prost::Message)]
+pub struct StreamTradesRequest {
+    /// Symbols to subscribe to (empty = all)
+    #[prost(string, repeated, tag="1")]
+    pub symbols: ::prost::alloc::vec::Vec<::prost::alloc::string::String>,
+}
+/// Response containing a stock trade
+#[derive(Clone, PartialEq, ::prost::Message)]
+pub struct StreamTradesResponse {
+    /// Trade data
+    #[prost(message, optional, tag="1")]
+    pub trade: ::core::option::Option<StockTrade>,
+}
+/// Request to stream stock bars
+#[derive(Clone, PartialEq, Eq, Hash, ::prost::Message)]
+pub struct StreamBarsRequest {
+    /// Symbols to subscribe to (empty = all)
+    #[prost(string, repeated, tag="1")]
+    pub symbols: ::prost::alloc::vec::Vec<::prost::alloc::string::String>,
+}
+/// Response containing a stock bar
+#[derive(Clone, PartialEq, ::prost::Message)]
+pub struct StreamBarsResponse {
+    /// Bar data
+    #[prost(message, optional, tag="1")]
+    pub bar: ::core::option::Option<StockBar>,
+}
+/// Request to stream option quotes
+#[derive(Clone, PartialEq, Eq, Hash, ::prost::Message)]
+pub struct StreamOptionQuotesRequest {
+    /// OCC symbols to subscribe to
+    #[prost(string, repeated, tag="1")]
+    pub symbols: ::prost::alloc::vec::Vec<::prost::alloc::string::String>,
+    /// Underlying symbols (subscribe to all options for these underlyings)
+    #[prost(string, repeated, tag="2")]
+    pub underlyings: ::prost::alloc::vec::Vec<::prost::alloc::string::String>,
+}
+/// Response containing an option quote
+#[derive(Clone, PartialEq, ::prost::Message)]
+pub struct StreamOptionQuotesResponse {
+    /// Quote data
+    #[prost(message, optional, tag="1")]
+    pub quote: ::core::option::Option<OptionQuoteUpdate>,
+}
+/// Request to stream option trades
+#[derive(Clone, PartialEq, Eq, Hash, ::prost::Message)]
+pub struct StreamOptionTradesRequest {
+    /// OCC symbols to subscribe to
+    #[prost(string, repeated, tag="1")]
+    pub symbols: ::prost::alloc::vec::Vec<::prost::alloc::string::String>,
+    /// Underlying symbols (subscribe to all options for these underlyings)
+    #[prost(string, repeated, tag="2")]
+    pub underlyings: ::prost::alloc::vec::Vec<::prost::alloc::string::String>,
+}
+/// Response containing an option trade
+#[derive(Clone, PartialEq, ::prost::Message)]
+pub struct StreamOptionTradesResponse {
+    /// Trade data
+    #[prost(message, optional, tag="1")]
+    pub trade: ::core::option::Option<OptionTrade>,
+}
+/// Request to stream order updates
+#[derive(Clone, PartialEq, Eq, Hash, ::prost::Message)]
+pub struct StreamOrderUpdatesRequest {
+    /// Optional: filter by order IDs
+    #[prost(string, repeated, tag="1")]
+    pub order_ids: ::prost::alloc::vec::Vec<::prost::alloc::string::String>,
+    /// Optional: filter by symbols
+    #[prost(string, repeated, tag="2")]
+    pub symbols: ::prost::alloc::vec::Vec<::prost::alloc::string::String>,
+}
+/// Response containing an order update
+#[derive(Clone, PartialEq, ::prost::Message)]
+pub struct StreamOrderUpdatesResponse {
+    /// Order update event
+    #[prost(message, optional, tag="1")]
+    pub update: ::core::option::Option<OrderUpdate>,
+}
+/// Request for connection status
+#[derive(Clone, Copy, PartialEq, Eq, Hash, ::prost::Message)]
+pub struct GetConnectionStatusRequest {
+}
+/// Response with connection status
+#[derive(Clone, PartialEq, ::prost::Message)]
+pub struct GetConnectionStatusResponse {
+    /// Current connection status
+    #[prost(message, optional, tag="1")]
+    pub status: ::core::option::Option<ConnectionStatus>,
+}
+// ============================================
+// Order/Trade Update Messages
+// ============================================
+
+/// Order update event types
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, PartialOrd, Ord, ::prost::Enumeration)]
+#[repr(i32)]
+pub enum OrderEvent {
+    Unspecified = 0,
+    New = 1,
+    Fill = 2,
+    PartialFill = 3,
+    Canceled = 4,
+    Expired = 5,
+    Rejected = 6,
+    PendingNew = 7,
+    Stopped = 8,
+    Replaced = 9,
+    Suspended = 10,
+    PendingCancel = 11,
+    PendingReplace = 12,
+    Calculated = 13,
+    DoneForDay = 14,
+    TradeBust = 15,
+}
+impl OrderEvent {
+    /// String value of the enum field names used in the ProtoBuf definition.
+    ///
+    /// The values are not transformed in any way and thus are considered stable
+    /// (if the ProtoBuf definition does not change) and safe for programmatic use.
+    pub fn as_str_name(&self) -> &'static str {
+        match self {
+            Self::Unspecified => "ORDER_EVENT_UNSPECIFIED",
+            Self::New => "ORDER_EVENT_NEW",
+            Self::Fill => "ORDER_EVENT_FILL",
+            Self::PartialFill => "ORDER_EVENT_PARTIAL_FILL",
+            Self::Canceled => "ORDER_EVENT_CANCELED",
+            Self::Expired => "ORDER_EVENT_EXPIRED",
+            Self::Rejected => "ORDER_EVENT_REJECTED",
+            Self::PendingNew => "ORDER_EVENT_PENDING_NEW",
+            Self::Stopped => "ORDER_EVENT_STOPPED",
+            Self::Replaced => "ORDER_EVENT_REPLACED",
+            Self::Suspended => "ORDER_EVENT_SUSPENDED",
+            Self::PendingCancel => "ORDER_EVENT_PENDING_CANCEL",
+            Self::PendingReplace => "ORDER_EVENT_PENDING_REPLACE",
+            Self::Calculated => "ORDER_EVENT_CALCULATED",
+            Self::DoneForDay => "ORDER_EVENT_DONE_FOR_DAY",
+            Self::TradeBust => "ORDER_EVENT_TRADE_BUST",
+        }
+    }
+    /// Creates an enum from field names used in the ProtoBuf definition.
+    pub fn from_str_name(value: &str) -> ::core::option::Option<Self> {
+        match value {
+            "ORDER_EVENT_UNSPECIFIED" => Some(Self::Unspecified),
+            "ORDER_EVENT_NEW" => Some(Self::New),
+            "ORDER_EVENT_FILL" => Some(Self::Fill),
+            "ORDER_EVENT_PARTIAL_FILL" => Some(Self::PartialFill),
+            "ORDER_EVENT_CANCELED" => Some(Self::Canceled),
+            "ORDER_EVENT_EXPIRED" => Some(Self::Expired),
+            "ORDER_EVENT_REJECTED" => Some(Self::Rejected),
+            "ORDER_EVENT_PENDING_NEW" => Some(Self::PendingNew),
+            "ORDER_EVENT_STOPPED" => Some(Self::Stopped),
+            "ORDER_EVENT_REPLACED" => Some(Self::Replaced),
+            "ORDER_EVENT_SUSPENDED" => Some(Self::Suspended),
+            "ORDER_EVENT_PENDING_CANCEL" => Some(Self::PendingCancel),
+            "ORDER_EVENT_PENDING_REPLACE" => Some(Self::PendingReplace),
+            "ORDER_EVENT_CALCULATED" => Some(Self::Calculated),
+            "ORDER_EVENT_DONE_FOR_DAY" => Some(Self::DoneForDay),
+            "ORDER_EVENT_TRADE_BUST" => Some(Self::TradeBust),
+            _ => None,
+        }
+    }
+}
+/// Asset class for orders
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, PartialOrd, Ord, ::prost::Enumeration)]
+#[repr(i32)]
+pub enum AssetClass {
+    Unspecified = 0,
+    UsEquity = 1,
+    UsOption = 2,
+    Crypto = 3,
+}
+impl AssetClass {
+    /// String value of the enum field names used in the ProtoBuf definition.
+    ///
+    /// The values are not transformed in any way and thus are considered stable
+    /// (if the ProtoBuf definition does not change) and safe for programmatic use.
+    pub fn as_str_name(&self) -> &'static str {
+        match self {
+            Self::Unspecified => "ASSET_CLASS_UNSPECIFIED",
+            Self::UsEquity => "ASSET_CLASS_US_EQUITY",
+            Self::UsOption => "ASSET_CLASS_US_OPTION",
+            Self::Crypto => "ASSET_CLASS_CRYPTO",
+        }
+    }
+    /// Creates an enum from field names used in the ProtoBuf definition.
+    pub fn from_str_name(value: &str) -> ::core::option::Option<Self> {
+        match value {
+            "ASSET_CLASS_UNSPECIFIED" => Some(Self::Unspecified),
+            "ASSET_CLASS_US_EQUITY" => Some(Self::UsEquity),
+            "ASSET_CLASS_US_OPTION" => Some(Self::UsOption),
+            "ASSET_CLASS_CRYPTO" => Some(Self::Crypto),
+            _ => None,
+        }
+    }
+}
+/// Order class for complex orders
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, PartialOrd, Ord, ::prost::Enumeration)]
+#[repr(i32)]
+pub enum OrderClass {
+    Unspecified = 0,
+    Simple = 1,
+    Bracket = 2,
+    Oco = 3,
+    Oto = 4,
+    Mleg = 5,
+}
+impl OrderClass {
+    /// String value of the enum field names used in the ProtoBuf definition.
+    ///
+    /// The values are not transformed in any way and thus are considered stable
+    /// (if the ProtoBuf definition does not change) and safe for programmatic use.
+    pub fn as_str_name(&self) -> &'static str {
+        match self {
+            Self::Unspecified => "ORDER_CLASS_UNSPECIFIED",
+            Self::Simple => "ORDER_CLASS_SIMPLE",
+            Self::Bracket => "ORDER_CLASS_BRACKET",
+            Self::Oco => "ORDER_CLASS_OCO",
+            Self::Oto => "ORDER_CLASS_OTO",
+            Self::Mleg => "ORDER_CLASS_MLEG",
+        }
+    }
+    /// Creates an enum from field names used in the ProtoBuf definition.
+    pub fn from_str_name(value: &str) -> ::core::option::Option<Self> {
+        match value {
+            "ORDER_CLASS_UNSPECIFIED" => Some(Self::Unspecified),
+            "ORDER_CLASS_SIMPLE" => Some(Self::Simple),
+            "ORDER_CLASS_BRACKET" => Some(Self::Bracket),
+            "ORDER_CLASS_OCO" => Some(Self::Oco),
+            "ORDER_CLASS_OTO" => Some(Self::Oto),
+            "ORDER_CLASS_MLEG" => Some(Self::Mleg),
+            _ => None,
+        }
+    }
+}
+// ============================================
+// Connection Status
+// ============================================
+
+/// Connection state for upstream WebSocket
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, PartialOrd, Ord, ::prost::Enumeration)]
+#[repr(i32)]
+pub enum ConnectionState {
+    Unspecified = 0,
+    Disconnected = 1,
+    Connecting = 2,
+    Authenticating = 3,
+    Connected = 4,
+    Reconnecting = 5,
+    Error = 6,
+}
+impl ConnectionState {
+    /// String value of the enum field names used in the ProtoBuf definition.
+    ///
+    /// The values are not transformed in any way and thus are considered stable
+    /// (if the ProtoBuf definition does not change) and safe for programmatic use.
+    pub fn as_str_name(&self) -> &'static str {
+        match self {
+            Self::Unspecified => "CONNECTION_STATE_UNSPECIFIED",
+            Self::Disconnected => "CONNECTION_STATE_DISCONNECTED",
+            Self::Connecting => "CONNECTION_STATE_CONNECTING",
+            Self::Authenticating => "CONNECTION_STATE_AUTHENTICATING",
+            Self::Connected => "CONNECTION_STATE_CONNECTED",
+            Self::Reconnecting => "CONNECTION_STATE_RECONNECTING",
+            Self::Error => "CONNECTION_STATE_ERROR",
+        }
+    }
+    /// Creates an enum from field names used in the ProtoBuf definition.
+    pub fn from_str_name(value: &str) -> ::core::option::Option<Self> {
+        match value {
+            "CONNECTION_STATE_UNSPECIFIED" => Some(Self::Unspecified),
+            "CONNECTION_STATE_DISCONNECTED" => Some(Self::Disconnected),
+            "CONNECTION_STATE_CONNECTING" => Some(Self::Connecting),
+            "CONNECTION_STATE_AUTHENTICATING" => Some(Self::Authenticating),
+            "CONNECTION_STATE_CONNECTED" => Some(Self::Connected),
+            "CONNECTION_STATE_RECONNECTING" => Some(Self::Reconnecting),
+            "CONNECTION_STATE_ERROR" => Some(Self::Error),
+            _ => None,
+        }
+    }
+}
+/// Feed type
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, PartialOrd, Ord, ::prost::Enumeration)]
+#[repr(i32)]
+pub enum FeedType {
+    Unspecified = 0,
+    Sip = 1,
+    Iex = 2,
+    Opra = 3,
+    Indicative = 4,
+    TradeUpdates = 5,
+}
+impl FeedType {
+    /// String value of the enum field names used in the ProtoBuf definition.
+    ///
+    /// The values are not transformed in any way and thus are considered stable
+    /// (if the ProtoBuf definition does not change) and safe for programmatic use.
+    pub fn as_str_name(&self) -> &'static str {
+        match self {
+            Self::Unspecified => "FEED_TYPE_UNSPECIFIED",
+            Self::Sip => "FEED_TYPE_SIP",
+            Self::Iex => "FEED_TYPE_IEX",
+            Self::Opra => "FEED_TYPE_OPRA",
+            Self::Indicative => "FEED_TYPE_INDICATIVE",
+            Self::TradeUpdates => "FEED_TYPE_TRADE_UPDATES",
+        }
+    }
+    /// Creates an enum from field names used in the ProtoBuf definition.
+    pub fn from_str_name(value: &str) -> ::core::option::Option<Self> {
+        match value {
+            "FEED_TYPE_UNSPECIFIED" => Some(Self::Unspecified),
+            "FEED_TYPE_SIP" => Some(Self::Sip),
+            "FEED_TYPE_IEX" => Some(Self::Iex),
+            "FEED_TYPE_OPRA" => Some(Self::Opra),
+            "FEED_TYPE_INDICATIVE" => Some(Self::Indicative),
+            "FEED_TYPE_TRADE_UPDATES" => Some(Self::TradeUpdates),
+            _ => None,
+        }
+    }
 }
 include!("cream.v1.tonic.rs");
 // @@protoc_insertion_point(module)

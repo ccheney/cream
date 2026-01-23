@@ -1,7 +1,7 @@
 /**
  * Options Data Streaming Service
  *
- * Connects to Alpaca WebSocket for real-time options data
+ * Connects to alpaca-stream-proxy via gRPC for real-time options data
  * and broadcasts updates to connected dashboard clients.
  *
  * Options symbols use OCC format: {underlying}{YYMMDD}{C|P}{strike}
@@ -11,27 +11,22 @@
  * @see docs/plans/31-alpaca-data-consolidation.md
  */
 
-import {
-	type AlpacaWsBarMessage,
-	type AlpacaWsEvent,
-	type AlpacaWsQuoteMessage,
-	type AlpacaWsTradeMessage,
-	isAlpacaConfigured,
-} from "@cream/marketdata";
 import log from "../logger.js";
 import { broadcastOptionsQuote } from "../websocket/handler.js";
 import {
-	getSharedOptionsWebSocket,
-	isOptionsWebSocketConnected,
-	offOptionsEvent,
-	onOptionsEvent,
-} from "./shared-options-ws.js";
+	type OptionQuoteUpdate,
+	type OptionTrade,
+	streamOptionQuotes,
+	streamOptionTrades,
+} from "./proxy-client.js";
 
 // ============================================
 // State
 // ============================================
 
 let isInitialized = false;
+let proxyAbortController: AbortController | null = null;
+let proxyStreamsRunning = false;
 
 /**
  * Active options contract subscriptions from dashboard clients.
@@ -66,9 +61,7 @@ const optionsCache = new Map<
  * Example: AAPL250117C00100000 -> AAPL
  */
 function extractUnderlying(contract: string): string {
-	// Remove O: prefix if present (legacy format)
 	const symbol = contract.startsWith("O:") ? contract.slice(2) : contract;
-	// Find first digit (start of date portion) and extract underlying
 	const dateStart = symbol.search(/\d/);
 	if (dateStart > 0) {
 		return symbol.slice(0, dateStart);
@@ -82,31 +75,22 @@ function extractUnderlying(contract: string): string {
 
 /**
  * Initialize the options data streaming service.
- * Registers event handler with the shared WebSocket connection.
  */
 export async function initOptionsDataStreaming(): Promise<void> {
 	if (isInitialized) {
 		return;
 	}
 
-	// Check if Alpaca credentials are available
-	if (!isAlpacaConfigured()) {
-		log.warn("ALPACA_KEY/ALPACA_SECRET not set, options data streaming disabled");
+	if (proxyStreamsRunning) {
+		log.warn("Options data proxy streaming already running");
 		return;
 	}
 
-	// Register our event handler with the shared connection
-	onOptionsEvent(handleOptionsEvent);
+	proxyAbortController = new AbortController();
+	proxyStreamsRunning = true;
 	isInitialized = true;
-	log.info("Options data streaming initialized (using shared WebSocket)");
-}
 
-/**
- * Ensure the shared options WebSocket is connected.
- */
-async function _ensureConnected(): Promise<boolean> {
-	const client = await getSharedOptionsWebSocket();
-	return client?.isConnected() ?? false;
+	log.info("Options data streaming initialized via proxy");
 }
 
 /**
@@ -114,7 +98,13 @@ async function _ensureConnected(): Promise<boolean> {
  */
 export function shutdownOptionsDataStreaming(): void {
 	log.info({ activeContracts: activeContracts.size }, "Shutting down options data streaming");
-	offOptionsEvent(handleOptionsEvent);
+
+	if (proxyAbortController) {
+		proxyAbortController.abort();
+		proxyAbortController = null;
+	}
+	proxyStreamsRunning = false;
+
 	isInitialized = false;
 	activeContracts.clear();
 	optionsCache.clear();
@@ -122,159 +112,128 @@ export function shutdownOptionsDataStreaming(): void {
 }
 
 // ============================================
-// Event Handlers
+// Proxy Mode Handlers
 // ============================================
 
 /**
- * Handle events from shared Alpaca Options WebSocket.
+ * Handle an option quote update from the proxy stream.
  */
-function handleOptionsEvent(event: AlpacaWsEvent): void {
-	switch (event.type) {
-		case "authenticated":
-			// Resubscribe to active contracts after reconnection
-			if (activeContracts.size > 0) {
-				resubscribeActiveContracts();
-			}
-			break;
-
-		case "subscribed":
-			log.debug({ subscriptions: event.subscriptions }, "Subscribed to options symbols");
-			break;
-
-		case "bar":
-			handleOptionsBarMessage(event.message);
-			break;
-
-		case "quote":
-			handleOptionsQuoteMessage(event.message);
-			break;
-
-		case "trade":
-			handleOptionsTradeMessage(event.message);
-			break;
-
-		// Other events (connected, disconnected, error) are logged by shared-options-ws.ts
-	}
-}
-
-/**
- * Resubscribe to all active contracts after reconnection.
- */
-async function resubscribeActiveContracts(): Promise<void> {
-	const client = await getSharedOptionsWebSocket();
-	if (!client?.isConnected()) {
-		return;
-	}
-
-	const contracts = Array.from(activeContracts);
-	if (contracts.length > 0) {
-		log.info({ count: contracts.length }, "Resubscribing to options contracts");
-		client.subscribe("quotes", contracts);
-		client.subscribe("trades", contracts);
-	}
-}
-
-/**
- * Handle options bar messages.
- */
-function handleOptionsBarMessage(msg: AlpacaWsBarMessage): void {
-	const contract = msg.S; // OCC format
+function handleProxyOptionQuote(quote: OptionQuoteUpdate): void {
+	const contract = quote.symbol;
 	const underlying = extractUnderlying(contract);
 
-	// Update cache
+	log.debug(
+		{ contract, bid: quote.bidPrice, ask: quote.askPrice },
+		"Options quote received from proxy",
+	);
+
 	const cached = optionsCache.get(contract);
 
 	optionsCache.set(contract, {
 		underlying,
-		bid: cached?.bid ?? 0,
-		ask: cached?.ask ?? 0,
-		last: msg.c,
-		volume: msg.v,
-		timestamp: new Date(msg.t),
-	});
-
-	// Broadcast to subscribed clients for this contract
-	broadcastOptionsQuote(contract, {
-		type: "options_aggregate",
-		data: {
-			contract,
-			underlying,
-			open: msg.o,
-			high: msg.h,
-			low: msg.l,
-			close: msg.c,
-			volume: msg.v,
-			timestamp: new Date(msg.t).toISOString(),
-		},
-	});
-}
-
-/**
- * Handle options quote messages with bid/ask updates.
- */
-function handleOptionsQuoteMessage(msg: AlpacaWsQuoteMessage): void {
-	const contract = msg.S;
-	const underlying = extractUnderlying(contract);
-	log.debug({ contract, bid: msg.bp, ask: msg.ap }, "Options quote received from Alpaca");
-
-	// Get cached data
-	const cached = optionsCache.get(contract);
-
-	// Update cache with new bid/ask
-	optionsCache.set(contract, {
-		underlying,
-		bid: msg.bp,
-		ask: msg.ap,
-		last: cached?.last ?? (msg.bp + msg.ap) / 2,
+		bid: quote.bidPrice,
+		ask: quote.askPrice,
+		last: cached?.last ?? (quote.bidPrice + quote.askPrice) / 2,
 		volume: cached?.volume ?? 0,
-		timestamp: new Date(msg.t), // RFC-3339 timestamp
+		timestamp: quote.timestamp ? new Date(Number(quote.timestamp.seconds) * 1000) : new Date(),
 	});
 
-	// Broadcast to subscribed clients for this contract
 	broadcastOptionsQuote(contract, {
 		type: "options_quote",
 		data: {
 			contract,
 			underlying,
-			bid: msg.bp,
-			ask: msg.ap,
-			bidSize: msg.bs,
-			askSize: msg.as,
-			last: cached?.last ?? (msg.bp + msg.ap) / 2,
-			timestamp: new Date(msg.t).toISOString(),
+			bid: quote.bidPrice,
+			ask: quote.askPrice,
+			bidSize: quote.bidSize,
+			askSize: quote.askSize,
+			last: cached?.last ?? (quote.bidPrice + quote.askPrice) / 2,
+			timestamp: quote.timestamp
+				? new Date(Number(quote.timestamp.seconds) * 1000).toISOString()
+				: new Date().toISOString(),
 		},
 	});
 }
 
 /**
- * Handle options trade messages.
+ * Handle an option trade from the proxy stream.
  */
-function handleOptionsTradeMessage(msg: AlpacaWsTradeMessage): void {
-	const contract = msg.S;
+function handleProxyOptionTrade(trade: OptionTrade): void {
+	const contract = trade.symbol;
 	const underlying = extractUnderlying(contract);
 
-	// Update cache with last trade price
 	const cached = optionsCache.get(contract);
 	optionsCache.set(contract, {
 		underlying,
-		bid: cached?.bid ?? msg.p,
-		ask: cached?.ask ?? msg.p,
-		last: msg.p,
-		volume: (cached?.volume ?? 0) + msg.s,
-		timestamp: new Date(msg.t),
+		bid: cached?.bid ?? trade.price,
+		ask: cached?.ask ?? trade.price,
+		last: trade.price,
+		volume: (cached?.volume ?? 0) + trade.size,
+		timestamp: trade.timestamp ? new Date(Number(trade.timestamp.seconds) * 1000) : new Date(),
 	});
 
-	// Broadcast to subscribed clients for this contract
 	broadcastOptionsQuote(contract, {
 		type: "options_trade",
 		data: {
 			contract,
 			underlying,
-			price: msg.p,
-			size: msg.s,
-			timestamp: new Date(msg.t).toISOString(),
+			price: trade.price,
+			size: trade.size,
+			timestamp: trade.timestamp
+				? new Date(Number(trade.timestamp.seconds) * 1000).toISOString()
+				: new Date().toISOString(),
 		},
 	});
+}
+
+/**
+ * Start proxy options quote stream for the given contracts.
+ */
+function startProxyOptionQuoteStream(contracts: string[], signal: AbortSignal): void {
+	(async () => {
+		try {
+			for await (const quote of streamOptionQuotes(contracts, [], {
+				signal,
+				onReconnect: (attempt: number) => {
+					log.info({ attempt }, "Proxy option quotes stream reconnecting");
+				},
+				onError: (error: Error) => {
+					log.error({ error: error.message }, "Proxy option quotes stream error");
+				},
+			})) {
+				handleProxyOptionQuote(quote);
+			}
+		} catch (error) {
+			if (!signal.aborted) {
+				log.error({ error }, "Proxy option quotes stream failed");
+			}
+		}
+	})();
+}
+
+/**
+ * Start proxy options trade stream for the given contracts.
+ */
+function startProxyOptionTradeStream(contracts: string[], signal: AbortSignal): void {
+	(async () => {
+		try {
+			for await (const trade of streamOptionTrades(contracts, [], {
+				signal,
+				onReconnect: (attempt: number) => {
+					log.info({ attempt }, "Proxy option trades stream reconnecting");
+				},
+				onError: (error: Error) => {
+					log.error({ error: error.message }, "Proxy option trades stream error");
+				},
+			})) {
+				handleProxyOptionTrade(trade);
+			}
+		} catch (error) {
+			if (!signal.aborted) {
+				log.error({ error }, "Proxy option trades stream failed");
+			}
+		}
+	})();
 }
 
 // ============================================
@@ -288,22 +247,21 @@ function handleOptionsTradeMessage(msg: AlpacaWsTradeMessage): void {
  * @param contract OCC format contract symbol (e.g., AAPL250117C00100000)
  */
 export async function subscribeContract(contract: string): Promise<void> {
-	// Normalize: remove O: prefix if present, convert to uppercase
 	let normalizedContract = contract.toUpperCase();
 	if (normalizedContract.startsWith("O:")) {
 		normalizedContract = normalizedContract.slice(2);
 	}
 
 	if (activeContracts.has(normalizedContract)) {
-		return; // Already subscribed
+		return;
 	}
 
 	activeContracts.add(normalizedContract);
 
-	const client = await getSharedOptionsWebSocket();
-	if (client?.isConnected()) {
-		client.subscribe("quotes", [normalizedContract]);
-		client.subscribe("trades", [normalizedContract]);
+	if (proxyAbortController) {
+		log.info({ contract: normalizedContract }, "Subscribing to options contract via proxy");
+		startProxyOptionQuoteStream([normalizedContract], proxyAbortController.signal);
+		startProxyOptionTradeStream([normalizedContract], proxyAbortController.signal);
 	}
 }
 
@@ -330,43 +288,31 @@ export async function subscribeContracts(contracts: string[]): Promise<void> {
 		activeContracts.add(contract);
 	}
 
-	const client = await getSharedOptionsWebSocket();
-	if (client?.isConnected()) {
+	if (proxyAbortController) {
 		log.info(
 			{ count: newContracts.length, contracts: newContracts.slice(0, 3) },
-			"Subscribing to options contracts via Alpaca WS",
+			"Subscribing to options contracts via proxy",
 		);
-		client.subscribe("quotes", newContracts);
-		client.subscribe("trades", newContracts);
-	} else {
-		log.warn(
-			{ count: newContracts.length },
-			"Cannot subscribe to options - Alpaca WS not connected",
-		);
+		startProxyOptionQuoteStream(newContracts, proxyAbortController.signal);
+		startProxyOptionTradeStream(newContracts, proxyAbortController.signal);
 	}
 }
 
 /**
  * Unsubscribe from options data for a contract.
  */
-export async function unsubscribeContract(contract: string): Promise<void> {
+export function unsubscribeContract(contract: string): void {
 	let normalizedContract = contract.toUpperCase();
 	if (normalizedContract.startsWith("O:")) {
 		normalizedContract = normalizedContract.slice(2);
 	}
 
 	if (!activeContracts.has(normalizedContract)) {
-		return; // Not subscribed
+		return;
 	}
 
 	activeContracts.delete(normalizedContract);
 	optionsCache.delete(normalizedContract);
-
-	const client = await getSharedOptionsWebSocket();
-	if (client?.isConnected()) {
-		client.unsubscribe("quotes", [normalizedContract]);
-		client.unsubscribe("trades", [normalizedContract]);
-	}
 }
 
 /**
@@ -404,7 +350,7 @@ export function getActiveContracts(): string[] {
  * Check if options streaming is initialized and connected.
  */
 export function isOptionsStreamingConnected(): boolean {
-	return isInitialized && isOptionsWebSocketConnected();
+	return isInitialized && proxyStreamsRunning;
 }
 
 // ============================================
