@@ -5,7 +5,7 @@
  * and step execution with mocked dependencies.
  */
 
-import { describe, expect, it, mock } from "bun:test";
+import { afterAll, beforeAll, describe, expect, it, mock } from "bun:test";
 import { z } from "zod";
 import {
 	ApprovalSchema,
@@ -112,6 +112,20 @@ mock.module("@cream/external-context", () => ({
 }));
 
 describe("trading-cycle workflow", () => {
+	const originalNodeEnv = Bun.env.NODE_ENV;
+
+	beforeAll(() => {
+		Bun.env.NODE_ENV = "test";
+	});
+
+	afterAll(() => {
+		if (originalNodeEnv === undefined) {
+			delete Bun.env.NODE_ENV;
+		} else {
+			Bun.env.NODE_ENV = originalNodeEnv;
+		}
+	});
+
 	describe("schema validation", () => {
 		it("should validate WorkflowInputSchema with required fields", () => {
 			const result = WorkflowInputSchema.safeParse({

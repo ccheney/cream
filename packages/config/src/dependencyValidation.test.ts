@@ -314,11 +314,14 @@ describe("DependencyValidator", () => {
 
 			expect(sorted).not.toBeNull();
 			expect(sorted).toHaveLength(3);
+			if (!sorted) {
+				throw new Error("Expected topological sort to return a list");
+			}
 
 			// domain should come before config, config before app
-			const domainIdx = sorted!.indexOf("@cream/domain");
-			const configIdx = sorted!.indexOf("@cream/config");
-			const appIdx = sorted!.indexOf("@cream/app");
+			const domainIdx = sorted.indexOf("@cream/domain");
+			const configIdx = sorted.indexOf("@cream/config");
+			const appIdx = sorted.indexOf("@cream/app");
 
 			expect(domainIdx).toBeLessThan(configIdx);
 			expect(configIdx).toBeLessThan(appIdx);

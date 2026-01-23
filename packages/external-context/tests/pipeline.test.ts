@@ -3,6 +3,7 @@
  */
 
 import { describe, expect, it } from "bun:test";
+import { requireValue } from "@cream/test-utils";
 import type { IExtractionClient, NewsArticle } from "../src/index.js";
 import { createExtractionPipeline, ExtractionPipeline } from "../src/index.js";
 
@@ -43,13 +44,13 @@ describe("ExtractionPipeline", () => {
 				["AAPL"],
 			);
 
-			expect(event).not.toBeNull();
-			expect(event!.eventId).toBeDefined();
-			expect(event!.sourceType).toBe("news");
-			expect(event!.scores).toBeDefined();
-			expect(event!.scores.sentimentScore).toBeDefined();
-			expect(event!.scores.importanceScore).toBeDefined();
-			expect(event!.scores.surpriseScore).toBeDefined();
+			const eventValue = requireValue(event, "Expected event to be returned");
+			expect(eventValue.eventId).toBeDefined();
+			expect(eventValue.sourceType).toBe("news");
+			expect(eventValue.scores).toBeDefined();
+			expect(eventValue.scores.sentimentScore).toBeDefined();
+			expect(eventValue.scores.importanceScore).toBeDefined();
+			expect(eventValue.scores.surpriseScore).toBeDefined();
 		});
 
 		it("should process news articles", async () => {
@@ -80,7 +81,8 @@ describe("ExtractionPipeline", () => {
 				["TSLA"],
 			);
 
-			expect(event!.relatedInstrumentIds).toContain("TSLA");
+			const eventValue = requireValue(event, "Expected event to be returned");
+			expect(eventValue.relatedInstrumentIds).toContain("TSLA");
 		});
 
 		it("should include processing timestamp", async () => {
@@ -88,8 +90,9 @@ describe("ExtractionPipeline", () => {
 			const event = await pipeline.processContent("Test content for pipeline processing.", "news");
 			const after = new Date();
 
-			expect(event!.processedAt.getTime()).toBeGreaterThanOrEqual(before.getTime());
-			expect(event!.processedAt.getTime()).toBeLessThanOrEqual(after.getTime());
+			const eventValue = requireValue(event, "Expected event to be returned");
+			expect(eventValue.processedAt.getTime()).toBeGreaterThanOrEqual(before.getTime());
+			expect(eventValue.processedAt.getTime()).toBeLessThanOrEqual(after.getTime());
 		});
 	});
 
@@ -171,7 +174,9 @@ describe("ExtractionPipeline", () => {
 			const event1 = await pipeline.processContent("Content 1", "news");
 			const event2 = await pipeline.processContent("Content 2", "news");
 
-			expect(event1!.eventId).not.toBe(event2!.eventId);
+			const firstEvent = requireValue(event1, "Expected first event to be returned");
+			const secondEvent = requireValue(event2, "Expected second event to be returned");
+			expect(firstEvent.eventId).not.toBe(secondEvent.eventId);
 		});
 	});
 
@@ -183,7 +188,8 @@ describe("ExtractionPipeline", () => {
 
 		it("should handle news source type", async () => {
 			const event = await pipeline.processContent("Breaking news about tech stocks.", "news");
-			expect(event!.sourceType).toBe("news");
+			const eventValue = requireValue(event, "Expected event to be returned");
+			expect(eventValue.sourceType).toBe("news");
 		});
 
 		it("should handle transcript source type", async () => {
@@ -191,7 +197,8 @@ describe("ExtractionPipeline", () => {
 				"CEO: We are pleased with our quarterly results.",
 				"transcript",
 			);
-			expect(event!.sourceType).toBe("transcript");
+			const eventValue = requireValue(event, "Expected event to be returned");
+			expect(eventValue.sourceType).toBe("transcript");
 		});
 
 		it("should handle macro source type", async () => {
@@ -199,7 +206,8 @@ describe("ExtractionPipeline", () => {
 				"Federal Reserve raised interest rates by 25 basis points.",
 				"macro",
 			);
-			expect(event!.sourceType).toBe("macro");
+			const eventValue = requireValue(event, "Expected event to be returned");
+			expect(eventValue.sourceType).toBe("macro");
 		});
 
 		it("should handle press_release source type", async () => {
@@ -207,7 +215,8 @@ describe("ExtractionPipeline", () => {
 				"FOR IMMEDIATE RELEASE: Company announces quarterly dividend.",
 				"press_release",
 			);
-			expect(event!.sourceType).toBe("press_release");
+			const eventValue = requireValue(event, "Expected event to be returned");
+			expect(eventValue.sourceType).toBe("press_release");
 		});
 	});
 });

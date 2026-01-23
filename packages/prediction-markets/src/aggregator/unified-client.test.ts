@@ -8,6 +8,7 @@ Bun.env.CREAM_ENV = "PAPER";
 import { afterEach, beforeEach, describe, expect, mock, test } from "bun:test";
 import type { PredictionMarketsConfig } from "@cream/config";
 import type { PredictionMarketEvent } from "@cream/domain";
+import { requireValue } from "@cream/test-utils";
 import {
 	createUnifiedClient,
 	DEFAULT_UNIFIED_CONFIG,
@@ -212,28 +213,32 @@ describe("UnifiedPredictionMarketClient", () => {
 		});
 
 		test("handles disabled Kalshi", () => {
+			const kalshiConfig = requireValue(baseConfig.kalshi, "kalshi config");
 			const config = {
 				...baseConfig,
-				kalshi: { ...baseConfig.kalshi!, enabled: false },
+				kalshi: { ...kalshiConfig, enabled: false },
 			};
 			const client = new UnifiedPredictionMarketClient(config);
 			expect(client).toBeDefined();
 		});
 
 		test("handles disabled Polymarket", () => {
+			const polymarketConfig = requireValue(baseConfig.polymarket, "polymarket config");
 			const config = {
 				...baseConfig,
-				polymarket: { ...baseConfig.polymarket!, enabled: false },
+				polymarket: { ...polymarketConfig, enabled: false },
 			};
 			const client = new UnifiedPredictionMarketClient(config);
 			expect(client).toBeDefined();
 		});
 
 		test("handles both platforms disabled", () => {
+			const kalshiConfig = requireValue(baseConfig.kalshi, "kalshi config");
+			const polymarketConfig = requireValue(baseConfig.polymarket, "polymarket config");
 			const config = {
 				...baseConfig,
-				kalshi: { ...baseConfig.kalshi!, enabled: false },
-				polymarket: { ...baseConfig.polymarket!, enabled: false },
+				kalshi: { ...kalshiConfig, enabled: false },
+				polymarket: { ...polymarketConfig, enabled: false },
 			};
 			const client = new UnifiedPredictionMarketClient(config);
 			expect(client).toBeDefined();
@@ -276,7 +281,8 @@ describe("UnifiedPredictionMarketClient", () => {
 		});
 
 		test("filters out low liquidity markets", async () => {
-			mockKalshiClient!.fetchMarkets.mockImplementation(() =>
+			const kalshiClient = requireValue(mockKalshiClient, "mock Kalshi client");
+			kalshiClient.fetchMarkets.mockImplementation(() =>
 				Promise.resolve([...mockKalshiEvents, mockLowLiquidityEvent]),
 			);
 
@@ -289,7 +295,8 @@ describe("UnifiedPredictionMarketClient", () => {
 		});
 
 		test("handles Kalshi fetch failure gracefully", async () => {
-			mockKalshiClient!.fetchMarkets.mockImplementation(() =>
+			const kalshiClient = requireValue(mockKalshiClient, "mock Kalshi client");
+			kalshiClient.fetchMarkets.mockImplementation(() =>
 				Promise.reject(new Error("Kalshi API error")),
 			);
 
@@ -302,7 +309,8 @@ describe("UnifiedPredictionMarketClient", () => {
 		});
 
 		test("handles Polymarket fetch failure gracefully", async () => {
-			mockPolymarketClient!.fetchMarkets.mockImplementation(() =>
+			const polymarketClient = requireValue(mockPolymarketClient, "mock Polymarket client");
+			polymarketClient.fetchMarkets.mockImplementation(() =>
 				Promise.reject(new Error("Polymarket API error")),
 			);
 
@@ -318,8 +326,10 @@ describe("UnifiedPredictionMarketClient", () => {
 			const client = new UnifiedPredictionMarketClient(baseConfig);
 			const _data = await client.getAllMarketData(["FED_RATE"]);
 
-			expect(mockKalshiClient!.fetchMarkets).toHaveBeenCalledWith(["FED_RATE"]);
-			expect(mockPolymarketClient!.fetchMarkets).toHaveBeenCalledWith(["FED_RATE"]);
+			const kalshiClient = requireValue(mockKalshiClient, "mock Kalshi client");
+			const polymarketClient = requireValue(mockPolymarketClient, "mock Polymarket client");
+			expect(kalshiClient.fetchMarkets).toHaveBeenCalledWith(["FED_RATE"]);
+			expect(polymarketClient.fetchMarkets).toHaveBeenCalledWith(["FED_RATE"]);
 		});
 
 		test("matches markets across platforms", async () => {
@@ -410,10 +420,12 @@ describe("UnifiedPredictionMarketClient", () => {
 
 		test("returns empty array for GDP if no matching markets", async () => {
 			// Mock returns no GDP markets
-			mockKalshiClient!.fetchMarkets.mockImplementation(
-				() => Promise.resolve([mockKalshiEvents[1]!]), // Only CPI market
+			const kalshiClient = requireValue(mockKalshiClient, "mock Kalshi client");
+			const polymarketClient = requireValue(mockPolymarketClient, "mock Polymarket client");
+			kalshiClient.fetchMarkets.mockImplementation(
+				() => Promise.resolve([requireValue(mockKalshiEvents[1], "CPI market")]), // Only CPI market
 			);
-			mockPolymarketClient!.fetchMarkets.mockImplementation(() => Promise.resolve([]));
+			polymarketClient.fetchMarkets.mockImplementation(() => Promise.resolve([]));
 
 			const client = new UnifiedPredictionMarketClient(baseConfig);
 			const markets = await client.getEconomicDataMarkets("GDP");
@@ -441,14 +453,17 @@ describe("UnifiedPredictionMarketClient", () => {
 				},
 			};
 
-			mockKalshiClient!.fetchMarkets.mockImplementation(() => Promise.resolve([jobsEvent]));
-			mockPolymarketClient!.fetchMarkets.mockImplementation(() => Promise.resolve([]));
+			const kalshiClient = requireValue(mockKalshiClient, "mock Kalshi client");
+			const polymarketClient = requireValue(mockPolymarketClient, "mock Polymarket client");
+			kalshiClient.fetchMarkets.mockImplementation(() => Promise.resolve([jobsEvent]));
+			polymarketClient.fetchMarkets.mockImplementation(() => Promise.resolve([]));
 
 			const client = new UnifiedPredictionMarketClient(baseConfig);
 			const markets = await client.getEconomicDataMarkets("NFP");
 
 			expect(markets.length).toBe(1);
-			expect(markets[0]!.indicator).toBe("NFP");
+			const firstMarket = requireValue(markets[0], "market");
+			expect(firstMarket.indicator).toBe("NFP");
 		});
 	});
 

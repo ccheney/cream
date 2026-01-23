@@ -3,6 +3,7 @@
  */
 
 import { describe, expect, it } from "bun:test";
+import { requireValue } from "@cream/test-utils";
 import {
 	buildOptionSymbol,
 	gcd,
@@ -33,9 +34,8 @@ describe("generateOrderId", () => {
 		const after = Date.now();
 
 		const parts = id.split("-");
-		const timestampPart = parts[1];
-		expect(timestampPart).toBeDefined();
-		const timestamp = parseInt(timestampPart!, 10);
+		const timestampPart = requireValue(parts[1], "timestamp part");
+		const timestamp = parseInt(timestampPart, 10);
 
 		expect(timestamp).toBeGreaterThanOrEqual(before);
 		expect(timestamp).toBeLessThanOrEqual(after);
@@ -156,21 +156,21 @@ describe("parseOptionSymbol", () => {
 	it("parses a call option symbol", () => {
 		const result = parseOptionSymbol("AAPL  251219C00200000");
 
-		expect(result).not.toBeNull();
-		expect(result!.underlying).toBe("AAPL");
-		expect(result!.expiration).toBe("2025-12-19");
-		expect(result!.optionType).toBe("call");
-		expect(result!.strike).toBe(200);
+		const parsed = requireValue(result, "parsed option");
+		expect(parsed.underlying).toBe("AAPL");
+		expect(parsed.expiration).toBe("2025-12-19");
+		expect(parsed.optionType).toBe("call");
+		expect(parsed.strike).toBe(200);
 	});
 
 	it("parses a put option symbol", () => {
 		const result = parseOptionSymbol("SPY   251220P00450000");
 
-		expect(result).not.toBeNull();
-		expect(result!.underlying).toBe("SPY");
-		expect(result!.expiration).toBe("2025-12-20");
-		expect(result!.optionType).toBe("put");
-		expect(result!.strike).toBe(450);
+		const parsed = requireValue(result, "parsed option");
+		expect(parsed.underlying).toBe("SPY");
+		expect(parsed.expiration).toBe("2025-12-20");
+		expect(parsed.optionType).toBe("put");
+		expect(parsed.strike).toBe(450);
 	});
 
 	it("returns null for invalid symbols", () => {

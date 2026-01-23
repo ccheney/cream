@@ -4,6 +4,7 @@
 
 import { describe, expect, it } from "bun:test";
 import type { OHLCVBar } from "@cream/indicators";
+import { requireValue } from "@cream/test-utils";
 import {
 	calculateMean,
 	calculateStd,
@@ -198,8 +199,9 @@ describe("Feature Extraction", () => {
 
 			expect(feature).not.toBeNull();
 			const lastOHLCVBar = candles[candles.length - 1];
-			expect(lastOHLCVBar).toBeDefined();
-			expect(feature!.timestamp).toBe(new Date(lastOHLCVBar!.timestamp).toISOString());
+			const safeFeature = requireValue(feature, "feature");
+			const safeLast = requireValue(lastOHLCVBar, "last OHLCV bar");
+			expect(safeFeature.timestamp).toBe(new Date(safeLast.timestamp).toISOString());
 		});
 	});
 
@@ -221,7 +223,9 @@ describe("Feature Extraction", () => {
 			expect(stds.length).toBe(4);
 
 			// Check normalized data has approximately zero mean
-			const normalizedMean = normalized.reduce((sum, row) => sum + row[0]!, 0) / normalized.length;
+			const normalizedMean =
+				normalized.reduce((sum, row) => sum + requireValue(row[0], "normalized value"), 0) /
+				normalized.length;
 			expect(Math.abs(normalizedMean)).toBeLessThan(0.1);
 		});
 	});
@@ -286,9 +290,10 @@ describe("GMM Classifier", () => {
 			const result = classifyWithGMM(model, testOHLCVBars);
 
 			expect(result).not.toBeNull();
-			expect(result!.regime).toBeDefined();
-			expect(result!.confidence).toBeGreaterThan(0);
-			expect(result!.clusterProbabilities.length).toBe(5);
+			const safeResult = requireValue(result, "classification result");
+			expect(safeResult.regime).toBeDefined();
+			expect(safeResult.confidence).toBeGreaterThan(0);
+			expect(safeResult.clusterProbabilities.length).toBe(5);
 		});
 
 		it("returns null for insufficient test data", () => {
@@ -391,8 +396,9 @@ describe("Regime Transition Detector", () => {
 
 		const history = detector.getHistory("AAPL");
 		expect(history.length).toBe(1);
-		expect(history[0]!.regime).toBe("BULL_TREND");
-		expect(history[0]!.duration).toBe(2);
+		const first = requireValue(history[0], "transition history entry");
+		expect(first.regime).toBe("BULL_TREND");
+		expect(first.duration).toBe(2);
 	});
 
 	it("rejects low confidence transitions", () => {

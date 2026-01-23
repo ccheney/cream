@@ -166,7 +166,11 @@ describe("chunkParsedFiling", () => {
 
 		// All chunks should have the same totalChunks
 		expect(chunks.length).toBeGreaterThan(0);
-		const totalChunks = chunks[0]!.totalChunks;
+		const firstChunk = chunks[0];
+		if (!firstChunk) {
+			throw new Error("Expected at least one chunk");
+		}
+		const totalChunks = firstChunk.totalChunks;
 		expect(totalChunks).toBe(chunks.length);
 		for (const chunk of chunks) {
 			expect(chunk.totalChunks).toBe(totalChunks);

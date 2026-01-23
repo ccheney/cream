@@ -304,8 +304,11 @@ describe("COMMON_SECTIONS patterns", () => {
 
 		const pattern = COMMON_SECTIONS.business;
 		expect(pattern).toBeDefined();
+		if (!pattern) {
+			throw new Error("Expected business pattern to be defined");
+		}
 		for (const text of variations) {
-			expect(pattern!.test(text)).toBe(true);
+			expect(pattern.test(text)).toBe(true);
 		}
 	});
 
@@ -314,8 +317,11 @@ describe("COMMON_SECTIONS patterns", () => {
 
 		const pattern = COMMON_SECTIONS.risk_factors;
 		expect(pattern).toBeDefined();
+		if (!pattern) {
+			throw new Error("Expected risk factors pattern to be defined");
+		}
 		for (const text of variations) {
-			expect(pattern!.test(text)).toBe(true);
+			expect(pattern.test(text)).toBe(true);
 		}
 	});
 
@@ -328,8 +334,11 @@ describe("COMMON_SECTIONS patterns", () => {
 
 		const pattern = COMMON_SECTIONS.mda;
 		expect(pattern).toBeDefined();
+		if (!pattern) {
+			throw new Error("Expected MD&A pattern to be defined");
+		}
 		for (const text of variations) {
-			expect(pattern!.test(text)).toBe(true);
+			expect(pattern.test(text)).toBe(true);
 		}
 	});
 });

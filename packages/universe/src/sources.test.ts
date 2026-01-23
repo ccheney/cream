@@ -54,10 +54,14 @@ describe("Source Resolvers", () => {
 
 			expect(result.sourceName).toBe("my-watchlist");
 			expect(result.instruments).toHaveLength(3);
-			expect(result.instruments[0]!.symbol).toBe("AAPL");
-			expect(result.instruments[1]!.symbol).toBe("MSFT"); // Should be uppercased
-			expect(result.instruments[2]!.symbol).toBe("GOOGL");
-			expect(result.instruments[0]!.source).toBe("my-watchlist");
+			const [first, second, third] = result.instruments;
+			if (!first || !second || !third) {
+				throw new Error("Expected three instruments to be resolved");
+			}
+			expect(first.symbol).toBe("AAPL");
+			expect(second.symbol).toBe("MSFT"); // Should be uppercased
+			expect(third.symbol).toBe("GOOGL");
+			expect(first.source).toBe("my-watchlist");
 			expect(result.warnings).toHaveLength(0);
 			expect(result.resolvedAt).toBeDefined();
 		});
@@ -145,7 +149,9 @@ describe("Source Resolvers", () => {
 				enabled: true,
 			};
 
-			await expect(resolveSource(source as any)).rejects.toThrow("Unknown source type: unknown");
+			await expect(resolveSource(source as unknown as StaticSource)).rejects.toThrow(
+				"Unknown source type: unknown",
+			);
 		});
 	});
 });
