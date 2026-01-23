@@ -23,15 +23,15 @@
 		"dist"
 	],
 	"scripts": {
-		"build": "bun build ./src/index.ts --outdir ./dist --target node && tsc --emitDeclarationOnly",
+		"build": "bun build ./src/index.ts --outdir ./dist --target node && tsgo --emitDeclarationOnly",
 		"typecheck": "tsgo --noEmit"
 	},
 	"dependencies": {
 		"@cream/indicators": "workspace:*",
-		"zod": "4.3.5"
+		"zod": "4.3.6"
 	},
 	"devDependencies": {
 		"@cream/tsconfig": "workspace:*",
-		"@typescript/native-preview": "7.0.0-dev.20260115.1"
+		"@typescript/native-preview": "7.0.0-dev.20260122.4"
 	}
 }

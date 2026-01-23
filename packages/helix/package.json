@@ -25,6 +25,6 @@
 		"@cream/tsconfig": "workspace:*",
 		"@types/bun": "1.3.6",
 		"testcontainers": "11.11.0",
-		"@typescript/native-preview": "7.0.0-dev.20260115.1"
+		"@typescript/native-preview": "7.0.0-dev.20260122.4"
 	}
 }

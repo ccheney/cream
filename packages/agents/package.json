@@ -23,7 +23,7 @@
 		"format": "biome format --write src/"
 	},
 	"dependencies": {
-		"@bufbuild/protobuf": "2.10.2",
+		"@bufbuild/protobuf": "2.11.0",
 		"@cream/broker": "workspace:*",
 		"@cream/config": "workspace:*",
 		"@cream/domain": "workspace:*",
@@ -35,14 +35,14 @@
 		"@cream/marketdata": "workspace:*",
 		"@cream/storage": "workspace:*",
 		"@cream/universe": "workspace:*",
-		"@google/genai": "1.36.0"
+		"@google/genai": "1.38.0"
 	},
 	"devDependencies": {
 		"@cream/tsconfig": "workspace:*",
 		"@types/bun": "1.3.6",
-		"@typescript/native-preview": "7.0.0-dev.20260115.1"
+		"@typescript/native-preview": "7.0.0-dev.20260122.4"
 	},
 	"optionalDependencies": {
-		"@anthropic-ai/claude-agent-sdk": "0.2.7"
+		"@anthropic-ai/claude-agent-sdk": "0.2.17"
 	}
 }

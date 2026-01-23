@@ -16,6 +16,6 @@
 		"build": "bun run lint && bun run generate"
 	},
 	"devDependencies": {
-		"@bufbuild/protoc-gen-es": "2.10.2"
+		"@bufbuild/protoc-gen-es": "2.11.0"
 	}
 }

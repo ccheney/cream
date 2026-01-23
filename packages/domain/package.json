@@ -44,16 +44,16 @@
 		"clean": "rm -rf dist coverage"
 	},
 	"dependencies": {
-		"@bufbuild/protobuf": "2.10.2",
+		"@bufbuild/protobuf": "2.11.0",
 		"@connectrpc/connect": "2.1.1",
 		"@connectrpc/connect-node": "2.1.1",
 		"@cream/logger": "workspace:*",
 		"@cream/schema-gen": "workspace:*",
-		"zod": "4.3.5"
+		"zod": "4.3.6"
 	},
 	"devDependencies": {
 		"@cream/tsconfig": "workspace:*",
 		"@types/bun": "1.3.6",
-		"@typescript/native-preview": "7.0.0-dev.20260115.1"
+		"@typescript/native-preview": "7.0.0-dev.20260122.4"
 	}
 }

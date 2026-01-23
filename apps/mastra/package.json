@@ -15,7 +15,8 @@
 		}
 	},
 	"scripts": {
-		"dev": "bunx --bun mastra dev",
+		"dev": "bun run src/server.ts",
+		"dev:mastra": "bunx --bun mastra dev",
 		"dev:hono": "bun run src/server.ts",
 		"build": "bun build src/index.ts --outdir dist --target bun --external pg --external pg-native --external @cream/schema-gen/*",
 		"start": "bun run src/server.ts",
@@ -25,10 +26,10 @@
 		"format": "biome format --write src/"
 	},
 	"dependencies": {
-		"@ai-sdk/google": "3.0.9",
-		"@ai-sdk/provider": "3.0.3",
-		"@ai-sdk/xai": "3.0.26",
-		"@bufbuild/protobuf": "2.10.2",
+		"@ai-sdk/google": "3.0.13",
+		"@ai-sdk/provider": "3.0.5",
+		"@ai-sdk/xai": "3.0.33",
+		"@bufbuild/protobuf": "2.11.0",
 		"@connectrpc/connect": "2.1.1",
 		"@connectrpc/connect-node": "2.1.1",
 		"@cream/agents": "workspace:*",
@@ -47,21 +48,21 @@
 		"@cream/storage": "workspace:*",
 		"@cream/universe": "workspace:*",
 		"@hono/node-server": "1.19.9",
-		"@mastra/core": "latest",
-		"@mastra/hono": "latest",
-		"@mastra/observability": "latest",
-		"@mastra/otel-exporter": "latest",
-		"@opentelemetry/exporter-trace-otlp-proto": "0.210.0",
-		"ai": "6.0.37",
+		"@mastra/core": "1.0.4",
+		"@mastra/hono": "1.0.1",
+		"@mastra/observability": "1.0.0",
+		"@mastra/otel-exporter": "1.0.0",
+		"@opentelemetry/exporter-trace-otlp-proto": "0.211.0",
+		"ai": "6.0.48",
 		"drizzle-orm": "^0.45.1",
-		"hono": "4.11.4",
-		"zod": "4.3.5"
+		"hono": "4.11.5",
+		"zod": "4.3.6"
 	},
 	"devDependencies": {
 		"@cream/tsconfig": "workspace:*",
 		"@types/bun": "1.3.6",
-		"@typescript/native-preview": "7.0.0-dev.20260115.1",
-		"mastra": "latest",
+		"@typescript/native-preview": "7.0.0-dev.20260122.4",
+		"mastra": "1.0.1",
 		"tsx": "4.21.0"
 	}
 }
