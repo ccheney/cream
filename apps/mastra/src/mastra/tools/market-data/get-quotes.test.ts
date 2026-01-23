@@ -5,8 +5,8 @@
 import { describe, expect, it, mock } from "bun:test";
 import { getQuotes } from "./get-quotes.js";
 
-// Mock the implementation from @cream/agents
-mock.module("@cream/agents", () => ({
+// Mock the implementation from @cream/agents/implementations
+mock.module("@cream/agents/implementations", () => ({
 	getQuotes: async (_ctx: unknown, instruments: string[]) => {
 		return instruments.map((symbol) => ({
 			symbol,

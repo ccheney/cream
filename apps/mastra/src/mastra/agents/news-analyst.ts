@@ -10,12 +10,7 @@ import { NEWS_ANALYST_CONFIG, NEWS_ANALYST_PROMPT } from "@cream/agents";
 import { getModelId } from "@cream/domain";
 import { Agent } from "@mastra/core/agent";
 
-import {
-	analyzeContent,
-	extractNewsContext,
-	graphragQuery,
-	helixQuery,
-} from "../tools/index.js";
+import { analyzeContent, extractNewsContext, graphragQuery, helixQuery } from "../tools/index.js";
 
 export const newsAnalyst = new Agent({
 	id: NEWS_ANALYST_CONFIG.type,

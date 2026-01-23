@@ -37,6 +37,10 @@ mock.module("@cream/domain", () => ({
 	}),
 	requireEnv: () => "PAPER",
 	isTest: () => true,
+	getModelId: () => "google/gemini-2.0-flash",
+	getFullModelId: () => "google/gemini-2.0-flash",
+	getLLMProvider: () => "google",
+	getLLMModelId: () => "gemini-2.0-flash",
 	calculateCaseStatistics: () => ({
 		total: 0,
 		byAction: {},

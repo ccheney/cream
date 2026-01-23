@@ -5,8 +5,8 @@
 import { describe, expect, it, mock } from "bun:test";
 import { recalcIndicator } from "./recalc-indicator.js";
 
-// Mock the implementation from @cream/agents
-mock.module("@cream/agents", () => ({
+// Mock the implementation from @cream/agents/implementations
+mock.module("@cream/agents/implementations", () => ({
 	recalcIndicator: async (
 		_ctx: unknown,
 		indicator: string,

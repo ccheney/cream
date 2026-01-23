@@ -6,7 +6,17 @@
  * @see docs/plans/53-mastra-v1-migration.md
  */
 
-import { getQuotes as getQuotesImpl, type Quote } from "@cream/agents";
+import { getQuotes as getQuotesImpl } from "@cream/agents/implementations";
+
+export interface Quote {
+	symbol: string;
+	bid: number;
+	ask: number;
+	last: number;
+	volume: number;
+	timestamp: string;
+}
+
 import { createContext, requireEnv } from "@cream/domain";
 import { createTool } from "@mastra/core/tools";
 import { z } from "zod";

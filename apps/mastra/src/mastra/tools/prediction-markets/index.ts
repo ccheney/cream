@@ -7,7 +7,9 @@
 
 export {
 	getMarketSnapshots,
+	getPredictionMarketsRepo,
 	type PredictionMarketsToolRepo,
+	type PredictionSignal,
 	setPredictionMarketsRepositoryProvider,
 } from "./get-market-snapshots.js";
 export { getPredictionSignals } from "./get-prediction-signals.js";

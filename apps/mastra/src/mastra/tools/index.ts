@@ -24,12 +24,7 @@ export { helixQuery } from "./helix/index.js";
 export { recalcIndicator } from "./indicators/index.js";
 
 // Market data tools
-export {
-	getGreeks,
-	getMarketSnapshots as getMarketSnapshotsMarketData,
-	getQuotes,
-	optionChain,
-} from "./market-data/index.js";
+export { getGreeks, getQuotes, optionChain } from "./market-data/index.js";
 
 // Portfolio tools
 export { getEnrichedPortfolioState, getPortfolioState } from "./portfolio/index.js";
@@ -37,7 +32,9 @@ export { getEnrichedPortfolioState, getPortfolioState } from "./portfolio/index.
 // Prediction markets tools
 export {
 	getMarketSnapshots,
+	getPredictionMarketsRepo,
 	getPredictionSignals,
 	type PredictionMarketsToolRepo,
+	type PredictionSignal,
 	setPredictionMarketsRepositoryProvider,
 } from "./prediction-markets/index.js";

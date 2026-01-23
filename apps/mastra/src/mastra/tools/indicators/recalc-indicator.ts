@@ -7,7 +7,15 @@
  * @see docs/plans/53-mastra-v1-migration.md
  */
 
-import { type IndicatorResult, recalcIndicator as recalcIndicatorImpl } from "@cream/agents";
+import { recalcIndicator as recalcIndicatorImpl } from "@cream/agents/implementations";
+
+interface IndicatorResult {
+	indicator: string;
+	symbol: string;
+	values: number[];
+	timestamps: string[];
+}
+
 import { createContext, requireEnv } from "@cream/domain";
 import { createTool } from "@mastra/core/tools";
 import { z } from "zod";

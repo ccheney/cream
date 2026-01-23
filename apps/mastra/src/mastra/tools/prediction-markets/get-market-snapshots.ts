@@ -41,7 +41,27 @@ interface MarketSnapshot {
 	data: MarketSnapshotData;
 }
 
+type SignalType =
+	| "fed_cut_probability"
+	| "fed_hike_probability"
+	| "recession_12m"
+	| "macro_uncertainty"
+	| "policy_event_risk"
+	| "cpi_surprise"
+	| "gdp_surprise"
+	| "shutdown_probability"
+	| "tariff_escalation";
+
+export interface PredictionSignal {
+	id: string;
+	signalType: SignalType;
+	signalValue: number;
+	confidence: number | null;
+	computedAt: string;
+}
+
 export interface PredictionMarketsToolRepo {
+	getLatestSignals(): Promise<PredictionSignal[]>;
 	getLatestSnapshots(platform?: PredictionPlatform): Promise<MarketSnapshot[]>;
 	findSnapshots(
 		filters: {
@@ -66,7 +86,7 @@ export function setPredictionMarketsRepositoryProvider(
 	repoProvider = provider;
 }
 
-async function getRepo(): Promise<PredictionMarketsToolRepo> {
+export async function getPredictionMarketsRepo(): Promise<PredictionMarketsToolRepo> {
 	if (!repoProvider) {
 		throw new Error(
 			"PredictionMarketsToolRepo provider not set. Call setPredictionMarketsRepositoryProvider() at startup.",
@@ -131,7 +151,7 @@ Updated every 15 minutes.`,
 			};
 		}
 
-		const repo = await getRepo();
+		const repo = await getPredictionMarketsRepo();
 
 		let snapshots: MarketSnapshot[];
 		if (inputData.marketType) {
