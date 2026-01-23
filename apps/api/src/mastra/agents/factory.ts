@@ -194,6 +194,15 @@ export interface GenerateOptions {
 	 */
 	maxSteps: number;
 	/**
+	 * Timeout configuration for AI SDK calls.
+	 * - totalMs: Total timeout for the entire call including all steps
+	 * - stepMs: Timeout for each individual step (LLM call)
+	 */
+	timeout?: {
+		totalMs?: number;
+		stepMs?: number;
+	};
+	/**
 	 * Provider-specific options for the underlying AI SDK model call.
 	 * Used to enable Gemini 3 thinking (reasoning) streaming.
 	 */
@@ -236,6 +245,10 @@ export function buildGenerateOptions(
 		requestContext: createRequestContext(settings.model),
 		instructions: settings.systemPromptOverride ?? undefined,
 		maxSteps: 100,
+		timeout: {
+			totalMs: 1_800_000, // 30 minutes total (structured output extraction can be slow)
+			stepMs: 600_000, // 10 minutes per step
+		},
 		providerOptions: {
 			google: {
 				thinkingConfig: {

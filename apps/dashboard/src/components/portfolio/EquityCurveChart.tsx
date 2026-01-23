@@ -268,7 +268,7 @@ export const EquityCurveChart = memo(function EquityCurveChart({
 			{/* Chart Container */}
 			<div className="relative h-64">
 				{!isLoading && !data && (
-					<div className="absolute inset-0 bg-cream-50 dark:bg-night-750 rounded flex items-center justify-center">
+					<div className="absolute inset-0 bg-cream-50 dark:bg-night-700 rounded flex items-center justify-center">
 						<span className="text-sm text-stone-400 dark:text-night-500">No data available</span>
 					</div>
 				)}

@@ -186,7 +186,7 @@ const CompactGreeks = memo(function CompactGreeks({
 
 	return (
 		<div
-			className={`flex items-center gap-6 px-4 py-3 bg-cream-50 dark:bg-night-750 rounded-lg ${className}`}
+			className={`flex items-center gap-6 px-4 py-3 bg-cream-50 dark:bg-night-700 rounded-lg ${className}`}
 		>
 			{isStreaming && (
 				<div className="flex items-center gap-1">

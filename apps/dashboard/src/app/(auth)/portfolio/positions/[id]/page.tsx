@@ -356,7 +356,7 @@ export default function PositionDetailPage() {
 					</h2>
 					<div className="overflow-x-auto">
 						<table className="w-full">
-							<thead className="bg-cream-50 dark:bg-night-750">
+							<thead className="bg-cream-50 dark:bg-night-700">
 								<tr className="text-left text-sm text-stone-500 dark:text-night-300">
 									<th className="px-4 py-3 font-medium">Time</th>
 									<th className="px-4 py-3 font-medium">Side</th>

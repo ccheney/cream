@@ -134,7 +134,7 @@ const OrderRow = memo(function OrderRow({ order }: OrderRowProps) {
 		order.side === "buy" ? "text-green-600 dark:text-green-400" : "text-red-600 dark:text-red-400";
 
 	return (
-		<tr className="hover:bg-cream-50 dark:hover:bg-night-750 transition-colors">
+		<tr className="hover:bg-cream-50 dark:hover:bg-night-600 transition-colors">
 			<td className="px-4 py-3 font-mono text-sm font-medium text-stone-900 dark:text-night-50">
 				{order.symbol}
 			</td>
@@ -196,7 +196,7 @@ const OrdersTable = memo(function OrdersTable({
 	return (
 		<div className="overflow-x-auto">
 			<table className="w-full">
-				<thead className="bg-cream-50 dark:bg-night-750">
+				<thead className="bg-cream-50 dark:bg-night-700">
 					<tr className="text-left text-sm text-stone-500 dark:text-night-300">
 						<th className="px-4 py-3 font-medium">Symbol</th>
 						<th className="px-4 py-3 font-medium">Side</th>

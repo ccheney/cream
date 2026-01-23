@@ -78,7 +78,7 @@ export const AggregateGreeks = memo(function AggregateGreeks({
 
 	return (
 		<div
-			className={`flex items-center gap-6 px-4 py-2 bg-cream-50 dark:bg-night-750 rounded-lg ${className}`}
+			className={`flex items-center gap-6 px-4 py-2 bg-cream-50 dark:bg-night-700 rounded-lg ${className}`}
 			role="group"
 			aria-label="Portfolio Greeks"
 		>

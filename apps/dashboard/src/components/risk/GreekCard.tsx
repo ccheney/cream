@@ -104,7 +104,7 @@ export const GreekCard = memo(function GreekCard({
 		<div
 			className={`
         relative text-center ${sizes.padding}
-        bg-cream-50 dark:bg-night-750 rounded-lg
+        bg-cream-50 dark:bg-night-700 rounded-lg
         border border-cream-200 dark:border-night-600
         ${isAtLimit ? "border-red-500 dark:border-red-500" : ""}
         ${isNearLimit && !isAtLimit ? "border-amber-500 dark:border-amber-500" : ""}

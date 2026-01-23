@@ -98,6 +98,11 @@ struct UseCases {
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
+    // Install rustls crypto provider before any TLS operations
+    rustls::crypto::ring::default_provider()
+        .install_default()
+        .expect("Failed to install rustls crypto provider");
+
     load_dotenv();
     init_tracing();
 
@@ -216,7 +221,7 @@ fn parse_config() -> Result<EngineConfig, Box<dyn std::error::Error>> {
 
     let position_monitor_enabled = std::env::var("POSITION_MONITOR_ENABLED")
         .map(|v| v.to_lowercase() == "true" || v == "1")
-        .unwrap_or(true);
+        .unwrap_or(false);
 
     Ok(EngineConfig {
         environment,

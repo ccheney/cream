@@ -159,7 +159,7 @@ function SupportingEvidenceSection({ items }: { items: SupportingEvidence[] }) {
 
 function EvidenceCard({ evidence }: { evidence: SupportingEvidence }) {
 	return (
-		<div className="p-3 rounded-lg bg-cream-50 dark:bg-night-750 border border-cream-100 dark:border-night-700">
+		<div className="p-3 rounded-lg bg-cream-50 dark:bg-night-700 border border-cream-100 dark:border-night-700">
 			<div className="flex items-center justify-between mb-1">
 				<EvidenceTypeBadge type={evidence.type} />
 				<span className="text-xs text-stone-500 dark:text-night-300">

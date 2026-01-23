@@ -44,7 +44,7 @@ export const PositionRow = memo(function PositionRow({
 	const logoUrl = buildTickerLogoUrl(position.symbol);
 
 	return (
-		<tr className="hover:bg-cream-50 dark:hover:bg-night-750 transition-colors">
+		<tr className="hover:bg-cream-50 dark:hover:bg-night-600 transition-colors">
 			<td className="px-4 py-3 font-medium text-stone-900 dark:text-night-50">
 				<div className="flex items-center gap-2">
 					<SourceLogo logoUrl={logoUrl} domain={position.symbol} size="sm" fallback="company" />

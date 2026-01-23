@@ -24,9 +24,13 @@ pub enum AlpacaError {
     #[error("Order rejected: {0}")]
     OrderRejected(String),
 
-    /// Authentication failed.
+    /// Authentication failed (401 Unauthorized).
     #[error("Authentication failed")]
     AuthenticationFailed,
+
+    /// Action forbidden (403 Forbidden).
+    #[error("Forbidden: {0}")]
+    Forbidden(String),
 
     /// Rate limited.
     #[error("Rate limited, retry after {retry_after_secs}s")]
@@ -86,6 +90,7 @@ impl From<AlpacaError> for BrokerError {
             AlpacaError::AuthenticationFailed => Self::Unknown {
                 message: "Authentication failed".to_string(),
             },
+            AlpacaError::Forbidden(msg) => Self::OrderRejected { reason: msg },
             AlpacaError::RateLimited { .. } => Self::RateLimited,
             AlpacaError::EnvironmentMismatch { expected, actual } => Self::Unknown {
                 message: format!("Environment mismatch: expected {expected}, got {actual}"),
@@ -114,6 +119,13 @@ mod tests {
         let err = AlpacaError::AuthenticationFailed;
         let broker_err: BrokerError = err.into();
         assert!(matches!(broker_err, BrokerError::Unknown { .. }));
+    }
+
+    #[test]
+    fn alpaca_error_to_broker_error_forbidden() {
+        let err = AlpacaError::Forbidden("short selling not allowed".to_string());
+        let broker_err: BrokerError = err.into();
+        assert!(matches!(broker_err, BrokerError::OrderRejected { .. }));
     }
 
     #[test]

@@ -57,8 +57,8 @@ export const PositionsPanel = memo(function PositionsPanel({
 							onClick={() => setActiveTab(tab.id)}
 							className={`px-4 py-2 text-sm font-medium rounded-t-lg transition-colors relative ${
 								activeTab === tab.id
-									? "text-stone-900 dark:text-night-50 bg-cream-50 dark:bg-night-750"
-									: "text-stone-500 dark:text-night-400 hover:text-stone-700 dark:hover:text-night-200 hover:bg-cream-50 dark:hover:bg-night-750"
+									? "text-stone-900 dark:text-night-50 bg-cream-50 dark:bg-night-800"
+									: "text-stone-500 dark:text-night-400 hover:text-stone-700 dark:hover:text-night-200 hover:bg-cream-50 dark:hover:bg-night-600"
 							}`}
 						>
 							{tab.label}
@@ -296,7 +296,7 @@ const StreamingPositionsTableInner = memo(function StreamingPositionsTableInner(
 	return (
 		<div role="table" aria-label="Open positions">
 			<div
-				className="grid bg-cream-50 dark:bg-night-750 text-sm text-stone-500 dark:text-night-300 border-b border-cream-200 dark:border-night-700"
+				className="grid bg-cream-50 dark:bg-night-700 text-sm text-stone-500 dark:text-night-300 border-b border-cream-200 dark:border-night-700"
 				style={{ gridTemplateColumns: GRID_TEMPLATE_OPEN }}
 				role="row"
 				tabIndex={0}
@@ -412,7 +412,7 @@ const OpenPositionRow = memo(function OpenPositionRow({
 
 	return (
 		<div
-			className="grid hover:bg-cream-50 dark:hover:bg-night-750 transition-colors absolute left-0 right-0 border-b border-cream-100 dark:border-night-700"
+			className="grid hover:bg-cream-50 dark:hover:bg-night-600 transition-colors absolute left-0 right-0 border-b border-cream-100 dark:border-night-700"
 			style={{ ...style, gridTemplateColumns: GRID_TEMPLATE_OPEN }}
 			role="row"
 			tabIndex={0}
@@ -604,7 +604,7 @@ const ClosedTradesTableInner = memo(function ClosedTradesTableInner({
 
 			<div role="table" aria-label="Closed trades">
 				<div
-					className="grid bg-cream-50 dark:bg-night-750 text-sm text-stone-500 dark:text-night-300 border-b border-cream-200 dark:border-night-700"
+					className="grid bg-cream-50 dark:bg-night-700 text-sm text-stone-500 dark:text-night-300 border-b border-cream-200 dark:border-night-700"
 					style={{ gridTemplateColumns: GRID_TEMPLATE_CLOSED }}
 					role="row"
 					tabIndex={0}
@@ -708,7 +708,7 @@ const ClosedTradeRow = memo(function ClosedTradeRow({
 
 	return (
 		<div
-			className="grid hover:bg-cream-50 dark:hover:bg-night-750 transition-colors border-b border-cream-100 dark:border-night-700"
+			className="grid hover:bg-cream-50 dark:hover:bg-night-600 transition-colors border-b border-cream-100 dark:border-night-700"
 			style={{ gridTemplateColumns: GRID_TEMPLATE_CLOSED }}
 			role="row"
 			tabIndex={0}

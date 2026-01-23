@@ -263,7 +263,8 @@ impl AlpacaHttpClient {
         error_message: String,
     ) -> AlpacaError {
         match status {
-            StatusCode::UNAUTHORIZED | StatusCode::FORBIDDEN => AlpacaError::AuthenticationFailed,
+            StatusCode::UNAUTHORIZED => AlpacaError::AuthenticationFailed,
+            StatusCode::FORBIDDEN => AlpacaError::Forbidden(error_message),
             StatusCode::NOT_FOUND => AlpacaError::OrderNotFound {
                 order_id: path.to_string(),
             },

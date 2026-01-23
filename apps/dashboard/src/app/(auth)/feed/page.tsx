@@ -461,7 +461,7 @@ function FeedEventRow({ event }: { event: NormalizedEvent }) {
 	});
 
 	return (
-		<div className="flex items-center gap-3 px-4 h-12 border-b border-cream-100 dark:border-night-700 hover:bg-cream-50 dark:hover:bg-night-750 transition-colors">
+		<div className="flex items-center gap-3 px-4 h-12 border-b border-cream-100 dark:border-night-700 hover:bg-cream-50 dark:hover:bg-night-600 transition-colors">
 			{/* Timestamp */}
 			<span className="text-xs font-mono text-stone-400 dark:text-night-400 w-20 flex-shrink-0">
 				{timeStr}

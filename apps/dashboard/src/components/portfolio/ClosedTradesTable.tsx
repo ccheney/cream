@@ -122,7 +122,7 @@ const TradeRow = memo(function TradeRow({ trade }: TradeRowProps) {
 
 	return (
 		<div
-			className="grid hover:bg-cream-50 dark:hover:bg-night-750 transition-colors border-b border-cream-100 dark:border-night-700"
+			className="grid hover:bg-cream-50 dark:hover:bg-night-600 transition-colors border-b border-cream-100 dark:border-night-700"
 			style={{ gridTemplateColumns: GRID_TEMPLATE }}
 			role="row"
 			tabIndex={0}
@@ -311,7 +311,7 @@ export const ClosedTradesTable = memo(function ClosedTradesTable({
 				<div role="table" aria-label="Closed trades">
 					{/* Column headers */}
 					<div
-						className="grid bg-cream-50 dark:bg-night-750 text-stone-500 dark:text-night-300 border-b border-cream-200 dark:border-night-700"
+						className="grid bg-cream-50 dark:bg-night-700 text-stone-500 dark:text-night-300 border-b border-cream-200 dark:border-night-700"
 						style={{ gridTemplateColumns: GRID_TEMPLATE }}
 						role="row"
 						tabIndex={0}

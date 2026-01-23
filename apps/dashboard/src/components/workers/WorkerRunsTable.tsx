@@ -151,7 +151,7 @@ function WorkerRunsTableComponent({ runs, isLoading }: WorkerRunsTableProps) {
 
 			<div className="overflow-x-auto">
 				<table className="min-w-full divide-y divide-cream-200 dark:divide-night-700">
-					<thead className="bg-cream-50 dark:bg-night-750">
+					<thead className="bg-cream-50 dark:bg-night-700">
 						<tr>
 							<th className="w-8 px-2 py-2" />
 							<th className="px-4 py-2 text-left text-xs font-medium text-stone-500 dark:text-night-300 uppercase tracking-wider">
@@ -178,8 +178,8 @@ function WorkerRunsTableComponent({ runs, isLoading }: WorkerRunsTableProps) {
 								<Fragment key={run.id}>
 									<tr
 										className={cn(
-											"hover:bg-cream-50 dark:hover:bg-night-750 transition-colors cursor-pointer",
-											isExpanded && "bg-cream-50 dark:bg-night-750",
+											"hover:bg-cream-50 dark:hover:bg-night-600 transition-colors cursor-pointer",
+											isExpanded && "bg-cream-50 dark:bg-night-700",
 										)}
 										onClick={() => toggleRow(run.id)}
 									>

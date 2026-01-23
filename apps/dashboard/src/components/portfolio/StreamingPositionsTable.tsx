@@ -124,7 +124,7 @@ const VirtualizedRow = memo(function VirtualizedRow({ position, style }: Virtual
 
 	return (
 		<div
-			className="grid hover:bg-cream-50 dark:hover:bg-night-750 transition-colors absolute left-0 right-0 border-b border-cream-100 dark:border-night-700"
+			className="grid hover:bg-cream-50 dark:hover:bg-night-600 transition-colors absolute left-0 right-0 border-b border-cream-100 dark:border-night-700"
 			style={{ ...style, gridTemplateColumns: GRID_TEMPLATE }}
 			role="row"
 		>
@@ -345,7 +345,7 @@ export const StreamingPositionsTable = memo(function StreamingPositionsTable({
 				<div role="table" aria-label="Open positions">
 					{/* Column headers */}
 					<div
-						className="grid bg-cream-50 dark:bg-night-750 text-sm text-stone-500 dark:text-night-300 border-b border-cream-200 dark:border-night-700"
+						className="grid bg-cream-50 dark:bg-night-700 text-sm text-stone-500 dark:text-night-300 border-b border-cream-200 dark:border-night-700"
 						style={{ gridTemplateColumns: GRID_TEMPLATE }}
 						role="row"
 					>

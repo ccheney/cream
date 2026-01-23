@@ -12,6 +12,7 @@
  * Additionally handles:
  * - source: Google Search grounding citations with URLs and titles
  * - start/finish: Stream lifecycle events
+ * - tripwire: Safety processor termination events
  * - Various boundary events (text-start, reasoning-end, etc.) - silently ignored
  */
 
@@ -234,6 +235,32 @@ export function createStreamChunkForwarder(
 					...streamChunkBase,
 					type: "error",
 					payload: { error: err },
+				});
+				return;
+			}
+
+			case "tripwire": {
+				const reason = asNonEmptyString(payload.reason) ?? "Stream blocked by processor";
+				const processorId = asNonEmptyString(payload.processorId);
+				const retry = payload.retry === true;
+
+				log.error(
+					{
+						agentType,
+						reason,
+						processorId,
+						retry,
+						metadata: payload.metadata,
+					},
+					"Tripwire triggered - stream blocked",
+				);
+
+				await onChunk({
+					...streamChunkBase,
+					type: "error",
+					payload: {
+						error: `Tripwire: ${reason}${processorId ? ` (processor: ${processorId})` : ""}`,
+					},
 				});
 				return;
 			}

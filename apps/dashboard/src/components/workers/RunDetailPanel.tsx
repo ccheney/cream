@@ -71,7 +71,7 @@ function MacroWatchDetails({ entries }: { entries: MacroWatchEntry[] }) {
 				{entries.map((entry) => (
 					<div
 						key={entry.id}
-						className="flex items-start gap-2 text-sm p-2 rounded bg-cream-50 dark:bg-night-750"
+						className="flex items-start gap-2 text-sm p-2 rounded bg-cream-50 dark:bg-night-700"
 					>
 						<CategoryBadge category={entry.category} />
 						<div className="flex-1 min-w-0">
@@ -343,7 +343,7 @@ function PredictionMarketsDetails({
 				{signals.map((signal) => (
 					<div
 						key={signal.signalType}
-						className="p-2.5 rounded bg-cream-50 dark:bg-night-750 border border-cream-100 dark:border-night-700"
+						className="p-2.5 rounded bg-cream-50 dark:bg-night-700 border border-cream-100 dark:border-night-700"
 					>
 						<div className="text-xs text-stone-500 dark:text-night-400 mb-1">
 							{signal.signalType}
