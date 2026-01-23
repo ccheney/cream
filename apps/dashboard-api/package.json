@@ -23,7 +23,7 @@
 	"dependencies": {
 		"@ai-sdk/google": "3.0.9",
 		"@cream/agents": "workspace:*",
-		"@cream/api": "workspace:*",
+		"@cream/mastra": "workspace:*",
 		"@cream/broker": "workspace:*",
 		"@cream/config": "workspace:*",
 		"@cream/dashboard-types": "workspace:*",

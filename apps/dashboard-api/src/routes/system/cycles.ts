@@ -9,9 +9,9 @@
  * be added in a future iteration.
  */
 
-import { tradingCycleWorkflow } from "@cream/api";
 import { MASTRA_API_URL, USE_MASTRA_APP } from "@cream/config";
 import type { CyclePhase, CycleProgressData, CycleResultData } from "@cream/domain/websocket";
+import { tradingCycleWorkflow } from "@cream/mastra";
 import { reconstructStreamingState } from "@cream/storage";
 import { createRoute, OpenAPIHono, z } from "@hono/zod-openapi";
 import { getCyclesRepo, getDecisionsRepo, getRuntimeConfigService } from "../../db.js";

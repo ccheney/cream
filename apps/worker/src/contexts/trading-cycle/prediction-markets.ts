@@ -5,7 +5,7 @@
  * Fetches data from Kalshi/Polymarket and stores computed signals.
  */
 
-import { predictionMarketsWorkflow } from "@cream/api";
+import { predictionMarketsWorkflow } from "@cream/mastra";
 import { log } from "../../shared/logger.js";
 
 // ============================================

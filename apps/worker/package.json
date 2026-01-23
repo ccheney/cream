@@ -18,6 +18,7 @@
 		"@cream/agents": "workspace:*",
 		"@cream/api": "workspace:*",
 		"@cream/config": "workspace:*",
+		"@cream/mastra": "workspace:*",
 		"@cream/domain": "workspace:*",
 		"@cream/filings": "workspace:*",
 		"@cream/helix": "workspace:*",
