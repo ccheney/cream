@@ -4,6 +4,9 @@
 	"globalDependencies": [".env", "bun.lock", "biome.json", "packages/tsconfig/base.json"],
 	"globalEnv": ["NODE_ENV", "CREAM_ENV"],
 	"tasks": {
+		"transit": {
+			"dependsOn": ["^transit"]
+		},
 		"build": {
 			"dependsOn": ["^build"],
 			"inputs": ["$TURBO_DEFAULT$", "tsconfig.json"],
@@ -19,12 +22,12 @@
 			"passThroughEnv": ["CLAUDECODE", "NODE_ENV", "CREAM_ENV", "LLM_*", "ALPACA_*", "KALSHI_*"]
 		},
 		"lint": {
-			"dependsOn": ["^build"],
+			"dependsOn": ["transit"],
 			"inputs": ["$TURBO_DEFAULT$", "biome.json", "tsconfig.json"],
 			"outputs": []
 		},
 		"typecheck": {
-			"dependsOn": ["^build"],
+			"dependsOn": ["transit"],
 			"inputs": ["$TURBO_DEFAULT$", "tsconfig.json"],
 			"outputs": []
 		},
