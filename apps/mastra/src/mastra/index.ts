@@ -12,6 +12,7 @@
  * @see docs/plans/53-mastra-v1-migration.md
  */
 
+import { PredictionMarketsRepository } from "@cream/storage";
 import { Mastra } from "@mastra/core";
 import { Observability } from "@mastra/observability";
 import { OtelExporter } from "@mastra/otel-exporter";
@@ -30,12 +31,118 @@ import {
 } from "./agents/index.js";
 // Scorers
 import { decisionQualityScorer, researchDepthScorer } from "./scorers/index.js";
+// Tools - prediction markets repository provider
+import {
+	type PredictionMarketsToolRepo,
+	setPredictionMarketsRepositoryProvider,
+} from "./tools/prediction-markets/get-market-snapshots.js";
 // Workflows
 import {
 	macroWatchWorkflow,
 	predictionMarketsWorkflow,
 	tradingCycleWorkflow,
 } from "./workflows/index.js";
+
+// ============================================
+// Repository Provider Initialization
+// ============================================
+
+// Type adapters for prediction markets (tool uses uppercase, storage uses lowercase)
+type ToolPlatform = "KALSHI" | "POLYMARKET";
+type StoragePlatform = "kalshi" | "polymarket";
+type ToolMarketType =
+	| "FED_RATE"
+	| "ECONOMIC_DATA"
+	| "RECESSION"
+	| "GEOPOLITICAL"
+	| "REGULATORY"
+	| "ELECTION"
+	| "OTHER";
+type StorageMarketType = "rate" | "election" | "economic";
+
+function toStoragePlatform(p?: ToolPlatform): StoragePlatform | undefined {
+	if (!p) return undefined;
+	return p.toLowerCase() as StoragePlatform;
+}
+
+function toToolPlatform(p: string): ToolPlatform {
+	return p.toUpperCase() as ToolPlatform;
+}
+
+function toStorageMarketType(t?: ToolMarketType): StorageMarketType | undefined {
+	if (!t) return undefined;
+	const mapping: Record<ToolMarketType, StorageMarketType> = {
+		FED_RATE: "rate",
+		ECONOMIC_DATA: "economic",
+		RECESSION: "economic",
+		GEOPOLITICAL: "economic",
+		REGULATORY: "economic",
+		ELECTION: "election",
+		OTHER: "economic",
+	};
+	return mapping[t];
+}
+
+function toToolMarketType(t: string): ToolMarketType {
+	const mapping: Record<StorageMarketType, ToolMarketType> = {
+		rate: "FED_RATE",
+		election: "ELECTION",
+		economic: "ECONOMIC_DATA",
+	};
+	return mapping[t as StorageMarketType] ?? "OTHER";
+}
+
+// Wire up prediction markets tools with storage repository
+setPredictionMarketsRepositoryProvider(async (): Promise<PredictionMarketsToolRepo> => {
+	const repo = new PredictionMarketsRepository();
+
+	return {
+		async getLatestSignals() {
+			const signals = await repo.getLatestSignals();
+			return signals.map((s) => ({
+				id: s.id,
+				signalType: s.signalType,
+				signalValue: s.signalValue,
+				confidence: s.confidence,
+				computedAt: s.computedAt,
+			}));
+		},
+
+		async getLatestSnapshots(platform) {
+			const snapshots = await repo.getLatestSnapshots(toStoragePlatform(platform));
+			return snapshots.map((s) => ({
+				id: s.id,
+				platform: toToolPlatform(s.platform),
+				marketTicker: s.marketTicker,
+				marketType: toToolMarketType(s.marketType),
+				marketQuestion: s.marketQuestion,
+				snapshotTime: s.snapshotTime,
+				data: s.data,
+			}));
+		},
+
+		async findSnapshots(filters, limit) {
+			const snapshots = await repo.findSnapshots(
+				{
+					platform: toStoragePlatform(filters.platform as ToolPlatform | undefined),
+					marketType: toStorageMarketType(filters.marketType as ToolMarketType | undefined),
+					fromTime: filters.fromTime,
+					toTime: filters.toTime,
+				},
+				limit,
+			);
+			return snapshots.map((s) => ({
+				id: s.id,
+				platform: toToolPlatform(s.platform),
+				marketTicker: s.marketTicker,
+				marketType: toToolMarketType(s.marketType),
+				marketQuestion: s.marketQuestion,
+				snapshotTime: s.snapshotTime,
+				data: s.data,
+			}));
+		},
+	};
+});
 
 const otelEndpoint = Bun.env.OTEL_EXPORTER_OTLP_ENDPOINT ?? "http://localhost:4318";
 const observabilityEnabled = Bun.env.OTEL_ENABLED !== "false";

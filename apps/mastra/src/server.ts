@@ -13,6 +13,7 @@ import { type HonoBindings, type HonoVariables, MastraServer } from "@mastra/hon
 import { Hono } from "hono";
 import { cors } from "hono/cors";
 
+// Import mastra - this also initializes repository providers
 import { mastra } from "./mastra/index.js";
 
 const app = new Hono<{ Bindings: HonoBindings; Variables: HonoVariables }>();
