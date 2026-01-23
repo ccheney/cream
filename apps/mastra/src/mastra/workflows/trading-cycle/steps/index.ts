@@ -15,6 +15,7 @@
  * - act: Execute approved decisions
  */
 
+export { analystsStep } from "./analysts.js";
 export { groundingStep } from "./grounding.js";
 export { observeStep } from "./observe.js";
 export { orientStep } from "./orient.js";
