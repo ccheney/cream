@@ -29,10 +29,12 @@ Tests use `NODE_ENV=test` with `CREAM_ENV=PAPER` and `ctx.source="test"` to iden
 
 ```
 apps/
-  api/                  # Mastra server (agents + workflows)
+  alpaca-stream-proxy/  # Rust gRPC proxy for Alpaca WebSocket multiplexing
+  api/                  # Legacy Mastra server (being migrated)
   dashboard/            # Next.js 16 trading dashboard
   dashboard-api/        # Hono REST + WebSocket API
   execution-engine/     # Rust gRPC server (order routing, risk)
+  mastra/               # Mastra v1.0 server (agents + workflows)
   worker/               # Hourly scheduler
 
 packages/
