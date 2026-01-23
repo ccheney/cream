@@ -14,6 +14,7 @@ import { getIndicatorService } from "../../services/indicators.js";
 import { ErrorSchema, TimeframeSchema } from "./types.js";
 
 const app = new OpenAPIHono();
+const IndicatorSnapshotOpenApiSchema = IndicatorSnapshotSchema as unknown as z.ZodTypeAny;
 
 // ============================================
 // Full Indicator Snapshot Endpoint
@@ -29,7 +30,7 @@ const snapshotRoute = createRoute({
 	},
 	responses: {
 		200: {
-			content: { "application/json": { schema: IndicatorSnapshotSchema } },
+			content: { "application/json": { schema: IndicatorSnapshotOpenApiSchema } },
 			description: "Full indicator snapshot with all categories",
 		},
 		503: {
