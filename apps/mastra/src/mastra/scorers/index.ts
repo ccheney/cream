@@ -1,4 +1,8 @@
-// Scorer registry - exports all scorers for agent evaluation
-// Scorers will be added during migration
+/**
+ * Scorers Registry
+ *
+ * Exports all scorers for Mastra configuration.
+ */
 
-export {};
+export { decisionQualityScorer } from "./decision-quality.js";
+export { researchDepthScorer } from "./research-depth.js";
