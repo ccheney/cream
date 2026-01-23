@@ -17,8 +17,7 @@
  */
 
 // Trading Cycle Workflow
-// TODO: Migrate from apps/api/src/mastra/workflows/trading-cycle/
-// export { tradingCycleWorkflow } from "./trading-cycle/workflow.js";
+export { tradingCycleWorkflow } from "./trading-cycle/index.js";
 
 // Prediction Markets Workflow
 // TODO: Migrate from apps/api/src/mastra/workflows/prediction-markets.ts

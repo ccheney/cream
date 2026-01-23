@@ -22,5 +22,5 @@ export * from "./schemas.js";
 // Export steps
 export * from "./steps/index.js";
 
-// TODO: Export workflow definition once all steps are migrated
-// export { tradingCycleWorkflow } from "./workflow.js";
+// Export workflow definition
+export { tradingCycleWorkflow } from "./workflow.js";
