@@ -161,6 +161,16 @@ export function resetCalendarService(): void {
 	initializationPromise = null;
 }
 
+/**
+ * Test-only override for the singleton CalendarService.
+ *
+ * Avoids module mocking by injecting a stubbed instance.
+ */
+export function setCalendarServiceForTests(service: CalendarService | null): void {
+	calendarServiceInstance = service;
+	initializationPromise = null;
+}
+
 // ============================================
 // Factory Functions
 // ============================================
