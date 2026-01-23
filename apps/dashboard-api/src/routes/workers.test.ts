@@ -1,7 +1,37 @@
 import { beforeAll, beforeEach, describe, expect, mock, test } from "bun:test";
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-type ApiResponse = any;
+type WorkerServiceStatus = {
+	name: string;
+	displayName: string;
+	status: string;
+	lastRun?: { status: string; startedAt?: string };
+};
+
+type WorkerStatusResponse = {
+	services: WorkerServiceStatus[];
+};
+
+type WorkerRun = {
+	id: string;
+	service: string;
+	status: string;
+	duration: number | null;
+};
+
+type WorkerRunsResponse = {
+	runs: WorkerRun[];
+	total: number;
+};
+
+type WorkerRunResponse = {
+	run: WorkerRun;
+};
+
+type WorkerTriggerResponse = {
+	runId: string;
+	status: string;
+	message: string;
+};
 
 interface MockRun {
 	id: string;
@@ -243,7 +273,7 @@ describe("Workers Routes", () => {
 			const res = await workersRoutes.request("/status");
 			expect(res.status).toBe(200);
 
-			const data = (await res.json()) as ApiResponse;
+			const data = (await res.json()) as WorkerStatusResponse;
 			expect(data.services).toBeDefined();
 			expect(Array.isArray(data.services)).toBe(true);
 			expect(data.services.length).toBe(7);
@@ -260,7 +290,7 @@ describe("Workers Routes", () => {
 
 		test("includes display names for all services", async () => {
 			const res = await workersRoutes.request("/status");
-			const data = (await res.json()) as ApiResponse;
+			const data = (await res.json()) as WorkerStatusResponse;
 
 			for (const service of data.services) {
 				expect(service.displayName).toBeDefined();
@@ -271,23 +301,35 @@ describe("Workers Routes", () => {
 
 		test("identifies running services", async () => {
 			const res = await workersRoutes.request("/status");
-			const data = (await res.json()) as ApiResponse;
+			const data = (await res.json()) as WorkerStatusResponse;
 
 			const shortInterest = data.services.find(
 				(s: { name: string }) => s.name === "short_interest",
 			);
+			if (!shortInterest) {
+				throw new Error("Expected short_interest service");
+			}
 			expect(shortInterest.status).toBe("running");
 
 			const macroWatch = data.services.find((s: { name: string }) => s.name === "macro_watch");
+			if (!macroWatch) {
+				throw new Error("Expected macro_watch service");
+			}
 			expect(macroWatch.status).toBe("idle");
 		});
 
 		test("includes last run info for services with history", async () => {
 			const res = await workersRoutes.request("/status");
-			const data = (await res.json()) as ApiResponse;
+			const data = (await res.json()) as WorkerStatusResponse;
 
 			const macroWatch = data.services.find((s: { name: string }) => s.name === "macro_watch");
+			if (!macroWatch) {
+				throw new Error("Expected macro_watch service");
+			}
 			expect(macroWatch.lastRun).toBeDefined();
+			if (!macroWatch.lastRun) {
+				throw new Error("Expected macro_watch lastRun");
+			}
 			expect(macroWatch.lastRun.status).toBe("completed");
 			expect(macroWatch.lastRun.startedAt).toBeDefined();
 		});
@@ -298,7 +340,7 @@ describe("Workers Routes", () => {
 			const res = await workersRoutes.request("/runs");
 			expect(res.status).toBe(200);
 
-			const data = (await res.json()) as ApiResponse;
+			const data = (await res.json()) as WorkerRunsResponse;
 			expect(data.runs).toBeDefined();
 			expect(Array.isArray(data.runs)).toBe(true);
 			expect(data.total).toBeDefined();
@@ -308,7 +350,7 @@ describe("Workers Routes", () => {
 			const res = await workersRoutes.request("/runs?limit=3");
 			expect(res.status).toBe(200);
 
-			const data = (await res.json()) as ApiResponse;
+			const data = (await res.json()) as WorkerRunsResponse;
 			expect(data.runs.length).toBeLessThanOrEqual(3);
 		});
 
@@ -316,7 +358,7 @@ describe("Workers Routes", () => {
 			const res = await workersRoutes.request("/runs?service=macro_watch");
 			expect(res.status).toBe(200);
 
-			const data = (await res.json()) as ApiResponse;
+			const data = (await res.json()) as WorkerRunsResponse;
 			expect(data.runs.every((r: { service: string }) => r.service === "macro_watch")).toBe(true);
 		});
 
@@ -324,13 +366,13 @@ describe("Workers Routes", () => {
 			const res = await workersRoutes.request("/runs?status=completed");
 			expect(res.status).toBe(200);
 
-			const data = (await res.json()) as ApiResponse;
+			const data = (await res.json()) as WorkerRunsResponse;
 			expect(data.runs.every((r: { status: string }) => r.status === "completed")).toBe(true);
 		});
 
 		test("includes duration for completed runs", async () => {
 			const res = await workersRoutes.request("/runs?status=completed");
-			const data = (await res.json()) as ApiResponse;
+			const data = (await res.json()) as WorkerRunsResponse;
 
 			for (const run of data.runs) {
 				expect(run.duration).toBeDefined();
@@ -340,7 +382,7 @@ describe("Workers Routes", () => {
 
 		test("returns null duration for running jobs", async () => {
 			const res = await workersRoutes.request("/runs?status=running");
-			const data = (await res.json()) as ApiResponse;
+			const data = (await res.json()) as WorkerRunsResponse;
 
 			for (const run of data.runs) {
 				expect(run.duration).toBeNull();
@@ -371,7 +413,7 @@ describe("Workers Routes", () => {
 			const res = await workersRoutes.request("/runs/run-001");
 			expect(res.status).toBe(200);
 
-			const data = (await res.json()) as ApiResponse;
+			const data = (await res.json()) as WorkerRunResponse;
 			expect(data.run).toBeDefined();
 			expect(data.run.id).toBe("run-001");
 			expect(data.run.service).toBe("macro_watch");
@@ -394,7 +436,7 @@ describe("Workers Routes", () => {
 
 			expect(res.status).toBe(202);
 
-			const data = (await res.json()) as ApiResponse;
+			const data = (await res.json()) as WorkerTriggerResponse;
 			expect(data.runId).toBeDefined();
 			expect(data.status).toBe("started");
 			expect(data.message).toContain("Macro Watch");

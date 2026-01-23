@@ -4,6 +4,20 @@ import * as db from "../db";
 import { portfolioService } from "../services/portfolio";
 import { riskRoutes } from "./risk";
 
+type ExposureResponse = {
+	gross: number;
+	net: number;
+	long: number;
+	short: number;
+};
+
+type GreeksResponse = {
+	delta: { current: number };
+	gamma: { current: number };
+	vega: { current: number };
+	byPosition: Array<{ symbol: string }>;
+};
+
 // Mock system state
 mock.module("./system", () => ({
 	systemState: { environment: "PAPER" },
@@ -42,7 +56,7 @@ describe("Risk Routes", () => {
 		const res = await app.request("/exposure");
 		expect(res.status).toBe(200);
 
-		const data = (await res.json()) as any;
+		const data = (await res.json()) as ExposureResponse;
 		expect(data.gross).toBeDefined();
 		expect(data.net).toBeDefined();
 		expect(data.long).toBe(1500);
@@ -72,7 +86,7 @@ describe("Risk Routes", () => {
 		const res = await app.request("/greeks");
 		expect(res.status).toBe(200);
 
-		const data = (await res.json()) as any;
+		const data = (await res.json()) as GreeksResponse;
 		// Delta Notional = 0.5 (delta) * 150 (price) * 100 (mult) * 10 (qty) = 75000
 		expect(data.delta.current).toBe(75000);
 		// Gamma = 0.05 * 100 * 10 = 50
@@ -81,6 +95,10 @@ describe("Risk Routes", () => {
 		expect(data.vega.current).toBe(200);
 
 		expect(data.byPosition).toHaveLength(1);
-		expect(data.byPosition[0].symbol).toBe("AAPL240119C00150000");
+		const firstPosition = data.byPosition[0];
+		if (!firstPosition) {
+			throw new Error("Expected byPosition entry");
+		}
+		expect(firstPosition.symbol).toBe("AAPL240119C00150000");
 	});
 });

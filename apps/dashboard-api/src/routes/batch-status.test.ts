@@ -1,7 +1,29 @@
 import { beforeAll, describe, expect, mock, test } from "bun:test";
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-type ApiResponse = any;
+type BatchStatusRun = {
+	id: string;
+	run_type: string;
+	status: string;
+	symbols_processed: number;
+	symbols_failed: number;
+};
+
+type BatchStatusSummary = {
+	total_runs: number;
+	running: number;
+	completed: number;
+	failed: number;
+	last_completed: Record<string, string | null>;
+};
+
+type BatchStatusResponse = {
+	runs: BatchStatusRun[];
+	summary: BatchStatusSummary;
+};
+
+type BatchStatusByIdResponse = {
+	run: BatchStatusRun;
+};
 
 // Mock database
 const mockSyncRuns = [
@@ -87,8 +109,10 @@ const mockIndicatorSyncRunsRepo = {
 			corporate_actions: null,
 		};
 		for (const run of completed) {
-			if (!lastCompleted[run.runType] || run.completedAt! > lastCompleted[run.runType]!) {
-				lastCompleted[run.runType] = run.completedAt;
+			const completedAt = run.completedAt;
+			const previous = lastCompleted[run.runType];
+			if (completedAt && (!previous || completedAt > previous)) {
+				lastCompleted[run.runType] = completedAt;
 			}
 		}
 
@@ -119,7 +143,7 @@ describe("Batch Status Routes", () => {
 		const res = await batchStatusRoutes.request("/batch/status");
 		expect(res.status).toBe(200);
 
-		const data = (await res.json()) as ApiResponse;
+		const data = (await res.json()) as BatchStatusResponse;
 		expect(data.runs).toBeDefined();
 		expect(Array.isArray(data.runs)).toBe(true);
 		expect(data.summary).toBeDefined();
@@ -133,7 +157,7 @@ describe("Batch Status Routes", () => {
 		const res = await batchStatusRoutes.request("/batch/status?limit=2");
 		expect(res.status).toBe(200);
 
-		const data = (await res.json()) as ApiResponse;
+		const data = (await res.json()) as BatchStatusResponse;
 		expect(data.runs.length).toBeLessThanOrEqual(2);
 	});
 
@@ -141,7 +165,7 @@ describe("Batch Status Routes", () => {
 		const res = await batchStatusRoutes.request("/batch/status?type=fundamentals");
 		expect(res.status).toBe(200);
 
-		const data = (await res.json()) as ApiResponse;
+		const data = (await res.json()) as BatchStatusResponse;
 		expect(data.runs.every((r: { run_type: string }) => r.run_type === "fundamentals")).toBe(true);
 	});
 
@@ -149,7 +173,7 @@ describe("Batch Status Routes", () => {
 		const res = await batchStatusRoutes.request("/batch/status?status=completed");
 		expect(res.status).toBe(200);
 
-		const data = (await res.json()) as ApiResponse;
+		const data = (await res.json()) as BatchStatusResponse;
 		expect(data.runs.every((r: { status: string }) => r.status === "completed")).toBe(true);
 	});
 
@@ -157,7 +181,7 @@ describe("Batch Status Routes", () => {
 		const res = await batchStatusRoutes.request("/batch/status");
 		expect(res.status).toBe(200);
 
-		const data = (await res.json()) as ApiResponse;
+		const data = (await res.json()) as BatchStatusResponse;
 		expect(data.summary.last_completed).toBeDefined();
 		expect(data.summary.last_completed).toHaveProperty("fundamentals");
 		expect(data.summary.last_completed).toHaveProperty("short_interest");
@@ -169,7 +193,7 @@ describe("Batch Status Routes", () => {
 		const res = await batchStatusRoutes.request("/batch/status/run-001");
 		expect(res.status).toBe(200);
 
-		const data = (await res.json()) as ApiResponse;
+		const data = (await res.json()) as BatchStatusByIdResponse;
 		expect(data.run).toBeDefined();
 		expect(data.run.id).toBe("run-001");
 		expect(data.run.run_type).toBe("fundamentals");

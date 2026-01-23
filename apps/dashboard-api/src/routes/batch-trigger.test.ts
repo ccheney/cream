@@ -1,7 +1,17 @@
 import { beforeAll, beforeEach, describe, expect, mock, test } from "bun:test";
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-type ApiResponse = any;
+type TriggerResponse = {
+	run_id: string;
+	job_type: string;
+	status: string;
+	message: string;
+	symbols_count?: number;
+};
+
+type CancelResponse = {
+	success: boolean;
+	message: string;
+};
 
 interface MockRun {
 	id: string;
@@ -93,7 +103,7 @@ describe("Batch Trigger Routes", () => {
 			});
 
 			expect(res.status).toBe(202);
-			const data = (await res.json()) as ApiResponse;
+			const data = (await res.json()) as TriggerResponse;
 			expect(data.run_id).toBeDefined();
 			expect(data.job_type).toBe("fundamentals");
 			expect(data.status).toBe("pending");
@@ -113,7 +123,7 @@ describe("Batch Trigger Routes", () => {
 			});
 
 			expect(res.status).toBe(202);
-			const data = (await res.json()) as ApiResponse;
+			const data = (await res.json()) as TriggerResponse;
 			expect(data.symbols_count).toBe(3);
 			expect(data.message).toContain("3 symbols");
 		});
@@ -128,7 +138,7 @@ describe("Batch Trigger Routes", () => {
 			});
 
 			expect(res.status).toBe(202);
-			const data = (await res.json()) as ApiResponse;
+			const data = (await res.json()) as TriggerResponse;
 			expect(data.job_type).toBe("sentiment");
 		});
 
@@ -142,7 +152,7 @@ describe("Batch Trigger Routes", () => {
 			});
 
 			expect(res.status).toBe(202);
-			const data = (await res.json()) as ApiResponse;
+			const data = (await res.json()) as TriggerResponse;
 			expect(data.job_type).toBe("corporate_actions");
 		});
 
@@ -228,7 +238,7 @@ describe("Batch Trigger Routes", () => {
 			});
 
 			expect(res.status).toBe(200);
-			const data = (await res.json()) as ApiResponse;
+			const data = (await res.json()) as CancelResponse;
 			expect(data.success).toBe(true);
 			expect(data.message).toContain("run-to-cancel");
 		});
@@ -251,7 +261,7 @@ describe("Batch Trigger Routes", () => {
 			});
 
 			expect(res.status).toBe(200);
-			const data = (await res.json()) as ApiResponse;
+			const data = (await res.json()) as CancelResponse;
 			expect(data.success).toBe(true);
 		});
 

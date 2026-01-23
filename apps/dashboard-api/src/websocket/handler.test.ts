@@ -7,6 +7,7 @@
  */
 
 import { afterEach, beforeEach, describe, expect, it } from "bun:test";
+import { requireArrayItem } from "@cream/test-utils";
 import {
 	broadcast,
 	broadcastAll,
@@ -123,7 +124,7 @@ describe("Connection Lifecycle", () => {
 		handleOpen(ws as unknown as WebSocketWithMetadata);
 
 		expect(ws.sentMessages).toHaveLength(1);
-		const message = JSON.parse(ws.sentMessages[0]!);
+		const message = JSON.parse(requireArrayItem(ws.sentMessages, 0, "sent message"));
 		expect(message.type).toBe("system_status");
 		expect(message.data.health).toBe("healthy");
 	});
@@ -156,7 +157,8 @@ describe("handleMessage", () => {
 		expect(ws.data.channels.has("alerts")).toBe(true);
 
 		// Check confirmation sent
-		const lastMessage = JSON.parse(ws.sentMessages[ws.sentMessages.length - 1]!);
+		const lastIndex = ws.sentMessages.length - 1;
+		const lastMessage = JSON.parse(requireArrayItem(ws.sentMessages, lastIndex, "sent message"));
 		expect(lastMessage.type).toBe("subscribed");
 	});
 
@@ -197,7 +199,7 @@ describe("handleMessage", () => {
 		handleMessage(ws as unknown as WebSocketWithMetadata, JSON.stringify({ type: "ping" }));
 
 		expect(ws.sentMessages).toHaveLength(1);
-		const message = JSON.parse(ws.sentMessages[0]!);
+		const message = JSON.parse(requireArrayItem(ws.sentMessages, 0, "sent message"));
 		expect(message.type).toBe("pong");
 		expect(message.timestamp).toBeDefined();
 	});
@@ -210,7 +212,7 @@ describe("handleMessage", () => {
 		handleMessage(ws as unknown as WebSocketWithMetadata, "not json");
 
 		expect(ws.sentMessages).toHaveLength(1);
-		const message = JSON.parse(ws.sentMessages[0]!);
+		const message = JSON.parse(requireArrayItem(ws.sentMessages, 0, "sent message"));
 		expect(message.type).toBe("error");
 		expect(message.message).toContain("Invalid JSON");
 	});
@@ -223,7 +225,7 @@ describe("handleMessage", () => {
 		handleMessage(ws as unknown as WebSocketWithMetadata, JSON.stringify({ type: "invalid_type" }));
 
 		expect(ws.sentMessages).toHaveLength(1);
-		const message = JSON.parse(ws.sentMessages[0]!);
+		const message = JSON.parse(requireArrayItem(ws.sentMessages, 0, "sent message"));
 		expect(message.type).toBe("error");
 	});
 
@@ -364,7 +366,7 @@ describe("sendMessage", () => {
 		});
 
 		expect(ws.sentMessages).toHaveLength(1);
-		const message = JSON.parse(ws.sentMessages[0]!);
+		const message = JSON.parse(requireArrayItem(ws.sentMessages, 0, "sent message"));
 		expect(message.type).toBe("pong");
 	});
 });
@@ -376,7 +378,7 @@ describe("sendError", () => {
 		sendError(ws as unknown as WebSocketWithMetadata, "Test error");
 
 		expect(ws.sentMessages).toHaveLength(1);
-		const message = JSON.parse(ws.sentMessages[0]!);
+		const message = JSON.parse(requireArrayItem(ws.sentMessages, 0, "sent message"));
 		expect(message.type).toBe("error");
 		expect(message.message).toBe("Test error");
 	});

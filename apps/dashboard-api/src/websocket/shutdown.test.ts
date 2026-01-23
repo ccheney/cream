@@ -208,8 +208,11 @@ describe("initiateShutdown", () => {
 
 		const state = manager.getState();
 		expect(state.startedAt).not.toBe(null);
-		expect(state.startedAt!.getTime()).toBeGreaterThanOrEqual(before);
-		expect(state.startedAt!.getTime()).toBeLessThanOrEqual(after);
+		if (!state.startedAt) {
+			throw new Error("Expected shutdown start time to be set");
+		}
+		expect(state.startedAt.getTime()).toBeGreaterThanOrEqual(before);
+		expect(state.startedAt.getTime()).toBeLessThanOrEqual(after);
 	});
 
 	it("logs shutdown initiated event", async () => {
@@ -217,7 +220,10 @@ describe("initiateShutdown", () => {
 
 		const initiatedLog = deps.logs.find((l) => l.event === "shutdown.initiated");
 		expect(initiatedLog).toBeDefined();
-		expect(initiatedLog!.message).toContain("manual");
+		if (!initiatedLog) {
+			throw new Error("Expected shutdown initiated log");
+		}
+		expect(initiatedLog.message).toContain("manual");
 	});
 
 	it("prevents duplicate shutdown", async () => {
@@ -313,7 +319,10 @@ describe("Client Warning Phase", () => {
 
 		const warnedLog = deps.logs.find((l) => l.event === "shutdown.connection_warned");
 		expect(warnedLog).toBeDefined();
-		expect(warnedLog!.message).toContain("2");
+		if (!warnedLog) {
+			throw new Error("Expected warning log");
+		}
+		expect(warnedLog.message).toContain("2");
 	});
 
 	it("handles send failures gracefully", async () => {
@@ -454,7 +463,10 @@ describe("Queue Flushing Phase", () => {
 
 		const flushLog = deps.logs.find((l) => l.event === "shutdown.queue_flushed");
 		expect(flushLog).toBeDefined();
-		expect(flushLog!.message).toContain("No queue flush configured");
+		if (!flushLog) {
+			throw new Error("Expected queue flush log");
+		}
+		expect(flushLog.message).toContain("No queue flush configured");
 	});
 
 	it("handles flush timeout", async () => {
@@ -507,7 +519,10 @@ describe("Subscription Cleanup Phase", () => {
 
 		const cleanupLog = deps.logs.find((l) => l.event === "shutdown.subscriptions_closed");
 		expect(cleanupLog).toBeDefined();
-		expect(cleanupLog!.message).toContain("No subscription cleanup configured");
+		if (!cleanupLog) {
+			throw new Error("Expected subscriptions cleanup log");
+		}
+		expect(cleanupLog.message).toContain("No subscription cleanup configured");
 	});
 });
 
@@ -605,8 +620,11 @@ describe("Shutdown Completion", () => {
 
 		const completeLog = deps.logs.find((l) => l.event === "shutdown.complete");
 		expect(completeLog).toBeDefined();
-		expect(completeLog!.duration).toBeDefined();
-		expect(completeLog!.duration).toBeGreaterThanOrEqual(0);
+		if (!completeLog) {
+			throw new Error("Expected shutdown completion log");
+		}
+		expect(completeLog.duration).toBeDefined();
+		expect(completeLog.duration).toBeGreaterThanOrEqual(0);
 	});
 
 	it("logs completion with metrics", async () => {
@@ -616,7 +634,10 @@ describe("Shutdown Completion", () => {
 
 		const completeLog = deps.logs.find((l) => l.event === "shutdown.complete");
 		expect(completeLog).toBeDefined();
-		expect(completeLog!.metadata?.forcedClosures).toBe(1);
+		if (!completeLog) {
+			throw new Error("Expected shutdown completion log");
+		}
+		expect(completeLog.metadata?.forcedClosures).toBe(1);
 	});
 });
 
@@ -803,7 +824,10 @@ describe("Edge Cases", () => {
 
 		const errorLog = deps.logs.find((l) => l.event === "shutdown.error");
 		expect(errorLog).toBeDefined();
-		expect(errorLog!.message).toContain("Cleanup failed");
+		if (!errorLog) {
+			throw new Error("Expected shutdown error log");
+		}
+		expect(errorLog.message).toContain("Cleanup failed");
 
 		// Should still complete
 		expect(manager.getCurrentPhase()).toBe("complete");
