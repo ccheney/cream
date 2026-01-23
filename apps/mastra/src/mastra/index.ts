@@ -16,8 +16,18 @@ import { Mastra } from "@mastra/core";
 import { Observability } from "@mastra/observability";
 import { OtelExporter } from "@mastra/otel-exporter";
 
-// Agents - will be populated as migration progresses
-// import * as agents from "./agents";
+// Agents
+import {
+	bearishResearcher,
+	bullishResearcher,
+	critic,
+	fundamentalsAnalyst,
+	groundingAgent,
+	newsAnalyst,
+	riskManager,
+	routingAgent,
+	trader,
+} from "./agents/index.js";
 
 // Workflows - will be populated as migration progresses
 // import * as workflows from "./workflows";
@@ -54,7 +64,15 @@ const observabilityEnabled = Bun.env.OTEL_ENABLED !== "false";
  */
 export const mastra = new Mastra({
 	agents: {
-		// Will be populated as agents are migrated
+		groundingAgent,
+		newsAnalyst,
+		fundamentalsAnalyst,
+		bullishResearcher,
+		bearishResearcher,
+		trader,
+		riskManager,
+		critic,
+		routingAgent,
 	},
 	workflows: {
 		// Will be populated as workflows are migrated
