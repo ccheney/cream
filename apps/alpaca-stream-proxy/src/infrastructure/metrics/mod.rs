@@ -30,6 +30,7 @@ static PROMETHEUS_HANDLE: OnceLock<PrometheusHandle> = OnceLock::new();
 /// # Panics
 ///
 /// Panics if called more than once or if the recorder cannot be installed.
+#[allow(clippy::expect_used)]
 pub fn init_metrics() -> PrometheusHandle {
     PROMETHEUS_HANDLE
         .get_or_init(|| {

@@ -107,6 +107,12 @@ pub fn init() -> TelemetryGuard {
 /// Initialize telemetry with custom configuration.
 ///
 /// Returns a guard that must be kept alive for the duration of the program.
+///
+/// # Panics
+///
+/// Panics if:
+/// - The tracing subscriber cannot be initialized (e.g., already initialized)
+/// - The OTLP exporter fails to build (e.g., invalid endpoint)
 #[must_use]
 #[allow(clippy::expect_used)]
 pub fn init_with_config(config: TelemetryConfig) -> TelemetryGuard {
