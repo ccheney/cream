@@ -1,10 +1,13 @@
 /**
  * Trading Cycle Trigger
  *
- * Domain service for triggering OODA trading cycles via dashboard-api.
- * The worker delegates cycle execution to dashboard-api for unified streaming.
+ * Domain service for triggering OODA trading cycles.
+ * Supports two modes:
+ * - Legacy: Triggers via dashboard-api (when USE_MASTRA_APP=false)
+ * - New: Triggers directly via Mastra API (when USE_MASTRA_APP=true)
  */
 
+import { MASTRA_API_URL, USE_MASTRA_APP } from "@cream/config";
 import { log } from "../../shared/logger.js";
 
 // ============================================
@@ -13,7 +16,9 @@ import { log } from "../../shared/logger.js";
 
 export interface CycleTriggerConfig {
 	dashboardApiUrl: string;
+	mastraApiUrl: string;
 	workerInternalSecret: string;
+	useMastraApp: boolean;
 }
 
 export interface CycleTriggerResult {
@@ -44,6 +49,21 @@ export class CycleTriggerService {
 		}
 
 		this.running = true;
+
+		try {
+			if (this.config.useMastraApp) {
+				return await this.triggerViaMastra(environment, symbols);
+			}
+			return await this.triggerViaDashboardApi(environment, symbols);
+		} finally {
+			this.running = false;
+		}
+	}
+
+	private async triggerViaDashboardApi(
+		environment: string,
+		symbols: string[],
+	): Promise<CycleTriggerResult | null> {
 		log.info({ environment }, "Triggering trading cycle via dashboard-api");
 
 		try {
@@ -71,7 +91,7 @@ export class CycleTriggerService {
 			const result = (await response.json()) as CycleTriggerResult;
 			log.info(
 				{ cycleId: result.cycleId, status: result.status },
-				"Trading cycle triggered successfully",
+				"Trading cycle triggered successfully via dashboard-api",
 			);
 			return result;
 		} catch (error) {
@@ -83,8 +103,80 @@ export class CycleTriggerService {
 				"Failed to reach dashboard-api for trading cycle trigger",
 			);
 			return null;
-		} finally {
-			this.running = false;
+		}
+	}
+
+	private async triggerViaMastra(
+		environment: string,
+		symbols: string[],
+	): Promise<CycleTriggerResult | null> {
+		log.info(
+			{ environment, mastraApiUrl: this.config.mastraApiUrl },
+			"Triggering trading cycle via Mastra API",
+		);
+
+		const cycleId = crypto.randomUUID();
+
+		try {
+			// Step 1: Create run
+			const createResponse = await fetch(
+				`${this.config.mastraApiUrl}/api/workflows/tradingCycleWorkflow/create-run?runId=${cycleId}`,
+				{
+					method: "POST",
+					headers: { "Content-Type": "application/json" },
+				},
+			);
+
+			if (!createResponse.ok) {
+				const errorBody = await createResponse.text();
+				log.error(
+					{ status: createResponse.status, body: errorBody },
+					"Failed to create Mastra workflow run",
+				);
+				return null;
+			}
+
+			// Step 2: Start streaming execution
+			const streamResponse = await fetch(
+				`${this.config.mastraApiUrl}/api/workflows/tradingCycleWorkflow/stream?runId=${cycleId}`,
+				{
+					method: "POST",
+					headers: { "Content-Type": "application/json" },
+					body: JSON.stringify({
+						inputData: {
+							cycleId,
+							instruments: symbols,
+							environment,
+						},
+					}),
+				},
+			);
+
+			if (!streamResponse.ok) {
+				const errorBody = await streamResponse.text();
+				log.error(
+					{ status: streamResponse.status, body: errorBody },
+					"Failed to start Mastra workflow stream",
+				);
+				return null;
+			}
+
+			// Stream is started - workflow will run asynchronously
+			log.info({ cycleId }, "Trading cycle triggered successfully via Mastra API");
+
+			return {
+				cycleId,
+				status: "queued",
+			};
+		} catch (error) {
+			log.error(
+				{
+					error: error instanceof Error ? error.message : String(error),
+					mastraApiUrl: this.config.mastraApiUrl,
+				},
+				"Failed to reach Mastra API for trading cycle trigger",
+			);
+			return null;
 		}
 	}
 }
@@ -96,6 +188,8 @@ export function createCycleTriggerService(config: CycleTriggerConfig): CycleTrig
 export function createCycleTriggerServiceFromEnv(): CycleTriggerService {
 	return new CycleTriggerService({
 		dashboardApiUrl: Bun.env.DASHBOARD_API_URL ?? "http://localhost:3001",
+		mastraApiUrl: MASTRA_API_URL,
 		workerInternalSecret: Bun.env.WORKER_INTERNAL_SECRET ?? "dev-internal-secret",
+		useMastraApp: USE_MASTRA_APP,
 	});
 }
