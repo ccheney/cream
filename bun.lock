@@ -6,6 +6,7 @@
       "name": "cream",
       "devDependencies": {
         "@biomejs/biome": "2.3.11",
+        "@cream/test-utils": "workspace:*",
         "@typescript/native-preview": "7.0.0-dev.20260122.4",
         "husky": "9.1.7",
         "testcontainers": "11.11.0",
@@ -96,6 +97,7 @@
         "zod": "4.3.6",
       },
       "devDependencies": {
+        "@cream/test-utils": "workspace:*",
         "@cream/tsconfig": "workspace:*",
         "@types/bun": "1.3.6",
         "@typescript/native-preview": "7.0.0-dev.20260122.4",
@@ -199,6 +201,7 @@
         "@google/genai": "1.38.0",
       },
       "devDependencies": {
+        "@cream/test-utils": "workspace:*",
         "@cream/tsconfig": "workspace:*",
         "@types/bun": "1.3.6",
         "@typescript/native-preview": "7.0.0-dev.20260122.4",
@@ -216,6 +219,7 @@
         "@cream/logger": "workspace:*",
       },
       "devDependencies": {
+        "@cream/test-utils": "workspace:*",
         "@cream/tsconfig": "workspace:*",
         "@types/bun": "1.3.6",
         "@typescript/native-preview": "7.0.0-dev.20260122.4",
@@ -230,6 +234,7 @@
         "zod": "4.3.6",
       },
       "devDependencies": {
+        "@cream/test-utils": "workspace:*",
         "@cream/tsconfig": "workspace:*",
         "@types/bun": "1.3.6",
         "@typescript/native-preview": "7.0.0-dev.20260122.4",
@@ -276,6 +281,7 @@
         "zod": "4.3.6",
       },
       "devDependencies": {
+        "@cream/test-utils": "workspace:*",
         "@cream/tsconfig": "workspace:*",
         "@types/bun": "1.3.6",
         "@typescript/native-preview": "7.0.0-dev.20260122.4",
@@ -325,6 +331,7 @@
         "@google/genai": "1.38.0",
       },
       "devDependencies": {
+        "@cream/test-utils": "workspace:*",
         "@cream/tsconfig": "workspace:*",
         "@types/bun": "1.3.6",
         "@typescript/native-preview": "7.0.0-dev.20260122.4",
@@ -340,6 +347,7 @@
         "typescript": "5.9.3",
       },
       "devDependencies": {
+        "@cream/test-utils": "workspace:*",
         "@cream/tsconfig": "workspace:*",
         "@types/bun": "1.3.6",
         "@typescript/native-preview": "7.0.0-dev.20260122.4",
@@ -376,6 +384,7 @@
         "zod": "4.3.6",
       },
       "devDependencies": {
+        "@cream/test-utils": "workspace:*",
         "@cream/tsconfig": "workspace:*",
         "@types/bun": "1.3.6",
         "@typescript/native-preview": "7.0.0-dev.20260122.4",
@@ -401,6 +410,7 @@
         "zod": "4.3.6",
       },
       "devDependencies": {
+        "@cream/test-utils": "workspace:*",
         "@cream/tsconfig": "workspace:*",
         "@types/bun": "1.3.6",
         "@typescript/native-preview": "7.0.0-dev.20260122.4",
@@ -422,6 +432,7 @@
         "@cream/logger": "workspace:*",
       },
       "devDependencies": {
+        "@cream/test-utils": "workspace:*",
         "@cream/tsconfig": "workspace:*",
         "@types/bun": "1.3.6",
         "@typescript/native-preview": "7.0.0-dev.20260122.4",
@@ -456,6 +467,15 @@
         "@types/pg": "^8.16.0",
         "@typescript/native-preview": "7.0.0-dev.20260122.4",
         "drizzle-kit": "^0.31.8",
+      },
+    },
+    "packages/test-utils": {
+      "name": "@cream/test-utils",
+      "version": "0.1.0",
+      "devDependencies": {
+        "@cream/tsconfig": "workspace:*",
+        "@types/bun": "1.3.6",
+        "@typescript/native-preview": "7.0.0-dev.20260122.4",
       },
     },
     "packages/tsconfig": {
@@ -654,6 +674,8 @@
     "@cream/schema-gen": ["@cream/schema-gen@workspace:packages/schema-gen"],
 
     "@cream/storage": ["@cream/storage@workspace:packages/storage"],
+
+    "@cream/test-utils": ["@cream/test-utils@workspace:packages/test-utils"],
 
     "@cream/tsconfig": ["@cream/tsconfig@workspace:packages/tsconfig"],
 
