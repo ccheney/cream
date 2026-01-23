@@ -1,4 +1,8 @@
-// Agent registry - exports all agents for Mastra configuration
-// Agents will be added as they are migrated from apps/api
+/**
+ * Agent Registry
+ *
+ * Exports all agents for Mastra configuration.
+ * Agents are migrated from packages/agents to this location.
+ */
 
-export {};
+export { newsAnalyst } from "./news-analyst.js";
