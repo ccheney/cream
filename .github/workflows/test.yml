@@ -6,13 +6,8 @@ on:
   pull_request:
     branches: [master]
   workflow_call:
-  workflow_dispatch:
-    inputs:
-      run_integration:
-        description: 'Run integration tests'
-        required: false
-        default: true
-        type: boolean
+  schedule:
+    - cron: "0 6 * * *"
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
@@ -24,48 +19,18 @@ env:
 
 jobs:
   # ============================================
-  # Detect Changed Paths (for conditional jobs)
-  # ============================================
-  changes:
-    name: Detect Changes
-    runs-on: ubuntu-latest
-    outputs:
-      typescript: ${{ steps.filter.outputs.typescript }}
-      rust: ${{ steps.filter.outputs.rust }}
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v6
-
-      - name: Check for changed paths
-        uses: dorny/paths-filter@v3
-        id: filter
-        with:
-          filters: |
-            typescript:
-              - 'apps/**/*.ts'
-              - 'apps/**/*.tsx'
-              - 'packages/**/*.ts'
-              - 'packages/**/*.tsx'
-              - 'package.json'
-              - 'bun.lock'
-              - 'turbo.json'
-            rust:
-              - 'apps/execution-engine/**'
-              - '**/Cargo.toml'
-              - '**/Cargo.lock'
-
-  # ============================================
   # TypeScript Unit Tests
   # ============================================
   unit-ts:
     name: TypeScript Tests
     runs-on: ubuntu-latest
-    needs: changes
-    if: ${{ needs.changes.outputs.typescript == 'true' || github.event_name == 'push' }}
+    if: ${{ github.event_name != 'schedule' }}
 
     steps:
       - name: Checkout
         uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
 
       - name: Setup Bun
         uses: oven-sh/setup-bun@v2
@@ -89,7 +54,12 @@ jobs:
         run: bun install --force
 
       - name: Run tests
-        run: bun run test:ts
+        run: |
+          if [[ "${{ github.event_name }}" == "schedule" ]]; then
+            bun run test:ts
+          else
+            bun run test:ts -- --affected
+          fi
 
   # ============================================
   # Rust Unit Tests
@@ -97,12 +67,13 @@ jobs:
   unit-rust:
     name: Rust Tests
     runs-on: ubuntu-latest
-    needs: changes
-    if: ${{ needs.changes.outputs.rust == 'true' || github.event_name == 'push' }}
+    if: ${{ github.event_name != 'schedule' }}
 
     steps:
       - name: Checkout
         uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
 
       - name: Setup Bun
         uses: oven-sh/setup-bun@v2
@@ -124,6 +95,7 @@ jobs:
             ~/.cargo/registry
             ~/.cargo/git
             apps/execution-engine/target
+            apps/alpaca-stream-proxy/target
           key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
           restore-keys: |
             ${{ runner.os }}-cargo-
@@ -132,7 +104,12 @@ jobs:
         run: bun install
 
       - name: Run tests
-        run: bun run test:rs
+        run: |
+          if [[ "${{ github.event_name }}" == "schedule" ]]; then
+            bun run test:rs
+          else
+            bun run test:rs -- --affected
+          fi
 
   # ============================================
   # Integration Tests (using testcontainers)
@@ -143,12 +120,14 @@ jobs:
   integration:
     name: Integration Tests
     runs-on: ubuntu-latest
-    needs: [changes, unit-rust]
-    if: ${{ github.event_name == 'workflow_dispatch' && inputs.run_integration }}
+    needs: [unit-rust]
+    if: ${{ github.event_name == 'schedule' }}
 
     steps:
       - name: Checkout
         uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
 
       - name: Setup Bun
         uses: oven-sh/setup-bun@v2
@@ -178,6 +157,7 @@ jobs:
             ~/.cargo/registry
             ~/.cargo/git
             apps/execution-engine/target
+            apps/alpaca-stream-proxy/target
           key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
           restore-keys: |
             ${{ runner.os }}-cargo-
@@ -198,12 +178,13 @@ jobs:
   lint:
     name: Lint & Type Check
     runs-on: ubuntu-latest
-    needs: changes
-    if: ${{ needs.changes.outputs.typescript == 'true' || github.event_name == 'push' }}
+    if: ${{ github.event_name != 'schedule' }}
 
     steps:
       - name: Checkout
         uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
 
       - name: Setup Bun
         uses: oven-sh/setup-bun@v2
@@ -227,13 +208,23 @@ jobs:
         run: bun install
 
       - name: Run Biome lint
-        run: bun run lint
+        run: |
+          if [[ "${{ github.event_name }}" == "schedule" ]]; then
+            bunx turbo run lint
+          else
+            bunx turbo run lint --affected
+          fi
 
       - name: Validate package dependencies
         run: bun run lint:deps
 
       - name: Type check
-        run: bun run typecheck
+        run: |
+          if [[ "${{ github.event_name }}" == "schedule" ]]; then
+            bun run typecheck
+          else
+            bun run typecheck -- --affected
+          fi
 
   # ============================================
   # Status Gate (for required checks)
@@ -241,13 +232,12 @@ jobs:
   test-gate:
     name: Test Gate
     runs-on: ubuntu-latest
-    needs: [changes, unit-ts, unit-rust, integration, lint]
+    needs: [unit-ts, unit-rust, integration, lint]
     if: always()
 
     steps:
       - name: Check job statuses
         run: |
-          echo "Changes: ${{ needs.changes.result }}"
           echo "TypeScript: ${{ needs.unit-ts.result }}"
           echo "Rust: ${{ needs.unit-rust.result }}"
           echo "Integration: ${{ needs.integration.result }}"

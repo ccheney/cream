@@ -9,12 +9,12 @@
 		"packages/*"
 	],
 	"scripts": {
-		"dev": "set -a && . .env 2>/dev/null && set +a && NODE_ENV=development CREAM_ENV=${CREAM_ENV:-PAPER} turbo run dev",
-		"build": "turbo run build",
-		"test": "NODE_ENV=test CREAM_ENV=PAPER turbo run test --filter='!./apps/dashboard'",
-		"test:ts": "NODE_ENV=test CREAM_ENV=PAPER turbo run test --filter='!./apps/dashboard' --filter='!@cream/execution-engine'",
-		"test:rs": "CREAM_ENV=PAPER turbo run test --filter=@cream/execution-engine",
-		"test:e2e": "CREAM_ENV=PAPER bun test ./**/tests/integration/*.test.ts --timeout 120000 && cd apps/dashboard && bun run test:e2e",
+		"dev": "set -a; [ -f .env ] && . .env; set +a; NODE_ENV=development CREAM_ENV=${CREAM_ENV:-PAPER} turbo run dev",
+		"build": "set -a; [ -f .env ] && . .env; set +a; turbo run build",
+		"test": "set -a; [ -f .env ] && . .env; set +a; NODE_ENV=test CREAM_ENV=PAPER turbo run test --filter='!./apps/dashboard'",
+		"test:ts": "set -a; [ -f .env ] && . .env; set +a; NODE_ENV=test CREAM_ENV=PAPER turbo run test --filter='!./apps/dashboard' --filter='!@cream/execution-engine' --filter='!@cream/alpaca-stream-proxy'",
+		"test:rs": "set -a; [ -f .env ] && . .env; set +a; CREAM_ENV=PAPER turbo run test --filter=@cream/execution-engine --filter=@cream/alpaca-stream-proxy",
+		"test:e2e": "set -a; [ -f .env ] && . .env; set +a; CREAM_ENV=PAPER bun test ./**/tests/integration/*.test.ts --timeout 120000 && cd apps/dashboard && bun run test:e2e",
 		"typecheck": "turbo run typecheck",
 		"clean": "turbo run clean && rm -rf node_modules",
 		"format": "turbo run format",
