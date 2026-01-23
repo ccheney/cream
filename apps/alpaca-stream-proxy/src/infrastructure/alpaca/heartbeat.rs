@@ -308,7 +308,9 @@ mod tests {
 
         // Set last pong to be in the past
         {
-            *state.last_pong.write() = Instant::now().checked_sub(Duration::from_millis(200)).unwrap();
+            *state.last_pong.write() = Instant::now()
+                .checked_sub(Duration::from_millis(200))
+                .unwrap();
         }
 
         // Spawn manager

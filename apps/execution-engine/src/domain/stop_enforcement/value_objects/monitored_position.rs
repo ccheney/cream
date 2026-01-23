@@ -1,5 +1,7 @@
 //! Monitored Position Value Object
 
+use rust_decimal::Decimal;
+
 use crate::domain::shared::{InstrumentId, OrderId};
 
 use super::StopTargetLevels;
@@ -11,6 +13,8 @@ pub struct MonitoredPosition {
     position_id: OrderId,
     /// Instrument being monitored.
     instrument_id: InstrumentId,
+    /// Position quantity (shares or contracts).
+    quantity: Decimal,
     /// Stop/target levels.
     levels: StopTargetLevels,
     /// Whether monitoring is active.
@@ -23,11 +27,13 @@ impl MonitoredPosition {
     pub const fn new(
         position_id: OrderId,
         instrument_id: InstrumentId,
+        quantity: Decimal,
         levels: StopTargetLevels,
     ) -> Self {
         Self {
             position_id,
             instrument_id,
+            quantity,
             levels,
             active: true,
         }
@@ -43,6 +49,12 @@ impl MonitoredPosition {
     #[must_use]
     pub const fn instrument_id(&self) -> &InstrumentId {
         &self.instrument_id
+    }
+
+    /// Get the position quantity.
+    #[must_use]
+    pub const fn quantity(&self) -> Decimal {
+        self.quantity
     }
 
     /// Get the stop/target levels.
@@ -93,11 +105,13 @@ mod tests {
         let position = MonitoredPosition::new(
             OrderId::new("pos-1"),
             InstrumentId::new("AAPL"),
+            Decimal::new(50, 0),
             test_levels(),
         );
 
         assert_eq!(position.position_id().as_str(), "pos-1");
         assert_eq!(position.instrument_id().as_str(), "AAPL");
+        assert_eq!(position.quantity(), Decimal::new(50, 0));
         assert!(position.is_active());
     }
 
@@ -106,6 +120,7 @@ mod tests {
         let mut position = MonitoredPosition::new(
             OrderId::new("pos-1"),
             InstrumentId::new("AAPL"),
+            Decimal::new(100, 0),
             test_levels(),
         );
 
@@ -123,6 +138,7 @@ mod tests {
         let mut position = MonitoredPosition::new(
             OrderId::new("pos-1"),
             InstrumentId::new("AAPL"),
+            Decimal::new(100, 0),
             test_levels(),
         );
 

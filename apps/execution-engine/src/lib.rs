@@ -22,11 +22,7 @@
 //!
 //! Deterministic execution engine for the Cream trading system.
 //!
-//! # Architecture (Clean Architecture + DDD + Hexagonal)
-//!
-//! The execution engine follows Clean Architecture principles with Domain-Driven Design:
-//!
-//! ## Layers (inside → outside)
+//! # Layers (inside → outside)
 //!
 //! - **Domain**: Core business logic (aggregates, value objects, domain events)
 //!   - `order_execution`: Order aggregate, status lifecycle, fills
@@ -56,7 +52,7 @@
 #![warn(clippy::pedantic)]
 
 // =============================================================================
-// Clean Architecture Layers
+// Module Declarations
 // =============================================================================
 
 /// Domain layer - Core business logic with no external dependencies.
@@ -69,7 +65,7 @@ pub mod application;
 pub mod infrastructure;
 
 // =============================================================================
-// Re-exports from Clean Architecture
+// Re-exports
 // =============================================================================
 
 // Domain re-exports

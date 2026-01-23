@@ -320,9 +320,10 @@ impl ProxyQuoteManager {
 
 /// Convert a protobuf stock quote to a local `QuoteUpdate`.
 fn convert_stock_quote(proto: &ProtoStockQuote) -> QuoteUpdate {
-    let timestamp = proto
-        .timestamp
-        .as_ref().map_or_else(Utc::now, |ts| Utc.timestamp_opt(ts.seconds, ts.nanos as u32).unwrap());
+    let timestamp = proto.timestamp.as_ref().map_or_else(Utc::now, |ts| {
+        Utc.timestamp_opt(ts.seconds, ts.nanos.unsigned_abs())
+            .unwrap()
+    });
 
     QuoteUpdate {
         symbol: proto.symbol.clone(),
@@ -337,9 +338,10 @@ fn convert_stock_quote(proto: &ProtoStockQuote) -> QuoteUpdate {
 
 /// Convert a protobuf option quote to a local `QuoteUpdate`.
 fn convert_option_quote(proto: &ProtoOptionQuote) -> QuoteUpdate {
-    let timestamp = proto
-        .timestamp
-        .as_ref().map_or_else(Utc::now, |ts| Utc.timestamp_opt(ts.seconds, ts.nanos as u32).unwrap());
+    let timestamp = proto.timestamp.as_ref().map_or_else(Utc::now, |ts| {
+        Utc.timestamp_opt(ts.seconds, ts.nanos.unsigned_abs())
+            .unwrap()
+    });
 
     QuoteUpdate {
         symbol: proto.symbol.clone(),

@@ -1,14 +1,8 @@
-//! Stream Proxy Client (Driven Adapter)
+//! Stream Proxy Client
 //!
 //! This module provides a gRPC client for connecting to the stream proxy service,
 //! which multiplexes real-time market data and order updates from Alpaca WebSocket
 //! connections through a single gRPC interface.
-//!
-//! # Architecture
-//!
-//! The stream proxy client is a **driven adapter** (outbound) that implements
-//! the hexagonal architecture pattern. It consumes real-time data from an
-//! external service (the stream proxy) and provides it to the application layer.
 //!
 //! # Usage
 //!

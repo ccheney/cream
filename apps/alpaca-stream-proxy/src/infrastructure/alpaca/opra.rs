@@ -125,16 +125,20 @@ impl OpraClientConfig {
 
     /// Create configuration for paper trading environment.
     ///
-    /// Uses the `indicative` feed which provides simulated options data.
+    /// Uses the `indicative` feed which provides indicative options data
+    /// (available on basic plan). Note: Market data streams always use
+    /// production URLs - paper vs live only affects trading API.
     #[must_use]
     pub fn paper(credentials: Credentials) -> Self {
         Self::new(
-            "wss://stream.data.sandbox.alpaca.markets/v1beta1/indicative".to_string(),
+            "wss://stream.data.alpaca.markets/v1beta1/indicative".to_string(),
             credentials,
         )
     }
 
     /// Create configuration for live trading environment.
+    ///
+    /// Uses the full OPRA feed (requires Algo Trader Plus subscription).
     #[must_use]
     pub fn live(credentials: Credentials) -> Self {
         Self::new(
@@ -561,7 +565,9 @@ mod tests {
     fn opra_config_paper() {
         let creds = Credentials::new("key", "secret").unwrap();
         let config = OpraClientConfig::paper(creds);
-        assert!(config.url.contains("sandbox"));
+        // Market data always uses production URLs (same data for paper/live)
+        assert!(!config.url.contains("sandbox"));
+        assert!(config.url.contains("stream.data.alpaca.markets"));
         assert!(config.url.contains("/v1beta1/indicative"));
     }
 

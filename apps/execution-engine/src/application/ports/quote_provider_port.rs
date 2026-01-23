@@ -5,9 +5,6 @@
 //!
 //! - `WebSocketManager` - Direct Alpaca WebSocket connections
 //! - `ProxyQuoteManager` - gRPC streaming from the centralized stream proxy
-//!
-//! This follows the hexagonal architecture pattern, allowing the application layer
-//! to remain agnostic to how quotes are delivered.
 
 use async_trait::async_trait;
 use tokio::sync::broadcast;

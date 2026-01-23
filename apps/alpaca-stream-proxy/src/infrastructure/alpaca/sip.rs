@@ -127,22 +127,18 @@ impl SipClientConfig {
 
     /// Create configuration for paper trading environment.
     ///
-    /// # Errors
-    ///
-    /// Returns an error if credentials cannot be created.
+    /// Note: Market data streams always use production URLs. Paper vs live only
+    /// affects the trading API, not market data. You get the same real market
+    /// data whether paper trading or live trading.
     #[must_use]
     pub fn paper(credentials: Credentials, feed: &str) -> Self {
         Self::new(
-            format!("wss://stream.data.sandbox.alpaca.markets/v2/{feed}"),
+            format!("wss://stream.data.alpaca.markets/v2/{feed}"),
             credentials,
         )
     }
 
     /// Create configuration for live trading environment.
-    ///
-    /// # Errors
-    ///
-    /// Returns an error if credentials cannot be created.
     #[must_use]
     pub fn live(credentials: Credentials, feed: &str) -> Self {
         Self::new(
@@ -571,7 +567,9 @@ mod tests {
     fn sip_config_paper() {
         let creds = Credentials::new("key", "secret").unwrap();
         let config = SipClientConfig::paper(creds, "sip");
-        assert!(config.url.contains("sandbox"));
+        // Market data always uses production URLs (same data for paper/live)
+        assert!(!config.url.contains("sandbox"));
+        assert!(config.url.contains("stream.data.alpaca.markets"));
         assert!(config.url.contains("/v2/sip"));
     }
 

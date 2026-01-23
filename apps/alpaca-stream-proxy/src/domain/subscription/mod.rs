@@ -531,7 +531,7 @@ mod tests {
         assert!(
             all_changes
                 .get(&SubscriptionType::Quotes)
-                .map_or(true, |c| c.unsubscribe.is_empty())
+                .is_none_or(|c| c.unsubscribe.is_empty())
         );
     }
 

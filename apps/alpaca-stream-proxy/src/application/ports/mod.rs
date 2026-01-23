@@ -1,8 +1,7 @@
 //! Port Interfaces
 //!
-//! Defines the interfaces (ports) for external systems following
-//! the Hexagonal Architecture pattern. These are the contracts that
-//! infrastructure adapters must implement.
+//! Defines the interfaces (ports) for external systems. These are the
+//! contracts that infrastructure adapters must implement.
 //!
 //! ## Driven Ports (Outbound)
 //!

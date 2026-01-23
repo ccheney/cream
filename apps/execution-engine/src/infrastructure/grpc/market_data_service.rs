@@ -1,6 +1,4 @@
 //! gRPC `MarketDataService` implementation.
-//!
-//! Implements the `MarketDataService` gRPC service using Clean Architecture ports.
 
 use std::pin::Pin;
 use std::sync::Arc;
@@ -18,7 +16,7 @@ use super::proto::cream::v1::{
 
 use crate::application::ports::{MarketDataPort, MarketQuote, OptionType};
 
-/// gRPC `MarketDataService` adapter using Clean Architecture.
+/// gRPC `MarketDataService` adapter.
 pub struct MarketDataServiceAdapter<M>
 where
     M: MarketDataPort,

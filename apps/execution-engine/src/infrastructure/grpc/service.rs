@@ -1,6 +1,4 @@
 //! gRPC `ExecutionService` implementation.
-//!
-//! Implements the `ExecutionService` gRPC service using Clean Architecture use cases.
 
 use std::pin::Pin;
 use std::sync::Arc;
@@ -35,7 +33,7 @@ use crate::domain::risk_management::value_objects::{
 };
 use crate::domain::shared::{InstrumentId, Money, OrderId, Quantity, Symbol};
 
-/// gRPC `ExecutionService` adapter using Clean Architecture.
+/// gRPC `ExecutionService` adapter.
 pub struct ExecutionServiceAdapter<B, R, O, E>
 where
     B: BrokerPort,

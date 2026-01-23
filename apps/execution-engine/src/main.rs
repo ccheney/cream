@@ -1,6 +1,6 @@
 //! Execution Engine Binary
 //!
-//! Starts the Cream execution engine using Clean Architecture.
+//! Starts the Cream execution engine.
 //!
 //! # Usage
 //!
@@ -112,7 +112,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     load_dotenv();
     init_tracing();
 
-    tracing::info!("Starting Cream Execution Engine (Clean Architecture)");
+    tracing::info!("Starting Cream Execution Engine");
 
     let config = parse_config()?;
     log_config(&config);
@@ -335,13 +335,14 @@ async fn create_quote_provider(
 
     // Connect to the stream proxy
     if config.position_monitor_enabled
-        && let Err(e) = manager.connect().await {
-            tracing::warn!(
-                error = %e,
-                endpoint = %config.stream_proxy_endpoint,
-                "Failed to connect to stream proxy, position monitoring may use REST fallback"
-            );
-        }
+        && let Err(e) = manager.connect().await
+    {
+        tracing::warn!(
+            error = %e,
+            endpoint = %config.stream_proxy_endpoint,
+            "Failed to connect to stream proxy, position monitoring may use REST fallback"
+        );
+    }
 
     Ok(Arc::new(manager))
 }

@@ -316,25 +316,25 @@ impl ProxyConfig {
     }
 
     /// Get the stock stream WebSocket URL.
+    ///
+    /// Note: Market data streams always use production URLs regardless of
+    /// trading environment. Only trade updates use paper vs live endpoints.
     #[must_use]
     pub fn stock_stream_url(&self) -> String {
-        let base = if self.environment.is_live() {
-            "wss://stream.data.alpaca.markets"
-        } else {
-            "wss://stream.data.sandbox.alpaca.markets"
-        };
-        format!("{}/v2/{}", base, self.feed.as_str())
+        format!("wss://stream.data.alpaca.markets/v2/{}", self.feed.as_str())
     }
 
     /// Get the options stream WebSocket URL.
+    ///
+    /// Paper uses `indicative` feed (basic plan), live uses `opra` (Algo Trader Plus).
+    /// Both use production URLs - market data is the same for paper/live trading.
     #[must_use]
     pub fn options_stream_url(&self) -> String {
-        let base = if self.environment.is_live() {
-            "wss://stream.data.alpaca.markets"
+        if self.environment.is_live() {
+            "wss://stream.data.alpaca.markets/v1beta1/opra".to_string()
         } else {
-            "wss://stream.data.sandbox.alpaca.markets"
-        };
-        format!("{base}/v1beta1/indicative")
+            "wss://stream.data.alpaca.markets/v1beta1/indicative".to_string()
+        }
     }
 
     /// Get the trade updates WebSocket URL.

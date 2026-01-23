@@ -712,18 +712,20 @@ async fn execute_exit<B: BrokerPort>(
         }
     };
 
-    // Get position direction to determine exit side
-    let exit_side = {
+    // Get position direction and quantity for exit order
+    let (exit_side, quantity) = {
         let monitor_guard = monitor.read();
-        monitor_guard
-            .get_position(position_id)
-            .map(|p| match p.levels().direction {
+        monitor_guard.get_position(position_id).map(|p| {
+            let side = match p.levels().direction {
                 PositionDirection::Long => OrderSide::Sell,
                 PositionDirection::Short => OrderSide::Buy,
-            })
-    };
+            };
+            (side, p.quantity())
+        })
+    }
+    .unzip();
 
-    let Some(exit_side) = exit_side else {
+    let (Some(exit_side), Some(quantity)) = (exit_side, quantity) else {
         return ExitResult {
             position_id: position_id.to_string(),
             symbol: symbol.to_string(),
@@ -741,7 +743,7 @@ async fn execute_exit<B: BrokerPort>(
         OrderId::new(&exit_order_id),
         Symbol::new(symbol),
         exit_side,
-        Decimal::new(100, 0), // TODO: Get actual quantity from position
+        quantity,
     );
 
     tracing::info!(

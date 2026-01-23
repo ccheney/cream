@@ -164,6 +164,7 @@ mod tests {
         MonitoredPosition::new(
             OrderId::new(position_id),
             InstrumentId::new(instrument_id),
+            Decimal::new(100, 0),
             levels,
         )
     }
@@ -177,6 +178,7 @@ mod tests {
         MonitoredPosition::new(
             OrderId::new(position_id),
             InstrumentId::new(instrument_id),
+            Decimal::new(100, 0),
             levels,
         )
     }

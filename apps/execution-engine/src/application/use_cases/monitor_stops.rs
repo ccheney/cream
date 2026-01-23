@@ -128,7 +128,7 @@ where
         trigger_type: &str,
     ) -> StopTriggerResult {
         // Get position info for exit order
-        let Some(_position) = self.monitor.get_position(position_id) else {
+        let Some(position) = self.monitor.get_position(position_id) else {
             return StopTriggerResult {
                 position_id: position_id.to_string(),
                 trigger_type: trigger_type.to_string(),
@@ -137,6 +137,8 @@ where
                 error: Some("Position not found".to_string()),
             };
         };
+
+        let quantity = position.quantity();
 
         // Determine exit order parameters based on trigger type
         let (exit_side, _purpose) = match trigger_type {
@@ -151,7 +153,7 @@ where
             OrderId::new(&exit_order_id),
             symbol.clone(),
             exit_side,
-            rust_decimal::Decimal::new(100, 0), // TODO: Get actual quantity from position
+            quantity,
         );
 
         match self.broker.submit_order(request).await {
@@ -343,6 +345,7 @@ mod tests {
         MonitoredPosition::new(
             OrderId::new(position_id),
             InstrumentId::new(instrument_id),
+            Decimal::new(100, 0),
             levels,
         )
     }
@@ -551,6 +554,7 @@ mod tests {
         MonitoredPosition::new(
             OrderId::new(position_id),
             InstrumentId::new(instrument_id),
+            Decimal::new(100, 0),
             levels,
         )
     }

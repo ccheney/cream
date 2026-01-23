@@ -403,7 +403,11 @@ async fn test_high_throughput_quote_streaming() {
 
     // Send 100 quotes rapidly
     for i in 0..100 {
-        let _ = hub.send_stock_quote(make_test_quote("AAPL", f64::from(i).mul_add(0.01, 150.0), 150.05));
+        let _ = hub.send_stock_quote(make_test_quote(
+            "AAPL",
+            f64::from(i).mul_add(0.01, 150.0),
+            150.05,
+        ));
     }
 
     // Count received messages

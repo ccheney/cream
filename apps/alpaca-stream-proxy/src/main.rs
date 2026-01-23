@@ -1,6 +1,6 @@
 //! Alpaca Stream Proxy Binary
 //!
-//! Starts the market data stream proxy using Clean Architecture.
+//! Starts the market data stream proxy.
 //!
 //! # Usage
 //!
@@ -61,7 +61,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     // Initialize telemetry (OpenTelemetry + tracing)
     let _telemetry_guard = telemetry::init();
 
-    tracing::info!("Starting Alpaca Stream Proxy (Clean Architecture)");
+    tracing::info!("Starting Alpaca Stream Proxy");
 
     // Initialize Prometheus metrics
     let _metrics_handle = init_metrics();

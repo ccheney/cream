@@ -22,9 +22,7 @@
 //! WebSocket feeds (SIP for stocks, OPRA for options) and multiplexes
 //! market data to multiple downstream clients.
 //!
-//! # Architecture (Clean Architecture + Hexagonal)
-//!
-//! ## Layers (inside → outside)
+//! # Layers (inside → outside)
 //!
 //! - **Domain**: Core streaming logic and data types
 //!   - `streaming`: Market data types (quotes, trades, bars)
@@ -57,7 +55,7 @@
 #![warn(clippy::pedantic)]
 
 // =============================================================================
-// Clean Architecture Layers
+// Module Declarations
 // =============================================================================
 
 /// Domain layer - Core streaming types with no external dependencies.

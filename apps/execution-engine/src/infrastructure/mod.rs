@@ -1,7 +1,7 @@
 //! Infrastructure Layer
 //!
 //! This module contains all adapters (implementations) for the ports defined
-//! in the application layer. Following hexagonal architecture:
+//! in the application layer.
 //!
 //! - **Driven Adapters (Outbound)**: Implement ports for external systems
 //!   - `persistence/`: Database adapters (PostgreSQL)
