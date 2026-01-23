@@ -3,6 +3,7 @@
  */
 
 import { describe, expect, it } from "bun:test";
+import { requireValue } from "@cream/test-utils";
 import {
 	assignRanks,
 	calculateCombinedRRFScore,
@@ -101,9 +102,18 @@ describe("assignRanks", () => {
 		const ranked = assignRanks(results, "vector");
 
 		// Both a and b should have rank 1
-		const rankA = ranked.find((r) => r.nodeId === "a")!.rank;
-		const rankB = ranked.find((r) => r.nodeId === "b")!.rank;
-		const rankC = ranked.find((r) => r.nodeId === "c")!.rank;
+		const rankA = requireValue(
+			ranked.find((r) => r.nodeId === "a"),
+			"rank a",
+		).rank;
+		const rankB = requireValue(
+			ranked.find((r) => r.nodeId === "b"),
+			"rank b",
+		).rank;
+		const rankC = requireValue(
+			ranked.find((r) => r.nodeId === "c"),
+			"rank c",
+		).rank;
 
 		expect(rankA).toBe(1);
 		expect(rankB).toBe(1);
@@ -198,9 +208,18 @@ describe("fuseWithRRF", () => {
 		expect(fused[0].nodeId).toBe("a");
 
 		// 'a' should have higher score than 'b' or 'c' alone
-		const scoreA = fused.find((r) => r.nodeId === "a")!.rrfScore;
-		const scoreB = fused.find((r) => r.nodeId === "b")!.rrfScore;
-		const scoreC = fused.find((r) => r.nodeId === "c")!.rrfScore;
+		const scoreA = requireValue(
+			fused.find((r) => r.nodeId === "a"),
+			"score a",
+		).rrfScore;
+		const scoreB = requireValue(
+			fused.find((r) => r.nodeId === "b"),
+			"score b",
+		).rrfScore;
+		const scoreC = requireValue(
+			fused.find((r) => r.nodeId === "c"),
+			"score c",
+		).rrfScore;
 
 		expect(scoreA).toBeGreaterThan(scoreB);
 		expect(scoreA).toBeGreaterThan(scoreC);
@@ -422,7 +441,10 @@ describe("Edge Cases", () => {
 		}
 
 		// 0.3 should be rank 4 (skipping 2 and 3)
-		const rankD = ranked.find((r) => r.nodeId === "d")!;
+		const rankD = requireValue(
+			ranked.find((r) => r.nodeId === "d"),
+			"rank d",
+		);
 		expect(rankD.rank).toBe(4);
 	});
 

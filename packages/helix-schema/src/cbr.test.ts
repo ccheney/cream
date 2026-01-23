@@ -443,7 +443,10 @@ describe("buildMemoryContext", () => {
 		const context = buildMemoryContext(result);
 
 		expect(context.retrievedCases).toHaveLength(1);
-		expect(context.caseStatistics!.winRate).toBe(1.0);
+		if (!context.caseStatistics) {
+			throw new Error("Expected case statistics to be defined");
+		}
+		expect(context.caseStatistics.winRate).toBe(1.0);
 	});
 });
 

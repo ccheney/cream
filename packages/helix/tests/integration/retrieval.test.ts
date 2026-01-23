@@ -148,8 +148,9 @@ function createMockClient(): HelixClient {
 			}
 
 			if (filter.properties) {
+				const properties = filter.properties;
 				results = results.filter((n) => {
-					for (const [key, value] of Object.entries(filter.properties!)) {
+					for (const [key, value] of Object.entries(properties)) {
 						if (n.properties[key] !== value) {
 							return false;
 						}
@@ -174,10 +175,17 @@ function createMockClient(): HelixClient {
 
 			const results: VectorSearchResult[] = candidates
 				.filter((n) => n.embedding)
-				.map((node) => ({
-					node,
-					similarity: cosineSimilarity(query.embedding, node.embedding!),
-				}))
+				.map((node) => {
+					const embedding = node.embedding;
+					if (!embedding) {
+						return null;
+					}
+					return {
+						node,
+						similarity: cosineSimilarity(query.embedding, embedding),
+					};
+				})
+				.filter((result): result is VectorSearchResult => result !== null)
 				.filter((r) => r.similarity >= (query.minSimilarity ?? 0))
 				.sort((a, b) => b.similarity - a.similarity)
 				.slice(0, query.topK ?? 10);
