@@ -52,7 +52,6 @@ export const PositionRow = memo(function PositionRow({
 						{position.symbol}
 					</Link>
 					{position.isStreaming && (
-						// biome-ignore lint/a11y/useSemanticElements: role="status" for live region accessibility
 						<span
 							className="w-2 h-2 rounded-full bg-green-500 animate-pulse"
 							title="Live streaming"

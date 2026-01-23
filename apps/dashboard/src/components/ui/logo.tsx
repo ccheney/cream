@@ -164,7 +164,6 @@ export function LoadingLogo({
 	...props
 }: Omit<LogoProps, "pulse">) {
 	return (
-		// biome-ignore lint/a11y/useSemanticElements: role="status" is appropriate for loading indicator
 		<div
 			style={{
 				display: "flex",

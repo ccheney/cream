@@ -117,7 +117,6 @@ const ContractCell = memo(function ContractCell({
 		type === "call" ? "bg-green-50/50 dark:bg-green-900/20" : "bg-red-50/50 dark:bg-red-900/20";
 
 	return (
-		// biome-ignore lint/a11y/useSemanticElements: Options chain cell with complex hover state and click behavior
 		<div
 			className={`
         grid grid-cols-5 gap-1 px-2 py-1.5 text-xs font-mono

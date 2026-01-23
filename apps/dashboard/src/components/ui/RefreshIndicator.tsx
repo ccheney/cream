@@ -238,7 +238,6 @@ export function RefreshIndicator({
 	children,
 }: RefreshIndicatorProps) {
 	const indicator = (
-		// biome-ignore lint/a11y/useSemanticElements: span with role="status" is correct for live region
 		<span
 			role="status"
 			aria-label={isRefreshing ? label : "Data up to date"}

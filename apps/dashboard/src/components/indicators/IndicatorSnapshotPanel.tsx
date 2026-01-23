@@ -158,7 +158,6 @@ function IndicatorSnapshotSkeleton({
 	const sectionCount = Math.min(sections.length, 3);
 
 	return (
-		// biome-ignore lint/a11y/useSemanticElements: div with role="status" is appropriate for loading skeletons
 		<div className={cn("space-y-4", className)} role="status" aria-label="Loading indicators">
 			{/* Header skeleton */}
 			<div className="flex items-center justify-between">

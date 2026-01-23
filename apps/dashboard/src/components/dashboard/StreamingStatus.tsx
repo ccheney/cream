@@ -129,7 +129,6 @@ export function StreamingStatus({ variant = "full", showOptions = true }: Stream
 			: "Streaming: Disconnected";
 
 		return (
-			// biome-ignore lint/a11y/useSemanticElements: role="status" for live region
 			<div
 				className="inline-flex items-center gap-1.5"
 				title={tooltipText}
@@ -145,7 +144,6 @@ export function StreamingStatus({ variant = "full", showOptions = true }: Stream
 	}
 
 	return (
-		// biome-ignore lint/a11y/useSemanticElements: role="region" for dashboard widget
 		<div
 			className="rounded-md border border-border bg-surface-secondary p-3"
 			role="region"

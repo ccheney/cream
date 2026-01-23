@@ -163,7 +163,6 @@ export function ThemeToggle({ compact = false, testId = "theme-toggle" }: ThemeT
 			data-testid={testId}
 		>
 			{THEMES.map(({ value, label, icon }) => (
-				// biome-ignore lint/a11y/useSemanticElements: Button with role="radio" is correct for radiogroup pattern
 				<button
 					key={value}
 					type="button"

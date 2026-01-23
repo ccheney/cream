@@ -139,7 +139,6 @@ export function SuccessButton({
 				{renderContent()}
 
 				{state === "success" && (
-					// biome-ignore lint/a11y/useSemanticElements: role="status" is appropriate for feedback
 					<span className="sr-only" role="status" aria-live="polite">
 						Form submitted successfully
 					</span>

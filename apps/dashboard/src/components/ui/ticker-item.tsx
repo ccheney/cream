@@ -128,7 +128,6 @@ export const TickerItem = memo(function TickerItem({
 	};
 
 	return (
-		// biome-ignore lint/a11y/useSemanticElements: Custom ticker item with complex nested content and remove button requires div structure
 		<div
 			className={`
         group relative flex flex-col gap-0.5 px-3 py-2

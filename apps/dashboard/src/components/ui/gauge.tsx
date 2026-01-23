@@ -233,7 +233,6 @@ export const Gauge = memo(function Gauge({
 
 	return (
 		<div className={`inline-flex flex-col items-center ${className}`} data-testid={testId}>
-			{/* biome-ignore lint/a11y/useSemanticElements: <meter> cannot contain SVG content; role="meter" is correct here */}
 			<svg
 				width={size}
 				height={size * 0.65} // Crop bottom portion

@@ -50,7 +50,6 @@ const MetricCard = memo(function MetricCard({
 			<div className="flex items-center gap-2 mb-1">
 				<span className="text-sm text-stone-500 dark:text-night-300">{label}</span>
 				{isStreaming && (
-					// biome-ignore lint/a11y/useSemanticElements: role="status" for live region accessibility
 					<span
 						className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse"
 						title="Live"

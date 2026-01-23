@@ -147,7 +147,6 @@ const LoadingSkeleton = memo(function LoadingSkeleton({ size, className }: Loadi
 	const sizeStyles = sizeConfig[size];
 
 	return (
-		// biome-ignore lint/a11y/useSemanticElements: span is appropriate for inline skeleton loading indicator
 		<span
 			className={cn(
 				"inline-block rounded animate-pulse",

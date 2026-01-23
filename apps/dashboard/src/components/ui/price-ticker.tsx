@@ -214,7 +214,6 @@ export const PriceTicker = memo(function PriceTicker({
 	}, [showTickDots, tickHistory]);
 
 	const StaleIndicator = () => (
-		// biome-ignore lint/a11y/useSemanticElements: role="status" is appropriate for stale indicator
 		<span
 			className="ml-1 text-gray-400"
 			title={`Last updated ${stale.secondsSinceUpdate}s ago`}
@@ -283,7 +282,6 @@ export const PriceTicker = memo(function PriceTicker({
 			)}
 
 			{showChange && displayDelta !== undefined && (
-				// biome-ignore lint/a11y/useSemanticElements: role="status" is appropriate for price delta
 				<span
 					className={`${styles.delta} ${
 						isPositive ? "text-green-600 dark:text-green-400" : "text-red-600 dark:text-red-400"

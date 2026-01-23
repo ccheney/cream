@@ -29,7 +29,6 @@ export function SuccessText({
 		<>
 			{/* biome-ignore lint/security/noDangerouslySetInnerHtml: Safe - hardcoded CSS keyframes */}
 			<style dangerouslySetInnerHTML={{ __html: checkmarkKeyframes }} />
-			{/* biome-ignore lint/a11y/useSemanticElements: role="status" is appropriate for feedback */}
 			<span role="status" aria-live="polite" data-testid={testId} style={styles}>
 				<Checkmark size={16} />
 				<span>{children}</span>
