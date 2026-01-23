@@ -105,9 +105,12 @@ struct UseCases {
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
     // Install rustls crypto provider before any TLS operations
-    rustls::crypto::ring::default_provider()
+    if rustls::crypto::ring::default_provider()
         .install_default()
-        .expect("Failed to install rustls crypto provider");
+        .is_err()
+    {
+        tracing::debug!("Rustls crypto provider already installed");
+    }
 
     load_dotenv();
     init_tracing();
