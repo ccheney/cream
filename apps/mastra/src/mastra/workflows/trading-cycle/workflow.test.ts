@@ -49,6 +49,14 @@ mock.module("@cream/domain", () => ({
 	}),
 }));
 
+// Mock @cream/broker to avoid real API calls
+mock.module("@cream/broker", () => ({
+	createAlpacaClient: () => ({
+		getPositions: async () => [],
+		getPosition: async () => null,
+	}),
+}));
+
 // Mock @cream/marketdata
 mock.module("@cream/marketdata", () => ({
 	isAlpacaConfigured: () => false,
@@ -113,9 +121,15 @@ mock.module("@cream/external-context", () => ({
 
 describe("trading-cycle workflow", () => {
 	const originalNodeEnv = Bun.env.NODE_ENV;
+	const originalExecutionEngineUrl = Bun.env.EXECUTION_ENGINE_URL;
+	const originalAlpacaKey = Bun.env.ALPACA_KEY;
+	const originalAlpacaSecret = Bun.env.ALPACA_SECRET;
 
 	beforeAll(() => {
 		Bun.env.NODE_ENV = "test";
+		Bun.env.EXECUTION_ENGINE_URL = "http://localhost:50053";
+		Bun.env.ALPACA_KEY = "test-key";
+		Bun.env.ALPACA_SECRET = "test-secret";
 	});
 
 	afterAll(() => {
@@ -123,6 +137,21 @@ describe("trading-cycle workflow", () => {
 			delete Bun.env.NODE_ENV;
 		} else {
 			Bun.env.NODE_ENV = originalNodeEnv;
+		}
+		if (originalExecutionEngineUrl === undefined) {
+			delete Bun.env.EXECUTION_ENGINE_URL;
+		} else {
+			Bun.env.EXECUTION_ENGINE_URL = originalExecutionEngineUrl;
+		}
+		if (originalAlpacaKey === undefined) {
+			delete Bun.env.ALPACA_KEY;
+		} else {
+			Bun.env.ALPACA_KEY = originalAlpacaKey;
+		}
+		if (originalAlpacaSecret === undefined) {
+			delete Bun.env.ALPACA_SECRET;
+		} else {
+			Bun.env.ALPACA_SECRET = originalAlpacaSecret;
 		}
 	});
 

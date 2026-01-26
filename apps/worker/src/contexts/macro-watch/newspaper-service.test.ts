@@ -3,9 +3,26 @@
  */
 
 import { afterEach, beforeEach, describe, expect, mock, test } from "bun:test";
-// Import the real compileMorningNewspaper BEFORE setting up module mocks
-// to prevent test isolation issues with other test files
-import { compileMorningNewspaper as realCompileMorningNewspaper } from "@cream/mastra";
+
+// Mock @cream/mastra to avoid loading agents that require LLM env vars
+const mockCompileMorningNewspaper = mock(() =>
+	Promise.resolve({
+		date: "2026-01-15",
+		summary: "Test summary",
+		sections: [],
+	}),
+);
+const mockFormatNewspaperForLLM = mock(() => "Test newspaper content");
+const mockRunMacroWatch = mock(() => Promise.resolve({ entries: [], totalCount: 0 }));
+mock.module("@cream/mastra", () => ({
+	compileMorningNewspaper: mockCompileMorningNewspaper,
+	formatNewspaperForLLM: mockFormatNewspaperForLLM,
+	runMacroWatch: mockRunMacroWatch,
+}));
+
+// Use the mock as the "real" function for tests
+const realCompileMorningNewspaper = mockCompileMorningNewspaper;
+
 import { createNewspaperService, NewspaperService } from "./newspaper-service.js";
 
 const mockUpsertNewspaper = mock(() => Promise.resolve());

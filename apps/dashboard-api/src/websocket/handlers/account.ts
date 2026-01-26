@@ -13,6 +13,7 @@ import {
 	getTradingStreamService,
 	shutdownTradingStreamService,
 } from "../../services/alpaca-streaming.js";
+import { persistOrderFromTradeUpdate } from "../../services/order-persistence.js";
 import { broadcastOrderUpdate, broadcastPositionUpdate } from "../channels.js";
 
 let isInitialized = false;
@@ -20,14 +21,18 @@ let isInitialized = false;
 /**
  * Handle trade update events from Alpaca.
  * Maps Alpaca trade_updates to dashboard WebSocket messages.
+ * Also persists orders to the database.
  */
-function handleTradeUpdate(event: TradingStreamEvent): void {
+async function handleTradeUpdate(event: TradingStreamEvent): Promise<void> {
 	if (event.type !== "trade_update") {
 		return;
 	}
 
 	const { order } = event.data;
 	const timestamp = new Date().toISOString();
+
+	// Persist order to database (handles both new orders and updates)
+	await persistOrderFromTradeUpdate(event.data.event, order);
 
 	// Determine cache keys to invalidate based on order event
 	const orderInvalidates = ["orders", "orders.recent"];
@@ -132,7 +137,7 @@ export async function initAlpacaTradeStream(paper = true): Promise<void> {
 	try {
 		const service = await getTradingStreamService(paper);
 
-		service.on((event) => {
+		service.on(async (event) => {
 			switch (event.type) {
 				case "connected":
 					log.info("Alpaca trading stream connected");
@@ -145,7 +150,7 @@ export async function initAlpacaTradeStream(paper = true): Promise<void> {
 					break;
 				}
 				case "trade_update":
-					handleTradeUpdate(event);
+					await handleTradeUpdate(event);
 					break;
 				case "error":
 					log.error({ message: event.message }, "Alpaca trading stream error");

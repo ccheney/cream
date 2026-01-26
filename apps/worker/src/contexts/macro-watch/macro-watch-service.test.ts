@@ -31,8 +31,14 @@ const mockRunMacroWatch = mock(() =>
 	}),
 );
 
+const mockCompileMorningNewspaper = mock(() =>
+	Promise.resolve({ date: "2026-01-15", summary: "Test", sections: [] }),
+);
+const mockFormatNewspaperForLLM = mock(() => "Test");
 mock.module("@cream/mastra", () => ({
 	runMacroWatch: mockRunMacroWatch,
+	compileMorningNewspaper: mockCompileMorningNewspaper,
+	formatNewspaperForLLM: mockFormatNewspaperForLLM,
 }));
 
 describe("MacroWatchService", () => {

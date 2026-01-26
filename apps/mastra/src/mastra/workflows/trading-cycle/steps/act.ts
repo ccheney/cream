@@ -8,6 +8,8 @@
  */
 
 import { create } from "@bufbuild/protobuf";
+import { createAlpacaClient, type PositionSide } from "@cream/broker";
+import { requireEnv } from "@cream/domain/env";
 import { createExecutionClient } from "@cream/domain/grpc";
 import { createNodeLogger } from "@cream/logger";
 import { InstrumentType, OrderType, TimeInForce } from "@cream/schema-gen/cream/v1/common";
@@ -169,10 +171,23 @@ interface OrderSubmissionResult {
 	errors: string[];
 }
 
-// Map decision action/direction to order side
-function getOrderSide(action: string, direction: string): OrderSide {
-	// CLOSE always sells the position (opposite of direction)
+/**
+ * Map decision action/direction to order side.
+ * For CLOSE actions, uses the current position side to determine the correct order direction.
+ */
+function getOrderSide(
+	action: string,
+	direction: string,
+	currentPositionSide?: PositionSide,
+): OrderSide {
+	// CLOSE requires knowing the current position side to determine order direction
 	if (action === "CLOSE") {
+		if (currentPositionSide) {
+			// If we have a current position, use its side to determine order direction
+			// Long position → SELL to close, Short position → BUY to cover
+			return currentPositionSide === "short" ? OrderSide.BUY : OrderSide.SELL;
+		}
+		// Fallback to direction if no position found (shouldn't happen for valid CLOSE)
 		return direction === "SHORT" ? OrderSide.BUY : OrderSide.SELL;
 	}
 	// SELL action with SHORT direction = sell to open short
@@ -185,6 +200,9 @@ function getOrderSide(action: string, direction: string): OrderSide {
 	}
 	// REDUCE reduces exposure (opposite of direction)
 	if (action === "REDUCE") {
+		if (currentPositionSide) {
+			return currentPositionSide === "long" ? OrderSide.SELL : OrderSide.BUY;
+		}
 		return direction === "LONG" ? OrderSide.SELL : OrderSide.BUY;
 	}
 	// INCREASE increases exposure (same as direction)
@@ -207,6 +225,43 @@ async function submitOrders(
 		throw new Error("EXECUTION_ENGINE_URL environment variable is required");
 	}
 
+	// Fetch current positions to determine correct order side for CLOSE/REDUCE actions
+	const environment = requireEnv();
+	const alpacaKey = Bun.env.ALPACA_KEY;
+	const alpacaSecret = Bun.env.ALPACA_SECRET;
+
+	if (!alpacaKey || !alpacaSecret) {
+		throw new Error("ALPACA_KEY and ALPACA_SECRET environment variables are required");
+	}
+
+	const brokerClient = createAlpacaClient({
+		apiKey: alpacaKey,
+		apiSecret: alpacaSecret,
+		environment,
+	});
+
+	let positionsBySide: Map<string, PositionSide> = new Map();
+	try {
+		const positions = await brokerClient.getPositions();
+		positionsBySide = new Map(positions.map((p) => [p.symbol, p.side]));
+		log.info(
+			{
+				cycleId,
+				positionCount: positions.length,
+				positions: positions.map((p) => ({ symbol: p.symbol, side: p.side, qty: p.qty })),
+			},
+			"Fetched current positions for order side determination",
+		);
+	} catch (err) {
+		log.warn(
+			{
+				cycleId,
+				error: err instanceof Error ? err.message : String(err),
+			},
+			"Failed to fetch positions, will use decision direction for order side",
+		);
+	}
+
 	log.info(
 		{
 			cycleId,
@@ -225,9 +280,10 @@ async function submitOrders(
 		}
 
 		const clientOrderId = `${cycleId}-${decision.instrumentId}-${Date.now()}`;
+		const currentPositionSide = positionsBySide.get(decision.instrumentId);
 
 		try {
-			const side = getOrderSide(decision.action, decision.direction);
+			const side = getOrderSide(decision.action, decision.direction, currentPositionSide);
 
 			const request = create(SubmitOrderRequestSchema, {
 				instrument: {
@@ -248,6 +304,7 @@ async function submitOrders(
 					symbol: decision.instrumentId,
 					action: decision.action,
 					direction: decision.direction,
+					currentPositionSide: currentPositionSide ?? "none",
 					side: side === OrderSide.BUY ? "BUY" : "SELL",
 					quantity: decision.size.value,
 					clientOrderId,

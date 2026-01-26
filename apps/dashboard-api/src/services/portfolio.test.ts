@@ -1,5 +1,4 @@
-import { describe, expect, it, mock, spyOn } from "bun:test";
-import * as db from "../db";
+import { describe, expect, it, mock } from "bun:test";
 
 // Mock AlpacaConnectionState enum for streaming modules
 const AlpacaConnectionState = {
@@ -11,7 +10,7 @@ const AlpacaConnectionState = {
 	ERROR: "ERROR",
 } as const;
 
-// Mock marketdata module
+// Mock marketdata module before any imports that use it
 mock.module("@cream/marketdata", () => ({
 	createAlpacaClientFromEnv: () => ({
 		getOptionSnapshots: mock(() =>
@@ -76,6 +75,38 @@ mock.module("@cream/marketdata", () => ({
 	AlpacaScreenerClient: class {},
 }));
 
+// Mock db module
+const mockFindOpen = mock(() =>
+	Promise.resolve([
+		{
+			id: "pos-1",
+			symbol: "AAPL240119C00150000",
+			side: "long",
+			quantity: 10,
+			avgEntryPrice: 5.0,
+			currentPrice: 5.2,
+			costBasis: 5000,
+			environment: "PAPER",
+		},
+		{
+			id: "pos-2",
+			symbol: "AAPL", // Not an option
+			side: "long",
+			quantity: 100,
+			avgEntryPrice: 150,
+			environment: "PAPER",
+		},
+	]),
+);
+mock.module("../db", () => ({
+	getPositionsRepo: () => Promise.resolve({ findOpen: mockFindOpen }),
+}));
+
+// Mock routes/system to avoid circular dependency
+mock.module("../routes/system", () => ({
+	getCurrentEnvironment: () => "PAPER",
+}));
+
 describe("PortfolioService", () => {
 	it("should return enriched option positions", async () => {
 		// Dynamic import to ensure mock is applied
@@ -83,36 +114,6 @@ describe("PortfolioService", () => {
 
 		// Reset singleton to ensure mock is used
 		PortfolioService._resetForTesting();
-
-		// Mock database repository
-		const mockRepo = {
-			findOpen: mock(() =>
-				Promise.resolve([
-					{
-						id: "pos-1",
-						symbol: "AAPL240119C00150000",
-						side: "long",
-						quantity: 10,
-						avgEntryPrice: 5.0,
-						currentPrice: 5.2,
-						costBasis: 5000,
-						environment: "PAPER",
-					},
-					{
-						id: "pos-2",
-						symbol: "AAPL", // Not an option
-						side: "long",
-						quantity: 100,
-						avgEntryPrice: 150,
-						environment: "PAPER",
-					},
-				]),
-			),
-		};
-
-		spyOn(db, "getPositionsRepo").mockReturnValue(
-			mockRepo as unknown as ReturnType<typeof db.getPositionsRepo>,
-		);
 
 		const service = PortfolioService.getInstance();
 		const results = await service.getOptionsPositions();

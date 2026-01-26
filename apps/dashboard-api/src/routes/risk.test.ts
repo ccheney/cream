@@ -1,8 +1,6 @@
 import { describe, expect, it, mock, spyOn } from "bun:test";
 import { Hono } from "hono";
 import * as db from "../db";
-import { portfolioService } from "../services/portfolio";
-import { riskRoutes } from "./risk";
 
 type ExposureResponse = {
 	gross: number;
@@ -21,7 +19,27 @@ type GreeksResponse = {
 // Mock system state
 mock.module("./system", () => ({
 	systemState: { environment: "PAPER" },
+	getCurrentEnvironment: () => "PAPER",
 }));
+
+// Mock marketdata to avoid loading real clients
+mock.module("@cream/marketdata", () => ({
+	createAlpacaClientFromEnv: () => ({
+		getOptionSnapshots: mock(() => Promise.resolve(new Map())),
+		getSnapshots: mock(() => Promise.resolve(new Map())),
+	}),
+	parseOptionTicker: () => undefined,
+	isAlpacaConfigured: () => false,
+}));
+
+// Mock routes/system for portfolio service
+mock.module("../routes/system", () => ({
+	getCurrentEnvironment: () => "PAPER",
+}));
+
+// Import after mocks are set up
+const { portfolioService } = await import("../services/portfolio");
+const { riskRoutes } = await import("./risk");
 
 describe("Risk Routes", () => {
 	const app = new Hono();
