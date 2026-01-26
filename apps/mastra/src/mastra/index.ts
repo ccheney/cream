@@ -15,7 +15,7 @@
 import { PredictionMarketsRepository } from "@cream/storage";
 import { Mastra } from "@mastra/core";
 import { Observability } from "@mastra/observability";
-import { OtelExporter } from "@mastra/otel-exporter";
+import { OtelBridge } from "@mastra/otel-bridge";
 
 // Agents
 import {
@@ -143,8 +143,9 @@ setPredictionMarketsRepositoryProvider(async (): Promise<PredictionMarketsToolRe
 	};
 });
 
-const otelEndpoint = Bun.env.OTEL_EXPORTER_OTLP_ENDPOINT ?? "http://localhost:4318";
-const observabilityEnabled = Bun.env.OTEL_ENABLED !== "false";
+// OTEL bridge configuration (SDK is initialized in instrumentation.ts)
+const observabilityEnabled =
+	Bun.env.OTEL_ENABLED !== "false" && Bun.env.OTEL_EXPORTER_OTLP_ENDPOINT !== undefined;
 
 /**
  * Mastra v1 instance for the trading system.
@@ -190,26 +191,9 @@ export const mastra = new Mastra({
 	observability: observabilityEnabled
 		? new Observability({
 				configs: {
-					otel: {
+					default: {
 						serviceName: "cream-mastra",
-						serializationOptions: {
-							maxStringLength: 131072, // 128KB - prevents truncation of large agent prompts/outputs
-							maxDepth: 10,
-							maxArrayLength: 100,
-							maxObjectKeys: 100,
-						},
-						exporters: [
-							new OtelExporter({
-								provider: {
-									custom: {
-										endpoint: `${otelEndpoint}/v1/traces`,
-										protocol: "http/protobuf",
-									},
-								},
-								timeout: 30000,
-								batchSize: 100,
-							}),
-						],
+						bridge: new OtelBridge(),
 					},
 				},
 			})
