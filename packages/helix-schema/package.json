@@ -18,7 +18,8 @@
 	"dependencies": {
 		"@cream/config": "workspace:*",
 		"@cream/domain": "workspace:*",
-		"@google/genai": "1.38.0"
+		"@google/genai": "1.38.0",
+		"zod": "4.3.6"
 	},
 	"devDependencies": {
 		"@cream/test-utils": "workspace:*",
