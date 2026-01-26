@@ -202,8 +202,10 @@ async function submitOrders(
 	const orderIds: string[] = [];
 	const errors: string[] = [];
 
-	// Get execution engine URL from environment
-	const executionEngineUrl = Bun.env.EXECUTION_ENGINE_URL ?? "http://localhost:50051";
+	const executionEngineUrl = Bun.env.EXECUTION_ENGINE_URL;
+	if (!executionEngineUrl) {
+		throw new Error("EXECUTION_ENGINE_URL environment variable is required");
+	}
 
 	log.info(
 		{
