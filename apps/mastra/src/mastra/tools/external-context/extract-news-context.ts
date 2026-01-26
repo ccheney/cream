@@ -75,7 +75,7 @@ const ExtractNewsContextOutputSchema = z.object({
 type ExtractNewsContextOutput = z.infer<typeof ExtractNewsContextOutputSchema>;
 
 export const extractNewsContext = createTool({
-	id: "extract_news_context",
+	id: "extractNewsContext",
 	description: `Deep extraction and analysis of news for symbols using structured outputs.
 
 Use this tool when you need:
@@ -90,9 +90,7 @@ Returns full extraction results with:
 - entities: companies, people, products mentioned with ticker links
 - dataPoints: numeric metrics extracted (revenue, growth %, etc.)
 - eventType: classification for event-driven analysis
-- scores: sentimentScore, importanceScore, surpriseScore
-
-Requires ALPACA_KEY and ALPACA_SECRET for news fetching.`,
+- scores: sentimentScore, importanceScore, surpriseScore`,
 	inputSchema: ExtractNewsContextInputSchema,
 	outputSchema: ExtractNewsContextOutputSchema,
 	execute: async (inputData): Promise<ExtractNewsContextOutput> => {

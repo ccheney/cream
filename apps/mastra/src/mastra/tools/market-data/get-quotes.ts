@@ -54,7 +54,7 @@ const GetQuotesOutputSchema = z.object({
 // ============================================
 
 export const getQuotes = createTool({
-	id: "get_quotes",
+	id: "getQuotes",
 	description: `Get real-time quotes for instruments. Use this tool to:
 - Fetch current bid/ask/last prices for stocks or ETFs
 - Get volume data for liquidity assessment

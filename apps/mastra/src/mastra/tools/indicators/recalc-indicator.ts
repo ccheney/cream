@@ -56,7 +56,7 @@ const RecalcIndicatorOutputSchema = z.object({
 // ============================================
 
 export const recalcIndicator = createTool({
-	id: "recalc_indicator",
+	id: "recalcIndicator",
 	description: `Recalculate a technical indicator for a symbol. Use this tool to:
 - Get fresh RSI readings for momentum assessment
 - Calculate moving averages (SMA, EMA) for trend analysis

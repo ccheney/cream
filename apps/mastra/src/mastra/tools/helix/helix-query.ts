@@ -20,9 +20,7 @@ const HelixQueryInputSchema = z.object({
 	query: z
 		.string()
 		.min(3)
-		.describe(
-			"Natural language query for semantic search over HelixDB memory (e.g., 'AAPL earnings guidance')",
-		),
+		.describe("Natural language query for semantic search (e.g., 'AAPL earnings guidance')"),
 	symbol: z.string().optional().describe("Optional company ticker symbol filter (e.g., 'AAPL')"),
 	limit: z
 		.number()
@@ -61,14 +59,14 @@ export interface HelixQueryResult {
 }
 
 export const helixQuery = createTool({
-	id: "helix_query",
-	description: `Query HelixDB for memory/graph data using semantic search. Use this tool to:
+	id: "helixQuery",
+	description: `Query for memory/graph data using semantic search. Use this tool to:
 - Retrieve similar historical cases from memory
 - Query knowledge graph relationships
 - Access vector similarity search results
 - Fetch agent memory and learned patterns
 
-HelixDB stores the system's learned memory including:
+Stores of the system's learned memory including:
 - Historical trade outcomes and their contexts
 - Market pattern embeddings for similarity search
 - Cross-session learning and pattern recognition`,

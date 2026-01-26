@@ -80,7 +80,7 @@ interface PortfolioStateResponse {
 }
 
 export const getPortfolioState = createTool({
-	id: "get_portfolio_state",
+	id: "getPortfolioState",
 	description: `Get current portfolio state including positions and buying power. Use this tool to:
 - Check existing positions before making trades
 - Assess available buying power for new positions

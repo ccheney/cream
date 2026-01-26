@@ -73,7 +73,7 @@ const GetEnrichedPortfolioStateOutputSchema = z.object({
 });
 
 export const getEnrichedPortfolioState = createTool({
-	id: "get_enriched_portfolio_state",
+	id: "getEnrichedPortfolioState",
 	description: `Get enriched portfolio state with full strategy, risk, and thesis context for each position.
 
 This tool provides comprehensive position awareness including:
@@ -87,9 +87,7 @@ Use this tool when you need to:
 - Honor the intended timeHorizon for positions
 - Assess whether invalidation conditions have been met
 - Review the original thesis and conviction for existing positions
-- Determine position age for swing vs intraday decisions
-
-Note: Positions opened manually or before decision tracking will have null metadata fields.`,
+- Determine position age for swing vs intraday decisions`,
 	inputSchema: GetEnrichedPortfolioStateInputSchema,
 	outputSchema: GetEnrichedPortfolioStateOutputSchema,
 	execute: async () => {

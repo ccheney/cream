@@ -37,15 +37,14 @@ const GetPredictionSignalsOutputSchema = z.object({
 });
 
 export const getPredictionSignals = createTool({
-	id: "get_prediction_signals",
+	id: "getPredictionSignals",
 	description: `Get latest prediction market signals for macro indicators. Use this tool to:
 - Check current Fed rate cut/hike probabilities from prediction markets
 - Assess recession probability over the next 12 months
 - Gauge macro uncertainty and policy event risk
 - Inform position sizing and risk management based on market-implied probabilities
 
-These signals are derived from real-money bets on Kalshi and Polymarket.
-Updated every 15 minutes.`,
+These signals are derived from real-money bets on Kalshi and Polymarket.`,
 	inputSchema: GetPredictionSignalsInputSchema,
 	outputSchema: GetPredictionSignalsOutputSchema,
 	execute: async (): Promise<z.infer<typeof GetPredictionSignalsOutputSchema>> => {

@@ -53,7 +53,7 @@ const SearchPapersOutputSchema = z.object({
 });
 
 export const searchAcademicPapers = createTool({
-	id: "search_academic_papers",
+	id: "searchAcademicPapers",
 	description: `Search the academic paper knowledge base for papers relevant to a research topic.
 
 Use this tool to:
@@ -102,7 +102,7 @@ const SearchExternalPapersOutputSchema = z.object({
 });
 
 export const searchExternalPapers = createTool({
-	id: "search_external_papers",
+	id: "searchExternalPapers",
 	description: `Search external academic databases (Semantic Scholar) for papers on a topic.
 
 Use this tool when:
@@ -146,7 +146,7 @@ const IngestPapersOutputSchema = z.object({
 });
 
 export const ingestAcademicPapers = createTool({
-	id: "ingest_academic_papers",
+	id: "ingestAcademicPapers",
 	description: `Search for papers on a topic and ingest them into the knowledge base.
 
 Use this tool to:

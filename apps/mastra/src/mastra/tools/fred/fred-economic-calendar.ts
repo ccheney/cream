@@ -42,7 +42,7 @@ const FREDCalendarOutputSchema = z.object({
 });
 
 export const fredEconomicCalendar = createTool({
-	id: "fred_economic_calendar",
+	id: "fredEconomicCalendar",
 	description: `Get economic calendar events from FRED (Federal Reserve Economic Data).
 
 Use this tool to find upcoming Federal Reserve data releases including:
@@ -53,8 +53,7 @@ Use this tool to find upcoming Federal Reserve data releases including:
 - Retail Sales - HIGH impact
 - PPI, Industrial Production, Housing Starts - MEDIUM impact
 
-Events are filtered to tracked releases only (no minor data).
-Requires FRED_API_KEY environment variable.`,
+Events are filtered to tracked releases only (no minor data).`,
 	inputSchema: FREDCalendarInputSchema,
 	outputSchema: FREDCalendarOutputSchema,
 	execute: async (inputData) => {

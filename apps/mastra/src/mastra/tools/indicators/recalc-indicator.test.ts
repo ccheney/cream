@@ -45,7 +45,7 @@ mock.module("@cream/domain", () => ({
 
 describe("recalcIndicator tool", () => {
 	it("should have correct tool id", () => {
-		expect(recalcIndicator.id).toBe("recalc_indicator");
+		expect(recalcIndicator.id).toBe("recalcIndicator");
 	});
 
 	it("should have a description mentioning indicators", () => {

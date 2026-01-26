@@ -130,15 +130,14 @@ const outputSchema = z.object({
 });
 
 export const getMarketSnapshots = createTool({
-	id: "get_market_snapshots",
+	id: "getMarketSnapshots",
 	description: `Get latest prediction market snapshots with outcome probabilities. Use this tool to:
 - See specific market pricing for Fed rate decisions
 - Check individual outcome probabilities for macro events
 - Compare probabilities across platforms (Kalshi vs Polymarket)
 - Identify high-conviction macro views from market pricing
 
-Markets include Fed rate decisions, economic data surprises, recession bets, and geopolitical events.
-Updated every 15 minutes.`,
+Markets include Fed rate decisions, economic data surprises, recession bets, and geopolitical events.`,
 	inputSchema,
 	outputSchema,
 	execute: async (inputData, _context): Promise<z.infer<typeof outputSchema>> => {

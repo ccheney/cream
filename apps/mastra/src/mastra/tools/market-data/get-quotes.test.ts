@@ -38,7 +38,7 @@ mock.module("@cream/domain", () => ({
 
 describe("getQuotes tool", () => {
 	it("should have correct tool id", () => {
-		expect(getQuotes.id).toBe("get_quotes");
+		expect(getQuotes.id).toBe("getQuotes");
 	});
 
 	it("should have a description", () => {

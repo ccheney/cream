@@ -80,7 +80,7 @@ export interface OptionChainResponse {
 }
 
 export const optionChain = createTool({
-	id: "option_chain",
+	id: "optionChain",
 	description: `Get option chain for an underlying. Use this tool to:
 - Find available strikes and expirations for options strategies
 - Assess option liquidity via volume and open interest

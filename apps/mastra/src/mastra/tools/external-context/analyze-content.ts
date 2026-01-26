@@ -36,7 +36,7 @@ const AnalyzeContentOutputSchema = z.object({
 type AnalyzeContentOutput = z.infer<typeof AnalyzeContentOutputSchema>;
 
 export const analyzeContent = createTool({
-	id: "analyze_content",
+	id: "analyzeContent",
 	description: `Analyze arbitrary text content with extraction pipeline.
 
 Use this tool for deep analysis of:

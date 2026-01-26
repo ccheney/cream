@@ -15,7 +15,12 @@ function createToolContext() {
 
 const GraphRAGQueryInputSchema = z.object({
 	query: z.string().min(3).describe("Natural language query for semantic search"),
-	limit: z.number().min(1).max(50).optional().describe("Maximum results per type (default: 10)"),
+	limit: z
+		.number()
+		.min(1)
+		.max(50)
+		.optional()
+		.describe("Maximum results per type (default: 10, max: 50)"),
 	symbol: z.string().optional().describe("Filter to specific company symbol"),
 });
 
@@ -29,7 +34,7 @@ const GraphRAGQueryOutputSchema = z.object({
 });
 
 export const graphragQuery = createTool({
-	id: "graphrag_query",
+	id: "graphragQuery",
 	description: `Query HelixDB using GraphRAG for unified cross-type search. Use this tool to:
 - Search across filings, transcripts, news, and events simultaneously
 - Discover related companies via graph traversal

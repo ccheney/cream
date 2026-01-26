@@ -38,7 +38,7 @@ export interface Greeks {
 }
 
 export const getGreeks = createTool({
-	id: "get_greeks",
+	id: "getGreeks",
 	description: `Get Greeks for an option contract. Use this tool to:
 - Assess delta exposure and directional risk
 - Understand gamma risk near expiration
