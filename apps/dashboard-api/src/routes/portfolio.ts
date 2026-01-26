@@ -880,12 +880,18 @@ app.openapi(performanceRoute, async (c) => {
 			const fetchHistory = async (
 				period: "1D" | "1W" | "1M" | "3M" | "1A" | "all",
 				timeframe: "1H" | "1D",
+				dateStart?: string,
 			) => {
 				try {
-					const result = await getPortfolioHistory(config, { period, timeframe });
+					const result = await getPortfolioHistory(config, {
+						period,
+						timeframe,
+						...(dateStart && { dateStart }),
+					});
 					log.debug(
 						{
 							period,
+							dateStart,
 							dataPoints: result.equity?.length ?? 0,
 							baseValue: result.baseValue,
 						},
@@ -901,11 +907,26 @@ app.openapi(performanceRoute, async (c) => {
 				}
 			};
 
+			// Calculate start of current calendar week (Monday at midnight)
+			const getWeekStartDate = (): string => {
+				const now = new Date();
+				const day = now.getDay();
+				const diff = day === 0 ? 6 : day - 1; // Sunday = 6 days back, otherwise day - 1
+				const monday = new Date(now);
+				monday.setDate(now.getDate() - diff);
+				monday.setHours(0, 0, 0, 0);
+				// ISO string always contains "T", so split will always have index 0
+				return monday.toISOString().slice(0, 10);
+			};
+
+			const weekStartDate = getWeekStartDate();
+
 			// Fetch history for different periods in parallel
+			// Note: weekHistory uses calendar week (Monday start) via dateStart parameter
 			const [_dayHistory, weekHistory, monthHistory, threeMonthHistory, ytdHistory, allHistory] =
 				await Promise.all([
 					fetchHistory("1D", "1H"),
-					fetchHistory("1W", "1D"),
+					fetchHistory("1W", "1D", weekStartDate),
 					fetchHistory("1M", "1D"),
 					fetchHistory("3M", "1D"),
 					fetchHistory("1A", "1D"),
@@ -966,8 +987,8 @@ app.openapi(performanceRoute, async (c) => {
 			const now = new Date();
 			const todayStart = new Date(now);
 			todayStart.setHours(0, 0, 0, 0);
-			const weekStart = new Date(now);
-			weekStart.setDate(weekStart.getDate() - 7);
+			// Use calendar week (Monday start) for consistency with weekHistory
+			const weekStart = new Date(weekStartDate);
 			const monthStart = new Date(now);
 			monthStart.setMonth(monthStart.getMonth() - 1);
 			const threeMonthStart = new Date(now);
