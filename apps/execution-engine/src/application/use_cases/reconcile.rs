@@ -347,6 +347,12 @@ mod tests {
         ) -> Result<Option<Decimal>, BrokerError> {
             Ok(None)
         }
+
+        async fn get_all_positions(
+            &self,
+        ) -> Result<Vec<crate::application::ports::PositionInfo>, BrokerError> {
+            Ok(vec![])
+        }
     }
 
     struct MockOrderRepo {
@@ -741,6 +747,14 @@ mod tests {
             &self,
             _instrument_id: &InstrumentId,
         ) -> Result<Option<Decimal>, BrokerError> {
+            Err(BrokerError::Unknown {
+                message: "Failed".to_string(),
+            })
+        }
+
+        async fn get_all_positions(
+            &self,
+        ) -> Result<Vec<crate::application::ports::PositionInfo>, BrokerError> {
             Err(BrokerError::Unknown {
                 message: "Failed".to_string(),
             })

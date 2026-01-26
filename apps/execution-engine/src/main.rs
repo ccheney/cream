@@ -329,6 +329,8 @@ async fn create_quote_provider(
     config: &EngineConfig,
     shutdown: CancellationToken,
 ) -> Result<Arc<ProxyQuoteManager>, Box<dyn std::error::Error>> {
+    use std::time::Duration;
+
     let proxy_config = ProxyQuoteManagerConfig {
         endpoint: config.stream_proxy_endpoint.clone(),
         enabled: config.position_monitor_enabled,
@@ -336,15 +338,19 @@ async fn create_quote_provider(
 
     let mut manager = ProxyQuoteManager::new(proxy_config, shutdown);
 
-    // Connect to the stream proxy
-    if config.position_monitor_enabled
-        && let Err(e) = manager.connect().await
-    {
-        tracing::warn!(
-            error = %e,
-            endpoint = %config.stream_proxy_endpoint,
-            "Failed to connect to stream proxy, position monitoring may use REST fallback"
-        );
+    // Connect to the stream proxy with retry (wait up to 60s for proxy to start)
+    if config.position_monitor_enabled {
+        let max_wait = Duration::from_secs(60);
+        let interval = Duration::from_secs(2);
+
+        if let Err(e) = manager.connect_with_retry(max_wait, interval).await {
+            tracing::error!(
+                error = %e,
+                endpoint = %config.stream_proxy_endpoint,
+                "Failed to connect to stream proxy after retries"
+            );
+            return Err(e.into());
+        }
     }
 
     Ok(Arc::new(manager))

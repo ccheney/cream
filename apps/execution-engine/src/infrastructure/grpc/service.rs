@@ -334,10 +334,44 @@ where
         &self,
         _request: Request<GetPositionsRequest>,
     ) -> Result<Response<GetPositionsResponse>, Status> {
-        // For now, return empty positions
-        // Real implementation would query positions from broker
+        let broker_positions = self
+            .broker
+            .get_all_positions()
+            .await
+            .map_err(|e| Status::internal(format!("Failed to get positions: {e}")))?;
+
+        let positions: Vec<super::proto::cream::v1::Position> = broker_positions
+            .into_iter()
+            .map(|p| {
+                let quantity: i32 = p.quantity.to_string().parse().unwrap_or(0);
+                let avg_entry_price: f64 = p.avg_entry_price.to_string().parse().unwrap_or(0.0);
+                let market_value: f64 = p.market_value.to_string().parse().unwrap_or(0.0);
+                let unrealized_pnl: f64 = p.unrealized_pnl.to_string().parse().unwrap_or(0.0);
+                let cost_basis = avg_entry_price * f64::from(quantity.abs());
+                let unrealized_pnl_pct = if cost_basis == 0.0 {
+                    0.0
+                } else {
+                    unrealized_pnl / cost_basis
+                };
+
+                super::proto::cream::v1::Position {
+                    instrument: Some(super::proto::cream::v1::Instrument {
+                        instrument_id: p.symbol,
+                        instrument_type: super::proto::cream::v1::InstrumentType::Equity.into(),
+                        option_contract: None,
+                    }),
+                    quantity,
+                    avg_entry_price,
+                    market_value,
+                    unrealized_pnl,
+                    unrealized_pnl_pct,
+                    cost_basis,
+                }
+            })
+            .collect();
+
         Ok(Response::new(GetPositionsResponse {
-            positions: vec![],
+            positions,
             as_of: Some(prost_types::Timestamp::from(std::time::SystemTime::now())),
         }))
     }
@@ -633,7 +667,7 @@ mod tests {
         clippy::too_many_lines
     )]
     use super::*;
-    use crate::application::ports::{BrokerError, OrderAck};
+    use crate::application::ports::{BrokerError, OrderAck, PositionInfo};
     use crate::domain::order_execution::aggregate::Order;
     use crate::domain::order_execution::errors::OrderError;
     use crate::domain::order_execution::value_objects::OrderStatus;
@@ -687,6 +721,10 @@ mod tests {
             _instrument_id: &crate::domain::shared::InstrumentId,
         ) -> Result<Option<Decimal>, BrokerError> {
             Ok(None)
+        }
+
+        async fn get_all_positions(&self) -> Result<Vec<PositionInfo>, BrokerError> {
+            Ok(vec![])
         }
     }
 
@@ -1350,6 +1388,12 @@ mod tests {
             &self,
             _instrument_id: &crate::domain::shared::InstrumentId,
         ) -> Result<Option<Decimal>, BrokerError> {
+            Err(BrokerError::ConnectionError {
+                message: "Broker unavailable".to_string(),
+            })
+        }
+
+        async fn get_all_positions(&self) -> Result<Vec<PositionInfo>, BrokerError> {
             Err(BrokerError::ConnectionError {
                 message: "Broker unavailable".to_string(),
             })

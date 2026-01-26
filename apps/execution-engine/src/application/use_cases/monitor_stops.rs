@@ -263,6 +263,12 @@ mod tests {
         ) -> Result<Option<Decimal>, BrokerError> {
             Ok(None)
         }
+
+        async fn get_all_positions(
+            &self,
+        ) -> Result<Vec<crate::application::ports::PositionInfo>, BrokerError> {
+            Ok(vec![])
+        }
     }
 
     struct MockPriceFeed {
@@ -520,6 +526,12 @@ mod tests {
             _instrument_id: &InstrumentId,
         ) -> Result<Option<Decimal>, BrokerError> {
             Ok(None)
+        }
+
+        async fn get_all_positions(
+            &self,
+        ) -> Result<Vec<crate::application::ports::PositionInfo>, BrokerError> {
+            Ok(vec![])
         }
     }
 

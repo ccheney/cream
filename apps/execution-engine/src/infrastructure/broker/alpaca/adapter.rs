@@ -4,7 +4,7 @@ use async_trait::async_trait;
 use rust_decimal::Decimal;
 
 use crate::application::ports::{
-    BrokerError, BrokerPort, CancelOrderRequest, OrderAck, SubmitOrderRequest,
+    BrokerError, BrokerPort, CancelOrderRequest, OrderAck, PositionInfo, SubmitOrderRequest,
 };
 use crate::domain::order_execution::value_objects::{OrderSide, OrderType, TimeInForce};
 use crate::domain::shared::{BrokerId, InstrumentId};
@@ -208,6 +208,50 @@ impl BrokerPort for AlpacaBrokerAdapter {
             Err(AlpacaError::OrderNotFound { .. }) => Ok(None),
             Err(e) => Err(BrokerError::from(e)),
         }
+    }
+
+    async fn get_all_positions(&self) -> Result<Vec<PositionInfo>, BrokerError> {
+        let positions: Vec<AlpacaPositionResponse> = self
+            .client
+            .get("/v2/positions")
+            .await
+            .map_err(BrokerError::from)?;
+
+        positions
+            .into_iter()
+            .map(|p| {
+                let quantity: Decimal = p.qty.parse().map_err(|_| BrokerError::Unknown {
+                    message: format!("Failed to parse quantity for {}", p.symbol),
+                })?;
+                let avg_entry_price: Decimal =
+                    p.avg_entry_price
+                        .parse()
+                        .map_err(|_| BrokerError::Unknown {
+                            message: format!("Failed to parse avg_entry_price for {}", p.symbol),
+                        })?;
+                let market_value: Decimal =
+                    p.market_value.parse().map_err(|_| BrokerError::Unknown {
+                        message: format!("Failed to parse market_value for {}", p.symbol),
+                    })?;
+                let unrealized_pnl: Decimal =
+                    p.unrealized_pl.parse().map_err(|_| BrokerError::Unknown {
+                        message: format!("Failed to parse unrealized_pl for {}", p.symbol),
+                    })?;
+                let current_price: Decimal =
+                    p.current_price.parse().map_err(|_| BrokerError::Unknown {
+                        message: format!("Failed to parse current_price for {}", p.symbol),
+                    })?;
+
+                Ok(PositionInfo {
+                    symbol: p.symbol,
+                    quantity,
+                    avg_entry_price,
+                    market_value,
+                    unrealized_pnl,
+                    current_price,
+                })
+            })
+            .collect()
     }
 }
 

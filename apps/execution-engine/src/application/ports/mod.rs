@@ -11,7 +11,9 @@ mod price_feed_port;
 mod quote_provider_port;
 mod risk_repository_port;
 
-pub use broker_port::{BrokerError, BrokerPort, CancelOrderRequest, OrderAck, SubmitOrderRequest};
+pub use broker_port::{
+    BrokerError, BrokerPort, CancelOrderRequest, OrderAck, PositionInfo, SubmitOrderRequest,
+};
 pub use event_publisher_port::{EventPublishError, EventPublisherPort, NoOpEventPublisher};
 pub use market_data_port::{
     MarketDataError, MarketDataPort, MarketQuote, OptionChainData, OptionContract, OptionGreeks,

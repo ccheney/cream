@@ -237,6 +237,12 @@ mod tests {
         ) -> Result<Option<Decimal>, BrokerError> {
             Ok(None)
         }
+
+        async fn get_all_positions(
+            &self,
+        ) -> Result<Vec<crate::application::ports::PositionInfo>, BrokerError> {
+            Ok(vec![])
+        }
     }
 
     // Mock order repository

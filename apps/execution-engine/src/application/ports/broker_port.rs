@@ -137,6 +137,23 @@ pub struct OrderAck {
     pub avg_fill_price: Option<Decimal>,
 }
 
+/// Position information from the broker.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct PositionInfo {
+    /// Instrument symbol.
+    pub symbol: String,
+    /// Quantity held (positive = long, negative = short).
+    pub quantity: Decimal,
+    /// Average entry price.
+    pub avg_entry_price: Decimal,
+    /// Current market value.
+    pub market_value: Decimal,
+    /// Unrealized P&L.
+    pub unrealized_pnl: Decimal,
+    /// Current price.
+    pub current_price: Decimal,
+}
+
 /// Broker port error.
 #[derive(Debug, Clone, thiserror::Error)]
 pub enum BrokerError {
@@ -200,6 +217,9 @@ pub trait BrokerPort: Send + Sync {
         &self,
         instrument_id: &InstrumentId,
     ) -> Result<Option<Decimal>, BrokerError>;
+
+    /// Get all positions.
+    async fn get_all_positions(&self) -> Result<Vec<PositionInfo>, BrokerError>;
 }
 
 #[cfg(test)]

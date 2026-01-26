@@ -121,6 +121,83 @@ impl ProxyQuoteManager {
         Ok(())
     }
 
+    /// Connect to the stream proxy service with retry logic.
+    ///
+    /// Waits for the proxy to become available, polling at regular intervals
+    /// until the connection succeeds or the timeout is reached.
+    ///
+    /// # Errors
+    ///
+    /// Returns error if connection fails after all retries or shutdown is requested.
+    pub async fn connect_with_retry(
+        &mut self,
+        max_wait: std::time::Duration,
+        interval: std::time::Duration,
+    ) -> Result<(), StreamProxyError> {
+        if !self.config.enabled {
+            tracing::info!("Stream proxy disabled, skipping connection");
+            return Ok(());
+        }
+
+        let start = std::time::Instant::now();
+        let mut attempt = 0u32;
+        let mut logged_waiting = false;
+
+        loop {
+            if self.shutdown.is_cancelled() {
+                return Err(StreamProxyError::StreamClosed {
+                    message: "shutdown requested while waiting for proxy".to_string(),
+                });
+            }
+
+            attempt += 1;
+            match self.connect().await {
+                Ok(()) => {
+                    if attempt > 1 {
+                        #[allow(clippy::cast_possible_truncation)]
+                        let elapsed_ms = start.elapsed().as_millis() as u64;
+                        tracing::info!(
+                            attempts = attempt,
+                            elapsed_ms,
+                            "Stream proxy is now available"
+                        );
+                    }
+                    return Ok(());
+                }
+                Err(e) => {
+                    if start.elapsed() >= max_wait {
+                        #[allow(clippy::cast_possible_truncation)]
+                        let max_wait_ms = max_wait.as_millis() as u64;
+                        tracing::warn!(
+                            error = %e,
+                            attempts = attempt,
+                            max_wait_ms,
+                            "Timed out waiting for stream proxy"
+                        );
+                        return Err(e);
+                    }
+
+                    if !logged_waiting {
+                        tracing::info!(
+                            endpoint = %self.config.endpoint,
+                            "Waiting for stream proxy to become available..."
+                        );
+                        logged_waiting = true;
+                    }
+
+                    tokio::select! {
+                        () = tokio::time::sleep(interval) => {}
+                        () = self.shutdown.cancelled() => {
+                            return Err(StreamProxyError::StreamClosed {
+                                message: "shutdown requested while waiting for proxy".to_string(),
+                            });
+                        }
+                    }
+                }
+            }
+        }
+    }
+
     /// Start streaming stock quotes.
     ///
     /// This spawns a background task that streams quotes from the proxy
