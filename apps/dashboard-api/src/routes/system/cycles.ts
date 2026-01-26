@@ -712,12 +712,32 @@ app.openapi(triggerCycleRoute, async (c) => {
 			// The actual workflow output is in the .result property
 			if (stream.result) {
 				const rawResult = await stream.result;
+				log.debug(
+					{
+						cycleId,
+						hasRawResult: !!rawResult,
+						rawResultKeys: rawResult ? Object.keys(rawResult as object) : [],
+					},
+					"Raw workflow result received",
+				);
 				const actualResult = (rawResult as { result?: unknown }).result;
+				log.debug(
+					{
+						cycleId,
+						hasActualResult: !!actualResult,
+						actualResultKeys: actualResult ? Object.keys(actualResult as object) : [],
+						hasDecisionPlan: !!(actualResult as { decisionPlan?: unknown })?.decisionPlan,
+					},
+					"Extracted workflow result",
+				);
 				workflowResult = actualResult as unknown as NonNullable<typeof workflowResult>;
+			} else {
+				log.warn({ cycleId }, "No stream.result available");
 			}
 
 			// Fallback if no result
 			if (!workflowResult) {
+				log.warn({ cycleId }, "Using fallback workflow result - no result from stream");
 				workflowResult = {
 					cycleId,
 					approved: false,
@@ -825,7 +845,7 @@ app.openapi(triggerCycleRoute, async (c) => {
 							id: decision.decisionId,
 							cycleId,
 							symbol: decision.instrumentId,
-							action: decision.action === "CLOSE" ? "SELL" : decision.action,
+							action: decision.action,
 							direction: decision.direction,
 							size: decision.size.value,
 							sizeUnit,
@@ -859,7 +879,16 @@ app.openapi(triggerCycleRoute, async (c) => {
 					"Decision persistence complete",
 				);
 			} else {
-				log.info({ cycleId }, "No decisions in workflow result to persist");
+				log.warn(
+					{
+						cycleId,
+						hasDecisionPlan: !!workflowResult.decisionPlan,
+						hasDecisions: !!workflowResult.decisionPlan?.decisions,
+						decisionCount: workflowResult.decisionPlan?.decisions?.length ?? 0,
+						workflowResultKeys: Object.keys(workflowResult),
+					},
+					"No decisions in workflow result to persist",
+				);
 			}
 
 			const durationMs = Date.now() - startTime;
