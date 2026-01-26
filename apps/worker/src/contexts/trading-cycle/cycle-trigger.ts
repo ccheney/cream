@@ -1,7 +1,11 @@
 /**
  * Trading Cycle Trigger
  *
- * Domain service for triggering OODA trading cycles via Mastra API.
+ * Domain service for triggering OODA trading cycles via Dashboard API.
+ * Uses dashboard-api's /api/system/trigger-cycle endpoint which handles:
+ * - Workflow execution via embedded Mastra
+ * - Decision persistence to database
+ * - WebSocket broadcasting of progress
  */
 
 import { log } from "../../shared/logger.js";
@@ -11,7 +15,8 @@ import { log } from "../../shared/logger.js";
 // ============================================
 
 export interface CycleTriggerConfig {
-	mastraApiUrl: string;
+	dashboardApiUrl: string;
+	internalSecret: string;
 }
 
 export interface CycleTriggerResult {
@@ -35,7 +40,7 @@ export class CycleTriggerService {
 		return this.running;
 	}
 
-	async trigger(environment: string, symbols: string[]): Promise<CycleTriggerResult | null> {
+	async trigger(environment: string, _symbols: string[]): Promise<CycleTriggerResult | null> {
 		if (this.running) {
 			log.info({}, "Skipping trading cycle - previous run still in progress");
 			return null;
@@ -44,82 +49,57 @@ export class CycleTriggerService {
 		this.running = true;
 
 		try {
-			return await this.triggerViaMastra(environment, symbols);
+			return await this.triggerViaDashboardApi(environment);
 		} finally {
 			this.running = false;
 		}
 	}
 
-	private async triggerViaMastra(
-		environment: string,
-		symbols: string[],
-	): Promise<CycleTriggerResult | null> {
+	private async triggerViaDashboardApi(environment: string): Promise<CycleTriggerResult | null> {
 		log.info(
-			{ environment, mastraApiUrl: this.config.mastraApiUrl },
-			"Triggering trading cycle via Mastra API",
+			{ environment, dashboardApiUrl: this.config.dashboardApiUrl },
+			"Triggering trading cycle via Dashboard API",
 		);
 
-		const cycleId = crypto.randomUUID();
-
 		try {
-			// Step 1: Create run
-			const createResponse = await fetch(
-				`${this.config.mastraApiUrl}/api/workflows/tradingCycleWorkflow/create-run?runId=${cycleId}`,
-				{
-					method: "POST",
-					headers: { "Content-Type": "application/json" },
-					body: JSON.stringify({}),
+			const response = await fetch(`${this.config.dashboardApiUrl}/api/system/trigger-cycle`, {
+				method: "POST",
+				headers: {
+					"Content-Type": "application/json",
+					Authorization: `Bearer ${this.config.internalSecret}`,
 				},
-			);
+				body: JSON.stringify({
+					environment,
+					// Symbols are loaded from runtime config by dashboard-api
+				}),
+			});
 
-			if (!createResponse.ok) {
-				const errorBody = await createResponse.text();
+			if (!response.ok) {
+				const errorBody = await response.text();
 				log.error(
-					{ status: createResponse.status, body: errorBody },
-					"Failed to create Mastra workflow run",
+					{ status: response.status, body: errorBody },
+					"Failed to trigger cycle via Dashboard API",
 				);
 				return null;
 			}
 
-			// Step 2: Start streaming execution
-			const streamResponse = await fetch(
-				`${this.config.mastraApiUrl}/api/workflows/tradingCycleWorkflow/stream?runId=${cycleId}`,
-				{
-					method: "POST",
-					headers: { "Content-Type": "application/json" },
-					body: JSON.stringify({
-						inputData: {
-							cycleId,
-							instruments: symbols,
-							environment,
-						},
-					}),
-				},
+			const result = (await response.json()) as { cycleId: string; status: string };
+			log.info(
+				{ cycleId: result.cycleId, status: result.status },
+				"Trading cycle triggered successfully",
 			);
-
-			if (!streamResponse.ok) {
-				const errorBody = await streamResponse.text();
-				log.error(
-					{ status: streamResponse.status, body: errorBody },
-					"Failed to start Mastra workflow stream",
-				);
-				return null;
-			}
-
-			// Stream is started - workflow will run asynchronously
-			log.info({ cycleId }, "Trading cycle triggered successfully via Mastra API");
 
 			return {
-				cycleId,
-				status: "queued",
+				cycleId: result.cycleId,
+				status: result.status,
 			};
 		} catch (error) {
 			log.error(
 				{
 					error: error instanceof Error ? error.message : String(error),
-					mastraApiUrl: this.config.mastraApiUrl,
+					dashboardApiUrl: this.config.dashboardApiUrl,
 				},
-				"Failed to reach Mastra API for trading cycle trigger",
+				"Failed to reach Dashboard API for trading cycle trigger",
 			);
 			return null;
 		}
@@ -132,6 +112,7 @@ export function createCycleTriggerService(config: CycleTriggerConfig): CycleTrig
 
 export function createCycleTriggerServiceFromEnv(): CycleTriggerService {
 	return new CycleTriggerService({
-		mastraApiUrl: Bun.env.MASTRA_API_URL ?? "http://localhost:4111",
+		dashboardApiUrl: Bun.env.DASHBOARD_API_URL ?? "http://localhost:3001",
+		internalSecret: Bun.env.WORKER_INTERNAL_SECRET ?? "dev-internal-secret",
 	});
 }
