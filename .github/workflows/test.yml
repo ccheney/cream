@@ -58,7 +58,7 @@ jobs:
           if [[ "${{ github.event_name }}" == "schedule" ]]; then
             bun run test:ts
           else
-            bun run test:ts -- --filter='[origin/master...]'
+            bun run test:ts -- --filter='[HEAD^1]'
           fi
 
   # ============================================
@@ -108,7 +108,7 @@ jobs:
           if [[ "${{ github.event_name }}" == "schedule" ]]; then
             bun run test:rs
           else
-            bun run test:rs -- --filter='[origin/master...]'
+            bun run test:rs -- --filter='[HEAD^1]'
           fi
 
   # ============================================
@@ -212,7 +212,7 @@ jobs:
           if [[ "${{ github.event_name }}" == "schedule" ]]; then
             bunx turbo run lint
           else
-            bunx turbo run lint --filter='[origin/master...]'
+            bunx turbo run lint --filter='[HEAD^1]'
           fi
 
       - name: Validate package dependencies
@@ -223,7 +223,7 @@ jobs:
           if [[ "${{ github.event_name }}" == "schedule" ]]; then
             bun run typecheck
           else
-            bun run typecheck -- --filter='[origin/master...]'
+            bun run typecheck -- --filter='[HEAD^1]'
           fi
 
   # ============================================
