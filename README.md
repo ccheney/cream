@@ -13,8 +13,7 @@ flowchart LR
         direction TB
         O1T["`**OBSERVE**`"]
         O1C[["`Market Snapshot
-OHLCV · Options · Quotes
-News · Earnings · Macro`"]]
+Quotes · Candles · Regime`"]]
         O1T ~~~ O1C
     end
 
@@ -22,9 +21,8 @@ News · Earnings · Macro`"]]
         direction TB
         O2T["`**ORIENT**`"]
         O2C[["`Context + Memory
-GraphRAG Retrieval
-Regime Classification
-Prediction Markets`"]]
+GraphRAG · Predictions
+Web Search Grounding`"]]
         O2T ~~~ O2C
     end
 
@@ -32,7 +30,7 @@ Prediction Markets`"]]
         direction TB
         DT["`**DECIDE**`"]
         DC[["`8-Agent Consensus
-3 Analysts → Bull vs Bear
+2 Analysts → Bull vs Bear
 Trader → Risk + Critic
 DecisionPlan Output`"]]
         DT ~~~ DC
@@ -41,10 +39,10 @@ DecisionPlan Output`"]]
     subgraph A[" "]
         direction TB
         AT["`**ACT**`"]
-        AC[["`Rust Execution
+        AC[["`Execution Engine
 Constraint Validation
-Order Routing → Alpaca
-Persist to HelixDB`"]]
+Order Routing → Broker
+Persist to Graph DB`"]]
         AT ~~~ AC
     end
 
