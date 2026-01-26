@@ -215,9 +215,7 @@ export function CycleSelector({ cycles, selectedId, onSelect, className }: Cycle
 					))}
 
 					{cycles.length === 0 && (
-						<div className="px-3 py-2 text-sm text-stone-400 dark:text-night-500">
-							No cycles
-						</div>
+						<div className="px-3 py-2 text-sm text-stone-400 dark:text-night-500">No cycles</div>
 					)}
 				</div>
 			)}

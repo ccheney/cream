@@ -126,6 +126,18 @@ export type {
 	TriggerCycleRequest,
 	TriggerCycleResponse,
 } from "./system";
+// Traces types
+export {
+	AGENT_METADATA,
+	type AgentData,
+	type AgentMetadata,
+	type CycleData,
+	type CycleListItem,
+	getAgentMetadata,
+	KNOWN_AGENT_TYPES,
+	type KnownAgentType,
+	type ToolCall,
+} from "./traces";
 // Trading types
 export type {
 	AgentOutput,
@@ -164,15 +176,3 @@ export type {
 	TimeInForce,
 	UpdateThesisRequest,
 } from "./trading";
-// Traces types
-export {
-	AGENT_METADATA,
-	getAgentMetadata,
-	KNOWN_AGENT_TYPES,
-	type AgentData,
-	type AgentMetadata,
-	type CycleData,
-	type CycleListItem,
-	type KnownAgentType,
-	type ToolCall,
-} from "./traces";
