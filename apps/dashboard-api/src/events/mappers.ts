@@ -167,12 +167,14 @@ export function mapOrderEvent(event: OrderUpdateEvent): BroadcastEvent {
  * Map decision insert event to DecisionMessage.
  */
 export function mapDecisionEvent(event: DecisionInsertEvent): BroadcastEvent {
-	// Map CLOSE action to NO_TRADE since CLOSE is not in the domain Action type
 	const actionMap: Record<DecisionInsertEvent["action"], Action> = {
 		BUY: "BUY",
 		SELL: "SELL",
 		HOLD: "HOLD",
-		CLOSE: "NO_TRADE",
+		CLOSE: "CLOSE",
+		INCREASE: "INCREASE",
+		REDUCE: "REDUCE",
+		NO_TRADE: "NO_TRADE",
 	};
 
 	const message: ServerMessage = {

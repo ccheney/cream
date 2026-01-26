@@ -152,7 +152,7 @@ export const DecisionInsertEventSchema = z.object({
 	decisionId: z.string(),
 	cycleId: z.string(),
 	symbol: z.string(),
-	action: z.enum(["BUY", "SELL", "HOLD", "CLOSE"]),
+	action: z.enum(["BUY", "SELL", "HOLD", "CLOSE", "INCREASE", "REDUCE", "NO_TRADE"]),
 	direction: z.enum(["LONG", "SHORT", "FLAT"]),
 	confidence: z.number().min(0).max(1),
 	createdAt: z.string().datetime(),

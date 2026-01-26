@@ -20,6 +20,7 @@ export const Action = z.enum([
 	"BUY", // Establish new long from flat
 	"SELL", // Establish new short from flat
 	"HOLD", // Maintain current position
+	"CLOSE", // Exit position completely
 	"INCREASE", // Increase exposure in direction
 	"REDUCE", // Reduce exposure magnitude
 	"NO_TRADE", // Remain flat
