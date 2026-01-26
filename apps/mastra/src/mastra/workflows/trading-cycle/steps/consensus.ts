@@ -115,7 +115,15 @@ export const consensusStep = createStep({
 		const riskManagerMs = performance.now() - riskStart;
 		const criticMs = performance.now() - criticStart;
 
-		const approved = riskApproval.verdict === "APPROVE" && criticApproval.verdict === "APPROVE";
+		// Determine overall approval:
+		// - APPROVE + APPROVE = approved (all decisions)
+		// - PARTIAL_APPROVE + APPROVE = approved (only approved decisions)
+		// - PARTIAL_APPROVE + PARTIAL_APPROVE = approved (intersection of approved decisions)
+		// - Any REJECT = not approved
+		const riskOk = riskApproval.verdict === "APPROVE" || riskApproval.verdict === "PARTIAL_APPROVE";
+		const criticOk =
+			criticApproval.verdict === "APPROVE" || criticApproval.verdict === "PARTIAL_APPROVE";
+		const approved = riskOk && criticOk;
 
 		log.info(
 			{
@@ -123,6 +131,10 @@ export const consensusStep = createStep({
 				approved,
 				riskVerdict: riskApproval.verdict,
 				criticVerdict: criticApproval.verdict,
+				riskApprovedCount: riskApproval.approvedDecisionIds?.length ?? 0,
+				riskRejectedCount: riskApproval.rejectedDecisionIds?.length ?? 0,
+				criticApprovedCount: criticApproval.approvedDecisionIds?.length ?? 0,
+				criticRejectedCount: criticApproval.rejectedDecisionIds?.length ?? 0,
 				errorCount: errors.length,
 				warningCount: warnings.length,
 			},
@@ -357,14 +369,31 @@ function parseApproval(
 
 	try {
 		const parsed = JSON.parse(jsonMatch[0]) as Record<string, unknown>;
+		const verdict = (parsed.verdict as "APPROVE" | "PARTIAL_APPROVE" | "REJECT") ?? "APPROVE";
+
+		// Only default to all decisions if verdict is APPROVE and no IDs provided
+		// For PARTIAL_APPROVE, we need explicit IDs to know which are approved
+		const allDecisionIds = decisions.map((d) => d.decisionId);
+		let approvedDecisionIds: string[];
+		if (Array.isArray(parsed.approvedDecisionIds)) {
+			approvedDecisionIds = parsed.approvedDecisionIds.map(String);
+		} else if (verdict === "APPROVE") {
+			approvedDecisionIds = allDecisionIds;
+		} else if (verdict === "REJECT") {
+			approvedDecisionIds = [];
+		} else {
+			// PARTIAL_APPROVE without explicit IDs - use rejectedDecisionIds to infer
+			const rejectedIds = new Set(
+				Array.isArray(parsed.rejectedDecisionIds) ? parsed.rejectedDecisionIds.map(String) : [],
+			);
+			approvedDecisionIds = allDecisionIds.filter((id) => !rejectedIds.has(id));
+		}
 
 		return {
-			verdict: (parsed.verdict as "APPROVE" | "PARTIAL_APPROVE" | "REJECT") ?? "APPROVE",
-			approvedDecisionIds: Array.isArray(parsed.approvedDecisionIds)
-				? parsed.approvedDecisionIds
-				: decisions.map((d) => d.decisionId),
+			verdict,
+			approvedDecisionIds,
 			rejectedDecisionIds: Array.isArray(parsed.rejectedDecisionIds)
-				? parsed.rejectedDecisionIds
+				? parsed.rejectedDecisionIds.map(String)
 				: [],
 			violations: normalizeViolations(parsed.violations, decisions),
 			required_changes: normalizeRequiredChanges(parsed.required_changes, decisions),
