@@ -1,402 +1,349 @@
 # Execution Engine
 
-The Execution Engine is the Rust-based deterministic core of the Cream trading system. It validates trading decisions from TypeScript agents, enforces risk constraints, routes orders to brokers, and manages portfolio state with crash recovery and reconciliation.
+Deterministic Rust execution engine for Cream's order routing and risk management. Receives `DecisionPlan` messages from TypeScript agents via gRPC/HTTP, validates against risk constraints, and routes orders to Alpaca Markets.
 
-## Overview
+## Architecture
 
-The execution engine runs as a standalone service with multiple API surfaces:
+```mermaid
+flowchart TB
+    subgraph TypeScript["TypeScript Layer"]
+        Mastra["Mastra Agents"]
+        DashAPI["Dashboard API"]
+    end
 
-- **HTTP/REST** (port 50051): Health checks and JSON endpoints for basic operations
-- **gRPC** (port 50053): Structured execution and market data services
+    subgraph Rust["Rust Execution Engine"]
+        subgraph Adapters["Driver Adapters"]
+            gRPC["gRPC Server<br/>:50053"]
+            HTTP["HTTP/REST<br/>:50051"]
+        end
 
-It operates in two environments:
+        subgraph Application["Application Layer"]
+            SubmitOrders["SubmitOrdersUseCase"]
+            ValidateRisk["ValidateRiskUseCase"]
+            CancelOrders["CancelOrdersUseCase"]
+            MonitorStops["MonitorStopsUseCase"]
+            Reconcile["ReconcileUseCase"]
+        end
 
-| Environment | Purpose | Broker | Credentials |
-|---|---|---|---|
-| **PAPER** | Paper trading (dry-run) | Alpaca Paper | ALPACA_KEY, ALPACA_SECRET |
-| **LIVE** | Real money trading | Alpaca Live | ALPACA_KEY, ALPACA_SECRET |
+        subgraph Domain["Domain Layer"]
+            OrderExec["order_execution"]
+            RiskMgmt["risk_management"]
+            ExecTactics["execution_tactics"]
+            StopEnforce["stop_enforcement"]
+            OptionPos["option_position"]
+        end
 
-## Key Components
+        subgraph Infrastructure["Driven Adapters"]
+            AlpacaBroker["AlpacaBrokerAdapter"]
+            AlpacaMarket["AlpacaMarketDataAdapter"]
+            StreamProxy["StreamProxyClient"]
+            OrderRepo["OrderRepository"]
+        end
+    end
 
-### Core Modules
+    subgraph External["External Services"]
+        Alpaca["Alpaca Markets API"]
+        Proxy["alpaca-stream-proxy<br/>:50052"]
+    end
 
-- **`execution/`** - Order routing, broker adapters, state management
-  - `gateway.rs` - Unified broker interface
-  - `alpaca.rs` - Alpaca Markets integration
-  - `state.rs` - Order state tracking
-  - `persistence.rs` - State snapshots and crash recovery
-  - `reconciliation.rs` - Periodic broker state sync
-  - `recovery.rs` - Crash recovery on startup
-  - `stops.rs` - Stop-loss and take-profit enforcement
-  - `tactics.rs` - Order execution tactics (TWAP, VWAP, adaptive, etc.)
+    Mastra -->|"CheckConstraints<br/>SubmitOrder"| gRPC
+    DashAPI -->|"REST"| HTTP
 
-- **`risk/`** - Constraint validation and position sizing
-  - `constraints.rs` - Per-instrument, portfolio, options, and margin checks
-  - `sizing.rs` - Position size calculations (SHARES, CONTRACTS, DOLLARS, PCT_EQUITY)
+    gRPC --> SubmitOrders & ValidateRisk & CancelOrders
+    HTTP --> SubmitOrders & ValidateRisk & CancelOrders
 
-- **`models/`** - Core domain types
-  - `order.rs` - Order and fill types
-  - `decision.rs` - DecisionPlan structures (mirrored from TypeScript agents)
-  - `constraint.rs` - Constraint request/response types
-  - `environment.rs` - PAPER/LIVE enum
+    SubmitOrders --> OrderExec & RiskMgmt
+    ValidateRisk --> RiskMgmt
+    MonitorStops --> StopEnforce
 
+    AlpacaBroker --> Alpaca
+    AlpacaMarket --> Alpaca
+    StreamProxy --> Proxy
+```
 
-- **`options/`** - Options trading support
-  - Greeks calculation (delta, gamma, vega, theta)
-  - Early exercise risk assessment
-  - Multi-leg order validation
-  - Assignment risk evaluation
+## Order Flow
 
-- **`pricing/`** - Options pricing
-  - Implied volatility solver
-  - Options strategy builders
-  - Greeks aggregation
+```mermaid
+sequenceDiagram
+    autonumber
+    participant Agent as Mastra Agent
+    participant EE as ExecutionService
+    participant Risk as RiskValidationService
+    participant Order as Order Aggregate
+    participant Broker as AlpacaBrokerAdapter
+    participant Alpaca as Alpaca API
 
-- **`feed/`** - Market data ingestion
-  - Alpaca integration for live market data
-  - Feed health monitoring
-  - Microstructure analysis
+    Agent->>+EE: CheckConstraints(DecisionPlan)
+    EE->>Risk: validate(orders, context)
+    Risk-->>EE: ConstraintResult
+    EE-->>-Agent: CheckConstraintsResponse
 
-- **`safety/`** - Safety mechanisms
-  - Mass cancel on broker disconnect
-  - Connection monitoring with heartbeat
-  - GTC order handling policies
+    alt Approved
+        Agent->>+EE: SubmitOrder(request)
+        EE->>Order: new(CreateOrderCommand)
+        Order-->>EE: Order [status=New]
+        EE->>Risk: validate([order], context)
+        Risk-->>EE: passed
+        EE->>+Broker: submit_order(request)
+        Broker->>+Alpaca: POST /v2/orders
+        Alpaca-->>-Broker: OrderResponse
+        Broker-->>-EE: OrderAck
+        EE->>Order: accept(broker_id)
+        Order-->>EE: Order [status=Accepted]
+        EE-->>-Agent: SubmitOrderResponse
+    end
+```
 
-- **`resilience/`** - Fault tolerance
-  - Circuit breaker pattern for broker/feed failures
-  - Automatic recovery with backoff
+## Risk Validation Pipeline
 
-- **`server/`** - API servers
-  - `http.rs` - REST/JSON endpoints
-  - `grpc.rs` - gRPC service implementations
-  - `tls.rs` - TLS/mTLS support
+```mermaid
+flowchart LR
+    subgraph Input
+        Orders[Orders]
+        Context[RiskContext]
+    end
 
-### Configuration
+    subgraph Checks["Risk Checks"]
+        PerInstrument["Per-Instrument<br/>max_units<br/>max_notional<br/>max_pct_equity"]
+        Portfolio["Portfolio<br/>max_gross_notional<br/>max_net_notional<br/>max_leverage"]
+        Options["Options Greeks<br/>max_delta<br/>max_gamma<br/>max_vega<br/>max_theta"]
+        BuyingPower["Buying Power<br/>required vs available"]
+        PDT["PDT Rules<br/>day_trades_remaining"]
+    end
 
-The engine loads configuration from `config.yaml` with environment variable interpolation:
+    subgraph Output
+        Result[ConstraintResult]
+    end
+
+    Orders --> PerInstrument & Portfolio & BuyingPower & PDT
+    Context --> PerInstrument & Portfolio & Options & BuyingPower & PDT
+
+    PerInstrument --> Result
+    Portfolio --> Result
+    Options --> Result
+    BuyingPower --> Result
+    PDT --> Result
+```
+
+## Order State Machine
+
+```mermaid
+stateDiagram-v2
+    [*] --> New : create
+    New --> Accepted : accept
+    New --> Rejected : reject
+    New --> Canceled : cancel
+
+    Accepted --> PartiallyFilled : partial fill
+    Accepted --> Filled : complete fill
+    Accepted --> Canceled : cancel
+
+    PartiallyFilled --> PartiallyFilled : partial fill
+    PartiallyFilled --> Filled : complete fill
+    PartiallyFilled --> Canceled : cancel
+
+    Filled --> [*]
+    Canceled --> [*]
+    Rejected --> [*]
+    Expired --> [*]
+
+    note right of PartiallyFilled
+        FIX Protocol Invariant
+        CumQty + LeavesQty = OrdQty
+    end note
+```
+
+## Domain Model
+
+### Bounded Contexts
+
+| Context | Responsibility |
+|---------|----------------|
+| `order_execution` | Order lifecycle (FIX protocol semantics), partial fills, state transitions |
+| `risk_management` | Risk policies, constraint validation, exposure tracking |
+| `execution_tactics` | TWAP, VWAP, Iceberg, Adaptive execution strategies |
+| `stop_enforcement` | Price monitoring, stop-loss/take-profit triggers |
+| `option_position` | Multi-leg options tracking, Greeks aggregation |
+
+### Key Aggregates
+
+```mermaid
+classDiagram
+    class Order {
+        +OrderId id
+        +Symbol symbol
+        +OrderSide side
+        +OrderType order_type
+        +Quantity quantity
+        +OrderStatus status
+        +PartialFillState partial_fill
+        +accept(BrokerId)
+        +apply_fill(FillReport)
+        +cancel(CancelReason)
+        +reject(RejectReason)
+    }
+
+    class RiskPolicy {
+        +String id
+        +String name
+        +ExposureLimits limits
+        +validate(orders, context)
+    }
+
+    class ExposureLimits {
+        +PerInstrumentLimits per_instrument
+        +PortfolioLimits portfolio
+        +OptionsLimits options
+        +SizingLimits sizing
+    }
+
+    RiskPolicy --> ExposureLimits
+```
+
+## gRPC Service
+
+**Package**: `cream.v1`
+**Port**: `50053`
+
+### ExecutionService
+
+| RPC | Request | Response | Description |
+|-----|---------|----------|-------------|
+| `CheckConstraints` | `CheckConstraintsRequest` | `CheckConstraintsResponse` | Validate DecisionPlan against risk limits |
+| `SubmitOrder` | `SubmitOrderRequest` | `SubmitOrderResponse` | Submit single order to broker |
+| `GetOrderState` | `GetOrderStateRequest` | `GetOrderStateResponse` | Query order by ID |
+| `CancelOrder` | `CancelOrderRequest` | `CancelOrderResponse` | Request order cancellation |
+| `StreamExecutions` | `StreamExecutionsRequest` | `stream StreamExecutionsResponse` | Real-time execution updates |
+| `GetAccountState` | `GetAccountStateRequest` | `GetAccountStateResponse` | Account equity, buying power |
+| `GetPositions` | `GetPositionsRequest` | `GetPositionsResponse` | Current positions |
+
+### MarketDataService
+
+| RPC | Description |
+|-----|-------------|
+| `GetSnapshot` | Latest quote for symbols |
+| `GetOptionChain` | Option chain for underlying |
+| `SubscribeMarketData` | Stream real-time quotes |
+
+## HTTP API
+
+**Port**: `50051`
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| `GET` | `/health` | Health check |
+| `POST` | `/api/v1/check-constraints` | Validate orders against risk |
+| `POST` | `/api/v1/submit-orders` | Submit batch of orders |
+| `POST` | `/api/v1/orders` | Get order state by IDs |
+| `POST` | `/api/v1/cancel-orders` | Cancel orders |
+
+## Configuration
+
+### Environment Variables
+
+| Variable | Required | Default | Description |
+|----------|----------|---------|-------------|
+| `CREAM_ENV` | No | `PAPER` | `PAPER` or `LIVE` |
+| `ALPACA_KEY` | Yes | - | Alpaca API key |
+| `ALPACA_SECRET` | Yes | - | Alpaca API secret |
+| `HTTP_PORT` | No | `50051` | HTTP server port |
+| `GRPC_PORT` | No | `50053` | gRPC server port |
+| `POSITION_MONITOR_ENABLED` | No | `true` | Enable position monitoring |
+| `STREAM_PROXY_ENDPOINT` | No | `http://localhost:50052` | Stream proxy gRPC endpoint |
+
+### config.yaml
 
 ```yaml
-server:
-  http_port: 50051
-  grpc_port: 50053
-
-brokers:
-  alpaca:
-    api_key: ${ALPACA_KEY}
-    api_secret: ${ALPACA_SECRET}
-
 constraints:
   per_instrument:
-    max_notional: 50000
-    max_units: 1000
+    max_notional: 50000      # $50k per position
+    max_units: 1000          # Max shares/contracts
+    max_equity_pct: 0.10     # 10% of equity
+
   portfolio:
     max_gross_notional: 500000
+    max_net_notional: 200000
     max_leverage: 2.0
 
-persistence:
-  enabled: true
-  db_path: "./data/orders.db"
-  snapshot_interval_secs: 60
-
-recovery:
-  enabled: true
-  auto_resolve_orphans: true
-  sync_positions: true
-
-reconciliation:
-  enabled: true
-  interval_secs: 300
-  protection_window_secs: 1800
-
-safety:
-  enabled: true
-  grace_period_seconds: 30
-  heartbeat_interval_ms: 30000
+  options:
+    max_delta_per_underlying: 100.0
+    max_portfolio_delta: 500.0
+    max_portfolio_gamma: 50.0
+    max_portfolio_vega: 1000.0
+    max_portfolio_theta: -500.0
 ```
 
-See `src/config.rs` for complete configuration schema and defaults.
+## Execution Tactics
 
-## Building and Running
+Available tactics for order slicing and market impact minimization:
 
-### Build
+| Tactic | Description |
+|--------|-------------|
+| `PassiveLimit` | Post limit at bid/ask, await fill |
+| `AggressiveLimit` | Cross spread for immediate execution |
+| `TWAP` | Time-weighted slices over duration |
+| `VWAP` | Volume-weighted slices based on historical profile |
+| `Iceberg` | Hidden quantity with visible peak |
+| `Adaptive` | Dynamic tactic switching based on market conditions |
 
-```bash
-# Build the binary
-cargo build -p execution-engine
+## Project Structure
 
-# Build with optimizations
-cargo build -p execution-engine --release
-
-# Build Rust workspace
-cargo build --workspace
 ```
+src/
+  domain/                    # Business logic (no dependencies)
+    order_execution/         # Order aggregate, FIX semantics
+    risk_management/         # Risk policies, validation
+    execution_tactics/       # TWAP, VWAP, Iceberg
+    stop_enforcement/        # Price monitoring
+    option_position/         # Multi-leg options
+    shared/                  # Value objects (Money, Quantity, Symbol)
 
-### Run
+  application/               # Use cases and orchestration
+    use_cases/               # SubmitOrders, ValidateRisk, etc.
+    ports/                   # BrokerPort, PriceFeedPort interfaces
+    dto/                     # Data transfer objects
+    services/                # PositionMonitorService
 
-```bash
-# With default config.yaml
-cargo run --bin execution-engine
-
-# With custom config
-cargo run --bin execution-engine -- --config /path/to/config.yaml
-
-# Set environment
-CREAM_ENV=PAPER ALPACA_KEY=... ALPACA_SECRET=... cargo run --bin execution-engine
+  infrastructure/            # External integrations
+    grpc/                    # Tonic gRPC server
+    http/                    # Axum REST API
+    broker/alpaca/           # Alpaca broker adapter
+    marketdata/              # Market data adapter
+    stream_proxy/            # Real-time quote client
+    persistence/             # Order repository
 ```
-
-### Testing
-
-```bash
-# Run all tests (requires CREAM_ENV=PAPER)
-CREAM_ENV=PAPER cargo test -p execution-engine
-
-# Run specific test module
-CREAM_ENV=PAPER cargo test -p execution-engine risk::
-
-# Run with output
-CREAM_ENV=PAPER cargo test -p execution-engine -- --nocapture
-
-# Run integration tests
-CREAM_ENV=PAPER cargo test -p execution-engine --test tactics_integration_test
-```
-
-### Coverage
-
-```bash
-# Generate coverage report
-cargo cov
-
-# View HTML report
-cargo cov-html
-
-# Check coverage meets 90% threshold
-cargo cov-check
-```
-
-## API Endpoints
-
-### HTTP/REST (port 50051)
-
-```bash
-# Health check
-GET /health
-
-# Validate constraints without executing
-POST /v1/check-constraints
-Content-Type: application/json
-{
-  "decision_plan": {...},
-  "portfolio_state": {...}
-}
-
-# Submit orders for execution
-POST /v1/submit-orders
-Content-Type: application/json
-{
-  "decision_plan": {...},
-  "execution_params": {...}
-}
-
-# Get order states
-POST /v1/order-state
-Content-Type: application/json
-{
-  "order_ids": ["order-1", "order-2"]
-}
-```
-
-### gRPC Services
-
-**ExecutionService** (port 50053)
-- `CheckConstraints` - Validate decision plan
-- `SubmitOrder` - Execute single order
-- `SubmitOrders` - Execute multiple orders
-- `GetOrderState` - Query order status
-- `CancelOrder` - Cancel active order
-- `GetPortfolioState` - Query positions and P&L
-
-**MarketDataService**
-- `GetSnapshot` - Current market snapshot for symbol
-- `GetOptionChain` - Option chain for underlying
-- `SubscribeMarketData` - Stream market data updates
-
-## Environment Variables
-
-### Required
-
-| Variable | Required for | Description |
-|---|---|---|
-| `CREAM_ENV` | All | PAPER or LIVE |
-| `ALPACA_KEY` | PAPER, LIVE | Alpaca API key |
-| `ALPACA_SECRET` | PAPER, LIVE | Alpaca API secret |
-
-### Optional
-
-| Variable | Default | Description |
-|---|---|---|
-| `RUST_LOG` | info | Logging level (trace, debug, info, warn, error) |
-| `GRPC_TLS_ENABLED` | false | Enable TLS for gRPC |
-| `GRPC_TLS_CERT_PATH` | - | Server certificate path |
-| `GRPC_TLS_KEY_PATH` | - | Server private key path |
-
-## Key Workflows
-
-### Order Submission Flow
-
-1. **Validation** (`ConstraintValidator`)
-   - Check per-instrument limits (notional, units, equity %)
-   - Check portfolio limits (gross/net notional, leverage)
-   - Validate options Greeks and assignment risk
-   - Verify buying power/margin
-
-2. **Decision Plan Routing**
-   - Parse DecisionPlan from TypeScript agents
-   - Extract orders with action, direction, size, stops, targets
-
-3. **Order Execution**
-   - Route to broker adapter (Alpaca or simulated)
-   - Track order state locally
-   - Persist state snapshot
-
-4. **Risk Enforcement**
-   - Monitor stops and targets
-   - Enforce bracket orders on entry
-   - Trigger mass cancel on disconnect
-
-### Crash Recovery (Startup)
-
-1. Load persisted orders and positions from local DB
-2. Fetch broker state from Alpaca
-3. Reconcile: find orphaned orders, closed positions, discrepancies
-4. Auto-resolve orphans or alert if critical
-5. Sync portfolio state
-6. Resume normal operation
-
-### Reconciliation (Periodic)
-
-1. Fetch broker state (orders, positions, buying power)
-2. Compare with local state
-3. Detect: missing orders, extra orders, quantity mismatches, price divergence
-4. Auto-resolve per config or alert
-5. Log discrepancies for audit
-
-## Important Notes
-
-### Precision and Financial Calculations
-
-- Uses `rust_decimal::Decimal` for all financial math (precise to many decimal places)
-- Avoids floating-point rounding errors in price and quantity calculations
-- Leverage calculations use precise decimal arithmetic
-
-### Determinism
-
-- Slippage models are parameterized (fixed BPS, spread-based, volume impact)
-- Commission includes SEC, TAF, and ORF regulatory fees
-- Stop/target triggers have configurable priority (stop_first, target_first, high_low_order)
-
-### Persistence
-
-- PAPER/LIVE modes: SQLite-backed persistence in `./data/orders.db`
-- Periodic snapshots on configurable interval (default 60s)
-- Enables crash recovery on service restart
-
-### Safety
-
-- Circuit breaker on broker API failures
-- Mass cancel on connection loss (configurable grace period)
-- GTC order handling (configurable: include or exclude from cancel)
-- Heartbeat monitoring with timeout detection
-- Manual kill switch via gRPC/HTTP endpoints
-
-### Options Support
-
-- Multi-leg order validation (spreads, straddles, etc.)
-- Greeks aggregation (portfolio-level delta, gamma, vega, theta)
-- Assignment risk assessment
-- Early exercise detection
-- Options-specific constraint checks
-
-## Troubleshooting
-
-### Startup fails: Missing credentials
-
-**Error**: "Missing required environment variables: ALPACA_KEY, ALPACA_SECRET"
-
-**Fix**: Set environment variables or update `config.yaml`:
-```bash
-export ALPACA_KEY=your-key
-export ALPACA_SECRET=your-secret
-cargo run --bin execution-engine
-```
-
-### Crashes on restart: Orphaned orders
-
-**Logs**: "Reconciliation detected critical discrepancies - orphans_resolved: N"
-
-**Fix**: Set `recovery.auto_resolve_orphans: true` in config to auto-cleanup, or manually review broker account.
-
-### Orders not executing: Circuit breaker open
-
-**Logs**: "Circuit breaker is open for Alpaca"
-
-**Fix**: Wait for the configured wait duration (default 30s) or restart the service. Check broker API status.
-
-### High latency on market data
-
-**Logs**: "Data gap detected for symbol XYZ"
-
-**Fix**: Check Alpaca connectivity. Verify network connectivity to data feed. Check `feeds.alpaca` config.
-
-## Dependencies
-
-Key external dependencies:
-
-- `tokio` - Async runtime
-- `tonic` - gRPC server
-- `axum` - HTTP server
-- `rust_decimal` - Precise decimal arithmetic
-- `sqlx` - SQLite/PostgreSQL client for persistence
-- `alpaca-websocket` - Market data feed
-- `reqwest` - HTTP client
-- `tracing` - Observability
-
-See `Cargo.toml` for complete dependency list and versions.
 
 ## Development
 
-### Adding New Features
+```bash
+# Build
+cargo build -p execution-engine
 
-1. Add domain models in `models/` if needed
-2. Implement constraint/validation logic in `risk/`
-3. Add execution logic in `execution/` with adapter implementations
-4. Expose via `server/` endpoints (HTTP or gRPC)
-5. Write tests with mocks for external dependencies
-6. Update `config.rs` if configuration is needed
+# Test
+cargo test -p execution-engine
 
-### Code Organization Principles
+# Run (requires ALPACA_KEY, ALPACA_SECRET)
+CREAM_ENV=PAPER cargo run -p execution-engine
 
-- **No unsafe code** (forbidden by lint)
-- **Self-documenting code** - clear names, minimal comments
-- **Strict error handling** - no `.unwrap()` in production paths
-- **Trait-based adapters** - support multiple brokers/feeds
-- **Configuration-driven** - behavior configurable without code changes
-- **Comprehensive testing** - 100% coverage threshold
+# Generate protobuf stubs (automatic via build.rs)
+buf generate
+```
 
-### Testing Strategy
+## Dependencies
 
-- Use `mockall` for mocking broker/feed APIs
-- Use `proptest` for property-based testing
-- Use `wiremock` for HTTP mock servers
-- Integration tests use `testcontainers` for real infrastructure when needed
+| Crate | Purpose |
+|-------|---------|
+| `tonic` | gRPC server/client |
+| `axum` | HTTP server |
+| `tokio` | Async runtime |
+| `rust_decimal` | Financial precision arithmetic |
+| `reqwest` | HTTP client for Alpaca API |
+| `sqlx` | PostgreSQL (shared with TS apps) |
+| `tracing` | Structured logging |
 
-## Related Documentation
+## Safety
 
-- **Cream Overview**: See `/Users/ccheney/Projects/cream/CLAUDE.md`
-- **Architecture Plans**: `docs/plans/09-rust-core.md` (order routing, risk)
-- **Testing Plans**: `docs/plans/14-testing.md` (coverage, strategies)
-- **Tactics Implementation**: `TACTICS_IMPLEMENTATION.md` (execution algorithms)
-
-## License
-
-AGPL-3.0-only
-
+- `#![forbid(unsafe_code)]` - No unsafe Rust
+- Clippy `pedantic` + `nursery` lints enabled
+- `unwrap_used` and `expect_used` warnings (test code excepted)
+- 90% code coverage target (Critical tier)

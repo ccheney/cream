@@ -1,254 +1,398 @@
 # @cream/prediction-markets
 
-Prediction markets integration for the Cream trading system. Aggregates probability data from Kalshi and Polymarket to provide macro-level signals for trading decisions.
+Prediction market data integration for Cream. Aggregates probability signals from Kalshi and Polymarket to provide macro-level context for trading decisions.
 
-## Installation
+## Architecture Overview
 
-```bash
-bun add @cream/prediction-markets
+```mermaid
+flowchart TB
+    subgraph Providers["Data Providers"]
+        Kalshi[Kalshi API]
+        Poly[Polymarket API]
+    end
+
+    subgraph REST["REST Clients"]
+        KC[KalshiClient]
+        PC[PolymarketClient]
+    end
+
+    subgraph WS["WebSocket Streams"]
+        KWS[KalshiWebSocketClient]
+        PWS[PolymarketWebSocketClient]
+    end
+
+    subgraph Aggregation["Aggregation Layer"]
+        UC[UnifiedPredictionMarketClient]
+        MM[MarketMatcher]
+        AD[ArbitrageDetector]
+        USS[UnifiedStreamingService]
+    end
+
+    subgraph Output["Output"]
+        Events[PredictionMarketEvent]
+        Scores[PredictionMarketScores]
+        Signals[MacroRiskSignals]
+    end
+
+    Kalshi --> KC
+    Poly --> PC
+    Kalshi --> KWS
+    Poly --> PWS
+
+    KC --> UC
+    PC --> UC
+    KWS --> USS
+    PWS --> USS
+
+    UC --> MM
+    UC --> AD
+    UC --> Events
+    UC --> Scores
+    UC --> Signals
 ```
 
-## Features
+## Data Flow
 
-- **Multi-Platform Support**: Unified client for Kalshi and Polymarket
-- **Real-Time Updates**: WebSocket support for Kalshi market data
-- **Market Aggregation**: Cross-platform market matching and arbitrage detection
-- **Caching**: In-memory TTL cache with LRU eviction
-- **Signal Transformation**: Convert prediction market data to trading signals
+```mermaid
+sequenceDiagram
+    autonumber
+    participant Cream as Cream Worker
+    participant UC as UnifiedClient
+    participant KC as KalshiClient
+    participant PC as PolymarketClient
+    participant MM as MarketMatcher
+    participant AD as ArbitrageDetector
 
-## Quick Start
+    Cream->>UC: getAllMarketData(["FED_RATE", "RECESSION"])
 
-```typescript
-import {
-  createKalshiClientFromEnv,
-  createPolymarketClientFromEnv,
-  createUnifiedClient,
-} from "@cream/prediction-markets";
+    par Parallel Fetch
+        UC->>KC: fetchMarkets(types)
+        KC-->>UC: KalshiEvents[]
+    and
+        UC->>PC: fetchMarkets(types)
+        PC-->>UC: PolymarketEvents[]
+    end
 
-// Create unified client (combines both platforms)
-const client = await createUnifiedClient();
+    UC->>MM: findMatches(kalshiEvents, polyEvents)
+    MM-->>UC: MatchedMarket[]
 
-// Fetch aggregated market data
-const data = await client.fetchAllMarkets();
-console.log("Fed Rate Markets:", data.fedRateMarkets);
-console.log("Macro Risk Signals:", data.macroRiskSignals);
-console.log("Arbitrage Alerts:", data.arbitrageAlerts);
-```
+    UC->>AD: analyze(matchedMarkets)
+    AD-->>UC: ArbitrageAlert[]
 
-## API Reference
+    UC->>UC: calculateCombinedScores()
+    UC->>UC: calculateMacroRiskSignals()
 
-### Clients
-
-#### KalshiClient
-
-REST API client for Kalshi prediction markets with RSA-PSS authentication.
-
-```typescript
-import { createKalshiClientFromEnv } from "@cream/prediction-markets";
-
-const client = await createKalshiClientFromEnv();
-
-// Fetch markets by series
-const fedMarkets = await client.getMarketsBySeries("KXFED");
-
-// Fetch events with markets
-const events = await client.getEventsWithMarkets({
-  seriesTicker: "KXFED",
-  status: "open",
-});
-```
-
-**Environment Variables:**
-- `KALSHI_API_KEY_ID` - API key ID
-- `KALSHI_PRIVATE_KEY` - RSA private key (PEM format)
-- `KALSHI_DEMO` - Set to "true" for demo environment
-
-#### PolymarketClient
-
-CLOB client for Polymarket prediction markets.
-
-```typescript
-import { createPolymarketClientFromEnv } from "@cream/prediction-markets";
-
-const client = await createPolymarketClientFromEnv();
-
-// Search for relevant markets
-const events = await client.searchMarkets("Federal Reserve");
-
-// Get orderbook for a token
-const orderbook = await client.getOrderbook(tokenId);
-```
-
-#### KalshiWebSocketClient
-
-Real-time market data via WebSocket connection.
-
-```typescript
-import { KalshiWebSocketClient } from "@cream/prediction-markets";
-
-const ws = new KalshiWebSocketClient({ demo: true });
-await ws.connect();
-
-// Subscribe to ticker updates
-ws.subscribe("ticker", ["KXFED-26JAN29"], (message) => {
-  console.log("Price update:", message);
-});
-
-// Access cached market state
-const state = ws.getCache().get("KXFED-26JAN29");
-```
-
-### Aggregation
-
-#### UnifiedPredictionMarketClient
-
-Combines Kalshi and Polymarket into a single interface.
-
-```typescript
-import { createUnifiedClient } from "@cream/prediction-markets";
-
-const client = await createUnifiedClient({
-  kalshi: { demo: true },
-  polymarket: {},
-  cache: { eventTtlMs: 300000 },
-  arbitrageThreshold: 0.05,
-});
-
-const data = await client.fetchAllMarkets();
-```
-
-#### MarketMatcher
-
-Matches similar markets across platforms using Jaccard similarity.
-
-```typescript
-import { MarketMatcher } from "@cream/prediction-markets";
-
-const matcher = new MarketMatcher({ minSimilarity: 0.3 });
-const matches = matcher.findMatches(kalshiMarkets, polymarketMarkets);
-```
-
-#### ArbitrageDetector
-
-Detects price divergences between platforms.
-
-```typescript
-import { ArbitrageDetector } from "@cream/prediction-markets";
-
-const detector = new ArbitrageDetector({ threshold: 0.05 });
-const alerts = detector.detectArbitrage(matchedMarkets);
-```
-
-### Caching
-
-#### MarketCache
-
-In-memory cache with TTL and LRU eviction.
-
-```typescript
-import { MarketCache } from "@cream/prediction-markets";
-
-const cache = new MarketCache({
-  eventTtlMs: 300000, // 5 minutes
-  scoresTtlMs: 60000, // 1 minute
-  maxEventEntries: 1000,
-});
-
-// Get-or-fetch pattern
-const event = await cache.getOrFetchEvent("KXFED-26JAN29", async () => {
-  return await fetchFromApi("KXFED-26JAN29");
-});
-```
-
-### Transformers
-
-#### transformToExternalEvent
-
-Converts prediction market events to ExternalEvent format for the trading system.
-
-```typescript
-import { transformToExternalEvent } from "@cream/prediction-markets";
-
-const externalEvent = transformToExternalEvent(predictionMarketEvent);
-// Returns: { eventId, eventType: "PREDICTION_MARKET", payload, ... }
-```
-
-#### mapToRelatedInstruments
-
-Maps market types to related ETF instruments.
-
-```typescript
-import { mapToRelatedInstruments } from "@cream/prediction-markets";
-
-const instruments = mapToRelatedInstruments(fedRateEvent);
-// Returns: ["XLF", "TLT", "IYR", "KRE", ...]
+    UC-->>Cream: UnifiedMarketData
 ```
 
 ## Market Types
 
-| Type | Description | Example Markets |
-|------|-------------|-----------------|
-| FED_RATE | Federal Reserve decisions | KXFED (25bps cut/hike) |
-| ECONOMIC_DATA | Economic indicators | KXCPI, KXGDP |
-| RECESSION | Recession probability | Recession 2026 |
-| GEOPOLITICAL | Geopolitical events | Tariffs, conflicts |
-| REGULATORY | Regulatory decisions | SEC, antitrust |
-| ELECTION | Election outcomes | Presidential races |
+| Type | Kalshi Series | Description |
+|------|---------------|-------------|
+| `FED_RATE` | KXFED, KXFOMC | Federal Reserve rate decisions |
+| `ECONOMIC_DATA` | KXCPI, KXGDP, KXJOBS, KXPCE | Economic indicator releases |
+| `RECESSION` | KXREC | Recession probability |
+| `ELECTION` | KXPRES | Presidential elections |
+| `GEOPOLITICAL` | - | Geopolitical events |
+| `REGULATORY` | - | Regulatory decisions |
 
-## Prediction Market Scores
+## Usage
 
-The aggregator computes standardized scores for the trading system:
-
-```typescript
-interface PredictionMarketScores {
-  fedCutProbability?: number;     // 0-1 probability of Fed rate cut
-  fedHikeProbability?: number;    // 0-1 probability of Fed rate hike
-  recessionProbability12m?: number; // 12-month recession probability
-  macroUncertaintyIndex?: number; // 0-1 overall macro uncertainty
-  policyEventRisk?: number;       // 0-1 policy event risk
-  cpiSurpriseDirection?: number;  // -1 to 1 CPI surprise direction
-  gdpSurpriseDirection?: number;  // -1 to 1 GDP surprise direction
-}
-```
-
-## Testing
-
-```bash
-# Run all tests
-bun test
-
-# Run with coverage
-bun test --coverage
-
-# Run specific test file
-bun test src/providers/kalshi/client.test.ts
-```
-
-## Configuration
-
-Configuration uses Zod schemas with sensible defaults. API keys come from environment variables:
+### Unified Client (Recommended)
 
 ```typescript
-import { createDefaultPredictionMarketsConfig } from "@cream/config/schemas/prediction_markets";
+import { createUnifiedClient, type UnifiedMarketData } from "@cream/prediction-markets";
 
-const config = createDefaultPredictionMarketsConfig();
-// { kalshi: {...}, polymarket: {...}, caching: {...}, ... }
+const client = createUnifiedClient({
+  kalshi: {
+    enabled: true,
+    api_key_id: process.env.KALSHI_API_KEY_ID,
+    private_key_path: process.env.KALSHI_PRIVATE_KEY_PATH,
+    rate_limit_tier: "basic",
+  },
+  polymarket: {
+    enabled: true,
+  },
+});
+
+// Fetch all market data with cross-platform analysis
+const data: UnifiedMarketData = await client.getAllMarketData([
+  "FED_RATE",
+  "ECONOMIC_DATA",
+  "RECESSION",
+]);
+
+// Access aggregated signals
+const { fedCutProbability, recessionProbability12m } = data.signals;
 ```
 
-Required environment variables:
-- `KALSHI_API_KEY_ID` - Kalshi API key ID
-- `KALSHI_PRIVATE_KEY_PATH` - Path to RSA private key
+### Direct Provider Access
+
+```typescript
+import { createKalshiClientFromEnv, createPolymarketClientFromEnv } from "@cream/prediction-markets";
+
+// Kalshi (requires API credentials)
+const kalshi = createKalshiClientFromEnv();
+const fedEvents = await kalshi.fetchMarkets(["FED_RATE"]);
+const scores = kalshi.calculateScores(fedEvents);
+
+// Polymarket (no auth required for read-only)
+const polymarket = createPolymarketClientFromEnv();
+const events = await polymarket.fetchMarkets(["RECESSION"]);
+```
+
+### Real-time Streaming
+
+```typescript
+import { createUnifiedStreamingService } from "@cream/prediction-markets";
+
+const streaming = createUnifiedStreamingService({
+  kalshiEnabled: true,
+  kalshiApiKeyId: process.env.KALSHI_API_KEY_ID,
+  kalshiPrivateKeyPath: process.env.KALSHI_PRIVATE_KEY_PATH,
+  polymarketEnabled: true,
+  autoReconnect: true,
+});
+
+streaming.onUpdate((update) => {
+  console.log(`${update.platform} ${update.ticker}: ${update.lastPrice}`);
+});
+
+await streaming.start();
+streaming.subscribeKalshiTickers(["KXFED-26JAN29-T4.25"]);
+streaming.subscribePolymarketAssets(["asset_id_here"]);
+```
+
+## Sector Mappings
+
+Prediction market events are mapped to tradeable instruments based on market type and keywords.
+
+```mermaid
+flowchart LR
+    subgraph Markets["Prediction Markets"]
+        FED[FED_RATE Markets]
+        ECON[ECONOMIC_DATA]
+        REC[RECESSION]
+        GEO[GEOPOLITICAL]
+    end
+
+    subgraph Sectors["Sector ETFs"]
+        XLF[XLF - Financials]
+        TLT[TLT - Treasuries]
+        XLE[XLE - Energy]
+        XLV[XLV - Healthcare]
+        GLD[GLD - Gold]
+    end
+
+    FED -->|rate sensitive| XLF
+    FED -->|inverse correlation| TLT
+    REC -->|defensive| GLD
+    GEO -->|oil exposure| XLE
+    ECON -->|inflation| GLD
+```
+
+| Market Pattern | Primary Sector | Key Instruments |
+|----------------|----------------|-----------------|
+| Fed rate, FOMC | FINANCIALS | XLF, KRE, TLT, IYR |
+| CPI, inflation | FINANCIALS | TIP, GLD, TLT |
+| Recession, GDP | FINANCIALS | SPY, QQQ, VIX, TLT |
+| Oil, OPEC | ENERGY | XLE, XOP, USO |
+| Tariff, trade | CONSUMER | XLY, EEM, FXI |
+| FDA approval | HEALTHCARE | XLV, IBB, XBI |
+
+## Scores & Signals
+
+### PredictionMarketScores
+
+Raw probability scores extracted from markets:
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `fedCutProbability` | `number?` | Probability of Fed rate cut |
+| `fedHikeProbability` | `number?` | Probability of Fed rate hike |
+| `recessionProbability12m` | `number?` | 12-month recession probability |
+| `macroUncertaintyIndex` | `number?` | Uncertainty index (0-1) |
+| `cpiSurpriseDirection` | `number?` | Expected CPI surprise direction |
+| `shutdownProbability` | `number?` | Government shutdown probability |
+
+### MacroRiskSignals
+
+Computed signals for trading decisions:
+
+| Field | Description |
+|-------|-------------|
+| `fedCutProbability` | Averaged across platforms |
+| `fedHikeProbability` | Averaged across platforms |
+| `recessionProbability12m` | Averaged across platforms |
+| `macroUncertaintyIndex` | Overall market uncertainty |
+| `policyEventRisk` | Risk score for policy events |
+| `marketConfidence` | Inverse of uncertainty |
+| `marketCount` | Markets used in computation |
+| `platforms` | Contributing platforms |
+
+## Cross-Platform Analysis
+
+### Market Matching
+
+The `MarketMatcher` finds equivalent markets across platforms using:
+
+- **Question similarity** (50% weight): Jaccard similarity on normalized text
+- **Outcome similarity** (30% weight): Binary market detection, outcome name matching
+- **Temporal similarity** (20% weight): Expiration date proximity
+
+```typescript
+const matcher = new MarketMatcher({ minSimilarity: 0.7 });
+const matches = matcher.findMatches(kalshiEvents, polymarketEvents);
+```
+
+### Arbitrage Detection
+
+The `ArbitrageDetector` identifies price divergences:
+
+| Alert Type | Condition | Implication |
+|------------|-----------|-------------|
+| `opportunity` | 5-20% divergence, high similarity | Potential arbitrage |
+| `data_quality_issue` | >20% divergence | Data validation needed |
+| `resolution_risk` | Divergence + low similarity | Different resolution criteria |
+
+## Caching
+
+```typescript
+import { createMarketCache } from "@cream/prediction-markets";
+
+const cache = createMarketCache({
+  eventTtlMs: 5 * 60 * 1000,  // 5 min for events
+  scoresTtlMs: 60 * 1000,     // 1 min for scores
+  maxEventEntries: 1000,
+  autoPrune: true,
+});
+
+// Get-or-fetch pattern
+const event = await cache.getOrFetchEvent("KXFED-26JAN29", async () => {
+  return kalshi.fetchMarketByTicker("KXFED-26JAN29");
+});
+```
 
 ## Rate Limits
 
-| Platform | Rate Limit |
-|----------|------------|
-| Kalshi REST | 100 req/min |
-| Kalshi WebSocket | 10 msg/sec |
-| Polymarket | 30 req/min |
+### Kalshi
 
-## Related Packages
+| Tier | Read/s | Write/s |
+|------|--------|---------|
+| basic | 20 | 10 |
+| advanced | 30 | 30 |
+| premier | 100 | 100 |
+| prime | 400 | 400 |
 
-- `@cream/domain` - Shared types and schemas
-- `@cream/config` - Configuration management
-- `@cream/storage` - Database persistence (PredictionMarketsRepository)
+### Polymarket
+
+| Endpoint | Requests/min |
+|----------|--------------|
+| gamma_markets | 60 |
+| clob_book_price | 120 |
+
+## WebSocket Channels
+
+### Kalshi
+
+| Channel | Data | Use Case |
+|---------|------|----------|
+| `ticker` | Price updates, volume | Real-time quotes |
+| `orderbook_delta` | Orderbook changes | Market depth |
+| `trade` | Trade executions | Volume tracking |
+
+### Polymarket
+
+| Event Type | Data | Use Case |
+|------------|------|----------|
+| `book` | Full orderbook snapshot | Initial state |
+| `price_change` | Best bid/ask updates | Real-time quotes |
+| `last_trade_price` | Last trade | Execution tracking |
+
+## Environment Variables
+
+| Variable | Required | Description |
+|----------|----------|-------------|
+| `KALSHI_API_KEY_ID` | For Kalshi | API key ID |
+| `KALSHI_PRIVATE_KEY_PATH` | For Kalshi | Path to RSA private key |
+| `POLYMARKET_CLOB_ENDPOINT` | No | Override CLOB URL |
+| `POLYMARKET_GAMMA_ENDPOINT` | No | Override Gamma URL |
+
+## Error Handling
+
+```typescript
+import {
+  PredictionMarketError,
+  RateLimitError,
+  AuthenticationError,
+} from "@cream/prediction-markets";
+
+try {
+  const events = await client.fetchMarkets(["FED_RATE"]);
+} catch (error) {
+  if (error instanceof RateLimitError) {
+    await sleep(error.retryAfterMs);
+  } else if (error instanceof AuthenticationError) {
+    // Check credentials
+  }
+}
+```
+
+## Transformers
+
+Transform prediction market events into Cream's external event schema:
+
+```typescript
+import {
+  transformToExternalEvents,
+  transformScoresToNumeric,
+  mapToRelatedInstruments,
+} from "@cream/prediction-markets";
+
+// Convert to ExternalEvent format for context pipeline
+const externalEvents = transformToExternalEvents(predictionEvents);
+
+// Convert scores to numeric format for ML features
+const numericScores = transformScoresToNumeric(scores);
+// { pm_fed_cut: 0.81, pm_recession_12m: 0.15, ... }
+
+// Get related instruments for a specific event
+const instruments = mapToRelatedInstruments(event);
+// ["XLF", "TLT", "IYR", "KRE"]
+```
+
+## Integration with Cream
+
+Prediction market signals feed into Cream's OODA loop during the **Observe** phase:
+
+```mermaid
+flowchart LR
+    subgraph Observe["Observe Phase"]
+        PM[Prediction Markets]
+        MD[Market Data]
+        News[News/Sentiment]
+    end
+
+    subgraph Orient["Orient Phase"]
+        Regime[Regime Classification]
+        Context[External Context]
+    end
+
+    subgraph Decide["Decide Phase"]
+        Agent[LLM Agent]
+    end
+
+    PM --> Context
+    MD --> Regime
+    News --> Context
+
+    Regime --> Agent
+    Context --> Agent
+```
+
+Signals influence trading decisions:
+
+- **High `fedCutProbability`**: Favor rate-sensitive longs (TLT, IYR)
+- **High `recessionProbability12m`**: Reduce equity exposure, favor defensives
+- **High `macroUncertaintyIndex`**: Reduce position sizes
+- **Arbitrage alerts**: Data quality validation

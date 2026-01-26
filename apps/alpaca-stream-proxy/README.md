@@ -1,189 +1,375 @@
 # Alpaca Stream Proxy
 
-Rust gRPC service that multiplexes a single Alpaca WebSocket connection to multiple downstream consumers.
+A Rust gRPC proxy that maintains persistent WebSocket connections to Alpaca's market data feeds and multiplexes data to multiple downstream clients. Part of the Cream agentic trading system.
 
-## Overview
+## Architecture
 
-Alpaca Markets enforces exactly one active WebSocket connection per account. This service maintains that single connection and distributes market data via gRPC streaming to multiple consumers (dashboard-api, execution-engine, etc.).
+```mermaid
+flowchart TB
+    subgraph Alpaca["Alpaca Markets"]
+        SIP["SIP WebSocket<br/>wss://stream.data.alpaca.markets/v2/sip"]
+        OPRA["OPRA WebSocket<br/>wss://stream.data.alpaca.markets/v1beta1/opra"]
+        Trading["Trade Updates WebSocket<br/>wss://api.alpaca.markets/stream"]
+    end
 
-```
-┌─────────────────────────────────────────────────────────────────┐
-│                    alpaca-stream-proxy (Rust)                   │
-│                                                                 │
-│  ┌───────────────────────────────────────────────────────────┐  │
-│  │                    WebSocket Clients                      │  │
-│  │  ┌─────────────┐  ┌─────────────┐  ┌─────────────────┐   │  │
-│  │  │ SIP Stream  │  │ OPRA Stream │  │ Trade Updates   │   │  │
-│  │  │ (stocks)    │  │ (options)   │  │ (orders)        │   │  │
-│  │  └─────────────┘  └─────────────┘  └─────────────────┘   │  │
-│  └───────────────────────────────────────────────────────────┘  │
-│                              │                                  │
-│                              ▼                                  │
-│  ┌───────────────────────────────────────────────────────────┐  │
-│  │           Broadcast Channels (tokio::sync::broadcast)     │  │
-│  └───────────────────────────────────────────────────────────┘  │
-│                              │                                  │
-│                              ▼                                  │
-│  ┌───────────────────────────────────────────────────────────┐  │
-│  │                    gRPC Server (tonic)                    │  │
-│  │  • StreamQuotes(symbols) → stream<Quote>                  │  │
-│  │  • StreamTrades(symbols) → stream<Trade>                  │  │
-│  │  • StreamBars(symbols) → stream<Bar>                      │  │
-│  │  • StreamOptionQuotes(contracts) → stream<OptionQuote>    │  │
-│  │  • StreamOrderUpdates() → stream<OrderUpdate>             │  │
-│  └───────────────────────────────────────────────────────────┘  │
-└─────────────────────────────────────────────────────────────────┘
-                │                              │
-                ▼                              ▼
-     ┌──────────────────┐         ┌──────────────────┐
-     │   dashboard-api  │         │ execution-engine │
-     │  (gRPC client)   │         │  (gRPC client)   │
-     └──────────────────┘         └──────────────────┘
-```
+    subgraph Proxy["alpaca-stream-proxy"]
+        subgraph WS["WebSocket Clients"]
+            SipClient["SipClient<br/>JSON codec"]
+            OpraClient["OpraClient<br/>MessagePack codec"]
+            TradingClient["TradingClient<br/>JSON codec"]
+        end
 
-## Features
+        subgraph Broadcast["BroadcastHub"]
+            StockQ["Stock Quotes<br/>10K buffer"]
+            StockT["Stock Trades<br/>10K buffer"]
+            StockB["Stock Bars<br/>1K buffer"]
+            OptQ["Option Quotes<br/>50K buffer"]
+            OptT["Option Trades<br/>10K buffer"]
+            Orders["Order Updates<br/>1K buffer"]
+        end
 
-- **Single connection multiplexing**: Maintains one WebSocket connection per stream type
-- **gRPC streaming**: Type-safe distribution via Protocol Buffers
-- **Automatic reconnection**: Exponential backoff with jitter
-- **Heartbeat monitoring**: Detects stale connections
-- **Subscription management**: Aggregates symbols across consumers
-- **Prometheus metrics**: Connection health, message throughput, latency
-- **OpenTelemetry tracing**: Distributed tracing support
+        gRPC["gRPC Server<br/>StreamProxyService"]
+        Health["Health Server<br/>HTTP :8082"]
+    end
 
-## Streams
+    subgraph Clients["Cream Services"]
+        Dashboard["dashboard-api"]
+        Mastra["mastra"]
+        Worker["worker"]
+    end
 
-| Stream | Endpoint | Format | Data |
-|--------|----------|--------|------|
-| SIP (stocks) | `wss://stream.data.alpaca.markets/v2/sip` | JSON | Quotes, trades, bars |
-| OPRA (options) | `wss://stream.data.alpaca.markets/v1beta1/opra` | msgpack | Option quotes, trades |
-| Trade Updates | `wss://[paper-]api.alpaca.markets/stream` | JSON | Order fills, cancellations |
+    SIP --> SipClient
+    OPRA --> OpraClient
+    Trading --> TradingClient
 
-## Environment Variables
+    SipClient --> StockQ & StockT & StockB
+    OpraClient --> OptQ & OptT
+    TradingClient --> Orders
 
-### Required
+    StockQ & StockT & StockB & OptQ & OptT & Orders --> gRPC
 
-```bash
-ALPACA_KEY=...           # Alpaca API key
-ALPACA_SECRET=...        # Alpaca API secret
-CREAM_ENV=PAPER|LIVE     # Environment (determines endpoints)
+    gRPC --> Dashboard & Mastra & Worker
+    Health -.-> Dashboard
 ```
 
-### Optional
+## Data Flow
 
-```bash
-ALPACA_FEED=sip                    # Market data feed (sip or iex, default: sip)
-STREAM_PROXY_GRPC_PORT=50052       # gRPC server port (default: 50052)
-STREAM_PROXY_HEALTH_PORT=8082      # Health check HTTP port (default: 8082)
-STREAM_PROXY_METRICS_PORT=9090     # Prometheus metrics port (default: 9090)
-OTEL_ENABLED=true                  # Enable OpenTelemetry (default: true)
-OTEL_EXPORTER_OTLP_ENDPOINT=...    # OTLP endpoint (default: http://localhost:4318)
-RUST_LOG=info                      # Log level
+```mermaid
+sequenceDiagram
+    autonumber
+    participant A as Alpaca WS
+    participant C as WebSocket Client
+    participant B as BroadcastHub
+    participant G as gRPC Server
+    participant D as Downstream Client
+
+    Note over A,C: Connection & Auth
+    C->>+A: Connect
+    A-->>C: {"T":"success","msg":"connected"}
+    C->>A: {"action":"auth","key":"...","secret":"..."}
+    A-->>-C: {"T":"success","msg":"authenticated"}
+
+    Note over D,G: Client subscribes
+    D->>G: StreamQuotes(symbols: ["AAPL"])
+    G->>B: Subscribe to stock_quotes channel
+
+    Note over A,D: Market data flow
+    A->>C: {"T":"q","S":"AAPL","bp":150.00,...}
+    C->>B: send_stock_quote(quote)
+    B->>G: broadcast to receivers
+    G->>D: StreamQuotesResponse(quote)
 ```
 
-## Running
+## Message Types
 
-```bash
-# Development
-cargo run --bin alpaca-stream-proxy
+```mermaid
+classDiagram
+    class StockQuote {
+        +string symbol
+        +Decimal bid_price
+        +int32 bid_size
+        +Decimal ask_price
+        +int32 ask_size
+        +DateTime timestamp
+        +string tape
+    }
 
-# Production
-cargo build --release --bin alpaca-stream-proxy
-./target/release/alpaca-stream-proxy
+    class StockTrade {
+        +string symbol
+        +int64 trade_id
+        +Decimal price
+        +int32 size
+        +string exchange
+        +DateTime timestamp
+    }
+
+    class StockBar {
+        +string symbol
+        +Decimal open
+        +Decimal high
+        +Decimal low
+        +Decimal close
+        +int64 volume
+        +int32 trade_count
+    }
+
+    class OptionQuote {
+        +string symbol
+        +Decimal bid_price
+        +int32 bid_size
+        +Decimal ask_price
+        +int32 ask_size
+        +DateTime timestamp
+    }
+
+    class OptionTrade {
+        +string symbol
+        +Decimal price
+        +int32 size
+        +string exchange
+        +DateTime timestamp
+    }
+
+    class OrderUpdate {
+        +OrderEvent event
+        +OrderDetails order
+        +string price
+        +string qty
+        +DateTime timestamp
+    }
+
+    class OrderEvent {
+        <<enumeration>>
+        New
+        Fill
+        PartialFill
+        Canceled
+        Expired
+        Rejected
+    }
+
+    OrderUpdate --> OrderEvent
 ```
 
-## Docker
+## Connection State Machine
 
-```bash
-# Build
-docker build -t alpaca-stream-proxy .
-
-# Run
-docker run -e ALPACA_KEY=... -e ALPACA_SECRET=... -e CREAM_ENV=PAPER \
-  -p 50052:50052 -p 8082:8082 alpaca-stream-proxy
+```mermaid
+stateDiagram-v2
+    [*] --> Disconnected
+    Disconnected --> Connecting : connect()
+    Connecting --> Authenticating : ws_connected
+    Authenticating --> Connected : auth_success
+    Authenticating --> Error : auth_failed
+    Connected --> Reconnecting : ws_closed
+    Connected --> Disconnected : shutdown
+    Reconnecting --> Connecting : delay_elapsed
+    Reconnecting --> Error : max_attempts_exceeded
+    Error --> Reconnecting : retry
+    Error --> [*] : shutdown
 ```
 
-## Health Check
+## Layer Structure
 
-```bash
-curl http://localhost:8082/health
 ```
+src/
+├── domain/                    # Core types, no external dependencies
+│   ├── streaming/             # Market data types
+│   └── subscription/          # Subscription tracking with refcounting
+│
+├── application/               # Use cases and port definitions
+│   ├── ports/                 # Interface traits
+│   └── services/              # Application services
+│
+└── infrastructure/            # Adapters and implementations
+    ├── alpaca/                # WebSocket clients
+    │   ├── sip.rs             # Stock data (JSON)
+    │   ├── opra.rs            # Options data (MessagePack)
+    │   ├── trading.rs         # Order updates (JSON)
+    │   ├── auth.rs            # Authentication handler
+    │   ├── codec.rs           # JSON/MessagePack codecs
+    │   ├── heartbeat.rs       # Connection health monitoring
+    │   ├── messages.rs        # Wire format types
+    │   └── reconnect.rs       # Exponential backoff policy
+    ├── grpc/                  # gRPC server
+    │   └── server.rs          # StreamProxyService implementation
+    ├── broadcast/             # Tokio broadcast channels
+    ├── config/                # Configuration from env vars
+    ├── health/                # HTTP health endpoints
+    ├── metrics/               # Prometheus instrumentation
+    └── telemetry/             # OpenTelemetry integration
+```
+
+## gRPC API
+
+| RPC | Description | Filter Support |
+|-----|-------------|----------------|
+| `StreamQuotes` | Real-time stock quotes (NBBO) | By symbol |
+| `StreamTrades` | Real-time stock trades | By symbol |
+| `StreamBars` | Real-time minute bars | By symbol |
+| `StreamOptionQuotes` | Real-time option quotes | By symbol or underlying |
+| `StreamOptionTrades` | Real-time option trades | By symbol or underlying |
+| `StreamOrderUpdates` | Order lifecycle events | By order ID or symbol |
+| `GetConnectionStatus` | Proxy health and feed states | N/A |
+
+Proto definition: `packages/proto/cream/v1/stream_proxy.proto`
+
+## Configuration
+
+### Required Environment Variables
+
+| Variable | Description |
+|----------|-------------|
+| `ALPACA_KEY` | Alpaca API key |
+| `ALPACA_SECRET` | Alpaca API secret |
+
+### Optional Environment Variables
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `CREAM_ENV` | `PAPER` | `PAPER` or `LIVE` |
+| `ALPACA_FEED` | `sip` | `sip` (full) or `iex` (free tier) |
+| `STREAM_PROXY_GRPC_PORT` | `50052` | gRPC server port |
+| `STREAM_PROXY_HEALTH_PORT` | `8082` | Health check HTTP port |
+| `STREAM_PROXY_METRICS_PORT` | `9090` | Prometheus metrics port |
+| `OTEL_ENABLED` | `true` | Enable OpenTelemetry tracing |
+| `OTEL_EXPORTER_OTLP_ENDPOINT` | `http://localhost:4318` | OTLP collector endpoint |
+| `RUST_LOG` | `info` | Log level filter |
+
+### WebSocket Tuning
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `STREAM_PROXY_HEARTBEAT_INTERVAL_SECS` | `30` | Ping interval |
+| `STREAM_PROXY_HEARTBEAT_TIMEOUT_SECS` | `60` | Pong timeout |
+| `STREAM_PROXY_RECONNECT_DELAY_INITIAL_MS` | `500` | Initial backoff delay |
+| `STREAM_PROXY_RECONNECT_DELAY_MAX_SECS` | `30` | Max backoff delay |
+| `STREAM_PROXY_MAX_RECONNECT_ATTEMPTS` | `0` | Max retries (0 = unlimited) |
+
+### Broadcast Channel Capacities
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `STREAM_PROXY_STOCK_QUOTES_CAPACITY` | `10000` | Stock quote buffer |
+| `STREAM_PROXY_STOCK_TRADES_CAPACITY` | `10000` | Stock trade buffer |
+| `STREAM_PROXY_STOCK_BARS_CAPACITY` | `1000` | Stock bar buffer |
+| `STREAM_PROXY_OPTIONS_QUOTES_CAPACITY` | `50000` | Option quote buffer |
+| `STREAM_PROXY_OPTIONS_TRADES_CAPACITY` | `10000` | Option trade buffer |
+| `STREAM_PROXY_ORDER_UPDATES_CAPACITY` | `1000` | Order update buffer |
+
+## Health Endpoints
+
+| Endpoint | Purpose | Response |
+|----------|---------|----------|
+| `GET /health` | Detailed status | JSON with feed states, uptime, client count |
+| `GET /healthz` | Kubernetes liveness | `200 OK` if process running |
+| `GET /readyz` | Kubernetes readiness | `200 OK` if any feed connected |
+| `GET /metrics` | Prometheus metrics | Text format metrics |
+
+### Health Response Schema
 
 ```json
 {
-  "status": "healthy",
-  "upstream": {
-    "stocks": { "connected": true, "lastMessage": "2026-01-22T15:30:00.123Z" },
-    "options": { "connected": true, "lastMessage": "2026-01-22T15:30:00.456Z" },
-    "trading": { "connected": true, "lastMessage": "2026-01-22T15:29:55.789Z" }
+  "status": "healthy|degraded|unhealthy",
+  "version": "0.1.0",
+  "uptime_secs": 3600,
+  "feeds": {
+    "sip": { "state": "connected", "connected": true, "messages_received": 1234567 },
+    "opra": { "state": "connected", "connected": true, "messages_received": 9876543 },
+    "trading": { "state": "connected", "connected": true, "messages_received": 42 }
   },
-  "subscriptions": {
-    "stocks": 47,
-    "options": 156
-  },
-  "consumers": 2
+  "subscriptions": { "broadcast_receivers": 5 }
 }
 ```
 
-## Protobuf Service
+## Alpaca Stream Protocols
 
-See `packages/schema/cream/v1/stream_proxy.proto` for the full service definition.
+### SIP (Stock Data)
+- URL: `wss://stream.data.alpaca.markets/v2/{sip|iex}`
+- Encoding: JSON
+- Auth: `{"action":"auth","key":"...","secret":"..."}`
+- Messages: Quotes (`q`), Trades (`t`), Bars (`b`), Status (`s`)
 
-```protobuf
-service StreamProxyService {
-  rpc StreamQuotes(StreamQuotesRequest) returns (stream QuotesResponse);
-  rpc StreamTrades(StreamTradesRequest) returns (stream TradesResponse);
-  rpc StreamBars(StreamBarsRequest) returns (stream BarsResponse);
-  rpc StreamOptionQuotes(StreamOptionQuotesRequest) returns (stream OptionQuotesResponse);
-  rpc StreamOptionTrades(StreamOptionTradesRequest) returns (stream OptionTradesResponse);
-  rpc StreamOrderUpdates(StreamOrderUpdatesRequest) returns (stream OrderUpdatesResponse);
-  rpc GetConnectionStatus(GetConnectionStatusRequest) returns (GetConnectionStatusResponse);
-}
-```
+### OPRA (Options Data)
+- URL (indicative): `wss://stream.data.alpaca.markets/v1beta1/indicative`
+- URL (full OPRA): `wss://stream.data.alpaca.markets/v1beta1/opra`
+- Encoding: MessagePack (binary)
+- Auth: Same structure, MessagePack encoded
+- Messages: Quotes (`q`), Trades (`t`)
 
-## Consumers
+### Trade Updates (Orders)
+- URL (paper): `wss://paper-api.alpaca.markets/stream`
+- URL (live): `wss://api.alpaca.markets/stream`
+- Encoding: JSON
+- Auth: `{"action":"authenticate","data":{"key_id":"...","secret_key":"..."}}`
+- Listen: `{"action":"listen","data":{"streams":["trade_updates"]}}`
 
-### TypeScript (dashboard-api)
+## Commands
 
-```typescript
-import { streamQuotes, streamTrades } from "./streaming/proxy-client.js";
+```bash
+# Development
+cargo run                       # Start with .env from workspace root
 
-// Stream quotes
-for await (const quote of streamQuotes(["AAPL", "MSFT"], { signal })) {
-  console.log(quote.symbol, quote.bidPrice, quote.askPrice);
-}
-```
+# Testing
+cargo test                      # Unit + integration tests
+cargo test --test grpc_streaming  # gRPC integration tests only
 
-### Rust (execution-engine)
+# Linting & Formatting
+cargo clippy --all-targets -- -D warnings
+cargo fmt
 
-```rust
-use crate::infrastructure::proxy::ProxyClient;
+# Build
+cargo build --release           # Optimized binary
 
-let mut client = ProxyClient::connect("http://localhost:50052").await?;
-let mut stream = client.stream_quotes(vec!["AAPL".into()]).await?;
-
-while let Some(quote) = stream.next().await {
-  println!("{}: {} x {}", quote.symbol, quote.bid_price, quote.ask_price);
-}
+# Docker
+docker build -t cream/alpaca-stream-proxy -f apps/alpaca-stream-proxy/Dockerfile .
+docker run -p 50052:50052 -p 8082:8082 \
+  -e ALPACA_KEY=... \
+  -e ALPACA_SECRET=... \
+  cream/alpaca-stream-proxy
 ```
 
 ## Metrics
 
-Prometheus metrics available at `http://localhost:9090/metrics`:
+Prometheus metrics exposed at `/metrics`:
 
+| Metric | Type | Description |
+|--------|------|-------------|
+| `alpaca_proxy_messages_received_total` | Counter | Messages from Alpaca by feed/type |
+| `alpaca_proxy_messages_sent_total` | Counter | Messages sent to gRPC clients |
+| `alpaca_proxy_messages_dropped_total` | Counter | Dropped due to slow consumers |
+| `alpaca_proxy_websocket_connections` | Gauge | Active WebSocket connections |
+| `alpaca_proxy_grpc_clients` | Gauge | Active gRPC client streams |
+| `alpaca_proxy_subscriptions_total` | Gauge | Active subscriptions by feed |
+| `alpaca_proxy_websocket_errors_total` | Counter | WebSocket errors by type |
+| `alpaca_proxy_reconnects_total` | Counter | Reconnection attempts by feed |
+| `alpaca_proxy_message_processing_seconds` | Histogram | Processing latency |
+
+## Integration with Cream
+
+This proxy serves as the single point of connection to Alpaca's streaming APIs for the Cream trading system:
+
+```mermaid
+flowchart LR
+    subgraph External
+        Alpaca[Alpaca Markets]
+    end
+
+    subgraph Cream["Cream System"]
+        Proxy[alpaca-stream-proxy]
+        DashAPI[dashboard-api]
+        Mastra[mastra agents]
+        Exec[execution-engine]
+    end
+
+    Alpaca <-->|3 WebSocket<br/>connections| Proxy
+    Proxy -->|gRPC streams| DashAPI
+    Proxy -->|gRPC streams| Mastra
+    Proxy -->|gRPC streams| Exec
 ```
-# Connection health
-alpaca_proxy_upstream_connections_active{stream="stocks|options|trading"}
-alpaca_proxy_upstream_reconnections_total{stream="stocks|options|trading"}
 
-# Message throughput
-alpaca_proxy_messages_received_total{stream, type}
-alpaca_proxy_messages_sent_total{consumer}
-
-# Latency
-alpaca_proxy_message_latency_seconds{quantile="0.5|0.9|0.99"}
-```
-
-## Architecture
-
-See [docs/plans/52-websocket-proxy.md](../../docs/plans/52-websocket-proxy.md) for the full design document.
+**Benefits of centralized proxy:**
+- Single set of Alpaca credentials
+- Reduced API rate limit consumption
+- Consistent connection management
+- Shared reconnection logic with exponential backoff
+- Unified metrics and observability

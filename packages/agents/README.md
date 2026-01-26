@@ -1,132 +1,340 @@
 # @cream/agents
 
-Agent prompts, tools, and consensus infrastructure for the Cream trading system.
+Agent prompts, configurations, and tools for Cream's 8-agent trading network. This package provides the LLM orchestration layer that powers the OODA trading cycle.
 
-## Overview
+## Architecture
 
-Provides:
+```mermaid
+flowchart TB
+    subgraph OODA["OODA Trading Cycle"]
+        direction TB
+        O1[Observe] --> O2[Orient]
+        O2 --> G[Grounding]
+        G --> A[Analysis]
+        A --> D[Debate]
+        D --> T[Trader]
+        T --> C[Consensus]
+        C --> Act[Act]
+    end
 
-- **9 Specialized Agents** - Analysis, research, decision, approval
-- **30+ Trading Tools** - Market data, indicators, external context
-- **Dual-Approval Consensus** - Risk Manager + Critic gate
-- **Quality Scoring** - Pre and post execution evaluation
+    subgraph Agents["8-Agent Network"]
+        direction TB
+        GA[Grounding Agent]
+        NA[News Analyst]
+        FA[Fundamentals Analyst]
+        BR[Bullish Researcher]
+        BeR[Bearish Researcher]
+        TR[Trader]
+        RM[Risk Manager]
+        CR[Critic]
+    end
+
+    G --> GA
+    A --> NA & FA
+    D --> BR & BeR
+    T --> TR
+    C --> RM & CR
+```
 
 ## Agent Network
 
-### Phase 1: Analysis (Parallel)
-- `news_analyst` - Event impact, sentiment
-- `fundamentals_analyst` - Valuation, macro
+### Execution Phases
 
-### Phase 2: Research (Parallel)
-- `bullish_researcher` - Bull case development
-- `bearish_researcher` - Bear case with counterarguments
+Agents execute in four phases, with parallelization within phases:
 
-### Phase 3: Decision (Sequential)
-- `trader` - Synthesizes into DecisionPlan
+```mermaid
+flowchart LR
+    subgraph Phase1["Phase 1: Analysis"]
+        direction TB
+        NA[News Analyst]
+        FA[Fundamentals Analyst]
+    end
 
-### Phase 4: Approval (Dual Gate)
-- `risk_manager` - Constraint validation
-- `critic` - Consistency, hallucination prevention
+    subgraph Phase2["Phase 2: Research"]
+        direction TB
+        BR[Bullish Researcher]
+        BeR[Bearish Researcher]
+    end
 
-## Consensus Gate
+    subgraph Phase3["Phase 3: Decision"]
+        TR[Trader]
+    end
 
-```typescript
-import { ConsensusGate, runConsensusLoop } from "@cream/agents";
+    subgraph Phase4["Phase 4: Approval"]
+        direction TB
+        RM[Risk Manager]
+        CR[Critic]
+    end
 
-const gate = new ConsensusGate({ maxIterations: 3 });
+    Phase1 -->|parallel| Phase2
+    Phase2 --> Phase3
+    Phase3 -->|parallel| Phase4
+```
 
-const result = await runConsensusLoop(
-  gate,
-  initialPlan,
-  async (plan) => ({
-    riskManager: await riskManagerAgent.run(plan),
-    critic: await criticAgent.run(plan),
-  }),
-  async (plan, rejections) => await traderAgent.run({ rejections })
-);
+### Agent Responsibilities
+
+| Agent | Role | Tools | Output Type |
+|-------|------|-------|-------------|
+| **Grounding Agent** | Web/X.com search for real-time context | xAI Grok live search | Structured market context |
+| **News Analyst** | Assess news impact and sentiment | None (context-driven) | `SentimentAnalysisOutput` |
+| **Fundamentals Analyst** | Valuation and macro context | `fredEconomicCalendar`, `graphragQuery`, `helixQuery`, `getPredictionSignals` | `FundamentalsAnalysisOutput` |
+| **Bullish Researcher** | Build strongest case for LONG | `helixQuery`, `analyzeContent`, `searchAcademicPapers` | `BullishResearchOutput` |
+| **Bearish Researcher** | Build strongest case for SHORT | `helixQuery`, `analyzeContent`, `searchAcademicPapers` | `BearishResearchOutput` |
+| **Trader** | Synthesize into decision plan | `getQuotes`, `getEnrichedPortfolioState`, `optionChain`, `getGreeks`, `helixQuery`, `getPredictionSignals`, `searchAcademicPapers` | `DecisionPlan` |
+| **Risk Manager** | Validate against constraints | `getEnrichedPortfolioState`, `getPredictionSignals` | `ApprovalOutput` |
+| **Critic** | Validate logical consistency | None (context-driven) | `ApprovalOutput` |
+
+## OODA Integration
+
+```mermaid
+sequenceDiagram
+    autonumber
+    participant W as Worker
+    participant O as Observe
+    participant Or as Orient
+    participant G as Grounding Agent
+    participant An as Analysts
+    participant R as Researchers
+    participant T as Trader
+    participant C as Consensus
+    participant A as Act
+
+    W->>O: trigger(cycleId, instruments)
+    O->>O: Fetch quotes, candles, regime
+    O->>Or: MarketSnapshot
+    Or->>Or: Load memory, thesis state
+    Or->>G: instruments[]
+    G->>G: xAI Grok web/X search
+    G->>An: GroundingContext
+    par News + Fundamentals
+        An->>An: News Analyst
+        An->>An: Fundamentals Analyst
+    end
+    An->>R: Analysis results
+    par Bullish + Bearish
+        R->>R: Bullish Researcher
+        R->>R: Bearish Researcher
+    end
+    R->>T: Research outputs
+    T->>T: Synthesize DecisionPlan
+    T->>C: DecisionPlan
+    par Risk + Critic
+        C->>C: Risk Manager
+        C->>C: Critic
+    end
+    C->>A: ApprovalOutput
+    A->>A: Submit approved orders
 ```
 
 ## Tools
 
-Categories:
-- **Market Data** - getQuotes, getMarketSnapshots, optionChain
-- **Technical** - recalcIndicator
-- **Fundamentals** - graphragQuery
-- **External** - extractNewsContext, analyzeContent
-- **Portfolio** - getEnrichedPortfolioState
+### Market Data Tools
 
-### graphragQuery
+| Tool | Description | Source |
+|------|-------------|--------|
+| `getQuotes` | Real-time bid/ask/last quotes | gRPC MarketDataService |
+| `getOptionChain` | Option chains by expiration | gRPC MarketDataService |
+| `getGreeks` | Delta, gamma, theta, vega, IV | Provider or Black-Scholes fallback |
 
-Unified semantic search across SEC filings, earnings transcripts, news, and events
-with automatic company discovery via graph traversal.
+### Portfolio Tools
 
-```typescript
-import { graphragQueryTool } from "@cream/agents";
+| Tool | Description | Source |
+|------|-------------|--------|
+| `getPortfolioState` | Positions, buying power, PDT status | gRPC ExecutionService / Alpaca |
+| `getEnrichedPortfolioState` | Above + strategy, risk params, thesis context | PostgreSQL joins |
 
-// Use via agent tool call
-const result = await agent.callTool("graphragQuery", {
-  query: "what are semiconductor companies saying about capacity constraints?",
-  limit: 15,
-});
+### Memory/RAG Tools
 
-// Or filter to specific company
-const result = await agent.callTool("graphragQuery", {
-  query: "revenue guidance changes",
-  symbol: "AAPL",
-  limit: 10,
-});
+| Tool | Description | Source |
+|------|-------------|--------|
+| `helixQuery` | Query thesis memories, historical trades | HelixDB |
+| `graphragQuery` | Semantic search across filings, transcripts, news | HelixDB vectors |
+| `searchAcademicPapers` | Search finance research knowledge base | HelixDB |
+| `searchExternalPapers` | Search Semantic Scholar | External API |
+
+### Economic Data Tools
+
+| Tool | Description | Source |
+|------|-------------|--------|
+| `getFredEconomicCalendar` | Upcoming FOMC, CPI, NFP, GDP releases | FRED API |
+| `getMacroIndicators` | Latest CPI, unemployment, Fed funds rate | FRED API |
+| `getPredictionSignals` | Fed decision probabilities, macro uncertainty | Kalshi |
+
+### Context Extraction Tools
+
+| Tool | Description | Source |
+|------|-------------|--------|
+| `extractNewsContext` | LLM extraction from news articles | Alpaca News + Gemini |
+| `analyzeContent` | Extract entities, sentiment, data points | Gemini structured outputs |
+
+## Prompts
+
+Each agent has a dedicated system prompt in `/src/prompts/`:
+
+```
+prompts/
+  groundingAgent.ts    # Web/X search strategy
+  newsAnalyst.ts       # News impact assessment
+  fundamentalsAnalyst.ts # Valuation + macro + prediction markets
+  bullishResearcher.ts # LONG thesis construction + IV analysis
+  bearishResearcher.ts # SHORT thesis construction + IV analysis
+  trader.ts            # Decision synthesis + PDT rules + options
+  riskManager.ts       # Constraint validation + position sizing
+  critic.ts            # Logic validation + evidence tracing
+  selfCheck.ts         # JSON schema validation
 ```
 
-**Parameters:**
+### Key Prompt Features
 
-| Param  | Type   | Required | Description                           |
-|--------|--------|----------|---------------------------------------|
-| query  | string | Yes      | Natural language query                |
-| symbol | string | No       | Filter to specific company ticker     |
-| limit  | number | No       | Max results per type (default: 10)    |
+**Thesis Memory**: Researchers query historical trades via `helixQuery` to learn from WIN/LOSS patterns.
 
-**Returns:**
+**IV Rank Analysis**: Researchers recommend options strategies based on volatility:
+- IV Rank >50%: Sell premium (credit spreads)
+- IV Rank <30%: Buy options (debit spreads)
 
-- `filingChunks` - SEC 10-K, 10-Q, 8-K filing sections
-- `transcriptChunks` - Earnings call transcript segments with speaker
-- `newsItems` - News articles with sentiment scores
-- `externalEvents` - Market events (macro, regulatory, etc.)
-- `companies` - Discovered companies via graph traversal
-- `executionTimeMs` - Query execution time
+**PDT Compliance**: Trader enforces FINRA Pattern Day Trader rules for accounts under $25k.
 
-## Quality Scoring
+**Prediction Markets**: Fundamentals analyst and trader incorporate Kalshi signals for Fed decisions, macro uncertainty.
 
-### Pre-Execution
+## Consensus Flow
 
-```typescript
-import { scorePlan } from "@cream/agents";
+```mermaid
+stateDiagram-v2
+    [*] --> TraderPlan
+    TraderPlan --> RiskCheck
+    TraderPlan --> CriticCheck
 
-const score = scorePlan(plan, portfolioValue, marketContext);
-// Returns: overall score, components, expected value, recommendations
+    state RiskCheck {
+        [*] --> ValidateConstraints
+        ValidateConstraints --> CheckStops
+        CheckStops --> CheckSizing
+        CheckSizing --> Verdict
+    }
+
+    state CriticCheck {
+        [*] --> TraceEvidence
+        TraceEvidence --> ValidateLogic
+        ValidateLogic --> CheckReferences
+        CheckReferences --> Verdict
+    }
+
+    RiskCheck --> Merge
+    CriticCheck --> Merge
+
+    Merge --> Approved: Both APPROVE
+    Merge --> PartialApproved: PARTIAL_APPROVE
+    Merge --> Rejected: Any REJECT
+
+    Approved --> Execute
+    PartialApproved --> ExecuteSubset
+    Rejected --> [*]
 ```
 
-### Post-Execution
+Both Risk Manager and Critic must approve for execution. Partial approvals execute the intersection of approved decisions.
+
+## Output Types
+
+### DecisionPlan
 
 ```typescript
-import { OutcomeScorer } from "@cream/agents";
+interface DecisionPlan {
+  cycleId: string;
+  timestamp: string;
+  decisions: Decision[];
+  portfolioNotes: string;
+}
 
-const outcome = new OutcomeScorer().scoreOutcome(completedTrade);
-// Returns: realized return, execution quality, attribution
+interface Decision {
+  decisionId: string;
+  instrumentId: string;
+  action: "BUY" | "SELL" | "HOLD" | "CLOSE";
+  direction: "LONG" | "SHORT" | "FLAT";
+  size: { value: number; unit: SizeUnit };
+  stopLoss?: { price: number; type: "FIXED" | "TRAILING" };
+  takeProfit?: { price: number };
+  strategyFamily: StrategyFamily;
+  timeHorizon: "INTRADAY" | "SWING" | "POSITION";
+  rationale: Rationale;
+  thesisState: ThesisState;
+  confidence: number;
+  legs?: OptionLeg[];  // For multi-leg options
+}
+```
+
+### ApprovalOutput
+
+```typescript
+interface ApprovalOutput {
+  verdict: "APPROVE" | "PARTIAL_APPROVE" | "REJECT";
+  approvedDecisionIds: string[];
+  rejectedDecisionIds: string[];
+  violations: ApprovalViolation[];
+  required_changes: ApprovalRequiredChange[];
+  notes: string;
+}
 ```
 
 ## Configuration
 
-All agents use global model from `trading_config.global_model`.
+All agents use the same model via `LLM_MODEL_ID` environment variable (default: Gemini). The Grounding Agent uses xAI Grok for live search capabilities.
 
 ```typescript
-import { AGENT_CONFIGS, getAgentConfig } from "@cream/agents";
+// Agent config structure
+interface AgentConfig {
+  type: AgentType;
+  name: string;
+  role: string;
+  personality: string[];
+  tools: string[];
+}
+```
 
-const config = getAgentConfig("news_analyst");
+## Usage
+
+```typescript
+import {
+  AGENT_CONFIGS,
+  getAgentConfig,
+  getAgentPrompt,
+  EXECUTION_PHASES,
+  // Tools
+  getQuotes,
+  getEnrichedPortfolioState,
+  helixQuery,
+  graphragQuery,
+} from "@cream/agents";
+
+// Get config for specific agent
+const traderConfig = getAgentConfig("trader");
+
+// Get system prompt
+const traderPrompt = getAgentPrompt("trader");
+
+// Access execution phases for orchestration
+for (const phase of EXECUTION_PHASES) {
+  console.log(`Phase ${phase.phase}: ${phase.name}`);
+  console.log(`  Agents: ${phase.agents.join(", ")}`);
+  console.log(`  Parallel: ${phase.parallel}`);
+}
+```
+
+## Test Mode
+
+All tools return empty results or throw in test mode (`NODE_ENV=test` with `ctx.source="test"`):
+
+```typescript
+// In test mode
+await getQuotes(testCtx, ["AAPL"]); // throws Error
+await graphragQuery(testCtx, { query: "..." }); // returns empty result
+await helixQuery(testCtx, "...", {}); // throws Error
 ```
 
 ## Dependencies
 
-- `@mastra/core` - Agent orchestration
-- `@cream/broker` - Trading operations
-- `@cream/helix` - Memory retrieval
-- `@cream/indicators` - Technical analysis
+- **@cream/broker**: Alpaca trading client
+- **@cream/domain**: ExecutionContext, Zod schemas
+- **@cream/helix**: HelixDB client for memory/RAG
+- **@cream/marketdata**: Alpaca market data
+- **@cream/external-context**: News extraction pipeline
+- **@cream/indicators**: Technical indicators
+- **@google/genai**: Gemini extraction client
