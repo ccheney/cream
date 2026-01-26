@@ -58,7 +58,10 @@
 				"FINRA_*",
 				"ALLOWED_ORIGINS",
 				"DASHBOARD_API_URL",
-				"WORKER_INTERNAL_SECRET"
+				"WORKER_INTERNAL_SECRET",
+				"OTEL_*",
+				"ZO_*",
+				"XAI_*"
 			]
 		},
 		"clean": {

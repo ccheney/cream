@@ -10,7 +10,8 @@
 
 import { validatePackageDependencies } from "../dependencyValidation";
 
-const rootDir = process.argv[2] ?? ".";
+// Find first positional argument (ignore flags like --filter)
+const rootDir = process.argv.slice(2).find((arg) => !arg.startsWith("-")) ?? ".";
 
 const result = await validatePackageDependencies(rootDir);
 
