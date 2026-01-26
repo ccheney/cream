@@ -128,21 +128,16 @@ flowchart TB
 
 ### Decision Rules
 
-$$
-\delta = S_{\text{bull}} - S_{\text{bear}}
-$$
-
-$$
-\text{action} = \left\{ \begin{array}{lcr}
-\text{HOLD} & |\delta| < & 0.2 \\
-\text{BUY}  & \delta > & 0.3 \\
-\text{SELL} & \delta < & -0.3
-\end{array} \right.
-$$
+| Metric | Formula |
+|--------|---------|
+| Conviction delta | δ = S_bull − S_bear |
+| HOLD | \|δ\| < 0.2 |
+| BUY | δ > 0.3 |
+| SELL | δ < −0.3 |
 
 **Requirements:**
 - Stop-loss at thesis invalidation price
-- $\dfrac{\text{reward}}{\text{risk}} \geq 1.5$
+- Reward/risk ratio ≥ 1.5
 
 ---
 
