@@ -7,25 +7,21 @@
 // @generated from file cream/v1/stream_proxy.proto (package cream.v1, syntax proto3)
 /* eslint-disable */
 
-import type { Message } from "@bufbuild/protobuf";
 import type { GenEnum, GenFile, GenMessage, GenService } from "@bufbuild/protobuf/codegenv1";
 import { enumDesc, fileDesc, messageDesc, serviceDesc } from "@bufbuild/protobuf/codegenv1";
-import type { Timestamp } from "@bufbuild/protobuf/wkt";
-import { file_google_protobuf_timestamp } from "@bufbuild/protobuf/wkt";
 import type { Environment, OrderType, TimeInForce } from "./common_pb.js";
 import { file_cream_v1_common } from "./common_pb.js";
 import type { OrderSide } from "./execution_pb.js";
 import { file_cream_v1_execution } from "./execution_pb.js";
+import type { Timestamp } from "@bufbuild/protobuf/wkt";
+import { file_google_protobuf_timestamp } from "@bufbuild/protobuf/wkt";
+import type { Message } from "@bufbuild/protobuf";
 
 /**
  * Describes the file cream/v1/stream_proxy.proto.
  */
-export const file_cream_v1_stream_proxy: GenFile =
-	/*@__PURE__*/
-	fileDesc(
-		"ChtjcmVhbS92MS9zdHJlYW1fcHJveHkucHJvdG8SCGNyZWFtLnYxIuMBCgpTdG9ja1F1b3RlEg4KBnN5bWJvbBgBIAEoCRItCgl0aW1lc3RhbXAYAiABKAsyGi5nb29nbGUucHJvdG9idWYuVGltZXN0YW1wEhQKDGJpZF9leGNoYW5nZRgDIAEoCRIRCgliaWRfcHJpY2UYBCABKAESEAoIYmlkX3NpemUYBSABKAUSFAoMYXNrX2V4Y2hhbmdlGAYgASgJEhEKCWFza19wcmljZRgHIAEoARIQCghhc2tfc2l6ZRgIIAEoBRISCgpjb25kaXRpb25zGAkgAygJEgwKBHRhcGUYCiABKAkirgEKClN0b2NrVHJhZGUSDgoGc3ltYm9sGAEgASgJEi0KCXRpbWVzdGFtcBgCIAEoCzIaLmdvb2dsZS5wcm90b2J1Zi5UaW1lc3RhbXASEAoIdHJhZGVfaWQYAyABKAMSEAoIZXhjaGFuZ2UYBCABKAkSDQoFcHJpY2UYBSABKAESDAoEc2l6ZRgGIAEoBRISCgpjb25kaXRpb25zGAcgAygJEgwKBHRhcGUYCCABKAkitAEKCFN0b2NrQmFyEg4KBnN5bWJvbBgBIAEoCRItCgl0aW1lc3RhbXAYAiABKAsyGi5nb29nbGUucHJvdG9idWYuVGltZXN0YW1wEgwKBG9wZW4YAyABKAESDAoEaGlnaBgEIAEoARILCgNsb3cYBSABKAESDQoFY2xvc2UYBiABKAESDgoGdm9sdW1lGAcgASgDEgwKBHZ3YXAYCCABKAESEwoLdHJhZGVfY291bnQYCSABKAUi2wEKEU9wdGlvblF1b3RlVXBkYXRlEg4KBnN5bWJvbBgBIAEoCRItCgl0aW1lc3RhbXAYAiABKAsyGi5nb29nbGUucHJvdG9idWYuVGltZXN0YW1wEhQKDGJpZF9leGNoYW5nZRgDIAEoCRIRCgliaWRfcHJpY2UYBCABKAESEAoIYmlkX3NpemUYBSABKAUSFAoMYXNrX2V4Y2hhbmdlGAYgASgJEhEKCWFza19wcmljZRgHIAEoARIQCghhc2tfc2l6ZRgIIAEoBRIRCgljb25kaXRpb24YCSABKAkijgEKC09wdGlvblRyYWRlEg4KBnN5bWJvbBgBIAEoCRItCgl0aW1lc3RhbXAYAiABKAsyGi5nb29nbGUucHJvdG9idWYuVGltZXN0YW1wEg0KBXByaWNlGAMgASgBEgwKBHNpemUYBCABKAUSEAoIZXhjaGFuZ2UYBSABKAkSEQoJY29uZGl0aW9uGAYgASgJIq0BCg5PcmRlclVwZGF0ZUxlZxIKCgJpZBgBIAEoCRIOCgZzeW1ib2wYAiABKAkSIQoEc2lkZRgDIAEoDjITLmNyZWFtLnYxLk9yZGVyU2lkZRILCgNxdHkYBCABKAkSEgoKZmlsbGVkX3F0eRgFIAEoCRIYChBmaWxsZWRfYXZnX3ByaWNlGAYgASgJEhEKCXJhdGlvX3F0eRgHIAEoCRIOCgZzdGF0dXMYCCABKAkiuAcKDE9yZGVyRGV0YWlscxIKCgJpZBgBIAEoCRIXCg9jbGllbnRfb3JkZXJfaWQYAiABKAkSDgoGc3ltYm9sGAMgASgJEikKC2Fzc2V0X2NsYXNzGAQgASgOMhQuY3JlYW0udjEuQXNzZXRDbGFzcxIpCgtvcmRlcl9jbGFzcxgFIAEoDjIULmNyZWFtLnYxLk9yZGVyQ2xhc3MSJwoKb3JkZXJfdHlwZRgGIAEoDjITLmNyZWFtLnYxLk9yZGVyVHlwZRIhCgRzaWRlGAcgASgOMhMuY3JlYW0udjEuT3JkZXJTaWRlEiwKDXRpbWVfaW5fZm9yY2UYCCABKA4yFS5jcmVhbS52MS5UaW1lSW5Gb3JjZRILCgNxdHkYCSABKAkSEgoKZmlsbGVkX3F0eRgKIAEoCRIYChBmaWxsZWRfYXZnX3ByaWNlGAsgASgJEhgKC2xpbWl0X3ByaWNlGAwgASgJSACIAQESFwoKc3RvcF9wcmljZRgNIAEoCUgBiAEBEg4KBnN0YXR1cxgOIAEoCRIWCg5leHRlbmRlZF9ob3VycxgPIAEoCBIuCgpjcmVhdGVkX2F0GBAgASgLMhouZ29vZ2xlLnByb3RvYnVmLlRpbWVzdGFtcBIuCgp1cGRhdGVkX2F0GBEgASgLMhouZ29vZ2xlLnByb3RvYnVmLlRpbWVzdGFtcBIwCgxzdWJtaXR0ZWRfYXQYEiABKAsyGi5nb29nbGUucHJvdG9idWYuVGltZXN0YW1wEjIKCWZpbGxlZF9hdBgTIAEoCzIaLmdvb2dsZS5wcm90b2J1Zi5UaW1lc3RhbXBIAogBARI0CgtjYW5jZWxlZF9hdBgUIAEoCzIaLmdvb2dsZS5wcm90b2J1Zi5UaW1lc3RhbXBIA4gBARIzCgpleHBpcmVkX2F0GBUgASgLMhouZ29vZ2xlLnByb3RvYnVmLlRpbWVzdGFtcEgEiAEBEjIKCWZhaWxlZF9hdBgWIAEoCzIaLmdvb2dsZS5wcm90b2J1Zi5UaW1lc3RhbXBIBYgBARImCgRsZWdzGBcgAygLMhguY3JlYW0udjEuT3JkZXJVcGRhdGVMZWcSFwoKY29tbWlzc2lvbhgYIAEoCUgGiAEBQg4KDF9saW1pdF9wcmljZUINCgtfc3RvcF9wcmljZUIMCgpfZmlsbGVkX2F0Qg4KDF9jYW5jZWxlZF9hdEINCgtfZXhwaXJlZF9hdEIMCgpfZmFpbGVkX2F0Qg0KC19jb21taXNzaW9uIqoCCgtPcmRlclVwZGF0ZRIjCgVldmVudBgBIAEoDjIULmNyZWFtLnYxLk9yZGVyRXZlbnQSEAoIZXZlbnRfaWQYAiABKAkSLQoJdGltZXN0YW1wGAMgASgLMhouZ29vZ2xlLnByb3RvYnVmLlRpbWVzdGFtcBIlCgVvcmRlchgEIAEoCzIWLmNyZWFtLnYxLk9yZGVyRGV0YWlscxIZCgxleGVjdXRpb25faWQYBSABKAlIAIgBARISCgVwcmljZRgGIAEoCUgBiAEBEhAKA3F0eRgHIAEoCUgCiAEBEhkKDHBvc2l0aW9uX3F0eRgIIAEoCUgDiAEBQg8KDV9leGVjdXRpb25faWRCCAoGX3ByaWNlQgYKBF9xdHlCDwoNX3Bvc2l0aW9uX3F0eSKwAgoKRmVlZFN0YXR1cxIlCglmZWVkX3R5cGUYASABKA4yEi5jcmVhbS52MS5GZWVkVHlwZRIoCgVzdGF0ZRgCIAEoDjIZLmNyZWFtLnYxLkNvbm5lY3Rpb25TdGF0ZRI6ChFsYXN0X2Nvbm5lY3RlZF9hdBgDIAEoCzIaLmdvb2dsZS5wcm90b2J1Zi5UaW1lc3RhbXBIAIgBARIaCg1lcnJvcl9tZXNzYWdlGAQgASgJSAGIAQESGgoSc3Vic2NyaXB0aW9uX2NvdW50GAUgASgFEhoKEnJlY29ubmVjdF9hdHRlbXB0cxgGIAEoBRIZChFtZXNzYWdlc19yZWNlaXZlZBgHIAEoA0IUChJfbGFzdF9jb25uZWN0ZWRfYXRCEAoOX2Vycm9yX21lc3NhZ2Ui7AEKEENvbm5lY3Rpb25TdGF0dXMSDwoHdmVyc2lvbhgBIAEoCRIuCgpzdGFydGVkX2F0GAIgASgLMhouZ29vZ2xlLnByb3RvYnVmLlRpbWVzdGFtcBIwCgxjdXJyZW50X3RpbWUYAyABKAsyGi5nb29nbGUucHJvdG9idWYuVGltZXN0YW1wEiMKBWZlZWRzGAQgAygLMhQuY3JlYW0udjEuRmVlZFN0YXR1cxIUCgxjbGllbnRfY291bnQYBSABKAUSKgoLZW52aXJvbm1lbnQYBiABKA4yFS5jcmVhbS52MS5FbnZpcm9ubWVudCImChNTdHJlYW1RdW90ZXNSZXF1ZXN0Eg8KB3N5bWJvbHMYASADKAkiOwoUU3RyZWFtUXVvdGVzUmVzcG9uc2USIwoFcXVvdGUYASABKAsyFC5jcmVhbS52MS5TdG9ja1F1b3RlIiYKE1N0cmVhbVRyYWRlc1JlcXVlc3QSDwoHc3ltYm9scxgBIAMoCSI7ChRTdHJlYW1UcmFkZXNSZXNwb25zZRIjCgV0cmFkZRgBIAEoCzIULmNyZWFtLnYxLlN0b2NrVHJhZGUiJAoRU3RyZWFtQmFyc1JlcXVlc3QSDwoHc3ltYm9scxgBIAMoCSI1ChJTdHJlYW1CYXJzUmVzcG9uc2USHwoDYmFyGAEgASgLMhIuY3JlYW0udjEuU3RvY2tCYXIiQQoZU3RyZWFtT3B0aW9uUXVvdGVzUmVxdWVzdBIPCgdzeW1ib2xzGAEgAygJEhMKC3VuZGVybHlpbmdzGAIgAygJIkgKGlN0cmVhbU9wdGlvblF1b3Rlc1Jlc3BvbnNlEioKBXF1b3RlGAEgASgLMhsuY3JlYW0udjEuT3B0aW9uUXVvdGVVcGRhdGUiQQoZU3RyZWFtT3B0aW9uVHJhZGVzUmVxdWVzdBIPCgdzeW1ib2xzGAEgAygJEhMKC3VuZGVybHlpbmdzGAIgAygJIkIKGlN0cmVhbU9wdGlvblRyYWRlc1Jlc3BvbnNlEiQKBXRyYWRlGAEgASgLMhUuY3JlYW0udjEuT3B0aW9uVHJhZGUiPwoZU3RyZWFtT3JkZXJVcGRhdGVzUmVxdWVzdBIRCglvcmRlcl9pZHMYASADKAkSDwoHc3ltYm9scxgCIAMoCSJDChpTdHJlYW1PcmRlclVwZGF0ZXNSZXNwb25zZRIlCgZ1cGRhdGUYASABKAsyFS5jcmVhbS52MS5PcmRlclVwZGF0ZSIcChpHZXRDb25uZWN0aW9uU3RhdHVzUmVxdWVzdCJJChtHZXRDb25uZWN0aW9uU3RhdHVzUmVzcG9uc2USKgoGc3RhdHVzGAEgASgLMhouY3JlYW0udjEuQ29ubmVjdGlvblN0YXR1cyrBAwoKT3JkZXJFdmVudBIbChdPUkRFUl9FVkVOVF9VTlNQRUNJRklFRBAAEhMKD09SREVSX0VWRU5UX05FVxABEhQKEE9SREVSX0VWRU5UX0ZJTEwQAhIcChhPUkRFUl9FVkVOVF9QQVJUSUFMX0ZJTEwQAxIYChRPUkRFUl9FVkVOVF9DQU5DRUxFRBAEEhcKE09SREVSX0VWRU5UX0VYUElSRUQQBRIYChRPUkRFUl9FVkVOVF9SRUpFQ1RFRBAGEhsKF09SREVSX0VWRU5UX1BFTkRJTkdfTkVXEAcSFwoTT1JERVJfRVZFTlRfU1RPUFBFRBAIEhgKFE9SREVSX0VWRU5UX1JFUExBQ0VEEAkSGQoVT1JERVJfRVZFTlRfU1VTUEVOREVEEAoSHgoaT1JERVJfRVZFTlRfUEVORElOR19DQU5DRUwQCxIfChtPUkRFUl9FVkVOVF9QRU5ESU5HX1JFUExBQ0UQDBIaChZPUkRFUl9FVkVOVF9DQUxDVUxBVEVEEA0SHAoYT1JERVJfRVZFTlRfRE9ORV9GT1JfREFZEA4SGgoWT1JERVJfRVZFTlRfVFJBREVfQlVTVBAPKncKCkFzc2V0Q2xhc3MSGwoXQVNTRVRfQ0xBU1NfVU5TUEVDSUZJRUQQABIZChVBU1NFVF9DTEFTU19VU19FUVVJVFkQARIZChVBU1NFVF9DTEFTU19VU19PUFRJT04QAhIWChJBU1NFVF9DTEFTU19DUllQVE8QAyqaAQoKT3JkZXJDbGFzcxIbChdPUkRFUl9DTEFTU19VTlNQRUNJRklFRBAAEhYKEk9SREVSX0NMQVNTX1NJTVBMRRABEhcKE09SREVSX0NMQVNTX0JSQUNLRVQQAhITCg9PUkRFUl9DTEFTU19PQ08QAxITCg9PUkRFUl9DTEFTU19PVE8QBBIUChBPUkRFUl9DTEFTU19NTEVHEAUq+wEKD0Nvbm5lY3Rpb25TdGF0ZRIgChxDT05ORUNUSU9OX1NUQVRFX1VOU1BFQ0lGSUVEEAASIQodQ09OTkVDVElPTl9TVEFURV9ESVNDT05ORUNURUQQARIfChtDT05ORUNUSU9OX1NUQVRFX0NPTk5FQ1RJTkcQAhIjCh9DT05ORUNUSU9OX1NUQVRFX0FVVEhFTlRJQ0FUSU5HEAMSHgoaQ09OTkVDVElPTl9TVEFURV9DT05ORUNURUQQBBIhCh1DT05ORUNUSU9OX1NUQVRFX1JFQ09OTkVDVElORxAFEhoKFkNPTk5FQ1RJT05fU1RBVEVfRVJST1IQBiqWAQoIRmVlZFR5cGUSGQoVRkVFRF9UWVBFX1VOU1BFQ0lGSUVEEAASEQoNRkVFRF9UWVBFX1NJUBABEhEKDUZFRURfVFlQRV9JRVgQAhISCg5GRUVEX1RZUEVfT1BSQRADEhgKFEZFRURfVFlQRV9JTkRJQ0FUSVZFEAQSGwoXRkVFRF9UWVBFX1RSQURFX1VQREFURVMQBTKOBQoSU3RyZWFtUHJveHlTZXJ2aWNlEk8KDFN0cmVhbVF1b3RlcxIdLmNyZWFtLnYxLlN0cmVhbVF1b3Rlc1JlcXVlc3QaHi5jcmVhbS52MS5TdHJlYW1RdW90ZXNSZXNwb25zZTABEk8KDFN0cmVhbVRyYWRlcxIdLmNyZWFtLnYxLlN0cmVhbVRyYWRlc1JlcXVlc3QaHi5jcmVhbS52MS5TdHJlYW1UcmFkZXNSZXNwb25zZTABEkkKClN0cmVhbUJhcnMSGy5jcmVhbS52MS5TdHJlYW1CYXJzUmVxdWVzdBocLmNyZWFtLnYxLlN0cmVhbUJhcnNSZXNwb25zZTABEmEKElN0cmVhbU9wdGlvblF1b3RlcxIjLmNyZWFtLnYxLlN0cmVhbU9wdGlvblF1b3Rlc1JlcXVlc3QaJC5jcmVhbS52MS5TdHJlYW1PcHRpb25RdW90ZXNSZXNwb25zZTABEmEKElN0cmVhbU9wdGlvblRyYWRlcxIjLmNyZWFtLnYxLlN0cmVhbU9wdGlvblRyYWRlc1JlcXVlc3QaJC5jcmVhbS52MS5TdHJlYW1PcHRpb25UcmFkZXNSZXNwb25zZTABEmEKElN0cmVhbU9yZGVyVXBkYXRlcxIjLmNyZWFtLnYxLlN0cmVhbU9yZGVyVXBkYXRlc1JlcXVlc3QaJC5jcmVhbS52MS5TdHJlYW1PcmRlclVwZGF0ZXNSZXNwb25zZTABEmIKE0dldENvbm5lY3Rpb25TdGF0dXMSJC5jcmVhbS52MS5HZXRDb25uZWN0aW9uU3RhdHVzUmVxdWVzdBolLmNyZWFtLnYxLkdldENvbm5lY3Rpb25TdGF0dXNSZXNwb25zZUKZAQoMY29tLmNyZWFtLnYxQhBTdHJlYW1Qcm94eVByb3RvUAFaNmdpdGh1Yi5jb20vY3JlYW0tdHJhZGluZy9jcmVhbS9nZW4vZ28vY3JlYW0vdjE7Y3JlYW12MaICA0NYWKoCCENyZWFtLlYxygIIQ3JlYW1cVjHiAhRDcmVhbVxWMVxHUEJNZXRhZGF0YeoCCUNyZWFtOjpWMWIGcHJvdG8z",
-		[file_cream_v1_common, file_cream_v1_execution, file_google_protobuf_timestamp],
-	);
+export const file_cream_v1_stream_proxy: GenFile = /*@__PURE__*/
+  fileDesc("ChtjcmVhbS92MS9zdHJlYW1fcHJveHkucHJvdG8SCGNyZWFtLnYxIuMBCgpTdG9ja1F1b3RlEg4KBnN5bWJvbBgBIAEoCRItCgl0aW1lc3RhbXAYAiABKAsyGi5nb29nbGUucHJvdG9idWYuVGltZXN0YW1wEhQKDGJpZF9leGNoYW5nZRgDIAEoCRIRCgliaWRfcHJpY2UYBCABKAESEAoIYmlkX3NpemUYBSABKAUSFAoMYXNrX2V4Y2hhbmdlGAYgASgJEhEKCWFza19wcmljZRgHIAEoARIQCghhc2tfc2l6ZRgIIAEoBRISCgpjb25kaXRpb25zGAkgAygJEgwKBHRhcGUYCiABKAkirgEKClN0b2NrVHJhZGUSDgoGc3ltYm9sGAEgASgJEi0KCXRpbWVzdGFtcBgCIAEoCzIaLmdvb2dsZS5wcm90b2J1Zi5UaW1lc3RhbXASEAoIdHJhZGVfaWQYAyABKAMSEAoIZXhjaGFuZ2UYBCABKAkSDQoFcHJpY2UYBSABKAESDAoEc2l6ZRgGIAEoBRISCgpjb25kaXRpb25zGAcgAygJEgwKBHRhcGUYCCABKAkitAEKCFN0b2NrQmFyEg4KBnN5bWJvbBgBIAEoCRItCgl0aW1lc3RhbXAYAiABKAsyGi5nb29nbGUucHJvdG9idWYuVGltZXN0YW1wEgwKBG9wZW4YAyABKAESDAoEaGlnaBgEIAEoARILCgNsb3cYBSABKAESDQoFY2xvc2UYBiABKAESDgoGdm9sdW1lGAcgASgDEgwKBHZ3YXAYCCABKAESEwoLdHJhZGVfY291bnQYCSABKAUi2wEKEU9wdGlvblF1b3RlVXBkYXRlEg4KBnN5bWJvbBgBIAEoCRItCgl0aW1lc3RhbXAYAiABKAsyGi5nb29nbGUucHJvdG9idWYuVGltZXN0YW1wEhQKDGJpZF9leGNoYW5nZRgDIAEoCRIRCgliaWRfcHJpY2UYBCABKAESEAoIYmlkX3NpemUYBSABKAUSFAoMYXNrX2V4Y2hhbmdlGAYgASgJEhEKCWFza19wcmljZRgHIAEoARIQCghhc2tfc2l6ZRgIIAEoBRIRCgljb25kaXRpb24YCSABKAkijgEKC09wdGlvblRyYWRlEg4KBnN5bWJvbBgBIAEoCRItCgl0aW1lc3RhbXAYAiABKAsyGi5nb29nbGUucHJvdG9idWYuVGltZXN0YW1wEg0KBXByaWNlGAMgASgBEgwKBHNpemUYBCABKAUSEAoIZXhjaGFuZ2UYBSABKAkSEQoJY29uZGl0aW9uGAYgASgJIq0BCg5PcmRlclVwZGF0ZUxlZxIKCgJpZBgBIAEoCRIOCgZzeW1ib2wYAiABKAkSIQoEc2lkZRgDIAEoDjITLmNyZWFtLnYxLk9yZGVyU2lkZRILCgNxdHkYBCABKAkSEgoKZmlsbGVkX3F0eRgFIAEoCRIYChBmaWxsZWRfYXZnX3ByaWNlGAYgASgJEhEKCXJhdGlvX3F0eRgHIAEoCRIOCgZzdGF0dXMYCCABKAkiuAcKDE9yZGVyRGV0YWlscxIKCgJpZBgBIAEoCRIXCg9jbGllbnRfb3JkZXJfaWQYAiABKAkSDgoGc3ltYm9sGAMgASgJEikKC2Fzc2V0X2NsYXNzGAQgASgOMhQuY3JlYW0udjEuQXNzZXRDbGFzcxIpCgtvcmRlcl9jbGFzcxgFIAEoDjIULmNyZWFtLnYxLk9yZGVyQ2xhc3MSJwoKb3JkZXJfdHlwZRgGIAEoDjITLmNyZWFtLnYxLk9yZGVyVHlwZRIhCgRzaWRlGAcgASgOMhMuY3JlYW0udjEuT3JkZXJTaWRlEiwKDXRpbWVfaW5fZm9yY2UYCCABKA4yFS5jcmVhbS52MS5UaW1lSW5Gb3JjZRILCgNxdHkYCSABKAkSEgoKZmlsbGVkX3F0eRgKIAEoCRIYChBmaWxsZWRfYXZnX3ByaWNlGAsgASgJEhgKC2xpbWl0X3ByaWNlGAwgASgJSACIAQESFwoKc3RvcF9wcmljZRgNIAEoCUgBiAEBEg4KBnN0YXR1cxgOIAEoCRIWCg5leHRlbmRlZF9ob3VycxgPIAEoCBIuCgpjcmVhdGVkX2F0GBAgASgLMhouZ29vZ2xlLnByb3RvYnVmLlRpbWVzdGFtcBIuCgp1cGRhdGVkX2F0GBEgASgLMhouZ29vZ2xlLnByb3RvYnVmLlRpbWVzdGFtcBIwCgxzdWJtaXR0ZWRfYXQYEiABKAsyGi5nb29nbGUucHJvdG9idWYuVGltZXN0YW1wEjIKCWZpbGxlZF9hdBgTIAEoCzIaLmdvb2dsZS5wcm90b2J1Zi5UaW1lc3RhbXBIAogBARI0CgtjYW5jZWxlZF9hdBgUIAEoCzIaLmdvb2dsZS5wcm90b2J1Zi5UaW1lc3RhbXBIA4gBARIzCgpleHBpcmVkX2F0GBUgASgLMhouZ29vZ2xlLnByb3RvYnVmLlRpbWVzdGFtcEgEiAEBEjIKCWZhaWxlZF9hdBgWIAEoCzIaLmdvb2dsZS5wcm90b2J1Zi5UaW1lc3RhbXBIBYgBARImCgRsZWdzGBcgAygLMhguY3JlYW0udjEuT3JkZXJVcGRhdGVMZWcSFwoKY29tbWlzc2lvbhgYIAEoCUgGiAEBQg4KDF9saW1pdF9wcmljZUINCgtfc3RvcF9wcmljZUIMCgpfZmlsbGVkX2F0Qg4KDF9jYW5jZWxlZF9hdEINCgtfZXhwaXJlZF9hdEIMCgpfZmFpbGVkX2F0Qg0KC19jb21taXNzaW9uIqoCCgtPcmRlclVwZGF0ZRIjCgVldmVudBgBIAEoDjIULmNyZWFtLnYxLk9yZGVyRXZlbnQSEAoIZXZlbnRfaWQYAiABKAkSLQoJdGltZXN0YW1wGAMgASgLMhouZ29vZ2xlLnByb3RvYnVmLlRpbWVzdGFtcBIlCgVvcmRlchgEIAEoCzIWLmNyZWFtLnYxLk9yZGVyRGV0YWlscxIZCgxleGVjdXRpb25faWQYBSABKAlIAIgBARISCgVwcmljZRgGIAEoCUgBiAEBEhAKA3F0eRgHIAEoCUgCiAEBEhkKDHBvc2l0aW9uX3F0eRgIIAEoCUgDiAEBQg8KDV9leGVjdXRpb25faWRCCAoGX3ByaWNlQgYKBF9xdHlCDwoNX3Bvc2l0aW9uX3F0eSKwAgoKRmVlZFN0YXR1cxIlCglmZWVkX3R5cGUYASABKA4yEi5jcmVhbS52MS5GZWVkVHlwZRIoCgVzdGF0ZRgCIAEoDjIZLmNyZWFtLnYxLkNvbm5lY3Rpb25TdGF0ZRI6ChFsYXN0X2Nvbm5lY3RlZF9hdBgDIAEoCzIaLmdvb2dsZS5wcm90b2J1Zi5UaW1lc3RhbXBIAIgBARIaCg1lcnJvcl9tZXNzYWdlGAQgASgJSAGIAQESGgoSc3Vic2NyaXB0aW9uX2NvdW50GAUgASgFEhoKEnJlY29ubmVjdF9hdHRlbXB0cxgGIAEoBRIZChFtZXNzYWdlc19yZWNlaXZlZBgHIAEoA0IUChJfbGFzdF9jb25uZWN0ZWRfYXRCEAoOX2Vycm9yX21lc3NhZ2Ui7AEKEENvbm5lY3Rpb25TdGF0dXMSDwoHdmVyc2lvbhgBIAEoCRIuCgpzdGFydGVkX2F0GAIgASgLMhouZ29vZ2xlLnByb3RvYnVmLlRpbWVzdGFtcBIwCgxjdXJyZW50X3RpbWUYAyABKAsyGi5nb29nbGUucHJvdG9idWYuVGltZXN0YW1wEiMKBWZlZWRzGAQgAygLMhQuY3JlYW0udjEuRmVlZFN0YXR1cxIUCgxjbGllbnRfY291bnQYBSABKAUSKgoLZW52aXJvbm1lbnQYBiABKA4yFS5jcmVhbS52MS5FbnZpcm9ubWVudCImChNTdHJlYW1RdW90ZXNSZXF1ZXN0Eg8KB3N5bWJvbHMYASADKAkiOwoUU3RyZWFtUXVvdGVzUmVzcG9uc2USIwoFcXVvdGUYASABKAsyFC5jcmVhbS52MS5TdG9ja1F1b3RlIiYKE1N0cmVhbVRyYWRlc1JlcXVlc3QSDwoHc3ltYm9scxgBIAMoCSI7ChRTdHJlYW1UcmFkZXNSZXNwb25zZRIjCgV0cmFkZRgBIAEoCzIULmNyZWFtLnYxLlN0b2NrVHJhZGUiJAoRU3RyZWFtQmFyc1JlcXVlc3QSDwoHc3ltYm9scxgBIAMoCSI1ChJTdHJlYW1CYXJzUmVzcG9uc2USHwoDYmFyGAEgASgLMhIuY3JlYW0udjEuU3RvY2tCYXIiQQoZU3RyZWFtT3B0aW9uUXVvdGVzUmVxdWVzdBIPCgdzeW1ib2xzGAEgAygJEhMKC3VuZGVybHlpbmdzGAIgAygJIkgKGlN0cmVhbU9wdGlvblF1b3Rlc1Jlc3BvbnNlEioKBXF1b3RlGAEgASgLMhsuY3JlYW0udjEuT3B0aW9uUXVvdGVVcGRhdGUiQQoZU3RyZWFtT3B0aW9uVHJhZGVzUmVxdWVzdBIPCgdzeW1ib2xzGAEgAygJEhMKC3VuZGVybHlpbmdzGAIgAygJIkIKGlN0cmVhbU9wdGlvblRyYWRlc1Jlc3BvbnNlEiQKBXRyYWRlGAEgASgLMhUuY3JlYW0udjEuT3B0aW9uVHJhZGUiPwoZU3RyZWFtT3JkZXJVcGRhdGVzUmVxdWVzdBIRCglvcmRlcl9pZHMYASADKAkSDwoHc3ltYm9scxgCIAMoCSJDChpTdHJlYW1PcmRlclVwZGF0ZXNSZXNwb25zZRIlCgZ1cGRhdGUYASABKAsyFS5jcmVhbS52MS5PcmRlclVwZGF0ZSIcChpHZXRDb25uZWN0aW9uU3RhdHVzUmVxdWVzdCJJChtHZXRDb25uZWN0aW9uU3RhdHVzUmVzcG9uc2USKgoGc3RhdHVzGAEgASgLMhouY3JlYW0udjEuQ29ubmVjdGlvblN0YXR1cyrBAwoKT3JkZXJFdmVudBIbChdPUkRFUl9FVkVOVF9VTlNQRUNJRklFRBAAEhMKD09SREVSX0VWRU5UX05FVxABEhQKEE9SREVSX0VWRU5UX0ZJTEwQAhIcChhPUkRFUl9FVkVOVF9QQVJUSUFMX0ZJTEwQAxIYChRPUkRFUl9FVkVOVF9DQU5DRUxFRBAEEhcKE09SREVSX0VWRU5UX0VYUElSRUQQBRIYChRPUkRFUl9FVkVOVF9SRUpFQ1RFRBAGEhsKF09SREVSX0VWRU5UX1BFTkRJTkdfTkVXEAcSFwoTT1JERVJfRVZFTlRfU1RPUFBFRBAIEhgKFE9SREVSX0VWRU5UX1JFUExBQ0VEEAkSGQoVT1JERVJfRVZFTlRfU1VTUEVOREVEEAoSHgoaT1JERVJfRVZFTlRfUEVORElOR19DQU5DRUwQCxIfChtPUkRFUl9FVkVOVF9QRU5ESU5HX1JFUExBQ0UQDBIaChZPUkRFUl9FVkVOVF9DQUxDVUxBVEVEEA0SHAoYT1JERVJfRVZFTlRfRE9ORV9GT1JfREFZEA4SGgoWT1JERVJfRVZFTlRfVFJBREVfQlVTVBAPKncKCkFzc2V0Q2xhc3MSGwoXQVNTRVRfQ0xBU1NfVU5TUEVDSUZJRUQQABIZChVBU1NFVF9DTEFTU19VU19FUVVJVFkQARIZChVBU1NFVF9DTEFTU19VU19PUFRJT04QAhIWChJBU1NFVF9DTEFTU19DUllQVE8QAyqaAQoKT3JkZXJDbGFzcxIbChdPUkRFUl9DTEFTU19VTlNQRUNJRklFRBAAEhYKEk9SREVSX0NMQVNTX1NJTVBMRRABEhcKE09SREVSX0NMQVNTX0JSQUNLRVQQAhITCg9PUkRFUl9DTEFTU19PQ08QAxITCg9PUkRFUl9DTEFTU19PVE8QBBIUChBPUkRFUl9DTEFTU19NTEVHEAUq+wEKD0Nvbm5lY3Rpb25TdGF0ZRIgChxDT05ORUNUSU9OX1NUQVRFX1VOU1BFQ0lGSUVEEAASIQodQ09OTkVDVElPTl9TVEFURV9ESVNDT05ORUNURUQQARIfChtDT05ORUNUSU9OX1NUQVRFX0NPTk5FQ1RJTkcQAhIjCh9DT05ORUNUSU9OX1NUQVRFX0FVVEhFTlRJQ0FUSU5HEAMSHgoaQ09OTkVDVElPTl9TVEFURV9DT05ORUNURUQQBBIhCh1DT05ORUNUSU9OX1NUQVRFX1JFQ09OTkVDVElORxAFEhoKFkNPTk5FQ1RJT05fU1RBVEVfRVJST1IQBiqWAQoIRmVlZFR5cGUSGQoVRkVFRF9UWVBFX1VOU1BFQ0lGSUVEEAASEQoNRkVFRF9UWVBFX1NJUBABEhEKDUZFRURfVFlQRV9JRVgQAhISCg5GRUVEX1RZUEVfT1BSQRADEhgKFEZFRURfVFlQRV9JTkRJQ0FUSVZFEAQSGwoXRkVFRF9UWVBFX1RSQURFX1VQREFURVMQBTKOBQoSU3RyZWFtUHJveHlTZXJ2aWNlEk8KDFN0cmVhbVF1b3RlcxIdLmNyZWFtLnYxLlN0cmVhbVF1b3Rlc1JlcXVlc3QaHi5jcmVhbS52MS5TdHJlYW1RdW90ZXNSZXNwb25zZTABEk8KDFN0cmVhbVRyYWRlcxIdLmNyZWFtLnYxLlN0cmVhbVRyYWRlc1JlcXVlc3QaHi5jcmVhbS52MS5TdHJlYW1UcmFkZXNSZXNwb25zZTABEkkKClN0cmVhbUJhcnMSGy5jcmVhbS52MS5TdHJlYW1CYXJzUmVxdWVzdBocLmNyZWFtLnYxLlN0cmVhbUJhcnNSZXNwb25zZTABEmEKElN0cmVhbU9wdGlvblF1b3RlcxIjLmNyZWFtLnYxLlN0cmVhbU9wdGlvblF1b3Rlc1JlcXVlc3QaJC5jcmVhbS52MS5TdHJlYW1PcHRpb25RdW90ZXNSZXNwb25zZTABEmEKElN0cmVhbU9wdGlvblRyYWRlcxIjLmNyZWFtLnYxLlN0cmVhbU9wdGlvblRyYWRlc1JlcXVlc3QaJC5jcmVhbS52MS5TdHJlYW1PcHRpb25UcmFkZXNSZXNwb25zZTABEmEKElN0cmVhbU9yZGVyVXBkYXRlcxIjLmNyZWFtLnYxLlN0cmVhbU9yZGVyVXBkYXRlc1JlcXVlc3QaJC5jcmVhbS52MS5TdHJlYW1PcmRlclVwZGF0ZXNSZXNwb25zZTABEmIKE0dldENvbm5lY3Rpb25TdGF0dXMSJC5jcmVhbS52MS5HZXRDb25uZWN0aW9uU3RhdHVzUmVxdWVzdBolLmNyZWFtLnYxLkdldENvbm5lY3Rpb25TdGF0dXNSZXNwb25zZUKZAQoMY29tLmNyZWFtLnYxQhBTdHJlYW1Qcm94eVByb3RvUAFaNmdpdGh1Yi5jb20vY3JlYW0tdHJhZGluZy9jcmVhbS9nZW4vZ28vY3JlYW0vdjE7Y3JlYW12MaICA0NYWKoCCENyZWFtLlYxygIIQ3JlYW1cVjHiAhRDcmVhbVxWMVxHUEJNZXRhZGF0YeoCCUNyZWFtOjpWMWIGcHJvdG8z", [file_cream_v1_common, file_cream_v1_execution, file_google_protobuf_timestamp]);
 
 /**
  * Real-time stock quote from SIP feed
@@ -33,84 +29,83 @@ export const file_cream_v1_stream_proxy: GenFile =
  * @generated from message cream.v1.StockQuote
  */
 export type StockQuote = Message<"cream.v1.StockQuote"> & {
-	/**
-	 * Symbol (e.g., "AAPL")
-	 *
-	 * @generated from field: string symbol = 1;
-	 */
-	symbol: string;
+  /**
+   * Symbol (e.g., "AAPL")
+   *
+   * @generated from field: string symbol = 1;
+   */
+  symbol: string;
 
-	/**
-	 * Quote timestamp
-	 *
-	 * @generated from field: google.protobuf.Timestamp timestamp = 2;
-	 */
-	timestamp?: Timestamp;
+  /**
+   * Quote timestamp
+   *
+   * @generated from field: google.protobuf.Timestamp timestamp = 2;
+   */
+  timestamp?: Timestamp;
 
-	/**
-	 * Bid exchange code
-	 *
-	 * @generated from field: string bid_exchange = 3;
-	 */
-	bidExchange: string;
+  /**
+   * Bid exchange code
+   *
+   * @generated from field: string bid_exchange = 3;
+   */
+  bidExchange: string;
 
-	/**
-	 * Bid price
-	 *
-	 * @generated from field: double bid_price = 4;
-	 */
-	bidPrice: number;
+  /**
+   * Bid price
+   *
+   * @generated from field: double bid_price = 4;
+   */
+  bidPrice: number;
 
-	/**
-	 * Bid size (shares)
-	 *
-	 * @generated from field: int32 bid_size = 5;
-	 */
-	bidSize: number;
+  /**
+   * Bid size (shares)
+   *
+   * @generated from field: int32 bid_size = 5;
+   */
+  bidSize: number;
 
-	/**
-	 * Ask exchange code
-	 *
-	 * @generated from field: string ask_exchange = 6;
-	 */
-	askExchange: string;
+  /**
+   * Ask exchange code
+   *
+   * @generated from field: string ask_exchange = 6;
+   */
+  askExchange: string;
 
-	/**
-	 * Ask price
-	 *
-	 * @generated from field: double ask_price = 7;
-	 */
-	askPrice: number;
+  /**
+   * Ask price
+   *
+   * @generated from field: double ask_price = 7;
+   */
+  askPrice: number;
 
-	/**
-	 * Ask size (shares)
-	 *
-	 * @generated from field: int32 ask_size = 8;
-	 */
-	askSize: number;
+  /**
+   * Ask size (shares)
+   *
+   * @generated from field: int32 ask_size = 8;
+   */
+  askSize: number;
 
-	/**
-	 * Quote conditions
-	 *
-	 * @generated from field: repeated string conditions = 9;
-	 */
-	conditions: string[];
+  /**
+   * Quote conditions
+   *
+   * @generated from field: repeated string conditions = 9;
+   */
+  conditions: string[];
 
-	/**
-	 * Tape (A, B, or C)
-	 *
-	 * @generated from field: string tape = 10;
-	 */
-	tape: string;
+  /**
+   * Tape (A, B, or C)
+   *
+   * @generated from field: string tape = 10;
+   */
+  tape: string;
 };
 
 /**
  * Describes the message cream.v1.StockQuote.
  * Use `create(StockQuoteSchema)` to create a new message.
  */
-export const StockQuoteSchema: GenMessage<StockQuote> =
-	/*@__PURE__*/
-	messageDesc(file_cream_v1_stream_proxy, 0);
+export const StockQuoteSchema: GenMessage<StockQuote> = /*@__PURE__*/
+  messageDesc(file_cream_v1_stream_proxy, 0);
 
 /**
  * Real-time stock trade from SIP feed
@@ -118,70 +113,69 @@ export const StockQuoteSchema: GenMessage<StockQuote> =
  * @generated from message cream.v1.StockTrade
  */
 export type StockTrade = Message<"cream.v1.StockTrade"> & {
-	/**
-	 * Symbol (e.g., "AAPL")
-	 *
-	 * @generated from field: string symbol = 1;
-	 */
-	symbol: string;
+  /**
+   * Symbol (e.g., "AAPL")
+   *
+   * @generated from field: string symbol = 1;
+   */
+  symbol: string;
 
-	/**
-	 * Trade timestamp
-	 *
-	 * @generated from field: google.protobuf.Timestamp timestamp = 2;
-	 */
-	timestamp?: Timestamp;
+  /**
+   * Trade timestamp
+   *
+   * @generated from field: google.protobuf.Timestamp timestamp = 2;
+   */
+  timestamp?: Timestamp;
 
-	/**
-	 * Trade ID
-	 *
-	 * @generated from field: int64 trade_id = 3;
-	 */
-	tradeId: bigint;
+  /**
+   * Trade ID
+   *
+   * @generated from field: int64 trade_id = 3;
+   */
+  tradeId: bigint;
 
-	/**
-	 * Exchange code where trade occurred
-	 *
-	 * @generated from field: string exchange = 4;
-	 */
-	exchange: string;
+  /**
+   * Exchange code where trade occurred
+   *
+   * @generated from field: string exchange = 4;
+   */
+  exchange: string;
 
-	/**
-	 * Trade price
-	 *
-	 * @generated from field: double price = 5;
-	 */
-	price: number;
+  /**
+   * Trade price
+   *
+   * @generated from field: double price = 5;
+   */
+  price: number;
 
-	/**
-	 * Trade size (shares)
-	 *
-	 * @generated from field: int32 size = 6;
-	 */
-	size: number;
+  /**
+   * Trade size (shares)
+   *
+   * @generated from field: int32 size = 6;
+   */
+  size: number;
 
-	/**
-	 * Trade conditions
-	 *
-	 * @generated from field: repeated string conditions = 7;
-	 */
-	conditions: string[];
+  /**
+   * Trade conditions
+   *
+   * @generated from field: repeated string conditions = 7;
+   */
+  conditions: string[];
 
-	/**
-	 * Tape (A, B, or C)
-	 *
-	 * @generated from field: string tape = 8;
-	 */
-	tape: string;
+  /**
+   * Tape (A, B, or C)
+   *
+   * @generated from field: string tape = 8;
+   */
+  tape: string;
 };
 
 /**
  * Describes the message cream.v1.StockTrade.
  * Use `create(StockTradeSchema)` to create a new message.
  */
-export const StockTradeSchema: GenMessage<StockTrade> =
-	/*@__PURE__*/
-	messageDesc(file_cream_v1_stream_proxy, 1);
+export const StockTradeSchema: GenMessage<StockTrade> = /*@__PURE__*/
+  messageDesc(file_cream_v1_stream_proxy, 1);
 
 /**
  * Real-time stock bar (OHLCV)
@@ -189,77 +183,76 @@ export const StockTradeSchema: GenMessage<StockTrade> =
  * @generated from message cream.v1.StockBar
  */
 export type StockBar = Message<"cream.v1.StockBar"> & {
-	/**
-	 * Symbol
-	 *
-	 * @generated from field: string symbol = 1;
-	 */
-	symbol: string;
+  /**
+   * Symbol
+   *
+   * @generated from field: string symbol = 1;
+   */
+  symbol: string;
 
-	/**
-	 * Bar timestamp (start of bar)
-	 *
-	 * @generated from field: google.protobuf.Timestamp timestamp = 2;
-	 */
-	timestamp?: Timestamp;
+  /**
+   * Bar timestamp (start of bar)
+   *
+   * @generated from field: google.protobuf.Timestamp timestamp = 2;
+   */
+  timestamp?: Timestamp;
 
-	/**
-	 * Open price
-	 *
-	 * @generated from field: double open = 3;
-	 */
-	open: number;
+  /**
+   * Open price
+   *
+   * @generated from field: double open = 3;
+   */
+  open: number;
 
-	/**
-	 * High price
-	 *
-	 * @generated from field: double high = 4;
-	 */
-	high: number;
+  /**
+   * High price
+   *
+   * @generated from field: double high = 4;
+   */
+  high: number;
 
-	/**
-	 * Low price
-	 *
-	 * @generated from field: double low = 5;
-	 */
-	low: number;
+  /**
+   * Low price
+   *
+   * @generated from field: double low = 5;
+   */
+  low: number;
 
-	/**
-	 * Close price
-	 *
-	 * @generated from field: double close = 6;
-	 */
-	close: number;
+  /**
+   * Close price
+   *
+   * @generated from field: double close = 6;
+   */
+  close: number;
 
-	/**
-	 * Volume
-	 *
-	 * @generated from field: int64 volume = 7;
-	 */
-	volume: bigint;
+  /**
+   * Volume
+   *
+   * @generated from field: int64 volume = 7;
+   */
+  volume: bigint;
 
-	/**
-	 * VWAP (volume-weighted average price)
-	 *
-	 * @generated from field: double vwap = 8;
-	 */
-	vwap: number;
+  /**
+   * VWAP (volume-weighted average price)
+   *
+   * @generated from field: double vwap = 8;
+   */
+  vwap: number;
 
-	/**
-	 * Number of trades in bar
-	 *
-	 * @generated from field: int32 trade_count = 9;
-	 */
-	tradeCount: number;
+  /**
+   * Number of trades in bar
+   *
+   * @generated from field: int32 trade_count = 9;
+   */
+  tradeCount: number;
 };
 
 /**
  * Describes the message cream.v1.StockBar.
  * Use `create(StockBarSchema)` to create a new message.
  */
-export const StockBarSchema: GenMessage<StockBar> =
-	/*@__PURE__*/
-	messageDesc(file_cream_v1_stream_proxy, 2);
+export const StockBarSchema: GenMessage<StockBar> = /*@__PURE__*/
+  messageDesc(file_cream_v1_stream_proxy, 2);
 
 /**
  * Real-time option quote from OPRA feed
@@ -267,77 +260,76 @@ export const StockBarSchema: GenMessage<StockBar> =
  * @generated from message cream.v1.OptionQuoteUpdate
  */
 export type OptionQuoteUpdate = Message<"cream.v1.OptionQuoteUpdate"> & {
-	/**
-	 * OCC option symbol (e.g., "AAPL240315C00172500")
-	 *
-	 * @generated from field: string symbol = 1;
-	 */
-	symbol: string;
+  /**
+   * OCC option symbol (e.g., "AAPL240315C00172500")
+   *
+   * @generated from field: string symbol = 1;
+   */
+  symbol: string;
 
-	/**
-	 * Quote timestamp
-	 *
-	 * @generated from field: google.protobuf.Timestamp timestamp = 2;
-	 */
-	timestamp?: Timestamp;
+  /**
+   * Quote timestamp
+   *
+   * @generated from field: google.protobuf.Timestamp timestamp = 2;
+   */
+  timestamp?: Timestamp;
 
-	/**
-	 * Bid exchange code
-	 *
-	 * @generated from field: string bid_exchange = 3;
-	 */
-	bidExchange: string;
+  /**
+   * Bid exchange code
+   *
+   * @generated from field: string bid_exchange = 3;
+   */
+  bidExchange: string;
 
-	/**
-	 * Bid price
-	 *
-	 * @generated from field: double bid_price = 4;
-	 */
-	bidPrice: number;
+  /**
+   * Bid price
+   *
+   * @generated from field: double bid_price = 4;
+   */
+  bidPrice: number;
 
-	/**
-	 * Bid size (contracts)
-	 *
-	 * @generated from field: int32 bid_size = 5;
-	 */
-	bidSize: number;
+  /**
+   * Bid size (contracts)
+   *
+   * @generated from field: int32 bid_size = 5;
+   */
+  bidSize: number;
 
-	/**
-	 * Ask exchange code
-	 *
-	 * @generated from field: string ask_exchange = 6;
-	 */
-	askExchange: string;
+  /**
+   * Ask exchange code
+   *
+   * @generated from field: string ask_exchange = 6;
+   */
+  askExchange: string;
 
-	/**
-	 * Ask price
-	 *
-	 * @generated from field: double ask_price = 7;
-	 */
-	askPrice: number;
+  /**
+   * Ask price
+   *
+   * @generated from field: double ask_price = 7;
+   */
+  askPrice: number;
 
-	/**
-	 * Ask size (contracts)
-	 *
-	 * @generated from field: int32 ask_size = 8;
-	 */
-	askSize: number;
+  /**
+   * Ask size (contracts)
+   *
+   * @generated from field: int32 ask_size = 8;
+   */
+  askSize: number;
 
-	/**
-	 * Quote condition
-	 *
-	 * @generated from field: string condition = 9;
-	 */
-	condition: string;
+  /**
+   * Quote condition
+   *
+   * @generated from field: string condition = 9;
+   */
+  condition: string;
 };
 
 /**
  * Describes the message cream.v1.OptionQuoteUpdate.
  * Use `create(OptionQuoteUpdateSchema)` to create a new message.
  */
-export const OptionQuoteUpdateSchema: GenMessage<OptionQuoteUpdate> =
-	/*@__PURE__*/
-	messageDesc(file_cream_v1_stream_proxy, 3);
+export const OptionQuoteUpdateSchema: GenMessage<OptionQuoteUpdate> = /*@__PURE__*/
+  messageDesc(file_cream_v1_stream_proxy, 3);
 
 /**
  * Real-time option trade from OPRA feed
@@ -345,56 +337,55 @@ export const OptionQuoteUpdateSchema: GenMessage<OptionQuoteUpdate> =
  * @generated from message cream.v1.OptionTrade
  */
 export type OptionTrade = Message<"cream.v1.OptionTrade"> & {
-	/**
-	 * OCC option symbol
-	 *
-	 * @generated from field: string symbol = 1;
-	 */
-	symbol: string;
+  /**
+   * OCC option symbol
+   *
+   * @generated from field: string symbol = 1;
+   */
+  symbol: string;
 
-	/**
-	 * Trade timestamp
-	 *
-	 * @generated from field: google.protobuf.Timestamp timestamp = 2;
-	 */
-	timestamp?: Timestamp;
+  /**
+   * Trade timestamp
+   *
+   * @generated from field: google.protobuf.Timestamp timestamp = 2;
+   */
+  timestamp?: Timestamp;
 
-	/**
-	 * Trade price
-	 *
-	 * @generated from field: double price = 3;
-	 */
-	price: number;
+  /**
+   * Trade price
+   *
+   * @generated from field: double price = 3;
+   */
+  price: number;
 
-	/**
-	 * Trade size (contracts)
-	 *
-	 * @generated from field: int32 size = 4;
-	 */
-	size: number;
+  /**
+   * Trade size (contracts)
+   *
+   * @generated from field: int32 size = 4;
+   */
+  size: number;
 
-	/**
-	 * Exchange code
-	 *
-	 * @generated from field: string exchange = 5;
-	 */
-	exchange: string;
+  /**
+   * Exchange code
+   *
+   * @generated from field: string exchange = 5;
+   */
+  exchange: string;
 
-	/**
-	 * Trade condition
-	 *
-	 * @generated from field: string condition = 6;
-	 */
-	condition: string;
+  /**
+   * Trade condition
+   *
+   * @generated from field: string condition = 6;
+   */
+  condition: string;
 };
 
 /**
  * Describes the message cream.v1.OptionTrade.
  * Use `create(OptionTradeSchema)` to create a new message.
  */
-export const OptionTradeSchema: GenMessage<OptionTrade> =
-	/*@__PURE__*/
-	messageDesc(file_cream_v1_stream_proxy, 4);
+export const OptionTradeSchema: GenMessage<OptionTrade> = /*@__PURE__*/
+  messageDesc(file_cream_v1_stream_proxy, 4);
 
 /**
  * Order leg for multi-leg orders
@@ -402,70 +393,69 @@ export const OptionTradeSchema: GenMessage<OptionTrade> =
  * @generated from message cream.v1.OrderUpdateLeg
  */
 export type OrderUpdateLeg = Message<"cream.v1.OrderUpdateLeg"> & {
-	/**
-	 * Leg order ID
-	 *
-	 * @generated from field: string id = 1;
-	 */
-	id: string;
+  /**
+   * Leg order ID
+   *
+   * @generated from field: string id = 1;
+   */
+  id: string;
 
-	/**
-	 * Symbol for this leg
-	 *
-	 * @generated from field: string symbol = 2;
-	 */
-	symbol: string;
+  /**
+   * Symbol for this leg
+   *
+   * @generated from field: string symbol = 2;
+   */
+  symbol: string;
 
-	/**
-	 * Side for this leg
-	 *
-	 * @generated from field: cream.v1.OrderSide side = 3;
-	 */
-	side: OrderSide;
+  /**
+   * Side for this leg
+   *
+   * @generated from field: cream.v1.OrderSide side = 3;
+   */
+  side: OrderSide;
 
-	/**
-	 * Quantity for this leg
-	 *
-	 * @generated from field: string qty = 4;
-	 */
-	qty: string;
+  /**
+   * Quantity for this leg
+   *
+   * @generated from field: string qty = 4;
+   */
+  qty: string;
 
-	/**
-	 * Filled quantity for this leg
-	 *
-	 * @generated from field: string filled_qty = 5;
-	 */
-	filledQty: string;
+  /**
+   * Filled quantity for this leg
+   *
+   * @generated from field: string filled_qty = 5;
+   */
+  filledQty: string;
 
-	/**
-	 * Average fill price for this leg
-	 *
-	 * @generated from field: string filled_avg_price = 6;
-	 */
-	filledAvgPrice: string;
+  /**
+   * Average fill price for this leg
+   *
+   * @generated from field: string filled_avg_price = 6;
+   */
+  filledAvgPrice: string;
 
-	/**
-	 * Ratio quantity for spread orders
-	 *
-	 * @generated from field: string ratio_qty = 7;
-	 */
-	ratioQty: string;
+  /**
+   * Ratio quantity for spread orders
+   *
+   * @generated from field: string ratio_qty = 7;
+   */
+  ratioQty: string;
 
-	/**
-	 * Status of this leg
-	 *
-	 * @generated from field: string status = 8;
-	 */
-	status: string;
+  /**
+   * Status of this leg
+   *
+   * @generated from field: string status = 8;
+   */
+  status: string;
 };
 
 /**
  * Describes the message cream.v1.OrderUpdateLeg.
  * Use `create(OrderUpdateLegSchema)` to create a new message.
  */
-export const OrderUpdateLegSchema: GenMessage<OrderUpdateLeg> =
-	/*@__PURE__*/
-	messageDesc(file_cream_v1_stream_proxy, 5);
+export const OrderUpdateLegSchema: GenMessage<OrderUpdateLeg> = /*@__PURE__*/
+  messageDesc(file_cream_v1_stream_proxy, 5);
 
 /**
  * Order details in update
@@ -473,182 +463,181 @@ export const OrderUpdateLegSchema: GenMessage<OrderUpdateLeg> =
  * @generated from message cream.v1.OrderDetails
  */
 export type OrderDetails = Message<"cream.v1.OrderDetails"> & {
-	/**
-	 * Order ID
-	 *
-	 * @generated from field: string id = 1;
-	 */
-	id: string;
+  /**
+   * Order ID
+   *
+   * @generated from field: string id = 1;
+   */
+  id: string;
 
-	/**
-	 * Client order ID
-	 *
-	 * @generated from field: string client_order_id = 2;
-	 */
-	clientOrderId: string;
+  /**
+   * Client order ID
+   *
+   * @generated from field: string client_order_id = 2;
+   */
+  clientOrderId: string;
 
-	/**
-	 * Symbol
-	 *
-	 * @generated from field: string symbol = 3;
-	 */
-	symbol: string;
+  /**
+   * Symbol
+   *
+   * @generated from field: string symbol = 3;
+   */
+  symbol: string;
 
-	/**
-	 * Asset class
-	 *
-	 * @generated from field: cream.v1.AssetClass asset_class = 4;
-	 */
-	assetClass: AssetClass;
+  /**
+   * Asset class
+   *
+   * @generated from field: cream.v1.AssetClass asset_class = 4;
+   */
+  assetClass: AssetClass;
 
-	/**
-	 * Order class
-	 *
-	 * @generated from field: cream.v1.OrderClass order_class = 5;
-	 */
-	orderClass: OrderClass;
+  /**
+   * Order class
+   *
+   * @generated from field: cream.v1.OrderClass order_class = 5;
+   */
+  orderClass: OrderClass;
 
-	/**
-	 * Order type
-	 *
-	 * @generated from field: cream.v1.OrderType order_type = 6;
-	 */
-	orderType: OrderType;
+  /**
+   * Order type
+   *
+   * @generated from field: cream.v1.OrderType order_type = 6;
+   */
+  orderType: OrderType;
 
-	/**
-	 * Side (buy/sell)
-	 *
-	 * @generated from field: cream.v1.OrderSide side = 7;
-	 */
-	side: OrderSide;
+  /**
+   * Side (buy/sell)
+   *
+   * @generated from field: cream.v1.OrderSide side = 7;
+   */
+  side: OrderSide;
 
-	/**
-	 * Time in force
-	 *
-	 * @generated from field: cream.v1.TimeInForce time_in_force = 8;
-	 */
-	timeInForce: TimeInForce;
+  /**
+   * Time in force
+   *
+   * @generated from field: cream.v1.TimeInForce time_in_force = 8;
+   */
+  timeInForce: TimeInForce;
 
-	/**
-	 * Quantity
-	 *
-	 * @generated from field: string qty = 9;
-	 */
-	qty: string;
+  /**
+   * Quantity
+   *
+   * @generated from field: string qty = 9;
+   */
+  qty: string;
 
-	/**
-	 * Filled quantity
-	 *
-	 * @generated from field: string filled_qty = 10;
-	 */
-	filledQty: string;
+  /**
+   * Filled quantity
+   *
+   * @generated from field: string filled_qty = 10;
+   */
+  filledQty: string;
 
-	/**
-	 * Average fill price
-	 *
-	 * @generated from field: string filled_avg_price = 11;
-	 */
-	filledAvgPrice: string;
+  /**
+   * Average fill price
+   *
+   * @generated from field: string filled_avg_price = 11;
+   */
+  filledAvgPrice: string;
 
-	/**
-	 * Limit price
-	 *
-	 * @generated from field: optional string limit_price = 12;
-	 */
-	limitPrice?: string;
+  /**
+   * Limit price
+   *
+   * @generated from field: optional string limit_price = 12;
+   */
+  limitPrice?: string;
 
-	/**
-	 * Stop price
-	 *
-	 * @generated from field: optional string stop_price = 13;
-	 */
-	stopPrice?: string;
+  /**
+   * Stop price
+   *
+   * @generated from field: optional string stop_price = 13;
+   */
+  stopPrice?: string;
 
-	/**
-	 * Status
-	 *
-	 * @generated from field: string status = 14;
-	 */
-	status: string;
+  /**
+   * Status
+   *
+   * @generated from field: string status = 14;
+   */
+  status: string;
 
-	/**
-	 * Extended hours
-	 *
-	 * @generated from field: bool extended_hours = 15;
-	 */
-	extendedHours: boolean;
+  /**
+   * Extended hours
+   *
+   * @generated from field: bool extended_hours = 15;
+   */
+  extendedHours: boolean;
 
-	/**
-	 * Created at
-	 *
-	 * @generated from field: google.protobuf.Timestamp created_at = 16;
-	 */
-	createdAt?: Timestamp;
+  /**
+   * Created at
+   *
+   * @generated from field: google.protobuf.Timestamp created_at = 16;
+   */
+  createdAt?: Timestamp;
 
-	/**
-	 * Updated at
-	 *
-	 * @generated from field: google.protobuf.Timestamp updated_at = 17;
-	 */
-	updatedAt?: Timestamp;
+  /**
+   * Updated at
+   *
+   * @generated from field: google.protobuf.Timestamp updated_at = 17;
+   */
+  updatedAt?: Timestamp;
 
-	/**
-	 * Submitted at
-	 *
-	 * @generated from field: google.protobuf.Timestamp submitted_at = 18;
-	 */
-	submittedAt?: Timestamp;
+  /**
+   * Submitted at
+   *
+   * @generated from field: google.protobuf.Timestamp submitted_at = 18;
+   */
+  submittedAt?: Timestamp;
 
-	/**
-	 * Filled at
-	 *
-	 * @generated from field: optional google.protobuf.Timestamp filled_at = 19;
-	 */
-	filledAt?: Timestamp;
+  /**
+   * Filled at
+   *
+   * @generated from field: optional google.protobuf.Timestamp filled_at = 19;
+   */
+  filledAt?: Timestamp;
 
-	/**
-	 * Canceled at
-	 *
-	 * @generated from field: optional google.protobuf.Timestamp canceled_at = 20;
-	 */
-	canceledAt?: Timestamp;
+  /**
+   * Canceled at
+   *
+   * @generated from field: optional google.protobuf.Timestamp canceled_at = 20;
+   */
+  canceledAt?: Timestamp;
 
-	/**
-	 * Expired at
-	 *
-	 * @generated from field: optional google.protobuf.Timestamp expired_at = 21;
-	 */
-	expiredAt?: Timestamp;
+  /**
+   * Expired at
+   *
+   * @generated from field: optional google.protobuf.Timestamp expired_at = 21;
+   */
+  expiredAt?: Timestamp;
 
-	/**
-	 * Failed at
-	 *
-	 * @generated from field: optional google.protobuf.Timestamp failed_at = 22;
-	 */
-	failedAt?: Timestamp;
+  /**
+   * Failed at
+   *
+   * @generated from field: optional google.protobuf.Timestamp failed_at = 22;
+   */
+  failedAt?: Timestamp;
 
-	/**
-	 * Legs for multi-leg orders
-	 *
-	 * @generated from field: repeated cream.v1.OrderUpdateLeg legs = 23;
-	 */
-	legs: OrderUpdateLeg[];
+  /**
+   * Legs for multi-leg orders
+   *
+   * @generated from field: repeated cream.v1.OrderUpdateLeg legs = 23;
+   */
+  legs: OrderUpdateLeg[];
 
-	/**
-	 * Commission
-	 *
-	 * @generated from field: optional string commission = 24;
-	 */
-	commission?: string;
+  /**
+   * Commission
+   *
+   * @generated from field: optional string commission = 24;
+   */
+  commission?: string;
 };
 
 /**
  * Describes the message cream.v1.OrderDetails.
  * Use `create(OrderDetailsSchema)` to create a new message.
  */
-export const OrderDetailsSchema: GenMessage<OrderDetails> =
-	/*@__PURE__*/
-	messageDesc(file_cream_v1_stream_proxy, 6);
+export const OrderDetailsSchema: GenMessage<OrderDetails> = /*@__PURE__*/
+  messageDesc(file_cream_v1_stream_proxy, 6);
 
 /**
  * Real-time order update event
@@ -656,70 +645,69 @@ export const OrderDetailsSchema: GenMessage<OrderDetails> =
  * @generated from message cream.v1.OrderUpdate
  */
 export type OrderUpdate = Message<"cream.v1.OrderUpdate"> & {
-	/**
-	 * Event type
-	 *
-	 * @generated from field: cream.v1.OrderEvent event = 1;
-	 */
-	event: OrderEvent;
+  /**
+   * Event type
+   *
+   * @generated from field: cream.v1.OrderEvent event = 1;
+   */
+  event: OrderEvent;
 
-	/**
-	 * Event ID (unique per event)
-	 *
-	 * @generated from field: string event_id = 2;
-	 */
-	eventId: string;
+  /**
+   * Event ID (unique per event)
+   *
+   * @generated from field: string event_id = 2;
+   */
+  eventId: string;
 
-	/**
-	 * Event timestamp
-	 *
-	 * @generated from field: google.protobuf.Timestamp timestamp = 3;
-	 */
-	timestamp?: Timestamp;
+  /**
+   * Event timestamp
+   *
+   * @generated from field: google.protobuf.Timestamp timestamp = 3;
+   */
+  timestamp?: Timestamp;
 
-	/**
-	 * Order details
-	 *
-	 * @generated from field: cream.v1.OrderDetails order = 4;
-	 */
-	order?: OrderDetails;
+  /**
+   * Order details
+   *
+   * @generated from field: cream.v1.OrderDetails order = 4;
+   */
+  order?: OrderDetails;
 
-	/**
-	 * Execution ID (for fill events)
-	 *
-	 * @generated from field: optional string execution_id = 5;
-	 */
-	executionId?: string;
+  /**
+   * Execution ID (for fill events)
+   *
+   * @generated from field: optional string execution_id = 5;
+   */
+  executionId?: string;
 
-	/**
-	 * Execution price (for fill events)
-	 *
-	 * @generated from field: optional string price = 6;
-	 */
-	price?: string;
+  /**
+   * Execution price (for fill events)
+   *
+   * @generated from field: optional string price = 6;
+   */
+  price?: string;
 
-	/**
-	 * Execution quantity (for fill events)
-	 *
-	 * @generated from field: optional string qty = 7;
-	 */
-	qty?: string;
+  /**
+   * Execution quantity (for fill events)
+   *
+   * @generated from field: optional string qty = 7;
+   */
+  qty?: string;
 
-	/**
-	 * Position quantity after execution
-	 *
-	 * @generated from field: optional string position_qty = 8;
-	 */
-	positionQty?: string;
+  /**
+   * Position quantity after execution
+   *
+   * @generated from field: optional string position_qty = 8;
+   */
+  positionQty?: string;
 };
 
 /**
  * Describes the message cream.v1.OrderUpdate.
  * Use `create(OrderUpdateSchema)` to create a new message.
  */
-export const OrderUpdateSchema: GenMessage<OrderUpdate> =
-	/*@__PURE__*/
-	messageDesc(file_cream_v1_stream_proxy, 7);
+export const OrderUpdateSchema: GenMessage<OrderUpdate> = /*@__PURE__*/
+  messageDesc(file_cream_v1_stream_proxy, 7);
 
 /**
  * Status of a single feed connection
@@ -727,63 +715,62 @@ export const OrderUpdateSchema: GenMessage<OrderUpdate> =
  * @generated from message cream.v1.FeedStatus
  */
 export type FeedStatus = Message<"cream.v1.FeedStatus"> & {
-	/**
-	 * Feed type
-	 *
-	 * @generated from field: cream.v1.FeedType feed_type = 1;
-	 */
-	feedType: FeedType;
+  /**
+   * Feed type
+   *
+   * @generated from field: cream.v1.FeedType feed_type = 1;
+   */
+  feedType: FeedType;
 
-	/**
-	 * Connection state
-	 *
-	 * @generated from field: cream.v1.ConnectionState state = 2;
-	 */
-	state: ConnectionState;
+  /**
+   * Connection state
+   *
+   * @generated from field: cream.v1.ConnectionState state = 2;
+   */
+  state: ConnectionState;
 
-	/**
-	 * Last connected time
-	 *
-	 * @generated from field: optional google.protobuf.Timestamp last_connected_at = 3;
-	 */
-	lastConnectedAt?: Timestamp;
+  /**
+   * Last connected time
+   *
+   * @generated from field: optional google.protobuf.Timestamp last_connected_at = 3;
+   */
+  lastConnectedAt?: Timestamp;
 
-	/**
-	 * Last error message (if state is ERROR)
-	 *
-	 * @generated from field: optional string error_message = 4;
-	 */
-	errorMessage?: string;
+  /**
+   * Last error message (if state is ERROR)
+   *
+   * @generated from field: optional string error_message = 4;
+   */
+  errorMessage?: string;
 
-	/**
-	 * Number of active subscriptions
-	 *
-	 * @generated from field: int32 subscription_count = 5;
-	 */
-	subscriptionCount: number;
+  /**
+   * Number of active subscriptions
+   *
+   * @generated from field: int32 subscription_count = 5;
+   */
+  subscriptionCount: number;
 
-	/**
-	 * Number of reconnection attempts since last success
-	 *
-	 * @generated from field: int32 reconnect_attempts = 6;
-	 */
-	reconnectAttempts: number;
+  /**
+   * Number of reconnection attempts since last success
+   *
+   * @generated from field: int32 reconnect_attempts = 6;
+   */
+  reconnectAttempts: number;
 
-	/**
-	 * Messages received since last reset
-	 *
-	 * @generated from field: int64 messages_received = 7;
-	 */
-	messagesReceived: bigint;
+  /**
+   * Messages received since last reset
+   *
+   * @generated from field: int64 messages_received = 7;
+   */
+  messagesReceived: bigint;
 };
 
 /**
  * Describes the message cream.v1.FeedStatus.
  * Use `create(FeedStatusSchema)` to create a new message.
  */
-export const FeedStatusSchema: GenMessage<FeedStatus> =
-	/*@__PURE__*/
-	messageDesc(file_cream_v1_stream_proxy, 8);
+export const FeedStatusSchema: GenMessage<FeedStatus> = /*@__PURE__*/
+  messageDesc(file_cream_v1_stream_proxy, 8);
 
 /**
  * Overall proxy connection status
@@ -791,56 +778,55 @@ export const FeedStatusSchema: GenMessage<FeedStatus> =
  * @generated from message cream.v1.ConnectionStatus
  */
 export type ConnectionStatus = Message<"cream.v1.ConnectionStatus"> & {
-	/**
-	 * Proxy version
-	 *
-	 * @generated from field: string version = 1;
-	 */
-	version: string;
+  /**
+   * Proxy version
+   *
+   * @generated from field: string version = 1;
+   */
+  version: string;
 
-	/**
-	 * Proxy start time
-	 *
-	 * @generated from field: google.protobuf.Timestamp started_at = 2;
-	 */
-	startedAt?: Timestamp;
+  /**
+   * Proxy start time
+   *
+   * @generated from field: google.protobuf.Timestamp started_at = 2;
+   */
+  startedAt?: Timestamp;
 
-	/**
-	 * Current time
-	 *
-	 * @generated from field: google.protobuf.Timestamp current_time = 3;
-	 */
-	currentTime?: Timestamp;
+  /**
+   * Current time
+   *
+   * @generated from field: google.protobuf.Timestamp current_time = 3;
+   */
+  currentTime?: Timestamp;
 
-	/**
-	 * Status of each feed
-	 *
-	 * @generated from field: repeated cream.v1.FeedStatus feeds = 4;
-	 */
-	feeds: FeedStatus[];
+  /**
+   * Status of each feed
+   *
+   * @generated from field: repeated cream.v1.FeedStatus feeds = 4;
+   */
+  feeds: FeedStatus[];
 
-	/**
-	 * Total active gRPC client connections
-	 *
-	 * @generated from field: int32 client_count = 5;
-	 */
-	clientCount: number;
+  /**
+   * Total active gRPC client connections
+   *
+   * @generated from field: int32 client_count = 5;
+   */
+  clientCount: number;
 
-	/**
-	 * Environment (PAPER or LIVE)
-	 *
-	 * @generated from field: cream.v1.Environment environment = 6;
-	 */
-	environment: Environment;
+  /**
+   * Environment (PAPER or LIVE)
+   *
+   * @generated from field: cream.v1.Environment environment = 6;
+   */
+  environment: Environment;
 };
 
 /**
  * Describes the message cream.v1.ConnectionStatus.
  * Use `create(ConnectionStatusSchema)` to create a new message.
  */
-export const ConnectionStatusSchema: GenMessage<ConnectionStatus> =
-	/*@__PURE__*/
-	messageDesc(file_cream_v1_stream_proxy, 9);
+export const ConnectionStatusSchema: GenMessage<ConnectionStatus> = /*@__PURE__*/
+  messageDesc(file_cream_v1_stream_proxy, 9);
 
 /**
  * Request to stream stock quotes
@@ -848,21 +834,20 @@ export const ConnectionStatusSchema: GenMessage<ConnectionStatus> =
  * @generated from message cream.v1.StreamQuotesRequest
  */
 export type StreamQuotesRequest = Message<"cream.v1.StreamQuotesRequest"> & {
-	/**
-	 * Symbols to subscribe to (empty = all)
-	 *
-	 * @generated from field: repeated string symbols = 1;
-	 */
-	symbols: string[];
+  /**
+   * Symbols to subscribe to (empty = all)
+   *
+   * @generated from field: repeated string symbols = 1;
+   */
+  symbols: string[];
 };
 
 /**
  * Describes the message cream.v1.StreamQuotesRequest.
  * Use `create(StreamQuotesRequestSchema)` to create a new message.
  */
-export const StreamQuotesRequestSchema: GenMessage<StreamQuotesRequest> =
-	/*@__PURE__*/
-	messageDesc(file_cream_v1_stream_proxy, 10);
+export const StreamQuotesRequestSchema: GenMessage<StreamQuotesRequest> = /*@__PURE__*/
+  messageDesc(file_cream_v1_stream_proxy, 10);
 
 /**
  * Response containing a stock quote
@@ -870,21 +855,20 @@ export const StreamQuotesRequestSchema: GenMessage<StreamQuotesRequest> =
  * @generated from message cream.v1.StreamQuotesResponse
  */
 export type StreamQuotesResponse = Message<"cream.v1.StreamQuotesResponse"> & {
-	/**
-	 * Quote data
-	 *
-	 * @generated from field: cream.v1.StockQuote quote = 1;
-	 */
-	quote?: StockQuote;
+  /**
+   * Quote data
+   *
+   * @generated from field: cream.v1.StockQuote quote = 1;
+   */
+  quote?: StockQuote;
 };
 
 /**
  * Describes the message cream.v1.StreamQuotesResponse.
  * Use `create(StreamQuotesResponseSchema)` to create a new message.
  */
-export const StreamQuotesResponseSchema: GenMessage<StreamQuotesResponse> =
-	/*@__PURE__*/
-	messageDesc(file_cream_v1_stream_proxy, 11);
+export const StreamQuotesResponseSchema: GenMessage<StreamQuotesResponse> = /*@__PURE__*/
+  messageDesc(file_cream_v1_stream_proxy, 11);
 
 /**
  * Request to stream stock trades
@@ -892,21 +876,20 @@ export const StreamQuotesResponseSchema: GenMessage<StreamQuotesResponse> =
  * @generated from message cream.v1.StreamTradesRequest
  */
 export type StreamTradesRequest = Message<"cream.v1.StreamTradesRequest"> & {
-	/**
-	 * Symbols to subscribe to (empty = all)
-	 *
-	 * @generated from field: repeated string symbols = 1;
-	 */
-	symbols: string[];
+  /**
+   * Symbols to subscribe to (empty = all)
+   *
+   * @generated from field: repeated string symbols = 1;
+   */
+  symbols: string[];
 };
 
 /**
  * Describes the message cream.v1.StreamTradesRequest.
  * Use `create(StreamTradesRequestSchema)` to create a new message.
  */
-export const StreamTradesRequestSchema: GenMessage<StreamTradesRequest> =
-	/*@__PURE__*/
-	messageDesc(file_cream_v1_stream_proxy, 12);
+export const StreamTradesRequestSchema: GenMessage<StreamTradesRequest> = /*@__PURE__*/
+  messageDesc(file_cream_v1_stream_proxy, 12);
 
 /**
  * Response containing a stock trade
@@ -914,21 +897,20 @@ export const StreamTradesRequestSchema: GenMessage<StreamTradesRequest> =
  * @generated from message cream.v1.StreamTradesResponse
  */
 export type StreamTradesResponse = Message<"cream.v1.StreamTradesResponse"> & {
-	/**
-	 * Trade data
-	 *
-	 * @generated from field: cream.v1.StockTrade trade = 1;
-	 */
-	trade?: StockTrade;
+  /**
+   * Trade data
+   *
+   * @generated from field: cream.v1.StockTrade trade = 1;
+   */
+  trade?: StockTrade;
 };
 
 /**
  * Describes the message cream.v1.StreamTradesResponse.
  * Use `create(StreamTradesResponseSchema)` to create a new message.
  */
-export const StreamTradesResponseSchema: GenMessage<StreamTradesResponse> =
-	/*@__PURE__*/
-	messageDesc(file_cream_v1_stream_proxy, 13);
+export const StreamTradesResponseSchema: GenMessage<StreamTradesResponse> = /*@__PURE__*/
+  messageDesc(file_cream_v1_stream_proxy, 13);
 
 /**
  * Request to stream stock bars
@@ -936,21 +918,20 @@ export const StreamTradesResponseSchema: GenMessage<StreamTradesResponse> =
  * @generated from message cream.v1.StreamBarsRequest
  */
 export type StreamBarsRequest = Message<"cream.v1.StreamBarsRequest"> & {
-	/**
-	 * Symbols to subscribe to (empty = all)
-	 *
-	 * @generated from field: repeated string symbols = 1;
-	 */
-	symbols: string[];
+  /**
+   * Symbols to subscribe to (empty = all)
+   *
+   * @generated from field: repeated string symbols = 1;
+   */
+  symbols: string[];
 };
 
 /**
  * Describes the message cream.v1.StreamBarsRequest.
  * Use `create(StreamBarsRequestSchema)` to create a new message.
  */
-export const StreamBarsRequestSchema: GenMessage<StreamBarsRequest> =
-	/*@__PURE__*/
-	messageDesc(file_cream_v1_stream_proxy, 14);
+export const StreamBarsRequestSchema: GenMessage<StreamBarsRequest> = /*@__PURE__*/
+  messageDesc(file_cream_v1_stream_proxy, 14);
 
 /**
  * Response containing a stock bar
@@ -958,21 +939,20 @@ export const StreamBarsRequestSchema: GenMessage<StreamBarsRequest> =
  * @generated from message cream.v1.StreamBarsResponse
  */
 export type StreamBarsResponse = Message<"cream.v1.StreamBarsResponse"> & {
-	/**
-	 * Bar data
-	 *
-	 * @generated from field: cream.v1.StockBar bar = 1;
-	 */
-	bar?: StockBar;
+  /**
+   * Bar data
+   *
+   * @generated from field: cream.v1.StockBar bar = 1;
+   */
+  bar?: StockBar;
 };
 
 /**
  * Describes the message cream.v1.StreamBarsResponse.
  * Use `create(StreamBarsResponseSchema)` to create a new message.
  */
-export const StreamBarsResponseSchema: GenMessage<StreamBarsResponse> =
-	/*@__PURE__*/
-	messageDesc(file_cream_v1_stream_proxy, 15);
+export const StreamBarsResponseSchema: GenMessage<StreamBarsResponse> = /*@__PURE__*/
+  messageDesc(file_cream_v1_stream_proxy, 15);
 
 /**
  * Request to stream option quotes
@@ -980,28 +960,27 @@ export const StreamBarsResponseSchema: GenMessage<StreamBarsResponse> =
  * @generated from message cream.v1.StreamOptionQuotesRequest
  */
 export type StreamOptionQuotesRequest = Message<"cream.v1.StreamOptionQuotesRequest"> & {
-	/**
-	 * OCC symbols to subscribe to
-	 *
-	 * @generated from field: repeated string symbols = 1;
-	 */
-	symbols: string[];
+  /**
+   * OCC symbols to subscribe to
+   *
+   * @generated from field: repeated string symbols = 1;
+   */
+  symbols: string[];
 
-	/**
-	 * Underlying symbols (subscribe to all options for these underlyings)
-	 *
-	 * @generated from field: repeated string underlyings = 2;
-	 */
-	underlyings: string[];
+  /**
+   * Underlying symbols (subscribe to all options for these underlyings)
+   *
+   * @generated from field: repeated string underlyings = 2;
+   */
+  underlyings: string[];
 };
 
 /**
  * Describes the message cream.v1.StreamOptionQuotesRequest.
  * Use `create(StreamOptionQuotesRequestSchema)` to create a new message.
  */
-export const StreamOptionQuotesRequestSchema: GenMessage<StreamOptionQuotesRequest> =
-	/*@__PURE__*/
-	messageDesc(file_cream_v1_stream_proxy, 16);
+export const StreamOptionQuotesRequestSchema: GenMessage<StreamOptionQuotesRequest> = /*@__PURE__*/
+  messageDesc(file_cream_v1_stream_proxy, 16);
 
 /**
  * Response containing an option quote
@@ -1009,21 +988,20 @@ export const StreamOptionQuotesRequestSchema: GenMessage<StreamOptionQuotesReque
  * @generated from message cream.v1.StreamOptionQuotesResponse
  */
 export type StreamOptionQuotesResponse = Message<"cream.v1.StreamOptionQuotesResponse"> & {
-	/**
-	 * Quote data
-	 *
-	 * @generated from field: cream.v1.OptionQuoteUpdate quote = 1;
-	 */
-	quote?: OptionQuoteUpdate;
+  /**
+   * Quote data
+   *
+   * @generated from field: cream.v1.OptionQuoteUpdate quote = 1;
+   */
+  quote?: OptionQuoteUpdate;
 };
 
 /**
  * Describes the message cream.v1.StreamOptionQuotesResponse.
  * Use `create(StreamOptionQuotesResponseSchema)` to create a new message.
  */
-export const StreamOptionQuotesResponseSchema: GenMessage<StreamOptionQuotesResponse> =
-	/*@__PURE__*/
-	messageDesc(file_cream_v1_stream_proxy, 17);
+export const StreamOptionQuotesResponseSchema: GenMessage<StreamOptionQuotesResponse> = /*@__PURE__*/
+  messageDesc(file_cream_v1_stream_proxy, 17);
 
 /**
  * Request to stream option trades
@@ -1031,28 +1009,27 @@ export const StreamOptionQuotesResponseSchema: GenMessage<StreamOptionQuotesResp
  * @generated from message cream.v1.StreamOptionTradesRequest
  */
 export type StreamOptionTradesRequest = Message<"cream.v1.StreamOptionTradesRequest"> & {
-	/**
-	 * OCC symbols to subscribe to
-	 *
-	 * @generated from field: repeated string symbols = 1;
-	 */
-	symbols: string[];
+  /**
+   * OCC symbols to subscribe to
+   *
+   * @generated from field: repeated string symbols = 1;
+   */
+  symbols: string[];
 
-	/**
-	 * Underlying symbols (subscribe to all options for these underlyings)
-	 *
-	 * @generated from field: repeated string underlyings = 2;
-	 */
-	underlyings: string[];
+  /**
+   * Underlying symbols (subscribe to all options for these underlyings)
+   *
+   * @generated from field: repeated string underlyings = 2;
+   */
+  underlyings: string[];
 };
 
 /**
  * Describes the message cream.v1.StreamOptionTradesRequest.
  * Use `create(StreamOptionTradesRequestSchema)` to create a new message.
  */
-export const StreamOptionTradesRequestSchema: GenMessage<StreamOptionTradesRequest> =
-	/*@__PURE__*/
-	messageDesc(file_cream_v1_stream_proxy, 18);
+export const StreamOptionTradesRequestSchema: GenMessage<StreamOptionTradesRequest> = /*@__PURE__*/
+  messageDesc(file_cream_v1_stream_proxy, 18);
 
 /**
  * Response containing an option trade
@@ -1060,21 +1037,20 @@ export const StreamOptionTradesRequestSchema: GenMessage<StreamOptionTradesReque
  * @generated from message cream.v1.StreamOptionTradesResponse
  */
 export type StreamOptionTradesResponse = Message<"cream.v1.StreamOptionTradesResponse"> & {
-	/**
-	 * Trade data
-	 *
-	 * @generated from field: cream.v1.OptionTrade trade = 1;
-	 */
-	trade?: OptionTrade;
+  /**
+   * Trade data
+   *
+   * @generated from field: cream.v1.OptionTrade trade = 1;
+   */
+  trade?: OptionTrade;
 };
 
 /**
  * Describes the message cream.v1.StreamOptionTradesResponse.
  * Use `create(StreamOptionTradesResponseSchema)` to create a new message.
  */
-export const StreamOptionTradesResponseSchema: GenMessage<StreamOptionTradesResponse> =
-	/*@__PURE__*/
-	messageDesc(file_cream_v1_stream_proxy, 19);
+export const StreamOptionTradesResponseSchema: GenMessage<StreamOptionTradesResponse> = /*@__PURE__*/
+  messageDesc(file_cream_v1_stream_proxy, 19);
 
 /**
  * Request to stream order updates
@@ -1082,28 +1058,27 @@ export const StreamOptionTradesResponseSchema: GenMessage<StreamOptionTradesResp
  * @generated from message cream.v1.StreamOrderUpdatesRequest
  */
 export type StreamOrderUpdatesRequest = Message<"cream.v1.StreamOrderUpdatesRequest"> & {
-	/**
-	 * Optional: filter by order IDs
-	 *
-	 * @generated from field: repeated string order_ids = 1;
-	 */
-	orderIds: string[];
+  /**
+   * Optional: filter by order IDs
+   *
+   * @generated from field: repeated string order_ids = 1;
+   */
+  orderIds: string[];
 
-	/**
-	 * Optional: filter by symbols
-	 *
-	 * @generated from field: repeated string symbols = 2;
-	 */
-	symbols: string[];
+  /**
+   * Optional: filter by symbols
+   *
+   * @generated from field: repeated string symbols = 2;
+   */
+  symbols: string[];
 };
 
 /**
  * Describes the message cream.v1.StreamOrderUpdatesRequest.
  * Use `create(StreamOrderUpdatesRequestSchema)` to create a new message.
  */
-export const StreamOrderUpdatesRequestSchema: GenMessage<StreamOrderUpdatesRequest> =
-	/*@__PURE__*/
-	messageDesc(file_cream_v1_stream_proxy, 20);
+export const StreamOrderUpdatesRequestSchema: GenMessage<StreamOrderUpdatesRequest> = /*@__PURE__*/
+  messageDesc(file_cream_v1_stream_proxy, 20);
 
 /**
  * Response containing an order update
@@ -1111,36 +1086,35 @@ export const StreamOrderUpdatesRequestSchema: GenMessage<StreamOrderUpdatesReque
  * @generated from message cream.v1.StreamOrderUpdatesResponse
  */
 export type StreamOrderUpdatesResponse = Message<"cream.v1.StreamOrderUpdatesResponse"> & {
-	/**
-	 * Order update event
-	 *
-	 * @generated from field: cream.v1.OrderUpdate update = 1;
-	 */
-	update?: OrderUpdate;
+  /**
+   * Order update event
+   *
+   * @generated from field: cream.v1.OrderUpdate update = 1;
+   */
+  update?: OrderUpdate;
 };
 
 /**
  * Describes the message cream.v1.StreamOrderUpdatesResponse.
  * Use `create(StreamOrderUpdatesResponseSchema)` to create a new message.
  */
-export const StreamOrderUpdatesResponseSchema: GenMessage<StreamOrderUpdatesResponse> =
-	/*@__PURE__*/
-	messageDesc(file_cream_v1_stream_proxy, 21);
+export const StreamOrderUpdatesResponseSchema: GenMessage<StreamOrderUpdatesResponse> = /*@__PURE__*/
+  messageDesc(file_cream_v1_stream_proxy, 21);
 
 /**
  * Request for connection status
  *
  * @generated from message cream.v1.GetConnectionStatusRequest
  */
-export type GetConnectionStatusRequest = Message<"cream.v1.GetConnectionStatusRequest"> & {};
+export type GetConnectionStatusRequest = Message<"cream.v1.GetConnectionStatusRequest"> & {
+};
 
 /**
  * Describes the message cream.v1.GetConnectionStatusRequest.
  * Use `create(GetConnectionStatusRequestSchema)` to create a new message.
  */
-export const GetConnectionStatusRequestSchema: GenMessage<GetConnectionStatusRequest> =
-	/*@__PURE__*/
-	messageDesc(file_cream_v1_stream_proxy, 22);
+export const GetConnectionStatusRequestSchema: GenMessage<GetConnectionStatusRequest> = /*@__PURE__*/
+  messageDesc(file_cream_v1_stream_proxy, 22);
 
 /**
  * Response with connection status
@@ -1148,21 +1122,20 @@ export const GetConnectionStatusRequestSchema: GenMessage<GetConnectionStatusReq
  * @generated from message cream.v1.GetConnectionStatusResponse
  */
 export type GetConnectionStatusResponse = Message<"cream.v1.GetConnectionStatusResponse"> & {
-	/**
-	 * Current connection status
-	 *
-	 * @generated from field: cream.v1.ConnectionStatus status = 1;
-	 */
-	status?: ConnectionStatus;
+  /**
+   * Current connection status
+   *
+   * @generated from field: cream.v1.ConnectionStatus status = 1;
+   */
+  status?: ConnectionStatus;
 };
 
 /**
  * Describes the message cream.v1.GetConnectionStatusResponse.
  * Use `create(GetConnectionStatusResponseSchema)` to create a new message.
  */
-export const GetConnectionStatusResponseSchema: GenMessage<GetConnectionStatusResponse> =
-	/*@__PURE__*/
-	messageDesc(file_cream_v1_stream_proxy, 23);
+export const GetConnectionStatusResponseSchema: GenMessage<GetConnectionStatusResponse> = /*@__PURE__*/
+  messageDesc(file_cream_v1_stream_proxy, 23);
 
 /**
  * Order update event types
@@ -1170,93 +1143,92 @@ export const GetConnectionStatusResponseSchema: GenMessage<GetConnectionStatusRe
  * @generated from enum cream.v1.OrderEvent
  */
 export enum OrderEvent {
-	/**
-	 * @generated from enum value: ORDER_EVENT_UNSPECIFIED = 0;
-	 */
-	UNSPECIFIED = 0,
+  /**
+   * @generated from enum value: ORDER_EVENT_UNSPECIFIED = 0;
+   */
+  UNSPECIFIED = 0,
 
-	/**
-	 * @generated from enum value: ORDER_EVENT_NEW = 1;
-	 */
-	NEW = 1,
+  /**
+   * @generated from enum value: ORDER_EVENT_NEW = 1;
+   */
+  NEW = 1,
 
-	/**
-	 * @generated from enum value: ORDER_EVENT_FILL = 2;
-	 */
-	FILL = 2,
+  /**
+   * @generated from enum value: ORDER_EVENT_FILL = 2;
+   */
+  FILL = 2,
 
-	/**
-	 * @generated from enum value: ORDER_EVENT_PARTIAL_FILL = 3;
-	 */
-	PARTIAL_FILL = 3,
+  /**
+   * @generated from enum value: ORDER_EVENT_PARTIAL_FILL = 3;
+   */
+  PARTIAL_FILL = 3,
 
-	/**
-	 * @generated from enum value: ORDER_EVENT_CANCELED = 4;
-	 */
-	CANCELED = 4,
+  /**
+   * @generated from enum value: ORDER_EVENT_CANCELED = 4;
+   */
+  CANCELED = 4,
 
-	/**
-	 * @generated from enum value: ORDER_EVENT_EXPIRED = 5;
-	 */
-	EXPIRED = 5,
+  /**
+   * @generated from enum value: ORDER_EVENT_EXPIRED = 5;
+   */
+  EXPIRED = 5,
 
-	/**
-	 * @generated from enum value: ORDER_EVENT_REJECTED = 6;
-	 */
-	REJECTED = 6,
+  /**
+   * @generated from enum value: ORDER_EVENT_REJECTED = 6;
+   */
+  REJECTED = 6,
 
-	/**
-	 * @generated from enum value: ORDER_EVENT_PENDING_NEW = 7;
-	 */
-	PENDING_NEW = 7,
+  /**
+   * @generated from enum value: ORDER_EVENT_PENDING_NEW = 7;
+   */
+  PENDING_NEW = 7,
 
-	/**
-	 * @generated from enum value: ORDER_EVENT_STOPPED = 8;
-	 */
-	STOPPED = 8,
+  /**
+   * @generated from enum value: ORDER_EVENT_STOPPED = 8;
+   */
+  STOPPED = 8,
 
-	/**
-	 * @generated from enum value: ORDER_EVENT_REPLACED = 9;
-	 */
-	REPLACED = 9,
+  /**
+   * @generated from enum value: ORDER_EVENT_REPLACED = 9;
+   */
+  REPLACED = 9,
 
-	/**
-	 * @generated from enum value: ORDER_EVENT_SUSPENDED = 10;
-	 */
-	SUSPENDED = 10,
+  /**
+   * @generated from enum value: ORDER_EVENT_SUSPENDED = 10;
+   */
+  SUSPENDED = 10,
 
-	/**
-	 * @generated from enum value: ORDER_EVENT_PENDING_CANCEL = 11;
-	 */
-	PENDING_CANCEL = 11,
+  /**
+   * @generated from enum value: ORDER_EVENT_PENDING_CANCEL = 11;
+   */
+  PENDING_CANCEL = 11,
 
-	/**
-	 * @generated from enum value: ORDER_EVENT_PENDING_REPLACE = 12;
-	 */
-	PENDING_REPLACE = 12,
+  /**
+   * @generated from enum value: ORDER_EVENT_PENDING_REPLACE = 12;
+   */
+  PENDING_REPLACE = 12,
 
-	/**
-	 * @generated from enum value: ORDER_EVENT_CALCULATED = 13;
-	 */
-	CALCULATED = 13,
+  /**
+   * @generated from enum value: ORDER_EVENT_CALCULATED = 13;
+   */
+  CALCULATED = 13,
 
-	/**
-	 * @generated from enum value: ORDER_EVENT_DONE_FOR_DAY = 14;
-	 */
-	DONE_FOR_DAY = 14,
+  /**
+   * @generated from enum value: ORDER_EVENT_DONE_FOR_DAY = 14;
+   */
+  DONE_FOR_DAY = 14,
 
-	/**
-	 * @generated from enum value: ORDER_EVENT_TRADE_BUST = 15;
-	 */
-	TRADE_BUST = 15,
+  /**
+   * @generated from enum value: ORDER_EVENT_TRADE_BUST = 15;
+   */
+  TRADE_BUST = 15,
 }
 
 /**
  * Describes the enum cream.v1.OrderEvent.
  */
-export const OrderEventSchema: GenEnum<OrderEvent> =
-	/*@__PURE__*/
-	enumDesc(file_cream_v1_stream_proxy, 0);
+export const OrderEventSchema: GenEnum<OrderEvent> = /*@__PURE__*/
+  enumDesc(file_cream_v1_stream_proxy, 0);
 
 /**
  * Asset class for orders
@@ -1264,33 +1236,32 @@ export const OrderEventSchema: GenEnum<OrderEvent> =
  * @generated from enum cream.v1.AssetClass
  */
 export enum AssetClass {
-	/**
-	 * @generated from enum value: ASSET_CLASS_UNSPECIFIED = 0;
-	 */
-	UNSPECIFIED = 0,
+  /**
+   * @generated from enum value: ASSET_CLASS_UNSPECIFIED = 0;
+   */
+  UNSPECIFIED = 0,
 
-	/**
-	 * @generated from enum value: ASSET_CLASS_US_EQUITY = 1;
-	 */
-	US_EQUITY = 1,
+  /**
+   * @generated from enum value: ASSET_CLASS_US_EQUITY = 1;
+   */
+  US_EQUITY = 1,
 
-	/**
-	 * @generated from enum value: ASSET_CLASS_US_OPTION = 2;
-	 */
-	US_OPTION = 2,
+  /**
+   * @generated from enum value: ASSET_CLASS_US_OPTION = 2;
+   */
+  US_OPTION = 2,
 
-	/**
-	 * @generated from enum value: ASSET_CLASS_CRYPTO = 3;
-	 */
-	CRYPTO = 3,
+  /**
+   * @generated from enum value: ASSET_CLASS_CRYPTO = 3;
+   */
+  CRYPTO = 3,
 }
 
 /**
  * Describes the enum cream.v1.AssetClass.
  */
-export const AssetClassSchema: GenEnum<AssetClass> =
-	/*@__PURE__*/
-	enumDesc(file_cream_v1_stream_proxy, 1);
+export const AssetClassSchema: GenEnum<AssetClass> = /*@__PURE__*/
+  enumDesc(file_cream_v1_stream_proxy, 1);
 
 /**
  * Order class for complex orders
@@ -1298,43 +1269,42 @@ export const AssetClassSchema: GenEnum<AssetClass> =
  * @generated from enum cream.v1.OrderClass
  */
 export enum OrderClass {
-	/**
-	 * @generated from enum value: ORDER_CLASS_UNSPECIFIED = 0;
-	 */
-	UNSPECIFIED = 0,
+  /**
+   * @generated from enum value: ORDER_CLASS_UNSPECIFIED = 0;
+   */
+  UNSPECIFIED = 0,
 
-	/**
-	 * @generated from enum value: ORDER_CLASS_SIMPLE = 1;
-	 */
-	SIMPLE = 1,
+  /**
+   * @generated from enum value: ORDER_CLASS_SIMPLE = 1;
+   */
+  SIMPLE = 1,
 
-	/**
-	 * @generated from enum value: ORDER_CLASS_BRACKET = 2;
-	 */
-	BRACKET = 2,
+  /**
+   * @generated from enum value: ORDER_CLASS_BRACKET = 2;
+   */
+  BRACKET = 2,
 
-	/**
-	 * @generated from enum value: ORDER_CLASS_OCO = 3;
-	 */
-	OCO = 3,
+  /**
+   * @generated from enum value: ORDER_CLASS_OCO = 3;
+   */
+  OCO = 3,
 
-	/**
-	 * @generated from enum value: ORDER_CLASS_OTO = 4;
-	 */
-	OTO = 4,
+  /**
+   * @generated from enum value: ORDER_CLASS_OTO = 4;
+   */
+  OTO = 4,
 
-	/**
-	 * @generated from enum value: ORDER_CLASS_MLEG = 5;
-	 */
-	MLEG = 5,
+  /**
+   * @generated from enum value: ORDER_CLASS_MLEG = 5;
+   */
+  MLEG = 5,
 }
 
 /**
  * Describes the enum cream.v1.OrderClass.
  */
-export const OrderClassSchema: GenEnum<OrderClass> =
-	/*@__PURE__*/
-	enumDesc(file_cream_v1_stream_proxy, 2);
+export const OrderClassSchema: GenEnum<OrderClass> = /*@__PURE__*/
+  enumDesc(file_cream_v1_stream_proxy, 2);
 
 /**
  * Connection state for upstream WebSocket
@@ -1342,48 +1312,47 @@ export const OrderClassSchema: GenEnum<OrderClass> =
  * @generated from enum cream.v1.ConnectionState
  */
 export enum ConnectionState {
-	/**
-	 * @generated from enum value: CONNECTION_STATE_UNSPECIFIED = 0;
-	 */
-	UNSPECIFIED = 0,
+  /**
+   * @generated from enum value: CONNECTION_STATE_UNSPECIFIED = 0;
+   */
+  UNSPECIFIED = 0,
 
-	/**
-	 * @generated from enum value: CONNECTION_STATE_DISCONNECTED = 1;
-	 */
-	DISCONNECTED = 1,
+  /**
+   * @generated from enum value: CONNECTION_STATE_DISCONNECTED = 1;
+   */
+  DISCONNECTED = 1,
 
-	/**
-	 * @generated from enum value: CONNECTION_STATE_CONNECTING = 2;
-	 */
-	CONNECTING = 2,
+  /**
+   * @generated from enum value: CONNECTION_STATE_CONNECTING = 2;
+   */
+  CONNECTING = 2,
 
-	/**
-	 * @generated from enum value: CONNECTION_STATE_AUTHENTICATING = 3;
-	 */
-	AUTHENTICATING = 3,
+  /**
+   * @generated from enum value: CONNECTION_STATE_AUTHENTICATING = 3;
+   */
+  AUTHENTICATING = 3,
 
-	/**
-	 * @generated from enum value: CONNECTION_STATE_CONNECTED = 4;
-	 */
-	CONNECTED = 4,
+  /**
+   * @generated from enum value: CONNECTION_STATE_CONNECTED = 4;
+   */
+  CONNECTED = 4,
 
-	/**
-	 * @generated from enum value: CONNECTION_STATE_RECONNECTING = 5;
-	 */
-	RECONNECTING = 5,
+  /**
+   * @generated from enum value: CONNECTION_STATE_RECONNECTING = 5;
+   */
+  RECONNECTING = 5,
 
-	/**
-	 * @generated from enum value: CONNECTION_STATE_ERROR = 6;
-	 */
-	ERROR = 6,
+  /**
+   * @generated from enum value: CONNECTION_STATE_ERROR = 6;
+   */
+  ERROR = 6,
 }
 
 /**
  * Describes the enum cream.v1.ConnectionState.
  */
-export const ConnectionStateSchema: GenEnum<ConnectionState> =
-	/*@__PURE__*/
-	enumDesc(file_cream_v1_stream_proxy, 3);
+export const ConnectionStateSchema: GenEnum<ConnectionState> = /*@__PURE__*/
+  enumDesc(file_cream_v1_stream_proxy, 3);
 
 /**
  * Feed type
@@ -1391,43 +1360,42 @@ export const ConnectionStateSchema: GenEnum<ConnectionState> =
  * @generated from enum cream.v1.FeedType
  */
 export enum FeedType {
-	/**
-	 * @generated from enum value: FEED_TYPE_UNSPECIFIED = 0;
-	 */
-	UNSPECIFIED = 0,
+  /**
+   * @generated from enum value: FEED_TYPE_UNSPECIFIED = 0;
+   */
+  UNSPECIFIED = 0,
 
-	/**
-	 * @generated from enum value: FEED_TYPE_SIP = 1;
-	 */
-	SIP = 1,
+  /**
+   * @generated from enum value: FEED_TYPE_SIP = 1;
+   */
+  SIP = 1,
 
-	/**
-	 * @generated from enum value: FEED_TYPE_IEX = 2;
-	 */
-	IEX = 2,
+  /**
+   * @generated from enum value: FEED_TYPE_IEX = 2;
+   */
+  IEX = 2,
 
-	/**
-	 * @generated from enum value: FEED_TYPE_OPRA = 3;
-	 */
-	OPRA = 3,
+  /**
+   * @generated from enum value: FEED_TYPE_OPRA = 3;
+   */
+  OPRA = 3,
 
-	/**
-	 * @generated from enum value: FEED_TYPE_INDICATIVE = 4;
-	 */
-	INDICATIVE = 4,
+  /**
+   * @generated from enum value: FEED_TYPE_INDICATIVE = 4;
+   */
+  INDICATIVE = 4,
 
-	/**
-	 * @generated from enum value: FEED_TYPE_TRADE_UPDATES = 5;
-	 */
-	TRADE_UPDATES = 5,
+  /**
+   * @generated from enum value: FEED_TYPE_TRADE_UPDATES = 5;
+   */
+  TRADE_UPDATES = 5,
 }
 
 /**
  * Describes the enum cream.v1.FeedType.
  */
-export const FeedTypeSchema: GenEnum<FeedType> =
-	/*@__PURE__*/
-	enumDesc(file_cream_v1_stream_proxy, 4);
+export const FeedTypeSchema: GenEnum<FeedType> = /*@__PURE__*/
+  enumDesc(file_cream_v1_stream_proxy, 4);
 
 /**
  * StreamProxy service provides real-time market data and order updates
@@ -1436,74 +1404,76 @@ export const FeedTypeSchema: GenEnum<FeedType> =
  * @generated from service cream.v1.StreamProxyService
  */
 export const StreamProxyService: GenService<{
-	/**
-	 * Stream real-time stock quotes (SIP feed)
-	 *
-	 * @generated from rpc cream.v1.StreamProxyService.StreamQuotes
-	 */
-	streamQuotes: {
-		methodKind: "server_streaming";
-		input: typeof StreamQuotesRequestSchema;
-		output: typeof StreamQuotesResponseSchema;
-	};
-	/**
-	 * Stream real-time stock trades (SIP feed)
-	 *
-	 * @generated from rpc cream.v1.StreamProxyService.StreamTrades
-	 */
-	streamTrades: {
-		methodKind: "server_streaming";
-		input: typeof StreamTradesRequestSchema;
-		output: typeof StreamTradesResponseSchema;
-	};
-	/**
-	 * Stream real-time stock bars (SIP feed)
-	 *
-	 * @generated from rpc cream.v1.StreamProxyService.StreamBars
-	 */
-	streamBars: {
-		methodKind: "server_streaming";
-		input: typeof StreamBarsRequestSchema;
-		output: typeof StreamBarsResponseSchema;
-	};
-	/**
-	 * Stream real-time option quotes (OPRA feed)
-	 *
-	 * @generated from rpc cream.v1.StreamProxyService.StreamOptionQuotes
-	 */
-	streamOptionQuotes: {
-		methodKind: "server_streaming";
-		input: typeof StreamOptionQuotesRequestSchema;
-		output: typeof StreamOptionQuotesResponseSchema;
-	};
-	/**
-	 * Stream real-time option trades (OPRA feed)
-	 *
-	 * @generated from rpc cream.v1.StreamProxyService.StreamOptionTrades
-	 */
-	streamOptionTrades: {
-		methodKind: "server_streaming";
-		input: typeof StreamOptionTradesRequestSchema;
-		output: typeof StreamOptionTradesResponseSchema;
-	};
-	/**
-	 * Stream real-time order updates (trade updates)
-	 *
-	 * @generated from rpc cream.v1.StreamProxyService.StreamOrderUpdates
-	 */
-	streamOrderUpdates: {
-		methodKind: "server_streaming";
-		input: typeof StreamOrderUpdatesRequestSchema;
-		output: typeof StreamOrderUpdatesResponseSchema;
-	};
-	/**
-	 * Get current connection status
-	 *
-	 * @generated from rpc cream.v1.StreamProxyService.GetConnectionStatus
-	 */
-	getConnectionStatus: {
-		methodKind: "unary";
-		input: typeof GetConnectionStatusRequestSchema;
-		output: typeof GetConnectionStatusResponseSchema;
-	};
-}> = /*@__PURE__*/ serviceDesc(file_cream_v1_stream_proxy, 0);
+  /**
+   * Stream real-time stock quotes (SIP feed)
+   *
+   * @generated from rpc cream.v1.StreamProxyService.StreamQuotes
+   */
+  streamQuotes: {
+    methodKind: "server_streaming";
+    input: typeof StreamQuotesRequestSchema;
+    output: typeof StreamQuotesResponseSchema;
+  },
+  /**
+   * Stream real-time stock trades (SIP feed)
+   *
+   * @generated from rpc cream.v1.StreamProxyService.StreamTrades
+   */
+  streamTrades: {
+    methodKind: "server_streaming";
+    input: typeof StreamTradesRequestSchema;
+    output: typeof StreamTradesResponseSchema;
+  },
+  /**
+   * Stream real-time stock bars (SIP feed)
+   *
+   * @generated from rpc cream.v1.StreamProxyService.StreamBars
+   */
+  streamBars: {
+    methodKind: "server_streaming";
+    input: typeof StreamBarsRequestSchema;
+    output: typeof StreamBarsResponseSchema;
+  },
+  /**
+   * Stream real-time option quotes (OPRA feed)
+   *
+   * @generated from rpc cream.v1.StreamProxyService.StreamOptionQuotes
+   */
+  streamOptionQuotes: {
+    methodKind: "server_streaming";
+    input: typeof StreamOptionQuotesRequestSchema;
+    output: typeof StreamOptionQuotesResponseSchema;
+  },
+  /**
+   * Stream real-time option trades (OPRA feed)
+   *
+   * @generated from rpc cream.v1.StreamProxyService.StreamOptionTrades
+   */
+  streamOptionTrades: {
+    methodKind: "server_streaming";
+    input: typeof StreamOptionTradesRequestSchema;
+    output: typeof StreamOptionTradesResponseSchema;
+  },
+  /**
+   * Stream real-time order updates (trade updates)
+   *
+   * @generated from rpc cream.v1.StreamProxyService.StreamOrderUpdates
+   */
+  streamOrderUpdates: {
+    methodKind: "server_streaming";
+    input: typeof StreamOrderUpdatesRequestSchema;
+    output: typeof StreamOrderUpdatesResponseSchema;
+  },
+  /**
+   * Get current connection status
+   *
+   * @generated from rpc cream.v1.StreamProxyService.GetConnectionStatus
+   */
+  getConnectionStatus: {
+    methodKind: "unary";
+    input: typeof GetConnectionStatusRequestSchema;
+    output: typeof GetConnectionStatusResponseSchema;
+  },
+}> = /*@__PURE__*/
+  serviceDesc(file_cream_v1_stream_proxy, 0);
+

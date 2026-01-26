@@ -94,12 +94,12 @@ describe("Decision Schema Sync", () => {
 	});
 
 	describe("Invalid Action", () => {
-		it("rejects CLOSE as action", async () => {
+		it("accepts CLOSE as action", async () => {
 			const example = await loadProtoExample("decision.json");
-			const invalid = { ...example, action: "CLOSE" }; // Not in current enum
+			const valid = { ...example, action: "CLOSE" };
 
-			const result = DecisionSchema.safeParse(invalid);
-			expect(result.success).toBe(false);
+			const result = DecisionSchema.safeParse(valid);
+			expect(result.success).toBe(true);
 		});
 
 		it("rejects lowercase action", async () => {
@@ -304,14 +304,14 @@ describe("Instrument Schema Sync", () => {
 describe("Enum Sync", () => {
 	describe("Action enum", () => {
 		it("accepts all valid actions", () => {
-			const validActions = ["BUY", "SELL", "HOLD", "INCREASE", "REDUCE", "NO_TRADE"];
+			const validActions = ["BUY", "SELL", "HOLD", "CLOSE", "INCREASE", "REDUCE", "NO_TRADE"];
 			for (const action of validActions) {
 				expect(() => Action.parse(action)).not.toThrow();
 			}
 		});
 
 		it("rejects invalid actions", () => {
-			const invalidActions = ["CLOSE", "CANCEL", "MODIFY", "buy", ""];
+			const invalidActions = ["OPEN", "CANCEL", "MODIFY", "buy", ""];
 			for (const action of invalidActions) {
 				expect(() => Action.parse(action)).toThrow();
 			}

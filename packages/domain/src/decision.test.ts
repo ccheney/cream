@@ -19,14 +19,15 @@ describe("Action enum", () => {
 		expect(Action.parse("BUY")).toBe("BUY");
 		expect(Action.parse("SELL")).toBe("SELL");
 		expect(Action.parse("HOLD")).toBe("HOLD");
+		expect(Action.parse("CLOSE")).toBe("CLOSE");
 		expect(Action.parse("INCREASE")).toBe("INCREASE");
 		expect(Action.parse("REDUCE")).toBe("REDUCE");
 		expect(Action.parse("NO_TRADE")).toBe("NO_TRADE");
 	});
 
 	it("rejects invalid actions", () => {
-		expect(() => Action.parse("CLOSE")).toThrow();
 		expect(() => Action.parse("OPEN")).toThrow();
+		expect(() => Action.parse("CANCEL")).toThrow();
 	});
 });
 

@@ -9,10 +9,9 @@
 	},
 	"scripts": {
 		"build": "bun build src/index.ts --outdir dist --target bun",
-		"test": "bun test",
 		"typecheck": "tsgo --noEmit",
-		"lint": "biome check src/ tests/",
-		"format": "biome format --write src/ tests/"
+		"lint": "biome check src/",
+		"format": "biome format --write src/"
 	},
 	"devDependencies": {
 		"@cream/tsconfig": "workspace:*",
