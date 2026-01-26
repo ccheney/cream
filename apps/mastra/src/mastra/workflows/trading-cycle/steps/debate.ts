@@ -2,15 +2,19 @@
  * Debate Step
  *
  * Fifth step in the OODA trading cycle. Runs bullish and bearish
- * researchers in parallel to create opposing thesis arguments.
+ * researchers in parallel to create opposing thesis arguments for all instruments.
  *
  * @see docs/plans/53-mastra-v1-migration.md
  */
 
+import { createNodeLogger } from "@cream/logger";
 import { createStep } from "@mastra/core/workflows";
 import { z } from "zod";
 
 import { bearishResearcher, bullishResearcher } from "../../../agents/index.js";
+
+const log = createNodeLogger({ service: "trading-cycle:debate" });
+
 import {
 	FundamentalsAnalysisSchema,
 	RegimeDataSchema,
@@ -64,30 +68,50 @@ export const debateStep = createStep({
 		const errors: string[] = [];
 		const warnings: string[] = [];
 
+		log.info(
+			{
+				cycleId,
+				symbolCount: instruments.length,
+				hasNewsAnalysis: (newsAnalysis?.length ?? 0) > 0,
+				hasFundamentalsAnalysis: (fundamentalsAnalysis?.length ?? 0) > 0,
+			},
+			"Starting debate step",
+		);
+
 		const bullishStart = performance.now();
 		const bearishStart = performance.now();
 
 		const [bullishResearch, bearishResearch] = await Promise.all([
 			runBullishResearcher(
+				cycleId,
 				instruments,
 				regimeLabels,
 				newsAnalysis,
 				fundamentalsAnalysis,
 				errors,
-				warnings,
 			),
 			runBearishResearcher(
+				cycleId,
 				instruments,
 				regimeLabels,
 				newsAnalysis,
 				fundamentalsAnalysis,
 				errors,
-				warnings,
 			),
 		]);
 
 		const bullishMs = performance.now() - bullishStart;
 		const bearishMs = performance.now() - bearishStart;
+
+		log.info(
+			{
+				cycleId,
+				bullishResultCount: bullishResearch.length,
+				bearishResultCount: bearishResearch.length,
+				errorCount: errors.length,
+			},
+			"Completed debate step",
+		);
 
 		return {
 			cycleId,
@@ -109,161 +133,133 @@ export const debateStep = createStep({
 // ============================================
 
 async function runBullishResearcher(
+	cycleId: string,
 	instruments: string[],
 	regimeLabels: Record<string, z.infer<typeof RegimeDataSchema>>,
 	newsAnalysis: z.infer<typeof SentimentAnalysisSchema>[] | undefined,
 	fundamentalsAnalysis: z.infer<typeof FundamentalsAnalysisSchema>[] | undefined,
 	errors: string[],
-	warnings: string[],
 ): Promise<z.infer<typeof ResearchSchema>[]> {
-	const results: z.infer<typeof ResearchSchema>[] = [];
+	try {
+		const prompt = buildBullishPrompt(
+			instruments,
+			regimeLabels,
+			newsAnalysis,
+			fundamentalsAnalysis,
+		);
+		log.debug({ cycleId, symbolCount: instruments.length }, "Calling bullish researcher");
 
-	for (const symbol of instruments) {
-		try {
-			const regime = regimeLabels[symbol];
-			const news = newsAnalysis?.find((n) => n.instrument_id === symbol);
-			const fundamentals = fundamentalsAnalysis?.find((f) => f.instrument_id === symbol);
+		const response = await bullishResearcher.generate(prompt, {
+			structuredOutput: {
+				schema: z.array(ResearchSchema),
+			},
+		});
 
-			const prompt = buildBullishPrompt(symbol, regime, news, fundamentals);
-			const response = await bullishResearcher.generate(prompt);
-
-			const research = parseResearch(symbol, response.text, "bullish", warnings);
-			if (research) {
-				results.push(research);
-			}
-		} catch (err) {
-			errors.push(`Bullish researcher failed for ${symbol}: ${formatError(err)}`);
-		}
+		log.debug({ cycleId, resultCount: response.object?.length ?? 0 }, "Bullish research complete");
+		return response.object ?? [];
+	} catch (err) {
+		errors.push(`Bullish researcher failed: ${formatError(err)}`);
+		log.error({ cycleId, error: formatError(err) }, "Bullish researcher failed");
+		return [];
 	}
-
-	return results;
 }
 
 async function runBearishResearcher(
+	cycleId: string,
 	instruments: string[],
 	regimeLabels: Record<string, z.infer<typeof RegimeDataSchema>>,
 	newsAnalysis: z.infer<typeof SentimentAnalysisSchema>[] | undefined,
 	fundamentalsAnalysis: z.infer<typeof FundamentalsAnalysisSchema>[] | undefined,
 	errors: string[],
-	warnings: string[],
 ): Promise<z.infer<typeof ResearchSchema>[]> {
-	const results: z.infer<typeof ResearchSchema>[] = [];
+	try {
+		const prompt = buildBearishPrompt(
+			instruments,
+			regimeLabels,
+			newsAnalysis,
+			fundamentalsAnalysis,
+		);
+		log.debug({ cycleId, symbolCount: instruments.length }, "Calling bearish researcher");
 
-	for (const symbol of instruments) {
-		try {
-			const regime = regimeLabels[symbol];
-			const news = newsAnalysis?.find((n) => n.instrument_id === symbol);
-			const fundamentals = fundamentalsAnalysis?.find((f) => f.instrument_id === symbol);
+		const response = await bearishResearcher.generate(prompt, {
+			structuredOutput: {
+				schema: z.array(ResearchSchema),
+			},
+		});
 
-			const prompt = buildBearishPrompt(symbol, regime, news, fundamentals);
-			const response = await bearishResearcher.generate(prompt);
-
-			const research = parseResearch(symbol, response.text, "bearish", warnings);
-			if (research) {
-				results.push(research);
-			}
-		} catch (err) {
-			errors.push(`Bearish researcher failed for ${symbol}: ${formatError(err)}`);
-		}
+		log.debug({ cycleId, resultCount: response.object?.length ?? 0 }, "Bearish research complete");
+		return response.object ?? [];
+	} catch (err) {
+		errors.push(`Bearish researcher failed: ${formatError(err)}`);
+		log.error({ cycleId, error: formatError(err) }, "Bearish researcher failed");
+		return [];
 	}
-
-	return results;
 }
 
 function buildBullishPrompt(
-	symbol: string,
-	regime: z.infer<typeof RegimeDataSchema> | undefined,
-	news: z.infer<typeof SentimentAnalysisSchema> | undefined,
-	fundamentals: z.infer<typeof FundamentalsAnalysisSchema> | undefined,
+	instruments: string[],
+	regimeLabels: Record<string, z.infer<typeof RegimeDataSchema>>,
+	newsAnalysis: z.infer<typeof SentimentAnalysisSchema>[] | undefined,
+	fundamentalsAnalysis: z.infer<typeof FundamentalsAnalysisSchema>[] | undefined,
 ): string {
-	const parts = [
-		`Create a BULLISH thesis for ${symbol}.`,
-		regime ? `Current regime: ${regime.regime} (confidence: ${regime.confidence})` : "",
-	];
+	const symbolContexts = instruments.map((symbol) => {
+		const regime = regimeLabels[symbol];
+		const news = newsAnalysis?.find((n) => n.instrument_id === symbol);
+		const fundamentals = fundamentalsAnalysis?.find((f) => f.instrument_id === symbol);
 
-	if (news) {
-		parts.push(`News sentiment: ${news.overall_sentiment} (strength: ${news.sentiment_strength})`);
-	}
-
-	if (fundamentals) {
-		if (fundamentals.fundamental_drivers.length > 0) {
-			parts.push(`Fundamental drivers:\n- ${fundamentals.fundamental_drivers.join("\n- ")}`);
+		const lines = [`## ${symbol}`];
+		if (regime) lines.push(`Regime: ${regime.regime} (confidence: ${regime.confidence})`);
+		if (news)
+			lines.push(`Sentiment: ${news.overall_sentiment} (strength: ${news.sentiment_strength})`);
+		if (fundamentals) {
+			if (fundamentals.fundamental_drivers.length > 0) {
+				lines.push(`Drivers: ${fundamentals.fundamental_drivers.join(", ")}`);
+			}
+			lines.push(`Valuation: ${fundamentals.valuation_context}`);
 		}
-		parts.push(`Valuation: ${fundamentals.valuation_context}`);
-	}
+		return lines.join("\n");
+	});
 
-	parts.push(
-		`Return JSON with: thesis, supporting_factors (array of {factor, source, strength}), conviction_level (0-1), memory_case_ids, strongest_counterargument.`,
-	);
+	return `Create BULLISH theses for all symbols. Consider cross-correlations, sector themes, and relative opportunities.
 
-	return parts.filter(Boolean).join("\n\n");
+${symbolContexts.join("\n\n")}
+
+Return a thesis for each symbol with conviction level and strongest counterargument.`;
 }
 
 function buildBearishPrompt(
-	symbol: string,
-	regime: z.infer<typeof RegimeDataSchema> | undefined,
-	news: z.infer<typeof SentimentAnalysisSchema> | undefined,
-	fundamentals: z.infer<typeof FundamentalsAnalysisSchema> | undefined,
+	instruments: string[],
+	regimeLabels: Record<string, z.infer<typeof RegimeDataSchema>>,
+	newsAnalysis: z.infer<typeof SentimentAnalysisSchema>[] | undefined,
+	fundamentalsAnalysis: z.infer<typeof FundamentalsAnalysisSchema>[] | undefined,
 ): string {
-	const parts = [
-		`Create a BEARISH thesis for ${symbol}.`,
-		regime ? `Current regime: ${regime.regime} (confidence: ${regime.confidence})` : "",
-	];
+	const symbolContexts = instruments.map((symbol) => {
+		const regime = regimeLabels[symbol];
+		const news = newsAnalysis?.find((n) => n.instrument_id === symbol);
+		const fundamentals = fundamentalsAnalysis?.find((f) => f.instrument_id === symbol);
 
-	if (news) {
-		parts.push(`News sentiment: ${news.overall_sentiment} (strength: ${news.sentiment_strength})`);
-	}
-
-	if (fundamentals) {
-		if (fundamentals.fundamental_headwinds.length > 0) {
-			parts.push(`Fundamental headwinds:\n- ${fundamentals.fundamental_headwinds.join("\n- ")}`);
+		const lines = [`## ${symbol}`];
+		if (regime) lines.push(`Regime: ${regime.regime} (confidence: ${regime.confidence})`);
+		if (news)
+			lines.push(`Sentiment: ${news.overall_sentiment} (strength: ${news.sentiment_strength})`);
+		if (fundamentals) {
+			if (fundamentals.fundamental_headwinds.length > 0) {
+				lines.push(`Headwinds: ${fundamentals.fundamental_headwinds.join(", ")}`);
+			}
+			if (fundamentals.event_risk.length > 0) {
+				lines.push(
+					`Risks: ${fundamentals.event_risk.map((e) => `${e.event} (${e.date})`).join(", ")}`,
+				);
+			}
 		}
-		if (fundamentals.event_risk.length > 0) {
-			parts.push(
-				`Event risks:\n- ${fundamentals.event_risk.map((e) => `${e.event} (${e.date}): ${e.potential_impact}`).join("\n- ")}`,
-			);
-		}
-	}
+		return lines.join("\n");
+	});
 
-	parts.push(
-		`Return JSON with: thesis, supporting_factors (array of {factor, source, strength}), conviction_level (0-1), memory_case_ids, strongest_counterargument.`,
-	);
+	return `Create BEARISH theses for all symbols. Consider systemic risks, correlation risks, and sector vulnerabilities.
 
-	return parts.filter(Boolean).join("\n\n");
-}
+${symbolContexts.join("\n\n")}
 
-function parseResearch(
-	symbol: string,
-	text: string,
-	type: "bullish" | "bearish",
-	warnings: string[],
-): z.infer<typeof ResearchSchema> | null {
-	const jsonMatch = text.match(/\{[\s\S]*\}/);
-	if (!jsonMatch) {
-		warnings.push(`Could not extract JSON from ${type} research for ${symbol}`);
-		return null;
-	}
-
-	try {
-		const parsed = JSON.parse(jsonMatch[0]) as Record<string, unknown>;
-		return {
-			instrument_id: symbol,
-			thesis: String(parsed.thesis ?? parsed.bullish_thesis ?? parsed.bearish_thesis ?? ""),
-			supporting_factors: Array.isArray(parsed.supporting_factors)
-				? parsed.supporting_factors.map((f: Record<string, unknown>) => ({
-						factor: String(f.factor ?? ""),
-						source: String(f.source ?? "FUNDAMENTAL"),
-						strength: String(f.strength ?? "MODERATE"),
-					}))
-				: [],
-			conviction_level: Number(parsed.conviction_level ?? 0.5),
-			memory_case_ids: Array.isArray(parsed.memory_case_ids) ? parsed.memory_case_ids : [],
-			strongest_counterargument: String(parsed.strongest_counterargument ?? ""),
-		};
-	} catch {
-		warnings.push(`Failed to parse ${type} research JSON for ${symbol}`);
-		return null;
-	}
+Return a thesis for each symbol with conviction level and strongest counterargument.`;
 }
 
 function formatError(error: unknown): string {

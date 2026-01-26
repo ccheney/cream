@@ -14,6 +14,7 @@ import { z } from "zod";
 
 import {
 	type CandleDataSchema,
+	ConstraintsSchema,
 	MarketSnapshotSchema,
 	type QuoteDataSchema,
 	RegimeDataSchema,
@@ -26,12 +27,16 @@ import {
 const ObserveInputSchema = z.object({
 	cycleId: z.string().describe("Unique identifier for this trading cycle"),
 	instruments: z.array(z.string()).min(1).describe("Symbols to observe"),
+	constraints: ConstraintsSchema.optional().describe(
+		"Runtime constraints passed from workflow input",
+	),
 });
 
 const ObserveOutputSchema = z.object({
 	cycleId: z.string(),
 	marketSnapshot: MarketSnapshotSchema,
 	regimeLabels: z.record(z.string(), RegimeDataSchema),
+	constraints: ConstraintsSchema.optional(),
 	errors: z.array(z.string()),
 	warnings: z.array(z.string()),
 	metrics: z.object({
@@ -63,7 +68,7 @@ export const observeStep = createStep({
 	outputSchema: ObserveOutputSchema,
 	execute: async ({ inputData }) => {
 		const startTime = performance.now();
-		const { cycleId, instruments } = inputData;
+		const { cycleId, instruments, constraints } = inputData;
 		const errors: string[] = [];
 		const warnings: string[] = [];
 
@@ -105,6 +110,7 @@ export const observeStep = createStep({
 			cycleId,
 			marketSnapshot,
 			regimeLabels,
+			constraints,
 			errors,
 			warnings,
 			metrics: {

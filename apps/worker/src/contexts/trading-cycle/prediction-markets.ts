@@ -5,7 +5,7 @@
  * Fetches data from Kalshi/Polymarket and stores computed signals.
  */
 
-import { predictionMarketsWorkflow } from "@cream/mastra";
+import { mastra } from "@cream/mastra";
 import { log } from "../../shared/logger.js";
 
 // ============================================
@@ -47,6 +47,7 @@ export class PredictionMarketsService {
 		this.running = true;
 
 		try {
+			const predictionMarketsWorkflow = mastra.getWorkflow("predictionMarketsWorkflow");
 			const run = await predictionMarketsWorkflow.createRun();
 			await Promise.race([
 				run.start({

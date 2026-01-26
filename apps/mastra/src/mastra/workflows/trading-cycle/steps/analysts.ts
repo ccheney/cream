@@ -2,15 +2,19 @@
  * Analysts Step
  *
  * Fourth step in the OODA trading cycle. Runs news analyst and fundamentals
- * analyst agents in parallel to gather analysis for each instrument.
+ * analyst agents in parallel to gather analysis for all instruments at once.
  *
  * @see docs/plans/53-mastra-v1-migration.md
  */
 
+import { createNodeLogger } from "@cream/logger";
 import { createStep } from "@mastra/core/workflows";
 import { z } from "zod";
 
 import { fundamentalsAnalyst, newsAnalyst } from "../../../agents/index.js";
+
+const log = createNodeLogger({ service: "trading-cycle:analysts" });
+
 import {
 	FundamentalsAnalysisSchema,
 	RegimeDataSchema,
@@ -75,17 +79,37 @@ export const analystsStep = createStep({
 		const errors: string[] = [];
 		const warnings: string[] = [];
 
+		log.info({ cycleId, symbolCount: instruments.length }, "Starting analysts step");
+
 		// Run analysts in parallel
 		const newsStart = performance.now();
 		const fundamentalsStart = performance.now();
 
 		const [newsResults, fundamentalsResults] = await Promise.all([
-			runNewsAnalyst(instruments, regimeLabels, groundingContext, errors, warnings),
-			runFundamentalsAnalyst(instruments, regimeLabels, groundingContext, errors, warnings),
+			runNewsAnalyst(cycleId, instruments, regimeLabels, groundingContext, errors, warnings),
+			runFundamentalsAnalyst(
+				cycleId,
+				instruments,
+				regimeLabels,
+				groundingContext,
+				errors,
+				warnings,
+			),
 		]);
 
 		const newsAnalystMs = performance.now() - newsStart;
 		const fundamentalsAnalystMs = performance.now() - fundamentalsStart;
+
+		log.info(
+			{
+				cycleId,
+				newsResultCount: newsResults.length,
+				fundamentalsResultCount: fundamentalsResults.length,
+				errorCount: errors.length,
+				warningCount: warnings.length,
+			},
+			"Completed analysts step",
+		);
 
 		return {
 			cycleId,
@@ -107,6 +131,7 @@ export const analystsStep = createStep({
 // ============================================
 
 async function runNewsAnalyst(
+	cycleId: string,
 	instruments: string[],
 	regimeLabels: Record<string, z.infer<typeof RegimeDataSchema>>,
 	groundingContext:
@@ -116,36 +141,29 @@ async function runNewsAnalyst(
 		  }
 		| undefined,
 	errors: string[],
-	warnings: string[],
+	_warnings: string[],
 ): Promise<z.infer<typeof SentimentAnalysisSchema>[]> {
-	const results: z.infer<typeof SentimentAnalysisSchema>[] = [];
+	try {
+		const prompt = buildNewsAnalystPrompt(instruments, regimeLabels, groundingContext);
+		log.debug({ cycleId, symbolCount: instruments.length }, "Calling news analyst");
 
-	for (const symbol of instruments) {
-		try {
-			const symbolContext = groundingContext?.perSymbol.find((s) => s.symbol === symbol);
-			const regime = regimeLabels[symbol];
+		const response = await newsAnalyst.generate(prompt, {
+			structuredOutput: {
+				schema: z.array(SentimentAnalysisSchema),
+			},
+		});
 
-			const prompt = buildNewsAnalystPrompt(
-				symbol,
-				regime,
-				symbolContext,
-				groundingContext?.global,
-			);
-			const response = await newsAnalyst.generate(prompt);
-
-			const analysis = parseNewsAnalysis(symbol, response.text, warnings);
-			if (analysis) {
-				results.push(analysis);
-			}
-		} catch (err) {
-			errors.push(`News analyst failed for ${symbol}: ${formatError(err)}`);
-		}
+		log.debug({ cycleId, resultCount: response.object?.length ?? 0 }, "News analysis complete");
+		return response.object ?? [];
+	} catch (err) {
+		errors.push(`News analyst failed: ${formatError(err)}`);
+		log.error({ cycleId, error: formatError(err) }, "News analyst failed");
+		return [];
 	}
-
-	return results;
 }
 
 async function runFundamentalsAnalyst(
+	cycleId: string,
 	instruments: string[],
 	regimeLabels: Record<string, z.infer<typeof RegimeDataSchema>>,
 	groundingContext:
@@ -155,178 +173,99 @@ async function runFundamentalsAnalyst(
 		  }
 		| undefined,
 	errors: string[],
-	warnings: string[],
+	_warnings: string[],
 ): Promise<z.infer<typeof FundamentalsAnalysisSchema>[]> {
-	const results: z.infer<typeof FundamentalsAnalysisSchema>[] = [];
+	try {
+		const prompt = buildFundamentalsPrompt(instruments, regimeLabels, groundingContext);
+		log.debug({ cycleId, symbolCount: instruments.length }, "Calling fundamentals analyst");
 
-	for (const symbol of instruments) {
-		try {
-			const symbolContext = groundingContext?.perSymbol.find((s) => s.symbol === symbol);
-			const regime = regimeLabels[symbol];
+		const response = await fundamentalsAnalyst.generate(prompt, {
+			structuredOutput: {
+				schema: z.array(FundamentalsAnalysisSchema),
+			},
+		});
 
-			const prompt = buildFundamentalsPrompt(
-				symbol,
-				regime,
-				symbolContext,
-				groundingContext?.global,
-			);
-			const response = await fundamentalsAnalyst.generate(prompt);
-
-			const analysis = parseFundamentalsAnalysis(symbol, response.text, warnings);
-			if (analysis) {
-				results.push(analysis);
-			}
-		} catch (err) {
-			errors.push(`Fundamentals analyst failed for ${symbol}: ${formatError(err)}`);
-		}
+		log.debug(
+			{ cycleId, resultCount: response.object?.length ?? 0 },
+			"Fundamentals analysis complete",
+		);
+		return response.object ?? [];
+	} catch (err) {
+		errors.push(`Fundamentals analyst failed: ${formatError(err)}`);
+		log.error({ cycleId, error: formatError(err) }, "Fundamentals analyst failed");
+		return [];
 	}
-
-	return results;
 }
 
 function buildNewsAnalystPrompt(
-	symbol: string,
-	regime: z.infer<typeof RegimeDataSchema> | undefined,
-	symbolContext:
+	instruments: string[],
+	regimeLabels: Record<string, z.infer<typeof RegimeDataSchema>>,
+	groundingContext:
 		| {
-				news: string[];
-				bullCase: string[];
-				bearCase: string[];
+				perSymbol: z.infer<typeof SymbolContextSchema>[];
+				global: z.infer<typeof GlobalContextSchema>;
 		  }
 		| undefined,
-	globalContext: z.infer<typeof GlobalContextSchema> | undefined,
 ): string {
-	const parts = [
-		`Analyze ${symbol} for news and sentiment impact.`,
-		regime ? `Current regime: ${regime.regime} (confidence: ${regime.confidence})` : "",
-	];
+	const symbolContexts = instruments.map((symbol) => {
+		const regime = regimeLabels[symbol];
+		const ctx = groundingContext?.perSymbol.find((s) => s.symbol === symbol);
 
-	if (symbolContext) {
-		if (symbolContext.news.length > 0) {
-			parts.push(`Recent news:\n- ${symbolContext.news.join("\n- ")}`);
-		}
-		if (symbolContext.bullCase.length > 0) {
-			parts.push(`Bullish signals:\n- ${symbolContext.bullCase.join("\n- ")}`);
-		}
-		if (symbolContext.bearCase.length > 0) {
-			parts.push(`Bearish signals:\n- ${symbolContext.bearCase.join("\n- ")}`);
-		}
-	}
+		const lines = [`## ${symbol}`];
+		if (regime) lines.push(`Regime: ${regime.regime} (confidence: ${regime.confidence})`);
+		if (ctx?.news?.length) lines.push(`News: ${ctx.news.join("; ")}`);
+		if (ctx?.bullCase?.length) lines.push(`Bullish: ${ctx.bullCase.join("; ")}`);
+		if (ctx?.bearCase?.length) lines.push(`Bearish: ${ctx.bearCase.join("; ")}`);
+		return lines.join("\n");
+	});
 
-	if (globalContext?.macro?.length) {
-		parts.push(`Macro context:\n- ${globalContext.macro.join("\n- ")}`);
-	}
+	const globalSection = groundingContext?.global?.macro?.length
+		? `\n## Global Macro\n${groundingContext.global.macro.join("\n")}`
+		: "";
 
-	parts.push(
-		"Return your analysis as JSON with event_impacts, overall_sentiment, sentiment_strength, and duration_expectation.",
-	);
+	return `Analyze news and sentiment for all symbols. Consider cross-market themes.
 
-	return parts.filter(Boolean).join("\n\n");
+${symbolContexts.join("\n\n")}${globalSection}
+
+Return analysis for each symbol.`;
 }
 
 function buildFundamentalsPrompt(
-	symbol: string,
-	regime: z.infer<typeof RegimeDataSchema> | undefined,
-	symbolContext:
+	instruments: string[],
+	regimeLabels: Record<string, z.infer<typeof RegimeDataSchema>>,
+	groundingContext:
 		| {
-				fundamentals: string[];
-				bullCase: string[];
-				bearCase: string[];
+				perSymbol: z.infer<typeof SymbolContextSchema>[];
+				global: z.infer<typeof GlobalContextSchema>;
 		  }
 		| undefined,
-	globalContext: z.infer<typeof GlobalContextSchema> | undefined,
 ): string {
-	const parts = [
-		`Analyze ${symbol} for fundamental valuation and macro context.`,
-		regime ? `Current regime: ${regime.regime} (confidence: ${regime.confidence})` : "",
-	];
+	const symbolContexts = instruments.map((symbol) => {
+		const regime = regimeLabels[symbol];
+		const ctx = groundingContext?.perSymbol.find((s) => s.symbol === symbol);
 
-	if (symbolContext) {
-		if (symbolContext.fundamentals.length > 0) {
-			parts.push(`Fundamentals context:\n- ${symbolContext.fundamentals.join("\n- ")}`);
-		}
-		if (symbolContext.bullCase.length > 0) {
-			parts.push(`Bullish factors:\n- ${symbolContext.bullCase.join("\n- ")}`);
-		}
-		if (symbolContext.bearCase.length > 0) {
-			parts.push(`Bearish factors:\n- ${symbolContext.bearCase.join("\n- ")}`);
-		}
+		const lines = [`## ${symbol}`];
+		if (regime) lines.push(`Regime: ${regime.regime} (confidence: ${regime.confidence})`);
+		if (ctx?.fundamentals?.length) lines.push(`Fundamentals: ${ctx.fundamentals.join("; ")}`);
+		if (ctx?.bullCase?.length) lines.push(`Bullish: ${ctx.bullCase.join("; ")}`);
+		if (ctx?.bearCase?.length) lines.push(`Bearish: ${ctx.bearCase.join("; ")}`);
+		return lines.join("\n");
+	});
+
+	const globalSection = [];
+	if (groundingContext?.global?.macro?.length) {
+		globalSection.push(`Macro: ${groundingContext.global.macro.join("; ")}`);
 	}
-
-	if (globalContext) {
-		if (globalContext.macro?.length) {
-			parts.push(`Macro context:\n- ${globalContext.macro.join("\n- ")}`);
-		}
-		if (globalContext.events?.length) {
-			parts.push(`Upcoming events:\n- ${globalContext.events.join("\n- ")}`);
-		}
+	if (groundingContext?.global?.events?.length) {
+		globalSection.push(`Events: ${groundingContext.global.events.join("; ")}`);
 	}
+	const globalText = globalSection.length ? `\n## Global Context\n${globalSection.join("\n")}` : "";
 
-	parts.push(
-		"Return your analysis as JSON with fundamental_drivers, fundamental_headwinds, valuation_context, macro_context, event_risk, and fundamental_thesis.",
-	);
+	return `Analyze fundamentals and valuation for all symbols. Consider sector themes.
 
-	return parts.filter(Boolean).join("\n\n");
-}
+${symbolContexts.join("\n\n")}${globalText}
 
-function parseNewsAnalysis(
-	symbol: string,
-	text: string,
-	warnings: string[],
-): z.infer<typeof SentimentAnalysisSchema> | null {
-	const jsonMatch = text.match(/\{[\s\S]*\}/);
-	if (!jsonMatch) {
-		warnings.push(`Could not extract JSON from news analysis for ${symbol}`);
-		return null;
-	}
-
-	try {
-		const parsed = JSON.parse(jsonMatch[0]) as Record<string, unknown>;
-		return {
-			instrument_id: symbol,
-			event_impacts: Array.isArray(parsed.event_impacts) ? parsed.event_impacts : [],
-			overall_sentiment: String(parsed.overall_sentiment ?? "NEUTRAL"),
-			sentiment_strength: Number(parsed.sentiment_strength ?? 0.5),
-			duration_expectation: String(parsed.duration_expectation ?? "DAYS"),
-			linked_event_ids: Array.isArray(parsed.linked_event_ids) ? parsed.linked_event_ids : [],
-		};
-	} catch {
-		warnings.push(`Failed to parse news analysis JSON for ${symbol}`);
-		return null;
-	}
-}
-
-function parseFundamentalsAnalysis(
-	symbol: string,
-	text: string,
-	warnings: string[],
-): z.infer<typeof FundamentalsAnalysisSchema> | null {
-	const jsonMatch = text.match(/\{[\s\S]*\}/);
-	if (!jsonMatch) {
-		warnings.push(`Could not extract JSON from fundamentals analysis for ${symbol}`);
-		return null;
-	}
-
-	try {
-		const parsed = JSON.parse(jsonMatch[0]) as Record<string, unknown>;
-		return {
-			instrument_id: symbol,
-			fundamental_drivers: Array.isArray(parsed.fundamental_drivers)
-				? parsed.fundamental_drivers
-				: [],
-			fundamental_headwinds: Array.isArray(parsed.fundamental_headwinds)
-				? parsed.fundamental_headwinds
-				: [],
-			valuation_context: String(parsed.valuation_context ?? ""),
-			macro_context: String(parsed.macro_context ?? ""),
-			event_risk: Array.isArray(parsed.event_risk) ? parsed.event_risk : [],
-			fundamental_thesis: String(parsed.fundamental_thesis ?? ""),
-			linked_event_ids: Array.isArray(parsed.linked_event_ids) ? parsed.linked_event_ids : [],
-		};
-	} catch {
-		warnings.push(`Failed to parse fundamentals analysis JSON for ${symbol}`);
-		return null;
-	}
+Return analysis for each symbol.`;
 }
 
 function formatError(error: unknown): string {

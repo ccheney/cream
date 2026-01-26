@@ -11,7 +11,12 @@ import { classifyRegime, DEFAULT_RULE_BASED_CONFIG } from "@cream/regime";
 import { createStep } from "@mastra/core/workflows";
 import { z } from "zod";
 
-import { MarketSnapshotSchema, MemoryContextSchema, RegimeDataSchema } from "../schemas.js";
+import {
+	ConstraintsSchema,
+	MarketSnapshotSchema,
+	MemoryContextSchema,
+	RegimeDataSchema,
+} from "../schemas.js";
 
 // ============================================
 // Schemas
@@ -21,6 +26,7 @@ const OrientInputSchema = z.object({
 	cycleId: z.string(),
 	marketSnapshot: MarketSnapshotSchema,
 	regimeLabels: z.record(z.string(), RegimeDataSchema),
+	constraints: ConstraintsSchema.optional(),
 });
 
 const OrientOutputSchema = z.object({
@@ -28,6 +34,7 @@ const OrientOutputSchema = z.object({
 	marketSnapshot: MarketSnapshotSchema,
 	memoryContext: MemoryContextSchema,
 	regimeLabels: z.record(z.string(), RegimeDataSchema),
+	constraints: ConstraintsSchema.optional(),
 	predictionMarketSignals: z
 		.object({
 			fedCutProbability: z.number().optional(),
@@ -65,7 +72,7 @@ export const orientStep = createStep({
 	inputSchema: OrientInputSchema,
 	outputSchema: OrientOutputSchema,
 	execute: async ({ inputData }) => {
-		const { cycleId, marketSnapshot, regimeLabels: inputRegimeLabels } = inputData;
+		const { cycleId, marketSnapshot, regimeLabels: inputRegimeLabels, constraints } = inputData;
 		const errors: string[] = [];
 		const warnings: string[] = [];
 
@@ -92,6 +99,7 @@ export const orientStep = createStep({
 			marketSnapshot,
 			memoryContext,
 			regimeLabels,
+			constraints,
 			predictionMarketSignals,
 			mode,
 			errors,

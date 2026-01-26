@@ -135,18 +135,79 @@ async function callGroundingAgent(
 	}
 }
 
+/**
+ * Format date in NY timezone as YYYY-MM-DD.
+ * Uses NY timezone since that's where US markets operate.
+ */
+function formatDateNY(date: Date): string {
+	const formatter = new Intl.DateTimeFormat("en-US", {
+		timeZone: "America/New_York",
+		year: "numeric",
+		month: "2-digit",
+		day: "2-digit",
+	});
+
+	const parts = formatter.formatToParts(date);
+	const year = parts.find((p) => p.type === "year")?.value ?? "";
+	const month = parts.find((p) => p.type === "month")?.value ?? "";
+	const day = parts.find((p) => p.type === "day")?.value ?? "";
+
+	return `${year}-${month}-${day}`;
+}
+
 function buildGroundingPrompt(instruments: string[]): string {
 	const symbolList = instruments.join(", ");
-	return `Search for real-time trading context for these symbols: ${symbolList}
+	const today = formatDateNY(new Date());
+
+	return `TODAY'S DATE: ${today}
+
+Search for real-time trading context for these symbols: ${symbolList}
+
+CRITICAL: Only include information from the LAST 24 HOURS (since ${today}). Reject any news, analysis, or social posts dated before yesterday. If you cannot find recent information for a symbol, note that explicitly rather than using stale data.
 
 Include:
-1. Recent news and developments for each symbol
-2. Fundamentals context (valuation, earnings expectations)
-3. Bullish catalysts and opportunities
-4. Bearish risks and concerns
-5. Global macro context affecting these symbols
+1. Recent news and developments for each symbol (last 24 hours only)
+2. Fundamentals context (current valuation, upcoming earnings expectations)
+3. Bullish catalysts and opportunities (recent developments)
+4. Bearish risks and concerns (current/emerging risks)
+5. Global macro context affecting these symbols today
+
+For each item, include the date when the information was published or posted.
 
 Return your findings as a JSON object.`;
+}
+
+/**
+ * Convert array items to strings.
+ * If item is already a string, return it.
+ * If item is an object, stringify it or extract relevant text.
+ */
+function toStringArray(items: unknown): string[] {
+	if (!Array.isArray(items)) return [];
+
+	return items
+		.map((item) => {
+			if (typeof item === "string") return item;
+			if (item === null || item === undefined) return "";
+			if (typeof item === "object") {
+				// Try to extract meaningful text from common object shapes
+				const obj = item as Record<string, unknown>;
+				if (typeof obj.headline === "string") {
+					const parts = [obj.headline];
+					if (typeof obj.source === "string") parts.push(`(${obj.source})`);
+					if (typeof obj.date === "string") parts.push(`[${obj.date}]`);
+					return parts.join(" ");
+				}
+				if (typeof obj.text === "string") return obj.text;
+				if (typeof obj.content === "string") return obj.content;
+				if (typeof obj.summary === "string") return obj.summary;
+				if (typeof obj.description === "string") return obj.description;
+				// Fallback: stringify the object
+				return JSON.stringify(item);
+			}
+			return String(item);
+		})
+		.filter((s) => s.length > 0);
 }
 
 function parseGroundingResponse(
@@ -174,13 +235,72 @@ function parseGroundingResponse(
 	}
 
 	try {
-		const parsed = JSON.parse(jsonMatch[0]) as Partial<GroundingResult>;
+		const parsed = JSON.parse(jsonMatch[0]) as Record<string, unknown>;
 
-		return {
-			perSymbol: parsed.perSymbol ?? emptyResult.perSymbol,
-			global: parsed.global ?? emptyResult.global,
-			sources: parsed.sources ?? emptyResult.sources,
+		// Process perSymbol array, converting object arrays to string arrays
+		const perSymbol: GroundingResult["perSymbol"] = [];
+		const parsedPerSymbol = parsed.perSymbol;
+		if (Array.isArray(parsedPerSymbol)) {
+			for (const item of parsedPerSymbol) {
+				if (item && typeof item === "object") {
+					const symbolItem = item as Record<string, unknown>;
+					perSymbol.push({
+						symbol: typeof symbolItem.symbol === "string" ? symbolItem.symbol : "",
+						news: toStringArray(symbolItem.news),
+						fundamentals: toStringArray(symbolItem.fundamentals),
+						bullCase: toStringArray(symbolItem.bullCase),
+						bearCase: toStringArray(symbolItem.bearCase),
+					});
+				}
+			}
+		}
+
+		// Process global object
+		const parsedGlobal = parsed.global;
+		const global: GroundingResult["global"] = {
+			macro: [],
+			events: [],
 		};
+		if (parsedGlobal && typeof parsedGlobal === "object") {
+			const g = parsedGlobal as Record<string, unknown>;
+			global.macro = toStringArray(g.macro);
+			global.events = toStringArray(g.events);
+		}
+
+		// Process sources array
+		const sources: GroundingResult["sources"] = [];
+		const parsedSources = parsed.sources;
+		if (Array.isArray(parsedSources)) {
+			for (const src of parsedSources) {
+				if (src && typeof src === "object") {
+					const s = src as Record<string, unknown>;
+					if (typeof s.url === "string" && typeof s.title === "string") {
+						sources.push({
+							url: s.url,
+							title: s.title,
+							relevance: typeof s.relevance === "string" ? s.relevance : "",
+							sourceType: s.sourceType === "x" ? "x" : s.sourceType === "news" ? "news" : "url",
+						});
+					}
+				}
+			}
+		}
+
+		// Ensure all instruments have entries (fill in missing ones)
+		const symbolsWithData = new Set(perSymbol.map((p) => p.symbol));
+		for (const symbol of instruments) {
+			if (!symbolsWithData.has(symbol)) {
+				perSymbol.push({
+					symbol,
+					news: [],
+					fundamentals: [],
+					bullCase: [],
+					bearCase: [],
+				});
+			}
+		}
+
+		return { perSymbol, global, sources };
 	} catch {
 		warnings.push("Failed to parse grounding response JSON");
 		return emptyResult;

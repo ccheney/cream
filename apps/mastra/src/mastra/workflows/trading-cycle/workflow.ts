@@ -33,15 +33,14 @@ export const tradingCycleWorkflow = createWorkflow({
 		cycleId: inputData.cycleId,
 		marketSnapshot: inputData.marketSnapshot,
 		regimeLabels: inputData.regimeLabels,
+		constraints: inputData.constraints,
 	}))
 	// Step 2: Orient - Load memory and compute regimes
 	.then(orientStep)
 	// Map orient output to grounding input
 	.map(async ({ inputData }) => ({
 		cycleId: inputData.cycleId,
-		instruments: inputData.memoryContext.regimeLabels
-			? Object.keys(inputData.memoryContext.regimeLabels)
-			: [],
+		instruments: inputData.marketSnapshot.instruments,
 	}))
 	// Step 3: Grounding - Fetch real-time web context
 	.then(groundingStep)
@@ -50,8 +49,8 @@ export const tradingCycleWorkflow = createWorkflow({
 		const orientResult = getStepResult(orientStep);
 		return {
 			cycleId: inputData.cycleId,
-			instruments: orientResult ? Object.keys(orientResult.memoryContext.regimeLabels) : [],
-			regimeLabels: orientResult?.memoryContext.regimeLabels ?? {},
+			instruments: orientResult?.marketSnapshot.instruments ?? [],
+			regimeLabels: orientResult?.regimeLabels ?? {},
 			groundingContext: {
 				perSymbol: inputData.perSymbol,
 				global: inputData.global,
@@ -65,8 +64,8 @@ export const tradingCycleWorkflow = createWorkflow({
 		const orientResult = getStepResult(orientStep);
 		return {
 			cycleId: inputData.cycleId,
-			instruments: orientResult ? Object.keys(orientResult.memoryContext.regimeLabels) : [],
-			regimeLabels: orientResult?.memoryContext.regimeLabels ?? {},
+			instruments: orientResult?.marketSnapshot.instruments ?? [],
+			regimeLabels: orientResult?.regimeLabels ?? {},
 			newsAnalysis: inputData.newsAnalysis,
 			fundamentalsAnalysis: inputData.fundamentalsAnalysis,
 		};
@@ -79,8 +78,9 @@ export const tradingCycleWorkflow = createWorkflow({
 		const analystsResult = getStepResult(analystsStep);
 		return {
 			cycleId: inputData.cycleId,
-			instruments: orientResult ? Object.keys(orientResult.memoryContext.regimeLabels) : [],
-			regimeLabels: orientResult?.memoryContext.regimeLabels ?? {},
+			instruments: orientResult?.marketSnapshot.instruments ?? [],
+			regimeLabels: orientResult?.regimeLabels ?? {},
+			constraints: orientResult?.constraints,
 			newsAnalysis: analystsResult?.newsAnalysis,
 			fundamentalsAnalysis: analystsResult?.fundamentalsAnalysis,
 			bullishResearch: inputData.bullishResearch,
@@ -90,11 +90,15 @@ export const tradingCycleWorkflow = createWorkflow({
 	// Step 6: Trader - Synthesize decision plan
 	.then(traderStep)
 	// Map trader output to consensus input
-	.map(async ({ inputData }) => ({
-		cycleId: inputData.cycleId,
-		decisionPlan: inputData.decisionPlan,
-		iterations: 0,
-	}))
+	.map(async ({ inputData, getStepResult }) => {
+		const orientResult = getStepResult(orientStep);
+		return {
+			cycleId: inputData.cycleId,
+			decisionPlan: inputData.decisionPlan,
+			constraints: orientResult?.constraints,
+			iterations: 0,
+		};
+	})
 	// Step 7: Consensus - Run risk manager and critic
 	.then(consensusStep)
 	// Map consensus output to act input

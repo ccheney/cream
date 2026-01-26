@@ -24,9 +24,18 @@ export const MemoryCaseSchema = z.object({
 // Event Schemas (for agent outputs)
 // ============================================
 
-export const EventImpactSchema = z.object({
-	event_id: z.string(),
-	event_type: z.enum([
+// Helper to normalize enum values (uppercase, handle common LLM variations)
+const normalizeImpact = (val: unknown): string => {
+	if (typeof val !== "string") return "MEDIUM";
+	const upper = val.toUpperCase();
+	if (["HIGH", "MEDIUM", "LOW"].includes(upper)) return upper;
+	return "MEDIUM";
+};
+
+const normalizeEventType = (val: unknown): string => {
+	if (typeof val !== "string") return "MACRO";
+	const upper = val.toUpperCase().replace(/[^A-Z&]/g, "");
+	const validTypes = [
 		"EARNINGS",
 		"GUIDANCE",
 		"M&A",
@@ -35,17 +44,57 @@ export const EventImpactSchema = z.object({
 		"MACRO",
 		"ANALYST",
 		"SOCIAL",
-	]),
-	impact_direction: z.enum(["BULLISH", "BEARISH", "NEUTRAL", "UNCERTAIN"]),
-	impact_magnitude: z.enum(["HIGH", "MEDIUM", "LOW"]),
+	];
+	if (validTypes.includes(upper)) return upper;
+	// Handle common variations
+	if (upper.includes("EARN")) return "EARNINGS";
+	if (upper.includes("GUID")) return "GUIDANCE";
+	if (upper.includes("MERG") || upper.includes("ACQUI")) return "M&A";
+	if (upper.includes("REG")) return "REGULATORY";
+	if (upper.includes("PROD")) return "PRODUCT";
+	if (upper.includes("ANAL")) return "ANALYST";
+	if (upper.includes("SOC")) return "SOCIAL";
+	return "MACRO";
+};
+
+const normalizeDirection = (val: unknown): string => {
+	if (typeof val !== "string") return "NEUTRAL";
+	const upper = val.toUpperCase();
+	if (["BULLISH", "BEARISH", "NEUTRAL", "UNCERTAIN"].includes(upper)) return upper;
+	if (upper.includes("BULL") || upper.includes("POS")) return "BULLISH";
+	if (upper.includes("BEAR") || upper.includes("NEG")) return "BEARISH";
+	return "NEUTRAL";
+};
+
+export const EventImpactSchema = z.object({
+	event_id: z.string(),
+	event_type: z.preprocess(
+		normalizeEventType,
+		z.enum(["EARNINGS", "GUIDANCE", "M&A", "REGULATORY", "PRODUCT", "MACRO", "ANALYST", "SOCIAL"]),
+	),
+	impact_direction: z.preprocess(
+		normalizeDirection,
+		z.enum(["BULLISH", "BEARISH", "NEUTRAL", "UNCERTAIN"]),
+	),
+	impact_magnitude: z.preprocess(normalizeImpact, z.enum(["HIGH", "MEDIUM", "LOW"])),
 	reasoning: z.string(),
 });
 
-export const EventRiskSchema = z.object({
-	event: z.string(),
-	date: z.string(),
-	potential_impact: z.enum(["HIGH", "MEDIUM", "LOW"]),
-});
+// EventRiskSchema that handles both object and string formats from LLM
+export const EventRiskSchema = z.preprocess(
+	(val) => {
+		// If it's a string, convert to object format
+		if (typeof val === "string") {
+			return { event: val, date: "unknown", potential_impact: "MEDIUM" };
+		}
+		return val;
+	},
+	z.object({
+		event: z.string(),
+		date: z.string().default("unknown"),
+		potential_impact: z.preprocess(normalizeImpact, z.enum(["HIGH", "MEDIUM", "LOW"])),
+	}),
+);
 
 // ============================================
 // Approval Schemas
@@ -283,6 +332,37 @@ export const GroundingOutputSchema = z.object({
 export type GroundingOutput = z.infer<typeof GroundingOutputSchema>;
 
 // ============================================
+// Constraints Schema
+// ============================================
+
+export const ConstraintsSchema = z.object({
+	perInstrument: z.object({
+		maxShares: z.number(),
+		maxContracts: z.number(),
+		maxNotional: z.number(),
+		maxPctEquity: z.number(),
+	}),
+	portfolio: z.object({
+		maxGrossExposure: z.number(),
+		maxNetExposure: z.number(),
+		maxConcentration: z.number(),
+		maxCorrelation: z.number(),
+		maxDrawdown: z.number(),
+		maxRiskPerTrade: z.number(),
+		maxSectorExposure: z.number(),
+		maxPositions: z.number(),
+	}),
+	options: z.object({
+		maxDelta: z.number(),
+		maxGamma: z.number(),
+		maxVega: z.number(),
+		maxTheta: z.number(),
+	}),
+});
+
+export type Constraints = z.infer<typeof ConstraintsSchema>;
+
+// ============================================
 // Workflow Input Schema
 // ============================================
 
@@ -291,6 +371,7 @@ export const WorkflowInputSchema = z.object({
 	instruments: z.array(z.string()).min(1, "At least one instrument is required"),
 	useDraftConfig: z.boolean().optional(),
 	externalContext: ExternalContextSchema.optional(),
+	constraints: ConstraintsSchema.optional(),
 });
 
 export type WorkflowInput = z.infer<typeof WorkflowInputSchema>;
@@ -312,33 +393,8 @@ export const WorkflowStateSchema = z.object({
 	memoryContext: MemoryContextSchema.optional(),
 	regimeLabels: z.record(z.string(), RegimeDataSchema).optional(),
 
-	// Runtime constraints (loaded in Orient phase)
-	constraints: z
-		.object({
-			perInstrument: z.object({
-				maxShares: z.number(),
-				maxContracts: z.number(),
-				maxNotional: z.number(),
-				maxPctEquity: z.number(),
-			}),
-			portfolio: z.object({
-				maxGrossExposure: z.number(),
-				maxNetExposure: z.number(),
-				maxConcentration: z.number(),
-				maxCorrelation: z.number(),
-				maxDrawdown: z.number(),
-				maxRiskPerTrade: z.number(),
-				maxSectorExposure: z.number(),
-				maxPositions: z.number(),
-			}),
-			options: z.object({
-				maxDelta: z.number(),
-				maxGamma: z.number(),
-				maxVega: z.number(),
-				maxTheta: z.number(),
-			}),
-		})
-		.optional(),
+	// Runtime constraints (loaded in Orient phase or passed via input)
+	constraints: ConstraintsSchema.optional(),
 
 	// DECIDE - Analysis phase
 	newsAnalysis: z.array(SentimentAnalysisSchema).optional(),
