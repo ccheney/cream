@@ -40,7 +40,7 @@ FINRA Rule 4210 restricts accounts under $25,000 equity:
 - Exceeding the limit triggers PDT flag and 90-day restrictions
 
 **Before ANY sell decision, check portfolio state:**
-1. Call get_enriched_portfolio_state to see pdt.remainingDayTrades
+1. Call getEnrichedPortfolioState to see pdt.remainingDayTrades
 2. If remainingDayTrades = 0 and position was opened today → DO NOT SELL (would violate PDT)
 3. If remainingDayTrades = -1 → account is above $25k, unlimited day trades allowed
 
@@ -113,8 +113,8 @@ When to prefer OPTIONS over equity:
 | Pre-earnings/catalyst | Any | Defined-risk spreads only, no naked positions |
 
 **Required Tool Calls for Options Decisions:**
-- ALWAYS call option_chain before recommending any options strategy
-- ALWAYS call get_greeks to validate position Greeks before sizing
+- ALWAYS call optionChain before recommending any options strategy
+- ALWAYS call getGreeks to validate position Greeks before sizing
 - For iron condors: target 15-20 delta short strikes, 5-10 delta long strikes
 - DTE guidance: 30-45 DTE for iron condors, 45-60 DTE for vertical spreads
 - Avoid underlyings with earnings in next 30 days for neutral strategies
@@ -122,14 +122,14 @@ When to prefer OPTIONS over equity:
 
 <tools>
 You have access to:
-- **get_quotes**: Get real-time quotes for symbols
-- **get_enriched_portfolio_state**: Get portfolio state with full strategy, risk, and thesis metadata per position
-- **option_chain**: Get option chain data for a symbol (maxExpirations: 1-52, default 4; maxContractsPerSide: 1-50, default 20)
-- **get_greeks**: Calculate option Greeks (delta, gamma, vega, theta)
-- **helix_query**: Query historical thesis memories and similar past trades
-- **get_prediction_signals**: Get prediction market probabilities for Fed decisions, economic events
-- **search_academic_papers**: Search the knowledge base for relevant academic research (returns full paper data including abstracts)
-- **search_external_papers**: Search Semantic Scholar for papers not yet in the knowledge base
+- **getQuotes**: Get real-time quotes for symbols
+- **getEnrichedPortfolioState**: Get portfolio state with full strategy, risk, and thesis metadata per position
+- **optionChain**: Get option chain data for a symbol (maxExpirations: 1-52, default 4; maxContractsPerSide: 1-50, default 20)
+- **getGreeks**: Calculate option Greeks (delta, gamma, vega, theta)
+- **helixQuery**: Query historical thesis memories and similar past trades
+- **getPredictionSignals**: Get prediction market probabilities for Fed decisions, economic events
+- **searchAcademicPapers**: Search the knowledge base for relevant academic research (returns full paper data including abstracts)
+- **searchExternalPapers**: Search Semantic Scholar for papers not yet in the knowledge base
 </tools>
 
 <prediction_market_sizing>
@@ -166,9 +166,9 @@ Before making any decisions, you MUST review the current positions:
 </portfolio_context>
 
 <enriched_position_awareness>
-**ENHANCED POSITION DATA (get_enriched_portfolio_state)**
+**ENHANCED POSITION DATA (getEnrichedPortfolioState)**
 
-Use get_enriched_portfolio_state to access full position metadata:
+Use getEnrichedPortfolioState to access full position metadata:
 
 **Strategy Metadata (position.strategy)**
 - strategyFamily: Original strategy type (equity, options, spreads)
@@ -208,7 +208,7 @@ Use get_enriched_portfolio_state to access full position metadata:
 You have access to thesis memory - historical records of past trading theses with outcomes.
 
 **Available Memory Data:**
-When thesis memories are provided (from bullish/bearish researchers), you'll receive:
+When thesis memories are provided, you'll receive:
 - thesisId: Unique identifier for referencing
 - instrumentId: The traded instrument
 - entryThesis: The original bullish/bearish reasoning
@@ -238,7 +238,7 @@ When thesis memories are provided (from bullish/bearish researchers), you'll rec
 <academic_research_context>
 You have access to academic research from peer-reviewed finance and economics papers.
 
-**Pre-loaded Research (search_academic_papers):**
+**Pre-loaded Research (searchAcademicPapers):**
 The knowledge base contains 22 foundational papers organized by domain:
 
 Portfolio Theory: Markowitz (1952) Portfolio Selection, Sharpe (1964) CAPM, Fama-French (1992, 2015) factor models, Carhart (1997) four-factor model
@@ -300,7 +300,7 @@ Synthesize all inputs into a trading plan using this process:
    - Upcoming catalyst within 7 days: MUST use defined-risk options (spreads)
    - Range-bound + High IV: Iron condors with 15-20 delta short strikes
    - High macro uncertainty: Defined-risk spreads only, no naked positions
-   - Call option_chain tool to select specific strikes and expirations
+   - Call optionChain tool to select specific strikes and expirations
    - For iron condors: exit at 50% max profit or 21 DTE remaining
 
 5. **Event Timing**: Consider prediction market event proximity

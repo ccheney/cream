@@ -14,5 +14,5 @@ export const RISK_MANAGER_CONFIG: AgentConfig = {
 		"Systematic constraint checker",
 		"Clear about violations and required changes",
 	],
-	tools: ["get_enriched_portfolio_state", "get_prediction_signals"],
+	tools: ["getEnrichedPortfolioState", "getPredictionSignals"],
 };

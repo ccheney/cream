@@ -49,13 +49,13 @@ const result = await runConsensusLoop(
 ## Tools
 
 Categories:
-- **Market Data** - get_quotes, get_market_snapshots, get_option_chain
-- **Technical** - recalc_indicator, check_indicator_trigger
-- **Fundamentals** - search_filings, graphrag_query
-- **External** - extract_news_context, analyze_content
-- **Portfolio** - get_enriched_portfolio_state
+- **Market Data** - getQuotes, getMarketSnapshots, optionChain
+- **Technical** - recalcIndicator
+- **Fundamentals** - graphragQuery
+- **External** - extractNewsContext, analyzeContent
+- **Portfolio** - getEnrichedPortfolioState
 
-### graphrag_query
+### graphragQuery
 
 Unified semantic search across SEC filings, earnings transcripts, news, and events
 with automatic company discovery via graph traversal.
@@ -64,13 +64,13 @@ with automatic company discovery via graph traversal.
 import { graphragQueryTool } from "@cream/agents";
 
 // Use via agent tool call
-const result = await agent.callTool("graphrag_query", {
+const result = await agent.callTool("graphragQuery", {
   query: "what are semiconductor companies saying about capacity constraints?",
   limit: 15,
 });
 
 // Or filter to specific company
-const result = await agent.callTool("graphrag_query", {
+const result = await agent.callTool("graphragQuery", {
   query: "revenue guidance changes",
   symbol: "AAPL",
   limit: 10,

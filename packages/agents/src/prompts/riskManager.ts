@@ -58,8 +58,8 @@ CRITICAL: Notional value calculation differs by instrument type:
 
 <tools>
 You have access to:
-- **get_enriched_portfolio_state**: Get current portfolio positions with full strategy, risk, and thesis metadata
-- **get_prediction_signals**: Get prediction market probabilities for macro events and uncertainty
+- **getEnrichedPortfolioState**: Get current portfolio positions with full strategy, risk, and thesis metadata
+- **getPredictionSignals**: Get prediction market probabilities for macro events and uncertainty
 </tools>
 
 <prediction_market_risk_rules>

@@ -2,11 +2,64 @@
  * Options Tools
  *
  * Get option chain and Greeks using gRPC MarketDataService.
+ * Falls back to local Black-Scholes calculation when provider Greeks unavailable.
  */
 
 import { type ExecutionContext, isTest } from "@cream/domain";
-import { getMarketDataClient } from "../clients.js";
+import {
+	calculateGreeks as calculateBlackScholesGreeks,
+	daysToYears,
+	solveIVFromQuote,
+} from "@cream/marketdata";
+import { getFREDClient, getMarketDataClient } from "../clients.js";
 import type { Greeks, OptionChainResponse, OptionContract, OptionExpiration } from "../types.js";
+
+// ============================================
+// Risk-Free Rate from FRED
+// ============================================
+
+interface CachedRate {
+	rate: number;
+	fetchedAt: number;
+}
+
+let cachedRiskFreeRate: CachedRate | null = null;
+const RATE_CACHE_TTL_MS = 60 * 60 * 1000; // 1 hour
+
+/**
+ * Get current risk-free rate from FRED (Federal Funds Rate).
+ * Caches the rate for 1 hour to avoid excessive API calls.
+ *
+ * @returns Risk-free rate as decimal (e.g., 0.045 for 4.5%), or null if unavailable
+ */
+async function getRiskFreeRate(): Promise<number | null> {
+	const now = Date.now();
+
+	if (cachedRiskFreeRate && now - cachedRiskFreeRate.fetchedAt < RATE_CACHE_TTL_MS) {
+		return cachedRiskFreeRate.rate;
+	}
+
+	const client = getFREDClient();
+	if (!client) {
+		return null;
+	}
+
+	try {
+		const latest = await client.getLatestValue("FEDFUNDS");
+		if (latest) {
+			const rate = latest.value / 100; // Convert from percent to decimal
+			cachedRiskFreeRate = { rate, fetchedAt: now };
+			return rate;
+		}
+	} catch {
+		// FRED API error - return cached value if available, otherwise null
+		if (cachedRiskFreeRate) {
+			return cachedRiskFreeRate.rate;
+		}
+	}
+
+	return null;
+}
 
 /**
  * Parse OSI symbol into components
@@ -150,7 +203,8 @@ export async function getOptionChain(
  * Get Greeks for an option contract
  *
  * Uses gRPC MarketDataService GetOptionChain to find the specific contract
- * and extract its Greeks.
+ * and extract its Greeks. Falls back to local Black-Scholes calculation
+ * when provider Greeks are unavailable (common for illiquid contracts).
  *
  * @param ctx - ExecutionContext
  * @param contractSymbol - Option contract symbol (OSI format)
@@ -203,16 +257,86 @@ export async function getGreeks(ctx: ExecutionContext, contractSymbol: string): 
 		throw new Error(`Contract not found: ${contractSymbol}`);
 	}
 
-	if (option.delta === undefined || option.gamma === undefined) {
-		throw new Error(`Greeks not available for contract: ${contractSymbol}`);
+	// If provider Greeks are available, use them
+	if (option.delta !== undefined && option.gamma !== undefined) {
+		return {
+			delta: option.delta,
+			gamma: option.gamma,
+			theta: option.theta ?? 0,
+			vega: option.vega ?? 0,
+			rho: option.rho ?? 0,
+			iv: option.impliedVolatility ?? 0,
+		};
 	}
 
+	// Fallback: Calculate Greeks locally using Black-Scholes
+	// Only if we can determine IV accurately (from provider or bid/ask)
+	const underlyingPrice = chain.underlyingPrice;
+	if (!underlyingPrice || underlyingPrice <= 0) {
+		throw new Error(`Greeks not available: no underlying price for ${parsed.underlying}`);
+	}
+
+	// Calculate time to expiration in years
+	const expirationDate = new Date(`${parsed.expiration}T16:00:00-05:00`); // 4 PM ET expiration
+	const now = new Date();
+	const daysToExpiry = Math.max(
+		0,
+		(expirationDate.getTime() - now.getTime()) / (1000 * 60 * 60 * 24),
+	);
+	const timeToExpiration = daysToYears(daysToExpiry);
+
+	if (timeToExpiration <= 0) {
+		throw new Error(`Greeks not available: contract ${contractSymbol} has expired`);
+	}
+
+	// Get risk-free rate from FRED
+	const riskFreeRate = await getRiskFreeRate();
+	if (riskFreeRate === null) {
+		throw new Error(
+			`Greeks not available for ${contractSymbol}: cannot fetch risk-free rate from FRED`,
+		);
+	}
+
+	// Determine IV - require either provider IV or solvable from quotes
+	let impliedVolatility: number | null = option.impliedVolatility ?? null;
+
+	const quote = option.quote;
+	if (impliedVolatility === null && quote && quote.bid > 0 && quote.ask > 0) {
+		impliedVolatility = solveIVFromQuote(
+			quote.bid,
+			quote.ask,
+			underlyingPrice,
+			parsed.strike,
+			timeToExpiration,
+			parsed.type === "call" ? "CALL" : "PUT",
+			riskFreeRate,
+		);
+	}
+
+	if (impliedVolatility === null) {
+		throw new Error(
+			`Greeks not available for ${contractSymbol}: no IV from provider and cannot solve from quotes (likely illiquid contract)`,
+		);
+	}
+
+	// Calculate Greeks using Black-Scholes
+	const bsGreeks = calculateBlackScholesGreeks({
+		symbol: parsed.underlying,
+		contracts: 1,
+		strike: parsed.strike,
+		underlyingPrice,
+		timeToExpiration,
+		impliedVolatility,
+		optionType: parsed.type === "call" ? "CALL" : "PUT",
+		riskFreeRate,
+	});
+
 	return {
-		delta: option.delta,
-		gamma: option.gamma,
-		theta: option.theta ?? 0,
-		vega: option.vega ?? 0,
-		rho: option.rho ?? 0,
-		iv: option.impliedVolatility ?? 0,
+		delta: bsGreeks.delta,
+		gamma: bsGreeks.gamma,
+		theta: bsGreeks.theta,
+		vega: bsGreeks.vega,
+		rho: bsGreeks.rho,
+		iv: impliedVolatility,
 	};
 }

@@ -68,11 +68,15 @@ export async function getPortfolioState(ctx: ExecutionContext): Promise<Portfoli
 			daytradingBuyingPower: accountState?.daytradingBuyingPower ?? 0,
 		};
 
+		const equity = accountState?.equity ?? 0;
+		const lastEquity = accountState?.lastEquity ?? equity;
+		const dayPnL = equity - lastEquity;
+
 		return {
 			positions: mappedPositions,
 			buyingPower: accountState?.buyingPower ?? 0,
-			totalEquity: accountState?.equity ?? 0,
-			dayPnL: 0, // Would need day P&L tracking in account state
+			totalEquity: equity,
+			dayPnL,
 			totalPnL,
 			pdt,
 		};
