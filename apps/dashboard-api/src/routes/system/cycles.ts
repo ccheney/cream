@@ -6,7 +6,7 @@
  */
 
 import type { CyclePhase, CycleProgressData, CycleResultData } from "@cream/domain/websocket";
-import { tradingCycleWorkflow } from "@cream/mastra";
+import { mastra } from "@cream/mastra";
 import { reconstructStreamingState } from "@cream/storage";
 import { createRoute, OpenAPIHono, z } from "@hono/zod-openapi";
 import { getCyclesRepo, getDecisionsRepo, getRuntimeConfigService } from "../../db.js";
@@ -225,7 +225,11 @@ app.openapi(triggerCycleRoute, async (c) => {
 	const emitResult = (
 		status: "completed" | "failed",
 		durationMs: number,
-		workflowResult?: Awaited<ReturnType<typeof tradingCycleWorkflow.execute>>,
+		workflowResult?: {
+			approved: boolean;
+			iterations: number;
+			orderSubmission?: { orderIds: string[] };
+		},
 		error?: string,
 	) => {
 		const resultData: CycleResultData = {
@@ -265,6 +269,8 @@ app.openapi(triggerCycleRoute, async (c) => {
 			emitProgress("observe", 10, "market_data", "Fetching market data...");
 
 			// Execute workflow with streaming - forward agent events to WebSocket
+			// Use mastra.getWorkflow() to get workflow with observability/tracing enabled
+			const tradingCycleWorkflow = mastra.getWorkflow("tradingCycleWorkflow");
 			const run = await tradingCycleWorkflow.createRun();
 			const stream = await run.stream({
 				inputData: {

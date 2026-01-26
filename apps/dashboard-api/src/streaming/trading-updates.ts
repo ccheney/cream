@@ -10,10 +10,10 @@
 
 import { type Position as AlpacaPosition, createAlpacaClient } from "@cream/broker";
 import { requireEnv } from "@cream/domain";
-import { DecisionsRepository, PositionsRepository } from "@cream/storage";
+import { DecisionsRepository, PositionsRepository, ThesisStateRepository } from "@cream/storage";
 import log from "../logger.js";
 import { broadcastOrderUpdate, broadcastPositionUpdate } from "../websocket/channels.js";
-import { type OrderUpdate, streamOrderUpdates } from "./proxy-client.js";
+import { type OrderUpdate, streamOrderUpdates, waitForProxy } from "./proxy-client.js";
 
 // Proxy state
 let proxyAbortController: AbortController | null = null;
@@ -54,11 +54,16 @@ async function syncPositionToDb(
 		log.debug({ symbol: position.symbol, id: existing.id }, "Updated position in database");
 	} else {
 		const decisionsRepo = new DecisionsRepository();
+		const thesisRepo = new ThesisStateRepository();
+
 		const recentDecisions = await decisionsRepo.findMany(
 			{ symbol: position.symbol },
 			{ limit: 1, offset: 0 },
 		);
 		const decisionId = recentDecisions.data[0]?.id ?? null;
+
+		const activeThesis = await thesisRepo.findActiveForInstrument(position.symbol, environment);
+		const thesisId = activeThesis?.thesisId ?? null;
 
 		const created = await positionsRepo.create({
 			symbol: position.symbol,
@@ -67,6 +72,7 @@ async function syncPositionToDb(
 			avgEntryPrice: position.avgEntryPrice,
 			currentPrice: position.currentPrice,
 			decisionId,
+			thesisId,
 			environment,
 			openedAt: filledAt ? new Date(filledAt) : undefined,
 		});
@@ -76,6 +82,7 @@ async function syncPositionToDb(
 				id: created.id,
 				qty: position.qty,
 				decisionId,
+				thesisId,
 				openedAt: filledAt,
 			},
 			"Created position in database",
@@ -271,6 +278,7 @@ async function startProxyOrderStream(signal: AbortSignal): Promise<void> {
 
 /**
  * Initialize trading updates streaming.
+ * Waits for the proxy to become available before starting the stream.
  */
 export async function initTradingUpdatesStreaming(): Promise<void> {
 	if (proxyStreamRunning) {
@@ -279,6 +287,13 @@ export async function initTradingUpdatesStreaming(): Promise<void> {
 	}
 
 	proxyAbortController = new AbortController();
+
+	// Wait for proxy to become available before starting stream
+	const proxyAvailable = await waitForProxy({ signal: proxyAbortController.signal });
+	if (!proxyAvailable) {
+		log.warn("Proxy not available, trading updates streaming will retry on demand");
+	}
+
 	startProxyOrderStream(proxyAbortController.signal);
 	proxyStreamRunning = true;
 

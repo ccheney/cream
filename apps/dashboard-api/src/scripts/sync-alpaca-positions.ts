@@ -7,7 +7,7 @@
  * Requires .env to be loaded (uses Bun's automatic .env loading from project root).
  */
 import { createNodeLogger } from "@cream/logger";
-import { DecisionsRepository, PositionsRepository } from "@cream/storage";
+import { DecisionsRepository, PositionsRepository, ThesisStateRepository } from "@cream/storage";
 
 const log = createNodeLogger({
 	service: "sync-alpaca-positions",
@@ -69,6 +69,7 @@ async function main() {
 
 	const positionsRepo = new PositionsRepository();
 	const decisionsRepo = new DecisionsRepository();
+	const thesisRepo = new ThesisStateRepository();
 	let created = 0;
 	let updated = 0;
 	let skipped = 0;
@@ -89,6 +90,10 @@ async function main() {
 			);
 			const decisionId = recentDecisions.data[0]?.id ?? null;
 
+			// Look up active thesis for this symbol
+			const activeThesis = await thesisRepo.findActiveForInstrument(ap.symbol, CREAM_ENV);
+			const thesisId = activeThesis?.thesisId ?? null;
+
 			// Create new position (use absolute qty since side indicates direction)
 			const qty = Math.abs(Number(ap.qty));
 			const position = await positionsRepo.create({
@@ -98,6 +103,7 @@ async function main() {
 				avgEntryPrice: Number(ap.avg_entry_price),
 				currentPrice: Number(ap.current_price),
 				decisionId,
+				thesisId,
 				environment: CREAM_ENV,
 			});
 			created++;
@@ -109,6 +115,7 @@ async function main() {
 					avgEntry: ap.avg_entry_price,
 					id: position.id,
 					decisionId,
+					thesisId,
 				},
 				"Created position",
 			);

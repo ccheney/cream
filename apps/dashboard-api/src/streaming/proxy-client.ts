@@ -407,14 +407,15 @@ export async function* streamOrderUpdates(
 
 /**
  * Get the current connection status of the proxy.
+ * Returns null if the proxy is not reachable.
  */
 export async function getConnectionStatus(): Promise<ConnectionStatus | null> {
 	try {
 		const proxyClient = getClient();
 		const response = await proxyClient.getConnectionStatus({});
 		return response.status ?? null;
-	} catch (error) {
-		log.error({ error }, "Failed to get proxy connection status");
+	} catch {
+		// Connection failures are expected during startup - don't log as error
 		return null;
 	}
 }
@@ -425,6 +426,64 @@ export async function getConnectionStatus(): Promise<ConnectionStatus | null> {
 export async function isProxyHealthy(): Promise<boolean> {
 	const status = await getConnectionStatus();
 	return status !== null;
+}
+
+const DEFAULT_WAIT_INTERVAL_MS = 2000;
+const DEFAULT_MAX_WAIT_MS = 60000;
+
+export interface WaitForProxyOptions {
+	maxWaitMs?: number;
+	intervalMs?: number;
+	signal?: AbortSignal;
+	silent?: boolean;
+}
+
+/**
+ * Wait for the proxy to become available.
+ * Polls the proxy health endpoint until it responds or timeout is reached.
+ *
+ * @returns true if proxy became available, false if timeout or aborted
+ */
+export async function waitForProxy(options: WaitForProxyOptions = {}): Promise<boolean> {
+	const {
+		maxWaitMs = DEFAULT_MAX_WAIT_MS,
+		intervalMs = DEFAULT_WAIT_INTERVAL_MS,
+		signal,
+		silent = false,
+	} = options;
+
+	const startTime = Date.now();
+	let attempt = 0;
+
+	while (Date.now() - startTime < maxWaitMs) {
+		if (signal?.aborted) {
+			return false;
+		}
+
+		attempt++;
+		const healthy = await isProxyHealthy();
+
+		if (healthy) {
+			if (attempt > 1 && !silent) {
+				log.info(
+					{ attempts: attempt, elapsedMs: Date.now() - startTime },
+					"Proxy is now available",
+				);
+			}
+			return true;
+		}
+
+		if (attempt === 1 && !silent) {
+			log.info("Waiting for stream proxy to become available...");
+		}
+
+		await sleep(intervalMs);
+	}
+
+	if (!silent) {
+		log.warn({ maxWaitMs, attempts: attempt }, "Timed out waiting for proxy");
+	}
+	return false;
 }
 
 /**
@@ -462,5 +521,6 @@ export default {
 	// Status
 	getConnectionStatus,
 	isProxyHealthy,
+	waitForProxy,
 	resetClient,
 };

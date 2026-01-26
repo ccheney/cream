@@ -49,6 +49,7 @@ import {
 	snapshotsRoutes,
 	systemRoutes,
 	thesesRoutes,
+	tracesRoutes,
 	workersRoutes,
 } from "./routes/index.js";
 import {
@@ -224,6 +225,7 @@ app.use("/api/economic-calendar/*", requireAuth());
 app.use("/api/workers/*", requireAuth());
 app.use("/api/admin/*", requireAuth());
 app.use("/api/search/*", requireAuth());
+app.use("/api/traces/*", requireAuth());
 
 // Apply LIVE protection to sensitive operations
 app.use("/api/decisions/*", liveProtection());
@@ -250,6 +252,7 @@ app.route("/api/economic-calendar", economicCalendarRoutes);
 app.route("/api/workers", workersRoutes);
 app.route("/api/admin", adminRoutes);
 app.route("/api/search", searchRoutes);
+app.route("/api/traces", tracesRoutes);
 
 // AI routes (no auth required for status summaries - they're read-only and rate-limited)
 app.route("/api/ai", aiRoutes);

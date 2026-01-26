@@ -164,3 +164,15 @@ export type {
 	TimeInForce,
 	UpdateThesisRequest,
 } from "./trading";
+// Traces types
+export {
+	AGENT_METADATA,
+	getAgentMetadata,
+	KNOWN_AGENT_TYPES,
+	type AgentData,
+	type AgentMetadata,
+	type CycleData,
+	type CycleListItem,
+	type KnownAgentType,
+	type ToolCall,
+} from "./traces";

@@ -49,6 +49,7 @@ export {
 	streamOrderUpdates as proxyStreamOrderUpdates,
 	streamQuotes as proxyStreamQuotes,
 	streamTrades as proxyStreamTrades,
+	waitForProxy,
 } from "./proxy-client.js";
 // Shared Options WebSocket (single connection for Alpaca)
 export {

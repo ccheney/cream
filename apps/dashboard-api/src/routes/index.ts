@@ -64,4 +64,5 @@ export { default as searchRoutes } from "./search.js";
 export { default as snapshotsRoutes } from "./snapshots.js";
 export { default as systemRoutes } from "./system.js";
 export { default as thesesRoutes } from "./theses.js";
+export { default as tracesRoutes } from "./traces.js";
 export { default as workersRoutes } from "./workers.js";

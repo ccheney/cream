@@ -229,6 +229,14 @@ export const queryKeys = {
 				: ([...queryKeys.workers.all, "runs"] as const),
 		run: (id: string) => [...queryKeys.workers.all, "run", id] as const,
 	},
+
+	// Traces (OpenObserve)
+	traces: {
+		all: ["traces"] as const,
+		cycles: () => [...queryKeys.traces.all, "cycles"] as const,
+		cycle: (id: string) => [...queryKeys.traces.all, "cycle", id] as const,
+		latest: () => [...queryKeys.traces.all, "latest"] as const,
+	},
 } as const;
 
 // ============================================
