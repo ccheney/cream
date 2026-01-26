@@ -26,8 +26,7 @@
 	"dependencies": {
 		"@cream/logger": "workspace:*",
 		"@cream/storage": "workspace:*",
-		"@typescript/native-preview": "7.0.0-dev.20260122.4",
-		"typescript": "5.9.3"
+		"zod": "4.3.6"
 	},
 	"devDependencies": {
 		"@cream/test-utils": "workspace:*",
