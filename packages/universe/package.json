@@ -23,7 +23,8 @@
 		"@cream/config": "workspace:*",
 		"@cream/domain": "workspace:*",
 		"@cream/logger": "workspace:*",
-		"@cream/storage": "workspace:*"
+		"@cream/storage": "workspace:*",
+		"zod": "3.24.4"
 	},
 	"devDependencies": {
 		"@cream/tsconfig": "workspace:*",

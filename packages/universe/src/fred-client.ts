@@ -31,7 +31,7 @@ export const FRED_RATE_LIMITS = {
  * Used when fetching release dates across all releases.
  */
 export const FREDReleaseDateSchema = z.object({
-	release_id: z.union([z.number(), z.string().transform(Number)]),
+	release_id: z.coerce.number(),
 	release_name: z.string().optional(),
 	date: z.string(), // YYYY-MM-DD
 });
@@ -63,7 +63,7 @@ export const FREDObservationSchema = z.object({
 	realtime_start: z.string(),
 	realtime_end: z.string(),
 	date: z.string(), // YYYY-MM-DD
-	value: z.string().transform((v) => (v === "." ? null : v)),
+	value: z.string().transform((v: string) => (v === "." ? null : v)),
 });
 export type FREDObservation = z.infer<typeof FREDObservationSchema>;
 

@@ -11,6 +11,7 @@ import {
 	daysToYears,
 	solveIVFromQuote,
 } from "@cream/marketdata";
+import type { OptionQuote } from "@cream/schema-gen/cream/v1/market_snapshot";
 import { getFREDClient, getMarketDataClient } from "../clients.js";
 import type { Greeks, OptionChainResponse, OptionContract, OptionExpiration } from "../types.js";
 
@@ -235,7 +236,7 @@ export async function getGreeks(ctx: ExecutionContext, contractSymbol: string): 
 	}
 
 	// Find the specific contract by matching underlying, expiration, type, and strike
-	const option = chain.options.find((opt) => {
+	const option = chain.options.find((opt: OptionQuote) => {
 		const contract = opt.contract;
 		if (!contract) {
 			return false;

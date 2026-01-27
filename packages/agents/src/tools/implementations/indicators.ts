@@ -17,6 +17,7 @@ import {
 	calculateStochastic,
 	calculateVolumeSMA,
 } from "@cream/indicators";
+import type { Bar, SymbolSnapshot } from "@cream/schema-gen/cream/v1/market_snapshot";
 import { getMarketDataClient } from "../clients.js";
 import type { IndicatorResult } from "../types.js";
 
@@ -168,7 +169,9 @@ export async function recalcIndicator(
 	});
 
 	// Extract bars and convert to Candle format
-	const symbolSnapshot = response.data.snapshot?.symbols?.find((s) => s.symbol === symbol);
+	const symbolSnapshot = response.data.snapshot?.symbols?.find(
+		(s: SymbolSnapshot) => s.symbol === symbol,
+	);
 	const bars = symbolSnapshot?.bars ?? [];
 
 	if (bars.length === 0) {
@@ -176,7 +179,7 @@ export async function recalcIndicator(
 	}
 
 	// Convert protobuf bars to Candle format
-	const candles: Candle[] = bars.map((bar) => ({
+	const candles: Candle[] = bars.map((bar: Bar) => ({
 		timestamp: bar.timestamp ? timestampDate(bar.timestamp).getTime() : Date.now(),
 		open: bar.open,
 		high: bar.high,

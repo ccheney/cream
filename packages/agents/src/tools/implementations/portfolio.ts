@@ -7,6 +7,7 @@
 import type { Position as BrokerPosition } from "@cream/broker";
 import { type ExecutionContext, isTest } from "@cream/domain";
 import { GrpcError } from "@cream/domain/grpc";
+import type { Position as GrpcPosition } from "@cream/schema-gen/cream/v1/execution";
 import { getBrokerClient, getExecutionClient } from "../clients.js";
 import type {
 	EnrichedPortfolioStateResponse,
@@ -47,7 +48,7 @@ export async function getPortfolioState(ctx: ExecutionContext): Promise<Portfoli
 
 		// Calculate total unrealized P&L
 		let totalPnL = 0;
-		const mappedPositions: PortfolioPosition[] = positions.map((pos) => {
+		const mappedPositions: PortfolioPosition[] = positions.map((pos: GrpcPosition) => {
 			totalPnL += pos.unrealizedPnl ?? 0;
 			return {
 				symbol: pos.instrument?.instrumentId ?? "",
