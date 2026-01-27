@@ -119,7 +119,7 @@ function inferCloseReason(thesis: Thesis, exitPrice: number, side: "long" | "sho
 		}
 	}
 
-	return "MANUAL";
+	return "REBALANCE";
 }
 
 /**

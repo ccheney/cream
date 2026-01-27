@@ -50,7 +50,8 @@ export type ThesisCloseReason =
 	| "INVALIDATED"
 	| "MANUAL"
 	| "TIME_DECAY"
-	| "CORRELATION";
+	| "CORRELATION"
+	| "REBALANCE";
 
 /**
  * ThesisMemory node for HelixDB storage

@@ -22,7 +22,8 @@ export type CloseReason =
 	| "INVALIDATED"
 	| "MANUAL"
 	| "TIME_DECAY"
-	| "CORRELATION";
+	| "CORRELATION"
+	| "REBALANCE";
 
 export interface Thesis {
 	thesisId: string;
@@ -538,6 +539,18 @@ export class ThesisStateRepository {
 			.update(thesisState)
 			.set({
 				peakUnrealizedPnl: sql`GREATEST(COALESCE(${thesisState.peakUnrealizedPnl}, ${peakPnl}), ${peakPnl})`,
+				lastUpdated: new Date(),
+			})
+			.where(eq(thesisState.thesisId, thesisId));
+
+		return this.findByIdOrThrow(thesisId);
+	}
+
+	async updateCloseReason(thesisId: string, closeReason: CloseReason): Promise<Thesis> {
+		await this.db
+			.update(thesisState)
+			.set({
+				closeReason,
 				lastUpdated: new Date(),
 			})
 			.where(eq(thesisState.thesisId, thesisId));
