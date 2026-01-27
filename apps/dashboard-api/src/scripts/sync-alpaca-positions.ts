@@ -50,22 +50,65 @@ interface AlpacaPosition {
 	change_today: string;
 }
 
+interface AlpacaOrder {
+	id: string;
+	symbol: string;
+	side: string;
+	qty: string;
+	filled_qty: string;
+	filled_avg_price: string | null;
+	status: string;
+	filled_at: string | null;
+}
+
 async function main() {
-	log.info({ environment: CREAM_ENV }, "Fetching positions from Alpaca");
+	log.info({ environment: CREAM_ENV }, "Fetching positions and recent orders from Alpaca");
 
-	const response = await fetch(`${ALPACA_BASE_URL}/v2/positions`, {
-		headers: {
-			"APCA-API-KEY-ID": ALPACA_KEY,
-			"APCA-API-SECRET-KEY": ALPACA_SECRET,
-		},
-	});
+	// Fetch positions and recent filled orders in parallel
+	const [positionsResponse, ordersResponse] = await Promise.all([
+		fetch(`${ALPACA_BASE_URL}/v2/positions`, {
+			headers: {
+				"APCA-API-KEY-ID": ALPACA_KEY,
+				"APCA-API-SECRET-KEY": ALPACA_SECRET,
+			},
+		}),
+		fetch(`${ALPACA_BASE_URL}/v2/orders?status=closed&limit=200&direction=desc`, {
+			headers: {
+				"APCA-API-KEY-ID": ALPACA_KEY,
+				"APCA-API-SECRET-KEY": ALPACA_SECRET,
+			},
+		}),
+	]);
 
-	if (!response.ok) {
-		throw new Error(`Alpaca API error: ${response.status} ${await response.text()}`);
+	if (!positionsResponse.ok) {
+		throw new Error(
+			`Alpaca positions API error: ${positionsResponse.status} ${await positionsResponse.text()}`,
+		);
+	}
+	if (!ordersResponse.ok) {
+		throw new Error(
+			`Alpaca orders API error: ${ordersResponse.status} ${await ordersResponse.text()}`,
+		);
 	}
 
-	const alpacaPositions = (await response.json()) as AlpacaPosition[];
-	log.info({ count: alpacaPositions.length }, "Found positions in Alpaca");
+	const alpacaPositions = (await positionsResponse.json()) as AlpacaPosition[];
+	const alpacaOrders = (await ordersResponse.json()) as AlpacaOrder[];
+	log.info(
+		{ positions: alpacaPositions.length, orders: alpacaOrders.length },
+		"Fetched from Alpaca",
+	);
+
+	// Build a map of symbol -> most recent exit order (for closing positions)
+	// Exit order is: sell for long positions, buy for short positions
+	const recentExitOrders = new Map<string, AlpacaOrder>();
+	for (const order of alpacaOrders) {
+		if (order.status === "filled" && order.filled_avg_price) {
+			// Only store the most recent (first in desc order)
+			if (!recentExitOrders.has(order.symbol)) {
+				recentExitOrders.set(order.symbol, order);
+			}
+		}
+	}
 
 	const positionsRepo = new PositionsRepository();
 	const decisionsRepo = new DecisionsRepository();
@@ -76,12 +119,32 @@ async function main() {
 
 	for (const ap of alpacaPositions) {
 		const existing = await positionsRepo.findBySymbol(ap.symbol, CREAM_ENV);
+		const alpacaQty = Math.abs(Number(ap.qty));
+		const avgEntry = Number(ap.avg_entry_price);
+		const currentPrice = Number(ap.current_price);
 
 		if (existing) {
-			// Update existing position with current prices
-			await positionsRepo.updatePrice(existing.id, Number(ap.current_price));
+			// Sync from Alpaca (quantity, avgEntry, and price)
+			if (existing.quantity !== alpacaQty || existing.avgEntryPrice !== avgEntry) {
+				await positionsRepo.syncFromBroker(existing.id, {
+					quantity: alpacaQty,
+					avgEntryPrice: avgEntry,
+					currentPrice,
+				});
+				log.info(
+					{
+						symbol: ap.symbol,
+						oldQty: existing.quantity,
+						newQty: alpacaQty,
+						avgEntry,
+					},
+					"Synced position from Alpaca",
+				);
+			} else {
+				await positionsRepo.updatePrice(existing.id, currentPrice);
+				log.debug({ symbol: ap.symbol, price: currentPrice }, "Updated position price");
+			}
 			updated++;
-			log.debug({ symbol: ap.symbol, price: ap.current_price }, "Updated position");
 		} else {
 			// Look up the most recent decision for this symbol to link stop/target
 			const recentDecisions = await decisionsRepo.findMany(
@@ -129,8 +192,28 @@ async function main() {
 	for (const dbPos of dbPositions) {
 		if (!alpacaSymbols.has(dbPos.symbol)) {
 			// Position exists in DB but not in Alpaca - it was closed
-			log.info({ symbol: dbPos.symbol }, "Position no longer in Alpaca, marking as closed");
-			await positionsRepo.close(dbPos.id, dbPos.currentPrice ?? dbPos.avgEntryPrice);
+			// Find the exit order to get the actual fill price
+			const exitOrder = recentExitOrders.get(dbPos.symbol);
+			const isExitOrder =
+				exitOrder &&
+				((dbPos.side === "long" && exitOrder.side === "sell") ||
+					(dbPos.side === "short" && exitOrder.side === "buy"));
+
+			const exitPrice =
+				isExitOrder && exitOrder.filled_avg_price
+					? Number(exitOrder.filled_avg_price)
+					: (dbPos.currentPrice ?? dbPos.avgEntryPrice);
+
+			log.info(
+				{
+					symbol: dbPos.symbol,
+					exitPrice,
+					fromOrder: isExitOrder,
+					orderId: exitOrder?.id,
+				},
+				"Position no longer in Alpaca, marking as closed",
+			);
+			await positionsRepo.close(dbPos.id, exitPrice);
 			skipped++;
 		}
 	}

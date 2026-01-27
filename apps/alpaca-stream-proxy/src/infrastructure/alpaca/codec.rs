@@ -17,8 +17,9 @@
 //! ```
 
 use crate::infrastructure::alpaca::messages::{
-    AlpacaMessage, ErrorMessage, OptionQuoteMessage, OptionTradeMessage, StockBarMessage,
-    StockQuoteMessage, StockStatusMessage, StockTradeMessage, SubscriptionMessage, SuccessMessage,
+    AlpacaMessage, AuthorizationMessage, ErrorMessage, ListeningMessage, OptionQuoteMessage,
+    OptionTradeMessage, StockBarMessage, StockQuoteMessage, StockStatusMessage, StockTradeMessage,
+    SubscriptionMessage, SuccessMessage, TradeUpdateMessage,
 };
 
 /// Codec errors.
@@ -174,6 +175,18 @@ impl JsonCodec {
             Some("subscription") => {
                 let m: SubscriptionMessage = serde_json::from_value(value)?;
                 Ok(AlpacaMessage::Subscription(m))
+            }
+            Some("authorization") => {
+                let m: AuthorizationMessage = serde_json::from_value(value)?;
+                Ok(AlpacaMessage::Authorization(m))
+            }
+            Some("listening") => {
+                let m: ListeningMessage = serde_json::from_value(value)?;
+                Ok(AlpacaMessage::Listening(m))
+            }
+            Some("trade_updates") => {
+                let m: TradeUpdateMessage = serde_json::from_value(value)?;
+                Ok(AlpacaMessage::TradeUpdate(Box::new(m)))
             }
             _ => {
                 // Try generic parse
@@ -358,6 +371,41 @@ mod tests {
 
         let messages = codec.decode(json).unwrap();
         assert!(messages.is_empty());
+    }
+
+    #[test]
+    fn json_codec_decode_authorization() {
+        let codec = JsonCodec::new();
+        let json =
+            r#"{"stream":"authorization","data":{"action":"authenticate","status":"authorized"}}"#;
+
+        let messages = codec.decode(json).unwrap();
+        assert_eq!(messages.len(), 1);
+
+        match &messages[0] {
+            AlpacaMessage::Authorization(msg) => {
+                assert_eq!(msg.stream, "authorization");
+                assert!(msg.is_authorized());
+            }
+            _ => panic!("expected Authorization message"),
+        }
+    }
+
+    #[test]
+    fn json_codec_decode_listening() {
+        let codec = JsonCodec::new();
+        let json = r#"{"stream":"listening","data":{"streams":["trade_updates"]}}"#;
+
+        let messages = codec.decode(json).unwrap();
+        assert_eq!(messages.len(), 1);
+
+        match &messages[0] {
+            AlpacaMessage::Listening(msg) => {
+                assert_eq!(msg.stream, "listening");
+                assert!(msg.data.streams.contains(&"trade_updates".to_string()));
+            }
+            _ => panic!("expected Listening message"),
+        }
     }
 
     #[test]

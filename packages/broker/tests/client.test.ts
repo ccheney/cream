@@ -136,28 +136,32 @@ describe("LIVE protection", () => {
 		).rejects.toThrow(BrokerError);
 	});
 
-	it("allows LIVE orders with confirmation in order ID", async () => {
-		const client = createAlpacaClient({
-			apiKey: "test-key",
-			apiSecret: "test-secret",
-			environment: "LIVE",
-		});
-
-		// This should NOT throw LIVE_PROTECTION (but will fail with network error)
-		try {
-			await client.submitOrder({
-				clientOrderId: "test-LIVE-CONFIRMED-order",
-				symbol: "AAPL",
-				qty: 1,
-				side: "buy",
-				type: "market",
-				timeInForce: "day",
+	it(
+		"allows LIVE orders with confirmation in order ID",
+		async () => {
+			const client = createAlpacaClient({
+				apiKey: "test-key",
+				apiSecret: "test-secret",
+				environment: "LIVE",
 			});
-		} catch (error) {
-			// Should fail with NETWORK_ERROR or INVALID_CREDENTIALS, not LIVE_PROTECTION
-			expect((error as BrokerError).code).not.toBe("LIVE_PROTECTION");
-		}
-	});
+
+			// This should NOT throw LIVE_PROTECTION (but will fail with network error)
+			try {
+				await client.submitOrder({
+					clientOrderId: "test-LIVE-CONFIRMED-order",
+					symbol: "AAPL",
+					qty: 1,
+					side: "buy",
+					type: "market",
+					timeInForce: "day",
+				});
+			} catch (error) {
+				// Should fail with NETWORK_ERROR or INVALID_CREDENTIALS, not LIVE_PROTECTION
+				expect((error as BrokerError).code).not.toBe("LIVE_PROTECTION");
+			}
+		},
+		{ timeout: 10000 },
+	);
 
 	it("allows disabling LIVE protection", async () => {
 		const client = createAlpacaClient({

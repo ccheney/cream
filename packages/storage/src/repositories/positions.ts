@@ -411,6 +411,43 @@ export class PositionsRepository {
 		return mapPositionRow(row);
 	}
 
+	/**
+	 * Sync position from broker data (Alpaca).
+	 * Uses broker values directly as source of truth.
+	 */
+	async syncFromBroker(
+		id: string,
+		data: { quantity: number; avgEntryPrice: number; currentPrice: number },
+	): Promise<Position> {
+		const position = await this.findByIdOrThrow(id);
+
+		const costBasis = data.quantity * data.avgEntryPrice;
+		const marketValue = data.quantity * data.currentPrice;
+		const unrealizedPnl =
+			position.side === "long" ? marketValue - costBasis : costBasis - marketValue;
+		const unrealizedPnlPct = costBasis > 0 ? (unrealizedPnl / costBasis) * 100 : 0;
+
+		const [row] = await this.db
+			.update(positions)
+			.set({
+				qty: String(data.quantity),
+				avgEntry: String(data.avgEntryPrice),
+				costBasis: String(costBasis),
+				currentPrice: String(data.currentPrice),
+				marketValue: String(marketValue),
+				unrealizedPnl: String(unrealizedPnl),
+				unrealizedPnlPct: String(unrealizedPnlPct),
+				updatedAt: new Date(),
+			})
+			.where(eq(positions.id, id))
+			.returning();
+
+		if (!row) {
+			throw RepositoryError.notFound("positions", id);
+		}
+		return mapPositionRow(row);
+	}
+
 	async close(id: string, exitPrice: number): Promise<Position> {
 		const position = await this.findByIdOrThrow(id);
 

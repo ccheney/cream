@@ -12,6 +12,7 @@ import { type Position as AlpacaPosition, createAlpacaClient } from "@cream/brok
 import { requireEnv } from "@cream/domain";
 import { DecisionsRepository, PositionsRepository, ThesisStateRepository } from "@cream/storage";
 import log from "../logger.js";
+import { persistOrderFromProxyUpdate } from "../services/order-persistence.js";
 import { broadcastOrderUpdate, broadcastPositionUpdate } from "../websocket/channels.js";
 import { type OrderUpdate, streamOrderUpdates, waitForProxy } from "./proxy-client.js";
 
@@ -50,8 +51,29 @@ async function syncPositionToDb(
 	const existing = await positionsRepo.findBySymbol(position.symbol, environment);
 
 	if (existing) {
-		await positionsRepo.updatePrice(existing.id, position.currentPrice);
-		log.debug({ symbol: position.symbol, id: existing.id }, "Updated position in database");
+		const alpacaQty = Math.abs(position.qty);
+
+		// Sync quantity if it changed (partial fills, adds, or reductions)
+		if (existing.quantity !== alpacaQty) {
+			await positionsRepo.syncFromBroker(existing.id, {
+				quantity: alpacaQty,
+				avgEntryPrice: position.avgEntryPrice,
+				currentPrice: position.currentPrice,
+			});
+			log.info(
+				{
+					symbol: position.symbol,
+					id: existing.id,
+					oldQty: existing.quantity,
+					newQty: alpacaQty,
+					avgEntry: position.avgEntryPrice,
+				},
+				"Synced position quantity from Alpaca",
+			);
+		} else {
+			await positionsRepo.updatePrice(existing.id, position.currentPrice);
+			log.debug({ symbol: position.symbol, id: existing.id }, "Updated position price");
+		}
 	} else {
 		const decisionsRepo = new DecisionsRepository();
 		const thesisRepo = new ThesisStateRepository();
@@ -146,6 +168,9 @@ async function handleProxyOrderUpdate(update: OrderUpdate): Promise<void> {
 		{ event: eventType, symbol: order.symbol, orderId: order.id },
 		"Received trade update from proxy",
 	);
+
+	// Persist order to database
+	await persistOrderFromProxyUpdate(eventType, order);
 
 	// Broadcast order update
 	broadcastOrderUpdate({

@@ -352,14 +352,9 @@ impl AuthHandler {
     pub fn create_auth_request(&mut self) -> AuthMessage {
         self.state = AuthState::Authenticating;
 
-        match self.stream_type {
-            StreamType::MarketData => {
-                AuthMessage::MarketData(self.credentials.to_market_data_auth())
-            }
-            StreamType::TradeUpdates => {
-                AuthMessage::TradeUpdates(self.credentials.to_trade_updates_auth())
-            }
-        }
+        // Both market data and trade updates now use the same auth format:
+        // {"action": "auth", "key": "...", "secret": "..."}
+        AuthMessage::MarketData(self.credentials.to_market_data_auth())
     }
 
     /// Process a success message from the server.
@@ -573,7 +568,8 @@ mod tests {
         assert_eq!(handler.stream_type(), StreamType::TradeUpdates);
 
         let msg = handler.create_auth_request();
-        assert!(matches!(msg, AuthMessage::TradeUpdates(_)));
+        // Trade updates now uses the same auth format as market data
+        assert!(matches!(msg, AuthMessage::MarketData(_)));
     }
 
     #[test]
@@ -620,15 +616,12 @@ mod tests {
     fn test_auth_message_to_json() {
         let creds = Credentials::new("test_key", "test_secret").unwrap();
 
+        // Both market data and trade updates now use the same format
         let market_data_msg = AuthMessage::MarketData(creds.to_market_data_auth());
         let json = market_data_msg.to_json().unwrap();
         assert!(json.contains(r#""action":"auth""#));
         assert!(json.contains(r#""key":"test_key""#));
-
-        let trade_msg = AuthMessage::TradeUpdates(creds.to_trade_updates_auth());
-        let json = trade_msg.to_json().unwrap();
-        assert!(json.contains(r#""action":"authenticate""#));
-        assert!(json.contains(r#""key_id":"test_key""#));
+        assert!(json.contains(r#""secret":"test_secret""#));
     }
 
     #[test]

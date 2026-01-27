@@ -226,9 +226,7 @@ impl TradingClient {
     async fn connect_and_run(&self) -> Result<(), TradingClientError> {
         tracing::info!(url = %self.config.url, "Connecting to trade updates stream");
 
-        // Connect to WebSocket
         let (ws_stream, _response) = tokio_tungstenite::connect_async(&self.config.url).await?;
-
         let (mut write, mut read) = ws_stream.split();
 
         // Set up authentication handler (trade updates uses different flow)
@@ -285,12 +283,24 @@ impl TradingClient {
                     match msg {
                         Some(Ok(Message::Text(text))) => {
                             heartbeat_state.record_pong();
-
                             self.handle_text_message(
                                 &text,
                                 &mut auth_handler,
                                 &mut write,
                             ).await?;
+                        }
+                        Some(Ok(Message::Binary(data))) => {
+                            heartbeat_state.record_pong();
+                            // Alpaca sends Binary messages for trade updates
+                            if let Ok(text) = String::from_utf8(data.to_vec()) {
+                                self.handle_text_message(
+                                    &text,
+                                    &mut auth_handler,
+                                    &mut write,
+                                ).await?;
+                            } else {
+                                tracing::warn!(len = data.len(), "Received non-UTF8 binary message");
+                            }
                         }
                         Some(Ok(Message::Pong(_))) => {
                             heartbeat_state.record_pong();
