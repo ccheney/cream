@@ -8,6 +8,7 @@
  */
 import { createNodeLogger } from "@cream/logger";
 import { DecisionsRepository, PositionsRepository, ThesisStateRepository } from "@cream/storage";
+import { closeThesisForPosition } from "../services/thesis-closure.js";
 
 const log = createNodeLogger({
 	service: "sync-alpaca-positions",
@@ -213,7 +214,16 @@ async function main() {
 				},
 				"Position no longer in Alpaca, marking as closed",
 			);
-			await positionsRepo.close(dbPos.id, exitPrice);
+			const closedPosition = await positionsRepo.close(dbPos.id, exitPrice);
+
+			if (dbPos.thesisId && closedPosition.realizedPnl !== null) {
+				await closeThesisForPosition({
+					thesisId: dbPos.thesisId,
+					exitPrice,
+					realizedPnl: closedPosition.realizedPnl,
+					side: dbPos.side as "long" | "short",
+				});
+			}
 			skipped++;
 		}
 	}

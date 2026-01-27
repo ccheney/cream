@@ -13,6 +13,7 @@ import { requireEnv } from "@cream/domain";
 import { DecisionsRepository, PositionsRepository, ThesisStateRepository } from "@cream/storage";
 import log from "../logger.js";
 import { persistOrderFromProxyUpdate } from "../services/order-persistence.js";
+import { closeThesisForPosition } from "../services/thesis-closure.js";
 import { broadcastOrderUpdate, broadcastPositionUpdate } from "../websocket/channels.js";
 import { type OrderUpdate, streamOrderUpdates, waitForProxy } from "./proxy-client.js";
 
@@ -114,14 +115,25 @@ async function syncPositionToDb(
 
 /**
  * Close position in database when it no longer exists in Alpaca.
+ * Also closes the associated thesis if one exists.
  */
 async function closePositionInDb(symbol: string, environment: string): Promise<void> {
 	const positionsRepo = new PositionsRepository();
 	const existing = await positionsRepo.findBySymbol(symbol, environment);
 
 	if (existing) {
-		await positionsRepo.close(existing.id, existing.currentPrice ?? existing.avgEntryPrice);
+		const exitPrice = existing.currentPrice ?? existing.avgEntryPrice;
+		const closedPosition = await positionsRepo.close(existing.id, exitPrice);
 		log.info({ symbol, id: existing.id }, "Closed position in database");
+
+		if (existing.thesisId && closedPosition.realizedPnl !== null) {
+			await closeThesisForPosition({
+				thesisId: existing.thesisId,
+				exitPrice,
+				realizedPnl: closedPosition.realizedPnl,
+				side: existing.side as "long" | "short",
+			});
+		}
 	}
 }
 
