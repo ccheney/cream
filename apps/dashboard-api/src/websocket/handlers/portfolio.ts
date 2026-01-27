@@ -2,7 +2,7 @@
  * Portfolio Handlers
  *
  * Handlers for portfolio state requests and position updates.
- * Fetches real-time data from Alpaca, enriched with DB metadata.
+ * Fetches real-time data directly from Alpaca (sole source of truth).
  */
 
 import { createAlpacaClient } from "@cream/broker";
@@ -23,42 +23,23 @@ export async function handlePortfolioState(ws: WebSocketWithMetadata): Promise<v
 		const environment = requireEnv();
 
 		if (!isAlpacaConfigured()) {
-			// Fall back to DB-only if Alpaca not configured
-			const { getPositionsRepo } = await import("../../db.js");
-			const positionsRepo = await getPositionsRepo();
-			const positionsResult = await positionsRepo.findMany({
-				environment,
-				status: "open",
-			});
-
-			const positions = positionsResult.data.map((p) => ({
-				symbol: p.symbol,
-				quantity: p.quantity,
-				marketValue: p.marketValue ?? p.quantity * (p.avgEntryPrice ?? 0),
-				unrealizedPnl: p.unrealizedPnl ?? 0,
-				unrealizedPnlPercent: p.unrealizedPnlPct ?? 0,
-				costBasis: p.avgEntryPrice ?? 0,
-			}));
-
-			const totalValue = positions.reduce((sum, p) => sum + p.marketValue, 0);
-
 			sendMessage(ws, {
 				type: "portfolio",
 				data: {
-					totalValue,
+					totalValue: 0,
 					cash: 0,
 					buyingPower: 0,
 					dailyPnl: 0,
 					dailyPnlPercent: 0,
-					openPositions: positions.length,
-					positions,
+					openPositions: 0,
+					positions: [],
 					timestamp: new Date().toISOString(),
 				},
 			});
 			return;
 		}
 
-		// Fetch from Alpaca (primary source)
+		// Fetch from Alpaca (sole source of truth)
 		const client = createAlpacaClient({
 			apiKey: Bun.env.ALPACA_KEY as string,
 			apiSecret: Bun.env.ALPACA_SECRET as string,

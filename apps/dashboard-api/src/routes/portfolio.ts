@@ -489,101 +489,42 @@ const positionsRoute = createRoute({
 });
 
 app.openapi(positionsRoute, async (c) => {
-	// Primary source: Alpaca positions (real-time, authoritative)
-	// Secondary source: DB positions (for metadata like thesisId, openedAt)
+	// Alpaca is the sole source of truth for positions
+	// No DB sync required - eliminates sync drift issues
 	if (!isAlpacaConfigured()) {
-		// Fall back to DB-only if Alpaca not configured
-		const repo = await getPositionsRepo();
-		const result = await repo.findMany({
-			environment: getCurrentEnvironment(),
-			status: "open",
-		});
-		return c.json(
-			result.data.map((p) => ({
-				id: p.id,
-				symbol: p.symbol,
-				side: p.side === "long" ? "LONG" : "SHORT",
-				qty: p.quantity,
-				avgEntry: p.avgEntryPrice,
-				currentPrice: p.currentPrice ?? 0,
-				lastdayPrice: null,
-				marketValue: p.marketValue ?? (p.currentPrice ?? 0) * p.quantity,
-				unrealizedPnl: p.unrealizedPnl ?? 0,
-				unrealizedPnlPct: p.unrealizedPnlPct ?? 0,
-				thesisId: p.thesisId,
-				daysHeld: calculateDaysHeld(p.openedAt),
-				openedAt: p.openedAt,
-			})),
-		);
+		log.warn("Alpaca not configured, returning empty positions");
+		return c.json([]);
 	}
 
 	try {
 		const client = getBrokerClient();
 		const alpacaPositions = await client.getPositions();
 
-		// Fetch DB positions for metadata enrichment (thesisId, openedAt, etc)
-		const repo = await getPositionsRepo();
-		const dbResult = await repo.findMany({
-			environment: getCurrentEnvironment(),
-			status: "open",
-		});
-		const dbPositionMap = new Map(dbResult.data.map((p) => [p.symbol, p]));
-
-		log.debug(
-			{ alpacaCount: alpacaPositions.length, dbCount: dbResult.data.length },
-			"Fetched positions from Alpaca and DB",
-		);
+		log.debug({ count: alpacaPositions.length }, "Fetched positions from Alpaca");
 
 		return c.json(
-			alpacaPositions.map((ap) => {
-				const dbPosition = dbPositionMap.get(ap.symbol);
-				return {
-					// Use DB id if available, otherwise generate from symbol
-					id: dbPosition?.id ?? `alpaca-${ap.symbol}`,
-					symbol: ap.symbol,
-					side: ap.side === "long" ? "LONG" : "SHORT",
-					qty: ap.qty,
-					avgEntry: ap.avgEntryPrice,
-					currentPrice: ap.currentPrice,
-					lastdayPrice: ap.lastdayPrice,
-					marketValue: ap.marketValue,
-					unrealizedPnl: ap.unrealizedPl,
-					unrealizedPnlPct: ap.unrealizedPlpc * 100, // Convert from decimal to percentage
-					// Metadata from DB if available
-					thesisId: dbPosition?.thesisId ?? null,
-					daysHeld: dbPosition ? calculateDaysHeld(dbPosition.openedAt) : 0,
-					openedAt: dbPosition?.openedAt ?? new Date().toISOString(),
-				};
-			}),
+			alpacaPositions.map((ap) => ({
+				id: `alpaca-${ap.symbol}`,
+				symbol: ap.symbol,
+				side: ap.side === "long" ? "LONG" : "SHORT",
+				qty: ap.qty,
+				avgEntry: ap.avgEntryPrice,
+				currentPrice: ap.currentPrice,
+				lastdayPrice: ap.lastdayPrice,
+				marketValue: ap.marketValue,
+				unrealizedPnl: ap.unrealizedPl,
+				unrealizedPnlPct: ap.unrealizedPlpc * 100,
+				thesisId: null,
+				daysHeld: 0,
+				openedAt: new Date().toISOString(),
+			})),
 		);
 	} catch (error) {
 		log.error(
 			{ error: error instanceof Error ? error.message : String(error) },
 			"Failed to fetch Alpaca positions",
 		);
-		// Fall back to DB-only on error
-		const repo = await getPositionsRepo();
-		const result = await repo.findMany({
-			environment: getCurrentEnvironment(),
-			status: "open",
-		});
-		return c.json(
-			result.data.map((p) => ({
-				id: p.id,
-				symbol: p.symbol,
-				side: p.side === "long" ? "LONG" : "SHORT",
-				qty: p.quantity,
-				avgEntry: p.avgEntryPrice,
-				currentPrice: p.currentPrice ?? 0,
-				lastdayPrice: null,
-				marketValue: p.marketValue ?? (p.currentPrice ?? 0) * p.quantity,
-				unrealizedPnl: p.unrealizedPnl ?? 0,
-				unrealizedPnlPct: p.unrealizedPnlPct ?? 0,
-				thesisId: p.thesisId,
-				daysHeld: calculateDaysHeld(p.openedAt),
-				openedAt: p.openedAt,
-			})),
-		);
+		throw new HTTPException(502, { message: "Failed to fetch positions from broker" });
 	}
 });
 
@@ -1529,40 +1470,47 @@ interface ClosedTrade {
 app.openapi(closedTradesRoute, async (c) => {
 	const query = c.req.valid("query");
 
-	try {
-		const ordersRepo = getOrdersRepo();
+	if (!isAlpacaConfigured()) {
+		return c.json({
+			trades: [],
+			count: 0,
+			totalRealizedPnl: 0,
+			winCount: 0,
+			lossCount: 0,
+			winRate: 0,
+		});
+	}
 
-		// Get all filled orders from our database
-		const { data: orders } = await ordersRepo.findMany({
-			status: "filled",
-			environment: getCurrentEnvironment(),
-			symbol: query.symbol,
+	try {
+		const client = getBrokerClient();
+
+		// Fetch closed orders directly from Alpaca (source of truth)
+		const alpacaOrders = await client.getOrders({
+			status: "closed",
+			limit: 500,
+			direction: "asc",
 		});
 
-		// Sort by filled date ascending for FIFO processing
-		const sortedOrders = orders
-			.filter((o): o is typeof o & { filledAt: string } => o.filledAt !== null)
-			.toSorted((a, b) => new Date(a.filledAt).getTime() - new Date(b.filledAt).getTime());
+		// Filter for filled orders only and optionally by symbol
+		const filledOrders = alpacaOrders
+			.filter((o) => o.status === "filled" && o.filledAt)
+			.filter((o) => !query.symbol || o.symbol === query.symbol);
 
 		// Group orders by symbol and process FIFO
 		const symbolLots = new Map<string, FifoLot[]>();
 		const closedTrades: ClosedTrade[] = [];
 
-		for (const order of sortedOrders) {
+		for (const order of filledOrders) {
 			const symbol = order.symbol;
-			const qty = order.filledQuantity > 0 ? order.filledQuantity : order.quantity;
-			const price = order.avgFillPrice ?? 0;
-			const date = order.filledAt;
-			const orderId = order.brokerOrderId ?? order.id;
+			const qty = order.filledQty > 0 ? order.filledQty : order.qty;
+			const price = order.filledAvgPrice ?? 0;
+			const date = order.filledAt as string;
+			const orderId = order.id;
 
 			if (!symbolLots.has(symbol)) {
 				symbolLots.set(symbol, []);
 			}
-			let lots = symbolLots.get(symbol);
-			if (!lots) {
-				lots = [];
-				symbolLots.set(symbol, lots);
-			}
+			const lots = symbolLots.get(symbol)!;
 
 			if (order.side === "buy") {
 				// Add to FIFO queue
@@ -1578,9 +1526,7 @@ app.openapi(closedTradesRoute, async (c) => {
 
 				while (sellQtyRemaining > 0 && lots.length > 0) {
 					const lot = lots[0];
-					if (!lot) {
-						break;
-					}
+					if (!lot) break;
 
 					const matchQty = Math.min(sellQtyRemaining, lot.remainingQty);
 
@@ -1617,7 +1563,6 @@ app.openapi(closedTradesRoute, async (c) => {
 					lot.remainingQty -= matchQty;
 					sellQtyRemaining -= matchQty;
 
-					// Remove exhausted lot
 					if (lot.remainingQty <= 0) {
 						lots.shift();
 					}
@@ -1645,7 +1590,7 @@ app.openapi(closedTradesRoute, async (c) => {
 				winRate,
 				symbol: query.symbol,
 			},
-			"Computed closed trades with FIFO matching",
+			"Computed closed trades from Alpaca with FIFO matching",
 		);
 
 		return c.json({
@@ -1661,8 +1606,8 @@ app.openapi(closedTradesRoute, async (c) => {
 			throw error;
 		}
 		const message = error instanceof Error ? error.message : "Unknown error";
-		log.error({ error: message }, "Failed to compute closed trades");
-		throw new HTTPException(503, { message: `Failed to compute closed trades: ${message}` });
+		log.error({ error: message }, "Failed to fetch closed trades from Alpaca");
+		throw new HTTPException(502, { message: "Failed to fetch closed trades from broker" });
 	}
 });
 
