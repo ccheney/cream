@@ -10,7 +10,7 @@
 # ===========================================
 # Stage 1: Dependencies
 # ===========================================
-FROM oven/bun:1.3.6 AS deps
+FROM oven/bun:1.3.7 AS deps
 WORKDIR /app
 
 # Copy workspace configuration
@@ -46,7 +46,7 @@ RUN bun install --frozen-lockfile
 # ===========================================
 # Stage 2: Builder
 # ===========================================
-FROM oven/bun:1.3.6 AS builder
+FROM oven/bun:1.3.7 AS builder
 WORKDIR /app
 
 # Copy node_modules from deps stage
@@ -113,7 +113,7 @@ RUN bun build src/index.ts --outdir dist --target bun
 # ===========================================
 # Stage 3: Production Runner
 # ===========================================
-FROM oven/bun:1.3.6-slim AS runner
+FROM oven/bun:1.3.7-slim AS runner
 WORKDIR /app
 
 ENV NODE_ENV=production
