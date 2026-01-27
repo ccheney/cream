@@ -33,7 +33,7 @@
 			"outputs": []
 		},
 		"typecheck": {
-			"dependsOn": ["transit"],
+			"dependsOn": ["^build"],
 			"inputs": ["$TURBO_DEFAULT$", "tsconfig.json"],
 			"outputs": ["**/*.tsbuildinfo"]
 		},
