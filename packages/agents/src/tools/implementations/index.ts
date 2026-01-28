@@ -43,3 +43,9 @@ export { getGreeks, getOptionChain, parseOSISymbol } from "./options.js";
 export { getEnrichedPortfolioState, getPortfolioState } from "./portfolio.js";
 export { enrichPositions } from "./positionEnrichment.js";
 export { getQuotes } from "./quotes.js";
+export {
+	checkSymbolCooldown,
+	getRecentDecisions,
+	type RecentDecision,
+	type RecentDecisionsResponse,
+} from "./recentDecisions.js";

@@ -48,6 +48,8 @@ export interface Thesis {
 	lastUpdated: string;
 	createdAt: string;
 	closedAt: string | null;
+	/** Cooldown period - prevents re-entry until this time */
+	cooldownUntil: string | null;
 }
 
 export interface ThesisContext {
@@ -178,6 +180,7 @@ function mapThesisRow(row: ThesisRow): Thesis {
 		lastUpdated: row.lastUpdated.toISOString(),
 		createdAt: row.createdAt.toISOString(),
 		closedAt: row.closedAt?.toISOString() ?? null,
+		cooldownUntil: row.cooldownUntil?.toISOString() ?? null,
 	};
 }
 
@@ -432,12 +435,18 @@ export class ThesisStateRepository {
 		return this.findByIdOrThrow(thesisId);
 	}
 
+	/**
+	 * Default cooldown period in hours after closing a position
+	 */
+	static readonly DEFAULT_COOLDOWN_HOURS = 4;
+
 	async close(
 		thesisId: string,
 		reason: CloseReason,
 		exitPrice?: number,
 		realizedPnl?: number,
 		cycleId?: string,
+		cooldownHours?: number,
 	): Promise<Thesis> {
 		const thesis = await this.findByIdOrThrow(thesisId);
 
@@ -451,6 +460,11 @@ export class ThesisStateRepository {
 				? (realizedPnl / thesis.entryPrice) * 100
 				: null;
 
+		// Set cooldown period (default 4 hours)
+		const cooldownMs =
+			(cooldownHours ?? ThesisStateRepository.DEFAULT_COOLDOWN_HOURS) * 60 * 60 * 1000;
+		const cooldownUntil = new Date(now.getTime() + cooldownMs);
+
 		await this.db
 			.update(thesisState)
 			.set({
@@ -461,6 +475,7 @@ export class ThesisStateRepository {
 				realizedPnlPct: pnlPct?.toString() ?? null,
 				lastUpdated: now,
 				closedAt: now,
+				cooldownUntil,
 			})
 			.where(eq(thesisState.thesisId, thesisId));
 
@@ -475,6 +490,87 @@ export class ThesisStateRepository {
 		});
 
 		return this.findByIdOrThrow(thesisId);
+	}
+
+	/**
+	 * Check if a symbol is currently on cooldown (recently closed, cannot re-enter yet)
+	 */
+	async isOnCooldown(
+		instrumentId: string,
+		environment: string,
+	): Promise<{
+		onCooldown: boolean;
+		cooldownUntil: string | null;
+		closeReason: string | null;
+		hoursSinceClose: number | null;
+	}> {
+		const [row] = await this.db
+			.select()
+			.from(thesisState)
+			.where(
+				and(
+					eq(thesisState.instrumentId, instrumentId),
+					eq(thesisState.environment, environment as typeof thesisState.$inferSelect.environment),
+					eq(thesisState.state, "CLOSED"),
+				),
+			)
+			.orderBy(desc(thesisState.closedAt))
+			.limit(1);
+
+		if (!row || !row.cooldownUntil) {
+			return { onCooldown: false, cooldownUntil: null, closeReason: null, hoursSinceClose: null };
+		}
+
+		const now = new Date();
+		const onCooldown = row.cooldownUntil > now;
+		const hoursSinceClose = row.closedAt
+			? (now.getTime() - row.closedAt.getTime()) / (1000 * 60 * 60)
+			: null;
+
+		return {
+			onCooldown,
+			cooldownUntil: row.cooldownUntil.toISOString(),
+			closeReason: row.closeReason,
+			hoursSinceClose: hoursSinceClose !== null ? Math.round(hoursSinceClose * 10) / 10 : null,
+		};
+	}
+
+	/**
+	 * Find all symbols currently on cooldown
+	 */
+	async findSymbolsOnCooldown(environment: string): Promise<
+		Array<{
+			instrumentId: string;
+			cooldownUntil: string;
+			closeReason: string | null;
+			closedAt: string | null;
+		}>
+	> {
+		const now = new Date();
+
+		const rows = await this.db
+			.select({
+				instrumentId: thesisState.instrumentId,
+				cooldownUntil: thesisState.cooldownUntil,
+				closeReason: thesisState.closeReason,
+				closedAt: thesisState.closedAt,
+			})
+			.from(thesisState)
+			.where(
+				and(
+					eq(thesisState.environment, environment as typeof thesisState.$inferSelect.environment),
+					eq(thesisState.state, "CLOSED"),
+					gte(thesisState.cooldownUntil, now),
+				),
+			)
+			.orderBy(desc(thesisState.closedAt));
+
+		return rows.map((r) => ({
+			instrumentId: r.instrumentId,
+			cooldownUntil: r.cooldownUntil!.toISOString(),
+			closeReason: r.closeReason,
+			closedAt: r.closedAt?.toISOString() ?? null,
+		}));
 	}
 
 	async updateConviction(thesisId: string, conviction: number): Promise<Thesis> {

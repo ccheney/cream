@@ -240,12 +240,12 @@ export const ResearchSchema = z.object({
 // ============================================
 
 export const StopLossSchema = z.object({
-	price: z.number(),
+	price: z.number().positive("Stop-loss price must be greater than 0"),
 	type: z.enum(["FIXED", "TRAILING"]),
 });
 
 export const TakeProfitSchema = z.object({
-	price: z.number(),
+	price: z.number().positive("Take-profit price must be greater than 0"),
 });
 
 export const OptionLegSchema = z.object({
@@ -363,6 +363,21 @@ export const ConstraintsSchema = z.object({
 export type Constraints = z.infer<typeof ConstraintsSchema>;
 
 // ============================================
+// Recent Closes Schema (Cross-Cycle Context)
+// ============================================
+
+export const RecentCloseSchema = z.object({
+	symbol: z.string(),
+	closedAt: z.string(),
+	closePrice: z.number().nullable(),
+	rationale: z.string().nullable(),
+	closeReason: z.string().nullable(),
+	cooldownUntil: z.string().nullable(),
+});
+
+export type RecentClose = z.infer<typeof RecentCloseSchema>;
+
+// ============================================
 // Workflow Input Schema
 // ============================================
 
@@ -372,6 +387,11 @@ export const WorkflowInputSchema = z.object({
 	useDraftConfig: z.boolean().optional(),
 	externalContext: ExternalContextSchema.optional(),
 	constraints: ConstraintsSchema.optional(),
+	/**
+	 * Recent closes from prior cycles - prevents re-entry during cooldown.
+	 * Pass symbols that were closed in the past N hours along with their close reason.
+	 */
+	recentCloses: z.array(RecentCloseSchema).optional(),
 });
 
 export type WorkflowInput = z.infer<typeof WorkflowInputSchema>;

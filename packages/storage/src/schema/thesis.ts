@@ -46,6 +46,8 @@ export const thesisState = pgTable(
 		lastUpdated: timestamp("last_updated", { withTimezone: true }).notNull().defaultNow(),
 		createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
 		closedAt: timestamp("closed_at", { withTimezone: true }),
+		/** Cooldown period - prevents re-entry until this time */
+		cooldownUntil: timestamp("cooldown_until", { withTimezone: true }),
 	},
 	(table) => [
 		check(

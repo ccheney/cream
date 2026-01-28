@@ -9,7 +9,12 @@ import type { CyclePhase, CycleProgressData, CycleResultData } from "@cream/doma
 import { mastra } from "@cream/mastra";
 import { reconstructStreamingState } from "@cream/storage";
 import { createRoute, OpenAPIHono, z } from "@hono/zod-openapi";
-import { getCyclesRepo, getDecisionsRepo, getRuntimeConfigService } from "../../db.js";
+import {
+	getCyclesRepo,
+	getDecisionsRepo,
+	getRuntimeConfigService,
+	getThesesRepo,
+} from "../../db.js";
 import log from "../../logger.js";
 import {
 	flushSync,
@@ -268,6 +273,25 @@ app.openapi(triggerCycleRoute, async (c) => {
 		try {
 			emitProgress("observe", 10, "market_data", "Fetching market data...");
 
+			// Query recent closes for cross-cycle context (cooldown prevention)
+			const thesesRepo = getThesesRepo();
+			const symbolsOnCooldown = await thesesRepo.findSymbolsOnCooldown(environment);
+			const recentCloses = symbolsOnCooldown.map((c) => ({
+				symbol: c.instrumentId,
+				closedAt: c.closedAt ?? new Date().toISOString(),
+				closePrice: null as number | null,
+				rationale: null as string | null,
+				closeReason: c.closeReason,
+				cooldownUntil: c.cooldownUntil,
+			}));
+
+			if (recentCloses.length > 0) {
+				log.info(
+					{ cycleId, cooldownSymbols: recentCloses.map((c) => c.symbol) },
+					"Found symbols on cooldown - passing to workflow",
+				);
+			}
+
 			// Execute workflow with streaming - forward agent events to WebSocket
 			// Use mastra.getWorkflow() to get workflow with observability/tracing enabled
 			const tradingCycleWorkflow = mastra.getWorkflow("tradingCycleWorkflow");
@@ -277,6 +301,7 @@ app.openapi(triggerCycleRoute, async (c) => {
 					cycleId,
 					instruments: resolvedSymbols,
 					useDraftConfig,
+					recentCloses,
 				},
 			});
 

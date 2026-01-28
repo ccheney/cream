@@ -20,6 +20,8 @@ import {
 	ConstraintsSchema,
 	DecisionPlanSchema,
 	type DecisionSchema,
+	type RecentClose,
+	RecentCloseSchema,
 	ResearchSchema,
 } from "../schemas.js";
 
@@ -33,6 +35,10 @@ const TraderInputSchema = z.object({
 	constraints: ConstraintsSchema.optional().describe("Runtime risk constraints"),
 	bullishResearch: z.array(ResearchSchema).describe("Bullish research from debate step"),
 	bearishResearch: z.array(ResearchSchema).describe("Bearish research from debate step"),
+	recentCloses: z
+		.array(RecentCloseSchema)
+		.optional()
+		.describe("Recently closed positions (cooldown)"),
 });
 
 const TraderOutputSchema = z.object({
@@ -56,7 +62,8 @@ export const traderStep = createStep({
 	outputSchema: TraderOutputSchema,
 	execute: async ({ inputData }) => {
 		const startTime = performance.now();
-		const { cycleId, instruments, constraints, bullishResearch, bearishResearch } = inputData;
+		const { cycleId, instruments, constraints, bullishResearch, bearishResearch, recentCloses } =
+			inputData;
 		const errors: string[] = [];
 		const warnings: string[] = [];
 
@@ -67,6 +74,7 @@ export const traderStep = createStep({
 				bullishResearchCount: bullishResearch.length,
 				bearishResearchCount: bearishResearch.length,
 				hasConstraints: !!constraints,
+				recentClosesCount: recentCloses?.length ?? 0,
 			},
 			"Starting trader step",
 		);
@@ -77,6 +85,7 @@ export const traderStep = createStep({
 			constraints,
 			bullishResearch,
 			bearishResearch,
+			recentCloses ?? [],
 			errors,
 			warnings,
 		);
@@ -120,6 +129,7 @@ async function runTraderAgent(
 	constraints: Constraints | undefined,
 	bullishResearch: z.infer<typeof ResearchSchema>[],
 	bearishResearch: z.infer<typeof ResearchSchema>[],
+	recentCloses: RecentClose[],
 	errors: string[],
 	warnings: string[],
 ): Promise<z.infer<typeof DecisionPlanSchema>> {
@@ -137,6 +147,7 @@ async function runTraderAgent(
 			constraints,
 			bullishResearch,
 			bearishResearch,
+			recentCloses,
 		);
 		log.debug({ cycleId, promptLength: prompt.length }, "Calling trader agent");
 		const response = await trader.generate(prompt);
@@ -162,11 +173,31 @@ function buildTraderPrompt(
 	constraints: Constraints | undefined,
 	bullishResearch: z.infer<typeof ResearchSchema>[],
 	bearishResearch: z.infer<typeof ResearchSchema>[],
+	recentCloses: RecentClose[],
 ): string {
 	const parts = [
 		`Create a decision plan for cycle ${cycleId}.`,
 		`Instruments: ${instruments.join(", ")}`,
 	];
+
+	// Add recent closes (cooldown) context at the top for visibility
+	if (recentCloses.length > 0) {
+		parts.push(`\n## ⚠️ RECENT CLOSES (COOLDOWN ACTIVE)`);
+		parts.push(`The following symbols were recently closed and are on COOLDOWN.`);
+		parts.push(
+			`DO NOT issue BUY orders for these symbols unless the close reason has materially changed.`,
+		);
+		parts.push(``);
+		for (const close of recentCloses) {
+			const cooldownTime = close.cooldownUntil
+				? new Date(close.cooldownUntil).toLocaleTimeString()
+				: "unknown";
+			parts.push(`- **${close.symbol}**: Closed at ${close.closedAt}`);
+			parts.push(`  - Reason: ${close.closeReason ?? close.rationale ?? "No reason provided"}`);
+			parts.push(`  - Cooldown until: ${cooldownTime}`);
+		}
+		parts.push(``);
+	}
 
 	if (constraints) {
 		parts.push(`\n## Risk Constraints (ACTUAL LIMITS - MUST COMPLY)`);
@@ -275,13 +306,39 @@ function parseDecisionPlan(
 				const instrumentId = String(dec.instrumentId ?? "");
 				const hasStopLoss = !!dec.stopLoss;
 
-				if ((action === "BUY" || action === "SELL") && !hasStopLoss) {
-					const warnMsg = `Decision ${decisionId} (${instrumentId}) missing stop-loss for ${action} action`;
-					warnings.push(warnMsg);
-					log.warn(
+				// Validate stop-loss for BUY/SELL actions - HARD FAILURE if missing or invalid
+				let stopLoss: { price: number; type: "FIXED" | "TRAILING" } | undefined;
+				if (dec.stopLoss) {
+					const rawPrice = (dec.stopLoss as Record<string, unknown>).price;
+					const price = Number(rawPrice);
+					const type =
+						((dec.stopLoss as Record<string, unknown>).type as "FIXED" | "TRAILING") ?? "FIXED";
+
+					if (!Number.isFinite(price) || price <= 0) {
+						const errMsg = `Decision ${decisionId} (${instrumentId}) has invalid stop-loss price: ${rawPrice}. Must be a positive number.`;
+						warnings.push(errMsg);
+						log.error(
+							{ cycleId, decisionId, instrumentId, action, rawPrice },
+							"Invalid stop-loss price - must be positive",
+						);
+						// Skip this decision entirely if it's a BUY/SELL with invalid stop-loss
+						if (action === "BUY" || action === "SELL") {
+							continue;
+						}
+					} else {
+						stopLoss = { price, type };
+					}
+				}
+
+				if ((action === "BUY" || action === "SELL") && !stopLoss) {
+					const errMsg = `Decision ${decisionId} (${instrumentId}) REJECTED: missing stop-loss for ${action} action`;
+					warnings.push(errMsg);
+					log.error(
 						{ cycleId, decisionId, instrumentId, action },
-						"Missing stop-loss for actionable trade",
+						"REJECTING trade - missing stop-loss for actionable trade",
 					);
+					// Skip this decision - do not add to decisions array
+					continue;
 				}
 
 				decisions.push({
@@ -293,16 +350,20 @@ function parseDecisionPlan(
 						value: Number((dec.size as Record<string, unknown>)?.value ?? 0),
 						unit: String((dec.size as Record<string, unknown>)?.unit ?? "SHARES"),
 					},
-					stopLoss: dec.stopLoss
-						? {
-								price: Number((dec.stopLoss as Record<string, unknown>).price ?? 0),
-								type:
-									((dec.stopLoss as Record<string, unknown>).type as "FIXED" | "TRAILING") ??
-									"FIXED",
-							}
-						: undefined,
+					stopLoss,
 					takeProfit: dec.takeProfit
-						? { price: Number((dec.takeProfit as Record<string, unknown>).price ?? 0) }
+						? (() => {
+								const rawPrice = (dec.takeProfit as Record<string, unknown>).price;
+								const price = Number(rawPrice);
+								if (!Number.isFinite(price) || price <= 0) {
+									log.warn(
+										{ cycleId, decisionId, instrumentId, rawPrice },
+										"Invalid take-profit price - ignoring",
+									);
+									return undefined;
+								}
+								return { price };
+							})()
 						: undefined,
 					strategyFamily: String(dec.strategyFamily ?? "EQUITY_LONG"),
 					timeHorizon: String(dec.timeHorizon ?? "SWING"),

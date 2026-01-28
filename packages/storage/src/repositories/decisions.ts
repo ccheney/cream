@@ -265,6 +265,47 @@ export class DecisionsRepository {
 		return rows.map(mapDecisionRow);
 	}
 
+	/**
+	 * Find recent decisions within a lookback window, optionally filtered by action.
+	 * Useful for cross-cycle context (e.g., finding recent CLOSE decisions to prevent re-entry).
+	 */
+	async findRecentWithinWindow(
+		environment: string,
+		lookbackHours: number,
+		options?: {
+			actions?: DecisionAction[];
+			status?: DecisionStatus[];
+			symbols?: string[];
+		},
+	): Promise<Decision[]> {
+		const cutoffTime = new Date(Date.now() - lookbackHours * 60 * 60 * 1000);
+
+		const conditions = [
+			eq(decisions.environment, environment as "PAPER" | "LIVE"),
+			gte(decisions.createdAt, cutoffTime),
+		];
+
+		if (options?.actions && options.actions.length > 0) {
+			conditions.push(inArray(decisions.action, options.actions));
+		}
+
+		if (options?.status && options.status.length > 0) {
+			conditions.push(inArray(decisions.status, options.status));
+		}
+
+		if (options?.symbols && options.symbols.length > 0) {
+			conditions.push(inArray(decisions.symbol, options.symbols));
+		}
+
+		const rows = await this.db
+			.select()
+			.from(decisions)
+			.where(and(...conditions))
+			.orderBy(desc(decisions.createdAt));
+
+		return rows.map(mapDecisionRow);
+	}
+
 	async updateStatus(id: string, status: DecisionStatus): Promise<Decision> {
 		const [row] = await this.db
 			.update(decisions)

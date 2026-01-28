@@ -74,6 +74,7 @@ export const tradingCycleWorkflow = createWorkflow({
 	.then(debateStep)
 	// Map debate output to trader input
 	.map(async ({ inputData, getStepResult }) => {
+		const observeResult = getStepResult(observeStep);
 		const orientResult = getStepResult(orientStep);
 		const analystsResult = getStepResult(analystsStep);
 		return {
@@ -85,6 +86,7 @@ export const tradingCycleWorkflow = createWorkflow({
 			fundamentalsAnalysis: analystsResult?.fundamentalsAnalysis,
 			bullishResearch: inputData.bullishResearch,
 			bearishResearch: inputData.bearishResearch,
+			recentCloses: observeResult?.recentCloses,
 		};
 	})
 	// Step 6: Trader - Synthesize decision plan

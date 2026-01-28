@@ -27,7 +27,11 @@ export { recalcIndicator } from "./indicators/index.js";
 export { getGreeks, getQuotes, optionChain } from "./market-data/index.js";
 
 // Portfolio tools
-export { getEnrichedPortfolioState, getPortfolioState } from "./portfolio/index.js";
+export {
+	getEnrichedPortfolioState,
+	getPortfolioState,
+	getRecentDecisions,
+} from "./portfolio/index.js";
 
 // Prediction markets tools
 export {

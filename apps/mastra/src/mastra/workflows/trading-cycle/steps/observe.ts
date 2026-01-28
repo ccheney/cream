@@ -17,6 +17,7 @@ import {
 	ConstraintsSchema,
 	MarketSnapshotSchema,
 	type QuoteDataSchema,
+	RecentCloseSchema,
 	RegimeDataSchema,
 } from "../schemas.js";
 
@@ -30,6 +31,10 @@ const ObserveInputSchema = z.object({
 	constraints: ConstraintsSchema.optional().describe(
 		"Runtime constraints passed from workflow input",
 	),
+	recentCloses: z
+		.array(RecentCloseSchema)
+		.optional()
+		.describe("Recently closed positions (cooldown prevention)"),
 });
 
 const ObserveOutputSchema = z.object({
@@ -37,6 +42,7 @@ const ObserveOutputSchema = z.object({
 	marketSnapshot: MarketSnapshotSchema,
 	regimeLabels: z.record(z.string(), RegimeDataSchema),
 	constraints: ConstraintsSchema.optional(),
+	recentCloses: z.array(RecentCloseSchema).optional(),
 	errors: z.array(z.string()),
 	warnings: z.array(z.string()),
 	metrics: z.object({
@@ -68,7 +74,7 @@ export const observeStep = createStep({
 	outputSchema: ObserveOutputSchema,
 	execute: async ({ inputData }) => {
 		const startTime = performance.now();
-		const { cycleId, instruments, constraints } = inputData;
+		const { cycleId, instruments, constraints, recentCloses } = inputData;
 		const errors: string[] = [];
 		const warnings: string[] = [];
 
@@ -111,6 +117,7 @@ export const observeStep = createStep({
 			marketSnapshot,
 			regimeLabels,
 			constraints,
+			recentCloses,
 			errors,
 			warnings,
 			metrics: {
