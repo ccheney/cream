@@ -104,12 +104,7 @@ jobs:
         run: bun install
 
       - name: Run tests
-        run: |
-          if [[ "${{ github.event_name }}" == "schedule" ]]; then
-            bun run test:rs
-          else
-            bun run test:rs -- --filter='[HEAD^1]'
-          fi
+        run: bun run test:rs
 
   # ============================================
   # Integration Tests (using testcontainers)
