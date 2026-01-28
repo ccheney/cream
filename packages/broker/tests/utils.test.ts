@@ -35,7 +35,7 @@ describe("generateOrderId", () => {
 
 		const parts = id.split("-");
 		const timestampPart = requireValue(parts[1], "timestamp part");
-		const timestamp = parseInt(timestampPart, 10);
+		const timestamp = Number.parseInt(timestampPart, 10);
 
 		expect(timestamp).toBeGreaterThanOrEqual(before);
 		expect(timestamp).toBeLessThanOrEqual(after);

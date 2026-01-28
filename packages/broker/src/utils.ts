@@ -158,7 +158,7 @@ export function parseOptionSymbol(optionSymbol: string): {
 	}
 
 	// Parse date (YYMMDD)
-	const year = 2000 + parseInt(dateStr.substring(0, 2), 10);
+	const year = 2000 + Number.parseInt(dateStr.substring(0, 2), 10);
 	const month = dateStr.substring(2, 4);
 	const day = dateStr.substring(4, 6);
 	const expiration = `${year}-${month}-${day}`;
@@ -167,7 +167,7 @@ export function parseOptionSymbol(optionSymbol: string): {
 	const optionType: "call" | "put" = typeChar === "C" ? "call" : "put";
 
 	// Parse strike (8 digits, last 3 are decimals -> divide by 1000)
-	const strike = parseInt(strikeStr, 10) / 1000;
+	const strike = Number.parseInt(strikeStr, 10) / 1000;
 
 	return { underlying, expiration, optionType, strike };
 }

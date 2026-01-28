@@ -194,7 +194,7 @@ describe("Moving Averages", () => {
 		const result = adapter.calculate(bars);
 
 		// In uptrend: price > SMA20 > SMA50 > SMA200
-		const currentPrice = requireValue(bars[bars.length - 1], "last bar").close;
+		const currentPrice = requireValue(bars.at(-1), "last bar").close;
 
 		expect(result.sma_20).not.toBeNull();
 		expect(result.sma_50).not.toBeNull();
@@ -243,7 +243,7 @@ describe("Moving Averages", () => {
 		}
 
 		const result = adapter.calculate(bars);
-		const currentPrice = requireValue(bars[bars.length - 1], "last bar").close; // 150
+		const currentPrice = requireValue(bars.at(-1), "last bar").close; // 150
 
 		expect(result.ema_21).not.toBeNull();
 		expect(result.sma_20).not.toBeNull();

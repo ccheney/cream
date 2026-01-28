@@ -198,7 +198,7 @@ describe("Feature Extraction", () => {
 			const feature = extractSingleFeature(candles);
 
 			expect(feature).not.toBeNull();
-			const lastOHLCVBar = candles[candles.length - 1];
+			const lastOHLCVBar = candles.at(-1);
 			const safeFeature = requireValue(feature, "feature");
 			const safeLast = requireValue(lastOHLCVBar, "last OHLCV bar");
 			expect(safeFeature.timestamp).toBe(new Date(safeLast.timestamp).toISOString());

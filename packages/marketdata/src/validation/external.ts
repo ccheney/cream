@@ -610,12 +610,12 @@ export function extractRateLimitStatus(headers: Headers | Record<string, string>
 	const reset = getHeader("X-RateLimit-Reset") ?? getHeader("RateLimit-Reset");
 	const retryAfter = getHeader("Retry-After");
 
-	const remainingNum = remaining ? parseInt(remaining, 10) : undefined;
-	const limitNum = limit ? parseInt(limit, 10) : undefined;
+	const remainingNum = remaining ? Number.parseInt(remaining, 10) : undefined;
+	const limitNum = limit ? Number.parseInt(limit, 10) : undefined;
 
 	let resetTime: Date | undefined;
 	if (reset) {
-		const resetNum = parseInt(reset, 10);
+		const resetNum = Number.parseInt(reset, 10);
 		if (!Number.isNaN(resetNum)) {
 			// Could be Unix timestamp or seconds from now
 			resetTime =
@@ -625,7 +625,7 @@ export function extractRateLimitStatus(headers: Headers | Record<string, string>
 
 	let retryAfterSeconds: number | undefined;
 	if (retryAfter) {
-		retryAfterSeconds = parseInt(retryAfter, 10);
+		retryAfterSeconds = Number.parseInt(retryAfter, 10);
 		if (Number.isNaN(retryAfterSeconds)) {
 			// Could be HTTP-date format
 			const retryDate = new Date(retryAfter);

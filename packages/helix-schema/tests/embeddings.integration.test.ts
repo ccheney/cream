@@ -68,6 +68,6 @@ describe.skipIf(!GEMINI_API_KEY)("EmbeddingClient API Integration", () => {
 
 		expect(result.embeddings.length).toBe(3);
 		expect(progressUpdates.length).toBeGreaterThan(0);
-		expect(progressUpdates[progressUpdates.length - 1].processed).toBe(3);
+		expect(progressUpdates.at(-1)?.processed).toBe(3);
 	});
 });

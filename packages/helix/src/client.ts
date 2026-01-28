@@ -281,9 +281,12 @@ export function createHelixClient(config: HelixClientConfig = {}): HelixClient {
  */
 export function createHelixClientFromEnv(): HelixClient {
 	const host = Bun.env.HELIX_HOST ?? DEFAULT_CONFIG.host;
-	const port = parseInt(Bun.env.HELIX_PORT ?? String(DEFAULT_CONFIG.port), 10);
-	const timeout = parseInt(Bun.env.HELIX_TIMEOUT ?? String(DEFAULT_CONFIG.timeout), 10);
-	const maxRetries = parseInt(Bun.env.HELIX_MAX_RETRIES ?? String(DEFAULT_CONFIG.maxRetries), 10);
+	const port = Number.parseInt(Bun.env.HELIX_PORT ?? String(DEFAULT_CONFIG.port), 10);
+	const timeout = Number.parseInt(Bun.env.HELIX_TIMEOUT ?? String(DEFAULT_CONFIG.timeout), 10);
+	const maxRetries = Number.parseInt(
+		Bun.env.HELIX_MAX_RETRIES ?? String(DEFAULT_CONFIG.maxRetries),
+		10,
+	);
 
 	return createHelixClient({ host, port, timeout, maxRetries });
 }

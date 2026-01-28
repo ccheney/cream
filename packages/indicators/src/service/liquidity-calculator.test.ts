@@ -291,7 +291,7 @@ describe("Volume Ratio Calculation", () => {
 		const bars = generateBars(50, 100, 1000000);
 
 		// Set last bar to 3x average volume
-		const lastBar = bars[bars.length - 1];
+		const lastBar = bars.at(-1);
 		if (lastBar) {
 			lastBar.volume = 3000000;
 		}
@@ -307,7 +307,7 @@ describe("Volume Ratio Calculation", () => {
 		const bars = generateBars(50, 100, 1000000);
 
 		// Set last bar to 0.2x average volume
-		const lastBar = bars[bars.length - 1];
+		const lastBar = bars.at(-1);
 		if (lastBar) {
 			lastBar.volume = 200000;
 		}
@@ -340,7 +340,7 @@ describe("Turnover Ratio Calculation", () => {
 		const bars = generateBars(50, 100, 100000);
 
 		// Set last bar to 20x average volume (extreme spike)
-		const lastBar = bars[bars.length - 1];
+		const lastBar = bars.at(-1);
 		if (lastBar) {
 			lastBar.volume = 2000000;
 		}

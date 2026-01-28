@@ -533,7 +533,7 @@ describe("calculateLiquidityAbsorptionRatioSeries", () => {
 		const singleResult = calculateLiquidityAbsorptionRatio(bars);
 
 		// Last result in series should match single calculation
-		const lastSeriesResult = series[series.length - 1];
+		const lastSeriesResult = series.at(-1);
 
 		expect(lastSeriesResult).not.toBeNull();
 		expect(singleResult).not.toBeNull();

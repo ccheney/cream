@@ -279,7 +279,7 @@ export function parseMoney(str: string): number {
 	const cleaned = str.replace(/[$,]/g, "").trim();
 
 	// Parse as float then convert to cents
-	const amount = parseFloat(cleaned);
+	const amount = Number.parseFloat(cleaned);
 	if (Number.isNaN(amount)) {
 		throw new Error(`Invalid money string: ${str}`);
 	}

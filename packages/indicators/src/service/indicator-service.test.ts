@@ -768,7 +768,7 @@ describe("IndicatorService.getSnapshotsBatch", () => {
 		expect(firstCall?.completed).toBe(0);
 
 		// Final call should show completion
-		const lastCall = progressCalls[progressCalls.length - 1];
+		const lastCall = progressCalls.at(-1);
 		expect(lastCall).toBeDefined();
 		expect(lastCall?.completed).toBe(3);
 	});

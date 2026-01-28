@@ -80,7 +80,7 @@ export function useThesisPageState(
 	}
 
 	async function handleRealize(): Promise<void> {
-		const price = parseFloat(exitPrice);
+		const price = Number.parseFloat(exitPrice);
 		if (!Number.isNaN(price)) {
 			await realizeThesis.mutateAsync({
 				id,

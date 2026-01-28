@@ -43,7 +43,7 @@ export function calculateNext6AMESTMs(): number {
 		hour: "numeric",
 		hour12: false,
 	};
-	const estHour = parseInt(new Intl.DateTimeFormat("en-US", estOptions).format(now), 10);
+	const estHour = Number.parseInt(new Intl.DateTimeFormat("en-US", estOptions).format(now), 10);
 
 	const next6AM = new Date(now);
 	if (estHour >= 6) {
@@ -97,7 +97,7 @@ export function getNext6AMESTDate(): Date {
 		hour: "numeric",
 		hour12: false,
 	};
-	const estHour = parseInt(new Intl.DateTimeFormat("en-US", estOptions).format(now), 10);
+	const estHour = Number.parseInt(new Intl.DateTimeFormat("en-US", estOptions).format(now), 10);
 
 	const next6AM = new Date(now);
 	if (estHour >= 6) {
@@ -122,7 +122,7 @@ export function calculateNextEconCalendarSyncMs(): number {
 		hour: "numeric",
 		hour12: false,
 	};
-	const estHour = parseInt(new Intl.DateTimeFormat("en-US", estOptions).format(now), 10);
+	const estHour = Number.parseInt(new Intl.DateTimeFormat("en-US", estOptions).format(now), 10);
 
 	const nextSync = new Date(now);
 
@@ -152,7 +152,7 @@ export function getNextEconCalendarSyncDate(): Date {
 		hour: "numeric",
 		hour12: false,
 	};
-	const estHour = parseInt(new Intl.DateTimeFormat("en-US", estOptions).format(now), 10);
+	const estHour = Number.parseInt(new Intl.DateTimeFormat("en-US", estOptions).format(now), 10);
 
 	const nextSync = new Date(now);
 

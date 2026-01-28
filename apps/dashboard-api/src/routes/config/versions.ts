@@ -42,7 +42,7 @@ const getHistoryRoute = createRoute({
 
 app.openapi(getHistoryRoute, async (c) => {
 	const environment = getEnvironment(c);
-	const limit = c.req.query("limit") ? parseInt(c.req.query("limit") as string, 10) : 20;
+	const limit = c.req.query("limit") ? Number.parseInt(c.req.query("limit") as string, 10) : 20;
 
 	const service = await getRuntimeConfigService();
 	const history = await service.getHistory(environment, limit);

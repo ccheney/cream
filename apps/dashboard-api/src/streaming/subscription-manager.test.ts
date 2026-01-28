@@ -302,7 +302,7 @@ describe("Connection Pool Capacity", () => {
 		if (pools.length >= maxPools) {
 			return false;
 		}
-		const lastPool = pools[pools.length - 1];
+		const lastPool = pools.at(-1);
 		return lastPool !== undefined && lastPool.contractCount >= CONNECTION_SPAWN_THRESHOLD;
 	}
 

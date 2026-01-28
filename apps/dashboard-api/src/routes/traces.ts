@@ -434,7 +434,7 @@ const listCyclesRoute = createRoute({
 
 app.openapi(listCyclesRoute, async (c) => {
 	const { limit } = c.req.valid("query");
-	const limitNum = Math.min(parseInt(limit, 10) || 20, 100);
+	const limitNum = Math.min(Number.parseInt(limit, 10) || 20, 100);
 
 	// Query for distinct trading-cycle workflow traces in the last 30 days
 	const now = Date.now() * 1000; // microseconds

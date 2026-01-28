@@ -307,7 +307,7 @@ export type AppType = typeof app;
 // ============================================
 
 if (import.meta.main) {
-	const port = parseInt(Bun.env.PORT ?? "3001", 10);
+	const port = Number.parseInt(Bun.env.PORT ?? "3001", 10);
 
 	log.info({ port, allowedOrigins }, "Starting Dashboard API server");
 

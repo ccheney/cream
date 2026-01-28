@@ -16,25 +16,25 @@ export function mapAccount(data: AlpacaAccountResponse): Account {
 		id: data.id,
 		status: data.status,
 		currency: data.currency,
-		cash: parseFloat(data.cash),
-		portfolioValue: parseFloat(data.portfolio_value),
-		buyingPower: parseFloat(data.buying_power),
-		regtBuyingPower: parseFloat(data.regt_buying_power),
-		daytradingBuyingPower: parseFloat(data.daytrading_buying_power),
+		cash: Number.parseFloat(data.cash),
+		portfolioValue: Number.parseFloat(data.portfolio_value),
+		buyingPower: Number.parseFloat(data.buying_power),
+		regtBuyingPower: Number.parseFloat(data.regt_buying_power),
+		daytradingBuyingPower: Number.parseFloat(data.daytrading_buying_power),
 		daytradeCount: data.daytrade_count,
 		patternDayTrader: data.pattern_day_trader,
 		tradingBlocked: data.trading_blocked,
 		transfersBlocked: data.transfers_blocked,
 		accountBlocked: data.account_blocked,
 		shortingEnabled: data.shorting_enabled,
-		longMarketValue: parseFloat(data.long_market_value),
-		shortMarketValue: parseFloat(data.short_market_value),
-		equity: parseFloat(data.equity),
-		lastEquity: parseFloat(data.last_equity),
-		multiplier: parseFloat(data.multiplier),
-		initialMargin: parseFloat(data.initial_margin),
-		maintenanceMargin: parseFloat(data.maintenance_margin),
-		sma: parseFloat(data.sma),
+		longMarketValue: Number.parseFloat(data.long_market_value),
+		shortMarketValue: Number.parseFloat(data.short_market_value),
+		equity: Number.parseFloat(data.equity),
+		lastEquity: Number.parseFloat(data.last_equity),
+		multiplier: Number.parseFloat(data.multiplier),
+		initialMargin: Number.parseFloat(data.initial_margin),
+		maintenanceMargin: Number.parseFloat(data.maintenance_margin),
+		sma: Number.parseFloat(data.sma),
 		createdAt: data.created_at,
 	};
 }
@@ -42,16 +42,16 @@ export function mapAccount(data: AlpacaAccountResponse): Account {
 export function mapPosition(data: AlpacaPositionResponse): Position {
 	return {
 		symbol: data.symbol,
-		qty: parseFloat(data.qty),
+		qty: Number.parseFloat(data.qty),
 		side: data.side as "long" | "short",
-		avgEntryPrice: parseFloat(data.avg_entry_price),
-		marketValue: parseFloat(data.market_value),
-		costBasis: parseFloat(data.cost_basis),
-		unrealizedPl: parseFloat(data.unrealized_pl),
-		unrealizedPlpc: parseFloat(data.unrealized_plpc),
-		currentPrice: parseFloat(data.current_price),
-		lastdayPrice: parseFloat(data.lastday_price),
-		changeToday: parseFloat(data.change_today),
+		avgEntryPrice: Number.parseFloat(data.avg_entry_price),
+		marketValue: Number.parseFloat(data.market_value),
+		costBasis: Number.parseFloat(data.cost_basis),
+		unrealizedPl: Number.parseFloat(data.unrealized_pl),
+		unrealizedPlpc: Number.parseFloat(data.unrealized_plpc),
+		currentPrice: Number.parseFloat(data.current_price),
+		lastdayPrice: Number.parseFloat(data.lastday_price),
+		changeToday: Number.parseFloat(data.change_today),
 	};
 }
 
@@ -60,8 +60,8 @@ export function mapOrder(data: AlpacaOrderResponse): Order {
 		id: data.id,
 		clientOrderId: data.client_order_id,
 		symbol: data.symbol,
-		qty: parseFloat(data.qty),
-		filledQty: parseFloat(data.filled_qty),
+		qty: Number.parseFloat(data.qty),
+		filledQty: Number.parseFloat(data.filled_qty),
 		side: data.side as "buy" | "sell",
 		type: data.type as Order["type"],
 		timeInForce: data.time_in_force as Order["timeInForce"],
@@ -72,13 +72,13 @@ export function mapOrder(data: AlpacaOrderResponse): Order {
 	};
 
 	if (data.limit_price) {
-		order.limitPrice = parseFloat(data.limit_price);
+		order.limitPrice = Number.parseFloat(data.limit_price);
 	}
 	if (data.stop_price) {
-		order.stopPrice = parseFloat(data.stop_price);
+		order.stopPrice = Number.parseFloat(data.stop_price);
 	}
 	if (data.filled_avg_price) {
-		order.filledAvgPrice = parseFloat(data.filled_avg_price);
+		order.filledAvgPrice = Number.parseFloat(data.filled_avg_price);
 	}
 	if (data.filled_at) {
 		order.filledAt = data.filled_at;
