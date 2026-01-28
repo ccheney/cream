@@ -1507,10 +1507,11 @@ app.openapi(closedTradesRoute, async (c) => {
 			const date = order.filledAt as string;
 			const orderId = order.id;
 
-			if (!symbolLots.has(symbol)) {
-				symbolLots.set(symbol, []);
+			let lots = symbolLots.get(symbol);
+			if (!lots) {
+				lots = [];
+				symbolLots.set(symbol, lots);
 			}
-			const lots = symbolLots.get(symbol)!;
 
 			if (order.side === "buy") {
 				// Add to FIFO queue
