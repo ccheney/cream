@@ -37,6 +37,40 @@ mock.module("../routes/system", () => ({
 	getCurrentEnvironment: () => "PAPER",
 }));
 
+// Mock db module - must export all functions to avoid module resolution issues
+mock.module("../db", () => ({
+	getDrizzleDb: () => ({}),
+	closeDb: async () => {},
+	getDecisionsRepo: () => ({}),
+	getAlertsRepo: () => ({}),
+	getAlertSettingsRepo: () => ({}),
+	getOrdersRepo: () => ({}),
+	getPositionsRepo: () => ({ findOpen: () => Promise.resolve([]) }),
+	getAgentOutputsRepo: () => ({}),
+	getPortfolioSnapshotsRepo: () => ({}),
+	getConfigVersionsRepo: () => ({}),
+	getThesesRepo: () => ({}),
+	getRegimeLabelsRepo: () => ({}),
+	getTradingConfigRepo: () => ({}),
+	getAgentConfigsRepo: () => ({}),
+	getUniverseConfigsRepo: () => ({}),
+	getUserPreferencesRepo: () => ({}),
+	getAuditLogRepo: () => ({}),
+	getConstraintsConfigRepo: () => ({}),
+	getCyclesRepo: () => ({}),
+	getFilingsRepo: () => ({}),
+	getFilingSyncRunsRepo: () => ({}),
+	getSystemStateRepo: () => ({}),
+	getIndicatorSyncRunsRepo: () => ({}),
+	getMacroWatchRepo: () => ({}),
+	getFundamentalsRepo: () => ({}),
+	getShortInterestRepo: () => ({}),
+	getSentimentRepo: () => ({}),
+	getCorporateActionsRepo: () => ({}),
+	getPredictionMarketsRepo: () => ({}),
+	getRuntimeConfigService: () => ({}),
+}));
+
 // Import after mocks are set up
 const { portfolioService } = await import("../services/portfolio");
 const { riskRoutes } = await import("./risk");

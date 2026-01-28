@@ -100,6 +100,36 @@ const mockFindOpen = mock(() =>
 );
 mock.module("../db", () => ({
 	getPositionsRepo: () => Promise.resolve({ findOpen: mockFindOpen }),
+	// Stub implementations for all other exports
+	getDrizzleDb: () => ({}),
+	closeDb: async () => {},
+	getDecisionsRepo: () => ({}),
+	getAlertsRepo: () => ({}),
+	getAlertSettingsRepo: () => ({}),
+	getOrdersRepo: () => ({}),
+	getAgentOutputsRepo: () => ({}),
+	getPortfolioSnapshotsRepo: () => ({}),
+	getConfigVersionsRepo: () => ({}),
+	getThesesRepo: () => ({}),
+	getRegimeLabelsRepo: () => ({}),
+	getTradingConfigRepo: () => ({}),
+	getAgentConfigsRepo: () => ({}),
+	getUniverseConfigsRepo: () => ({}),
+	getUserPreferencesRepo: () => ({}),
+	getAuditLogRepo: () => ({}),
+	getConstraintsConfigRepo: () => ({}),
+	getCyclesRepo: () => ({}),
+	getFilingsRepo: () => ({}),
+	getFilingSyncRunsRepo: () => ({}),
+	getSystemStateRepo: () => ({}),
+	getIndicatorSyncRunsRepo: () => ({}),
+	getMacroWatchRepo: () => ({}),
+	getFundamentalsRepo: () => ({}),
+	getShortInterestRepo: () => ({}),
+	getSentimentRepo: () => ({}),
+	getCorporateActionsRepo: () => ({}),
+	getPredictionMarketsRepo: () => ({}),
+	getRuntimeConfigService: () => ({}),
 }));
 
 // Mock routes/system to avoid circular dependency
