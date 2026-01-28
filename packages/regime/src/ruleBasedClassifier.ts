@@ -70,7 +70,7 @@ export function classifyRegime(
 	const fastMa = calculateSMA(candles, config.trend_ma_fast) ?? 0;
 	const slowMa = calculateSMA(candles, config.trend_ma_slow) ?? 0;
 	const currentAtr = calculateATR(candles, 14) ?? 0;
-	const currentPrice = candles[candles.length - 1]?.close ?? 0;
+	const currentPrice = candles.at(-1)?.close ?? 0;
 
 	const maDiff = fastMa - slowMa;
 	const maDiffPct = currentPrice > 0 ? Math.abs(maDiff) / currentPrice : 0;

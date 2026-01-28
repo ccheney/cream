@@ -133,12 +133,7 @@ export interface DividendIndicators {
 // Helper Functions
 // ============================================
 
-/**
- * Sleep for specified milliseconds
- */
-function sleep(ms: number): Promise<void> {
-	return new Promise((resolve) => setTimeout(resolve, ms));
-}
+const sleep = Bun.sleep;
 
 /**
  * Get date string in YYYY-MM-DD format

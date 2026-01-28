@@ -38,10 +38,7 @@ export function createMockFetch(implementation: () => Promise<Response>): MockFe
  * Create a mock JSON response.
  */
 export function createJsonResponse(data: unknown, status = 200): Response {
-	return new Response(JSON.stringify(data), {
-		status,
-		headers: { "Content-Type": "application/json" },
-	});
+	return Response.json(data, { status });
 }
 
 /**

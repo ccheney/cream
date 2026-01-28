@@ -248,7 +248,7 @@ function buildSectorPeerEdges(companies: CompanyData[], maxPeersPerCompany: numb
 				}
 
 				// Create deterministic edge key to avoid duplicates
-				const edgeKey = [source.symbol, target.symbol].sort().join("->");
+				const edgeKey = [source.symbol, target.symbol].toSorted().join("->");
 				if (edgeSet.has(edgeKey)) {
 					continue;
 				}
@@ -312,7 +312,7 @@ function buildIndustryPeerEdges(
 					continue;
 				}
 
-				const edgeKey = [source.symbol, target.symbol].sort().join("->");
+				const edgeKey = [source.symbol, target.symbol].toSorted().join("->");
 				if (existingEdges.has(edgeKey)) {
 					continue;
 				}
@@ -419,7 +419,7 @@ function buildCorrelationPeerEdges(
 			continue;
 		}
 
-		const edgeKey = [pair.symbolA, pair.symbolB].sort().join("->");
+		const edgeKey = [pair.symbolA, pair.symbolB].toSorted().join("->");
 		if (existingEdges.has(edgeKey)) {
 			continue;
 		}
@@ -527,7 +527,7 @@ export class CompanyGraphBuilder {
 		// Step 2: Build sector peer edges
 		const sectorPeerEdges = buildSectorPeerEdges(companies, maxPeersPerCompany);
 		const existingEdges = new Set(
-			sectorPeerEdges.map((e) => [e.sourceId, e.targetId].sort().join("->")),
+			sectorPeerEdges.map((e) => [e.sourceId, e.targetId].toSorted().join("->")),
 		);
 
 		// Step 3: Build industry peer edges (if enabled)

@@ -337,8 +337,8 @@ export class DependencyGraph {
 			maxDepth,
 			mostDepended,
 			mostDependencies,
-			leafPackages: leafPackages.sort(),
-			rootPackages: rootPackages.sort(),
+			leafPackages: leafPackages.toSorted(),
+			rootPackages: rootPackages.toSorted(),
 		};
 	}
 

@@ -301,7 +301,7 @@ const CACHE_TTL_MS = 60 * 60 * 1000; // 1 hour
 export async function getCorrelationMatrix(
 	options: CalculateCorrelationOptions,
 ): Promise<CorrelationMatrix> {
-	const cacheKey = options.symbols.sort().join(",");
+	const cacheKey = options.symbols.toSorted().join(",");
 	const cached = correlationCache.get(cacheKey);
 
 	if (cached && Date.now() - cached.timestamp < CACHE_TTL_MS) {

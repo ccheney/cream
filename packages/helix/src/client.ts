@@ -304,9 +304,4 @@ function isRetryable(error: unknown): boolean {
 	return true;
 }
 
-/**
- * Sleep for a given duration.
- */
-function sleep(ms: number): Promise<void> {
-	return new Promise((resolve) => setTimeout(resolve, ms));
-}
+const sleep = Bun.sleep;

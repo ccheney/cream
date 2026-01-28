@@ -160,13 +160,13 @@ export function calculateMACD(
 		signalLine = macdVal * signalMultiplier + signalLine * (1 - signalMultiplier);
 	}
 
-	const macdLine = macdValues[macdValues.length - 1];
+	const macdLine = macdValues.at(-1);
 	if (macdLine === undefined) {
 		return null;
 	}
 
 	const histogram = macdLine - signalLine;
-	const lastBar = bars[bars.length - 1];
+	const lastBar = bars.at(-1);
 
 	return {
 		macdLine,

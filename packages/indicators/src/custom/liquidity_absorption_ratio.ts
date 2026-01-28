@@ -242,7 +242,7 @@ export function calculateLiquidityAbsorptionRatio(
 	}
 
 	// Get the most recent bar's result
-	const lastBarResult = barResults[barResults.length - 1];
+	const lastBarResult = barResults.at(-1);
 	if (!lastBarResult) {
 		return null;
 	}
@@ -266,7 +266,7 @@ export function calculateLiquidityAbsorptionRatio(
 	// Clamp to [-3, 3] as per hypothesis specification
 	const clampedValue = Math.max(-3, Math.min(3, zScore));
 
-	const lastBar = bars[bars.length - 1];
+	const lastBar = bars.at(-1);
 
 	return {
 		value: clampedValue,

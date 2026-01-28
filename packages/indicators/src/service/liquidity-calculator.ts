@@ -94,7 +94,7 @@ export class LiquidityCalculatorAdapter implements LiquidityCalculator {
 	 * @returns Normalized turnover ratio (0-1 scale) or null
 	 */
 	private calculateTurnoverRatio(bars: OHLCVBar[], avgVolume: number): number | null {
-		const lastBar = bars[bars.length - 1];
+		const lastBar = bars.at(-1);
 		if (!lastBar || avgVolume <= 0) {
 			return null;
 		}

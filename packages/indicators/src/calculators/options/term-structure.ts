@@ -149,7 +149,7 @@ export function calculateTermStructureSlope(
 
 	// Use first and last points for slope
 	const front = points[0];
-	const back = points[points.length - 1];
+	const back = points.at(-1);
 
 	if (!front || !back) {
 		return null;
@@ -306,7 +306,7 @@ export function calculateTermStructureCurvature(points: TermStructurePoint[]): n
 	// Use three points for second derivative approximation
 	const p1 = points[0];
 	const p2 = points[Math.floor(points.length / 2)];
-	const p3 = points[points.length - 1];
+	const p3 = points.at(-1);
 
 	if (!p1 || !p2 || !p3) {
 		return null;

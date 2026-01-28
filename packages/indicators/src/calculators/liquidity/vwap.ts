@@ -73,7 +73,7 @@ export function calculateVWAP(bars: OHLCVBar[]): VWAPResult | null {
 	}
 
 	const vwap = cumulativePV / cumulativeVolume;
-	const latestBar = bars[bars.length - 1];
+	const latestBar = bars.at(-1);
 
 	return {
 		vwap,

@@ -101,7 +101,7 @@ export const OptionsChainTable = memo(function OptionsChainTable({
 	useEffect(() => {
 		if (onVisibleRowsChange && virtualItems.length > 0) {
 			const startIndex = virtualItems[0]?.index ?? 0;
-			const endIndex = virtualItems[virtualItems.length - 1]?.index ?? 0;
+			const endIndex = virtualItems.at(-1)?.index ?? 0;
 			onVisibleRowsChange(startIndex, endIndex);
 		}
 	}, [virtualItems, onVisibleRowsChange]);

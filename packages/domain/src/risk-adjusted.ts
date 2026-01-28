@@ -176,7 +176,7 @@ export function calculateRawReturn(equity: number[]): number {
 		return 0;
 	}
 	const first = equity[0];
-	const last = equity[equity.length - 1];
+	const last = equity.at(-1);
 	if (first === undefined || last === undefined || first === 0) {
 		return 0;
 	}
@@ -236,7 +236,7 @@ export function calculateCurrentDrawdown(equity: number[]): number {
 	}
 
 	const peak = Math.max(...equity);
-	const current = equity[equity.length - 1];
+	const current = equity.at(-1);
 
 	if (current === undefined || peak === 0) {
 		return 0;

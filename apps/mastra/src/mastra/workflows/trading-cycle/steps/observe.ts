@@ -163,8 +163,9 @@ async function fetchMarketData(
 					volume: 100000 + Math.random() * 100000,
 				});
 			}
-			historicalCandles.set(symbol, stubCandles.reverse());
-			candles[symbol] = stubCandles;
+			const reversedCandles = stubCandles.toReversed();
+			historicalCandles.set(symbol, reversedCandles);
+			candles[symbol] = reversedCandles;
 		}
 
 		return { candles, quotes, historicalCandles };

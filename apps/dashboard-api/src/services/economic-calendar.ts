@@ -336,7 +336,7 @@ export class EconomicCalendarService {
 				}
 			}
 
-			observations.reverse();
+			const reversedObservations = observations.toReversed();
 
 			const SERIES_UNITS: Record<string, string> = {
 				CPIAUCSL: "index",
@@ -360,7 +360,7 @@ export class EconomicCalendarService {
 				seriesId: primarySeriesId,
 				seriesName: releaseMeta.name,
 				unit: SERIES_UNITS[primarySeriesId] ?? "",
-				observations,
+				observations: reversedObservations,
 			};
 		} catch (error) {
 			log.error(

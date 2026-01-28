@@ -165,7 +165,7 @@ export function validateCandleData(
 	}
 
 	const firstCandle = candles[0];
-	const lastCandle = candles[candles.length - 1];
+	const lastCandle = candles.at(-1);
 	if (!firstCandle || !lastCandle) {
 		return {
 			isValid: false,

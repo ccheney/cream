@@ -73,7 +73,7 @@ function useMatrixData(
 	cells: CellData[][];
 } {
 	return useMemo(() => {
-		const keys = Object.keys(data).sort();
+		const keys = Object.keys(data).toSorted();
 
 		const cells: CellData[][] = keys.map((rowKey) => {
 			return keys.map((colKey) => {

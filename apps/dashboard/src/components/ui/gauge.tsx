@@ -145,7 +145,7 @@ function getColorForValue(value: number, zones: GaugeZone[]): string {
 		}
 	}
 	// Handle edge case for max value
-	const lastZone = zones[zones.length - 1];
+	const lastZone = zones.at(-1);
 	if (lastZone && value >= lastZone.start) {
 		return lastZone.color;
 	}

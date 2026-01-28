@@ -1002,7 +1002,7 @@ app.openapi(performanceRoute, async (c) => {
 
 	// Now calculate current drawdown using REAL-TIME equity (includes today's unrealized P&L)
 	// We need to fetch current equity if we're in the Alpaca-configured block
-	let currentEquityForDD = equityHistory[equityHistory.length - 1] ?? 0;
+	let currentEquityForDD = equityHistory.at(-1) ?? 0;
 	if (isAlpacaConfigured()) {
 		try {
 			const client = getBrokerClient();

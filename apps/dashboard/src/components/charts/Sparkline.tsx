@@ -59,7 +59,7 @@ function getTrendColor(data: number[]): SparklineColor {
 		return "neutral";
 	}
 	const first = data[0] ?? 0;
-	const last = data[data.length - 1] ?? 0;
+	const last = data.at(-1) ?? 0;
 	if (last > first) {
 		return "profit";
 	}
@@ -123,7 +123,7 @@ function getLastPoint(
 	const max = Math.max(...data);
 	const range = max - min || 1;
 
-	const lastValue = data[data.length - 1] ?? 0;
+	const lastValue = data.at(-1) ?? 0;
 	const x = width - padding;
 	const y = height - padding - ((lastValue - min) / range) * (height - padding * 2);
 
@@ -179,7 +179,7 @@ function SparklineComponent({
 			height={height}
 			className={className}
 			role="img"
-			aria-label={`Sparkline showing trend from ${data[0]} to ${data[data.length - 1]}`}
+			aria-label={`Sparkline showing trend from ${data[0]} to ${data.at(-1)}`}
 		>
 			<path
 				d={path}

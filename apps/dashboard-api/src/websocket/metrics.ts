@@ -242,7 +242,7 @@ export function createMetricsRegistry(): MetricsRegistry {
 							for (const pair of labelKey.split(",")) {
 								const [k, v] = pair.split("=");
 								if (k && v) {
-									baseLabels[k] = v.replace(/"/g, "");
+									baseLabels[k] = v.replaceAll('"', "");
 								}
 							}
 						}
@@ -260,7 +260,7 @@ export function createMetricsRegistry(): MetricsRegistry {
 								});
 							}
 						}
-						const lastCount = buckets.counts[buckets.counts.length - 1];
+						const lastCount = buckets.counts.at(-1);
 						if (lastCount !== undefined) {
 							cumulative += lastCount;
 						}
@@ -276,7 +276,7 @@ export function createMetricsRegistry(): MetricsRegistry {
 							for (const pair of labelKey.split(",")) {
 								const [k, v] = pair.split("=");
 								if (k && v) {
-									labels[k] = v.replace(/"/g, "");
+									labels[k] = v.replaceAll('"', "");
 								}
 							}
 						}
@@ -317,7 +317,7 @@ export function createMetricsRegistry(): MetricsRegistry {
 							}
 						}
 
-						const lastCount = buckets.counts[buckets.counts.length - 1];
+						const lastCount = buckets.counts.at(-1);
 						if (lastCount !== undefined) {
 							cumulative += lastCount;
 						}

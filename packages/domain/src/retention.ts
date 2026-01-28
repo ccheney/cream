@@ -425,7 +425,7 @@ export function getTransitionDecision(nodeInfo: NodeAgeInfo): TierTransitionResu
 
 	// Check if node should be deleted (beyond all tiers)
 	if (!expectedTier) {
-		const lastThreshold = tierThresholds[tierThresholds.length - 1];
+		const lastThreshold = tierThresholds.at(-1);
 		if (
 			lastThreshold &&
 			lastThreshold.endDay !== Number.MAX_SAFE_INTEGER &&

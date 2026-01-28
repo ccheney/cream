@@ -117,7 +117,7 @@ function transformData(data: PortfolioHistory, liveEquity?: number): SingleValue
 	if (liveEquity !== undefined && liveEquity > 0) {
 		const now = Math.floor(Date.now() / 1000) as Time; // Current time in Unix seconds
 		// Only append if it's after the last data point
-		const lastTime = chartData[chartData.length - 1]?.time;
+		const lastTime = chartData.at(-1)?.time;
 		if (!lastTime || now > lastTime) {
 			chartData.push({ time: now, value: liveEquity });
 		}

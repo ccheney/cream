@@ -258,9 +258,9 @@ export class PointInTimeUniverseResolver {
 		let latestDate: string | null = null;
 
 		if (currentConstituents.length > 0) {
-			const dates = currentConstituents.map((c) => c.dateAdded).sort();
+			const dates = currentConstituents.map((c) => c.dateAdded).toSorted();
 			earliestDate = dates[0] ?? null;
-			latestDate = dates[dates.length - 1] ?? null;
+			latestDate = dates.at(-1) ?? null;
 		}
 
 		return {

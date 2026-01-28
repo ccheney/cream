@@ -51,7 +51,7 @@ export function calculateCurrentDrawdown(equity: number[]): number {
 	}
 
 	const peak = Math.max(...equity);
-	const current = equity[equity.length - 1];
+	const current = equity.at(-1);
 
 	if (current === undefined || peak === 0) {
 		return 0;

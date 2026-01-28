@@ -93,7 +93,7 @@ export function calculateEMA(bars: OHLCVBar[], period: number): EMAResult | null
 		ema = bar.close * multiplier + ema * (1 - multiplier);
 	}
 
-	const lastBar = bars[bars.length - 1];
+	const lastBar = bars.at(-1);
 
 	return {
 		ema,
@@ -196,7 +196,7 @@ export function calculateMultipleEMAs(bars: OHLCVBar[], periods: number[]): Mult
 		return null;
 	}
 
-	const lastBar = bars[bars.length - 1];
+	const lastBar = bars.at(-1);
 
 	return {
 		emas,

@@ -105,12 +105,12 @@ function getSectionDisplayName(sectionKey: string): string {
 
 	// Handle 8-K item keys (e.g., "item_2_02" -> "Item 2.02")
 	if (sectionKey.startsWith("item_")) {
-		const itemNumber = sectionKey.replace("item_", "").replace("_", ".");
+		const itemNumber = sectionKey.replace("item_", "").replaceAll("_", ".");
 		return `Item ${itemNumber}`;
 	}
 
 	// Fallback: title case the key
-	return sectionKey.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
+	return sectionKey.replaceAll("_", " ").replace(/\b\w/g, (c) => c.toUpperCase());
 }
 
 // ============================================

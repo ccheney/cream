@@ -162,7 +162,7 @@ describe("filterEdgesByTime", () => {
 		const { filtered, stats } = filterEdgesByTime(edges, { asOfTimestamp: MAR_2024 });
 
 		expect(filtered.length).toBe(2);
-		expect(filtered.map((e) => e.id).sort()).toEqual(["e1", "e3"]);
+		expect(filtered.map((e) => e.id).toSorted()).toEqual(["e1", "e3"]);
 		expect(stats.expired).toBe(1);
 	});
 

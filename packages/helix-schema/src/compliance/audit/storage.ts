@@ -84,7 +84,7 @@ export class InMemoryAuditStorage implements AuditStorage {
 		if (this.entries.length === 0) {
 			return null;
 		}
-		return this.entries[this.entries.length - 1] ?? null;
+		return this.entries.at(-1) ?? null;
 	}
 
 	async verifyIntegrity(_entry: AuditLogEntry): Promise<boolean> {

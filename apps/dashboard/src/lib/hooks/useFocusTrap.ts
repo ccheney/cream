@@ -111,7 +111,7 @@ export function useFocusTrap(options: UseFocusTrapOptions = {}): UseFocusTrapRet
 	// Focus the last focusable element
 	const focusLast = useCallback(() => {
 		const elements = getFocusableElements();
-		const last = elements[elements.length - 1];
+		const last = elements.at(-1);
 		if (last) {
 			last.focus();
 		}
@@ -184,7 +184,7 @@ export function useFocusTrap(options: UseFocusTrapOptions = {}): UseFocusTrapRet
 				}
 
 				const firstElement = elements[0];
-				const lastElement = elements[elements.length - 1];
+				const lastElement = elements.at(-1);
 
 				if (!firstElement || !lastElement) {
 					event.preventDefault();

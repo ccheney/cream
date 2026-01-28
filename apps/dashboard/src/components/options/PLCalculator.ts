@@ -190,14 +190,11 @@ export function analyzeStrategy(legs: OptionLeg[], data: PLDataPoint[]): PLAnaly
 	}
 
 	const firstPoint = data[0];
-	const lastPoint = data[data.length - 1];
+	const lastPoint = data.at(-1);
 
 	// Long calls/puts have unlimited profit potential at price extremes
 	if (firstPoint && lastPoint) {
-		if (
-			maxProfitPrices[0] === firstPoint.price ||
-			maxProfitPrices[maxProfitPrices.length - 1] === lastPoint.price
-		) {
+		if (maxProfitPrices[0] === firstPoint.price || maxProfitPrices.at(-1) === lastPoint.price) {
 			const hasUnlimitedUpside = legs.some((leg) => leg.right === "CALL" && leg.quantity > 0);
 			const hasUnlimitedDownside = legs.some((leg) => leg.right === "PUT" && leg.quantity > 0);
 

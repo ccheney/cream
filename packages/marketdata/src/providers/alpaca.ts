@@ -873,7 +873,7 @@ export class AlpacaMarketDataClient {
 
 		await Promise.all(promises);
 
-		return Array.from(expirations).sort();
+		return Array.from(expirations).toSorted();
 	}
 
 	// ============================================

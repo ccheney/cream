@@ -152,7 +152,7 @@ export async function getOptionChain(
 
 		// Construct a symbol from underlying, expiration, type, strike
 		const typeChar = optionType === "call" ? "C" : "P";
-		const expirationShort = expiration.replace(/-/g, "").slice(2); // YYMMDD
+		const expirationShort = expiration.replaceAll("-", "").slice(2); // YYMMDD
 		const strikeStr = Math.floor(contract.strike * 1000)
 			.toString()
 			.padStart(8, "0");

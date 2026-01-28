@@ -155,7 +155,7 @@ app.openapi(candlesRoute, async (c) => {
 
 		if (recentBars.length > 0) {
 			const first = recentBars[0];
-			const last = recentBars[recentBars.length - 1];
+			const last = recentBars.at(-1);
 			log.debug(
 				{
 					symbol: upperSymbol,

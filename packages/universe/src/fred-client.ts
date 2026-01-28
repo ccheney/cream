@@ -448,12 +448,7 @@ class RateLimiter {
 	}
 }
 
-/**
- * Sleep utility for delays.
- */
-function sleep(ms: number): Promise<void> {
-	return new Promise((resolve) => setTimeout(resolve, ms));
-}
+const sleep = Bun.sleep;
 
 // ============================================
 // FRED Client

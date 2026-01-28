@@ -165,7 +165,7 @@ function mapConnectCodeToGrpcCode(code: string | number): GrpcErrorCode {
 		unauthenticated: GrpcErrorCode.UNAUTHENTICATED,
 	};
 
-	const normalizedCode = String(code).toLowerCase().replace(/-/g, "_");
+	const normalizedCode = String(code).toLowerCase().replaceAll("-", "_");
 	return codeMap[normalizedCode] || GrpcErrorCode.UNKNOWN;
 }
 
@@ -221,6 +221,4 @@ export class RetryBackoff {
 /**
  * Wait for a specified duration
  */
-export function sleep(ms: number): Promise<void> {
-	return new Promise((resolve) => setTimeout(resolve, ms));
-}
+export const sleep = Bun.sleep;

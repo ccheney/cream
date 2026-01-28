@@ -274,7 +274,7 @@ export function useKeyboardShortcuts(
 				const isPrintableWithShift =
 					modifiers.length === 1 && modifiers[0] === "shift" && key.length === 1;
 				if (!isPrintableWithShift) {
-					keyString = [...modifiers.sort(), key].join("+");
+					keyString = [...modifiers.toSorted(), key].join("+");
 				}
 			}
 

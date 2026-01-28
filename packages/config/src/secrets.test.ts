@@ -126,7 +126,7 @@ describe("MemorySecretsProvider", () => {
 		provider.set("C", "3");
 
 		const keys = await provider.list();
-		expect(keys.sort()).toEqual(["A", "B", "C"]);
+		expect(keys.toSorted()).toEqual(["A", "B", "C"]);
 	});
 
 	it("should delete secrets", async () => {
@@ -222,7 +222,7 @@ describe("EncryptedFileSecretsProvider", () => {
 		const provider = new EncryptedFileSecretsProvider(testFilePath, testPassword);
 
 		const keys = await provider.list();
-		expect(keys.sort()).toEqual(["API_KEY", "DB_PASSWORD"]);
+		expect(keys.toSorted()).toEqual(["API_KEY", "DB_PASSWORD"]);
 
 		// Cleanup
 		await Bun.file(testFilePath)

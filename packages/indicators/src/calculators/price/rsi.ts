@@ -120,7 +120,7 @@ export function calculateRSI(bars: OHLCVBar[], period = 14): RSIResult | null {
 		rsi = 100 - 100 / (1 + rs);
 	}
 
-	const lastBar = bars[bars.length - 1];
+	const lastBar = bars.at(-1);
 
 	return {
 		rsi,

@@ -74,7 +74,7 @@ export function calculateMomentum(bars: OHLCVBar[], period: number): MomentumRes
 		return null;
 	}
 
-	const endBar = bars[bars.length - 1];
+	const endBar = bars.at(-1);
 	const startBar = bars[bars.length - 1 - period];
 
 	if (!endBar || !startBar) {
@@ -162,7 +162,7 @@ export function calculateMultiPeriodMomentum(bars: OHLCVBar[]): MultiPeriodMomen
 		return null;
 	}
 
-	const lastBar = bars[bars.length - 1];
+	const lastBar = bars.at(-1);
 
 	return {
 		byPeriod,
@@ -190,7 +190,7 @@ export function calculateCustomMomentumPeriods(
 		return null;
 	}
 
-	const lastBar = bars[bars.length - 1];
+	const lastBar = bars.at(-1);
 
 	return {
 		byPeriod,

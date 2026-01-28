@@ -175,7 +175,7 @@ export async function buildSnapshot(
 
 	const primaryTimeframe = config.timeframes[0] ?? "1h";
 	const primaryCandles = candlesByTimeframe[primaryTimeframe] ?? [];
-	const latestCandle = primaryCandles[primaryCandles.length - 1];
+	const latestCandle = primaryCandles.at(-1);
 
 	if (!latestCandle) {
 		throw new Error(

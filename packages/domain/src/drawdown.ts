@@ -208,7 +208,7 @@ export function calculateDrawdownStats(equityCurve: EquityPoint[]): DrawdownStat
 	}
 
 	// Get current (last) values (safe - we checked length > 0 at start)
-	const lastPoint = equityCurve[equityCurve.length - 1];
+	const lastPoint = equityCurve.at(-1);
 	if (!lastPoint) {
 		return createEmptyDrawdownStats();
 	}

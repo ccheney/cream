@@ -129,12 +129,7 @@ export interface ShortInterestBatchJobConfig {
 // Helper Functions
 // ============================================
 
-/**
- * Sleep for specified milliseconds
- */
-function sleep(ms: number): Promise<void> {
-	return new Promise((resolve) => setTimeout(resolve, ms));
-}
+const sleep = Bun.sleep;
 
 /**
  * Calculate short % of float.

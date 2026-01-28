@@ -519,7 +519,7 @@ export class MockAdapter {
 			return null;
 		}
 
-		const lastCandle = candles[candles.length - 1];
+		const lastCandle = candles.at(-1);
 
 		return {
 			ticker: symbol,

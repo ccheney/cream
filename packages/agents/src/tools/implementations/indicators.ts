@@ -51,7 +51,7 @@ function calculateIndicatorFromCandles(
 			// calculateSMA returns number | null, not an array
 			const smaValue = calculateSMA(candles, period);
 			if (smaValue !== null && candles.length > 0) {
-				const lastBar = candles[candles.length - 1];
+				const lastBar = candles.at(-1);
 				if (lastBar) {
 					results.push({ value: smaValue, timestamp: lastBar.timestamp });
 				}
@@ -72,7 +72,7 @@ function calculateIndicatorFromCandles(
 			// calculateATR returns number | null, not ATRResult
 			const atrValue = calculateATR(candles, period);
 			if (atrValue !== null && candles.length > 0) {
-				const lastBar = candles[candles.length - 1];
+				const lastBar = candles.at(-1);
 				if (lastBar) {
 					results.push({ value: atrValue, timestamp: lastBar.timestamp });
 				}

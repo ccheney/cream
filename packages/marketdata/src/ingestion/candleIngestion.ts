@@ -347,9 +347,7 @@ export function checkStaleness(
 // Utilities
 // ============================================
 
-function sleep(ms: number): Promise<void> {
-	return new Promise((resolve) => setTimeout(resolve, ms));
-}
+const sleep = Bun.sleep;
 
 /**
  * Calculate derived timeframes from base candles
@@ -378,7 +376,7 @@ export function aggregateCandles(candles: Candle[], targetTimeframe: Timeframe):
 	for (let i = 0; i < candles.length; i += ratio) {
 		const group = candles.slice(i, i + ratio);
 		const first = group[0];
-		const last = group[group.length - 1];
+		const last = group.at(-1);
 		if (!first || !last) {
 			continue;
 		}

@@ -194,7 +194,7 @@ export const selectNewEventCount = (state: EventFeedStore): number => state.newE
 export const selectHasNewEvents = (state: EventFeedStore): boolean => state.newEventCount > 0;
 
 export const selectLatestEvent = (state: EventFeedStore): FeedEvent | null =>
-	state.events.length > 0 ? (state.events[state.events.length - 1] ?? null) : null;
+	state.events.length > 0 ? (state.events.at(-1) ?? null) : null;
 
 export const selectEventsByType =
 	(type: EventType) =>
@@ -222,7 +222,7 @@ export function subscribeToNewEvents(callback: (event: FeedEvent) => void): () =
 				return;
 			}
 
-			const latestEvent = events[events.length - 1];
+			const latestEvent = events.at(-1);
 			if (!latestEvent) {
 				return;
 			}
@@ -250,7 +250,7 @@ export function subscribeToEventType(
 				return;
 			}
 
-			const latestEvent = typeEvents[typeEvents.length - 1];
+			const latestEvent = typeEvents.at(-1);
 			if (!latestEvent) {
 				return;
 			}

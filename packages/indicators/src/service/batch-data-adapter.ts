@@ -325,7 +325,7 @@ export class CorporateActionsRepositoryAdapter implements CorporateActionsReposi
 			return null;
 		}
 
-		const nextExDate = upcomingDividends[upcomingDividends.length - 1]?.exDate;
+		const nextExDate = upcomingDividends.at(-1)?.exDate;
 		if (!nextExDate) {
 			return null;
 		}

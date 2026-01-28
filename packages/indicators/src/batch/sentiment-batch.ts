@@ -153,12 +153,7 @@ export interface SentimentScoringConfig {
 // Helper Functions
 // ============================================
 
-/**
- * Sleep for specified milliseconds
- */
-function sleep(ms: number): Promise<void> {
-	return new Promise((resolve) => setTimeout(resolve, ms));
-}
+const sleep = Bun.sleep;
 
 /**
  * Convert sentiment classification to numeric score.

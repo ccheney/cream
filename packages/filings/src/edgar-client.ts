@@ -209,7 +209,7 @@ export class EdgarClient {
 	 */
 	getFilingUrl(filing: Filing): string {
 		const cikUnpadded = filing.company.cik.replace(/^0+/, "");
-		const accessionClean = filing.accessionNumber.replace(/-/g, "");
+		const accessionClean = filing.accessionNumber.replaceAll("-", "");
 		return `https://www.sec.gov/Archives/edgar/data/${cikUnpadded}/${accessionClean}/${filing.primaryDocument}`;
 	}
 }

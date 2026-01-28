@@ -106,7 +106,7 @@ export function calculateBollingerBands(
 	const bandwidth = middle > 0 ? ((upper - lower) / middle) * 100 : 0;
 
 	// Calculate %B
-	const lastBar = bars[bars.length - 1];
+	const lastBar = bars.at(-1);
 	if (!lastBar) {
 		return null;
 	}
@@ -245,7 +245,7 @@ export function detectBollingerSqueeze(bandwidthHistory: number[], threshold = 1
 	const percentileIndex = Math.floor((threshold / 100) * sorted.length);
 	const percentileValue = sorted[percentileIndex] ?? sorted[0];
 
-	const currentBandwidth = bandwidthHistory[bandwidthHistory.length - 1];
+	const currentBandwidth = bandwidthHistory.at(-1);
 	if (currentBandwidth === undefined || percentileValue === undefined) {
 		return false;
 	}

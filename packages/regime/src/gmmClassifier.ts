@@ -313,7 +313,7 @@ function assignRegimeLabels(clusters: GMMCluster[]): void {
 	const sorted = clusters.toSorted((a, b) => (a.mean[1] ?? 0) - (b.mean[1] ?? 0));
 
 	const lowestVol = sorted[0];
-	const highestVol = sorted[sorted.length - 1];
+	const highestVol = sorted.at(-1);
 
 	if (lowestVol) {
 		lowestVol.regime = "LOW_VOL";
@@ -332,7 +332,7 @@ function assignRegimeLabels(clusters: GMMCluster[]): void {
 		}
 	}
 	if (remaining.length >= 2) {
-		const last = remaining[remaining.length - 1];
+		const last = remaining.at(-1);
 		if (last) {
 			last.regime = "BULL_TREND";
 		}
@@ -360,7 +360,7 @@ export function classifyWithGMM(model: GMMModel, candles: OHLCVBar[]): GMMClassi
 		return null;
 	}
 
-	const latestFeature = features[features.length - 1];
+	const latestFeature = features.at(-1);
 	if (!latestFeature) {
 		return null;
 	}

@@ -933,7 +933,7 @@ export function applyTransforms(
 		}
 
 		const lookbackValues = series.slice(-lookbackPeriod);
-		let currentValue = series[series.length - 1];
+		let currentValue = series.at(-1);
 		if (currentValue === undefined) {
 			continue;
 		}

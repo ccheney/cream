@@ -103,7 +103,7 @@ export function extractSingleFeature(
 	config: FeatureExtractionConfig = DEFAULT_FEATURE_CONFIG,
 ): RegimeFeatures | null {
 	const features = extractFeatures(candles, config);
-	return features[features.length - 1] ?? null;
+	return features.at(-1) ?? null;
 }
 
 export function getMinimumCandleCount(

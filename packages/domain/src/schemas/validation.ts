@@ -208,12 +208,12 @@ export function safeTickerSymbol(): z.ZodString {
  */
 export function sanitizeString(value: string): string {
 	return value
-		.replace(/'/g, "''")
-		.replace(/"/g, '""')
-		.replace(/;/g, "")
-		.replace(/--/g, "")
-		.replace(/\/\*/g, "")
-		.replace(/\*\//g, "");
+		.replaceAll("'", "''")
+		.replaceAll('"', '""')
+		.replaceAll(";", "")
+		.replaceAll("--", "")
+		.replaceAll("/*", "")
+		.replaceAll("*/", "");
 }
 
 // ============================================

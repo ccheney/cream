@@ -90,7 +90,7 @@ export async function getAvailablePool(): Promise<ConnectionPool | null> {
 		}
 	}
 
-	const lastPool = connectionPools[connectionPools.length - 1];
+	const lastPool = connectionPools.at(-1);
 	if (
 		lastPool &&
 		lastPool.contracts.size >= CONNECTION_SPAWN_THRESHOLD &&

@@ -87,7 +87,7 @@ export function calculateAmihud(bars: OHLCVBar[], period = 20): AmihudResult | n
 
 	const illiquidity = sumRatio / validDays;
 	const avgDollarVolume = totalDollarVolume / validDays;
-	const latestBar = bars[bars.length - 1];
+	const latestBar = bars.at(-1);
 
 	return {
 		illiquidity,

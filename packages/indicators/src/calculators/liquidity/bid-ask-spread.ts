@@ -90,7 +90,7 @@ export function calculateAverageBidAskSpread(quotes: Quote[]): BidAskSpreadResul
 	const avgSpread = validResults.reduce((sum, r) => sum + r.spread, 0) / validResults.length;
 	const avgSpreadPct = validResults.reduce((sum, r) => sum + r.spreadPct, 0) / validResults.length;
 	const avgMidpoint = validResults.reduce((sum, r) => sum + r.midpoint, 0) / validResults.length;
-	const latestTimestamp = validResults[validResults.length - 1]?.timestamp ?? Date.now();
+	const latestTimestamp = validResults.at(-1)?.timestamp ?? Date.now();
 
 	return {
 		spread: avgSpread,

@@ -7,7 +7,6 @@
  * @see https://docs.kalshi.com/websockets/introduction
  */
 
-import * as fs from "node:fs";
 import { generateAuthHeaders } from "./auth.js";
 import { MarketStateCache } from "./cache.js";
 import { handleMessage } from "./handlers.js";
@@ -39,7 +38,7 @@ export class KalshiWebSocketClient {
 	private reconnectAttempts = 0;
 	private reconnectTimer: Timer | null = null;
 	private heartbeatTimer: Timer | null = null;
-	private readonly config: ResolvedConfig;
+	private config: ResolvedConfig;
 	private readonly cache: MarketStateCache;
 
 	private subscriptions: Map<string, Set<KalshiWebSocketCallback>> = new Map();
@@ -49,15 +48,14 @@ export class KalshiWebSocketClient {
 	private onDisconnectCallbacks: Set<(reason?: string) => void> = new Set();
 	private onErrorCallbacks: Set<(error: Error) => void> = new Set();
 
+	private readonly privateKeyPath?: string;
+
 	constructor(config: KalshiWebSocketConfig = {}) {
-		let privateKeyPem = config.privateKeyPem ?? "";
-		if (!privateKeyPem && config.privateKeyPath) {
-			privateKeyPem = fs.readFileSync(config.privateKeyPath, "utf-8");
-		}
+		this.privateKeyPath = config.privateKeyPath;
 
 		this.config = {
 			apiKeyId: config.apiKeyId ?? "",
-			privateKeyPem,
+			privateKeyPem: config.privateKeyPem ?? "",
 			demo: config.demo ?? false,
 			autoReconnect: config.autoReconnect ?? true,
 			cacheTtlMs: config.cacheTtlMs ?? 5 * 60 * 1000,
@@ -92,6 +90,11 @@ export class KalshiWebSocketClient {
 
 		this.connectionState = "connecting";
 		const url = this.config.demo ? KALSHI_DEMO_WEBSOCKET_URL : KALSHI_WEBSOCKET_URL;
+
+		// Load private key from file if not provided directly
+		if (!this.config.privateKeyPem && this.privateKeyPath) {
+			this.config.privateKeyPem = await Bun.file(this.privateKeyPath).text();
+		}
 
 		const { promise, resolve, reject } = Promise.withResolvers<void>();
 		try {

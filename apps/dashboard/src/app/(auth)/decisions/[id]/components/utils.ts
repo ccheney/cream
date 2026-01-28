@@ -11,7 +11,7 @@ export function formatSizeUnit(unit: string): string {
 		CONTRACTS: "contracts",
 		DOLLARS: "",
 	};
-	return map[unit] ?? unit.toLowerCase().replace(/_/g, " ");
+	return map[unit] ?? unit.toLowerCase().replaceAll("_", " ");
 }
 
 export function formatSize(size: number, unit: string): string {
@@ -54,7 +54,7 @@ export function formatPrice(price: number | null): string {
 }
 
 export function formatAgentName(type: string): string {
-	return type.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
+	return type.replaceAll("_", " ").replace(/\b\w/g, (c) => c.toUpperCase());
 }
 
 export const actionColors: Record<string, string> = {

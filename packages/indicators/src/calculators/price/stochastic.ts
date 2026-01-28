@@ -90,7 +90,7 @@ function calculateRawK(bars: OHLCVBar[]): number | null {
 		return 50; // No price movement
 	}
 
-	const lastBar = bars[bars.length - 1];
+	const lastBar = bars.at(-1);
 	if (!lastBar) {
 		return null;
 	}
@@ -140,7 +140,7 @@ export function calculateStochastic(
 	}
 
 	// Current %K
-	const k = kValues[kValues.length - 1];
+	const k = kValues.at(-1);
 	if (k === undefined) {
 		return null;
 	}
@@ -149,7 +149,7 @@ export function calculateStochastic(
 	const recentKValues = kValues.slice(-dPeriod);
 	const d = recentKValues.reduce((sum, val) => sum + val, 0) / dPeriod;
 
-	const lastBar = bars[bars.length - 1];
+	const lastBar = bars.at(-1);
 
 	return {
 		k,
@@ -207,7 +207,7 @@ export function calculateSlowStochastic(
 	}
 
 	// Current Slow %K
-	const slowK = slowKValues[slowKValues.length - 1];
+	const slowK = slowKValues.at(-1);
 	if (slowK === undefined) {
 		return null;
 	}
@@ -217,12 +217,12 @@ export function calculateSlowStochastic(
 	const slowD = recentSlowK.reduce((sum, val) => sum + val, 0) / slowKPeriod;
 
 	// Current Fast %K for reference
-	const k = kValues[kValues.length - 1];
+	const k = kValues.at(-1);
 	if (k === undefined) {
 		return null;
 	}
 
-	const lastBar = bars[bars.length - 1];
+	const lastBar = bars.at(-1);
 
 	return {
 		k,

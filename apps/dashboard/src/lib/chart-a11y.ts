@@ -100,7 +100,7 @@ export function calculateStats(data: number[]): ChartStats {
 	}
 
 	const first = data[0];
-	const last = data[data.length - 1];
+	const last = data.at(-1);
 	if (first === undefined || last === undefined) {
 		return {};
 	}
@@ -263,12 +263,14 @@ export function getFocusStyleString(): string {
  * Focus trap for modal chart views.
  */
 export function createFocusTrap(container: HTMLElement): () => void {
-	const focusableElements = container.querySelectorAll<HTMLElement>(
-		'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])',
+	const focusableElements = Array.from(
+		container.querySelectorAll<HTMLElement>(
+			'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])',
+		),
 	);
 
 	const firstElement = focusableElements[0];
-	const lastElement = focusableElements[focusableElements.length - 1];
+	const lastElement = focusableElements.at(-1);
 
 	const handleKeyDown = (event: KeyboardEvent) => {
 		if (event.key !== "Tab") {
@@ -331,7 +333,7 @@ export function toCSV<T extends Record<string, unknown>>(
 				const value = row[col.key];
 				const str = String(value ?? "");
 				// Escape quotes and wrap in quotes
-				return `"${str.replace(/"/g, '""')}"`;
+				return `"${str.replaceAll('"', '""')}"`;
 			})
 			.join(","),
 	);

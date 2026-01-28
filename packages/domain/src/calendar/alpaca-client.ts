@@ -83,12 +83,7 @@ function mapHttpStatusToErrorCode(status: number): CalendarErrorCode {
 	}
 }
 
-/**
- * Sleep for a given number of milliseconds.
- */
-function sleep(ms: number): Promise<void> {
-	return new Promise((resolve) => setTimeout(resolve, ms));
-}
+const sleep = Bun.sleep;
 
 /**
  * Format date to YYYY-MM-DD string.

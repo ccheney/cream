@@ -11,7 +11,6 @@
  * - 2: Runtime not found (Bun or Rust missing)
  */
 
-import { exists } from "node:fs/promises";
 import { dirname, join } from "node:path";
 import { parseArgs } from "node:util";
 import { colors } from "./colors.js";
@@ -34,7 +33,7 @@ const REQUIRED_RUNTIMES = ["Bun", "Rust"];
 
 async function findProjectRoot(): Promise<string> {
 	let rootDir = process.cwd();
-	while (!(await exists(join(rootDir, "package.json")))) {
+	while (!(await Bun.file(join(rootDir, "package.json")).exists())) {
 		const parent = dirname(rootDir);
 		if (parent === rootDir) {
 			log.error("Could not find project root (package.json)");

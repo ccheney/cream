@@ -516,9 +516,7 @@ export function createShutdownManager(
 	};
 }
 
-function sleep(ms: number): Promise<void> {
-	return new Promise((resolve) => setTimeout(resolve, ms));
-}
+const sleep = Bun.sleep;
 
 /** Use in the upgrade handler to reject new connections during shutdown. */
 export function shouldRejectConnection(manager: ShutdownManager): boolean {
@@ -529,28 +527,19 @@ export function shouldRejectConnection(manager: ShutdownManager): boolean {
 export function createHealthCheckHandler(manager: ShutdownManager) {
 	return (): Response => {
 		if (!manager.isHealthy()) {
-			return new Response(
-				JSON.stringify({
+			return Response.json(
+				{
 					status: "unhealthy",
 					reason: "shutting_down",
 					phase: manager.getCurrentPhase(),
-				}),
-				{
-					status: 503,
-					headers: { "Content-Type": "application/json" },
 				},
+				{ status: 503 },
 			);
 		}
 
-		return new Response(
-			JSON.stringify({
-				status: "healthy",
-			}),
-			{
-				status: 200,
-				headers: { "Content-Type": "application/json" },
-			},
-		);
+		return Response.json({
+			status: "healthy",
+		});
 	};
 }
 

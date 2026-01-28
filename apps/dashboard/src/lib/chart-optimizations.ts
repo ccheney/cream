@@ -78,7 +78,7 @@ export function downsampleLTTB(data: Point[], options: DownsampleOptions): Point
 	if (threshold <= 2) {
 		// Return first and last point
 		const first = data[0];
-		const last = data[data.length - 1];
+		const last = data.at(-1);
 		if (!first || !last) {
 			return data;
 		}
@@ -154,7 +154,7 @@ export function downsampleLTTB(data: Point[], options: DownsampleOptions): Point
 	}
 
 	// Always add last point
-	const lastPoint = data[data.length - 1];
+	const lastPoint = data.at(-1);
 	if (lastPoint) {
 		sampled.push(lastPoint);
 	}
@@ -261,7 +261,7 @@ export function simplifyDouglasPeucker(points: Point[], epsilon: number): Point[
 	let maxIndex = 0;
 
 	const start = points[0];
-	const end = points[points.length - 1];
+	const end = points.at(-1);
 
 	if (!start || !end) {
 		return points;
@@ -344,8 +344,8 @@ export function sampleEveryN<T>(data: T[], n: number): T[] {
 	}
 
 	// Always include last point
-	const lastSampled = sampled[sampled.length - 1];
-	const lastData = data[data.length - 1];
+	const lastSampled = sampled.at(-1);
+	const lastData = data.at(-1);
 	if (lastData !== undefined && lastSampled !== lastData) {
 		sampled.push(lastData);
 	}

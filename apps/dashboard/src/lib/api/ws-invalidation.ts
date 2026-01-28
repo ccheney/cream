@@ -345,7 +345,7 @@ export function handleWSMessage(message: WSMessage): void {
 					continue;
 				}
 
-				const lastCandle = oldData[oldData.length - 1];
+				const lastCandle = oldData.at(-1);
 				if (!lastCandle) {
 					continue;
 				}
@@ -376,7 +376,7 @@ export function handleWSMessage(message: WSMessage): void {
 						volume: agg.volume,
 					};
 					// Extract limit from query key (last element)
-					const limit = (queryKey[queryKey.length - 1] as number) || 500;
+					const limit = (queryKey.at(-1) as number) || 500;
 					newData = [...oldData, newCandle];
 					if (newData.length > limit) {
 						newData = newData.slice(-limit);

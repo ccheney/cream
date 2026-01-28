@@ -107,12 +107,12 @@ function parseDate(dateStr: string): Date | null {
  */
 function cleanText(text: string): string {
 	return text
-		.replace(/&nbsp;/g, " ")
-		.replace(/&amp;/g, "&")
-		.replace(/&lt;/g, "<")
-		.replace(/&gt;/g, ">")
-		.replace(/&quot;/g, '"')
-		.replace(/&#39;/g, "'")
+		.replaceAll("&nbsp;", " ")
+		.replaceAll("&amp;", "&")
+		.replaceAll("&lt;", "<")
+		.replaceAll("&gt;", ">")
+		.replaceAll("&quot;", '"')
+		.replaceAll("&#39;", "'")
 		.replace(/<[^>]*>/g, "") // Strip HTML tags
 		.replace(/\s+/g, " ") // Normalize whitespace
 		.trim();

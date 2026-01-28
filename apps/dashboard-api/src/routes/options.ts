@@ -299,7 +299,7 @@ app.openapi(chainRoute, async (c) => {
 				expirationSet.add(contract.expirationDate);
 			}
 		}
-		const expirations = Array.from(expirationSet).sort();
+		const expirations = Array.from(expirationSet).toSorted();
 
 		// Group by strike
 		const strikeMap = new Map<

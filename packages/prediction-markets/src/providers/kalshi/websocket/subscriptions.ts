@@ -18,7 +18,7 @@ export interface SubscriptionManager {
 }
 
 export function createSubscriptionKey(channel: string, tickers: string[]): string {
-	return `${channel}:${tickers.sort().join(",")}`;
+	return `${channel}:${tickers.toSorted().join(",")}`;
 }
 
 export function createSubscribeCommand(

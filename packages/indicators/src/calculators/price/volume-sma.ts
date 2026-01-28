@@ -42,7 +42,7 @@ export function calculateVolumeSMA(
 	const volumeSum = recentBars.reduce((sum, bar) => sum + bar.volume, 0);
 	const volumeSma = volumeSum / period;
 
-	const lastBar = bars[bars.length - 1];
+	const lastBar = bars.at(-1);
 	if (!lastBar) {
 		return null;
 	}

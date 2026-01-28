@@ -5,7 +5,6 @@
  * event stream with automatic reconnection and database persistence.
  */
 
-import * as fs from "node:fs";
 import type { PredictionMarketsConfig } from "@cream/config";
 import {
 	createKalshiWebSocketClient,
@@ -87,7 +86,7 @@ export class UnifiedStreamingService {
 		if (this.config.kalshiEnabled) {
 			let privateKeyPem = this.config.kalshiPrivateKeyPem;
 			if (!privateKeyPem && this.config.kalshiPrivateKeyPath) {
-				privateKeyPem = fs.readFileSync(this.config.kalshiPrivateKeyPath, "utf-8");
+				privateKeyPem = await Bun.file(this.config.kalshiPrivateKeyPath).text();
 			}
 
 			this.kalshiClient = createKalshiWebSocketClient({

@@ -318,7 +318,7 @@ const CACHE_TTL_MS = 15 * 60 * 1000; // 15 minutes
 function createCacheKey(positions: PositionForExposure[], nav: number): string {
 	const positionHash = positions
 		.map((p) => `${p.symbol}:${p.side}:${p.quantity}`)
-		.sort()
+		.toSorted()
 		.join("|");
 	return `var:${positionHash}:${Math.round(nav)}`;
 }

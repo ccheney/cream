@@ -119,10 +119,7 @@ export function createHealthServer(deps: HealthServerDeps, port?: number) {
 	async function handleTrigger(service: WorkerService): Promise<Response> {
 		const trigger = serviceTriggerMap[service];
 		if (!trigger) {
-			return new Response(JSON.stringify({ error: "Service triggers not configured" }), {
-				status: 503,
-				headers: { "Content-Type": "application/json" },
-			});
+			return Response.json({ error: "Service triggers not configured" }, { status: 503 });
 		}
 
 		try {
@@ -130,18 +127,12 @@ export function createHealthServer(deps: HealthServerDeps, port?: number) {
 			const result = await trigger();
 			log.info({ service, result }, "Service trigger completed");
 
-			return new Response(JSON.stringify(result), {
-				status: result.success ? 200 : 500,
-				headers: { "Content-Type": "application/json" },
-			});
+			return Response.json(result, { status: result.success ? 200 : 500 });
 		} catch (error) {
 			const message = error instanceof Error ? error.message : "Unknown error";
 			log.error({ service, error: message }, "Service trigger failed");
 
-			return new Response(JSON.stringify({ success: false, message, error: message }), {
-				status: 500,
-				headers: { "Content-Type": "application/json" },
-			});
+			return Response.json({ success: false, message, error: message }, { status: 500 });
 		}
 	}
 
@@ -156,19 +147,13 @@ export function createHealthServer(deps: HealthServerDeps, port?: number) {
 
 				if (url.pathname === "/health" || url.pathname === "/") {
 					const health = buildHealthResponse();
-					return new Response(JSON.stringify(health, null, 2), {
-						status: 200,
-						headers: { "Content-Type": "application/json" },
-					});
+					return Response.json(health);
 				}
 
 				if (url.pathname === "/reload") {
 					if (req.method === "POST") {
 						deps.onReload().catch(() => {});
-						return new Response(JSON.stringify({ status: "reloading" }), {
-							status: 202,
-							headers: { "Content-Type": "application/json" },
-						});
+						return Response.json({ status: "reloading" }, { status: 202 });
 					}
 					return new Response("Method not allowed", { status: 405 });
 				}
@@ -192,10 +177,7 @@ export function createHealthServer(deps: HealthServerDeps, port?: number) {
 					];
 
 					if (!validServices.includes(service)) {
-						return new Response(JSON.stringify({ error: `Unknown service: ${service}` }), {
-							status: 400,
-							headers: { "Content-Type": "application/json" },
-						});
+						return Response.json({ error: `Unknown service: ${service}` }, { status: 400 });
 					}
 
 					return handleTrigger(service);

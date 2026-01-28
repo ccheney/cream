@@ -2,7 +2,6 @@
  * Version validators for runtimes and packages.
  */
 
-import { exists } from "node:fs/promises";
 import { join } from "node:path";
 import type { VersionConstraint } from "./types.js";
 import { compareVersions, normalizeVersion } from "./version.js";
@@ -132,9 +131,10 @@ export async function checkRustCrates(rootDir: string): Promise<VersionConstrain
 	];
 
 	for (const cargoPath of cargoFiles) {
-		if (!(await exists(cargoPath))) continue;
+		const cargoFile = Bun.file(cargoPath);
+		if (!(await cargoFile.exists())) continue;
 
-		const content = await Bun.file(cargoPath).text();
+		const content = await cargoFile.text();
 
 		for (const [crate, required] of Object.entries(RUST_CRATE_REQUIREMENTS)) {
 			// Parse simple version from Cargo.toml

@@ -9,7 +9,6 @@
  * from @cream/agents) via the config.
  */
 
-import { randomUUID } from "node:crypto";
 import { EntityLinker, type EntityLinkerConfig } from "./linking/index.js";
 import {
 	parseEconomicCalendarEvents,
@@ -162,7 +161,7 @@ export class ExtractionPipeline {
 
 			// Stage 4: Create event
 			return {
-				eventId: randomUUID(),
+				eventId: crypto.randomUUID(),
 				sourceType,
 				eventType: extraction.eventType,
 				eventTime,

@@ -76,7 +76,7 @@ export const HistoryChart = memo(function HistoryChart({
 			.map((p, i) => `${i === 0 ? "M" : "L"} ${p.x.toFixed(2)} ${p.y.toFixed(2)}`)
 			.join(" ");
 
-		const lastPt = pts[pts.length - 1];
+		const lastPt = pts.at(-1);
 		const firstPt = pts[0];
 		const fillPathStr =
 			lastPt && firstPt
@@ -97,7 +97,7 @@ export const HistoryChart = memo(function HistoryChart({
 			return true;
 		}
 		const first = data[0]?.value ?? 0;
-		const last = data[data.length - 1]?.value ?? 0;
+		const last = data.at(-1)?.value ?? 0;
 		return last >= first;
 	}, [data]);
 
@@ -151,7 +151,7 @@ export const HistoryChart = memo(function HistoryChart({
 				{/* X-axis labels */}
 				{(() => {
 					const firstDate = data[0]?.date;
-					const lastDate = data[data.length - 1]?.date;
+					const lastDate = data.at(-1)?.date;
 					return (
 						<>
 							{firstDate && (

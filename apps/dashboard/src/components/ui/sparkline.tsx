@@ -79,7 +79,7 @@ function generatePathData(
 		.join(" ");
 
 	// Build fill path (closed polygon for gradient fill)
-	const fillPath = `${linePath} L ${points[points.length - 1]?.x.toFixed(2)} ${height - padding} L ${padding} ${height - padding} Z`;
+	const fillPath = `${linePath} L ${points.at(-1)?.x.toFixed(2)} ${height - padding} L ${padding} ${height - padding} Z`;
 
 	return { linePath, fillPath };
 }
@@ -120,7 +120,7 @@ export const Sparkline = memo(function Sparkline({
 		if (data.length < 2) {
 			return true;
 		}
-		const last = data[data.length - 1];
+		const last = data.at(-1);
 		const first = data[0];
 		return last !== undefined && first !== undefined ? last >= first : true;
 	}, [data]);
@@ -160,7 +160,7 @@ export const Sparkline = memo(function Sparkline({
 	}
 
 	// Calculate percentage change for ARIA label
-	const lastVal = data[data.length - 1] ?? 0;
+	const lastVal = data.at(-1) ?? 0;
 	const firstVal = data[0] ?? 1;
 	const percentChange = ((lastVal - firstVal) / firstVal) * 100;
 	const ariaLabel = `Price trend: ${isPositive ? "up" : "down"} ${Math.abs(percentChange).toFixed(1)}% over ${data.length} points`;

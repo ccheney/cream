@@ -50,7 +50,7 @@ export function calculateTurnover(bars: OHLCVBar[], period = 20): TurnoverResult
 
 	// Get lookback bars for average (excluding current)
 	const lookbackBars = bars.slice(-period - 1, -1);
-	const currentBar = bars[bars.length - 1];
+	const currentBar = bars.at(-1);
 
 	if (!currentBar || lookbackBars.length === 0) {
 		return null;

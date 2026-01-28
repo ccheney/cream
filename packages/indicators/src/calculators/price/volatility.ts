@@ -100,7 +100,7 @@ export function calculateCloseToCloseVolatility(
 	const dailyVol = Math.sqrt(variance);
 
 	const volatility = dailyVol * Math.sqrt(annualizationFactor);
-	const lastBar = bars[bars.length - 1];
+	const lastBar = bars.at(-1);
 
 	return {
 		volatility,
@@ -154,7 +154,7 @@ export function calculateParkinsonVolatility(
 	const dailyVariance = parkinsonConstant * (sumSquaredLogRange / validBars);
 	const volatility = Math.sqrt(dailyVariance) * Math.sqrt(annualizationFactor);
 
-	const lastBar = bars[bars.length - 1];
+	const lastBar = bars.at(-1);
 
 	return {
 		volatility,
@@ -213,7 +213,7 @@ export function calculateGarmanKlassVolatility(
 	const avgDailyVariance = sumVariance / validBars;
 	const volatility = Math.sqrt(Math.max(0, avgDailyVariance)) * Math.sqrt(annualizationFactor);
 
-	const lastBar = bars[bars.length - 1];
+	const lastBar = bars.at(-1);
 
 	return {
 		volatility,
@@ -242,7 +242,7 @@ export function calculateVolatilityComparison(
 
 	const average = values.length > 0 ? values.reduce((sum, v) => sum + v, 0) / values.length : null;
 
-	const lastBar = bars[bars.length - 1];
+	const lastBar = bars.at(-1);
 
 	return {
 		closeToClose: c2c?.volatility ?? null,
