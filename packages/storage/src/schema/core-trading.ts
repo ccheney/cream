@@ -1,8 +1,8 @@
 /**
  * Core Trading Tables
  *
- * decisions, agent_outputs, orders, positions, position_history,
- * portfolio_snapshots, config_versions, cycles, cycle_events
+ * decisions, agent_outputs, orders, positions, portfolio_snapshots,
+ * config_versions, cycles, cycle_events
  */
 import { sql } from "drizzle-orm";
 import {
@@ -53,8 +53,6 @@ export const decisions = pgTable(
 		sizeUnit: sizeUnitEnum("size_unit").notNull().default("SHARES"),
 
 		entryPrice: numeric("entry_price", { precision: 12, scale: 4 }),
-		stopLoss: numeric("stop_loss", { precision: 12, scale: 4 }),
-		takeProfit: numeric("take_profit", { precision: 12, scale: 4 }),
 		stopPrice: numeric("stop_price", { precision: 12, scale: 4 }),
 		targetPrice: numeric("target_price", { precision: 12, scale: 4 }),
 
@@ -194,27 +192,6 @@ export const positions = pgTable(
 		uniqueIndex("idx_positions_symbol_env_open")
 			.on(table.symbol, table.environment)
 			.where(sql`${table.closedAt} IS NULL`),
-	],
-);
-
-// position_history: Historical snapshots for P&L tracking
-export const positionHistory = pgTable(
-	"position_history",
-	{
-		id: serial("id").primaryKey(),
-		positionId: uuid("position_id")
-			.notNull()
-			.references(() => positions.id, { onDelete: "cascade" }),
-		timestamp: timestamp("timestamp", { withTimezone: true }).notNull().defaultNow(),
-		price: numeric("price", { precision: 12, scale: 4 }).notNull(),
-		qty: numeric("qty", { precision: 14, scale: 4 }).notNull(),
-		unrealizedPnl: numeric("unrealized_pnl", { precision: 14, scale: 2 }),
-		marketValue: numeric("market_value", { precision: 14, scale: 2 }),
-	},
-	(table) => [
-		index("idx_position_history_position_id").on(table.positionId),
-		index("idx_position_history_timestamp").on(table.timestamp),
-		index("idx_position_history_position_ts").on(table.positionId, table.timestamp),
 	],
 );
 

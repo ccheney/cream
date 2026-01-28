@@ -5,15 +5,7 @@
  */
 import { relations } from "drizzle-orm";
 import { account, session, twoFactor, user } from "./auth";
-import {
-	agentOutputs,
-	cycleEvents,
-	cycles,
-	decisions,
-	orders,
-	positionHistory,
-	positions,
-} from "./core-trading";
+import { agentOutputs, cycleEvents, cycles, decisions, orders, positions } from "./core-trading";
 import { thesisState, thesisStateHistory } from "./thesis";
 import { alertSettings, userPreferences } from "./user-settings";
 
@@ -45,7 +37,7 @@ export const ordersRelations = relations(orders, ({ one }) => ({
 }));
 
 // Positions relations
-export const positionsRelations = relations(positions, ({ one, many }) => ({
+export const positionsRelations = relations(positions, ({ one }) => ({
 	decision: one(decisions, {
 		fields: [positions.decisionId],
 		references: [decisions.id],
@@ -53,15 +45,6 @@ export const positionsRelations = relations(positions, ({ one, many }) => ({
 	thesis: one(thesisState, {
 		fields: [positions.thesisId],
 		references: [thesisState.thesisId],
-	}),
-	history: many(positionHistory),
-}));
-
-// Position history relations
-export const positionHistoryRelations = relations(positionHistory, ({ one }) => ({
-	position: one(positions, {
-		fields: [positionHistory.positionId],
-		references: [positions.id],
 	}),
 }));
 
