@@ -23,9 +23,9 @@ afterAll(() => {
 	}
 });
 
-// Mock database
+// Mock database - must export all functions from db.ts
 mock.module("../db", () => ({
-	getRegimeLabelsRepo: async () => ({
+	getRegimeLabelsRepo: () => ({
 		getCurrent: async (symbol: string) => {
 			if (symbol === "_MARKET") {
 				return {
@@ -39,6 +39,36 @@ mock.module("../db", () => ({
 			return null;
 		},
 	}),
+	// Stub implementations for all other exports
+	getDrizzleDb: () => ({}),
+	closeDb: async () => {},
+	getDecisionsRepo: () => ({}),
+	getAlertsRepo: () => ({}),
+	getAlertSettingsRepo: () => ({}),
+	getOrdersRepo: () => ({}),
+	getPositionsRepo: () => ({}),
+	getAgentOutputsRepo: () => ({}),
+	getPortfolioSnapshotsRepo: () => ({}),
+	getConfigVersionsRepo: () => ({}),
+	getThesesRepo: () => ({}),
+	getTradingConfigRepo: () => ({}),
+	getAgentConfigsRepo: () => ({}),
+	getUniverseConfigsRepo: () => ({}),
+	getUserPreferencesRepo: () => ({}),
+	getAuditLogRepo: () => ({}),
+	getConstraintsConfigRepo: () => ({}),
+	getCyclesRepo: () => ({}),
+	getFilingsRepo: () => ({}),
+	getFilingSyncRunsRepo: () => ({}),
+	getSystemStateRepo: () => ({}),
+	getIndicatorSyncRunsRepo: () => ({}),
+	getMacroWatchRepo: () => ({}),
+	getFundamentalsRepo: () => ({}),
+	getShortInterestRepo: () => ({}),
+	getSentimentRepo: () => ({}),
+	getCorporateActionsRepo: () => ({}),
+	getPredictionMarketsRepo: () => ({}),
+	getRuntimeConfigService: () => ({}),
 }));
 
 // Mock Alpaca market data client
