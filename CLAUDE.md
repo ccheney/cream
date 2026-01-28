@@ -90,6 +90,11 @@ buf generate # Protobuf → TS + Rust stubs
 ## Code Conventions
 
 - Prefer Bun APIs over Node.js equivalents including websockets (`Bun.file()`, `Bun.serve()`, `Bun.env`, etc.)
+  - Use `Response.json(data, init)` instead of `new Response(JSON.stringify(data), { headers: ... })` (3.5x faster)
+  - Use `Bun.sleep(ms)` instead of `new Promise(resolve => setTimeout(resolve, ms))`
+  - Use `Bun.file(path).text()` or `.json()` instead of `fs.readFileSync`
+  - Use `Bun.file(path).exists()` instead of `exists()` from `node:fs/promises`
+  - Use `crypto.randomUUID()` (Web Crypto API) instead of importing from `node:crypto`
 - Use `workspace:*` for internal package dependencies
 - **Trust self-documenting code.** Do not add comments that restate what the code does. Only add comments when explaining *why* something non-obvious is necessary.
 - **Do NOT modify linting rules** without explicit approval
