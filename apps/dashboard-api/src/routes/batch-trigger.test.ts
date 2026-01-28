@@ -1,4 +1,5 @@
 import { beforeAll, beforeEach, describe, expect, mock, test } from "bun:test";
+import { resolve } from "node:path";
 
 type TriggerResponse = {
 	run_id: string;
@@ -78,16 +79,40 @@ const createMockIndicatorSyncRunsRepo = () => ({
 	},
 });
 
-// Re-export everything from real module, override only what tests need
-const realDb = await import("../db.js");
-mock.module("../db.js", () => ({
-	...realDb,
+// Mock db module using absolute path for cross-platform consistency
+const dbPath = resolve(import.meta.dir, "../db.ts");
+mock.module(dbPath, () => ({
 	getIndicatorSyncRunsRepo: createMockIndicatorSyncRunsRepo,
 	getMacroWatchRepo: () => ({}),
 	getShortInterestRepo: () => ({}),
 	getSentimentRepo: () => ({}),
 	getCorporateActionsRepo: () => ({}),
 	getFilingsRepo: () => ({}),
+	// Provide stub implementations for other exports that might be needed
+	getDrizzleDb: () => ({}),
+	closeDb: async () => {},
+	getDecisionsRepo: () => ({}),
+	getAlertsRepo: () => ({}),
+	getAlertSettingsRepo: () => ({}),
+	getOrdersRepo: () => ({}),
+	getPositionsRepo: () => ({}),
+	getAgentOutputsRepo: () => ({}),
+	getPortfolioSnapshotsRepo: () => ({}),
+	getConfigVersionsRepo: () => ({}),
+	getThesesRepo: () => ({}),
+	getRegimeLabelsRepo: () => ({}),
+	getTradingConfigRepo: () => ({}),
+	getAgentConfigsRepo: () => ({}),
+	getUniverseConfigsRepo: () => ({}),
+	getUserPreferencesRepo: () => ({}),
+	getAuditLogRepo: () => ({}),
+	getConstraintsConfigRepo: () => ({}),
+	getCyclesRepo: () => ({}),
+	getFilingSyncRunsRepo: () => ({}),
+	getSystemStateRepo: () => ({}),
+	getFundamentalsRepo: () => ({}),
+	getPredictionMarketsRepo: () => ({}),
+	getRuntimeConfigService: () => ({}),
 }));
 
 // Import after mock is set up
