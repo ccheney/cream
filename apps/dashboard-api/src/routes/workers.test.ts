@@ -249,7 +249,10 @@ const createMockIndicatorSyncRunsRepo = () => ({
 	},
 });
 
+// Re-export everything from real module, override only what tests need
+const realDb = await import("../db.js");
 mock.module("../db.js", () => ({
+	...realDb,
 	getIndicatorSyncRunsRepo: createMockIndicatorSyncRunsRepo,
 	getMacroWatchRepo: () => ({}),
 	getShortInterestRepo: () => ({}),
