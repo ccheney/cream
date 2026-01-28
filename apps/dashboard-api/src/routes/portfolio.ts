@@ -555,6 +555,48 @@ const positionDetailRoute = createRoute({
 // @ts-expect-error - Hono OpenAPI multi-response type inference limitation
 app.openapi(positionDetailRoute, async (c) => {
 	const { id } = c.req.valid("param");
+
+	// Handle Alpaca positions (alpaca-SYMBOL format)
+	if (id.startsWith("alpaca-")) {
+		const symbol = id.slice(7); // Remove "alpaca-" prefix
+
+		if (!isAlpacaConfigured()) {
+			return c.json({ error: "Trading service unavailable" }, 404);
+		}
+
+		try {
+			const client = getBrokerClient();
+			const alpacaPosition = await client.getPosition(symbol);
+
+			if (!alpacaPosition) {
+				return c.json({ error: "Position not found" }, 404);
+			}
+
+			return c.json({
+				id: `alpaca-${alpacaPosition.symbol}`,
+				symbol: alpacaPosition.symbol,
+				side: alpacaPosition.side === "long" ? "LONG" : "SHORT",
+				qty: alpacaPosition.qty,
+				avgEntry: alpacaPosition.avgEntryPrice,
+				currentPrice: alpacaPosition.currentPrice,
+				lastdayPrice: alpacaPosition.lastdayPrice,
+				marketValue: alpacaPosition.marketValue,
+				unrealizedPnl: alpacaPosition.unrealizedPl,
+				unrealizedPnlPct: alpacaPosition.unrealizedPlpc * 100,
+				thesisId: null,
+				daysHeld: 0,
+				openedAt: new Date().toISOString(),
+			});
+		} catch (error) {
+			log.error(
+				{ error: error instanceof Error ? error.message : String(error), symbol },
+				"Failed to fetch Alpaca position",
+			);
+			throw new HTTPException(502, { message: "Failed to fetch position from broker" });
+		}
+	}
+
+	// Handle database positions (UUID format)
 	const [repo, decisionsRepo] = await Promise.all([getPositionsRepo(), getDecisionsRepo()]);
 
 	const position = await repo.findById(id);
@@ -711,71 +753,10 @@ const performanceRoute = createRoute({
 });
 
 app.openapi(performanceRoute, async (c) => {
-	const [decisionsRepo, ordersRepo] = await Promise.all([getDecisionsRepo(), getOrdersRepo()]);
+	// Performance metrics are now 100% Alpaca API driven (no DB dependency)
+	// Returns come from Alpaca portfolio history, trade stats are set to 0
+	// (trade stats would require Alpaca orders API which is separate from portfolio)
 
-	// Get executed decisions for trade statistics (kept for potential future use)
-	const _decisions = await decisionsRepo.findMany(
-		{ status: "executed" },
-		{ limit: 1000, offset: 0 },
-	);
-
-	// Get filled orders for P&L calculations
-	const orders = await ordersRepo.findMany(
-		{ status: "filled", environment: getCurrentEnvironment() },
-		{ limit: 1000, offset: 0 },
-	);
-
-	// Calculate P&L from filled orders (BUY is entry, SELL is exit)
-	// Group orders by symbol to calculate realized P&L per trade
-	interface TradePnL {
-		pnl: number;
-		timestamp: string;
-	}
-	const tradePnLs: TradePnL[] = [];
-	const positionCosts = new Map<string, { qty: number; avgCost: number }>();
-
-	// Process orders chronologically to track position costs
-	const sortedOrders = orders.data.toSorted(
-		(a, b) =>
-			new Date(a.filledAt ?? a.createdAt).getTime() - new Date(b.filledAt ?? b.createdAt).getTime(),
-	);
-
-	for (const order of sortedOrders) {
-		const symbol = order.symbol;
-		const qty = order.filledQuantity ?? order.quantity;
-		const price = order.avgFillPrice ?? order.limitPrice ?? 0;
-
-		if (order.side === "buy") {
-			// Opening or adding to position
-			const existing = positionCosts.get(symbol);
-			if (existing) {
-				// Average in
-				const newQty = existing.qty + qty;
-				const newCost = (existing.qty * existing.avgCost + qty * price) / newQty;
-				positionCosts.set(symbol, { qty: newQty, avgCost: newCost });
-			} else {
-				positionCosts.set(symbol, { qty, avgCost: price });
-			}
-		} else if (order.side === "sell") {
-			// Closing position - calculate P&L
-			const existing = positionCosts.get(symbol);
-			if (existing && existing.qty > 0) {
-				const sellQty = Math.min(qty, existing.qty);
-				const pnl = sellQty * (price - existing.avgCost);
-				tradePnLs.push({ pnl, timestamp: order.filledAt ?? order.createdAt });
-
-				// Update remaining position
-				const remainingQty = existing.qty - sellQty;
-				if (remainingQty > 0) {
-					positionCosts.set(symbol, { qty: remainingQty, avgCost: existing.avgCost });
-				} else {
-					positionCosts.delete(symbol);
-				}
-			}
-		}
-	}
-
-	// Calculate period metrics from Alpaca portfolio history
 	interface PeriodMetrics {
 		return: number;
 		returnPct: number;
@@ -783,15 +764,6 @@ app.openapi(performanceRoute, async (c) => {
 		winRate: number;
 	}
 	const defaultMetrics: PeriodMetrics = { return: 0, returnPct: 0, trades: 0, winRate: 0 };
-
-	// Helper to calculate trade stats for a period
-	const calcTradeStats = (startDate: Date) => {
-		const periodTrades = tradePnLs.filter((t) => new Date(t.timestamp) >= startDate);
-		const periodWins = periodTrades.filter((t) => t.pnl > 0).length;
-		const trades = periodTrades.length;
-		const winRate = trades > 0 ? (periodWins / trades) * 100 : 0;
-		return { trades, winRate };
-	};
 
 	// Fetch Alpaca portfolio history for each period
 	let periodMetrics = {
@@ -875,9 +847,9 @@ app.openapi(performanceRoute, async (c) => {
 				]);
 
 			// Helper to calculate returns using CURRENT equity vs historical base value
-			// Uses the FIRST equity value in the history array for reliability
-			// (Alpaca's baseValue can be inconsistent for new accounts)
-			// fallbackBase is used when period-specific history has invalid data (e.g., 0)
+			// baseValue = equity at market close BEFORE the period started (what we want)
+			// equity[0] = first data point WITHIN the period (fallback for new accounts)
+			// fallbackBase is used when period-specific history has invalid data
 			const calcReturns = (
 				history: BrokerPortfolioHistory | null,
 				overrideBase?: number,
@@ -888,14 +860,14 @@ app.openapi(performanceRoute, async (c) => {
 					return { return: 0, returnPct: 0 };
 				}
 
-				// Use override base if provided, otherwise use first equity value from history
-				// This is more reliable than baseValue for periods that may be incomplete
+				// Priority: overrideBase > baseValue > equity[0] > fallbackBase
+				// baseValue represents the close BEFORE the period started (correct for returns)
+				// equity[0] is first point WITHIN the period (fallback for new accounts where baseValue may be 0)
 				let baseValue = overrideBase;
 				if (!baseValue && history) {
-					// Use the first equity value in the array (start of period)
-					const historyBase = history.equity?.[0] ?? history.baseValue ?? 0;
-					// Only use history base if it's valid (non-zero)
-					// Alpaca can return 0 for the first equity value in period-specific queries for new accounts
+					// Prefer baseValue (close before period) over equity[0] (first point in period)
+					const historyBase =
+						history.baseValue > 0 ? history.baseValue : (history.equity?.[0] ?? 0);
 					baseValue = historyBase > 0 ? historyBase : undefined;
 				}
 				// Fall back to allHistory base if period-specific base is invalid
@@ -924,20 +896,6 @@ app.openapi(performanceRoute, async (c) => {
 			// For Today, use lastEquity from account (most reliable for intraday)
 			const lastEquity = currentAccount.lastEquity;
 
-			// Calculate period boundaries for trade stats
-			const now = new Date();
-			const todayStart = new Date(now);
-			todayStart.setHours(0, 0, 0, 0);
-			// Use calendar week (Monday start) for consistency with weekHistory
-			const weekStart = new Date(weekStartDate);
-			const monthStart = new Date(now);
-			monthStart.setMonth(monthStart.getMonth() - 1);
-			const threeMonthStart = new Date(now);
-			threeMonthStart.setMonth(threeMonthStart.getMonth() - 3);
-			const ytdStart = new Date(now.getFullYear(), 0, 1);
-			const oneYearStart = new Date(now);
-			oneYearStart.setFullYear(oneYearStart.getFullYear() - 1);
-
 			// Get fallback base from allHistory (first valid non-zero equity value)
 			// This is used when period-specific queries return invalid data for new accounts
 			const fallbackBase = allHistory?.equity?.find((e) => e > 0) ?? allHistory?.baseValue ?? 0;
@@ -948,20 +906,27 @@ app.openapi(performanceRoute, async (c) => {
 			const todayReturn = todayBase > 0 ? currentEquity - todayBase : 0;
 			const todayReturnPct = todayBase > 0 ? (currentEquity / todayBase - 1) * 100 : 0;
 			const todayReturns = { return: todayReturn, returnPct: todayReturnPct };
+
+			// All period returns use calcReturns which now correctly uses baseValue
+			// (equity at close BEFORE the period started)
 			const weekReturns = calcReturns(weekHistory, undefined, fallbackBase);
 			const monthReturns = calcReturns(monthHistory, undefined, fallbackBase);
 			const threeMonthReturns = calcReturns(threeMonthHistory, undefined, fallbackBase);
 			const ytdReturns = calcReturns(ytdHistory, undefined, fallbackBase);
 			const allReturns = calcReturns(allHistory, undefined, fallbackBase);
 
+			// Trade stats (trades, winRate) are set to 0 - these would require
+			// fetching from Alpaca orders API which is separate from portfolio history
+			const noTradeStats = { trades: 0, winRate: 0 };
+
 			periodMetrics = {
-				today: { ...todayReturns, ...calcTradeStats(todayStart) },
-				week: { ...weekReturns, ...calcTradeStats(weekStart) },
-				month: { ...monthReturns, ...calcTradeStats(monthStart) },
-				threeMonth: { ...threeMonthReturns, ...calcTradeStats(threeMonthStart) },
-				ytd: { ...ytdReturns, ...calcTradeStats(ytdStart) },
-				oneYear: { ...allReturns, ...calcTradeStats(oneYearStart) }, // Use all history for 1Y
-				total: { ...allReturns, ...calcTradeStats(new Date(0)) },
+				today: { ...todayReturns, ...noTradeStats },
+				week: { ...weekReturns, ...noTradeStats },
+				month: { ...monthReturns, ...noTradeStats },
+				threeMonth: { ...threeMonthReturns, ...noTradeStats },
+				ytd: { ...ytdReturns, ...noTradeStats },
+				oneYear: { ...allReturns, ...noTradeStats },
+				total: { ...allReturns, ...noTradeStats },
 			};
 
 			// Use the longest history for volatility/drawdown calculations
@@ -1030,17 +995,13 @@ app.openapi(performanceRoute, async (c) => {
 	const maxDrawdownPct = peak > 0 ? -(maxDrawdown / peak) * 100 : 0;
 	const currentDrawdownPct = peak > 0 ? -(currentDrawdown / peak) * 100 : 0;
 
-	// Calculate overall win/loss statistics from trade P&Ls
-	const wins = tradePnLs.filter((t) => t.pnl > 0);
-	const losses = tradePnLs.filter((t) => t.pnl < 0);
-
-	const totalWins = wins.reduce((sum, t) => sum + t.pnl, 0);
-	const totalLosses = Math.abs(losses.reduce((sum, t) => sum + t.pnl, 0));
-
-	const avgWin = wins.length > 0 ? totalWins / wins.length : 0;
-	const avgLoss = losses.length > 0 ? totalLosses / losses.length : 0;
-	const winRate = tradePnLs.length > 0 ? (wins.length / tradePnLs.length) * 100 : 0;
-	const profitFactor = totalLosses > 0 ? totalWins / totalLosses : 0;
+	// Trade stats are set to 0 - no longer calculated from DB
+	// These would require Alpaca orders API which is separate from portfolio history
+	const winRate = 0;
+	const profitFactor = 0;
+	const avgWin = 0;
+	const avgLoss = 0;
+	const totalTrades = 0;
 
 	// Calculate Sharpe and Sortino from daily returns
 	const dailyReturns = calculateReturns(equityHistory);
@@ -1091,7 +1052,7 @@ app.openapi(performanceRoute, async (c) => {
 		profitFactor,
 		avgWin,
 		avgLoss,
-		totalTrades: tradePnLs.length,
+		totalTrades,
 	});
 });
 
