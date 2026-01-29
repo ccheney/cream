@@ -214,6 +214,7 @@ export function useWebSocket(options: UseWebSocketOptions): UseWebSocketReturn {
 	const countdownIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 	const shouldReconnectRef = useRef(true);
 	const isUnmountedRef = useRef(false);
+	const reconnectAttemptsRef = useRef(0);
 
 	// Subscription refs (for replay after reconnect)
 	const subscribedChannelsRef = useRef<Set<string>>(new Set());
@@ -328,6 +329,7 @@ export function useWebSocket(options: UseWebSocketOptions): UseWebSocketReturn {
 				return;
 			}
 			setConnectionState("connected");
+			reconnectAttemptsRef.current = 0;
 			setReconnectAttempts(0);
 			setLastError(null);
 			setNextRetryIn(null);
@@ -348,11 +350,16 @@ export function useWebSocket(options: UseWebSocketOptions): UseWebSocketReturn {
 			onDisconnectRef.current?.();
 
 			// Attempt reconnection
-			if (shouldReconnectRef.current && reconnectAttempts < reconnectionConfig.maxAttempts) {
+			if (
+				shouldReconnectRef.current &&
+				reconnectAttemptsRef.current < reconnectionConfig.maxAttempts
+			) {
 				setConnectionState("reconnecting");
-				const delay = calculateBackoffDelay(reconnectAttempts, reconnectionConfig, true);
+				const currentAttempt = reconnectAttemptsRef.current;
+				const delay = calculateBackoffDelay(currentAttempt, reconnectionConfig, true);
 				const delaySeconds = Math.ceil(delay / 1000);
-				setReconnectAttempts((prev) => prev + 1);
+				reconnectAttemptsRef.current = currentAttempt + 1;
+				setReconnectAttempts(reconnectAttemptsRef.current);
 
 				// Start countdown
 				setNextRetryIn(delaySeconds);
@@ -410,7 +417,6 @@ export function useWebSocket(options: UseWebSocketOptions): UseWebSocketReturn {
 	}, [
 		url,
 		token,
-		reconnectAttempts,
 		reconnectionConfig,
 		clearTimers,
 		startHeartbeat,

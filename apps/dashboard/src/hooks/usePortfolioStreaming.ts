@@ -137,8 +137,9 @@ export function usePortfolioStreaming(
 
 			// Calculate P/L based on side
 			const multiplier = position.side === "LONG" ? 1 : -1;
-			const liveMarketValue = livePrice * position.qty;
-			const liveUnrealizedPnl = (livePrice - position.avgEntry) * position.qty * multiplier;
+			const absQty = Math.abs(position.qty);
+			const liveMarketValue = livePrice * absQty;
+			const liveUnrealizedPnl = (livePrice - position.avgEntry) * absQty * multiplier;
 			const liveUnrealizedPnlPct =
 				position.avgEntry !== 0
 					? ((livePrice - position.avgEntry) / position.avgEntry) * 100 * multiplier
@@ -148,7 +149,7 @@ export function usePortfolioStreaming(
 			// Formula: (currentPrice - lastdayPrice) * qty
 			let liveDayPnl = 0;
 			if (position.lastdayPrice != null && livePrice > 0) {
-				liveDayPnl = (livePrice - position.lastdayPrice) * position.qty * multiplier;
+				liveDayPnl = (livePrice - position.lastdayPrice) * absQty * multiplier;
 			}
 
 			return {
