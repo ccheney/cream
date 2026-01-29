@@ -18,7 +18,7 @@ const enabled = Bun.env.OTEL_ENABLED !== "false" && endpoint !== undefined;
 
 if (enabled && endpoint) {
 	const exporter = new OTLPTraceExporter({
-		url: `${endpoint}/v1/traces`,
+		url: endpoint,
 		headers: authToken ? { Authorization: `Basic ${authToken}` } : undefined,
 	});
 

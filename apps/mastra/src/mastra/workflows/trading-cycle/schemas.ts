@@ -254,7 +254,7 @@ export const StopLossSchema = z.object({
 });
 
 export const TakeProfitSchema = z.object({
-	price: z.number().positive("Take-profit price must be greater than 0"),
+	price: z.number(),
 });
 
 export const OptionLegSchema = z.object({
