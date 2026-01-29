@@ -122,6 +122,7 @@ export {
 // Portfolio
 export {
 	useAccount,
+	useClosedTrades,
 	useClosePosition,
 	useEquityCurve,
 	useModifyStop,

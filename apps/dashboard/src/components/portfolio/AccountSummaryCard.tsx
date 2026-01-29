@@ -18,6 +18,13 @@ import { PerformanceGrid } from "./PerformanceGrid";
 // Types
 // ============================================
 
+export interface TradeStats {
+	totalRealizedPnl: number;
+	winCount: number;
+	lossCount: number;
+	winRate: number;
+}
+
 export interface AccountSummaryCardProps {
 	account?: Account;
 	isLoading?: boolean;
@@ -28,6 +35,8 @@ export interface AccountSummaryCardProps {
 	liveDayPnl?: number;
 	/** Live streaming day P&L percentage - overrides API data when available */
 	liveDayPnlPct?: number;
+	/** Trade statistics from closed trades */
+	tradeStats?: TradeStats;
 }
 
 interface MetricItemProps {
@@ -36,6 +45,7 @@ interface MetricItemProps {
 	value: string;
 	variant?: "default" | "positive" | "negative" | "warning";
 	isLoading?: boolean;
+	subText?: string;
 }
 
 // ============================================
@@ -48,6 +58,7 @@ const MetricItem = memo(function MetricItem({
 	value,
 	variant = "default",
 	isLoading = false,
+	subText,
 }: MetricItemProps) {
 	const variantClasses = {
 		default: "text-stone-900 dark:text-night-50",
@@ -74,6 +85,9 @@ const MetricItem = memo(function MetricItem({
 				<TooltipContent position="top">{tooltip}</TooltipContent>
 			</Tooltip>
 			<div className={`text-lg font-semibold font-mono ${variantClasses[variant]}`}>{value}</div>
+			{subText && (
+				<div className="text-xs text-stone-400 dark:text-night-500 font-mono">{subText}</div>
+			)}
 		</div>
 	);
 });
@@ -115,10 +129,15 @@ export const AccountSummaryCard = memo(function AccountSummaryCard({
 	isPerformanceLoading = false,
 	liveDayPnl,
 	liveDayPnlPct,
+	tradeStats,
 }: AccountSummaryCardProps) {
-	// Calculate margin used percentage
-	const marginUsed =
+	// Calculate maintenance margin percentage
+	const maintMarginPct =
 		account && account.equity > 0 ? (account.maintenanceMargin / account.equity) * 100 : 0;
+
+	// Calculate unsettled cash (cash that hasn't settled yet from recent sales)
+	const unsettledCash =
+		account && account.cashWithdrawable !== undefined ? account.cash - account.cashWithdrawable : 0;
 
 	// Merge live streaming data with API performance metrics
 	const mergedMetrics = useMemo((): PerformanceMetrics | undefined => {
@@ -148,7 +167,7 @@ export const AccountSummaryCard = memo(function AccountSummaryCard({
 
 	// Determine margin status variant
 	const marginVariant: MetricItemProps["variant"] =
-		marginUsed >= 80 ? "negative" : marginUsed >= 50 ? "warning" : "default";
+		maintMarginPct >= 80 ? "negative" : maintMarginPct >= 50 ? "warning" : "default";
 
 	return (
 		<div className="bg-white dark:bg-night-800 rounded-lg border border-cream-200 dark:border-night-700 p-5 flex flex-col">
@@ -171,9 +190,10 @@ export const AccountSummaryCard = memo(function AccountSummaryCard({
 				{/* Row 1: Cash, Buying Power, Long Value, Short Value */}
 				<MetricItem
 					label="Cash"
-					tooltip="Available cash balance for trading"
+					tooltip="Available cash balance. Unsettled funds from recent sales become withdrawable T+1."
 					value={formatCurrency(account?.cash ?? 0)}
 					isLoading={isLoading}
+					subText={unsettledCash > 0 ? `(${formatCurrency(unsettledCash)} settling)` : undefined}
 				/>
 				<MetricItem
 					label="Buying Power"
@@ -195,11 +215,11 @@ export const AccountSummaryCard = memo(function AccountSummaryCard({
 					isLoading={isLoading}
 				/>
 
-				{/* Row 2: Margin Used, PDT Status, Day Trades, Shorting */}
+				{/* Row 2: Maint. Margin, PDT Status, Day Trades, Shorting */}
 				<MetricItem
-					label="Margin Used"
-					tooltip="Percentage of available margin currently utilized"
-					value={formatPercent(marginUsed)}
+					label="Maint. Margin"
+					tooltip="Maintenance margin requirement - collateral required to hold current positions (not borrowed funds)"
+					value={formatPercent(maintMarginPct)}
 					variant={marginVariant}
 					isLoading={isLoading}
 				/>
@@ -256,13 +276,45 @@ export const AccountSummaryCard = memo(function AccountSummaryCard({
 				/>
 			</div>
 
-			{/* Performance Returns - aligned to bottom right */}
+			{/* Trade Stats + Performance Returns */}
 			<div className="mt-auto pt-4 border-t border-cream-200 dark:border-night-700">
-				<div className="flex flex-col items-end gap-1">
-					<span className="text-xs text-stone-400 dark:text-night-500 uppercase tracking-wide">
-						Returns
-					</span>
-					<PerformanceGrid metrics={mergedMetrics} isLoading={isPerformanceLoading} />
+				<div className="flex items-end justify-between gap-4 flex-wrap">
+					{/* Trade Stats - left side (always show, with fallback to zeros) */}
+					<div className="flex items-center gap-6">
+						<div>
+							<span className="text-xs text-stone-400 dark:text-night-500">Total P&L</span>
+							<p
+								className={`text-lg font-semibold font-mono ${(tradeStats?.totalRealizedPnl ?? 0) >= 0 ? "text-green-600 dark:text-green-400" : "text-red-600 dark:text-red-400"}`}
+							>
+								{(tradeStats?.totalRealizedPnl ?? 0) >= 0 ? "+" : ""}
+								{formatCurrency(tradeStats?.totalRealizedPnl ?? 0)}
+							</p>
+						</div>
+						<div>
+							<span className="text-xs text-stone-400 dark:text-night-500">Win Rate</span>
+							<p className="text-lg font-semibold text-stone-900 dark:text-night-50">
+								{(tradeStats?.winRate ?? 0).toFixed(1)}%
+							</p>
+						</div>
+						<div>
+							<span className="text-xs text-stone-400 dark:text-night-500">W / L</span>
+							<p className="text-lg font-semibold">
+								<span className="text-green-600 dark:text-green-400">
+									{tradeStats?.winCount ?? 0}
+								</span>
+								<span className="text-stone-400 mx-1">/</span>
+								<span className="text-red-600 dark:text-red-400">{tradeStats?.lossCount ?? 0}</span>
+							</p>
+						</div>
+					</div>
+
+					{/* Returns - right side */}
+					<div className="flex flex-col items-end gap-1 ml-auto">
+						<span className="text-xs text-stone-400 dark:text-night-500 uppercase tracking-wide">
+							Returns
+						</span>
+						<PerformanceGrid metrics={mergedMetrics} isLoading={isPerformanceLoading} />
+					</div>
 				</div>
 			</div>
 		</div>

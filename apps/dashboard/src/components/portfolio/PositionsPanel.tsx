@@ -532,10 +532,6 @@ type ClosedSortField =
 
 const ClosedTradesTableInner = memo(function ClosedTradesTableInner({
 	trades,
-	totalRealizedPnl,
-	winCount,
-	lossCount,
-	winRate,
 }: ClosedTradesTableInnerProps) {
 	const [sortState, setSortState] = useState<{ field: ClosedSortField; direction: "asc" | "desc" }>(
 		{
@@ -571,37 +567,8 @@ const ClosedTradesTableInner = memo(function ClosedTradesTableInner({
 		return sorted;
 	}, [trades, sortState]);
 
-	const totalPnlColor = totalRealizedPnl >= 0 ? "text-green-600" : "text-red-600";
-
 	return (
 		<div>
-			{/* Summary Stats */}
-			<div className="px-4 py-3 border-b border-cream-200 dark:border-night-700 flex items-center justify-between flex-wrap gap-4">
-				<div className="flex items-center gap-6">
-					<div>
-						<span className="text-xs text-stone-500 dark:text-night-400">Total P&L</span>
-						<p className={`text-lg font-semibold font-mono ${totalPnlColor}`}>
-							{totalRealizedPnl >= 0 ? "+" : ""}
-							{formatCurrency(totalRealizedPnl, 2)}
-						</p>
-					</div>
-					<div>
-						<span className="text-xs text-stone-500 dark:text-night-400">Win Rate</span>
-						<p className="text-lg font-semibold text-stone-900 dark:text-night-50">
-							{winRate.toFixed(1)}%
-						</p>
-					</div>
-					<div>
-						<span className="text-xs text-stone-500 dark:text-night-400">W / L</span>
-						<p className="text-lg font-semibold">
-							<span className="text-green-600">{winCount}</span>
-							<span className="text-stone-400 mx-1">/</span>
-							<span className="text-red-600">{lossCount}</span>
-						</p>
-					</div>
-				</div>
-			</div>
-
 			<div role="table" aria-label="Closed trades">
 				<div
 					className="grid bg-cream-50 dark:bg-night-700 text-sm text-stone-500 dark:text-night-300 border-b border-cream-200 dark:border-night-700"

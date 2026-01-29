@@ -26,6 +26,7 @@ import { RiskMetricsBar } from "@/components/portfolio/RiskMetricsBar";
 import { QueryErrorBoundary } from "@/components/QueryErrorBoundary";
 import {
 	useAccount,
+	useClosedTrades,
 	usePerformanceMetrics,
 	usePortfolioHistory,
 	usePortfolioSummary,
@@ -47,6 +48,7 @@ export default function PortfolioPage() {
 	const { data: performanceMetrics, isLoading: isPerformanceLoading } = usePerformanceMetrics();
 	const { data: portfolioHistory, isLoading: isHistoryLoading } = usePortfolioHistory(chartPeriod);
 	const { data: positions, isLoading: isPositionsLoading } = usePositions();
+	const { data: closedTradesData } = useClosedTrades();
 	const accountStreaming = useAccountStreaming(account);
 	const { streamingPositions, state: portfolioState } = usePortfolioStreaming({
 		positions: positions ?? [],
@@ -104,6 +106,16 @@ export default function PortfolioPage() {
 						isPerformanceLoading={isPerformanceLoading}
 						liveDayPnl={portfolioState.liveDayPnl}
 						liveDayPnlPct={portfolioState.liveDayPnlPct}
+						tradeStats={
+							closedTradesData
+								? {
+										totalRealizedPnl: closedTradesData.totalRealizedPnl,
+										winCount: closedTradesData.winCount,
+										lossCount: closedTradesData.lossCount,
+										winRate: closedTradesData.winRate,
+									}
+								: undefined
+						}
 					/>
 				</QueryErrorBoundary>
 
