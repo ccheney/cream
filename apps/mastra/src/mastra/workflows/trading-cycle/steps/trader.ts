@@ -15,14 +15,29 @@ import { trader } from "../../../agents/index.js";
 
 const log = createNodeLogger({ service: "trading-cycle:trader" });
 
+import { getModelId } from "@cream/domain";
 import {
+	xmlCandleSummary,
+	xmlMemoryCases,
+	xmlPredictionMarketSignals,
+	xmlQuotes,
+	xmlRecentCloses,
+} from "../prompt-helpers.js";
+import {
+	CandleSummarySchema,
 	type Constraints,
 	ConstraintsSchema,
 	DecisionPlanSchema,
 	type DecisionSchema,
+	FundamentalsAnalysisSchema,
+	MemoryCaseSchema,
+	PredictionMarketSignalsSchema,
+	QuoteDataSchema,
 	type RecentClose,
 	RecentCloseSchema,
+	RegimeDataSchema,
 	ResearchSchema,
+	SentimentAnalysisSchema,
 } from "../schemas.js";
 
 // ============================================
@@ -32,13 +47,40 @@ import {
 const TraderInputSchema = z.object({
 	cycleId: z.string().describe("Unique identifier for this trading cycle"),
 	instruments: z.array(z.string()).min(1).describe("Symbols to trade"),
+	regimeLabels: z
+		.record(z.string(), RegimeDataSchema)
+		.optional()
+		.describe("Regime classifications per symbol"),
 	constraints: ConstraintsSchema.optional().describe("Runtime risk constraints"),
+	newsAnalysis: z
+		.array(SentimentAnalysisSchema)
+		.optional()
+		.describe("News analysis from analysts step"),
+	fundamentalsAnalysis: z
+		.array(FundamentalsAnalysisSchema)
+		.optional()
+		.describe("Fundamentals analysis from analysts step"),
 	bullishResearch: z.array(ResearchSchema).describe("Bullish research from debate step"),
 	bearishResearch: z.array(ResearchSchema).describe("Bearish research from debate step"),
 	recentCloses: z
 		.array(RecentCloseSchema)
 		.optional()
 		.describe("Recently closed positions (cooldown)"),
+	quotes: z
+		.record(z.string(), QuoteDataSchema)
+		.optional()
+		.describe("Current market quotes keyed by symbol"),
+	memoryCases: z
+		.array(MemoryCaseSchema)
+		.optional()
+		.describe("Similar historical cases from memory"),
+	candleSummaries: z
+		.array(CandleSummarySchema)
+		.optional()
+		.describe("Price action summaries per symbol"),
+	predictionMarketSignals: PredictionMarketSignalsSchema.optional().describe(
+		"Prediction market signals from orient step",
+	),
 });
 
 const TraderOutputSchema = z.object({
@@ -62,8 +104,21 @@ export const traderStep = createStep({
 	outputSchema: TraderOutputSchema,
 	execute: async ({ inputData }) => {
 		const startTime = performance.now();
-		const { cycleId, instruments, constraints, bullishResearch, bearishResearch, recentCloses } =
-			inputData;
+		const {
+			cycleId,
+			instruments,
+			regimeLabels,
+			constraints,
+			newsAnalysis,
+			fundamentalsAnalysis,
+			bullishResearch,
+			bearishResearch,
+			recentCloses,
+			quotes,
+			memoryCases,
+			candleSummaries,
+			predictionMarketSignals,
+		} = inputData;
 		const errors: string[] = [];
 		const warnings: string[] = [];
 
@@ -82,10 +137,17 @@ export const traderStep = createStep({
 		const decisionPlan = await runTraderAgent(
 			cycleId,
 			instruments,
+			regimeLabels ?? {},
 			constraints,
+			newsAnalysis ?? [],
+			fundamentalsAnalysis ?? [],
 			bullishResearch,
 			bearishResearch,
 			recentCloses ?? [],
+			quotes ?? {},
+			memoryCases ?? [],
+			candleSummaries ?? [],
+			predictionMarketSignals,
 			errors,
 			warnings,
 		);
@@ -126,10 +188,17 @@ export const traderStep = createStep({
 async function runTraderAgent(
 	cycleId: string,
 	instruments: string[],
+	regimeLabels: Record<string, z.infer<typeof RegimeDataSchema>>,
 	constraints: Constraints | undefined,
+	newsAnalysis: z.infer<typeof SentimentAnalysisSchema>[],
+	fundamentalsAnalysis: z.infer<typeof FundamentalsAnalysisSchema>[],
 	bullishResearch: z.infer<typeof ResearchSchema>[],
 	bearishResearch: z.infer<typeof ResearchSchema>[],
 	recentCloses: RecentClose[],
+	quotes: Record<string, z.infer<typeof QuoteDataSchema>>,
+	memoryCases: z.infer<typeof MemoryCaseSchema>[],
+	candleSummaries: z.infer<typeof CandleSummarySchema>[],
+	predictionMarketSignals: z.infer<typeof PredictionMarketSignalsSchema> | undefined,
 	errors: string[],
 	warnings: string[],
 ): Promise<z.infer<typeof DecisionPlanSchema>> {
@@ -144,21 +213,38 @@ async function runTraderAgent(
 		const prompt = buildTraderPrompt(
 			cycleId,
 			instruments,
+			regimeLabels,
 			constraints,
+			newsAnalysis,
+			fundamentalsAnalysis,
 			bullishResearch,
 			bearishResearch,
 			recentCloses,
+			quotes,
+			memoryCases,
+			candleSummaries,
+			predictionMarketSignals,
 		);
 		log.debug({ cycleId, promptLength: prompt.length }, "Calling trader agent");
-		const response = await trader.generate(prompt);
+		const response = await trader.generate(prompt, {
+			structuredOutput: {
+				schema: DecisionPlanSchema,
+				model: getModelId(),
+			},
+		});
 
-		const plan = parseDecisionPlan(cycleId, response.text, instruments, warnings);
-		if (plan) {
-			log.debug({ cycleId, decisionCount: plan.decisions.length }, "Trader agent returned plan");
-			return plan;
+		const plan = response.object;
+		if (!plan) {
+			log.warn({ cycleId }, "Trader agent returned no structured output, using empty plan");
+			return emptyPlan;
 		}
-		log.warn({ cycleId }, "Trader agent returned unparseable response, using empty plan");
-		return emptyPlan;
+
+		const validatedPlan = validateDecisionPlan(cycleId, plan, warnings);
+		log.debug(
+			{ cycleId, decisionCount: validatedPlan.decisions.length },
+			"Trader agent returned plan",
+		);
+		return validatedPlan;
 	} catch (err) {
 		const errorMsg = `Trader agent failed: ${formatError(err)}`;
 		errors.push(errorMsg);
@@ -170,245 +256,154 @@ async function runTraderAgent(
 function buildTraderPrompt(
 	cycleId: string,
 	instruments: string[],
+	regimeLabels: Record<string, z.infer<typeof RegimeDataSchema>>,
 	constraints: Constraints | undefined,
+	newsAnalysis: z.infer<typeof SentimentAnalysisSchema>[],
+	fundamentalsAnalysis: z.infer<typeof FundamentalsAnalysisSchema>[],
 	bullishResearch: z.infer<typeof ResearchSchema>[],
 	bearishResearch: z.infer<typeof ResearchSchema>[],
 	recentCloses: RecentClose[],
+	quotes: Record<string, z.infer<typeof QuoteDataSchema>>,
+	memoryCases: z.infer<typeof MemoryCaseSchema>[],
+	candleSummaries: z.infer<typeof CandleSummarySchema>[],
+	predictionMarketSignals: z.infer<typeof PredictionMarketSignalsSchema> | undefined,
 ): string {
-	const parts = [
-		`Create a decision plan for cycle ${cycleId}.`,
-		`Instruments: ${instruments.join(", ")}`,
-	];
+	const globalSections: string[] = [];
 
-	// Add recent closes (cooldown) context at the top for visibility
-	if (recentCloses.length > 0) {
-		parts.push(`\n## ⚠️ RECENT CLOSES (COOLDOWN ACTIVE)`);
-		parts.push(`The following symbols were recently closed and are on COOLDOWN.`);
-		parts.push(
-			`DO NOT issue BUY orders for these symbols unless the close reason has materially changed.`,
-		);
-		parts.push(``);
-		for (const close of recentCloses) {
-			const cooldownTime = close.cooldownUntil
-				? new Date(close.cooldownUntil).toLocaleTimeString()
-				: "unknown";
-			parts.push(`- **${close.symbol}**: Closed at ${close.closedAt}`);
-			parts.push(`  - Reason: ${close.closeReason ?? close.rationale ?? "No reason provided"}`);
-			parts.push(`  - Cooldown until: ${cooldownTime}`);
-		}
-		parts.push(``);
-	}
+	globalSections.push(xmlQuotes(quotes));
+	globalSections.push(xmlRecentCloses(recentCloses));
+	globalSections.push(xmlPredictionMarketSignals(predictionMarketSignals));
 
 	if (constraints) {
-		parts.push(`\n## Risk Constraints (ACTUAL LIMITS - MUST COMPLY)`);
-		parts.push(`### Per-Instrument Limits`);
-		parts.push(
-			`- maxPctEquity: ${(constraints.perInstrument.maxPctEquity * 100).toFixed(1)}% of portfolio per position`,
-		);
-		parts.push(
-			`- maxNotional: $${constraints.perInstrument.maxNotional.toLocaleString()} per position`,
-		);
-		parts.push(
-			`- maxShares: ${constraints.perInstrument.maxShares.toLocaleString()} shares per equity position`,
-		);
-		parts.push(
-			`- maxContracts: ${constraints.perInstrument.maxContracts} contracts per options position`,
-		);
-		parts.push(`### Portfolio Limits`);
-		parts.push(`- maxPositions: ${constraints.portfolio.maxPositions} total positions`);
-		parts.push(
-			`- maxConcentration: ${(constraints.portfolio.maxConcentration * 100).toFixed(1)}% max single position`,
-		);
-		parts.push(
-			`- maxGrossExposure: ${(constraints.portfolio.maxGrossExposure * 100).toFixed(0)}% of equity`,
-		);
-		parts.push(
-			`- maxNetExposure: ${(constraints.portfolio.maxNetExposure * 100).toFixed(0)}% of equity`,
-		);
-		parts.push(
-			`- maxRiskPerTrade: ${(constraints.portfolio.maxRiskPerTrade * 100).toFixed(1)}% of portfolio per trade`,
-		);
-		parts.push(
-			`- maxDrawdown: ${(constraints.portfolio.maxDrawdown * 100).toFixed(0)}% max drawdown limit`,
-		);
-		parts.push(
-			`- maxSectorExposure: ${(constraints.portfolio.maxSectorExposure * 100).toFixed(0)}% per sector`,
-		);
-		parts.push(`### Options Greeks Limits`);
-		parts.push(`- maxDelta: ${constraints.options.maxDelta.toLocaleString()}`);
-		parts.push(`- maxGamma: ${constraints.options.maxGamma.toLocaleString()}`);
-		parts.push(`- maxVega: $${constraints.options.maxVega.toLocaleString()}`);
-		parts.push(`- maxTheta: $${constraints.options.maxTheta.toLocaleString()}/day`);
+		globalSections.push(`<risk_constraints>
+  <per_instrument max_pct_equity="${(constraints.perInstrument.maxPctEquity * 100).toFixed(1)}%" max_notional="${constraints.perInstrument.maxNotional}" max_shares="${constraints.perInstrument.maxShares}" max_contracts="${constraints.perInstrument.maxContracts}" />
+  <portfolio max_positions="${constraints.portfolio.maxPositions}" max_concentration="${(constraints.portfolio.maxConcentration * 100).toFixed(1)}%" max_gross_exposure="${(constraints.portfolio.maxGrossExposure * 100).toFixed(0)}%" max_net_exposure="${(constraints.portfolio.maxNetExposure * 100).toFixed(0)}%" max_risk_per_trade="${(constraints.portfolio.maxRiskPerTrade * 100).toFixed(1)}%" max_drawdown="${(constraints.portfolio.maxDrawdown * 100).toFixed(0)}%" max_sector_exposure="${(constraints.portfolio.maxSectorExposure * 100).toFixed(0)}%" />
+  <options max_delta="${constraints.options.maxDelta}" max_gamma="${constraints.options.maxGamma}" max_vega="${constraints.options.maxVega}" max_theta="${constraints.options.maxTheta}" />
+</risk_constraints>`);
 	}
 
-	for (const symbol of instruments) {
+	const symbolSections = instruments.map((symbol) => {
 		const bullish = bullishResearch.find((r) => r.instrument_id === symbol);
 		const bearish = bearishResearch.find((r) => r.instrument_id === symbol);
+		const regime = regimeLabels[symbol];
+		const news = newsAnalysis.find((n) => n.instrument_id === symbol);
+		const fundamentals = fundamentalsAnalysis.find((f) => f.instrument_id === symbol);
+		const symbolMemory = memoryCases.filter((c) => c.symbol === symbol);
+		const candle = candleSummaries.find((c) => c.symbol === symbol);
 
-		parts.push(`\n## ${symbol}`);
-
+		const parts: string[] = [];
+		if (regime)
+			parts.push(
+				`  <regime classification="${regime.regime}" confidence="${regime.confidence.toFixed(2)}" />`,
+			);
+		if (candle) parts.push(`  ${xmlCandleSummary(candle)}`);
+		if (symbolMemory.length > 0) parts.push(`  ${xmlMemoryCases(symbolMemory, symbol)}`);
+		if (news)
+			parts.push(
+				`  <sentiment overall="${news.overall_sentiment}" strength="${news.sentiment_strength}" />`,
+			);
+		if (fundamentals) {
+			const fParts: string[] = [];
+			if (fundamentals.fundamental_drivers.length > 0)
+				fParts.push(`    <drivers>${fundamentals.fundamental_drivers.join(", ")}</drivers>`);
+			if (fundamentals.fundamental_headwinds.length > 0)
+				fParts.push(`    <headwinds>${fundamentals.fundamental_headwinds.join(", ")}</headwinds>`);
+			fParts.push(`    <valuation>${fundamentals.valuation_context}</valuation>`);
+			if (fundamentals.event_risk.length > 0)
+				fParts.push(
+					`    <event_risks>${fundamentals.event_risk.map((e) => `${e.event} (${e.date})`).join(", ")}</event_risks>`,
+				);
+			parts.push(`  <fundamentals>\n${fParts.join("\n")}\n  </fundamentals>`);
+		}
 		if (bullish) {
-			parts.push(`**Bullish Thesis** (conviction: ${bullish.conviction_level}):`);
-			parts.push(bullish.thesis);
-			if (bullish.supporting_factors.length > 0) {
-				parts.push(
-					`Supporting factors: ${bullish.supporting_factors.map((f) => `${f.factor} (${f.source}: ${f.strength})`).join(", ")}`,
-				);
-			}
-			parts.push(`Strongest counterargument: ${bullish.strongest_counterargument}`);
+			const factors =
+				bullish.supporting_factors.length > 0
+					? `\n    <supporting_factors>${bullish.supporting_factors.map((f) => `${f.factor} (${f.source}: ${f.strength})`).join(", ")}</supporting_factors>`
+					: "";
+			parts.push(`  <bullish_thesis conviction="${bullish.conviction_level}">
+    <thesis>${bullish.thesis}</thesis>${factors}
+    <counterargument>${bullish.strongest_counterargument}</counterargument>
+  </bullish_thesis>`);
 		}
-
 		if (bearish) {
-			parts.push(`**Bearish Thesis** (conviction: ${bearish.conviction_level}):`);
-			parts.push(bearish.thesis);
-			if (bearish.supporting_factors.length > 0) {
-				parts.push(
-					`Supporting factors: ${bearish.supporting_factors.map((f) => `${f.factor} (${f.source}: ${f.strength})`).join(", ")}`,
-				);
-			}
-			parts.push(`Strongest counterargument: ${bearish.strongest_counterargument}`);
+			const factors =
+				bearish.supporting_factors.length > 0
+					? `\n    <supporting_factors>${bearish.supporting_factors.map((f) => `${f.factor} (${f.source}: ${f.strength})`).join(", ")}</supporting_factors>`
+					: "";
+			parts.push(`  <bearish_thesis conviction="${bearish.conviction_level}">
+    <thesis>${bearish.thesis}</thesis>${factors}
+    <counterargument>${bearish.strongest_counterargument}</counterargument>
+  </bearish_thesis>`);
 		}
-	}
+		return `<instrument symbol="${symbol}">\n${parts.join("\n")}\n</instrument>`;
+	});
 
-	parts.push(`\nReturn JSON with:
-- decisions: array of {decisionId, instrumentId, action (BUY/SELL/HOLD/CLOSE), direction (LONG/SHORT/FLAT), size {value, unit}, stopLoss (REQUIRED for BUY/SELL - {price, type: "FIXED"|"TRAILING"}), takeProfit?, strategyFamily, timeHorizon, rationale {summary, bullishFactors[], bearishFactors[], decisionLogic, memoryReferences[]}, thesisState, confidence (0-1)}
-- portfolioNotes: overall portfolio commentary
+	const allSections = [
+		...globalSections.filter(Boolean),
+		`<instruments>\n${symbolSections.join("\n")}\n</instruments>`,
+	];
 
-IMPORTANT: Every BUY or SELL decision MUST include a stopLoss. Trades without stop-losses will be rejected.`);
+	return `Create a decision plan for cycle ${cycleId}.
 
-	return parts.join("\n");
+${allSections.join("\n\n")}
+
+IMPORTANT: Every BUY or SELL decision MUST include a stopLoss. Use current_market_prices to set realistic stop-loss and take-profit levels. Trades without stop-losses will be rejected.`;
 }
 
-function parseDecisionPlan(
+function validateDecisionPlan(
 	cycleId: string,
-	text: string,
-	_instruments: string[],
+	plan: z.infer<typeof DecisionPlanSchema>,
 	warnings: string[],
-): z.infer<typeof DecisionPlanSchema> | null {
-	const jsonMatch = text.match(/\{[\s\S]*\}/);
-	if (!jsonMatch) {
-		const warnMsg = "Could not extract JSON from trader response";
-		warnings.push(warnMsg);
-		log.warn({ cycleId, responsePreview: text.slice(0, 500) }, "No JSON found in trader response");
-		return null;
-	}
+): z.infer<typeof DecisionPlanSchema> {
+	const validatedDecisions: z.infer<typeof DecisionSchema>[] = [];
 
-	try {
-		const parsed = JSON.parse(jsonMatch[0]) as Record<string, unknown>;
-
-		const decisions: z.infer<typeof DecisionSchema>[] = [];
-
-		if (Array.isArray(parsed.decisions)) {
-			for (const d of parsed.decisions) {
-				const dec = d as Record<string, unknown>;
-				const action = (dec.action as "BUY" | "SELL" | "HOLD" | "CLOSE") ?? "HOLD";
-				const decisionId = String(dec.decisionId ?? `${cycleId}-${dec.instrumentId}`);
-				const instrumentId = String(dec.instrumentId ?? "");
-				const hasStopLoss = !!dec.stopLoss;
-
-				// Validate stop-loss for BUY/SELL actions - HARD FAILURE if missing or invalid
-				let stopLoss: { price: number; type: "FIXED" | "TRAILING" } | undefined;
-				if (dec.stopLoss) {
-					const rawPrice = (dec.stopLoss as Record<string, unknown>).price;
-					const price = Number(rawPrice);
-					const type =
-						((dec.stopLoss as Record<string, unknown>).type as "FIXED" | "TRAILING") ?? "FIXED";
-
-					if (!Number.isFinite(price) || price <= 0) {
-						const errMsg = `Decision ${decisionId} (${instrumentId}) has invalid stop-loss price: ${rawPrice}. Must be a positive number.`;
-						warnings.push(errMsg);
-						log.error(
-							{ cycleId, decisionId, instrumentId, action, rawPrice },
-							"Invalid stop-loss price - must be positive",
-						);
-						// Skip this decision entirely if it's a BUY/SELL with invalid stop-loss
-						if (action === "BUY" || action === "SELL") {
-							continue;
-						}
-					} else {
-						stopLoss = { price, type };
-					}
-				}
-
-				if ((action === "BUY" || action === "SELL") && !stopLoss) {
-					const errMsg = `Decision ${decisionId} (${instrumentId}) REJECTED: missing stop-loss for ${action} action`;
-					warnings.push(errMsg);
-					log.error(
-						{ cycleId, decisionId, instrumentId, action },
-						"REJECTING trade - missing stop-loss for actionable trade",
-					);
-					// Skip this decision - do not add to decisions array
-					continue;
-				}
-
-				decisions.push({
-					decisionId,
-					instrumentId,
-					action,
-					direction: (dec.direction as "LONG" | "SHORT" | "FLAT") ?? "FLAT",
-					size: {
-						value: Number((dec.size as Record<string, unknown>)?.value ?? 0),
-						unit: String((dec.size as Record<string, unknown>)?.unit ?? "SHARES"),
+	for (const d of plan.decisions) {
+		if (d.stopLoss) {
+			if (!Number.isFinite(d.stopLoss.price) || d.stopLoss.price <= 0) {
+				const errMsg = `Decision ${d.decisionId} (${d.instrumentId}) has invalid stop-loss price: ${d.stopLoss.price}. Must be a positive number.`;
+				warnings.push(errMsg);
+				log.error(
+					{
+						cycleId,
+						decisionId: d.decisionId,
+						instrumentId: d.instrumentId,
+						action: d.action,
+						rawPrice: d.stopLoss.price,
 					},
-					stopLoss,
-					takeProfit: dec.takeProfit
-						? (() => {
-								const rawPrice = (dec.takeProfit as Record<string, unknown>).price;
-								const price = Number(rawPrice);
-								if (!Number.isFinite(price) || price <= 0) {
-									log.warn(
-										{ cycleId, decisionId, instrumentId, rawPrice },
-										"Invalid take-profit price - ignoring",
-									);
-									return undefined;
-								}
-								return { price };
-							})()
-						: undefined,
-					strategyFamily: String(dec.strategyFamily ?? "EQUITY_LONG"),
-					timeHorizon: String(dec.timeHorizon ?? "SWING"),
-					rationale: {
-						summary: String((dec.rationale as Record<string, unknown>)?.summary ?? ""),
-						bullishFactors: Array.isArray(
-							(dec.rationale as Record<string, unknown>)?.bullishFactors,
-						)
-							? ((dec.rationale as Record<string, unknown>).bullishFactors as string[])
-							: [],
-						bearishFactors: Array.isArray(
-							(dec.rationale as Record<string, unknown>)?.bearishFactors,
-						)
-							? ((dec.rationale as Record<string, unknown>).bearishFactors as string[])
-							: [],
-						decisionLogic: String((dec.rationale as Record<string, unknown>)?.decisionLogic ?? ""),
-						memoryReferences: Array.isArray(
-							(dec.rationale as Record<string, unknown>)?.memoryReferences,
-						)
-							? ((dec.rationale as Record<string, unknown>).memoryReferences as string[])
-							: [],
-					},
-					thesisState: String(dec.thesisState ?? "WATCHING"),
-					confidence: Number(dec.confidence ?? 0.5),
-					legs: undefined,
-					netLimitPrice: undefined,
-				});
+					"Invalid stop-loss price - must be positive",
+				);
+				if (d.action === "BUY" || d.action === "SELL") continue;
 			}
 		}
 
-		return {
-			cycleId,
-			timestamp: new Date().toISOString(),
-			decisions,
-			portfolioNotes: String(parsed.portfolioNotes ?? ""),
-		};
-	} catch (err) {
-		const warnMsg = "Failed to parse trader response JSON";
-		warnings.push(warnMsg);
-		log.warn(
-			{ cycleId, error: formatError(err), jsonPreview: jsonMatch[0].slice(0, 500) },
-			"JSON parse failed for trader",
-		);
-		return null;
+		if ((d.action === "BUY" || d.action === "SELL") && !d.stopLoss) {
+			const errMsg = `Decision ${d.decisionId} (${d.instrumentId}) REJECTED: missing stop-loss for ${d.action} action`;
+			warnings.push(errMsg);
+			log.error(
+				{ cycleId, decisionId: d.decisionId, instrumentId: d.instrumentId, action: d.action },
+				"REJECTING trade - missing stop-loss for actionable trade",
+			);
+			continue;
+		}
+
+		if (d.takeProfit && (!Number.isFinite(d.takeProfit.price) || d.takeProfit.price <= 0)) {
+			log.warn(
+				{
+					cycleId,
+					decisionId: d.decisionId,
+					instrumentId: d.instrumentId,
+					rawPrice: d.takeProfit.price,
+				},
+				"Invalid take-profit price - ignoring",
+			);
+			validatedDecisions.push({ ...d, takeProfit: undefined });
+			continue;
+		}
+
+		validatedDecisions.push(d);
 	}
+
+	return { ...plan, decisions: validatedDecisions };
 }
 
 function formatError(error: unknown): string {

@@ -15,6 +15,7 @@ import {
 	getGreeks,
 	getPredictionSignals,
 	getQuotes,
+	getRecentDecisions,
 	helixQuery,
 	optionChain,
 	searchAcademicPapers,
@@ -28,6 +29,7 @@ export const trader = new Agent({
 	instructions: TRADER_PROMPT,
 	model: getModelId(),
 	tools: {
+		getRecentDecisions,
 		getQuotes,
 		getEnrichedPortfolioState,
 		optionChain,

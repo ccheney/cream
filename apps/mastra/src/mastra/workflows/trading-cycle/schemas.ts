@@ -173,6 +173,15 @@ export const QuoteDataSchema = z.object({
 	timestamp: z.number(),
 });
 
+export const CandleSummarySchema = z.object({
+	symbol: z.string(),
+	lastClose: z.number(),
+	high20: z.number().describe("20-bar high"),
+	low20: z.number().describe("20-bar low"),
+	avgVolume20: z.number().describe("20-bar average volume"),
+	trendDirection: z.enum(["UP", "DOWN", "FLAT"]).describe("Simple trend based on 20-bar SMA slope"),
+});
+
 export const MarketSnapshotSchema = z.object({
 	instruments: z.array(z.string()),
 	candles: z.record(z.string(), z.array(CandleDataSchema)),

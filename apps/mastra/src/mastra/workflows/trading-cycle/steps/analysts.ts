@@ -15,8 +15,11 @@ import { fundamentalsAnalyst, newsAnalyst } from "../../../agents/index.js";
 
 const log = createNodeLogger({ service: "trading-cycle:analysts" });
 
+import { getModelId } from "@cream/domain";
+import { xmlPredictionMarketSignals } from "../prompt-helpers.js";
 import {
 	FundamentalsAnalysisSchema,
+	PredictionMarketSignalsSchema,
 	RegimeDataSchema,
 	SentimentAnalysisSchema,
 } from "../schemas.js";
@@ -49,6 +52,9 @@ const AnalystsInputSchema = z.object({
 		})
 		.optional()
 		.describe("Grounding context from previous step"),
+	predictionMarketSignals: PredictionMarketSignalsSchema.optional().describe(
+		"Prediction market signals from orient step",
+	),
 });
 
 const AnalystsOutputSchema = z.object({
@@ -75,7 +81,8 @@ export const analystsStep = createStep({
 	outputSchema: AnalystsOutputSchema,
 	execute: async ({ inputData }) => {
 		const startTime = performance.now();
-		const { cycleId, instruments, regimeLabels, groundingContext } = inputData;
+		const { cycleId, instruments, regimeLabels, groundingContext, predictionMarketSignals } =
+			inputData;
 		const errors: string[] = [];
 		const warnings: string[] = [];
 
@@ -86,14 +93,21 @@ export const analystsStep = createStep({
 		const fundamentalsStart = performance.now();
 
 		const [newsResults, fundamentalsResults] = await Promise.all([
-			runNewsAnalyst(cycleId, instruments, regimeLabels, groundingContext, errors, warnings),
+			runNewsAnalyst(
+				cycleId,
+				instruments,
+				regimeLabels,
+				groundingContext,
+				predictionMarketSignals,
+				errors,
+			),
 			runFundamentalsAnalyst(
 				cycleId,
 				instruments,
 				regimeLabels,
 				groundingContext,
+				predictionMarketSignals,
 				errors,
-				warnings,
 			),
 		]);
 
@@ -140,16 +154,22 @@ async function runNewsAnalyst(
 				global: z.infer<typeof GlobalContextSchema>;
 		  }
 		| undefined,
+	predictionMarketSignals: z.infer<typeof PredictionMarketSignalsSchema> | undefined,
 	errors: string[],
-	_warnings: string[],
 ): Promise<z.infer<typeof SentimentAnalysisSchema>[]> {
 	try {
-		const prompt = buildNewsAnalystPrompt(instruments, regimeLabels, groundingContext);
+		const prompt = buildNewsAnalystPrompt(
+			instruments,
+			regimeLabels,
+			groundingContext,
+			predictionMarketSignals,
+		);
 		log.debug({ cycleId, symbolCount: instruments.length }, "Calling news analyst");
 
 		const response = await newsAnalyst.generate(prompt, {
 			structuredOutput: {
 				schema: z.array(SentimentAnalysisSchema),
+				model: getModelId(),
 			},
 		});
 
@@ -172,16 +192,22 @@ async function runFundamentalsAnalyst(
 				global: z.infer<typeof GlobalContextSchema>;
 		  }
 		| undefined,
+	predictionMarketSignals: z.infer<typeof PredictionMarketSignalsSchema> | undefined,
 	errors: string[],
-	_warnings: string[],
 ): Promise<z.infer<typeof FundamentalsAnalysisSchema>[]> {
 	try {
-		const prompt = buildFundamentalsPrompt(instruments, regimeLabels, groundingContext);
+		const prompt = buildFundamentalsPrompt(
+			instruments,
+			regimeLabels,
+			groundingContext,
+			predictionMarketSignals,
+		);
 		log.debug({ cycleId, symbolCount: instruments.length }, "Calling fundamentals analyst");
 
 		const response = await fundamentalsAnalyst.generate(prompt, {
 			structuredOutput: {
 				schema: z.array(FundamentalsAnalysisSchema),
+				model: getModelId(),
 			},
 		});
 
@@ -206,26 +232,35 @@ function buildNewsAnalystPrompt(
 				global: z.infer<typeof GlobalContextSchema>;
 		  }
 		| undefined,
+	predictionMarketSignals: z.infer<typeof PredictionMarketSignalsSchema> | undefined,
 ): string {
-	const symbolContexts = instruments.map((symbol) => {
+	const symbolSections = instruments.map((symbol) => {
 		const regime = regimeLabels[symbol];
 		const ctx = groundingContext?.perSymbol.find((s) => s.symbol === symbol);
-
-		const lines = [`## ${symbol}`];
-		if (regime) lines.push(`Regime: ${regime.regime} (confidence: ${regime.confidence})`);
-		if (ctx?.news?.length) lines.push(`News: ${ctx.news.join("; ")}`);
-		if (ctx?.bullCase?.length) lines.push(`Bullish: ${ctx.bullCase.join("; ")}`);
-		if (ctx?.bearCase?.length) lines.push(`Bearish: ${ctx.bearCase.join("; ")}`);
-		return lines.join("\n");
+		const parts: string[] = [];
+		if (regime)
+			parts.push(
+				`  <regime classification="${regime.regime}" confidence="${regime.confidence}" />`,
+			);
+		if (ctx?.news?.length) parts.push(`  <news>${ctx.news.join("; ")}</news>`);
+		if (ctx?.bullCase?.length) parts.push(`  <bull_case>${ctx.bullCase.join("; ")}</bull_case>`);
+		if (ctx?.bearCase?.length) parts.push(`  <bear_case>${ctx.bearCase.join("; ")}</bear_case>`);
+		return `<instrument symbol="${symbol}">\n${parts.join("\n")}\n</instrument>`;
 	});
 
 	const globalSection = groundingContext?.global?.macro?.length
-		? `\n## Global Macro\n${groundingContext.global.macro.join("\n")}`
+		? `<global_macro>\n${groundingContext.global.macro.map((m) => `  <item>${m}</item>`).join("\n")}\n</global_macro>\n`
 		: "";
+
+	const predictionSection = xmlPredictionMarketSignals(predictionMarketSignals);
 
 	return `Analyze news and sentiment for all symbols. Consider cross-market themes.
 
-${symbolContexts.join("\n\n")}${globalSection}
+<instruments>
+${symbolSections.join("\n")}
+</instruments>
+
+${globalSection}${predictionSection}
 
 Return analysis for each symbol.`;
 }
@@ -239,31 +274,42 @@ function buildFundamentalsPrompt(
 				global: z.infer<typeof GlobalContextSchema>;
 		  }
 		| undefined,
+	predictionMarketSignals: z.infer<typeof PredictionMarketSignalsSchema> | undefined,
 ): string {
-	const symbolContexts = instruments.map((symbol) => {
+	const symbolSections = instruments.map((symbol) => {
 		const regime = regimeLabels[symbol];
 		const ctx = groundingContext?.perSymbol.find((s) => s.symbol === symbol);
-
-		const lines = [`## ${symbol}`];
-		if (regime) lines.push(`Regime: ${regime.regime} (confidence: ${regime.confidence})`);
-		if (ctx?.fundamentals?.length) lines.push(`Fundamentals: ${ctx.fundamentals.join("; ")}`);
-		if (ctx?.bullCase?.length) lines.push(`Bullish: ${ctx.bullCase.join("; ")}`);
-		if (ctx?.bearCase?.length) lines.push(`Bearish: ${ctx.bearCase.join("; ")}`);
-		return lines.join("\n");
+		const parts: string[] = [];
+		if (regime)
+			parts.push(
+				`  <regime classification="${regime.regime}" confidence="${regime.confidence}" />`,
+			);
+		if (ctx?.fundamentals?.length)
+			parts.push(`  <fundamentals>${ctx.fundamentals.join("; ")}</fundamentals>`);
+		if (ctx?.bullCase?.length) parts.push(`  <bull_case>${ctx.bullCase.join("; ")}</bull_case>`);
+		if (ctx?.bearCase?.length) parts.push(`  <bear_case>${ctx.bearCase.join("; ")}</bear_case>`);
+		return `<instrument symbol="${symbol}">\n${parts.join("\n")}\n</instrument>`;
 	});
 
-	const globalSection = [];
+	const globalParts: string[] = [];
 	if (groundingContext?.global?.macro?.length) {
-		globalSection.push(`Macro: ${groundingContext.global.macro.join("; ")}`);
+		globalParts.push(`  <macro>${groundingContext.global.macro.join("; ")}</macro>`);
 	}
 	if (groundingContext?.global?.events?.length) {
-		globalSection.push(`Events: ${groundingContext.global.events.join("; ")}`);
+		globalParts.push(`  <events>${groundingContext.global.events.join("; ")}</events>`);
 	}
-	const globalText = globalSection.length ? `\n## Global Context\n${globalSection.join("\n")}` : "";
+	const globalSection = globalParts.length
+		? `<global_context>\n${globalParts.join("\n")}\n</global_context>\n`
+		: "";
+	const predictionSection = xmlPredictionMarketSignals(predictionMarketSignals);
 
 	return `Analyze fundamentals and valuation for all symbols. Consider sector themes.
 
-${symbolContexts.join("\n\n")}${globalText}
+<instruments>
+${symbolSections.join("\n")}
+</instruments>
+
+${globalSection}${predictionSection}
 
 Return analysis for each symbol.`;
 }

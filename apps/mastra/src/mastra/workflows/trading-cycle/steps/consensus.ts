@@ -15,14 +15,18 @@ import { critic, riskManager } from "../../../agents/index.js";
 
 const log = createNodeLogger({ service: "trading-cycle:consensus" });
 
+import { getModelId } from "@cream/domain";
+import { xmlQuotes, xmlRecentCloses, xmlRegimes } from "../prompt-helpers.js";
 import {
 	ApprovalSchema,
 	type Constraints,
 	ConstraintsSchema,
-	type ConstraintViolationSchema,
 	DecisionPlanSchema,
 	type DecisionSchema,
-	type RequiredChangeSchema,
+	QuoteDataSchema,
+	type RecentClose,
+	RecentCloseSchema,
+	RegimeDataSchema,
 } from "../schemas.js";
 
 // ============================================
@@ -33,7 +37,19 @@ const ConsensusInputSchema = z.object({
 	cycleId: z.string().describe("Unique identifier for this trading cycle"),
 	decisionPlan: DecisionPlanSchema.describe("Decision plan from trader step"),
 	constraints: ConstraintsSchema.optional().describe("Runtime risk constraints"),
+	regimeLabels: z
+		.record(z.string(), RegimeDataSchema)
+		.optional()
+		.describe("Regime classifications per symbol"),
 	iterations: z.number().optional().describe("Current iteration count"),
+	quotes: z
+		.record(z.string(), QuoteDataSchema)
+		.optional()
+		.describe("Current market quotes keyed by symbol"),
+	recentCloses: z
+		.array(RecentCloseSchema)
+		.optional()
+		.describe("Recently closed positions (cooldown)"),
 });
 
 const ConsensusOutputSchema = z.object({
@@ -62,7 +78,15 @@ export const consensusStep = createStep({
 	outputSchema: ConsensusOutputSchema,
 	execute: async ({ inputData }) => {
 		const startTime = performance.now();
-		const { cycleId, decisionPlan, constraints, iterations: inputIterations } = inputData;
+		const {
+			cycleId,
+			decisionPlan,
+			constraints,
+			regimeLabels,
+			iterations: inputIterations,
+			quotes,
+			recentCloses,
+		} = inputData;
 		const iterations = (inputIterations ?? 0) + 1;
 		const errors: string[] = [];
 		const warnings: string[] = [];
@@ -108,8 +132,16 @@ export const consensusStep = createStep({
 		const criticStart = performance.now();
 
 		const [riskApproval, criticApproval] = await Promise.all([
-			runRiskManager(cycleId, decisionPlan.decisions, constraints, errors, warnings),
-			runCritic(cycleId, decisionPlan.decisions, errors, warnings),
+			runRiskManager(
+				cycleId,
+				decisionPlan.decisions,
+				constraints,
+				regimeLabels ?? {},
+				quotes ?? {},
+				recentCloses ?? [],
+				errors,
+			),
+			runCritic(cycleId, decisionPlan.decisions, errors),
 		]);
 
 		const riskManagerMs = performance.now() - riskStart;
@@ -166,8 +198,10 @@ async function runRiskManager(
 	cycleId: string,
 	decisions: z.infer<typeof DecisionSchema>[],
 	constraints: Constraints | undefined,
+	regimeLabels: Record<string, z.infer<typeof RegimeDataSchema>>,
+	quotes: Record<string, z.infer<typeof QuoteDataSchema>>,
+	recentCloses: RecentClose[],
 	errors: string[],
-	warnings: string[],
 ): Promise<z.infer<typeof ApprovalSchema>> {
 	const defaultApproval: z.infer<typeof ApprovalSchema> = {
 		verdict: "APPROVE",
@@ -179,19 +213,29 @@ async function runRiskManager(
 	};
 
 	try {
-		const prompt = buildRiskManagerPrompt(decisions, constraints);
+		const prompt = buildRiskManagerPrompt(
+			decisions,
+			constraints,
+			regimeLabels,
+			quotes,
+			recentCloses,
+		);
 		log.debug(
 			{ cycleId, decisionCount: decisions.length, hasConstraints: !!constraints },
 			"Calling risk manager",
 		);
-		const response = await riskManager.generate(prompt);
+		const response = await riskManager.generate(prompt, {
+			structuredOutput: {
+				schema: ApprovalSchema,
+				model: getModelId(),
+			},
+		});
 
-		const approval = parseApproval(cycleId, response.text, decisions, "risk_manager", warnings);
-		if (approval) {
-			log.debug({ cycleId, verdict: approval.verdict }, "Risk manager returned verdict");
-			return approval;
+		if (response.object) {
+			log.debug({ cycleId, verdict: response.object.verdict }, "Risk manager returned verdict");
+			return normalizeApproval(response.object, decisions);
 		}
-		log.warn({ cycleId }, "Risk manager returned unparseable response, using default approval");
+		log.warn({ cycleId }, "Risk manager returned no structured output, using default approval");
 		return defaultApproval;
 	} catch (err) {
 		const errorMsg = `Risk manager failed: ${formatError(err)}`;
@@ -205,7 +249,6 @@ async function runCritic(
 	cycleId: string,
 	decisions: z.infer<typeof DecisionSchema>[],
 	errors: string[],
-	warnings: string[],
 ): Promise<z.infer<typeof ApprovalSchema>> {
 	const defaultApproval: z.infer<typeof ApprovalSchema> = {
 		verdict: "APPROVE",
@@ -219,14 +262,18 @@ async function runCritic(
 	try {
 		const prompt = buildCriticPrompt(decisions);
 		log.debug({ cycleId, decisionCount: decisions.length }, "Calling critic");
-		const response = await critic.generate(prompt);
+		const response = await critic.generate(prompt, {
+			structuredOutput: {
+				schema: ApprovalSchema,
+				model: getModelId(),
+			},
+		});
 
-		const approval = parseApproval(cycleId, response.text, decisions, "critic", warnings);
-		if (approval) {
-			log.debug({ cycleId, verdict: approval.verdict }, "Critic returned verdict");
-			return approval;
+		if (response.object) {
+			log.debug({ cycleId, verdict: response.object.verdict }, "Critic returned verdict");
+			return normalizeApproval(response.object, decisions);
 		}
-		log.warn({ cycleId }, "Critic returned unparseable response, using default approval");
+		log.warn({ cycleId }, "Critic returned no structured output, using default approval");
 		return defaultApproval;
 	} catch (err) {
 		const errorMsg = `Critic failed: ${formatError(err)}`;
@@ -239,253 +286,113 @@ async function runCritic(
 function buildRiskManagerPrompt(
 	decisions: z.infer<typeof DecisionSchema>[],
 	constraints: Constraints | undefined,
+	regimeLabels: Record<string, z.infer<typeof RegimeDataSchema>>,
+	quotes: Record<string, z.infer<typeof QuoteDataSchema>>,
+	recentCloses: RecentClose[],
 ): string {
-	const parts = ["Review these trading decisions for risk compliance.", ""];
+	const contextSections: string[] = [];
+
+	contextSections.push(xmlRegimes(regimeLabels));
+	contextSections.push(xmlQuotes(quotes));
 
 	if (constraints) {
-		parts.push(`## Risk Constraints (ACTUAL LIMITS - ENFORCE STRICTLY)`);
-		parts.push(`### Per-Instrument Limits`);
-		parts.push(
-			`- maxPctEquity: ${(constraints.perInstrument.maxPctEquity * 100).toFixed(1)}% of portfolio per position`,
-		);
-		parts.push(
-			`- maxNotional: $${constraints.perInstrument.maxNotional.toLocaleString()} per position`,
-		);
-		parts.push(
-			`- maxShares: ${constraints.perInstrument.maxShares.toLocaleString()} shares per equity position`,
-		);
-		parts.push(
-			`- maxContracts: ${constraints.perInstrument.maxContracts} contracts per options position`,
-		);
-		parts.push(`### Portfolio Limits`);
-		parts.push(`- maxPositions: ${constraints.portfolio.maxPositions} total positions`);
-		parts.push(
-			`- maxConcentration: ${(constraints.portfolio.maxConcentration * 100).toFixed(1)}% max single position`,
-		);
-		parts.push(
-			`- maxGrossExposure: ${(constraints.portfolio.maxGrossExposure * 100).toFixed(0)}% of equity`,
-		);
-		parts.push(
-			`- maxNetExposure: ${(constraints.portfolio.maxNetExposure * 100).toFixed(0)}% of equity`,
-		);
-		parts.push(
-			`- maxRiskPerTrade: ${(constraints.portfolio.maxRiskPerTrade * 100).toFixed(1)}% of portfolio per trade`,
-		);
-		parts.push(
-			`- maxDrawdown: ${(constraints.portfolio.maxDrawdown * 100).toFixed(0)}% max drawdown limit`,
-		);
-		parts.push(
-			`- maxSectorExposure: ${(constraints.portfolio.maxSectorExposure * 100).toFixed(0)}% per sector`,
-		);
-		parts.push(`### Options Greeks Limits`);
-		parts.push(`- maxDelta: ${constraints.options.maxDelta.toLocaleString()}`);
-		parts.push(`- maxGamma: ${constraints.options.maxGamma.toLocaleString()}`);
-		parts.push(`- maxVega: $${constraints.options.maxVega.toLocaleString()}`);
-		parts.push(`- maxTheta: $${constraints.options.maxTheta.toLocaleString()}/day`);
-		parts.push("");
+		contextSections.push(`<risk_constraints>
+  <per_instrument max_pct_equity="${(constraints.perInstrument.maxPctEquity * 100).toFixed(1)}%" max_notional="${constraints.perInstrument.maxNotional}" max_shares="${constraints.perInstrument.maxShares}" max_contracts="${constraints.perInstrument.maxContracts}" />
+  <portfolio max_positions="${constraints.portfolio.maxPositions}" max_concentration="${(constraints.portfolio.maxConcentration * 100).toFixed(1)}%" max_gross_exposure="${(constraints.portfolio.maxGrossExposure * 100).toFixed(0)}%" max_net_exposure="${(constraints.portfolio.maxNetExposure * 100).toFixed(0)}%" max_risk_per_trade="${(constraints.portfolio.maxRiskPerTrade * 100).toFixed(1)}%" max_drawdown="${(constraints.portfolio.maxDrawdown * 100).toFixed(0)}%" max_sector_exposure="${(constraints.portfolio.maxSectorExposure * 100).toFixed(0)}%" />
+  <options max_delta="${constraints.options.maxDelta}" max_gamma="${constraints.options.maxGamma}" max_vega="${constraints.options.maxVega}" max_theta="${constraints.options.maxTheta}" />
+</risk_constraints>`);
 	}
 
-	parts.push("## Decisions");
+	contextSections.push(xmlRecentCloses(recentCloses));
 
-	for (const d of decisions) {
-		parts.push(`### ${d.decisionId}`);
-		parts.push(`- Instrument: ${d.instrumentId}`);
-		parts.push(`- Action: ${d.action} ${d.direction}`);
-		parts.push(`- Size: ${d.size.value} ${d.size.unit}`);
-		if (d.stopLoss) {
-			parts.push(`- Stop Loss: ${d.stopLoss.price} (${d.stopLoss.type})`);
-		} else if (d.action === "BUY" || d.action === "SELL") {
-			parts.push(`- Stop Loss: **MISSING** (REQUIRED for ${d.action})`);
-		}
-		parts.push(`- Confidence: ${d.confidence}`);
-		parts.push(`- Rationale: ${d.rationale.summary}`);
-		parts.push("");
-	}
+	const decisionSections = decisions.map((d) => {
+		const stopLine = d.stopLoss
+			? `  <stop_loss price="${d.stopLoss.price}" type="${d.stopLoss.type}" />`
+			: d.action === "BUY" || d.action === "SELL"
+				? `  <stop_loss status="MISSING" />`
+				: "";
+		return `<decision id="${d.decisionId}" instrument="${d.instrumentId}" action="${d.action}" direction="${d.direction}" confidence="${d.confidence}">
+  <size value="${d.size.value}" unit="${d.size.unit}" />
+${stopLine}
+  <rationale>${d.rationale.summary}</rationale>
+</decision>`;
+	});
 
-	parts.push(`## Risk Review Guidelines`);
-	parts.push(`1. Check position sizing vs portfolio limits`);
-	parts.push(`2. Verify stop losses are present and appropriate for all BUY/SELL actions`);
-	parts.push(`3. Assess concentration risk`);
-	parts.push(`4. Evaluate correlation exposure`);
-	parts.push(`5. REJECT any BUY/SELL decision without a stop-loss`);
-	parts.push("");
-	parts.push(
-		`Return JSON with: verdict (APPROVE/PARTIAL_APPROVE/REJECT), approvedDecisionIds[], rejectedDecisionIds[], violations[], required_changes[], notes`,
-	);
+	return `Review these trading decisions for risk compliance.
 
-	return parts.join("\n");
+${contextSections.filter(Boolean).join("\n\n")}
+
+<decisions>
+${decisionSections.join("\n")}
+</decisions>
+
+<review_guidelines>
+1. Check position sizing vs portfolio limits
+2. Verify stop losses are present and appropriate for all BUY/SELL actions
+3. Assess concentration risk using market_regimes for correlation analysis
+4. Validate stop-loss levels against current_market_prices
+5. REJECT any BUY/SELL decision without a stop-loss
+6. REJECT any BUY for symbols in recent_closes_cooldown unless close reason has materially changed
+</review_guidelines>
+
+Validate stop-loss levels against current_market_prices. REJECT any BUY for symbols in recent_closes_cooldown unless close reason has materially changed.`;
 }
 
 function buildCriticPrompt(decisions: z.infer<typeof DecisionSchema>[]): string {
-	const parts = [
-		"Critically review these trading decisions for logical soundness.",
-		"Focus on the quality of reasoning, not risk constraints or position sizing.",
-		"",
-		"## Decisions",
-	];
-
-	for (const d of decisions) {
-		parts.push(`### ${d.decisionId}`);
-		parts.push(`- Instrument: ${d.instrumentId}`);
-		parts.push(`- Action: ${d.action} ${d.direction}`);
-		parts.push(`- Rationale: ${d.rationale.summary}`);
-		parts.push(`- Bullish factors: ${d.rationale.bullishFactors.join(", ")}`);
-		parts.push(`- Bearish factors: ${d.rationale.bearishFactors.join(", ")}`);
-		parts.push(`- Decision logic: ${d.rationale.decisionLogic}`);
-		parts.push(`- Confidence: ${d.confidence}`);
-		parts.push("");
-	}
-
-	parts.push(`## Critic Review Guidelines`);
-	parts.push(`1. Challenge assumptions in the rationale`);
-	parts.push(`2. Identify logical inconsistencies`);
-	parts.push(`3. Question conviction levels vs evidence`);
-	parts.push(`4. Suggest improvements or alternatives`);
-	parts.push("");
-	parts.push(
-		`Return JSON with: verdict (APPROVE/PARTIAL_APPROVE/REJECT), approvedDecisionIds[], rejectedDecisionIds[], violations[], required_changes[], notes`,
+	const decisionSections = decisions.map(
+		(
+			d,
+		) => `<decision id="${d.decisionId}" instrument="${d.instrumentId}" action="${d.action}" direction="${d.direction}" confidence="${d.confidence}">
+  <rationale>${d.rationale.summary}</rationale>
+  <bullish_factors>${d.rationale.bullishFactors.join(", ")}</bullish_factors>
+  <bearish_factors>${d.rationale.bearishFactors.join(", ")}</bearish_factors>
+  <decision_logic>${d.rationale.decisionLogic}</decision_logic>
+</decision>`,
 	);
 
-	return parts.join("\n");
+	return `Critically review these trading decisions for logical soundness.
+Focus on the quality of reasoning, not risk constraints or position sizing.
+
+<decisions>
+${decisionSections.join("\n")}
+</decisions>
+
+<review_guidelines>
+1. Challenge assumptions in the rationale
+2. Identify logical inconsistencies
+3. Question conviction levels vs evidence
+4. Suggest improvements or alternatives
+</review_guidelines>
+
+Suggest improvements or alternatives where reasoning is weak.`;
 }
 
-function parseApproval(
-	cycleId: string,
-	text: string,
+function normalizeApproval(
+	approval: z.infer<typeof ApprovalSchema>,
 	decisions: z.infer<typeof DecisionSchema>[],
-	agentType: string,
-	warnings: string[],
-): z.infer<typeof ApprovalSchema> | null {
-	const jsonMatch = text.match(/\{[\s\S]*\}/);
-	if (!jsonMatch) {
-		const warnMsg = `Could not extract JSON from ${agentType} response`;
-		warnings.push(warnMsg);
-		log.warn(
-			{ cycleId, agentType, responsePreview: text.slice(0, 200) },
-			`No JSON found in ${agentType} response`,
-		);
-		return null;
+): z.infer<typeof ApprovalSchema> {
+	const allDecisionIds = decisions.map((d) => d.decisionId);
+
+	let approvedDecisionIds: string[];
+	if (approval.approvedDecisionIds && approval.approvedDecisionIds.length > 0) {
+		approvedDecisionIds = approval.approvedDecisionIds;
+	} else if (approval.verdict === "APPROVE") {
+		approvedDecisionIds = allDecisionIds;
+	} else if (approval.verdict === "REJECT") {
+		approvedDecisionIds = [];
+	} else {
+		const rejectedIds = new Set(approval.rejectedDecisionIds ?? []);
+		approvedDecisionIds = allDecisionIds.filter((id) => !rejectedIds.has(id));
 	}
 
-	try {
-		const parsed = JSON.parse(jsonMatch[0]) as Record<string, unknown>;
-		const verdict = (parsed.verdict as "APPROVE" | "PARTIAL_APPROVE" | "REJECT") ?? "APPROVE";
-
-		// Only default to all decisions if verdict is APPROVE and no IDs provided
-		// For PARTIAL_APPROVE, we need explicit IDs to know which are approved
-		const allDecisionIds = decisions.map((d) => d.decisionId);
-		let approvedDecisionIds: string[];
-		if (Array.isArray(parsed.approvedDecisionIds)) {
-			approvedDecisionIds = parsed.approvedDecisionIds.map(String);
-		} else if (verdict === "APPROVE") {
-			approvedDecisionIds = allDecisionIds;
-		} else if (verdict === "REJECT") {
-			approvedDecisionIds = [];
-		} else {
-			// PARTIAL_APPROVE without explicit IDs - use rejectedDecisionIds to infer
-			const rejectedIds = new Set(
-				Array.isArray(parsed.rejectedDecisionIds) ? parsed.rejectedDecisionIds.map(String) : [],
-			);
-			approvedDecisionIds = allDecisionIds.filter((id) => !rejectedIds.has(id));
-		}
-
-		return {
-			verdict,
-			approvedDecisionIds,
-			rejectedDecisionIds: Array.isArray(parsed.rejectedDecisionIds)
-				? parsed.rejectedDecisionIds.map(String)
-				: [],
-			violations: normalizeViolations(parsed.violations, decisions),
-			required_changes: normalizeRequiredChanges(parsed.required_changes, decisions),
-			notes: String(parsed.notes ?? ""),
-		};
-	} catch (err) {
-		const warnMsg = `Failed to parse ${agentType} response JSON`;
-		warnings.push(warnMsg);
-		log.warn(
-			{ cycleId, agentType, error: formatError(err), jsonPreview: jsonMatch[0].slice(0, 200) },
-			`JSON parse failed for ${agentType}`,
-		);
-		return null;
-	}
-}
-
-function normalizeViolations(
-	raw: unknown,
-	decisions: z.infer<typeof DecisionSchema>[],
-): z.infer<typeof ConstraintViolationSchema>[] {
-	if (!Array.isArray(raw)) return [];
-
-	const decisionIds = decisions.map((d) => d.decisionId);
-
-	return raw.map((item) => {
-		if (typeof item === "string") {
-			return {
-				constraint: item,
-				current_value: "unknown",
-				limit: "unknown",
-				severity: "WARNING" as const,
-				affected_decisions: decisionIds,
-			};
-		}
-		if (typeof item === "object" && item !== null) {
-			const obj = item as Record<string, unknown>;
-			return {
-				constraint: String(obj.constraint ?? "Unknown constraint"),
-				current_value: normalizeValueOrNumber(obj.current_value),
-				limit: normalizeValueOrNumber(obj.limit),
-				severity: obj.severity === "CRITICAL" ? ("CRITICAL" as const) : ("WARNING" as const),
-				affected_decisions: Array.isArray(obj.affected_decisions)
-					? obj.affected_decisions.map(String)
-					: decisionIds,
-			};
-		}
-		return {
-			constraint: String(item),
-			current_value: "unknown",
-			limit: "unknown",
-			severity: "WARNING" as const,
-			affected_decisions: decisionIds,
-		};
-	});
-}
-
-function normalizeRequiredChanges(
-	raw: unknown,
-	decisions: z.infer<typeof DecisionSchema>[],
-): z.infer<typeof RequiredChangeSchema>[] {
-	if (!Array.isArray(raw)) return [];
-
-	const firstDecisionId = decisions[0]?.decisionId ?? "unknown";
-
-	return raw.map((item) => {
-		if (typeof item === "string") {
-			return {
-				decisionId: firstDecisionId,
-				change: item,
-				reason: "Required by risk review",
-			};
-		}
-		if (typeof item === "object" && item !== null) {
-			const obj = item as Record<string, unknown>;
-			return {
-				decisionId: String(obj.decisionId ?? firstDecisionId),
-				change: String(obj.change ?? "Unknown change"),
-				reason: String(obj.reason ?? "Required by review"),
-			};
-		}
-		return {
-			decisionId: firstDecisionId,
-			change: String(item),
-			reason: "Required by risk review",
-		};
-	});
-}
-
-function normalizeValueOrNumber(val: unknown): string | number {
-	if (typeof val === "number") return val;
-	if (typeof val === "string") return val;
-	return "unknown";
+	return {
+		...approval,
+		approvedDecisionIds,
+		rejectedDecisionIds: approval.rejectedDecisionIds ?? [],
+		violations: approval.violations ?? [],
+		required_changes: approval.required_changes ?? [],
+		notes: approval.notes ?? "",
+	};
 }
 
 function formatError(error: unknown): string {

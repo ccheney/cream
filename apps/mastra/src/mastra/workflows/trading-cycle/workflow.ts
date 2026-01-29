@@ -8,8 +8,45 @@
  */
 
 import { createWorkflow } from "@mastra/core/workflows";
+import type { z } from "zod";
+import { type CandleDataSchema, WorkflowInputSchema, WorkflowResultSchema } from "./schemas.js";
 
-import { WorkflowInputSchema, WorkflowResultSchema } from "./schemas.js";
+type Candle = z.infer<typeof CandleDataSchema>;
+
+function buildCandleSummaries(
+	candles: Record<string, Candle[]>,
+	instruments: string[],
+): {
+	symbol: string;
+	lastClose: number;
+	high20: number;
+	low20: number;
+	avgVolume20: number;
+	trendDirection: "UP" | "DOWN" | "FLAT";
+}[] {
+	return instruments.flatMap((symbol) => {
+		const bars = candles[symbol];
+		if (!bars || bars.length < 2) return [];
+		const recent = bars.slice(-20);
+		const lastClose = recent.at(-1)!.close;
+		const high20 = Math.max(...recent.map((c) => c.high));
+		const low20 = Math.min(...recent.map((c) => c.low));
+		const avgVolume20 = recent.reduce((sum, c) => sum + c.volume, 0) / recent.length;
+		const smaStart = recent.slice(0, Math.ceil(recent.length / 2));
+		const smaEnd = recent.slice(Math.ceil(recent.length / 2));
+		const avgStart = smaStart.reduce((s, c) => s + c.close, 0) / smaStart.length;
+		const avgEnd = smaEnd.reduce((s, c) => s + c.close, 0) / smaEnd.length;
+		const pctChange = (avgEnd - avgStart) / avgStart;
+		const trendDirection =
+			pctChange > 0.01
+				? ("UP" as const)
+				: pctChange < -0.01
+					? ("DOWN" as const)
+					: ("FLAT" as const);
+		return [{ symbol, lastClose, high20, low20, avgVolume20, trendDirection }];
+	});
+}
+
 import {
 	actStep,
 	analystsStep,
@@ -55,6 +92,7 @@ export const tradingCycleWorkflow = createWorkflow({
 				perSymbol: inputData.perSymbol,
 				global: inputData.global,
 			},
+			predictionMarketSignals: orientResult?.predictionMarketSignals,
 		};
 	})
 	// Step 4: Analysts - Run news and fundamentals analysts
@@ -62,12 +100,23 @@ export const tradingCycleWorkflow = createWorkflow({
 	// Map analysts output to debate input
 	.map(async ({ inputData, getStepResult }) => {
 		const orientResult = getStepResult(orientStep);
+		const groundingResult = getStepResult(groundingStep);
 		return {
 			cycleId: inputData.cycleId,
 			instruments: orientResult?.marketSnapshot.instruments ?? [],
 			regimeLabels: orientResult?.regimeLabels ?? {},
 			newsAnalysis: inputData.newsAnalysis,
 			fundamentalsAnalysis: inputData.fundamentalsAnalysis,
+			globalGrounding: groundingResult
+				? { macro: groundingResult.global.macro, events: groundingResult.global.events }
+				: undefined,
+			memoryCases: orientResult?.memoryContext.relevantCases ?? [],
+			candleSummaries: buildCandleSummaries(
+				orientResult?.marketSnapshot.candles ?? {},
+				orientResult?.marketSnapshot.instruments ?? [],
+			),
+			groundingSources: groundingResult?.sources ?? [],
+			predictionMarketSignals: orientResult?.predictionMarketSignals,
 		};
 	})
 	// Step 5: Debate - Run bullish and bearish researchers
@@ -87,18 +136,29 @@ export const tradingCycleWorkflow = createWorkflow({
 			bullishResearch: inputData.bullishResearch,
 			bearishResearch: inputData.bearishResearch,
 			recentCloses: observeResult?.recentCloses,
+			quotes: observeResult?.marketSnapshot.quotes ?? {},
+			memoryCases: orientResult?.memoryContext.relevantCases ?? [],
+			candleSummaries: buildCandleSummaries(
+				orientResult?.marketSnapshot.candles ?? {},
+				orientResult?.marketSnapshot.instruments ?? [],
+			),
+			predictionMarketSignals: orientResult?.predictionMarketSignals,
 		};
 	})
 	// Step 6: Trader - Synthesize decision plan
 	.then(traderStep)
 	// Map trader output to consensus input
 	.map(async ({ inputData, getStepResult }) => {
+		const observeResult = getStepResult(observeStep);
 		const orientResult = getStepResult(orientStep);
 		return {
 			cycleId: inputData.cycleId,
 			decisionPlan: inputData.decisionPlan,
 			constraints: orientResult?.constraints,
+			regimeLabels: orientResult?.regimeLabels ?? {},
 			iterations: 0,
+			quotes: observeResult?.marketSnapshot.quotes ?? {},
+			recentCloses: observeResult?.recentCloses ?? [],
 		};
 	})
 	// Step 7: Consensus - Run risk manager and critic
