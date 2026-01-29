@@ -36,6 +36,12 @@ export function mapAccount(data: AlpacaAccountResponse): Account {
 		maintenanceMargin: Number.parseFloat(data.maintenance_margin),
 		sma: Number.parseFloat(data.sma),
 		createdAt: data.created_at,
+		cashWithdrawable: Number.parseFloat(data.cash_withdrawable),
+		cashTransferable: Number.parseFloat(data.cash_transferable),
+		pendingTransferIn: Number.parseFloat(data.pending_transfer_in),
+		pendingTransferOut: Number.parseFloat(data.pending_transfer_out),
+		nonMarginableBuyingPower: Number.parseFloat(data.non_marginable_buying_power),
+		accruedFees: Number.parseFloat(data.accrued_fees),
 	};
 }
 

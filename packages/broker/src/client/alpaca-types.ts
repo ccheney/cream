@@ -29,6 +29,12 @@ export interface AlpacaAccountResponse {
 	maintenance_margin: string;
 	sma: string;
 	created_at: string;
+	cash_withdrawable: string;
+	cash_transferable: string;
+	pending_transfer_in: string;
+	pending_transfer_out: string;
+	non_marginable_buying_power: string;
+	accrued_fees: string;
 }
 
 export interface AlpacaPositionResponse {

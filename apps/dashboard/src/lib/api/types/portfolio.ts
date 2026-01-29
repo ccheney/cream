@@ -52,6 +52,12 @@ export interface Account {
 	maintenanceMargin: number;
 	sma: number;
 	createdAt: string;
+	cashWithdrawable: number;
+	cashTransferable: number;
+	pendingTransferIn: number;
+	pendingTransferOut: number;
+	nonMarginableBuyingPower: number;
+	accruedFees: number;
 }
 
 export type PortfolioHistoryPeriod = "1D" | "1W" | "1M" | "3M" | "1A" | "all";

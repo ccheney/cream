@@ -113,6 +113,18 @@ export interface Account {
 	/** Special Memorandum Account */
 	sma: number;
 	createdAt: string;
+	/** Settled cash available for withdrawal */
+	cashWithdrawable: number;
+	/** Settled cash available for transfer */
+	cashTransferable: number;
+	/** Pending incoming transfers */
+	pendingTransferIn: number;
+	/** Pending outgoing transfers */
+	pendingTransferOut: number;
+	/** Buying power for non-marginable securities */
+	nonMarginableBuyingPower: number;
+	/** Accrued fees on the account */
+	accruedFees: number;
 }
 
 export class BrokerError extends Error {

@@ -50,6 +50,12 @@ export const AccountSchema = z.object({
 	maintenanceMargin: z.number(),
 	sma: z.number(),
 	createdAt: z.string(),
+	cashWithdrawable: z.number(),
+	cashTransferable: z.number(),
+	pendingTransferIn: z.number(),
+	pendingTransferOut: z.number(),
+	nonMarginableBuyingPower: z.number(),
+	accruedFees: z.number(),
 });
 
 export type Account = z.infer<typeof AccountSchema>;
