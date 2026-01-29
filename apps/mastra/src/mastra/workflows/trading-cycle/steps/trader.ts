@@ -376,7 +376,11 @@ function validateDecisionPlan(
 			}
 		}
 
-		if ((d.action === "BUY" || d.action === "SELL") && !d.stopLoss) {
+		if (
+			(d.action === "BUY" || d.action === "SELL") &&
+			!d.stopLoss &&
+			d.instrumentType !== "OPTION"
+		) {
 			const errMsg = `Decision ${d.decisionId} (${d.instrumentId}) REJECTED: missing stop-loss for ${d.action} action`;
 			warnings.push(errMsg);
 			log.error(

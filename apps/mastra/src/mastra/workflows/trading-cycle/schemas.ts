@@ -266,6 +266,7 @@ export const OptionLegSchema = z.object({
 export const DecisionSchema = z.object({
 	decisionId: z.string(),
 	instrumentId: z.string(),
+	instrumentType: z.enum(["EQUITY", "OPTION"]).default("EQUITY"),
 	action: z.enum(["BUY", "SELL", "HOLD", "CLOSE"]),
 	direction: z.enum(["LONG", "SHORT", "FLAT"]),
 	size: z.object({

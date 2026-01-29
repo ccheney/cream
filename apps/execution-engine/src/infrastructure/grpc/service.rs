@@ -354,10 +354,17 @@ where
                     unrealized_pnl / cost_basis
                 };
 
+                let is_option = is_occ_symbol(&p.symbol);
+                let instrument_type = if is_option {
+                    super::proto::cream::v1::InstrumentType::Option
+                } else {
+                    super::proto::cream::v1::InstrumentType::Equity
+                };
+
                 super::proto::cream::v1::Position {
                     instrument: Some(super::proto::cream::v1::Instrument {
                         instrument_id: p.symbol,
-                        instrument_type: super::proto::cream::v1::InstrumentType::Equity.into(),
+                        instrument_type: instrument_type.into(),
                         option_contract: None,
                     }),
                     quantity,
@@ -388,12 +395,18 @@ where
                 use crate::application::dto::OrderDto;
                 let dto = OrderDto::from_order(&order);
 
+                let order_instrument_type = if is_occ_symbol(&dto.symbol) {
+                    super::proto::cream::v1::InstrumentType::Option
+                } else {
+                    super::proto::cream::v1::InstrumentType::Equity
+                };
+
                 let response = GetOrderStateResponse {
                     order_id: dto.order_id,
                     broker_order_id: dto.broker_id.unwrap_or_default(),
                     instrument: Some(super::proto::cream::v1::Instrument {
                         instrument_id: dto.symbol,
-                        instrument_type: super::proto::cream::v1::InstrumentType::Equity.into(),
+                        instrument_type: order_instrument_type.into(),
                         option_contract: None,
                     }),
                     status: convert_to_proto_status(dto.status),
@@ -595,6 +608,18 @@ fn convert_domain_violation_to_proto(
         limit_value,
         constraint_name: v.code.clone(),
     }
+}
+
+/// Detect OCC option symbols (e.g. AAPL250117C00150000).
+/// OCC symbols are 15+ chars ending with a strike price block.
+fn is_occ_symbol(symbol: &str) -> bool {
+    symbol.len() >= 15
+        && symbol
+            .as_bytes()
+            .iter()
+            .rev()
+            .take(8)
+            .all(u8::is_ascii_digit)
 }
 
 // Conversion helpers

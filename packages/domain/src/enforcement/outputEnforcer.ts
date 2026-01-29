@@ -664,12 +664,12 @@ export function createFallbackPlan(
 			decisions.push({
 				instrument: {
 					instrumentId,
-					instrumentType: "EQUITY", // Default, should be enhanced with actual type
+					instrumentType: instrumentId.length >= 15 ? "OPTION" : "EQUITY",
 				},
 				action: "HOLD",
 				size: {
 					quantity: Math.abs(position.quantity),
-					unit: "SHARES",
+					unit: instrumentId.length >= 15 ? "CONTRACTS" : "SHARES",
 					targetPositionQuantity: position.quantity,
 				},
 				orderPlan: {

@@ -182,12 +182,12 @@ export function mapDecisionEvent(event: DecisionInsertEvent): BroadcastEvent {
 		data: {
 			instrument: {
 				instrumentId: event.symbol,
-				instrumentType: "EQUITY",
+				instrumentType: event.symbol.length >= 15 ? "OPTION" : "EQUITY",
 			},
 			action: actionMap[event.action],
 			size: {
 				quantity: 0,
-				unit: "SHARES",
+				unit: event.symbol.length >= 15 ? "CONTRACTS" : "SHARES",
 				targetPositionQuantity: 0,
 			},
 			orderPlan: {

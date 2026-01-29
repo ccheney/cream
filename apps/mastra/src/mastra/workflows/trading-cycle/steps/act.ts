@@ -150,7 +150,7 @@ async function checkConstraints(
 	const violations: string[] = [];
 
 	for (const decision of decisionPlan.decisions) {
-		if (decision.action === "BUY" && !decision.stopLoss) {
+		if (decision.action === "BUY" && !decision.stopLoss && decision.instrumentType !== "OPTION") {
 			violations.push(`${decision.instrumentId}: Buy order missing stop loss`);
 		}
 
@@ -285,14 +285,20 @@ async function submitOrders(
 		try {
 			const side = getOrderSide(decision.action, decision.direction, currentPositionSide);
 
+			const instrumentType =
+				decision.instrumentType === "OPTION" ? InstrumentType.OPTION : InstrumentType.EQUITY;
+
+			const isOption = instrumentType === InstrumentType.OPTION;
+
 			const request = create(SubmitOrderRequestSchema, {
 				instrument: {
 					instrumentId: decision.instrumentId,
-					instrumentType: InstrumentType.EQUITY,
+					instrumentType,
 				},
 				side,
 				quantity: decision.size.value,
-				orderType: OrderType.MARKET, // Use market orders for now
+				orderType: isOption && decision.netLimitPrice != null ? OrderType.LIMIT : OrderType.MARKET,
+				limitPrice: isOption ? decision.netLimitPrice : undefined,
 				timeInForce: TimeInForce.DAY,
 				clientOrderId,
 				cycleId,
@@ -302,6 +308,7 @@ async function submitOrders(
 				{
 					cycleId,
 					symbol: decision.instrumentId,
+					instrumentType: decision.instrumentType,
 					action: decision.action,
 					direction: decision.direction,
 					currentPositionSide: currentPositionSide ?? "none",
