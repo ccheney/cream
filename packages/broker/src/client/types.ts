@@ -22,6 +22,8 @@ export interface GetOrdersOptions {
 	side?: "buy" | "sell";
 	/** Include nested bracket order legs */
 	nested?: boolean;
+	/** Pagination cursor: return orders after this order ID */
+	after?: string;
 }
 
 /**
@@ -83,9 +85,17 @@ export interface AlpacaClient {
 	/**
 	 * Get orders with optional filtering.
 	 *
-	 * @param options - Filter options (status, limit, direction, symbols, side, nested)
+	 * @param options - Filter options (status, limit, direction, symbols, side, nested, after)
 	 */
 	getOrders(options?: GetOrdersOptions): Promise<Order[]>;
+
+	/**
+	 * Get all orders with auto-pagination.
+	 * Fetches all orders matching the filter by automatically paginating through results.
+	 *
+	 * @param options - Filter options (status, direction, symbols, side, nested)
+	 */
+	getAllOrders(options?: Omit<GetOrdersOptions, "limit" | "after">): Promise<Order[]>;
 
 	/**
 	 * Close a position.

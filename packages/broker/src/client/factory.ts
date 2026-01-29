@@ -216,9 +216,41 @@ export function createAlpacaClient(config: AlpacaClientConfig): AlpacaClient {
 			if (options.nested !== undefined) {
 				params.set("nested", String(options.nested));
 			}
+			if (options.after !== undefined) {
+				params.set("after", options.after);
+			}
 
 			const data = await request<AlpacaOrderResponse[]>("GET", `/v2/orders?${params.toString()}`);
 			return data.map(mapOrder);
+		},
+
+		async getAllOrders(options: Omit<GetOrdersOptions, "limit" | "after"> = {}): Promise<Order[]> {
+			const allOrders: Order[] = [];
+			let after: string | undefined;
+			const batchSize = 500;
+
+			// Auto-paginate through all orders
+			while (true) {
+				const batch = await this.getOrders({
+					...options,
+					limit: batchSize,
+					after,
+				});
+
+				if (batch.length === 0) break;
+
+				allOrders.push(...batch);
+
+				// If we got fewer than batchSize, we've reached the end
+				if (batch.length < batchSize) break;
+
+				// Use the last order's ID as the cursor for the next page
+				after = batch.at(-1)?.id;
+				if (!after) break;
+			}
+
+			log.debug({ totalOrders: allOrders.length, status: options.status }, "Fetched all orders");
+			return allOrders;
 		},
 
 		async closePosition(symbol: string, qty?: number): Promise<Order> {

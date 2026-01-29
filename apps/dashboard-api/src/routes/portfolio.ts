@@ -1445,17 +1445,18 @@ app.openapi(closedTradesRoute, async (c) => {
 	try {
 		const client = getBrokerClient();
 
-		// Fetch closed orders directly from Alpaca (source of truth)
-		const alpacaOrders = await client.getOrders({
+		// Fetch ALL closed orders from Alpaca with auto-pagination
+		const alpacaOrders = await client.getAllOrders({
 			status: "closed",
-			limit: 500,
-			direction: "asc",
 		});
 
 		// Filter for filled orders only and optionally by symbol
+		// IMPORTANT: Sort by filledAt (execution time) for correct FIFO matching
+		// Alpaca's direction param sorts by created_at, not filled_at
 		const filledOrders = alpacaOrders
 			.filter((o) => o.status === "filled" && o.filledAt)
-			.filter((o) => !query.symbol || o.symbol === query.symbol);
+			.filter((o) => !query.symbol || o.symbol === query.symbol)
+			.toSorted((a, b) => new Date(a.filledAt!).getTime() - new Date(b.filledAt!).getTime());
 
 		// Group orders by symbol and process FIFO
 		const symbolLots = new Map<string, FifoLot[]>();
