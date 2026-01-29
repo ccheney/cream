@@ -20,8 +20,11 @@ import { useState } from "react";
 import { AccountSummaryCard } from "@/components/portfolio/AccountSummaryCard";
 import { AllocationDonut } from "@/components/portfolio/AllocationDonut";
 import { EquityCurveChart } from "@/components/portfolio/EquityCurveChart";
+import { OptionsPositionsWidget } from "@/components/portfolio/OptionsPositionsWidget";
 import { OrderHistoryWidget } from "@/components/portfolio/OrderHistoryWidget";
+import { PortfolioSummary } from "@/components/portfolio/PortfolioSummary";
 import { PositionsPanel } from "@/components/portfolio/PositionsPanel";
+import { PositionsTable } from "@/components/portfolio/PositionsTable";
 import { RiskMetricsBar } from "@/components/portfolio/RiskMetricsBar";
 import { QueryErrorBoundary } from "@/components/QueryErrorBoundary";
 import {
@@ -75,6 +78,13 @@ export default function PortfolioPage() {
 
 	return (
 		<div className="space-y-6">
+			{/* Portfolio Summary */}
+			<PortfolioSummary
+				state={portfolioState}
+				cash={summary?.cash ?? 0}
+				isLoading={isPositionsLoading}
+			/>
+
 			{/* Header with NAV */}
 			<div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
 				<div>
@@ -143,23 +153,27 @@ export default function PortfolioPage() {
 						/>
 					</QueryErrorBoundary>
 
-					<QueryErrorBoundary title="Failed to load risk metrics">
-						<RiskMetricsBar
-							metrics={performanceMetrics}
-							streamingMetrics={streamingRiskMetrics}
-							isLoading={isPerformanceLoading}
-						/>
+					<QueryErrorBoundary title="Failed to load options positions">
+						<OptionsPositionsWidget showAggregateGreeks />
 					</QueryErrorBoundary>
 				</div>
 
-				{/* Allocation Donut - 1/3 width on large screens */}
-				<div className="lg:col-span-1">
+				{/* Allocation + Risk Metrics - 1/3 width on large screens */}
+				<div className="lg:col-span-1 space-y-6">
 					<QueryErrorBoundary title="Failed to load allocation">
 						<AllocationDonut
 							positions={streamingPositions}
 							account={account}
 							isStreaming={portfolioState.isStreaming}
 							isLoading={isPositionsLoading || isAccountLoading}
+						/>
+					</QueryErrorBoundary>
+
+					<QueryErrorBoundary title="Failed to load risk metrics">
+						<RiskMetricsBar
+							metrics={performanceMetrics}
+							streamingMetrics={streamingRiskMetrics}
+							isLoading={isPerformanceLoading}
 						/>
 					</QueryErrorBoundary>
 				</div>
@@ -169,6 +183,16 @@ export default function PortfolioPage() {
 			<QueryErrorBoundary title="Failed to load order history">
 				<OrderHistoryWidget limit={100} />
 			</QueryErrorBoundary>
+
+			{/* === Unused Components Preview (temporary) === */}
+			<div className="border-t-2 border-dashed border-amber-400 pt-6 space-y-6">
+				<h2 className="text-xl font-semibold text-amber-600">Unused Components Preview</h2>
+
+				<div>
+					<h3 className="text-sm font-medium text-stone-500 mb-2">PositionsTable</h3>
+					<PositionsTable positions={streamingPositions} isLoading={isPositionsLoading} />
+				</div>
+			</div>
 		</div>
 	);
 }

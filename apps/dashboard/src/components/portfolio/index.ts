@@ -18,5 +18,3 @@ export type { PositionRowProps } from "./PositionRow";
 export { PositionRow } from "./PositionRow";
 export type { PositionsTableProps } from "./PositionsTable";
 export { PositionsTable } from "./PositionsTable";
-export type { StreamingPositionsTableProps } from "./StreamingPositionsTable";
-export { StreamingPositionsTable } from "./StreamingPositionsTable";

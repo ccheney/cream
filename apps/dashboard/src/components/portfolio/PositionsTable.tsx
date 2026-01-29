@@ -18,22 +18,7 @@ export const PositionsTable = memo(function PositionsTable({
 	isLoading = false,
 }: PositionsTableProps) {
 	return (
-		<div className="bg-white dark:bg-night-800 rounded-lg border border-cream-200 dark:border-night-700">
-			<div className="p-4 border-b border-cream-200 dark:border-night-700 flex items-center justify-between">
-				<h2 className="text-lg font-medium text-stone-900 dark:text-night-50">Open Positions</h2>
-				<div className="flex items-center gap-3">
-					{positions.some((p) => p.isStreaming) && (
-						<div className="flex items-center gap-1.5 text-xs text-green-600 dark:text-green-400">
-							<span className="w-2 h-2 rounded-full bg-green-500 animate-pulse" />
-							Live
-						</div>
-					)}
-					<span className="text-sm text-stone-500 dark:text-night-300">
-						{positions.length} positions
-					</span>
-				</div>
-			</div>
-
+		<div>
 			{isLoading ? (
 				<div className="p-4 space-y-2">
 					{[1, 2, 3].map((i) => (

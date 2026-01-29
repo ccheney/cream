@@ -201,7 +201,7 @@ export const RiskMetricsBar = memo(function RiskMetricsBar({
 					</div>
 				)}
 			</div>
-			<div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-4">
+			<div className="grid grid-cols-3 gap-4">
 				{METRICS.map((config) => (
 					<MetricItem
 						key={config.key}

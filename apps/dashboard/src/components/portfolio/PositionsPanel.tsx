@@ -12,6 +12,7 @@
 import { memo, useState } from "react";
 import { useClosedTrades } from "@/hooks/queries/usePortfolio";
 import type { StreamingPosition } from "@/hooks/usePortfolioStreaming";
+import { PositionsTable } from "./PositionsTable";
 
 // ============================================
 // Types
@@ -136,7 +137,7 @@ const OpenPositionsContent = memo(function OpenPositionsContent({
 		);
 	}
 
-	return <StreamingPositionsTableInner positions={positions} isStreaming={isStreaming} />;
+	return <PositionsTable positions={positions} />;
 });
 
 interface ClosedTradesContentProps {
@@ -204,12 +205,14 @@ import { useVirtualizer } from "@tanstack/react-virtual";
 import Link from "next/link";
 import { useCallback, useMemo, useRef } from "react";
 import { AnimatedNumber } from "@/components/ui/animated-number";
+import { SourceLogo } from "@/components/ui/source-logo";
 import { usePriceFlash } from "@/components/ui/use-price-flash";
+import { buildTickerLogoUrl } from "@/lib/config";
 
 const ROW_HEIGHT = 48;
 const OVERSCAN = 5;
 const GRID_TEMPLATE_OPEN =
-	"minmax(100px, 1.5fr) minmax(60px, 1fr) minmax(80px, 1.2fr) minmax(80px, 1.2fr) minmax(80px, 1.2fr) minmax(90px, 1.3fr) minmax(80px, 1.2fr)";
+	"minmax(100px, 1.5fr) minmax(60px, 1fr) minmax(80px, 1.2fr) minmax(80px, 1.2fr) minmax(80px, 1.2fr) minmax(80px, 1.2fr) minmax(90px, 1.3fr) minmax(80px, 1.2fr)";
 const GRID_TEMPLATE_CLOSED =
 	"minmax(80px, 1fr) minmax(60px, 0.8fr) minmax(80px, 1fr) minmax(80px, 1fr) minmax(90px, 1.2fr) minmax(70px, 1fr) minmax(60px, 0.8fr) minmax(90px, 1.2fr)";
 
@@ -251,6 +254,7 @@ type OpenSortField =
 	| "livePrice"
 	| "liveDayPnl"
 	| "liveUnrealizedPnl"
+	| "liveMarketValue"
 	| "liveUnrealizedPnlPct";
 
 const StreamingPositionsTableInner = memo(function StreamingPositionsTableInner({
@@ -318,6 +322,12 @@ const StreamingPositionsTableInner = memo(function StreamingPositionsTableInner(
 				<SortHeaderOpen
 					label="Current"
 					field="livePrice"
+					currentSort={sortState}
+					onSort={handleSort}
+				/>
+				<SortHeaderOpen
+					label="Value"
+					field="liveMarketValue"
 					currentSort={sortState}
 					onSort={handleSort}
 				/>
@@ -422,6 +432,12 @@ const OpenPositionRow = memo(function OpenPositionRow({
 				role="cell"
 			>
 				<div className="flex items-center gap-2">
+					<SourceLogo
+						logoUrl={buildTickerLogoUrl(position.symbol)}
+						domain={position.symbol}
+						size="sm"
+						fallback="company"
+					/>
 					<Link href={`/portfolio/positions/${position.id}`} className="hover:text-blue-600">
 						{position.symbol}
 					</Link>
@@ -460,6 +476,12 @@ const OpenPositionRow = memo(function OpenPositionRow({
 					className="font-mono text-stone-900 dark:text-night-50"
 					animationThreshold={0.001}
 				/>
+			</div>
+			<div
+				className="px-4 py-3 text-right font-mono text-stone-900 dark:text-night-50 flex items-center justify-end"
+				role="cell"
+			>
+				{formatCurrency(position.liveMarketValue, 0)}
 			</div>
 			<div
 				className={`px-4 py-3 text-right font-mono flex items-center justify-end ${dayPnlColor}`}
@@ -656,7 +678,7 @@ const SortHeaderClosed = memo(function SortHeaderClosed({
 	return (
 		<button
 			type="button"
-			className={`px-3 py-3 font-medium cursor-pointer hover:bg-cream-100 dark:hover:bg-night-700 transition-colors select-none text-xs ${align === "right" ? "text-right justify-end" : "text-left justify-start"} flex items-center gap-1`}
+			className={`px-4 py-3 font-medium cursor-pointer hover:bg-cream-100 dark:hover:bg-night-700 transition-colors select-none ${align === "right" ? "text-right justify-end" : "text-left justify-start"} flex items-center gap-1`}
 			onClick={() => onSort(field)}
 		>
 			{align === "right" && <span className="w-3 text-xs">{icon}</span>}
@@ -681,50 +703,64 @@ const ClosedTradeRow = memo(function ClosedTradeRow({
 			tabIndex={0}
 		>
 			<div
-				className="px-3 py-3 font-medium text-stone-900 dark:text-night-50 flex items-center text-sm"
+				className="px-4 py-3 font-medium text-stone-900 dark:text-night-50 flex items-center"
 				role="cell"
 			>
-				{trade.symbol}
+				<div className="flex items-center gap-2">
+					<SourceLogo
+						logoUrl={buildTickerLogoUrl(trade.symbol)}
+						domain={trade.symbol}
+						size="sm"
+						fallback="company"
+					/>
+					<Link href={`/portfolio/positions/${trade.id}`} className="hover:text-blue-600">
+						{trade.symbol}
+					</Link>
+				</div>
 			</div>
 			<div
-				className="px-3 py-3 text-right font-mono text-stone-900 dark:text-night-50 flex items-center justify-end text-sm"
+				className="px-4 py-3 text-right font-mono text-stone-900 dark:text-night-50 flex items-center justify-end"
 				role="cell"
 			>
-				{trade.quantity}
+				<span
+					className={`px-2 py-0.5 text-xs font-medium rounded ${trade.side === "LONG" ? "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400" : "bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400"}`}
+				>
+					{trade.quantity}
+				</span>
 			</div>
 			<div
-				className="px-3 py-3 text-right font-mono text-stone-500 dark:text-night-400 flex items-center justify-end text-sm"
+				className="px-4 py-3 text-right font-mono text-stone-900 dark:text-night-50 flex items-center justify-end"
 				role="cell"
 			>
 				{formatCurrency(trade.entryPrice)}
 			</div>
 			<div
-				className="px-3 py-3 text-right font-mono text-stone-900 dark:text-night-50 flex items-center justify-end text-sm"
+				className="px-4 py-3 text-right font-mono text-stone-900 dark:text-night-50 flex items-center justify-end"
 				role="cell"
 			>
 				{formatCurrency(trade.exitPrice)}
 			</div>
 			<div
-				className={`px-3 py-3 text-right font-mono flex items-center justify-end text-sm ${pnlColor}`}
+				className={`px-4 py-3 text-right font-mono flex items-center justify-end ${pnlColor}`}
 				role="cell"
 			>
 				{trade.realizedPnl >= 0 ? "+" : ""}
 				{formatCurrency(trade.realizedPnl, 2)}
 			</div>
 			<div
-				className={`px-3 py-3 text-right font-mono flex items-center justify-end text-sm ${pnlColor}`}
+				className={`px-4 py-3 text-right font-mono flex items-center justify-end ${pnlColor}`}
 				role="cell"
 			>
 				{formatPct(trade.realizedPnlPct)}
 			</div>
 			<div
-				className="px-3 py-3 text-right text-stone-500 dark:text-night-400 flex items-center justify-end text-sm"
+				className="px-4 py-3 text-right text-stone-500 dark:text-night-300 flex items-center justify-end"
 				role="cell"
 			>
 				{formatHoldTime(trade.holdDays)}
 			</div>
 			<div
-				className="px-3 py-3 text-right text-stone-500 dark:text-night-400 flex items-center justify-end text-sm"
+				className="px-4 py-3 text-right text-stone-500 dark:text-night-300 flex items-center justify-end"
 				role="cell"
 			>
 				{formatDate(trade.exitDate)}
