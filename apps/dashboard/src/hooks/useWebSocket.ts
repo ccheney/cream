@@ -173,26 +173,31 @@ export function useWebSocket(options: UseWebSocketOptions): UseWebSocketReturn {
 
 	// Memoize configs to prevent recreating connect/startHeartbeat on every render
 	// Only depend on individual properties, NOT the object reference
+	const reconnectMaxAttempts = reconnection?.maxAttempts ?? DEFAULT_RECONNECTION.maxAttempts;
+	const reconnectInitialDelay = reconnection?.initialDelay ?? DEFAULT_RECONNECTION.initialDelay;
+	const reconnectMaxDelay = reconnection?.maxDelay ?? DEFAULT_RECONNECTION.maxDelay;
+	const reconnectBackoff =
+		reconnection?.backoffMultiplier ?? DEFAULT_RECONNECTION.backoffMultiplier;
+
 	const reconnectionConfig = useMemo<ReconnectionConfig>(
 		() => ({
-			...DEFAULT_RECONNECTION,
-			...reconnection,
+			maxAttempts: reconnectMaxAttempts,
+			initialDelay: reconnectInitialDelay,
+			maxDelay: reconnectMaxDelay,
+			backoffMultiplier: reconnectBackoff,
 		}),
-		[
-			reconnection?.maxAttempts,
-			reconnection?.initialDelay,
-			reconnection?.maxDelay,
-			reconnection?.backoffMultiplier,
-			reconnection,
-		],
+		[reconnectMaxAttempts, reconnectInitialDelay, reconnectMaxDelay, reconnectBackoff],
 	);
+
+	const hbPingInterval = heartbeat?.pingInterval ?? DEFAULT_HEARTBEAT.pingInterval;
+	const hbPongTimeout = heartbeat?.pongTimeout ?? DEFAULT_HEARTBEAT.pongTimeout;
 
 	const heartbeatConfig = useMemo<HeartbeatConfig>(
 		() => ({
-			...DEFAULT_HEARTBEAT,
-			...heartbeat,
+			pingInterval: hbPingInterval,
+			pongTimeout: hbPongTimeout,
 		}),
-		[heartbeat?.pingInterval, heartbeat?.pongTimeout, heartbeat],
+		[hbPingInterval, hbPongTimeout],
 	);
 
 	// State
