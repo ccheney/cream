@@ -15,7 +15,6 @@ export {
 	predictionMarketsWorkflow,
 	tradingCycleWorkflow,
 } from "./mastra/workflows/index.js";
-
 // Export MacroWatch utilities for direct use by workers
 export {
 	compileMorningNewspaper,
@@ -24,3 +23,5 @@ export {
 	type NewspaperContent,
 	runMacroWatch,
 } from "./mastra/workflows/macro-watch/index.js";
+// Export trading cycle types for consumers
+export type { EnrichedPosition } from "./mastra/workflows/trading-cycle/schemas.js";

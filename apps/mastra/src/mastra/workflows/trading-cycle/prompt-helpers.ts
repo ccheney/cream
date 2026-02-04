@@ -8,6 +8,7 @@
 import type { z } from "zod";
 import type {
 	CandleSummarySchema,
+	EnrichedPositionSchema,
 	GroundingSourceSchema,
 	MemoryCaseSchema,
 	PredictionMarketSignalsSchema,
@@ -23,6 +24,7 @@ type CandleSummary = z.infer<typeof CandleSummarySchema>;
 type GroundingSource = z.infer<typeof GroundingSourceSchema>;
 type QuoteData = z.infer<typeof QuoteDataSchema>;
 type RecentClose = z.infer<typeof RecentCloseSchema>;
+type EnrichedPosition = z.infer<typeof EnrichedPositionSchema>;
 
 export function xmlPredictionMarketSignals(signals: PredictionMarketSignals | undefined): string {
 	if (!signals) return "";
@@ -115,4 +117,21 @@ export function xmlRecentCloses(closes: RecentClose[]): string {
 		return `  <closed_position symbol="${c.symbol}" closed_at="${c.closedAt}" reason="${reason}" cooldown_until="${c.cooldownUntil ?? "unknown"}" />`;
 	});
 	return `<recent_closes_cooldown>\n${lines.join("\n")}\n</recent_closes_cooldown>`;
+}
+
+export function xmlCurrentPositions(positions: EnrichedPosition[]): string {
+	if (!positions || positions.length === 0) return "";
+
+	const lines = positions.map((p) => {
+		const stop = p.riskParams?.stopPrice?.toFixed(2) ?? "none";
+		const target = p.riskParams?.targetPrice?.toFixed(2) ?? "none";
+		const thesisState = p.thesis?.state ?? "unknown";
+		const conviction = p.thesis?.conviction?.toFixed(2) ?? "N/A";
+		const pnlPct = p.unrealizedPnlPct.toFixed(2);
+		const days = p.holdingDays ?? 0;
+
+		return `  <position symbol="${p.symbol}" side="${p.side}" qty="${p.quantity}" avg_cost="${p.averageCost.toFixed(2)}" unrealized_pnl="${p.unrealizedPnl.toFixed(2)}" unrealized_pnl_pct="${pnlPct}%" days_held="${days}" stop="${stop}" target="${target}" thesis_state="${thesisState}" conviction="${conviction}" />`;
+	});
+
+	return `<current_positions count="${positions.length}">\n${lines.join("\n")}\n</current_positions>`;
 }

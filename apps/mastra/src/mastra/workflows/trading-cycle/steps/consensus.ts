@@ -308,10 +308,8 @@ function buildRiskManagerPrompt(
 	const decisionSections = decisions.map((d) => {
 		const stopLine = d.stopLoss
 			? `  <stop_loss price="${d.stopLoss.price}" type="${d.stopLoss.type}" />`
-			: d.action === "BUY" || d.action === "SELL"
-				? `  <stop_loss status="MISSING" />`
-				: "";
-		return `<decision id="${d.decisionId}" instrument="${d.instrumentId}" action="${d.action}" direction="${d.direction}" confidence="${d.confidence}">
+			: `  <stop_loss note="N/A - options risk managed via Greeks" />`;
+		return `<decision id="${d.decisionId}" instrument="${d.instrumentId}" type="${d.instrumentType}" action="${d.action}" direction="${d.direction}" confidence="${d.confidence}">
   <size value="${d.size.value}" unit="${d.size.unit}" />
 ${stopLine}
   <rationale>${d.rationale.summary}</rationale>

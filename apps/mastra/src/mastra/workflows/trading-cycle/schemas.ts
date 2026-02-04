@@ -215,7 +215,7 @@ export const SentimentAnalysisSchema = z.object({
 	overall_sentiment: z.string(),
 	sentiment_strength: z.number(),
 	duration_expectation: z.string(),
-	linked_event_ids: z.array(z.string()),
+	linked_event_ids: z.array(z.string()).default([]),
 });
 
 export const FundamentalsAnalysisSchema = z.object({
@@ -226,7 +226,7 @@ export const FundamentalsAnalysisSchema = z.object({
 	macro_context: z.string(),
 	event_risk: z.array(EventRiskSchema),
 	fundamental_thesis: z.string(),
-	linked_event_ids: z.array(z.string()),
+	linked_event_ids: z.array(z.string()).default([]),
 });
 
 export const ResearchSchema = z.object({
@@ -249,7 +249,10 @@ export const ResearchSchema = z.object({
 // ============================================
 
 export const StopLossSchema = z.object({
-	price: z.number().positive("Stop-loss price must be greater than 0"),
+	price: z
+		.number()
+		.positive()
+		.describe("Stop-loss trigger price in USD. Must be a real market price."),
 	type: z.enum(["FIXED", "TRAILING"]),
 });
 
@@ -273,8 +276,12 @@ export const DecisionSchema = z.object({
 		value: z.number(),
 		unit: z.string(),
 	}),
-	stopLoss: StopLossSchema.optional(),
-	takeProfit: TakeProfitSchema.optional(),
+	stopLoss: StopLossSchema.optional().describe(
+		"Stop-loss trigger price and type. Required for EQUITY, optional for OPTION (risk managed via Greeks).",
+	),
+	takeProfit: TakeProfitSchema.optional().describe(
+		"Take-profit target. Omit entirely (null) if not applicable — do NOT set price to 0.",
+	),
 	strategyFamily: z.string(),
 	timeHorizon: z.string(),
 	rationale: z.object({
@@ -388,6 +395,39 @@ export const RecentCloseSchema = z.object({
 export type RecentClose = z.infer<typeof RecentCloseSchema>;
 
 // ============================================
+// Enriched Position Schemas
+// ============================================
+
+export const PositionThesisContextSchema = z.object({
+	thesisId: z.string().nullable(),
+	state: z.string().nullable(),
+	entryThesis: z.string().nullable(),
+	invalidationConditions: z.string().nullable(),
+	conviction: z.number().nullable(),
+});
+
+export const PositionRiskParamsSchema = z.object({
+	stopPrice: z.number().nullable(),
+	targetPrice: z.number().nullable(),
+	entryPrice: z.number().nullable(),
+});
+
+export const EnrichedPositionSchema = z.object({
+	symbol: z.string(),
+	quantity: z.number(),
+	side: z.enum(["long", "short"]),
+	averageCost: z.number(),
+	marketValue: z.number(),
+	unrealizedPnl: z.number(),
+	unrealizedPnlPct: z.number(),
+	holdingDays: z.number().nullable(),
+	riskParams: PositionRiskParamsSchema.nullable(),
+	thesis: PositionThesisContextSchema.nullable(),
+});
+
+export type EnrichedPosition = z.infer<typeof EnrichedPositionSchema>;
+
+// ============================================
 // Workflow Input Schema
 // ============================================
 
@@ -402,6 +442,11 @@ export const WorkflowInputSchema = z.object({
 	 * Pass symbols that were closed in the past N hours along with their close reason.
 	 */
 	recentCloses: z.array(RecentCloseSchema).optional(),
+	/**
+	 * Current open positions enriched with thesis context.
+	 * Provides trader with knowledge of existing holdings.
+	 */
+	positions: z.array(EnrichedPositionSchema).optional(),
 });
 
 export type WorkflowInput = z.infer<typeof WorkflowInputSchema>;

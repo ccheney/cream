@@ -2,7 +2,8 @@
  * Analysts Step
  *
  * Fourth step in the OODA trading cycle. Runs news analyst and fundamentals
- * analyst agents in parallel to gather analysis for all instruments at once.
+ * analyst agents in parallel, with each processing symbols in batches to
+ * improve structured output reliability.
  *
  * @see docs/plans/53-mastra-v1-migration.md
  */
@@ -23,6 +24,12 @@ import {
 	RegimeDataSchema,
 	SentimentAnalysisSchema,
 } from "../schemas.js";
+
+// ============================================
+// Constants
+// ============================================
+
+const BATCH_SIZE = 5;
 
 // ============================================
 // Schemas
@@ -67,6 +74,7 @@ const AnalystsOutputSchema = z.object({
 		totalMs: z.number(),
 		newsAnalystMs: z.number(),
 		fundamentalsAnalystMs: z.number(),
+		batchCount: z.number(),
 	}),
 });
 
@@ -76,7 +84,7 @@ const AnalystsOutputSchema = z.object({
 
 export const analystsStep = createStep({
 	id: "analysts-parallel",
-	description: "Run news and fundamentals analysts in parallel",
+	description: "Run news and fundamentals analysts in parallel with batched symbols",
 	inputSchema: AnalystsInputSchema,
 	outputSchema: AnalystsOutputSchema,
 	execute: async ({ inputData }) => {
@@ -86,24 +94,33 @@ export const analystsStep = createStep({
 		const errors: string[] = [];
 		const warnings: string[] = [];
 
-		log.info({ cycleId, symbolCount: instruments.length }, "Starting analysts step");
+		const batches = chunk(instruments, BATCH_SIZE);
+		log.info(
+			{
+				cycleId,
+				symbolCount: instruments.length,
+				batchCount: batches.length,
+				batchSize: BATCH_SIZE,
+			},
+			"Starting analysts step with batching",
+		);
 
-		// Run analysts in parallel
+		// Run news and fundamentals analysts in parallel, each processing batches sequentially
 		const newsStart = performance.now();
 		const fundamentalsStart = performance.now();
 
 		const [newsResults, fundamentalsResults] = await Promise.all([
-			runNewsAnalyst(
+			runNewsAnalystBatched(
 				cycleId,
-				instruments,
+				batches,
 				regimeLabels,
 				groundingContext,
 				predictionMarketSignals,
 				errors,
 			),
-			runFundamentalsAnalyst(
+			runFundamentalsAnalystBatched(
 				cycleId,
-				instruments,
+				batches,
 				regimeLabels,
 				groundingContext,
 				predictionMarketSignals,
@@ -135,6 +152,7 @@ export const analystsStep = createStep({
 				totalMs: performance.now() - startTime,
 				newsAnalystMs,
 				fundamentalsAnalystMs,
+				batchCount: batches.length,
 			},
 		};
 	},
@@ -144,9 +162,17 @@ export const analystsStep = createStep({
 // Helper Functions
 // ============================================
 
-async function runNewsAnalyst(
+function chunk<T>(array: T[], size: number): T[][] {
+	const result: T[][] = [];
+	for (let i = 0; i < array.length; i += size) {
+		result.push(array.slice(i, i + size));
+	}
+	return result;
+}
+
+async function runNewsAnalystBatched(
 	cycleId: string,
-	instruments: string[],
+	batches: string[][],
 	regimeLabels: Record<string, z.infer<typeof RegimeDataSchema>>,
 	groundingContext:
 		| {
@@ -157,34 +183,67 @@ async function runNewsAnalyst(
 	predictionMarketSignals: z.infer<typeof PredictionMarketSignalsSchema> | undefined,
 	errors: string[],
 ): Promise<z.infer<typeof SentimentAnalysisSchema>[]> {
-	try {
-		const prompt = buildNewsAnalystPrompt(
-			instruments,
-			regimeLabels,
-			groundingContext,
-			predictionMarketSignals,
+	const allResults: z.infer<typeof SentimentAnalysisSchema>[] = [];
+
+	for (let i = 0; i < batches.length; i++) {
+		const batch = batches[i];
+		if (!batch) continue;
+
+		log.debug(
+			{ cycleId, batchIndex: i + 1, batchCount: batches.length, symbols: batch },
+			"Processing news analyst batch",
 		);
-		log.debug({ cycleId, symbolCount: instruments.length }, "Calling news analyst");
 
-		const response = await newsAnalyst.generate(prompt, {
-			structuredOutput: {
-				schema: z.array(SentimentAnalysisSchema),
-				model: getModelId(),
-			},
-		});
+		try {
+			const prompt = buildNewsAnalystPrompt(
+				batch,
+				regimeLabels,
+				groundingContext,
+				predictionMarketSignals,
+			);
 
-		log.debug({ cycleId, resultCount: response.object?.length ?? 0 }, "News analysis complete");
-		return response.object ?? [];
-	} catch (err) {
-		errors.push(`News analyst failed: ${formatError(err)}`);
-		log.error({ cycleId, error: formatError(err) }, "News analyst failed");
-		return [];
+			log.info(
+				{
+					cycleId,
+					batchIndex: i + 1,
+					promptLength: prompt.length,
+					promptPreview: prompt.slice(0, 500),
+				},
+				"News analyst batch prompt built",
+			);
+			log.debug({ cycleId, batchIndex: i + 1, fullPrompt: prompt }, "Full news analyst prompt");
+
+			const response = await newsAnalyst.generate(prompt, {
+				structuredOutput: {
+					schema: z.array(SentimentAnalysisSchema),
+					model: getModelId(),
+				},
+				abortSignal: AbortSignal.timeout(600_000), // 10 min per batch
+			});
+
+			if (response.object) {
+				allResults.push(...response.object);
+				log.debug(
+					{ cycleId, batchIndex: i + 1, resultCount: response.object.length },
+					"News analyst batch complete",
+				);
+			}
+		} catch (err) {
+			const errorMsg = `News analyst batch ${i + 1}/${batches.length} failed: ${formatError(err)}`;
+			errors.push(errorMsg);
+			log.error(
+				{ cycleId, batchIndex: i + 1, error: formatError(err) },
+				"News analyst batch failed",
+			);
+		}
 	}
+
+	return allResults;
 }
 
-async function runFundamentalsAnalyst(
+async function runFundamentalsAnalystBatched(
 	cycleId: string,
-	instruments: string[],
+	batches: string[][],
 	regimeLabels: Record<string, z.infer<typeof RegimeDataSchema>>,
 	groundingContext:
 		| {
@@ -195,32 +254,65 @@ async function runFundamentalsAnalyst(
 	predictionMarketSignals: z.infer<typeof PredictionMarketSignalsSchema> | undefined,
 	errors: string[],
 ): Promise<z.infer<typeof FundamentalsAnalysisSchema>[]> {
-	try {
-		const prompt = buildFundamentalsPrompt(
-			instruments,
-			regimeLabels,
-			groundingContext,
-			predictionMarketSignals,
-		);
-		log.debug({ cycleId, symbolCount: instruments.length }, "Calling fundamentals analyst");
+	const allResults: z.infer<typeof FundamentalsAnalysisSchema>[] = [];
 
-		const response = await fundamentalsAnalyst.generate(prompt, {
-			structuredOutput: {
-				schema: z.array(FundamentalsAnalysisSchema),
-				model: getModelId(),
-			},
-		});
+	for (let i = 0; i < batches.length; i++) {
+		const batch = batches[i];
+		if (!batch) continue;
 
 		log.debug(
-			{ cycleId, resultCount: response.object?.length ?? 0 },
-			"Fundamentals analysis complete",
+			{ cycleId, batchIndex: i + 1, batchCount: batches.length, symbols: batch },
+			"Processing fundamentals analyst batch",
 		);
-		return response.object ?? [];
-	} catch (err) {
-		errors.push(`Fundamentals analyst failed: ${formatError(err)}`);
-		log.error({ cycleId, error: formatError(err) }, "Fundamentals analyst failed");
-		return [];
+
+		try {
+			const prompt = buildFundamentalsPrompt(
+				batch,
+				regimeLabels,
+				groundingContext,
+				predictionMarketSignals,
+			);
+
+			log.info(
+				{
+					cycleId,
+					batchIndex: i + 1,
+					promptLength: prompt.length,
+					promptPreview: prompt.slice(0, 500),
+				},
+				"Fundamentals analyst batch prompt built",
+			);
+			log.debug(
+				{ cycleId, batchIndex: i + 1, fullPrompt: prompt },
+				"Full fundamentals analyst prompt",
+			);
+
+			const response = await fundamentalsAnalyst.generate(prompt, {
+				structuredOutput: {
+					schema: z.array(FundamentalsAnalysisSchema),
+					model: getModelId(),
+				},
+				abortSignal: AbortSignal.timeout(600_000), // 10 min per batch
+			});
+
+			if (response.object) {
+				allResults.push(...response.object);
+				log.debug(
+					{ cycleId, batchIndex: i + 1, resultCount: response.object.length },
+					"Fundamentals analyst batch complete",
+				);
+			}
+		} catch (err) {
+			const errorMsg = `Fundamentals analyst batch ${i + 1}/${batches.length} failed: ${formatError(err)}`;
+			errors.push(errorMsg);
+			log.error(
+				{ cycleId, batchIndex: i + 1, error: formatError(err) },
+				"Fundamentals analyst batch failed",
+			);
+		}
 	}
+
+	return allResults;
 }
 
 function buildNewsAnalystPrompt(

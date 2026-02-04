@@ -28,7 +28,9 @@ function buildCandleSummaries(
 		const bars = candles[symbol];
 		if (!bars || bars.length < 2) return [];
 		const recent = bars.slice(-20);
-		const lastClose = recent.at(-1)!.close;
+		const lastBar = recent.at(-1);
+		if (!lastBar) return [];
+		const lastClose = lastBar.close;
 		const high20 = Math.max(...recent.map((c) => c.high));
 		const low20 = Math.min(...recent.map((c) => c.low));
 		const avgVolume20 = recent.reduce((sum, c) => sum + c.volume, 0) / recent.length;
@@ -143,6 +145,7 @@ export const tradingCycleWorkflow = createWorkflow({
 				orientResult?.marketSnapshot.instruments ?? [],
 			),
 			predictionMarketSignals: orientResult?.predictionMarketSignals,
+			positions: observeResult?.positions ?? [],
 		};
 	})
 	// Step 6: Trader - Synthesize decision plan

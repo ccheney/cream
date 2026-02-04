@@ -2,7 +2,8 @@
  * Debate Step
  *
  * Fifth step in the OODA trading cycle. Runs bullish and bearish
- * researchers in parallel to create opposing thesis arguments for all instruments.
+ * researchers in parallel for each batch of symbols to create
+ * opposing thesis arguments.
  *
  * @see docs/plans/53-mastra-v1-migration.md
  */
@@ -33,6 +34,12 @@ import {
 	ResearchSchema,
 	SentimentAnalysisSchema,
 } from "../schemas.js";
+
+// ============================================
+// Constants
+// ============================================
+
+const BATCH_SIZE = 5;
 
 // ============================================
 // Schemas
@@ -84,6 +91,7 @@ const DebateOutputSchema = z.object({
 		totalMs: z.number(),
 		bullishMs: z.number(),
 		bearishMs: z.number(),
+		batchCount: z.number(),
 	}),
 });
 
@@ -93,7 +101,7 @@ const DebateOutputSchema = z.object({
 
 export const debateStep = createStep({
 	id: "debate-researchers",
-	description: "Run bullish and bearish researchers in parallel",
+	description: "Run bullish and bearish researchers in parallel with batched symbols",
 	inputSchema: DebateInputSchema,
 	outputSchema: DebateOutputSchema,
 	execute: async ({ inputData }) => {
@@ -113,47 +121,79 @@ export const debateStep = createStep({
 		const errors: string[] = [];
 		const warnings: string[] = [];
 
+		const batches = chunk(instruments, BATCH_SIZE);
 		log.info(
 			{
 				cycleId,
 				symbolCount: instruments.length,
+				batchCount: batches.length,
+				batchSize: BATCH_SIZE,
 				hasNewsAnalysis: (newsAnalysis?.length ?? 0) > 0,
 				hasFundamentalsAnalysis: (fundamentalsAnalysis?.length ?? 0) > 0,
 			},
-			"Starting debate step",
+			"Starting debate step with batching",
 		);
 
 		const bullishStart = performance.now();
 		const bearishStart = performance.now();
 
-		const [bullishResearch, bearishResearch] = await Promise.all([
-			runBullishResearcher(
-				cycleId,
-				instruments,
-				regimeLabels,
-				newsAnalysis,
-				fundamentalsAnalysis,
-				globalGrounding,
-				memoryCases ?? [],
-				candleSummaries ?? [],
-				groundingSources ?? [],
-				predictionMarketSignals,
-				errors,
-			),
-			runBearishResearcher(
-				cycleId,
-				instruments,
-				regimeLabels,
-				newsAnalysis,
-				fundamentalsAnalysis,
-				globalGrounding,
-				memoryCases ?? [],
-				candleSummaries ?? [],
-				groundingSources ?? [],
-				predictionMarketSignals,
-				errors,
-			),
-		]);
+		const allBullishResearch: z.infer<typeof ResearchSchema>[] = [];
+		const allBearishResearch: z.infer<typeof ResearchSchema>[] = [];
+
+		// Process batches sequentially, but run bullish/bearish in parallel for each batch
+		for (let i = 0; i < batches.length; i++) {
+			const batch = batches[i];
+			if (!batch) continue;
+
+			log.debug(
+				{ cycleId, batchIndex: i + 1, batchCount: batches.length, symbols: batch },
+				"Processing debate batch",
+			);
+
+			const [bullishResults, bearishResults] = await Promise.all([
+				runBullishResearcherBatch(
+					cycleId,
+					i + 1,
+					batch,
+					regimeLabels,
+					newsAnalysis,
+					fundamentalsAnalysis,
+					globalGrounding,
+					memoryCases ?? [],
+					candleSummaries ?? [],
+					groundingSources ?? [],
+					predictionMarketSignals,
+					errors,
+				),
+				runBearishResearcherBatch(
+					cycleId,
+					i + 1,
+					batch,
+					regimeLabels,
+					newsAnalysis,
+					fundamentalsAnalysis,
+					globalGrounding,
+					memoryCases ?? [],
+					candleSummaries ?? [],
+					groundingSources ?? [],
+					predictionMarketSignals,
+					errors,
+				),
+			]);
+
+			allBullishResearch.push(...bullishResults);
+			allBearishResearch.push(...bearishResults);
+
+			log.debug(
+				{
+					cycleId,
+					batchIndex: i + 1,
+					bullishCount: bullishResults.length,
+					bearishCount: bearishResults.length,
+				},
+				"Debate batch complete",
+			);
+		}
 
 		const bullishMs = performance.now() - bullishStart;
 		const bearishMs = performance.now() - bearishStart;
@@ -161,8 +201,8 @@ export const debateStep = createStep({
 		log.info(
 			{
 				cycleId,
-				bullishResultCount: bullishResearch.length,
-				bearishResultCount: bearishResearch.length,
+				bullishResultCount: allBullishResearch.length,
+				bearishResultCount: allBearishResearch.length,
 				errorCount: errors.length,
 			},
 			"Completed debate step",
@@ -170,14 +210,15 @@ export const debateStep = createStep({
 
 		return {
 			cycleId,
-			bullishResearch,
-			bearishResearch,
+			bullishResearch: allBullishResearch,
+			bearishResearch: allBearishResearch,
 			errors,
 			warnings,
 			metrics: {
 				totalMs: performance.now() - startTime,
 				bullishMs,
 				bearishMs,
+				batchCount: batches.length,
 			},
 		};
 	},
@@ -187,10 +228,19 @@ export const debateStep = createStep({
 // Helper Functions
 // ============================================
 
+function chunk<T>(array: T[], size: number): T[][] {
+	const result: T[][] = [];
+	for (let i = 0; i < array.length; i += size) {
+		result.push(array.slice(i, i + size));
+	}
+	return result;
+}
+
 type GlobalGrounding = { macro: string[]; events: string[] };
 
-async function runBullishResearcher(
+async function runBullishResearcherBatch(
 	cycleId: string,
+	batchIndex: number,
 	instruments: string[],
 	regimeLabels: Record<string, z.infer<typeof RegimeDataSchema>>,
 	newsAnalysis: z.infer<typeof SentimentAnalysisSchema>[] | undefined,
@@ -214,26 +264,42 @@ async function runBullishResearcher(
 			groundingSources,
 			predictionMarketSignals,
 		);
-		log.debug({ cycleId, symbolCount: instruments.length }, "Calling bullish researcher");
+		log.info(
+			{
+				cycleId,
+				batchIndex,
+				symbolCount: instruments.length,
+				promptLength: prompt.length,
+				promptPreview: prompt.slice(0, 500),
+			},
+			"Bullish researcher batch prompt built",
+		);
+		log.debug({ cycleId, batchIndex, fullPrompt: prompt }, "Full bullish batch prompt");
 
 		const response = await bullishResearcher.generate(prompt, {
 			structuredOutput: {
 				schema: z.array(ResearchSchema),
 				model: getModelId(),
 			},
+			abortSignal: AbortSignal.timeout(600_000), // 10 min per batch
 		});
 
-		log.debug({ cycleId, resultCount: response.object?.length ?? 0 }, "Bullish research complete");
+		log.debug(
+			{ cycleId, batchIndex, resultCount: response.object?.length ?? 0 },
+			"Bullish batch research complete",
+		);
 		return response.object ?? [];
 	} catch (err) {
-		errors.push(`Bullish researcher failed: ${formatError(err)}`);
-		log.error({ cycleId, error: formatError(err) }, "Bullish researcher failed");
+		const errorMsg = `Bullish researcher batch ${batchIndex} failed: ${formatError(err)}`;
+		errors.push(errorMsg);
+		log.error({ cycleId, batchIndex, error: formatError(err) }, "Bullish researcher batch failed");
 		return [];
 	}
 }
 
-async function runBearishResearcher(
+async function runBearishResearcherBatch(
 	cycleId: string,
+	batchIndex: number,
 	instruments: string[],
 	regimeLabels: Record<string, z.infer<typeof RegimeDataSchema>>,
 	newsAnalysis: z.infer<typeof SentimentAnalysisSchema>[] | undefined,
@@ -257,20 +323,35 @@ async function runBearishResearcher(
 			groundingSources,
 			predictionMarketSignals,
 		);
-		log.debug({ cycleId, symbolCount: instruments.length }, "Calling bearish researcher");
+		log.info(
+			{
+				cycleId,
+				batchIndex,
+				symbolCount: instruments.length,
+				promptLength: prompt.length,
+				promptPreview: prompt.slice(0, 500),
+			},
+			"Bearish researcher batch prompt built",
+		);
+		log.debug({ cycleId, batchIndex, fullPrompt: prompt }, "Full bearish batch prompt");
 
 		const response = await bearishResearcher.generate(prompt, {
 			structuredOutput: {
 				schema: z.array(ResearchSchema),
 				model: getModelId(),
 			},
+			abortSignal: AbortSignal.timeout(600_000), // 10 min per batch
 		});
 
-		log.debug({ cycleId, resultCount: response.object?.length ?? 0 }, "Bearish research complete");
+		log.debug(
+			{ cycleId, batchIndex, resultCount: response.object?.length ?? 0 },
+			"Bearish batch research complete",
+		);
 		return response.object ?? [];
 	} catch (err) {
-		errors.push(`Bearish researcher failed: ${formatError(err)}`);
-		log.error({ cycleId, error: formatError(err) }, "Bearish researcher failed");
+		const errorMsg = `Bearish researcher batch ${batchIndex} failed: ${formatError(err)}`;
+		errors.push(errorMsg);
+		log.error({ cycleId, batchIndex, error: formatError(err) }, "Bearish researcher batch failed");
 		return [];
 	}
 }
@@ -319,7 +400,7 @@ function buildBullishPrompt(
 		xmlPredictionMarketSignals(predictionMarketSignals),
 	].filter(Boolean);
 
-	return `Create BULLISH theses for all symbols. Consider cross-correlations, sector themes, and relative opportunities.
+	return `Create BULLISH theses for these symbols: ${instruments.join(", ")}. Consider cross-correlations, sector themes, and relative opportunities.
 
 ${sections.join("\n\n")}
 
@@ -373,7 +454,7 @@ function buildBearishPrompt(
 		xmlPredictionMarketSignals(predictionMarketSignals),
 	].filter(Boolean);
 
-	return `Create BEARISH theses for all symbols. Consider systemic risks, correlation risks, and sector vulnerabilities.
+	return `Create BEARISH theses for these symbols: ${instruments.join(", ")}. Consider systemic risks, correlation risks, and sector vulnerabilities.
 
 ${sections.join("\n\n")}
 

@@ -15,6 +15,7 @@ import { z } from "zod";
 import {
 	type CandleDataSchema,
 	ConstraintsSchema,
+	EnrichedPositionSchema,
 	MarketSnapshotSchema,
 	type QuoteDataSchema,
 	RecentCloseSchema,
@@ -35,6 +36,10 @@ const ObserveInputSchema = z.object({
 		.array(RecentCloseSchema)
 		.optional()
 		.describe("Recently closed positions (cooldown prevention)"),
+	positions: z
+		.array(EnrichedPositionSchema)
+		.optional()
+		.describe("Current open positions with thesis context"),
 });
 
 const ObserveOutputSchema = z.object({
@@ -43,6 +48,7 @@ const ObserveOutputSchema = z.object({
 	regimeLabels: z.record(z.string(), RegimeDataSchema),
 	constraints: ConstraintsSchema.optional(),
 	recentCloses: z.array(RecentCloseSchema).optional(),
+	positions: z.array(EnrichedPositionSchema).optional(),
 	errors: z.array(z.string()),
 	warnings: z.array(z.string()),
 	metrics: z.object({
@@ -74,7 +80,7 @@ export const observeStep = createStep({
 	outputSchema: ObserveOutputSchema,
 	execute: async ({ inputData }) => {
 		const startTime = performance.now();
-		const { cycleId, instruments, constraints, recentCloses } = inputData;
+		const { cycleId, instruments, constraints, recentCloses, positions } = inputData;
 		const errors: string[] = [];
 		const warnings: string[] = [];
 
@@ -118,6 +124,7 @@ export const observeStep = createStep({
 			regimeLabels,
 			constraints,
 			recentCloses,
+			positions,
 			errors,
 			warnings,
 			metrics: {
