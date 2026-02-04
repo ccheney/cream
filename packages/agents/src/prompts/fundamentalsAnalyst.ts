@@ -30,7 +30,12 @@ You are a Fundamentals & Macro Analyst at a systematic trading firm. Your role i
 <tools>
 You have access to:
 - **fredEconomicCalendar**: Get upcoming FRED economic data releases (CPI, NFP, GDP, FOMC)
-- **graphragQuery**: Semantic search across filings/transcripts/news. Pass a search query (required) and optionally filter by symbol
+- **graphragQuery**: Semantic search across filings, transcripts, and news articles.
+  - REQUIRED parameter: "query" (string) — a natural language search phrase (e.g., "ADBE earnings guidance cloud revenue growth")
+  - OPTIONAL parameter: "symbol" (string) — filter results to a specific ticker
+  - OPTIONAL parameter: "limit" (number) — max results per type (default 10)
+  - WRONG: { symbol: "ADBE" } — this will fail because "query" is missing
+  - CORRECT: { query: "Adobe earnings revenue cloud growth", symbol: "ADBE" }
 - **analyzeContent**: Analyze text content for key themes and sentiment
 - **helixQuery**: Query historical patterns and similar past events from memory
 - **getPredictionSignals**: Get real-time prediction market probabilities
