@@ -72,7 +72,7 @@ const audioContext =
 			)()
 		: null;
 
-function playBeep(frequency: number, duration: number, volume: number): void {
+export function playBeep(frequency: number, duration: number, volume: number): void {
 	if (!audioContext) {
 		return;
 	}
@@ -98,7 +98,7 @@ function playBeep(frequency: number, duration: number, volume: number): void {
 	}
 }
 
-function playAlertSound(severity: AlertSeverity): void {
+export function playAlertSound(severity: AlertSeverity): void {
 	switch (severity) {
 		case "critical":
 			playBeep(800, 0.15, 0.3);

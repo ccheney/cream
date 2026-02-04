@@ -153,9 +153,9 @@ function NewspaperDetails({ newspaper }: { newspaper: NewspaperData | null }) {
 								{sectionLabels[sectionKey] ?? sectionKey} ({bullets.length})
 							</div>
 							<ul className="space-y-1">
-								{bullets.map((bullet) => (
+								{bullets.map((bullet, idx) => (
 									<li
-										key={bullet}
+										key={`${idx}-${bullet}`}
 										className="text-sm text-stone-700 dark:text-night-200 leading-relaxed"
 									>
 										{bullet}

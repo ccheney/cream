@@ -90,7 +90,7 @@ export function useLoadingState(
 			store.startLoading(key, initialOptions);
 		}
 		// eslint-disable-next-line react-hooks/exhaustive-deps
-	}, [initialLoading, initialOptions, key, store.startLoading]);
+	}, [initialLoading, initialOptions, key, store]);
 
 	// Cleanup on unmount
 	useEffect(() => {
@@ -100,7 +100,7 @@ export function useLoadingState(
 			}
 		};
 		// eslint-disable-next-line react-hooks/exhaustive-deps
-	}, [autoCleanup, store.stopLoading]);
+	}, [autoCleanup, store]);
 
 	const isLoading = store.isLoading(key);
 

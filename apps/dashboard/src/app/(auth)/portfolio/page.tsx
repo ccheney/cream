@@ -24,7 +24,6 @@ import { OptionsPositionsWidget } from "@/components/portfolio/OptionsPositionsW
 import { OrderHistoryWidget } from "@/components/portfolio/OrderHistoryWidget";
 import { PortfolioSummary } from "@/components/portfolio/PortfolioSummary";
 import { PositionsPanel } from "@/components/portfolio/PositionsPanel";
-import { PositionsTable } from "@/components/portfolio/PositionsTable";
 import { RiskMetricsBar } from "@/components/portfolio/RiskMetricsBar";
 import { QueryErrorBoundary } from "@/components/QueryErrorBoundary";
 import {
@@ -183,16 +182,6 @@ export default function PortfolioPage() {
 			<QueryErrorBoundary title="Failed to load order history">
 				<OrderHistoryWidget limit={100} />
 			</QueryErrorBoundary>
-
-			{/* === Unused Components Preview (temporary) === */}
-			<div className="border-t-2 border-dashed border-amber-400 pt-6 space-y-6">
-				<h2 className="text-xl font-semibold text-amber-600">Unused Components Preview</h2>
-
-				<div>
-					<h3 className="text-sm font-medium text-stone-500 mb-2">PositionsTable</h3>
-					<PositionsTable positions={streamingPositions} isLoading={isPositionsLoading} />
-				</div>
-			</div>
 		</div>
 	);
 }

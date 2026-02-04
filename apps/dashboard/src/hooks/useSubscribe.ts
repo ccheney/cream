@@ -251,13 +251,7 @@ export function useSymbolSubscription(
 			// Don't unsubscribe on every render, only on unmount
 		};
 		// eslint-disable-next-line react-hooks/exhaustive-deps
-	}, [
-		autoSubscribe,
-		symbols,
-		wsStore.subscribeSymbols,
-		wsStore.subscribedSymbols,
-		wsStore.unsubscribeSymbols,
-	]);
+	}, [autoSubscribe, symbols, wsStore]);
 
 	// Cleanup on unmount
 	useEffect(() => {
@@ -267,7 +261,7 @@ export function useSymbolSubscription(
 			}
 		};
 		// eslint-disable-next-line react-hooks/exhaustive-deps
-	}, [wsStore.unsubscribeSymbols]);
+	}, [wsStore]);
 
 	return {
 		subscribedSymbols: wsStore.subscribedSymbols,

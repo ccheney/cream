@@ -185,7 +185,7 @@ function TradingViewChartComponent({
 			markersRef.current = null;
 			priceLineRefs.current.clear();
 		};
-	}, [height, onCrosshairMove, onReady, width, data.length, data.map]);
+	}, [height, onCrosshairMove, onReady, width, data]);
 
 	useEffect(() => {
 		if (!seriesRef.current || !volumeSeriesRef.current || data.length === 0) {
