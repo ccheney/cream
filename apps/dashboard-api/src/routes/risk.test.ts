@@ -1,6 +1,29 @@
-import { describe, expect, it, mock, spyOn } from "bun:test";
+import { afterAll, beforeAll, describe, expect, it, mock, spyOn } from "bun:test";
 import { Hono } from "hono";
-import * as db from "../db";
+
+// Store original env vars
+const originalAlpacaKey = Bun.env.ALPACA_KEY;
+const originalAlpacaSecret = Bun.env.ALPACA_SECRET;
+
+// Set env vars before mocks are applied
+beforeAll(() => {
+	Bun.env.ALPACA_KEY = "test-key";
+	Bun.env.ALPACA_SECRET = "test-secret";
+});
+
+afterAll(() => {
+	// Restore original env vars
+	if (originalAlpacaKey !== undefined) {
+		Bun.env.ALPACA_KEY = originalAlpacaKey;
+	} else {
+		delete Bun.env.ALPACA_KEY;
+	}
+	if (originalAlpacaSecret !== undefined) {
+		Bun.env.ALPACA_SECRET = originalAlpacaSecret;
+	} else {
+		delete Bun.env.ALPACA_SECRET;
+	}
+});
 
 type ExposureResponse = {
 	gross: number;
@@ -20,6 +43,28 @@ type GreeksResponse = {
 mock.module("./system", () => ({
 	systemState: { environment: "PAPER" },
 	getCurrentEnvironment: () => "PAPER",
+}));
+
+// Mock broker client
+mock.module("@cream/broker", () => ({
+	createAlpacaClient: () => ({
+		getPositions: mock(() =>
+			Promise.resolve([
+				{
+					symbol: "AAPL",
+					side: "long",
+					qty: 10,
+					avgEntryPrice: 140,
+					currentPrice: 150,
+					marketValue: 1500,
+					unrealizedPl: 100,
+					unrealizedPlpc: 0.071,
+					lastdayPrice: 148,
+				},
+			]),
+		),
+		getAccount: mock(() => Promise.resolve({ equity: 100000 })),
+	}),
 }));
 
 // Mock marketdata to avoid loading real clients
@@ -45,9 +90,11 @@ mock.module("../db", () => ({
 	getAlertsRepo: () => ({}),
 	getAlertSettingsRepo: () => ({}),
 	getOrdersRepo: () => ({}),
-	getPositionsRepo: () => ({ findOpen: () => Promise.resolve([]) }),
 	getAgentOutputsRepo: () => ({}),
-	getPortfolioSnapshotsRepo: () => ({}),
+	getPortfolioSnapshotsRepo: () => ({
+		getLatest: () => Promise.resolve({ nav: 100000 }),
+		getFirst: () => Promise.resolve({ nav: 95000 }),
+	}),
 	getConfigVersionsRepo: () => ({}),
 	getThesesRepo: () => ({}),
 	getRegimeLabelsRepo: () => ({}),
@@ -80,27 +127,12 @@ describe("Risk Routes", () => {
 	app.route("/", riskRoutes);
 
 	it("GET /exposure returns 200 with metrics", async () => {
-		// Mock DB
-		const mockPositionsRepo = {
-			findOpen: mock(() =>
-				Promise.resolve([
-					{
-						symbol: "AAPL",
-						side: "LONG",
-						quantity: 10,
-						marketValue: 1500,
-						costBasis: 1400,
-					},
-				]),
-			),
-		};
+		// Mock DB snapshots repo
 		const mockSnapshotsRepo = {
 			getLatest: mock(() => Promise.resolve({ nav: 100000 })),
 		};
 
-		spyOn(db, "getPositionsRepo").mockReturnValue(
-			mockPositionsRepo as unknown as ReturnType<typeof db.getPositionsRepo>,
-		);
+		const db = await import("../db");
 		spyOn(db, "getPortfolioSnapshotsRepo").mockReturnValue(
 			mockSnapshotsRepo as unknown as ReturnType<typeof db.getPortfolioSnapshotsRepo>,
 		);

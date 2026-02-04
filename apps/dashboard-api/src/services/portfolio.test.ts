@@ -1,4 +1,28 @@
-import { describe, expect, it, mock } from "bun:test";
+import { afterAll, beforeAll, describe, expect, it, mock } from "bun:test";
+
+// Store original env vars
+const originalAlpacaKey = Bun.env.ALPACA_KEY;
+const originalAlpacaSecret = Bun.env.ALPACA_SECRET;
+
+// Set env vars before mocks are applied
+beforeAll(() => {
+	Bun.env.ALPACA_KEY = "test-key";
+	Bun.env.ALPACA_SECRET = "test-secret";
+});
+
+afterAll(() => {
+	// Restore original env vars
+	if (originalAlpacaKey !== undefined) {
+		Bun.env.ALPACA_KEY = originalAlpacaKey;
+	} else {
+		delete Bun.env.ALPACA_KEY;
+	}
+	if (originalAlpacaSecret !== undefined) {
+		Bun.env.ALPACA_SECRET = originalAlpacaSecret;
+	} else {
+		delete Bun.env.ALPACA_SECRET;
+	}
+});
 
 // Mock AlpacaConnectionState enum for streaming modules
 const AlpacaConnectionState = {
@@ -75,31 +99,43 @@ mock.module("@cream/marketdata", () => ({
 	AlpacaScreenerClient: class {},
 }));
 
+// Mock broker client to return option positions
+mock.module("@cream/broker", () => ({
+	createAlpacaClient: () => ({
+		getPositions: mock(() =>
+			Promise.resolve([
+				{
+					symbol: "AAPL240119C00150000",
+					side: "long",
+					qty: 10,
+					avgEntryPrice: 5.0,
+					currentPrice: 5.5,
+					marketValue: 5500,
+					unrealizedPl: 500,
+					unrealizedPlpc: 0.1,
+					costBasis: 5000,
+					lastdayPrice: 5.2,
+				},
+				{
+					symbol: "AAPL", // Not an option
+					side: "long",
+					qty: 100,
+					avgEntryPrice: 150,
+					currentPrice: 155,
+					marketValue: 15500,
+					unrealizedPl: 500,
+					unrealizedPlpc: 0.033,
+					costBasis: 15000,
+					lastdayPrice: 154,
+				},
+			]),
+		),
+		getAccount: mock(() => Promise.resolve({ equity: 100000 })),
+	}),
+}));
+
 // Mock db module
-const mockFindOpen = mock(() =>
-	Promise.resolve([
-		{
-			id: "pos-1",
-			symbol: "AAPL240119C00150000",
-			side: "long",
-			quantity: 10,
-			avgEntryPrice: 5.0,
-			currentPrice: 5.2,
-			costBasis: 5000,
-			environment: "PAPER",
-		},
-		{
-			id: "pos-2",
-			symbol: "AAPL", // Not an option
-			side: "long",
-			quantity: 100,
-			avgEntryPrice: 150,
-			environment: "PAPER",
-		},
-	]),
-);
 mock.module("../db", () => ({
-	getPositionsRepo: () => Promise.resolve({ findOpen: mockFindOpen }),
 	// Stub implementations for all other exports
 	getDrizzleDb: () => ({}),
 	closeDb: async () => {},

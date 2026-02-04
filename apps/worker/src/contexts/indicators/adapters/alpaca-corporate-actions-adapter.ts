@@ -12,7 +12,7 @@ const ALPACA_CORPORATE_ACTIONS_URL = "https://data.alpaca.markets/v1beta1/corpor
 
 const AlpacaCorporateActionsItemSchema = z
 	.object({
-		symbol: z.string(),
+		symbol: z.string().optional(),
 		ex_date: z.string().optional(),
 		process_date: z.string().optional(),
 		record_date: z.string().nullable().optional(),
@@ -109,6 +109,12 @@ export class AlpacaCorporateActionsAdapter implements AlpacaCorporateActionsClie
 
 		for (const [typeKey, items] of Object.entries(actions)) {
 			for (const item of items) {
+				// Skip entries without a symbol (some corporate action types like stock_mergers may not include it)
+				if (!item.symbol) {
+					log.debug({ typeKey }, "Skipping corporate action: missing symbol");
+					continue;
+				}
+
 				const exDate = item.ex_date ?? item.process_date;
 				if (!exDate) {
 					log.warn(
@@ -174,7 +180,7 @@ export class AlpacaCorporateActionsAdapter implements AlpacaCorporateActionsClie
 
 				results.push({
 					corporate_action_type: actionType,
-					symbol: item.symbol,
+					symbol: item.symbol as string, // Already checked for undefined above
 					ex_date: exDate,
 					record_date: item.record_date ?? null,
 					payment_date: item.payment_date ?? item.payable_date ?? null,

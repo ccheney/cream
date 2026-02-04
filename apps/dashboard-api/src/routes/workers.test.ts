@@ -267,7 +267,6 @@ mock.module(dbPath, () => ({
 	getAlertsRepo: () => ({}),
 	getAlertSettingsRepo: () => ({}),
 	getOrdersRepo: () => ({}),
-	getPositionsRepo: () => ({}),
 	getAgentOutputsRepo: () => ({}),
 	getPortfolioSnapshotsRepo: () => ({}),
 	getConfigVersionsRepo: () => ({}),

@@ -46,7 +46,6 @@ mock.module("../db", () => ({
 	getAlertsRepo: () => ({}),
 	getAlertSettingsRepo: () => ({}),
 	getOrdersRepo: () => ({}),
-	getPositionsRepo: () => ({}),
 	getAgentOutputsRepo: () => ({}),
 	getPortfolioSnapshotsRepo: () => ({}),
 	getConfigVersionsRepo: () => ({}),
