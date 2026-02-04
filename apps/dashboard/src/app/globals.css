@@ -171,7 +171,7 @@ body {
   line-height: 1.5;
   color: var(--text-primary);
   background-color: var(--bg-page);
-  transition: background-color 0.2s ease, color 0.2s ease;
+  transition: none;
 }
 
 /* ============================================
@@ -307,7 +307,7 @@ button:disabled,
 
 html.transitioning,
 html.transitioning * {
-  transition: background-color 0.2s ease, border-color 0.2s ease !important;
+  transition: background-color 15s ease, border-color 15s ease, color 15s ease, fill 15s ease, stroke 15s ease, box-shadow 15s ease !important;
 }
 
 /* ============================================

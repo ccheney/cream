@@ -17,7 +17,9 @@ import { useActiveConfig, useDraftConfig } from "@/hooks/queries";
 import {
 	AgentsSection,
 	ConstraintsSection,
+	DisplaySection,
 	NotificationsSection,
+	SoundSection,
 	UniverseSection,
 } from "./components/index";
 import { type Section, VALID_SECTIONS } from "./types";
@@ -120,6 +122,10 @@ function SectionContent({ section }: SectionContentProps) {
 			return <AgentsSection />;
 		case "notifications":
 			return <NotificationsSection />;
+		case "sound":
+			return <SoundSection />;
+		case "display":
+			return <DisplaySection />;
 		default:
 			return <UniverseSection />;
 	}

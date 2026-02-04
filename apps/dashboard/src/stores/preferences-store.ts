@@ -16,6 +16,7 @@ export interface SoundPreferences {
 	criticalAlerts: boolean;
 	tradeExecutions: boolean;
 	orderFills: boolean;
+	marketBell: boolean;
 }
 
 export interface NotificationPreferences {
@@ -34,6 +35,8 @@ export interface DisplayPreferences {
 	/** Privacy mode - hides portfolio values when false */
 	showValues: boolean;
 	compactMode: boolean;
+	/** Auto-switch to light before market open, dark after market close */
+	autoThemeByMarketHours: boolean;
 }
 
 export type FeedEventType =
@@ -92,6 +95,7 @@ const defaultSoundPreferences: SoundPreferences = {
 	criticalAlerts: true,
 	tradeExecutions: true,
 	orderFills: false,
+	marketBell: true,
 };
 
 const defaultNotificationPreferences: NotificationPreferences = {
@@ -108,6 +112,7 @@ const defaultDisplayPreferences: DisplayPreferences = {
 	numberFormat: "short",
 	showValues: true,
 	compactMode: false,
+	autoThemeByMarketHours: false,
 };
 
 const defaultFeedPreferences: FeedPreferences = {
@@ -238,17 +243,36 @@ export const usePreferencesStore = create<PreferencesStore>()(
 				}),
 				{
 					name: "cream-preferences",
-					version: 2,
+					version: 4,
 					migrate: (persisted, version) => {
 						const state = persisted as Partial<PreferencesState>;
 						if (version < 2) {
-							// Add new feed filter preferences
 							return {
 								...initialState,
 								...state,
 								feed: {
 									...defaultFeedPreferences,
 									...state.feed,
+								},
+							};
+						}
+						if (version < 3) {
+							return {
+								...initialState,
+								...state,
+								sound: {
+									...defaultSoundPreferences,
+									...state.sound,
+								},
+							};
+						}
+						if (version < 4) {
+							return {
+								...initialState,
+								...state,
+								display: {
+									...defaultDisplayPreferences,
+									...state.display,
 								},
 							};
 						}
@@ -282,18 +306,35 @@ export const selectFeedSymbolFilter = (state: PreferencesStore) => state.feed.sy
 // Theme Management
 // ============================================
 
+let themeTransitionTimer: ReturnType<typeof setTimeout> | null = null;
+
 export function applyTheme(theme: "light" | "dark"): void {
 	if (typeof document === "undefined") {
 		return;
 	}
 
-	document.documentElement.setAttribute("data-theme", theme);
+	const html = document.documentElement;
+	const isInitial = !html.hasAttribute("data-theme");
+
+	html.setAttribute("data-theme", theme);
 
 	// Toggle .dark class for Tailwind dark: variants
 	if (theme === "dark") {
-		document.documentElement.classList.add("dark");
+		html.classList.add("dark");
 	} else {
-		document.documentElement.classList.remove("dark");
+		html.classList.remove("dark");
+	}
+
+	// 15s crossfade between themes (skip on initial load)
+	if (!isInitial) {
+		if (themeTransitionTimer) {
+			clearTimeout(themeTransitionTimer);
+		}
+		html.classList.add("transitioning");
+		themeTransitionTimer = setTimeout(() => {
+			html.classList.remove("transitioning");
+			themeTransitionTimer = null;
+		}, 15_000);
 	}
 
 	const metaThemeColor = document.querySelector('meta[name="theme-color"]');

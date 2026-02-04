@@ -24,6 +24,8 @@ import { SkipLink } from "@/components/ui/skip-link";
 import { Spinner } from "@/components/ui/spinner";
 import { TickerStrip } from "@/components/ui/ticker-strip";
 import { useAuth } from "@/contexts/AuthContext";
+import { useMarketBell } from "@/hooks/useMarketBell";
+import { useMarketTheme } from "@/hooks/useMarketTheme";
 import { useMediaQuery } from "@/lib/hooks/useMediaQuery";
 import { useWebSocketContext } from "@/providers/WebSocketProvider";
 import { useSidebar } from "@/stores/ui-store";
@@ -38,6 +40,8 @@ export default function AuthLayout({ children }: { children: React.ReactNode }) 
 	const sidebarInitialized = useRef(false);
 	const [isDrawerOpen, setDrawerOpen] = useState(false);
 	const [isAddSymbolModalOpen, setAddSymbolModalOpen] = useState(false);
+	useMarketBell();
+	useMarketTheme();
 	const watchlistSymbols = useWatchlistStore((s) => s.symbols);
 	const addSymbol = useWatchlistStore((s) => s.addSymbol);
 	const removeSymbol = useWatchlistStore((s) => s.removeSymbol);

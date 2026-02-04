@@ -119,6 +119,26 @@ export default function ConfigPage() {
 				</div>
 			) : null}
 
+			{/* Preferences */}
+			<div className="grid grid-cols-3 gap-6">
+				<ConfigSection title="Notifications" href="/config/notifications">
+					<ConfigField label="Push" value="Browser alerts" />
+					<ConfigField label="Email" value="Critical alerts" />
+				</ConfigSection>
+
+				<ConfigSection title="Sound" href="/config/sound">
+					<ConfigField label="Market Bell" value="Open & Close" />
+					<ConfigField label="Alerts" value="Critical / Warning" />
+					<ConfigField label="Trades" value="Executions & Fills" />
+				</ConfigSection>
+
+				<ConfigSection title="Display" href="/config/display">
+					<ConfigField label="Theme" value="Light / Dark" />
+					<ConfigField label="Market Hours" value="Auto transition" />
+					<ConfigField label="Privacy" value="Show values" />
+				</ConfigSection>
+			</div>
+
 			{/* Config History */}
 			<div className="bg-white dark:bg-night-800 rounded-lg border border-cream-200 dark:border-night-700">
 				<div className="p-4 border-b border-cream-200 dark:border-night-700">

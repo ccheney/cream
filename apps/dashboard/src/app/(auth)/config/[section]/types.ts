@@ -18,6 +18,8 @@ export const VALID_SECTIONS = [
 	"agents",
 	"risk",
 	"notifications",
+	"sound",
+	"display",
 ] as const;
 
 export type Section = (typeof VALID_SECTIONS)[number];

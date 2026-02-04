@@ -6,7 +6,9 @@
 
 export { AgentsSection } from "./AgentsSection";
 export { ConstraintsSection } from "./ConstraintsSection";
+export { DisplaySection } from "./DisplaySection";
 export { NotificationsSection } from "./NotificationsSection";
+export { SoundSection } from "./SoundSection";
 export {
 	ConstraintField,
 	EditorHeader,
