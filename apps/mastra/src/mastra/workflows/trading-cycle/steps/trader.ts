@@ -7,7 +7,7 @@
  * with each batch seeing decisions from prior batches.
  *
  * Uses multi-step execution with prepareStep to enable tool calling
- * (optionChain, getGreeks) before structured output generation.
+ * before structured output generation.
  * This is required because Gemini doesn't support tools + structured
  * output simultaneously.
  *
@@ -19,7 +19,13 @@ import { createStep } from "@mastra/core/workflows";
 import { z } from "zod";
 
 import { trader } from "../../../agents/index.js";
-import { getGreeks, optionChain } from "../../../tools/index.js";
+import {
+	getEnrichedPortfolioState,
+	getGreeks,
+	getPredictionSignals,
+	getRecentDecisions,
+	optionChain,
+} from "../../../tools/index.js";
 
 const log = createNodeLogger({ service: "trading-cycle:trader" });
 
@@ -298,20 +304,23 @@ async function runTraderBatched(
 			);
 			log.debug({ cycleId, batchIndex: i + 1, fullPrompt: prompt }, "Full trader prompt");
 
-			// Use multi-step execution: step 0 enables tools (optionChain, getGreeks),
+			// Use multi-step execution: step 0 enables tools for data gathering,
 			// subsequent steps use structured output for the decision plan.
 			// This is required because Gemini doesn't support tools + structured output simultaneously.
 			const stream = await trader.stream(prompt, {
 				prepareStep: async ({ stepNumber }) => {
 					if (stepNumber === 0) {
-						// Step 0: Enable option tools for data gathering
-						log.debug(
-							{ cycleId, batchIndex: i + 1, stepNumber },
-							"Trader step 0: enabling option tools",
-						);
+						// Step 0: Enable tools for data gathering
+						log.debug({ cycleId, batchIndex: i + 1, stepNumber }, "Trader step 0: enabling tools");
 						return {
 							model: getModelId(),
-							tools: { optionChain, getGreeks },
+							tools: {
+								optionChain,
+								getGreeks,
+								getRecentDecisions,
+								getEnrichedPortfolioState,
+								getPredictionSignals,
+							},
 							toolChoice: "auto",
 						};
 					}
