@@ -2,15 +2,15 @@
  * Trading Updates Streaming
  *
  * Connects to alpaca-stream-proxy via gRPC to receive real-time
- * order fills and position changes, then broadcasts to dashboard clients
- * and persists position changes to the database.
+ * order fills and position changes, then broadcasts to dashboard clients.
+ * Alpaca is the sole source of truth for positions - no database sync needed.
  *
  * @see docs/plans/ui/40-streaming-data-integration.md
  */
 
-import { type Position as AlpacaPosition, createAlpacaClient } from "@cream/broker";
+import { createAlpacaClient } from "@cream/broker";
 import { requireEnv } from "@cream/domain";
-import { DecisionsRepository, PositionsRepository, ThesisStateRepository } from "@cream/storage";
+import { ThesisStateRepository } from "@cream/storage";
 import log from "../logger.js";
 import { persistOrderFromProxyUpdate } from "../services/order-persistence.js";
 import { closeThesisForPosition } from "../services/thesis-closure.js";
@@ -40,100 +40,27 @@ type OrderEventType =
 	| "order_cancel_rejected";
 
 /**
- * Sync position from Alpaca to database.
- * Creates new position or updates existing one, linking to the most recent decision.
+ * Close thesis when a position is fully closed.
+ * Looks up the active thesis for the symbol and closes it.
  */
-async function syncPositionToDb(
-	position: AlpacaPosition,
+async function closeThesisOnPositionClose(
+	symbol: string,
+	exitPrice: number,
+	realizedPnl: number,
+	side: "long" | "short",
 	environment: string,
-	filledAt?: string | null,
 ): Promise<void> {
-	const positionsRepo = new PositionsRepository();
-	const existing = await positionsRepo.findBySymbol(position.symbol, environment);
+	const thesisRepo = new ThesisStateRepository();
+	const activeThesis = await thesisRepo.findActiveForInstrument(symbol, environment);
 
-	if (existing) {
-		const alpacaQty = Math.abs(position.qty);
-
-		// Sync quantity if it changed (partial fills, adds, or reductions)
-		if (existing.quantity !== alpacaQty) {
-			await positionsRepo.syncFromBroker(existing.id, {
-				quantity: alpacaQty,
-				avgEntryPrice: position.avgEntryPrice,
-				currentPrice: position.currentPrice,
-			});
-			log.info(
-				{
-					symbol: position.symbol,
-					id: existing.id,
-					oldQty: existing.quantity,
-					newQty: alpacaQty,
-					avgEntry: position.avgEntryPrice,
-				},
-				"Synced position quantity from Alpaca",
-			);
-		} else {
-			await positionsRepo.updatePrice(existing.id, position.currentPrice);
-			log.debug({ symbol: position.symbol, id: existing.id }, "Updated position price");
-		}
-	} else {
-		const decisionsRepo = new DecisionsRepository();
-		const thesisRepo = new ThesisStateRepository();
-
-		const recentDecisions = await decisionsRepo.findMany(
-			{ symbol: position.symbol },
-			{ limit: 1, offset: 0 },
-		);
-		const decisionId = recentDecisions.data[0]?.id ?? null;
-
-		const activeThesis = await thesisRepo.findActiveForInstrument(position.symbol, environment);
-		const thesisId = activeThesis?.thesisId ?? null;
-
-		const created = await positionsRepo.create({
-			symbol: position.symbol,
-			side: position.side as "long" | "short",
-			quantity: Math.abs(position.qty),
-			avgEntryPrice: position.avgEntryPrice,
-			currentPrice: position.currentPrice,
-			decisionId,
-			thesisId,
-			environment,
-			openedAt: filledAt ? new Date(filledAt) : undefined,
+	if (activeThesis?.thesisId) {
+		await closeThesisForPosition({
+			thesisId: activeThesis.thesisId,
+			exitPrice,
+			realizedPnl,
+			side,
 		});
-		log.info(
-			{
-				symbol: position.symbol,
-				id: created.id,
-				qty: position.qty,
-				decisionId,
-				thesisId,
-				openedAt: filledAt,
-			},
-			"Created position in database",
-		);
-	}
-}
-
-/**
- * Close position in database when it no longer exists in Alpaca.
- * Also closes the associated thesis if one exists.
- */
-async function closePositionInDb(symbol: string, environment: string): Promise<void> {
-	const positionsRepo = new PositionsRepository();
-	const existing = await positionsRepo.findBySymbol(symbol, environment);
-
-	if (existing) {
-		const exitPrice = existing.currentPrice ?? existing.avgEntryPrice;
-		const closedPosition = await positionsRepo.close(existing.id, exitPrice);
-		log.info({ symbol, id: existing.id }, "Closed position in database");
-
-		if (existing.thesisId && closedPosition.realizedPnl !== null) {
-			await closeThesisForPosition({
-				thesisId: existing.thesisId,
-				exitPrice,
-				realizedPnl: closedPosition.realizedPnl,
-				side: existing.side as "long" | "short",
-			});
-		}
+		log.info({ symbol, thesisId: activeThesis.thesisId }, "Closed thesis for position");
 	}
 }
 
@@ -216,13 +143,9 @@ async function handleProxyOrderUpdate(update: OrderUpdate): Promise<void> {
 			});
 
 			const position = await client.getPosition(order.symbol);
-			const filledAt = order.filledAt
-				? new Date(Number(order.filledAt.seconds) * 1000).toISOString()
-				: null;
 
 			if (position) {
-				await syncPositionToDb(position, environment, filledAt);
-
+				// Position still exists - broadcast update
 				broadcastPositionUpdate({
 					type: "position_update",
 					data: {
@@ -249,7 +172,11 @@ async function handleProxyOrderUpdate(update: OrderUpdate): Promise<void> {
 					"Broadcasted position update (proxy)",
 				);
 			} else if (eventType === "fill") {
-				await closePositionInDb(order.symbol, environment);
+				// Position no longer exists - it was closed
+				// Close thesis and broadcast removal
+				const exitPrice = Number(order.filledAvgPrice ?? 0);
+				const side = order.side === 1 ? "long" : "short";
+				await closeThesisOnPositionClose(order.symbol, exitPrice, 0, side, environment);
 
 				broadcastPositionUpdate({
 					type: "position_update",

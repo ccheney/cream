@@ -2,17 +2,18 @@
  * Portfolio Service
  *
  * Unified service for portfolio-related operations.
- * Handles position retrieval, options data enrichment, and performance metrics.
+ * Handles options position retrieval with market data and greeks enrichment.
+ * Uses Alpaca as the sole source of truth for positions.
  *
  * @see docs/plans/31-alpaca-data-consolidation.md
  */
 
+import { type Position as BrokerPosition, createAlpacaClient } from "@cream/broker";
 import {
 	type AlpacaMarketDataClient,
 	createAlpacaClientFromEnv,
 	parseOptionTicker,
 } from "@cream/marketdata";
-import { getPositionsRepo } from "../db.js";
 import log from "../logger.js";
 import { getCurrentEnvironment } from "../routes/system.js";
 
@@ -72,12 +73,25 @@ export class PortfolioService {
 
 	/**
 	 * Get all options positions with market data and greeks.
+	 * Uses Alpaca as the sole source of truth for positions.
 	 */
 	async getOptionsPositions(): Promise<OptionsPosition[]> {
-		const positionsRepo = await getPositionsRepo();
+		const alpacaKey = Bun.env.ALPACA_KEY;
+		const alpacaSecret = Bun.env.ALPACA_SECRET;
 
-		// 1. Get all open positions
-		const positions = await positionsRepo.findOpen(getCurrentEnvironment());
+		if (!alpacaKey || !alpacaSecret) {
+			log.warn("Alpaca not configured, returning empty options positions");
+			return [];
+		}
+
+		// 1. Get all open positions from Alpaca
+		const tradingClient = createAlpacaClient({
+			apiKey: alpacaKey,
+			apiSecret: alpacaSecret,
+			environment: getCurrentEnvironment(),
+		});
+
+		const positions = await tradingClient.getPositions();
 
 		// 2. Filter for options using OCC format check
 		const optionPositions = positions.filter((p) => parseOptionTicker(p.symbol) !== undefined);
@@ -86,56 +100,25 @@ export class PortfolioService {
 			return [];
 		}
 
-		// 3. Fetch market data for all options
-		// We can use getOptionChainSnapshot or getTickerSnapshot for each
-		// For efficiency with multiple positions, we should try to batch if possible
-		// Polygon doesn't have a specific batch endpoint for arbitrary option tickers,
-		// so we'll fetch snapshots individually or use the underlying chain if they share an underlying.
-		// For now, simple parallel fetch.
+		// 3. Parse option details and group by underlying
+		interface OptionPositionWithDetails {
+			pos: BrokerPosition;
+			details: NonNullable<ReturnType<typeof parseOptionTicker>>;
+		}
 
-		const enrichedPositions = await Promise.all(
-			optionPositions.map(async (pos) => {
-				const details = parseOptionTicker(pos.symbol);
-
-				if (!details) {
-					log.warn({ symbol: pos.symbol }, "Failed to parse option ticker");
-					return null;
-				}
-
-				try {
-					// Fetch snapshot for this specific option contract
-					// Note: Ticker snapshot gives price, but not greeks usually.
-					// Option contract snapshot gives greeks.
-					// We need to use the options API.
-
-					// Since we don't have a "get snapshot for specific contract" method readily exposed
-					// that returns greeks in the main PolygonClient public interface (it has getOptionChainSnapshot),
-					// we might need to rely on what's available or fetch the chain for the underlying.
-
-					// Let's check if we can get data for a single contract.
-					// Polygon's getTickerSnapshot works for options tickers too (O: prefix or plain OCC).
-					// But it might not have Greeks.
-
-					// Attempt to find the specific contract in the underlying's chain snapshot
-					// This is heavier but gives us Greeks.
-					// Optimization: Group by underlying.
-
-					return { pos, details };
-				} catch (error) {
-					log.warn(
-						{ symbol: pos.symbol, error: error instanceof Error ? error.message : String(error) },
-						"Failed to prep option",
-					);
-					return null;
-				}
-			}),
-		);
-		// Group by underlying to minimize API calls
-		const byUnderlying = new Map<string, typeof enrichedPositions>();
-		for (const item of enrichedPositions) {
-			if (!item) {
-				continue;
+		const enrichedPositions: (OptionPositionWithDetails | null)[] = optionPositions.map((pos) => {
+			const details = parseOptionTicker(pos.symbol);
+			if (!details) {
+				log.warn({ symbol: pos.symbol }, "Failed to parse option ticker");
+				return null;
 			}
+			return { pos, details };
+		});
+
+		// Group by underlying to minimize API calls
+		const byUnderlying = new Map<string, OptionPositionWithDetails[]>();
+		for (const item of enrichedPositions) {
+			if (!item) continue;
 			const list = byUnderlying.get(item.details.underlying) ?? [];
 			list.push(item);
 			byUnderlying.set(item.details.underlying, list);
@@ -143,17 +126,13 @@ export class PortfolioService {
 
 		const results: OptionsPosition[] = [];
 
-		// Fetch snapshots for each underlying group
+		// 4. Fetch snapshots for each underlying group
 		for (const [underlying, items] of byUnderlying.entries()) {
 			try {
-				if (!items || items.length === 0) {
-					continue;
-				}
+				if (items.length === 0) continue;
 
 				// Get option symbols for this underlying
-				const optionSymbols = items
-					.filter((item): item is NonNullable<typeof item> => item !== null)
-					.map((item) => item.pos.symbol);
+				const optionSymbols = items.map((item) => item.pos.symbol);
 
 				// Fetch option snapshots for all contracts (includes greeks)
 				const optionSnapshots = await this.alpacaClient.getOptionSnapshots(optionSymbols);
@@ -165,10 +144,6 @@ export class PortfolioService {
 					stockSnapshot?.dailyBar?.close ?? stockSnapshot?.latestTrade?.price ?? 0;
 
 				for (const item of items) {
-					if (!item) {
-						continue;
-					}
-
 					const marketData = optionSnapshots.get(item.pos.symbol);
 
 					// Fallback values if market data missing
@@ -178,14 +153,12 @@ export class PortfolioService {
 						item.pos.currentPrice ??
 						0;
 
-					const marketValue = Math.abs(item.pos.quantity) * currentPrice * 100; // Standard 100 multiplier
+					const marketValue = Math.abs(item.pos.qty) * currentPrice * 100; // Standard 100 multiplier
+					const costBasis = item.pos.qty * item.pos.avgEntryPrice * 100;
 
-					const costBasis = item.pos.costBasis; // Total cost
-					// Calculate unrealized PnL
-					// Long: MV - Cost, Short: Cost - MV
+					// Calculate unrealized PnL (Long: MV - Cost, Short: Cost - MV)
 					const unrealizedPnl =
 						item.pos.side === "long" ? marketValue - costBasis : costBasis - marketValue;
-
 					const unrealizedPnlPct = costBasis > 0 ? (unrealizedPnl / costBasis) * 100 : 0;
 
 					results.push({
@@ -195,7 +168,7 @@ export class PortfolioService {
 						expiration: item.details.expiration,
 						strike: item.details.strike,
 						right: item.details.type === "call" ? "CALL" : "PUT",
-						quantity: item.pos.quantity,
+						quantity: item.pos.qty,
 						avgCost: item.pos.avgEntryPrice,
 						currentPrice,
 						marketValue,
@@ -214,30 +187,25 @@ export class PortfolioService {
 			} catch (error) {
 				log.error(
 					{ underlying, error: error instanceof Error ? error.message : String(error) },
-					"Error fetching options",
+					"Error fetching options market data",
 				);
-				// Add with stale/db data
-				if (items) {
-					for (const item of items) {
-						if (!item) {
-							continue;
-						}
-						results.push({
-							contractSymbol: item.pos.symbol,
-							underlying: item.details.underlying,
-							underlyingPrice: 0,
-							expiration: item.details.expiration,
-							strike: item.details.strike,
-							right: item.details.type === "call" ? "CALL" : "PUT",
-							quantity: item.pos.quantity,
-							avgCost: item.pos.avgEntryPrice,
-							currentPrice: item.pos.currentPrice ?? 0,
-							marketValue: item.pos.marketValue ?? 0,
-							unrealizedPnl: item.pos.unrealizedPnl ?? 0,
-							unrealizedPnlPct: item.pos.unrealizedPnlPct ?? 0,
-							greeks: undefined,
-						});
-					}
+				// Add positions with broker data only (no greeks)
+				for (const item of items) {
+					results.push({
+						contractSymbol: item.pos.symbol,
+						underlying: item.details.underlying,
+						underlyingPrice: 0,
+						expiration: item.details.expiration,
+						strike: item.details.strike,
+						right: item.details.type === "call" ? "CALL" : "PUT",
+						quantity: item.pos.qty,
+						avgCost: item.pos.avgEntryPrice,
+						currentPrice: item.pos.currentPrice,
+						marketValue: item.pos.marketValue,
+						unrealizedPnl: item.pos.unrealizedPl,
+						unrealizedPnlPct: item.pos.unrealizedPlpc * 100,
+						greeks: undefined,
+					});
 				}
 			}
 		}

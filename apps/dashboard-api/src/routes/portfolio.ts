@@ -8,10 +8,8 @@
 
 import {
 	type AlpacaClient,
-	type Account as BrokerAccount,
 	type Order as BrokerOrder,
 	type PortfolioHistory as BrokerPortfolioHistory,
-	type Position as BrokerPosition,
 	createAlpacaClient,
 	type GetOrdersOptions,
 	getPortfolioHistory,
@@ -22,12 +20,7 @@ import {
 import { calculateReturns, calculateSharpe, calculateSortino } from "@cream/metrics";
 import { createRoute, OpenAPIHono, z } from "@hono/zod-openapi";
 import { HTTPException } from "hono/http-exception";
-import {
-	getDecisionsRepo,
-	getOrdersRepo,
-	getPortfolioSnapshotsRepo,
-	getPositionsRepo,
-} from "../db.js";
+import { getPortfolioSnapshotsRepo } from "../db.js";
 import log from "../logger.js";
 import { portfolioService } from "../services/portfolio.js";
 import { getCurrentEnvironment } from "./system.js";
@@ -321,17 +314,6 @@ const ClosedTradesResponseSchema = z.object({
 });
 
 // ============================================
-// Helpers
-// ============================================
-
-function calculateDaysHeld(openedAt: string): number {
-	const opened = new Date(openedAt);
-	const now = new Date();
-	const diffMs = now.getTime() - opened.getTime();
-	return Math.floor(diffMs / (1000 * 60 * 60 * 24));
-}
-
-// ============================================
 // Routes
 // ============================================
 
@@ -351,110 +333,90 @@ const summaryRoute = createRoute({
 });
 
 app.openapi(summaryRoute, async (c) => {
-	const [positionsRepo, snapshotsRepo] = await Promise.all([
-		getPositionsRepo(),
-		getPortfolioSnapshotsRepo(),
-	]);
-
-	const summary = await positionsRepo.getPortfolioSummary(getCurrentEnvironment());
+	const snapshotsRepo = await getPortfolioSnapshotsRepo();
 	const latestSnapshot = await snapshotsRepo.getLatest(getCurrentEnvironment());
 
-	// Calculate today's P&L
-	// When Alpaca is configured, use real-time positions with lastdayPrice for accurate intraday P&L
-	// Otherwise, fall back to NAV-based snapshot comparison
-	let todayPnl = 0;
-	let todayPnlPct = 0;
-	let alpacaAccount: BrokerAccount | null = null;
-	let alpacaPositions: BrokerPosition[] = [];
-
-	if (isAlpacaConfigured()) {
-		try {
-			const client = getBrokerClient();
-			[alpacaAccount, alpacaPositions] = await Promise.all([
-				client.getAccount(),
-				client.getPositions(),
-			]);
-
-			// Calculate Day P&L using lastdayPrice from Alpaca positions
-			// Formula: sum of (currentPrice - lastdayPrice) * qty for each position
-			todayPnl = alpacaPositions.reduce((sum, pos) => {
-				const dayChange = (pos.currentPrice - pos.lastdayPrice) * pos.qty;
-				return sum + dayChange;
-			}, 0);
-
-			// Calculate Day P&L percentage based on yesterday's portfolio value
-			const yesterdayValue = alpacaAccount.lastEquity;
-			todayPnlPct = yesterdayValue > 0 ? (todayPnl / yesterdayValue) * 100 : 0;
-
-			log.debug(
-				{ todayPnl, todayPnlPct, positionCount: alpacaPositions.length },
-				"Calculated Day P&L from Alpaca positions",
-			);
-		} catch (error) {
-			log.warn(
-				{ error: error instanceof Error ? error.message : String(error) },
-				"Failed to fetch Alpaca positions for Day P&L, falling back to snapshots",
-			);
-			// Fall back to snapshot-based calculation below
-		}
+	// Alpaca is the sole source of truth for positions
+	if (!isAlpacaConfigured()) {
+		log.warn("Alpaca not configured, returning default summary");
+		return c.json({
+			nav: latestSnapshot?.nav ?? 100000,
+			cash: latestSnapshot?.cash ?? 100000,
+			equity: 0,
+			buyingPower: (latestSnapshot?.cash ?? 100000) * 4,
+			grossExposure: 0,
+			netExposure: 0,
+			positionCount: 0,
+			todayPnl: 0,
+			todayPnlPct: 0,
+			totalPnl: 0,
+			totalPnlPct: 0,
+			lastUpdated: latestSnapshot?.timestamp ?? new Date().toISOString(),
+		});
 	}
 
-	// Fall back to NAV-based calculation if Alpaca data not available
-	if (todayPnl === 0 && latestSnapshot) {
-		const todayStart = new Date();
-		todayStart.setHours(0, 0, 0, 0);
-		const yesterdayEnd = new Date(todayStart);
-		yesterdayEnd.setSeconds(-1);
+	try {
+		const client = getBrokerClient();
+		const [alpacaAccount, alpacaPositions] = await Promise.all([
+			client.getAccount(),
+			client.getPositions(),
+		]);
 
-		const yesterdaySnapshot = await snapshotsRepo.findByDate(
-			getCurrentEnvironment(),
-			yesterdayEnd.toISOString().split("T")[0] ?? "",
+		// Calculate Day P&L using lastdayPrice from Alpaca positions
+		const todayPnl = alpacaPositions.reduce((sum, pos) => {
+			const dayChange = (pos.currentPrice - pos.lastdayPrice) * pos.qty;
+			return sum + dayChange;
+		}, 0);
+
+		// Calculate Day P&L percentage based on yesterday's portfolio value
+		const yesterdayValue = alpacaAccount.lastEquity;
+		const todayPnlPct = yesterdayValue > 0 ? (todayPnl / yesterdayValue) * 100 : 0;
+
+		// Calculate exposure from Alpaca positions
+		let longValue = 0;
+		let shortValue = 0;
+		for (const pos of alpacaPositions) {
+			if (pos.side === "long") {
+				longValue += pos.marketValue;
+			} else {
+				shortValue += Math.abs(pos.marketValue);
+			}
+		}
+		const grossExposure = longValue + shortValue;
+		const netExposure = longValue - shortValue;
+
+		// Get first snapshot for total P&L calculation
+		const firstSnapshot = await snapshotsRepo.getFirst(getCurrentEnvironment());
+		const totalPnl =
+			latestSnapshot && firstSnapshot ? alpacaAccount.portfolioValue - firstSnapshot.nav : 0;
+		const totalPnlPct = firstSnapshot?.nav ? (totalPnl / firstSnapshot.nav) * 100 : 0;
+
+		log.debug(
+			{ todayPnl, todayPnlPct, positionCount: alpacaPositions.length },
+			"Calculated summary from Alpaca",
 		);
 
-		todayPnl = yesterdaySnapshot ? latestSnapshot.nav - yesterdaySnapshot.nav : 0;
-		todayPnlPct = yesterdaySnapshot?.nav ? (todayPnl / yesterdaySnapshot.nav) * 100 : 0;
+		return c.json({
+			nav: alpacaAccount.portfolioValue,
+			cash: alpacaAccount.cash,
+			equity: alpacaAccount.equity,
+			buyingPower: alpacaAccount.buyingPower,
+			grossExposure,
+			netExposure,
+			positionCount: alpacaPositions.length,
+			todayPnl,
+			todayPnlPct,
+			totalPnl,
+			totalPnlPct,
+			lastUpdated: new Date().toISOString(),
+		});
+	} catch (error) {
+		log.error(
+			{ error: error instanceof Error ? error.message : String(error) },
+			"Failed to fetch Alpaca data for summary",
+		);
+		throw new HTTPException(502, { message: "Failed to fetch portfolio summary from broker" });
 	}
-
-	// Get first snapshot for total P&L calculation
-	const firstSnapshot = await snapshotsRepo.getFirst(getCurrentEnvironment());
-	const totalPnl = latestSnapshot && firstSnapshot ? latestSnapshot.nav - firstSnapshot.nav : 0;
-
-	const totalPnlPct = firstSnapshot?.nav ? (totalPnl / firstSnapshot.nav) * 100 : 0;
-
-	// Calculate net exposure from positions (long value - short value)
-	const positions = await positionsRepo.findMany({
-		environment: getCurrentEnvironment(),
-		status: "open",
-	});
-	const longValue = positions.data
-		.filter((p) => p.side === "long")
-		.reduce((sum, p) => sum + (p.marketValue ?? 0), 0);
-	const shortValue = positions.data
-		.filter((p) => p.side === "short")
-		.reduce((sum, p) => sum + Math.abs(p.marketValue ?? 0), 0);
-	const netExposure = longValue - shortValue;
-
-	// Use Alpaca account data when available for more accurate values
-	const nav = alpacaAccount?.portfolioValue ?? latestSnapshot?.nav ?? 100000;
-	const cash = alpacaAccount?.cash ?? latestSnapshot?.cash ?? 100000;
-	const buyingPower = alpacaAccount?.buyingPower ?? (latestSnapshot?.cash ?? 100000) * 4;
-	const positionCount =
-		alpacaPositions.length > 0 ? alpacaPositions.length : summary.totalPositions;
-
-	return c.json({
-		nav,
-		cash,
-		equity: alpacaAccount?.equity ?? summary.totalMarketValue,
-		buyingPower,
-		grossExposure: summary.totalMarketValue,
-		netExposure,
-		positionCount,
-		todayPnl,
-		todayPnlPct,
-		totalPnl,
-		totalPnlPct,
-		lastUpdated: latestSnapshot?.timestamp ?? new Date().toISOString(),
-	});
 });
 
 // GET /api/portfolio/options
@@ -556,83 +518,43 @@ const positionDetailRoute = createRoute({
 app.openapi(positionDetailRoute, async (c) => {
 	const { id } = c.req.valid("param");
 
-	// Handle Alpaca positions (alpaca-SYMBOL format)
-	if (id.startsWith("alpaca-")) {
-		const symbol = id.slice(7); // Remove "alpaca-" prefix
+	// Extract symbol from alpaca-SYMBOL format or use as-is
+	const symbol = id.startsWith("alpaca-") ? id.slice(7) : id;
 
-		if (!isAlpacaConfigured()) {
-			return c.json({ error: "Trading service unavailable" }, 404);
-		}
-
-		try {
-			const client = getBrokerClient();
-			const alpacaPosition = await client.getPosition(symbol);
-
-			if (!alpacaPosition) {
-				return c.json({ error: "Position not found" }, 404);
-			}
-
-			return c.json({
-				id: `alpaca-${alpacaPosition.symbol}`,
-				symbol: alpacaPosition.symbol,
-				side: alpacaPosition.side === "long" ? "LONG" : "SHORT",
-				qty: alpacaPosition.qty,
-				avgEntry: alpacaPosition.avgEntryPrice,
-				currentPrice: alpacaPosition.currentPrice,
-				lastdayPrice: alpacaPosition.lastdayPrice,
-				marketValue: alpacaPosition.marketValue,
-				unrealizedPnl: alpacaPosition.unrealizedPl,
-				unrealizedPnlPct: alpacaPosition.unrealizedPlpc * 100,
-				thesisId: null,
-				daysHeld: 0,
-				openedAt: new Date().toISOString(),
-			});
-		} catch (error) {
-			log.error(
-				{ error: error instanceof Error ? error.message : String(error), symbol },
-				"Failed to fetch Alpaca position",
-			);
-			throw new HTTPException(502, { message: "Failed to fetch position from broker" });
-		}
+	if (!isAlpacaConfigured()) {
+		return c.json({ error: "Trading service unavailable" }, 404);
 	}
 
-	// Handle database positions (UUID format)
-	const [repo, decisionsRepo] = await Promise.all([getPositionsRepo(), getDecisionsRepo()]);
+	try {
+		const client = getBrokerClient();
+		const alpacaPosition = await client.getPosition(symbol);
 
-	const position = await repo.findById(id);
-	if (!position) {
-		return c.json({ error: "Position not found" }, 404);
-	}
-
-	// Fetch stop/target from linked decision if available
-	let stop: number | null = null;
-	let target: number | null = null;
-
-	if (position.decisionId) {
-		const decision = await decisionsRepo.findById(position.decisionId);
-		if (decision) {
-			stop = decision.stopPrice;
-			target = decision.targetPrice;
+		if (!alpacaPosition) {
+			return c.json({ error: "Position not found" }, 404);
 		}
-	}
 
-	return c.json({
-		id: position.id,
-		symbol: position.symbol,
-		side: position.side === "long" ? "LONG" : "SHORT",
-		qty: position.quantity,
-		avgEntry: position.avgEntryPrice,
-		currentPrice: position.currentPrice,
-		lastdayPrice: null,
-		marketValue: position.marketValue,
-		unrealizedPnl: position.unrealizedPnl,
-		unrealizedPnlPct: position.unrealizedPnlPct,
-		stop,
-		target,
-		thesisId: position.thesisId,
-		daysHeld: calculateDaysHeld(position.openedAt),
-		openedAt: position.openedAt,
-	});
+		return c.json({
+			id: `alpaca-${alpacaPosition.symbol}`,
+			symbol: alpacaPosition.symbol,
+			side: alpacaPosition.side === "long" ? "LONG" : "SHORT",
+			qty: alpacaPosition.qty,
+			avgEntry: alpacaPosition.avgEntryPrice,
+			currentPrice: alpacaPosition.currentPrice,
+			lastdayPrice: alpacaPosition.lastdayPrice,
+			marketValue: alpacaPosition.marketValue,
+			unrealizedPnl: alpacaPosition.unrealizedPl,
+			unrealizedPnlPct: alpacaPosition.unrealizedPlpc * 100,
+			thesisId: null,
+			daysHeld: 0,
+			openedAt: new Date().toISOString(),
+		});
+	} catch (error) {
+		log.error(
+			{ error: error instanceof Error ? error.message : String(error), symbol },
+			"Failed to fetch Alpaca position",
+		);
+		throw new HTTPException(502, { message: "Failed to fetch position from broker" });
+	}
 });
 
 // GET /api/portfolio/equity-curve (internal snapshots)
@@ -1093,49 +1015,46 @@ const closePositionRoute = createRoute({
 // @ts-expect-error - Hono OpenAPI multi-response type inference limitation
 app.openapi(closePositionRoute, async (c) => {
 	const { id } = c.req.valid("param");
-	const body = c.req.valid("json");
+	// Note: body params (marketOrder, limitPrice) are ignored - Alpaca closePosition uses market orders
+	c.req.valid("json");
 
-	const [positionsRepo, ordersRepo] = await Promise.all([getPositionsRepo(), getOrdersRepo()]);
+	// Extract symbol from alpaca-SYMBOL format or use as-is
+	const symbol = id.startsWith("alpaca-") ? id.slice(7) : id;
 
-	const position = await positionsRepo.findById(id);
-	if (!position) {
-		log.warn({ positionId: id }, "Close position request for non-existent position");
-		return c.json({ error: "Position not found" }, 404);
+	if (!isAlpacaConfigured()) {
+		return c.json({ error: "Trading service unavailable" }, 404);
 	}
 
-	log.info(
-		{ positionId: id, symbol: position.symbol, quantity: position.quantity, side: position.side },
-		"Closing position",
-	);
-
 	try {
-		// Create a close order
-		const order = await ordersRepo.create({
-			decisionId: null,
-			symbol: position.symbol,
-			side: position.side === "long" ? "sell" : "buy",
-			quantity: position.quantity,
-			orderType: body.marketOrder ? "market" : "limit",
-			limitPrice: body.limitPrice ?? null,
-			environment: position.environment,
-		});
+		const client = getBrokerClient();
 
-		log.info({ positionId: id, orderId: order.id, symbol: position.symbol }, "Close order created");
+		// Verify position exists
+		const position = await client.getPosition(symbol);
+		if (!position) {
+			log.warn({ symbol }, "Close position request for non-existent position");
+			return c.json({ error: "Position not found" }, 404);
+		}
+
+		log.info({ symbol, qty: position.qty, side: position.side }, "Closing position via Alpaca");
+
+		// Close the position using Alpaca's API
+		const order = await client.closePosition(symbol);
+
+		log.info({ symbol, orderId: order.id }, "Close order submitted to Alpaca");
 
 		return c.json({
 			orderId: order.id,
-			message: `Close order submitted for ${position.symbol}`,
+			message: `Close order submitted for ${symbol}`,
 		});
 	} catch (error) {
 		log.error(
 			{
-				positionId: id,
-				symbol: position.symbol,
+				symbol,
 				error: error instanceof Error ? error.message : String(error),
 			},
-			"Failed to create close order",
+			"Failed to close position",
 		);
-		throw error;
+		throw new HTTPException(502, { message: "Failed to close position via broker" });
 	}
 });
 
@@ -1456,7 +1375,10 @@ app.openapi(closedTradesRoute, async (c) => {
 		const filledOrders = alpacaOrders
 			.filter((o) => o.status === "filled" && o.filledAt)
 			.filter((o) => !query.symbol || o.symbol === query.symbol)
-			.toSorted((a, b) => new Date(a.filledAt!).getTime() - new Date(b.filledAt!).getTime());
+			.toSorted(
+				(a, b) =>
+					new Date(a.filledAt as string).getTime() - new Date(b.filledAt as string).getTime(),
+			);
 
 		// Group orders by symbol and process FIFO
 		const symbolLots = new Map<string, FifoLot[]>();

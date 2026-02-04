@@ -24,7 +24,6 @@ import {
 	MacroWatchRepository,
 	OrdersRepository,
 	PortfolioSnapshotsRepository,
-	PositionsRepository,
 	PredictionMarketsRepository,
 	RegimeLabelsRepository,
 	SentimentRepository,
@@ -86,13 +85,6 @@ export function getAlertSettingsRepo(): AlertSettingsRepository {
  */
 export function getOrdersRepo(): OrdersRepository {
 	return new OrdersRepository();
-}
-
-/**
- * Get positions repository
- */
-export function getPositionsRepo(): PositionsRepository {
-	return new PositionsRepository();
 }
 
 /**

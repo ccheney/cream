@@ -5,8 +5,9 @@
  * System status is persisted to the database.
  */
 
+import { createAlpacaClient } from "@cream/broker";
 import { createRoute, OpenAPIHono, z } from "@hono/zod-openapi";
-import { getAlertsRepo, getOrdersRepo, getPositionsRepo, getSystemStateRepo } from "../../db.js";
+import { getAlertsRepo, getOrdersRepo, getSystemStateRepo } from "../../db.js";
 import { getRunningCycles, getSystemState, setSystemStatus } from "./state.js";
 import {
 	EnvironmentRequestSchema,
@@ -23,18 +24,33 @@ const app = new OpenAPIHono();
 
 type Environment = "PAPER" | "LIVE";
 
+function isAlpacaConfigured(): boolean {
+	return Boolean(Bun.env.ALPACA_KEY && Bun.env.ALPACA_SECRET);
+}
+
+async function getAlpacaPositionCount(environment: Environment): Promise<number> {
+	if (!isAlpacaConfigured()) {
+		return 0;
+	}
+
+	const client = createAlpacaClient({
+		apiKey: Bun.env.ALPACA_KEY as string,
+		apiSecret: Bun.env.ALPACA_SECRET as string,
+		environment,
+	});
+
+	const positions = await client.getPositions();
+	return positions.length;
+}
+
 async function getSystemStatusResponse(environmentOverride?: string) {
 	const state = await getSystemState(environmentOverride);
 	const environment = (environmentOverride ?? state.environment) as Environment;
 
-	const [positionsRepo, ordersRepo, alertsRepo] = await Promise.all([
-		getPositionsRepo(),
-		getOrdersRepo(),
-		getAlertsRepo(),
-	]);
+	const [ordersRepo, alertsRepo] = await Promise.all([getOrdersRepo(), getAlertsRepo()]);
 
-	const [positions, orders, alerts] = await Promise.all([
-		positionsRepo.findMany({ environment, status: "open" }),
+	const [positionCount, orders, alerts] = await Promise.all([
+		getAlpacaPositionCount(environment),
 		ordersRepo.findMany({ environment, status: "pending" }),
 		alertsRepo.findMany({ acknowledged: false }, { page: 1, pageSize: 10 }),
 	]);
@@ -54,7 +70,7 @@ async function getSystemStatusResponse(environmentOverride?: string) {
 		lastCycleId: state.lastCycleId,
 		lastCycleTime: state.lastCycleTime,
 		nextCycleTime: state.status === "running" ? nextHour.toISOString() : null,
-		positionCount: positions.total,
+		positionCount,
 		openOrderCount: orders.total,
 		alerts: alerts.data.map((a) => ({
 			id: a.id,
@@ -171,25 +187,30 @@ app.openapi(stopRoute, async (c) => {
 
 	if (body.closeAllPositions) {
 		try {
-			const positionsRepo = await getPositionsRepo();
-			const openPositions = await positionsRepo.findMany({
-				environment: state.environment,
-				status: "open",
-			});
-
-			if (openPositions.total > 0) {
-				const alertsRepo = await getAlertsRepo();
-				await alertsRepo.create({
-					severity: "warning",
-					type: "system",
-					title: "Position Close Requested",
-					message: `System stop requested with closeAllPositions=true. ${openPositions.total} open positions require attention.`,
-					metadata: {
-						positionCount: openPositions.total,
-						symbols: openPositions.data.map((p) => p.symbol),
-					},
+			// Get positions from Alpaca
+			if (isAlpacaConfigured()) {
+				const client = createAlpacaClient({
+					apiKey: Bun.env.ALPACA_KEY as string,
+					apiSecret: Bun.env.ALPACA_SECRET as string,
 					environment: state.environment,
 				});
+
+				const openPositions = await client.getPositions();
+
+				if (openPositions.length > 0) {
+					const alertsRepo = getAlertsRepo();
+					await alertsRepo.create({
+						severity: "warning",
+						type: "system",
+						title: "Position Close Requested",
+						message: `System stop requested with closeAllPositions=true. ${openPositions.length} open positions require attention.`,
+						metadata: {
+							positionCount: openPositions.length,
+							symbols: openPositions.map((p) => p.symbol),
+						},
+						environment: state.environment,
+					});
+				}
 			}
 		} catch {
 			// Non-critical error, continue with stop

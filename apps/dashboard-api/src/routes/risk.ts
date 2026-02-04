@@ -2,13 +2,13 @@
  * Risk API Routes
  *
  * Routes for exposure, Greeks, VaR, and risk limits.
- * Returns real data from positions (PostgreSQL) + market data (Massive API) - NO mock data.
+ * Returns real data from Alpaca positions + market data - NO mock data.
  *
  * Data Sources:
- * - Positions: PostgreSQL database
- * - Real-time prices: Massive WebSocket streaming
- * - Greeks: Massive Options Snapshot API or local Black-Scholes
- * - Historical data: Massive REST aggregates (for correlation/VaR)
+ * - Positions: Alpaca broker API (sole source of truth)
+ * - Real-time prices: Alpaca/Polygon streaming
+ * - Greeks: Alpaca Options Snapshot API
+ * - Historical data: Polygon REST aggregates (for correlation/VaR)
  * - Limits: Config constraints
  *
  * Note: Does NOT require the Rust execution engine - that's for order routing only.
@@ -17,8 +17,10 @@
  * @see docs/plans/ui/40-streaming-data-integration.md
  */
 
+import { type Position as BrokerPosition, createAlpacaClient } from "@cream/broker";
 import { createRoute, OpenAPIHono, z } from "@hono/zod-openapi";
-import { getPortfolioSnapshotsRepo, getPositionsRepo } from "../db.js";
+import { getPortfolioSnapshotsRepo } from "../db.js";
+import log from "../logger.js";
 import { portfolioService } from "../services/portfolio.js";
 import {
 	calculateExposure,
@@ -36,6 +38,38 @@ import { getCurrentEnvironment } from "./system.js";
 // ============================================
 
 const app = new OpenAPIHono();
+
+// ============================================
+// Helpers
+// ============================================
+
+function isAlpacaConfigured(): boolean {
+	return Boolean(Bun.env.ALPACA_KEY && Bun.env.ALPACA_SECRET);
+}
+
+async function getAlpacaPositions(): Promise<BrokerPosition[]> {
+	if (!isAlpacaConfigured()) {
+		log.warn("Alpaca not configured, returning empty positions");
+		return [];
+	}
+
+	const client = createAlpacaClient({
+		apiKey: Bun.env.ALPACA_KEY as string,
+		apiSecret: Bun.env.ALPACA_SECRET as string,
+		environment: getCurrentEnvironment(),
+	});
+
+	return client.getPositions();
+}
+
+function mapToExposurePositions(positions: BrokerPosition[]): PositionForExposure[] {
+	return positions.map((p) => ({
+		symbol: p.symbol,
+		side: (p.side === "long" ? "LONG" : "SHORT") as "LONG" | "SHORT",
+		quantity: p.qty,
+		marketValue: p.marketValue,
+	}));
+}
 
 // ============================================
 // Schema Definitions
@@ -132,26 +166,19 @@ const exposureRoute = createRoute({
 });
 
 app.openapi(exposureRoute, async (c) => {
-	const positionsRepo = await getPositionsRepo();
-	const snapshotsRepo = await getPortfolioSnapshotsRepo();
+	const snapshotsRepo = getPortfolioSnapshotsRepo();
 	const env = getCurrentEnvironment();
 
-	// 1. Get Positions
-	const positions = await positionsRepo.findOpen(env);
+	// 1. Get Positions from Alpaca
+	const positions = await getAlpacaPositions();
 
 	// 2. Get NAV
 	const latestSnapshot = await snapshotsRepo.getLatest(env);
-	// Fallback NAV if no snapshot: sum of absolute market values (approximation) or just cash + equity
-	const equity = positions.reduce((sum, p) => sum + (p.marketValue ?? 0), 0);
-	const nav = latestSnapshot?.nav ?? (equity || 100000); // Default to 100k if empty
+	const equity = positions.reduce((sum, p) => sum + p.marketValue, 0);
+	const nav = latestSnapshot?.nav ?? (equity || 100000);
 
 	// 3. Map to PositionForExposure
-	const positionsForExposure: PositionForExposure[] = positions.map((p) => ({
-		symbol: p.symbol,
-		side: p.side as "LONG" | "SHORT",
-		quantity: p.quantity,
-		marketValue: p.marketValue,
-	}));
+	const positionsForExposure = mapToExposurePositions(positions);
 
 	// 4. Calculate Exposure
 	const metrics = calculateExposure({
@@ -253,10 +280,8 @@ const correlationRoute = createRoute({
 });
 
 app.openapi(correlationRoute, async (c) => {
-	// Get positions from database
-	const positionsRepo = await getPositionsRepo();
-	const env = getCurrentEnvironment();
-	const positions = await positionsRepo.findOpen(env);
+	// Get positions from Alpaca
+	const positions = await getAlpacaPositions();
 
 	// Extract unique symbols
 	const symbols = [...new Set(positions.map((p) => p.symbol))];
@@ -304,23 +329,17 @@ const varRoute = createRoute({
 });
 
 app.openapi(varRoute, async (c) => {
-	// Get positions from database
-	const positionsRepo = await getPositionsRepo();
-	const snapshotsRepo = await getPortfolioSnapshotsRepo();
+	// Get positions from Alpaca
+	const snapshotsRepo = getPortfolioSnapshotsRepo();
 	const env = getCurrentEnvironment();
-	const positions = await positionsRepo.findOpen(env);
+	const positions = await getAlpacaPositions();
 
 	// Get NAV from latest snapshot (or calculate from positions)
 	const latestSnapshot = await snapshotsRepo.getLatest(env);
-	const nav = latestSnapshot?.nav ?? positions.reduce((sum, p) => sum + (p.marketValue ?? 0), 0);
+	const nav = latestSnapshot?.nav ?? positions.reduce((sum, p) => sum + p.marketValue, 0);
 
 	// Convert positions for VaR calculation
-	const positionsForVaR: PositionForExposure[] = positions.map((p) => ({
-		symbol: p.symbol,
-		side: p.side as "LONG" | "SHORT",
-		quantity: p.quantity,
-		marketValue: p.marketValue ?? 0,
-	}));
+	const positionsForVaR = mapToExposurePositions(positions);
 
 	// Calculate VaR metrics
 	const varMetrics = await getVaRMetrics({
@@ -354,23 +373,17 @@ const limitsRoute = createRoute({
 });
 
 app.openapi(limitsRoute, async (c) => {
-	// Get positions from database
-	const positionsRepo = await getPositionsRepo();
-	const snapshotsRepo = await getPortfolioSnapshotsRepo();
+	// Get positions from Alpaca
+	const snapshotsRepo = getPortfolioSnapshotsRepo();
 	const env = getCurrentEnvironment();
-	const positions = await positionsRepo.findOpen(env);
+	const positions = await getAlpacaPositions();
 
 	// Get NAV from latest snapshot (or calculate from positions)
 	const latestSnapshot = await snapshotsRepo.getLatest(env);
-	const nav = latestSnapshot?.nav ?? positions.reduce((sum, p) => sum + (p.marketValue ?? 0), 0);
+	const nav = latestSnapshot?.nav ?? positions.reduce((sum, p) => sum + p.marketValue, 0);
 
 	// Convert positions for exposure calculation
-	const positionsForExposure: PositionForExposure[] = positions.map((p) => ({
-		symbol: p.symbol,
-		side: p.side as "LONG" | "SHORT",
-		quantity: p.quantity,
-		marketValue: p.marketValue ?? 0,
-	}));
+	const positionsForExposure = mapToExposurePositions(positions);
 
 	// Calculate exposure metrics
 	const exposure = calculateExposure({

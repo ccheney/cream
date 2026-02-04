@@ -5,8 +5,11 @@
  * Uses embedded tradingCycleWorkflow from @cream/mastra.
  */
 
+import { enrichPositions, type PortfolioPosition } from "@cream/agents";
+import { createAlpacaClient } from "@cream/broker";
+import { type CreamEnvironment, createContext } from "@cream/domain";
 import type { CyclePhase, CycleProgressData, CycleResultData } from "@cream/domain/websocket";
-import { mastra } from "@cream/mastra";
+import { type EnrichedPosition, mastra } from "@cream/mastra";
 import { reconstructStreamingState } from "@cream/storage";
 import { createRoute, OpenAPIHono, z } from "@hono/zod-openapi";
 import {
@@ -292,6 +295,54 @@ app.openapi(triggerCycleRoute, async (c) => {
 				);
 			}
 
+			// Fetch current positions from Alpaca and enrich with thesis data
+			let enrichedPositions: EnrichedPosition[] = [];
+			if (Bun.env.ALPACA_KEY && Bun.env.ALPACA_SECRET) {
+				try {
+					const brokerClient = createAlpacaClient({
+						apiKey: Bun.env.ALPACA_KEY,
+						apiSecret: Bun.env.ALPACA_SECRET,
+						environment: environment as CreamEnvironment,
+					});
+					const alpacaPositions = await brokerClient.getPositions();
+
+					// Map broker positions to PortfolioPosition format for enrichment
+					const portfolioPositions: PortfolioPosition[] = alpacaPositions.map((p) => ({
+						symbol: p.symbol,
+						quantity: p.qty,
+						averageCost: p.avgEntryPrice,
+						marketValue: p.marketValue,
+						unrealizedPnL: p.unrealizedPl,
+					}));
+
+					// Enrich with thesis data
+					const ctx = createContext(environment as CreamEnvironment, "scheduled");
+					const enrichedPortfolio = await enrichPositions(portfolioPositions, ctx);
+
+					// Map to workflow EnrichedPosition schema
+					enrichedPositions = enrichedPortfolio.map((ep) => ({
+						symbol: ep.symbol,
+						quantity: ep.quantity,
+						side: ep.quantity >= 0 ? ("long" as const) : ("short" as const),
+						averageCost: ep.averageCost,
+						marketValue: ep.marketValue,
+						unrealizedPnl: ep.unrealizedPnL,
+						unrealizedPnlPct:
+							ep.averageCost > 0 ? (ep.unrealizedPnL / (ep.averageCost * ep.quantity)) * 100 : 0,
+						holdingDays: ep.holdingDays,
+						riskParams: ep.riskParams,
+						thesis: ep.thesis,
+					}));
+
+					log.info(
+						{ cycleId, positionCount: enrichedPositions.length },
+						"Enriched positions for cycle",
+					);
+				} catch (error) {
+					log.warn({ cycleId, error }, "Failed to fetch positions, continuing without");
+				}
+			}
+
 			// Execute workflow with streaming - forward agent events to WebSocket
 			// Use mastra.getWorkflow() to get workflow with observability/tracing enabled
 			const tradingCycleWorkflow = mastra.getWorkflow("tradingCycleWorkflow");
@@ -302,6 +353,7 @@ app.openapi(triggerCycleRoute, async (c) => {
 					instruments: resolvedSymbols,
 					useDraftConfig,
 					recentCloses,
+					positions: enrichedPositions,
 				},
 			});
 
