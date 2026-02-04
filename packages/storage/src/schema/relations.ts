@@ -5,7 +5,7 @@
  */
 import { relations } from "drizzle-orm";
 import { account, session, twoFactor, user } from "./auth";
-import { agentOutputs, cycleEvents, cycles, decisions, orders, positions } from "./core-trading";
+import { agentOutputs, cycleEvents, cycles, decisions, orders } from "./core-trading";
 import { thesisState, thesisStateHistory } from "./thesis";
 import { alertSettings, userPreferences } from "./user-settings";
 
@@ -13,7 +13,6 @@ import { alertSettings, userPreferences } from "./user-settings";
 export const decisionsRelations = relations(decisions, ({ many, one }) => ({
 	agentOutputs: many(agentOutputs),
 	orders: many(orders),
-	positions: many(positions),
 	cycle: one(cycles, {
 		fields: [decisions.cycleId],
 		references: [cycles.id],
@@ -36,18 +35,6 @@ export const ordersRelations = relations(orders, ({ one }) => ({
 	}),
 }));
 
-// Positions relations
-export const positionsRelations = relations(positions, ({ one }) => ({
-	decision: one(decisions, {
-		fields: [positions.decisionId],
-		references: [decisions.id],
-	}),
-	thesis: one(thesisState, {
-		fields: [positions.thesisId],
-		references: [thesisState.thesisId],
-	}),
-}));
-
 // Cycles relations
 export const cyclesRelations = relations(cycles, ({ many }) => ({
 	events: many(cycleEvents),
@@ -65,7 +52,6 @@ export const cycleEventsRelations = relations(cycleEvents, ({ one }) => ({
 // Thesis state relations
 export const thesisStateRelations = relations(thesisState, ({ many }) => ({
 	history: many(thesisStateHistory),
-	positions: many(positions),
 }));
 
 // Thesis state history relations

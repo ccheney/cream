@@ -567,7 +567,7 @@ export class ThesisStateRepository {
 
 		return rows.map((r) => ({
 			instrumentId: r.instrumentId,
-			cooldownUntil: r.cooldownUntil!.toISOString(),
+			cooldownUntil: r.cooldownUntil?.toISOString() ?? "",
 			closeReason: r.closeReason,
 			closedAt: r.closedAt?.toISOString() ?? null,
 		}));

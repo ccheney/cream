@@ -247,15 +247,6 @@ export {
 	type PortfolioSnapshotFilters,
 	PortfolioSnapshotsRepository,
 } from "./portfolio-snapshots.js";
-export {
-	type CreatePositionInput,
-	type Position,
-	type PositionFilters,
-	type PositionSide,
-	type PositionStatus,
-	PositionsRepository,
-	type PositionWithMetadata,
-} from "./positions.js";
 // Prediction markets (migration 006)
 export {
 	type ArbitrageAlert,

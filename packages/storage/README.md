@@ -54,9 +54,6 @@ erDiagram
     cycles ||--o{ cycle_events : logs
     decisions ||--o{ agent_outputs : has
     decisions ||--o{ orders : generates
-    decisions ||--o{ positions : creates
-    positions ||--o{ position_history : tracks
-    positions }o--|| thesis_state : follows
     thesis_state ||--o{ thesis_state_history : transitions
 
     user ||--o{ session : has
@@ -93,17 +90,6 @@ erDiagram
         text broker_order_id
     }
 
-    positions {
-        uuid id PK
-        text symbol
-        position_side side
-        numeric qty
-        numeric avg_entry
-        numeric unrealized_pnl
-        uuid thesis_id FK
-        position_status status
-    }
-
     thesis_state {
         uuid thesis_id PK
         text instrument_id
@@ -118,7 +104,7 @@ erDiagram
 
 | Module | Tables | Purpose |
 |--------|--------|---------|
-| `core-trading` | decisions, orders, positions, cycles, cycle_events, portfolio_snapshots | OODA loop execution |
+| `core-trading` | decisions, orders, cycles, cycle_events, portfolio_snapshots | OODA loop execution |
 | `thesis` | thesis_state, thesis_state_history | Position thesis tracking |
 | `config` | trading_config, agent_configs, universe_configs, constraints_config | Runtime configuration |
 | `auth` | user, session, account, verification, two_factor | Authentication (better-auth) |
@@ -155,15 +141,6 @@ classDiagram
         +getConfidenceCalibration(filters) Bin[]
     }
 
-    class PositionsRepository {
-        +findOpen(env) Position[]
-        +findOpenWithMetadata(env) PositionWithMetadata[]
-        +findBySymbol(symbol, env) Position
-        +updatePrice(id, price) Position
-        +close(id, exitPrice) Position
-        +getPortfolioSummary(env) Summary
-    }
-
     class CyclesRepository {
         +findRunning(env) Cycle
         +findRecent(env, limit) Cycle[]
@@ -174,21 +151,20 @@ classDiagram
     }
 
     Repository <|-- DecisionsRepository
-    Repository <|-- PositionsRepository
     Repository <|-- CyclesRepository
 ```
 
 ### Usage
 
 ```typescript
-import { getDb, DecisionsRepository, PositionsRepository } from "@cream/storage";
+import { getDb, DecisionsRepository, OrdersRepository } from "@cream/storage";
 
 // Singleton database client (lazy initialization)
 const db = getDb();
 
 // Repository with injected database (testable)
 const decisions = new DecisionsRepository(db);
-const positions = new PositionsRepository(db);
+const orders = new OrdersRepository(db);
 
 // Create a decision
 const decision = await decisions.create({
@@ -237,8 +213,6 @@ sequenceDiagram
     alt Decision Approved
         M->>S: OrdersRepository.create()
         S->>DB: INSERT orders
-        M->>S: PositionsRepository.create()
-        S->>DB: INSERT positions
     end
 
     W->>S: CyclesRepository.complete()
@@ -314,15 +288,15 @@ import type { Database } from "@cream/storage";
 
 // Schema (for direct queries)
 import * as schema from "@cream/storage/schema";
-import { decisions, orders, positions } from "@cream/storage/schema";
+import { decisions, orders, thesisState } from "@cream/storage/schema";
 
 // Repositories
 import {
   DecisionsRepository,
-  PositionsRepository,
   CyclesRepository,
   OrdersRepository,
-  // ... 30+ repositories
+  ThesisStateRepository,
+  // ... 25+ repositories
 } from "@cream/storage";
 
 // Utilities

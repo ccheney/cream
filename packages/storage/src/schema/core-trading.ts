@@ -1,7 +1,7 @@
 /**
  * Core Trading Tables
  *
- * decisions, agent_outputs, orders, positions, portfolio_snapshots,
+ * decisions, agent_outputs, orders, portfolio_snapshots,
  * config_versions, cycles, cycle_events
  */
 import { sql } from "drizzle-orm";
@@ -34,8 +34,6 @@ import {
 	orderSideEnum,
 	orderStatusEnum,
 	orderTypeEnum,
-	positionSideEnum,
-	positionStatusEnum,
 	sizeUnitEnum,
 	timeInForceEnum,
 } from "./enums";
@@ -154,44 +152,6 @@ export const orders = pgTable(
 		index("idx_orders_broker_order_id").on(table.brokerOrderId),
 		index("idx_orders_created_at").on(table.createdAt),
 		index("idx_orders_environment").on(table.environment),
-	],
-);
-
-// positions: Current open positions
-export const positions = pgTable(
-	"positions",
-	{
-		id: uuid("id").primaryKey().default(sql`uuidv7()`),
-		symbol: text("symbol").notNull(),
-		side: positionSideEnum("side").notNull(),
-		qty: numeric("qty", { precision: 14, scale: 4 }).notNull(),
-		avgEntry: numeric("avg_entry", { precision: 12, scale: 4 }).notNull(),
-		currentPrice: numeric("current_price", { precision: 12, scale: 4 }),
-		unrealizedPnl: numeric("unrealized_pnl", { precision: 14, scale: 2 }),
-		unrealizedPnlPct: numeric("unrealized_pnl_pct", { precision: 8, scale: 4 }),
-		realizedPnl: numeric("realized_pnl", { precision: 14, scale: 2 }).default("0"),
-		marketValue: numeric("market_value", { precision: 14, scale: 2 }),
-		costBasis: numeric("cost_basis", { precision: 14, scale: 2 }),
-		thesisId: uuid("thesis_id"),
-		decisionId: uuid("decision_id").references(() => decisions.id),
-		status: positionStatusEnum("status").notNull().default("open"),
-		metadata: jsonb("metadata").$type<Record<string, unknown>>().default({}),
-		environment: environmentEnum("environment").notNull(),
-		openedAt: timestamp("opened_at", { withTimezone: true }).notNull().defaultNow(),
-		updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
-		closedAt: timestamp("closed_at", { withTimezone: true }),
-	},
-	(table) => [
-		check("positive_quantity", sql`${table.qty}::numeric > 0`),
-		check("positive_entry", sql`${table.avgEntry}::numeric > 0`),
-		index("idx_positions_symbol").on(table.symbol),
-		index("idx_positions_thesis_id").on(table.thesisId),
-		index("idx_positions_decision_id").on(table.decisionId),
-		index("idx_positions_status").on(table.status),
-		index("idx_positions_environment").on(table.environment),
-		uniqueIndex("idx_positions_symbol_env_open")
-			.on(table.symbol, table.environment)
-			.where(sql`${table.closedAt} IS NULL`),
 	],
 );
 
