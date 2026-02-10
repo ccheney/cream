@@ -161,19 +161,13 @@ function refineRegimeClassifications(
 	return regimeLabels;
 }
 
+// Cross-cycle memory is handled by Mastra Observational Memory at the agent level.
+// This stub remains for future HelixDB case-based reasoning (structured CBR retrieval).
 async function loadMemoryContext(
 	_instruments: string[],
-	mode: "STUB" | "LLM",
-	warnings: string[],
+	_mode: "STUB" | "LLM",
+	_warnings: string[],
 ): Promise<z.infer<typeof MemoryContextSchema>> {
-	if (mode === "STUB") {
-		return {
-			relevantCases: [],
-			regimeLabels: {},
-		};
-	}
-
-	warnings.push("HelixDB memory retrieval not yet integrated - using empty context");
 	return {
 		relevantCases: [],
 		regimeLabels: {},

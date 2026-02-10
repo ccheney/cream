@@ -16,6 +16,7 @@ import { PredictionMarketsRepository } from "@cream/storage";
 import { Mastra } from "@mastra/core";
 import { Observability } from "@mastra/observability";
 import { OtelBridge } from "@mastra/otel-bridge";
+import { PostgresStore } from "@mastra/pg";
 
 // Agents
 import {
@@ -143,6 +144,33 @@ setPredictionMarketsRepositoryProvider(async (): Promise<PredictionMarketsToolRe
 	};
 });
 
+// ============================================
+// Database URL Resolution
+// ============================================
+
+const DATABASE_URLS: Record<string, string | undefined> = {
+	PAPER: Bun.env.DATABASE_URL_PAPER ?? Bun.env.DATABASE_URL,
+	LIVE: Bun.env.DATABASE_URL,
+};
+
+function getDatabaseUrl(): string {
+	if (Bun.env.NODE_ENV === "test" && Bun.env.TEST_DATABASE_URL) {
+		return Bun.env.TEST_DATABASE_URL;
+	}
+
+	const env = Bun.env.CREAM_ENV ?? "PAPER";
+	const url = DATABASE_URLS[env];
+
+	if (!url) {
+		throw new Error(
+			`DATABASE_URL not configured for environment: ${env}. ` +
+				`Set DATABASE_URL_${env} or DATABASE_URL environment variable.`,
+		);
+	}
+
+	return url;
+}
+
 // OTEL bridge configuration (SDK is initialized in instrumentation.ts)
 const observabilityEnabled =
 	Bun.env.OTEL_ENABLED !== "false" && Bun.env.OTEL_EXPORTER_OTLP_ENDPOINT !== undefined;
@@ -172,6 +200,10 @@ const observabilityEnabled =
  * - Export: OpenObserve via OTLP (configurable endpoint)
  */
 export const mastra = new Mastra({
+	storage: new PostgresStore({
+		id: "cream-mastra",
+		connectionString: getDatabaseUrl(),
+	}),
 	agents: {
 		groundingAgent,
 		newsAnalyst,

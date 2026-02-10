@@ -309,6 +309,13 @@ async function runTraderBatched(
 			// subsequent steps use structured output for the decision plan.
 			// This is required because Gemini doesn't support tools + structured output simultaneously.
 			const stream = await trader.stream(prompt, {
+				memory: {
+					thread: {
+						id: `${cycleId}-trader-batch-${i + 1}`,
+						metadata: { cycleId, symbols: batch, batchIndex: i + 1 },
+					},
+					resource: "trader",
+				},
 				prepareStep: async ({ stepNumber }) => {
 					if (stepNumber === 0) {
 						// Step 0: Enable tools for data gathering

@@ -49,6 +49,7 @@
 		"@cream/universe": "workspace:*",
 		"@hono/node-server": "1.19.9",
 		"@mastra/core": "1.2.0",
+		"@mastra/memory": "1.1.0",
 		"@mastra/hono": "1.1.1",
 		"@mastra/observability": "1.2.0",
 		"@mastra/otel-bridge": "1.0.2",

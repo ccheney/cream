@@ -10,6 +10,8 @@ import { TRADER_CONFIG, TRADER_PROMPT } from "@cream/agents";
 import { getModelId } from "@cream/domain";
 import { Agent } from "@mastra/core/agent";
 
+import { createTraderMemory } from "../memory.js";
+
 import {
 	getEnrichedPortfolioState,
 	getGreeks,
@@ -28,6 +30,7 @@ export const trader = new Agent({
 	description: TRADER_CONFIG.role,
 	instructions: TRADER_PROMPT,
 	model: getModelId(),
+	memory: createTraderMemory(),
 	tools: {
 		getRecentDecisions,
 		getQuotes,
