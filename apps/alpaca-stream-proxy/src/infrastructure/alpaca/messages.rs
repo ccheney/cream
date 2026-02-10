@@ -32,7 +32,7 @@
 
 use chrono::{DateTime, Utc};
 use rust_decimal::Decimal;
-use serde::{Deserialize, Serialize};
+use serde::{Deserialize, Deserializer, Serialize};
 
 // =============================================================================
 // Control Messages (Common to all streams)
@@ -663,6 +663,22 @@ pub enum OrderClass {
     Mleg,
 }
 
+/// Deserialize `Option<OrderClass>`, treating empty strings as `None`.
+/// Alpaca sometimes sends `""` instead of `null` or omitting the field.
+fn deserialize_order_class<'de, D>(deserializer: D) -> Result<Option<OrderClass>, D::Error>
+where
+    D: Deserializer<'de>,
+{
+    let value: Option<String> = Option::deserialize(deserializer)?;
+    match value {
+        None => Ok(None),
+        Some(s) if s.is_empty() => Ok(None),
+        Some(s) => serde_json::from_value::<OrderClass>(serde_json::Value::String(s))
+            .map(Some)
+            .map_err(serde::de::Error::custom),
+    }
+}
+
 /// Order details within a trade update message.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct OrderDetails {
@@ -736,8 +752,8 @@ pub struct OrderDetails {
     #[serde(default)]
     pub filled_avg_price: Option<String>,
 
-    /// Order class
-    #[serde(default)]
+    /// Order class (Alpaca sometimes sends "" instead of null)
+    #[serde(default, deserialize_with = "deserialize_order_class")]
     pub order_class: Option<OrderClass>,
 
     /// Order type
