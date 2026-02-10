@@ -7,23 +7,24 @@
  * @see docs/plans/53-mastra-v1-migration.md
  */
 
+import { calculateVRP, classifyVRPLevel } from "@cream/indicators";
 import { createWorkflow } from "@mastra/core/workflows";
 import type { z } from "zod";
-import { type CandleDataSchema, WorkflowInputSchema, WorkflowResultSchema } from "./schemas.js";
+import {
+	type CandleDataSchema,
+	type CandleSummarySchema,
+	WorkflowInputSchema,
+	WorkflowResultSchema,
+} from "./schemas.js";
 
 type Candle = z.infer<typeof CandleDataSchema>;
+type CandleSummary = z.infer<typeof CandleSummarySchema>;
 
 function buildCandleSummaries(
 	candles: Record<string, Candle[]>,
 	instruments: string[],
-): {
-	symbol: string;
-	lastClose: number;
-	high20: number;
-	low20: number;
-	avgVolume20: number;
-	trendDirection: "UP" | "DOWN" | "FLAT";
-}[] {
+	indicators?: Record<string, number>,
+): CandleSummary[] {
 	return instruments.flatMap((symbol) => {
 		const bars = candles[symbol];
 		if (!bars || bars.length < 2) return [];
@@ -45,7 +46,58 @@ function buildCandleSummaries(
 				: pctChange < -0.01
 					? ("DOWN" as const)
 					: ("FLAT" as const);
-		return [{ symbol, lastClose, high20, low20, avgVolume20, trendDirection }];
+
+		const summary: CandleSummary = {
+			symbol,
+			lastClose,
+			high20,
+			low20,
+			avgVolume20,
+			trendDirection,
+		};
+
+		const atmIV = indicators?.[`${symbol}:atmIV`];
+		if (atmIV != null && bars.length >= 21) {
+			const vrpResult = calculateVRP(atmIV, bars, 20);
+			if (vrpResult) {
+				summary.atmIV = atmIV;
+				summary.realizedVol20 = vrpResult.realizedVolatility;
+				summary.vrp = vrpResult.vrp;
+				summary.vrpLevel = classifyVRPLevel(vrpResult.vrp);
+			}
+
+			// IV Rank proxy: where ATM IV sits relative to rolling realized vol windows
+			if (bars.length >= 41) {
+				const rvWindows: number[] = [];
+				for (let i = 20; i <= bars.length; i++) {
+					const windowBars = bars.slice(i - 21, i);
+					const logReturns: number[] = [];
+					for (let j = 1; j < windowBars.length; j++) {
+						const prev = windowBars[j - 1];
+						const curr = windowBars[j];
+						if (prev && curr && prev.close > 0 && curr.close > 0) {
+							logReturns.push(Math.log(curr.close / prev.close));
+						}
+					}
+					if (logReturns.length >= 2) {
+						const mean = logReturns.reduce((s, r) => s + r, 0) / logReturns.length;
+						const variance =
+							logReturns.reduce((s, r) => s + (r - mean) ** 2, 0) / (logReturns.length - 1);
+						rvWindows.push(Math.sqrt(variance) * Math.sqrt(252));
+					}
+				}
+
+				if (rvWindows.length >= 5) {
+					const low = Math.min(...rvWindows);
+					const high = Math.max(...rvWindows);
+					const range = high - low;
+					summary.ivRank =
+						range > 0 ? Math.max(0, Math.min(100, ((atmIV - low) / range) * 100)) : 50;
+				}
+			}
+		}
+
+		return [summary];
 	});
 }
 
@@ -116,6 +168,7 @@ export const tradingCycleWorkflow = createWorkflow({
 			candleSummaries: buildCandleSummaries(
 				orientResult?.marketSnapshot.candles ?? {},
 				orientResult?.marketSnapshot.instruments ?? [],
+				orientResult?.marketSnapshot.indicators,
 			),
 			groundingSources: groundingResult?.sources ?? [],
 			predictionMarketSignals: orientResult?.predictionMarketSignals,
@@ -143,6 +196,7 @@ export const tradingCycleWorkflow = createWorkflow({
 			candleSummaries: buildCandleSummaries(
 				orientResult?.marketSnapshot.candles ?? {},
 				orientResult?.marketSnapshot.instruments ?? [],
+				orientResult?.marketSnapshot.indicators,
 			),
 			predictionMarketSignals: orientResult?.predictionMarketSignals,
 			positions: observeResult?.positions ?? [],

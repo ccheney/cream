@@ -180,6 +180,17 @@ export const CandleSummarySchema = z.object({
 	low20: z.number().describe("20-bar low"),
 	avgVolume20: z.number().describe("20-bar average volume"),
 	trendDirection: z.enum(["UP", "DOWN", "FLAT"]).describe("Simple trend based on 20-bar SMA slope"),
+	atmIV: z
+		.number()
+		.optional()
+		.describe("ATM implied volatility (annualized decimal, e.g. 0.30 = 30%)"),
+	realizedVol20: z.number().optional().describe("20-bar realized volatility (annualized decimal)"),
+	vrp: z.number().optional().describe("Volatility risk premium (IV - RV)"),
+	vrpLevel: z
+		.enum(["very_rich", "rich", "fair", "cheap", "very_cheap"])
+		.optional()
+		.describe("VRP classification for strategy selection"),
+	ivRank: z.number().optional().describe("IV Rank 0-100 (current ATM IV vs realized vol range)"),
 });
 
 export const MarketSnapshotSchema = z.object({
@@ -277,7 +288,7 @@ export const DecisionSchema = z.object({
 		unit: z.string(),
 	}),
 	stopLoss: StopLossSchema.optional().describe(
-		"Stop-loss trigger price and type. Required for EQUITY, optional for OPTION (risk managed via Greeks).",
+		"Stop-loss trigger price and type. REQUIRED for ALL EQUITY decisions (BUY, SELL, HOLD, CLOSE). Optional for OPTION (risk managed via Greeks). Omitting this for equity will cause rejection.",
 	),
 	takeProfit: TakeProfitSchema.optional().describe(
 		"Take-profit target. Omit entirely (null) if not applicable — do NOT set price to 0.",

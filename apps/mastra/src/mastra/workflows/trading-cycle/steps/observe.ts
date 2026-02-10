@@ -95,26 +95,22 @@ export const observeStep = createStep({
 			warnings,
 		);
 
-		// Classify regime for each symbol
-		const regimeLabels: Record<string, z.infer<typeof RegimeDataSchema>> = {};
-		for (const symbol of instruments) {
-			const symbolCandles = historicalCandles.get(symbol);
-			if (symbolCandles && symbolCandles.length > 0) {
-				const regime = classifySymbolRegime(symbolCandles, warnings);
-				regimeLabels[symbol] = regime;
-			} else {
-				regimeLabels[symbol] = {
-					regime: "RANGE_BOUND",
-					confidence: 0.5,
-					reasoning: "Insufficient data for regime classification",
-				};
-			}
+		// Classify regime and fetch ATM IV in parallel
+		const [regimeLabels, atmIVs] = await Promise.all([
+			classifyAllRegimes(instruments, historicalCandles, warnings),
+			fetchATMImpliedVolatility(instruments, quotes, warnings),
+		]);
+
+		const indicators: Record<string, number> = {};
+		for (const [symbol, iv] of Object.entries(atmIVs)) {
+			indicators[`${symbol}:atmIV`] = iv;
 		}
 
 		const marketSnapshot = {
 			instruments,
 			candles,
 			quotes,
+			...(Object.keys(indicators).length > 0 ? { indicators } : {}),
 			timestamp: Date.now(),
 		};
 
@@ -239,6 +235,92 @@ async function fetchMarketData(
 	}
 
 	return { candles, quotes, historicalCandles };
+}
+
+async function classifyAllRegimes(
+	instruments: string[],
+	historicalCandles: Map<string, Candle[]>,
+	warnings: string[],
+): Promise<Record<string, z.infer<typeof RegimeDataSchema>>> {
+	const regimeLabels: Record<string, z.infer<typeof RegimeDataSchema>> = {};
+	for (const symbol of instruments) {
+		const symbolCandles = historicalCandles.get(symbol);
+		if (symbolCandles && symbolCandles.length > 0) {
+			regimeLabels[symbol] = classifySymbolRegime(symbolCandles, warnings);
+		} else {
+			regimeLabels[symbol] = {
+				regime: "RANGE_BOUND",
+				confidence: 0.5,
+				reasoning: "Insufficient data for regime classification",
+			};
+		}
+	}
+	return regimeLabels;
+}
+
+async function fetchATMImpliedVolatility(
+	instruments: string[],
+	quotes: Record<string, z.infer<typeof QuoteDataSchema>>,
+	warnings: string[],
+): Promise<Record<string, number>> {
+	const atmIVs: Record<string, number> = {};
+
+	if (!isAlpacaConfigured()) {
+		return atmIVs;
+	}
+
+	const client = createAlpacaClientFromEnv();
+
+	const today = new Date();
+	const minExp = new Date(today);
+	minExp.setDate(minExp.getDate() + 30);
+	const maxExp = new Date(today);
+	maxExp.setDate(maxExp.getDate() + 45);
+
+	const results = await Promise.allSettled(
+		instruments.map(async (symbol) => {
+			const quote = quotes[symbol];
+			if (!quote) return { symbol, iv: undefined };
+
+			const midPrice = (quote.bid + quote.ask) / 2;
+			if (midPrice <= 0) return { symbol, iv: undefined };
+
+			const contracts = await client.getOptionContracts(symbol, {
+				expirationDateGte: minExp.toISOString().slice(0, 10),
+				expirationDateLte: maxExp.toISOString().slice(0, 10),
+				strikePriceGte: midPrice * 0.95,
+				strikePriceLte: midPrice * 1.05,
+				limit: 20,
+			});
+
+			if (contracts.length === 0) return { symbol, iv: undefined };
+
+			const contractSymbols = contracts.map((c) => c.symbol);
+			const snapshots = await client.getOptionSnapshots(contractSymbols);
+
+			const ivValues: number[] = [];
+			for (const [, snap] of snapshots) {
+				if (snap.impliedVolatility != null && snap.impliedVolatility > 0) {
+					ivValues.push(snap.impliedVolatility);
+				}
+			}
+
+			if (ivValues.length === 0) return { symbol, iv: undefined };
+
+			const avgIV = ivValues.reduce((sum, v) => sum + v, 0) / ivValues.length;
+			return { symbol, iv: avgIV };
+		}),
+	);
+
+	for (const result of results) {
+		if (result.status === "fulfilled" && result.value.iv != null) {
+			atmIVs[result.value.symbol] = result.value.iv;
+		} else if (result.status === "rejected") {
+			warnings.push(`ATM IV fetch failed: ${formatError(result.reason)}`);
+		}
+	}
+
+	return atmIVs;
 }
 
 function classifySymbolRegime(

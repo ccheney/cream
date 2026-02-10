@@ -89,7 +89,15 @@ export function xmlMemoryCases(cases: MemoryCase[], symbol?: string): string {
 }
 
 export function xmlCandleSummary(candle: CandleSummary): string {
-	return `<price_action last_close="${candle.lastClose.toFixed(2)}" high_20="${candle.high20.toFixed(2)}" low_20="${candle.low20.toFixed(2)}" avg_volume_20="${candle.avgVolume20.toLocaleString()}" trend="${candle.trendDirection}" />`;
+	const volAttrs: string[] = [];
+	if (candle.atmIV != null) volAttrs.push(`atm_iv="${(candle.atmIV * 100).toFixed(1)}%"`);
+	if (candle.realizedVol20 != null)
+		volAttrs.push(`rv_20d="${(candle.realizedVol20 * 100).toFixed(1)}%"`);
+	if (candle.vrp != null) volAttrs.push(`vrp="${(candle.vrp * 100).toFixed(1)}%"`);
+	if (candle.vrpLevel != null) volAttrs.push(`vrp_level="${candle.vrpLevel}"`);
+	if (candle.ivRank != null) volAttrs.push(`iv_rank="${candle.ivRank.toFixed(0)}"`);
+	const volStr = volAttrs.length > 0 ? ` ${volAttrs.join(" ")}` : "";
+	return `<price_action last_close="${candle.lastClose.toFixed(2)}" high_20="${candle.high20.toFixed(2)}" low_20="${candle.low20.toFixed(2)}" avg_volume_20="${candle.avgVolume20.toLocaleString()}" trend="${candle.trendDirection}"${volStr} />`;
 }
 
 export function xmlGroundingSources(sources: GroundingSource[]): string {
