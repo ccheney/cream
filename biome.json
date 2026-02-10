@@ -26,9 +26,17 @@
 		"enabled": true,
 		"rules": {
 			"recommended": true,
-			"a11y": {
-				"useSemanticElements": "off",
-				"useFocusableInteractive": "off"
+			"style": {
+				"useConsistentArrayType": "error",
+				"useImportType": "error",
+				"noUnusedTemplateLiteral": "error"
+			},
+			"correctness": {
+				"noUnusedVariables": "error",
+				"noUnusedImports": "error"
+			},
+			"suspicious": {
+				"noConsole": "warn"
 			},
 			"complexity": {
 				"noExcessiveLinesPerFunction": "error",
