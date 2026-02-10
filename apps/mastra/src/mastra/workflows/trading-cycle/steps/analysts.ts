@@ -218,7 +218,7 @@ async function runNewsAnalystBatched(
 					schema: z.array(SentimentAnalysisSchema),
 					model: getModelId(),
 				},
-				abortSignal: AbortSignal.timeout(600_000), // 10 min per batch
+				abortSignal: AbortSignal.timeout(900_000), // 15 min per batch
 			});
 
 			if (response.object) {
@@ -292,7 +292,7 @@ async function runFundamentalsAnalystBatched(
 					schema: z.array(FundamentalsAnalysisSchema),
 					model: getModelId(),
 				},
-				abortSignal: AbortSignal.timeout(600_000), // 10 min per batch
+				abortSignal: AbortSignal.timeout(900_000), // 15 min per batch
 			});
 
 			if (response.object) {

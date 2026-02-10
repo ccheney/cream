@@ -281,7 +281,7 @@ async function runBullishResearcherBatch(
 				schema: z.array(ResearchSchema),
 				model: getModelId(),
 			},
-			abortSignal: AbortSignal.timeout(600_000), // 10 min per batch
+			abortSignal: AbortSignal.timeout(900_000), // 15 min per batch
 		});
 
 		log.debug(
@@ -340,7 +340,7 @@ async function runBearishResearcherBatch(
 				schema: z.array(ResearchSchema),
 				model: getModelId(),
 			},
-			abortSignal: AbortSignal.timeout(600_000), // 10 min per batch
+			abortSignal: AbortSignal.timeout(900_000), // 15 min per batch
 		});
 
 		log.debug(

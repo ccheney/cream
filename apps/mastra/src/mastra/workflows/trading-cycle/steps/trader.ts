@@ -23,6 +23,7 @@ import {
 	getEnrichedPortfolioState,
 	getGreeks,
 	getPredictionSignals,
+	getQuotes,
 	getRecentDecisions,
 	optionChain,
 } from "../../../tools/index.js";
@@ -317,6 +318,7 @@ async function runTraderBatched(
 							tools: {
 								optionChain,
 								getGreeks,
+								getQuotes,
 								getRecentDecisions,
 								getEnrichedPortfolioState,
 								getPredictionSignals,
@@ -337,7 +339,7 @@ async function runTraderBatched(
 						},
 					};
 				},
-				abortSignal: AbortSignal.timeout(600_000), // 10 min per batch
+				abortSignal: AbortSignal.timeout(900_000), // 15 min per batch
 			});
 
 			// Consume the stream and get the final structured result
@@ -554,7 +556,7 @@ IMPORTANT: For symbols with upcoming catalysts, high conviction, or elevated IV 
 Options decisions do NOT require stopLoss - risk is managed via defined-risk structures and Greeks.
 </options_workflow>
 
-IMPORTANT: Every EQUITY BUY or SELL decision MUST include a stopLoss. Use current_market_prices to set realistic stop-loss and take-profit levels. Equity trades without stop-losses will be rejected.`;
+IMPORTANT: Every EQUITY decision MUST include a stopLoss — including HOLD and CLOSE actions (to maintain/update protective stop levels on existing positions). Use current_market_prices to set realistic stop-loss and take-profit levels. Equity decisions without stop-losses will be REJECTED.`;
 }
 
 function validateDecisionPlan(
