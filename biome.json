@@ -29,6 +29,24 @@
 			"a11y": {
 				"useSemanticElements": "off",
 				"useFocusableInteractive": "off"
+			},
+			"complexity": {
+				"noExcessiveLinesPerFunction": "error",
+				"noExcessiveCognitiveComplexity": "error"
+			},
+			"nursery": {
+				"noExcessiveClassesPerFile": {
+					"level": "error",
+					"options": {
+						"maxClasses": 1
+					}
+				},
+				"noExcessiveLinesPerFile": {
+					"level": "error",
+					"options": {
+						"maxLines": 500
+					}
+				}
 			}
 		}
 	},
