@@ -48,6 +48,6 @@
 		"@cream/proto": "workspace:*"
 	},
 	"devDependencies": {
-		"@typescript/native-preview": "7.0.0-dev.20260203.1"
+		"@typescript/native-preview": "7.0.0-dev.20260210.1"
 	}
 }

@@ -21,7 +21,7 @@
 		"format": "biome format --write src/"
 	},
 	"dependencies": {
-		"@ai-sdk/google": "3.0.20",
+		"@ai-sdk/google": "3.0.23",
 		"@cream/agents": "workspace:*",
 		"@cream/mastra": "workspace:*",
 		"@cream/broker": "workspace:*",
@@ -47,15 +47,15 @@
 		"@opentelemetry/exporter-trace-otlp-proto": "0.211.0",
 		"@opentelemetry/sdk-node": "0.211.0",
 		"@opentelemetry/sdk-trace-base": "2.5.0",
-		"ai": "6.0.69",
+		"ai": "6.0.78",
 		"better-auth": "1.4.18",
-		"hono": "4.11.7",
+		"hono": "4.11.9",
 		"zod": "4.3.6"
 	},
 	"devDependencies": {
 		"@cream/test-utils": "workspace:*",
 		"@cream/tsconfig": "workspace:*",
-		"@types/bun": "1.3.8",
-		"@typescript/native-preview": "7.0.0-dev.20260203.1"
+		"@types/bun": "1.3.9",
+		"@typescript/native-preview": "7.0.0-dev.20260210.1"
 	}
 }
