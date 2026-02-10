@@ -327,22 +327,21 @@ if (import.meta.main) {
 			);
 		});
 
-	// Initialize CalendarService (non-blocking, falls back to hardcoded if API unavailable)
+	// Initialize CalendarService before serving (required by sync calendar methods in routes)
 	const creamEnv = (Bun.env.CREAM_ENV as CreamEnvironment | undefined) ?? "PAPER";
-	initCalendarService({
-		mode: creamEnv,
-		alpacaKey: Bun.env.ALPACA_KEY,
-		alpacaSecret: Bun.env.ALPACA_SECRET,
-	})
-		.then(() => {
-			log.info({ mode: creamEnv }, "CalendarService initialized");
-		})
-		.catch((error: unknown) => {
-			log.warn(
-				{ error: error instanceof Error ? error.message : String(error), mode: creamEnv },
-				"CalendarService initialization failed, using fallback",
-			);
+	try {
+		await initCalendarService({
+			mode: creamEnv,
+			alpacaKey: Bun.env.ALPACA_KEY,
+			alpacaSecret: Bun.env.ALPACA_SECRET,
 		});
+		log.info({ mode: creamEnv }, "CalendarService initialized");
+	} catch (error: unknown) {
+		log.warn(
+			{ error: error instanceof Error ? error.message : String(error), mode: creamEnv },
+			"CalendarService initialization failed",
+		);
+	}
 
 	// Start heartbeat for WebSocket connections
 	startHeartbeat();

@@ -924,7 +924,7 @@ app.openapi(triggerCycleRoute, async (c) => {
 							symbol: decision.instrumentId,
 							action: decision.action,
 							direction: decision.direction,
-							size: decision.size.value,
+							size: Math.abs(decision.size.value),
 							sizeUnit,
 							status,
 							strategyFamily: decision.strategyFamily,
