@@ -8,8 +8,8 @@
 
 "use client";
 
-import { useCallback, useEffect, useRef } from "react";
-import { useWSStore } from "../stores/websocket";
+import { type RefObject, useCallback, useEffect, useRef } from "react";
+import { useWSStore, type WSStore } from "../stores/websocket";
 
 // ============================================
 // Types
@@ -146,7 +146,6 @@ export function useSubscribe(
 		return () => {
 			unsubscribe();
 		};
-		// eslint-disable-next-line react-hooks/exhaustive-deps
 	}, [autoSubscribe, ...deps, subscribe, unsubscribe]);
 
 	return {
@@ -181,35 +180,85 @@ export function useSymbolSubscription(
 	symbols: string[],
 	options: UseSymbolSubscriptionOptions = {},
 ): UseSymbolSubscriptionReturn {
-	const { autoSubscribe = true, deps: _deps = [] } = options;
-	void _deps; // Reserved for future dependency tracking
-
+	const { autoSubscribe = true } = options;
 	const wsStore = useWSStore();
 	const symbolsRef = useRef(symbols);
 	const subscribedRef = useRef(false);
+	const subscriptions = useSymbolSubscriptionActions({
+		wsStore,
+		symbolsRef,
+		subscribedRef,
+	});
 
-	// Update ref when symbols change
-	useEffect(() => {
-		symbolsRef.current = symbols;
-	}, [symbols]);
+	useSymbolSubscriptionSync({
+		autoSubscribe,
+		symbols,
+		wsStore,
+		symbolsRef,
+		subscribedRef,
+		subscribeSymbols: subscriptions.subscribeSymbols,
+		unsubscribeSymbols: subscriptions.unsubscribeSymbols,
+	});
 
-	// Subscribe function
+	useSymbolSubscriptionCleanup({
+		wsStore,
+		symbolsRef,
+		subscribedRef,
+	});
+
+	return {
+		subscribedSymbols: wsStore.subscribedSymbols,
+		subscribe: subscriptions.subscribe,
+		unsubscribe: subscriptions.unsubscribe,
+		isSubscribed: subscriptions.isSubscribed,
+	};
+}
+
+function useSymbolSubscriptionActions({
+	wsStore,
+	symbolsRef,
+	subscribedRef,
+}: {
+	wsStore: WSStore;
+	symbolsRef: RefObject<string[]>;
+	subscribedRef: RefObject<boolean>;
+}) {
+	const subscribeSymbols = useCallback(
+		(symbols: string[]) => {
+			if (symbols.length === 0) {
+				return;
+			}
+
+			wsStore.subscribeSymbols(symbols);
+		},
+		[wsStore],
+	);
+
+	const unsubscribeSymbols = useCallback(
+		(symbols: string[]) => {
+			if (symbols.length === 0) {
+				return;
+			}
+
+			wsStore.unsubscribeSymbols(symbols);
+		},
+		[wsStore],
+	);
+
 	const subscribe = useCallback(() => {
 		if (!subscribedRef.current && symbolsRef.current.length > 0) {
-			wsStore.subscribeSymbols(symbolsRef.current);
+			subscribeSymbols(symbolsRef.current);
 			subscribedRef.current = true;
 		}
-	}, [wsStore]);
+	}, [symbolsRef, subscribedRef, subscribeSymbols]);
 
-	// Unsubscribe function
 	const unsubscribe = useCallback(() => {
 		if (subscribedRef.current) {
-			wsStore.unsubscribeSymbols(symbolsRef.current);
+			unsubscribeSymbols(symbolsRef.current);
 			subscribedRef.current = false;
 		}
-	}, [wsStore]);
+	}, [symbolsRef, subscribedRef, unsubscribeSymbols]);
 
-	// Check subscription status
 	const isSubscribed = useCallback(
 		(symbol: string) => {
 			return wsStore.subscribedSymbols.includes(symbol);
@@ -217,58 +266,77 @@ export function useSymbolSubscription(
 		[wsStore.subscribedSymbols],
 	);
 
-	// Handle symbol changes
+	return {
+		subscribe,
+		unsubscribe,
+		isSubscribed,
+		subscribeSymbols,
+		unsubscribeSymbols,
+	};
+}
+
+function useSymbolSubscriptionSync({
+	autoSubscribe,
+	symbols,
+	wsStore,
+	symbolsRef,
+	subscribeSymbols,
+	unsubscribeSymbols,
+	subscribedRef,
+}: {
+	autoSubscribe: boolean;
+	symbols: string[];
+	wsStore: WSStore;
+	symbolsRef: RefObject<string[]>;
+	subscribeSymbols: (symbols: string[]) => void;
+	unsubscribeSymbols: (symbols: string[]) => void;
+	subscribedRef: RefObject<boolean>;
+}) {
+	useEffect(() => {
+		symbolsRef.current = symbols;
+	}, [symbols, symbolsRef]);
+
 	useEffect(() => {
 		if (!autoSubscribe) {
 			return;
 		}
 
-		// Get current subscriptions
-		const currentSymbols = new Set(wsStore.subscribedSymbols);
-		const newSymbols = new Set(symbols);
+		const diff = calculateSymbolSubscriptionDiff(wsStore.subscribedSymbols, symbols);
 
-		// Find symbols to add
-		const toAdd = symbols.filter((s) => !currentSymbols.has(s));
-
-		// Find symbols to remove
-		const toRemove = wsStore.subscribedSymbols.filter(
-			(s) => !newSymbols.has(s) && symbolsRef.current.includes(s),
-		);
-
-		// Subscribe to new symbols
-		if (toAdd.length > 0) {
-			wsStore.subscribeSymbols(toAdd);
+		if (diff.toAdd.length > 0) {
+			subscribeSymbols(diff.toAdd);
 		}
-
-		// Unsubscribe from removed symbols
-		if (toRemove.length > 0) {
-			wsStore.unsubscribeSymbols(toRemove);
+		if (diff.toRemove.length > 0) {
+			unsubscribeSymbols(diff.toRemove);
 		}
 
 		subscribedRef.current = symbols.length > 0;
+	}, [autoSubscribe, symbols, wsStore, subscribeSymbols, unsubscribeSymbols, subscribedRef]);
+}
 
-		return () => {
-			// Don't unsubscribe on every render, only on unmount
-		};
-		// eslint-disable-next-line react-hooks/exhaustive-deps
-	}, [autoSubscribe, symbols, wsStore]);
-
-	// Cleanup on unmount
+function useSymbolSubscriptionCleanup({
+	wsStore,
+	symbolsRef,
+	subscribedRef,
+}: {
+	wsStore: WSStore;
+	symbolsRef: RefObject<string[]>;
+	subscribedRef: RefObject<boolean>;
+}) {
 	useEffect(() => {
 		return () => {
 			if (subscribedRef.current && symbolsRef.current.length > 0) {
 				wsStore.unsubscribeSymbols(symbolsRef.current);
 			}
 		};
-		// eslint-disable-next-line react-hooks/exhaustive-deps
-	}, [wsStore]);
+	}, [wsStore, symbolsRef, subscribedRef]);
+}
 
-	return {
-		subscribedSymbols: wsStore.subscribedSymbols,
-		subscribe,
-		unsubscribe,
-		isSubscribed,
-	};
+function calculateSymbolSubscriptionDiff(currentSymbols: string[], targetSymbols: string[]) {
+	const currentSet = new Set(currentSymbols);
+	const toAdd = targetSymbols.filter((symbol) => !currentSet.has(symbol));
+	const toRemove = currentSymbols.filter((symbol) => !targetSymbols.includes(symbol));
+	return { toAdd, toRemove };
 }
 
 export default useSubscribe;

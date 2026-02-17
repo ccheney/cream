@@ -13,19 +13,41 @@ export interface UniverseConfigFormProps {
 	isSaving: boolean;
 }
 
-export function UniverseConfigForm({
-	config,
-	onSave,
-	onChange,
-	isSaving,
-}: UniverseConfigFormProps) {
-	const [formData, setFormData] = useState<Partial<RuntimeUniverseConfig>>({});
+type ListField = "staticSymbols" | "includeList" | "excludeList";
 
-	const [rawText, setRawText] = useState({
+interface RawTextState {
+	staticSymbols: string;
+	includeList: string;
+	excludeList: string;
+}
+
+function parseSymbolList(text: string): string[] {
+	return text
+		.split(",")
+		.map((s) => s.trim().toUpperCase())
+		.filter(Boolean);
+}
+
+function toInitialRawText(config: RuntimeUniverseConfig): RawTextState {
+	return {
 		staticSymbols: (config.staticSymbols || []).join(", "),
 		includeList: config.includeList.join(", "),
 		excludeList: config.excludeList.join(", "),
-	});
+	};
+}
+
+type HandleUniverseFieldChange = <K extends keyof RuntimeUniverseConfig>(
+	field: K,
+	value: RuntimeUniverseConfig[K],
+) => void;
+
+function useUniverseConfigDraftState({
+	config,
+	onSave,
+	onChange,
+}: Pick<UniverseConfigFormProps, "config" | "onSave" | "onChange">) {
+	const [formData, setFormData] = useState<Partial<RuntimeUniverseConfig>>({});
+	const hasChanges = Object.keys(formData).length > 0;
 
 	useEffect(() => {
 		if (config.source === "index" && !config.indexSource) {
@@ -34,13 +56,13 @@ export function UniverseConfigForm({
 		}
 	}, [config.source, config.indexSource, onChange]);
 
-	function handleChange<K extends keyof RuntimeUniverseConfig>(
+	const handleChange: HandleUniverseFieldChange = <K extends keyof RuntimeUniverseConfig>(
 		field: K,
 		value: RuntimeUniverseConfig[K],
-	): void {
+	) => {
 		setFormData((prev) => ({ ...prev, [field]: value }));
 		onChange();
-	}
+	};
 
 	function handleSave(): void {
 		if (Object.keys(formData).length > 0) {
@@ -53,14 +75,22 @@ export function UniverseConfigForm({
 		return (formData[field] as RuntimeUniverseConfig[K]) ?? config[field];
 	}
 
-	function parseSymbolList(text: string): string[] {
-		return text
-			.split(",")
-			.map((s) => s.trim().toUpperCase())
-			.filter(Boolean);
+	return { hasChanges, handleChange, handleSave, getValue };
+}
+
+function useUniverseConfigRawText(
+	config: RuntimeUniverseConfig,
+	onChange: () => void,
+	handleChange: HandleUniverseFieldChange,
+) {
+	const [rawText, setRawText] = useState<RawTextState>(toInitialRawText(config));
+
+	function setRawTextField(field: keyof RawTextState, text: string): void {
+		setRawText((prev) => ({ ...prev, [field]: text.toUpperCase() }));
+		onChange();
 	}
 
-	function handleArrayTextBlur(field: "staticSymbols" | "includeList" | "excludeList"): void {
+	function handleArrayTextBlur(field: ListField): void {
 		const parsed = parseSymbolList(rawText[field]);
 		if (field === "staticSymbols") {
 			handleChange(field, parsed.length > 0 ? parsed : null);
@@ -69,6 +99,25 @@ export function UniverseConfigForm({
 		}
 	}
 
+	return { rawText, setRawTextField, handleArrayTextBlur };
+}
+
+function useUniverseConfigFormController({
+	config,
+	onSave,
+	onChange,
+}: Pick<UniverseConfigFormProps, "config" | "onSave" | "onChange">) {
+	const { hasChanges, handleChange, handleSave, getValue } = useUniverseConfigDraftState({
+		config,
+		onSave,
+		onChange,
+	});
+	const { rawText, setRawTextField, handleArrayTextBlur } = useUniverseConfigRawText(
+		config,
+		onChange,
+		handleChange,
+	);
+
 	function handleSourceChange(source: "static" | "index" | "screener"): void {
 		handleChange("source", source);
 		if (source === "index" && !getValue("indexSource")) {
@@ -76,14 +125,144 @@ export function UniverseConfigForm({
 		}
 	}
 
+	return {
+		rawText,
+		hasChanges,
+		source: getValue("source"),
+		indexSource: getValue("indexSource") || "SPY",
+		minVolume: getValue("minVolume") || 0,
+		minMarketCap: getValue("minMarketCap") || 0,
+		optionableOnly: getValue("optionableOnly"),
+		handleSave,
+		handleSourceChange,
+		setRawTextField,
+		handleArrayTextBlur,
+		handleIndexSourceChange: (value: string) => handleChange("indexSource", value),
+		handleMinVolumeChange: (value: number) => handleChange("minVolume", value || null),
+		handleMinMarketCapChange: (value: number) => handleChange("minMarketCap", value || null),
+		handleOptionableOnlyChange: (value: boolean) => handleChange("optionableOnly", value),
+	};
+}
+
+interface UniverseSourceControlsProps {
+	source: "static" | "index" | "screener";
+	indexSource: string;
+	staticSymbols: string;
+	onSourceChange: (source: "static" | "index" | "screener") => void;
+	onIndexSourceChange: (value: string) => void;
+	onStaticSymbolsChange: (value: string) => void;
+	onStaticSymbolsBlur: () => void;
+}
+
+function UniverseSourceControls({
+	source,
+	indexSource,
+	staticSymbols,
+	onSourceChange,
+	onIndexSourceChange,
+	onStaticSymbolsChange,
+	onStaticSymbolsBlur,
+}: UniverseSourceControlsProps) {
+	return (
+		<>
+			<UniverseSourceSelector value={source} onChange={onSourceChange} />
+			{source === "static" && (
+				<StaticSymbolsInput
+					value={staticSymbols}
+					onChange={onStaticSymbolsChange}
+					onBlur={onStaticSymbolsBlur}
+				/>
+			)}
+			{source === "index" && (
+				<IndexSourceSelector value={indexSource} onChange={onIndexSourceChange} />
+			)}
+		</>
+	);
+}
+
+interface UniverseThresholdControlsProps {
+	minVolume: number;
+	minMarketCap: number;
+	optionableOnly: boolean;
+	onMinVolumeChange: (value: number) => void;
+	onMinMarketCapChange: (value: number) => void;
+	onOptionableOnlyChange: (value: boolean) => void;
+}
+
+function UniverseThresholdControls({
+	minVolume,
+	minMarketCap,
+	optionableOnly,
+	onMinVolumeChange,
+	onMinMarketCapChange,
+	onOptionableOnlyChange,
+}: UniverseThresholdControlsProps) {
+	return (
+		<>
+			<div className="grid grid-cols-2 gap-4">
+				<FormField
+					label="Min Volume"
+					tooltip="Minimum average daily trading volume. Filters out illiquid stocks."
+					value={minVolume}
+					onChange={onMinVolumeChange}
+				/>
+				<FormField
+					label="Min Market Cap"
+					tooltip="Minimum market capitalization in dollars. Filters out small-cap stocks."
+					value={minMarketCap}
+					onChange={onMinMarketCapChange}
+				/>
+			</div>
+			<OptionableCheckbox checked={optionableOnly} onChange={onOptionableOnlyChange} />
+		</>
+	);
+}
+
+interface UniverseListControlsProps {
+	includeList: string;
+	excludeList: string;
+	onIncludeChange: (value: string) => void;
+	onExcludeChange: (value: string) => void;
+	onIncludeBlur: () => void;
+	onExcludeBlur: () => void;
+}
+
+function UniverseListControls({
+	includeList,
+	excludeList,
+	onIncludeChange,
+	onExcludeChange,
+	onIncludeBlur,
+	onExcludeBlur,
+}: UniverseListControlsProps) {
+	return (
+		<IncludeExcludeLists
+			includeValue={includeList}
+			excludeValue={excludeList}
+			onIncludeChange={onIncludeChange}
+			onExcludeChange={onExcludeChange}
+			onIncludeBlur={onIncludeBlur}
+			onExcludeBlur={onExcludeBlur}
+		/>
+	);
+}
+
+export function UniverseConfigForm({
+	config,
+	onSave,
+	onChange,
+	isSaving,
+}: UniverseConfigFormProps) {
+	const form = useUniverseConfigFormController({ config, onSave, onChange });
+
 	return (
 		<div className="space-y-6">
 			<div className="flex items-center justify-between">
 				<h3 className="text-lg font-medium text-stone-900 dark:text-night-50">Universe Settings</h3>
 				<button
 					type="button"
-					onClick={handleSave}
-					disabled={isSaving || Object.keys(formData).length === 0}
+					onClick={form.handleSave}
+					disabled={isSaving || !form.hasChanges}
 					className="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-md hover:bg-blue-700 disabled:opacity-50"
 				>
 					{isSaving ? "Saving..." : "Save Changes"}
@@ -91,59 +270,30 @@ export function UniverseConfigForm({
 			</div>
 
 			<div className="space-y-4">
-				<UniverseSourceSelector value={getValue("source")} onChange={handleSourceChange} />
-
-				{getValue("source") === "static" && (
-					<StaticSymbolsInput
-						value={rawText.staticSymbols}
-						onChange={(text) => {
-							setRawText((prev) => ({ ...prev, staticSymbols: text.toUpperCase() }));
-							onChange();
-						}}
-						onBlur={() => handleArrayTextBlur("staticSymbols")}
-					/>
-				)}
-
-				{getValue("source") === "index" && (
-					<IndexSourceSelector
-						value={getValue("indexSource") || "SPY"}
-						onChange={(v) => handleChange("indexSource", v)}
-					/>
-				)}
-
-				<div className="grid grid-cols-2 gap-4">
-					<FormField
-						label="Min Volume"
-						tooltip="Minimum average daily trading volume. Filters out illiquid stocks."
-						value={getValue("minVolume") || 0}
-						onChange={(v) => handleChange("minVolume", v || null)}
-					/>
-					<FormField
-						label="Min Market Cap"
-						tooltip="Minimum market capitalization in dollars. Filters out small-cap stocks."
-						value={getValue("minMarketCap") || 0}
-						onChange={(v) => handleChange("minMarketCap", v || null)}
-					/>
-				</div>
-
-				<OptionableCheckbox
-					checked={getValue("optionableOnly")}
-					onChange={(v) => handleChange("optionableOnly", v)}
+				<UniverseSourceControls
+					source={form.source}
+					indexSource={form.indexSource}
+					staticSymbols={form.rawText.staticSymbols}
+					onSourceChange={form.handleSourceChange}
+					onIndexSourceChange={form.handleIndexSourceChange}
+					onStaticSymbolsChange={(value) => form.setRawTextField("staticSymbols", value)}
+					onStaticSymbolsBlur={() => form.handleArrayTextBlur("staticSymbols")}
 				/>
-
-				<IncludeExcludeLists
-					includeValue={rawText.includeList}
-					excludeValue={rawText.excludeList}
-					onIncludeChange={(text) => {
-						setRawText((prev) => ({ ...prev, includeList: text.toUpperCase() }));
-						onChange();
-					}}
-					onExcludeChange={(text) => {
-						setRawText((prev) => ({ ...prev, excludeList: text.toUpperCase() }));
-						onChange();
-					}}
-					onIncludeBlur={() => handleArrayTextBlur("includeList")}
-					onExcludeBlur={() => handleArrayTextBlur("excludeList")}
+				<UniverseThresholdControls
+					minVolume={form.minVolume}
+					minMarketCap={form.minMarketCap}
+					optionableOnly={form.optionableOnly}
+					onMinVolumeChange={form.handleMinVolumeChange}
+					onMinMarketCapChange={form.handleMinMarketCapChange}
+					onOptionableOnlyChange={form.handleOptionableOnlyChange}
+				/>
+				<UniverseListControls
+					includeList={form.rawText.includeList}
+					excludeList={form.rawText.excludeList}
+					onIncludeChange={(value) => form.setRawTextField("includeList", value)}
+					onExcludeChange={(value) => form.setRawTextField("excludeList", value)}
+					onIncludeBlur={() => form.handleArrayTextBlur("includeList")}
+					onExcludeBlur={() => form.handleArrayTextBlur("excludeList")}
 				/>
 			</div>
 		</div>

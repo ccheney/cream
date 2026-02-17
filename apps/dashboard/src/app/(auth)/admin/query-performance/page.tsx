@@ -60,23 +60,84 @@ function SummaryCard({ label, value, subtext, variant = "default" }: SummaryCard
 
 interface QueryTableProps {
 	isLoading: boolean;
-	stats: Array<{
-		query: string;
-		calls: number;
-		totalSeconds: number;
-		avgMs: number;
-		rows: number;
-		hitRatio: number;
-	}>;
+	stats: QueryStat[];
+}
+
+interface QueryStat {
+	query: string;
+	calls: number;
+	totalSeconds: number;
+	avgMs: number;
+	rows: number;
+	hitRatio: number;
+}
+
+function formatQueryText(query: string): string {
+	return query.length > 100 ? `${query.slice(0, 100)}...` : query;
+}
+
+function getAvgMsClass(avgMs: number): string {
+	if (avgMs > 100) {
+		return "text-amber-600 dark:text-amber-400";
+	}
+	if (avgMs > 50) {
+		return "text-stone-600 dark:text-stone-400";
+	}
+	return "";
+}
+
+function getHitRatioClass(hitRatio: number): string {
+	if (hitRatio < 0.9) {
+		return "text-amber-600 dark:text-amber-400";
+	}
+	if (hitRatio >= 0.99) {
+		return "text-emerald-600 dark:text-emerald-400";
+	}
+	return "";
+}
+
+function getHitRatioVariant(hitRatio: number): SummaryCardProps["variant"] {
+	if (hitRatio >= 0.99) {
+		return "success";
+	}
+	if (hitRatio < 0.9) {
+		return "warning";
+	}
+	return "default";
+}
+
+function QueryRow({ stat }: { stat: QueryStat }) {
+	return (
+		<TableRow>
+			<TableCell truncate className="max-w-md">
+				<code className="text-xs bg-stone-100 dark:bg-night-700 px-1.5 py-0.5 rounded">
+					{formatQueryText(stat.query)}
+				</code>
+			</TableCell>
+			<TableCell numeric>{stat.calls.toLocaleString()}</TableCell>
+			<TableCell numeric>{stat.totalSeconds.toFixed(2)}</TableCell>
+			<TableCell numeric className={getAvgMsClass(stat.avgMs)}>
+				{stat.avgMs.toFixed(2)}
+			</TableCell>
+			<TableCell numeric>{stat.rows.toLocaleString()}</TableCell>
+			<TableCell numeric className={getHitRatioClass(stat.hitRatio)}>
+				{(stat.hitRatio * 100).toFixed(1)}%
+			</TableCell>
+		</TableRow>
+	);
+}
+
+function QueryTableLoading() {
+	return (
+		<div className="bg-white dark:bg-night-800 rounded-lg border border-cream-200 dark:border-night-700 p-8 animate-pulse">
+			<div className="h-64 bg-stone-100 dark:bg-night-700 rounded" />
+		</div>
+	);
 }
 
 function QueryTable({ isLoading, stats }: QueryTableProps) {
 	if (isLoading) {
-		return (
-			<div className="bg-white dark:bg-night-800 rounded-lg border border-cream-200 dark:border-night-700 p-8 animate-pulse">
-				<div className="h-64 bg-stone-100 dark:bg-night-700 rounded" />
-			</div>
-		);
+		return <QueryTableLoading />;
 	}
 
 	return (
@@ -96,46 +157,149 @@ function QueryTable({ isLoading, stats }: QueryTableProps) {
 					{stats.length === 0 ? (
 						<TableEmpty colSpan={6}>No query statistics available</TableEmpty>
 					) : (
-						stats.map((stat) => (
-							<TableRow key={stat.query}>
-								<TableCell truncate className="max-w-md">
-									<code className="text-xs bg-stone-100 dark:bg-night-700 px-1.5 py-0.5 rounded">
-										{stat.query.length > 100 ? `${stat.query.slice(0, 100)}...` : stat.query}
-									</code>
-								</TableCell>
-								<TableCell numeric>{stat.calls.toLocaleString()}</TableCell>
-								<TableCell numeric>{stat.totalSeconds.toFixed(2)}</TableCell>
-								<TableCell
-									numeric
-									className={
-										stat.avgMs > 100
-											? "text-amber-600 dark:text-amber-400"
-											: stat.avgMs > 50
-												? "text-stone-600 dark:text-stone-400"
-												: ""
-									}
-								>
-									{stat.avgMs.toFixed(2)}
-								</TableCell>
-								<TableCell numeric>{stat.rows.toLocaleString()}</TableCell>
-								<TableCell
-									numeric
-									className={
-										stat.hitRatio < 0.9
-											? "text-amber-600 dark:text-amber-400"
-											: stat.hitRatio >= 0.99
-												? "text-emerald-600 dark:text-emerald-400"
-												: ""
-									}
-								>
-									{(stat.hitRatio * 100).toFixed(1)}%
-								</TableCell>
-							</TableRow>
-						))
+						stats.map((stat) => <QueryRow key={stat.query} stat={stat} />)
 					)}
 				</TableBody>
 			</Table>
 		</div>
+	);
+}
+
+interface QuerySummary {
+	totalQueries: number;
+	avgResponseMs: number;
+	overallHitRatio: number;
+	slowQueryCount: number;
+}
+
+interface QuerySummarySectionProps {
+	isLoading: boolean;
+	error: unknown;
+	summary?: QuerySummary;
+}
+
+function QuerySummarySection({ isLoading, error, summary }: QuerySummarySectionProps) {
+	if (isLoading) {
+		return (
+			<div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+				{[1, 2, 3, 4].map((i) => (
+					<div
+						key={i}
+						className="h-24 bg-white dark:bg-night-800 rounded-lg border border-cream-200 dark:border-night-700 animate-pulse"
+					/>
+				))}
+			</div>
+		);
+	}
+
+	if (error) {
+		return (
+			<div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg p-4">
+				<p className="text-sm text-red-800 dark:text-red-200">
+					{error instanceof Error ? error.message : "Failed to load statistics"}
+				</p>
+			</div>
+		);
+	}
+
+	if (!summary) {
+		return null;
+	}
+
+	return (
+		<div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+			<SummaryCard
+				label="Total Queries"
+				value={summary.totalQueries.toLocaleString()}
+				subtext="Unique query patterns"
+			/>
+			<SummaryCard
+				label="Avg Response"
+				value={`${summary.avgResponseMs.toFixed(1)}ms`}
+				variant={summary.avgResponseMs > 50 ? "warning" : "default"}
+				subtext="Mean execution time"
+			/>
+			<SummaryCard
+				label="Buffer Hit Ratio"
+				value={`${(summary.overallHitRatio * 100).toFixed(1)}%`}
+				variant={getHitRatioVariant(summary.overallHitRatio)}
+				subtext="Shared buffer cache hits"
+			/>
+			<SummaryCard
+				label="Slow Queries"
+				value={summary.slowQueryCount}
+				variant={summary.slowQueryCount > 0 ? "warning" : "success"}
+				subtext="> 100ms average"
+			/>
+		</div>
+	);
+}
+
+interface QueryPageHeaderProps {
+	isResetting: boolean;
+	onReset: () => void;
+}
+
+function QueryPageHeader({ isResetting, onReset }: QueryPageHeaderProps) {
+	return (
+		<div className="flex items-center justify-between">
+			<div>
+				<h1 className="text-2xl font-semibold text-stone-900 dark:text-night-50">
+					Query Performance
+				</h1>
+				<p className="mt-1 text-sm text-stone-500 dark:text-stone-400">
+					PostgreSQL query statistics from pg_stat_statements
+				</p>
+			</div>
+			<div className="flex items-center gap-2">
+				<Button variant="ghost" size="sm" onClick={onReset} disabled={isResetting}>
+					{isResetting ? "Resetting..." : "Reset Stats"}
+				</Button>
+			</div>
+		</div>
+	);
+}
+
+interface SortControlsProps {
+	sortBy: QueryStatsFilters["sortBy"];
+	onSortChange: (sortBy: QueryStatsFilters["sortBy"]) => void;
+}
+
+const SORT_OPTIONS: { key: QueryStatsFilters["sortBy"]; label: string }[] = [
+	{ key: "total_time", label: "Total Time" },
+	{ key: "avg_time", label: "Avg Time" },
+	{ key: "calls", label: "Calls" },
+];
+
+function SortControls({ sortBy, onSortChange }: SortControlsProps) {
+	return (
+		<div className="flex items-center gap-2">
+			<span className="text-sm text-stone-500 dark:text-stone-400">Sort by:</span>
+			<div className="flex gap-1">
+				{SORT_OPTIONS.map((option) => (
+					<Button
+						key={option.key}
+						variant={sortBy === option.key ? "primary" : "ghost"}
+						size="sm"
+						onClick={() => onSortChange(option.key)}
+					>
+						{option.label}
+					</Button>
+				))}
+			</div>
+		</div>
+	);
+}
+
+function LastUpdatedTimestamp({ timestamp }: { timestamp?: string }) {
+	if (!timestamp) {
+		return null;
+	}
+
+	return (
+		<p className="text-xs text-stone-400 dark:text-stone-500 text-right">
+			Last updated: {new Date(timestamp).toLocaleString()}
+		</p>
 	);
 }
 
@@ -164,112 +328,19 @@ export default function QueryPerformancePage() {
 
 	return (
 		<div className="space-y-6">
-			{/* Page Header */}
-			<div className="flex items-center justify-between">
-				<div>
-					<h1 className="text-2xl font-semibold text-stone-900 dark:text-night-50">
-						Query Performance
-					</h1>
-					<p className="mt-1 text-sm text-stone-500 dark:text-stone-400">
-						PostgreSQL query statistics from pg_stat_statements
-					</p>
-				</div>
-				<div className="flex items-center gap-2">
-					<Button
-						variant="ghost"
-						size="sm"
-						onClick={handleReset}
-						disabled={resetMutation.isPending}
-					>
-						{resetMutation.isPending ? "Resetting..." : "Reset Stats"}
-					</Button>
-				</div>
-			</div>
+			<QueryPageHeader isResetting={resetMutation.isPending} onReset={handleReset} />
 
-			{/* Summary Cards */}
 			<QueryErrorBoundary title="Failed to load query statistics">
-				{isLoading ? (
-					<div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-						{[1, 2, 3, 4].map((i) => (
-							<div
-								key={i}
-								className="h-24 bg-white dark:bg-night-800 rounded-lg border border-cream-200 dark:border-night-700 animate-pulse"
-							/>
-						))}
-					</div>
-				) : error ? (
-					<div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg p-4">
-						<p className="text-sm text-red-800 dark:text-red-200">
-							{error instanceof Error ? error.message : "Failed to load statistics"}
-						</p>
-					</div>
-				) : data ? (
-					<div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-						<SummaryCard
-							label="Total Queries"
-							value={data.summary.totalQueries.toLocaleString()}
-							subtext="Unique query patterns"
-						/>
-						<SummaryCard
-							label="Avg Response"
-							value={`${data.summary.avgResponseMs.toFixed(1)}ms`}
-							variant={data.summary.avgResponseMs > 50 ? "warning" : "default"}
-							subtext="Mean execution time"
-						/>
-						<SummaryCard
-							label="Buffer Hit Ratio"
-							value={`${(data.summary.overallHitRatio * 100).toFixed(1)}%`}
-							variant={
-								data.summary.overallHitRatio >= 0.99
-									? "success"
-									: data.summary.overallHitRatio < 0.9
-										? "warning"
-										: "default"
-							}
-							subtext="Shared buffer cache hits"
-						/>
-						<SummaryCard
-							label="Slow Queries"
-							value={data.summary.slowQueryCount}
-							variant={data.summary.slowQueryCount > 0 ? "warning" : "success"}
-							subtext="> 100ms average"
-						/>
-					</div>
-				) : null}
+				<QuerySummarySection isLoading={isLoading} error={error} summary={data?.summary} />
 			</QueryErrorBoundary>
 
-			{/* Sort Controls */}
-			<div className="flex items-center gap-2">
-				<span className="text-sm text-stone-500 dark:text-stone-400">Sort by:</span>
-				<div className="flex gap-1">
-					{[
-						{ key: "total_time" as const, label: "Total Time" },
-						{ key: "avg_time" as const, label: "Avg Time" },
-						{ key: "calls" as const, label: "Calls" },
-					].map((option) => (
-						<Button
-							key={option.key}
-							variant={filters.sortBy === option.key ? "primary" : "ghost"}
-							size="sm"
-							onClick={() => handleSortChange(option.key)}
-						>
-							{option.label}
-						</Button>
-					))}
-				</div>
-			</div>
+			<SortControls sortBy={filters.sortBy} onSortChange={handleSortChange} />
 
-			{/* Query Table */}
 			<QueryErrorBoundary title="Failed to load query table">
 				<QueryTable isLoading={isLoading} stats={data?.stats ?? []} />
 			</QueryErrorBoundary>
 
-			{/* Timestamp */}
-			{data?.timestamp && (
-				<p className="text-xs text-stone-400 dark:text-stone-500 text-right">
-					Last updated: {new Date(data.timestamp).toLocaleString()}
-				</p>
-			)}
+			<LastUpdatedTimestamp timestamp={data?.timestamp} />
 		</div>
 	);
 }

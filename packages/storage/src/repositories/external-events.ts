@@ -228,52 +228,41 @@ export class ExternalEventsRepository {
 		return row ? mapExternalEventRow(row) : null;
 	}
 
-	async findMany(
-		filters: ExternalEventFilters = {},
-		pagination?: PaginationOptions,
-	): Promise<PaginatedResult<ExternalEvent>> {
+	private buildFindManyWhereClause(filters: ExternalEventFilters) {
 		const conditions = [];
 
 		if (filters.sourceType) {
-			if (Array.isArray(filters.sourceType)) {
-				conditions.push(
-					inArray(
-						externalEvents.sourceType,
-						filters.sourceType as (typeof externalEvents.$inferSelect.sourceType)[],
-					),
-				);
-			} else {
-				conditions.push(
-					eq(
-						externalEvents.sourceType,
-						filters.sourceType as typeof externalEvents.$inferSelect.sourceType,
-					),
-				);
-			}
+			const sourceType = filters.sourceType;
+			conditions.push(
+				Array.isArray(sourceType)
+					? inArray(
+							externalEvents.sourceType,
+							sourceType as (typeof externalEvents.$inferSelect.sourceType)[],
+						)
+					: eq(
+							externalEvents.sourceType,
+							sourceType as typeof externalEvents.$inferSelect.sourceType,
+						),
+			);
 		}
 		if (filters.eventType) {
-			if (Array.isArray(filters.eventType)) {
-				conditions.push(inArray(externalEvents.eventType, filters.eventType));
-			} else {
-				conditions.push(eq(externalEvents.eventType, filters.eventType));
-			}
+			const eventType = filters.eventType;
+			conditions.push(
+				Array.isArray(eventType)
+					? inArray(externalEvents.eventType, eventType)
+					: eq(externalEvents.eventType, eventType),
+			);
 		}
 		if (filters.sentiment) {
-			if (Array.isArray(filters.sentiment)) {
-				conditions.push(
-					inArray(
-						externalEvents.sentiment,
-						filters.sentiment as (typeof externalEvents.$inferSelect.sentiment)[],
-					),
-				);
-			} else {
-				conditions.push(
-					eq(
-						externalEvents.sentiment,
-						filters.sentiment as typeof externalEvents.$inferSelect.sentiment,
-					),
-				);
-			}
+			const sentiment = filters.sentiment;
+			conditions.push(
+				Array.isArray(sentiment)
+					? inArray(
+							externalEvents.sentiment,
+							sentiment as (typeof externalEvents.$inferSelect.sentiment)[],
+						)
+					: eq(externalEvents.sentiment, sentiment as typeof externalEvents.$inferSelect.sentiment),
+			);
 		}
 		if (filters.fromDate) {
 			conditions.push(gte(externalEvents.eventTime, new Date(filters.fromDate)));
@@ -285,10 +274,34 @@ export class ExternalEventsRepository {
 			conditions.push(gte(externalEvents.importanceScore, String(filters.minImportance)));
 		}
 
-		const whereClause = conditions.length > 0 ? and(...conditions) : undefined;
+		return conditions.length > 0 ? and(...conditions) : undefined;
+	}
+
+	private getPagination(
+		pagination?: PaginationOptions,
+	): Required<PaginationOptions> & { offset: number } {
 		const page = pagination?.page ?? 1;
 		const pageSize = pagination?.pageSize ?? 50;
-		const offset = (page - 1) * pageSize;
+		return {
+			page,
+			pageSize,
+			offset: (page - 1) * pageSize,
+		};
+	}
+
+	private filterBySymbol(events: ExternalEvent[], symbol?: string): ExternalEvent[] {
+		if (!symbol) {
+			return events;
+		}
+		return events.filter((event) => event.relatedInstruments.includes(symbol));
+	}
+
+	async findMany(
+		filters: ExternalEventFilters = {},
+		pagination?: PaginationOptions,
+	): Promise<PaginatedResult<ExternalEvent>> {
+		const whereClause = this.buildFindManyWhereClause(filters);
+		const { page, pageSize, offset } = this.getPagination(pagination);
 
 		const [countResult] = await this.db
 			.select({ count: count() })
@@ -303,14 +316,7 @@ export class ExternalEventsRepository {
 			.limit(pageSize)
 			.offset(offset);
 
-		let data = rows.map(mapExternalEventRow);
-
-		// Symbol filtering done in-memory
-		if (filters.symbol) {
-			const symbolToFilter = filters.symbol;
-			data = data.filter((event) => event.relatedInstruments.includes(symbolToFilter));
-		}
-
+		const data = this.filterBySymbol(rows.map(mapExternalEventRow), filters.symbol);
 		const total = countResult?.count ?? 0;
 
 		return {

@@ -68,6 +68,41 @@ const quoteCache = new Map<
 	}
 >();
 
+type SnapshotMap = Awaited<ReturnType<AlpacaMarketDataClient["getSnapshots"]>>;
+type SnapshotEntry = SnapshotMap extends Map<string, infer T> ? T : never;
+
+function seedQuoteCacheFromSnapshot(symbol: string, snapshot: SnapshotEntry): void {
+	if (quoteCache.has(symbol)) {
+		return;
+	}
+
+	const dailyBar = snapshot.dailyBar;
+	const prevBar = snapshot.prevDailyBar;
+	const latestTrade = snapshot.latestTrade;
+	const latestQuote = snapshot.latestQuote;
+	const lastPrice = latestTrade?.price ?? dailyBar?.close ?? 0;
+
+	quoteCache.set(symbol, {
+		bid: latestQuote?.bidPrice ?? dailyBar?.close ?? 0,
+		ask: latestQuote?.askPrice ?? dailyBar?.close ?? 0,
+		last: lastPrice,
+		volume: dailyBar?.volume ?? 0,
+		prevClose: prevBar?.close ?? lastPrice,
+		timestamp: dailyBar?.timestamp ? new Date(dailyBar.timestamp) : new Date(),
+	});
+}
+
+function fetchSnapshotsWithoutBlocking(client: AlpacaMarketDataClient, symbols: string[]): void {
+	client
+		.getSnapshots(symbols)
+		.then((snapshots) => {
+			for (const [symbol, snapshot] of snapshots) {
+				seedQuoteCacheFromSnapshot(symbol, snapshot);
+			}
+		})
+		.catch(() => {});
+}
+
 // ============================================
 // Initialization
 // ============================================
@@ -392,28 +427,7 @@ export async function subscribeSymbol(symbol: string): Promise<void> {
 	// Fetch snapshot to seed the cache with proper prevClose
 	const client = getAlpacaClient();
 	if (client && !quoteCache.has(upperSymbol)) {
-		client
-			.getSnapshots([upperSymbol])
-			.then((snapshots) => {
-				const snapshot = snapshots.get(upperSymbol);
-				if (snapshot && !quoteCache.has(upperSymbol)) {
-					const dailyBar = snapshot.dailyBar;
-					const prevBar = snapshot.prevDailyBar;
-					const latestTrade = snapshot.latestTrade;
-					const latestQuote = snapshot.latestQuote;
-
-					const lastPrice = latestTrade?.price ?? dailyBar?.close ?? 0;
-					quoteCache.set(upperSymbol, {
-						bid: latestQuote?.bidPrice ?? dailyBar?.close ?? 0,
-						ask: latestQuote?.askPrice ?? dailyBar?.close ?? 0,
-						last: lastPrice,
-						volume: dailyBar?.volume ?? 0,
-						prevClose: prevBar?.close ?? lastPrice,
-						timestamp: dailyBar?.timestamp ? new Date(dailyBar.timestamp) : new Date(),
-					});
-				}
-			})
-			.catch(() => {});
+		fetchSnapshotsWithoutBlocking(client, [upperSymbol]);
 	}
 
 	// Connect lazily on first subscription
@@ -439,30 +453,7 @@ export async function subscribeSymbols(symbols: string[]): Promise<void> {
 	// Fetch snapshots for new symbols to seed the cache with proper prevClose
 	const client = getAlpacaClient();
 	if (client) {
-		// Fetch in parallel but don't block subscription
-		client
-			.getSnapshots(newSymbols)
-			.then((snapshots) => {
-				for (const [symbol, snapshot] of snapshots) {
-					if (!quoteCache.has(symbol)) {
-						const dailyBar = snapshot.dailyBar;
-						const prevBar = snapshot.prevDailyBar;
-						const latestTrade = snapshot.latestTrade;
-						const latestQuote = snapshot.latestQuote;
-
-						const lastPrice = latestTrade?.price ?? dailyBar?.close ?? 0;
-						quoteCache.set(symbol, {
-							bid: latestQuote?.bidPrice ?? dailyBar?.close ?? 0,
-							ask: latestQuote?.askPrice ?? dailyBar?.close ?? 0,
-							last: lastPrice,
-							volume: dailyBar?.volume ?? 0,
-							prevClose: prevBar?.close ?? lastPrice,
-							timestamp: dailyBar?.timestamp ? new Date(dailyBar.timestamp) : new Date(),
-						});
-					}
-				}
-			})
-			.catch(() => {});
+		fetchSnapshotsWithoutBlocking(client, newSymbols);
 	}
 
 	// Connect lazily on first subscription

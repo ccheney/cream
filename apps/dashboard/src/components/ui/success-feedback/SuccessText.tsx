@@ -27,12 +27,11 @@ export function SuccessText({
 
 	return (
 		<>
-			{/* biome-ignore lint/security/noDangerouslySetInnerHtml: Safe - hardcoded CSS keyframes */}
-			<style dangerouslySetInnerHTML={{ __html: checkmarkKeyframes }} />
-			<span role="status" aria-live="polite" data-testid={testId} style={styles}>
+			<style>{checkmarkKeyframes}</style>
+			<output aria-live="polite" data-testid={testId} style={styles}>
 				<Checkmark size={16} />
 				<span>{children}</span>
-			</span>
+			</output>
 		</>
 	);
 }

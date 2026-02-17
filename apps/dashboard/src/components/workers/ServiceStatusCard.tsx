@@ -90,6 +90,31 @@ function StatusDot({ status }: { status: DotStatus }) {
 	);
 }
 
+type LastRun = ServiceStatus["lastRun"];
+
+function getDotStatus(status: ServiceStatus["status"], lastRun: LastRun): DotStatus {
+	if (status === "running") {
+		return "running";
+	}
+	if (lastRun?.status === "completed") {
+		return "success";
+	}
+	if (lastRun?.status === "failed") {
+		return "failed";
+	}
+	return "idle";
+}
+
+function getLastRunText(status: ServiceStatus["status"], lastRun: LastRun): string {
+	if (status === "running") {
+		return "Running...";
+	}
+	if (!lastRun) {
+		return "Never run";
+	}
+	return formatDistanceToNow(new Date(lastRun.startedAt), { addSuffix: true });
+}
+
 // ============================================
 // Countdown Hook
 // ============================================
@@ -163,32 +188,8 @@ function ServiceStatusCardComponent({
 	const { name, displayName, status, lastRun, nextRun } = service;
 	const countdown = useCountdown(nextRun);
 	const dataSources = DATA_SOURCES[name] ?? [];
-
-	const getDotStatus = (): DotStatus => {
-		if (status === "running") {
-			return "running";
-		}
-		if (lastRun?.status === "completed") {
-			return "success";
-		}
-		if (lastRun?.status === "failed") {
-			return "failed";
-		}
-		return "idle";
-	};
-
-	const dotStatus = getDotStatus();
-
-	const getLastRunText = (): string => {
-		if (status === "running") {
-			return "Running...";
-		}
-		if (!lastRun) {
-			return "Never run";
-		}
-		return formatDistanceToNow(new Date(lastRun.startedAt), { addSuffix: true });
-	};
-
+	const dotStatus = getDotStatus(status, lastRun);
+	const lastRunText = getLastRunText(status, lastRun);
 	const isDisabled = disabled || isPending || status === "running";
 
 	return (
@@ -223,7 +224,7 @@ function ServiceStatusCardComponent({
 			)}
 
 			<div className="flex items-center justify-between">
-				<span className="text-sm text-stone-500 dark:text-night-300">{getLastRunText()}</span>
+				<span className="text-sm text-stone-500 dark:text-night-300">{lastRunText}</span>
 				<button
 					type="button"
 					onClick={onTrigger}

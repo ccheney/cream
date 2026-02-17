@@ -49,6 +49,13 @@ export interface GetFilingsParams {
 	limit?: number;
 }
 
+interface RecentFilingArrays {
+	forms: string[];
+	accessionNumbers: string[];
+	filingDates: string[];
+	primaryDocuments?: string[];
+}
+
 // ============================================
 // Client Class
 // ============================================
@@ -118,66 +125,86 @@ export class EdgarClient {
 			throw new Error(`Company not found: ${params.tickerOrCik}`);
 		}
 
-		const submissions = await this.client.getCompanySubmissions(company.cik);
+		const recentFilings = await this.getRecentFilings(params.tickerOrCik, company.cik);
+		const filingArrays = this.getRecentFilingArrays(params.tickerOrCik, recentFilings);
+		const formTypeSet = params.filingTypes ? new Set(params.filingTypes) : null;
+		return this.collectFilings(params, company, filingArrays, formTypeSet);
+	}
+
+	private async getRecentFilings(
+		tickerOrCik: string,
+		cik: string,
+	): Promise<Record<string, unknown>> {
+		const submissions = await this.client.getCompanySubmissions(cik);
 		const recentFilings = submissions.filings?.recent;
-
 		if (!recentFilings) {
-			throw new Error(`No filings found for company: ${params.tickerOrCik}`);
+			throw new Error(`No filings found for company: ${tickerOrCik}`);
 		}
+		return recentFilings as Record<string, unknown>;
+	}
 
-		const filings: Filing[] = [];
+	private getRecentFilingArrays(
+		tickerOrCik: string,
+		recentFilings: Record<string, unknown>,
+	): RecentFilingArrays {
 		const forms = recentFilings.form as string[] | undefined;
 		const accessionNumbers = recentFilings.accessionNumber as string[] | undefined;
 		const filingDates = recentFilings.filingDate as string[] | undefined;
 		const primaryDocuments = recentFilings.primaryDocument as string[] | undefined;
 
 		if (!forms || !accessionNumbers || !filingDates) {
-			throw new Error(`Invalid filing data structure for company: ${params.tickerOrCik}`);
+			throw new Error(`Invalid filing data structure for company: ${tickerOrCik}`);
 		}
 
-		const formTypeSet = params.filingTypes ? new Set(params.filingTypes) : null;
+		return { forms, accessionNumbers, filingDates, primaryDocuments };
+	}
 
-		for (let i = 0; i < forms.length; i++) {
-			// Check limit
+	private collectFilings(
+		params: GetFilingsParams,
+		company: Company,
+		filingArrays: RecentFilingArrays,
+		formTypeSet: Set<FilingType> | null,
+	): Filing[] {
+		const filings: Filing[] = [];
+		for (let index = 0; index < filingArrays.forms.length; index++) {
 			if (params.limit && filings.length >= params.limit) {
 				break;
 			}
-
-			const formType = forms[i];
-			const accessionNumber = accessionNumbers[i];
-			const filedDateStr = filingDates[i];
-
-			// Skip if missing required fields
-			if (!formType || !accessionNumber || !filedDateStr) {
-				continue;
+			const filing = this.buildFilingAtIndex(index, params, company, filingArrays, formTypeSet);
+			if (filing) {
+				filings.push(filing);
 			}
-
-			// Filter by form type
-			if (formTypeSet && !formTypeSet.has(formType as FilingType)) {
-				continue;
-			}
-
-			// Parse date
-			const filedDate = new Date(filedDateStr);
-
-			// Filter by date range
-			if (params.startDate && filedDate < params.startDate) {
-				continue;
-			}
-			if (params.endDate && filedDate > params.endDate) {
-				continue;
-			}
-
-			filings.push({
-				accessionNumber,
-				filingType: formType as FilingType,
-				filedDate,
-				company,
-				primaryDocument: primaryDocuments?.[i] ?? `${accessionNumber}.htm`,
-			});
 		}
-
 		return filings;
+	}
+
+	private buildFilingAtIndex(
+		index: number,
+		params: GetFilingsParams,
+		company: Company,
+		filingArrays: RecentFilingArrays,
+		formTypeSet: Set<FilingType> | null,
+	): Filing | null {
+		const formType = filingArrays.forms[index];
+		const accessionNumber = filingArrays.accessionNumbers[index];
+		const filedDateStr = filingArrays.filingDates[index];
+		if (!formType || !accessionNumber || !filedDateStr) {
+			return null;
+		}
+		if (formTypeSet && !formTypeSet.has(formType as FilingType)) {
+			return null;
+		}
+		const filedDate = new Date(filedDateStr);
+		if (!isWithinDateRange(filedDate, params.startDate, params.endDate)) {
+			return null;
+		}
+		return {
+			accessionNumber,
+			filingType: formType as FilingType,
+			filedDate,
+			company,
+			primaryDocument: filingArrays.primaryDocuments?.[index] ?? `${accessionNumber}.htm`,
+		};
 	}
 
 	/**
@@ -212,4 +239,14 @@ export class EdgarClient {
 		const accessionClean = filing.accessionNumber.replaceAll("-", "");
 		return `https://www.sec.gov/Archives/edgar/data/${cikUnpadded}/${accessionClean}/${filing.primaryDocument}`;
 	}
+}
+
+function isWithinDateRange(filedDate: Date, startDate?: Date, endDate?: Date): boolean {
+	if (startDate && filedDate < startDate) {
+		return false;
+	}
+	if (endDate && filedDate > endDate) {
+		return false;
+	}
+	return true;
 }

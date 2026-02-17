@@ -12,6 +12,20 @@ import { Skeleton, SkeletonContainer } from "@/components/ui/skeleton";
 // Skeleton Components
 // ============================================
 
+const HEADER_SKELETON_KEYS = ["header-mon", "header-tue", "header-wed", "header-thu", "header-fri"];
+const GRID_SKELETON_ITEMS = Array.from({ length: 35 }, (_, index) => ({
+	key: `cell-${index}`,
+	height: index % 7 === 0 ? 48 : 24,
+}));
+const MOBILE_EVENT_SKELETON_KEYS = [
+	"event-1",
+	"event-2",
+	"event-3",
+	"event-4",
+	"event-5",
+	"event-6",
+];
+
 function FiltersSkeleton() {
 	return (
 		<div className="flex items-center gap-3">
@@ -59,9 +73,8 @@ function CalendarGridSkeleton() {
 		<div className="flex flex-col h-full p-2">
 			{/* Day headers - hidden on mobile */}
 			<div className="hidden sm:grid grid-cols-5 gap-1 mb-2">
-				{Array.from({ length: 5 }).map((_, i) => (
-					// biome-ignore lint/suspicious/noArrayIndexKey: Static skeleton layout, index is stable
-					<div key={`header-${i}`} className="text-center py-2">
+				{HEADER_SKELETON_KEYS.map((headerKey) => (
+					<div key={headerKey} className="text-center py-2">
 						<Skeleton width={60} height={14} className="mx-auto" />
 						<Skeleton width={24} height={20} className="mx-auto mt-1" />
 					</div>
@@ -69,22 +82,15 @@ function CalendarGridSkeleton() {
 			</div>
 			{/* Time grid - desktop */}
 			<div className="flex-1 hidden sm:grid grid-cols-5 gap-1">
-				{Array.from({ length: 35 }).map((_, i) => (
-					<Skeleton
-						// biome-ignore lint/suspicious/noArrayIndexKey: Static skeleton layout, index is stable
-						key={`cell-${i}`}
-						height={i % 7 === 0 ? 48 : 24}
-						radius={4}
-						className="dark:bg-night-700"
-					/>
+				{GRID_SKELETON_ITEMS.map((item) => (
+					<Skeleton key={item.key} height={item.height} radius={4} className="dark:bg-night-700" />
 				))}
 			</div>
 			{/* Event list - mobile */}
 			<div className="flex-1 flex flex-col gap-2 sm:hidden">
-				{Array.from({ length: 6 }).map((_, i) => (
+				{MOBILE_EVENT_SKELETON_KEYS.map((eventKey) => (
 					<div
-						// biome-ignore lint/suspicious/noArrayIndexKey: Static skeleton layout, index is stable
-						key={`event-${i}`}
+						key={eventKey}
 						className="flex items-center gap-3 p-3 rounded-lg bg-cream-50 dark:bg-night-700"
 					>
 						<Skeleton width={10} height={10} radius="50%" />

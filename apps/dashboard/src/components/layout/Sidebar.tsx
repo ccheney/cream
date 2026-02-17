@@ -85,6 +85,8 @@ export const EXPERIMENT_ITEMS: NavItem[] = [
 
 const SIDEBAR_WIDTH = 240;
 const COLLAPSED_WIDTH = 64;
+const collapsedSidebarWidth = COLLAPSED_WIDTH;
+const expandedSidebarWidth = SIDEBAR_WIDTH;
 
 interface NavLinkProps {
 	item: NavItem;
@@ -130,6 +132,158 @@ const NavLink = memo(function NavLink({ item, collapsed, isHovered }: NavLinkPro
 	);
 });
 
+interface SidebarHeaderProps {
+	onToggle: () => void;
+	showLabel: boolean;
+	isCollapsed: boolean;
+}
+
+const SidebarHeader = memo(function SidebarHeader({
+	onToggle,
+	showLabel,
+	isCollapsed,
+}: SidebarHeaderProps) {
+	const chevronRotation = isCollapsed ? "rotate-180" : "";
+	const buttonTitle = isCollapsed ? "Expand sidebar" : "Collapse sidebar";
+
+	return (
+		<div className="p-4 border-b border-cream-200 dark:border-night-700 flex items-center justify-between h-14">
+			<div className="flex items-center gap-3">
+				<Logo className="h-8 w-8 flex-shrink-0" />
+			</div>
+			{showLabel && (
+				<button
+					type="button"
+					onClick={onToggle}
+					className="p-1.5 rounded-md text-stone-500 dark:text-night-400 hover:text-stone-700 dark:hover:text-night-100 hover:bg-cream-100 dark:hover:bg-night-700 transition-colors"
+					title={buttonTitle}
+				>
+					<ChevronLeft className={`w-4 h-4 transition-transform duration-200 ${chevronRotation}`} />
+				</button>
+			)}
+		</div>
+	);
+});
+
+interface SidebarNavProps {
+	collapsed: boolean;
+	isHovered: boolean;
+}
+
+const SidebarNav = memo(function SidebarNav({ collapsed, isHovered }: SidebarNavProps) {
+	return (
+		<nav className="flex-1 mt-4 px-2 overflow-y-auto flex flex-col" aria-label="Main navigation">
+			<div className="space-y-1">
+				{NAV_GROUPS.map((group, groupIndex) => (
+					<div key={group[0]?.href ?? `nav-group-${groupIndex}`}>
+						{groupIndex > 0 && (
+							<div className="my-2 mx-3 border-t border-cream-200 dark:border-night-700" />
+						)}
+						{group.map((item) => (
+							<NavLink key={item.href} item={item} collapsed={collapsed} isHovered={isHovered} />
+						))}
+					</div>
+				))}
+			</div>
+
+			<div className="mt-auto pt-4">
+				<div className="border-t border-cream-200 dark:border-night-700 pt-4">
+					{(!collapsed || isHovered) && (
+						<div className="px-3 mb-2 text-xs font-medium text-stone-400 dark:text-night-400 uppercase tracking-wider">
+							Experiments
+						</div>
+					)}
+					<div className="space-y-1">
+						{EXPERIMENT_ITEMS.map((item) => (
+							<NavLink key={item.href} item={item} collapsed={collapsed} isHovered={isHovered} />
+						))}
+					</div>
+				</div>
+			</div>
+		</nav>
+	);
+});
+
+interface SidebarFooterProps {
+	collapsed: boolean;
+	isHovered: boolean;
+	userEmail?: string;
+	resolvedTheme: "dark" | "light" | "system";
+	onToggleTheme: () => void;
+	onSignOut?: () => void;
+}
+
+function SidebarFooterThemeButton({ resolvedTheme, onToggleTheme }: SidebarFooterThemeButtonProps) {
+	return (
+		<button
+			type="button"
+			onClick={onToggleTheme}
+			className="p-1.5 rounded-md text-stone-500 dark:text-night-300 hover:bg-cream-100 dark:hover:bg-night-700 hover:text-stone-700 dark:hover:text-night-100 transition-colors"
+			title={resolvedTheme === "dark" ? "Switch to light mode" : "Switch to dark mode"}
+		>
+			{resolvedTheme === "dark" ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
+		</button>
+	);
+}
+
+interface SidebarFooterThemeButtonProps {
+	resolvedTheme: "dark" | "light" | "system";
+	onToggleTheme: () => void;
+}
+
+const SidebarFooter = memo(function SidebarFooter({
+	collapsed,
+	isHovered,
+	userEmail,
+	resolvedTheme,
+	onToggleTheme,
+	onSignOut,
+}: SidebarFooterProps) {
+	const showLabel = !collapsed || isHovered;
+
+	if (showLabel) {
+		return (
+			<div className="p-4 border-t border-cream-200 dark:border-night-700">
+				<div className="flex items-center justify-between gap-2">
+					{userEmail ? (
+						<div className="text-xs text-stone-500 dark:text-night-300 truncate flex-1">
+							{userEmail}
+						</div>
+					) : (
+						<div className="flex-1" />
+					)}
+					<div className="flex items-center gap-1">
+						<SidebarFooterThemeButton resolvedTheme={resolvedTheme} onToggleTheme={onToggleTheme} />
+						{onSignOut && (
+							<button
+								type="button"
+								onClick={onSignOut}
+								className="p-1.5 rounded-md text-stone-500 dark:text-night-300 hover:bg-cream-100 dark:hover:bg-night-700 hover:text-stone-700 dark:hover:text-night-100 transition-colors"
+								title="Sign out"
+							>
+								<LogOut className="w-4 h-4" />
+							</button>
+						)}
+					</div>
+				</div>
+			</div>
+		);
+	}
+
+	return (
+		<div className="p-4 border-t border-cream-200 dark:border-night-700 flex flex-col items-center gap-2">
+			{userEmail && (
+				<div className="w-8 h-8 rounded-full bg-cream-200 dark:bg-night-600 flex items-center justify-center">
+					<span className="text-xs font-medium text-stone-600 dark:text-night-300">
+						{userEmail.charAt(0).toUpperCase()}
+					</span>
+				</div>
+			)}
+			<SidebarFooterThemeButton resolvedTheme={resolvedTheme} onToggleTheme={onToggleTheme} />
+		</div>
+	);
+});
+
 export const Sidebar = memo(function Sidebar({
 	userEmail,
 	onSignOut,
@@ -144,7 +298,7 @@ export const Sidebar = memo(function Sidebar({
 		updateDisplay({ theme: resolvedTheme === "dark" ? "light" : "dark" });
 	};
 
-	const width = collapsed && !isHovered ? COLLAPSED_WIDTH : SIDEBAR_WIDTH;
+	const width = collapsed && !isHovered ? collapsedSidebarWidth : expandedSidebarWidth;
 	const showLabel = !collapsed || isHovered;
 
 	return (
@@ -154,113 +308,16 @@ export const Sidebar = memo(function Sidebar({
 			onMouseEnter={() => collapsed && setIsHovered(true)}
 			onMouseLeave={() => setIsHovered(false)}
 		>
-			<div className="p-4 border-b border-cream-200 dark:border-night-700 flex items-center justify-between h-14">
-				<div className="flex items-center gap-3">
-					<Logo className="h-8 w-8 flex-shrink-0" />
-				</div>
-				{showLabel && (
-					<button
-						type="button"
-						onClick={toggleSidebar}
-						className="p-1.5 rounded-md text-stone-500 dark:text-night-400 hover:text-stone-700 dark:hover:text-night-100 hover:bg-cream-100 dark:hover:bg-night-700 transition-colors"
-						title={collapsed ? "Expand sidebar" : "Collapse sidebar"}
-					>
-						<ChevronLeft
-							className={`w-4 h-4 transition-transform duration-200 ${collapsed ? "rotate-180" : ""}`}
-						/>
-					</button>
-				)}
-			</div>
-
-			<nav className="flex-1 mt-4 px-2 overflow-y-auto flex flex-col" aria-label="Main navigation">
-				<div className="space-y-1">
-					{NAV_GROUPS.map((group, groupIndex) => (
-						<div key={group[0]?.href ?? `nav-group-${groupIndex}`}>
-							{groupIndex > 0 && (
-								<div className="my-2 mx-3 border-t border-cream-200 dark:border-night-700" />
-							)}
-							{group.map((item) => (
-								<NavLink key={item.href} item={item} collapsed={collapsed} isHovered={isHovered} />
-							))}
-						</div>
-					))}
-				</div>
-
-				<div className="mt-auto pt-4">
-					<div className="border-t border-cream-200 dark:border-night-700 pt-4">
-						{showLabel && (
-							<div className="px-3 mb-2 text-xs font-medium text-stone-400 dark:text-night-400 uppercase tracking-wider">
-								Experiments
-							</div>
-						)}
-						<div className="space-y-1">
-							{EXPERIMENT_ITEMS.map((item) => (
-								<NavLink key={item.href} item={item} collapsed={collapsed} isHovered={isHovered} />
-							))}
-						</div>
-					</div>
-				</div>
-			</nav>
-
-			<div className="p-4 border-t border-cream-200 dark:border-night-700">
-				{!collapsed || isHovered ? (
-					<div className="flex items-center justify-between gap-2">
-						{userEmail ? (
-							<div className="text-xs text-stone-500 dark:text-night-300 truncate flex-1">
-								{userEmail}
-							</div>
-						) : (
-							<div className="flex-1" />
-						)}
-						<div className="flex items-center gap-1">
-							<button
-								type="button"
-								onClick={toggleTheme}
-								className="p-1.5 rounded-md text-stone-500 dark:text-night-300 hover:bg-cream-100 dark:hover:bg-night-700 hover:text-stone-700 dark:hover:text-night-100 transition-colors"
-								title={resolvedTheme === "dark" ? "Switch to light mode" : "Switch to dark mode"}
-							>
-								{resolvedTheme === "dark" ? (
-									<Sun className="w-4 h-4" />
-								) : (
-									<Moon className="w-4 h-4" />
-								)}
-							</button>
-							{onSignOut && (
-								<button
-									type="button"
-									onClick={onSignOut}
-									className="p-1.5 rounded-md text-stone-500 dark:text-night-300 hover:bg-cream-100 dark:hover:bg-night-700 hover:text-stone-700 dark:hover:text-night-100 transition-colors"
-									title="Sign out"
-								>
-									<LogOut className="w-4 h-4" />
-								</button>
-							)}
-						</div>
-					</div>
-				) : (
-					<div className="flex flex-col items-center gap-2">
-						{userEmail && (
-							<div className="w-8 h-8 rounded-full bg-cream-200 dark:bg-night-600 flex items-center justify-center">
-								<span className="text-xs font-medium text-stone-600 dark:text-night-300">
-									{userEmail.charAt(0).toUpperCase()}
-								</span>
-							</div>
-						)}
-						<button
-							type="button"
-							onClick={toggleTheme}
-							className="p-1.5 rounded-md text-stone-500 dark:text-night-300 hover:bg-cream-100 dark:hover:bg-night-700 hover:text-stone-700 dark:hover:text-night-100 transition-colors"
-							title={resolvedTheme === "dark" ? "Switch to light mode" : "Switch to dark mode"}
-						>
-							{resolvedTheme === "dark" ? (
-								<Sun className="w-4 h-4" />
-							) : (
-								<Moon className="w-4 h-4" />
-							)}
-						</button>
-					</div>
-				)}
-			</div>
+			<SidebarHeader onToggle={toggleSidebar} showLabel={showLabel} isCollapsed={collapsed} />
+			<SidebarNav collapsed={collapsed} isHovered={isHovered} />
+			<SidebarFooter
+				collapsed={collapsed}
+				isHovered={isHovered}
+				userEmail={userEmail}
+				resolvedTheme={resolvedTheme}
+				onToggleTheme={toggleTheme}
+				onSignOut={onSignOut}
+			/>
 		</aside>
 	);
 });

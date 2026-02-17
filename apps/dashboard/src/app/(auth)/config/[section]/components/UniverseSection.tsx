@@ -68,90 +68,133 @@ interface SectionProps {
 	onFormChange: (data: Partial<RuntimeUniverseConfig>) => void;
 }
 
+interface SourceFieldProps {
+	universe: RuntimeUniverseConfig;
+	editing: boolean;
+	formData: Partial<RuntimeUniverseConfig>;
+	onFormChange: (data: Partial<RuntimeUniverseConfig>) => void;
+}
+
+function SourceTypeField({ universe, editing, formData, onFormChange }: SourceFieldProps) {
+	return (
+		<div>
+			<label
+				htmlFor="source-type"
+				className="block text-sm text-stone-600 dark:text-night-200 dark:text-night-400 mb-1"
+			>
+				Source Type
+			</label>
+			{editing ? (
+				<select
+					id="source-type"
+					value={formData.source ?? universe.source}
+					onChange={(e) =>
+						onFormChange({
+							source: e.target.value as RuntimeUniverseConfig["source"],
+						})
+					}
+					className="mt-1 w-full px-3 py-2 border border-cream-200 dark:border-night-600 rounded-md bg-white dark:bg-night-700 text-stone-900 dark:text-night-50"
+				>
+					<option value="static">Static</option>
+					<option value="index">Index</option>
+					<option value="screener">Screener</option>
+				</select>
+			) : (
+				<div className="text-stone-900 dark:text-night-50 capitalize">{universe.source}</div>
+			)}
+		</div>
+	);
+}
+
+function StaticSymbolsField({ universe, editing, formData, onFormChange }: SourceFieldProps) {
+	return (
+		<div>
+			<label
+				htmlFor="static-symbols"
+				className="block text-sm text-stone-600 dark:text-night-200 dark:text-night-400 mb-1"
+			>
+				Static Symbols
+			</label>
+			{editing ? (
+				<textarea
+					id="static-symbols"
+					rows={3}
+					defaultValue={(formData.staticSymbols ?? universe.staticSymbols)?.join(", ") || ""}
+					onChange={(e) => {
+						const symbols = e.target.value
+							.split(",")
+							.map((s) => s.trim().toUpperCase())
+							.filter(Boolean);
+						onFormChange({ staticSymbols: symbols.length > 0 ? symbols : null });
+					}}
+					placeholder="AAPL, MSFT, GOOGL, ..."
+					className="w-full px-3 py-2 border border-cream-200 dark:border-night-600 rounded-md bg-white dark:bg-night-700 text-stone-900 dark:text-night-50"
+				/>
+			) : (
+				<div className="text-stone-900 dark:text-night-50">
+					{universe.staticSymbols?.join(", ") || "None"}
+				</div>
+			)}
+		</div>
+	);
+}
+
+function IndexSourceField({ universe, editing, formData, onFormChange }: SourceFieldProps) {
+	return (
+		<div>
+			<label
+				htmlFor="index-source"
+				className="block text-sm text-stone-600 dark:text-night-200 dark:text-night-400 mb-1"
+			>
+				Index Source
+			</label>
+			{editing ? (
+				<select
+					id="index-source"
+					value={formData.indexSource ?? universe.indexSource ?? "SPY"}
+					onChange={(e) => onFormChange({ indexSource: e.target.value })}
+					className="w-full px-3 py-2 border border-cream-200 dark:border-night-600 rounded-md bg-white dark:bg-night-700 text-stone-900 dark:text-night-50"
+				>
+					<option value="SPY">S&P 500 (SPY)</option>
+					<option value="QQQ">Nasdaq 100 (QQQ)</option>
+					<option value="IWM">Russell 2000 (IWM)</option>
+					<option value="DIA">Dow Jones (DIA)</option>
+				</select>
+			) : (
+				<div className="text-stone-900 dark:text-night-50">{universe.indexSource || "None"}</div>
+			)}
+		</div>
+	);
+}
+
 function SourceSection({ universe, editing, formData, onFormChange }: SectionProps) {
+	const selectedSource = formData.source ?? universe.source;
+
 	return (
 		<div>
 			<h3 className="text-sm font-medium text-stone-900 dark:text-night-50 mb-3">Source</h3>
 			<div className="grid grid-cols-2 gap-4">
-				<div>
-					{/* biome-ignore lint/a11y/noLabelWithoutControl: input is inside label when editing */}
-					<label className="block text-sm text-stone-600 dark:text-night-200 dark:text-night-400 mb-1">
-						Source Type
-						{editing ? (
-							<select
-								value={formData.source ?? universe.source}
-								onChange={(e) =>
-									onFormChange({
-										source: e.target.value as RuntimeUniverseConfig["source"],
-									})
-								}
-								className="mt-1 w-full px-3 py-2 border border-cream-200 dark:border-night-600 rounded-md bg-white dark:bg-night-700 text-stone-900 dark:text-night-50"
-							>
-								<option value="static">Static</option>
-								<option value="index">Index</option>
-								<option value="screener">Screener</option>
-							</select>
-						) : (
-							<div className="text-stone-900 dark:text-night-50 capitalize">{universe.source}</div>
-						)}
-					</label>
-				</div>
-				{(formData.source ?? universe.source) === "static" && (
-					<div>
-						<label
-							htmlFor="static-symbols"
-							className="block text-sm text-stone-600 dark:text-night-200 dark:text-night-400 mb-1"
-						>
-							Static Symbols
-						</label>
-						{editing ? (
-							<textarea
-								id="static-symbols"
-								rows={3}
-								defaultValue={(formData.staticSymbols ?? universe.staticSymbols)?.join(", ") || ""}
-								onChange={(e) => {
-									const symbols = e.target.value
-										.split(",")
-										.map((s) => s.trim().toUpperCase())
-										.filter(Boolean);
-									onFormChange({ staticSymbols: symbols.length > 0 ? symbols : null });
-								}}
-								placeholder="AAPL, MSFT, GOOGL, ..."
-								className="w-full px-3 py-2 border border-cream-200 dark:border-night-600 rounded-md bg-white dark:bg-night-700 text-stone-900 dark:text-night-50"
-							/>
-						) : (
-							<div className="text-stone-900 dark:text-night-50">
-								{universe.staticSymbols?.join(", ") || "None"}
-							</div>
-						)}
-					</div>
+				<SourceTypeField
+					universe={universe}
+					editing={editing}
+					formData={formData}
+					onFormChange={onFormChange}
+				/>
+				{selectedSource === "static" && (
+					<StaticSymbolsField
+						universe={universe}
+						editing={editing}
+						formData={formData}
+						onFormChange={onFormChange}
+					/>
 				)}
-				{(formData.source ?? universe.source) === "index" && (
-					<div>
-						<label
-							htmlFor="index-source"
-							className="block text-sm text-stone-600 dark:text-night-200 dark:text-night-400 mb-1"
-						>
-							Index Source
-						</label>
-						{editing ? (
-							<select
-								id="index-source"
-								value={formData.indexSource ?? universe.indexSource ?? "SPY"}
-								onChange={(e) => onFormChange({ indexSource: e.target.value })}
-								className="w-full px-3 py-2 border border-cream-200 dark:border-night-600 rounded-md bg-white dark:bg-night-700 text-stone-900 dark:text-night-50"
-							>
-								<option value="SPY">S&P 500 (SPY)</option>
-								<option value="QQQ">Nasdaq 100 (QQQ)</option>
-								<option value="IWM">Russell 2000 (IWM)</option>
-								<option value="DIA">Dow Jones (DIA)</option>
-							</select>
-						) : (
-							<div className="text-stone-900 dark:text-night-50">
-								{universe.indexSource || "None"}
-							</div>
-						)}
-					</div>
+				{selectedSource === "index" && (
+					<IndexSourceField
+						universe={universe}
+						editing={editing}
+						formData={formData}
+						onFormChange={onFormChange}
+					/>
 				)}
 			</div>
 		</div>
@@ -164,74 +207,81 @@ function FiltersSection({ universe, editing, formData, onFormChange }: SectionPr
 			<h3 className="text-sm font-medium text-stone-900 dark:text-night-50 mb-3">Filters</h3>
 			<div className="grid grid-cols-2 gap-4">
 				<div>
-					{/* biome-ignore lint/a11y/noLabelWithoutControl: input is inside label when editing */}
-					<label className="block text-sm text-stone-600 dark:text-night-200 dark:text-night-400 mb-1">
+					<label
+						htmlFor="optionable-only"
+						className="block text-sm text-stone-600 dark:text-night-200 dark:text-night-400 mb-1"
+					>
 						Optionable Only
-						{editing ? (
-							<select
-								value={String(formData.optionableOnly ?? universe.optionableOnly)}
-								onChange={(e) =>
-									onFormChange({
-										optionableOnly: e.target.value === "true",
-									})
-								}
-								className="mt-1 w-full px-3 py-2 border border-cream-200 dark:border-night-600 rounded-md bg-white dark:bg-night-700 text-stone-900 dark:text-night-50"
-							>
-								<option value="true">Yes</option>
-								<option value="false">No</option>
-							</select>
-						) : (
-							<div className="text-stone-900 dark:text-night-50">
-								{universe.optionableOnly ? "Yes" : "No"}
-							</div>
-						)}
 					</label>
+					{editing ? (
+						<select
+							id="optionable-only"
+							value={String(formData.optionableOnly ?? universe.optionableOnly)}
+							onChange={(e) =>
+								onFormChange({
+									optionableOnly: e.target.value === "true",
+								})
+							}
+							className="mt-1 w-full px-3 py-2 border border-cream-200 dark:border-night-600 rounded-md bg-white dark:bg-night-700 text-stone-900 dark:text-night-50"
+						>
+							<option value="true">Yes</option>
+							<option value="false">No</option>
+						</select>
+					) : (
+						<div className="text-stone-900 dark:text-night-50">
+							{universe.optionableOnly ? "Yes" : "No"}
+						</div>
+					)}
 				</div>
 				<div>
-					{/* biome-ignore lint/a11y/noLabelWithoutControl: input is inside label when editing */}
-					<label className="block text-sm text-stone-600 dark:text-night-200 dark:text-night-400 mb-1">
+					<label
+						htmlFor="min-volume"
+						className="block text-sm text-stone-600 dark:text-night-200 dark:text-night-400 mb-1"
+					>
 						Min Volume
-						{editing ? (
-							<input
-								type="number"
-								value={formData.minVolume ?? universe.minVolume ?? 0}
-								onChange={(e) =>
-									onFormChange({
-										minVolume: parseInt(e.target.value, 10) || null,
-									})
-								}
-								className="mt-1 w-full px-3 py-2 border border-cream-200 dark:border-night-600 rounded-md bg-white dark:bg-night-700 text-stone-900 dark:text-night-50"
-							/>
-						) : (
-							<div className="text-stone-900 dark:text-night-50">
-								{universe.minVolume?.toLocaleString() ?? "Not set"}
-							</div>
-						)}
 					</label>
+					{editing ? (
+						<input
+							id="min-volume"
+							type="number"
+							value={formData.minVolume ?? universe.minVolume ?? 0}
+							onChange={(e) =>
+								onFormChange({
+									minVolume: parseInt(e.target.value, 10) || null,
+								})
+							}
+							className="mt-1 w-full px-3 py-2 border border-cream-200 dark:border-night-600 rounded-md bg-white dark:bg-night-700 text-stone-900 dark:text-night-50"
+						/>
+					) : (
+						<div className="text-stone-900 dark:text-night-50">
+							{universe.minVolume?.toLocaleString() ?? "Not set"}
+						</div>
+					)}
 				</div>
 				<div>
-					{/* biome-ignore lint/a11y/noLabelWithoutControl: input is inside label when editing */}
-					<label className="block text-sm text-stone-600 dark:text-night-200 dark:text-night-400 mb-1">
+					<label
+						htmlFor="min-market-cap"
+						className="block text-sm text-stone-600 dark:text-night-200 dark:text-night-400 mb-1"
+					>
 						Min Market Cap
-						{editing ? (
-							<input
-								type="number"
-								value={formData.minMarketCap ?? universe.minMarketCap ?? 0}
-								onChange={(e) =>
-									onFormChange({
-										minMarketCap: parseInt(e.target.value, 10) || null,
-									})
-								}
-								className="mt-1 w-full px-3 py-2 border border-cream-200 dark:border-night-600 rounded-md bg-white dark:bg-night-700 text-stone-900 dark:text-night-50"
-							/>
-						) : (
-							<div className="text-stone-900 dark:text-night-50">
-								{universe.minMarketCap
-									? `$${(universe.minMarketCap / 1e9).toFixed(1)}B`
-									: "Not set"}
-							</div>
-						)}
 					</label>
+					{editing ? (
+						<input
+							id="min-market-cap"
+							type="number"
+							value={formData.minMarketCap ?? universe.minMarketCap ?? 0}
+							onChange={(e) =>
+								onFormChange({
+									minMarketCap: parseInt(e.target.value, 10) || null,
+								})
+							}
+							className="mt-1 w-full px-3 py-2 border border-cream-200 dark:border-night-600 rounded-md bg-white dark:bg-night-700 text-stone-900 dark:text-night-50"
+						/>
+					) : (
+						<div className="text-stone-900 dark:text-night-50">
+							{universe.minMarketCap ? `$${(universe.minMarketCap / 1e9).toFixed(1)}B` : "Not set"}
+						</div>
+					)}
 				</div>
 			</div>
 		</div>

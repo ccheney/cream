@@ -27,46 +27,36 @@ import {
 	getRecentDecisions,
 	optionChain,
 } from "../../../tools/index.js";
+import {
+	buildBatchPrompt,
+	createBatchState,
+	isDecisionPlan,
+	logOffBatchDecisions,
+	type NormalizedTraderInput,
+	type TraderBatchOutcome,
+	type TraderBatchState,
+} from "./trader-batch-utils.js";
 
 const log = createNodeLogger({ service: "trading-cycle:trader" });
 
 import { getModelId } from "@cream/domain";
 import {
-	xmlCandleSummary,
-	xmlCurrentPositions,
-	xmlMemoryCases,
-	xmlPredictionMarketSignals,
-	xmlQuotes,
-	xmlRecentCloses,
-} from "../prompt-helpers.js";
-import {
 	CandleSummarySchema,
-	type Constraints,
 	ConstraintsSchema,
 	DecisionPlanSchema,
 	type DecisionSchema,
-	type EnrichedPosition,
 	EnrichedPositionSchema,
 	FundamentalsAnalysisSchema,
 	MemoryCaseSchema,
 	PredictionMarketSignalsSchema,
 	QuoteDataSchema,
-	type RecentClose,
 	RecentCloseSchema,
 	RegimeDataSchema,
 	ResearchSchema,
 	SentimentAnalysisSchema,
 } from "../schemas.js";
 
-// ============================================
-// Constants
-// ============================================
-
 const BATCH_SIZE = 5;
-
-// ============================================
-// Schemas
-// ============================================
 
 const TraderInputSchema = z.object({
 	cycleId: z.string().describe("Unique identifier for this trading cycle"),
@@ -122,10 +112,6 @@ const TraderOutputSchema = z.object({
 	}),
 });
 
-// ============================================
-// Step Definition
-// ============================================
-
 export const traderStep = createStep({
 	id: "trader-synthesize",
 	description: "Synthesize research into decision plan with batched processing",
@@ -133,56 +119,18 @@ export const traderStep = createStep({
 	outputSchema: TraderOutputSchema,
 	execute: async ({ inputData }) => {
 		const startTime = performance.now();
-		const {
-			cycleId,
-			instruments,
-			regimeLabels,
-			constraints,
-			newsAnalysis,
-			fundamentalsAnalysis,
-			bullishResearch,
-			bearishResearch,
-			recentCloses,
-			quotes,
-			memoryCases,
-			candleSummaries,
-			predictionMarketSignals,
-			positions,
-		} = inputData;
+		const { cycleId, instruments } = inputData;
 		const errors: string[] = [];
 		const warnings: string[] = [];
 
 		const batches = chunk(instruments, BATCH_SIZE);
-		log.info(
-			{
-				cycleId,
-				symbolCount: instruments.length,
-				batchCount: batches.length,
-				batchSize: BATCH_SIZE,
-				bullishResearchCount: bullishResearch.length,
-				bearishResearchCount: bearishResearch.length,
-				hasConstraints: !!constraints,
-				recentClosesCount: recentCloses?.length ?? 0,
-				positionsCount: positions?.length ?? 0,
-			},
-			"Starting trader step with batching",
-		);
+		const normalizedInput = normalizeTraderInput(inputData);
+		logTraderStart(inputData, cycleId, batches.length);
 
 		const decisionPlan = await runTraderBatched(
 			cycleId,
 			batches,
-			regimeLabels ?? {},
-			constraints,
-			newsAnalysis ?? [],
-			fundamentalsAnalysis ?? [],
-			bullishResearch,
-			bearishResearch,
-			recentCloses ?? [],
-			quotes ?? {},
-			memoryCases ?? [],
-			candleSummaries ?? [],
-			predictionMarketSignals,
-			positions ?? [],
+			normalizedInput,
 			errors,
 			warnings,
 		);
@@ -217,10 +165,6 @@ export const traderStep = createStep({
 	},
 });
 
-// ============================================
-// Helper Functions
-// ============================================
-
 function chunk<T>(array: T[], size: number): T[][] {
 	const result: T[][] = [];
 	for (let i = 0; i < array.length; i += size) {
@@ -229,203 +173,112 @@ function chunk<T>(array: T[], size: number): T[][] {
 	return result;
 }
 
+function normalizeTraderInput(inputData: z.infer<typeof TraderInputSchema>): NormalizedTraderInput {
+	return {
+		regimeLabels: inputData.regimeLabels ?? {},
+		constraints: inputData.constraints,
+		newsAnalysis: inputData.newsAnalysis ?? [],
+		fundamentalsAnalysis: inputData.fundamentalsAnalysis ?? [],
+		bullishResearch: inputData.bullishResearch,
+		bearishResearch: inputData.bearishResearch,
+		recentCloses: inputData.recentCloses ?? [],
+		quotes: inputData.quotes ?? {},
+		memoryCases: inputData.memoryCases ?? [],
+		candleSummaries: inputData.candleSummaries ?? [],
+		predictionMarketSignals: inputData.predictionMarketSignals,
+		positions: inputData.positions ?? [],
+	};
+}
+
+function logTraderStart(
+	inputData: z.infer<typeof TraderInputSchema>,
+	cycleId: string,
+	batchCount: number,
+): void {
+	log.info(
+		{
+			cycleId,
+			symbolCount: inputData.instruments.length,
+			batchCount,
+			batchSize: BATCH_SIZE,
+			bullishResearchCount: inputData.bullishResearch.length,
+			bearishResearchCount: inputData.bearishResearch.length,
+			hasConstraints: !!inputData.constraints,
+			recentClosesCount: inputData.recentCloses?.length ?? 0,
+			positionsCount: inputData.positions?.length ?? 0,
+		},
+		"Starting trader step with batching",
+	);
+}
+
+function logBatchStart(cycleId: string, batchState: TraderBatchState): void {
+	log.debug(
+		{
+			cycleId,
+			batchIndex: batchState.batchIndex + 1,
+			batchCount: batchState.batchCount,
+			symbols: batchState.batch,
+			batchPositionCount: batchState.batchPositions.length,
+			batchQuoteCount: Object.keys(batchState.batchQuotes).length,
+		},
+		"Processing trader batch",
+	);
+}
+
+async function consumeTraderToolCalls(
+	cycleId: string,
+	batchIndex: number,
+	stream: Awaited<ReturnType<typeof trader.stream>>,
+): Promise<void> {
+	let toolCallCount = 0;
+	const toolsUsed: string[] = [];
+	for await (const chunk of stream.fullStream) {
+		if (chunk.type !== "tool-call") continue;
+		toolCallCount++;
+		const toolName = chunk.payload.toolName;
+		if (!toolsUsed.includes(toolName)) {
+			toolsUsed.push(toolName);
+		}
+		log.debug(
+			{ cycleId, batchIndex: batchIndex + 1, toolName, toolCallId: chunk.payload.toolCallId },
+			"Trader tool call",
+		);
+	}
+	if (toolCallCount > 0) {
+		log.info(
+			{ cycleId, batchIndex: batchIndex + 1, toolCallCount, toolsUsed },
+			"Trader completed tool calls",
+		);
+	}
+}
+
 async function runTraderBatched(
 	cycleId: string,
 	batches: string[][],
-	regimeLabels: Record<string, z.infer<typeof RegimeDataSchema>>,
-	constraints: Constraints | undefined,
-	newsAnalysis: z.infer<typeof SentimentAnalysisSchema>[],
-	fundamentalsAnalysis: z.infer<typeof FundamentalsAnalysisSchema>[],
-	bullishResearch: z.infer<typeof ResearchSchema>[],
-	bearishResearch: z.infer<typeof ResearchSchema>[],
-	recentCloses: RecentClose[],
-	quotes: Record<string, z.infer<typeof QuoteDataSchema>>,
-	memoryCases: z.infer<typeof MemoryCaseSchema>[],
-	candleSummaries: z.infer<typeof CandleSummarySchema>[],
-	predictionMarketSignals: z.infer<typeof PredictionMarketSignalsSchema> | undefined,
-	positions: EnrichedPosition[],
+	input: NormalizedTraderInput,
 	errors: string[],
 	warnings: string[],
 ): Promise<z.infer<typeof DecisionPlanSchema>> {
 	const allDecisions: z.infer<typeof DecisionSchema>[] = [];
 	const portfolioNotes: string[] = [];
-
-	for (let i = 0; i < batches.length; i++) {
-		const batch = batches[i];
+	for (const [batchIndex, batch] of batches.entries()) {
 		if (!batch) continue;
-
-		const batchSet = new Set(batch);
-
-		// Filter data to only batch-relevant symbols
-		const batchPositions = positions.filter((p) => batchSet.has(p.symbol));
-		const batchQuotes = Object.fromEntries(
-			Object.entries(quotes).filter(([symbol]) => batchSet.has(symbol)),
+		const outcome = await processTraderBatch(
+			cycleId,
+			batchIndex,
+			batches.length,
+			batch,
+			input,
+			allDecisions,
+			warnings,
 		);
-		const batchRecentCloses = recentCloses.filter((c) => batchSet.has(c.symbol));
-
-		log.debug(
-			{
-				cycleId,
-				batchIndex: i + 1,
-				batchCount: batches.length,
-				symbols: batch,
-				batchPositionCount: batchPositions.length,
-				batchQuoteCount: Object.keys(batchQuotes).length,
-			},
-			"Processing trader batch",
-		);
-
-		try {
-			const prompt = buildTraderPrompt(
-				cycleId,
-				batch,
-				regimeLabels,
-				constraints,
-				newsAnalysis,
-				fundamentalsAnalysis,
-				bullishResearch,
-				bearishResearch,
-				batchRecentCloses,
-				batchQuotes,
-				memoryCases,
-				candleSummaries,
-				predictionMarketSignals,
-				batchPositions,
-				allDecisions, // Pass prior batch decisions for context
-			);
-
-			log.info(
-				{
-					cycleId,
-					batchIndex: i + 1,
-					promptLength: prompt.length,
-					promptPreview: prompt.slice(0, 500),
-				},
-				"Trader batch prompt built",
-			);
-			log.debug({ cycleId, batchIndex: i + 1, fullPrompt: prompt }, "Full trader prompt");
-
-			// Use multi-step execution: step 0 enables tools for data gathering,
-			// subsequent steps use structured output for the decision plan.
-			// This is required because Gemini doesn't support tools + structured output simultaneously.
-			const stream = await trader.stream(prompt, {
-				memory: {
-					thread: {
-						id: `${cycleId}-trader-batch-${i + 1}`,
-						metadata: { cycleId, symbols: batch, batchIndex: i + 1 },
-					},
-					resource: "trader",
-				},
-				prepareStep: async ({ stepNumber }) => {
-					if (stepNumber === 0) {
-						// Step 0: Enable tools for data gathering
-						log.debug({ cycleId, batchIndex: i + 1, stepNumber }, "Trader step 0: enabling tools");
-						return {
-							model: getModelId(),
-							tools: {
-								optionChain,
-								getGreeks,
-								getQuotes,
-								getRecentDecisions,
-								getEnrichedPortfolioState,
-								getPredictionSignals,
-							},
-							toolChoice: "auto",
-						};
-					}
-					// Step 1+: Disable tools, enable structured output
-					log.debug(
-						{ cycleId, batchIndex: i + 1, stepNumber },
-						"Trader step 1+: structured output mode",
-					);
-					return {
-						model: getModelId(),
-						tools: undefined,
-						structuredOutput: {
-							schema: DecisionPlanSchema,
-						},
-					};
-				},
-				abortSignal: AbortSignal.timeout(900_000), // 15 min per batch
-			});
-
-			// Consume the stream and get the final structured result
-			let toolCallCount = 0;
-			const toolsUsed: string[] = [];
-			for await (const chunk of stream.fullStream) {
-				if (chunk.type === "tool-call") {
-					toolCallCount++;
-					const toolName = chunk.payload.toolName;
-					if (!toolsUsed.includes(toolName)) {
-						toolsUsed.push(toolName);
-					}
-					log.debug(
-						{
-							cycleId,
-							batchIndex: i + 1,
-							toolName,
-							toolCallId: chunk.payload.toolCallId,
-						},
-						"Trader tool call",
-					);
-				}
-			}
-
-			if (toolCallCount > 0) {
-				log.info(
-					{ cycleId, batchIndex: i + 1, toolCallCount, toolsUsed },
-					"Trader completed tool calls for options data",
-				);
-			}
-
-			const plan = await stream.object;
-			if (
-				plan &&
-				typeof plan === "object" &&
-				"decisions" in plan &&
-				Array.isArray((plan as Record<string, unknown>).decisions)
-			) {
-				const validatedPlan = validateDecisionPlan(
-					cycleId,
-					plan as z.infer<typeof DecisionPlanSchema>,
-					warnings,
-				);
-
-				// Filter decisions to only include symbols in this batch (safety net)
-				const batchDecisions = validatedPlan.decisions.filter((d) => batchSet.has(d.instrumentId));
-
-				// Log if model generated off-batch decisions
-				const offBatchCount = validatedPlan.decisions.length - batchDecisions.length;
-				if (offBatchCount > 0) {
-					const offBatchSymbols = validatedPlan.decisions
-						.filter((d) => !batchSet.has(d.instrumentId))
-						.map((d) => d.instrumentId);
-					log.warn(
-						{
-							cycleId,
-							batchIndex: i + 1,
-							offBatchCount,
-							offBatchSymbols,
-						},
-						"Filtered out decisions for symbols not in batch",
-					);
-				}
-
-				allDecisions.push(...batchDecisions);
-				if (validatedPlan.portfolioNotes) {
-					portfolioNotes.push(validatedPlan.portfolioNotes);
-				}
-				log.debug(
-					{ cycleId, batchIndex: i + 1, decisionCount: batchDecisions.length },
-					"Trader batch complete",
-				);
-			} else {
-				log.warn({ cycleId, batchIndex: i + 1 }, "Trader batch returned no structured output");
-			}
-		} catch (err) {
-			const errorMsg = `Trader batch ${i + 1}/${batches.length} failed: ${formatError(err)}`;
-			errors.push(errorMsg);
-			log.error({ cycleId, batchIndex: i + 1, error: formatError(err) }, "Trader batch failed");
+		if (outcome.error) {
+			errors.push(`Trader batch ${batchIndex + 1}/${batches.length} failed: ${outcome.error}`);
+			continue;
+		}
+		allDecisions.push(...outcome.decisions);
+		if (outcome.portfolioNotes) {
+			portfolioNotes.push(outcome.portfolioNotes);
 		}
 	}
 
@@ -438,132 +291,167 @@ async function runTraderBatched(
 	};
 }
 
-function buildTraderPrompt(
+async function processTraderBatch(
 	cycleId: string,
-	instruments: string[],
-	regimeLabels: Record<string, z.infer<typeof RegimeDataSchema>>,
-	constraints: Constraints | undefined,
-	newsAnalysis: z.infer<typeof SentimentAnalysisSchema>[],
-	fundamentalsAnalysis: z.infer<typeof FundamentalsAnalysisSchema>[],
-	bullishResearch: z.infer<typeof ResearchSchema>[],
-	bearishResearch: z.infer<typeof ResearchSchema>[],
-	recentCloses: RecentClose[],
-	quotes: Record<string, z.infer<typeof QuoteDataSchema>>,
-	memoryCases: z.infer<typeof MemoryCaseSchema>[],
-	candleSummaries: z.infer<typeof CandleSummarySchema>[],
-	predictionMarketSignals: z.infer<typeof PredictionMarketSignalsSchema> | undefined,
-	positions: EnrichedPosition[],
-	priorBatchDecisions: z.infer<typeof DecisionSchema>[],
-): string {
-	const globalSections: string[] = [];
-
-	// Only include positions for batch symbols
-	globalSections.push(xmlCurrentPositions(positions));
-	// Only include quotes for batch symbols
-	globalSections.push(xmlQuotes(quotes));
-	globalSections.push(xmlRecentCloses(recentCloses));
-	globalSections.push(xmlPredictionMarketSignals(predictionMarketSignals));
-
-	if (constraints) {
-		globalSections.push(`<risk_constraints>
-  <per_instrument max_pct_equity="${(constraints.perInstrument.maxPctEquity * 100).toFixed(1)}%" max_notional="${constraints.perInstrument.maxNotional}" max_shares="${constraints.perInstrument.maxShares}" max_contracts="${constraints.perInstrument.maxContracts}" />
-  <portfolio max_positions="${constraints.portfolio.maxPositions}" max_concentration="${(constraints.portfolio.maxConcentration * 100).toFixed(1)}%" max_gross_exposure="${(constraints.portfolio.maxGrossExposure * 100).toFixed(0)}%" max_net_exposure="${(constraints.portfolio.maxNetExposure * 100).toFixed(0)}%" max_risk_per_trade="${(constraints.portfolio.maxRiskPerTrade * 100).toFixed(1)}%" max_drawdown="${(constraints.portfolio.maxDrawdown * 100).toFixed(0)}%" max_sector_exposure="${(constraints.portfolio.maxSectorExposure * 100).toFixed(0)}%" />
-  <options max_delta="${constraints.options.maxDelta}" max_gamma="${constraints.options.maxGamma}" max_vega="${constraints.options.maxVega}" max_theta="${constraints.options.maxTheta}" />
-</risk_constraints>`);
+	batchIndex: number,
+	batchCount: number,
+	batch: string[],
+	input: NormalizedTraderInput,
+	priorDecisions: z.infer<typeof DecisionSchema>[],
+	warnings: string[],
+): Promise<TraderBatchOutcome> {
+	const batchState = createBatchState(batch, batchIndex, batchCount, input);
+	logBatchStart(cycleId, batchState);
+	try {
+		const prompt = buildBatchPrompt(cycleId, batchState, input, priorDecisions);
+		logBatchPrompt(cycleId, batchState, prompt);
+		const stream = await createTraderStream(cycleId, batchState, prompt);
+		await consumeTraderToolCalls(cycleId, batchState.batchIndex, stream);
+		const plan = await stream.object;
+		return buildBatchOutcome(cycleId, batchState, plan, warnings);
+	} catch (error) {
+		log.error(
+			{ cycleId, batchIndex: batchIndex + 1, error: formatError(error) },
+			"Trader batch failed",
+		);
+		return { decisions: [], error: formatError(error) };
 	}
+}
 
-	// Include prior batch decisions so trader can avoid concentration
-	if (priorBatchDecisions.length > 0) {
-		const priorDecisionsSummary = priorBatchDecisions
-			.map(
-				(d) =>
-					`  <decision symbol="${d.instrumentId}" action="${d.action}" direction="${d.direction}" size="${d.size.value} ${d.size.unit}" confidence="${d.confidence.toFixed(2)}" />`,
-			)
-			.join("\n");
-		globalSections.push(`<prior_batch_decisions note="Already decided this cycle - consider for concentration/correlation">
-${priorDecisionsSummary}
-</prior_batch_decisions>`);
-	}
+function logBatchPrompt(cycleId: string, batchState: TraderBatchState, prompt: string): void {
+	log.info(
+		{
+			cycleId,
+			batchIndex: batchState.batchIndex + 1,
+			promptLength: prompt.length,
+			promptPreview: prompt.slice(0, 500),
+		},
+		"Trader batch prompt built",
+	);
+	log.debug(
+		{ cycleId, batchIndex: batchState.batchIndex + 1, fullPrompt: prompt },
+		"Full trader prompt",
+	);
+}
 
-	const symbolSections = instruments.map((symbol) => {
-		const bullish = bullishResearch.find((r) => r.instrument_id === symbol);
-		const bearish = bearishResearch.find((r) => r.instrument_id === symbol);
-		const regime = regimeLabels[symbol];
-		const news = newsAnalysis.find((n) => n.instrument_id === symbol);
-		const fundamentals = fundamentalsAnalysis.find((f) => f.instrument_id === symbol);
-		const symbolMemory = memoryCases.filter((c) => c.symbol === symbol);
-		const candle = candleSummaries.find((c) => c.symbol === symbol);
-
-		const parts: string[] = [];
-		if (regime)
-			parts.push(
-				`  <regime classification="${regime.regime}" confidence="${regime.confidence.toFixed(2)}" />`,
-			);
-		if (candle) parts.push(`  ${xmlCandleSummary(candle)}`);
-		if (symbolMemory.length > 0) parts.push(`  ${xmlMemoryCases(symbolMemory, symbol)}`);
-		if (news)
-			parts.push(
-				`  <sentiment overall="${news.overall_sentiment}" strength="${news.sentiment_strength}" />`,
-			);
-		if (fundamentals) {
-			const fParts: string[] = [];
-			if (fundamentals.fundamental_drivers.length > 0)
-				fParts.push(`    <drivers>${fundamentals.fundamental_drivers.join(", ")}</drivers>`);
-			if (fundamentals.fundamental_headwinds.length > 0)
-				fParts.push(`    <headwinds>${fundamentals.fundamental_headwinds.join(", ")}</headwinds>`);
-			fParts.push(`    <valuation>${fundamentals.valuation_context}</valuation>`);
-			if (fundamentals.event_risk.length > 0)
-				fParts.push(
-					`    <event_risks>${fundamentals.event_risk.map((e) => `${e.event} (${e.date})`).join(", ")}</event_risks>`,
-				);
-			parts.push(`  <fundamentals>\n${fParts.join("\n")}\n  </fundamentals>`);
-		}
-		if (bullish) {
-			const factors =
-				bullish.supporting_factors.length > 0
-					? `\n    <supporting_factors>${bullish.supporting_factors.map((f) => `${f.factor} (${f.source}: ${f.strength})`).join(", ")}</supporting_factors>`
-					: "";
-			parts.push(`  <bullish_thesis conviction="${bullish.conviction_level}">
-    <thesis>${bullish.thesis}</thesis>${factors}
-    <counterargument>${bullish.strongest_counterargument}</counterargument>
-  </bullish_thesis>`);
-		}
-		if (bearish) {
-			const factors =
-				bearish.supporting_factors.length > 0
-					? `\n    <supporting_factors>${bearish.supporting_factors.map((f) => `${f.factor} (${f.source}: ${f.strength})`).join(", ")}</supporting_factors>`
-					: "";
-			parts.push(`  <bearish_thesis conviction="${bearish.conviction_level}">
-    <thesis>${bearish.thesis}</thesis>${factors}
-    <counterargument>${bearish.strongest_counterargument}</counterargument>
-  </bearish_thesis>`);
-		}
-		return `<instrument symbol="${symbol}">\n${parts.join("\n")}\n</instrument>`;
+async function createTraderStream(
+	cycleId: string,
+	batchState: TraderBatchState,
+	prompt: string,
+): Promise<Awaited<ReturnType<typeof trader.stream>>> {
+	return trader.stream(prompt, {
+		memory: {
+			thread: {
+				id: `${cycleId}-trader-batch-${batchState.batchIndex + 1}`,
+				metadata: { cycleId, symbols: batchState.batch, batchIndex: batchState.batchIndex + 1 },
+			},
+			resource: "trader",
+		},
+		prepareStep: async ({ stepNumber }) =>
+			prepareTraderStep(cycleId, batchState.batchIndex, stepNumber),
+		abortSignal: AbortSignal.timeout(900_000),
 	});
+}
 
-	const allSections = [
-		...globalSections.filter(Boolean),
-		`<instruments>\n${symbolSections.join("\n")}\n</instruments>`,
-	];
+function prepareTraderStep(
+	cycleId: string,
+	batchIndex: number,
+	stepNumber: number,
+): {
+	model: string;
+	tools:
+		| {
+				optionChain: typeof optionChain;
+				getGreeks: typeof getGreeks;
+				getQuotes: typeof getQuotes;
+				getRecentDecisions: typeof getRecentDecisions;
+				getEnrichedPortfolioState: typeof getEnrichedPortfolioState;
+				getPredictionSignals: typeof getPredictionSignals;
+		  }
+		| undefined;
+	toolChoice?: "auto";
+	structuredOutput?: { schema: typeof DecisionPlanSchema };
+} {
+	if (stepNumber === 0) {
+		log.debug({ cycleId, batchIndex: batchIndex + 1, stepNumber }, "Trader step 0: enabling tools");
+		return {
+			model: getModelId(),
+			tools: {
+				optionChain,
+				getGreeks,
+				getQuotes,
+				getRecentDecisions,
+				getEnrichedPortfolioState,
+				getPredictionSignals,
+			},
+			toolChoice: "auto",
+		};
+	}
+	log.debug(
+		{ cycleId, batchIndex: batchIndex + 1, stepNumber },
+		"Trader step 1+: structured output mode",
+	);
+	return {
+		model: getModelId(),
+		tools: undefined,
+		structuredOutput: { schema: DecisionPlanSchema },
+	};
+}
 
-	return `Create a decision plan for cycle ${cycleId}.
+function buildBatchOutcome(
+	cycleId: string,
+	batchState: TraderBatchState,
+	plan: unknown,
+	warnings: string[],
+): TraderBatchOutcome {
+	if (!isDecisionPlan(plan)) {
+		log.warn(
+			{ cycleId, batchIndex: batchState.batchIndex + 1 },
+			"Trader batch returned no structured output",
+		);
+		return { decisions: [] };
+	}
+	const validatedPlan = validateDecisionPlan(cycleId, plan, warnings);
+	const batchDecisions = validatedPlan.decisions.filter((decision) =>
+		batchState.batchSet.has(decision.instrumentId),
+	);
+	logOffBatchDecisions(cycleId, batchState, validatedPlan.decisions, batchDecisions);
+	log.debug(
+		{ cycleId, batchIndex: batchState.batchIndex + 1, decisionCount: batchDecisions.length },
+		"Trader batch complete",
+	);
+	return { decisions: batchDecisions, portfolioNotes: validatedPlan.portfolioNotes };
+}
 
-IMPORTANT: Only generate decisions for these symbols: ${instruments.join(", ")}. Do NOT generate decisions for any other symbols.
+function _isDecisionPlan(value: unknown): value is z.infer<typeof DecisionPlanSchema> {
+	return (
+		!!value &&
+		typeof value === "object" &&
+		"decisions" in value &&
+		Array.isArray((value as Record<string, unknown>).decisions)
+	);
+}
 
-${allSections.join("\n\n")}
-
-<options_workflow>
-IMPORTANT: For symbols with upcoming catalysts, high conviction, or elevated IV conditions, you MUST:
-1. Call optionChain(underlying) to get available strikes and expirations
-2. Call getGreeks(contractSymbol) to validate position Greeks before sizing
-3. Set instrumentType to "OPTION" and use the OCC symbol as instrumentId (e.g., "AAPL250321C00250000")
-4. Include the legs array for multi-leg strategies (spreads, iron condors)
-5. Set netLimitPrice for the spread credit/debit
-
-Options decisions do NOT require stopLoss - risk is managed via defined-risk structures and Greeks.
-</options_workflow>
-
-IMPORTANT: Every EQUITY decision MUST include a stopLoss — including HOLD and CLOSE actions (to maintain/update protective stop levels on existing positions). Use current_market_prices to set realistic stop-loss and take-profit levels. Equity decisions without stop-losses will be REJECTED.`;
+function _logOffBatchDecisions(
+	cycleId: string,
+	batchState: TraderBatchState,
+	allDecisions: z.infer<typeof DecisionSchema>[],
+	batchDecisions: z.infer<typeof DecisionSchema>[],
+): void {
+	const offBatchCount = allDecisions.length - batchDecisions.length;
+	if (offBatchCount <= 0) return;
+	const offBatchSymbols = allDecisions
+		.filter((decision) => !batchState.batchSet.has(decision.instrumentId))
+		.map((decision) => decision.instrumentId);
+	log.warn(
+		{
+			cycleId,
+			batchIndex: batchState.batchIndex + 1,
+			offBatchCount,
+			offBatchSymbols,
+		},
+		"Filtered out decisions for symbols not in batch",
+	);
 }
 
 function validateDecisionPlan(

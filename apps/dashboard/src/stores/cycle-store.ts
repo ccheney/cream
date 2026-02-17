@@ -5,7 +5,7 @@
  * @see docs/plans/ui/07-state-management.md lines 106-120
  */
 
-import { create } from "zustand";
+import { create, type StateCreator } from "zustand";
 import { useShallow } from "zustand/react/shallow";
 
 export type CyclePhase = "observe" | "orient" | "decide" | "act" | "complete";
@@ -72,6 +72,79 @@ const initialState: CycleState = {
 	streamingOutput: null,
 };
 
+type CycleStoreCreator = StateCreator<CycleStore>;
+type CycleSet = Parameters<CycleStoreCreator>[0];
+type CycleGet = Parameters<CycleStoreCreator>[1];
+
+function createCycleActions(set: CycleSet, get: CycleGet): CycleActions {
+	return {
+		setCycle: (cycle) => {
+			set({ activeCycle: cycle });
+			if (cycle) {
+				get().clearOutputs();
+			}
+		},
+		updatePhase: (phase) => {
+			const cycle = get().activeCycle;
+			if (!cycle) {
+				return;
+			}
+			set({ activeCycle: { ...cycle, phase } });
+		},
+		updateProgress: (progress) => {
+			const cycle = get().activeCycle;
+			if (!cycle) {
+				return;
+			}
+			set({ activeCycle: { ...cycle, progress: Math.min(100, Math.max(0, progress)) } });
+		},
+		updateAgentOutput: (output) => {
+			set((state) => {
+				const newOutputs = new Map(state.agentOutputs);
+				newOutputs.set(output.agentType, output);
+				return { agentOutputs: newOutputs };
+			});
+		},
+		updateSymbolAnalysis: (analysis) => {
+			set((state) => {
+				const newAnalysis = new Map(state.symbolAnalysis);
+				newAnalysis.set(analysis.symbol, analysis);
+				return { symbolAnalysis: newAnalysis };
+			});
+		},
+		setStreamingOutput: (output) => {
+			set({ streamingOutput: output });
+		},
+		appendStreamingOutput: (text) => {
+			const current = get().streamingOutput;
+			if (!current) {
+				return;
+			}
+			set({ streamingOutput: { ...current, text: current.text + text } });
+		},
+		clearOutputs: () => {
+			set({
+				agentOutputs: new Map(),
+				symbolAnalysis: new Map(),
+				streamingOutput: null,
+			});
+		},
+		completeCycle: () => {
+			const cycle = get().activeCycle;
+			if (!cycle) {
+				return;
+			}
+			set({
+				activeCycle: { ...cycle, phase: "complete", progress: 100 },
+				streamingOutput: null,
+			});
+		},
+		reset: () => {
+			set(initialState);
+		},
+	};
+}
+
 /**
  * Not persisted - cycle state is ephemeral and reconstructed from server on reconnection.
  *
@@ -92,98 +165,12 @@ const initialState: CycleState = {
  * );
  * ```
  */
-export const useCycleStore = create<CycleStore>((set, get) => ({
+const createCycleStore: CycleStoreCreator = (set, get) => ({
 	...initialState,
+	...createCycleActions(set, get),
+});
 
-	setCycle: (cycle) => {
-		set({ activeCycle: cycle });
-		if (cycle) {
-			get().clearOutputs();
-		}
-	},
-
-	updatePhase: (phase) => {
-		const cycle = get().activeCycle;
-		if (cycle) {
-			set({
-				activeCycle: {
-					...cycle,
-					phase,
-				},
-			});
-		}
-	},
-
-	updateProgress: (progress) => {
-		const cycle = get().activeCycle;
-		if (cycle) {
-			set({
-				activeCycle: {
-					...cycle,
-					progress: Math.min(100, Math.max(0, progress)),
-				},
-			});
-		}
-	},
-
-	updateAgentOutput: (output) => {
-		set((state) => {
-			const newOutputs = new Map(state.agentOutputs);
-			newOutputs.set(output.agentType, output);
-			return { agentOutputs: newOutputs };
-		});
-	},
-
-	updateSymbolAnalysis: (analysis) => {
-		set((state) => {
-			const newAnalysis = new Map(state.symbolAnalysis);
-			newAnalysis.set(analysis.symbol, analysis);
-			return { symbolAnalysis: newAnalysis };
-		});
-	},
-
-	setStreamingOutput: (output) => {
-		set({ streamingOutput: output });
-	},
-
-	appendStreamingOutput: (text) => {
-		const current = get().streamingOutput;
-		if (current) {
-			set({
-				streamingOutput: {
-					...current,
-					text: current.text + text,
-				},
-			});
-		}
-	},
-
-	clearOutputs: () => {
-		set({
-			agentOutputs: new Map(),
-			symbolAnalysis: new Map(),
-			streamingOutput: null,
-		});
-	},
-
-	completeCycle: () => {
-		const cycle = get().activeCycle;
-		if (cycle) {
-			set({
-				activeCycle: {
-					...cycle,
-					phase: "complete",
-					progress: 100,
-				},
-				streamingOutput: null,
-			});
-		}
-	},
-
-	reset: () => {
-		set(initialState);
-	},
-}));
+export const useCycleStore = create<CycleStore>(createCycleStore);
 
 export const selectActiveCycle = (state: CycleStore) => state.activeCycle;
 export const selectCyclePhase = (state: CycleStore) => state.activeCycle?.phase;

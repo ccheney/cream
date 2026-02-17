@@ -32,6 +32,13 @@ interface StatusDotProps {
 	pulse?: boolean;
 }
 
+type StatusInfo = {
+	text: string;
+	color: "green" | "yellow" | "red" | "gray";
+	pulse: boolean;
+	ariaLabel: string;
+};
+
 function StatusDot({ color, pulse }: StatusDotProps) {
 	const colorClasses = {
 		green: "bg-profit",
@@ -60,6 +67,125 @@ function StatusDot({ color, pulse }: StatusDotProps) {
 	);
 }
 
+function resolveConnectionStatus(state: ConnectionState, retryAttempt: number): StatusInfo {
+	switch (state) {
+		case "connected":
+			return {
+				text: "Live",
+				color: "green",
+				pulse: false,
+				ariaLabel: "Live connection",
+			};
+		case "connecting":
+			return {
+				text: "Connecting...",
+				color: "yellow",
+				pulse: true,
+				ariaLabel: "Connecting to server",
+			};
+		case "reconnecting":
+			return {
+				text: `Reconnecting${retryAttempt > 0 ? ` (${retryAttempt})` : ""}...`,
+				color: "yellow",
+				pulse: true,
+				ariaLabel: `Reconnecting, attempt ${retryAttempt}`,
+			};
+		case "disconnected":
+			return {
+				text: "Disconnected",
+				color: "gray",
+				pulse: false,
+				ariaLabel: "Disconnected from server",
+			};
+		case "error":
+			return {
+				text: "Connection Error",
+				color: "red",
+				pulse: false,
+				ariaLabel: "Connection error",
+			};
+		case "offline":
+			return {
+				text: "Offline",
+				color: "red",
+				pulse: false,
+				ariaLabel: "Network offline",
+			};
+		default:
+			return {
+				text: "Unknown",
+				color: "gray",
+				pulse: false,
+				ariaLabel: "Unknown connection state",
+			};
+	}
+}
+
+function computeRetrySeconds(retryCountdown: number | null | undefined): number | null {
+	return retryCountdown != null ? Math.ceil(retryCountdown / 1000) : null;
+}
+
+function CompactConnectionStatus({ status }: { status: StatusInfo }) {
+	return (
+		<output className="inline-flex items-center" title={status.text} aria-label={status.ariaLabel}>
+			<StatusDot color={status.color} pulse={status.pulse} />
+		</output>
+	);
+}
+
+function DetailedConnectionStatus({
+	status,
+	countdownSeconds,
+	onRetry,
+	detailed,
+	lastError,
+}: {
+	status: StatusInfo;
+	countdownSeconds: number | null;
+	onRetry?: () => void;
+	detailed: boolean;
+	lastError?: Error | null;
+}) {
+	const showRetryButton = status.text === "Connection Error" || status.text === "Disconnected";
+
+	return (
+		<output
+			className="inline-flex items-center gap-2"
+			aria-live="polite"
+			aria-label={status.ariaLabel}
+		>
+			<StatusDot color={status.color} pulse={status.pulse} />
+			<span className="text-xs text-text-secondary">{status.text}</span>
+
+			{countdownSeconds !== null && countdownSeconds > 0 && (
+				<span className="text-xs text-text-muted">(retrying in {countdownSeconds}s)</span>
+			)}
+
+			{showRetryButton && onRetry && (
+				<button
+					type="button"
+					onClick={onRetry}
+					className="
+            text-xs text-primary
+            hover:text-primary-hover
+            underline underline-offset-2
+            hover:no-underline
+            transition-colors duration-150
+          "
+				>
+					Retry now
+				</button>
+			)}
+
+			{detailed && lastError && (
+				<span className="text-xs text-text-muted" title={lastError.message}>
+					({lastError.name})
+				</span>
+			)}
+		</output>
+	);
+}
+
 export function ConnectionStatus({
 	state: stateProp,
 	retryCountdown,
@@ -76,111 +202,21 @@ export function ConnectionStatus({
 
 	const state: ConnectionState = stateProp || (wsStatus as ConnectionState);
 	const attempt = retryAttempt || wsState.reconnectAttempts;
-
-	function getStatusInfo() {
-		switch (state) {
-			case "connected":
-				return {
-					text: "Live",
-					color: "green" as const,
-					pulse: false,
-					ariaLabel: "Live connection",
-				};
-			case "connecting":
-				return {
-					text: "Connecting...",
-					color: "yellow" as const,
-					pulse: true,
-					ariaLabel: "Connecting to server",
-				};
-			case "reconnecting":
-				return {
-					text: `Reconnecting${attempt > 0 ? ` (${attempt})` : ""}...`,
-					color: "yellow" as const,
-					pulse: true,
-					ariaLabel: `Reconnecting, attempt ${attempt}`,
-				};
-			case "disconnected":
-				return {
-					text: "Disconnected",
-					color: "gray" as const,
-					pulse: false,
-					ariaLabel: "Disconnected from server",
-				};
-			case "error":
-				return {
-					text: "Connection Error",
-					color: "red" as const,
-					pulse: false,
-					ariaLabel: "Connection error",
-				};
-			case "offline":
-				return {
-					text: "Offline",
-					color: "red" as const,
-					pulse: false,
-					ariaLabel: "Network offline",
-				};
-			default:
-				return {
-					text: "Unknown",
-					color: "gray" as const,
-					pulse: false,
-					ariaLabel: "Unknown connection state",
-				};
-		}
-	}
-
-	const status = getStatusInfo();
-	const countdownSeconds = retryCountdown != null ? Math.ceil(retryCountdown / 1000) : null;
+	const status = resolveConnectionStatus(state, attempt);
+	const countdownSeconds = computeRetrySeconds(retryCountdown);
 
 	if (compact) {
-		return (
-			<output
-				className="inline-flex items-center"
-				title={status.text}
-				aria-label={status.ariaLabel}
-			>
-				<StatusDot color={status.color} pulse={status.pulse} />
-			</output>
-		);
+		return <CompactConnectionStatus status={status} />;
 	}
 
 	return (
-		<output
-			className="inline-flex items-center gap-2"
-			aria-live="polite"
-			aria-label={status.ariaLabel}
-		>
-			<StatusDot color={status.color} pulse={status.pulse} />
-			<span className="text-xs text-text-secondary">{status.text}</span>
-
-			{countdownSeconds !== null && countdownSeconds > 0 && (
-				<span className="text-xs text-text-muted">(retrying in {countdownSeconds}s)</span>
-			)}
-
-			{(state === "error" || state === "disconnected") && onRetry && (
-				<button
-					type="button"
-					onClick={onRetry}
-					className="
-            text-xs text-primary
-            hover:text-primary-hover
-            underline underline-offset-2
-            hover:no-underline
-            transition-colors duration-150
-          "
-				>
-					Retry now
-				</button>
-			)}
-
-			{detailed && wsState.lastError && (
-				<span className="text-xs text-text-muted" title={wsState.lastError.message}>
-					({wsState.lastError.name})
-				</span>
-			)}
-		</output>
+		<DetailedConnectionStatus
+			status={status}
+			countdownSeconds={countdownSeconds}
+			onRetry={onRetry}
+			detailed={detailed}
+			lastError={wsState.lastError}
+		/>
 	);
 }
 

@@ -305,7 +305,7 @@ export interface TemporalEdgeStats {
  * @returns Statistics about temporal coverage
  */
 export function calculateTemporalStats(
-	edges: Array<Partial<TemporalEdgeProperties>>,
+	edges: Partial<TemporalEdgeProperties>[],
 ): TemporalEdgeStats {
 	const stats: TemporalEdgeStats = {
 		totalEdges: edges.length,
@@ -316,26 +316,47 @@ export function calculateTemporalStats(
 	};
 
 	for (const edge of edges) {
-		if (edge.valid_from !== undefined) {
-			stats.temporalEdges++;
-
-			if (edge.valid_to === undefined || edge.valid_to === null) {
-				stats.activeEdges++;
-			} else {
-				stats.expiredEdges++;
-				if (stats.latestValidTo === undefined || edge.valid_to > stats.latestValidTo) {
-					stats.latestValidTo = edge.valid_to;
-				}
-			}
-
-			if (stats.earliestValidFrom === undefined || edge.valid_from < stats.earliestValidFrom) {
-				stats.earliestValidFrom = edge.valid_from;
-			}
-		} else {
+		if (edge.valid_from === undefined) {
 			stats.legacyEdges++;
 			stats.activeEdges++; // Legacy edges treated as active
+			continue;
 		}
+
+		stats.temporalEdges++;
+		updateTemporalRange(stats, edge);
+		updateTemporalStatus(stats, edge);
 	}
 
 	return stats;
+}
+
+function updateTemporalRange(
+	stats: TemporalEdgeStats,
+	edge: Partial<TemporalEdgeProperties>,
+): void {
+	if (
+		edge.valid_from !== undefined &&
+		(stats.earliestValidFrom === undefined || edge.valid_from < stats.earliestValidFrom)
+	) {
+		stats.earliestValidFrom = edge.valid_from;
+	}
+
+	if (
+		edge.valid_to !== undefined &&
+		edge.valid_to !== null &&
+		(stats.latestValidTo === undefined || edge.valid_to > stats.latestValidTo)
+	) {
+		stats.latestValidTo = edge.valid_to;
+	}
+}
+
+function updateTemporalStatus(
+	stats: TemporalEdgeStats,
+	edge: Partial<TemporalEdgeProperties>,
+): void {
+	if (edge.valid_to === undefined || edge.valid_to === null) {
+		stats.activeEdges++;
+		return;
+	}
+	stats.expiredEdges++;
 }

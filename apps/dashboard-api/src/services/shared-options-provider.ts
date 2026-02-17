@@ -55,6 +55,12 @@ interface UnderlyingState {
 	lastUpdate: number;
 }
 
+interface IVBuckets {
+	atmIvs: number[];
+	otmPutIvs: number[];
+	otmCallIvs: number[];
+}
+
 // ============================================
 // Configuration
 // ============================================
@@ -279,6 +285,67 @@ export class SharedOptionsDataProvider implements OptionsDataProvider {
 		return atmQuotes.reduce((sum, iv) => sum + iv, 0) / atmQuotes.length;
 	}
 
+	private waitForQuoteData(state: UnderlyingState): Promise<void> | undefined {
+		if (state.quotes.size === 0) {
+			return new Promise((resolve) => setTimeout(resolve, CONFIG.subscribeWaitMs));
+		}
+		return undefined;
+	}
+
+	private collectIVBuckets(state: UnderlyingState): IVBuckets {
+		const buckets: IVBuckets = {
+			atmIvs: [],
+			otmPutIvs: [],
+			otmCallIvs: [],
+		};
+		const atmThreshold = 0.02;
+		const otmThreshold = 0.1;
+
+		for (const quote of state.quotes.values()) {
+			this.addQuoteToIVBuckets(state, quote, buckets, atmThreshold, otmThreshold);
+		}
+		return buckets;
+	}
+
+	private addQuoteToIVBuckets(
+		state: UnderlyingState,
+		quote: OptionQuoteData,
+		buckets: IVBuckets,
+		atmThreshold: number,
+		otmThreshold: number,
+	): void {
+		if (quote.iv === null) {
+			return;
+		}
+
+		const optionInfo = parseOptionSymbol(quote.symbol);
+		if (!optionInfo) {
+			return;
+		}
+
+		const moneyness = (optionInfo.strike - state.underlyingPrice) / state.underlyingPrice;
+		const absMoneyness = Math.abs(moneyness);
+		if (absMoneyness <= atmThreshold) {
+			buckets.atmIvs.push(quote.iv);
+			return;
+		}
+		if (absMoneyness < 0.05 || absMoneyness > otmThreshold) {
+			return;
+		}
+		if (optionInfo.type === "PUT" && moneyness < 0) {
+			buckets.otmPutIvs.push(quote.iv);
+		} else if (optionInfo.type === "CALL" && moneyness > 0) {
+			buckets.otmCallIvs.push(quote.iv);
+		}
+	}
+
+	private averageOrNull(values: number[]): number | null {
+		if (values.length === 0) {
+			return null;
+		}
+		return values.reduce((sum, value) => sum + value, 0) / values.length;
+	}
+
 	/**
 	 * Get IV skew for an underlying.
 	 */
@@ -293,50 +360,18 @@ export class SharedOptionsDataProvider implements OptionsDataProvider {
 			return null;
 		}
 
-		// Wait for quotes
-		if (state.quotes.size === 0) {
-			await new Promise((resolve) => setTimeout(resolve, CONFIG.subscribeWaitMs));
+		const waitForQuotes = this.waitForQuoteData(state);
+		if (waitForQuotes) {
+			await waitForQuotes;
 		}
 
-		// Collect IV by category
-		const atmIvs: number[] = [];
-		const otmPutIvs: number[] = [];
-		const otmCallIvs: number[] = [];
-
-		const atmThreshold = 0.02;
-		const otmThreshold = 0.1;
-
-		for (const quote of state.quotes.values()) {
-			if (quote.iv === null) {
-				continue;
-			}
-
-			const optionInfo = parseOptionSymbol(quote.symbol);
-			if (!optionInfo) {
-				continue;
-			}
-
-			const moneyness = (optionInfo.strike - state.underlyingPrice) / state.underlyingPrice;
-			const absMoneyness = Math.abs(moneyness);
-
-			if (absMoneyness <= atmThreshold) {
-				atmIvs.push(quote.iv);
-			} else if (absMoneyness >= 0.05 && absMoneyness <= otmThreshold) {
-				if (optionInfo.type === "PUT" && moneyness < 0) {
-					otmPutIvs.push(quote.iv);
-				} else if (optionInfo.type === "CALL" && moneyness > 0) {
-					otmCallIvs.push(quote.iv);
-				}
-			}
-		}
-
-		if (atmIvs.length === 0 || otmPutIvs.length === 0 || otmCallIvs.length === 0) {
+		const buckets = this.collectIVBuckets(state);
+		const avgAtmIv = this.averageOrNull(buckets.atmIvs);
+		const avgOtmPutIv = this.averageOrNull(buckets.otmPutIvs);
+		const avgOtmCallIv = this.averageOrNull(buckets.otmCallIvs);
+		if (avgAtmIv === null || avgOtmPutIv === null || avgOtmCallIv === null) {
 			return null;
 		}
-
-		const avgAtmIv = atmIvs.reduce((sum, iv) => sum + iv, 0) / atmIvs.length;
-		const avgOtmPutIv = otmPutIvs.reduce((sum, iv) => sum + iv, 0) / otmPutIvs.length;
-		const avgOtmCallIv = otmCallIvs.reduce((sum, iv) => sum + iv, 0) / otmCallIvs.length;
 
 		if (avgAtmIv <= 0) {
 			return null;

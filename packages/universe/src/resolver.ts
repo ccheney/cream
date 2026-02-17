@@ -1,14 +1,3 @@
-/**
- * Universe Resolver
- *
- * Main entry point for resolving a complete universe configuration.
- * Handles source composition, filtering, diversification, and limits.
- *
- * Filtering works with metadata already present on instruments.
- *
- * @see docs/plans/11-configuration.md lines 355-700
- */
-
 import type { UniverseConfig, UniverseFilters, UniverseSource } from "@cream/config";
 
 import {
@@ -18,365 +7,336 @@ import {
 	type SourceResolverOptions,
 } from "./sources.js";
 
-// ============================================
-// Types
-// ============================================
-
-/**
- * Universe resolution result
- */
 export interface UniverseResolutionResult {
-	/** Final resolved instruments */
 	instruments: ResolvedInstrument[];
-	/** Individual source results */
 	sourceResults: SourceResolutionResult[];
-	/** Composition mode used */
 	composeMode: "union" | "intersection";
-	/** Resolution timestamp */
 	resolvedAt: string;
-	/** Warnings from resolution */
 	warnings: string[];
-	/** Statistics */
 	stats: {
-		/** Total from sources before filtering */
 		totalFromSources: number;
-		/** After composition */
 		afterComposition: number;
-		/** After filters */
 		afterFilters: number;
-		/** After diversification */
 		afterDiversification: number;
-		/** Final count */
 		final: number;
-		/** Sectors represented */
 		sectors: string[];
 	};
 }
 
-/**
- * Universe resolver options
- */
 export interface UniverseResolverOptions extends SourceResolverOptions {
-	/** Skip API calls for disabled sources */
 	skipDisabled?: boolean;
 }
 
-// ============================================
-// Composition Functions
-// ============================================
+export interface DiversificationConfig {
+	maxPerSector?: number;
+	maxPerIndustry?: number;
+	minSectorsRepresented?: number;
+}
 
-/**
- * Compose instruments from multiple sources using union (combine all, dedupe)
- */
-function composeUnion(sourceResults: SourceResolutionResult[]): ResolvedInstrument[] {
+interface FilterResult {
+	instruments: ResolvedInstrument[];
+	warnings: string[];
+}
+
+interface ResolutionOutput {
+	sourceResults: SourceResolutionResult[];
+	warnings: string[];
+}
+
+interface UniverseStats {
+	totalFromSources: number;
+	afterComposition: number;
+	afterFilters: number;
+	afterDiversification: number;
+	final: number;
+	sectors: string[];
+}
+
+function mergeInstrumentMetadata(
+	existing: ResolvedInstrument,
+	incoming: ResolvedInstrument,
+): ResolvedInstrument {
+	const merged: ResolvedInstrument = {
+		symbol: incoming.symbol,
+		source: `${existing.source},${incoming.source}`,
+	};
+	const name = existing.name ?? incoming.name;
+	const sector = existing.sector ?? incoming.sector;
+	const industry = existing.industry ?? incoming.industry;
+	const marketCap = existing.marketCap ?? incoming.marketCap;
+	const avgVolume = existing.avgVolume ?? incoming.avgVolume;
+	const price = existing.price ?? incoming.price;
+	if (name !== undefined) merged.name = name;
+	if (sector !== undefined) merged.sector = sector;
+	if (industry !== undefined) merged.industry = industry;
+	if (marketCap !== undefined) merged.marketCap = marketCap;
+	if (avgVolume !== undefined) merged.avgVolume = avgVolume;
+	if (price !== undefined) merged.price = price;
+	return merged;
+}
+
+function composeFromSources(
+	sourceResults: SourceResolutionResult[],
+	allowedSymbols?: Set<string>,
+): ResolvedInstrument[] {
 	const symbolMap = new Map<string, ResolvedInstrument>();
-
 	for (const result of sourceResults) {
 		for (const instrument of result.instruments) {
-			const existing = symbolMap.get(instrument.symbol);
-			if (existing) {
-				const merged: ResolvedInstrument = {
-					symbol: instrument.symbol,
-					source: `${existing.source},${instrument.source}`,
-				};
-				const name = existing.name ?? instrument.name;
-				const sector = existing.sector ?? instrument.sector;
-				const industry = existing.industry ?? instrument.industry;
-				const marketCap = existing.marketCap ?? instrument.marketCap;
-				const avgVolume = existing.avgVolume ?? instrument.avgVolume;
-				const price = existing.price ?? instrument.price;
-				if (name !== undefined) {
-					merged.name = name;
-				}
-				if (sector !== undefined) {
-					merged.sector = sector;
-				}
-				if (industry !== undefined) {
-					merged.industry = industry;
-				}
-				if (marketCap !== undefined) {
-					merged.marketCap = marketCap;
-				}
-				if (avgVolume !== undefined) {
-					merged.avgVolume = avgVolume;
-				}
-				if (price !== undefined) {
-					merged.price = price;
-				}
-				symbolMap.set(instrument.symbol, merged);
-			} else {
-				symbolMap.set(instrument.symbol, instrument);
+			if (allowedSymbols && !allowedSymbols.has(instrument.symbol)) {
+				continue;
 			}
+			const existing = symbolMap.get(instrument.symbol);
+			symbolMap.set(
+				instrument.symbol,
+				existing ? mergeInstrumentMetadata(existing, instrument) : instrument,
+			);
 		}
 	}
-
 	return Array.from(symbolMap.values());
 }
 
-/**
- * Compose instruments using intersection (only those in ALL sources)
- */
+function composeUnion(sourceResults: SourceResolutionResult[]): ResolvedInstrument[] {
+	return composeFromSources(sourceResults);
+}
+
+function buildIntersectionSymbolSet(sourceResults: SourceResolutionResult[]): Set<string> {
+	const symbolSets = sourceResults.map(
+		(result) => new Set(result.instruments.map((i) => i.symbol)),
+	);
+	const firstSet = symbolSets[0];
+	if (!firstSet) {
+		return new Set();
+	}
+	return symbolSets.slice(1).reduce<Set<string>>((acc, set) => acc.intersection(set), firstSet);
+}
+
 function composeIntersection(sourceResults: SourceResolutionResult[]): ResolvedInstrument[] {
 	if (sourceResults.length === 0) {
 		return [];
 	}
 	if (sourceResults.length === 1) {
-		const firstResult = sourceResults[0];
-		if (!firstResult) {
-			return [];
-		}
-		return firstResult.instruments;
+		return sourceResults[0]?.instruments ?? [];
 	}
-
-	const symbolSets = sourceResults.map(
-		(result) => new Set(result.instruments.map((i) => i.symbol)),
-	);
-
-	const firstSet = symbolSets[0];
-	if (!firstSet) {
-		return [];
-	}
-	// Multi-set intersection using ES2024 Set.prototype.intersection()
-	const intersection = symbolSets
-		.slice(1)
-		.reduce<Set<string>>((acc, set) => acc.intersection(set), firstSet);
-
-	const symbolMap = new Map<string, ResolvedInstrument>();
-
-	for (const result of sourceResults) {
-		for (const instrument of result.instruments) {
-			if (!intersection.has(instrument.symbol)) {
-				continue;
-			}
-
-			const existing = symbolMap.get(instrument.symbol);
-			if (existing) {
-				const merged: ResolvedInstrument = {
-					symbol: instrument.symbol,
-					source: `${existing.source},${instrument.source}`,
-				};
-				const name = existing.name ?? instrument.name;
-				const sector = existing.sector ?? instrument.sector;
-				const industry = existing.industry ?? instrument.industry;
-				const marketCap = existing.marketCap ?? instrument.marketCap;
-				const avgVolume = existing.avgVolume ?? instrument.avgVolume;
-				const price = existing.price ?? instrument.price;
-				if (name !== undefined) {
-					merged.name = name;
-				}
-				if (sector !== undefined) {
-					merged.sector = sector;
-				}
-				if (industry !== undefined) {
-					merged.industry = industry;
-				}
-				if (marketCap !== undefined) {
-					merged.marketCap = marketCap;
-				}
-				if (avgVolume !== undefined) {
-					merged.avgVolume = avgVolume;
-				}
-				if (price !== undefined) {
-					merged.price = price;
-				}
-				symbolMap.set(instrument.symbol, merged);
-			} else {
-				symbolMap.set(instrument.symbol, instrument);
-			}
-		}
-	}
-
-	return Array.from(symbolMap.values());
+	const intersection = buildIntersectionSymbolSet(sourceResults);
+	return composeFromSources(sourceResults, intersection);
 }
 
-// ============================================
-// Filter Functions
-// ============================================
+function applyMinFilter(
+	instruments: ResolvedInstrument[],
+	threshold: number,
+	getValue: (instrument: ResolvedInstrument) => number,
+	warningLabel: string,
+	warnings: string[],
+): ResolvedInstrument[] {
+	if (threshold <= 0) {
+		return instruments;
+	}
+	const before = instruments.length;
+	const filtered = instruments.filter((instrument) => getValue(instrument) >= threshold);
+	if (filtered.length < before) {
+		warnings.push(`Filtered ${before - filtered.length} instruments below min ${warningLabel}`);
+	}
+	return filtered;
+}
 
-/**
- * Apply post-resolution filters
- *
- * Filtering works with metadata already present on instruments.
- */
+function applyMaxPriceFilter(
+	instruments: ResolvedInstrument[],
+	maxPrice: number | undefined,
+	warnings: string[],
+): ResolvedInstrument[] {
+	if (maxPrice === undefined) {
+		return instruments;
+	}
+	const before = instruments.length;
+	const filtered = instruments.filter(
+		(instrument) => (instrument.price ?? Number.POSITIVE_INFINITY) <= maxPrice,
+	);
+	if (filtered.length < before) {
+		warnings.push(`Filtered ${before - filtered.length} instruments above max price`);
+	}
+	return filtered;
+}
+
+function applyTickerExclusions(
+	instruments: ResolvedInstrument[],
+	excludeTickers: string[],
+	warnings: string[],
+): ResolvedInstrument[] {
+	if (excludeTickers.length === 0) {
+		return instruments;
+	}
+	const excludeSet = new Set(excludeTickers.map((ticker) => ticker.toUpperCase()));
+	const before = instruments.length;
+	const filtered = instruments.filter(
+		(instrument) => !excludeSet.has(instrument.symbol.toUpperCase()),
+	);
+	if (filtered.length < before) {
+		warnings.push(`Excluded ${before - filtered.length} instruments by ticker blocklist`);
+	}
+	return filtered;
+}
+
+function applyIncludedSectors(
+	instruments: ResolvedInstrument[],
+	includeSectors: string[] | undefined,
+	warnings: string[],
+): ResolvedInstrument[] {
+	if (!includeSectors || includeSectors.length === 0) {
+		return instruments;
+	}
+	const includeSet = new Set(includeSectors.map((sector) => sector.toLowerCase()));
+	const before = instruments.length;
+	const filtered = instruments.filter(
+		(instrument) => !!instrument.sector && includeSet.has(instrument.sector.toLowerCase()),
+	);
+	if (filtered.length < before) {
+		warnings.push(`Filtered ${before - filtered.length} instruments not in included sectors`);
+	}
+	return filtered;
+}
+
+function applyExcludedSectors(
+	instruments: ResolvedInstrument[],
+	excludeSectors: string[] | undefined,
+	warnings: string[],
+): ResolvedInstrument[] {
+	if (!excludeSectors || excludeSectors.length === 0) {
+		return instruments;
+	}
+	const excludeSet = new Set(excludeSectors.map((sector) => sector.toLowerCase()));
+	const before = instruments.length;
+	const filtered = instruments.filter(
+		(instrument) => !instrument.sector || !excludeSet.has(instrument.sector.toLowerCase()),
+	);
+	if (filtered.length < before) {
+		warnings.push(`Excluded ${before - filtered.length} instruments by sector blocklist`);
+	}
+	return filtered;
+}
+
 function applyFilters(
 	instruments: ResolvedInstrument[],
 	filters: UniverseFilters | undefined,
-): { instruments: ResolvedInstrument[]; warnings: string[] } {
+): FilterResult {
 	if (!filters) {
 		return { instruments, warnings: [] };
 	}
-
 	const warnings: string[] = [];
 	let filtered = [...instruments];
-
-	if (filters.min_avg_volume > 0) {
-		const before = filtered.length;
-		filtered = filtered.filter((i) => (i.avgVolume ?? 0) >= filters.min_avg_volume);
-		if (filtered.length < before) {
-			warnings.push(`Filtered ${before - filtered.length} instruments below min volume`);
-		}
-	}
-
-	if (filters.min_market_cap > 0) {
-		const before = filtered.length;
-		filtered = filtered.filter((i) => (i.marketCap ?? 0) >= filters.min_market_cap);
-		if (filtered.length < before) {
-			warnings.push(`Filtered ${before - filtered.length} instruments below min market cap`);
-		}
-	}
-
-	if (filters.min_price > 0) {
-		const before = filtered.length;
-		filtered = filtered.filter((i) => (i.price ?? 0) >= filters.min_price);
-		if (filtered.length < before) {
-			warnings.push(`Filtered ${before - filtered.length} instruments below min price`);
-		}
-	}
-
-	if (filters.max_price !== undefined) {
-		const maxPrice = filters.max_price;
-		const before = filtered.length;
-		filtered = filtered.filter((i) => (i.price ?? Number.POSITIVE_INFINITY) <= maxPrice);
-		if (filtered.length < before) {
-			warnings.push(`Filtered ${before - filtered.length} instruments above max price`);
-		}
-	}
-
-	if (filters.exclude_tickers.length > 0) {
-		const excludeSet = new Set(filters.exclude_tickers.map((t: string) => t.toUpperCase()));
-		const before = filtered.length;
-		filtered = filtered.filter((i) => !excludeSet.has(i.symbol.toUpperCase()));
-		if (filtered.length < before) {
-			warnings.push(`Excluded ${before - filtered.length} instruments by ticker blocklist`);
-		}
-	}
-
-	if (filters.include_sectors && filters.include_sectors.length > 0) {
-		const includeSet = new Set(filters.include_sectors.map((s: string) => s.toLowerCase()));
-		const before = filtered.length;
-		filtered = filtered.filter((i) => {
-			if (!i.sector) {
-				return false;
-			}
-			return includeSet.has(i.sector.toLowerCase());
-		});
-		if (filtered.length < before) {
-			warnings.push(`Filtered ${before - filtered.length} instruments not in included sectors`);
-		}
-	}
-
-	if (filters.exclude_sectors && filters.exclude_sectors.length > 0) {
-		const excludeSet = new Set(filters.exclude_sectors.map((s: string) => s.toLowerCase()));
-		const before = filtered.length;
-		filtered = filtered.filter((i) => {
-			if (!i.sector) {
-				return true;
-			}
-			return !excludeSet.has(i.sector.toLowerCase());
-		});
-		if (filtered.length < before) {
-			warnings.push(`Excluded ${before - filtered.length} instruments by sector blocklist`);
-		}
-	}
-
+	filtered = applyMinFilter(
+		filtered,
+		filters.min_avg_volume,
+		(item) => item.avgVolume ?? 0,
+		"volume",
+		warnings,
+	);
+	filtered = applyMinFilter(
+		filtered,
+		filters.min_market_cap,
+		(item) => item.marketCap ?? 0,
+		"market cap",
+		warnings,
+	);
+	filtered = applyMinFilter(
+		filtered,
+		filters.min_price,
+		(item) => item.price ?? 0,
+		"price",
+		warnings,
+	);
+	filtered = applyMaxPriceFilter(filtered, filters.max_price, warnings);
+	filtered = applyTickerExclusions(filtered, filters.exclude_tickers, warnings);
+	filtered = applyIncludedSectors(filtered, filters.include_sectors, warnings);
+	filtered = applyExcludedSectors(filtered, filters.exclude_sectors, warnings);
 	return { instruments: filtered, warnings };
 }
 
-// ============================================
-// Diversification Functions
-// ============================================
-
-/**
- * Diversification configuration (optional extension to UniverseConfig)
- */
-export interface DiversificationConfig {
-	/** Maximum instruments per sector */
-	maxPerSector?: number;
-	/** Maximum instruments per industry */
-	maxPerIndustry?: number;
-	/** Minimum sectors that must be represented */
-	minSectorsRepresented?: number;
+function getDiversificationConfig(config: UniverseConfig): DiversificationConfig | undefined {
+	return (config as UniverseConfig & { diversification?: DiversificationConfig }).diversification;
 }
 
-/**
- * Apply diversification rules
- */
+function limitByGrouping(
+	instruments: ResolvedInstrument[],
+	limit: number,
+	getGroupKey: (instrument: ResolvedInstrument) => string,
+): { instruments: ResolvedInstrument[]; removed: number } {
+	const counts = new Map<string, number>();
+	const limited: ResolvedInstrument[] = [];
+	for (const instrument of instruments) {
+		const key = getGroupKey(instrument);
+		const count = counts.get(key) ?? 0;
+		if (count >= limit) {
+			continue;
+		}
+		limited.push(instrument);
+		counts.set(key, count + 1);
+	}
+	return { instruments: limited, removed: instruments.length - limited.length };
+}
+
+function warnIfSectorCoverageTooLow(
+	instruments: ResolvedInstrument[],
+	minimumSectors: number,
+	warnings: string[],
+): void {
+	const sectorsPresent = new Set(
+		instruments
+			.filter((instrument) => instrument.sector)
+			.map((instrument) => instrument.sector as string),
+	);
+	if (sectorsPresent.size < minimumSectors) {
+		warnings.push(
+			`Warning: only ${sectorsPresent.size} sectors represented, below minimum of ${minimumSectors}`,
+		);
+	}
+}
+
 function applyDiversification(
 	instruments: ResolvedInstrument[],
 	config: UniverseConfig,
-): { instruments: ResolvedInstrument[]; warnings: string[] } {
+): FilterResult {
 	const warnings: string[] = [];
+	const diversification = getDiversificationConfig(config);
+	if (!diversification) {
+		return { instruments: [...instruments], warnings };
+	}
+
 	let filtered = [...instruments];
-
-	const diversify = (config as UniverseConfig & { diversification?: DiversificationConfig })
-		.diversification;
-
-	if (!diversify) {
-		return { instruments: filtered, warnings };
-	}
-
-	if (diversify.maxPerSector && diversify.maxPerSector > 0) {
-		const sectorCounts = new Map<string, number>();
-		const diversified: ResolvedInstrument[] = [];
-
-		for (const instrument of filtered) {
-			const sector = instrument.sector ?? "Unknown";
-			const count = sectorCounts.get(sector) ?? 0;
-
-			if (count < diversify.maxPerSector) {
-				diversified.push(instrument);
-				sectorCounts.set(sector, count + 1);
-			}
-		}
-
-		const removed = filtered.length - diversified.length;
-		if (removed > 0) {
-			warnings.push(`Diversification: removed ${removed} instruments exceeding sector limits`);
-		}
-		filtered = diversified;
-	}
-
-	if (diversify.maxPerIndustry && diversify.maxPerIndustry > 0) {
-		const industryCounts = new Map<string, number>();
-		const diversified: ResolvedInstrument[] = [];
-
-		for (const instrument of filtered) {
-			const industry = instrument.industry ?? "Unknown";
-			const count = industryCounts.get(industry) ?? 0;
-
-			if (count < diversify.maxPerIndustry) {
-				diversified.push(instrument);
-				industryCounts.set(industry, count + 1);
-			}
-		}
-
-		const removed = filtered.length - diversified.length;
-		if (removed > 0) {
-			warnings.push(`Diversification: removed ${removed} instruments exceeding industry limits`);
-		}
-		filtered = diversified;
-	}
-
-	if (diversify.minSectorsRepresented && diversify.minSectorsRepresented > 0) {
-		const sectorsPresent = new Set(filtered.filter((i) => i.sector).map((i) => i.sector as string));
-		if (sectorsPresent.size < diversify.minSectorsRepresented) {
+	if (diversification.maxPerSector && diversification.maxPerSector > 0) {
+		const limited = limitByGrouping(
+			filtered,
+			diversification.maxPerSector,
+			(instrument) => instrument.sector ?? "Unknown",
+		);
+		filtered = limited.instruments;
+		if (limited.removed > 0) {
 			warnings.push(
-				`Warning: only ${sectorsPresent.size} sectors represented, ` +
-					`below minimum of ${diversify.minSectorsRepresented}`,
+				`Diversification: removed ${limited.removed} instruments exceeding sector limits`,
 			);
 		}
 	}
 
+	if (diversification.maxPerIndustry && diversification.maxPerIndustry > 0) {
+		const limited = limitByGrouping(
+			filtered,
+			diversification.maxPerIndustry,
+			(instrument) => instrument.industry ?? "Unknown",
+		);
+		filtered = limited.instruments;
+		if (limited.removed > 0) {
+			warnings.push(
+				`Diversification: removed ${limited.removed} instruments exceeding industry limits`,
+			);
+		}
+	}
+
+	if (diversification.minSectorsRepresented && diversification.minSectorsRepresented > 0) {
+		warnIfSectorCoverageTooLow(filtered, diversification.minSectorsRepresented, warnings);
+	}
+
 	return { instruments: filtered, warnings };
 }
 
-// ============================================
-// Ranking Functions
-// ============================================
-
-/**
- * Rank and limit instruments
- */
 function rankAndLimit(
 	instruments: ResolvedInstrument[],
 	maxInstruments: number,
@@ -384,36 +344,21 @@ function rankAndLimit(
 	if (instruments.length <= maxInstruments) {
 		return instruments;
 	}
-
-	const ranked = instruments.toSorted((a, b) => {
-		const aVol = a.avgVolume ?? 0;
-		const bVol = b.avgVolume ?? 0;
-		return bVol - aVol;
-	});
-
-	return ranked.slice(0, maxInstruments);
+	return instruments
+		.toSorted((a, b) => (b.avgVolume ?? 0) - (a.avgVolume ?? 0))
+		.slice(0, maxInstruments);
 }
 
-// ============================================
-// Main Resolver
-// ============================================
+function getEnabledSources(config: UniverseConfig): UniverseSource[] {
+	return config.sources.filter((source: UniverseSource) => source.enabled);
+}
 
-/**
- * Resolve a complete universe configuration
- */
-export async function resolveUniverse(
-	config: UniverseConfig,
-	options: UniverseResolverOptions = {},
-): Promise<UniverseResolutionResult> {
-	const warnings: string[] = [];
+async function resolveSources(
+	enabledSources: UniverseSource[],
+	options: UniverseResolverOptions,
+): Promise<ResolutionOutput> {
 	const sourceResults: SourceResolutionResult[] = [];
-
-	const enabledSources = config.sources.filter((s: UniverseSource) => s.enabled);
-
-	if (enabledSources.length === 0) {
-		throw new Error("No enabled sources in universe configuration");
-	}
-
+	const warnings: string[] = [];
 	for (const source of enabledSources) {
 		try {
 			const result = await resolveSource(source, options);
@@ -423,61 +368,99 @@ export async function resolveUniverse(
 			warnings.push(`Failed to resolve source ${source.name}: ${error}`);
 		}
 	}
+	return { sourceResults, warnings };
+}
 
-	if (sourceResults.length === 0) {
+function composeInstruments(
+	composeMode: UniverseConfig["compose_mode"],
+	sourceResults: SourceResolutionResult[],
+): ResolvedInstrument[] {
+	return composeMode === "intersection"
+		? composeIntersection(sourceResults)
+		: composeUnion(sourceResults);
+}
+
+function collectSectors(instruments: ResolvedInstrument[]): string[] {
+	return [
+		...new Set(
+			instruments
+				.filter((instrument) => instrument.sector)
+				.map((instrument) => instrument.sector as string),
+		),
+	];
+}
+
+function buildStats(
+	sourceResults: SourceResolutionResult[],
+	afterComposition: number,
+	afterFilters: number,
+	afterDiversification: number,
+	instruments: ResolvedInstrument[],
+): UniverseStats {
+	return {
+		totalFromSources: sourceResults.reduce((sum, result) => sum + result.instruments.length, 0),
+		afterComposition,
+		afterFilters,
+		afterDiversification,
+		final: instruments.length,
+		sectors: collectSectors(instruments),
+	};
+}
+
+export async function resolveUniverse(
+	config: UniverseConfig,
+	options: UniverseResolverOptions = {},
+): Promise<UniverseResolutionResult> {
+	const enabledSources = getEnabledSources(config);
+	if (enabledSources.length === 0) {
+		throw new Error("No enabled sources in universe configuration");
+	}
+
+	const resolution = await resolveSources(enabledSources, options);
+	if (resolution.sourceResults.length === 0) {
 		throw new Error("All sources failed to resolve");
 	}
 
-	const totalFromSources = sourceResults.reduce((sum, r) => sum + r.instruments.length, 0);
-
 	const composeMode = config.compose_mode;
-	let instruments =
-		composeMode === "intersection"
-			? composeIntersection(sourceResults)
-			: composeUnion(sourceResults);
-
+	let instruments = composeInstruments(composeMode, resolution.sourceResults);
 	const afterComposition = instruments.length;
 
 	const filterResult = applyFilters(instruments, config.filters);
 	instruments = filterResult.instruments;
-	warnings.push(...filterResult.warnings);
-
 	const afterFilters = instruments.length;
 
-	const diversifyResult = applyDiversification(instruments, config);
-	instruments = diversifyResult.instruments;
-	warnings.push(...diversifyResult.warnings);
-
+	const diversificationResult = applyDiversification(instruments, config);
+	instruments = diversificationResult.instruments;
 	const afterDiversification = instruments.length;
 
 	instruments = rankAndLimit(instruments, config.max_instruments);
-
-	const sectors = [...new Set(instruments.filter((i) => i.sector).map((i) => i.sector as string))];
+	const warnings = [
+		...resolution.warnings,
+		...filterResult.warnings,
+		...diversificationResult.warnings,
+	];
+	const stats = buildStats(
+		resolution.sourceResults,
+		afterComposition,
+		afterFilters,
+		afterDiversification,
+		instruments,
+	);
 
 	return {
 		instruments,
-		sourceResults,
+		sourceResults: resolution.sourceResults,
 		composeMode,
 		resolvedAt: new Date().toISOString(),
 		warnings,
-		stats: {
-			totalFromSources,
-			afterComposition,
-			afterFilters,
-			afterDiversification,
-			final: instruments.length,
-			sectors,
-		},
+		stats,
 	};
 }
 
-/**
- * Get just the ticker symbols from a universe config
- */
 export async function resolveUniverseSymbols(
 	config: UniverseConfig,
 	options: UniverseResolverOptions = {},
 ): Promise<string[]> {
 	const result = await resolveUniverse(config, options);
-	return result.instruments.map((i) => i.symbol);
+	return result.instruments.map((instrument) => instrument.symbol);
 }

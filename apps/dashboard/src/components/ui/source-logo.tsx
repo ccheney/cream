@@ -9,7 +9,9 @@
 
 "use client";
 
-import { type ImgHTMLAttributes, memo, useState } from "react";
+import type { ImageLoader, ImageProps } from "next/image";
+import Image from "next/image";
+import { memo, useState } from "react";
 
 // Simple className merger utility
 function cn(...classes: (string | boolean | undefined | null)[]): string {
@@ -23,7 +25,7 @@ function cn(...classes: (string | boolean | undefined | null)[]): string {
 export type SourceLogoSize = "sm" | "md" | "lg";
 export type FallbackType = "globe" | "company" | "x" | "none";
 
-export interface SourceLogoProps extends Omit<ImgHTMLAttributes<HTMLImageElement>, "src" | "size"> {
+export interface SourceLogoProps extends Omit<ImageProps, "src" | "alt" | "width" | "height"> {
 	/** LogoKit URL for the logo */
 	logoUrl?: string | null;
 	/** Domain name for alt text */
@@ -45,6 +47,8 @@ const sizeConfig: Record<SourceLogoSize, { px: number; className: string }> = {
 	md: { px: 24, className: "h-6 w-6" },
 	lg: { px: 32, className: "h-8 w-8" },
 };
+
+const passthroughLoader: ImageLoader = ({ src }) => src;
 
 // ============================================
 // Fallback Icons
@@ -147,18 +151,94 @@ const LoadingSkeleton = memo(function LoadingSkeleton({ size, className }: Loadi
 	const sizeStyles = sizeConfig[size];
 
 	return (
-		<span
+		<output
 			className={cn(
 				"inline-block rounded animate-pulse",
 				"bg-stone-200 dark:bg-stone-700",
 				sizeStyles.className,
 				className,
 			)}
-			role="status"
 			aria-label="Loading logo"
+			aria-live="polite"
 		/>
 	);
 });
+
+interface LogoImageBaseProps {
+	logoUrl: string;
+	size: SourceLogoSize;
+}
+
+function LoadingLogoImage({
+	logoUrl,
+	size,
+	onLoaded,
+	onFailed,
+}: LogoImageBaseProps & { onLoaded: () => void; onFailed: () => void }) {
+	const sizeStyles = sizeConfig[size];
+
+	return (
+		<Image
+			loader={passthroughLoader}
+			unoptimized
+			src={logoUrl}
+			alt=""
+			width={sizeStyles.px}
+			height={sizeStyles.px}
+			className="hidden"
+			onLoad={onLoaded}
+			onError={onFailed}
+		/>
+	);
+}
+
+interface LoadedLogoImageProps extends LogoImageBaseProps {
+	domain?: string;
+	className?: string;
+	onError?: SourceLogoProps["onError"];
+	imageProps: Omit<
+		SourceLogoProps,
+		"logoUrl" | "domain" | "size" | "fallback" | "className" | "onError"
+	>;
+	onImageError: () => void;
+}
+
+function LoadedLogoImage({
+	logoUrl,
+	domain,
+	size,
+	className,
+	onError,
+	imageProps,
+	onImageError,
+}: LoadedLogoImageProps) {
+	const sizeStyles = sizeConfig[size];
+
+	return (
+		<Image
+			loader={passthroughLoader}
+			unoptimized
+			src={logoUrl}
+			alt={domain ? `${domain} logo` : "Source logo"}
+			width={sizeStyles.px}
+			height={sizeStyles.px}
+			sizes={`${sizeStyles.px}px`}
+			className={cn(
+				"rounded object-contain",
+				"grayscale-[30%] opacity-90",
+				"hover:grayscale-0 hover:opacity-100",
+				"transition-[filter,opacity] duration-150",
+				sizeStyles.className,
+				className,
+			)}
+			onError={(event) => {
+				onImageError();
+				onError?.(event);
+			}}
+			{...imageProps}
+		/>
+	);
+}
 
 // ============================================
 // Component
@@ -193,56 +273,35 @@ export const SourceLogo = memo(function SourceLogo({
 	const [status, setStatus] = useState<"loading" | "loaded" | "error">(
 		logoUrl ? "loading" : "error",
 	);
+	const { onError, ...imageProps } = props;
 
-	const sizeStyles = sizeConfig[size];
-
-	// No logo URL provided
-	if (!logoUrl) {
+	if (!logoUrl || status === "error") {
 		return <FallbackIcon type={fallback} size={size} className={className} />;
 	}
 
-	// Loading state
 	if (status === "loading") {
 		return (
 			<>
 				<LoadingSkeleton size={size} className={className} />
-				{/* biome-ignore lint/performance/noImgElement: external CDN images require img element */}
-				<img
-					src={logoUrl}
-					alt=""
-					className="hidden"
-					onLoad={() => setStatus("loaded")}
-					onError={() => setStatus("error")}
+				<LoadingLogoImage
+					logoUrl={logoUrl}
+					size={size}
+					onLoaded={() => setStatus("loaded")}
+					onFailed={() => setStatus("error")}
 				/>
 			</>
 		);
 	}
 
-	// Error state - show fallback
-	if (status === "error") {
-		return <FallbackIcon type={fallback} size={size} className={className} />;
-	}
-
-	// Loaded state - show logo
 	return (
-		// biome-ignore lint/performance/noImgElement: external CDN images require img element
-		<img
-			src={logoUrl}
-			alt={domain ? `${domain} logo` : "Source logo"}
-			width={sizeStyles.px}
-			height={sizeStyles.px}
-			className={cn(
-				"rounded object-contain",
-				// Subtle grayscale by default, full color on hover
-				"grayscale-[30%] opacity-90",
-				"hover:grayscale-0 hover:opacity-100",
-				"transition-[filter,opacity] duration-150",
-				sizeStyles.className,
-				className,
-			)}
-			loading="lazy"
-			onError={() => setStatus("error")}
-			{...props}
+		<LoadedLogoImage
+			logoUrl={logoUrl}
+			domain={domain}
+			size={size}
+			className={className}
+			onError={onError}
+			imageProps={imageProps}
+			onImageError={() => setStatus("error")}
 		/>
 	);
 });

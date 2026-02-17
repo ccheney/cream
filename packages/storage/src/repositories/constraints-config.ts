@@ -98,6 +98,87 @@ export interface UpdateConstraintsConfigInput {
 // ============================================
 
 type ConstraintsConfigRow = typeof constraintsConfig.$inferSelect;
+type ConstraintsConfigInsert = typeof constraintsConfig.$inferInsert;
+
+const CONSTRAINTS_DIRECT_FIELDS = ["maxShares", "maxContracts", "maxPositions"] as const;
+const CONSTRAINTS_DECIMAL_FIELDS = [
+	"maxNotional",
+	"maxPctEquity",
+	"maxGrossExposure",
+	"maxNetExposure",
+	"maxConcentration",
+	"maxCorrelation",
+	"maxDrawdown",
+	"maxRiskPerTrade",
+	"maxSectorExposure",
+	"maxDelta",
+	"maxGamma",
+	"maxVega",
+	"maxTheta",
+] as const;
+
+const CONSTRAINTS_DEFAULT_INSERT_VALUES: Pick<
+	ConstraintsConfigInsert,
+	(typeof CONSTRAINTS_DIRECT_FIELDS)[number] | (typeof CONSTRAINTS_DECIMAL_FIELDS)[number]
+> = {
+	maxShares: 1000,
+	maxContracts: 10,
+	maxPositions: 10,
+	maxNotional: "50000",
+	maxPctEquity: "0.1",
+	maxGrossExposure: "2",
+	maxNetExposure: "1",
+	maxConcentration: "0.25",
+	maxCorrelation: "0.7",
+	maxDrawdown: "0.15",
+	maxRiskPerTrade: "0.02",
+	maxSectorExposure: "0.3",
+	maxDelta: "100",
+	maxGamma: "50",
+	maxVega: "1000",
+	maxTheta: "500",
+};
+
+function applyConstraintsNumericFields(
+	target: Partial<ConstraintsConfigInsert>,
+	input: CreateConstraintsConfigInput | UpdateConstraintsConfigInput,
+): void {
+	for (const field of CONSTRAINTS_DIRECT_FIELDS) {
+		const value = input[field];
+		if (value !== undefined) {
+			target[field] = value;
+		}
+	}
+
+	for (const field of CONSTRAINTS_DECIMAL_FIELDS) {
+		const value = input[field];
+		if (value !== undefined) {
+			target[field] = String(value);
+		}
+	}
+}
+
+function buildConstraintsCreateData(input: CreateConstraintsConfigInput): ConstraintsConfigInsert {
+	const data: ConstraintsConfigInsert = {
+		environment: input.environment,
+		status: input.status ?? "draft",
+		...CONSTRAINTS_DEFAULT_INSERT_VALUES,
+	};
+
+	applyConstraintsNumericFields(data, input);
+	return data;
+}
+
+function buildConstraintsDraftUpdateData(
+	input: UpdateConstraintsConfigInput,
+): Partial<ConstraintsConfigInsert> {
+	const data: Partial<ConstraintsConfigInsert> = {
+		updatedAt: new Date(),
+	};
+
+	applyConstraintsNumericFields(data, input);
+	return data;
+}
 
 function mapConstraintsConfigRow(row: ConstraintsConfigRow): ConstraintsConfig {
 	return {
@@ -149,26 +230,7 @@ export class ConstraintsConfigRepository {
 	async create(input: CreateConstraintsConfigInput): Promise<ConstraintsConfig> {
 		const [row] = await this.db
 			.insert(constraintsConfig)
-			.values({
-				environment: input.environment,
-				maxShares: input.maxShares ?? 1000,
-				maxContracts: input.maxContracts ?? 10,
-				maxNotional: String(input.maxNotional ?? 50000),
-				maxPctEquity: String(input.maxPctEquity ?? 0.1),
-				maxGrossExposure: String(input.maxGrossExposure ?? 2.0),
-				maxNetExposure: String(input.maxNetExposure ?? 1.0),
-				maxConcentration: String(input.maxConcentration ?? 0.25),
-				maxCorrelation: String(input.maxCorrelation ?? 0.7),
-				maxDrawdown: String(input.maxDrawdown ?? 0.15),
-				maxRiskPerTrade: String(input.maxRiskPerTrade ?? 0.02),
-				maxSectorExposure: String(input.maxSectorExposure ?? 0.3),
-				maxPositions: input.maxPositions ?? 10,
-				maxDelta: String(input.maxDelta ?? 100),
-				maxGamma: String(input.maxGamma ?? 50),
-				maxVega: String(input.maxVega ?? 1000),
-				maxTheta: String(input.maxTheta ?? 500),
-				status: input.status ?? "draft",
-			})
+			.values(buildConstraintsCreateData(input))
 			.returning();
 
 		if (!row) {
@@ -239,58 +301,7 @@ export class ConstraintsConfigRepository {
 		const existingDraft = await this.getDraft(environment);
 
 		if (existingDraft) {
-			const updateData: Partial<typeof constraintsConfig.$inferInsert> = {
-				updatedAt: new Date(),
-			};
-
-			if (input.maxShares !== undefined) {
-				updateData.maxShares = input.maxShares;
-			}
-			if (input.maxContracts !== undefined) {
-				updateData.maxContracts = input.maxContracts;
-			}
-			if (input.maxNotional !== undefined) {
-				updateData.maxNotional = String(input.maxNotional);
-			}
-			if (input.maxPctEquity !== undefined) {
-				updateData.maxPctEquity = String(input.maxPctEquity);
-			}
-			if (input.maxGrossExposure !== undefined) {
-				updateData.maxGrossExposure = String(input.maxGrossExposure);
-			}
-			if (input.maxNetExposure !== undefined) {
-				updateData.maxNetExposure = String(input.maxNetExposure);
-			}
-			if (input.maxConcentration !== undefined) {
-				updateData.maxConcentration = String(input.maxConcentration);
-			}
-			if (input.maxCorrelation !== undefined) {
-				updateData.maxCorrelation = String(input.maxCorrelation);
-			}
-			if (input.maxDrawdown !== undefined) {
-				updateData.maxDrawdown = String(input.maxDrawdown);
-			}
-			if (input.maxRiskPerTrade !== undefined) {
-				updateData.maxRiskPerTrade = String(input.maxRiskPerTrade);
-			}
-			if (input.maxSectorExposure !== undefined) {
-				updateData.maxSectorExposure = String(input.maxSectorExposure);
-			}
-			if (input.maxPositions !== undefined) {
-				updateData.maxPositions = input.maxPositions;
-			}
-			if (input.maxDelta !== undefined) {
-				updateData.maxDelta = String(input.maxDelta);
-			}
-			if (input.maxGamma !== undefined) {
-				updateData.maxGamma = String(input.maxGamma);
-			}
-			if (input.maxVega !== undefined) {
-				updateData.maxVega = String(input.maxVega);
-			}
-			if (input.maxTheta !== undefined) {
-				updateData.maxTheta = String(input.maxTheta);
-			}
+			const updateData = buildConstraintsDraftUpdateData(input);
 
 			await this.db
 				.update(constraintsConfig)

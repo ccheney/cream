@@ -12,6 +12,84 @@ import { playBellSound } from "@/hooks/useMarketBell";
 import { playAlertSound, playBeep } from "@/stores/alert-store";
 import { type SoundPreferences, usePreferencesStore } from "@/stores/preferences-store";
 
+function playTradeExecutionPreview(volume: number) {
+	playBeep(880, 0.12, volume * 0.4);
+	setTimeout(() => playBeep(1108, 0.15, volume * 0.35), 150);
+}
+
+function playOrderFillPreview(volume: number) {
+	playBeep(660, 0.1, volume * 0.3);
+	setTimeout(() => playBeep(880, 0.1, volume * 0.3), 120);
+	setTimeout(() => playBeep(1100, 0.15, volume * 0.25), 240);
+}
+
+interface AlertRowsProps {
+	sound: SoundPreferences;
+	onToggle: (key: keyof SoundPreferences) => void;
+}
+
+function AlertRows({ sound, onToggle }: AlertRowsProps) {
+	return (
+		<>
+			<ToggleRowWithPreview
+				title="Critical Alerts"
+				description="Play sound for critical-level alerts"
+				enabled={sound.criticalAlerts}
+				disabled={!sound.enabled}
+				onToggle={() => onToggle("criticalAlerts")}
+				onPreview={() => playAlertSound("critical")}
+			/>
+			<ToggleRowWithPreview
+				title="Trade Executions"
+				description="Play sound when trades are executed"
+				enabled={sound.tradeExecutions}
+				disabled={!sound.enabled}
+				onToggle={() => onToggle("tradeExecutions")}
+				onPreview={() => playTradeExecutionPreview(sound.volume)}
+			/>
+			<ToggleRowWithPreview
+				title="Order Fills"
+				description="Play sound when orders are filled"
+				enabled={sound.orderFills}
+				disabled={!sound.enabled}
+				onToggle={() => onToggle("orderFills")}
+				onPreview={() => playOrderFillPreview(sound.volume)}
+			/>
+		</>
+	);
+}
+
+interface MarketBellSectionProps {
+	sound: SoundPreferences;
+	onToggle: (key: keyof SoundPreferences) => void;
+}
+
+function MarketBellSection({ sound, onToggle }: MarketBellSectionProps) {
+	return (
+		<div className="pt-2 border-t border-cream-100 dark:border-night-700">
+			<ToggleRow
+				title="Market Bell"
+				description="Play opening bell at 9:30 AM ET and closing bell at 4:00 PM ET"
+				enabled={sound.marketBell}
+				disabled={!sound.enabled}
+				onToggle={() => onToggle("marketBell")}
+			/>
+			<div className="flex items-center gap-2 mt-3 ml-0.5">
+				<PreviewButton
+					label="Opening Bell"
+					disabled={!sound.enabled}
+					onClick={() => playBellSound("open", sound.volume)}
+				/>
+				<PreviewButton
+					label="Closing Bell"
+					disabled={!sound.enabled}
+					onClick={() => playBellSound("close", sound.volume)}
+				/>
+			</div>
+		</div>
+	);
+}
+
 export function SoundSection() {
 	const sound = usePreferencesStore((s) => s.sound);
 	const updateSound = usePreferencesStore((s) => s.updateSound);
@@ -46,62 +124,8 @@ export function SoundSection() {
 
 				<VolumeRow volume={sound.volume} disabled={!sound.enabled} onChange={setVolume} />
 
-				<ToggleRowWithPreview
-					title="Critical Alerts"
-					description="Play sound for critical-level alerts"
-					enabled={sound.criticalAlerts}
-					disabled={!sound.enabled}
-					onToggle={() => toggle("criticalAlerts")}
-					onPreview={() => playAlertSound("critical")}
-				/>
-
-				<ToggleRowWithPreview
-					title="Trade Executions"
-					description="Play sound when trades are executed"
-					enabled={sound.tradeExecutions}
-					disabled={!sound.enabled}
-					onToggle={() => toggle("tradeExecutions")}
-					onPreview={() => {
-						playBeep(880, 0.12, sound.volume * 0.4);
-						setTimeout(() => playBeep(1108, 0.15, sound.volume * 0.35), 150);
-					}}
-				/>
-
-				<ToggleRowWithPreview
-					title="Order Fills"
-					description="Play sound when orders are filled"
-					enabled={sound.orderFills}
-					disabled={!sound.enabled}
-					onToggle={() => toggle("orderFills")}
-					onPreview={() => {
-						playBeep(660, 0.1, sound.volume * 0.3);
-						setTimeout(() => playBeep(880, 0.1, sound.volume * 0.3), 120);
-						setTimeout(() => playBeep(1100, 0.15, sound.volume * 0.25), 240);
-					}}
-				/>
-
-				<div className="pt-2 border-t border-cream-100 dark:border-night-700">
-					<ToggleRow
-						title="Market Bell"
-						description="Play opening bell at 9:30 AM ET and closing bell at 4:00 PM ET"
-						enabled={sound.marketBell}
-						disabled={!sound.enabled}
-						onToggle={() => toggle("marketBell")}
-					/>
-
-					<div className="flex items-center gap-2 mt-3 ml-0.5">
-						<PreviewButton
-							label="Opening Bell"
-							disabled={!sound.enabled}
-							onClick={() => playBellSound("open", sound.volume)}
-						/>
-						<PreviewButton
-							label="Closing Bell"
-							disabled={!sound.enabled}
-							onClick={() => playBellSound("close", sound.volume)}
-						/>
-					</div>
-				</div>
+				<AlertRows sound={sound} onToggle={toggle} />
+				<MarketBellSection sound={sound} onToggle={toggle} />
 			</div>
 		</div>
 	);

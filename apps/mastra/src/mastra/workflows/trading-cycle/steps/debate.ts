@@ -13,17 +13,11 @@ import { createStep } from "@mastra/core/workflows";
 import { z } from "zod";
 
 import { bearishResearcher, bullishResearcher } from "../../../agents/index.js";
+import { buildBearishPrompt, buildBullishPrompt } from "./debate-prompts.js";
 
 const log = createNodeLogger({ service: "trading-cycle:debate" });
 
 import { getModelId } from "@cream/domain";
-import {
-	xmlCandleSummary,
-	xmlGlobalGrounding,
-	xmlGroundingSources,
-	xmlMemoryCases,
-	xmlPredictionMarketSignals,
-} from "../prompt-helpers.js";
 import {
 	CandleSummarySchema,
 	FundamentalsAnalysisSchema,
@@ -104,124 +98,7 @@ export const debateStep = createStep({
 	description: "Run bullish and bearish researchers in parallel with batched symbols",
 	inputSchema: DebateInputSchema,
 	outputSchema: DebateOutputSchema,
-	execute: async ({ inputData }) => {
-		const startTime = performance.now();
-		const {
-			cycleId,
-			instruments,
-			regimeLabels,
-			newsAnalysis,
-			fundamentalsAnalysis,
-			globalGrounding,
-			memoryCases,
-			candleSummaries,
-			groundingSources,
-			predictionMarketSignals,
-		} = inputData;
-		const errors: string[] = [];
-		const warnings: string[] = [];
-
-		const batches = chunk(instruments, BATCH_SIZE);
-		log.info(
-			{
-				cycleId,
-				symbolCount: instruments.length,
-				batchCount: batches.length,
-				batchSize: BATCH_SIZE,
-				hasNewsAnalysis: (newsAnalysis?.length ?? 0) > 0,
-				hasFundamentalsAnalysis: (fundamentalsAnalysis?.length ?? 0) > 0,
-			},
-			"Starting debate step with batching",
-		);
-
-		const bullishStart = performance.now();
-		const bearishStart = performance.now();
-
-		const allBullishResearch: z.infer<typeof ResearchSchema>[] = [];
-		const allBearishResearch: z.infer<typeof ResearchSchema>[] = [];
-
-		// Process batches sequentially, but run bullish/bearish in parallel for each batch
-		for (let i = 0; i < batches.length; i++) {
-			const batch = batches[i];
-			if (!batch) continue;
-
-			log.debug(
-				{ cycleId, batchIndex: i + 1, batchCount: batches.length, symbols: batch },
-				"Processing debate batch",
-			);
-
-			const [bullishResults, bearishResults] = await Promise.all([
-				runBullishResearcherBatch(
-					cycleId,
-					i + 1,
-					batch,
-					regimeLabels,
-					newsAnalysis,
-					fundamentalsAnalysis,
-					globalGrounding,
-					memoryCases ?? [],
-					candleSummaries ?? [],
-					groundingSources ?? [],
-					predictionMarketSignals,
-					errors,
-				),
-				runBearishResearcherBatch(
-					cycleId,
-					i + 1,
-					batch,
-					regimeLabels,
-					newsAnalysis,
-					fundamentalsAnalysis,
-					globalGrounding,
-					memoryCases ?? [],
-					candleSummaries ?? [],
-					groundingSources ?? [],
-					predictionMarketSignals,
-					errors,
-				),
-			]);
-
-			allBullishResearch.push(...bullishResults);
-			allBearishResearch.push(...bearishResults);
-
-			log.debug(
-				{
-					cycleId,
-					batchIndex: i + 1,
-					bullishCount: bullishResults.length,
-					bearishCount: bearishResults.length,
-				},
-				"Debate batch complete",
-			);
-		}
-
-		const bullishMs = performance.now() - bullishStart;
-		const bearishMs = performance.now() - bearishStart;
-
-		log.info(
-			{
-				cycleId,
-				bullishResultCount: allBullishResearch.length,
-				bearishResultCount: allBearishResearch.length,
-				errorCount: errors.length,
-			},
-			"Completed debate step",
-		);
-
-		return {
-			cycleId,
-			bullishResearch: allBullishResearch,
-			bearishResearch: allBearishResearch,
-			errors,
-			warnings,
-			metrics: {
-				totalMs: performance.now() - startTime,
-				bullishMs,
-				bearishMs,
-				batchCount: batches.length,
-			},
-		};
-	},
+	execute: async ({ inputData }) => executeDebateStep(inputData),
 });
 
 // ============================================
@@ -237,6 +114,208 @@ function chunk<T>(array: T[], size: number): T[][] {
 }
 
 type GlobalGrounding = { macro: string[]; events: string[] };
+
+async function executeDebateStep(
+	inputData: z.infer<typeof DebateInputSchema>,
+): Promise<z.infer<typeof DebateOutputSchema>> {
+	const startTime = performance.now();
+	const {
+		cycleId,
+		instruments,
+		regimeLabels,
+		newsAnalysis,
+		fundamentalsAnalysis,
+		globalGrounding,
+		memoryCases,
+		candleSummaries,
+		groundingSources,
+		predictionMarketSignals,
+	} = inputData;
+	const errors: string[] = [];
+	const warnings: string[] = [];
+	const batches = chunk(instruments, BATCH_SIZE);
+
+	logDebateStart(cycleId, instruments.length, batches.length, newsAnalysis, fundamentalsAnalysis);
+	const batchResult = await runDebateBatches(
+		cycleId,
+		batches,
+		regimeLabels,
+		newsAnalysis,
+		fundamentalsAnalysis,
+		globalGrounding,
+		memoryCases ?? [],
+		candleSummaries ?? [],
+		groundingSources ?? [],
+		predictionMarketSignals,
+		errors,
+	);
+	logDebateCompletion(
+		cycleId,
+		batchResult.allBullishResearch.length,
+		batchResult.allBearishResearch.length,
+		errors,
+	);
+
+	return {
+		cycleId,
+		bullishResearch: batchResult.allBullishResearch,
+		bearishResearch: batchResult.allBearishResearch,
+		errors,
+		warnings,
+		metrics: {
+			totalMs: performance.now() - startTime,
+			bullishMs: batchResult.bullishMs,
+			bearishMs: batchResult.bearishMs,
+			batchCount: batches.length,
+		},
+	};
+}
+
+function logDebateStart(
+	cycleId: string,
+	symbolCount: number,
+	batchCount: number,
+	newsAnalysis: z.infer<typeof SentimentAnalysisSchema>[] | undefined,
+	fundamentalsAnalysis: z.infer<typeof FundamentalsAnalysisSchema>[] | undefined,
+): void {
+	log.info(
+		{
+			cycleId,
+			symbolCount,
+			batchCount,
+			batchSize: BATCH_SIZE,
+			hasNewsAnalysis: (newsAnalysis?.length ?? 0) > 0,
+			hasFundamentalsAnalysis: (fundamentalsAnalysis?.length ?? 0) > 0,
+		},
+		"Starting debate step with batching",
+	);
+}
+
+async function runDebateBatches(
+	cycleId: string,
+	batches: string[][],
+	regimeLabels: Record<string, z.infer<typeof RegimeDataSchema>>,
+	newsAnalysis: z.infer<typeof SentimentAnalysisSchema>[] | undefined,
+	fundamentalsAnalysis: z.infer<typeof FundamentalsAnalysisSchema>[] | undefined,
+	globalGrounding: GlobalGrounding | undefined,
+	memoryCases: z.infer<typeof MemoryCaseSchema>[],
+	candleSummaries: z.infer<typeof CandleSummarySchema>[],
+	groundingSources: z.infer<typeof GroundingSourceSchema>[],
+	predictionMarketSignals: z.infer<typeof PredictionMarketSignalsSchema> | undefined,
+	errors: string[],
+): Promise<{
+	allBullishResearch: z.infer<typeof ResearchSchema>[];
+	allBearishResearch: z.infer<typeof ResearchSchema>[];
+	bullishMs: number;
+	bearishMs: number;
+}> {
+	const bullishStart = performance.now();
+	const bearishStart = performance.now();
+	const allBullishResearch: z.infer<typeof ResearchSchema>[] = [];
+	const allBearishResearch: z.infer<typeof ResearchSchema>[] = [];
+
+	for (let i = 0; i < batches.length; i++) {
+		const batch = batches[i];
+		if (!batch) continue;
+		const result = await runDebateBatch(
+			cycleId,
+			i + 1,
+			batches.length,
+			batch,
+			regimeLabels,
+			newsAnalysis,
+			fundamentalsAnalysis,
+			globalGrounding,
+			memoryCases,
+			candleSummaries,
+			groundingSources,
+			predictionMarketSignals,
+			errors,
+		);
+		allBullishResearch.push(...result.bullishResults);
+		allBearishResearch.push(...result.bearishResults);
+	}
+
+	return {
+		allBullishResearch,
+		allBearishResearch,
+		bullishMs: performance.now() - bullishStart,
+		bearishMs: performance.now() - bearishStart,
+	};
+}
+
+async function runDebateBatch(
+	cycleId: string,
+	batchIndex: number,
+	batchCount: number,
+	batch: string[],
+	regimeLabels: Record<string, z.infer<typeof RegimeDataSchema>>,
+	newsAnalysis: z.infer<typeof SentimentAnalysisSchema>[] | undefined,
+	fundamentalsAnalysis: z.infer<typeof FundamentalsAnalysisSchema>[] | undefined,
+	globalGrounding: GlobalGrounding | undefined,
+	memoryCases: z.infer<typeof MemoryCaseSchema>[],
+	candleSummaries: z.infer<typeof CandleSummarySchema>[],
+	groundingSources: z.infer<typeof GroundingSourceSchema>[],
+	predictionMarketSignals: z.infer<typeof PredictionMarketSignalsSchema> | undefined,
+	errors: string[],
+): Promise<{
+	bullishResults: z.infer<typeof ResearchSchema>[];
+	bearishResults: z.infer<typeof ResearchSchema>[];
+}> {
+	log.debug({ cycleId, batchIndex, batchCount, symbols: batch }, "Processing debate batch");
+	const [bullishResults, bearishResults] = await Promise.all([
+		runBullishResearcherBatch(
+			cycleId,
+			batchIndex,
+			batch,
+			regimeLabels,
+			newsAnalysis,
+			fundamentalsAnalysis,
+			globalGrounding,
+			memoryCases,
+			candleSummaries,
+			groundingSources,
+			predictionMarketSignals,
+			errors,
+		),
+		runBearishResearcherBatch(
+			cycleId,
+			batchIndex,
+			batch,
+			regimeLabels,
+			newsAnalysis,
+			fundamentalsAnalysis,
+			globalGrounding,
+			memoryCases,
+			candleSummaries,
+			groundingSources,
+			predictionMarketSignals,
+			errors,
+		),
+	]);
+	log.debug(
+		{
+			cycleId,
+			batchIndex,
+			bullishCount: bullishResults.length,
+			bearishCount: bearishResults.length,
+		},
+		"Debate batch complete",
+	);
+	return { bullishResults, bearishResults };
+}
+
+function logDebateCompletion(
+	cycleId: string,
+	bullishResultCount: number,
+	bearishResultCount: number,
+	errors: string[],
+): void {
+	log.info(
+		{ cycleId, bullishResultCount, bearishResultCount, errorCount: errors.length },
+		"Completed debate step",
+	);
+}
 
 async function runBullishResearcherBatch(
 	cycleId: string,
@@ -354,111 +433,6 @@ async function runBearishResearcherBatch(
 		log.error({ cycleId, batchIndex, error: formatError(err) }, "Bearish researcher batch failed");
 		return [];
 	}
-}
-
-function buildBullishPrompt(
-	instruments: string[],
-	regimeLabels: Record<string, z.infer<typeof RegimeDataSchema>>,
-	newsAnalysis: z.infer<typeof SentimentAnalysisSchema>[] | undefined,
-	fundamentalsAnalysis: z.infer<typeof FundamentalsAnalysisSchema>[] | undefined,
-	globalGrounding: GlobalGrounding | undefined,
-	memoryCases: z.infer<typeof MemoryCaseSchema>[],
-	candleSummaries: z.infer<typeof CandleSummarySchema>[],
-	groundingSources: z.infer<typeof GroundingSourceSchema>[],
-	predictionMarketSignals: z.infer<typeof PredictionMarketSignalsSchema> | undefined,
-): string {
-	const symbolSections = instruments.map((symbol) => {
-		const regime = regimeLabels[symbol];
-		const news = newsAnalysis?.find((n) => n.instrument_id === symbol);
-		const fundamentals = fundamentalsAnalysis?.find((f) => f.instrument_id === symbol);
-		const candle = candleSummaries.find((c) => c.symbol === symbol);
-		const symbolMemory = memoryCases.filter((c) => c.symbol === symbol);
-
-		const parts: string[] = [];
-		if (regime)
-			parts.push(
-				`  <regime classification="${regime.regime}" confidence="${regime.confidence}" />`,
-			);
-		if (candle) parts.push(`  ${xmlCandleSummary(candle)}`);
-		if (news)
-			parts.push(
-				`  <sentiment overall="${news.overall_sentiment}" strength="${news.sentiment_strength}" />`,
-			);
-		if (fundamentals) {
-			if (fundamentals.fundamental_drivers.length > 0)
-				parts.push(`  <drivers>${fundamentals.fundamental_drivers.join(", ")}</drivers>`);
-			parts.push(`  <valuation>${fundamentals.valuation_context}</valuation>`);
-		}
-		if (symbolMemory.length > 0) parts.push(`  ${xmlMemoryCases(symbolMemory, symbol)}`);
-		return `<instrument symbol="${symbol}">\n${parts.join("\n")}\n</instrument>`;
-	});
-
-	const sections = [
-		`<instruments>\n${symbolSections.join("\n")}\n</instruments>`,
-		xmlGlobalGrounding(globalGrounding),
-		xmlGroundingSources(groundingSources),
-		xmlPredictionMarketSignals(predictionMarketSignals),
-	].filter(Boolean);
-
-	return `Create BULLISH theses for these symbols: ${instruments.join(", ")}. Consider cross-correlations, sector themes, and relative opportunities.
-
-${sections.join("\n\n")}
-
-Return a thesis for each symbol with conviction level and strongest counterargument.`;
-}
-
-function buildBearishPrompt(
-	instruments: string[],
-	regimeLabels: Record<string, z.infer<typeof RegimeDataSchema>>,
-	newsAnalysis: z.infer<typeof SentimentAnalysisSchema>[] | undefined,
-	fundamentalsAnalysis: z.infer<typeof FundamentalsAnalysisSchema>[] | undefined,
-	globalGrounding: GlobalGrounding | undefined,
-	memoryCases: z.infer<typeof MemoryCaseSchema>[],
-	candleSummaries: z.infer<typeof CandleSummarySchema>[],
-	groundingSources: z.infer<typeof GroundingSourceSchema>[],
-	predictionMarketSignals: z.infer<typeof PredictionMarketSignalsSchema> | undefined,
-): string {
-	const symbolSections = instruments.map((symbol) => {
-		const regime = regimeLabels[symbol];
-		const news = newsAnalysis?.find((n) => n.instrument_id === symbol);
-		const fundamentals = fundamentalsAnalysis?.find((f) => f.instrument_id === symbol);
-		const candle = candleSummaries.find((c) => c.symbol === symbol);
-		const symbolMemory = memoryCases.filter((c) => c.symbol === symbol);
-
-		const parts: string[] = [];
-		if (regime)
-			parts.push(
-				`  <regime classification="${regime.regime}" confidence="${regime.confidence}" />`,
-			);
-		if (candle) parts.push(`  ${xmlCandleSummary(candle)}`);
-		if (news)
-			parts.push(
-				`  <sentiment overall="${news.overall_sentiment}" strength="${news.sentiment_strength}" />`,
-			);
-		if (fundamentals) {
-			if (fundamentals.fundamental_headwinds.length > 0)
-				parts.push(`  <headwinds>${fundamentals.fundamental_headwinds.join(", ")}</headwinds>`);
-			if (fundamentals.event_risk.length > 0)
-				parts.push(
-					`  <event_risks>${fundamentals.event_risk.map((e) => `${e.event} (${e.date})`).join(", ")}</event_risks>`,
-				);
-		}
-		if (symbolMemory.length > 0) parts.push(`  ${xmlMemoryCases(symbolMemory, symbol)}`);
-		return `<instrument symbol="${symbol}">\n${parts.join("\n")}\n</instrument>`;
-	});
-
-	const sections = [
-		`<instruments>\n${symbolSections.join("\n")}\n</instruments>`,
-		xmlGlobalGrounding(globalGrounding),
-		xmlGroundingSources(groundingSources),
-		xmlPredictionMarketSignals(predictionMarketSignals),
-	].filter(Boolean);
-
-	return `Create BEARISH theses for these symbols: ${instruments.join(", ")}. Consider systemic risks, correlation risks, and sector vulnerabilities.
-
-${sections.join("\n\n")}
-
-Return a thesis for each symbol with conviction level and strongest counterargument.`;
 }
 
 function formatError(error: unknown): string {

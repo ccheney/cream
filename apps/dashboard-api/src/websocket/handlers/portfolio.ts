@@ -14,6 +14,31 @@ function isAlpacaConfigured(): boolean {
 	return Boolean(Bun.env.ALPACA_KEY && Bun.env.ALPACA_SECRET);
 }
 
+function sendEmptyPortfolio(ws: WebSocketWithMetadata): void {
+	sendMessage(ws, {
+		type: "portfolio",
+		data: {
+			totalValue: 0,
+			cash: 0,
+			buyingPower: 0,
+			dailyPnl: 0,
+			dailyPnlPercent: 0,
+			openPositions: 0,
+			positions: [],
+			timestamp: new Date().toISOString(),
+		},
+	});
+}
+
+function calculatePortfolioDailyPnl(
+	positions: Awaited<ReturnType<ReturnType<typeof createAlpacaClient>["getPositions"]>>,
+): number {
+	return positions.reduce((sum, p) => {
+		const dayChange = (p.currentPrice - p.lastdayPrice) * p.qty * (p.side === "long" ? 1 : -1);
+		return sum + dayChange;
+	}, 0);
+}
+
 /**
  * Handle portfolio state request.
  * Returns current positions and portfolio summary from Alpaca.
@@ -23,23 +48,10 @@ export async function handlePortfolioState(ws: WebSocketWithMetadata): Promise<v
 		const environment = requireEnv();
 
 		if (!isAlpacaConfigured()) {
-			sendMessage(ws, {
-				type: "portfolio",
-				data: {
-					totalValue: 0,
-					cash: 0,
-					buyingPower: 0,
-					dailyPnl: 0,
-					dailyPnlPercent: 0,
-					openPositions: 0,
-					positions: [],
-					timestamp: new Date().toISOString(),
-				},
-			});
+			sendEmptyPortfolio(ws);
 			return;
 		}
 
-		// Fetch from Alpaca (sole source of truth)
 		const client = createAlpacaClient({
 			apiKey: Bun.env.ALPACA_KEY as string,
 			apiSecret: Bun.env.ALPACA_SECRET as string,
@@ -62,11 +74,7 @@ export async function handlePortfolioState(ws: WebSocketWithMetadata): Promise<v
 			lastdayPrice: p.lastdayPrice,
 		}));
 
-		// Calculate daily P&L from position changes
-		const dailyPnl = alpacaPositions.reduce((sum, p) => {
-			const dayChange = (p.currentPrice - p.lastdayPrice) * p.qty * (p.side === "long" ? 1 : -1);
-			return sum + dayChange;
-		}, 0);
+		const dailyPnl = calculatePortfolioDailyPnl(alpacaPositions);
 
 		const totalValue = positions.reduce((sum, p) => sum + p.marketValue, 0);
 		const totalCostBasis = positions.reduce((sum, p) => sum + p.costBasis * p.quantity, 0);

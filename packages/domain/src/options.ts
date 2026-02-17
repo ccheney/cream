@@ -127,6 +127,132 @@ export type OSIParseResult =
 	| { success: true; contract: OptionContract }
 	| { success: false; error: OSIError };
 
+type ParsedOSIComponents = {
+	symbolPart: string;
+	yearPart: string;
+	monthPart: string;
+	dayPart: string;
+	typePart: string;
+	strikeDollarsPart: string;
+	strikeCentsPart: string;
+};
+
+function parseError(message: string, code: OSIErrorCode, input: string): OSIParseResult {
+	return { success: false, error: new OSIError(message, code, input) };
+}
+
+function padOSISymbol(normalized: string): string {
+	if (normalized.length >= OSI_LENGTH) {
+		return normalized;
+	}
+
+	const match = normalized.match(/^([A-Z]+)(\d{2})(\d{2})(\d{2})([CP])(\d{8})$/);
+	if (!match?.[1]) {
+		return normalized;
+	}
+
+	const symbol = match[1].padEnd(6, " ");
+	return symbol + normalized.slice(match[1].length);
+}
+
+function parseOSIComponents(padded: string): ParsedOSIComponents {
+	return {
+		symbolPart: padded.slice(0, 6).trim(),
+		yearPart: padded.slice(6, 8),
+		monthPart: padded.slice(8, 10),
+		dayPart: padded.slice(10, 12),
+		typePart: padded.slice(12, 13),
+		strikeDollarsPart: padded.slice(13, 18),
+		strikeCentsPart: padded.slice(18, 21),
+	};
+}
+
+function parseYear(yearPart: string, input: string): number | OSIError {
+	const year = Number.parseInt(yearPart, 10);
+	if (Number.isNaN(year) || year < 0 || year > 99) {
+		return new OSIError(`Invalid year "${yearPart}"`, "INVALID_DATE", input);
+	}
+	return year;
+}
+
+function validateMonth(monthPart: string, input: string): OSIError | undefined {
+	const month = Number.parseInt(monthPart, 10);
+	if (Number.isNaN(month) || month < 1 || month > 12) {
+		return new OSIError(`Invalid month "${monthPart}"`, "INVALID_DATE", input);
+	}
+	return undefined;
+}
+
+function validateDay(dayPart: string, input: string): OSIError | undefined {
+	const day = Number.parseInt(dayPart, 10);
+	if (Number.isNaN(day) || day < 1 || day > 31) {
+		return new OSIError(`Invalid day "${dayPart}"`, "INVALID_DATE", input);
+	}
+	return undefined;
+}
+
+function parseStrike(
+	strikeDollarsPart: string,
+	strikeCentsPart: string,
+	input: string,
+): number | OSIError {
+	const strikeDollars = Number.parseInt(strikeDollarsPart, 10);
+	const strikeCents = Number.parseInt(strikeCentsPart, 10);
+
+	if (Number.isNaN(strikeDollars) || Number.isNaN(strikeCents)) {
+		return new OSIError(
+			`Invalid strike price "${strikeDollarsPart}.${strikeCentsPart}"`,
+			"INVALID_STRIKE",
+			input,
+		);
+	}
+
+	return strikeDollars + strikeCents / 1000;
+}
+
+function formatSymbol(underlyingSymbol: string): string {
+	const symbol = underlyingSymbol.toUpperCase().padEnd(6, " ");
+	if (symbol.length > 6) {
+		throw new OSIError(`Symbol "${underlyingSymbol}" exceeds 6 characters`, "INVALID_SYMBOL");
+	}
+	return symbol;
+}
+
+function parseExpirationDate(expirationDate: string): { year: string; month: string; day: string } {
+	const dateParts = expirationDate.split("-");
+	if (dateParts.length !== 3) {
+		throw new OSIError(`Invalid expiration date format "${expirationDate}"`, "INVALID_DATE");
+	}
+
+	const yearStr = dateParts[0];
+	const monthStr = dateParts[1];
+	const dayStr = dateParts[2];
+	if (!yearStr || !monthStr || !dayStr) {
+		throw new OSIError(`Invalid expiration date format "${expirationDate}"`, "INVALID_DATE");
+	}
+
+	const fullYear = Number.parseInt(yearStr, 10);
+	return {
+		year: (fullYear % 100).toString().padStart(2, "0"),
+		month: monthStr.padStart(2, "0"),
+		day: dayStr.padStart(2, "0"),
+	};
+}
+
+function formatStrike(strike: number): { dollars: string; fraction: string } {
+	const strikeDollars = Math.floor(strike);
+	const strikeFraction = Math.round((strike - strikeDollars) * 1000);
+	const dollars = strikeDollars.toString().padStart(5, "0");
+	if (dollars.length > 5) {
+		throw new OSIError(`Strike price ${strike} exceeds maximum ($99,999)`, "INVALID_STRIKE");
+	}
+
+	return {
+		dollars,
+		fraction: strikeFraction.toString().padStart(3, "0"),
+	};
+}
+
 // ============================================
 // Conversion Functions
 // ============================================
@@ -147,114 +273,59 @@ export type OSIParseResult =
  * ```
  */
 export function parseOSI(osi: string): OSIParseResult {
-	// Normalize: trim and ensure proper length
 	const normalized = osi.trim();
-
 	if (normalized.length < 15 || normalized.length > OSI_LENGTH) {
-		return {
-			success: false,
-			error: new OSIError(
-				`OSI symbol must be 15-21 characters, got ${normalized.length}`,
-				"INVALID_LENGTH",
-				osi,
-			),
-		};
+		return parseError(
+			`OSI symbol must be 15-21 characters, got ${normalized.length}`,
+			"INVALID_LENGTH",
+			osi,
+		);
 	}
 
-	// Pad to 21 characters if needed (symbol section)
-	let padded = normalized;
-	if (padded.length < OSI_LENGTH) {
-		// Find where the numeric part starts (expiration)
-		const match = padded.match(/^([A-Z]+)(\d{2})(\d{2})(\d{2})([CP])(\d{8})$/);
-		if (match?.[1]) {
-			const symbol = match[1].padEnd(6, " ");
-			padded = symbol + padded.slice(match[1].length);
-		}
+	const components = parseOSIComponents(padOSISymbol(normalized));
+
+	if (!/^[A-Z]{1,6}$/.test(components.symbolPart)) {
+		return parseError(
+			`Invalid symbol "${components.symbolPart}": must be 1-6 uppercase letters`,
+			"INVALID_SYMBOL",
+			osi,
+		);
 	}
 
-	// Parse components
-	const symbolPart = padded.slice(0, 6).trim();
-	const yearPart = padded.slice(6, 8);
-	const monthPart = padded.slice(8, 10);
-	const dayPart = padded.slice(10, 12);
-	const typePart = padded.slice(12, 13);
-	const strikeDollarsPart = padded.slice(13, 18);
-	const strikeCentsPart = padded.slice(18, 21);
-
-	// Validate symbol
-	if (!/^[A-Z]{1,6}$/.test(symbolPart)) {
-		return {
-			success: false,
-			error: new OSIError(
-				`Invalid symbol "${symbolPart}": must be 1-6 uppercase letters`,
-				"INVALID_SYMBOL",
-				osi,
-			),
-		};
+	const year = parseYear(components.yearPart, osi);
+	if (year instanceof OSIError) {
+		return { success: false, error: year };
 	}
 
-	// Validate date components
-	const year = Number.parseInt(yearPart, 10);
-	const month = Number.parseInt(monthPart, 10);
-	const day = Number.parseInt(dayPart, 10);
-
-	if (Number.isNaN(year) || year < 0 || year > 99) {
-		return {
-			success: false,
-			error: new OSIError(`Invalid year "${yearPart}"`, "INVALID_DATE", osi),
-		};
+	const monthError = validateMonth(components.monthPart, osi);
+	if (monthError) {
+		return { success: false, error: monthError };
 	}
 
-	if (Number.isNaN(month) || month < 1 || month > 12) {
-		return {
-			success: false,
-			error: new OSIError(`Invalid month "${monthPart}"`, "INVALID_DATE", osi),
-		};
+	const dayError = validateDay(components.dayPart, osi);
+	if (dayError) {
+		return { success: false, error: dayError };
 	}
 
-	if (Number.isNaN(day) || day < 1 || day > 31) {
-		return {
-			success: false,
-			error: new OSIError(`Invalid day "${dayPart}"`, "INVALID_DATE", osi),
-		};
+	if (components.typePart !== "C" && components.typePart !== "P") {
+		return parseError(
+			`Invalid option type "${components.typePart}": must be C or P`,
+			"INVALID_TYPE",
+			osi,
+		);
 	}
 
-	// Validate type
-	if (typePart !== "C" && typePart !== "P") {
-		return {
-			success: false,
-			error: new OSIError(`Invalid option type "${typePart}": must be C or P`, "INVALID_TYPE", osi),
-		};
+	const strike = parseStrike(components.strikeDollarsPart, components.strikeCentsPart, osi);
+	if (strike instanceof OSIError) {
+		return { success: false, error: strike };
 	}
 
-	// Validate and parse strike
-	const strikeDollars = Number.parseInt(strikeDollarsPart, 10);
-	const strikeCents = Number.parseInt(strikeCentsPart, 10);
-
-	if (Number.isNaN(strikeDollars) || Number.isNaN(strikeCents)) {
-		return {
-			success: false,
-			error: new OSIError(
-				`Invalid strike price "${strikeDollarsPart}.${strikeCentsPart}"`,
-				"INVALID_STRIKE",
-				osi,
-			),
-		};
-	}
-
-	const strike = strikeDollars + strikeCents / 1000;
-
-	// Construct expiration date
-	// Year is 2-digit, assume 2000s for now (00-99 -> 2000-2099)
 	const fullYear = 2000 + year;
-	const expirationDate = `${fullYear}-${monthPart}-${dayPart}`;
-
-	// Build contract
 	const contract: OptionContract = {
-		underlyingSymbol: symbolPart,
-		expirationDate,
+		underlyingSymbol: components.symbolPart,
+		expirationDate: `${fullYear}-${components.monthPart}-${components.dayPart}`,
 		strike,
-		right: typePart === "C" ? "CALL" : "PUT",
+		right: components.typePart === "C" ? "CALL" : "PUT",
 		multiplier: 100,
 	};
 
@@ -295,64 +366,12 @@ export function parseOSIOrThrow(osi: string): OptionContract {
  * ```
  */
 export function toOSI(contract: OptionContract): string {
-	// Validate contract
 	const validated = OptionContractSchema.parse(contract);
-
-	// Symbol: 6 chars, right-padded
-	const symbol = validated.underlyingSymbol.toUpperCase().padEnd(6, " ");
-	if (symbol.length > 6) {
-		throw new OSIError(
-			`Symbol "${validated.underlyingSymbol}" exceeds 6 characters`,
-			"INVALID_SYMBOL",
-		);
-	}
-
-	// Parse date
-	const dateParts = validated.expirationDate.split("-");
-	if (dateParts.length !== 3) {
-		throw new OSIError(
-			`Invalid expiration date format "${validated.expirationDate}"`,
-			"INVALID_DATE",
-		);
-	}
-
-	const yearStr = dateParts[0];
-	const monthStr = dateParts[1];
-	const dayStr = dateParts[2];
-
-	if (!yearStr || !monthStr || !dayStr) {
-		throw new OSIError(
-			`Invalid expiration date format "${validated.expirationDate}"`,
-			"INVALID_DATE",
-		);
-	}
-
-	const fullYear = Number.parseInt(yearStr, 10);
-
-	// Year: last 2 digits
-	const year = (fullYear % 100).toString().padStart(2, "0");
-	const month = monthStr.padStart(2, "0");
-	const day = dayStr.padStart(2, "0");
-
-	// Type: C or P
+	const symbol = formatSymbol(validated.underlyingSymbol);
+	const expiration = parseExpirationDate(validated.expirationDate);
 	const type = validated.right === "CALL" ? "C" : "P";
-
-	// Strike: split into dollars (5 digits) and millicents (3 digits)
-	const strikeDollars = Math.floor(validated.strike);
-	const strikeFraction = Math.round((validated.strike - strikeDollars) * 1000);
-
-	const strikeDollarsStr = strikeDollars.toString().padStart(5, "0");
-	const strikeFractionStr = strikeFraction.toString().padStart(3, "0");
-
-	if (strikeDollarsStr.length > 5) {
-		throw new OSIError(
-			`Strike price ${validated.strike} exceeds maximum ($99,999)`,
-			"INVALID_STRIKE",
-		);
-	}
-
-	// Combine all parts
-	return `${symbol}${year}${month}${day}${type}${strikeDollarsStr}${strikeFractionStr}`;
+	const strike = formatStrike(validated.strike);
+	return `${symbol}${expiration.year}${expiration.month}${expiration.day}${type}${strike.dollars}${strike.fraction}`;
 }
 
 /**

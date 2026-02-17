@@ -1,30 +1,13 @@
-/**
- * Polymarket WebSocket Client
- *
- * Real-time market data streaming from Polymarket prediction markets.
- * Supports orderbook updates, price changes, and last trade prices.
- *
- * @see https://docs.polymarket.com/developers/CLOB/websocket/market-channel
- */
-
 import { z } from "zod";
 
 export const POLYMARKET_WEBSOCKET_URL = "wss://ws-subscriptions-clob.polymarket.com/ws/market";
-
-/** Heartbeat interval in milliseconds */
 export const HEARTBEAT_INTERVAL_MS = 30000;
-
-/** Default reconnection settings */
 export const DEFAULT_RECONNECT_CONFIG = {
 	initialDelayMs: 1000,
 	maxDelayMs: 30000,
 	backoffMultiplier: 2,
 	maxRetries: 10,
 };
-
-// ============================================
-// Message Schemas
-// ============================================
 
 export const OrderSummarySchema = z.object({
 	price: z.string(),
@@ -71,10 +54,6 @@ export type LastTradePriceMessage = z.infer<typeof LastTradePriceMessageSchema>;
 
 export type PolymarketWebSocketMessage = BookMessage | PriceChangeMessage | LastTradePriceMessage;
 
-// ============================================
-// Market State Cache
-// ============================================
-
 export interface CachedMarketState {
 	assetId: string;
 	conditionId: string;
@@ -85,120 +64,168 @@ export interface CachedMarketState {
 	expiresAt: Date;
 }
 
-export class MarketStateCache {
-	private cache: Map<string, CachedMarketState> = new Map();
-	private readonly ttlMs: number;
+export interface MarketStateCache {
+	updateFromBook(msg: BookMessage): void;
+	updateFromPriceChange(msg: PriceChangeMessage): void;
+	updateFromLastTradePrice(msg: LastTradePriceMessage): void;
+	get(assetId: string): CachedMarketState | undefined;
+	getAll(): CachedMarketState[];
+	clear(): void;
+}
 
-	constructor(ttlMs = 5 * 60 * 1000) {
-		this.ttlMs = ttlMs;
-	}
+type MarketStateCacheConstructor = {
+	new (ttlMs?: number): MarketStateCache;
+	(ttlMs?: number): MarketStateCache;
+	prototype: MarketStateCache;
+};
 
-	updateFromBook(msg: BookMessage): void {
-		const now = new Date();
-		const existing = this.cache.get(msg.asset_id) ?? {
-			assetId: msg.asset_id,
-			conditionId: msg.market,
-			lastUpdated: now,
-			expiresAt: new Date(now.getTime() + this.ttlMs),
-		};
+type CacheStorage = { cache: Map<string, CachedMarketState>; ttlMs: number };
 
-		const bestBid = msg.bids?.[0]?.price ? Number.parseFloat(msg.bids[0].price) : existing.bestBid;
-		const bestAsk = msg.asks?.[0]?.price ? Number.parseFloat(msg.asks[0].price) : existing.bestAsk;
+function createCacheEntry(
+	assetId: string,
+	conditionId: string,
+	now: Date,
+	ttlMs: number,
+): CachedMarketState {
+	return {
+		assetId,
+		conditionId,
+		lastUpdated: now,
+		expiresAt: new Date(now.getTime() + ttlMs),
+	};
+}
 
-		this.cache.set(msg.asset_id, {
-			...existing,
-			bestBid,
-			bestAsk,
-			lastUpdated: now,
-			expiresAt: new Date(now.getTime() + this.ttlMs),
-		});
-	}
+function getCachedEntry(
+	storage: CacheStorage,
+	assetId: string,
+	conditionId: string,
+	now: Date,
+): CachedMarketState {
+	return storage.cache.get(assetId) ?? createCacheEntry(assetId, conditionId, now, storage.ttlMs);
+}
 
-	updateFromPriceChange(msg: PriceChangeMessage): void {
-		const now = new Date();
-		for (const change of msg.price_changes) {
-			const existing = this.cache.get(change.asset_id) ?? {
-				assetId: change.asset_id,
-				conditionId: msg.market,
-				lastUpdated: now,
-				expiresAt: new Date(now.getTime() + this.ttlMs),
-			};
+function withUpdatedTimestamps(
+	storage: CacheStorage,
+	state: CachedMarketState,
+	now: Date,
+): CachedMarketState {
+	return {
+		...state,
+		lastUpdated: now,
+		expiresAt: new Date(now.getTime() + storage.ttlMs),
+	};
+}
 
-			this.cache.set(change.asset_id, {
+function updateCacheFromBook(storage: CacheStorage, msg: BookMessage): void {
+	const now = new Date();
+	const existing = getCachedEntry(storage, msg.asset_id, msg.market, now);
+	const bestBid = msg.bids?.[0]?.price ? Number.parseFloat(msg.bids[0].price) : existing.bestBid;
+	const bestAsk = msg.asks?.[0]?.price ? Number.parseFloat(msg.asks[0].price) : existing.bestAsk;
+	storage.cache.set(
+		msg.asset_id,
+		withUpdatedTimestamps(
+			storage,
+			{
 				...existing,
-				bestBid: change.best_bid ? Number.parseFloat(change.best_bid) : existing.bestBid,
-				bestAsk: change.best_ask ? Number.parseFloat(change.best_ask) : existing.bestAsk,
-				lastUpdated: now,
-				expiresAt: new Date(now.getTime() + this.ttlMs),
-			});
-		}
-	}
+				bestBid,
+				bestAsk,
+			},
+			now,
+		),
+	);
+}
 
-	updateFromLastTradePrice(msg: LastTradePriceMessage): void {
-		const now = new Date();
-		const existing = this.cache.get(msg.asset_id) ?? {
-			assetId: msg.asset_id,
-			conditionId: msg.market,
-			lastUpdated: now,
-			expiresAt: new Date(now.getTime() + this.ttlMs),
-		};
-
-		this.cache.set(msg.asset_id, {
-			...existing,
-			lastPrice: Number.parseFloat(msg.price),
-			lastUpdated: now,
-			expiresAt: new Date(now.getTime() + this.ttlMs),
-		});
-	}
-
-	get(assetId: string): CachedMarketState | undefined {
-		const entry = this.cache.get(assetId);
-		if (!entry) {
-			return undefined;
-		}
-		if (entry.expiresAt < new Date()) {
-			this.cache.delete(assetId);
-			return undefined;
-		}
-		return entry;
-	}
-
-	getAll(): CachedMarketState[] {
-		const now = new Date();
-		const results: CachedMarketState[] = [];
-		for (const [assetId, entry] of this.cache.entries()) {
-			if (entry.expiresAt < now) {
-				this.cache.delete(assetId);
-			} else {
-				results.push(entry);
-			}
-		}
-		return results;
-	}
-
-	clear(): void {
-		this.cache.clear();
+function updateCacheFromPriceChange(storage: CacheStorage, msg: PriceChangeMessage): void {
+	const now = new Date();
+	for (const change of msg.price_changes) {
+		const existing = getCachedEntry(storage, change.asset_id, msg.market, now);
+		storage.cache.set(
+			change.asset_id,
+			withUpdatedTimestamps(
+				storage,
+				{
+					...existing,
+					bestBid: change.best_bid ? Number.parseFloat(change.best_bid) : existing.bestBid,
+					bestAsk: change.best_ask ? Number.parseFloat(change.best_ask) : existing.bestAsk,
+				},
+				now,
+			),
+		);
 	}
 }
 
-// ============================================
-// WebSocket Client
-// ============================================
+function updateCacheFromLastTradePrice(storage: CacheStorage, msg: LastTradePriceMessage): void {
+	const now = new Date();
+	const existing = getCachedEntry(storage, msg.asset_id, msg.market, now);
+	storage.cache.set(
+		msg.asset_id,
+		withUpdatedTimestamps(
+			storage,
+			{
+				...existing,
+				lastPrice: Number.parseFloat(msg.price),
+			},
+			now,
+		),
+	);
+}
+
+function getCachedState(storage: CacheStorage, assetId: string): CachedMarketState | undefined {
+	const entry = storage.cache.get(assetId);
+	if (!entry) {
+		return undefined;
+	}
+	if (entry.expiresAt < new Date()) {
+		storage.cache.delete(assetId);
+		return undefined;
+	}
+	return entry;
+}
+
+function getAllCachedStates(storage: CacheStorage): CachedMarketState[] {
+	const now = new Date();
+	const results: CachedMarketState[] = [];
+	for (const [assetId, entry] of storage.cache.entries()) {
+		if (entry.expiresAt < now) {
+			storage.cache.delete(assetId);
+		} else {
+			results.push(entry);
+		}
+	}
+	return results;
+}
+
+function createMarketStateCache(ttlMs = 5 * 60 * 1000): MarketStateCache {
+	const storage: CacheStorage = { cache: new Map<string, CachedMarketState>(), ttlMs };
+	return {
+		updateFromBook: (msg) => updateCacheFromBook(storage, msg),
+		updateFromPriceChange: (msg) => updateCacheFromPriceChange(storage, msg),
+		updateFromLastTradePrice: (msg) => updateCacheFromLastTradePrice(storage, msg),
+		get: (assetId) => getCachedState(storage, assetId),
+		getAll: () => getAllCachedStates(storage),
+		clear: () => storage.cache.clear(),
+	};
+}
+
+export const MarketStateCache: MarketStateCacheConstructor = function MarketStateCache(
+	ttlMs = 5 * 60 * 1000,
+): MarketStateCache {
+	const instance = createMarketStateCache(ttlMs);
+	Object.setPrototypeOf(instance, MarketStateCache.prototype);
+	return instance;
+} as MarketStateCacheConstructor;
 
 export type PolymarketWebSocketCallback = (message: PolymarketWebSocketMessage) => void;
 export type ConnectionState = "disconnected" | "connecting" | "connected" | "reconnecting";
 
 export interface PolymarketWebSocketConfig {
-	/** Auto-reconnect on disconnect */
 	autoReconnect?: boolean;
-	/** Reconnection settings */
 	reconnect?: {
 		initialDelayMs?: number;
 		maxDelayMs?: number;
 		backoffMultiplier?: number;
 		maxRetries?: number;
 	};
-	/** Cache TTL in milliseconds */
 	cacheTtlMs?: number;
 }
 
@@ -212,13 +239,9 @@ export class PolymarketWebSocketClient {
 		reconnect: Required<NonNullable<PolymarketWebSocketConfig["reconnect"]>>;
 	};
 	private readonly cache: MarketStateCache;
-
-	// Subscription management
 	private subscribedAssets: Set<string> = new Set();
 	private pendingAssets: Set<string> = new Set();
 	private callbacks: Set<PolymarketWebSocketCallback> = new Set();
-
-	// Event listeners
 	private onConnectCallbacks: Set<() => void> = new Set();
 	private onDisconnectCallbacks: Set<(reason?: string) => void> = new Set();
 	private onErrorCallbacks: Set<(error: Error) => void> = new Set();
@@ -242,7 +265,6 @@ export class PolymarketWebSocketClient {
 	getConnectionState(): ConnectionState {
 		return this.connectionState;
 	}
-
 	getCache(): MarketStateCache {
 		return this.cache;
 	}
@@ -305,9 +327,6 @@ export class PolymarketWebSocketClient {
 		this.connectionState = "disconnected";
 	}
 
-	/**
-	 * Subscribe to market updates for specific asset IDs (token IDs)
-	 */
 	subscribe(assetIds: string[], callback: PolymarketWebSocketCallback): void {
 		this.callbacks.add(callback);
 
@@ -325,9 +344,6 @@ export class PolymarketWebSocketClient {
 		}
 	}
 
-	/**
-	 * Unsubscribe from market updates
-	 */
 	unsubscribe(assetIds: string[], callback?: PolymarketWebSocketCallback): void {
 		if (callback) {
 			this.callbacks.delete(callback);
@@ -342,11 +358,9 @@ export class PolymarketWebSocketClient {
 	onConnect(callback: () => void): void {
 		this.onConnectCallbacks.add(callback);
 	}
-
 	onDisconnect(callback: (reason?: string) => void): void {
 		this.onDisconnectCallbacks.add(callback);
 	}
-
 	onError(callback: (error: Error) => void): void {
 		this.onErrorCallbacks.add(callback);
 	}
@@ -395,9 +409,7 @@ export class PolymarketWebSocketClient {
 					cb(message);
 				}
 			}
-		} catch {
-			// Ignore parse errors for ping/pong messages
-		}
+		} catch {}
 	}
 
 	private handleDisconnect(reason?: string): void {
@@ -451,7 +463,6 @@ export class PolymarketWebSocketClient {
 	}
 
 	private resubscribe(): void {
-		// Subscribe to pending assets
 		if (this.pendingAssets.size > 0) {
 			this.sendSubscription([...this.pendingAssets]);
 			for (const assetId of this.pendingAssets) {
@@ -459,20 +470,16 @@ export class PolymarketWebSocketClient {
 			}
 			this.pendingAssets.clear();
 		}
-
-		// Resubscribe to previously subscribed assets
 		if (this.subscribedAssets.size > 0) {
 			this.sendSubscription([...this.subscribedAssets]);
 		}
 	}
 
 	private startHeartbeat(): void {
-		this.heartbeatTimer = setInterval(() => {
-			if (this.ws && this.connectionState === "connected") {
-				// Polymarket uses ping/pong frames handled by the WebSocket protocol
-				// We just need to keep the connection alive
-			}
-		}, HEARTBEAT_INTERVAL_MS);
+		this.heartbeatTimer = setInterval(
+			() => void (this.ws && this.connectionState === "connected"),
+			HEARTBEAT_INTERVAL_MS,
+		);
 	}
 
 	private stopHeartbeat(): void {

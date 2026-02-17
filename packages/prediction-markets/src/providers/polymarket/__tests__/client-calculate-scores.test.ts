@@ -5,10 +5,9 @@
 import { describe, expect, it } from "bun:test";
 import { PolymarketClient } from "../client.js";
 
-describe("PolymarketClient.calculateScores", () => {
+describe("PolymarketClient.calculateScores fed probabilities", () => {
 	it("should calculate scores from events", () => {
 		const client = new PolymarketClient();
-
 		const events = [
 			{
 				eventId: "pm_polymarket_test",
@@ -34,10 +33,11 @@ describe("PolymarketClient.calculateScores", () => {
 		expect(scores.fedCutProbability).toBe(0.6);
 		expect(scores.fedHikeProbability).toBe(0.1);
 	});
+});
 
+describe("PolymarketClient.calculateScores recession probability", () => {
 	it("should calculate recession probability from events", () => {
 		const client = new PolymarketClient();
-
 		const events = [
 			{
 				eventId: "pm_polymarket_recession",
@@ -61,10 +61,11 @@ describe("PolymarketClient.calculateScores", () => {
 		const scores = client.calculateScores(events);
 		expect(scores.recessionProbability12m).toBe(0.35);
 	});
+});
 
+describe("PolymarketClient.calculateScores macro uncertainty", () => {
 	it("should calculate macro uncertainty index", () => {
 		const client = new PolymarketClient();
-
 		const events = [
 			{
 				eventId: "pm_polymarket_cut",
@@ -97,12 +98,13 @@ describe("PolymarketClient.calculateScores", () => {
 		];
 
 		const scores = client.calculateScores(events);
-
 		expect(scores.fedCutProbability).toBe(0.5);
 		expect(scores.fedHikeProbability).toBe(0.4);
 		expect(scores.macroUncertaintyIndex).toBe(0.8); // 0.4 / 0.5
 	});
+});
 
+describe("PolymarketClient.calculateScores empty events", () => {
 	it("should return empty scores for empty events", () => {
 		const client = new PolymarketClient();
 		const scores = client.calculateScores([]);

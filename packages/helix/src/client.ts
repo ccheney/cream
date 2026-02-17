@@ -132,6 +132,17 @@ export interface HelixClient {
 	getConfig(): Required<HelixClientConfig>;
 }
 
+type HelixQueryParams = Record<string, unknown> | undefined;
+
+interface HelixQueryExecutor {
+	query(name: string, params?: Record<string, unknown>): Promise<unknown>;
+}
+
+interface ClientRuntime {
+	connected: boolean;
+	helixInstance: HelixQueryExecutor | null;
+}
+
 /**
  * Create a HelixDB client.
  *
@@ -153,121 +164,11 @@ export interface HelixClient {
  * ```
  */
 export function createHelixClient(config: HelixClientConfig = {}): HelixClient {
-	const mergedConfig: Required<HelixClientConfig> = {
-		...DEFAULT_CONFIG,
-		...config,
-	};
-
-	let connected = false;
-	let helixInstance: unknown = null;
-
-	// Lazy initialization of the helix-ts client
-	const getClient = async () => {
-		if (!helixInstance) {
-			try {
-				// Dynamic import to handle missing module gracefully
-				const { HelixDB } = await import("helix-ts");
-				const url = `http://${mergedConfig.host}:${mergedConfig.port}`;
-				helixInstance = new HelixDB(url);
-				connected = true;
-			} catch (error) {
-				throw new HelixError(
-					`Failed to connect to HelixDB at ${mergedConfig.host}:${mergedConfig.port}`,
-					"CONNECTION_FAILED",
-					error instanceof Error ? error : undefined,
-				);
-			}
-		}
-		return helixInstance as {
-			query: (name: string, params?: Record<string, unknown>) => Promise<unknown>;
-		};
-	};
-
-	/**
-	 * Execute a query with retry logic.
-	 */
-	const executeWithRetry = async <T>(
-		queryName: string,
-		params: Record<string, unknown> | undefined,
-		attempt = 1,
-	): Promise<QueryResult<T>> => {
-		const startTime = performance.now();
-
-		try {
-			const client = await getClient();
-			const data = await Promise.race([
-				client.query(queryName, params),
-				new Promise((_, reject) =>
-					setTimeout(
-						() => reject(new HelixError("Query timed out", "TIMEOUT")),
-						mergedConfig.timeout,
-					),
-				),
-			]);
-
-			const executionTimeMs = performance.now() - startTime;
-			return { data: data as T, executionTimeMs };
-		} catch (error) {
-			if (attempt < mergedConfig.maxRetries && isRetryable(error)) {
-				// Exponential backoff
-				const delay = mergedConfig.retryDelay * 2 ** (attempt - 1);
-				await sleep(delay);
-				return executeWithRetry(queryName, params, attempt + 1);
-			}
-
-			if (error instanceof HelixError) {
-				throw error;
-			}
-
-			throw new HelixError(
-				`Query "${queryName}" failed: ${error instanceof Error ? error.message : "Unknown error"}`,
-				"QUERY_FAILED",
-				error instanceof Error ? error : undefined,
-			);
-		}
-	};
-
-	return {
-		async query<T = unknown>(
-			queryName: string,
-			params?: Record<string, unknown>,
-		): Promise<QueryResult<T>> {
-			return executeWithRetry<T>(queryName, params);
-		},
-
-		isConnected(): boolean {
-			return connected;
-		},
-
-		async healthCheck(): Promise<HealthCheckResult> {
-			const startTime = performance.now();
-			try {
-				// Attempt to initialize the client and make a connection
-				await getClient();
-				const latencyMs = performance.now() - startTime;
-				return {
-					healthy: true,
-					latencyMs,
-				};
-			} catch (error) {
-				const latencyMs = performance.now() - startTime;
-				return {
-					healthy: false,
-					latencyMs,
-					error: error instanceof Error ? error.message : "Unknown error",
-				};
-			}
-		},
-
-		close(): void {
-			connected = false;
-			helixInstance = null;
-		},
-
-		getConfig(): Required<HelixClientConfig> {
-			return { ...mergedConfig };
-		},
-	};
+	const mergedConfig = mergeClientConfig(config);
+	const runtime = createRuntime();
+	const getClient = createLazyClientGetter(runtime, mergedConfig);
+	const executeWithRetry = createRetryingQueryExecutor(getClient, mergedConfig);
+	return createClientFacade(runtime, mergedConfig, getClient, executeWithRetry);
 }
 
 /**
@@ -308,3 +209,161 @@ function isRetryable(error: unknown): boolean {
 }
 
 const sleep = Bun.sleep;
+
+function mergeClientConfig(config: HelixClientConfig): Required<HelixClientConfig> {
+	return {
+		...DEFAULT_CONFIG,
+		...config,
+	};
+}
+
+function createRuntime(): ClientRuntime {
+	return {
+		connected: false,
+		helixInstance: null,
+	};
+}
+
+function createLazyClientGetter(
+	runtime: ClientRuntime,
+	config: Required<HelixClientConfig>,
+): () => Promise<HelixQueryExecutor> {
+	return async (): Promise<HelixQueryExecutor> => {
+		if (runtime.helixInstance) {
+			return runtime.helixInstance;
+		}
+
+		runtime.helixInstance = await initializeHelixClient(config);
+		runtime.connected = true;
+		return runtime.helixInstance;
+	};
+}
+
+async function initializeHelixClient(
+	config: Required<HelixClientConfig>,
+): Promise<HelixQueryExecutor> {
+	try {
+		const { HelixDB } = await import("helix-ts");
+		const url = buildConnectionUrl(config);
+		return new HelixDB(url) as HelixQueryExecutor;
+	} catch (error) {
+		throw createConnectionError(config, error);
+	}
+}
+
+function buildConnectionUrl(config: Required<HelixClientConfig>): string {
+	return `http://${config.host}:${config.port}`;
+}
+
+function createConnectionError(config: Required<HelixClientConfig>, error: unknown): HelixError {
+	return new HelixError(
+		`Failed to connect to HelixDB at ${config.host}:${config.port}`,
+		"CONNECTION_FAILED",
+		error instanceof Error ? error : undefined,
+	);
+}
+
+function createRetryingQueryExecutor(
+	getClient: () => Promise<HelixQueryExecutor>,
+	config: Required<HelixClientConfig>,
+): <T>(queryName: string, params: HelixQueryParams) => Promise<QueryResult<T>> {
+	return async <T>(queryName: string, params: HelixQueryParams): Promise<QueryResult<T>> => {
+		let attempt = 1;
+		while (true) {
+			try {
+				return await executeQuery<T>(getClient, queryName, params, config.timeout);
+			} catch (error) {
+				if (attempt < config.maxRetries && isRetryable(error)) {
+					const delay = config.retryDelay * 2 ** (attempt - 1);
+					await sleep(delay);
+					attempt += 1;
+					continue;
+				}
+				throw normalizeQueryError(queryName, error);
+			}
+		}
+	};
+}
+
+async function executeQuery<T>(
+	getClient: () => Promise<HelixQueryExecutor>,
+	queryName: string,
+	params: HelixQueryParams,
+	timeoutMs: number,
+): Promise<QueryResult<T>> {
+	const startTime = performance.now();
+	const client = await getClient();
+	const data = (await Promise.race([
+		client.query(queryName, params),
+		createTimeoutPromise(timeoutMs),
+	])) as T;
+	return { data, executionTimeMs: performance.now() - startTime };
+}
+
+function createTimeoutPromise(timeoutMs: number): Promise<never> {
+	return new Promise((_, reject) => {
+		setTimeout(() => {
+			reject(new HelixError("Query timed out", "TIMEOUT"));
+		}, timeoutMs);
+	});
+}
+
+function normalizeQueryError(queryName: string, error: unknown): HelixError {
+	if (error instanceof HelixError) {
+		return error;
+	}
+
+	return new HelixError(
+		`Query "${queryName}" failed: ${error instanceof Error ? error.message : "Unknown error"}`,
+		"QUERY_FAILED",
+		error instanceof Error ? error : undefined,
+	);
+}
+
+function createClientFacade(
+	runtime: ClientRuntime,
+	config: Required<HelixClientConfig>,
+	getClient: () => Promise<HelixQueryExecutor>,
+	executeWithRetry: <T>(queryName: string, params: HelixQueryParams) => Promise<QueryResult<T>>,
+): HelixClient {
+	return {
+		query<T = unknown>(
+			queryName: string,
+			params?: Record<string, unknown>,
+		): Promise<QueryResult<T>> {
+			return executeWithRetry<T>(queryName, params);
+		},
+		isConnected(): boolean {
+			return runtime.connected;
+		},
+		healthCheck(): Promise<HealthCheckResult> {
+			return performHealthCheck(getClient);
+		},
+		close(): void {
+			runtime.connected = false;
+			runtime.helixInstance = null;
+		},
+		getConfig(): Required<HelixClientConfig> {
+			return { ...config };
+		},
+	};
+}
+
+async function performHealthCheck(
+	getClient: () => Promise<HelixQueryExecutor>,
+): Promise<HealthCheckResult> {
+	const startTime = performance.now();
+	try {
+		await getClient();
+		return {
+			healthy: true,
+			latencyMs: performance.now() - startTime,
+		};
+	} catch (error) {
+		return {
+			healthy: false,
+			latencyMs: performance.now() - startTime,
+			error: error instanceof Error ? error.message : "Unknown error",
+		};
+	}
+}

@@ -45,36 +45,22 @@ export interface RelativeTimeProps {
 // Utility Functions
 // ============================================
 
-/**
- * Calculate appropriate update interval based on timestamp age.
- * More recent timestamps update more frequently.
- */
 function calculateUpdateInterval(timestamp: Date): number {
 	const now = Date.now();
 	const diff = now - timestamp.getTime();
 
-	// Less than 1 minute: update every second
 	if (diff < 60 * 1000) {
 		return 1000;
 	}
-
-	// Less than 1 hour: update every minute
 	if (diff < 60 * 60 * 1000) {
 		return 60 * 1000;
 	}
-
-	// Less than 1 day: update every hour
 	if (diff < 24 * 60 * 60 * 1000) {
 		return 60 * 60 * 1000;
 	}
-
-	// Older: update every day
 	return 24 * 60 * 60 * 1000;
 }
 
-/**
- * Normalize timestamp input to Date object.
- */
 function normalizeTimestamp(timestamp: Date | string | number): Date {
 	if (timestamp instanceof Date) {
 		return timestamp;
@@ -85,50 +71,73 @@ function normalizeTimestamp(timestamp: Date | string | number): Date {
 	return new Date(timestamp);
 }
 
-/**
- * Format relative time with custom short format.
- * Produces: 'just now', '30s ago', '5m ago', '2h ago', '3d ago'
- */
 function formatShortRelative(date: Date): string {
 	const now = Date.now();
 	const diff = now - date.getTime();
 
-	// Future dates
 	if (diff < 0) {
 		return "in the future";
 	}
-
-	// Just now (< 10 seconds)
 	if (diff < 10 * 1000) {
 		return "just now";
 	}
-
-	// Seconds (< 1 minute)
 	if (diff < 60 * 1000) {
 		const seconds = Math.floor(diff / 1000);
 		return `${seconds}s ago`;
 	}
-
-	// Minutes (< 1 hour)
 	if (diff < 60 * 60 * 1000) {
 		const minutes = Math.floor(diff / (60 * 1000));
 		return `${minutes}m ago`;
 	}
-
-	// Hours (< 1 day)
 	if (diff < 24 * 60 * 60 * 1000) {
 		const hours = Math.floor(diff / (60 * 60 * 1000));
 		return `${hours}h ago`;
 	}
-
-	// Days (< 1 week)
 	if (diff < 7 * 24 * 60 * 60 * 1000) {
 		const days = Math.floor(diff / (24 * 60 * 60 * 1000));
 		return `${days}d ago`;
 	}
-
-	// Fall back to date-fns for older dates
 	return formatDistanceToNow(date, { addSuffix: true });
+}
+
+function buildDisplayText(
+	relativeTime: string,
+	prefix: string,
+	suffix: string,
+	capitalize: boolean,
+): string {
+	let text = `${prefix}${relativeTime}${suffix}`;
+	if (capitalize && text.length > 0) {
+		text = text.charAt(0).toUpperCase() + text.slice(1);
+	}
+	return text;
+}
+
+function formatAbsolute(date: Date, absoluteFormat: string): string {
+	return format(date, absoluteFormat);
+}
+
+// ============================================
+// Hooks
+// ============================================
+
+function useRelativeValue(date: Date, isValidDate: boolean, customInterval?: number): string {
+	const [relativeTime, setRelativeTime] = useState(() =>
+		isValidDate ? formatShortRelative(date) : "Invalid date",
+	);
+
+	useEffect(() => {
+		if (!isValidDate) {
+			return;
+		}
+		const update = () => setRelativeTime(formatShortRelative(date));
+		const interval = customInterval ?? calculateUpdateInterval(date);
+		update();
+		const timer = setInterval(update, interval);
+		return () => clearInterval(timer);
+	}, [date, customInterval, isValidDate]);
+
+	return relativeTime;
 }
 
 // ============================================
@@ -164,62 +173,21 @@ export const RelativeTime = forwardRef<HTMLTimeElement, RelativeTimeProps>(
 		},
 		ref,
 	) => {
-		// Normalize and validate timestamp
 		const date = useMemo(() => normalizeTimestamp(timestamp), [timestamp]);
 		const isValidDate = useMemo(() => isValid(date), [date]);
+		const relativeTime = useRelativeValue(date, isValidDate, customInterval);
 
-		// State for relative time string
-		const [relativeTime, setRelativeTime] = useState(() =>
-			isValidDate ? formatShortRelative(date) : "Invalid date",
+		const displayText = useMemo(
+			() => buildDisplayText(relativeTime, prefix, suffix, capitalize),
+			[relativeTime, prefix, suffix, capitalize],
 		);
 
-		// Auto-update effect
-		useEffect(() => {
-			if (!isValidDate) {
-				return;
-			}
+		const absoluteTime = useMemo(
+			() => (isValidDate ? formatAbsolute(date, absoluteFormat) : "Invalid date"),
+			[absoluteFormat, date, isValidDate],
+		);
 
-			const update = () => {
-				setRelativeTime(formatShortRelative(date));
-			};
-
-			// Initial update
-			update();
-
-			// Calculate interval
-			const interval = customInterval ?? calculateUpdateInterval(date);
-
-			const timer = setInterval(() => {
-				update();
-			}, interval);
-
-			return () => clearInterval(timer);
-		}, [date, isValidDate, customInterval]);
-
-		// Format the display text
-		const displayText = useMemo(() => {
-			let text = `${prefix}${relativeTime}${suffix}`;
-			if (capitalize && text.length > 0) {
-				text = text.charAt(0).toUpperCase() + text.slice(1);
-			}
-			return text;
-		}, [relativeTime, prefix, suffix, capitalize]);
-
-		// Format absolute time for tooltip
-		const absoluteTime = useMemo(() => {
-			if (!isValidDate) {
-				return "Invalid date";
-			}
-			return format(date, absoluteFormat);
-		}, [date, isValidDate, absoluteFormat]);
-
-		// ISO string for datetime attribute
-		const isoString = useMemo(() => {
-			if (!isValidDate) {
-				return "";
-			}
-			return date.toISOString();
-		}, [date, isValidDate]);
+		const isoString = useMemo(() => (isValidDate ? date.toISOString() : ""), [date, isValidDate]);
 
 		const timeElement = (
 			<time

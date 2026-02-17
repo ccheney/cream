@@ -10,8 +10,6 @@ import {
 	validateOHLC,
 	validatePrice,
 	validatePriceChange,
-	validateRawCandle,
-	validateRawCandles,
 	validateSymbol,
 	validateTimestamp,
 	validateVolume,
@@ -134,12 +132,12 @@ describe("validatePriceChange", () => {
 
 	it("should handle zero previous close", () => {
 		const issues = validatePriceChange(0, 100);
-		expect(issues).toHaveLength(0); // Can't calculate change
+		expect(issues).toHaveLength(0);
 	});
 
 	it("should handle negative previous close", () => {
 		const issues = validatePriceChange(-10, 100);
-		expect(issues).toHaveLength(0); // Can't calculate change
+		expect(issues).toHaveLength(0);
 	});
 });
 
@@ -220,7 +218,7 @@ describe("validateTimestamp", () => {
 	});
 
 	it("should reject future timestamp", () => {
-		const futureDate = new Date(Date.now() + 60 * 60 * 1000); // 1 hour in future
+		const futureDate = new Date(Date.now() + 60 * 60 * 1000);
 		const issues = validateTimestamp(futureDate);
 		expect(issues).toHaveLength(1);
 		expect(issues[0]?.issue).toContain("future");
@@ -237,118 +235,6 @@ describe("validateTimestamp", () => {
 		const issues = validateTimestamp({ foo: "bar" });
 		expect(issues).toHaveLength(1);
 		expect(issues[0]?.issue).toContain("must be Date, string, or number");
-	});
-});
-
-// ============================================
-// Raw Candle Validation Tests
-// ============================================
-
-describe("validateRawCandle", () => {
-	it("should accept valid candle (standard format)", () => {
-		const result = validateRawCandle({
-			timestamp: "2024-01-15T10:30:00Z",
-			open: 100,
-			high: 105,
-			low: 98,
-			close: 103,
-			volume: 1000000,
-		});
-
-		expect(result.valid).toBe(true);
-		expect(result.issues).toHaveLength(0);
-		expect(result.sanitized).toBeDefined();
-	});
-
-	it("should accept valid candle (Polygon format)", () => {
-		const result = validateRawCandle({
-			t: Date.now(),
-			o: 100,
-			h: 105,
-			l: 98,
-			c: 103,
-			v: 1000000,
-		});
-
-		expect(result.valid).toBe(true);
-		expect(result.issues).toHaveLength(0);
-	});
-
-	it("should reject candle with invalid OHLC", () => {
-		const result = validateRawCandle({
-			timestamp: "2024-01-15T10:30:00Z",
-			open: 100,
-			high: 95, // Invalid: high < open
-			low: 98,
-			close: 103,
-			volume: 1000000,
-		});
-
-		expect(result.valid).toBe(false);
-		expect(result.issues.some((i) => i.issue.includes("High"))).toBe(true);
-	});
-
-	it("should reject candle with missing price", () => {
-		const result = validateRawCandle({
-			timestamp: "2024-01-15T10:30:00Z",
-			open: 100,
-			high: 105,
-			// missing low
-			close: 103,
-			volume: 1000000,
-		});
-
-		expect(result.valid).toBe(false);
-	});
-
-	it("should reject candle with negative volume", () => {
-		const result = validateRawCandle({
-			timestamp: "2024-01-15T10:30:00Z",
-			open: 100,
-			high: 105,
-			low: 98,
-			close: 103,
-			volume: -1000,
-		});
-
-		expect(result.valid).toBe(false);
-	});
-});
-
-describe("validateRawCandles", () => {
-	it("should separate valid and invalid candles", () => {
-		const candles = [
-			{
-				timestamp: "2024-01-15T10:30:00Z",
-				open: 100,
-				high: 105,
-				low: 98,
-				close: 103,
-				volume: 1000000,
-			},
-			{
-				timestamp: "2024-01-15T10:31:00Z",
-				open: 100,
-				high: 95, // Invalid
-				low: 98,
-				close: 103,
-				volume: 1000000,
-			},
-			{
-				timestamp: "2024-01-15T10:32:00Z",
-				open: 103,
-				high: 108,
-				low: 102,
-				close: 106,
-				volume: 1200000,
-			},
-		];
-
-		const result = validateRawCandles(candles);
-
-		expect(result.valid).toHaveLength(2);
-		expect(result.invalid).toHaveLength(1);
-		expect(result.invalid[0]?.index).toBe(1);
 	});
 });
 

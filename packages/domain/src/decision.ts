@@ -234,36 +234,31 @@ export type Decision = z.infer<typeof DecisionSchema>;
  * Determine the direction of a decision
  */
 export function getDecisionDirection(decision: Decision): Direction {
-	const { action, size } = decision;
-
-	if (action === "NO_TRADE" || action === "HOLD") {
-		if (size.targetPositionQuantity > 0) {
+	const targetDirection = getDirectionFromTarget(decision.size.targetPositionQuantity);
+	switch (decision.action) {
+		case "BUY":
 			return "LONG";
-		}
-		if (size.targetPositionQuantity < 0) {
+		case "SELL":
 			return "SHORT";
-		}
-		return "FLAT";
+		case "NO_TRADE":
+		case "HOLD":
+		case "INCREASE":
+		case "REDUCE":
+			return targetDirection;
+		case "CLOSE":
+			return "FLAT";
+		default:
+			return "FLAT";
 	}
+}
 
-	if (action === "BUY" || (action === "INCREASE" && size.targetPositionQuantity > 0)) {
+function getDirectionFromTarget(targetPositionQuantity: number): Direction {
+	if (targetPositionQuantity > 0) {
 		return "LONG";
 	}
-
-	if (action === "SELL" || (action === "INCREASE" && size.targetPositionQuantity < 0)) {
+	if (targetPositionQuantity < 0) {
 		return "SHORT";
 	}
-
-	if (action === "REDUCE") {
-		if (size.targetPositionQuantity > 0) {
-			return "LONG";
-		}
-		if (size.targetPositionQuantity < 0) {
-			return "SHORT";
-		}
-		return "FLAT";
-	}
-
 	return "FLAT";
 }
 
@@ -288,30 +283,40 @@ export interface RiskValidationResult {
  * 5. Maximum stop distance (stop not > 5x profit target)
  */
 export function validateRiskLevels(decision: Decision, entryPrice: number): RiskValidationResult {
-	const result: RiskValidationResult = {
-		valid: true,
-		errors: [],
-		warnings: [],
-		riskRewardRatio: null,
-	};
-
+	const result = createRiskValidationResult();
 	const { stopLossLevel, takeProfitLevel } = decision.riskLevels;
 	const direction = getDecisionDirection(decision);
-
-	// Skip detailed validation for FLAT positions
 	if (direction === "FLAT") {
 		return result;
 	}
 
 	const riskAmount = Math.abs(entryPrice - stopLossLevel);
 	const rewardAmount = Math.abs(takeProfitLevel - entryPrice);
-
-	// Calculate risk-reward ratio
 	if (riskAmount > 0) {
 		result.riskRewardRatio = rewardAmount / riskAmount;
 	}
 
-	// Validate logical direction
+	applyDirectionChecks(result, direction, stopLossLevel, takeProfitLevel, entryPrice);
+	appendRiskWarnings(result, riskAmount, rewardAmount);
+	return result;
+}
+
+function createRiskValidationResult(): RiskValidationResult {
+	return {
+		valid: true,
+		errors: [],
+		warnings: [],
+		riskRewardRatio: null,
+	};
+}
+
+function applyDirectionChecks(
+	result: RiskValidationResult,
+	direction: Direction,
+	stopLossLevel: number,
+	takeProfitLevel: number,
+	entryPrice: number,
+): void {
 	if (direction === "LONG") {
 		if (stopLossLevel >= entryPrice) {
 			result.valid = false;
@@ -325,7 +330,10 @@ export function validateRiskLevels(decision: Decision, entryPrice: number): Risk
 				`LONG position: takeProfitLevel (${takeProfitLevel}) must be above entryPrice (${entryPrice})`,
 			);
 		}
-	} else if (direction === "SHORT") {
+		return;
+	}
+
+	if (direction === "SHORT") {
 		if (stopLossLevel <= entryPrice) {
 			result.valid = false;
 			result.errors.push(
@@ -339,22 +347,23 @@ export function validateRiskLevels(decision: Decision, entryPrice: number): Risk
 			);
 		}
 	}
+}
 
-	// Check minimum risk-reward ratio (1.5:1)
+function appendRiskWarnings(
+	result: RiskValidationResult,
+	riskAmount: number,
+	rewardAmount: number,
+): void {
 	if (result.riskRewardRatio !== null && result.riskRewardRatio < 1.5) {
 		result.warnings.push(
 			`Risk-reward ratio (${result.riskRewardRatio.toFixed(2)}) is below minimum 1.5:1`,
 		);
 	}
-
-	// Check maximum stop distance (stop loss not > 5x profit target)
 	if (riskAmount > rewardAmount * 5) {
 		result.warnings.push(
 			`Stop distance (${riskAmount.toFixed(2)}) exceeds 5x profit target (${rewardAmount.toFixed(2)})`,
 		);
 	}
-
-	return result;
 }
 
 // ============================================

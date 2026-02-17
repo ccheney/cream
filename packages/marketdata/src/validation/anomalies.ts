@@ -160,41 +160,11 @@ export function detectPriceSpikes(
 	const anomalies: Anomaly[] = [];
 
 	for (let i = 1; i < candles.length; i++) {
-		const prev = candles[i - 1];
-		const curr = candles[i];
-		if (!prev || !curr) {
+		const pair = getCandlePair(candles, i);
+		if (!pair) {
 			continue;
 		}
-
-		// Calculate percentage change
-		const pctChange = (curr.close - prev.close) / prev.close;
-		const absChange = Math.abs(pctChange);
-
-		if (absChange >= config.priceSpikePct) {
-			anomalies.push({
-				type: "price_spike",
-				timestamp: curr.timestamp,
-				symbol: curr.symbol,
-				value: pctChange,
-				threshold: config.priceSpikePct,
-				severity: absChange >= config.priceSpikePct * 1.5 ? "critical" : "warning",
-				description: `Price ${pctChange > 0 ? "spike up" : "spike down"}: ${(pctChange * 100).toFixed(2)}%`,
-			});
-		}
-
-		// Check for gap up/down (open significantly different from prev close)
-		const gapPct = (curr.open - prev.close) / prev.close;
-		if (Math.abs(gapPct) >= config.priceSpikePct) {
-			anomalies.push({
-				type: gapPct > 0 ? "gap_up" : "gap_down",
-				timestamp: curr.timestamp,
-				symbol: curr.symbol,
-				value: gapPct,
-				threshold: config.priceSpikePct,
-				severity: "warning",
-				description: `Gap ${gapPct > 0 ? "up" : "down"}: ${(gapPct * 100).toFixed(2)}%`,
-			});
-		}
+		anomalies.push(...detectPriceMoveAnomalies(pair.prev, pair.curr, config));
 	}
 
 	return anomalies;
@@ -220,78 +190,126 @@ export function detectFlashCrashes(
 	const anomalies: Anomaly[] = [];
 
 	for (let i = 1; i < candles.length - recoveryCandles; i++) {
-		const prev = candles[i - 1];
-		const curr = candles[i];
-		if (!prev || !curr) {
+		const pair = getCandlePair(candles, i);
+		if (!pair) {
 			continue;
 		}
-
-		// Check for significant drop
-		const dropPct = (curr.low - prev.close) / prev.close;
-
-		if (dropPct <= -config.flashCrashPct) {
-			let recovered = false;
-			for (let j = 1; j <= recoveryCandles && i + j < candles.length; j++) {
-				const recoveryCandle = candles[i + j];
-				if (!recoveryCandle) {
-					continue;
-				}
-				const recoveryPct = (recoveryCandle.close - prev.close) / prev.close;
-
-				// Consider recovered if price returns within 2% of original
-				if (recoveryPct >= -0.02) {
-					recovered = true;
-					break;
-				}
-			}
-
-			if (recovered) {
-				anomalies.push({
-					type: "flash_crash",
-					timestamp: curr.timestamp,
-					symbol: curr.symbol,
-					value: dropPct,
-					threshold: config.flashCrashPct,
-					severity: "critical",
-					description: `Flash crash: ${(dropPct * 100).toFixed(2)}% drop with recovery`,
-				});
-			}
-		}
-
-		// Check for significant rally
-		const rallyPct = (curr.high - prev.close) / prev.close;
-
-		if (rallyPct >= config.flashCrashPct) {
-			let reversed = false;
-			for (let j = 1; j <= recoveryCandles && i + j < candles.length; j++) {
-				const reversalCandle = candles[i + j];
-				if (!reversalCandle) {
-					continue;
-				}
-				const reversalPct = (reversalCandle.close - prev.close) / prev.close;
-
-				// Consider reversed if price returns within 2% of original
-				if (reversalPct <= 0.02) {
-					reversed = true;
-					break;
-				}
-			}
-
-			if (reversed) {
-				anomalies.push({
-					type: "flash_rally",
-					timestamp: curr.timestamp,
-					symbol: curr.symbol,
-					value: rallyPct,
-					threshold: config.flashCrashPct,
-					severity: "critical",
-					description: `Flash rally: ${(rallyPct * 100).toFixed(2)}% spike with reversal`,
-				});
-			}
-		}
+		anomalies.push(
+			...detectFlashMoveAnomalies(candles, i, pair.prev, pair.curr, config, recoveryCandles),
+		);
 	}
 
 	return anomalies;
+}
+
+function getCandlePair(candles: Candle[], index: number): { prev: Candle; curr: Candle } | null {
+	const prev = candles[index - 1];
+	const curr = candles[index];
+	if (!prev || !curr) {
+		return null;
+	}
+	return { prev, curr };
+}
+
+function detectPriceMoveAnomalies(
+	prev: Candle,
+	curr: Candle,
+	config: AnomalyDetectionConfig,
+): Anomaly[] {
+	const anomalies: Anomaly[] = [];
+
+	const pctChange = (curr.close - prev.close) / prev.close;
+	const absChange = Math.abs(pctChange);
+	if (absChange >= config.priceSpikePct) {
+		anomalies.push({
+			type: "price_spike",
+			timestamp: curr.timestamp,
+			symbol: curr.symbol,
+			value: pctChange,
+			threshold: config.priceSpikePct,
+			severity: absChange >= config.priceSpikePct * 1.5 ? "critical" : "warning",
+			description: `Price ${pctChange > 0 ? "spike up" : "spike down"}: ${(pctChange * 100).toFixed(2)}%`,
+		});
+	}
+
+	const gapPct = (curr.open - prev.close) / prev.close;
+	if (Math.abs(gapPct) >= config.priceSpikePct) {
+		anomalies.push({
+			type: gapPct > 0 ? "gap_up" : "gap_down",
+			timestamp: curr.timestamp,
+			symbol: curr.symbol,
+			value: gapPct,
+			threshold: config.priceSpikePct,
+			severity: "warning",
+			description: `Gap ${gapPct > 0 ? "up" : "down"}: ${(gapPct * 100).toFixed(2)}%`,
+		});
+	}
+
+	return anomalies;
+}
+
+function detectFlashMoveAnomalies(
+	candles: Candle[],
+	index: number,
+	prev: Candle,
+	curr: Candle,
+	config: AnomalyDetectionConfig,
+	recoveryCandles: number,
+): Anomaly[] {
+	const anomalies: Anomaly[] = [];
+	const dropPct = (curr.low - prev.close) / prev.close;
+	if (
+		dropPct <= -config.flashCrashPct &&
+		hasRecovery(candles, index, recoveryCandles, prev.close, (movePct) => movePct >= -0.02)
+	) {
+		anomalies.push({
+			type: "flash_crash",
+			timestamp: curr.timestamp,
+			symbol: curr.symbol,
+			value: dropPct,
+			threshold: config.flashCrashPct,
+			severity: "critical",
+			description: `Flash crash: ${(dropPct * 100).toFixed(2)}% drop with recovery`,
+		});
+	}
+
+	const rallyPct = (curr.high - prev.close) / prev.close;
+	if (
+		rallyPct >= config.flashCrashPct &&
+		hasRecovery(candles, index, recoveryCandles, prev.close, (movePct) => movePct <= 0.02)
+	) {
+		anomalies.push({
+			type: "flash_rally",
+			timestamp: curr.timestamp,
+			symbol: curr.symbol,
+			value: rallyPct,
+			threshold: config.flashCrashPct,
+			severity: "critical",
+			description: `Flash rally: ${(rallyPct * 100).toFixed(2)}% spike with reversal`,
+		});
+	}
+
+	return anomalies;
+}
+
+function hasRecovery(
+	candles: Candle[],
+	startIndex: number,
+	recoveryCandles: number,
+	referenceClose: number,
+	match: (movePct: number) => boolean,
+): boolean {
+	for (let j = 1; j <= recoveryCandles && startIndex + j < candles.length; j++) {
+		const recoveryCandle = candles[startIndex + j];
+		if (!recoveryCandle) {
+			continue;
+		}
+		const movePct = (recoveryCandle.close - referenceClose) / referenceClose;
+		if (match(movePct)) {
+			return true;
+		}
+	}
+	return false;
 }
 
 // ============================================

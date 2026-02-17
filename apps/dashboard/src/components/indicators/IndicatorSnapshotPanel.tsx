@@ -45,6 +45,22 @@ export interface IndicatorSnapshotPanelProps {
 	className?: string;
 }
 
+function withStableOccurrenceKeys<T>(
+	items: T[],
+	getBaseKey: (item: T) => string,
+): Array<{ item: T; key: string }> {
+	const counts = new Map<string, number>();
+	return items.map((item) => {
+		const base = getBaseKey(item);
+		const nextCount = (counts.get(base) ?? 0) + 1;
+		counts.set(base, nextCount);
+		return {
+			item,
+			key: `${base}-${nextCount}`,
+		};
+	});
+}
+
 function getDataFreshness(updatedAt: number): Freshness {
 	const now = Date.now();
 	const ageMs = now - updatedAt;
@@ -119,6 +135,15 @@ const ALL_SECTIONS: IndicatorCategory[] = [
 	"corporate",
 ];
 
+const SKELETON_ROW_KEYS = [
+	"skeleton-row-1",
+	"skeleton-row-2",
+	"skeleton-row-3",
+	"skeleton-row-4",
+	"skeleton-row-5",
+	"skeleton-row-6",
+] as const;
+
 function IndicatorSectionSkeleton() {
 	return (
 		<div className="rounded-lg border border-cream-200 dark:border-night-700 bg-cream-50/50 dark:bg-night-800/50">
@@ -133,9 +158,8 @@ function IndicatorSectionSkeleton() {
 			{/* Content */}
 			<div className="border-t border-cream-200 dark:border-night-700 px-4 py-3">
 				<div className="grid grid-cols-2 gap-3">
-					{Array.from({ length: 6 }, (_, i) => (
-						// biome-ignore lint/suspicious/noArrayIndexKey: Static skeleton count, index is stable
-						<div key={i} className="space-y-1">
+					{SKELETON_ROW_KEYS.map((rowKey) => (
+						<div key={rowKey} className="space-y-1">
 							<Skeleton width={60} height={12} />
 							<Skeleton width={80} height={20} />
 						</div>
@@ -155,10 +179,13 @@ function IndicatorSnapshotSkeleton({
 	layout: "full" | "compact";
 	className?: string;
 }) {
-	const sectionCount = Math.min(sections.length, 3);
+	const skeletonSections = withStableOccurrenceKeys(
+		sections.slice(0, 3),
+		(section) => `${section}-skeleton`,
+	);
 
 	return (
-		<div className={cn("space-y-4", className)} role="status" aria-label="Loading indicators">
+		<div className={cn("space-y-4", className)} aria-busy="true">
 			{/* Header skeleton */}
 			<div className="flex items-center justify-between">
 				<Skeleton width={120} height={14} />
@@ -172,14 +199,96 @@ function IndicatorSnapshotSkeleton({
 					layout === "full" ? "grid-cols-1 lg:grid-cols-2" : "grid-cols-1",
 				)}
 			>
-				{Array.from({ length: sectionCount }, (_, i) => (
-					// biome-ignore lint/suspicious/noArrayIndexKey: Static skeleton count, index is stable
-					<div key={i} className={layout === "full" && i === 0 ? "lg:col-span-2" : ""}>
+				{skeletonSections.map(({ key }, index) => (
+					<div key={key} className={layout === "full" && index === 0 ? "lg:col-span-2" : ""}>
 						<IndicatorSectionSkeleton />
 					</div>
 				))}
 			</div>
 		</div>
+	);
+}
+
+function useIsMarketClosed(): boolean {
+	const [isMarketClosed, setIsMarketClosed] = useState(!isOptionsMarketOpen());
+
+	useEffect(() => {
+		setIsMarketClosed(!isOptionsMarketOpen());
+		const interval = setInterval(() => {
+			setIsMarketClosed(!isOptionsMarketOpen());
+		}, 60_000);
+		return () => clearInterval(interval);
+	}, []);
+
+	return isMarketClosed;
+}
+
+function IndicatorPanelsGrid({
+	sections,
+	layout,
+	data,
+	isMarketClosed,
+}: {
+	sections: IndicatorCategory[];
+	layout: "full" | "compact";
+	data: NonNullable<ReturnType<typeof useIndicatorSnapshot>["data"]>;
+	isMarketClosed: boolean;
+}) {
+	const priceFreshness = getDataFreshness(data.metadata.price_updated_at);
+	const fundamentalsFreshness = getBatchDataFreshness(data.metadata.fundamentals_date);
+	const shortInterestFreshness = getBatchDataFreshness(data.metadata.short_interest_date);
+	const sentimentFreshness = getBatchDataFreshness(data.metadata.sentiment_date);
+
+	return (
+		<div
+			className={cn("grid gap-4", layout === "full" ? "grid-cols-1 lg:grid-cols-2" : "grid-cols-1")}
+		>
+			{sections.includes("price") && (
+				<div className={layout === "full" ? "lg:col-span-2" : ""}>
+					<PriceIndicatorsPanel data={data.price} freshness={priceFreshness} />
+				</div>
+			)}
+			{sections.includes("liquidity") && (
+				<LiquidityIndicatorsPanel data={data.liquidity} freshness={priceFreshness} />
+			)}
+			{sections.includes("options") && (
+				<OptionsIndicatorsPanel
+					data={data.options}
+					freshness={priceFreshness}
+					isMarketClosed={isMarketClosed}
+				/>
+			)}
+			{sections.includes("value") && (
+				<ValueIndicatorsPanel data={data.value} freshness={fundamentalsFreshness} />
+			)}
+			{sections.includes("quality") && (
+				<QualityIndicatorsPanel data={data.quality} freshness={fundamentalsFreshness} />
+			)}
+			{sections.includes("short_interest") && (
+				<ShortInterestPanel data={data.short_interest} freshness={shortInterestFreshness} />
+			)}
+			{sections.includes("sentiment") && (
+				<SentimentPanel data={data.sentiment} freshness={sentimentFreshness} />
+			)}
+			{sections.includes("corporate") && (
+				<CorporatePanel data={data.corporate} freshness={fundamentalsFreshness} />
+			)}
+		</div>
+	);
+}
+
+function MissingFieldsNotice({ fields }: { fields: string[] }) {
+	const optionsFields = new Set(["implied_volatility", "iv_skew", "put_call_ratio"]);
+	const otherMissing = fields.filter((field) => !optionsFields.has(field));
+
+	if (otherMissing.length === 0) {
+		return null;
+	}
+
+	return (
+		<p className="text-xs text-stone-400 dark:text-night-500">
+			Some data unavailable: {otherMissing.join(", ")}
+		</p>
 	);
 }
 
@@ -190,21 +299,7 @@ export function IndicatorSnapshotPanel({
 	className,
 }: IndicatorSnapshotPanelProps) {
 	const { data, isLoading, isError, error } = useIndicatorSnapshot(symbol);
-
-	// Track market open status for options (updates every minute)
-	const [isMarketClosed, setIsMarketClosed] = useState(!isOptionsMarketOpen());
-
-	useEffect(() => {
-		// Update immediately
-		setIsMarketClosed(!isOptionsMarketOpen());
-
-		// Check every minute
-		const interval = setInterval(() => {
-			setIsMarketClosed(!isOptionsMarketOpen());
-		}, 60_000);
-
-		return () => clearInterval(interval);
-	}, []);
+	const isMarketClosed = useIsMarketClosed();
 
 	if (isLoading) {
 		return <IndicatorSnapshotSkeleton sections={sections} layout={layout} className={className} />;
@@ -219,11 +314,6 @@ export function IndicatorSnapshotPanel({
 		);
 	}
 
-	const priceFreshness = getDataFreshness(data.metadata.price_updated_at);
-	const fundamentalsFreshness = getBatchDataFreshness(data.metadata.fundamentals_date);
-	const shortInterestFreshness = getBatchDataFreshness(data.metadata.short_interest_date);
-	const sentimentFreshness = getBatchDataFreshness(data.metadata.sentiment_date);
-
 	return (
 		<div className={cn("space-y-4", className)}>
 			{/* Header with data quality */}
@@ -233,65 +323,13 @@ export function IndicatorSnapshotPanel({
 				</h3>
 				<DataQualityBadge quality={data.metadata.data_quality} />
 			</div>
-
-			{/* Panels Grid */}
-			<div
-				className={cn(
-					"grid gap-4",
-					layout === "full" ? "grid-cols-1 lg:grid-cols-2" : "grid-cols-1",
-				)}
-			>
-				{sections.includes("price") && (
-					<div className={layout === "full" ? "lg:col-span-2" : ""}>
-						<PriceIndicatorsPanel data={data.price} freshness={priceFreshness} />
-					</div>
-				)}
-
-				{sections.includes("liquidity") && (
-					<LiquidityIndicatorsPanel data={data.liquidity} freshness={priceFreshness} />
-				)}
-
-				{sections.includes("options") && (
-					<OptionsIndicatorsPanel
-						data={data.options}
-						freshness={priceFreshness}
-						isMarketClosed={isMarketClosed}
-					/>
-				)}
-
-				{sections.includes("value") && (
-					<ValueIndicatorsPanel data={data.value} freshness={fundamentalsFreshness} />
-				)}
-
-				{sections.includes("quality") && (
-					<QualityIndicatorsPanel data={data.quality} freshness={fundamentalsFreshness} />
-				)}
-
-				{sections.includes("short_interest") && (
-					<ShortInterestPanel data={data.short_interest} freshness={shortInterestFreshness} />
-				)}
-
-				{sections.includes("sentiment") && (
-					<SentimentPanel data={data.sentiment} freshness={sentimentFreshness} />
-				)}
-
-				{sections.includes("corporate") && (
-					<CorporatePanel data={data.corporate} freshness={fundamentalsFreshness} />
-				)}
-			</div>
-
-			{/* Missing fields warning - exclude options fields since the Options panel explains market hours */}
-			{(() => {
-				const optionsFields = ["implied_volatility", "iv_skew", "put_call_ratio"];
-				const otherMissing = data.metadata.missing_fields.filter((f) => !optionsFields.includes(f));
-				return (
-					otherMissing.length > 0 && (
-						<p className="text-xs text-stone-400 dark:text-night-500">
-							Some data unavailable: {otherMissing.join(", ")}
-						</p>
-					)
-				);
-			})()}
+			<IndicatorPanelsGrid
+				sections={sections}
+				layout={layout}
+				data={data}
+				isMarketClosed={isMarketClosed}
+			/>
+			<MissingFieldsNotice fields={data.metadata.missing_fields} />
 		</div>
 	);
 }

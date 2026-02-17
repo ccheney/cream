@@ -266,7 +266,9 @@ describe("getTransitionDecision", () => {
 		expect(result.targetTier).toBe("COLD");
 		expect(result.shouldDelete).toBe(false);
 	});
+});
 
+describe("getTransitionDecision retention boundaries", () => {
 	it("deletes PAPER TradeDecision after retention expires", () => {
 		const paperPolicy = requirePolicy(
 			getRetentionPolicy("TradeDecision", "PAPER"),
@@ -284,7 +286,9 @@ describe("getTransitionDecision", () => {
 		expect(result.shouldDelete).toBe(true);
 		expect(result.reason).toContain("exceeded total retention");
 	});
+});
 
+describe("getTransitionDecision edge conditions", () => {
 	it("handles unknown node type gracefully", () => {
 		const nodeInfo: NodeAgeInfo = {
 			ageDays: 10,

@@ -106,6 +106,83 @@ const initialState: UIState = {
 	chartShowIndicators: ["SMA_20", "SMA_50"],
 };
 
+type UISet = (partial: Partial<UIStore> | ((state: UIStore) => Partial<UIStore>)) => void;
+type UIGet = () => UIStore;
+
+function toggleFeedFilterSelection(current: FeedFilter[], filter: FeedFilter): FeedFilter[] {
+	if (filter === "all") {
+		return ["all"];
+	}
+
+	const withoutAll = current.filter((value) => value !== "all");
+	if (current.includes(filter)) {
+		const filtered = withoutAll.filter((value) => value !== filter);
+		return filtered.length > 0 ? filtered : ["all"];
+	}
+	return [...withoutAll, filter];
+}
+
+function toggleChartIndicatorSelection(current: string[], indicator: string): string[] {
+	return current.includes(indicator)
+		? current.filter((value) => value !== indicator)
+		: [...current, indicator];
+}
+
+function createUIActions(set: UISet, get: UIGet): UIActions {
+	return {
+		toggleSidebar: () => {
+			set((state) => ({ sidebarCollapsed: !state.sidebarCollapsed }));
+		},
+		setSidebarCollapsed: (collapsed) => {
+			set({ sidebarCollapsed: collapsed });
+		},
+		toggleRealTimeFeed: () => {
+			set((state) => ({ realTimeFeedVisible: !state.realTimeFeedVisible }));
+		},
+		setRealTimeFeedVisible: (visible) => {
+			set({ realTimeFeedVisible: visible });
+		},
+		toggleAlertsPanel: () => {
+			set((state) => ({ alertsPanelVisible: !state.alertsPanelVisible }));
+		},
+		setAlertsPanelVisible: (visible) => {
+			set({ alertsPanelVisible: visible });
+		},
+		setTheme: (theme) => {
+			set({ theme });
+		},
+		setChartTimeframe: (timeframe) => {
+			set({ chartTimeframe: timeframe });
+		},
+		setFeedFilters: (filters) => {
+			set({ realTimeFeedFilters: filters });
+		},
+		toggleFeedFilter: (filter) => {
+			set({ realTimeFeedFilters: toggleFeedFilterSelection(get().realTimeFeedFilters, filter) });
+		},
+		setTablePageSize: (size) => {
+			set({ tablePageSize: size });
+		},
+		setTableDensity: (density) => {
+			set({ tableDensity: density });
+		},
+		setChartShowVolume: (show) => {
+			set({ chartShowVolume: show });
+		},
+		setChartIndicators: (indicators) => {
+			set({ chartShowIndicators: indicators });
+		},
+		toggleChartIndicator: (indicator) => {
+			set({
+				chartShowIndicators: toggleChartIndicatorSelection(get().chartShowIndicators, indicator),
+			});
+		},
+		reset: () => {
+			set(initialState);
+		},
+	};
+}
+
 // ============================================
 // Store Implementation
 // ============================================
@@ -130,96 +207,7 @@ export const useUIStore = create<UIStore>()(
 		(set, get) => ({
 			// Initial state
 			...initialState,
-
-			// Panel toggles
-			toggleSidebar: () => {
-				set((state) => ({ sidebarCollapsed: !state.sidebarCollapsed }));
-			},
-
-			setSidebarCollapsed: (collapsed) => {
-				set({ sidebarCollapsed: collapsed });
-			},
-
-			toggleRealTimeFeed: () => {
-				set((state) => ({ realTimeFeedVisible: !state.realTimeFeedVisible }));
-			},
-
-			setRealTimeFeedVisible: (visible) => {
-				set({ realTimeFeedVisible: visible });
-			},
-
-			toggleAlertsPanel: () => {
-				set((state) => ({ alertsPanelVisible: !state.alertsPanelVisible }));
-			},
-
-			setAlertsPanelVisible: (visible) => {
-				set({ alertsPanelVisible: visible });
-			},
-
-			// Preferences
-			setTheme: (theme) => {
-				set({ theme });
-			},
-
-			setChartTimeframe: (timeframe) => {
-				set({ chartTimeframe: timeframe });
-			},
-
-			setFeedFilters: (filters) => {
-				set({ realTimeFeedFilters: filters });
-			},
-
-			toggleFeedFilter: (filter) => {
-				const current = get().realTimeFeedFilters;
-				if (filter === "all") {
-					set({ realTimeFeedFilters: ["all"] });
-				} else {
-					// Remove 'all' when selecting specific filters
-					const withoutAll = current.filter((f) => f !== "all");
-					if (current.includes(filter)) {
-						const newFilters = withoutAll.filter((f) => f !== filter);
-						set({
-							realTimeFeedFilters: newFilters.length > 0 ? newFilters : ["all"],
-						});
-					} else {
-						set({ realTimeFeedFilters: [...withoutAll, filter] });
-					}
-				}
-			},
-
-			// Table preferences
-			setTablePageSize: (size) => {
-				set({ tablePageSize: size });
-			},
-
-			setTableDensity: (density) => {
-				set({ tableDensity: density });
-			},
-
-			// Chart preferences
-			setChartShowVolume: (show) => {
-				set({ chartShowVolume: show });
-			},
-
-			setChartIndicators: (indicators) => {
-				set({ chartShowIndicators: indicators });
-			},
-
-			toggleChartIndicator: (indicator) => {
-				const current = get().chartShowIndicators;
-				if (current.includes(indicator)) {
-					set({
-						chartShowIndicators: current.filter((i) => i !== indicator),
-					});
-				} else {
-					set({ chartShowIndicators: [...current, indicator] });
-				}
-			},
-
-			// Reset
-			reset: () => {
-				set(initialState);
-			},
+			...createUIActions(set, get),
 		}),
 		{
 			name: "cream-ui-preferences",

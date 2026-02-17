@@ -39,8 +39,7 @@ const pulseKeyframes = `
 export default function Loading() {
 	return (
 		<>
-			{/* biome-ignore lint/security/noDangerouslySetInnerHtml: Required for SSR keyframe animation - constant styles defined at build time */}
-			<style dangerouslySetInnerHTML={{ __html: pulseKeyframes }} />
+			<style>{pulseKeyframes}</style>
 			<output
 				className="loading-container"
 				style={{

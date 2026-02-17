@@ -104,17 +104,7 @@ async function callGroundingAgent(
 	errors: string[],
 	warnings: string[],
 ): Promise<GroundingResult> {
-	const emptyResult: GroundingResult = {
-		perSymbol: instruments.map((symbol) => ({
-			symbol,
-			news: [],
-			fundamentals: [],
-			bullCase: [],
-			bearCase: [],
-		})),
-		global: { macro: [], events: [] },
-		sources: [],
-	};
+	const emptyResult = createEmptyGroundingResult(instruments);
 
 	// Check if xAI API is configured
 	if (!Bun.env.XAI_API_KEY) {
@@ -184,30 +174,7 @@ Return your findings as a JSON object.`;
  */
 function toStringArray(items: unknown): string[] {
 	if (!Array.isArray(items)) return [];
-
-	return items
-		.map((item) => {
-			if (typeof item === "string") return item;
-			if (item === null || item === undefined) return "";
-			if (typeof item === "object") {
-				// Try to extract meaningful text from common object shapes
-				const obj = item as Record<string, unknown>;
-				if (typeof obj.headline === "string") {
-					const parts = [obj.headline];
-					if (typeof obj.source === "string") parts.push(`(${obj.source})`);
-					if (typeof obj.date === "string") parts.push(`[${obj.date}]`);
-					return parts.join(" ");
-				}
-				if (typeof obj.text === "string") return obj.text;
-				if (typeof obj.content === "string") return obj.content;
-				if (typeof obj.summary === "string") return obj.summary;
-				if (typeof obj.description === "string") return obj.description;
-				// Fallback: stringify the object
-				return JSON.stringify(item);
-			}
-			return String(item);
-		})
-		.filter((s) => s.length > 0);
+	return items.map(toGroundingText).filter((text) => text.length > 0);
 }
 
 function parseGroundingResponse(
@@ -215,7 +182,27 @@ function parseGroundingResponse(
 	instruments: string[],
 	warnings: string[],
 ): GroundingResult {
-	const emptyResult: GroundingResult = {
+	const emptyResult = createEmptyGroundingResult(instruments);
+	const parsed = extractGroundingJson(text);
+	if (!parsed) {
+		warnings.push("Could not extract JSON from grounding response");
+		return emptyResult;
+	}
+
+	try {
+		const perSymbol = parsePerSymbolContext(parsed.perSymbol);
+		const global = parseGlobalContext(parsed.global);
+		const sources = parseSources(parsed.sources);
+		ensureAllInstrumentsPresent(perSymbol, instruments);
+		return { perSymbol, global, sources };
+	} catch {
+		warnings.push("Failed to parse grounding response JSON");
+		return emptyResult;
+	}
+}
+
+function createEmptyGroundingResult(instruments: string[]): GroundingResult {
+	return {
 		perSymbol: instruments.map((symbol) => ({
 			symbol,
 			news: [],
@@ -226,84 +213,89 @@ function parseGroundingResponse(
 		global: { macro: [], events: [] },
 		sources: [],
 	};
+}
 
-	// Try to extract JSON from the response
-	const jsonMatch = text.match(/\{[\s\S]*\}/);
-	if (!jsonMatch) {
-		warnings.push("Could not extract JSON from grounding response");
-		return emptyResult;
+function toGroundingText(item: unknown): string {
+	if (typeof item === "string") return item;
+	if (item === null || item === undefined) return "";
+	if (typeof item === "object") return toGroundingTextFromObject(item as Record<string, unknown>);
+	return String(item);
+}
+
+function toGroundingTextFromObject(obj: Record<string, unknown>): string {
+	if (typeof obj.headline === "string") {
+		const parts = [obj.headline];
+		if (typeof obj.source === "string") parts.push(`(${obj.source})`);
+		if (typeof obj.date === "string") parts.push(`[${obj.date}]`);
+		return parts.join(" ");
 	}
+	const textField = [obj.text, obj.content, obj.summary, obj.description].find(
+		(value) => typeof value === "string",
+	);
+	return typeof textField === "string" ? textField : JSON.stringify(obj);
+}
 
-	try {
-		const parsed = JSON.parse(jsonMatch[0]) as Record<string, unknown>;
+function extractGroundingJson(text: string): Record<string, unknown> | undefined {
+	const jsonMatch = text.match(/\{[\s\S]*\}/);
+	if (!jsonMatch) return undefined;
+	return JSON.parse(jsonMatch[0]) as Record<string, unknown>;
+}
 
-		// Process perSymbol array, converting object arrays to string arrays
-		const perSymbol: GroundingResult["perSymbol"] = [];
-		const parsedPerSymbol = parsed.perSymbol;
-		if (Array.isArray(parsedPerSymbol)) {
-			for (const item of parsedPerSymbol) {
-				if (item && typeof item === "object") {
-					const symbolItem = item as Record<string, unknown>;
-					perSymbol.push({
-						symbol: typeof symbolItem.symbol === "string" ? symbolItem.symbol : "",
-						news: toStringArray(symbolItem.news),
-						fundamentals: toStringArray(symbolItem.fundamentals),
-						bullCase: toStringArray(symbolItem.bullCase),
-						bearCase: toStringArray(symbolItem.bearCase),
-					});
-				}
-			}
-		}
+function parsePerSymbolContext(parsedPerSymbol: unknown): GroundingResult["perSymbol"] {
+	if (!Array.isArray(parsedPerSymbol)) return [];
+	return parsedPerSymbol
+		.filter((item): item is Record<string, unknown> => !!item && typeof item === "object")
+		.map((item) => ({
+			symbol: typeof item.symbol === "string" ? item.symbol : "",
+			news: toStringArray(item.news),
+			fundamentals: toStringArray(item.fundamentals),
+			bullCase: toStringArray(item.bullCase),
+			bearCase: toStringArray(item.bearCase),
+		}));
+}
 
-		// Process global object
-		const parsedGlobal = parsed.global;
-		const global: GroundingResult["global"] = {
-			macro: [],
-			events: [],
-		};
-		if (parsedGlobal && typeof parsedGlobal === "object") {
-			const g = parsedGlobal as Record<string, unknown>;
-			global.macro = toStringArray(g.macro);
-			global.events = toStringArray(g.events);
-		}
+function parseGlobalContext(parsedGlobal: unknown): GroundingResult["global"] {
+	if (!parsedGlobal || typeof parsedGlobal !== "object") {
+		return { macro: [], events: [] };
+	}
+	const global = parsedGlobal as Record<string, unknown>;
+	return {
+		macro: toStringArray(global.macro),
+		events: toStringArray(global.events),
+	};
+}
 
-		// Process sources array
-		const sources: GroundingResult["sources"] = [];
-		const parsedSources = parsed.sources;
-		if (Array.isArray(parsedSources)) {
-			for (const src of parsedSources) {
-				if (src && typeof src === "object") {
-					const s = src as Record<string, unknown>;
-					if (typeof s.url === "string" && typeof s.title === "string") {
-						sources.push({
-							url: s.url,
-							title: s.title,
-							relevance: typeof s.relevance === "string" ? s.relevance : "",
-							sourceType: s.sourceType === "x" ? "x" : s.sourceType === "news" ? "news" : "url",
-						});
-					}
-				}
-			}
-		}
+function parseSources(parsedSources: unknown): GroundingResult["sources"] {
+	if (!Array.isArray(parsedSources)) return [];
+	const sources: GroundingResult["sources"] = [];
+	for (const source of parsedSources) {
+		if (!source || typeof source !== "object") continue;
+		const item = source as Record<string, unknown>;
+		if (typeof item.url !== "string" || typeof item.title !== "string") continue;
+		sources.push({
+			url: item.url,
+			title: item.title,
+			relevance: typeof item.relevance === "string" ? item.relevance : "",
+			sourceType: item.sourceType === "x" ? "x" : item.sourceType === "news" ? "news" : "url",
+		});
+	}
+	return sources;
+}
 
-		// Ensure all instruments have entries (fill in missing ones)
-		const symbolsWithData = new Set(perSymbol.map((p) => p.symbol));
-		for (const symbol of instruments) {
-			if (!symbolsWithData.has(symbol)) {
-				perSymbol.push({
-					symbol,
-					news: [],
-					fundamentals: [],
-					bullCase: [],
-					bearCase: [],
-				});
-			}
-		}
-
-		return { perSymbol, global, sources };
-	} catch {
-		warnings.push("Failed to parse grounding response JSON");
-		return emptyResult;
+function ensureAllInstrumentsPresent(
+	perSymbol: GroundingResult["perSymbol"],
+	instruments: string[],
+): void {
+	const symbolsWithData = new Set(perSymbol.map((item) => item.symbol));
+	for (const symbol of instruments) {
+		if (symbolsWithData.has(symbol)) continue;
+		perSymbol.push({
+			symbol,
+			news: [],
+			fundamentals: [],
+			bullCase: [],
+			bearCase: [],
+		});
 	}
 }
 

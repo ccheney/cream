@@ -13,6 +13,173 @@ export interface TradingConfigFormProps {
 	isSaving: boolean;
 }
 
+interface DurationFieldConfig {
+	key:
+		| "tradingCycleIntervalMs"
+		| "predictionMarketsIntervalMs"
+		| "agentTimeoutMs"
+		| "totalConsensusTimeoutMs";
+	label: string;
+	hint?: string;
+	tooltip: string;
+	minMs: number;
+	maxMs?: number;
+}
+
+const DURATION_FIELD_CONFIGS: DurationFieldConfig[] = [
+	{
+		key: "tradingCycleIntervalMs",
+		label: "Trading Cycle Interval",
+		hint: "Time between cycles",
+		tooltip: "How often the OODA loop runs to evaluate positions and make decisions",
+		minMs: 60000,
+		maxMs: 86400000,
+	},
+	{
+		key: "predictionMarketsIntervalMs",
+		label: "Prediction Markets Interval",
+		tooltip: "How often prediction market data (Kalshi, Polymarket) is refreshed",
+		minMs: 60000,
+	},
+	{
+		key: "agentTimeoutMs",
+		label: "Agent Timeout",
+		tooltip: "Maximum time allowed for a single agent to complete its analysis",
+		minMs: 5000,
+	},
+	{
+		key: "totalConsensusTimeoutMs",
+		label: "Total Consensus Timeout",
+		tooltip: "Maximum time for all agents to reach a trading consensus",
+		minMs: 10000,
+	},
+];
+
+interface NumericFieldConfig {
+	key:
+		| "maxConsensusIterations"
+		| "convictionDeltaHold"
+		| "convictionDeltaAction"
+		| "highConvictionPct"
+		| "mediumConvictionPct"
+		| "lowConvictionPct"
+		| "minRiskRewardRatio"
+		| "kellyFraction";
+	label: string;
+	hint?: string;
+	tooltip: string;
+	step?: number;
+	min?: number;
+	max?: number;
+}
+
+const NUMERIC_FIELD_CONFIGS: NumericFieldConfig[] = [
+	{
+		key: "maxConsensusIterations",
+		label: "Max Consensus Iterations",
+		tooltip: "Maximum discussion rounds agents can have before forcing a decision",
+		min: 1,
+		max: 10,
+	},
+	{
+		key: "convictionDeltaHold",
+		label: "Conviction Delta (Hold)",
+		hint: "Threshold to maintain position",
+		tooltip: "Minimum conviction score difference to keep an existing position open",
+		step: 0.01,
+		min: 0,
+		max: 1,
+	},
+	{
+		key: "convictionDeltaAction",
+		label: "Conviction Delta (Action)",
+		hint: "Threshold to take action",
+		tooltip: "Minimum conviction score to open a new position or close an existing one",
+		step: 0.01,
+		min: 0,
+		max: 1,
+	},
+	{
+		key: "highConvictionPct",
+		label: "High Conviction %",
+		tooltip: "Portfolio allocation percentage for high-confidence trades",
+		step: 0.01,
+		min: 0,
+		max: 1,
+	},
+	{
+		key: "mediumConvictionPct",
+		label: "Medium Conviction %",
+		tooltip: "Portfolio allocation percentage for medium-confidence trades",
+		step: 0.01,
+		min: 0,
+		max: 1,
+	},
+	{
+		key: "lowConvictionPct",
+		label: "Low Conviction %",
+		tooltip: "Portfolio allocation percentage for low-confidence trades",
+		step: 0.01,
+		min: 0,
+		max: 1,
+	},
+	{
+		key: "minRiskRewardRatio",
+		label: "Min Risk/Reward Ratio",
+		tooltip: "Minimum potential profit vs potential loss required to enter a trade",
+		step: 0.1,
+		min: 0.5,
+		max: 10,
+	},
+	{
+		key: "kellyFraction",
+		label: "Kelly Fraction",
+		hint: "Position sizing multiplier",
+		tooltip:
+			"Fraction of Kelly criterion used for position sizing (1.0 = full Kelly, 0.5 = half Kelly)",
+		step: 0.01,
+		min: 0,
+		max: 1,
+	},
+];
+
+interface TradingFieldsGridProps {
+	getValue: (field: keyof RuntimeTradingConfig) => number;
+	onFieldChange: (field: keyof RuntimeTradingConfig, value: number | string) => void;
+}
+
+function TradingFieldsGrid({ getValue, onFieldChange }: TradingFieldsGridProps) {
+	return (
+		<div className="grid grid-cols-2 gap-4">
+			{DURATION_FIELD_CONFIGS.map((field) => (
+				<DurationField
+					key={field.key}
+					label={field.label}
+					hint={field.hint}
+					tooltip={field.tooltip}
+					value={getValue(field.key)}
+					onChange={(value) => onFieldChange(field.key, value)}
+					minMs={field.minMs}
+					maxMs={field.maxMs}
+				/>
+			))}
+			{NUMERIC_FIELD_CONFIGS.map((field) => (
+				<FormField
+					key={field.key}
+					label={field.label}
+					hint={field.hint}
+					tooltip={field.tooltip}
+					value={getValue(field.key)}
+					onChange={(value) => onFieldChange(field.key, value)}
+					step={field.step}
+					min={field.min}
+					max={field.max}
+				/>
+			))}
+		</div>
+	);
+}
+
 export function TradingConfigForm({ config, onSave, onChange, isSaving }: TradingConfigFormProps) {
 	const [formData, setFormData] = useState<Partial<RuntimeTradingConfig>>({});
 
@@ -49,118 +216,11 @@ export function TradingConfigForm({ config, onSave, onChange, isSaving }: Tradin
 					{isSaving ? "Saving..." : "Save Changes"}
 				</button>
 			</div>
-
 			<GlobalModelSelector
 				value={getGlobalModel()}
-				onChange={(v) => handleChange("globalModel", v)}
+				onChange={(value) => handleChange("globalModel", value)}
 			/>
-
-			<div className="grid grid-cols-2 gap-4">
-				<DurationField
-					label="Trading Cycle Interval"
-					hint="Time between cycles"
-					tooltip="How often the OODA loop runs to evaluate positions and make decisions"
-					value={getValue("tradingCycleIntervalMs")}
-					onChange={(v) => handleChange("tradingCycleIntervalMs", v)}
-					minMs={60000}
-					maxMs={86400000}
-				/>
-				<DurationField
-					label="Prediction Markets Interval"
-					tooltip="How often prediction market data (Kalshi, Polymarket) is refreshed"
-					value={getValue("predictionMarketsIntervalMs")}
-					onChange={(v) => handleChange("predictionMarketsIntervalMs", v)}
-					minMs={60000}
-				/>
-				<DurationField
-					label="Agent Timeout"
-					tooltip="Maximum time allowed for a single agent to complete its analysis"
-					value={getValue("agentTimeoutMs")}
-					onChange={(v) => handleChange("agentTimeoutMs", v)}
-					minMs={5000}
-				/>
-				<DurationField
-					label="Total Consensus Timeout"
-					tooltip="Maximum time for all agents to reach a trading consensus"
-					value={getValue("totalConsensusTimeoutMs")}
-					onChange={(v) => handleChange("totalConsensusTimeoutMs", v)}
-					minMs={10000}
-				/>
-				<FormField
-					label="Max Consensus Iterations"
-					tooltip="Maximum discussion rounds agents can have before forcing a decision"
-					value={getValue("maxConsensusIterations")}
-					onChange={(v) => handleChange("maxConsensusIterations", v)}
-					min={1}
-					max={10}
-				/>
-				<FormField
-					label="Conviction Delta (Hold)"
-					hint="Threshold to maintain position"
-					tooltip="Minimum conviction score difference to keep an existing position open"
-					value={getValue("convictionDeltaHold")}
-					onChange={(v) => handleChange("convictionDeltaHold", v)}
-					step={0.01}
-					min={0}
-					max={1}
-				/>
-				<FormField
-					label="Conviction Delta (Action)"
-					hint="Threshold to take action"
-					tooltip="Minimum conviction score to open a new position or close an existing one"
-					value={getValue("convictionDeltaAction")}
-					onChange={(v) => handleChange("convictionDeltaAction", v)}
-					step={0.01}
-					min={0}
-					max={1}
-				/>
-				<FormField
-					label="High Conviction %"
-					tooltip="Portfolio allocation percentage for high-confidence trades"
-					value={getValue("highConvictionPct")}
-					onChange={(v) => handleChange("highConvictionPct", v)}
-					step={0.01}
-					min={0}
-					max={1}
-				/>
-				<FormField
-					label="Medium Conviction %"
-					tooltip="Portfolio allocation percentage for medium-confidence trades"
-					value={getValue("mediumConvictionPct")}
-					onChange={(v) => handleChange("mediumConvictionPct", v)}
-					step={0.01}
-					min={0}
-					max={1}
-				/>
-				<FormField
-					label="Low Conviction %"
-					tooltip="Portfolio allocation percentage for low-confidence trades"
-					value={getValue("lowConvictionPct")}
-					onChange={(v) => handleChange("lowConvictionPct", v)}
-					step={0.01}
-					min={0}
-					max={1}
-				/>
-				<FormField
-					label="Min Risk/Reward Ratio"
-					tooltip="Minimum potential profit vs potential loss required to enter a trade"
-					value={getValue("minRiskRewardRatio")}
-					onChange={(v) => handleChange("minRiskRewardRatio", v)}
-					step={0.1}
-					min={0.5}
-					max={10}
-				/>
-				<FormField
-					label="Kelly Fraction"
-					hint="Position sizing multiplier"
-					tooltip="Fraction of Kelly criterion used for position sizing (1.0 = full Kelly, 0.5 = half Kelly)"
-					value={getValue("kellyFraction")}
-					onChange={(v) => handleChange("kellyFraction", v)}
-					step={0.01}
-					min={0}
-					max={1}
-				/>
-			</div>
+			<TradingFieldsGrid getValue={getValue} onFieldChange={handleChange} />
 		</div>
 	);
 }

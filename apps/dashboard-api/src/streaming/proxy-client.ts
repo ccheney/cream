@@ -86,7 +86,7 @@ function calculateBackoff(attempt: number): number {
 }
 
 async function sleep(ms: number): Promise<void> {
-	return new Promise((resolve) => setTimeout(resolve, ms));
+	return Bun.sleep(ms);
 }
 
 function isRetryableError(error: unknown): boolean {
@@ -100,6 +100,82 @@ function isRetryableError(error: unknown): boolean {
 		].includes(error.code);
 	}
 	return false;
+}
+
+interface ReconnectingStreamOptions<TResponse, TValue> {
+	signal?: AbortSignal;
+	onReconnect?: (attempt: number) => void;
+	onError?: (error: Error) => void;
+	logMessage: string;
+	createStream: (signal?: AbortSignal) => AsyncIterable<TResponse>;
+	extractValue: (response: TResponse) => TValue | undefined;
+}
+
+interface StreamErrorContext {
+	attempt: number;
+	signal?: AbortSignal;
+	onReconnect?: (attempt: number) => void;
+	onError?: (error: Error) => void;
+	logMessage: string;
+}
+
+function asError(error: unknown): Error {
+	return error instanceof Error ? error : new Error(String(error));
+}
+
+async function handleStreamError(
+	error: unknown,
+	{ attempt, signal, onReconnect, onError, logMessage }: StreamErrorContext,
+): Promise<number | null> {
+	if (signal?.aborted) {
+		return null;
+	}
+	if (isRetryableError(error) && attempt < MAX_RECONNECT_ATTEMPTS - 1) {
+		const nextAttempt = attempt + 1;
+		const backoff = calculateBackoff(nextAttempt);
+		log.warn({ attempt: nextAttempt, backoffMs: backoff, error }, logMessage);
+		onReconnect?.(nextAttempt);
+		await sleep(backoff);
+		return nextAttempt;
+	}
+	const err = asError(error);
+	onError?.(err);
+	throw err;
+}
+
+async function* streamWithReconnect<TResponse, TValue>({
+	signal,
+	onReconnect,
+	onError,
+	logMessage,
+	createStream,
+	extractValue,
+}: ReconnectingStreamOptions<TResponse, TValue>): AsyncGenerator<TValue, void, unknown> {
+	let attempt = 0;
+	while (attempt < MAX_RECONNECT_ATTEMPTS) {
+		try {
+			for await (const response of createStream(signal)) {
+				const value = extractValue(response);
+				if (value !== undefined) {
+					yield value;
+				}
+				attempt = 0;
+			}
+			return;
+		} catch (error) {
+			const nextAttempt = await handleStreamError(error, {
+				attempt,
+				signal,
+				onReconnect,
+				onError,
+				logMessage,
+			});
+			if (nextAttempt === null) {
+				return;
+			}
+			attempt = nextAttempt;
+		}
+	}
 }
 
 // ============================================
@@ -119,39 +195,14 @@ export async function* streamQuotes(
 ): AsyncGenerator<StockQuote, void, unknown> {
 	const { signal, onReconnect, onError } = options;
 	const proxyClient = getClient();
-	let attempt = 0;
-
-	while (attempt < MAX_RECONNECT_ATTEMPTS) {
-		try {
-			const stream = proxyClient.streamQuotes({ symbols }, { signal });
-
-			for await (const response of stream) {
-				if (response.quote) {
-					yield response.quote;
-				}
-				attempt = 0;
-			}
-
-			// Stream ended normally
-			return;
-		} catch (error) {
-			if (signal?.aborted) {
-				return;
-			}
-
-			if (isRetryableError(error) && attempt < MAX_RECONNECT_ATTEMPTS - 1) {
-				attempt++;
-				const backoff = calculateBackoff(attempt);
-				log.warn({ attempt, backoffMs: backoff, error }, "Reconnecting quotes stream");
-				onReconnect?.(attempt);
-				await sleep(backoff);
-			} else {
-				const err = error instanceof Error ? error : new Error(String(error));
-				onError?.(err);
-				throw err;
-			}
-		}
-	}
+	yield* streamWithReconnect({
+		signal,
+		onReconnect,
+		onError,
+		logMessage: "Reconnecting quotes stream",
+		createStream: (abortSignal) => proxyClient.streamQuotes({ symbols }, { signal: abortSignal }),
+		extractValue: (response) => response.quote,
+	});
 }
 
 /**
@@ -167,38 +218,14 @@ export async function* streamTrades(
 ): AsyncGenerator<StockTrade, void, unknown> {
 	const { signal, onReconnect, onError } = options;
 	const proxyClient = getClient();
-	let attempt = 0;
-
-	while (attempt < MAX_RECONNECT_ATTEMPTS) {
-		try {
-			const stream = proxyClient.streamTrades({ symbols }, { signal });
-
-			for await (const response of stream) {
-				if (response.trade) {
-					yield response.trade;
-				}
-				attempt = 0;
-			}
-
-			return;
-		} catch (error) {
-			if (signal?.aborted) {
-				return;
-			}
-
-			if (isRetryableError(error) && attempt < MAX_RECONNECT_ATTEMPTS - 1) {
-				attempt++;
-				const backoff = calculateBackoff(attempt);
-				log.warn({ attempt, backoffMs: backoff, error }, "Reconnecting trades stream");
-				onReconnect?.(attempt);
-				await sleep(backoff);
-			} else {
-				const err = error instanceof Error ? error : new Error(String(error));
-				onError?.(err);
-				throw err;
-			}
-		}
-	}
+	yield* streamWithReconnect({
+		signal,
+		onReconnect,
+		onError,
+		logMessage: "Reconnecting trades stream",
+		createStream: (abortSignal) => proxyClient.streamTrades({ symbols }, { signal: abortSignal }),
+		extractValue: (response) => response.trade,
+	});
 }
 
 /**
@@ -214,38 +241,14 @@ export async function* streamBars(
 ): AsyncGenerator<StockBar, void, unknown> {
 	const { signal, onReconnect, onError } = options;
 	const proxyClient = getClient();
-	let attempt = 0;
-
-	while (attempt < MAX_RECONNECT_ATTEMPTS) {
-		try {
-			const stream = proxyClient.streamBars({ symbols }, { signal });
-
-			for await (const response of stream) {
-				if (response.bar) {
-					yield response.bar;
-				}
-				attempt = 0;
-			}
-
-			return;
-		} catch (error) {
-			if (signal?.aborted) {
-				return;
-			}
-
-			if (isRetryableError(error) && attempt < MAX_RECONNECT_ATTEMPTS - 1) {
-				attempt++;
-				const backoff = calculateBackoff(attempt);
-				log.warn({ attempt, backoffMs: backoff, error }, "Reconnecting bars stream");
-				onReconnect?.(attempt);
-				await sleep(backoff);
-			} else {
-				const err = error instanceof Error ? error : new Error(String(error));
-				onError?.(err);
-				throw err;
-			}
-		}
-	}
+	yield* streamWithReconnect({
+		signal,
+		onReconnect,
+		onError,
+		logMessage: "Reconnecting bars stream",
+		createStream: (abortSignal) => proxyClient.streamBars({ symbols }, { signal: abortSignal }),
+		extractValue: (response) => response.bar,
+	});
 }
 
 /**
@@ -263,41 +266,15 @@ export async function* streamOptionQuotes(
 ): AsyncGenerator<OptionQuoteUpdate, void, unknown> {
 	const { signal, onReconnect, onError } = options;
 	const proxyClient = getClient();
-	let attempt = 0;
-
-	while (attempt < MAX_RECONNECT_ATTEMPTS) {
-		try {
-			const stream = proxyClient.streamOptionQuotes(
-				{ symbols: contracts, underlyings },
-				{ signal },
-			);
-
-			for await (const response of stream) {
-				if (response.quote) {
-					yield response.quote;
-				}
-				attempt = 0;
-			}
-
-			return;
-		} catch (error) {
-			if (signal?.aborted) {
-				return;
-			}
-
-			if (isRetryableError(error) && attempt < MAX_RECONNECT_ATTEMPTS - 1) {
-				attempt++;
-				const backoff = calculateBackoff(attempt);
-				log.warn({ attempt, backoffMs: backoff, error }, "Reconnecting option quotes stream");
-				onReconnect?.(attempt);
-				await sleep(backoff);
-			} else {
-				const err = error instanceof Error ? error : new Error(String(error));
-				onError?.(err);
-				throw err;
-			}
-		}
-	}
+	yield* streamWithReconnect({
+		signal,
+		onReconnect,
+		onError,
+		logMessage: "Reconnecting option quotes stream",
+		createStream: (abortSignal) =>
+			proxyClient.streamOptionQuotes({ symbols: contracts, underlyings }, { signal: abortSignal }),
+		extractValue: (response) => response.quote,
+	});
 }
 
 /**
@@ -315,41 +292,15 @@ export async function* streamOptionTrades(
 ): AsyncGenerator<OptionTrade, void, unknown> {
 	const { signal, onReconnect, onError } = options;
 	const proxyClient = getClient();
-	let attempt = 0;
-
-	while (attempt < MAX_RECONNECT_ATTEMPTS) {
-		try {
-			const stream = proxyClient.streamOptionTrades(
-				{ symbols: contracts, underlyings },
-				{ signal },
-			);
-
-			for await (const response of stream) {
-				if (response.trade) {
-					yield response.trade;
-				}
-				attempt = 0;
-			}
-
-			return;
-		} catch (error) {
-			if (signal?.aborted) {
-				return;
-			}
-
-			if (isRetryableError(error) && attempt < MAX_RECONNECT_ATTEMPTS - 1) {
-				attempt++;
-				const backoff = calculateBackoff(attempt);
-				log.warn({ attempt, backoffMs: backoff, error }, "Reconnecting option trades stream");
-				onReconnect?.(attempt);
-				await sleep(backoff);
-			} else {
-				const err = error instanceof Error ? error : new Error(String(error));
-				onError?.(err);
-				throw err;
-			}
-		}
-	}
+	yield* streamWithReconnect({
+		signal,
+		onReconnect,
+		onError,
+		logMessage: "Reconnecting option trades stream",
+		createStream: (abortSignal) =>
+			proxyClient.streamOptionTrades({ symbols: contracts, underlyings }, { signal: abortSignal }),
+		extractValue: (response) => response.trade,
+	});
 }
 
 /**
@@ -367,38 +318,15 @@ export async function* streamOrderUpdates(
 ): AsyncGenerator<OrderUpdate, void, unknown> {
 	const { signal, onReconnect, onError } = options;
 	const proxyClient = getClient();
-	let attempt = 0;
-
-	while (attempt < MAX_RECONNECT_ATTEMPTS) {
-		try {
-			const stream = proxyClient.streamOrderUpdates({ orderIds, symbols }, { signal });
-
-			for await (const response of stream) {
-				if (response.update) {
-					yield response.update;
-				}
-				attempt = 0;
-			}
-
-			return;
-		} catch (error) {
-			if (signal?.aborted) {
-				return;
-			}
-
-			if (isRetryableError(error) && attempt < MAX_RECONNECT_ATTEMPTS - 1) {
-				attempt++;
-				const backoff = calculateBackoff(attempt);
-				log.warn({ attempt, backoffMs: backoff, error }, "Reconnecting order updates stream");
-				onReconnect?.(attempt);
-				await sleep(backoff);
-			} else {
-				const err = error instanceof Error ? error : new Error(String(error));
-				onError?.(err);
-				throw err;
-			}
-		}
-	}
+	yield* streamWithReconnect({
+		signal,
+		onReconnect,
+		onError,
+		logMessage: "Reconnecting order updates stream",
+		createStream: (abortSignal) =>
+			proxyClient.streamOrderUpdates({ orderIds, symbols }, { signal: abortSignal }),
+		extractValue: (response) => response.update,
+	});
 }
 
 // ============================================

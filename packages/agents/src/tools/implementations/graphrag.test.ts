@@ -82,175 +82,81 @@ const mockSearchResult: GraphRAGSearchResult = {
 	executionTimeMs: 15,
 };
 
+function createTestContext(): ExecutionContext {
+	return {
+		environment: "PAPER",
+		source: "test",
+		traceId: "test-trace",
+	};
+}
+
+async function runGraphRAGQuery(params: { query: string; symbol?: string; limit?: number }) {
+	const { graphragQuery } = await import("./graphrag.js");
+	return graphragQuery(createTestContext(), params);
+}
+
+function expectObjectFields(value: unknown, fields: string[]): void {
+	for (const field of fields) {
+		expect(value).toHaveProperty(field);
+	}
+}
+
 // ============================================
 // Tests
 // ============================================
 
-describe("graphragQuery", () => {
-	describe("test mode", () => {
-		test("returns empty results in test mode", async () => {
-			// Import after setting CREAM_ENV=PAPER (with source="test")
-			const { graphragQuery } = await import("./graphrag.js");
-
-			const ctx: ExecutionContext = {
-				environment: "PAPER",
-				source: "test",
-				traceId: "test-trace",
-			};
-
-			const result = await graphragQuery(ctx, {
-				query: "semiconductor supply chain",
-				limit: 10,
-			});
-
-			expect(result.filingChunks).toEqual([]);
-			expect(result.transcriptChunks).toEqual([]);
-			expect(result.newsItems).toEqual([]);
-			expect(result.externalEvents).toEqual([]);
-			expect(result.companies).toEqual([]);
-			expect(result.executionTimeMs).toBe(0);
+describe("graphragQuery test mode", () => {
+	test("returns empty results in test mode", async () => {
+		const result = await runGraphRAGQuery({
+			query: "semiconductor supply chain",
+			limit: 10,
 		});
-
-		test("returns empty results even with symbol filter in test mode", async () => {
-			const { graphragQuery } = await import("./graphrag.js");
-
-			const ctx: ExecutionContext = {
-				environment: "PAPER",
-				source: "test",
-				traceId: "test-trace",
-			};
-
-			const result = await graphragQuery(ctx, {
-				query: "revenue growth",
-				symbol: "AAPL",
-				limit: 5,
-			});
-
-			expect(result.filingChunks).toEqual([]);
-			expect(result.companies).toEqual([]);
-		});
+		expect(result.filingChunks).toEqual([]);
+		expect(result.transcriptChunks).toEqual([]);
+		expect(result.newsItems).toEqual([]);
+		expect(result.externalEvents).toEqual([]);
+		expect(result.companies).toEqual([]);
+		expect(result.executionTimeMs).toBe(0);
 	});
 
-	describe("parameter handling", () => {
-		test("accepts query parameter", async () => {
-			const { graphragQuery } = await import("./graphrag.js");
-
-			const ctx: ExecutionContext = {
-				environment: "PAPER",
-				source: "test",
-				traceId: "test-trace",
-			};
-
-			// Should not throw
-			const result = await graphragQuery(ctx, {
-				query: "test query",
-			});
-
-			expect(result).toBeDefined();
+	test("returns empty results even with symbol filter in test mode", async () => {
+		const result = await runGraphRAGQuery({
+			query: "revenue growth",
+			symbol: "AAPL",
+			limit: 5,
 		});
-
-		test("accepts optional limit parameter", async () => {
-			const { graphragQuery } = await import("./graphrag.js");
-
-			const ctx: ExecutionContext = {
-				environment: "PAPER",
-				source: "test",
-				traceId: "test-trace",
-			};
-
-			// Should not throw
-			const result = await graphragQuery(ctx, {
-				query: "test query",
-				limit: 20,
-			});
-
-			expect(result).toBeDefined();
-		});
-
-		test("accepts optional symbol parameter", async () => {
-			const { graphragQuery } = await import("./graphrag.js");
-
-			const ctx: ExecutionContext = {
-				environment: "PAPER",
-				source: "test",
-				traceId: "test-trace",
-			};
-
-			// Should not throw
-			const result = await graphragQuery(ctx, {
-				query: "test query",
-				symbol: "AAPL",
-			});
-
-			expect(result).toBeDefined();
-		});
+		expect(result.filingChunks).toEqual([]);
+		expect(result.companies).toEqual([]);
 	});
 });
 
-describe("GraphRAGQueryResult structure", () => {
+describe("graphragQuery parameter handling", () => {
+	test("accepts query parameter", async () => {
+		const result = await runGraphRAGQuery({ query: "test query" });
+		expect(result).toBeDefined();
+	});
+
+	test("accepts optional limit parameter", async () => {
+		const result = await runGraphRAGQuery({ query: "test query", limit: 20 });
+		expect(result).toBeDefined();
+	});
+
+	test("accepts optional symbol parameter", async () => {
+		const result = await runGraphRAGQuery({ query: "test query", symbol: "AAPL" });
+		expect(result).toBeDefined();
+	});
+});
+
+describe("GraphRAGQueryResult top-level structure", () => {
 	test("result has all required fields", () => {
-		expect(mockSearchResult).toHaveProperty("filingChunks");
-		expect(mockSearchResult).toHaveProperty("transcriptChunks");
-		expect(mockSearchResult).toHaveProperty("newsItems");
-		expect(mockSearchResult).toHaveProperty("externalEvents");
-		expect(mockSearchResult).toHaveProperty("companies");
-		expect(mockSearchResult).toHaveProperty("executionTimeMs");
-	});
-
-	test("filing chunks have correct structure", () => {
-		const filing = mockSearchResult.filingChunks[0];
-		expect(filing).toHaveProperty("id");
-		expect(filing).toHaveProperty("filingId");
-		expect(filing).toHaveProperty("companySymbol");
-		expect(filing).toHaveProperty("filingType");
-		expect(filing).toHaveProperty("filingDate");
-		expect(filing).toHaveProperty("chunkText");
-		expect(filing).toHaveProperty("chunkIndex");
-		expect(filing).toHaveProperty("score");
-	});
-
-	test("transcript chunks have correct structure", () => {
-		const transcript = mockSearchResult.transcriptChunks[0];
-		expect(transcript).toHaveProperty("id");
-		expect(transcript).toHaveProperty("transcriptId");
-		expect(transcript).toHaveProperty("companySymbol");
-		expect(transcript).toHaveProperty("callDate");
-		expect(transcript).toHaveProperty("speaker");
-		expect(transcript).toHaveProperty("chunkText");
-		expect(transcript).toHaveProperty("chunkIndex");
-		expect(transcript).toHaveProperty("score");
-	});
-
-	test("news items have correct structure", () => {
-		const news = mockSearchResult.newsItems[0];
-		expect(news).toHaveProperty("id");
-		expect(news).toHaveProperty("headline");
-		expect(news).toHaveProperty("bodyText");
-		expect(news).toHaveProperty("source");
-		expect(news).toHaveProperty("relatedSymbols");
-		expect(news).toHaveProperty("sentimentScore");
-		expect(news).toHaveProperty("score");
-	});
-
-	test("external events have correct structure", () => {
-		const event = mockSearchResult.externalEvents[0];
-		expect(event).toHaveProperty("id");
-		expect(event).toHaveProperty("eventId");
-		expect(event).toHaveProperty("eventType");
-		expect(event).toHaveProperty("textSummary");
-		expect(event).toHaveProperty("relatedInstrumentIds");
-		expect(event).toHaveProperty("score");
-	});
-
-	test("companies have correct structure", () => {
-		const company = mockSearchResult.companies[0];
-		expect(company).toHaveProperty("id");
-		expect(company).toHaveProperty("symbol");
-		expect(company).toHaveProperty("name");
-		expect(company).toHaveProperty("sector");
-		expect(company).toHaveProperty("industry");
-		expect(company).toHaveProperty("marketCapBucket");
-		expect(company).toHaveProperty("source");
+		expectObjectFields(mockSearchResult, [
+			"filingChunks",
+			"transcriptChunks",
+			"newsItems",
+			"externalEvents",
+			"companies",
+			"executionTimeMs",
+		]);
 	});
 
 	test("company source is valid enum value", () => {
@@ -258,5 +164,56 @@ describe("GraphRAGQueryResult structure", () => {
 		for (const company of mockSearchResult.companies) {
 			expect(validSources).toContain(company.source);
 		}
+	});
+});
+
+describe("GraphRAGQueryResult nested field shapes", () => {
+	test("nested results include required field shapes", () => {
+		expectObjectFields(mockSearchResult.filingChunks[0], [
+			"id",
+			"filingId",
+			"companySymbol",
+			"filingType",
+			"filingDate",
+			"chunkText",
+			"chunkIndex",
+			"score",
+		]);
+		expectObjectFields(mockSearchResult.transcriptChunks[0], [
+			"id",
+			"transcriptId",
+			"companySymbol",
+			"callDate",
+			"speaker",
+			"chunkText",
+			"chunkIndex",
+			"score",
+		]);
+		expectObjectFields(mockSearchResult.newsItems[0], [
+			"id",
+			"headline",
+			"bodyText",
+			"source",
+			"relatedSymbols",
+			"sentimentScore",
+			"score",
+		]);
+		expectObjectFields(mockSearchResult.externalEvents[0], [
+			"id",
+			"eventId",
+			"eventType",
+			"textSummary",
+			"relatedInstrumentIds",
+			"score",
+		]);
+		expectObjectFields(mockSearchResult.companies[0], [
+			"id",
+			"symbol",
+			"name",
+			"sector",
+			"industry",
+			"marketCapBucket",
+			"source",
+		]);
 	});
 });

@@ -30,9 +30,100 @@ export interface DiffResult {
 	};
 }
 
+type DiffStats = DiffResult["stats"];
+
 // ============================================
 // Deep Object Diff
 // ============================================
+
+function createStats(): DiffStats {
+	return { added: 0, removed: 0, changed: 0, unchanged: 0 };
+}
+
+function mergeStats(target: DiffStats, delta: DiffStats): void {
+	target.added += delta.added;
+	target.removed += delta.removed;
+	target.changed += delta.changed;
+	target.unchanged += delta.unchanged;
+}
+
+function hasOwnValue(source: Record<string, unknown>, key: string): boolean {
+	return Object.hasOwn(source, key);
+}
+
+function compareSharedKey(
+	key: string,
+	oldValue: unknown,
+	newValue: unknown,
+	currentPath: string[],
+): { entry?: DiffEntry; stats: DiffStats } {
+	if (isObject(oldValue) && isObject(newValue)) {
+		const childResult = calculateDiff(oldValue, newValue, currentPath);
+		if (childResult.entries.length === 0) {
+			return { stats: { ...createStats(), unchanged: 1 } };
+		}
+
+		const hasNestedChanges = childResult.entries.some((entry) => entry.type !== "unchanged");
+		return {
+			entry: {
+				path: currentPath,
+				key,
+				type: hasNestedChanges ? "changed" : "unchanged",
+				children: childResult.entries,
+			},
+			stats: childResult.stats,
+		};
+	}
+
+	if (Array.isArray(oldValue) && Array.isArray(newValue)) {
+		const hasChanged = JSON.stringify(oldValue) !== JSON.stringify(newValue);
+		return {
+			entry: hasChanged
+				? { path: currentPath, key, type: "changed", oldValue, newValue }
+				: undefined,
+			stats: hasChanged ? { ...createStats(), changed: 1 } : { ...createStats(), unchanged: 1 },
+		};
+	}
+
+	if (oldValue !== newValue) {
+		return {
+			entry: { path: currentPath, key, type: "changed", oldValue, newValue },
+			stats: { ...createStats(), changed: 1 },
+		};
+	}
+
+	return {
+		entry: { path: currentPath, key, type: "unchanged", oldValue, newValue },
+		stats: { ...createStats(), unchanged: 1 },
+	};
+}
+
+function diffKey(
+	before: Record<string, unknown>,
+	after: Record<string, unknown>,
+	key: string,
+	path: string[],
+): { entry?: DiffEntry; stats: DiffStats } {
+	const oldValue = before[key];
+	const newValue = after[key];
+	const currentPath = [...path, key];
+
+	if (!hasOwnValue(after, key)) {
+		return {
+			entry: { path: currentPath, key, type: "removed", oldValue },
+			stats: { ...createStats(), removed: countLeafNodes(oldValue) },
+		};
+	}
+
+	if (!hasOwnValue(before, key)) {
+		return {
+			entry: { path: currentPath, key, type: "added", newValue },
+			stats: { ...createStats(), added: countLeafNodes(newValue) },
+		};
+	}
+
+	return compareSharedKey(key, oldValue, newValue, currentPath);
+}
 
 /**
  * Calculate deep differences between two objects.
@@ -44,98 +135,15 @@ export function calculateDiff(
 	path: string[] = [],
 ): DiffResult {
 	const entries: DiffEntry[] = [];
-	const stats = { added: 0, removed: 0, changed: 0, unchanged: 0 };
+	const stats = createStats();
 
 	const allKeys = new Set([...Object.keys(before), ...Object.keys(after)]);
-
 	for (const key of allKeys) {
-		const oldValue = before[key];
-		const newValue = after[key];
-		const currentPath = [...path, key];
-
-		// Key only in before (removed)
-		if (!(key in after)) {
-			entries.push({
-				path: currentPath,
-				key,
-				type: "removed",
-				oldValue,
-			});
-			stats.removed += countLeafNodes(oldValue);
-			continue;
+		const result = diffKey(before, after, key, path);
+		if (result.entry) {
+			entries.push(result.entry);
 		}
-
-		// Key only in after (added)
-		if (!(key in before)) {
-			entries.push({
-				path: currentPath,
-				key,
-				type: "added",
-				newValue,
-			});
-			stats.added += countLeafNodes(newValue);
-			continue;
-		}
-
-		// Both exist - compare values
-		if (isObject(oldValue) && isObject(newValue)) {
-			// Recurse into nested objects
-			const childResult = calculateDiff(
-				oldValue as Record<string, unknown>,
-				newValue as Record<string, unknown>,
-				currentPath,
-			);
-
-			if (childResult.entries.length > 0) {
-				const hasChanges = childResult.entries.some((e) => e.type !== "unchanged");
-				entries.push({
-					path: currentPath,
-					key,
-					type: hasChanges ? "changed" : "unchanged",
-					children: childResult.entries,
-				});
-				stats.added += childResult.stats.added;
-				stats.removed += childResult.stats.removed;
-				stats.changed += childResult.stats.changed;
-				stats.unchanged += childResult.stats.unchanged;
-			} else {
-				stats.unchanged++;
-			}
-		} else if (Array.isArray(oldValue) && Array.isArray(newValue)) {
-			// Compare arrays
-			if (JSON.stringify(oldValue) !== JSON.stringify(newValue)) {
-				entries.push({
-					path: currentPath,
-					key,
-					type: "changed",
-					oldValue,
-					newValue,
-				});
-				stats.changed++;
-			} else {
-				stats.unchanged++;
-			}
-		} else if (oldValue !== newValue) {
-			// Primitive value changed
-			entries.push({
-				path: currentPath,
-				key,
-				type: "changed",
-				oldValue,
-				newValue,
-			});
-			stats.changed++;
-		} else {
-			// Values are equal
-			entries.push({
-				path: currentPath,
-				key,
-				type: "unchanged",
-				oldValue,
-				newValue,
-			});
-			stats.unchanged++;
-		}
+		mergeStats(stats, result.stats);
 	}
 
 	return { entries, stats };
@@ -148,6 +156,35 @@ export function calculateDiff(
 /**
  * Format a value for human-readable display with type awareness.
  */
+function formatNumberValue(value: number): string {
+	if (value >= 1_000_000) {
+		return `$${(value / 1_000_000).toFixed(1)}M`;
+	}
+	if (value >= 1_000) {
+		return `$${(value / 1_000).toFixed(0)}K`;
+	}
+	if (value > 0 && value <= 1 && value !== Math.floor(value)) {
+		return `${(value * 100).toFixed(0)}%`;
+	}
+	return value.toLocaleString();
+}
+
+function formatArrayValue(value: unknown[]): string {
+	if (value.length === 0) {
+		return "[]";
+	}
+	const allScalars = value.every((item) => typeof item === "string" || typeof item === "number");
+	if (value.length <= 3 && allScalars) {
+		return `[${value.join(", ")}]`;
+	}
+	return `[${value.length} items]`;
+}
+
+function formatObjectValue(value: Record<string, unknown>): string {
+	const keyCount = Object.keys(value).length;
+	return keyCount === 0 ? "{}" : `{${keyCount} properties}`;
+}
+
 export function formatValue(value: unknown): string {
 	if (value === null) {
 		return "null";
@@ -159,37 +196,16 @@ export function formatValue(value: unknown): string {
 		return value ? "true" : "false";
 	}
 	if (typeof value === "number") {
-		// Check if it looks like a dollar amount (large number)
-		if (value >= 1_000_000) {
-			return `$${(value / 1_000_000).toFixed(1)}M`;
-		}
-		if (value >= 1_000) {
-			return `$${(value / 1_000).toFixed(0)}K`;
-		}
-		// Check if it looks like a percentage (0-1 range with decimals)
-		if (value > 0 && value <= 1 && value !== Math.floor(value)) {
-			return `${(value * 100).toFixed(0)}%`;
-		}
-		return value.toLocaleString();
+		return formatNumberValue(value);
 	}
 	if (typeof value === "string") {
 		return value;
 	}
 	if (Array.isArray(value)) {
-		if (value.length === 0) {
-			return "[]";
-		}
-		if (value.length <= 3 && value.every((v) => typeof v === "string" || typeof v === "number")) {
-			return `[${value.join(", ")}]`;
-		}
-		return `[${value.length} items]`;
+		return formatArrayValue(value);
 	}
 	if (isObject(value)) {
-		const keys = Object.keys(value);
-		if (keys.length === 0) {
-			return "{}";
-		}
-		return `{${keys.length} properties}`;
+		return formatObjectValue(value);
 	}
 	return String(value);
 }

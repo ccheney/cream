@@ -188,6 +188,87 @@ export function calculateDimensions(
 	};
 }
 
+function useResizeObserverController({
+	containerRef,
+	updateDimensions,
+	debounceMs,
+}: {
+	containerRef: { current: HTMLDivElement | null };
+	updateDimensions: () => void;
+	debounceMs: number;
+}) {
+	useEffect(() => {
+		const container = containerRef.current;
+		if (!container) {
+			return;
+		}
+
+		updateDimensions();
+
+		const debouncedUpdate = debounce(updateDimensions, debounceMs);
+		const observer = new ResizeObserver(() => {
+			requestAnimationFrame(() => {
+				debouncedUpdate();
+			});
+		});
+
+		observer.observe(container);
+
+		return () => {
+			observer.disconnect();
+		};
+	}, [containerRef, debounceMs, updateDimensions]);
+}
+
+function useChartDimensionUpdater({
+	containerRef,
+	optionsRef,
+	onResizeRef,
+	setDimensions,
+	setBreakpoint,
+	setIsReady,
+}: {
+	containerRef: React.RefObject<HTMLDivElement | null>;
+	optionsRef: React.MutableRefObject<UseChartResizeOptions>;
+	onResizeRef: React.MutableRefObject<UseChartResizeOptions["onResize"] | undefined>;
+	setDimensions: React.Dispatch<React.SetStateAction<ChartDimensions>>;
+	setBreakpoint: React.Dispatch<React.SetStateAction<Breakpoint>>;
+	setIsReady: React.Dispatch<React.SetStateAction<boolean>>;
+}) {
+	return useCallback(() => {
+		const container = containerRef.current;
+		if (!container) {
+			return;
+		}
+
+		const rect = container.getBoundingClientRect();
+		const containerWidth = rect.width;
+		if (containerWidth === 0) {
+			return;
+		}
+
+		const newDimensions = calculateDimensions(containerWidth, optionsRef.current);
+		const newBreakpoint = getBreakpoint(containerWidth);
+
+		setDimensions((prev) => {
+			if (prev.width === newDimensions.width && prev.height === newDimensions.height) {
+				return prev;
+			}
+			return newDimensions;
+		});
+
+		setBreakpoint((prev) => {
+			if (prev === newBreakpoint) {
+				return prev;
+			}
+			return newBreakpoint;
+		});
+
+		setIsReady(true);
+		onResizeRef.current?.(newDimensions, newBreakpoint);
+	}, [containerRef, optionsRef, onResizeRef, setBreakpoint, setDimensions, setIsReady]);
+}
+
 // ============================================
 // Hook Implementation
 // ============================================
@@ -242,76 +323,25 @@ export function useChartResize(options: UseChartResizeOptions = {}): UseChartRes
 		onResizeRef.current = onResize;
 	}, [options, onResize]);
 
-	// Calculate and update dimensions
-	const updateDimensions = useCallback(() => {
-		const container = containerRef.current;
-		if (!container) {
-			return;
-		}
-
-		const rect = container.getBoundingClientRect();
-		const containerWidth = rect.width;
-
-		if (containerWidth === 0) {
-			return;
-		}
-
-		const newDimensions = calculateDimensions(containerWidth, optionsRef.current);
-		const newBreakpoint = getBreakpoint(containerWidth);
-
-		setDimensions((prev) => {
-			// Only update if changed
-			if (prev.width === newDimensions.width && prev.height === newDimensions.height) {
-				return prev;
-			}
-			return newDimensions;
-		});
-
-		setBreakpoint((prev) => {
-			if (prev === newBreakpoint) {
-				return prev;
-			}
-			return newBreakpoint;
-		});
-
-		setIsReady(true);
-
-		// Call resize callback
-		onResizeRef.current?.(newDimensions, newBreakpoint);
-	}, []);
+	const updateDimensions = useChartDimensionUpdater({
+		containerRef,
+		optionsRef,
+		onResizeRef,
+		setDimensions,
+		setBreakpoint,
+		setIsReady,
+	});
 
 	// Recalculate function (manual trigger)
 	const recalculate = useCallback(() => {
 		updateDimensions();
 	}, [updateDimensions]);
 
-	// Setup ResizeObserver
-	useEffect(() => {
-		const container = containerRef.current;
-		if (!container) {
-			return;
-		}
-
-		// Initial measurement
-		updateDimensions();
-
-		// Debounced resize handler
-		const debouncedUpdate = debounce(updateDimensions, debounceMs);
-
-		// Create observer
-		const observer = new ResizeObserver((_entries) => {
-			// Use requestAnimationFrame for smooth updates
-			requestAnimationFrame(() => {
-				debouncedUpdate();
-			});
-		});
-
-		observer.observe(container);
-
-		return () => {
-			observer.disconnect();
-		};
-	}, [updateDimensions, debounceMs]);
+	useResizeObserverController({
+		containerRef,
+		updateDimensions,
+		debounceMs,
+	});
 
 	return {
 		containerRef,

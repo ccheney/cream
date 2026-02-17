@@ -316,6 +316,167 @@ function createInvalidationBatcher(queryClient: QueryClient, debounceMs: number)
 	};
 }
 
+function createServerMessageInvalidator(
+	queryClient: QueryClient,
+	_batcher: ReturnType<typeof createInvalidationBatcher>,
+) {
+	return function invalidateByType(type: ServerMessageType) {
+		switch (type) {
+			case "quote":
+				queryClient.invalidateQueries({ queryKey: ["market"] });
+				break;
+			case "order":
+				queryClient.invalidateQueries({ queryKey: queryKeys.orders() });
+				queryClient.invalidateQueries({ queryKey: queryKeys.portfolio() });
+				break;
+			case "decision":
+				queryClient.invalidateQueries({ queryKey: queryKeys.decisions() });
+				break;
+			case "system_status":
+				queryClient.invalidateQueries({ queryKey: queryKeys.systemStatus() });
+				break;
+			case "alert":
+				queryClient.invalidateQueries({ queryKey: queryKeys.alerts() });
+				break;
+			case "agent_output":
+				queryClient.invalidateQueries({ queryKey: queryKeys.agents() });
+				break;
+			case "portfolio":
+			case "position":
+				queryClient.invalidateQueries({ queryKey: queryKeys.portfolio() });
+				break;
+			case "heartbeat":
+			case "cycle_progress":
+			case "error":
+				break;
+		}
+	};
+}
+
+function routeServerMessage({
+	message,
+	queryClient,
+	batcher,
+	onCycleProgressRef,
+	onErrorRef,
+}: {
+	message: ServerMessage;
+	queryClient: QueryClient;
+	batcher: ReturnType<typeof createInvalidationBatcher>;
+	onCycleProgressRef: { current: ((payload: CycleProgressPayload) => void) | undefined };
+	onErrorRef: { current: ((error: Error) => void) | undefined };
+}) {
+	if (message.type === "heartbeat") {
+		return;
+	}
+
+	switch (message.type) {
+		case "quote": {
+			const payload = message.data as QuotePayload;
+			queryClient.setQueryData(queryKeys.marketQuote(payload.symbol), payload);
+			return;
+		}
+		case "order": {
+			batcher.add(queryKeys.portfolio());
+			batcher.add(queryKeys.positions());
+			batcher.add(queryKeys.orders());
+			return;
+		}
+		case "decision":
+			batcher.add(queryKeys.decisions());
+			return;
+		case "system_status":
+			// System status is handled separately by REST polling.
+			return;
+		case "alert":
+			batcher.add(queryKeys.alerts());
+			return;
+		case "agent_output":
+			batcher.add(queryKeys.agents());
+			return;
+		case "cycle_progress":
+			onCycleProgressRef.current?.(message.data as CycleProgressPayload);
+			return;
+		case "portfolio": {
+			const payload = message.data as PortfolioPayload;
+			queryClient.setQueryData(queryKeys.portfolioSummary(), payload);
+			return;
+		}
+		case "position": {
+			const payload = message.data as PositionPayload;
+			queryClient.setQueryData(queryKeys.position(payload.symbol), payload);
+			batcher.add(queryKeys.positions());
+			return;
+		}
+		case "error": {
+			const error = new Error(typeof message.data === "string" ? message.data : "WebSocket error");
+			onErrorRef.current?.(error);
+			return;
+		}
+		default:
+			return;
+	}
+}
+
+function useInvalidationBatcher(queryClient: QueryClient, debounceMs: number) {
+	const batcher = createInvalidationBatcher(queryClient, debounceMs);
+
+	useEffect(() => {
+		return () => {
+			batcher.cancel();
+		};
+	}, [batcher]);
+
+	return batcher;
+}
+
+function useMessageCallbacks(
+	queryClient: QueryClient,
+	batcher: ReturnType<typeof createInvalidationBatcher>,
+	onCycleProgressRef: { current: ((payload: CycleProgressPayload) => void) | undefined },
+	onErrorRef: { current: ((error: Error) => void) | undefined },
+) {
+	const handleMessage = useCallback(
+		(raw: unknown) => {
+			try {
+				const message = parseServerMessage(raw);
+				if (!message) {
+					return;
+				}
+
+				routeServerMessage({
+					message,
+					queryClient,
+					batcher,
+					onCycleProgressRef,
+					onErrorRef,
+				});
+			} catch (err) {
+				const error = err instanceof Error ? err : new Error(String(err));
+				onErrorRef.current?.(error);
+			}
+		},
+		[batcher, onCycleProgressRef, onErrorRef, queryClient],
+	);
+
+	const invalidateByType = useCallback(
+		(type: ServerMessageType) => {
+			createServerMessageInvalidator(queryClient, batcher)(type);
+		},
+		[batcher, queryClient],
+	);
+
+	const flush = useCallback(() => {
+		batcher.flush();
+	}, [batcher]);
+
+	return {
+		handleMessage,
+		invalidateByType,
+		flush,
+	};
+}
+
 // ============================================
 // Hook Implementation
 // ============================================
@@ -341,10 +502,7 @@ export function useWebSocketQuerySync(
 	options: UseWebSocketQuerySyncOptions = {},
 ): UseWebSocketQuerySyncReturn {
 	const { debounceMs = 100, onCycleProgress, onError } = options;
-
 	const queryClient = useQueryClient();
-
-	// Refs for stable callbacks
 	const onCycleProgressRef = useRef(onCycleProgress);
 	const onErrorRef = useRef(onError);
 
@@ -353,162 +511,18 @@ export function useWebSocketQuerySync(
 		onErrorRef.current = onError;
 	}, [onCycleProgress, onError]);
 
-	// Create invalidation batcher
-	const batcherRef = useRef<ReturnType<typeof createInvalidationBatcher> | null>(null);
-
-	if (!batcherRef.current) {
-		batcherRef.current = createInvalidationBatcher(queryClient, debounceMs);
-	}
-
-	// Cleanup on unmount
-	useEffect(() => {
-		return () => {
-			batcherRef.current?.cancel();
-		};
-	}, []);
-
-	// Handle message
-	const handleMessage = useCallback(
-		(raw: unknown) => {
-			try {
-				const message = parseServerMessage(raw);
-
-				if (!message) {
-					return;
-				}
-
-				// Skip heartbeat
-				if (message.type === "heartbeat") {
-					return;
-				}
-
-				switch (message.type) {
-					case "quote": {
-						const payload = message.data as QuotePayload;
-						// Use setQueryData for complete data (no refetch needed)
-						queryClient.setQueryData(queryKeys.marketQuote(payload.symbol), payload);
-						break;
-					}
-
-					case "order": {
-						// Invalidate portfolio and orders queries
-						batcherRef.current?.add(queryKeys.portfolio());
-						batcherRef.current?.add(queryKeys.positions());
-						batcherRef.current?.add(queryKeys.orders());
-						break;
-					}
-
-					case "decision": {
-						// Invalidate decisions queries
-						batcherRef.current?.add(queryKeys.decisions());
-						break;
-					}
-
-					case "system_status": {
-						// NOTE: WebSocket system_status is for health checks (healthy/unhealthy),
-						// NOT trading system status (ACTIVE/PAUSED/STOPPED).
-						// Don't update the system status query here - it's handled by REST API.
-						// The health status uses a different data shape and would break the UI.
-						break;
-					}
-
-					case "alert": {
-						// Invalidate alerts queries
-						batcherRef.current?.add(queryKeys.alerts());
-						break;
-					}
-
-					case "agent_output": {
-						// Invalidate agents queries
-						batcherRef.current?.add(queryKeys.agents());
-						break;
-					}
-
-					case "cycle_progress": {
-						const payload = message.data as CycleProgressPayload;
-						// Update Zustand store (not React Query)
-						onCycleProgressRef.current?.(payload);
-						break;
-					}
-
-					case "portfolio": {
-						const payload = message.data as PortfolioPayload;
-						// Use setQueryData for complete data
-						queryClient.setQueryData(queryKeys.portfolioSummary(), payload);
-						break;
-					}
-
-					case "position": {
-						const payload = message.data as PositionPayload;
-						// Update specific position
-						queryClient.setQueryData(queryKeys.position(payload.symbol), payload);
-						// Invalidate positions list
-						batcherRef.current?.add(queryKeys.positions());
-						break;
-					}
-
-					case "error": {
-						const error = new Error(
-							typeof message.data === "string" ? message.data : "WebSocket error",
-						);
-						onErrorRef.current?.(error);
-						break;
-					}
-
-					default:
-						break;
-				}
-			} catch (err) {
-				const error = err instanceof Error ? err : new Error(String(err));
-				onErrorRef.current?.(error);
-			}
-		},
-		[queryClient],
+	const batcher = useInvalidationBatcher(queryClient, debounceMs);
+	const { handleMessage, invalidateByType, flush } = useMessageCallbacks(
+		queryClient,
+		batcher,
+		onCycleProgressRef,
+		onErrorRef,
 	);
-
-	// Manual invalidation by type
-	const invalidateByType = useCallback(
-		(type: ServerMessageType) => {
-			switch (type) {
-				case "quote":
-					queryClient.invalidateQueries({ queryKey: ["market"] });
-					break;
-				case "order":
-					queryClient.invalidateQueries({ queryKey: queryKeys.orders() });
-					queryClient.invalidateQueries({ queryKey: queryKeys.portfolio() });
-					break;
-				case "decision":
-					queryClient.invalidateQueries({ queryKey: queryKeys.decisions() });
-					break;
-				case "system_status":
-					queryClient.invalidateQueries({ queryKey: queryKeys.systemStatus() });
-					break;
-				case "alert":
-					queryClient.invalidateQueries({ queryKey: queryKeys.alerts() });
-					break;
-				case "agent_output":
-					queryClient.invalidateQueries({ queryKey: queryKeys.agents() });
-					break;
-				case "portfolio":
-				case "position":
-					queryClient.invalidateQueries({ queryKey: queryKeys.portfolio() });
-					break;
-				default:
-					break;
-			}
-		},
-		[queryClient],
-	);
-
-	// Flush pending invalidations
-	const flush = useCallback(() => {
-		batcherRef.current?.flush();
-	}, []);
 
 	return {
 		handleMessage,
 		invalidateByType,
-		pendingCount: batcherRef.current?.size ?? 0,
+		pendingCount: batcher.size,
 		flush,
 	};
 }

@@ -38,151 +38,151 @@ async function loadProtoExample<T = unknown>(filename: string): Promise<T> {
 // Decision Schema Sync Tests
 // ============================================
 
-describe("Decision Schema Sync", () => {
-	describe("Valid Examples", () => {
-		it("validates equity decision from proto example", async () => {
-			const example = await loadProtoExample("decision.json");
-			const result = DecisionSchema.safeParse(example);
+describe("Decision Schema Sync - Valid Examples", () => {
+	it("validates equity decision from proto example", async () => {
+		const example = await loadProtoExample("decision.json");
+		const result = DecisionSchema.safeParse(example);
 
-			expect(result.success).toBe(true);
-			if (result.success) {
-				expect(result.data.instrument.instrumentType).toBe("EQUITY");
-				expect(result.data.action).toBe("BUY");
-				expect(result.data.confidence).toBe(0.78);
-			}
-		});
-
-		it("validates option decision from proto example", async () => {
-			const example = await loadProtoExample("option_decision.json");
-			const result = DecisionSchema.safeParse(example);
-
-			expect(result.success).toBe(true);
-			if (result.success) {
-				expect(result.data.instrument.instrumentType).toBe("OPTION");
-				expect(result.data.instrument.optionContract).toBeDefined();
-				expect(result.data.instrument.optionContract?.optionType).toBe("CALL");
-			}
-		});
+		expect(result.success).toBe(true);
+		if (result.success) {
+			expect(result.data.instrument.instrumentType).toBe("EQUITY");
+			expect(result.data.action).toBe("BUY");
+			expect(result.data.confidence).toBe(0.78);
+		}
 	});
 
-	describe("Invalid Instrument Type", () => {
-		it("rejects CRYPTO as instrument type", async () => {
-			const invalid = {
-				...(await loadProtoExample("decision.json")),
-				instrument: {
-					instrumentId: "BTC",
-					instrumentType: "CRYPTO", // Invalid - not in enum
-				},
-			};
+	it("validates option decision from proto example", async () => {
+		const example = await loadProtoExample("option_decision.json");
+		const result = DecisionSchema.safeParse(example);
 
-			const result = DecisionSchema.safeParse(invalid);
-			expect(result.success).toBe(false);
-		});
+		expect(result.success).toBe(true);
+		if (result.success) {
+			expect(result.data.instrument.instrumentType).toBe("OPTION");
+			expect(result.data.instrument.optionContract).toBeDefined();
+			expect(result.data.instrument.optionContract?.optionType).toBe("CALL");
+		}
+	});
+});
 
-		it("rejects FUTURES as instrument type", async () => {
-			const invalid = {
-				...(await loadProtoExample("decision.json")),
-				instrument: {
-					instrumentId: "ES",
-					instrumentType: "FUTURES", // Invalid
-				},
-			};
+describe("Decision Schema Sync - Invalid Instrument Type", () => {
+	it("rejects CRYPTO as instrument type", async () => {
+		const invalid = {
+			...(await loadProtoExample("decision.json")),
+			instrument: {
+				instrumentId: "BTC",
+				instrumentType: "CRYPTO",
+			},
+		};
 
-			const result = DecisionSchema.safeParse(invalid);
-			expect(result.success).toBe(false);
-		});
+		const result = DecisionSchema.safeParse(invalid);
+		expect(result.success).toBe(false);
 	});
 
-	describe("Invalid Action", () => {
-		it("accepts CLOSE as action", async () => {
-			const example = await loadProtoExample("decision.json");
-			const valid = { ...example, action: "CLOSE" };
+	it("rejects FUTURES as instrument type", async () => {
+		const invalid = {
+			...(await loadProtoExample("decision.json")),
+			instrument: {
+				instrumentId: "ES",
+				instrumentType: "FUTURES",
+			},
+		};
 
-			const result = DecisionSchema.safeParse(valid);
-			expect(result.success).toBe(true);
-		});
+		const result = DecisionSchema.safeParse(invalid);
+		expect(result.success).toBe(false);
+	});
+});
 
-		it("rejects lowercase action", async () => {
-			const example = await loadProtoExample("decision.json");
-			const invalid = { ...example, action: "buy" }; // lowercase
+describe("Decision Schema Sync - Invalid Action", () => {
+	it("accepts CLOSE as action", async () => {
+		const example = await loadProtoExample("decision.json");
+		const valid = { ...example, action: "CLOSE" };
 
-			const result = DecisionSchema.safeParse(invalid);
-			expect(result.success).toBe(false);
-		});
+		const result = DecisionSchema.safeParse(valid);
+		expect(result.success).toBe(true);
 	});
 
-	describe("Missing Required Fields", () => {
-		it("rejects decision without instrument", async () => {
-			const example = await loadProtoExample("decision.json");
-			const { instrument: _, ...invalid } = example as Record<string, unknown>;
+	it("rejects lowercase action", async () => {
+		const example = await loadProtoExample("decision.json");
+		const invalid = { ...example, action: "buy" };
 
-			const result = DecisionSchema.safeParse(invalid);
-			expect(result.success).toBe(false);
-		});
+		const result = DecisionSchema.safeParse(invalid);
+		expect(result.success).toBe(false);
+	});
+});
 
-		it("rejects decision without action", async () => {
-			const example = await loadProtoExample("decision.json");
-			const { action: _, ...invalid } = example as Record<string, unknown>;
+describe("Decision Schema Sync - Missing Required Fields", () => {
+	it("rejects decision without instrument", async () => {
+		const example = await loadProtoExample("decision.json");
+		const { instrument: _, ...invalid } = example as Record<string, unknown>;
 
-			const result = DecisionSchema.safeParse(invalid);
-			expect(result.success).toBe(false);
-		});
-
-		it("rejects decision without size", async () => {
-			const example = await loadProtoExample("decision.json");
-			const { size: _, ...invalid } = example as Record<string, unknown>;
-
-			const result = DecisionSchema.safeParse(invalid);
-			expect(result.success).toBe(false);
-		});
-
-		it("rejects decision without riskLevels", async () => {
-			const example = await loadProtoExample("decision.json");
-			const { riskLevels: _, ...invalid } = example as Record<string, unknown>;
-
-			const result = DecisionSchema.safeParse(invalid);
-			expect(result.success).toBe(false);
-		});
-
-		it("rejects decision without rationale", async () => {
-			const example = await loadProtoExample("decision.json");
-			const { rationale: _, ...invalid } = example as Record<string, unknown>;
-
-			const result = DecisionSchema.safeParse(invalid);
-			expect(result.success).toBe(false);
-		});
+		const result = DecisionSchema.safeParse(invalid);
+		expect(result.success).toBe(false);
 	});
 
-	describe("Invalid Field Types", () => {
-		it("rejects string confidence instead of number", async () => {
-			const example = await loadProtoExample("decision.json");
-			const invalid = { ...example, confidence: "0.78" }; // string instead of number
+	it("rejects decision without action", async () => {
+		const example = await loadProtoExample("decision.json");
+		const { action: _, ...invalid } = example as Record<string, unknown>;
 
-			const result = DecisionSchema.safeParse(invalid);
-			expect(result.success).toBe(false);
-		});
+		const result = DecisionSchema.safeParse(invalid);
+		expect(result.success).toBe(false);
+	});
+});
 
-		it("rejects negative quantity", async () => {
-			const example = (await loadProtoExample("decision.json")) as Record<string, unknown>;
-			const invalid = {
-				...example,
-				size: {
-					...(example.size as Record<string, unknown>),
-					quantity: -10,
-				},
-			};
+describe("Decision Schema Sync - Missing Required Fields", () => {
+	it("rejects decision without size", async () => {
+		const example = await loadProtoExample("decision.json");
+		const { size: _, ...invalid } = example as Record<string, unknown>;
 
-			const result = DecisionSchema.safeParse(invalid);
-			expect(result.success).toBe(false);
-		});
+		const result = DecisionSchema.safeParse(invalid);
+		expect(result.success).toBe(false);
+	});
 
-		it("rejects confidence outside 0-1 range", async () => {
-			const example = await loadProtoExample("decision.json");
-			const invalid = { ...example, confidence: 1.5 }; // > 1
+	it("rejects decision without riskLevels", async () => {
+		const example = await loadProtoExample("decision.json");
+		const { riskLevels: _, ...invalid } = example as Record<string, unknown>;
 
-			const result = DecisionSchema.safeParse(invalid);
-			expect(result.success).toBe(false);
-		});
+		const result = DecisionSchema.safeParse(invalid);
+		expect(result.success).toBe(false);
+	});
+
+	it("rejects decision without rationale", async () => {
+		const example = await loadProtoExample("decision.json");
+		const { rationale: _, ...invalid } = example as Record<string, unknown>;
+
+		const result = DecisionSchema.safeParse(invalid);
+		expect(result.success).toBe(false);
+	});
+});
+
+describe("Decision Schema Sync - Invalid Field Types", () => {
+	it("rejects string confidence instead of number", async () => {
+		const example = await loadProtoExample("decision.json");
+		const invalid = { ...example, confidence: "0.78" };
+
+		const result = DecisionSchema.safeParse(invalid);
+		expect(result.success).toBe(false);
+	});
+
+	it("rejects negative quantity", async () => {
+		const example = (await loadProtoExample("decision.json")) as Record<string, unknown>;
+		const invalid = {
+			...example,
+			size: {
+				...(example.size as Record<string, unknown>),
+				quantity: -10,
+			},
+		};
+
+		const result = DecisionSchema.safeParse(invalid);
+		expect(result.success).toBe(false);
+	});
+
+	it("rejects confidence outside 0-1 range", async () => {
+		const example = await loadProtoExample("decision.json");
+		const invalid = { ...example, confidence: 1.5 };
+
+		const result = DecisionSchema.safeParse(invalid);
+		expect(result.success).toBe(false);
 	});
 });
 

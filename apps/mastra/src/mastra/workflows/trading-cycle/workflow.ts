@@ -10,6 +10,18 @@
 import { calculateVRP, classifyVRPLevel } from "@cream/indicators";
 import { createWorkflow } from "@mastra/core/workflows";
 import type { z } from "zod";
+
+import {
+	actStep,
+	analystsStep,
+	consensusStep,
+	debateStep,
+	groundingStep,
+	observeStep,
+	orientStep,
+	traderStep,
+} from "./steps/index.js";
+
 import {
 	type CandleDataSchema,
 	type CandleSummarySchema,
@@ -25,92 +37,114 @@ function buildCandleSummaries(
 	instruments: string[],
 	indicators?: Record<string, number>,
 ): CandleSummary[] {
-	return instruments.flatMap((symbol) => {
-		const bars = candles[symbol];
-		if (!bars || bars.length < 2) return [];
-		const recent = bars.slice(-20);
-		const lastBar = recent.at(-1);
-		if (!lastBar) return [];
-		const lastClose = lastBar.close;
-		const high20 = Math.max(...recent.map((c) => c.high));
-		const low20 = Math.min(...recent.map((c) => c.low));
-		const avgVolume20 = recent.reduce((sum, c) => sum + c.volume, 0) / recent.length;
-		const smaStart = recent.slice(0, Math.ceil(recent.length / 2));
-		const smaEnd = recent.slice(Math.ceil(recent.length / 2));
-		const avgStart = smaStart.reduce((s, c) => s + c.close, 0) / smaStart.length;
-		const avgEnd = smaEnd.reduce((s, c) => s + c.close, 0) / smaEnd.length;
-		const pctChange = (avgEnd - avgStart) / avgStart;
-		const trendDirection =
-			pctChange > 0.01
-				? ("UP" as const)
-				: pctChange < -0.01
-					? ("DOWN" as const)
-					: ("FLAT" as const);
-
-		const summary: CandleSummary = {
-			symbol,
-			lastClose,
-			high20,
-			low20,
-			avgVolume20,
-			trendDirection,
-		};
-
-		const atmIV = indicators?.[`${symbol}:atmIV`];
-		if (atmIV != null && bars.length >= 21) {
-			const vrpResult = calculateVRP(atmIV, bars, 20);
-			if (vrpResult) {
-				summary.atmIV = atmIV;
-				summary.realizedVol20 = vrpResult.realizedVolatility;
-				summary.vrp = vrpResult.vrp;
-				summary.vrpLevel = classifyVRPLevel(vrpResult.vrp);
-			}
-
-			// IV Rank proxy: where ATM IV sits relative to rolling realized vol windows
-			if (bars.length >= 41) {
-				const rvWindows: number[] = [];
-				for (let i = 20; i <= bars.length; i++) {
-					const windowBars = bars.slice(i - 21, i);
-					const logReturns: number[] = [];
-					for (let j = 1; j < windowBars.length; j++) {
-						const prev = windowBars[j - 1];
-						const curr = windowBars[j];
-						if (prev && curr && prev.close > 0 && curr.close > 0) {
-							logReturns.push(Math.log(curr.close / prev.close));
-						}
-					}
-					if (logReturns.length >= 2) {
-						const mean = logReturns.reduce((s, r) => s + r, 0) / logReturns.length;
-						const variance =
-							logReturns.reduce((s, r) => s + (r - mean) ** 2, 0) / (logReturns.length - 1);
-						rvWindows.push(Math.sqrt(variance) * Math.sqrt(252));
-					}
-				}
-
-				if (rvWindows.length >= 5) {
-					const low = Math.min(...rvWindows);
-					const high = Math.max(...rvWindows);
-					const range = high - low;
-					summary.ivRank =
-						range > 0 ? Math.max(0, Math.min(100, ((atmIV - low) / range) * 100)) : 50;
-				}
-			}
-		}
-
-		return [summary];
-	});
+	return instruments
+		.map((symbol) => buildSymbolCandleSummary(symbol, candles[symbol], indicators))
+		.filter((summary): summary is CandleSummary => summary !== undefined);
 }
 
-import {
-	actStep,
-	analystsStep,
-	consensusStep,
-	debateStep,
-	groundingStep,
-	observeStep,
-	orientStep,
-	traderStep,
-} from "./steps/index.js";
+function buildSymbolCandleSummary(
+	symbol: string,
+	bars: Candle[] | undefined,
+	indicators?: Record<string, number>,
+): CandleSummary | undefined {
+	if (!bars || bars.length < 2) return undefined;
+	const recent = bars.slice(-20);
+	const lastBar = recent.at(-1);
+	if (!lastBar) return undefined;
+	const summary = buildBaseCandleSummary(symbol, recent, lastBar.close);
+	const atmIV = indicators?.[`${symbol}:atmIV`];
+	if (atmIV == null || bars.length < 21) {
+		return summary;
+	}
+	return withVolatilityMetrics(summary, bars, atmIV);
+}
+
+function buildBaseCandleSummary(
+	symbol: string,
+	recent: Candle[],
+	lastClose: number,
+): CandleSummary {
+	return {
+		symbol,
+		lastClose,
+		high20: Math.max(...recent.map((c) => c.high)),
+		low20: Math.min(...recent.map((c) => c.low)),
+		avgVolume20: recent.reduce((sum, c) => sum + c.volume, 0) / recent.length,
+		trendDirection: calculateTrendDirection(recent),
+	};
+}
+
+function calculateTrendDirection(recent: Candle[]): "UP" | "DOWN" | "FLAT" {
+	const midpoint = Math.ceil(recent.length / 2);
+	const avgStart = averageClose(recent.slice(0, midpoint));
+	const avgEnd = averageClose(recent.slice(midpoint));
+	const pctChange = (avgEnd - avgStart) / avgStart;
+	if (pctChange > 0.01) return "UP";
+	if (pctChange < -0.01) return "DOWN";
+	return "FLAT";
+}
+
+function averageClose(candles: Candle[]): number {
+	return candles.reduce((sum, candle) => sum + candle.close, 0) / candles.length;
+}
+
+function withVolatilityMetrics(
+	summary: CandleSummary,
+	bars: Candle[],
+	atmIV: number,
+): CandleSummary {
+	const result: CandleSummary = { ...summary };
+	const vrpResult = calculateVRP(atmIV, bars, 20);
+	if (vrpResult) {
+		result.atmIV = atmIV;
+		result.realizedVol20 = vrpResult.realizedVolatility;
+		result.vrp = vrpResult.vrp;
+		result.vrpLevel = classifyVRPLevel(vrpResult.vrp);
+	}
+	const ivRank = calculateIvRank(atmIV, bars);
+	if (ivRank !== undefined) {
+		result.ivRank = ivRank;
+	}
+	return result;
+}
+
+function calculateIvRank(atmIV: number, bars: Candle[]): number | undefined {
+	if (bars.length < 41) return undefined;
+	const rvWindows = buildRealizedVolWindows(bars);
+	if (rvWindows.length < 5) return undefined;
+	const low = Math.min(...rvWindows);
+	const high = Math.max(...rvWindows);
+	const range = high - low;
+	return range > 0 ? Math.max(0, Math.min(100, ((atmIV - low) / range) * 100)) : 50;
+}
+
+function buildRealizedVolWindows(bars: Candle[]): number[] {
+	const rvWindows: number[] = [];
+	for (let i = 20; i <= bars.length; i++) {
+		const windowBars = bars.slice(i - 21, i);
+		const volatility = calculateAnnualizedVolatility(windowBars);
+		if (volatility !== undefined) {
+			rvWindows.push(volatility);
+		}
+	}
+	return rvWindows;
+}
+
+function calculateAnnualizedVolatility(windowBars: Candle[]): number | undefined {
+	const logReturns: number[] = [];
+	for (let i = 1; i < windowBars.length; i++) {
+		const prev = windowBars[i - 1];
+		const curr = windowBars[i];
+		if (prev && curr && prev.close > 0 && curr.close > 0) {
+			logReturns.push(Math.log(curr.close / prev.close));
+		}
+	}
+	if (logReturns.length < 2) return undefined;
+	const mean = logReturns.reduce((sum, value) => sum + value, 0) / logReturns.length;
+	const variance =
+		logReturns.reduce((sum, value) => sum + (value - mean) ** 2, 0) / (logReturns.length - 1);
+	return Math.sqrt(variance) * Math.sqrt(252);
+}
 
 export const tradingCycleWorkflow = createWorkflow({
 	id: "trading-cycle",

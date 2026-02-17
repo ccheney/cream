@@ -2,8 +2,10 @@
  * MacroWatch Service Tests
  */
 
-import { afterEach, beforeEach, describe, expect, mock, test } from "bun:test";
-import { createMacroWatchService, MacroWatchService } from "./macro-watch-service.js";
+import { afterEach, beforeAll, beforeEach, expect, mock, test } from "bun:test";
+
+let createMacroWatchService: typeof import("./macro-watch-service.js").createMacroWatchService;
+let MacroWatchService: typeof import("./macro-watch-service.js").MacroWatchService;
 
 const mockRunMacroWatch = mock(() =>
 	Promise.resolve({
@@ -35,122 +37,93 @@ const mockCompileMorningNewspaper = mock(() =>
 	Promise.resolve({ date: "2026-01-15", summary: "Test", sections: [] }),
 );
 const mockFormatNewspaperForLLM = mock(() => "Test");
+
 mock.module("@cream/mastra", () => ({
 	runMacroWatch: mockRunMacroWatch,
 	compileMorningNewspaper: mockCompileMorningNewspaper,
 	formatNewspaperForLLM: mockFormatNewspaperForLLM,
 }));
 
-describe("MacroWatchService", () => {
-	let service: MacroWatchService;
+beforeAll(async () => {
+	({ createMacroWatchService, MacroWatchService } = await import("./macro-watch-service.js"));
+});
 
-	beforeEach(() => {
-		service = createMacroWatchService();
-		mockRunMacroWatch.mockClear();
-	});
+let service: MacroWatchService;
 
-	afterEach(() => {
-		mockRunMacroWatch.mockClear();
-	});
+beforeEach(() => {
+	service = createMacroWatchService();
+	mockRunMacroWatch.mockClear();
+});
 
-	describe("constructor", () => {
-		test("creates service with default config", () => {
-			const svc = new MacroWatchService();
-			expect(svc.isRunning()).toBe(false);
-			expect(svc.getLastRun()).toBeNull();
-		});
+afterEach(() => {
+	mockRunMacroWatch.mockClear();
+});
 
-		test("creates service with custom config", () => {
-			const svc = new MacroWatchService({ maxEntriesPerHour: 100 });
-			expect(svc.isRunning()).toBe(false);
-		});
-	});
+test("constructor works with default config", () => {
+	const svc = new MacroWatchService();
+	expect(svc.isRunning()).toBe(false);
+	expect(svc.getLastRun()).toBeNull();
+});
 
-	describe("run", () => {
-		test("runs macro watch and returns entries", async () => {
-			const symbols = ["AAPL", "MSFT"];
-			const { entries, saved } = await service.run(symbols);
+test("constructor works with custom config", () => {
+	const svc = new MacroWatchService({ maxEntriesPerHour: 100 });
+	expect(svc.isRunning()).toBe(false);
+});
 
-			expect(mockRunMacroWatch).toHaveBeenCalledTimes(1);
-			expect(entries).toHaveLength(2);
-			expect(entries[0]?.category).toBe("NEWS");
-			expect(entries[1]?.category).toBe("PREDICTION");
-			expect(saved).toBe(0); // No db provider set
-		});
+test("run returns entries and saved count", async () => {
+	const { entries, saved } = await service.run(["AAPL", "MSFT"]);
+	expect(mockRunMacroWatch).toHaveBeenCalledTimes(1);
+	expect(entries).toHaveLength(2);
+	expect(entries[0]?.category).toBe("NEWS");
+	expect(entries[1]?.category).toBe("PREDICTION");
+	expect(saved).toBe(0);
+});
 
-		test("updates lastRun timestamp after successful run", async () => {
-			expect(service.getLastRun()).toBeNull();
+test("run updates lastRun timestamp", async () => {
+	expect(service.getLastRun()).toBeNull();
+	await service.run(["AAPL"]);
+	expect(service.getLastRun()).not.toBeNull();
+	expect(service.getLastRun()).toBeInstanceOf(Date);
+});
 
-			await service.run(["AAPL"]);
+test("running flag returns to false after run", async () => {
+	expect(service.isRunning()).toBe(false);
+	await service.run(["AAPL"]);
+	expect(service.isRunning()).toBe(false);
+});
 
-			expect(service.getLastRun()).not.toBeNull();
-			expect(service.getLastRun()).toBeInstanceOf(Date);
-		});
+test("run skips when already running", async () => {
+	mockRunMacroWatch.mockImplementationOnce(
+		() => new Promise((resolve) => setTimeout(() => resolve({ entries: [], totalCount: 0 }), 100)),
+	);
+	const firstRun = service.run(["AAPL"]);
+	const secondResult = await service.run(["MSFT"]);
+	expect(secondResult).toEqual({ entries: [], saved: 0, helixIngested: 0 });
+	await firstRun;
+	expect(mockRunMacroWatch).toHaveBeenCalledTimes(1);
+});
 
-		test("sets running flag during execution", async () => {
-			expect(service.isRunning()).toBe(false);
+test("run returns empty result on errors", async () => {
+	mockRunMacroWatch.mockImplementationOnce(() => Promise.reject(new Error("API error")));
+	const result = await service.run(["AAPL"]);
+	expect(result).toEqual({ entries: [], saved: 0, helixIngested: 0 });
+	expect(service.isRunning()).toBe(false);
+});
 
-			const runPromise = service.run(["AAPL"]);
+test("run uses lastRun on subsequent calls", async () => {
+	await service.run(["AAPL"]);
+	expect(mockRunMacroWatch.mock.calls[0]).toBeDefined();
+	mockRunMacroWatch.mockClear();
+	await service.run(["AAPL"]);
+	expect(mockRunMacroWatch.mock.calls[0]).toBeDefined();
+});
 
-			await runPromise;
-			expect(service.isRunning()).toBe(false);
-		});
+test("createMacroWatchService creates default instance", () => {
+	const svc = createMacroWatchService();
+	expect(svc).toBeInstanceOf(MacroWatchService);
+});
 
-		test("skips if already running", async () => {
-			mockRunMacroWatch.mockImplementationOnce(
-				() =>
-					new Promise((resolve) =>
-						setTimeout(
-							() =>
-								resolve({
-									entries: [],
-									totalCount: 0,
-								}),
-							100,
-						),
-					),
-			);
-
-			const firstRun = service.run(["AAPL"]);
-			const secondResult = await service.run(["MSFT"]);
-
-			expect(secondResult).toEqual({ entries: [], saved: 0, helixIngested: 0 });
-
-			await firstRun;
-			expect(mockRunMacroWatch).toHaveBeenCalledTimes(1);
-		});
-
-		test("returns empty result on error", async () => {
-			mockRunMacroWatch.mockImplementationOnce(() => Promise.reject(new Error("API error")));
-
-			const result = await service.run(["AAPL"]);
-
-			expect(result).toEqual({ entries: [], saved: 0, helixIngested: 0 });
-			expect(service.isRunning()).toBe(false);
-		});
-
-		test("uses lastRun for since parameter on subsequent runs", async () => {
-			await service.run(["AAPL"]);
-			const firstCallArgs = mockRunMacroWatch.mock.calls[0];
-			expect(firstCallArgs).toBeDefined();
-
-			mockRunMacroWatch.mockClear();
-
-			await service.run(["AAPL"]);
-			const secondCallArgs = mockRunMacroWatch.mock.calls[0];
-			expect(secondCallArgs).toBeDefined();
-		});
-	});
-
-	describe("createMacroWatchService", () => {
-		test("creates service instance", () => {
-			const svc = createMacroWatchService();
-			expect(svc).toBeInstanceOf(MacroWatchService);
-		});
-
-		test("creates service with config", () => {
-			const svc = createMacroWatchService({ maxEntriesPerHour: 50 });
-			expect(svc).toBeInstanceOf(MacroWatchService);
-		});
-	});
+test("createMacroWatchService creates configured instance", () => {
+	const svc = createMacroWatchService({ maxEntriesPerHour: 50 });
+	expect(svc).toBeInstanceOf(MacroWatchService);
 });

@@ -14,7 +14,7 @@
 "use client";
 
 import { useVirtualizer } from "@tanstack/react-virtual";
-import { memo, useCallback, useEffect, useRef } from "react";
+import { memo, type RefObject, useCallback, useEffect, useMemo, useRef } from "react";
 import { useAutoScroll } from "./use-auto-scroll";
 import { useRelativeTime } from "./use-relative-time";
 
@@ -119,7 +119,6 @@ const EventItem = memo(function EventItem({ event, onClick }: EventItemProps) {
 			aria-label={`${event.type} event: ${event.message}`}
 			data-event-id={event.id}
 		>
-			{/* Icon with subtle glow on hover */}
 			<span
 				className="flex-shrink-0 flex items-center justify-center w-6 h-6 rounded-full text-sm transition-shadow duration-150"
 				style={{
@@ -131,12 +130,10 @@ const EventItem = memo(function EventItem({ event, onClick }: EventItemProps) {
 				{config.icon}
 			</span>
 
-			{/* Timestamp - monospace for data */}
 			<span className="flex-shrink-0 w-14 text-xs font-mono text-stone-500 dark:text-night-400 tabular-nums tracking-tight">
 				{formatted}
 			</span>
 
-			{/* Type Badge - refined pill shape */}
 			<span
 				className="flex-shrink-0 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider rounded-full"
 				style={{
@@ -147,14 +144,12 @@ const EventItem = memo(function EventItem({ event, onClick }: EventItemProps) {
 				{config.label}
 			</span>
 
-			{/* Symbol (if present) - emphasized */}
 			{event.symbol && (
 				<span className="flex-shrink-0 font-mono font-semibold text-sm text-stone-800 dark:text-night-100">
 					{event.symbol}
 				</span>
 			)}
 
-			{/* Message - truncated with fade */}
 			<span className="flex-1 text-sm text-stone-600 dark:text-night-300 truncate group-hover:text-stone-800 dark:group-hover:text-night-100 transition-colors">
 				{event.message}
 			</span>
@@ -200,12 +195,10 @@ const NewEventsButton = memo(function NewEventsButton({ count, onClick }: NewEve
 const EmptyState = memo(function EmptyState() {
 	return (
 		<div className="flex flex-col items-center justify-center h-full text-stone-500 dark:text-night-400">
-			{/* Minimal activity indicator */}
 			<div className="relative mb-4">
 				<div className="w-12 h-12 rounded-full border-2 border-dashed border-stone-300 dark:border-night-600 flex items-center justify-center">
 					<div className="w-2 h-2 rounded-full bg-stone-300 dark:bg-night-600" />
 				</div>
-				{/* Subtle pulse ring */}
 				<div className="absolute inset-0 rounded-full border-2 border-stone-200 dark:border-night-700 animate-ping opacity-20" />
 			</div>
 			<span className="text-sm font-medium text-stone-500 dark:text-night-400">
@@ -217,6 +210,195 @@ const EmptyState = memo(function EmptyState() {
 		</div>
 	);
 });
+
+// ============================================
+// Hooks
+// ============================================
+
+function useDisplayEvents(events: FeedEvent[], maxEvents: number) {
+	return useMemo(() => {
+		if (events.length > maxEvents) {
+			return events.slice(-maxEvents);
+		}
+		return events;
+	}, [events, maxEvents]);
+}
+
+function useNewItemTracking(displayCount: number, onNewItems: (count?: number) => void) {
+	const previousCountRef = useRef(displayCount);
+
+	useEffect(() => {
+		const newCount = displayCount - previousCountRef.current;
+		if (newCount > 0) {
+			onNewItems(newCount);
+		}
+		previousCountRef.current = displayCount;
+	}, [displayCount, onNewItems]);
+}
+
+function useLiveScrollToEnd({
+	isAutoScrolling,
+	displayCount,
+	onScrollToEnd,
+}: {
+	isAutoScrolling: boolean;
+	displayCount: number;
+	onScrollToEnd: (index: number) => void;
+}) {
+	useEffect(() => {
+		if (isAutoScrolling && displayCount > 0) {
+			onScrollToEnd(displayCount - 1);
+		}
+	}, [isAutoScrolling, displayCount, onScrollToEnd]);
+}
+
+interface EventFeedState {
+	displayEvents: FeedEvent[];
+	containerRef: RefObject<HTMLDivElement | null>;
+	isAutoScrolling: boolean;
+	newItemCount: number;
+	scrollToBottom: () => void;
+	onScroll: () => void;
+	virtualItems: ReturnType<
+		ReturnType<typeof useVirtualizer<HTMLElement, Element>>["getVirtualItems"]
+	>;
+	totalHeight: string;
+}
+
+function useEventFeedState(events: FeedEvent[], maxEvents: number): EventFeedState {
+	const displayEvents = useDisplayEvents(events, maxEvents);
+	const { containerRef, isAutoScrolling, newItemCount, scrollToBottom, onNewItems, onScroll } =
+		useAutoScroll({ threshold: 50 });
+
+	useNewItemTracking(displayEvents.length, onNewItems);
+
+	const virtualizer = useVirtualizer({
+		count: displayEvents.length,
+		getScrollElement: () => containerRef.current,
+		estimateSize: () => EVENT_ITEM_HEIGHT,
+		overscan: 5,
+	});
+
+	useLiveScrollToEnd({
+		isAutoScrolling,
+		displayCount: displayEvents.length,
+		onScrollToEnd: (index) => {
+			virtualizer.scrollToIndex(index, { align: "end", behavior: "auto" });
+		},
+	});
+
+	return {
+		displayEvents,
+		containerRef,
+		isAutoScrolling,
+		newItemCount,
+		scrollToBottom,
+		onScroll,
+		virtualItems: virtualizer.getVirtualItems(),
+		totalHeight: `${virtualizer.getTotalSize()}px`,
+	};
+}
+
+interface EventFeedListProps {
+	containerRef: RefObject<HTMLDivElement | null>;
+	isAutoScrolling: boolean;
+	newItemCount: number;
+	scrollToBottom: () => void;
+	onScroll: () => void;
+	virtualItems: EventFeedState["virtualItems"];
+	totalHeight: string;
+	displayEvents: FeedEvent[];
+	onEventClick?: (event: FeedEvent) => void;
+}
+
+const EventFeedList = memo(function EventFeedList({
+	containerRef,
+	isAutoScrolling,
+	newItemCount,
+	scrollToBottom,
+	onScroll,
+	virtualItems,
+	totalHeight,
+	displayEvents,
+	onEventClick,
+}: EventFeedListProps) {
+	return (
+		<>
+			<NewEventsButton count={newItemCount} onClick={scrollToBottom} />
+
+			<div
+				ref={containerRef}
+				className="h-full overflow-y-auto"
+				onScroll={onScroll}
+				role="log"
+				aria-live="polite"
+				aria-label="Event feed"
+			>
+				<div style={{ height: totalHeight, width: "100%", position: "relative" }}>
+					{virtualItems.map((virtualItem) =>
+						mapVirtualItemsToRows({
+							virtualItem,
+							event: displayEvents[virtualItem.index],
+							onEventClick,
+						}),
+					)}
+				</div>
+			</div>
+
+			<LiveIndicator isAutoScrolling={isAutoScrolling} />
+		</>
+	);
+});
+
+function mapVirtualItemsToRows(params: {
+	virtualItem: {
+		index: number;
+		size: number;
+		start: number;
+	};
+	event: FeedEvent;
+	onEventClick?: (event: FeedEvent) => void;
+}) {
+	const { virtualItem, event, onEventClick } = params;
+	if (!event) {
+		return null;
+	}
+
+	return (
+		<div
+			key={event.id}
+			style={{
+				position: "absolute",
+				top: 0,
+				left: 0,
+				width: "100%",
+				height: `${virtualItem.size}px`,
+				transform: `translateY(${virtualItem.start}px)`,
+			}}
+		>
+			<EventItem event={event} onClick={onEventClick} />
+		</div>
+	);
+}
+
+function LiveIndicator({ isAutoScrolling }: { isAutoScrolling: boolean }) {
+	if (!isAutoScrolling) {
+		return null;
+	}
+
+	return (
+		<div
+			className="absolute bottom-3 right-3 flex items-center gap-1.5 px-2.5 py-1.5 bg-night-900/90 dark:bg-night-800/95 backdrop-blur-sm text-white text-xs font-medium rounded-full shadow-md"
+			aria-hidden="true"
+		>
+			<span className="relative flex h-2 w-2">
+				<span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75" />
+				<span className="relative inline-flex rounded-full h-2 w-2 bg-green-500" />
+			</span>
+			<span className="tracking-wide">LIVE</span>
+		</div>
+	);
+}
 
 // ============================================
 // Main Component
@@ -250,42 +432,16 @@ export const EventFeed = memo(function EventFeed({
 	className = "",
 	"data-testid": testId,
 }: EventFeedProps) {
-	// Limit events for memory management
-	const displayEvents = events.length > maxEvents ? events.slice(-maxEvents) : events;
-
-	// Auto-scroll behavior
-	const { containerRef, isAutoScrolling, newItemCount, scrollToBottom, onNewItems, onScroll } =
-		useAutoScroll({ threshold: 50 });
-
-	// Track previous event count for detecting new events
-	const prevCountRef = useRef(displayEvents.length);
-
-	// Notify when new events arrive
-	useEffect(() => {
-		const newCount = displayEvents.length - prevCountRef.current;
-		if (newCount > 0) {
-			onNewItems(newCount);
-		}
-		prevCountRef.current = displayEvents.length;
-	}, [displayEvents.length, onNewItems]);
-
-	// Virtualizer setup
-	const virtualizer = useVirtualizer({
-		count: displayEvents.length,
-		getScrollElement: () => containerRef.current,
-		estimateSize: () => EVENT_ITEM_HEIGHT,
-		overscan: 5,
-	});
-
-	// Handle scroll to bottom when auto-scrolling kicks in
-	useEffect(() => {
-		if (isAutoScrolling && containerRef.current) {
-			virtualizer.scrollToIndex(displayEvents.length - 1, {
-				align: "end",
-				behavior: "auto",
-			});
-		}
-	}, [isAutoScrolling, displayEvents.length, virtualizer, containerRef.current]);
+	const {
+		displayEvents,
+		containerRef,
+		isAutoScrolling,
+		newItemCount,
+		scrollToBottom,
+		onScroll,
+		virtualItems,
+		totalHeight,
+	} = useEventFeedState(events, maxEvents);
 
 	const containerHeight = typeof height === "number" ? `${height}px` : height;
 
@@ -307,63 +463,17 @@ export const EventFeed = memo(function EventFeed({
 			style={{ height: containerHeight }}
 			data-testid={testId}
 		>
-			{/* New Events Button - positioned at top of container */}
-			<NewEventsButton count={newItemCount} onClick={scrollToBottom} />
-
-			{/* Virtualized List */}
-			<div
-				ref={containerRef}
-				className="h-full overflow-y-auto"
+			<EventFeedList
+				containerRef={containerRef}
+				isAutoScrolling={isAutoScrolling}
+				newItemCount={newItemCount}
+				scrollToBottom={scrollToBottom}
 				onScroll={onScroll}
-				role="log"
-				aria-live="polite"
-				aria-label="Event feed"
-			>
-				<div
-					style={{
-						height: `${virtualizer.getTotalSize()}px`,
-						width: "100%",
-						position: "relative",
-					}}
-				>
-					{virtualizer.getVirtualItems().map((virtualItem) => {
-						const event = displayEvents[virtualItem.index];
-						if (!event) {
-							return null;
-						}
-						return (
-							<div
-								key={event.id}
-								style={{
-									position: "absolute",
-									top: 0,
-									left: 0,
-									width: "100%",
-									height: `${virtualItem.size}px`,
-									transform: `translateY(${virtualItem.start}px)`,
-								}}
-							>
-								<EventItem event={event} onClick={onEventClick} />
-							</div>
-						);
-					})}
-				</div>
-			</div>
-
-			{/* Living "Live" Indicator with Cream Glow */}
-			{isAutoScrolling && (
-				<div
-					className="absolute bottom-3 right-3 flex items-center gap-1.5 px-2.5 py-1.5 bg-night-900/90 dark:bg-night-800/95 backdrop-blur-sm text-white text-xs font-medium rounded-full shadow-md"
-					aria-hidden="true"
-				>
-					{/* Pulsing dot - the "Living Indicator" */}
-					<span className="relative flex h-2 w-2">
-						<span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75" />
-						<span className="relative inline-flex rounded-full h-2 w-2 bg-green-500" />
-					</span>
-					<span className="tracking-wide">LIVE</span>
-				</div>
-			)}
+				virtualItems={virtualItems}
+				totalHeight={totalHeight}
+				displayEvents={displayEvents}
+				onEventClick={onEventClick}
+			/>
 		</div>
 	);
 });

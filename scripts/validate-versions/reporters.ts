@@ -58,11 +58,11 @@ export function printSummary(results: CheckResult): void {
 
 	const total = `Total checks: ${results.total}`;
 	const passed = colors.green(`✓ Passed: ${results.passed}`);
-	const failed = results.failed > 0 ? colors.red(`✗ Failed: ${results.failed}`) : `✗ Failed: 0`;
+	const failed = results.failed > 0 ? colors.red(`✗ Failed: ${results.failed}`) : "✗ Failed: 0";
 	const warnings =
-		results.warnings > 0 ? colors.yellow(`⚠ Warnings: ${results.warnings}`) : `⚠ Warnings: 0`;
+		results.warnings > 0 ? colors.yellow(`⚠ Warnings: ${results.warnings}`) : "⚠ Warnings: 0";
 	const missing =
-		results.missing > 0 ? colors.red(`? Missing: ${results.missing}`) : `? Missing: 0`;
+		results.missing > 0 ? colors.red(`? Missing: ${results.missing}`) : "? Missing: 0";
 
 	print(`${total} | ${passed} | ${failed} | ${warnings} | ${missing}`);
 }

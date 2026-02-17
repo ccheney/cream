@@ -9,6 +9,7 @@
  */
 
 import { z } from "zod";
+import { CalendarClientError, type CalendarErrorCode } from "./client-error";
 import {
 	type AlpacaCalendarResponse,
 	AlpacaCalendarResponseSchema,
@@ -17,6 +18,9 @@ import {
 	type CalendarDay,
 	type MarketClock,
 } from "./types";
+
+export { CalendarClientError };
+export type { CalendarErrorCode };
 
 // ============================================
 // Types
@@ -32,24 +36,6 @@ export interface AlpacaCalendarClientConfig {
 	maxRetries?: number;
 	/** Initial backoff in ms before exponential increase (default: 1000) */
 	initialBackoffMs?: number;
-}
-
-export type CalendarErrorCode =
-	| "INVALID_CREDENTIALS"
-	| "RATE_LIMITED"
-	| "NETWORK_ERROR"
-	| "VALIDATION_ERROR"
-	| "UNKNOWN";
-
-export class CalendarClientError extends Error {
-	constructor(
-		message: string,
-		public readonly code: CalendarErrorCode,
-		public override readonly cause?: Error,
-	) {
-		super(message);
-		this.name = "CalendarClientError";
-	}
 }
 
 // ============================================
@@ -84,6 +70,11 @@ function mapHttpStatusToErrorCode(status: number): CalendarErrorCode {
 }
 
 const sleep = Bun.sleep;
+
+interface RequestAttemptResult<T> {
+	readonly shouldRetry: boolean;
+	readonly data?: T;
+}
 
 /**
  * Format date to YYYY-MM-DD string.
@@ -216,62 +207,97 @@ export class AlpacaCalendarClient {
 	 */
 	private async request<T>(path: string): Promise<T> {
 		const url = `${this.baseUrl}${path}`;
-		const retries = this.maxRetries;
 
-		for (let attempt = 0; attempt <= retries; attempt++) {
-			try {
-				const response = await fetch(url, {
-					method: "GET",
-					headers: this.headers,
-				});
-
-				if (!response.ok) {
-					const errorCode = mapHttpStatusToErrorCode(response.status);
-
-					// Retry on rate limiting
-					if (response.status === 429 && attempt < retries) {
-						const backoffMs = this.initialBackoffMs * 2 ** attempt;
-						await sleep(backoffMs);
-						continue;
-					}
-
-					const errorBody = await response.text();
-					let errorMessage = `Alpaca Calendar API error: ${response.status}`;
-
-					try {
-						const errorJson = JSON.parse(errorBody);
-						errorMessage = errorJson.message || errorMessage;
-					} catch {
-						errorMessage = errorBody || errorMessage;
-					}
-
-					throw new CalendarClientError(errorMessage, errorCode);
+		for (let attempt = 0; attempt <= this.maxRetries; attempt++) {
+			const result = await this.requestAttempt<T>(url, attempt);
+			if (!result.shouldRetry) {
+				if (result.data === undefined) {
+					throw new CalendarClientError("Response data missing", "UNKNOWN");
 				}
-
-				const text = await response.text();
-				return JSON.parse(text) as T;
-			} catch (error) {
-				if (error instanceof CalendarClientError) {
-					throw error;
-				}
-
-				// Retry on network errors
-				if (attempt < retries) {
-					const backoffMs = this.initialBackoffMs * 2 ** attempt;
-					await sleep(backoffMs);
-					continue;
-				}
-
-				throw new CalendarClientError(
-					`Network error: ${error instanceof Error ? error.message : "Unknown error"}`,
-					"NETWORK_ERROR",
-					error instanceof Error ? error : undefined,
-				);
+				return result.data;
 			}
 		}
 
 		// Should not reach here, but TypeScript needs this
 		throw new CalendarClientError("Max retries exceeded", "NETWORK_ERROR");
+	}
+
+	private async requestAttempt<T>(url: string, attempt: number): Promise<RequestAttemptResult<T>> {
+		try {
+			const response = await fetch(url, {
+				method: "GET",
+				headers: this.headers,
+			});
+			if (!response.ok) {
+				return this.handleHttpFailure(response, attempt);
+			}
+			return {
+				shouldRetry: false,
+				data: await this.parseJsonResponse<T>(response),
+			};
+		} catch (error) {
+			if (error instanceof CalendarClientError) {
+				throw error;
+			}
+			if (this.canRetry(attempt)) {
+				await this.waitForRetry(attempt);
+				return { shouldRetry: true };
+			}
+			throw this.createNetworkError(error);
+		}
+	}
+
+	private async handleHttpFailure(
+		response: Response,
+		attempt: number,
+	): Promise<RequestAttemptResult<never>> {
+		if (response.status === 429 && this.canRetry(attempt)) {
+			await this.waitForRetry(attempt);
+			return { shouldRetry: true };
+		}
+		throw new CalendarClientError(
+			await this.extractErrorMessage(response),
+			mapHttpStatusToErrorCode(response.status),
+		);
+	}
+
+	private async parseJsonResponse<T>(response: Response): Promise<T> {
+		const text = await response.text();
+		return JSON.parse(text) as T;
+	}
+
+	private async extractErrorMessage(response: Response): Promise<string> {
+		const fallback = `Alpaca Calendar API error: ${response.status}`;
+		const errorBody = await response.text();
+		if (!errorBody) {
+			return fallback;
+		}
+		try {
+			const parsed = JSON.parse(errorBody) as { message?: unknown };
+			return typeof parsed.message === "string" && parsed.message.length > 0
+				? parsed.message
+				: fallback;
+		} catch {
+			return errorBody;
+		}
+	}
+
+	private canRetry(attempt: number): boolean {
+		return attempt < this.maxRetries;
+	}
+
+	private async waitForRetry(attempt: number): Promise<void> {
+		const backoffMs = this.initialBackoffMs * 2 ** attempt;
+		await sleep(backoffMs);
+	}
+
+	private createNetworkError(error: unknown): CalendarClientError {
+		const message = error instanceof Error ? error.message : "Unknown error";
+		return new CalendarClientError(
+			`Network error: ${message}`,
+			"NETWORK_ERROR",
+			error instanceof Error ? error : undefined,
+		);
 	}
 }
 

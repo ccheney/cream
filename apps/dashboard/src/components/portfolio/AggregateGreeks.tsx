@@ -1,4 +1,3 @@
-// biome-ignore-all lint/a11y/useSemanticElements: ARIA roles required for semantic grouping
 /**
  * AggregateGreeks Component
  *
@@ -77,16 +76,14 @@ export const AggregateGreeks = memo(function AggregateGreeks({
 	const thetaColor = greeks.totalTheta <= 0 ? "text-red-500" : "text-green-500";
 
 	return (
-		<div
+		<fieldset
 			className={`flex items-center gap-6 px-4 py-2 bg-cream-50 dark:bg-night-700 rounded-lg ${className}`}
-			role="group"
 			aria-label="Portfolio Greeks"
 		>
 			{isStreaming && (
 				<div className="flex items-center gap-1">
-					<span
+					<output
 						className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse"
-						role="status"
 						aria-label="Live streaming"
 					/>
 					<span className={`${labelSize} text-stone-500 dark:text-night-300`}>Live</span>
@@ -126,7 +123,7 @@ export const AggregateGreeks = memo(function AggregateGreeks({
 					{formatVega(greeks.totalVega)}
 				</span>
 			</div>
-		</div>
+		</fieldset>
 	);
 });
 

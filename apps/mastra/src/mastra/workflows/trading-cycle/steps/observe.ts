@@ -69,6 +69,12 @@ interface Candle {
 	volume: number;
 }
 
+interface MarketDataBundle {
+	candles: Record<string, z.infer<typeof CandleDataSchema>[]>;
+	quotes: Record<string, z.infer<typeof QuoteDataSchema>>;
+	historicalCandles: Map<string, Candle[]>;
+}
+
 // ============================================
 // Step Definition
 // ============================================
@@ -138,103 +144,140 @@ async function fetchMarketData(
 	instruments: string[],
 	errors: string[],
 	warnings: string[],
-): Promise<{
-	candles: Record<string, z.infer<typeof CandleDataSchema>[]>;
-	quotes: Record<string, z.infer<typeof QuoteDataSchema>>;
-	historicalCandles: Map<string, Candle[]>;
-}> {
-	const candles: Record<string, z.infer<typeof CandleDataSchema>[]> = {};
-	const quotes: Record<string, z.infer<typeof QuoteDataSchema>> = {};
-	const historicalCandles = new Map<string, Candle[]>();
-
+): Promise<MarketDataBundle> {
 	if (!isAlpacaConfigured()) {
 		warnings.push("Alpaca not configured - using stub data");
-
-		for (const symbol of instruments) {
-			const stubPrice = 100 + Math.random() * 100;
-			quotes[symbol] = {
-				bid: stubPrice * 0.999,
-				ask: stubPrice * 1.001,
-				bidSize: 100,
-				askSize: 100,
-				timestamp: Date.now(),
-			};
-
-			// Generate stub candles for regime classification
-			const stubCandles: Candle[] = [];
-			for (let i = 0; i < 100; i++) {
-				const basePrice = stubPrice * (1 + (Math.random() - 0.5) * 0.1);
-				stubCandles.push({
-					timestamp: Date.now() - i * 3600000,
-					open: basePrice,
-					high: basePrice * 1.01,
-					low: basePrice * 0.99,
-					close: basePrice * (1 + (Math.random() - 0.5) * 0.02),
-					volume: 100000 + Math.random() * 100000,
-				});
-			}
-			const reversedCandles = stubCandles.toReversed();
-			historicalCandles.set(symbol, reversedCandles);
-			candles[symbol] = reversedCandles;
-		}
-
-		return { candles, quotes, historicalCandles };
+		return buildStubMarketData(instruments);
 	}
 
 	try {
-		const client = createAlpacaClientFromEnv();
-		const snapshots = await client.getSnapshots(instruments);
-
-		// Fetch historical candles for regime
-		const requiredBars = getRequiredCandleCount(DEFAULT_RULE_BASED_CONFIG) + 10;
-		const to = new Date();
-		const from = new Date();
-		from.setDate(from.getDate() - 90);
-
-		for (const symbol of instruments) {
-			const alpacaSnapshot = snapshots.get(symbol);
-
-			if (alpacaSnapshot) {
-				const last = alpacaSnapshot.latestTrade?.price ?? 0;
-				quotes[symbol] = {
-					bid: alpacaSnapshot.latestQuote?.bidPrice ?? last,
-					ask: alpacaSnapshot.latestQuote?.askPrice ?? last,
-					bidSize: alpacaSnapshot.latestQuote?.bidSize ?? 0,
-					askSize: alpacaSnapshot.latestQuote?.askSize ?? 0,
-					timestamp: alpacaSnapshot.latestTrade?.timestamp
-						? new Date(alpacaSnapshot.latestTrade.timestamp).getTime()
-						: Date.now(),
-				};
-			} else {
-				errors.push(`No snapshot data for ${symbol}`);
-			}
-
-			// Fetch historical bars
-			try {
-				const fromDate = from.toISOString().split("T")[0] ?? "";
-				const toDate = to.toISOString().split("T")[0] ?? "";
-				const bars = await client.getBars(symbol, "1Hour", fromDate, toDate, requiredBars);
-
-				const symbolCandles: Candle[] = bars.map((bar) => ({
-					timestamp: new Date(bar.timestamp).getTime(),
-					open: bar.open,
-					high: bar.high,
-					low: bar.low,
-					close: bar.close,
-					volume: bar.volume,
-				}));
-
-				historicalCandles.set(symbol, symbolCandles);
-				candles[symbol] = symbolCandles;
-			} catch (error) {
-				errors.push(`Failed to fetch bars for ${symbol}: ${formatError(error)}`);
-			}
-		}
+		return await fetchLiveMarketData(instruments, errors);
 	} catch (error) {
 		errors.push(`Market data fetch error: ${formatError(error)}`);
+		return createEmptyMarketDataBundle();
 	}
+}
 
-	return { candles, quotes, historicalCandles };
+function createEmptyMarketDataBundle(): MarketDataBundle {
+	return { candles: {}, quotes: {}, historicalCandles: new Map<string, Candle[]>() };
+}
+
+function buildStubMarketData(instruments: string[]): MarketDataBundle {
+	const data = createEmptyMarketDataBundle();
+	for (const symbol of instruments) {
+		const stubPrice = 100 + Math.random() * 100;
+		data.quotes[symbol] = {
+			bid: stubPrice * 0.999,
+			ask: stubPrice * 1.001,
+			bidSize: 100,
+			askSize: 100,
+			timestamp: Date.now(),
+		};
+		const reversedCandles = generateStubCandles(stubPrice).toReversed();
+		data.historicalCandles.set(symbol, reversedCandles);
+		data.candles[symbol] = reversedCandles;
+	}
+	return data;
+}
+
+function generateStubCandles(stubPrice: number): Candle[] {
+	const stubCandles: Candle[] = [];
+	for (let i = 0; i < 100; i++) {
+		const basePrice = stubPrice * (1 + (Math.random() - 0.5) * 0.1);
+		stubCandles.push({
+			timestamp: Date.now() - i * 3600000,
+			open: basePrice,
+			high: basePrice * 1.01,
+			low: basePrice * 0.99,
+			close: basePrice * (1 + (Math.random() - 0.5) * 0.02),
+			volume: 100000 + Math.random() * 100000,
+		});
+	}
+	return stubCandles;
+}
+
+async function fetchLiveMarketData(
+	instruments: string[],
+	errors: string[],
+): Promise<MarketDataBundle> {
+	const data = createEmptyMarketDataBundle();
+	const client = createAlpacaClientFromEnv();
+	const snapshots = await client.getSnapshots(instruments);
+	const dateWindow = createBarsDateWindow();
+	for (const symbol of instruments) {
+		populateQuoteFromSnapshot(symbol, snapshots.get(symbol), data.quotes, errors);
+		await fetchSymbolBars(symbol, client, dateWindow, data, errors);
+	}
+	return data;
+}
+
+function createBarsDateWindow(): { fromDate: string; toDate: string; requiredBars: number } {
+	const requiredBars = getRequiredCandleCount(DEFAULT_RULE_BASED_CONFIG) + 10;
+	const to = new Date();
+	const from = new Date();
+	from.setDate(from.getDate() - 90);
+	return {
+		fromDate: from.toISOString().split("T")[0] ?? "",
+		toDate: to.toISOString().split("T")[0] ?? "",
+		requiredBars,
+	};
+}
+
+function populateQuoteFromSnapshot(
+	symbol: string,
+	snapshot:
+		| {
+				latestTrade?: { price?: number; timestamp?: string };
+				latestQuote?: { bidPrice?: number; askPrice?: number; bidSize?: number; askSize?: number };
+		  }
+		| undefined,
+	quotes: Record<string, z.infer<typeof QuoteDataSchema>>,
+	errors: string[],
+): void {
+	if (!snapshot) {
+		errors.push(`No snapshot data for ${symbol}`);
+		return;
+	}
+	const last = snapshot.latestTrade?.price ?? 0;
+	quotes[symbol] = {
+		bid: snapshot.latestQuote?.bidPrice ?? last,
+		ask: snapshot.latestQuote?.askPrice ?? last,
+		bidSize: snapshot.latestQuote?.bidSize ?? 0,
+		askSize: snapshot.latestQuote?.askSize ?? 0,
+		timestamp: snapshot.latestTrade?.timestamp
+			? new Date(snapshot.latestTrade.timestamp).getTime()
+			: Date.now(),
+	};
+}
+
+async function fetchSymbolBars(
+	symbol: string,
+	client: ReturnType<typeof createAlpacaClientFromEnv>,
+	dateWindow: { fromDate: string; toDate: string; requiredBars: number },
+	data: MarketDataBundle,
+	errors: string[],
+): Promise<void> {
+	try {
+		const bars = await client.getBars(
+			symbol,
+			"1Hour",
+			dateWindow.fromDate,
+			dateWindow.toDate,
+			dateWindow.requiredBars,
+		);
+		const symbolCandles = bars.map((bar) => ({
+			timestamp: new Date(bar.timestamp).getTime(),
+			open: bar.open,
+			high: bar.high,
+			low: bar.low,
+			close: bar.close,
+			volume: bar.volume,
+		}));
+		data.historicalCandles.set(symbol, symbolCandles);
+		data.candles[symbol] = symbolCandles;
+	} catch (error) {
+		errors.push(`Failed to fetch bars for ${symbol}: ${formatError(error)}`);
+	}
 }
 
 async function classifyAllRegimes(

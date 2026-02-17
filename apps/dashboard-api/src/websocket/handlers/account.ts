@@ -18,6 +18,57 @@ import { broadcastOrderUpdate, broadcastPositionUpdate } from "../channels.js";
 
 let isInitialized = false;
 
+const FILL_EVENTS = new Set(["fill", "partial_fill"]);
+
+function isFillEvent(eventType: string): boolean {
+	return FILL_EVENTS.has(eventType);
+}
+
+function getOrderInvalidates(eventType: string): string[] {
+	const invalidates = ["orders", "orders.recent"];
+	if (isFillEvent(eventType)) {
+		invalidates.push("portfolio.positions", "portfolio.summary", "portfolio.account");
+	}
+	return invalidates;
+}
+
+function createPositionUpdateData(event: TradingStreamEvent, timestamp: string) {
+	const { order } = event.data;
+	const fillPrice = event.data.price ? Number.parseFloat(event.data.price) : null;
+	const fillQty = event.data.qty ? Number.parseFloat(event.data.qty) : null;
+	const positionQty = event.data.position_qty ? Number.parseFloat(event.data.position_qty) : 0;
+	const side = positionQty >= 0 ? "LONG" : "SHORT";
+	const qty = Math.abs(positionQty);
+	const avgEntry = order.filled_avg_price ? Number.parseFloat(order.filled_avg_price) : 0;
+	const marketValue = qty * (fillPrice ?? avgEntry);
+
+	return {
+		payload: {
+			type: "position_update" as const,
+			data: {
+				symbol: order.symbol,
+				side,
+				qty,
+				avgEntry,
+				marketValue,
+				unrealizedPnl: 0,
+				event: event.data.event === "fill" ? "fill" : "partial_fill",
+				orderId: order.id,
+				timestamp,
+			},
+			invalidates: [
+				"portfolio.positions",
+				"portfolio.summary",
+				"portfolio.account",
+				`portfolio.positions.${order.symbol}`,
+			],
+		},
+		fillPrice,
+		fillQty,
+		qty,
+	};
+}
+
 /**
  * Handle trade update events from Alpaca.
  * Maps Alpaca trade_updates to dashboard WebSocket messages.
@@ -29,18 +80,10 @@ async function handleTradeUpdate(event: TradingStreamEvent): Promise<void> {
 	}
 
 	const { order } = event.data;
+	const eventType = event.data.event;
 	const timestamp = new Date().toISOString();
 
-	// Persist order to database (handles both new orders and updates)
 	await persistOrderFromTradeUpdate(event.data.event, order);
-
-	// Determine cache keys to invalidate based on order event
-	const orderInvalidates = ["orders", "orders.recent"];
-	if (event.data.event === "fill" || event.data.event === "partial_fill") {
-		orderInvalidates.push("portfolio.positions", "portfolio.summary", "portfolio.account");
-	}
-
-	// Broadcast order update to orders channel with cache invalidation hints
 	const orderUpdateSent = broadcastOrderUpdate({
 		type: "order_update",
 		data: {
@@ -56,7 +99,7 @@ async function handleTradeUpdate(event: TradingStreamEvent): Promise<void> {
 			event: event.data.event,
 			timestamp,
 		},
-		invalidates: orderInvalidates,
+		invalidates: getOrderInvalidates(eventType),
 	});
 
 	log.debug(
@@ -69,57 +112,23 @@ async function handleTradeUpdate(event: TradingStreamEvent): Promise<void> {
 		"Broadcasted order update",
 	);
 
-	// For fill events, also broadcast position update
-	if (event.data.event === "fill" || event.data.event === "partial_fill") {
-		const fillPrice = event.data.price ? Number.parseFloat(event.data.price) : null;
-		const fillQty = event.data.qty ? Number.parseFloat(event.data.qty) : null;
-		const positionQty = event.data.position_qty ? Number.parseFloat(event.data.position_qty) : 0;
-
-		// Determine position side based on filled quantity
-		// Positive qty = long, negative = short (though Alpaca typically reports absolute values)
-		const side = positionQty >= 0 ? "LONG" : "SHORT";
-		const qty = Math.abs(positionQty);
-
-		// Calculate market value (approximate - client should refetch for accuracy)
-		const avgEntry = order.filled_avg_price ? Number.parseFloat(order.filled_avg_price) : 0;
-		const marketValue = qty * (fillPrice ?? avgEntry);
-
-		// Cache keys to invalidate for position changes
-		const positionInvalidates = [
-			"portfolio.positions",
-			"portfolio.summary",
-			"portfolio.account",
-			`portfolio.positions.${order.symbol}`,
-		];
-
-		const positionUpdateSent = broadcastPositionUpdate({
-			type: "position_update",
-			data: {
-				symbol: order.symbol,
-				side,
-				qty,
-				avgEntry,
-				marketValue,
-				unrealizedPnl: 0, // Client should calculate from live price
-				event: event.data.event === "fill" ? "fill" : "partial_fill",
-				orderId: order.id,
-				timestamp,
-			},
-			invalidates: positionInvalidates,
-		});
-
-		log.debug(
-			{
-				symbol: order.symbol,
-				event: event.data.event,
-				qty,
-				fillPrice,
-				fillQty,
-				clientsSent: positionUpdateSent,
-			},
-			"Broadcasted position update",
-		);
+	if (!isFillEvent(eventType)) {
+		return;
 	}
+
+	const positionUpdate = createPositionUpdateData(event, timestamp);
+	const positionUpdateSent = broadcastPositionUpdate(positionUpdate.payload);
+	log.debug(
+		{
+			symbol: order.symbol,
+			event: eventType,
+			qty: positionUpdate.qty,
+			fillPrice: positionUpdate.fillPrice,
+			fillQty: positionUpdate.fillQty,
+			clientsSent: positionUpdateSent,
+		},
+		"Broadcasted position update",
+	);
 }
 
 /**

@@ -96,6 +96,40 @@ export interface UseCycleManagementResult {
 	handleCycleError: () => void;
 }
 
+function useStatusCycleSync(
+	statusData:
+		| {
+				environment?: string;
+				runningCycle?: { cycleId: string; phase?: string | null; startedAt: string } | null;
+		  }
+		| undefined,
+	activeCycle: ReturnType<typeof useActiveCycle>["cycle"],
+	cycleIsRunning: boolean,
+	setCycle: ReturnType<typeof useCycleActions>["setCycle"],
+	resetCycle: ReturnType<typeof useCycleActions>["reset"],
+): void {
+	useEffect(() => {
+		if (statusData?.runningCycle && !activeCycle) {
+			setCycle({
+				id: statusData.runningCycle.cycleId,
+				phase: (statusData.runningCycle.phase as CyclePhase) ?? "observe",
+				progress: 0,
+				startedAt: statusData.runningCycle.startedAt,
+			});
+			return;
+		}
+
+		if (!statusData?.runningCycle && activeCycle && cycleIsRunning) {
+			const timer = setTimeout(() => {
+				resetCycle();
+			}, 1000);
+			return () => clearTimeout(timer);
+		}
+
+		return undefined;
+	}, [statusData?.runningCycle, activeCycle, cycleIsRunning, setCycle, resetCycle]);
+}
+
 export function useCycleManagement(
 	statusData:
 		| {
@@ -112,22 +146,7 @@ export function useCycleManagement(
 	const activeCycleId = activeCycle?.id ?? null;
 	const cycleInProgress = triggerCycle.isPending || cycleIsRunning;
 
-	useEffect(() => {
-		if (statusData?.runningCycle && !activeCycle) {
-			setCycle({
-				id: statusData.runningCycle.cycleId,
-				phase: (statusData.runningCycle.phase as CyclePhase) ?? "observe",
-				progress: 0,
-				startedAt: statusData.runningCycle.startedAt,
-			});
-		} else if (!statusData?.runningCycle && activeCycle && cycleIsRunning) {
-			const timer = setTimeout(() => {
-				resetCycle();
-			}, 1000);
-			return () => clearTimeout(timer);
-		}
-		return undefined;
-	}, [statusData?.runningCycle, activeCycle, cycleIsRunning, setCycle, resetCycle]);
+	useStatusCycleSync(statusData, activeCycle, cycleIsRunning, setCycle, resetCycle);
 
 	const handleTriggerCycle = useCallback(() => {
 		if (!statusData?.environment) {

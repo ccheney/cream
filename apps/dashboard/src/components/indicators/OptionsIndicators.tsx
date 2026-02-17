@@ -422,10 +422,101 @@ const VRPSection = memo(function VRPSection({ data }: { data: OptionsIndicatorsD
 	);
 });
 
+function getGreekColor(value: number | null): string {
+	if (value === null || value === 0) {
+		return "text-stone-900 dark:text-stone-100";
+	}
+	if (value > 0) {
+		return "text-green-600 dark:text-green-400";
+	}
+	return "text-red-600 dark:text-red-400";
+}
+
+type GreekCardProps = {
+	label: string;
+	value: number | null;
+	trend: string;
+	decimals?: number;
+};
+
+function GreekCard({ label, value, trend, decimals = 2 }: GreekCardProps) {
+	return (
+		<div className="p-2 bg-stone-50 dark:bg-stone-800/50 rounded-lg">
+			<div className="text-xs text-stone-500 dark:text-stone-400 mb-0.5">{label}</div>
+			<div className={`font-mono text-sm font-semibold ${getGreekColor(value)}`}>
+				{formatGreek(value, decimals)}
+			</div>
+			<div className="text-xs text-stone-400">{trend}</div>
+		</div>
+	);
+}
+
+const GREEK_ROW_LABELS = {
+	delta: {
+		label: "Delta (Δ)",
+		trendPositive: "Net Long",
+		trendNegative: "Net Short",
+	},
+	gamma: {
+		label: "Gamma (Γ)",
+		trendPositive: "Long Gamma",
+		trendNegative: "Short Gamma",
+	},
+	theta: {
+		label: "Theta (Θ)",
+		trendPositive: "Collecting",
+		trendNegative: "Paying",
+	},
+	vega: {
+		label: "Vega (ν)",
+		trendPositive: "Long Vol",
+		trendNegative: "Short Vol",
+	},
+} as const;
+
+function formatGreekTrend({
+	value,
+	labels,
+}: {
+	value: number | null;
+	labels: { trendPositive: string; trendNegative: string; trendNeutral: string };
+}): string {
+	if (value === null) {
+		return "—";
+	}
+	if (value > 0) {
+		return labels.trendPositive;
+	}
+	if (value < 0) {
+		return labels.trendNegative;
+	}
+	return labels.trendNeutral;
+}
+
 /**
  * Greeks Section
  */
 const GreeksSection = memo(function GreeksSection({ data }: { data: OptionsIndicatorsData }) {
+	const greekCards = [
+		{
+			...GREEK_ROW_LABELS.delta,
+			value: data.net_delta,
+		},
+		{
+			...GREEK_ROW_LABELS.gamma,
+			value: data.net_gamma,
+			decimals: 3,
+		},
+		{
+			...GREEK_ROW_LABELS.theta,
+			value: data.net_theta,
+		},
+		{
+			...GREEK_ROW_LABELS.vega,
+			value: data.net_vega,
+		},
+	];
+
 	return (
 		<div className="space-y-2">
 			<h4 className="text-xs font-semibold text-stone-500 dark:text-stone-400 uppercase tracking-wide">
@@ -433,105 +524,22 @@ const GreeksSection = memo(function GreeksSection({ data }: { data: OptionsIndic
 			</h4>
 
 			<div className="grid grid-cols-2 gap-2">
-				{/* Delta */}
-				<div className="p-2 bg-stone-50 dark:bg-stone-800/50 rounded-lg">
-					<div className="text-xs text-stone-500 dark:text-stone-400 mb-0.5">Delta (Δ)</div>
-					<div
-						className={`font-mono text-sm font-semibold ${
-							(data.net_delta ?? 0) > 0
-								? "text-green-600 dark:text-green-400"
-								: (data.net_delta ?? 0) < 0
-									? "text-red-600 dark:text-red-400"
-									: "text-stone-900 dark:text-stone-100"
-						}`}
-					>
-						{formatGreek(data.net_delta)}
-					</div>
-					<div className="text-xs text-stone-400">
-						{data.net_delta !== null
-							? data.net_delta > 0
-								? "Net Long"
-								: data.net_delta < 0
-									? "Net Short"
-									: "Neutral"
-							: "—"}
-					</div>
-				</div>
-
-				{/* Gamma */}
-				<div className="p-2 bg-stone-50 dark:bg-stone-800/50 rounded-lg">
-					<div className="text-xs text-stone-500 dark:text-stone-400 mb-0.5">Gamma (Γ)</div>
-					<div
-						className={`font-mono text-sm font-semibold ${
-							(data.net_gamma ?? 0) > 0
-								? "text-green-600 dark:text-green-400"
-								: (data.net_gamma ?? 0) < 0
-									? "text-red-600 dark:text-red-400"
-									: "text-stone-900 dark:text-stone-100"
-						}`}
-					>
-						{formatGreek(data.net_gamma, 3)}
-					</div>
-					<div className="text-xs text-stone-400">
-						{data.net_gamma !== null
-							? data.net_gamma > 0
-								? "Long Gamma"
-								: data.net_gamma < 0
-									? "Short Gamma"
-									: "Neutral"
-							: "—"}
-					</div>
-				</div>
-
-				{/* Theta */}
-				<div className="p-2 bg-stone-50 dark:bg-stone-800/50 rounded-lg">
-					<div className="text-xs text-stone-500 dark:text-stone-400 mb-0.5">Theta (Θ)</div>
-					<div
-						className={`font-mono text-sm font-semibold ${
-							(data.net_theta ?? 0) > 0
-								? "text-green-600 dark:text-green-400"
-								: (data.net_theta ?? 0) < 0
-									? "text-red-600 dark:text-red-400"
-									: "text-stone-900 dark:text-stone-100"
-						}`}
-					>
-						{formatGreek(data.net_theta)}
-					</div>
-					<div className="text-xs text-stone-400">
-						{data.net_theta !== null
-							? data.net_theta > 0
-								? "Collecting"
-								: data.net_theta < 0
-									? "Paying"
-									: "Neutral"
-							: "—"}
-					</div>
-				</div>
-
-				{/* Vega */}
-				<div className="p-2 bg-stone-50 dark:bg-stone-800/50 rounded-lg">
-					<div className="text-xs text-stone-500 dark:text-stone-400 mb-0.5">Vega (ν)</div>
-					<div
-						className={`font-mono text-sm font-semibold ${
-							(data.net_vega ?? 0) > 0
-								? "text-green-600 dark:text-green-400"
-								: (data.net_vega ?? 0) < 0
-									? "text-red-600 dark:text-red-400"
-									: "text-stone-900 dark:text-stone-100"
-						}`}
-					>
-						{formatGreek(data.net_vega)}
-					</div>
-					<div className="text-xs text-stone-400">
-						{data.net_vega !== null
-							? data.net_vega > 0
-								? "Long Vol"
-								: data.net_vega < 0
-									? "Short Vol"
-									: "Neutral"
-							: "—"}
-					</div>
-				</div>
+				{greekCards.map((greek) => (
+					<GreekCard
+						key={greek.label}
+						label={greek.label}
+						value={greek.value}
+						trend={formatGreekTrend({
+							value: greek.value,
+							labels: {
+								trendPositive: greek.trendPositive,
+								trendNegative: greek.trendNegative,
+								trendNeutral: "Neutral",
+							},
+						})}
+						decimals={greek.decimals}
+					/>
+				))}
 			</div>
 		</div>
 	);

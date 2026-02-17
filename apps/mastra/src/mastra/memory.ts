@@ -6,10 +6,13 @@
  * resource level (per-agent), not per-thread — threads are disposable
  * (one per cycle per batch) while observations persist indefinitely.
  *
- * Storage is inherited from the Mastra instance-level PostgresStore.
+ * Storage is explicitly shared with the Mastra instance-level PostgresStore
+ * since agents are constructed before the Mastra instance.
  */
 
 import { Memory } from "@mastra/memory";
+
+import { storage } from "./storage.js";
 
 /**
  * Trader agent memory — highest value target for cross-cycle learning.
@@ -18,6 +21,7 @@ import { Memory } from "@mastra/memory";
  */
 export function createTraderMemory(): Memory {
 	return new Memory({
+		storage,
 		options: {
 			lastMessages: 10,
 			observationalMemory: {
@@ -39,6 +43,7 @@ export function createTraderMemory(): Memory {
  */
 export function createAnalystMemory(): Memory {
 	return new Memory({
+		storage,
 		options: {
 			lastMessages: 8,
 			observationalMemory: {

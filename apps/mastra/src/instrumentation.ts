@@ -16,6 +16,10 @@ const endpoint = Bun.env.OTEL_EXPORTER_OTLP_ENDPOINT;
 const authToken = Bun.env.ZO_AUTH_TOKEN;
 const enabled = Bun.env.OTEL_ENABLED !== "false" && endpoint !== undefined;
 
+function writeInstrumentationMessage(message: string): void {
+	process.stdout.write(`[instrumentation] ${message}\n`);
+}
+
 if (enabled && endpoint) {
 	const exporter = new OTLPTraceExporter({
 		url: endpoint,
@@ -40,7 +44,7 @@ if (enabled && endpoint) {
 		process.exit(0);
 	});
 
-	console.log(`[instrumentation] OTEL tracing enabled, exporting to ${endpoint}`);
+	writeInstrumentationMessage(`OTEL tracing enabled, exporting to ${endpoint}`);
 } else {
-	console.log("[instrumentation] OTEL tracing disabled");
+	writeInstrumentationMessage("OTEL tracing disabled");
 }

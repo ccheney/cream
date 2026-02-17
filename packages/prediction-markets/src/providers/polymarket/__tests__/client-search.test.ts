@@ -11,7 +11,7 @@ import {
 	restoreFetch,
 } from "./fixtures.js";
 
-describe("PolymarketClient.searchMarkets", () => {
+describe("PolymarketClient.searchMarkets responses", () => {
 	let ctx: FetchMockContext;
 
 	beforeEach(() => {
@@ -50,6 +50,18 @@ describe("PolymarketClient.searchMarkets", () => {
 
 		expect(results).toHaveLength(0);
 	});
+});
+
+describe("PolymarketClient.searchMarkets filtering", () => {
+	let ctx: FetchMockContext;
+
+	beforeEach(() => {
+		ctx = createFetchMock();
+	});
+
+	afterEach(() => {
+		restoreFetch(ctx);
+	});
 
 	it("should filter out invalid events from response", async () => {
 		ctx.mockFetch.mockImplementation(() =>
@@ -69,6 +81,18 @@ describe("PolymarketClient.searchMarkets", () => {
 		const results = await client.searchMarkets("query");
 
 		expect(results).toHaveLength(1);
+	});
+});
+
+describe("PolymarketClient.searchMarkets errors", () => {
+	let ctx: FetchMockContext;
+
+	beforeEach(() => {
+		ctx = createFetchMock();
+	});
+
+	afterEach(() => {
+		restoreFetch(ctx);
 	});
 
 	it("should throw on search errors", async () => {

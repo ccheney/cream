@@ -29,91 +29,65 @@ export interface ConfigDiffProps<T extends ConfigType = ConfigType> {
 	viewMode?: "diff" | "tree";
 }
 
-export function ConfigDiff<T extends ConfigType>({
-	before,
-	after,
-	showUnchanged = false,
-	onRevert,
-	viewMode = "diff",
-}: ConfigDiffProps<T>) {
-	const [mode, setMode] = useState<"diff" | "tree">(viewMode);
-
-	const diffResult = useMemo(
-		() =>
-			calculateDiff(
-				before as unknown as Record<string, unknown>,
-				after as unknown as Record<string, unknown>,
-			),
-		[before, after],
-	);
-
-	const displayEntries = useMemo(
-		() => (showUnchanged ? diffResult.entries : filterChangesOnly(diffResult.entries)),
-		[diffResult.entries, showUnchanged],
-	);
-
-	const hasChanges =
-		diffResult.stats.added > 0 || diffResult.stats.removed > 0 || diffResult.stats.changed > 0;
-
-	if (!hasChanges) {
-		return (
-			<div className="p-4 text-center text-stone-500 dark:text-night-300">
-				No configuration changes
-			</div>
-		);
-	}
-
+function DiffEmptyState() {
 	return (
-		<div className="space-y-4">
-			<div className="flex items-center justify-between">
-				<div className="flex items-center gap-4 text-sm">
-					{diffResult.stats.added > 0 && (
-						<span className="text-emerald-600 dark:text-emerald-400">
-							+{diffResult.stats.added} added
-						</span>
-					)}
-					{diffResult.stats.removed > 0 && (
-						<span className="text-red-600 dark:text-red-400">
-							-{diffResult.stats.removed} removed
-						</span>
-					)}
-					{diffResult.stats.changed > 0 && (
-						<span className="text-amber-600 dark:text-amber-400">
-							~{diffResult.stats.changed} changed
-						</span>
-					)}
-				</div>
-				<div className="flex items-center gap-1 bg-cream-100 dark:bg-night-700 rounded-lg p-1">
-					<button
-						type="button"
-						onClick={() => setMode("diff")}
-						className={`px-3 py-1 text-sm rounded-md transition-colors ${
-							mode === "diff"
-								? "bg-white dark:bg-night-600 text-stone-900 dark:text-night-50 shadow-sm"
-								: "text-stone-600 dark:text-night-200 dark:text-night-400 hover:text-stone-900 dark:hover:text-night-50"
-						}`}
-					>
-						Diff
-					</button>
-					<button
-						type="button"
-						onClick={() => setMode("tree")}
-						className={`px-3 py-1 text-sm rounded-md transition-colors ${
-							mode === "tree"
-								? "bg-white dark:bg-night-600 text-stone-900 dark:text-night-50 shadow-sm"
-								: "text-stone-600 dark:text-night-200 dark:text-night-400 hover:text-stone-900 dark:hover:text-night-50"
-						}`}
-					>
-						Tree
-					</button>
-				</div>
-			</div>
+		<div className="p-4 text-center text-stone-500 dark:text-night-300">
+			No configuration changes
+		</div>
+	);
+}
 
-			{mode === "diff" ? (
-				<DiffView before={before} after={after} />
-			) : (
-				<TreeView entries={displayEntries} onRevert={onRevert} after={after} />
+function DiffStats({
+	added,
+	removed,
+	changed,
+}: {
+	added: number;
+	removed: number;
+	changed: number;
+}) {
+	return (
+		<div className="flex items-center gap-4 text-sm">
+			{added > 0 && <span className="text-emerald-600 dark:text-emerald-400">+{added} added</span>}
+			{removed > 0 && <span className="text-red-600 dark:text-red-400">-{removed} removed</span>}
+			{changed > 0 && (
+				<span className="text-amber-600 dark:text-amber-400">~{changed} changed</span>
 			)}
+		</div>
+	);
+}
+
+function DiffModeToggle({
+	mode,
+	onChange,
+}: {
+	mode: "diff" | "tree";
+	onChange: (mode: "diff" | "tree") => void;
+}) {
+	return (
+		<div className="flex items-center gap-1 bg-cream-100 dark:bg-night-700 rounded-lg p-1">
+			<button
+				type="button"
+				onClick={() => onChange("diff")}
+				className={`px-3 py-1 text-sm rounded-md transition-colors ${
+					mode === "diff"
+						? "bg-white dark:bg-night-600 text-stone-900 dark:text-night-50 shadow-sm"
+						: "text-stone-600 dark:text-night-200 dark:text-night-400 hover:text-stone-900 dark:hover:text-night-50"
+				}`}
+			>
+				Diff
+			</button>
+			<button
+				type="button"
+				onClick={() => onChange("tree")}
+				className={`px-3 py-1 text-sm rounded-md transition-colors ${
+					mode === "tree"
+						? "bg-white dark:bg-night-600 text-stone-900 dark:text-night-50 shadow-sm"
+						: "text-stone-600 dark:text-night-200 dark:text-night-400 hover:text-stone-900 dark:hover:text-night-50"
+				}`}
+			>
+				Tree
+			</button>
 		</div>
 	);
 }
@@ -126,44 +100,39 @@ function DiffView({ before, after }: { before: ConfigType; after: ConfigType }) 
 	return (
 		<div className="rounded-lg border border-cream-200 dark:border-night-700 overflow-hidden">
 			<MultiFileDiff
-				oldFile={{
-					name: "config.json",
-					contents: oldContents,
-				}}
-				newFile={{
-					name: "config.json",
-					contents: newContents,
-				}}
-				options={{
-					theme: resolvedTheme === "dark" ? "pierre-dark" : "pierre-light",
-				}}
+				oldFile={{ name: "config.json", contents: oldContents }}
+				newFile={{ name: "config.json", contents: newContents }}
+				options={{ theme: resolvedTheme === "dark" ? "pierre-dark" : "pierre-light" }}
 			/>
 		</div>
 	);
 }
 
-interface TreeViewProps<T extends ConfigType> {
+function DiffList({
+	entries,
+	onRevert,
+	after,
+}: {
 	entries: DiffEntry[];
-	onRevert?: (path: string[], oldValue: unknown, newConfig: T) => void;
-	after: T;
-}
-
-function TreeView<T extends ConfigType>({ entries, onRevert, after }: TreeViewProps<T>) {
+	onRevert?: (entry: DiffEntry) => void;
+	after: ConfigType;
+}) {
 	const handleRevert = (entry: DiffEntry) => {
 		if (!onRevert) {
 			return;
 		}
+
 		const newConfig = revertChange(
 			after as unknown as Record<string, unknown>,
 			entry.path,
 			entry.oldValue,
-		) as unknown as T;
+		) as unknown as ConfigType;
 		onRevert(entry.path, entry.oldValue, newConfig);
 	};
 
 	return (
 		<div className="rounded-lg border border-cream-200 dark:border-night-700 bg-white dark:bg-night-800">
-			<Accordion type="multiple" defaultValue={entries.map((e) => e.key)}>
+			<Accordion type="multiple" defaultValue={entries.map((entry) => entry.key)}>
 				{entries.map((entry) => (
 					<DiffEntryRow
 						key={entry.path.join(".")}
@@ -183,27 +152,36 @@ interface DiffEntryRowProps {
 	onRevert?: (entry: DiffEntry) => void;
 }
 
+const CHANGE_STATUS_CLASS: Record<DiffEntry["type"], { badge: string; row: string }> = {
+	added: {
+		badge: "bg-emerald-100 text-emerald-800 dark:bg-emerald-900/40 dark:text-emerald-300",
+		row: "bg-emerald-50 dark:bg-emerald-900/20 border-l-2 border-emerald-500",
+	},
+	removed: {
+		badge: "bg-red-100 text-red-800 dark:bg-red-900/40 dark:text-red-300",
+		row: "bg-red-50 dark:bg-red-900/20 border-l-2 border-red-500",
+	},
+	changed: {
+		badge: "bg-amber-100 text-amber-800 dark:bg-amber-900/40 dark:text-amber-300",
+		row: "bg-amber-50 dark:bg-amber-900/20 border-l-2 border-amber-500",
+	},
+	unchanged: {
+		badge: "bg-cream-100 text-stone-600 dark:text-night-200 dark:bg-night-700 dark:text-night-400",
+		row: "border-l-2 border-emerald-200/30",
+	},
+};
+
 function DiffEntryRow({ entry, depth, onRevert }: DiffEntryRowProps) {
-	const hasChildren = entry.children && entry.children.length > 0;
+	const hasChildren = entry.children?.length > 0;
+	const statusStyles = CHANGE_STATUS_CLASS[entry.type];
 
-	const typeStyles = {
-		added: "bg-emerald-50 dark:bg-emerald-900/20 border-l-2 border-emerald-500",
-		removed: "bg-red-50 dark:bg-red-900/20 border-l-2 border-red-500",
-		changed: "bg-amber-50 dark:bg-amber-900/20 border-l-2 border-amber-500",
-		unchanged: "",
-	};
-
-	const valueBadgeStyles = {
-		added: "bg-emerald-100 text-emerald-800 dark:bg-emerald-900/40 dark:text-emerald-300",
-		removed: "bg-red-100 text-red-800 dark:bg-red-900/40 dark:text-red-300",
-		changed: "bg-amber-100 text-amber-800 dark:bg-amber-900/40 dark:text-amber-300",
-		unchanged:
-			"bg-cream-100 text-stone-600 dark:text-night-200 dark:bg-night-700 dark:text-night-400",
-	};
+	if (!entry.key) {
+		return null;
+	}
 
 	if (hasChildren) {
 		return (
-			<AccordionItem value={entry.key} className={typeStyles[entry.type]}>
+			<AccordionItem value={entry.key} className={statusStyles.row}>
 				<AccordionTrigger className="px-4 py-2">
 					<span className="font-medium text-stone-900 dark:text-night-50">
 						{formatKey(entry.key)}
@@ -227,7 +205,7 @@ function DiffEntryRow({ entry, depth, onRevert }: DiffEntryRowProps) {
 
 	return (
 		<div
-			className={`flex items-center justify-between px-4 py-2 ${typeStyles[entry.type]} ${
+			className={`flex items-center justify-between px-4 py-2 ${statusStyles.row} ${
 				depth > 0 ? "border-b border-cream-100 dark:border-night-700" : ""
 			}`}
 			style={{ paddingLeft: `${1 + depth * 0.75}rem` }}
@@ -239,30 +217,30 @@ function DiffEntryRow({ entry, depth, onRevert }: DiffEntryRowProps) {
 			<div className="flex items-center gap-3">
 				{entry.type === "changed" && (
 					<>
-						<span className="text-xs px-2 py-0.5 rounded bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-300 line-through">
+						<span className={`text-xs px-2 py-0.5 rounded ${statusStyles.badge}`}>
 							{formatValue(entry.oldValue)}
 						</span>
 						<span className="text-stone-400 dark:text-night-400">&rarr;</span>
-						<span className="text-xs px-2 py-0.5 rounded bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-300">
+						<span className={`text-xs px-2 py-0.5 rounded ${statusStyles.badge}`}>
 							{formatValue(entry.newValue)}
 						</span>
 					</>
 				)}
 
 				{entry.type === "added" && (
-					<span className={`text-xs px-2 py-0.5 rounded ${valueBadgeStyles.added}`}>
+					<span className={`text-xs px-2 py-0.5 rounded ${statusStyles.badge}`}>
 						{formatValue(entry.newValue)}
 					</span>
 				)}
 
 				{entry.type === "removed" && (
-					<span className={`text-xs px-2 py-0.5 rounded ${valueBadgeStyles.removed}`}>
+					<span className={`text-xs px-2 py-0.5 rounded ${statusStyles.badge}`}>
 						{formatValue(entry.oldValue)}
 					</span>
 				)}
 
 				{entry.type === "unchanged" && (
-					<span className={`text-xs px-2 py-0.5 rounded ${valueBadgeStyles.unchanged}`}>
+					<span className={`text-xs px-2 py-0.5 rounded ${statusStyles.badge}`}>
 						{formatValue(entry.oldValue)}
 					</span>
 				)}
@@ -279,6 +257,79 @@ function DiffEntryRow({ entry, depth, onRevert }: DiffEntryRowProps) {
 				)}
 			</div>
 		</div>
+	);
+}
+
+function ConfigDiffBody({
+	before,
+	after,
+	mode,
+	setMode,
+	showUnchanged,
+	onRevert,
+}: {
+	before: ConfigType;
+	after: ConfigType;
+	mode: "diff" | "tree";
+	setMode: (mode: "diff" | "tree") => void;
+	showUnchanged?: boolean;
+	onRevert?: (path: string[], oldValue: unknown, newConfig: ConfigType) => void;
+}) {
+	const diffResult = useMemo(
+		() =>
+			calculateDiff(
+				before as unknown as Record<string, unknown>,
+				after as unknown as Record<string, unknown>,
+			),
+		[before, after],
+	);
+
+	const displayEntries = useMemo(
+		() => (showUnchanged ? diffResult.entries : filterChangesOnly(diffResult.entries)),
+		[diffResult.entries, showUnchanged],
+	);
+
+	if (
+		diffResult.stats.added === 0 &&
+		diffResult.stats.removed === 0 &&
+		diffResult.stats.changed === 0
+	) {
+		return <DiffEmptyState />;
+	}
+
+	return (
+		<div className="space-y-4">
+			<div className="flex items-center justify-between">
+				<DiffStats
+					added={diffResult.stats.added}
+					removed={diffResult.stats.removed}
+					changed={diffResult.stats.changed}
+				/>
+				<DiffModeToggle mode={mode} onChange={setMode} />
+			</div>
+
+			{mode === "diff" ? (
+				<DiffView before={before} after={after} />
+			) : (
+				<DiffList entries={displayEntries} onRevert={onRevert} after={after} />
+			)}
+		</div>
+	);
+}
+
+export function ConfigDiff<T extends ConfigType>(props: ConfigDiffProps<T>) {
+	const { before, after, showUnchanged = false, onRevert, viewMode = "diff" } = props;
+	const [mode, setMode] = useState<"diff" | "tree">(viewMode);
+
+	return (
+		<ConfigDiffBody
+			before={before}
+			after={after}
+			mode={mode}
+			setMode={setMode}
+			showUnchanged={showUnchanged}
+			onRevert={onRevert}
+		/>
 	);
 }
 

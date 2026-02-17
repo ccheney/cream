@@ -28,40 +28,37 @@ export const viewport: Viewport = {
 	],
 };
 
+const themeInitializationScript = `
+	(function() {
+		try {
+			var stored = localStorage.getItem('cream-preferences');
+			var theme = 'system';
+			if (stored) {
+				var parsed = JSON.parse(stored);
+				if (parsed.state && parsed.state.display && parsed.state.display.theme) {
+					theme = parsed.state.display.theme;
+				}
+			}
+			var resolved = theme;
+
+			if (theme === 'system') {
+				resolved = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+			}
+
+			document.documentElement.setAttribute('data-theme', resolved);
+			if (resolved === 'dark') {
+				document.documentElement.classList.add('dark');
+			}
+		} catch (e) {}
+	})();
+`;
+
 export default function RootLayout({ children }: { children: React.ReactNode }) {
 	return (
 		<html lang="en" suppressHydrationWarning>
 			<head>
 				{/* Theme initialization script - prevents flash of wrong theme */}
-				<script
-					// biome-ignore lint/security/noDangerouslySetInnerHtml: Required for synchronous theme init before hydration
-					dangerouslySetInnerHTML={{
-						__html: `
-              (function() {
-                try {
-                  var stored = localStorage.getItem('cream-preferences');
-                  var theme = 'system';
-                  if (stored) {
-                    var parsed = JSON.parse(stored);
-                    if (parsed.state && parsed.state.display && parsed.state.display.theme) {
-                      theme = parsed.state.display.theme;
-                    }
-                  }
-                  var resolved = theme;
-
-                  if (theme === 'system') {
-                    resolved = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
-                  }
-
-                  document.documentElement.setAttribute('data-theme', resolved);
-                  if (resolved === 'dark') {
-                    document.documentElement.classList.add('dark');
-                  }
-                } catch (e) {}
-              })();
-            `,
-					}}
-				/>
+				<script>{themeInitializationScript}</script>
 			</head>
 			<body className="font-ui antialiased">
 				<Providers>{children}</Providers>

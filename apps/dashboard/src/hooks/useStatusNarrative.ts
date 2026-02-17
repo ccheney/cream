@@ -168,32 +168,30 @@ export function useStatusNarrative(
 	const [isGenerating, setIsGenerating] = useState(false);
 	const lastReasoningRef = useRef("");
 	const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+	const narrativeState = createNarrativeStateUpdater(setNarrative, setType, setConfidence);
 
-	// Generate narrative function
-	const generateNarrative = useCallback(async (text: string) => {
-		if (!text || text.length < MIN_REASONING_LENGTH) {
-			setNarrative("Thinking...");
-			setType("observation");
-			setConfidence(0.3);
-			return;
-		}
+	const generateNarrative = useCallback(
+		async (text: string) => {
+			if (!text || text.length < MIN_REASONING_LENGTH) {
+				narrativeState.reset();
+				return;
+			}
 
-		// Skip if reasoning hasn't changed significantly
-		if (Math.abs(text.length - lastReasoningRef.current.length) < 50) {
-			return;
-		}
+			if (Math.abs(text.length - lastReasoningRef.current.length) < 50) {
+				return;
+			}
 
-		setIsGenerating(true);
-		try {
-			const response = await fetchStatusNarrative(text);
-			setNarrative(response.summary);
-			setType(response.type);
-			setConfidence(response.confidence);
-			lastReasoningRef.current = text;
-		} finally {
-			setIsGenerating(false);
-		}
-	}, []);
+			setIsGenerating(true);
+			try {
+				const response = await fetchStatusNarrative(text);
+				narrativeState.setFromResponse(response.summary, response.type, response.confidence);
+				lastReasoningRef.current = text;
+			} finally {
+				setIsGenerating(false);
+			}
+		},
+		[narrativeState],
+	);
 
 	// Manual refresh function
 	const refresh = useCallback(() => {
@@ -203,22 +201,49 @@ export function useStatusNarrative(
 		}
 	}, [reasoningText, generateNarrative]);
 
-	// Generate immediately when reasoning starts and periodically while streaming
+	useNarrativeRefreshTicker(isStreaming, reasoningText, generateNarrative, intervalRef);
+	useNarrativeResetEffect(reasoningText, narrativeState.reset);
+
+	return { narrative, type, confidence, isGenerating, refresh };
+}
+
+export default useStatusNarrative;
+function createNarrativeStateUpdater(
+	setNarrative: (value: string) => void,
+	setType: (value: ThoughtType) => void,
+	setConfidence: (value: number) => void,
+) {
+	return {
+		reset: () => {
+			setNarrative("Thinking...");
+			setType("observation");
+			setConfidence(0.3);
+		},
+		setFromResponse: (summary: string, responseType: ThoughtType, responseConfidence: number) => {
+			setNarrative(summary);
+			setType(responseType);
+			setConfidence(responseConfidence);
+		},
+	};
+}
+
+function useNarrativeRefreshTicker(
+	isStreaming: boolean,
+	reasoningText: string,
+	generateNarrative: (text: string) => Promise<void>,
+	intervalRef: { current: ReturnType<typeof setInterval> | null },
+) {
 	useEffect(() => {
 		if (!isStreaming) {
-			// Clear interval when not streaming
 			if (intervalRef.current) {
 				clearInterval(intervalRef.current);
 				intervalRef.current = null;
 			}
-			// Keep last narrative when stopped
 			return;
 		}
 
-		// Generate immediately on first content
 		generateNarrative(reasoningText);
 
-		// Then refresh periodically while streaming
 		intervalRef.current = setInterval(() => {
 			generateNarrative(reasoningText);
 		}, REFRESH_INTERVAL);
@@ -229,19 +254,13 @@ export function useStatusNarrative(
 				intervalRef.current = null;
 			}
 		};
-	}, [isStreaming, reasoningText, generateNarrative]);
-
-	// Reset when reasoning is cleared
-	useEffect(() => {
-		if (!reasoningText) {
-			setNarrative("Thinking...");
-			setType("observation");
-			setConfidence(0.3);
-			lastReasoningRef.current = "";
-		}
-	}, [reasoningText]);
-
-	return { narrative, type, confidence, isGenerating, refresh };
+	}, [isStreaming, reasoningText, generateNarrative, intervalRef]);
 }
 
-export default useStatusNarrative;
+function useNarrativeResetEffect(reasoningText: string, resetNarrative: () => void) {
+	useEffect(() => {
+		if (!reasoningText) {
+			resetNarrative();
+		}
+	}, [reasoningText, resetNarrative]);
+}

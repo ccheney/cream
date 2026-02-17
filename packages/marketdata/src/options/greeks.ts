@@ -169,6 +169,112 @@ function calculateD1D2(
 	return { d1, d2 };
 }
 
+function calculateExpiredGreeks(S: number, K: number, optionType: OptionType): OptionGreeks {
+	const isCall = optionType === "CALL";
+	const intrinsicValue = isCall ? Math.max(S - K, 0) : Math.max(K - S, 0);
+	const delta = isCall ? (S > K ? 1 : 0) : S < K ? -1 : 0;
+
+	return {
+		delta,
+		gamma: 0,
+		theta: 0,
+		vega: 0,
+		rho: 0,
+		theoreticalPrice: intrinsicValue,
+	};
+}
+
+function calculateZeroVolGreeks(
+	S: number,
+	K: number,
+	T: number,
+	r: number,
+	optionType: OptionType,
+): OptionGreeks {
+	const isCall = optionType === "CALL";
+	const pv = Math.exp(-r * T);
+	const intrinsicValue = isCall ? Math.max(S - K * pv, 0) : Math.max(K * pv - S, 0);
+	const delta = isCall ? (S > K * pv ? 1 : 0) : S < K * pv ? -1 : 0;
+
+	return {
+		delta,
+		gamma: 0,
+		theta: 0,
+		vega: 0,
+		rho: 0,
+		theoreticalPrice: intrinsicValue,
+	};
+}
+
+function calculateDelta(Nd1: number, isCall: boolean): number {
+	return isCall ? Nd1 : Nd1 - 1;
+}
+
+function calculateTheta(
+	S: number,
+	K: number,
+	sigma: number,
+	sqrtT: number,
+	r: number,
+	expRT: number,
+	Nd2: number,
+	isCall: boolean,
+): number {
+	const thetaTerm1 =
+		-(
+			S *
+			normalPDF((Math.log(S / K) + (r + (sigma * sigma) / 2) * (sqrtT * sqrtT)) / (sigma * sqrtT)) *
+			sigma
+		) /
+		(2 * sqrtT);
+	const annualTheta = isCall
+		? thetaTerm1 - r * K * expRT * Nd2
+		: thetaTerm1 + r * K * expRT * (1 - Nd2);
+	return annualTheta / DAYS_PER_YEAR;
+}
+
+function calculateRho(K: number, T: number, expRT: number, Nd2: number, isCall: boolean): number {
+	return isCall ? (K * T * expRT * Nd2) / 100 : (-K * T * expRT * (1 - Nd2)) / 100;
+}
+
+function calculateTheoreticalPrice(
+	S: number,
+	K: number,
+	expRT: number,
+	Nd1: number,
+	Nd2: number,
+	isCall: boolean,
+): number {
+	const rawPrice = isCall ? S * Nd1 - K * expRT * Nd2 : K * expRT * (1 - Nd2) - S * (1 - Nd1);
+	return Math.max(rawPrice, 0);
+}
+
+function calculateRegularGreeks(
+	S: number,
+	K: number,
+	T: number,
+	sigma: number,
+	r: number,
+	optionType: OptionType,
+): OptionGreeks {
+	const { d1, d2 } = calculateD1D2(S, K, T, r, sigma);
+	const sqrtT = Math.sqrt(T);
+	const expRT = Math.exp(-r * T);
+	const Nd1 = normalCDF(d1);
+	const Nd2 = normalCDF(d2);
+	const nd1 = normalPDF(d1);
+	const isCall = optionType === "CALL";
+
+	return {
+		delta: calculateDelta(Nd1, isCall),
+		gamma: nd1 / (S * sigma * sqrtT),
+		theta: calculateTheta(S, K, sigma, sqrtT, r, expRT, Nd2, isCall),
+		vega: (S * sqrtT * nd1) / 100,
+		rho: calculateRho(K, T, expRT, Nd2, isCall),
+		theoreticalPrice: calculateTheoreticalPrice(S, K, expRT, Nd1, Nd2, isCall),
+	};
+}
+
 /**
  * Calculate all Greeks for a single option using Black-Scholes model.
  *
@@ -185,98 +291,15 @@ export function calculateGreeks(position: OptionPosition): OptionGreeks {
 		riskFreeRate: r = DEFAULT_RISK_FREE_RATE,
 	} = position;
 
-	// Handle edge case: expired option
 	if (T <= 0) {
-		const isCall = optionType === "CALL";
-		const intrinsicValue = isCall ? Math.max(S - K, 0) : Math.max(K - S, 0);
-		const delta = isCall ? (S > K ? 1 : 0) : S < K ? -1 : 0;
-
-		return {
-			delta,
-			gamma: 0,
-			theta: 0,
-			vega: 0,
-			rho: 0,
-			theoreticalPrice: intrinsicValue,
-		};
+		return calculateExpiredGreeks(S, K, optionType);
 	}
 
-	// Handle edge case: zero volatility
 	if (sigma <= 0) {
-		const isCall = optionType === "CALL";
-		const pv = Math.exp(-r * T);
-		const intrinsicValue = isCall ? Math.max(S - K * pv, 0) : Math.max(K * pv - S, 0);
-		const delta = isCall ? (S > K * pv ? 1 : 0) : S < K * pv ? -1 : 0;
-
-		return {
-			delta,
-			gamma: 0,
-			theta: 0,
-			vega: 0,
-			rho: 0,
-			theoreticalPrice: intrinsicValue,
-		};
+		return calculateZeroVolGreeks(S, K, T, r, optionType);
 	}
 
-	const { d1, d2 } = calculateD1D2(S, K, T, r, sigma);
-	const sqrtT = Math.sqrt(T);
-	const expRT = Math.exp(-r * T);
-
-	const Nd1 = normalCDF(d1);
-	const Nd2 = normalCDF(d2);
-	const nd1 = normalPDF(d1);
-
-	const isCall = optionType === "CALL";
-
-	// Delta
-	let delta: number;
-	if (isCall) {
-		delta = Nd1;
-	} else {
-		delta = Nd1 - 1;
-	}
-
-	// Gamma (same for calls and puts)
-	const gamma = nd1 / (S * sigma * sqrtT);
-
-	// Theta (time decay per day)
-	let theta: number;
-	const thetaTerm1 = -(S * nd1 * sigma) / (2 * sqrtT);
-	if (isCall) {
-		theta = thetaTerm1 - r * K * expRT * Nd2;
-	} else {
-		theta = thetaTerm1 + r * K * expRT * (1 - Nd2);
-	}
-	// Convert to per-day (from per-year)
-	theta = theta / DAYS_PER_YEAR;
-
-	// Vega (per 1% change in volatility)
-	const vega = (S * sqrtT * nd1) / 100; // Divide by 100 for 1% change
-
-	// Rho (per 1% change in interest rate)
-	let rho: number;
-	if (isCall) {
-		rho = (K * T * expRT * Nd2) / 100;
-	} else {
-		rho = (-K * T * expRT * (1 - Nd2)) / 100;
-	}
-
-	// Theoretical price
-	let theoreticalPrice: number;
-	if (isCall) {
-		theoreticalPrice = S * Nd1 - K * expRT * Nd2;
-	} else {
-		theoreticalPrice = K * expRT * (1 - Nd2) - S * (1 - Nd1);
-	}
-
-	return {
-		delta,
-		gamma,
-		theta,
-		vega,
-		rho,
-		theoreticalPrice: Math.max(theoreticalPrice, 0),
-	};
+	return calculateRegularGreeks(S, K, T, sigma, r, optionType);
 }
 
 // ============================================
@@ -291,7 +314,6 @@ export function calculateGreeks(position: OptionPosition): OptionGreeks {
  */
 export function calculateOptionsExposure(positions: OptionPosition[]): OptionsExposure {
 	const bySymbol = new Map<string, SymbolExposure>();
-
 	let totalDeltaNotional = 0;
 	let totalGamma = 0;
 	let totalVega = 0;
@@ -300,45 +322,16 @@ export function calculateOptionsExposure(positions: OptionPosition[]): OptionsEx
 	let totalContracts = 0;
 
 	for (const position of positions) {
-		const multiplier = position.multiplier ?? DEFAULT_MULTIPLIER;
-		const greeks = calculateGreeks(position);
+		const positionExposure = calculatePositionExposure(position);
 
-		// Position-level values (contracts can be negative for shorts)
-		const positionMultiplier = position.contracts * multiplier;
-		const deltaNotional = positionMultiplier * greeks.delta * position.underlyingPrice;
-		const gamma = positionMultiplier * greeks.gamma;
-		const vega = positionMultiplier * greeks.vega;
-		const theta = positionMultiplier * greeks.theta;
-		const rho = positionMultiplier * greeks.rho;
-
-		// Add to totals
-		totalDeltaNotional += deltaNotional;
-		totalGamma += gamma;
-		totalVega += vega;
-		totalTheta += theta;
-		totalRho += rho;
+		totalDeltaNotional += positionExposure.deltaNotional;
+		totalGamma += positionExposure.gamma;
+		totalVega += positionExposure.vega;
+		totalTheta += positionExposure.theta;
+		totalRho += positionExposure.rho;
 		totalContracts += Math.abs(position.contracts);
 
-		// Add to symbol breakdown
-		const existing = bySymbol.get(position.symbol);
-		if (existing) {
-			existing.deltaNotional += deltaNotional;
-			existing.gamma += gamma;
-			existing.vega += vega;
-			existing.theta += theta;
-			existing.rho += rho;
-			existing.contracts += position.contracts;
-		} else {
-			bySymbol.set(position.symbol, {
-				symbol: position.symbol,
-				deltaNotional,
-				gamma,
-				vega,
-				theta,
-				rho,
-				contracts: position.contracts,
-			});
-		}
+		accumulateSymbolExposure(bySymbol, position.symbol, position.contracts, positionExposure);
 	}
 
 	return {
@@ -351,6 +344,56 @@ export function calculateOptionsExposure(positions: OptionPosition[]): OptionsEx
 		totalContracts,
 		bySymbol,
 	};
+}
+
+interface PositionExposureMetrics {
+	deltaNotional: number;
+	gamma: number;
+	vega: number;
+	theta: number;
+	rho: number;
+}
+
+function calculatePositionExposure(position: OptionPosition): PositionExposureMetrics {
+	const multiplier = position.multiplier ?? DEFAULT_MULTIPLIER;
+	const greeks = calculateGreeks(position);
+	const positionMultiplier = position.contracts * multiplier;
+
+	return {
+		deltaNotional: positionMultiplier * greeks.delta * position.underlyingPrice,
+		gamma: positionMultiplier * greeks.gamma,
+		vega: positionMultiplier * greeks.vega,
+		theta: positionMultiplier * greeks.theta,
+		rho: positionMultiplier * greeks.rho,
+	};
+}
+
+function accumulateSymbolExposure(
+	bySymbol: Map<string, SymbolExposure>,
+	symbol: string,
+	contracts: number,
+	exposure: PositionExposureMetrics,
+): void {
+	const existing = bySymbol.get(symbol);
+	if (existing) {
+		existing.deltaNotional += exposure.deltaNotional;
+		existing.gamma += exposure.gamma;
+		existing.vega += exposure.vega;
+		existing.theta += exposure.theta;
+		existing.rho += exposure.rho;
+		existing.contracts += contracts;
+		return;
+	}
+
+	bySymbol.set(symbol, {
+		symbol,
+		deltaNotional: exposure.deltaNotional,
+		gamma: exposure.gamma,
+		vega: exposure.vega,
+		theta: exposure.theta,
+		rho: exposure.rho,
+		contracts,
+	});
 }
 
 /**

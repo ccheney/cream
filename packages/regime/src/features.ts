@@ -40,6 +40,10 @@ export const DEFAULT_FEATURE_CONFIG: FeatureExtractionConfig = {
 	volumePeriod: 20,
 };
 
+const STABILITY_EPSILON = 0.0001;
+const TREND_STRENGTH_MIN = -3;
+const TREND_STRENGTH_MAX = 3;
+
 /**
  * Extract regime classification features from candle data.
  *
@@ -56,43 +60,12 @@ export function extractFeatures(
 	}
 
 	const features: RegimeFeatures[] = [];
-	const logReturns: number[] = [];
-	for (let i = 1; i < candles.length; i++) {
-		const prevClose = candles[i - 1]?.close ?? 0;
-		const currClose = candles[i]?.close ?? 0;
-		if (prevClose > 0 && currClose > 0) {
-			logReturns.push(Math.log(currClose / prevClose));
-		} else {
-			logReturns.push(0);
-		}
-	}
-
+	const logReturns = computeLogReturns(candles);
 	for (let i = config.volatilityPeriod; i < candles.length; i++) {
-		const returnIdx = i - 1;
-		const candle = candles[i];
-		if (!candle) {
-			continue;
+		const feature = createFeatureObservation(candles, logReturns, i, config);
+		if (feature) {
+			features.push(feature);
 		}
-
-		const returns = logReturns[returnIdx] ?? 0;
-
-		const recentReturns = logReturns.slice(returnIdx - config.volatilityPeriod + 1, returnIdx + 1);
-		const volatility = calculateStd(recentReturns);
-
-		const recentVolumes = candles.slice(i - config.volumePeriod + 1, i + 1).map((c) => c.volume);
-		const volumeMean = calculateMean(recentVolumes);
-		const volumeStd = calculateStd(recentVolumes);
-		const volumeZScore = volumeStd > 0.0001 ? (candle.volume - volumeMean) / volumeStd : 0;
-
-		const trendStrength = volatility > 0.0001 ? returns / volatility : 0;
-
-		features.push({
-			returns,
-			volatility,
-			volumeZScore,
-			trendStrength: Math.max(-3, Math.min(3, trendStrength)),
-			timestamp: new Date(candle.timestamp).toISOString(),
-		});
 	}
 
 	return features;
@@ -110,6 +83,71 @@ export function getMinimumCandleCount(
 	config: FeatureExtractionConfig = DEFAULT_FEATURE_CONFIG,
 ): number {
 	return Math.max(config.volatilityPeriod, config.volumePeriod) + 1;
+}
+
+function computeLogReturns(candles: OHLCVBar[]): number[] {
+	const returns: number[] = [];
+	for (let i = 1; i < candles.length; i++) {
+		returns.push(computeLogReturn(candles[i - 1]?.close ?? 0, candles[i]?.close ?? 0));
+	}
+	return returns;
+}
+
+function computeLogReturn(previousClose: number, currentClose: number): number {
+	if (previousClose <= 0 || currentClose <= 0) {
+		return 0;
+	}
+	return Math.log(currentClose / previousClose);
+}
+
+function createFeatureObservation(
+	candles: OHLCVBar[],
+	logReturns: number[],
+	candleIndex: number,
+	config: FeatureExtractionConfig,
+): RegimeFeatures | null {
+	const candle = candles[candleIndex];
+	if (!candle) {
+		return null;
+	}
+
+	const returnIndex = candleIndex - 1;
+	const returns = logReturns[returnIndex] ?? 0;
+	const recentReturns = logReturns.slice(
+		returnIndex - config.volatilityPeriod + 1,
+		returnIndex + 1,
+	);
+	const volatility = calculateStd(recentReturns);
+
+	const recentVolumes = candles
+		.slice(candleIndex - config.volumePeriod + 1, candleIndex + 1)
+		.map((item) => item.volume);
+	const volumeZScore = calculateRollingVolumeZScore(candle.volume, recentVolumes);
+
+	return {
+		returns,
+		volatility,
+		volumeZScore,
+		trendStrength: calculateTrendStrength(returns, volatility),
+		timestamp: new Date(candle.timestamp).toISOString(),
+	};
+}
+
+function calculateRollingVolumeZScore(volume: number, sample: number[]): number {
+	const mean = calculateMean(sample);
+	const std = calculateStd(sample);
+	if (std <= STABILITY_EPSILON) {
+		return 0;
+	}
+	return (volume - mean) / std;
+}
+
+function calculateTrendStrength(returns: number, volatility: number): number {
+	if (volatility <= STABILITY_EPSILON) {
+		return 0;
+	}
+	const rawStrength = returns / volatility;
+	return Math.max(TREND_STRENGTH_MIN, Math.min(TREND_STRENGTH_MAX, rawStrength));
 }
 
 export function calculateStd(values: number[]): number {
@@ -136,7 +174,7 @@ export function calculateMean(values: number[]): number {
 export function calculateZScore(value: number, sample: number[]): number {
 	const mean = calculateMean(sample);
 	const std = calculateStd(sample);
-	if (std < 0.0001) {
+	if (std < STABILITY_EPSILON) {
 		throw new Error("Cannot calculate z-score: standard deviation is near zero");
 	}
 	return (value - mean) / std;
@@ -167,10 +205,10 @@ export function normalizeFeatures(features: RegimeFeatures[]): {
 	];
 
 	const stds = [
-		Math.max(calculateStd(returns), 0.0001),
-		Math.max(calculateStd(volatility), 0.0001),
-		Math.max(calculateStd(volumeZScore), 0.0001),
-		Math.max(calculateStd(trendStrength), 0.0001),
+		Math.max(calculateStd(returns), STABILITY_EPSILON),
+		Math.max(calculateStd(volatility), STABILITY_EPSILON),
+		Math.max(calculateStd(volumeZScore), STABILITY_EPSILON),
+		Math.max(calculateStd(trendStrength), STABILITY_EPSILON),
 	];
 
 	const meanReturns = means[0] ?? 0;

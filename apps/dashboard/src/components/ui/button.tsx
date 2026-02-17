@@ -176,83 +176,50 @@ const buttonKeyframes = `
   }
 `;
 
-// ============================================
-// Component
-// ============================================
+function useButtonAutoReset(state: ButtonState, onStateReset?: () => void): void {
+	React.useEffect(() => {
+		if (state === "success") {
+			const timeout = setTimeout(() => {
+				onStateReset?.();
+			}, SUCCESS_STATE_DURATION);
+			return () => clearTimeout(timeout);
+		}
 
-/**
- * Button component with variants and loading states.
- *
- * @example
- * ```tsx
- * // Primary button
- * <Button variant="primary" onClick={handleClick}>
- *   Save Changes
- * </Button>
- *
- * // Button with loading state
- * <Button
- *   state={isLoading ? "loading" : "idle"}
- *   onClick={handleSubmit}
- * >
- *   Submit
- * </Button>
- *
- * // Button with full state machine
- * const { state, execute, reset } = useAsyncButton(async () => {
- *   await saveData();
- * });
- *
- * <Button state={state} onClick={execute} onStateReset={reset}>
- *   Save
- * </Button>
- * ```
- */
-export const Button = forwardRef<HTMLButtonElement, ButtonProps>(
-	(
-		{
-			variant = "primary",
-			size = "md",
-			state = "idle",
-			children,
-			loadingText,
-			successText = "Done",
-			errorText = "Error",
-			onStateReset,
-			fullWidth = false,
-			leftIcon,
-			rightIcon,
-			testId = "button",
-			disabled,
-			style,
-			...props
-		},
-		ref,
-	) => {
-		const variantStyle = VARIANT_STYLES[variant];
-		const sizeStyle = SIZE_STYLES[size];
-		const stateBg = STATE_BG_COLORS[state];
+		if (state === "error") {
+			const timeout = setTimeout(() => {
+				onStateReset?.();
+			}, ERROR_STATE_DURATION);
+			return () => clearTimeout(timeout);
+		}
 
-		const isDisabled = disabled || state === "loading" || state === "success";
-		const isIconButton = size === "icon";
+		return undefined;
+	}, [state, onStateReset]);
+}
 
-		// Auto-reset timer
-		React.useEffect(() => {
-			if (state === "success") {
-				const timeout = setTimeout(() => {
-					onStateReset?.();
-				}, SUCCESS_STATE_DURATION);
-				return () => clearTimeout(timeout);
-			} else if (state === "error") {
-				const timeout = setTimeout(() => {
-					onStateReset?.();
-				}, ERROR_STATE_DURATION);
-				return () => clearTimeout(timeout);
-			}
-			return undefined;
-		}, [state, onStateReset]);
+function getButtonStyles({
+	variant,
+	size,
+	state,
+	isDisabled,
+	fullWidth,
+	style,
+}: {
+	variant: ButtonVariant;
+	size: ButtonSize;
+	state: ButtonState;
+	isDisabled: boolean;
+	fullWidth: boolean;
+	style?: React.CSSProperties;
+}) {
+	const variantStyle = VARIANT_STYLES[variant];
+	const sizeStyle = SIZE_STYLES[size];
+	const isIconButton = size === "icon";
+	const stateBg = STATE_BG_COLORS[state];
 
-		const buttonStyles: React.CSSProperties = {
+	return {
+		isIconButton,
+		sizeStyle,
+		buttonStyles: {
 			display: "inline-flex",
 			alignItems: "center",
 			justifyContent: "center",
@@ -273,41 +240,114 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps>(
 			textDecoration: variant === "link" ? "underline" : "none",
 			animation: state === "error" ? "button-shake 0.4s ease-out" : undefined,
 			...style,
-		};
+		},
+	};
+}
 
-		const renderContent = () => {
-			switch (state) {
-				case "loading":
-					return (
-						<>
-							<Spinner size={sizeStyle.iconSize <= 14 ? "xs" : "sm"} label="Loading" />
-							{!isIconButton && <span>{loadingText ?? children}</span>}
-						</>
-					);
-				case "success":
-					return (
-						<>
-							<Checkmark size={sizeStyle.iconSize} color="#ffffff" />
-							{!isIconButton && <span>{successText}</span>}
-						</>
-					);
-				case "error":
-					return (
-						<>
-							<span aria-hidden="true">✕</span>
-							{!isIconButton && <span>{errorText}</span>}
-						</>
-					);
-				default:
-					return (
-						<>
-							{leftIcon && <span aria-hidden="true">{leftIcon}</span>}
-							{children}
-							{rightIcon && <span aria-hidden="true">{rightIcon}</span>}
-						</>
-					);
-			}
-		};
+interface ButtonContentProps {
+	state: ButtonState;
+	isIconButton: boolean;
+	children: React.ReactNode;
+	sizeStyle: { iconSize: number };
+	leftIcon?: React.ReactNode;
+	rightIcon?: React.ReactNode;
+	loadingText?: string;
+	successText: string;
+	errorText: string;
+}
+
+function ButtonContent({
+	state,
+	isIconButton,
+	children,
+	sizeStyle,
+	leftIcon,
+	rightIcon,
+	loadingText,
+	successText,
+	errorText,
+}: ButtonContentProps) {
+	switch (state) {
+		case "loading":
+			return (
+				<>
+					<Spinner size={sizeStyle.iconSize <= 14 ? "xs" : "sm"} label="Loading" />
+					{!isIconButton && <span>{loadingText ?? children}</span>}
+				</>
+			);
+		case "success":
+			return (
+				<>
+					<Checkmark size={sizeStyle.iconSize} color="#ffffff" />
+					{!isIconButton && <span>{successText}</span>}
+				</>
+			);
+		case "error":
+			return (
+				<>
+					<span aria-hidden="true">✕</span>
+					{!isIconButton && <span>{errorText}</span>}
+				</>
+			);
+		default:
+			return (
+				<>
+					{leftIcon && <span aria-hidden="true">{leftIcon}</span>}
+					{children}
+					{rightIcon && <span aria-hidden="true">{rightIcon}</span>}
+				</>
+			);
+	}
+}
+
+function ButtonLiveMessage({ state }: { state: ButtonState }) {
+	if (state === "success") {
+		return <p className="sr-only">Action completed successfully</p>;
+	}
+	if (state === "error") {
+		return <p className="sr-only">Action failed</p>;
+	}
+	return null;
+}
+
+// ============================================
+// Component
+// ============================================
+
+/**
+ * Button component with variants and loading states.
+ */
+export const Button = forwardRef<HTMLButtonElement, ButtonProps>(
+	(
+		{
+			variant = "primary",
+			size = "md",
+			state = "idle",
+			children,
+			loadingText,
+			successText = "Done",
+			errorText = "Error",
+			onStateReset,
+			fullWidth = false,
+			leftIcon,
+			rightIcon,
+			testId = "button",
+			disabled,
+			...props
+		},
+		ref,
+	) => {
+		const isDisabled = disabled || state === "loading" || state === "success";
+		useButtonAutoReset(state, onStateReset);
+
+		const { buttonStyles, isIconButton, sizeStyle } = getButtonStyles({
+			variant,
+			size,
+			state,
+			isDisabled,
+			fullWidth,
+			style: props.style,
+		});
 
 		return (
 			<>
@@ -327,19 +367,19 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps>(
 					aria-disabled={isDisabled}
 					className={state === "error" ? "button-shake" : undefined}
 				>
-					{renderContent()}
-
-					{/* Screen reader announcement */}
-					{state === "success" && (
-						<span className="sr-only" role="status" aria-live="polite">
-							Action completed successfully
-						</span>
-					)}
-					{state === "error" && (
-						<span className="sr-only" role="alert" aria-live="assertive">
-							Action failed
-						</span>
-					)}
+					<ButtonContent
+						state={state}
+						isIconButton={isIconButton}
+						sizeStyle={sizeStyle}
+						leftIcon={leftIcon}
+						rightIcon={rightIcon}
+						loadingText={loadingText}
+						successText={successText}
+						errorText={errorText}
+					>
+						{children}
+					</ButtonContent>
+					<ButtonLiveMessage state={state} />
 				</button>
 			</>
 		);

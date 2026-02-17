@@ -1,11 +1,3 @@
-/**
- * Quote Batching and Throttling Tests
- *
- * Tests for quote batching, throttling, and metrics.
- *
- * @see docs/plans/ui/06-websocket.md lines 158-174
- */
-
 import { afterEach, beforeEach, describe, expect, it } from "bun:test";
 import {
 	type BatchingMetrics,
@@ -18,10 +10,6 @@ import {
 	SymbolThrottle,
 } from "./batching.js";
 
-// ============================================
-// Test Helpers
-// ============================================
-
 function delay(ms: number): Promise<void> {
 	return new Promise((resolve) => setTimeout(resolve, ms));
 }
@@ -29,10 +17,6 @@ function delay(ms: number): Promise<void> {
 function createTestQuote(symbol: string, last?: number): Quote {
 	return createQuote(symbol, last ?? 100 - 0.01, last ?? 100 + 0.01, last ?? 100, 1000);
 }
-
-// ============================================
-// SymbolThrottle Tests
-// ============================================
 
 describe("SymbolThrottle", () => {
 	it("allows first update for a symbol", () => {
@@ -90,10 +74,6 @@ describe("SymbolThrottle", () => {
 	});
 });
 
-// ============================================
-// QuoteBatcher Basic Tests
-// ============================================
-
 describe("QuoteBatcher", () => {
 	let receivedBatches: Quote[][];
 	let batcher: QuoteBatcher;
@@ -143,10 +123,6 @@ describe("QuoteBatcher", () => {
 	});
 });
 
-// ============================================
-// Batch Size Limit Tests
-// ============================================
-
 describe("QuoteBatcher - Size Limit", () => {
 	let receivedBatches: Quote[][];
 	let batcher: QuoteBatcher;
@@ -180,10 +156,6 @@ describe("QuoteBatcher - Size Limit", () => {
 		expect(batcher.getBufferSize()).toBe(1);
 	});
 });
-
-// ============================================
-// Timer Flush Tests
-// ============================================
 
 describe("QuoteBatcher - Timer Flush", () => {
 	let receivedBatches: Quote[][];
@@ -225,10 +197,6 @@ describe("QuoteBatcher - Timer Flush", () => {
 	});
 });
 
-// ============================================
-// Throttling Tests
-// ============================================
-
 describe("QuoteBatcher - Throttling", () => {
 	let receivedBatches: Quote[][];
 	let batcher: QuoteBatcher;
@@ -268,11 +236,7 @@ describe("QuoteBatcher - Throttling", () => {
 	});
 });
 
-// ============================================
-// Metrics Tests
-// ============================================
-
-describe("QuoteBatcher - Metrics", () => {
+describe("QuoteBatcher - Metrics counters", () => {
 	let batcher: QuoteBatcher;
 
 	beforeEach(() => {
@@ -308,6 +272,22 @@ describe("QuoteBatcher - Metrics", () => {
 		batcher.flush();
 		expect(batcher.getMetrics().batchesSent).toBe(2);
 	});
+});
+
+describe("QuoteBatcher - Metrics aggregates", () => {
+	let batcher: QuoteBatcher;
+
+	beforeEach(() => {
+		batcher = new QuoteBatcher(() => {}, {
+			maxBatchSize: 5,
+			flushInterval: 1000,
+			throttlePerSymbol: 0,
+		});
+	});
+
+	afterEach(() => {
+		batcher.stop();
+	});
 
 	it("calculates average batch size", () => {
 		batcher.add(createTestQuote("AAPL"));
@@ -330,6 +310,22 @@ describe("QuoteBatcher - Metrics", () => {
 		batcher.add(createTestQuote("AMZN"));
 		batcher.flush();
 		expect(batcher.getMetrics().maxBatchSizeSeen).toBe(3);
+	});
+});
+
+describe("QuoteBatcher - Metrics lifecycle", () => {
+	let batcher: QuoteBatcher;
+
+	beforeEach(() => {
+		batcher = new QuoteBatcher(() => {}, {
+			maxBatchSize: 5,
+			flushInterval: 1000,
+			throttlePerSymbol: 0,
+		});
+	});
+
+	afterEach(() => {
+		batcher.stop();
 	});
 
 	it("tracks flush reasons", () => {
@@ -355,10 +351,6 @@ describe("QuoteBatcher - Metrics", () => {
 		expect(metrics.batchesSent).toBe(0);
 	});
 });
-
-// ============================================
-// Configuration Tests
-// ============================================
 
 describe("QuoteBatcher - Configuration", () => {
 	it("uses default config", () => {
@@ -395,10 +387,6 @@ describe("QuoteBatcher - Configuration", () => {
 	});
 });
 
-// ============================================
-// addMany Tests
-// ============================================
-
 describe("QuoteBatcher - addMany", () => {
 	it("adds multiple quotes", () => {
 		const batcher = new QuoteBatcher(() => {}, { throttlePerSymbol: 0 });
@@ -423,11 +411,7 @@ describe("QuoteBatcher - addMany", () => {
 	});
 });
 
-// ============================================
-// Utility Function Tests
-// ============================================
-
-describe("Utility Functions", () => {
+describe("Utility Functions - rates", () => {
 	it("calculateThrottleRate returns 0 for no quotes", () => {
 		const metrics: BatchingMetrics = {
 			quotesReceived: 0,
@@ -483,7 +467,9 @@ describe("Utility Functions", () => {
 		};
 		expect(calculateBatchFillRate(metrics, 50)).toBe(0.5);
 	});
+});
 
+describe("Utility Functions - createQuote", () => {
 	it("createQuote creates valid quote", () => {
 		const quote = createQuote("AAPL", 149.99, 150.01, 150.0, 1000000);
 		expect(quote.symbol).toBe("AAPL");
@@ -494,10 +480,6 @@ describe("Utility Functions", () => {
 		expect(quote.timestamp).toBeDefined();
 	});
 });
-
-// ============================================
-// Default Config Tests
-// ============================================
 
 describe("DEFAULT_BATCHING_CONFIG", () => {
 	it("has correct maxBatchSize", () => {

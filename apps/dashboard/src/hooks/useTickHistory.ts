@@ -5,6 +5,8 @@
 import { useCallback, useRef, useState } from "react";
 import type { TickDirection } from "@/components/ui/tick-dots";
 
+const PRICE_HISTORY_LIMIT = 20;
+
 export interface UseTickHistoryOptions {
 	/** Maximum number of ticks to track (default: 8) */
 	maxTicks?: number;
@@ -69,6 +71,34 @@ export interface UseMultiTickHistoryResult {
 	clearAll: () => void;
 }
 
+function appendWithLimit<T>(values: T[], value: T, limit: number): T[] {
+	return [...values, value].slice(-limit);
+}
+
+function recordSymbolTick(
+	ticks: Map<string, TickDirection[]>,
+	prices: Map<string, number[]>,
+	lastPrices: Map<string, number>,
+	symbol: string,
+	price: number,
+	maxTicks: number,
+): boolean {
+	const lastPrice = lastPrices.get(symbol);
+	const nextPrices = appendWithLimit(prices.get(symbol) ?? [], price, PRICE_HISTORY_LIMIT);
+	prices.set(symbol, nextPrices);
+
+	let changed = false;
+	if (lastPrice !== undefined && price !== lastPrice) {
+		const direction: TickDirection = price > lastPrice ? "up" : "down";
+		const nextTicks = appendWithLimit(ticks.get(symbol) ?? [], direction, maxTicks);
+		ticks.set(symbol, nextTicks);
+		changed = true;
+	}
+
+	lastPrices.set(symbol, price);
+	return changed;
+}
+
 /**
  * Hook to track tick history for multiple symbols.
  *
@@ -110,23 +140,17 @@ export function useMultiTickHistory(
 
 	const recordTick = useCallback(
 		(symbol: string, price: number) => {
-			const lastPrice = lastPricesRef.current.get(symbol);
-
-			// Update price history
-			const prices = pricesRef.current.get(symbol) ?? [];
-			const updatedPrices = [...prices, price].slice(-20);
-			pricesRef.current.set(symbol, updatedPrices);
-
-			// Record tick direction if price changed
-			if (lastPrice !== undefined && price !== lastPrice) {
-				const direction: TickDirection = price > lastPrice ? "up" : "down";
-				const ticks = ticksRef.current.get(symbol) ?? [];
-				const updatedTicks = [...ticks, direction].slice(-maxTicks);
-				ticksRef.current.set(symbol, updatedTicks);
+			const changed = recordSymbolTick(
+				ticksRef.current,
+				pricesRef.current,
+				lastPricesRef.current,
+				symbol,
+				price,
+				maxTicks,
+			);
+			if (changed) {
 				forceUpdate((n) => n + 1);
 			}
-
-			lastPricesRef.current.set(symbol, price);
 		},
 		[maxTicks],
 	);

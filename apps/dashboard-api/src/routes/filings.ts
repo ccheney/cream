@@ -105,6 +105,82 @@ const lastSyncTime = new Map<string, number>();
 
 const app = new OpenAPIHono();
 
+type TriggerSyncRequest = z.infer<typeof TriggerSyncRequestSchema>;
+type FilingType = "10-K" | "10-Q" | "8-K" | "DEF14A";
+
+function findRunningSyncRunId(): string | null {
+	for (const [runId, state] of syncStates) {
+		if (state.status === "queued" || state.status === "running") {
+			return runId;
+		}
+	}
+	return null;
+}
+
+function getRetryAfterMs(environment: string): number | null {
+	const lastSync = lastSyncTime.get(environment) ?? 0;
+	const timeSinceLastSync = Date.now() - lastSync;
+	if (timeSinceLastSync >= SYNC_RATE_LIMIT_MS) {
+		return null;
+	}
+	return SYNC_RATE_LIMIT_MS - timeSinceLastSync;
+}
+
+function createInitialSyncState(runId: string, symbols: string[], startedAt: string): SyncState {
+	return {
+		runId,
+		status: "queued",
+		symbolsRequested: symbols,
+		symbolsProcessed: 0,
+		symbolsTotal: symbols.length,
+		filingsFetched: 0,
+		filingsIngested: 0,
+		chunksCreated: 0,
+		startedAt,
+		completedAt: null,
+		error: null,
+	};
+}
+
+async function executeSyncRun(
+	state: SyncState,
+	request: TriggerSyncRequest,
+	filingTypes: FilingType[],
+): Promise<void> {
+	state.status = "running";
+	try {
+		const service = createFilingsIngestionService(getDrizzleDb());
+		const result = await service.syncFilings(
+			{
+				symbols: request.symbols,
+				filingTypes,
+				startDate: request.startDate,
+				endDate: request.endDate,
+				limitPerSymbol: request.limitPerSymbol,
+				triggerSource: "dashboard",
+				environment: request.environment,
+			},
+			(progress) => {
+				state.symbolsProcessed = progress.symbolsProcessed;
+				state.filingsIngested = progress.filingsIngested ?? 0;
+				state.chunksCreated = progress.chunksCreated ?? 0;
+			},
+		);
+		state.status = result.success ? "completed" : "failed";
+		state.completedAt = new Date().toISOString();
+		state.filingsFetched = result.filingsFetched;
+		state.filingsIngested = result.filingsIngested;
+		state.chunksCreated = result.chunksCreated;
+		if (!result.success) {
+			state.error = result.errors.join("; ");
+		}
+	} catch (error) {
+		state.status = "failed";
+		state.completedAt = new Date().toISOString();
+		state.error = error instanceof Error ? error.message : "Unknown error";
+	}
+}
+
 // POST /api/filings/trigger-sync
 const triggerSyncRoute = createRoute({
 	method: "post",
@@ -144,18 +220,13 @@ app.openapi(triggerSyncRoute, async (c) => {
 	const body = c.req.valid("json");
 	const { symbols, filingTypes, startDate, endDate, limitPerSymbol, environment } = body;
 
-	// Check for running sync
-	for (const [runId, state] of syncStates) {
-		if (state.status === "queued" || state.status === "running") {
-			return c.json({ error: "Sync already in progress", runId }, 409);
-		}
+	const runningRunId = findRunningSyncRunId();
+	if (runningRunId) {
+		return c.json({ error: "Sync already in progress", runId: runningRunId }, 409);
 	}
 
-	// Rate limiting
-	const lastSync = lastSyncTime.get(environment) ?? 0;
-	const timeSinceLastSync = Date.now() - lastSync;
-	if (timeSinceLastSync < SYNC_RATE_LIMIT_MS) {
-		const retryAfterMs = SYNC_RATE_LIMIT_MS - timeSinceLastSync;
+	const retryAfterMs = getRetryAfterMs(environment);
+	if (retryAfterMs !== null) {
 		return c.json(
 			{
 				error: `Rate limited. Try again in ${Math.ceil(retryAfterMs / 60000)} minutes.`,
@@ -165,72 +236,18 @@ app.openapi(triggerSyncRoute, async (c) => {
 		);
 	}
 
-	// Generate run ID
 	const runId = `sync_${Date.now()}_${crypto.randomUUID().slice(0, 8)}`;
 	const startedAt = new Date().toISOString();
-	const resolvedFilingTypes = filingTypes ?? ["10-K", "10-Q", "8-K"];
-
-	// Track sync state
-	const state: SyncState = {
-		runId,
-		status: "queued",
-		symbolsRequested: symbols,
-		symbolsProcessed: 0,
-		symbolsTotal: symbols.length,
-		filingsFetched: 0,
-		filingsIngested: 0,
-		chunksCreated: 0,
-		startedAt,
-		completedAt: null,
-		error: null,
-	};
+	const resolvedFilingTypes: FilingType[] = filingTypes ?? ["10-K", "10-Q", "8-K"];
+	const state = createInitialSyncState(runId, symbols, startedAt);
 	syncStates.set(runId, state);
 	lastSyncTime.set(environment, Date.now());
 
-	// Run sync asynchronously
-	const runSync = async () => {
-		state.status = "running";
-
-		try {
-			const dbClient = getDrizzleDb();
-			const service = createFilingsIngestionService(dbClient);
-
-			const result = await service.syncFilings(
-				{
-					symbols,
-					filingTypes: resolvedFilingTypes as Array<"10-K" | "10-Q" | "8-K" | "DEF14A">,
-					startDate,
-					endDate,
-					limitPerSymbol,
-					triggerSource: "dashboard",
-					environment,
-				},
-				(progress) => {
-					// Update state
-					state.symbolsProcessed = progress.symbolsProcessed;
-					state.filingsIngested = progress.filingsIngested ?? 0;
-					state.chunksCreated = progress.chunksCreated ?? 0;
-				},
-			);
-
-			// Update final state
-			state.status = result.success ? "completed" : "failed";
-			state.completedAt = new Date().toISOString();
-			state.filingsFetched = result.filingsFetched;
-			state.filingsIngested = result.filingsIngested;
-			state.chunksCreated = result.chunksCreated;
-			if (!result.success) {
-				state.error = result.errors.join("; ");
-			}
-		} catch (error) {
-			state.status = "failed";
-			state.completedAt = new Date().toISOString();
-			state.error = error instanceof Error ? error.message : "Unknown error";
-		}
-	};
-
-	// Start without awaiting
-	runSync();
+	void executeSyncRun(
+		state,
+		{ symbols, filingTypes, startDate, endDate, limitPerSymbol, environment },
+		resolvedFilingTypes,
+	);
 
 	return c.json({
 		runId,

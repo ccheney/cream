@@ -57,66 +57,40 @@ const IGNORED_MESSAGE_TYPES = new Set([
 	"options_aggregate",
 ]);
 
+type EventNormalizer = (data: unknown, timestamp: Date) => NormalizedEvent;
+
+const EVENT_NORMALIZERS: Partial<Record<WebSocketMessage["type"], EventNormalizer>> = {
+	quote: (data, timestamp) => normalizeQuote(data as QuoteData, timestamp),
+	trade: (data, timestamp) => normalizeTrade(data as TradeData, timestamp),
+	options_quote: (data, timestamp) => normalizeOptionsQuote(data as OptionsQuoteData, timestamp),
+	options_trade: (data, timestamp) => normalizeOptionsTrade(data as OptionsTradeData, timestamp),
+	decision: (data, timestamp) => normalizeDecision(data as DecisionData, timestamp),
+	order: (data, timestamp) => normalizeOrder(data as OrderData, timestamp),
+	alert: (data, timestamp) => normalizeAlert(data as AlertData, timestamp),
+	agent_output: (data, timestamp) => normalizeAgentOutput(data as AgentOutputData, timestamp),
+	cycle_progress: (data, timestamp) => normalizeCycleProgress(data as CycleProgressData, timestamp),
+	aggregate: (data, timestamp) => normalizeAggregate(data as AggregateData, timestamp),
+	agent_tool_call: (data, timestamp) =>
+		normalizeAgentToolCall(data as AgentToolCallData, timestamp),
+	agent_tool_result: (data, timestamp) =>
+		normalizeAgentToolResult(data as AgentToolResultData, timestamp),
+	agent_reasoning: (data, timestamp) =>
+		normalizeAgentReasoning(data as AgentReasoningData, timestamp),
+	agent_text_delta: (data, timestamp) =>
+		normalizeAgentTextDelta(data as AgentTextDeltaData, timestamp),
+	agent_status: (data, timestamp) => normalizeAgentStatus(data as AgentStatusData, timestamp),
+	cycle_result: (data, timestamp) => normalizeCycleResult(data as CycleResultData, timestamp),
+	decision_plan: (data, timestamp) => normalizeDecisionPlan(data as DecisionPlanData, timestamp),
+};
+
 export function normalizeEvent(message: WebSocketMessage): NormalizedEvent | null {
 	const timestamp = new Date();
-	const data = message.data as unknown;
-
-	switch (message.type) {
-		case "quote":
-			return normalizeQuote(data as QuoteData, timestamp);
-
-		case "trade":
-			return normalizeTrade(data as TradeData, timestamp);
-
-		case "options_quote":
-			return normalizeOptionsQuote(data as OptionsQuoteData, timestamp);
-
-		case "options_trade":
-			return normalizeOptionsTrade(data as OptionsTradeData, timestamp);
-
-		case "decision":
-			return normalizeDecision(data as DecisionData, timestamp);
-
-		case "order":
-			return normalizeOrder(data as OrderData, timestamp);
-
-		case "alert":
-			return normalizeAlert(data as AlertData, timestamp);
-
-		case "agent_output":
-			return normalizeAgentOutput(data as AgentOutputData, timestamp);
-
-		case "cycle_progress":
-			return normalizeCycleProgress(data as CycleProgressData, timestamp);
-
-		case "aggregate":
-			return normalizeAggregate(data as AggregateData, timestamp);
-
-		case "agent_tool_call":
-			return normalizeAgentToolCall(data as AgentToolCallData, timestamp);
-
-		case "agent_tool_result":
-			return normalizeAgentToolResult(data as AgentToolResultData, timestamp);
-
-		case "agent_reasoning":
-			return normalizeAgentReasoning(data as AgentReasoningData, timestamp);
-
-		case "agent_text_delta":
-			return normalizeAgentTextDelta(data as AgentTextDeltaData, timestamp);
-
-		case "agent_status":
-			return normalizeAgentStatus(data as AgentStatusData, timestamp);
-
-		case "cycle_result":
-			return normalizeCycleResult(data as CycleResultData, timestamp);
-
-		case "decision_plan":
-			return normalizeDecisionPlan(data as DecisionPlanData, timestamp);
-
-		default:
-			if (IGNORED_MESSAGE_TYPES.has(message.type)) {
-				return null;
-			}
-			return normalizeSystem(message.data, message.type, timestamp);
+	const normalizer = EVENT_NORMALIZERS[message.type];
+	if (normalizer) {
+		return normalizer(message.data, timestamp);
 	}
+
+	return IGNORED_MESSAGE_TYPES.has(message.type)
+		? null
+		: normalizeSystem(message.data, message.type, timestamp);
 }

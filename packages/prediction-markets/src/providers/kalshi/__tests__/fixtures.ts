@@ -62,13 +62,20 @@ export const mockGetEvent = mock(() =>
 // ============================================
 
 mock.module("kalshi-typescript", () => ({
-	Configuration: class Configuration {},
-	MarketApi: class MarketApi {
-		getMarkets = mockGetMarkets;
-		getMarket = mockGetMarket;
+	Configuration: function Configuration() {
+		// no-op test constructor
 	},
-	EventsApi: class EventsApi {
-		getEvent = mockGetEvent;
+	MarketApi: function MarketApi(this: {
+		getMarkets: typeof mockGetMarkets;
+		getMarket: typeof mockGetMarket;
+	}) {
+		this.getMarkets = mockGetMarkets;
+		this.getMarket = mockGetMarket;
+	},
+	EventsApi: function EventsApi(this: {
+		getEvent: typeof mockGetEvent;
+	}) {
+		this.getEvent = mockGetEvent;
 	},
 }));
 

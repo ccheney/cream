@@ -96,100 +96,129 @@ export class PointInTimeUniverseResolver {
 
 	async getUniverseAsOf(indexId: IndexId, asOfDate: string): Promise<PointInTimeResult> {
 		const warnings: string[] = [];
-		const tickerChangesMapped = new Map<string, string>();
-		const delistedExcluded: string[] = [];
-		let tickerChangesApplied = 0;
-
-		if (this.config.useCache) {
-			const snapshot = await this.snapshotsRepo.get(indexId, asOfDate);
-			if (snapshot) {
-				return {
-					symbols: snapshot.tickers,
-					asOfDate,
-					indexId,
-					fromCache: true,
-					warnings: [],
-					metadata: {
-						tickerChangesApplied: 0,
-						delistedExcluded: [],
-						tickerChangesMapped: new Map(),
-					},
-				};
-			}
-
-			const closestSnapshot = await this.snapshotsRepo.getClosestBefore(indexId, asOfDate);
-			if (closestSnapshot) {
-				const snapshotDate = new Date(closestSnapshot.snapshotDate);
-				const targetDate = new Date(asOfDate);
-				const daysDiff = Math.abs(
-					(targetDate.getTime() - snapshotDate.getTime()) / (1000 * 60 * 60 * 24),
-				);
-
-				if (daysDiff <= this.config.maxCacheAgeDays) {
-					warnings.push(
-						`Using snapshot from ${closestSnapshot.snapshotDate} (${Math.round(daysDiff)} days before target)`,
-					);
-					return {
-						symbols: closestSnapshot.tickers,
-						asOfDate,
-						indexId,
-						fromCache: true,
-						warnings,
-						metadata: {
-							tickerChangesApplied: 0,
-							delistedExcluded: [],
-							tickerChangesMapped: new Map(),
-						},
-					};
-				}
-			}
+		const cachedResult = await this.getCachedUniverse(indexId, asOfDate, warnings);
+		if (cachedResult) {
+			return cachedResult;
 		}
 
 		const constituents = await this.constituentsRepo.getConstituentsAsOf(indexId, asOfDate);
-
-		if (constituents.length > 0) {
-			const resolvedSymbols: string[] = [];
-
-			for (const symbol of constituents) {
-				const historicalSymbol = await this.tickerChangesRepo.resolveToHistoricalSymbol(
-					symbol,
-					asOfDate,
-				);
-
-				if (historicalSymbol !== symbol) {
-					tickerChangesMapped.set(symbol, historicalSymbol);
-					tickerChangesApplied++;
-				}
-
-				resolvedSymbols.push(historicalSymbol);
-			}
-
-			return {
-				symbols: resolvedSymbols,
-				asOfDate,
-				indexId,
-				fromCache: false,
-				warnings,
-				metadata: {
-					tickerChangesApplied,
-					delistedExcluded,
-					tickerChangesMapped,
-				},
-			};
+		if (constituents.length === 0) {
+			warnings.push(`No historical data available for ${indexId} on ${asOfDate}`);
+			return this.createResult([], asOfDate, indexId, false, warnings, this.createEmptyMetadata());
 		}
 
-		warnings.push(`No historical data available for ${indexId} on ${asOfDate}`);
-		return {
-			symbols: [],
+		const metadata = await this.resolveHistoricalSymbols(constituents, asOfDate);
+		return this.createResult(
+			metadata.resolvedSymbols,
 			asOfDate,
 			indexId,
-			fromCache: false,
+			false,
 			warnings,
-			metadata: {
-				tickerChangesApplied: 0,
-				delistedExcluded: [],
-				tickerChangesMapped: new Map(),
-			},
+			metadata,
+		);
+	}
+
+	private createEmptyMetadata(): PointInTimeResult["metadata"] {
+		return {
+			tickerChangesApplied: 0,
+			delistedExcluded: [],
+			tickerChangesMapped: new Map(),
+		};
+	}
+
+	private createResult(
+		symbols: string[],
+		asOfDate: string,
+		indexId: IndexId,
+		fromCache: boolean,
+		warnings: string[],
+		metadata: PointInTimeResult["metadata"],
+	): PointInTimeResult {
+		return {
+			symbols,
+			asOfDate,
+			indexId,
+			fromCache,
+			warnings,
+			metadata,
+		};
+	}
+
+	private async getCachedUniverse(
+		indexId: IndexId,
+		asOfDate: string,
+		warnings: string[],
+	): Promise<PointInTimeResult | null> {
+		if (!this.config.useCache) {
+			return null;
+		}
+
+		const exactSnapshot = await this.snapshotsRepo.get(indexId, asOfDate);
+		if (exactSnapshot) {
+			return this.createResult(
+				exactSnapshot.tickers,
+				asOfDate,
+				indexId,
+				true,
+				[],
+				this.createEmptyMetadata(),
+			);
+		}
+
+		const closestSnapshot = await this.snapshotsRepo.getClosestBefore(indexId, asOfDate);
+		if (!closestSnapshot) {
+			return null;
+		}
+
+		const daysDiff = this.calculateDaysDifference(asOfDate, closestSnapshot.snapshotDate);
+		if (daysDiff > this.config.maxCacheAgeDays) {
+			return null;
+		}
+
+		warnings.push(
+			`Using snapshot from ${closestSnapshot.snapshotDate} (${Math.round(daysDiff)} days before target)`,
+		);
+		return this.createResult(
+			closestSnapshot.tickers,
+			asOfDate,
+			indexId,
+			true,
+			warnings,
+			this.createEmptyMetadata(),
+		);
+	}
+
+	private calculateDaysDifference(targetDate: string, snapshotDate: string): number {
+		const targetTimestamp = new Date(targetDate).getTime();
+		const snapshotTimestamp = new Date(snapshotDate).getTime();
+		return Math.abs((targetTimestamp - snapshotTimestamp) / (1000 * 60 * 60 * 24));
+	}
+
+	private async resolveHistoricalSymbols(
+		constituents: string[],
+		asOfDate: string,
+	): Promise<PointInTimeResult["metadata"] & { resolvedSymbols: string[] }> {
+		const resolvedSymbols: string[] = [];
+		const tickerChangesMapped = new Map<string, string>();
+		let tickerChangesApplied = 0;
+
+		for (const symbol of constituents) {
+			const historicalSymbol = await this.tickerChangesRepo.resolveToHistoricalSymbol(
+				symbol,
+				asOfDate,
+			);
+			if (historicalSymbol !== symbol) {
+				tickerChangesMapped.set(symbol, historicalSymbol);
+				tickerChangesApplied++;
+			}
+			resolvedSymbols.push(historicalSymbol);
+		}
+
+		return {
+			resolvedSymbols,
+			tickerChangesApplied,
+			delistedExcluded: [],
+			tickerChangesMapped,
 		};
 	}
 

@@ -76,123 +76,173 @@ export const consensusStep = createStep({
 	description: "Run risk manager and critic for approval",
 	inputSchema: ConsensusInputSchema,
 	outputSchema: ConsensusOutputSchema,
-	execute: async ({ inputData }) => {
-		const startTime = performance.now();
-		const {
-			cycleId,
-			decisionPlan,
-			constraints,
-			regimeLabels,
-			iterations: inputIterations,
-			quotes,
-			recentCloses,
-		} = inputData;
-		const iterations = (inputIterations ?? 0) + 1;
-		const errors: string[] = [];
-		const warnings: string[] = [];
-
-		log.info(
-			{
-				cycleId,
-				decisionCount: decisionPlan.decisions.length,
-				iteration: iterations,
-				hasConstraints: !!constraints,
-			},
-			"Starting consensus step",
-		);
-
-		// Early rejection for empty decision plans - nothing to approve
-		if (decisionPlan.decisions.length === 0) {
-			log.warn({ cycleId }, "No decisions in plan - rejecting automatically");
-			const emptyRejection: z.infer<typeof ApprovalSchema> = {
-				verdict: "REJECT",
-				approvedDecisionIds: [],
-				rejectedDecisionIds: [],
-				violations: [],
-				required_changes: [],
-				notes: "No decisions to approve - plan is empty",
-			};
-			return {
-				cycleId,
-				approved: false,
-				iterations,
-				riskApproval: emptyRejection,
-				criticApproval: emptyRejection,
-				errors,
-				warnings,
-				metrics: {
-					totalMs: performance.now() - startTime,
-					riskManagerMs: 0,
-					criticMs: 0,
-				},
-			};
-		}
-
-		const riskStart = performance.now();
-		const criticStart = performance.now();
-
-		const [riskApproval, criticApproval] = await Promise.all([
-			runRiskManager(
-				cycleId,
-				decisionPlan.decisions,
-				constraints,
-				regimeLabels ?? {},
-				quotes ?? {},
-				recentCloses ?? [],
-				errors,
-			),
-			runCritic(cycleId, decisionPlan.decisions, errors),
-		]);
-
-		const riskManagerMs = performance.now() - riskStart;
-		const criticMs = performance.now() - criticStart;
-
-		// Determine overall approval:
-		// - APPROVE + APPROVE = approved (all decisions)
-		// - PARTIAL_APPROVE + APPROVE = approved (only approved decisions)
-		// - PARTIAL_APPROVE + PARTIAL_APPROVE = approved (intersection of approved decisions)
-		// - Any REJECT = not approved
-		const riskOk = riskApproval.verdict === "APPROVE" || riskApproval.verdict === "PARTIAL_APPROVE";
-		const criticOk =
-			criticApproval.verdict === "APPROVE" || criticApproval.verdict === "PARTIAL_APPROVE";
-		const approved = riskOk && criticOk;
-
-		log.info(
-			{
-				cycleId,
-				approved,
-				riskVerdict: riskApproval.verdict,
-				criticVerdict: criticApproval.verdict,
-				riskApprovedCount: riskApproval.approvedDecisionIds?.length ?? 0,
-				riskRejectedCount: riskApproval.rejectedDecisionIds?.length ?? 0,
-				criticApprovedCount: criticApproval.approvedDecisionIds?.length ?? 0,
-				criticRejectedCount: criticApproval.rejectedDecisionIds?.length ?? 0,
-				errorCount: errors.length,
-				warningCount: warnings.length,
-			},
-			"Completed consensus step",
-		);
-
-		return {
-			cycleId,
-			approved,
-			iterations,
-			riskApproval,
-			criticApproval,
-			errors,
-			warnings,
-			metrics: {
-				totalMs: performance.now() - startTime,
-				riskManagerMs,
-				criticMs,
-			},
-		};
-	},
+	execute: async ({ inputData }) => executeConsensusStep(inputData),
 });
 
 // ============================================
 // Helper Functions
 // ============================================
+
+async function executeConsensusStep(
+	inputData: z.infer<typeof ConsensusInputSchema>,
+): Promise<z.infer<typeof ConsensusOutputSchema>> {
+	const startTime = performance.now();
+	const {
+		cycleId,
+		decisionPlan,
+		constraints,
+		regimeLabels,
+		iterations: inputIterations,
+		quotes,
+		recentCloses,
+	} = inputData;
+	const iterations = (inputIterations ?? 0) + 1;
+	const errors: string[] = [];
+	const warnings: string[] = [];
+
+	logConsensusStart(cycleId, decisionPlan.decisions.length, iterations, !!constraints);
+	if (decisionPlan.decisions.length === 0) {
+		return createEmptyPlanConsensusResult(cycleId, iterations, errors, warnings, startTime);
+	}
+
+	const approvals = await runConsensusApprovals(
+		cycleId,
+		decisionPlan.decisions,
+		constraints,
+		regimeLabels ?? {},
+		quotes ?? {},
+		recentCloses ?? [],
+		errors,
+	);
+	const approved =
+		isApprovalAllowed(approvals.riskApproval) && isApprovalAllowed(approvals.criticApproval);
+	logConsensusCompletion(
+		cycleId,
+		approved,
+		approvals.riskApproval,
+		approvals.criticApproval,
+		errors,
+		warnings,
+	);
+
+	return {
+		cycleId,
+		approved,
+		iterations,
+		riskApproval: approvals.riskApproval,
+		criticApproval: approvals.criticApproval,
+		errors,
+		warnings,
+		metrics: {
+			totalMs: performance.now() - startTime,
+			riskManagerMs: approvals.riskManagerMs,
+			criticMs: approvals.criticMs,
+		},
+	};
+}
+
+function logConsensusStart(
+	cycleId: string,
+	decisionCount: number,
+	iteration: number,
+	hasConstraints: boolean,
+): void {
+	log.info({ cycleId, decisionCount, iteration, hasConstraints }, "Starting consensus step");
+}
+
+function createEmptyPlanConsensusResult(
+	cycleId: string,
+	iterations: number,
+	errors: string[],
+	warnings: string[],
+	startTime: number,
+): z.infer<typeof ConsensusOutputSchema> {
+	log.warn({ cycleId }, "No decisions in plan - rejecting automatically");
+	const emptyRejection = createEmptyPlanRejection();
+	return {
+		cycleId,
+		approved: false,
+		iterations,
+		riskApproval: emptyRejection,
+		criticApproval: emptyRejection,
+		errors,
+		warnings,
+		metrics: {
+			totalMs: performance.now() - startTime,
+			riskManagerMs: 0,
+			criticMs: 0,
+		},
+	};
+}
+
+function createEmptyPlanRejection(): z.infer<typeof ApprovalSchema> {
+	return {
+		verdict: "REJECT",
+		approvedDecisionIds: [],
+		rejectedDecisionIds: [],
+		violations: [],
+		required_changes: [],
+		notes: "No decisions to approve - plan is empty",
+	};
+}
+
+async function runConsensusApprovals(
+	cycleId: string,
+	decisions: z.infer<typeof DecisionSchema>[],
+	constraints: Constraints | undefined,
+	regimeLabels: Record<string, z.infer<typeof RegimeDataSchema>>,
+	quotes: Record<string, z.infer<typeof QuoteDataSchema>>,
+	recentCloses: RecentClose[],
+	errors: string[],
+): Promise<{
+	riskApproval: z.infer<typeof ApprovalSchema>;
+	criticApproval: z.infer<typeof ApprovalSchema>;
+	riskManagerMs: number;
+	criticMs: number;
+}> {
+	const riskStart = performance.now();
+	const criticStart = performance.now();
+	const [riskApproval, criticApproval] = await Promise.all([
+		runRiskManager(cycleId, decisions, constraints, regimeLabels, quotes, recentCloses, errors),
+		runCritic(cycleId, decisions, errors),
+	]);
+
+	return {
+		riskApproval,
+		criticApproval,
+		riskManagerMs: performance.now() - riskStart,
+		criticMs: performance.now() - criticStart,
+	};
+}
+
+function isApprovalAllowed(approval: z.infer<typeof ApprovalSchema>): boolean {
+	return approval.verdict === "APPROVE" || approval.verdict === "PARTIAL_APPROVE";
+}
+
+function logConsensusCompletion(
+	cycleId: string,
+	approved: boolean,
+	riskApproval: z.infer<typeof ApprovalSchema>,
+	criticApproval: z.infer<typeof ApprovalSchema>,
+	errors: string[],
+	warnings: string[],
+): void {
+	log.info(
+		{
+			cycleId,
+			approved,
+			riskVerdict: riskApproval.verdict,
+			criticVerdict: criticApproval.verdict,
+			riskApprovedCount: riskApproval.approvedDecisionIds?.length ?? 0,
+			riskRejectedCount: riskApproval.rejectedDecisionIds?.length ?? 0,
+			criticApprovedCount: criticApproval.approvedDecisionIds?.length ?? 0,
+			criticRejectedCount: criticApproval.rejectedDecisionIds?.length ?? 0,
+			errorCount: errors.length,
+			warningCount: warnings.length,
+		},
+		"Completed consensus step",
+	);
+}
 
 async function runRiskManager(
 	cycleId: string,

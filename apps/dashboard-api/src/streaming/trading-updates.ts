@@ -39,6 +39,126 @@ type OrderEventType =
 	| "order_replace_rejected"
 	| "order_cancel_rejected";
 
+type ProxyOrder = NonNullable<OrderUpdate["order"]>;
+
+function isFillEvent(eventType: OrderEventType): boolean {
+	return eventType === "fill" || eventType === "partial_fill";
+}
+
+function getUpdateTimestamp(update: OrderUpdate): string {
+	return update.timestamp
+		? new Date(Number(update.timestamp.seconds) * 1000).toISOString()
+		: new Date().toISOString();
+}
+
+function broadcastProxyOrderUpdate(
+	order: ProxyOrder,
+	eventType: OrderEventType,
+	timestamp: string,
+): void {
+	broadcastOrderUpdate({
+		type: "order_update",
+		data: {
+			orderId: order.id,
+			clientOrderId: order.clientOrderId,
+			symbol: order.symbol,
+			side: order.side === 1 ? "buy" : "sell",
+			orderType: order.orderType === 2 ? "market" : "limit",
+			status: order.status,
+			qty: order.qty,
+			filledQty: order.filledQty,
+			filledAvgPrice: order.filledAvgPrice,
+			event: eventType,
+			timestamp,
+		},
+		invalidates: ["portfolio.positions", "portfolio.orders"],
+	});
+}
+
+function broadcastPositionFromProxyFill(
+	order: ProxyOrder,
+	eventType: OrderEventType,
+	position: Awaited<ReturnType<ReturnType<typeof createAlpacaClient>["getPosition"]>>,
+): void {
+	if (!position) {
+		return;
+	}
+
+	broadcastPositionUpdate({
+		type: "position_update",
+		data: {
+			symbol: position.symbol,
+			side: position.side === "long" ? "LONG" : "SHORT",
+			qty: position.qty,
+			avgEntry: position.avgEntryPrice,
+			marketValue: position.marketValue,
+			unrealizedPnl: position.unrealizedPl,
+			event: eventType === "fill" ? "fill" : "partial_fill",
+			orderId: order.id,
+			timestamp: new Date().toISOString(),
+		},
+		invalidates: ["portfolio.positions", "portfolio.summary"],
+	});
+
+	log.info(
+		{
+			symbol: order.symbol,
+			event: eventType,
+			qty: position.qty,
+			avgEntry: position.avgEntryPrice,
+		},
+		"Broadcasted position update (proxy)",
+	);
+}
+
+async function broadcastClosedPositionFromProxyFill(
+	order: ProxyOrder,
+	environment: string,
+): Promise<void> {
+	const exitPrice = Number(order.filledAvgPrice ?? 0);
+	const side = order.side === 1 ? "long" : "short";
+	await closeThesisOnPositionClose(order.symbol, exitPrice, 0, side, environment);
+
+	broadcastPositionUpdate({
+		type: "position_update",
+		data: {
+			symbol: order.symbol,
+			side: "LONG",
+			qty: 0,
+			avgEntry: 0,
+			marketValue: 0,
+			unrealizedPnl: 0,
+			event: "close",
+			orderId: order.id,
+			timestamp: new Date().toISOString(),
+		},
+		invalidates: ["portfolio.positions", "portfolio.summary"],
+	});
+
+	log.info({ symbol: order.symbol }, "Position closed, broadcasted removal (proxy)");
+}
+
+async function handleFilledOrderPositionUpdate(
+	order: ProxyOrder,
+	eventType: OrderEventType,
+): Promise<void> {
+	const environment = requireEnv();
+	const client = createAlpacaClient({
+		apiKey: Bun.env.ALPACA_KEY as string,
+		apiSecret: Bun.env.ALPACA_SECRET as string,
+		environment,
+	});
+
+	const position = await client.getPosition(order.symbol);
+	if (position) {
+		broadcastPositionFromProxyFill(order, eventType, position);
+		return;
+	}
+	if (eventType === "fill") {
+		await broadcastClosedPositionFromProxyFill(order, environment);
+	}
+}
+
 /**
  * Close thesis when a position is fully closed.
  * Looks up the active thesis for the symbol and closes it.
@@ -108,103 +228,23 @@ async function handleProxyOrderUpdate(update: OrderUpdate): Promise<void> {
 		"Received trade update from proxy",
 	);
 
-	// Persist order to database
 	await persistOrderFromProxyUpdate(eventType, order);
+	broadcastProxyOrderUpdate(order, eventType, getUpdateTimestamp(update));
 
-	// Broadcast order update
-	broadcastOrderUpdate({
-		type: "order_update",
-		data: {
-			orderId: order.id,
-			clientOrderId: order.clientOrderId,
-			symbol: order.symbol,
-			side: order.side === 1 ? "buy" : "sell",
-			orderType: order.orderType === 2 ? "market" : "limit",
-			status: order.status,
-			qty: order.qty,
-			filledQty: order.filledQty,
-			filledAvgPrice: order.filledAvgPrice,
-			event: eventType,
-			timestamp: update.timestamp
-				? new Date(Number(update.timestamp.seconds) * 1000).toISOString()
-				: new Date().toISOString(),
-		},
-		invalidates: ["portfolio.positions", "portfolio.orders"],
-	});
+	if (!isFillEvent(eventType)) {
+		return;
+	}
 
-	// On fill events, fetch updated position from Alpaca and broadcast
-	if (eventType === "fill" || eventType === "partial_fill") {
-		try {
-			const environment = requireEnv();
-			const client = createAlpacaClient({
-				apiKey: Bun.env.ALPACA_KEY as string,
-				apiSecret: Bun.env.ALPACA_SECRET as string,
-				environment,
-			});
-
-			const position = await client.getPosition(order.symbol);
-
-			if (position) {
-				// Position still exists - broadcast update
-				broadcastPositionUpdate({
-					type: "position_update",
-					data: {
-						symbol: position.symbol,
-						side: position.side === "long" ? "LONG" : "SHORT",
-						qty: position.qty,
-						avgEntry: position.avgEntryPrice,
-						marketValue: position.marketValue,
-						unrealizedPnl: position.unrealizedPl,
-						event: eventType === "fill" ? "fill" : "partial_fill",
-						orderId: order.id,
-						timestamp: new Date().toISOString(),
-					},
-					invalidates: ["portfolio.positions", "portfolio.summary"],
-				});
-
-				log.info(
-					{
-						symbol: order.symbol,
-						event: eventType,
-						qty: position.qty,
-						avgEntry: position.avgEntryPrice,
-					},
-					"Broadcasted position update (proxy)",
-				);
-			} else if (eventType === "fill") {
-				// Position no longer exists - it was closed
-				// Close thesis and broadcast removal
-				const exitPrice = Number(order.filledAvgPrice ?? 0);
-				const side = order.side === 1 ? "long" : "short";
-				await closeThesisOnPositionClose(order.symbol, exitPrice, 0, side, environment);
-
-				broadcastPositionUpdate({
-					type: "position_update",
-					data: {
-						symbol: order.symbol,
-						side: "LONG",
-						qty: 0,
-						avgEntry: 0,
-						marketValue: 0,
-						unrealizedPnl: 0,
-						event: "close",
-						orderId: order.id,
-						timestamp: new Date().toISOString(),
-					},
-					invalidates: ["portfolio.positions", "portfolio.summary"],
-				});
-
-				log.info({ symbol: order.symbol }, "Position closed, broadcasted removal (proxy)");
-			}
-		} catch (error) {
-			log.warn(
-				{
-					symbol: order.symbol,
-					error: error instanceof Error ? error.message : String(error),
-				},
-				"Failed to fetch position after fill (proxy)",
-			);
-		}
+	try {
+		await handleFilledOrderPositionUpdate(order, eventType);
+	} catch (error) {
+		log.warn(
+			{
+				symbol: order.symbol,
+				error: error instanceof Error ? error.message : String(error),
+			},
+			"Failed to fetch position after fill (proxy)",
+		);
 	}
 }
 

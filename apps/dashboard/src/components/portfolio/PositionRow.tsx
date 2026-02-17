@@ -55,8 +55,7 @@ export const PositionRow = memo(function PositionRow({
 						<span
 							className="w-2 h-2 rounded-full bg-green-500 animate-pulse"
 							title="Live streaming"
-							role="status"
-							aria-label="Live streaming"
+							aria-hidden="true"
 						/>
 					)}
 				</div>

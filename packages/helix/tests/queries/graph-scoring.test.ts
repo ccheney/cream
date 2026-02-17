@@ -58,7 +58,7 @@ function createOptions(overrides: Partial<TraversalOptions> = {}): Required<Trav
 // getEdgeWeight Tests
 // ============================================
 
-describe("getEdgeWeight", () => {
+describe("getEdgeWeight: typed edge fields", () => {
 	it("extracts confidence_score from INFLUENCED_DECISION", () => {
 		const edge = createEdge({
 			type: "INFLUENCED_DECISION",
@@ -90,7 +90,9 @@ describe("getEdgeWeight", () => {
 		});
 		expect(getEdgeWeight(edge)).toBe(0.6);
 	});
+});
 
+describe("getEdgeWeight: MENTIONED_IN mapping", () => {
 	it("returns PRIMARY weight for MENTIONED_IN with PRIMARY type", () => {
 		const edge = createEdge({
 			type: "MENTIONED_IN",
@@ -122,7 +124,9 @@ describe("getEdgeWeight", () => {
 		});
 		expect(getEdgeWeight(edge)).toBe(0.5);
 	});
+});
 
+describe("getEdgeWeight: fallback fields", () => {
 	it("extracts generic weight property for unknown edge types", () => {
 		const edge = createEdge({
 			type: "CUSTOM_EDGE",
@@ -376,7 +380,7 @@ describe("sortEdgesByPriority", () => {
 // filterAndPrioritizeEdges Tests
 // ============================================
 
-describe("filterAndPrioritizeEdges", () => {
+describe("filterAndPrioritizeEdges: filtering and limiting", () => {
 	it("filters out low-weight edges", () => {
 		const edges = [
 			createEdge({
@@ -411,7 +415,9 @@ describe("filterAndPrioritizeEdges", () => {
 
 		expect(filtered.length).toBe(10);
 	});
+});
 
+describe("filterAndPrioritizeEdges: ordering", () => {
 	it("returns highest priority edges first", () => {
 		const edges = [
 			createEdge({ id: "low", type: "CUSTOM_EDGE", properties: { weight: 0.4 } }),
@@ -440,15 +446,13 @@ describe("filterAndPrioritizeEdges", () => {
 		];
 
 		const edgeCounts = new Map([
-			["hub", 1000], // hub node
-			["normal", 10], // normal node
+			["hub", 1000],
+			["normal", 10],
 		]);
 
 		const opts = createOptions({ hubPenaltyThreshold: 500, hubPenaltyMultiplier: 0.5 });
 		const filtered = filterAndPrioritizeEdges(edges, edgeCounts, opts);
 
-		// hub-target: 0.9 * 0.5 = 0.45
-		// normal-target: 0.7 * 1.0 = 0.7
 		expect(filtered[0]?.id).toBe("normal-target");
 	});
 });

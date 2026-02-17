@@ -79,34 +79,24 @@ export interface HealthServerDeps {
 
 const DEFAULT_PORT = 3002;
 
-export function createHealthServer(deps: HealthServerDeps, port?: number) {
-	const healthPort = port ?? Number(Bun.env.HEALTH_PORT ?? DEFAULT_PORT);
+const VALID_SERVICES: WorkerService[] = [
+	"macro_watch",
+	"newspaper",
+	"filings_sync",
+	"short_interest",
+	"sentiment",
+	"corporate_actions",
+	"prediction_markets",
+];
 
-	function buildHealthResponse() {
-		const intervals = deps.getIntervals();
-		const indicatorJobs = deps.getIndicatorJobStatus();
-		const startedAt = deps.getStartedAt();
-		const nextRun = deps.getNextRun();
+function isWorkerService(value: string): value is WorkerService {
+	return VALID_SERVICES.includes(value as WorkerService);
+}
 
-		return {
-			status: "ok",
-			uptime_ms: Date.now() - startedAt.getTime(),
-			environment: deps.getEnvironment(),
-			config_id: deps.getConfigId(),
-			intervals: {
-				trading_cycle_ms: intervals.tradingCycleIntervalMs,
-				prediction_markets_ms: intervals.predictionMarketsIntervalMs,
-			},
-			instruments: deps.getInstruments(),
-			last_run: formatLastRun(deps.getLastRun()),
-			next_run: nextRun ? formatNextRun(nextRun) : null,
-			running: deps.getRunningStatus(),
-			indicator_batch_jobs: formatIndicatorJobs(indicatorJobs),
-			started_at: startedAt.toISOString(),
-		};
-	}
-
-	const serviceTriggerMap: Record<WorkerService, (() => Promise<TriggerResult>) | undefined> = {
+function createServiceTriggerMap(
+	deps: HealthServerDeps,
+): Record<WorkerService, (() => Promise<TriggerResult>) | undefined> {
+	return {
 		macro_watch: deps.triggers?.triggerMacroWatch,
 		newspaper: deps.triggers?.triggerNewspaper,
 		filings_sync: deps.triggers?.triggerFilingsSync,
@@ -115,90 +105,142 @@ export function createHealthServer(deps: HealthServerDeps, port?: number) {
 		corporate_actions: deps.triggers?.triggerCorporateActions,
 		prediction_markets: deps.triggers?.triggerPredictionMarkets,
 	};
+}
 
-	async function handleTrigger(service: WorkerService): Promise<Response> {
-		const trigger = serviceTriggerMap[service];
-		if (!trigger) {
-			return Response.json({ error: "Service triggers not configured" }, { status: 503 });
-		}
+function buildHealthResponse(deps: HealthServerDeps) {
+	const intervals = deps.getIntervals();
+	const indicatorJobs = deps.getIndicatorJobStatus();
+	const startedAt = deps.getStartedAt();
+	const nextRun = deps.getNextRun();
 
-		try {
-			log.info({ service }, "Service trigger requested via HTTP");
-			const result = await trigger();
-			log.info({ service, result }, "Service trigger completed");
+	return {
+		status: "ok",
+		uptime_ms: Date.now() - startedAt.getTime(),
+		environment: deps.getEnvironment(),
+		config_id: deps.getConfigId(),
+		intervals: {
+			trading_cycle_ms: intervals.tradingCycleIntervalMs,
+			prediction_markets_ms: intervals.predictionMarketsIntervalMs,
+		},
+		instruments: deps.getInstruments(),
+		last_run: formatLastRun(deps.getLastRun()),
+		next_run: nextRun ? formatNextRun(nextRun) : null,
+		running: deps.getRunningStatus(),
+		indicator_batch_jobs: formatIndicatorJobs(indicatorJobs),
+		started_at: startedAt.toISOString(),
+	};
+}
 
-			return Response.json(result, { status: result.success ? 200 : 500 });
-		} catch (error) {
-			const message = error instanceof Error ? error.message : "Unknown error";
-			log.error({ service, error: message }, "Service trigger failed");
-
-			return Response.json({ success: false, message, error: message }, { status: 500 });
-		}
+function parseTriggerPath(pathname: string): {
+	matched: boolean;
+	service?: WorkerService;
+	invalidService?: string;
+} {
+	const match = pathname.match(/^\/trigger\/([a-z_]+)$/);
+	if (!match) {
+		return { matched: false };
 	}
 
+	const requestedService = match[1] ?? "";
+	if (!isWorkerService(requestedService)) {
+		return { matched: true, invalidService: requestedService };
+	}
+
+	return { matched: true, service: requestedService };
+}
+
+async function handleTriggerRequest(
+	service: WorkerService,
+	triggerMap: Record<WorkerService, (() => Promise<TriggerResult>) | undefined>,
+): Promise<Response> {
+	const trigger = triggerMap[service];
+	if (!trigger) {
+		return Response.json({ error: "Service triggers not configured" }, { status: 503 });
+	}
+
+	try {
+		log.info({ service }, "Service trigger requested via HTTP");
+		const result = await trigger();
+		log.info({ service, result }, "Service trigger completed");
+		return Response.json(result, { status: result.success ? 200 : 500 });
+	} catch (error) {
+		const message = error instanceof Error ? error.message : "Unknown error";
+		log.error({ service, error: message }, "Service trigger failed");
+		return Response.json({ success: false, message, error: message }, { status: 500 });
+	}
+}
+
+function methodNotAllowed(): Response {
+	return new Response("Method not allowed", { status: 405 });
+}
+
+async function routeRequest(
+	req: Request,
+	deps: HealthServerDeps,
+	triggerMap: Record<WorkerService, (() => Promise<TriggerResult>) | undefined>,
+): Promise<Response> {
+	const url = new URL(req.url);
+
+	if (url.pathname === "/health" || url.pathname === "/") {
+		return Response.json(buildHealthResponse(deps));
+	}
+
+	if (url.pathname === "/reload") {
+		if (req.method !== "POST") {
+			return methodNotAllowed();
+		}
+
+		deps.onReload().catch(() => {});
+		return Response.json({ status: "reloading" }, { status: 202 });
+	}
+
+	const triggerPath = parseTriggerPath(url.pathname);
+	if (triggerPath.matched) {
+		if (req.method !== "POST") {
+			return methodNotAllowed();
+		}
+		if (triggerPath.invalidService) {
+			return Response.json(
+				{ error: `Unknown service: ${triggerPath.invalidService}` },
+				{ status: 400 },
+			);
+		}
+		return handleTriggerRequest(triggerPath.service as WorkerService, triggerMap);
+	}
+
+	return new Response("Not found", { status: 404 });
+}
+
+export function createHealthServer(deps: HealthServerDeps, port?: number) {
+	const healthPort = port ?? Number(Bun.env.HEALTH_PORT ?? DEFAULT_PORT);
+	const triggerMap = createServiceTriggerMap(deps);
 	let server: ReturnType<typeof Bun.serve> | null = null;
 
 	function start() {
 		server = Bun.serve({
 			port: healthPort,
 			idleTimeout: 120,
-			async fetch(req) {
-				const url = new URL(req.url);
-
-				if (url.pathname === "/health" || url.pathname === "/") {
-					const health = buildHealthResponse();
-					return Response.json(health);
-				}
-
-				if (url.pathname === "/reload") {
-					if (req.method === "POST") {
-						deps.onReload().catch(() => {});
-						return Response.json({ status: "reloading" }, { status: 202 });
-					}
-					return new Response("Method not allowed", { status: 405 });
-				}
-
-				// Service trigger endpoints: POST /trigger/:service
-				const triggerMatch = url.pathname.match(/^\/trigger\/([a-z_]+)$/);
-				if (triggerMatch) {
-					if (req.method !== "POST") {
-						return new Response("Method not allowed", { status: 405 });
-					}
-
-					const service = triggerMatch[1] as WorkerService;
-					const validServices: WorkerService[] = [
-						"macro_watch",
-						"newspaper",
-						"filings_sync",
-						"short_interest",
-						"sentiment",
-						"corporate_actions",
-						"prediction_markets",
-					];
-
-					if (!validServices.includes(service)) {
-						return Response.json({ error: `Unknown service: ${service}` }, { status: 400 });
-					}
-
-					return handleTrigger(service);
-				}
-
-				return new Response("Not found", { status: 404 });
-			},
+			fetch: (req) => routeRequest(req, deps, triggerMap),
 		});
 
 		log.info({ port: healthPort }, "Health endpoint listening");
 	}
 
 	function stop() {
-		if (server) {
-			server.stop(true);
-			server = null;
-			log.info({ port: healthPort }, "Health endpoint stopped");
+		if (!server) {
+			return;
 		}
+
+		server.stop(true);
+		server = null;
+		log.info({ port: healthPort }, "Health endpoint stopped");
 	}
 
-	return { start, stop, buildHealthResponse };
+	return {
+		start,
+		stop,
+		buildHealthResponse: () => buildHealthResponse(deps),
+	};
 }
 
 function formatLastRun(lastRun: {

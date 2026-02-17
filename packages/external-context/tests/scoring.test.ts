@@ -24,7 +24,18 @@ import {
 	isSurpriseSignificant,
 } from "../src/index.js";
 
-describe("Sentiment Scoring", () => {
+const baseImportanceExtraction: ExtractionResult = {
+	sentiment: "neutral",
+	confidence: 0.8,
+	entities: [{ name: "Apple", type: "company", ticker: "AAPL" }],
+	dataPoints: [],
+	eventType: "earnings",
+	importance: 4,
+	summary: "Test",
+	keyInsights: [],
+};
+
+describe("Sentiment Scoring: Core", () => {
 	it("should compute bullish sentiment score", () => {
 		const score = computeSentimentScore("bullish", 1.0);
 		expect(score).toBeGreaterThan(0.5);
@@ -62,7 +73,9 @@ describe("Sentiment Scoring", () => {
 		const score = computeSentimentFromExtraction(extraction);
 		expect(score).toBeGreaterThan(0);
 	});
+});
 
+describe("Sentiment Scoring: Aggregation Basics", () => {
 	it("should aggregate sentiment scores", () => {
 		const scores = [0.5, 0.3, 0.7];
 		const mean = aggregateSentimentScores(scores, "mean");
@@ -87,7 +100,9 @@ describe("Sentiment Scoring", () => {
 		const median = aggregateSentimentScores(scores, "median");
 		expect(median).toBe(0.5); // (0.4 + 0.6) / 2
 	});
+});
 
+describe("Sentiment Scoring: Weighted and Labels", () => {
 	it("should compute weighted aggregation with valid weights", () => {
 		const scores = [0.5, 0.8];
 		const weights = [1, 3]; // weight second score 3x more
@@ -132,22 +147,15 @@ describe("Sentiment Scoring", () => {
 	});
 });
 
-describe("Importance Scoring", () => {
-	const baseExtraction: ExtractionResult = {
-		sentiment: "neutral",
-		confidence: 0.8,
-		entities: [{ name: "Apple", type: "company", ticker: "AAPL" }],
-		dataPoints: [],
-		eventType: "earnings",
-		importance: 4,
-		summary: "Test",
-		keyInsights: [],
-	};
-
+describe("Importance Scoring: Core", () => {
 	it("should compute importance score", () => {
-		const score = computeImportanceScore(baseExtraction, "news", "reuters.com", new Date(), [
-			"AAPL",
-		]);
+		const score = computeImportanceScore(
+			baseImportanceExtraction,
+			"news",
+			"reuters.com",
+			new Date(),
+			["AAPL"],
+		);
 		expect(score).toBeGreaterThan(0);
 		expect(score).toBeLessThanOrEqual(1);
 	});
@@ -170,10 +178,12 @@ describe("Importance Scoring", () => {
 	});
 
 	it("should compute entity relevance", () => {
-		const score = computeEntityRelevance(baseExtraction, ["AAPL", "MSFT"]);
+		const score = computeEntityRelevance(baseImportanceExtraction, ["AAPL", "MSFT"]);
 		expect(score).toBeGreaterThan(0);
 	});
+});
 
+describe("Importance Scoring: Classification and Entity Matching", () => {
 	it("should classify importance", () => {
 		expect(classifyImportance(0.95)).toBe("critical");
 		expect(classifyImportance(0.75)).toBe("high");
@@ -202,7 +212,9 @@ describe("Importance Scoring", () => {
 		const score = computeEntityRelevance(extraction, ["AAPL", "MSFT"]);
 		expect(score).toBeGreaterThan(0);
 	});
+});
 
+describe("Importance Scoring: Event Type Boost", () => {
 	it("should apply event type boost for earnings", () => {
 		const boosted = applyEventTypeBoost(0.5, "earnings");
 		expect(boosted).toBe(0.6); // 0.5 + 0.1 boost
@@ -229,7 +241,7 @@ describe("Importance Scoring", () => {
 	});
 });
 
-describe("Surprise Scoring", () => {
+describe("Surprise Scoring: Core", () => {
 	it("should compute positive surprise for beat", () => {
 		const score = computeSurpriseScore(110, 100);
 		expect(score).toBeGreaterThan(0);
@@ -265,7 +277,9 @@ describe("Surprise Scoring", () => {
 		const score = computeSurpriseScore(0, 0);
 		expect(score).toBe(0);
 	});
+});
 
+describe("Surprise Scoring: Aggregation and Labels", () => {
 	it("should aggregate multiple surprises", () => {
 		const dataPoints = [
 			{ actual: 110, expected: 100, weight: 1 },
@@ -309,7 +323,9 @@ describe("Surprise Scoring", () => {
 		expect(getSurpriseDirection(-0.2)).toBe("negative");
 		expect(getSurpriseDirection(0)).toBe("neutral");
 	});
+});
 
+describe("Surprise Scoring: Extraction Matching", () => {
 	it("should compute surprise from extraction with matching data points", () => {
 		const extraction: ExtractionResult = {
 			sentiment: "bullish",
@@ -351,7 +367,9 @@ describe("Surprise Scoring", () => {
 		const score = computeSurpriseFromExtraction(extraction, expectations);
 		expect(score).toBeGreaterThan(0); // Partial match: "total revenue" contains "revenue"
 	});
+});
 
+describe("Surprise Scoring: Extraction Fallback", () => {
 	it("should compute surprise from extraction with no matches (fallback to event-based)", () => {
 		const extraction: ExtractionResult = {
 			sentiment: "bullish",
@@ -387,7 +405,9 @@ describe("Surprise Scoring", () => {
 		// Falls back to event-based surprise
 		expect(typeof score).toBe("number");
 	});
+});
 
+describe("Surprise Scoring: Metric Weights", () => {
 	it("should apply metric weight for eps", () => {
 		const extraction: ExtractionResult = {
 			sentiment: "bullish",

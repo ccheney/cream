@@ -56,6 +56,10 @@ const slideKeyframes = `
   }
 `;
 
+function KeyframesStyle({ css }: { css: string }) {
+	return <style>{css}</style>;
+}
+
 // ============================================
 // Sub-components
 // ============================================
@@ -66,8 +70,7 @@ const slideKeyframes = `
 function DotIndicator({ isRefreshing }: { isRefreshing: boolean }) {
 	return (
 		<>
-			{/* biome-ignore lint/security/noDangerouslySetInnerHtml: Safe - hardcoded CSS keyframes */}
-			<style dangerouslySetInnerHTML={{ __html: pulseKeyframes }} />
+			<KeyframesStyle css={pulseKeyframes} />
 			<span
 				style={{
 					display: "inline-block",
@@ -91,8 +94,7 @@ function DotIndicator({ isRefreshing }: { isRefreshing: boolean }) {
 function BarIndicator({ isRefreshing }: { isRefreshing: boolean }) {
 	return (
 		<>
-			{/* biome-ignore lint/security/noDangerouslySetInnerHtml: Safe - hardcoded CSS keyframes */}
-			<style dangerouslySetInnerHTML={{ __html: slideKeyframes }} />
+			<KeyframesStyle css={slideKeyframes} />
 			<span
 				style={{
 					display: "block",
@@ -132,8 +134,7 @@ function BarIndicator({ isRefreshing }: { isRefreshing: boolean }) {
 function PulseIndicator({ isRefreshing }: { isRefreshing: boolean }) {
 	return (
 		<>
-			{/* biome-ignore lint/security/noDangerouslySetInnerHtml: Safe - hardcoded CSS keyframes */}
-			<style dangerouslySetInnerHTML={{ __html: pulseKeyframes }} />
+			<KeyframesStyle css={pulseKeyframes} />
 			<span
 				style={{
 					display: "inline-flex",
@@ -177,8 +178,7 @@ function PulseIndicator({ isRefreshing }: { isRefreshing: boolean }) {
 function IconIndicator({ isRefreshing }: { isRefreshing: boolean }) {
 	return (
 		<>
-			{/* biome-ignore lint/security/noDangerouslySetInnerHtml: Safe - hardcoded CSS keyframes */}
-			<style dangerouslySetInnerHTML={{ __html: spinKeyframes }} />
+			<KeyframesStyle css={spinKeyframes} />
 			<svg
 				width="14"
 				height="14"
@@ -238,8 +238,7 @@ export function RefreshIndicator({
 	children,
 }: RefreshIndicatorProps) {
 	const indicator = (
-		<span
-			role="status"
+		<output
 			aria-label={isRefreshing ? label : "Data up to date"}
 			aria-live="polite"
 			className={className}
@@ -248,7 +247,7 @@ export function RefreshIndicator({
 			{variant === "bar" && <BarIndicator isRefreshing={isRefreshing} />}
 			{variant === "pulse" && <PulseIndicator isRefreshing={isRefreshing} />}
 			{variant === "icon" && <IconIndicator isRefreshing={isRefreshing} />}
-		</span>
+		</output>
 	);
 
 	// Inline mode - just return the indicator

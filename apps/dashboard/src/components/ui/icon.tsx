@@ -8,7 +8,7 @@
  */
 
 import type { LucideIcon, LucideProps } from "lucide-react";
-import * as Icons from "lucide-react";
+import { icons } from "lucide-react";
 import { memo } from "react";
 
 // ============================================
@@ -65,6 +65,8 @@ const SIZE_MAP: Record<IconSize, number> = {
 	xl: 32,
 };
 
+const iconRegistry = icons as Record<string, LucideIcon>;
+
 // ============================================
 // Component
 // ============================================
@@ -101,10 +103,7 @@ export const Icon = memo(function Icon({
 	"data-testid": testId,
 	...props
 }: IconProps) {
-	// Lookup the icon component from the icons map
-	// Note: Dynamic access is necessary for runtime icon lookup by name
-	// biome-ignore lint/performance/noDynamicNamespaceImportAccess: Required for dynamic icon lookup
-	const IconComponent = Icons[name as keyof typeof Icons] as LucideIcon | undefined;
+	const IconComponent = iconRegistry[name];
 
 	// Handle invalid icon name
 	if (!IconComponent) {

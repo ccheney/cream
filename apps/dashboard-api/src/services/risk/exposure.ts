@@ -28,6 +28,73 @@ export interface CalculateExposureOptions {
 	limits?: ExposureLimits;
 }
 
+interface ExposureAccumulation {
+	longExposure: number;
+	shortExposure: number;
+	positionValues: Array<{ symbol: string; value: number }>;
+	sectorTotals: Record<string, number>;
+}
+
+function createEmptyExposureMetrics(limits: ExposureLimits): ExposureMetrics {
+	return {
+		gross: { current: 0, limit: limits.maxGrossExposure, pct: 0 },
+		net: { current: 0, limit: limits.maxNetExposure, pct: 0 },
+		long: 0,
+		short: 0,
+		concentrationMax: { symbol: "N/A", pct: 0 },
+		sectorExposure: {},
+	};
+}
+
+function accumulateExposure(positions: PositionForExposure[]): ExposureAccumulation {
+	const result: ExposureAccumulation = {
+		longExposure: 0,
+		shortExposure: 0,
+		positionValues: [],
+		sectorTotals: {},
+	};
+
+	for (const position of positions) {
+		const value = Math.abs(position.marketValue ?? 0);
+		if (position.side === "LONG") {
+			result.longExposure += value;
+		} else {
+			result.shortExposure += value;
+		}
+
+		result.positionValues.push({ symbol: position.symbol, value });
+		const sector = position.sector ?? getSector(position.symbol);
+		result.sectorTotals[sector] = (result.sectorTotals[sector] ?? 0) + value;
+	}
+
+	return result;
+}
+
+function findMaxConcentration(
+	positionValues: Array<{ symbol: string; value: number }>,
+	nav: number,
+): { symbol: string; pct: number } {
+	let maxConcentration = { symbol: "N/A", pct: 0 };
+	for (const pv of positionValues) {
+		const pct = nav > 0 ? (pv.value / nav) * 100 : 0;
+		if (pct > maxConcentration.pct) {
+			maxConcentration = { symbol: pv.symbol, pct };
+		}
+	}
+	return maxConcentration;
+}
+
+function mapSectorExposure(
+	sectorTotals: Record<string, number>,
+	nav: number,
+): Record<string, number> {
+	const sectorExposure: Record<string, number> = {};
+	for (const [sector, total] of Object.entries(sectorTotals)) {
+		sectorExposure[sector] = nav > 0 ? (total / nav) * 100 : 0;
+	}
+	return sectorExposure;
+}
+
 /**
  * Calculate exposure metrics from positions.
  *
@@ -46,69 +113,20 @@ export interface CalculateExposureOptions {
 export function calculateExposure(options: CalculateExposureOptions): ExposureMetrics {
 	const { positions, nav, limits = DEFAULT_EXPOSURE_LIMITS } = options;
 
-	// Handle empty positions
 	if (positions.length === 0 || nav <= 0) {
-		return {
-			gross: { current: 0, limit: limits.maxGrossExposure, pct: 0 },
-			net: { current: 0, limit: limits.maxNetExposure, pct: 0 },
-			long: 0,
-			short: 0,
-			concentrationMax: { symbol: "N/A", pct: 0 },
-			sectorExposure: {},
-		};
+		return createEmptyExposureMetrics(limits);
 	}
 
-	// Calculate long and short exposure
-	let longExposure = 0;
-	let shortExposure = 0;
-
-	// Track position values for concentration
-	const positionValues: Array<{ symbol: string; value: number }> = [];
-
-	// Track sector exposure
-	const sectorTotals: Record<string, number> = {};
-
-	for (const position of positions) {
-		const value = Math.abs(position.marketValue ?? 0);
-
-		if (position.side === "LONG") {
-			longExposure += value;
-		} else {
-			shortExposure += value;
-		}
-
-		// Track for concentration
-		positionValues.push({ symbol: position.symbol, value });
-
-		// Track sector exposure
-		const sector = position.sector ?? getSector(position.symbol);
-		sectorTotals[sector] = (sectorTotals[sector] ?? 0) + value;
-	}
-
-	// Calculate gross and net exposure
+	const { longExposure, shortExposure, positionValues, sectorTotals } =
+		accumulateExposure(positions);
 	const grossExposure = longExposure + shortExposure;
 	const netExposure = longExposure - shortExposure;
-
-	// Calculate gross/net as percentage of limits
 	const grossPct =
 		limits.maxGrossExposure > 0 ? (grossExposure / limits.maxGrossExposure) * 100 : 0;
 	const netPct =
 		limits.maxNetExposure > 0 ? (Math.abs(netExposure) / limits.maxNetExposure) * 100 : 0;
-
-	// Find max concentration
-	let maxConcentration = { symbol: "N/A", pct: 0 };
-	for (const pv of positionValues) {
-		const pct = nav > 0 ? (pv.value / nav) * 100 : 0;
-		if (pct > maxConcentration.pct) {
-			maxConcentration = { symbol: pv.symbol, pct };
-		}
-	}
-
-	// Convert sector totals to percentages of NAV
-	const sectorExposure: Record<string, number> = {};
-	for (const [sector, total] of Object.entries(sectorTotals)) {
-		sectorExposure[sector] = nav > 0 ? (total / nav) * 100 : 0;
-	}
+	const maxConcentration = findMaxConcentration(positionValues, nav);
+	const sectorExposure = mapSectorExposure(sectorTotals, nav);
 
 	return {
 		gross: {
@@ -143,6 +161,58 @@ export interface ExposureWarning {
 	message: string;
 }
 
+function createWarning(
+	metric: "gross" | "net" | "concentration",
+	level: WarningLevel,
+	current: number,
+	limit: number,
+	pct: number,
+	message: string,
+): ExposureWarning {
+	return {
+		metric,
+		level,
+		current,
+		limit,
+		pct,
+		message,
+	};
+}
+
+function addExposureWarning(
+	warnings: ExposureWarning[],
+	metric: "gross" | "net",
+	current: number,
+	limit: number,
+	pct: number,
+): void {
+	if (pct >= 100) {
+		warnings.push(
+			createWarning(
+				metric,
+				"critical",
+				current,
+				limit,
+				pct,
+				`${metric === "gross" ? "Gross" : "Net"} exposure at or above limit`,
+			),
+		);
+		return;
+	}
+	if (pct >= 80) {
+		warnings.push(
+			createWarning(
+				metric,
+				"warning",
+				current,
+				limit,
+				pct,
+				`${metric === "gross" ? "Gross" : "Net"} exposure approaching limit`,
+			),
+		);
+	}
+}
+
 /**
  * Check exposure metrics for warnings.
  */
@@ -152,68 +222,38 @@ export function checkExposureWarnings(
 ): ExposureWarning[] {
 	const warnings: ExposureWarning[] = [];
 
-	// Gross exposure warning
-	if (metrics.gross.pct >= 100) {
-		warnings.push({
-			metric: "gross",
-			level: "critical",
-			current: metrics.gross.current,
-			limit: metrics.gross.limit,
-			pct: metrics.gross.pct,
-			message: "Gross exposure at or above limit",
-		});
-	} else if (metrics.gross.pct >= 80) {
-		warnings.push({
-			metric: "gross",
-			level: "warning",
-			current: metrics.gross.current,
-			limit: metrics.gross.limit,
-			pct: metrics.gross.pct,
-			message: "Gross exposure approaching limit",
-		});
-	}
+	addExposureWarning(
+		warnings,
+		"gross",
+		metrics.gross.current,
+		metrics.gross.limit,
+		metrics.gross.pct,
+	);
+	addExposureWarning(warnings, "net", metrics.net.current, metrics.net.limit, metrics.net.pct);
 
-	// Net exposure warning
-	if (metrics.net.pct >= 100) {
-		warnings.push({
-			metric: "net",
-			level: "critical",
-			current: metrics.net.current,
-			limit: metrics.net.limit,
-			pct: metrics.net.pct,
-			message: "Net exposure at or above limit",
-		});
-	} else if (metrics.net.pct >= 80) {
-		warnings.push({
-			metric: "net",
-			level: "warning",
-			current: metrics.net.current,
-			limit: metrics.net.limit,
-			pct: metrics.net.pct,
-			message: "Net exposure approaching limit",
-		});
-	}
-
-	// Concentration warning
 	const concentrationLimitPct = limits.maxConcentration * 100;
 	if (metrics.concentrationMax.pct >= concentrationLimitPct) {
-		warnings.push({
-			metric: "concentration",
-			level: "critical",
-			current: metrics.concentrationMax.pct,
-			limit: concentrationLimitPct,
-			pct: (metrics.concentrationMax.pct / concentrationLimitPct) * 100,
-			message: `Position ${metrics.concentrationMax.symbol} exceeds concentration limit`,
-		});
+		warnings.push(
+			createWarning(
+				"concentration",
+				"critical",
+				metrics.concentrationMax.pct,
+				concentrationLimitPct,
+				(metrics.concentrationMax.pct / concentrationLimitPct) * 100,
+				`Position ${metrics.concentrationMax.symbol} exceeds concentration limit`,
+			),
+		);
 	} else if (metrics.concentrationMax.pct >= concentrationLimitPct * 0.8) {
-		warnings.push({
-			metric: "concentration",
-			level: "warning",
-			current: metrics.concentrationMax.pct,
-			limit: concentrationLimitPct,
-			pct: (metrics.concentrationMax.pct / concentrationLimitPct) * 100,
-			message: `Position ${metrics.concentrationMax.symbol} approaching concentration limit`,
-		});
+		warnings.push(
+			createWarning(
+				"concentration",
+				"warning",
+				metrics.concentrationMax.pct,
+				concentrationLimitPct,
+				(metrics.concentrationMax.pct / concentrationLimitPct) * 100,
+				`Position ${metrics.concentrationMax.symbol} approaching concentration limit`,
+			),
+		);
 	}
 
 	return warnings;

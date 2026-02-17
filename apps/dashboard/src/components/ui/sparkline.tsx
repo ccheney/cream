@@ -60,28 +60,44 @@ function generatePathData(
 
 	const innerWidth = width - padding * 2;
 	const innerHeight = height - padding * 2;
-
-	// Find min/max for scaling
 	const min = Math.min(...data);
 	const max = Math.max(...data);
-	const range = max - min || 1; // Prevent division by zero
-
-	// Calculate points
+	const range = max - min || 1;
 	const points = data.map((value, index) => {
 		const x = padding + (index / (data.length - 1)) * innerWidth;
 		const y = padding + innerHeight - ((value - min) / range) * innerHeight;
 		return { x, y };
 	});
 
-	// Build line path
 	const linePath = points
 		.map((point, i) => `${i === 0 ? "M" : "L"} ${point.x.toFixed(2)} ${point.y.toFixed(2)}`)
 		.join(" ");
 
-	// Build fill path (closed polygon for gradient fill)
-	const fillPath = `${linePath} L ${points.at(-1)?.x.toFixed(2)} ${height - padding} L ${padding} ${height - padding} Z`;
-
+	const fillPath = `${linePath} L ${points.at(-1)?.x.toFixed(2)} ${height - padding} L ${padding} ${
+		height - padding
+	} Z`;
 	return { linePath, fillPath };
+}
+
+function getTrendState(data: number[]) {
+	const isPositive = data.length >= 2 ? (data.at(-1) ?? 0) >= (data[0] ?? 0) : true;
+	return {
+		isPositive,
+		strokeColor: isPositive ? "#22c55e" : "#ef4444",
+		gradientId: `sparkline-gradient-${isPositive ? "positive" : "negative"}`,
+	};
+}
+
+function createAriaLabel(data: number[], isPositive: boolean): string {
+	if (data.length < 2) {
+		return "No price data available";
+	}
+	const lastVal = data.at(-1) ?? 0;
+	const firstVal = data[0] ?? 1;
+	const percentChange = ((lastVal - firstVal) / firstVal) * 100;
+	return `Price trend: ${isPositive ? "up" : "down"} ${Math.abs(percentChange).toFixed(1)}% over ${
+		data.length
+	} points`;
 }
 
 // ============================================
@@ -115,27 +131,13 @@ export const Sparkline = memo(function Sparkline({
 	className = "",
 	"data-testid": testId,
 }: SparklineProps) {
-	// Determine trend direction (positive if last > first)
-	const isPositive = useMemo(() => {
-		if (data.length < 2) {
-			return true;
-		}
-		const last = data.at(-1);
-		const first = data[0];
-		return last !== undefined && first !== undefined ? last >= first : true;
-	}, [data]);
-
-	// Generate SVG paths
+	const { isPositive, strokeColor, gradientId } = useMemo(() => getTrendState(data), [data]);
 	const { linePath, fillPath } = useMemo(
 		() => generatePathData(data, width, height, PADDING),
 		[data, width, height],
 	);
+	const ariaLabel = useMemo(() => createAriaLabel(data, isPositive), [data, isPositive]);
 
-	// Colors based on trend
-	const strokeColor = isPositive ? "#22c55e" : "#ef4444"; // green-500 / red-500
-	const gradientId = `sparkline-gradient-${isPositive ? "positive" : "negative"}`;
-
-	// Handle empty or insufficient data
 	if (data.length < 2) {
 		return (
 			<svg
@@ -159,12 +161,6 @@ export const Sparkline = memo(function Sparkline({
 		);
 	}
 
-	// Calculate percentage change for ARIA label
-	const lastVal = data.at(-1) ?? 0;
-	const firstVal = data[0] ?? 1;
-	const percentChange = ((lastVal - firstVal) / firstVal) * 100;
-	const ariaLabel = `Price trend: ${isPositive ? "up" : "down"} ${Math.abs(percentChange).toFixed(1)}% over ${data.length} points`;
-
 	return (
 		<svg
 			width={width}
@@ -174,7 +170,6 @@ export const Sparkline = memo(function Sparkline({
 			role="img"
 			aria-label={ariaLabel}
 		>
-			{/* Gradient definition */}
 			<defs>
 				<linearGradient id={gradientId} x1="0%" y1="0%" x2="0%" y2="100%">
 					<stop offset="0%" stopColor={strokeColor} stopOpacity={0.3} />
@@ -182,10 +177,8 @@ export const Sparkline = memo(function Sparkline({
 				</linearGradient>
 			</defs>
 
-			{/* Fill area */}
 			{showFill && fillPath && <path d={fillPath} fill={`url(#${gradientId})`} />}
 
-			{/* Line */}
 			{linePath && (
 				<path
 					d={linePath}

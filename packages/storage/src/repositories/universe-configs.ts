@@ -63,6 +63,113 @@ export interface UpdateUniverseConfigInput {
 // ============================================
 
 type UniverseConfigRow = typeof universeConfigs.$inferSelect;
+type UniverseConfigInsert = typeof universeConfigs.$inferInsert;
+
+const UNIVERSE_DEFINED_OVERRIDE_FIELDS = [
+	"source",
+	"optionableOnly",
+	"includeList",
+	"excludeList",
+] as const;
+
+const UNIVERSE_NULLABLE_OVERRIDE_FIELDS = [
+	"staticSymbols",
+	"indexSource",
+	"minVolume",
+	"minMarketCap",
+] as const;
+
+const UNIVERSE_MUTABLE_FIELDS = [
+	"source",
+	"staticSymbols",
+	"indexSource",
+	"minVolume",
+	"minMarketCap",
+	"optionableOnly",
+	"includeList",
+	"excludeList",
+] as const;
+
+const UNIVERSE_DRAFT_DEFAULT_VALUES: Pick<
+	CreateUniverseConfigInput,
+	(typeof UNIVERSE_MUTABLE_FIELDS)[number]
+> = {
+	source: "static",
+	staticSymbols: null,
+	indexSource: null,
+	minVolume: null,
+	minMarketCap: null,
+	optionableOnly: false,
+	includeList: [],
+	excludeList: [],
+};
+
+function applyUniverseUpdateFields(
+	target: Partial<UniverseConfigInsert>,
+	input: UpdateUniverseConfigInput,
+): void {
+	const mutableTarget = target as Record<string, unknown>;
+	for (const field of UNIVERSE_MUTABLE_FIELDS) {
+		const value = input[field];
+		if (value !== undefined) {
+			mutableTarget[field] = value;
+		}
+	}
+}
+
+function applyUniverseCreateOverrides(
+	target: Partial<CreateUniverseConfigInput>,
+	input: UpdateUniverseConfigInput,
+): void {
+	const mutableTarget = target as Record<string, unknown>;
+	for (const field of UNIVERSE_DEFINED_OVERRIDE_FIELDS) {
+		const value = input[field];
+		if (value !== undefined) {
+			mutableTarget[field] = value;
+		}
+	}
+
+	for (const field of UNIVERSE_NULLABLE_OVERRIDE_FIELDS) {
+		const value = input[field];
+		if (value != null) {
+			mutableTarget[field] = value;
+		}
+	}
+}
+
+function buildUniverseDraftUpdateData(
+	input: UpdateUniverseConfigInput,
+): Partial<UniverseConfigInsert> {
+	const data: Partial<UniverseConfigInsert> = {
+		updatedAt: new Date(),
+	};
+
+	applyUniverseUpdateFields(data, input);
+	return data;
+}
+
+function buildUniverseDraftCreateInput(
+	environment: UniverseEnvironment,
+	input: UpdateUniverseConfigInput,
+	activeConfig: UniverseConfig | null,
+): CreateUniverseConfigInput {
+	const draftInput: CreateUniverseConfigInput = {
+		environment,
+		status: "draft",
+		...UNIVERSE_DRAFT_DEFAULT_VALUES,
+	};
+
+	if (activeConfig) {
+		const mutableDraftInput = draftInput as unknown as Record<string, unknown>;
+		const mutableActiveConfig = activeConfig as unknown as Record<string, unknown>;
+		for (const field of UNIVERSE_MUTABLE_FIELDS) {
+			mutableDraftInput[field] = mutableActiveConfig[field];
+		}
+	}
+
+	applyUniverseCreateOverrides(draftInput, input);
+	return draftInput;
+}
 
 function mapUniverseConfigRow(row: UniverseConfigRow): UniverseConfig {
 	return {
@@ -180,34 +287,7 @@ export class UniverseConfigsRepository {
 		const existingDraft = await this.getDraft(environment);
 
 		if (existingDraft) {
-			const updateData: Partial<typeof universeConfigs.$inferInsert> = {
-				updatedAt: new Date(),
-			};
-
-			if (input.source !== undefined) {
-				updateData.source = input.source;
-			}
-			if (input.staticSymbols !== undefined) {
-				updateData.staticSymbols = input.staticSymbols;
-			}
-			if (input.indexSource !== undefined) {
-				updateData.indexSource = input.indexSource;
-			}
-			if (input.minVolume !== undefined) {
-				updateData.minVolume = input.minVolume;
-			}
-			if (input.minMarketCap !== undefined) {
-				updateData.minMarketCap = input.minMarketCap;
-			}
-			if (input.optionableOnly !== undefined) {
-				updateData.optionableOnly = input.optionableOnly;
-			}
-			if (input.includeList !== undefined) {
-				updateData.includeList = input.includeList;
-			}
-			if (input.excludeList !== undefined) {
-				updateData.excludeList = input.excludeList;
-			}
+			const updateData = buildUniverseDraftUpdateData(input);
 
 			await this.db
 				.update(universeConfigs)
@@ -219,18 +299,7 @@ export class UniverseConfigsRepository {
 
 		const activeConfig = await this.getActive(environment);
 
-		return this.create({
-			environment,
-			source: input.source ?? activeConfig?.source ?? "static",
-			staticSymbols: input.staticSymbols ?? activeConfig?.staticSymbols ?? null,
-			indexSource: input.indexSource ?? activeConfig?.indexSource ?? null,
-			minVolume: input.minVolume ?? activeConfig?.minVolume ?? null,
-			minMarketCap: input.minMarketCap ?? activeConfig?.minMarketCap ?? null,
-			optionableOnly: input.optionableOnly ?? activeConfig?.optionableOnly ?? false,
-			includeList: input.includeList ?? activeConfig?.includeList ?? [],
-			excludeList: input.excludeList ?? activeConfig?.excludeList ?? [],
-			status: "draft",
-		});
+		return this.create(buildUniverseDraftCreateInput(environment, input, activeConfig));
 	}
 
 	async setStatus(id: string, status: UniverseConfigStatus): Promise<UniverseConfig> {

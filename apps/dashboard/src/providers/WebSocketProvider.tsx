@@ -78,99 +78,69 @@ const HEARTBEAT_CONFIG = {
 	pongTimeout: 60000,
 };
 
-export function WebSocketProvider({ children }: WebSocketProviderProps) {
-	const { isAuthenticated } = useAuth();
-	const [lastMessage, setLastMessage] = useState<WSMessage | null>(null);
-
-	// Handle incoming WebSocket messages
-	const handleMessage = useCallback((data: unknown) => {
-		const message = data as WSMessage;
-		// Track last message for consumers
-		setLastMessage(message);
-		// Route to TanStack Query invalidation handler
-		handleWSMessage(message);
-	}, []);
-
-	// Initialize WebSocket connection
-	const ws = useWebSocket({
-		url: config.websocket.url,
-		onMessage: handleMessage,
-		autoConnect: false, // We'll connect manually after auth
-		reconnection: RECONNECTION_CONFIG,
-		heartbeat: HEARTBEAT_CONFIG,
-	});
-
-	// Destructure all values to avoid depending on unstable ws object reference
-	const {
-		connectionState,
-		connected,
-		reconnecting,
-		send,
-		sendMessage,
-		subscribe,
-		unsubscribe,
-		subscribeSymbols,
-		unsubscribeSymbols,
-		subscribeOptions,
-		unsubscribeOptions,
-		connect,
-		disconnect,
-		lastError,
-	} = ws;
-
-	// Connect when authenticated
+function useWebSocketLifecycle(
+	isAuthenticated: boolean,
+	connectionState: ConnectionState,
+	connected: boolean,
+	connect: () => void,
+	disconnect: () => void,
+	subscribe: (channels: string[]) => void,
+): void {
 	useEffect(() => {
 		if (isAuthenticated && connectionState === "disconnected") {
 			connect();
-		} else if (!isAuthenticated && connected) {
+			return;
+		}
+		if (!isAuthenticated && connected) {
 			disconnect();
 		}
 	}, [isAuthenticated, connectionState, connected, connect, disconnect]);
 
-	// Subscribe to core channels when connected
 	useEffect(() => {
 		if (connected) {
 			subscribe(["system", "portfolio"]);
 		}
 	}, [connected, subscribe]);
+}
 
-	const value = useMemo<WebSocketContextValue>(
-		() => ({
-			connectionState,
-			connected,
-			reconnecting,
-			lastMessage,
-			send,
-			sendMessage,
-			subscribe,
-			unsubscribe,
-			subscribeSymbols,
-			unsubscribeSymbols,
-			subscribeOptions,
-			unsubscribeOptions,
-			connect,
-			disconnect,
-			lastError,
-		}),
-		[
-			connectionState,
-			connected,
-			reconnecting,
-			lastMessage,
-			send,
-			sendMessage,
-			subscribe,
-			unsubscribe,
-			subscribeSymbols,
-			unsubscribeSymbols,
-			subscribeOptions,
-			unsubscribeOptions,
-			connect,
-			disconnect,
-			lastError,
-		],
+function useConfiguredWebSocket(setLastMessage: (message: WSMessage) => void) {
+	const handleMessage = useCallback(
+		(data: unknown) => {
+			const message = data as WSMessage;
+			setLastMessage(message);
+			handleWSMessage(message);
+		},
+		[setLastMessage],
 	);
 
+	return useWebSocket({
+		url: config.websocket.url,
+		onMessage: handleMessage,
+		autoConnect: false,
+		reconnection: RECONNECTION_CONFIG,
+		heartbeat: HEARTBEAT_CONFIG,
+	});
+}
+
+function useContextValue(ws: ReturnType<typeof useWebSocket>, lastMessage: WSMessage | null) {
+	return useMemo<WebSocketContextValue>(() => ({ ...ws, lastMessage }), [ws, lastMessage]);
+}
+
+export function WebSocketProvider({ children }: WebSocketProviderProps) {
+	const { isAuthenticated } = useAuth();
+	const [lastMessage, setLastMessage] = useState<WSMessage | null>(null);
+	const ws = useConfiguredWebSocket((message) => setLastMessage(message));
+
+	useWebSocketLifecycle(
+		isAuthenticated,
+		ws.connectionState,
+		ws.connected,
+		ws.connect,
+		ws.disconnect,
+		ws.subscribe,
+	);
+
+	const value = useContextValue(ws, lastMessage);
 	return <WebSocketContext.Provider value={value}>{children}</WebSocketContext.Provider>;
 }
 

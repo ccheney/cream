@@ -72,6 +72,128 @@ function ChevronIcon({ className }: { className?: string }) {
 	);
 }
 
+function StatusDot({ status }: { status: CycleListItem["status"] }) {
+	return (
+		<span
+			className={cn(
+				"h-2 w-2 rounded-full shrink-0",
+				status === "complete" && "bg-green-500",
+				status === "error" && "bg-red-500",
+				status === "running" && "bg-amber-500 animate-pulse",
+			)}
+		/>
+	);
+}
+
+function CycleButtonContent({ cycle }: { cycle?: CycleListItem | null }) {
+	if (!cycle) {
+		return <span className="text-sm text-stone-400 dark:text-night-500">No cycles</span>;
+	}
+
+	return (
+		<>
+			<StatusDot status={cycle.status} />
+			<span className="text-sm">{formatCycleTime(cycle.startTime)}</span>
+			<span className="text-xs font-mono text-stone-400 dark:text-night-500">
+				{cycle.id.slice(0, 8)}
+			</span>
+		</>
+	);
+}
+
+interface CycleOptionProps {
+	cycle: CycleListItem;
+	selected: boolean;
+	onSelect: (cycleId: string) => void;
+}
+
+function CycleOption({ cycle, selected, onSelect }: CycleOptionProps) {
+	return (
+		<button
+			key={cycle.id}
+			type="button"
+			onClick={() => onSelect(cycle.id)}
+			className={cn(
+				"flex items-center gap-2 w-full px-3 py-2 text-left",
+				"hover:bg-cream-100 dark:hover:bg-night-700",
+				"transition-colors duration-100",
+				selected && "bg-cream-50 dark:bg-night-700",
+			)}
+			role="option"
+			aria-selected={selected}
+		>
+			<StatusDot status={cycle.status} />
+			<span className="text-sm text-stone-700 dark:text-night-200">
+				{formatCycleTime(cycle.startTime)}
+			</span>
+			<span className="ml-auto text-xs text-stone-400 dark:text-night-500 font-mono">
+				{cycle.id.slice(0, 8)}
+			</span>
+		</button>
+	);
+}
+
+interface CycleListboxProps {
+	cycles: CycleListItem[];
+	selectedId?: string;
+	onSelect: (cycleId: string) => void;
+}
+
+function CycleListbox({ cycles, selectedId, onSelect }: CycleListboxProps) {
+	if (cycles.length === 0) {
+		return <div className="px-3 py-2 text-sm text-stone-400 dark:text-night-500">No cycles</div>;
+	}
+
+	return (
+		<>
+			{cycles.map((cycle) => (
+				<CycleOption
+					key={cycle.id}
+					cycle={cycle}
+					selected={selectedId === cycle.id}
+					onSelect={onSelect}
+				/>
+			))}
+		</>
+	);
+}
+
+function useDismissableDropdown(
+	isOpen: boolean,
+	containerRef: React.RefObject<HTMLDivElement | null>,
+	onClose: () => void,
+) {
+	useEffect(() => {
+		if (!isOpen) {
+			return;
+		}
+
+		function handleClickOutside(event: MouseEvent) {
+			if (containerRef.current && !containerRef.current.contains(event.target as Node)) {
+				onClose();
+			}
+		}
+
+		document.addEventListener("mousedown", handleClickOutside);
+		return () => document.removeEventListener("mousedown", handleClickOutside);
+	}, [isOpen, containerRef, onClose]);
+
+	useEffect(() => {
+		if (!isOpen) {
+			return;
+		}
+
+		function handleEscape(event: KeyboardEvent) {
+			if (event.key === "Escape") {
+				onClose();
+			}
+		}
+
+		document.addEventListener("keydown", handleEscape);
+		return () => document.removeEventListener("keydown", handleEscape);
+	}, [isOpen, onClose]);
+}
+
 // ============================================
 // Component
 // ============================================
@@ -91,36 +213,13 @@ function ChevronIcon({ className }: { className?: string }) {
 export function CycleSelector({ cycles, selectedId, onSelect, className }: CycleSelectorProps) {
 	const [isOpen, setIsOpen] = useState(false);
 	const containerRef = useRef<HTMLDivElement>(null);
-
-	// Close on outside click
-	useEffect(() => {
-		if (!isOpen) return;
-
-		function handleClickOutside(event: MouseEvent) {
-			if (containerRef.current && !containerRef.current.contains(event.target as Node)) {
-				setIsOpen(false);
-			}
-		}
-
-		document.addEventListener("mousedown", handleClickOutside);
-		return () => document.removeEventListener("mousedown", handleClickOutside);
-	}, [isOpen]);
-
-	// Close on escape
-	useEffect(() => {
-		if (!isOpen) return;
-
-		function handleEscape(event: KeyboardEvent) {
-			if (event.key === "Escape") {
-				setIsOpen(false);
-			}
-		}
-
-		document.addEventListener("keydown", handleEscape);
-		return () => document.removeEventListener("keydown", handleEscape);
-	}, [isOpen]);
-
+	useDismissableDropdown(isOpen, containerRef, () => setIsOpen(false));
 	const selectedCycle = selectedId ? cycles.find((c) => c.id === selectedId) : null;
+	const displayCycle = selectedCycle ?? cycles[0];
+	const handleSelectCycle = (cycleId: string) => {
+		onSelect(cycleId);
+		setIsOpen(false);
+	};
 
 	return (
 		<div ref={containerRef} className={cn("relative", className)}>
@@ -138,28 +237,7 @@ export function CycleSelector({ cycles, selectedId, onSelect, className }: Cycle
 				aria-haspopup="listbox"
 				aria-expanded={isOpen}
 			>
-				{(() => {
-					const displayCycle = selectedCycle ?? cycles[0];
-					if (displayCycle) {
-						return (
-							<>
-								<span
-									className={cn(
-										"h-2 w-2 rounded-full shrink-0",
-										displayCycle.status === "complete" && "bg-green-500",
-										displayCycle.status === "error" && "bg-red-500",
-										displayCycle.status === "running" && "bg-amber-500 animate-pulse",
-									)}
-								/>
-								<span className="text-sm">{formatCycleTime(displayCycle.startTime)}</span>
-								<span className="text-xs font-mono text-stone-400 dark:text-night-500">
-									{displayCycle.id.slice(0, 8)}
-								</span>
-							</>
-						);
-					}
-					return <span className="text-sm text-stone-400 dark:text-night-500">No cycles</span>;
-				})()}
+				<CycleButtonContent cycle={displayCycle} />
 				<ChevronIcon
 					className={cn(
 						"h-4 w-4 ml-auto text-stone-400 dark:text-night-500 transition-transform duration-200",
@@ -179,44 +257,7 @@ export function CycleSelector({ cycles, selectedId, onSelect, className }: Cycle
 					)}
 					role="listbox"
 				>
-					{/* Cycle list */}
-					{cycles.map((cycle) => (
-						<button
-							key={cycle.id}
-							type="button"
-							onClick={() => {
-								onSelect(cycle.id);
-								setIsOpen(false);
-							}}
-							className={cn(
-								"flex items-center gap-2 w-full px-3 py-2 text-left",
-								"hover:bg-cream-100 dark:hover:bg-night-700",
-								"transition-colors duration-100",
-								selectedId === cycle.id && "bg-cream-50 dark:bg-night-700",
-							)}
-							role="option"
-							aria-selected={selectedId === cycle.id}
-						>
-							<span
-								className={cn(
-									"h-2 w-2 rounded-full shrink-0",
-									cycle.status === "complete" && "bg-green-500",
-									cycle.status === "error" && "bg-red-500",
-									cycle.status === "running" && "bg-amber-500 animate-pulse",
-								)}
-							/>
-							<span className="text-sm text-stone-700 dark:text-night-200">
-								{formatCycleTime(cycle.startTime)}
-							</span>
-							<span className="ml-auto text-xs text-stone-400 dark:text-night-500 font-mono">
-								{cycle.id.slice(0, 8)}
-							</span>
-						</button>
-					))}
-
-					{cycles.length === 0 && (
-						<div className="px-3 py-2 text-sm text-stone-400 dark:text-night-500">No cycles</div>
-					)}
+					<CycleListbox cycles={cycles} selectedId={selectedId} onSelect={handleSelectCycle} />
 				</div>
 			)}
 		</div>

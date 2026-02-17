@@ -2,28 +2,44 @@
  * Newspaper Service Tests
  */
 
-import { afterEach, beforeEach, describe, expect, mock, test } from "bun:test";
+import { afterAll, afterEach, beforeAll, beforeEach, expect, mock, test } from "bun:test";
 
-// Mock @cream/mastra to avoid loading agents that require LLM env vars
-const mockCompileMorningNewspaper = mock(() =>
-	Promise.resolve({
+let createNewspaperService: typeof import("./newspaper-service.js").createNewspaperService;
+let NewspaperService: typeof import("./newspaper-service.js").NewspaperService;
+
+const mockCompileMorningNewspaper = mock(() => ({
+	content: {
 		date: "2026-01-15",
 		summary: "Test summary",
-		sections: [],
-	}),
-);
-const mockFormatNewspaperForLLM = mock(() => "Test newspaper content");
+		entryCount: 2,
+		sections: {
+			macro: "Macro section",
+			universe: "Universe section",
+			predictionMarkets: "Prediction section",
+			economicCalendar: "Calendar section",
+		},
+	},
+	storageInput: {
+		date: "2026-01-15",
+		summary: "Test summary",
+		entryCount: 2,
+		sections: {
+			macro: ["Macro section"],
+			universe: ["Universe section"],
+			predictionMarkets: ["Prediction section"],
+			economicCalendar: ["Calendar section"],
+		},
+	},
+}));
+
+const mockFormatNewspaperForLLM = mock(() => "Formatted summary");
 const mockRunMacroWatch = mock(() => Promise.resolve({ entries: [], totalCount: 0 }));
+
 mock.module("@cream/mastra", () => ({
 	compileMorningNewspaper: mockCompileMorningNewspaper,
 	formatNewspaperForLLM: mockFormatNewspaperForLLM,
 	runMacroWatch: mockRunMacroWatch,
 }));
-
-// Use the mock as the "real" function for tests
-const realCompileMorningNewspaper = mockCompileMorningNewspaper;
-
-import { createNewspaperService, NewspaperService } from "./newspaper-service.js";
 
 const mockUpsertNewspaper = mock(() => Promise.resolve());
 const mockGetEntriesSinceClose = mock(() =>
@@ -66,138 +82,174 @@ const mockGetCalendarService = mock<() => typeof mockCalendarService | null>(
 	() => mockCalendarService,
 );
 
-mock.module("@cream/mastra", () => ({
-	// Pass through the real compileMorningNewspaper to avoid breaking other tests
-	compileMorningNewspaper: realCompileMorningNewspaper,
-}));
+const createFilingSyncRunsRepository = () => ({
+	start: async () => ({ id: "run-1" }) as { id: string },
+	updateProgress: async () => undefined,
+	complete: async () => undefined,
+	fail: async () => undefined,
+});
+
+const createFilingsRepository = () => ({
+	existsByAccessionNumber: async () => false,
+	create: async () => ({ id: "filing-1" }) as { id: string },
+	markComplete: async () => undefined,
+});
+
+function createMockMacroWatchRepository() {
+	return createMacroWatchRepository();
+}
+
+function createMockFilingSyncRunsRepository() {
+	return createFilingSyncRunsRepository();
+}
+
+function createMockFilingsRepository() {
+	return createFilingsRepository();
+}
+
+const createMacroWatchRepository = () => ({
+	...mockRepo,
+});
 
 mock.module("@cream/storage", () => ({
-	MacroWatchRepository: class {
-		constructor() {
-			Object.assign(this, mockRepo);
-		}
-	},
+	MacroWatchRepository: createMockMacroWatchRepository,
+	FilingSyncRunsRepository: createMockFilingSyncRunsRepository,
+	FilingsRepository: createMockFilingsRepository,
 }));
 
 mock.module("@cream/domain", () => ({
 	getCalendarService: mockGetCalendarService,
+	createContext: () => ({
+		environment: "PAPER",
+		source: "test",
+		traceId: "test-trace",
+	}),
+	getModelId: () => "google/gemini-2.0-flash",
+	requireEnv: () => "PAPER",
+	isTest: () => true,
+	calculateCaseStatistics: () => ({ totalCases: 0 }),
+	isLive: () => false,
+	getLLMProvider: () => "google",
+	getLLMModelId: () => "gemini-2.0-flash",
+	getFullModelId: () => "google/gemini-2.0-flash",
 }));
 
-describe("NewspaperService", () => {
-	let service: NewspaperService;
+let service: NewspaperService;
 
-	beforeEach(() => {
-		service = createNewspaperService();
-		mockGetEntriesSinceClose.mockClear();
-		mockUpsertNewspaper.mockClear();
-		mockGetCalendarService.mockClear();
-		mockGetPreviousTradingDay.mockClear();
-	});
+beforeEach(() => {
+	service = createNewspaperService();
+	mockCompileMorningNewspaper.mockClear();
+	mockFormatNewspaperForLLM.mockClear();
+	mockGetEntriesSinceClose.mockClear();
+	mockUpsertNewspaper.mockClear();
+	mockGetCalendarService.mockClear();
+	mockGetPreviousTradingDay.mockClear();
+});
 
-	afterEach(() => {
-		mockGetEntriesSinceClose.mockClear();
-		mockUpsertNewspaper.mockClear();
-		mockGetCalendarService.mockClear();
-		mockGetPreviousTradingDay.mockClear();
-	});
+beforeAll(async () => {
+	({ createNewspaperService, NewspaperService } = await import("./newspaper-service.js"));
+});
 
-	describe("constructor", () => {
-		test("creates service with default config", () => {
-			const svc = new NewspaperService();
-			expect(svc.isRunning()).toBe(false);
-			expect(svc.getLastCompile()).toBeNull();
-		});
+afterEach(() => {
+	mockCompileMorningNewspaper.mockClear();
+	mockFormatNewspaperForLLM.mockClear();
+	mockGetEntriesSinceClose.mockClear();
+	mockUpsertNewspaper.mockClear();
+	mockGetCalendarService.mockClear();
+	mockGetPreviousTradingDay.mockClear();
+});
 
-		test("creates service with custom config", () => {
-			const svc = new NewspaperService({ maxBulletsPerSection: 10 });
-			expect(svc.isRunning()).toBe(false);
-		});
-	});
+afterAll(() => {
+	mock.restore();
+});
 
-	describe("compile", () => {
-		test("compiles newspaper from overnight entries", async () => {
-			const symbols = ["AAPL", "MSFT"];
-			await service.compile(symbols);
+test("constructor creates service with default config", () => {
+	const svc = new NewspaperService();
+	expect(svc.isRunning()).toBe(false);
+	expect(svc.getLastCompile()).toBeNull();
+});
 
-			expect(mockGetCalendarService).toHaveBeenCalled();
-			expect(mockGetEntriesSinceClose).toHaveBeenCalled();
-			// compileMorningNewspaper is called (verified by upsertNewspaper being called with result)
-			expect(mockUpsertNewspaper).toHaveBeenCalled();
-		});
+test("constructor creates service with custom config", () => {
+	const svc = new NewspaperService({ maxBulletsPerSection: 10 });
+	expect(svc.isRunning()).toBe(false);
+});
 
-		test("updates lastCompile timestamp after successful compile", async () => {
-			expect(service.getLastCompile()).toBeNull();
+test("compile compiles newspaper from overnight entries", async () => {
+	await service.compile(["AAPL", "MSFT"]);
 
-			await service.compile(["AAPL"]);
+	expect(mockGetCalendarService).toHaveBeenCalled();
+	expect(mockGetEntriesSinceClose).toHaveBeenCalled();
+	expect(mockCompileMorningNewspaper).toHaveBeenCalled();
+	expect(mockUpsertNewspaper).toHaveBeenCalled();
+});
 
-			expect(service.getLastCompile()).not.toBeNull();
-			expect(service.getLastCompile()).toBeInstanceOf(Date);
-		});
+test("compile updates lastCompile timestamp after success", async () => {
+	expect(service.getLastCompile()).toBeNull();
 
-		test("sets running flag during execution", async () => {
-			expect(service.isRunning()).toBe(false);
+	await service.compile(["AAPL"]);
 
-			const compilePromise = service.compile(["AAPL"]);
+	expect(service.getLastCompile()).not.toBeNull();
+	expect(service.getLastCompile()).toBeInstanceOf(Date);
+});
 
-			await compilePromise;
-			expect(service.isRunning()).toBe(false);
-		});
+test("compile resets running flag after execution", async () => {
+	expect(service.isRunning()).toBe(false);
 
-		test("skips if already running", async () => {
-			mockGetEntriesSinceClose.mockImplementationOnce(
-				() => new Promise((resolve) => setTimeout(() => resolve([]), 100)),
-			);
+	await service.compile(["AAPL"]);
 
-			const firstCompile = service.compile(["AAPL"]);
-			const result = await service.compile(["MSFT"]);
+	expect(service.isRunning()).toBe(false);
+});
 
-			expect(result.compiled).toBe(false);
-			expect(result.message).toBe("Already running");
+test("compile skips if already running", async () => {
+	mockGetEntriesSinceClose.mockImplementationOnce(
+		() => new Promise((resolve) => setTimeout(() => resolve([]), 100)),
+	);
 
-			await firstCompile;
-		});
+	const firstCompile = service.compile(["AAPL"]);
+	const result = await service.compile(["MSFT"]);
 
-		test("skips when no entries available", async () => {
-			mockGetEntriesSinceClose.mockImplementationOnce(() => Promise.resolve([]));
+	expect(result.compiled).toBe(false);
+	expect(result.message).toBe("Already running");
 
-			await service.compile(["AAPL"]);
+	await firstCompile;
+});
 
-			// When no entries, upsertNewspaper should not be called (compilation skipped)
-			expect(mockUpsertNewspaper).not.toHaveBeenCalled();
-		});
+test("compile skips when no entries are available", async () => {
+	mockGetEntriesSinceClose.mockImplementationOnce(() => Promise.resolve([]));
 
-		test("handles calendar service not available", async () => {
-			mockGetCalendarService.mockReturnValueOnce(null);
+	await service.compile(["AAPL"]);
 
-			const result = await service.compile(["AAPL"]);
+	expect(mockUpsertNewspaper).not.toHaveBeenCalled();
+});
 
-			expect(result.compiled).toBe(false);
-			expect(result.message).toBe("CalendarService not available");
-			expect(service.getLastCompile()).toBeNull();
-		});
+test("compile handles missing calendar service", async () => {
+	mockGetCalendarService.mockReturnValueOnce(null);
 
-		test("handles errors gracefully", async () => {
-			mockGetEntriesSinceClose.mockImplementationOnce(() =>
-				Promise.reject(new Error("Database error")),
-			);
+	const result = await service.compile(["AAPL"]);
 
-			const result = await service.compile(["AAPL"]);
+	expect(result.compiled).toBe(false);
+	expect(result.message).toBe("CalendarService not available");
+	expect(service.getLastCompile()).toBeNull();
+});
 
-			expect(result.compiled).toBe(false);
-			expect(service.isRunning()).toBe(false);
-			expect(service.getLastCompile()).toBeNull();
-		});
-	});
+test("compile handles errors gracefully", async () => {
+	mockGetEntriesSinceClose.mockImplementationOnce(() =>
+		Promise.reject(new Error("Database error")),
+	);
 
-	describe("createNewspaperService", () => {
-		test("creates service instance", () => {
-			const svc = createNewspaperService();
-			expect(svc).toBeInstanceOf(NewspaperService);
-		});
+	const result = await service.compile(["AAPL"]);
 
-		test("creates service with config", () => {
-			const svc = createNewspaperService({ maxBulletsPerSection: 5 });
-			expect(svc).toBeInstanceOf(NewspaperService);
-		});
-	});
+	expect(result.compiled).toBe(false);
+	expect(service.isRunning()).toBe(false);
+	expect(service.getLastCompile()).toBeNull();
+});
+
+test("createNewspaperService creates service instance", () => {
+	const svc = createNewspaperService();
+	expect(svc).toBeInstanceOf(NewspaperService);
+});
+
+test("createNewspaperService creates service with config", () => {
+	const svc = createNewspaperService({ maxBulletsPerSection: 5 });
+	expect(svc).toBeInstanceOf(NewspaperService);
 });

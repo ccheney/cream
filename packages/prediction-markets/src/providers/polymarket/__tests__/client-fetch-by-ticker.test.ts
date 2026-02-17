@@ -11,7 +11,7 @@ import {
 	restoreFetch,
 } from "./fixtures.js";
 
-describe("PolymarketClient.fetchMarketByTicker", () => {
+describe("PolymarketClient.fetchMarketByTicker success", () => {
 	let ctx: FetchMockContext;
 
 	beforeEach(() => {
@@ -36,6 +36,18 @@ describe("PolymarketClient.fetchMarketByTicker", () => {
 		expect(event).not.toBeNull();
 		expect(event?.payload.marketTicker).toBe("market-789");
 		expect(event?.payload.platform).toBe("POLYMARKET");
+	});
+});
+
+describe("PolymarketClient.fetchMarketByTicker null cases", () => {
+	let ctx: FetchMockContext;
+
+	beforeEach(() => {
+		ctx = createFetchMock();
+	});
+
+	afterEach(() => {
+		restoreFetch(ctx);
 	});
 
 	it("should return null for 404", async () => {
@@ -65,6 +77,18 @@ describe("PolymarketClient.fetchMarketByTicker", () => {
 		const event = await client.fetchMarketByTicker("bad-market");
 
 		expect(event).toBeNull();
+	});
+});
+
+describe("PolymarketClient.fetchMarketByTicker errors", () => {
+	let ctx: FetchMockContext;
+
+	beforeEach(() => {
+		ctx = createFetchMock();
+	});
+
+	afterEach(() => {
+		restoreFetch(ctx);
 	});
 
 	it("should throw for non-404 errors in fetchMarketByTicker", async () => {

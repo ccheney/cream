@@ -129,6 +129,12 @@ export interface DividendIndicators {
 	annualDividend: number | null;
 }
 
+type BatchRunState = {
+	processed: number;
+	failed: number;
+	errors: Array<{ symbol: string; error: string }>;
+};
+
 // ============================================
 // Helper Functions
 // ============================================
@@ -367,76 +373,118 @@ export class CorporateActionsBatchJob {
 	 */
 	async run(symbols: string[]): Promise<BatchJobResult> {
 		const startTime = Date.now();
-		let processed = 0;
-		let failed = 0;
-		const errors: Array<{ symbol: string; error: string }> = [];
+		const state: BatchRunState = {
+			processed: 0,
+			failed: 0,
+			errors: [],
+		};
 
 		log.info({ symbolCount: symbols.length }, "Starting corporate actions batch job");
-
-		// Calculate date range
-		const endDate = new Date();
-		endDate.setDate(endDate.getDate() + this.config.lookaheadDays);
-		const startDate = new Date();
-		startDate.setDate(startDate.getDate() - this.config.lookbackDays);
-
-		const startDateStr = formatDate(startDate);
-		const endDateStr = formatDate(endDate);
+		const { startDate, endDate } = this.getDateRange();
 
 		try {
-			// Fetch all corporate actions for date range in one call
-			const allActions = await this.fetchWithRetry(symbols, startDateStr, endDateStr);
-
-			// Group actions by symbol
-			const actionsBySymbol = new Map<string, AlpacaCorporateAction[]>();
-			for (const action of allActions) {
-				const symbol = action.symbol.toUpperCase();
-				const existing = actionsBySymbol.get(symbol) ?? [];
-				existing.push(action);
-				actionsBySymbol.set(symbol, existing);
-			}
-
-			// Process each symbol
-			for (const symbol of symbols) {
-				const upperSymbol = symbol.toUpperCase();
-				const symbolActions = actionsBySymbol.get(upperSymbol) ?? [];
-
-				try {
-					await this.processSymbol(upperSymbol, symbolActions);
-					processed++;
-					log.debug({ symbol: upperSymbol, actionCount: symbolActions.length }, "Processed symbol");
-				} catch (error) {
-					failed++;
-					const errorMessage = error instanceof Error ? error.message : String(error);
-					errors.push({ symbol: upperSymbol, error: errorMessage });
-					log.warn({ symbol: upperSymbol, error: errorMessage }, "Failed to process symbol");
-
-					if (!this.config.continueOnError) {
-						throw error;
-					}
-				}
-			}
+			const actionsBySymbol = await this.fetchActionsBySymbol(symbols, startDate, endDate);
+			await this.processSymbols(symbols, actionsBySymbol, state);
 		} catch (error) {
-			// Top-level fetch failure
 			const errorMessage = error instanceof Error ? error.message : String(error);
 			log.error({ error: errorMessage }, "Failed to fetch corporate actions from Alpaca");
 
 			if (!this.config.continueOnError) {
 				throw error;
 			}
-
-			// Mark all symbols as failed
-			for (const symbol of symbols) {
-				if (processed === 0 && errors.length === 0) {
-					failed++;
-					errors.push({ symbol, error: `Fetch failed: ${errorMessage}` });
-				}
-			}
+			this.handleFetchFailure(errorMessage, symbols, state);
 		}
 
 		const durationMs = Date.now() - startTime;
-		log.info({ processed, failed, durationMs }, "Completed corporate actions batch job");
+		log.info(
+			{ processed: state.processed, failed: state.failed, durationMs },
+			"Completed corporate actions batch job",
+		);
 
-		return { processed, failed, errors, durationMs };
+		return {
+			processed: state.processed,
+			failed: state.failed,
+			errors: state.errors,
+			durationMs,
+		};
+	}
+
+	private getDateRange(): { startDate: string; endDate: string } {
+		const endDate = new Date();
+		endDate.setDate(endDate.getDate() + this.config.lookaheadDays);
+		const startDate = new Date();
+		startDate.setDate(startDate.getDate() - this.config.lookbackDays);
+		return {
+			startDate: formatDate(startDate),
+			endDate: formatDate(endDate),
+		};
+	}
+
+	private async fetchActionsBySymbol(
+		symbols: string[],
+		startDate: string,
+		endDate: string,
+	): Promise<Map<string, AlpacaCorporateAction[]>> {
+		const allActions = await this.fetchWithRetry(symbols, startDate, endDate);
+		return this.groupActionsBySymbol(allActions);
+	}
+
+	private groupActionsBySymbol(
+		allActions: AlpacaCorporateAction[],
+	): Map<string, AlpacaCorporateAction[]> {
+		const actionsBySymbol = new Map<string, AlpacaCorporateAction[]>();
+		for (const action of allActions) {
+			const symbol = action.symbol.toUpperCase();
+			const existing = actionsBySymbol.get(symbol) ?? [];
+			existing.push(action);
+			actionsBySymbol.set(symbol, existing);
+		}
+		return actionsBySymbol;
+	}
+
+	private async processSymbols(
+		symbols: string[],
+		actionsBySymbol: Map<string, AlpacaCorporateAction[]>,
+		state: BatchRunState,
+	): Promise<void> {
+		for (const symbol of symbols) {
+			await this.processSymbolWithTracking(symbol.toUpperCase(), actionsBySymbol, state);
+		}
+	}
+
+	private async processSymbolWithTracking(
+		upperSymbol: string,
+		actionsBySymbol: Map<string, AlpacaCorporateAction[]>,
+		state: BatchRunState,
+	): Promise<void> {
+		const symbolActions = actionsBySymbol.get(upperSymbol) ?? [];
+
+		try {
+			await this.processSymbol(upperSymbol, symbolActions);
+			state.processed++;
+			log.debug({ symbol: upperSymbol, actionCount: symbolActions.length }, "Processed symbol");
+		} catch (error) {
+			this.recordSymbolFailure(upperSymbol, error, state);
+			if (!this.config.continueOnError) {
+				throw error;
+			}
+		}
+	}
+
+	private recordSymbolFailure(symbol: string, error: unknown, state: BatchRunState): void {
+		state.failed++;
+		const errorMessage = error instanceof Error ? error.message : String(error);
+		state.errors.push({ symbol, error: errorMessage });
+		log.warn({ symbol, error: errorMessage }, "Failed to process symbol");
+	}
+
+	private handleFetchFailure(errorMessage: string, symbols: string[], state: BatchRunState): void {
+		for (const symbol of symbols) {
+			if (state.processed === 0 && state.errors.length === 0) {
+				state.failed++;
+				state.errors.push({ symbol, error: `Fetch failed: ${errorMessage}` });
+			}
+		}
 	}
 
 	/**

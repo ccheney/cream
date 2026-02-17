@@ -148,6 +148,91 @@ const variantConfig: Record<
 	},
 };
 
+interface ConfirmationCheckboxListProps {
+	checkboxes: ConfirmationDialogCheckbox[];
+	checkedItems: Record<string, boolean>;
+	onCheckboxChange: (id: string, checked: boolean) => void;
+}
+
+function ConfirmationCheckboxList({
+	checkboxes,
+	checkedItems,
+	onCheckboxChange,
+}: ConfirmationCheckboxListProps) {
+	return (
+		<div className="space-y-3 mt-4">
+			{checkboxes.map((checkbox) => (
+				<label key={checkbox.id} className="flex items-center gap-3 cursor-pointer">
+					<input
+						type="checkbox"
+						checked={checkedItems[checkbox.id] ?? false}
+						onChange={(event) => onCheckboxChange(checkbox.id, event.target.checked)}
+						className={cn(
+							"h-4 w-4 rounded border-stone-300 dark:border-stone-600",
+							"text-blue-600 focus:ring-blue-500 focus:ring-offset-0",
+							"dark:bg-stone-700",
+						)}
+					/>
+					<span className="text-sm text-stone-700 dark:text-stone-300">
+						{checkbox.label}
+						{checkbox.required && (
+							<span className="text-red-500 ml-1" aria-hidden="true">
+								*
+							</span>
+						)}
+					</span>
+				</label>
+			))}
+		</div>
+	);
+}
+
+function useConfirmationState(
+	checkboxes: ConfirmationDialogCheckbox[],
+	onConfirm: () => void | Promise<void>,
+	onOpenChange: (open: boolean) => void,
+) {
+	const [checkedItems, setCheckedItems] = useState<Record<string, boolean>>({});
+	const [isConfirming, setIsConfirming] = useState(false);
+	const requiredCheckboxes = checkboxes.filter((checkbox) => checkbox.required);
+	const allRequiredChecked = requiredCheckboxes.every((checkbox) => checkedItems[checkbox.id]);
+	const canConfirm = requiredCheckboxes.length === 0 || allRequiredChecked;
+
+	const handleConfirm = async () => {
+		if (!canConfirm) {
+			return;
+		}
+
+		setIsConfirming(true);
+		try {
+			await onConfirm();
+			onOpenChange(false);
+		} finally {
+			setIsConfirming(false);
+		}
+	};
+
+	const handleCheckboxChange = (id: string, checked: boolean) => {
+		setCheckedItems((previous) => ({ ...previous, [id]: checked }));
+	};
+
+	const handleOpenChange = (newOpen: boolean) => {
+		if (!newOpen) {
+			setCheckedItems({});
+		}
+		onOpenChange(newOpen);
+	};
+
+	return {
+		canConfirm,
+		checkedItems,
+		handleCheckboxChange,
+		handleConfirm,
+		handleOpenChange,
+		isConfirming,
+	};
+}
+
 /**
  * ConfirmationDialog - Dialog for confirming destructive actions.
  *
@@ -186,40 +271,16 @@ export const ConfirmationDialog = forwardRef<HTMLDivElement, ConfirmationDialogP
 		},
 		_ref,
 	) => {
-		const [checkedItems, setCheckedItems] = useState<Record<string, boolean>>({});
-		const [isConfirming, setIsConfirming] = useState(false);
-
 		const config = variantConfig[variant];
 		const Icon = config.Icon;
-
-		const requiredCheckboxes = checkboxes.filter((cb) => cb.required);
-		const allRequiredChecked = requiredCheckboxes.every((cb) => checkedItems[cb.id]);
-		const canConfirm = requiredCheckboxes.length === 0 || allRequiredChecked;
-
-		const handleConfirm = async () => {
-			if (!canConfirm) {
-				return;
-			}
-
-			setIsConfirming(true);
-			try {
-				await onConfirm();
-				onOpenChange(false);
-			} finally {
-				setIsConfirming(false);
-			}
-		};
-
-		const handleCheckboxChange = (id: string, checked: boolean) => {
-			setCheckedItems((prev) => ({ ...prev, [id]: checked }));
-		};
-
-		const handleOpenChange = (newOpen: boolean) => {
-			if (!newOpen) {
-				setCheckedItems({});
-			}
-			onOpenChange(newOpen);
-		};
+		const {
+			canConfirm,
+			checkedItems,
+			handleCheckboxChange,
+			handleConfirm,
+			handleOpenChange,
+			isConfirming,
+		} = useConfirmationState(checkboxes, onConfirm, onOpenChange);
 
 		const loading = isLoading || isConfirming;
 
@@ -243,30 +304,11 @@ export const ConfirmationDialog = forwardRef<HTMLDivElement, ConfirmationDialogP
 							{children}
 
 							{checkboxes.length > 0 && (
-								<div className="space-y-3 mt-4">
-									{checkboxes.map((checkbox) => (
-										<label key={checkbox.id} className="flex items-center gap-3 cursor-pointer">
-											<input
-												type="checkbox"
-												checked={checkedItems[checkbox.id] ?? false}
-												onChange={(e) => handleCheckboxChange(checkbox.id, e.target.checked)}
-												className={cn(
-													"h-4 w-4 rounded border-stone-300 dark:border-stone-600",
-													"text-blue-600 focus:ring-blue-500 focus:ring-offset-0",
-													"dark:bg-stone-700",
-												)}
-											/>
-											<span className="text-sm text-stone-700 dark:text-stone-300">
-												{checkbox.label}
-												{checkbox.required && (
-													<span className="text-red-500 ml-1" aria-hidden="true">
-														*
-													</span>
-												)}
-											</span>
-										</label>
-									))}
-								</div>
+								<ConfirmationCheckboxList
+									checkboxes={checkboxes}
+									checkedItems={checkedItems}
+									onCheckboxChange={handleCheckboxChange}
+								/>
 							)}
 						</DialogBody>
 					)}

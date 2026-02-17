@@ -148,6 +148,64 @@ const fallbackStyles = {
 	},
 };
 
+interface HoverableButtonProps {
+	children: ReactNode;
+	onClick: () => void;
+	style: React.CSSProperties;
+	hoverColor: string;
+	defaultColor: string;
+}
+
+function HoverableButton({
+	children,
+	onClick,
+	style,
+	hoverColor,
+	defaultColor,
+}: HoverableButtonProps) {
+	const handleMouseOver = (event: React.MouseEvent<HTMLButtonElement>) => {
+		event.currentTarget.style.backgroundColor = hoverColor;
+	};
+	const handleMouseOut = (event: React.MouseEvent<HTMLButtonElement>) => {
+		event.currentTarget.style.backgroundColor = defaultColor;
+	};
+	const handleFocus = (event: React.FocusEvent<HTMLButtonElement>) => {
+		event.currentTarget.style.backgroundColor = hoverColor;
+	};
+	const handleBlur = (event: React.FocusEvent<HTMLButtonElement>) => {
+		event.currentTarget.style.backgroundColor = defaultColor;
+	};
+
+	return (
+		<button
+			type="button"
+			onClick={onClick}
+			style={style}
+			onMouseOver={handleMouseOver}
+			onMouseOut={handleMouseOut}
+			onFocus={handleFocus}
+			onBlur={handleBlur}
+		>
+			{children}
+		</button>
+	);
+}
+
+function ErrorDetails({ error, errorInfo }: Pick<ErrorFallbackProps, "error" | "errorInfo">) {
+	return (
+		<div style={fallbackStyles.details}>
+			<div style={fallbackStyles.errorName}>{error.name}</div>
+			<div style={fallbackStyles.errorMessage}>{error.message}</div>
+			{errorInfo?.componentStack && (
+				<pre style={fallbackStyles.stack}>
+					Component Stack:{"\n"}
+					{errorInfo.componentStack}
+				</pre>
+			)}
+		</div>
+	);
+}
+
 /**
  * Default error fallback component.
  */
@@ -188,59 +246,26 @@ export function DefaultErrorFallback({ error, errorInfo, reset }: ErrorFallbackP
 			</p>
 
 			<div style={fallbackStyles.actions}>
-				<button
-					type="button"
+				<HoverableButton
 					onClick={reset}
 					style={fallbackStyles.primaryButton}
-					onMouseOver={(e) => {
-						e.currentTarget.style.backgroundColor = "#b45309"; // amber-700
-					}}
-					onFocus={(e) => {
-						e.currentTarget.style.backgroundColor = "#b45309";
-					}}
-					onMouseOut={(e) => {
-						e.currentTarget.style.backgroundColor = "#d97706"; // amber-600
-					}}
-					onBlur={(e) => {
-						e.currentTarget.style.backgroundColor = "#d97706";
-					}}
+					hoverColor="#b45309"
+					defaultColor="#d97706"
 				>
 					Try again
-				</button>
+				</HoverableButton>
 
-				<button
-					type="button"
+				<HoverableButton
 					onClick={() => setShowDetails(!showDetails)}
 					style={fallbackStyles.secondaryButton}
-					onMouseOver={(e) => {
-						e.currentTarget.style.backgroundColor = "#f5f5f4"; // stone-100
-					}}
-					onFocus={(e) => {
-						e.currentTarget.style.backgroundColor = "#f5f5f4";
-					}}
-					onMouseOut={(e) => {
-						e.currentTarget.style.backgroundColor = "transparent";
-					}}
-					onBlur={(e) => {
-						e.currentTarget.style.backgroundColor = "transparent";
-					}}
+					hoverColor="#f5f5f4"
+					defaultColor="transparent"
 				>
 					{showDetails ? "Hide details" : "Show details"}
-				</button>
+				</HoverableButton>
 			</div>
 
-			{showDetails && (
-				<div style={fallbackStyles.details}>
-					<div style={fallbackStyles.errorName}>{error.name}</div>
-					<div style={fallbackStyles.errorMessage}>{error.message}</div>
-					{errorInfo?.componentStack && (
-						<pre style={fallbackStyles.stack}>
-							Component Stack:{"\n"}
-							{errorInfo.componentStack}
-						</pre>
-					)}
-				</div>
-			)}
+			{showDetails && <ErrorDetails error={error} errorInfo={errorInfo} />}
 		</div>
 	);
 }

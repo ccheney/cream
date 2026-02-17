@@ -15,6 +15,53 @@ interface ValidationResult {
 	warnings: string[];
 }
 
+interface ConfigTabContentProps {
+	activeTab: TabType;
+	draftConfig: FullRuntimeConfig;
+	isSaving: boolean;
+	onFormChange: () => void;
+	onSave: (updates: SaveDraftInput) => void;
+}
+
+function ConfigTabContent({
+	activeTab,
+	draftConfig,
+	isSaving,
+	onFormChange,
+	onSave,
+}: ConfigTabContentProps) {
+	if (activeTab === "trading") {
+		return (
+			<TradingConfigForm
+				config={draftConfig.trading}
+				onSave={(updates) => onSave({ trading: updates })}
+				onChange={onFormChange}
+				isSaving={isSaving}
+			/>
+		);
+	}
+
+	if (activeTab === "agents") {
+		return (
+			<AgentConfigList
+				agents={draftConfig.agents}
+				onSave={(agentType, updates) => onSave({ agents: { [agentType]: updates } })}
+				onChange={onFormChange}
+				isSaving={isSaving}
+			/>
+		);
+	}
+
+	return (
+		<UniverseConfigForm
+			config={draftConfig.universe}
+			onSave={(updates) => onSave({ universe: updates })}
+			onChange={onFormChange}
+			isSaving={isSaving}
+		/>
+	);
+}
+
 export default function ConfigEditPage() {
 	const router = useRouter();
 	const { data: draftConfig, isLoading: draftLoading } = useDraftConfig();
@@ -65,39 +112,16 @@ export default function ConfigEditPage() {
 			<TabNavigation activeTab={activeTab} onTabChange={setActiveTab} />
 
 			<div className="bg-white dark:bg-night-800 rounded-lg border border-cream-200 dark:border-night-700 p-6">
-				{activeTab === "trading" && (
-					<TradingConfigForm
-						config={draftConfig.trading}
-						onSave={(updates) => {
-							handleSave({ trading: updates });
-							setHasUnsavedChanges(false);
-						}}
-						onChange={() => setHasUnsavedChanges(true)}
-						isSaving={saveDraft.isPending}
-					/>
-				)}
-				{activeTab === "agents" && (
-					<AgentConfigList
-						agents={draftConfig.agents}
-						onSave={(agentType, updates) => {
-							handleSave({ agents: { [agentType]: updates } });
-							setHasUnsavedChanges(false);
-						}}
-						onChange={() => setHasUnsavedChanges(true)}
-						isSaving={saveDraft.isPending}
-					/>
-				)}
-				{activeTab === "universe" && (
-					<UniverseConfigForm
-						config={draftConfig.universe}
-						onSave={(updates) => {
-							handleSave({ universe: updates });
-							setHasUnsavedChanges(false);
-						}}
-						onChange={() => setHasUnsavedChanges(true)}
-						isSaving={saveDraft.isPending}
-					/>
-				)}
+				<ConfigTabContent
+					activeTab={activeTab}
+					draftConfig={draftConfig}
+					isSaving={saveDraft.isPending}
+					onFormChange={() => setHasUnsavedChanges(true)}
+					onSave={(updates) => {
+						handleSave(updates);
+						setHasUnsavedChanges(false);
+					}}
+				/>
 			</div>
 
 			<DiffPanel activeConfig={activeConfig} draftConfig={draftConfig} />

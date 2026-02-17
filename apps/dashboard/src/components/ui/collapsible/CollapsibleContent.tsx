@@ -8,6 +8,77 @@ import { type CollapsibleContentProps, cn } from "./types";
 /**
  * CollapsibleContent - Animated content that expands/collapses.
  */
+
+function useCollapsibleAnimation(
+	isOpen: boolean,
+	animationDuration: number,
+	contentRef: MutableRefObject<HTMLElement | null>,
+) {
+	const [height, setHeight] = useState<number | "auto">(isOpen ? "auto" : 0);
+	const [isAnimating, setIsAnimating] = useState(false);
+
+	useEffect(() => {
+		const content = contentRef.current;
+		if (!content) {
+			return;
+		}
+
+		if (isOpen) {
+			const scrollHeight = content.scrollHeight;
+			setHeight(0);
+			setIsAnimating(true);
+
+			void content.offsetHeight;
+
+			requestAnimationFrame(() => {
+				setHeight(scrollHeight);
+			});
+
+			const timeout = setTimeout(() => {
+				setHeight("auto");
+				setIsAnimating(false);
+			}, animationDuration);
+
+			return () => clearTimeout(timeout);
+		}
+
+		const scrollHeight = content.scrollHeight;
+		setHeight(scrollHeight);
+		setIsAnimating(true);
+
+		void content.offsetHeight;
+
+		requestAnimationFrame(() => {
+			setHeight(0);
+		});
+
+		const timeout = setTimeout(() => {
+			setIsAnimating(false);
+		}, animationDuration);
+
+		return () => clearTimeout(timeout);
+	}, [animationDuration, contentRef, isOpen]);
+
+	return { height, isAnimating };
+}
+
+function useCollapsibleSectionRef(
+	forwardedRef: React.Ref<HTMLElement> | undefined,
+	contentRef: MutableRefObject<HTMLElement | null>,
+) {
+	return useCallback(
+		(node: HTMLElement | null) => {
+			contentRef.current = node;
+			if (typeof forwardedRef === "function") {
+				forwardedRef(node);
+			} else if (forwardedRef) {
+				forwardedRef.current = node;
+			}
+		},
+		[forwardedRef, contentRef],
+	);
+}
+
 export const CollapsibleContent = forwardRef<HTMLElement, CollapsibleContentProps>(
 	function CollapsibleContent(
 		{ children, animationDuration = 200, forceMount, className, style, ...props },
@@ -15,65 +86,8 @@ export const CollapsibleContent = forwardRef<HTMLElement, CollapsibleContentProp
 	) {
 		const { isOpen, contentId, triggerId } = useCollapsibleContext();
 		const contentRef = useRef<HTMLElement>(null);
-		const [height, setHeight] = useState<number | "auto">(isOpen ? "auto" : 0);
-		const [isAnimating, setIsAnimating] = useState(false);
-
-		useEffect(() => {
-			if (!contentRef.current) {
-				return;
-			}
-
-			const content = contentRef.current;
-
-			if (isOpen) {
-				const scrollHeight = content.scrollHeight;
-				setHeight(0);
-				setIsAnimating(true);
-
-				// Force reflow
-				void content.offsetHeight;
-
-				requestAnimationFrame(() => {
-					setHeight(scrollHeight);
-				});
-
-				const timeout = setTimeout(() => {
-					setHeight("auto");
-					setIsAnimating(false);
-				}, animationDuration);
-
-				return () => clearTimeout(timeout);
-			}
-
-			const scrollHeight = content.scrollHeight;
-			setHeight(scrollHeight);
-			setIsAnimating(true);
-
-			// Force reflow
-			void content.offsetHeight;
-
-			requestAnimationFrame(() => {
-				setHeight(0);
-			});
-
-			const timeout = setTimeout(() => {
-				setIsAnimating(false);
-			}, animationDuration);
-
-			return () => clearTimeout(timeout);
-		}, [isOpen, animationDuration]);
-
-		const handleRef = useCallback(
-			(node: HTMLElement | null) => {
-				(contentRef as MutableRefObject<HTMLElement | null>).current = node;
-				if (typeof ref === "function") {
-					ref(node);
-				} else if (ref) {
-					ref.current = node;
-				}
-			},
-			[ref],
-		);
+		const { height, isAnimating } = useCollapsibleAnimation(isOpen, animationDuration, contentRef);
+		const handleRef = useCollapsibleSectionRef(ref, contentRef);
 
 		if (!forceMount && !isOpen && height === 0 && !isAnimating) {
 			return null;

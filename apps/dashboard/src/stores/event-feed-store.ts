@@ -49,7 +49,7 @@ export interface EventFeedState {
 
 export interface EventFeedActions {
 	addEvent: (event: Omit<FeedEvent, "id" | "timestamp">) => void;
-	addEvents: (events: Array<Omit<FeedEvent, "id" | "timestamp">>) => void;
+	addEvents: (events: Omit<FeedEvent, "id" | "timestamp">[]) => void;
 	clearEvents: () => void;
 	setIsAtBottom: (isAtBottom: boolean) => void;
 	resetNewEventCount: () => void;
@@ -78,110 +78,91 @@ function generateEventId(): string {
 	return `evt-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`;
 }
 
+type EventFeedSet = (
+	partial: Partial<EventFeedStore> | ((state: EventFeedStore) => Partial<EventFeedStore>),
+) => void;
+type EventFeedGet = () => EventFeedStore;
+
+function trimEvents(events: FeedEvent[], maxEvents: number): FeedEvent[] {
+	return events.length > maxEvents ? events.slice(events.length - maxEvents) : events;
+}
+
+function createEventData(event: Omit<FeedEvent, "id" | "timestamp">, timestamp: Date): FeedEvent {
+	return {
+		...event,
+		id: generateEventId(),
+		timestamp,
+	};
+}
+
+function createEventFeedActions(set: EventFeedSet, get: EventFeedGet): EventFeedActions {
+	return {
+		addEvent: (event) => {
+			if (get().isPaused) {
+				return;
+			}
+
+			const newEvent = createEventData(event, new Date());
+			set((state) => {
+				const events = trimEvents([...state.events, newEvent], state.maxEvents);
+				return { events, newEventCount: state.isAtBottom ? 0 : state.newEventCount + 1 };
+			});
+		},
+		addEvents: (events) => {
+			if (get().isPaused) {
+				return;
+			}
+
+			const now = Date.now();
+			const newEvents = events.map((event, index) => createEventData(event, new Date(now + index)));
+			set((state) => {
+				const allEvents = trimEvents([...state.events, ...newEvents], state.maxEvents);
+				return {
+					events: allEvents,
+					newEventCount: state.isAtBottom ? 0 : state.newEventCount + newEvents.length,
+				};
+			});
+		},
+		clearEvents: () => {
+			set({ events: [], newEventCount: 0 });
+		},
+		setIsAtBottom: (isAtBottom) => {
+			set({ isAtBottom, newEventCount: isAtBottom ? 0 : get().newEventCount });
+		},
+		resetNewEventCount: () => {
+			set({ newEventCount: 0 });
+		},
+		setPaused: (isPaused) => {
+			set({ isPaused });
+		},
+		togglePaused: () => {
+			set((state) => ({ isPaused: !state.isPaused }));
+		},
+		setTypeFilter: (types) => {
+			set({ typeFilter: types });
+		},
+		setSeverityFilter: (severities) => {
+			set({ severityFilter: severities });
+		},
+		getFilteredEvents: () => {
+			const state = get();
+			let filtered = state.events;
+			if (state.typeFilter.length > 0) {
+				filtered = filtered.filter((event) => state.typeFilter.includes(event.type));
+			}
+			if (state.severityFilter.length > 0) {
+				filtered = filtered.filter((event) => state.severityFilter.includes(event.severity));
+			}
+			return filtered;
+		},
+	};
+}
+
 export const useEventFeedStore = create<EventFeedStore>()(
 	devtools(
 		subscribeWithSelector((set, get) => ({
 			...initialState,
-
-			addEvent: (event) => {
-				if (get().isPaused) {
-					return;
-				}
-
-				const newEvent: FeedEvent = {
-					...event,
-					id: generateEventId(),
-					timestamp: new Date(),
-				};
-
-				set((state) => {
-					const events = [...state.events, newEvent];
-					const trimmedEvents =
-						events.length > state.maxEvents
-							? events.slice(events.length - state.maxEvents)
-							: events;
-
-					return {
-						events: trimmedEvents,
-						newEventCount: state.isAtBottom ? 0 : state.newEventCount + 1,
-					};
-				});
-			},
-
-			addEvents: (events) => {
-				if (get().isPaused) {
-					return;
-				}
-
-				const now = new Date();
-				const newEvents: FeedEvent[] = events.map((event, index) => ({
-					...event,
-					id: generateEventId(),
-					timestamp: new Date(now.getTime() + index), // Stagger for stable ordering
-				}));
-
-				set((state) => {
-					const allEvents = [...state.events, ...newEvents];
-					const trimmedEvents =
-						allEvents.length > state.maxEvents
-							? allEvents.slice(allEvents.length - state.maxEvents)
-							: allEvents;
-
-					return {
-						events: trimmedEvents,
-						newEventCount: state.isAtBottom ? 0 : state.newEventCount + newEvents.length,
-					};
-				});
-			},
-
-			clearEvents: () => {
-				set({
-					events: [],
-					newEventCount: 0,
-				});
-			},
-
-			setIsAtBottom: (isAtBottom) => {
-				set({
-					isAtBottom,
-					newEventCount: isAtBottom ? 0 : get().newEventCount,
-				});
-			},
-
-			resetNewEventCount: () => {
-				set({ newEventCount: 0 });
-			},
-
-			setPaused: (isPaused) => {
-				set({ isPaused });
-			},
-
-			togglePaused: () => {
-				set((state) => ({ isPaused: !state.isPaused }));
-			},
-
-			setTypeFilter: (types) => {
-				set({ typeFilter: types });
-			},
-
-			setSeverityFilter: (severities) => {
-				set({ severityFilter: severities });
-			},
-
-			getFilteredEvents: () => {
-				const state = get();
-				let filtered = state.events;
-
-				if (state.typeFilter.length > 0) {
-					filtered = filtered.filter((e) => state.typeFilter.includes(e.type));
-				}
-
-				if (state.severityFilter.length > 0) {
-					filtered = filtered.filter((e) => state.severityFilter.includes(e.severity));
-				}
-
-				return filtered;
-			},
+			...createEventFeedActions(set, get),
 		})),
 		{ name: "event-feed-store" },
 	),

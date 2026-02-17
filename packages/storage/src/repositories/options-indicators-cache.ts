@@ -73,6 +73,52 @@ export interface UpdateOptionsIndicatorsCacheInput {
 // ============================================
 
 type OptionsIndicatorsRow = typeof optionsIndicatorsCache.$inferSelect;
+type OptionsIndicatorsInsert = typeof optionsIndicatorsCache.$inferInsert;
+
+const OPTIONS_NUMERIC_FIELDS = [
+	"impliedVolatility",
+	"ivPercentile30d",
+	"ivSkew",
+	"putCallRatio",
+	"vrp",
+	"termStructureSlope",
+	"netDelta",
+	"netGamma",
+	"netTheta",
+	"netVega",
+] as const;
+
+function toNullableNumericString(value: number | null | undefined): string | null {
+	return value == null ? null : String(value);
+}
+
+function buildOptionsUpsertFields(
+	input: CreateOptionsIndicatorsCacheInput,
+): Pick<OptionsIndicatorsInsert, (typeof OPTIONS_NUMERIC_FIELDS)[number]> {
+	const fields = {} as Pick<OptionsIndicatorsInsert, (typeof OPTIONS_NUMERIC_FIELDS)[number]>;
+
+	for (const field of OPTIONS_NUMERIC_FIELDS) {
+		fields[field] = toNullableNumericString(input[field]);
+	}
+
+	return fields;
+}
+
+function buildOptionsUpdateFields(
+	input: UpdateOptionsIndicatorsCacheInput,
+): Partial<Pick<OptionsIndicatorsInsert, (typeof OPTIONS_NUMERIC_FIELDS)[number]>> {
+	const fields: Partial<Pick<OptionsIndicatorsInsert, (typeof OPTIONS_NUMERIC_FIELDS)[number]>> =
+		{};
+
+	for (const field of OPTIONS_NUMERIC_FIELDS) {
+		const value = input[field];
+		if (value !== undefined) {
+			fields[field] = toNullableNumericString(value);
+		}
+	}
+
+	return fields;
+}
 
 function mapOptionsIndicatorsRow(row: OptionsIndicatorsRow): OptionsIndicatorsCache {
 	return {
@@ -116,41 +162,21 @@ export class OptionsIndicatorsCacheRepository {
 	async set(input: CreateOptionsIndicatorsCacheInput): Promise<OptionsIndicatorsCache> {
 		const now = new Date();
 		const expiresAt = this.calculateExpiresAt(input.ttlMinutes);
+		const numericFields = buildOptionsUpsertFields(input);
 
 		const [row] = await this.db
 			.insert(optionsIndicatorsCache)
 			.values({
 				symbol: input.symbol,
 				timestamp: now,
-				impliedVolatility: input.impliedVolatility != null ? String(input.impliedVolatility) : null,
-				ivPercentile30d: input.ivPercentile30d != null ? String(input.ivPercentile30d) : null,
-				ivSkew: input.ivSkew != null ? String(input.ivSkew) : null,
-				putCallRatio: input.putCallRatio != null ? String(input.putCallRatio) : null,
-				vrp: input.vrp != null ? String(input.vrp) : null,
-				termStructureSlope:
-					input.termStructureSlope != null ? String(input.termStructureSlope) : null,
-				netDelta: input.netDelta != null ? String(input.netDelta) : null,
-				netGamma: input.netGamma != null ? String(input.netGamma) : null,
-				netTheta: input.netTheta != null ? String(input.netTheta) : null,
-				netVega: input.netVega != null ? String(input.netVega) : null,
+				...numericFields,
 				expiresAt,
 			})
 			.onConflictDoUpdate({
 				target: optionsIndicatorsCache.symbol,
 				set: {
 					timestamp: now,
-					impliedVolatility:
-						input.impliedVolatility != null ? String(input.impliedVolatility) : null,
-					ivPercentile30d: input.ivPercentile30d != null ? String(input.ivPercentile30d) : null,
-					ivSkew: input.ivSkew != null ? String(input.ivSkew) : null,
-					putCallRatio: input.putCallRatio != null ? String(input.putCallRatio) : null,
-					vrp: input.vrp != null ? String(input.vrp) : null,
-					termStructureSlope:
-						input.termStructureSlope != null ? String(input.termStructureSlope) : null,
-					netDelta: input.netDelta != null ? String(input.netDelta) : null,
-					netGamma: input.netGamma != null ? String(input.netGamma) : null,
-					netTheta: input.netTheta != null ? String(input.netTheta) : null,
-					netVega: input.netVega != null ? String(input.netVega) : null,
+					...numericFields,
 					expiresAt,
 				},
 			})
@@ -278,52 +304,10 @@ export class OptionsIndicatorsCacheRepository {
 		symbol: string,
 		input: UpdateOptionsIndicatorsCacheInput,
 	): Promise<OptionsIndicatorsCache | null> {
-		const updates: Record<string, unknown> = {
+		const updates: Partial<OptionsIndicatorsInsert> = {
 			timestamp: new Date(),
+			...buildOptionsUpdateFields(input),
 		};
-
-		if (input.impliedVolatility !== undefined) {
-			updates.impliedVolatility =
-				input.impliedVolatility != null ? String(input.impliedVolatility) : null;
-		}
-
-		if (input.ivPercentile30d !== undefined) {
-			updates.ivPercentile30d =
-				input.ivPercentile30d != null ? String(input.ivPercentile30d) : null;
-		}
-
-		if (input.ivSkew !== undefined) {
-			updates.ivSkew = input.ivSkew != null ? String(input.ivSkew) : null;
-		}
-
-		if (input.putCallRatio !== undefined) {
-			updates.putCallRatio = input.putCallRatio != null ? String(input.putCallRatio) : null;
-		}
-
-		if (input.vrp !== undefined) {
-			updates.vrp = input.vrp != null ? String(input.vrp) : null;
-		}
-
-		if (input.termStructureSlope !== undefined) {
-			updates.termStructureSlope =
-				input.termStructureSlope != null ? String(input.termStructureSlope) : null;
-		}
-
-		if (input.netDelta !== undefined) {
-			updates.netDelta = input.netDelta != null ? String(input.netDelta) : null;
-		}
-
-		if (input.netGamma !== undefined) {
-			updates.netGamma = input.netGamma != null ? String(input.netGamma) : null;
-		}
-
-		if (input.netTheta !== undefined) {
-			updates.netTheta = input.netTheta != null ? String(input.netTheta) : null;
-		}
-
-		if (input.netVega !== undefined) {
-			updates.netVega = input.netVega != null ? String(input.netVega) : null;
-		}
 
 		if (input.ttlMinutes !== undefined) {
 			updates.expiresAt = this.calculateExpiresAt(input.ttlMinutes);

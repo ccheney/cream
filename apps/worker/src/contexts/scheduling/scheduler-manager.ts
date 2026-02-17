@@ -173,6 +173,36 @@ export class SchedulerManager {
 		return calendar.getTradingSession(new Date());
 	}
 
+	private async runMacroWatchOrLog(session: TradingSession, message: string): Promise<void> {
+		if (this.handlers.runMacroWatch) {
+			log.info({ session }, message);
+			await this.handlers.runMacroWatch();
+			return;
+		}
+
+		log.info({ session }, `${message} (macro watch not configured)`);
+	}
+
+	private async handleClosedSession(session: TradingSession): Promise<void> {
+		await this.runMacroWatchOrLog(
+			session,
+			"Market closed, running macro watch instead of trading cycle",
+		);
+	}
+
+	private async handlePremarketSession(session: TradingSession): Promise<void> {
+		if (this.isNearOpen()) {
+			if (this.handlers.compileNewspaper) {
+				log.info({}, "Near market open, compiling morning newspaper");
+				await this.handlers.compileNewspaper();
+			}
+			await this.handlers.runTradingCycle();
+			return;
+		}
+
+		await this.runMacroWatchOrLog(session, "Early pre-market, running macro watch");
+	}
+
 	/**
 	 * Session-aware trading cycle handler.
 	 *
@@ -187,38 +217,15 @@ export class SchedulerManager {
 		log.info({ session }, "Trading cycle triggered");
 
 		if (session === "CLOSED" || session === "AFTER_HOURS") {
-			// Market closed - run lightweight macro watch instead
-			if (this.handlers.runMacroWatch) {
-				log.info({ session }, "Market closed, running macro watch instead of trading cycle");
-				await this.handlers.runMacroWatch();
-			} else {
-				log.info({ session }, "Market closed, skipping trading cycle (macro watch not configured)");
-			}
+			await this.handleClosedSession(session);
 			return;
 		}
 
 		if (session === "PRE_MARKET") {
-			if (this.isNearOpen()) {
-				// Near market open - compile overnight digest before first RTH cycle
-				if (this.handlers.compileNewspaper) {
-					log.info({}, "Near market open, compiling morning newspaper");
-					await this.handlers.compileNewspaper();
-				}
-				// Then run the trading cycle
-				await this.handlers.runTradingCycle();
-			} else {
-				// Early pre-market - run macro watch
-				if (this.handlers.runMacroWatch) {
-					log.info({ session }, "Early pre-market, running macro watch");
-					await this.handlers.runMacroWatch();
-				} else {
-					log.info({ session }, "Early pre-market, skipping (macro watch not configured)");
-				}
-			}
+			await this.handlePremarketSession(session);
 			return;
 		}
 
-		// RTH - run full OODA trading cycle
 		await this.handlers.runTradingCycle();
 	}
 

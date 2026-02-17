@@ -13,6 +13,16 @@ import type { MacroWatchEntry, MacroWatchSession } from "../entry-schemas.js";
 
 const log = createNodeLogger({ service: "macro-watch-news", level: "info" });
 
+interface NewsArticle {
+	id: number;
+	created_at: string;
+	headline: string;
+	symbols: string[];
+	source: string;
+	summary?: string;
+	url?: string;
+}
+
 /**
  * Major indices and macro symbols to always include in news.
  */
@@ -61,6 +71,84 @@ function getCurrentSession(): MacroWatchSession {
  */
 const MAJOR_SYMBOLS_FOR_FETCH = [...MAJOR_INDEX_ETFS, "VIX", "TLT", "GLD", "USO", "EEM"];
 
+function toUniverseSet(symbols: string[]): Set<string> {
+	return new Set(symbols.map((symbol) => symbol.toUpperCase()));
+}
+
+function createNewsEntry(
+	article: NewsArticle,
+	session: MacroWatchSession,
+	isMacro: boolean,
+): MacroWatchEntry {
+	return {
+		timestamp: article.created_at,
+		session,
+		category: "NEWS",
+		headline: article.headline,
+		symbols: article.symbols,
+		source: article.source,
+		metadata: {
+			articleId: article.id,
+			summary: article.summary,
+			url: article.url,
+			isMacro,
+		},
+	};
+}
+
+function addUniqueNewsEntries(
+	entries: MacroWatchEntry[],
+	seenArticleIds: Set<number>,
+	articles: NewsArticle[],
+	session: MacroWatchSession,
+	isMacro: boolean,
+): void {
+	for (const article of articles) {
+		if (seenArticleIds.has(article.id)) {
+			continue;
+		}
+		seenArticleIds.add(article.id);
+		entries.push(createNewsEntry(article, session, isMacro));
+	}
+}
+
+function shouldIncludeGeneralArticle(
+	article: NewsArticle,
+	universeSet: Set<string>,
+): {
+	include: boolean;
+	isMacro: boolean;
+} {
+	const mentionsUniverse = article.symbols.some((symbol) => universeSet.has(symbol.toUpperCase()));
+	const mentionsMajor = article.symbols.some((symbol) => MAJOR_SYMBOLS.has(symbol.toUpperCase()));
+	return {
+		include: mentionsUniverse || mentionsMajor,
+		isMacro: mentionsMajor && !mentionsUniverse,
+	};
+}
+
+function addGeneralNewsEntries(
+	entries: MacroWatchEntry[],
+	seenArticleIds: Set<number>,
+	articles: NewsArticle[],
+	session: MacroWatchSession,
+	universeSet: Set<string>,
+): void {
+	for (const article of articles) {
+		if (seenArticleIds.has(article.id)) {
+			continue;
+		}
+
+		const inclusion = shouldIncludeGeneralArticle(article, universeSet);
+		if (!inclusion.include) {
+			continue;
+		}
+
+		seenArticleIds.add(article.id);
+		entries.push(createNewsEntry(article, session, inclusion.isMacro));
+	}
+}
+
 /**
  * Scan Alpaca news for universe symbols and major indices since the given time.
  *
@@ -80,89 +168,22 @@ export async function scanNews(symbols: string[], since: string): Promise<MacroW
 	const entries: MacroWatchEntry[] = [];
 	const session = getCurrentSession();
 	const seenArticleIds = new Set<number>();
-	const universeSet = new Set(symbols.map((u) => u.toUpperCase()));
+	const universeSet = toUniverseSet(symbols);
 
 	try {
 		const client = createAlpacaClientFromEnv();
 		const now = new Date().toISOString();
 
-		// 1. Always fetch news for major indices (macro context for all users)
 		const majorNews = await client.getNews(MAJOR_SYMBOLS_FOR_FETCH, 30, since, now);
+		addUniqueNewsEntries(entries, seenArticleIds, majorNews, session, true);
 
-		for (const article of majorNews) {
-			seenArticleIds.add(article.id);
-			entries.push({
-				timestamp: article.created_at,
-				session,
-				category: "NEWS",
-				headline: article.headline,
-				symbols: article.symbols,
-				source: article.source,
-				metadata: {
-					articleId: article.id,
-					summary: article.summary,
-					url: article.url,
-					isMacro: true,
-				},
-			});
-		}
-
-		// 2. Fetch news for user's universe symbols (if any symbols provided)
 		if (symbols.length > 0) {
 			const universeNews = await client.getNews(symbols, 30, since, now);
-
-			for (const article of universeNews) {
-				if (seenArticleIds.has(article.id)) {
-					continue;
-				}
-				seenArticleIds.add(article.id);
-				entries.push({
-					timestamp: article.created_at,
-					session,
-					category: "NEWS",
-					headline: article.headline,
-					symbols: article.symbols,
-					source: article.source,
-					metadata: {
-						articleId: article.id,
-						summary: article.summary,
-						url: article.url,
-						isMacro: false,
-					},
-				});
-			}
+			addUniqueNewsEntries(entries, seenArticleIds, universeNews, session, false);
 		}
 
-		// 3. Fetch general market news for broader context
 		const generalNews = await client.getNews([], 20, since, now);
-
-		for (const article of generalNews) {
-			if (seenArticleIds.has(article.id)) {
-				continue;
-			}
-
-			// Include if it mentions any universe symbol or major indices
-			const mentionsUniverse = article.symbols.some((s) => universeSet.has(s.toUpperCase()));
-			const mentionsMajor = article.symbols.some((s) => MAJOR_SYMBOLS.has(s.toUpperCase()));
-
-			if (mentionsUniverse || mentionsMajor) {
-				seenArticleIds.add(article.id);
-				entries.push({
-					timestamp: article.created_at,
-					session,
-					category: "NEWS",
-					headline: article.headline,
-					symbols: article.symbols,
-					source: article.source,
-					metadata: {
-						articleId: article.id,
-						summary: article.summary,
-						url: article.url,
-						isMacro: mentionsMajor && !mentionsUniverse,
-					},
-				});
-			}
-		}
+		addGeneralNewsEntries(entries, seenArticleIds, generalNews, session, universeSet);
 	} catch (error) {
 		log.error(
 			{ error: error instanceof Error ? error.message : String(error) },

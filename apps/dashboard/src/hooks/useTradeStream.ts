@@ -36,30 +36,169 @@ export interface UseTradeStreamReturn {
 	addTrade: (trade: Trade) => void;
 }
 
-// ============================================
-// Constants
-// ============================================
-
 const DEFAULT_MAX_TRADES = 500;
 
-// ============================================
-// Hook Implementation
-// ============================================
+function parseTradeMessage(raw: RawTradeMessage, symbol: string, tradeId: number): Trade {
+	const id = raw.i ?? `${symbol}-${tradeId}`;
+	return {
+		id,
+		symbol: raw.sym.toUpperCase(),
+		price: raw.p,
+		size: raw.s,
+		side: classifyTradeSide(raw.c),
+		exchange: raw.x,
+		conditions: raw.c,
+		timestamp: new Date(raw.t / 1e6),
+	};
+}
 
-/**
- * useTradeStream provides real-time trade data streaming.
- *
- * Connects to the dashboard-api WebSocket and accumulates
- * trade messages for the TradeTape component.
- *
- * @example
- * ```tsx
- * const { trades, isConnected, isLoading, error } = useTradeStream({
- *   symbol: 'AAPL',
- *   maxTrades: 500,
- * });
- * ```
- */
+function getWebSocketUrl(): string {
+	return (
+		process.env.NEXT_PUBLIC_WS_URL ??
+		(typeof window !== "undefined" ? `ws://${window.location.host}/ws` : "ws://localhost:3001/ws")
+	);
+}
+
+function subscribe(ws: WebSocket, symbol: string): void {
+	ws.send(
+		JSON.stringify({
+			type: "subscribe",
+			channel: "trades",
+			symbol,
+		}),
+	);
+}
+
+function unsubscribe(ws: WebSocket, symbol: string): void {
+	ws.send(
+		JSON.stringify({
+			type: "unsubscribe",
+			channel: "trades",
+			symbol,
+		}),
+	);
+}
+
+interface SocketHandlers {
+	onOpen: () => void;
+	onTrade: (trade: RawTradeMessage) => void;
+	onError: (error: Error) => void;
+	onClose: () => void;
+}
+
+function createTradeSocket(symbol: string, handlers: SocketHandlers): WebSocket {
+	const ws = new WebSocket(getWebSocketUrl());
+
+	ws.onopen = () => {
+		handlers.onOpen();
+		subscribe(ws, symbol);
+	};
+
+	ws.onmessage = (event) => {
+		try {
+			const message = JSON.parse(event.data);
+			if (message.type === "trade" && message.data?.sym?.toUpperCase() === symbol) {
+				handlers.onTrade(message.data as RawTradeMessage);
+			}
+		} catch {
+			// Ignore non-JSON messages.
+		}
+	};
+
+	ws.onerror = () => {
+		handlers.onError(new Error("WebSocket connection error"));
+	};
+
+	ws.onclose = () => {
+		handlers.onClose();
+	};
+
+	return ws;
+}
+
+function closeTradeSocket(ws: WebSocket | null, symbol: string): void {
+	if (!ws) {
+		return;
+	}
+	if (ws.readyState === WebSocket.OPEN) {
+		unsubscribe(ws, symbol);
+	}
+	ws.close();
+}
+
+function useTradeSocketConnection({
+	addTrade,
+	clearTrades,
+	enabled,
+	setError,
+	setIsConnected,
+	setIsLoading,
+	symbol,
+	tradeIdCounter,
+	wsRef,
+}: {
+	addTrade: (trade: Trade) => void;
+	clearTrades: () => void;
+	enabled: boolean;
+	setError: React.Dispatch<React.SetStateAction<Error | null>>;
+	setIsConnected: React.Dispatch<React.SetStateAction<boolean>>;
+	setIsLoading: React.Dispatch<React.SetStateAction<boolean>>;
+	symbol: string;
+	tradeIdCounter: React.MutableRefObject<number>;
+	wsRef: React.MutableRefObject<WebSocket | null>;
+}) {
+	useEffect(() => {
+		if (!enabled || !symbol) {
+			return;
+		}
+
+		const upperSymbol = symbol.toUpperCase();
+		clearTrades();
+		setIsLoading(true);
+		setError(null);
+
+		try {
+			wsRef.current = createTradeSocket(upperSymbol, {
+				onOpen: () => {
+					setIsConnected(true);
+					setIsLoading(false);
+					setError(null);
+				},
+				onTrade: (rawTrade) => {
+					const nextTrade = parseTradeMessage(rawTrade, symbol, tradeIdCounter.current++);
+					addTrade(nextTrade);
+				},
+				onError: (socketError) => {
+					setError(socketError);
+					setIsConnected(false);
+				},
+				onClose: () => {
+					setIsConnected(false);
+					setIsLoading(false);
+				},
+			});
+		} catch (connectionError) {
+			setError(connectionError instanceof Error ? connectionError : new Error("Failed to connect"));
+			setIsLoading(false);
+		}
+
+		return () => {
+			closeTradeSocket(wsRef.current, upperSymbol);
+			wsRef.current = null;
+		};
+	}, [
+		addTrade,
+		clearTrades,
+		enabled,
+		setError,
+		setIsConnected,
+		setIsLoading,
+		symbol,
+		tradeIdCounter,
+		wsRef,
+	]);
+}
+
 export function useTradeStream({
 	symbol,
 	maxTrades = DEFAULT_MAX_TRADES,
@@ -69,144 +208,34 @@ export function useTradeStream({
 	const [isConnected, setIsConnected] = useState(false);
 	const [isLoading, setIsLoading] = useState(true);
 	const [error, setError] = useState<Error | null>(null);
-
 	const wsRef = useRef<WebSocket | null>(null);
 	const tradeIdCounter = useRef(0);
 
-	/**
-	 * Convert raw WebSocket message to Trade object.
-	 */
-	const parseTradeMessage = useCallback(
-		(raw: RawTradeMessage): Trade => {
-			const id = raw.i ?? `${symbol}-${tradeIdCounter.current++}`;
-
-			return {
-				id,
-				symbol: raw.sym.toUpperCase(),
-				price: raw.p,
-				size: raw.s,
-				side: classifyTradeSide(raw.c),
-				exchange: raw.x,
-				conditions: raw.c,
-				timestamp: new Date(raw.t / 1e6), // Nanoseconds to milliseconds
-			};
-		},
-		[symbol],
-	);
-
-	/**
-	 * Add a new trade to the list with memory management.
-	 */
 	const addTrade = useCallback(
 		(trade: Trade) => {
 			setTrades((prev) => {
 				const next = [...prev, trade];
-				// Keep only the last maxTrades
-				if (next.length > maxTrades) {
-					return next.slice(-maxTrades);
-				}
-				return next;
+				return next.length > maxTrades ? next.slice(-maxTrades) : next;
 			});
 		},
 		[maxTrades],
 	);
 
-	/**
-	 * Clear all trades.
-	 */
 	const clearTrades = useCallback(() => {
 		setTrades([]);
 	}, []);
 
-	/**
-	 * Connect to WebSocket and subscribe to trades.
-	 */
-	useEffect(() => {
-		if (!enabled || !symbol) {
-			return;
-		}
-
-		const upperSymbol = symbol.toUpperCase();
-		setIsLoading(true);
-		setError(null);
-
-		// Get WebSocket URL from environment or default
-		const wsUrl =
-			process.env.NEXT_PUBLIC_WS_URL ??
-			(typeof window !== "undefined"
-				? `ws://${window.location.host}/ws`
-				: "ws://localhost:3001/ws");
-
-		try {
-			const ws = new WebSocket(wsUrl);
-			wsRef.current = ws;
-
-			ws.onopen = () => {
-				setIsConnected(true);
-				setIsLoading(false);
-				setError(null);
-
-				// Subscribe to trades for the symbol
-				ws.send(
-					JSON.stringify({
-						type: "subscribe",
-						channel: "trades",
-						symbol: upperSymbol,
-					}),
-				);
-			};
-
-			ws.onmessage = (event) => {
-				try {
-					const message = JSON.parse(event.data);
-
-					// Handle trade messages
-					if (message.type === "trade" && message.data?.sym?.toUpperCase() === upperSymbol) {
-						const trade = parseTradeMessage(message.data);
-						addTrade(trade);
-					}
-				} catch {
-					// Ignore parse errors for non-JSON messages
-				}
-			};
-
-			ws.onerror = () => {
-				setError(new Error("WebSocket connection error"));
-				setIsConnected(false);
-			};
-
-			ws.onclose = () => {
-				setIsConnected(false);
-				setIsLoading(false);
-			};
-		} catch (err) {
-			setError(err instanceof Error ? err : new Error("Failed to connect"));
-			setIsLoading(false);
-		}
-
-		return () => {
-			if (wsRef.current) {
-				// Unsubscribe before closing
-				if (wsRef.current.readyState === WebSocket.OPEN) {
-					wsRef.current.send(
-						JSON.stringify({
-							type: "unsubscribe",
-							channel: "trades",
-							symbol: upperSymbol,
-						}),
-					);
-				}
-				wsRef.current.close();
-				wsRef.current = null;
-			}
-		};
-	}, [enabled, symbol, parseTradeMessage, addTrade]);
-
-	// Clear trades when symbol changes
-	// biome-ignore lint/correctness/useExhaustiveDependencies: symbol change should trigger clear
-	useEffect(() => {
-		clearTrades();
-	}, [symbol, clearTrades]);
+	useTradeSocketConnection({
+		addTrade,
+		clearTrades,
+		enabled,
+		setError,
+		setIsConnected,
+		setIsLoading,
+		symbol,
+		tradeIdCounter,
+		wsRef,
+	});
 
 	return {
 		trades,

@@ -87,80 +87,127 @@ export const analystsStep = createStep({
 	description: "Run news and fundamentals analysts in parallel with batched symbols",
 	inputSchema: AnalystsInputSchema,
 	outputSchema: AnalystsOutputSchema,
-	execute: async ({ inputData }) => {
-		const startTime = performance.now();
-		const { cycleId, instruments, regimeLabels, groundingContext, predictionMarketSignals } =
-			inputData;
-		const errors: string[] = [];
-		const warnings: string[] = [];
-
-		const batches = chunk(instruments, BATCH_SIZE);
-		log.info(
-			{
-				cycleId,
-				symbolCount: instruments.length,
-				batchCount: batches.length,
-				batchSize: BATCH_SIZE,
-			},
-			"Starting analysts step with batching",
-		);
-
-		// Run news and fundamentals analysts in parallel, each processing batches sequentially
-		const newsStart = performance.now();
-		const fundamentalsStart = performance.now();
-
-		const [newsResults, fundamentalsResults] = await Promise.all([
-			runNewsAnalystBatched(
-				cycleId,
-				batches,
-				regimeLabels,
-				groundingContext,
-				predictionMarketSignals,
-				errors,
-			),
-			runFundamentalsAnalystBatched(
-				cycleId,
-				batches,
-				regimeLabels,
-				groundingContext,
-				predictionMarketSignals,
-				errors,
-			),
-		]);
-
-		const newsAnalystMs = performance.now() - newsStart;
-		const fundamentalsAnalystMs = performance.now() - fundamentalsStart;
-
-		log.info(
-			{
-				cycleId,
-				newsResultCount: newsResults.length,
-				fundamentalsResultCount: fundamentalsResults.length,
-				errorCount: errors.length,
-				warningCount: warnings.length,
-			},
-			"Completed analysts step",
-		);
-
-		return {
-			cycleId,
-			newsAnalysis: newsResults,
-			fundamentalsAnalysis: fundamentalsResults,
-			errors,
-			warnings,
-			metrics: {
-				totalMs: performance.now() - startTime,
-				newsAnalystMs,
-				fundamentalsAnalystMs,
-				batchCount: batches.length,
-			},
-		};
-	},
+	execute: async ({ inputData }) => executeAnalystsStep(inputData),
 });
 
 // ============================================
 // Helper Functions
 // ============================================
+
+async function executeAnalystsStep(
+	inputData: z.infer<typeof AnalystsInputSchema>,
+): Promise<z.infer<typeof AnalystsOutputSchema>> {
+	const startTime = performance.now();
+	const { cycleId, instruments, regimeLabels, groundingContext, predictionMarketSignals } =
+		inputData;
+	const errors: string[] = [];
+	const warnings: string[] = [];
+	const batches = chunk(instruments, BATCH_SIZE);
+
+	logAnalystsStart(cycleId, instruments.length, batches.length);
+	const metrics = await runAnalystsInParallel(
+		cycleId,
+		batches,
+		regimeLabels,
+		groundingContext,
+		predictionMarketSignals,
+		errors,
+	);
+	logAnalystsCompletion(
+		cycleId,
+		metrics.newsResults.length,
+		metrics.fundamentalsResults.length,
+		errors,
+		warnings,
+	);
+
+	return {
+		cycleId,
+		newsAnalysis: metrics.newsResults,
+		fundamentalsAnalysis: metrics.fundamentalsResults,
+		errors,
+		warnings,
+		metrics: {
+			totalMs: performance.now() - startTime,
+			newsAnalystMs: metrics.newsAnalystMs,
+			fundamentalsAnalystMs: metrics.fundamentalsAnalystMs,
+			batchCount: batches.length,
+		},
+	};
+}
+
+function logAnalystsStart(cycleId: string, symbolCount: number, batchCount: number): void {
+	log.info(
+		{ cycleId, symbolCount, batchCount, batchSize: BATCH_SIZE },
+		"Starting analysts step with batching",
+	);
+}
+
+async function runAnalystsInParallel(
+	cycleId: string,
+	batches: string[][],
+	regimeLabels: Record<string, z.infer<typeof RegimeDataSchema>>,
+	groundingContext:
+		| {
+				perSymbol: z.infer<typeof SymbolContextSchema>[];
+				global: z.infer<typeof GlobalContextSchema>;
+		  }
+		| undefined,
+	predictionMarketSignals: z.infer<typeof PredictionMarketSignalsSchema> | undefined,
+	errors: string[],
+): Promise<{
+	newsResults: z.infer<typeof SentimentAnalysisSchema>[];
+	fundamentalsResults: z.infer<typeof FundamentalsAnalysisSchema>[];
+	newsAnalystMs: number;
+	fundamentalsAnalystMs: number;
+}> {
+	const newsStart = performance.now();
+	const fundamentalsStart = performance.now();
+	const [newsResults, fundamentalsResults] = await Promise.all([
+		runNewsAnalystBatched(
+			cycleId,
+			batches,
+			regimeLabels,
+			groundingContext,
+			predictionMarketSignals,
+			errors,
+		),
+		runFundamentalsAnalystBatched(
+			cycleId,
+			batches,
+			regimeLabels,
+			groundingContext,
+			predictionMarketSignals,
+			errors,
+		),
+	]);
+
+	return {
+		newsResults,
+		fundamentalsResults,
+		newsAnalystMs: performance.now() - newsStart,
+		fundamentalsAnalystMs: performance.now() - fundamentalsStart,
+	};
+}
+
+function logAnalystsCompletion(
+	cycleId: string,
+	newsResultCount: number,
+	fundamentalsResultCount: number,
+	errors: string[],
+	warnings: string[],
+): void {
+	log.info(
+		{
+			cycleId,
+			newsResultCount,
+			fundamentalsResultCount,
+			errorCount: errors.length,
+			warningCount: warnings.length,
+		},
+		"Completed analysts step",
+	);
+}
 
 function chunk<T>(array: T[], size: number): T[][] {
 	const result: T[][] = [];

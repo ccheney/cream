@@ -156,18 +156,13 @@ export function ThemeToggle({ compact = false, testId = "theme-toggle" }: ThemeT
 	};
 
 	return (
-		<div
-			style={styles.container}
-			role="radiogroup"
-			aria-label="Theme selection"
-			data-testid={testId}
-		>
+		<fieldset style={styles.container} aria-label="Theme selection" data-testid={testId}>
+			<legend className="sr-only">Theme selection</legend>
 			{THEMES.map(({ value, label, icon }) => (
 				<button
 					key={value}
 					type="button"
-					role="radio"
-					aria-checked={theme === value}
+					aria-pressed={theme === value}
 					aria-label={`${label} theme`}
 					onClick={() => setTheme(value)}
 					style={{
@@ -180,7 +175,7 @@ export function ThemeToggle({ compact = false, testId = "theme-toggle" }: ThemeT
 					{!compact && <span>{label}</span>}
 				</button>
 			))}
-		</div>
+		</fieldset>
 	);
 }
 

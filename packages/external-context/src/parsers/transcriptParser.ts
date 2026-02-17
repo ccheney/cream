@@ -21,6 +21,11 @@ const DEFAULT_CONFIG: Required<TranscriptParserConfig> = {
 	minSegmentLength: 20,
 };
 
+const SPEAKER_WITH_ROLE_PATTERN = /^([A-Z][A-Za-z\s.]+)\s*--\s*([^:]+):\s*(.*)$/;
+const SIMPLE_SPEAKER_PATTERN = /^([A-Z][A-Za-z\s.]+):\s*(.*)$/;
+
+type SpeakerDraft = { speaker: string; role?: string; text: string[] };
+
 /**
  * Parse transcript into normalized format
  */
@@ -66,20 +71,8 @@ function parseTranscriptContent(
 	config: Required<TranscriptParserConfig>,
 ): TranscriptSpeaker[] {
 	const speakers: TranscriptSpeaker[] = [];
-
-	// Truncate if too long
-	let processedContent = content;
-	if (processedContent.length > config.maxContentLength) {
-		processedContent = processedContent.slice(0, config.maxContentLength);
-	}
-
-	// Split by common speaker patterns
-	// Pattern 1: "Name -- Title: Text"
-	// Pattern 2: "Name: Text"
-	// Pattern 3: Line breaks with speaker attribution
-
-	const lines = processedContent.split(/\n+/);
-	let currentSpeaker: { speaker: string; role?: string; text: string[] } | null = null;
+	const lines = truncateTranscriptContent(content, config.maxContentLength).split(/\n+/);
+	let currentSpeaker: SpeakerDraft | null = null;
 
 	for (const line of lines) {
 		const trimmedLine = line.trim();
@@ -87,60 +80,77 @@ function parseTranscriptContent(
 			continue;
 		}
 
-		// Try to match speaker pattern with role
-		const speakerWithRole = trimmedLine.match(/^([A-Z][A-Za-z\s.]+)\s*--\s*([^:]+):\s*(.*)$/);
-		if (speakerWithRole?.[1] && speakerWithRole[2]) {
-			// Save previous speaker
-			if (currentSpeaker && currentSpeaker.text.length > 0) {
-				speakers.push(finalizeSpeaker(currentSpeaker, config));
-			}
-			currentSpeaker = {
-				speaker: speakerWithRole[1].trim(),
-				role: speakerWithRole[2].trim(),
-				text: speakerWithRole[3] ? [speakerWithRole[3].trim()] : [],
-			};
+		const speakerFromLine = parseSpeakerLine(trimmedLine);
+		if (speakerFromLine) {
+			pushSpeakerSegment(speakers, currentSpeaker, config);
+			currentSpeaker = speakerFromLine;
 			continue;
 		}
 
-		// Try to match simple speaker pattern
-		const simpleSpeaker = trimmedLine.match(/^([A-Z][A-Za-z\s.]+):\s*(.*)$/);
-		if (simpleSpeaker?.[1] && simpleSpeaker[1].length < 50) {
-			// Save previous speaker
-			if (currentSpeaker && currentSpeaker.text.length > 0) {
-				speakers.push(finalizeSpeaker(currentSpeaker, config));
-			}
-			currentSpeaker = {
-				speaker: simpleSpeaker[1].trim(),
-				text: simpleSpeaker[2] ? [simpleSpeaker[2].trim()] : [],
-			};
-			continue;
-		}
-
-		// Continuation of previous speaker
-		if (currentSpeaker) {
-			currentSpeaker.text.push(trimmedLine);
-		} else {
-			// No speaker yet, start with "Unknown"
-			currentSpeaker = {
-				speaker: "Unknown",
-				text: [trimmedLine],
-			};
-		}
+		currentSpeaker = appendToSpeakerSegment(currentSpeaker, trimmedLine);
 	}
 
-	// Save last speaker
-	if (currentSpeaker && currentSpeaker.text.length > 0) {
-		speakers.push(finalizeSpeaker(currentSpeaker, config));
-	}
+	pushSpeakerSegment(speakers, currentSpeaker, config);
 
 	return speakers;
+}
+
+function truncateTranscriptContent(content: string, maxLength: number): string {
+	if (content.length > maxLength) {
+		return content.slice(0, maxLength);
+	}
+
+	return content;
+}
+
+function parseSpeakerLine(line: string): SpeakerDraft | null {
+	const speakerWithRole = line.match(SPEAKER_WITH_ROLE_PATTERN);
+	if (speakerWithRole?.[1] && speakerWithRole[2]) {
+		return {
+			speaker: speakerWithRole[1].trim(),
+			role: speakerWithRole[2].trim(),
+			text: speakerWithRole[3] ? [speakerWithRole[3].trim()] : [],
+		};
+	}
+
+	const simpleSpeaker = line.match(SIMPLE_SPEAKER_PATTERN);
+	if (simpleSpeaker?.[1] && simpleSpeaker[1].length < 50) {
+		return {
+			speaker: simpleSpeaker[1].trim(),
+			text: simpleSpeaker[2] ? [simpleSpeaker[2].trim()] : [],
+		};
+	}
+
+	return null;
+}
+
+function appendToSpeakerSegment(currentSpeaker: SpeakerDraft | null, line: string): SpeakerDraft {
+	if (!currentSpeaker) {
+		return {
+			speaker: "Unknown",
+			text: [line],
+		};
+	}
+
+	currentSpeaker.text.push(line);
+	return currentSpeaker;
+}
+
+function pushSpeakerSegment(
+	speakers: TranscriptSpeaker[],
+	speaker: SpeakerDraft | null,
+	config: Required<TranscriptParserConfig>,
+): void {
+	if (speaker && speaker.text.length > 0) {
+		speakers.push(finalizeSpeaker(speaker, config));
+	}
 }
 
 /**
  * Finalize a speaker segment
  */
 function finalizeSpeaker(
-	speaker: { speaker: string; role?: string; text: string[] },
+	speaker: SpeakerDraft,
 	config: Required<TranscriptParserConfig>,
 ): TranscriptSpeaker {
 	const text = speaker.text.join(" ").trim();

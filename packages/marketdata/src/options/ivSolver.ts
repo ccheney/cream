@@ -48,6 +48,15 @@ const MIN_IV = 0.001; // 0.1%
 const MAX_IV = 5.0; // 500%
 const INITIAL_IV_GUESS = 0.25; // 25%
 
+interface SolverParams {
+	optionPrice: number;
+	S: number;
+	K: number;
+	T: number;
+	optionType: OptionType;
+	r: number;
+}
+
 // ============================================
 // Black-Scholes Price Calculation
 // ============================================
@@ -136,93 +145,88 @@ function blackScholesVega(
  * ```
  */
 export function solveIV(input: IVSolverInput): IVSolverResult {
-	const {
-		optionPrice,
-		underlyingPrice: S,
-		strike: K,
-		timeToExpiration: T,
-		optionType,
-		riskFreeRate: r = DEFAULT_RISK_FREE_RATE,
-	} = input;
-
-	// Edge case: expired option
-	if (T <= 0) {
-		return {
-			impliedVolatility: 0,
-			iterations: 0,
-			converged: true,
-		};
+	const params = toSolverParams(input);
+	const edgeCase = getEdgeCaseResult(params);
+	if (edgeCase) {
+		return edgeCase;
 	}
 
-	// Edge case: price below discounted intrinsic value
-	// For European options with non-zero interest rates:
-	// - Call lower bound: max(S - K*exp(-rT), 0)
-	// - Put lower bound: max(K*exp(-rT) - S, 0)
+	return runNewtonRaphson(params);
+}
+
+function toSolverParams(input: IVSolverInput): SolverParams {
+	return {
+		optionPrice: input.optionPrice,
+		S: input.underlyingPrice,
+		K: input.strike,
+		T: input.timeToExpiration,
+		optionType: input.optionType,
+		r: input.riskFreeRate ?? DEFAULT_RISK_FREE_RATE,
+	};
+}
+
+function createSolverResult(
+	impliedVolatility: number,
+	iterations: number,
+	converged: boolean,
+): IVSolverResult {
+	return { impliedVolatility, iterations, converged };
+}
+
+function getDiscountedIntrinsic(params: SolverParams): number {
+	const { S, K, T, optionType, r } = params;
 	const discountFactor = Math.exp(-r * T);
-	const discountedIntrinsic =
-		optionType === "CALL"
-			? Math.max(S - K * discountFactor, 0)
-			: Math.max(K * discountFactor - S, 0);
+	return optionType === "CALL"
+		? Math.max(S - K * discountFactor, 0)
+		: Math.max(K * discountFactor - S, 0);
+}
 
+function getEdgeCaseResult(params: SolverParams): IVSolverResult | null {
+	const { T, optionPrice } = params;
+
+	if (T <= 0) {
+		return createSolverResult(0, 0, true);
+	}
+
+	const discountedIntrinsic = getDiscountedIntrinsic(params);
 	if (optionPrice < discountedIntrinsic - PRECISION) {
-		return {
-			impliedVolatility: MIN_IV,
-			iterations: 0,
-			converged: false,
-		};
+		return createSolverResult(MIN_IV, 0, false);
 	}
 
-	// Edge case: price is essentially zero
 	if (optionPrice < PRECISION) {
-		return {
-			impliedVolatility: MIN_IV,
-			iterations: 0,
-			converged: true,
-		};
+		return createSolverResult(MIN_IV, 0, true);
 	}
 
-	// Start with initial guess
+	return null;
+}
+
+function runNewtonRaphson(params: SolverParams): IVSolverResult {
+	const { optionPrice, S, K, T, optionType, r } = params;
 	let sigma = INITIAL_IV_GUESS;
 
 	for (let i = 0; i < MAX_ITERATIONS; i++) {
 		const bsPrice = blackScholesPrice(S, K, T, r, sigma, optionType);
 		const diff = bsPrice - optionPrice;
 
-		// Check convergence
 		if (Math.abs(diff) < PRECISION) {
-			return {
-				impliedVolatility: sigma,
-				iterations: i + 1,
-				converged: true,
-			};
+			return createSolverResult(sigma, i + 1, true);
 		}
 
-		// Calculate vega for Newton-Raphson step
 		const vega = blackScholesVega(S, K, T, r, sigma);
-
-		// Vega too small - use bisection fallback
-		if (Math.abs(vega) < PRECISION) {
-			// Adjust sigma based on price difference
-			if (diff > 0) {
-				sigma *= 0.8;
-			} else {
-				sigma *= 1.2;
-			}
-		} else {
-			// Newton-Raphson step
-			sigma = sigma - diff / vega;
-		}
-
-		// Keep sigma in bounds
-		sigma = Math.max(MIN_IV, Math.min(MAX_IV, sigma));
+		sigma = getNextSigma(sigma, diff, vega);
 	}
 
-	// Did not converge, return best estimate
-	return {
-		impliedVolatility: sigma,
-		iterations: MAX_ITERATIONS,
-		converged: false,
-	};
+	return createSolverResult(sigma, MAX_ITERATIONS, false);
+}
+
+function getNextSigma(currentSigma: number, diff: number, vega: number): number {
+	const nextSigma =
+		Math.abs(vega) < PRECISION
+			? diff > 0
+				? currentSigma * 0.8
+				: currentSigma * 1.2
+			: currentSigma - diff / vega;
+	return Math.max(MIN_IV, Math.min(MAX_IV, nextSigma));
 }
 
 /**

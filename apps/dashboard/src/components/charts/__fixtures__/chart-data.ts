@@ -9,6 +9,10 @@ import type { AllocationDataPoint } from "../AllocationChart";
 import type { EquityDataPoint } from "../EquityCurve";
 import type { ReturnsDataPoint } from "../ReturnsChart";
 
+function toISODate(value: Date): string {
+	return value.toISOString().split("T")[0] ?? value.toISOString();
+}
+
 // ============================================
 // OHLCV Candlestick Data
 // ============================================
@@ -33,8 +37,7 @@ export function generateOHLCVData(days: number, startPrice = 100): OHLCVData[] {
 		const volume = Math.floor(Math.random() * 1000000) + 100000;
 
 		data.push({
-			// biome-ignore lint/style/noNonNullAssertion: split always returns array
-			time: date.toISOString().split("T")[0]!,
+			time: toISODate(date),
 			open: Number(open.toFixed(2)),
 			high: Number(high.toFixed(2)),
 			low: Number(low.toFixed(2)),
@@ -138,8 +141,7 @@ export function generateEquityData(days: number, startEquity = 100000): EquityDa
 		const drawdown = ((peak - equity) / peak) * 100;
 
 		data.push({
-			// biome-ignore lint/style/noNonNullAssertion: split always returns array
-			time: date.toISOString().split("T")[0]!,
+			time: toISODate(date),
 			value: Math.round(equity * 100) / 100,
 			drawdown: Math.round(drawdown * 100) / 100,
 		});

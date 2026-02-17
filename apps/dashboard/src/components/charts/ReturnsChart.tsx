@@ -187,6 +187,121 @@ function CustomBar({ x, y, width, height, fill, radius }: CustomBarProps) {
 // Component
 // ============================================
 
+function getYDomain(data: ReturnsDataPoint[]): [number, number] {
+	if (data.length === 0) {
+		return [-10, 10];
+	}
+
+	const values = data.map((d) => d.value);
+	const min = Math.min(...values, 0);
+	const max = Math.max(...values, 0);
+	const padding = Math.max(Math.abs(max - min) * 0.1, 1);
+	return [min - padding, max + padding];
+}
+
+function ReturnsChartEmptyState({
+	width,
+	height,
+	className,
+}: {
+	width: number | string;
+	height: number;
+	className?: string;
+}) {
+	return (
+		<div
+			className={className}
+			style={{
+				width: typeof width === "number" ? `${width}px` : width,
+				height: `${height}px`,
+				display: "flex",
+				alignItems: "center",
+				justifyContent: "center",
+				color: CHART_COLORS.text,
+				fontFamily: "Geist Mono, monospace",
+				fontSize: 12,
+			}}
+		>
+			No data
+		</div>
+	);
+}
+
+function ReturnsChartBody({
+	data,
+	showGrid,
+	showXAxis,
+	showYAxis,
+	showZeroLine,
+	showTooltip,
+	barRadius,
+	valueFormatter,
+	yDomain,
+}: {
+	data: ReturnsDataPoint[];
+	showGrid: boolean;
+	showXAxis: boolean;
+	showYAxis: boolean;
+	showZeroLine: boolean;
+	showTooltip: boolean;
+	barRadius: number;
+	valueFormatter: (value: number) => string;
+	yDomain: [number, number];
+}) {
+	return (
+		<ResponsiveContainer width="100%" height="100%">
+			<BarChart data={data} margin={{ top: 10, right: 10, left: 10, bottom: 0 }}>
+				{showGrid && (
+					<CartesianGrid strokeDasharray="3 3" stroke={CHART_COLORS.grid} vertical={false} />
+				)}
+
+				{showXAxis && (
+					<XAxis
+						dataKey="period"
+						stroke={CHART_COLORS.text}
+						tick={{ fill: CHART_COLORS.text, fontSize: 10 }}
+						axisLine={{ stroke: CHART_COLORS.grid }}
+						tickLine={{ stroke: CHART_COLORS.grid }}
+					/>
+				)}
+
+				{showYAxis && (
+					<YAxis
+						domain={yDomain}
+						stroke={CHART_COLORS.text}
+						tick={{ fill: CHART_COLORS.text, fontSize: 10 }}
+						tickFormatter={(value) => `${value}%`}
+						axisLine={{ stroke: CHART_COLORS.grid }}
+						tickLine={{ stroke: CHART_COLORS.grid }}
+						width={50}
+					/>
+				)}
+
+				{showZeroLine && <ReferenceLine y={0} stroke={CHART_COLORS.text} strokeWidth={1} />}
+
+				{showTooltip && (
+					<Tooltip
+						content={<CustomTooltip valueFormatter={valueFormatter} />}
+						cursor={{ fill: "rgba(120, 113, 108, 0.1)" }}
+					/>
+				)}
+
+				<Bar
+					dataKey="value"
+					animationDuration={300}
+					shape={(props: unknown) => (
+						<CustomBar {...(props as CustomBarProps)} radius={barRadius} />
+					)}
+				>
+					{data.map((entry) => (
+						<Cell key={`cell-${entry.period}`} fill={getReturnColor(entry.value)} />
+					))}
+				</Bar>
+			</BarChart>
+		</ResponsiveContainer>
+	);
+}
+
 /**
  * Returns bar chart component with positive/negative coloring.
  */
@@ -203,36 +318,10 @@ function ReturnsChartComponent({
 	valueFormatter = defaultValueFormatter,
 	className,
 }: ReturnsChartProps) {
-	// Calculate Y axis domain with padding
-	const yDomain = useMemo(() => {
-		if (data.length === 0) {
-			return [-10, 10];
-		}
-		const values = data.map((d) => d.value);
-		const min = Math.min(...values, 0);
-		const max = Math.max(...values, 0);
-		const padding = Math.max(Math.abs(max - min) * 0.1, 1);
-		return [min - padding, max + padding];
-	}, [data]);
+	const yDomain = useMemo(() => getYDomain(data), [data]);
 
 	if (data.length === 0) {
-		return (
-			<div
-				className={className}
-				style={{
-					width: typeof width === "number" ? `${width}px` : width,
-					height: `${height}px`,
-					display: "flex",
-					alignItems: "center",
-					justifyContent: "center",
-					color: CHART_COLORS.text,
-					fontFamily: "Geist Mono, monospace",
-					fontSize: 12,
-				}}
-			>
-				No data
-			</div>
-		);
+		return <ReturnsChartEmptyState width={width} height={height} className={className} />;
 	}
 
 	return (
@@ -243,56 +332,17 @@ function ReturnsChartComponent({
 				height: `${height}px`,
 			}}
 		>
-			<ResponsiveContainer width="100%" height="100%">
-				<BarChart data={data} margin={{ top: 10, right: 10, left: 10, bottom: 0 }}>
-					{showGrid && (
-						<CartesianGrid strokeDasharray="3 3" stroke={CHART_COLORS.grid} vertical={false} />
-					)}
-
-					{showXAxis && (
-						<XAxis
-							dataKey="period"
-							stroke={CHART_COLORS.text}
-							tick={{ fill: CHART_COLORS.text, fontSize: 10 }}
-							axisLine={{ stroke: CHART_COLORS.grid }}
-							tickLine={{ stroke: CHART_COLORS.grid }}
-						/>
-					)}
-
-					{showYAxis && (
-						<YAxis
-							domain={yDomain}
-							stroke={CHART_COLORS.text}
-							tick={{ fill: CHART_COLORS.text, fontSize: 10 }}
-							tickFormatter={(value) => `${value}%`}
-							axisLine={{ stroke: CHART_COLORS.grid }}
-							tickLine={{ stroke: CHART_COLORS.grid }}
-							width={50}
-						/>
-					)}
-
-					{showZeroLine && <ReferenceLine y={0} stroke={CHART_COLORS.text} strokeWidth={1} />}
-
-					{showTooltip && (
-						<Tooltip
-							content={<CustomTooltip valueFormatter={valueFormatter} />}
-							cursor={{ fill: "rgba(120, 113, 108, 0.1)" }}
-						/>
-					)}
-
-					<Bar
-						dataKey="value"
-						animationDuration={300}
-						shape={(props: unknown) => (
-							<CustomBar {...(props as CustomBarProps)} radius={barRadius} />
-						)}
-					>
-						{data.map((entry) => (
-							<Cell key={`cell-${entry.period}`} fill={getReturnColor(entry.value)} />
-						))}
-					</Bar>
-				</BarChart>
-			</ResponsiveContainer>
+			<ReturnsChartBody
+				data={data}
+				showGrid={showGrid}
+				showXAxis={showXAxis}
+				showYAxis={showYAxis}
+				showZeroLine={showZeroLine}
+				showTooltip={showTooltip}
+				barRadius={barRadius}
+				valueFormatter={valueFormatter}
+				yDomain={yDomain}
+			/>
 		</div>
 	);
 }

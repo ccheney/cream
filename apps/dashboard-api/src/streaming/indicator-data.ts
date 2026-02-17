@@ -48,6 +48,52 @@ const indicatorCache = new Map<
 	}
 >();
 
+function createPriceIndicatorSnapshot(priceIndicators: PriceIndicators) {
+	return {
+		rsi_14: priceIndicators.rsi_14,
+		atr_14: priceIndicators.atr_14,
+		sma_20: priceIndicators.sma_20,
+		sma_50: priceIndicators.sma_50,
+		sma_200: priceIndicators.sma_200,
+		ema_9: priceIndicators.ema_9,
+		ema_12: priceIndicators.ema_12,
+		ema_21: priceIndicators.ema_21,
+		macd_line: priceIndicators.macd_line,
+		macd_signal: priceIndicators.macd_signal,
+		macd_histogram: priceIndicators.macd_histogram,
+		bollinger_upper: priceIndicators.bollinger_upper,
+		bollinger_middle: priceIndicators.bollinger_middle,
+		bollinger_lower: priceIndicators.bollinger_lower,
+		bollinger_bandwidth: priceIndicators.bollinger_bandwidth,
+		stochastic_k: priceIndicators.stochastic_k,
+		stochastic_d: priceIndicators.stochastic_d,
+		momentum_1m: priceIndicators.momentum_1m,
+		momentum_3m: priceIndicators.momentum_3m,
+		momentum_12m: priceIndicators.momentum_12m,
+		realized_vol_20d: priceIndicators.realized_vol_20d,
+	};
+}
+
+function cacheAndBroadcastIndicators(
+	symbol: string,
+	now: Date,
+	priceIndicators: PriceIndicators,
+): void {
+	indicatorCache.set(symbol, {
+		price: priceIndicators,
+		timestamp: now,
+	});
+
+	broadcastIndicator(symbol, {
+		type: "indicator",
+		data: {
+			symbol,
+			timestamp: now.toISOString(),
+			price: createPriceIndicatorSnapshot(priceIndicators),
+		},
+	});
+}
+
 // ============================================
 // Helpers
 // ============================================
@@ -210,7 +256,6 @@ export function shutdownIndicatorDataStreaming(): void {
 async function handleProxyBar(bar: StockBar): Promise<void> {
 	const symbol = bar.symbol.toUpperCase();
 
-	// Only process if we have subscribers
 	if (!activeSymbols.has(symbol)) {
 		return;
 	}
@@ -222,50 +267,10 @@ async function handleProxyBar(bar: StockBar): Promise<void> {
 	}
 
 	try {
-		// Invalidate cache and recalculate
 		service.invalidateRealtimeCache(symbol);
 		const priceIndicators = await service.getPriceIndicators(symbol);
-
 		const now = new Date();
-
-		// Update cache
-		indicatorCache.set(symbol, {
-			price: priceIndicators,
-			timestamp: now,
-		});
-
-		// Broadcast to subscribed clients
-		broadcastIndicator(symbol, {
-			type: "indicator",
-			data: {
-				symbol,
-				timestamp: now.toISOString(),
-				price: {
-					rsi_14: priceIndicators.rsi_14,
-					atr_14: priceIndicators.atr_14,
-					sma_20: priceIndicators.sma_20,
-					sma_50: priceIndicators.sma_50,
-					sma_200: priceIndicators.sma_200,
-					ema_9: priceIndicators.ema_9,
-					ema_12: priceIndicators.ema_12,
-					ema_21: priceIndicators.ema_21,
-					macd_line: priceIndicators.macd_line,
-					macd_signal: priceIndicators.macd_signal,
-					macd_histogram: priceIndicators.macd_histogram,
-					bollinger_upper: priceIndicators.bollinger_upper,
-					bollinger_middle: priceIndicators.bollinger_middle,
-					bollinger_lower: priceIndicators.bollinger_lower,
-					bollinger_bandwidth: priceIndicators.bollinger_bandwidth,
-					stochastic_k: priceIndicators.stochastic_k,
-					stochastic_d: priceIndicators.stochastic_d,
-					momentum_1m: priceIndicators.momentum_1m,
-					momentum_3m: priceIndicators.momentum_3m,
-					momentum_12m: priceIndicators.momentum_12m,
-					realized_vol_20d: priceIndicators.realized_vol_20d,
-				},
-			},
-		});
-
+		cacheAndBroadcastIndicators(symbol, now, priceIndicators);
 		log.debug({ symbol, rsi: priceIndicators.rsi_14 }, "Broadcast indicator update");
 	} catch (error) {
 		log.warn(

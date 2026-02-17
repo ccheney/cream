@@ -121,7 +121,7 @@ describe("wasEdgeRecordedBy", () => {
 // filterEdgesByTime Tests
 // ============================================
 
-describe("filterEdgesByTime", () => {
+describe("filterEdgesByTime: baseline", () => {
 	it("returns all edges when no options provided", () => {
 		const edges = [
 			createEdge({ id: "e1", properties: { valid_from: JAN_2024 } }),
@@ -137,7 +137,9 @@ describe("filterEdgesByTime", () => {
 		expect(stats.expired).toBe(0);
 		expect(stats.notYetRecorded).toBe(0);
 	});
+});
 
+describe("filterEdgesByTime: asOfTimestamp", () => {
 	it("filters out edges not yet valid", () => {
 		const edges = [
 			createEdge({ id: "e1", properties: { valid_from: JAN_2024 } }),
@@ -154,9 +156,9 @@ describe("filterEdgesByTime", () => {
 
 	it("filters out expired edges", () => {
 		const edges = [
-			createEdge({ id: "e1", properties: { valid_from: JAN_2024 } }), // Active
-			createEdge({ id: "e2", properties: { valid_from: JAN_2024, valid_to: FEB_2024 } }), // Expired
-			createEdge({ id: "e3", properties: { valid_from: JAN_2024, valid_to: APR_2024 } }), // Active at MAR
+			createEdge({ id: "e1", properties: { valid_from: JAN_2024 } }),
+			createEdge({ id: "e2", properties: { valid_from: JAN_2024, valid_to: FEB_2024 } }),
+			createEdge({ id: "e3", properties: { valid_from: JAN_2024, valid_to: APR_2024 } }),
 		];
 
 		const { filtered, stats } = filterEdgesByTime(edges, { asOfTimestamp: MAR_2024 });
@@ -171,18 +173,18 @@ describe("filterEdgesByTime", () => {
 			createEdge({ id: "e1", properties: { valid_from: JAN_2024, valid_to: FEB_2024 } }),
 		];
 
-		// Without includeExpired
 		const { filtered: filtered1 } = filterEdgesByTime(edges, { asOfTimestamp: MAR_2024 });
 		expect(filtered1.length).toBe(0);
 
-		// With includeExpired
 		const { filtered: filtered2 } = filterEdgesByTime(edges, {
 			asOfTimestamp: MAR_2024,
 			includeExpired: true,
 		});
 		expect(filtered2.length).toBe(1);
 	});
+});
 
+describe("filterEdgesByTime: knownAsOfTimestamp", () => {
 	it("filters by knownAsOfTimestamp", () => {
 		const edges = [
 			createEdge({ id: "e1", properties: { recorded_at: JAN_2024 } }),
@@ -196,11 +198,10 @@ describe("filterEdgesByTime", () => {
 		expect(filtered[0]?.id).toBe("e1");
 		expect(stats.notYetRecorded).toBe(2);
 	});
+});
 
+describe("filterEdgesByTime: combined constraints", () => {
 	it("combines asOfTimestamp and knownAsOfTimestamp", () => {
-		// Edge 1: Started Jan, recorded Jan - visible at Feb
-		// Edge 2: Started Jan, recorded Mar - not visible at Feb (didn't know yet)
-		// Edge 3: Started Mar, recorded Jan - not visible at Feb (not yet valid)
 		const edges = [
 			createEdge({ id: "e1", properties: { valid_from: JAN_2024, recorded_at: JAN_2024 } }),
 			createEdge({ id: "e2", properties: { valid_from: JAN_2024, recorded_at: MAR_2024 } }),
@@ -220,13 +221,12 @@ describe("filterEdgesByTime", () => {
 
 	it("handles legacy edges without temporal properties", () => {
 		const edges = [
-			createEdge({ id: "e1", properties: {} }), // Legacy
+			createEdge({ id: "e1", properties: {} }),
 			createEdge({ id: "e2", properties: { valid_from: MAR_2024 } }),
 		];
 
 		const { filtered } = filterEdgesByTime(edges, { asOfTimestamp: FEB_2024 });
 
-		// Legacy edge should be included (treated as always active)
 		expect(filtered.length).toBe(1);
 		expect(filtered[0]?.id).toBe("e1");
 	});

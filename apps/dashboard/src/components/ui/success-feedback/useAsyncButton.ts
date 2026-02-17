@@ -4,23 +4,130 @@
  * Hook for managing async button state transitions.
  */
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import {
+	type Dispatch,
+	type SetStateAction,
+	useCallback,
+	useEffect,
+	useRef,
+	useState,
+} from "react";
 import { ERROR_STATE_DURATION, SUCCESS_STATE_DURATION } from "./animations";
 import type { ButtonState, UseAsyncButtonOptions, UseAsyncButtonReturn } from "./types";
 
+interface AsyncButtonRuntime<T> {
+	targetSuccessDuration: number;
+	targetErrorDuration: number;
+	onSuccess?: (result: T) => void;
+	onError?: (error: Error) => void;
+	setState: Dispatch<SetStateAction<ButtonState>>;
+	setError: Dispatch<SetStateAction<Error | null>>;
+}
+
+function useAsyncButtonTimer() {
+	const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+	const clear = useCallback(() => {
+		if (timeoutRef.current) {
+			clearTimeout(timeoutRef.current);
+			timeoutRef.current = null;
+		}
+	}, []);
+
+	const schedule = useCallback(
+		(durationMs: number, callback: () => void, setState: Dispatch<SetStateAction<ButtonState>>) => {
+			clear();
+			timeoutRef.current = setTimeout(() => {
+				setState("idle");
+				callback();
+			}, durationMs);
+		},
+		[clear],
+	);
+
+	useEffect(() => {
+		return () => {
+			clear();
+		};
+	}, [clear]);
+
+	return { clear, schedule };
+}
+
+function useAsyncButtonLifecycle<T>({
+	targetSuccessDuration,
+	targetErrorDuration,
+	onSuccess,
+	onError,
+	setState,
+	setError,
+}: AsyncButtonRuntime<T>) {
+	const { clear, schedule } = useAsyncButtonTimer();
+
+	const handleSuccess = useCallback(
+		(result: T) => {
+			setState("success");
+			schedule(
+				targetSuccessDuration,
+				() => {
+					onSuccess?.(result);
+				},
+				setState,
+			);
+		},
+		[onSuccess, schedule, setState, targetSuccessDuration],
+	);
+
+	const handleError = useCallback(
+		(error: Error) => {
+			setError(error);
+			setState("error");
+			schedule(
+				targetErrorDuration,
+				() => {
+					onError?.(error);
+				},
+				setState,
+			);
+		},
+		[onError, schedule, setError, setState, targetErrorDuration],
+	);
+
+	const reset = useCallback(() => {
+		setState("idle");
+		setError(null);
+		clear();
+	}, [clear, setError, setState]);
+
+	return { handleSuccess, handleError, reset };
+}
+
+function useAsyncButtonExecution<T>(
+	asyncFn: () => Promise<T>,
+	state: ButtonState,
+	setError: Dispatch<SetStateAction<Error | null>>,
+	setState: Dispatch<SetStateAction<ButtonState>>,
+	handleSuccess: (result: T) => void,
+	handleError: (error: Error) => void,
+) {
+	return useCallback(async () => {
+		if (state === "loading") {
+			return;
+		}
+
+		setError(null);
+		setState("loading");
+		try {
+			const result = await asyncFn();
+			handleSuccess(result);
+		} catch (error) {
+			handleError(error instanceof Error ? error : new Error(String(error)));
+		}
+	}, [asyncFn, handleError, handleSuccess, setError, setState, state]);
+}
+
 /**
  * Hook for managing async button state.
- *
- * @example
- * ```tsx
- * const { state, execute, reset } = useAsyncButton(async () => {
- *   await saveData();
- * });
- *
- * <SuccessButton state={state} onClick={execute} onStateReset={reset}>
- *   Save
- * </SuccessButton>
- * ```
  */
 export function useAsyncButton<T>(
 	asyncFn: () => Promise<T>,
@@ -28,8 +135,6 @@ export function useAsyncButton<T>(
 ): UseAsyncButtonReturn {
 	const [state, setState] = useState<ButtonState>("idle");
 	const [error, setError] = useState<Error | null>(null);
-	const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-
 	const {
 		successDuration = SUCCESS_STATE_DURATION,
 		errorDuration = ERROR_STATE_DURATION,
@@ -37,49 +142,23 @@ export function useAsyncButton<T>(
 		onError,
 	} = options;
 
-	const reset = useCallback(() => {
-		setState("idle");
-		setError(null);
-		if (timeoutRef.current) {
-			clearTimeout(timeoutRef.current);
-		}
-	}, []);
+	const { handleSuccess, handleError, reset } = useAsyncButtonLifecycle<T>({
+		targetSuccessDuration: successDuration,
+		targetErrorDuration: errorDuration,
+		onSuccess,
+		onError,
+		setState,
+		setError,
+	});
 
-	const execute = useCallback(async () => {
-		if (state === "loading") {
-			return;
-		}
-
-		setState("loading");
-		setError(null);
-
-		try {
-			const result = await asyncFn();
-			setState("success");
-
-			timeoutRef.current = setTimeout(() => {
-				setState("idle");
-				onSuccess?.(result);
-			}, successDuration);
-		} catch (e) {
-			const err = e instanceof Error ? e : new Error(String(e));
-			setError(err);
-			setState("error");
-
-			timeoutRef.current = setTimeout(() => {
-				setState("idle");
-				onError?.(err);
-			}, errorDuration);
-		}
-	}, [asyncFn, state, successDuration, errorDuration, onSuccess, onError]);
-
-	useEffect(() => {
-		return () => {
-			if (timeoutRef.current) {
-				clearTimeout(timeoutRef.current);
-			}
-		};
-	}, []);
+	const execute = useAsyncButtonExecution(
+		asyncFn,
+		state,
+		setError,
+		setState,
+		handleSuccess,
+		handleError,
+	);
 
 	return {
 		state,

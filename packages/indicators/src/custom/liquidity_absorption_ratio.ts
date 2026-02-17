@@ -88,6 +88,68 @@ interface CandleMetrics {
 	isBullish: boolean;
 }
 
+type SingleBarAbsorptionResult = ReturnType<typeof calculateSingleBarAbsorptionRatio>;
+
+function getDefaultConfig(
+	config?: LiquidityAbsorptionRatioConfig,
+): Required<LiquidityAbsorptionRatioConfig> {
+	return {
+		normalizationPeriod: config?.normalizationPeriod ?? 20,
+		minRangeFraction: config?.minRangeFraction ?? 0.0001,
+		minBodyFraction: config?.minBodyFraction ?? 0.01,
+	};
+}
+
+function collectAbsorptionResults(
+	bars: OHLCVBar[],
+	config: Required<LiquidityAbsorptionRatioConfig>,
+): { absorptionRatios: number[]; barResults: SingleBarAbsorptionResult[] } {
+	const absorptionRatios: number[] = [];
+	const barResults: SingleBarAbsorptionResult[] = [];
+
+	for (const bar of bars) {
+		const result = calculateSingleBarAbsorptionRatio(bar, config);
+		barResults.push(result);
+		if (result !== null) {
+			absorptionRatios.push(result.absorptionRatio);
+		}
+	}
+
+	return { absorptionRatios, barResults };
+}
+
+function getRollingWindow(values: number[], normalizationPeriod: number): number[] {
+	const windowStart = Math.max(0, values.length - normalizationPeriod - 1);
+	const currentValueIndex = values.length - 1;
+	return values.slice(windowStart, currentValueIndex);
+}
+
+function clamp(value: number, min: number, max: number): number {
+	return Math.max(min, Math.min(max, value));
+}
+
+function buildLiquidityAbsorptionRatioResult(
+	barResult: NonNullable<SingleBarAbsorptionResult>,
+	mean: number,
+	stdDev: number,
+	timestamp: number,
+): LiquidityAbsorptionRatioResult {
+	const rawAbsorptionRatio = barResult.absorptionRatio;
+	const zScore = (rawAbsorptionRatio - mean) / stdDev;
+
+	return {
+		value: clamp(zScore, -3, 3),
+		rawAbsorptionRatio,
+		upperWickVolume: barResult.upperWickVolume,
+		lowerWickVolume: barResult.lowerWickVolume,
+		bodyVolume: barResult.bodyVolume,
+		trendOpposingWickDirection: barResult.trendOpposingWickDirection,
+		rollingMean: mean,
+		rollingStdDev: stdDev,
+		timestamp,
+	};
+}
+
 /**
  * Extract wick and body metrics from a candle
  */
@@ -217,31 +279,14 @@ export function calculateLiquidityAbsorptionRatio(
 	bars: OHLCVBar[],
 	config?: LiquidityAbsorptionRatioConfig,
 ): LiquidityAbsorptionRatioResult | null {
-	// Default configuration
-	const fullConfig: Required<LiquidityAbsorptionRatioConfig> = {
-		normalizationPeriod: config?.normalizationPeriod ?? 20,
-		minRangeFraction: config?.minRangeFraction ?? 0.0001,
-		minBodyFraction: config?.minBodyFraction ?? 0.01,
-	};
+	const fullConfig = getDefaultConfig(config);
 
 	// Need at least normalizationPeriod + 1 bars for meaningful Z-score
 	if (bars.length < fullConfig.normalizationPeriod + 1) {
 		return null;
 	}
 
-	// Calculate absorption ratios for all bars
-	const absorptionRatios: number[] = [];
-	const barResults: Array<ReturnType<typeof calculateSingleBarAbsorptionRatio>> = [];
-
-	for (const bar of bars) {
-		const result = calculateSingleBarAbsorptionRatio(bar, fullConfig);
-		barResults.push(result);
-		if (result !== null) {
-			absorptionRatios.push(result.absorptionRatio);
-		}
-	}
-
-	// Get the most recent bar's result
+	const { absorptionRatios, barResults } = collectAbsorptionResults(bars, fullConfig);
 	const lastBarResult = barResults.at(-1);
 	if (!lastBarResult) {
 		return null;
@@ -252,33 +297,14 @@ export function calculateLiquidityAbsorptionRatio(
 		return null;
 	}
 
-	// Get the rolling window for Z-score calculation (excluding the current bar)
-	const windowStart = Math.max(0, absorptionRatios.length - fullConfig.normalizationPeriod - 1);
-	const windowEnd = absorptionRatios.length - 1;
-	const rollingWindow = absorptionRatios.slice(windowStart, windowEnd);
-
+	const rollingWindow = getRollingWindow(absorptionRatios, fullConfig.normalizationPeriod);
 	const { mean, stdDev } = calculateRollingStats(rollingWindow);
-
-	// Calculate Z-score for the current bar
-	const rawAbsorptionRatio = lastBarResult.absorptionRatio;
-	const zScore = (rawAbsorptionRatio - mean) / stdDev;
-
-	// Clamp to [-3, 3] as per hypothesis specification
-	const clampedValue = Math.max(-3, Math.min(3, zScore));
-
-	const lastBar = bars.at(-1);
-
-	return {
-		value: clampedValue,
-		rawAbsorptionRatio,
-		upperWickVolume: lastBarResult.upperWickVolume,
-		lowerWickVolume: lastBarResult.lowerWickVolume,
-		bodyVolume: lastBarResult.bodyVolume,
-		trendOpposingWickDirection: lastBarResult.trendOpposingWickDirection,
-		rollingMean: mean,
-		rollingStdDev: stdDev,
-		timestamp: lastBar?.timestamp ?? Date.now(),
-	};
+	return buildLiquidityAbsorptionRatioResult(
+		lastBarResult,
+		mean,
+		stdDev,
+		bars.at(-1)?.timestamp ?? Date.now(),
+	);
 }
 
 /**
@@ -292,11 +318,7 @@ export function calculateLiquidityAbsorptionRatioSeries(
 	bars: OHLCVBar[],
 	config?: LiquidityAbsorptionRatioConfig,
 ): Array<LiquidityAbsorptionRatioResult | null> {
-	const fullConfig: Required<LiquidityAbsorptionRatioConfig> = {
-		normalizationPeriod: config?.normalizationPeriod ?? 20,
-		minRangeFraction: config?.minRangeFraction ?? 0.0001,
-		minBodyFraction: config?.minBodyFraction ?? 0.01,
-	};
+	const fullConfig = getDefaultConfig(config);
 
 	const results: Array<LiquidityAbsorptionRatioResult | null> = [];
 

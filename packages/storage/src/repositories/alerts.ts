@@ -141,29 +141,20 @@ export class AlertsRepository {
 		return alert;
 	}
 
-	async findMany(
-		filters: AlertFilters = {},
-		pagination?: PaginationOptions,
-	): Promise<PaginatedResult<Alert>> {
+	private buildFindManyWhereClause(filters: AlertFilters) {
 		const conditions = [];
 
 		if (filters.severity) {
-			if (Array.isArray(filters.severity)) {
-				conditions.push(
-					inArray(alerts.severity, filters.severity as (typeof alerts.$inferSelect.severity)[]),
-				);
-			} else {
-				conditions.push(
-					eq(alerts.severity, filters.severity as typeof alerts.$inferSelect.severity),
-				);
-			}
+			const severity = filters.severity;
+			conditions.push(
+				Array.isArray(severity)
+					? inArray(alerts.severity, severity as (typeof alerts.$inferSelect.severity)[])
+					: eq(alerts.severity, severity as typeof alerts.$inferSelect.severity),
+			);
 		}
 		if (filters.type) {
-			if (Array.isArray(filters.type)) {
-				conditions.push(inArray(alerts.type, filters.type));
-			} else {
-				conditions.push(eq(alerts.type, filters.type));
-			}
+			const type = filters.type;
+			conditions.push(Array.isArray(type) ? inArray(alerts.type, type) : eq(alerts.type, type));
 		}
 		if (filters.acknowledged !== undefined) {
 			conditions.push(eq(alerts.acknowledged, filters.acknowledged));
@@ -180,7 +171,14 @@ export class AlertsRepository {
 			conditions.push(lte(alerts.createdAt, new Date(filters.toDate)));
 		}
 
-		const whereClause = conditions.length > 0 ? and(...conditions) : undefined;
+		return conditions.length > 0 ? and(...conditions) : undefined;
+	}
+
+	async findMany(
+		filters: AlertFilters = {},
+		pagination?: PaginationOptions,
+	): Promise<PaginatedResult<Alert>> {
+		const whereClause = this.buildFindManyWhereClause(filters);
 		const page = pagination?.page ?? 1;
 		const pageSize = pagination?.pageSize ?? 50;
 		const offset = (page - 1) * pageSize;

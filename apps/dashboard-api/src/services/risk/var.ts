@@ -190,6 +190,67 @@ function parametricVaR(
 	return nav * stdDev * zScore * Math.sqrt(holdingPeriod);
 }
 
+function zeroVaR(): VaRMetrics {
+	return {
+		oneDay95: 0,
+		oneDay99: 0,
+		tenDay95: 0,
+		method: "parametric",
+	};
+}
+
+function createMarketDataClient(): AlpacaMarketDataClient | null {
+	if (!isAlpacaConfigured()) {
+		return null;
+	}
+	try {
+		return createAlpacaClientFromEnv();
+	} catch {
+		return null;
+	}
+}
+
+async function fetchReturnsBySymbol(
+	client: AlpacaMarketDataClient,
+	positions: PositionForExposure[],
+	from: string,
+	to: string,
+): Promise<Record<string, number[]>> {
+	const returnsBySymbol: Record<string, number[]> = {};
+	await Promise.all(
+		positions.map(async (position) => {
+			try {
+				const bars = await client.getBars(position.symbol, "1Day", from, to);
+				if (bars.length > 0) {
+					returnsBySymbol[position.symbol] = calculateReturns(bars.map((bar) => bar.close));
+				}
+			} catch {
+				// Skip symbols with fetch errors
+			}
+		}),
+	);
+	return returnsBySymbol;
+}
+
+function calculateVaRByMethod(
+	portfolioReturns: number[],
+	nav: number,
+	useHistorical: boolean,
+): Pick<VaRMetrics, "oneDay95" | "oneDay99" | "tenDay95"> {
+	if (useHistorical) {
+		return {
+			oneDay95: historicalVaR(portfolioReturns, nav, 0.95, 1),
+			oneDay99: historicalVaR(portfolioReturns, nav, 0.99, 1),
+			tenDay95: historicalVaR(portfolioReturns, nav, 0.95, 10),
+		};
+	}
+	return {
+		oneDay95: parametricVaR(portfolioReturns, nav, 0.95, 1),
+		oneDay99: parametricVaR(portfolioReturns, nav, 0.99, 1),
+		tenDay95: parametricVaR(portfolioReturns, nav, 0.95, 10),
+	};
+}
+
 // ============================================
 // VaR Calculation Service
 // ============================================
@@ -212,90 +273,28 @@ function parametricVaR(
 export async function calculateVaR(options: CalculateVaROptions): Promise<VaRMetrics> {
 	const { positions, nav, lookbackDays = 252, preferredMethod = "historical" } = options;
 
-	// Handle empty portfolio
 	if (positions.length === 0 || nav === 0) {
-		return {
-			oneDay95: 0,
-			oneDay99: 0,
-			tenDay95: 0,
-			method: "parametric",
-		};
+		return zeroVaR();
 	}
 
-	// Get date range
 	const to = formatDate(new Date());
 	const from = getFromDate(lookbackDays);
-
-	// Create Alpaca client
-	let client: AlpacaMarketDataClient;
-	if (!isAlpacaConfigured()) {
-		// If no API key, return zero VaR
-		return {
-			oneDay95: 0,
-			oneDay99: 0,
-			tenDay95: 0,
-			method: "parametric",
-		};
+	const client = createMarketDataClient();
+	if (!client) {
+		return zeroVaR();
 	}
 
-	try {
-		client = createAlpacaClientFromEnv();
-	} catch {
-		// If client creation fails, return zero VaR
-		return {
-			oneDay95: 0,
-			oneDay99: 0,
-			tenDay95: 0,
-			method: "parametric",
-		};
-	}
-
-	// Fetch historical prices for all positions
-	const returnsBySymbol: Record<string, number[]> = {};
-
-	await Promise.all(
-		positions.map(async (position) => {
-			try {
-				const bars = await client.getBars(position.symbol, "1Day", from, to);
-
-				if (bars.length > 0) {
-					const prices = bars.map((bar) => bar.close);
-					returnsBySymbol[position.symbol] = calculateReturns(prices);
-				}
-			} catch {
-				// Skip symbols with fetch errors
-			}
-		}),
-	);
-
-	// Calculate portfolio returns
+	const returnsBySymbol = await fetchReturnsBySymbol(client, positions, from, to);
 	const portfolioReturns = calculatePortfolioReturns(positions, returnsBySymbol, nav);
-
-	// Determine method based on data availability
 	const useHistorical =
 		preferredMethod === "historical" && portfolioReturns.length >= MIN_HISTORICAL_DATA_POINTS;
-
 	const method = useHistorical ? "historical" : "parametric";
-
-	// Calculate VaR metrics
-	let oneDay95: number;
-	let oneDay99: number;
-	let tenDay95: number;
-
-	if (useHistorical) {
-		oneDay95 = historicalVaR(portfolioReturns, nav, 0.95, 1);
-		oneDay99 = historicalVaR(portfolioReturns, nav, 0.99, 1);
-		tenDay95 = historicalVaR(portfolioReturns, nav, 0.95, 10);
-	} else {
-		oneDay95 = parametricVaR(portfolioReturns, nav, 0.95, 1);
-		oneDay99 = parametricVaR(portfolioReturns, nav, 0.99, 1);
-		tenDay95 = parametricVaR(portfolioReturns, nav, 0.95, 10);
-	}
+	const metrics = calculateVaRByMethod(portfolioReturns, nav, useHistorical);
 
 	return {
-		oneDay95: Number(oneDay95.toFixed(2)),
-		oneDay99: Number(oneDay99.toFixed(2)),
-		tenDay95: Number(tenDay95.toFixed(2)),
+		oneDay95: Number(metrics.oneDay95.toFixed(2)),
+		oneDay99: Number(metrics.oneDay99.toFixed(2)),
+		tenDay95: Number(metrics.tenDay95.toFixed(2)),
 		method,
 	};
 }

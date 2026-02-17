@@ -41,84 +41,68 @@ export interface UseAggregateGreeksReturn {
 const DEFAULT_THROTTLE_MS = 100;
 const DEFAULT_SPY_PRICE = 500;
 
-export function useAggregateGreeks(
-	options: UseAggregateGreeksOptions = {},
-): UseAggregateGreeksReturn {
-	const { throttleMs = DEFAULT_THROTTLE_MS, spyPrice: providedSpyPrice, enabled = true } = options;
-
-	// Fetch options positions
-	const {
-		data: positionsResponse,
-		isLoading: positionsLoading,
-		error: positionsError,
-		refetch: refetchPositions,
-	} = useOptionsPositions();
-
-	// Extract positions and underlying prices
-	const positions = useMemo(() => positionsResponse?.positions ?? [], [positionsResponse]);
-	const underlyingPricesFromApi = useMemo(
-		() => positionsResponse?.underlyingPrices ?? {},
-		[positionsResponse],
-	);
-
-	// Get unique underlyings for WebSocket quotes + SPY for conversion
-	const underlyingSymbols = useMemo(() => {
-		const symbols = new Set(positions.map((p) => p.underlying));
-		symbols.add("SPY");
-		return Array.from(symbols);
-	}, [positions]);
-
-	// Stream underlying quotes
-	const { data: quotesData } = useQuotes(underlyingSymbols);
-
-	// Build price lookup from streaming quotes
-	const underlyingPrices = useMemo(() => {
-		const prices: Record<string, number> = { ...underlyingPricesFromApi };
-		// Override with streaming prices if available
-		if (quotesData.length > 0) {
-			for (const quote of quotesData) {
-				if (quote?.symbol) {
-					prices[quote.symbol] = quote.last ?? quote.bid ?? quote.ask ?? 0;
-				}
-			}
+function buildUnderlyingPriceMap(
+	quotesData: Array<{ symbol: string; last?: number; bid?: number; ask?: number }>,
+	underlyingPricesFromApi: Record<string, number>,
+) {
+	const prices: Record<string, number> = { ...underlyingPricesFromApi };
+	for (const quote of quotesData) {
+		if (quote?.symbol) {
+			prices[quote.symbol] = quote.last ?? quote.bid ?? quote.ask ?? 0;
 		}
-		return prices;
-	}, [quotesData, underlyingPricesFromApi]);
+	}
+	return prices;
+}
 
-	// Use position greeks hook for Black-Scholes calculations
-	const { aggregateGreeks, isStreaming: greeksStreaming } = usePositionGreeks({
-		positions,
-		underlyingPrices,
-	});
+function deriveAggregateData(
+	positions: Array<{ id: string }>,
+	aggregateGreeks: {
+		deltaNotional: number;
+		totalGamma: number;
+		totalTheta: number;
+		totalVega: number;
+		totalRho: number;
+	},
+	underlyingPrices: Record<string, number>,
+	providedSpyPrice?: number,
+) {
+	if (positions.length === 0) {
+		return null;
+	}
 
-	// State for throttled output
-	const [data, setData] = useState<AggregateGreeksData | null>(null);
-	const [isStreaming, setIsStreaming] = useState(false);
-	const lastUpdateRef = useRef<number>(0);
+	const spyPrice = providedSpyPrice ?? underlyingPrices.SPY ?? DEFAULT_SPY_PRICE;
+	const deltaSPYEquivalent = spyPrice > 0 ? aggregateGreeks.deltaNotional / spyPrice : 0;
+
+	return {
+		deltaNotional: aggregateGreeks.deltaNotional,
+		deltaSPYEquivalent,
+		gammaTotal: aggregateGreeks.totalGamma,
+		thetaDaily: aggregateGreeks.totalTheta,
+		vegaTotal: aggregateGreeks.totalVega,
+		rhoTotal: aggregateGreeks.totalRho,
+		positionCount: positions.length,
+		lastUpdated: new Date(),
+	};
+}
+
+function useThrottleAggregateData({
+	enabled,
+	throttleMs,
+	greeksStreaming,
+	transformedData,
+	setData,
+	setIsStreaming,
+}: {
+	enabled: boolean;
+	throttleMs: number;
+	greeksStreaming: boolean;
+	transformedData: AggregateGreeksData | null;
+	setData: (data: AggregateGreeksData | null) => void;
+	setIsStreaming: (isStreaming: boolean) => void;
+}) {
 	const pendingUpdateRef = useRef<AggregateGreeksData | null>(null);
+	const lastUpdateRef = useRef<number>(0);
 
-	// Transform aggregate greeks to our format with SPY equivalent
-	const transformedData = useMemo((): AggregateGreeksData | null => {
-		if (positions.length === 0) {
-			return null;
-		}
-
-		const spyPrice = providedSpyPrice ?? underlyingPrices.SPY ?? DEFAULT_SPY_PRICE;
-		const deltaSPYEquivalent = spyPrice > 0 ? aggregateGreeks.deltaNotional / spyPrice : 0;
-
-		return {
-			deltaNotional: aggregateGreeks.deltaNotional,
-			deltaSPYEquivalent,
-			gammaTotal: aggregateGreeks.totalGamma,
-			thetaDaily: aggregateGreeks.totalTheta,
-			vegaTotal: aggregateGreeks.totalVega,
-			rhoTotal: aggregateGreeks.totalRho,
-			positionCount: positions.length,
-			lastUpdated: new Date(),
-		};
-	}, [aggregateGreeks, positions.length, providedSpyPrice, underlyingPrices.SPY]);
-
-	// Throttled update effect
 	useEffect(() => {
 		if (!enabled || !transformedData) {
 			if (!transformedData) {
@@ -129,7 +113,6 @@ export function useAggregateGreeks(
 
 		const now = Date.now();
 		const timeSinceLastUpdate = now - lastUpdateRef.current;
-
 		if (timeSinceLastUpdate >= throttleMs) {
 			setData(transformedData);
 			lastUpdateRef.current = now;
@@ -138,7 +121,6 @@ export function useAggregateGreeks(
 		}
 
 		pendingUpdateRef.current = transformedData;
-
 		const timeoutId = setTimeout(() => {
 			if (pendingUpdateRef.current) {
 				setData(pendingUpdateRef.current);
@@ -149,9 +131,96 @@ export function useAggregateGreeks(
 		}, throttleMs - timeSinceLastUpdate);
 
 		return () => clearTimeout(timeoutId);
-	}, [transformedData, enabled, throttleMs, greeksStreaming]);
+	}, [enabled, transformedData, throttleMs, greeksStreaming, setData, setIsStreaming]);
+}
 
-	// Refresh function
+function useAggregatePositionState() {
+	const {
+		data: positionsResponse,
+		isLoading: positionsLoading,
+		error: positionsError,
+		refetch: refetchPositions,
+	} = useOptionsPositions();
+
+	const positions = useMemo(() => positionsResponse?.positions ?? [], [positionsResponse]);
+	const underlyingPricesFromApi = useMemo(
+		() => positionsResponse?.underlyingPrices ?? {},
+		[positionsResponse],
+	);
+
+	const underlyingSymbols = useMemo(() => {
+		const symbols = new Set(positions.map((position) => position.underlying));
+		symbols.add("SPY");
+		return Array.from(symbols);
+	}, [positions]);
+
+	const { data: quotesData } = useQuotes(underlyingSymbols);
+
+	const underlyingPrices = useMemo(
+		() => buildUnderlyingPriceMap(quotesData, underlyingPricesFromApi),
+		[quotesData, underlyingPricesFromApi],
+	);
+
+	return {
+		positions,
+		positionsLoading,
+		positionsError,
+		refetchPositions,
+		underlyingPrices,
+	};
+}
+
+function useAggregateDerivedState(
+	positions: Array<{ id: string }>,
+	providedSpyPrice: number | undefined,
+	underlyingPrices: Record<string, number>,
+	throttleMs: number,
+	enabled: boolean,
+) {
+	const { aggregateGreeks, isStreaming: greeksStreaming } = usePositionGreeks({
+		positions,
+		underlyingPrices,
+	});
+
+	const [data, setData] = useState<AggregateGreeksData | null>(null);
+	const [isStreaming, setIsStreaming] = useState(false);
+
+	const transformedData = useMemo(
+		() => deriveAggregateData(positions, aggregateGreeks, underlyingPrices, providedSpyPrice),
+		[aggregateGreeks, positions, underlyingPrices, providedSpyPrice],
+	);
+
+	useThrottleAggregateData({
+		enabled,
+		throttleMs,
+		greeksStreaming,
+		transformedData,
+		setData,
+		setIsStreaming,
+	});
+
+	return {
+		data,
+		isStreaming,
+	};
+}
+
+export function useAggregateGreeks(
+	options: UseAggregateGreeksOptions = {},
+): UseAggregateGreeksReturn {
+	const { throttleMs = DEFAULT_THROTTLE_MS, spyPrice: providedSpyPrice, enabled = true } = options;
+
+	const { positions, positionsLoading, positionsError, refetchPositions, underlyingPrices } =
+		useAggregatePositionState();
+
+	const { data, isStreaming } = useAggregateDerivedState(
+		positions,
+		providedSpyPrice,
+		underlyingPrices,
+		throttleMs,
+		enabled,
+	);
+
 	const refresh = useCallback(() => {
 		refetchPositions();
 	}, [refetchPositions]);

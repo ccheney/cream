@@ -1,11 +1,3 @@
-/**
- * Event Types Tests
- *
- * Tests for event type definitions and schemas.
- *
- * @see docs/plans/ui/08-realtime.md
- */
-
 import { describe, expect, it } from "bun:test";
 import {
 	BaseEventSchema,
@@ -29,75 +21,27 @@ import {
 	SystemAlertEventSchema,
 } from "./types";
 
-// ============================================
-// Event Source Type Tests
-// ============================================
-
 describe("EventSource Type", () => {
-	it("includes redis", () => {
-		const source: EventSource = "redis";
-		expect(source).toBe("redis");
-	});
-
-	it("includes grpc", () => {
-		const source: EventSource = "grpc";
-		expect(source).toBe("grpc");
-	});
-
-	it("includes database", () => {
-		const source: EventSource = "database";
-		expect(source).toBe("database");
-	});
-
-	it("includes internal", () => {
-		const source: EventSource = "internal";
-		expect(source).toBe("internal");
+	it("includes all sources", () => {
+		const sources: EventSource[] = ["redis", "grpc", "database", "internal"];
+		expect(sources).toEqual(["redis", "grpc", "database", "internal"]);
 	});
 });
 
 describe("SourceStatus Type", () => {
-	it("includes connecting", () => {
-		const status: SourceStatus = "connecting";
-		expect(status).toBe("connecting");
-	});
-
-	it("includes connected", () => {
-		const status: SourceStatus = "connected";
-		expect(status).toBe("connected");
-	});
-
-	it("includes disconnected", () => {
-		const status: SourceStatus = "disconnected";
-		expect(status).toBe("disconnected");
-	});
-
-	it("includes error", () => {
-		const status: SourceStatus = "error";
-		expect(status).toBe("error");
+	it("includes all statuses", () => {
+		const statuses: SourceStatus[] = ["connecting", "connected", "disconnected", "error"];
+		expect(statuses).toEqual(["connecting", "connected", "disconnected", "error"]);
 	});
 });
 
-// ============================================
-// Redis Channels Tests
-// ============================================
-
 describe("REDIS_CHANNELS", () => {
-	it("has CYCLE channel pattern", () => {
+	it("has expected channel patterns", () => {
 		expect(REDIS_CHANNELS.CYCLE).toBe("mastra:cycle:*");
-	});
-
-	it("has AGENT channel pattern", () => {
 		expect(REDIS_CHANNELS.AGENT).toBe("mastra:agent:*");
-	});
-
-	it("has ALERT channel pattern", () => {
 		expect(REDIS_CHANNELS.ALERT).toBe("system:alert:*");
 	});
 });
-
-// ============================================
-// BaseEvent Schema Tests
-// ============================================
 
 describe("BaseEventSchema", () => {
 	it("validates valid event", () => {
@@ -108,24 +52,21 @@ describe("BaseEventSchema", () => {
 			timestamp: "2026-01-04T12:00:00.000Z",
 			payload: { data: "test" },
 		};
-		const result = BaseEventSchema.safeParse(event);
-		expect(result.success).toBe(true);
+		expect(BaseEventSchema.safeParse(event).success).toBe(true);
 	});
 
-	it("requires id field", () => {
+	it("requires id", () => {
 		const event = {
 			source: "redis",
 			type: "test",
 			timestamp: "2026-01-04T12:00:00.000Z",
 			payload: {},
 		};
-		const result = BaseEventSchema.safeParse(event);
-		expect(result.success).toBe(false);
+		expect(BaseEventSchema.safeParse(event).success).toBe(false);
 	});
 
-	it("validates source enum", () => {
-		const validSources = ["redis", "grpc", "database", "internal"];
-		for (const source of validSources) {
+	it("accepts valid sources and rejects invalid source", () => {
+		for (const source of ["redis", "grpc", "database", "internal"]) {
 			const event = {
 				id: "evt-123",
 				source,
@@ -133,27 +74,18 @@ describe("BaseEventSchema", () => {
 				timestamp: "2026-01-04T12:00:00.000Z",
 				payload: {},
 			};
-			const result = BaseEventSchema.safeParse(event);
-			expect(result.success).toBe(true);
+			expect(BaseEventSchema.safeParse(event).success).toBe(true);
 		}
-	});
-
-	it("rejects invalid source", () => {
-		const event = {
+		const invalid = {
 			id: "evt-123",
 			source: "unknown",
 			type: "test",
 			timestamp: "2026-01-04T12:00:00.000Z",
 			payload: {},
 		};
-		const result = BaseEventSchema.safeParse(event);
-		expect(result.success).toBe(false);
+		expect(BaseEventSchema.safeParse(invalid).success).toBe(false);
 	});
 });
-
-// ============================================
-// MastraCycleEvent Schema Tests
-// ============================================
 
 describe("MastraCycleEventSchema", () => {
 	it("validates valid cycle event", () => {
@@ -163,72 +95,49 @@ describe("MastraCycleEventSchema", () => {
 			status: "started",
 			timestamp: "2026-01-04T12:00:00.000Z",
 		};
-		const result = MastraCycleEventSchema.safeParse(event);
-		expect(result.success).toBe(true);
+		expect(MastraCycleEventSchema.safeParse(event).success).toBe(true);
 	});
 
-	it("validates all phases", () => {
-		const phases = ["observe", "orient", "decide", "act", "complete"];
-		for (const phase of phases) {
+	it("accepts all phases and statuses", () => {
+		for (const phase of ["observe", "orient", "decide", "act", "complete"]) {
 			const event = {
 				cycleId: "cycle-123",
 				phase,
 				status: "started",
 				timestamp: "2026-01-04T12:00:00.000Z",
 			};
-			const result = MastraCycleEventSchema.safeParse(event);
-			expect(result.success).toBe(true);
+			expect(MastraCycleEventSchema.safeParse(event).success).toBe(true);
 		}
-	});
-
-	it("validates all statuses", () => {
-		const statuses = ["started", "progress", "completed", "failed"];
-		for (const status of statuses) {
+		for (const status of ["started", "progress", "completed", "failed"]) {
 			const event = {
 				cycleId: "cycle-123",
 				phase: "observe",
 				status,
 				timestamp: "2026-01-04T12:00:00.000Z",
 			};
-			const result = MastraCycleEventSchema.safeParse(event);
-			expect(result.success).toBe(true);
+			expect(MastraCycleEventSchema.safeParse(event).success).toBe(true);
 		}
 	});
 
-	it("allows optional progress", () => {
-		const event = {
+	it("accepts optional progress and enforces range", () => {
+		const valid = {
 			cycleId: "cycle-123",
 			phase: "orient",
 			status: "progress",
 			progress: 50,
 			timestamp: "2026-01-04T12:00:00.000Z",
 		};
-		const result = MastraCycleEventSchema.safeParse(event);
-		expect(result.success).toBe(true);
-		if (result.success) {
-			expect(result.data.progress).toBe(50);
+		const parsed = MastraCycleEventSchema.safeParse(valid);
+		expect(parsed.success).toBe(true);
+		if (parsed.success) {
+			expect(parsed.data.progress).toBe(50);
 		}
-	});
-
-	it("validates progress range (0-100)", () => {
-		const invalidProgress = [-1, 101, 200];
-		for (const progress of invalidProgress) {
-			const event = {
-				cycleId: "cycle-123",
-				phase: "orient",
-				status: "progress",
-				progress,
-				timestamp: "2026-01-04T12:00:00.000Z",
-			};
-			const result = MastraCycleEventSchema.safeParse(event);
-			expect(result.success).toBe(false);
+		for (const progress of [-1, 101, 200]) {
+			const invalid = { ...valid, progress };
+			expect(MastraCycleEventSchema.safeParse(invalid).success).toBe(false);
 		}
 	});
 });
-
-// ============================================
-// MastraAgentEvent Schema Tests
-// ============================================
 
 describe("MastraAgentEventSchema", () => {
 	it("validates valid agent event", () => {
@@ -238,12 +147,11 @@ describe("MastraAgentEventSchema", () => {
 			status: "started",
 			timestamp: "2026-01-04T12:00:00.000Z",
 		};
-		const result = MastraAgentEventSchema.safeParse(event);
-		expect(result.success).toBe(true);
+		expect(MastraAgentEventSchema.safeParse(event).success).toBe(true);
 	});
 
-	it("validates all agent types", () => {
-		const agentTypes = [
+	it("validates all agent types and statuses", () => {
+		for (const agentType of [
 			"sentiment",
 			"fundamentals",
 			"bullish",
@@ -251,30 +159,23 @@ describe("MastraAgentEventSchema", () => {
 			"trader",
 			"risk",
 			"critic",
-		];
-		for (const agentType of agentTypes) {
+		]) {
 			const event = {
 				cycleId: "cycle-123",
 				agentType,
 				status: "complete",
 				timestamp: "2026-01-04T12:00:00.000Z",
 			};
-			const result = MastraAgentEventSchema.safeParse(event);
-			expect(result.success).toBe(true);
+			expect(MastraAgentEventSchema.safeParse(event).success).toBe(true);
 		}
-	});
-
-	it("validates all statuses", () => {
-		const statuses = ["started", "thinking", "complete", "error"];
-		for (const status of statuses) {
+		for (const status of ["started", "thinking", "complete", "error"]) {
 			const event = {
 				cycleId: "cycle-123",
 				agentType: "trader",
 				status,
 				timestamp: "2026-01-04T12:00:00.000Z",
 			};
-			const result = MastraAgentEventSchema.safeParse(event);
-			expect(result.success).toBe(true);
+			expect(MastraAgentEventSchema.safeParse(event).success).toBe(true);
 		}
 	});
 
@@ -287,14 +188,9 @@ describe("MastraAgentEventSchema", () => {
 			reasoning: "Strong technical signals",
 			timestamp: "2026-01-04T12:00:00.000Z",
 		};
-		const result = MastraAgentEventSchema.safeParse(event);
-		expect(result.success).toBe(true);
+		expect(MastraAgentEventSchema.safeParse(event).success).toBe(true);
 	});
 });
-
-// ============================================
-// QuoteStreamEvent Schema Tests
-// ============================================
 
 describe("QuoteStreamEventSchema", () => {
 	it("validates valid quote event", () => {
@@ -304,11 +200,10 @@ describe("QuoteStreamEventSchema", () => {
 			ask: 185.05,
 			timestamp: "2026-01-04T12:00:00.000Z",
 		};
-		const result = QuoteStreamEventSchema.safeParse(event);
-		expect(result.success).toBe(true);
+		expect(QuoteStreamEventSchema.safeParse(event).success).toBe(true);
 	});
 
-	it("allows optional fields", () => {
+	it("allows optional quote fields", () => {
 		const event = {
 			symbol: "AAPL",
 			bid: 185.0,
@@ -320,26 +215,16 @@ describe("QuoteStreamEventSchema", () => {
 			volume: 1000000,
 			timestamp: "2026-01-04T12:00:00.000Z",
 		};
-		const result = QuoteStreamEventSchema.safeParse(event);
-		expect(result.success).toBe(true);
+		expect(QuoteStreamEventSchema.safeParse(event).success).toBe(true);
 	});
 
 	it("requires symbol", () => {
-		const event = {
-			bid: 185.0,
-			ask: 185.05,
-			timestamp: "2026-01-04T12:00:00.000Z",
-		};
-		const result = QuoteStreamEventSchema.safeParse(event);
-		expect(result.success).toBe(false);
+		const event = { bid: 185.0, ask: 185.05, timestamp: "2026-01-04T12:00:00.000Z" };
+		expect(QuoteStreamEventSchema.safeParse(event).success).toBe(false);
 	});
 });
 
-// ============================================
-// OrderUpdateEvent Schema Tests
-// ============================================
-
-describe("OrderUpdateEventSchema", () => {
+describe("OrderUpdateEventSchema - basic validation", () => {
 	it("validates valid order event", () => {
 		const event = {
 			orderId: "order-123",
@@ -352,13 +237,13 @@ describe("OrderUpdateEventSchema", () => {
 			status: "partially_filled",
 			timestamp: "2026-01-04T12:00:00.000Z",
 		};
-		const result = OrderUpdateEventSchema.safeParse(event);
-		expect(result.success).toBe(true);
+		expect(OrderUpdateEventSchema.safeParse(event).success).toBe(true);
 	});
+});
 
-	it("validates all sides", () => {
-		const sides = ["BUY", "SELL"];
-		for (const side of sides) {
+describe("OrderUpdateEventSchema - enum coverage", () => {
+	it("validates all sides, types, and statuses", () => {
+		for (const side of ["BUY", "SELL"]) {
 			const event = {
 				orderId: "order-123",
 				symbol: "AAPL",
@@ -369,14 +254,9 @@ describe("OrderUpdateEventSchema", () => {
 				status: "pending",
 				timestamp: "2026-01-04T12:00:00.000Z",
 			};
-			const result = OrderUpdateEventSchema.safeParse(event);
-			expect(result.success).toBe(true);
+			expect(OrderUpdateEventSchema.safeParse(event).success).toBe(true);
 		}
-	});
-
-	it("validates all order types", () => {
-		const types = ["market", "limit", "stop", "stop_limit"];
-		for (const type of types) {
+		for (const type of ["market", "limit", "stop", "stop_limit"]) {
 			const event = {
 				orderId: "order-123",
 				symbol: "AAPL",
@@ -387,13 +267,9 @@ describe("OrderUpdateEventSchema", () => {
 				status: "pending",
 				timestamp: "2026-01-04T12:00:00.000Z",
 			};
-			const result = OrderUpdateEventSchema.safeParse(event);
-			expect(result.success).toBe(true);
+			expect(OrderUpdateEventSchema.safeParse(event).success).toBe(true);
 		}
-	});
-
-	it("validates all statuses", () => {
-		const statuses = [
+		for (const status of [
 			"pending",
 			"open",
 			"partially_filled",
@@ -401,8 +277,7 @@ describe("OrderUpdateEventSchema", () => {
 			"cancelled",
 			"rejected",
 			"expired",
-		];
-		for (const status of statuses) {
+		]) {
 			const event = {
 				orderId: "order-123",
 				symbol: "AAPL",
@@ -413,15 +288,10 @@ describe("OrderUpdateEventSchema", () => {
 				status,
 				timestamp: "2026-01-04T12:00:00.000Z",
 			};
-			const result = OrderUpdateEventSchema.safeParse(event);
-			expect(result.success).toBe(true);
+			expect(OrderUpdateEventSchema.safeParse(event).success).toBe(true);
 		}
 	});
 });
-
-// ============================================
-// DecisionInsertEvent Schema Tests
-// ============================================
 
 describe("DecisionInsertEventSchema", () => {
 	it("validates valid decision event", () => {
@@ -434,13 +304,11 @@ describe("DecisionInsertEventSchema", () => {
 			confidence: 0.85,
 			createdAt: "2026-01-04T12:00:00.000Z",
 		};
-		const result = DecisionInsertEventSchema.safeParse(event);
-		expect(result.success).toBe(true);
+		expect(DecisionInsertEventSchema.safeParse(event).success).toBe(true);
 	});
 
-	it("validates all actions", () => {
-		const actions = ["BUY", "SELL", "HOLD", "CLOSE"];
-		for (const action of actions) {
+	it("validates all actions and directions", () => {
+		for (const action of ["BUY", "SELL", "HOLD", "CLOSE"]) {
 			const event = {
 				decisionId: "dec-123",
 				cycleId: "cycle-123",
@@ -450,14 +318,9 @@ describe("DecisionInsertEventSchema", () => {
 				confidence: 0.5,
 				createdAt: "2026-01-04T12:00:00.000Z",
 			};
-			const result = DecisionInsertEventSchema.safeParse(event);
-			expect(result.success).toBe(true);
+			expect(DecisionInsertEventSchema.safeParse(event).success).toBe(true);
 		}
-	});
-
-	it("validates all directions", () => {
-		const directions = ["LONG", "SHORT", "FLAT"];
-		for (const direction of directions) {
+		for (const direction of ["LONG", "SHORT", "FLAT"]) {
 			const event = {
 				decisionId: "dec-123",
 				cycleId: "cycle-123",
@@ -467,14 +330,12 @@ describe("DecisionInsertEventSchema", () => {
 				confidence: 0.5,
 				createdAt: "2026-01-04T12:00:00.000Z",
 			};
-			const result = DecisionInsertEventSchema.safeParse(event);
-			expect(result.success).toBe(true);
+			expect(DecisionInsertEventSchema.safeParse(event).success).toBe(true);
 		}
 	});
 
-	it("validates confidence range (0-1)", () => {
-		const invalidConfidence = [-0.1, 1.1, 2];
-		for (const confidence of invalidConfidence) {
+	it("enforces confidence range", () => {
+		for (const confidence of [-0.1, 1.1, 2]) {
 			const event = {
 				decisionId: "dec-123",
 				cycleId: "cycle-123",
@@ -484,41 +345,30 @@ describe("DecisionInsertEventSchema", () => {
 				confidence,
 				createdAt: "2026-01-04T12:00:00.000Z",
 			};
-			const result = DecisionInsertEventSchema.safeParse(event);
-			expect(result.success).toBe(false);
+			expect(DecisionInsertEventSchema.safeParse(event).success).toBe(false);
 		}
 	});
 });
 
-// ============================================
-// SystemAlertEvent Schema Tests
-// ============================================
-
 describe("SystemAlertEventSchema", () => {
-	it("validates valid alert event", () => {
-		const event = {
+	it("validates alert event and severities", () => {
+		const valid = {
 			alertId: "alert-123",
 			severity: "warning",
 			title: "High Latency",
 			message: "Broker response time exceeded threshold",
 			timestamp: "2026-01-04T12:00:00.000Z",
 		};
-		const result = SystemAlertEventSchema.safeParse(event);
-		expect(result.success).toBe(true);
-	});
-
-	it("validates all severities", () => {
-		const severities = ["info", "warning", "error", "critical"];
-		for (const severity of severities) {
-			const event = {
-				alertId: "alert-123",
-				severity,
-				title: "Test Alert",
-				message: "Test message",
-				timestamp: "2026-01-04T12:00:00.000Z",
-			};
-			const result = SystemAlertEventSchema.safeParse(event);
-			expect(result.success).toBe(true);
+		expect(SystemAlertEventSchema.safeParse(valid).success).toBe(true);
+		for (const severity of ["info", "warning", "error", "critical"]) {
+			expect(
+				SystemAlertEventSchema.safeParse({
+					...valid,
+					severity,
+					title: "Test Alert",
+					message: "Test message",
+				}).success,
+			).toBe(true);
 		}
 	});
 
@@ -531,146 +381,69 @@ describe("SystemAlertEventSchema", () => {
 			source: "broker-adapter",
 			timestamp: "2026-01-04T12:00:00.000Z",
 		};
-		const result = SystemAlertEventSchema.safeParse(event);
-		expect(result.success).toBe(true);
+		expect(SystemAlertEventSchema.safeParse(event).success).toBe(true);
 	});
 });
 
-// ============================================
-// HealthCheckEvent Schema Tests
-// ============================================
-
 describe("HealthCheckEventSchema", () => {
-	it("validates valid health event", () => {
-		const event = {
-			status: "healthy",
+	it("validates health event and all status values", () => {
+		const base = {
 			version: "0.1.0",
 			uptime: 3600,
 			connections: 42,
-			sources: {
-				redis: "connected",
-				grpc: "connected",
-			},
+			sources: { redis: "connected", grpc: "connected" },
 			timestamp: "2026-01-04T12:00:00.000Z",
 		};
-		const result = HealthCheckEventSchema.safeParse(event);
-		expect(result.success).toBe(true);
-	});
-
-	it("validates all status values", () => {
-		const statuses = ["healthy", "degraded", "unhealthy"];
-		for (const status of statuses) {
-			const event = {
-				status,
-				version: "0.1.0",
-				uptime: 3600,
-				connections: 42,
-				sources: {},
-				timestamp: "2026-01-04T12:00:00.000Z",
-			};
-			const result = HealthCheckEventSchema.safeParse(event);
-			expect(result.success).toBe(true);
+		expect(HealthCheckEventSchema.safeParse({ ...base, status: "healthy" }).success).toBe(true);
+		for (const status of ["healthy", "degraded", "unhealthy"]) {
+			expect(HealthCheckEventSchema.safeParse({ ...base, status, sources: {} }).success).toBe(true);
 		}
 	});
 });
 
-// ============================================
-// Configuration Type Tests
-// ============================================
-
-describe("RedisConfig Type", () => {
-	it("has required url field", () => {
-		const config: RedisConfig = {
-			url: "redis://localhost:6379",
-		};
-		expect(config.url).toBeDefined();
-	});
-
-	it("has optional fields", () => {
-		const config: RedisConfig = {
+describe("Config Types", () => {
+	it("supports Redis and gRPC config fields", () => {
+		const redis: RedisConfig = {
 			url: "redis://localhost:6379",
 			password: "secret",
 			db: 1,
 			maxRetries: 3,
 			retryDelayMs: 1000,
 		};
-		expect(config.password).toBe("secret");
-		expect(config.db).toBe(1);
-	});
-});
-
-describe("GrpcConfig Type", () => {
-	it("has required host and port", () => {
-		const config: GrpcConfig = {
-			host: "localhost",
-			port: 50052,
-		};
-		expect(config.host).toBeDefined();
-		expect(config.port).toBeDefined();
-	});
-
-	it("has optional fields", () => {
-		const config: GrpcConfig = {
+		const grpc: GrpcConfig = {
 			host: "localhost",
 			port: 50052,
 			useTls: true,
 			maxRetries: 5,
 			retryDelayMs: 2000,
 		};
-		expect(config.useTls).toBe(true);
-	});
-});
-
-describe("DatabaseCdcConfig Type", () => {
-	it("has required fields", () => {
-		const config: DatabaseCdcConfig = {
-			pollIntervalMs: 1000,
-			tables: ["decisions", "orders"],
-		};
-		expect(config.pollIntervalMs).toBeDefined();
-		expect(config.tables).toBeDefined();
-	});
-});
-
-describe("EventPublisherConfig Type", () => {
-	it("allows empty config", () => {
-		const config: EventPublisherConfig = {};
-		expect(config).toBeDefined();
+		expect(redis.url).toBeDefined();
+		expect(grpc.port).toBe(50052);
 	});
 
-	it("accepts all optional fields", () => {
-		const config: EventPublisherConfig = {
+	it("supports CDC and publisher config", () => {
+		const db: DatabaseCdcConfig = { pollIntervalMs: 1000, tables: ["decisions", "orders"] };
+		const publisher: EventPublisherConfig = {
 			redis: { url: "redis://localhost:6379" },
 			grpc: { host: "localhost", port: 50052 },
 			database: { pollIntervalMs: 1000, tables: ["decisions"] },
 			enableInternalEvents: true,
 		};
-		expect(config.redis).toBeDefined();
-		expect(config.grpc).toBeDefined();
-		expect(config.database).toBeDefined();
+		expect(db.tables).toBeDefined();
+		expect(publisher.redis).toBeDefined();
+		expect(publisher.grpc).toBeDefined();
+		expect(publisher.database).toBeDefined();
 	});
 });
 
-// ============================================
-// State Type Tests
-// ============================================
-
-describe("SourceState Type", () => {
-	it("has required fields", () => {
+describe("State Types", () => {
+	it("supports SourceState and PublisherStats", () => {
 		const state: SourceState = {
 			status: "connected",
 			lastEvent: new Date(),
 			lastError: null,
 			reconnectAttempts: 0,
 		};
-		expect(state.status).toBeDefined();
-		expect(state.lastEvent).toBeDefined();
-		expect(state.lastError).toBe(null);
-	});
-});
-
-describe("PublisherStats Type", () => {
-	it("has required fields", () => {
 		const stats: PublisherStats = {
 			eventsReceived: 100,
 			eventsBroadcast: 95,
@@ -687,41 +460,22 @@ describe("PublisherStats Type", () => {
 				internal: { status: "connected", lastEvent: null, lastError: null, reconnectAttempts: 0 },
 			},
 		};
-		expect(stats.eventsReceived).toBe(100);
+		expect(state.lastError).toBe(null);
 		expect(stats.eventsBroadcast).toBe(95);
 	});
 });
 
-// ============================================
-// Broadcast Type Tests
-// ============================================
-
-describe("BroadcastTarget Type", () => {
-	it("supports channel targeting", () => {
-		const target: BroadcastTarget = {
-			channel: "quotes",
-		};
-		expect(target.channel).toBe("quotes");
+describe("Broadcast Types", () => {
+	it("supports BroadcastTarget variants", () => {
+		const channelTarget: BroadcastTarget = { channel: "quotes" };
+		const symbolTarget: BroadcastTarget = { channel: "quotes", symbol: "AAPL" };
+		const broadcastTarget: BroadcastTarget = { channel: null };
+		expect(channelTarget.channel).toBe("quotes");
+		expect(symbolTarget.symbol).toBe("AAPL");
+		expect(broadcastTarget.channel).toBe(null);
 	});
 
-	it("supports symbol targeting", () => {
-		const target: BroadcastTarget = {
-			channel: "quotes",
-			symbol: "AAPL",
-		};
-		expect(target.symbol).toBe("AAPL");
-	});
-
-	it("supports null channel (broadcast all)", () => {
-		const target: BroadcastTarget = {
-			channel: null,
-		};
-		expect(target.channel).toBe(null);
-	});
-});
-
-describe("BroadcastEvent Type", () => {
-	it("has target and message", () => {
+	it("supports BroadcastEvent structure", () => {
 		const event: BroadcastEvent = {
 			target: { channel: "orders" },
 			message: {

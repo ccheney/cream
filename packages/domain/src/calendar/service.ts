@@ -13,7 +13,10 @@ import {
 	createAlpacaCalendarClient,
 } from "./alpaca-client";
 import { type CalendarCache, createCalendarCache } from "./cache";
+import { CalendarServiceError } from "./service-error";
 import type { CalendarDay, CalendarService, MarketClock, TradingSession } from "./types";
+
+export { CalendarServiceError };
 
 // ============================================
 // Constants
@@ -72,19 +75,6 @@ function toDate(date: Date | string): Date {
 // ============================================
 // Error Types
 // ============================================
-
-/**
- * Error thrown when calendar data is not available.
- */
-export class CalendarServiceError extends Error {
-	constructor(
-		message: string,
-		public readonly code: "NOT_INITIALIZED" | "API_UNAVAILABLE" | "CACHE_MISS",
-	) {
-		super(message);
-		this.name = "CalendarServiceError";
-	}
-}
 
 // ============================================
 // AlpacaCalendarService

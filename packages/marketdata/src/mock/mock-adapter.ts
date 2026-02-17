@@ -8,94 +8,21 @@
  * @see docs/plans/17-mock-data-layer.md
  */
 
-// Local types for fixture data (matches legacy format in fixtures)
-interface FixtureAggregateBar {
-	o: number;
-	h: number;
-	l: number;
-	c: number;
-	v: number;
-	vw?: number;
-	t: number;
-	n?: number;
-}
+import {
+	type ErrorSimulationConfig,
+	type ErrorType,
+	MockApiError,
+	simulateError,
+} from "./mock-errors.js";
+import {
+	type FixtureAggregateBar,
+	type FixtureAggregatesResponse,
+	type FixtureSnapshot,
+	mockData,
+} from "./mock-fixtures.js";
 
-interface FixtureAggregatesResponse {
-	ticker: string;
-	queryCount: number;
-	resultsCount: number;
-	adjusted: boolean;
-	status: string;
-	results: FixtureAggregateBar[];
-}
-
-interface FixtureSnapshot {
-	ticker: string;
-	day?: {
-		o: number;
-		h: number;
-		l: number;
-		c: number;
-		v: number;
-		vw?: number;
-	};
-	lastQuote?: {
-		P: number;
-		S: number;
-		p: number;
-		s: number;
-		t: number;
-	};
-	lastTrade?: {
-		p: number;
-		s: number;
-		t: number;
-	};
-	todaysChange?: number;
-	todaysChangePerc?: number;
-	updated: number;
-}
-
-// ============================================
-// Fixture Imports
-// ============================================
-
-// Alpaca fixtures
-import alpacaAccount from "../../fixtures/alpaca/account.json";
-// Alpaca fixtures for market data
-import candlesAAPL from "../../fixtures/alpaca/candles-1h-AAPL.json";
-import alpacaOrders from "../../fixtures/alpaca/orders.json";
-import alpacaPositions from "../../fixtures/alpaca/positions.json";
-import quoteAAPL from "../../fixtures/alpaca/quote-AAPL.json";
-import tradesAAPL from "../../fixtures/alpaca/trades-AAPL.json";
-
-// ============================================
-// Fixture Registry
-// ============================================
-
-/**
- * All mock data fixtures organized by provider.
- */
-export const mockData = {
-	alpacaMarketData: {
-		candles: {
-			AAPL: {
-				"1h": candlesAAPL,
-			},
-		},
-		quotes: {
-			AAPL: quoteAAPL,
-		},
-		trades: {
-			AAPL: tradesAAPL,
-		},
-	},
-	alpaca: {
-		account: alpacaAccount,
-		positions: alpacaPositions,
-		orders: alpacaOrders,
-	},
-} as const;
+export { MockApiError, mockData };
+export type { ErrorSimulationConfig, ErrorType };
 
 // ============================================
 // Types
@@ -166,82 +93,6 @@ export interface MockMacroIndicator {
 	data: Array<{ date: string; value: string }>;
 }
 
-// ============================================
-// Error Simulation
-// ============================================
-
-export type ErrorType =
-	| "NETWORK_ERROR"
-	| "TIMEOUT"
-	| "RATE_LIMIT"
-	| "AUTH_ERROR"
-	| "NOT_FOUND"
-	| "SERVER_ERROR"
-	| "INVALID_RESPONSE";
-
-export interface ErrorSimulationConfig {
-	/** Error type to simulate */
-	errorType: ErrorType;
-	/** Probability of error (0-1). Default: 1.0 (always) */
-	probability?: number;
-	/** Delay before error (ms). Default: 0 */
-	delayMs?: number;
-	/** Custom error message */
-	message?: string;
-	/** HTTP status code for HTTP errors */
-	statusCode?: number;
-}
-
-/**
- * Mock API error for testing error handling.
- */
-export class MockApiError extends Error {
-	constructor(
-		public readonly errorType: ErrorType,
-		public readonly statusCode: number,
-		message: string,
-	) {
-		super(message);
-		this.name = "MockApiError";
-	}
-}
-
-const ERROR_DEFAULTS: Record<ErrorType, { statusCode: number; message: string }> = {
-	NETWORK_ERROR: { statusCode: 0, message: "Network request failed" },
-	TIMEOUT: { statusCode: 0, message: "Request timed out" },
-	RATE_LIMIT: { statusCode: 429, message: "Rate limit exceeded" },
-	AUTH_ERROR: { statusCode: 401, message: "Authentication failed" },
-	NOT_FOUND: { statusCode: 404, message: "Resource not found" },
-	SERVER_ERROR: { statusCode: 500, message: "Internal server error" },
-	INVALID_RESPONSE: { statusCode: 0, message: "Invalid response format" },
-};
-
-/**
- * Simulate an API error based on configuration.
- */
-async function simulateError(config: ErrorSimulationConfig): Promise<void> {
-	const probability = config.probability ?? 1.0;
-
-	if (Math.random() > probability) {
-		return; // No error this time
-	}
-
-	if (config.delayMs && config.delayMs > 0) {
-		await new Promise((resolve) => setTimeout(resolve, config.delayMs));
-	}
-
-	const defaults = ERROR_DEFAULTS[config.errorType];
-	throw new MockApiError(
-		config.errorType,
-		config.statusCode ?? defaults.statusCode,
-		config.message ?? defaults.message,
-	);
-}
-
-// ============================================
-// Mock Adapter Class
-// ============================================
-
 /**
  * Configuration for the mock adapter.
  */
@@ -279,10 +130,6 @@ export class MockAdapter {
 			await simulateError(this.config.errorSimulation);
 		}
 	}
-
-	// ============================================
-	// Candle Data
-	// ============================================
 
 	/**
 	 * Get mock candles for a symbol and timeframe.
@@ -340,10 +187,6 @@ export class MockAdapter {
 		return candles.slice(-count);
 	}
 
-	// ============================================
-	// Quote Data
-	// ============================================
-
 	/**
 	 * Get mock quote for a symbol.
 	 */
@@ -360,7 +203,7 @@ export class MockAdapter {
 		const q = quoteData.results[0];
 		return {
 			symbol: q.T,
-			timestamp: Number(BigInt(q.t) / BigInt(1000000)), // ns to ms
+			timestamp: Number(BigInt(q.t) / BigInt(1000000)),
 			bid: q.p,
 			ask: q.P,
 			bidSize: q.s,
@@ -382,10 +225,6 @@ export class MockAdapter {
 		return quotes;
 	}
 
-	// ============================================
-	// Trade Data
-	// ============================================
-
 	/**
 	 * Get mock trades for a symbol.
 	 */
@@ -401,15 +240,11 @@ export class MockAdapter {
 
 		return tradeData.results.map((t: { T: string; t: number; p: number; s: number }) => ({
 			symbol: t.T,
-			timestamp: Number(BigInt(t.t) / BigInt(1000000)), // ns to ms
+			timestamp: Number(BigInt(t.t) / BigInt(1000000)),
 			price: t.p,
 			size: t.s,
 		}));
 	}
-
-	// ============================================
-	// Account Data (Alpaca)
-	// ============================================
 
 	/**
 	 * Get mock account information.
@@ -500,10 +335,6 @@ export class MockAdapter {
 
 		return orders;
 	}
-
-	// ============================================
-	// Snapshot Builder
-	// ============================================
 
 	/**
 	 * Build a mock market snapshot for a symbol.

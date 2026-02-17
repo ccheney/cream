@@ -13,6 +13,7 @@
 
 import type { z } from "zod";
 import { log } from "./logger.js";
+import { RateLimiter } from "./rate-limiter.js";
 
 // ============================================
 // Types
@@ -89,6 +90,15 @@ export interface ApiError {
 	response?: unknown;
 }
 
+interface PreparedRequest {
+	url: string;
+	headers: Record<string, string>;
+	timeout: number;
+	method: "GET" | "POST" | "PUT" | "DELETE";
+	body?: string;
+	path: string;
+}
+
 // ============================================
 // Default Configuration
 // ============================================
@@ -107,58 +117,7 @@ export const DEFAULT_RETRY: RetryConfig = {
 
 export const DEFAULT_TIMEOUT_MS = 30000;
 
-// ============================================
-// Rate Limiter
-// ============================================
-
-/**
- * Token bucket rate limiter.
- */
-export class RateLimiter {
-	private tokens: number;
-	private lastRefill: number;
-
-	constructor(private config: RateLimitConfig) {
-		this.tokens = config.maxRequests;
-		this.lastRefill = Date.now();
-	}
-
-	/**
-	 * Acquire a token for making a request.
-	 * Returns immediately if tokens are available, otherwise waits.
-	 */
-	async acquire(): Promise<void> {
-		this.refill();
-
-		if (this.tokens > 0) {
-			this.tokens--;
-			return;
-		}
-
-		// Wait until next refill
-		const waitTime = this.config.intervalMs - (Date.now() - this.lastRefill);
-		if (waitTime > 0) {
-			await this.sleep(waitTime);
-			this.refill();
-		}
-
-		this.tokens--;
-	}
-
-	private refill(): void {
-		const now = Date.now();
-		const elapsed = now - this.lastRefill;
-
-		if (elapsed >= this.config.intervalMs) {
-			this.tokens = this.config.maxRequests;
-			this.lastRefill = now;
-		}
-	}
-
-	private sleep(ms: number): Promise<void> {
-		return new Promise((resolve) => setTimeout(resolve, ms));
-	}
-}
+export { RateLimiter };
 
 // ============================================
 // Base REST Client
@@ -196,70 +155,15 @@ export class RestClient {
 		options: RequestOptions = {},
 		schema?: S,
 	): Promise<z.output<S> | unknown> {
-		const url = this.buildUrl(path, options.params);
-		const headers = this.buildHeaders(options.headers);
-		const timeout = options.timeoutMs ?? this.config.timeoutMs;
-		const method = options.method ?? "GET";
+		await this.acquireRateLimitToken(options.skipRateLimit ?? false);
 
-		// Apply rate limiting
-		if (!options.skipRateLimit && this.rateLimiter) {
-			await this.rateLimiter.acquire();
-		}
+		const prepared = this.prepareRequest(path, options);
+		log.debug(
+			{ method: prepared.method, path: prepared.path, timeout: prepared.timeout },
+			"Market data API request",
+		);
 
-		const retryConfig = this.config.retry ?? DEFAULT_RETRY;
-		let lastError: ApiError | undefined;
-		const startTime = Date.now();
-
-		log.debug({ method, path, timeout }, "Market data API request");
-
-		for (let attempt = 0; attempt <= retryConfig.maxRetries; attempt++) {
-			try {
-				const response = await this.executeRequest(url, {
-					method,
-					headers,
-					body: options.body ? JSON.stringify(options.body) : undefined,
-					timeout,
-				});
-
-				// Parse and validate response
-				const data = await response.json();
-
-				const latencyMs = Date.now() - startTime;
-				log.debug({ method, path, status: response.status, latencyMs }, "Market data API response");
-
-				if (schema) {
-					return schema.parse(data);
-				}
-
-				return data;
-			} catch (error) {
-				lastError = this.classifyError(error);
-
-				if (!lastError.retryable || attempt >= retryConfig.maxRetries) {
-					const latencyMs = Date.now() - startTime;
-					log.error(
-						{ method, path, status: lastError.status, error: lastError.message, latencyMs },
-						"Market data API error",
-					);
-					throw lastError;
-				}
-
-				// Exponential backoff
-				const delay = Math.min(
-					retryConfig.initialDelayMs * retryConfig.backoffMultiplier ** attempt,
-					retryConfig.maxDelayMs,
-				);
-
-				log.warn(
-					{ method, path, attempt: attempt + 1, delayMs: delay, error: lastError.message },
-					"Market data API retry",
-				);
-
-				await this.sleep(delay);
-			}
-		}
-
-		throw lastError ?? new Error("Request failed");
+		return this.executeWithRetry(prepared, schema);
 	}
 
 	/**
@@ -346,6 +250,114 @@ export class RestClient {
 		}
 	}
 
+	private prepareRequest(path: string, options: RequestOptions): PreparedRequest {
+		return {
+			url: this.buildUrl(path, options.params),
+			headers: this.buildHeaders(options.headers),
+			timeout: options.timeoutMs ?? this.config.timeoutMs,
+			method: options.method ?? "GET",
+			body: options.body ? JSON.stringify(options.body) : undefined,
+			path,
+		};
+	}
+
+	private async acquireRateLimitToken(skipRateLimit: boolean): Promise<void> {
+		if (skipRateLimit || !this.rateLimiter) {
+			return;
+		}
+
+		await this.rateLimiter.acquire();
+	}
+
+	private async executeWithRetry<S extends z.ZodTypeAny>(
+		prepared: PreparedRequest,
+		schema?: S,
+	): Promise<z.output<S> | unknown> {
+		const retryConfig = this.config.retry ?? DEFAULT_RETRY;
+		const startTime = Date.now();
+		let lastError: ApiError | undefined;
+
+		for (let attempt = 0; attempt <= retryConfig.maxRetries; attempt++) {
+			try {
+				return await this.executeAndParseResponse(prepared, schema, startTime);
+			} catch (error) {
+				lastError = this.classifyError(error);
+				const isFinalAttempt = attempt >= retryConfig.maxRetries;
+
+				if (!lastError.retryable || isFinalAttempt) {
+					this.logAndThrowError(prepared, lastError, startTime);
+				}
+
+				await this.delayBeforeRetry(prepared, retryConfig, attempt, lastError);
+			}
+		}
+
+		throw lastError ?? new Error("Request failed");
+	}
+
+	private async executeAndParseResponse<S extends z.ZodTypeAny>(
+		prepared: PreparedRequest,
+		schema: S | undefined,
+		startTime: number,
+	): Promise<z.output<S> | unknown> {
+		const response = await this.executeRequest(prepared.url, {
+			method: prepared.method,
+			headers: prepared.headers,
+			body: prepared.body,
+			timeout: prepared.timeout,
+		});
+
+		const data = await response.json();
+		const latencyMs = Date.now() - startTime;
+
+		log.debug(
+			{ method: prepared.method, path: prepared.path, status: response.status, latencyMs },
+			"Market data API response",
+		);
+
+		return schema ? schema.parse(data) : data;
+	}
+
+	private logAndThrowError(prepared: PreparedRequest, error: ApiError, startTime: number): never {
+		const latencyMs = Date.now() - startTime;
+		log.error(
+			{
+				method: prepared.method,
+				path: prepared.path,
+				status: error.status,
+				error: error.message,
+				latencyMs,
+			},
+			"Market data API error",
+		);
+		throw error;
+	}
+
+	private async delayBeforeRetry(
+		prepared: PreparedRequest,
+		retryConfig: RetryConfig,
+		attempt: number,
+		error: ApiError,
+	): Promise<void> {
+		const delay = Math.min(
+			retryConfig.initialDelayMs * retryConfig.backoffMultiplier ** attempt,
+			retryConfig.maxDelayMs,
+		);
+
+		log.warn(
+			{
+				method: prepared.method,
+				path: prepared.path,
+				attempt: attempt + 1,
+				delayMs: delay,
+				error: error.message,
+			},
+			"Market data API retry",
+		);
+
+		await this.sleep(delay);
+	}
+
 	/**
 	 * Build the full URL with query parameters.
 	 */
@@ -389,7 +401,6 @@ export class RestClient {
 	 */
 	private classifyError(error: unknown): ApiError {
 		if (error instanceof Error) {
-			// Timeout or network error
 			if (error.name === "AbortError") {
 				return {
 					status: 0,
@@ -399,7 +410,6 @@ export class RestClient {
 				};
 			}
 
-			// Zod validation errors are not retryable
 			if (error.name === "ZodError") {
 				return {
 					status: 0,
@@ -409,7 +419,6 @@ export class RestClient {
 				};
 			}
 
-			// Network error
 			return {
 				status: 0,
 				statusText: "Network Error",
@@ -418,7 +427,6 @@ export class RestClient {
 			};
 		}
 
-		// HTTP error response
 		const httpError = error as {
 			status: number;
 			statusText: string;

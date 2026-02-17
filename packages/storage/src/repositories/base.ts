@@ -6,19 +6,8 @@
  * @see docs/plans/ui/04-data-requirements.md
  */
 
-// ============================================
-// Types
-// ============================================
-
 export type Row = Record<string, unknown>;
 
-// ============================================
-// Error Handling
-// ============================================
-
-/**
- * Error codes for repository operations
- */
 export type RepositoryErrorCode =
 	| "NOT_FOUND"
 	| "CONSTRAINT_VIOLATION"
@@ -28,9 +17,6 @@ export type RepositoryErrorCode =
 	| "QUERY_ERROR"
 	| "TRANSACTION_ERROR";
 
-/**
- * Repository error with context
- */
 export class RepositoryError extends Error {
 	constructor(
 		message: string,
@@ -83,167 +69,14 @@ export class RepositoryError extends Error {
 	}
 }
 
-// ============================================
-// Query Builder
-// ============================================
+export type { Filter, FilterOperator, Order, OrderDirection } from "./base-query-builder";
+export { QueryBuilder, query } from "./base-query-builder";
 
-/**
- * Filter operator types
- */
-export type FilterOperator =
-	| "="
-	| "!="
-	| ">"
-	| "<"
-	| ">="
-	| "<="
-	| "LIKE"
-	| "IN"
-	| "IS NULL"
-	| "IS NOT NULL";
-
-/**
- * Filter definition
- */
-export interface Filter {
-	field: string;
-	operator: FilterOperator;
-	value?: unknown;
-}
-
-/**
- * Order direction
- */
-export type OrderDirection = "ASC" | "DESC";
-
-/**
- * Order definition
- */
-export interface Order {
-	field: string;
-	direction: OrderDirection;
-}
-
-/**
- * Query builder for type-safe SQL construction
- */
-export class QueryBuilder {
-	private filters: Filter[] = [];
-	private orders: Order[] = [];
-	private limitValue = 100;
-	private offsetValue = 0;
-
-	/**
-	 * Add a WHERE clause
-	 */
-	where(field: string, operator: FilterOperator, value?: unknown): this {
-		this.filters.push({ field, operator, value });
-		return this;
-	}
-
-	/**
-	 * Add equality filter (shorthand)
-	 */
-	eq(field: string, value: unknown): this {
-		return this.where(field, "=", value);
-	}
-
-	/**
-	 * Add ORDER BY clause
-	 */
-	orderBy(field: string, direction: OrderDirection = "ASC"): this {
-		this.orders.push({ field, direction });
-		return this;
-	}
-
-	/**
-	 * Set LIMIT
-	 */
-	limit(limit: number): this {
-		this.limitValue = limit;
-		return this;
-	}
-
-	/**
-	 * Set OFFSET
-	 */
-	offset(offset: number): this {
-		this.offsetValue = offset;
-		return this;
-	}
-
-	/**
-	 * Build the query
-	 */
-	build(baseQuery: string): { sql: string; args: unknown[] } {
-		const args: unknown[] = [];
-		let sql = baseQuery;
-
-		// WHERE clause
-		if (this.filters.length > 0) {
-			const whereClauses: string[] = [];
-			for (const filter of this.filters) {
-				if (filter.operator === "IS NULL" || filter.operator === "IS NOT NULL") {
-					whereClauses.push(`${filter.field} ${filter.operator}`);
-				} else if (filter.operator === "IN" && Array.isArray(filter.value)) {
-					const placeholders = filter.value.map(() => "?").join(", ");
-					whereClauses.push(`${filter.field} IN (${placeholders})`);
-					args.push(...filter.value);
-				} else {
-					whereClauses.push(`${filter.field} ${filter.operator} ?`);
-					args.push(filter.value);
-				}
-			}
-			sql += ` WHERE ${whereClauses.join(" AND ")}`;
-		}
-
-		// ORDER BY clause
-		if (this.orders.length > 0) {
-			const orderClauses = this.orders.map((o) => `${o.field} ${o.direction}`);
-			sql += ` ORDER BY ${orderClauses.join(", ")}`;
-		}
-
-		// LIMIT and OFFSET
-		sql += ` LIMIT ? OFFSET ?`;
-		args.push(this.limitValue, this.offsetValue);
-
-		return { sql, args };
-	}
-
-	/**
-	 * Reset the builder for reuse
-	 */
-	reset(): this {
-		this.filters = [];
-		this.orders = [];
-		this.limitValue = 100;
-		this.offsetValue = 0;
-		return this;
-	}
-}
-
-/**
- * Create a new query builder
- */
-export function query(): QueryBuilder {
-	return new QueryBuilder();
-}
-
-// ============================================
-// Pagination
-// ============================================
-
-/**
- * Pagination options
- */
 export interface PaginationOptions {
 	page?: number;
 	pageSize?: number;
 }
 
-/**
- * Paginated result
- */
 export interface PaginatedResult<T> {
 	data: T[];
 	total: number;
@@ -254,41 +87,22 @@ export interface PaginatedResult<T> {
 	hasPrev: boolean;
 }
 
-// ============================================
-// Type Utilities
-// ============================================
-
-/**
- * Convert database row to domain type with validation
- */
 export function mapRow<T>(row: Row, mapper: (row: Row) => T): T {
 	return mapper(row);
 }
 
-/**
- * Convert multiple rows to domain types
- */
 export function mapRows<T>(rows: Row[], mapper: (row: Row) => T): T[] {
 	return rows.map(mapper);
 }
 
-/**
- * Convert boolean-like SQLite values (0/1) to boolean
- */
 export function toBoolean(value: unknown): boolean {
 	return value === 1 || value === true || value === "1" || value === "true";
 }
 
-/**
- * Convert boolean to SQLite integer (0/1)
- */
 export function fromBoolean(value: boolean): number {
 	return value ? 1 : 0;
 }
 
-/**
- * Parse JSON column safely
- */
 export function parseJson<T>(value: unknown, defaultValue: T): T {
 	if (value === null || value === undefined) {
 		return defaultValue;
@@ -303,9 +117,6 @@ export function parseJson<T>(value: unknown, defaultValue: T): T {
 	return value as T;
 }
 
-/**
- * Stringify value for JSON column
- */
 export function toJson(value: unknown): string {
 	return JSON.stringify(value);
 }

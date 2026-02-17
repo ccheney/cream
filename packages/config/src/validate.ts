@@ -183,40 +183,9 @@ export function validateAtStartup(config: unknown): ValidationResult & { warning
 	}
 
 	const cfg = baseResult.data;
-
-	// Cross-field consistency checks
-
-	// LIVE environment should have all required configurations
-	if (cfg.core.environment === "LIVE") {
-		if (!cfg.universe) {
-			warnings.push("LIVE environment without universe configuration - no instruments to trade");
-		}
-		if (
-			cfg.constraints?.per_instrument?.max_pct_equity !== undefined &&
-			cfg.constraints.per_instrument.max_pct_equity > 0.2
-		) {
-			warnings.push("LIVE: per_instrument.max_pct_equity > 20% is risky");
-		}
-		if (
-			cfg.constraints?.portfolio?.max_gross_pct_equity !== undefined &&
-			cfg.constraints.portfolio.max_gross_pct_equity > 3.0
-		) {
-			warnings.push("LIVE: portfolio leverage > 3x is very risky");
-		}
-	}
-
-	// Validate LLM model is appropriate for environment
-	if (cfg.core.environment === "LIVE" && cfg.core.llm.model_id.includes("flash")) {
-		warnings.push("LIVE environment using flash model - consider pro for production");
-	}
-
-	// Validate regime classifier has required config
-	if (cfg.regime) {
-		if (cfg.regime.classifier_type === "hmm" && !cfg.regime.hmm) {
-			// This is actually an error caught by schema, but double-check
-			warnings.push("HMM classifier selected but no HMM config provided");
-		}
-	}
+	warnings.push(...getLiveEnvironmentWarnings(cfg));
+	pushModelWarning(cfg, warnings);
+	pushRegimeWarning(cfg, warnings);
 
 	return {
 		success: true,
@@ -224,4 +193,42 @@ export function validateAtStartup(config: unknown): ValidationResult & { warning
 		errors: [],
 		warnings,
 	};
+}
+
+function getLiveEnvironmentWarnings(cfg: CreamConfig): string[] {
+	if (cfg.core.environment !== "LIVE") {
+		return [];
+	}
+
+	const warnings: string[] = [];
+	if (!cfg.universe) {
+		warnings.push("LIVE environment without universe configuration - no instruments to trade");
+	}
+	if (
+		cfg.constraints?.per_instrument?.max_pct_equity !== undefined &&
+		cfg.constraints.per_instrument.max_pct_equity > 0.2
+	) {
+		warnings.push("LIVE: per_instrument.max_pct_equity > 20% is risky");
+	}
+	if (
+		cfg.constraints?.portfolio?.max_gross_pct_equity !== undefined &&
+		cfg.constraints.portfolio.max_gross_pct_equity > 3.0
+	) {
+		warnings.push("LIVE: portfolio leverage > 3x is very risky");
+	}
+
+	return warnings;
+}
+
+function pushModelWarning(cfg: CreamConfig, warnings: string[]): void {
+	if (cfg.core.environment !== "LIVE" || !cfg.core.llm.model_id.includes("flash")) {
+		return;
+	}
+	warnings.push("LIVE environment using flash model - consider pro for production");
+}
+
+function pushRegimeWarning(cfg: CreamConfig, warnings: string[]): void {
+	if (cfg.regime?.classifier_type === "hmm" && !cfg.regime.hmm) {
+		warnings.push("HMM classifier selected but no HMM config provided");
+	}
 }

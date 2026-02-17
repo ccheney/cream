@@ -147,118 +147,136 @@ function generateId(): string {
 	return `alert-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;
 }
 
+type AlertSet = (
+	partial: Partial<AlertStore> | ((state: AlertStore) => Partial<AlertStore>),
+) => void;
+type AlertGet = () => AlertStore;
+
+function shouldPlaySound(alert: Alert, settings: AlertSettings): boolean {
+	if (alert.playSound === false) {
+		return false;
+	}
+
+	const soundBySeverity = {
+		critical: settings.soundCritical,
+		warning: settings.soundWarning,
+		info: settings.soundInfo,
+	};
+	return soundBySeverity[alert.severity];
+}
+
+function shouldPushNotification(alert: Alert, settings: AlertSettings): boolean {
+	return alert.pushNotification !== false && settings.pushEnabled;
+}
+
+function getAlertDuration(alert: Alert, settings: AlertSettings): number {
+	return alert.severity === "warning" ? settings.warningDuration : settings.infoDuration;
+}
+
+function maybeNotify(alert: Alert, settings: AlertSettings): void {
+	if (shouldPlaySound(alert, settings)) {
+		playAlertSound(alert.severity);
+	}
+	if (shouldPushNotification(alert, settings)) {
+		sendPushNotification(alert);
+	}
+}
+
+function addToAlertQueue(set: AlertSet, alert: Alert): void {
+	set((state) => ({ alerts: [...state.alerts, alert].slice(-MAX_VISIBLE_ALERTS) }));
+}
+
+function scheduleAutoDismiss(id: string, duration: number, set: AlertSet, get: AlertGet): void {
+	setTimeout(() => {
+		set((state) => ({
+			alerts: state.alerts.map((alert) =>
+				alert.id === id ? { ...alert, dismissing: true } : alert,
+			),
+		}));
+	}, duration);
+
+	setTimeout(() => {
+		get().dismissAlert(id);
+	}, duration + EXIT_ANIMATION_DURATION);
+}
+
+function createAlert(alertData: Omit<Alert, "id" | "createdAt">): Alert {
+	return {
+		...alertData,
+		id: generateId(),
+		createdAt: Date.now(),
+	};
+}
+
+function createAlertActions(
+	set: AlertSet,
+	get: AlertGet,
+): Omit<AlertStore, "alerts" | "criticalBanner" | "settings"> {
+	return {
+		addAlert: (alertData) => {
+			const alert = createAlert(alertData);
+			const { settings } = get();
+
+			if (alert.severity === "critical") {
+				set({ criticalBanner: alert });
+				maybeNotify(alert, settings);
+				return alert.id;
+			}
+
+			addToAlertQueue(set, alert);
+			maybeNotify(alert, settings);
+			scheduleAutoDismiss(alert.id, getAlertDuration(alert, settings), set, get);
+			return alert.id;
+		},
+		acknowledgeCritical: () => {
+			const { criticalBanner } = get();
+			if (!criticalBanner) {
+				return;
+			}
+			set({ criticalBanner: { ...criticalBanner, acknowledged: true } });
+			setTimeout(() => {
+				set({ criticalBanner: null });
+			}, EXIT_ANIMATION_DURATION);
+		},
+		dismissAlert: (id) => {
+			set((state) => ({ alerts: state.alerts.filter((alert) => alert.id !== id) }));
+		},
+		clearAlerts: () => {
+			set({ alerts: [] });
+		},
+		updateSettings: (newSettings) => {
+			set((state) => ({ settings: { ...state.settings, ...newSettings } }));
+		},
+		critical: (title, message, action) =>
+			get().addAlert({
+				severity: "critical",
+				title,
+				message,
+				action,
+				playSound: true,
+				pushNotification: true,
+			}),
+		warning: (title, message, action) =>
+			get().addAlert({
+				severity: "warning",
+				title,
+				message,
+				action,
+			}),
+		info: (title, message) =>
+			get().addAlert({
+				severity: "info",
+				title,
+				message,
+			}),
+	};
+}
+
 export const useAlertStore = create<AlertStore>((set, get) => ({
 	alerts: [],
 	criticalBanner: null,
 	settings: DEFAULT_SETTINGS,
-
-	addAlert: (alertData) => {
-		const id = generateId();
-		const alert: Alert = {
-			...alertData,
-			id,
-			createdAt: Date.now(),
-		};
-
-		const { settings } = get();
-
-		if (alert.severity === "critical") {
-			set({ criticalBanner: alert });
-
-			if (alert.playSound !== false && settings.soundCritical) {
-				playAlertSound("critical");
-			}
-
-			if (alert.pushNotification !== false && settings.pushEnabled) {
-				sendPushNotification(alert);
-			}
-
-			return id;
-		}
-
-		set((state) => {
-			const newAlerts = [...state.alerts, alert].slice(-MAX_VISIBLE_ALERTS);
-			return { alerts: newAlerts };
-		});
-
-		const soundEnabled = alert.severity === "warning" ? settings.soundWarning : settings.soundInfo;
-		if (alert.playSound !== false && soundEnabled) {
-			playAlertSound(alert.severity);
-		}
-
-		if (alert.pushNotification !== false && settings.pushEnabled) {
-			sendPushNotification(alert);
-		}
-
-		const duration =
-			alert.severity === "warning" ? settings.warningDuration : settings.infoDuration;
-
-		setTimeout(() => {
-			set((state) => ({
-				alerts: state.alerts.map((a) => (a.id === id ? { ...a, dismissing: true } : a)),
-			}));
-		}, duration);
-
-		setTimeout(() => {
-			get().dismissAlert(id);
-		}, duration + EXIT_ANIMATION_DURATION);
-
-		return id;
-	},
-
-	acknowledgeCritical: () => {
-		const { criticalBanner } = get();
-		if (criticalBanner) {
-			set({
-				criticalBanner: { ...criticalBanner, acknowledged: true },
-			});
-
-			setTimeout(() => {
-				set({ criticalBanner: null });
-			}, EXIT_ANIMATION_DURATION);
-		}
-	},
-
-	dismissAlert: (id) => {
-		set((state) => ({
-			alerts: state.alerts.filter((a) => a.id !== id),
-		}));
-	},
-
-	clearAlerts: () => {
-		set({ alerts: [] });
-	},
-
-	updateSettings: (newSettings) => {
-		set((state) => ({
-			settings: { ...state.settings, ...newSettings },
-		}));
-	},
-
-	critical: (title, message, action) =>
-		get().addAlert({
-			severity: "critical",
-			title,
-			message,
-			action,
-			playSound: true,
-			pushNotification: true,
-		}),
-
-	warning: (title, message, action) =>
-		get().addAlert({
-			severity: "warning",
-			title,
-			message,
-			action,
-		}),
-
-	info: (title, message, _action) =>
-		get().addAlert({
-			severity: "info",
-			title,
-			message,
-		}),
+	...createAlertActions(set, get),
 }));
 
 /**

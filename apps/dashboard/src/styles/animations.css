@@ -244,6 +244,29 @@
 	}
 }
 
+@keyframes button-shake {
+	0%,
+	100% {
+		transform: translateX(0);
+	}
+	25% {
+		transform: translateX(-2px);
+	}
+	75% {
+		transform: translateX(2px);
+	}
+}
+
+@keyframes logo-pulse {
+	0%,
+	100% {
+		opacity: 1;
+	}
+	50% {
+		opacity: 0.85;
+	}
+}
+
 /* ============================================
    Animation Utility Classes
    ============================================ */
@@ -318,6 +341,14 @@
 	animation: pulse-scale 2s ease-in-out infinite;
 }
 
+.animate-logo-pulse {
+	animation: logo-pulse 1.2s ease-in-out infinite;
+}
+
+.button-shake {
+	animation: button-shake 0.4s ease-out;
+}
+
 /* ============================================
    Duration Utility Classes
    ============================================ */
@@ -390,8 +421,12 @@
 		animation: none;
 	}
 
-	/* biome-ignore-all lint/complexity/noImportantStyles: !important required for a11y prefers-reduced-motion override */
-	/* Reduce transition durations */
+	.button-shake,
+	.animate-logo-pulse {
+		animation: none !important;
+	}
+
+/* Reduce transition durations */
 	.duration-instant,
 	.duration-fast,
 	.duration-normal,

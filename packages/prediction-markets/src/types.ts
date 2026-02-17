@@ -36,10 +36,31 @@ export interface PredictionMarketProvider {
 	calculateScores(events: PredictionMarketEvent[]): PredictionMarketScores;
 }
 
+type ErrorPlatform = PredictionPlatform | "AGGREGATOR";
+type NoExtraProperties = Record<PropertyKey, never>;
+
+type PredictionMarketErrorDefinition<TArgs extends unknown[], TExtra extends object> = (
+	...args: TArgs
+) => {
+	message: string;
+	platform: ErrorPlatform;
+	code: string;
+	cause?: Error;
+	extra?: TExtra;
+};
+
+type PredictionMarketErrorConstructor<
+	TArgs extends unknown[],
+	TInstance extends PredictionMarketError,
+> = {
+	new (...args: TArgs): TInstance;
+	readonly prototype: TInstance;
+};
+
 export class PredictionMarketError extends Error {
 	constructor(
 		message: string,
-		public readonly platform: PredictionPlatform | "AGGREGATOR",
+		public readonly platform: ErrorPlatform,
 		public readonly code: string,
 		public override readonly cause?: Error,
 	) {
@@ -48,39 +69,102 @@ export class PredictionMarketError extends Error {
 	}
 }
 
-export class RateLimitError extends PredictionMarketError {
-	constructor(
-		platform: PredictionPlatform,
-		public readonly retryAfterMs: number,
-	) {
-		super(`Rate limit exceeded for ${platform}`, platform, "RATE_LIMIT");
+function createPredictionMarketErrorConstructor<
+	TArgs extends unknown[],
+	TExtra extends object = NoExtraProperties,
+	TInstance extends PredictionMarketError = PredictionMarketError & TExtra,
+>(
+	name: string,
+	definition: PredictionMarketErrorDefinition<TArgs, TExtra>,
+): PredictionMarketErrorConstructor<TArgs, TInstance> {
+	function ErrorConstructor(this: unknown, ...args: TArgs): TInstance {
+		void this;
+		const { message, platform, code, cause, extra } = definition(...args);
+		const error = new PredictionMarketError(message, platform, code, cause) as TInstance;
+		error.name = name;
+		if (extra) {
+			Object.assign(error, extra);
+		}
+		Object.setPrototypeOf(error, Constructor.prototype);
+		return error;
 	}
+
+	const Constructor = ErrorConstructor as unknown as PredictionMarketErrorConstructor<
+		TArgs,
+		TInstance
+	>;
+
+	Object.defineProperty(Constructor, "name", { value: name });
+	Object.setPrototypeOf(Constructor.prototype, PredictionMarketError.prototype);
+	Object.setPrototypeOf(Constructor, PredictionMarketError);
+	Object.defineProperty(Constructor.prototype, "constructor", {
+		value: Constructor,
+		writable: true,
+		configurable: true,
+	});
+
+	return Constructor;
 }
 
-export class AuthenticationError extends PredictionMarketError {
-	constructor(platform: PredictionPlatform, message: string) {
-		super(message, platform, "AUTH_ERROR");
-	}
+export interface RateLimitError extends PredictionMarketError {
+	readonly retryAfterMs: number;
 }
 
-export class ConfigurationError extends PredictionMarketError {
-	constructor(platform: PredictionPlatform | "AGGREGATOR", message: string) {
-		super(message, platform, "CONFIG_MISSING");
-	}
-}
+export const RateLimitError = createPredictionMarketErrorConstructor<
+	[platform: PredictionPlatform, retryAfterMs: number],
+	{ readonly retryAfterMs: number },
+	RateLimitError
+>("RateLimitError", (platform, retryAfterMs) => ({
+	message: `Rate limit exceeded for ${platform}`,
+	platform,
+	code: "RATE_LIMIT",
+	extra: { retryAfterMs },
+}));
 
-export class InsufficientDataError extends PredictionMarketError {
-	constructor(platform: PredictionPlatform | "AGGREGATOR", required: number, actual: number) {
-		super(
-			`Insufficient data: need ${required} samples, got ${actual}`,
-			platform,
-			"INSUFFICIENT_DATA",
-		);
-	}
-}
+export interface AuthenticationError extends PredictionMarketError {}
 
-export class ValidationError extends PredictionMarketError {
-	constructor(platform: PredictionPlatform | "AGGREGATOR", schemaName: string, details: string) {
-		super(`Schema validation failed for ${schemaName}: ${details}`, platform, "VALIDATION_ERROR");
-	}
-}
+export const AuthenticationError = createPredictionMarketErrorConstructor<
+	[platform: PredictionPlatform, message: string],
+	NoExtraProperties,
+	AuthenticationError
+>("AuthenticationError", (platform, message) => ({
+	message,
+	platform,
+	code: "AUTH_ERROR",
+}));
+
+export interface ConfigurationError extends PredictionMarketError {}
+
+export const ConfigurationError = createPredictionMarketErrorConstructor<
+	[platform: ErrorPlatform, message: string],
+	NoExtraProperties,
+	ConfigurationError
+>("ConfigurationError", (platform, message) => ({
+	message,
+	platform,
+	code: "CONFIG_MISSING",
+}));
+
+export interface InsufficientDataError extends PredictionMarketError {}
+
+export const InsufficientDataError = createPredictionMarketErrorConstructor<
+	[platform: ErrorPlatform, required: number, actual: number],
+	NoExtraProperties,
+	InsufficientDataError
+>("InsufficientDataError", (platform, required, actual) => ({
+	message: `Insufficient data: need ${required} samples, got ${actual}`,
+	platform,
+	code: "INSUFFICIENT_DATA",
+}));
+
+export interface ValidationError extends PredictionMarketError {}
+
+export const ValidationError = createPredictionMarketErrorConstructor<
+	[platform: ErrorPlatform, schemaName: string, details: string],
+	NoExtraProperties,
+	ValidationError
+>("ValidationError", (platform, schemaName, details) => ({
+	message: `Schema validation failed for ${schemaName}: ${details}`,
+	platform,
+	code: "VALIDATION_ERROR",
+}));

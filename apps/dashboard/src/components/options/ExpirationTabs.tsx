@@ -1,6 +1,6 @@
 "use client";
 
-import { memo, useCallback, useEffect, useRef } from "react";
+import { memo, type Ref, useCallback, useEffect, useRef } from "react";
 import type { ExpirationInfo } from "@/lib/api/types";
 
 export interface ExpirationTabsProps {
@@ -40,6 +40,63 @@ function getDteColor(dte: number): string {
 	return "text-stone-500 dark:text-night-300";
 }
 
+function EmptyTabsState({ className, testId }: { className: string; testId?: string }) {
+	return (
+		<div
+			className={`flex items-center px-4 py-2 text-stone-500 dark:text-night-300 ${className}`}
+			data-testid={testId}
+		>
+			No expirations available
+		</div>
+	);
+}
+
+function ExpirationTab({
+	expiration,
+	isSelected,
+	onSelect,
+	refProp,
+}: {
+	expiration: ExpirationInfo;
+	isSelected: boolean;
+	onSelect: (date: string) => void;
+	refProp: Ref<HTMLButtonElement>;
+}) {
+	const typeIndicator = getTypeIndicator(expiration.type);
+
+	const badgeClasses = isSelected ? "bg-white text-primary" : "bg-primary text-white";
+	const labelClasses = isSelected ? "text-white/80" : getDteColor(expiration.dte);
+
+	const buttonClasses = isSelected
+		? "bg-primary text-white"
+		: "bg-cream-200 dark:bg-night-700 text-stone-700 dark:text-night-200 hover:bg-cream-300 dark:hover:bg-white/[0.04]";
+
+	return (
+		<button
+			ref={refProp}
+			type="button"
+			onClick={() => onSelect(expiration.date)}
+			className={`relative flex flex-col items-center px-3 py-1.5 min-w-[70px] rounded-md transition-colors duration-150 ${buttonClasses}`}
+			aria-pressed={isSelected}
+			aria-label={`Expiration ${formatExpirationLabel(expiration)}, ${expiration.dte} days to expiration`}
+		>
+			{typeIndicator && (
+				<span
+					className={`absolute -top-1 -right-1 w-4 h-4 text-[10px] font-bold rounded-full flex items-center justify-center ${badgeClasses}`}
+				>
+					{typeIndicator}
+				</span>
+			)}
+
+			<span className="text-sm font-medium whitespace-nowrap">
+				{formatExpirationLabel(expiration)}
+			</span>
+
+			<span className={`text-xs ${labelClasses}`}>{expiration.dte}d</span>
+		</button>
+	);
+}
+
 export const ExpirationTabs = memo(function ExpirationTabs({
 	expirations,
 	selected,
@@ -50,8 +107,11 @@ export const ExpirationTabs = memo(function ExpirationTabs({
 	const scrollContainerRef = useRef<HTMLDivElement>(null);
 	const selectedRef = useRef<HTMLButtonElement>(null);
 
-	// biome-ignore lint/correctness/useExhaustiveDependencies: selected triggers scroll to center the newly selected tab
 	useEffect(() => {
+		if (!selected) {
+			return;
+		}
+
 		if (selectedRef.current && scrollContainerRef.current) {
 			const container = scrollContainerRef.current;
 			const selectedEl = selectedRef.current;
@@ -72,14 +132,7 @@ export const ExpirationTabs = memo(function ExpirationTabs({
 	);
 
 	if (expirations.length === 0) {
-		return (
-			<div
-				className={`flex items-center px-4 py-2 text-stone-500 dark:text-night-300 ${className}`}
-				data-testid={testId}
-			>
-				No expirations available
-			</div>
-		);
+		return <EmptyTabsState className={className} testId={testId} />;
 	}
 
 	return (
@@ -93,46 +146,14 @@ export const ExpirationTabs = memo(function ExpirationTabs({
 			>
 				{expirations.map((exp) => {
 					const isSelected = exp.date === selected;
-					const typeIndicator = getTypeIndicator(exp.type);
-
 					return (
-						<button
+						<ExpirationTab
 							key={exp.date}
-							ref={isSelected ? selectedRef : null}
-							type="button"
-							onClick={() => handleSelect(exp.date)}
-							className={`
-                relative flex flex-col items-center px-3 py-1.5 min-w-[70px]
-                rounded-md transition-colors duration-150
-                ${
-									isSelected
-										? "bg-primary text-white"
-										: "bg-cream-200 dark:bg-night-700 text-stone-700 dark:text-night-200 hover:bg-cream-300 dark:hover:bg-white/[0.04]"
-								}
-              `}
-							aria-pressed={isSelected}
-							aria-label={`Expiration ${formatExpirationLabel(exp)}, ${exp.dte} days to expiration`}
-						>
-							{typeIndicator && (
-								<span
-									className={`
-                    absolute -top-1 -right-1 w-4 h-4 text-[10px] font-bold
-                    rounded-full flex items-center justify-center
-                    ${isSelected ? "bg-white text-primary" : "bg-primary text-white"}
-                  `}
-								>
-									{typeIndicator}
-								</span>
-							)}
-
-							<span className="text-sm font-medium whitespace-nowrap">
-								{formatExpirationLabel(exp)}
-							</span>
-
-							<span className={`text-xs ${isSelected ? "text-white/80" : getDteColor(exp.dte)}`}>
-								{exp.dte}d
-							</span>
-						</button>
+							expiration={exp}
+							isSelected={isSelected}
+							onSelect={handleSelect}
+							refProp={isSelected ? selectedRef : null}
+						/>
 					);
 				})}
 			</div>

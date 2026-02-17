@@ -7,10 +7,6 @@
 
 import { z } from "zod";
 
-// ============================================
-// Memory Context Schemas
-// ============================================
-
 export const MemoryCaseSchema = z.object({
 	caseId: z.string(),
 	symbol: z.string(),
@@ -20,11 +16,6 @@ export const MemoryCaseSchema = z.object({
 	similarity: z.number(),
 });
 
-// ============================================
-// Event Schemas (for agent outputs)
-// ============================================
-
-// Helper to normalize enum values (uppercase, handle common LLM variations)
 const normalizeImpact = (val: unknown): string => {
 	if (typeof val !== "string") return "MEDIUM";
 	const upper = val.toUpperCase();
@@ -46,7 +37,6 @@ const normalizeEventType = (val: unknown): string => {
 		"SOCIAL",
 	];
 	if (validTypes.includes(upper)) return upper;
-	// Handle common variations
 	if (upper.includes("EARN")) return "EARNINGS";
 	if (upper.includes("GUID")) return "GUIDANCE";
 	if (upper.includes("MERG") || upper.includes("ACQUI")) return "M&A";
@@ -80,10 +70,8 @@ export const EventImpactSchema = z.object({
 	reasoning: z.string(),
 });
 
-// EventRiskSchema that handles both object and string formats from LLM
 export const EventRiskSchema = z.preprocess(
 	(val) => {
-		// If it's a string, convert to object format
 		if (typeof val === "string") {
 			return { event: val, date: "unknown", potential_impact: "MEDIUM" };
 		}
@@ -95,10 +83,6 @@ export const EventRiskSchema = z.preprocess(
 		potential_impact: z.preprocess(normalizeImpact, z.enum(["HIGH", "MEDIUM", "LOW"])),
 	}),
 );
-
-// ============================================
-// Approval Schemas
-// ============================================
 
 export const ConstraintViolationSchema = z.object({
 	constraint: z.string(),
@@ -114,10 +98,6 @@ export const RequiredChangeSchema = z.object({
 	reason: z.string(),
 });
 
-// ============================================
-// Prediction Markets
-// ============================================
-
 export const PredictionMarketSignalsSchema = z.object({
 	fedCutProbability: z.number().optional(),
 	fedHikeProbability: z.number().optional(),
@@ -130,10 +110,6 @@ export const PredictionMarketSignalsSchema = z.object({
 	timestamp: z.string().optional(),
 	platforms: z.array(z.string()).optional(),
 });
-
-// ============================================
-// External Context
-// ============================================
 
 export const NewsEventSchema = z.object({
 	eventId: z.string(),
@@ -151,10 +127,6 @@ export const ExternalContextSchema = z.object({
 	macroIndicators: z.record(z.string(), z.number()),
 	predictionMarketSignals: PredictionMarketSignalsSchema.optional(),
 });
-
-// ============================================
-// Market Data
-// ============================================
 
 export const CandleDataSchema = z.object({
 	timestamp: z.number(),
@@ -201,10 +173,6 @@ export const MarketSnapshotSchema = z.object({
 	timestamp: z.number(),
 });
 
-// ============================================
-// Regime and Memory
-// ============================================
-
 export const RegimeDataSchema = z.object({
 	regime: z.string(),
 	confidence: z.number(),
@@ -215,10 +183,6 @@ export const MemoryContextSchema = z.object({
 	relevantCases: z.array(MemoryCaseSchema),
 	regimeLabels: z.record(z.string(), RegimeDataSchema),
 });
-
-// ============================================
-// Analysis Outputs
-// ============================================
 
 export const SentimentAnalysisSchema = z.object({
 	instrument_id: z.string(),
@@ -254,10 +218,6 @@ export const ResearchSchema = z.object({
 	memory_case_ids: z.array(z.string()),
 	strongest_counterargument: z.string(),
 });
-
-// ============================================
-// Decision Types
-// ============================================
 
 export const StopLossSchema = z.object({
 	price: z
@@ -324,10 +284,6 @@ export const ApprovalSchema = z.object({
 	notes: z.string().optional(),
 });
 
-// ============================================
-// Grounding Output Schemas
-// ============================================
-
 export const SymbolGroundingSchema = z.object({
 	symbol: z.string().describe("Stock ticker symbol"),
 	news: z.array(z.string()).describe("Key headlines and recent developments"),
@@ -359,10 +315,6 @@ export const GroundingOutputSchema = z.object({
 
 export type GroundingOutput = z.infer<typeof GroundingOutputSchema>;
 
-// ============================================
-// Constraints Schema
-// ============================================
-
 export const ConstraintsSchema = z.object({
 	perInstrument: z.object({
 		maxShares: z.number(),
@@ -390,10 +342,6 @@ export const ConstraintsSchema = z.object({
 
 export type Constraints = z.infer<typeof ConstraintsSchema>;
 
-// ============================================
-// Recent Closes Schema (Cross-Cycle Context)
-// ============================================
-
 export const RecentCloseSchema = z.object({
 	symbol: z.string(),
 	closedAt: z.string(),
@@ -404,10 +352,6 @@ export const RecentCloseSchema = z.object({
 });
 
 export type RecentClose = z.infer<typeof RecentCloseSchema>;
-
-// ============================================
-// Enriched Position Schemas
-// ============================================
 
 export const PositionThesisContextSchema = z.object({
 	thesisId: z.string().nullable(),
@@ -438,10 +382,6 @@ export const EnrichedPositionSchema = z.object({
 
 export type EnrichedPosition = z.infer<typeof EnrichedPositionSchema>;
 
-// ============================================
-// Workflow Input Schema
-// ============================================
-
 export const WorkflowInputSchema = z.object({
 	cycleId: z.string(),
 	instruments: z.array(z.string()).min(1, "At least one instrument is required"),
@@ -462,44 +402,32 @@ export const WorkflowInputSchema = z.object({
 
 export type WorkflowInput = z.infer<typeof WorkflowInputSchema>;
 
-// ============================================
-// Workflow State Schema
-// ============================================
-
 export const WorkflowStateSchema = z.object({
 	cycleId: z.string(),
 	timestamp: z.string(),
 	configVersion: z.string().nullable().default(null),
 	mode: z.enum(["STUB", "LLM"]).default("STUB"),
 
-	// OBSERVE phase
 	marketSnapshot: MarketSnapshotSchema.optional(),
 
-	// ORIENT phase
 	memoryContext: MemoryContextSchema.optional(),
 	regimeLabels: z.record(z.string(), RegimeDataSchema).optional(),
 
-	// Runtime constraints (loaded in Orient phase or passed via input)
 	constraints: ConstraintsSchema.optional(),
 
-	// DECIDE - Analysis phase
 	newsAnalysis: z.array(SentimentAnalysisSchema).optional(),
 	fundamentalsAnalysis: z.array(FundamentalsAnalysisSchema).optional(),
 
-	// DECIDE - Debate phase
 	bullishResearch: z.array(ResearchSchema).optional(),
 	bearishResearch: z.array(ResearchSchema).optional(),
 
-	// DECIDE - Trader phase
 	decisionPlan: DecisionPlanSchema.optional(),
 
-	// DECIDE - Consensus phase
 	riskApproval: ApprovalSchema.optional(),
 	criticApproval: ApprovalSchema.optional(),
 	iterations: z.number().default(0),
 	approved: z.boolean().default(false),
 
-	// ACT phase
 	constraintCheck: z
 		.object({
 			passed: z.boolean(),
@@ -516,10 +444,6 @@ export const WorkflowStateSchema = z.object({
 });
 
 export type WorkflowState = z.infer<typeof WorkflowStateSchema>;
-
-// ============================================
-// Workflow Output Schema
-// ============================================
 
 export const ThesisUpdateSchema = z.object({
 	thesisId: z.string(),

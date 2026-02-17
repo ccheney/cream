@@ -13,6 +13,9 @@ import type {
 	VersionRegistry,
 } from "./parity.js";
 import { runParityValidation } from "./parity.js";
+import { ParityValidationError } from "./parity-validation-error.js";
+
+export { ParityValidationError } from "./parity-validation-error.js";
 
 // ============================================
 // Types
@@ -293,29 +296,6 @@ export class ParityValidationService {
 		}
 
 		return latest.fullReport;
-	}
-}
-
-// ============================================
-// Error Types
-// ============================================
-
-/**
- * Error thrown when parity validation fails.
- */
-export class ParityValidationError extends Error {
-	readonly code: "VALIDATION_FAILED" | "NO_VALIDATION" | "NOT_READY";
-	readonly report?: ParityValidationResult;
-
-	constructor(
-		message: string,
-		code: "VALIDATION_FAILED" | "NO_VALIDATION" | "NOT_READY",
-		report?: ParityValidationResult,
-	) {
-		super(message);
-		this.name = "ParityValidationError";
-		this.code = code;
-		this.report = report;
 	}
 }
 

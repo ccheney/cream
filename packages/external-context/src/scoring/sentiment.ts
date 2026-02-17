@@ -95,45 +95,53 @@ export function aggregateSentimentScores(
 		return firstScore !== undefined ? firstScore : 0;
 	}
 
-	switch (method) {
-		case "mean": {
-			const sum = scores.reduce((acc, s) => acc + s, 0);
-			return sum / scores.length;
-		}
+	const aggregateByMethod: Record<"mean" | "median" | "weighted", (values: number[]) => number> = {
+		mean: meanSentimentScores,
+		median: medianSentimentScores,
+		weighted: (values) => weightedSentimentScores(values, weights),
+	};
 
-		case "median": {
-			const sorted = scores.toSorted((a, b) => a - b);
-			const mid = Math.floor(sorted.length / 2);
-			if (sorted.length % 2 !== 0) {
-				const midValue = sorted[mid];
-				return midValue !== undefined ? midValue : 0;
-			} else {
-				const midValue1 = sorted[mid - 1];
-				const midValue2 = sorted[mid];
-				if (midValue1 === undefined || midValue2 === undefined) {
-					return 0;
-				}
-				return (midValue1 + midValue2) / 2;
-			}
-		}
+	return aggregateByMethod[method](scores);
+}
 
-		case "weighted": {
-			if (!weights || weights.length !== scores.length) {
-				// Fall back to mean if weights not provided
-				return scores.reduce((sum, s) => sum + s, 0) / scores.length;
-			}
-			const totalWeight = weights.reduce((sum, w) => sum + w, 0);
-			if (totalWeight === 0) {
-				return 0;
-			}
-			return (
-				scores.reduce((sum, s, i) => {
-					const weight = weights[i];
-					return sum + s * (weight !== undefined ? weight : 0);
-				}, 0) / totalWeight
-			);
-		}
+function meanSentimentScores(scores: number[]): number {
+	return scores.reduce((sum, score) => sum + score, 0) / scores.length;
+}
+
+function medianSentimentScores(scores: number[]): number {
+	const sorted = scores.toSorted((a, b) => a - b);
+	const middleIndex = Math.floor(sorted.length / 2);
+
+	if (sorted.length % 2 !== 0) {
+		const middleValue = sorted[middleIndex];
+		return middleValue !== undefined ? middleValue : 0;
 	}
+
+	const middleLeft = sorted[middleIndex - 1];
+	const middleRight = sorted[middleIndex];
+	if (middleLeft === undefined || middleRight === undefined) {
+		return 0;
+	}
+
+	return (middleLeft + middleRight) / 2;
+}
+
+function weightedSentimentScores(scores: number[], weights?: number[]): number {
+	if (!weights || weights.length !== scores.length) {
+		return meanSentimentScores(scores);
+	}
+
+	const totalWeight = weights.reduce((sum, weight) => sum + weight, 0);
+	if (totalWeight === 0) {
+		return 0;
+	}
+
+	return (
+		scores.reduce((sum, score, index) => {
+			const weight = weights[index];
+			return sum + score * (weight !== undefined ? weight : 0);
+		}, 0) / totalWeight
+	);
 }
 
 /**

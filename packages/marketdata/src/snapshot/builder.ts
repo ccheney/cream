@@ -146,92 +146,192 @@ export async function buildSnapshot(
 	sources: SnapshotDataSources,
 	options: BuildSnapshotOptions = {},
 ): Promise<FeatureSnapshot> {
-	const config = { ...DEFAULT_SNAPSHOT_CONFIG, ...options.config };
-	const indicatorConfig = options.indicatorConfig ?? DEFAULT_PIPELINE_CONFIG;
-	const useCache = options.useCache ?? true;
-	const cache = options.cache ?? getGlobalCache();
-
-	if (useCache) {
-		const cached = cache.get(symbol, timestamp);
-		if (cached) {
-			return cached;
-		}
+	const context = resolveBuildContext(options);
+	const cached = getCachedSnapshot(symbol, timestamp, context);
+	if (cached) {
+		return cached;
 	}
 
-	const candlePromises = config.timeframes.map(async (tf) => {
-		const candles = await sources.candles.getCandles(symbol, tf, config.lookbackWindow, timestamp);
-		return [tf, candles] as const;
-	});
+	const candleData = await loadCandleData(symbol, timestamp, sources, context.config);
+	const indicators = buildIndicators(candleData.primaryCandles, context.indicatorConfig);
+	const normalized = buildNormalizedValues(
+		candleData.primaryCandles,
+		candleData.primaryTimeframe,
+		context.config.includeNormalized,
+	);
+	const regime = buildRegime(candleData.primaryCandles);
+	const recentEvents = await loadRecentEvents(symbol, sources, context.config);
+	const metadata = await loadMetadata(symbol, sources, candleData.latestCandle.close);
 
-	const candleResults = await Promise.all(candlePromises);
+	const snapshot = createFeatureSnapshot(
+		symbol,
+		timestamp,
+		context.config,
+		candleData.candlesByTimeframe,
+		candleData.latestCandle,
+		indicators,
+		normalized,
+		regime,
+		recentEvents,
+		metadata,
+	);
+	cacheSnapshot(context, snapshot);
+	return snapshot;
+}
+
+function resolveBuildContext(options: BuildSnapshotOptions): {
+	config: SnapshotBuilderConfig;
+	indicatorConfig: IndicatorPipelineConfig;
+	useCache: boolean;
+	cache: SnapshotCache;
+} {
+	return {
+		config: { ...DEFAULT_SNAPSHOT_CONFIG, ...options.config },
+		indicatorConfig: options.indicatorConfig ?? DEFAULT_PIPELINE_CONFIG,
+		useCache: options.useCache ?? true,
+		cache: options.cache ?? getGlobalCache(),
+	};
+}
+
+function getCachedSnapshot(
+	symbol: string,
+	timestamp: number,
+	context: { useCache: boolean; cache: SnapshotCache },
+): FeatureSnapshot | null {
+	if (!context.useCache) {
+		return null;
+	}
+	return context.cache.get(symbol, timestamp);
+}
+
+async function loadCandleData(
+	symbol: string,
+	timestamp: number,
+	sources: SnapshotDataSources,
+	config: SnapshotBuilderConfig,
+): Promise<{
+	candlesByTimeframe: CandlesByTimeframe;
+	primaryTimeframe: Timeframe;
+	primaryCandles: IndicatorCandle[];
+	latestCandle: IndicatorCandle;
+}> {
+	const candleResults = await Promise.all(
+		config.timeframes.map(async (tf) => {
+			const candles = await sources.candles.getCandles(
+				symbol,
+				tf,
+				config.lookbackWindow,
+				timestamp,
+			);
+			return [tf, candles] as const;
+		}),
+	);
 
 	const candlesByTimeframe: CandlesByTimeframe = {};
-	const candleMap = new Map<Timeframe, IndicatorCandle[]>();
-
 	for (const [tf, candles] of candleResults) {
 		candlesByTimeframe[tf] = candles;
-		candleMap.set(tf, candles);
 	}
 
 	const primaryTimeframe = config.timeframes[0] ?? "1h";
 	const primaryCandles = candlesByTimeframe[primaryTimeframe] ?? [];
 	const latestCandle = primaryCandles.at(-1);
-
 	if (!latestCandle) {
 		throw new Error(
 			`No candle data available for ${symbol} at ${new Date(timestamp).toISOString()}`,
 		);
 	}
 
+	return { candlesByTimeframe, primaryTimeframe, primaryCandles, latestCandle };
+}
+
+function buildIndicators(
+	primaryCandles: IndicatorCandle[],
+	indicatorConfig: IndicatorPipelineConfig,
+): IndicatorValues {
 	const indicatorSnapshot = calculateMultiTimeframeIndicators(primaryCandles, indicatorConfig);
-	// Flatten multi-timeframe indicators to flat key-value map
 	const indicators: IndicatorValues = {};
+
 	for (const [timeframe, values] of Object.entries(indicatorSnapshot)) {
 		for (const [key, value] of Object.entries(values)) {
 			indicators[`${key}_${timeframe}`] = value;
 		}
 	}
 
-	let normalized: NormalizedValues = {};
-	if (config.includeNormalized) {
-		const transformResult = applyTransforms(
-			primaryCandles,
-			primaryTimeframe,
-			DEFAULT_TRANSFORM_CONFIG,
-		);
-		normalized = transformResult ?? {};
+	return indicators;
+}
+
+function buildNormalizedValues(
+	primaryCandles: IndicatorCandle[],
+	primaryTimeframe: Timeframe,
+	includeNormalized: boolean,
+): NormalizedValues {
+	if (!includeNormalized) {
+		return {};
 	}
 
-	const regimeInput = { candles: primaryCandles };
-	const regime: RegimeClassification = classifyRegime(regimeInput, DEFAULT_RULE_BASED_CONFIG);
+	const transformResult = applyTransforms(
+		primaryCandles,
+		primaryTimeframe,
+		DEFAULT_TRANSFORM_CONFIG,
+	);
+	return transformResult ?? {};
+}
 
-	let recentEvents: ExternalEventSummary[] = [];
-	if (config.includeEvents && sources.events) {
-		recentEvents = await sources.events.getRecentEvents(
-			symbol,
-			config.eventLookbackHours,
-			config.maxEvents,
-		);
+function buildRegime(primaryCandles: IndicatorCandle[]): RegimeClassification {
+	return classifyRegime({ candles: primaryCandles }, DEFAULT_RULE_BASED_CONFIG);
+}
+
+async function loadRecentEvents(
+	symbol: string,
+	sources: SnapshotDataSources,
+	config: SnapshotBuilderConfig,
+): Promise<ExternalEventSummary[]> {
+	if (!config.includeEvents || !sources.events) {
+		return [];
 	}
 
-	let metadata: UniverseMetadata = { symbol };
-	if (sources.universe) {
-		const resolved = await sources.universe.getMetadata(symbol);
-		if (resolved) {
-			metadata = {
-				symbol: resolved.symbol,
-				name: resolved.name,
-				sector: resolved.sector,
-				industry: resolved.industry,
-				marketCap: resolved.marketCap,
-				marketCapBucket: classifyMarketCap(resolved.marketCap),
-				avgVolume: resolved.avgVolume,
-				price: resolved.price ?? latestCandle.close,
-			};
-		}
+	return sources.events.getRecentEvents(symbol, config.eventLookbackHours, config.maxEvents);
+}
+
+async function loadMetadata(
+	symbol: string,
+	sources: SnapshotDataSources,
+	fallbackPrice: number,
+): Promise<UniverseMetadata> {
+	if (!sources.universe) {
+		return { symbol };
 	}
 
-	const snapshot: FeatureSnapshot = {
+	const resolved = await sources.universe.getMetadata(symbol);
+	if (!resolved) {
+		return { symbol };
+	}
+
+	return {
+		symbol: resolved.symbol,
+		name: resolved.name,
+		sector: resolved.sector,
+		industry: resolved.industry,
+		marketCap: resolved.marketCap,
+		marketCapBucket: classifyMarketCap(resolved.marketCap),
+		avgVolume: resolved.avgVolume,
+		price: resolved.price ?? fallbackPrice,
+	};
+}
+
+function createFeatureSnapshot(
+	symbol: string,
+	timestamp: number,
+	config: SnapshotBuilderConfig,
+	candlesByTimeframe: CandlesByTimeframe,
+	latestCandle: IndicatorCandle,
+	indicators: IndicatorValues,
+	normalized: NormalizedValues,
+	regime: RegimeClassification,
+	recentEvents: ExternalEventSummary[],
+	metadata: UniverseMetadata,
+): FeatureSnapshot {
+	return {
 		symbol,
 		timestamp,
 		createdAt: new Date().toISOString(),
@@ -249,12 +349,15 @@ export async function buildSnapshot(
 			eventLookbackHours: config.eventLookbackHours,
 		},
 	};
+}
 
-	if (useCache) {
-		cache.set(snapshot);
+function cacheSnapshot(
+	context: { useCache: boolean; cache: SnapshotCache },
+	snapshot: FeatureSnapshot,
+): void {
+	if (context.useCache) {
+		context.cache.set(snapshot);
 	}
-
-	return snapshot;
 }
 
 /**

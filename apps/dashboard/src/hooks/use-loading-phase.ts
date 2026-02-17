@@ -15,7 +15,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { create } from "zustand";
+import { useLoadingPhaseStore } from "./use-loading-phase.store";
 
 // ============================================
 // Types
@@ -94,184 +94,6 @@ export interface LoadingPhaseState {
 	/** Mark phase as error */
 	markPhaseError: (phase: LoadingPhase, error: Error) => void;
 }
-
-// ============================================
-// Constants
-// ============================================
-
-/**
- * Phase execution order.
- */
-const PHASE_ORDER: LoadingPhase[] = ["critical", "important", "deferred"];
-
-/**
- * Default phase state.
- */
-const DEFAULT_PHASE_STATE: PhaseState = {
-	status: "pending",
-	startedAt: null,
-	completedAt: null,
-	error: null,
-};
-
-/**
- * Initial phases state.
- */
-const INITIAL_PHASES: Record<LoadingPhase, PhaseState> = {
-	critical: { ...DEFAULT_PHASE_STATE },
-	important: { ...DEFAULT_PHASE_STATE },
-	deferred: { ...DEFAULT_PHASE_STATE },
-	"on-demand": { ...DEFAULT_PHASE_STATE },
-};
-
-// ============================================
-// Store
-// ============================================
-
-/**
- * Loading phase store.
- */
-export const useLoadingPhaseStore = create<LoadingPhaseState>((set, get) => ({
-	currentPhase: null,
-	phases: { ...INITIAL_PHASES },
-	loaders: new Map(),
-	isInitialLoadComplete: false,
-
-	registerLoader: (id, phase, loader) => {
-		set((state) => {
-			const loaders = new Map(state.loaders);
-			loaders.set(id, {
-				id,
-				phase,
-				loader,
-				status: "pending",
-			});
-			return { loaders };
-		});
-	},
-
-	unregisterLoader: (id) => {
-		set((state) => {
-			const loaders = new Map(state.loaders);
-			loaders.delete(id);
-			return { loaders };
-		});
-	},
-
-	getLoadersByPhase: (phase) => {
-		const { loaders } = get();
-		return Array.from(loaders.values()).filter((l) => l.phase === phase);
-	},
-
-	markPhaseComplete: (phase) => {
-		set((state) => ({
-			phases: {
-				...state.phases,
-				[phase]: {
-					...state.phases[phase],
-					status: "complete",
-					completedAt: Date.now(),
-				},
-			},
-		}));
-	},
-
-	markPhaseError: (phase, error) => {
-		set((state) => ({
-			phases: {
-				...state.phases,
-				[phase]: {
-					...state.phases[phase],
-					status: "error",
-					error,
-				},
-			},
-		}));
-	},
-
-	startLoading: async () => {
-		const { getLoadersByPhase, markPhaseComplete, markPhaseError } = get();
-
-		// Execute phases in order
-		for (const phase of PHASE_ORDER) {
-			set((state) => ({
-				currentPhase: phase,
-				phases: {
-					...state.phases,
-					[phase]: {
-						...state.phases[phase],
-						status: "loading",
-						startedAt: Date.now(),
-					},
-				},
-			}));
-
-			const loaders = getLoadersByPhase(phase);
-
-			if (loaders.length > 0) {
-				try {
-					// Execute all loaders in the phase concurrently
-					await Promise.all(
-						loaders.map(async (registration) => {
-							try {
-								await registration.loader();
-								// Update loader status
-								set((state) => {
-									const updatedLoaders = new Map(state.loaders);
-									const loader = updatedLoaders.get(registration.id);
-									if (loader) {
-										updatedLoaders.set(registration.id, { ...loader, status: "complete" });
-									}
-									return { loaders: updatedLoaders };
-								});
-							} catch (error) {
-								// Update loader status with error
-								set((state) => {
-									const updatedLoaders = new Map(state.loaders);
-									const loader = updatedLoaders.get(registration.id);
-									if (loader) {
-										updatedLoaders.set(registration.id, {
-											...loader,
-											status: "error",
-											error: error instanceof Error ? error : new Error(String(error)),
-										});
-									}
-									return { loaders: updatedLoaders };
-								});
-								throw error;
-							}
-						}),
-					);
-
-					markPhaseComplete(phase);
-				} catch (error) {
-					markPhaseError(phase, error instanceof Error ? error : new Error(String(error)));
-					// For critical phase, stop loading
-					if (phase === "critical") {
-						return;
-					}
-				}
-			} else {
-				// No loaders for this phase, mark complete
-				markPhaseComplete(phase);
-			}
-		}
-
-		set({
-			currentPhase: null,
-			isInitialLoadComplete: true,
-		});
-	},
-
-	reset: () => {
-		set({
-			currentPhase: null,
-			phases: { ...INITIAL_PHASES },
-			loaders: new Map(),
-			isInitialLoadComplete: false,
-		});
-	},
-}));
 
 // ============================================
 // Hooks
@@ -451,6 +273,44 @@ export interface UseOnDemandLoaderReturn<T> {
 	reset: () => void;
 }
 
+async function executeOnDemandLoad<T>(
+	loaderRef: { current: () => Promise<T> },
+	loadState: {
+		setData: (data: T | null) => void;
+		setIsLoading: (isLoading: boolean) => void;
+		setError: (error: Error | null) => void;
+	},
+) {
+	loadState.setIsLoading(true);
+	loadState.setError(null);
+
+	try {
+		const result = await loaderRef.current();
+		loadState.setData(result);
+		return result;
+	} catch (e) {
+		const err = e instanceof Error ? e : new Error(String(e));
+		loadState.setError(err);
+		throw err;
+	} finally {
+		loadState.setIsLoading(false);
+	}
+}
+
+function resetOnDemandLoaderState<T>({
+	setData,
+	setIsLoading,
+	setError,
+}: {
+	setData: (data: T | null) => void;
+	setIsLoading: (isLoading: boolean) => void;
+	setError: (error: Error | null) => void;
+}) {
+	setData(null);
+	setIsLoading(false);
+	setError(null);
+}
+
 /**
  * Hook for on-demand loading (e.g., when navigating to detail views).
  *
@@ -484,26 +344,15 @@ export function useOnDemandLoader<T>(loader: () => Promise<T>): UseOnDemandLoade
 	}, [loader]);
 
 	const load = useCallback(async () => {
-		setIsLoading(true);
-		setError(null);
-
-		try {
-			const result = await loaderRef.current();
-			setData(result);
-			return result;
-		} catch (e) {
-			const err = e instanceof Error ? e : new Error(String(e));
-			setError(err);
-			throw err;
-		} finally {
-			setIsLoading(false);
-		}
+		return executeOnDemandLoad(loaderRef, {
+			setData,
+			setIsLoading,
+			setError,
+		});
 	}, []);
 
 	const reset = useCallback(() => {
-		setData(null);
-		setIsLoading(false);
-		setError(null);
+		resetOnDemandLoaderState({ setData, setIsLoading, setError });
 	}, []);
 
 	return {

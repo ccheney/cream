@@ -59,6 +59,121 @@ const ChainHeader = memo(function ChainHeader() {
 	);
 });
 
+function EmptyChainState({ className, testId }: { className: string; testId?: string }) {
+	return (
+		<div
+			className={`flex items-center justify-center p-8 text-stone-500 dark:text-night-300 ${className}`}
+			data-testid={testId}
+		>
+			No options data available
+		</div>
+	);
+}
+
+type VirtualItem = {
+	index: number;
+	key: string | number;
+	size: number;
+	start: number;
+};
+
+function useOptionsChainVirtualization({
+	chain,
+	atmIndex,
+	onVisibleRowsChange,
+}: {
+	chain: ChainRow[];
+	atmIndex: number;
+	onVisibleRowsChange?: (startIndex: number, endIndex: number) => void;
+}) {
+	const parentRef = useRef<HTMLDivElement>(null);
+	const virtualizer = useVirtualizer({
+		count: chain.length,
+		getScrollElement: () => parentRef.current,
+		estimateSize: () => ROW_HEIGHT,
+		overscan: OVERSCAN,
+	});
+	const virtualItems = virtualizer.getVirtualItems();
+
+	useEffect(() => {
+		if (chain.length === 0) {
+			return;
+		}
+		const timer = setTimeout(() => {
+			virtualizer.scrollToIndex(atmIndex, { align: "center" });
+		}, 100);
+		return () => clearTimeout(timer);
+	}, [atmIndex, chain.length, virtualizer]);
+
+	useEffect(() => {
+		if (!onVisibleRowsChange || virtualItems.length === 0) {
+			return;
+		}
+		const startIndex = virtualItems[0]?.index ?? 0;
+		const endIndex = virtualItems.at(-1)?.index ?? 0;
+		onVisibleRowsChange(startIndex, endIndex);
+	}, [onVisibleRowsChange, virtualItems]);
+
+	return {
+		parentRef,
+		virtualItems,
+		totalHeight: virtualizer.getTotalSize(),
+	};
+}
+
+function OptionsChainContent({
+	chain,
+	atmStrike,
+	underlyingPrice,
+	virtualItems,
+	totalHeight,
+	onContractClick,
+}: {
+	chain: ChainRow[];
+	atmStrike: number | null;
+	underlyingPrice: number | null;
+	virtualItems: VirtualItem[];
+	totalHeight: number;
+	onContractClick: (contract: OptionsContract, type: "call" | "put", strike: number) => void;
+}) {
+	return (
+		<div className="flex-1 overflow-auto" style={{ contain: "strict" }}>
+			<div style={{ height: `${totalHeight}px`, width: "100%", position: "relative" }}>
+				{virtualItems.map((virtualRow) => {
+					const row = chain[virtualRow.index];
+					if (!row) {
+						return null;
+					}
+
+					return (
+						<div
+							key={virtualRow.key}
+							style={{
+								position: "absolute",
+								top: 0,
+								left: 0,
+								width: "100%",
+								height: `${virtualRow.size}px`,
+								transform: `translateY(${virtualRow.start}px)`,
+							}}
+						>
+							<OptionsChainRow
+								strike={row.strike}
+								call={row.call}
+								put={row.put}
+								isAtm={row.strike === atmStrike}
+								underlyingPrice={underlyingPrice}
+								onContractClick={onContractClick}
+								data-testid={`chain-row-${row.strike}`}
+							/>
+						</div>
+					);
+				})}
+			</div>
+		</div>
+	);
+}
+
 export const OptionsChainTable = memo(function OptionsChainTable({
 	chain,
 	atmStrike,
@@ -68,8 +183,6 @@ export const OptionsChainTable = memo(function OptionsChainTable({
 	className = "",
 	"data-testid": testId,
 }: OptionsChainTableProps) {
-	const parentRef = useRef<HTMLDivElement>(null);
-
 	const atmIndex = useMemo(() => {
 		if (atmStrike === null) {
 			return Math.floor(chain.length / 2);
@@ -78,103 +191,45 @@ export const OptionsChainTable = memo(function OptionsChainTable({
 		return index >= 0 ? index : Math.floor(chain.length / 2);
 	}, [chain, atmStrike]);
 
-	const virtualizer = useVirtualizer({
-		count: chain.length,
-		getScrollElement: () => parentRef.current,
-		estimateSize: () => ROW_HEIGHT,
-		overscan: OVERSCAN,
+	const { parentRef, virtualItems, totalHeight } = useOptionsChainVirtualization({
+		chain,
+		atmIndex,
+		onVisibleRowsChange,
 	});
-
-	const virtualItems = virtualizer.getVirtualItems();
-
-	useEffect(() => {
-		if (chain.length === 0) {
-			return;
-		}
-		// Delay ensures container is measured before scrolling
-		const timer = setTimeout(() => {
-			virtualizer.scrollToIndex(atmIndex, { align: "center" });
-		}, 100);
-		return () => clearTimeout(timer);
-	}, [atmIndex, chain.length, virtualizer]);
-
-	useEffect(() => {
-		if (onVisibleRowsChange && virtualItems.length > 0) {
-			const startIndex = virtualItems[0]?.index ?? 0;
-			const endIndex = virtualItems.at(-1)?.index ?? 0;
-			onVisibleRowsChange(startIndex, endIndex);
-		}
-	}, [virtualItems, onVisibleRowsChange]);
 
 	const handleContractClick = useCallback(
 		(contract: OptionsContract, type: "call" | "put") => {
-			if (onContractClick) {
-				const row = chain.find(
-					(r) =>
-						(type === "call" && r.call?.symbol === contract.symbol) ||
-						(type === "put" && r.put?.symbol === contract.symbol),
-				);
-				const strike = row?.strike ?? 0;
-				onContractClick(contract, type, strike);
+			if (!onContractClick) {
+				return;
 			}
+
+			const row = chain.find(
+				(r) =>
+					(type === "call" && r.call?.symbol === contract.symbol) ||
+					(type === "put" && r.put?.symbol === contract.symbol),
+			);
+			const strike = row?.strike ?? 0;
+			onContractClick(contract, type, strike);
 		},
 		[chain, onContractClick],
 	);
 
 	if (chain.length === 0) {
-		return (
-			<div
-				className={`flex items-center justify-center p-8 text-stone-500 dark:text-night-300 ${className}`}
-				data-testid={testId}
-			>
-				No options data available
-			</div>
-		);
+		return <EmptyChainState className={className} testId={testId} />;
 	}
 
 	return (
 		<div className={`flex flex-col ${className}`} data-testid={testId}>
 			<ChainHeader />
-
-			<div ref={parentRef} className="flex-1 overflow-auto" style={{ contain: "strict" }}>
-				<div
-					style={{
-						height: `${virtualizer.getTotalSize()}px`,
-						width: "100%",
-						position: "relative",
-					}}
-				>
-					{virtualItems.map((virtualRow) => {
-						const row = chain[virtualRow.index];
-						if (!row) {
-							return null;
-						}
-
-						return (
-							<div
-								key={virtualRow.key}
-								style={{
-									position: "absolute",
-									top: 0,
-									left: 0,
-									width: "100%",
-									height: `${virtualRow.size}px`,
-									transform: `translateY(${virtualRow.start}px)`,
-								}}
-							>
-								<OptionsChainRow
-									strike={row.strike}
-									call={row.call}
-									put={row.put}
-									isAtm={row.strike === atmStrike}
-									underlyingPrice={underlyingPrice}
-									onContractClick={handleContractClick}
-									data-testid={`chain-row-${row.strike}`}
-								/>
-							</div>
-						);
-					})}
-				</div>
+			<div ref={parentRef}>
+				<OptionsChainContent
+					chain={chain}
+					atmStrike={atmStrike}
+					underlyingPrice={underlyingPrice}
+					virtualItems={virtualItems}
+					totalHeight={totalHeight}
+					onContractClick={handleContractClick}
+				/>
 			</div>
 		</div>
 	);

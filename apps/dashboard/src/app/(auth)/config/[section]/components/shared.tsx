@@ -80,25 +80,37 @@ interface ConstraintFieldProps {
 }
 
 export function ConstraintField({ label, value, editing, suffix, onChange }: ConstraintFieldProps) {
+	const inputId = `constraint-${label.toLowerCase().replaceAll(/\s+/g, "-")}`;
+
 	return (
 		<div>
-			{/* biome-ignore lint/a11y/noLabelWithoutControl: input is inside label when editing */}
-			<label className="block text-sm text-stone-600 dark:text-night-200 dark:text-night-400 mb-1">
-				{label}
-				{editing ? (
+			{editing ? (
+				<>
+					<label
+						htmlFor={inputId}
+						className="block text-sm text-stone-600 dark:text-night-200 dark:text-night-400 mb-1"
+					>
+						{label}
+					</label>
 					<input
+						id={inputId}
 						type="number"
 						defaultValue={value}
 						onChange={(e) => onChange(parseFloat(e.target.value) || 0)}
 						className="mt-1 w-full px-3 py-2 border border-cream-200 dark:border-night-600 rounded-md bg-white dark:bg-night-700 text-stone-900 dark:text-night-50"
 					/>
-				) : (
+				</>
+			) : (
+				<>
+					<div className="block text-sm text-stone-600 dark:text-night-200 dark:text-night-400 mb-1">
+						{label}
+					</div>
 					<div className="text-stone-900 dark:text-night-50">
 						{value.toLocaleString()}
 						{suffix}
 					</div>
-				)}
-			</label>
+				</>
+			)}
 		</div>
 	);
 }

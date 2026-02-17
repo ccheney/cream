@@ -104,7 +104,7 @@ describe("ITEMS_8K", () => {
 // extractItems Tests
 // ============================================
 
-describe("Form8KParser.extractItems", () => {
+describe("Form8KParser.extractItems basic extraction", () => {
 	test("extracts items from simple 8-K", () => {
 		const parser = new Form8KParser(createMock8KFiling(), simple8KHtml);
 		const items = parser.extractItems();
@@ -130,7 +130,9 @@ describe("Form8KParser.extractItems", () => {
 		expect(itemNumbers).toContain("5.02");
 		expect(itemNumbers).toContain("9.01");
 	});
+});
 
+describe("Form8KParser.extractItems boundaries", () => {
 	test("extracts content between items", () => {
 		const parser = new Form8KParser(createMock8KFiling(), multiItem8KHtml);
 		const items = parser.extractItems();
@@ -152,7 +154,9 @@ describe("Form8KParser.extractItems", () => {
 			expect(item.content).not.toContain("Pursuant to the requirements");
 		}
 	});
+});
 
+describe("Form8KParser.extractItems formatting variants", () => {
 	test("handles case-insensitive item matching", () => {
 		const htmlLowerCase = `
       <body>
@@ -183,7 +187,9 @@ describe("Form8KParser.extractItems", () => {
 		// Should match at least the properly formatted one
 		expect(items.length).toBeGreaterThanOrEqual(1);
 	});
+});
 
+describe("Form8KParser.extractItems edge cases", () => {
 	test("returns unknown title for unrecognized items", () => {
 		const htmlUnknown = `
       <body>

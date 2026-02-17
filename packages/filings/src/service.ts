@@ -36,6 +36,13 @@ interface ProcessedFiling {
 	chunks: FilingChunk[];
 }
 
+interface SyncCounters {
+	symbolsProcessed: number;
+	filingsFetched: number;
+	filingsIngested: number;
+	chunksCreated: number;
+}
+
 // ============================================
 // Service Class
 // ============================================
@@ -83,8 +90,8 @@ export class FilingsIngestionService {
 	): Promise<FilingSyncResult> {
 		const startTime = Date.now();
 		const errors: string[] = [];
+		const counters = this.createSyncCounters();
 
-		// Create sync run record
 		const syncRun = await this.syncRunsRepo.start({
 			symbolsRequested: config.symbols,
 			filingTypes: config.filingTypes,
@@ -96,172 +103,174 @@ export class FilingsIngestionService {
 		});
 		const runId = syncRun.id;
 
-		let symbolsProcessed = 0;
-		let filingsFetched = 0;
-		let filingsIngested = 0;
-		let chunksCreated = 0;
-
 		try {
 			const client = this.helixClient ?? createHelixClientFromEnv();
-
-			// Process each symbol
 			for (const symbol of config.symbols) {
-				// Report progress - fetching
-				if (onProgress) {
-					onProgress({
-						phase: "fetching",
-						symbol,
-						symbolsProcessed,
-						symbolsTotal: config.symbols.length,
-						filingsIngested,
-						chunksCreated,
-					});
-				}
-
-				try {
-					// Fetch filings for symbol
-					const filings = await this.edgarClient.getFilings({
-						tickerOrCik: symbol,
-						filingTypes: config.filingTypes,
-						startDate: config.startDate ? new Date(config.startDate) : undefined,
-						endDate: config.endDate ? new Date(config.endDate) : undefined,
-						limit: config.limitPerSymbol ?? 10,
-					});
-
-					filingsFetched += filings.length;
-
-					// Report progress - parsing
-					if (onProgress) {
-						onProgress({
-							phase: "parsing",
-							symbol,
-							symbolsProcessed,
-							symbolsTotal: config.symbols.length,
-							filingsIngested,
-							chunksCreated,
-						});
-					}
-
-					// Process each filing
-					for (const filing of filings) {
-						// Check if already ingested
-						const exists = await this.filingsRepo.existsByAccessionNumber(filing.accessionNumber);
-						if (exists) {
-							continue;
-						}
-
-						try {
-							// Fetch HTML and parse
-							const html = await this.edgarClient.getFilingHtml(filing);
-							const parsed = parseFiling(filing, html);
-
-							// Report progress - chunking
-							if (onProgress) {
-								onProgress({
-									phase: "chunking",
-									symbol,
-									symbolsProcessed,
-									symbolsTotal: config.symbols.length,
-									filingsIngested,
-									chunksCreated,
-								});
-							}
-
-							// Chunk the filing
-							const chunks = chunkParsedFiling(parsed);
-
-							// Create filing record
-							const createdFiling = await this.filingsRepo.create({
-								accessionNumber: filing.accessionNumber,
-								symbol,
-								filingType: filing.filingType,
-								filedDate: formatDate(filing.filedDate),
-								ingestedAt: new Date().toISOString(),
-							});
-							const filingId = createdFiling.id;
-
-							// Report progress - storing
-							if (onProgress) {
-								onProgress({
-									phase: "storing",
-									symbol,
-									symbolsProcessed,
-									symbolsTotal: config.symbols.length,
-									filingsIngested,
-									chunksCreated,
-								});
-							}
-
-							// Ingest chunks into HelixDB
-							const result = await batchIngestChunks(client, chunks);
-
-							if (result.successful.length > 0) {
-								await this.filingsRepo.markComplete(
-									filingId,
-									Object.keys(parsed.sections).length,
-									result.successful.length,
-								);
-								filingsIngested++;
-								chunksCreated += result.successful.length;
-							} else if (result.failed.length > 0) {
-								const errorMsg = result.failed.map((f) => f.error).join("; ");
-								await this.filingsRepo.markFailed(filingId, errorMsg);
-								errors.push(`Failed to ingest ${filing.accessionNumber}: ${errorMsg}`);
-							}
-						} catch (parseError) {
-							const errorMsg = parseError instanceof Error ? parseError.message : "Unknown error";
-							errors.push(`Failed to parse ${symbol}/${filing.accessionNumber}: ${errorMsg}`);
-						}
-					}
-				} catch (symbolError) {
-					const errorMsg = symbolError instanceof Error ? symbolError.message : "Unknown error";
-					errors.push(`Failed to process ${symbol}: ${errorMsg}`);
-				}
-
-				symbolsProcessed++;
-
-				// Update progress in database
-				await this.syncRunsRepo.updateProgress(runId, {
-					symbolsProcessed,
-					filingsFetched,
-					filingsIngested,
-					chunksCreated,
-				});
+				await this.processSymbol(config, symbol, client, counters, errors, onProgress);
+				counters.symbolsProcessed++;
+				await this.syncRunsRepo.updateProgress(runId, counters);
 			}
 
-			// Mark complete
 			await this.syncRunsRepo.complete(runId, {
-				filingsIngested,
-				chunksCreated,
+				filingsIngested: counters.filingsIngested,
+				chunksCreated: counters.chunksCreated,
 			});
-
-			return {
-				runId,
-				success: errors.length === 0,
-				symbolsProcessed,
-				filingsFetched,
-				filingsIngested,
-				chunksCreated,
-				durationMs: Date.now() - startTime,
-				errors,
-			};
+			return this.buildSyncResult(runId, startTime, counters, errors, errors.length === 0);
 		} catch (error) {
 			const errorMessage = error instanceof Error ? error.message : "Unknown error";
 			errors.push(errorMessage);
-
 			await this.syncRunsRepo.fail(runId, errorMessage);
-
-			return {
-				runId,
-				success: false,
-				symbolsProcessed,
-				filingsFetched,
-				filingsIngested,
-				chunksCreated,
-				durationMs: Date.now() - startTime,
-				errors,
-			};
+			return this.buildSyncResult(runId, startTime, counters, errors, false);
 		}
+	}
+
+	private createSyncCounters(): SyncCounters {
+		return {
+			symbolsProcessed: 0,
+			filingsFetched: 0,
+			filingsIngested: 0,
+			chunksCreated: 0,
+		};
+	}
+
+	private buildSyncResult(
+		runId: string,
+		startTime: number,
+		counters: SyncCounters,
+		errors: string[],
+		success: boolean,
+	): FilingSyncResult {
+		return {
+			runId,
+			success,
+			symbolsProcessed: counters.symbolsProcessed,
+			filingsFetched: counters.filingsFetched,
+			filingsIngested: counters.filingsIngested,
+			chunksCreated: counters.chunksCreated,
+			durationMs: Date.now() - startTime,
+			errors,
+		};
+	}
+
+	private reportProgress(
+		phase: Parameters<ProgressCallback>[0]["phase"],
+		symbol: string,
+		config: FilingSyncConfig,
+		counters: SyncCounters,
+		onProgress?: ProgressCallback,
+	): void {
+		if (!onProgress) {
+			return;
+		}
+		onProgress({
+			phase,
+			symbol,
+			symbolsProcessed: counters.symbolsProcessed,
+			symbolsTotal: config.symbols.length,
+			filingsIngested: counters.filingsIngested,
+			chunksCreated: counters.chunksCreated,
+		});
+	}
+
+	private async processSymbol(
+		config: FilingSyncConfig,
+		symbol: string,
+		client: HelixClient,
+		counters: SyncCounters,
+		errors: string[],
+		onProgress?: ProgressCallback,
+	): Promise<void> {
+		this.reportProgress("fetching", symbol, config, counters, onProgress);
+		try {
+			const filings = await this.edgarClient.getFilings({
+				tickerOrCik: symbol,
+				filingTypes: config.filingTypes,
+				startDate: config.startDate ? new Date(config.startDate) : undefined,
+				endDate: config.endDate ? new Date(config.endDate) : undefined,
+				limit: config.limitPerSymbol ?? 10,
+			});
+			counters.filingsFetched += filings.length;
+			this.reportProgress("parsing", symbol, config, counters, onProgress);
+			for (const filing of filings) {
+				await this.processSingleFiling(
+					config,
+					symbol,
+					filing,
+					client,
+					counters,
+					errors,
+					onProgress,
+				);
+			}
+		} catch (symbolError) {
+			const errorMsg = symbolError instanceof Error ? symbolError.message : "Unknown error";
+			errors.push(`Failed to process ${symbol}: ${errorMsg}`);
+		}
+	}
+
+	private async processSingleFiling(
+		config: FilingSyncConfig,
+		symbol: string,
+		filing: Filing,
+		client: HelixClient,
+		counters: SyncCounters,
+		errors: string[],
+		onProgress?: ProgressCallback,
+	): Promise<void> {
+		const exists = await this.filingsRepo.existsByAccessionNumber(filing.accessionNumber);
+		if (exists) {
+			return;
+		}
+
+		try {
+			const html = await this.edgarClient.getFilingHtml(filing);
+			const parsed = parseFiling(filing, html);
+			this.reportProgress("chunking", symbol, config, counters, onProgress);
+			const chunks = chunkParsedFiling(parsed);
+
+			const createdFiling = await this.filingsRepo.create({
+				accessionNumber: filing.accessionNumber,
+				symbol,
+				filingType: filing.filingType,
+				filedDate: formatDate(filing.filedDate),
+				ingestedAt: new Date().toISOString(),
+			});
+
+			this.reportProgress("storing", symbol, config, counters, onProgress);
+			const result = await batchIngestChunks(client, chunks);
+			await this.handleBatchResult(createdFiling.id, filing, parsed, result, counters, errors);
+		} catch (parseError) {
+			const errorMsg = parseError instanceof Error ? parseError.message : "Unknown error";
+			errors.push(`Failed to parse ${symbol}/${filing.accessionNumber}: ${errorMsg}`);
+		}
+	}
+
+	private async handleBatchResult(
+		filingId: string,
+		filing: Filing,
+		parsed: ReturnType<typeof parseFiling>,
+		result: Awaited<ReturnType<typeof batchIngestChunks>>,
+		counters: SyncCounters,
+		errors: string[],
+	): Promise<void> {
+		if (result.successful.length > 0) {
+			await this.filingsRepo.markComplete(
+				filingId,
+				Object.keys(parsed.sections).length,
+				result.successful.length,
+			);
+			counters.filingsIngested++;
+			counters.chunksCreated += result.successful.length;
+			return;
+		}
+
+		if (result.failed.length === 0) {
+			return;
+		}
+
+		const errorMsg = result.failed.map((failedItem) => failedItem.error).join("; ");
+		await this.filingsRepo.markFailed(filingId, errorMsg);
+		errors.push(`Failed to ingest ${filing.accessionNumber}: ${errorMsg}`);
 	}
 
 	/**

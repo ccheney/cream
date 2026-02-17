@@ -81,14 +81,93 @@ export type UseChartUpdatesReturn = ChartUpdatesState & ChartUpdatesActions;
 const DEFAULT_MAX_DATA_POINTS = 500;
 const DEFAULT_THROTTLE_MS = 100;
 const STALE_THRESHOLD_MS = 30000; // 30 seconds
+const STALE_CHECK_INTERVAL_MS = 5000;
 
-// ============================================
-// Hook Implementation
-// ============================================
+type ChartData = OHLCVData[] | EquityDataPoint[] | number[] | number;
 
-/**
- * Hook for managing real-time chart updates.
- */
+interface ChartCallbacksContext {
+	chartType: ChartUpdateType;
+	symbol?: string;
+	initialData: OHLCVData[] | EquityDataPoint[] | number[] | number | undefined;
+	maxDataPoints: number;
+	onUpdateRef: React.RefObject<((data: unknown) => void) | undefined>;
+	throttlerRef: React.RefObject<ReturnType<typeof createThrottledUpdater<ChartData>> | null>;
+	setState: React.Dispatch<React.SetStateAction<ChartUpdatesState>>;
+	onUpdateError?: (error: Error) => void;
+}
+
+function useChartUpdateActions({
+	chartType,
+	symbol,
+	initialData,
+	maxDataPoints,
+	onUpdateRef,
+	throttlerRef,
+	setState,
+	onUpdateError,
+}: ChartCallbacksContext) {
+	const cancelPendingUpdate = useCallback(() => {
+		const throttler = throttlerRef.current;
+		throttler?.cancel();
+	}, [throttlerRef]);
+
+	const applyUpdate = useCallback(
+		(message: ChartUpdateMessage) => {
+			if (!shouldApplyMessage(message, chartType, symbol)) {
+				return;
+			}
+
+			setState((prev) => {
+				try {
+					const nextData = getUpdatedData(chartType, prev.data, message, maxDataPoints);
+					if (nextData !== null) {
+						throttlerRef.current?.update(nextData);
+					}
+					return prev;
+				} catch (error) {
+					const nextError = error instanceof Error ? error : new Error(String(error));
+					onUpdateRef.current?.(nextError);
+					onUpdateError?.(nextError);
+					return { ...prev, error: nextError };
+				}
+			});
+		},
+		[chartType, onUpdateError, onUpdateRef, setState, symbol, maxDataPoints, throttlerRef],
+	);
+
+	const reset = useCallback(() => {
+		cancelPendingUpdate();
+		setState({
+			data: resolveInitialData(chartType, initialData),
+			isConnected: false,
+			isStale: false,
+			lastUpdate: null,
+			error: null,
+		});
+	}, [cancelPendingUpdate, chartType, initialData, setState]);
+
+	const clearError = useCallback(() => {
+		setState((prev) => ({ ...prev, error: null }));
+	}, [setState]);
+
+	return { applyUpdate, reset, clearError };
+}
+
+function useChartDataState(
+	chartType: ChartUpdateType,
+	initialData: OHLCVData[] | EquityDataPoint[] | number[] | number | undefined,
+) {
+	const [state, setState] = useState<ChartUpdatesState>(() => ({
+		data: resolveInitialData(chartType, initialData),
+		isConnected: false,
+		isStale: false,
+		lastUpdate: null,
+		error: null,
+	}));
+
+	return { state, setState };
+}
+
 export function useChartUpdates(options: UseChartUpdatesOptions): UseChartUpdatesReturn {
 	const {
 		chartType,
@@ -100,149 +179,40 @@ export function useChartUpdates(options: UseChartUpdatesOptions): UseChartUpdate
 		onError,
 	} = options;
 
-	// State
-	const [state, setState] = useState<ChartUpdatesState>(() => ({
-		data: getInitialData(chartType, initialData),
-		isConnected: false,
-		isStale: false,
-		lastUpdate: null,
-		error: null,
-	}));
-
-	// Refs for callbacks and throttler
 	const onUpdateRef = useRef(onUpdate);
 	const onErrorRef = useRef(onError);
-	const throttlerRef = useRef<ReturnType<typeof createThrottledUpdater<unknown>> | null>(null);
-	const staleTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-	// Update refs
 	useEffect(() => {
 		onUpdateRef.current = onUpdate;
 		onErrorRef.current = onError;
 	}, [onUpdate, onError]);
 
-	// Initialize throttler
-	useEffect(() => {
-		throttlerRef.current = createThrottledUpdater<unknown>((data) => {
-			setState((prev) => ({
-				...prev,
-				data: data as typeof prev.data,
-				lastUpdate: new Date(),
-				isStale: false,
-			}));
-			onUpdateRef.current?.(data);
-		}, throttleMs);
+	const staleTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-		return () => {
-			throttlerRef.current?.cancel();
-		};
-	}, [throttleMs]);
+	const { state, setState } = useChartDataState(chartType, initialData);
 
-	// Stale detection
-	useEffect(() => {
-		const checkStale = () => {
-			if (state.lastUpdate) {
-				const now = Date.now();
-				const elapsed = now - state.lastUpdate.getTime();
-				if (elapsed > STALE_THRESHOLD_MS && !state.isStale) {
-					setState((prev) => ({ ...prev, isStale: true }));
-				}
-			}
-		};
+	const throttlerRef = useChartThrottler<ChartData>({
+		setState,
+		onUpdateRef,
+		intervalMs: throttleMs,
+	});
 
-		staleTimerRef.current = setInterval(checkStale, 5000);
+	useChartStaleTimer({
+		state,
+		setState,
+		staleTimerRef,
+	});
 
-		return () => {
-			if (staleTimerRef.current) {
-				clearInterval(staleTimerRef.current);
-			}
-		};
-	}, [state.lastUpdate, state.isStale]);
-
-	// Apply update handler
-	const applyUpdate = useCallback(
-		(message: ChartUpdateMessage) => {
-			try {
-				// Validate message matches our chart type
-				if (message.chartType !== chartType) {
-					return;
-				}
-
-				// Check symbol filter
-				if (symbol && message.symbol && message.symbol !== symbol) {
-					return;
-				}
-
-				setState((prev) => {
-					let newData: typeof prev.data;
-
-					switch (chartType) {
-						case "candles":
-							newData = applyCandleUpdate(
-								prev.data as OHLCVData[],
-								message.payload as CandleUpdate,
-							);
-							newData = trimData(newData as OHLCVData[], maxDataPoints);
-							break;
-
-						case "equity":
-							newData = appendEquityPoint(
-								prev.data as EquityDataPoint[],
-								message.payload as EquityUpdate,
-							);
-							newData = trimData(newData as EquityDataPoint[], maxDataPoints);
-							break;
-
-						case "sparkline": {
-							const sparklineUpdate = message.payload as SparklineUpdate;
-							newData = appendSparklineValue(
-								prev.data as number[],
-								sparklineUpdate.value,
-								sparklineUpdate.maxLength ?? maxDataPoints,
-							);
-							break;
-						}
-
-						case "gauge": {
-							const gaugeUpdate = message.payload as GaugeUpdate;
-							newData = gaugeUpdate.value;
-							break;
-						}
-
-						default:
-							return prev;
-					}
-
-					// Use throttler for actual state update
-					throttlerRef.current?.update(newData);
-
-					return prev; // State will be updated by throttler
-				});
-			} catch (err) {
-				const error = err instanceof Error ? err : new Error(String(err));
-				setState((prev) => ({ ...prev, error }));
-				onErrorRef.current?.(error);
-			}
-		},
-		[chartType, symbol, maxDataPoints],
-	);
-
-	// Reset handler
-	const reset = useCallback(() => {
-		throttlerRef.current?.cancel();
-		setState({
-			data: getInitialData(chartType, initialData),
-			isConnected: false,
-			isStale: false,
-			lastUpdate: null,
-			error: null,
-		});
-	}, [chartType, initialData]);
-
-	// Clear error handler
-	const clearError = useCallback(() => {
-		setState((prev) => ({ ...prev, error: null }));
-	}, []);
+	const { applyUpdate, reset, clearError } = useChartUpdateActions({
+		chartType,
+		symbol,
+		initialData,
+		maxDataPoints,
+		onUpdateRef,
+		throttlerRef,
+		setState,
+		onUpdateError: (error) => onErrorRef.current?.(error),
+	});
 
 	return {
 		...state,
@@ -252,14 +222,126 @@ export function useChartUpdates(options: UseChartUpdatesOptions): UseChartUpdate
 	};
 }
 
-// ============================================
-// Helper Functions
-// ============================================
+function useChartThrottler<TData>({
+	setState,
+	onUpdateRef,
+	intervalMs,
+}: {
+	setState: React.Dispatch<React.SetStateAction<ChartUpdatesState>>;
+	onUpdateRef: React.RefObject<((data: unknown) => void) | undefined>;
+	intervalMs: number;
+}) {
+	const throttlerRef = useRef<ReturnType<typeof createThrottledUpdater<TData>> | null>(null);
 
-function getInitialData(
+	useEffect(() => {
+		throttlerRef.current = createThrottledUpdater<TData>((data) => {
+			setState((prev) => ({
+				...prev,
+				data: data as ChartData,
+				lastUpdate: new Date(),
+				isStale: false,
+			}));
+			onUpdateRef.current?.(data);
+		}, intervalMs);
+
+		return () => {
+			throttlerRef.current?.cancel();
+		};
+	}, [intervalMs, onUpdateRef, setState]);
+
+	return throttlerRef;
+}
+
+function useChartStaleTimer({
+	state,
+	setState,
+	staleTimerRef,
+}: {
+	state: ChartUpdatesState;
+	setState: React.Dispatch<React.SetStateAction<ChartUpdatesState>>;
+	staleTimerRef: React.RefObject<ReturnType<typeof setTimeout> | null>;
+}) {
+	useEffect(() => {
+		const checkStale = () => {
+			if (!state.lastUpdate) {
+				return;
+			}
+
+			const elapsed = Date.now() - state.lastUpdate.getTime();
+			if (elapsed > STALE_THRESHOLD_MS && !state.isStale) {
+				setState((prev) => ({ ...prev, isStale: true }));
+			}
+		};
+
+		staleTimerRef.current = setInterval(checkStale, STALE_CHECK_INTERVAL_MS);
+		return () => {
+			if (staleTimerRef.current) {
+				clearInterval(staleTimerRef.current);
+			}
+		};
+	}, [state.lastUpdate, state.isStale, setState, staleTimerRef]);
+}
+
+function shouldApplyMessage(
+	message: ChartUpdateMessage,
+	chartType: ChartUpdateType,
+	symbol?: string,
+): message is ChartUpdateMessage {
+	if (message.chartType !== chartType) {
+		return false;
+	}
+	if (!symbol || !message.symbol) {
+		return true;
+	}
+	return message.symbol === symbol;
+}
+
+function getUpdatedData(
+	chartType: ChartUpdateType,
+	previousData: ChartData,
+	message: ChartUpdateMessage,
+	maxDataPoints: number,
+): ChartData | null {
+	switch (chartType) {
+		case "candles": {
+			const candles = applyCandleUpdate(
+				previousData as OHLCVData[],
+				message.payload as CandleUpdate,
+			);
+			return trimData(candles, maxDataPoints);
+		}
+
+		case "equity": {
+			const equity = appendEquityPoint(
+				previousData as EquityDataPoint[],
+				message.payload as EquityUpdate,
+			);
+			return trimData(equity, maxDataPoints);
+		}
+
+		case "sparkline": {
+			const sparklineUpdate = message.payload as SparklineUpdate;
+			return appendSparklineValue(
+				previousData as number[],
+				sparklineUpdate.value,
+				sparklineUpdate.maxLength ?? maxDataPoints,
+			);
+		}
+
+		case "gauge": {
+			const gauge = message.payload as GaugeUpdate;
+			return gauge.value;
+		}
+
+		default:
+			return null;
+	}
+}
+
+function resolveInitialData(
 	chartType: ChartUpdateType,
 	initialData?: OHLCVData[] | EquityDataPoint[] | number[] | number,
-): OHLCVData[] | EquityDataPoint[] | number[] | number {
+): ChartData {
 	if (initialData !== undefined) {
 		return initialData;
 	}
@@ -274,7 +356,7 @@ function getInitialData(
 		case "gauge":
 			return 0;
 		default:
-			return [];
+			return [] as OHLCVData[];
 	}
 }
 

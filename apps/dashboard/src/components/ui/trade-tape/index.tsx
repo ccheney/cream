@@ -18,32 +18,235 @@ import { NewTradesButton } from "./NewTradesButton";
 import { StatisticsFooter } from "./StatisticsFooter";
 import { TradeRow } from "./TradeRow";
 import { TradeTapeHeader } from "./TradeTapeHeader";
-import type { TradeStatistics, TradeTapeProps } from "./types";
+import type { Trade, TradeStatistics, TradeTapeProps } from "./types";
 import { DEFAULT_HIGHLIGHT_THRESHOLD, DEFAULT_MAX_TRADES, TRADE_ITEM_HEIGHT } from "./types";
 import { calculateTradesPerMinute, calculateVWAP } from "./utils";
 
-/**
- * TradeTape displays real-time Time & Sales data.
- *
- * Features:
- * - Virtualized scrolling for 1000+ trades/minute
- * - Auto-scroll when at bottom, pause when user scrolls up
- * - Large trade highlighting
- * - VWAP and trades-per-minute statistics
- * - Buy/Sell side classification from trade conditions
- *
- * @example
- * ```tsx
- * <TradeTape
- *   symbol="AAPL"
- *   trades={trades}
- *   highlightThreshold={1000}
- *   showStatistics
- *   height={400}
- *   onTradeClick={(trade) => console.log('Clicked:', trade)}
- * />
- * ```
- */
+// ============================================
+// Hooks
+// ============================================
+
+function useTradeTapeDisplayState(trades: Trade[], maxTrades: number) {
+	const displayTrades = useMemo(
+		() => (trades.length > maxTrades ? trades.slice(-maxTrades) : trades),
+		[trades, maxTrades],
+	);
+
+	const statistics = useMemo(() => {
+		const volume = displayTrades.reduce((sum, trade) => sum + trade.size, 0);
+		const vwap = calculateVWAP(displayTrades);
+		const tradesPerMinute = calculateTradesPerMinute(displayTrades);
+		return {
+			volume,
+			vwap,
+			tradesPerMinute,
+			tradeCount: displayTrades.length,
+		};
+	}, [displayTrades]);
+
+	return { displayTrades, statistics };
+}
+
+function useTradeTapeAutoScrollCounter(
+	displayTradesLength: number,
+	onNewItems: (delta: number) => void,
+) {
+	const prevCountRef = useRef(displayTradesLength);
+	useEffect(() => {
+		const delta = displayTradesLength - prevCountRef.current;
+		if (delta > 0) {
+			onNewItems(delta);
+		}
+		prevCountRef.current = displayTradesLength;
+	}, [displayTradesLength, onNewItems]);
+}
+
+function useTradeTapeVirtualizer(
+	displayTradesLength: number,
+	containerRef: React.RefObject<HTMLDivElement | null>,
+	isAutoScrolling: boolean,
+) {
+	const virtualizer = useVirtualizer({
+		count: displayTradesLength,
+		getScrollElement: () => containerRef.current,
+		estimateSize: () => TRADE_ITEM_HEIGHT,
+		overscan: 10,
+	});
+
+	useEffect(() => {
+		if (isAutoScrolling && containerRef.current) {
+			virtualizer.scrollToIndex(displayTradesLength - 1, {
+				align: "end",
+				behavior: "auto",
+			});
+		}
+	}, [isAutoScrolling, displayTradesLength, virtualizer, containerRef]);
+
+	return {
+		virtualItems: virtualizer.getVirtualItems(),
+		virtSize: `${virtualizer.getTotalSize()}px`,
+	};
+}
+
+function useTradeTapeState(
+	trades: Trade[],
+	maxTrades: number,
+	showStatistics: boolean,
+	height: number | string,
+) {
+	const { displayTrades, statistics } = useTradeTapeDisplayState(trades, maxTrades);
+	const { containerRef, isAutoScrolling, newItemCount, scrollToBottom, onNewItems, onScroll } =
+		useAutoScroll({ threshold: 50 });
+	const containerHeight = typeof height === "number" ? `${height}px` : height;
+	const bodyHeight = `calc(${containerHeight} - ${showStatistics ? "80px" : "44px"})`;
+	const { virtualItems, virtSize } = useTradeTapeVirtualizer(
+		displayTrades.length,
+		containerRef,
+		isAutoScrolling,
+	);
+
+	useTradeTapeAutoScrollCounter(displayTrades.length, onNewItems);
+
+	return {
+		displayTrades,
+		statistics,
+		containerHeight,
+		bodyHeight,
+		scrollState: {
+			containerRef,
+			isAutoScrolling,
+			newItemCount,
+			scrollToBottom,
+			onScroll,
+			virtualItems,
+			virtSize,
+		},
+	};
+}
+
+// ============================================
+// Components
+// ============================================
+
+interface TradeTapeContentProps {
+	scrollRef: React.RefObject<HTMLDivElement | null>;
+	onScroll: () => void;
+	bodyHeight: string;
+	virtualItems: {
+		index: number;
+		size: number;
+		start: number;
+	}[];
+	virtSize: string;
+	trades: Trade[];
+	highlightThreshold: number;
+	onTradeClick?: (trade: Trade) => void;
+	symbol: string;
+}
+
+function TradeTapeContent({
+	scrollRef,
+	onScroll,
+	bodyHeight,
+	virtualItems,
+	virtSize,
+	trades,
+	highlightThreshold,
+	onTradeClick,
+	symbol,
+}: TradeTapeContentProps) {
+	return (
+		<div
+			ref={scrollRef}
+			className="overflow-auto"
+			style={{ height: bodyHeight }}
+			onScroll={onScroll}
+			role="log"
+			aria-live="polite"
+			aria-label={`Trade tape for ${symbol}`}
+		>
+			<div style={{ height: virtSize, width: "100%", position: "relative" }}>
+				{virtualItems.map((virtualItem) => {
+					const trade = trades[virtualItem.index];
+					if (!trade) {
+						return null;
+					}
+					return (
+						<div
+							key={trade.id}
+							style={{
+								position: "absolute",
+								top: 0,
+								left: 0,
+								width: "100%",
+								height: `${virtualItem.size}px`,
+								transform: `translateY(${virtualItem.start}px)`,
+							}}
+						>
+							<TradeRow
+								trade={trade}
+								isHighlighted={trade.size >= highlightThreshold}
+								onClick={onTradeClick}
+							/>
+						</div>
+					);
+				})}
+			</div>
+		</div>
+	);
+}
+
+function TradeTapeFooter({
+	isAutoScrolling: auto,
+	statistics: maybeStatistics,
+	showStatistics,
+}: {
+	isAutoScrolling: boolean;
+	statistics: TradeStatistics;
+	showStatistics: boolean;
+}) {
+	return (
+		<>
+			{showStatistics && <StatisticsFooter stats={maybeStatistics} />}
+			{auto && (
+				<div
+					className="absolute bottom-12 right-2 px-2 py-1 bg-night-800/80 text-white text-xs rounded"
+					aria-hidden="true"
+				>
+					Live
+				</div>
+			)}
+		</>
+	);
+}
+
+function TradeTapeEmpty({
+	symbol,
+	containerHeight,
+	className,
+	testId,
+}: {
+	symbol: string;
+	containerHeight: string;
+	className?: string;
+	testId?: string;
+}) {
+	return (
+		<div
+			className={`relative bg-white dark:bg-night-800 rounded-lg border border-cream-200 dark:border-night-700 overflow-hidden ${className ?? ""}`}
+			style={{ height: containerHeight }}
+			data-testid={testId}
+		>
+			<TradeTapeHeader symbol={symbol} />
+			<EmptyState symbol={symbol} />
+		</div>
+	);
+}
+
+// ============================================
+// Main Component
+// ============================================
+
 export const TradeTape = memo(function TradeTape({
 	symbol,
 	trades,
@@ -55,66 +258,21 @@ export const TradeTape = memo(function TradeTape({
 	className = "",
 	"data-testid": testId,
 }: TradeTapeProps): React.ReactElement {
-	const displayTrades = useMemo(
-		() => (trades.length > maxTrades ? trades.slice(-maxTrades) : trades),
-		[trades, maxTrades],
+	const { displayTrades, statistics, bodyHeight, scrollState, containerHeight } = useTradeTapeState(
+		trades,
+		maxTrades,
+		showStatistics,
+		height,
 	);
-
-	const { containerRef, isAutoScrolling, newItemCount, scrollToBottom, onNewItems, onScroll } =
-		useAutoScroll({ threshold: 50 });
-
-	const prevCountRef = useRef(displayTrades.length);
-
-	useEffect(() => {
-		const newCount = displayTrades.length - prevCountRef.current;
-		if (newCount > 0) {
-			onNewItems(newCount);
-		}
-		prevCountRef.current = displayTrades.length;
-	}, [displayTrades.length, onNewItems]);
-
-	const statistics = useMemo((): TradeStatistics => {
-		const volume = displayTrades.reduce((sum, t) => sum + t.size, 0);
-		const vwap = calculateVWAP(displayTrades);
-		const tradesPerMinute = calculateTradesPerMinute(displayTrades);
-
-		return {
-			volume,
-			vwap,
-			tradesPerMinute,
-			tradeCount: displayTrades.length,
-		};
-	}, [displayTrades]);
-
-	const virtualizer = useVirtualizer({
-		count: displayTrades.length,
-		getScrollElement: () => containerRef.current,
-		estimateSize: () => TRADE_ITEM_HEIGHT,
-		overscan: 10,
-	});
-
-	// biome-ignore lint/correctness/useExhaustiveDependencies: containerRef is a stable ref
-	useEffect(() => {
-		if (isAutoScrolling && containerRef.current) {
-			virtualizer.scrollToIndex(displayTrades.length - 1, {
-				align: "end",
-				behavior: "auto",
-			});
-		}
-	}, [isAutoScrolling, displayTrades.length, virtualizer]);
-
-	const containerHeight = typeof height === "number" ? `${height}px` : height;
 
 	if (displayTrades.length === 0) {
 		return (
-			<div
-				className={`relative bg-white dark:bg-night-800 rounded-lg border border-cream-200 dark:border-night-700 overflow-hidden ${className}`}
-				style={{ height: containerHeight }}
-				data-testid={testId}
-			>
-				<TradeTapeHeader symbol={symbol} />
-				<EmptyState symbol={symbol} />
-			</div>
+			<TradeTapeEmpty
+				symbol={symbol}
+				containerHeight={containerHeight}
+				className={className}
+				testId={testId}
+			/>
 		);
 	}
 
@@ -124,63 +282,23 @@ export const TradeTape = memo(function TradeTape({
 			data-testid={testId}
 		>
 			<TradeTapeHeader symbol={symbol} />
-
-			<NewTradesButton count={newItemCount} onClick={scrollToBottom} />
-
-			<div
-				ref={containerRef}
-				className="overflow-auto"
-				style={{ height: `calc(${containerHeight} - ${showStatistics ? "80px" : "44px"})` }}
-				onScroll={onScroll}
-				role="log"
-				aria-live="polite"
-				aria-label={`Trade tape for ${symbol}`}
-			>
-				<div
-					style={{
-						height: `${virtualizer.getTotalSize()}px`,
-						width: "100%",
-						position: "relative",
-					}}
-				>
-					{virtualizer.getVirtualItems().map((virtualItem) => {
-						const trade = displayTrades[virtualItem.index];
-						if (!trade) {
-							return null;
-						}
-						return (
-							<div
-								key={trade.id}
-								style={{
-									position: "absolute",
-									top: 0,
-									left: 0,
-									width: "100%",
-									height: `${virtualItem.size}px`,
-									transform: `translateY(${virtualItem.start}px)`,
-								}}
-							>
-								<TradeRow
-									trade={trade}
-									isHighlighted={trade.size >= highlightThreshold}
-									onClick={onTradeClick}
-								/>
-							</div>
-						);
-					})}
-				</div>
-			</div>
-
-			{showStatistics && <StatisticsFooter stats={statistics} />}
-
-			{isAutoScrolling && (
-				<div
-					className="absolute bottom-12 right-2 px-2 py-1 bg-night-800/80 text-white text-xs rounded"
-					aria-hidden="true"
-				>
-					Live
-				</div>
-			)}
+			<NewTradesButton count={scrollState.newItemCount} onClick={scrollState.scrollToBottom} />
+			<TradeTapeContent
+				scrollRef={scrollState.containerRef}
+				onScroll={scrollState.onScroll}
+				bodyHeight={bodyHeight}
+				virtualItems={scrollState.virtualItems}
+				virtSize={scrollState.virtSize}
+				trades={displayTrades}
+				highlightThreshold={highlightThreshold}
+				onTradeClick={onTradeClick}
+				symbol={symbol}
+			/>
+			<TradeTapeFooter
+				isAutoScrolling={scrollState.isAutoScrolling}
+				statistics={statistics}
+				showStatistics={showStatistics}
+			/>
 		</div>
 	);
 });

@@ -18,174 +18,66 @@ import {
 	type DecisionPlan,
 	DecisionPlanSchema,
 } from "../schemas/decision-plan";
+import { createFallbackPlan } from "./outputEnforcer.fallback";
+import {
+	createParseError,
+	createParseFailureResult,
+	createPreflightFailureResult,
+	createSuccessResult,
+} from "./outputEnforcer.results";
+import type {
+	EnforcementOptions,
+	EnforcementResult,
+	MarketContext,
+	ParseError,
+	PositionInfo,
+	PreflightError,
+	PreflightResult,
+	Result,
+	TraderAgentInterface,
+} from "./outputEnforcer.types";
 
-// ============================================
-// Types
-// ============================================
+export { createFallbackPlan } from "./outputEnforcer.fallback";
+export type {
+	EnforcementOptions,
+	EnforcementResult,
+	MarketContext,
+	ParseError,
+	PositionInfo,
+	PreflightError,
+	PreflightErrorType,
+	PreflightResult,
+	Result,
+	TraderAgentInterface,
+} from "./outputEnforcer.types";
 
-/**
- * Market context for preflight validation
- */
-export interface MarketContext {
-	/** Is the market currently open for trading */
-	marketOpen: boolean;
-	/** Current timestamp */
-	currentTime: Date;
-	/** Available buying power in dollars */
-	buyingPower: number;
-	/** Current margin usage percentage (0-1) */
-	marginUsage: number;
-	/** Maximum allowed margin usage (0-1) */
-	maxMarginUsage: number;
-	/** Current positions keyed by instrument ID */
-	currentPositions: Map<string, PositionInfo>;
-}
-
-/**
- * Position information for preflight checks
- */
-export interface PositionInfo {
-	/** Instrument ID */
-	instrumentId: string;
-	/** Current quantity (positive=long, negative=short, zero=flat) */
-	quantity: number;
-	/** Average entry price */
-	avgEntryPrice: number;
-	/** Current market value */
-	marketValue: number;
-}
-
-/**
- * Preflight error types
- */
-export type PreflightErrorType =
-	| "MARKET_CLOSED"
-	| "INSUFFICIENT_BUYING_POWER"
-	| "MARGIN_EXCEEDED"
-	| "ACTION_CONFLICT"
-	| "POSITION_NOT_FOUND"
-	| "INVALID_SIZE";
-
-/**
- * Preflight validation error
- */
-export interface PreflightError {
-	/** Error type */
-	type: PreflightErrorType;
-	/** Error message */
-	message: string;
-	/** Related instrument ID */
-	instrumentId?: string;
-	/** Related decision */
-	decision?: Decision;
-	/** Severity */
-	severity: "ERROR" | "WARNING";
-}
-
-/**
- * Preflight validation result
- */
-export interface PreflightResult {
-	/** Whether preflight passed */
-	valid: boolean;
-	/** Errors found */
-	errors: PreflightError[];
-	/** Warnings found */
-	warnings: PreflightError[];
-	/** Estimated cost of all new entries */
-	estimatedCost: number;
-}
-
-/**
- * Parse error for enforcement
- */
-export interface ParseError {
-	/** Error type */
-	type: "JSON_PARSE" | "SCHEMA_VALIDATION" | "RETRY_FAILED";
-	/** Error message */
-	message: string;
-	/** Raw output that failed */
-	rawOutput?: string;
-	/** Attempt count */
-	attemptCount: number;
-}
-
-/**
- * Result type for enforcement operations
- */
-export type Result<T, E> = { ok: true; value: T } | { ok: false; error: E };
-
-/**
- * Enforcement result combining parse and preflight
- */
-export interface EnforcementResult {
-	/** Whether enforcement passed */
-	success: boolean;
-	/** Validated decision plan (if successful) */
-	decisionPlan?: DecisionPlan;
-	/** Parse errors (if any) */
-	parseErrors?: ParseError[];
-	/** Preflight errors (if any) */
-	preflightErrors?: PreflightError[];
-	/** Whether fallback was triggered */
-	fallbackTriggered: boolean;
-	/** Fallback reason */
-	fallbackReason?: string;
-	/** Retry attempt count */
-	attemptCount: number;
-}
-
-/**
- * Agent interface for plan revision requests
- */
-export interface TraderAgentInterface {
-	/** Request a revised plan based on errors */
-	requestRevision(
-		originalPlan: string,
-		errors: PreflightError[],
-		context: MarketContext,
-	): Promise<string>;
-}
-
-/**
- * Enforcement options
- */
-export interface EnforcementOptions {
-	/** Logger for observability */
-	logger?: ParseLogger;
-	/** Trader agent for revision requests */
+interface NormalizedOptions {
+	logger: ParseLogger;
 	traderAgent?: TraderAgentInterface;
-	/** Custom schema (defaults to DecisionPlanSchema) */
-	schema?: ZodSchema<DecisionPlan>;
-	/** Maximum revision attempts (default 1) */
-	maxRevisionAttempts?: number;
-	/** Whether to skip preflight checks */
-	skipPreflight?: boolean;
+	schema: ZodSchema<DecisionPlan>;
+	maxRevisionAttempts: number;
+	skipPreflight: boolean;
 }
 
-const DEFAULT_OPTIONS: EnforcementOptions = {
+const DEFAULT_OPTIONS = {
 	logger: defaultLogger,
 	maxRevisionAttempts: 1,
 	skipPreflight: false,
-};
-
-// ============================================
-// Output Enforcer Class
-// ============================================
+} as const;
 
 /**
  * Enforces output validation and preflight checks for DecisionPlan
  */
 export class OutputEnforcer {
-	private readonly options: Required<EnforcementOptions>;
+	private readonly options: NormalizedOptions;
 
 	constructor(options: EnforcementOptions = {}) {
 		this.options = {
-			logger: options.logger ?? DEFAULT_OPTIONS.logger ?? defaultLogger,
-			traderAgent: options.traderAgent as TraderAgentInterface,
+			logger: options.logger ?? DEFAULT_OPTIONS.logger,
+			traderAgent: options.traderAgent,
 			schema: options.schema ?? DecisionPlanSchema,
-			maxRevisionAttempts: options.maxRevisionAttempts ?? DEFAULT_OPTIONS.maxRevisionAttempts ?? 1,
-			skipPreflight: options.skipPreflight ?? DEFAULT_OPTIONS.skipPreflight ?? false,
+			maxRevisionAttempts: options.maxRevisionAttempts ?? DEFAULT_OPTIONS.maxRevisionAttempts,
+			skipPreflight: options.skipPreflight ?? DEFAULT_OPTIONS.skipPreflight,
 		};
 	}
 
@@ -218,12 +110,7 @@ export class OutputEnforcer {
 
 		return {
 			ok: false,
-			error: {
-				type: result.finalError?.includes("JSON") ? "JSON_PARSE" : "SCHEMA_VALIDATION",
-				message: result.finalError ?? "Unknown parse error",
-				rawOutput: response,
-				attemptCount: 1,
-			},
+			error: createParseError(result.finalError, response, 1, "Unknown parse error"),
 		};
 	}
 
@@ -237,71 +124,11 @@ export class OutputEnforcer {
 	 * - Do NOT coerce or clip - require explicit re-planning
 	 */
 	runPreflightChecks(plan: DecisionPlan, context: MarketContext): PreflightResult {
-		const errors: PreflightError[] = [];
+		const errors = this.getContextErrors(context);
 		const warnings: PreflightError[] = [];
-		let estimatedCost = 0;
+		const estimatedCost = this.validateDecisions(plan.decisions, context.currentPositions, errors);
 
-		// Check market hours
-		if (!context.marketOpen) {
-			errors.push({
-				type: "MARKET_CLOSED",
-				message: "Market is currently closed - cannot execute trades",
-				severity: "ERROR",
-			});
-		}
-
-		// Check margin usage
-		if (context.marginUsage >= context.maxMarginUsage) {
-			errors.push({
-				type: "MARGIN_EXCEEDED",
-				message: `Margin usage (${(context.marginUsage * 100).toFixed(1)}%) exceeds maximum allowed (${(context.maxMarginUsage * 100).toFixed(1)}%)`,
-				severity: "ERROR",
-			});
-		}
-
-		// Validate each decision
-		for (const decision of plan.decisions) {
-			const instrumentId = decision.instrument.instrumentId;
-			const currentPosition = context.currentPositions.get(instrumentId);
-
-			// Check action compatibility with current holdings
-			const actionError = this.validateActionCompatibility(decision, currentPosition);
-			if (actionError) {
-				errors.push(actionError);
-			}
-
-			// Estimate cost for new entries
-			if (this.isNewEntry(decision.action)) {
-				const cost = this.estimateDecisionCost(decision);
-				estimatedCost += cost;
-			}
-
-			// Check size validity
-			if (decision.size.quantity < 0) {
-				errors.push({
-					type: "INVALID_SIZE",
-					message: `Invalid size quantity (${decision.size.quantity}) - must be non-negative`,
-					instrumentId,
-					decision,
-					severity: "ERROR",
-				});
-			}
-		}
-
-		// Check buying power
-		if (estimatedCost > context.buyingPower) {
-			errors.push({
-				type: "INSUFFICIENT_BUYING_POWER",
-				message: `Estimated cost ($${estimatedCost.toFixed(2)}) exceeds available buying power ($${context.buyingPower.toFixed(2)})`,
-				severity: "ERROR",
-			});
-		} else if (estimatedCost > context.buyingPower * 0.8) {
-			warnings.push({
-				type: "INSUFFICIENT_BUYING_POWER",
-				message: `Estimated cost ($${estimatedCost.toFixed(2)}) uses more than 80% of buying power`,
-				severity: "WARNING",
-			});
-		}
+		this.addBuyingPowerChecks(estimatedCost, context.buyingPower, errors, warnings);
 
 		return {
 			valid: errors.length === 0,
@@ -337,7 +164,7 @@ export class OutputEnforcer {
 
 		this.options.logger.info("Requesting plan revision from Trader Agent", {
 			errorCount: errors.length,
-			errorTypes: errors.map((e) => e.type),
+			errorTypes: errors.map((error) => error.type),
 		});
 
 		try {
@@ -346,8 +173,6 @@ export class OutputEnforcer {
 				errors,
 				context,
 			);
-
-			// Parse the revised plan (no further retries)
 			return this.parseJSONOnce(revisedResponse);
 		} catch (error) {
 			this.options.logger.error("Trader Agent revision request failed", {
@@ -380,113 +205,170 @@ export class OutputEnforcer {
 		retryCallback?: (prompt: string) => Promise<string>,
 	): Promise<EnforcementResult> {
 		let attemptCount = 0;
-
-		// Step 1: Parse and validate JSON
 		const parseResult = await this.parseAndValidateJSON(response, retryCallback);
-		attemptCount++;
+		attemptCount += 1;
 
 		if (!parseResult.ok) {
 			this.options.logger.error("Parse failed after retry", {
 				error: parseResult.error.message,
 			});
-
-			return {
-				success: false,
-				parseErrors: [parseResult.error],
-				fallbackTriggered: true,
-				fallbackReason: "JSON parsing failed after retry - executing no new entries",
-				attemptCount,
-			};
+			return createParseFailureResult(parseResult.error, attemptCount);
 		}
 
-		const plan = parseResult.value;
-
-		// Step 2: Skip preflight if configured
 		if (this.options.skipPreflight) {
-			return {
-				success: true,
-				decisionPlan: plan,
-				fallbackTriggered: false,
-				attemptCount,
-			};
+			return createSuccessResult(parseResult.value, attemptCount);
 		}
 
-		// Step 3: Run preflight checks
-		const preflightResult = this.runPreflightChecks(plan, context);
-
+		const preflightResult = this.runPreflightChecks(parseResult.value, context);
 		if (preflightResult.valid) {
 			this.options.logger.info("Enforcement passed", {
-				decisionsCount: plan.decisions.length,
+				decisionsCount: parseResult.value.decisions.length,
 				estimatedCost: preflightResult.estimatedCost,
 			});
-
-			return {
-				success: true,
-				decisionPlan: plan,
-				fallbackTriggered: false,
-				attemptCount,
-			};
+			return createSuccessResult(parseResult.value, attemptCount);
 		}
 
-		// Step 4: Preflight failed - request revision (if agent available)
 		this.options.logger.warn("Preflight validation failed", {
 			errorCount: preflightResult.errors.length,
-			errors: preflightResult.errors.map((e) => e.message),
+			errors: preflightResult.errors.map((error) => error.message),
 		});
 
-		if (this.options.traderAgent && attemptCount < this.options.maxRevisionAttempts + 1) {
-			const revisionResult = await this.requestPlanRevision(
-				response,
-				preflightResult.errors,
-				context,
+		const revisionResult = await this.tryRevision(
+			response,
+			context,
+			preflightResult.errors,
+			attemptCount,
+		);
+		if (revisionResult) {
+			return revisionResult;
+		}
+
+		return createPreflightFailureResult(
+			preflightResult.errors,
+			"Preflight validation failed - executing no new entries",
+			attemptCount,
+		);
+	}
+
+	private getContextErrors(context: MarketContext): PreflightError[] {
+		const errors: PreflightError[] = [];
+
+		if (!context.marketOpen) {
+			errors.push({
+				type: "MARKET_CLOSED",
+				message: "Market is currently closed - cannot execute trades",
+				severity: "ERROR",
+			});
+		}
+
+		if (context.marginUsage >= context.maxMarginUsage) {
+			errors.push({
+				type: "MARGIN_EXCEEDED",
+				message: `Margin usage (${(context.marginUsage * 100).toFixed(1)}%) exceeds maximum allowed (${(context.maxMarginUsage * 100).toFixed(1)}%)`,
+				severity: "ERROR",
+			});
+		}
+
+		return errors;
+	}
+
+	private validateDecisions(
+		decisions: Decision[],
+		currentPositions: Map<string, PositionInfo>,
+		errors: PreflightError[],
+	): number {
+		let estimatedCost = 0;
+
+		for (const decision of decisions) {
+			const actionError = this.validateActionCompatibility(
+				decision,
+				currentPositions.get(decision.instrument.instrumentId),
 			);
-			attemptCount++;
+			if (actionError) {
+				errors.push(actionError);
+			}
 
-			if (revisionResult.ok) {
-				// Re-run preflight on revised plan
-				const revisedPreflightResult = this.runPreflightChecks(revisionResult.value, context);
+			if (this.isNewEntry(decision.action)) {
+				estimatedCost += this.estimateDecisionCost(decision);
+			}
 
-				if (revisedPreflightResult.valid) {
-					this.options.logger.info("Revised plan passed enforcement", {
-						decisionsCount: revisionResult.value.decisions.length,
-					});
-
-					return {
-						success: true,
-						decisionPlan: revisionResult.value,
-						fallbackTriggered: false,
-						attemptCount,
-					};
-				}
-
-				// Revised plan also failed preflight
-				this.options.logger.error("Revised plan also failed preflight", {
-					errors: revisedPreflightResult.errors.map((e) => e.message),
+			if (decision.size.quantity < 0) {
+				errors.push({
+					type: "INVALID_SIZE",
+					message: `Invalid size quantity (${decision.size.quantity}) - must be non-negative`,
+					instrumentId: decision.instrument.instrumentId,
+					decision,
+					severity: "ERROR",
 				});
-
-				return {
-					success: false,
-					preflightErrors: revisedPreflightResult.errors,
-					fallbackTriggered: true,
-					fallbackReason: "Revised plan failed preflight - executing no new entries",
-					attemptCount,
-				};
 			}
 		}
 
-		// Step 5: Fallback - skip new entries
-		return {
-			success: false,
-			preflightErrors: preflightResult.errors,
-			fallbackTriggered: true,
-			fallbackReason: "Preflight validation failed - executing no new entries",
-			attemptCount,
-		};
+		return estimatedCost;
 	}
 
-	// ============================================
-	// Private Helpers
-	// ============================================
+	private addBuyingPowerChecks(
+		estimatedCost: number,
+		buyingPower: number,
+		errors: PreflightError[],
+		warnings: PreflightError[],
+	): void {
+		if (estimatedCost > buyingPower) {
+			errors.push({
+				type: "INSUFFICIENT_BUYING_POWER",
+				message: `Estimated cost ($${estimatedCost.toFixed(2)}) exceeds available buying power ($${buyingPower.toFixed(2)})`,
+				severity: "ERROR",
+			});
+			return;
+		}
+
+		if (estimatedCost > buyingPower * 0.8) {
+			warnings.push({
+				type: "INSUFFICIENT_BUYING_POWER",
+				message: `Estimated cost ($${estimatedCost.toFixed(2)}) uses more than 80% of buying power`,
+				severity: "WARNING",
+			});
+		}
+	}
+
+	private async tryRevision(
+		response: string,
+		context: MarketContext,
+		errors: PreflightError[],
+		attemptCount: number,
+	): Promise<EnforcementResult | null> {
+		if (!this.options.traderAgent) {
+			return null;
+		}
+
+		if (attemptCount >= this.options.maxRevisionAttempts + 1) {
+			return null;
+		}
+
+		const revisionResult = await this.requestPlanRevision(response, errors, context);
+		const revisionAttemptCount = attemptCount + 1;
+
+		if (!revisionResult.ok) {
+			return null;
+		}
+
+		const revisedPreflight = this.runPreflightChecks(revisionResult.value, context);
+		if (revisedPreflight.valid) {
+			this.options.logger.info("Revised plan passed enforcement", {
+				decisionsCount: revisionResult.value.decisions.length,
+			});
+			return createSuccessResult(revisionResult.value, revisionAttemptCount);
+		}
+
+		this.options.logger.error("Revised plan also failed preflight", {
+			errors: revisedPreflight.errors.map((error) => error.message),
+		});
+
+		return createPreflightFailureResult(
+			revisedPreflight.errors,
+			"Revised plan failed preflight - executing no new entries",
+			revisionAttemptCount,
+		);
+	}
 
 	private async parseWithRetryInternal(
 		response: string,
@@ -505,12 +387,12 @@ export class OutputEnforcer {
 
 		return {
 			ok: false,
-			error: {
-				type: result.finalError?.includes("JSON") ? "JSON_PARSE" : "SCHEMA_VALIDATION",
-				message: result.finalError ?? "Unknown parse error",
-				rawOutput: response,
-				attemptCount: result.attempts.length,
-			},
+			error: createParseError(
+				result.finalError,
+				response,
+				result.attempts.length,
+				"Unknown parse error",
+			),
 		};
 	}
 
@@ -518,81 +400,82 @@ export class OutputEnforcer {
 		decision: Decision,
 		currentPosition?: PositionInfo,
 	): PreflightError | null {
+		const { action } = decision;
 		const instrumentId = decision.instrument.instrumentId;
-		const action = decision.action;
-		const hasPosition = currentPosition && currentPosition.quantity !== 0;
-		const isLong = currentPosition && currentPosition.quantity > 0;
-		const isShort = currentPosition && currentPosition.quantity < 0;
+		const hasPosition = currentPosition !== undefined && currentPosition.quantity !== 0;
 
-		// BUY requires flat position (or no position)
-		if (action === "BUY" && hasPosition) {
-			return {
-				type: "ACTION_CONFLICT",
-				message: `Cannot BUY ${instrumentId}: already have position (qty: ${currentPosition.quantity}). Use INCREASE to add to position.`,
-				instrumentId,
+		switch (action) {
+			case "BUY":
+				return hasPosition
+					? this.createActionConflict(
+							decision,
+							`Cannot BUY ${instrumentId}: already have position (qty: ${currentPosition?.quantity}). Use INCREASE to add to position.`,
+						)
+					: null;
+			case "SELL":
+				return hasPosition
+					? this.createActionConflict(
+							decision,
+							`Cannot SELL ${instrumentId}: already have position (qty: ${currentPosition?.quantity}). Use REDUCE to decrease position.`,
+						)
+					: null;
+			case "INCREASE":
+				return this.validateIncreaseAction(decision, currentPosition, hasPosition);
+			case "REDUCE":
+				return hasPosition
+					? null
+					: this.createActionConflict(
+							decision,
+							`Cannot REDUCE ${instrumentId}: no existing position to reduce`,
+						);
+			case "HOLD":
+				return hasPosition
+					? null
+					: this.createActionConflict(
+							decision,
+							`Cannot HOLD ${instrumentId}: no existing position to hold`,
+						);
+			default:
+				return null;
+		}
+	}
+
+	private validateIncreaseAction(
+		decision: Decision,
+		currentPosition: PositionInfo | undefined,
+		hasPosition: boolean,
+	): PreflightError | null {
+		const instrumentId = decision.instrument.instrumentId;
+
+		if (!hasPosition) {
+			return this.createActionConflict(
 				decision,
-				severity: "ERROR",
-			};
+				`Cannot INCREASE ${instrumentId}: no existing position. Use BUY or SELL to establish position.`,
+			);
 		}
 
-		// SELL requires flat position (or no position)
-		if (action === "SELL" && hasPosition) {
-			return {
-				type: "ACTION_CONFLICT",
-				message: `Cannot SELL ${instrumentId}: already have position (qty: ${currentPosition.quantity}). Use REDUCE to decrease position.`,
-				instrumentId,
+		const targetIsLong = decision.size.targetPositionQuantity > 0;
+		const currentIsLong = (currentPosition?.quantity ?? 0) > 0;
+		const currentIsShort = (currentPosition?.quantity ?? 0) < 0;
+
+		if ((currentIsLong && !targetIsLong) || (currentIsShort && targetIsLong)) {
+			return this.createActionConflict(
 				decision,
-				severity: "ERROR",
-			};
-		}
-
-		// INCREASE requires existing position in same direction
-		if (action === "INCREASE") {
-			if (!hasPosition) {
-				return {
-					type: "ACTION_CONFLICT",
-					message: `Cannot INCREASE ${instrumentId}: no existing position. Use BUY or SELL to establish position.`,
-					instrumentId,
-					decision,
-					severity: "ERROR",
-				};
-			}
-
-			const targetIsLong = decision.size.targetPositionQuantity > 0;
-			if ((isLong && !targetIsLong) || (isShort && targetIsLong)) {
-				return {
-					type: "ACTION_CONFLICT",
-					message: `Cannot INCREASE ${instrumentId}: target direction conflicts with current position`,
-					instrumentId,
-					decision,
-					severity: "ERROR",
-				};
-			}
-		}
-
-		// REDUCE requires existing position
-		if (action === "REDUCE" && !hasPosition) {
-			return {
-				type: "ACTION_CONFLICT",
-				message: `Cannot REDUCE ${instrumentId}: no existing position to reduce`,
-				instrumentId,
-				decision,
-				severity: "ERROR",
-			};
-		}
-
-		// HOLD requires existing position
-		if (action === "HOLD" && !hasPosition) {
-			return {
-				type: "ACTION_CONFLICT",
-				message: `Cannot HOLD ${instrumentId}: no existing position to hold`,
-				instrumentId,
-				decision,
-				severity: "ERROR",
-			};
+				`Cannot INCREASE ${instrumentId}: target direction conflicts with current position`,
+			);
 		}
 
 		return null;
+	}
+
+	private createActionConflict(decision: Decision, message: string): PreflightError {
+		return {
+			type: "ACTION_CONFLICT",
+			message,
+			instrumentId: decision.instrument.instrumentId,
+			decision,
+			severity: "ERROR",
+		};
 	}
 
 	private isNewEntry(action: Action): boolean {
@@ -600,24 +483,16 @@ export class OutputEnforcer {
 	}
 
 	private estimateDecisionCost(decision: Decision): number {
-		// Rough cost estimation based on quantity and order plan
 		const quantity = decision.size.quantity;
 		const limitPrice = decision.orderPlan.entryLimitPrice;
-
 		if (limitPrice) {
 			return quantity * limitPrice;
 		}
 
-		// If no limit price, use a conservative estimate
-		// For options, multiply by 100 (contract multiplier)
 		const multiplier = decision.instrument.instrumentType === "OPTION" ? 100 : 1;
-		return quantity * multiplier * 100; // Assume $100 per share/contract
+		return quantity * multiplier * 100;
 	}
 }
-
-// ============================================
-// Factory Functions
-// ============================================
 
 /**
  * Create an output enforcer with default options
@@ -649,66 +524,6 @@ export function runPreflightChecks(
 	const enforcer = createOutputEnforcer({ logger });
 	return enforcer.runPreflightChecks(plan, context);
 }
-
-/**
- * Create a fallback decision plan that maintains existing positions
- */
-export function createFallbackPlan(
-	cycleId: string,
-	currentPositions: Map<string, PositionInfo>,
-): DecisionPlan {
-	const decisions: Decision[] = [];
-
-	for (const [instrumentId, position] of currentPositions) {
-		if (position.quantity !== 0) {
-			decisions.push({
-				instrument: {
-					instrumentId,
-					instrumentType: instrumentId.length >= 15 ? "OPTION" : "EQUITY",
-				},
-				action: "HOLD",
-				size: {
-					quantity: Math.abs(position.quantity),
-					unit: instrumentId.length >= 15 ? "CONTRACTS" : "SHARES",
-					targetPositionQuantity: position.quantity,
-				},
-				orderPlan: {
-					entryOrderType: "LIMIT",
-					exitOrderType: "MARKET",
-					timeInForce: "DAY",
-					executionTactic: "",
-					executionParams: {},
-				},
-				riskLevels: {
-					// Maintain existing risk levels (these should be from the original plan)
-					stopLossLevel: position.avgEntryPrice * (position.quantity > 0 ? 0.95 : 1.05),
-					takeProfitLevel: position.avgEntryPrice * (position.quantity > 0 ? 1.1 : 0.9),
-					denomination: "UNDERLYING_PRICE",
-				},
-				strategyFamily: "TREND",
-				rationale: "Fallback: maintaining existing position due to plan validation failure",
-				confidence: 0.5,
-				references: {
-					usedIndicators: [],
-					memoryCaseIds: [],
-					eventIds: [],
-				},
-			});
-		}
-	}
-
-	return {
-		cycleId,
-		asOfTimestamp: `${new Date().toISOString().replace(/\.\d{3}/, "")}Z`,
-		environment: "PAPER",
-		decisions,
-		portfolioNotes: "Fallback plan: no new entries, maintaining existing positions",
-	};
-}
-
-// ============================================
-// Exports
-// ============================================
 
 export default {
 	OutputEnforcer,

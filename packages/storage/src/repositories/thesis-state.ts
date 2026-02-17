@@ -1,207 +1,42 @@
-/**
- * Thesis State Repository (Drizzle ORM)
- *
- * Manages thesis lifecycle tracking across OODA cycles.
- * Theses track position state from WATCHING through CLOSED.
- *
- * @see docs/plans/05-agents.md - Thesis State Management section
- */
-import { and, asc, count, desc, eq, gte, ilike, inArray, ne, or, sql } from "drizzle-orm";
+import { and, asc, count, desc, eq, gte, inArray, ne, sql } from "drizzle-orm";
 import { type Database, getDb } from "../db";
 import { thesisState, thesisStateHistory } from "../schema/thesis";
+import {
+	type CooldownStatus,
+	type CooldownSymbol,
+	findSymbolsOnCooldown as findSymbolsOnCooldownQuery,
+	getCooldownStatus,
+	getThesisStats,
+	searchTheses,
+	type ThesisStats,
+} from "./thesis-state.queries";
+import type {
+	CloseReason,
+	CreateThesisInput,
+	PaginatedResult,
+	PaginationOptions,
+	StateTransitionInput,
+	Thesis,
+	ThesisContext,
+	ThesisFilters,
+	ThesisState,
+	ThesisStateHistoryEntry,
+} from "./thesis-state.types";
+import { isValidTransition, mapHistoryRow, mapThesisRow } from "./thesis-state.types";
 
-// ============================================
-// Types
-// ============================================
-
-export type ThesisState = "WATCHING" | "ENTERED" | "ADDING" | "MANAGING" | "EXITING" | "CLOSED";
-
-export type CloseReason =
-	| "STOP_HIT"
-	| "TARGET_HIT"
-	| "INVALIDATED"
-	| "MANUAL"
-	| "TIME_DECAY"
-	| "CORRELATION"
-	| "REBALANCE";
-
-export interface Thesis {
-	thesisId: string;
-	instrumentId: string;
-	state: ThesisState;
-	entryPrice: number | null;
-	entryDate: string | null;
-	currentStop: number | null;
-	currentTarget: number | null;
-	conviction: number | null;
-	entryThesis: string | null;
-	invalidationConditions: string | null;
-	addCount: number;
-	maxPositionReached: boolean;
-	peakUnrealizedPnl: number | null;
-	closeReason: CloseReason | null;
-	exitPrice: number | null;
-	realizedPnl: number | null;
-	realizedPnlPct: number | null;
-	environment: string;
-	notes: Record<string, unknown>;
-	lastUpdated: string;
-	createdAt: string;
-	closedAt: string | null;
-	/** Cooldown period - prevents re-entry until this time */
-	cooldownUntil: string | null;
-}
-
-export interface ThesisContext {
-	instrumentId: string;
-	currentState: ThesisState;
-	entryPrice: number | null;
-	entryDate: string | null;
-	currentPnL: number | null;
-	stopLoss: number | null;
-	takeProfit: number | null;
-	addCount: number;
-	maxPositionReached: boolean;
-	daysHeld: number;
-}
-
-export interface CreateThesisInput {
-	thesisId?: string;
-	instrumentId: string;
-	state?: ThesisState;
-	entryThesis?: string;
-	invalidationConditions?: string;
-	conviction?: number;
-	currentStop?: number;
-	currentTarget?: number;
-	environment: string;
-	notes?: Record<string, unknown>;
-}
-
-export interface StateTransitionInput {
-	toState: ThesisState;
-	triggerReason?: string;
-	cycleId?: string;
-	priceAtTransition?: number;
-	notes?: string;
-}
-
-export interface ThesisFilters {
-	instrumentId?: string;
-	state?: ThesisState;
-	states?: ThesisState[];
-	environment?: string;
-	closedAfter?: string;
-	createdAfter?: string;
-}
-
-export interface ThesisStateHistoryEntry {
-	id: number;
-	thesisId: string;
-	fromState: ThesisState;
-	toState: ThesisState;
-	triggerReason: string | null;
-	cycleId: string | null;
-	priceAtTransition: number | null;
-	convictionAtTransition: number | null;
-	notes: string | null;
-	createdAt: string;
-}
-
-export interface PaginationOptions {
-	page?: number;
-	pageSize?: number;
-}
-
-export interface PaginatedResult<T> {
-	data: T[];
-	total: number;
-	page: number;
-	pageSize: number;
-	totalPages: number;
-}
-
-// ============================================
-// State Transition Validation
-// ============================================
-
-const VALID_TRANSITIONS: Record<ThesisState, ThesisState[]> = {
-	WATCHING: ["ENTERED", "CLOSED"],
-	ENTERED: ["ADDING", "MANAGING", "EXITING", "CLOSED"],
-	ADDING: ["MANAGING", "EXITING", "CLOSED"],
-	MANAGING: ["ADDING", "EXITING", "CLOSED"],
-	EXITING: ["MANAGING", "CLOSED"],
-	CLOSED: ["WATCHING"],
-};
-
-export function isValidTransition(from: ThesisState, to: ThesisState): boolean {
-	return VALID_TRANSITIONS[from]?.includes(to) ?? false;
-}
-
-// ============================================
-// Row Mapping
-// ============================================
-
-type ThesisRow = typeof thesisState.$inferSelect;
-type HistoryRow = typeof thesisStateHistory.$inferSelect;
-
-function parseNotes(notes: string | null): Record<string, unknown> {
-	if (!notes) {
-		return {};
-	}
-	try {
-		return JSON.parse(notes) as Record<string, unknown>;
-	} catch {
-		return {};
-	}
-}
-
-function mapThesisRow(row: ThesisRow): Thesis {
-	return {
-		thesisId: row.thesisId,
-		instrumentId: row.instrumentId,
-		state: row.state as ThesisState,
-		entryPrice: row.entryPrice ? Number(row.entryPrice) : null,
-		entryDate: row.entryDate?.toISOString() ?? null,
-		currentStop: row.currentStop ? Number(row.currentStop) : null,
-		currentTarget: row.currentTarget ? Number(row.currentTarget) : null,
-		conviction: row.conviction ? Number(row.conviction) : null,
-		entryThesis: row.entryThesis,
-		invalidationConditions: row.invalidationConditions,
-		addCount: row.addCount,
-		maxPositionReached: row.maxPositionReached === 1,
-		peakUnrealizedPnl: row.peakUnrealizedPnl ? Number(row.peakUnrealizedPnl) : null,
-		closeReason: row.closeReason as CloseReason | null,
-		exitPrice: row.exitPrice ? Number(row.exitPrice) : null,
-		realizedPnl: row.realizedPnl ? Number(row.realizedPnl) : null,
-		realizedPnlPct: row.realizedPnlPct ? Number(row.realizedPnlPct) : null,
-		environment: row.environment,
-		notes: parseNotes(row.notes),
-		lastUpdated: row.lastUpdated.toISOString(),
-		createdAt: row.createdAt.toISOString(),
-		closedAt: row.closedAt?.toISOString() ?? null,
-		cooldownUntil: row.cooldownUntil?.toISOString() ?? null,
-	};
-}
-
-function mapHistoryRow(row: HistoryRow): ThesisStateHistoryEntry {
-	return {
-		id: row.id,
-		thesisId: row.thesisId,
-		fromState: row.fromState as ThesisState,
-		toState: row.toState as ThesisState,
-		triggerReason: row.triggerReason,
-		cycleId: row.cycleId,
-		priceAtTransition: row.priceAtTransition ? Number(row.priceAtTransition) : null,
-		convictionAtTransition: row.convictionAtTransition ? Number(row.convictionAtTransition) : null,
-		notes: row.notes,
-		createdAt: row.createdAt.toISOString(),
-	};
-}
-
-// ============================================
-// Repository
-// ============================================
+export {
+	type CloseReason,
+	type CreateThesisInput,
+	isValidTransition,
+	type PaginatedResult,
+	type PaginationOptions,
+	type StateTransitionInput,
+	type Thesis,
+	type ThesisContext,
+	type ThesisFilters,
+	type ThesisState,
+	type ThesisStateHistoryEntry,
+} from "./thesis-state.types";
 
 export class ThesisStateRepository {
 	private db: Database;
@@ -435,11 +270,7 @@ export class ThesisStateRepository {
 		return this.findByIdOrThrow(thesisId);
 	}
 
-	/**
-	 * Default cooldown period in hours after closing a position
-	 */
 	static readonly DEFAULT_COOLDOWN_HOURS = 4;
-
 	async close(
 		thesisId: string,
 		reason: CloseReason,
@@ -460,7 +291,6 @@ export class ThesisStateRepository {
 				? (realizedPnl / thesis.entryPrice) * 100
 				: null;
 
-		// Set cooldown period (default 4 hours)
 		const cooldownMs =
 			(cooldownHours ?? ThesisStateRepository.DEFAULT_COOLDOWN_HOURS) * 60 * 60 * 1000;
 		const cooldownUntil = new Date(now.getTime() + cooldownMs);
@@ -492,85 +322,12 @@ export class ThesisStateRepository {
 		return this.findByIdOrThrow(thesisId);
 	}
 
-	/**
-	 * Check if a symbol is currently on cooldown (recently closed, cannot re-enter yet)
-	 */
-	async isOnCooldown(
-		instrumentId: string,
-		environment: string,
-	): Promise<{
-		onCooldown: boolean;
-		cooldownUntil: string | null;
-		closeReason: string | null;
-		hoursSinceClose: number | null;
-	}> {
-		const [row] = await this.db
-			.select()
-			.from(thesisState)
-			.where(
-				and(
-					eq(thesisState.instrumentId, instrumentId),
-					eq(thesisState.environment, environment as typeof thesisState.$inferSelect.environment),
-					eq(thesisState.state, "CLOSED"),
-				),
-			)
-			.orderBy(desc(thesisState.closedAt))
-			.limit(1);
-
-		if (!row || !row.cooldownUntil) {
-			return { onCooldown: false, cooldownUntil: null, closeReason: null, hoursSinceClose: null };
-		}
-
-		const now = new Date();
-		const onCooldown = row.cooldownUntil > now;
-		const hoursSinceClose = row.closedAt
-			? (now.getTime() - row.closedAt.getTime()) / (1000 * 60 * 60)
-			: null;
-
-		return {
-			onCooldown,
-			cooldownUntil: row.cooldownUntil.toISOString(),
-			closeReason: row.closeReason,
-			hoursSinceClose: hoursSinceClose !== null ? Math.round(hoursSinceClose * 10) / 10 : null,
-		};
+	async isOnCooldown(instrumentId: string, environment: string): Promise<CooldownStatus> {
+		return getCooldownStatus(this.db, instrumentId, environment);
 	}
 
-	/**
-	 * Find all symbols currently on cooldown
-	 */
-	async findSymbolsOnCooldown(environment: string): Promise<
-		Array<{
-			instrumentId: string;
-			cooldownUntil: string;
-			closeReason: string | null;
-			closedAt: string | null;
-		}>
-	> {
-		const now = new Date();
-
-		const rows = await this.db
-			.select({
-				instrumentId: thesisState.instrumentId,
-				cooldownUntil: thesisState.cooldownUntil,
-				closeReason: thesisState.closeReason,
-				closedAt: thesisState.closedAt,
-			})
-			.from(thesisState)
-			.where(
-				and(
-					eq(thesisState.environment, environment as typeof thesisState.$inferSelect.environment),
-					eq(thesisState.state, "CLOSED"),
-					gte(thesisState.cooldownUntil, now),
-				),
-			)
-			.orderBy(desc(thesisState.closedAt));
-
-		return rows.map((r) => ({
-			instrumentId: r.instrumentId,
-			cooldownUntil: r.cooldownUntil?.toISOString() ?? "",
-			closeReason: r.closeReason,
-			closedAt: r.closedAt?.toISOString() ?? null,
-		}));
+	async findSymbolsOnCooldown(environment: string): Promise<CooldownSymbol[]> {
+		return findSymbolsOnCooldownQuery(this.db, environment);
 	}
 
 	async updateConviction(thesisId: string, conviction: number): Promise<Thesis> {
@@ -714,83 +471,14 @@ export class ThesisStateRepository {
 		return result.length > 0;
 	}
 
-	async getStats(environment: string): Promise<{
-		total: number;
-		byState: Record<ThesisState, number>;
-		avgHoldingDays: number;
-		winRate: number;
-	}> {
-		const envFilter = environment as typeof thesisState.$inferSelect.environment;
-
-		const stateCountsResult = await this.db
-			.select({
-				total: count(),
-				watching: sql<number>`SUM(CASE WHEN ${thesisState.state} = 'WATCHING' THEN 1 ELSE 0 END)::int`,
-				entered: sql<number>`SUM(CASE WHEN ${thesisState.state} = 'ENTERED' THEN 1 ELSE 0 END)::int`,
-				adding: sql<number>`SUM(CASE WHEN ${thesisState.state} = 'ADDING' THEN 1 ELSE 0 END)::int`,
-				managing: sql<number>`SUM(CASE WHEN ${thesisState.state} = 'MANAGING' THEN 1 ELSE 0 END)::int`,
-				exiting: sql<number>`SUM(CASE WHEN ${thesisState.state} = 'EXITING' THEN 1 ELSE 0 END)::int`,
-				closed: sql<number>`SUM(CASE WHEN ${thesisState.state} = 'CLOSED' THEN 1 ELSE 0 END)::int`,
-			})
-			.from(thesisState)
-			.where(eq(thesisState.environment, envFilter));
-
-		const performanceResult = await this.db
-			.select({
-				avgHoldingDays: sql<number>`AVG(EXTRACT(EPOCH FROM (${thesisState.closedAt} - ${thesisState.entryDate})) / 86400)`,
-				winRate: sql<number>`AVG(CASE WHEN ${thesisState.realizedPnl}::numeric > 0 THEN 1.0 ELSE 0.0 END)`,
-			})
-			.from(thesisState)
-			.where(
-				and(
-					eq(thesisState.environment, envFilter),
-					eq(thesisState.state, "CLOSED"),
-					sql`${thesisState.entryDate} IS NOT NULL`,
-				),
-			);
-
-		const stateCounts = stateCountsResult[0];
-		const performance = performanceResult[0];
-
-		return {
-			total: stateCounts?.total ?? 0,
-			byState: {
-				WATCHING: stateCounts?.watching ?? 0,
-				ENTERED: stateCounts?.entered ?? 0,
-				ADDING: stateCounts?.adding ?? 0,
-				MANAGING: stateCounts?.managing ?? 0,
-				EXITING: stateCounts?.exiting ?? 0,
-				CLOSED: stateCounts?.closed ?? 0,
-			},
-			avgHoldingDays: performance?.avgHoldingDays ?? 0,
-			winRate: performance?.winRate ?? 0,
-		};
+	async getStats(environment: string): Promise<ThesisStats> {
+		return getThesisStats(this.db, environment);
 	}
 
 	async search(
 		query: string,
 		limit = 5,
 	): Promise<Pick<Thesis, "thesisId" | "instrumentId" | "entryThesis">[]> {
-		const rows = await this.db
-			.select({
-				thesisId: thesisState.thesisId,
-				instrumentId: thesisState.instrumentId,
-				entryThesis: thesisState.entryThesis,
-			})
-			.from(thesisState)
-			.where(
-				or(
-					ilike(thesisState.instrumentId, `%${query}%`),
-					ilike(thesisState.entryThesis, `%${query}%`),
-				),
-			)
-			.orderBy(desc(thesisState.createdAt))
-			.limit(limit);
-
-		return rows.map((r) => ({
-			thesisId: r.thesisId,
-			instrumentId: r.instrumentId,
-			entryThesis: r.entryThesis,
-		}));
+		return searchTheses(this.db, query, limit);
 	}
 }

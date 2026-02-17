@@ -128,6 +128,51 @@ const sizeStyles = {
 	},
 };
 
+function applyDefaultActionStyles(button: HTMLButtonElement, variant: "primary" | "secondary") {
+	button.style.backgroundColor = variant === "secondary" ? "#f5f5f4" : "#1c1917";
+}
+
+function clearActionFocusStyles(button: HTMLButtonElement, variant: "primary" | "secondary") {
+	button.style.backgroundColor = variant === "secondary" ? "transparent" : "#292524";
+}
+
+function setActionPressStyle(button: HTMLButtonElement, pressed: boolean) {
+	button.style.transform = pressed ? "scale(0.98)" : "scale(1)";
+}
+
+function EmptyStateActionButton({ label, onClick, variant = "primary" }: EmptyStateAction) {
+	const buttonStyle =
+		variant === "secondary" ? baseStyles.secondaryButton : baseStyles.primaryButton;
+
+	return (
+		<button
+			type="button"
+			onClick={onClick}
+			style={buttonStyle}
+			onMouseOver={(event) => {
+				applyDefaultActionStyles(event.currentTarget, variant);
+			}}
+			onMouseOut={(event) => {
+				clearActionFocusStyles(event.currentTarget, variant);
+			}}
+			onFocus={(event) => {
+				applyDefaultActionStyles(event.currentTarget, variant);
+			}}
+			onBlur={(event) => {
+				clearActionFocusStyles(event.currentTarget, variant);
+			}}
+			onMouseDown={(event) => {
+				setActionPressStyle(event.currentTarget, true);
+			}}
+			onMouseUp={(event) => {
+				setActionPressStyle(event.currentTarget, false);
+			}}
+		>
+			{label}
+		</button>
+	);
+}
+
 // ============================================
 // Component
 // ============================================
@@ -183,54 +228,18 @@ export function EmptyState({
 			{(action || secondaryAction) && (
 				<div style={baseStyles.actions}>
 					{action && (
-						// biome-ignore lint/a11y/useKeyWithMouseEvents: Button is keyboard accessible via native behavior
-						<button
-							type="button"
+						<EmptyStateActionButton
+							label={action.label}
 							onClick={action.onClick}
-							style={
-								action.variant === "secondary"
-									? baseStyles.secondaryButton
-									: baseStyles.primaryButton
-							}
-							onMouseOver={(e) => {
-								if (action.variant !== "secondary") {
-									e.currentTarget.style.backgroundColor = "#1c1917";
-								} else {
-									e.currentTarget.style.backgroundColor = "#f5f5f4";
-								}
-							}}
-							onMouseOut={(e) => {
-								if (action.variant !== "secondary") {
-									e.currentTarget.style.backgroundColor = "#292524";
-								} else {
-									e.currentTarget.style.backgroundColor = "transparent";
-								}
-							}}
-							onMouseDown={(e) => {
-								e.currentTarget.style.transform = "scale(0.98)";
-							}}
-							onMouseUp={(e) => {
-								e.currentTarget.style.transform = "scale(1)";
-							}}
-						>
-							{action.label}
-						</button>
+							variant={action.variant ?? "primary"}
+						/>
 					)}
 					{secondaryAction && (
-						// biome-ignore lint/a11y/useKeyWithMouseEvents: Button is keyboard accessible via native behavior
-						<button
-							type="button"
+						<EmptyStateActionButton
+							label={secondaryAction.label}
 							onClick={secondaryAction.onClick}
-							style={baseStyles.secondaryButton}
-							onMouseOver={(e) => {
-								e.currentTarget.style.backgroundColor = "#f5f5f4";
-							}}
-							onMouseOut={(e) => {
-								e.currentTarget.style.backgroundColor = "transparent";
-							}}
-						>
-							{secondaryAction.label}
-						</button>
+							variant="secondary"
+						/>
 					)}
 				</div>
 			)}

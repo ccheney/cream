@@ -58,6 +58,151 @@ const DEFAULT_SETTINGS: MACDSettings = {
 	signalPeriod: 9,
 };
 
+interface MACDMultipliers {
+	fast: number;
+	slow: number;
+	signal: number;
+}
+
+interface EMAState {
+	fastEMA: number;
+	slowEMA: number;
+}
+
+interface MACDComputation {
+	macdValues: number[];
+	fastEMA: number;
+	slowEMA: number;
+}
+
+function hasMinimumBars(
+	barsLength: number,
+	{ slowPeriod, signalPeriod }: Pick<MACDSettings, "slowPeriod" | "signalPeriod">,
+): boolean {
+	return barsLength >= slowPeriod + signalPeriod;
+}
+
+function average(values: number[]): number {
+	return values.reduce((sum, value) => sum + value, 0) / values.length;
+}
+
+function updateEMA(previousEMA: number, price: number, multiplier: number): number {
+	return price * multiplier + previousEMA * (1 - multiplier);
+}
+
+function getMultipliers(settings: MACDSettings): MACDMultipliers {
+	return {
+		fast: calculateEMAMultiplier(settings.fastPeriod),
+		slow: calculateEMAMultiplier(settings.slowPeriod),
+		signal: calculateEMAMultiplier(settings.signalPeriod),
+	};
+}
+
+function seedEMAState(
+	bars: OHLCVBar[],
+	{ fastPeriod, slowPeriod }: MACDSettings,
+	multipliers: MACDMultipliers,
+): EMAState | null {
+	const fastSeedBars = bars.slice(0, fastPeriod);
+	const slowSeedBars = bars.slice(0, slowPeriod);
+	if (fastSeedBars.length < fastPeriod || slowSeedBars.length < slowPeriod) {
+		return null;
+	}
+
+	let fastEMA = average(fastSeedBars.map((bar) => bar.close));
+	const slowEMA = average(slowSeedBars.map((bar) => bar.close));
+
+	for (const bar of bars.slice(fastPeriod, slowPeriod)) {
+		fastEMA = updateEMA(fastEMA, bar.close, multipliers.fast);
+	}
+
+	return { fastEMA, slowEMA };
+}
+
+function computeMACDValues(
+	bars: OHLCVBar[],
+	slowPeriod: number,
+	initialState: EMAState,
+	multipliers: MACDMultipliers,
+): MACDComputation {
+	const macdValues: number[] = [];
+	let { fastEMA, slowEMA } = initialState;
+
+	for (const bar of bars.slice(slowPeriod)) {
+		fastEMA = updateEMA(fastEMA, bar.close, multipliers.fast);
+		slowEMA = updateEMA(slowEMA, bar.close, multipliers.slow);
+		macdValues.push(fastEMA - slowEMA);
+	}
+
+	return { macdValues, fastEMA, slowEMA };
+}
+
+function calculateSignalLine(
+	macdValues: number[],
+	signalPeriod: number,
+	signalMultiplier: number,
+): number | null {
+	if (macdValues.length < signalPeriod) {
+		return null;
+	}
+
+	let signalLine = average(macdValues.slice(0, signalPeriod));
+	for (const value of macdValues.slice(signalPeriod)) {
+		signalLine = updateEMA(signalLine, value, signalMultiplier);
+	}
+
+	return signalLine;
+}
+
+function calculateSignalSeries(
+	macdValues: number[],
+	signalPeriod: number,
+	signalMultiplier: number,
+): number[] {
+	if (macdValues.length < signalPeriod) {
+		return [];
+	}
+
+	const signalSeries: number[] = [];
+	let signalLine = average(macdValues.slice(0, signalPeriod));
+	signalSeries.push(signalLine);
+
+	for (const value of macdValues.slice(signalPeriod)) {
+		signalLine = updateEMA(signalLine, value, signalMultiplier);
+		signalSeries.push(signalLine);
+	}
+
+	return signalSeries;
+}
+
+function buildSeriesResult(
+	macdValues: number[],
+	bars: OHLCVBar[],
+	slowPeriod: number,
+	signalPeriod: number,
+	signalSeries: number[],
+): MACDResult[] {
+	return signalSeries
+		.map((signalLine, signalOffset) => {
+			const macdIndex = signalPeriod - 1 + signalOffset;
+			const macdLine = macdValues[macdIndex];
+			const bar = bars[slowPeriod + macdIndex];
+			if (macdLine === undefined || !bar) {
+				return null;
+			}
+
+			return {
+				macdLine,
+				signalLine,
+				histogram: macdLine - signalLine,
+				fastEMA: 0,
+				slowEMA: 0,
+				timestamp: bar.timestamp,
+			};
+		})
+		.filter((result): result is MACDResult => result !== null);
+}
+
 /**
  * Calculate MACD
  *
@@ -78,103 +223,36 @@ export function calculateMACD(
 	bars: OHLCVBar[],
 	settings: MACDSettings = DEFAULT_SETTINGS,
 ): MACDResult | null {
-	const { fastPeriod, slowPeriod, signalPeriod } = settings;
-
-	// Need enough bars for slow EMA + signal period
-	const minBars = slowPeriod + signalPeriod;
-	if (bars.length < minBars) {
+	const { slowPeriod, signalPeriod } = settings;
+	if (!hasMinimumBars(bars.length, settings)) {
 		return null;
 	}
 
-	const fastMultiplier = calculateEMAMultiplier(fastPeriod);
-	const slowMultiplier = calculateEMAMultiplier(slowPeriod);
-	const signalMultiplier = calculateEMAMultiplier(signalPeriod);
-
-	// Initialize fast EMA
-	let fastSum = 0;
-	for (let i = 0; i < fastPeriod; i++) {
-		const bar = bars[i];
-		if (!bar) {
-			return null;
-		}
-		fastSum += bar.close;
-	}
-	let fastEMA = fastSum / fastPeriod;
-
-	// Initialize slow EMA
-	let slowSum = 0;
-	for (let i = 0; i < slowPeriod; i++) {
-		const bar = bars[i];
-		if (!bar) {
-			return null;
-		}
-		slowSum += bar.close;
-	}
-	let slowEMA = slowSum / slowPeriod;
-
-	// Calculate EMAs up to the point where we can start MACD line
-	for (let i = fastPeriod; i < slowPeriod; i++) {
-		const bar = bars[i];
-		if (!bar) {
-			return null;
-		}
-		fastEMA = bar.close * fastMultiplier + fastEMA * (1 - fastMultiplier);
-	}
-
-	// Calculate MACD line values and signal line
-	const macdValues: number[] = [];
-
-	for (let i = slowPeriod; i < bars.length; i++) {
-		const bar = bars[i];
-		if (!bar) {
-			return null;
-		}
-
-		fastEMA = bar.close * fastMultiplier + fastEMA * (1 - fastMultiplier);
-		slowEMA = bar.close * slowMultiplier + slowEMA * (1 - slowMultiplier);
-
-		macdValues.push(fastEMA - slowEMA);
-	}
-
-	if (macdValues.length < signalPeriod) {
+	const multipliers = getMultipliers(settings);
+	const initialState = seedEMAState(bars, settings, multipliers);
+	if (!initialState) {
 		return null;
 	}
 
-	// Initialize signal line EMA
-	let signalSum = 0;
-	for (let i = 0; i < signalPeriod; i++) {
-		const val = macdValues[i];
-		if (val === undefined) {
-			return null;
-		}
-		signalSum += val;
-	}
-	let signalLine = signalSum / signalPeriod;
-
-	// Calculate signal line for remaining values
-	for (let i = signalPeriod; i < macdValues.length; i++) {
-		const macdVal = macdValues[i];
-		if (macdVal === undefined) {
-			return null;
-		}
-		signalLine = macdVal * signalMultiplier + signalLine * (1 - signalMultiplier);
-	}
-
+	const { macdValues, fastEMA, slowEMA } = computeMACDValues(
+		bars,
+		slowPeriod,
+		initialState,
+		multipliers,
+	);
+	const signalLine = calculateSignalLine(macdValues, signalPeriod, multipliers.signal);
 	const macdLine = macdValues.at(-1);
-	if (macdLine === undefined) {
+	if (signalLine === null || macdLine === undefined) {
 		return null;
 	}
-
-	const histogram = macdLine - signalLine;
-	const lastBar = bars.at(-1);
 
 	return {
 		macdLine,
 		signalLine,
-		histogram,
+		histogram: macdLine - signalLine,
 		fastEMA,
 		slowEMA,
-		timestamp: lastBar?.timestamp ?? Date.now(),
+		timestamp: bars.at(-1)?.timestamp ?? Date.now(),
 	};
 }
 
@@ -189,117 +267,20 @@ export function calculateMACDSeries(
 	bars: OHLCVBar[],
 	settings: MACDSettings = DEFAULT_SETTINGS,
 ): MACDResult[] {
-	const { fastPeriod, slowPeriod, signalPeriod } = settings;
-	const results: MACDResult[] = [];
-
-	const minBars = slowPeriod + signalPeriod;
-	if (bars.length < minBars) {
-		return results;
+	const { slowPeriod, signalPeriod } = settings;
+	if (!hasMinimumBars(bars.length, settings)) {
+		return [];
 	}
 
-	const fastMultiplier = calculateEMAMultiplier(fastPeriod);
-	const slowMultiplier = calculateEMAMultiplier(slowPeriod);
-	const signalMultiplier = calculateEMAMultiplier(signalPeriod);
-
-	// Initialize fast EMA
-	let fastSum = 0;
-	for (let i = 0; i < fastPeriod; i++) {
-		const bar = bars[i];
-		if (!bar) {
-			return results;
-		}
-		fastSum += bar.close;
-	}
-	let fastEMA = fastSum / fastPeriod;
-
-	// Initialize slow EMA
-	let slowSum = 0;
-	for (let i = 0; i < slowPeriod; i++) {
-		const bar = bars[i];
-		if (!bar) {
-			return results;
-		}
-		slowSum += bar.close;
-	}
-	let slowEMA = slowSum / slowPeriod;
-
-	// Calculate EMAs up to slow period
-	for (let i = fastPeriod; i < slowPeriod; i++) {
-		const bar = bars[i];
-		if (!bar) {
-			return results;
-		}
-		fastEMA = bar.close * fastMultiplier + fastEMA * (1 - fastMultiplier);
+	const multipliers = getMultipliers(settings);
+	const initialState = seedEMAState(bars, settings, multipliers);
+	if (!initialState) {
+		return [];
 	}
 
-	// Collect MACD values
-	const macdValues: number[] = [];
-
-	for (let i = slowPeriod; i < bars.length; i++) {
-		const bar = bars[i];
-		if (!bar) {
-			continue;
-		}
-
-		fastEMA = bar.close * fastMultiplier + fastEMA * (1 - fastMultiplier);
-		slowEMA = bar.close * slowMultiplier + slowEMA * (1 - slowMultiplier);
-
-		macdValues.push(fastEMA - slowEMA);
-	}
-
-	if (macdValues.length < signalPeriod) {
-		return results;
-	}
-
-	// Initialize signal line
-	let signalSum = 0;
-	for (let i = 0; i < signalPeriod; i++) {
-		const val = macdValues[i];
-		if (val === undefined) {
-			return results;
-		}
-		signalSum += val;
-	}
-	let signalLine = signalSum / signalPeriod;
-
-	// First result
-	const firstMacd = macdValues[signalPeriod - 1];
-	const firstBar = bars[slowPeriod + signalPeriod - 1];
-	if (firstMacd !== undefined && firstBar) {
-		results.push({
-			macdLine: firstMacd,
-			signalLine,
-			histogram: firstMacd - signalLine,
-			fastEMA: 0, // Not tracked for series
-			slowEMA: 0,
-			timestamp: firstBar.timestamp,
-		});
-	}
-
-	// Calculate remaining values
-	for (let i = signalPeriod; i < macdValues.length; i++) {
-		const macdVal = macdValues[i];
-		if (macdVal === undefined) {
-			continue;
-		}
-
-		signalLine = macdVal * signalMultiplier + signalLine * (1 - signalMultiplier);
-
-		const barIndex = slowPeriod + i;
-		const bar = bars[barIndex];
-		if (bar) {
-			results.push({
-				macdLine: macdVal,
-				signalLine,
-				histogram: macdVal - signalLine,
-				fastEMA: 0,
-				slowEMA: 0,
-				timestamp: bar.timestamp,
-			});
-		}
-	}
-
-	return results;
+	const { macdValues } = computeMACDValues(bars, slowPeriod, initialState, multipliers);
+	const signalSeries = calculateSignalSeries(macdValues, signalPeriod, multipliers.signal);
+	return buildSeriesResult(macdValues, bars, slowPeriod, signalPeriod, signalSeries);
 }
 
 /**
@@ -362,26 +343,33 @@ export function classifyMACDMomentum(
 	previous: MACDResult | null = null,
 ): MACDMomentum {
 	const histogram = current.histogram;
+	const previousHistogram = previous?.histogram ?? null;
 
 	if (histogram > 0) {
-		if (!previous) {
-			return histogram > 0.5 ? "strong_bullish" : "bullish";
-		}
-		if (histogram > previous.histogram) {
-			return histogram > 0.5 ? "strong_bullish" : "bullish";
-		}
+		return classifyPositiveMomentum(histogram, previousHistogram);
+	}
+	if (histogram < 0) {
+		return classifyNegativeMomentum(histogram, previousHistogram);
+	}
+	return "neutral";
+}
+
+function classifyPositiveMomentum(
+	histogram: number,
+	previousHistogram: number | null,
+): MACDMomentum {
+	if (previousHistogram !== null && histogram <= previousHistogram) {
 		return "weakening_bullish";
 	}
+	return histogram > 0.5 ? "strong_bullish" : "bullish";
+}
 
-	if (histogram < 0) {
-		if (!previous) {
-			return histogram < -0.5 ? "strong_bearish" : "bearish";
-		}
-		if (histogram < previous.histogram) {
-			return histogram < -0.5 ? "strong_bearish" : "bearish";
-		}
+function classifyNegativeMomentum(
+	histogram: number,
+	previousHistogram: number | null,
+): MACDMomentum {
+	if (previousHistogram !== null && histogram >= previousHistogram) {
 		return "weakening_bearish";
 	}
-
-	return "neutral";
+	return histogram < -0.5 ? "strong_bearish" : "bearish";
 }

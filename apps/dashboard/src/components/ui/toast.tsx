@@ -107,6 +107,133 @@ const POSITION_STYLES: Record<ToastPosition, React.CSSProperties> = {
 	},
 };
 
+interface ToastColorPalette {
+	borderColor: string;
+	iconColor: string;
+	icon: string;
+	role: "status" | "alert";
+	ariaLive: "polite" | "assertive";
+}
+
+interface ToastRenderStyles {
+	toastStyles: React.CSSProperties;
+}
+
+interface ToastHandlers {
+	onDismiss: () => void;
+	onClickDismiss: () => void;
+}
+
+function buildToastStyles(
+	variantStyle: ToastColorPalette,
+	isDismissing: boolean,
+): ToastRenderStyles {
+	return {
+		toastStyles: {
+			display: "flex",
+			alignItems: "flex-start",
+			gap: "12px",
+			padding: "12px 16px",
+			backgroundColor: "#ffffff",
+			border: "1px solid #e7e5e4",
+			borderLeft: `4px solid ${variantStyle.borderColor}`,
+			borderRadius: "8px",
+			boxShadow: "0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -2px rgba(0, 0, 0, 0.1)",
+			minWidth: "300px",
+			maxWidth: "400px",
+			animation: isDismissing
+				? `toast-exit ${EXIT_ANIMATION_DURATION}ms ease-in forwards`
+				: "toast-enter 200ms ease-out",
+			pointerEvents: "auto",
+		},
+	};
+}
+
+function getToastHandlers(onDismiss: (id: string) => void, toastId: string): ToastHandlers {
+	const onClose = () => onDismiss(toastId);
+	return {
+		onDismiss: onClose,
+		onClickDismiss: onClose,
+	};
+}
+
+function ToastIcon({ variantStyle }: { variantStyle: ToastColorPalette }) {
+	return (
+		<span
+			style={{
+				display: "flex",
+				alignItems: "center",
+				justifyContent: "center",
+				width: "24px",
+				height: "24px",
+				color: variantStyle.iconColor,
+				fontWeight: "bold",
+				fontSize: "14px",
+			}}
+			aria-hidden="true"
+		>
+			{variantStyle.icon}
+		</span>
+	);
+}
+
+function ToastContent({ toast: { title, message } }: { toast: Pick<Toast, "title" | "message"> }) {
+	const titleStyles = {
+		fontWeight: 600,
+		fontSize: "14px",
+		color: "#1c1917",
+		margin: 0,
+	};
+
+	const messageStyles = {
+		fontSize: "14px",
+		color: "#44403c",
+		margin: 0,
+		lineHeight: 1.4,
+	};
+
+	return (
+		<div style={{ flex: 1, display: "flex", flexDirection: "column", gap: "4px" }}>
+			{title && <h4 style={titleStyles}>{title}</h4>}
+			<p style={messageStyles}>{message}</p>
+		</div>
+	);
+}
+
+function ToastDismissButton({
+	onClickDismiss,
+	toastId,
+}: {
+	onClickDismiss: () => void;
+	toastId: string;
+}) {
+	return (
+		<button
+			type="button"
+			onClick={onClickDismiss}
+			style={{
+				display: "flex",
+				alignItems: "center",
+				justifyContent: "center",
+				width: "24px",
+				height: "24px",
+				border: "none",
+				background: "transparent",
+				cursor: "pointer",
+				color: "#78716c",
+				fontSize: "16px",
+				padding: 0,
+				borderRadius: "4px",
+				transition: "color 0.15s, background-color 0.15s",
+			}}
+			aria-label="Dismiss notification"
+			data-testid={`toast-close-${toastId}`}
+		>
+			×
+		</button>
+	);
+}
+
 // ============================================
 // Keyframes
 // ============================================
@@ -150,72 +277,8 @@ const toastKeyframes = `
  */
 export function ToastItem({ toast, onDismiss }: ToastProps) {
 	const variantStyle = VARIANT_STYLES[toast.variant];
-
-	const toastStyles: React.CSSProperties = {
-		display: "flex",
-		alignItems: "flex-start",
-		gap: "12px",
-		padding: "12px 16px",
-		backgroundColor: "#ffffff",
-		border: "1px solid #e7e5e4",
-		borderLeft: `4px solid ${variantStyle.borderColor}`,
-		borderRadius: "8px",
-		boxShadow: "0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -2px rgba(0, 0, 0, 0.1)",
-		minWidth: "300px",
-		maxWidth: "400px",
-		animation: toast.dismissing
-			? `toast-exit ${EXIT_ANIMATION_DURATION}ms ease-in forwards`
-			: "toast-enter 200ms ease-out",
-		pointerEvents: "auto",
-	};
-
-	const iconStyles: React.CSSProperties = {
-		display: "flex",
-		alignItems: "center",
-		justifyContent: "center",
-		width: "24px",
-		height: "24px",
-		color: variantStyle.iconColor,
-		fontWeight: "bold",
-		fontSize: "14px",
-	};
-
-	const contentStyles: React.CSSProperties = {
-		flex: 1,
-		display: "flex",
-		flexDirection: "column",
-		gap: "4px",
-	};
-
-	const titleStyles: React.CSSProperties = {
-		fontWeight: 600,
-		fontSize: "14px",
-		color: "#1c1917",
-		margin: 0,
-	};
-
-	const messageStyles: React.CSSProperties = {
-		fontSize: "14px",
-		color: "#44403c",
-		margin: 0,
-		lineHeight: 1.4,
-	};
-
-	const closeButtonStyles: React.CSSProperties = {
-		display: "flex",
-		alignItems: "center",
-		justifyContent: "center",
-		width: "24px",
-		height: "24px",
-		border: "none",
-		background: "transparent",
-		cursor: "pointer",
-		color: "#78716c",
-		fontSize: "16px",
-		padding: 0,
-		borderRadius: "4px",
-		transition: "color 0.15s, background-color 0.15s",
-	};
+	const handlers = getToastHandlers(onDismiss, toast.id);
+	const styles = buildToastStyles(variantStyle, toast.dismissing);
 
 	return (
 		<div
@@ -223,29 +286,16 @@ export function ToastItem({ toast, onDismiss }: ToastProps) {
 			role={variantStyle.role}
 			aria-live={variantStyle.ariaLive}
 			data-testid={`toast-${toast.id}`}
-			style={toastStyles}
+			style={styles.toastStyles}
 		>
 			{/* Icon */}
-			<span style={iconStyles} aria-hidden="true">
-				{variantStyle.icon}
-			</span>
+			<ToastIcon variantStyle={variantStyle} />
 
 			{/* Content */}
-			<div style={contentStyles}>
-				{toast.title && <h4 style={titleStyles}>{toast.title}</h4>}
-				<p style={messageStyles}>{toast.message}</p>
-			</div>
+			<ToastContent toast={toast} />
 
 			{/* Close button */}
-			<button
-				type="button"
-				onClick={() => onDismiss(toast.id)}
-				style={closeButtonStyles}
-				aria-label="Dismiss notification"
-				data-testid={`toast-close-${toast.id}`}
-			>
-				×
-			</button>
+			<ToastDismissButton onClickDismiss={handlers.onDismiss} toastId={toast.id} />
 		</div>
 	);
 }

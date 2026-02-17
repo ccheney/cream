@@ -221,234 +221,240 @@ function createMockClient(responseOverrides: Record<string, unknown> = {}): Heli
 // Tests
 // ============================================
 
-describe("searchGraphContext", () => {
+describe("searchGraphContext: unified search shape", () => {
 	let client: HelixClient;
 
 	beforeEach(() => {
 		client = createMockClient();
 	});
 
-	describe("unified search (no symbol filter)", () => {
-		it("returns results from multiple types", async () => {
-			const result = await searchGraphContext(client, {
-				query: "semiconductor supply chain",
-				limit: 10,
-			});
-
-			expect(result.filingChunks.length).toBe(1);
-			expect(result.transcriptChunks.length).toBe(1);
-			expect(result.newsItems.length).toBe(1);
-			expect(result.externalEvents.length).toBe(1);
+	it("returns results from multiple types", async () => {
+		const result = await searchGraphContext(client, {
+			query: "semiconductor supply chain",
+			limit: 10,
 		});
 
-		it("transforms filing chunks correctly", async () => {
-			const result = await searchGraphContext(client, {
-				query: "test",
-			});
-
-			const filing = result.filingChunks[0];
-			expect(filing).toBeDefined();
-			expect(filing?.id).toBe("fc-001");
-			expect(filing?.filingId).toBe("10K-2024-AAPL");
-			expect(filing?.companySymbol).toBe("AAPL");
-			expect(filing?.filingType).toBe("10-K");
-			expect(filing?.filingDate).toBe("2024-01-15");
-			expect(filing?.chunkIndex).toBe(5);
-			expect(filing?.score).toBe(0.95);
-		});
-
-		it("transforms transcript chunks correctly", async () => {
-			const result = await searchGraphContext(client, {
-				query: "test",
-			});
-
-			const transcript = result.transcriptChunks[0];
-			expect(transcript).toBeDefined();
-			expect(transcript?.id).toBe("tc-001");
-			expect(transcript?.transcriptId).toBe("Q4-2024-NVDA");
-			expect(transcript?.companySymbol).toBe("NVDA");
-			expect(transcript?.speaker).toBe("Jensen Huang");
-			expect(transcript?.score).toBe(0.88);
-		});
-
-		it("transforms news items correctly", async () => {
-			const result = await searchGraphContext(client, {
-				query: "test",
-			});
-
-			const news = result.newsItems[0];
-			expect(news).toBeDefined();
-			expect(news?.id).toBe("ni-001");
-			expect(news?.headline).toBe("Semiconductor Industry Faces Capacity Constraints");
-			expect(news?.source).toBe("Reuters");
-			expect(news?.sentimentScore).toBe(-0.3);
-			expect(news?.score).toBe(0.82);
-		});
-
-		it("transforms external events correctly", async () => {
-			const result = await searchGraphContext(client, {
-				query: "test",
-			});
-
-			const event = result.externalEvents[0];
-			expect(event).toBeDefined();
-			expect(event?.id).toBe("ee-001");
-			expect(event?.eventId).toBe("evt-supply-001");
-			expect(event?.eventType).toBe("supply_chain");
-			expect(event?.score).toBe(0.75);
-		});
-
-		it("deduplicates company nodes", async () => {
-			const result = await searchGraphContext(client, {
-				query: "test",
-			});
-
-			// Should have 3 unique companies (AAPL appears twice in mock data)
-			expect(result.companies.length).toBe(3);
-
-			const symbols = result.companies.map((c) => c.symbol);
-			expect(symbols).toContain("AAPL");
-			expect(symbols).toContain("NVDA");
-			expect(symbols).toContain("TSM");
-		});
-
-		it("assigns correct source to companies", async () => {
-			const result = await searchGraphContext(client, {
-				query: "test",
-			});
-
-			const aapl = result.companies.find((c) => c.symbol === "AAPL");
-			const nvda = result.companies.find((c) => c.symbol === "NVDA");
-			const tsm = result.companies.find((c) => c.symbol === "TSM");
-
-			expect(aapl?.source).toBe("filing");
-			expect(nvda?.source).toBe("transcript");
-			expect(tsm?.source).toBe("news");
-		});
-
-		it("includes execution time", async () => {
-			const result = await searchGraphContext(client, {
-				query: "test",
-			});
-
-			expect(result.executionTimeMs).toBeGreaterThan(0);
-		});
+		expect(result.filingChunks.length).toBe(1);
+		expect(result.transcriptChunks.length).toBe(1);
+		expect(result.newsItems.length).toBe(1);
+		expect(result.externalEvents.length).toBe(1);
 	});
 
-	describe("company-filtered search", () => {
-		it("uses SearchGraphContextByCompany when symbol provided", async () => {
-			const result = await searchGraphContext(client, {
-				query: "revenue growth",
-				symbol: "AAPL",
-				limit: 10,
-			});
-
-			// Results should come from company-specific mock
-			expect(result.filingChunks.length).toBe(1);
-			expect(result.filingChunks[0]?.chunkText).toContain("iPhone revenue");
+	it("includes execution time", async () => {
+		const result = await searchGraphContext(client, {
+			query: "test",
 		});
 
-		it("includes related and dependent companies", async () => {
-			const result = await searchGraphContext(client, {
-				query: "test",
-				symbol: "AAPL",
-			});
+		expect(result.executionTimeMs).toBeGreaterThan(0);
+	});
+});
 
-			const sources = result.companies.map((c) => c.source);
-			expect(sources).toContain("related");
-			expect(sources).toContain("dependent");
-		});
+describe("searchGraphContext: unified transformations", () => {
+	let client: HelixClient;
 
-		it("does not include external events for company search", async () => {
-			const result = await searchGraphContext(client, {
-				query: "test",
-				symbol: "AAPL",
-			});
-
-			expect(result.externalEvents.length).toBe(0);
-		});
+	beforeEach(() => {
+		client = createMockClient();
 	});
 
-	describe("edge cases", () => {
-		it("handles empty results gracefully", async () => {
-			const emptyClient = createMockClient({
-				filing_chunks: [],
-				transcript_chunks: [],
-				news_items: [],
-				external_events: [],
-				filing_companies: [],
-				transcript_companies: [],
-				news_companies: [],
-			});
+	it("transforms filing chunks correctly", async () => {
+		const result = await searchGraphContext(client, { query: "test" });
+		const filing = result.filingChunks[0];
 
-			const result = await searchGraphContext(emptyClient, {
-				query: "nonexistent topic",
-			});
+		expect(filing).toBeDefined();
+		expect(filing?.id).toBe("fc-001");
+		expect(filing?.filingId).toBe("10K-2024-AAPL");
+		expect(filing?.companySymbol).toBe("AAPL");
+		expect(filing?.filingType).toBe("10-K");
+		expect(filing?.filingDate).toBe("2024-01-15");
+		expect(filing?.chunkIndex).toBe(5);
+		expect(filing?.score).toBe(0.95);
+	});
 
-			expect(result.filingChunks).toEqual([]);
-			expect(result.transcriptChunks).toEqual([]);
-			expect(result.newsItems).toEqual([]);
-			expect(result.externalEvents).toEqual([]);
-			expect(result.companies).toEqual([]);
+	it("transforms transcript chunks correctly", async () => {
+		const result = await searchGraphContext(client, { query: "test" });
+		const transcript = result.transcriptChunks[0];
+
+		expect(transcript).toBeDefined();
+		expect(transcript?.id).toBe("tc-001");
+		expect(transcript?.transcriptId).toBe("Q4-2024-NVDA");
+		expect(transcript?.companySymbol).toBe("NVDA");
+		expect(transcript?.speaker).toBe("Jensen Huang");
+		expect(transcript?.score).toBe(0.88);
+	});
+
+	it("transforms news items correctly", async () => {
+		const result = await searchGraphContext(client, { query: "test" });
+		const news = result.newsItems[0];
+
+		expect(news).toBeDefined();
+		expect(news?.id).toBe("ni-001");
+		expect(news?.headline).toBe("Semiconductor Industry Faces Capacity Constraints");
+		expect(news?.source).toBe("Reuters");
+		expect(news?.sentimentScore).toBe(-0.3);
+		expect(news?.score).toBe(0.82);
+	});
+});
+
+describe("searchGraphContext: unified external data and companies", () => {
+	let client: HelixClient;
+
+	beforeEach(() => {
+		client = createMockClient();
+	});
+
+	it("transforms external events correctly", async () => {
+		const result = await searchGraphContext(client, { query: "test" });
+		const event = result.externalEvents[0];
+
+		expect(event).toBeDefined();
+		expect(event?.id).toBe("ee-001");
+		expect(event?.eventId).toBe("evt-supply-001");
+		expect(event?.eventType).toBe("supply_chain");
+		expect(event?.score).toBe(0.75);
+	});
+
+	it("deduplicates company nodes", async () => {
+		const result = await searchGraphContext(client, { query: "test" });
+		const symbols = result.companies.map((company) => company.symbol);
+
+		expect(result.companies.length).toBe(3);
+		expect(symbols).toContain("AAPL");
+		expect(symbols).toContain("NVDA");
+		expect(symbols).toContain("TSM");
+	});
+
+	it("assigns correct source to companies", async () => {
+		const result = await searchGraphContext(client, { query: "test" });
+		const aapl = result.companies.find((company) => company.symbol === "AAPL");
+		const nvda = result.companies.find((company) => company.symbol === "NVDA");
+		const tsm = result.companies.find((company) => company.symbol === "TSM");
+
+		expect(aapl?.source).toBe("filing");
+		expect(nvda?.source).toBe("transcript");
+		expect(tsm?.source).toBe("news");
+	});
+});
+
+describe("searchGraphContext: company-filtered search", () => {
+	let client: HelixClient;
+
+	beforeEach(() => {
+		client = createMockClient();
+	});
+
+	it("uses SearchGraphContextByCompany when symbol provided", async () => {
+		const result = await searchGraphContext(client, {
+			query: "revenue growth",
+			symbol: "AAPL",
+			limit: 10,
 		});
 
-		it("handles null property values", async () => {
-			const nullClient = createMockClient({
-				filing_chunks: [
-					{
-						id: "fc-null",
-						label: "FilingChunk",
-						data: [0.1],
-						score: 0.5,
-						filing_id: null,
-						company_symbol: null,
-						filing_type: null,
-						filing_date: null,
-						chunk_text: null,
-						chunk_index: null,
-					},
-				],
-				transcript_chunks: [],
-				news_items: [],
-				external_events: [],
-				filing_companies: [],
-				transcript_companies: [],
-				news_companies: [],
-			});
+		expect(result.filingChunks.length).toBe(1);
+		expect(result.filingChunks[0]?.chunkText).toContain("iPhone revenue");
+	});
 
-			const result = await searchGraphContext(nullClient, {
-				query: "test",
-			});
-
-			const filing = result.filingChunks[0];
-			expect(filing).toBeDefined();
-			expect(filing?.filingId).toBe("");
-			expect(filing?.companySymbol).toBe("");
-			expect(filing?.chunkIndex).toBe(0);
+	it("includes related and dependent companies", async () => {
+		const result = await searchGraphContext(client, {
+			query: "test",
+			symbol: "AAPL",
 		});
 
-		it("uses default limit of 10", async () => {
-			let capturedLimit: number | undefined;
-			const trackingClient: HelixClient = {
-				...createMockClient(),
-				query: async <T = unknown>(
-					_queryName: string,
-					params?: Record<string, unknown>,
-				): Promise<QueryResult<T>> => {
-					capturedLimit = params?.limit as number;
-					return {
-						data: mockSearchGraphContextResponse as T,
-						executionTimeMs: 1,
-					};
+		const sources = result.companies.map((company) => company.source);
+		expect(sources).toContain("related");
+		expect(sources).toContain("dependent");
+	});
+
+	it("does not include external events for company search", async () => {
+		const result = await searchGraphContext(client, {
+			query: "test",
+			symbol: "AAPL",
+		});
+
+		expect(result.externalEvents.length).toBe(0);
+	});
+});
+
+describe("searchGraphContext: edge cases", () => {
+	it("handles empty results gracefully", async () => {
+		const emptyClient = createMockClient({
+			filing_chunks: [],
+			transcript_chunks: [],
+			news_items: [],
+			external_events: [],
+			filing_companies: [],
+			transcript_companies: [],
+			news_companies: [],
+		});
+
+		const result = await searchGraphContext(emptyClient, {
+			query: "nonexistent topic",
+		});
+
+		expect(result.filingChunks).toEqual([]);
+		expect(result.transcriptChunks).toEqual([]);
+		expect(result.newsItems).toEqual([]);
+		expect(result.externalEvents).toEqual([]);
+		expect(result.companies).toEqual([]);
+	});
+
+	it("handles null property values", async () => {
+		const nullClient = createMockClient({
+			filing_chunks: [
+				{
+					id: "fc-null",
+					label: "FilingChunk",
+					data: [0.1],
+					score: 0.5,
+					filing_id: null,
+					company_symbol: null,
+					filing_type: null,
+					filing_date: null,
+					chunk_text: null,
+					chunk_index: null,
 				},
-			};
-
-			await searchGraphContext(trackingClient, {
-				query: "test",
-			});
-
-			expect(capturedLimit).toBe(10);
+			],
+			transcript_chunks: [],
+			news_items: [],
+			external_events: [],
+			filing_companies: [],
+			transcript_companies: [],
+			news_companies: [],
 		});
+
+		const result = await searchGraphContext(nullClient, {
+			query: "test",
+		});
+
+		const filing = result.filingChunks[0];
+		expect(filing).toBeDefined();
+		expect(filing?.filingId).toBe("");
+		expect(filing?.companySymbol).toBe("");
+		expect(filing?.chunkIndex).toBe(0);
+	});
+});
+
+describe("searchGraphContext: defaults", () => {
+	it("uses default limit of 10", async () => {
+		let capturedLimit: number | undefined;
+		const trackingClient: HelixClient = {
+			...createMockClient(),
+			query: async <T = unknown>(
+				_queryName: string,
+				params?: Record<string, unknown>,
+			): Promise<QueryResult<T>> => {
+				capturedLimit = params?.limit as number;
+				return {
+					data: mockSearchGraphContextResponse as T,
+					executionTimeMs: 1,
+				};
+			},
+		};
+
+		await searchGraphContext(trackingClient, {
+			query: "test",
+		});
+
+		expect(capturedLimit).toBe(10);
 	});
 });
 

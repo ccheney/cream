@@ -154,33 +154,48 @@ export interface WebSocketLogger {
 	log(entry: LogEntry): void;
 }
 
-export function createWebSocketLogger(config: Partial<LoggerConfig> = {}): WebSocketLogger {
-	const fullConfig: LoggerConfig = { ...DEFAULT_LOGGER_CONFIG, ...config };
+type EntryFactory = (
+	level: LogLevel,
+	event: WebSocketEventType,
+	message: string,
+	connectionId?: string,
+	userId?: string,
+	metadata?: Record<string, unknown>,
+) => LogEntry;
 
-	const log = (entry: LogEntry): void => {
-		if (!fullConfig.enabled) {
-			return;
-		}
-		if (!shouldLog(entry.level, fullConfig.level)) {
+type EmitEntry = (
+	level: LogLevel,
+	event: WebSocketEventType,
+	message: string,
+	connectionId?: string,
+	userId?: string,
+	metadata?: Record<string, unknown>,
+) => void;
+
+function createLogDispatcher(config: LoggerConfig): (entry: LogEntry) => void {
+	return (entry: LogEntry): void => {
+		if (!config.enabled || !shouldLog(entry.level, config.level)) {
 			return;
 		}
 
 		switch (entry.level) {
 			case "error":
 				logger.error(entry, entry.message);
-				break;
+				return;
 			case "warn":
 				logger.warn(entry, entry.message);
-				break;
+				return;
 			case "debug":
 				logger.debug(entry, entry.message);
-				break;
+				return;
 			default:
 				logger.info(entry, entry.message);
 		}
 	};
+}
 
-	const createEntry = (
+function createEntryFactory(): EntryFactory {
+	return (
 		level: LogLevel,
 		event: WebSocketEventType,
 		message: string,
@@ -197,234 +212,240 @@ export function createWebSocketLogger(config: Partial<LoggerConfig> = {}): WebSo
 		message,
 		metadata,
 	});
+}
+
+function createEmitter(log: (entry: LogEntry) => void, createEntry: EntryFactory): EmitEntry {
+	return (
+		level: LogLevel,
+		event: WebSocketEventType,
+		message: string,
+		connectionId?: string,
+		userId?: string,
+		metadata?: Record<string, unknown>,
+	): void => {
+		log(createEntry(level, event, message, connectionId, userId, metadata));
+	};
+}
+
+function createConnectionHandlers(
+	emit: EmitEntry,
+): Pick<
+	WebSocketLogger,
+	| "connectionAttempt"
+	| "connectionSuccess"
+	| "connectionFailure"
+	| "connectionClose"
+	| "reconnectAttempt"
+> {
+	return {
+		connectionAttempt({ userId, ip, userAgent }) {
+			emit("info", "connection.attempt", `Connection attempt from ${ip}`, undefined, userId, {
+				ip,
+				userAgent,
+			});
+		},
+		connectionSuccess({ connectionId, userId, protocol }) {
+			emit(
+				"info",
+				"connection.success",
+				`Connection established: ${connectionId}`,
+				connectionId,
+				userId,
+				{
+					protocol,
+				},
+			);
+		},
+		connectionFailure({ userId, ip, reason }) {
+			emit(
+				"warn",
+				"connection.failure",
+				`Connection failed from ${ip}: ${reason}`,
+				undefined,
+				userId,
+				{
+					ip,
+					reason,
+				},
+			);
+		},
+		connectionClose({ connectionId, userId, duration, reason }) {
+			emit(
+				"info",
+				"connection.close",
+				`Connection closed: ${connectionId} (duration: ${duration}ms)`,
+				connectionId,
+				userId,
+				{ duration, reason },
+			);
+		},
+		reconnectAttempt({ userId, connectionId, attemptCount }) {
+			emit(
+				"info",
+				"connection.reconnect",
+				`Reconnection attempt ${attemptCount}`,
+				connectionId,
+				userId,
+				{
+					attemptCount,
+				},
+			);
+		},
+	};
+}
+
+function createMessageHandlers(
+	emit: EmitEntry,
+	config: LoggerConfig,
+): Pick<WebSocketLogger, "messageReceived" | "messageSent" | "messageInvalid"> {
+	return {
+		messageReceived({ connectionId, type, size }) {
+			emit(
+				"debug",
+				"message.received",
+				`Received ${type} (${size} bytes)`,
+				connectionId,
+				undefined,
+				{
+					type,
+					size,
+				},
+			);
+		},
+		messageSent({ connectionId, type, size }) {
+			emit("debug", "message.sent", `Sent ${type} (${size} bytes)`, connectionId, undefined, {
+				type,
+				size,
+			});
+		},
+		messageInvalid({ connectionId, error, raw }) {
+			const truncated =
+				raw && config.includeRawMessages
+					? truncateMessage(raw, config.maxRawMessageLength)
+					: undefined;
+			emit("warn", "message.invalid", `Invalid message: ${error}`, connectionId, undefined, {
+				error,
+				raw: truncated,
+			});
+		},
+	};
+}
+
+function createSubscriptionHandlers(
+	emit: EmitEntry,
+): Pick<
+	WebSocketLogger,
+	| "channelSubscribe"
+	| "channelUnsubscribe"
+	| "symbolSubscribe"
+	| "symbolUnsubscribe"
+	| "authFailure"
+> {
+	return {
+		channelSubscribe({ connectionId, userId, channels }) {
+			emit(
+				"info",
+				"subscribe.channel",
+				`Subscribed to channels: ${channels.join(", ")}`,
+				connectionId,
+				userId,
+				{ channels },
+			);
+		},
+		channelUnsubscribe({ connectionId, channels }) {
+			emit(
+				"info",
+				"unsubscribe.channel",
+				`Unsubscribed from channels: ${channels.join(", ")}`,
+				connectionId,
+				undefined,
+				{ channels },
+			);
+		},
+		symbolSubscribe({ connectionId, symbols }) {
+			emit(
+				"info",
+				"subscribe.symbol",
+				`Subscribed to symbols: ${symbols.join(", ")}`,
+				connectionId,
+				undefined,
+				{ symbols },
+			);
+		},
+		symbolUnsubscribe({ connectionId, symbols }) {
+			emit(
+				"info",
+				"unsubscribe.symbol",
+				`Unsubscribed from symbols: ${symbols.join(", ")}`,
+				connectionId,
+				undefined,
+				{ symbols },
+			);
+		},
+		authFailure({ userId, channel, reason }) {
+			emit(
+				"warn",
+				"auth.failure",
+				`Authorization failed for channel ${channel}: ${reason}`,
+				undefined,
+				userId,
+				{ channel, reason },
+			);
+		},
+	};
+}
+
+function createSystemHandlers(
+	emit: EmitEntry,
+): Pick<
+	WebSocketLogger,
+	"rateLimitExceeded" | "broadcastError" | "heartbeatPing" | "heartbeatPong" | "heartbeatTimeout"
+> {
+	return {
+		rateLimitExceeded({ connectionId, userId, reason }) {
+			emit("warn", "rate_limit.exceeded", `Rate limit exceeded: ${reason}`, connectionId, userId, {
+				reason,
+			});
+		},
+		broadcastError({ connectionId, error }) {
+			emit("error", "broadcast.error", `Broadcast error: ${error}`, connectionId, undefined, {
+				error,
+			});
+		},
+		heartbeatPing({ connectionId }) {
+			emit("debug", "heartbeat.ping", "Heartbeat ping sent", connectionId);
+		},
+		heartbeatPong({ connectionId, latency }) {
+			emit(
+				"debug",
+				"heartbeat.pong",
+				`Heartbeat pong received (latency: ${latency}ms)`,
+				connectionId,
+				undefined,
+				{ latency },
+			);
+		},
+		heartbeatTimeout({ connectionId }) {
+			emit("warn", "heartbeat.timeout", "Heartbeat timeout", connectionId);
+		},
+	};
+}
+
+export function createWebSocketLogger(config: Partial<LoggerConfig> = {}): WebSocketLogger {
+	const fullConfig: LoggerConfig = { ...DEFAULT_LOGGER_CONFIG, ...config };
+	const log = createLogDispatcher(fullConfig);
+	const createEntry = createEntryFactory();
+	const emit = createEmitter(log, createEntry);
 
 	return {
 		config: fullConfig,
-
 		setLevel(level: LogLevel) {
 			fullConfig.level = level;
 		},
-
-		connectionAttempt({ userId, ip, userAgent }) {
-			log(
-				createEntry(
-					"info",
-					"connection.attempt",
-					`Connection attempt from ${ip}`,
-					undefined,
-					userId,
-					{ ip, userAgent },
-				),
-			);
-		},
-
-		connectionSuccess({ connectionId, userId, protocol }) {
-			log(
-				createEntry(
-					"info",
-					"connection.success",
-					`Connection established: ${connectionId}`,
-					connectionId,
-					userId,
-					{ protocol },
-				),
-			);
-		},
-
-		connectionFailure({ userId, ip, reason }) {
-			log(
-				createEntry(
-					"warn",
-					"connection.failure",
-					`Connection failed from ${ip}: ${reason}`,
-					undefined,
-					userId,
-					{ ip, reason },
-				),
-			);
-		},
-
-		connectionClose({ connectionId, userId, duration, reason }) {
-			log(
-				createEntry(
-					"info",
-					"connection.close",
-					`Connection closed: ${connectionId} (duration: ${duration}ms)`,
-					connectionId,
-					userId,
-					{ duration, reason },
-				),
-			);
-		},
-
-		reconnectAttempt({ userId, connectionId, attemptCount }) {
-			log(
-				createEntry(
-					"info",
-					"connection.reconnect",
-					`Reconnection attempt ${attemptCount}`,
-					connectionId,
-					userId,
-					{ attemptCount },
-				),
-			);
-		},
-
-		messageReceived({ connectionId, type, size }) {
-			log(
-				createEntry(
-					"debug",
-					"message.received",
-					`Received ${type} (${size} bytes)`,
-					connectionId,
-					undefined,
-					{ type, size },
-				),
-			);
-		},
-
-		messageSent({ connectionId, type, size }) {
-			log(
-				createEntry(
-					"debug",
-					"message.sent",
-					`Sent ${type} (${size} bytes)`,
-					connectionId,
-					undefined,
-					{ type, size },
-				),
-			);
-		},
-
-		messageInvalid({ connectionId, error, raw }) {
-			const truncated =
-				raw && fullConfig.includeRawMessages
-					? truncateMessage(raw, fullConfig.maxRawMessageLength)
-					: undefined;
-			log(
-				createEntry(
-					"warn",
-					"message.invalid",
-					`Invalid message: ${error}`,
-					connectionId,
-					undefined,
-					{ error, raw: truncated },
-				),
-			);
-		},
-
-		channelSubscribe({ connectionId, userId, channels }) {
-			log(
-				createEntry(
-					"info",
-					"subscribe.channel",
-					`Subscribed to channels: ${channels.join(", ")}`,
-					connectionId,
-					userId,
-					{ channels },
-				),
-			);
-		},
-
-		channelUnsubscribe({ connectionId, channels }) {
-			log(
-				createEntry(
-					"info",
-					"unsubscribe.channel",
-					`Unsubscribed from channels: ${channels.join(", ")}`,
-					connectionId,
-					undefined,
-					{ channels },
-				),
-			);
-		},
-
-		symbolSubscribe({ connectionId, symbols }) {
-			log(
-				createEntry(
-					"info",
-					"subscribe.symbol",
-					`Subscribed to symbols: ${symbols.join(", ")}`,
-					connectionId,
-					undefined,
-					{ symbols },
-				),
-			);
-		},
-
-		symbolUnsubscribe({ connectionId, symbols }) {
-			log(
-				createEntry(
-					"info",
-					"unsubscribe.symbol",
-					`Unsubscribed from symbols: ${symbols.join(", ")}`,
-					connectionId,
-					undefined,
-					{ symbols },
-				),
-			);
-		},
-
-		authFailure({ userId, channel, reason }) {
-			log(
-				createEntry(
-					"warn",
-					"auth.failure",
-					`Authorization failed for channel ${channel}: ${reason}`,
-					undefined,
-					userId,
-					{ channel, reason },
-				),
-			);
-		},
-
-		rateLimitExceeded({ connectionId, userId, reason }) {
-			log(
-				createEntry(
-					"warn",
-					"rate_limit.exceeded",
-					`Rate limit exceeded: ${reason}`,
-					connectionId,
-					userId,
-					{ reason },
-				),
-			);
-		},
-
-		broadcastError({ connectionId, error }) {
-			log(
-				createEntry(
-					"error",
-					"broadcast.error",
-					`Broadcast error: ${error}`,
-					connectionId,
-					undefined,
-					{ error },
-				),
-			);
-		},
-
-		heartbeatPing({ connectionId }) {
-			log(createEntry("debug", "heartbeat.ping", "Heartbeat ping sent", connectionId));
-		},
-
-		heartbeatPong({ connectionId, latency }) {
-			log(
-				createEntry(
-					"debug",
-					"heartbeat.pong",
-					`Heartbeat pong received (latency: ${latency}ms)`,
-					connectionId,
-					undefined,
-					{ latency },
-				),
-			);
-		},
-
-		heartbeatTimeout({ connectionId }) {
-			log(createEntry("warn", "heartbeat.timeout", "Heartbeat timeout", connectionId));
-		},
-
+		...createConnectionHandlers(emit),
+		...createMessageHandlers(emit, fullConfig),
+		...createSubscriptionHandlers(emit),
+		...createSystemHandlers(emit),
 		log,
 	};
 }

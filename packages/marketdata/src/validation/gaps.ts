@@ -72,6 +72,32 @@ export function getExpectedIntervalMs(timeframe: Timeframe): number {
 	return TIMEFRAME_MINUTES[timeframe] * 60 * 1000;
 }
 
+function createEmptyGapResult(): GapDetectionResult {
+	return {
+		symbol: "",
+		timeframe: "1h",
+		totalCandles: 0,
+		gaps: [],
+		gapCount: 0,
+		totalMissingCandles: 0,
+		hasGaps: false,
+	};
+}
+
+function buildGapInfo(
+	previousTimestamp: string,
+	expectedIntervalMs: number,
+	actualInterval: number,
+): GapInfo {
+	const prevTime = new Date(previousTimestamp).getTime();
+	return {
+		expectedTimestamp: new Date(prevTime + expectedIntervalMs).toISOString(),
+		previousTimestamp,
+		gapMinutes: actualInterval / (1000 * 60),
+		gapCandles: Math.floor(actualInterval / expectedIntervalMs) - 1,
+	};
+}
+
 // ============================================
 // Gap Detection
 // ============================================
@@ -85,28 +111,12 @@ export function getExpectedIntervalMs(timeframe: Timeframe): number {
  */
 export function detectGaps(candles: Candle[], toleranceMultiplier = 1.5): GapDetectionResult {
 	if (candles.length === 0) {
-		return {
-			symbol: "",
-			timeframe: "1h",
-			totalCandles: 0,
-			gaps: [],
-			gapCount: 0,
-			totalMissingCandles: 0,
-			hasGaps: false,
-		};
+		return createEmptyGapResult();
 	}
 
 	const firstCandle = candles[0];
 	if (!firstCandle) {
-		return {
-			symbol: "",
-			timeframe: "1h",
-			totalCandles: 0,
-			gaps: [],
-			gapCount: 0,
-			totalMissingCandles: 0,
-			hasGaps: false,
-		};
+		return createEmptyGapResult();
 	}
 	const timeframe = firstCandle.timeframe;
 	const expectedIntervalMs = getExpectedIntervalMs(timeframe);
@@ -127,17 +137,9 @@ export function detectGaps(candles: Candle[], toleranceMultiplier = 1.5): GapDet
 		const actualInterval = currTime - prevTime;
 
 		if (actualInterval > toleranceMs) {
-			const gapMinutes = actualInterval / (1000 * 60);
-			const gapCandles = Math.floor(actualInterval / expectedIntervalMs) - 1;
-
-			gaps.push({
-				expectedTimestamp: new Date(prevTime + expectedIntervalMs).toISOString(),
-				previousTimestamp: prev.timestamp,
-				gapMinutes,
-				gapCandles,
-			});
-
-			totalMissingCandles += gapCandles;
+			const gap = buildGapInfo(prev.timestamp, expectedIntervalMs, actualInterval);
+			gaps.push(gap);
+			totalMissingCandles += gap.gapCandles;
 		}
 	}
 

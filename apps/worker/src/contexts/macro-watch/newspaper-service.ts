@@ -30,6 +30,64 @@ export class NewspaperService {
 		this.config = config;
 	}
 
+	private createSkippedResult(message: string): NewspaperCompileResult {
+		return { compiled: false, entryCount: 0, message };
+	}
+
+	private async getEntriesSincePreviousClose(
+		repo: MacroWatchRepository,
+	): Promise<Awaited<ReturnType<MacroWatchRepository["getEntriesSinceClose"]>>> {
+		const calendar = getCalendarService();
+		if (!calendar) {
+			throw new Error("CalendarService not available");
+		}
+
+		const prevClose = await calendar.getPreviousTradingDay(new Date());
+		const prevCloseTime = new Date(prevClose);
+		prevCloseTime.setUTCHours(21, 0, 0, 0);
+		return repo.getEntriesSinceClose(prevCloseTime.toISOString());
+	}
+
+	private applySectionLimit(compiled: ReturnType<typeof compileMorningNewspaper>): void {
+		const maxBulletsPerSection = this.config.maxBulletsPerSection;
+		if (!maxBulletsPerSection || maxBulletsPerSection <= 0) {
+			return;
+		}
+
+		const limitedSections = {
+			macro: compiled.storageInput.sections.macro.slice(0, maxBulletsPerSection),
+			universe: compiled.storageInput.sections.universe.slice(0, maxBulletsPerSection),
+			predictionMarkets: compiled.storageInput.sections.predictionMarkets.slice(
+				0,
+				maxBulletsPerSection,
+			),
+			economicCalendar: compiled.storageInput.sections.economicCalendar.slice(
+				0,
+				maxBulletsPerSection,
+			),
+		};
+
+		compiled.storageInput.sections = limitedSections;
+		compiled.content.sections = {
+			macro: limitedSections.macro.join("\n"),
+			universe: limitedSections.universe.join("\n"),
+			predictionMarkets: limitedSections.predictionMarkets.join("\n"),
+			economicCalendar: limitedSections.economicCalendar.join("\n"),
+		};
+		compiled.content.summary = formatNewspaperForLLM(limitedSections);
+	}
+
+	private buildSuccessResult(content: {
+		entryCount: number;
+		sections: { macro: string; universe: string };
+	}): NewspaperCompileResult {
+		return {
+			compiled: true,
+			entryCount: content.entryCount,
+			message: `Compiled ${content.entryCount} entries (${content.sections.macro.length} macro, ${content.sections.universe.length} universe)`,
+		};
+	}
+
 	/**
 	 * Compile the morning newspaper from overnight MacroWatch entries.
 	 * Fetches all entries since previous market close and summarizes them.
@@ -40,74 +98,44 @@ export class NewspaperService {
 	async compile(symbols: string[]): Promise<NewspaperCompileResult> {
 		if (this.running) {
 			log.info({}, "Skipping newspaper compilation - already running");
-			return { compiled: false, entryCount: 0, message: "Already running" };
+			return this.createSkippedResult("Already running");
 		}
 
 		this.running = true;
 
 		try {
-			const calendar = getCalendarService();
-			if (!calendar) {
-				log.warn({}, "CalendarService not available, cannot compile newspaper");
-				return { compiled: false, entryCount: 0, message: "CalendarService not available" };
-			}
-
-			const prevClose = await calendar.getPreviousTradingDay(new Date());
-			const prevCloseTime = new Date(prevClose);
-			// Set to 4:00 PM ET (market close)
-			prevCloseTime.setUTCHours(21, 0, 0, 0); // 4 PM ET = 21:00 UTC
-
-			// Fetch all entries since previous close
 			const repo = new MacroWatchRepository();
-			const entries = await repo.getEntriesSinceClose(prevCloseTime.toISOString());
+			const entries = await this.getEntriesSincePreviousClose(repo);
 
 			if (entries.length === 0) {
 				log.info({}, "No overnight entries to compile");
-				return { compiled: false, entryCount: 0, message: "No overnight entries to compile" };
+				return this.createSkippedResult("No overnight entries to compile");
 			}
 
-			// Compile the newspaper
-			const { content, storageInput } = compileMorningNewspaper(entries, symbols);
-			const maxBulletsPerSection = this.config.maxBulletsPerSection;
-			if (maxBulletsPerSection && maxBulletsPerSection > 0) {
-				const limitedSections = {
-					macro: storageInput.sections.macro.slice(0, maxBulletsPerSection),
-					universe: storageInput.sections.universe.slice(0, maxBulletsPerSection),
-					predictionMarkets: storageInput.sections.predictionMarkets.slice(0, maxBulletsPerSection),
-					economicCalendar: storageInput.sections.economicCalendar.slice(0, maxBulletsPerSection),
-				};
+			const compiled = compileMorningNewspaper(entries, symbols);
+			this.applySectionLimit(compiled);
 
-				storageInput.sections = limitedSections;
-				content.sections = {
-					macro: limitedSections.macro.join("\n"),
-					universe: limitedSections.universe.join("\n"),
-					predictionMarkets: limitedSections.predictionMarkets.join("\n"),
-					economicCalendar: limitedSections.economicCalendar.join("\n"),
-				};
-				content.summary = formatNewspaperForLLM(limitedSections);
-			}
-
-			// Save to database (upsert to handle re-compilation on same day)
-			await repo.upsertNewspaper(storageInput);
+			await repo.upsertNewspaper(compiled.storageInput);
 
 			this.lastCompile = new Date();
 
 			log.info(
 				{
-					date: content.date,
-					entryCount: content.entryCount,
-					macroCount: content.sections.macro.length,
-					universeCount: content.sections.universe.length,
+					date: compiled.content.date,
+					entryCount: compiled.content.entryCount,
+					macroCount: compiled.content.sections.macro.length,
+					universeCount: compiled.content.sections.universe.length,
 				},
 				"Morning newspaper compiled",
 			);
 
-			return {
-				compiled: true,
-				entryCount: content.entryCount,
-				message: `Compiled ${content.entryCount} entries (${content.sections.macro.length} macro, ${content.sections.universe.length} universe)`,
-			};
+			return this.buildSuccessResult(compiled.content);
 		} catch (error) {
+			if (error instanceof Error && error.message === "CalendarService not available") {
+				log.warn({}, "CalendarService not available, cannot compile newspaper");
+				return this.createSkippedResult("CalendarService not available");
+			}
+
 			log.error(
 				{ error: error instanceof Error ? error.message : String(error) },
 				"Newspaper compilation failed",

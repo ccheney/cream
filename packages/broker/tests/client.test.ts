@@ -103,16 +103,13 @@ describe("BrokerError", () => {
 	});
 });
 
-describe("LIVE protection", () => {
-	it("allows PAPER orders without confirmation", async () => {
+describe("LIVE protection blocking", () => {
+	it("allows PAPER orders without confirmation", () => {
 		const client = createAlpacaClient({
 			apiKey: "test-key",
 			apiSecret: "test-secret",
 			environment: "PAPER",
 		});
-
-		// This would fail with network error, not LIVE_PROTECTION
-		// Just verify it doesn't throw LIVE_PROTECTION synchronously
 		expect(client.getEnvironment()).toBe("PAPER");
 	});
 
@@ -122,8 +119,6 @@ describe("LIVE protection", () => {
 			apiSecret: "test-secret",
 			environment: "LIVE",
 		});
-
-		// This should throw LIVE_PROTECTION before making any network call
 		await expect(
 			client.submitOrder({
 				clientOrderId: "test-order",
@@ -135,7 +130,9 @@ describe("LIVE protection", () => {
 			}),
 		).rejects.toThrow(BrokerError);
 	});
+});
 
+describe("LIVE protection bypass", () => {
 	it(
 		"allows LIVE orders with confirmation in order ID",
 		async () => {
@@ -144,8 +141,6 @@ describe("LIVE protection", () => {
 				apiSecret: "test-secret",
 				environment: "LIVE",
 			});
-
-			// This should NOT throw LIVE_PROTECTION (but will fail with network error)
 			try {
 				await client.submitOrder({
 					clientOrderId: "test-LIVE-CONFIRMED-order",
@@ -156,7 +151,6 @@ describe("LIVE protection", () => {
 					timeInForce: "day",
 				});
 			} catch (error) {
-				// Should fail with NETWORK_ERROR or INVALID_CREDENTIALS, not LIVE_PROTECTION
 				expect((error as BrokerError).code).not.toBe("LIVE_PROTECTION");
 			}
 		},
@@ -170,8 +164,6 @@ describe("LIVE protection", () => {
 			environment: "LIVE",
 			requireLiveConfirmation: false,
 		});
-
-		// This should NOT throw LIVE_PROTECTION (but will fail with network error)
 		try {
 			await client.submitOrder({
 				clientOrderId: "test-order",

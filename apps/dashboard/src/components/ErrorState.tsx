@@ -1,4 +1,3 @@
-// biome-ignore-all lint/suspicious/noArrayIndexKey: Action buttons use stable static array
 /**
  * Error State Component
  *
@@ -41,6 +40,80 @@ export interface ErrorStateProps {
 	icon?: ReactNode;
 	/** Test ID */
 	testId?: string;
+}
+
+type ErrorStateSize = NonNullable<ErrorStateProps["size"]>;
+
+function getActionIdentifier(action: ErrorStateAction): string {
+	return `${action.label}-${action.variant ?? "primary"}`;
+}
+
+function buildActions(
+	onRetry: ErrorStateProps["onRetry"],
+	actions: ErrorStateAction[],
+): ErrorStateAction[] {
+	if (!onRetry) {
+		return actions;
+	}
+	return [{ label: "Try Again", onClick: onRetry, variant: "primary" }, ...actions];
+}
+
+function getContainerSizeClasses(size: ErrorStateSize): string {
+	if (size === "compact") {
+		return "py-6 px-4";
+	}
+	if (size === "full") {
+		return "py-16 px-8 min-h-[400px]";
+	}
+	return "py-12 px-6";
+}
+
+function getIconClassName(isCompact: boolean): string {
+	return isCompact ? "w-8 h-8" : "w-10 h-10";
+}
+
+function getActionVariantClass(variant: ErrorStateAction["variant"]): string {
+	if (variant === "secondary") {
+		return "text-stone-600 dark:text-night-200 bg-cream-100 dark:bg-night-700 hover:bg-cream-200 dark:hover:bg-night-600";
+	}
+	return "text-white bg-amber-600 hover:bg-amber-700 dark:bg-amber-600 dark:hover:bg-amber-700";
+}
+
+interface ErrorActionsProps {
+	actions: ErrorStateAction[];
+	isCompact: boolean;
+	testId: string;
+}
+
+function ErrorActions({ actions, isCompact, testId }: ErrorActionsProps) {
+	if (actions.length === 0) {
+		return null;
+	}
+
+	return (
+		<div className={`flex items-center gap-2 ${isCompact ? "mt-4" : "mt-5"}`}>
+			{actions.map((action) => {
+				const actionId = getActionIdentifier(action);
+				return (
+					<button
+						key={actionId}
+						type="button"
+						onClick={action.onClick}
+						className={`
+							inline-flex items-center gap-1.5
+							${isCompact ? "px-3 py-1.5 text-xs" : "px-3 py-1.5 text-sm"}
+							font-medium rounded-md transition-colors
+							${getActionVariantClass(action.variant)}
+						`}
+						data-testid={`${testId}-action-${actionId}`}
+					>
+						{action.label === "Try Again" && <RefreshIcon className="w-3.5 h-3.5" />}
+						{action.label}
+					</button>
+				);
+			})}
+		</div>
+	);
 }
 
 // ============================================
@@ -137,12 +210,8 @@ export function ErrorState({
 }: ErrorStateProps) {
 	const isCompact = size === "compact";
 	const isFull = size === "full";
-
-	// Combine retry with custom actions
-	const allActions: ErrorStateAction[] = [
-		...(onRetry ? [{ label: "Try Again", onClick: onRetry, variant: "primary" as const }] : []),
-		...actions,
-	];
+	const allActions = buildActions(onRetry, actions);
+	const containerClasses = getContainerSizeClasses(size);
 
 	return (
 		<div
@@ -150,7 +219,7 @@ export function ErrorState({
 			data-testid={testId}
 			className={`
         flex flex-col items-center justify-center text-center
-        ${isCompact ? "py-6 px-4" : isFull ? "py-16 px-8 min-h-[400px]" : "py-12 px-6"}
+        ${containerClasses}
         ${isFull ? "bg-cream-50 dark:bg-night-900 rounded-lg" : ""}
       `}
 		>
@@ -161,7 +230,7 @@ export function ErrorState({
           ${isCompact ? "mb-3" : "mb-4"}
         `}
 			>
-				{icon ?? <WarningIcon className={isCompact ? "w-8 h-8" : "w-10 h-10"} />}
+				{icon ?? <WarningIcon className={getIconClassName(isCompact)} />}
 			</div>
 
 			{/* Title */}
@@ -181,11 +250,11 @@ export function ErrorState({
 			<p
 				className={`
           text-stone-500 dark:text-night-300
-          ${isCompact ? "text-sm" : "text-sm"}
+          text-sm
           max-w-sm
         `}
 			>
-				{isCompact ? message : message}
+				{message}
 			</p>
 
 			{/* Hint */}
@@ -200,32 +269,7 @@ export function ErrorState({
 				</p>
 			)}
 
-			{/* Actions */}
-			{allActions.length > 0 && (
-				<div className={`flex items-center gap-2 ${isCompact ? "mt-4" : "mt-5"}`}>
-					{allActions.map((action, index) => (
-						<button
-							key={`action-${index}`}
-							type="button"
-							onClick={action.onClick}
-							className={`
-                inline-flex items-center gap-1.5
-                ${isCompact ? "px-3 py-1.5 text-xs" : "px-3 py-1.5 text-sm"}
-                font-medium rounded-md transition-colors
-                ${
-									action.variant === "secondary"
-										? "text-stone-600 dark:text-night-200 bg-cream-100 dark:bg-night-700 hover:bg-cream-200 dark:hover:bg-night-600"
-										: "text-white bg-amber-600 hover:bg-amber-700 dark:bg-amber-600 dark:hover:bg-amber-700"
-								}
-              `}
-							data-testid={`${testId}-action-${index}`}
-						>
-							{action.label === "Try Again" && <RefreshIcon className="w-3.5 h-3.5" />}
-							{action.label}
-						</button>
-					))}
-				</div>
-			)}
+			<ErrorActions actions={allActions} isCompact={isCompact} testId={testId} />
 		</div>
 	);
 }

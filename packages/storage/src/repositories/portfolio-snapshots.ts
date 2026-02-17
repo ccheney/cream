@@ -232,6 +232,51 @@ export class PortfolioSnapshotsRepository {
 		}));
 	}
 
+	private async getPerformanceAggregate(envType: "PAPER" | "LIVE", fromDate: Date) {
+		const [aggRow] = await this.db
+			.select({
+				maxNav: sql<string>`MAX(${portfolioSnapshots.nav}::numeric)`,
+				minNav: sql<string>`MIN(${portfolioSnapshots.nav}::numeric)`,
+				snapshotCount: count(),
+			})
+			.from(portfolioSnapshots)
+			.where(
+				and(
+					eq(portfolioSnapshots.environment, envType),
+					gte(portfolioSnapshots.timestamp, fromDate),
+				),
+			);
+
+		return aggRow;
+	}
+
+	private async getStartNav(envType: "PAPER" | "LIVE", fromDate: Date): Promise<number> {
+		const [startRow] = await this.db
+			.select({ nav: portfolioSnapshots.nav })
+			.from(portfolioSnapshots)
+			.where(
+				and(
+					eq(portfolioSnapshots.environment, envType),
+					gte(portfolioSnapshots.timestamp, fromDate),
+				),
+			)
+			.orderBy(portfolioSnapshots.timestamp)
+			.limit(1);
+
+		return startRow?.nav ? Number(startRow.nav) : 0;
+	}
+
+	private async getEndNav(envType: "PAPER" | "LIVE"): Promise<number> {
+		const [endRow] = await this.db
+			.select({ nav: portfolioSnapshots.nav })
+			.from(portfolioSnapshots)
+			.where(eq(portfolioSnapshots.environment, envType))
+			.orderBy(desc(portfolioSnapshots.timestamp))
+			.limit(1);
+
+		return endRow?.nav ? Number(endRow.nav) : 0;
+	}
+
 	async getPerformanceMetrics(
 		environment: string,
 		days = 30,
@@ -249,45 +294,9 @@ export class PortfolioSnapshotsRepository {
 		fromDate.setDate(fromDate.getDate() - days);
 
 		const envType = environment as "PAPER" | "LIVE";
-
-		// Get aggregates
-		const [aggRow] = await this.db
-			.select({
-				maxNav: sql<string>`MAX(${portfolioSnapshots.nav}::numeric)`,
-				minNav: sql<string>`MIN(${portfolioSnapshots.nav}::numeric)`,
-				snapshotCount: count(),
-			})
-			.from(portfolioSnapshots)
-			.where(
-				and(
-					eq(portfolioSnapshots.environment, envType),
-					gte(portfolioSnapshots.timestamp, fromDate),
-				),
-			);
-
-		// Get start NAV
-		const [startRow] = await this.db
-			.select({ nav: portfolioSnapshots.nav })
-			.from(portfolioSnapshots)
-			.where(
-				and(
-					eq(portfolioSnapshots.environment, envType),
-					gte(portfolioSnapshots.timestamp, fromDate),
-				),
-			)
-			.orderBy(portfolioSnapshots.timestamp)
-			.limit(1);
-
-		// Get end NAV
-		const [endRow] = await this.db
-			.select({ nav: portfolioSnapshots.nav })
-			.from(portfolioSnapshots)
-			.where(eq(portfolioSnapshots.environment, envType))
-			.orderBy(desc(portfolioSnapshots.timestamp))
-			.limit(1);
-
-		const startNav = startRow?.nav ? Number(startRow.nav) : 0;
-		const endNav = endRow?.nav ? Number(endRow.nav) : 0;
+		const aggRow = await this.getPerformanceAggregate(envType, fromDate);
+		const startNav = await this.getStartNav(envType, fromDate);
+		const endNav = await this.getEndNav(envType);
 		const periodReturn = endNav - startNav;
 		const periodReturnPct = startNav > 0 ? (periodReturn / startNav) * 100 : 0;
 		const maxNav = aggRow?.maxNav ? Number(aggRow.maxNav) : 0;

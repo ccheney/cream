@@ -86,6 +86,156 @@ const VARIANT_STYLES: Record<
 	},
 };
 
+const PANEL_BASE_STYLES: Omit<React.CSSProperties, "backgroundColor" | "border"> = {
+	display: "flex",
+	gap: "12px",
+	padding: "16px",
+	borderRadius: "8px",
+	position: "relative",
+};
+
+const ICON_STYLES: Omit<React.CSSProperties, "color"> = {
+	display: "flex",
+	alignItems: "center",
+	justifyContent: "center",
+	width: "24px",
+	height: "24px",
+	fontSize: "18px",
+	flexShrink: 0,
+};
+
+const CONTENT_STYLES: React.CSSProperties = {
+	flex: 1,
+	display: "flex",
+	flexDirection: "column",
+	gap: "8px",
+};
+
+const TEXT_STYLES = {
+	title: { fontWeight: 600, fontSize: "14px", color: "#1c1917", margin: 0 },
+	message: { fontSize: "14px", color: "#44403c", margin: 0, lineHeight: 1.5 },
+	hint: { fontSize: "13px", color: "#78716c", margin: 0, lineHeight: 1.4 },
+	errorCode: { fontSize: "12px", color: "#a8a29e", fontFamily: "monospace", marginTop: "4px" },
+	actions: { display: "flex", gap: "8px", marginTop: "8px" },
+};
+
+const BUTTON_BASE_STYLES: React.CSSProperties = {
+	padding: "8px 16px",
+	borderRadius: "6px",
+	fontSize: "14px",
+	fontWeight: 500,
+	cursor: "pointer",
+	border: "none",
+	transition: "background-color 0.15s, opacity 0.15s",
+};
+
+const CLOSE_BUTTON_STYLES: React.CSSProperties = {
+	position: "absolute",
+	top: "12px",
+	right: "12px",
+	width: "24px",
+	height: "24px",
+	display: "flex",
+	alignItems: "center",
+	justifyContent: "center",
+	border: "none",
+	background: "transparent",
+	cursor: "pointer",
+	color: "#78716c",
+	fontSize: "18px",
+	padding: 0,
+	borderRadius: "4px",
+};
+
+// ============================================
+// Helpers
+// ============================================
+
+function getPanelStyles(variantStyle: (typeof VARIANT_STYLES)[ErrorPanelVariant]) {
+	return {
+		containerStyles: {
+			...PANEL_BASE_STYLES,
+			backgroundColor: variantStyle.background,
+			border: `1px solid ${variantStyle.border}`,
+		},
+		iconStyles: {
+			...ICON_STYLES,
+			color: variantStyle.iconColor,
+		},
+		primaryButtonStyles: {
+			...BUTTON_BASE_STYLES,
+			backgroundColor: variantStyle.border,
+			color: "#ffffff",
+		},
+		secondaryButtonStyles: {
+			...BUTTON_BASE_STYLES,
+			backgroundColor: "transparent",
+			color: "#44403c",
+			border: "1px solid #d6d3d1",
+		},
+	};
+}
+
+function useEscapeToDismiss(dismissible: boolean, onDismiss?: () => void) {
+	const handleKeyDown = useCallback(
+		(event: KeyboardEvent) => {
+			if (event.key === "Escape" && dismissible && onDismiss) {
+				onDismiss();
+			}
+		},
+		[dismissible, onDismiss],
+	);
+
+	useEffect(() => {
+		if (!dismissible) {
+			return;
+		}
+
+		document.addEventListener("keydown", handleKeyDown);
+		return () => document.removeEventListener("keydown", handleKeyDown);
+	}, [dismissible, handleKeyDown]);
+}
+
+function useAutoFocusPanel(autoFocus: boolean, panelRef: React.RefObject<HTMLDivElement | null>) {
+	useEffect(() => {
+		if (autoFocus && panelRef.current) {
+			panelRef.current.focus();
+		}
+	}, [autoFocus, panelRef]);
+}
+
+function ErrorPanelActions({
+	actions,
+	primaryButtonStyles,
+	secondaryButtonStyles,
+	testId,
+}: {
+	actions?: ErrorAction[];
+	primaryButtonStyles: React.CSSProperties;
+	secondaryButtonStyles: React.CSSProperties;
+	testId: string;
+}) {
+	if (!actions || actions.length === 0) {
+		return null;
+	}
+
+	return (
+		<div style={TEXT_STYLES.actions}>
+			{actions.map((action) => (
+				<button
+					key={action.label}
+					type="button"
+					onClick={action.onClick}
+					style={action.variant === "secondary" ? secondaryButtonStyles : primaryButtonStyles}
+					data-testid={`${testId}-action-${action.label.toLowerCase().replace(/\s+/g, "-")}`}
+				>
+					{action.label}
+				</button>
+			))}
+		</div>
+	);
+}
+
 // ============================================
 // Component
 // ============================================
@@ -120,134 +270,10 @@ export function ErrorPanel({
 }: ErrorPanelProps) {
 	const panelRef = useRef<HTMLDivElement>(null);
 	const variantStyle = VARIANT_STYLES[variant];
+	const panelStyles = getPanelStyles(variantStyle);
 
-	// Handle keyboard dismiss
-	const handleKeyDown = useCallback(
-		(event: KeyboardEvent) => {
-			if (event.key === "Escape" && dismissible && onDismiss) {
-				onDismiss();
-			}
-		},
-		[dismissible, onDismiss],
-	);
-
-	useEffect(() => {
-		if (dismissible) {
-			document.addEventListener("keydown", handleKeyDown);
-			return () => document.removeEventListener("keydown", handleKeyDown);
-		}
-		return undefined;
-	}, [dismissible, handleKeyDown]);
-
-	// Auto-focus on mount
-	useEffect(() => {
-		if (autoFocus && panelRef.current) {
-			panelRef.current.focus();
-		}
-	}, [autoFocus]);
-
-	const containerStyles: React.CSSProperties = {
-		display: "flex",
-		gap: "12px",
-		padding: "16px",
-		backgroundColor: variantStyle.background,
-		border: `1px solid ${variantStyle.border}`,
-		borderRadius: "8px",
-		position: "relative",
-	};
-
-	const iconStyles: React.CSSProperties = {
-		display: "flex",
-		alignItems: "center",
-		justifyContent: "center",
-		width: "24px",
-		height: "24px",
-		color: variantStyle.iconColor,
-		fontSize: "18px",
-		flexShrink: 0,
-	};
-
-	const contentStyles: React.CSSProperties = {
-		flex: 1,
-		display: "flex",
-		flexDirection: "column",
-		gap: "8px",
-	};
-
-	const titleStyles: React.CSSProperties = {
-		fontWeight: 600,
-		fontSize: "14px",
-		color: "#1c1917",
-		margin: 0,
-	};
-
-	const messageStyles: React.CSSProperties = {
-		fontSize: "14px",
-		color: "#44403c",
-		margin: 0,
-		lineHeight: 1.5,
-	};
-
-	const hintStyles: React.CSSProperties = {
-		fontSize: "13px",
-		color: "#78716c",
-		margin: 0,
-		lineHeight: 1.4,
-	};
-
-	const errorCodeStyles: React.CSSProperties = {
-		fontSize: "12px",
-		color: "#a8a29e",
-		fontFamily: "monospace",
-		marginTop: "4px",
-	};
-
-	const actionsStyles: React.CSSProperties = {
-		display: "flex",
-		gap: "8px",
-		marginTop: "8px",
-	};
-
-	const buttonBaseStyles: React.CSSProperties = {
-		padding: "8px 16px",
-		borderRadius: "6px",
-		fontSize: "14px",
-		fontWeight: 500,
-		cursor: "pointer",
-		border: "none",
-		transition: "background-color 0.15s, opacity 0.15s",
-	};
-
-	const primaryButtonStyles: React.CSSProperties = {
-		...buttonBaseStyles,
-		backgroundColor: variantStyle.border,
-		color: "#ffffff",
-	};
-
-	const secondaryButtonStyles: React.CSSProperties = {
-		...buttonBaseStyles,
-		backgroundColor: "transparent",
-		color: "#44403c",
-		border: "1px solid #d6d3d1",
-	};
-
-	const closeButtonStyles: React.CSSProperties = {
-		position: "absolute",
-		top: "12px",
-		right: "12px",
-		width: "24px",
-		height: "24px",
-		display: "flex",
-		alignItems: "center",
-		justifyContent: "center",
-		border: "none",
-		background: "transparent",
-		cursor: "pointer",
-		color: "#78716c",
-		fontSize: "18px",
-		padding: 0,
-		borderRadius: "4px",
-	};
+	useEscapeToDismiss(dismissible, onDismiss);
+	useAutoFocusPanel(autoFocus, panelRef);
 
 	return (
 		<div
@@ -255,45 +281,32 @@ export function ErrorPanel({
 			role="alert"
 			aria-live="assertive"
 			data-testid={testId}
-			style={containerStyles}
+			style={panelStyles.containerStyles}
 			tabIndex={autoFocus ? -1 : undefined}
 		>
-			{/* Icon */}
-			<span style={iconStyles} aria-hidden="true">
+			<span style={panelStyles.iconStyles} aria-hidden="true">
 				{variantStyle.icon}
 			</span>
 
-			{/* Content */}
-			<div style={contentStyles}>
-				<h4 style={titleStyles}>{title}</h4>
-				<p style={messageStyles}>{message}</p>
-				{hint && <p style={hintStyles}>{hint}</p>}
-				{errorCode && <span style={errorCodeStyles}>Error code: {errorCode}</span>}
+			<div style={CONTENT_STYLES}>
+				<h4 style={TEXT_STYLES.title}>{title}</h4>
+				<p style={TEXT_STYLES.message}>{message}</p>
+				{hint && <p style={TEXT_STYLES.hint}>{hint}</p>}
+				{errorCode && <span style={TEXT_STYLES.errorCode}>Error code: {errorCode}</span>}
 
-				{/* Actions */}
-				{actions && actions.length > 0 && (
-					<div style={actionsStyles}>
-						{actions.map((action) => (
-							<button
-								key={action.label}
-								type="button"
-								onClick={action.onClick}
-								style={action.variant === "secondary" ? secondaryButtonStyles : primaryButtonStyles}
-								data-testid={`${testId}-action-${action.label.toLowerCase().replace(/\s+/g, "-")}`}
-							>
-								{action.label}
-							</button>
-						))}
-					</div>
-				)}
+				<ErrorPanelActions
+					actions={actions}
+					primaryButtonStyles={panelStyles.primaryButtonStyles}
+					secondaryButtonStyles={panelStyles.secondaryButtonStyles}
+					testId={testId}
+				/>
 			</div>
 
-			{/* Dismiss button */}
 			{dismissible && onDismiss && (
 				<button
 					type="button"
 					onClick={onDismiss}
-					style={closeButtonStyles}
+					style={CLOSE_BUTTON_STYLES}
 					aria-label="Dismiss error"
 					data-testid={`${testId}-dismiss`}
 				>

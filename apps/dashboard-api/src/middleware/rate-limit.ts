@@ -232,6 +232,7 @@ export function rateLimit(config: Partial<RateLimitConfig> = {}): MiddlewareHand
 		...DEFAULT_CONFIG,
 		...config,
 	};
+	const keyGenerator = mergedConfig.keyGenerator ?? defaultKeyGenerator;
 
 	// Start cleanup timer on first use
 	startCleanup();
@@ -242,8 +243,6 @@ export function rateLimit(config: Partial<RateLimitConfig> = {}): MiddlewareHand
 			return next();
 		}
 
-		// Generate key for this request
-		const keyGenerator = mergedConfig.keyGenerator ?? defaultKeyGenerator;
 		const key = keyGenerator(c);
 
 		// Check rate limit
@@ -255,39 +254,53 @@ export function rateLimit(config: Partial<RateLimitConfig> = {}): MiddlewareHand
 		c.header("X-RateLimit-Reset", String(Math.ceil(result.resetAt / 1000)));
 
 		if (result.isLimited) {
-			// Log the rate limit violation
 			const ip =
 				c.req.header("x-forwarded-for")?.split(",")[0]?.trim() ??
 				c.req.header("x-real-ip") ??
 				"unknown";
-			const userId = c.get("userId") as string | undefined;
-			const path = new URL(c.req.url).pathname;
-
-			log.warn(
-				{
-					ip,
-					userId: userId ?? "anonymous",
-					path,
-					limit: mergedConfig.maxRequests,
-					windowMs: mergedConfig.windowMs,
-				},
-				"Rate limit exceeded",
-			);
-
-			// Return 429 Too Many Requests
+			logRateLimitExceeded({
+				ip,
+				userId: (c.get("userId") as string | undefined) ?? "anonymous",
+				path: new URL(c.req.url).pathname,
+				config: mergedConfig,
+			});
 			c.header("Retry-After", String(result.retryAfter));
-			return c.json(
-				{
-					error: "Too Many Requests",
-					message: mergedConfig.message,
-					retryAfter: result.retryAfter,
-				},
-				429,
-			);
+			return c.json(createRateLimitResponse(mergedConfig.message, result.retryAfter), 429);
 		}
 
 		return next();
 	};
+}
+
+function createRateLimitResponse(message: string, retryAfter: number) {
+	return {
+		error: "Too Many Requests",
+		message,
+		retryAfter,
+	};
+}
+
+function logRateLimitExceeded({
+	ip,
+	userId,
+	path,
+	config,
+}: {
+	ip: string;
+	userId: string;
+	path: string;
+	config: RateLimitConfig;
+}): void {
+	log.warn(
+		{
+			ip,
+			userId,
+			path,
+			limit: config.maxRequests,
+			windowMs: config.windowMs,
+		},
+		"Rate limit exceeded",
+	);
 }
 
 // ============================================

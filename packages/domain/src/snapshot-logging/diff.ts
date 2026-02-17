@@ -91,16 +91,41 @@ export function diffSnapshots(
 	options: SnapshotDiffOptions = {},
 ): SnapshotDiffResult {
 	const { includeBars = false, includeQuotes = false, maxDiffs = 100 } = options;
-
+	const summary = createDiffSummary(previous, current);
 	const diffs: SnapshotDiffEntry[] = [];
-	const summary = {
+	addTopLevelDiffs(previous, current, summary, diffs);
+
+	const prevSymbols = mapSymbolsByTicker(previous);
+	const currSymbols = mapSymbolsByTicker(current);
+	collectAddedAndRemovedSymbols(prevSymbols, currSymbols, summary, diffs);
+	collectModifiedSymbols(prevSymbols, currSymbols, summary, diffs, includeBars, includeQuotes);
+
+	const limitedDiffs = diffs.slice(0, maxDiffs);
+
+	return {
+		identical: diffs.length === 0,
+		diffCount: diffs.length,
+		diffs: limitedDiffs,
+		summary,
+	};
+}
+
+function createDiffSummary(previous: MarketSnapshot, current: MarketSnapshot) {
+	return {
 		symbolsAdded: [] as string[],
 		symbolsRemoved: [] as string[],
 		symbolsModified: [] as string[],
 		regimeChanged: previous.regime !== current.regime,
 		marketStatusChanged: previous.marketStatus !== current.marketStatus,
 	};
+}
 
+function addTopLevelDiffs(
+	previous: MarketSnapshot,
+	current: MarketSnapshot,
+	summary: ReturnType<typeof createDiffSummary>,
+	diffs: SnapshotDiffEntry[],
+): void {
 	if (summary.regimeChanged) {
 		diffs.push({
 			path: "regime",
@@ -118,59 +143,70 @@ export function diffSnapshots(
 			changeType: "modified",
 		});
 	}
+}
 
-	const prevSymbols = new Map((previous.symbols ?? []).map((s) => [s.symbol, s]));
-	const currSymbols = new Map((current.symbols ?? []).map((s) => [s.symbol, s]));
+function mapSymbolsByTicker(snapshot: MarketSnapshot): Map<string, SymbolSnapshot> {
+	return new Map((snapshot.symbols ?? []).map((symbol) => [symbol.symbol, symbol]));
+}
 
+function collectAddedAndRemovedSymbols(
+	prevSymbols: Map<string, SymbolSnapshot>,
+	currSymbols: Map<string, SymbolSnapshot>,
+	summary: ReturnType<typeof createDiffSummary>,
+	diffs: SnapshotDiffEntry[],
+): void {
 	for (const [symbol] of currSymbols) {
-		if (!prevSymbols.has(symbol)) {
-			summary.symbolsAdded.push(symbol);
-			diffs.push({
-				path: `symbols.${symbol}`,
-				previous: undefined,
-				current: symbol,
-				changeType: "added",
-			});
+		if (prevSymbols.has(symbol)) {
+			continue;
 		}
+		summary.symbolsAdded.push(symbol);
+		diffs.push({
+			path: `symbols.${symbol}`,
+			previous: undefined,
+			current: symbol,
+			changeType: "added",
+		});
 	}
 
 	for (const [symbol] of prevSymbols) {
-		if (!currSymbols.has(symbol)) {
-			summary.symbolsRemoved.push(symbol);
-			diffs.push({
-				path: `symbols.${symbol}`,
-				previous: symbol,
-				current: undefined,
-				changeType: "removed",
-			});
+		if (currSymbols.has(symbol)) {
+			continue;
 		}
+		summary.symbolsRemoved.push(symbol);
+		diffs.push({
+			path: `symbols.${symbol}`,
+			previous: symbol,
+			current: undefined,
+			changeType: "removed",
+		});
 	}
+}
 
-	for (const [symbol, currSymbol] of currSymbols) {
-		const prevSymbol = prevSymbols.get(symbol);
-		if (!prevSymbol) {
+function collectModifiedSymbols(
+	prevSymbols: Map<string, SymbolSnapshot>,
+	currSymbols: Map<string, SymbolSnapshot>,
+	summary: ReturnType<typeof createDiffSummary>,
+	diffs: SnapshotDiffEntry[],
+	includeBars: boolean,
+	includeQuotes: boolean,
+): void {
+	for (const [symbol, currentSymbol] of currSymbols) {
+		const previousSymbol = prevSymbols.get(symbol);
+		if (!previousSymbol) {
 			continue;
 		}
 
 		const symbolDiffs = diffSymbolSnapshots(
-			prevSymbol,
-			currSymbol,
+			previousSymbol,
+			currentSymbol,
 			symbol,
 			includeBars,
 			includeQuotes,
 		);
-		if (symbolDiffs.length > 0) {
-			summary.symbolsModified.push(symbol);
-			diffs.push(...symbolDiffs);
+		if (symbolDiffs.length === 0) {
+			continue;
 		}
+		summary.symbolsModified.push(symbol);
+		diffs.push(...symbolDiffs);
 	}
-
-	const limitedDiffs = diffs.slice(0, maxDiffs);
-
-	return {
-		identical: diffs.length === 0,
-		diffCount: diffs.length,
-		diffs: limitedDiffs,
-		summary,
-	};
 }

@@ -1,12 +1,3 @@
-/**
- * Indicator Snapshot Routes
- *
- * API endpoints for retrieving unified indicator snapshots combining
- * real-time and batch indicator data.
- *
- * @see docs/plans/33-indicator-engine-v2.md
- */
-
 import { createRoute, OpenAPIHono, z } from "@hono/zod-openapi";
 import { HTTPException } from "hono/http-exception";
 import {
@@ -17,10 +8,6 @@ import {
 } from "../db.js";
 
 const app = new OpenAPIHono();
-
-// ============================================
-// Schema Definitions
-// ============================================
 
 const DataQualitySchema = z.enum(["COMPLETE", "PARTIAL", "STALE"]);
 
@@ -107,79 +94,78 @@ const BatchSnapshotsResponseSchema = z.object({
 	}),
 });
 
-// ============================================
-// Helper Functions
-// ============================================
+type DataQuality = z.infer<typeof DataQualitySchema>;
+type BatchSnapshot = z.infer<typeof BatchIndicatorSnapshotSchema>;
 
-function createEmptyValueIndicators(): z.infer<typeof ValueIndicatorsSchema> {
-	return {
-		pe_ratio_ttm: null,
-		pe_ratio_forward: null,
-		pb_ratio: null,
-		ev_ebitda: null,
-		earnings_yield: null,
-		dividend_yield: null,
-		cape_10yr: null,
-	};
+const EMPTY_VALUE: z.infer<typeof ValueIndicatorsSchema> = {
+	pe_ratio_ttm: null,
+	pe_ratio_forward: null,
+	pb_ratio: null,
+	ev_ebitda: null,
+	earnings_yield: null,
+	dividend_yield: null,
+	cape_10yr: null,
+};
+
+const EMPTY_QUALITY: z.infer<typeof QualityIndicatorsSchema> = {
+	gross_profitability: null,
+	roe: null,
+	roa: null,
+	asset_growth: null,
+	accruals_ratio: null,
+	cash_flow_quality: null,
+	beneish_m_score: null,
+};
+
+const EMPTY_SHORT_INTEREST: z.infer<typeof ShortInterestIndicatorsSchema> = {
+	short_interest: null,
+	short_interest_ratio: null,
+	days_to_cover: null,
+	short_pct_float: null,
+	short_interest_change: null,
+};
+
+const EMPTY_SENTIMENT: z.infer<typeof SentimentIndicatorsSchema> = {
+	sentiment_score: null,
+	sentiment_strength: null,
+	news_volume: null,
+	sentiment_momentum: null,
+	event_risk_flag: null,
+	news_sentiment: null,
+	social_sentiment: null,
+	analyst_sentiment: null,
+};
+
+const EMPTY_CORPORATE: z.infer<typeof CorporateIndicatorsSchema> = {
+	trailing_dividend_yield: null,
+	days_to_ex_dividend: null,
+	dividend_growth: null,
+	pending_split: null,
+};
+
+const EMPTY_MARKET: z.infer<typeof MarketContextSchema> = {
+	market_cap: null,
+	sector: null,
+	industry: null,
+};
+
+function nullableNumber(value: unknown): number | null {
+	return typeof value === "number" ? value : null;
 }
 
-function createEmptyQualityIndicators(): z.infer<typeof QualityIndicatorsSchema> {
-	return {
-		gross_profitability: null,
-		roe: null,
-		roa: null,
-		asset_growth: null,
-		accruals_ratio: null,
-		cash_flow_quality: null,
-		beneish_m_score: null,
-	};
+function nullableString(value: unknown): string | null {
+	return typeof value === "string" ? value : null;
 }
 
-function createEmptyShortInterestIndicators(): z.infer<typeof ShortInterestIndicatorsSchema> {
-	return {
-		short_interest: null,
-		short_interest_ratio: null,
-		days_to_cover: null,
-		short_pct_float: null,
-		short_interest_change: null,
-	};
-}
-
-function createEmptySentimentIndicators(): z.infer<typeof SentimentIndicatorsSchema> {
-	return {
-		sentiment_score: null,
-		sentiment_strength: null,
-		news_volume: null,
-		sentiment_momentum: null,
-		event_risk_flag: null,
-		news_sentiment: null,
-		social_sentiment: null,
-		analyst_sentiment: null,
-	};
-}
-
-function createEmptyCorporateIndicators(): z.infer<typeof CorporateIndicatorsSchema> {
-	return {
-		trailing_dividend_yield: null,
-		days_to_ex_dividend: null,
-		dividend_growth: null,
-		pending_split: null,
-	};
-}
-
-function createEmptyMarketContext(): z.infer<typeof MarketContextSchema> {
-	return {
-		market_cap: null,
-		sector: null,
-		industry: null,
-	};
+function nullableBoolean(value: unknown): boolean | null {
+	return typeof value === "boolean" ? value : null;
 }
 
 function determineDataQuality(
 	hasFundamentals: boolean,
 	hasShortInterest: boolean,
 	hasSentiment: boolean,
-): z.infer<typeof DataQualitySchema> {
+): DataQuality {
 	const count = [hasFundamentals, hasShortInterest, hasSentiment].filter(Boolean).length;
 	if (count >= 2) {
 		return "COMPLETE";
@@ -190,36 +176,141 @@ function determineDataQuality(
 	return "STALE";
 }
 
-// ============================================
-// Route Definitions
-// ============================================
+function mapFundamentals(fundamentals: Record<string, unknown> | null) {
+	if (!fundamentals) return { value: EMPTY_VALUE, quality: EMPTY_QUALITY, market: EMPTY_MARKET };
+	const f = fundamentals;
+	return {
+		value: {
+			pe_ratio_ttm: nullableNumber(f.peRatioTtm),
+			pe_ratio_forward: nullableNumber(f.peRatioForward),
+			pb_ratio: nullableNumber(f.pbRatio),
+			ev_ebitda: nullableNumber(f.evEbitda),
+			earnings_yield: nullableNumber(f.earningsYield),
+			dividend_yield: nullableNumber(f.dividendYield),
+			cape_10yr: nullableNumber(f.cape10yr),
+		},
+		quality: {
+			gross_profitability: nullableNumber(f.grossProfitability),
+			roe: nullableNumber(f.roe),
+			roa: nullableNumber(f.roa),
+			asset_growth: nullableNumber(f.assetGrowth),
+			accruals_ratio: nullableNumber(f.accrualsRatio),
+			cash_flow_quality: nullableNumber(f.cashFlowQuality),
+			beneish_m_score: nullableNumber(f.beneishMScore),
+		},
+		market: {
+			market_cap: nullableNumber(f.marketCap),
+			sector: nullableString(f.sector),
+			industry: nullableString(f.industry),
+		},
+	};
+}
 
-// GET /api/snapshots/:symbol - Get indicator snapshot for a single symbol
+function mapShortInterest(shortInterest: Record<string, unknown> | null) {
+	if (!shortInterest) {
+		return EMPTY_SHORT_INTEREST;
+	}
+	return {
+		short_interest: nullableNumber(shortInterest.shortInterest),
+		short_interest_ratio: nullableNumber(shortInterest.shortInterestRatio),
+		days_to_cover: nullableNumber(shortInterest.daysToCover),
+		short_pct_float: nullableNumber(shortInterest.shortPctFloat),
+		short_interest_change: nullableNumber(shortInterest.shortInterestChange),
+	};
+}
+
+function mapSentiment(sentiment: Record<string, unknown> | null) {
+	if (!sentiment) {
+		return EMPTY_SENTIMENT;
+	}
+	return {
+		sentiment_score: nullableNumber(sentiment.sentimentScore),
+		sentiment_strength: nullableNumber(sentiment.sentimentStrength),
+		news_volume: nullableNumber(sentiment.newsVolume),
+		sentiment_momentum: nullableNumber(sentiment.sentimentMomentum),
+		event_risk_flag: nullableBoolean(sentiment.eventRiskFlag),
+		news_sentiment: nullableNumber(sentiment.newsSentiment),
+		social_sentiment: nullableNumber(sentiment.socialSentiment),
+		analyst_sentiment: nullableNumber(sentiment.analystSentiment),
+	};
+}
+
+function mapCorporate(corporateActions: Record<string, unknown>[]) {
+	const recentAction = corporateActions[0];
+	if (!recentAction) {
+		return { corporate: EMPTY_CORPORATE, recentAction: null };
+	}
+	const exDate = recentAction.exDate as string | undefined;
+	const daysToExDividend = exDate
+		? Math.max(0, Math.floor((new Date(exDate).getTime() - Date.now()) / (24 * 60 * 60 * 1000)))
+		: null;
+	return {
+		corporate: {
+			trailing_dividend_yield: nullableNumber(recentAction.amount),
+			days_to_ex_dividend: daysToExDividend,
+			dividend_growth: null,
+			pending_split:
+				recentAction.actionType === "split" || recentAction.actionType === "reverse_split",
+		},
+		recentAction,
+	};
+}
+
+function buildSnapshot(
+	symbol: string,
+	fundamentals: Record<string, unknown> | null,
+	shortInterest: Record<string, unknown> | null,
+	sentiment: Record<string, unknown> | null,
+	corporateActions: Record<string, unknown>[],
+): BatchSnapshot {
+	const fundamentalsMapped = mapFundamentals(fundamentals);
+	const corporateMapped = mapCorporate(corporateActions);
+	return {
+		value: fundamentalsMapped.value,
+		quality: fundamentalsMapped.quality,
+		short_interest: mapShortInterest(shortInterest),
+		sentiment: mapSentiment(sentiment),
+		corporate: corporateMapped.corporate,
+		market: fundamentalsMapped.market,
+		metadata: {
+			symbol,
+			timestamp: new Date().toISOString(),
+			data_quality: determineDataQuality(!!fundamentals, !!shortInterest, !!sentiment),
+			last_fundamentals_update: nullableString(fundamentals?.computedAt),
+			last_short_interest_update: nullableString(shortInterest?.fetchedAt),
+			last_sentiment_update: nullableString(sentiment?.computedAt),
+			last_corporate_actions_update: nullableString(corporateMapped.recentAction?.createdAt),
+		},
+	};
+}
+
+async function getSnapshotForSymbol(symbol: string): Promise<BatchSnapshot> {
+	const [fundamentalsList, shortInterest, sentiment, corporateActions] = await Promise.all([
+		getFundamentalsRepo().findBySymbol(symbol),
+		getShortInterestRepo().findLatestBySymbol(symbol),
+		getSentimentRepo().findLatestBySymbol(symbol),
+		getCorporateActionsRepo().getForSymbol(symbol),
+	]);
+	return buildSnapshot(
+		symbol,
+		(fundamentalsList?.[0] as Record<string, unknown> | undefined) ?? null,
+		(shortInterest as Record<string, unknown> | null) ?? null,
+		(sentiment as Record<string, unknown> | null) ?? null,
+		(corporateActions as Record<string, unknown>[] | undefined) ?? [],
+	);
+}
+
 const getSnapshotRoute = createRoute({
 	method: "get",
 	path: "/:symbol",
-	request: {
-		params: z.object({
-			symbol: z.string(),
-		}),
-	},
+	request: { params: z.object({ symbol: z.string() }) },
 	responses: {
 		200: {
-			content: {
-				"application/json": {
-					schema: BatchIndicatorSnapshotSchema,
-				},
-			},
+			content: { "application/json": { schema: BatchIndicatorSnapshotSchema } },
 			description: "Indicator snapshot for symbol",
 		},
 		503: {
-			content: {
-				"application/json": {
-					schema: z.object({
-						error: z.string(),
-					}),
-				},
-			},
+			content: { "application/json": { schema: z.object({ error: z.string() }) } },
 			description: "Database service unavailable",
 		},
 	},
@@ -229,120 +320,8 @@ const getSnapshotRoute = createRoute({
 app.openapi(getSnapshotRoute, async (c) => {
 	const { symbol } = c.req.valid("param");
 	const upperSymbol = symbol.toUpperCase();
-
 	try {
-		// Get repositories
-		const fundamentalsRepo = getFundamentalsRepo();
-		const shortInterestRepo = getShortInterestRepo();
-		const sentimentRepo = getSentimentRepo();
-		const corporateActionsRepo = getCorporateActionsRepo();
-
-		// Fetch all batch data in parallel
-		const [fundamentalsList, shortInterest, sentiment, corporateActions] = await Promise.all([
-			fundamentalsRepo.findBySymbol(upperSymbol),
-			shortInterestRepo.findLatestBySymbol(upperSymbol),
-			sentimentRepo.findLatestBySymbol(upperSymbol),
-			corporateActionsRepo.getForSymbol(upperSymbol),
-		]);
-		const fundamentals = fundamentalsList?.[0] ?? null;
-
-		// Map to output format
-		const value = fundamentals
-			? {
-					pe_ratio_ttm: fundamentals.peRatioTtm,
-					pe_ratio_forward: fundamentals.peRatioForward,
-					pb_ratio: fundamentals.pbRatio,
-					ev_ebitda: fundamentals.evEbitda,
-					earnings_yield: fundamentals.earningsYield,
-					dividend_yield: fundamentals.dividendYield,
-					cape_10yr: fundamentals.cape10yr,
-				}
-			: createEmptyValueIndicators();
-
-		const quality = fundamentals
-			? {
-					gross_profitability: fundamentals.grossProfitability,
-					roe: fundamentals.roe,
-					roa: fundamentals.roa,
-					asset_growth: fundamentals.assetGrowth,
-					accruals_ratio: fundamentals.accrualsRatio,
-					cash_flow_quality: fundamentals.cashFlowQuality,
-					beneish_m_score: fundamentals.beneishMScore,
-				}
-			: createEmptyQualityIndicators();
-
-		const shortInterestData = shortInterest
-			? {
-					short_interest: shortInterest.shortInterest,
-					short_interest_ratio: shortInterest.shortInterestRatio,
-					days_to_cover: shortInterest.daysToCover,
-					short_pct_float: shortInterest.shortPctFloat,
-					short_interest_change: shortInterest.shortInterestChange,
-				}
-			: createEmptyShortInterestIndicators();
-
-		const sentimentData = sentiment
-			? {
-					sentiment_score: sentiment.sentimentScore,
-					sentiment_strength: sentiment.sentimentStrength,
-					news_volume: sentiment.newsVolume,
-					sentiment_momentum: sentiment.sentimentMomentum,
-					event_risk_flag: sentiment.eventRiskFlag,
-					news_sentiment: sentiment.newsSentiment,
-					social_sentiment: sentiment.socialSentiment,
-					analyst_sentiment: sentiment.analystSentiment,
-				}
-			: createEmptySentimentIndicators();
-
-		// Corporate actions - calculate from recent actions
-		const recentAction = corporateActions?.[0];
-		const corporate = recentAction
-			? {
-					trailing_dividend_yield: recentAction.amount ? recentAction.amount : null,
-					days_to_ex_dividend: recentAction.exDate
-						? Math.max(
-								0,
-								Math.floor(
-									(new Date(recentAction.exDate).getTime() - Date.now()) / (24 * 60 * 60 * 1000),
-								),
-							)
-						: null,
-					dividend_growth: null,
-					pending_split:
-						recentAction.actionType === "split" || recentAction.actionType === "reverse_split",
-				}
-			: createEmptyCorporateIndicators();
-
-		const market = fundamentals
-			? {
-					market_cap: fundamentals.marketCap,
-					sector: fundamentals.sector,
-					industry: fundamentals.industry,
-				}
-			: createEmptyMarketContext();
-
-		const metadata = {
-			symbol: upperSymbol,
-			timestamp: new Date().toISOString(),
-			data_quality: determineDataQuality(!!fundamentals, !!shortInterest, !!sentiment),
-			last_fundamentals_update: fundamentals?.computedAt ?? null,
-			last_short_interest_update: shortInterest?.fetchedAt ?? null,
-			last_sentiment_update: sentiment?.computedAt ?? null,
-			last_corporate_actions_update: recentAction?.createdAt ?? null,
-		};
-
-		return c.json(
-			{
-				value,
-				quality,
-				short_interest: shortInterestData,
-				sentiment: sentimentData,
-				corporate,
-				market,
-				metadata,
-			},
-			200,
-		);
+		return c.json(await getSnapshotForSymbol(upperSymbol), 200);
 	} catch (error) {
 		const message = error instanceof Error ? error.message : "Unknown error";
 		throw new HTTPException(503, {
@@ -351,7 +330,6 @@ app.openapi(getSnapshotRoute, async (c) => {
 	}
 });
 
-// POST /api/snapshots/batch - Get indicator snapshots for multiple symbols
 const batchSnapshotsRoute = createRoute({
 	method: "post",
 	path: "/batch",
@@ -359,30 +337,18 @@ const batchSnapshotsRoute = createRoute({
 		body: {
 			content: {
 				"application/json": {
-					schema: z.object({
-						symbols: z.array(z.string()).min(1).max(100),
-					}),
+					schema: z.object({ symbols: z.array(z.string()).min(1).max(100) }),
 				},
 			},
 		},
 	},
 	responses: {
 		200: {
-			content: {
-				"application/json": {
-					schema: BatchSnapshotsResponseSchema,
-				},
-			},
+			content: { "application/json": { schema: BatchSnapshotsResponseSchema } },
 			description: "Batch indicator snapshots",
 		},
 		503: {
-			content: {
-				"application/json": {
-					schema: z.object({
-						error: z.string(),
-					}),
-				},
-			},
+			content: { "application/json": { schema: z.object({ error: z.string() }) } },
 			description: "Database service unavailable",
 		},
 	},
@@ -393,152 +359,47 @@ app.openapi(batchSnapshotsRoute, async (c) => {
 	const { symbols } = c.req.valid("json");
 	const startTime = Date.now();
 	const upperSymbols = symbols.map((s) => s.toUpperCase());
-
 	try {
-		// Get repositories
-		const fundamentalsRepo = getFundamentalsRepo();
-		const shortInterestRepo = getShortInterestRepo();
-		const sentimentRepo = getSentimentRepo();
-		const corporateActionsRepo = getCorporateActionsRepo();
-
-		const snapshots: Record<string, z.infer<typeof BatchIndicatorSnapshotSchema>> = {};
-		const errors: Record<string, string> = {};
-		let successCount = 0;
-
-		// Process each symbol
-		await Promise.all(
+		const results = await Promise.all(
 			upperSymbols.map(async (symbol) => {
 				try {
-					const [fundamentalsList, shortInterest, sentiment, corporateActions] = await Promise.all([
-						fundamentalsRepo.findBySymbol(symbol),
-						shortInterestRepo.findLatestBySymbol(symbol),
-						sentimentRepo.findLatestBySymbol(symbol),
-						corporateActionsRepo.getForSymbol(symbol),
-					]);
-					const fundamentals = fundamentalsList?.[0] ?? null;
-
-					const value = fundamentals
-						? {
-								pe_ratio_ttm: fundamentals.peRatioTtm,
-								pe_ratio_forward: fundamentals.peRatioForward,
-								pb_ratio: fundamentals.pbRatio,
-								ev_ebitda: fundamentals.evEbitda,
-								earnings_yield: fundamentals.earningsYield,
-								dividend_yield: fundamentals.dividendYield,
-								cape_10yr: fundamentals.cape10yr,
-							}
-						: createEmptyValueIndicators();
-
-					const quality = fundamentals
-						? {
-								gross_profitability: fundamentals.grossProfitability,
-								roe: fundamentals.roe,
-								roa: fundamentals.roa,
-								asset_growth: fundamentals.assetGrowth,
-								accruals_ratio: fundamentals.accrualsRatio,
-								cash_flow_quality: fundamentals.cashFlowQuality,
-								beneish_m_score: fundamentals.beneishMScore,
-							}
-						: createEmptyQualityIndicators();
-
-					const shortInterestData = shortInterest
-						? {
-								short_interest: shortInterest.shortInterest,
-								short_interest_ratio: shortInterest.shortInterestRatio,
-								days_to_cover: shortInterest.daysToCover,
-								short_pct_float: shortInterest.shortPctFloat,
-								short_interest_change: shortInterest.shortInterestChange,
-							}
-						: createEmptyShortInterestIndicators();
-
-					const sentimentData = sentiment
-						? {
-								sentiment_score: sentiment.sentimentScore,
-								sentiment_strength: sentiment.sentimentStrength,
-								news_volume: sentiment.newsVolume,
-								sentiment_momentum: sentiment.sentimentMomentum,
-								event_risk_flag: sentiment.eventRiskFlag,
-								news_sentiment: sentiment.newsSentiment,
-								social_sentiment: sentiment.socialSentiment,
-								analyst_sentiment: sentiment.analystSentiment,
-							}
-						: createEmptySentimentIndicators();
-
-					const recentAction = corporateActions?.[0];
-					const corporate = recentAction
-						? {
-								trailing_dividend_yield: recentAction.amount ? recentAction.amount : null,
-								days_to_ex_dividend: recentAction.exDate
-									? Math.max(
-											0,
-											Math.floor(
-												(new Date(recentAction.exDate).getTime() - Date.now()) /
-													(24 * 60 * 60 * 1000),
-											),
-										)
-									: null,
-								dividend_growth: null,
-								pending_split:
-									recentAction.actionType === "split" ||
-									recentAction.actionType === "reverse_split",
-							}
-						: createEmptyCorporateIndicators();
-
-					const market = fundamentals
-						? {
-								market_cap: fundamentals.marketCap,
-								sector: fundamentals.sector,
-								industry: fundamentals.industry,
-							}
-						: createEmptyMarketContext();
-
-					const metadata = {
+					return {
 						symbol,
-						timestamp: new Date().toISOString(),
-						data_quality: determineDataQuality(!!fundamentals, !!shortInterest, !!sentiment),
-						last_fundamentals_update: fundamentals?.computedAt ?? null,
-						last_short_interest_update: shortInterest?.fetchedAt ?? null,
-						last_sentiment_update: sentiment?.computedAt ?? null,
-						last_corporate_actions_update: recentAction?.createdAt ?? null,
+						snapshot: await getSnapshotForSymbol(symbol),
+						error: null as string | null,
 					};
-
-					snapshots[symbol] = {
-						value,
-						quality,
-						short_interest: shortInterestData,
-						sentiment: sentimentData,
-						corporate,
-						market,
-						metadata,
-					};
-					successCount++;
 				} catch (error) {
 					const message = error instanceof Error ? error.message : "Unknown error";
-					errors[symbol] = message;
+					return { symbol, snapshot: null as BatchSnapshot | null, error: message };
 				}
 			}),
 		);
-
-		const executionTimeMs = Date.now() - startTime;
-
+		const snapshots: Record<string, BatchSnapshot> = {};
+		const errors: Record<string, string> = {};
+		for (const result of results) {
+			if (result.snapshot) {
+				snapshots[result.symbol] = result.snapshot;
+			} else if (result.error) {
+				errors[result.symbol] = result.error;
+			}
+		}
+		const successful = Object.keys(snapshots).length;
 		return c.json(
 			{
 				snapshots,
 				errors: Object.keys(errors).length > 0 ? errors : undefined,
 				metadata: {
 					total: upperSymbols.length,
-					successful: successCount,
-					failed: upperSymbols.length - successCount,
-					execution_time_ms: executionTimeMs,
+					successful,
+					failed: upperSymbols.length - successful,
+					execution_time_ms: Date.now() - startTime,
 				},
 			},
 			200,
 		);
 	} catch (error) {
 		const message = error instanceof Error ? error.message : "Unknown error";
-		throw new HTTPException(503, {
-			message: `Failed to fetch batch snapshots: ${message}`,
-		});
+		throw new HTTPException(503, { message: `Failed to fetch batch snapshots: ${message}` });
 	}
 });
 

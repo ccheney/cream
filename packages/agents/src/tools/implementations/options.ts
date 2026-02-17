@@ -106,6 +106,266 @@ export function parseOSISymbol(
 	};
 }
 
+type ParsedOSISymbol = NonNullable<ReturnType<typeof parseOSISymbol>>;
+type OptionType = "call" | "put";
+
+interface NormalizedOptionChain {
+	options: OptionQuote[];
+	underlyingPrice: number | null;
+}
+
+function assertNotTestMode(ctx: ExecutionContext, operation: string): void {
+	if (isTest(ctx)) {
+		throw new Error(`${operation} is not available in test mode`);
+	}
+}
+
+function getOptionType(optionTypeValue: number): OptionType {
+	return optionTypeValue === 1 ? "call" : "put";
+}
+
+function getTypeChar(optionType: OptionType): "C" | "P" {
+	return optionType === "call" ? "C" : "P";
+}
+
+function buildContractSymbol(
+	underlying: string,
+	expiration: string,
+	optionType: OptionType,
+	strike: number,
+): string {
+	const expirationShort = expiration.replaceAll("-", "").slice(2); // YYMMDD
+	const strikeStr = Math.floor(strike * 1000)
+		.toString()
+		.padStart(8, "0");
+	return `${underlying.padEnd(6)}${expirationShort}${getTypeChar(optionType)}${strikeStr}`;
+}
+
+function toMappedContract(option: OptionQuote): {
+	expiration: string;
+	type: OptionType;
+	contract: OptionContract;
+} | null {
+	const contract = option.contract;
+	const quote = option.quote;
+	if (!contract || !quote) {
+		return null;
+	}
+
+	const expiration = contract.expiration ?? "";
+	const type = getOptionType(contract.optionType);
+	return {
+		expiration,
+		type,
+		contract: {
+			symbol: buildContractSymbol(contract.underlying, expiration, type, contract.strike),
+			strike: contract.strike,
+			expiration,
+			type,
+			bid: quote.bid,
+			ask: quote.ask,
+			last: quote.last,
+			volume: Number(quote.volume),
+			openInterest: option.openInterest ?? 0,
+		},
+	};
+}
+
+function addToExpirationMap(
+	expirationMap: Map<string, OptionExpiration>,
+	mapped: { expiration: string; type: OptionType; contract: OptionContract },
+): void {
+	let expirationData = expirationMap.get(mapped.expiration);
+	if (!expirationData) {
+		expirationData = { expiration: mapped.expiration, calls: [], puts: [] };
+		expirationMap.set(mapped.expiration, expirationData);
+	}
+
+	if (mapped.type === "call") {
+		expirationData.calls.push(mapped.contract);
+		return;
+	}
+	expirationData.puts.push(mapped.contract);
+}
+
+function sortExpirations(expirationMap: Map<string, OptionExpiration>): OptionExpiration[] {
+	const sortedExpirations = [...expirationMap.values()].sort((a, b) =>
+		a.expiration.localeCompare(b.expiration),
+	);
+	for (const expiration of sortedExpirations) {
+		expiration.calls.sort((a, b) => a.strike - b.strike);
+		expiration.puts.sort((a, b) => a.strike - b.strike);
+	}
+	return sortedExpirations;
+}
+
+function parseContractSymbolOrThrow(contractSymbol: string): ParsedOSISymbol {
+	const parsed = parseOSISymbol(contractSymbol);
+	if (!parsed) {
+		throw new Error(`Invalid OSI symbol format: ${contractSymbol}`);
+	}
+	return parsed;
+}
+
+function toNormalizedOptionChain(
+	chain: { options?: OptionQuote[]; underlyingPrice?: number } | undefined,
+	underlying: string,
+): NormalizedOptionChain {
+	const options = chain?.options;
+	if (!options) {
+		throw new Error(`No option chain found for underlying: ${underlying}`);
+	}
+	return { options, underlyingPrice: chain?.underlyingPrice ?? null };
+}
+
+function matchesContract(option: OptionQuote, parsed: ParsedOSISymbol): boolean {
+	const contract = option.contract;
+	if (!contract) {
+		return false;
+	}
+
+	const matchesUnderlying =
+		contract.underlying.toUpperCase().trim() === parsed.underlying.toUpperCase();
+	const matchesExpiration = contract.expiration === parsed.expiration;
+	const matchesType =
+		(parsed.type === "call" && contract.optionType === 1) ||
+		(parsed.type === "put" && contract.optionType === 2);
+	const matchesStrike = Math.abs(contract.strike - parsed.strike) < 0.01;
+	return matchesUnderlying && matchesExpiration && matchesType && matchesStrike;
+}
+
+function findOptionOrThrow(
+	options: OptionQuote[],
+	parsed: ParsedOSISymbol,
+	contractSymbol: string,
+): OptionQuote {
+	const matched = options.find((option) => matchesContract(option, parsed));
+	if (!matched) {
+		throw new Error(`Contract not found: ${contractSymbol}`);
+	}
+	return matched;
+}
+
+function hasProviderGreeks(option: OptionQuote): boolean {
+	return option.delta !== undefined && option.gamma !== undefined;
+}
+
+function toProviderGreeks(option: OptionQuote): Greeks {
+	return {
+		delta: option.delta ?? 0,
+		gamma: option.gamma ?? 0,
+		theta: option.theta ?? 0,
+		vega: option.vega ?? 0,
+		rho: option.rho ?? 0,
+		iv: option.impliedVolatility ?? 0,
+	};
+}
+
+function getTimeToExpirationYears(expiration: string): number {
+	const expirationDate = new Date(`${expiration}T16:00:00-05:00`);
+	const now = new Date();
+	const daysToExpiry = Math.max(
+		0,
+		(expirationDate.getTime() - now.getTime()) / (1000 * 60 * 60 * 24),
+	);
+	return daysToYears(daysToExpiry);
+}
+
+function validateFallbackInputs(
+	contractSymbol: string,
+	parsed: ParsedOSISymbol,
+	underlyingPrice: number | null,
+): { underlyingPrice: number; timeToExpiration: number } {
+	if (!underlyingPrice || underlyingPrice <= 0) {
+		throw new Error(`Greeks not available: no underlying price for ${parsed.underlying}`);
+	}
+
+	const timeToExpiration = getTimeToExpirationYears(parsed.expiration);
+	if (timeToExpiration <= 0) {
+		throw new Error(`Greeks not available: contract ${contractSymbol} has expired`);
+	}
+
+	return { underlyingPrice, timeToExpiration };
+}
+
+function solveImpliedVolatility(
+	option: OptionQuote,
+	parsed: ParsedOSISymbol,
+	underlyingPrice: number,
+	timeToExpiration: number,
+	riskFreeRate: number,
+): number | null {
+	const quote = option.quote;
+	if (!quote || quote.bid <= 0 || quote.ask <= 0) {
+		return option.impliedVolatility ?? null;
+	}
+
+	return (
+		option.impliedVolatility ??
+		solveIVFromQuote(
+			quote.bid,
+			quote.ask,
+			underlyingPrice,
+			parsed.strike,
+			timeToExpiration,
+			parsed.type === "call" ? "CALL" : "PUT",
+			riskFreeRate,
+		)
+	);
+}
+
+async function calculateFallbackGreeks(
+	option: OptionQuote,
+	parsed: ParsedOSISymbol,
+	contractSymbol: string,
+	underlyingPrice: number | null,
+): Promise<Greeks> {
+	const { underlyingPrice: resolvedUnderlyingPrice, timeToExpiration } = validateFallbackInputs(
+		contractSymbol,
+		parsed,
+		underlyingPrice,
+	);
+	const riskFreeRate = await getRiskFreeRate();
+	if (riskFreeRate === null) {
+		throw new Error(
+			`Greeks not available for ${contractSymbol}: cannot fetch risk-free rate from FRED`,
+		);
+	}
+
+	const impliedVolatility = solveImpliedVolatility(
+		option,
+		parsed,
+		resolvedUnderlyingPrice,
+		timeToExpiration,
+		riskFreeRate,
+	);
+	if (impliedVolatility === null) {
+		throw new Error(
+			`Greeks not available for ${contractSymbol}: no IV from provider and cannot solve from quotes (likely illiquid contract)`,
+		);
+	}
+
+	const bsGreeks = calculateBlackScholesGreeks({
+		symbol: parsed.underlying,
+		contracts: 1,
+		strike: parsed.strike,
+		underlyingPrice: resolvedUnderlyingPrice,
+		timeToExpiration,
+		impliedVolatility,
+		optionType: parsed.type === "call" ? "CALL" : "PUT",
+		riskFreeRate,
+	});
+
+	return {
+		delta: bsGreeks.delta,
+		gamma: bsGreeks.gamma,
+		theta: bsGreeks.theta,
+		vega: bsGreeks.vega,
+		rho: bsGreeks.rho,
+		iv: impliedVolatility,
+	};
+}
+
 /**
  * Get option chain for an underlying
  *
@@ -120,9 +380,7 @@ export async function getOptionChain(
 	ctx: ExecutionContext,
 	underlying: string,
 ): Promise<OptionChainResponse> {
-	if (isTest(ctx)) {
-		throw new Error("getOptionChain is not available in test mode");
-	}
+	assertNotTestMode(ctx, "getOptionChain");
 
 	const client = getMarketDataClient();
 	const response = await client.getOptionChain({
@@ -137,66 +395,18 @@ export async function getOptionChain(
 		};
 	}
 
-	// Group options by expiration
 	const expirationMap = new Map<string, OptionExpiration>();
-
 	for (const opt of chain.options) {
-		const contract = opt.contract;
-		const quote = opt.quote;
-		if (!contract || !quote) {
+		const mapped = toMappedContract(opt);
+		if (!mapped) {
 			continue;
 		}
-
-		const expiration = contract.expiration ?? ""; // Already in YYYY-MM-DD format
-		const optionType = contract.optionType === 1 ? "call" : "put"; // 1 = CALL, 2 = PUT
-
-		// Construct a symbol from underlying, expiration, type, strike
-		const typeChar = optionType === "call" ? "C" : "P";
-		const expirationShort = expiration.replaceAll("-", "").slice(2); // YYMMDD
-		const strikeStr = Math.floor(contract.strike * 1000)
-			.toString()
-			.padStart(8, "0");
-		const constructedSymbol = `${contract.underlying.padEnd(6)}${expirationShort}${typeChar}${strikeStr}`;
-
-		const optContract: OptionContract = {
-			symbol: constructedSymbol,
-			strike: contract.strike,
-			expiration,
-			type: optionType,
-			bid: quote.bid,
-			ask: quote.ask,
-			last: quote.last,
-			volume: Number(quote.volume),
-			openInterest: opt.openInterest ?? 0,
-		};
-
-		let expData = expirationMap.get(expiration);
-		if (!expData) {
-			expData = { expiration, calls: [], puts: [] };
-			expirationMap.set(expiration, expData);
-		}
-
-		if (optionType === "call") {
-			expData.calls.push(optContract);
-		} else {
-			expData.puts.push(optContract);
-		}
-	}
-
-	// Sort expirations and convert to array
-	const sortedExpirations = Array.from(expirationMap.values()).sort((a, b) =>
-		a.expiration.localeCompare(b.expiration),
-	);
-
-	// Sort calls/puts by strike
-	for (const exp of sortedExpirations) {
-		exp.calls.sort((a, b) => a.strike - b.strike);
-		exp.puts.sort((a, b) => a.strike - b.strike);
+		addToExpirationMap(expirationMap, mapped);
 	}
 
 	return {
 		underlying,
-		expirations: sortedExpirations,
+		expirations: sortExpirations(expirationMap),
 	};
 }
 
@@ -213,131 +423,16 @@ export async function getOptionChain(
  * @throws Error if contract not found, invalid symbol, or gRPC fails
  */
 export async function getGreeks(ctx: ExecutionContext, contractSymbol: string): Promise<Greeks> {
-	if (isTest(ctx)) {
-		throw new Error("getGreeks is not available in test mode");
-	}
-
-	// Parse the OSI symbol to extract components
-	const parsed = parseOSISymbol(contractSymbol);
-	if (!parsed) {
-		throw new Error(`Invalid OSI symbol format: ${contractSymbol}`);
-	}
-
+	assertNotTestMode(ctx, "getGreeks");
+	const parsed = parseContractSymbolOrThrow(contractSymbol);
 	const client = getMarketDataClient();
-
-	// Get option chain for the underlying
 	const response = await client.getOptionChain({
 		underlying: parsed.underlying,
 	});
-
-	const chain = response.data.chain;
-	if (!chain || !chain.options) {
-		throw new Error(`No option chain found for underlying: ${parsed.underlying}`);
+	const chain = toNormalizedOptionChain(response.data.chain, parsed.underlying);
+	const option = findOptionOrThrow(chain.options, parsed, contractSymbol);
+	if (hasProviderGreeks(option)) {
+		return toProviderGreeks(option);
 	}
-
-	// Find the specific contract by matching underlying, expiration, type, and strike
-	const option = chain.options.find((opt: OptionQuote) => {
-		const contract = opt.contract;
-		if (!contract) {
-			return false;
-		}
-
-		const matchesUnderlying =
-			contract.underlying.toUpperCase().trim() === parsed.underlying.toUpperCase();
-		const matchesExpiration = contract.expiration === parsed.expiration;
-		const matchesType =
-			(parsed.type === "call" && contract.optionType === 1) ||
-			(parsed.type === "put" && contract.optionType === 2);
-		// Allow small tolerance for strike matching (floating point)
-		const matchesStrike = Math.abs(contract.strike - parsed.strike) < 0.01;
-
-		return matchesUnderlying && matchesExpiration && matchesType && matchesStrike;
-	});
-
-	if (!option) {
-		throw new Error(`Contract not found: ${contractSymbol}`);
-	}
-
-	// If provider Greeks are available, use them
-	if (option.delta !== undefined && option.gamma !== undefined) {
-		return {
-			delta: option.delta,
-			gamma: option.gamma,
-			theta: option.theta ?? 0,
-			vega: option.vega ?? 0,
-			rho: option.rho ?? 0,
-			iv: option.impliedVolatility ?? 0,
-		};
-	}
-
-	// Fallback: Calculate Greeks locally using Black-Scholes
-	// Only if we can determine IV accurately (from provider or bid/ask)
-	const underlyingPrice = chain.underlyingPrice;
-	if (!underlyingPrice || underlyingPrice <= 0) {
-		throw new Error(`Greeks not available: no underlying price for ${parsed.underlying}`);
-	}
-
-	// Calculate time to expiration in years
-	const expirationDate = new Date(`${parsed.expiration}T16:00:00-05:00`); // 4 PM ET expiration
-	const now = new Date();
-	const daysToExpiry = Math.max(
-		0,
-		(expirationDate.getTime() - now.getTime()) / (1000 * 60 * 60 * 24),
-	);
-	const timeToExpiration = daysToYears(daysToExpiry);
-
-	if (timeToExpiration <= 0) {
-		throw new Error(`Greeks not available: contract ${contractSymbol} has expired`);
-	}
-
-	// Get risk-free rate from FRED
-	const riskFreeRate = await getRiskFreeRate();
-	if (riskFreeRate === null) {
-		throw new Error(
-			`Greeks not available for ${contractSymbol}: cannot fetch risk-free rate from FRED`,
-		);
-	}
-
-	// Determine IV - require either provider IV or solvable from quotes
-	let impliedVolatility: number | null = option.impliedVolatility ?? null;
-
-	const quote = option.quote;
-	if (impliedVolatility === null && quote && quote.bid > 0 && quote.ask > 0) {
-		impliedVolatility = solveIVFromQuote(
-			quote.bid,
-			quote.ask,
-			underlyingPrice,
-			parsed.strike,
-			timeToExpiration,
-			parsed.type === "call" ? "CALL" : "PUT",
-			riskFreeRate,
-		);
-	}
-
-	if (impliedVolatility === null) {
-		throw new Error(
-			`Greeks not available for ${contractSymbol}: no IV from provider and cannot solve from quotes (likely illiquid contract)`,
-		);
-	}
-
-	// Calculate Greeks using Black-Scholes
-	const bsGreeks = calculateBlackScholesGreeks({
-		symbol: parsed.underlying,
-		contracts: 1,
-		strike: parsed.strike,
-		underlyingPrice,
-		timeToExpiration,
-		impliedVolatility,
-		optionType: parsed.type === "call" ? "CALL" : "PUT",
-		riskFreeRate,
-	});
-
-	return {
-		delta: bsGreeks.delta,
-		gamma: bsGreeks.gamma,
-		theta: bsGreeks.theta,
-		vega: bsGreeks.vega,
-		rho: bsGreeks.rho,
-		iv: impliedVolatility,
-	};
+	return calculateFallbackGreeks(option, parsed, contractSymbol, chain.underlyingPrice);
 }

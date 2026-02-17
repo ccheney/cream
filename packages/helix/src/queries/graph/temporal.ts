@@ -55,6 +55,126 @@ export interface TemporalTraversalResponse<T = Record<string, unknown>>
 	};
 }
 
+type TemporalFilterOptions = Pick<
+	TemporalTraversalOptions,
+	"asOfTimestamp" | "knownAsOfTimestamp" | "includeExpired"
+>;
+type TemporalExclusionReason = "notYetValid" | "expired" | "notYetRecorded";
+
+function createTemporalStats(beforeFiltering: number): TemporalTraversalResponse["temporalStats"] {
+	return {
+		beforeFiltering,
+		afterFiltering: 0,
+		notYetValid: 0,
+		expired: 0,
+		notYetRecorded: 0,
+	};
+}
+
+function getValidityExclusion(
+	edge: GraphEdge,
+	options: TemporalFilterOptions,
+): TemporalExclusionReason | undefined {
+	const asOfTimestamp = options.asOfTimestamp;
+	if (asOfTimestamp === undefined) {
+		return undefined;
+	}
+
+	const validFrom = edge.properties.valid_from;
+	if (typeof validFrom === "number" && validFrom > asOfTimestamp) {
+		return "notYetValid";
+	}
+
+	if (options.includeExpired) {
+		return undefined;
+	}
+
+	const validTo = edge.properties.valid_to;
+	if (typeof validTo === "number" && validTo <= asOfTimestamp) {
+		return "expired";
+	}
+
+	return undefined;
+}
+
+function getRecordedExclusion(
+	edge: GraphEdge,
+	options: TemporalFilterOptions,
+): TemporalExclusionReason | undefined {
+	if (options.knownAsOfTimestamp === undefined) {
+		return undefined;
+	}
+
+	if (wasEdgeRecordedBy(edge, options.knownAsOfTimestamp)) {
+		return undefined;
+	}
+	return "notYetRecorded";
+}
+
+function getTemporalExclusionReason(
+	edge: GraphEdge,
+	options: TemporalFilterOptions,
+): TemporalExclusionReason | undefined {
+	return getValidityExclusion(edge, options) ?? getRecordedExclusion(edge, options);
+}
+
+function collectUniqueEdges<T>(
+	paths: WeightedTraversalResponse<T>["paths"],
+): Map<string, WeightedTraversalResponse<T>["paths"][number]["edges"][number]> {
+	const uniqueEdges = new Map<
+		string,
+		WeightedTraversalResponse<T>["paths"][number]["edges"][number]
+	>();
+	for (const path of paths) {
+		for (const edge of path.edges) {
+			uniqueEdges.set(edge.id, edge);
+		}
+	}
+	return uniqueEdges;
+}
+
+function filterPathsByValidEdges<T>(
+	paths: WeightedTraversalResponse<T>["paths"],
+	validEdgeIds: Set<string>,
+): WeightedTraversalResponse<T>["paths"] {
+	return paths.filter((path) => path.edges.every((edge) => validEdgeIds.has(edge.id)));
+}
+
+function collectValidNodeIds<T>(paths: WeightedTraversalResponse<T>["paths"]): Set<string> {
+	const nodeIds = new Set<string>();
+	for (const path of paths) {
+		for (const node of path.nodes) {
+			nodeIds.add(node.id);
+		}
+	}
+	return nodeIds;
+}
+
+function calculateAveragePriority(
+	prioritizedEdges: WeightedTraversalResponse["prioritizedEdges"],
+): number {
+	if (prioritizedEdges.length === 0) {
+		return 0;
+	}
+	const totalPriority = prioritizedEdges.reduce((sum, edge) => sum + edge.priority, 0);
+	return totalPriority / prioritizedEdges.length;
+}
+
+function buildUnfilteredTemporalResponse<T>(
+	weightedResult: WeightedTraversalResponse<T>,
+	startTime: number,
+): TemporalTraversalResponse<T> {
+	const temporalStats = createTemporalStats(weightedResult.filterStats.totalEdges);
+	temporalStats.afterFiltering = weightedResult.filterStats.totalEdges;
+
+	return {
+		...weightedResult,
+		executionTimeMs: performance.now() - startTime,
+		asOfTimestamp: undefined,
+		temporalStats,
+	};
+}
+
 /**
  * Check if an edge is active at a given point in time.
  *
@@ -106,49 +226,19 @@ export function wasEdgeRecordedBy(edge: GraphEdge, knownAsOfTimestamp: number): 
  */
 export function filterEdgesByTime(
 	edges: GraphEdge[],
-	options: Pick<
-		TemporalTraversalOptions,
-		"asOfTimestamp" | "knownAsOfTimestamp" | "includeExpired"
-	>,
+	options: TemporalFilterOptions,
 ): { filtered: GraphEdge[]; stats: TemporalTraversalResponse["temporalStats"] } {
-	const stats = {
-		beforeFiltering: edges.length,
-		afterFiltering: 0,
-		notYetValid: 0,
-		expired: 0,
-		notYetRecorded: 0,
-	};
+	const stats = createTemporalStats(edges.length);
+	const filtered: GraphEdge[] = [];
 
-	const filtered = edges.filter((edge) => {
-		if (options.asOfTimestamp !== undefined) {
-			const props = edge.properties;
-
-			const validFrom = props.valid_from;
-			if (typeof validFrom === "number" && validFrom > options.asOfTimestamp) {
-				stats.notYetValid++;
-				return false;
-			}
-
-			if (!options.includeExpired) {
-				const validTo = props.valid_to;
-				if (validTo !== undefined && validTo !== null && typeof validTo === "number") {
-					if (validTo <= options.asOfTimestamp) {
-						stats.expired++;
-						return false;
-					}
-				}
-			}
+	for (const edge of edges) {
+		const exclusionReason = getTemporalExclusionReason(edge, options);
+		if (exclusionReason) {
+			stats[exclusionReason]++;
+			continue;
 		}
-
-		if (options.knownAsOfTimestamp !== undefined) {
-			if (!wasEdgeRecordedBy(edge, options.knownAsOfTimestamp)) {
-				stats.notYetRecorded++;
-				return false;
-			}
-		}
-
-		return true;
-	});
+		filtered.push(edge);
+	}
 
 	stats.afterFiltering = filtered.length;
 	return { filtered, stats };
@@ -197,51 +287,22 @@ export async function traverseAtTime<T = Record<string, unknown>>(
 	options: TemporalTraversalOptions = {},
 ): Promise<TemporalTraversalResponse<T>> {
 	const startTime = performance.now();
-
 	const weightedResult = await weightedTraverse<T>(client, startNodeId, options);
-
 	if (options.asOfTimestamp === undefined && options.knownAsOfTimestamp === undefined) {
-		return {
-			...weightedResult,
-			asOfTimestamp: undefined,
-			temporalStats: {
-				beforeFiltering: weightedResult.filterStats.totalEdges,
-				afterFiltering: weightedResult.filterStats.totalEdges,
-				notYetValid: 0,
-				expired: 0,
-				notYetRecorded: 0,
-			},
-		};
+		return buildUnfilteredTemporalResponse(weightedResult, startTime);
 	}
 
-	const allEdges = new Map<string, (typeof weightedResult.paths)[0]["edges"][0]>();
-	for (const path of weightedResult.paths) {
-		for (const edge of path.edges) {
-			allEdges.set(edge.id, edge);
-		}
-	}
-
+	const allEdges = collectUniqueEdges(weightedResult.paths);
 	const { filtered: temporallyFiltered, stats: temporalStats } = filterEdgesByTime(
 		Array.from(allEdges.values()),
 		options,
 	);
-
 	const validEdgeIds = new Set(temporallyFiltered.map((e) => e.id));
-
-	const filteredPaths = weightedResult.paths.filter((path) =>
-		path.edges.every((edge) => validEdgeIds.has(edge.id)),
-	);
-
+	const filteredPaths = filterPathsByValidEdges(weightedResult.paths, validEdgeIds);
 	const filteredPrioritizedEdges = weightedResult.prioritizedEdges.filter((pe) =>
 		validEdgeIds.has(pe.edge.id),
 	);
-
-	const validNodeIds = new Set<string>();
-	for (const path of filteredPaths) {
-		for (const node of path.nodes) {
-			validNodeIds.add(node.id);
-		}
-	}
+	const validNodeIds = collectValidNodeIds(filteredPaths);
 	const filteredNodes = weightedResult.nodes.filter((n) => validNodeIds.has(n.id));
 
 	return {
@@ -252,11 +313,7 @@ export async function traverseAtTime<T = Record<string, unknown>>(
 		filterStats: {
 			totalEdges: weightedResult.filterStats.totalEdges,
 			filteredEdges: temporallyFiltered.length,
-			averagePriority:
-				filteredPrioritizedEdges.length > 0
-					? filteredPrioritizedEdges.reduce((sum, e) => sum + e.priority, 0) /
-						filteredPrioritizedEdges.length
-					: 0,
+			averagePriority: calculateAveragePriority(filteredPrioritizedEdges),
 		},
 		asOfTimestamp: options.asOfTimestamp,
 		temporalStats,

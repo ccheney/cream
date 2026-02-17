@@ -146,32 +146,20 @@ export function parseFREDObservations(
 	observations: FREDObservationEntry[],
 	metadata?: FREDObservationMetadata,
 ): ParsedMacroRelease[] {
-	const results: ParsedMacroRelease[] = [];
-
 	if (!observations || observations.length === 0) {
-		return results;
+		return [];
 	}
 
-	// Look up series metadata from registry if not provided
-	const registryMeta = FRED_SERIES[seriesId as FREDSeriesId] as
-		| { name: string; unit: string }
-		| undefined;
-	const name = metadata?.name ?? registryMeta?.name ?? seriesId;
-	const unit = metadata?.unit ?? registryMeta?.unit ?? undefined;
+	const { name, unit } = resolveFREDObservationMetadata(seriesId, metadata);
+	const results: ParsedMacroRelease[] = [];
 
-	for (let i = 0; i < observations.length; i++) {
-		const item = observations[i];
-		if (!item || !item.date) {
+	for (const [index, item] of observations.entries()) {
+		if (!item?.date) {
 			continue;
 		}
 
-		// Skip missing data (FRED uses '.' for unavailable values)
-		if (item.value === "." || item.value === "" || item.value == null) {
-			continue;
-		}
-
-		const value = Number.parseFloat(item.value);
-		if (Number.isNaN(value)) {
+		const value = parseFREDObservationValue(item.value);
+		if (value === null) {
 			continue;
 		}
 
@@ -180,24 +168,10 @@ export function parseFREDObservations(
 			continue;
 		}
 
-		// Get previous value from next item (observations typically newest-first)
-		// Scan for next valid observation
-		let previousValue: number | undefined;
-		for (let j = i + 1; j < observations.length; j++) {
-			const nextItem = observations[j];
-			if (nextItem && nextItem.value !== "." && nextItem.value !== "" && nextItem.value != null) {
-				const parsed = Number.parseFloat(nextItem.value);
-				if (!Number.isNaN(parsed)) {
-					previousValue = parsed;
-					break;
-				}
-			}
-		}
-
 		results.push({
 			indicator: name,
 			value,
-			previousValue,
+			previousValue: findPreviousObservationValue(observations, index + 1),
 			date,
 			unit,
 			source: `FRED:${seriesId}`,
@@ -205,6 +179,43 @@ export function parseFREDObservations(
 	}
 
 	return results;
+}
+
+function resolveFREDObservationMetadata(
+	seriesId: string,
+	metadata?: FREDObservationMetadata,
+): { name: string; unit?: string } {
+	const registryMeta = FRED_SERIES[seriesId as FREDSeriesId] as
+		| { name: string; unit: string }
+		| undefined;
+
+	return {
+		name: metadata?.name ?? registryMeta?.name ?? seriesId,
+		unit: metadata?.unit ?? registryMeta?.unit ?? undefined,
+	};
+}
+
+function parseFREDObservationValue(value: string | null | undefined): number | null {
+	if (value === "." || value === "" || value == null) {
+		return null;
+	}
+
+	const parsed = Number.parseFloat(value);
+	return Number.isNaN(parsed) ? null : parsed;
+}
+
+function findPreviousObservationValue(
+	observations: FREDObservationEntry[],
+	startIndex: number,
+): number | undefined {
+	for (let index = startIndex; index < observations.length; index++) {
+		const parsedValue = parseFREDObservationValue(observations[index]?.value);
+		if (parsedValue !== null) {
+			return parsedValue;
+		}
+	}
+
+	return undefined;
 }
 
 /**

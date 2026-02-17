@@ -125,6 +125,12 @@ export interface ShortInterestBatchJobConfig {
 	batchSize?: number;
 }
 
+type ShortInterestRunState = {
+	processed: number;
+	failed: number;
+	errors: Array<{ symbol: string; error: string }>;
+};
+
 // ============================================
 // Helper Functions
 // ============================================
@@ -241,93 +247,133 @@ export class ShortInterestBatchJob {
 	 */
 	async run(symbols: string[], settlementDate?: string): Promise<BatchJobResult> {
 		const startTime = Date.now();
-		let processed = 0;
-		let failed = 0;
-		const errors: Array<{ symbol: string; error: string }> = [];
+		const state: ShortInterestRunState = {
+			processed: 0,
+			failed: 0,
+			errors: [],
+		};
 
 		log.info({ symbolCount: symbols.length, settlementDate }, "Starting short interest batch job");
 
-		// Get latest settlement date if not provided
 		const targetDate = settlementDate ?? (await this.getLatestDateWithRetry());
 		log.info({ targetDate }, "Using settlement date");
 
-		// Process in batches to respect FINRA API limits
 		const batches = this.chunkArray(symbols, this.config.batchSize);
-
 		for (let batchIndex = 0; batchIndex < batches.length; batchIndex++) {
 			const batch = batches[batchIndex];
 			if (!batch) {
 				continue;
 			}
-
-			try {
-				// Fetch short interest data from FINRA for this batch
-				const finraData = await this.fetchWithRetry(batch, targetDate);
-
-				// Create a map for quick lookup
-				const finraMap = new Map<string, FINRAShortInterestRecord>();
-				for (const record of finraData) {
-					finraMap.set(record.symbolCode.toUpperCase(), record);
-				}
-
-				// Process each symbol
-				for (const symbol of batch) {
-					const upperSymbol = symbol.toUpperCase();
-					const finraRecord = finraMap.get(upperSymbol);
-
-					if (!finraRecord) {
-						// No FINRA data for this symbol (may not be OTC-reported)
-						log.debug({ symbol: upperSymbol }, "No FINRA data available");
-						continue;
-					}
-
-					try {
-						await this.processSymbol(finraRecord);
-						processed++;
-						log.debug(
-							{ symbol: upperSymbol, processed, total: symbols.length },
-							"Processed symbol",
-						);
-					} catch (error) {
-						failed++;
-						const errorMessage = error instanceof Error ? error.message : String(error);
-						errors.push({ symbol: upperSymbol, error: errorMessage });
-						log.warn({ symbol: upperSymbol, error: errorMessage }, "Failed to process symbol");
-
-						if (!this.config.continueOnError) {
-							throw error;
-						}
-					}
-				}
-			} catch (error) {
-				// Batch-level failure
-				const errorMessage = error instanceof Error ? error.message : String(error);
-				log.error(
-					{ batchIndex, batchSize: batch.length, error: errorMessage },
-					"Failed to fetch batch from FINRA",
-				);
-
-				if (!this.config.continueOnError) {
-					throw error;
-				}
-
-				// Mark all symbols in this batch as failed
-				for (const symbol of batch) {
-					failed++;
-					errors.push({ symbol, error: `Batch fetch failed: ${errorMessage}` });
-				}
-			}
-
-			// Rate limiting between batches
+			await this.processBatch(batch, batchIndex, targetDate, symbols.length, state);
 			if (batchIndex < batches.length - 1) {
 				await sleep(this.config.rateLimitDelayMs);
 			}
 		}
 
 		const durationMs = Date.now() - startTime;
-		log.info({ processed, failed, durationMs }, "Completed short interest batch job");
+		log.info(
+			{ processed: state.processed, failed: state.failed, durationMs },
+			"Completed short interest batch job",
+		);
+		return {
+			processed: state.processed,
+			failed: state.failed,
+			errors: state.errors,
+			durationMs,
+		};
+	}
 
-		return { processed, failed, errors, durationMs };
+	private async processBatch(
+		batch: string[],
+		batchIndex: number,
+		targetDate: string,
+		totalSymbols: number,
+		state: ShortInterestRunState,
+	): Promise<void> {
+		try {
+			const finraMap = await this.fetchBatchAsMap(batch, targetDate);
+			await this.processBatchSymbols(batch, finraMap, totalSymbols, state);
+		} catch (error) {
+			this.handleBatchFailure(error, batchIndex, batch, state);
+			if (!this.config.continueOnError) {
+				throw error;
+			}
+		}
+	}
+
+	private async fetchBatchAsMap(
+		batch: string[],
+		targetDate: string,
+	): Promise<Map<string, FINRAShortInterestRecord>> {
+		const finraData = await this.fetchWithRetry(batch, targetDate);
+		const finraMap = new Map<string, FINRAShortInterestRecord>();
+		for (const record of finraData) {
+			finraMap.set(record.symbolCode.toUpperCase(), record);
+		}
+		return finraMap;
+	}
+
+	private async processBatchSymbols(
+		batch: string[],
+		finraMap: Map<string, FINRAShortInterestRecord>,
+		totalSymbols: number,
+		state: ShortInterestRunState,
+	): Promise<void> {
+		for (const symbol of batch) {
+			const upperSymbol = symbol.toUpperCase();
+			const finraRecord = finraMap.get(upperSymbol);
+			if (!finraRecord) {
+				log.debug({ symbol: upperSymbol }, "No FINRA data available");
+				continue;
+			}
+			await this.processRecordWithTracking(upperSymbol, finraRecord, totalSymbols, state);
+		}
+	}
+
+	private async processRecordWithTracking(
+		upperSymbol: string,
+		finraRecord: FINRAShortInterestRecord,
+		totalSymbols: number,
+		state: ShortInterestRunState,
+	): Promise<void> {
+		try {
+			await this.processSymbol(finraRecord);
+			state.processed++;
+			log.debug(
+				{ symbol: upperSymbol, processed: state.processed, total: totalSymbols },
+				"Processed symbol",
+			);
+		} catch (error) {
+			this.recordSymbolFailure(upperSymbol, error, state);
+			if (!this.config.continueOnError) {
+				throw error;
+			}
+		}
+	}
+
+	private recordSymbolFailure(symbol: string, error: unknown, state: ShortInterestRunState): void {
+		state.failed++;
+		const errorMessage = error instanceof Error ? error.message : String(error);
+		state.errors.push({ symbol, error: errorMessage });
+		log.warn({ symbol, error: errorMessage }, "Failed to process symbol");
+	}
+
+	private handleBatchFailure(
+		error: unknown,
+		batchIndex: number,
+		batch: string[],
+		state: ShortInterestRunState,
+	): void {
+		const errorMessage = error instanceof Error ? error.message : String(error);
+		log.error(
+			{ batchIndex, batchSize: batch.length, error: errorMessage },
+			"Failed to fetch batch from FINRA",
+		);
+
+		for (const symbol of batch) {
+			state.failed++;
+			state.errors.push({ symbol, error: `Batch fetch failed: ${errorMessage}` });
+		}
 	}
 
 	/**

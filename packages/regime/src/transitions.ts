@@ -42,6 +42,12 @@ export interface TransitionDetectorConfig {
 	minTransitionConfidence: number;
 }
 
+interface PendingTransition {
+	regime: RegimeLabel;
+	count: number;
+	confidence: number;
+}
+
 export const DEFAULT_TRANSITION_CONFIG: TransitionDetectorConfig = {
 	minConfirmationObservations: 2,
 	maxHistoryLength: 100,
@@ -50,10 +56,7 @@ export const DEFAULT_TRANSITION_CONFIG: TransitionDetectorConfig = {
 
 export class RegimeTransitionDetector {
 	private states: Map<string, RegimeState> = new Map();
-	private pendingTransitions: Map<
-		string,
-		{ regime: RegimeLabel; count: number; confidence: number }
-	> = new Map();
+	private pendingTransitions: Map<string, PendingTransition> = new Map();
 	private config: TransitionDetectorConfig;
 
 	constructor(config: TransitionDetectorConfig = DEFAULT_TRANSITION_CONFIG) {
@@ -66,16 +69,9 @@ export class RegimeTransitionDetector {
 		timestamp: string,
 		confidence: number,
 	): TransitionUpdateResult {
-		let state = this.states.get(instrumentId);
+		const state = this.states.get(instrumentId);
 		if (!state) {
-			state = {
-				currentRegime: regime,
-				regimeStartTime: timestamp,
-				observationCount: 1,
-				history: [],
-			};
-			this.states.set(instrumentId, state);
-			return { kind: "initialized", regime };
+			return this.initializeState(instrumentId, regime, timestamp);
 		}
 
 		if (regime === state.currentRegime) {
@@ -92,49 +88,87 @@ export class RegimeTransitionDetector {
 			};
 		}
 
-		let pending = this.pendingTransitions.get(instrumentId);
-		if (!pending || pending.regime !== regime) {
-			pending = { regime, count: 1, confidence };
-			this.pendingTransitions.set(instrumentId, pending);
-		} else {
-			pending.count++;
-			pending.confidence = Math.max(pending.confidence, confidence);
-		}
-
-		if (pending.count >= this.config.minConfirmationObservations) {
-			const transition: RegimeTransition = {
-				fromRegime: state.currentRegime,
-				toRegime: regime,
-				timestamp,
-				instrumentId,
-				confidence: pending.confidence,
-				previousRegimeDuration: state.observationCount,
+		const pending = this.trackPendingTransition(instrumentId, regime, confidence);
+		if (pending.count < this.config.minConfirmationObservations) {
+			return {
+				kind: "pending_confirmation",
+				count: pending.count,
+				required: this.config.minConfirmationObservations,
 			};
-
-			state.history.push({
-				regime: state.currentRegime,
-				startTime: state.regimeStartTime,
-				endTime: timestamp,
-				duration: state.observationCount,
-			});
-
-			if (state.history.length > this.config.maxHistoryLength) {
-				state.history = state.history.slice(-this.config.maxHistoryLength);
-			}
-
-			state.currentRegime = regime;
-			state.regimeStartTime = timestamp;
-			state.observationCount = 1;
-			this.pendingTransitions.delete(instrumentId);
-
-			return { kind: "transition", transition };
 		}
 
-		return {
-			kind: "pending_confirmation",
-			count: pending.count,
-			required: this.config.minConfirmationObservations,
+		const transition = this.commitTransition(
+			instrumentId,
+			state,
+			regime,
+			timestamp,
+			pending.confidence,
+		);
+		return { kind: "transition", transition };
+	}
+
+	private initializeState(
+		instrumentId: string,
+		regime: RegimeLabel,
+		timestamp: string,
+	): TransitionUpdateResult {
+		this.states.set(instrumentId, {
+			currentRegime: regime,
+			regimeStartTime: timestamp,
+			observationCount: 1,
+			history: [],
+		});
+		return { kind: "initialized", regime };
+	}
+
+	private trackPendingTransition(
+		instrumentId: string,
+		regime: RegimeLabel,
+		confidence: number,
+	): PendingTransition {
+		const pending = this.pendingTransitions.get(instrumentId);
+		if (!pending || pending.regime !== regime) {
+			const nextPending: PendingTransition = { regime, count: 1, confidence };
+			this.pendingTransitions.set(instrumentId, nextPending);
+			return nextPending;
+		}
+
+		pending.count++;
+		pending.confidence = Math.max(pending.confidence, confidence);
+		return pending;
+	}
+
+	private commitTransition(
+		instrumentId: string,
+		state: RegimeState,
+		regime: RegimeLabel,
+		timestamp: string,
+		confidence: number,
+	): RegimeTransition {
+		const transition: RegimeTransition = {
+			fromRegime: state.currentRegime,
+			toRegime: regime,
+			timestamp,
+			instrumentId,
+			confidence,
+			previousRegimeDuration: state.observationCount,
 		};
+
+		state.history.push({
+			regime: state.currentRegime,
+			startTime: state.regimeStartTime,
+			endTime: timestamp,
+			duration: state.observationCount,
+		});
+		if (state.history.length > this.config.maxHistoryLength) {
+			state.history = state.history.slice(-this.config.maxHistoryLength);
+		}
+
+		state.currentRegime = regime;
+		state.regimeStartTime = timestamp;
+		state.observationCount = 1;
+		this.pendingTransitions.delete(instrumentId);
+		return transition;
 	}
 
 	getCurrentRegime(instrumentId: string): RegimeLabel | null {

@@ -62,11 +62,14 @@ app.get("/api/workflows", (c) =>
 );
 
 let server: ReturnType<typeof Bun.serve>;
-let baseUrl: string;
+let baseUrl = "";
+
+type AgentsResponse = { agents: Array<{ id: string; name: string }> };
+type WorkflowsResponse = { workflows: Array<{ id: string; name: string }> };
 
 beforeAll(() => {
 	server = Bun.serve({
-		port: 0, // Random available port
+		port: 0,
 		fetch: app.fetch,
 	});
 	baseUrl = `http://localhost:${server.port}`;
@@ -76,52 +79,52 @@ afterAll(() => {
 	server.stop();
 });
 
-describe("Mastra API E2E", () => {
+async function fetchJson<T>(path: string): Promise<{ response: Response; data: T }> {
+	const response = await fetch(`${baseUrl}${path}`);
+	const data = (await response.json()) as T;
+	return { response, data };
+}
+
+function runHealthTests(): void {
 	describe("GET /health", () => {
 		it("should return ok status", async () => {
-			const response = await fetch(`${baseUrl}/health`);
+			const { response, data } = await fetchJson<{ status: string }>("/health");
 			expect(response.status).toBe(200);
-
-			const data = (await response.json()) as { status: string };
 			expect(data).toEqual({ status: "ok" });
 		});
 	});
+}
 
+function runRootTests(): void {
 	describe("GET /", () => {
 		it("should return API info and endpoints", async () => {
-			const response = await fetch(`${baseUrl}/`);
-			expect(response.status).toBe(200);
-
-			const data = (await response.json()) as {
+			const { response, data } = await fetchJson<{
 				name: string;
 				version: string;
 				endpoints: Record<string, string>;
-			};
+			}>("/");
+			expect(response.status).toBe(200);
 			expect(data.name).toBe("@cream/mastra");
 			expect(data.version).toBe("0.1.0");
-			expect(data.endpoints).toBeDefined();
 			expect(data.endpoints.health).toBe("/health");
 			expect(data.endpoints.agents).toBe("/api/agents");
 			expect(data.endpoints.workflows).toBe("/api/workflows");
 		});
 	});
+}
 
+function runAgentTests(): void {
 	describe("GET /api/agents", () => {
 		it("should return list of agents", async () => {
-			const response = await fetch(`${baseUrl}/api/agents`);
+			const { response, data } = await fetchJson<AgentsResponse>("/api/agents");
 			expect(response.status).toBe(200);
-
-			const data = (await response.json()) as { agents: Array<{ id: string; name: string }> };
-			expect(data.agents).toBeDefined();
 			expect(Array.isArray(data.agents)).toBe(true);
 			expect(data.agents.length).toBeGreaterThan(0);
 		});
 
 		it("should include expected agent IDs", async () => {
-			const response = await fetch(`${baseUrl}/api/agents`);
-			const data = (await response.json()) as { agents: Array<{ id: string; name: string }> };
-
-			const agentIds = data.agents.map((a) => a.id);
+			const { data } = await fetchJson<AgentsResponse>("/api/agents");
+			const agentIds = data.agents.map((agent) => agent.id);
 			expect(agentIds).toContain("grounding_agent");
 			expect(agentIds).toContain("news_analyst");
 			expect(agentIds).toContain("trader");
@@ -129,37 +132,33 @@ describe("Mastra API E2E", () => {
 			expect(agentIds).toContain("critic");
 		});
 	});
+}
 
+function runWorkflowTests(): void {
 	describe("GET /api/workflows", () => {
 		it("should return list of workflows", async () => {
-			const response = await fetch(`${baseUrl}/api/workflows`);
+			const { response, data } = await fetchJson<WorkflowsResponse>("/api/workflows");
 			expect(response.status).toBe(200);
-
-			const data = (await response.json()) as { workflows: Array<{ id: string; name: string }> };
-			expect(data.workflows).toBeDefined();
 			expect(Array.isArray(data.workflows)).toBe(true);
 			expect(data.workflows.length).toBe(3);
 		});
 
 		it("should include expected workflow IDs", async () => {
-			const response = await fetch(`${baseUrl}/api/workflows`);
-			const data = (await response.json()) as { workflows: Array<{ id: string; name: string }> };
-
-			const workflowIds = data.workflows.map((w) => w.id);
+			const { data } = await fetchJson<WorkflowsResponse>("/api/workflows");
+			const workflowIds = data.workflows.map((workflow) => workflow.id);
 			expect(workflowIds).toContain("trading-cycle");
 			expect(workflowIds).toContain("prediction-markets");
 			expect(workflowIds).toContain("macro-watch");
 		});
 	});
+}
 
+function runCorsAndErrorTests(): void {
 	describe("CORS headers", () => {
 		it("should include CORS headers for allowed origins", async () => {
 			const response = await fetch(`${baseUrl}/health`, {
-				headers: {
-					Origin: "http://localhost:3000",
-				},
+				headers: { Origin: "http://localhost:3000" },
 			});
-
 			expect(response.headers.get("Access-Control-Allow-Origin")).toBeDefined();
 		});
 	});
@@ -170,4 +169,12 @@ describe("Mastra API E2E", () => {
 			expect(response.status).toBe(404);
 		});
 	});
+}
+
+describe("Mastra API E2E", () => {
+	runHealthTests();
+	runRootTests();
+	runAgentTests();
+	runWorkflowTests();
+	runCorsAndErrorTests();
 });

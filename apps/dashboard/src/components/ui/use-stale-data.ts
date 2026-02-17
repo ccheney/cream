@@ -6,7 +6,7 @@
  * @see docs/plans/ui/31-realtime-patterns.md line 26
  */
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 export type StaleLevel = "fresh" | "stale" | "very-stale" | "extremely-stale";
 
@@ -53,6 +53,48 @@ const OPACITY_VALUES: Record<StaleLevel, number> = {
 	"extremely-stale": 0.3,
 };
 
+function createStaleState(
+	level: StaleLevel,
+	isStale: boolean,
+	showIndicator: boolean,
+	secondsSinceUpdate: number,
+): StaleState {
+	return {
+		level,
+		isStale,
+		opacity: OPACITY_VALUES[level],
+		showIndicator,
+		secondsSinceUpdate,
+	};
+}
+
+function getFreshStaleState(secondsSinceUpdate: number): StaleState {
+	return createStaleState("fresh", false, false, secondsSinceUpdate);
+}
+
+function getStaleState(level: Exclude<StaleLevel, "fresh">, rawElapsedMs: number): StaleState {
+	const secondsSinceUpdate = Math.floor(rawElapsedMs / 1000);
+	return createStaleState(level, true, level !== "stale", secondsSinceUpdate);
+}
+
+function resolveStaleState(
+	rawElapsedMs: number,
+	staleThresholdMs: number,
+	veryStaleThresholdMs: number,
+	extremelyStaleThresholdMs: number,
+): StaleState {
+	if (rawElapsedMs >= extremelyStaleThresholdMs) {
+		return getStaleState("extremely-stale", rawElapsedMs);
+	}
+	if (rawElapsedMs >= veryStaleThresholdMs) {
+		return getStaleState("very-stale", rawElapsedMs);
+	}
+	if (rawElapsedMs >= staleThresholdMs) {
+		return getStaleState("stale", rawElapsedMs);
+	}
+	return getFreshStaleState(Math.floor(rawElapsedMs / 1000));
+}
+
 /**
  * Hook to track data freshness and provide stale state.
  *
@@ -84,72 +126,30 @@ export function useStaleData(
 		updateIntervalMs = DEFAULT_UPDATE_INTERVAL_MS,
 	} = options;
 
-	const [lastUpdate, setLastUpdate] = useState<Date>(lastUpdatedAt ?? new Date());
-	const [stale, setStale] = useState<StaleState>({
-		level: "fresh",
-		isStale: false,
-		opacity: 1.0,
-		showIndicator: false,
-		secondsSinceUpdate: 0,
-	});
-
-	const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
-
-	const calculateStaleState = useCallback(
-		(elapsedMs: number): StaleState => {
-			const secondsSinceUpdate = Math.floor(elapsedMs / 1000);
-
-			if (elapsedMs >= extremelyStaleThresholdMs) {
-				return {
-					level: "extremely-stale",
-					isStale: true,
-					opacity: OPACITY_VALUES["extremely-stale"],
-					showIndicator: true,
-					secondsSinceUpdate,
-				};
-			}
-
-			if (elapsedMs >= veryStaleThresholdMs) {
-				return {
-					level: "very-stale",
-					isStale: true,
-					opacity: OPACITY_VALUES["very-stale"],
-					showIndicator: true,
-					secondsSinceUpdate,
-				};
-			}
-
-			if (elapsedMs >= staleThresholdMs) {
-				return {
-					level: "stale",
-					isStale: true,
-					opacity: OPACITY_VALUES.stale,
-					showIndicator: false,
-					secondsSinceUpdate,
-				};
-			}
-
-			return {
-				level: "fresh",
-				isStale: false,
-				opacity: OPACITY_VALUES.fresh,
-				showIndicator: false,
-				secondsSinceUpdate,
-			};
-		},
+	const thresholds = useMemo(
+		() => ({ staleThresholdMs, veryStaleThresholdMs, extremelyStaleThresholdMs }),
 		[staleThresholdMs, veryStaleThresholdMs, extremelyStaleThresholdMs],
 	);
 
-	const markUpdated = () => {
+	const [lastUpdate, setLastUpdate] = useState<Date>(lastUpdatedAt ?? new Date());
+	const [stale, setStale] = useState<StaleState>(getFreshStaleState(0));
+	const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
+	const calculateStaleState = useCallback(
+		(elapsedMs: number) =>
+			resolveStaleState(
+				elapsedMs,
+				thresholds.staleThresholdMs,
+				thresholds.veryStaleThresholdMs,
+				thresholds.extremelyStaleThresholdMs,
+			),
+		[thresholds],
+	);
+
+	const markUpdated = useCallback(() => {
 		setLastUpdate(new Date());
-		setStale({
-			level: "fresh",
-			isStale: false,
-			opacity: 1.0,
-			showIndicator: false,
-			secondsSinceUpdate: 0,
-		});
-	};
+		setStale(getFreshStaleState(0));
+	}, []);
 
 	useEffect(() => {
 		if (lastUpdatedAt) {
@@ -158,21 +158,20 @@ export function useStaleData(
 	}, [lastUpdatedAt]);
 
 	useEffect(() => {
-		const checkStaleness = () => {
+		const updateStaleState = () => {
 			const elapsedMs = Date.now() - lastUpdate.getTime();
-			const newState = calculateStaleState(elapsedMs);
-			setStale(newState);
+			setStale(calculateStaleState(elapsedMs));
 		};
 
-		checkStaleness();
-		intervalRef.current = setInterval(checkStaleness, updateIntervalMs);
+		updateStaleState();
+		intervalRef.current = setInterval(updateStaleState, updateIntervalMs);
 
 		return () => {
 			if (intervalRef.current) {
 				clearInterval(intervalRef.current);
 			}
 		};
-	}, [lastUpdate, updateIntervalMs, calculateStaleState]);
+	}, [calculateStaleState, lastUpdate, updateIntervalMs]);
 
 	return { stale, markUpdated };
 }

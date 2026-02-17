@@ -117,7 +117,8 @@ const ContractCell = memo(function ContractCell({
 		type === "call" ? "bg-green-50/50 dark:bg-green-900/20" : "bg-red-50/50 dark:bg-red-900/20";
 
 	return (
-		<div
+		<button
+			type="button"
 			className={`
         grid grid-cols-5 gap-1 px-2 py-1.5 text-xs font-mono
         cursor-pointer transition-colors duration-150
@@ -129,8 +130,6 @@ const ContractCell = memo(function ContractCell({
 			onKeyDown={handleKeyDown}
 			onMouseEnter={() => setIsHovered(true)}
 			onMouseLeave={() => setIsHovered(false)}
-			role="button"
-			tabIndex={0}
 			aria-label={`${type} option at strike, bid ${formatPrice(contract.bid)}, ask ${formatPrice(contract.ask)}`}
 		>
 			<span className="text-right text-green-600 dark:text-green-400">
@@ -158,7 +157,7 @@ const ContractCell = memo(function ContractCell({
 			{isHovered && (
 				<span className="absolute top-0.5 left-0.5 w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse" />
 			)}
-		</div>
+		</button>
 	);
 });
 

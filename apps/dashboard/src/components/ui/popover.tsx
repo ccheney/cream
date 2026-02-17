@@ -77,25 +77,145 @@ function usePopoverContext() {
 	return context;
 }
 
+interface PopoverPositionState {
+	position: PopoverPosition;
+	top: number;
+	left: number;
+}
+
+function calculatePopoverPosition(
+	position: PopoverPosition,
+	triggerRect: DOMRect,
+	contentRect: DOMRect,
+	viewportWidth: number,
+	viewportHeight: number,
+): PopoverPositionState {
+	const padding = 8;
+	const candidates: { position: PopoverPosition; top: number; left: number }[] = [
+		{
+			position: "top",
+			top: triggerRect.top - contentRect.height - padding,
+			left: triggerRect.left + (triggerRect.width - contentRect.width) / 2,
+		},
+		{
+			position: "bottom",
+			top: triggerRect.bottom + padding,
+			left: triggerRect.left + (triggerRect.width - contentRect.width) / 2,
+		},
+		{
+			position: "left",
+			top: triggerRect.top + (triggerRect.height - contentRect.height) / 2,
+			left: triggerRect.left - contentRect.width - padding,
+		},
+		{
+			position: "right",
+			top: triggerRect.top + (triggerRect.height - contentRect.height) / 2,
+			left: triggerRect.right + padding,
+		},
+	];
+
+	const defaultCandidate = candidates.find((entry) => entry.position === position) ?? candidates[1];
+	const fallbackCandidate = candidates[0] ?? defaultCandidate;
+	let result = defaultCandidate ?? fallbackCandidate;
+	let { top, left } = result;
+
+	if (result.position === "top" && candidates[1]?.top !== undefined && candidates[1].top < 0) {
+		result = candidates[1];
+		top = candidates[1].top;
+		left = candidates[1].left;
+	}
+
+	if (
+		result.position === "bottom" &&
+		result.top + contentRect.height > viewportHeight &&
+		candidates[0]
+	) {
+		result = candidates[0];
+		top = result.top;
+		left = result.left;
+	}
+
+	left = Math.max(padding, Math.min(left, viewportWidth - contentRect.width - padding));
+	return { position: result.position, top, left };
+}
+
+function usePopoverPosition(
+	isOpen: boolean,
+	position: PopoverPosition,
+	triggerRef: React.RefObject<HTMLElement | null>,
+	contentRef: React.RefObject<HTMLDivElement | null>,
+): PopoverPositionState {
+	const [coords, setCoords] = useState({ top: 0, left: 0, position });
+
+	useEffect(() => {
+		if (!isOpen || !triggerRef.current || !contentRef.current) {
+			return;
+		}
+
+		const triggerRect = triggerRef.current.getBoundingClientRect();
+		const contentRect = contentRef.current.getBoundingClientRect();
+		setCoords(
+			calculatePopoverPosition(
+				position,
+				triggerRect,
+				contentRect,
+				window.innerWidth,
+				window.innerHeight,
+			),
+		);
+	}, [isOpen, position, triggerRef, contentRef]);
+
+	return coords;
+}
+
+function usePopoverDismissHandlers(
+	isOpen: boolean,
+	close: () => void,
+	contentRef: React.RefObject<HTMLDivElement | null>,
+	triggerRef: React.RefObject<HTMLElement | null>,
+) {
+	useEffect(() => {
+		if (!isOpen) {
+			return;
+		}
+
+		const handleEscape = (event: KeyboardEvent) => {
+			if (event.key === "Escape") {
+				close();
+			}
+		};
+
+		const handleClickOutside = (event: MouseEvent) => {
+			const target = event.target as Node;
+			if (
+				contentRef.current &&
+				!contentRef.current.contains(target) &&
+				triggerRef.current &&
+				!triggerRef.current.contains(target)
+			) {
+				close();
+			}
+		};
+
+		document.addEventListener("keydown", handleEscape);
+		const timeout = setTimeout(() => {
+			document.addEventListener("mousedown", handleClickOutside);
+		}, 0);
+
+		return () => {
+			clearTimeout(timeout);
+			document.removeEventListener("keydown", handleEscape);
+			document.removeEventListener("mousedown", handleClickOutside);
+		};
+	}, [isOpen, close, contentRef, triggerRef]);
+}
+
 // ============================================
-// Popover Root
+// Root
 // ============================================
 
 /**
  * Popover - Click-triggered rich content popup.
- *
- * @example
- * ```tsx
- * <Popover>
- *   <PopoverTrigger>
- *     <button>Open</button>
- *   </PopoverTrigger>
- *   <PopoverContent>
- *     <p>Rich content here</p>
- *     <button>Action</button>
- *   </PopoverContent>
- * </Popover>
- * ```
  */
 export function Popover({ defaultOpen = false, open, onOpenChange, children }: PopoverProps) {
 	const [internalOpen, setInternalOpen] = useState(defaultOpen);
@@ -106,11 +226,11 @@ export function Popover({ defaultOpen = false, open, onOpenChange, children }: P
 	const isOpen = isControlled ? open : internalOpen;
 
 	const toggle = useCallback(() => {
-		const newOpen = !isOpen;
+		const nextOpen = !isOpen;
 		if (!isControlled) {
-			setInternalOpen(newOpen);
+			setInternalOpen(nextOpen);
 		}
-		onOpenChange?.(newOpen);
+		onOpenChange?.(nextOpen);
 	}, [isOpen, isControlled, onOpenChange]);
 
 	const close = useCallback(() => {
@@ -128,7 +248,7 @@ export function Popover({ defaultOpen = false, open, onOpenChange, children }: P
 }
 
 // ============================================
-// PopoverTrigger
+// Trigger
 // ============================================
 
 /**
@@ -138,7 +258,6 @@ export const PopoverTrigger = forwardRef<HTMLButtonElement, PopoverTriggerProps>
 	({ children, className, ...props }, ref) => {
 		const { toggle, triggerRef, contentId, isOpen } = usePopoverContext();
 
-		// Combine refs
 		const handleRef = useCallback(
 			(node: HTMLButtonElement | null) => {
 				triggerRef.current = node;
@@ -171,8 +290,31 @@ export const PopoverTrigger = forwardRef<HTMLButtonElement, PopoverTriggerProps>
 PopoverTrigger.displayName = "PopoverTrigger";
 
 // ============================================
-// PopoverContent
+// Content
 // ============================================
+
+function PopoverArrow({
+	adjustedPosition,
+	style,
+}: {
+	adjustedPosition: PopoverPosition;
+	style: string;
+}) {
+	return (
+		<div
+			className={cn(
+				"absolute w-3 h-3 bg-white dark:bg-stone-800 rotate-45",
+				"border-stone-200 dark:border-stone-700",
+				adjustedPosition === "top" && "bottom-[-6px] left-1/2 -translate-x-1/2 border-b border-r",
+				adjustedPosition === "bottom" && "top-[-6px] left-1/2 -translate-x-1/2 border-t border-l",
+				adjustedPosition === "left" && "right-[-6px] top-1/2 -translate-y-1/2 border-t border-r",
+				adjustedPosition === "right" && "left-[-6px] top-1/2 -translate-y-1/2 border-b border-l",
+			)}
+			aria-hidden="true"
+			style={style}
+		/>
+	);
+}
 
 /**
  * PopoverContent - The popover content panel.
@@ -181,119 +323,14 @@ export const PopoverContent = forwardRef<HTMLDivElement, PopoverContentProps>(
 	({ position = "bottom", children, className, style, ...props }, ref) => {
 		const { isOpen, close, triggerRef, contentId } = usePopoverContext();
 		const contentRef = useRef<HTMLDivElement | null>(null);
-		const [coords, setCoords] = useState({ top: 0, left: 0 });
-		const [adjustedPosition, setAdjustedPosition] = useState(position);
+		const {
+			top,
+			left,
+			position: adjustedPosition,
+		} = usePopoverPosition(isOpen, position, triggerRef, contentRef);
 
-		// Calculate position
-		useEffect(() => {
-			if (!isOpen || !triggerRef.current || !contentRef.current) {
-				return;
-			}
+		usePopoverDismissHandlers(isOpen, close, contentRef, triggerRef);
 
-			const triggerRect = triggerRef.current.getBoundingClientRect();
-			const contentRect = contentRef.current.getBoundingClientRect();
-			const padding = 8;
-
-			let newPosition = position;
-			let top = 0;
-			let left = 0;
-
-			// Calculate initial position
-			const calculatePosition = (pos: PopoverPosition) => {
-				switch (pos) {
-					case "top":
-						return {
-							top: triggerRect.top - contentRect.height - padding,
-							left: triggerRect.left + (triggerRect.width - contentRect.width) / 2,
-						};
-					case "bottom":
-						return {
-							top: triggerRect.bottom + padding,
-							left: triggerRect.left + (triggerRect.width - contentRect.width) / 2,
-						};
-					case "left":
-						return {
-							top: triggerRect.top + (triggerRect.height - contentRect.height) / 2,
-							left: triggerRect.left - contentRect.width - padding,
-						};
-					case "right":
-						return {
-							top: triggerRect.top + (triggerRect.height - contentRect.height) / 2,
-							left: triggerRect.right + padding,
-						};
-				}
-			};
-
-			const pos = calculatePosition(position);
-			top = pos.top;
-			left = pos.left;
-
-			// Auto-adjust if out of viewport
-			if (top < 0 && position === "top") {
-				newPosition = "bottom";
-				const newPos = calculatePosition("bottom");
-				top = newPos.top;
-				left = newPos.left;
-			} else if (top + contentRect.height > window.innerHeight && position === "bottom") {
-				newPosition = "top";
-				const newPos = calculatePosition("top");
-				top = newPos.top;
-				left = newPos.left;
-			}
-
-			// Keep within horizontal bounds
-			left = Math.max(padding, Math.min(left, window.innerWidth - contentRect.width - padding));
-
-			setCoords({ top, left });
-			setAdjustedPosition(newPosition);
-		}, [isOpen, position, triggerRef]);
-
-		// Close on escape
-		useEffect(() => {
-			if (!isOpen) {
-				return;
-			}
-
-			const handleEscape = (e: KeyboardEvent) => {
-				if (e.key === "Escape") {
-					close();
-				}
-			};
-
-			document.addEventListener("keydown", handleEscape);
-			return () => document.removeEventListener("keydown", handleEscape);
-		}, [isOpen, close]);
-
-		// Close on outside click
-		useEffect(() => {
-			if (!isOpen) {
-				return;
-			}
-
-			const handleClickOutside = (e: MouseEvent) => {
-				const target = e.target as Node;
-				if (
-					contentRef.current &&
-					!contentRef.current.contains(target) &&
-					triggerRef.current &&
-					!triggerRef.current.contains(target)
-				) {
-					close();
-				}
-			};
-
-			// Delay to prevent immediate close on trigger click
-			const timeout = setTimeout(() => {
-				document.addEventListener("mousedown", handleClickOutside);
-			}, 0);
-
-			return () => {
-				clearTimeout(timeout);
-				document.removeEventListener("mousedown", handleClickOutside);
-			};
-		}, [isOpen, close, triggerRef]);
-
-		// Combine refs
 		const handleRef = useCallback(
 			(node: HTMLDivElement | null) => {
 				contentRef.current = node;
@@ -323,30 +360,11 @@ export const PopoverContent = forwardRef<HTMLDivElement, PopoverContentProps>(
 					"animate-in fade-in-0 zoom-in-95 duration-150",
 					className,
 				)}
-				style={{
-					top: coords.top,
-					left: coords.left,
-					...style,
-				}}
+				style={{ top, left, ...style }}
 				{...props}
 			>
 				{children}
-				{/* Arrow */}
-				<div
-					className={cn(
-						"absolute w-3 h-3 bg-white dark:bg-stone-800 rotate-45",
-						"border-stone-200 dark:border-stone-700",
-						adjustedPosition === "top" &&
-							"bottom-[-6px] left-1/2 -translate-x-1/2 border-b border-r",
-						adjustedPosition === "bottom" &&
-							"top-[-6px] left-1/2 -translate-x-1/2 border-t border-l",
-						adjustedPosition === "left" &&
-							"right-[-6px] top-1/2 -translate-y-1/2 border-t border-r",
-						adjustedPosition === "right" &&
-							"left-[-6px] top-1/2 -translate-y-1/2 border-b border-l",
-					)}
-					aria-hidden="true"
-				/>
+				<PopoverArrow adjustedPosition={adjustedPosition} style={{}} />
 			</div>
 		);
 	},

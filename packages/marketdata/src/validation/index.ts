@@ -133,6 +133,178 @@ export interface ValidationResult {
 // Combined Validation
 // ============================================
 
+interface ValidationAccumulator {
+	issues: ValidationIssue[];
+	qualityScore: number;
+	processedCandles: (Candle | InterpolatedCandle)[];
+	staleness?: {
+		isStale: boolean;
+		staleMinutes: number;
+		threshold: number;
+	};
+	gaps?: GapDetectionResult;
+	anomalies?: {
+		count: number;
+		items: Anomaly[];
+	};
+}
+
+function createNoDataResult(): ValidationResult {
+	return {
+		isValid: false,
+		symbol: "",
+		timeframe: "1h",
+		totalCandles: 0,
+		issues: [
+			{
+				type: "insufficient_data",
+				severity: "critical",
+				message: "No candle data provided",
+			},
+		],
+		qualityScore: 0,
+	};
+}
+
+function createAccumulator(candles: Candle[]): ValidationAccumulator {
+	return {
+		issues: [],
+		qualityScore: 100,
+		processedCandles: candles,
+	};
+}
+
+function applyMinimumDataCheck(acc: ValidationAccumulator, candles: Candle[]): void {
+	if (candles.length >= 10) {
+		return;
+	}
+	acc.issues.push({
+		type: "insufficient_data",
+		severity: "warning",
+		message: `Only ${candles.length} candles provided (minimum 10 recommended)`,
+	});
+	acc.qualityScore -= 10;
+}
+
+function applyStalenessCheck(
+	acc: ValidationAccumulator,
+	lastCandle: Candle,
+	timeframe: Timeframe,
+	config: ValidationConfig,
+): void {
+	if (config.checkStaleness === false) {
+		return;
+	}
+
+	const staleness = checkStaleness(
+		lastCandle.timestamp,
+		timeframe,
+		config.stalenessThresholds ?? DEFAULT_STALENESS_THRESHOLDS,
+	);
+	acc.staleness = {
+		isStale: staleness.isStale,
+		staleMinutes: staleness.staleMinutes,
+		threshold: staleness.threshold,
+	};
+
+	if (!staleness.isStale) {
+		return;
+	}
+
+	const critical = staleness.staleMinutes > staleness.threshold * 2;
+	acc.issues.push({
+		type: "staleness",
+		severity: critical ? "critical" : "warning",
+		message: `Data is stale: last update ${staleness.staleMinutes.toFixed(0)} minutes ago (threshold: ${staleness.threshold} minutes)`,
+		timestamp: lastCandle.timestamp,
+		details: { staleMinutes: staleness.staleMinutes, threshold: staleness.threshold },
+	});
+	acc.qualityScore -= critical ? 30 : 15;
+}
+
+function isUnexpectedGap(
+	gap: GapDetectionResult["gaps"][number],
+	config: ValidationConfig,
+): boolean {
+	if (config.calendarAware === false) {
+		return true;
+	}
+
+	return !isExpectedGap(
+		gap.previousTimestamp,
+		new Date(new Date(gap.previousTimestamp).getTime() + gap.gapMinutes * 60_000).toISOString(),
+		config.calendarConfig ?? DEFAULT_US_CALENDAR,
+	);
+}
+
+function applyGapCheck(
+	acc: ValidationAccumulator,
+	candles: Candle[],
+	config: ValidationConfig,
+): void {
+	if (config.checkGaps === false) {
+		return;
+	}
+
+	const gapResult = detectGaps(candles);
+	acc.gaps = gapResult;
+
+	if (!gapResult.hasGaps) {
+		return;
+	}
+
+	const unexpectedGaps = gapResult.gaps.filter((gap) => isUnexpectedGap(gap, config));
+	if (unexpectedGaps.length > 0) {
+		for (const gap of unexpectedGaps) {
+			acc.issues.push({
+				type: "gap",
+				severity: gap.gapCandles > 5 ? "critical" : "warning",
+				message: `Gap detected: ${gap.gapCandles} missing candle(s) (${gap.gapMinutes.toFixed(0)} minutes)`,
+				timestamp: gap.expectedTimestamp,
+				details: { gapCandles: gap.gapCandles, gapMinutes: gap.gapMinutes },
+			});
+		}
+		acc.qualityScore -= Math.min(30, unexpectedGaps.length * 5);
+	}
+
+	if (config.autoFillGaps) {
+		acc.processedCandles = fillGaps(candles, 1);
+	}
+}
+
+function applyAnomalyCheck(
+	acc: ValidationAccumulator,
+	candles: Candle[],
+	config: ValidationConfig,
+): void {
+	if (config.checkAnomalies === false) {
+		return;
+	}
+
+	const anomalies = detectAllAnomalies(candles, config.anomalyConfig ?? DEFAULT_ANOMALY_CONFIG);
+	if (!anomalies.hasAnomalies) {
+		return;
+	}
+
+	acc.anomalies = {
+		count: anomalies.anomalies.length,
+		items: anomalies.anomalies,
+	};
+
+	for (const anomaly of anomalies.anomalies) {
+		acc.issues.push({
+			type: "anomaly",
+			severity: anomaly.severity,
+			message: anomaly.description,
+			timestamp: anomaly.timestamp,
+			details: { type: anomaly.type, value: anomaly.value },
+		});
+	}
+
+	const criticalCount = anomalies.anomalies.filter((item) => item.severity === "critical").length;
+	acc.qualityScore -= Math.min(20, criticalCount * 10);
+}
+
 /**
  * Validate candle data comprehensively.
  *
@@ -144,169 +316,35 @@ export function validateCandleData(
 	candles: Candle[],
 	config: ValidationConfig = DEFAULT_VALIDATION_CONFIG,
 ): ValidationResult {
-	const issues: ValidationIssue[] = [];
-	let qualityScore = 100;
-
 	if (candles.length === 0) {
-		return {
-			isValid: false,
-			symbol: "",
-			timeframe: "1h",
-			totalCandles: 0,
-			issues: [
-				{
-					type: "insufficient_data",
-					severity: "critical",
-					message: "No candle data provided",
-				},
-			],
-			qualityScore: 0,
-		};
+		return createNoDataResult();
 	}
 
 	const firstCandle = candles[0];
 	const lastCandle = candles.at(-1);
 	if (!firstCandle || !lastCandle) {
-		return {
-			isValid: false,
-			symbol: "",
-			timeframe: "1h",
-			totalCandles: 0,
-			issues: [
-				{
-					type: "insufficient_data",
-					severity: "critical",
-					message: "No candle data provided",
-				},
-			],
-			qualityScore: 0,
-		};
-	}
-	const symbol = firstCandle.symbol;
-	const timeframe = firstCandle.timeframe;
-
-	// Minimum data check
-	if (candles.length < 10) {
-		issues.push({
-			type: "insufficient_data",
-			severity: "warning",
-			message: `Only ${candles.length} candles provided (minimum 10 recommended)`,
-		});
-		qualityScore -= 10;
+		return createNoDataResult();
 	}
 
-	// Staleness check
-	let stalenessResult: { isStale: boolean; staleMinutes: number; threshold: number } | undefined;
-	if (config.checkStaleness !== false) {
-		const staleness = checkStaleness(
-			lastCandle.timestamp,
-			timeframe,
-			config.stalenessThresholds ?? DEFAULT_STALENESS_THRESHOLDS,
-		);
-
-		stalenessResult = {
-			isStale: staleness.isStale,
-			staleMinutes: staleness.staleMinutes,
-			threshold: staleness.threshold,
-		};
-
-		if (staleness.isStale) {
-			issues.push({
-				type: "staleness",
-				severity: staleness.staleMinutes > staleness.threshold * 2 ? "critical" : "warning",
-				message: `Data is stale: last update ${staleness.staleMinutes.toFixed(0)} minutes ago (threshold: ${staleness.threshold} minutes)`,
-				timestamp: lastCandle.timestamp,
-				details: { staleMinutes: staleness.staleMinutes, threshold: staleness.threshold },
-			});
-			qualityScore -= staleness.staleMinutes > staleness.threshold * 2 ? 30 : 15;
-		}
-	}
-
-	// Gap detection
-	let gapResult: GapDetectionResult | undefined;
-	let processedCandles: (Candle | InterpolatedCandle)[] = candles;
-
-	if (config.checkGaps !== false) {
-		gapResult = detectGaps(candles);
-
-		if (gapResult.hasGaps) {
-			// Filter out expected gaps (calendar-aware)
-			let unexpectedGaps = gapResult.gaps;
-
-			if (config.calendarAware !== false) {
-				unexpectedGaps = gapResult.gaps.filter((gap) => {
-					return !isExpectedGap(
-						gap.previousTimestamp,
-						new Date(
-							new Date(gap.previousTimestamp).getTime() + gap.gapMinutes * 60000,
-						).toISOString(),
-						config.calendarConfig ?? DEFAULT_US_CALENDAR,
-					);
-				});
-			}
-
-			if (unexpectedGaps.length > 0) {
-				for (const gap of unexpectedGaps) {
-					issues.push({
-						type: "gap",
-						severity: gap.gapCandles > 5 ? "critical" : "warning",
-						message: `Gap detected: ${gap.gapCandles} missing candle(s) (${gap.gapMinutes.toFixed(0)} minutes)`,
-						timestamp: gap.expectedTimestamp,
-						details: { gapCandles: gap.gapCandles, gapMinutes: gap.gapMinutes },
-					});
-				}
-				qualityScore -= Math.min(30, unexpectedGaps.length * 5);
-			}
-
-			// Auto-fill single gaps if enabled
-			if (config.autoFillGaps) {
-				processedCandles = fillGaps(candles, 1);
-			}
-		}
-	}
-
-	// Anomaly detection
-	let anomalyResult: { count: number; items: Anomaly[] } | undefined;
-	if (config.checkAnomalies !== false) {
-		const anomalies = detectAllAnomalies(candles, config.anomalyConfig ?? DEFAULT_ANOMALY_CONFIG);
-
-		if (anomalies.hasAnomalies) {
-			anomalyResult = {
-				count: anomalies.anomalies.length,
-				items: anomalies.anomalies,
-			};
-
-			for (const anomaly of anomalies.anomalies) {
-				issues.push({
-					type: "anomaly",
-					severity: anomaly.severity,
-					message: anomaly.description,
-					timestamp: anomaly.timestamp,
-					details: { type: anomaly.type, value: anomaly.value },
-				});
-			}
-
-			// Deduct for critical anomalies
-			const criticalCount = anomalies.anomalies.filter((a) => a.severity === "critical").length;
-			qualityScore -= Math.min(20, criticalCount * 10);
-		}
-	}
-
-	// Calculate final validity
-	const criticalIssues = issues.filter((i) => i.severity === "critical");
+	const acc = createAccumulator(candles);
+	applyMinimumDataCheck(acc, candles);
+	applyStalenessCheck(acc, lastCandle, firstCandle.timeframe, config);
+	applyGapCheck(acc, candles, config);
+	applyAnomalyCheck(acc, candles, config);
+	const criticalIssues = acc.issues.filter((issue) => issue.severity === "critical");
 	const isValid = criticalIssues.length === 0;
 
 	return {
 		isValid,
-		symbol,
-		timeframe,
+		symbol: firstCandle.symbol,
+		timeframe: firstCandle.timeframe,
 		totalCandles: candles.length,
-		issues,
-		staleness: stalenessResult,
-		gaps: gapResult,
-		anomalies: anomalyResult,
-		processedCandles: config.autoFillGaps ? processedCandles : undefined,
-		qualityScore: Math.max(0, qualityScore),
+		issues: acc.issues,
+		staleness: acc.staleness,
+		gaps: acc.gaps,
+		anomalies: acc.anomalies,
+		processedCandles: config.autoFillGaps ? acc.processedCandles : undefined,
+		qualityScore: Math.max(0, acc.qualityScore),
 	};
 }
 

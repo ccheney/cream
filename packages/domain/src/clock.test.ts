@@ -34,64 +34,54 @@ describe("Clock Thresholds", () => {
 // Timestamp Validation Tests
 // ============================================
 
-describe("validateTimestamp", () => {
+describe("validateTimestamp current and future handling", () => {
 	it("accepts valid current timestamp", () => {
-		const now = new Date().toISOString();
-		const result = validateTimestamp(now);
-
+		const result = validateTimestamp(new Date().toISOString());
 		expect(result.valid).toBe(true);
 		expect(result.errors.length).toBe(0);
 	});
 
 	it("accepts timestamp from 1 hour ago", () => {
 		const hourAgo = new Date(Date.now() - 60 * 60 * 1000).toISOString();
-		const result = validateTimestamp(hourAgo);
-
-		expect(result.valid).toBe(true);
+		expect(validateTimestamp(hourAgo).valid).toBe(true);
 	});
 
 	it("rejects future timestamp by default", () => {
-		const future = new Date(Date.now() + 60 * 1000).toISOString(); // 1 min ahead
+		const future = new Date(Date.now() + 60 * 1000).toISOString();
 		const result = validateTimestamp(future);
-
 		expect(result.valid).toBe(false);
 		expect(result.errors[0]).toContain("in the future");
 	});
 
 	it("allows future timestamp within tolerance", () => {
-		const nearFuture = new Date(Date.now() + 3000).toISOString(); // 3s ahead
-		const result = validateTimestamp(nearFuture, { futureTolerance: 5000 });
-
-		expect(result.valid).toBe(true);
+		const nearFuture = new Date(Date.now() + 3000).toISOString();
+		expect(validateTimestamp(nearFuture, { futureTolerance: 5000 }).valid).toBe(true);
 	});
 
 	it("allows future timestamp when allowFuture is true", () => {
 		const future = new Date(Date.now() + 60 * 1000).toISOString();
 		const result = validateTimestamp(future, { allowFuture: true });
-
 		expect(result.valid).toBe(true);
-		expect(result.warnings.length).toBe(1);
 		expect(result.warnings[0]).toContain("in the future");
 	});
+});
 
+describe("validateTimestamp stale and invalid values", () => {
 	it("rejects stale timestamp", () => {
-		const oldDate = new Date(Date.now() - 40 * 24 * 60 * 60 * 1000).toISOString(); // 40 days ago
+		const oldDate = new Date(Date.now() - 40 * 24 * 60 * 60 * 1000).toISOString();
 		const result = validateTimestamp(oldDate, { maxAgeMs: 30 * 24 * 60 * 60 * 1000 });
-
 		expect(result.valid).toBe(false);
 		expect(result.errors[0]).toContain("days old");
 	});
 
 	it("rejects invalid timestamp format", () => {
 		const result = validateTimestamp("not-a-timestamp");
-
 		expect(result.valid).toBe(false);
 		expect(result.errors[0]).toContain("Invalid timestamp format");
 	});
 
 	it("rejects pre-epoch timestamp", () => {
 		const result = validateTimestamp("1960-01-01T00:00:00.000Z");
-
 		expect(result.valid).toBe(false);
 		expect(result.errors[0]).toContain("before Unix epoch");
 	});
@@ -193,7 +183,7 @@ describe("isHourlyAligned", () => {
 // Candle Sequence Validation Tests
 // ============================================
 
-describe("validateCandleSequence", () => {
+describe("validateCandleSequence validation cases", () => {
 	it("validates correct hourly sequence", () => {
 		const timestamps = [
 			"2026-01-04T14:00:00.000Z",
@@ -201,9 +191,7 @@ describe("validateCandleSequence", () => {
 			"2026-01-04T16:00:00.000Z",
 			"2026-01-04T17:00:00.000Z",
 		];
-
 		const result = validateCandleSequence(timestamps);
-
 		expect(result.valid).toBe(true);
 		expect(result.gaps.length).toBe(0);
 		expect(result.outOfOrder.length).toBe(0);
@@ -213,12 +201,9 @@ describe("validateCandleSequence", () => {
 		const timestamps = [
 			"2026-01-04T14:00:00.000Z",
 			"2026-01-04T15:00:00.000Z",
-			// Missing 16:00 and 17:00
 			"2026-01-04T18:00:00.000Z",
 		];
-
 		const result = validateCandleSequence(timestamps);
-
 		expect(result.valid).toBe(false);
 		expect(result.gaps.length).toBe(1);
 		expect(result.gaps[0].missingHours).toBe(2);
@@ -230,26 +215,22 @@ describe("validateCandleSequence", () => {
 		const timestamps = [
 			"2026-01-04T14:00:00.000Z",
 			"2026-01-04T16:00:00.000Z",
-			"2026-01-04T15:00:00.000Z", // Out of order
+			"2026-01-04T15:00:00.000Z",
 		];
-
 		const result = validateCandleSequence(timestamps);
-
 		expect(result.valid).toBe(false);
 		expect(result.outOfOrder.length).toBe(1);
 		expect(result.outOfOrder[0].index).toBe(2);
 	});
+});
 
+describe("validateCandleSequence edge cases", () => {
 	it("handles empty sequence", () => {
-		const result = validateCandleSequence([]);
-
-		expect(result.valid).toBe(true);
+		expect(validateCandleSequence([]).valid).toBe(true);
 	});
 
 	it("handles single timestamp", () => {
-		const result = validateCandleSequence(["2026-01-04T14:00:00.000Z"]);
-
-		expect(result.valid).toBe(true);
+		expect(validateCandleSequence(["2026-01-04T14:00:00.000Z"]).valid).toBe(true);
 	});
 });
 

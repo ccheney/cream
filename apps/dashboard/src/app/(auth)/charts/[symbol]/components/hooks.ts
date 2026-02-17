@@ -44,80 +44,146 @@ interface SessionBoundaries {
 	closeTimes: number[];
 }
 
-/**
- * Find session boundary timestamps (market open 9:30 AM ET, close 4:00 PM ET).
- * Takes original candle timestamps (ISO strings) and returns local timestamps for chart.
- */
-export function findSessionBoundaries(candles: { timestamp: string }[]): SessionBoundaries {
-	const openTimes: number[] = [];
-	const closeTimes: number[] = [];
-
-	const byDate = new Map<string, { timestamp: string; etHour: number; etMinute: number }[]>();
-
-	for (const candle of candles) {
-		const utcDate = new Date(candle.timestamp);
-		const etFormatter = new Intl.DateTimeFormat("en-US", {
-			timeZone: "America/New_York",
-			year: "numeric",
-			month: "2-digit",
-			day: "2-digit",
-			hour: "numeric",
-			minute: "numeric",
-			hour12: false,
-		});
-		const parts = etFormatter.formatToParts(utcDate);
-		const year = parts.find((p) => p.type === "year")?.value;
-		const month = parts.find((p) => p.type === "month")?.value;
-		const day = parts.find((p) => p.type === "day")?.value;
-		const hour = Number.parseInt(parts.find((p) => p.type === "hour")?.value ?? "0", 10);
-		const minute = Number.parseInt(parts.find((p) => p.type === "minute")?.value ?? "0", 10);
-
-		const dateKey = `${year}-${month}-${day}`;
-		if (!byDate.has(dateKey)) {
-			byDate.set(dateKey, []);
-		}
-		byDate.get(dateKey)?.push({ timestamp: candle.timestamp, etHour: hour, etMinute: minute });
-	}
-
-	for (const dayCandles of byDate.values()) {
-		const openTarget = 9 * 60 + 30;
-		let closestOpen: { timestamp: string; diff: number } | null = null;
-		for (const c of dayCandles) {
-			const candleMinutes = c.etHour * 60 + c.etMinute;
-			const diff = Math.abs(candleMinutes - openTarget);
-			if (diff <= 5 && (!closestOpen || diff < closestOpen.diff)) {
-				closestOpen = { timestamp: c.timestamp, diff };
-			}
-		}
-		if (closestOpen) {
-			openTimes.push(timeToLocal(new Date(closestOpen.timestamp).getTime() / 1000));
-		}
-
-		const closeTarget = 16 * 60;
-		let closestClose: { timestamp: string; diff: number } | null = null;
-		for (const c of dayCandles) {
-			const candleMinutes = c.etHour * 60 + c.etMinute;
-			const diff = Math.abs(candleMinutes - closeTarget);
-			if (diff <= 5 && (!closestClose || diff < closestClose.diff)) {
-				closestClose = { timestamp: c.timestamp, diff };
-			}
-		}
-		if (closestClose) {
-			closeTimes.push(timeToLocal(new Date(closestClose.timestamp).getTime() / 1000));
-		}
-	}
-
-	return { openTimes, closeTimes };
+interface CandleWithEtTime {
+	timestamp: string;
+	etHour: number;
+	etMinute: number;
 }
 
-/**
- * Custom hook for chart data including candles, indicators, quote, and regime.
- *
- * Uses module-level cache to show previous data while loading new symbol's data.
- * This prevents UI flicker during navigation.
- */
-export function useChartData(symbol: string, timeframe: ChartTimeframe, enabledMAs: string[]) {
-	const limit = CANDLE_LIMITS[timeframe] ?? 300;
+interface DisplayData {
+	displayCandles: ReturnType<typeof useCandles>["data"];
+	displayIndicators: ReturnType<typeof useIndicators>["data"];
+	displayQuote: ReturnType<typeof useQuote>["data"] | undefined;
+	isWaitingForData: boolean;
+}
+
+const NEW_YORK_TIME_FORMATTER = new Intl.DateTimeFormat("en-US", {
+	timeZone: "America/New_York",
+	year: "numeric",
+	month: "2-digit",
+	day: "2-digit",
+	hour: "numeric",
+	minute: "numeric",
+	hour12: false,
+});
+
+function getEasternDateParts(timestamp: string): { dateKey: string; hour: number; minute: number } {
+	const parts = NEW_YORK_TIME_FORMATTER.formatToParts(new Date(timestamp));
+	const year = parts.find((part) => part.type === "year")?.value ?? "";
+	const month = parts.find((part) => part.type === "month")?.value ?? "";
+	const day = parts.find((part) => part.type === "day")?.value ?? "";
+	const hour = Number.parseInt(parts.find((part) => part.type === "hour")?.value ?? "0", 10);
+	const minute = Number.parseInt(parts.find((part) => part.type === "minute")?.value ?? "0", 10);
+	return { dateKey: `${year}-${month}-${day}`, hour, minute };
+}
+
+function groupCandlesByDate(candles: { timestamp: string }[]): Map<string, CandleWithEtTime[]> {
+	const grouped = new Map<string, CandleWithEtTime[]>();
+	for (const candle of candles) {
+		const { dateKey, hour, minute } = getEasternDateParts(candle.timestamp);
+		const entry = grouped.get(dateKey) ?? [];
+		entry.push({ timestamp: candle.timestamp, etHour: hour, etMinute: minute });
+		grouped.set(dateKey, entry);
+	}
+	return grouped;
+}
+
+function findClosestBoundaryTimestamp(
+	dayCandles: CandleWithEtTime[],
+	targetMinutes: number,
+	maxDiffMinutes = 5,
+): string | null {
+	let closestTimestamp: string | null = null;
+	let closestDiff = Number.POSITIVE_INFINITY;
+
+	for (const candle of dayCandles) {
+		const candleMinutes = candle.etHour * 60 + candle.etMinute;
+		const diff = Math.abs(candleMinutes - targetMinutes);
+		if (diff <= maxDiffMinutes && diff < closestDiff) {
+			closestTimestamp = candle.timestamp;
+			closestDiff = diff;
+		}
+	}
+
+	return closestTimestamp;
+}
+
+function resolveDisplayData(
+	symbol: string,
+	candles: ReturnType<typeof useCandles>["data"],
+	indicators: ReturnType<typeof useIndicators>["data"],
+	quote: ReturnType<typeof useQuote>["data"],
+): DisplayData {
+	const hasCurrentData = Boolean(candles && candles.length > 0);
+	if (hasCurrentData) {
+		chartDataCache = { symbol, candles, indicators, quote };
+	}
+
+	const cacheMatchesSymbol = chartDataCache?.symbol === symbol;
+	const displayCandles = hasCurrentData
+		? candles
+		: cacheMatchesSymbol
+			? chartDataCache?.candles
+			: undefined;
+	const displayIndicators = hasCurrentData
+		? indicators
+		: cacheMatchesSymbol
+			? chartDataCache?.indicators
+			: undefined;
+	const displayQuote = quote ?? (cacheMatchesSymbol ? chartDataCache?.quote : undefined);
+	const isWaitingForData = !hasCurrentData && cacheMatchesSymbol && chartDataCache !== null;
+
+	return { displayCandles, displayIndicators, displayQuote, isWaitingForData };
+}
+
+function useChartSeries(displayCandles: ReturnType<typeof useCandles>["data"]) {
+	return useMemo(() => {
+		if (!displayCandles || displayCandles.length === 0) {
+			return [];
+		}
+		return displayCandles.map((candle) => ({
+			time: timeToLocal(new Date(candle.timestamp).getTime() / 1000),
+			open: candle.open,
+			high: candle.high,
+			low: candle.low,
+			close: candle.close,
+			volume: candle.volume,
+		}));
+	}, [displayCandles]);
+}
+
+function useDayRange(displayCandles: ReturnType<typeof useCandles>["data"]) {
+	return useMemo(() => {
+		if (!displayCandles || displayCandles.length === 0) {
+			return { high: undefined, low: undefined };
+		}
+		return {
+			high: Math.max(...displayCandles.map((candle) => candle.high)),
+			low: Math.min(...displayCandles.map((candle) => candle.low)),
+		};
+	}, [displayCandles]);
+}
+
+interface ChartQueryState {
+	candles: ReturnType<typeof useCandles>["data"];
+	candlesLoading: boolean;
+	candlesFetching: boolean;
+	candlesError: boolean;
+	indicators: ReturnType<typeof useIndicators>["data"];
+	indicatorsLoading: boolean;
+	indicatorsFetching: boolean;
+	indicatorsError: boolean;
+	quote: ReturnType<typeof useQuote>["data"];
+	quoteLoading: boolean;
+	quoteError: boolean;
+	regime: ReturnType<typeof useRegime>["data"];
+}
+
+function useChartQueryState(
+	symbol: string,
+	timeframe: ChartTimeframe,
+	limit: number,
+): ChartQueryState {
 	const {
 		data: candles,
 		isLoading: candlesLoading,
@@ -133,72 +199,92 @@ export function useChartData(symbol: string, timeframe: ChartTimeframe, enabledM
 	const { data: quote, isLoading: quoteLoading, isError: quoteError } = useQuote(symbol);
 	const { data: regime } = useRegime();
 
-	// Detect if symbol is invalid (all APIs return errors)
-	const isSymbolError = candlesError && indicatorsError && quoteError;
+	return {
+		candles,
+		candlesLoading,
+		candlesFetching,
+		candlesError,
+		indicators,
+		indicatorsLoading,
+		indicatorsFetching,
+		indicatorsError,
+		quote,
+		quoteLoading,
+		quoteError,
+		regime,
+	};
+}
 
-	// Update cache when we have valid data for this symbol
-	const hasCurrentData = Boolean(candles && candles.length > 0);
-	if (hasCurrentData) {
-		chartDataCache = { symbol, candles, indicators, quote };
-	}
-
-	// Only use cached data if it's for the same symbol (prevents showing stale data for non-existent symbols)
-	const cacheMatchesSymbol = chartDataCache?.symbol === symbol;
-	const displayCandles = hasCurrentData
-		? candles
-		: cacheMatchesSymbol
-			? chartDataCache?.candles
-			: undefined;
-	const displayIndicators = hasCurrentData
-		? indicators
-		: cacheMatchesSymbol
-			? chartDataCache?.indicators
-			: undefined;
-	const displayQuote = quote ?? (cacheMatchesSymbol ? chartDataCache?.quote : undefined);
-	const isWaitingForData = !hasCurrentData && cacheMatchesSymbol && chartDataCache !== null;
-
-	const chartData = useMemo(() => {
-		if (!displayCandles || displayCandles.length === 0) {
-			return [];
-		}
-		return displayCandles.map((c) => ({
-			time: timeToLocal(new Date(c.timestamp).getTime() / 1000),
-			open: c.open,
-			high: c.high,
-			low: c.low,
-			close: c.close,
-			volume: c.volume,
-		}));
-	}, [displayCandles]);
-
+function useChartComputedState(
+	displayCandles: ReturnType<typeof useCandles>["data"],
+	enabledMAs: string[],
+) {
+	const chartData = useChartSeries(displayCandles);
 	const maOverlays = useMemo(() => {
 		if (chartData.length === 0) {
 			return [];
 		}
 		return calculateMAOverlays(chartData, enabledMAs);
 	}, [chartData, enabledMAs]);
-
 	const sessionBoundaries = useMemo(() => {
 		if (!displayCandles || displayCandles.length === 0) {
 			return undefined;
 		}
 		return findSessionBoundaries(displayCandles);
 	}, [displayCandles]);
+	const dayHighLow = useDayRange(displayCandles);
 
-	const dayHighLow = useMemo(() => {
-		if (!displayCandles || displayCandles.length === 0) {
-			return { high: undefined, low: undefined };
+	return { chartData, maOverlays, sessionBoundaries, dayHighLow };
+}
+
+/**
+ * Find session boundary timestamps (market open 9:30 AM ET, close 4:00 PM ET).
+ * Takes original candle timestamps (ISO strings) and returns local timestamps for chart.
+ */
+export function findSessionBoundaries(candles: { timestamp: string }[]): SessionBoundaries {
+	const openTimes: number[] = [];
+	const closeTimes: number[] = [];
+	const byDate = groupCandlesByDate(candles);
+	for (const dayCandles of byDate.values()) {
+		const openTimestamp = findClosestBoundaryTimestamp(dayCandles, 9 * 60 + 30);
+		if (openTimestamp) {
+			openTimes.push(timeToLocal(new Date(openTimestamp).getTime() / 1000));
 		}
-		return {
-			high: Math.max(...displayCandles.map((c) => c.high)),
-			low: Math.min(...displayCandles.map((c) => c.low)),
-		};
-	}, [displayCandles]);
 
-	// Show overlay when refetching data or waiting for new symbol's data
+		const closeTimestamp = findClosestBoundaryTimestamp(dayCandles, 16 * 60);
+		if (closeTimestamp) {
+			closeTimes.push(timeToLocal(new Date(closeTimestamp).getTime() / 1000));
+		}
+	}
+
+	return { openTimes, closeTimes };
+}
+
+/**
+ * Custom hook for chart data including candles, indicators, quote, and regime.
+ *
+ * Uses module-level cache to show previous data while loading new symbol's data.
+ * This prevents UI flicker during navigation.
+ */
+export function useChartData(symbol: string, timeframe: ChartTimeframe, enabledMAs: string[]) {
+	const limit = CANDLE_LIMITS[timeframe] ?? 300;
+	const queryState = useChartQueryState(symbol, timeframe, limit);
+	const isSymbolError =
+		queryState.candlesError && queryState.indicatorsError && queryState.quoteError;
+	const { displayCandles, displayIndicators, displayQuote, isWaitingForData } = resolveDisplayData(
+		symbol,
+		queryState.candles,
+		queryState.indicators,
+		queryState.quote,
+	);
+	const { chartData, maOverlays, sessionBoundaries, dayHighLow } = useChartComputedState(
+		displayCandles,
+		enabledMAs,
+	);
 	const hasDisplayData = Boolean(displayCandles && displayCandles.length > 0);
 	const isRefetching =
-		((candlesFetching || indicatorsFetching) && hasDisplayData) || isWaitingForData;
+		((queryState.candlesFetching || queryState.indicatorsFetching) && hasDisplayData) ||
+		isWaitingForData;
 
 	return {
 		candles: displayCandles,
@@ -207,11 +293,11 @@ export function useChartData(symbol: string, timeframe: ChartTimeframe, enabledM
 		sessionBoundaries,
 		indicators: displayIndicators,
 		quote: displayQuote,
-		regime,
+		regime: queryState.regime,
 		dayHighLow,
-		candlesLoading: candlesLoading && !isWaitingForData,
-		indicatorsLoading: indicatorsLoading && !isWaitingForData,
-		quoteLoading,
+		candlesLoading: queryState.candlesLoading && !isWaitingForData,
+		indicatorsLoading: queryState.indicatorsLoading && !isWaitingForData,
+		quoteLoading: queryState.quoteLoading,
 		isRefetching,
 		isSymbolError,
 	};

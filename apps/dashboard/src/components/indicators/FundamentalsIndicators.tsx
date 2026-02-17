@@ -34,6 +34,15 @@ export interface FundamentalsIndicatorsProps {
 	className?: string;
 }
 
+type IndicatorBadgeVariant = "success" | "info" | "warning" | "error" | "neutral";
+
+interface IndicatorMetric {
+	label: string;
+	value: string;
+	badge?: string;
+	badgeVariant?: IndicatorBadgeVariant;
+}
+
 // ============================================
 // Utility Functions
 // ============================================
@@ -62,53 +71,48 @@ function formatPercent(value: number | null, decimals = 1): string {
  * Get P/E variant based on value
  * Low P/E = value, High P/E = growth/expensive
  */
-function getPEVariant(value: number | null): "success" | "info" | "warning" | "error" | "neutral" {
+function getPEVariant(value: number | null): IndicatorBadgeVariant {
 	if (value === null) {
 		return "neutral";
 	}
 	if (value < 0) {
-		return "error"; // Negative earnings
+		return "error";
 	}
 	if (value < 15) {
-		return "success"; // Value
+		return "success";
 	}
 	if (value < 25) {
-		return "info"; // Fair
+		return "info";
 	}
 	if (value < 40) {
-		return "warning"; // Growth premium
+		return "warning";
 	}
-	return "error"; // Expensive
+	return "error";
 }
 
 /**
  * Get ROE variant based on value
  */
-function getROEVariant(value: number | null): "success" | "info" | "warning" | "error" | "neutral" {
+function getROEVariant(value: number | null): IndicatorBadgeVariant {
 	if (value === null) {
 		return "neutral";
 	}
 	if (value < 0) {
-		return "error"; // Negative ROE
+		return "error";
 	}
 	if (value < 0.08) {
-		return "warning"; // Below average
+		return "warning";
 	}
 	if (value < 0.15) {
-		return "info"; // Average
+		return "info";
 	}
-	if (value < 0.25) {
-		return "success"; // Good
-	}
-	return "success"; // Excellent
+	return "success";
 }
 
 /**
  * Get quality score badge variant
  */
-function getQualityVariant(
-	quality: "HIGH" | "MEDIUM" | "LOW" | null,
-): "success" | "info" | "warning" | "error" | "neutral" {
+function getQualityVariant(quality: "HIGH" | "MEDIUM" | "LOW" | null): IndicatorBadgeVariant {
 	switch (quality) {
 		case "HIGH":
 			return "success";
@@ -125,42 +129,239 @@ function getQualityVariant(
  * Get Beneish M-Score interpretation
  * M-Score > -1.78 suggests earnings manipulation
  */
-function getMScoreVariant(
-	value: number | null,
-): "success" | "info" | "warning" | "error" | "neutral" {
+function getMScoreVariant(value: number | null): IndicatorBadgeVariant {
 	if (value === null) {
 		return "neutral";
 	}
 	if (value < -2.22) {
-		return "success"; // Low manipulation risk
+		return "success";
 	}
 	if (value < -1.78) {
-		return "info"; // Moderate
+		return "info";
 	}
-	return "error"; // High manipulation risk
+	return "error";
 }
 
 /**
  * Get accruals ratio interpretation
  * High accruals = lower earnings quality
  */
-function getAccrualsVariant(
-	value: number | null,
-): "success" | "info" | "warning" | "error" | "neutral" {
+function getAccrualsVariant(value: number | null): IndicatorBadgeVariant {
 	if (value === null) {
 		return "neutral";
 	}
 	const absValue = Math.abs(value);
 	if (absValue < 0.05) {
-		return "success"; // Low accruals
+		return "success";
 	}
 	if (absValue < 0.1) {
-		return "info"; // Moderate
+		return "info";
 	}
 	if (absValue < 0.15) {
-		return "warning"; // Elevated
+		return "warning";
 	}
-	return "error"; // High accruals
+	return "error";
+}
+
+function getPEBadge(value: number | null): string | undefined {
+	if (value === null) {
+		return undefined;
+	}
+	if (value < 0) {
+		return "Loss";
+	}
+	if (value < 15) {
+		return "Value";
+	}
+	if (value < 25) {
+		return "Fair";
+	}
+	if (value < 40) {
+		return "Growth";
+	}
+	return "Premium";
+}
+
+function getForwardPETrend(
+	value: ValueIndicators,
+): Pick<IndicatorMetric, "badge" | "badgeVariant"> {
+	if (value.pe_ratio_forward === null || value.pe_ratio_ttm === null) {
+		return { badgeVariant: "neutral" };
+	}
+	const improving = value.pe_ratio_forward < value.pe_ratio_ttm;
+	return {
+		badge: improving ? "Improving" : "Declining",
+		badgeVariant: improving ? "success" : "warning",
+	};
+}
+
+function getCAPEMeta(cape: number | null): Pick<IndicatorMetric, "badge" | "badgeVariant"> {
+	if (cape === null) {
+		return { badgeVariant: "neutral" };
+	}
+	if (cape < 15) {
+		return { badge: "Undervalued", badgeVariant: "success" };
+	}
+	if (cape < 25) {
+		return { badge: "Fair", badgeVariant: "info" };
+	}
+	return { badge: "Overvalued", badgeVariant: "error" };
+}
+
+function getGrossProfitMeta(value: number | null): Pick<IndicatorMetric, "badge" | "badgeVariant"> {
+	if (value === null) {
+		return { badgeVariant: "neutral" };
+	}
+	if (value > 0.33) {
+		return { badge: "Strong", badgeVariant: "success" };
+	}
+	if (value > 0.2) {
+		return { badge: "Good", badgeVariant: "info" };
+	}
+	return { badge: "Weak", badgeVariant: "warning" };
+}
+
+function getROEMeta(value: number | null): Pick<IndicatorMetric, "badge" | "badgeVariant"> {
+	if (value === null) {
+		return { badgeVariant: "neutral" };
+	}
+	const badgeVariant = getROEVariant(value);
+	if (value < 0) {
+		return { badge: "Loss", badgeVariant };
+	}
+	if (value > 0.2) {
+		return { badge: "Excellent", badgeVariant };
+	}
+	if (value > 0.15) {
+		return { badge: "Good", badgeVariant };
+	}
+	if (value > 0.08) {
+		return { badge: "Fair", badgeVariant };
+	}
+	return { badge: "Weak", badgeVariant };
+}
+
+function getROAMeta(value: number | null): Pick<IndicatorMetric, "badge" | "badgeVariant"> {
+	if (value === null) {
+		return { badgeVariant: "neutral" };
+	}
+	if (value < 0) {
+		return { badge: "Loss", badgeVariant: "error" };
+	}
+	if (value > 0.1) {
+		return { badge: "Excellent", badgeVariant: "success" };
+	}
+	if (value > 0.05) {
+		return { badge: "Good", badgeVariant: "info" };
+	}
+	return { badge: "Weak", badgeVariant: "warning" };
+}
+
+function getAssetGrowthMeta(value: number | null): Pick<IndicatorMetric, "badge" | "badgeVariant"> {
+	if (value === null) {
+		return { badgeVariant: "neutral" };
+	}
+	if (value > 0.2) {
+		return { badge: "High", badgeVariant: "warning" };
+	}
+	if (value > 0.05) {
+		return { badge: "Moderate", badgeVariant: "info" };
+	}
+	return { badge: "Low", badgeVariant: "success" };
+}
+
+function getAccrualsMeta(value: number | null): Pick<IndicatorMetric, "badge" | "badgeVariant"> {
+	if (value === null) {
+		return { badgeVariant: "neutral" };
+	}
+	const absValue = Math.abs(value);
+	if (absValue < 0.05) {
+		return { badge: "Low", badgeVariant: "success" };
+	}
+	if (absValue < 0.1) {
+		return { badge: "Moderate", badgeVariant: "info" };
+	}
+	return { badge: "High", badgeVariant: getAccrualsVariant(value) };
+}
+
+function getCashFlowMeta(value: number | null): Pick<IndicatorMetric, "badge" | "badgeVariant"> {
+	if (value === null) {
+		return { badgeVariant: "neutral" };
+	}
+	if (value > 1.1) {
+		return { badge: "Strong", badgeVariant: "success" };
+	}
+	if (value > 0.8) {
+		return { badge: "Good", badgeVariant: "info" };
+	}
+	return { badge: "Weak", badgeVariant: "error" };
+}
+
+function getMScoreMeta(value: number | null): Pick<IndicatorMetric, "badge" | "badgeVariant"> {
+	if (value === null) {
+		return { badgeVariant: "neutral" };
+	}
+	if (value < -2.22) {
+		return { badge: "Safe", badgeVariant: getMScoreVariant(value) };
+	}
+	if (value < -1.78) {
+		return { badge: "Gray Zone", badgeVariant: getMScoreVariant(value) };
+	}
+	return { badge: "Risk", badgeVariant: getMScoreVariant(value) };
+}
+
+function getValuationMetrics(data: ValueIndicators): IndicatorMetric[] {
+	const forwardPE = getForwardPETrend(data);
+	const cape = getCAPEMeta(data.cape_10yr);
+	return [
+		{
+			label: "P/E (TTM)",
+			value: formatRatio(data.pe_ratio_ttm),
+			badge: getPEBadge(data.pe_ratio_ttm),
+			badgeVariant: getPEVariant(data.pe_ratio_ttm),
+		},
+		{ label: "P/E (Forward)", value: formatRatio(data.pe_ratio_forward), ...forwardPE },
+		{ label: "P/B Ratio", value: formatRatio(data.pb_ratio) },
+		{ label: "EV/EBITDA", value: formatRatio(data.ev_ebitda) },
+		{ label: "CAPE (10yr)", value: formatRatio(data.cape_10yr), ...cape },
+	];
+}
+
+function getProfitabilityMetrics(data: QualityIndicators): IndicatorMetric[] {
+	return [
+		{
+			label: "Gross Profitability",
+			value: formatPercent(data.gross_profitability),
+			...getGrossProfitMeta(data.gross_profitability),
+		},
+		{ label: "Return on Equity (ROE)", value: formatPercent(data.roe), ...getROEMeta(data.roe) },
+		{ label: "Return on Assets (ROA)", value: formatPercent(data.roa), ...getROAMeta(data.roa) },
+	];
+}
+
+function getQualityMetrics(data: QualityIndicators): IndicatorMetric[] {
+	return [
+		{
+			label: "Asset Growth",
+			value: formatPercent(data.asset_growth),
+			...getAssetGrowthMeta(data.asset_growth),
+		},
+		{
+			label: "Accruals Ratio",
+			value: formatPercent(data.accruals_ratio),
+			...getAccrualsMeta(data.accruals_ratio),
+		},
+		{
+			label: "Cash Flow Quality",
+			value: formatRatio(data.cash_flow_quality),
+			...getCashFlowMeta(data.cash_flow_quality),
+		},
+		{
+			label: "Beneish M-Score",
+			value: formatRatio(data.beneish_m_score),
+			...getMScoreMeta(data.beneish_m_score),
+		},
+	];
 }
 
 // ============================================
@@ -179,7 +380,7 @@ const IndicatorRow = memo(function IndicatorRow({
 	label: string;
 	value: string;
 	badge?: string;
-	badgeVariant?: "success" | "info" | "warning" | "error" | "neutral";
+	badgeVariant?: IndicatorBadgeVariant;
 }) {
 	return (
 		<div className="flex items-center justify-between py-2 border-b border-stone-100 dark:border-stone-800 last:border-0">
@@ -198,81 +399,34 @@ const IndicatorRow = memo(function IndicatorRow({
 	);
 });
 
+function IndicatorList({ metrics }: { metrics: IndicatorMetric[] }) {
+	return (
+		<>
+			{metrics.map((metric) => (
+				<IndicatorRow
+					key={metric.label}
+					label={metric.label}
+					value={metric.value}
+					badge={metric.badge}
+					badgeVariant={metric.badgeVariant}
+				/>
+			))}
+		</>
+	);
+}
+
 /**
  * Valuation Section
  */
 const ValuationSection = memo(function ValuationSection({ data }: { data: ValueIndicators }) {
+	const metrics = getValuationMetrics(data);
 	return (
 		<div className="space-y-1">
 			<h4 className="text-xs font-semibold text-stone-500 dark:text-stone-400 uppercase tracking-wide mb-2">
 				Valuation
 			</h4>
-
 			<div className="bg-stone-50 dark:bg-stone-800/50 rounded-lg p-3">
-				<IndicatorRow
-					label="P/E (TTM)"
-					value={formatRatio(data.pe_ratio_ttm)}
-					badge={
-						data.pe_ratio_ttm !== null
-							? data.pe_ratio_ttm < 0
-								? "Loss"
-								: data.pe_ratio_ttm < 15
-									? "Value"
-									: data.pe_ratio_ttm < 25
-										? "Fair"
-										: data.pe_ratio_ttm < 40
-											? "Growth"
-											: "Premium"
-							: undefined
-					}
-					badgeVariant={getPEVariant(data.pe_ratio_ttm)}
-				/>
-
-				<IndicatorRow
-					label="P/E (Forward)"
-					value={formatRatio(data.pe_ratio_forward)}
-					badge={
-						data.pe_ratio_forward !== null && data.pe_ratio_ttm !== null
-							? data.pe_ratio_forward < data.pe_ratio_ttm
-								? "Improving"
-								: "Declining"
-							: undefined
-					}
-					badgeVariant={
-						data.pe_ratio_forward !== null && data.pe_ratio_ttm !== null
-							? data.pe_ratio_forward < data.pe_ratio_ttm
-								? "success"
-								: "warning"
-							: "neutral"
-					}
-				/>
-
-				<IndicatorRow label="P/B Ratio" value={formatRatio(data.pb_ratio)} />
-
-				<IndicatorRow label="EV/EBITDA" value={formatRatio(data.ev_ebitda)} />
-
-				<IndicatorRow
-					label="CAPE (10yr)"
-					value={formatRatio(data.cape_10yr)}
-					badge={
-						data.cape_10yr !== null
-							? data.cape_10yr < 15
-								? "Undervalued"
-								: data.cape_10yr < 25
-									? "Fair"
-									: "Overvalued"
-							: undefined
-					}
-					badgeVariant={
-						data.cape_10yr !== null
-							? data.cape_10yr < 15
-								? "success"
-								: data.cape_10yr < 25
-									? "info"
-									: "error"
-							: "neutral"
-					}
-				/>
+				<IndicatorList metrics={metrics} />
 			</div>
 		</div>
 	);
@@ -325,81 +479,14 @@ const ProfitabilitySection = memo(function ProfitabilitySection({
 }: {
 	data: QualityIndicators;
 }) {
+	const metrics = getProfitabilityMetrics(data);
 	return (
 		<div className="space-y-1">
 			<h4 className="text-xs font-semibold text-stone-500 dark:text-stone-400 uppercase tracking-wide mb-2">
 				Profitability
 			</h4>
-
 			<div className="bg-stone-50 dark:bg-stone-800/50 rounded-lg p-3">
-				<IndicatorRow
-					label="Gross Profitability"
-					value={formatPercent(data.gross_profitability)}
-					badge={
-						data.gross_profitability !== null
-							? data.gross_profitability > 0.33
-								? "Strong"
-								: data.gross_profitability > 0.2
-									? "Good"
-									: "Weak"
-							: undefined
-					}
-					badgeVariant={
-						data.gross_profitability !== null
-							? data.gross_profitability > 0.33
-								? "success"
-								: data.gross_profitability > 0.2
-									? "info"
-									: "warning"
-							: "neutral"
-					}
-				/>
-
-				<IndicatorRow
-					label="Return on Equity (ROE)"
-					value={formatPercent(data.roe)}
-					badge={
-						data.roe !== null
-							? data.roe < 0
-								? "Loss"
-								: data.roe > 0.2
-									? "Excellent"
-									: data.roe > 0.15
-										? "Good"
-										: data.roe > 0.08
-											? "Fair"
-											: "Weak"
-							: undefined
-					}
-					badgeVariant={getROEVariant(data.roe)}
-				/>
-
-				<IndicatorRow
-					label="Return on Assets (ROA)"
-					value={formatPercent(data.roa)}
-					badge={
-						data.roa !== null
-							? data.roa < 0
-								? "Loss"
-								: data.roa > 0.1
-									? "Excellent"
-									: data.roa > 0.05
-										? "Good"
-										: "Weak"
-							: undefined
-					}
-					badgeVariant={
-						data.roa !== null
-							? data.roa < 0
-								? "error"
-								: data.roa > 0.1
-									? "success"
-									: data.roa > 0.05
-										? "info"
-										: "warning"
-							: "neutral"
-					}
-				/>
+				<IndicatorList metrics={metrics} />
 			</div>
 		</div>
 	);
@@ -409,6 +496,7 @@ const ProfitabilitySection = memo(function ProfitabilitySection({
  * Quality Factors Section
  */
 const QualitySection = memo(function QualitySection({ data }: { data: QualityIndicators }) {
+	const metrics = getQualityMetrics(data);
 	return (
 		<div className="space-y-1">
 			<div className="flex items-center justify-between mb-2">
@@ -421,83 +509,8 @@ const QualitySection = memo(function QualitySection({ data }: { data: QualityInd
 					</Badge>
 				)}
 			</div>
-
 			<div className="bg-stone-50 dark:bg-stone-800/50 rounded-lg p-3">
-				<IndicatorRow
-					label="Asset Growth"
-					value={formatPercent(data.asset_growth)}
-					badge={
-						data.asset_growth !== null
-							? data.asset_growth > 0.2
-								? "High"
-								: data.asset_growth > 0.05
-									? "Moderate"
-									: "Low"
-							: undefined
-					}
-					badgeVariant={
-						data.asset_growth !== null
-							? data.asset_growth > 0.2
-								? "warning" // High growth can dilute returns
-								: data.asset_growth > 0.05
-									? "info"
-									: "success"
-							: "neutral"
-					}
-				/>
-
-				<IndicatorRow
-					label="Accruals Ratio"
-					value={formatPercent(data.accruals_ratio)}
-					badge={
-						data.accruals_ratio !== null
-							? Math.abs(data.accruals_ratio) < 0.05
-								? "Low"
-								: Math.abs(data.accruals_ratio) < 0.1
-									? "Moderate"
-									: "High"
-							: undefined
-					}
-					badgeVariant={getAccrualsVariant(data.accruals_ratio)}
-				/>
-
-				<IndicatorRow
-					label="Cash Flow Quality"
-					value={formatRatio(data.cash_flow_quality)}
-					badge={
-						data.cash_flow_quality !== null
-							? data.cash_flow_quality > 1.1
-								? "Strong"
-								: data.cash_flow_quality > 0.8
-									? "Good"
-									: "Weak"
-							: undefined
-					}
-					badgeVariant={
-						data.cash_flow_quality !== null
-							? data.cash_flow_quality > 1.1
-								? "success"
-								: data.cash_flow_quality > 0.8
-									? "info"
-									: "error"
-							: "neutral"
-					}
-				/>
-
-				<IndicatorRow
-					label="Beneish M-Score"
-					value={formatRatio(data.beneish_m_score)}
-					badge={
-						data.beneish_m_score !== null
-							? data.beneish_m_score < -2.22
-								? "Safe"
-								: data.beneish_m_score < -1.78
-									? "Gray Zone"
-									: "Risk"
-							: undefined
-					}
-					badgeVariant={getMScoreVariant(data.beneish_m_score)}
-				/>
+				<IndicatorList metrics={metrics} />
 			</div>
 		</div>
 	);

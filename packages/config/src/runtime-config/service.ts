@@ -28,6 +28,17 @@ import type {
 } from "./types.js";
 import { validateForPromotion } from "./validation.js";
 
+type DraftUpdateConfig = Partial<{
+	trading: Partial<RuntimeTradingConfig>;
+	universe: Partial<RuntimeUniverseConfig>;
+	agents: Partial<Record<RuntimeAgentType, Partial<RuntimeAgentConfig>>>;
+	constraints: Partial<{
+		perInstrument: Partial<RuntimePerInstrumentLimits>;
+		portfolio: Partial<RuntimePortfolioLimits>;
+		options: Partial<RuntimeOptionsLimits>;
+	}>;
+}>;
+
 export class RuntimeConfigService {
 	constructor(
 		private readonly tradingConfigRepo: TradingConfigRepository,
@@ -101,76 +112,12 @@ export class RuntimeConfigService {
 
 	async saveDraft(
 		environment: RuntimeEnvironment,
-		config: Partial<{
-			trading: Partial<RuntimeTradingConfig>;
-			universe: Partial<RuntimeUniverseConfig>;
-			agents: Partial<Record<RuntimeAgentType, Partial<RuntimeAgentConfig>>>;
-			constraints: Partial<{
-				perInstrument: Partial<RuntimePerInstrumentLimits>;
-				portfolio: Partial<RuntimePortfolioLimits>;
-				options: Partial<RuntimeOptionsLimits>;
-			}>;
-		}>,
+		config: DraftUpdateConfig,
 	): Promise<FullRuntimeConfig> {
-		if (config.trading) {
-			await this.tradingConfigRepo.saveDraft(environment as TradingEnvironment, {
-				maxConsensusIterations: config.trading.maxConsensusIterations,
-				agentTimeoutMs: config.trading.agentTimeoutMs,
-				totalConsensusTimeoutMs: config.trading.totalConsensusTimeoutMs,
-				convictionDeltaHold: config.trading.convictionDeltaHold,
-				convictionDeltaAction: config.trading.convictionDeltaAction,
-				highConvictionPct: config.trading.highConvictionPct,
-				mediumConvictionPct: config.trading.mediumConvictionPct,
-				lowConvictionPct: config.trading.lowConvictionPct,
-				minRiskRewardRatio: config.trading.minRiskRewardRatio,
-				kellyFraction: config.trading.kellyFraction,
-				tradingCycleIntervalMs: config.trading.tradingCycleIntervalMs,
-				predictionMarketsIntervalMs: config.trading.predictionMarketsIntervalMs,
-				globalModel: config.trading.globalModel,
-			});
-		}
-
-		if (config.universe) {
-			await this.universeConfigsRepo.saveDraft(environment, {
-				source: config.universe.source,
-				staticSymbols: config.universe.staticSymbols,
-				indexSource: config.universe.indexSource,
-				minVolume: config.universe.minVolume,
-				minMarketCap: config.universe.minMarketCap,
-				optionableOnly: config.universe.optionableOnly,
-				includeList: config.universe.includeList,
-				excludeList: config.universe.excludeList,
-			});
-		}
-
-		if (config.agents) {
-			for (const [agentType, agentConfig] of Object.entries(config.agents)) {
-				if (agentConfig) {
-					await this.agentConfigsRepo.upsert(environment, agentType as RuntimeAgentType, {
-						systemPromptOverride: agentConfig.systemPromptOverride,
-						enabled: agentConfig.enabled,
-					});
-				}
-			}
-		}
-
-		if (config.constraints && this.constraintsConfigRepo) {
-			await this.constraintsConfigRepo.saveDraft(environment, {
-				maxShares: config.constraints.perInstrument?.maxShares,
-				maxContracts: config.constraints.perInstrument?.maxContracts,
-				maxNotional: config.constraints.perInstrument?.maxNotional,
-				maxPctEquity: config.constraints.perInstrument?.maxPctEquity,
-				maxGrossExposure: config.constraints.portfolio?.maxGrossExposure,
-				maxNetExposure: config.constraints.portfolio?.maxNetExposure,
-				maxConcentration: config.constraints.portfolio?.maxConcentration,
-				maxCorrelation: config.constraints.portfolio?.maxCorrelation,
-				maxDrawdown: config.constraints.portfolio?.maxDrawdown,
-				maxDelta: config.constraints.options?.maxDelta,
-				maxGamma: config.constraints.options?.maxGamma,
-				maxVega: config.constraints.options?.maxVega,
-				maxTheta: config.constraints.options?.maxTheta,
-			});
-		}
+		await this.saveTradingDraft(environment, config.trading);
+		await this.saveUniverseDraft(environment, config.universe);
+		await this.saveAgentDrafts(environment, config.agents);
+		await this.saveConstraintsDraft(environment, config.constraints);
 
 		return this.getDraft(environment);
 	}
@@ -218,63 +165,10 @@ export class RuntimeConfigService {
 			throw RuntimeConfigError.validationFailed(validation.errors, targetEnvironment);
 		}
 
-		const sourceTrading = await this.tradingConfigRepo.getActive(
-			sourceEnvironment as TradingEnvironment,
-		);
-		if (!sourceTrading) {
-			throw RuntimeConfigError.notSeeded(sourceEnvironment);
-		}
-
-		const promotedTrading = await this.tradingConfigRepo.promote(
-			sourceTrading.id,
-			targetEnvironment as TradingEnvironment,
-		);
-		await this.tradingConfigRepo.setStatus(promotedTrading.id, "active");
-
+		await this.promoteTrading(sourceEnvironment, targetEnvironment);
 		await this.agentConfigsRepo.cloneToEnvironment(sourceEnvironment, targetEnvironment);
-
-		const sourceUniverse = await this.universeConfigsRepo.getActive(sourceEnvironment);
-		if (sourceUniverse) {
-			await this.universeConfigsRepo.saveDraft(targetEnvironment, {
-				source: sourceUniverse.source,
-				staticSymbols: sourceUniverse.staticSymbols,
-				indexSource: sourceUniverse.indexSource,
-				minVolume: sourceUniverse.minVolume,
-				minMarketCap: sourceUniverse.minMarketCap,
-				optionableOnly: sourceUniverse.optionableOnly,
-				includeList: sourceUniverse.includeList,
-				excludeList: sourceUniverse.excludeList,
-			});
-			const universeDraft = await this.universeConfigsRepo.getDraft(targetEnvironment);
-			if (universeDraft) {
-				await this.universeConfigsRepo.setStatus(universeDraft.id, "active");
-			}
-		}
-
-		if (this.constraintsConfigRepo) {
-			const sourceConstraints = await this.constraintsConfigRepo.getActive(sourceEnvironment);
-			if (sourceConstraints) {
-				await this.constraintsConfigRepo.saveDraft(targetEnvironment, {
-					maxShares: sourceConstraints.perInstrument.maxShares,
-					maxContracts: sourceConstraints.perInstrument.maxContracts,
-					maxNotional: sourceConstraints.perInstrument.maxNotional,
-					maxPctEquity: sourceConstraints.perInstrument.maxPctEquity,
-					maxGrossExposure: sourceConstraints.portfolio.maxGrossExposure,
-					maxNetExposure: sourceConstraints.portfolio.maxNetExposure,
-					maxConcentration: sourceConstraints.portfolio.maxConcentration,
-					maxCorrelation: sourceConstraints.portfolio.maxCorrelation,
-					maxDrawdown: sourceConstraints.portfolio.maxDrawdown,
-					maxDelta: sourceConstraints.options.maxDelta,
-					maxGamma: sourceConstraints.options.maxGamma,
-					maxVega: sourceConstraints.options.maxVega,
-					maxTheta: sourceConstraints.options.maxTheta,
-				});
-				const constraintsDraft = await this.constraintsConfigRepo.getDraft(targetEnvironment);
-				if (constraintsDraft) {
-					await this.constraintsConfigRepo.setStatus(constraintsDraft.id, "active");
-				}
-			}
-		}
+		await this.promoteUniverse(sourceEnvironment, targetEnvironment);
+		await this.promoteConstraints(sourceEnvironment, targetEnvironment);
 
 		return this.getActiveConfig(targetEnvironment);
 	}
@@ -379,6 +273,166 @@ export class RuntimeConfigService {
 			agents[config.agentType] = config;
 		}
 		return agents as Record<RuntimeAgentType, RuntimeAgentConfig>;
+	}
+
+	private async saveTradingDraft(
+		environment: RuntimeEnvironment,
+		trading: DraftUpdateConfig["trading"],
+	): Promise<void> {
+		if (!trading) {
+			return;
+		}
+		await this.tradingConfigRepo.saveDraft(environment as TradingEnvironment, {
+			maxConsensusIterations: trading.maxConsensusIterations,
+			agentTimeoutMs: trading.agentTimeoutMs,
+			totalConsensusTimeoutMs: trading.totalConsensusTimeoutMs,
+			convictionDeltaHold: trading.convictionDeltaHold,
+			convictionDeltaAction: trading.convictionDeltaAction,
+			highConvictionPct: trading.highConvictionPct,
+			mediumConvictionPct: trading.mediumConvictionPct,
+			lowConvictionPct: trading.lowConvictionPct,
+			minRiskRewardRatio: trading.minRiskRewardRatio,
+			kellyFraction: trading.kellyFraction,
+			tradingCycleIntervalMs: trading.tradingCycleIntervalMs,
+			predictionMarketsIntervalMs: trading.predictionMarketsIntervalMs,
+			globalModel: trading.globalModel,
+		});
+	}
+
+	private async saveUniverseDraft(
+		environment: RuntimeEnvironment,
+		universe: DraftUpdateConfig["universe"],
+	): Promise<void> {
+		if (!universe) {
+			return;
+		}
+		await this.universeConfigsRepo.saveDraft(environment, {
+			source: universe.source,
+			staticSymbols: universe.staticSymbols,
+			indexSource: universe.indexSource,
+			minVolume: universe.minVolume,
+			minMarketCap: universe.minMarketCap,
+			optionableOnly: universe.optionableOnly,
+			includeList: universe.includeList,
+			excludeList: universe.excludeList,
+		});
+	}
+
+	private async saveAgentDrafts(
+		environment: RuntimeEnvironment,
+		agents: DraftUpdateConfig["agents"],
+	): Promise<void> {
+		if (!agents) {
+			return;
+		}
+		for (const [agentType, agentConfig] of Object.entries(agents)) {
+			if (!agentConfig) {
+				continue;
+			}
+			await this.agentConfigsRepo.upsert(environment, agentType as RuntimeAgentType, {
+				systemPromptOverride: agentConfig.systemPromptOverride,
+				enabled: agentConfig.enabled,
+			});
+		}
+	}
+
+	private async saveConstraintsDraft(
+		environment: RuntimeEnvironment,
+		constraints: DraftUpdateConfig["constraints"],
+	): Promise<void> {
+		if (!constraints || !this.constraintsConfigRepo) {
+			return;
+		}
+		await this.constraintsConfigRepo.saveDraft(environment, {
+			maxShares: constraints.perInstrument?.maxShares,
+			maxContracts: constraints.perInstrument?.maxContracts,
+			maxNotional: constraints.perInstrument?.maxNotional,
+			maxPctEquity: constraints.perInstrument?.maxPctEquity,
+			maxGrossExposure: constraints.portfolio?.maxGrossExposure,
+			maxNetExposure: constraints.portfolio?.maxNetExposure,
+			maxConcentration: constraints.portfolio?.maxConcentration,
+			maxCorrelation: constraints.portfolio?.maxCorrelation,
+			maxDrawdown: constraints.portfolio?.maxDrawdown,
+			maxDelta: constraints.options?.maxDelta,
+			maxGamma: constraints.options?.maxGamma,
+			maxVega: constraints.options?.maxVega,
+			maxTheta: constraints.options?.maxTheta,
+		});
+	}
+
+	private async promoteTrading(
+		sourceEnvironment: RuntimeEnvironment,
+		targetEnvironment: RuntimeEnvironment,
+	): Promise<void> {
+		const sourceTrading = await this.tradingConfigRepo.getActive(
+			sourceEnvironment as TradingEnvironment,
+		);
+		if (!sourceTrading) {
+			throw RuntimeConfigError.notSeeded(sourceEnvironment);
+		}
+		const promotedTrading = await this.tradingConfigRepo.promote(
+			sourceTrading.id,
+			targetEnvironment as TradingEnvironment,
+		);
+		await this.tradingConfigRepo.setStatus(promotedTrading.id, "active");
+	}
+
+	private async promoteUniverse(
+		sourceEnvironment: RuntimeEnvironment,
+		targetEnvironment: RuntimeEnvironment,
+	): Promise<void> {
+		const sourceUniverse = await this.universeConfigsRepo.getActive(sourceEnvironment);
+		if (!sourceUniverse) {
+			return;
+		}
+		await this.universeConfigsRepo.saveDraft(targetEnvironment, {
+			source: sourceUniverse.source,
+			staticSymbols: sourceUniverse.staticSymbols,
+			indexSource: sourceUniverse.indexSource,
+			minVolume: sourceUniverse.minVolume,
+			minMarketCap: sourceUniverse.minMarketCap,
+			optionableOnly: sourceUniverse.optionableOnly,
+			includeList: sourceUniverse.includeList,
+			excludeList: sourceUniverse.excludeList,
+		});
+		const universeDraft = await this.universeConfigsRepo.getDraft(targetEnvironment);
+		if (!universeDraft) {
+			return;
+		}
+		await this.universeConfigsRepo.setStatus(universeDraft.id, "active");
+	}
+
+	private async promoteConstraints(
+		sourceEnvironment: RuntimeEnvironment,
+		targetEnvironment: RuntimeEnvironment,
+	): Promise<void> {
+		if (!this.constraintsConfigRepo) {
+			return;
+		}
+		const sourceConstraints = await this.constraintsConfigRepo.getActive(sourceEnvironment);
+		if (!sourceConstraints) {
+			return;
+		}
+		await this.constraintsConfigRepo.saveDraft(targetEnvironment, {
+			maxShares: sourceConstraints.perInstrument.maxShares,
+			maxContracts: sourceConstraints.perInstrument.maxContracts,
+			maxNotional: sourceConstraints.perInstrument.maxNotional,
+			maxPctEquity: sourceConstraints.perInstrument.maxPctEquity,
+			maxGrossExposure: sourceConstraints.portfolio.maxGrossExposure,
+			maxNetExposure: sourceConstraints.portfolio.maxNetExposure,
+			maxConcentration: sourceConstraints.portfolio.maxConcentration,
+			maxCorrelation: sourceConstraints.portfolio.maxCorrelation,
+			maxDrawdown: sourceConstraints.portfolio.maxDrawdown,
+			maxDelta: sourceConstraints.options.maxDelta,
+			maxGamma: sourceConstraints.options.maxGamma,
+			maxVega: sourceConstraints.options.maxVega,
+			maxTheta: sourceConstraints.options.maxTheta,
+		});
+		const constraintsDraft = await this.constraintsConfigRepo.getDraft(targetEnvironment);
+		if (!constraintsDraft) {
+			return;
+		}
+		await this.constraintsConfigRepo.setStatus(constraintsDraft.id, "active");
 	}
 }
 

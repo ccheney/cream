@@ -151,6 +151,208 @@ export function observeHistogram(histogram: HistogramBuckets, value: number): vo
 	}
 }
 
+function getHistogramBucketsForMetric(name: string): number[] {
+	if (name.includes("latency") || name.includes("ms")) {
+		return LATENCY_BUCKETS;
+	}
+	if (name.includes("size") || name.includes("bytes")) {
+		return SIZE_BUCKETS;
+	}
+	if (name.includes("duration") || name.includes("seconds")) {
+		return DURATION_BUCKETS;
+	}
+	return LATENCY_BUCKETS;
+}
+
+function parseLabelKey(labelKey: string): Labels {
+	const labels: Labels = {};
+	if (!labelKey) {
+		return labels;
+	}
+
+	for (const pair of labelKey.split(",")) {
+		const [k, v] = pair.split("=");
+		if (k && v) {
+			labels[k] = v.replaceAll('"', "");
+		}
+	}
+	return labels;
+}
+
+function buildHistogramSamples(
+	baseLabels: Labels,
+	histogram: HistogramBuckets,
+): Array<{ labels: Labels; value: number }> {
+	const samples: Array<{ labels: Labels; value: number }> = [];
+	let cumulative = 0;
+
+	for (let i = 0; i < histogram.boundaries.length; i++) {
+		const count = histogram.counts[i];
+		const boundary = histogram.boundaries[i];
+		if (count === undefined || boundary === undefined) {
+			continue;
+		}
+		cumulative += count;
+		samples.push({
+			labels: { ...baseLabels, le: String(boundary) },
+			value: cumulative,
+		});
+	}
+
+	const lastCount = histogram.counts.at(-1);
+	if (lastCount !== undefined) {
+		cumulative += lastCount;
+	}
+	samples.push({
+		labels: { ...baseLabels, le: "+Inf" },
+		value: cumulative,
+	});
+
+	return samples;
+}
+
+function buildMetricOutput(name: string, metric: Metric): MetricOutput {
+	const samples: Array<{ labels: Labels; value: number }> = [];
+	for (const [labelKey, rawValue] of metric.values) {
+		const labels = parseLabelKey(labelKey);
+		if (metric.type === "histogram") {
+			samples.push(...buildHistogramSamples(labels, rawValue as HistogramBuckets));
+			continue;
+		}
+		samples.push({ labels, value: rawValue as number });
+	}
+
+	return {
+		name,
+		type: metric.type,
+		help: metric.help,
+		samples,
+	};
+}
+
+function appendHistogramPrometheusLines(
+	lines: string[],
+	name: string,
+	labelKey: string,
+	histogram: HistogramBuckets,
+): void {
+	let cumulative = 0;
+	for (let i = 0; i < histogram.boundaries.length; i++) {
+		const count = histogram.counts[i];
+		const le = histogram.boundaries[i];
+		if (count === undefined || le === undefined) {
+			continue;
+		}
+		cumulative += count;
+		const labels = labelKey ? `{${labelKey},le="${le}"}` : `{le="${le}"}`;
+		lines.push(`${name}_bucket${labels} ${cumulative}`);
+	}
+
+	const lastCount = histogram.counts.at(-1);
+	if (lastCount !== undefined) {
+		cumulative += lastCount;
+	}
+	const infLabels = labelKey ? `{${labelKey},le="+Inf"}` : `{le="+Inf"}`;
+	const sumLabels = labelKey ? `{${labelKey}}` : "";
+	lines.push(`${name}_bucket${infLabels} ${cumulative}`);
+	lines.push(`${name}_sum${sumLabels} ${histogram.sum}`);
+	lines.push(`${name}_count${sumLabels} ${histogram.count}`);
+}
+
+function appendPrometheusMetric(lines: string[], name: string, metric: Metric): void {
+	lines.push(`# HELP ${name} ${metric.help}`);
+	lines.push(`# TYPE ${name} ${metric.type}`);
+
+	for (const [labelKey, value] of metric.values) {
+		if (metric.type === "histogram") {
+			appendHistogramPrometheusLines(lines, name, labelKey, value as HistogramBuckets);
+			continue;
+		}
+		const labels = labelKey ? `{${labelKey}}` : "";
+		lines.push(`${name}${labels} ${value}`);
+	}
+}
+
+class MetricsRegistryImpl implements MetricsRegistry {
+	metrics = new Map<string, Metric>();
+
+	private ensureMetric(name: string, type: MetricType): Metric {
+		const existing = this.metrics.get(name);
+		if (existing) {
+			return existing;
+		}
+
+		const metric: Metric = {
+			name,
+			type,
+			help: METRIC_HELP[name] || name,
+			values: new Map(),
+		};
+		this.metrics.set(name, metric);
+		return metric;
+	}
+
+	private getNumericValue(metric: Metric, key: string): number {
+		return (metric.values.get(key) as number) || 0;
+	}
+
+	inc(name: string, labels: Labels = {}, value = 1): void {
+		const metric = this.ensureMetric(name, "counter");
+		const key = labelsToKey(labels);
+		metric.values.set(key, this.getNumericValue(metric, key) + value);
+	}
+
+	set(name: string, value: number, labels: Labels = {}): void {
+		const metric = this.ensureMetric(name, "gauge");
+		const key = labelsToKey(labels);
+		metric.values.set(key, value);
+	}
+
+	incGauge(name: string, labels: Labels = {}, value = 1): void {
+		const metric = this.ensureMetric(name, "gauge");
+		const key = labelsToKey(labels);
+		metric.values.set(key, this.getNumericValue(metric, key) + value);
+	}
+
+	decGauge(name: string, labels: Labels = {}, value = 1): void {
+		const metric = this.ensureMetric(name, "gauge");
+		const key = labelsToKey(labels);
+		metric.values.set(key, this.getNumericValue(metric, key) - value);
+	}
+
+	observe(name: string, value: number, labels: Labels = {}): void {
+		const metric = this.ensureMetric(name, "histogram");
+		const key = labelsToKey(labels);
+		let histogram = metric.values.get(key) as HistogramBuckets | undefined;
+		if (!histogram) {
+			histogram = createHistogramBuckets(getHistogramBucketsForMetric(name));
+			metric.values.set(key, histogram);
+		}
+		observeHistogram(histogram, value);
+	}
+
+	getMetrics(): MetricOutput[] {
+		const outputs: MetricOutput[] = [];
+		for (const [name, metric] of this.metrics) {
+			outputs.push(buildMetricOutput(name, metric));
+		}
+		return outputs;
+	}
+
+	toPrometheus(): string {
+		const lines: string[] = [];
+		for (const [name, metric] of this.metrics) {
+			appendPrometheusMetric(lines, name, metric);
+			lines.push("");
+		}
+		return lines.join("\n");
+	}
+
+	reset(): void {
+		this.metrics.clear();
+	}
+}
+
 /**
  * @example
  * ```ts
@@ -164,187 +366,7 @@ export function observeHistogram(histogram: HistogramBuckets, value: number): vo
  * ```
  */
 export function createMetricsRegistry(): MetricsRegistry {
-	const metrics = new Map<string, Metric>();
-
-	const ensureMetric = (name: string, type: MetricType, _buckets?: number[]): Metric => {
-		let metric = metrics.get(name);
-		if (!metric) {
-			metric = {
-				name,
-				type,
-				help: METRIC_HELP[name] || name,
-				values: new Map(),
-			};
-			metrics.set(name, metric);
-		}
-		return metric;
-	};
-
-	return {
-		metrics,
-
-		inc(name: string, labels: Labels = {}, value = 1): void {
-			const metric = ensureMetric(name, "counter");
-			const key = labelsToKey(labels);
-			const current = (metric.values.get(key) as number) || 0;
-			metric.values.set(key, current + value);
-		},
-
-		set(name: string, value: number, labels: Labels = {}): void {
-			const metric = ensureMetric(name, "gauge");
-			const key = labelsToKey(labels);
-			metric.values.set(key, value);
-		},
-
-		incGauge(name: string, labels: Labels = {}, value = 1): void {
-			const metric = ensureMetric(name, "gauge");
-			const key = labelsToKey(labels);
-			const current = (metric.values.get(key) as number) || 0;
-			metric.values.set(key, current + value);
-		},
-
-		decGauge(name: string, labels: Labels = {}, value = 1): void {
-			const metric = ensureMetric(name, "gauge");
-			const key = labelsToKey(labels);
-			const current = (metric.values.get(key) as number) || 0;
-			metric.values.set(key, current - value);
-		},
-
-		observe(name: string, value: number, labels: Labels = {}): void {
-			const metric = ensureMetric(name, "histogram");
-			const key = labelsToKey(labels);
-			let histogram = metric.values.get(key) as HistogramBuckets | undefined;
-			if (!histogram) {
-				const buckets =
-					name.includes("latency") || name.includes("ms")
-						? LATENCY_BUCKETS
-						: name.includes("size") || name.includes("bytes")
-							? SIZE_BUCKETS
-							: name.includes("duration") || name.includes("seconds")
-								? DURATION_BUCKETS
-								: LATENCY_BUCKETS;
-				histogram = createHistogramBuckets(buckets);
-				metric.values.set(key, histogram);
-			}
-			observeHistogram(histogram, value);
-		},
-
-		getMetrics(): MetricOutput[] {
-			const outputs: MetricOutput[] = [];
-
-			for (const [name, metric] of metrics) {
-				const samples: Array<{ labels: Labels; value: number }> = [];
-
-				if (metric.type === "histogram") {
-					for (const [labelKey, histogram] of metric.values) {
-						const baseLabels: Labels = {};
-						if (labelKey) {
-							for (const pair of labelKey.split(",")) {
-								const [k, v] = pair.split("=");
-								if (k && v) {
-									baseLabels[k] = v.replaceAll('"', "");
-								}
-							}
-						}
-
-						const buckets = histogram as HistogramBuckets;
-						let cumulative = 0;
-						for (let i = 0; i < buckets.boundaries.length; i++) {
-							const count = buckets.counts[i];
-							const boundary = buckets.boundaries[i];
-							if (count !== undefined && boundary !== undefined) {
-								cumulative += count;
-								samples.push({
-									labels: { ...baseLabels, le: String(boundary) },
-									value: cumulative,
-								});
-							}
-						}
-						const lastCount = buckets.counts.at(-1);
-						if (lastCount !== undefined) {
-							cumulative += lastCount;
-						}
-						samples.push({
-							labels: { ...baseLabels, le: "+Inf" },
-							value: cumulative,
-						});
-					}
-				} else {
-					for (const [labelKey, value] of metric.values) {
-						const labels: Labels = {};
-						if (labelKey) {
-							for (const pair of labelKey.split(",")) {
-								const [k, v] = pair.split("=");
-								if (k && v) {
-									labels[k] = v.replaceAll('"', "");
-								}
-							}
-						}
-						samples.push({ labels, value: value as number });
-					}
-				}
-
-				outputs.push({
-					name,
-					type: metric.type,
-					help: metric.help,
-					samples,
-				});
-			}
-
-			return outputs;
-		},
-
-		toPrometheus(): string {
-			const lines: string[] = [];
-
-			for (const [name, metric] of metrics) {
-				lines.push(`# HELP ${name} ${metric.help}`);
-				lines.push(`# TYPE ${name} ${metric.type}`);
-
-				if (metric.type === "histogram") {
-					for (const [labelKey, histogram] of metric.values) {
-						const buckets = histogram as HistogramBuckets;
-						let cumulative = 0;
-
-						for (let i = 0; i < buckets.boundaries.length; i++) {
-							const count = buckets.counts[i];
-							const le = buckets.boundaries[i];
-							if (count !== undefined && le !== undefined) {
-								cumulative += count;
-								const labels = labelKey ? `{${labelKey},le="${le}"}` : `{le="${le}"}`;
-								lines.push(`${name}_bucket${labels} ${cumulative}`);
-							}
-						}
-
-						const lastCount = buckets.counts.at(-1);
-						if (lastCount !== undefined) {
-							cumulative += lastCount;
-						}
-						const infLabels = labelKey ? `{${labelKey},le="+Inf"}` : `{le="+Inf"}`;
-						lines.push(`${name}_bucket${infLabels} ${cumulative}`);
-
-						const sumLabels = labelKey ? `{${labelKey}}` : "";
-						lines.push(`${name}_sum${sumLabels} ${buckets.sum}`);
-						lines.push(`${name}_count${sumLabels} ${buckets.count}`);
-					}
-				} else {
-					for (const [labelKey, value] of metric.values) {
-						const labels = labelKey ? `{${labelKey}}` : "";
-						lines.push(`${name}${labels} ${value}`);
-					}
-				}
-
-				lines.push("");
-			}
-
-			return lines.join("\n");
-		},
-
-		reset(): void {
-			metrics.clear();
-		},
-	};
+	return new MetricsRegistryImpl();
 }
 
 export interface WebSocketMetrics {
@@ -376,85 +398,118 @@ export interface WebSocketMetrics {
 	getActiveConnections(): number;
 }
 
-export function createWebSocketMetrics(): WebSocketMetrics {
-	const registry = createMetricsRegistry();
-	let activeConnections = 0;
+interface ActiveConnectionState {
+	value: number;
+}
 
+function createConnectionHandlers(
+	registry: MetricsRegistry,
+	activeConnections: ActiveConnectionState,
+): Pick<WebSocketMetrics, "connectionOpened" | "connectionClosed" | "connectionError"> {
 	return {
-		registry,
-
-		connectionOpened(userId?: string) {
-			activeConnections += 1;
-			registry.set(WS_METRICS.ACTIVE_CONNECTIONS, activeConnections);
+		connectionOpened(userId?: string): void {
+			activeConnections.value += 1;
+			registry.set(WS_METRICS.ACTIVE_CONNECTIONS, activeConnections.value);
 			registry.inc(WS_METRICS.TOTAL_CONNECTIONS, userId ? { user_id: userId } : {});
 		},
-
-		connectionClosed(durationSeconds: number, _userId?: string) {
-			activeConnections = Math.max(0, activeConnections - 1);
-			registry.set(WS_METRICS.ACTIVE_CONNECTIONS, activeConnections);
+		connectionClosed(durationSeconds: number, _userId?: string): void {
+			activeConnections.value = Math.max(0, activeConnections.value - 1);
+			registry.set(WS_METRICS.ACTIVE_CONNECTIONS, activeConnections.value);
 			registry.observe(WS_METRICS.CONNECTION_DURATION, durationSeconds);
 		},
-
-		connectionError(reason: string) {
+		connectionError(reason: string): void {
 			registry.inc(WS_METRICS.CONNECTION_ERRORS, { reason });
 		},
+	};
+}
 
-		messageReceived(type: string, sizeBytes: number) {
+function createMessageHandlers(
+	registry: MetricsRegistry,
+): Pick<WebSocketMetrics, "messageReceived" | "messageSent" | "messageError"> {
+	return {
+		messageReceived(type: string, sizeBytes: number): void {
 			registry.inc(WS_METRICS.MESSAGES_RECEIVED, { type });
 			registry.observe(WS_METRICS.MESSAGE_SIZE_RECEIVED, sizeBytes, { type });
 		},
-
-		messageSent(type: string, sizeBytes: number) {
+		messageSent(type: string, sizeBytes: number): void {
 			registry.inc(WS_METRICS.MESSAGES_SENT, { type });
 			registry.observe(WS_METRICS.MESSAGE_SIZE_SENT, sizeBytes, { type });
 		},
-
-		messageError(reason: string) {
+		messageError(reason: string): void {
 			registry.inc(WS_METRICS.MESSAGE_ERRORS, { reason });
 		},
+	};
+}
 
-		observeBroadcastLatency(latencyMs: number) {
+function createLatencyHandlers(
+	registry: MetricsRegistry,
+): Pick<
+	WebSocketMetrics,
+	| "observeBroadcastLatency"
+	| "observeRoundtripLatency"
+	| "observeHeartbeatLatency"
+	| "heartbeatTimeout"
+> {
+	return {
+		observeBroadcastLatency(latencyMs: number): void {
 			registry.observe(WS_METRICS.BROADCAST_LATENCY, latencyMs);
 		},
-
-		observeRoundtripLatency(latencyMs: number) {
+		observeRoundtripLatency(latencyMs: number): void {
 			registry.observe(WS_METRICS.ROUNDTRIP_LATENCY, latencyMs);
 		},
-
-		updateChannelSubscriptions(count: number) {
-			registry.set(WS_METRICS.SUBSCRIBED_CHANNELS, count);
-		},
-
-		updateSymbolSubscriptions(count: number) {
-			registry.set(WS_METRICS.SUBSCRIBED_SYMBOLS, count);
-		},
-
-		rateLimitViolation(reason: string) {
-			registry.inc(WS_METRICS.RATE_LIMIT_VIOLATIONS, { reason });
-		},
-
-		observeQuoteBatchSize(size: number) {
-			registry.observe(WS_METRICS.QUOTE_BATCH_SIZE, size);
-		},
-
-		observeQuoteThrottleDiscards(symbol: string, count: number) {
-			registry.inc(WS_METRICS.QUOTE_THROTTLE_DISCARDS, { symbol }, count);
-		},
-
-		observeHeartbeatLatency(latencyMs: number) {
+		observeHeartbeatLatency(latencyMs: number): void {
 			registry.observe(WS_METRICS.HEARTBEAT_LATENCY, latencyMs);
 		},
-
-		heartbeatTimeout() {
+		heartbeatTimeout(): void {
 			registry.inc(WS_METRICS.HEARTBEAT_TIMEOUTS);
 		},
+	};
+}
 
-		toPrometheus() {
+function createSubscriptionAndRateHandlers(
+	registry: MetricsRegistry,
+): Pick<
+	WebSocketMetrics,
+	| "updateChannelSubscriptions"
+	| "updateSymbolSubscriptions"
+	| "rateLimitViolation"
+	| "observeQuoteBatchSize"
+	| "observeQuoteThrottleDiscards"
+> {
+	return {
+		updateChannelSubscriptions(count: number): void {
+			registry.set(WS_METRICS.SUBSCRIBED_CHANNELS, count);
+		},
+		updateSymbolSubscriptions(count: number): void {
+			registry.set(WS_METRICS.SUBSCRIBED_SYMBOLS, count);
+		},
+		rateLimitViolation(reason: string): void {
+			registry.inc(WS_METRICS.RATE_LIMIT_VIOLATIONS, { reason });
+		},
+		observeQuoteBatchSize(size: number): void {
+			registry.observe(WS_METRICS.QUOTE_BATCH_SIZE, size);
+		},
+		observeQuoteThrottleDiscards(symbol: string, count: number): void {
+			registry.inc(WS_METRICS.QUOTE_THROTTLE_DISCARDS, { symbol }, count);
+		},
+	};
+}
+
+export function createWebSocketMetrics(): WebSocketMetrics {
+	const registry = createMetricsRegistry();
+	const activeConnections: ActiveConnectionState = { value: 0 };
+
+	return {
+		registry,
+		...createConnectionHandlers(registry, activeConnections),
+		...createMessageHandlers(registry),
+		...createLatencyHandlers(registry),
+		...createSubscriptionAndRateHandlers(registry),
+		toPrometheus(): string {
 			return registry.toPrometheus();
 		},
-
-		getActiveConnections() {
-			return activeConnections;
+		getActiveConnections(): number {
+			return activeConnections.value;
 		},
 	};
 }

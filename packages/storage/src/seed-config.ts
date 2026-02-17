@@ -112,6 +112,100 @@ interface SeedResult {
 	constraints: "created" | "skipped" | "replaced";
 }
 
+async function seedTradingConfig(
+	environment: TradingEnvironment,
+	tradingRepo: TradingConfigRepository,
+	existingTrading: Awaited<ReturnType<TradingConfigRepository["getActive"]>>,
+	force: boolean,
+): Promise<SeedResult["trading"]> {
+	if (existingTrading && !force) {
+		return "skipped";
+	}
+
+	let version = 1;
+	let status: SeedResult["trading"] = "created";
+	if (existingTrading && force) {
+		await tradingRepo.setStatus(existingTrading.id, "archived");
+		version = existingTrading.version + 1;
+		status = "replaced";
+	}
+
+	await tradingRepo.create({
+		environment,
+		version,
+		...getDefaultTradingConfig(),
+		status: "active",
+	});
+
+	return status;
+}
+
+async function seedAgentConfigs(
+	environment: TradingEnvironment,
+	agentRepo: AgentConfigsRepository,
+	existingAgents: Awaited<ReturnType<AgentConfigsRepository["getAll"]>>,
+	force: boolean,
+): Promise<SeedResult["agents"]> {
+	const hasAllAgents = existingAgents.length === AGENT_TYPES.length;
+	if (hasAllAgents && !force) {
+		return "skipped";
+	}
+
+	for (const agentType of AGENT_TYPES) {
+		const defaults = DEFAULT_AGENT_CONFIGS[agentType];
+		await agentRepo.upsert(environment, agentType, {
+			enabled: defaults.enabled,
+			systemPromptOverride: null,
+		});
+	}
+
+	return existingAgents.length > 0 ? "replaced" : "created";
+}
+
+async function seedUniverseConfig(
+	environment: TradingEnvironment,
+	universeRepo: UniverseConfigsRepository,
+	existingUniverse: Awaited<ReturnType<UniverseConfigsRepository["getActive"]>>,
+	force: boolean,
+): Promise<SeedResult["universe"]> {
+	if (existingUniverse && !force) {
+		return "skipped";
+	}
+
+	let status: SeedResult["universe"] = "created";
+	if (existingUniverse && force) {
+		await universeRepo.setStatus(existingUniverse.id, "archived");
+		status = "replaced";
+	}
+
+	const draft = await universeRepo.saveDraft(environment, DEFAULT_UNIVERSE_CONFIG);
+	await universeRepo.setStatus(draft.id, "active");
+	return status;
+}
+
+async function seedConstraintsConfig(
+	environment: TradingEnvironment,
+	constraintsRepo: ConstraintsConfigRepository,
+	existingConstraints: Awaited<ReturnType<ConstraintsConfigRepository["getActive"]>>,
+	force: boolean,
+): Promise<SeedResult["constraints"]> {
+	if (existingConstraints && !force) {
+		return "skipped";
+	}
+
+	let status: SeedResult["constraints"] = "created";
+	if (existingConstraints && force) {
+		await constraintsRepo.setStatus(existingConstraints.id, "archived");
+		status = "replaced";
+	}
+
+	await constraintsRepo.create({
+		environment,
+		status: "active",
+	});
+	return status;
+}
+
 async function seedEnvironment(
 	environment: TradingEnvironment,
 	tradingRepo: TradingConfigRepository,
@@ -120,78 +214,22 @@ async function seedEnvironment(
 	constraintsRepo: ConstraintsConfigRepository,
 	force: boolean,
 ): Promise<SeedResult> {
-	const result: SeedResult = {
-		environment,
-		trading: "skipped",
-		agents: "skipped",
-		universe: "skipped",
-		constraints: "skipped",
-	};
-
 	const existingTrading = await tradingRepo.getActive(environment);
 	const existingUniverse = await universeRepo.getActive(environment);
 	const existingAgents = await agentRepo.getAll(environment);
 	const existingConstraints = await constraintsRepo.getActive(environment);
 
-	if (!existingTrading || force) {
-		let version = 1;
-		if (existingTrading && force) {
-			await tradingRepo.setStatus(existingTrading.id, "archived");
-			version = existingTrading.version + 1;
-			result.trading = "replaced";
-		} else {
-			result.trading = "created";
-		}
+	const trading = await seedTradingConfig(environment, tradingRepo, existingTrading, force);
+	const agents = await seedAgentConfigs(environment, agentRepo, existingAgents, force);
+	const universe = await seedUniverseConfig(environment, universeRepo, existingUniverse, force);
+	const constraints = await seedConstraintsConfig(
+		environment,
+		constraintsRepo,
+		existingConstraints,
+		force,
+	);
 
-		await tradingRepo.create({
-			environment,
-			version,
-			...getDefaultTradingConfig(),
-			status: "active",
-		});
-	}
-
-	const hasAllAgents = existingAgents.length === AGENT_TYPES.length;
-	if (!hasAllAgents || force) {
-		result.agents = existingAgents.length > 0 ? "replaced" : "created";
-
-		for (const agentType of AGENT_TYPES) {
-			const defaults = DEFAULT_AGENT_CONFIGS[agentType];
-			await agentRepo.upsert(environment, agentType, {
-				enabled: defaults.enabled,
-				systemPromptOverride: null,
-			});
-		}
-	}
-
-	if (!existingUniverse || force) {
-		if (existingUniverse && force) {
-			await universeRepo.setStatus(existingUniverse.id, "archived");
-			result.universe = "replaced";
-		} else {
-			result.universe = "created";
-		}
-
-		const draft = await universeRepo.saveDraft(environment, DEFAULT_UNIVERSE_CONFIG);
-		await universeRepo.setStatus(draft.id, "active");
-	}
-
-	// Seed constraints config with defaults
-	if (!existingConstraints || force) {
-		if (existingConstraints && force) {
-			await constraintsRepo.setStatus(existingConstraints.id, "archived");
-			result.constraints = "replaced";
-		} else {
-			result.constraints = "created";
-		}
-
-		await constraintsRepo.create({
-			environment,
-			status: "active",
-		});
-	}
-
-	return result;
+	return { environment, trading, agents, universe, constraints };
 }
 
 async function main(): Promise<void> {

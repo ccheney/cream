@@ -103,6 +103,79 @@ export interface MacroFactorsResult {
 	sectorsWithDefaults: string[];
 }
 
+interface CompanyFactorExposure {
+	symbol: string;
+	entityId: string;
+	name: string;
+	sensitivity: number;
+}
+
+interface AggregatedMacroExposure {
+	entityId: string;
+	name: string;
+	category: MacroCategory;
+	avgSensitivity: number;
+	companyCount: number;
+	topExposed: { symbol: string; sensitivity: number }[];
+}
+
+function toNormalizedSymbol(symbol: string): string {
+	return symbol.toUpperCase();
+}
+
+async function collectCompanyExposures(
+	builder: ReturnType<typeof createMacroGraphBuilder>,
+	symbols: string[],
+): Promise<CompanyFactorExposure[]> {
+	const allExposures: CompanyFactorExposure[] = [];
+	for (const symbol of symbols) {
+		const normalizedSymbol = toNormalizedSymbol(symbol);
+		const factors = await builder.getMacroFactorsForCompany(normalizedSymbol);
+		for (const factor of factors) {
+			allExposures.push({
+				symbol: normalizedSymbol,
+				entityId: factor.entityId,
+				name: factor.name,
+				sensitivity: factor.sensitivity,
+			});
+		}
+	}
+	return allExposures;
+}
+
+function toAggregatedExposure(
+	entityId: string,
+	exposures: CompanyFactorExposure[],
+): AggregatedMacroExposure {
+	const predefined = PREDEFINED_MACRO_ENTITIES.find((entity) => entity.entity_id === entityId);
+	const avgSensitivity =
+		exposures.reduce((sum, exposure) => sum + exposure.sensitivity, 0) / exposures.length;
+	const topExposed = [...exposures]
+		.sort((a, b) => b.sensitivity - a.sensitivity)
+		.slice(0, 3)
+		.map((exposure) => ({ symbol: exposure.symbol, sensitivity: exposure.sensitivity }));
+
+	return {
+		entityId,
+		name: exposures[0]?.name ?? entityId,
+		category: predefined?.category ?? ("ECONOMIC_INDICATORS" as MacroCategory),
+		avgSensitivity,
+		companyCount: exposures.length,
+		topExposed,
+	};
+}
+
+function aggregatePortfolioExposures(
+	exposures: CompanyFactorExposure[],
+): AggregatedMacroExposure[] {
+	const byFactor = Map.groupBy(exposures, (exposure) => exposure.entityId);
+	const aggregated = [...byFactor.entries()].map(([entityId, groupedExposures]) =>
+		toAggregatedExposure(entityId, groupedExposures),
+	);
+	aggregated.sort((a, b) => b.avgSensitivity - a.avgSensitivity);
+	return aggregated;
+}
+
 // ============================================
 // Implementation
 // ============================================
@@ -200,53 +273,11 @@ export async function getPortfolioMacroExposure(
 
 	const client = getHelixClient();
 	const builder = createMacroGraphBuilder(client);
-
-	// Collect exposures for all companies
-	const allExposures: { symbol: string; entityId: string; name: string; sensitivity: number }[] =
-		[];
-
-	for (const symbol of symbols) {
-		const factors = await builder.getMacroFactorsForCompany(symbol.toUpperCase());
-		for (const f of factors) {
-			allExposures.push({
-				symbol: symbol.toUpperCase(),
-				entityId: f.entityId,
-				name: f.name,
-				sensitivity: f.sensitivity,
-			});
-		}
-	}
-
-	// Aggregate by macro factor
-	const byFactor = Map.groupBy(allExposures, (e) => e.entityId);
-
-	const aggregatedExposures = [...byFactor.entries()].map(([entityId, exposures]) => {
-		const first = exposures[0];
-		const predefined = PREDEFINED_MACRO_ENTITIES.find((p) => p.entity_id === entityId);
-
-		const avgSensitivity = exposures.reduce((sum, e) => sum + e.sensitivity, 0) / exposures.length;
-
-		const sorted = [...exposures].sort((a, b) => b.sensitivity - a.sensitivity);
-		const topExposed = sorted.slice(0, 3).map((e) => ({
-			symbol: e.symbol,
-			sensitivity: e.sensitivity,
-		}));
-
-		return {
-			entityId,
-			name: first?.name ?? entityId,
-			category: predefined?.category ?? ("ECONOMIC_INDICATORS" as MacroCategory),
-			avgSensitivity,
-			companyCount: exposures.length,
-			topExposed,
-		};
-	});
-
-	// Sort by average sensitivity
-	aggregatedExposures.sort((a, b) => b.avgSensitivity - a.avgSensitivity);
+	const allExposures = await collectCompanyExposures(builder, symbols);
+	const aggregatedExposures = aggregatePortfolioExposures(allExposures);
 
 	return {
-		symbols: symbols.map((s) => s.toUpperCase()),
+		symbols: symbols.map((symbol) => toNormalizedSymbol(symbol)),
 		aggregatedExposures,
 		executionTimeMs: performance.now() - startTime,
 	};

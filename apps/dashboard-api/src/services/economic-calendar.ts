@@ -72,6 +72,24 @@ export interface EventHistoryResult {
 /** Cache is considered stale after 12 hours */
 const CACHE_STALE_HOURS = 12;
 
+const SERIES_UNITS: Record<string, string> = {
+	CPIAUCSL: "index",
+	CPILFESL: "index",
+	PAYEMS: "thousands",
+	UNRATE: "%",
+	GDPC1: "billions",
+	FEDFUNDS: "%",
+	RSAFS: "millions",
+	INDPRO: "index",
+	PCE: "billions",
+	DGS10: "%",
+	HOUST: "thousands",
+	DGORDER: "millions",
+	PPIACO: "index",
+	JTSJOL: "thousands",
+	UMCSENT: "index",
+};
+
 // ============================================
 // Service
 // ============================================
@@ -296,71 +314,20 @@ export class EconomicCalendarService {
 	 * Returns the last 12 observations for the release's primary series.
 	 */
 	async getEventHistory(eventId: string): Promise<EventHistoryResult | null> {
-		const match = eventId.match(/^fred-(\d+)-/);
-		if (!match) {
-			log.warn({ eventId }, "Invalid event ID format for history lookup");
-			return null;
-		}
-
-		const releaseId = Number.parseInt(match[1] ?? "0", 10);
-		const releaseMeta = getReleaseById(releaseId);
-
-		if (!releaseMeta) {
-			log.warn({ releaseId }, "Unknown release ID");
-			return null;
-		}
-
+		const releaseId = this.parseReleaseId(eventId);
+		if (!releaseId) return null;
+		const releaseMeta = this.getReleaseMeta(releaseId);
+		if (!releaseMeta) return null;
 		const primarySeriesId = releaseMeta.series[0];
-		if (!primarySeriesId) {
-			log.warn({ releaseId }, "No series defined for release");
-			return null;
-		}
+		if (!primarySeriesId) return null;
 
 		try {
-			const client = createFREDClientFromEnv();
-			const response = await client.getObservations(primarySeriesId, {
-				sort_order: "desc",
-				limit: 12,
-			});
-
-			const observations: HistoricalObservation[] = [];
-			for (const obs of response.observations) {
-				if (obs.value !== null) {
-					const value = Number.parseFloat(obs.value);
-					if (!Number.isNaN(value)) {
-						observations.push({
-							date: obs.date,
-							value,
-						});
-					}
-				}
-			}
-
-			const reversedObservations = observations.toReversed();
-
-			const SERIES_UNITS: Record<string, string> = {
-				CPIAUCSL: "index",
-				CPILFESL: "index",
-				PAYEMS: "thousands",
-				UNRATE: "%",
-				GDPC1: "billions",
-				FEDFUNDS: "%",
-				RSAFS: "millions",
-				INDPRO: "index",
-				PCE: "billions",
-				DGS10: "%",
-				HOUST: "thousands",
-				DGORDER: "millions",
-				PPIACO: "index",
-				JTSJOL: "thousands",
-				UMCSENT: "index",
-			};
-
+			const observations = await this.fetchHistoricalObservations(primarySeriesId);
 			return {
 				seriesId: primarySeriesId,
 				seriesName: releaseMeta.name,
 				unit: SERIES_UNITS[primarySeriesId] ?? "",
-				observations: reversedObservations,
+				observations,
 			};
 		} catch (error) {
 			log.error(
@@ -369,6 +336,55 @@ export class EconomicCalendarService {
 			);
 			return null;
 		}
+	}
+
+	private parseReleaseId(eventId: string): number | null {
+		const match = eventId.match(/^fred-(\d+)-/);
+		if (!match) {
+			log.warn({ eventId }, "Invalid event ID format for history lookup");
+			return null;
+		}
+
+		return Number.parseInt(match[1] ?? "0", 10);
+	}
+
+	private getReleaseMeta(releaseId: number) {
+		const releaseMeta = getReleaseById(releaseId);
+		if (!releaseMeta) {
+			log.warn({ releaseId }, "Unknown release ID");
+			return null;
+		}
+
+		if (!releaseMeta.series[0]) {
+			log.warn({ releaseId }, "No series defined for release");
+			return null;
+		}
+
+		return releaseMeta;
+	}
+
+	private async fetchHistoricalObservations(seriesId: string): Promise<HistoricalObservation[]> {
+		const client = createFREDClientFromEnv();
+		const response = await client.getObservations(seriesId, {
+			sort_order: "desc",
+			limit: 12,
+		});
+		const observations: HistoricalObservation[] = [];
+		for (const observation of response.observations) {
+			if (observation.value === null) {
+				continue;
+			}
+
+			const value = Number.parseFloat(observation.value);
+			if (!Number.isNaN(value)) {
+				observations.push({
+					date: observation.date,
+					value,
+				});
+			}
+		}
+
+		return observations.toReversed();
 	}
 }
 

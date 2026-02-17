@@ -35,6 +35,86 @@ const DEFAULT_MAX_VALUE = 500000;
 const DEFAULT_WARNING = 0.8;
 const DEFAULT_CRITICAL = 0.95;
 
+const SIZE_STYLES = {
+	sm: { height: "h-3", text: "text-xs", label: "text-[10px]" },
+	md: { height: "h-4", text: "text-sm", label: "text-xs" },
+	lg: { height: "h-6", text: "text-base", label: "text-sm" },
+} as const;
+
+type DeltaDirection = "positive" | "negative";
+type DeltaStatus = "normal" | "warning" | "critical";
+
+interface DeltaFillState {
+	fillPct: number;
+	direction: DeltaDirection;
+	status: DeltaStatus;
+}
+
+function getDeltaFillState(
+	deltaNotional: number,
+	maxValue: number,
+	warningThreshold: number,
+	criticalThreshold: number,
+): DeltaFillState {
+	const absValue = Math.abs(deltaNotional);
+	const pct = Math.min((absValue / maxValue) * 100, 100);
+	const direction: DeltaDirection = deltaNotional >= 0 ? "positive" : "negative";
+	const threshold = absValue / maxValue;
+
+	const status: DeltaStatus =
+		threshold >= criticalThreshold
+			? "critical"
+			: threshold >= warningThreshold
+				? "warning"
+				: "normal";
+
+	return { fillPct: pct, direction, status };
+}
+
+function getFillColor(direction: DeltaDirection, status: DeltaStatus): string {
+	if (status === "critical" || status === "warning") {
+		return direction === "positive" ? "bg-red-500" : "bg-red-500";
+	}
+	return direction === "positive" ? "bg-green-500 dark:bg-green-400" : "bg-red-500 dark:bg-red-400";
+}
+
+function formatValue(value: number, formatSign = true): string {
+	const sign = formatSign && value >= 0 ? "+" : "";
+	return `${sign}${Math.abs(value).toLocaleString("en-US", { maximumFractionDigits: 0 })}`;
+}
+
+function formatScaleValue(maxValue: number) {
+	return `${formatValue(maxValue / 1000)}K`;
+}
+
+function DeltaLimitLines({
+	warningThreshold,
+	criticalThreshold,
+}: {
+	warningThreshold: number;
+	criticalThreshold: number;
+}) {
+	const warningLeft = `${50 - (warningThreshold * 100) / 2}%`;
+	const warningRight = `${50 + (warningThreshold * 100) / 2}%`;
+	const criticalLeft = `${50 - (criticalThreshold * 100) / 2}%`;
+	const criticalRight = `${50 + (criticalThreshold * 100) / 2}%`;
+
+	return (
+		<>
+			<div
+				className="absolute top-0 bottom-0 w-px bg-amber-400 dark:bg-amber-500"
+				style={{ left: warningLeft }}
+			/>
+			<div
+				className="absolute top-0 bottom-0 w-px bg-amber-400 dark:bg-amber-500"
+				style={{ left: warningRight }}
+			/>
+			<div className="absolute top-0 bottom-0 w-px bg-red-500" style={{ left: criticalLeft }} />
+			<div className="absolute top-0 bottom-0 w-px bg-red-500" style={{ left: criticalRight }} />
+		</>
+	);
+}
+
 export const DeltaGauge = memo(function DeltaGauge({
 	deltaNotional,
 	deltaSPYEquivalent,
@@ -45,46 +125,13 @@ export const DeltaGauge = memo(function DeltaGauge({
 	size = "md",
 	className = "",
 }: DeltaGaugeProps) {
-	const { fillPct, direction, status } = useMemo(() => {
-		const absValue = Math.abs(deltaNotional);
-		const pct = Math.min((absValue / maxValue) * 100, 100);
-		const dir = deltaNotional >= 0 ? "positive" : "negative";
+	const { fillPct, direction, status } = useMemo(
+		() => getDeltaFillState(deltaNotional, maxValue, warningThreshold, criticalThreshold),
+		[deltaNotional, maxValue, warningThreshold, criticalThreshold],
+	);
 
-		const thresholdPct = absValue / maxValue;
-		let state: "normal" | "warning" | "critical" = "normal";
-		if (thresholdPct >= criticalThreshold) {
-			state = "critical";
-		} else if (thresholdPct >= warningThreshold) {
-			state = "warning";
-		}
-
-		return { fillPct: pct, direction: dir, status: state };
-	}, [deltaNotional, maxValue, warningThreshold, criticalThreshold]);
-
-	const sizeClasses = {
-		sm: { height: "h-3", text: "text-xs", label: "text-[10px]" },
-		md: { height: "h-4", text: "text-sm", label: "text-xs" },
-		lg: { height: "h-6", text: "text-base", label: "text-sm" },
-	};
-
-	const sizes = sizeClasses[size];
-
-	const fillColor = useMemo(() => {
-		if (status === "critical") {
-			return direction === "positive" ? "bg-red-500" : "bg-red-500";
-		}
-		if (status === "warning") {
-			return direction === "positive" ? "bg-amber-500" : "bg-amber-500";
-		}
-		return direction === "positive"
-			? "bg-green-500 dark:bg-green-400"
-			: "bg-red-500 dark:bg-red-400";
-	}, [direction, status]);
-
-	const formatSPY = (value: number) => {
-		const sign = value >= 0 ? "+" : "";
-		return `≈ ${sign}${Math.abs(value).toLocaleString("en-US", { maximumFractionDigits: 0 })} SPY shares`;
-	};
+	const sizes = SIZE_STYLES[size];
+	const fillColor = useMemo(() => getFillColor(direction, status), [direction, status]);
 
 	return (
 		<div className={`space-y-2 ${className}`}>
@@ -136,41 +183,26 @@ export const DeltaGauge = memo(function DeltaGauge({
 				</div>
 
 				{showLimits && (
-					<>
-						<div
-							className="absolute top-0 bottom-0 w-px bg-amber-400 dark:bg-amber-500"
-							style={{ left: `${50 + (warningThreshold * 100) / 2}%` }}
-						/>
-						<div
-							className="absolute top-0 bottom-0 w-px bg-amber-400 dark:bg-amber-500"
-							style={{ left: `${50 - (warningThreshold * 100) / 2}%` }}
-						/>
-
-						<div
-							className="absolute top-0 bottom-0 w-px bg-red-500"
-							style={{ left: `${50 + (criticalThreshold * 100) / 2}%` }}
-						/>
-						<div
-							className="absolute top-0 bottom-0 w-px bg-red-500"
-							style={{ left: `${50 - (criticalThreshold * 100) / 2}%` }}
-						/>
-					</>
+					<DeltaLimitLines
+						warningThreshold={warningThreshold}
+						criticalThreshold={criticalThreshold}
+					/>
 				)}
 			</div>
 
 			<div className="flex items-center justify-between">
 				<span className={`${sizes.label} text-stone-400 dark:text-night-400 font-mono`}>
-					-${(maxValue / 1000).toFixed(0)}K
+					-{formatScaleValue(maxValue)}
 				</span>
 				<span className={`${sizes.label} text-stone-400 dark:text-night-400 font-mono`}>0</span>
 				<span className={`${sizes.label} text-stone-400 dark:text-night-400 font-mono`}>
-					+${(maxValue / 1000).toFixed(0)}K
+					+{formatScaleValue(maxValue)}
 				</span>
 			</div>
 
 			<div className="text-center">
 				<span className={`${sizes.label} text-stone-500 dark:text-night-300`}>
-					{formatSPY(deltaSPYEquivalent)}
+					≈ {formatValue(deltaSPYEquivalent)} SPY shares
 				</span>
 			</div>
 		</div>

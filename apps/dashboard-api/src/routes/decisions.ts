@@ -1,11 +1,3 @@
-/**
- * Decisions Routes
- *
- * Endpoints for listing, viewing, and managing trading decisions.
- *
- * @see docs/plans/ui/05-api-endpoints.md
- */
-
 import { createHelixClientFromEnv, getDecisionCitations } from "@cream/helix";
 import { createRoute, OpenAPIHono, z } from "@hono/zod-openapi";
 import { getAgentOutputsRepo, getDecisionsRepo, getOrdersRepo } from "../db.js";
@@ -93,9 +85,7 @@ const StopLossSchema = z.object({
 	type: z.enum(["FIXED", "TRAILING"]),
 });
 
-const TakeProfitSchema = z.object({
-	price: z.number(),
-});
+const TakeProfitSchema = z.object({ price: z.number() });
 
 const OptionLegSchema = z.object({
 	symbol: z.string(),
@@ -114,7 +104,6 @@ const DecisionDetailSchema = DecisionSchema.extend({
 	execution: ExecutionDetailSchema.nullable(),
 	riskApproval: ApprovalDetailSchema.optional(),
 	criticApproval: ApprovalDetailSchema.optional(),
-	// Full decision metadata
 	stopLoss: StopLossSchema.nullable(),
 	takeProfit: TakeProfitSchema.nullable(),
 	thesisState: z.string().nullable(),
@@ -143,14 +132,113 @@ const DecisionQuerySchema = z.object({
 	offset: z.coerce.number().min(0).default(0),
 });
 
+type DecisionMetadata = {
+	riskApproval?: z.infer<typeof ApprovalDetailSchema>;
+	criticApproval?: z.infer<typeof ApprovalDetailSchema>;
+	stopLoss?: z.infer<typeof StopLossSchema>;
+	takeProfit?: z.infer<typeof TakeProfitSchema>;
+	thesisState?: string;
+	decisionLogic?: string;
+	memoryReferences?: string[];
+	legs?: z.infer<typeof OptionLegSchema>[];
+	netLimitPrice?: number;
+	originalAction?: string;
+};
+
+type Citation = z.infer<typeof CitationSchema>;
+
+function mapAgentOutput(ao: {
+	agentType: string;
+	vote: "APPROVE" | "REJECT";
+	confidence: number;
+	reasoningSummary: string | null;
+	latencyMs: number | null;
+	createdAt: string;
+}) {
+	return {
+		agentType: ao.agentType,
+		vote: ao.vote,
+		confidence: ao.confidence,
+		reasoning: ao.reasoningSummary ?? "",
+		processingTimeMs: ao.latencyMs ?? 0,
+		createdAt: ao.createdAt,
+	};
+}
+
+function mapCitation(citation: {
+	id: string;
+	url: string | null;
+	title: string;
+	source: string;
+	snippet: string;
+	relevanceScore: number;
+	fetchedAt: string;
+}): Citation {
+	return {
+		id: citation.id,
+		url: citation.url ?? "",
+		title: citation.title,
+		source: citation.source,
+		snippet: citation.snippet,
+		relevanceScore: citation.relevanceScore,
+		fetchedAt: citation.fetchedAt,
+	};
+}
+
+function mapExecution(
+	order: {
+		id: string;
+		brokerOrderId: string | null;
+		status: string;
+		filledQuantity: number;
+		avgFillPrice: number | null;
+		createdAt: string;
+		submittedAt: string | null;
+		filledAt: string | null;
+	} | null,
+): z.infer<typeof ExecutionDetailSchema> | null {
+	if (!order) {
+		return null;
+	}
+	return {
+		orderId: order.id,
+		brokerOrderId: order.brokerOrderId,
+		broker: "ALPACA",
+		status: order.status,
+		filledQty: order.filledQuantity,
+		avgFillPrice: order.avgFillPrice,
+		slippage: null,
+		commissions: null,
+		timestamps: {
+			submitted: order.createdAt,
+			accepted: order.submittedAt,
+			filled: order.filledAt,
+		},
+	};
+}
+
+async function getCitations(id: string): Promise<Citation[]> {
+	try {
+		const helixClient = createHelixClientFromEnv();
+		return (await getDecisionCitations(helixClient, id)).map(mapCitation);
+	} catch {
+		return [];
+	}
+}
+
+function getDecisionMetadata(raw: unknown): DecisionMetadata {
+	if (!raw || typeof raw !== "object") {
+		return {};
+	}
+	return raw as DecisionMetadata;
+}
+
 const app = new OpenAPIHono();
 
 const listRoute = createRoute({
 	method: "get",
 	path: "/",
-	request: {
-		query: DecisionQuerySchema,
-	},
+	request: { query: DecisionQuerySchema },
 	responses: {
 		200: {
 			content: { "application/json": { schema: PaginatedDecisionsSchema } },
@@ -163,9 +251,7 @@ const listRoute = createRoute({
 // @ts-expect-error - Hono OpenAPI enum type inference limitation
 app.openapi(listRoute, async (c) => {
 	const query = c.req.valid("query");
-	const repo = await getDecisionsRepo();
-
-	const result = await repo.findMany(
+	const result = await (await getDecisionsRepo()).findMany(
 		{
 			symbol: query.symbol,
 			action: query.action,
@@ -180,14 +266,8 @@ app.openapi(listRoute, async (c) => {
 			fromDate: query.dateFrom,
 			toDate: query.dateTo,
 		},
-		{
-			limit: query.limit,
-			offset: query.offset,
-		},
+		{ limit: query.limit, offset: query.offset },
 	);
-
-	const hasMore = result.offset + result.data.length < result.total;
-
 	return c.json({
 		items: result.data.map((d) => ({
 			id: d.id,
@@ -201,34 +281,28 @@ app.openapi(listRoute, async (c) => {
 			stop: d.stopPrice,
 			target: d.targetPrice,
 			status: d.status.toUpperCase(),
-			consensusCount: 8, // All 8 agents participate in consensus
-			pnl: null, // PnL calculated when position is closed
+			consensusCount: 8,
+			pnl: null,
 			createdAt: d.createdAt,
 		})),
 		total: result.total,
 		limit: result.limit,
 		offset: result.offset,
-		hasMore,
+		hasMore: result.offset + result.data.length < result.total,
 	});
 });
 
 const detailRoute = createRoute({
 	method: "get",
 	path: "/:id",
-	request: {
-		params: z.object({ id: z.string() }),
-	},
+	request: { params: z.object({ id: z.string() }) },
 	responses: {
 		200: {
 			content: { "application/json": { schema: DecisionDetailSchema } },
 			description: "Decision detail",
 		},
 		404: {
-			content: {
-				"application/json": {
-					schema: z.object({ error: z.string() }),
-				},
-			},
+			content: { "application/json": { schema: z.object({ error: z.string() }) } },
 			description: "Decision not found",
 		},
 	},
@@ -243,92 +317,16 @@ app.openapi(detailRoute, async (c) => {
 		getAgentOutputsRepo(),
 		getOrdersRepo(),
 	]);
-
 	const decision = await decisionsRepo.findById(id);
 	if (!decision) {
 		return c.json({ error: "Decision not found" }, 404);
 	}
-
-	const agentOutputs = await agentOutputsRepo.findByDecision(id);
-	const orders = await ordersRepo.findByDecision(id);
-	const order = orders[0];
-
-	// HelixDB citations are non-blocking - gracefully degrade to empty array if unavailable
-	let citations: Array<{
-		id: string;
-		url: string;
-		title: string;
-		source: string;
-		snippet: string;
-		relevanceScore: number;
-		fetchedAt: string;
-	}> = [];
-
-	try {
-		const helixClient = createHelixClientFromEnv();
-		const rawCitations = await getDecisionCitations(helixClient, id);
-		citations = rawCitations.map((citation) => ({
-			id: citation.id,
-			url: citation.url ?? "",
-			title: citation.title,
-			source: citation.source,
-			snippet: citation.snippet,
-			relevanceScore: citation.relevanceScore,
-			fetchedAt: citation.fetchedAt,
-		}));
-	} catch {
-		// HelixDB unavailable - continue with empty citations
-	}
-
-	// Extract full decision metadata
-	const metadata = decision.metadata as {
-		riskApproval?: {
-			verdict: "APPROVE" | "REJECT";
-			notes?: string;
-			violations?: Array<{
-				constraint?: string;
-				current_value?: string | number;
-				limit?: string | number;
-				severity?: string;
-				affected_decisions?: string[];
-			}>;
-			requiredChanges?: Array<{
-				decisionId: string;
-				change: string;
-				reason?: string;
-			}>;
-		};
-		criticApproval?: {
-			verdict: "APPROVE" | "REJECT";
-			notes?: string;
-			violations?: Array<{
-				constraint?: string;
-				current_value?: string | number;
-				limit?: string | number;
-				severity?: string;
-				affected_decisions?: string[];
-			}>;
-			requiredChanges?: Array<{
-				decisionId: string;
-				change: string;
-				reason?: string;
-			}>;
-		};
-		// Full decision details
-		stopLoss?: { price: number; type: "FIXED" | "TRAILING" };
-		takeProfit?: { price: number };
-		thesisState?: string;
-		decisionLogic?: string;
-		memoryReferences?: string[];
-		legs?: Array<{
-			symbol: string;
-			ratioQty: number;
-			positionIntent: "BUY_TO_OPEN" | "BUY_TO_CLOSE" | "SELL_TO_OPEN" | "SELL_TO_CLOSE";
-		}>;
-		netLimitPrice?: number;
-		originalAction?: string;
-	} | null;
-
+	const [agentOutputs, orders, citations] = await Promise.all([
+		agentOutputsRepo.findByDecision(id),
+		ordersRepo.findByDecision(id),
+		getCitations(id),
+	]);
+	const metadata = getDecisionMetadata(decision.metadata);
 	return c.json({
 		id: decision.id,
 		cycleId: decision.cycleId,
@@ -349,63 +347,33 @@ app.openapi(detailRoute, async (c) => {
 		rationale: decision.rationale,
 		bullishFactors: decision.bullishFactors ?? [],
 		bearishFactors: decision.bearishFactors ?? [],
-		agentOutputs: agentOutputs.map((ao) => ({
-			agentType: ao.agentType,
-			vote: ao.vote,
-			confidence: ao.confidence,
-			reasoning: ao.reasoningSummary ?? "",
-			processingTimeMs: ao.latencyMs ?? 0,
-			createdAt: ao.createdAt,
-		})),
+		agentOutputs: agentOutputs.map(mapAgentOutput),
 		citations,
-		execution: order
-			? {
-					orderId: order.id,
-					brokerOrderId: order.brokerOrderId,
-					broker: "ALPACA",
-					status: order.status,
-					filledQty: order.filledQuantity,
-					avgFillPrice: order.avgFillPrice,
-					slippage: null,
-					commissions: null,
-					timestamps: {
-						submitted: order.createdAt,
-						accepted: order.submittedAt,
-						filled: order.filledAt,
-					},
-				}
-			: null,
-		riskApproval: metadata?.riskApproval,
-		criticApproval: metadata?.criticApproval,
-		// Full decision details from metadata
-		stopLoss: metadata?.stopLoss ?? null,
-		takeProfit: metadata?.takeProfit ?? null,
-		thesisState: metadata?.thesisState ?? null,
-		decisionLogic: metadata?.decisionLogic ?? null,
-		memoryReferences: metadata?.memoryReferences ?? [],
-		legs: metadata?.legs ?? [],
-		netLimitPrice: metadata?.netLimitPrice ?? null,
-		originalAction: metadata?.originalAction ?? null,
+		execution: mapExecution(orders[0] ?? null),
+		riskApproval: metadata.riskApproval,
+		criticApproval: metadata.criticApproval,
+		stopLoss: metadata.stopLoss ?? null,
+		takeProfit: metadata.takeProfit ?? null,
+		thesisState: metadata.thesisState ?? null,
+		decisionLogic: metadata.decisionLogic ?? null,
+		memoryReferences: metadata.memoryReferences ?? [],
+		legs: metadata.legs ?? [],
+		netLimitPrice: metadata.netLimitPrice ?? null,
+		originalAction: metadata.originalAction ?? null,
 	});
 });
 
 const agentsRoute = createRoute({
 	method: "get",
 	path: "/:id/agents",
-	request: {
-		params: z.object({ id: z.string() }),
-	},
+	request: { params: z.object({ id: z.string() }) },
 	responses: {
 		200: {
 			content: { "application/json": { schema: z.array(AgentOutputSchema) } },
 			description: "Agent outputs for decision",
 		},
 		404: {
-			content: {
-				"application/json": {
-					schema: z.object({ error: z.string() }),
-				},
-			},
+			content: { "application/json": { schema: z.object({ error: z.string() }) } },
 			description: "Decision not found",
 		},
 	},
@@ -419,43 +387,23 @@ app.openapi(agentsRoute, async (c) => {
 		getDecisionsRepo(),
 		getAgentOutputsRepo(),
 	]);
-
-	const decision = await decisionsRepo.findById(id);
-	if (!decision) {
+	if (!(await decisionsRepo.findById(id))) {
 		return c.json({ error: "Decision not found" }, 404);
 	}
-
-	const agentOutputs = await agentOutputsRepo.findByDecision(id);
-
-	return c.json(
-		agentOutputs.map((ao) => ({
-			agentType: ao.agentType,
-			vote: ao.vote,
-			confidence: ao.confidence,
-			reasoning: ao.reasoningSummary ?? "",
-			processingTimeMs: ao.latencyMs ?? 0,
-			createdAt: ao.createdAt,
-		})),
-	);
+	return c.json((await agentOutputsRepo.findByDecision(id)).map(mapAgentOutput));
 });
 
 const citationsRoute = createRoute({
 	method: "get",
 	path: "/:id/citations",
-	request: {
-		params: z.object({ id: z.string() }),
-	},
+	request: { params: z.object({ id: z.string() }) },
 	responses: {
 		200: {
 			content: { "application/json": { schema: z.array(CitationSchema) } },
 			description: "Citations for decision",
 		},
 		404: {
-			content: {
-				"application/json": {
-					schema: z.object({ error: z.string() }),
-				},
-			},
+			content: { "application/json": { schema: z.object({ error: z.string() }) } },
 			description: "Decision not found",
 		},
 	},
@@ -465,51 +413,23 @@ const citationsRoute = createRoute({
 // @ts-expect-error - Hono OpenAPI multi-response type inference limitation
 app.openapi(citationsRoute, async (c) => {
 	const { id } = c.req.valid("param");
-	const decisionsRepo = await getDecisionsRepo();
-
-	const decision = await decisionsRepo.findById(id);
-	if (!decision) {
+	if (!(await (await getDecisionsRepo()).findById(id))) {
 		return c.json({ error: "Decision not found" }, 404);
 	}
-
-	try {
-		const helixClient = createHelixClientFromEnv();
-		const citations = await getDecisionCitations(helixClient, id);
-
-		return c.json(
-			citations.map((citation) => ({
-				id: citation.id,
-				url: citation.url ?? "",
-				title: citation.title,
-				source: citation.source,
-				snippet: citation.snippet,
-				relevanceScore: citation.relevanceScore,
-				fetchedAt: citation.fetchedAt,
-			})),
-		);
-	} catch {
-		// HelixDB unavailable - graceful degradation
-		return c.json([]);
-	}
+	return c.json(await getCitations(id));
 });
 
 const executionRoute = createRoute({
 	method: "get",
 	path: "/:id/execution",
-	request: {
-		params: z.object({ id: z.string() }),
-	},
+	request: { params: z.object({ id: z.string() }) },
 	responses: {
 		200: {
 			content: { "application/json": { schema: ExecutionDetailSchema.nullable() } },
 			description: "Execution details for decision",
 		},
 		404: {
-			content: {
-				"application/json": {
-					schema: z.object({ error: z.string() }),
-				},
-			},
+			content: { "application/json": { schema: z.object({ error: z.string() }) } },
 			description: "Decision not found",
 		},
 	},
@@ -520,34 +440,11 @@ const executionRoute = createRoute({
 app.openapi(executionRoute, async (c) => {
 	const { id } = c.req.valid("param");
 	const [decisionsRepo, ordersRepo] = await Promise.all([getDecisionsRepo(), getOrdersRepo()]);
-
-	const decision = await decisionsRepo.findById(id);
-	if (!decision) {
+	if (!(await decisionsRepo.findById(id))) {
 		return c.json({ error: "Decision not found" }, 404);
 	}
-
-	const orders = await ordersRepo.findByDecision(id);
-	const order = orders[0];
-
-	if (!order) {
-		return c.json(null);
-	}
-
-	return c.json({
-		orderId: order.id,
-		brokerOrderId: order.brokerOrderId,
-		broker: "ALPACA",
-		status: order.status,
-		filledQty: order.filledQuantity,
-		avgFillPrice: order.avgFillPrice,
-		slippage: null,
-		commissions: null,
-		timestamps: {
-			submitted: order.createdAt,
-			accepted: order.submittedAt,
-			filled: order.filledAt,
-		},
-	});
+	const order = (await ordersRepo.findByDecision(id))[0] ?? null;
+	return c.json(mapExecution(order));
 });
 
 export default app;

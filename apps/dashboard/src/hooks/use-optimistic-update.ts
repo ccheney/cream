@@ -66,6 +66,120 @@ export interface UseOptimisticUpdateReturn<TData, TVariables> {
 	reset: () => void;
 }
 
+function buildErrorMessage(
+	errorMessage: string | ((error: Error) => string) | undefined,
+	error: Error,
+) {
+	if (typeof errorMessage === "function") {
+		return errorMessage(error);
+	}
+	return errorMessage || `Update failed: ${error.message}`;
+}
+
+function createOptimisticMutationOptions<TData, TVariables>(
+	queryClient: QueryClient,
+	queryKey: QueryKey,
+	mutationFn: (variables: TVariables) => Promise<TData>,
+	optimisticUpdate: OptimisticUpdateOptions<
+		TData,
+		TVariables,
+		OptimisticMutationContext<TData>
+	>["optimisticUpdate"],
+	onSuccess: OptimisticUpdateOptions<
+		TData,
+		TVariables,
+		OptimisticMutationContext<TData>
+	>["onSuccess"],
+	onError: OptimisticUpdateOptions<TData, TVariables, OptimisticMutationContext<TData>>["onError"],
+	errorMessage: OptimisticUpdateOptions<
+		TData,
+		TVariables,
+		OptimisticMutationContext<TData>
+	>["errorMessage"],
+	alert: ReturnType<typeof useAlert>,
+	skipErrorToast: boolean,
+	retry: number,
+	retryMutation: (variables: TVariables) => void,
+) {
+	return {
+		mutationFn,
+		retry,
+		onMutate: async (variables: TVariables) => {
+			await queryClient.cancelQueries({ queryKey });
+			const previousData = queryClient.getQueryData<TData>(queryKey);
+			if (optimisticUpdate) {
+				const optimisticData = optimisticUpdate(previousData, variables);
+				queryClient.setQueryData(queryKey, optimisticData);
+			}
+			return { previousData, timestamp: Date.now() };
+		},
+		onError: (
+			error: Error,
+			variables: TVariables,
+			context: OptimisticMutationContext<TData> | undefined,
+		) => {
+			if (context?.previousData !== undefined) {
+				queryClient.setQueryData(queryKey, context.previousData);
+			}
+			if (!skipErrorToast) {
+				const message = buildErrorMessage(errorMessage, error);
+				alert.warning("Update Failed", message, {
+					label: "Retry",
+					onClick: () => {
+						retryMutation(variables);
+					},
+				});
+			}
+			if (context) {
+				onError?.(error, variables, context);
+			}
+		},
+		onSuccess: (
+			data: TData,
+			variables: TVariables,
+			context: OptimisticMutationContext<TData> | undefined,
+		) => {
+			if (context) {
+				onSuccess?.(data, variables, context);
+			}
+		},
+		onSettled: async () => {
+			await queryClient.invalidateQueries({ queryKey });
+		},
+	} as UseMutationOptions<TData, Error, TVariables, OptimisticMutationContext<TData>>;
+}
+
+function createListMutationOptions<TItem extends { id: string }, TRequest, TResult>(
+	queryClient: QueryClient,
+	queryKey: QueryKey,
+	options: {
+		mutationFn?: (request: TRequest) => Promise<TResult>;
+		applyOptimistic: (request: TRequest, oldData: TItem[] | undefined) => TItem[];
+		onErrorMessage: string;
+		alert: ReturnType<typeof useAlert>;
+	},
+) {
+	return {
+		mutationFn: options.mutationFn,
+		onMutate: async (request: TRequest) => {
+			await queryClient.cancelQueries({ queryKey });
+			const previousData = queryClient.getQueryData<TItem[]>(queryKey);
+			queryClient.setQueryData<TItem[]>(queryKey, (old) => options.applyOptimistic(request, old));
+			return { previousData };
+		},
+		onError: (_error: unknown, _request: TRequest, context: { previousData?: TItem[] }) => {
+			queryClient.setQueryData(queryKey, context.previousData);
+			options.alert.warning(
+				options.onErrorMessage,
+				_error instanceof Error ? _error.message : String(_error),
+			);
+		},
+		onSettled: () => {
+			queryClient.invalidateQueries({ queryKey });
+		},
+	} as UseMutationOptions<TResult, Error, TRequest, { previousData?: TItem[] }>;
+}
+
 // ============================================
 // Debounce Helper
 // ============================================
@@ -139,76 +253,27 @@ export function useOptimisticUpdate<TData, TVariables>(
 		retry = 0,
 	} = options;
 
-	const mutationOptions: UseMutationOptions<
-		TData,
-		Error,
-		TVariables,
-		OptimisticMutationContext<TData>
-	> = {
-		mutationFn,
-		retry,
+	const mutateRef = useRef<(variables: TVariables) => void>(() => void 0);
+	const retryMutation = useCallback((variables: TVariables) => {
+		mutateRef.current(variables);
+	}, []);
 
-		// Before mutation: apply optimistic update
-		onMutate: async (variables) => {
-			// Cancel any outgoing refetches (prevent race conditions)
-			await queryClient.cancelQueries({ queryKey });
-
-			// Snapshot the previous value
-			const previousData = queryClient.getQueryData<TData>(queryKey);
-
-			// Apply optimistic update if provided
-			if (optimisticUpdate) {
-				const optimisticData = optimisticUpdate(previousData, variables);
-				queryClient.setQueryData(queryKey, optimisticData);
-			}
-
-			// Return context with previous data
-			return { previousData, timestamp: Date.now() };
-		},
-
-		// On error: rollback to previous value
-		onError: (error, variables, context) => {
-			// Rollback to previous data
-			if (context?.previousData !== undefined) {
-				queryClient.setQueryData(queryKey, context.previousData);
-			}
-
-			// Show error toast unless skipped
-			if (!skipErrorToast) {
-				const message =
-					typeof errorMessage === "function"
-						? errorMessage(error)
-						: errorMessage || `Update failed: ${error.message}`;
-
-				alert.warning("Update Failed", message, {
-					label: "Retry",
-					onClick: () => {
-						// Re-attempt the mutation
-						mutation.mutate(variables);
-					},
-				});
-			}
-
-			// Call user's onError handler
-			if (context) {
-				onError?.(error, variables, context);
-			}
-		},
-
-		// On success: call user's onSuccess handler
-		onSuccess: (data, variables, context) => {
-			if (context) {
-				onSuccess?.(data, variables, context);
-			}
-		},
-
-		// After mutation (success or error): refetch to ensure consistency
-		onSettled: async () => {
-			await queryClient.invalidateQueries({ queryKey });
-		},
-	};
-
-	const mutation = useMutation(mutationOptions);
+	const mutation = useMutation(
+		createOptimisticMutationOptions(
+			queryClient,
+			queryKey,
+			mutationFn,
+			optimisticUpdate,
+			onSuccess,
+			onError,
+			errorMessage,
+			alert,
+			skipErrorToast,
+			retry,
+			retryMutation,
+		),
+	);
+	mutateRef.current = mutation.mutate;
 
 	// Debounced mutate function
 	const debouncedMutate = useDebouncedCallback(
@@ -244,63 +309,37 @@ export function useOptimisticListUpdate<TItem extends { id: string }>(options: {
 	const queryClient = useQueryClient();
 	const alert = useAlert();
 
-	// Add mutation
-	const addMutation = useMutation({
-		mutationFn: options.addFn,
-		onMutate: async (newItem) => {
-			await queryClient.cancelQueries({ queryKey: options.queryKey });
-			const previousData = queryClient.getQueryData<TItem[]>(options.queryKey);
-			queryClient.setQueryData<TItem[]>(options.queryKey, (old) => [...(old || []), newItem]);
-			return { previousData };
-		},
-		onError: (error, _variables, context) => {
-			queryClient.setQueryData(options.queryKey, context?.previousData);
-			alert.warning("Failed to add item", error.message);
-		},
-		onSettled: () => {
-			queryClient.invalidateQueries({ queryKey: options.queryKey });
-		},
-	});
+	const addMutation = useMutation(
+		createListMutationOptions<TItem, TItem, TItem>(queryClient, options.queryKey, {
+			mutationFn: options.addFn,
+			applyOptimistic: (newItem, oldData) => [...(oldData || []), newItem],
+			onErrorMessage: options.errorMessage || "Failed to add item",
+			alert,
+		}),
+	);
 
-	// Remove mutation
-	const removeMutation = useMutation({
-		mutationFn: options.removeFn,
-		onMutate: async (id) => {
-			await queryClient.cancelQueries({ queryKey: options.queryKey });
-			const previousData = queryClient.getQueryData<TItem[]>(options.queryKey);
-			queryClient.setQueryData<TItem[]>(options.queryKey, (old) =>
-				(old || []).filter((item) => item.id !== id),
-			);
-			return { previousData };
-		},
-		onError: (error, _variables, context) => {
-			queryClient.setQueryData(options.queryKey, context?.previousData);
-			alert.warning("Failed to remove item", error.message);
-		},
-		onSettled: () => {
-			queryClient.invalidateQueries({ queryKey: options.queryKey });
-		},
-	});
+	const removeMutation = useMutation(
+		createListMutationOptions<TItem, string, void>(queryClient, options.queryKey, {
+			mutationFn: options.removeFn,
+			applyOptimistic: (id, oldData) => (oldData || []).filter((item) => item.id !== id),
+			onErrorMessage: options.errorMessage || "Failed to remove item",
+			alert,
+		}),
+	);
 
-	// Update mutation
-	const updateMutation = useMutation({
-		mutationFn: options.updateFn,
-		onMutate: async (updates) => {
-			await queryClient.cancelQueries({ queryKey: options.queryKey });
-			const previousData = queryClient.getQueryData<TItem[]>(options.queryKey);
-			queryClient.setQueryData<TItem[]>(options.queryKey, (old) =>
-				(old || []).map((item) => (item.id === updates.id ? { ...item, ...updates } : item)),
-			);
-			return { previousData };
-		},
-		onError: (error, _variables, context) => {
-			queryClient.setQueryData(options.queryKey, context?.previousData);
-			alert.warning("Failed to update item", error.message);
-		},
-		onSettled: () => {
-			queryClient.invalidateQueries({ queryKey: options.queryKey });
-		},
-	});
+	const updateMutation = useMutation(
+		createListMutationOptions<TItem, Partial<TItem> & { id: string }, TItem>(
+			queryClient,
+			options.queryKey,
+			{
+				mutationFn: options.updateFn,
+				applyOptimistic: (updates, oldData) =>
+					(oldData || []).map((item) => (item.id === updates.id ? { ...item, ...updates } : item)),
+				onErrorMessage: options.errorMessage || "Failed to update item",
+				alert,
+			},
+		),
+	);
 
 	return {
 		add: addMutation.mutate,

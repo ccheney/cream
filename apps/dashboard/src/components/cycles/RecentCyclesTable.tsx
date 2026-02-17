@@ -84,6 +84,56 @@ function RecentCyclesTableSkeleton() {
 	);
 }
 
+interface RecentCycleRowProps {
+	cycle: CycleListItem;
+}
+
+const RecentCycleRow = memo(function RecentCycleRow({ cycle }: RecentCycleRowProps) {
+	const durationStr = cycle.durationMs
+		? formatDuration(intervalToDuration({ start: 0, end: cycle.durationMs }), {
+				format: ["minutes", "seconds"],
+			})
+		: "—";
+
+	const approvalLabel =
+		cycle.approved === null || cycle.approved === undefined ? "—" : cycle.approved ? "Yes" : "No";
+
+	const approvalClassName =
+		cycle.approved === null || cycle.approved === undefined
+			? "text-stone-400 dark:text-night-500"
+			: cycle.approved
+				? "text-emerald-600 dark:text-emerald-400"
+				: "text-red-600 dark:text-red-400";
+
+	return (
+		<tr className="text-sm hover:bg-cream-50 dark:hover:bg-night-700/30">
+			<td className="px-5 py-3">
+				<span className="font-mono text-xs text-stone-600 dark:text-night-300">
+					{cycle.id.slice(0, 8)}...
+				</span>
+			</td>
+			<td className="px-5 py-3">
+				<StatusBadge status={cycle.status} />
+			</td>
+			<td className="px-5 py-3">
+				<span className="flex items-center gap-1 text-xs text-stone-500 dark:text-night-400">
+					<Clock className="w-3 h-3" />
+					{formatDistanceToNow(new Date(cycle.startedAt), { addSuffix: true })}
+				</span>
+			</td>
+			<td className="px-5 py-3">
+				<span className="text-xs font-mono text-stone-600 dark:text-night-300">{durationStr}</span>
+			</td>
+			<td className="px-5 py-3">
+				<span className="font-mono text-stone-700 dark:text-night-200">{cycle.decisionsCount}</span>
+			</td>
+			<td className="px-5 py-3">
+				<span className={`text-xs font-medium ${approvalClassName}`}>{approvalLabel}</span>
+			</td>
+		</tr>
+	);
+});
+
 // ============================================
 // Main Component
 // ============================================
@@ -126,58 +176,9 @@ export const RecentCyclesTable = memo(function RecentCyclesTable({
 							</tr>
 						</thead>
 						<tbody className="divide-y divide-cream-100 dark:divide-night-700">
-							{cycles.map((cycle) => {
-								const durationStr = cycle.durationMs
-									? formatDuration(intervalToDuration({ start: 0, end: cycle.durationMs }), {
-											format: ["minutes", "seconds"],
-										})
-									: "—";
-
-								return (
-									<tr
-										key={cycle.id}
-										className="text-sm hover:bg-cream-50 dark:hover:bg-night-700/30"
-									>
-										<td className="px-5 py-3">
-											<span className="font-mono text-xs text-stone-600 dark:text-night-300">
-												{cycle.id.slice(0, 8)}...
-											</span>
-										</td>
-										<td className="px-5 py-3">
-											<StatusBadge status={cycle.status} />
-										</td>
-										<td className="px-5 py-3">
-											<span className="flex items-center gap-1 text-xs text-stone-500 dark:text-night-400">
-												<Clock className="w-3 h-3" />
-												{formatDistanceToNow(new Date(cycle.startedAt), { addSuffix: true })}
-											</span>
-										</td>
-										<td className="px-5 py-3">
-											<span className="text-xs font-mono text-stone-600 dark:text-night-300">
-												{durationStr}
-											</span>
-										</td>
-										<td className="px-5 py-3">
-											<span className="font-mono text-stone-700 dark:text-night-200">
-												{cycle.decisionsCount}
-											</span>
-										</td>
-										<td className="px-5 py-3">
-											<span
-												className={`text-xs font-medium ${
-													cycle.approved
-														? "text-emerald-600 dark:text-emerald-400"
-														: cycle.approved === false
-															? "text-red-600 dark:text-red-400"
-															: "text-stone-400 dark:text-night-500"
-												}`}
-											>
-												{cycle.approved ? "Yes" : cycle.approved === false ? "No" : "—"}
-											</span>
-										</td>
-									</tr>
-								);
-							})}
+							{cycles.map((cycle) => (
+								<RecentCycleRow key={cycle.id} cycle={cycle} />
+							))}
 						</tbody>
 					</table>
 				</div>

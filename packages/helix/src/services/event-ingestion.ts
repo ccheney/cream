@@ -91,6 +91,34 @@ export interface EventIngestionOptions {
 	batchSize?: number;
 }
 
+interface ResolvedEventIngestionOptions {
+	generateEmbeddings: boolean;
+	createMacroEdges: boolean;
+	createCompanyEdges: boolean;
+	batchSize: number;
+}
+
+interface EmbeddingGenerationResult {
+	embeddings: Map<string, number[]>;
+	embeddingsGenerated: number;
+}
+
+const METRIC_MATCHERS: Array<{ macroId: string; keywords: string[] }> = [
+	{ macroId: "gdp", keywords: ["gdp", "growth"] },
+	{ macroId: "cpi", keywords: ["cpi", "inflation"] },
+	{ macroId: "unemployment", keywords: ["unemployment", "jobs", "nonfarm"] },
+	{ macroId: "pmi_manufacturing", keywords: ["pmi", "manufacturing"] },
+	{ macroId: "fed_funds_rate", keywords: ["rate", "fed"] },
+];
+
+const SUMMARY_MATCHERS: Array<{ macroId: string; keywords: string[] }> = [
+	{ macroId: "fed_funds_rate", keywords: ["fed", "fomc", "interest rate"] },
+	{ macroId: "oil_wti", keywords: ["oil", "crude", "opec"] },
+	{ macroId: "treasury_10y", keywords: ["treasury", "yield", "bond"] },
+];
+
+const VALID_MACRO_ENTITY_IDS = new Set(PREDEFINED_MACRO_ENTITIES.map((entity) => entity.entity_id));
+
 // ============================================
 // Helper Functions
 // ============================================
@@ -116,7 +144,6 @@ function mapEventType(sourceType: string, eventType: string): ExternalEventType 
 		other: "NEWS",
 	};
 
-	// Source-type based mapping for special cases
 	if (sourceType === "macro") {
 		return "MACRO";
 	}
@@ -134,16 +161,14 @@ function buildTextSummary(event: ExtractedEvent): string {
 		parts.push(`Key insights: ${event.extraction.keyInsights.join("; ")}`);
 	}
 
-	// Add sentiment context
 	parts.push(
 		`Sentiment: ${event.extraction.sentiment} (confidence: ${event.extraction.confidence.toFixed(2)})`,
 	);
 
-	// Add data points if relevant
 	if (event.extraction.dataPoints.length > 0) {
 		const dataPointStr = event.extraction.dataPoints
 			.slice(0, 3)
-			.map((dp) => `${dp.metric}: ${dp.value} ${dp.unit}`)
+			.map((dataPoint) => `${dataPoint.metric}: ${dataPoint.value} ${dataPoint.unit}`)
 			.join(", ");
 		parts.push(`Data: ${dataPointStr}`);
 	}
@@ -171,56 +196,40 @@ function toExternalEvent(event: ExtractedEvent): ExternalEvent {
 	};
 }
 
+function addMacroFactorsFromMetrics(event: ExtractedEvent, factors: Set<string>): void {
+	for (const dataPoint of event.extraction.dataPoints) {
+		const metric = dataPoint.metric.toLowerCase();
+		for (const matcher of METRIC_MATCHERS) {
+			if (matcher.keywords.some((keyword) => metric.includes(keyword))) {
+				factors.add(matcher.macroId);
+			}
+		}
+	}
+}
+
+function addMacroFactorsFromSummary(event: ExtractedEvent, factors: Set<string>): void {
+	const summary = event.extraction.summary.toLowerCase();
+	for (const matcher of SUMMARY_MATCHERS) {
+		if (matcher.keywords.some((keyword) => summary.includes(keyword))) {
+			factors.add(matcher.macroId);
+		}
+	}
+}
+
 /**
  * Identify macro factors related to an event
  * Returns macro entity IDs that should be linked
  */
 function identifyMacroFactors(event: ExtractedEvent): string[] {
-	const factors: Set<string> = new Set();
-
-	// Check event type for macro mapping
-	if (event.eventType === "macro_release") {
-		// Try to identify specific macro factor from data points
-		for (const dp of event.extraction.dataPoints) {
-			const metric = dp.metric.toLowerCase();
-
-			if (metric.includes("gdp") || metric.includes("growth")) {
-				factors.add("gdp");
-			}
-			if (metric.includes("cpi") || metric.includes("inflation")) {
-				factors.add("cpi");
-			}
-			if (
-				metric.includes("unemployment") ||
-				metric.includes("jobs") ||
-				metric.includes("nonfarm")
-			) {
-				factors.add("unemployment");
-			}
-			if (metric.includes("pmi") || metric.includes("manufacturing")) {
-				factors.add("pmi_manufacturing");
-			}
-			if (metric.includes("rate") || metric.includes("fed")) {
-				factors.add("fed_funds_rate");
-			}
-		}
-
-		// Check summary for keywords
-		const summary = event.extraction.summary.toLowerCase();
-		if (summary.includes("fed") || summary.includes("fomc") || summary.includes("interest rate")) {
-			factors.add("fed_funds_rate");
-		}
-		if (summary.includes("oil") || summary.includes("crude") || summary.includes("opec")) {
-			factors.add("oil_wti");
-		}
-		if (summary.includes("treasury") || summary.includes("yield") || summary.includes("bond")) {
-			factors.add("treasury_10y");
-		}
+	if (event.eventType !== "macro_release") {
+		return [];
 	}
 
-	// Filter to only predefined macro entities
-	const validIds = new Set(PREDEFINED_MACRO_ENTITIES.map((e) => e.entity_id));
-	return [...factors].filter((id) => validIds.has(id));
+	const factors = new Set<string>();
+	addMacroFactorsFromMetrics(event, factors);
+	addMacroFactorsFromSummary(event, factors);
+
+	return [...factors].filter((macroId) => VALID_MACRO_ENTITY_IDS.has(macroId));
 }
 
 // ============================================
@@ -247,108 +256,103 @@ export class EventIngestionService {
 		return this.embeddingClient;
 	}
 
-	/**
-	 * Ingest a batch of extracted events
-	 */
-	async ingestEvents(
-		events: ExtractedEvent[],
-		options: EventIngestionOptions = {},
-	): Promise<EventIngestionResult> {
-		const startTime = performance.now();
-		const warnings: string[] = [];
-		const errors: string[] = [];
+	private resolveOptions(options: EventIngestionOptions): ResolvedEventIngestionOptions {
+		return {
+			generateEmbeddings: options.generateEmbeddings ?? true,
+			createMacroEdges: options.createMacroEdges ?? true,
+			createCompanyEdges: options.createCompanyEdges ?? true,
+			batchSize: options.batchSize ?? 50,
+		};
+	}
 
-		const {
-			generateEmbeddings = true,
-			createMacroEdges = true,
-			createCompanyEdges = true,
-			batchSize = 50,
-		} = options;
+	private createEmptyResult(): EventIngestionResult {
+		return {
+			eventsIngested: 0,
+			edgesCreated: 0,
+			embeddingsGenerated: 0,
+			executionTimeMs: 0,
+			warnings: [],
+			errors: [],
+		};
+	}
 
-		if (events.length === 0) {
-			return {
-				eventsIngested: 0,
-				edgesCreated: 0,
-				embeddingsGenerated: 0,
-				executionTimeMs: 0,
-				warnings: [],
-				errors: [],
-			};
-		}
-
-		// Step 1: Convert to HelixDB format
-		const externalEvents = events.map(toExternalEvent);
-
-		// Step 2: Generate embeddings if enabled
-		const embeddings: Map<string, number[]> = new Map();
+	private async generateEmbeddingsForEvents(
+		externalEvents: ExternalEvent[],
+		generateEmbeddings: boolean,
+		warnings: string[],
+	): Promise<EmbeddingGenerationResult> {
+		const embeddings = new Map<string, number[]>();
 		let embeddingsGenerated = 0;
 
-		if (generateEmbeddings) {
-			try {
-				const embeddingClient = this.getEmbeddingClient();
-				const textsToEmbed = externalEvents.map((e) => e.text_summary ?? "");
-				const validTexts = textsToEmbed.filter((t) => t.length > 0);
-
-				if (validTexts.length > 0) {
-					const result = await embeddingClient.batchGenerateEmbeddings(validTexts);
-
-					let validIndex = 0;
-					for (let i = 0; i < textsToEmbed.length; i++) {
-						const text = textsToEmbed[i];
-						if (text && text.length > 0) {
-							const embedding = result.embeddings[validIndex];
-							if (embedding) {
-								embeddings.set(externalEvents[i]?.event_id ?? "", embedding.values);
-								embeddingsGenerated++;
-							}
-							validIndex++;
-						}
-					}
-				}
-			} catch (error) {
-				warnings.push(
-					`Embedding generation failed: ${error instanceof Error ? error.message : "Unknown error"}`,
-				);
-			}
+		if (!generateEmbeddings) {
+			return { embeddings, embeddingsGenerated };
 		}
 
-		// Step 3: Upsert events with embeddings
-		const eventsWithEmbeddings: NodeWithEmbedding<ExternalEvent>[] = externalEvents.map(
-			(event) => ({
-				node: event,
-				embedding: embeddings.get(event.event_id),
-				embeddingModelVersion: DEFAULT_EMBEDDING_CONFIG.model,
-			}),
-		);
+		try {
+			const embeddingClient = this.getEmbeddingClient();
+			const textsToEmbed = externalEvents.map((event) => event.text_summary ?? "");
+			const validTexts = textsToEmbed.filter((text) => text.length > 0);
 
+			if (validTexts.length === 0) {
+				return { embeddings, embeddingsGenerated };
+			}
+
+			const result = await embeddingClient.batchGenerateEmbeddings(validTexts);
+			let validIndex = 0;
+			for (let i = 0; i < textsToEmbed.length; i++) {
+				if (!textsToEmbed[i]) {
+					continue;
+				}
+				const embedding = result.embeddings[validIndex];
+				if (embedding) {
+					embeddings.set(externalEvents[i]?.event_id ?? "", embedding.values);
+					embeddingsGenerated++;
+				}
+				validIndex++;
+			}
+		} catch (error) {
+			warnings.push(
+				`Embedding generation failed: ${error instanceof Error ? error.message : "Unknown error"}`,
+			);
+		}
+
+		return { embeddings, embeddingsGenerated };
+	}
+
+	private async upsertEvents(
+		eventsWithEmbeddings: NodeWithEmbedding<ExternalEvent>[],
+		batchSize: number,
+		errors: string[],
+	): Promise<number> {
 		let eventsIngested = 0;
+
 		for (let i = 0; i < eventsWithEmbeddings.length; i += batchSize) {
 			const batch = eventsWithEmbeddings.slice(i, i + batchSize);
 			const result = await batchUpsertExternalEvents(this.client, batch);
 			eventsIngested += result.successful.length;
 
 			if (result.failed.length > 0) {
-				errors.push(...result.failed.slice(0, 5).map((f) => f.error ?? "Unknown error"));
+				errors.push(
+					...result.failed.slice(0, 5).map((failure) => failure.error ?? "Unknown error"),
+				);
 			}
 		}
 
-		// Step 4: Create edges
+		return eventsIngested;
+	}
+
+	private buildEventEdges(
+		events: ExtractedEvent[],
+		createMacroEdges: boolean,
+		createCompanyEdges: boolean,
+	): EdgeInput[] {
 		const edges: EdgeInput[] = [];
 
-		for (let i = 0; i < events.length; i++) {
-			const event = events[i];
-			if (!event) {
-				continue;
-			}
-
-			const eventId = event.eventId;
-
-			// Create RELATES_TO_MACRO edges for macro events
+		for (const event of events) {
 			if (createMacroEdges) {
-				const macroFactors = identifyMacroFactors(event);
-				for (const macroId of macroFactors) {
+				for (const macroId of identifyMacroFactors(event)) {
 					const edge: RelatesToMacroEdge = {
-						source_id: eventId,
+						source_id: event.eventId,
 						target_id: macroId,
 					};
 					edges.push({
@@ -360,36 +364,89 @@ export class EventIngestionService {
 				}
 			}
 
-			// Create company edges for news with tickers
-			if (createCompanyEdges && event.relatedInstrumentIds.length > 0) {
-				for (const symbol of event.relatedInstrumentIds) {
-					edges.push({
-						sourceId: eventId,
-						targetId: symbol,
-						edgeType: "EVENT_MENTIONS",
-						properties: {
-							sentiment: event.scores.sentimentScore,
-						},
-					});
-				}
+			if (!createCompanyEdges || event.relatedInstrumentIds.length === 0) {
+				continue;
+			}
+			for (const symbol of event.relatedInstrumentIds) {
+				edges.push({
+					sourceId: event.eventId,
+					targetId: symbol,
+					edgeType: "EVENT_MENTIONS",
+					properties: {
+						sentiment: event.scores.sentimentScore,
+					},
+				});
 			}
 		}
 
-		// Batch create edges
+		return edges;
+	}
+
+	private async createEdgesInBatches(
+		edges: EdgeInput[],
+		batchSize: number,
+		warnings: string[],
+	): Promise<number> {
 		let edgesCreated = 0;
-		if (edges.length > 0) {
-			for (let i = 0; i < edges.length; i += batchSize) {
-				const batch = edges.slice(i, i + batchSize);
-				const result = await batchCreateEdges(this.client, batch);
-				edgesCreated += result.successful.length;
 
-				if (result.failed.length > 0) {
-					warnings.push(
-						`${result.failed.length} edges failed to create in batch ${Math.floor(i / batchSize) + 1}`,
-					);
-				}
+		for (let i = 0; i < edges.length; i += batchSize) {
+			const batch = edges.slice(i, i + batchSize);
+			const result = await batchCreateEdges(this.client, batch);
+			edgesCreated += result.successful.length;
+
+			if (result.failed.length > 0) {
+				warnings.push(
+					`${result.failed.length} edges failed to create in batch ${Math.floor(i / batchSize) + 1}`,
+				);
 			}
 		}
+
+		return edgesCreated;
+	}
+
+	/**
+	 * Ingest a batch of extracted events
+	 */
+	async ingestEvents(
+		events: ExtractedEvent[],
+		options: EventIngestionOptions = {},
+	): Promise<EventIngestionResult> {
+		if (events.length === 0) {
+			return this.createEmptyResult();
+		}
+
+		const startTime = performance.now();
+		const warnings: string[] = [];
+		const errors: string[] = [];
+		const resolvedOptions = this.resolveOptions(options);
+		const externalEvents = events.map(toExternalEvent);
+		const { embeddings, embeddingsGenerated } = await this.generateEmbeddingsForEvents(
+			externalEvents,
+			resolvedOptions.generateEmbeddings,
+			warnings,
+		);
+		const eventsWithEmbeddings: NodeWithEmbedding<ExternalEvent>[] = externalEvents.map(
+			(event) => ({
+				node: event,
+				embedding: embeddings.get(event.event_id),
+				embeddingModelVersion: DEFAULT_EMBEDDING_CONFIG.model,
+			}),
+		);
+		const eventsIngested = await this.upsertEvents(
+			eventsWithEmbeddings,
+			resolvedOptions.batchSize,
+			errors,
+		);
+		const edges = this.buildEventEdges(
+			events,
+			resolvedOptions.createMacroEdges,
+			resolvedOptions.createCompanyEdges,
+		);
+		const edgesCreated = await this.createEdgesInBatches(
+			edges,
+			resolvedOptions.batchSize,
+			warnings,
+		);
 
 		return {
 			eventsIngested,
@@ -423,10 +480,10 @@ export class EventIngestionService {
 				Array<{ event_id: string; similarity: number; text_summary: string }>
 			>("SearchExternalEvents", { query: queryText, limit });
 
-			return result.data.map((r) => ({
-				eventId: r.event_id,
-				similarity: r.similarity,
-				textSummary: r.text_summary,
+			return result.data.map((row) => ({
+				eventId: row.event_id,
+				similarity: row.similarity,
+				textSummary: row.text_summary,
 			}));
 		} catch {
 			return [];
@@ -446,10 +503,10 @@ export class EventIngestionService {
 				Array<{ event_id: string; similarity: number; text_summary: string }>
 			>("SearchExternalEventsByType", { query: queryText, event_type: eventType, limit });
 
-			return result.data.map((r) => ({
-				eventId: r.event_id,
-				similarity: r.similarity,
-				textSummary: r.text_summary,
+			return result.data.map((row) => ({
+				eventId: row.event_id,
+				similarity: row.similarity,
+				textSummary: row.text_summary,
 			}));
 		} catch {
 			return [];

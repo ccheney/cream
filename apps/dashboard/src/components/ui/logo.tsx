@@ -59,13 +59,6 @@ export const SIZE_MAP: Record<LogoSize, number> = {
 // Keyframes
 // ============================================
 
-const pulseKeyframes = `
-  @keyframes logo-pulse {
-    0%, 100% { opacity: 1; }
-    50% { opacity: 0.6; }
-  }
-`;
-
 // ============================================
 // Component
 // ============================================
@@ -99,44 +92,39 @@ export function Logo({
 	...props
 }: LogoProps) {
 	const computedSize = sizePx ?? SIZE_MAP[size];
-
 	const logoStyle: React.CSSProperties = {
 		width: variant === "icon" ? computedSize : computedSize * 3.2,
 		height: computedSize,
-		animation: pulse ? "logo-pulse 2s ease-in-out infinite" : "none",
+		animation: undefined,
 		...style,
 	};
 
 	const viewBoxWidth = variant === "icon" ? 100 : 380;
 
 	return (
-		<>
-			{/* biome-ignore lint/security/noDangerouslySetInnerHtml: Safe - hardcoded CSS keyframes */}
-			{pulse && <style dangerouslySetInnerHTML={{ __html: pulseKeyframes }} />}
-			{/* biome-ignore lint/a11y/noSvgWithoutTitle: SVG has aria-label for accessibility */}
-			<svg
-				xmlns="http://www.w3.org/2000/svg"
-				viewBox={`0 0 ${viewBoxWidth} 120`}
-				fill="none"
-				aria-label={label}
-				data-testid={testId}
-				className={className}
-				style={logoStyle}
-				{...props}
+		<svg
+			xmlns="http://www.w3.org/2000/svg"
+			viewBox={`0 0 ${viewBoxWidth} 120`}
+			fill="none"
+			aria-label={label}
+			data-testid={testId}
+			className={`${className ?? ""} ${pulse ? "animate-logo-pulse" : ""}`.trim()}
+			style={logoStyle}
+			{...props}
+		>
+			<title>{label}</title>
+			<text
+				x="0"
+				y="95"
+				fontFamily="system-ui, -apple-system, sans-serif"
+				fontSize="110"
+				fontWeight="700"
+				fill="currentColor"
+				letterSpacing="-0.05em"
 			>
-				<text
-					x="0"
-					y="95"
-					fontFamily="system-ui, -apple-system, sans-serif"
-					fontSize="110"
-					fontWeight="700"
-					fill="currentColor"
-					letterSpacing="-0.05em"
-				>
-					{variant === "icon" ? "C" : "Cream"}
-				</text>
-			</svg>
-		</>
+				{variant === "icon" ? "C" : "Cream"}
+			</text>
+		</svg>
 	);
 }
 
@@ -164,14 +152,13 @@ export function LoadingLogo({
 	...props
 }: Omit<LogoProps, "pulse">) {
 	return (
-		<div
+		<output
 			style={{
 				display: "flex",
 				alignItems: "center",
 				justifyContent: "center",
 				minHeight: "100%",
 			}}
-			role="status"
 			aria-live="polite"
 			aria-label={label}
 			data-testid={`${testId}-container`}
@@ -186,7 +173,7 @@ export function LoadingLogo({
 				{...props}
 			/>
 			<span className="sr-only">{label}</span>
-		</div>
+		</output>
 	);
 }
 

@@ -262,6 +262,94 @@ function renderCustomLegend(props: CustomLegendProps) {
 	);
 }
 
+interface AllocationChartBodyProps {
+	data: AllocationDataPoint[];
+	size: number;
+	innerRadiusPx: number;
+	outerRadius: number;
+	showLegend: boolean;
+	showTooltip: boolean;
+	showLabels: boolean;
+	total: number;
+	valueFormatter: (value: number) => string;
+}
+
+function AllocationChartEmptyState({ size, className }: { size: number; className?: string }) {
+	return (
+		<div
+			className={className}
+			style={{
+				width: `${size}px`,
+				height: `${size}px`,
+				display: "flex",
+				alignItems: "center",
+				justifyContent: "center",
+				color: CHART_COLORS.text,
+				fontFamily: "Geist Mono, monospace",
+				fontSize: 12,
+			}}
+		>
+			No data
+		</div>
+	);
+}
+
+function AllocationChartBody({
+	data,
+	size,
+	innerRadiusPx,
+	outerRadius,
+	showLegend,
+	showTooltip,
+	showLabels,
+	total,
+	valueFormatter,
+}: AllocationChartBodyProps) {
+	return (
+		<ResponsiveContainer width={size} height={size}>
+			<PieChart>
+				{showTooltip && (
+					<Tooltip content={<CustomTooltip total={total} valueFormatter={valueFormatter} />} />
+				)}
+				<Pie
+					data={data}
+					cx="50%"
+					cy="50%"
+					innerRadius={innerRadiusPx}
+					outerRadius={outerRadius}
+					dataKey="value"
+					nameKey="name"
+					label={showLabels ? renderCustomLabel : undefined}
+					labelLine={showLabels}
+					animationDuration={300}
+				>
+					{data.map((entry, index) => (
+						<Cell
+							key={`cell-${entry.name}`}
+							fill={getAllocationColor(index, entry.color)}
+							stroke="transparent"
+						/>
+					))}
+				</Pie>
+				{showLegend && (
+					<Legend
+						layout="vertical"
+						align="right"
+						verticalAlign="middle"
+						content={(props) =>
+							renderCustomLegend({
+								payload: props.payload as readonly LegendPayloadEntry[] | undefined,
+								total,
+								valueFormatter,
+							})
+						}
+					/>
+				)}
+			</PieChart>
+		</ResponsiveContainer>
+	);
+}
+
 // ============================================
 // Component
 // ============================================
@@ -279,86 +367,36 @@ function AllocationChartComponent({
 	valueFormatter = defaultValueFormatter,
 	className,
 }: AllocationChartProps) {
-	// Calculate total
 	const total = useMemo(() => data.reduce((sum, d) => sum + d.value, 0), [data]);
-
-	// Calculate radii
 	const outerRadius = size / 2 - 40;
 	const innerRadiusPx = outerRadius * (innerRadius / 100);
+	const containerWidth = showLegend ? `${size + 150}px` : `${size}px`;
 
 	if (data.length === 0) {
-		return (
-			<div
-				className={className}
-				style={{
-					width: `${size}px`,
-					height: `${size}px`,
-					display: "flex",
-					alignItems: "center",
-					justifyContent: "center",
-					color: CHART_COLORS.text,
-					fontFamily: "Geist Mono, monospace",
-					fontSize: 12,
-				}}
-			>
-				No data
-			</div>
-		);
+		return <AllocationChartEmptyState size={size} className={className} />;
 	}
 
 	return (
 		<div
 			className={className}
 			style={{
-				width: showLegend ? `${size + 150}px` : `${size}px`,
+				width: containerWidth,
 				height: `${size}px`,
 				display: "flex",
 				alignItems: "center",
 			}}
 		>
-			<ResponsiveContainer width={size} height={size}>
-				<PieChart>
-					{showTooltip && (
-						<Tooltip content={<CustomTooltip total={total} valueFormatter={valueFormatter} />} />
-					)}
-
-					<Pie
-						data={data}
-						cx="50%"
-						cy="50%"
-						innerRadius={innerRadiusPx}
-						outerRadius={outerRadius}
-						dataKey="value"
-						nameKey="name"
-						label={showLabels ? renderCustomLabel : undefined}
-						labelLine={showLabels}
-						animationDuration={300}
-					>
-						{data.map((entry, index) => (
-							<Cell
-								key={`cell-${entry.name}`}
-								fill={getAllocationColor(index, entry.color)}
-								stroke="transparent"
-							/>
-						))}
-					</Pie>
-
-					{showLegend && (
-						<Legend
-							layout="vertical"
-							align="right"
-							verticalAlign="middle"
-							content={(props) =>
-								renderCustomLegend({
-									payload: props.payload as readonly LegendPayloadEntry[] | undefined,
-									total,
-									valueFormatter,
-								})
-							}
-						/>
-					)}
-				</PieChart>
-			</ResponsiveContainer>
+			<AllocationChartBody
+				data={data}
+				size={size}
+				innerRadiusPx={innerRadiusPx}
+				outerRadius={outerRadius}
+				showLegend={showLegend}
+				showTooltip={showTooltip}
+				showLabels={showLabels}
+				total={total}
+				valueFormatter={valueFormatter}
+			/>
 		</div>
 	);
 }

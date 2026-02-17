@@ -119,6 +119,88 @@ function SelectDropdown({ value, options, onChange, icon }: SelectDropdownProps)
 	);
 }
 
+interface ImpactFiltersProps {
+	selected: ImpactLevel[];
+	onToggle: (impact: ImpactLevel) => void;
+}
+
+function ImpactFilters({ selected, onToggle }: ImpactFiltersProps) {
+	return (
+		<div className="flex items-center gap-1 sm:gap-1.5">
+			<Filter className="w-3 sm:w-3.5 h-3 sm:h-3.5 text-stone-400 dark:text-night-400" />
+			{IMPACT_OPTIONS.map((opt) => (
+				<FilterChip
+					key={opt.value}
+					label={opt.label}
+					color={opt.color}
+					active={selected.includes(opt.value)}
+					onClick={() => onToggle(opt.value)}
+				/>
+			))}
+		</div>
+	);
+}
+
+interface ClearFiltersProps {
+	onClear: () => void;
+}
+
+function ClearFilters({ onClear }: ClearFiltersProps) {
+	return (
+		<>
+			<div className="hidden sm:block w-px h-5 bg-cream-300 dark:bg-night-600" />
+			<button
+				type="button"
+				onClick={onClear}
+				className="inline-flex items-center gap-1 px-2 py-1 text-xs text-stone-500 dark:text-night-400 hover:text-stone-700 dark:hover:text-night-200 transition-colors"
+			>
+				<X className="w-3 h-3" />
+				Clear
+			</button>
+		</>
+	);
+}
+
+interface FiltersToolbarProps {
+	filters: CalendarFilterState;
+	className?: string;
+	onCountryChange: (country: string) => void;
+	onDateRangeChange: (dateRange: CalendarFilterState["dateRange"]) => void;
+	onImpactToggle: (impact: ImpactLevel) => void;
+	onClear: () => void;
+	hasActiveFilters: boolean;
+}
+
+function FiltersToolbar({
+	filters,
+	className,
+	onCountryChange,
+	onDateRangeChange,
+	onImpactToggle,
+	onClear,
+	hasActiveFilters,
+}: FiltersToolbarProps) {
+	return (
+		<div className={`flex flex-wrap items-center gap-2 sm:gap-3 ${className ?? ""}`}>
+			<SelectDropdown
+				value={filters.country}
+				options={COUNTRY_OPTIONS}
+				onChange={onCountryChange}
+				icon={<Globe className="w-3.5 h-3.5" />}
+			/>
+			<SelectDropdown
+				value={filters.dateRange}
+				options={DATE_RANGE_OPTIONS}
+				onChange={(value) => onDateRangeChange(value as CalendarFilterState["dateRange"])}
+				icon={<Calendar className="w-3.5 h-3.5" />}
+			/>
+			<div className="hidden sm:block w-px h-5 bg-cream-300 dark:bg-night-600" />
+			<ImpactFilters selected={filters.impact} onToggle={onImpactToggle} />
+			{hasActiveFilters && <ClearFilters onClear={onClear} />}
+		</div>
+	);
+}
+
 // ============================================
 // Main Component
 // ============================================
@@ -163,55 +245,15 @@ export function CalendarFilters({ filters, onFilterChange, className }: Calendar
 	}, [filters]);
 
 	return (
-		<div className={`flex flex-wrap items-center gap-2 sm:gap-3 ${className ?? ""}`}>
-			{/* Country Filter */}
-			<SelectDropdown
-				value={filters.country}
-				options={COUNTRY_OPTIONS}
-				onChange={setCountry}
-				icon={<Globe className="w-3.5 h-3.5" />}
-			/>
-
-			{/* Date Range Filter */}
-			<SelectDropdown
-				value={filters.dateRange}
-				options={DATE_RANGE_OPTIONS}
-				onChange={(v) => setDateRange(v as CalendarFilterState["dateRange"])}
-				icon={<Calendar className="w-3.5 h-3.5" />}
-			/>
-
-			{/* Separator - hidden on mobile */}
-			<div className="hidden sm:block w-px h-5 bg-cream-300 dark:bg-night-600" />
-
-			{/* Impact Filters */}
-			<div className="flex items-center gap-1 sm:gap-1.5">
-				<Filter className="w-3 sm:w-3.5 h-3 sm:h-3.5 text-stone-400 dark:text-night-400" />
-				{IMPACT_OPTIONS.map((opt) => (
-					<FilterChip
-						key={opt.value}
-						label={opt.label}
-						color={opt.color}
-						active={filters.impact.includes(opt.value)}
-						onClick={() => toggleImpact(opt.value)}
-					/>
-				))}
-			</div>
-
-			{/* Clear Filters */}
-			{hasActiveFilters && (
-				<>
-					<div className="hidden sm:block w-px h-5 bg-cream-300 dark:bg-night-600" />
-					<button
-						type="button"
-						onClick={clearFilters}
-						className="inline-flex items-center gap-1 px-2 py-1 text-xs text-stone-500 dark:text-night-400 hover:text-stone-700 dark:hover:text-night-200 transition-colors"
-					>
-						<X className="w-3 h-3" />
-						Clear
-					</button>
-				</>
-			)}
-		</div>
+		<FiltersToolbar
+			filters={filters}
+			className={className}
+			onCountryChange={setCountry}
+			onDateRangeChange={setDateRange}
+			onImpactToggle={toggleImpact}
+			onClear={clearFilters}
+			hasActiveFilters={hasActiveFilters}
+		/>
 	);
 }
 

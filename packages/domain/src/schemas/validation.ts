@@ -348,6 +348,20 @@ export function coerceInt(defaultValue?: number) {
 		.pipe(z.number().int());
 }
 
+const TRUE_BOOLEAN_STRINGS = new Set(["true", "1", "yes"]);
+const FALSE_BOOLEAN_STRINGS = new Set(["false", "0", "no", ""]);
+
+function parseStringBoolean(value: string): boolean | undefined {
+	const lower = value.toLowerCase();
+	if (TRUE_BOOLEAN_STRINGS.has(lower)) {
+		return true;
+	}
+	if (FALSE_BOOLEAN_STRINGS.has(lower)) {
+		return false;
+	}
+	return undefined;
+}
+
 export function coerceBool(defaultValue?: boolean) {
 	return z.unknown().transform((val) => {
 		if (val === undefined || val === null) {
@@ -356,17 +370,11 @@ export function coerceBool(defaultValue?: boolean) {
 		if (typeof val === "boolean") {
 			return val;
 		}
-		if (typeof val === "string") {
-			const lower = val.toLowerCase();
-			if (lower === "true" || lower === "1" || lower === "yes") {
-				return true;
-			}
-			if (lower === "false" || lower === "0" || lower === "no" || lower === "") {
-				return false;
-			}
-		}
 		if (typeof val === "number") {
 			return val !== 0;
+		}
+		if (typeof val === "string") {
+			return parseStringBoolean(val) ?? Boolean(val);
 		}
 		return Boolean(val);
 	});

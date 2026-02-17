@@ -5,8 +5,6 @@
  * Uses StreamingPositionsTable for open positions and ClosedTradesTable for closed trades.
  */
 
-// biome-ignore-all lint/a11y/useSemanticElements: Using div+role for virtualized table (react-window) - semantic elements don't work with virtualization
-
 "use client";
 
 import { memo, useState } from "react";
@@ -266,6 +264,46 @@ type ClosedSortField =
 	| "holdDays"
 	| "exitDate";
 
+interface ClosedHeaderDef {
+	label: string;
+	field: ClosedSortField;
+	align?: "left" | "right";
+}
+
+const CLOSED_HEADERS: ClosedHeaderDef[] = [
+	{ label: "Symbol", field: "symbol", align: "left" },
+	{ label: "Qty", field: "quantity" },
+	{ label: "Entry", field: "entryPrice" },
+	{ label: "Exit", field: "exitPrice" },
+	{ label: "P&L", field: "realizedPnl" },
+	{ label: "Return", field: "realizedPnlPct" },
+	{ label: "Hold", field: "holdDays" },
+	{ label: "Closed", field: "exitDate" },
+];
+
+function sortClosedTrades(
+	trades: ClosedTradesTableInnerProps["trades"],
+	sortState: { field: ClosedSortField; direction: "asc" | "desc" },
+) {
+	const sorted = [...trades];
+	const { field, direction } = sortState;
+	const multiplier = direction === "asc" ? 1 : -1;
+
+	sorted.sort((a, b) => {
+		if (field === "symbol") {
+			return a.symbol.localeCompare(b.symbol) * multiplier;
+		}
+		if (field === "exitDate") {
+			return (new Date(a.exitDate).getTime() - new Date(b.exitDate).getTime()) * multiplier;
+		}
+		const aVal = a[field] as number;
+		const bVal = b[field] as number;
+		return (aVal - bVal) * multiplier;
+	});
+
+	return sorted;
+}
+
 const ClosedTradesTableInner = memo(function ClosedTradesTableInner({
 	trades,
 }: ClosedTradesTableInnerProps) {
@@ -283,94 +321,45 @@ const ClosedTradesTableInner = memo(function ClosedTradesTableInner({
 		}));
 	}, []);
 
-	const sortedTrades = useMemo(() => {
-		const sorted = [...trades];
-		const { field, direction } = sortState;
-		const multiplier = direction === "asc" ? 1 : -1;
+	const sortedTrades = useMemo(() => sortClosedTrades(trades, sortState), [trades, sortState]);
 
-		sorted.sort((a, b) => {
-			if (field === "symbol") {
-				return a.symbol.localeCompare(b.symbol) * multiplier;
-			}
-			if (field === "exitDate") {
-				return (new Date(a.exitDate).getTime() - new Date(b.exitDate).getTime()) * multiplier;
-			}
-			const aVal = a[field] as number;
-			const bVal = b[field] as number;
-			return (aVal - bVal) * multiplier;
-		});
+	return <ClosedTradesGrid sortState={sortState} onSort={handleSort} sortedTrades={sortedTrades} />;
+});
 
-		return sorted;
-	}, [trades, sortState]);
-
+function ClosedTradesGrid({
+	sortState,
+	onSort,
+	sortedTrades,
+}: {
+	sortState: { field: ClosedSortField; direction: "asc" | "desc" };
+	onSort: (field: ClosedSortField) => void;
+	sortedTrades: ClosedTradesTableInnerProps["trades"];
+}) {
 	return (
 		<div>
-			<div role="table" aria-label="Closed trades">
-				<div
-					className="grid bg-cream-50 dark:bg-night-700 text-sm text-stone-500 dark:text-night-300 border-b border-cream-200 dark:border-night-700"
-					style={{ gridTemplateColumns: GRID_TEMPLATE_CLOSED }}
-					role="row"
-					tabIndex={0}
-				>
+			<div
+				className="grid bg-cream-50 dark:bg-night-700 text-sm text-stone-500 dark:text-night-300 border-b border-cream-200 dark:border-night-700"
+				style={{ gridTemplateColumns: GRID_TEMPLATE_CLOSED }}
+			>
+				{CLOSED_HEADERS.map((header) => (
 					<SortHeaderClosed
-						label="Symbol"
-						field="symbol"
+						key={header.field}
+						label={header.label}
+						field={header.field}
 						currentSort={sortState}
-						onSort={handleSort}
-						align="left"
+						onSort={onSort}
+						align={header.align}
 					/>
-					<SortHeaderClosed
-						label="Qty"
-						field="quantity"
-						currentSort={sortState}
-						onSort={handleSort}
-					/>
-					<SortHeaderClosed
-						label="Entry"
-						field="entryPrice"
-						currentSort={sortState}
-						onSort={handleSort}
-					/>
-					<SortHeaderClosed
-						label="Exit"
-						field="exitPrice"
-						currentSort={sortState}
-						onSort={handleSort}
-					/>
-					<SortHeaderClosed
-						label="P&L"
-						field="realizedPnl"
-						currentSort={sortState}
-						onSort={handleSort}
-					/>
-					<SortHeaderClosed
-						label="Return"
-						field="realizedPnlPct"
-						currentSort={sortState}
-						onSort={handleSort}
-					/>
-					<SortHeaderClosed
-						label="Hold"
-						field="holdDays"
-						currentSort={sortState}
-						onSort={handleSort}
-					/>
-					<SortHeaderClosed
-						label="Closed"
-						field="exitDate"
-						currentSort={sortState}
-						onSort={handleSort}
-					/>
-				</div>
-				<div className="max-h-[400px] overflow-auto" role="rowgroup">
-					{sortedTrades.map((trade) => (
-						<ClosedTradeRow key={trade.id} trade={trade} />
-					))}
-				</div>
+				))}
+			</div>
+			<div className="max-h-[400px] overflow-auto">
+				{sortedTrades.map((trade) => (
+					<ClosedTradeRow key={trade.id} trade={trade} />
+				))}
 			</div>
 		</div>
 	);
-});
+}
 
 interface SortHeaderClosedProps {
 	label: string;
@@ -413,13 +402,8 @@ const ClosedTradeRow = memo(function ClosedTradeRow({
 		<div
 			className="grid hover:bg-cream-50 dark:hover:bg-night-600 transition-colors border-b border-cream-100 dark:border-night-700"
 			style={{ gridTemplateColumns: GRID_TEMPLATE_CLOSED }}
-			role="row"
-			tabIndex={0}
 		>
-			<div
-				className="px-4 py-3 font-medium text-stone-900 dark:text-night-50 flex items-center"
-				role="cell"
-			>
+			<div className="px-4 py-3 font-medium text-stone-900 dark:text-night-50 flex items-center">
 				<div className="flex items-center gap-2">
 					<SourceLogo
 						logoUrl={buildTickerLogoUrl(trade.symbol)}
@@ -432,51 +416,30 @@ const ClosedTradeRow = memo(function ClosedTradeRow({
 					</Link>
 				</div>
 			</div>
-			<div
-				className="px-4 py-3 text-right font-mono text-stone-900 dark:text-night-50 flex items-center justify-end"
-				role="cell"
-			>
+			<div className="px-4 py-3 text-right font-mono text-stone-900 dark:text-night-50 flex items-center justify-end">
 				<span
 					className={`px-2 py-0.5 text-xs font-medium rounded ${trade.side === "LONG" ? "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400" : "bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400"}`}
 				>
 					{trade.quantity}
 				</span>
 			</div>
-			<div
-				className="px-4 py-3 text-right font-mono text-stone-900 dark:text-night-50 flex items-center justify-end"
-				role="cell"
-			>
+			<div className="px-4 py-3 text-right font-mono text-stone-900 dark:text-night-50 flex items-center justify-end">
 				{formatCurrency(trade.entryPrice)}
 			</div>
-			<div
-				className="px-4 py-3 text-right font-mono text-stone-900 dark:text-night-50 flex items-center justify-end"
-				role="cell"
-			>
+			<div className="px-4 py-3 text-right font-mono text-stone-900 dark:text-night-50 flex items-center justify-end">
 				{formatCurrency(trade.exitPrice)}
 			</div>
-			<div
-				className={`px-4 py-3 text-right font-mono flex items-center justify-end ${pnlColor}`}
-				role="cell"
-			>
+			<div className={`px-4 py-3 text-right font-mono flex items-center justify-end ${pnlColor}`}>
 				{trade.realizedPnl >= 0 ? "+" : ""}
 				{formatCurrency(trade.realizedPnl, 2)}
 			</div>
-			<div
-				className={`px-4 py-3 text-right font-mono flex items-center justify-end ${pnlColor}`}
-				role="cell"
-			>
+			<div className={`px-4 py-3 text-right font-mono flex items-center justify-end ${pnlColor}`}>
 				{formatPct(trade.realizedPnlPct)}
 			</div>
-			<div
-				className="px-4 py-3 text-right text-stone-500 dark:text-night-300 flex items-center justify-end"
-				role="cell"
-			>
+			<div className="px-4 py-3 text-right text-stone-500 dark:text-night-300 flex items-center justify-end">
 				{formatHoldTime(trade.holdDays)}
 			</div>
-			<div
-				className="px-4 py-3 text-right text-stone-500 dark:text-night-300 flex items-center justify-end"
-				role="cell"
-			>
+			<div className="px-4 py-3 text-right text-stone-500 dark:text-night-300 flex items-center justify-end">
 				{formatDate(trade.exitDate)}
 			</div>
 		</div>

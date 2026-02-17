@@ -46,6 +46,17 @@ interface AggregatedShortVolume {
 	shortVolumeRatio: number;
 }
 
+interface RequestCompareFilter {
+	fieldName: string;
+	compareType: string;
+	fieldValue: string;
+}
+
+interface RequestDomainFilter {
+	fieldName: string;
+	values: string[];
+}
+
 export class FINRAClientAdapter implements FINRAClient {
 	private readonly clientId: string;
 	private readonly clientSecret: string;
@@ -141,55 +152,64 @@ export class FINRAClientAdapter implements FINRAClient {
 		return Array.from(aggregated.values());
 	}
 
-	async queryShortInterest(request?: FINRAQueryRequest): Promise<FINRAShortInterestRecord[]> {
-		const token = await this.getAccessToken();
+	private mapFieldName(fieldName: string): string {
+		if (fieldName === "symbolCode" || fieldName === "issueSymbolIdentifier") {
+			return "securitiesInformationProcessorSymbolIdentifier";
+		}
 
-		// Build request body according to FINRA API spec
+		if (fieldName === "settlementDate") {
+			return "tradeReportDate";
+		}
+
+		return fieldName;
+	}
+
+	private buildFilters(request?: FINRAQueryRequest): {
+		compareFilters: RequestCompareFilter[];
+		domainFilters: RequestDomainFilter[];
+	} {
+		const compareFilters: RequestCompareFilter[] = [];
+		const domainFilters: RequestDomainFilter[] = [];
+
+		for (const filter of request?.compareFilters ?? []) {
+			const fieldName = this.mapFieldName(filter.fieldName);
+
+			if (filter.compareType === "IN" && Array.isArray(filter.fieldValue)) {
+				domainFilters.push({ fieldName, values: filter.fieldValue });
+				continue;
+			}
+
+			compareFilters.push({
+				fieldName,
+				compareType: filter.compareType === "EQUAL" ? "EQUAL" : filter.compareType,
+				fieldValue: String(filter.fieldValue),
+			});
+		}
+
+		return { compareFilters, domainFilters };
+	}
+
+	private buildQueryBody(request?: FINRAQueryRequest): Record<string, unknown> {
 		const body: Record<string, unknown> = {
 			limit: request?.limit ?? 100,
 			offset: request?.offset ?? 0,
 		};
+		const { compareFilters, domainFilters } = this.buildFilters(request);
 
-		// Process filters - convert "IN" to domainFilters, others to compareFilters
-		if (request?.compareFilters && request.compareFilters.length > 0) {
-			const compareFilters: Array<{
-				fieldName: string;
-				compareType: string;
-				fieldValue: string;
-			}> = [];
-			const domainFilters: Array<{ fieldName: string; values: string[] }> = [];
-
-			for (const f of request.compareFilters) {
-				// Map generic field names to regShoDaily field names
-				let fieldName = f.fieldName;
-				if (fieldName === "symbolCode" || fieldName === "issueSymbolIdentifier") {
-					fieldName = "securitiesInformationProcessorSymbolIdentifier";
-				} else if (fieldName === "settlementDate") {
-					fieldName = "tradeReportDate";
-				}
-
-				if (f.compareType === "IN" && Array.isArray(f.fieldValue)) {
-					domainFilters.push({
-						fieldName,
-						values: f.fieldValue,
-					});
-				} else {
-					compareFilters.push({
-						fieldName,
-						compareType: f.compareType === "EQUAL" ? "EQUAL" : f.compareType,
-						fieldValue: String(f.fieldValue),
-					});
-				}
-			}
-
-			if (compareFilters.length > 0) {
-				body.compareFilters = compareFilters;
-			}
-			if (domainFilters.length > 0) {
-				body.domainFilters = domainFilters;
-			}
+		if (compareFilters.length > 0) {
+			body.compareFilters = compareFilters;
+		}
+		if (domainFilters.length > 0) {
+			body.domainFilters = domainFilters;
 		}
 
+		return body;
+	}
+
+	private async executeQuery(
+		token: string,
+		body: Record<string, unknown>,
+	): Promise<RegShoDailyRecord[]> {
 		const response = await fetch(FINRA_API_URL, {
 			method: "POST",
 			headers: {
@@ -206,29 +226,36 @@ export class FINRAClientAdapter implements FINRAClient {
 		}
 
 		const data = (await response.json()) as RegShoDailyRecord[] | null;
+		return data ?? [];
+	}
 
-		if (!data || data.length === 0) {
-			return [];
-		}
-
-		// Aggregate by symbol and date
-		const aggregated = this.aggregateRecords(data);
-
-		// Map to FINRAShortInterestRecord interface for compatibility
-		return aggregated.map((agg) => ({
+	private toShortInterestRecord(agg: AggregatedShortVolume): FINRAShortInterestRecord {
+		return {
 			symbolCode: agg.symbol,
-			issueName: "", // Not available in regShoDaily
-			marketClassCode: "", // Would need to aggregate from individual records
+			issueName: "",
+			marketClassCode: "",
 			settlementDate: agg.tradeDate,
-			currentShortPositionQuantity: agg.shortVolume, // Using short volume as proxy
+			currentShortPositionQuantity: agg.shortVolume,
 			previousShortPositionQuantity: null,
 			changePreviousNumber: null,
 			changePercent: null,
 			averageDailyVolumeQuantity: agg.totalVolume,
-			daysToCoverQuantity: agg.shortVolumeRatio, // Using ratio as proxy for days to cover
+			daysToCoverQuantity: agg.shortVolumeRatio,
 			stockSplitFlag: null,
 			revisionFlag: null,
-		}));
+		};
+	}
+
+	async queryShortInterest(request?: FINRAQueryRequest): Promise<FINRAShortInterestRecord[]> {
+		const token = await this.getAccessToken();
+		const body = this.buildQueryBody(request);
+		const data = await this.executeQuery(token, body);
+		if (!data || data.length === 0) {
+			return [];
+		}
+
+		const aggregated = this.aggregateRecords(data);
+		return aggregated.map((agg) => this.toShortInterestRecord(agg));
 	}
 
 	async getShortInterestBySymbols(

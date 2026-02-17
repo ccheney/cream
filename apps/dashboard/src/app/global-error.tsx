@@ -115,8 +115,8 @@ export default function GlobalError({ error, reset }: GlobalErrorProps) {
 				<meta charSet="utf-8" />
 				<meta name="viewport" content="width=device-width, initial-scale=1" />
 				<title>Application Error | Cream</title>
-				{/* biome-ignore lint/security/noDangerouslySetInnerHtml: Required for SSR CSS - constant styles defined at build time */}
-				<style dangerouslySetInnerHTML={{ __html: globalStyles }} />
+
+				<style>{globalStyles}</style>
 			</head>
 			<body>
 				<div style={styles.container} role="alert" aria-label="Critical error">

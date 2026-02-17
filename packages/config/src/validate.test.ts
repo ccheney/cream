@@ -156,20 +156,29 @@ describe("validatePartialConfig", () => {
 	});
 });
 
-describe("validateAtStartup", () => {
-	const baseConfig = {
-		core: {
-			environment: "PAPER",
-			llm: { model_id: "gemini-3-pro-preview" },
-		},
-	};
+const baseConfig = {
+	core: {
+		environment: "PAPER",
+		llm: { model_id: "gemini-3-pro-preview" },
+	},
+};
 
+describe("validateAtStartup baseline behavior", () => {
 	it("returns success with empty warnings for valid PAPER config", () => {
 		const result = validateAtStartup(baseConfig);
 		expect(result.success).toBe(true);
 		expect(result.warnings).toHaveLength(0);
 	});
 
+	it("returns errors with empty warnings for invalid config", () => {
+		const result = validateAtStartup({});
+		expect(result.success).toBe(false);
+		expect(result.errors.length).toBeGreaterThan(0);
+		expect(result.warnings).toHaveLength(0);
+	});
+});
+
+describe("validateAtStartup LIVE warnings for setup", () => {
 	it("warns about LIVE environment without universe", () => {
 		const result = validateAtStartup({
 			core: {
@@ -178,7 +187,7 @@ describe("validateAtStartup", () => {
 			},
 		});
 		expect(result.success).toBe(true);
-		expect(result.warnings.some((w) => w.includes("universe"))).toBe(true);
+		expect(result.warnings.some((warning) => warning.includes("universe"))).toBe(true);
 	});
 
 	it("warns about flash model in LIVE environment", () => {
@@ -193,9 +202,11 @@ describe("validateAtStartup", () => {
 			},
 		});
 		expect(result.success).toBe(true);
-		expect(result.warnings.some((w) => w.includes("flash model"))).toBe(true);
+		expect(result.warnings.some((warning) => warning.includes("flash model"))).toBe(true);
 	});
+});
 
+describe("validateAtStartup LIVE warnings for risk limits", () => {
 	it("warns about high per-instrument concentration in LIVE", () => {
 		const result = validateAtStartup({
 			core: {
@@ -213,7 +224,7 @@ describe("validateAtStartup", () => {
 			},
 		});
 		expect(result.success).toBe(true);
-		expect(result.warnings.some((w) => w.includes("max_pct_equity"))).toBe(true);
+		expect(result.warnings.some((warning) => warning.includes("max_pct_equity"))).toBe(true);
 	});
 
 	it("warns about high leverage in LIVE", () => {
@@ -233,16 +244,11 @@ describe("validateAtStartup", () => {
 			},
 		});
 		expect(result.success).toBe(true);
-		expect(result.warnings.some((w) => w.includes("leverage"))).toBe(true);
+		expect(result.warnings.some((warning) => warning.includes("leverage"))).toBe(true);
 	});
+});
 
-	it("returns errors with empty warnings for invalid config", () => {
-		const result = validateAtStartup({});
-		expect(result.success).toBe(false);
-		expect(result.errors.length).toBeGreaterThan(0);
-		expect(result.warnings).toHaveLength(0);
-	});
-
+describe("validateAtStartup regime validation", () => {
 	it("accepts valid HMM classifier with proper config", () => {
 		const result = validateAtStartup({
 			core: {

@@ -15,6 +15,164 @@ import {
 import { useRollbackConfig, useRuntimeConfigHistory } from "@/hooks/queries";
 import type { ConfigHistoryEntry, Environment, FullRuntimeConfig } from "@/lib/api/types";
 
+function HistoryLoadingState() {
+	return (
+		<div className="space-y-6">
+			<div className="h-12 bg-cream-100 dark:bg-night-700 rounded-lg animate-pulse" />
+			{[1, 2, 3].map((i) => (
+				<div key={i} className="h-32 bg-cream-100 dark:bg-night-700 rounded-lg animate-pulse" />
+			))}
+		</div>
+	);
+}
+
+function HistoryErrorState({ error }: { error: unknown }) {
+	return (
+		<div className="text-center py-12">
+			<p className="text-red-600 dark:text-red-400">Failed to load configuration history</p>
+			<p className="text-sm text-stone-500 dark:text-night-300 mt-2">
+				{error instanceof Error ? error.message : "Unknown error"}
+			</p>
+		</div>
+	);
+}
+
+function HistoryEmptyState({ onBack }: { onBack: () => void }) {
+	return (
+		<div className="space-y-6">
+			<PageHeader onBack={onBack} />
+			<div className="text-center py-12 bg-white dark:bg-night-800 rounded-lg border border-cream-200 dark:border-night-700">
+				<HistoryIcon className="w-12 h-12 text-cream-300 dark:text-stone-600 dark:text-night-200 mx-auto mb-4" />
+				<p className="text-stone-500 dark:text-night-300">No configuration history available</p>
+				<p className="text-sm text-stone-400 dark:text-night-400 mt-2">
+					Configuration changes will appear here after you promote a draft.
+				</p>
+			</div>
+		</div>
+	);
+}
+
+interface HistoryStateViewProps {
+	isLoading: boolean;
+	error: unknown;
+	history: ConfigHistoryEntry[] | undefined;
+	onBack: () => void;
+}
+
+function renderHistoryStateView({ isLoading, error, history, onBack }: HistoryStateViewProps) {
+	if (isLoading) {
+		return <HistoryLoadingState />;
+	}
+	if (error) {
+		return <HistoryErrorState error={error} />;
+	}
+	if (!history || history.length === 0) {
+		return <HistoryEmptyState onBack={onBack} />;
+	}
+	return null;
+}
+
+function findVersionConfig(
+	history: ConfigHistoryEntry[],
+	versionId: string,
+): FullRuntimeConfig | null {
+	const version = history.find((entry) => entry.id === versionId);
+	return version?.config ?? null;
+}
+
+interface ConfigHistoryLoadedViewProps {
+	history: ConfigHistoryEntry[];
+	onBack: () => void;
+	selectedVersions: [string, string] | null;
+	onCloseComparison: () => void;
+	onCompare: (versionId: string, previousVersionId: string | undefined) => void;
+	onRollbackRequest: (version: ConfigHistoryEntry) => void;
+	rollbackTarget: ConfigHistoryEntry | null;
+	onCloseRollback: () => void;
+	onConfirmRollback: () => void;
+	isRollbackPending: boolean;
+}
+
+function ConfigHistoryLoadedView({
+	history,
+	onBack,
+	selectedVersions,
+	onCloseComparison,
+	onCompare,
+	onRollbackRequest,
+	rollbackTarget,
+	onCloseRollback,
+	onConfirmRollback,
+	isRollbackPending,
+}: ConfigHistoryLoadedViewProps) {
+	return (
+		<div className="space-y-6">
+			<PageHeader onBack={onBack} />
+			<div className="relative">
+				<div className="absolute left-6 top-0 bottom-0 w-px bg-cream-200 dark:bg-night-600" />
+				<div className="space-y-4">
+					{history.map((version, index) => (
+						<ConfigVersionCard
+							key={version.id}
+							version={version}
+							previousVersionId={history[index + 1]?.id}
+							onCompare={() => onCompare(version.id, history[index + 1]?.id)}
+							onRollback={() => onRollbackRequest(version)}
+						/>
+					))}
+				</div>
+			</div>
+			{selectedVersions && (
+				<ComparisonDialog
+					open={!!selectedVersions}
+					onClose={onCloseComparison}
+					beforeConfig={findVersionConfig(history, selectedVersions[1])}
+					afterConfig={findVersionConfig(history, selectedVersions[0])}
+					beforeVersion={history.find((v) => v.id === selectedVersions[1])?.version}
+					afterVersion={history.find((v) => v.id === selectedVersions[0])?.version}
+				/>
+			)}
+			{rollbackTarget && (
+				<Dialog open={!!rollbackTarget} onOpenChange={onCloseRollback}>
+					<DialogContent>
+						<DialogHeader>
+							<DialogTitle>Rollback Configuration</DialogTitle>
+							<DialogDescription>
+								Are you sure you want to rollback to version {rollbackTarget.version}? This will
+								immediately update the active configuration.
+							</DialogDescription>
+						</DialogHeader>
+						<div className="px-6 py-4 text-sm text-stone-600 dark:text-night-200 dark:text-night-400">
+							<p>
+								<strong>Version:</strong> {rollbackTarget.version}
+							</p>
+							<p>
+								<strong>Created:</strong> {formatDate(rollbackTarget.createdAt)}
+							</p>
+							{rollbackTarget.createdBy && (
+								<p>
+									<strong>By:</strong> {rollbackTarget.createdBy}
+								</p>
+							)}
+						</div>
+						<DialogFooter>
+							<DialogClose>Cancel</DialogClose>
+							<button
+								type="button"
+								onClick={onConfirmRollback}
+								disabled={isRollbackPending}
+								className="px-4 py-2 text-sm font-medium text-white bg-amber-600 rounded-md hover:bg-amber-700 disabled:opacity-50"
+							>
+								{isRollbackPending ? "Rolling back..." : "Confirm Rollback"}
+							</button>
+						</DialogFooter>
+					</DialogContent>
+				</Dialog>
+			)}
+		</div>
+	);
+}
+
 export default function ConfigHistoryPage() {
 	const router = useRouter();
 	const [environment] = useState<Environment>("PAPER");
@@ -44,117 +202,29 @@ export default function ConfigHistoryPage() {
 		}
 	};
 
-	const getVersionConfig = (versionId: string): FullRuntimeConfig | null => {
-		const version = history?.find((v) => v.id === versionId);
-		return version?.config ?? null;
-	};
-
-	if (isLoading) {
-		return (
-			<div className="space-y-6">
-				<div className="h-12 bg-cream-100 dark:bg-night-700 rounded-lg animate-pulse" />
-				{[1, 2, 3].map((i) => (
-					<div key={i} className="h-32 bg-cream-100 dark:bg-night-700 rounded-lg animate-pulse" />
-				))}
-			</div>
-		);
-	}
-
-	if (error) {
-		return (
-			<div className="text-center py-12">
-				<p className="text-red-600 dark:text-red-400">Failed to load configuration history</p>
-				<p className="text-sm text-stone-500 dark:text-night-300 mt-2">
-					{error instanceof Error ? error.message : "Unknown error"}
-				</p>
-			</div>
-		);
-	}
-
-	if (!history || history.length === 0) {
-		return (
-			<div className="space-y-6">
-				<PageHeader onBack={() => router.back()} />
-				<div className="text-center py-12 bg-white dark:bg-night-800 rounded-lg border border-cream-200 dark:border-night-700">
-					<HistoryIcon className="w-12 h-12 text-cream-300 dark:text-stone-600 dark:text-night-200 mx-auto mb-4" />
-					<p className="text-stone-500 dark:text-night-300">No configuration history available</p>
-					<p className="text-sm text-stone-400 dark:text-night-400 mt-2">
-						Configuration changes will appear here after you promote a draft.
-					</p>
-				</div>
-			</div>
-		);
+	const stateView = renderHistoryStateView({
+		isLoading,
+		error,
+		history,
+		onBack: () => router.back(),
+	});
+	if (stateView) {
+		return stateView;
 	}
 
 	return (
-		<div className="space-y-6">
-			<PageHeader onBack={() => router.back()} />
-
-			<div className="relative">
-				<div className="absolute left-6 top-0 bottom-0 w-px bg-cream-200 dark:bg-night-600" />
-
-				<div className="space-y-4">
-					{history.map((version, index) => (
-						<ConfigVersionCard
-							key={version.id}
-							version={version}
-							previousVersionId={history[index + 1]?.id}
-							onCompare={() => handleCompare(version.id, history[index + 1]?.id)}
-							onRollback={() => setRollbackTarget(version)}
-						/>
-					))}
-				</div>
-			</div>
-
-			{selectedVersions && (
-				<ComparisonDialog
-					open={!!selectedVersions}
-					onClose={() => setSelectedVersions(null)}
-					beforeConfig={getVersionConfig(selectedVersions[1])}
-					afterConfig={getVersionConfig(selectedVersions[0])}
-					beforeVersion={history?.find((v) => v.id === selectedVersions[1])?.version}
-					afterVersion={history?.find((v) => v.id === selectedVersions[0])?.version}
-				/>
-			)}
-
-			{rollbackTarget && (
-				<Dialog open={!!rollbackTarget} onOpenChange={() => setRollbackTarget(null)}>
-					<DialogContent>
-						<DialogHeader>
-							<DialogTitle>Rollback Configuration</DialogTitle>
-							<DialogDescription>
-								Are you sure you want to rollback to version {rollbackTarget.version}? This will
-								immediately update the active configuration.
-							</DialogDescription>
-						</DialogHeader>
-						<div className="px-6 py-4 text-sm text-stone-600 dark:text-night-200 dark:text-night-400">
-							<p>
-								<strong>Version:</strong> {rollbackTarget.version}
-							</p>
-							<p>
-								<strong>Created:</strong> {formatDate(rollbackTarget.createdAt)}
-							</p>
-							{rollbackTarget.createdBy && (
-								<p>
-									<strong>By:</strong> {rollbackTarget.createdBy}
-								</p>
-							)}
-						</div>
-						<DialogFooter>
-							<DialogClose>Cancel</DialogClose>
-							<button
-								type="button"
-								onClick={handleRollback}
-								disabled={rollbackMutation.isPending}
-								className="px-4 py-2 text-sm font-medium text-white bg-amber-600 rounded-md hover:bg-amber-700 disabled:opacity-50"
-							>
-								{rollbackMutation.isPending ? "Rolling back..." : "Confirm Rollback"}
-							</button>
-						</DialogFooter>
-					</DialogContent>
-				</Dialog>
-			)}
-		</div>
+		<ConfigHistoryLoadedView
+			history={history}
+			onBack={() => router.back()}
+			selectedVersions={selectedVersions}
+			onCloseComparison={() => setSelectedVersions(null)}
+			onCompare={handleCompare}
+			onRollbackRequest={setRollbackTarget}
+			rollbackTarget={rollbackTarget}
+			onCloseRollback={() => setRollbackTarget(null)}
+			onConfirmRollback={handleRollback}
+			isRollbackPending={rollbackMutation.isPending}
+		/>
 	);
 }
 

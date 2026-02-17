@@ -51,6 +51,172 @@ const FOCUSABLE_SELECTOR = [
 	"[contenteditable='true']",
 ].join(",");
 
+function collectFocusableElements(container: HTMLDivElement | null): HTMLElement[] {
+	if (!container) {
+		return [];
+	}
+	return Array.from(container.querySelectorAll(FOCUSABLE_SELECTOR));
+}
+
+function focusElement(element: HTMLElement | null | undefined): void {
+	if (element) {
+		element.focus();
+	}
+}
+
+function resolveInitialFocusTarget(
+	container: HTMLDivElement | null,
+	initialFocus: UseFocusTrapOptions["initialFocus"],
+): HTMLElement | null {
+	if (!initialFocus) {
+		return null;
+	}
+	if (typeof initialFocus === "string") {
+		return container?.querySelector<HTMLElement>(initialFocus) ?? null;
+	}
+	return initialFocus.current ?? null;
+}
+
+function trapTabNavigation(event: KeyboardEvent, focusableElements: HTMLElement[]): void {
+	if (focusableElements.length === 0) {
+		event.preventDefault();
+		return;
+	}
+
+	const firstElement = focusableElements[0];
+	const lastElement = focusableElements.at(-1);
+	if (!firstElement || !lastElement) {
+		event.preventDefault();
+		return;
+	}
+
+	const shouldWrapBackward = event.shiftKey && document.activeElement === firstElement;
+	const shouldWrapForward = !event.shiftKey && document.activeElement === lastElement;
+	if (shouldWrapBackward) {
+		event.preventDefault();
+		lastElement.focus();
+		return;
+	}
+	if (shouldWrapForward) {
+		event.preventDefault();
+		firstElement.focus();
+	}
+}
+
+interface InitialFocusEffectOptions {
+	active: boolean;
+	autoFocus: boolean;
+	initialFocus: UseFocusTrapOptions["initialFocus"];
+	containerRef: React.RefObject<HTMLDivElement | null>;
+	previousActiveElement: React.RefObject<Element | null>;
+	focusFirst: () => void;
+}
+
+function useInitialFocusEffect({
+	active,
+	autoFocus,
+	initialFocus,
+	containerRef,
+	previousActiveElement,
+	focusFirst,
+}: InitialFocusEffectOptions): void {
+	useEffect(() => {
+		if (!active || !autoFocus) {
+			return;
+		}
+
+		previousActiveElement.current = document.activeElement;
+		requestAnimationFrame(() => {
+			const target = resolveInitialFocusTarget(containerRef.current, initialFocus);
+			if (target) {
+				target.focus();
+				return;
+			}
+			focusFirst();
+		});
+	}, [active, autoFocus, initialFocus, containerRef, previousActiveElement, focusFirst]);
+}
+
+function useReturnFocusEffect(
+	active: boolean,
+	returnFocusTo: React.RefObject<HTMLElement> | undefined,
+	previousActiveElement: React.RefObject<Element | null>,
+): void {
+	useEffect(() => {
+		if (active) {
+			return;
+		}
+
+		const returnElement = returnFocusTo?.current ?? previousActiveElement.current;
+		if (returnElement instanceof HTMLElement) {
+			returnElement.focus();
+		}
+	}, [active, returnFocusTo, previousActiveElement]);
+}
+
+interface FocusTrapKeydownEffectOptions {
+	active: boolean;
+	onEscape?: () => void;
+	getFocusableElements: () => HTMLElement[];
+}
+
+function useFocusTrapKeydownEffect({
+	active,
+	onEscape,
+	getFocusableElements,
+}: FocusTrapKeydownEffectOptions): void {
+	useEffect(() => {
+		if (!active) {
+			return;
+		}
+
+		const handleKeyDown = (event: KeyboardEvent) => {
+			if (event.key === "Escape" && onEscape) {
+				event.preventDefault();
+				onEscape();
+				return;
+			}
+			if (event.key !== "Tab") {
+				return;
+			}
+
+			trapTabNavigation(event, getFocusableElements());
+		};
+
+		document.addEventListener("keydown", handleKeyDown);
+		return () => document.removeEventListener("keydown", handleKeyDown);
+	}, [active, onEscape, getFocusableElements]);
+}
+
+function useFocusContainmentEffect(
+	active: boolean,
+	containerRef: React.RefObject<HTMLDivElement | null>,
+	focusFirst: () => void,
+): void {
+	useEffect(() => {
+		if (!active) {
+			return;
+		}
+
+		const handleFocusIn = (event: FocusEvent) => {
+			const container = containerRef.current;
+			if (!container) {
+				return;
+			}
+			const target = event.target as Node;
+			if (container.contains(target)) {
+				return;
+			}
+
+			event.preventDefault();
+			focusFirst();
+		};
+
+		document.addEventListener("focusin", handleFocusIn);
+		return () => document.removeEventListener("focusin", handleFocusIn);
+	}, [active, containerRef, focusFirst]);
+}
+
 // ============================================
 // Hook
 // ============================================
@@ -91,148 +257,31 @@ export function useFocusTrap(options: UseFocusTrapOptions = {}): UseFocusTrapRet
 	const containerRef = useRef<HTMLDivElement | null>(null);
 	const previousActiveElement = useRef<Element | null>(null);
 
-	// Get all focusable elements in container
 	const getFocusableElements = useCallback((): HTMLElement[] => {
-		if (!containerRef.current) {
-			return [];
-		}
-		return Array.from(containerRef.current.querySelectorAll(FOCUSABLE_SELECTOR));
+		return collectFocusableElements(containerRef.current);
 	}, []);
 
-	// Focus the first focusable element
 	const focusFirst = useCallback(() => {
 		const elements = getFocusableElements();
-		const first = elements[0];
-		if (first) {
-			first.focus();
-		}
+		focusElement(elements[0]);
 	}, [getFocusableElements]);
 
-	// Focus the last focusable element
 	const focusLast = useCallback(() => {
 		const elements = getFocusableElements();
-		const last = elements.at(-1);
-		if (last) {
-			last.focus();
-		}
+		focusElement(elements.at(-1));
 	}, [getFocusableElements]);
 
-	// Handle initial focus
-	useEffect(() => {
-		if (!active || !autoFocus) {
-			return;
-		}
-
-		// Store the currently focused element
-		previousActiveElement.current = document.activeElement;
-
-		// Focus initial element
-		const setInitialFocus = () => {
-			if (initialFocus) {
-				if (typeof initialFocus === "string") {
-					const element = containerRef.current?.querySelector<HTMLElement>(initialFocus);
-					if (element) {
-						element.focus();
-						return;
-					}
-				} else if (initialFocus.current) {
-					initialFocus.current.focus();
-					return;
-				}
-			}
-			// Default: focus first focusable element
-			focusFirst();
-		};
-
-		// Slight delay to ensure DOM is ready
-		requestAnimationFrame(setInitialFocus);
-	}, [active, autoFocus, initialFocus, focusFirst]);
-
-	// Return focus on deactivation
-	useEffect(() => {
-		if (active) {
-			return;
-		}
-
-		// Return focus to designated element or previous active element
-		const returnElement = returnFocusTo?.current ?? previousActiveElement.current;
-		if (returnElement && returnElement instanceof HTMLElement) {
-			returnElement.focus();
-		}
-	}, [active, returnFocusTo]);
-
-	// Handle keyboard navigation
-	useEffect(() => {
-		if (!active) {
-			return;
-		}
-
-		const handleKeyDown = (event: KeyboardEvent) => {
-			// Escape key
-			if (event.key === "Escape" && onEscape) {
-				event.preventDefault();
-				onEscape();
-				return;
-			}
-
-			// Tab key - trap focus
-			if (event.key === "Tab") {
-				const elements = getFocusableElements();
-				if (elements.length === 0) {
-					event.preventDefault();
-					return;
-				}
-
-				const firstElement = elements[0];
-				const lastElement = elements.at(-1);
-
-				if (!firstElement || !lastElement) {
-					event.preventDefault();
-					return;
-				}
-
-				if (event.shiftKey) {
-					// Shift+Tab: if on first element, go to last
-					if (document.activeElement === firstElement) {
-						event.preventDefault();
-						lastElement.focus();
-					}
-				} else {
-					// Tab: if on last element, go to first
-					if (document.activeElement === lastElement) {
-						event.preventDefault();
-						firstElement.focus();
-					}
-				}
-			}
-		};
-
-		document.addEventListener("keydown", handleKeyDown);
-		return () => document.removeEventListener("keydown", handleKeyDown);
-	}, [active, getFocusableElements, onEscape]);
-
-	// Prevent focus leaving the container
-	useEffect(() => {
-		if (!active) {
-			return;
-		}
-
-		const handleFocusIn = (event: FocusEvent) => {
-			if (!containerRef.current) {
-				return;
-			}
-
-			const target = event.target as Node;
-			if (!containerRef.current.contains(target)) {
-				// Focus escaped - bring it back
-				event.preventDefault();
-				focusFirst();
-			}
-		};
-
-		document.addEventListener("focusin", handleFocusIn);
-		return () => document.removeEventListener("focusin", handleFocusIn);
-	}, [active, focusFirst]);
+	useInitialFocusEffect({
+		active,
+		autoFocus,
+		initialFocus,
+		containerRef,
+		previousActiveElement,
+		focusFirst,
+	});
+	useReturnFocusEffect(active, returnFocusTo, previousActiveElement);
+	useFocusTrapKeydownEffect({ active, onEscape, getFocusableElements });
+	useFocusContainmentEffect(active, containerRef, focusFirst);
 
 	return {
 		containerRef,

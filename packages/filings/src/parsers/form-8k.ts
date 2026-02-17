@@ -106,17 +106,17 @@ export class Form8KParser extends FilingParser {
 	 */
 	extractItems(): Form8KItem[] {
 		const text = this.extractText();
-		const items: Form8KItem[] = [];
+		const matches = this.findItemMatches(text);
+		const signatureIndex = this.findSignatureIndex(text);
+		return this.extractItemsFromMatches(text, matches, signatureIndex);
+	}
 
-		// Find all item matches
+	private findItemMatches(text: string): Array<{ number: string; index: number; length: number }> {
 		const matches: Array<{ number: string; index: number; length: number }> = [];
-		let match: RegExpExecArray | null;
-
-		// Reset regex state
 		ITEM_PATTERN.lastIndex = 0;
 
-		// biome-ignore lint/suspicious/noAssignInExpressions: standard regex loop pattern
-		while ((match = ITEM_PATTERN.exec(text)) !== null) {
+		let match = ITEM_PATTERN.exec(text);
+		while (match !== null) {
 			const itemNumber = match[1];
 			if (itemNumber) {
 				matches.push({
@@ -125,43 +125,39 @@ export class Form8KParser extends FilingParser {
 					length: match[0].length,
 				});
 			}
+			match = ITEM_PATTERN.exec(text);
 		}
+		return matches;
+	}
 
-		// Find signature section (marks end of items content)
+	private findSignatureIndex(text: string): number {
 		const signatureMatch = SIGNATURE_PATTERN.exec(text);
-		const signatureIndex = signatureMatch?.index ?? text.length;
+		return signatureMatch?.index ?? text.length;
+	}
 
-		// Extract content for each item
-		for (let i = 0; i < matches.length; i++) {
-			const current = matches[i];
+	private extractItemsFromMatches(
+		text: string,
+		matches: Array<{ number: string; index: number; length: number }>,
+		signatureIndex: number,
+	): Form8KItem[] {
+		const items: Form8KItem[] = [];
+		for (let index = 0; index < matches.length; index++) {
+			const current = matches[index];
 			if (!current) {
 				continue;
 			}
-			const next = matches[i + 1];
-
-			// Content starts after item header
+			const next = matches[index + 1];
 			const contentStart = current.index + current.length;
-
-			// Content ends at next item, signature, or end of document
 			const contentEnd = Math.min(next?.index ?? text.length, signatureIndex);
-
-			let content = text.slice(contentStart, contentEnd).trim();
-
-			// Limit content length
-			if (content.length > MAX_ITEM_CONTENT) {
-				content = content.slice(0, MAX_ITEM_CONTENT);
-			}
-
-			// Look up item title
-			const itemTitle = ITEMS_8K[current.number] ?? "Unknown Item";
-
+			const rawContent = text.slice(contentStart, contentEnd).trim();
+			const content =
+				rawContent.length > MAX_ITEM_CONTENT ? rawContent.slice(0, MAX_ITEM_CONTENT) : rawContent;
 			items.push({
 				itemNumber: current.number,
-				itemTitle,
+				itemTitle: ITEMS_8K[current.number] ?? "Unknown Item",
 				content,
 			});
 		}
-
 		return items;
 	}
 

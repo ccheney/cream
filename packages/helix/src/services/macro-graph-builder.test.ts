@@ -24,7 +24,7 @@ import {
 // Predefined Macro Entities Tests
 // ============================================
 
-describe("PREDEFINED_MACRO_ENTITIES", () => {
+describe("PREDEFINED_MACRO_ENTITIES structure", () => {
 	test("contains expected number of entities", () => {
 		expect(PREDEFINED_MACRO_ENTITIES.length).toBe(19);
 	});
@@ -63,7 +63,9 @@ describe("PREDEFINED_MACRO_ENTITIES", () => {
 			expect(validFrequencies).toContain(entity.frequency);
 		}
 	});
+});
 
+describe("PREDEFINED_MACRO_ENTITIES key factors", () => {
 	test("contains key interest rate factors", () => {
 		const interestRates = PREDEFINED_MACRO_ENTITIES.filter((e) => e.category === "INTEREST_RATES");
 		const ids = interestRates.map((e) => e.entity_id);

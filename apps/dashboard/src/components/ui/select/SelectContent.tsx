@@ -37,6 +37,82 @@ interface GroupedOptions {
 	ungrouped: SelectOption[];
 }
 
+function useGroupedOptions(options: SelectOption[]): GroupedOptions {
+	const UNGROUPED = "__ungrouped__";
+	return useMemo(() => {
+		const allGroups = Object.groupBy(options, (o) => o.group ?? UNGROUPED);
+		const ungrouped = allGroups[UNGROUPED] ?? [];
+		const { [UNGROUPED]: _, ...groups } = allGroups;
+		return { groups: groups as Record<string, SelectOption[]>, ungrouped };
+	}, [options]);
+}
+
+function SelectContentList({
+	groupedOptions,
+	filteredOptions,
+	multiple,
+	values,
+	value,
+	highlightedIndex,
+	handleOptionClick,
+	setHighlightedIndex,
+}: {
+	groupedOptions: GroupedOptions;
+	filteredOptions: SelectOption[];
+	multiple: boolean;
+	values: string[];
+	value?: string;
+	highlightedIndex: number;
+	setHighlightedIndex: React.Dispatch<React.SetStateAction<number>>;
+	handleOptionClick: (option: SelectOption) => void;
+}) {
+	let flatUngroupedIndex = 0;
+
+	return (
+		<>
+			{groupedOptions.ungrouped
+				.filter((opt) => filteredOptions.includes(opt))
+				.map((option) => {
+					const currentIndex = flatUngroupedIndex++;
+					return (
+						<SelectItem
+							key={option.value}
+							option={option}
+							isSelected={multiple ? values.includes(option.value) : value === option.value}
+							isHighlighted={highlightedIndex === currentIndex}
+							multiple={multiple}
+							onClick={() => handleOptionClick(option)}
+							onMouseEnter={() => setHighlightedIndex(currentIndex)}
+						/>
+					);
+				})}
+
+			{Object.entries(groupedOptions.groups).map(([groupName, groupOptions]) => {
+				const visibleOptions = groupOptions.filter((opt) => filteredOptions.includes(opt));
+				if (visibleOptions.length === 0) {
+					return null;
+				}
+
+				return (
+					<div key={groupName}>
+						<div style={groupLabelStyles}>{groupName}</div>
+						{visibleOptions.map((option) => (
+							<SelectItem
+								key={option.value}
+								option={option}
+								isSelected={multiple ? values.includes(option.value) : value === option.value}
+								isHighlighted={false}
+								multiple={multiple}
+								onClick={() => handleOptionClick(option)}
+							/>
+						))}
+					</div>
+				);
+			})}
+		</>
+	);
+}
+
 export function SelectContent({
 	options,
 	filteredOptions,
@@ -52,14 +128,7 @@ export function SelectContent({
 	onSearchInputChange,
 }: SelectContentProps): React.ReactElement {
 	const searchInputRef = useRef<HTMLInputElement>(null);
-
-	const groupedOptions = useMemo((): GroupedOptions => {
-		const UNGROUPED = "__ungrouped__";
-		const allGroups = Object.groupBy(options, (o) => o.group ?? UNGROUPED);
-		const ungrouped = allGroups[UNGROUPED] ?? [];
-		const { [UNGROUPED]: _, ...groups } = allGroups;
-		return { groups: groups as Record<string, SelectOption[]>, ungrouped };
-	}, [options]);
+	const groupedOptions = useGroupedOptions(options);
 
 	useEffect(() => {
 		if (searchable && searchInputRef.current) {
@@ -96,44 +165,16 @@ export function SelectContent({
 			)}
 
 			{!loading && (
-				<>
-					{groupedOptions.ungrouped
-						.filter((opt) => filteredOptions.includes(opt))
-						.map((option, index) => (
-							<SelectItem
-								key={option.value}
-								option={option}
-								isSelected={multiple ? values.includes(option.value) : value === option.value}
-								isHighlighted={highlightedIndex === index}
-								multiple={multiple}
-								onClick={() => handleOptionClick(option)}
-								onMouseEnter={() => setHighlightedIndex(index)}
-							/>
-						))}
-
-					{Object.entries(groupedOptions.groups).map(([groupName, groupOptions]) => {
-						const visibleOptions = groupOptions.filter((opt) => filteredOptions.includes(opt));
-						if (visibleOptions.length === 0) {
-							return null;
-						}
-
-						return (
-							<div key={groupName}>
-								<div style={groupLabelStyles}>{groupName}</div>
-								{visibleOptions.map((option) => (
-									<SelectItem
-										key={option.value}
-										option={option}
-										isSelected={multiple ? values.includes(option.value) : value === option.value}
-										isHighlighted={false}
-										multiple={multiple}
-										onClick={() => handleOptionClick(option)}
-									/>
-								))}
-							</div>
-						);
-					})}
-				</>
+				<SelectContentList
+					groupedOptions={groupedOptions}
+					filteredOptions={filteredOptions}
+					multiple={multiple}
+					values={values}
+					value={value}
+					highlightedIndex={highlightedIndex}
+					handleOptionClick={handleOptionClick}
+					setHighlightedIndex={setHighlightedIndex}
+				/>
 			)}
 		</div>
 	);

@@ -9,6 +9,39 @@ import { log } from "../../../shared/logger.js";
 
 const ALPACA_NEWS_URL = "https://data.alpaca.markets/v1beta1/news";
 
+const POSITIVE_WORDS = [
+	"beat",
+	"upgrade",
+	"growth",
+	"profit",
+	"gain",
+	"bullish",
+	"buy",
+	"surge",
+	"rally",
+];
+
+const NEGATIVE_WORDS = [
+	"miss",
+	"downgrade",
+	"loss",
+	"decline",
+	"bearish",
+	"sell",
+	"warning",
+	"plunge",
+	"crash",
+];
+
+interface AlpacaNewsItem {
+	id: number;
+	headline: string;
+	summary?: string;
+	created_at: string;
+	symbols: string[];
+	source: string;
+}
+
 export class AlpacaSentimentAdapter implements SentimentDataProvider {
 	private readonly apiKey: string;
 	private readonly apiSecret: string;
@@ -18,25 +51,88 @@ export class AlpacaSentimentAdapter implements SentimentDataProvider {
 		this.apiSecret = apiSecret;
 	}
 
+	private toRfc3339(dateValue: string, endOfDay: boolean): string {
+		if (dateValue.includes("T")) {
+			return dateValue;
+		}
+
+		return endOfDay ? `${dateValue}T23:59:59Z` : `${dateValue}T00:00:00Z`;
+	}
+
+	private buildNewsUrl(symbols: string[], startDate: string, endDate: string): string {
+		const url = new URL(ALPACA_NEWS_URL);
+		url.searchParams.set("symbols", symbols.join(","));
+		url.searchParams.set("start", this.toRfc3339(startDate, false));
+		url.searchParams.set("end", this.toRfc3339(endDate, true));
+		url.searchParams.set("limit", "50");
+		return url.toString();
+	}
+
+	private analyzeSentiment(text: string): {
+		sentiment: "bullish" | "bearish" | "neutral";
+		confidence: number;
+	} {
+		const normalized = text.toLowerCase();
+		const positiveCount = POSITIVE_WORDS.filter((word) => normalized.includes(word)).length;
+		const negativeCount = NEGATIVE_WORDS.filter((word) => normalized.includes(word)).length;
+
+		if (positiveCount > negativeCount) {
+			return {
+				sentiment: "bullish",
+				confidence: Math.min(0.9, 0.5 + positiveCount * 0.1),
+			};
+		}
+
+		if (negativeCount > positiveCount) {
+			return {
+				sentiment: "bearish",
+				confidence: Math.min(0.9, 0.5 + negativeCount * 0.1),
+			};
+		}
+
+		return { sentiment: "neutral", confidence: 0.5 };
+	}
+
+	private parseNewsResponse(data: unknown): AlpacaNewsItem[] {
+		const typed = data as { news?: AlpacaNewsItem[] };
+		return typed.news ?? [];
+	}
+
+	private toSentimentEntries(
+		item: AlpacaNewsItem,
+		targetSymbols: Set<string>,
+	): ExtractedSentiment[] {
+		const analysis = this.analyzeSentiment(`${item.headline} ${item.summary ?? ""}`);
+		const eventTime = new Date(item.created_at);
+		const entries: ExtractedSentiment[] = [];
+
+		for (const symbol of item.symbols) {
+			if (!targetSymbols.has(symbol)) {
+				continue;
+			}
+
+			entries.push({
+				symbol,
+				sourceType: "news",
+				sentiment: analysis.sentiment,
+				confidence: analysis.confidence,
+				eventTime,
+			});
+		}
+
+		return entries;
+	}
+
 	async getSentimentData(
 		symbols: string[],
 		startDate: string,
 		endDate: string,
 	): Promise<ExtractedSentiment[]> {
 		const results: ExtractedSentiment[] = [];
+		const targetSymbols = new Set(symbols);
 
 		try {
-			// Convert date strings to RFC3339 timestamps (Alpaca requires full timestamps)
-			const startTimestamp = startDate.includes("T") ? startDate : `${startDate}T00:00:00Z`;
-			const endTimestamp = endDate.includes("T") ? endDate : `${endDate}T23:59:59Z`;
-
-			const url = new URL(ALPACA_NEWS_URL);
-			url.searchParams.set("symbols", symbols.join(","));
-			url.searchParams.set("start", startTimestamp);
-			url.searchParams.set("end", endTimestamp);
-			url.searchParams.set("limit", "50");
-
-			const response = await fetch(url.toString(), {
+			const response = await fetch(this.buildNewsUrl(symbols, startDate, endDate), {
 				headers: {
 					"APCA-API-KEY-ID": this.apiKey,
 					"APCA-API-SECRET-KEY": this.apiSecret,
@@ -48,67 +144,9 @@ export class AlpacaSentimentAdapter implements SentimentDataProvider {
 				return results;
 			}
 
-			const data = (await response.json()) as {
-				news?: Array<{
-					id: number;
-					headline: string;
-					summary?: string;
-					created_at: string;
-					symbols: string[];
-					source: string;
-				}>;
-			};
-
-			for (const item of data.news ?? []) {
-				const text = `${item.headline} ${item.summary ?? ""}`.toLowerCase();
-				let sentiment: "bullish" | "bearish" | "neutral" = "neutral";
-				let confidence = 0.5;
-
-				const positiveWords = [
-					"beat",
-					"upgrade",
-					"growth",
-					"profit",
-					"gain",
-					"bullish",
-					"buy",
-					"surge",
-					"rally",
-				];
-				const negativeWords = [
-					"miss",
-					"downgrade",
-					"loss",
-					"decline",
-					"bearish",
-					"sell",
-					"warning",
-					"plunge",
-					"crash",
-				];
-
-				const positiveCount = positiveWords.filter((w) => text.includes(w)).length;
-				const negativeCount = negativeWords.filter((w) => text.includes(w)).length;
-
-				if (positiveCount > negativeCount) {
-					sentiment = "bullish";
-					confidence = Math.min(0.9, 0.5 + positiveCount * 0.1);
-				} else if (negativeCount > positiveCount) {
-					sentiment = "bearish";
-					confidence = Math.min(0.9, 0.5 + negativeCount * 0.1);
-				}
-
-				for (const symbol of item.symbols) {
-					if (symbols.includes(symbol)) {
-						results.push({
-							symbol,
-							sourceType: "news",
-							sentiment,
-							confidence,
-							eventTime: new Date(item.created_at),
-						});
-					}
-				}
+			const news = this.parseNewsResponse(await response.json());
+			for (const item of news) {
+				results.push(...this.toSentimentEntries(item, targetSymbols));
 			}
 		} catch (error) {
 			log.warn(

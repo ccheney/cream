@@ -16,6 +16,20 @@ import type {
 
 const log = createNodeLogger({ service: "newspaper", level: "info" });
 
+const EMPTY_SECTIONS = {
+	macro: ["No significant macro developments"],
+	universe: ["No significant universe developments"],
+	predictionMarkets: ["No significant prediction market changes"],
+	economicCalendar: ["No economic releases expected today"],
+} as const;
+
+interface CategorizedEntries {
+	news: MacroWatchEntry[];
+	prediction: MacroWatchEntry[];
+	economic: MacroWatchEntry[];
+	movers: MacroWatchEntry[];
+}
+
 /**
  * Compiled newspaper content ready for LLM consumption
  */
@@ -32,6 +46,95 @@ export interface NewspaperContent {
 	entryCount: number;
 }
 
+function buildUniverseSet(universeSymbols: string[]): Set<string> {
+	return new Set(universeSymbols.map((symbol) => symbol.toUpperCase()));
+}
+
+function categorizeEntries(entries: MacroWatchEntry[]): CategorizedEntries {
+	return {
+		news: entries.filter((entry) => entry.category === "NEWS"),
+		prediction: entries.filter((entry) => entry.category === "PREDICTION"),
+		economic: entries.filter((entry) => entry.category === "ECONOMIC"),
+		movers: entries.filter((entry) => entry.category === "MOVER"),
+	};
+}
+
+function mentionsUniverse(entry: MacroWatchEntry, universeSet: Set<string>): boolean {
+	return entry.symbols.some((symbol) => universeSet.has(symbol.toUpperCase()));
+}
+
+function withFallback(lines: string[], fallback: string): string[] {
+	return lines.length > 0 ? lines : [fallback];
+}
+
+function buildMacroHeadlines(newsEntries: MacroWatchEntry[], universeSet: Set<string>): string[] {
+	return newsEntries
+		.filter((entry) => !mentionsUniverse(entry, universeSet))
+		.slice(0, 5)
+		.map((entry) => `• ${entry.headline} [${entry.source}]`);
+}
+
+function buildUniverseHeadlines(
+	newsEntries: MacroWatchEntry[],
+	universeSet: Set<string>,
+): string[] {
+	return newsEntries
+		.filter((entry) => mentionsUniverse(entry, universeSet))
+		.slice(0, 10)
+		.map((entry) => `• ${entry.symbols.join(", ")}: ${entry.headline}`);
+}
+
+function buildUniverseMovers(moverEntries: MacroWatchEntry[], universeSet: Set<string>): string[] {
+	return moverEntries
+		.filter((entry) => mentionsUniverse(entry, universeSet))
+		.slice(0, 5)
+		.map((entry) => `• ${entry.headline}`);
+}
+
+function findComprehensivePredictionEntry(entries: MacroWatchEntry[]): MacroWatchEntry | undefined {
+	return entries.find((entry) => {
+		const metadata = entry.metadata as Record<string, unknown> | undefined;
+		return metadata?.isComprehensive === true;
+	});
+}
+
+function buildComprehensivePredictionHeadlines(entry: MacroWatchEntry): string[] {
+	const metadata = entry.metadata as Record<string, unknown> | undefined;
+	const detailLines =
+		typeof metadata?.details === "string"
+			? metadata.details
+					.split("\n")
+					.map((line) => line.trim())
+					.filter((line) => line.length > 0)
+			: [];
+	return [`• ${entry.headline}`, ...detailLines];
+}
+
+function buildLegacyPredictionHeadlines(entries: MacroWatchEntry[]): string[] {
+	const headlines: string[] = [];
+	const seenHeadlines = new Set<string>();
+	for (const entry of entries.slice(0, 5)) {
+		if (seenHeadlines.has(entry.headline)) {
+			continue;
+		}
+		seenHeadlines.add(entry.headline);
+		headlines.push(`• ${entry.headline}`);
+	}
+	return headlines;
+}
+
+function buildPredictionHeadlines(entries: MacroWatchEntry[]): string[] {
+	const comprehensiveEntry = findComprehensivePredictionEntry(entries);
+	if (comprehensiveEntry) {
+		return buildComprehensivePredictionHeadlines(comprehensiveEntry);
+	}
+	return buildLegacyPredictionHeadlines(entries);
+}
+
+function buildEconomicHeadlines(entries: MacroWatchEntry[]): string[] {
+	return entries.slice(0, 5).map((entry) => `• ${entry.headline}`);
+}
+
 /**
  * Compile overnight entries into a morning newspaper.
  *
@@ -43,79 +146,21 @@ export function compileNewspaper(
 	entries: MacroWatchEntry[],
 	universeSymbols: string[],
 ): NewspaperSections {
-	const universeSet = new Set(universeSymbols.map((s) => s.toUpperCase()));
-
-	// Categorize entries
-	const newsEntries = entries.filter((e) => e.category === "NEWS");
-	const predictionEntries = entries.filter((e) => e.category === "PREDICTION");
-	const economicEntries = entries.filter((e) => e.category === "ECONOMIC");
-	const moverEntries = entries.filter((e) => e.category === "MOVER");
-
-	// Build macro section (market-wide news)
-	const macroHeadlines = newsEntries
-		.filter((e) => !e.symbols.some((s) => universeSet.has(s.toUpperCase())))
-		.slice(0, 5)
-		.map((e) => `• ${e.headline} [${e.source}]`);
-
-	// Build universe section (news about holdings)
-	const universeHeadlines = newsEntries
-		.filter((e) => e.symbols.some((s) => universeSet.has(s.toUpperCase())))
-		.slice(0, 10)
-		.map((e) => `• ${e.symbols.join(", ")}: ${e.headline}`);
-
-	// Add mover entries for universe symbols
-	const universeMovers = moverEntries
-		.filter((e) => e.symbols.some((s) => universeSet.has(s.toUpperCase())))
-		.slice(0, 5)
-		.map((e) => `• ${e.headline}`);
-
-	// Build prediction markets section
-	// Prefer comprehensive summaries over individual entries
-	const predictionHeadlines: string[] = [];
-
-	// First, check for a comprehensive summary entry
-	const comprehensiveEntry = predictionEntries.find((e) => {
-		const metadata = e.metadata as Record<string, unknown> | undefined;
-		return metadata?.isComprehensive === true;
-	});
-
-	if (comprehensiveEntry) {
-		// Use the comprehensive summary with detailed breakdown
-		const metadata = comprehensiveEntry.metadata as Record<string, unknown>;
-		predictionHeadlines.push(`• ${comprehensiveEntry.headline}`);
-		if (typeof metadata.details === "string") {
-			const details = metadata.details.split("\n").filter((l: string) => l.trim());
-			for (const detail of details) {
-				predictionHeadlines.push(detail);
-			}
-		}
-	} else {
-		// Fallback: use individual entries (legacy behavior)
-		// Deduplicate by headline to avoid duplicates
-		const seenHeadlines = new Set<string>();
-		for (const entry of predictionEntries.slice(0, 5)) {
-			if (!seenHeadlines.has(entry.headline)) {
-				seenHeadlines.add(entry.headline);
-				predictionHeadlines.push(`• ${entry.headline}`);
-			}
-		}
-	}
-
-	// Build economic calendar section
-	const economicHeadlines = economicEntries.slice(0, 5).map((e) => `• ${e.headline}`);
+	const universeSet = buildUniverseSet(universeSymbols);
+	const categorized = categorizeEntries(entries);
+	const macro = buildMacroHeadlines(categorized.news, universeSet);
+	const universe = [
+		...buildUniverseHeadlines(categorized.news, universeSet),
+		...buildUniverseMovers(categorized.movers, universeSet),
+	];
+	const predictionMarkets = buildPredictionHeadlines(categorized.prediction);
+	const economicCalendar = buildEconomicHeadlines(categorized.economic);
 
 	return {
-		macro: macroHeadlines.length > 0 ? macroHeadlines : ["No significant macro developments"],
-		universe:
-			[...universeHeadlines, ...universeMovers].length > 0
-				? [...universeHeadlines, ...universeMovers]
-				: ["No significant universe developments"],
-		predictionMarkets:
-			predictionHeadlines.length > 0
-				? predictionHeadlines
-				: ["No significant prediction market changes"],
-		economicCalendar:
-			economicHeadlines.length > 0 ? economicHeadlines : ["No economic releases expected today"],
+		macro: withFallback(macro, EMPTY_SECTIONS.macro[0]),
+		universe: withFallback(universe, EMPTY_SECTIONS.universe[0]),
+		predictionMarkets: withFallback(predictionMarkets, EMPTY_SECTIONS.predictionMarkets[0]),
+		economicCalendar: withFallback(economicCalendar, EMPTY_SECTIONS.economicCalendar[0]),
 	};
 }
 
@@ -193,7 +238,7 @@ export function prepareNewspaperForStorage(
 		date,
 		compiledAt: now.toISOString(),
 		sections,
-		rawEntryIds: entries.map((e) => e.id).filter((id): id is string => id !== undefined),
+		rawEntryIds: entries.map((entry) => entry.id).filter((id): id is string => id !== undefined),
 	};
 }
 

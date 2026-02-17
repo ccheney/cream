@@ -39,12 +39,41 @@ interface SortState {
 	direction: SortDirection;
 }
 
+interface HeaderDef {
+	label: string;
+	field: SortField;
+	align?: "left" | "right";
+}
+
 // ============================================
 // Constants
 // ============================================
 
 const GRID_TEMPLATE =
 	"minmax(80px, 1fr) minmax(60px, 0.8fr) minmax(80px, 1fr) minmax(80px, 1fr) minmax(90px, 1.2fr) minmax(70px, 1fr) minmax(60px, 0.8fr) minmax(90px, 1.2fr)";
+
+const HEADER_DEFS: HeaderDef[] = [
+	{ label: "Symbol", field: "symbol", align: "left" },
+	{ label: "Qty", field: "quantity" },
+	{ label: "Entry", field: "entryPrice" },
+	{ label: "Exit", field: "exitPrice" },
+	{ label: "P&L", field: "realizedPnl" },
+	{ label: "Return", field: "realizedPnlPct" },
+	{ label: "Hold", field: "holdDays" },
+	{ label: "Closed", field: "exitDate" },
+];
+
+const NUMERIC_SORT_GETTERS: Record<
+	Exclude<SortField, "symbol" | "exitDate">,
+	(trade: ClosedTrade) => number
+> = {
+	quantity: (trade) => trade.quantity,
+	entryPrice: (trade) => trade.entryPrice,
+	exitPrice: (trade) => trade.exitPrice,
+	realizedPnl: (trade) => trade.realizedPnl,
+	realizedPnlPct: (trade) => trade.realizedPnlPct,
+	holdDays: (trade) => trade.holdDays,
+};
 
 // ============================================
 // Helpers
@@ -74,6 +103,24 @@ const formatHoldTime = (days: number) => {
 	}
 	return `${days} days`;
 };
+
+function sortTrades(trades: ClosedTrade[], sortState: SortState): ClosedTrade[] {
+	const sorted = [...trades];
+	const { field, direction } = sortState;
+	const multiplier = direction === "asc" ? 1 : -1;
+
+	sorted.sort((a, b) => {
+		if (field === "symbol") {
+			return a.symbol.localeCompare(b.symbol) * multiplier;
+		}
+		if (field === "exitDate") {
+			return (new Date(a.exitDate).getTime() - new Date(b.exitDate).getTime()) * multiplier;
+		}
+		return (NUMERIC_SORT_GETTERS[field](a) - NUMERIC_SORT_GETTERS[field](b)) * multiplier;
+	});
+
+	return sorted;
+}
 
 // ============================================
 // Subcomponents
@@ -124,76 +171,129 @@ const TradeRow = memo(function TradeRow({ trade }: TradeRowProps) {
 		<div
 			className="grid hover:bg-cream-50 dark:hover:bg-night-600 transition-colors border-b border-cream-100 dark:border-night-700"
 			style={{ gridTemplateColumns: GRID_TEMPLATE }}
-			role="row"
-			tabIndex={0}
 		>
-			{/* Symbol */}
-			<div
-				className="px-3 py-3 font-medium text-stone-900 dark:text-night-50 flex items-center text-sm"
-				role="cell"
-			>
+			<div className="px-3 py-3 font-medium text-stone-900 dark:text-night-50 flex items-center text-sm">
 				{trade.symbol}
 			</div>
-
-			{/* Quantity */}
-			<div
-				className="px-3 py-3 text-right font-mono text-stone-900 dark:text-night-50 flex items-center justify-end text-sm"
-				role="cell"
-			>
+			<div className="px-3 py-3 text-right font-mono text-stone-900 dark:text-night-50 flex items-center justify-end text-sm">
 				{trade.quantity}
 			</div>
-
-			{/* Entry Price */}
-			<div
-				className="px-3 py-3 text-right font-mono text-stone-500 dark:text-night-400 flex items-center justify-end text-sm"
-				role="cell"
-			>
+			<div className="px-3 py-3 text-right font-mono text-stone-500 dark:text-night-400 flex items-center justify-end text-sm">
 				{formatCurrency(trade.entryPrice)}
 			</div>
-
-			{/* Exit Price */}
-			<div
-				className="px-3 py-3 text-right font-mono text-stone-900 dark:text-night-50 flex items-center justify-end text-sm"
-				role="cell"
-			>
+			<div className="px-3 py-3 text-right font-mono text-stone-900 dark:text-night-50 flex items-center justify-end text-sm">
 				{formatCurrency(trade.exitPrice)}
 			</div>
-
-			{/* Realized P&L */}
 			<div
 				className={`px-3 py-3 text-right font-mono flex items-center justify-end text-sm ${pnlColor}`}
-				role="cell"
 			>
 				{trade.realizedPnl >= 0 ? "+" : ""}
 				{formatCurrency(trade.realizedPnl, 2)}
 			</div>
-
-			{/* % Return */}
 			<div
 				className={`px-3 py-3 text-right font-mono flex items-center justify-end text-sm ${pnlColor}`}
-				role="cell"
 			>
 				{formatPct(trade.realizedPnlPct)}
 			</div>
-
-			{/* Hold Time */}
-			<div
-				className="px-3 py-3 text-right text-stone-500 dark:text-night-400 flex items-center justify-end text-sm"
-				role="cell"
-			>
+			<div className="px-3 py-3 text-right text-stone-500 dark:text-night-400 flex items-center justify-end text-sm">
 				{formatHoldTime(trade.holdDays)}
 			</div>
-
-			{/* Exit Date */}
-			<div
-				className="px-3 py-3 text-right text-stone-500 dark:text-night-400 flex items-center justify-end text-sm"
-				role="cell"
-			>
+			<div className="px-3 py-3 text-right text-stone-500 dark:text-night-400 flex items-center justify-end text-sm">
 				{formatDate(trade.exitDate)}
 			</div>
 		</div>
 	);
 });
+
+function SummaryStats({
+	totalRealizedPnl,
+	winRate,
+	winCount,
+	lossCount,
+	tradeCount,
+}: {
+	totalRealizedPnl: number;
+	winRate: number;
+	winCount: number;
+	lossCount: number;
+	tradeCount: number;
+}) {
+	const totalPnlColor = totalRealizedPnl >= 0 ? "text-green-600" : "text-red-600";
+
+	return (
+		<div className="px-4 py-3 border-b border-cream-200 dark:border-night-700 flex items-center justify-between flex-wrap gap-4">
+			<div className="flex items-center gap-6">
+				<div>
+					<span className="text-xs text-stone-500 dark:text-night-400">Total P&L</span>
+					<p className={`text-lg font-semibold font-mono ${totalPnlColor}`}>
+						{totalRealizedPnl >= 0 ? "+" : ""}
+						{formatCurrency(totalRealizedPnl, 2)}
+					</p>
+				</div>
+				<div>
+					<span className="text-xs text-stone-500 dark:text-night-400">Win Rate</span>
+					<p className="text-lg font-semibold text-stone-900 dark:text-night-50">
+						{winRate.toFixed(1)}%
+					</p>
+				</div>
+				<div>
+					<span className="text-xs text-stone-500 dark:text-night-400">W / L</span>
+					<p className="text-lg font-semibold">
+						<span className="text-green-600">{winCount}</span>
+						<span className="text-stone-400 mx-1">/</span>
+						<span className="text-red-600">{lossCount}</span>
+					</p>
+				</div>
+			</div>
+			<span className="text-sm text-stone-500 dark:text-night-300">{tradeCount} trades</span>
+		</div>
+	);
+}
+
+function LoadingRows() {
+	return (
+		<div className="p-4 space-y-2">
+			{["row-1", "row-2", "row-3"].map((rowKey) => (
+				<div key={rowKey} className="h-12 bg-cream-100 dark:bg-night-700 rounded animate-pulse" />
+			))}
+		</div>
+	);
+}
+
+function TradesGrid({
+	sortState,
+	onSort,
+	sortedTrades,
+}: {
+	sortState: SortState;
+	onSort: (field: SortField) => void;
+	sortedTrades: ClosedTrade[];
+}) {
+	return (
+		<div>
+			<div
+				className="grid bg-cream-50 dark:bg-night-700 text-stone-500 dark:text-night-300 border-b border-cream-200 dark:border-night-700"
+				style={{ gridTemplateColumns: GRID_TEMPLATE }}
+			>
+				{HEADER_DEFS.map((header) => (
+					<SortableHeader
+						key={header.field}
+						label={header.label}
+						field={header.field}
+						currentSort={sortState}
+						onSort={onSort}
+						align={header.align}
+					/>
+				))}
+			</div>
+			<div className="max-h-[400px] overflow-auto">
+				{sortedTrades.map((trade) => (
+					<TradeRow key={trade.id} trade={trade} />
+				))}
+			</div>
+		</div>
+	);
+}
 
 // ============================================
 // Main Component
@@ -207,10 +307,8 @@ export const ClosedTradesTable = memo(function ClosedTradesTable({
 	winRate,
 	isLoading = false,
 }: ClosedTradesTableProps) {
-	const [sortState, setSortState] = useState<SortState>({
-		field: "exitDate",
-		direction: "desc",
-	});
+	const [sortState, setSortState] = useState<SortState>({ field: "exitDate", direction: "desc" });
+	const sortedTrades = useMemo(() => sortTrades(trades, sortState), [trades, sortState]);
 
 	const handleSort = useCallback((field: SortField) => {
 		setSortState((prev) => ({
@@ -219,162 +317,20 @@ export const ClosedTradesTable = memo(function ClosedTradesTable({
 		}));
 	}, []);
 
-	const sortedTrades = useMemo(() => {
-		const sorted = [...trades];
-		const { field, direction } = sortState;
-		const multiplier = direction === "asc" ? 1 : -1;
-
-		sorted.sort((a, b) => {
-			let aVal: number | string;
-			let bVal: number | string;
-
-			switch (field) {
-				case "symbol":
-					return a.symbol.localeCompare(b.symbol) * multiplier;
-				case "quantity":
-					aVal = a.quantity;
-					bVal = b.quantity;
-					break;
-				case "entryPrice":
-					aVal = a.entryPrice;
-					bVal = b.entryPrice;
-					break;
-				case "exitPrice":
-					aVal = a.exitPrice;
-					bVal = b.exitPrice;
-					break;
-				case "realizedPnl":
-					aVal = a.realizedPnl;
-					bVal = b.realizedPnl;
-					break;
-				case "realizedPnlPct":
-					aVal = a.realizedPnlPct;
-					bVal = b.realizedPnlPct;
-					break;
-				case "holdDays":
-					aVal = a.holdDays;
-					bVal = b.holdDays;
-					break;
-				case "exitDate":
-					aVal = new Date(a.exitDate).getTime();
-					bVal = new Date(b.exitDate).getTime();
-					break;
-				default:
-					return 0;
-			}
-
-			return ((aVal as number) - (bVal as number)) * multiplier;
-		});
-
-		return sorted;
-	}, [trades, sortState]);
-
-	const totalPnlColor = totalRealizedPnl >= 0 ? "text-green-600" : "text-red-600";
-
 	return (
 		<div className="bg-white dark:bg-night-800 rounded-lg border border-cream-200 dark:border-night-700">
-			{/* Summary Stats */}
-			<div className="px-4 py-3 border-b border-cream-200 dark:border-night-700 flex items-center justify-between flex-wrap gap-4">
-				<div className="flex items-center gap-6">
-					<div>
-						<span className="text-xs text-stone-500 dark:text-night-400">Total P&L</span>
-						<p className={`text-lg font-semibold font-mono ${totalPnlColor}`}>
-							{totalRealizedPnl >= 0 ? "+" : ""}
-							{formatCurrency(totalRealizedPnl, 2)}
-						</p>
-					</div>
-					<div>
-						<span className="text-xs text-stone-500 dark:text-night-400">Win Rate</span>
-						<p className="text-lg font-semibold text-stone-900 dark:text-night-50">
-							{winRate.toFixed(1)}%
-						</p>
-					</div>
-					<div>
-						<span className="text-xs text-stone-500 dark:text-night-400">W / L</span>
-						<p className="text-lg font-semibold">
-							<span className="text-green-600">{winCount}</span>
-							<span className="text-stone-400 mx-1">/</span>
-							<span className="text-red-600">{lossCount}</span>
-						</p>
-					</div>
-				</div>
-				<span className="text-sm text-stone-500 dark:text-night-300">{trades.length} trades</span>
-			</div>
-
-			{isLoading ? (
-				<div className="p-4 space-y-2">
-					{[1, 2, 3].map((i) => (
-						<div key={i} className="h-12 bg-cream-100 dark:bg-night-700 rounded animate-pulse" />
-					))}
-				</div>
-			) : trades.length > 0 ? (
-				<div role="table" aria-label="Closed trades">
-					{/* Column headers */}
-					<div
-						className="grid bg-cream-50 dark:bg-night-700 text-stone-500 dark:text-night-300 border-b border-cream-200 dark:border-night-700"
-						style={{ gridTemplateColumns: GRID_TEMPLATE }}
-						role="row"
-						tabIndex={0}
-					>
-						<SortableHeader
-							label="Symbol"
-							field="symbol"
-							currentSort={sortState}
-							onSort={handleSort}
-							align="left"
-						/>
-						<SortableHeader
-							label="Qty"
-							field="quantity"
-							currentSort={sortState}
-							onSort={handleSort}
-						/>
-						<SortableHeader
-							label="Entry"
-							field="entryPrice"
-							currentSort={sortState}
-							onSort={handleSort}
-						/>
-						<SortableHeader
-							label="Exit"
-							field="exitPrice"
-							currentSort={sortState}
-							onSort={handleSort}
-						/>
-						<SortableHeader
-							label="P&L"
-							field="realizedPnl"
-							currentSort={sortState}
-							onSort={handleSort}
-						/>
-						<SortableHeader
-							label="Return"
-							field="realizedPnlPct"
-							currentSort={sortState}
-							onSort={handleSort}
-						/>
-						<SortableHeader
-							label="Hold"
-							field="holdDays"
-							currentSort={sortState}
-							onSort={handleSort}
-						/>
-						<SortableHeader
-							label="Closed"
-							field="exitDate"
-							currentSort={sortState}
-							onSort={handleSort}
-						/>
-					</div>
-
-					{/* Rows */}
-					<div className="max-h-[400px] overflow-auto" role="rowgroup">
-						{sortedTrades.map((trade) => (
-							<TradeRow key={trade.id} trade={trade} />
-						))}
-					</div>
-				</div>
-			) : (
+			<SummaryStats
+				totalRealizedPnl={totalRealizedPnl}
+				winRate={winRate}
+				winCount={winCount}
+				lossCount={lossCount}
+				tradeCount={trades.length}
+			/>
+			{isLoading && <LoadingRows />}
+			{!isLoading && trades.length > 0 && (
+				<TradesGrid sortState={sortState} onSort={handleSort} sortedTrades={sortedTrades} />
+			)}
+			{!isLoading && trades.length === 0 && (
 				<div className="p-8 text-center text-stone-400 dark:text-night-400">No closed trades</div>
 			)}
 		</div>

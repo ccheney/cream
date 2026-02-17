@@ -96,105 +96,103 @@ describe("VolatilityScaleParamsSchema", () => {
 // TransformConfigSchema Tests
 // ============================================
 
-describe("TransformConfigSchema", () => {
-	describe("input/inputs validation", () => {
-		test("accepts single input", () => {
-			const config = TransformConfigSchema.parse({
-				name: "returns",
-				input: "close",
-				params: { periods: [1, 5] },
-				output_prefix: "return",
-			});
-			expect(config.input).toBe("close");
-			expect(config.inputs).toBeUndefined();
+describe("TransformConfigSchema input/inputs validation", () => {
+	test("accepts single input", () => {
+		const config = TransformConfigSchema.parse({
+			name: "returns",
+			input: "close",
+			params: { periods: [1, 5] },
+			output_prefix: "return",
 		});
-
-		test("accepts multiple inputs", () => {
-			const config = TransformConfigSchema.parse({
-				name: "zscore",
-				inputs: ["rsi_14", "atr_14"],
-				params: { lookback: 100 },
-				output_suffix: "_zscore",
-			});
-			expect(config.inputs).toEqual(["rsi_14", "atr_14"]);
-			expect(config.input).toBeUndefined();
-		});
-
-		test("rejects when neither input nor inputs provided", () => {
-			expect(() =>
-				TransformConfigSchema.parse({
-					name: "zscore",
-					params: { lookback: 100 },
-				}),
-			).toThrow();
-		});
-
-		test("rejects when both input and inputs provided", () => {
-			expect(() =>
-				TransformConfigSchema.parse({
-					name: "zscore",
-					input: "close",
-					inputs: ["rsi_14"],
-					params: {},
-				}),
-			).toThrow();
-		});
+		expect(config.input).toBe("close");
+		expect(config.inputs).toBeUndefined();
 	});
 
-	describe("output naming", () => {
-		test("accepts output_prefix", () => {
-			const config = TransformConfigSchema.parse({
-				name: "returns",
-				input: "close",
-				params: {},
-				output_prefix: "return",
-			});
-			expect(config.output_prefix).toBe("return");
+	test("accepts multiple inputs", () => {
+		const config = TransformConfigSchema.parse({
+			name: "zscore",
+			inputs: ["rsi_14", "atr_14"],
+			params: { lookback: 100 },
+			output_suffix: "_zscore",
 		});
+		expect(config.inputs).toEqual(["rsi_14", "atr_14"]);
+		expect(config.input).toBeUndefined();
+	});
 
-		test("accepts output_suffix", () => {
-			const config = TransformConfigSchema.parse({
+	test("rejects when neither input nor inputs provided", () => {
+		expect(() =>
+			TransformConfigSchema.parse({
+				name: "zscore",
+				params: { lookback: 100 },
+			}),
+		).toThrow();
+	});
+
+	test("rejects when both input and inputs provided", () => {
+		expect(() =>
+			TransformConfigSchema.parse({
+				name: "zscore",
+				input: "close",
+				inputs: ["rsi_14"],
+				params: {},
+			}),
+		).toThrow();
+	});
+});
+
+describe("TransformConfigSchema output naming", () => {
+	test("accepts output_prefix", () => {
+		const config = TransformConfigSchema.parse({
+			name: "returns",
+			input: "close",
+			params: {},
+			output_prefix: "return",
+		});
+		expect(config.output_prefix).toBe("return");
+	});
+
+	test("accepts output_suffix", () => {
+		const config = TransformConfigSchema.parse({
+			name: "zscore",
+			inputs: ["rsi"],
+			params: {},
+			output_suffix: "_zscore",
+		});
+		expect(config.output_suffix).toBe("_zscore");
+	});
+
+	test("allows both prefix and suffix", () => {
+		const config = TransformConfigSchema.parse({
+			name: "custom",
+			input: "value",
+			params: {},
+			output_prefix: "norm_",
+			output_suffix: "_scaled",
+		});
+		expect(config.output_prefix).toBe("norm_");
+		expect(config.output_suffix).toBe("_scaled");
+	});
+});
+
+describe("TransformConfigSchema params validation", () => {
+	test("accepts arbitrary params", () => {
+		const config = TransformConfigSchema.parse({
+			name: "custom_transform",
+			input: "value",
+			params: { custom_param: 42, another: "value" },
+		});
+		expect(config.params.custom_param).toBe(42);
+		expect(config.params.another).toBe("value");
+	});
+
+	test("requires params object", () => {
+		expect(() =>
+			TransformConfigSchema.parse({
 				name: "zscore",
 				inputs: ["rsi"],
-				params: {},
-				output_suffix: "_zscore",
-			});
-			expect(config.output_suffix).toBe("_zscore");
-		});
-
-		test("allows both prefix and suffix", () => {
-			const config = TransformConfigSchema.parse({
-				name: "custom",
-				input: "value",
-				params: {},
-				output_prefix: "norm_",
-				output_suffix: "_scaled",
-			});
-			expect(config.output_prefix).toBe("norm_");
-			expect(config.output_suffix).toBe("_scaled");
-		});
-	});
-
-	describe("params validation", () => {
-		test("accepts arbitrary params", () => {
-			const config = TransformConfigSchema.parse({
-				name: "custom_transform",
-				input: "value",
-				params: { custom_param: 42, another: "value" },
-			});
-			expect(config.params.custom_param).toBe(42);
-			expect(config.params.another).toBe("value");
-		});
-
-		test("requires params object", () => {
-			expect(() =>
-				TransformConfigSchema.parse({
-					name: "zscore",
-					inputs: ["rsi"],
-					// missing params
-				}),
-			).toThrow();
-		});
+				// missing params
+			}),
+		).toThrow();
 	});
 });
 

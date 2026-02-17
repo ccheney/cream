@@ -78,44 +78,88 @@ function groupDecisionsByCycle(decisions: Decision[]): CycleGroup[] {
 }
 
 export default function DecisionsPage() {
+	const {
+		actionFilter,
+		cycleGroups,
+		decisions,
+		highlightedCycleId,
+		isLoading,
+		setActionFilter,
+		setStatusFilter,
+		statusFilter,
+	} = useDecisionTimelineData();
+	const { collapseAll, expandAll, expandedCycles, setCycleRef, toggleCycle } = useCycleExpansion(
+		highlightedCycleId,
+		cycleGroups,
+	);
+
+	return (
+		<div className="space-y-6">
+			<DecisionsHeader
+				actionFilter={actionFilter}
+				statusFilter={statusFilter}
+				setActionFilter={setActionFilter}
+				setStatusFilter={setStatusFilter}
+			/>
+			<DecisionTimelinePanel
+				collapseAll={collapseAll}
+				cycleGroups={cycleGroups}
+				decisionsTotal={decisions?.total ?? 0}
+				expandAll={expandAll}
+				expandedCycles={expandedCycles}
+				isLoading={isLoading}
+				setCycleRef={setCycleRef}
+				toggleCycle={toggleCycle}
+			/>
+		</div>
+	);
+}
+
+function useDecisionTimelineData() {
 	const searchParams = useSearchParams();
 	const highlightedCycleId = searchParams.get("cycle");
-	const cycleRefs = useRef<Map<string, HTMLDivElement>>(new Map());
-	const hasScrolled = useRef(false);
-
 	const [actionFilter, setActionFilter] = useState<DecisionAction | "all">("all");
 	const [statusFilter, setStatusFilter] = useState<DecisionStatus | "all">("all");
-	const [expandedCycles, setExpandedCycles] = useState<Set<string>>(new Set());
-
 	const { data: decisions, isLoading } = useDecisions({
 		action: actionFilter === "all" ? undefined : actionFilter,
 		status: statusFilter === "all" ? undefined : statusFilter,
 		limit: 100,
 	});
+	const cycleGroups = useMemo(
+		() => (decisions?.items ? groupDecisionsByCycle(decisions.items) : []),
+		[decisions?.items],
+	);
 
-	const cycleGroups = useMemo(() => {
-		if (!decisions?.items) {
-			return [];
-		}
-		return groupDecisionsByCycle(decisions.items);
-	}, [decisions?.items]);
+	return {
+		actionFilter,
+		cycleGroups,
+		decisions,
+		highlightedCycleId,
+		isLoading,
+		setActionFilter,
+		setStatusFilter,
+		statusFilter,
+	};
+}
 
-	// Auto-expand and scroll to highlighted cycle from query param
+function useCycleExpansion(highlightedCycleId: string | null, cycleGroups: CycleGroup[]) {
+	const cycleRefs = useRef<Map<string, HTMLDivElement>>(new Map());
+	const hasScrolled = useRef(false);
+	const [expandedCycles, setExpandedCycles] = useState<Set<string>>(new Set());
+
 	useEffect(() => {
 		if (!highlightedCycleId || cycleGroups.length === 0 || hasScrolled.current) {
 			return;
 		}
 
-		// Expand the highlighted cycle
 		setExpandedCycles((prev) => new Set([...prev, highlightedCycleId]));
-
-		// Scroll to the cycle after a brief delay for DOM update
 		const timeoutId = setTimeout(() => {
 			const element = cycleRefs.current.get(highlightedCycleId);
-			if (element) {
-				element.scrollIntoView({ behavior: "smooth", block: "start" });
-				hasScrolled.current = true;
+			if (!element) {
+				return;
 			}
+			element.scrollIntoView({ behavior: "smooth", block: "start" });
+			hasScrolled.current = true;
 		}, 100);
 
 		return () => clearTimeout(timeoutId);
@@ -124,122 +168,208 @@ export default function DecisionsPage() {
 	const toggleCycle = (cycleId: string) => {
 		setExpandedCycles((prev) => {
 			const next = new Set(prev);
-			if (next.has(cycleId)) {
-				next.delete(cycleId);
-			} else {
-				next.add(cycleId);
-			}
+			next.has(cycleId) ? next.delete(cycleId) : next.add(cycleId);
 			return next;
 		});
 	};
 
-	const expandAll = () => {
-		setExpandedCycles(new Set(cycleGroups.map((g) => g.cycleId)));
-	};
-
-	const collapseAll = () => {
-		setExpandedCycles(new Set());
-	};
-
 	const setCycleRef = (cycleId: string, element: HTMLDivElement | null) => {
-		if (element) {
-			cycleRefs.current.set(cycleId, element);
-		} else {
-			cycleRefs.current.delete(cycleId);
-		}
+		element ? cycleRefs.current.set(cycleId, element) : cycleRefs.current.delete(cycleId);
 	};
+
+	return {
+		collapseAll: () => setExpandedCycles(new Set()),
+		expandAll: () => setExpandedCycles(new Set(cycleGroups.map((group) => group.cycleId))),
+		expandedCycles,
+		setCycleRef,
+		toggleCycle,
+	};
+}
+
+function DecisionsHeader({
+	actionFilter,
+	setActionFilter,
+	setStatusFilter,
+	statusFilter,
+}: {
+	actionFilter: DecisionAction | "all";
+	setActionFilter: (value: DecisionAction | "all") => void;
+	setStatusFilter: (value: DecisionStatus | "all") => void;
+	statusFilter: DecisionStatus | "all";
+}) {
+	return (
+		<div className="flex items-center justify-between">
+			<h1 className="text-2xl font-semibold text-stone-900 dark:text-night-50">Decisions</h1>
+			<div className="flex items-center gap-2">
+				<FilterSelect
+					value={actionFilter}
+					onChange={(value) => setActionFilter(value as DecisionAction | "all")}
+					options={["all", "BUY", "SELL", "HOLD", "CLOSE"]}
+					labels={["All Actions", "BUY", "SELL", "HOLD", "CLOSE"]}
+				/>
+				<FilterSelect
+					value={statusFilter}
+					onChange={(value) => setStatusFilter(value as DecisionStatus | "all")}
+					options={["all", "PENDING", "APPROVED", "EXECUTED", "REJECTED", "FAILED"]}
+					labels={["All Status", "Pending", "Approved", "Executed", "Rejected", "Failed"]}
+				/>
+			</div>
+		</div>
+	);
+}
+
+function FilterSelect({
+	labels,
+	onChange,
+	options,
+	value,
+}: {
+	labels: string[];
+	onChange: (value: string) => void;
+	options: string[];
+	value: string;
+}) {
+	return (
+		<select
+			value={value}
+			onChange={(event) => onChange(event.target.value)}
+			className="text-sm border border-cream-200 dark:border-night-700 rounded-md px-3 py-1.5 bg-white dark:bg-night-800 text-stone-900 dark:text-night-50"
+		>
+			{options.map((option, index) => (
+				<option key={option} value={option}>
+					{labels[index] ?? option}
+				</option>
+			))}
+		</select>
+	);
+}
+
+function DecisionTimelinePanel({
+	collapseAll,
+	cycleGroups,
+	decisionsTotal,
+	expandAll,
+	expandedCycles,
+	isLoading,
+	setCycleRef,
+	toggleCycle,
+}: {
+	collapseAll: () => void;
+	cycleGroups: CycleGroup[];
+	decisionsTotal: number;
+	expandAll: () => void;
+	expandedCycles: Set<string>;
+	isLoading: boolean;
+	setCycleRef: (cycleId: string, element: HTMLDivElement | null) => void;
+	toggleCycle: (cycleId: string) => void;
+}) {
+	return (
+		<div className="bg-white dark:bg-night-800 rounded-lg border border-cream-200 dark:border-night-700">
+			<TimelineHeader
+				cycleCount={cycleGroups.length}
+				decisionsTotal={decisionsTotal}
+				expandAll={expandAll}
+				collapseAll={collapseAll}
+			/>
+			<TimelineBody
+				cycleGroups={cycleGroups}
+				expandedCycles={expandedCycles}
+				isLoading={isLoading}
+				setCycleRef={setCycleRef}
+				toggleCycle={toggleCycle}
+			/>
+		</div>
+	);
+}
+
+function TimelineHeader({
+	collapseAll,
+	cycleCount,
+	decisionsTotal,
+	expandAll,
+}: {
+	collapseAll: () => void;
+	cycleCount: number;
+	decisionsTotal: number;
+	expandAll: () => void;
+}) {
+	return (
+		<div className="p-4 border-b border-cream-200 dark:border-night-700">
+			<div className="flex items-center justify-between">
+				<div className="flex items-center gap-4">
+					<h2 className="text-lg font-medium text-stone-900 dark:text-night-50">
+						Decision Timeline
+					</h2>
+					{cycleCount > 0 && (
+						<div className="flex items-center gap-2">
+							<button
+								type="button"
+								onClick={expandAll}
+								className="text-xs text-stone-500 dark:text-night-300 hover:text-stone-700 dark:hover:text-night-100"
+							>
+								Expand all
+							</button>
+							<span className="text-cream-300 dark:text-night-600">|</span>
+							<button
+								type="button"
+								onClick={collapseAll}
+								className="text-xs text-stone-500 dark:text-night-300 hover:text-stone-700 dark:hover:text-night-100"
+							>
+								Collapse all
+							</button>
+						</div>
+					)}
+				</div>
+				<span className="text-sm text-stone-500 dark:text-night-300">
+					{decisionsTotal} decisions in {cycleCount} cycles
+				</span>
+			</div>
+		</div>
+	);
+}
+
+function TimelineBody({
+	cycleGroups,
+	expandedCycles,
+	isLoading,
+	setCycleRef,
+	toggleCycle,
+}: {
+	cycleGroups: CycleGroup[];
+	expandedCycles: Set<string>;
+	isLoading: boolean;
+	setCycleRef: (cycleId: string, element: HTMLDivElement | null) => void;
+	toggleCycle: (cycleId: string) => void;
+}) {
+	if (isLoading) {
+		return (
+			<div className="p-4 space-y-4">
+				{[1, 2, 3, 4, 5].map((item) => (
+					<div key={item} className="h-24 bg-cream-100 dark:bg-night-700 rounded animate-pulse" />
+				))}
+			</div>
+		);
+	}
+
+	if (cycleGroups.length === 0) {
+		return (
+			<div className="p-8 text-center text-stone-400 dark:text-night-400">
+				No decisions to display
+			</div>
+		);
+	}
 
 	return (
-		<div className="space-y-6">
-			<div className="flex items-center justify-between">
-				<h1 className="text-2xl font-semibold text-stone-900 dark:text-night-50">Decisions</h1>
-				<div className="flex items-center gap-2">
-					<select
-						value={actionFilter}
-						onChange={(e) => setActionFilter(e.target.value as DecisionAction | "all")}
-						className="text-sm border border-cream-200 dark:border-night-700 rounded-md px-3 py-1.5 bg-white dark:bg-night-800 text-stone-900 dark:text-night-50"
-					>
-						<option value="all">All Actions</option>
-						<option value="BUY">BUY</option>
-						<option value="SELL">SELL</option>
-						<option value="HOLD">HOLD</option>
-						<option value="CLOSE">CLOSE</option>
-					</select>
-					<select
-						value={statusFilter}
-						onChange={(e) => setStatusFilter(e.target.value as DecisionStatus | "all")}
-						className="text-sm border border-cream-200 dark:border-night-700 rounded-md px-3 py-1.5 bg-white dark:bg-night-800 text-stone-900 dark:text-night-50"
-					>
-						<option value="all">All Status</option>
-						<option value="PENDING">Pending</option>
-						<option value="APPROVED">Approved</option>
-						<option value="EXECUTED">Executed</option>
-						<option value="REJECTED">Rejected</option>
-						<option value="FAILED">Failed</option>
-					</select>
-				</div>
-			</div>
-
-			{/* Decision Timeline */}
-			<div className="bg-white dark:bg-night-800 rounded-lg border border-cream-200 dark:border-night-700">
-				<div className="p-4 border-b border-cream-200 dark:border-night-700">
-					<div className="flex items-center justify-between">
-						<div className="flex items-center gap-4">
-							<h2 className="text-lg font-medium text-stone-900 dark:text-night-50">
-								Decision Timeline
-							</h2>
-							{cycleGroups.length > 0 && (
-								<div className="flex items-center gap-2">
-									<button
-										type="button"
-										onClick={expandAll}
-										className="text-xs text-stone-500 dark:text-night-300 hover:text-stone-700 dark:hover:text-night-100"
-									>
-										Expand all
-									</button>
-									<span className="text-cream-300 dark:text-night-600">|</span>
-									<button
-										type="button"
-										onClick={collapseAll}
-										className="text-xs text-stone-500 dark:text-night-300 hover:text-stone-700 dark:hover:text-night-100"
-									>
-										Collapse all
-									</button>
-								</div>
-							)}
-						</div>
-						{decisions && (
-							<span className="text-sm text-stone-500 dark:text-night-300">
-								{decisions.total} decisions in {cycleGroups.length} cycles
-							</span>
-						)}
-					</div>
-				</div>
-
-				{isLoading ? (
-					<div className="p-4 space-y-4">
-						{[1, 2, 3, 4, 5].map((i) => (
-							<div key={i} className="h-24 bg-cream-100 dark:bg-night-700 rounded animate-pulse" />
-						))}
-					</div>
-				) : cycleGroups.length > 0 ? (
-					<div className="divide-y divide-cream-100 dark:divide-night-700">
-						{cycleGroups.map((group) => (
-							<CycleGroupCard
-								key={group.cycleId}
-								ref={(el) => setCycleRef(group.cycleId, el)}
-								group={group}
-								isExpanded={expandedCycles.has(group.cycleId)}
-								onToggle={() => toggleCycle(group.cycleId)}
-							/>
-						))}
-					</div>
-				) : (
-					<div className="p-8 text-center text-stone-400 dark:text-night-400">
-						No decisions to display
-					</div>
-				)}
-			</div>
+		<div className="divide-y divide-cream-100 dark:divide-night-700">
+			{cycleGroups.map((group) => (
+				<CycleGroupCard
+					key={group.cycleId}
+					ref={(element) => setCycleRef(group.cycleId, element)}
+					group={group}
+					isExpanded={expandedCycles.has(group.cycleId)}
+					onToggle={() => toggleCycle(group.cycleId)}
+				/>
+			))}
 		</div>
 	);
 }

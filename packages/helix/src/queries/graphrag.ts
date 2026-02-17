@@ -324,6 +324,73 @@ function deduplicateCompanies(companies: CompanyResult[]): CompanyResult[] {
 	return Array.from(seen.values());
 }
 
+function transformSearchContent(
+	response: Pick<
+		SearchGraphContextResponse | SearchGraphContextByCompanyResponse,
+		"filing_chunks" | "transcript_chunks" | "news_items"
+	>,
+): Omit<GraphRAGSearchResult, "externalEvents" | "companies" | "executionTimeMs"> {
+	return {
+		filingChunks: (response.filing_chunks ?? []).map(transformFilingChunk),
+		transcriptChunks: (response.transcript_chunks ?? []).map(transformTranscriptChunk),
+		newsItems: (response.news_items ?? []).map(transformNewsItem),
+	};
+}
+
+function collectCompaniesBySource(
+	companyGroups: Array<{ companies: RawCompany[] | undefined; source: CompanyResult["source"] }>,
+): CompanyResult[] {
+	return companyGroups
+		.flatMap(({ companies, source }) =>
+			(companies ?? []).map((raw) => transformCompany(raw, source)),
+		)
+		.filter((company) => company.symbol.length > 0);
+}
+
+function buildUnifiedSearchResult(
+	response: SearchGraphContextResponse,
+	startTime: number,
+): GraphRAGSearchResult {
+	const content = transformSearchContent(response);
+	const externalEvents = (response.external_events ?? []).map(transformExternalEvent);
+	const companies = deduplicateCompanies(
+		collectCompaniesBySource([
+			{ companies: response.filing_companies, source: "filing" },
+			{ companies: response.transcript_companies, source: "transcript" },
+			{ companies: response.news_companies, source: "news" },
+		]),
+	);
+
+	return {
+		...content,
+		externalEvents,
+		companies,
+		executionTimeMs: performance.now() - startTime,
+	};
+}
+
+function buildCompanySearchResult(
+	response: SearchGraphContextByCompanyResponse,
+	startTime: number,
+): GraphRAGSearchResult {
+	const content = transformSearchContent(response);
+	const companies = deduplicateCompanies(
+		collectCompaniesBySource([
+			{ companies: response.company, source: "filing" },
+			{ companies: response.news_companies, source: "news" },
+			{ companies: response.related_companies, source: "related" },
+			{ companies: response.dependent_companies, source: "dependent" },
+		]),
+	);
+
+	return {
+		...content,
+		externalEvents: [],
+		companies,
+		executionTimeMs: performance.now() - startTime,
+	};
+}
+
 // ============================================
 // Main Functions
 // ============================================
@@ -361,11 +428,9 @@ export async function searchGraphContext(
 	options: GraphRAGSearchOptions,
 ): Promise<GraphRAGSearchResult> {
 	const { query, limit = 10, symbol } = options;
-
 	const startTime = performance.now();
 
 	if (symbol) {
-		// Use filtered search for specific company
 		const result = await client.query<SearchGraphContextByCompanyResponse>(
 			"SearchGraphContextByCompany",
 			{
@@ -374,84 +439,14 @@ export async function searchGraphContext(
 				limit,
 			},
 		);
-
-		const response = result.data;
-
-		// Transform results
-		const filingChunks = (response.filing_chunks ?? []).map(transformFilingChunk);
-		const transcriptChunks = (response.transcript_chunks ?? []).map(transformTranscriptChunk);
-		const newsItems = (response.news_items ?? []).map(transformNewsItem);
-
-		// Gather companies from various sources
-		const companies: CompanyResult[] = [];
-
-		// Primary company
-		for (const raw of response.company ?? []) {
-			companies.push(transformCompany(raw, "filing"));
-		}
-
-		// Companies from news mentions
-		for (const raw of response.news_companies ?? []) {
-			companies.push(transformCompany(raw, "news"));
-		}
-
-		// Related companies
-		for (const raw of response.related_companies ?? []) {
-			companies.push(transformCompany(raw, "related"));
-		}
-
-		// Dependent companies
-		for (const raw of response.dependent_companies ?? []) {
-			companies.push(transformCompany(raw, "dependent"));
-		}
-
-		return {
-			filingChunks,
-			transcriptChunks,
-			newsItems,
-			externalEvents: [], // Not returned by company-specific query
-			companies: deduplicateCompanies(companies),
-			executionTimeMs: performance.now() - startTime,
-		};
+		return buildCompanySearchResult(result.data, startTime);
 	}
 
-	// Use unified search across all types
 	const result = await client.query<SearchGraphContextResponse>("SearchGraphContext", {
 		query,
 		limit,
 	});
-
-	const response = result.data;
-
-	// Transform results
-	const filingChunks = (response.filing_chunks ?? []).map(transformFilingChunk);
-	const transcriptChunks = (response.transcript_chunks ?? []).map(transformTranscriptChunk);
-	const newsItems = (response.news_items ?? []).map(transformNewsItem);
-	const externalEvents = (response.external_events ?? []).map(transformExternalEvent);
-
-	// Gather companies from graph traversal
-	const companies: CompanyResult[] = [];
-
-	for (const raw of response.filing_companies ?? []) {
-		companies.push(transformCompany(raw, "filing"));
-	}
-
-	for (const raw of response.transcript_companies ?? []) {
-		companies.push(transformCompany(raw, "transcript"));
-	}
-
-	for (const raw of response.news_companies ?? []) {
-		companies.push(transformCompany(raw, "news"));
-	}
-
-	return {
-		filingChunks,
-		transcriptChunks,
-		newsItems,
-		externalEvents,
-		companies: deduplicateCompanies(companies),
-		executionTimeMs: performance.now() - startTime,
-	};
+	return buildUnifiedSearchResult(result.data, startTime);
 }
 
 /**

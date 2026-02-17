@@ -58,7 +58,7 @@ export interface BrowserLoggerOptions {
 	/** Flush interval in ms (default: 5000) */
 	flushInterval?: number;
 	/** Error callback for flush failures (default: silent) */
-	onFlushError?: (error: Error, failedLogs: Array<Record<string, unknown>>) => void;
+	onFlushError?: (error: Error, failedLogs: Record<string, unknown>[]) => void;
 }
 
 export type Logger = PinoLogger;

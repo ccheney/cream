@@ -122,6 +122,24 @@ export const DEFAULT_RRF_K = 60;
  */
 export const DEFAULT_TOP_K = 10;
 
+type SourceType = "vector" | "graph";
+
+type AggregatedResult<T> = {
+	node: T;
+	nodeId: string;
+	rrfScore: number;
+	sources: SourceType[];
+	ranks: { vector?: number; graph?: number };
+	originalScores: { vector?: number; graph?: number };
+};
+
+type MultiMethodAggregate<T> = {
+	node: T;
+	nodeId: string;
+	rrfScore: number;
+	sourcesByMethod: Record<string, number>;
+};
+
 // ============================================
 // Core RRF Functions
 // ============================================
@@ -152,7 +170,7 @@ export function calculateRRFScore(rank: number, k: number = DEFAULT_RRF_K): numb
  */
 export function assignRanks<T>(
 	results: RetrievalResult<T>[],
-	source: "vector" | "graph",
+	source: SourceType,
 ): RankedResult<T>[] {
 	// Sort by score descending
 	const sorted = results.toSorted((a, b) => b.score - a.score);
@@ -181,6 +199,55 @@ export function assignRanks<T>(
 	});
 }
 
+function createAggregateMap<T>(): Map<string, AggregatedResult<T>> {
+	return new Map<string, AggregatedResult<T>>();
+}
+
+function insertOrMergeRankedResult<T>(
+	resultMap: Map<string, AggregatedResult<T>>,
+	result: RankedResult<T>,
+	k: number,
+): void {
+	const score = calculateRRFScore(result.rank, k);
+	const existing = resultMap.get(result.nodeId);
+	if (!existing) {
+		resultMap.set(result.nodeId, {
+			node: result.node,
+			nodeId: result.nodeId,
+			rrfScore: score,
+			sources: [result.source],
+			ranks: { [result.source]: result.rank },
+			originalScores: { [result.source]: result.score },
+		});
+		return;
+	}
+	existing.rrfScore += score;
+	existing.sources.push(result.source);
+	existing.ranks[result.source] = result.rank;
+	existing.originalScores[result.source] = result.score;
+}
+
+function mergeRankedResults<T>(
+	resultMap: Map<string, AggregatedResult<T>>,
+	results: RankedResult<T>[],
+	k: number,
+): void {
+	for (const result of results) {
+		insertOrMergeRankedResult(resultMap, result, k);
+	}
+}
+
+function buildTopResults<T>(
+	resultMap: Map<string, AggregatedResult<T>>,
+	minScore: number,
+	topK: number,
+): RRFResult<T>[] {
+	return Array.from(resultMap.values())
+		.filter((result) => result.rrfScore >= minScore)
+		.sort((a, b) => b.rrfScore - a.rrfScore)
+		.slice(0, topK);
+}
+
 /**
  * Fuse vector search and graph traversal results using RRF
  *
@@ -197,68 +264,84 @@ export function fuseWithRRF<T>(
 	options: RRFOptions = {},
 ): RRFResult<T>[] {
 	const { k = DEFAULT_RRF_K, topK = DEFAULT_TOP_K, minScore = 0 } = options;
+	const resultMap = createAggregateMap<T>();
+	mergeRankedResults(resultMap, assignRanks(vectorResults, "vector"), k);
+	mergeRankedResults(resultMap, assignRanks(graphResults, "graph"), k);
+	return buildTopResults(resultMap, minScore, topK);
+}
 
-	// Assign ranks to each result set
-	const rankedVector = assignRanks(vectorResults, "vector");
-	const rankedGraph = assignRanks(graphResults, "graph");
-
-	// Build map of nodeId -> aggregated result
-	const resultMap = new Map<
-		string,
-		{
-			node: T;
-			nodeId: string;
-			rrfScore: number;
-			sources: ("vector" | "graph")[];
-			ranks: { vector?: number; graph?: number };
-			originalScores: { vector?: number; graph?: number };
-		}
-	>();
-
-	// Process vector results
-	for (const result of rankedVector) {
-		const score = calculateRRFScore(result.rank, k);
-		resultMap.set(result.nodeId, {
-			node: result.node,
-			nodeId: result.nodeId,
-			rrfScore: score,
-			sources: ["vector"],
-			ranks: { vector: result.rank },
-			originalScores: { vector: result.score },
-		});
+function updateRankTracking(
+	previousScore: number | null,
+	currentRank: number,
+	skipCount: number,
+	score: number,
+): { rank: number; skips: number } {
+	if (previousScore === null) {
+		return { rank: currentRank, skips: skipCount };
 	}
-
-	// Process graph results (add to existing or create new)
-	for (const result of rankedGraph) {
-		const score = calculateRRFScore(result.rank, k);
-		const existing = resultMap.get(result.nodeId);
-
-		if (existing) {
-			// Node appears in both result sets - add scores
-			existing.rrfScore += score;
-			existing.sources.push("graph");
-			existing.ranks.graph = result.rank;
-			existing.originalScores.graph = result.score;
-		} else {
-			// New node from graph only
-			resultMap.set(result.nodeId, {
-				node: result.node,
-				nodeId: result.nodeId,
-				rrfScore: score,
-				sources: ["graph"],
-				ranks: { graph: result.rank },
-				originalScores: { graph: result.score },
-			});
-		}
+	if (score < previousScore) {
+		return { rank: currentRank + 1 + skipCount, skips: 0 };
 	}
+	if (score === previousScore) {
+		return { rank: currentRank, skips: skipCount + 1 };
+	}
+	return { rank: currentRank, skips: skipCount };
+}
 
-	// Convert to array and sort by RRF score descending
-	const fused = Array.from(resultMap.values())
-		.filter((r) => r.rrfScore >= minScore)
-		.sort((a, b) => b.rrfScore - a.rrfScore);
+function mergeMultiMethodResult<T>(
+	resultMap: Map<string, MultiMethodAggregate<T>>,
+	method: string,
+	result: RetrievalResult<T>,
+	rank: number,
+	k: number,
+): void {
+	const score = calculateRRFScore(rank, k);
+	const existing = resultMap.get(result.nodeId);
+	if (existing) {
+		existing.rrfScore += score;
+		existing.sourcesByMethod[method] = rank;
+		return;
+	}
+	resultMap.set(result.nodeId, {
+		node: result.node,
+		nodeId: result.nodeId,
+		rrfScore: score,
+		sourcesByMethod: { [method]: rank },
+	});
+}
 
-	// Return top-K results
-	return fused.slice(0, topK);
+function processResultSet<T>(
+	resultMap: Map<string, MultiMethodAggregate<T>>,
+	method: string,
+	results: RetrievalResult<T>[],
+	k: number,
+): void {
+	let currentRank = 1;
+	let previousScore: number | null = null;
+	let skipCount = 0;
+	for (const result of results.toSorted((a, b) => b.score - a.score)) {
+		const tracking = updateRankTracking(previousScore, currentRank, skipCount, result.score);
+		currentRank = tracking.rank;
+		skipCount = tracking.skips;
+		previousScore = result.score;
+		mergeMultiMethodResult(resultMap, method, result, currentRank, k);
+	}
+}
+
+function mapMultiMethodResult<T>(result: MultiMethodAggregate<T>): RRFResult<T> & {
+	sourcesByMethod: Record<string, number>;
+} {
+	return {
+		node: result.node,
+		nodeId: result.nodeId,
+		rrfScore: result.rrfScore,
+		sources: Object.keys(result.sourcesByMethod) as SourceType[],
+		ranks: Object.fromEntries(
+			Object.entries(result.sourcesByMethod).map(([method, rank]) => [method, rank]),
+		) as { vector?: number; graph?: number },
+		originalScores: {},
+		sourcesByMethod: result.sourcesByMethod,
+	};
 }
 
 /**
@@ -275,71 +358,15 @@ export function fuseMultipleWithRRF<T>(
 	options: RRFOptions = {},
 ): (RRFResult<T> & { sourcesByMethod: Record<string, number> })[] {
 	const { k = DEFAULT_RRF_K, topK = DEFAULT_TOP_K, minScore = 0 } = options;
-
-	// Build map of nodeId -> aggregated result
-	const resultMap = new Map<
-		string,
-		{
-			node: T;
-			nodeId: string;
-			rrfScore: number;
-			sourcesByMethod: Record<string, number>;
-		}
-	>();
-
-	// Process each result set
+	const resultMap = new Map<string, MultiMethodAggregate<T>>();
 	for (const { method, results } of resultSets) {
-		// Sort by score descending and assign ranks
-		const sorted = results.toSorted((a, b) => b.score - a.score);
-
-		let currentRank = 1;
-		let previousScore: number | null = null;
-		let skipCount = 0;
-
-		for (const result of sorted) {
-			// Handle ties
-			if (previousScore !== null && result.score < previousScore) {
-				currentRank += 1 + skipCount;
-				skipCount = 0;
-			} else if (previousScore !== null && result.score === previousScore) {
-				skipCount++;
-			}
-			previousScore = result.score;
-
-			const score = calculateRRFScore(currentRank, k);
-			const existing = resultMap.get(result.nodeId);
-
-			if (existing) {
-				existing.rrfScore += score;
-				existing.sourcesByMethod[method] = currentRank;
-			} else {
-				resultMap.set(result.nodeId, {
-					node: result.node,
-					nodeId: result.nodeId,
-					rrfScore: score,
-					sourcesByMethod: { [method]: currentRank },
-				});
-			}
-		}
+		processResultSet(resultMap, method, results, k);
 	}
-
-	// Convert, filter, and sort
-	const fused = Array.from(resultMap.values())
+	return Array.from(resultMap.values())
 		.filter((r) => r.rrfScore >= minScore)
-		.sort((a, b) => b.rrfScore - a.rrfScore);
-
-	// Map to expected output format
-	return fused.slice(0, topK).map((r) => ({
-		node: r.node,
-		nodeId: r.nodeId,
-		rrfScore: r.rrfScore,
-		sources: Object.keys(r.sourcesByMethod) as ("vector" | "graph")[],
-		ranks: Object.fromEntries(
-			Object.entries(r.sourcesByMethod).map(([method, rank]) => [method, rank]),
-		) as { vector?: number; graph?: number },
-		originalScores: {},
-		sourcesByMethod: r.sourcesByMethod,
-	}));
+		.sort((a, b) => b.rrfScore - a.rrfScore)
+		.slice(0, topK)
+		.map(mapMultiMethodResult);
 }
 
 // ============================================

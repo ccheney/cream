@@ -6,6 +6,8 @@
  * @see docs/plans/ui/26-data-viz.md
  */
 
+import { LRUCache, memoize, processBatched, throttle } from "./chart-optimizations.utils";
+
 // ============================================
 // Types
 // ============================================
@@ -48,6 +50,86 @@ export interface DownsampleOptions {
 	preserveExtremes?: boolean;
 }
 
+function getBoundaryPoints(data: Point[]): [Point, Point] | null {
+	const first = data[0];
+	const last = data.at(-1);
+	if (!first || !last) {
+		return null;
+	}
+	return [first, last];
+}
+
+function getBucketRange(
+	bucketIndex: number,
+	bucketSize: number,
+	dataLength: number,
+): { start: number; end: number } {
+	const start = Math.floor((bucketIndex + 1) * bucketSize) + 1;
+	const end = Math.min(Math.floor((bucketIndex + 2) * bucketSize) + 1, dataLength - 1);
+	return { start, end };
+}
+
+function getNextBucketAverage(
+	data: Point[],
+	bucketIndex: number,
+	bucketSize: number,
+	currentBucketEnd: number,
+): Point {
+	const nextBucketStart = currentBucketEnd;
+	const nextBucketEnd = Math.min(Math.floor((bucketIndex + 3) * bucketSize) + 1, data.length);
+
+	let avgX = 0;
+	let avgY = 0;
+	for (let i = nextBucketStart; i < nextBucketEnd; i++) {
+		const point = data[i];
+		if (!point) {
+			continue;
+		}
+		avgX += point.x;
+		avgY += point.y;
+	}
+
+	const pointCount = nextBucketEnd - nextBucketStart || 1;
+	return { x: avgX / pointCount, y: avgY / pointCount };
+}
+
+function getTriangleArea(pointA: Point, pointB: Point, average: Point): number {
+	return Math.abs(
+		(pointA.x - average.x) * (pointB.y - pointA.y) - (pointA.x - pointB.x) * (average.y - pointA.y),
+	);
+}
+
+function findLargestTrianglePointIndex(
+	data: Point[],
+	anchorIndex: number,
+	bucketStart: number,
+	bucketEnd: number,
+	average: Point,
+): number {
+	const pointA = data[anchorIndex];
+	if (!pointA) {
+		return bucketStart;
+	}
+
+	let maxArea = -1;
+	let maxAreaIndex = bucketStart;
+
+	for (let i = bucketStart; i < bucketEnd; i++) {
+		const point = data[i];
+		if (!point) {
+			continue;
+		}
+		const area = getTriangleArea(pointA, point, average);
+		if (area <= maxArea) {
+			continue;
+		}
+		maxArea = area;
+		maxAreaIndex = i;
+	}
+
+	return maxAreaIndex;
+}
+
 // ============================================
 // LTTB Algorithm (Largest Triangle Three Buckets)
 // ============================================
@@ -68,92 +150,36 @@ export interface DownsampleOptions {
  * ```
  */
 export function downsampleLTTB(data: Point[], options: DownsampleOptions): Point[] {
-	const { threshold, preserveExtremes: _preserveExtremes = true } = options;
+	const { threshold } = options;
 
-	// Return data as-is if within threshold
 	if (data.length <= threshold) {
 		return data;
 	}
 
 	if (threshold <= 2) {
-		// Return first and last point
-		const first = data[0];
-		const last = data.at(-1);
-		if (!first || !last) {
-			return data;
-		}
-		return [first, last];
+		return getBoundaryPoints(data) ?? data;
 	}
 
-	const sampled: Point[] = [];
-
-	// Bucket size
-	const bucketSize = (data.length - 2) / (threshold - 2);
-
-	// Always add first point
 	const firstPoint = data[0];
 	if (!firstPoint) {
 		return data;
 	}
-	sampled.push(firstPoint);
+	const sampled: Point[] = [firstPoint];
+	const bucketSize = (data.length - 2) / (threshold - 2);
+	let previousIndex = 0;
 
-	let a = 0; // Previous selected point index
-
-	for (let i = 0; i < threshold - 2; i++) {
-		// Calculate bucket boundaries
-		const bucketStart = Math.floor((i + 1) * bucketSize) + 1;
-		const bucketEnd = Math.min(Math.floor((i + 2) * bucketSize) + 1, data.length - 1);
-
-		// Calculate average point in next bucket (for triangle area calculation)
-		let avgX = 0;
-		let avgY = 0;
-		const nextBucketStart = bucketEnd;
-		const nextBucketEnd = Math.min(Math.floor((i + 3) * bucketSize) + 1, data.length);
-
-		for (let j = nextBucketStart; j < nextBucketEnd; j++) {
-			const point = data[j];
-			if (point) {
-				avgX += point.x;
-				avgY += point.y;
-			}
-		}
-		const avgCount = nextBucketEnd - nextBucketStart;
-		avgX /= avgCount || 1;
-		avgY /= avgCount || 1;
-
-		// Find point in current bucket with largest triangle area
-		let maxArea = -1;
-		let maxAreaPoint = bucketStart;
-
-		const pointA = data[a];
-		if (!pointA) {
+	for (let bucketIndex = 0; bucketIndex < threshold - 2; bucketIndex++) {
+		const { start, end } = getBucketRange(bucketIndex, bucketSize, data.length);
+		const average = getNextBucketAverage(data, bucketIndex, bucketSize, end);
+		const maxAreaIndex = findLargestTrianglePointIndex(data, previousIndex, start, end, average);
+		const selectedPoint = data[maxAreaIndex];
+		if (!selectedPoint) {
 			continue;
 		}
-
-		for (let j = bucketStart; j < bucketEnd; j++) {
-			const pointJ = data[j];
-			if (!pointJ) {
-				continue;
-			}
-			// Calculate triangle area using cross product
-			const area = Math.abs(
-				(pointA.x - avgX) * (pointJ.y - pointA.y) - (pointA.x - pointJ.x) * (avgY - pointA.y),
-			);
-
-			if (area > maxArea) {
-				maxArea = area;
-				maxAreaPoint = j;
-			}
-		}
-
-		const selectedPoint = data[maxAreaPoint];
-		if (selectedPoint) {
-			sampled.push(selectedPoint);
-			a = maxAreaPoint;
-		}
+		sampled.push(selectedPoint);
+		previousIndex = maxAreaIndex;
 	}
 
-	// Always add last point
 	const lastPoint = data.at(-1);
 	if (lastPoint) {
 		sampled.push(lastPoint);
@@ -397,138 +423,6 @@ export function calculateVisibleRange(
 	const endIndex = Math.min(startIndex + visibleItems, totalItems);
 
 	return { startIndex, endIndex };
-}
-
-// ============================================
-// Memoization Utilities
-// ============================================
-
-/**
- * Simple cache with LRU eviction.
- */
-export class LRUCache<K, V> {
-	private cache = new Map<K, V>();
-	private maxSize: number;
-
-	constructor(maxSize = 100) {
-		this.maxSize = maxSize;
-	}
-
-	get(key: K): V | undefined {
-		const value = this.cache.get(key);
-		if (value === undefined) {
-			return undefined;
-		}
-
-		// Move to end (most recently used)
-		this.cache.delete(key);
-		this.cache.set(key, value);
-		return value;
-	}
-
-	set(key: K, value: V): void {
-		if (this.cache.has(key)) {
-			this.cache.delete(key);
-		} else if (this.cache.size >= this.maxSize) {
-			// Evict oldest (first item)
-			const firstKey = this.cache.keys().next().value;
-			if (firstKey !== undefined) {
-				this.cache.delete(firstKey);
-			}
-		}
-		this.cache.set(key, value);
-	}
-
-	has(key: K): boolean {
-		return this.cache.has(key);
-	}
-
-	clear(): void {
-		this.cache.clear();
-	}
-
-	get size(): number {
-		return this.cache.size;
-	}
-}
-
-/**
- * Memoize a function with a custom cache key.
- */
-export function memoize<Args extends unknown[], Result>(
-	fn: (...args: Args) => Result,
-	keyFn?: (...args: Args) => string,
-	maxSize = 100,
-): (...args: Args) => Result {
-	const cache = new LRUCache<string, Result>(maxSize);
-
-	return (...args: Args): Result => {
-		const key = keyFn ? keyFn(...args) : JSON.stringify(args);
-
-		const cached = cache.get(key);
-		if (cached !== undefined) {
-			return cached;
-		}
-
-		const result = fn(...args);
-		cache.set(key, result);
-		return result;
-	};
-}
-
-// ============================================
-// Batch Processing
-// ============================================
-
-/**
- * Process data in batches to avoid blocking the main thread.
- */
-export async function processBatched<T, R>(
-	data: T[],
-	processor: (item: T) => R,
-	batchSize = 1000,
-): Promise<R[]> {
-	const results: R[] = [];
-
-	for (let i = 0; i < data.length; i += batchSize) {
-		const batch = data.slice(i, i + batchSize);
-		const batchResults = batch.map(processor);
-		results.push(...batchResults);
-
-		// Yield to main thread
-		if (i + batchSize < data.length) {
-			await new Promise((resolve) => setTimeout(resolve, 0));
-		}
-	}
-
-	return results;
-}
-
-/**
- * Throttle function calls.
- */
-export function throttle<T extends (...args: unknown[]) => unknown>(
-	fn: T,
-	limit: number,
-): (...args: Parameters<T>) => void {
-	let inThrottle = false;
-	let lastArgs: Parameters<T> | null = null;
-
-	return (...args: Parameters<T>) => {
-		if (!inThrottle) {
-			fn(...args);
-			inThrottle = true;
-			setTimeout(() => {
-				inThrottle = false;
-				if (lastArgs) {
-					fn(...lastArgs);
-					lastArgs = null;
-				}
-			}, limit);
-		} else {
-			lastArgs = args;
-		}
-	};
 }
 
 // ============================================

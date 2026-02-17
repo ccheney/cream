@@ -143,7 +143,7 @@ describe("Connection Lifecycle", () => {
 // Message Handling Tests
 // ============================================
 
-describe("handleMessage", () => {
+describe("handleMessage - subscriptions", () => {
 	it("handles subscribe message", () => {
 		const ws = createMockWebSocket();
 		handleOpen(ws as unknown as WebSocketWithMetadata);
@@ -190,7 +190,9 @@ describe("handleMessage", () => {
 		expect(ws.data.symbols.has("MSFT")).toBe(true); // Uppercased
 		expect(ws.data.channels.has("quotes")).toBe(true); // Auto-subscribed
 	});
+});
 
+describe("handleMessage - ping and validation", () => {
 	it("handles ping message", () => {
 		const ws = createMockWebSocket();
 		handleOpen(ws as unknown as WebSocketWithMetadata);
@@ -228,7 +230,9 @@ describe("handleMessage", () => {
 		const message = JSON.parse(requireArrayItem(ws.sentMessages, 0, "sent message"));
 		expect(message.type).toBe("error");
 	});
+});
 
+describe("handleMessage - errors and state updates", () => {
 	it("handles invalid channel name", () => {
 		const ws = createMockWebSocket();
 		handleOpen(ws as unknown as WebSocketWithMetadata);
@@ -260,8 +264,8 @@ describe("handleMessage", () => {
 // Broadcasting Tests
 // ============================================
 
-describe("Broadcasting", () => {
-	it("broadcast sends to subscribed connections only", () => {
+describe("broadcast", () => {
+	it("sends to subscribed connections only", () => {
 		const ws1 = createMockWebSocket();
 		ws1.data.channels.add("orders");
 		handleOpen(ws1 as unknown as WebSocketWithMetadata);
@@ -292,8 +296,10 @@ describe("Broadcasting", () => {
 		expect(ws1.sentMessages).toHaveLength(1);
 		expect(ws2.sentMessages).toHaveLength(0);
 	});
+});
 
-	it("broadcastQuote sends to symbol subscribers only", () => {
+describe("broadcastQuote", () => {
+	it("sends to symbol subscribers only", () => {
 		const ws1 = createMockWebSocket();
 		ws1.data.channels.add("quotes");
 		ws1.data.symbols.add("AAPL");
@@ -323,8 +329,10 @@ describe("Broadcasting", () => {
 		expect(ws1.sentMessages).toHaveLength(1);
 		expect(ws2.sentMessages).toHaveLength(0);
 	});
+});
 
-	it("broadcastAll sends to all connections", () => {
+describe("broadcastAll", () => {
+	it("sends to all connections", () => {
 		const ws1 = createMockWebSocket();
 		handleOpen(ws1 as unknown as WebSocketWithMetadata);
 

@@ -36,31 +36,22 @@ export interface EquityDataPoint {
 export interface EquityCurveProps {
 	/** Equity time series data */
 	data: EquityDataPoint[];
-
 	/** Chart width (default: 100%) */
 	width?: number | string;
-
 	/** Chart height in pixels (default: 300) */
 	height?: number;
-
 	/** Show grid lines (default: true) */
 	showGrid?: boolean;
-
 	/** Show tooltip (default: true) */
 	showTooltip?: boolean;
-
 	/** Show X axis (default: true) */
 	showXAxis?: boolean;
-
 	/** Show Y axis (default: true) */
 	showYAxis?: boolean;
-
 	/** Format value for display */
 	valueFormatter?: (value: number) => string;
-
 	/** Format time for display */
 	timeFormatter?: (time: string | number) => string;
-
 	/** Additional CSS class */
 	className?: string;
 }
@@ -94,8 +85,27 @@ function defaultTimeFormatter(time: string | number): string {
 	return time;
 }
 
+function calculateYDomain(data: EquityDataPoint[]): [number, number] {
+	if (data.length === 0) {
+		return [0, 100];
+	}
+
+	const values = data.map((d) => d.value);
+	const min = Math.min(...values);
+	const max = Math.max(...values);
+	const padding = (max - min) * 0.1 || max * 0.1;
+	return [min - padding, max + padding];
+}
+
+function chartDimensionStyles(width: number | string, height: number) {
+	return {
+		widthStyle: typeof width === "number" ? `${width}px` : width,
+		heightStyle: `${height}px`,
+	};
+}
+
 // ============================================
-// Custom Tooltip
+// Tooltip
 // ============================================
 
 interface CustomTooltipPayload {
@@ -148,67 +158,64 @@ function CustomTooltip({ active, payload, valueFormatter, timeFormatter }: Custo
 }
 
 // ============================================
-// Component
+// Sub-components
 // ============================================
 
-/**
- * Equity curve area chart with gradient fill.
- */
-function EquityCurveComponent({
-	data,
-	width = "100%",
-	height = 300,
-	showGrid = true,
-	showTooltip = true,
-	showXAxis = true,
-	showYAxis = true,
-	valueFormatter = defaultValueFormatter,
-	timeFormatter = defaultTimeFormatter,
+function EmptyState({
 	className,
-}: EquityCurveProps) {
-	// Generate unique gradient ID
-	const gradientId = useMemo(() => `equityGradient-${Math.random().toString(36).slice(2, 9)}`, []);
-
-	// Calculate Y axis domain with padding
-	const yDomain = useMemo(() => {
-		if (data.length === 0) {
-			return [0, 100];
-		}
-		const values = data.map((d) => d.value);
-		const min = Math.min(...values);
-		const max = Math.max(...values);
-		const padding = (max - min) * 0.1 || max * 0.1;
-		return [min - padding, max + padding];
-	}, [data]);
-
-	if (data.length === 0) {
-		return (
-			<div
-				className={className}
-				style={{
-					width: typeof width === "number" ? `${width}px` : width,
-					height: `${height}px`,
-					display: "flex",
-					alignItems: "center",
-					justifyContent: "center",
-					color: CHART_COLORS.text,
-					fontFamily: "Geist Mono, monospace",
-					fontSize: 12,
-				}}
-			>
-				No data
-			</div>
-		);
-	}
+	width,
+	height,
+}: {
+	className?: string;
+	width: number | string;
+	height: number;
+}) {
+	const { widthStyle, heightStyle } = chartDimensionStyles(width, height);
 
 	return (
 		<div
 			className={className}
 			style={{
-				width: typeof width === "number" ? `${width}px` : width,
-				height: `${height}px`,
+				width: widthStyle,
+				height: heightStyle,
+				display: "flex",
+				alignItems: "center",
+				justifyContent: "center",
+				color: CHART_COLORS.text,
+				fontFamily: "Geist Mono, monospace",
+				fontSize: 12,
 			}}
 		>
+			No data
+		</div>
+	);
+}
+
+interface EquityAreaChartProps {
+	data: EquityDataPoint[];
+	showGrid: boolean;
+	showXAxis: boolean;
+	showYAxis: boolean;
+	showTooltip: boolean;
+	yDomain: [number, number];
+	valueFormatter: (value: number) => string;
+	timeFormatter: (time: string | number) => string;
+}
+
+function EquityAreaChart({
+	data,
+	showGrid,
+	showXAxis,
+	showYAxis,
+	showTooltip,
+	yDomain,
+	valueFormatter,
+	timeFormatter,
+}: EquityAreaChartProps) {
+	const gradientId = useMemo(() => `equityGradient-${Math.random().toString(36).slice(2, 9)}`, []);
+
+	return (
+		<div style={{ width: "100%", height: "100%" }}>
 			<ResponsiveContainer width="100%" height="100%">
 				<AreaChart data={data} margin={{ top: 10, right: 10, left: 10, bottom: 0 }}>
 					<defs>
@@ -263,6 +270,45 @@ function EquityCurveComponent({
 					/>
 				</AreaChart>
 			</ResponsiveContainer>
+		</div>
+	);
+}
+
+/**
+ * Equity curve area chart with gradient fill.
+ */
+function EquityCurveComponent({
+	data,
+	width = "100%",
+	height = 300,
+	showGrid = true,
+	showTooltip = true,
+	showXAxis = true,
+	showYAxis = true,
+	valueFormatter = defaultValueFormatter,
+	timeFormatter = defaultTimeFormatter,
+	className,
+}: EquityCurveProps) {
+	const yDomain = useMemo(() => calculateYDomain(data), [data]);
+
+	if (data.length === 0) {
+		return <EmptyState className={className} width={width} height={height} />;
+	}
+
+	const { widthStyle, heightStyle } = chartDimensionStyles(width, height);
+
+	return (
+		<div className={className} style={{ width: widthStyle, height: heightStyle }}>
+			<EquityAreaChart
+				data={data}
+				showGrid={showGrid}
+				showXAxis={showXAxis}
+				showYAxis={showYAxis}
+				showTooltip={showTooltip}
+				yDomain={yDomain}
+				valueFormatter={valueFormatter}
+				timeFormatter={timeFormatter}
+			/>
 		</div>
 	);
 }

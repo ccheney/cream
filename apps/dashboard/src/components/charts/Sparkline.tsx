@@ -39,6 +39,8 @@ export interface SparklineProps {
 	autoColor?: boolean;
 }
 
+type SparklinePoint = [number, number];
+
 function getColor(color: SparklineColor | string): string {
 	switch (color) {
 		case "profit":
@@ -52,6 +54,101 @@ function getColor(color: SparklineColor | string): string {
 		default:
 			return color;
 	}
+}
+
+function getDataRange(data: number[]) {
+	if (data.length === 0) {
+		return null;
+	}
+
+	const min = Math.min(...data);
+	const max = Math.max(...data);
+	return { min, range: Math.max(max - min, 1) };
+}
+
+function getLastPoint(
+	data: number[],
+	width: number,
+	height: number,
+	padding = 2,
+): { x: number; y: number } | null {
+	if (data.length === 0) {
+		return null;
+	}
+
+	const bounds = getDataRange(data);
+	if (!bounds) {
+		return null;
+	}
+
+	const lastValue = data.at(-1) ?? 0;
+	const x = width - padding;
+	const y = height - padding - ((lastValue - bounds.min) / bounds.range) * (height - padding * 2);
+
+	return { x, y };
+}
+
+function buildSparklinePoints(
+	data: number[],
+	width: number,
+	height: number,
+	padding = 2,
+): SparklinePoint[] {
+	const bounds = getDataRange(data);
+	if (!bounds) {
+		return [];
+	}
+
+	const xSpan = width - padding * 2;
+	const ySpan = height - padding * 2;
+
+	return data.map((value, index) => {
+		const x = (index / (data.length - 1)) * xSpan + padding;
+		const y = height - padding - ((value - bounds.min) / bounds.range) * ySpan;
+		return [x, y];
+	});
+}
+
+function buildCurveSegment(points: SparklinePoint[], index: number): string {
+	const current = points.at(index) ?? points[0];
+	const next = points.at(index + 1) ?? points.at(-1);
+	const previous = points.at(index - 1) ?? points[0];
+	const nextNext = points.at(index + 2) ?? points.at(-1);
+
+	const controlPoint1X = current[0] + (next[0] - previous[0]) / 6;
+	const controlPoint1Y = current[1] + (next[1] - previous[1]) / 6;
+	const controlPoint2X = next[0] - (nextNext[0] - current[0]) / 6;
+	const controlPoint2Y = next[1] - (nextNext[1] - current[1]) / 6;
+
+	return ` C ${controlPoint1X} ${controlPoint1Y}, ${controlPoint2X} ${controlPoint2Y}, ${next[0]} ${next[1]}`;
+}
+
+function buildPath(points: SparklinePoint[]): string {
+	if (points.length === 0) {
+		return "";
+	}
+	if (points.length === 1) {
+		const singlePoint = points[0];
+		if (!singlePoint) {
+			return "";
+		}
+
+		const [x, y] = singlePoint;
+		return `M 0 ${y} L ${x * 2} ${y}`;
+	}
+
+	const firstPoint = points[0];
+	if (!firstPoint) {
+		return "";
+	}
+
+	const [startX, startY] = firstPoint;
+	const segments = points
+		.slice(0, points.length - 1)
+		.map((_, index) => buildCurveSegment(points, index))
+		.join("");
+
+	return `M ${startX} ${startY}${segments}`;
 }
 
 function getTrendColor(data: number[]): SparklineColor {
@@ -79,55 +176,8 @@ function generatePath(data: number[], width: number, height: number, padding = 2
 		return `M 0 ${y} L ${width} ${y}`;
 	}
 
-	const min = Math.min(...data);
-	const max = Math.max(...data);
-	const range = max - min || 1;
-
-	const points: [number, number][] = data.map((value, index) => {
-		const x = (index / (data.length - 1)) * (width - padding * 2) + padding;
-		const y = height - padding - ((value - min) / range) * (height - padding * 2);
-		return [x, y];
-	});
-
-	let path = `M ${points[0]?.[0] ?? 0} ${points[0]?.[1] ?? 0}`;
-
-	for (let i = 0; i < points.length - 1; i++) {
-		const p0 = points[Math.max(0, i - 1)];
-		const p1 = points[i];
-		const p2 = points[i + 1];
-		const p3 = points[Math.min(points.length - 1, i + 2)];
-
-		// Catmull-Rom to Bezier conversion
-		const cp1x = (p1?.[0] ?? 0) + ((p2?.[0] ?? 0) - (p0?.[0] ?? 0)) / 6;
-		const cp1y = (p1?.[1] ?? 0) + ((p2?.[1] ?? 0) - (p0?.[1] ?? 0)) / 6;
-		const cp2x = (p2?.[0] ?? 0) - ((p3?.[0] ?? 0) - (p1?.[0] ?? 0)) / 6;
-		const cp2y = (p2?.[1] ?? 0) - ((p3?.[1] ?? 0) - (p1?.[1] ?? 0)) / 6;
-
-		path += ` C ${cp1x} ${cp1y}, ${cp2x} ${cp2y}, ${p2?.[0] ?? 0} ${p2?.[1] ?? 0}`;
-	}
-
-	return path;
-}
-
-function getLastPoint(
-	data: number[],
-	width: number,
-	height: number,
-	padding = 2,
-): { x: number; y: number } | null {
-	if (data.length === 0) {
-		return null;
-	}
-
-	const min = Math.min(...data);
-	const max = Math.max(...data);
-	const range = max - min || 1;
-
-	const lastValue = data.at(-1) ?? 0;
-	const x = width - padding;
-	const y = height - padding - ((lastValue - min) / range) * (height - padding * 2);
-
-	return { x, y };
+	const points = buildSparklinePoints(data, width, height, padding);
+	return buildPath(points);
 }
 
 function SparklineComponent({

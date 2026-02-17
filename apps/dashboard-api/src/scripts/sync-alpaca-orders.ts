@@ -22,12 +22,20 @@ for (const line of envContent.split("\n")) {
 
 import { OrdersRepository } from "@cream/storage";
 
+function printInfo(message: string): void {
+	process.stdout.write(`${message}\n`);
+}
+
+function printError(message: string): void {
+	process.stderr.write(`${message}\n`);
+}
+
 const _ALPACA_BASE_URL = process.env.ALPACA_BASE_URL;
 const _ALPACA_KEY = process.env.ALPACA_KEY;
 const _ALPACA_SECRET = process.env.ALPACA_SECRET;
 
 if (!_ALPACA_BASE_URL || !_ALPACA_KEY || !_ALPACA_SECRET) {
-	console.error("Missing ALPACA_BASE_URL, ALPACA_KEY, or ALPACA_SECRET in .env");
+	printError("Missing ALPACA_BASE_URL, ALPACA_KEY, or ALPACA_SECRET in .env");
 	process.exit(1);
 }
 
@@ -115,7 +123,7 @@ function mapTimeInForce(tif: string): "day" | "gtc" | "ioc" | "fok" {
 }
 
 async function main() {
-	console.log("Fetching orders from Alpaca...");
+	printInfo("Fetching orders from Alpaca...");
 
 	const response = await fetch(`${ALPACA_BASE_URL}/v2/orders?status=all&limit=500`, {
 		headers: {
@@ -129,7 +137,7 @@ async function main() {
 	}
 
 	const alpacaOrders = (await response.json()) as AlpacaOrder[];
-	console.log(`Found ${alpacaOrders.length} orders in Alpaca`);
+	printInfo(`Found ${alpacaOrders.length} orders in Alpaca`);
 
 	const ordersRepo = new OrdersRepository();
 	let inserted = 0;
@@ -164,14 +172,14 @@ async function main() {
 		}
 
 		inserted++;
-		console.log(`Inserted: ${ao.symbol} ${ao.side} ${ao.qty} @ ${ao.filled_avg_price || "market"}`);
+		printInfo(`Inserted: ${ao.symbol} ${ao.side} ${ao.qty} @ ${ao.filled_avg_price || "market"}`);
 	}
 
-	console.log(`\nSync complete: ${inserted} inserted, ${skipped} already existed`);
+	printInfo(`Sync complete: ${inserted} inserted, ${skipped} already existed`);
 	process.exit(0);
 }
 
 main().catch((err) => {
-	console.error("Error:", err);
+	printError(`Error: ${String(err)}`);
 	process.exit(1);
 });

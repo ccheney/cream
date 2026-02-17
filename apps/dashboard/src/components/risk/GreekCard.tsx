@@ -68,6 +68,74 @@ const GREEK_CONFIG: Record<GreekType, GreekConfig> = {
 	},
 };
 
+const SIZE_CLASSES = {
+	sm: { letter: "text-2xl", value: "text-lg", label: "text-[10px]", padding: "p-3" },
+	md: { letter: "text-3xl", value: "text-xl", label: "text-xs", padding: "p-4" },
+	lg: { letter: "text-4xl", value: "text-2xl", label: "text-sm", padding: "p-5" },
+} as const;
+
+interface GreekLimitState {
+	textColor: string;
+}
+
+function getGreekValueColor(type: GreekType, value: number, config: GreekConfig): string {
+	if (type === "theta") {
+		return value > 0 ? config.colorPositive : config.colorNegative;
+	}
+	return value >= 0 ? config.colorPositive : config.colorNegative;
+}
+
+function getLimitState(limit: number | null): GreekLimitState {
+	if (limit === null) {
+		return { textColor: "" };
+	}
+	if (limit >= 0.95) {
+		return { textColor: "text-red-500" };
+	}
+	if (limit >= 0.8) {
+		return { textColor: "text-amber-500" };
+	}
+	return { textColor: "" };
+}
+
+function getLimitLabel(limitUtilization: number | null) {
+	if (limitUtilization === null) {
+		return null;
+	}
+	return `(${(limitUtilization * 100).toFixed(0)}%)`;
+}
+
+function renderGreekValue(type: GreekType, value: number) {
+	if (type === "delta" || type === "vega") {
+		return (
+			<AnimatedNumber
+				value={value}
+				format="currency"
+				decimals={0}
+				className="inline"
+				animationThreshold={100}
+			/>
+		);
+	}
+
+	if (type === "theta") {
+		return (
+			<>
+				{value < 0 ? "-" : "+"}$
+				<AnimatedNumber value={Math.abs(value)} format="decimal" decimals={0} className="inline" />
+				/day
+			</>
+		);
+	}
+
+	return (
+		<>
+			{value >= 0 ? "+" : ""}
+			<AnimatedNumber value={value} format="decimal" decimals={0} className="inline" />
+		</>
+	);
+}
+
 export const GreekCard = memo(function GreekCard({
 	type,
 	value,
@@ -77,28 +145,13 @@ export const GreekCard = memo(function GreekCard({
 	className = "",
 }: GreekCardProps) {
 	const config = GREEK_CONFIG[type];
-
-	const sizeClasses = {
-		sm: { letter: "text-2xl", value: "text-lg", label: "text-[10px]", padding: "p-3" },
-		md: { letter: "text-3xl", value: "text-xl", label: "text-xs", padding: "p-4" },
-		lg: { letter: "text-4xl", value: "text-2xl", label: "text-sm", padding: "p-5" },
-	};
-
-	const sizes = sizeClasses[size];
-
-	// Theta is inverted: negative theta (paying premium) is bad, positive (collecting) is good
-	const valueColor =
-		type === "theta"
-			? value <= 0
-				? config.colorNegative
-				: config.colorPositive
-			: value >= 0
-				? config.colorPositive
-				: config.colorNegative;
-
+	const sizes = SIZE_CLASSES[size];
 	const limitUtilization = limit ? Math.abs(value) / limit : null;
-	const isNearLimit = limitUtilization && limitUtilization >= 0.8;
-	const isAtLimit = limitUtilization && limitUtilization >= 0.95;
+	const isAtLimit = Boolean(limitUtilization && limitUtilization >= 0.95);
+	const isNearLimit = Boolean(limitUtilization && limitUtilization >= 0.8);
+	const valueColor = getGreekValueColor(type, value, config);
+	const limitState = getLimitState(limitUtilization);
+	const limitLabel = getLimitLabel(limitUtilization);
 
 	return (
 		<div
@@ -124,31 +177,7 @@ export const GreekCard = memo(function GreekCard({
 			<div className={`${sizes.label} text-stone-500 dark:text-night-300 mt-1`}>{config.name}</div>
 
 			<div className={`mt-2 ${sizes.value} font-mono font-semibold ${valueColor}`}>
-				{type === "delta" || type === "vega" ? (
-					<AnimatedNumber
-						value={value}
-						format="currency"
-						decimals={0}
-						className="inline"
-						animationThreshold={100}
-					/>
-				) : type === "theta" ? (
-					<>
-						{value < 0 ? "-" : "+"}$
-						<AnimatedNumber
-							value={Math.abs(value)}
-							format="decimal"
-							decimals={0}
-							className="inline"
-						/>
-						/day
-					</>
-				) : (
-					<>
-						{value >= 0 ? "+" : ""}
-						<AnimatedNumber value={value} format="decimal" decimals={0} className="inline" />
-					</>
-				)}
+				{renderGreekValue(type, value)}
 			</div>
 
 			<div className={`${sizes.label} text-stone-400 dark:text-night-400 mt-1`}>{config.unit}</div>
@@ -156,13 +185,7 @@ export const GreekCard = memo(function GreekCard({
 			{limit !== undefined && (
 				<div className={`${sizes.label} text-stone-400 dark:text-night-400 mt-2`}>
 					Limit: {config.format(limit)}
-					{limitUtilization && (
-						<span
-							className={`ml-1 ${isAtLimit ? "text-red-500" : isNearLimit ? "text-amber-500" : ""}`}
-						>
-							({(limitUtilization * 100).toFixed(0)}%)
-						</span>
-					)}
+					{limitLabel ? <span className={`ml-1 ${limitState.textColor}`}>{limitLabel}</span> : null}
 				</div>
 			)}
 		</div>

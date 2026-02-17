@@ -206,68 +206,27 @@ export class LayerValidator {
 		const sourceLayer = this.findLayerForFile(sourceFile);
 		const targetLayer = this.findLayerForImport(importPath);
 
-		// Can't validate if we don't know the layers
 		if (!sourceLayer || !targetLayer) {
-			if (!this.config.warnOnUnknown) {
-				return null;
-			}
-
-			if (!sourceLayer) {
-				return {
-					sourceLayer: "unknown",
-					sourcePackage: sourceFile,
-					targetLayer: targetLayer?.name ?? "unknown",
-					targetPackage: importPath,
-					importStatement: `import from '${importPath}'`,
-					filePath: sourceFile,
-					lineNumber,
-					severity: "WARNING",
-					message: `Source file not mapped to any layer: ${sourceFile}`,
-				};
-			}
-
-			return null;
+			return this.getUnknownLayerViolation(
+				sourceLayer,
+				targetLayer,
+				sourceFile,
+				importPath,
+				lineNumber,
+			);
 		}
 
-		// Same layer is allowed (unless circular check is enabled)
 		if (sourceLayer.name === targetLayer.name) {
 			return null;
 		}
 
-		// Check forbidden dependencies
-		if (sourceLayer.forbiddenDependencies.includes(targetLayer.name)) {
-			return {
-				sourceLayer: sourceLayer.name,
-				sourcePackage: sourceFile,
-				targetLayer: targetLayer.name,
-				targetPackage: importPath,
-				importStatement: `import from '${importPath}'`,
-				filePath: sourceFile,
-				lineNumber,
-				severity: "ERROR",
-				message: `Layer '${sourceLayer.name}' must not import from '${targetLayer.name}' layer`,
-			};
-		}
-
-		// Check if dependency is allowed
-		if (
-			sourceLayer.allowedDependencies.length > 0 &&
-			!sourceLayer.allowedDependencies.includes(targetLayer.name)
-		) {
-			return {
-				sourceLayer: sourceLayer.name,
-				sourcePackage: sourceFile,
-				targetLayer: targetLayer.name,
-				targetPackage: importPath,
-				importStatement: `import from '${importPath}'`,
-				filePath: sourceFile,
-				lineNumber,
-				severity: "ERROR",
-				message: `Layer '${sourceLayer.name}' is not allowed to import from '${targetLayer.name}' layer`,
-			};
-		}
-
-		return null;
+		return this.getDependencyViolation(
+			sourceLayer,
+			targetLayer,
+			sourceFile,
+			importPath,
+			lineNumber,
+		);
 	}
 
 	/**
@@ -407,6 +366,84 @@ export class LayerValidator {
 	getLayers(): ArchitecturalLayer[] {
 		return [...this.config.layers];
 	}
+
+	private getUnknownLayerViolation(
+		sourceLayer: ArchitecturalLayer | null,
+		targetLayer: ArchitecturalLayer | null,
+		sourceFile: string,
+		importPath: string,
+		lineNumber?: number,
+	): LayerViolation | null {
+		if (!this.config.warnOnUnknown || sourceLayer) {
+			return null;
+		}
+		return this.buildViolation(
+			"unknown",
+			targetLayer?.name ?? "unknown",
+			sourceFile,
+			importPath,
+			lineNumber,
+			"WARNING",
+			`Source file not mapped to any layer: ${sourceFile}`,
+		);
+	}
+
+	private getDependencyViolation(
+		sourceLayer: ArchitecturalLayer,
+		targetLayer: ArchitecturalLayer,
+		sourceFile: string,
+		importPath: string,
+		lineNumber?: number,
+	): LayerViolation | null {
+		if (sourceLayer.forbiddenDependencies.includes(targetLayer.name)) {
+			return this.buildViolation(
+				sourceLayer.name,
+				targetLayer.name,
+				sourceFile,
+				importPath,
+				lineNumber,
+				"ERROR",
+				`Layer '${sourceLayer.name}' must not import from '${targetLayer.name}' layer`,
+			);
+		}
+
+		const hasRestrictedDependencies = sourceLayer.allowedDependencies.length > 0;
+		if (hasRestrictedDependencies && !sourceLayer.allowedDependencies.includes(targetLayer.name)) {
+			return this.buildViolation(
+				sourceLayer.name,
+				targetLayer.name,
+				sourceFile,
+				importPath,
+				lineNumber,
+				"ERROR",
+				`Layer '${sourceLayer.name}' is not allowed to import from '${targetLayer.name}' layer`,
+			);
+		}
+
+		return null;
+	}
+
+	private buildViolation(
+		sourceLayer: string,
+		targetLayer: string,
+		sourceFile: string,
+		importPath: string,
+		lineNumber: number | undefined,
+		severity: "ERROR" | "WARNING",
+		message: string,
+	): LayerViolation {
+		return {
+			sourceLayer,
+			sourcePackage: sourceFile,
+			targetLayer,
+			targetPackage: importPath,
+			importStatement: `import from '${importPath}'`,
+			filePath: sourceFile,
+			lineNumber,
+			severity,
+			message,
+		};
+	}
 }
 
 // ============================================
@@ -425,48 +462,31 @@ export function parseImports(source: string): Array<{ path: string; line: number
 	const requireRegex = /require\s*\(\s*['"]([^'"]+)['"]\s*\)/g;
 	const dynamicImportRegex = /import\s*\(\s*['"]([^'"]+)['"]\s*\)/g;
 
-	for (let i = 0; i < lines.length; i++) {
-		const line = lines[i];
-		if (line === undefined) {
-			continue;
-		}
-		const lineNumber = i + 1;
-
-		// Check import/export from
-		importRegex.lastIndex = 0;
-		let match = importRegex.exec(line);
-		while (match !== null) {
-			const path = match[1];
-			if (path !== undefined) {
-				imports.push({ path, line: lineNumber });
-			}
-			match = importRegex.exec(line);
-		}
-
-		// Check require()
-		requireRegex.lastIndex = 0;
-		match = requireRegex.exec(line);
-		while (match !== null) {
-			const path = match[1];
-			if (path !== undefined) {
-				imports.push({ path, line: lineNumber });
-			}
-			match = requireRegex.exec(line);
-		}
-
-		// Check dynamic import()
-		dynamicImportRegex.lastIndex = 0;
-		match = dynamicImportRegex.exec(line);
-		while (match !== null) {
-			const path = match[1];
-			if (path !== undefined) {
-				imports.push({ path, line: lineNumber });
-			}
-			match = dynamicImportRegex.exec(line);
-		}
+	for (const [index, line] of lines.entries()) {
+		const lineNumber = index + 1;
+		collectImportsForRegex(line, lineNumber, importRegex, imports);
+		collectImportsForRegex(line, lineNumber, requireRegex, imports);
+		collectImportsForRegex(line, lineNumber, dynamicImportRegex, imports);
 	}
 
 	return imports;
+}
+
+function collectImportsForRegex(
+	line: string,
+	lineNumber: number,
+	regex: RegExp,
+	imports: Array<{ path: string; line: number }>,
+): void {
+	regex.lastIndex = 0;
+	let match = regex.exec(line);
+	while (match !== null) {
+		const path = match[1];
+		if (path !== undefined) {
+			imports.push({ path, line: lineNumber });
+		}
+		match = regex.exec(line);
+	}
 }
 
 // ============================================

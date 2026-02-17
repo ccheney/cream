@@ -204,59 +204,9 @@ export class KalshiClient implements PredictionMarketProvider {
 	 */
 	calculateScores(events: PredictionMarketEvent[]): PredictionMarketScores {
 		const scores: PredictionMarketScores = {};
-
-		// Find Fed rate markets
-		const fedMarkets = events.filter((e) => e.payload.marketType === "FED_RATE");
-		if (fedMarkets.length > 0) {
-			// Look for cut vs hike probabilities
-			for (const market of fedMarkets) {
-				const _question = market.payload.marketQuestion.toLowerCase();
-				for (const outcome of market.payload.outcomes) {
-					const outcomeLower = outcome.outcome.toLowerCase();
-					if (outcomeLower.includes("cut") || outcomeLower.includes("decrease")) {
-						scores.fedCutProbability = Math.max(scores.fedCutProbability ?? 0, outcome.probability);
-					}
-					if (outcomeLower.includes("hike") || outcomeLower.includes("increase")) {
-						scores.fedHikeProbability = Math.max(
-							scores.fedHikeProbability ?? 0,
-							outcome.probability,
-						);
-					}
-				}
-			}
-		}
-
-		// Find recession markets
-		const recessionMarkets = events.filter((e) =>
-			e.payload.marketQuestion.toLowerCase().includes("recession"),
-		);
-		if (recessionMarkets.length > 0) {
-			const [market] = recessionMarkets;
-			if (!market) {
-				return scores;
-			}
-			const yesOutcome = market.payload.outcomes.find((o) => o.outcome.toLowerCase() === "yes");
-			if (yesOutcome) {
-				scores.recessionProbability12m = yesOutcome.probability;
-			}
-		}
-
-		// Calculate macro uncertainty from multiple signals
-		const uncertaintySignals: number[] = [];
-		if (scores.fedCutProbability !== undefined && scores.fedHikeProbability !== undefined) {
-			// High uncertainty when cut and hike are both possible
-			const maxProb = Math.max(scores.fedCutProbability, scores.fedHikeProbability);
-			const minProb = Math.min(scores.fedCutProbability, scores.fedHikeProbability);
-			if (maxProb > 0) {
-				uncertaintySignals.push(minProb / maxProb); // Ratio indicates uncertainty
-			}
-		}
-
-		if (uncertaintySignals.length > 0) {
-			scores.macroUncertaintyIndex =
-				uncertaintySignals.reduce((a, b) => a + b, 0) / uncertaintySignals.length;
-		}
-
+		this.assignFedRateScores(events, scores);
+		this.assignRecessionScore(events, scores);
+		this.assignMacroUncertainty(scores);
 		return scores;
 	}
 
@@ -332,6 +282,77 @@ export class KalshiClient implements PredictionMarketProvider {
 			},
 			relatedInstrumentIds: this.getRelatedInstruments(marketType),
 		};
+	}
+
+	private assignFedRateScores(
+		events: PredictionMarketEvent[],
+		scores: PredictionMarketScores,
+	): void {
+		for (const event of events) {
+			if (event.payload.marketType !== "FED_RATE") {
+				continue;
+			}
+
+			for (const outcome of event.payload.outcomes) {
+				const outcomeName = outcome.outcome.toLowerCase();
+				if (this.isFedCutOutcome(outcomeName)) {
+					scores.fedCutProbability = Math.max(scores.fedCutProbability ?? 0, outcome.probability);
+				}
+				if (this.isFedHikeOutcome(outcomeName)) {
+					scores.fedHikeProbability = Math.max(scores.fedHikeProbability ?? 0, outcome.probability);
+				}
+			}
+		}
+	}
+
+	private assignRecessionScore(
+		events: PredictionMarketEvent[],
+		scores: PredictionMarketScores,
+	): void {
+		const recessionMarket = events.find((event) =>
+			event.payload.marketQuestion.toLowerCase().includes("recession"),
+		);
+		if (!recessionMarket) {
+			return;
+		}
+
+		const yesOutcome = recessionMarket.payload.outcomes.find(
+			(outcome) => outcome.outcome.toLowerCase() === "yes",
+		);
+		if (yesOutcome) {
+			scores.recessionProbability12m = yesOutcome.probability;
+		}
+	}
+
+	private assignMacroUncertainty(scores: PredictionMarketScores): void {
+		const uncertaintySignal = this.calculateFedUncertaintySignal(scores);
+		if (uncertaintySignal === undefined) {
+			return;
+		}
+
+		scores.macroUncertaintyIndex = uncertaintySignal;
+	}
+
+	private calculateFedUncertaintySignal(scores: PredictionMarketScores): number | undefined {
+		if (scores.fedCutProbability === undefined || scores.fedHikeProbability === undefined) {
+			return undefined;
+		}
+
+		const maxProbability = Math.max(scores.fedCutProbability, scores.fedHikeProbability);
+		if (maxProbability <= 0) {
+			return undefined;
+		}
+
+		const minProbability = Math.min(scores.fedCutProbability, scores.fedHikeProbability);
+		return minProbability / maxProbability;
+	}
+
+	private isFedCutOutcome(outcomeName: string): boolean {
+		return outcomeName.includes("cut") || outcomeName.includes("decrease");
+	}
+
+	private isFedHikeOutcome(outcomeName: string): boolean {
+		return outcomeName.includes("hike") || outcomeName.includes("increase");
 	}
 
 	/**

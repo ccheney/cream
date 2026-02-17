@@ -1,4 +1,3 @@
-// biome-ignore-all lint/suspicious/noArrayIndexKey: Timeline uses stable indices
 "use client";
 
 import { format } from "date-fns";
@@ -38,8 +37,11 @@ export function ExecutionTimeline({ execution }: ExecutionTimelineProps): React.
 			<div className="relative">
 				<div className="absolute left-3.5 top-0 bottom-0 w-0.5 bg-cream-200 dark:bg-night-600" />
 				<div className="space-y-4">
-					{timelineEvents.map((event, i) => (
-						<div key={`timeline-${i}`} className="relative flex items-start gap-4 pl-10">
+					{timelineEvents.map((event) => (
+						<div
+							key={`${event.label}-${event.time ?? "pending"}`}
+							className="relative flex items-start gap-4 pl-10"
+						>
 							<div
 								className={`absolute left-0 w-7 h-7 rounded-full flex items-center justify-center ${
 									event.status === "complete"

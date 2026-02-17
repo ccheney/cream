@@ -19,10 +19,6 @@ import {
 	upsertTradeDecision,
 } from "../../src/queries/mutations.js";
 
-// ============================================
-// Mock Client
-// ============================================
-
 function createMockClient(
 	options: { shouldFail?: boolean; failOnQuery?: string } = {},
 ): HelixClient {
@@ -52,11 +48,7 @@ function createMockClient(
 	};
 }
 
-// ============================================
-// Trade Decision Tests
-// ============================================
-
-describe("upsertTradeDecision", () => {
+describe("upsertTradeDecision: success cases", () => {
 	let client: HelixClient;
 
 	beforeEach(() => {
@@ -104,7 +96,9 @@ describe("upsertTradeDecision", () => {
 		expect(result.success).toBe(true);
 		expect(result.id).toBe("dec-002");
 	});
+});
 
+describe("upsertTradeDecision: failure case", () => {
 	it("should return error on failure", async () => {
 		const failingClient = createMockClient({ shouldFail: true });
 		const decision = {
@@ -127,10 +121,6 @@ describe("upsertTradeDecision", () => {
 		expect(result.error).toBe("Mock query failure");
 	});
 });
-
-// ============================================
-// Lifecycle Event Tests
-// ============================================
 
 describe("createLifecycleEvent", () => {
 	let client: HelixClient;
@@ -175,10 +165,6 @@ describe("createLifecycleEvent", () => {
 		expect(result.error).toBe("Mock query failure");
 	});
 });
-
-// ============================================
-// External Event Tests
-// ============================================
 
 describe("upsertExternalEvent", () => {
 	let client: HelixClient;
@@ -235,10 +221,6 @@ describe("upsertExternalEvent", () => {
 		expect(result.error).toBe("Mock query failure");
 	});
 });
-
-// ============================================
-// Edge Tests
-// ============================================
 
 describe("createEdge", () => {
 	let client: HelixClient;
@@ -322,11 +304,7 @@ describe("createHasEventEdge", () => {
 	});
 });
 
-// ============================================
-// Batch Tests
-// ============================================
-
-describe("batchUpsertTradeDecisions", () => {
+describe("batchUpsertTradeDecisions: success case", () => {
 	let client: HelixClient;
 
 	beforeEach(() => {
@@ -374,7 +352,9 @@ describe("batchUpsertTradeDecisions", () => {
 		expect(result.totalProcessed).toBe(2);
 		expect(result.executionTimeMs).toBeGreaterThan(0);
 	});
+});
 
+describe("batchUpsertTradeDecisions: partial failures", () => {
 	it("should handle partial failures", async () => {
 		const failingClient = createMockClient({ failOnQuery: "upsertTradeDecision" });
 		const decisions: NodeWithEmbedding<TradeDecision>[] = [

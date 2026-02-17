@@ -46,7 +46,7 @@ function createPosition(
 // Core Calculation Tests
 // ============================================
 
-describe("calculateExposureStats", () => {
+describe("calculateExposureStats directional portfolios", () => {
 	test("calculates basic gross/net exposure", () => {
 		// Classic example: 70% long + 30% short = 100% gross, 40% net
 		const positions: Position[] = [
@@ -80,7 +80,9 @@ describe("calculateExposureStats", () => {
 		expect(stats.longPositionCount).toBe(2);
 		expect(stats.shortPositionCount).toBe(0);
 	});
+});
 
+describe("calculateExposureStats directional edge cases", () => {
 	test("handles all-short portfolio", () => {
 		const positions: Position[] = [
 			createPosition("AAPL", -100, -50000),
@@ -104,7 +106,9 @@ describe("calculateExposureStats", () => {
 		expect(stats.netExposureNotional).toBe(0);
 		expect(stats.totalPositionCount).toBe(0);
 	});
+});
 
+describe("calculateExposureStats edge conditions", () => {
 	test("handles leveraged portfolio (gross > 100%)", () => {
 		const positions: Position[] = [
 			createPosition("AAPL", 100, 120000), // Long 120%
@@ -116,7 +120,9 @@ describe("calculateExposureStats", () => {
 		expect(stats.grossExposurePctEquity).toBeCloseTo(2.0, 6); // 200%
 		expect(stats.netExposurePctEquity).toBeCloseTo(0.4, 6); // 40%
 	});
+});
 
+describe("calculateExposureStats validation", () => {
 	test("throws on zero equity", () => {
 		expect(() => calculateExposureStats([], 0)).toThrow("accountEquity must be positive");
 	});
@@ -214,7 +220,7 @@ describe("calculateExposureByStrategy", () => {
 // Validation Tests
 // ============================================
 
-describe("validateExposure", () => {
+describe("validateExposure limits", () => {
 	test("passes when within limits", () => {
 		// Keep each position under 20% single position limit
 		const positions: Position[] = [
@@ -264,7 +270,9 @@ describe("validateExposure", () => {
 		expect(result.violations.some((v) => v.limitType === "single_position")).toBe(true);
 		expect(result.violations.find((v) => v.limitType === "single_position")?.context).toBe("AAPL");
 	});
+});
 
+describe("validateExposure defaults", () => {
 	test("uses default limits", () => {
 		expect(DEFAULT_EXPOSURE_LIMITS.maxGrossExposure).toBe(2.0);
 		expect(DEFAULT_EXPOSURE_LIMITS.maxNetExposure).toBe(1.0);

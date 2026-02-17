@@ -315,6 +315,13 @@ export function addAllowedOrigin(origin: string): void {
 
 const auditLog: SecurityAuditEvent[] = [];
 const MAX_AUDIT_LOG_SIZE = 10000;
+type AuditFilter = {
+	eventType?: SecurityEventType;
+	userId?: string;
+	connectionId?: string;
+	success?: boolean;
+	since?: Date;
+};
 
 export function logSecurityEvent(event: Omit<SecurityAuditEvent, "timestamp">): void {
 	const fullEvent: SecurityAuditEvent = {
@@ -329,40 +336,35 @@ export function logSecurityEvent(event: Omit<SecurityAuditEvent, "timestamp">): 
 	}
 }
 
-export function getAuditLog(
-	filter?: {
-		eventType?: SecurityEventType;
-		userId?: string;
-		connectionId?: string;
-		success?: boolean;
-		since?: Date;
-	},
-	limit = 100,
-): SecurityAuditEvent[] {
-	let filtered = auditLog;
+export function getAuditLog(filter?: AuditFilter, limit = 100): SecurityAuditEvent[] {
+	const filtered = filter
+		? auditLog.filter((event) => matchesAuditFilter(event, filter))
+		: auditLog;
+	return filtered.slice(-limit);
+}
 
-	if (filter) {
-		filtered = auditLog.filter((event) => {
-			if (filter.eventType && event.eventType !== filter.eventType) {
-				return false;
-			}
-			if (filter.userId && event.userId !== filter.userId) {
-				return false;
-			}
-			if (filter.connectionId && event.connectionId !== filter.connectionId) {
-				return false;
-			}
-			if (filter.success !== undefined && event.success !== filter.success) {
-				return false;
-			}
-			if (filter.since && new Date(event.timestamp) < filter.since) {
-				return false;
-			}
-			return true;
-		});
+function matchesAuditFilter(event: SecurityAuditEvent, filter: AuditFilter): boolean {
+	if (filter.eventType && event.eventType !== filter.eventType) {
+		return false;
 	}
 
-	return filtered.slice(-limit);
+	if (filter.userId && event.userId !== filter.userId) {
+		return false;
+	}
+
+	if (filter.connectionId && event.connectionId !== filter.connectionId) {
+		return false;
+	}
+
+	if (filter.success !== undefined && event.success !== filter.success) {
+		return false;
+	}
+
+	if (filter.since && new Date(event.timestamp) < filter.since) {
+		return false;
+	}
+
+	return true;
 }
 
 export function clearAuditLog(): void {

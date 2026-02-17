@@ -43,12 +43,11 @@ export function InlineSuccess({
 
 	return (
 		<>
-			{/* biome-ignore lint/security/noDangerouslySetInnerHtml: Safe - hardcoded CSS keyframes */}
-			<style dangerouslySetInnerHTML={{ __html: checkmarkKeyframes }} />
-			<span role="status" aria-live="polite" data-testid={testId} style={styles}>
+			<style>{checkmarkKeyframes}</style>
+			<output aria-live="polite" data-testid={testId} style={styles}>
 				<Checkmark size={14} />
 				<span>{text}</span>
-			</span>
+			</output>
 		</>
 	);
 }

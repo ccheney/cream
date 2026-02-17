@@ -1,4 +1,3 @@
-// biome-ignore-all lint/suspicious/noArrayIndexKey: Factor lists use stable indices
 "use client";
 
 import { formatDistanceToNow } from "date-fns";
@@ -8,6 +7,22 @@ import { formatPrice, formatSize, formatStrategy, formatTimeHorizon } from "./ut
 
 export interface DecisionDetailsProps {
 	decision: DecisionDetail;
+}
+
+function withStableOccurrenceKeys<T>(
+	items: T[],
+	getBaseKey: (item: T) => string,
+): Array<{ item: T; key: string }> {
+	const counts = new Map<string, number>();
+	return items.map((item) => {
+		const base = getBaseKey(item);
+		const nextCount = (counts.get(base) ?? 0) + 1;
+		counts.set(base, nextCount);
+		return {
+			item,
+			key: `${base}-${nextCount}`,
+		};
+	});
 }
 
 function formatThesisState(state: string | null): string {
@@ -138,6 +153,11 @@ function OptionLegsSection({ decision }: DecisionDetailsProps): React.ReactEleme
 		return null;
 	}
 
+	const legs = withStableOccurrenceKeys(
+		decision.legs,
+		(leg) => `${leg.symbol}-${leg.positionIntent}-${leg.ratioQty}`,
+	);
+
 	return (
 		<div className="mt-6 pt-6 border-t border-cream-100 dark:border-night-700">
 			<h3 className="text-sm font-medium text-stone-900 dark:text-night-50 mb-3">Option Legs</h3>
@@ -151,8 +171,8 @@ function OptionLegsSection({ decision }: DecisionDetailsProps): React.ReactEleme
 						</tr>
 					</thead>
 					<tbody>
-						{decision.legs.map((leg, i) => (
-							<tr key={`leg-${i}`} className="border-t border-cream-100 dark:border-night-700">
+						{legs.map(({ item: leg, key }) => (
+							<tr key={key} className="border-t border-cream-100 dark:border-night-700">
 								<td className="pr-4 py-2 font-mono text-stone-900 dark:text-night-50">
 									{leg.symbol}
 								</td>
@@ -179,6 +199,15 @@ function RationaleSection({ decision }: DecisionDetailsProps): React.ReactElemen
 		return null;
 	}
 
+	const bullishFactors = withStableOccurrenceKeys(
+		decision.bullishFactors ?? [],
+		(factor) => factor,
+	);
+	const bearishFactors = withStableOccurrenceKeys(
+		decision.bearishFactors ?? [],
+		(factor) => factor,
+	);
+
 	return (
 		<div className="mt-6 pt-6 border-t border-cream-100 dark:border-night-700">
 			<h3 className="text-sm font-medium text-stone-900 dark:text-night-50 mb-3">Rationale</h3>
@@ -186,9 +215,9 @@ function RationaleSection({ decision }: DecisionDetailsProps): React.ReactElemen
 				<div>
 					<h4 className="text-xs font-medium text-green-600 mb-2">Bullish Factors</h4>
 					<ul className="space-y-1">
-						{(decision.bullishFactors ?? []).map((factor, i) => (
+						{bullishFactors.map(({ item: factor, key }) => (
 							<li
-								key={`bull-${i}`}
+								key={`bull-${key}`}
 								className="text-sm text-stone-700 dark:text-night-100 flex items-start gap-2"
 							>
 								<span className="text-green-500 mt-0.5">+</span>
@@ -200,9 +229,9 @@ function RationaleSection({ decision }: DecisionDetailsProps): React.ReactElemen
 				<div>
 					<h4 className="text-xs font-medium text-red-600 mb-2">Bearish Factors</h4>
 					<ul className="space-y-1">
-						{(decision.bearishFactors ?? []).map((factor, i) => (
+						{bearishFactors.map(({ item: factor, key }) => (
 							<li
-								key={`bear-${i}`}
+								key={`bear-${key}`}
 								className="text-sm text-stone-700 dark:text-night-100 flex items-start gap-2"
 							>
 								<span className="text-red-500 mt-0.5">-</span>
@@ -236,15 +265,17 @@ function MemoryReferencesSection({ decision }: DecisionDetailsProps): React.Reac
 		return null;
 	}
 
+	const references = withStableOccurrenceKeys(decision.memoryReferences, (ref) => ref);
+
 	return (
 		<div className="mt-6 pt-6 border-t border-cream-100 dark:border-night-700">
 			<h3 className="text-sm font-medium text-stone-900 dark:text-night-50 mb-3">
 				Memory References
 			</h3>
 			<div className="flex flex-wrap gap-2">
-				{decision.memoryReferences.map((ref, i) => (
+				{references.map(({ item: ref, key }) => (
 					<span
-						key={`mem-${i}`}
+						key={`mem-${key}`}
 						className="px-2 py-1 text-xs font-mono bg-cream-100 dark:bg-night-700 text-stone-600 dark:text-night-200 rounded"
 					>
 						{ref}

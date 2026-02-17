@@ -114,7 +114,7 @@ export const StatusDot = forwardRef<HTMLSpanElement, StatusDotProps>(
 		return (
 			<span
 				ref={ref}
-				role="status"
+				role="img"
 				aria-label={label ?? config.ariaLabel}
 				className={cn(
 					"relative inline-flex items-center justify-center",

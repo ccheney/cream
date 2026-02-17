@@ -15,10 +15,9 @@ import {
 // UUID v4 regex pattern
 const UUID_V4_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
-describe("createContext", () => {
+describe("createContext generated fields", () => {
 	test("generates valid UUID v4 traceId", () => {
-		const ctx = createContext("PAPER", "test");
-		expect(ctx.traceId).toMatch(UUID_V4_REGEX);
+		expect(createContext("PAPER", "test").traceId).toMatch(UUID_V4_REGEX);
 	});
 
 	test("generates unique traceId for each call", () => {
@@ -28,40 +27,36 @@ describe("createContext", () => {
 	});
 
 	test("sets environment correctly", () => {
-		const testCtx = createContext("PAPER", "test");
-		const paperCtx = createContext("PAPER", "scheduled");
-		const liveCtx = createContext("LIVE", "scheduled");
-
-		expect(testCtx.environment).toBe("PAPER");
-		expect(paperCtx.environment).toBe("PAPER");
-		expect(liveCtx.environment).toBe("LIVE");
+		expect(createContext("PAPER", "test").environment).toBe("PAPER");
+		expect(createContext("PAPER", "scheduled").environment).toBe("PAPER");
+		expect(createContext("LIVE", "scheduled").environment).toBe("LIVE");
 	});
 
 	test("sets source correctly for all valid sources", () => {
 		const sources: ExecutionSource[] = ["test", "dashboard-test", "scheduled", "manual"];
-
 		for (const source of sources) {
-			const ctx = createContext("PAPER", source);
-			expect(ctx.source).toBe(source);
+			expect(createContext("PAPER", source).source).toBe(source);
 		}
 	});
 
 	test("sets optional configId when provided", () => {
-		const ctx = createContext("PAPER", "dashboard-test", "config-v1.2.3");
-		expect(ctx.configId).toBe("config-v1.2.3");
+		expect(createContext("PAPER", "dashboard-test", "config-v1.2.3").configId).toBe(
+			"config-v1.2.3",
+		);
 	});
 
 	test("configId is undefined when not provided", () => {
-		const ctx = createContext("PAPER", "test");
-		expect(ctx.configId).toBeUndefined();
+		expect(createContext("PAPER", "test").configId).toBeUndefined();
+	});
+});
+
+describe("createContext immutability", () => {
+	test("returns frozen object", () => {
+		expect(Object.isFrozen(createContext("PAPER", "test"))).toBe(true);
 	});
 
-	test("returns frozen (immutable) object", () => {
+	test("frozen object properties cannot be modified", () => {
 		const ctx = createContext("PAPER", "test");
-
-		expect(Object.isFrozen(ctx)).toBe(true);
-
-		// Attempting to modify should throw in strict mode or be silently ignored
 		expect(() => {
 			// @ts-expect-error - Testing runtime immutability
 			ctx.environment = "LIVE";
@@ -70,7 +65,6 @@ describe("createContext", () => {
 
 	test("frozen object properties cannot be deleted", () => {
 		const ctx = createContext("PAPER", "test");
-
 		expect(() => {
 			// @ts-expect-error - Testing runtime immutability
 			delete ctx.traceId;
@@ -79,7 +73,6 @@ describe("createContext", () => {
 
 	test("frozen object cannot have properties added", () => {
 		const ctx = createContext("PAPER", "test");
-
 		expect(() => {
 			// @ts-expect-error - Testing runtime immutability
 			ctx.newProperty = "value";

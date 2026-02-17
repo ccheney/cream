@@ -15,6 +15,32 @@ import log from "../logger.js";
 
 const app = new OpenAPIHono();
 
+function buildTriggerMetadata(symbols: string[] | undefined, priority: "normal" | "high") {
+	const symbolsCount = symbols?.length ?? -1;
+	const errorMessage = symbols
+		? JSON.stringify({ symbols, priority })
+		: JSON.stringify({ priority });
+	return { symbolsCount, errorMessage };
+}
+
+function buildTriggerResponse(
+	run: { id: string; startedAt: string },
+	jobType: z.infer<typeof JobTypeSchema>,
+	symbolsCount: number,
+) {
+	const isAllSymbols = symbolsCount === -1;
+	return {
+		run_id: run.id,
+		job_type: jobType,
+		status: "pending" as const,
+		symbols_count: isAllSymbols ? 0 : symbolsCount,
+		created_at: run.startedAt,
+		message: isAllSymbols
+			? `Triggered ${jobType} batch job for all symbols`
+			: `Triggered ${jobType} batch job for ${symbolsCount} symbols`,
+	};
+}
+
 // ============================================
 // Schema Definitions
 // ============================================
@@ -81,31 +107,22 @@ const triggerBatchJobRoute = createRoute({
 app.openapi(triggerBatchJobRoute, async (c) => {
 	const { job_type, symbols, priority } = c.req.valid("json");
 	const environment = requireEnv();
+	const repo = getIndicatorSyncRunsRepo();
 
 	try {
-		const repo = getIndicatorSyncRunsRepo();
-
-		// Check if a job of this type is already running
 		const runningJob = await repo.findRunningByType(job_type);
-
 		if (runningJob) {
 			throw new HTTPException(409, {
 				message: `A ${job_type} batch job is already running`,
 			});
 		}
 
-		// Get symbol count - if symbols provided, use those, otherwise indicate "all"
-		const symbolsCount = symbols?.length ?? -1; // -1 means "all symbols"
-
-		// Insert the trigger request as a pending sync run (id auto-generated as uuidv7)
-		const errorMessage = symbols
-			? JSON.stringify({ symbols, priority })
-			: JSON.stringify({ priority });
+		const { symbolsCount, errorMessage } = buildTriggerMetadata(symbols, priority);
 
 		const run = await repo.create({
 			runType: job_type,
 			environment,
-			errorMessage, // Store symbols/priority in errorMessage temporarily (worker will clear it)
+			errorMessage,
 		});
 
 		log.info(
@@ -119,20 +136,7 @@ app.openapi(triggerBatchJobRoute, async (c) => {
 			"Batch job trigger request created",
 		);
 
-		return c.json(
-			{
-				run_id: run.id,
-				job_type,
-				status: "pending" as const,
-				symbols_count: symbolsCount === -1 ? 0 : symbolsCount,
-				created_at: run.startedAt,
-				message:
-					symbolsCount === -1
-						? `Triggered ${job_type} batch job for all symbols`
-						: `Triggered ${job_type} batch job for ${symbolsCount} symbols`,
-			},
-			202,
-		);
+		return c.json(buildTriggerResponse(run, job_type, symbolsCount), 202);
 	} catch (error) {
 		if (error instanceof HTTPException) {
 			throw error;

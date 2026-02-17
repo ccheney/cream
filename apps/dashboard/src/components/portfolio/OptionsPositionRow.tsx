@@ -12,6 +12,36 @@ export interface OptionsPositionRowProps {
 	onPositionClick?: (position: StreamingOptionsPosition) => void;
 }
 
+function OutputLiveIndicator() {
+	return (
+		<output
+			aria-label="Live streaming"
+			className="w-2 h-2 rounded-full bg-green-500 animate-pulse"
+		/>
+	);
+}
+
+function PnlCell({ pnl, pct }: { pnl: number; pct: number }) {
+	return (
+		<div className="flex flex-col items-end">
+			<span className="font-mono">
+				{pnl >= 0 ? "+" : ""}
+				<AnimatedNumber
+					value={pnl}
+					format="currency"
+					decimals={0}
+					className="inline"
+					animationThreshold={1}
+				/>
+			</span>
+			<span className="text-xs">
+				({pct >= 0 ? "+" : ""}
+				{pct.toFixed(1)}%)
+			</span>
+		</div>
+	);
+}
+
 export const OptionsPositionRow = memo(function OptionsPositionRow({
 	position,
 	onPositionClick,
@@ -54,14 +84,7 @@ export const OptionsPositionRow = memo(function OptionsPositionRow({
 					>
 						{contractDisplay}
 					</button>
-					{position.isStreaming && (
-						<span
-							className="w-2 h-2 rounded-full bg-green-500 animate-pulse"
-							title="Live streaming"
-							role="status"
-							aria-label="Live streaming"
-						/>
-					)}
+					{position.isStreaming && <OutputLiveIndicator />}
 				</div>
 			</td>
 
@@ -85,22 +108,7 @@ export const OptionsPositionRow = memo(function OptionsPositionRow({
 			</td>
 
 			<td className={`px-4 py-3 text-right font-mono ${pnlColor} ${pnlFlashClasses} rounded`}>
-				<div className="flex flex-col items-end">
-					<span className="font-mono">
-						{position.liveUnrealizedPnl >= 0 ? "+" : ""}
-						<AnimatedNumber
-							value={position.liveUnrealizedPnl}
-							format="currency"
-							decimals={0}
-							className="inline"
-							animationThreshold={1}
-						/>
-					</span>
-					<span className="text-xs">
-						({position.liveUnrealizedPnlPct >= 0 ? "+" : ""}
-						{position.liveUnrealizedPnlPct.toFixed(1)}%)
-					</span>
-				</div>
+				<PnlCell pnl={position.liveUnrealizedPnl} pct={position.liveUnrealizedPnlPct} />
 			</td>
 
 			<td className="px-4 py-3 text-right font-mono text-stone-900 dark:text-night-50">

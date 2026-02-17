@@ -155,6 +155,68 @@ function usePrefersReducedMotion(): boolean {
 }
 
 // ============================================
+// Animation Hooks
+// ============================================
+
+const ANIMATION_VARIANTS = {
+	initial: { y: 10, opacity: 0 },
+	animate: { y: 0, opacity: 1 },
+	exit: { y: -10, opacity: 0 },
+};
+
+function useAnimatedDisplayValue(
+	value: number,
+	shouldAnimate: boolean,
+): { displayValue: number; animationKey: number } {
+	const previousValueRef = useRef(value);
+	const lastAnimationRef = useRef(0);
+	const [displayValue, setDisplayValue] = useState(value);
+	const [animationKey, setAnimationKey] = useState(0);
+
+	useEffect((): undefined | (() => void) => {
+		const now = Date.now();
+		const timeSinceLastAnimation = now - lastAnimationRef.current;
+
+		// Debounce: schedule update after remaining debounce time
+		if (shouldAnimate && timeSinceLastAnimation < DEBOUNCE_INTERVAL) {
+			const remainingTime = DEBOUNCE_INTERVAL - timeSinceLastAnimation;
+			const timeoutId = setTimeout(() => {
+				lastAnimationRef.current = Date.now();
+				setAnimationKey((prev) => prev + 1);
+				setDisplayValue(value);
+			}, remainingTime);
+
+			previousValueRef.current = value;
+			return () => clearTimeout(timeoutId);
+		}
+
+		// Trigger animation immediately
+		if (shouldAnimate) {
+			lastAnimationRef.current = now;
+			setAnimationKey((prev) => prev + 1);
+		}
+
+		// Update display value
+		setDisplayValue(value);
+		previousValueRef.current = value;
+		return undefined;
+	}, [value, shouldAnimate]);
+
+	return { displayValue, animationKey };
+}
+
+function usePreviousValue(value: number): number {
+	const ref = useRef(value);
+	const previous = ref.current;
+
+	useEffect(() => {
+		ref.current = value;
+	}, [value]);
+
+	return previous;
+}
+
+// ============================================
 // Component
 // ============================================
 
@@ -187,68 +249,29 @@ export const AnimatedNumber = memo(function AnimatedNumber({
 	"data-testid": testId,
 }: AnimatedNumberProps) {
 	const prefersReducedMotion = usePrefersReducedMotion();
-	const previousValueRef = useRef(value);
-	const lastAnimationRef = useRef(0);
-	const [displayValue, setDisplayValue] = useState(value);
-	const [animationKey, setAnimationKey] = useState(0);
 
 	// Calculate actual decimals
 	const actualDecimals = decimals ?? getDefaultDecimals(format);
 
 	// Determine if we should animate this change
+	const previousValue = usePreviousValue(value);
 	const shouldAnimate = useMemo(() => {
 		if (!animate || prefersReducedMotion) {
 			return false;
 		}
 
-		const previousValue = previousValueRef.current;
 		if (previousValue === 0) {
 			return value !== 0;
 		}
 
 		const percentChange = Math.abs((value - previousValue) / previousValue);
 		return percentChange >= animationThreshold;
-	}, [value, animate, prefersReducedMotion, animationThreshold]);
+	}, [value, animate, prefersReducedMotion, animationThreshold, previousValue]);
 
-	// Update display value with debouncing
-	useEffect((): undefined | (() => void) => {
-		const now = Date.now();
-		const timeSinceLastAnimation = now - lastAnimationRef.current;
-
-		// Debounce: schedule update after remaining debounce time
-		if (shouldAnimate && timeSinceLastAnimation < DEBOUNCE_INTERVAL) {
-			const remainingTime = DEBOUNCE_INTERVAL - timeSinceLastAnimation;
-			const timeoutId = setTimeout(() => {
-				lastAnimationRef.current = Date.now();
-				setAnimationKey((prev) => prev + 1);
-				setDisplayValue(value);
-			}, remainingTime);
-
-			previousValueRef.current = value;
-			return () => clearTimeout(timeoutId);
-		}
-
-		// Trigger animation immediately
-		if (shouldAnimate) {
-			lastAnimationRef.current = now;
-			setAnimationKey((prev) => prev + 1);
-		}
-
-		// Update display value
-		setDisplayValue(value);
-		previousValueRef.current = value;
-		return undefined;
-	}, [value, shouldAnimate]);
+	const { displayValue, animationKey } = useAnimatedDisplayValue(value, shouldAnimate);
 
 	// Format the display value
 	const formattedValue = formatNumber(displayValue, format, actualDecimals, prefix, suffix);
-
-	// Animation variants
-	const variants = {
-		initial: { y: 10, opacity: 0 },
-		animate: { y: 0, opacity: 1 },
-		exit: { y: -10, opacity: 0 },
-	};
 
 	// Disable animation if not needed
 	const shouldRenderAnimated = animate && !prefersReducedMotion;
@@ -266,7 +289,7 @@ export const AnimatedNumber = memo(function AnimatedNumber({
 				<AnimatePresence mode="wait">
 					<motion.span
 						key={animationKey}
-						variants={variants}
+						variants={ANIMATION_VARIANTS}
 						initial="initial"
 						animate="animate"
 						exit="exit"

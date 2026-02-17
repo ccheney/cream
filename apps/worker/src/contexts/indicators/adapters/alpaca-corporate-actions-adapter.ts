@@ -33,6 +33,8 @@ const AlpacaCorporateActionsResponseSchema = z.object({
 	corporate_actions: z.record(z.string(), z.array(AlpacaCorporateActionsItemSchema)),
 });
 
+type CorporateActionItem = z.infer<typeof AlpacaCorporateActionsItemSchema>;
+
 export class AlpacaCorporateActionsAdapter implements AlpacaCorporateActionsClient {
 	private readonly apiKey: string;
 	private readonly apiSecret: string;
@@ -102,6 +104,89 @@ export class AlpacaCorporateActionsAdapter implements AlpacaCorporateActionsClie
 		return this.flattenCorporateActions(data.corporate_actions);
 	}
 
+	private resolveActionType(
+		rawType: string,
+		special?: boolean,
+	): AlpacaCorporateAction["corporate_action_type"] {
+		switch (rawType.toLowerCase()) {
+			case "dividend":
+			case "cash_dividend":
+			case "cash_dividends":
+				return special ? "SpecialDividend" : "Dividend";
+			case "special_dividend":
+			case "special_dividends":
+				return "SpecialDividend";
+			case "stock_split":
+			case "stock_splits":
+			case "forward_split":
+			case "forward_splits":
+				return "Split";
+			case "reverse_split":
+			case "reverse_splits":
+				return "ReverseSplit";
+			case "spinoff":
+			case "spin_off":
+				return "Spinoff";
+			case "merger":
+				return "Merger";
+			case "acquisition":
+				return "Acquisition";
+			case "name_change":
+			case "symbol_change":
+				return "NameChange";
+			default:
+				return "Dividend";
+		}
+	}
+
+	private resolveActionValue(item: CorporateActionItem): number {
+		if (item.cash !== undefined) {
+			return item.cash;
+		}
+
+		if (item.rate !== undefined) {
+			return item.rate;
+		}
+
+		if (item.new_rate !== undefined && item.old_rate !== undefined) {
+			return item.old_rate !== 0 ? item.new_rate / item.old_rate : 1;
+		}
+
+		return 0;
+	}
+
+	private toCorporateAction(
+		typeKey: string,
+		item: CorporateActionItem,
+	): AlpacaCorporateAction | null {
+		if (!item.symbol) {
+			log.debug({ typeKey }, "Skipping corporate action: missing symbol");
+			return null;
+		}
+
+		const exDate = item.ex_date ?? item.process_date;
+		if (!exDate) {
+			log.warn(
+				{ typeKey, symbol: item.symbol },
+				"Skipping corporate action: missing ex_date/process_date",
+			);
+			return null;
+		}
+
+		const actionType = this.resolveActionType(item.corporate_action_type ?? typeKey, item.special);
+		const value = this.resolveActionValue(item);
+
+		return {
+			corporate_action_type: actionType,
+			symbol: item.symbol,
+			ex_date: exDate,
+			record_date: item.record_date ?? null,
+			payment_date: item.payment_date ?? item.payable_date ?? null,
+			value,
+			description: item.description,
+		};
+	}
+
 	private flattenCorporateActions(
 		actions: z.infer<typeof AlpacaCorporateActionsResponseSchema>["corporate_actions"],
 	): AlpacaCorporateAction[] {
@@ -109,84 +194,10 @@ export class AlpacaCorporateActionsAdapter implements AlpacaCorporateActionsClie
 
 		for (const [typeKey, items] of Object.entries(actions)) {
 			for (const item of items) {
-				// Skip entries without a symbol (some corporate action types like stock_mergers may not include it)
-				if (!item.symbol) {
-					log.debug({ typeKey }, "Skipping corporate action: missing symbol");
-					continue;
+				const action = this.toCorporateAction(typeKey, item);
+				if (action) {
+					results.push(action);
 				}
-
-				const exDate = item.ex_date ?? item.process_date;
-				if (!exDate) {
-					log.warn(
-						{ typeKey, symbol: item.symbol },
-						"Skipping corporate action: missing ex_date/process_date",
-					);
-					continue;
-				}
-
-				const rawType = item.corporate_action_type ?? typeKey;
-				const normalizedType = rawType.toLowerCase();
-
-				let actionType: AlpacaCorporateAction["corporate_action_type"];
-				switch (normalizedType) {
-					case "dividend":
-					case "cash_dividend":
-					case "cash_dividends":
-						actionType = "Dividend";
-						if (item.special) {
-							actionType = "SpecialDividend";
-						}
-						break;
-					case "special_dividend":
-					case "special_dividends":
-						actionType = "SpecialDividend";
-						break;
-					case "stock_split":
-					case "stock_splits":
-					case "forward_split":
-					case "forward_splits":
-						actionType = "Split";
-						break;
-					case "reverse_split":
-					case "reverse_splits":
-						actionType = "ReverseSplit";
-						break;
-					case "spinoff":
-					case "spin_off":
-						actionType = "Spinoff";
-						break;
-					case "merger":
-						actionType = "Merger";
-						break;
-					case "acquisition":
-						actionType = "Acquisition";
-						break;
-					case "name_change":
-					case "symbol_change":
-						actionType = "NameChange";
-						break;
-					default:
-						actionType = "Dividend";
-				}
-
-				let value = 0;
-				if (item.cash !== undefined) {
-					value = item.cash;
-				} else if (item.rate !== undefined) {
-					value = item.rate;
-				} else if (item.new_rate !== undefined && item.old_rate !== undefined) {
-					value = item.old_rate !== 0 ? item.new_rate / item.old_rate : 1;
-				}
-
-				results.push({
-					corporate_action_type: actionType,
-					symbol: item.symbol as string, // Already checked for undefined above
-					ex_date: exDate,
-					record_date: item.record_date ?? null,
-					payment_date: item.payment_date ?? item.payable_date ?? null,
-					value,
-					description: item.description,
-				});
 			}
 		}
 

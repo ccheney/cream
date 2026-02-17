@@ -158,74 +158,90 @@ export function calculateDrawdownStats(equityCurve: EquityPoint[]): DrawdownStat
 		return createEmptyDrawdownStats();
 	}
 
-	// Initialize with first point (safe after length check)
 	const firstPoint = equityCurve[0];
 	if (!firstPoint) {
 		return createEmptyDrawdownStats();
 	}
-	let peakEquity = firstPoint.equity;
-	let peakTimestamp = firstPoint.timestamp;
-	let troughEquity = firstPoint.equity;
-	let troughTimestamp = firstPoint.timestamp;
-	let maxDrawdownPct = 0;
-	let maxDrawdownAbsolute = 0;
-
-	// Track current drawdown
-	let currentDrawdownStart: string | null = null;
-	let currentDrawdownDuration = 0;
-	let inDrawdown = false;
-
-	// Iterate through equity curve
+	const state = createDrawdownState(firstPoint);
 	for (const point of equityCurve) {
-		if (point.equity >= peakEquity) {
-			// New high - reset peak and exit drawdown
-			peakEquity = point.equity;
-			peakTimestamp = point.timestamp;
-			inDrawdown = false;
-			currentDrawdownStart = null;
-			currentDrawdownDuration = 0;
-		} else {
-			// In drawdown
-			if (!inDrawdown) {
-				// Starting new drawdown
-				inDrawdown = true;
-				currentDrawdownStart = point.timestamp;
-				currentDrawdownDuration = 1;
-			} else {
-				currentDrawdownDuration++;
-			}
-
-			const drawdown = calculateDrawdown(point.equity, peakEquity);
-			const drawdownAbsolute = peakEquity - point.equity;
-
-			if (drawdown > maxDrawdownPct) {
-				maxDrawdownPct = drawdown;
-				maxDrawdownAbsolute = drawdownAbsolute;
-				troughEquity = point.equity;
-				troughTimestamp = point.timestamp;
-			}
-		}
+		updateDrawdownState(state, point);
 	}
 
-	// Get current (last) values (safe - we checked length > 0 at start)
 	const lastPoint = equityCurve.at(-1);
 	if (!lastPoint) {
 		return createEmptyDrawdownStats();
 	}
-	const currentDrawdownPct = calculateDrawdown(lastPoint.equity, peakEquity);
-	const currentDrawdownAbsolute = Math.max(0, peakEquity - lastPoint.equity);
+	return buildStatsFromState(state, lastPoint);
+}
 
+interface DrawdownState {
+	peakEquity: number;
+	peakTimestamp: string;
+	troughEquity: number;
+	troughTimestamp: string;
+	maxDrawdownPct: number;
+	maxDrawdownAbsolute: number;
+	currentDrawdownStart: string | null;
+	currentDrawdownDuration: number;
+	inDrawdown: boolean;
+}
+
+function createDrawdownState(firstPoint: EquityPoint): DrawdownState {
+	return {
+		peakEquity: firstPoint.equity,
+		peakTimestamp: firstPoint.timestamp,
+		troughEquity: firstPoint.equity,
+		troughTimestamp: firstPoint.timestamp,
+		maxDrawdownPct: 0,
+		maxDrawdownAbsolute: 0,
+		currentDrawdownStart: null,
+		currentDrawdownDuration: 0,
+		inDrawdown: false,
+	};
+}
+
+function updateDrawdownState(state: DrawdownState, point: EquityPoint): void {
+	if (point.equity >= state.peakEquity) {
+		state.peakEquity = point.equity;
+		state.peakTimestamp = point.timestamp;
+		state.inDrawdown = false;
+		state.currentDrawdownStart = null;
+		state.currentDrawdownDuration = 0;
+		return;
+	}
+
+	if (!state.inDrawdown) {
+		state.inDrawdown = true;
+		state.currentDrawdownStart = point.timestamp;
+		state.currentDrawdownDuration = 1;
+	} else {
+		state.currentDrawdownDuration++;
+	}
+
+	const drawdown = calculateDrawdown(point.equity, state.peakEquity);
+	const drawdownAbsolute = state.peakEquity - point.equity;
+	if (drawdown > state.maxDrawdownPct) {
+		state.maxDrawdownPct = drawdown;
+		state.maxDrawdownAbsolute = drawdownAbsolute;
+		state.troughEquity = point.equity;
+		state.troughTimestamp = point.timestamp;
+	}
+}
+
+function buildStatsFromState(state: DrawdownState, lastPoint: EquityPoint): DrawdownStats {
+	const currentDrawdownPct = calculateDrawdown(lastPoint.equity, state.peakEquity);
+	const currentDrawdownAbsolute = Math.max(0, state.peakEquity - lastPoint.equity);
 	return {
 		currentDrawdown: currentDrawdownPct,
 		currentDrawdownAbsolute,
-		maxDrawdown: maxDrawdownPct,
-		maxDrawdownAbsolute,
-		drawdownDuration: currentDrawdownDuration,
-		drawdownStartTime: currentDrawdownStart,
-		peakEquity,
-		peakTimestamp,
-		troughEquity: maxDrawdownPct > 0 ? troughEquity : peakEquity,
-		troughTimestamp: maxDrawdownPct > 0 ? troughTimestamp : peakTimestamp,
+		maxDrawdown: state.maxDrawdownPct,
+		maxDrawdownAbsolute: state.maxDrawdownAbsolute,
+		drawdownDuration: state.currentDrawdownDuration,
+		drawdownStartTime: state.currentDrawdownStart,
+		peakEquity: state.peakEquity,
+		peakTimestamp: state.peakTimestamp,
+		troughEquity: state.maxDrawdownPct > 0 ? state.troughEquity : state.peakEquity,
+		troughTimestamp: state.maxDrawdownPct > 0 ? state.troughTimestamp : state.peakTimestamp,
 		recoveryNeeded: calculateRecoveryNeeded(currentDrawdownPct),
 		riskLevel: getRiskLevel(currentDrawdownPct),
 	};

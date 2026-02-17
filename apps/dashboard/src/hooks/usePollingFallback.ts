@@ -9,7 +9,15 @@
 
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import {
+	type Dispatch,
+	type RefObject,
+	type SetStateAction,
+	useCallback,
+	useEffect,
+	useRef,
+	useState,
+} from "react";
 
 export interface PollingEndpoint<T> {
 	key: string;
@@ -78,157 +86,379 @@ export function usePollingFallback(options: UsePollingFallbackOptions): UsePolli
 	const countdownIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 	const activationTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
+	usePollingEndpointSync(endpoints, endpointsRef);
+
+	const pollingManager = useEndpointPollingManager(endpointsRef, pollIntervalsRef);
+	const pollingControls = usePollingControls({
+		pollingManager,
+		setIsPolling,
+	});
+	const endpointActions = usePollingEndpointActions({
+		isPolling,
+		pollingManager,
+		endpointsRef,
+	});
+
+	usePollingState({
+		wsConnected,
+		disconnectThreshold,
+		isPolling,
+		setPollingActivatesIn,
+		disconnectedAtRef,
+		countdownIntervalRef,
+		activationTimeoutRef,
+		enablePolling: pollingControls.enablePolling,
+		disablePolling: pollingControls.disablePolling,
+	});
+
+	usePollingCleanup({
+		activationTimeoutRef,
+		countdownIntervalRef,
+		stopAllPolling: pollingManager.stopAllPolling,
+	});
+
+	return {
+		isPolling,
+		pollingActivatesIn,
+		enablePolling: pollingControls.enablePolling,
+		disablePolling: pollingControls.disablePolling,
+		addEndpoint: endpointActions.addEndpoint,
+		removeEndpoint: endpointActions.removeEndpoint,
+	};
+}
+
+export default usePollingFallback;
+
+function usePollingEndpointSync(
+	endpoints: PollingEndpoint<unknown>[],
+	endpointsRef: RefObject<Map<string, PollingEndpoint<unknown>>>,
+) {
 	useEffect(() => {
 		for (const endpoint of endpoints) {
 			endpointsRef.current.set(endpoint.key, endpoint);
 		}
-	}, [endpoints]);
+	}, [endpoints, endpointsRef]);
+}
 
-	const startPollingEndpoint = useCallback((endpoint: PollingEndpoint<unknown>) => {
-		if (endpoint.enabled === false) {
-			return;
-		}
-
-		const existing = pollIntervalsRef.current.get(endpoint.key);
-		if (existing) {
-			clearInterval(existing);
-		}
-
-		const poll = async () => {
-			try {
-				const data = await endpoint.fetcher();
-				endpoint.onData?.(data);
-			} catch (err) {
-				const error = err instanceof Error ? err : new Error(String(err));
-				endpoint.onError?.(error);
+function useEndpointPollingManager(
+	endpointsRef: RefObject<Map<string, PollingEndpoint<unknown>>>,
+	pollIntervalsRef: RefObject<Map<string, ReturnType<typeof setInterval>>>,
+) {
+	const startPollingEndpoint = useCallback(
+		(endpoint: PollingEndpoint<unknown>) => {
+			if (endpoint.enabled === false) {
+				return;
 			}
-		};
 
-		poll();
+			const existing = pollIntervalsRef.current.get(endpoint.key);
+			if (existing) {
+				clearInterval(existing);
+			}
 
-		const intervalId = setInterval(poll, endpoint.interval);
-		pollIntervalsRef.current.set(endpoint.key, intervalId);
-	}, []);
+			const poll = async () => {
+				try {
+					const data = await endpoint.fetcher();
+					endpoint.onData?.(data);
+				} catch (err) {
+					const error = err instanceof Error ? err : new Error(String(err));
+					endpoint.onError?.(error);
+				}
+			};
 
-	const stopPollingEndpoint = useCallback((key: string) => {
-		const intervalId = pollIntervalsRef.current.get(key);
-		if (intervalId) {
-			clearInterval(intervalId);
-			pollIntervalsRef.current.delete(key);
-		}
-	}, []);
+			poll();
+			const intervalId = setInterval(poll, endpoint.interval);
+			pollIntervalsRef.current.set(endpoint.key, intervalId);
+		},
+		[pollIntervalsRef],
+	);
+
+	const stopPollingEndpoint = useCallback(
+		(key: string) => {
+			const intervalId = pollIntervalsRef.current.get(key);
+			if (intervalId) {
+				clearInterval(intervalId);
+				pollIntervalsRef.current.delete(key);
+			}
+		},
+		[pollIntervalsRef],
+	);
 
 	const startAllPolling = useCallback(() => {
 		for (const endpoint of endpointsRef.current.values()) {
 			startPollingEndpoint(endpoint);
 		}
-	}, [startPollingEndpoint]);
+	}, [endpointsRef, startPollingEndpoint]);
 
 	const stopAllPolling = useCallback(() => {
 		for (const key of pollIntervalsRef.current.keys()) {
 			stopPollingEndpoint(key);
 		}
-	}, [stopPollingEndpoint]);
+	}, [pollIntervalsRef, stopPollingEndpoint]);
 
+	return {
+		startPollingEndpoint,
+		stopPollingEndpoint,
+		startAllPolling,
+		stopAllPolling,
+	};
+}
+
+function usePollingControls({
+	pollingManager,
+	setIsPolling,
+}: {
+	pollingManager: ReturnType<typeof useEndpointPollingManager>;
+	setIsPolling: Dispatch<SetStateAction<boolean>>;
+}) {
 	const enablePolling = useCallback(() => {
 		setIsPolling(true);
-		startAllPolling();
-	}, [startAllPolling]);
+		pollingManager.startAllPolling();
+	}, [pollingManager, setIsPolling]);
 
 	const disablePolling = useCallback(() => {
 		setIsPolling(false);
-		stopAllPolling();
-	}, [stopAllPolling]);
+		pollingManager.stopAllPolling();
+	}, [pollingManager, setIsPolling]);
 
+	return { enablePolling, disablePolling };
+}
+
+function usePollingEndpointActions({
+	isPolling,
+	pollingManager,
+	endpointsRef,
+}: {
+	isPolling: boolean;
+	pollingManager: ReturnType<typeof useEndpointPollingManager>;
+	endpointsRef: RefObject<Map<string, PollingEndpoint<unknown>>>;
+}) {
 	const addEndpoint = useCallback(
 		<T>(endpoint: PollingEndpoint<T>) => {
-			endpointsRef.current.set(endpoint.key, endpoint as PollingEndpoint<unknown>);
+			const castEndpoint = endpoint as PollingEndpoint<unknown>;
+			endpointsRef.current.set(castEndpoint.key, castEndpoint);
 			if (isPolling) {
-				startPollingEndpoint(endpoint as PollingEndpoint<unknown>);
+				pollingManager.startPollingEndpoint(castEndpoint);
 			}
 		},
-		[isPolling, startPollingEndpoint],
+		[isPolling, pollingManager, endpointsRef],
 	);
 
 	const removeEndpoint = useCallback(
 		(key: string) => {
-			stopPollingEndpoint(key);
+			pollingManager.stopPollingEndpoint(key);
 			endpointsRef.current.delete(key);
 		},
-		[stopPollingEndpoint],
+		[pollingManager, endpointsRef],
 	);
 
+	return { addEndpoint, removeEndpoint };
+}
+
+type PollingStateConfig = {
+	wsConnected: boolean;
+	disconnectThreshold: number;
+	isPolling: boolean;
+	enablePolling: () => void;
+	disablePolling: () => void;
+	setPollingActivatesIn: Dispatch<SetStateAction<number>>;
+	disconnectedAtRef: RefObject<number | null>;
+	countdownIntervalRef: RefObject<ReturnType<typeof setInterval> | null>;
+	activationTimeoutRef: RefObject<ReturnType<typeof setTimeout> | null>;
+};
+
+function startFallbackCountdown({
+	disconnectThreshold,
+	enablePolling,
+	setPollingActivatesIn,
+	disconnectedAtRef,
+	countdownIntervalRef,
+	activationTimeoutRef,
+	onFinish,
+}: {
+	disconnectThreshold: number;
+	enablePolling: () => void;
+	setPollingActivatesIn: Dispatch<SetStateAction<number>>;
+	disconnectedAtRef: RefObject<number | null>;
+	countdownIntervalRef: RefObject<ReturnType<typeof setInterval> | null>;
+	activationTimeoutRef: RefObject<ReturnType<typeof setTimeout> | null>;
+	onFinish: () => void;
+}) {
+	disconnectedAtRef.current = Date.now();
+	setPollingActivatesIn(Math.ceil(disconnectThreshold / 1000));
+
+	countdownIntervalRef.current = setInterval(() => {
+		const elapsed = Date.now() - (disconnectedAtRef.current ?? Date.now());
+		const remaining = Math.max(0, Math.ceil((disconnectThreshold - elapsed) / 1000));
+		setPollingActivatesIn(remaining);
+
+		if (remaining <= 0) {
+			onFinish();
+		}
+	}, 1000);
+
+	activationTimeoutRef.current = setTimeout(() => {
+		enablePolling();
+	}, disconnectThreshold);
+}
+
+function useFallbackCountdownEffect({
+	activationTimeoutRef,
+	countdownIntervalRef,
+	disconnectedAtRef,
+	disconnectThreshold,
+	enablePolling,
+	setPollingActivatesIn,
+	clearPollingTimers,
+}: {
+	activationTimeoutRef: RefObject<ReturnType<typeof setTimeout> | null>;
+	countdownIntervalRef: RefObject<ReturnType<typeof setInterval> | null>;
+	disconnectedAtRef: RefObject<number | null>;
+	disconnectThreshold: number;
+	enablePolling: () => void;
+	setPollingActivatesIn: Dispatch<SetStateAction<number>>;
+	clearPollingTimers: () => void;
+}) {
+	return useCallback(() => {
+		startFallbackCountdown({
+			disconnectThreshold,
+			enablePolling,
+			setPollingActivatesIn,
+			disconnectedAtRef,
+			countdownIntervalRef,
+			activationTimeoutRef,
+			onFinish: clearPollingTimers,
+		});
+	}, [
+		activationTimeoutRef,
+		countdownIntervalRef,
+		clearPollingTimers,
+		disconnectThreshold,
+		disconnectedAtRef,
+		enablePolling,
+		setPollingActivatesIn,
+	]);
+}
+
+function usePollingTimerCleanup({
+	activationTimeoutRef,
+	countdownIntervalRef,
+}: {
+	activationTimeoutRef: RefObject<ReturnType<typeof setTimeout> | null>;
+	countdownIntervalRef: RefObject<ReturnType<typeof setInterval> | null>;
+}) {
+	return useCallback(() => {
+		if (activationTimeoutRef.current) {
+			clearTimeout(activationTimeoutRef.current);
+			activationTimeoutRef.current = null;
+		}
+		if (countdownIntervalRef.current) {
+			clearInterval(countdownIntervalRef.current);
+			countdownIntervalRef.current = null;
+		}
+	}, [activationTimeoutRef, countdownIntervalRef]);
+}
+
+function usePollingConnectionEffect({
+	wsConnected,
+	disconnectedAtRef,
+	isPolling,
+	disablePolling,
+	setPollingActivatesIn,
+	clearPollingTimers,
+	beginFallbackCountdown,
+}: {
+	wsConnected: boolean;
+	disconnectedAtRef: RefObject<number | null>;
+	isPolling: boolean;
+	disablePolling: () => void;
+	setPollingActivatesIn: Dispatch<SetStateAction<number>>;
+	clearPollingTimers: () => void;
+	beginFallbackCountdown: () => void;
+}) {
 	useEffect(() => {
 		if (wsConnected) {
 			disconnectedAtRef.current = null;
 			setPollingActivatesIn(0);
-
-			if (activationTimeoutRef.current) {
-				clearTimeout(activationTimeoutRef.current);
-				activationTimeoutRef.current = null;
-			}
-
-			if (countdownIntervalRef.current) {
-				clearInterval(countdownIntervalRef.current);
-				countdownIntervalRef.current = null;
-			}
-
+			clearPollingTimers();
 			if (isPolling) {
 				disablePolling();
 			}
-		} else {
-			if (disconnectedAtRef.current === null) {
-				disconnectedAtRef.current = Date.now();
-				const thresholdSeconds = Math.ceil(disconnectThreshold / 1000);
-				setPollingActivatesIn(thresholdSeconds);
-
-				countdownIntervalRef.current = setInterval(() => {
-					const elapsed = Date.now() - (disconnectedAtRef.current ?? Date.now());
-					const remaining = Math.max(0, Math.ceil((disconnectThreshold - elapsed) / 1000));
-					setPollingActivatesIn(remaining);
-
-					if (remaining <= 0 && countdownIntervalRef.current) {
-						clearInterval(countdownIntervalRef.current);
-						countdownIntervalRef.current = null;
-					}
-				}, 1000);
-
-				activationTimeoutRef.current = setTimeout(() => {
-					enablePolling();
-				}, disconnectThreshold);
-			}
+			return;
 		}
 
-		return () => {
-			if (activationTimeoutRef.current) {
-				clearTimeout(activationTimeoutRef.current);
-			}
-			if (countdownIntervalRef.current) {
-				clearInterval(countdownIntervalRef.current);
-			}
-		};
-	}, [wsConnected, disconnectThreshold, isPolling, enablePolling, disablePolling]);
+		if (disconnectedAtRef.current === null) {
+			beginFallbackCountdown();
+		}
 
+		return clearPollingTimers;
+	}, [
+		wsConnected,
+		disconnectedAtRef,
+		isPolling,
+		disablePolling,
+		setPollingActivatesIn,
+		clearPollingTimers,
+		beginFallbackCountdown,
+	]);
+}
+
+function usePollingState({
+	wsConnected,
+	disconnectThreshold,
+	isPolling,
+	enablePolling,
+	disablePolling,
+	setPollingActivatesIn,
+	disconnectedAtRef,
+	countdownIntervalRef,
+	activationTimeoutRef,
+}: PollingStateConfig) {
+	const clearPollingTimers = usePollingTimerCleanup({
+		activationTimeoutRef,
+		countdownIntervalRef,
+	});
+
+	const beginFallbackCountdown = useFallbackCountdownEffect({
+		activationTimeoutRef,
+		countdownIntervalRef,
+		disconnectedAtRef,
+		disconnectThreshold,
+		enablePolling,
+		setPollingActivatesIn,
+		clearPollingTimers,
+	});
+
+	usePollingConnectionEffect({
+		wsConnected,
+		disconnectedAtRef,
+		isPolling,
+		disablePolling,
+		setPollingActivatesIn,
+		clearPollingTimers,
+		beginFallbackCountdown,
+	});
+}
+
+function usePollingCleanup({
+	activationTimeoutRef,
+	countdownIntervalRef,
+	stopAllPolling,
+}: {
+	activationTimeoutRef: RefObject<ReturnType<typeof setTimeout> | null>;
+	countdownIntervalRef: RefObject<ReturnType<typeof setInterval> | null>;
+	stopAllPolling: () => void;
+}) {
 	useEffect(() => {
 		return () => {
 			stopAllPolling();
 			if (activationTimeoutRef.current) {
 				clearTimeout(activationTimeoutRef.current);
+				activationTimeoutRef.current = null;
 			}
 			if (countdownIntervalRef.current) {
 				clearInterval(countdownIntervalRef.current);
+				countdownIntervalRef.current = null;
 			}
 		};
-	}, [stopAllPolling]);
-
-	return {
-		isPolling,
-		pollingActivatesIn,
-		enablePolling,
-		disablePolling,
-		addEndpoint,
-		removeEndpoint,
-	};
+	}, [activationTimeoutRef, countdownIntervalRef, stopAllPolling]);
 }
-
-export default usePollingFallback;

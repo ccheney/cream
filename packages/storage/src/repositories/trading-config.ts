@@ -122,6 +122,94 @@ export interface UpdateTradingConfigInput {
 // ============================================
 
 type TradingConfigRow = typeof tradingConfig.$inferSelect;
+type TradingConfigInsert = typeof tradingConfig.$inferInsert;
+
+const TRADING_DIRECT_FIELDS = [
+	"maxConsensusIterations",
+	"agentTimeoutMs",
+	"totalConsensusTimeoutMs",
+	"tradingCycleIntervalMs",
+	"predictionMarketsIntervalMs",
+	"globalModel",
+] as const;
+
+const TRADING_DECIMAL_FIELDS = [
+	"convictionDeltaHold",
+	"convictionDeltaAction",
+	"highConvictionPct",
+	"mediumConvictionPct",
+	"lowConvictionPct",
+	"minRiskRewardRatio",
+	"kellyFraction",
+] as const;
+
+function getTradingDefaultInsertValues(): Pick<
+	TradingConfigInsert,
+	(typeof TRADING_DIRECT_FIELDS)[number] | (typeof TRADING_DECIMAL_FIELDS)[number]
+> {
+	return {
+		maxConsensusIterations: 3,
+		agentTimeoutMs: 30000,
+		totalConsensusTimeoutMs: 300000,
+		tradingCycleIntervalMs: 3600000,
+		predictionMarketsIntervalMs: 900000,
+		globalModel: getDefaultGlobalModel(),
+		convictionDeltaHold: "0.2",
+		convictionDeltaAction: "0.3",
+		highConvictionPct: "0.7",
+		mediumConvictionPct: "0.5",
+		lowConvictionPct: "0.25",
+		minRiskRewardRatio: "1.5",
+		kellyFraction: "0.5",
+	};
+}
+
+function applyTradingConfigFields(
+	target: Partial<TradingConfigInsert>,
+	input: CreateTradingConfigInput | UpdateTradingConfigInput,
+): void {
+	const mutableTarget = target as Record<string, unknown>;
+	for (const field of TRADING_DIRECT_FIELDS) {
+		const value = input[field];
+		if (value !== undefined) {
+			mutableTarget[field] = value;
+		}
+	}
+
+	for (const field of TRADING_DECIMAL_FIELDS) {
+		const value = input[field];
+		if (value !== undefined) {
+			mutableTarget[field] = String(value);
+		}
+	}
+}
+
+function buildTradingCreateData(
+	input: CreateTradingConfigInput,
+	version: number,
+): TradingConfigInsert {
+	const data: TradingConfigInsert = {
+		environment: input.environment,
+		version,
+		status: input.status ?? "draft",
+		promotedFrom: input.promotedFrom ?? null,
+		...getTradingDefaultInsertValues(),
+	};
+
+	applyTradingConfigFields(data, input);
+	return data;
+}
+
+function buildTradingDraftUpdateData(
+	input: UpdateTradingConfigInput,
+): Partial<TradingConfigInsert> {
+	const data: Partial<TradingConfigInsert> = {
+		updatedAt: new Date(),
+	};
+
+	applyTradingConfigFields(data, input);
+	return data;
+}
 
 function mapTradingConfigRow(row: TradingConfigRow): TradingConfig {
 	return {
@@ -171,25 +259,7 @@ export class TradingConfigRepository {
 
 		const [row] = await this.db
 			.insert(tradingConfig)
-			.values({
-				environment: input.environment,
-				version,
-				maxConsensusIterations: input.maxConsensusIterations ?? 3,
-				agentTimeoutMs: input.agentTimeoutMs ?? 30000,
-				totalConsensusTimeoutMs: input.totalConsensusTimeoutMs ?? 300000,
-				convictionDeltaHold: String(input.convictionDeltaHold ?? 0.2),
-				convictionDeltaAction: String(input.convictionDeltaAction ?? 0.3),
-				highConvictionPct: String(input.highConvictionPct ?? 0.7),
-				mediumConvictionPct: String(input.mediumConvictionPct ?? 0.5),
-				lowConvictionPct: String(input.lowConvictionPct ?? 0.25),
-				minRiskRewardRatio: String(input.minRiskRewardRatio ?? 1.5),
-				kellyFraction: String(input.kellyFraction ?? 0.5),
-				tradingCycleIntervalMs: input.tradingCycleIntervalMs ?? 3600000,
-				predictionMarketsIntervalMs: input.predictionMarketsIntervalMs ?? 900000,
-				globalModel: input.globalModel ?? getDefaultGlobalModel(),
-				status: input.status ?? "draft",
-				promotedFrom: input.promotedFrom ?? null,
-			})
+			.values(buildTradingCreateData(input, version))
 			.returning();
 
 		if (!row) {
@@ -260,49 +330,7 @@ export class TradingConfigRepository {
 		const existingDraft = await this.getDraft(environment);
 
 		if (existingDraft) {
-			const updateData: Partial<typeof tradingConfig.$inferInsert> = {
-				updatedAt: new Date(),
-			};
-
-			if (input.maxConsensusIterations !== undefined) {
-				updateData.maxConsensusIterations = input.maxConsensusIterations;
-			}
-			if (input.agentTimeoutMs !== undefined) {
-				updateData.agentTimeoutMs = input.agentTimeoutMs;
-			}
-			if (input.totalConsensusTimeoutMs !== undefined) {
-				updateData.totalConsensusTimeoutMs = input.totalConsensusTimeoutMs;
-			}
-			if (input.convictionDeltaHold !== undefined) {
-				updateData.convictionDeltaHold = String(input.convictionDeltaHold);
-			}
-			if (input.convictionDeltaAction !== undefined) {
-				updateData.convictionDeltaAction = String(input.convictionDeltaAction);
-			}
-			if (input.highConvictionPct !== undefined) {
-				updateData.highConvictionPct = String(input.highConvictionPct);
-			}
-			if (input.mediumConvictionPct !== undefined) {
-				updateData.mediumConvictionPct = String(input.mediumConvictionPct);
-			}
-			if (input.lowConvictionPct !== undefined) {
-				updateData.lowConvictionPct = String(input.lowConvictionPct);
-			}
-			if (input.minRiskRewardRatio !== undefined) {
-				updateData.minRiskRewardRatio = String(input.minRiskRewardRatio);
-			}
-			if (input.kellyFraction !== undefined) {
-				updateData.kellyFraction = String(input.kellyFraction);
-			}
-			if (input.tradingCycleIntervalMs !== undefined) {
-				updateData.tradingCycleIntervalMs = input.tradingCycleIntervalMs;
-			}
-			if (input.predictionMarketsIntervalMs !== undefined) {
-				updateData.predictionMarketsIntervalMs = input.predictionMarketsIntervalMs;
-			}
-			if (input.globalModel !== undefined) {
-				updateData.globalModel = input.globalModel;
-			}
+			const updateData = buildTradingDraftUpdateData(input);
 
 			await this.db
 				.update(tradingConfig)

@@ -1,7 +1,3 @@
-/**
- * Execution Error Tests
- */
-
 import { describe, expect, it, mock } from "bun:test";
 import {
 	type ConstraintViolationDetails,
@@ -28,10 +24,6 @@ import {
 	withRetry,
 } from "./errors";
 
-// ============================================
-// GrpcStatusCode Tests
-// ============================================
-
 describe("GrpcStatusCode", () => {
 	it("has all standard codes", () => {
 		expect(GrpcStatusCode.OK).toBe(0);
@@ -51,10 +43,6 @@ describe("GrpcStatusCode", () => {
 		}
 	});
 });
-
-// ============================================
-// ExecutionError Tests
-// ============================================
 
 describe("ExecutionError", () => {
 	it("creates error with message and code", () => {
@@ -118,10 +106,6 @@ describe("ExecutionError", () => {
 	});
 });
 
-// ============================================
-// InvalidArgumentError Tests
-// ============================================
-
 describe("InvalidArgumentError", () => {
 	it("creates error with message", () => {
 		const error = new InvalidArgumentError("Invalid quantity");
@@ -141,10 +125,6 @@ describe("InvalidArgumentError", () => {
 		expect(error.invalidValue).toBe(-5);
 	});
 });
-
-// ============================================
-// ConstraintViolationError Tests
-// ============================================
 
 describe("ConstraintViolationError", () => {
 	it("creates error with violation details", () => {
@@ -177,10 +157,6 @@ describe("ConstraintViolationError", () => {
 	});
 });
 
-// ============================================
-// InsufficientFundsError Tests
-// ============================================
-
 describe("InsufficientFundsError", () => {
 	it("creates error with amounts", () => {
 		const error = new InsufficientFundsError(5000, 2500);
@@ -199,10 +175,6 @@ describe("InsufficientFundsError", () => {
 	});
 });
 
-// ============================================
-// NotFoundError Tests
-// ============================================
-
 describe("NotFoundError", () => {
 	it("creates error with resource info", () => {
 		const error = new NotFoundError("Instrument", "AAPL");
@@ -214,10 +186,6 @@ describe("NotFoundError", () => {
 		expect(error.retryable).toBe(false);
 	});
 });
-
-// ============================================
-// ServiceUnavailableError Tests
-// ============================================
 
 describe("ServiceUnavailableError", () => {
 	it("creates retryable error", () => {
@@ -242,10 +210,6 @@ describe("ServiceUnavailableError", () => {
 	});
 });
 
-// ============================================
-// DeadlineExceededError Tests
-// ============================================
-
 describe("DeadlineExceededError", () => {
 	it("creates retryable error", () => {
 		const error = new DeadlineExceededError(30000);
@@ -263,10 +227,6 @@ describe("DeadlineExceededError", () => {
 	});
 });
 
-// ============================================
-// PermissionDeniedError Tests
-// ============================================
-
 describe("PermissionDeniedError", () => {
 	it("creates non-retryable error", () => {
 		const error = new PermissionDeniedError("options_trading");
@@ -277,10 +237,6 @@ describe("PermissionDeniedError", () => {
 		expect(error.retryable).toBe(false);
 	});
 });
-
-// ============================================
-// ResourceExhaustedError Tests
-// ============================================
 
 describe("ResourceExhaustedError", () => {
 	it("creates retryable error", () => {
@@ -293,10 +249,6 @@ describe("ResourceExhaustedError", () => {
 	});
 });
 
-// ============================================
-// InternalError Tests
-// ============================================
-
 describe("InternalError", () => {
 	it("creates non-retryable error", () => {
 		const error = new InternalError("Unexpected server error");
@@ -307,11 +259,7 @@ describe("InternalError", () => {
 	});
 });
 
-// ============================================
-// mapGrpcError Tests
-// ============================================
-
-describe("mapGrpcError", () => {
+describe("mapGrpcError mappings", () => {
 	it("maps INVALID_ARGUMENT to InvalidArgumentError", () => {
 		const grpcError: GrpcError = {
 			code: GrpcStatusCode.INVALID_ARGUMENT,
@@ -335,6 +283,30 @@ describe("mapGrpcError", () => {
 		expect(error).toBeInstanceOf(ConstraintViolationError);
 	});
 
+	it("maps NOT_FOUND to NotFoundError", () => {
+		const error = mapGrpcError({ code: GrpcStatusCode.NOT_FOUND, message: "Not found" });
+		expect(error).toBeInstanceOf(NotFoundError);
+	});
+
+	it("maps UNAVAILABLE to ServiceUnavailableError", () => {
+		const error = mapGrpcError({ code: GrpcStatusCode.UNAVAILABLE, message: "Unavailable" });
+		expect(error).toBeInstanceOf(ServiceUnavailableError);
+		expect(error.retryable).toBe(true);
+	});
+
+	it("maps DEADLINE_EXCEEDED to DeadlineExceededError", () => {
+		const error = mapGrpcError({ code: GrpcStatusCode.DEADLINE_EXCEEDED, message: "Timeout" });
+		expect(error).toBeInstanceOf(DeadlineExceededError);
+		expect(error.retryable).toBe(true);
+	});
+
+	it("maps unknown codes to InternalError", () => {
+		const error = mapGrpcError({ code: 99, message: "Unknown" });
+		expect(error).toBeInstanceOf(InternalError);
+	});
+});
+
+describe("mapGrpcError metadata", () => {
 	it("parses error details from metadata", () => {
 		const details = {
 			code: "TEST_CODE",
@@ -361,33 +333,7 @@ describe("mapGrpcError", () => {
 		expect(error.traceId).toBe("trace-123");
 		expect(error.violation.constraintName).toBe("MAX_SIZE");
 	});
-
-	it("maps NOT_FOUND to NotFoundError", () => {
-		const error = mapGrpcError({ code: GrpcStatusCode.NOT_FOUND, message: "Not found" });
-		expect(error).toBeInstanceOf(NotFoundError);
-	});
-
-	it("maps UNAVAILABLE to ServiceUnavailableError", () => {
-		const error = mapGrpcError({ code: GrpcStatusCode.UNAVAILABLE, message: "Unavailable" });
-		expect(error).toBeInstanceOf(ServiceUnavailableError);
-		expect(error.retryable).toBe(true);
-	});
-
-	it("maps DEADLINE_EXCEEDED to DeadlineExceededError", () => {
-		const error = mapGrpcError({ code: GrpcStatusCode.DEADLINE_EXCEEDED, message: "Timeout" });
-		expect(error).toBeInstanceOf(DeadlineExceededError);
-		expect(error.retryable).toBe(true);
-	});
-
-	it("maps unknown codes to InternalError", () => {
-		const error = mapGrpcError({ code: 99, message: "Unknown" });
-		expect(error).toBeInstanceOf(InternalError);
-	});
 });
-
-// ============================================
-// Retry Logic Tests
-// ============================================
 
 describe("isRetryableError", () => {
 	it("returns true for retryable ExecutionError", () => {
@@ -420,9 +366,9 @@ describe("calculateRetryDelay", () => {
 		const delay1 = calculateRetryDelay(1, { ...DEFAULT_RETRY_OPTIONS, jitterFactor: 0 });
 		const delay2 = calculateRetryDelay(2, { ...DEFAULT_RETRY_OPTIONS, jitterFactor: 0 });
 
-		expect(delay0).toBe(100); // initialDelayMs
-		expect(delay1).toBe(200); // 100 * 2
-		expect(delay2).toBe(400); // 100 * 2^2
+		expect(delay0).toBe(100);
+		expect(delay1).toBe(200);
+		expect(delay2).toBe(400);
 	});
 
 	it("caps at maxDelayMs", () => {
@@ -435,7 +381,6 @@ describe("calculateRetryDelay", () => {
 		for (let i = 0; i < 10; i++) {
 			delays.add(calculateRetryDelay(0, { ...DEFAULT_RETRY_OPTIONS, jitterFactor: 0.5 }));
 		}
-		// With jitter, we should get some variation
 		expect(delays.size).toBeGreaterThan(1);
 	});
 });
@@ -483,55 +428,49 @@ describe("withRetry", () => {
 		await expect(withRetry(fn, { maxRetries: 2, initialDelayMs: 1 })).rejects.toThrow(
 			ServiceUnavailableError,
 		);
-		expect(fn).toHaveBeenCalledTimes(3); // Initial + 2 retries
+		expect(fn).toHaveBeenCalledTimes(3);
 	});
 });
 
-// ============================================
-// Type Guard Tests
-// ============================================
-
-describe("Type Guards", () => {
-	describe("isExecutionError", () => {
-		it("returns true for ExecutionError", () => {
-			expect(isExecutionError(new ExecutionError("test", GrpcStatusCode.INTERNAL))).toBe(true);
-		});
-
-		it("returns true for subclasses", () => {
-			expect(isExecutionError(new InvalidArgumentError("test"))).toBe(true);
-			expect(isExecutionError(new InsufficientFundsError(100, 50))).toBe(true);
-		});
-
-		it("returns false for plain Error", () => {
-			expect(isExecutionError(new Error("test"))).toBe(false);
-		});
+describe("isExecutionError", () => {
+	it("returns true for ExecutionError", () => {
+		expect(isExecutionError(new ExecutionError("test", GrpcStatusCode.INTERNAL))).toBe(true);
 	});
 
-	describe("isConstraintViolation", () => {
-		it("returns true for ConstraintViolationError", () => {
-			const error = new ConstraintViolationError("test", {
-				constraintName: "TEST",
-				message: "test",
-			});
-			expect(isConstraintViolation(error)).toBe(true);
-		});
-
-		it("returns true for InsufficientFundsError (subclass)", () => {
-			expect(isConstraintViolation(new InsufficientFundsError(100, 50))).toBe(true);
-		});
+	it("returns true for subclasses", () => {
+		expect(isExecutionError(new InvalidArgumentError("test"))).toBe(true);
+		expect(isExecutionError(new InsufficientFundsError(100, 50))).toBe(true);
 	});
 
-	describe("isInsufficientFunds", () => {
-		it("returns true for InsufficientFundsError", () => {
-			expect(isInsufficientFunds(new InsufficientFundsError(100, 50))).toBe(true);
-		});
+	it("returns false for plain Error", () => {
+		expect(isExecutionError(new Error("test"))).toBe(false);
+	});
+});
 
-		it("returns false for other ConstraintViolationError", () => {
-			const error = new ConstraintViolationError("test", {
-				constraintName: "TEST",
-				message: "test",
-			});
-			expect(isInsufficientFunds(error)).toBe(false);
+describe("isConstraintViolation", () => {
+	it("returns true for ConstraintViolationError", () => {
+		const error = new ConstraintViolationError("test", {
+			constraintName: "TEST",
+			message: "test",
 		});
+		expect(isConstraintViolation(error)).toBe(true);
+	});
+
+	it("returns true for InsufficientFundsError (subclass)", () => {
+		expect(isConstraintViolation(new InsufficientFundsError(100, 50))).toBe(true);
+	});
+});
+
+describe("isInsufficientFunds", () => {
+	it("returns true for InsufficientFundsError", () => {
+		expect(isInsufficientFunds(new InsufficientFundsError(100, 50))).toBe(true);
+	});
+
+	it("returns false for other ConstraintViolationError", () => {
+		const error = new ConstraintViolationError("test", {
+			constraintName: "TEST",
+			message: "test",
+		});
+		expect(isInsufficientFunds(error)).toBe(false);
 	});
 });

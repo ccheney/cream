@@ -10,7 +10,7 @@
 
 "use client";
 
-import { memo, useEffect, useMemo } from "react";
+import { memo, useEffect } from "react";
 import { AnimatedNumber } from "./animated-number";
 import { Sparkline } from "./sparkline";
 import type { TickDirection } from "./tick-dots";
@@ -76,6 +76,38 @@ function formatBidAsk(bid: number, ask: number): string {
 	return `${bid.toFixed(2)} × ${ask.toFixed(2)}`;
 }
 
+interface ResolvedDelta {
+	displayDelta: number | undefined;
+	displayDeltaPercent: number | undefined;
+	isPositive: boolean;
+}
+
+function resolveDelta(
+	price: number,
+	previousPrice: number | undefined,
+	delta: number | undefined,
+	deltaPercent: number | undefined,
+): ResolvedDelta {
+	const displayDelta = delta ?? (previousPrice !== undefined ? price - previousPrice : undefined);
+	const displayDeltaPercent =
+		deltaPercent ??
+		(previousPrice !== undefined && previousPrice !== 0
+			? ((price - previousPrice) / previousPrice) * 100
+			: undefined);
+	return {
+		displayDelta,
+		displayDeltaPercent,
+		isPositive: displayDelta !== undefined ? displayDelta >= 0 : true,
+	};
+}
+
+function getFlashClasses(flash: ReturnType<typeof usePriceFlash>["flash"]): string {
+	if (!flash.isFlashing) {
+		return "";
+	}
+	return flash.direction === "up" ? "animate-flash-profit" : "animate-flash-loss";
+}
+
 const sizeStyles = {
 	sm: {
 		container: "text-sm",
@@ -115,6 +147,308 @@ const variantStyles = {
 	},
 };
 
+function StaleIndicator({ secondsSinceUpdate }: { secondsSinceUpdate: number }) {
+	return (
+		<output
+			className="ml-1 text-gray-400"
+			title={`Last updated ${secondsSinceUpdate}s ago`}
+			aria-label={`Data is ${secondsSinceUpdate} seconds old`}
+		>
+			<svg
+				className="inline-block w-3 h-3"
+				fill="none"
+				stroke="currentColor"
+				viewBox="0 0 24 24"
+				aria-hidden="true"
+			>
+				<title>Stale data indicator</title>
+				<path
+					strokeLinecap="round"
+					strokeLinejoin="round"
+					strokeWidth={2}
+					d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"
+				/>
+			</svg>
+		</output>
+	);
+}
+
+function BidAskValue({
+	showBidAsk,
+	bid,
+	ask,
+	className,
+}: {
+	showBidAsk: boolean;
+	bid: number | undefined;
+	ask: number | undefined;
+	className: string;
+}) {
+	if (!showBidAsk || bid === undefined || ask === undefined) {
+		return null;
+	}
+	return <span className={className}>{formatBidAsk(bid, ask)}</span>;
+}
+
+function ChangeValue({
+	showChange,
+	displayDelta,
+	displayDeltaPercent,
+	isPositive,
+	className,
+}: {
+	showChange: boolean;
+	displayDelta: number | undefined;
+	displayDeltaPercent: number | undefined;
+	isPositive: boolean;
+	className: string;
+}) {
+	if (!showChange || displayDelta === undefined) {
+		return null;
+	}
+	return (
+		<output
+			className={className}
+			aria-label={`Change: ${isPositive ? "up" : "down"} ${Math.abs(displayDelta).toFixed(2)}`}
+		>
+			{formatDelta(displayDelta, displayDeltaPercent)}
+		</output>
+	);
+}
+
+function SparklineValue({
+	variant,
+	showSparkline,
+	sparklineData,
+}: {
+	variant: PriceTickerProps["variant"];
+	showSparkline: boolean;
+	sparklineData: number[];
+}) {
+	if (!showSparkline || sparklineData.length < 2) {
+		return null;
+	}
+	if (variant === "compact") {
+		return <Sparkline data={sparklineData} width={50} height={16} strokeWidth={1} />;
+	}
+	return <Sparkline data={sparklineData} width={60} height={20} className="mt-1" />;
+}
+
+function TickDotsValue({
+	showTickDots,
+	tickData,
+	size,
+}: {
+	showTickDots: boolean;
+	tickData: TickDirection[];
+	size: PriceTickerProps["size"];
+}) {
+	if (!showTickDots || tickData.length === 0) {
+		return null;
+	}
+	return (
+		<TickDots ticks={tickData} maxDots={8} dotSize={size === "sm" ? 5 : 6} className="mt-0.5" />
+	);
+}
+
+function PriceValue({
+	price,
+	flashClasses,
+	isPositive,
+	stale,
+	variant,
+	showSparkline,
+	sparklineData,
+	styleClass,
+}: {
+	price: number;
+	flashClasses: string;
+	isPositive: boolean;
+	stale: ReturnType<typeof useStaleData>["stale"];
+	variant: PriceTickerProps["variant"];
+	showSparkline: boolean;
+	sparklineData: number[];
+	styleClass: string;
+}) {
+	return (
+		<div
+			className={`${styleClass} ${flashClasses} rounded px-1 -mx-1 flex items-center gap-2`}
+			style={{
+				["--flash-color" as string]: isPositive
+					? "rgba(34, 197, 94, 0.3)"
+					: "rgba(239, 68, 68, 0.3)",
+			}}
+			aria-live="polite"
+			aria-atomic="true"
+		>
+			<AnimatedNumber
+				value={price}
+				format="currency"
+				decimals={price >= 1 ? 2 : 4}
+				className="font-mono"
+				animationThreshold={0.001}
+			/>
+			{stale.showIndicator && <StaleIndicator secondsSinceUpdate={stale.secondsSinceUpdate} />}
+			{variant === "compact" && (
+				<SparklineValue
+					variant={variant}
+					showSparkline={showSparkline}
+					sparklineData={sparklineData}
+				/>
+			)}
+		</div>
+	);
+}
+
+function PriceTickerContent({
+	symbol,
+	showSymbol,
+	stale,
+	styles,
+	variantStyle,
+	className,
+	testId,
+	price,
+	flashClasses,
+	isPositive,
+	variant,
+	showSparkline,
+	sparklineData,
+	showBidAsk,
+	bid,
+	ask,
+	showChange,
+	displayDelta,
+	displayDeltaPercent,
+	showTickDots,
+	tickData,
+	size,
+}: {
+	symbol: string;
+	showSymbol: boolean;
+	stale: ReturnType<typeof useStaleData>["stale"];
+	styles: (typeof sizeStyles)[keyof typeof sizeStyles];
+	variantStyle: (typeof variantStyles)[keyof typeof variantStyles];
+	className: string;
+	testId: string | undefined;
+	price: number;
+	flashClasses: string;
+	isPositive: boolean;
+	variant: PriceTickerProps["variant"];
+	showSparkline: boolean;
+	sparklineData: number[];
+	showBidAsk: boolean;
+	bid: number | undefined;
+	ask: number | undefined;
+	showChange: boolean;
+	displayDelta: number | undefined;
+	displayDeltaPercent: number | undefined;
+	showTickDots: boolean;
+	tickData: TickDirection[];
+	size: PriceTickerProps["size"];
+}) {
+	return (
+		<div
+			className={`inline-flex ${variantStyle.layout} ${variantStyle.gap} ${styles.container} ${className}`}
+			style={{ opacity: stale.opacity, transition: "opacity 300ms ease-in-out" }}
+			data-testid={testId}
+		>
+			{showSymbol && (
+				<span className={`${styles.symbol} text-gray-500 dark:text-gray-400`}>{symbol}</span>
+			)}
+			<PriceValue
+				price={price}
+				flashClasses={flashClasses}
+				isPositive={isPositive}
+				stale={stale}
+				variant={variant}
+				showSparkline={showSparkline}
+				sparklineData={sparklineData}
+				styleClass={styles.price}
+			/>
+			<BidAskValue
+				showBidAsk={showBidAsk}
+				bid={bid}
+				ask={ask}
+				className={`${styles.bidAsk} text-gray-500 dark:text-gray-400 font-mono`}
+			/>
+			<ChangeValue
+				showChange={showChange}
+				displayDelta={displayDelta}
+				displayDeltaPercent={displayDeltaPercent}
+				isPositive={isPositive}
+				className={`${styles.delta} ${
+					isPositive ? "text-green-600 dark:text-green-400" : "text-red-600 dark:text-red-400"
+				}`}
+			/>
+			{variant !== "compact" && (
+				<SparklineValue
+					variant={variant}
+					showSparkline={showSparkline}
+					sparklineData={sparklineData}
+				/>
+			)}
+			<TickDotsValue showTickDots={showTickDots} tickData={tickData} size={size} />
+		</div>
+	);
+}
+
+function resolveTickerInputs(props: PriceTickerProps) {
+	const showSparkline = props.showSparkline ?? false;
+	const showTickDots = props.showTickDots ?? false;
+	return {
+		symbol: props.symbol,
+		price: props.price,
+		previousPrice: props.previousPrice,
+		delta: props.delta,
+		deltaPercent: props.deltaPercent,
+		showSymbol: props.showSymbol ?? true,
+		showBidAsk: props.showBidAsk ?? false,
+		bid: props.bid,
+		ask: props.ask,
+		showChange: props.showChange ?? true,
+		showSparkline,
+		showTickDots,
+		className: props.className ?? "",
+		size: props.size ?? "md",
+		variant: props.variant ?? "default",
+		testId: props["data-testid"],
+		sparklineData: showSparkline ? (props.priceHistory?.slice(-20) ?? []) : [],
+		tickData: showTickDots ? (props.tickHistory ?? []) : [],
+		lastUpdatedAt: props.lastUpdatedAt,
+	};
+}
+
+function usePriceTickerModel(props: PriceTickerProps) {
+	const resolved = resolveTickerInputs(props);
+	const { flash } = usePriceFlash(resolved.price, resolved.previousPrice);
+	const { stale, markUpdated } = useStaleData(props.lastUpdatedAt);
+
+	useEffect(() => {
+		if (resolved.price !== resolved.previousPrice) {
+			markUpdated();
+		}
+	}, [resolved.price, resolved.previousPrice, markUpdated]);
+
+	const { displayDelta, displayDeltaPercent, isPositive } = resolveDelta(
+		resolved.price,
+		resolved.previousPrice,
+		resolved.delta,
+		resolved.deltaPercent,
+	);
+
+	return {
+		...resolved,
+		stale,
+		styles: sizeStyles[resolved.size],
+		variantStyle: variantStyles[resolved.variant],
+		flashClasses: getFlashClasses(flash),
+		isPositive,
+		displayDelta,
+		displayDeltaPercent,
+	};
+}
+
 /**
  * PriceTicker displays live prices with visual feedback.
  *
@@ -151,157 +485,9 @@ const variantStyles = {
  * />
  * ```
  */
-export const PriceTicker = memo(function PriceTicker({
-	symbol,
-	price,
-	previousPrice,
-	delta,
-	deltaPercent,
-	lastUpdatedAt,
-	showSymbol = true,
-	showBidAsk = false,
-	bid,
-	ask,
-	showChange = true,
-	showSparkline = false,
-	priceHistory,
-	showTickDots = false,
-	tickHistory,
-	className = "",
-	size = "md",
-	variant = "default",
-	"data-testid": testId,
-}: PriceTickerProps) {
-	const { flash } = usePriceFlash(price, previousPrice);
-	const { stale, markUpdated } = useStaleData(lastUpdatedAt);
-
-	useEffect(() => {
-		if (price !== previousPrice) {
-			markUpdated();
-		}
-	}, [price, previousPrice, markUpdated]);
-
-	const styles = sizeStyles[size];
-	const variantStyle = variantStyles[variant];
-
-	const displayDelta = delta ?? (previousPrice !== undefined ? price - previousPrice : undefined);
-	const displayDeltaPercent =
-		deltaPercent ??
-		(previousPrice !== undefined && previousPrice !== 0
-			? ((price - previousPrice) / previousPrice) * 100
-			: undefined);
-
-	const isPositive = displayDelta !== undefined ? displayDelta >= 0 : true;
-
-	const flashClasses = flash.isFlashing
-		? flash.direction === "up"
-			? "animate-flash-profit"
-			: "animate-flash-loss"
-		: "";
-
-	const sparklineData = useMemo(() => {
-		if (!showSparkline || !priceHistory) {
-			return [];
-		}
-		return priceHistory.slice(-20);
-	}, [showSparkline, priceHistory]);
-
-	const tickData = useMemo(() => {
-		if (!showTickDots || !tickHistory) {
-			return [];
-		}
-		return tickHistory;
-	}, [showTickDots, tickHistory]);
-
-	const StaleIndicator = () => (
-		<span
-			className="ml-1 text-gray-400"
-			title={`Last updated ${stale.secondsSinceUpdate}s ago`}
-			role="status"
-			aria-label={`Data is ${stale.secondsSinceUpdate} seconds old`}
-		>
-			<svg
-				className="inline-block w-3 h-3"
-				fill="none"
-				stroke="currentColor"
-				viewBox="0 0 24 24"
-				aria-hidden="true"
-			>
-				<title>Stale data indicator</title>
-				<path
-					strokeLinecap="round"
-					strokeLinejoin="round"
-					strokeWidth={2}
-					d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"
-				/>
-			</svg>
-		</span>
-	);
-
-	return (
-		<div
-			className={`inline-flex ${variantStyle.layout} ${variantStyle.gap} ${styles.container} ${className}`}
-			style={{
-				opacity: stale.opacity,
-				transition: "opacity 300ms ease-in-out",
-			}}
-			data-testid={testId}
-		>
-			{showSymbol && (
-				<span className={`${styles.symbol} text-gray-500 dark:text-gray-400`}>{symbol}</span>
-			)}
-
-			<div
-				className={`${styles.price} ${flashClasses} rounded px-1 -mx-1 flex items-center gap-2`}
-				style={{
-					["--flash-color" as string]: isPositive
-						? "rgba(34, 197, 94, 0.3)"
-						: "rgba(239, 68, 68, 0.3)",
-				}}
-				aria-live="polite"
-				aria-atomic="true"
-			>
-				<AnimatedNumber
-					value={price}
-					format="currency"
-					decimals={price >= 1 ? 2 : 4}
-					className="font-mono"
-					animationThreshold={0.001}
-				/>
-				{stale.showIndicator && <StaleIndicator />}
-
-				{variant === "compact" && showSparkline && sparklineData.length >= 2 && (
-					<Sparkline data={sparklineData} width={50} height={16} strokeWidth={1} />
-				)}
-			</div>
-
-			{showBidAsk && bid !== undefined && ask !== undefined && (
-				<span className={`${styles.bidAsk} text-gray-500 dark:text-gray-400 font-mono`}>
-					{formatBidAsk(bid, ask)}
-				</span>
-			)}
-
-			{showChange && displayDelta !== undefined && (
-				<span
-					className={`${styles.delta} ${
-						isPositive ? "text-green-600 dark:text-green-400" : "text-red-600 dark:text-red-400"
-					}`}
-					role="status"
-					aria-label={`Change: ${isPositive ? "up" : "down"} ${Math.abs(displayDelta).toFixed(2)}`}
-				>
-					{formatDelta(displayDelta, displayDeltaPercent)}
-				</span>
-			)}
-
-			{variant !== "compact" && showSparkline && sparklineData.length >= 2 && (
-				<Sparkline data={sparklineData} width={60} height={20} className="mt-1" />
-			)}
-
-			{showTickDots && tickData.length > 0 && (
-				<TickDots ticks={tickData} maxDots={8} dotSize={size === "sm" ? 5 : 6} className="mt-0.5" />
-			)}
-		</div>
-	);
+export const PriceTicker = memo(function PriceTicker(props: PriceTickerProps) {
+	const model = usePriceTickerModel(props);
+	return <PriceTickerContent {...model} />;
 });
 
 /**

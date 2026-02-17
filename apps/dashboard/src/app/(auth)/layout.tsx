@@ -32,6 +32,28 @@ import { useSidebar } from "@/stores/ui-store";
 import { useWatchlistStore } from "@/stores/watchlist-store";
 
 export default function AuthLayout({ children }: { children: React.ReactNode }) {
+	const model = useAuthLayoutModel();
+
+	if (model.isLoading) {
+		return <LoadingScreen />;
+	}
+	if (!model.isAuthenticated) {
+		return null;
+	}
+	if (model.isMobile) {
+		return (
+			<ResponsiveAuthLayout model={model} mobile>
+				{children}
+			</ResponsiveAuthLayout>
+		);
+	}
+	if (model.isTablet) {
+		return <ResponsiveAuthLayout model={model}>{children}</ResponsiveAuthLayout>;
+	}
+	return <DesktopAuthLayout model={model}>{children}</DesktopAuthLayout>;
+}
+
+function useAuthLayoutModel() {
 	const router = useRouter();
 	const { isAuthenticated, isLoading, user, signOut } = useAuth();
 	const { connected, connectionState } = useWebSocketContext();
@@ -40,252 +62,223 @@ export default function AuthLayout({ children }: { children: React.ReactNode }) 
 	const sidebarInitialized = useRef(false);
 	const [isDrawerOpen, setDrawerOpen] = useState(false);
 	const [isAddSymbolModalOpen, setAddSymbolModalOpen] = useState(false);
+	const watchlistSymbols = useWatchlistStore((state) => state.symbols);
+	const addSymbol = useWatchlistStore((state) => state.addSymbol);
+	const removeSymbol = useWatchlistStore((state) => state.removeSymbol);
+
 	useMarketBell();
 	useMarketTheme();
-	const watchlistSymbols = useWatchlistStore((s) => s.symbols);
-	const addSymbol = useWatchlistStore((s) => s.addSymbol);
-	const removeSymbol = useWatchlistStore((s) => s.removeSymbol);
+	useAuthLayoutEffects(
+		isLoading,
+		isAuthenticated,
+		router,
+		isDesktop,
+		isLaptop,
+		setDrawerOpen,
+		sidebarInitialized,
+		setCollapsed,
+	);
 
+	const actions = useAuthLayoutActions(router, addSymbol, setAddSymbolModalOpen, setDrawerOpen);
+
+	return {
+		...actions,
+		connected,
+		connectionState,
+		isAddSymbolModalOpen,
+		isAuthenticated,
+		isDesktop,
+		isDrawerOpen,
+		isLaptop,
+		isLoading,
+		isMobile,
+		isTablet,
+		removeSymbol,
+		signOut,
+		user,
+		watchlistSymbols,
+	};
+}
+
+function useAuthLayoutActions(
+	router: ReturnType<typeof useRouter>,
+	addSymbol: (symbol: string) => void,
+	setAddSymbolModalOpen: React.Dispatch<React.SetStateAction<boolean>>,
+	setDrawerOpen: React.Dispatch<React.SetStateAction<boolean>>,
+) {
 	const handleSymbolClick = useCallback(
-		(symbol: string) => {
-			router.push(`/charts/${symbol}`);
-		},
+		(symbol: string) => router.push(`/charts/${symbol}`),
 		[router],
 	);
+	const handleAddSymbol = useCallback((symbol: string) => addSymbol(symbol), [addSymbol]);
 
-	const handleSymbolAdd = useCallback(() => {
-		setAddSymbolModalOpen(true);
-	}, []);
+	return {
+		addSymbol: handleAddSymbol,
+		handleSymbolClick,
+		openAddSymbolModal: () => setAddSymbolModalOpen(true),
+		openDrawer: () => setDrawerOpen(true),
+		closeAddSymbolModal: () => setAddSymbolModalOpen(false),
+		closeDrawer: () => setDrawerOpen(false),
+	};
+}
 
-	const handleAddSymbol = useCallback(
-		(symbol: string) => {
-			addSymbol(symbol);
-		},
-		[addSymbol],
-	);
-
-	// Redirect to login if not authenticated
+function useAuthLayoutEffects(
+	isLoading: boolean,
+	isAuthenticated: boolean,
+	router: ReturnType<typeof useRouter>,
+	isDesktop: boolean,
+	isLaptop: boolean,
+	setDrawerOpen: (open: boolean) => void,
+	sidebarInitialized: React.MutableRefObject<boolean>,
+	setCollapsed: (collapsed: boolean) => void,
+) {
 	useEffect(() => {
 		if (!isLoading && !isAuthenticated) {
 			router.push("/login");
 		}
-	}, [isLoading, isAuthenticated, router]);
+	}, [isAuthenticated, isLoading, router]);
 
-	// Close drawer on breakpoint change
 	useEffect(() => {
 		if (isDesktop || isLaptop) {
 			setDrawerOpen(false);
 		}
-	}, [isDesktop, isLaptop]);
+	}, [isDesktop, isLaptop, setDrawerOpen]);
 
-	// Set initial collapsed state based on viewport (laptop auto-collapses)
-	// Only runs once after hydration to avoid overriding user toggle preference
 	useEffect(() => {
 		if (sidebarInitialized.current) {
 			return;
 		}
 		sidebarInitialized.current = true;
 		setCollapsed(isLaptop);
-	}, [isLaptop, setCollapsed]);
+	}, [isLaptop, setCollapsed, sidebarInitialized]);
+}
 
-	// Show loading while checking auth
-	if (isLoading) {
-		return (
-			<div className="flex h-screen items-center justify-center bg-cream-50 dark:bg-night-900">
-				<Spinner size="lg" />
+type LayoutModel = ReturnType<typeof useAuthLayoutModel>;
+
+function LoadingScreen() {
+	return (
+		<div className="flex h-screen items-center justify-center bg-cream-50 dark:bg-night-900">
+			<Spinner size="lg" />
+		</div>
+	);
+}
+
+function ResponsiveAuthLayout({
+	children,
+	mobile = false,
+	model,
+}: {
+	children: React.ReactNode;
+	mobile?: boolean;
+	model: LayoutModel;
+}) {
+	return (
+		<div className="flex flex-col h-screen bg-cream-50 dark:bg-night-900">
+			<SkipLink />
+			<GlobalLoadingIndicator />
+			<ResponsiveHeader mobile={mobile} model={model} />
+			<TickerSection model={model} />
+			<main
+				id="main-content"
+				className={mobile ? "flex-1 p-4 pb-20 overflow-auto" : "flex-1 p-6 overflow-auto"}
+				tabIndex={-1}
+			>
+				{children}
+			</main>
+			{mobile && <MobileNav onMoreClick={model.openDrawer} />}
+			<SharedOverlays model={model} />
+		</div>
+	);
+}
+
+function ResponsiveHeader({ mobile, model }: { mobile: boolean; model: LayoutModel }) {
+	return (
+		<header className="h-14 border-b border-cream-200 dark:border-night-700 bg-white dark:bg-night-800 px-4 flex items-center justify-between shrink-0">
+			<div className="flex items-center gap-3">
+				<button
+					type="button"
+					onClick={model.openDrawer}
+					className="p-2 -ml-2 rounded-md text-stone-600 dark:text-night-200 hover:bg-cream-100 dark:hover:bg-night-700"
+					aria-label="Open navigation menu"
+				>
+					<Menu className="w-5 h-5" />
+				</button>
+				<Logo className={mobile ? "h-6 w-auto" : "h-7 w-auto"} />
 			</div>
-		);
-	}
-
-	// Don't render until authenticated
-	if (!isAuthenticated) {
-		return null;
-	}
-
-	// Mobile layout: bottom nav + hamburger header
-	if (isMobile) {
-		return (
-			<div className="flex flex-col h-screen bg-cream-50 dark:bg-night-900">
-				<SkipLink />
-				<GlobalLoadingIndicator />
-
-				{/* Mobile Header */}
-				<header className="h-14 border-b border-cream-200 dark:border-night-700 bg-white dark:bg-night-800 px-4 flex items-center justify-between shrink-0">
-					<div className="flex items-center gap-3">
-						<button
-							type="button"
-							onClick={() => setDrawerOpen(true)}
-							className="p-2 -ml-2 rounded-md text-stone-600 dark:text-night-200 hover:bg-cream-100 dark:hover:bg-night-700"
-							aria-label="Open navigation menu"
-						>
-							<Menu className="w-5 h-5" />
-						</button>
-						<Logo className="h-6 w-auto" />
-					</div>
-					<div className="flex items-center gap-3">
-						<ConnectionBadge connected={connected} state={connectionState} />
-						<EnvBadge />
-					</div>
-				</header>
-
-				{/* Ticker Strip */}
-				<TickerStrip
-					symbols={watchlistSymbols}
-					onSymbolClick={handleSymbolClick}
-					onSymbolRemove={removeSymbol}
-					onSymbolAdd={handleSymbolAdd}
-					showTickHistory
-					allowRemove
-					allowAdd
-				/>
-
-				{/* Main Content - with bottom padding for nav bar */}
-				<div id="main-content" className="flex-1 p-4 pb-20 overflow-auto" tabIndex={-1}>
-					{children}
-				</div>
-
-				{/* Bottom Navigation */}
-				<MobileNav onMoreClick={() => setDrawerOpen(true)} />
-
-				{/* Navigation Drawer */}
-				<NavDrawer
-					open={isDrawerOpen}
-					onClose={() => setDrawerOpen(false)}
-					userEmail={user?.email}
-					onSignOut={signOut}
-				/>
-
-				{/* Add Symbol Modal */}
-				<AddSymbolModal
-					isOpen={isAddSymbolModalOpen}
-					onClose={() => setAddSymbolModalOpen(false)}
-					onAdd={handleAddSymbol}
-					existingSymbols={watchlistSymbols}
-				/>
-
-				{/* Global Search (Cmd+K) */}
-				<GlobalSearch />
+			<div className="flex items-center gap-4">
+				<ConnectionBadge connected={model.connected} state={model.connectionState} />
+				<EnvBadge />
 			</div>
-		);
-	}
+		</header>
+	);
+}
 
-	// Tablet layout: hamburger menu with overlay drawer
-	if (isTablet) {
-		return (
-			<div className="flex flex-col h-screen bg-cream-50 dark:bg-night-900">
-				<SkipLink />
-				<GlobalLoadingIndicator />
-
-				{/* Tablet Header */}
-				<header className="h-14 border-b border-cream-200 dark:border-night-700 bg-white dark:bg-night-800 px-4 flex items-center justify-between shrink-0">
-					<div className="flex items-center gap-3">
-						<button
-							type="button"
-							onClick={() => setDrawerOpen(true)}
-							className="p-2 -ml-2 rounded-md text-stone-600 dark:text-night-200 hover:bg-cream-100 dark:hover:bg-night-700"
-							aria-label="Open navigation menu"
-						>
-							<Menu className="w-5 h-5" />
-						</button>
-						<Logo className="h-7 w-auto" />
-					</div>
-					<div className="flex items-center gap-4">
-						<ConnectionBadge connected={connected} state={connectionState} />
-						<EnvBadge />
-					</div>
-				</header>
-
-				{/* Ticker Strip */}
-				<TickerStrip
-					symbols={watchlistSymbols}
-					onSymbolClick={handleSymbolClick}
-					onSymbolRemove={removeSymbol}
-					onSymbolAdd={handleSymbolAdd}
-					showTickHistory
-					allowRemove
-					allowAdd
-				/>
-
-				{/* Main Content */}
-				<main id="main-content" className="flex-1 p-6 overflow-auto" tabIndex={-1}>
-					{children}
-				</main>
-
-				{/* Navigation Drawer */}
-				<NavDrawer
-					open={isDrawerOpen}
-					onClose={() => setDrawerOpen(false)}
-					userEmail={user?.email}
-					onSignOut={signOut}
-				/>
-
-				{/* Add Symbol Modal */}
-				<AddSymbolModal
-					isOpen={isAddSymbolModalOpen}
-					onClose={() => setAddSymbolModalOpen(false)}
-					onAdd={handleAddSymbol}
-					existingSymbols={watchlistSymbols}
-				/>
-
-				{/* Global Search (Cmd+K) */}
-				<GlobalSearch />
-			</div>
-		);
-	}
-
-	// Desktop/Laptop layout: sidebar (collapsed on laptop)
+function DesktopAuthLayout({ children, model }: { children: React.ReactNode; model: LayoutModel }) {
 	return (
 		<div className="flex h-screen bg-cream-50 dark:bg-night-900">
 			<SkipLink />
 			<GlobalLoadingIndicator />
-
-			{/* Sidebar */}
-			<Sidebar userEmail={user?.email} onSignOut={signOut} />
-
-			{/* Main content */}
+			<Sidebar userEmail={model.user?.email} onSignOut={model.signOut} />
 			<main className="flex-1 overflow-auto flex flex-col">
-				{/* Header */}
 				<header className="h-14 border-b border-cream-200 dark:border-night-700 bg-white dark:bg-night-800 px-6 flex items-center justify-end shrink-0">
 					<div className="flex items-center gap-4">
-						<ConnectionBadge connected={connected} state={connectionState} />
+						<ConnectionBadge connected={model.connected} state={model.connectionState} />
 						<EnvBadge />
 					</div>
 				</header>
-
-				{/* Ticker Strip */}
-				<TickerStrip
-					symbols={watchlistSymbols}
-					onSymbolClick={handleSymbolClick}
-					onSymbolRemove={removeSymbol}
-					onSymbolAdd={handleSymbolAdd}
-					showTickHistory
-					allowRemove
-					allowAdd
-				/>
-
-				{/* Page content */}
+				<TickerSection model={model} />
 				<div id="main-content" className="flex-1 p-6 overflow-auto" tabIndex={-1}>
 					{children}
 				</div>
 			</main>
-
-			{/* Add Symbol Modal */}
-			<AddSymbolModal
-				isOpen={isAddSymbolModalOpen}
-				onClose={() => setAddSymbolModalOpen(false)}
-				onAdd={handleAddSymbol}
-				existingSymbols={watchlistSymbols}
-			/>
-
-			{/* Global Search (Cmd+K) */}
+			<AddSymbolModalShell model={model} />
 			<GlobalSearch />
 		</div>
 	);
 }
 
+function TickerSection({ model }: { model: LayoutModel }) {
+	return (
+		<TickerStrip
+			symbols={model.watchlistSymbols}
+			onSymbolClick={model.handleSymbolClick}
+			onSymbolRemove={model.removeSymbol}
+			onSymbolAdd={model.openAddSymbolModal}
+			showTickHistory
+			allowRemove
+			allowAdd
+		/>
+	);
+}
+
+function AddSymbolModalShell({ model }: { model: LayoutModel }) {
+	return (
+		<AddSymbolModal
+			isOpen={model.isAddSymbolModalOpen}
+			onClose={model.closeAddSymbolModal}
+			onAdd={model.addSymbol}
+			existingSymbols={model.watchlistSymbols}
+		/>
+	);
+}
+
+function SharedOverlays({ model }: { model: LayoutModel }) {
+	return (
+		<>
+			<NavDrawer
+				open={model.isDrawerOpen}
+				onClose={model.closeDrawer}
+				userEmail={model.user?.email}
+				onSignOut={model.signOut}
+			/>
+			<AddSymbolModalShell model={model} />
+			<GlobalSearch />
+		</>
+	);
+}
+
 function ConnectionBadge({ connected, state }: { connected: boolean; state: string }) {
 	const isConnecting = state === "connecting" || state === "reconnecting";
-
 	if (connected) {
 		return (
 			<div className="flex items-center gap-2">
@@ -296,7 +289,6 @@ function ConnectionBadge({ connected, state }: { connected: boolean; state: stri
 			</div>
 		);
 	}
-
 	if (isConnecting) {
 		return (
 			<div className="flex items-center gap-2">
@@ -307,7 +299,6 @@ function ConnectionBadge({ connected, state }: { connected: boolean; state: stri
 			</div>
 		);
 	}
-
 	return null;
 }
 

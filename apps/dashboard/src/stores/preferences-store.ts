@@ -163,121 +163,83 @@ function getSystemTheme(): "light" | "dark" {
 	return window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
 }
 
+type PreferencesSet = (
+	partial: Partial<PreferencesStore> | ((state: PreferencesStore) => Partial<PreferencesStore>),
+) => void;
+type PreferencesGet = () => PreferencesStore;
+
+function withUpdatedTimestamp(partial: Partial<PreferencesStore>): Partial<PreferencesStore> {
+	return { ...partial, lastUpdated: Date.now() };
+}
+
+function migratePreferencesState(persisted: unknown, version: number): PreferencesState {
+	const state = persisted as Partial<PreferencesState>;
+	if (version < 2) {
+		return { ...initialState, ...state, feed: { ...defaultFeedPreferences, ...state.feed } };
+	}
+	if (version < 3) {
+		return { ...initialState, ...state, sound: { ...defaultSoundPreferences, ...state.sound } };
+	}
+	if (version < 4) {
+		return {
+			...initialState,
+			...state,
+			display: { ...defaultDisplayPreferences, ...state.display },
+		};
+	}
+	return persisted as PreferencesState;
+}
+
+function createPreferencesActions(set: PreferencesSet, get: PreferencesGet): PreferencesActions {
+	return {
+		updateSound: (prefs) =>
+			set((state) => withUpdatedTimestamp({ sound: { ...state.sound, ...prefs } })),
+		updateNotifications: (prefs) =>
+			set((state) =>
+				withUpdatedTimestamp({
+					notifications: { ...state.notifications, ...prefs },
+				}),
+			),
+		updateDisplay: (prefs) =>
+			set((state) => withUpdatedTimestamp({ display: { ...state.display, ...prefs } })),
+		updateFeed: (prefs) =>
+			set((state) => withUpdatedTimestamp({ feed: { ...state.feed, ...prefs } })),
+		resetToDefaults: () => set(withUpdatedTimestamp(initialState)),
+		togglePreference: (category, key) => {
+			set((state) => {
+				const categoryState = state[category] as unknown as Record<string, unknown>;
+				if (typeof categoryState[key] !== "boolean") {
+					return state;
+				}
+
+				return withUpdatedTimestamp({
+					[category]: { ...categoryState, [key]: !categoryState[key] },
+				});
+			});
+		},
+		getComputedTheme: () => {
+			const { theme } = get().display;
+			return theme === "system" ? getSystemTheme() : theme;
+		},
+		shouldAnimate: () => {
+			const state = get();
+			return state.display.animationsEnabled && !prefersReducedMotion();
+		},
+	};
+}
+
 export const usePreferencesStore = create<PreferencesStore>()(
 	devtools(
 		subscribeWithSelector(
 			persist(
 				(set, get) => ({
 					...initialState,
-
-					updateSound: (prefs) => {
-						set((state) => ({
-							sound: { ...state.sound, ...prefs },
-							lastUpdated: Date.now(),
-						}));
-					},
-
-					updateNotifications: (prefs) => {
-						set((state) => ({
-							notifications: { ...state.notifications, ...prefs },
-							lastUpdated: Date.now(),
-						}));
-					},
-
-					updateDisplay: (prefs) => {
-						set((state) => ({
-							display: { ...state.display, ...prefs },
-							lastUpdated: Date.now(),
-						}));
-					},
-
-					updateFeed: (prefs) => {
-						set((state) => ({
-							feed: { ...state.feed, ...prefs },
-							lastUpdated: Date.now(),
-						}));
-					},
-
-					resetToDefaults: () => {
-						set({
-							...initialState,
-							lastUpdated: Date.now(),
-						});
-					},
-
-					togglePreference: (category, key) => {
-						set((state) => {
-							const categoryState = state[category] as unknown as Record<string, unknown>;
-							if (typeof categoryState[key] !== "boolean") {
-								return state;
-							}
-
-							return {
-								[category]: {
-									...categoryState,
-									[key]: !categoryState[key],
-								},
-								lastUpdated: Date.now(),
-							};
-						});
-					},
-
-					getComputedTheme: () => {
-						const { theme } = get().display;
-						if (theme === "system") {
-							return getSystemTheme();
-						}
-						return theme;
-					},
-
-					shouldAnimate: () => {
-						const state = get();
-						if (!state.display.animationsEnabled) {
-							return false;
-						}
-						if (prefersReducedMotion()) {
-							return false;
-						}
-						return true;
-					},
+					...createPreferencesActions(set, get),
 				}),
 				{
 					name: "cream-preferences",
 					version: 4,
-					migrate: (persisted, version) => {
-						const state = persisted as Partial<PreferencesState>;
-						if (version < 2) {
-							return {
-								...initialState,
-								...state,
-								feed: {
-									...defaultFeedPreferences,
-									...state.feed,
-								},
-							};
-						}
-						if (version < 3) {
-							return {
-								...initialState,
-								...state,
-								sound: {
-									...defaultSoundPreferences,
-									...state.sound,
-								},
-							};
-						}
-						if (version < 4) {
-							return {
-								...initialState,
-								...state,
-								display: {
-									...defaultDisplayPreferences,
-									...state.display,
-								},
-							};
-						}
-						return persisted as PreferencesState;
-					},
+					migrate: migratePreferencesState,
 				},
 			),
 		),

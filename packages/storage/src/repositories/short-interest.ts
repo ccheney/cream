@@ -246,16 +246,12 @@ export class ShortInterestRepository {
 		return rows.map(mapShortInterestRow);
 	}
 
-	async findWithFilters(
-		filters: ShortInterestFilters,
-		pagination?: PaginationOptions,
-	): Promise<PaginatedResult<ShortInterestIndicators>> {
+	private buildFindWithFiltersWhereClause(filters: ShortInterestFilters) {
 		const conditions = [];
 
 		if (filters.symbol) {
 			conditions.push(eq(shortInterestIndicators.symbol, filters.symbol));
 		}
-
 		if (filters.settlementDate) {
 			const dateStart = new Date(filters.settlementDate);
 			dateStart.setHours(0, 0, 0, 0);
@@ -264,27 +260,41 @@ export class ShortInterestRepository {
 			conditions.push(gte(shortInterestIndicators.settlementDate, dateStart));
 			conditions.push(lte(shortInterestIndicators.settlementDate, dateEnd));
 		}
-
 		if (filters.settlementDateGte) {
 			conditions.push(
 				gte(shortInterestIndicators.settlementDate, new Date(filters.settlementDateGte)),
 			);
 		}
-
 		if (filters.settlementDateLte) {
 			conditions.push(
 				lte(shortInterestIndicators.settlementDate, new Date(filters.settlementDateLte)),
 			);
 		}
-
 		if (filters.shortPctFloatGte !== undefined) {
 			conditions.push(gte(shortInterestIndicators.shortPctFloat, String(filters.shortPctFloatGte)));
 		}
 
-		const whereClause = conditions.length > 0 ? and(...conditions) : undefined;
+		return conditions.length > 0 ? and(...conditions) : undefined;
+	}
+
+	private getPagination(
+		pagination?: PaginationOptions,
+	): Required<PaginationOptions> & { offset: number } {
 		const page = pagination?.page ?? 1;
 		const pageSize = pagination?.pageSize ?? 50;
-		const offset = (page - 1) * pageSize;
+		return {
+			page,
+			pageSize,
+			offset: (page - 1) * pageSize,
+		};
+	}
+
+	async findWithFilters(
+		filters: ShortInterestFilters,
+		pagination?: PaginationOptions,
+	): Promise<PaginatedResult<ShortInterestIndicators>> {
+		const whereClause = this.buildFindWithFiltersWhereClause(filters);
+		const { page, pageSize, offset } = this.getPagination(pagination);
 
 		const [countResult] = await this.db
 			.select({ count: count() })

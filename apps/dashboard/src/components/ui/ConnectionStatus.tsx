@@ -15,6 +15,43 @@ export interface ConnectionStatusProps {
 	className?: string;
 }
 
+const sizeClasses = {
+	sm: { dot: "w-1.5 h-1.5", text: "text-xs", icon: "w-3 h-3" },
+	md: { dot: "w-2 h-2", text: "text-sm", icon: "w-4 h-4" },
+	lg: { dot: "w-2.5 h-2.5", text: "text-base", icon: "w-5 h-5" },
+} as const;
+
+const stateConfig = {
+	connected: {
+		dotColor: "bg-green-500",
+		textColor: "text-green-600 dark:text-green-400",
+		label: "Live",
+		icon: Wifi,
+		animate: false,
+	},
+	connecting: {
+		dotColor: "bg-yellow-500",
+		textColor: "text-yellow-600 dark:text-yellow-400",
+		label: "Connecting...",
+		icon: RefreshCw,
+		animate: true,
+	},
+	reconnecting: {
+		dotColor: "bg-yellow-500",
+		textColor: "text-yellow-600 dark:text-yellow-400",
+		getLabel: (attempt: number, maxAttempts: number) => `Reconnecting (${attempt}/${maxAttempts})`,
+		icon: RefreshCw,
+		animate: true,
+	},
+	disconnected: {
+		dotColor: "bg-red-500",
+		textColor: "text-red-600 dark:text-red-400",
+		label: "Disconnected",
+		icon: WifiOff,
+		animate: false,
+	},
+} as const;
+
 export const ConnectionStatus = memo(function ConnectionStatus({
 	state,
 	attempt = 0,
@@ -24,47 +61,15 @@ export const ConnectionStatus = memo(function ConnectionStatus({
 	size = "md",
 	className = "",
 }: ConnectionStatusProps) {
-	const sizeClasses = {
-		sm: { dot: "w-1.5 h-1.5", text: "text-xs", icon: "w-3 h-3" },
-		md: { dot: "w-2 h-2", text: "text-sm", icon: "w-4 h-4" },
-		lg: { dot: "w-2.5 h-2.5", text: "text-base", icon: "w-5 h-5" },
-	};
-
 	const styles = sizeClasses[size];
-
-	const stateConfig = {
-		connected: {
-			dotColor: "bg-green-500",
-			textColor: "text-green-600 dark:text-green-400",
-			label: "Live",
-			icon: Wifi,
-			animate: false,
-		},
-		connecting: {
-			dotColor: "bg-yellow-500",
-			textColor: "text-yellow-600 dark:text-yellow-400",
-			label: "Connecting...",
-			icon: RefreshCw,
-			animate: true,
-		},
-		reconnecting: {
-			dotColor: "bg-yellow-500",
-			textColor: "text-yellow-600 dark:text-yellow-400",
-			label: `Reconnecting (${attempt}/${maxAttempts})`,
-			icon: RefreshCw,
-			animate: true,
-		},
-		disconnected: {
-			dotColor: "bg-red-500",
-			textColor: "text-red-600 dark:text-red-400",
-			label: "Disconnected",
-			icon: WifiOff,
-			animate: false,
-		},
-	};
-
 	const config = stateConfig[state];
 	const Icon = config.icon;
+	const label = "getLabel" in config ? config.getLabel(attempt, maxAttempts) : config.label;
+	const showRetryCountdown =
+		state === "reconnecting" &&
+		nextRetryIn !== null &&
+		nextRetryIn !== undefined &&
+		nextRetryIn > 0;
 
 	return (
 		<output className={`flex items-center gap-2 ${className}`} aria-live="polite">
@@ -78,16 +83,13 @@ export const ConnectionStatus = memo(function ConnectionStatus({
 				/>
 			)}
 
-			<span className={`${styles.text} ${config.textColor}`}>{config.label}</span>
+			<span className={`${styles.text} ${config.textColor}`}>{label}</span>
 
-			{state === "reconnecting" &&
-				nextRetryIn !== null &&
-				nextRetryIn !== undefined &&
-				nextRetryIn > 0 && (
-					<span className={`${styles.text} text-stone-500 dark:text-night-300`}>
-						({nextRetryIn}s)
-					</span>
-				)}
+			{showRetryCountdown && (
+				<span className={`${styles.text} text-stone-500 dark:text-night-300`}>
+					({nextRetryIn}s)
+				</span>
+			)}
 
 			{state === "connected" && showDetails && (
 				<span title="Streaming active">

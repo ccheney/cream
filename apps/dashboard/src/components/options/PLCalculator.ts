@@ -163,53 +163,83 @@ export function findBreakevens(_legs: OptionLeg[], data: PLDataPoint[]): number[
 	return breakevens;
 }
 
-export function analyzeStrategy(legs: OptionLeg[], data: PLDataPoint[]): PLAnalysis {
-	const breakevens = findBreakevens(legs, data);
+interface ExtremumState {
+	maxProfit: number;
+	maxLoss: number;
+	maxProfitPrices: number[];
+	maxLossPrices: number[];
+}
 
-	let maxProfit = Number.NEGATIVE_INFINITY;
-	let maxLoss = Number.POSITIVE_INFINITY;
-	const maxProfitPrices: number[] = [];
-	const maxLossPrices: number[] = [];
+function getInitialExtrema(): ExtremumState {
+	return {
+		maxProfit: Number.NEGATIVE_INFINITY,
+		maxLoss: Number.POSITIVE_INFINITY,
+		maxProfitPrices: [],
+		maxLossPrices: [],
+	};
+}
 
-	for (const point of data) {
-		if (point.pnlAtExpiration > maxProfit) {
-			maxProfit = point.pnlAtExpiration;
-			maxProfitPrices.length = 0;
-			maxProfitPrices.push(point.price);
-		} else if (point.pnlAtExpiration === maxProfit) {
-			maxProfitPrices.push(point.price);
-		}
-
-		if (point.pnlAtExpiration < maxLoss) {
-			maxLoss = point.pnlAtExpiration;
-			maxLossPrices.length = 0;
-			maxLossPrices.push(point.price);
-		} else if (point.pnlAtExpiration === maxLoss) {
-			maxLossPrices.push(point.price);
-		}
+function updateExtrema(state: ExtremumState, point: PLDataPoint): ExtremumState {
+	if (point.pnlAtExpiration > state.maxProfit) {
+		state.maxProfit = point.pnlAtExpiration;
+		state.maxProfitPrices = [point.price];
+	} else if (point.pnlAtExpiration === state.maxProfit) {
+		state.maxProfitPrices.push(point.price);
 	}
 
+	if (point.pnlAtExpiration < state.maxLoss) {
+		state.maxLoss = point.pnlAtExpiration;
+		state.maxLossPrices = [point.price];
+	} else if (point.pnlAtExpiration === state.maxLoss) {
+		state.maxLossPrices.push(point.price);
+	}
+
+	return state;
+}
+
+function determineUnlimitedMaxProfit(
+	legs: OptionLeg[],
+	extrema: ExtremumState,
+	data: PLDataPoint[],
+): number {
 	const firstPoint = data[0];
 	const lastPoint = data.at(-1);
-
-	// Long calls/puts have unlimited profit potential at price extremes
-	if (firstPoint && lastPoint) {
-		if (maxProfitPrices[0] === firstPoint.price || maxProfitPrices.at(-1) === lastPoint.price) {
-			const hasUnlimitedUpside = legs.some((leg) => leg.right === "CALL" && leg.quantity > 0);
-			const hasUnlimitedDownside = legs.some((leg) => leg.right === "PUT" && leg.quantity > 0);
-
-			if (hasUnlimitedUpside || hasUnlimitedDownside) {
-				maxProfit = Number.POSITIVE_INFINITY;
-			}
-		}
+	if (!firstPoint || !lastPoint) {
+		return extrema.maxProfit;
 	}
+
+	const touchesEndpoint =
+		extrema.maxProfitPrices.at(0) === firstPoint.price ||
+		extrema.maxProfitPrices.at(-1) === lastPoint.price;
+	if (!touchesEndpoint) {
+		return extrema.maxProfit;
+	}
+
+	const hasLongCall = legs.some((leg) => leg.right === "CALL" && leg.quantity > 0);
+	const hasLongPut = legs.some((leg) => leg.right === "PUT" && leg.quantity > 0);
+
+	if (!hasLongCall && !hasLongPut) {
+		return extrema.maxProfit;
+	}
+
+	return Number.POSITIVE_INFINITY;
+}
+
+export function analyzeStrategy(legs: OptionLeg[], data: PLDataPoint[]): PLAnalysis {
+	const breakevens = findBreakevens(legs, data);
+	const extrema = getInitialExtrema();
+	for (const point of data) {
+		updateExtrema(extrema, point);
+	}
+
+	const maxProfit = determineUnlimitedMaxProfit(legs, extrema, data);
 
 	return {
 		breakevens,
 		maxProfit,
-		maxLoss,
-		maxProfitPrices,
-		maxLossPrices,
+		maxLoss: extrema.maxLoss,
+		maxProfitPrices: extrema.maxProfitPrices,
+		maxLossPrices: extrema.maxLossPrices,
 	};
 }
 

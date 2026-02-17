@@ -1,10 +1,5 @@
 /**
  * WebSocket Graceful Shutdown
- *
- * Implements graceful shutdown with connection draining, message queue flushing,
- * and event subscription cleanup for zero-downtime deployments.
- *
- * @see docs/plans/ui/06-websocket.md
  */
 
 import type { ServerWebSocket } from "bun";
@@ -23,32 +18,20 @@ export type ShutdownPhase =
 export type ShutdownReason = "SIGTERM" | "SIGINT" | "manual" | "error";
 
 export interface ShutdownConfig {
-	/** Time to wait for clients to disconnect after warning (ms) */
 	drainTimeout: number;
-	/** Time to wait for queue flush (ms) */
 	flushTimeout: number;
-	/** Time to wait for subscription cleanup (ms) */
 	cleanupTimeout: number;
-	/** Maximum total shutdown time (ms) */
 	maxShutdownTime: number;
-	/** Whether to exit process after shutdown */
 	exitProcess: boolean;
 }
 
 export interface ShutdownState {
-	/** Current shutdown phase */
 	phase: ShutdownPhase;
-	/** Reason for shutdown */
 	reason: ShutdownReason | null;
-	/** Timestamp when shutdown started */
 	startedAt: Date | null;
-	/** Whether shutdown is in progress */
 	isShuttingDown: boolean;
-	/** Number of connections at shutdown start */
 	initialConnectionCount: number;
-	/** Number of connections forcefully closed */
 	forcedClosures: number;
-	/** Number of messages dropped */
 	droppedMessages: number;
 }
 
@@ -93,10 +76,10 @@ export interface ShutdownDependencies {
 }
 
 export const DEFAULT_SHUTDOWN_CONFIG: ShutdownConfig = {
-	drainTimeout: 30000, // 30s for clients to disconnect
-	flushTimeout: 10000, // 10s to flush queues
-	cleanupTimeout: 10000, // 10s for subscription cleanup
-	maxShutdownTime: 60000, // 60s max total
+	drainTimeout: 30000,
+	flushTimeout: 10000,
+	cleanupTimeout: 10000,
+	maxShutdownTime: 60000,
 	exitProcess: true,
 };
 
@@ -106,70 +89,27 @@ export const WS_CLOSE_CODES = {
 	SHUTDOWN: 1012,
 } as const;
 
-/**
- * Manages graceful WebSocket server shutdown.
- *
- * @example
- * ```ts
- * const shutdown = createShutdownManager({
- *   getConnections: () => connections,
- *   sendMessage: (ws, msg) => { ws.send(JSON.stringify(msg)); return true; },
- *   flushQueues: async () => { batcher.flush(); },
- *   cleanupSubscriptions: async () => { redis.quit(); },
- *   onLog: (entry) => console.log(JSON.stringify(entry)),
- * });
- *
- * // Start signal handlers
- * shutdown.registerSignalHandlers();
- *
- * // Check health (for load balancer)
- * if (!shutdown.isHealthy()) {
- *   return new Response("Service Unavailable", { status: 503 });
- * }
- *
- * // Manual shutdown
- * await shutdown.initiateShutdown("manual");
- * ```
- */
 export interface ShutdownManager {
-	/** Current shutdown state */
 	getState(): ShutdownState;
-
-	/** Check if server is accepting connections */
 	isHealthy(): boolean;
-
-	/** Check if shutdown is in progress */
 	isShuttingDown(): boolean;
-
-	/** Get current phase */
 	getCurrentPhase(): ShutdownPhase;
-
-	/** Register signal handlers (SIGTERM, SIGINT) */
 	registerSignalHandlers(): void;
-
-	/** Unregister signal handlers */
 	unregisterSignalHandlers(): void;
-
-	/** Initiate graceful shutdown */
 	initiateShutdown(reason: ShutdownReason): Promise<void>;
-
-	/** Force immediate shutdown */
 	forceShutdown(): void;
-
-	/** Reset state (for testing) */
 	reset(): void;
 }
 
-/**
- * Create a shutdown manager.
- */
-export function createShutdownManager(
-	deps: ShutdownDependencies,
-	config: Partial<ShutdownConfig> = {},
-): ShutdownManager {
-	const fullConfig: ShutdownConfig = { ...DEFAULT_SHUTDOWN_CONFIG, ...config };
+const sleep = Bun.sleep;
 
-	const state: ShutdownState = {
+function getErrorMessage(error: unknown): string {
+	return error instanceof Error ? error.message : String(error);
+}
+
+class ShutdownManagerImpl implements ShutdownManager {
+	private readonly config: ShutdownConfig;
+	private readonly state: ShutdownState = {
 		phase: "idle",
 		reason: null,
 		startedAt: null,
@@ -179,62 +119,68 @@ export function createShutdownManager(
 		droppedMessages: 0,
 	};
 
-	let signalHandlerRegistered = false;
-	let shutdownTimeout: ReturnType<typeof setTimeout> | null = null;
+	private signalHandlerRegistered = false;
+	private shutdownTimeout: ReturnType<typeof setTimeout> | null = null;
 
-	const log = (
-		event: ShutdownEventType,
-		message: string,
-		metadata?: Record<string, unknown>,
-	): void => {
-		if (!deps.onLog) {
+	private readonly handleSigterm = (): void => {
+		void this.initiateShutdown("SIGTERM");
+	};
+
+	private readonly handleSigint = (): void => {
+		void this.initiateShutdown("SIGINT");
+	};
+
+	constructor(
+		private readonly deps: ShutdownDependencies,
+		config: Partial<ShutdownConfig>,
+	) {
+		this.config = { ...DEFAULT_SHUTDOWN_CONFIG, ...config };
+	}
+
+	private log(event: ShutdownEventType, message: string, metadata?: Record<string, unknown>): void {
+		if (!this.deps.onLog) {
 			return;
 		}
 
 		const entry: ShutdownLogEntry = {
 			timestamp: new Date().toISOString(),
 			event,
-			phase: state.phase,
-			reason: state.reason ?? undefined,
-			connectionCount: deps.getConnections().size,
-			duration: state.startedAt ? Date.now() - state.startedAt.getTime() : undefined,
+			phase: this.state.phase,
+			reason: this.state.reason ?? undefined,
+			connectionCount: this.deps.getConnections().size,
+			duration: this.state.startedAt ? Date.now() - this.state.startedAt.getTime() : undefined,
 			message,
 			metadata,
 		};
+		this.deps.onLog(entry);
+	}
 
-		deps.onLog(entry);
-	};
-
-	const setPhase = (phase: ShutdownPhase): void => {
-		const previousPhase = state.phase;
-		state.phase = phase;
-
-		log("shutdown.phase_change", `Phase transition: ${previousPhase} → ${phase}`, {
+	private setPhase(phase: ShutdownPhase): void {
+		const previousPhase = this.state.phase;
+		this.state.phase = phase;
+		this.log("shutdown.phase_change", `Phase transition: ${previousPhase} -> ${phase}`, {
 			previousPhase,
 			newPhase: phase,
 		});
-	};
+	}
 
-	/** Server marks itself as unhealthy so load balancer stops routing traffic. */
-	const rejectConnectionsPhase = (): void => {
-		setPhase("reject_connections");
-	};
+	private rejectConnectionsPhase(): void {
+		this.setPhase("reject_connections");
+	}
 
-	const warnClientsPhase = (): void => {
-		setPhase("warn_clients");
-
-		const connections = deps.getConnections();
+	private warnClientsPhase(): void {
+		this.setPhase("warn_clients");
+		const connections = this.deps.getConnections();
 		let warned = 0;
 
 		for (const [_connectionId, ws] of connections) {
 			try {
-				const success = deps.sendMessage(ws, {
+				const success = this.deps.sendMessage(ws, {
 					type: "shutdown_warning",
 					message: "Server shutting down. Please reconnect to another server.",
-					timeout: fullConfig.drainTimeout / 1000,
+					timeout: this.config.drainTimeout / 1000,
 					timestamp: new Date().toISOString(),
 				});
-
 				if (success) {
 					warned++;
 				}
@@ -243,61 +189,58 @@ export function createShutdownManager(
 			}
 		}
 
-		log("shutdown.connection_warned", `Warned ${warned} connections of shutdown`, {
+		this.log("shutdown.connection_warned", `Warned ${warned} connections of shutdown`, {
 			warnedCount: warned,
 			totalConnections: connections.size,
 		});
-	};
+	}
 
-	const drainConnectionsPhase = async (): Promise<void> => {
-		setPhase("drain_connections");
-
+	private async drainConnectionsPhase(): Promise<void> {
+		this.setPhase("drain_connections");
 		const startTime = Date.now();
-		const checkInterval = 100; // Check every 100ms
+		const checkInterval = 100;
 
-		while (Date.now() - startTime < fullConfig.drainTimeout) {
-			const connections = deps.getConnections();
-
+		while (Date.now() - startTime < this.config.drainTimeout) {
+			const connections = this.deps.getConnections();
 			if (connections.size === 0) {
-				log("shutdown.connection_drained", "All connections drained successfully", {
+				this.log("shutdown.connection_drained", "All connections drained successfully", {
 					duration: Date.now() - startTime,
 				});
 				return;
 			}
 
-			// Log progress every 5 seconds
 			if ((Date.now() - startTime) % 5000 < checkInterval) {
-				log("shutdown.connection_drained", `Waiting for ${connections.size} connections to drain`, {
-					remainingConnections: connections.size,
-					elapsed: Date.now() - startTime,
-				});
+				this.log(
+					"shutdown.connection_drained",
+					`Waiting for ${connections.size} connections to drain`,
+					{
+						remainingConnections: connections.size,
+						elapsed: Date.now() - startTime,
+					},
+				);
 			}
 
 			await sleep(checkInterval);
 		}
 
-		log(
+		this.log(
 			"shutdown.timeout",
-			`Drain timeout reached with ${deps.getConnections().size} connections`,
-			{
-				remainingConnections: deps.getConnections().size,
-			},
+			`Drain timeout reached with ${this.deps.getConnections().size} connections`,
+			{ remainingConnections: this.deps.getConnections().size },
 		);
-	};
+	}
 
-	const forceClosePhase = (): void => {
-		setPhase("force_close");
-
-		const connections = deps.getConnections();
+	private forceClosePhase(): void {
+		this.setPhase("force_close");
+		const connections = this.deps.getConnections();
 		let closed = 0;
 
 		for (const [connectionId, ws] of connections) {
 			try {
 				ws.close(WS_CLOSE_CODES.SHUTDOWN, "Server shutdown");
 				closed++;
-				state.forcedClosures++;
-
-				log("shutdown.connection_forced", `Force closed connection: ${connectionId}`, {
+				this.state.forcedClosures++;
+				this.log("shutdown.connection_forced", `Force closed connection: ${connectionId}`, {
 					connectionId,
 				});
 			} catch {
@@ -306,224 +249,204 @@ export function createShutdownManager(
 		}
 
 		if (closed > 0) {
-			log("shutdown.connection_forced", `Force closed ${closed} connections`, {
+			this.log("shutdown.connection_forced", `Force closed ${closed} connections`, {
 				forcedCount: closed,
 			});
 		}
-	};
+	}
 
-	/** Close Redis connections, gRPC streams, etc. */
-	const cleanupSubscriptionsPhase = async (): Promise<void> => {
-		setPhase("cleanup_subscriptions");
-
-		if (!deps.cleanupSubscriptions) {
-			log("shutdown.subscriptions_closed", "No subscription cleanup configured", {});
+	private async cleanupSubscriptionsPhase(): Promise<void> {
+		this.setPhase("cleanup_subscriptions");
+		if (!this.deps.cleanupSubscriptions) {
+			this.log("shutdown.subscriptions_closed", "No subscription cleanup configured", {});
 			return;
 		}
 
 		try {
-			const cleanup = Promise.race([
-				deps.cleanupSubscriptions(),
-				sleep(fullConfig.cleanupTimeout).then(() => {
+			await Promise.race([
+				this.deps.cleanupSubscriptions(),
+				sleep(this.config.cleanupTimeout).then(() => {
 					throw new Error("Subscription cleanup timeout");
 				}),
 			]);
-
-			await cleanup;
-			log("shutdown.subscriptions_closed", "Subscriptions cleaned up successfully", {});
+			this.log("shutdown.subscriptions_closed", "Subscriptions cleaned up successfully", {});
 		} catch (error) {
-			log("shutdown.error", `Subscription cleanup failed: ${(error as Error).message}`, {
-				error: (error as Error).message,
+			this.log("shutdown.error", `Subscription cleanup failed: ${getErrorMessage(error)}`, {
+				error: getErrorMessage(error),
 			});
 		}
-	};
+	}
 
-	const flushQueuesPhase = async (): Promise<void> => {
-		setPhase("flush_queues");
-
-		if (!deps.flushQueues) {
-			log("shutdown.queue_flushed", "No queue flush configured", {});
+	private async flushQueuesPhase(): Promise<void> {
+		this.setPhase("flush_queues");
+		if (!this.deps.flushQueues) {
+			this.log("shutdown.queue_flushed", "No queue flush configured", {});
 			return;
 		}
 
 		try {
-			const flush = Promise.race([
-				deps.flushQueues(),
-				sleep(fullConfig.flushTimeout).then(() => {
+			await Promise.race([
+				this.deps.flushQueues(),
+				sleep(this.config.flushTimeout).then(() => {
 					throw new Error("Queue flush timeout");
 				}),
 			]);
-
-			await flush;
-			log("shutdown.queue_flushed", "Message queues flushed successfully", {});
+			this.log("shutdown.queue_flushed", "Message queues flushed successfully", {});
 		} catch (error) {
-			log("shutdown.error", `Queue flush failed: ${(error as Error).message}`, {
-				error: (error as Error).message,
+			this.log("shutdown.error", `Queue flush failed: ${getErrorMessage(error)}`, {
+				error: getErrorMessage(error),
 			});
 		}
-	};
+	}
 
-	const completePhase = (): void => {
-		setPhase("complete");
-
-		const duration = state.startedAt ? Date.now() - state.startedAt.getTime() : 0;
-
-		log("shutdown.complete", `Shutdown complete in ${duration}ms`, {
+	private completePhase(): void {
+		this.setPhase("complete");
+		const duration = this.state.startedAt ? Date.now() - this.state.startedAt.getTime() : 0;
+		this.log("shutdown.complete", `Shutdown complete in ${duration}ms`, {
 			duration,
-			forcedClosures: state.forcedClosures,
-			droppedMessages: state.droppedMessages,
+			forcedClosures: this.state.forcedClosures,
+			droppedMessages: this.state.droppedMessages,
 		});
 
-		if (fullConfig.exitProcess) {
-			// Allow final log to flush before exiting
+		if (this.config.exitProcess) {
 			setTimeout(() => {
 				process.exit(0);
 			}, 100);
 		}
-	};
+	}
 
-	const initiateShutdown = async (reason: ShutdownReason): Promise<void> => {
-		if (state.isShuttingDown) {
-			log("shutdown.error", "Shutdown already in progress", { existingReason: state.reason });
+	private startOverallTimeout(): void {
+		this.shutdownTimeout = setTimeout(() => {
+			this.log("shutdown.timeout", "Maximum shutdown time exceeded, forcing exit", {
+				maxTime: this.config.maxShutdownTime,
+			});
+			this.forceShutdown();
+		}, this.config.maxShutdownTime);
+	}
+
+	private clearOverallTimeout(): void {
+		if (!this.shutdownTimeout) {
+			return;
+		}
+		clearTimeout(this.shutdownTimeout);
+		this.shutdownTimeout = null;
+	}
+
+	getState(): ShutdownState {
+		return { ...this.state };
+	}
+
+	isHealthy(): boolean {
+		return !this.state.isShuttingDown;
+	}
+
+	isShuttingDown(): boolean {
+		return this.state.isShuttingDown;
+	}
+
+	getCurrentPhase(): ShutdownPhase {
+		return this.state.phase;
+	}
+
+	registerSignalHandlers(): void {
+		if (this.signalHandlerRegistered) {
+			return;
+		}
+		process.on("SIGTERM", this.handleSigterm);
+		process.on("SIGINT", this.handleSigint);
+		this.signalHandlerRegistered = true;
+		this.log("shutdown.initiated", "Signal handlers registered (SIGTERM, SIGINT)", {});
+	}
+
+	unregisterSignalHandlers(): void {
+		if (!this.signalHandlerRegistered) {
+			return;
+		}
+		process.off("SIGTERM", this.handleSigterm);
+		process.off("SIGINT", this.handleSigint);
+		this.signalHandlerRegistered = false;
+	}
+
+	async initiateShutdown(reason: ShutdownReason): Promise<void> {
+		if (this.state.isShuttingDown) {
+			this.log("shutdown.error", "Shutdown already in progress", {
+				existingReason: this.state.reason,
+			});
 			return;
 		}
 
-		state.isShuttingDown = true;
-		state.reason = reason;
-		state.startedAt = new Date();
-		state.initialConnectionCount = deps.getConnections().size;
+		this.state.isShuttingDown = true;
+		this.state.reason = reason;
+		this.state.startedAt = new Date();
+		this.state.initialConnectionCount = this.deps.getConnections().size;
 
-		log("shutdown.initiated", `Shutdown initiated: ${reason}`, {
+		this.log("shutdown.initiated", `Shutdown initiated: ${reason}`, {
 			reason,
-			initialConnections: state.initialConnectionCount,
+			initialConnections: this.state.initialConnectionCount,
 		});
 
-		// Set overall timeout
-		shutdownTimeout = setTimeout(() => {
-			log("shutdown.timeout", "Maximum shutdown time exceeded, forcing exit", {
-				maxTime: fullConfig.maxShutdownTime,
-			});
-			forceShutdown();
-		}, fullConfig.maxShutdownTime);
+		this.startOverallTimeout();
 
 		try {
-			rejectConnectionsPhase();
-			warnClientsPhase();
-			await drainConnectionsPhase();
-			forceClosePhase();
-			await cleanupSubscriptionsPhase();
-			await flushQueuesPhase();
-			completePhase();
+			this.rejectConnectionsPhase();
+			this.warnClientsPhase();
+			await this.drainConnectionsPhase();
+			this.forceClosePhase();
+			await this.cleanupSubscriptionsPhase();
+			await this.flushQueuesPhase();
+			this.completePhase();
 		} catch (error) {
-			log("shutdown.error", `Shutdown error: ${(error as Error).message}`, {
-				error: (error as Error).message,
+			this.log("shutdown.error", `Shutdown error: ${getErrorMessage(error)}`, {
+				error: getErrorMessage(error),
 			});
-			forceShutdown();
+			this.forceShutdown();
 		} finally {
-			if (shutdownTimeout) {
-				clearTimeout(shutdownTimeout);
-				shutdownTimeout = null;
-			}
+			this.clearOverallTimeout();
 		}
-	};
+	}
 
-	const forceShutdown = (): void => {
-		log("shutdown.complete", "Forced shutdown", {
-			reason: state.reason,
-			forcedClosures: state.forcedClosures,
+	forceShutdown(): void {
+		this.log("shutdown.complete", "Forced shutdown", {
+			reason: this.state.reason,
+			forcedClosures: this.state.forcedClosures,
 		});
 
-		const connections = deps.getConnections();
-		for (const [_id, ws] of connections) {
+		for (const [_id, ws] of this.deps.getConnections()) {
 			try {
 				ws.close(WS_CLOSE_CODES.SHUTDOWN, "Forced shutdown");
-			} catch {}
+			} catch {
+				// Ignore close errors
+			}
 		}
 
-		if (fullConfig.exitProcess) {
+		if (this.config.exitProcess) {
 			process.exit(1);
 		}
-	};
+	}
 
-	const handleSigterm = (): void => {
-		initiateShutdown("SIGTERM");
-	};
-
-	const handleSigint = (): void => {
-		initiateShutdown("SIGINT");
-	};
-
-	const registerSignalHandlers = (): void => {
-		if (signalHandlerRegistered) {
-			return;
-		}
-
-		process.on("SIGTERM", handleSigterm);
-		process.on("SIGINT", handleSigint);
-
-		signalHandlerRegistered = true;
-
-		log("shutdown.initiated", "Signal handlers registered (SIGTERM, SIGINT)", {});
-	};
-
-	const unregisterSignalHandlers = (): void => {
-		if (!signalHandlerRegistered) {
-			return;
-		}
-
-		process.off("SIGTERM", handleSigterm);
-		process.off("SIGINT", handleSigint);
-
-		signalHandlerRegistered = false;
-	};
-
-	return {
-		getState(): ShutdownState {
-			return { ...state };
-		},
-
-		isHealthy(): boolean {
-			return !state.isShuttingDown;
-		},
-
-		isShuttingDown(): boolean {
-			return state.isShuttingDown;
-		},
-
-		getCurrentPhase(): ShutdownPhase {
-			return state.phase;
-		},
-
-		registerSignalHandlers,
-		unregisterSignalHandlers,
-		initiateShutdown,
-		forceShutdown,
-
-		reset(): void {
-			state.phase = "idle";
-			state.reason = null;
-			state.startedAt = null;
-			state.isShuttingDown = false;
-			state.initialConnectionCount = 0;
-			state.forcedClosures = 0;
-			state.droppedMessages = 0;
-
-			if (shutdownTimeout) {
-				clearTimeout(shutdownTimeout);
-				shutdownTimeout = null;
-			}
-		},
-	};
+	reset(): void {
+		this.state.phase = "idle";
+		this.state.reason = null;
+		this.state.startedAt = null;
+		this.state.isShuttingDown = false;
+		this.state.initialConnectionCount = 0;
+		this.state.forcedClosures = 0;
+		this.state.droppedMessages = 0;
+		this.clearOverallTimeout();
+	}
 }
 
-const sleep = Bun.sleep;
+export function createShutdownManager(
+	deps: ShutdownDependencies,
+	config: Partial<ShutdownConfig> = {},
+): ShutdownManager {
+	return new ShutdownManagerImpl(deps, config);
+}
 
-/** Use in the upgrade handler to reject new connections during shutdown. */
 export function shouldRejectConnection(manager: ShutdownManager): boolean {
 	return manager.isShuttingDown();
 }
 
-/** Returns 503 during shutdown for load balancer health checks. */
 export function createHealthCheckHandler(manager: ShutdownManager) {
 	return (): Response => {
 		if (!manager.isHealthy()) {

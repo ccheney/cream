@@ -17,9 +17,13 @@ import type {
 	TranscriptChunkResult,
 } from "../../src/queries/graphrag.js";
 
-// ============================================
-// Mock Data Generators
-// ============================================
+interface MockGraphRAGClient {
+	searchGraphContext(options: {
+		query: string;
+		limit?: number;
+		symbol?: string;
+	}): Promise<GraphRAGSearchResult>;
+}
 
 function createFilingChunk(
 	id: string,
@@ -108,21 +112,6 @@ function createCompany(
 	};
 }
 
-// ============================================
-// Mock GraphRAG Client
-// ============================================
-
-interface MockGraphRAGClient {
-	searchGraphContext(options: {
-		query: string;
-		limit?: number;
-		symbol?: string;
-	}): Promise<GraphRAGSearchResult>;
-}
-
-/**
- * Creates a mock GraphRAG client with configurable test data.
- */
 function createMockGraphRAGClient(testData: {
 	filingChunks?: FilingChunkResult[];
 	transcriptChunks?: TranscriptChunkResult[];
@@ -137,29 +126,20 @@ function createMockGraphRAGClient(testData: {
 
 			let filingChunks = testData.filingChunks ?? [];
 			let transcriptChunks = testData.transcriptChunks ?? [];
-			let newsItems = testData.newsItems ?? [];
-			let externalEvents = testData.externalEvents ?? [];
+			const newsItems = testData.newsItems ?? [];
+			const externalEvents = testData.externalEvents ?? [];
 			const companies = testData.companies ?? [];
 
-			// Filter by symbol if provided
 			if (symbol) {
-				filingChunks = filingChunks.filter((c) => c.companySymbol === symbol);
-				transcriptChunks = transcriptChunks.filter((c) => c.companySymbol === symbol);
-				// News and events don't filter by single symbol
-				// Companies include related/dependent for symbol queries
+				filingChunks = filingChunks.filter((chunk) => chunk.companySymbol === symbol);
+				transcriptChunks = transcriptChunks.filter((chunk) => chunk.companySymbol === symbol);
 			}
 
-			// Apply limit
-			filingChunks = filingChunks.slice(0, limit);
-			transcriptChunks = transcriptChunks.slice(0, limit);
-			newsItems = newsItems.slice(0, limit);
-			externalEvents = externalEvents.slice(0, limit);
-
 			return {
-				filingChunks,
-				transcriptChunks,
-				newsItems,
-				externalEvents,
+				filingChunks: filingChunks.slice(0, limit),
+				transcriptChunks: transcriptChunks.slice(0, limit),
+				newsItems: newsItems.slice(0, limit),
+				externalEvents: externalEvents.slice(0, limit),
 				companies,
 				executionTimeMs: performance.now() - startTime,
 			};
@@ -167,160 +147,173 @@ function createMockGraphRAGClient(testData: {
 	};
 }
 
-// ============================================
-// Integration Tests
-// ============================================
-
 describe("GraphRAG Integration", () => {
+	registerCrossTypeSearchSuite();
+	registerCompanyScopedQueriesSuite();
+	registerSupplyChainDiscoverySuite();
+	registerResultLimitsSuite();
+	registerEmptyResultsSuite();
+	registerCompanySourceAttributionSuite();
+});
+
+function registerCrossTypeSearchSuite(): void {
 	describe("Cross-Type Search", () => {
-		it("returns results from multiple document types", async () => {
-			const client = createMockGraphRAGClient({
-				filingChunks: [
-					createFilingChunk(
-						"fc-1",
-						"TSM",
-						"Capacity constraints in advanced node production...",
-						0.95,
-					),
-					createFilingChunk("fc-2", "INTC", "Foundry capacity investments accelerating...", 0.88),
-				],
-				transcriptChunks: [
-					createTranscriptChunk(
-						"tc-1",
-						"NVDA",
-						"Jensen Huang",
-						"Supply chain for AI chips remains tight...",
-						0.92,
-					),
-				],
-				newsItems: [
-					createNewsItem(
-						"ni-1",
-						"Semiconductor Industry Faces Capacity Constraints",
-						"TSM,INTC,NVDA",
-						-0.3,
-						0.85,
-					),
-				],
-				externalEvents: [
-					createExternalEvent("ee-1", "supply_chain", "Major fab reports production delays", 0.78),
-				],
-				companies: [
-					createCompany("TSM", "Taiwan Semiconductor", "filing"),
-					createCompany("INTC", "Intel Corporation", "filing"),
-					createCompany("NVDA", "NVIDIA Corporation", "transcript"),
-				],
-			});
-
-			const result = await client.searchGraphContext({
-				query: "semiconductor capacity constraints",
-				limit: 10,
-			});
-
-			// Verify multiple types returned
-			expect(result.filingChunks.length).toBeGreaterThan(0);
-			expect(result.transcriptChunks.length).toBeGreaterThan(0);
-			expect(result.newsItems.length).toBeGreaterThan(0);
-			expect(result.externalEvents.length).toBeGreaterThan(0);
-
-			// Verify companies discovered
-			expect(result.companies.length).toBe(3);
-			const symbols = result.companies.map((c) => c.symbol);
-			expect(symbols).toContain("TSM");
-			expect(symbols).toContain("INTC");
-			expect(symbols).toContain("NVDA");
-		});
-
-		it("scores results by relevance", async () => {
-			const client = createMockGraphRAGClient({
-				filingChunks: [
-					createFilingChunk("fc-1", "AAPL", "Highly relevant content", 0.95),
-					createFilingChunk("fc-2", "MSFT", "Less relevant content", 0.72),
-					createFilingChunk("fc-3", "GOOGL", "Somewhat relevant", 0.85),
-				],
-			});
-
-			const result = await client.searchGraphContext({
-				query: "test query",
-				limit: 10,
-			});
-
-			// Verify scores are present
-			for (const chunk of result.filingChunks) {
-				expect(chunk.score).toBeGreaterThanOrEqual(0);
-				expect(chunk.score).toBeLessThanOrEqual(1);
-			}
-		});
-
-		it("tracks execution time", async () => {
-			const client = createMockGraphRAGClient({});
-
-			const result = await client.searchGraphContext({
-				query: "test query",
-			});
-
-			expect(result.executionTimeMs).toBeGreaterThanOrEqual(0);
-		});
+		registerMultiDocumentTypeTest();
+		registerRelevanceScoringTest();
+		registerExecutionTimeTest();
 	});
+}
 
+function registerMultiDocumentTypeTest(): void {
+	it("returns results from multiple document types", async () => {
+		const client = createCrossTypeSearchClient();
+		const result = await client.searchGraphContext({
+			query: "semiconductor capacity constraints",
+			limit: 10,
+		});
+		assertMultipleTypesReturned(result);
+		assertCompanySymbols(result, ["TSM", "INTC", "NVDA"]);
+	});
+}
+
+function createCrossTypeSearchClient(): MockGraphRAGClient {
+	return createMockGraphRAGClient({
+		filingChunks: [
+			createFilingChunk("fc-1", "TSM", "Capacity constraints in advanced node production...", 0.95),
+			createFilingChunk("fc-2", "INTC", "Foundry capacity investments accelerating...", 0.88),
+		],
+		transcriptChunks: [
+			createTranscriptChunk(
+				"tc-1",
+				"NVDA",
+				"Jensen Huang",
+				"Supply chain for AI chips remains tight...",
+				0.92,
+			),
+		],
+		newsItems: [
+			createNewsItem(
+				"ni-1",
+				"Semiconductor Industry Faces Capacity Constraints",
+				"TSM,INTC,NVDA",
+				-0.3,
+				0.85,
+			),
+		],
+		externalEvents: [
+			createExternalEvent("ee-1", "supply_chain", "Major fab reports production delays", 0.78),
+		],
+		companies: [
+			createCompany("TSM", "Taiwan Semiconductor", "filing"),
+			createCompany("INTC", "Intel Corporation", "filing"),
+			createCompany("NVDA", "NVIDIA Corporation", "transcript"),
+		],
+	});
+}
+
+function assertMultipleTypesReturned(result: GraphRAGSearchResult): void {
+	expect(result.filingChunks.length).toBeGreaterThan(0);
+	expect(result.transcriptChunks.length).toBeGreaterThan(0);
+	expect(result.newsItems.length).toBeGreaterThan(0);
+	expect(result.externalEvents.length).toBeGreaterThan(0);
+}
+
+function assertCompanySymbols(result: GraphRAGSearchResult, symbols: string[]): void {
+	expect(result.companies.length).toBe(symbols.length);
+	const discoveredSymbols = result.companies.map((company) => company.symbol);
+	for (const symbol of symbols) {
+		expect(discoveredSymbols).toContain(symbol);
+	}
+}
+
+function registerRelevanceScoringTest(): void {
+	it("scores results by relevance", async () => {
+		const client = createMockGraphRAGClient({
+			filingChunks: [
+				createFilingChunk("fc-1", "AAPL", "Highly relevant content", 0.95),
+				createFilingChunk("fc-2", "MSFT", "Less relevant content", 0.72),
+				createFilingChunk("fc-3", "GOOGL", "Somewhat relevant", 0.85),
+			],
+		});
+		const result = await client.searchGraphContext({
+			query: "test query",
+			limit: 10,
+		});
+		for (const chunk of result.filingChunks) {
+			expect(chunk.score).toBeGreaterThanOrEqual(0);
+			expect(chunk.score).toBeLessThanOrEqual(1);
+		}
+	});
+}
+
+function registerExecutionTimeTest(): void {
+	it("tracks execution time", async () => {
+		const client = createMockGraphRAGClient({});
+		const result = await client.searchGraphContext({ query: "test query" });
+		expect(result.executionTimeMs).toBeGreaterThanOrEqual(0);
+	});
+}
+
+function registerCompanyScopedQueriesSuite(): void {
 	describe("Company-Scoped Queries", () => {
-		it("filters results to specific company", async () => {
-			const client = createMockGraphRAGClient({
-				filingChunks: [
-					createFilingChunk("fc-1", "AAPL", "Apple iPhone revenue...", 0.9),
-					createFilingChunk("fc-2", "MSFT", "Microsoft Azure growth...", 0.85),
-					createFilingChunk("fc-3", "AAPL", "Services segment expansion...", 0.88),
-				],
-				transcriptChunks: [
-					createTranscriptChunk("tc-1", "AAPL", "Tim Cook", "Q4 results...", 0.92),
-					createTranscriptChunk("tc-2", "GOOGL", "Sundar Pichai", "AI investments...", 0.87),
-				],
-				companies: [
-					createCompany("AAPL", "Apple Inc.", "filing"),
-					createCompany("MSFT", "Microsoft Corporation", "related"),
-				],
-			});
-
-			const result = await client.searchGraphContext({
-				query: "revenue growth",
-				symbol: "AAPL",
-				limit: 10,
-			});
-
-			// All filing chunks should be AAPL
-			for (const chunk of result.filingChunks) {
-				expect(chunk.companySymbol).toBe("AAPL");
-			}
-
-			// All transcript chunks should be AAPL
-			for (const chunk of result.transcriptChunks) {
-				expect(chunk.companySymbol).toBe("AAPL");
-			}
-		});
-
-		it("includes related companies for symbol queries", async () => {
-			const client = createMockGraphRAGClient({
-				filingChunks: [createFilingChunk("fc-1", "AAPL", "Supply chain...", 0.9)],
-				companies: [
-					createCompany("AAPL", "Apple Inc.", "filing"),
-					createCompany("FOXCONN", "Hon Hai Precision", "dependent"),
-					createCompany("MSFT", "Microsoft Corporation", "related"),
-				],
-			});
-
-			const result = await client.searchGraphContext({
-				query: "supply chain",
-				symbol: "AAPL",
-			});
-
-			// Should include related and dependent companies
-			const sources = result.companies.map((c) => c.source);
-			expect(sources).toContain("filing");
-			expect(sources).toContain("dependent");
-			expect(sources).toContain("related");
-		});
+		registerCompanyFilterTest();
+		registerRelatedCompanyInclusionTest();
 	});
+}
 
+function registerCompanyFilterTest(): void {
+	it("filters results to specific company", async () => {
+		const client = createMockGraphRAGClient({
+			filingChunks: [
+				createFilingChunk("fc-1", "AAPL", "Apple iPhone revenue...", 0.9),
+				createFilingChunk("fc-2", "MSFT", "Microsoft Azure growth...", 0.85),
+				createFilingChunk("fc-3", "AAPL", "Services segment expansion...", 0.88),
+			],
+			transcriptChunks: [
+				createTranscriptChunk("tc-1", "AAPL", "Tim Cook", "Q4 results...", 0.92),
+				createTranscriptChunk("tc-2", "GOOGL", "Sundar Pichai", "AI investments...", 0.87),
+			],
+			companies: [
+				createCompany("AAPL", "Apple Inc.", "filing"),
+				createCompany("MSFT", "Microsoft Corporation", "related"),
+			],
+		});
+		const result = await client.searchGraphContext({
+			query: "revenue growth",
+			symbol: "AAPL",
+			limit: 10,
+		});
+		for (const chunk of result.filingChunks) {
+			expect(chunk.companySymbol).toBe("AAPL");
+		}
+		for (const chunk of result.transcriptChunks) {
+			expect(chunk.companySymbol).toBe("AAPL");
+		}
+	});
+}
+
+function registerRelatedCompanyInclusionTest(): void {
+	it("includes related companies for symbol queries", async () => {
+		const client = createMockGraphRAGClient({
+			filingChunks: [createFilingChunk("fc-1", "AAPL", "Supply chain...", 0.9)],
+			companies: [
+				createCompany("AAPL", "Apple Inc.", "filing"),
+				createCompany("FOXCONN", "Hon Hai Precision", "dependent"),
+				createCompany("MSFT", "Microsoft Corporation", "related"),
+			],
+		});
+		const result = await client.searchGraphContext({
+			query: "supply chain",
+			symbol: "AAPL",
+		});
+		const sources = result.companies.map((company) => company.source);
+		expect(sources).toContain("filing");
+		expect(sources).toContain("dependent");
+		expect(sources).toContain("related");
+	});
+}
+
+function registerSupplyChainDiscoverySuite(): void {
 	describe("Supply Chain Discovery", () => {
 		it("discovers companies through graph relationships", async () => {
 			const client = createMockGraphRAGClient({
@@ -338,61 +331,51 @@ describe("GraphRAG Integration", () => {
 					createCompany("FDX", "FedEx Corporation", "related"),
 				],
 			});
-
 			const result = await client.searchGraphContext({
 				query: "shipping costs spike",
 				limit: 10,
 			});
-
-			// Should find retail companies mentioning logistics
-			expect(result.filingChunks.some((c) => c.companySymbol === "WMT")).toBe(true);
-			expect(result.filingChunks.some((c) => c.companySymbol === "TGT")).toBe(true);
-
-			// Should discover transportation companies
-			expect(result.companies.some((c) => c.symbol === "UPS")).toBe(true);
-			expect(result.companies.some((c) => c.symbol === "FDX")).toBe(true);
+			expect(result.filingChunks.some((chunk) => chunk.companySymbol === "WMT")).toBe(true);
+			expect(result.filingChunks.some((chunk) => chunk.companySymbol === "TGT")).toBe(true);
+			expect(result.companies.some((company) => company.symbol === "UPS")).toBe(true);
+			expect(result.companies.some((company) => company.symbol === "FDX")).toBe(true);
 		});
 	});
+}
 
+function registerResultLimitsSuite(): void {
 	describe("Result Limits", () => {
 		it("respects limit parameter", async () => {
 			const client = createMockGraphRAGClient({
-				filingChunks: Array.from({ length: 20 }, (_, i) =>
-					createFilingChunk(`fc-${i}`, "AAPL", `Content ${i}`, 0.9 - i * 0.01),
-				),
+				filingChunks: createFilingChunks(20),
 			});
-
-			const result = await client.searchGraphContext({
-				query: "test",
-				limit: 5,
-			});
-
+			const result = await client.searchGraphContext({ query: "test", limit: 5 });
 			expect(result.filingChunks).toHaveLength(5);
 		});
 
 		it("uses default limit of 10", async () => {
 			const client = createMockGraphRAGClient({
-				filingChunks: Array.from({ length: 20 }, (_, i) =>
-					createFilingChunk(`fc-${i}`, "AAPL", `Content ${i}`, 0.9 - i * 0.01),
-				),
+				filingChunks: createFilingChunks(20),
 			});
-
-			const result = await client.searchGraphContext({
-				query: "test",
-			});
-
+			const result = await client.searchGraphContext({ query: "test" });
 			expect(result.filingChunks).toHaveLength(10);
 		});
 	});
+}
 
+function createFilingChunks(count: number): FilingChunkResult[] {
+	return Array.from({ length: count }, (_, index) =>
+		createFilingChunk(`fc-${index}`, "AAPL", `Content ${index}`, 0.9 - index * 0.01),
+	);
+}
+
+function registerEmptyResultsSuite(): void {
 	describe("Empty Results", () => {
 		it("handles no matching results gracefully", async () => {
 			const client = createMockGraphRAGClient({});
-
 			const result = await client.searchGraphContext({
 				query: "nonexistent topic xyz123",
 			});
-
 			expect(result.filingChunks).toEqual([]);
 			expect(result.transcriptChunks).toEqual([]);
 			expect(result.newsItems).toEqual([]);
@@ -401,7 +384,9 @@ describe("GraphRAG Integration", () => {
 			expect(result.executionTimeMs).toBeGreaterThanOrEqual(0);
 		});
 	});
+}
 
+function registerCompanySourceAttributionSuite(): void {
 	describe("Company Source Attribution", () => {
 		it("correctly attributes company discovery source", async () => {
 			const client = createMockGraphRAGClient({
@@ -413,13 +398,10 @@ describe("GraphRAG Integration", () => {
 					createCompany("FOXCONN", "Hon Hai Precision", "dependent"),
 				],
 			});
-
-			const result = await client.searchGraphContext({
-				query: "test",
-			});
-
-			const sourceMap = new Map(result.companies.map((c) => [c.symbol, c.source]));
-
+			const result = await client.searchGraphContext({ query: "test" });
+			const sourceMap = new Map(
+				result.companies.map((company) => [company.symbol, company.source]),
+			);
 			expect(sourceMap.get("AAPL")).toBe("filing");
 			expect(sourceMap.get("NVDA")).toBe("transcript");
 			expect(sourceMap.get("TSLA")).toBe("news");
@@ -427,12 +409,10 @@ describe("GraphRAG Integration", () => {
 			expect(sourceMap.get("FOXCONN")).toBe("dependent");
 		});
 	});
-});
+}
 
 describe("Test Mode Behavior", () => {
 	it("should be tested via unit tests in graphrag.test.ts", () => {
-		// Test mode is tested in the unit tests
-		// This is a placeholder to document that behavior is covered
 		expect(true).toBe(true);
 	});
 });
@@ -440,14 +420,14 @@ describe("Test Mode Behavior", () => {
 describe("Performance Characteristics", () => {
 	it("returns results in reasonable time with mock client", async () => {
 		const client = createMockGraphRAGClient({
-			filingChunks: Array.from({ length: 100 }, (_, i) =>
-				createFilingChunk(`fc-${i}`, "AAPL", `Content ${i}`, 0.9),
+			filingChunks: Array.from({ length: 100 }, (_, index) =>
+				createFilingChunk(`fc-${index}`, "AAPL", `Content ${index}`, 0.9),
 			),
-			transcriptChunks: Array.from({ length: 100 }, (_, i) =>
-				createTranscriptChunk(`tc-${i}`, "AAPL", "Speaker", `Content ${i}`, 0.85),
+			transcriptChunks: Array.from({ length: 100 }, (_, index) =>
+				createTranscriptChunk(`tc-${index}`, "AAPL", "Speaker", `Content ${index}`, 0.85),
 			),
-			newsItems: Array.from({ length: 50 }, (_, i) =>
-				createNewsItem(`ni-${i}`, `Headline ${i}`, "AAPL", 0.5, 0.8),
+			newsItems: Array.from({ length: 50 }, (_, index) =>
+				createNewsItem(`ni-${index}`, `Headline ${index}`, "AAPL", 0.5, 0.8),
 			),
 		});
 
@@ -457,8 +437,6 @@ describe("Performance Characteristics", () => {
 			limit: 10,
 		});
 		const elapsed = performance.now() - startTime;
-
-		// Mock client should be very fast (< 50ms)
 		expect(elapsed).toBeLessThan(50);
 		expect(result.executionTimeMs).toBeLessThan(50);
 	});

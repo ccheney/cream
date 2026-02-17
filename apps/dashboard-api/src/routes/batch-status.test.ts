@@ -165,8 +165,8 @@ mock.module(dbPath, () => ({
 // Import after mock is set up
 const batchStatusRoutes = (await import("./batch-status")).default;
 
-describe("Batch Status Routes", () => {
-	test("GET /batch/status returns recent runs with summary", async () => {
+describe("GET /batch/status", () => {
+	test("returns recent runs with summary", async () => {
 		const res = await batchStatusRoutes.request("/batch/status");
 		expect(res.status).toBe(200);
 
@@ -180,7 +180,7 @@ describe("Batch Status Routes", () => {
 		expect(data.summary.failed).toBe(1);
 	});
 
-	test("GET /batch/status respects limit parameter", async () => {
+	test("respects limit parameter", async () => {
 		const res = await batchStatusRoutes.request("/batch/status?limit=2");
 		expect(res.status).toBe(200);
 
@@ -188,7 +188,7 @@ describe("Batch Status Routes", () => {
 		expect(data.runs.length).toBeLessThanOrEqual(2);
 	});
 
-	test("GET /batch/status filters by type", async () => {
+	test("filters by type", async () => {
 		const res = await batchStatusRoutes.request("/batch/status?type=fundamentals");
 		expect(res.status).toBe(200);
 
@@ -196,7 +196,7 @@ describe("Batch Status Routes", () => {
 		expect(data.runs.every((r: { run_type: string }) => r.run_type === "fundamentals")).toBe(true);
 	});
 
-	test("GET /batch/status filters by status", async () => {
+	test("filters by status", async () => {
 		const res = await batchStatusRoutes.request("/batch/status?status=completed");
 		expect(res.status).toBe(200);
 
@@ -204,7 +204,7 @@ describe("Batch Status Routes", () => {
 		expect(data.runs.every((r: { status: string }) => r.status === "completed")).toBe(true);
 	});
 
-	test("GET /batch/status includes last_completed per run type", async () => {
+	test("includes last_completed per run type", async () => {
 		const res = await batchStatusRoutes.request("/batch/status");
 		expect(res.status).toBe(200);
 
@@ -215,8 +215,10 @@ describe("Batch Status Routes", () => {
 		expect(data.summary.last_completed).toHaveProperty("sentiment");
 		expect(data.summary.last_completed).toHaveProperty("corporate_actions");
 	});
+});
 
-	test("GET /batch/status/:id returns single run", async () => {
+describe("GET /batch/status/:id and validation", () => {
+	test("returns single run", async () => {
 		const res = await batchStatusRoutes.request("/batch/status/run-001");
 		expect(res.status).toBe(200);
 
@@ -229,22 +231,22 @@ describe("Batch Status Routes", () => {
 		expect(data.run.symbols_failed).toBe(2);
 	});
 
-	test("GET /batch/status/:id returns 404 for non-existent run", async () => {
+	test("returns 404 for non-existent run", async () => {
 		const res = await batchStatusRoutes.request("/batch/status/non-existent");
 		expect(res.status).toBe(404);
 	});
 
-	test("GET /batch/status validates type enum", async () => {
+	test("validates type enum", async () => {
 		const res = await batchStatusRoutes.request("/batch/status?type=invalid_type");
 		expect(res.status).toBe(400);
 	});
 
-	test("GET /batch/status validates status enum", async () => {
+	test("validates status enum", async () => {
 		const res = await batchStatusRoutes.request("/batch/status?status=invalid_status");
 		expect(res.status).toBe(400);
 	});
 
-	test("GET /batch/status validates limit range", async () => {
+	test("validates limit range", async () => {
 		const res = await batchStatusRoutes.request("/batch/status?limit=0");
 		expect(res.status).toBe(400);
 

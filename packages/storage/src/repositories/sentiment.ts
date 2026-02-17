@@ -9,108 +9,33 @@
 import { and, asc, count, desc, eq, gte, inArray, isNotNull, lte, max } from "drizzle-orm";
 import { type Database, getDb } from "../db";
 import { sentimentIndicators } from "../schema/indicators";
+import type {
+	CreateSentimentInput,
+	PaginatedResult,
+	PaginationOptions,
+	SentimentFilters,
+	SentimentIndicators,
+	UpdateSentimentInput,
+} from "./sentiment.types";
+import {
+	buildSentimentCountConditions,
+	buildSentimentCreateValues,
+	buildSentimentFilterConditions,
+	buildSentimentUpdateData,
+	buildSentimentUpsertSet,
+	getDateRange,
+	mapSentimentRow,
+	resolvePagination,
+} from "./sentiment.types";
 
-// ============================================
-// Types
-// ============================================
-
-export interface SentimentIndicators {
-	id: string;
-	symbol: string;
-	date: string;
-
-	sentimentScore: number | null;
-	sentimentStrength: number | null;
-	newsVolume: number | null;
-	sentimentMomentum: number | null;
-	eventRiskFlag: boolean;
-
-	newsSentiment: number | null;
-	socialSentiment: number | null;
-	analystSentiment: number | null;
-
-	computedAt: string;
-}
-
-export interface CreateSentimentInput {
-	symbol: string;
-	date: string;
-
-	sentimentScore?: number | null;
-	sentimentStrength?: number | null;
-	newsVolume?: number | null;
-	sentimentMomentum?: number | null;
-	eventRiskFlag?: boolean;
-
-	newsSentiment?: number | null;
-	socialSentiment?: number | null;
-	analystSentiment?: number | null;
-}
-
-export interface UpdateSentimentInput {
-	sentimentScore?: number | null;
-	sentimentStrength?: number | null;
-	newsVolume?: number | null;
-	sentimentMomentum?: number | null;
-	eventRiskFlag?: boolean;
-
-	newsSentiment?: number | null;
-	socialSentiment?: number | null;
-	analystSentiment?: number | null;
-}
-
-export interface SentimentFilters {
-	symbol?: string;
-	date?: string;
-	dateGte?: string;
-	dateLte?: string;
-	sentimentScoreGte?: number;
-	sentimentScoreLte?: number;
-	eventRiskFlag?: boolean;
-}
-
-export interface PaginationOptions {
-	page?: number;
-	pageSize?: number;
-}
-
-export interface PaginatedResult<T> {
-	data: T[];
-	total: number;
-	page: number;
-	pageSize: number;
-	totalPages: number;
-}
-
-// ============================================
-// Row Mapping
-// ============================================
-
-type SentimentRow = typeof sentimentIndicators.$inferSelect;
-
-function mapSentimentRow(row: SentimentRow): SentimentIndicators {
-	return {
-		id: row.id,
-		symbol: row.symbol,
-		date: row.date.toISOString(),
-
-		sentimentScore: row.sentimentScore ? Number(row.sentimentScore) : null,
-		sentimentStrength: row.sentimentStrength ? Number(row.sentimentStrength) : null,
-		newsVolume: row.newsVolume,
-		sentimentMomentum: row.sentimentMomentum ? Number(row.sentimentMomentum) : null,
-		eventRiskFlag: row.eventRiskFlag ?? false,
-
-		newsSentiment: row.newsSentiment ? Number(row.newsSentiment) : null,
-		socialSentiment: row.socialSentiment ? Number(row.socialSentiment) : null,
-		analystSentiment: row.analystSentiment ? Number(row.analystSentiment) : null,
-
-		computedAt: row.computedAt.toISOString(),
-	};
-}
-
-// ============================================
-// Repository
-// ============================================
+export type {
+	CreateSentimentInput,
+	PaginatedResult,
+	PaginationOptions,
+	SentimentFilters,
+	SentimentIndicators,
+	UpdateSentimentInput,
+} from "./sentiment.types";
 
 export class SentimentRepository {
 	private db: Database;
@@ -122,18 +47,7 @@ export class SentimentRepository {
 	async create(input: CreateSentimentInput): Promise<SentimentIndicators> {
 		const [row] = await this.db
 			.insert(sentimentIndicators)
-			.values({
-				symbol: input.symbol,
-				date: new Date(input.date),
-				sentimentScore: input.sentimentScore != null ? String(input.sentimentScore) : null,
-				sentimentStrength: input.sentimentStrength != null ? String(input.sentimentStrength) : null,
-				newsVolume: input.newsVolume ?? null,
-				sentimentMomentum: input.sentimentMomentum != null ? String(input.sentimentMomentum) : null,
-				eventRiskFlag: input.eventRiskFlag ?? false,
-				newsSentiment: input.newsSentiment != null ? String(input.newsSentiment) : null,
-				socialSentiment: input.socialSentiment != null ? String(input.socialSentiment) : null,
-				analystSentiment: input.analystSentiment != null ? String(input.analystSentiment) : null,
-			})
+			.values(buildSentimentCreateValues(input))
 			.returning();
 
 		if (!row) {
@@ -145,33 +59,10 @@ export class SentimentRepository {
 	async upsert(input: CreateSentimentInput): Promise<SentimentIndicators> {
 		const [row] = await this.db
 			.insert(sentimentIndicators)
-			.values({
-				symbol: input.symbol,
-				date: new Date(input.date),
-				sentimentScore: input.sentimentScore != null ? String(input.sentimentScore) : null,
-				sentimentStrength: input.sentimentStrength != null ? String(input.sentimentStrength) : null,
-				newsVolume: input.newsVolume ?? null,
-				sentimentMomentum: input.sentimentMomentum != null ? String(input.sentimentMomentum) : null,
-				eventRiskFlag: input.eventRiskFlag ?? false,
-				newsSentiment: input.newsSentiment != null ? String(input.newsSentiment) : null,
-				socialSentiment: input.socialSentiment != null ? String(input.socialSentiment) : null,
-				analystSentiment: input.analystSentiment != null ? String(input.analystSentiment) : null,
-			})
+			.values(buildSentimentCreateValues(input))
 			.onConflictDoUpdate({
 				target: [sentimentIndicators.symbol, sentimentIndicators.date],
-				set: {
-					sentimentScore: input.sentimentScore != null ? String(input.sentimentScore) : null,
-					sentimentStrength:
-						input.sentimentStrength != null ? String(input.sentimentStrength) : null,
-					newsVolume: input.newsVolume ?? null,
-					sentimentMomentum:
-						input.sentimentMomentum != null ? String(input.sentimentMomentum) : null,
-					eventRiskFlag: input.eventRiskFlag ?? false,
-					newsSentiment: input.newsSentiment != null ? String(input.newsSentiment) : null,
-					socialSentiment: input.socialSentiment != null ? String(input.socialSentiment) : null,
-					analystSentiment: input.analystSentiment != null ? String(input.analystSentiment) : null,
-					computedAt: new Date(),
-				},
+				set: buildSentimentUpsertSet(input),
 			})
 			.returning();
 
@@ -206,10 +97,7 @@ export class SentimentRepository {
 	}
 
 	async findBySymbolAndDate(symbol: string, date: string): Promise<SentimentIndicators | null> {
-		const dateStart = new Date(date);
-		dateStart.setHours(0, 0, 0, 0);
-		const dateEnd = new Date(date);
-		dateEnd.setHours(23, 59, 59, 999);
+		const { start, end } = getDateRange(date);
 
 		const [row] = await this.db
 			.select()
@@ -217,8 +105,8 @@ export class SentimentRepository {
 			.where(
 				and(
 					eq(sentimentIndicators.symbol, symbol),
-					gte(sentimentIndicators.date, dateStart),
-					lte(sentimentIndicators.date, dateEnd),
+					gte(sentimentIndicators.date, start),
+					lte(sentimentIndicators.date, end),
 				),
 			)
 			.limit(1);
@@ -246,7 +134,6 @@ export class SentimentRepository {
 		if (options?.startDate) {
 			conditions.push(gte(sentimentIndicators.date, new Date(options.startDate)));
 		}
-
 		if (options?.endDate) {
 			conditions.push(lte(sentimentIndicators.date, new Date(options.endDate)));
 		}
@@ -264,45 +151,9 @@ export class SentimentRepository {
 		filters: SentimentFilters,
 		pagination?: PaginationOptions,
 	): Promise<PaginatedResult<SentimentIndicators>> {
-		const conditions = [];
-
-		if (filters.symbol) {
-			conditions.push(eq(sentimentIndicators.symbol, filters.symbol));
-		}
-
-		if (filters.date) {
-			const dateStart = new Date(filters.date);
-			dateStart.setHours(0, 0, 0, 0);
-			const dateEnd = new Date(filters.date);
-			dateEnd.setHours(23, 59, 59, 999);
-			conditions.push(gte(sentimentIndicators.date, dateStart));
-			conditions.push(lte(sentimentIndicators.date, dateEnd));
-		}
-
-		if (filters.dateGte) {
-			conditions.push(gte(sentimentIndicators.date, new Date(filters.dateGte)));
-		}
-
-		if (filters.dateLte) {
-			conditions.push(lte(sentimentIndicators.date, new Date(filters.dateLte)));
-		}
-
-		if (filters.sentimentScoreGte !== undefined) {
-			conditions.push(gte(sentimentIndicators.sentimentScore, String(filters.sentimentScoreGte)));
-		}
-
-		if (filters.sentimentScoreLte !== undefined) {
-			conditions.push(lte(sentimentIndicators.sentimentScore, String(filters.sentimentScoreLte)));
-		}
-
-		if (filters.eventRiskFlag !== undefined) {
-			conditions.push(eq(sentimentIndicators.eventRiskFlag, filters.eventRiskFlag));
-		}
-
+		const conditions = buildSentimentFilterConditions(filters);
 		const whereClause = conditions.length > 0 ? and(...conditions) : undefined;
-		const page = pagination?.page ?? 1;
-		const pageSize = pagination?.pageSize ?? 50;
-		const offset = (page - 1) * pageSize;
+		const { page, pageSize, offset } = resolvePagination(pagination);
 
 		const [countResult] = await this.db
 			.select({ count: count() })
@@ -330,18 +181,15 @@ export class SentimentRepository {
 
 	async findMostPositive(limit = 10, date?: string): Promise<SentimentIndicators[]> {
 		if (date) {
-			const dateStart = new Date(date);
-			dateStart.setHours(0, 0, 0, 0);
-			const dateEnd = new Date(date);
-			dateEnd.setHours(23, 59, 59, 999);
+			const { start, end } = getDateRange(date);
 
 			const rows = await this.db
 				.select()
 				.from(sentimentIndicators)
 				.where(
 					and(
-						gte(sentimentIndicators.date, dateStart),
-						lte(sentimentIndicators.date, dateEnd),
+						gte(sentimentIndicators.date, start),
+						lte(sentimentIndicators.date, end),
 						isNotNull(sentimentIndicators.sentimentScore),
 					),
 				)
@@ -379,18 +227,15 @@ export class SentimentRepository {
 
 	async findMostNegative(limit = 10, date?: string): Promise<SentimentIndicators[]> {
 		if (date) {
-			const dateStart = new Date(date);
-			dateStart.setHours(0, 0, 0, 0);
-			const dateEnd = new Date(date);
-			dateEnd.setHours(23, 59, 59, 999);
+			const { start, end } = getDateRange(date);
 
 			const rows = await this.db
 				.select()
 				.from(sentimentIndicators)
 				.where(
 					and(
-						gte(sentimentIndicators.date, dateStart),
-						lte(sentimentIndicators.date, dateEnd),
+						gte(sentimentIndicators.date, start),
+						lte(sentimentIndicators.date, end),
 						isNotNull(sentimentIndicators.sentimentScore),
 					),
 				)
@@ -428,18 +273,15 @@ export class SentimentRepository {
 
 	async findWithEventRisk(date?: string): Promise<SentimentIndicators[]> {
 		if (date) {
-			const dateStart = new Date(date);
-			dateStart.setHours(0, 0, 0, 0);
-			const dateEnd = new Date(date);
-			dateEnd.setHours(23, 59, 59, 999);
+			const { start, end } = getDateRange(date);
 
 			const rows = await this.db
 				.select()
 				.from(sentimentIndicators)
 				.where(
 					and(
-						gte(sentimentIndicators.date, dateStart),
-						lte(sentimentIndicators.date, dateEnd),
+						gte(sentimentIndicators.date, start),
+						lte(sentimentIndicators.date, end),
 						eq(sentimentIndicators.eventRiskFlag, true),
 					),
 				)
@@ -474,49 +316,9 @@ export class SentimentRepository {
 	}
 
 	async update(id: string, input: UpdateSentimentInput): Promise<SentimentIndicators | null> {
-		const updates: Record<string, unknown> = {
-			computedAt: new Date(),
-		};
-
-		if (input.sentimentScore !== undefined) {
-			updates.sentimentScore = input.sentimentScore != null ? String(input.sentimentScore) : null;
-		}
-
-		if (input.sentimentStrength !== undefined) {
-			updates.sentimentStrength =
-				input.sentimentStrength != null ? String(input.sentimentStrength) : null;
-		}
-
-		if (input.newsVolume !== undefined) {
-			updates.newsVolume = input.newsVolume;
-		}
-
-		if (input.sentimentMomentum !== undefined) {
-			updates.sentimentMomentum =
-				input.sentimentMomentum != null ? String(input.sentimentMomentum) : null;
-		}
-
-		if (input.eventRiskFlag !== undefined) {
-			updates.eventRiskFlag = input.eventRiskFlag;
-		}
-
-		if (input.newsSentiment !== undefined) {
-			updates.newsSentiment = input.newsSentiment != null ? String(input.newsSentiment) : null;
-		}
-
-		if (input.socialSentiment !== undefined) {
-			updates.socialSentiment =
-				input.socialSentiment != null ? String(input.socialSentiment) : null;
-		}
-
-		if (input.analystSentiment !== undefined) {
-			updates.analystSentiment =
-				input.analystSentiment != null ? String(input.analystSentiment) : null;
-		}
-
 		const [row] = await this.db
 			.update(sentimentIndicators)
-			.set(updates)
+			.set(buildSentimentUpdateData(input))
 			.where(eq(sentimentIndicators.id, id))
 			.returning();
 
@@ -542,25 +344,7 @@ export class SentimentRepository {
 	}
 
 	async count(filters?: SentimentFilters): Promise<number> {
-		const conditions = [];
-
-		if (filters?.symbol) {
-			conditions.push(eq(sentimentIndicators.symbol, filters.symbol));
-		}
-
-		if (filters?.date) {
-			const dateStart = new Date(filters.date);
-			dateStart.setHours(0, 0, 0, 0);
-			const dateEnd = new Date(filters.date);
-			dateEnd.setHours(23, 59, 59, 999);
-			conditions.push(gte(sentimentIndicators.date, dateStart));
-			conditions.push(lte(sentimentIndicators.date, dateEnd));
-		}
-
-		if (filters?.eventRiskFlag !== undefined) {
-			conditions.push(eq(sentimentIndicators.eventRiskFlag, filters.eventRiskFlag));
-		}
-
+		const conditions = buildSentimentCountConditions(filters);
 		const whereClause = conditions.length > 0 ? and(...conditions) : undefined;
 
 		const [result] = await this.db

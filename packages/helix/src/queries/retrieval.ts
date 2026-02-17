@@ -137,6 +137,254 @@ const DEFAULT_OPTIONS: Required<TradeMemoryRetrievalOptions> = {
 	performanceTargetMs: 3,
 };
 
+type TradeVectorResult = VectorSearchResult<TradeDecision>;
+type TradeRetrievalResult = RetrievalResult<TradeVectorResult>;
+type TradeFusedResult = RRFResult<TradeVectorResult>;
+
+interface RetrievalExecutionContext {
+	opts: Required<TradeMemoryRetrievalOptions>;
+	vectorSearchOpts: VectorSearchOptions;
+	vectorResults: Awaited<ReturnType<typeof vectorSearch<TradeDecision>>>;
+	vectorRetrievalResults: TradeRetrievalResult[];
+	graphRetrievalResults: TradeRetrievalResult[];
+	vectorSearchMs: number;
+	graphTraversalMs: number;
+}
+
+interface OutcomeMetrics {
+	wins: number;
+	totalReturn: number;
+	totalHoldingTime: number;
+	outcomeCount: number;
+}
+
+function createEmptyTradeStatistics(): TradeStatistics {
+	return {
+		winRate: 0,
+		avgReturn: 0,
+		avgHoldingTimeHours: 0,
+		sampleSize: 0,
+		actionDistribution: {},
+	};
+}
+
+function buildTradeFilters(snapshot: MarketSnapshot): Record<string, unknown> {
+	const filters: Record<string, unknown> = {
+		regime_label: snapshot.regimeLabel,
+	};
+
+	if (snapshot.underlyingSymbol) {
+		filters.underlying_symbol = snapshot.underlyingSymbol;
+		return filters;
+	}
+
+	filters.instrument_id = snapshot.instrumentId;
+	return filters;
+}
+
+function createVectorSearchOptions(
+	opts: Required<TradeMemoryRetrievalOptions>,
+	filters: Record<string, unknown>,
+): VectorSearchOptions {
+	return {
+		topK: opts.topK * 2,
+		minSimilarity: opts.minSimilarity,
+		nodeType: "TradeDecision",
+		filters,
+	};
+}
+
+function toTradeRetrievalResults(results: TradeVectorResult[]): TradeRetrievalResult[] {
+	return results.map((result) => ({
+		node: result,
+		nodeId: result.id,
+		score: result.similarity,
+	}));
+}
+
+function createVectorOnlyResults(
+	results: TradeRetrievalResult[],
+	opts: Required<TradeMemoryRetrievalOptions>,
+): TradeFusedResult[] {
+	return results.slice(0, opts.topK).map((result, index) => ({
+		node: result.node,
+		nodeId: result.nodeId,
+		rrfScore: 1 / (opts.rrfK + index + 1),
+		sources: ["vector" as const],
+		ranks: { vector: index + 1 },
+		originalScores: { vector: result.score },
+	}));
+}
+
+function fuseTradeResults(
+	context: Pick<
+		RetrievalExecutionContext,
+		"graphRetrievalResults" | "opts" | "vectorRetrievalResults"
+	>,
+): TradeFusedResult[] {
+	if (context.graphRetrievalResults.length > 0) {
+		return fuseWithRRF(context.vectorRetrievalResults, context.graphRetrievalResults, {
+			k: context.opts.rrfK,
+			topK: context.opts.topK,
+		});
+	}
+
+	return createVectorOnlyResults(context.vectorRetrievalResults, context.opts);
+}
+
+function toQualityResults(results: TradeFusedResult[]): TradeRetrievalResult[] {
+	return results.map((result) => ({
+		node: result.node,
+		nodeId: result.nodeId,
+		score: result.rrfScore,
+	}));
+}
+
+async function runPrimaryRetrieval(
+	client: HelixClient,
+	embedding: number[],
+	snapshot: MarketSnapshot,
+	opts: Required<TradeMemoryRetrievalOptions>,
+): Promise<RetrievalExecutionContext> {
+	const vectorSearchOpts = createVectorSearchOptions(opts, buildTradeFilters(snapshot));
+
+	const vectorStart = performance.now();
+	const vectorResults = await vectorSearch<TradeDecision>(client, embedding, vectorSearchOpts);
+	const vectorSearchMs = performance.now() - vectorStart;
+	const vectorRetrievalResults = toTradeRetrievalResults(vectorResults.results);
+
+	const graphStart = performance.now();
+	const graphTraversalMs = performance.now() - graphStart;
+
+	return {
+		opts,
+		vectorSearchOpts,
+		vectorResults,
+		vectorRetrievalResults,
+		graphRetrievalResults: [],
+		vectorSearchMs,
+		graphTraversalMs,
+	};
+}
+
+async function applyCorrectiveRetrieval(
+	client: HelixClient,
+	embedding: number[],
+	context: RetrievalExecutionContext,
+	quality: QualityAssessment,
+	fusedResults: TradeFusedResult[],
+): Promise<{ fusedResults: TradeFusedResult[]; correctionApplied: boolean }> {
+	if (!context.opts.enableCorrective || !shouldCorrect(quality)) {
+		return { fusedResults, correctionApplied: false };
+	}
+
+	const broadenedResults = await vectorSearch<TradeDecision>(client, embedding, {
+		...context.vectorSearchOpts,
+		topK: context.opts.topK * 3,
+		minSimilarity: context.opts.minSimilarity * 0.7,
+	});
+
+	if (broadenedResults.results.length <= fusedResults.length) {
+		return { fusedResults, correctionApplied: false };
+	}
+
+	return {
+		fusedResults: createVectorOnlyResults(
+			toTradeRetrievalResults(broadenedResults.results),
+			context.opts,
+		),
+		correctionApplied: true,
+	};
+}
+
+async function buildTradeMemories(
+	client: HelixClient,
+	results: TradeFusedResult[],
+	includeInfluencingEvents: boolean,
+): Promise<TradeMemory[]> {
+	return Promise.all(
+		results.map(async (result) => {
+			const decision = result.node.properties as TradeDecision;
+			const memory: TradeMemory = {
+				decision,
+				vectorSimilarity: result.originalScores.vector,
+				graphRelevance: result.originalScores.graph,
+				rrfScore: result.rrfScore,
+				sources: result.sources,
+			};
+
+			if (includeInfluencingEvents) {
+				memory.influencingEvents = await getInfluencingEvents(client, decision.decision_id);
+			}
+
+			return memory;
+		}),
+	);
+}
+
+function parseDecisionOutcome(
+	realizedOutcome: string,
+): { pnl?: number; return_pct?: number; holding_hours?: number } | undefined {
+	try {
+		return JSON.parse(realizedOutcome) as {
+			pnl?: number;
+			return_pct?: number;
+			holding_hours?: number;
+		};
+	} catch {
+		return undefined;
+	}
+}
+
+function updateOutcomeMetrics(metrics: OutcomeMetrics, decision: TradeDecision): void {
+	if (!decision.realized_outcome) {
+		return;
+	}
+
+	const outcome = parseDecisionOutcome(decision.realized_outcome);
+	if (!outcome) {
+		return;
+	}
+
+	if (typeof outcome.pnl === "number") {
+		if (outcome.pnl > 0) {
+			metrics.wins++;
+		}
+		metrics.outcomeCount++;
+	}
+
+	if (typeof outcome.return_pct === "number") {
+		metrics.totalReturn += outcome.return_pct;
+	}
+
+	if (typeof outcome.holding_hours === "number") {
+		metrics.totalHoldingTime += outcome.holding_hours;
+	}
+}
+
+function calculateOutcomeMetrics(decisions: TradeDecision[]): OutcomeMetrics {
+	const metrics: OutcomeMetrics = {
+		wins: 0,
+		totalReturn: 0,
+		totalHoldingTime: 0,
+		outcomeCount: 0,
+	};
+
+	for (const decision of decisions) {
+		updateOutcomeMetrics(metrics, decision);
+	}
+
+	return metrics;
+}
+
+function calculateActionDistribution(decisions: TradeDecision[]): Record<string, number> {
+	const distribution: Record<string, number> = {};
+	for (const decision of decisions) {
+		distribution[decision.action] = (distribution[decision.action] ?? 0) + 1;
+	}
+	return distribution;
+}
+
 // ============================================
 // Situation Brief Generation
 // ============================================
@@ -206,133 +454,34 @@ export async function retrieveTradeMemories(
 ): Promise<TradeMemoryRetrievalResult> {
 	const opts = { ...DEFAULT_OPTIONS, ...options };
 	const startTime = performance.now();
-
-	// Hard filters for trade memory retrieval
-	const filters: Record<string, unknown> = {
-		regime_label: snapshot.regimeLabel,
-	};
-
-	// Filter by instrument or underlying for options
-	if (snapshot.underlyingSymbol) {
-		filters.underlying_symbol = snapshot.underlyingSymbol;
-	} else {
-		filters.instrument_id = snapshot.instrumentId;
-	}
-
-	// 1. Vector similarity search
-	const vectorStart = performance.now();
-	const vectorSearchOpts: VectorSearchOptions = {
-		topK: opts.topK * 2, // Get more for fusion
-		minSimilarity: opts.minSimilarity,
-		nodeType: "TradeDecision",
-		filters,
-	};
-	const vectorResults = await vectorSearch<TradeDecision>(client, embedding, vectorSearchOpts);
-	const vectorSearchMs = performance.now() - vectorStart;
-
-	// 2. Convert to RRF format
-	const vectorRetrievalResults: RetrievalResult<VectorSearchResult<TradeDecision>>[] =
-		vectorResults.results.map((r) => ({
-			node: r,
-			nodeId: r.id,
-			score: r.similarity,
-		}));
-
-	// 3. Graph traversal for related events (simplified - no separate graph results here)
-	// In a full implementation, we'd traverse INFLUENCED_DECISION edges
-	const graphStart = performance.now();
-	const graphRetrievalResults: RetrievalResult<VectorSearchResult<TradeDecision>>[] = [];
-	// Graph traversal would add results here based on event relationships
-	const graphTraversalMs = performance.now() - graphStart;
-
-	// 4. Fuse with RRF
+	const retrievalContext = await runPrimaryRetrieval(client, embedding, snapshot, opts);
 	const fusionStart = performance.now();
-	let fusedResults: RRFResult<VectorSearchResult<TradeDecision>>[];
-
-	if (graphRetrievalResults.length > 0) {
-		fusedResults = fuseWithRRF(vectorRetrievalResults, graphRetrievalResults, {
-			k: opts.rrfK,
-			topK: opts.topK,
-		});
-	} else {
-		// Vector-only (no graph results to fuse)
-		fusedResults = vectorRetrievalResults.slice(0, opts.topK).map((r, i) => ({
-			node: r.node,
-			nodeId: r.nodeId,
-			rrfScore: 1 / (opts.rrfK + i + 1),
-			sources: ["vector" as const],
-			ranks: { vector: i + 1 },
-			originalScores: { vector: r.score },
-		}));
-	}
+	let fusedResults = fuseTradeResults(retrievalContext);
 	const fusionMs = performance.now() - fusionStart;
 
-	// 5. Quality assessment
-	const quality = assessRetrievalQuality(
-		fusedResults.map((r) => ({
-			node: r.node,
-			nodeId: r.nodeId,
-			score: r.rrfScore,
-		})),
+	const quality = assessRetrievalQuality(toQualityResults(fusedResults));
+	const correction = await applyCorrectiveRetrieval(
+		client,
+		embedding,
+		retrievalContext,
+		quality,
+		fusedResults,
 	);
+	fusedResults = correction.fusedResults;
 
-	// 6. Corrective retrieval (if enabled and needed)
-	let correctionApplied = false;
-	if (opts.enableCorrective && shouldCorrect(quality)) {
-		// Broaden search by lowering threshold
-		const broadenedResults = await vectorSearch<TradeDecision>(client, embedding, {
-			...vectorSearchOpts,
-			topK: opts.topK * 3,
-			minSimilarity: opts.minSimilarity * 0.7,
-		});
-
-		if (broadenedResults.results.length > fusedResults.length) {
-			fusedResults = broadenedResults.results.slice(0, opts.topK).map((r, i) => ({
-				node: r,
-				nodeId: r.id,
-				rrfScore: 1 / (opts.rrfK + i + 1),
-				sources: ["vector" as const],
-				ranks: { vector: i + 1 },
-				originalScores: { vector: r.similarity },
-			}));
-			correctionApplied = true;
-		}
-	}
-
-	// 7. Enrich with influencing events (if requested)
-	const memories: TradeMemory[] = await Promise.all(
-		fusedResults.map(async (r) => {
-			const decision = r.node.properties as TradeDecision;
-			const memory: TradeMemory = {
-				decision,
-				vectorSimilarity: r.originalScores.vector,
-				graphRelevance: r.originalScores.graph,
-				rrfScore: r.rrfScore,
-				sources: r.sources,
-			};
-
-			if (opts.includeInfluencingEvents) {
-				memory.influencingEvents = await getInfluencingEvents(client, decision.decision_id);
-			}
-
-			return memory;
-		}),
-	);
-
-	// 8. Calculate statistics
+	const memories = await buildTradeMemories(client, fusedResults, opts.includeInfluencingEvents);
 	const statistics = calculateTradeStatistics(memories);
-
 	const executionTimeMs = performance.now() - startTime;
 
 	return {
 		memories,
 		statistics,
 		quality,
-		correctionApplied,
+		correctionApplied: correction.correctionApplied,
 		executionTimeMs,
 		timing: {
-			vectorSearchMs,
-			graphTraversalMs,
+			vectorSearchMs: retrievalContext.vectorSearchMs,
+			graphTraversalMs: retrievalContext.graphTraversalMs,
 			fusionMs,
 		},
 	};
@@ -347,59 +496,18 @@ export async function retrieveTradeMemories(
  */
 export function calculateTradeStatistics(memories: TradeMemory[]): TradeStatistics {
 	if (memories.length === 0) {
-		return {
-			winRate: 0,
-			avgReturn: 0,
-			avgHoldingTimeHours: 0,
-			sampleSize: 0,
-			actionDistribution: {},
-		};
+		return createEmptyTradeStatistics();
 	}
 
 	const decisions = memories.map((m) => m.decision);
-
-	// Calculate win rate from realized_outcome if available
-	let wins = 0;
-	let totalReturn = 0;
-	let totalHoldingTime = 0;
-	let outcomeCount = 0;
-
-	for (const decision of decisions) {
-		if (decision.realized_outcome) {
-			try {
-				const outcome = JSON.parse(decision.realized_outcome) as {
-					pnl?: number;
-					return_pct?: number;
-					holding_hours?: number;
-				};
-				if (typeof outcome.pnl === "number") {
-					if (outcome.pnl > 0) {
-						wins++;
-					}
-					outcomeCount++;
-				}
-				if (typeof outcome.return_pct === "number") {
-					totalReturn += outcome.return_pct;
-				}
-				if (typeof outcome.holding_hours === "number") {
-					totalHoldingTime += outcome.holding_hours;
-				}
-			} catch {
-				// Skip invalid outcome JSON
-			}
-		}
-	}
-
-	// Action distribution
-	const actionDistribution: Record<string, number> = {};
-	for (const decision of decisions) {
-		actionDistribution[decision.action] = (actionDistribution[decision.action] ?? 0) + 1;
-	}
+	const metrics = calculateOutcomeMetrics(decisions);
+	const actionDistribution = calculateActionDistribution(decisions);
 
 	return {
-		winRate: outcomeCount > 0 ? wins / outcomeCount : 0,
-		avgReturn: outcomeCount > 0 ? totalReturn / outcomeCount : 0,
-		avgHoldingTimeHours: outcomeCount > 0 ? totalHoldingTime / outcomeCount : 0,
+		winRate: metrics.outcomeCount > 0 ? metrics.wins / metrics.outcomeCount : 0,
+		avgReturn: metrics.outcomeCount > 0 ? metrics.totalReturn / metrics.outcomeCount : 0,
+		avgHoldingTimeHours:
+			metrics.outcomeCount > 0 ? metrics.totalHoldingTime / metrics.outcomeCount : 0,
 		sampleSize: decisions.length,
 		actionDistribution,
 	};

@@ -38,6 +38,104 @@ const ALPACA_TIMEFRAME_MAP: Record<Timeframe, AlpacaTimeframe> = {
 	"1d": "1Day",
 };
 
+function resolveCandleRange(timeframe: Timeframe): { fromStr: string; isIntraday: boolean } {
+	const isIntraday = timeframe !== "1d";
+	if (!isIntraday) {
+		return { fromStr: getDaysAgo(365), isIntraday };
+	}
+	const todayNY = getTodayNY();
+	const session = getTradingSession(new Date());
+	const hasIntradayData = session === "RTH" || session === "AFTER_HOURS";
+	if (isMarketOpen(todayNY) && hasIntradayData) {
+		return { fromStr: todayNY, isIntraday };
+	}
+	const prevDay = getPreviousTradingDay(todayNY);
+	return { fromStr: prevDay.toISOString().slice(0, 10), isIntraday };
+}
+
+function filterAndLimitBars(
+	bars: Awaited<ReturnType<ReturnType<typeof getAlpacaClient>["getBars"]>>,
+	isIntraday: boolean,
+	limit: number,
+	symbol: string,
+	timeframe: Timeframe,
+) {
+	let filteredBars = bars;
+	if (isIntraday) {
+		const beforeCount = bars.length;
+		filteredBars = bars.filter((bar) => isMarketHours(new Date(bar.timestamp)));
+		log.debug(
+			{ symbol, timeframe, beforeCount, afterCount: filteredBars.length },
+			"Applied market hours filter",
+		);
+	}
+	const sortedBars = filteredBars.toSorted(
+		(a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime(),
+	);
+	return sortedBars.slice(Math.max(0, sortedBars.length - limit));
+}
+
+function mapBarsToCandles(
+	bars: Awaited<ReturnType<ReturnType<typeof getAlpacaClient>["getBars"]>>,
+): Candle[] {
+	return bars.map((bar) => ({
+		timestamp: bar.timestamp,
+		open: bar.open,
+		high: bar.high,
+		low: bar.low,
+		close: bar.close,
+		volume: bar.volume,
+	}));
+}
+
+function logRecentBars(
+	bars: Awaited<ReturnType<ReturnType<typeof getAlpacaClient>["getBars"]>>,
+	symbol: string,
+	timeframe: Timeframe,
+): void {
+	if (bars.length === 0) {
+		return;
+	}
+	const first = bars[0];
+	const last = bars.at(-1);
+	log.debug(
+		{
+			symbol,
+			timeframe,
+			count: bars.length,
+			firstTimestamp: first?.timestamp,
+			lastTimestamp: last?.timestamp,
+		},
+		"Returning candles",
+	);
+}
+
+async function fetchCandles(
+	symbol: string,
+	timeframe: Timeframe,
+	limit: number,
+): Promise<Candle[]> {
+	const alpacaTimeframe = ALPACA_TIMEFRAME_MAP[timeframe];
+	const { fromStr, isIntraday } = resolveCandleRange(timeframe);
+	const toStr = getDaysAgo(-1);
+	const fetchLimit = Math.min(limit + 500, 10000);
+	const bars = await getAlpacaClient().getBars(symbol, alpacaTimeframe, fromStr, toStr, fetchLimit);
+
+	log.debug(
+		{ symbol, timeframe, count: bars.length, from: fromStr, to: toStr },
+		"Fetched candles from Alpaca",
+	);
+
+	if (bars.length === 0) {
+		log.warn({ symbol, timeframe }, "No candle data returned from Alpaca");
+		throw new HTTPException(503, { message: `No candle data available for ${symbol}` });
+	}
+
+	const recentBars = filterAndLimitBars(bars, isIntraday, limit, symbol, timeframe);
+	logRecentBars(recentBars, symbol, timeframe);
+	return mapBarsToCandles(recentBars);
+}
+
 // ============================================
 // Routes
 // ============================================
@@ -73,6 +171,7 @@ app.openapi(candlesRoute, async (c) => {
 	const { timeframe, limit } = c.req.valid("query");
 	const upperSymbol = symbol.toUpperCase();
 	const cacheKey = `candles:${CACHE_VERSION}:${upperSymbol}:${timeframe}:${limit}`;
+	const normalizedTimeframe = timeframe as Timeframe;
 
 	const cached = getCached<Candle[]>(cacheKey);
 	if (cached) {
@@ -81,102 +180,8 @@ app.openapi(candlesRoute, async (c) => {
 	}
 	log.debug({ cacheKey }, "Cache miss for candles - fetching fresh data");
 
-	const client = getAlpacaClient();
-	const alpacaTimeframe = ALPACA_TIMEFRAME_MAP[timeframe as Timeframe];
-	const isIntraday = timeframe !== "1d";
-
-	let fromStr: string;
-	if (isIntraday) {
-		// For intraday: fetch current trading day only if we have data within market hours filter
-		// The market hours filter is 7 AM - 5 PM ET, so we need to be past 7 AM ET to have data
-		const todayNY = getTodayNY();
-		const session = getTradingSession(new Date());
-		const hasIntradayData = session === "RTH" || session === "AFTER_HOURS";
-
-		if (isMarketOpen(todayNY) && hasIntradayData) {
-			fromStr = todayNY;
-		} else {
-			// Market not open today, or we're in pre-market/closed - use previous trading day
-			const prevDay = getPreviousTradingDay(todayNY);
-			fromStr = prevDay.toISOString().slice(0, 10);
-		}
-	} else {
-		// For daily bars: fetch 1 year of history
-		fromStr = getDaysAgo(365);
-	}
-
-	// For end date, use tomorrow to ensure we get all of today's data
-	// Alpaca interprets date-only strings as midnight UTC, which excludes today's ET data
-	const toStr = getDaysAgo(-1);
-
-	// Scale fetchLimit based on timeframe for single day of data
-	// 1-minute bars: ~960 bars/day with extended hours
-	// 5-minute bars: ~192 bars/day
-	const fetchLimit = Math.min(limit + 500, 10000);
-
 	try {
-		const bars = await client.getBars(upperSymbol, alpacaTimeframe, fromStr, toStr, fetchLimit);
-
-		log.debug(
-			{
-				symbol: upperSymbol,
-				timeframe,
-				count: bars.length,
-				from: fromStr,
-				to: toStr,
-			},
-			"Fetched candles from Alpaca",
-		);
-
-		if (!bars || bars.length === 0) {
-			log.warn({ symbol: upperSymbol, timeframe }, "No candle data returned from Alpaca");
-			throw new HTTPException(503, {
-				message: `No candle data available for ${upperSymbol}`,
-			});
-		}
-
-		// Filter to market hours for intraday timeframes
-		let filteredBars = bars;
-		if (isIntraday) {
-			const beforeCount = bars.length;
-			filteredBars = bars.filter((bar) => isMarketHours(new Date(bar.timestamp)));
-			log.debug(
-				{ symbol: upperSymbol, timeframe, beforeCount, afterCount: filteredBars.length },
-				"Applied market hours filter",
-			);
-		}
-
-		// Sort by timestamp ascending
-		filteredBars.sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime());
-
-		// Take the most recent 'limit' bars
-		const startIndex = Math.max(0, filteredBars.length - limit);
-		const recentBars = filteredBars.slice(startIndex);
-
-		if (recentBars.length > 0) {
-			const first = recentBars[0];
-			const last = recentBars.at(-1);
-			log.debug(
-				{
-					symbol: upperSymbol,
-					timeframe,
-					count: recentBars.length,
-					firstTimestamp: first?.timestamp,
-					lastTimestamp: last?.timestamp,
-				},
-				"Returning candles",
-			);
-		}
-
-		const candles: Candle[] = recentBars.map((bar) => ({
-			timestamp: bar.timestamp, // Already ISO format from Alpaca
-			open: bar.open,
-			high: bar.high,
-			low: bar.low,
-			close: bar.close,
-			volume: bar.volume,
-		}));
-
+		const candles = await fetchCandles(upperSymbol, normalizedTimeframe, limit);
 		setCache(cacheKey, candles);
 		return c.json(candles, 200);
 	} catch (error) {

@@ -13,6 +13,63 @@ import { getDrizzleDb } from "../db.js";
 
 const app = new OpenAPIHono();
 
+function getOrderByClause(sortBy: "total_time" | "avg_time" | "calls") {
+	if (sortBy === "avg_time") {
+		return sql`mean_exec_time DESC`;
+	}
+	if (sortBy === "calls") {
+		return sql`calls DESC`;
+	}
+	return sql`total_exec_time DESC`;
+}
+
+function mapStatsRows(rows: unknown[]) {
+	return rows.map((row) => {
+		const r = row as {
+			query: string;
+			calls: string | number;
+			total_seconds: string | number;
+			avg_ms: string | number;
+			rows: string | number;
+			shared_blks_hit: string | number;
+			shared_blks_read: string | number;
+			hit_ratio: string | number;
+		};
+		return {
+			query: r.query,
+			calls: Number(r.calls),
+			totalSeconds: Number(r.total_seconds),
+			avgMs: Number(r.avg_ms),
+			rows: Number(r.rows),
+			sharedBlksHit: Number(r.shared_blks_hit),
+			sharedBlksRead: Number(r.shared_blks_read),
+			hitRatio: Number(r.hit_ratio),
+		};
+	});
+}
+
+function mapSummaryRow(row: unknown) {
+	const summaryRow = row as {
+		total_calls: string | number | null;
+		avg_response_ms: string | number | null;
+		overall_hit_ratio: string | number | null;
+		slow_count: string | number | null;
+	};
+	return {
+		totalQueries: Number(summaryRow.total_calls ?? 0),
+		avgResponseMs: Number(summaryRow.avg_response_ms ?? 0),
+		overallHitRatio: Number(summaryRow.overall_hit_ratio ?? 1),
+		slowQueryCount: Number(summaryRow.slow_count ?? 0),
+	};
+}
+
+async function isPgStatStatementsInstalled(db: ReturnType<typeof getDrizzleDb>) {
+	const extensionCheck = await db.execute(sql`
+		SELECT 1 FROM pg_extension WHERE extname = 'pg_stat_statements'
+	`);
+	return extensionCheck.rows.length > 0;
+}
+
 // ============================================
 // Schema Definitions
 // ============================================
@@ -88,24 +145,11 @@ app.openapi(getQueryStatsRoute, async (c) => {
 	const db = getDrizzleDb();
 
 	try {
-		// Check if pg_stat_statements is available
-		const extensionCheck = await db.execute(sql`
-			SELECT 1 FROM pg_extension WHERE extname = 'pg_stat_statements'
-		`);
-
-		if (extensionCheck.rows.length === 0) {
+		if (!(await isPgStatStatementsInstalled(db))) {
 			return c.json({ error: "pg_stat_statements extension not installed" }, 503);
 		}
+		const orderByClause = getOrderByClause(sortBy);
 
-		// Build ORDER BY clause based on sortBy parameter
-		const orderByClause =
-			sortBy === "avg_time"
-				? sql`mean_exec_time DESC`
-				: sortBy === "calls"
-					? sql`calls DESC`
-					: sql`total_exec_time DESC`;
-
-		// Query pg_stat_statements
 		const result = await db.execute(sql`
 			SELECT
 				query,
@@ -124,10 +168,9 @@ app.openapi(getQueryStatsRoute, async (c) => {
 				AND query NOT LIKE '%pg_extension%'
 				AND userid = (SELECT usesysid FROM pg_user WHERE usename = current_user)
 			ORDER BY ${orderByClause}
-			LIMIT ${limit}
+				LIMIT ${limit}
 		`);
 
-		// Calculate summary stats
 		const summaryResult = await db.execute(sql`
 			SELECT
 				SUM(calls)::bigint as total_calls,
@@ -138,48 +181,13 @@ app.openapi(getQueryStatsRoute, async (c) => {
 				END AS overall_hit_ratio,
 				COUNT(*) FILTER (WHERE mean_exec_time > 100) as slow_count
 			FROM pg_stat_statements
-			WHERE query NOT LIKE '%pg_stat_statements%'
-				AND userid = (SELECT usesysid FROM pg_user WHERE usename = current_user)
+				WHERE query NOT LIKE '%pg_stat_statements%'
+					AND userid = (SELECT usesysid FROM pg_user WHERE usename = current_user)
 		`);
 
-		const summaryRow = summaryResult.rows[0] as {
-			total_calls: string | number | null;
-			avg_response_ms: string | number | null;
-			overall_hit_ratio: string | number | null;
-			slow_count: string | number | null;
-		};
-
-		const stats = result.rows.map((row) => {
-			const r = row as {
-				query: string;
-				calls: string | number;
-				total_seconds: string | number;
-				avg_ms: string | number;
-				rows: string | number;
-				shared_blks_hit: string | number;
-				shared_blks_read: string | number;
-				hit_ratio: string | number;
-			};
-			return {
-				query: r.query,
-				calls: Number(r.calls),
-				totalSeconds: Number(r.total_seconds),
-				avgMs: Number(r.avg_ms),
-				rows: Number(r.rows),
-				sharedBlksHit: Number(r.shared_blks_hit),
-				sharedBlksRead: Number(r.shared_blks_read),
-				hitRatio: Number(r.hit_ratio),
-			};
-		});
-
 		return c.json({
-			stats,
-			summary: {
-				totalQueries: Number(summaryRow.total_calls ?? 0),
-				avgResponseMs: Number(summaryRow.avg_response_ms ?? 0),
-				overallHitRatio: Number(summaryRow.overall_hit_ratio ?? 1),
-				slowQueryCount: Number(summaryRow.slow_count ?? 0),
-			},
+			stats: mapStatsRows(result.rows),
+			summary: mapSummaryRow(summaryResult.rows[0]),
 			timestamp: new Date().toISOString(),
 		});
 	} catch (error) {

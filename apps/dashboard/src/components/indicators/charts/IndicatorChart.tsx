@@ -4,9 +4,7 @@
  * Base Indicator Chart Component
  *
  * Reusable TradingView Lightweight Charts component for technical indicators.
- * Supports line charts, area charts, and histograms with optional reference bands.
- *
- * @see docs/plans/ui/26-data-viz.md
+ * Supports line charts, area charts, and histograms with optional reference lines.
  */
 
 import {
@@ -18,13 +16,9 @@ import {
 	LineSeries,
 	type Time,
 } from "lightweight-charts";
-import { memo, useCallback, useEffect, useRef } from "react";
+import { memo, type RefObject, useCallback, useEffect, useRef } from "react";
 
 import { CHART_COLORS, DEFAULT_CHART_OPTIONS } from "@/lib/chart-config";
-
-// ============================================
-// Types
-// ============================================
 
 export interface IndicatorDataPoint {
 	time: number | string;
@@ -48,52 +42,34 @@ export interface ReferenceZone {
 export type ChartType = "line" | "area" | "histogram";
 
 export interface IndicatorChartProps {
-	/** Data points for the indicator */
 	data: IndicatorDataPoint[];
-
-	/** Chart type */
 	type?: ChartType;
-
-	/** Line/area color */
 	color?: string;
-
-	/** Secondary data (e.g., MACD signal line) */
 	secondaryData?: IndicatorDataPoint[];
-
-	/** Secondary line color */
 	secondaryColor?: string;
-
-	/** Histogram data (e.g., MACD histogram) */
 	histogramData?: IndicatorDataPoint[];
-
-	/** Reference lines (e.g., overbought/oversold levels) */
 	referenceLines?: ReferenceLine[];
-
-	/** Reference zones (e.g., RSI bands) */
 	referenceZones?: ReferenceZone[];
-
-	/** Chart title displayed in top left */
 	title?: string;
-
-	/** Chart height in pixels */
 	height?: number;
-
-	/** Y-axis minimum value (auto if not set) */
 	minValue?: number;
-
-	/** Y-axis maximum value (auto if not set) */
 	maxValue?: number;
-
-	/** Auto-resize to container */
 	autoResize?: boolean;
-
-	/** Additional CSS class */
 	className?: string;
 }
 
-// ============================================
-// Chart Options
-// ============================================
+type DataPoint = {
+	time: Time;
+	value: number;
+};
+
+type HistogramPoint = {
+	time: Time;
+	value: number;
+	color: string;
+};
+
+type MainSeries = ISeriesApi<"Line"> | ISeriesApi<"Area">;
 
 const INDICATOR_CHART_OPTIONS = {
 	...DEFAULT_CHART_OPTIONS,
@@ -108,14 +84,10 @@ const INDICATOR_CHART_OPTIONS = {
 	},
 };
 
-// ============================================
-// Helper Functions
-// ============================================
-
-function formatData(data: IndicatorDataPoint[]): Array<{ time: Time; value: number }> {
-	return data.map((d) => ({
-		time: d.time as Time,
-		value: d.value,
+function formatData(data: IndicatorDataPoint[]): DataPoint[] {
+	return data.map((datum) => ({
+		time: datum.time as Time,
+		value: datum.value,
 	}));
 }
 
@@ -123,19 +95,305 @@ function formatHistogramData(
 	data: IndicatorDataPoint[],
 	positiveColor: string,
 	negativeColor: string,
-): Array<{ time: Time; value: number; color: string }> {
-	return data.map((d) => ({
-		time: d.time as Time,
-		value: d.value,
-		color: d.value >= 0 ? positiveColor : negativeColor,
+): HistogramPoint[] {
+	return data.map((datum) => ({
+		time: datum.time as Time,
+		value: datum.value,
+		color: datum.value >= 0 ? positiveColor : negativeColor,
 	}));
 }
 
-// ============================================
-// Component
-// ============================================
+function toLineWidth(lineWidth: number | undefined): 1 | 2 | 3 | 4 {
+	switch (lineWidth) {
+		case 2:
+			return 2;
+		case 3:
+			return 3;
+		case 4:
+			return 4;
+		default:
+			return 1;
+	}
+}
 
-function IndicatorChartComponent({
+function createChartInstance(container: HTMLDivElement, height: number): IChartApi {
+	return createChart(container, {
+		...INDICATOR_CHART_OPTIONS,
+		width: container.clientWidth,
+		height,
+	});
+}
+
+function setScaleBounds(chart: IChartApi, minValue?: number, maxValue?: number): void {
+	if (minValue === undefined && maxValue === undefined) {
+		return;
+	}
+	chart.priceScale("right").applyOptions({ autoScale: false });
+}
+
+function createPrimarySeries(chart: IChartApi, type: ChartType, color: string): MainSeries {
+	if (type === "area") {
+		return chart.addSeries(AreaSeries, {
+			lineColor: color,
+			topColor: `${color}50`,
+			bottomColor: `${color}05`,
+			lineWidth: 2,
+			priceLineVisible: false,
+		}) as ISeriesApi<"Area">;
+	}
+
+	return chart.addSeries(LineSeries, {
+		color,
+		lineWidth: 2,
+		priceLineVisible: false,
+		crosshairMarkerVisible: true,
+		crosshairMarkerRadius: 4,
+	}) as ISeriesApi<"Line">;
+}
+
+function createSecondarySeries(chart: IChartApi, color: string): ISeriesApi<"Line"> {
+	return chart.addSeries(LineSeries, {
+		color,
+		lineWidth: 1,
+		priceLineVisible: false,
+		crosshairMarkerVisible: false,
+	}) as ISeriesApi<"Line">;
+}
+
+function createHistogramSeries(
+	chart: IChartApi,
+	histogramData: IndicatorDataPoint[] | undefined,
+): ISeriesApi<"Histogram"> | null {
+	if (!histogramData || histogramData.length === 0) {
+		return null;
+	}
+	return chart.addSeries(HistogramSeries, {
+		priceFormat: { type: "price", precision: 4 },
+		priceScaleId: "right",
+	}) as ISeriesApi<"Histogram">;
+}
+
+function addReferenceLines(mainSeries: MainSeries, referenceLines: ReferenceLine[]): void {
+	for (const line of referenceLines) {
+		mainSeries.createPriceLine({
+			price: line.value,
+			color: line.color,
+			lineWidth: toLineWidth(line.lineWidth),
+			lineStyle: 2,
+			title: line.title ?? "",
+			axisLabelVisible: false,
+		});
+	}
+}
+
+function setMainSeriesData(series: MainSeries | null, data: IndicatorDataPoint[]): void {
+	if (!series || data.length === 0) {
+		return;
+	}
+	series.setData(formatData(data));
+}
+
+function setSecondarySeriesData(
+	series: ISeriesApi<"Line"> | null,
+	data: IndicatorDataPoint[] | undefined,
+): void {
+	if (!series || !data || data.length === 0) {
+		return;
+	}
+	series.setData(formatData(data));
+}
+
+function setHistogramSeriesData(
+	series: ISeriesApi<"Histogram"> | null,
+	data: IndicatorDataPoint[] | undefined,
+): void {
+	if (!series || !data || data.length === 0) {
+		return;
+	}
+	series.setData(formatHistogramData(data, CHART_COLORS.profit, CHART_COLORS.loss));
+}
+
+function syncSeriesPayload({
+	mainSeriesRef,
+	secondarySeriesRef,
+	histogramSeriesRef,
+	data,
+	secondaryData,
+	histogramData,
+}: {
+	mainSeriesRef: RefObject<MainSeries | null>;
+	secondarySeriesRef: RefObject<ISeriesApi<"Line"> | null>;
+	histogramSeriesRef: RefObject<ISeriesApi<"Histogram"> | null>;
+	data: IndicatorDataPoint[];
+	secondaryData?: IndicatorDataPoint[];
+	histogramData?: IndicatorDataPoint[];
+}) {
+	setMainSeriesData(mainSeriesRef.current, data);
+	setSecondarySeriesData(secondarySeriesRef.current, secondaryData);
+	setHistogramSeriesData(histogramSeriesRef.current, histogramData);
+}
+
+function useChartInitialization({
+	containerRef,
+	chartRef,
+	mainSeriesRef,
+	secondarySeriesRef,
+	histogramSeriesRef,
+	type,
+	color,
+	secondaryColor,
+	data,
+	secondaryData,
+	histogramData,
+	referenceLines,
+	minValue,
+	maxValue,
+	height,
+}: {
+	containerRef: RefObject<HTMLDivElement | null>;
+	chartRef: RefObject<IChartApi | null>;
+	mainSeriesRef: RefObject<MainSeries | null>;
+	secondarySeriesRef: RefObject<ISeriesApi<"Line"> | null>;
+	histogramSeriesRef: RefObject<ISeriesApi<"Histogram"> | null>;
+	type: ChartType;
+	color: string;
+	secondaryColor: string;
+	data: IndicatorDataPoint[];
+	secondaryData?: IndicatorDataPoint[];
+	histogramData?: IndicatorDataPoint[];
+	referenceLines: ReferenceLine[];
+	minValue?: number;
+	maxValue?: number;
+	height: number;
+}) {
+	useEffect(() => {
+		if (!containerRef.current) {
+			return;
+		}
+
+		const chart = createChartInstance(containerRef.current, height);
+		chartRef.current = chart;
+		setScaleBounds(chart, minValue, maxValue);
+
+		const mainSeries = createPrimarySeries(chart, type, color);
+		const secondarySeries =
+			secondaryData && secondaryData.length > 0
+				? createSecondarySeries(chart, secondaryColor)
+				: null;
+		const histogramSeries = createHistogramSeries(chart, histogramData);
+		mainSeriesRef.current = mainSeries;
+		secondarySeriesRef.current = secondarySeries;
+		histogramSeriesRef.current = histogramSeries;
+
+		addReferenceLines(mainSeries, referenceLines);
+		syncSeriesPayload({
+			mainSeriesRef,
+			secondarySeriesRef,
+			histogramSeriesRef,
+			data,
+			secondaryData,
+			histogramData,
+		});
+		chart.timeScale().fitContent();
+
+		return () => {
+			chart.remove();
+			chartRef.current = null;
+			mainSeriesRef.current = null;
+			secondarySeriesRef.current = null;
+			histogramSeriesRef.current = null;
+		};
+	}, [
+		type,
+		color,
+		secondaryColor,
+		data,
+		secondaryData,
+		histogramData,
+		referenceLines,
+		minValue,
+		maxValue,
+		height,
+		chartRef,
+		mainSeriesRef,
+		secondarySeriesRef,
+		histogramSeriesRef,
+		containerRef,
+	]);
+}
+
+function useSeriesSync({
+	chartRef,
+	mainSeriesRef,
+	secondarySeriesRef,
+	histogramSeriesRef,
+	data,
+	secondaryData,
+	histogramData,
+}: {
+	chartRef: RefObject<IChartApi | null>;
+	mainSeriesRef: RefObject<MainSeries | null>;
+	secondarySeriesRef: RefObject<ISeriesApi<"Line"> | null>;
+	histogramSeriesRef: RefObject<ISeriesApi<"Histogram"> | null>;
+	data: IndicatorDataPoint[];
+	secondaryData?: IndicatorDataPoint[];
+	histogramData?: IndicatorDataPoint[];
+}) {
+	useEffect(() => {
+		syncSeriesPayload({
+			mainSeriesRef,
+			secondarySeriesRef,
+			histogramSeriesRef,
+			data,
+			secondaryData,
+			histogramData,
+		});
+		chartRef.current?.timeScale().fitContent();
+	}, [
+		chartRef,
+		mainSeriesRef,
+		secondarySeriesRef,
+		histogramSeriesRef,
+		data,
+		secondaryData,
+		histogramData,
+	]);
+
+	useEffect(() => {
+		setSecondarySeriesData(secondarySeriesRef.current, secondaryData);
+	}, [secondarySeriesRef, secondaryData]);
+
+	useEffect(() => {
+		setHistogramSeriesData(histogramSeriesRef.current, histogramData);
+	}, [histogramSeriesRef, histogramData]);
+}
+
+function useChartResize({
+	autoResize,
+	chartRef,
+	containerRef,
+}: {
+	autoResize: boolean;
+	chartRef: RefObject<IChartApi | null>;
+	containerRef: RefObject<HTMLDivElement | null>;
+}) {
+	const handleResize = useCallback(() => {
+		if (!autoResize || !chartRef.current || !containerRef.current) {
+			return;
+		}
+		chartRef.current.applyOptions({ width: containerRef.current.clientWidth });
+	}, [autoResize, chartRef, containerRef]);
+
+	useEffect(() => {
+		if (!autoResize) {
+			return;
+		}
+		window.addEventListener("resize", handleResize);
+		return () => window.removeEventListener("resize", handleResize);
+	}, [autoResize, handleResize]);
+}
+
+export const IndicatorChart = memo(function IndicatorChart({
 	data,
 	type = "line",
 	color = CHART_COLORS.primary,
@@ -153,164 +411,39 @@ function IndicatorChartComponent({
 }: IndicatorChartProps) {
 	const containerRef = useRef<HTMLDivElement>(null);
 	const chartRef = useRef<IChartApi | null>(null);
-	const mainSeriesRef = useRef<ISeriesApi<"Line"> | ISeriesApi<"Area"> | null>(null);
+	const mainSeriesRef = useRef<MainSeries | null>(null);
 	const secondarySeriesRef = useRef<ISeriesApi<"Line"> | null>(null);
 	const histogramSeriesRef = useRef<ISeriesApi<"Histogram"> | null>(null);
 
-	// Initialize chart
-	useEffect(() => {
-		if (!containerRef.current) {
-			return;
-		}
-
-		const chart = createChart(containerRef.current, {
-			...INDICATOR_CHART_OPTIONS,
-			width: containerRef.current.clientWidth,
-			height,
-		});
-
-		chartRef.current = chart;
-
-		// Configure price scale if min/max set
-		if (minValue !== undefined || maxValue !== undefined) {
-			chart.priceScale("right").applyOptions({
-				autoScale: false,
-			});
-		}
-
-		// Add histogram series first (behind main line)
-		if (histogramData && histogramData.length > 0) {
-			const histogramSeries = chart.addSeries(HistogramSeries, {
-				priceFormat: { type: "price", precision: 4 },
-				priceScaleId: "right",
-			}) as ISeriesApi<"Histogram">;
-			histogramSeriesRef.current = histogramSeries;
-
-			const formatted = formatHistogramData(histogramData, CHART_COLORS.profit, CHART_COLORS.loss);
-			histogramSeries.setData(formatted);
-		}
-
-		// Add main series
-		if (type === "area") {
-			const areaSeries = chart.addSeries(AreaSeries, {
-				lineColor: color,
-				topColor: `${color}50`,
-				bottomColor: `${color}05`,
-				lineWidth: 2,
-				priceLineVisible: false,
-			}) as ISeriesApi<"Area">;
-			mainSeriesRef.current = areaSeries;
-		} else {
-			const lineSeries = chart.addSeries(LineSeries, {
-				color,
-				lineWidth: 2,
-				priceLineVisible: false,
-				crosshairMarkerVisible: true,
-				crosshairMarkerRadius: 4,
-			}) as ISeriesApi<"Line">;
-			mainSeriesRef.current = lineSeries;
-		}
-
-		// Add secondary line series
-		if (secondaryData && secondaryData.length > 0) {
-			const secondarySeries = chart.addSeries(LineSeries, {
-				color: secondaryColor,
-				lineWidth: 1,
-				priceLineVisible: false,
-				crosshairMarkerVisible: false,
-			}) as ISeriesApi<"Line">;
-			secondarySeriesRef.current = secondarySeries;
-		}
-
-		// Add reference lines as price lines
-		if (mainSeriesRef.current) {
-			for (const line of referenceLines) {
-				mainSeriesRef.current.createPriceLine({
-					price: line.value,
-					color: line.color,
-					lineWidth: (line.lineWidth ?? 1) as 1 | 2 | 3 | 4,
-					lineStyle: 2, // Dashed
-					title: line.title ?? "",
-					axisLabelVisible: false,
-				});
-			}
-		}
-
-		// Set data
-		if (data.length > 0 && mainSeriesRef.current) {
-			const formatted = formatData(data);
-			mainSeriesRef.current.setData(formatted);
-		}
-
-		if (secondaryData && secondaryData.length > 0 && secondarySeriesRef.current) {
-			const formatted = formatData(secondaryData);
-			secondarySeriesRef.current.setData(formatted);
-		}
-
-		chart.timeScale().fitContent();
-
-		return () => {
-			chart.remove();
-			chartRef.current = null;
-			mainSeriesRef.current = null;
-			secondarySeriesRef.current = null;
-			histogramSeriesRef.current = null;
-		};
-	}, [
+	useChartInitialization({
+		containerRef,
+		chartRef,
+		mainSeriesRef,
+		secondarySeriesRef,
+		histogramSeriesRef,
 		type,
 		color,
 		secondaryColor,
-		height,
+		data,
+		secondaryData,
+		histogramData,
+		referenceLines,
 		minValue,
 		maxValue,
-		referenceLines,
-		histogramData,
-		secondaryData,
+		height,
+	});
+
+	useSeriesSync({
+		chartRef,
+		mainSeriesRef,
+		secondarySeriesRef,
+		histogramSeriesRef,
 		data,
-	]);
+		secondaryData,
+		histogramData,
+	});
 
-	// Update data when changed
-	useEffect(() => {
-		if (data.length > 0 && mainSeriesRef.current) {
-			const formatted = formatData(data);
-			mainSeriesRef.current.setData(formatted);
-			chartRef.current?.timeScale().fitContent();
-		}
-	}, [data]);
-
-	useEffect(() => {
-		if (secondaryData && secondaryData.length > 0 && secondarySeriesRef.current) {
-			const formatted = formatData(secondaryData);
-			secondarySeriesRef.current.setData(formatted);
-		}
-	}, [secondaryData]);
-
-	useEffect(() => {
-		if (histogramData && histogramData.length > 0 && histogramSeriesRef.current) {
-			const formatted = formatHistogramData(histogramData, CHART_COLORS.profit, CHART_COLORS.loss);
-			histogramSeriesRef.current.setData(formatted);
-		}
-	}, [histogramData]);
-
-	// Handle resize
-	const handleResize = useCallback(() => {
-		if (!chartRef.current || !containerRef.current || !autoResize) {
-			return;
-		}
-
-		chartRef.current.applyOptions({
-			width: containerRef.current.clientWidth,
-		});
-	}, [autoResize]);
-
-	useEffect(() => {
-		if (!autoResize) {
-			return;
-		}
-
-		window.addEventListener("resize", handleResize);
-		return () => window.removeEventListener("resize", handleResize);
-	}, [autoResize, handleResize]);
+	useChartResize({ autoResize, chartRef, containerRef });
 
 	return (
 		<div className={`relative ${className}`}>
@@ -322,8 +455,6 @@ function IndicatorChartComponent({
 			<div ref={containerRef} style={{ width: "100%", height: `${height}px` }} />
 		</div>
 	);
-}
-
-export const IndicatorChart = memo(IndicatorChartComponent);
+});
 
 export default IndicatorChart;

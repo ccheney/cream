@@ -113,6 +113,19 @@ function getSectionDisplayName(sectionKey: string): string {
 	return sectionKey.replaceAll("_", " ").replace(/\b\w/g, (c) => c.toUpperCase());
 }
 
+interface SplitState {
+	chunks: string[];
+	currentChunk: string;
+	previousOverlap: string;
+}
+
+interface FilingChunkMeta {
+	filingId: string;
+	companySymbol: string;
+	filingType: ParsedFiling["filing"]["filingType"];
+	filingDate: string;
+}
+
 // ============================================
 // Chunking Functions
 // ============================================
@@ -137,67 +150,100 @@ export function splitTextWithOverlap(
 	maxSize = MAX_CHUNK_SIZE,
 	overlap = CHUNK_OVERLAP,
 ): string[] {
-	// Single chunk if fits
 	if (text.length <= maxSize) {
 		return [text];
 	}
 
-	const chunks: string[] = [];
+	const state: SplitState = {
+		chunks: [],
+		currentChunk: "",
+		previousOverlap: "",
+	};
 
-	// Split on paragraph boundaries
-	const paragraphs = text.split(/\n\n+/);
-
-	let currentChunk = "";
-	let previousOverlap = "";
-
-	for (const paragraph of paragraphs) {
+	for (const paragraph of getNonEmptyParagraphs(text)) {
 		const trimmedParagraph = paragraph.trim();
-		if (!trimmedParagraph) {
+		processParagraph(state, trimmedParagraph, maxSize, overlap);
+	}
+
+	pushCurrentChunkIfPresent(state);
+	return state.chunks;
+}
+
+function getNonEmptyParagraphs(text: string): string[] {
+	return text.split(/\n\n+/).filter((paragraph) => paragraph.trim());
+}
+
+function processParagraph(
+	state: SplitState,
+	paragraph: string,
+	maxSize: number,
+	overlap: number,
+): void {
+	const paragraphChunk = buildChunkText(
+		state.currentChunk,
+		state.previousOverlap,
+		paragraph,
+		"\n\n",
+	);
+	if (paragraphChunk.length > maxSize && state.currentChunk) {
+		startNextChunk(state, overlap, paragraph, "\n\n");
+		return;
+	}
+
+	if (paragraph.length > maxSize) {
+		processOversizedParagraph(state, paragraph, maxSize, overlap);
+		return;
+	}
+
+	state.currentChunk = paragraphChunk;
+}
+
+function processOversizedParagraph(
+	state: SplitState,
+	paragraph: string,
+	maxSize: number,
+	overlap: number,
+): void {
+	for (const sentence of splitOnSentences(paragraph)) {
+		const sentenceChunk = buildChunkText(state.currentChunk, state.previousOverlap, sentence, " ");
+		if (sentenceChunk.length > maxSize && state.currentChunk) {
+			startNextChunk(state, overlap, sentence, " ");
 			continue;
 		}
-
-		// Check if adding this paragraph exceeds limit
-		const potentialChunk = currentChunk
-			? `${currentChunk}\n\n${trimmedParagraph}`
-			: `${previousOverlap}${previousOverlap ? "\n\n" : ""}${trimmedParagraph}`;
-
-		if (potentialChunk.length > maxSize && currentChunk) {
-			// Save current chunk
-			chunks.push(currentChunk);
-
-			// Get overlap from end of current chunk
-			previousOverlap = currentChunk.slice(-overlap);
-
-			// Start new chunk with overlap and current paragraph
-			currentChunk = `${previousOverlap}\n\n${trimmedParagraph}`;
-		} else if (trimmedParagraph.length > maxSize) {
-			// Handle oversized paragraph by splitting on sentences
-			const sentences = splitOnSentences(trimmedParagraph);
-
-			for (const sentence of sentences) {
-				const potentialWithSentence = currentChunk
-					? `${currentChunk} ${sentence}`
-					: `${previousOverlap}${previousOverlap ? " " : ""}${sentence}`;
-
-				if (potentialWithSentence.length > maxSize && currentChunk) {
-					chunks.push(currentChunk);
-					previousOverlap = currentChunk.slice(-overlap);
-					currentChunk = `${previousOverlap} ${sentence}`;
-				} else {
-					currentChunk = potentialWithSentence;
-				}
-			}
-		} else {
-			currentChunk = potentialChunk;
-		}
+		state.currentChunk = sentenceChunk;
 	}
+}
 
-	// Add final chunk
-	if (currentChunk.trim()) {
-		chunks.push(currentChunk);
+function buildChunkText(
+	currentChunk: string,
+	previousOverlap: string,
+	input: string,
+	separator: string,
+): string {
+	if (currentChunk) {
+		return `${currentChunk}${separator}${input}`;
 	}
+	if (!previousOverlap) {
+		return input;
+	}
+	return `${previousOverlap}${separator}${input}`;
+}
 
-	return chunks;
+function startNextChunk(
+	state: SplitState,
+	overlap: number,
+	nextContent: string,
+	separator: string,
+): void {
+	state.chunks.push(state.currentChunk);
+	state.previousOverlap = state.currentChunk.slice(-overlap);
+	state.currentChunk = buildChunkText("", state.previousOverlap, nextContent, separator);
+}
+
+function pushCurrentChunkIfPresent(state: SplitState): void {
+	if (state.currentChunk.trim()) {
+		state.chunks.push(state.currentChunk);
+	}
 }
 
 /**
@@ -230,53 +276,17 @@ function splitOnSentences(text: string): string[] {
 export function chunkParsedFiling(parsed: ParsedFiling): FilingChunk[] {
 	const chunks: FilingChunk[] = [];
 	let globalChunkIndex = 0;
-
-	const { filing, sections } = parsed;
-
-	// Extract filing metadata
-	const filingId = filing.accessionNumber;
-	const companySymbol = filing.company.ticker ?? filing.company.cik;
-	const filingType = filing.filingType;
-	const filingDate = formatDate(filing.filedDate);
+	const metadata = getFilingChunkMeta(parsed);
 
 	// Process each section
-	for (const [sectionKey, sectionContent] of Object.entries(sections)) {
-		// Skip tiny sections
-		if (sectionContent.length < MIN_SECTION_LENGTH) {
-			continue;
-		}
-
-		const sectionName = getSectionDisplayName(sectionKey);
-
-		// Split section into chunks
-		const sectionChunks = splitTextWithOverlap(sectionContent);
-
-		// Create chunk objects
-		for (let i = 0; i < sectionChunks.length; i++) {
-			const chunkText = sectionChunks[i];
-
-			// Prepend header
-			let header = `## ${sectionName}`;
-			if (sectionChunks.length > 1) {
-				header += ` (Part ${i + 1} of ${sectionChunks.length})`;
-			}
-
-			const formattedChunk = `${header}\n\n${chunkText}`;
-
-			chunks.push({
-				chunkId: createChunkId(filingId, sectionKey, globalChunkIndex),
-				filingId,
-				companySymbol,
-				filingType,
-				filingDate,
-				sectionName,
-				chunkIndex: globalChunkIndex,
-				chunkText: formattedChunk,
-				totalChunks: 0, // Updated after all chunks created
-			});
-
-			globalChunkIndex++;
-		}
+	for (const [sectionKey, sectionContent] of Object.entries(parsed.sections)) {
+		globalChunkIndex = appendSectionChunks(
+			chunks,
+			metadata,
+			sectionKey,
+			sectionContent,
+			globalChunkIndex,
+		);
 	}
 
 	// Update totalChunks on all chunks
@@ -287,13 +297,67 @@ export function chunkParsedFiling(parsed: ParsedFiling): FilingChunk[] {
 	return chunks;
 }
 
+function getFilingChunkMeta(parsed: ParsedFiling): FilingChunkMeta {
+	return {
+		filingId: parsed.filing.accessionNumber,
+		companySymbol: parsed.filing.company.ticker ?? parsed.filing.company.cik,
+		filingType: parsed.filing.filingType,
+		filingDate: formatDate(parsed.filing.filedDate),
+	};
+}
+
+function appendSectionChunks(
+	chunks: FilingChunk[],
+	metadata: FilingChunkMeta,
+	sectionKey: string,
+	sectionContent: string,
+	startChunkIndex: number,
+): number {
+	if (sectionContent.length < MIN_SECTION_LENGTH) {
+		return startChunkIndex;
+	}
+
+	const sectionName = getSectionDisplayName(sectionKey);
+	const sectionChunks = splitTextWithOverlap(sectionContent);
+	let chunkIndex = startChunkIndex;
+
+	for (const [sectionChunkIndex, chunkText] of sectionChunks.entries()) {
+		const chunkHeader = createChunkHeader(sectionName, sectionChunkIndex, sectionChunks.length);
+		chunks.push({
+			chunkId: createChunkId(metadata.filingId, sectionKey, chunkIndex),
+			filingId: metadata.filingId,
+			companySymbol: metadata.companySymbol,
+			filingType: metadata.filingType,
+			filingDate: metadata.filingDate,
+			sectionName,
+			chunkIndex,
+			chunkText: `${chunkHeader}\n\n${chunkText}`,
+			totalChunks: 0,
+		});
+		chunkIndex++;
+	}
+
+	return chunkIndex;
+}
+
+function createChunkHeader(
+	sectionName: string,
+	sectionChunkIndex: number,
+	totalSectionChunks: number,
+): string {
+	if (totalSectionChunks <= 1) {
+		return `## ${sectionName}`;
+	}
+	return `## ${sectionName} (Part ${sectionChunkIndex + 1} of ${totalSectionChunks})`;
+}
+
 /**
  * Convert FilingChunk array to plain objects for serialization.
  *
  * @param chunks - Array of FilingChunk objects
  * @returns Array of plain objects
  */
-export function chunksToObjects(chunks: FilingChunk[]): Array<Record<string, unknown>> {
+export function chunksToObjects(chunks: FilingChunk[]): Record<string, unknown>[] {
 	return chunks.map((chunk) => ({
 		chunk_id: chunk.chunkId,
 		filing_id: chunk.filingId,

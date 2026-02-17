@@ -80,25 +80,14 @@ export class DependencyGraph {
 
 		while (queue.length > 0) {
 			const current = queue.shift();
-			if (current === undefined) {
+			if (current === undefined || visited.has(current)) {
 				continue;
 			}
 			if (current === to) {
 				return true;
 			}
-			if (visited.has(current)) {
-				continue;
-			}
 			visited.add(current);
-
-			const deps = this.forwardGraph.get(current);
-			if (deps) {
-				for (const dep of deps) {
-					if (!visited.has(dep)) {
-						queue.push(dep);
-					}
-				}
-			}
+			this.enqueueUnvisitedDependencies(current, visited, queue);
 		}
 
 		return false;
@@ -113,35 +102,11 @@ export class DependencyGraph {
 		const recStack = new Set<string>();
 		const path: string[] = [];
 
-		const dfs = (node: string): void => {
-			visited.add(node);
-			recStack.add(node);
-			path.push(node);
-
-			const neighbors = this.forwardGraph.get(node);
-			if (neighbors) {
-				for (const neighbor of neighbors) {
-					if (!visited.has(neighbor)) {
-						dfs(neighbor);
-					} else if (recStack.has(neighbor)) {
-						const cycleStart = path.indexOf(neighbor);
-						const cycle = [...path.slice(cycleStart), neighbor];
-						const normalized = this.normalizeCycle(cycle);
-						if (!cycles.some((c) => this.cyclesEqual(c, normalized))) {
-							cycles.push(normalized);
-						}
-					}
-				}
-			}
-
-			path.pop();
-			recStack.delete(node);
-		};
-
 		for (const node of this.packages.keys()) {
-			if (!visited.has(node)) {
-				dfs(node);
+			if (visited.has(node)) {
+				continue;
 			}
+			this.traverseForCycles(node, visited, recStack, path, cycles);
 		}
 
 		return cycles;
@@ -373,5 +338,56 @@ export class DependencyGraph {
 			return false;
 		}
 		return a.every((val, i) => val === b[i]);
+	}
+
+	private enqueueUnvisitedDependencies(
+		current: string,
+		visited: Set<string>,
+		queue: string[],
+	): void {
+		for (const dep of this.forwardGraph.get(current) ?? []) {
+			if (visited.has(dep)) {
+				continue;
+			}
+			queue.push(dep);
+		}
+	}
+
+	private traverseForCycles(
+		node: string,
+		visited: Set<string>,
+		recStack: Set<string>,
+		path: string[],
+		cycles: string[][],
+	): void {
+		visited.add(node);
+		recStack.add(node);
+		path.push(node);
+
+		for (const neighbor of this.forwardGraph.get(node) ?? []) {
+			if (!visited.has(neighbor)) {
+				this.traverseForCycles(neighbor, visited, recStack, path, cycles);
+				continue;
+			}
+			if (recStack.has(neighbor)) {
+				this.addCycleIfUnique(neighbor, path, cycles);
+			}
+		}
+
+		path.pop();
+		recStack.delete(node);
+	}
+
+	private addCycleIfUnique(neighbor: string, path: string[], cycles: string[][]): void {
+		const cycleStart = path.indexOf(neighbor);
+		if (cycleStart < 0) {
+			return;
+		}
+		const cycle = [...path.slice(cycleStart), neighbor];
+		const normalized = this.normalizeCycle(cycle);
+		if (cycles.some((existingCycle) => this.cyclesEqual(existingCycle, normalized))) {
+			return;
+		}
+		cycles.push(normalized);
 	}
 }

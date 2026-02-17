@@ -1,5 +1,3 @@
-// biome-ignore-all lint/a11y/useSemanticElements: CSS grid layout requires div elements with ARIA roles
-// biome-ignore-all lint/a11y/useFocusableInteractive: Headers are not interactive
 /**
  * Correlation Heat Map Component
  *
@@ -10,7 +8,7 @@
 
 "use client";
 
-import { memo, useCallback, useMemo, useState } from "react";
+import { type MouseEvent, memo, useCallback, useMemo, useState } from "react";
 import { CHART_COLORS } from "@/lib/chart-config";
 import {
 	CORRELATION_COLORS,
@@ -67,19 +65,16 @@ export interface CellData {
 function useMatrixData(
 	data: CorrelationMatrix,
 	highlightThreshold: number,
-	_showDiagonal: boolean,
 ): {
 	keys: string[];
 	cells: CellData[][];
 } {
 	return useMemo(() => {
 		const keys = Object.keys(data).toSorted();
-
 		const cells: CellData[][] = keys.map((rowKey) => {
 			return keys.map((colKey) => {
 				const value = data[rowKey]?.[colKey] ?? 0;
 				const isDiagonal = rowKey === colKey;
-
 				return {
 					rowKey,
 					colKey,
@@ -90,7 +85,6 @@ function useMatrixData(
 				};
 			});
 		});
-
 		return { keys, cells };
 	}, [data, highlightThreshold]);
 }
@@ -104,65 +98,73 @@ interface CellProps {
 	size: number;
 	showDiagonal: boolean;
 	isHovered: boolean;
-	onHover: (cell: CellData | null) => void;
+	onHover: (cell: CellData | null, position?: { x: number; y: number }) => void;
 }
 
-function Cell({ cell, size, showDiagonal, isHovered, onHover }: CellProps) {
-	const handleMouseEnter = useCallback(() => {
-		onHover(cell);
-	}, [cell, onHover]);
-
-	const handleMouseLeave = useCallback(() => {
-		onHover(null);
-	}, [onHover]);
-
-	// Hide diagonal if not showing
-	if (cell.isDiagonal && !showDiagonal) {
-		return (
-			<div
-				style={{
-					width: size,
-					height: size,
-					backgroundColor: CHART_COLORS.background,
-				}}
-			/>
-		);
-	}
-
-	const borderColor = cell.isHighCorrelation
-		? cell.value > 0
-			? CORRELATION_COLORS.positive
-			: CORRELATION_COLORS.negative
-		: "transparent";
-
+function HiddenDiagonalCell({ size }: { size: number }) {
 	return (
 		<div
 			style={{
 				width: size,
 				height: size,
-				backgroundColor: cell.color,
-				border: `2px solid ${borderColor}`,
-				boxSizing: "border-box",
-				cursor: "pointer",
-				transition: "transform 0.1s ease",
-				transform: isHovered ? "scale(1.05)" : "scale(1)",
-				zIndex: isHovered ? 10 : 1,
-				position: "relative",
-				display: "flex",
-				alignItems: "center",
-				justifyContent: "center",
-				fontFamily: "Geist Mono, monospace",
-				fontSize: size > 40 ? 10 : 8,
-				color: Math.abs(cell.value) > 0.5 ? "#FFFFFF" : CHART_COLORS.text,
-				textShadow: Math.abs(cell.value) > 0.5 ? "0 1px 2px rgba(0,0,0,0.5)" : "none",
+				backgroundColor: CHART_COLORS.background,
 			}}
-			onMouseEnter={handleMouseEnter}
+		/>
+	);
+}
+
+function getCellBorderColor(cell: CellData): string {
+	if (!cell.isHighCorrelation) {
+		return "transparent";
+	}
+	return cell.value > 0 ? CORRELATION_COLORS.positive : CORRELATION_COLORS.negative;
+}
+
+function getCellStyle(cell: CellData, size: number, isHovered: boolean) {
+	return {
+		width: size,
+		height: size,
+		backgroundColor: cell.color,
+		border: `2px solid ${getCellBorderColor(cell)}`,
+		boxSizing: "border-box",
+		cursor: "pointer",
+		transition: "transform 0.1s ease",
+		transform: isHovered ? "scale(1.05)" : "scale(1)",
+		zIndex: isHovered ? 10 : 1,
+		position: "relative",
+		display: "flex",
+		alignItems: "center",
+		justifyContent: "center",
+		fontFamily: "Geist Mono, monospace",
+		fontSize: size > 40 ? 10 : 8,
+		color: Math.abs(cell.value) > 0.5 ? "#FFFFFF" : CHART_COLORS.text,
+		textShadow: Math.abs(cell.value) > 0.5 ? "0 1px 2px rgba(0,0,0,0.5)" : "none",
+		padding: 0,
+	} as const;
+}
+
+function Cell({ cell, size, showDiagonal, isHovered, onHover }: CellProps) {
+	const handleMouseMoveOrEnter = useCallback(
+		(event: MouseEvent<HTMLButtonElement>) => onHover(cell, { x: event.clientX, y: event.clientY }),
+		[cell, onHover],
+	);
+	const handleMouseLeave = useCallback(() => onHover(null), [onHover]);
+
+	if (cell.isDiagonal && !showDiagonal) {
+		return <HiddenDiagonalCell size={size} />;
+	}
+
+	return (
+		<button
+			type="button"
+			style={getCellStyle(cell, size, isHovered)}
+			onMouseEnter={handleMouseMoveOrEnter}
+			onMouseMove={handleMouseMoveOrEnter}
 			onMouseLeave={handleMouseLeave}
-			role="cell"
 			aria-label={`${cell.rowKey} vs ${cell.colKey}: ${formatCorrelation(cell.value)}`}
 		>
 			{isHovered && formatCorrelation(cell.value)}
-		</div>
+		</button>
 	);
 }
 
@@ -221,6 +223,140 @@ function Tooltip({ cell, position }: TooltipProps) {
 	);
 }
 
+function HeatMapEmptyState({ className }: { className?: string }) {
+	return (
+		<div
+			className={className}
+			style={{
+				display: "flex",
+				alignItems: "center",
+				justifyContent: "center",
+				color: CHART_COLORS.text,
+				fontFamily: "Geist Mono, monospace",
+				fontSize: 12,
+				padding: 20,
+			}}
+		>
+			No data
+		</div>
+	);
+}
+
+function HeatMapRow({
+	row,
+	rowKey,
+	cellSize,
+	showDiagonal,
+	hoveredCell,
+	onCellHover,
+}: {
+	row: CellData[];
+	rowKey: string;
+	cellSize: number;
+	showDiagonal: boolean;
+	hoveredCell: CellData | null;
+	onCellHover: (cell: CellData | null, position?: { x: number; y: number }) => void;
+}) {
+	return (
+		<>
+			<div
+				style={{
+					display: "flex",
+					alignItems: "center",
+					justifyContent: "flex-end",
+					paddingRight: 8,
+					fontFamily: "Geist Mono, monospace",
+					fontSize: 10,
+					color: CHART_COLORS.text,
+					whiteSpace: "nowrap",
+					overflow: "hidden",
+					textOverflow: "ellipsis",
+				}}
+			>
+				{rowKey}
+			</div>
+			{row.map((cell) => (
+				<Cell
+					key={`${cell.rowKey}-${cell.colKey}`}
+					cell={cell}
+					size={cellSize}
+					showDiagonal={showDiagonal}
+					isHovered={hoveredCell?.rowKey === cell.rowKey && hoveredCell?.colKey === cell.colKey}
+					onHover={onCellHover}
+				/>
+			))}
+		</>
+	);
+}
+
+function HeatMapGrid({
+	keys,
+	cells,
+	cellSize,
+	cellGap,
+	showDiagonal,
+	hoveredCell,
+	onCellHover,
+}: {
+	keys: string[];
+	cells: CellData[][];
+	cellSize: number;
+	cellGap: number;
+	showDiagonal: boolean;
+	hoveredCell: CellData | null;
+	onCellHover: (cell: CellData | null, position?: { x: number; y: number }) => void;
+}) {
+	const labelSize = 60;
+	const matrixSize = keys.length * (cellSize + cellGap);
+
+	return (
+		<div
+			style={{
+				display: "grid",
+				gridTemplateColumns: `${labelSize}px repeat(${keys.length}, ${cellSize}px)`,
+				gridTemplateRows: `${labelSize}px repeat(${keys.length}, ${cellSize}px)`,
+				gap: cellGap,
+				width: labelSize + matrixSize,
+				height: labelSize + matrixSize,
+			}}
+		>
+			<div />
+			{keys.map((key) => (
+				<div
+					key={`col-${key}`}
+					style={{
+						display: "flex",
+						alignItems: "flex-end",
+						justifyContent: "center",
+						paddingBottom: 4,
+						fontFamily: "Geist Mono, monospace",
+						fontSize: 10,
+						color: CHART_COLORS.text,
+						transform: "rotate(-45deg)",
+						transformOrigin: "bottom center",
+						whiteSpace: "nowrap",
+						overflow: "hidden",
+						textOverflow: "ellipsis",
+					}}
+				>
+					{key}
+				</div>
+			))}
+			{cells.map((row, rowIndex) => (
+				<HeatMapRow
+					key={keys[rowIndex] ?? `row-${rowIndex}`}
+					row={row}
+					rowKey={keys[rowIndex] ?? ""}
+					cellSize={cellSize}
+					showDiagonal={showDiagonal}
+					hoveredCell={hoveredCell}
+					onCellHover={onCellHover}
+				/>
+			))}
+		</div>
+	);
+}
+
 // ============================================
 // Main Component
 // ============================================
@@ -237,130 +373,35 @@ function HeatMapComponent({
 	showTooltip = true,
 	className,
 }: HeatMapProps) {
-	const { keys, cells } = useMatrixData(data, highlightThreshold, showDiagonal);
+	const { keys, cells } = useMatrixData(data, highlightThreshold);
 	const [hoveredCell, setHoveredCell] = useState<CellData | null>(null);
 	const [mousePosition, setMousePosition] = useState({ x: 0, y: 0 });
 
-	const handleMouseMove = useCallback((e: React.MouseEvent) => {
-		setMousePosition({ x: e.clientX, y: e.clientY });
-	}, []);
-
-	const handleCellHover = useCallback((cell: CellData | null) => {
-		setHoveredCell(cell);
-	}, []);
-
-	// Calculate dimensions
-	const labelWidth = 60;
-	const gridWidth = keys.length * (cellSize + cellGap);
-	const totalWidth = labelWidth + gridWidth;
-	const totalHeight = labelWidth + gridWidth;
+	const handleCellHover = useCallback(
+		(cell: CellData | null, position?: { x: number; y: number }) => {
+			setHoveredCell(cell);
+			if (position) {
+				setMousePosition(position);
+			}
+		},
+		[],
+	);
 
 	if (keys.length === 0) {
-		return (
-			<div
-				className={className}
-				style={{
-					display: "flex",
-					alignItems: "center",
-					justifyContent: "center",
-					color: CHART_COLORS.text,
-					fontFamily: "Geist Mono, monospace",
-					fontSize: 12,
-					padding: 20,
-				}}
-			>
-				No data
-			</div>
-		);
+		return <HeatMapEmptyState className={className} />;
 	}
 
 	return (
-		<div
-			className={className}
-			style={{ position: "relative" }}
-			onMouseMove={handleMouseMove}
-			role="grid"
-			aria-label="Correlation matrix"
-		>
-			{/* Container */}
-			<div
-				style={{
-					display: "grid",
-					gridTemplateColumns: `${labelWidth}px repeat(${keys.length}, ${cellSize}px)`,
-					gridTemplateRows: `${labelWidth}px repeat(${keys.length}, ${cellSize}px)`,
-					gap: cellGap,
-					width: totalWidth,
-					height: totalHeight,
-				}}
-			>
-				{/* Empty corner */}
-				<div />
-
-				{/* Column headers */}
-				{keys.map((key) => (
-					<div
-						key={`col-${key}`}
-						style={{
-							display: "flex",
-							alignItems: "flex-end",
-							justifyContent: "center",
-							paddingBottom: 4,
-							fontFamily: "Geist Mono, monospace",
-							fontSize: 10,
-							color: CHART_COLORS.text,
-							transform: "rotate(-45deg)",
-							transformOrigin: "bottom center",
-							whiteSpace: "nowrap",
-							overflow: "hidden",
-							textOverflow: "ellipsis",
-						}}
-						role="columnheader"
-					>
-						{key}
-					</div>
-				))}
-
-				{/* Rows */}
-				{cells.map((row, rowIndex) => (
-					<>
-						{/* Row header */}
-						<div
-							key={`row-${keys[rowIndex]}`}
-							style={{
-								display: "flex",
-								alignItems: "center",
-								justifyContent: "flex-end",
-								paddingRight: 8,
-								fontFamily: "Geist Mono, monospace",
-								fontSize: 10,
-								color: CHART_COLORS.text,
-								whiteSpace: "nowrap",
-								overflow: "hidden",
-								textOverflow: "ellipsis",
-							}}
-							role="rowheader"
-						>
-							{keys[rowIndex]}
-						</div>
-
-						{/* Row cells */}
-						{row.map((cell, _colIndex) => (
-							<Cell
-								key={`${cell.rowKey}-${cell.colKey}`}
-								cell={cell}
-								size={cellSize}
-								showDiagonal={showDiagonal}
-								isHovered={
-									hoveredCell?.rowKey === cell.rowKey && hoveredCell?.colKey === cell.colKey
-								}
-								onHover={handleCellHover}
-							/>
-						))}
-					</>
-				))}
-			</div>
-
-			{/* Tooltip */}
+		<div className={className} style={{ position: "relative" }}>
+			<HeatMapGrid
+				keys={keys}
+				cells={cells}
+				cellSize={cellSize}
+				cellGap={cellGap}
+				showDiagonal={showDiagonal}
+				hoveredCell={hoveredCell}
+				onCellHover={handleCellHover}
+			/>
 			{showTooltip && hoveredCell && <Tooltip cell={hoveredCell} position={mousePosition} />}
 		</div>
 	);

@@ -150,6 +150,85 @@ export function isAuthError(error: ApiError | ApiErrorType): boolean {
 	return type === "unauthorized" || type === "forbidden";
 }
 
+interface ParsedErrorMetadata {
+	message?: string;
+	statusCode?: number;
+	code?: string;
+	details?: Record<string, unknown>;
+}
+
+function asRecord(value: unknown): Record<string, unknown> | null {
+	return typeof value === "object" && value !== null ? (value as Record<string, unknown>) : null;
+}
+
+function getBodyMessage(errorObj: Record<string, unknown>): string | undefined {
+	const body = asRecord(errorObj.body ?? errorObj.data ?? errorObj);
+	if (!body) {
+		return undefined;
+	}
+
+	const message = typeof body.message === "string" ? body.message : undefined;
+	const error = typeof body.error === "string" ? body.error : undefined;
+	return error ?? message;
+}
+
+function extractErrorMetadata(error: unknown): ParsedErrorMetadata {
+	const metadata: ParsedErrorMetadata = {};
+
+	if (isResponseError(error)) {
+		metadata.statusCode = error.status ?? error.statusCode;
+		if (error.message) {
+			metadata.message = error.message;
+		}
+	}
+
+	const errorObj = asRecord(error);
+	if (!errorObj) {
+		return metadata;
+	}
+
+	if (typeof errorObj.code === "string") {
+		metadata.code = errorObj.code;
+	}
+
+	if (asRecord(errorObj.details)) {
+		metadata.details = errorObj.details as Record<string, unknown>;
+	}
+
+	const bodyMessage = getBodyMessage(errorObj);
+	if (bodyMessage) {
+		metadata.message = bodyMessage;
+	}
+
+	return metadata;
+}
+
+function resolveErrorMessage(
+	error: unknown,
+	type: ApiErrorType,
+	messages: Record<ApiErrorType, string>,
+	extractedMessage?: string,
+): string {
+	if (extractedMessage) {
+		return extractedMessage;
+	}
+	if (error instanceof Error && type === "unknown") {
+		return error.message || messages.unknown;
+	}
+	return messages[type];
+}
+
+function resolveErrorCode(
+	type: ApiErrorType,
+	extractedCode: string | undefined,
+	codePrefix: string | undefined,
+): string | undefined {
+	if (extractedCode) {
+		return extractedCode;
+	}
+	return codePrefix ? `${codePrefix}-${type.toUpperCase()}` : undefined;
+}
+
 // ============================================
 // Error Parsing
 // ============================================
@@ -160,64 +239,16 @@ export function isAuthError(error: ApiError | ApiErrorType): boolean {
 export function parseError(error: unknown, options: ErrorHandlerOptions = {}): ApiError {
 	const type = getErrorType(error);
 	const messages = { ...DEFAULT_ERROR_MESSAGES, ...options.messages };
-
-	let message = messages[type];
-	let statusCode: number | undefined;
-	let code: string | undefined;
-	let details: Record<string, unknown> | undefined;
-
-	// Extract details from response error
-	if (isResponseError(error)) {
-		statusCode = error.status ?? error.statusCode;
-
-		if (error.message) {
-			message = error.message;
-		}
-	}
-
-	// Extract from Error object
-	if (error instanceof Error) {
-		if (!message || type === "unknown") {
-			message = error.message || messages.unknown;
-		}
-	}
-
-	// Extract from object with body/data
-	if (typeof error === "object" && error !== null) {
-		const errorObj = error as Record<string, unknown>;
-
-		if (errorObj.code && typeof errorObj.code === "string") {
-			code = errorObj.code;
-		}
-
-		if (errorObj.details && typeof errorObj.details === "object") {
-			details = errorObj.details as Record<string, unknown>;
-		}
-
-		// Try to extract message from various formats
-		const body = errorObj.body ?? errorObj.data ?? errorObj;
-		if (typeof body === "object" && body !== null) {
-			const bodyObj = body as Record<string, unknown>;
-			if (bodyObj.message && typeof bodyObj.message === "string") {
-				message = bodyObj.message;
-			}
-			if (bodyObj.error && typeof bodyObj.error === "string") {
-				message = bodyObj.error;
-			}
-		}
-	}
-
-	// Add code prefix if provided
-	if (options.codePrefix && !code) {
-		code = `${options.codePrefix}-${type.toUpperCase()}`;
-	}
+	const metadata = extractErrorMetadata(error);
+	const message = resolveErrorMessage(error, type, messages, metadata.message);
+	const code = resolveErrorCode(type, metadata.code, options.codePrefix);
 
 	return {
 		type,
 		message,
-		statusCode,
+		statusCode: metadata.statusCode,
 		code,
-		details,
+		details: metadata.details,
 		timestamp: Date.now(),
 		isTransient: isTransientError(type),
 	};

@@ -1,11 +1,5 @@
 /**
  * @cream/worker - Hourly Scheduler
- *
- * Triggers the trading cycle workflow every hour via dashboard-api.
- * Also runs: prediction markets (15 min), filings sync (daily), indicator batch jobs.
- *
- * Configuration is loaded from the database via RuntimeConfigService.
- * Run 'bun run db:seed' to initialize configuration before starting.
  */
 
 import { initTracing, shutdownTracing } from "./tracing.js";
@@ -13,14 +7,7 @@ import { initTracing, shutdownTracing } from "./tracing.js";
 initTracing();
 
 import type { FullRuntimeConfig, RuntimeEnvironment } from "@cream/config";
-import {
-	type CreamEnvironment,
-	createContext,
-	initCalendarService,
-	isTest,
-	requireEnv,
-	validateEnvironmentOrExit,
-} from "@cream/domain";
+import { requireEnv } from "@cream/domain";
 
 import {
 	createEconomicCalendarService,
@@ -56,12 +43,9 @@ import {
 	recordRunStart,
 	reloadConfig,
 	type TriggerResult,
-	validateHelixDBOrExit,
 } from "./shared/index.js";
-
-// ============================================
-// Worker State
-// ============================================
+import { initializeCalendar, validateStartup } from "./startup.js";
+import { failedTriggerResult, successTriggerResult, toErrorMessage } from "./worker-utils.js";
 
 interface WorkerState {
 	config: FullRuntimeConfig;
@@ -77,25 +61,20 @@ interface WorkerState {
 		economicCalendar: Date | null;
 	};
 	startedAt: Date;
-
-	// Domain services
 	cycleTrigger: CycleTriggerService;
 	predictionMarkets: PredictionMarketsService;
 	filingsSync: FilingsSyncService | null;
 	macroWatch: MacroWatchService;
 	newspaper: NewspaperService;
 	economicCalendar: EconomicCalendarService;
-
-	// Schedulers
 	schedulerManager: SchedulerManager | null;
 	indicatorScheduler: IndicatorBatchScheduler | null;
 }
 
 let state: WorkerState;
+type WorkerDb = Awaited<ReturnType<typeof getDbClient>>;
 
-// ============================================
-// Config Accessors
-// ============================================
+type TrackedServiceName = "filings_sync" | "macro_watch" | "newspaper" | "economic_calendar";
 
 function getIntervals() {
 	return {
@@ -116,9 +95,34 @@ function getIndicatorJobStatus(): Record<string, JobState> | null {
 	return state.indicatorScheduler?.getJobStatus() ?? null;
 }
 
-// ============================================
-// Workflow Execution Handlers
-// ============================================
+async function runWithTracking(
+	service: TrackedServiceName,
+	setLastRun: () => void,
+	execute: () => Promise<{ success: boolean; message: string; processed?: number }>,
+): Promise<void> {
+	setLastRun();
+	const db = await getDbClient();
+	const { runId } = await recordRunStart({ db, service, environment: state.environment });
+
+	try {
+		const result = await execute();
+		await recordRunComplete({
+			db,
+			runId,
+			success: result.success,
+			message: result.message,
+			processed: result.processed,
+		});
+	} catch (error) {
+		await recordRunComplete({
+			db,
+			runId,
+			success: false,
+			message: toErrorMessage(error),
+		});
+		throw error;
+	}
+}
 
 async function runTradingCycle(): Promise<void> {
 	state.lastRun.tradingCycle = new Date();
@@ -131,151 +135,91 @@ async function runPredictionMarkets(): Promise<void> {
 }
 
 async function runFilingsSync(): Promise<void> {
-	state.lastRun.filingsSync = new Date();
-	const db = await getDbClient();
-	const { runId } = await recordRunStart({
-		db,
-		service: "filings_sync",
-		environment: state.environment,
-	});
-
-	try {
-		const result = await state.filingsSync?.sync(getInstruments(), state.environment);
-		await recordRunComplete({
-			db,
-			runId,
-			success: true,
-			message: result
-				? `${result.filingsIngested} filings, ${result.chunksCreated} chunks`
-				: "Completed",
-			processed: result?.filingsIngested ?? 0,
-		});
-	} catch (error) {
-		await recordRunComplete({
-			db,
-			runId,
-			success: false,
-			message: error instanceof Error ? error.message : "Unknown error",
-		});
-		throw error;
-	}
+	await runWithTracking(
+		"filings_sync",
+		() => {
+			state.lastRun.filingsSync = new Date();
+		},
+		async () => {
+			const result = await state.filingsSync?.sync(getInstruments(), state.environment);
+			return {
+				success: true,
+				message: result
+					? `${result.filingsIngested} filings, ${result.chunksCreated} chunks`
+					: "Completed",
+				processed: result?.filingsIngested ?? 0,
+			};
+		},
+	);
 }
 
 async function runMacroWatch(): Promise<void> {
-	state.lastRun.macroWatch = new Date();
-	const db = await getDbClient();
-	const { runId } = await recordRunStart({
-		db,
-		service: "macro_watch",
-		environment: state.environment,
-	});
-
-	try {
-		const { entries, saved } = await state.macroWatch.run(getInstruments());
-
-		await recordRunComplete({
-			db,
-			runId,
-			success: true,
-			message: `${entries.length} entries, ${saved} saved`,
-			processed: entries.length,
-		});
-	} catch (error) {
-		await recordRunComplete({
-			db,
-			runId,
-			success: false,
-			message: error instanceof Error ? error.message : "Unknown error",
-		});
-		throw error;
-	}
+	await runWithTracking(
+		"macro_watch",
+		() => {
+			state.lastRun.macroWatch = new Date();
+		},
+		async () => {
+			const { entries, saved } = await state.macroWatch.run(getInstruments());
+			return {
+				success: true,
+				message: `${entries.length} entries, ${saved} saved`,
+				processed: entries.length,
+			};
+		},
+	);
 }
 
 async function compileNewspaper(): Promise<void> {
-	state.lastRun.newspaper = new Date();
-	const db = await getDbClient();
-	const { runId } = await recordRunStart({
-		db,
-		service: "newspaper",
-		environment: state.environment,
-	});
-
-	try {
-		const result = await state.newspaper.compile(getInstruments());
-		await recordRunComplete({
-			db,
-			runId,
-			success: result.compiled,
-			message: result.message,
-			processed: result.entryCount,
-		});
-	} catch (error) {
-		await recordRunComplete({
-			db,
-			runId,
-			success: false,
-			message: error instanceof Error ? error.message : "Unknown error",
-		});
-		throw error;
-	}
+	await runWithTracking(
+		"newspaper",
+		() => {
+			state.lastRun.newspaper = new Date();
+		},
+		async () => {
+			const result = await state.newspaper.compile(getInstruments());
+			return {
+				success: result.compiled,
+				message: result.message,
+				processed: result.entryCount,
+			};
+		},
+	);
 }
 
 async function runEconomicCalendarSync(): Promise<void> {
-	state.lastRun.economicCalendar = new Date();
-	const db = await getDbClient();
-	const { runId } = await recordRunStart({
-		db,
-		service: "economic_calendar",
-		environment: state.environment,
-	});
-
-	try {
-		const result = await state.economicCalendar.refresh();
-		await recordRunComplete({
-			db,
-			runId,
-			success: true,
-			message: `${result.eventsUpserted} events cached, ${result.eventsOldDeleted} old events deleted`,
-			processed: result.eventsUpserted,
-		});
-	} catch (error) {
-		await recordRunComplete({
-			db,
-			runId,
-			success: false,
-			message: error instanceof Error ? error.message : "Unknown error",
-		});
-		throw error;
-	}
+	await runWithTracking(
+		"economic_calendar",
+		() => {
+			state.lastRun.economicCalendar = new Date();
+		},
+		async () => {
+			const result = await state.economicCalendar.refresh();
+			return {
+				success: true,
+				message: `${result.eventsUpserted} events cached, ${result.eventsOldDeleted} old events deleted`,
+				processed: result.eventsUpserted,
+			};
+		},
+	);
 }
-
-// ============================================
-// Service Trigger Handlers (for HTTP API)
-// ============================================
 
 async function triggerMacroWatch(): Promise<TriggerResult> {
 	const startTime = Date.now();
 	try {
-		// Reload config to get user's latest universe settings
 		await handleReloadConfig();
-
 		state.lastRun.macroWatch = new Date();
 		const { entries, saved } = await state.macroWatch.run(getInstruments());
-
-		return {
-			success: true,
-			message: `MacroWatch completed with ${entries.length} entries, ${saved} saved`,
-			processed: entries.length,
-			failed: 0,
-			durationMs: Date.now() - startTime,
-		};
+		return successTriggerResult(
+			startTime,
+			`MacroWatch completed with ${entries.length} entries, ${saved} saved`,
+			{
+				processed: entries.length,
+				failed: 0,
+			},
+		);
 	} catch (error) {
-		return {
-			success: false,
-			message: "MacroWatch failed",
-			error: error instanceof Error ? error.message : "Unknown error",
-			durationMs: Date.now() - startTime,
-		};
+		return failedTriggerResult(startTime, "MacroWatch failed", error);
 	}
 }
 
@@ -284,19 +228,9 @@ async function triggerNewspaper(): Promise<TriggerResult> {
 	try {
 		state.lastRun.newspaper = new Date();
 		const result = await state.newspaper.compile(getInstruments());
-		return {
-			success: result.compiled,
-			message: result.message,
-			processed: result.entryCount,
-			durationMs: Date.now() - startTime,
-		};
+		return successTriggerResult(startTime, result.message, { processed: result.entryCount });
 	} catch (error) {
-		return {
-			success: false,
-			message: "Newspaper compilation failed",
-			error: error instanceof Error ? error.message : "Unknown error",
-			durationMs: Date.now() - startTime,
-		};
+		return failedTriggerResult(startTime, "Newspaper compilation failed", error);
 	}
 }
 
@@ -305,26 +239,16 @@ async function triggerFilingsSync(): Promise<TriggerResult> {
 	try {
 		state.lastRun.filingsSync = new Date();
 		const result = await state.filingsSync?.sync(getInstruments(), state.environment);
-		if (result) {
-			return {
-				success: true,
-				message: `Filings sync completed: ${result.filingsIngested} filings, ${result.chunksCreated} chunks`,
-				processed: result.filingsIngested,
-				durationMs: result.durationMs,
-			};
+		if (!result) {
+			return successTriggerResult(startTime, "Filings sync completed (no result)");
 		}
-		return {
-			success: true,
-			message: "Filings sync completed (no result)",
-			durationMs: Date.now() - startTime,
-		};
+		return successTriggerResult(
+			startTime,
+			`Filings sync completed: ${result.filingsIngested} filings, ${result.chunksCreated} chunks`,
+			{ processed: result.filingsIngested, durationMs: result.durationMs },
+		);
 	} catch (error) {
-		return {
-			success: false,
-			message: "Filings sync failed",
-			error: error instanceof Error ? error.message : "Unknown error",
-			durationMs: Date.now() - startTime,
-		};
+		return failedTriggerResult(startTime, "Filings sync failed", error);
 	}
 }
 
@@ -350,50 +274,9 @@ async function triggerIndicatorJob(
 			error: result.errors?.length ? result.errors[0]?.error : undefined,
 		};
 	} catch (error) {
-		return {
-			success: false,
-			message: `${jobName} job failed`,
-			error: error instanceof Error ? error.message : "Unknown error",
-			durationMs: Date.now() - startTime,
-		};
+		return failedTriggerResult(startTime, `${jobName} job failed`, error);
 	}
 }
-
-async function triggerShortInterest(): Promise<TriggerResult> {
-	return triggerIndicatorJob("shortInterest");
-}
-
-async function triggerSentiment(): Promise<TriggerResult> {
-	return triggerIndicatorJob("sentiment");
-}
-
-async function triggerCorporateActions(): Promise<TriggerResult> {
-	return triggerIndicatorJob("corporateActions");
-}
-
-async function triggerPredictionMarkets(): Promise<TriggerResult> {
-	const startTime = Date.now();
-	try {
-		state.lastRun.predictionMarkets = new Date();
-		await state.predictionMarkets.run();
-		return {
-			success: true,
-			message: "Prediction markets fetch completed",
-			durationMs: Date.now() - startTime,
-		};
-	} catch (error) {
-		return {
-			success: false,
-			message: "Prediction markets fetch failed",
-			error: error instanceof Error ? error.message : "Unknown error",
-			durationMs: Date.now() - startTime,
-		};
-	}
-}
-
-// ============================================
-// Configuration Reload
-// ============================================
 
 async function handleReloadConfig(): Promise<void> {
 	await reloadConfig({
@@ -407,54 +290,26 @@ async function handleReloadConfig(): Promise<void> {
 	});
 }
 
-// ============================================
-// Main
-// ============================================
-
-async function main() {
-	const environment = requireEnv();
-
-	const startupCtx = createContext(environment, "scheduled");
-	if (!isTest(startupCtx)) {
-		validateEnvironmentOrExit(startupCtx, "worker", []);
-
-		if (!Bun.env.GOOGLE_GENERATIVE_AI_API_KEY) {
-			log.warn(
-				{},
-				"GOOGLE_GENERATIVE_AI_API_KEY not configured. Agent execution will use stub agents.",
-			);
-		}
-	}
-
-	await validateHelixDBOrExit(startupCtx);
-
-	initCalendarService({
-		mode: environment as CreamEnvironment,
-		alpacaKey: Bun.env.ALPACA_KEY,
-		alpacaSecret: Bun.env.ALPACA_SECRET,
-	})
-		.then(() => log.info({ mode: environment }, "CalendarService initialized"))
-		.catch((error: unknown) => {
-			log.warn(
-				{ error: error instanceof Error ? error.message : String(error), mode: environment },
-				"CalendarService initialization failed, using fallback",
-			);
-		});
-
-	let config: FullRuntimeConfig;
+async function loadRuntimeConfigOrExit(
+	environment: RuntimeEnvironment,
+): Promise<FullRuntimeConfig> {
 	try {
-		config = await loadConfig(environment);
+		return await loadConfig(environment);
 	} catch (error) {
 		log.error(
-			{ error: error instanceof Error ? error.message : "Unknown error" },
+			{ error: toErrorMessage(error) },
 			"Failed to load config from database. Run 'bun run db:seed' to initialize.",
 		);
 		process.exit(1);
 	}
+}
 
-	const db = await getDbClient();
-
-	state = {
+function createInitialState(
+	environment: RuntimeEnvironment,
+	config: FullRuntimeConfig,
+	db: WorkerDb,
+): WorkerState {
+	return {
 		config,
 		environment,
 		runOnStartup: Bun.env.RUN_ON_STARTUP === "true",
@@ -468,7 +323,6 @@ async function main() {
 			economicCalendar: null,
 		},
 		startedAt: new Date(),
-
 		cycleTrigger: createCycleTriggerServiceFromEnv(),
 		predictionMarkets: createPredictionMarketsService(),
 		filingsSync: createFilingsSyncService(db),
@@ -484,11 +338,12 @@ async function main() {
 			service.setDbProvider(getDbClient);
 			return service;
 		})(),
-
 		schedulerManager: null,
 		indicatorScheduler: null,
 	};
+}
 
+function logStartup(config: FullRuntimeConfig, environment: RuntimeEnvironment): void {
 	const intervals = getIntervals();
 	log.info({ environment, configId: config.trading.id }, "Worker starting");
 	log.info(
@@ -499,7 +354,9 @@ async function main() {
 		"Intervals configured",
 	);
 	log.info({ instruments: getInstruments() }, "Instruments configured");
+}
 
+function startHealthServer() {
 	const healthServer = createHealthServer({
 		getEnvironment: () => state.environment,
 		getConfigId: () => state.config.trading.id,
@@ -521,47 +378,59 @@ async function main() {
 			triggerMacroWatch,
 			triggerNewspaper,
 			triggerFilingsSync,
-			triggerShortInterest,
-			triggerSentiment,
-			triggerCorporateActions,
-			triggerPredictionMarkets,
+			triggerShortInterest: () => triggerIndicatorJob("shortInterest"),
+			triggerSentiment: () => triggerIndicatorJob("sentiment"),
+			triggerCorporateActions: () => triggerIndicatorJob("corporateActions"),
+			triggerPredictionMarkets: async () => {
+				const startTime = Date.now();
+				try {
+					state.lastRun.predictionMarkets = new Date();
+					await state.predictionMarkets.run();
+					return successTriggerResult(startTime, "Prediction markets fetch completed");
+				} catch (error) {
+					return failedTriggerResult(startTime, "Prediction markets fetch failed", error);
+				}
+			},
 		},
 	});
 	healthServer.start();
+	return healthServer;
+}
 
+async function startSchedulers(db: WorkerDb): Promise<void> {
 	if (state.schedulerDisabled) {
 		log.info({}, "Scheduler disabled (SCHEDULER_DISABLED=true). Health endpoint only.");
-	} else {
-		if (state.runOnStartup) {
-			log.info({}, "Running cycles on startup");
-			await Promise.all([runTradingCycle(), runPredictionMarkets()]);
-		}
-
-		state.schedulerManager = createSchedulerManager(
-			{
-				runTradingCycle,
-				runPredictionMarkets,
-				runFilingsSync,
-				runMacroWatch,
-				compileNewspaper,
-				runEconomicCalendarSync,
-			},
-			getIntervals,
-		);
-		state.schedulerManager.start();
-
-		state.indicatorScheduler = startIndicatorScheduler({
-			db,
-			getSymbols: getInstruments,
-		});
+		return;
 	}
 
+	if (state.runOnStartup) {
+		log.info({}, "Running cycles on startup");
+		await Promise.all([runTradingCycle(), runPredictionMarkets()]);
+	}
+
+	state.schedulerManager = createSchedulerManager(
+		{
+			runTradingCycle,
+			runPredictionMarkets,
+			runFilingsSync,
+			runMacroWatch,
+			compileNewspaper,
+			runEconomicCalendarSync,
+		},
+		getIntervals,
+	);
+	state.schedulerManager.start();
+
+	state.indicatorScheduler = startIndicatorScheduler({
+		db,
+		getSymbols: getInstruments,
+	});
+}
+
+function registerSignalHandlers(healthServer: ReturnType<typeof startHealthServer>): void {
 	process.on("SIGHUP", () => {
 		handleReloadConfig().catch((error) => {
-			log.error(
-				{ error: error instanceof Error ? error.message : String(error) },
-				"Config reload failed",
-			);
+			log.error({ error: toErrorMessage(error) }, "Config reload failed");
 		});
 	});
 
@@ -577,12 +446,24 @@ async function main() {
 	process.on("SIGTERM", shutdown);
 }
 
+async function main(): Promise<void> {
+	const environment = requireEnv();
+	await validateStartup(environment);
+	initializeCalendar(environment);
+
+	const config = await loadRuntimeConfigOrExit(environment);
+	const db = await getDbClient();
+	state = createInitialState(environment, config, db);
+
+	logStartup(config, environment);
+	const healthServer = startHealthServer();
+	await startSchedulers(db);
+	registerSignalHandlers(healthServer);
+}
+
 main().catch((error) => {
 	log.error(
-		{
-			error: error instanceof Error ? error.message : String(error),
-			stack: error instanceof Error ? error.stack : undefined,
-		},
+		{ error: toErrorMessage(error), stack: error instanceof Error ? error.stack : undefined },
 		"Worker crashed",
 	);
 	process.exit(1);

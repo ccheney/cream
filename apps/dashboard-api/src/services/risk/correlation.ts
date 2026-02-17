@@ -119,6 +119,150 @@ function getFromDate(tradingDays: number): string {
 	return formatDate(date);
 }
 
+function createIdentityMatrix(symbols: string[]): number[][] {
+	return symbols.map((_, i) => symbols.map((_, j) => (i === j ? 1 : 0)));
+}
+
+function createIdentityResult(symbols: string[]): CorrelationMatrix {
+	return {
+		symbols,
+		matrix: createIdentityMatrix(symbols),
+		highCorrelationPairs: [],
+	};
+}
+
+async function createCorrelationClient(): Promise<AlpacaMarketDataClient | null> {
+	if (!isAlpacaConfigured()) {
+		return null;
+	}
+
+	try {
+		return createAlpacaClientFromEnv();
+	} catch {
+		return null;
+	}
+}
+
+async function fetchPriceData(
+	client: AlpacaMarketDataClient,
+	symbols: string[],
+	from: string,
+	to: string,
+): Promise<Record<string, number[]>> {
+	const priceData: Record<string, number[]> = {};
+
+	await Promise.all(
+		symbols.map(async (symbol) => {
+			try {
+				const bars = await client.getBars(symbol, "1Day", from, to);
+				if (bars.length > 0) {
+					priceData[symbol] = bars.map((bar) => bar.close);
+				}
+			} catch {
+				// Skip symbols with fetch errors
+			}
+		}),
+	);
+
+	return priceData;
+}
+
+function filterSymbolsWithData(symbols: string[], priceData: Record<string, number[]>): string[] {
+	return symbols.filter((symbol) => {
+		const data = priceData[symbol];
+		return data !== undefined && data.length > 10;
+	});
+}
+
+function buildReturns(
+	symbolsWithData: string[],
+	priceData: Record<string, number[]>,
+): Record<string, number[]> {
+	const returns: Record<string, number[]> = {};
+	for (const symbol of symbolsWithData) {
+		const data = priceData[symbol];
+		if (data) {
+			returns[symbol] = calculateReturns(data);
+		}
+	}
+	return returns;
+}
+
+function alignReturns(symbolsWithData: string[], returns: Record<string, number[]>): void {
+	const returnLengths = symbolsWithData
+		.map((symbol) => returns[symbol]?.length ?? 0)
+		.filter((length) => length > 0);
+	const minLength = returnLengths.length > 0 ? Math.min(...returnLengths) : 0;
+
+	for (const symbol of symbolsWithData) {
+		const symbolReturns = returns[symbol];
+		if (symbolReturns) {
+			returns[symbol] = symbolReturns.slice(-minLength);
+		}
+	}
+}
+
+function buildCorrelationMatrix(symbols: string[], returns: Record<string, number[]>): number[][] {
+	const matrix: number[][] = [];
+
+	for (let i = 0; i < symbols.length; i++) {
+		const row: number[] = [];
+		const symbolI = symbols[i];
+		for (let j = 0; j < symbols.length; j++) {
+			const symbolJ = symbols[j];
+			if (i === j) {
+				row.push(1);
+				continue;
+			}
+
+			if (symbolI && symbolJ) {
+				const returnsI = returns[symbolI];
+				const returnsJ = returns[symbolJ];
+				if (returnsI && returnsJ && returnsI.length > 0 && returnsJ.length > 0) {
+					row.push(pearsonCorrelation(returnsI, returnsJ));
+					continue;
+				}
+			}
+
+			row.push(0);
+		}
+		matrix.push(row);
+	}
+
+	return matrix;
+}
+
+function findHighCorrelationPairs(
+	symbols: string[],
+	matrix: number[][],
+	threshold: number,
+): HighCorrelationPair[] {
+	const highCorrelationPairs: HighCorrelationPair[] = [];
+
+	for (let i = 0; i < symbols.length; i++) {
+		for (let j = i + 1; j < symbols.length; j++) {
+			const row = matrix[i];
+			const correlation = row?.[j];
+			const symbolA = symbols[i];
+			const symbolB = symbols[j];
+			if (correlation !== undefined && symbolA && symbolB && Math.abs(correlation) > threshold) {
+				highCorrelationPairs.push({
+					a: symbolA,
+					b: symbolB,
+					correlation: Number(correlation.toFixed(4)),
+				});
+			}
+		}
+	}
+
+	highCorrelationPairs.sort((a, b) => Math.abs(b.correlation) - Math.abs(a.correlation));
+	return highCorrelationPairs;
+}
+
+function roundCorrelationMatrix(matrix: number[][]): number[][] {
+	return matrix.map((row) => row.map((value) => Number(value.toFixed(4))));
+}
+
 // ============================================
 // Correlation Service
 // ============================================
@@ -140,145 +284,34 @@ export async function calculateCorrelationMatrix(
 ): Promise<CorrelationMatrix> {
 	const { symbols, lookbackDays = 60, threshold = 0.7 } = options;
 
-	// Handle empty or single symbol case
 	if (symbols.length === 0) {
 		return { symbols: [], matrix: [], highCorrelationPairs: [] };
 	}
 
 	if (symbols.length === 1) {
-		return {
-			symbols,
-			matrix: [[1]],
-			highCorrelationPairs: [],
-		};
+		return { symbols, matrix: [[1]], highCorrelationPairs: [] };
 	}
 
-	// Get date range
 	const to = formatDate(new Date());
 	const from = getFromDate(lookbackDays);
-
-	// Create Alpaca client
-	let client: AlpacaMarketDataClient;
-	if (!isAlpacaConfigured()) {
-		// If no API key, return identity matrix
-		const matrix = symbols.map((_, i) => symbols.map((_, j) => (i === j ? 1 : 0)));
-		return { symbols, matrix, highCorrelationPairs: [] };
+	const client = await createCorrelationClient();
+	if (!client) {
+		return createIdentityResult(symbols);
 	}
 
-	try {
-		client = createAlpacaClientFromEnv();
-	} catch {
-		// If client creation fails, return identity matrix
-		const matrix = symbols.map((_, i) => symbols.map((_, j) => (i === j ? 1 : 0)));
-		return { symbols, matrix, highCorrelationPairs: [] };
-	}
-
-	// Fetch historical prices for all symbols
-	const priceData: Record<string, number[]> = {};
-
-	await Promise.all(
-		symbols.map(async (symbol) => {
-			try {
-				const bars = await client.getBars(symbol, "1Day", from, to);
-
-				if (bars.length > 0) {
-					priceData[symbol] = bars.map((bar) => bar.close);
-				}
-			} catch {
-				// Skip symbols with fetch errors
-			}
-		}),
-	);
-
-	// Filter to symbols with data
-	const symbolsWithData = symbols.filter((s) => {
-		const data = priceData[s];
-		return data && data.length > 10;
-	});
-
+	const priceData = await fetchPriceData(client, symbols, from, to);
+	const symbolsWithData = filterSymbolsWithData(symbols, priceData);
 	if (symbolsWithData.length < 2) {
-		// Not enough data for correlation
-		const matrix = symbols.map((_, i) => symbols.map((_, j) => (i === j ? 1 : 0)));
-		return { symbols, matrix, highCorrelationPairs: [] };
+		return createIdentityResult(symbols);
 	}
 
-	// Calculate returns for each symbol
-	const returns: Record<string, number[]> = {};
-	for (const symbol of symbolsWithData) {
-		const data = priceData[symbol];
-		if (data) {
-			returns[symbol] = calculateReturns(data);
-		}
-	}
-
-	// Align returns to same length (use minimum)
-	const returnLengths = symbolsWithData
-		.map((s) => returns[s]?.length ?? 0)
-		.filter((len) => len > 0);
-	const minLength = returnLengths.length > 0 ? Math.min(...returnLengths) : 0;
-
-	for (const symbol of symbolsWithData) {
-		const symbolReturns = returns[symbol];
-		if (symbolReturns) {
-			returns[symbol] = symbolReturns.slice(-minLength);
-		}
-	}
-
-	// Build correlation matrix
-	const n = symbols.length;
-	const matrix: number[][] = [];
-
-	for (let i = 0; i < n; i++) {
-		const row: number[] = [];
-		const symbolI = symbols[i];
-		for (let j = 0; j < n; j++) {
-			const symbolJ = symbols[j];
-			if (i === j) {
-				row.push(1); // Diagonal is always 1
-			} else if (symbolI && symbolJ) {
-				const ri = returns[symbolI];
-				const rj = returns[symbolJ];
-
-				if (ri && rj && ri.length > 0 && rj.length > 0) {
-					row.push(pearsonCorrelation(ri, rj));
-				} else {
-					row.push(0); // No data available
-				}
-			} else {
-				row.push(0);
-			}
-		}
-		matrix.push(row);
-	}
-
-	// Find high correlation pairs
-	const highCorrelationPairs: HighCorrelationPair[] = [];
-
-	for (let i = 0; i < n; i++) {
-		for (let j = i + 1; j < n; j++) {
-			const row = matrix[i];
-			const corr = row?.[j];
-			const symbolA = symbols[i];
-			const symbolB = symbols[j];
-			if (corr !== undefined && symbolA && symbolB && Math.abs(corr) > threshold) {
-				highCorrelationPairs.push({
-					a: symbolA,
-					b: symbolB,
-					correlation: Number(corr.toFixed(4)),
-				});
-			}
-		}
-	}
-
-	// Sort high correlation pairs by absolute correlation (descending)
-	highCorrelationPairs.sort((a, b) => Math.abs(b.correlation) - Math.abs(a.correlation));
-
-	// Round matrix values
-	const roundedMatrix = matrix.map((row) => row.map((val) => Number(val.toFixed(4))));
-
+	const returns = buildReturns(symbolsWithData, priceData);
+	alignReturns(symbolsWithData, returns);
+	const matrix = buildCorrelationMatrix(symbols, returns);
+	const highCorrelationPairs = findHighCorrelationPairs(symbols, matrix, threshold);
 	return {
 		symbols,
-		matrix: roundedMatrix,
+		matrix: roundCorrelationMatrix(matrix),
 		highCorrelationPairs,
 	};
 }

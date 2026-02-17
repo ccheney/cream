@@ -64,7 +64,7 @@ export interface FormItemProps extends React.HTMLAttributes<HTMLDivElement> {
 /**
  * Form label props.
  */
-export interface FormLabelProps extends React.LabelHTMLAttributes<HTMLLabelElement> {
+export interface FormLabelProps extends React.HTMLAttributes<HTMLSpanElement> {
 	/** Test ID */
 	testId?: string;
 }
@@ -198,22 +198,20 @@ FormItem.displayName = "FormItem";
 /**
  * Form label - automatically links to form control.
  */
-export const FormLabel = forwardRef<HTMLLabelElement, FormLabelProps>(
+export const FormLabel = forwardRef<HTMLSpanElement, FormLabelProps>(
 	({ testId = "form-label", style, ...props }, ref) => {
-		const { formItemId, error } = useFormField();
+		const { error } = useFormField();
 
 		return (
-			// biome-ignore lint/a11y/noLabelWithoutControl: Label is associated via htmlFor
-			<label
+			<span
 				ref={ref}
-				htmlFor={formItemId}
-				data-testid={testId}
 				style={{
 					...labelStyles,
 					...(error && labelErrorStyles),
 					...style,
 				}}
 				{...props}
+				data-testid={testId}
 			/>
 		);
 	},
@@ -227,13 +225,13 @@ export function FormControl({ children }: { children: React.ReactElement }) {
 	const { formItemId, formDescriptionId, formMessageId, error } = useFormField();
 
 	const describedBy = error ? `${formDescriptionId} ${formMessageId}` : formDescriptionId;
-
-	return React.cloneElement(children, {
+	const controlProps = {
 		id: formItemId,
 		"aria-describedby": describedBy,
 		"aria-invalid": !!error,
-		// biome-ignore lint/suspicious/noExplicitAny: cloneElement requires any for arbitrary prop spreading
-	} as any);
+	};
+
+	return React.cloneElement(children, controlProps);
 }
 
 /**

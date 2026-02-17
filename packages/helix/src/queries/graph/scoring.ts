@@ -30,6 +30,37 @@ export const MENTION_TYPE_WEIGHTS: Record<string, number> = {
 	PEER_COMPARISON: 0.5,
 };
 
+type EdgeProps = GraphEdge["properties"];
+type WeightExtractor = (props: EdgeProps) => number | undefined;
+
+function readNumericProperty(
+	props: EdgeProps,
+	...keys: Array<keyof EdgeProps>
+): number | undefined {
+	for (const key of keys) {
+		const value = props[key];
+		if (typeof value === "number") {
+			return value;
+		}
+	}
+	return undefined;
+}
+
+function getMentionWeight(props: EdgeProps): number {
+	const mentionType = props.mention_type;
+	if (typeof mentionType !== "string") {
+		return 0.5;
+	}
+	return MENTION_TYPE_WEIGHTS[mentionType] ?? 0.5;
+}
+
+const EDGE_WEIGHT_EXTRACTORS: Record<string, WeightExtractor> = {
+	INFLUENCED_DECISION: (props) => readNumericProperty(props, "confidence_score", "influence_score"),
+	DEPENDS_ON: (props) => readNumericProperty(props, "strength"),
+	AFFECTED_BY: (props) => readNumericProperty(props, "sensitivity"),
+	MENTIONED_IN: (props) => getMentionWeight(props),
+};
+
 /**
  * Extract the weight attribute from an edge based on its type.
  *
@@ -37,41 +68,11 @@ export const MENTION_TYPE_WEIGHTS: Record<string, number> = {
  * @returns Weight value [0, 1] or undefined if no weight attribute
  */
 export function getEdgeWeight(edge: GraphEdge): number | undefined {
-	const props = edge.properties;
-
-	switch (edge.type) {
-		case "INFLUENCED_DECISION":
-			if (typeof props.confidence_score === "number") {
-				return props.confidence_score;
-			}
-			if (typeof props.influence_score === "number") {
-				return props.influence_score;
-			}
-			return undefined;
-
-		case "DEPENDS_ON":
-			return typeof props.strength === "number" ? props.strength : undefined;
-
-		case "AFFECTED_BY":
-			return typeof props.sensitivity === "number" ? props.sensitivity : undefined;
-
-		case "MENTIONED_IN": {
-			const mentionType = props.mention_type as string | undefined;
-			return mentionType ? (MENTION_TYPE_WEIGHTS[mentionType] ?? 0.5) : 0.5;
-		}
-
-		default:
-			if (typeof props.weight === "number") {
-				return props.weight;
-			}
-			if (typeof props.score === "number") {
-				return props.score;
-			}
-			if (typeof props.strength === "number") {
-				return props.strength;
-			}
-			return undefined;
+	const extractor = EDGE_WEIGHT_EXTRACTORS[edge.type];
+	if (extractor) {
+		return extractor(edge.properties);
 	}
+	return readNumericProperty(edge.properties, "weight", "score", "strength");
 }
 
 /**

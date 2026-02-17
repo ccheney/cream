@@ -105,127 +105,100 @@ describe("toPaperNode", () => {
 // Relevance Score Calculation Tests
 // ============================================
 
-describe("calculatePaperRelevanceScore", () => {
+describe("calculatePaperRelevanceScore citation behavior", () => {
 	test("returns positive score for paper with citations", () => {
-		const input = createMockPaperInput({ citationCount: 100 });
-		const score = calculatePaperRelevanceScore(input);
+		const score = calculatePaperRelevanceScore(createMockPaperInput({ citationCount: 100 }));
 		expect(score).toBeGreaterThan(0);
 	});
 
 	test("returns higher score for more citations", () => {
-		const lowCites = createMockPaperInput({ citationCount: 10 });
-		const highCites = createMockPaperInput({ citationCount: 1000 });
-
-		const lowScore = calculatePaperRelevanceScore(lowCites);
-		const highScore = calculatePaperRelevanceScore(highCites);
-
+		const lowScore = calculatePaperRelevanceScore(createMockPaperInput({ citationCount: 10 }));
+		const highScore = calculatePaperRelevanceScore(createMockPaperInput({ citationCount: 1000 }));
 		expect(highScore).toBeGreaterThan(lowScore);
 	});
 
 	test("citation impact is log-scaled", () => {
-		const paper100 = createMockPaperInput({ citationCount: 100 });
-		const paper10000 = createMockPaperInput({ citationCount: 10000 });
-
-		const score100 = calculatePaperRelevanceScore(paper100);
-		const score10000 = calculatePaperRelevanceScore(paper10000);
-
-		// 100x more citations should NOT result in 100x score
-		// With log-scaling, ratio should be much smaller
-		const ratio = score10000 / score100;
-		expect(ratio).toBeLessThan(5);
+		const score100 = calculatePaperRelevanceScore(createMockPaperInput({ citationCount: 100 }));
+		const score10000 = calculatePaperRelevanceScore(createMockPaperInput({ citationCount: 10000 }));
+		expect(score10000 / score100).toBeLessThan(5);
 	});
 
+	test("handles zero citations", () => {
+		const score = calculatePaperRelevanceScore(createMockPaperInput({ citationCount: 0 }));
+		expect(score).toBeGreaterThanOrEqual(0);
+	});
+});
+
+describe("calculatePaperRelevanceScore recency behavior", () => {
 	test("gives recency bonus for recent papers", () => {
 		const currentYear = new Date().getFullYear();
 		const recentPaper = createMockPaperInput({
 			publicationYear: currentYear - 1,
 			citationCount: 50,
 		});
-		const oldPaper = createMockPaperInput({
-			publicationYear: currentYear - 10,
-			citationCount: 50,
-		});
-
-		const recentScore = calculatePaperRelevanceScore(recentPaper);
-		const oldScore = calculatePaperRelevanceScore(oldPaper);
-
-		expect(recentScore).toBeGreaterThan(oldScore);
+		const oldPaper = createMockPaperInput({ publicationYear: currentYear - 10, citationCount: 50 });
+		expect(calculatePaperRelevanceScore(recentPaper)).toBeGreaterThan(
+			calculatePaperRelevanceScore(oldPaper),
+		);
 	});
 
 	test("recency bonus decreases with age", () => {
 		const currentYear = new Date().getFullYear();
-		const year1 = createMockPaperInput({
-			publicationYear: currentYear - 1,
-			citationCount: 0,
-		});
-		const year3 = createMockPaperInput({
-			publicationYear: currentYear - 3,
-			citationCount: 0,
-		});
-		const year5 = createMockPaperInput({
-			publicationYear: currentYear - 5,
-			citationCount: 0,
-		});
-
-		const score1 = calculatePaperRelevanceScore(year1);
-		const score3 = calculatePaperRelevanceScore(year3);
-		const score5 = calculatePaperRelevanceScore(year5);
-
+		const score1 = calculatePaperRelevanceScore(
+			createMockPaperInput({ publicationYear: currentYear - 1, citationCount: 0 }),
+		);
+		const score3 = calculatePaperRelevanceScore(
+			createMockPaperInput({ publicationYear: currentYear - 3, citationCount: 0 }),
+		);
+		const score5 = calculatePaperRelevanceScore(
+			createMockPaperInput({ publicationYear: currentYear - 5, citationCount: 0 }),
+		);
 		expect(score1).toBeGreaterThan(score3);
 		expect(score3).toBeGreaterThan(score5);
 	});
 
 	test("no recency bonus for papers older than 5 years", () => {
 		const currentYear = new Date().getFullYear();
-		const paper6Years = createMockPaperInput({
-			publicationYear: currentYear - 6,
-			citationCount: 0,
-		});
-		const paper10Years = createMockPaperInput({
-			publicationYear: currentYear - 10,
-			citationCount: 0,
-		});
-
-		const score6 = calculatePaperRelevanceScore(paper6Years);
-		const score10 = calculatePaperRelevanceScore(paper10Years);
-
-		// Both should have same score (no recency component)
+		const score6 = calculatePaperRelevanceScore(
+			createMockPaperInput({ publicationYear: currentYear - 6, citationCount: 0 }),
+		);
+		const score10 = calculatePaperRelevanceScore(
+			createMockPaperInput({ publicationYear: currentYear - 10, citationCount: 0 }),
+		);
 		expect(score6).toBe(score10);
 	});
+});
 
+describe("calculatePaperRelevanceScore quality and missing data", () => {
 	test("gives quality bonus for substantial abstracts", () => {
-		const longAbstract = createMockPaperInput({
-			abstract: "A".repeat(300),
-			citationCount: 0,
-			publicationYear: undefined,
-		});
-		const shortAbstract = createMockPaperInput({
-			abstract: "Short abstract",
-			citationCount: 0,
-			publicationYear: undefined,
-		});
-
-		const longScore = calculatePaperRelevanceScore(longAbstract);
-		const shortScore = calculatePaperRelevanceScore(shortAbstract);
-
+		const longScore = calculatePaperRelevanceScore(
+			createMockPaperInput({
+				abstract: "A".repeat(300),
+				citationCount: 0,
+				publicationYear: undefined,
+			}),
+		);
+		const shortScore = calculatePaperRelevanceScore(
+			createMockPaperInput({
+				abstract: "Short abstract",
+				citationCount: 0,
+				publicationYear: undefined,
+			}),
+		);
 		expect(longScore).toBeGreaterThan(shortScore);
 	});
 
-	test("handles zero citations", () => {
-		const input = createMockPaperInput({ citationCount: 0 });
-		const score = calculatePaperRelevanceScore(input);
-		expect(score).toBeGreaterThanOrEqual(0);
-	});
-
 	test("handles missing publicationYear", () => {
-		const input = createMockPaperInput({ publicationYear: undefined, citationCount: 100 });
-		const score = calculatePaperRelevanceScore(input);
+		const score = calculatePaperRelevanceScore(
+			createMockPaperInput({ publicationYear: undefined, citationCount: 100 }),
+		);
 		expect(score).toBeGreaterThan(0);
 	});
 
 	test("handles missing abstract", () => {
-		const input = createMockPaperInput({ abstract: "", citationCount: 100 });
-		const score = calculatePaperRelevanceScore(input);
+		const score = calculatePaperRelevanceScore(
+			createMockPaperInput({ abstract: "", citationCount: 100 }),
+		);
 		expect(score).toBeGreaterThan(0);
 	});
 });
@@ -234,7 +207,7 @@ describe("calculatePaperRelevanceScore", () => {
 // Seed Papers Validation Tests
 // ============================================
 
-describe("SEED_PAPERS", () => {
+describe("SEED_PAPERS structure", () => {
 	test("contains expected number of papers", () => {
 		expect(SEED_PAPERS.length).toBe(22);
 	});
@@ -253,21 +226,22 @@ describe("SEED_PAPERS", () => {
 	});
 
 	test("paper IDs are unique", () => {
-		const ids = SEED_PAPERS.map((p) => p.paperId);
-		const uniqueIds = new Set(ids);
-		expect(uniqueIds.size).toBe(ids.length);
+		const ids = SEED_PAPERS.map((paper) => paper.paperId);
+		expect(new Set(ids).size).toBe(ids.length);
 	});
+});
 
+describe("SEED_PAPERS key coverage", () => {
 	test("contains Fama-French papers", () => {
 		const famaFrench = SEED_PAPERS.filter(
-			(p) => p.authors.includes("Fama") || p.authors.includes("French"),
+			(paper) => paper.authors.includes("Fama") || paper.authors.includes("French"),
 		);
 		expect(famaFrench.length).toBeGreaterThanOrEqual(2);
 	});
 
 	test("contains momentum paper (Jegadeesh-Titman)", () => {
 		const momentum = SEED_PAPERS.find(
-			(p) => p.authors.includes("Jegadeesh") || p.authors.includes("Titman"),
+			(paper) => paper.authors.includes("Jegadeesh") || paper.authors.includes("Titman"),
 		);
 		expect(momentum).toBeDefined();
 		expect(momentum?.title).toContain("Winners");
@@ -275,7 +249,7 @@ describe("SEED_PAPERS", () => {
 
 	test("contains Black-Scholes paper", () => {
 		const bs = SEED_PAPERS.find(
-			(p) => p.authors.includes("Black") && p.authors.includes("Scholes"),
+			(paper) => paper.authors.includes("Black") && paper.authors.includes("Scholes"),
 		);
 		expect(bs).toBeDefined();
 		expect(bs?.title).toContain("Options");
@@ -283,11 +257,13 @@ describe("SEED_PAPERS", () => {
 
 	test("contains post-publication decay paper (McLean-Pontiff)", () => {
 		const decay = SEED_PAPERS.find(
-			(p) => p.authors.includes("McLean") || p.title.includes("Destroy"),
+			(paper) => paper.authors.includes("McLean") || paper.title.includes("Destroy"),
 		);
 		expect(decay).toBeDefined();
 	});
+});
 
+describe("SEED_PAPERS metadata quality", () => {
 	test("all papers have publication years", () => {
 		for (const paper of SEED_PAPERS) {
 			expect(paper.publicationYear).toBeDefined();

@@ -103,12 +103,6 @@ const bannerStyles = {
 	},
 };
 
-const spinnerKeyframes = `
-  @keyframes spin {
-    to { transform: rotate(360deg); }
-  }
-`;
-
 function WarningIcon({ style }: { style?: React.CSSProperties }) {
 	return (
 		<svg
@@ -234,66 +228,74 @@ export function ConnectionBanner({
 	const isReconnecting = status === "reconnecting" && nextRetryIn === 0;
 
 	return (
-		<>
-			{/* biome-ignore lint/security/noDangerouslySetInnerHtml: Safe - hardcoded CSS keyframes */}
-			<style dangerouslySetInnerHTML={{ __html: spinnerKeyframes }} />
-			<div role="alert" aria-live="assertive" data-testid={testId} style={bannerStyles.container}>
-				<WarningIcon style={bannerStyles.icon} />
+		<div role="alert" aria-live="assertive" data-testid={testId} style={bannerStyles.container}>
+			<WarningIcon style={bannerStyles.icon} />
 
-				<div style={bannerStyles.content}>
-					<div style={bannerStyles.title}>{title}</div>
-					<div style={bannerStyles.message}>{message}</div>
-				</div>
+			<div style={bannerStyles.content}>
+				<div style={bannerStyles.title}>{title}</div>
+				<div style={bannerStyles.message}>{message}</div>
+			</div>
 
-				<div style={bannerStyles.actions}>
-					{/* biome-ignore lint/a11y/useKeyWithMouseEvents: Button is keyboard accessible via native behavior */}
+			<div style={bannerStyles.actions}>
+				<button
+					type="button"
+					onClick={onReconnect}
+					disabled={isReconnecting}
+					style={{
+						...bannerStyles.reconnectButton,
+						opacity: isReconnecting ? 0.7 : 1,
+						cursor: isReconnecting ? "not-allowed" : "pointer",
+					}}
+					onMouseOver={(e) => {
+						if (!isReconnecting) {
+							e.currentTarget.style.backgroundColor = "#b45309";
+						}
+					}}
+					onMouseOut={(e) => {
+						e.currentTarget.style.backgroundColor = "#d97706";
+					}}
+					onFocus={(e) => {
+						if (!isReconnecting) {
+							e.currentTarget.style.backgroundColor = "#b45309";
+						}
+					}}
+					onBlur={(e) => {
+						e.currentTarget.style.backgroundColor = "#d97706";
+					}}
+					aria-label={isReconnecting ? "Reconnecting" : "Reconnect now"}
+				>
+					{isReconnecting ? (
+						<div style={bannerStyles.spinner} />
+					) : (
+						<RefreshIcon style={{ width: "14px", height: "14px" }} />
+					)}
+					{isReconnecting ? "Reconnecting..." : "Reconnect Now"}
+				</button>
+
+				{onDismiss && (
 					<button
 						type="button"
-						onClick={onReconnect}
-						disabled={isReconnecting}
-						style={{
-							...bannerStyles.reconnectButton,
-							opacity: isReconnecting ? 0.7 : 1,
-							cursor: isReconnecting ? "not-allowed" : "pointer",
-						}}
+						onClick={onDismiss}
+						style={bannerStyles.dismissButton}
 						onMouseOver={(e) => {
-							if (!isReconnecting) {
-								e.currentTarget.style.backgroundColor = "#b45309";
-							}
+							e.currentTarget.style.backgroundColor = "rgba(146, 64, 14, 0.1)";
 						}}
 						onMouseOut={(e) => {
-							e.currentTarget.style.backgroundColor = "#d97706";
+							e.currentTarget.style.backgroundColor = "transparent";
 						}}
-						aria-label={isReconnecting ? "Reconnecting" : "Reconnect now"}
+						onFocus={(e) => {
+							e.currentTarget.style.backgroundColor = "rgba(146, 64, 14, 0.1)";
+						}}
+						onBlur={(e) => {
+							e.currentTarget.style.backgroundColor = "transparent";
+						}}
+						aria-label="Dismiss banner"
 					>
-						{isReconnecting ? (
-							<div style={bannerStyles.spinner} />
-						) : (
-							<RefreshIcon style={{ width: "14px", height: "14px" }} />
-						)}
-						{isReconnecting ? "Reconnecting..." : "Reconnect Now"}
+						<CloseIcon style={{ width: "18px", height: "18px" }} />
 					</button>
-
-					{onDismiss && (
-						// biome-ignore lint/a11y/useKeyWithMouseEvents: Button is keyboard accessible via native behavior
-						<button
-							type="button"
-							onClick={onDismiss}
-							style={bannerStyles.dismissButton}
-							onMouseOver={(e) => {
-								e.currentTarget.style.backgroundColor = "rgba(146, 64, 14, 0.1)";
-							}}
-							onMouseOut={(e) => {
-								e.currentTarget.style.backgroundColor = "transparent";
-							}}
-							aria-label="Dismiss banner"
-						>
-							<CloseIcon style={{ width: "18px", height: "18px" }} />
-						</button>
-					)}
-				</div>
+				)}
 			</div>
-		</>
+		</div>
 	);
 }
 

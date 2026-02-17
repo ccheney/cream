@@ -341,7 +341,7 @@ export function validateRiskReward(decision: Decision, entryPrice: number): Risk
 	}
 
 	if (risk > reward * 5) {
-		warnings.push(`Stop loss distance exceeds 5x the profit target`);
+		warnings.push("Stop loss distance exceeds 5x the profit target");
 	}
 
 	return {

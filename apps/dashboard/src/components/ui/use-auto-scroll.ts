@@ -24,7 +24,7 @@ export interface UseAutoScrollReturn {
 	isAutoScrolling: boolean;
 	/** Whether user is at the bottom of the feed */
 	isAtBottom: boolean;
-	/** Number of new items since user scrolled away */
+	/** New items since user scrolled away */
 	newItemCount: number;
 	/** Scroll to bottom and resume auto-scroll */
 	scrollToBottom: () => void;
@@ -34,27 +34,81 @@ export interface UseAutoScrollReturn {
 	onScroll: () => void;
 }
 
-export function useAutoScroll(options: UseAutoScrollOptions = {}): UseAutoScrollReturn {
-	const { threshold = 50, debounceMs = 100 } = options;
+function isAtBottom(container: HTMLDivElement | null, threshold: number): boolean {
+	if (!container) {
+		return true;
+	}
 
-	const containerRef = useRef<HTMLDivElement | null>(null);
-	const [isAutoScrolling, setIsAutoScrolling] = useState(true);
-	const [isAtBottom, setIsAtBottom] = useState(true);
-	const [newItemCount, setNewItemCount] = useState(0);
+	const { scrollTop, scrollHeight, clientHeight } = container;
+	const distanceFromBottom = scrollHeight - scrollTop - clientHeight;
+	return distanceFromBottom <= threshold;
+}
 
+interface ScrollPositionTrackerResult {
+	onScroll: () => void;
+	isProgrammaticScrollRef: React.MutableRefObject<boolean>;
+}
+
+function useScrollPositionTracker(
+	containerRef: React.RefObject<HTMLDivElement | null>,
+	threshold: number,
+	debounceMs: number,
+	onPositionChange: (atBottom: boolean) => void,
+): ScrollPositionTrackerResult {
 	const debounceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-	const isScrollingRef = useRef(false);
+	const isProgrammaticScrollRef = useRef(false);
 
-	const checkIsAtBottom = useCallback(() => {
-		const container = containerRef.current;
-		if (!container) {
-			return true;
+	const onScroll = useCallback(() => {
+		if (debounceTimerRef.current) {
+			clearTimeout(debounceTimerRef.current);
 		}
 
-		const { scrollTop, scrollHeight, clientHeight } = container;
-		const distanceFromBottom = scrollHeight - scrollTop - clientHeight;
-		return distanceFromBottom <= threshold;
-	}, [threshold]);
+		isProgrammaticScrollRef.current = true;
+		debounceTimerRef.current = setTimeout(() => {
+			isProgrammaticScrollRef.current = false;
+			onPositionChange(isAtBottom(containerRef.current, threshold));
+		}, debounceMs);
+	}, [containerRef, threshold, debounceMs, onPositionChange]);
+
+	useEffect(() => {
+		return () => {
+			if (debounceTimerRef.current) {
+				clearTimeout(debounceTimerRef.current);
+			}
+		};
+	}, []);
+
+	return { onScroll, isProgrammaticScrollRef };
+}
+
+function useAutoScrollStateHandlers(
+	containerRef: React.RefObject<HTMLDivElement | null>,
+	threshold: number,
+	debounceMs: number,
+	isAutoScrolling: boolean,
+	setIsAutoScrolling: (isAutoScrolling: boolean) => void,
+	setIsAtBottomState: (isAtBottom: boolean) => void,
+	setNewItemCount: (updater: number | ((prevState: number) => number)) => void,
+) {
+	const handlePositionChange = useCallback(
+		(atBottom: boolean) => {
+			setIsAtBottomState(atBottom);
+			if (atBottom) {
+				setIsAutoScrolling(true);
+				setNewItemCount(0);
+			} else {
+				setIsAutoScrolling(false);
+			}
+		},
+		[setIsAutoScrolling, setIsAtBottomState, setNewItemCount],
+	);
+
+	const { onScroll, isProgrammaticScrollRef } = useScrollPositionTracker(
+		containerRef,
+		threshold,
+		debounceMs,
+		handlePositionChange,
+	);
 
 	const scrollToBottom = useCallback(() => {
 		const container = containerRef.current;
@@ -68,35 +122,13 @@ export function useAutoScroll(options: UseAutoScrollOptions = {}): UseAutoScroll
 		});
 
 		setIsAutoScrolling(true);
-		setIsAtBottom(true);
+		setIsAtBottomState(true);
 		setNewItemCount(0);
-	}, []);
-
-	const onScroll = useCallback(() => {
-		if (debounceTimerRef.current) {
-			clearTimeout(debounceTimerRef.current);
-		}
-
-		isScrollingRef.current = true;
-
-		debounceTimerRef.current = setTimeout(() => {
-			isScrollingRef.current = false;
-			const atBottom = checkIsAtBottom();
-
-			setIsAtBottom(atBottom);
-
-			if (atBottom) {
-				setIsAutoScrolling(true);
-				setNewItemCount(0);
-			} else {
-				setIsAutoScrolling(false);
-			}
-		}, debounceMs);
-	}, [checkIsAtBottom, debounceMs]);
+	}, [containerRef, setIsAutoScrolling, setIsAtBottomState, setNewItemCount]);
 
 	const onNewItems = useCallback(
 		(count = 1) => {
-			if (isAutoScrolling && !isScrollingRef.current) {
+			if (isAutoScrolling && !isProgrammaticScrollRef.current) {
 				requestAnimationFrame(() => {
 					scrollToBottom();
 				});
@@ -104,21 +136,34 @@ export function useAutoScroll(options: UseAutoScrollOptions = {}): UseAutoScroll
 				setNewItemCount((prev) => prev + count);
 			}
 		},
-		[isAutoScrolling, scrollToBottom],
+		[isAutoScrolling, isProgrammaticScrollRef, scrollToBottom, setNewItemCount],
 	);
 
-	useEffect(() => {
-		return () => {
-			if (debounceTimerRef.current) {
-				clearTimeout(debounceTimerRef.current);
-			}
-		};
-	}, []);
+	return { onScroll, onNewItems, scrollToBottom };
+}
+
+export function useAutoScroll(options: UseAutoScrollOptions = {}): UseAutoScrollReturn {
+	const { threshold = 50, debounceMs = 100 } = options;
+
+	const containerRef = useRef<HTMLDivElement | null>(null);
+	const [isAutoScrolling, setIsAutoScrolling] = useState(true);
+	const [isAtBottomState, setIsAtBottomState] = useState(true);
+	const [newItemCount, setNewItemCount] = useState(0);
+
+	const { onScroll, onNewItems, scrollToBottom } = useAutoScrollStateHandlers(
+		containerRef,
+		threshold,
+		debounceMs,
+		isAutoScrolling,
+		setIsAutoScrolling,
+		setIsAtBottomState,
+		setNewItemCount,
+	);
 
 	return {
 		containerRef,
 		isAutoScrolling,
-		isAtBottom,
+		isAtBottom: isAtBottomState,
 		newItemCount,
 		scrollToBottom,
 		onNewItems,

@@ -66,47 +66,9 @@ interface AuthProviderProps {
 
 export function AuthProvider({ children }: AuthProviderProps) {
 	const { data: session, isPending, error, refetch } = useSession();
-
-	// Map better-auth user to AuthUser type
-	const user: AuthUser | null = session?.user
-		? {
-				id: session.user.id,
-				email: session.user.email,
-				name: session.user.name ?? null,
-				image: session.user.image ?? null,
-				emailVerified: session.user.emailVerified ?? false,
-				twoFactorEnabled: (session.user as { twoFactorEnabled?: boolean }).twoFactorEnabled,
-			}
-		: null;
-
+	const user = mapAuthUser(session?.user);
 	const twoFactorEnabled = user?.twoFactorEnabled ?? false;
-
-	// Sign in with Google OAuth
-	const signInWithGoogle = useCallback(async () => {
-		// Use absolute URL to redirect back to the portfolio (not the API server)
-		const callbackURL = `${window.location.origin}/portfolio`;
-		await authClient.signIn.social({
-			provider: "google",
-			callbackURL,
-		});
-	}, []);
-
-	// Sign out
-	const handleSignOut = useCallback(async () => {
-		await authClient.signOut();
-		// Redirect to login page
-		window.location.href = "/login";
-	}, []);
-
-	// Verify 2FA TOTP code during login
-	const verifyTwoFactor = useCallback(async (code: string) => {
-		try {
-			await twoFactorClient.verifyTotp({ code });
-			return true;
-		} catch {
-			return false;
-		}
-	}, []);
+	const { signInWithGoogle, signOut, verifyTwoFactor } = useAuthActions();
 
 	const value = useMemo<AuthContextValue>(
 		() => ({
@@ -116,7 +78,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
 			twoFactorEnabled,
 			error: error ?? null,
 			signInWithGoogle,
-			signOut: handleSignOut,
+			signOut,
 			verifyTwoFactor,
 			refreshSession: refetch,
 		}),
@@ -127,13 +89,54 @@ export function AuthProvider({ children }: AuthProviderProps) {
 			twoFactorEnabled,
 			error,
 			signInWithGoogle,
-			handleSignOut,
+			signOut,
 			verifyTwoFactor,
 			refetch,
 		],
 	);
 
 	return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
+}
+
+function mapAuthUser(user: { [key: string]: unknown } | undefined): AuthUser | null {
+	if (!user) {
+		return null;
+	}
+
+	return {
+		id: user.id as string,
+		email: user.email as string,
+		name: (user.name as string | null | undefined) ?? null,
+		image: (user.image as string | null | undefined) ?? null,
+		emailVerified: (user.emailVerified as boolean | undefined) ?? false,
+		twoFactorEnabled: (user.twoFactorEnabled as boolean | undefined) ?? false,
+	};
+}
+
+function useAuthActions() {
+	const signInWithGoogle = useCallback(async () => {
+		const callbackURL = `${window.location.origin}/portfolio`;
+		await authClient.signIn.social({
+			provider: "google",
+			callbackURL,
+		});
+	}, []);
+
+	const signOut = useCallback(async () => {
+		await authClient.signOut();
+		window.location.href = "/login";
+	}, []);
+
+	const verifyTwoFactor = useCallback(async (code: string) => {
+		try {
+			await twoFactorClient.verifyTotp({ code });
+			return true;
+		} catch {
+			return false;
+		}
+	}, []);
+
+	return { signInWithGoogle, signOut, verifyTwoFactor };
 }
 
 // ============================================

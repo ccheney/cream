@@ -1,175 +1,121 @@
 /**
  * AlpacaCalendarClient Integration Tests
- *
- * Tests that verify real Alpaca API behavior using PAPER credentials.
- * These tests are skipped if ALPACA_KEY is not set.
- *
- * Run with: bun test alpaca-client.integration.test.ts
  */
 
 import { describe, expect, it } from "bun:test";
 import { createAlpacaCalendarClient } from "./alpaca-client";
 
-// ============================================
-// Environment Check
-// ============================================
-
 const ALPACA_KEY = Bun.env.ALPACA_KEY;
 const ALPACA_SECRET = Bun.env.ALPACA_SECRET;
 const HAS_CREDENTIALS = Boolean(ALPACA_KEY && ALPACA_SECRET);
+const describeIfCredentials = describe.skipIf(!HAS_CREDENTIALS);
 
-// ============================================
-// Integration Tests
-// ============================================
+function createClient() {
+	if (!ALPACA_KEY || !ALPACA_SECRET) {
+		throw new Error("ALPACA credentials are required for integration tests");
+	}
+	return createAlpacaCalendarClient({
+		apiKey: ALPACA_KEY,
+		apiSecret: ALPACA_SECRET,
+		environment: "PAPER",
+	});
+}
 
-describe.skipIf(!HAS_CREDENTIALS)("AlpacaCalendarClient Integration", () => {
-	const createClient = () => {
-		if (!ALPACA_KEY || !ALPACA_SECRET) {
-			throw new Error("ALPACA credentials are required for integration tests");
+describeIfCredentials("AlpacaCalendarClient Integration getCalendar basic", () => {
+	it("returns calendar days for a valid date range", async () => {
+		const today = new Date();
+		const nextWeek = new Date(today);
+		nextWeek.setDate(today.getDate() + 14);
+		const start = today.toISOString().slice(0, 10);
+		const end = nextWeek.toISOString().slice(0, 10);
+
+		const days = await createClient().getCalendar(start, end);
+		expect(Array.isArray(days)).toBe(true);
+		expect(days.length).toBeGreaterThan(0);
+
+		for (const day of days) {
+			expect(day).toHaveProperty("date");
+			expect(day).toHaveProperty("open");
+			expect(day).toHaveProperty("close");
+			expect(day.date).toMatch(/^\d{4}-\d{2}-\d{2}$/);
+			expect(day.open).toMatch(/^\d{2}:\d{2}$/);
+			expect(day.close).toMatch(/^\d{2}:\d{2}$/);
 		}
-		return createAlpacaCalendarClient({
-			apiKey: ALPACA_KEY,
-			apiSecret: ALPACA_SECRET,
-			environment: "PAPER",
-		});
-	};
-
-	describe("getCalendar", () => {
-		it("returns calendar days for a valid date range", async () => {
-			// Fetch next 7 trading days from today
-			const today = new Date();
-			const nextWeek = new Date(today);
-			nextWeek.setDate(today.getDate() + 14); // Two weeks to ensure we get some trading days
-
-			const start = today.toISOString().slice(0, 10);
-			const end = nextWeek.toISOString().slice(0, 10);
-
-			const days = await createClient().getCalendar(start, end);
-
-			// Should return an array of calendar days
-			expect(Array.isArray(days)).toBe(true);
-
-			// Should have at least some trading days (not all days are trading days)
-			expect(days.length).toBeGreaterThan(0);
-
-			// Each day should have required fields
-			for (const day of days) {
-				expect(day).toHaveProperty("date");
-				expect(day).toHaveProperty("open");
-				expect(day).toHaveProperty("close");
-
-				// Date should be in YYYY-MM-DD format
-				expect(day.date).toMatch(/^\d{4}-\d{2}-\d{2}$/);
-
-				// Open and close should be in HH:MM format
-				expect(day.open).toMatch(/^\d{2}:\d{2}$/);
-				expect(day.close).toMatch(/^\d{2}:\d{2}$/);
-			}
-		});
-
-		it("returns empty array for past range with no trading days", async () => {
-			// Query a weekend in the past
-			const days = await createClient().getCalendar("2025-01-04", "2025-01-05"); // Saturday-Sunday
-
-			expect(Array.isArray(days)).toBe(true);
-			expect(days.length).toBe(0);
-		});
-
-		it("returns sorted calendar days", async () => {
-			const days = await createClient().getCalendar("2025-01-06", "2025-01-31");
-
-			// Check that dates are in ascending order
-			for (let i = 1; i < days.length; i++) {
-				const prev = days[i - 1];
-				const curr = days[i];
-				if (!prev || !curr) {
-					throw new Error("Expected calendar days to be defined");
-				}
-				const prevDate = prev.date;
-				const currDate = curr.date;
-				expect(currDate > prevDate).toBe(true);
-			}
-		});
-
-		it("accepts Date objects as parameters", async () => {
-			const start = new Date("2025-06-01");
-			const end = new Date("2025-06-30");
-
-			const days = await createClient().getCalendar(start, end);
-
-			expect(Array.isArray(days)).toBe(true);
-			// June has roughly 20-22 trading days
-			expect(days.length).toBeGreaterThan(15);
-			expect(days.length).toBeLessThan(25);
-		});
 	});
 
-	describe("getClock", () => {
-		it("returns current market clock status", async () => {
-			const clock = await createClient().getClock();
+	it("returns empty array for weekend-only past range", async () => {
+		const days = await createClient().getCalendar("2025-01-04", "2025-01-05");
+		expect(Array.isArray(days)).toBe(true);
+		expect(days.length).toBe(0);
+	});
+});
 
-			// Should have all required fields
-			expect(clock).toHaveProperty("isOpen");
-			expect(clock).toHaveProperty("timestamp");
-			expect(clock).toHaveProperty("nextOpen");
-			expect(clock).toHaveProperty("nextClose");
-
-			// isOpen should be a boolean
-			expect(typeof clock.isOpen).toBe("boolean");
-
-			// Dates should be valid Date objects
-			expect(clock.timestamp).toBeInstanceOf(Date);
-			expect(clock.nextOpen).toBeInstanceOf(Date);
-			expect(clock.nextClose).toBeInstanceOf(Date);
-
-			// Timestamp should be close to current time (within 1 minute)
-			const now = Date.now();
-			const clockTime = clock.timestamp.getTime();
-			expect(Math.abs(now - clockTime)).toBeLessThan(60000);
-		});
-
-		it("nextOpen and nextClose are in the future", async () => {
-			const clock = await createClient().getClock();
-			const now = Date.now();
-
-			// One of them should be in the future
-			// If market is open, nextClose is in future
-			// If market is closed, nextOpen is in future
-			if (clock.isOpen) {
-				expect(clock.nextClose.getTime()).toBeGreaterThan(now);
-			} else {
-				expect(clock.nextOpen.getTime()).toBeGreaterThan(now);
+describeIfCredentials("AlpacaCalendarClient Integration getCalendar ordering", () => {
+	it("returns sorted calendar days", async () => {
+		const days = await createClient().getCalendar("2025-01-06", "2025-01-31");
+		for (let i = 1; i < days.length; i++) {
+			const previous = days[i - 1];
+			const current = days[i];
+			if (!previous || !current) {
+				throw new Error("Expected calendar days to be defined");
 			}
-		});
+			expect(current.date > previous.date).toBe(true);
+		}
 	});
 
-	describe("response schema validation", () => {
-		it("calendar response passes schema validation", async () => {
-			const days = await createClient().getCalendar("2025-01-06", "2025-01-10");
+	it("accepts Date objects as parameters", async () => {
+		const days = await createClient().getCalendar(new Date("2025-06-01"), new Date("2025-06-30"));
+		expect(Array.isArray(days)).toBe(true);
+		expect(days.length).toBeGreaterThan(15);
+		expect(days.length).toBeLessThan(25);
+	});
+});
 
-			for (const day of days) {
-				// Ensure no unexpected null values
-				expect(day.date).not.toBeNull();
-				expect(day.open).not.toBeNull();
-				expect(day.close).not.toBeNull();
+describeIfCredentials("AlpacaCalendarClient Integration getClock", () => {
+	it("returns current market clock status", async () => {
+		const clock = await createClient().getClock();
+		expect(clock).toHaveProperty("isOpen");
+		expect(clock).toHaveProperty("timestamp");
+		expect(clock).toHaveProperty("nextOpen");
+		expect(clock).toHaveProperty("nextClose");
+		expect(typeof clock.isOpen).toBe("boolean");
+		expect(clock.timestamp).toBeInstanceOf(Date);
+		expect(clock.nextOpen).toBeInstanceOf(Date);
+		expect(clock.nextClose).toBeInstanceOf(Date);
+		expect(Math.abs(Date.now() - clock.timestamp.getTime())).toBeLessThan(60000);
+	});
 
-				// Session times may be undefined but not null
-				if (day.sessionOpen !== undefined) {
-					expect(typeof day.sessionOpen).toBe("string");
-				}
-				if (day.sessionClose !== undefined) {
-					expect(typeof day.sessionClose).toBe("string");
-				}
+	it("nextOpen and nextClose are in the future when relevant", async () => {
+		const clock = await createClient().getClock();
+		const now = Date.now();
+		if (clock.isOpen) {
+			expect(clock.nextClose.getTime()).toBeGreaterThan(now);
+		} else {
+			expect(clock.nextOpen.getTime()).toBeGreaterThan(now);
+		}
+	});
+});
+
+describeIfCredentials("AlpacaCalendarClient Integration schema conformance", () => {
+	it("calendar response passes expected schema shape", async () => {
+		const days = await createClient().getCalendar("2025-01-06", "2025-01-10");
+		for (const day of days) {
+			expect(day.date).not.toBeNull();
+			expect(day.open).not.toBeNull();
+			expect(day.close).not.toBeNull();
+			if (day.sessionOpen !== undefined) {
+				expect(typeof day.sessionOpen).toBe("string");
 			}
-		});
+			if (day.sessionClose !== undefined) {
+				expect(typeof day.sessionClose).toBe("string");
+			}
+		}
+	});
 
-		it("clock response has valid ISO timestamp format", async () => {
-			const clock = await createClient().getClock();
-
-			// Timestamps should be valid dates that can be serialized
-			expect(clock.timestamp.toISOString()).toMatch(/^\d{4}-\d{2}-\d{2}T/);
-			expect(clock.nextOpen.toISOString()).toMatch(/^\d{4}-\d{2}-\d{2}T/);
-			expect(clock.nextClose.toISOString()).toMatch(/^\d{4}-\d{2}-\d{2}T/);
-		});
+	it("clock response has ISO timestamps", async () => {
+		const clock = await createClient().getClock();
+		expect(clock.timestamp.toISOString()).toMatch(/^\d{4}-\d{2}-\d{2}T/);
+		expect(clock.nextOpen.toISOString()).toMatch(/^\d{4}-\d{2}-\d{2}T/);
+		expect(clock.nextClose.toISOString()).toMatch(/^\d{4}-\d{2}-\d{2}T/);
 	});
 });

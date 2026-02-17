@@ -131,6 +131,50 @@ function calculateUtilization(current: number, limit: number): number {
 	return Math.abs(current / limit) * 100;
 }
 
+function createLimitItem(
+	name: string,
+	category: LimitCategory,
+	current: number,
+	limit: number,
+	utilizationCurrent = current,
+): LimitStatusItem {
+	const utilization = calculateUtilization(utilizationCurrent, limit);
+	return {
+		name,
+		category,
+		current,
+		limit,
+		utilization,
+		status: getStatus(utilization),
+	};
+}
+
+function getPerInstrumentMaxima(
+	positions: PositionForExposure[],
+	nav: number,
+): { maxUnits: number; maxNotional: number; maxPctEquity: number } {
+	let maxUnits = 0;
+	let maxNotional = 0;
+	let maxPctEquity = 0;
+
+	for (const position of positions) {
+		const units = Math.abs(position.quantity);
+		const notional = Math.abs(position.marketValue ?? 0);
+		const pctEquity = nav > 0 ? notional / nav : 0;
+		if (units > maxUnits) {
+			maxUnits = units;
+		}
+		if (notional > maxNotional) {
+			maxNotional = notional;
+		}
+		if (pctEquity > maxPctEquity) {
+			maxPctEquity = pctEquity;
+		}
+	}
+
+	return { maxUnits, maxNotional, maxPctEquity };
+}
+
 // ============================================
 // Limit Calculations
 // ============================================
@@ -143,65 +187,26 @@ function calculatePerInstrumentLimits(
 	nav: number,
 	constraints: PerInstrumentConstraints,
 ): LimitStatusItem[] {
-	const limits: LimitStatusItem[] = [];
-
-	// Find max values across all positions
-	let maxUnits = 0;
-	let maxNotional = 0;
-	let maxPctEquity = 0;
-
-	for (const position of positions) {
-		const units = Math.abs(position.quantity);
-		const notional = Math.abs(position.marketValue ?? 0);
-		const pctEquity = nav > 0 ? notional / nav : 0;
-
-		if (units > maxUnits) {
-			maxUnits = units;
-		}
-		if (notional > maxNotional) {
-			maxNotional = notional;
-		}
-		if (pctEquity > maxPctEquity) {
-			maxPctEquity = pctEquity;
-		}
-	}
-
-	// Max Shares/Contracts
-	const unitsUtil = calculateUtilization(maxUnits, constraints.max_units);
-	limits.push({
-		name: "Max Units Per Position",
-		category: "per_instrument",
-		current: maxUnits,
-		limit: constraints.max_units,
-		utilization: unitsUtil,
-		status: getStatus(unitsUtil),
-	});
-
-	// Max Notional
-	const notionalUtil = calculateUtilization(maxNotional, constraints.max_notional);
-	limits.push({
-		name: "Max Notional Per Position",
-		category: "per_instrument",
-		current: maxNotional,
-		limit: constraints.max_notional,
-		utilization: notionalUtil,
-		status: getStatus(notionalUtil),
-	});
-
-	// Max % Equity
+	const { maxUnits, maxNotional, maxPctEquity } = getPerInstrumentMaxima(positions, nav);
 	const pctEquityLimit = constraints.max_pct_equity * 100;
 	const pctEquityCurrent = maxPctEquity * 100;
-	const pctEquityUtil = calculateUtilization(maxPctEquity, constraints.max_pct_equity);
-	limits.push({
-		name: "Max % Equity Per Position",
-		category: "per_instrument",
-		current: pctEquityCurrent,
-		limit: pctEquityLimit,
-		utilization: pctEquityUtil,
-		status: getStatus(pctEquityUtil),
-	});
 
-	return limits;
+	return [
+		createLimitItem("Max Units Per Position", "per_instrument", maxUnits, constraints.max_units),
+		createLimitItem(
+			"Max Notional Per Position",
+			"per_instrument",
+			maxNotional,
+			constraints.max_notional,
+		),
+		createLimitItem(
+			"Max % Equity Per Position",
+			"per_instrument",
+			pctEquityCurrent,
+			pctEquityLimit,
+			maxPctEquity,
+		),
+	];
 }
 
 /**
@@ -212,74 +217,45 @@ function calculatePortfolioLimits(
 	nav: number,
 	constraints: PortfolioConstraints,
 ): LimitStatusItem[] {
-	const limits: LimitStatusItem[] = [];
-
-	// Gross Notional
-	const grossNotionalUtil = calculateUtilization(
-		exposure.gross.current,
-		constraints.max_gross_notional,
-	);
-	limits.push({
-		name: "Gross Exposure",
-		category: "portfolio",
-		current: exposure.gross.current,
-		limit: constraints.max_gross_notional,
-		utilization: grossNotionalUtil,
-		status: getStatus(grossNotionalUtil),
-	});
-
-	// Net Notional
-	const netNotionalUtil = calculateUtilization(
-		Math.abs(exposure.net.current),
-		constraints.max_net_notional,
-	);
-	limits.push({
-		name: "Net Exposure",
-		category: "portfolio",
-		current: exposure.net.current,
-		limit: constraints.max_net_notional,
-		utilization: netNotionalUtil,
-		status: getStatus(netNotionalUtil),
-	});
-
-	// Gross % Equity
 	const grossPctEquity = nav > 0 ? exposure.gross.current / nav : 0;
-	const grossPctEquityUtil = calculateUtilization(grossPctEquity, constraints.max_gross_pct_equity);
-	limits.push({
-		name: "Gross Exposure % Equity",
-		category: "portfolio",
-		current: grossPctEquity * 100,
-		limit: constraints.max_gross_pct_equity * 100,
-		utilization: grossPctEquityUtil,
-		status: getStatus(grossPctEquityUtil),
-	});
-
-	// Net % Equity
 	const netPctEquity = nav > 0 ? Math.abs(exposure.net.current) / nav : 0;
-	const netPctEquityUtil = calculateUtilization(netPctEquity, constraints.max_net_pct_equity);
-	limits.push({
-		name: "Net Exposure % Equity",
-		category: "portfolio",
-		current: netPctEquity * 100,
-		limit: constraints.max_net_pct_equity * 100,
-		utilization: netPctEquityUtil,
-		status: getStatus(netPctEquityUtil),
-	});
-
-	// Concentration (from exposure metrics)
-	// Use 25% as default concentration limit if not in config
 	const concentrationLimit = 25;
-	const concentrationUtil = calculateUtilization(exposure.concentrationMax.pct, concentrationLimit);
-	limits.push({
-		name: "Concentration",
-		category: "portfolio",
-		current: exposure.concentrationMax.pct,
-		limit: concentrationLimit,
-		utilization: concentrationUtil,
-		status: getStatus(concentrationUtil),
-	});
 
-	return limits;
+	return [
+		createLimitItem(
+			"Gross Exposure",
+			"portfolio",
+			exposure.gross.current,
+			constraints.max_gross_notional,
+		),
+		createLimitItem(
+			"Net Exposure",
+			"portfolio",
+			exposure.net.current,
+			constraints.max_net_notional,
+			Math.abs(exposure.net.current),
+		),
+		createLimitItem(
+			"Gross Exposure % Equity",
+			"portfolio",
+			grossPctEquity * 100,
+			constraints.max_gross_pct_equity * 100,
+			grossPctEquity,
+		),
+		createLimitItem(
+			"Net Exposure % Equity",
+			"portfolio",
+			netPctEquity * 100,
+			constraints.max_net_pct_equity * 100,
+			netPctEquity,
+		),
+		createLimitItem(
+			"Concentration",
+			"portfolio",
+			exposure.concentrationMax.pct,
+			concentrationLimit,
+		),
+	];
 }
 
 /**

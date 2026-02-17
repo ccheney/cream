@@ -38,7 +38,7 @@ describe("PolymarketClient constructor", () => {
 	});
 });
 
-describe("PolymarketClient event transformation", () => {
+describe("PolymarketClient event transformation defaults", () => {
 	let ctx: FetchMockContext;
 
 	beforeEach(() => {
@@ -76,6 +76,18 @@ describe("PolymarketClient event transformation", () => {
 
 		expect(events[0]?.payload.outcomes).toHaveLength(2);
 	});
+});
+
+describe("PolymarketClient event transformation validation", () => {
+	let ctx: FetchMockContext;
+
+	beforeEach(() => {
+		ctx = createFetchMock();
+	});
+
+	afterEach(() => {
+		restoreFetch(ctx);
+	});
 
 	it("should skip events without markets", async () => {
 		ctx.mockFetch.mockImplementation(() =>
@@ -98,6 +110,18 @@ describe("PolymarketClient event transformation", () => {
 
 		const noMarketEvents = events.filter((e) => e.eventId.includes("event-no-markets"));
 		expect(noMarketEvents).toHaveLength(0);
+	});
+});
+
+describe("PolymarketClient event transformation liquidity", () => {
+	let ctx: FetchMockContext;
+
+	beforeEach(() => {
+		ctx = createFetchMock();
+	});
+
+	afterEach(() => {
+		restoreFetch(ctx);
 	});
 
 	it("should calculate liquidity score correctly", async () => {

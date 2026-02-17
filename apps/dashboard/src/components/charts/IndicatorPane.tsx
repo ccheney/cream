@@ -13,9 +13,9 @@
 import {
 	createChart,
 	type HistogramData,
+	HistogramSeries,
 	type IChartApi,
-	type ISeriesApi,
-	type LineData,
+	LineSeries,
 	type Time,
 } from "lightweight-charts";
 import { memo, useEffect, useRef } from "react";
@@ -111,6 +111,143 @@ const INDICATOR_COLORS = {
 	},
 } as const;
 
+function getChartHeight(type: IndicatorType, height?: number): number {
+	return height ?? (type === "volume" ? 80 : 100);
+}
+
+function createIndicatorChart(container: HTMLDivElement, chartHeight: number): IChartApi {
+	return createChart(container, {
+		...DEFAULT_CHART_OPTIONS,
+		width: container.clientWidth,
+		height: chartHeight,
+		rightPriceScale: {
+			...DEFAULT_CHART_OPTIONS.rightPriceScale,
+			scaleMargins: {
+				top: 0.1,
+				bottom: 0.1,
+			},
+		},
+		timeScale: {
+			...DEFAULT_CHART_OPTIONS.timeScale,
+			visible: false,
+		},
+	});
+}
+
+function attachResizeListener(containerRef: React.RefObject<HTMLDivElement>, chart: IChartApi) {
+	const handleResize = () => {
+		if (!containerRef.current) {
+			return;
+		}
+		chart.applyOptions({ width: containerRef.current.clientWidth });
+	};
+	window.addEventListener("resize", handleResize);
+	return () => window.removeEventListener("resize", handleResize);
+}
+
+function attachParentSync(parentChart: IChartApi | undefined, chart: IChartApi) {
+	if (!parentChart) {
+		return () => {};
+	}
+	const handleRangeChange = (
+		range: ReturnType<IChartApi["timeScale"]>["getVisibleLogicalRange"],
+	) => {
+		if (range) {
+			chart.timeScale().setVisibleLogicalRange(range);
+		}
+	};
+	parentChart.timeScale().subscribeVisibleLogicalRangeChange(handleRangeChange);
+	return () => parentChart.timeScale().unsubscribeVisibleLogicalRangeChange(handleRangeChange);
+}
+
+function initIndicatorSeries(
+	chart: IChartApi,
+	type: IndicatorType,
+	rsiData?: RSIData[],
+	macdData?: MACDData[],
+	stochasticData?: StochasticData[],
+	volumeData?: VolumeData[],
+) {
+	switch (type) {
+		case "rsi":
+			initRSI(chart, rsiData ?? []);
+			return;
+		case "macd":
+			initMACD(chart, macdData ?? []);
+			return;
+		case "stochastic":
+			initStochastic(chart, stochasticData ?? []);
+			return;
+		case "volume":
+			initVolume(chart, volumeData ?? []);
+			return;
+	}
+}
+
+function useIndicatorChart({
+	containerRef,
+	chartRef,
+	type,
+	chartHeight,
+	onReady,
+	parentChart,
+	rsiData,
+	macdData,
+	stochasticData,
+	volumeData,
+}: {
+	containerRef: React.RefObject<HTMLDivElement>;
+	chartRef: React.RefObject<IChartApi | null>;
+	type: IndicatorType;
+	chartHeight: number;
+	onReady?: (chart: IChartApi) => void;
+	parentChart?: IChartApi;
+	rsiData?: RSIData[];
+	macdData?: MACDData[];
+	stochasticData?: StochasticData[];
+	volumeData?: VolumeData[];
+}) {
+	useEffect(() => {
+		if (!containerRef.current) {
+			return;
+		}
+		const chart = createIndicatorChart(containerRef.current, chartHeight);
+		chartRef.current = chart;
+		initIndicatorSeries(chart, type, rsiData, macdData, stochasticData, volumeData);
+		const detachParentSync = attachParentSync(parentChart, chart);
+		const detachResizeListener = attachResizeListener(containerRef, chart);
+		chart.timeScale().fitContent();
+		onReady?.(chart);
+
+		return () => {
+			detachResizeListener();
+			detachParentSync();
+			chart.remove();
+			chartRef.current = null;
+		};
+	}, [
+		type,
+		chartHeight,
+		onReady,
+		parentChart,
+		rsiData,
+		macdData,
+		stochasticData,
+		volumeData,
+		containerRef,
+		chartRef,
+	]);
+}
+
+function IndicatorPaneHeader({ type, timeframe }: { type: IndicatorType; timeframe?: string }) {
+	return (
+		<div className="flex items-center justify-between px-2 py-1 text-xs text-stone-500 dark:text-night-300 border-b border-cream-100 dark:border-night-700">
+			<span className="font-medium uppercase">{type}</span>
+			{timeframe && <span className="text-stone-400 dark:text-night-400">{timeframe}</span>}
+		</div>
+	);
+}
+
 // ============================================
 // Indicator Pane Component
 // ============================================
@@ -129,87 +266,24 @@ function IndicatorPaneComponent({
 }: IndicatorPaneProps) {
 	const containerRef = useRef<HTMLDivElement>(null);
 	const chartRef = useRef<IChartApi | null>(null);
+	const chartHeight = getChartHeight(type, height);
 
-	// Set default height based on indicator type
-	const chartHeight = height ?? (type === "volume" ? 80 : 100);
-
-	// Initialize chart
-	useEffect(() => {
-		if (!containerRef.current) {
-			return;
-		}
-
-		const chart = createChart(containerRef.current, {
-			...DEFAULT_CHART_OPTIONS,
-			width: containerRef.current.clientWidth,
-			height: chartHeight,
-			rightPriceScale: {
-				...DEFAULT_CHART_OPTIONS.rightPriceScale,
-				scaleMargins: {
-					top: 0.1,
-					bottom: 0.1,
-				},
-			},
-			timeScale: {
-				...DEFAULT_CHART_OPTIONS.timeScale,
-				visible: false, // Hide time scale since parent chart shows it
-			},
-		});
-
-		chartRef.current = chart;
-
-		// Add indicator-specific series
-		switch (type) {
-			case "rsi":
-				initRSI(chart, rsiData ?? []);
-				break;
-			case "macd":
-				initMACD(chart, macdData ?? []);
-				break;
-			case "stochastic":
-				initStochastic(chart, stochasticData ?? []);
-				break;
-			case "volume":
-				initVolume(chart, volumeData ?? []);
-				break;
-		}
-
-		// Sync with parent chart if provided
-		if (parentChart) {
-			parentChart.timeScale().subscribeVisibleLogicalRangeChange((range) => {
-				if (range) {
-					chart.timeScale().setVisibleLogicalRange(range);
-				}
-			});
-		}
-
-		chart.timeScale().fitContent();
-		onReady?.(chart);
-
-		// Resize handler
-		const handleResize = () => {
-			if (containerRef.current) {
-				chart.applyOptions({ width: containerRef.current.clientWidth });
-			}
-		};
-
-		window.addEventListener("resize", handleResize);
-
-		return () => {
-			window.removeEventListener("resize", handleResize);
-			chart.remove();
-			chartRef.current = null;
-		};
-	}, [type, chartHeight, onReady, parentChart, rsiData, macdData, stochasticData, volumeData]);
+	useIndicatorChart({
+		containerRef,
+		chartRef,
+		type,
+		chartHeight,
+		onReady,
+		parentChart,
+		rsiData,
+		macdData,
+		stochasticData,
+		volumeData,
+	});
 
 	return (
 		<div className={className}>
-			{/* Header */}
-			<div className="flex items-center justify-between px-2 py-1 text-xs text-stone-500 dark:text-night-300 border-b border-cream-100 dark:border-night-700">
-				<span className="font-medium uppercase">{type}</span>
-				{timeframe && <span className="text-stone-400 dark:text-night-400">{timeframe}</span>}
-			</div>
-			{/* Chart container */}
+			<IndicatorPaneHeader type={type} timeframe={timeframe} />
 			<div ref={containerRef} style={{ height: chartHeight }} />
 		</div>
 	);
@@ -220,24 +294,16 @@ function IndicatorPaneComponent({
 // ============================================
 
 function initRSI(chart: IChartApi, data: RSIData[]) {
-	// Add RSI line
-	// biome-ignore lint/suspicious/noExplicitAny: lightweight-charts API requires string literal
-	const series = chart.addSeries("line" as any, {
+	const series = chart.addSeries(LineSeries, {
 		color: INDICATOR_COLORS.rsi.line,
 		lineWidth: 2,
 		priceLineVisible: false,
-	}) as ISeriesApi<"Line">;
+	});
 
 	if (data.length > 0) {
-		series.setData(
-			data.map((d) => ({
-				time: d.time as Time,
-				value: d.value,
-			})),
-		);
+		series.setData(data.map((d) => ({ time: d.time as Time, value: d.value })));
 	}
 
-	// Add overbought/oversold lines
 	series.createPriceLine({
 		price: 70,
 		color: "rgba(239, 68, 68, 0.5)",
@@ -256,24 +322,20 @@ function initRSI(chart: IChartApi, data: RSIData[]) {
 		axisLabelVisible: false,
 	});
 
-	// Set scale to 0-100
-	chart.priceScale("right").applyOptions({
-		autoScale: false,
-		scaleMargins: { top: 0.05, bottom: 0.05 },
-	});
+	chart
+		.priceScale("right")
+		.applyOptions({ autoScale: false, scaleMargins: { top: 0.05, bottom: 0.05 } });
 }
 
 function initMACD(chart: IChartApi, data: MACDData[]) {
-	// Histogram series
-	// biome-ignore lint/suspicious/noExplicitAny: lightweight-charts API requires string literal
-	const histogramSeries = chart.addSeries("histogram" as any, {
+	const histogramSeries = chart.addSeries(HistogramSeries, {
 		priceLineVisible: false,
 		priceFormat: {
 			type: "price",
 			precision: 4,
 			minMove: 0.0001,
 		},
-	}) as ISeriesApi<"Histogram">;
+	});
 
 	if (data.length > 0) {
 		const histogramData: HistogramData[] = data.map((d) => ({
@@ -285,39 +347,22 @@ function initMACD(chart: IChartApi, data: MACDData[]) {
 		histogramSeries.setData(histogramData);
 	}
 
-	// MACD line
-	// biome-ignore lint/suspicious/noExplicitAny: lightweight-charts API requires string literal
-	const macdSeries = chart.addSeries("line" as any, {
+	const macdSeries = chart.addSeries(LineSeries, {
 		color: INDICATOR_COLORS.macd.macdLine,
 		lineWidth: 2,
 		priceLineVisible: false,
-	}) as ISeriesApi<"Line">;
-
-	if (data.length > 0) {
-		const macdLineData: LineData[] = data.map((d) => ({
-			time: d.time as Time,
-			value: d.macd,
-		}));
-		macdSeries.setData(macdLineData);
-	}
-
-	// Signal line
-	// biome-ignore lint/suspicious/noExplicitAny: lightweight-charts API requires string literal
-	const signalSeries = chart.addSeries("line" as any, {
+	});
+	const signalSeries = chart.addSeries(LineSeries, {
 		color: INDICATOR_COLORS.macd.signalLine,
 		lineWidth: 2,
 		priceLineVisible: false,
-	}) as ISeriesApi<"Line">;
+	});
 
 	if (data.length > 0) {
-		const signalLineData: LineData[] = data.map((d) => ({
-			time: d.time as Time,
-			value: d.signal,
-		}));
-		signalSeries.setData(signalLineData);
+		macdSeries.setData(data.map((d) => ({ time: d.time as Time, value: d.macd })));
+		signalSeries.setData(data.map((d) => ({ time: d.time as Time, value: d.signal })));
 	}
 
-	// Add zero line
 	histogramSeries.createPriceLine({
 		price: 0,
 		color: CHART_COLORS.grid,
@@ -329,41 +374,22 @@ function initMACD(chart: IChartApi, data: MACDData[]) {
 }
 
 function initStochastic(chart: IChartApi, data: StochasticData[]) {
-	// %K line
-	// biome-ignore lint/suspicious/noExplicitAny: lightweight-charts v5 addSeries overload
-	const kSeries = chart.addSeries("line" as any, {
+	const kSeries = chart.addSeries(LineSeries, {
 		color: INDICATOR_COLORS.stochastic.k,
 		lineWidth: 2,
 		priceLineVisible: false,
-	}) as ISeriesApi<"Line">;
-
-	if (data.length > 0) {
-		kSeries.setData(
-			data.map((d) => ({
-				time: d.time as Time,
-				value: d.k,
-			})),
-		);
-	}
-
-	// %D line
-	// biome-ignore lint/suspicious/noExplicitAny: lightweight-charts v5 addSeries overload
-	const dSeries = chart.addSeries("line" as any, {
+	});
+	const dSeries = chart.addSeries(LineSeries, {
 		color: INDICATOR_COLORS.stochastic.d,
 		lineWidth: 2,
 		priceLineVisible: false,
-	}) as ISeriesApi<"Line">;
+	});
 
 	if (data.length > 0) {
-		dSeries.setData(
-			data.map((d) => ({
-				time: d.time as Time,
-				value: d.d,
-			})),
-		);
+		kSeries.setData(data.map((d) => ({ time: d.time as Time, value: d.k })));
+		dSeries.setData(data.map((d) => ({ time: d.time as Time, value: d.d })));
 	}
 
-	// Add overbought/oversold lines
 	kSeries.createPriceLine({
 		price: 80,
 		color: "rgba(239, 68, 68, 0.5)",
@@ -372,7 +398,6 @@ function initStochastic(chart: IChartApi, data: StochasticData[]) {
 		title: "",
 		axisLabelVisible: false,
 	});
-
 	kSeries.createPriceLine({
 		price: 20,
 		color: "rgba(34, 197, 94, 0.5)",
@@ -384,13 +409,12 @@ function initStochastic(chart: IChartApi, data: StochasticData[]) {
 }
 
 function initVolume(chart: IChartApi, data: VolumeData[]) {
-	// biome-ignore lint/suspicious/noExplicitAny: lightweight-charts v5 addSeries overload
-	const series = chart.addSeries("histogram" as any, {
+	const series = chart.addSeries(HistogramSeries, {
 		priceLineVisible: false,
 		priceFormat: {
 			type: "volume",
 		},
-	}) as ISeriesApi<"Histogram">;
+	});
 
 	if (data.length > 0) {
 		series.setData(

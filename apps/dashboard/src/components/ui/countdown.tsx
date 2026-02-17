@@ -112,6 +112,64 @@ function formatWithSuffix(state: CountdownState): string {
 	return `(in ${totalSeconds}s)`;
 }
 
+function buildDisplayText(
+	state: CountdownState,
+	format: CountdownFormat,
+	showSuffix: boolean,
+): string {
+	if (showSuffix) {
+		return formatWithSuffix(state);
+	}
+	return formatCountdown(state, format);
+}
+
+function buildStateClasses(state: CountdownState): string {
+	if (state.isComplete) {
+		return "text-emerald-600 dark:text-emerald-400";
+	}
+	if (state.isCritical) {
+		return "text-red-600 dark:text-red-400";
+	}
+	if (state.isWarning) {
+		return "text-amber-600 dark:text-amber-400";
+	}
+	return "text-stone-700 dark:text-stone-300";
+}
+
+function buildAnimationClasses(state: CountdownState, prefersReducedMotion: boolean): string {
+	if (state.isCritical && !prefersReducedMotion) {
+		return "animate-pulse";
+	}
+	return "";
+}
+
+function formatPlural(value: number, unit: "hour" | "minute" | "second"): string {
+	return `${value} ${unit}${value !== 1 ? "s" : ""}`;
+}
+
+function buildAriaLabel(state: CountdownState, ariaLabel?: string): string {
+	if (ariaLabel) {
+		return ariaLabel;
+	}
+
+	if (state.isComplete) {
+		return "Countdown complete";
+	}
+
+	const parts: string[] = [];
+	if (state.hours > 0) {
+		parts.push(formatPlural(state.hours, "hour"));
+	}
+	if (state.minutes > 0) {
+		parts.push(formatPlural(state.minutes, "minute"));
+	}
+	if (state.seconds > 0 || parts.length === 0) {
+		parts.push(formatPlural(state.seconds, "second"));
+	}
+
+	return `${parts.join(", ")} remaining`;
+}
+
 function usePrefersReducedMotion(): boolean {
 	const [prefersReducedMotion, setPrefersReducedMotion] = useState(false);
 
@@ -154,8 +212,6 @@ export function useCountdown(
 	useEffect(() => {
 		onCompleteRef.current = onComplete;
 	}, [onComplete]);
-
-	const _targetTimeMs = targetTime.getTime();
 	useEffect(() => {
 		hasCompletedRef.current = false;
 	}, []);
@@ -199,56 +255,19 @@ export const Countdown = memo(function Countdown({
 		criticalThreshold,
 	});
 
-	const displayText = useMemo(() => {
-		if (showSuffix) {
-			return formatWithSuffix(state);
-		}
-		return formatCountdown(state, format);
-	}, [state, format, showSuffix]);
+	const displayText = useMemo(
+		() => buildDisplayText(state, format, showSuffix),
+		[state, format, showSuffix],
+	);
 
-	const stateClasses = useMemo(() => {
-		if (state.isComplete) {
-			return "text-emerald-600 dark:text-emerald-400";
-		}
-		if (state.isCritical) {
-			return "text-red-600 dark:text-red-400";
-		}
-		if (state.isWarning) {
-			return "text-amber-600 dark:text-amber-400";
-		}
-		return "text-stone-700 dark:text-stone-300";
-	}, [state.isComplete, state.isCritical, state.isWarning]);
+	const stateClasses = useMemo(() => buildStateClasses(state), [state]);
 
-	const animationClasses = useMemo(() => {
-		if (state.isCritical && !prefersReducedMotion) {
-			return "animate-pulse";
-		}
-		return "";
-	}, [state.isCritical, prefersReducedMotion]);
+	const animationClasses = useMemo(
+		() => buildAnimationClasses(state, prefersReducedMotion),
+		[state, prefersReducedMotion],
+	);
 
-	const computedAriaLabel = useMemo(() => {
-		if (ariaLabel) {
-			return ariaLabel;
-		}
-
-		const { hours, minutes, seconds } = state;
-		if (state.isComplete) {
-			return "Countdown complete";
-		}
-
-		const parts: string[] = [];
-		if (hours > 0) {
-			parts.push(`${hours} hour${hours !== 1 ? "s" : ""}`);
-		}
-		if (minutes > 0) {
-			parts.push(`${minutes} minute${minutes !== 1 ? "s" : ""}`);
-		}
-		if (seconds > 0 || parts.length === 0) {
-			parts.push(`${seconds} second${seconds !== 1 ? "s" : ""}`);
-		}
-
-		return `${parts.join(", ")} remaining`;
-	}, [ariaLabel, state]);
+	const computedAriaLabel = useMemo(() => buildAriaLabel(state, ariaLabel), [state, ariaLabel]);
 
 	return (
 		<span role="timer" aria-label={computedAriaLabel} aria-live="polite" aria-atomic="true">

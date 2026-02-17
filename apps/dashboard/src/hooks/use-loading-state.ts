@@ -89,7 +89,6 @@ export function useLoadingState(
 		if (initialLoading) {
 			store.startLoading(key, initialOptions);
 		}
-		// eslint-disable-next-line react-hooks/exhaustive-deps
 	}, [initialLoading, initialOptions, key, store]);
 
 	// Cleanup on unmount
@@ -99,7 +98,6 @@ export function useLoadingState(
 				store.stopLoading(keyRef.current);
 			}
 		};
-		// eslint-disable-next-line react-hooks/exhaustive-deps
 	}, [autoCleanup, store]);
 
 	const isLoading = store.isLoading(key);

@@ -7,7 +7,7 @@
 import type { Position as BrokerPosition } from "@cream/broker";
 import { type ExecutionContext, isTest } from "@cream/domain";
 import { GrpcError } from "@cream/domain/grpc";
-import type { Position as GrpcPosition } from "@cream/schema-gen/cream/v1/execution";
+import type { AccountState, Position as GrpcPosition } from "@cream/schema-gen/cream/v1/execution";
 import { getBrokerClient, getExecutionClient } from "../clients.js";
 import type {
 	EnrichedPortfolioStateResponse,
@@ -16,6 +16,57 @@ import type {
 	PortfolioStateResponse,
 } from "../types.js";
 import { enrichPositions } from "./positionEnrichment.js";
+
+function shouldFallbackToBroker(error: unknown): boolean {
+	return error instanceof GrpcError && error.code === "UNAVAILABLE";
+}
+
+function mapGrpcPositions(positions: GrpcPosition[]): {
+	positions: PortfolioPosition[];
+	totalPnL: number;
+} {
+	let totalPnL = 0;
+	const mappedPositions = positions.map((position) => {
+		const unrealizedPnL = position.unrealizedPnl ?? 0;
+		totalPnL += unrealizedPnL;
+		return {
+			symbol: position.instrument?.instrumentId ?? "",
+			quantity: position.quantity,
+			averageCost: position.avgEntryPrice,
+			marketValue: position.marketValue,
+			unrealizedPnL,
+		};
+	});
+	return { positions: mappedPositions, totalPnL };
+}
+
+function toGrpcPdtStatus(accountState: AccountState | undefined): PdtStatus {
+	return {
+		dayTradeCount: accountState?.dayTradeCount ?? 0,
+		remainingDayTrades: accountState?.remainingDayTrades ?? -1,
+		isPatternDayTrader: accountState?.isPdtRestricted ?? false,
+		isUnderThreshold: accountState?.underPdtThreshold ?? false,
+		lastEquity: accountState?.lastEquity ?? 0,
+		daytradingBuyingPower: accountState?.daytradingBuyingPower ?? 0,
+	};
+}
+
+function toPortfolioStateFromGrpc(
+	accountState: AccountState | undefined,
+	positions: GrpcPosition[],
+): PortfolioStateResponse {
+	const mapped = mapGrpcPositions(positions);
+	const equity = accountState?.equity ?? 0;
+	const lastEquity = accountState?.lastEquity ?? equity;
+	return {
+		positions: mapped.positions,
+		buyingPower: accountState?.buyingPower ?? 0,
+		totalEquity: equity,
+		dayPnL: equity - lastEquity,
+		totalPnL: mapped.totalPnL,
+		pdt: toGrpcPdtStatus(accountState),
+	};
+}
 
 /**
  * Get current portfolio state
@@ -36,54 +87,16 @@ export async function getPortfolioState(ctx: ExecutionContext): Promise<Portfoli
 	// Try gRPC first
 	try {
 		const client = getExecutionClient();
-
-		// Fetch account state and positions in parallel
 		const [accountResponse, positionsResponse] = await Promise.all([
 			client.getAccountState(),
 			client.getPositions(),
 		]);
-
 		const accountState = accountResponse.data.accountState;
 		const positions = positionsResponse.data.positions ?? [];
-
-		// Calculate total unrealized P&L
-		let totalPnL = 0;
-		const mappedPositions: PortfolioPosition[] = positions.map((pos: GrpcPosition) => {
-			totalPnL += pos.unrealizedPnl ?? 0;
-			return {
-				symbol: pos.instrument?.instrumentId ?? "",
-				quantity: pos.quantity,
-				averageCost: pos.avgEntryPrice,
-				marketValue: pos.marketValue,
-				unrealizedPnL: pos.unrealizedPnl ?? 0,
-			};
-		});
-
-		// Build PDT status from account state
-		const pdt: PdtStatus = {
-			dayTradeCount: accountState?.dayTradeCount ?? 0,
-			remainingDayTrades: accountState?.remainingDayTrades ?? -1,
-			isPatternDayTrader: accountState?.isPdtRestricted ?? false,
-			isUnderThreshold: accountState?.underPdtThreshold ?? false,
-			lastEquity: accountState?.lastEquity ?? 0,
-			daytradingBuyingPower: accountState?.daytradingBuyingPower ?? 0,
-		};
-
-		const equity = accountState?.equity ?? 0;
-		const lastEquity = accountState?.lastEquity ?? equity;
-		const dayPnL = equity - lastEquity;
-
-		return {
-			positions: mappedPositions,
-			buyingPower: accountState?.buyingPower ?? 0,
-			totalEquity: equity,
-			dayPnL,
-			totalPnL,
-			pdt,
-		};
+		return toPortfolioStateFromGrpc(accountState, positions);
 	} catch (error) {
 		// gRPC failed - try broker client as fallback
-		if (error instanceof GrpcError && error.code === "UNAVAILABLE") {
+		if (shouldFallbackToBroker(error)) {
 			return getPortfolioStateFromBroker(ctx);
 		}
 		throw error;

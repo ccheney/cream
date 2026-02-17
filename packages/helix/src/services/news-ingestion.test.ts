@@ -93,7 +93,7 @@ describe("toNewsItem", () => {
 // Embeddable Text Building Tests
 // ============================================
 
-describe("buildEmbeddableText", () => {
+describe("buildEmbeddableText core behavior", () => {
 	test("combines headline and body text", () => {
 		const input = createMockNewsItemInput();
 		const text = buildEmbeddableText(input);
@@ -103,22 +103,7 @@ describe("buildEmbeddableText", () => {
 
 	test("separates headline and body with newlines", () => {
 		const input = createMockNewsItemInput();
-		const text = buildEmbeddableText(input);
-		expect(text).toContain("\n\n");
-	});
-
-	test("truncates long body text to default 500 characters", () => {
-		const longBody = "A".repeat(1000);
-		const input = createMockNewsItemInput({ bodyText: longBody });
-		const text = buildEmbeddableText(input);
-		expect(text.length).toBeLessThan(input.headline.length + 500 + 20); // headline + body + separator + ellipsis
-	});
-
-	test("adds ellipsis when truncating", () => {
-		const longBody = "A".repeat(1000);
-		const input = createMockNewsItemInput({ bodyText: longBody });
-		const text = buildEmbeddableText(input);
-		expect(text).toContain("...");
+		expect(buildEmbeddableText(input)).toContain("\n\n");
 	});
 
 	test("does not truncate short body text", () => {
@@ -129,19 +114,32 @@ describe("buildEmbeddableText", () => {
 		expect(text).toContain(shortBody);
 	});
 
-	test("respects custom max body length", () => {
-		const longBody = "A".repeat(1000);
-		const input = createMockNewsItemInput({ bodyText: longBody });
-		const text = buildEmbeddableText(input, 100);
-		const bodyPart = text.split("\n\n")[1];
-		expect(bodyPart?.length).toBeLessThanOrEqual(103); // 100 + "..."
-	});
-
 	test("handles empty body text", () => {
 		const input = createMockNewsItemInput({ bodyText: "" });
 		const text = buildEmbeddableText(input);
 		expect(text).toContain(input.headline);
 		expect(text).toContain("\n\n");
+	});
+});
+
+describe("buildEmbeddableText truncation", () => {
+	test("truncates long body text to default 500 characters", () => {
+		const longBody = "A".repeat(1000);
+		const input = createMockNewsItemInput({ bodyText: longBody });
+		const text = buildEmbeddableText(input);
+		expect(text.length).toBeLessThan(input.headline.length + 500 + 20); // headline + body + separator + ellipsis
+	});
+
+	test("adds ellipsis when truncating", () => {
+		const longBody = "A".repeat(1000);
+		expect(buildEmbeddableText(createMockNewsItemInput({ bodyText: longBody }))).toContain("...");
+	});
+
+	test("respects custom max body length", () => {
+		const longBody = "A".repeat(1000);
+		const input = createMockNewsItemInput({ bodyText: longBody });
+		const bodyPart = buildEmbeddableText(input, 100).split("\n\n")[1];
+		expect(bodyPart?.length).toBeLessThanOrEqual(103); // 100 + "..."
 	});
 
 	test("handles body text exactly at max length", () => {
@@ -154,9 +152,7 @@ describe("buildEmbeddableText", () => {
 
 	test("handles body text one character over max length", () => {
 		const overBody = "A".repeat(501);
-		const input = createMockNewsItemInput({ bodyText: overBody });
-		const text = buildEmbeddableText(input);
-		expect(text).toContain("...");
+		expect(buildEmbeddableText(createMockNewsItemInput({ bodyText: overBody }))).toContain("...");
 	});
 });
 

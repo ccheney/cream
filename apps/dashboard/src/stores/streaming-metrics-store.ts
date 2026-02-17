@@ -52,107 +52,99 @@ const initialState: StreamingMetricsState = {
 	optionsQuoteTimestamps: [],
 };
 
+type StreamingSet = (
+	partial:
+		| Partial<StreamingMetricsStore>
+		| ((state: StreamingMetricsStore) => Partial<StreamingMetricsStore>),
+) => void;
+type StreamingGet = () => StreamingMetricsStore;
+
+function updateLatencyQueue(
+	latencyQueue: number[],
+	now: number,
+	serverTimestamp?: number,
+): { queue: number[]; avgLatency: number } {
+	const queue =
+		typeof serverTimestamp === "number"
+			? [...latencyQueue, now - serverTimestamp].slice(-LATENCY_QUEUE_SIZE)
+			: latencyQueue;
+	const avgLatency =
+		queue.length > 0 ? queue.reduce((sum, latency) => sum + latency, 0) / queue.length : 0;
+	return { queue, avgLatency };
+}
+
+function getRecentTimestamps(timestamps: number[], now: number): number[] {
+	const cutoff = now - QUOTE_WINDOW_MS;
+	return timestamps.filter((timestamp) => timestamp > cutoff);
+}
+
+function recordQuote(
+	set: StreamingSet,
+	get: StreamingGet,
+	type: "stock" | "options",
+	serverTimestamp?: number,
+): void {
+	const now = Date.now();
+	const state = get();
+	const { queue, avgLatency } = updateLatencyQueue(state.latencyQueue, now, serverTimestamp);
+	const timestamps =
+		type === "stock"
+			? getRecentTimestamps([...state.stockQuoteTimestamps, now], now)
+			: getRecentTimestamps([...state.optionsQuoteTimestamps, now], now);
+
+	set({
+		lastMessageTimestamp: now,
+		lastMessageAgo: 0,
+		latencyQueue: queue,
+		avgLatency,
+		stockQuoteTimestamps: type === "stock" ? timestamps : state.stockQuoteTimestamps,
+		optionsQuoteTimestamps: type === "options" ? timestamps : state.optionsQuoteTimestamps,
+		quotesPerMinute: type === "stock" ? timestamps.length : state.quotesPerMinute,
+		optionsQuotesPerMinute: type === "options" ? timestamps.length : state.optionsQuotesPerMinute,
+	});
+}
+
+function createStreamingActions(set: StreamingSet, get: StreamingGet): StreamingMetricsActions {
+	return {
+		recordStockQuote: (serverTimestamp) => recordQuote(set, get, "stock", serverTimestamp),
+		recordOptionsQuote: (serverTimestamp) => recordQuote(set, get, "options", serverTimestamp),
+		setStocksConnected: (connected) => {
+			set({ stocksConnected: connected });
+		},
+		setOptionsConnected: (connected) => {
+			set({ optionsConnected: connected });
+		},
+		setSymbolCount: (count) => {
+			set({ symbolCount: count });
+		},
+		setContractCount: (count) => {
+			set({ contractCount: count });
+		},
+		setReconnectAttempts: (attempts) => {
+			set({ reconnectAttempts: attempts });
+		},
+		tick: () => {
+			const state = get();
+			const now = Date.now();
+			const stockQuoteTimestamps = getRecentTimestamps(state.stockQuoteTimestamps, now);
+			const optionsQuoteTimestamps = getRecentTimestamps(state.optionsQuoteTimestamps, now);
+			set({
+				lastMessageAgo: state.lastMessageTimestamp ? now - state.lastMessageTimestamp : 0,
+				stockQuoteTimestamps,
+				optionsQuoteTimestamps,
+				quotesPerMinute: stockQuoteTimestamps.length,
+				optionsQuotesPerMinute: optionsQuoteTimestamps.length,
+			});
+		},
+		reset: () => {
+			set(initialState);
+		},
+	};
+}
+
 export const useStreamingMetricsStore = create<StreamingMetricsStore>()((set, get) => ({
 	...initialState,
-
-	recordStockQuote: (serverTimestamp) => {
-		const now = Date.now();
-		const state = get();
-
-		let newLatencyQueue = state.latencyQueue;
-		if (serverTimestamp) {
-			const latency = now - serverTimestamp;
-			newLatencyQueue = [...state.latencyQueue, latency].slice(-LATENCY_QUEUE_SIZE);
-		}
-
-		const cutoff = now - QUOTE_WINDOW_MS;
-		const newQuoteTimestamps = [...state.stockQuoteTimestamps, now].filter((t) => t > cutoff);
-
-		const avgLatency =
-			newLatencyQueue.length > 0
-				? newLatencyQueue.reduce((a, b) => a + b, 0) / newLatencyQueue.length
-				: 0;
-
-		set({
-			lastMessageTimestamp: now,
-			lastMessageAgo: 0,
-			latencyQueue: newLatencyQueue,
-			avgLatency,
-			stockQuoteTimestamps: newQuoteTimestamps,
-			quotesPerMinute: newQuoteTimestamps.length,
-		});
-	},
-
-	recordOptionsQuote: (serverTimestamp) => {
-		const now = Date.now();
-		const state = get();
-
-		let newLatencyQueue = state.latencyQueue;
-		if (serverTimestamp) {
-			const latency = now - serverTimestamp;
-			newLatencyQueue = [...state.latencyQueue, latency].slice(-LATENCY_QUEUE_SIZE);
-		}
-
-		const cutoff = now - QUOTE_WINDOW_MS;
-		const newQuoteTimestamps = [...state.optionsQuoteTimestamps, now].filter((t) => t > cutoff);
-
-		const avgLatency =
-			newLatencyQueue.length > 0
-				? newLatencyQueue.reduce((a, b) => a + b, 0) / newLatencyQueue.length
-				: 0;
-
-		set({
-			lastMessageTimestamp: now,
-			lastMessageAgo: 0,
-			latencyQueue: newLatencyQueue,
-			avgLatency,
-			optionsQuoteTimestamps: newQuoteTimestamps,
-			optionsQuotesPerMinute: newQuoteTimestamps.length,
-		});
-	},
-
-	setStocksConnected: (connected) => {
-		set({ stocksConnected: connected });
-	},
-
-	setOptionsConnected: (connected) => {
-		set({ optionsConnected: connected });
-	},
-
-	setSymbolCount: (count) => {
-		set({ symbolCount: count });
-	},
-
-	setContractCount: (count) => {
-		set({ contractCount: count });
-	},
-
-	setReconnectAttempts: (attempts) => {
-		set({ reconnectAttempts: attempts });
-	},
-
-	tick: () => {
-		const state = get();
-		const now = Date.now();
-
-		const lastMessageAgo = state.lastMessageTimestamp ? now - state.lastMessageTimestamp : 0;
-
-		const cutoff = now - QUOTE_WINDOW_MS;
-		const stockQuoteTimestamps = state.stockQuoteTimestamps.filter((t) => t > cutoff);
-		const optionsQuoteTimestamps = state.optionsQuoteTimestamps.filter((t) => t > cutoff);
-
-		set({
-			lastMessageAgo,
-			stockQuoteTimestamps,
-			optionsQuoteTimestamps,
-			quotesPerMinute: stockQuoteTimestamps.length,
-			optionsQuotesPerMinute: optionsQuoteTimestamps.length,
-		});
-	},
-
-	reset: () => {
-		set(initialState);
-	},
+	...createStreamingActions(set, get),
 }));
 
 export function getHealthStatus(state: StreamingMetricsState): HealthStatus {

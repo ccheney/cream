@@ -57,19 +57,22 @@ mock.module("@cream/logger", () => ({
 
 // Mock @cream/external-context (needed for transitive imports)
 const mockZodSchema = z.object({});
+function SemanticScholarClientMock() {}
+function ExtractionPipelineMock() {}
+function EntityLinkerMock() {}
 mock.module("@cream/external-context", () => ({
 	createSemanticScholarClient: () => ({
 		searchPapers: async () => ({ data: [], total: 0, offset: 0 }),
 	}),
-	SemanticScholarClient: class {},
+	SemanticScholarClient: SemanticScholarClientMock,
 	createExtractionPipeline: () => ({
 		processNews: async () => ({ events: [] }),
 	}),
-	ExtractionPipeline: class {},
+	ExtractionPipeline: ExtractionPipelineMock,
 	createEntityLinker: () => ({
 		link: async () => [],
 	}),
-	EntityLinker: class {},
+	EntityLinker: EntityLinkerMock,
 	ExtractionResultSchema: mockZodSchema,
 	DataPointSchema: mockZodSchema,
 	EntityTypeSchema: z.enum(["PERSON", "ORG", "PRODUCT"]),
@@ -78,7 +81,19 @@ mock.module("@cream/external-context", () => ({
 	SentimentSchema: z.enum(["POSITIVE", "NEGATIVE", "NEUTRAL"]),
 }));
 
-describe("prediction-markets workflow", () => {
+function createStepContext(marketTypes: string[]) {
+	return {
+		inputData: { marketTypes },
+		mapiTraceId: "test",
+		runId: "test-run",
+		context: { machineContext: undefined },
+		getInitData: () => undefined,
+		getStepResult: () => undefined,
+		runtimeContext: {},
+	};
+}
+
+function registerSchemaValidationTests(): void {
 	describe("schema validation", () => {
 		it("should validate input schema with default market types", () => {
 			const result = PredictionMarketsInputSchema.safeParse({});
@@ -99,55 +114,55 @@ describe("prediction-markets workflow", () => {
 		});
 
 		it("should reject invalid market types", () => {
-			const result = PredictionMarketsInputSchema.safeParse({
-				marketTypes: ["INVALID_TYPE"],
-			});
-			expect(result.success).toBe(false);
+			expect(
+				PredictionMarketsInputSchema.safeParse({ marketTypes: ["INVALID_TYPE"] }).success,
+			).toBe(false);
 		});
 
 		it("should validate output schema structure", () => {
-			const output = {
-				signals: {
+			expect(
+				PredictionMarketsOutputSchema.safeParse({
+					signals: {
+						platforms: ["kalshi", "polymarket"],
+						timestamp: new Date().toISOString(),
+						fedCutProbability: 0.65,
+					},
+					scores: { fedCut: 0.65 },
+					numericScores: { fedCut: 65 },
+					eventCount: 10,
+					arbitrageAlertCount: 2,
+					fetchedAt: new Date().toISOString(),
+				}).success,
+			).toBe(true);
+		});
+
+		const signalCases = [
+			{ name: "optional fields", value: { platforms: [], timestamp: new Date().toISOString() } },
+			{
+				name: "all fields",
+				value: {
+					fedCutProbability: 0.65,
+					fedHikeProbability: 0.15,
+					recessionProbability12m: 0.35,
+					macroUncertaintyIndex: 0.5,
+					policyEventRisk: 0.4,
+					marketConfidence: 0.7,
+					marketCount: 25,
 					platforms: ["kalshi", "polymarket"],
 					timestamp: new Date().toISOString(),
-					fedCutProbability: 0.65,
 				},
-				scores: { fedCut: 0.65 },
-				numericScores: { fedCut: 65 },
-				eventCount: 10,
-				arbitrageAlertCount: 2,
-				fetchedAt: new Date().toISOString(),
-			};
-			const result = PredictionMarketsOutputSchema.safeParse(output);
-			expect(result.success).toBe(true);
-		});
+			},
+		];
 
-		it("should validate MacroRiskSignals with optional fields", () => {
-			const signals = {
-				platforms: [],
-				timestamp: new Date().toISOString(),
-			};
-			const result = MacroRiskSignalsSchema.safeParse(signals);
-			expect(result.success).toBe(true);
-		});
-
-		it("should validate MacroRiskSignals with all fields", () => {
-			const signals = {
-				fedCutProbability: 0.65,
-				fedHikeProbability: 0.15,
-				recessionProbability12m: 0.35,
-				macroUncertaintyIndex: 0.5,
-				policyEventRisk: 0.4,
-				marketConfidence: 0.7,
-				marketCount: 25,
-				platforms: ["kalshi", "polymarket"],
-				timestamp: new Date().toISOString(),
-			};
-			const result = MacroRiskSignalsSchema.safeParse(signals);
-			expect(result.success).toBe(true);
-		});
+		for (const signalCase of signalCases) {
+			it(`should validate MacroRiskSignals with ${signalCase.name}`, () => {
+				expect(MacroRiskSignalsSchema.safeParse(signalCase.value).success).toBe(true);
+			});
+		}
 	});
+}
 
+function registerWorkflowAndStepTests(): void {
 	describe("workflow definition", () => {
 		it("should have correct workflow id", () => {
 			expect(predictionMarketsWorkflow.id).toBe("prediction-markets");
@@ -160,16 +175,9 @@ describe("prediction-markets workflow", () => {
 		});
 
 		it("should execute and return empty data in test mode", async () => {
-			const result = await fetchPredictionMarketsStep.execute({
-				inputData: { marketTypes: ["FED_RATE"] },
-				mapiTraceId: "test",
-				runId: "test-run",
-				context: { machineContext: undefined },
-				getInitData: () => undefined,
-				getStepResult: () => undefined,
-				runtimeContext: {},
-			} as never);
-
+			const result = await fetchPredictionMarketsStep.execute(
+				createStepContext(["FED_RATE"]) as never,
+			);
 			expect(result).toHaveProperty("signals");
 			expect(result).toHaveProperty("fetchedAt");
 			if ("signals" in result && "eventCount" in result) {
@@ -179,18 +187,15 @@ describe("prediction-markets workflow", () => {
 		});
 
 		it("should return valid output schema from step execution", async () => {
-			const result = await fetchPredictionMarketsStep.execute({
-				inputData: { marketTypes: ["FED_RATE", "RECESSION"] },
-				mapiTraceId: "test",
-				runId: "test-run",
-				context: { machineContext: undefined },
-				getInitData: () => undefined,
-				getStepResult: () => undefined,
-				runtimeContext: {},
-			} as never);
-
-			const validation = PredictionMarketsOutputSchema.safeParse(result);
-			expect(validation.success).toBe(true);
+			const result = await fetchPredictionMarketsStep.execute(
+				createStepContext(["FED_RATE", "RECESSION"]) as never,
+			);
+			expect(PredictionMarketsOutputSchema.safeParse(result).success).toBe(true);
 		});
 	});
+}
+
+describe("prediction-markets workflow", () => {
+	registerSchemaValidationTests();
+	registerWorkflowAndStepTests();
 });

@@ -22,6 +22,16 @@ export interface StreamingRiskMetrics {
 	isStreaming: boolean;
 }
 
+type MinimalPerformanceMetrics = Pick<
+	PerformanceMetrics,
+	| "sharpeRatio"
+	| "sortinoRatio"
+	| "maxDrawdownPct"
+	| "winRate"
+	| "profitFactor"
+	| "currentDrawdownPct"
+>;
+
 export interface UseRiskMetricsStreamingOptions {
 	/** Performance metrics from REST API */
 	performanceMetrics?: PerformanceMetrics;
@@ -29,6 +39,95 @@ export interface UseRiskMetricsStreamingOptions {
 	portfolioState: PortfolioStreamingState;
 	/** Account data for peak tracking initialization */
 	initialEquity?: number;
+}
+
+const FALLBACK_PERFORMANCE_METRICS: Pick<
+	PerformanceMetrics,
+	| "sharpeRatio"
+	| "sortinoRatio"
+	| "maxDrawdownPct"
+	| "winRate"
+	| "profitFactor"
+	| "currentDrawdownPct"
+> = {
+	sharpeRatio: 0,
+	sortinoRatio: 0,
+	maxDrawdownPct: 0,
+	winRate: 0,
+	profitFactor: 0,
+	currentDrawdownPct: 0,
+};
+
+function buildFallbackPortfolioState(): PortfolioStreamingState {
+	return {
+		liveNav: 0,
+		liveTotalPnl: 0,
+		liveTotalPnlPct: 0,
+		liveDayPnl: 0,
+		liveDayPnlPct: 0,
+		isStreaming: false,
+		lastUpdated: null,
+	};
+}
+
+function getHistoricalMetrics(
+	performanceMetrics: MinimalPerformanceMetrics,
+): Pick<
+	StreamingRiskMetrics,
+	"sharpeRatio" | "sortinoRatio" | "maxDrawdownPct" | "winRate" | "profitFactor"
+> {
+	return {
+		sharpeRatio: performanceMetrics.sharpeRatio,
+		sortinoRatio: performanceMetrics.sortinoRatio,
+		maxDrawdownPct: performanceMetrics.maxDrawdownPct,
+		winRate: performanceMetrics.winRate,
+		profitFactor: performanceMetrics.profitFactor,
+	};
+}
+
+function calculatePeakNav(
+	peakNavRef: { current: number },
+	currentNav: number,
+	initialEquity: number,
+): number {
+	if (peakNavRef.current === 0) {
+		peakNavRef.current = Math.max(initialEquity, currentNav);
+		return peakNavRef.current;
+	}
+
+	if (currentNav > peakNavRef.current) {
+		peakNavRef.current = currentNav;
+	}
+
+	return peakNavRef.current;
+}
+
+function calculateRealTimeDrawdown(peakNav: number, currentNav: number): number {
+	if (peakNav <= 0 || currentNav <= 0) {
+		return 0;
+	}
+	return -((peakNav - currentNav) / peakNav) * 100;
+}
+
+function buildStreamingRiskMetrics(
+	performanceMetrics: MinimalPerformanceMetrics,
+	portfolioState: PortfolioStreamingState,
+	initialEquity: number,
+	peakNavRef: { current: number },
+): StreamingRiskMetrics {
+	const historical = getHistoricalMetrics(performanceMetrics);
+	const currentNav = portfolioState.liveNav;
+	const peakNav = calculatePeakNav(peakNavRef, currentNav, initialEquity);
+	const currentDrawdownFromStreaming = calculateRealTimeDrawdown(peakNav, currentNav);
+	const currentDrawdownPct = !portfolioState.isStreaming
+		? performanceMetrics.currentDrawdownPct
+		: currentDrawdownFromStreaming;
+
+	return {
+		...historical,
+		currentDrawdownPct,
+		isStreaming: portfolioState.isStreaming,
+	};
 }
 
 /**
@@ -43,65 +142,40 @@ export function useRiskMetricsStreaming({
 	initialEquity = 100000,
 }: UseRiskMetricsStreamingOptions): StreamingRiskMetrics {
 	// Track the peak NAV seen during this session for accurate drawdown calculation
-	// Initialize with the higher of initial equity or max drawdown-derived peak
+	// Initialize with the higher of initial equity or max drawdown-derived peak.
 	const peakNavRef = useRef<number>(0);
+	const safePerformanceMetrics = performanceMetrics ?? FALLBACK_PERFORMANCE_METRICS;
+	const safePortfolioState = portfolioState ?? buildFallbackPortfolioState();
+	const safeInitialEquity =
+		Number.isFinite(initialEquity) && initialEquity > 0 ? initialEquity : 100000;
+
+	const { sharpeRatio, sortinoRatio, maxDrawdownPct, winRate, profitFactor, currentDrawdownPct } =
+		safePerformanceMetrics;
 
 	const metrics = useMemo((): StreamingRiskMetrics => {
-		// Use API metrics for historical values
-		const sharpeRatio = performanceMetrics?.sharpeRatio ?? 0;
-		const sortinoRatio = performanceMetrics?.sortinoRatio ?? 0;
-		const winRate = performanceMetrics?.winRate ?? 0;
-		const profitFactor = performanceMetrics?.profitFactor ?? 0;
-
-		// Max drawdown comes from historical data
-		const maxDrawdownPct = performanceMetrics?.maxDrawdownPct ?? 0;
-
-		// Calculate current drawdown in real-time using streaming NAV
-		const currentNav = portfolioState.liveNav;
-
-		// Initialize or update peak NAV
-		if (peakNavRef.current === 0) {
-			// First run: initialize peak from API data or initial equity
-			// If we have max drawdown data, we can estimate historical peak
-			if (performanceMetrics && performanceMetrics.maxDrawdownPct < 0) {
-				// maxDrawdownPct is negative (e.g., -1.17%)
-				// peak = currentNav / (1 + maxDrawdownPct/100) at the time of max DD
-				// But we don't know current vs max DD timing, so use initial equity as baseline
-				peakNavRef.current = Math.max(initialEquity, currentNav);
-			} else {
-				peakNavRef.current = Math.max(initialEquity, currentNav);
-			}
-		}
-
-		// Update peak if current NAV is higher
-		if (currentNav > peakNavRef.current) {
-			peakNavRef.current = currentNav;
-		}
-
-		// Calculate current drawdown as negative percentage
-		// Formula: -((peak - current) / peak) * 100
-		// Result: 0% at peak, -5% when 5% below peak, etc.
-		let currentDrawdownPct = 0;
-		if (peakNavRef.current > 0 && currentNav > 0) {
-			const drawdownFromPeak = peakNavRef.current - currentNav;
-			currentDrawdownPct = -(drawdownFromPeak / peakNavRef.current) * 100;
-		}
-
-		// If API provides current drawdown and we don't have streaming data yet, use API value
-		if (!portfolioState.isStreaming && performanceMetrics) {
-			currentDrawdownPct = performanceMetrics.currentDrawdownPct;
-		}
-
-		return {
-			sharpeRatio,
-			sortinoRatio,
-			maxDrawdownPct,
-			currentDrawdownPct,
-			winRate,
-			profitFactor,
-			isStreaming: portfolioState.isStreaming,
-		};
-	}, [performanceMetrics, portfolioState, initialEquity]);
+		return buildStreamingRiskMetrics(
+			{
+				sharpeRatio,
+				sortinoRatio,
+				maxDrawdownPct,
+				winRate,
+				profitFactor,
+				currentDrawdownPct,
+			},
+			safePortfolioState,
+			safeInitialEquity,
+			peakNavRef,
+		);
+	}, [
+		sharpeRatio,
+		sortinoRatio,
+		maxDrawdownPct,
+		winRate,
+		profitFactor,
+		currentDrawdownPct,
+		safeInitialEquity,
+		safePortfolioState,
+	]);
 
 	return metrics;
 }

@@ -9,14 +9,6 @@
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it } from "bun:test";
 import type { StartedTestContainer } from "testcontainers";
 
-// ============================================
-// Types
-// ============================================
-
-/**
- * HelixDB client interface.
- * Will be implemented with actual HelixDB client in Phase 7.
- */
 interface HelixClient {
 	upsertNode(node: HelixNode): Promise<UpsertResult>;
 	getNode(id: string): Promise<HelixNode | null>;
@@ -57,13 +49,9 @@ interface VectorSearchResult {
 	similarity: number;
 }
 
-// ============================================
-// Test Helpers
-// ============================================
+type NodeStore = Map<string, HelixNode>;
+type ClientAccessor = () => HelixClient;
 
-/**
- * Creates a sample trade decision node.
- */
 function createTradeDecisionNode(
 	id: string,
 	instrument: string,
@@ -84,16 +72,10 @@ function createTradeDecisionNode(
 	};
 }
 
-/**
- * Generates a mock embedding vector.
- */
 function generateMockEmbedding(dimensions = 768): number[] {
 	return Array.from({ length: dimensions }, () => Math.random() * 2 - 1);
 }
 
-/**
- * Calculates cosine similarity between two vectors.
- */
 function cosineSimilarity(a: number[], b: number[]): number {
 	if (a.length !== b.length) {
 		return 0;
@@ -103,116 +85,89 @@ function cosineSimilarity(a: number[], b: number[]): number {
 	let normA = 0;
 	let normB = 0;
 
-	for (let i = 0; i < a.length; i++) {
-		const aVal = a[i];
-		const bVal = b[i];
-		if (aVal === undefined || bVal === undefined) {
+	for (let index = 0; index < a.length; index++) {
+		const aValue = a[index];
+		const bValue = b[index];
+		if (aValue === undefined || bValue === undefined) {
 			continue;
 		}
-		dotProduct += aVal * bVal;
-		normA += aVal * aVal;
-		normB += bVal * bVal;
+		dotProduct += aValue * bValue;
+		normA += aValue * aValue;
+		normB += bValue * bValue;
 	}
 
 	return dotProduct / (Math.sqrt(normA) * Math.sqrt(normB));
 }
 
-/**
- * Mock HelixDB client for testing.
- * Will be replaced with actual HelixDB client when available.
- */
 function createMockClient(): HelixClient {
-	const nodes = new Map<string, HelixNode>();
-
+	const nodes: NodeStore = new Map();
 	return {
-		async upsertNode(node: HelixNode): Promise<UpsertResult> {
-			const existing = nodes.has(node.id);
-			nodes.set(node.id, node);
-
-			return {
-				id: node.id,
-				created: !existing,
-				updated: existing,
-			};
-		},
-
-		async getNode(id: string): Promise<HelixNode | null> {
-			return nodes.get(id) ?? null;
-		},
-
-		async queryNodes(filter: NodeFilter): Promise<HelixNode[]> {
-			let results = Array.from(nodes.values());
-
-			if (filter.type) {
-				results = results.filter((n) => n.type === filter.type);
-			}
-
-			if (filter.properties) {
-				const properties = filter.properties;
-				results = results.filter((n) => {
-					for (const [key, value] of Object.entries(properties)) {
-						if (n.properties[key] !== value) {
-							return false;
-						}
-					}
-					return true;
-				});
-			}
-
-			if (filter.limit) {
-				results = results.slice(0, filter.limit);
-			}
-
-			return results;
-		},
-
-		async vectorSearch(query: VectorQuery): Promise<VectorSearchResult[]> {
-			let candidates = Array.from(nodes.values());
-
-			if (query.type) {
-				candidates = candidates.filter((n) => n.type === query.type);
-			}
-
-			const results: VectorSearchResult[] = candidates
-				.filter((n) => n.embedding)
-				.map((node) => {
-					const embedding = node.embedding;
-					if (!embedding) {
-						return null;
-					}
-					return {
-						node,
-						similarity: cosineSimilarity(query.embedding, embedding),
-					};
-				})
-				.filter((result): result is VectorSearchResult => result !== null)
-				.filter((r) => r.similarity >= (query.minSimilarity ?? 0))
-				.sort((a, b) => b.similarity - a.similarity)
-				.slice(0, query.topK ?? 10);
-
-			return results;
-		},
-
-		async deleteNode(id: string): Promise<boolean> {
-			return nodes.delete(id);
-		},
-
-		async clearAll(): Promise<void> {
+		upsertNode: async (node): Promise<UpsertResult> => upsertNode(nodes, node),
+		getNode: async (id): Promise<HelixNode | null> => nodes.get(id) ?? null,
+		queryNodes: async (filter): Promise<HelixNode[]> => queryNodes(nodes, filter),
+		vectorSearch: async (query): Promise<VectorSearchResult[]> => vectorSearch(nodes, query),
+		deleteNode: async (id): Promise<boolean> => nodes.delete(id),
+		clearAll: async (): Promise<void> => {
 			nodes.clear();
 		},
 	};
 }
 
-// ============================================
-// Integration Tests
-// ============================================
+function upsertNode(nodes: NodeStore, node: HelixNode): UpsertResult {
+	const existing = nodes.has(node.id);
+	nodes.set(node.id, node);
+	return {
+		id: node.id,
+		created: !existing,
+		updated: existing,
+	};
+}
+
+function queryNodes(nodes: NodeStore, filter: NodeFilter): HelixNode[] {
+	let results = Array.from(nodes.values());
+	if (filter.type) {
+		results = results.filter((node) => node.type === filter.type);
+	}
+	const properties = filter.properties;
+	if (properties !== undefined) {
+		results = results.filter((node) => hasMatchingProperties(node, properties));
+	}
+	if (filter.limit) {
+		results = results.slice(0, filter.limit);
+	}
+	return results;
+}
+
+function hasMatchingProperties(node: HelixNode, properties: Record<string, unknown>): boolean {
+	for (const [key, value] of Object.entries(properties)) {
+		if (node.properties[key] !== value) {
+			return false;
+		}
+	}
+	return true;
+}
+
+function vectorSearch(nodes: NodeStore, query: VectorQuery): VectorSearchResult[] {
+	let candidates = Array.from(nodes.values());
+	if (query.type) {
+		candidates = candidates.filter((node) => node.type === query.type);
+	}
+	return candidates
+		.flatMap((node) => {
+			const embedding = node.embedding;
+			if (!embedding) {
+				return [];
+			}
+			return [{ node, similarity: cosineSimilarity(query.embedding, embedding) }];
+		})
+		.filter((result) => result.similarity >= (query.minSimilarity ?? 0))
+		.sort((a, b) => b.similarity - a.similarity)
+		.slice(0, query.topK ?? 10);
+}
 
 describe("HelixDB Integration", () => {
-	// biome-ignore lint/style/useConst: Intentionally let for future reassignment when container code is enabled
-	let container: StartedTestContainer | null = null;
+	const container: StartedTestContainer | null = null;
 	let client: HelixClient;
-
-	// NOTE: Container-based tests use mock client until HelixDB Docker image is available.
 
 	beforeAll(async () => {
 		void container;
@@ -224,65 +179,67 @@ describe("HelixDB Integration", () => {
 	});
 
 	afterEach(async () => {
-		// Clear all data between tests
 		await client.clearAll();
 	});
 
+	registerNodeOperationsSuite(() => client);
+	registerFilteredRetrievalSuite(() => client);
+	registerVectorSearchSuite(() => client);
+});
+
+function registerNodeOperationsSuite(getClient: ClientAccessor): void {
 	describe("Node Operations", () => {
 		it("upserts a new node", async () => {
+			const client = getClient();
 			const node = createTradeDecisionNode("decision-1", "AAPL", "BUY", "BULLISH");
-
 			const result = await client.upsertNode(node);
-
 			expect(result.id).toBe("decision-1");
 			expect(result.created).toBe(true);
 			expect(result.updated).toBe(false);
 		});
 
 		it("updates an existing node", async () => {
+			const client = getClient();
 			const node = createTradeDecisionNode("decision-2", "MSFT", "BUY", "BULLISH");
 			await client.upsertNode(node);
-
-			// Update the node
 			node.properties.confidence = 0.85;
 			const result = await client.upsertNode(node);
-
 			expect(result.updated).toBe(true);
 			expect(result.created).toBe(false);
 		});
 
 		it("retrieves a node by ID", async () => {
+			const client = getClient();
 			const node = createTradeDecisionNode("decision-3", "GOOGL", "SELL", "BEARISH");
 			await client.upsertNode(node);
-
 			const retrieved = await client.getNode("decision-3");
-
 			expect(retrieved).not.toBeNull();
 			expect(retrieved?.id).toBe("decision-3");
 			expect(retrieved?.properties.instrument).toBe("GOOGL");
 		});
 
 		it("returns null for non-existent node", async () => {
+			const client = getClient();
 			const retrieved = await client.getNode("non-existent");
-
 			expect(retrieved).toBeNull();
 		});
 
 		it("deletes a node", async () => {
+			const client = getClient();
 			const node = createTradeDecisionNode("decision-4", "AMZN", "HOLD", "NEUTRAL");
 			await client.upsertNode(node);
-
 			const deleted = await client.deleteNode("decision-4");
 			const retrieved = await client.getNode("decision-4");
-
 			expect(deleted).toBe(true);
 			expect(retrieved).toBeNull();
 		});
 	});
+}
 
+function registerFilteredRetrievalSuite(getClient: ClientAccessor): void {
 	describe("Filtered Retrieval", () => {
 		beforeEach(async () => {
-			// Set up test data
+			const client = getClient();
 			await client.upsertNode(createTradeDecisionNode("d1", "AAPL", "BUY", "BULLISH"));
 			await client.upsertNode(createTradeDecisionNode("d2", "AAPL", "SELL", "BEARISH"));
 			await client.upsertNode(createTradeDecisionNode("d3", "MSFT", "BUY", "BULLISH"));
@@ -290,125 +247,124 @@ describe("HelixDB Integration", () => {
 		});
 
 		it("filters by node type", async () => {
-			const results = await client.queryNodes({ type: "TradeDecision" });
-
+			const results = await getClient().queryNodes({ type: "TradeDecision" });
 			expect(results).toHaveLength(4);
 		});
 
 		it("filters by instrument", async () => {
-			const results = await client.queryNodes({
+			const results = await getClient().queryNodes({
 				type: "TradeDecision",
 				properties: { instrument: "AAPL" },
 			});
-
 			expect(results).toHaveLength(2);
-			expect(results.every((n) => n.properties.instrument === "AAPL")).toBe(true);
+			expect(results.every((node) => node.properties.instrument === "AAPL")).toBe(true);
 		});
 
 		it("filters by regime", async () => {
-			const results = await client.queryNodes({
+			const results = await getClient().queryNodes({
 				type: "TradeDecision",
 				properties: { regime: "BULLISH" },
 			});
-
 			expect(results).toHaveLength(2);
 		});
 
 		it("limits results", async () => {
-			const results = await client.queryNodes({
+			const results = await getClient().queryNodes({
 				type: "TradeDecision",
 				limit: 2,
 			});
-
 			expect(results).toHaveLength(2);
 		});
 	});
+}
 
+function registerVectorSearchSuite(getClient: ClientAccessor): void {
 	describe("Vector Search", () => {
 		beforeEach(async () => {
-			// Set up test data with known embeddings
-			const baseEmbedding = generateMockEmbedding();
-
-			// Create nodes with similar embeddings
-			const node1 = createTradeDecisionNode("v1", "AAPL", "BUY", "BULLISH");
-			node1.embedding = baseEmbedding;
-
-			const node2 = createTradeDecisionNode("v2", "MSFT", "BUY", "BULLISH");
-			node2.embedding = baseEmbedding.map((v) => v + Math.random() * 0.1); // Slightly different
-
-			const node3 = createTradeDecisionNode("v3", "GOOGL", "SELL", "BEARISH");
-			node3.embedding = baseEmbedding.map((v) => -v); // Very different
-
-			await client.upsertNode(node1);
-			await client.upsertNode(node2);
-			await client.upsertNode(node3);
+			await seedVectorSearchData(getClient());
 		});
 
-		it("returns similar nodes", async () => {
-			const queryEmbedding = generateMockEmbedding();
-
-			const results = await client.vectorSearch({
-				embedding: queryEmbedding,
-				topK: 3,
-			});
-
-			expect(results.length).toBeGreaterThan(0);
-			expect(results[0]?.similarity).toBeDefined();
-		});
-
-		it("filters by type in vector search", async () => {
-			const queryEmbedding = generateMockEmbedding();
-
-			const results = await client.vectorSearch({
-				embedding: queryEmbedding,
-				type: "TradeDecision",
-				topK: 5,
-			});
-
-			expect(results.every((r) => r.node.type === "TradeDecision")).toBe(true);
-		});
-
-		it("respects minimum similarity threshold", async () => {
-			const queryEmbedding = generateMockEmbedding();
-
-			const results = await client.vectorSearch({
-				embedding: queryEmbedding,
-				minSimilarity: 0.5,
-				topK: 10,
-			});
-
-			expect(results.every((r) => r.similarity >= 0.5)).toBe(true);
-		});
-
-		it("limits results with topK", async () => {
-			const queryEmbedding = generateMockEmbedding();
-
-			const results = await client.vectorSearch({
-				embedding: queryEmbedding,
-				topK: 1,
-			});
-
-			expect(results).toHaveLength(1);
-		});
-
-		it("orders results by similarity descending", async () => {
-			const queryEmbedding = generateMockEmbedding();
-
-			const results = await client.vectorSearch({
-				embedding: queryEmbedding,
-				topK: 3,
-			});
-
-			for (let i = 1; i < results.length; i++) {
-				const prev = results[i - 1];
-				const curr = results[i];
-				if (prev && curr) {
-					expect(prev.similarity).toBeGreaterThanOrEqual(curr.similarity);
-				}
-			}
-		});
+		registerVectorSearchResultTests(getClient);
+		registerVectorSearchTopKTest(getClient);
+		registerVectorSearchOrderingTest(getClient);
 	});
-});
+}
+
+function registerVectorSearchResultTests(getClient: ClientAccessor): void {
+	it("returns similar nodes", async () => {
+		const queryEmbedding = generateMockEmbedding();
+		const results = await getClient().vectorSearch({
+			embedding: queryEmbedding,
+			topK: 3,
+		});
+		expect(results.length).toBeGreaterThan(0);
+		expect(results[0]?.similarity).toBeDefined();
+	});
+
+	it("filters by type in vector search", async () => {
+		const queryEmbedding = generateMockEmbedding();
+		const results = await getClient().vectorSearch({
+			embedding: queryEmbedding,
+			type: "TradeDecision",
+			topK: 5,
+		});
+		expect(results.every((result) => result.node.type === "TradeDecision")).toBe(true);
+	});
+
+	it("respects minimum similarity threshold", async () => {
+		const queryEmbedding = generateMockEmbedding();
+		const results = await getClient().vectorSearch({
+			embedding: queryEmbedding,
+			minSimilarity: 0.5,
+			topK: 10,
+		});
+		expect(results.every((result) => result.similarity >= 0.5)).toBe(true);
+	});
+}
+
+function registerVectorSearchTopKTest(getClient: ClientAccessor): void {
+	it("limits results with topK", async () => {
+		const queryEmbedding = generateMockEmbedding();
+		const results = await getClient().vectorSearch({
+			embedding: queryEmbedding,
+			topK: 1,
+		});
+		expect(results).toHaveLength(1);
+	});
+}
+
+function registerVectorSearchOrderingTest(getClient: ClientAccessor): void {
+	it("orders results by similarity descending", async () => {
+		const queryEmbedding = generateMockEmbedding();
+		const results = await getClient().vectorSearch({
+			embedding: queryEmbedding,
+			topK: 3,
+		});
+		for (let index = 1; index < results.length; index++) {
+			const previous = results[index - 1];
+			const current = results[index];
+			if (previous && current) {
+				expect(previous.similarity).toBeGreaterThanOrEqual(current.similarity);
+			}
+		}
+	});
+}
+
+async function seedVectorSearchData(client: HelixClient): Promise<void> {
+	const baseEmbedding = generateMockEmbedding();
+	const node1 = createTradeDecisionNode("v1", "AAPL", "BUY", "BULLISH");
+	node1.embedding = baseEmbedding;
+
+	const node2 = createTradeDecisionNode("v2", "MSFT", "BUY", "BULLISH");
+	node2.embedding = baseEmbedding.map((value) => value + Math.random() * 0.1);
+
+	const node3 = createTradeDecisionNode("v3", "GOOGL", "SELL", "BEARISH");
+	node3.embedding = baseEmbedding.map((value) => -value);
+
+	await client.upsertNode(node1);
+	await client.upsertNode(node2);
+	await client.upsertNode(node3);
+}
 
 // Container-based integration tests removed. When helixdb/helix Docker image
 // becomes available, add proper testcontainers-based integration tests here.

@@ -6,7 +6,7 @@ import { afterEach, beforeEach, describe, expect, it } from "bun:test";
 import { PolymarketClient } from "../client.js";
 import { createFetchMock, type FetchMockContext, restoreFetch } from "./fixtures.js";
 
-describe("PolymarketClient.getMidpoint", () => {
+describe("PolymarketClient.getMidpoint responses", () => {
 	let ctx: FetchMockContext;
 
 	beforeEach(() => {
@@ -44,6 +44,18 @@ describe("PolymarketClient.getMidpoint", () => {
 
 		expect(midpoint).toBeNull();
 	});
+});
+
+describe("PolymarketClient.getMidpoint missing fields", () => {
+	let ctx: FetchMockContext;
+
+	beforeEach(() => {
+		ctx = createFetchMock();
+	});
+
+	afterEach(() => {
+		restoreFetch(ctx);
+	});
 
 	it("should return null for missing mid field", async () => {
 		ctx.mockFetch.mockImplementation(() =>
@@ -57,6 +69,18 @@ describe("PolymarketClient.getMidpoint", () => {
 		const midpoint = await client.getMidpoint("token-123");
 
 		expect(midpoint).toBeNull();
+	});
+});
+
+describe("PolymarketClient.getMidpoint errors", () => {
+	let ctx: FetchMockContext;
+
+	beforeEach(() => {
+		ctx = createFetchMock();
+	});
+
+	afterEach(() => {
+		restoreFetch(ctx);
 	});
 
 	it("should return null on getMidpoint error", async () => {

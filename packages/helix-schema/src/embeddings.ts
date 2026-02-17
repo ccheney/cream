@@ -420,6 +420,75 @@ export interface BatchEmbeddingOptions {
 	concurrency?: number;
 }
 
+interface BatchAccumulator {
+	embeddings: EmbeddingResult[];
+	apiCalls: number;
+	processed: number;
+}
+
+function chunkTexts(texts: string[], batchSize: number): string[][] {
+	const batches: string[][] = [];
+	for (let i = 0; i < texts.length; i += batchSize) {
+		batches.push(texts.slice(i, i + batchSize));
+	}
+	return batches;
+}
+
+function appendBatchResult(
+	accumulator: BatchAccumulator,
+	embeddingCount: number,
+	result: BatchEmbeddingResult,
+): void {
+	accumulator.embeddings.push(...result.embeddings);
+	accumulator.apiCalls += result.apiCalls;
+	accumulator.processed += embeddingCount;
+}
+
+function reportProgress(
+	callback: BatchProgressCallback | undefined,
+	processed: number,
+	total: number,
+): void {
+	if (callback) {
+		callback(processed, total);
+	}
+}
+
+async function processBatchesSequentially(
+	client: EmbeddingClient,
+	batches: string[][],
+	onProgress: BatchProgressCallback | undefined,
+	total: number,
+	accumulator: BatchAccumulator,
+): Promise<void> {
+	for (const batch of batches) {
+		const result = await client.batchGenerateEmbeddings(batch);
+		appendBatchResult(accumulator, batch.length, result);
+		reportProgress(onProgress, accumulator.processed, total);
+	}
+}
+
+async function processBatchesConcurrently(
+	client: EmbeddingClient,
+	batches: string[][],
+	concurrency: number,
+	onProgress: BatchProgressCallback | undefined,
+	total: number,
+	accumulator: BatchAccumulator,
+): Promise<void> {
+	for (let i = 0; i < batches.length; i += concurrency) {
+		const concurrentBatches = batches.slice(i, i + concurrency);
+		const results = await Promise.all(
+			concurrentBatches.map((batch) => client.batchGenerateEmbeddings(batch)),
+		);
+		for (const [index, result] of results.entries()) {
+			const batchLength = concurrentBatches[index]?.length ?? result.embeddings.length;
+			appendBatchResult(accumulator, batchLength, result);
+		}
+		reportProgress(onProgress, accumulator.processed, total);
+	}
+}
+
 /**
  * Process many texts with progress tracking
  *
@@ -432,57 +501,29 @@ export async function batchEmbedWithProgress(
 ): Promise<BatchEmbeddingResult> {
 	const { onProgress, concurrency = 1 } = options;
 	const config = client.getConfig();
-	const batchSize = config.batchSize;
-
 	const startTime = Date.now();
-	const embeddings: EmbeddingResult[] = [];
-	let apiCalls = 0;
-
-	// Chunk into batches
-	const batches: string[][] = [];
-	for (let i = 0; i < texts.length; i += batchSize) {
-		batches.push(texts.slice(i, i + batchSize));
-	}
-
-	// Process batches
-	let processed = 0;
-
+	const batches = chunkTexts(texts, config.batchSize);
+	const accumulator: BatchAccumulator = {
+		embeddings: [],
+		apiCalls: 0,
+		processed: 0,
+	};
 	if (concurrency <= 1) {
-		// Sequential processing
-		for (const batch of batches) {
-			const result = await client.batchGenerateEmbeddings(batch);
-			embeddings.push(...result.embeddings);
-			apiCalls += result.apiCalls;
-			processed += batch.length;
-
-			if (onProgress) {
-				onProgress(processed, texts.length);
-			}
-		}
+		await processBatchesSequentially(client, batches, onProgress, texts.length, accumulator);
 	} else {
-		// Concurrent processing (limited parallelism)
-		for (let i = 0; i < batches.length; i += concurrency) {
-			const concurrentBatches = batches.slice(i, i + concurrency);
-			const results = await Promise.all(
-				concurrentBatches.map((batch) => client.batchGenerateEmbeddings(batch)),
-			);
-
-			for (const result of results) {
-				embeddings.push(...result.embeddings);
-				apiCalls += result.apiCalls;
-				processed += result.embeddings.length;
-			}
-
-			if (onProgress) {
-				onProgress(processed, texts.length);
-			}
-		}
+		await processBatchesConcurrently(
+			client,
+			batches,
+			concurrency,
+			onProgress,
+			texts.length,
+			accumulator,
+		);
 	}
-
 	return {
-		embeddings,
+		embeddings: accumulator.embeddings,
 		processingTimeMs: Date.now() - startTime,
-		apiCalls,
+		apiCalls: accumulator.apiCalls,
 	};
 }
 

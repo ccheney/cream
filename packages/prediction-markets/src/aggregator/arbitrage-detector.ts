@@ -109,7 +109,7 @@ export class ArbitrageDetector {
 			description =
 				`Price divergence (${(match.priceDivergence * 100).toFixed(1)}%) ` +
 				`with low similarity (${(match.similarity * 100).toFixed(0)}%) - ` +
-				`markets may have different resolution criteria`;
+				"markets may have different resolution criteria";
 		} else {
 			type = "opportunity";
 			description =

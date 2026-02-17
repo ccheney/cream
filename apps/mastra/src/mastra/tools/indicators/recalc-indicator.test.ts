@@ -43,7 +43,7 @@ mock.module("@cream/domain", () => ({
 	}),
 }));
 
-describe("recalcIndicator tool", () => {
+describe("recalcIndicator metadata", () => {
 	it("should have correct tool id", () => {
 		expect(recalcIndicator.id).toBe("recalcIndicator");
 	});
@@ -53,63 +53,50 @@ describe("recalcIndicator tool", () => {
 		expect(recalcIndicator.description).toContain("RSI");
 		expect(recalcIndicator.description).toContain("SMA");
 	});
+});
 
-	it("should validate input schema - accepts valid RSI request", () => {
-		const result = recalcIndicator.inputSchema?.safeParse({
-			indicator: "RSI",
-			symbol: "AAPL",
-		});
-		expect(result?.success).toBe(true);
+describe("recalcIndicator input schema", () => {
+	const parse = (input: Record<string, unknown>) => recalcIndicator.inputSchema?.safeParse(input);
+
+	it("should accept valid RSI request", () => {
+		expect(parse({ indicator: "RSI", symbol: "AAPL" })?.success).toBe(true);
 	});
 
-	it("should validate input schema - accepts request with params", () => {
-		const result = recalcIndicator.inputSchema?.safeParse({
-			indicator: "BOLLINGER",
-			symbol: "SPY",
-			params: { period: 20, stdDev: 2 },
-		});
-		expect(result?.success).toBe(true);
+	it("should accept request with params", () => {
+		expect(
+			parse({ indicator: "BOLLINGER", symbol: "SPY", params: { period: 20, stdDev: 2 } })?.success,
+		).toBe(true);
 	});
 
-	it("should validate input schema - rejects invalid indicator", () => {
-		const result = recalcIndicator.inputSchema?.safeParse({
-			indicator: "INVALID",
-			symbol: "AAPL",
-		});
-		expect(result?.success).toBe(false);
+	it("should reject invalid indicator", () => {
+		expect(parse({ indicator: "INVALID", symbol: "AAPL" })?.success).toBe(false);
 	});
 
-	it("should validate input schema - rejects missing symbol", () => {
-		const result = recalcIndicator.inputSchema?.safeParse({
-			indicator: "RSI",
-		});
-		expect(result?.success).toBe(false);
+	it("should reject missing symbol", () => {
+		expect(parse({ indicator: "RSI" })?.success).toBe(false);
 	});
 
 	it("should accept all supported indicator types", () => {
 		const indicators = ["RSI", "SMA", "EMA", "ATR", "BOLLINGER", "STOCHASTIC", "VOLUME_SMA"];
-
 		for (const indicator of indicators) {
-			const result = recalcIndicator.inputSchema?.safeParse({
-				indicator,
-				symbol: "AAPL",
-			});
-			expect(result?.success).toBe(true);
+			expect(parse({ indicator, symbol: "AAPL" })?.success).toBe(true);
 		}
 	});
+});
 
+describe("recalcIndicator execution", () => {
 	it("should execute and return indicator result", async () => {
 		if (!recalcIndicator.execute) throw new Error("execute not defined");
 		const result = await recalcIndicator.execute({ indicator: "RSI", symbol: "AAPL" }, {} as never);
 
-		if ("indicator" in result && "values" in result) {
-			expect(result.indicator).toBe("RSI");
-			expect(result.symbol).toBe("AAPL");
-			expect(result.values).toHaveLength(5);
-			expect(result.timestamps).toHaveLength(5);
-		} else {
+		if (!("indicator" in result && "values" in result && "timestamps" in result)) {
 			throw new Error("Unexpected validation error");
 		}
+
+		expect(result.indicator).toBe("RSI");
+		expect(result.symbol).toBe("AAPL");
+		expect(result.values).toHaveLength(5);
+		expect(result.timestamps).toHaveLength(5);
 	});
 
 	it("should return values in chronological order", async () => {
@@ -119,12 +106,12 @@ describe("recalcIndicator tool", () => {
 			{} as never,
 		);
 
-		if ("values" in result && "timestamps" in result) {
-			expect(Array.isArray(result.values)).toBe(true);
-			expect(Array.isArray(result.timestamps)).toBe(true);
-			expect(result.values.length).toBe(result.timestamps.length);
-		} else {
+		if (!("values" in result && "timestamps" in result)) {
 			throw new Error("Unexpected validation error");
 		}
+
+		expect(Array.isArray(result.values)).toBe(true);
+		expect(Array.isArray(result.timestamps)).toBe(true);
+		expect(result.values.length).toBe(result.timestamps.length);
 	});
 });

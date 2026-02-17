@@ -117,6 +117,80 @@ function generateId(): string {
 	return `toast-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;
 }
 
+type ToastSet = (
+	partial: Partial<ToastStore> | ((state: ToastStore) => Partial<ToastStore>),
+) => void;
+type ToastGet = () => ToastStore;
+
+function createToast(
+	variant: ToastVariant,
+	message: string,
+	options: ToastOptions,
+	duration: number,
+): Toast {
+	return {
+		id: generateId(),
+		variant,
+		message,
+		title: options.title,
+		duration,
+		createdAt: Date.now(),
+	};
+}
+
+function scheduleDismiss(id: string, duration: number, get: ToastGet): void {
+	if (duration <= 0) {
+		return;
+	}
+
+	setTimeout(() => {
+		get().startDismiss(id);
+	}, duration);
+
+	setTimeout(() => {
+		get().removeToast(id);
+	}, duration + EXIT_ANIMATION_DURATION);
+}
+
+function createToastActions(set: ToastSet, get: ToastGet): Omit<ToastStore, keyof ToastStoreState> {
+	return {
+		addToast: (variant, message, options = {}) => {
+			const duration = options.duration ?? DEFAULT_DURATIONS[variant];
+			const toast = createToast(variant, message, options, duration);
+
+			set((state) => {
+				const nextToasts = [...state.toasts, toast];
+				return { toasts: nextToasts.slice(-state.maxVisible) };
+			});
+
+			scheduleDismiss(toast.id, duration, get);
+			return toast.id;
+		},
+		removeToast: (id) => {
+			set((state) => ({ toasts: state.toasts.filter((toast) => toast.id !== id) }));
+		},
+		startDismiss: (id) => {
+			set((state) => ({
+				toasts: state.toasts.map((toast) =>
+					toast.id === id ? { ...toast, dismissing: true } : toast,
+				),
+			}));
+		},
+		clearAll: () => {
+			set({ toasts: [] });
+		},
+		setPosition: (position) => {
+			set({ position });
+		},
+		success: (message, options) => get().addToast("success", message, options),
+		error: (message, options) => get().addToast("error", message, options),
+		warning: (message, options) => get().addToast("warning", message, options),
+		info: (message, options) => get().addToast("info", message, options),
+	};
+}
+
+type ToastStoreState = Pick<ToastStore, "toasts" | "position" | "maxVisible">;
+
 // ============================================
 // Store
 // ============================================
@@ -128,70 +202,7 @@ export const useToastStore = create<ToastStore>((set, get) => ({
 	toasts: [],
 	position: "bottom-right",
 	maxVisible: MAX_VISIBLE_TOASTS,
-
-	addToast: (variant, message, options = {}) => {
-		const id = generateId();
-		const duration = options.duration ?? DEFAULT_DURATIONS[variant];
-
-		const toast: Toast = {
-			id,
-			variant,
-			message,
-			title: options.title,
-			duration,
-			createdAt: Date.now(),
-		};
-
-		set((state) => {
-			// Add new toast to the end
-			const newToasts = [...state.toasts, toast];
-
-			// Remove oldest toasts if exceeding max
-			const visibleToasts = newToasts.slice(-state.maxVisible);
-
-			return { toasts: visibleToasts };
-		});
-
-		// Schedule auto-dismiss if duration > 0
-		if (duration > 0) {
-			setTimeout(() => {
-				get().startDismiss(id);
-			}, duration);
-
-			// Remove after exit animation
-			setTimeout(() => {
-				get().removeToast(id);
-			}, duration + EXIT_ANIMATION_DURATION);
-		}
-
-		return id;
-	},
-
-	removeToast: (id) => {
-		set((state) => ({
-			toasts: state.toasts.filter((t) => t.id !== id),
-		}));
-	},
-
-	startDismiss: (id) => {
-		set((state) => ({
-			toasts: state.toasts.map((t) => (t.id === id ? { ...t, dismissing: true } : t)),
-		}));
-	},
-
-	clearAll: () => {
-		set({ toasts: [] });
-	},
-
-	setPosition: (position) => {
-		set({ position });
-	},
-
-	// Convenience methods
-	success: (message, options) => get().addToast("success", message, options),
-	error: (message, options) => get().addToast("error", message, options),
-	warning: (message, options) => get().addToast("warning", message, options),
-	info: (message, options) => get().addToast("info", message, options),
+	...createToastActions(set, get),
 }));
 
 // ============================================

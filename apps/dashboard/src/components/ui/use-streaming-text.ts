@@ -2,7 +2,15 @@
  * @see docs/plans/ui/31-realtime-patterns.md lines 69-87
  */
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import {
+	type Dispatch,
+	type SetStateAction,
+	useCallback,
+	useEffect,
+	useMemo,
+	useRef,
+	useState,
+} from "react";
 
 // ============================================
 // Types
@@ -35,6 +43,177 @@ export interface UseStreamingTextReturn {
 }
 
 // ============================================
+// Internal streaming helpers
+// ============================================
+
+interface StreamingSink {
+	setStatus: (status: StreamingStatus) => void;
+	setError: (error: string | null) => void;
+	appendChunk: (chunk: string) => void;
+	flushPendingText: () => void;
+}
+
+function truncate(text: string, maxLength: number): string {
+	return text.length > maxLength ? text.slice(-maxLength) : text;
+}
+
+function createDebounceController(flush: () => void, debounceMs: number) {
+	let timer: ReturnType<typeof setTimeout> | null = null;
+
+	const schedule = () => {
+		if (timer) {
+			return;
+		}
+
+		timer = setTimeout(() => {
+			flush();
+			timer = null;
+		}, debounceMs);
+	};
+
+	const clear = () => {
+		if (!timer) {
+			return;
+		}
+
+		clearTimeout(timer);
+		timer = null;
+	};
+
+	return { schedule, clear };
+}
+
+function createStreamingEventSource(url: string, debounceMs: number, sink: StreamingSink) {
+	let eventSource: EventSource | null = null;
+	const { clear, schedule } = createDebounceController(sink.flushPendingText, debounceMs);
+
+	const closeSource = () => {
+		if (eventSource) {
+			eventSource.close();
+			eventSource = null;
+		}
+	};
+
+	const stop = () => {
+		clear();
+		closeSource();
+		sink.flushPendingText();
+	};
+
+	const onComplete = () => {
+		sink.flushPendingText();
+		sink.setStatus("complete");
+		stop();
+	};
+
+	const onErrorMessage = (event: MessageEvent) => {
+		sink.flushPendingText();
+		sink.setError((event.data as string) || "Stream error");
+		sink.setStatus("error");
+		stop();
+	};
+
+	const onError = (source: EventSource) => () => {
+		sink.flushPendingText();
+		if (source.readyState === EventSource.CLOSED) {
+			sink.setStatus("complete");
+		} else {
+			sink.setError("Connection error");
+			sink.setStatus("error");
+		}
+		stop();
+	};
+
+	const start = () => {
+		if (eventSource) {
+			return;
+		}
+
+		eventSource = new EventSource(url);
+		sink.setStatus("processing");
+		sink.setError(null);
+		eventSource.onopen = () => {
+			sink.setStatus("processing");
+		};
+		eventSource.onmessage = (event) => {
+			sink.appendChunk(event.data);
+			schedule();
+		};
+		eventSource.addEventListener("complete", () => {
+			onComplete();
+		});
+		eventSource.addEventListener("error-message", onErrorMessage);
+		eventSource.onerror = onError(eventSource);
+	};
+
+	return { start, stop };
+}
+
+function useStreamingPendingText(maxLength: number, setText: Dispatch<SetStateAction<string>>) {
+	const pendingTextRef = useRef("");
+
+	const appendChunk = useCallback(
+		(chunk: string) => {
+			pendingTextRef.current = truncate(`${pendingTextRef.current}${chunk}`, maxLength);
+		},
+		[maxLength],
+	);
+
+	const flush = useCallback(() => {
+		if (!pendingTextRef.current) {
+			return;
+		}
+
+		setText((value) => {
+			const nextText = `${value}${pendingTextRef.current}`;
+			pendingTextRef.current = "";
+			return truncate(nextText, maxLength);
+		});
+	}, [maxLength, setText]);
+
+	const reset = useCallback(() => {
+		pendingTextRef.current = "";
+	}, []);
+
+	return { appendChunk, flush, reset };
+}
+
+function useStreamingController(url: string | null, debounceMs: number, sink: StreamingSink) {
+	const sinkMemoized = useMemo(
+		() => ({
+			setStatus: sink.setStatus,
+			setError: sink.setError,
+			appendChunk: sink.appendChunk,
+			flushPendingText: sink.flushPendingText,
+		}),
+		[sink.setStatus, sink.setError, sink.appendChunk, sink.flushPendingText],
+	);
+
+	return useMemo(
+		() => (url ? createStreamingEventSource(url, debounceMs, sinkMemoized) : null),
+		[url, debounceMs, sinkMemoized],
+	);
+}
+
+function useAutoStartStreaming(
+	autoConnect: boolean,
+	url: string | null,
+	controller: ReturnType<typeof createStreamingEventSource> | null,
+	start: () => void,
+	stop: () => void,
+) {
+	useEffect(() => {
+		if (autoConnect && url && controller) {
+			start();
+		}
+
+		return () => {
+			stop();
+		};
+	}, [autoConnect, controller, start, stop, url]);
+}
+
+// ============================================
 // Hook Implementation
 // ============================================
 
@@ -47,112 +226,41 @@ export function useStreamingText(
 	const [text, setText] = useState("");
 	const [status, setStatus] = useState<StreamingStatus>("idle");
 	const [error, setError] = useState<string | null>(null);
+	const {
+		appendChunk,
+		flush,
+		reset: resetPendingText,
+	} = useStreamingPendingText(maxLength, setText);
 
-	const eventSourceRef = useRef<EventSource | null>(null);
-	const pendingTextRef = useRef("");
-	const debounceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-
-	const flushText = useCallback(() => {
-		if (pendingTextRef.current) {
-			setText((prev) => {
-				const newText = prev + pendingTextRef.current;
-				pendingTextRef.current = "";
-				return newText.length > maxLength ? newText.slice(-maxLength) : newText;
-			});
-		}
-	}, [maxLength]);
-
-	const start = useCallback(() => {
-		if (!url || eventSourceRef.current) {
-			return;
-		}
-
-		setStatus("processing");
-		setError(null);
-
-		const eventSource = new EventSource(url);
-		eventSourceRef.current = eventSource;
-
-		eventSource.onopen = () => {
-			setStatus("processing");
-		};
-
-		eventSource.onmessage = (event) => {
-			pendingTextRef.current += event.data;
-
-			if (!debounceTimerRef.current) {
-				debounceTimerRef.current = setTimeout(() => {
-					flushText();
-					debounceTimerRef.current = null;
-				}, debounceMs);
-			}
-		};
-
-		eventSource.onerror = () => {
-			flushText();
-
-			// SSE onerror fires for both errors and normal stream completion
-			if (eventSource.readyState === EventSource.CLOSED) {
-				setStatus("complete");
-			} else {
-				setError("Connection error");
-				setStatus("error");
-			}
-			eventSource.close();
-			eventSourceRef.current = null;
-		};
-
-		eventSource.addEventListener("complete", () => {
-			flushText();
-			setStatus("complete");
-			eventSource.close();
-			eventSourceRef.current = null;
-		});
-
-		eventSource.addEventListener("error-message", (event) => {
-			flushText();
-			setError((event as MessageEvent).data || "Stream error");
-			setStatus("error");
-			eventSource.close();
-			eventSourceRef.current = null;
-		});
-	}, [url, debounceMs, flushText]);
+	const controller = useStreamingController(url, debounceMs, {
+		setStatus,
+		setError,
+		appendChunk,
+		flushPendingText: flush,
+	});
 
 	const stop = useCallback(() => {
-		if (debounceTimerRef.current) {
-			clearTimeout(debounceTimerRef.current);
-			debounceTimerRef.current = null;
-		}
-
-		if (eventSourceRef.current) {
-			eventSourceRef.current.close();
-			eventSourceRef.current = null;
-		}
-
-		flushText();
-
+		controller?.stop();
 		if (status === "processing") {
 			setStatus("idle");
 		}
-	}, [flushText, status]);
+	}, [controller, status]);
+
+	const start = useCallback(() => {
+		if (url && controller) {
+			controller.start();
+		}
+	}, [controller, url]);
+
+	useAutoStartStreaming(autoConnect, url, controller, start, stop);
 
 	const reset = useCallback(() => {
 		stop();
 		setText("");
 		setStatus("idle");
 		setError(null);
-		pendingTextRef.current = "";
-	}, [stop]);
-
-	useEffect(() => {
-		if (autoConnect && url) {
-			start();
-		}
-
-		return () => {
-			stop();
-		};
-	}, [autoConnect, url, start, stop]);
+		resetPendingText();
+	}, [resetPendingText, stop]);
 
 	return {
 		text,

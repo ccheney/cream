@@ -76,310 +76,296 @@ export interface EventPublisher {
 	isRunning(): boolean;
 }
 
-/**
- * Create event publisher.
- */
-export function createEventPublisher(config: EventPublisherConfig = {}): EventPublisher {
-	createWebSocketLogger({ level: "info" });
-	const metrics = createWebSocketMetrics();
-	const emitter = new EventEmitter();
+interface PublisherRuntime {
+	metrics: ReturnType<typeof createWebSocketMetrics>;
+	emitter: EventEmitter;
+	running: boolean;
+	healthCheckInterval: ReturnType<typeof setInterval> | null;
+	quoteBatchInterval: ReturnType<typeof setInterval> | null;
+	pendingQuotes: QuoteStreamEvent[];
+	sourceStates: Record<EventSource, SourceState>;
+	eventsReceived: number;
+	eventsBroadcast: number;
+	eventsDropped: number;
+}
 
-	// State
-	let running = false;
-	let healthCheckInterval: ReturnType<typeof setInterval> | null = null;
-	let quoteBatchInterval: ReturnType<typeof setInterval> | null = null;
-	const pendingQuotes: QuoteStreamEvent[] = [];
+function createSourceState(): SourceState {
+	return {
+		status: "disconnected",
+		lastEvent: null,
+		lastError: null,
+		reconnectAttempts: 0,
+	};
+}
 
-	// Source states
-	const sourceStates: Record<EventSource, SourceState> = {
+function createSourceStates(): Record<EventSource, SourceState> {
+	return {
 		redis: createSourceState(),
 		grpc: createSourceState(),
 		database: createSourceState(),
 		internal: createSourceState(),
 	};
+}
 
-	// Stats
-	let eventsReceived = 0;
-	let eventsBroadcast = 0;
-	let eventsDropped = 0;
+function createPublisherRuntime(): PublisherRuntime {
+	return {
+		metrics: createWebSocketMetrics(),
+		emitter: new EventEmitter(),
+		running: false,
+		healthCheckInterval: null,
+		quoteBatchInterval: null,
+		pendingQuotes: [],
+		sourceStates: createSourceStates(),
+		eventsReceived: 0,
+		eventsBroadcast: 0,
+		eventsDropped: 0,
+	};
+}
 
-	// ============================================
-	// Source State Management
-	// ============================================
+function updateSourceState(
+	runtime: PublisherRuntime,
+	source: EventSource,
+	update: Partial<SourceState>,
+): void {
+	Object.assign(runtime.sourceStates[source], update);
+}
 
-	function createSourceState(): SourceState {
-		return {
-			status: "disconnected",
-			lastEvent: null,
-			lastError: null,
-			reconnectAttempts: 0,
-		};
-	}
+function setSourceConnected(runtime: PublisherRuntime, source: EventSource): void {
+	updateSourceState(runtime, source, {
+		status: "connected",
+		reconnectAttempts: 0,
+		lastError: null,
+	});
+}
 
-	function updateSourceState(source: EventSource, update: Partial<SourceState>): void {
-		Object.assign(sourceStates[source], update);
-	}
+function setSourceDisconnected(runtime: PublisherRuntime, source: EventSource): void {
+	updateSourceState(runtime, source, { status: "disconnected" });
+}
 
-	function setSourceConnected(source: EventSource): void {
-		updateSourceState(source, {
-			status: "connected",
-			reconnectAttempts: 0,
-			lastError: null,
-		});
-	}
-
-	function setSourceDisconnected(source: EventSource): void {
-		updateSourceState(source, {
-			status: "disconnected",
-		});
-	}
-
-	// ============================================
-	// Broadcasting
-	// ============================================
-
-	function broadcastEvent(event: BroadcastEvent): void {
-		try {
-			const { target, message } = event;
-
-			if (target.channel === null) {
-				// Broadcast to all
-				broadcastAll(message);
-			} else if (target.symbol) {
-				// Broadcast to symbol subscribers
-				broadcastQuote(target.symbol, message);
-			} else {
-				// Broadcast to channel subscribers
-				broadcast(target.channel, message);
-			}
-
-			eventsBroadcast++;
-			metrics.observeBroadcastLatency(1); // Simplified latency tracking
-		} catch (_error) {
-			eventsDropped++;
+function broadcastEvent(runtime: PublisherRuntime, event: BroadcastEvent): void {
+	try {
+		const { target, message } = event;
+		if (target.channel === null) {
+			broadcastAll(message);
+		} else if (target.symbol) {
+			broadcastQuote(target.symbol, message);
+		} else {
+			broadcast(target.channel, message);
 		}
+
+		runtime.eventsBroadcast++;
+		runtime.metrics.observeBroadcastLatency(1);
+	} catch {
+		runtime.eventsDropped++;
+	}
+}
+
+function flushPendingQuotes(runtime: PublisherRuntime): void {
+	if (runtime.pendingQuotes.length === 0) {
+		return;
 	}
 
-	// ============================================
-	// Quote Batching
-	// ============================================
+	const quotes = runtime.pendingQuotes.splice(0, runtime.pendingQuotes.length);
+	const events = batchQuoteEvents(quotes);
+	for (const event of events) {
+		broadcastEvent(runtime, event);
+	}
+	runtime.metrics.observeQuoteBatchSize(quotes.length);
+}
 
-	function startQuoteBatching(): void {
-		quoteBatchInterval = setInterval(() => {
-			if (pendingQuotes.length === 0) {
-				return;
-			}
+function startQuoteBatching(runtime: PublisherRuntime): void {
+	runtime.quoteBatchInterval = setInterval(() => {
+		flushPendingQuotes(runtime);
+	}, QUOTE_BATCH_INTERVAL_MS);
+}
 
-			// Get and clear pending quotes
-			const quotes = pendingQuotes.splice(0, pendingQuotes.length);
-
-			// Batch and broadcast
-			const broadcastEvents = batchQuoteEvents(quotes);
-			for (const event of broadcastEvents) {
-				broadcastEvent(event);
-			}
-
-			metrics.observeQuoteBatchSize(quotes.length);
-		}, QUOTE_BATCH_INTERVAL_MS);
+function stopQuoteBatching(runtime: PublisherRuntime): void {
+	if (!runtime.quoteBatchInterval) {
+		return;
 	}
 
-	function stopQuoteBatching(): void {
-		if (quoteBatchInterval) {
-			clearInterval(quoteBatchInterval);
-			quoteBatchInterval = null;
-		}
+	clearInterval(runtime.quoteBatchInterval);
+	runtime.quoteBatchInterval = null;
+}
+
+function normalizeHealthSourceState(status: SourceState["status"]): SourceState["status"] {
+	return status === "connecting" ? "disconnected" : status;
+}
+
+function getOverallHealth(
+	sourceStates: Record<EventSource, SourceState>,
+): "healthy" | "degraded" | "unhealthy" {
+	const states = Object.values(sourceStates);
+	const connected = states.filter((state) => state.status === "connected").length;
+	const errors = states.filter((state) => state.status === "error").length;
+	if (errors >= 2) {
+		return "unhealthy";
+	}
+	if (connected < 2) {
+		return "degraded";
+	}
+	return "healthy";
+}
+
+function createHealthCheckEvent(runtime: PublisherRuntime): HealthCheckEvent {
+	return {
+		status: getOverallHealth(runtime.sourceStates),
+		version: "0.1.0",
+		uptime: process.uptime(),
+		connections: runtime.metrics.getActiveConnections(),
+		sources: {
+			redis: normalizeHealthSourceState(runtime.sourceStates.redis.status),
+			grpc: normalizeHealthSourceState(runtime.sourceStates.grpc.status),
+			database: normalizeHealthSourceState(runtime.sourceStates.database.status),
+			internal: normalizeHealthSourceState(runtime.sourceStates.internal.status),
+		},
+		timestamp: new Date().toISOString(),
+	};
+}
+
+function startHealthChecks(runtime: PublisherRuntime): void {
+	runtime.healthCheckInterval = setInterval(() => {
+		const healthEvent = createHealthCheckEvent(runtime);
+		broadcastEvent(runtime, mapHealthCheckEvent(healthEvent));
+	}, HEALTH_CHECK_INTERVAL_MS);
+}
+
+function stopHealthChecks(runtime: PublisherRuntime): void {
+	if (!runtime.healthCheckInterval) {
+		return;
 	}
 
-	// ============================================
-	// Health Checks
-	// ============================================
+	clearInterval(runtime.healthCheckInterval);
+	runtime.healthCheckInterval = null;
+}
 
-	function startHealthChecks(): void {
-		healthCheckInterval = setInterval(() => {
-			const healthEvent: HealthCheckEvent = {
-				status: getOverallHealth(),
-				version: "0.1.0",
-				uptime: process.uptime(),
-				connections: metrics.getActiveConnections(),
-				sources: {
-					redis:
-						sourceStates.redis.status === "connecting" ? "disconnected" : sourceStates.redis.status,
-					grpc:
-						sourceStates.grpc.status === "connecting" ? "disconnected" : sourceStates.grpc.status,
-					database:
-						sourceStates.database.status === "connecting"
-							? "disconnected"
-							: sourceStates.database.status,
-					internal:
-						sourceStates.internal.status === "connecting"
-							? "disconnected"
-							: sourceStates.internal.status,
-				},
-				timestamp: new Date().toISOString(),
-			};
+function recordSourceEvent(runtime: PublisherRuntime, source: EventSource): void {
+	runtime.eventsReceived++;
+	updateSourceState(runtime, source, { lastEvent: new Date() });
+}
 
-			const event = mapHealthCheckEvent(healthEvent);
-			broadcastEvent(event);
-		}, HEALTH_CHECK_INTERVAL_MS);
+function handleCycleEvent(runtime: PublisherRuntime, event: MastraCycleEvent): void {
+	recordSourceEvent(runtime, "redis");
+	broadcastEvent(runtime, mapCycleEvent(event));
+}
+
+function handleAgentEvent(runtime: PublisherRuntime, event: MastraAgentEvent): void {
+	recordSourceEvent(runtime, "redis");
+	broadcastEvent(runtime, mapAgentEvent(event));
+}
+
+function handleQuoteEvent(runtime: PublisherRuntime, event: QuoteStreamEvent): void {
+	recordSourceEvent(runtime, "grpc");
+	runtime.pendingQuotes.push(event);
+}
+
+function handleOrderEvent(runtime: PublisherRuntime, event: OrderUpdateEvent): void {
+	recordSourceEvent(runtime, "grpc");
+	broadcastEvent(runtime, mapOrderEvent(event));
+}
+
+function handleDecisionEvent(runtime: PublisherRuntime, event: DecisionInsertEvent): void {
+	recordSourceEvent(runtime, "database");
+	broadcastEvent(runtime, mapDecisionEvent(event));
+}
+
+function handleAlertEvent(runtime: PublisherRuntime, event: SystemAlertEvent): void {
+	recordSourceEvent(runtime, "internal");
+	broadcastEvent(runtime, mapAlertEvent(event));
+}
+
+function setupInternalEvents(runtime: PublisherRuntime): void {
+	runtime.emitter.on("cycle", (event: MastraCycleEvent) => handleCycleEvent(runtime, event));
+	runtime.emitter.on("agent", (event: MastraAgentEvent) => handleAgentEvent(runtime, event));
+	runtime.emitter.on("quote", (event: QuoteStreamEvent) => handleQuoteEvent(runtime, event));
+	runtime.emitter.on("order", (event: OrderUpdateEvent) => handleOrderEvent(runtime, event));
+	runtime.emitter.on("decision", (event: DecisionInsertEvent) =>
+		handleDecisionEvent(runtime, event),
+	);
+	runtime.emitter.on("alert", (event: SystemAlertEvent) => handleAlertEvent(runtime, event));
+	setSourceConnected(runtime, "internal");
+}
+
+function teardownInternalEvents(runtime: PublisherRuntime): void {
+	runtime.emitter.removeAllListeners();
+	setSourceDisconnected(runtime, "internal");
+}
+
+function startPublisher(runtime: PublisherRuntime, config: EventPublisherConfig): void {
+	if (runtime.running) {
+		return;
 	}
 
-	function stopHealthChecks(): void {
-		if (healthCheckInterval) {
-			clearInterval(healthCheckInterval);
-			healthCheckInterval = null;
-		}
+	runtime.running = true;
+	if (config.enableInternalEvents !== false) {
+		setupInternalEvents(runtime);
+	}
+	startQuoteBatching(runtime);
+	startHealthChecks(runtime);
+}
+
+function stopPublisher(runtime: PublisherRuntime): void {
+	if (!runtime.running) {
+		return;
 	}
 
-	function getOverallHealth(): "healthy" | "degraded" | "unhealthy" {
-		const states = Object.values(sourceStates);
-		const connected = states.filter((s) => s.status === "connected").length;
-		const errors = states.filter((s) => s.status === "error").length;
+	runtime.running = false;
+	stopQuoteBatching(runtime);
+	stopHealthChecks(runtime);
+	teardownInternalEvents(runtime);
+	flushPendingQuotes(runtime);
+}
 
-		if (errors >= 2) {
-			return "unhealthy";
-		}
-		if (connected < 2) {
-			return "degraded";
-		}
-		return "healthy";
-	}
+function getPublisherStats(runtime: PublisherRuntime): PublisherStats {
+	return {
+		eventsReceived: runtime.eventsReceived,
+		eventsBroadcast: runtime.eventsBroadcast,
+		eventsDropped: runtime.eventsDropped,
+		sourceStates: { ...runtime.sourceStates },
+	};
+}
 
-	// ============================================
-	// Event Handlers
-	// ============================================
-
-	function handleCycleEvent(event: MastraCycleEvent): void {
-		eventsReceived++;
-		updateSourceState("redis", { lastEvent: new Date() });
-		const broadcastEvent_ = mapCycleEvent(event);
-		broadcastEvent(broadcastEvent_);
-	}
-
-	function handleAgentEvent(event: MastraAgentEvent): void {
-		eventsReceived++;
-		updateSourceState("redis", { lastEvent: new Date() });
-		const broadcastEvent_ = mapAgentEvent(event);
-		broadcastEvent(broadcastEvent_);
-	}
-
-	function handleQuoteEvent(event: QuoteStreamEvent): void {
-		eventsReceived++;
-		updateSourceState("grpc", { lastEvent: new Date() });
-		// Queue for batching instead of immediate broadcast
-		pendingQuotes.push(event);
-	}
-
-	function handleOrderEvent(event: OrderUpdateEvent): void {
-		eventsReceived++;
-		updateSourceState("grpc", { lastEvent: new Date() });
-		const broadcastEvent_ = mapOrderEvent(event);
-		broadcastEvent(broadcastEvent_);
-	}
-
-	function handleDecisionEvent(event: DecisionInsertEvent): void {
-		eventsReceived++;
-		updateSourceState("database", { lastEvent: new Date() });
-		const broadcastEvent_ = mapDecisionEvent(event);
-		broadcastEvent(broadcastEvent_);
-	}
-
-	function handleAlertEvent(event: SystemAlertEvent): void {
-		eventsReceived++;
-		updateSourceState("internal", { lastEvent: new Date() });
-		const broadcastEvent_ = mapAlertEvent(event);
-		broadcastEvent(broadcastEvent_);
-	}
-
-	// ============================================
-	// Internal Event Emitter
-	// ============================================
-
-	function setupInternalEvents(): void {
-		emitter.on("cycle", handleCycleEvent);
-		emitter.on("agent", handleAgentEvent);
-		emitter.on("quote", handleQuoteEvent);
-		emitter.on("order", handleOrderEvent);
-		emitter.on("decision", handleDecisionEvent);
-		emitter.on("alert", handleAlertEvent);
-
-		setSourceConnected("internal");
-	}
-
-	function teardownInternalEvents(): void {
-		emitter.removeAllListeners();
-		setSourceDisconnected("internal");
-	}
-
-	// ============================================
-	// Public API
-	// ============================================
-
+function createPublisherApi(
+	runtime: PublisherRuntime,
+	config: EventPublisherConfig,
+): EventPublisher {
 	return {
 		async start(): Promise<void> {
-			if (running) {
-				return;
-			}
-			running = true;
-
-			// Setup internal event handling
-			if (config.enableInternalEvents !== false) {
-				setupInternalEvents();
-			}
-
-			// Start quote batching
-			startQuoteBatching();
-
-			// Start health checks
-			startHealthChecks();
+			startPublisher(runtime, config);
 		},
 
 		async stop(): Promise<void> {
-			if (!running) {
-				return;
-			}
-			running = false;
-
-			// Stop intervals
-			stopQuoteBatching();
-			stopHealthChecks();
-
-			// Teardown internal events
-			teardownInternalEvents();
-
-			// Flush pending quotes
-			if (pendingQuotes.length > 0) {
-				const broadcastEvents = batchQuoteEvents(pendingQuotes);
-				for (const event of broadcastEvents) {
-					broadcastEvent(event);
-				}
-				pendingQuotes.length = 0;
-			}
+			stopPublisher(runtime);
 		},
 
 		getStats(): PublisherStats {
-			return {
-				eventsReceived,
-				eventsBroadcast,
-				eventsDropped,
-				sourceStates: { ...sourceStates },
-			};
+			return getPublisherStats(runtime);
 		},
 
 		getSourceState(source: EventSource): SourceState {
-			return { ...sourceStates[source] };
+			return { ...runtime.sourceStates[source] };
 		},
 
 		emit(event: MappableEvent): void {
-			if (!running) {
+			if (!runtime.running) {
 				return;
 			}
-			emitter.emit(event.type, event.data);
+			runtime.emitter.emit(event.type, event.data);
 		},
 
 		isRunning(): boolean {
-			return running;
+			return runtime.running;
 		},
 	};
+}
+
+/**
+ * Create event publisher.
+ */
+export function createEventPublisher(config: EventPublisherConfig = {}): EventPublisher {
+	createWebSocketLogger({ level: "info" });
+	const runtime = createPublisherRuntime();
+	return createPublisherApi(runtime, config);
 }
 
 // ============================================

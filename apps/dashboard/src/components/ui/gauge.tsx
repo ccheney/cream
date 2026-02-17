@@ -152,6 +152,93 @@ function getColorForValue(value: number, zones: GaugeZone[]): string {
 	return "#78716C"; // Default stone-500
 }
 
+function useGaugeGeometry(
+	value: number | null,
+	min: number,
+	max: number,
+	size: number,
+	strokeWidth: number,
+	variant: GaugeVariant,
+	zones?: GaugeZone[],
+) {
+	const activeZones = useMemo(() => zones ?? ZONE_PRESETS[variant], [zones, variant]);
+	const viewBoxSize = size;
+	const center = viewBoxSize / 2;
+	const radius = (viewBoxSize - strokeWidth * 2) / 2;
+
+	const { valueAngle, valueColor } = useMemo(() => {
+		if (value === null) {
+			return { valueAngle: START_ANGLE, valueColor: "#A8A29E" };
+		}
+		return {
+			valueAngle: valueToAngle(value, min, max),
+			valueColor: getColorForValue(value, activeZones),
+		};
+	}, [value, min, max, activeZones]);
+
+	const backgroundArc = useMemo(
+		() => describeArc(center, center, radius, START_ANGLE, END_ANGLE),
+		[center, radius],
+	);
+	const valueArc = useMemo(() => {
+		if (value === null || valueAngle <= START_ANGLE) {
+			return "";
+		}
+		return describeArc(center, center, radius, START_ANGLE, valueAngle);
+	}, [center, radius, value, valueAngle]);
+
+	return { center, viewBoxSize, valueAngle, valueColor, backgroundArc, valueArc };
+}
+
+function formatGaugeValue(value: number | null, decimals: number, unit: string): string {
+	const labelValue = value !== null ? value.toFixed(decimals) : "—";
+	return `${labelValue}${unit}`;
+}
+
+function buildGaugeAriaLabel(label: string | undefined, displayValue: string): string {
+	return label ? `${label}: ${displayValue}` : `Gauge value: ${displayValue}`;
+}
+
+function GaugeCenterValue({
+	center,
+	size,
+	displayValue,
+	unit,
+}: {
+	center: number;
+	size: number;
+	displayValue: string;
+	unit: string;
+}) {
+	return (
+		<text
+			x={center}
+			y={center + 2}
+			textAnchor="middle"
+			dominantBaseline="middle"
+			className="fill-stone-900 dark:fill-stone-100 font-mono text-sm font-semibold"
+			style={{ fontSize: size * 0.18 }}
+		>
+			{displayValue}
+			{unit && (
+				<tspan className="fill-stone-500 dark:fill-stone-400" style={{ fontSize: size * 0.12 }}>
+					{unit}
+				</tspan>
+			)}
+		</text>
+	);
+}
+
+function GaugeLabelText({ label }: { label?: string }) {
+	if (!label) {
+		return null;
+	}
+
+	return (
+		<span className="text-xs text-stone-500 dark:text-stone-400 mt-0.5 font-medium">{label}</span>
+	);
+}
+
 // ============================================
 // Component
 // ============================================
@@ -191,45 +278,18 @@ export const Gauge = memo(function Gauge({
 	className = "",
 	"data-testid": testId,
 }: GaugeProps) {
-	// Use custom zones or preset
-	const activeZones = zones ?? ZONE_PRESETS[variant];
-
-	// Calculate SVG dimensions
-	const viewBoxSize = size;
-	const center = viewBoxSize / 2;
-	const radius = (viewBoxSize - strokeWidth * 2) / 2;
-
-	// Calculate value angle and color
-	const { valueAngle, valueColor } = useMemo(() => {
-		if (value === null) {
-			return { valueAngle: START_ANGLE, valueColor: "#A8A29E" }; // stone-400
-		}
-		return {
-			valueAngle: valueToAngle(value, min, max),
-			valueColor: getColorForValue(value, activeZones),
-		};
-	}, [value, min, max, activeZones]);
-
-	// Generate arc paths
-	const backgroundArc = useMemo(
-		() => describeArc(center, center, radius, START_ANGLE, END_ANGLE),
-		[center, radius],
+	const { center, viewBoxSize, valueColor, backgroundArc, valueArc } = useGaugeGeometry(
+		value,
+		min,
+		max,
+		size,
+		strokeWidth,
+		variant,
+		zones,
 	);
 
-	const valueArc = useMemo(() => {
-		if (value === null || valueAngle <= START_ANGLE) {
-			return "";
-		}
-		return describeArc(center, center, radius, START_ANGLE, valueAngle);
-	}, [center, radius, value, valueAngle]);
-
-	// Format display value
-	const displayValue = value !== null ? value.toFixed(decimals) : "—";
-
-	// ARIA label
-	const ariaLabel = label
-		? `${label}: ${displayValue}${unit}`
-		: `Gauge value: ${displayValue}${unit}`;
+	const displayValue = formatGaugeValue(value, decimals, unit);
+	const ariaLabel = buildGaugeAriaLabel(label, displayValue);
 
 	return (
 		<div className={`inline-flex flex-col items-center ${className}`} data-testid={testId}>
@@ -237,11 +297,9 @@ export const Gauge = memo(function Gauge({
 				width={size}
 				height={size * 0.65} // Crop bottom portion
 				viewBox={`0 0 ${viewBoxSize} ${viewBoxSize * 0.75}`}
-				role="meter"
+				role="img"
 				aria-label={ariaLabel}
-				aria-valuenow={value ?? undefined}
-				aria-valuemin={min}
-				aria-valuemax={max}
+				aria-roledescription="gauge"
 			>
 				{/* Background track */}
 				<path
@@ -268,29 +326,11 @@ export const Gauge = memo(function Gauge({
 				)}
 
 				{/* Center value display */}
-				<text
-					x={center}
-					y={center + 2}
-					textAnchor="middle"
-					dominantBaseline="middle"
-					className="fill-stone-900 dark:fill-stone-100 font-mono text-sm font-semibold"
-					style={{ fontSize: size * 0.18 }}
-				>
-					{displayValue}
-					{unit && (
-						<tspan className="fill-stone-500 dark:fill-stone-400" style={{ fontSize: size * 0.12 }}>
-							{unit}
-						</tspan>
-					)}
-				</text>
+				<GaugeCenterValue center={center} size={size} displayValue={displayValue} unit={unit} />
 			</svg>
 
 			{/* Label */}
-			{label && (
-				<span className="text-xs text-stone-500 dark:text-stone-400 mt-0.5 font-medium">
-					{label}
-				</span>
-			)}
+			<GaugeLabelText label={label} />
 		</div>
 	);
 });

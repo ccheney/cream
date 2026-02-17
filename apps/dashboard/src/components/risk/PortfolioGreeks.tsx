@@ -34,69 +34,93 @@ export interface PortfolioGreeksProps {
 	className?: string;
 }
 
-export const PortfolioGreeks = memo(function PortfolioGreeks({
-	deltaLimit = 500000,
+interface CompactCardConfig {
+	label: string;
+	value: string;
+	color: string;
+}
+
+function formatTimestamp(date: Date): string {
+	return date.toLocaleTimeString("en-US", {
+		hour: "2-digit",
+		minute: "2-digit",
+		second: "2-digit",
+	});
+}
+
+function formatAge(date: Date): string {
+	const ms = Date.now() - date.getTime();
+	return ms < 1000 ? `${ms}ms ago` : `${(ms / 1000).toFixed(1)}s ago`;
+}
+
+function formatGreekValue(value: number, type: "currency" | "number") {
+	const sign = value >= 0 ? "+" : "";
+	if (type === "currency") {
+		return `${sign}$${Math.abs(value).toLocaleString("en-US", { maximumFractionDigits: 0 })}`;
+	}
+	return `${sign}${value.toFixed(0)}`;
+}
+
+function PortfolioGreeksLoading({ className = "" }: { className?: string }) {
+	return (
+		<div
+			className={`bg-white dark:bg-night-800 rounded-lg border border-cream-200 dark:border-night-700 p-6 ${className}`}
+		>
+			<div className="flex items-center justify-center h-48">
+				<Spinner size="lg" />
+			</div>
+		</div>
+	);
+}
+
+function PortfolioGreeksEmpty({ className = "" }: { className?: string }) {
+	return (
+		<div
+			className={`bg-white dark:bg-night-800 rounded-lg border border-cream-200 dark:border-night-700 p-6 ${className}`}
+		>
+			<div className="text-center text-stone-500 dark:text-night-300 py-8">
+				No options positions to calculate Greeks
+			</div>
+		</div>
+	);
+}
+
+const CompactGreeksItem = memo(function CompactGreeksItem({
+	label,
+	value,
+	color,
+}: CompactCardConfig) {
+	return (
+		<div className="flex items-center gap-1.5">
+			<span className="text-xs text-stone-500 dark:text-night-300 font-medium">{label}</span>
+			<span className={`text-sm font-mono ${color}`}>{value}</span>
+		</div>
+	);
+});
+
+function PortfolioGreeksFull({
+	data,
+	isStreaming,
+	deltaLimit,
 	gammaLimit,
 	thetaLimit,
 	vegaLimit,
-	showGauge = true,
-	showLimits = false,
-	variant = "full",
-	className = "",
-}: PortfolioGreeksProps) {
-	const { data, isLoading, isStreaming, refresh } = useAggregateGreeks({
-		throttleMs: 100,
-		enabled: true,
-	});
-
-	const formatTimestamp = (date: Date) => {
-		return date.toLocaleTimeString("en-US", {
-			hour: "2-digit",
-			minute: "2-digit",
-			second: "2-digit",
-		});
-	};
-
-	const getTimeSinceUpdate = (date: Date) => {
-		const ms = Date.now() - date.getTime();
-		if (ms < 1000) {
-			return `${ms}ms ago`;
-		}
-		return `${(ms / 1000).toFixed(1)}s ago`;
-	};
-
-	if (isLoading) {
-		return (
-			<div
-				className={`bg-white dark:bg-night-800 rounded-lg border border-cream-200 dark:border-night-700 p-6 ${className}`}
-			>
-				<div className="flex items-center justify-center h-48">
-					<Spinner size="lg" />
-				</div>
-			</div>
-		);
-	}
-
-	if (!data) {
-		return (
-			<div
-				className={`bg-white dark:bg-night-800 rounded-lg border border-cream-200 dark:border-night-700 p-6 ${className}`}
-			>
-				<div className="text-center text-stone-500 dark:text-night-300 py-8">
-					No options positions to calculate Greeks
-				</div>
-			</div>
-		);
-	}
-
-	if (variant === "compact") {
-		return <CompactGreeks data={data} isStreaming={isStreaming} className={className} />;
-	}
-
+	showGauge,
+	showLimits,
+	refresh,
+}: {
+	data: AggregateGreeksData;
+	isStreaming: boolean;
+	deltaLimit: number;
+	gammaLimit?: number;
+	thetaLimit?: number;
+	vegaLimit?: number;
+	showGauge: boolean;
+	showLimits: boolean;
+	refresh: () => void;
+}) {
 	return (
-		<div
-			className={`bg-white dark:bg-night-800 rounded-lg border border-cream-200 dark:border-night-700 ${className}`}
-		>
+		<div className="bg-white dark:bg-night-800 rounded-lg border border-cream-200 dark:border-night-700">
 			<div className="flex items-center justify-between px-4 py-3 border-b border-cream-200 dark:border-night-700">
 				<div className="flex items-center gap-3">
 					<h2 className="text-lg font-medium text-stone-900 dark:text-night-50">
@@ -109,9 +133,10 @@ export const PortfolioGreeks = memo(function PortfolioGreeks({
 						</div>
 					)}
 				</div>
+
 				<div className="flex items-center gap-3">
 					<span className="text-xs text-stone-400 dark:text-night-400">
-						{formatTimestamp(data.lastUpdated)} ({getTimeSinceUpdate(data.lastUpdated)})
+						{formatTimestamp(data.lastUpdated)} ({formatAge(data.lastUpdated)})
 					</span>
 					<button
 						type="button"
@@ -163,27 +188,17 @@ export const PortfolioGreeks = memo(function PortfolioGreeks({
 			</div>
 		</div>
 	);
-});
-
-interface CompactGreeksProps {
-	data: AggregateGreeksData;
-	isStreaming: boolean;
-	className?: string;
 }
 
-const CompactGreeks = memo(function CompactGreeks({
+const PortfolioGreeksCompact = memo(function PortfolioGreeksCompact({
 	data,
 	isStreaming,
 	className = "",
-}: CompactGreeksProps) {
-	const formatValue = (value: number, type: "currency" | "number") => {
-		const sign = value >= 0 ? "+" : "";
-		if (type === "currency") {
-			return `${sign}$${Math.abs(value).toLocaleString("en-US", { maximumFractionDigits: 0 })}`;
-		}
-		return `${sign}${value.toFixed(0)}`;
-	};
-
+}: {
+	data: AggregateGreeksData;
+	isStreaming: boolean;
+	className?: string;
+}) {
 	return (
 		<div
 			className={`flex items-center gap-6 px-4 py-3 bg-cream-50 dark:bg-night-700 rounded-lg ${className}`}
@@ -195,44 +210,115 @@ const CompactGreeks = memo(function CompactGreeks({
 				</div>
 			)}
 
-			<div className="flex items-center gap-1.5">
-				<span className="text-xs text-stone-500 dark:text-night-300 font-medium">Δ</span>
-				<span
-					className={`text-sm font-mono ${
-						data.deltaNotional >= 0
-							? "text-green-600 dark:text-green-400"
-							: "text-red-600 dark:text-red-400"
-					}`}
-				>
-					{formatValue(data.deltaNotional, "currency")}
-				</span>
-			</div>
-
-			<div className="flex items-center gap-1.5">
-				<span className="text-xs text-stone-500 dark:text-night-300 font-medium">Γ</span>
-				<span className="text-sm font-mono text-stone-700 dark:text-night-100">
-					{formatValue(data.gammaTotal, "number")}
-				</span>
-			</div>
-
-			<div className="flex items-center gap-1.5">
-				<span className="text-xs text-stone-500 dark:text-night-300 font-medium">Θ</span>
-				<span
-					className={`text-sm font-mono ${
-						data.thetaDaily <= 0 ? "text-red-500" : "text-green-500"
-					}`}
-				>
-					${Math.abs(data.thetaDaily).toFixed(0)}/day
-				</span>
-			</div>
-
-			<div className="flex items-center gap-1.5">
-				<span className="text-xs text-stone-500 dark:text-night-300 font-medium">V</span>
-				<span className="text-sm font-mono text-stone-700 dark:text-night-100">
-					{formatValue(data.vegaTotal, "currency")}
-				</span>
-			</div>
+			<CompactGreeksItem
+				label="Δ"
+				value={formatGreekValue(data.deltaNotional, "currency")}
+				color={
+					data.deltaNotional >= 0
+						? "text-green-600 dark:text-green-400"
+						: "text-red-600 dark:text-red-400"
+				}
+			/>
+			<CompactGreeksItem
+				label="Γ"
+				value={formatGreekValue(data.gammaTotal, "number")}
+				color="text-stone-700 dark:text-night-100"
+			/>
+			<CompactGreeksItem
+				label="Θ"
+				value={`$${Math.abs(data.thetaDaily).toFixed(0)}/day`}
+				color={data.thetaDaily <= 0 ? "text-red-500" : "text-green-500"}
+			/>
+			<CompactGreeksItem
+				label="V"
+				value={formatGreekValue(data.vegaTotal, "currency")}
+				color="text-stone-700 dark:text-night-100"
+			/>
 		</div>
+	);
+});
+
+function PortfolioGreeksContent({
+	variant,
+	data,
+	isStreaming,
+	deltaLimit,
+	gammaLimit,
+	thetaLimit,
+	vegaLimit,
+	showGauge,
+	showLimits,
+	className,
+	refresh,
+}: {
+	variant: "full" | "compact";
+	data: AggregateGreeksData;
+	isStreaming: boolean;
+	deltaLimit: number;
+	gammaLimit?: number;
+	thetaLimit?: number;
+	vegaLimit?: number;
+	showGauge: boolean;
+	showLimits: boolean;
+	className?: string;
+	refresh: () => void;
+}) {
+	if (variant === "compact") {
+		return <PortfolioGreeksCompact data={data} isStreaming={isStreaming} className={className} />;
+	}
+
+	return (
+		<PortfolioGreeksFull
+			data={data}
+			isStreaming={isStreaming}
+			deltaLimit={deltaLimit}
+			gammaLimit={gammaLimit}
+			thetaLimit={thetaLimit}
+			vegaLimit={vegaLimit}
+			showGauge={showGauge}
+			showLimits={showLimits}
+			refresh={refresh}
+		/>
+	);
+}
+
+export const PortfolioGreeks = memo(function PortfolioGreeks({
+	deltaLimit = 500000,
+	gammaLimit,
+	thetaLimit,
+	vegaLimit,
+	showGauge = true,
+	showLimits = false,
+	variant = "full",
+	className = "",
+}: PortfolioGreeksProps) {
+	const { data, isLoading, isStreaming, refresh } = useAggregateGreeks({
+		throttleMs: 100,
+		enabled: true,
+	});
+
+	if (isLoading) {
+		return <PortfolioGreeksLoading className={className} />;
+	}
+
+	if (!data) {
+		return <PortfolioGreeksEmpty className={className} />;
+	}
+
+	return (
+		<PortfolioGreeksContent
+			variant={variant}
+			data={data}
+			isStreaming={isStreaming}
+			deltaLimit={deltaLimit}
+			gammaLimit={gammaLimit}
+			thetaLimit={thetaLimit}
+			vegaLimit={vegaLimit}
+			showGauge={showGauge}
+			showLimits={showLimits}
+			className={className}
+			refresh={refresh}
+		/>
 	);
 });
 

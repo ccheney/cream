@@ -12,7 +12,6 @@ import {
 	EXPIRATION_CHECKPOINT_TIMES,
 	ExpirationAction,
 	ExpirationCheckpoint,
-	ExpirationEvaluationSchema,
 	ExpirationPolicyConfig,
 	ExpirationReason,
 	type ExpiringPosition,
@@ -431,92 +430,5 @@ describe("ExpiringPositionSchema", () => {
 
 		const result = ExpiringPositionSchema.safeParse(position);
 		expect(result.success).toBe(false);
-	});
-});
-
-describe("ExpirationEvaluationSchema", () => {
-	it("should validate a complete evaluation", () => {
-		const position = {
-			positionId: "pos-123",
-			osiSymbol: "AAPL  260117C00150000",
-			underlyingSymbol: "AAPL",
-			expirationDate: "2026-01-17",
-			strike: 150,
-			right: "CALL" as const,
-			quantity: -1,
-			underlyingPrice: 150.25,
-			dte: 0.5,
-			positionType: "SHORT_UNCOVERED" as const,
-			moneyness: "ATM" as const,
-			distanceFromStrike: 0.25,
-			isPinRisk: true,
-			isExpirationDay: true,
-		};
-
-		const evaluation = {
-			position,
-			action: "CLOSE",
-			reason: "PIN_RISK",
-			priority: 9,
-			explanation: "Short CALL within $0.50 of strike - pin risk at expiration",
-			deadline: "2026-01-17T15:00:00.000Z",
-			isForced: true,
-		};
-
-		const result = ExpirationEvaluationSchema.safeParse(evaluation);
-		expect(result.success).toBe(true);
-	});
-
-	it("should validate priority range", () => {
-		const position = {
-			positionId: "pos-123",
-			osiSymbol: "AAPL  260117C00150000",
-			underlyingSymbol: "AAPL",
-			expirationDate: "2026-01-17",
-			strike: 150,
-			right: "CALL" as const,
-			quantity: 1,
-			underlyingPrice: 155,
-			dte: 5,
-			positionType: "LONG_OPTION" as const,
-			moneyness: "ITM" as const,
-			distanceFromStrike: 5,
-			isPinRisk: false,
-			isExpirationDay: false,
-		};
-
-		// Priority must be 1-10
-		expect(
-			ExpirationEvaluationSchema.safeParse({
-				position,
-				action: "CLOSE",
-				reason: "MINIMUM_DTE",
-				priority: 0,
-				explanation: "test",
-				isForced: false,
-			}).success,
-		).toBe(false);
-
-		expect(
-			ExpirationEvaluationSchema.safeParse({
-				position,
-				action: "CLOSE",
-				reason: "MINIMUM_DTE",
-				priority: 11,
-				explanation: "test",
-				isForced: false,
-			}).success,
-		).toBe(false);
-
-		expect(
-			ExpirationEvaluationSchema.safeParse({
-				position,
-				action: "CLOSE",
-				reason: "MINIMUM_DTE",
-				priority: 5,
-				explanation: "test",
-				isForced: false,
-			}).success,
-		).toBe(true);
 	});
 });

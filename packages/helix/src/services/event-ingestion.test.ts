@@ -50,36 +50,16 @@ function createMockExtractedEvent(overrides: Partial<ExtractedEvent> = {}): Extr
 // ============================================
 
 describe("mapEventType", () => {
-	test("maps earnings to EARNINGS", () => {
+	test("maps known event types", () => {
 		expect(mapEventType("news", "earnings")).toBe("EARNINGS");
-	});
-
-	test("maps guidance to EARNINGS", () => {
 		expect(mapEventType("news", "guidance")).toBe("EARNINGS");
-	});
-
-	test("maps dividend to EARNINGS", () => {
 		expect(mapEventType("news", "dividend")).toBe("EARNINGS");
-	});
-
-	test("maps macro_release to MACRO", () => {
 		expect(mapEventType("news", "macro_release")).toBe("MACRO");
-	});
-
-	test("maps analyst_rating to NEWS", () => {
 		expect(mapEventType("news", "analyst_rating")).toBe("NEWS");
-	});
-
-	test("maps merger_acquisition to NEWS", () => {
 		expect(mapEventType("news", "merger_acquisition")).toBe("NEWS");
-	});
-
-	test("maps product_launch to NEWS", () => {
 		expect(mapEventType("news", "product_launch")).toBe("NEWS");
-	});
-
-	test("maps regulatory to NEWS", () => {
 		expect(mapEventType("news", "regulatory")).toBe("NEWS");
+		expect(mapEventType("news", "other")).toBe("NEWS");
 	});
 
 	test("maps unknown event type to NEWS", () => {
@@ -90,41 +70,21 @@ describe("mapEventType", () => {
 		expect(mapEventType("macro", "any_type")).toBe("MACRO");
 		expect(mapEventType("macro", "earnings")).toBe("MACRO");
 	});
-
-	test("maps other to NEWS", () => {
-		expect(mapEventType("news", "other")).toBe("NEWS");
-	});
 });
 
 // ============================================
 // Text Summary Building Tests
 // ============================================
 
-describe("buildTextSummary", () => {
-	test("includes summary as first part", () => {
-		const event = createMockExtractedEvent();
-		const summary = buildTextSummary(event);
+describe("buildTextSummary content", () => {
+	test("includes summary, key insights, sentiment, and data", () => {
+		const summary = buildTextSummary(createMockExtractedEvent());
 		expect(summary).toContain("Apple reports strong Q4 earnings beating analyst expectations");
-	});
-
-	test("includes key insights when present", () => {
-		const event = createMockExtractedEvent();
-		const summary = buildTextSummary(event);
 		expect(summary).toContain("Key insights:");
 		expect(summary).toContain("Revenue up 15% YoY");
 		expect(summary).toContain("Services segment growth accelerates");
-	});
-
-	test("includes sentiment context", () => {
-		const event = createMockExtractedEvent();
-		const summary = buildTextSummary(event);
 		expect(summary).toContain("Sentiment: bullish");
 		expect(summary).toContain("confidence: 0.85");
-	});
-
-	test("includes data points when present", () => {
-		const event = createMockExtractedEvent();
-		const summary = buildTextSummary(event);
 		expect(summary).toContain("Data:");
 		expect(summary).toContain("EPS: 2.1 USD");
 	});
@@ -149,7 +109,9 @@ describe("buildTextSummary", () => {
 		expect(summary).not.toContain("Net Income:");
 		expect(summary).not.toContain("Free Cash Flow:");
 	});
+});
 
+describe("buildTextSummary optional fields", () => {
 	test("handles empty key insights", () => {
 		const event = createMockExtractedEvent({
 			extraction: {
@@ -157,8 +119,7 @@ describe("buildTextSummary", () => {
 				keyInsights: [],
 			},
 		});
-		const summary = buildTextSummary(event);
-		expect(summary).not.toContain("Key insights:");
+		expect(buildTextSummary(event)).not.toContain("Key insights:");
 	});
 
 	test("handles empty data points", () => {
@@ -168,8 +129,7 @@ describe("buildTextSummary", () => {
 				dataPoints: [],
 			},
 		});
-		const summary = buildTextSummary(event);
-		expect(summary).not.toContain("Data:");
+		expect(buildTextSummary(event)).not.toContain("Data:");
 	});
 });
 
@@ -179,26 +139,22 @@ describe("buildTextSummary", () => {
 
 describe("toExternalEvent", () => {
 	test("converts eventId to event_id", () => {
-		const event = createMockExtractedEvent();
-		const external = toExternalEvent(event);
+		const external = toExternalEvent(createMockExtractedEvent());
 		expect(external.event_id).toBe("test-event-123");
 	});
 
 	test("maps event type correctly", () => {
-		const event = createMockExtractedEvent({ eventType: "earnings" });
-		const external = toExternalEvent(event);
+		const external = toExternalEvent(createMockExtractedEvent({ eventType: "earnings" }));
 		expect(external.event_type).toBe("EARNINGS");
 	});
 
 	test("converts eventTime to ISO string", () => {
-		const event = createMockExtractedEvent();
-		const external = toExternalEvent(event);
+		const external = toExternalEvent(createMockExtractedEvent());
 		expect(external.event_time).toBe("2025-01-15T10:00:00.000Z");
 	});
 
 	test("serializes payload as JSON", () => {
-		const event = createMockExtractedEvent();
-		const external = toExternalEvent(event);
+		const external = toExternalEvent(createMockExtractedEvent());
 		const payload = JSON.parse(external.payload);
 		expect(payload.sourceType).toBe("news");
 		expect(payload.eventType).toBe("earnings");
@@ -207,14 +163,14 @@ describe("toExternalEvent", () => {
 	});
 
 	test("builds text_summary from extraction", () => {
-		const event = createMockExtractedEvent();
-		const external = toExternalEvent(event);
+		const external = toExternalEvent(createMockExtractedEvent());
 		expect(external.text_summary).toContain("Apple reports strong Q4 earnings");
 	});
 
 	test("serializes relatedInstrumentIds as JSON", () => {
-		const event = createMockExtractedEvent({ relatedInstrumentIds: ["AAPL", "MSFT"] });
-		const external = toExternalEvent(event);
+		const external = toExternalEvent(
+			createMockExtractedEvent({ relatedInstrumentIds: ["AAPL", "MSFT"] }),
+		);
 		expect(external.related_instrument_ids).toBe(JSON.stringify(["AAPL", "MSFT"]));
 	});
 });
@@ -223,74 +179,63 @@ describe("toExternalEvent", () => {
 // Macro Factor Identification Tests
 // ============================================
 
-describe("identifyMacroFactors", () => {
+describe("identifyMacroFactors non-macro events", () => {
 	test("returns empty array for non-macro events", () => {
 		const event = createMockExtractedEvent({ eventType: "earnings" });
-		const factors = identifyMacroFactors(event);
-		expect(factors).toEqual([]);
+		expect(identifyMacroFactors(event)).toEqual([]);
 	});
+});
 
-	test("identifies GDP from data point metrics", () => {
-		const event = createMockExtractedEvent({
+describe("identifyMacroFactors from data point metrics", () => {
+	test("identifies GDP and CPI", () => {
+		const gdpEvent = createMockExtractedEvent({
 			eventType: "macro_release",
 			extraction: {
 				...createMockExtractedEvent().extraction,
 				dataPoints: [{ metric: "GDP Growth", value: 2.5, unit: "%" }],
 			},
 		});
-		const factors = identifyMacroFactors(event);
-		expect(factors).toContain("gdp");
-	});
-
-	test("identifies CPI from data point metrics", () => {
-		const event = createMockExtractedEvent({
+		const cpiEvent = createMockExtractedEvent({
 			eventType: "macro_release",
 			extraction: {
 				...createMockExtractedEvent().extraction,
 				dataPoints: [{ metric: "CPI YoY", value: 3.2, unit: "%" }],
 			},
 		});
-		const factors = identifyMacroFactors(event);
-		expect(factors).toContain("cpi");
+		expect(identifyMacroFactors(gdpEvent)).toContain("gdp");
+		expect(identifyMacroFactors(cpiEvent)).toContain("cpi");
 	});
 
-	test("identifies unemployment from data point metrics", () => {
-		const event = createMockExtractedEvent({
+	test("identifies unemployment and PMI variants", () => {
+		const unemploymentEvent = createMockExtractedEvent({
 			eventType: "macro_release",
 			extraction: {
 				...createMockExtractedEvent().extraction,
 				dataPoints: [{ metric: "Unemployment Rate", value: 3.7, unit: "%" }],
 			},
 		});
-		const factors = identifyMacroFactors(event);
-		expect(factors).toContain("unemployment");
-	});
-
-	test("identifies nonfarm payrolls as unemployment", () => {
-		const event = createMockExtractedEvent({
+		const nonfarmEvent = createMockExtractedEvent({
 			eventType: "macro_release",
 			extraction: {
 				...createMockExtractedEvent().extraction,
 				dataPoints: [{ metric: "Nonfarm Payrolls", value: 250, unit: "K" }],
 			},
 		});
-		const factors = identifyMacroFactors(event);
-		expect(factors).toContain("unemployment");
-	});
-
-	test("identifies PMI from data point metrics", () => {
-		const event = createMockExtractedEvent({
+		const pmiEvent = createMockExtractedEvent({
 			eventType: "macro_release",
 			extraction: {
 				...createMockExtractedEvent().extraction,
 				dataPoints: [{ metric: "ISM PMI Manufacturing", value: 52.3, unit: "index" }],
 			},
 		});
-		const factors = identifyMacroFactors(event);
-		expect(factors).toContain("pmi_manufacturing");
+		expect(identifyMacroFactors(unemploymentEvent)).toContain("unemployment");
+		expect(identifyMacroFactors(nonfarmEvent)).toContain("unemployment");
+		expect(identifyMacroFactors(pmiEvent)).toContain("pmi_manufacturing");
 	});
+});
 
-	test("identifies fed funds rate from summary keywords", () => {
+describe("identifyMacroFactors from summary keywords", () => {
+	test("identifies fed funds rate from summary", () => {
 		const event = createMockExtractedEvent({
 			eventType: "macro_release",
 			extraction: {
@@ -299,12 +244,11 @@ describe("identifyMacroFactors", () => {
 				dataPoints: [],
 			},
 		});
-		const factors = identifyMacroFactors(event);
-		expect(factors).toContain("fed_funds_rate");
+		expect(identifyMacroFactors(event)).toContain("fed_funds_rate");
 	});
 
-	test("identifies oil from summary keywords", () => {
-		const event = createMockExtractedEvent({
+	test("identifies oil and treasury keywords", () => {
+		const oilEvent = createMockExtractedEvent({
 			eventType: "macro_release",
 			extraction: {
 				...createMockExtractedEvent().extraction,
@@ -312,12 +256,7 @@ describe("identifyMacroFactors", () => {
 				dataPoints: [],
 			},
 		});
-		const factors = identifyMacroFactors(event);
-		expect(factors).toContain("oil_wti");
-	});
-
-	test("identifies treasury from summary keywords", () => {
-		const event = createMockExtractedEvent({
+		const treasuryEvent = createMockExtractedEvent({
 			eventType: "macro_release",
 			extraction: {
 				...createMockExtractedEvent().extraction,
@@ -325,10 +264,12 @@ describe("identifyMacroFactors", () => {
 				dataPoints: [],
 			},
 		});
-		const factors = identifyMacroFactors(event);
-		expect(factors).toContain("treasury_10y");
+		expect(identifyMacroFactors(oilEvent)).toContain("oil_wti");
+		expect(identifyMacroFactors(treasuryEvent)).toContain("treasury_10y");
 	});
+});
 
+describe("identifyMacroFactors combined behavior", () => {
 	test("identifies multiple factors from combined data", () => {
 		const event = createMockExtractedEvent({
 			eventType: "macro_release",
@@ -356,11 +297,10 @@ describe("identifyMacroFactors", () => {
 			},
 		});
 		const factors = identifyMacroFactors(event);
-		const fedRateOccurrences = factors.filter((f) => f === "fed_funds_rate").length;
-		expect(fedRateOccurrences).toBe(1);
+		expect(factors.filter((factor) => factor === "fed_funds_rate").length).toBe(1);
 	});
 
-	test("filters out invalid macro entity IDs", () => {
+	test("returns valid non-empty factor IDs", () => {
 		const event = createMockExtractedEvent({
 			eventType: "macro_release",
 			extraction: {
@@ -368,8 +308,7 @@ describe("identifyMacroFactors", () => {
 				dataPoints: [{ metric: "GDP Growth", value: 2.5, unit: "%" }],
 			},
 		});
-		const factors = identifyMacroFactors(event);
-		for (const factor of factors) {
+		for (const factor of identifyMacroFactors(event)) {
 			expect(typeof factor).toBe("string");
 			expect(factor.length).toBeGreaterThan(0);
 		}

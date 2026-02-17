@@ -109,6 +109,15 @@ const initialState: WSState = {
 	lastError: null,
 };
 
+function appendUnique(current: string[], values: string[]): string[] {
+	const additions = values.filter((value) => !current.includes(value));
+	return additions.length > 0 ? [...current, ...additions] : current;
+}
+
+function excludeValues(current: string[], values: string[]): string[] {
+	return current.filter((value) => !values.includes(value));
+}
+
 // ============================================
 // Store Implementation
 // ============================================
@@ -122,93 +131,34 @@ const initialState: WSState = {
 export const useWSStore = create<WSStore>()(
 	persist(
 		(set, get) => ({
-			// Initial state
 			...initialState,
-
-			// Actions
-			setConnected: (connected) => {
-				set({
-					connected,
-					connectionStatus: connected ? "connected" : "disconnected",
-				});
-			},
-
-			setConnectionStatus: (status) => {
-				set({
-					connectionStatus: status,
-					connected: status === "connected",
-				});
-			},
-
-			subscribe: (channels) => {
-				const current = get().subscribedChannels;
-				const newChannels = channels.filter((c) => !current.includes(c));
-				if (newChannels.length > 0) {
-					set({ subscribedChannels: [...current, ...newChannels] });
-				}
-			},
-
-			unsubscribe: (channels) => {
-				const current = get().subscribedChannels;
-				set({
-					subscribedChannels: current.filter((c) => !channels.includes(c)),
-				});
-			},
-
-			subscribeSymbols: (symbols) => {
-				const current = get().subscribedSymbols;
-				const newSymbols = symbols.filter((s) => !current.includes(s));
-				if (newSymbols.length > 0) {
-					set({ subscribedSymbols: [...current, ...newSymbols] });
-				}
-			},
-
-			unsubscribeSymbols: (symbols) => {
-				const current = get().subscribedSymbols;
-				set({
-					subscribedSymbols: current.filter((s) => !symbols.includes(s)),
-				});
-			},
-
-			setReconnectAttempts: (count) => {
-				set({ reconnectAttempts: count });
-			},
-
-			incrementReconnectAttempts: () => {
-				set((state) => ({ reconnectAttempts: state.reconnectAttempts + 1 }));
-			},
-
-			setLastError: (error) => {
-				set({ lastError: error });
-			},
-
-			onConnected: () => {
+			setConnected: (connected) =>
+				set({ connected, connectionStatus: connected ? "connected" : "disconnected" }),
+			setConnectionStatus: (status) =>
+				set({ connectionStatus: status, connected: status === "connected" }),
+			subscribe: (channels) =>
+				set({ subscribedChannels: appendUnique(get().subscribedChannels, channels) }),
+			unsubscribe: (channels) =>
+				set({ subscribedChannels: excludeValues(get().subscribedChannels, channels) }),
+			subscribeSymbols: (symbols) =>
+				set({ subscribedSymbols: appendUnique(get().subscribedSymbols, symbols) }),
+			unsubscribeSymbols: (symbols) =>
+				set({ subscribedSymbols: excludeValues(get().subscribedSymbols, symbols) }),
+			setReconnectAttempts: (count) => set({ reconnectAttempts: count }),
+			incrementReconnectAttempts: () =>
+				set((state) => ({ reconnectAttempts: state.reconnectAttempts + 1 })),
+			setLastError: (error) => set({ lastError: error }),
+			onConnected: () =>
 				set({
 					connected: true,
 					connectionStatus: "connected",
 					reconnectAttempts: 0,
 					lastConnectedAt: new Date().toISOString(),
 					lastError: null,
-				});
-			},
-
-			onDisconnected: () => {
-				set({
-					connected: false,
-					connectionStatus: "disconnected",
-				});
-			},
-
-			clearSubscriptions: () => {
-				set({
-					subscribedChannels: [],
-					subscribedSymbols: [],
-				});
-			},
-
-			reset: () => {
-				set(initialState);
-			},
+				}),
+			onDisconnected: () => set({ connected: false, connectionStatus: "disconnected" }),
+			clearSubscriptions: () => set({ subscribedChannels: [], subscribedSymbols: [] }),
+			reset: () => set(initialState),
 		}),
 		{
 			name: "cream-ws-subscriptions",

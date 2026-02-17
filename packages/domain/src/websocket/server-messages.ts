@@ -1,11 +1,3 @@
-/**
- * Server → Client WebSocket Message Schemas
- *
- * Defines messages sent from the server to the client.
- *
- * @see docs/plans/ui/06-websocket.md lines 63-138
- */
-
 import { z } from "zod/v4";
 import { DecisionPlanSchema, DecisionSchema } from "../decision.js";
 import { Channel } from "./channel.js";
@@ -26,16 +18,6 @@ import {
 	ToolResultChunkDataSchema,
 } from "./data-payloads.js";
 
-// ============================================
-// Quote Message
-// ============================================
-
-/**
- * Real-time quote update.
- *
- * @example
- * { type: "quote", data: { symbol: "AAPL", bid: 185.00, ask: 185.01, ... } }
- */
 export const QuoteMessageSchema = z.object({
 	type: z.literal("quote"),
 	data: QuoteDataSchema,
@@ -43,16 +25,6 @@ export const QuoteMessageSchema = z.object({
 
 export type QuoteMessage = z.infer<typeof QuoteMessageSchema>;
 
-// ============================================
-// Aggregate Message
-// ============================================
-
-/**
- * Real-time aggregate bar update.
- *
- * @example
- * { type: "aggregate", data: { symbol: "AAPL", open: 185.00, high: 185.50, ... } }
- */
 export const AggregateMessageSchema = z.object({
 	type: z.literal("aggregate"),
 	data: AggregateDataSchema,
@@ -60,44 +32,21 @@ export const AggregateMessageSchema = z.object({
 
 export type AggregateMessage = z.infer<typeof AggregateMessageSchema>;
 
-// ============================================
-// Options Quote Message
-// ============================================
-
-/**
- * Options quote data schema.
- */
 export const OptionsQuoteDataSchema = z.object({
-	/** OCC contract symbol */
 	contract: z.string(),
-	/** Underlying symbol */
 	underlying: z.string(),
-	/** Best bid price */
 	bid: z.number(),
-	/** Best ask price */
 	ask: z.number(),
-	/** Bid size (optional) */
 	bidSize: z.number().optional(),
-	/** Ask size (optional) */
 	askSize: z.number().optional(),
-	/** Last trade price */
 	last: z.number(),
-	/** Volume (optional) */
 	volume: z.number().optional(),
-	/** Open interest (optional) */
 	openInterest: z.number().optional(),
-	/** Timestamp */
 	timestamp: z.string(),
 });
 
 export type OptionsQuoteData = z.infer<typeof OptionsQuoteDataSchema>;
 
-/**
- * Real-time options quote update.
- *
- * @example
- * { type: "options_quote", data: { contract: "O:AAPL250117C00100000", bid: 5.00, ask: 5.10, ... } }
- */
 export const OptionsQuoteMessageSchema = z.object({
 	type: z.literal("options_quote"),
 	data: OptionsQuoteDataSchema,
@@ -105,37 +54,19 @@ export const OptionsQuoteMessageSchema = z.object({
 
 export type OptionsQuoteMessage = z.infer<typeof OptionsQuoteMessageSchema>;
 
-// ============================================
-// Options Aggregate Message
-// ============================================
-
-/**
- * Options aggregate data schema.
- */
 export const OptionsAggregateDataSchema = z.object({
-	/** OCC contract symbol */
 	contract: z.string(),
-	/** Underlying symbol */
 	underlying: z.string(),
-	/** Open price */
 	open: z.number(),
-	/** High price */
 	high: z.number(),
-	/** Low price */
 	low: z.number(),
-	/** Close price */
 	close: z.number(),
-	/** Volume */
 	volume: z.number(),
-	/** Timestamp */
 	timestamp: z.string(),
 });
 
 export type OptionsAggregateData = z.infer<typeof OptionsAggregateDataSchema>;
 
-/**
- * Options aggregate bar update.
- */
 export const OptionsAggregateMessageSchema = z.object({
 	type: z.literal("options_aggregate"),
 	data: OptionsAggregateDataSchema,
@@ -143,31 +74,16 @@ export const OptionsAggregateMessageSchema = z.object({
 
 export type OptionsAggregateMessage = z.infer<typeof OptionsAggregateMessageSchema>;
 
-// ============================================
-// Options Trade Message
-// ============================================
-
-/**
- * Options trade data schema.
- */
 export const OptionsTradeDataSchema = z.object({
-	/** OCC contract symbol */
 	contract: z.string(),
-	/** Underlying symbol */
 	underlying: z.string(),
-	/** Trade price */
 	price: z.number(),
-	/** Trade size */
 	size: z.number(),
-	/** Timestamp */
 	timestamp: z.string(),
 });
 
 export type OptionsTradeData = z.infer<typeof OptionsTradeDataSchema>;
 
-/**
- * Options trade execution.
- */
 export const OptionsTradeMessageSchema = z.object({
 	type: z.literal("options_trade"),
 	data: OptionsTradeDataSchema,
@@ -175,13 +91,6 @@ export const OptionsTradeMessageSchema = z.object({
 
 export type OptionsTradeMessage = z.infer<typeof OptionsTradeMessageSchema>;
 
-// ============================================
-// Equity Trade Message (Time & Sales)
-// ============================================
-
-/**
- * Equity trade execution data (Time & Sales).
- */
 export const TradeDataSchema = z.object({
 	ev: z.string(),
 	sym: z.string(),
@@ -195,12 +104,6 @@ export const TradeDataSchema = z.object({
 
 export type TradeData = z.infer<typeof TradeDataSchema>;
 
-/**
- * Equity trade execution (Time & Sales).
- *
- * @example
- * { type: "trade", data: { ev: "T", sym: "AAPL", p: 150.25, s: 100, x: 1, t: 123456789, i: "trade-id" } }
- */
 export const TradeMessageSchema = z.object({
 	type: z.literal("trade"),
 	data: TradeDataSchema,
@@ -208,16 +111,6 @@ export const TradeMessageSchema = z.object({
 
 export type TradeMessage = z.infer<typeof TradeMessageSchema>;
 
-// ============================================
-// Order Message
-// ============================================
-
-/**
- * Order status update.
- *
- * @example
- * { type: "order", data: { id: "uuid", symbol: "AAPL", status: "filled", ... } }
- */
 export const OrderMessageSchema = z.object({
 	type: z.literal("order"),
 	data: OrderDataSchema,
@@ -225,36 +118,14 @@ export const OrderMessageSchema = z.object({
 
 export type OrderMessage = z.infer<typeof OrderMessageSchema>;
 
-// ============================================
-// Decision Message
-// ============================================
-
-/**
- * Trading decision from agents.
- *
- * @example
- * { type: "decision", data: { instrument: { ... }, action: "BUY", ... } }
- */
 export const DecisionMessageSchema = z.object({
 	type: z.literal("decision"),
-	/** Full decision from agent network */
 	data: DecisionSchema,
-	/** Cycle ID */
 	cycleId: z.string(),
 });
 
 export type DecisionMessage = z.infer<typeof DecisionMessageSchema>;
 
-// ============================================
-// Decision Plan Message
-// ============================================
-
-/**
- * Full decision plan from a trading cycle.
- *
- * @example
- * { type: "decision_plan", data: { cycleId: "...", decisions: [...] } }
- */
 export const DecisionPlanMessageSchema = z.object({
 	type: z.literal("decision_plan"),
 	data: DecisionPlanSchema,
@@ -262,16 +133,6 @@ export const DecisionPlanMessageSchema = z.object({
 
 export type DecisionPlanMessage = z.infer<typeof DecisionPlanMessageSchema>;
 
-// ============================================
-// Agent Output Message
-// ============================================
-
-/**
- * Agent reasoning and output.
- *
- * @example
- * { type: "agent_output", data: { agentType: "trader", status: "complete", ... } }
- */
 export const AgentOutputMessageSchema = z.object({
 	type: z.literal("agent_output"),
 	data: AgentOutputDataSchema,
@@ -279,16 +140,6 @@ export const AgentOutputMessageSchema = z.object({
 
 export type AgentOutputMessage = z.infer<typeof AgentOutputMessageSchema>;
 
-// ============================================
-// Agent Streaming Messages
-// ============================================
-
-/**
- * Agent tool call event - emitted when an agent invokes a tool.
- *
- * @example
- * { type: "agent_tool_call", data: { agentType: "news", toolName: "get_quotes", ... } }
- */
 export const AgentToolCallMessageSchema = z.object({
 	type: z.literal("agent_tool_call"),
 	data: ToolCallChunkDataSchema,
@@ -296,12 +147,6 @@ export const AgentToolCallMessageSchema = z.object({
 
 export type AgentToolCallMessage = z.infer<typeof AgentToolCallMessageSchema>;
 
-/**
- * Agent tool result event - emitted when a tool execution completes.
- *
- * @example
- * { type: "agent_tool_result", data: { agentType: "news", toolName: "get_quotes", success: true, ... } }
- */
 export const AgentToolResultMessageSchema = z.object({
 	type: z.literal("agent_tool_result"),
 	data: ToolResultChunkDataSchema,
@@ -309,12 +154,6 @@ export const AgentToolResultMessageSchema = z.object({
 
 export type AgentToolResultMessage = z.infer<typeof AgentToolResultMessageSchema>;
 
-/**
- * Agent reasoning event - incremental reasoning/thought output.
- *
- * @example
- * { type: "agent_reasoning", data: { agentType: "trader", text: "Analyzing price action...", ... } }
- */
 export const AgentReasoningMessageSchema = z.object({
 	type: z.literal("agent_reasoning"),
 	data: ReasoningChunkDataSchema,
@@ -322,12 +161,6 @@ export const AgentReasoningMessageSchema = z.object({
 
 export type AgentReasoningMessage = z.infer<typeof AgentReasoningMessageSchema>;
 
-/**
- * Agent text delta event - incremental text output.
- *
- * @example
- * { type: "agent_text_delta", data: { agentType: "trader", text: "The ", ... } }
- */
 export const AgentTextDeltaMessageSchema = z.object({
 	type: z.literal("agent_text_delta"),
 	data: TextDeltaChunkDataSchema,
@@ -335,40 +168,19 @@ export const AgentTextDeltaMessageSchema = z.object({
 
 export type AgentTextDeltaMessage = z.infer<typeof AgentTextDeltaMessageSchema>;
 
-// ============================================
-// Agent Source Message
-// ============================================
-
-/**
- * Agent source data schema for grounding citations.
- */
 export const AgentSourceDataSchema = z.object({
-	/** Cycle ID */
 	cycleId: z.string(),
-	/** Agent type */
 	agentType: z.string(),
-	/** Source type: url or x (Twitter/X) */
 	sourceType: z.enum(["url", "x"]),
-	/** Full URL of the source */
 	url: z.string(),
-	/** Optional title of the source */
 	title: z.string().optional(),
-	/** Extracted domain (e.g., "yahoo.com") */
 	domain: z.string().optional(),
-	/** LogoKit URL for the source logo */
 	logoUrl: z.string().optional(),
-	/** Timestamp */
 	timestamp: z.string(),
 });
 
 export type AgentSourceData = z.infer<typeof AgentSourceDataSchema>;
 
-/**
- * Agent source event - grounding citation from web/X search.
- *
- * @example
- * { type: "agent_source", data: { agentType: "grounding", sourceType: "url", url: "...", domain: "yahoo.com", ... } }
- */
 export const AgentSourceMessageSchema = z.object({
 	type: z.literal("agent_source"),
 	data: AgentSourceDataSchema,
@@ -376,16 +188,6 @@ export const AgentSourceMessageSchema = z.object({
 
 export type AgentSourceMessage = z.infer<typeof AgentSourceMessageSchema>;
 
-// ============================================
-// Agent Status Message
-// ============================================
-
-/**
- * Agent status update - real-time status for dashboard display.
- *
- * @example
- * { type: "agent_status", data: { type: "technical", displayName: "Technical Analyst", status: "idle", ... } }
- */
 export const AgentStatusMessageSchema = z.object({
 	type: z.literal("agent_status"),
 	data: AgentStatusDataSchema,
@@ -393,16 +195,6 @@ export const AgentStatusMessageSchema = z.object({
 
 export type AgentStatusMessage = z.infer<typeof AgentStatusMessageSchema>;
 
-// ============================================
-// Cycle Progress Message
-// ============================================
-
-/**
- * Trading cycle progress update.
- *
- * @example
- * { type: "cycle_progress", data: { phase: "decide", progress: 75, ... } }
- */
 export const CycleProgressMessageSchema = z.object({
 	type: z.literal("cycle_progress"),
 	data: CycleProgressDataSchema,
@@ -410,16 +202,6 @@ export const CycleProgressMessageSchema = z.object({
 
 export type CycleProgressMessage = z.infer<typeof CycleProgressMessageSchema>;
 
-// ============================================
-// Cycle Result Message
-// ============================================
-
-/**
- * Trading cycle final result.
- *
- * @example
- * { type: "cycle_result", data: { cycleId: "...", status: "completed", ... } }
- */
 export const CycleResultMessageSchema = z.object({
 	type: z.literal("cycle_result"),
 	data: CycleResultDataSchema,
@@ -427,16 +209,6 @@ export const CycleResultMessageSchema = z.object({
 
 export type CycleResultMessage = z.infer<typeof CycleResultMessageSchema>;
 
-// ============================================
-// Alert Message
-// ============================================
-
-/**
- * System alert or notification.
- *
- * @example
- * { type: "alert", data: { severity: "warning", title: "...", ... } }
- */
 export const AlertMessageSchema = z.object({
 	type: z.literal("alert"),
 	data: AlertDataSchema,
@@ -444,16 +216,6 @@ export const AlertMessageSchema = z.object({
 
 export type AlertMessage = z.infer<typeof AlertMessageSchema>;
 
-// ============================================
-// System Status Message
-// ============================================
-
-/**
- * System health status update.
- *
- * @example
- * { type: "system_status", data: { health: "healthy", ... } }
- */
 export const SystemStatusMessageSchema = z.object({
 	type: z.literal("system_status"),
 	data: SystemStatusDataSchema,
@@ -461,16 +223,6 @@ export const SystemStatusMessageSchema = z.object({
 
 export type SystemStatusMessage = z.infer<typeof SystemStatusMessageSchema>;
 
-// ============================================
-// Portfolio Message
-// ============================================
-
-/**
- * Portfolio summary update.
- *
- * @example
- * { type: "portfolio", data: { totalValue: 100000, ... } }
- */
 export const PortfolioMessageSchema = z.object({
 	type: z.literal("portfolio"),
 	data: PortfolioDataSchema,
@@ -478,95 +230,39 @@ export const PortfolioMessageSchema = z.object({
 
 export type PortfolioMessage = z.infer<typeof PortfolioMessageSchema>;
 
-// ============================================
-// Pong Message
-// ============================================
-
-/**
- * Heartbeat pong response.
- *
- * @example
- * { type: "pong", timestamp: "2026-01-04T14:00:00Z" }
- */
 export const PongMessageSchema = z.object({
 	type: z.literal("pong"),
-	/** Server timestamp */
 	timestamp: z.string().datetime(),
 });
 
 export type PongMessage = z.infer<typeof PongMessageSchema>;
 
-// ============================================
-// Subscribed Message
-// ============================================
-
-/**
- * Confirmation of channel subscription.
- *
- * @example
- * { type: "subscribed", channels: ["quotes", "orders"] }
- */
 export const SubscribedMessageSchema = z.object({
 	type: z.literal("subscribed"),
-	/** Channels successfully subscribed to */
 	channels: z.array(Channel),
 });
 
 export type SubscribedMessage = z.infer<typeof SubscribedMessageSchema>;
 
-// ============================================
-// Unsubscribed Message
-// ============================================
-
-/**
- * Confirmation of channel unsubscription.
- *
- * @example
- * { type: "unsubscribed", channels: ["quotes"] }
- */
 export const UnsubscribedMessageSchema = z.object({
 	type: z.literal("unsubscribed"),
-	/** Channels successfully unsubscribed from */
 	channels: z.array(Channel),
 });
 
 export type UnsubscribedMessage = z.infer<typeof UnsubscribedMessageSchema>;
 
-// ============================================
-// Error Message
-// ============================================
-
-/**
- * Error response from server.
- *
- * @example
- * { type: "error", code: "INVALID_MESSAGE", message: "..." }
- */
 export const ErrorMessageSchema = z.object({
 	type: z.literal("error"),
-	/** Error code */
 	code: z.string(),
-	/** Human-readable error message */
 	message: z.string(),
-	/** Original message that caused error (optional) */
 	originalMessage: z.unknown().optional(),
 });
 
 export type ErrorMessage = z.infer<typeof ErrorMessageSchema>;
 
-// ============================================
-// Indicator Message
-// ============================================
-
-/**
- * Real-time indicator data schema.
- */
 export const IndicatorDataSchema = z.object({
-	/** Symbol */
 	symbol: z.string(),
-	/** Timestamp */
 	timestamp: z.string(),
-	/** Price-based indicators */
 	price: z.object({
 		rsi_14: z.number().nullable(),
 		atr_14: z.number().nullable(),
@@ -594,12 +290,6 @@ export const IndicatorDataSchema = z.object({
 
 export type IndicatorData = z.infer<typeof IndicatorDataSchema>;
 
-/**
- * Real-time indicator update.
- *
- * @example
- * { type: "indicator", data: { symbol: "AAPL", price: { rsi_14: 55.2, ... } } }
- */
 export const IndicatorMessageSchema = z.object({
 	type: z.literal("indicator"),
 	data: IndicatorDataSchema,
@@ -607,32 +297,15 @@ export const IndicatorMessageSchema = z.object({
 
 export type IndicatorMessage = z.infer<typeof IndicatorMessageSchema>;
 
-// ============================================
-// Account Update Message (from Alpaca trade stream)
-// ============================================
-
-/**
- * Account update data - triggered when account balance changes.
- */
 export const AccountUpdateDataSchema = z.object({
-	/** Account cash balance */
 	cash: z.number(),
-	/** Account equity */
 	equity: z.number(),
-	/** Buying power */
 	buyingPower: z.number(),
-	/** Timestamp of the update */
 	timestamp: z.string(),
 });
 
 export type AccountUpdateData = z.infer<typeof AccountUpdateDataSchema>;
 
-/**
- * Account update message - broadcasted when account balance changes.
- *
- * @example
- * { type: "account_update", data: { cash: 50000, equity: 150000, ... } }
- */
 export const AccountUpdateMessageSchema = z.object({
 	type: z.literal("account_update"),
 	data: AccountUpdateDataSchema,
@@ -640,78 +313,38 @@ export const AccountUpdateMessageSchema = z.object({
 
 export type AccountUpdateMessage = z.infer<typeof AccountUpdateMessageSchema>;
 
-// ============================================
-// Position Update Message (from Alpaca trade stream)
-// ============================================
-
-/**
- * Position update data - triggered when position changes (order fills).
- */
 export const PositionUpdateDataSchema = z.object({
-	/** Symbol */
 	symbol: z.string(),
-	/** Position side (LONG or SHORT) */
 	side: z.enum(["LONG", "SHORT"]),
-	/** New quantity */
 	qty: z.number(),
-	/** Average entry price */
 	avgEntry: z.number(),
-	/** Current market value */
 	marketValue: z.number(),
-	/** Unrealized P&L */
 	unrealizedPnl: z.number(),
-	/** Event that triggered this update */
 	event: z.enum(["fill", "partial_fill", "close"]),
-	/** Order ID that caused this update */
 	orderId: z.string(),
-	/** Timestamp of the update */
 	timestamp: z.string(),
 });
 
 export type PositionUpdateData = z.infer<typeof PositionUpdateDataSchema>;
 
-/**
- * Position update message - broadcasted when positions change.
- *
- * @example
- * { type: "position_update", data: { symbol: "AAPL", qty: 100, ... } }
- */
 export const PositionUpdateMessageSchema = z.object({
 	type: z.literal("position_update"),
 	data: PositionUpdateDataSchema,
-	/** TanStack Query cache keys to invalidate on the client */
 	invalidates: z.array(z.string()).optional(),
 });
 
 export type PositionUpdateMessage = z.infer<typeof PositionUpdateMessageSchema>;
 
-// ============================================
-// Order Update Message (from Alpaca trade stream)
-// ============================================
-
-/**
- * Order update data - triggered on order status changes.
- */
 export const OrderUpdateDataSchema = z.object({
-	/** Order ID */
 	orderId: z.string(),
-	/** Client order ID */
 	clientOrderId: z.string(),
-	/** Symbol */
 	symbol: z.string(),
-	/** Order side */
 	side: z.enum(["buy", "sell"]),
-	/** Order type */
 	orderType: z.string(),
-	/** Order status */
 	status: z.string(),
-	/** Quantity ordered */
 	qty: z.string().nullable(),
-	/** Quantity filled */
 	filledQty: z.string(),
-	/** Average fill price */
 	filledAvgPrice: z.string().nullable(),
-	/** Event type that triggered this update */
 	event: z.enum([
 		"new",
 		"fill",
@@ -730,41 +363,23 @@ export const OrderUpdateDataSchema = z.object({
 		"order_replace_rejected",
 		"order_cancel_rejected",
 	]),
-	/** Timestamp of the event */
 	timestamp: z.string(),
 });
 
 export type OrderUpdateData = z.infer<typeof OrderUpdateDataSchema>;
 
-/**
- * Order update message - broadcasted on order status changes.
- *
- * @example
- * { type: "order_update", data: { orderId: "...", event: "fill", ... } }
- */
 export const OrderUpdateMessageSchema = z.object({
 	type: z.literal("order_update"),
 	data: OrderUpdateDataSchema,
-	/** TanStack Query cache keys to invalidate on the client */
 	invalidates: z.array(z.string()).optional(),
 });
 
 export type OrderUpdateMessage = z.infer<typeof OrderUpdateMessageSchema>;
 
-// ============================================
-// Worker Run Update Message
-// ============================================
-
-/**
- * Worker service run status values.
- */
 export const WorkerRunStatusSchema = z.enum(["pending", "running", "completed", "failed"]);
 
 export type WorkerRunStatus = z.infer<typeof WorkerRunStatusSchema>;
 
-/**
- * Worker service names.
- */
 export const WorkerServiceNameSchema = z.enum([
 	"macro_watch",
 	"newspaper",
@@ -777,38 +392,20 @@ export const WorkerServiceNameSchema = z.enum([
 
 export type WorkerServiceName = z.infer<typeof WorkerServiceNameSchema>;
 
-/**
- * Worker run update data - triggered when a worker run changes status.
- */
 export const WorkerRunUpdateDataSchema = z.object({
-	/** Run ID */
 	runId: z.string(),
-	/** Service name */
 	service: WorkerServiceNameSchema,
-	/** Run status */
 	status: WorkerRunStatusSchema,
-	/** Start time */
 	startedAt: z.string(),
-	/** Completion time (if completed/failed) */
 	completedAt: z.string().nullable(),
-	/** Duration in seconds (if completed/failed) */
 	duration: z.number().nullable(),
-	/** Result message */
 	result: z.string().nullable(),
-	/** Error message (if failed) */
 	error: z.string().nullable(),
-	/** Timestamp of this update */
 	timestamp: z.string(),
 });
 
 export type WorkerRunUpdateData = z.infer<typeof WorkerRunUpdateDataSchema>;
 
-/**
- * Worker run update message - broadcasted when a worker run changes status.
- *
- * @example
- * { type: "worker_run_update", data: { runId: "...", service: "macro_watch", status: "completed", ... } }
- */
 export const WorkerRunUpdateMessageSchema = z.object({
 	type: z.literal("worker_run_update"),
 	data: WorkerRunUpdateDataSchema,
@@ -816,13 +413,6 @@ export const WorkerRunUpdateMessageSchema = z.object({
 
 export type WorkerRunUpdateMessage = z.infer<typeof WorkerRunUpdateMessageSchema>;
 
-// ============================================
-// Server Message Union
-// ============================================
-
-/**
- * Discriminated union of all server → client messages.
- */
 export const ServerMessageSchema = z.discriminatedUnion("type", [
 	QuoteMessageSchema,
 	AggregateMessageSchema,

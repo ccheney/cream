@@ -43,18 +43,105 @@ export class EconomicCalendarService {
 		this.getDb = getDb;
 	}
 
-	/**
-	 * Refresh the economic calendar cache by fetching from FRED.
-	 */
-	async refresh(): Promise<EconomicCalendarRefreshResult> {
+	private createSkippedResult(): EconomicCalendarRefreshResult {
+		return { eventsUpserted: 0, eventsOldDeleted: 0, durationMs: 0 };
+	}
+
+	private canRefresh(): boolean {
 		if (this.running) {
 			log.info({}, "Skipping economic calendar refresh - previous run still in progress");
-			return { eventsUpserted: 0, eventsOldDeleted: 0, durationMs: 0 };
+			return false;
 		}
 
 		if (!this.getDb) {
 			log.warn({}, "Economic calendar service has no DB provider configured");
-			return { eventsUpserted: 0, eventsOldDeleted: 0, durationMs: 0 };
+			return false;
+		}
+
+		return true;
+	}
+
+	private resolveDateRange(now: Date): {
+		startDateStr: string;
+		endDateStr: string;
+		deleteBeforeDateStr: string;
+	} {
+		const cfg = this.config as Required<EconomicCalendarServiceConfig>;
+		const dayMs = 24 * 60 * 60 * 1000;
+
+		const startDate = new Date(now.getTime() - cfg.daysBehind * dayMs);
+		const endDate = new Date(now.getTime() + cfg.daysAhead * dayMs);
+		const deleteBeforeDate = new Date(now.getTime() - (cfg.daysBehind + 30) * dayMs);
+
+		return {
+			startDateStr: startDate.toISOString().split("T")[0] ?? "",
+			endDateStr: endDate.toISOString().split("T")[0] ?? "",
+			deleteBeforeDateStr: deleteBeforeDate.toISOString().split("T")[0] ?? "",
+		};
+	}
+
+	private toUpsertInput(event: {
+		id: string;
+		name: string;
+		date: string;
+		time: string;
+		impact: string;
+		actual: string | null;
+		previous: string | null;
+		forecast: string | null;
+	}): CreateEconomicCalendarEventInput {
+		const match = event.id.match(/^fred-(\d+)-/);
+		const releaseId = match?.[1] ? Number.parseInt(match[1], 10) : 0;
+
+		return {
+			releaseId,
+			releaseName: event.name,
+			releaseDate: event.date,
+			releaseTime: event.time,
+			impact: event.impact,
+			country: "US",
+			actual: event.actual,
+			previous: event.previous,
+			forecast: event.forecast,
+			unit: null,
+			fetchedAt: new Date().toISOString(),
+		};
+	}
+
+	private async performRefresh(startTime: number): Promise<EconomicCalendarRefreshResult> {
+		const ctx = createContext(requireEnv(), "scheduled");
+		const now = new Date();
+		const { startDateStr, endDateStr, deleteBeforeDateStr } = this.resolveDateRange(now);
+
+		log.info({ startDate: startDateStr, endDate: endDateStr }, "Fetching FRED calendar");
+		const events = await getFredEconomicCalendar(ctx, startDateStr, endDateStr);
+		const eventsToUpsert = events.map((event) => this.toUpsertInput(event));
+
+		const db = this.getDb as () => Database;
+		const repo = new EconomicCalendarRepository(db());
+
+		const eventsUpserted = await repo.upsertEvents(eventsToUpsert);
+		const eventsOldDeleted = await repo.clearOldEvents(deleteBeforeDateStr);
+		const durationMs = Date.now() - startTime;
+
+		log.info(
+			{
+				eventsUpserted,
+				eventsOldDeleted,
+				durationMs,
+			},
+			"Economic calendar refresh complete",
+		);
+
+		return { eventsUpserted, eventsOldDeleted, durationMs };
+	}
+
+	/**
+	 * Refresh the economic calendar cache by fetching from FRED.
+	 */
+	async refresh(): Promise<EconomicCalendarRefreshResult> {
+		if (!this.canRefresh()) {
+			return this.createSkippedResult();
 		}
 
 		this.running = true;
@@ -62,62 +149,7 @@ export class EconomicCalendarService {
 		this.lastRun = new Date();
 
 		try {
-			const ctx = createContext(requireEnv(), "scheduled");
-			const cfg = this.config as Required<EconomicCalendarServiceConfig>;
-
-			const now = new Date();
-			const startDate = new Date(now.getTime() - cfg.daysBehind * 24 * 60 * 60 * 1000);
-			const endDate = new Date(now.getTime() + cfg.daysAhead * 24 * 60 * 60 * 1000);
-
-			const startDateStr = startDate.toISOString().split("T")[0] ?? "";
-			const endDateStr = endDate.toISOString().split("T")[0] ?? "";
-
-			log.info({ startDate: startDateStr, endDate: endDateStr }, "Fetching FRED calendar");
-
-			const events = await getFredEconomicCalendar(ctx, startDateStr, endDateStr);
-
-			const eventsToUpsert: CreateEconomicCalendarEventInput[] = events.map((event) => {
-				const match = event.id.match(/^fred-(\d+)-/);
-				const releaseId = match?.[1] ? Number.parseInt(match[1], 10) : 0;
-
-				return {
-					releaseId,
-					releaseName: event.name,
-					releaseDate: event.date,
-					releaseTime: event.time,
-					impact: event.impact,
-					country: "US",
-					actual: event.actual,
-					previous: event.previous,
-					forecast: event.forecast,
-					unit: null,
-					fetchedAt: new Date().toISOString(),
-				};
-			});
-
-			const db = this.getDb();
-			const repo = new EconomicCalendarRepository(db);
-
-			const eventsUpserted = await repo.upsertEvents(eventsToUpsert);
-
-			const deleteBeforeDate = new Date(
-				now.getTime() - (cfg.daysBehind + 30) * 24 * 60 * 60 * 1000,
-			);
-			const deleteBeforeDateStr = deleteBeforeDate.toISOString().split("T")[0] ?? "";
-			const eventsOldDeleted = await repo.clearOldEvents(deleteBeforeDateStr);
-
-			const durationMs = Date.now() - startTime;
-
-			log.info(
-				{
-					eventsUpserted,
-					eventsOldDeleted,
-					durationMs,
-				},
-				"Economic calendar refresh complete",
-			);
-
-			return { eventsUpserted, eventsOldDeleted, durationMs };
+			return await this.performRefresh(startTime);
 		} catch (error) {
 			log.error(
 				{ error: error instanceof Error ? error.message : String(error) },

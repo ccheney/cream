@@ -199,22 +199,7 @@ function SurpriseIndicator({
 	);
 }
 
-// ============================================
-// Main Component
-// ============================================
-
-export function EventDetailDrawer({ event, isOpen, onClose }: EventDetailDrawerProps) {
-	const { isMobile } = useMediaQuery();
-
-	// Fetch historical data for sparkline
-	const { data: history, isLoading: isHistoryLoading } = useEventHistory(event?.id ?? null);
-
-	const drawerWidth = useMemo(
-		() => (isMobile ? DRAWER_WIDTH_MOBILE : DRAWER_WIDTH_DESKTOP),
-		[isMobile],
-	);
-
-	// Close on ESC
+function useEscapeToClose(isOpen: boolean, onClose: () => void) {
 	useEffect(() => {
 		const handleKeyDown = (e: KeyboardEvent) => {
 			if (e.key === "Escape" && isOpen) {
@@ -225,157 +210,240 @@ export function EventDetailDrawer({ event, isOpen, onClose }: EventDetailDrawerP
 		window.addEventListener("keydown", handleKeyDown);
 		return () => window.removeEventListener("keydown", handleKeyDown);
 	}, [isOpen, onClose]);
+}
 
+function DrawerBackdrop({ onClose }: { onClose: () => void }) {
+	return (
+		<motion.div
+			initial={{ opacity: 0 }}
+			animate={{ opacity: 0.3 }}
+			exit={{ opacity: 0 }}
+			transition={{ duration: 0.2 }}
+			className="fixed inset-0 bg-black z-40"
+			onClick={onClose}
+		/>
+	);
+}
+
+function DrawerHeader({ event, onClose }: { event: EconomicEvent; onClose: () => void }) {
+	return (
+		<div className="flex items-start justify-between px-4 py-4 border-b border-cream-200 dark:border-night-700 shrink-0">
+			<div className="flex-1 min-w-0 pr-4">
+				<h2 className="text-lg font-semibold text-stone-900 dark:text-night-50 leading-tight">
+					{event.name}
+				</h2>
+				<div className="flex items-center gap-3 mt-2">
+					<ImpactBadge impact={event.impact} />
+					<span className="text-xs text-stone-500 dark:text-night-400 uppercase">
+						{event.country}
+					</span>
+				</div>
+			</div>
+			<button
+				type="button"
+				onClick={onClose}
+				className="p-1.5 text-stone-500 hover:text-stone-700 dark:text-night-400 dark:hover:text-night-200 hover:bg-cream-100 dark:hover:bg-night-700 rounded-md transition-colors shrink-0"
+				title="Close (Esc)"
+			>
+				<X className="w-5 h-5" />
+			</button>
+		</div>
+	);
+}
+
+function DateTimeSection({ event }: { event: EconomicEvent }) {
+	return (
+		<div className="px-4 py-4 border-b border-cream-200 dark:border-night-700">
+			<div className="flex items-center gap-4">
+				<div className="flex items-center gap-2 text-sm text-stone-600 dark:text-night-300">
+					<Calendar className="w-4 h-4 text-stone-400 dark:text-night-500" />
+					{formatDate(event.date)}
+				</div>
+				<div className="flex items-center gap-2 text-sm text-stone-600 dark:text-night-300">
+					<Clock className="w-4 h-4 text-stone-400 dark:text-night-500" />
+					{formatTime(event.time)}
+				</div>
+			</div>
+		</div>
+	);
+}
+
+function ReleaseDataSection({ event }: { event: EconomicEvent }) {
+	return (
+		<div className="px-4 py-4 border-b border-cream-200 dark:border-night-700">
+			<h3 className="text-sm font-medium text-stone-700 dark:text-night-200 mb-3">Release Data</h3>
+			<div className="grid grid-cols-3 gap-3">
+				<ValueCard label="Previous" value={event.previous} unit={event.unit} variant="previous" />
+				<ValueCard label="Forecast" value={event.forecast} unit={event.unit} variant="forecast" />
+				<ValueCard label="Actual" value={event.actual} unit={event.unit} variant="actual" />
+			</div>
+			<div className="mt-3">
+				<SurpriseIndicator actual={event.actual} forecast={event.forecast} />
+			</div>
+		</div>
+	);
+}
+
+interface HistoricalSectionProps {
+	isHistoryLoading: boolean;
+	chartData: EventHistoryObservations;
+	seriesId: string;
+	unit: string;
+	chartWidth: number;
+}
+
+function HistoricalSection({
+	isHistoryLoading,
+	chartData,
+	seriesId,
+	unit,
+	chartWidth,
+}: HistoricalSectionProps) {
+	return (
+		<div className="px-4 py-4 border-b border-cream-200 dark:border-night-700">
+			<h3 className="text-sm font-medium text-stone-700 dark:text-night-200 mb-3">
+				Historical Releases
+			</h3>
+			<div className="bg-cream-50 dark:bg-night-900 rounded-lg p-3">
+				{isHistoryLoading ? (
+					<div className="h-20 flex items-center justify-center">
+						<div className="w-4 h-4 border-2 border-amber-500 border-t-transparent rounded-full animate-spin" />
+					</div>
+				) : chartData.length > 1 ? (
+					<HistoryChart
+						data={chartData}
+						seriesId={seriesId}
+						unit={unit}
+						width={chartWidth}
+						height={80}
+					/>
+				) : (
+					<div className="h-20 flex items-center justify-center">
+						<span className="text-xs text-stone-400 dark:text-night-500">
+							No historical data available
+						</span>
+					</div>
+				)}
+			</div>
+		</div>
+	);
+}
+
+function SourceSection({ sourceUrl }: { sourceUrl: string | null }) {
+	if (!sourceUrl) {
+		return null;
+	}
+
+	return (
+		<div className="px-4 py-4">
+			<a
+				href={sourceUrl}
+				target="_blank"
+				rel="noopener noreferrer"
+				className="inline-flex items-center gap-2 text-sm text-amber-600 dark:text-amber-400 hover:text-amber-700 dark:hover:text-amber-300 transition-colors"
+			>
+				<ExternalLink className="w-4 h-4" />
+				View on FRED
+			</a>
+		</div>
+	);
+}
+
+function DrawerFooter() {
+	return (
+		<div className="px-4 py-3 border-t border-cream-200 dark:border-night-700 bg-cream-50 dark:bg-night-900 shrink-0">
+			<p className="text-xs text-stone-500 dark:text-night-400">
+				Data sourced from Federal Reserve Economic Data (FRED)
+			</p>
+		</div>
+	);
+}
+
+type EventHistoryObservations = NonNullable<
+	ReturnType<typeof useEventHistory>["data"]
+>["observations"];
+
+interface DrawerPanelProps {
+	event: EconomicEvent;
+	drawerWidth: string | number;
+	isMobile: boolean;
+	isHistoryLoading: boolean;
+	chartData: EventHistoryObservations;
+	seriesId: string;
+	unit: string;
+	sourceUrl: string | null;
+	onClose: () => void;
+}
+
+function DrawerPanel({
+	event,
+	drawerWidth,
+	isMobile,
+	isHistoryLoading,
+	chartData,
+	seriesId,
+	unit,
+	sourceUrl,
+	onClose,
+}: DrawerPanelProps) {
+	return (
+		<motion.div
+			initial={{ x: "100%" }}
+			animate={{ x: 0 }}
+			exit={{ x: "100%" }}
+			transition={{ type: "spring", damping: 25, stiffness: 300 }}
+			style={{ width: drawerWidth }}
+			className="fixed right-0 top-0 h-full bg-white dark:bg-night-800 border-l border-cream-200 dark:border-night-700 z-50 flex flex-col shadow-xl"
+		>
+			<DrawerHeader event={event} onClose={onClose} />
+			<div className="flex-1 overflow-auto">
+				<DateTimeSection event={event} />
+				<ReleaseDataSection event={event} />
+				<HistoricalSection
+					isHistoryLoading={isHistoryLoading}
+					chartData={chartData}
+					seriesId={seriesId}
+					unit={unit}
+					chartWidth={isMobile ? 280 : DRAWER_WIDTH_DESKTOP - 56}
+				/>
+				<SourceSection sourceUrl={sourceUrl} />
+			</div>
+			<DrawerFooter />
+		</motion.div>
+	);
+}
+
+// ============================================
+// Main Component
+// ============================================
+
+export function EventDetailDrawer({ event, isOpen, onClose }: EventDetailDrawerProps) {
+	const { isMobile } = useMediaQuery();
+	const { data: history, isLoading: isHistoryLoading } = useEventHistory(event?.id ?? null);
+	const drawerWidth = useMemo(
+		() => (isMobile ? DRAWER_WIDTH_MOBILE : DRAWER_WIDTH_DESKTOP),
+		[isMobile],
+	);
+	useEscapeToClose(isOpen, onClose);
 	const sourceUrl = event ? getSourceUrl(event.name) : null;
-
-	// Extract chart data from history
 	const chartData = useMemo(() => history?.observations ?? [], [history]);
 
 	return (
 		<AnimatePresence>
 			{isOpen && event && (
 				<>
-					{/* Backdrop */}
-					<motion.div
-						initial={{ opacity: 0 }}
-						animate={{ opacity: 0.3 }}
-						exit={{ opacity: 0 }}
-						transition={{ duration: 0.2 }}
-						className="fixed inset-0 bg-black z-40"
-						onClick={onClose}
+					<DrawerBackdrop onClose={onClose} />
+					<DrawerPanel
+						event={event}
+						drawerWidth={drawerWidth}
+						isMobile={isMobile}
+						isHistoryLoading={isHistoryLoading}
+						chartData={chartData}
+						seriesId={history?.seriesId ?? ""}
+						unit={history?.unit ?? ""}
+						sourceUrl={sourceUrl}
+						onClose={onClose}
 					/>
-
-					{/* Drawer Panel */}
-					<motion.div
-						initial={{ x: "100%" }}
-						animate={{ x: 0 }}
-						exit={{ x: "100%" }}
-						transition={{ type: "spring", damping: 25, stiffness: 300 }}
-						style={{ width: drawerWidth }}
-						className="fixed right-0 top-0 h-full bg-white dark:bg-night-800 border-l border-cream-200 dark:border-night-700 z-50 flex flex-col shadow-xl"
-					>
-						{/* Header */}
-						<div className="flex items-start justify-between px-4 py-4 border-b border-cream-200 dark:border-night-700 shrink-0">
-							<div className="flex-1 min-w-0 pr-4">
-								<h2 className="text-lg font-semibold text-stone-900 dark:text-night-50 leading-tight">
-									{event.name}
-								</h2>
-								<div className="flex items-center gap-3 mt-2">
-									<ImpactBadge impact={event.impact} />
-									<span className="text-xs text-stone-500 dark:text-night-400 uppercase">
-										{event.country}
-									</span>
-								</div>
-							</div>
-							<button
-								type="button"
-								onClick={onClose}
-								className="p-1.5 text-stone-500 hover:text-stone-700 dark:text-night-400 dark:hover:text-night-200 hover:bg-cream-100 dark:hover:bg-night-700 rounded-md transition-colors shrink-0"
-								title="Close (Esc)"
-							>
-								<X className="w-5 h-5" />
-							</button>
-						</div>
-
-						{/* Content - scrollable */}
-						<div className="flex-1 overflow-auto">
-							{/* Date & Time */}
-							<div className="px-4 py-4 border-b border-cream-200 dark:border-night-700">
-								<div className="flex items-center gap-4">
-									<div className="flex items-center gap-2 text-sm text-stone-600 dark:text-night-300">
-										<Calendar className="w-4 h-4 text-stone-400 dark:text-night-500" />
-										{formatDate(event.date)}
-									</div>
-									<div className="flex items-center gap-2 text-sm text-stone-600 dark:text-night-300">
-										<Clock className="w-4 h-4 text-stone-400 dark:text-night-500" />
-										{formatTime(event.time)}
-									</div>
-								</div>
-							</div>
-
-							{/* Values */}
-							<div className="px-4 py-4 border-b border-cream-200 dark:border-night-700">
-								<h3 className="text-sm font-medium text-stone-700 dark:text-night-200 mb-3">
-									Release Data
-								</h3>
-								<div className="grid grid-cols-3 gap-3">
-									<ValueCard
-										label="Previous"
-										value={event.previous}
-										unit={event.unit}
-										variant="previous"
-									/>
-									<ValueCard
-										label="Forecast"
-										value={event.forecast}
-										unit={event.unit}
-										variant="forecast"
-									/>
-									<ValueCard
-										label="Actual"
-										value={event.actual}
-										unit={event.unit}
-										variant="actual"
-									/>
-								</div>
-
-								{/* Surprise Indicator */}
-								<div className="mt-3">
-									<SurpriseIndicator actual={event.actual} forecast={event.forecast} />
-								</div>
-							</div>
-
-							{/* Historical Releases */}
-							<div className="px-4 py-4 border-b border-cream-200 dark:border-night-700">
-								<h3 className="text-sm font-medium text-stone-700 dark:text-night-200 mb-3">
-									Historical Releases
-								</h3>
-								<div className="bg-cream-50 dark:bg-night-900 rounded-lg p-3">
-									{isHistoryLoading ? (
-										<div className="h-20 flex items-center justify-center">
-											<div className="w-4 h-4 border-2 border-amber-500 border-t-transparent rounded-full animate-spin" />
-										</div>
-									) : chartData.length > 1 ? (
-										<HistoryChart
-											data={chartData}
-											seriesId={history?.seriesId ?? ""}
-											unit={history?.unit ?? ""}
-											width={isMobile ? 280 : DRAWER_WIDTH_DESKTOP - 56}
-											height={80}
-										/>
-									) : (
-										<div className="h-20 flex items-center justify-center">
-											<span className="text-xs text-stone-400 dark:text-night-500">
-												No historical data available
-											</span>
-										</div>
-									)}
-								</div>
-							</div>
-
-							{/* Source Link */}
-							{sourceUrl && (
-								<div className="px-4 py-4">
-									<a
-										href={sourceUrl}
-										target="_blank"
-										rel="noopener noreferrer"
-										className="inline-flex items-center gap-2 text-sm text-amber-600 dark:text-amber-400 hover:text-amber-700 dark:hover:text-amber-300 transition-colors"
-									>
-										<ExternalLink className="w-4 h-4" />
-										View on FRED
-									</a>
-								</div>
-							)}
-						</div>
-
-						{/* Footer */}
-						<div className="px-4 py-3 border-t border-cream-200 dark:border-night-700 bg-cream-50 dark:bg-night-900 shrink-0">
-							<p className="text-xs text-stone-500 dark:text-night-400">
-								Data sourced from Federal Reserve Economic Data (FRED)
-							</p>
-						</div>
-					</motion.div>
 				</>
 			)}
 		</AnimatePresence>

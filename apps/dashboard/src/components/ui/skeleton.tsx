@@ -149,6 +149,10 @@ const shimmerKeyframes = `
   }
 `;
 
+function ShimmerKeyframes() {
+	return <style>{shimmerKeyframes}</style>;
+}
+
 // ============================================
 // Components
 // ============================================
@@ -183,8 +187,7 @@ export function Skeleton({
 
 	return (
 		<>
-			{/* biome-ignore lint/security/noDangerouslySetInnerHtml: Safe - hardcoded CSS keyframes */}
-			<style dangerouslySetInnerHTML={{ __html: shimmerKeyframes }} />
+			<ShimmerKeyframes />
 			<div
 				role="presentation"
 				aria-hidden="true"
@@ -215,7 +218,7 @@ export function SkeletonText({
 	style,
 	...props
 }: SkeletonTextProps) {
-	const lineArray = Array.from({ length: lines }, (_, i) => i);
+	const lineIds = Array.from({ length: lines }, (_, index) => `${testId}-line-${index}`);
 
 	return (
 		<div
@@ -224,14 +227,13 @@ export function SkeletonText({
 			role="presentation"
 			aria-hidden="true"
 		>
-			{/* biome-ignore lint/security/noDangerouslySetInnerHtml: Safe - hardcoded CSS keyframes */}
-			<style dangerouslySetInnerHTML={{ __html: shimmerKeyframes }} />
-			{lineArray.map((index) => (
+			<ShimmerKeyframes />
+			{lineIds.map((lineId, index) => (
 				<Skeleton
-					key={index}
+					key={lineId}
 					width={index === lines - 1 && lines > 1 ? lastLineWidth : width}
 					height={lineHeight}
-					testId={`${testId}-line-${index}`}
+					testId={lineId}
 					{...props}
 				/>
 			))}
@@ -285,8 +287,7 @@ export function SkeletonCard({
 			style={{ ...cardStyles, width: toCssValue(width), ...style }}
 			{...props}
 		>
-			{/* biome-ignore lint/security/noDangerouslySetInnerHtml: Safe - hardcoded CSS keyframes */}
-			<style dangerouslySetInnerHTML={{ __html: shimmerKeyframes }} />
+			<ShimmerKeyframes />
 
 			{/* Header with avatar */}
 			{avatar && (
@@ -346,10 +347,10 @@ export function SkeletonContainer({
 	}
 
 	return (
-		<div role="status" aria-live="polite" aria-busy="true" aria-label={label} data-testid={testId}>
+		<output aria-live="polite" aria-busy="true" aria-label={label} data-testid={testId}>
 			<span className="sr-only">{label}</span>
 			{children}
-		</div>
+		</output>
 	);
 }
 
@@ -367,6 +368,8 @@ export function SkeletonTableRow({
 	columns?: number;
 	testId?: string;
 }) {
+	const cellIds = Array.from({ length: columns }, (_, index) => `${testId}-cell-${index}`);
+
 	return (
 		<div
 			data-testid={testId}
@@ -379,11 +382,9 @@ export function SkeletonTableRow({
 				borderBottom: "1px solid #e7e5e4",
 			}}
 		>
-			{/* biome-ignore lint/security/noDangerouslySetInnerHtml: Safe - hardcoded CSS keyframes */}
-			<style dangerouslySetInnerHTML={{ __html: shimmerKeyframes }} />
-			{Array.from({ length: columns }, (_, i) => (
-				// biome-ignore lint/suspicious/noArrayIndexKey: Static column count, index is stable
-				<Skeleton key={i} width={`${100 / columns}%`} height={16} testId={`${testId}-cell-${i}`} />
+			<ShimmerKeyframes />
+			{cellIds.map((cellId) => (
+				<Skeleton key={cellId} width={`${100 / columns}%`} height={16} testId={cellId} />
 			))}
 		</div>
 	);
@@ -414,8 +415,7 @@ export function SkeletonChart({
 				borderRadius: "8px",
 			}}
 		>
-			{/* biome-ignore lint/security/noDangerouslySetInnerHtml: Safe - hardcoded CSS keyframes */}
-			<style dangerouslySetInnerHTML={{ __html: shimmerKeyframes }} />
+			<ShimmerKeyframes />
 			{/* Header */}
 			<div style={{ display: "flex", justifyContent: "space-between" }}>
 				<Skeleton width={120} height={20} testId={`${testId}-title`} />
@@ -446,8 +446,7 @@ export function SkeletonStat({ testId = "skeleton-stat" }: { testId?: string }) 
 				borderRadius: "8px",
 			}}
 		>
-			{/* biome-ignore lint/security/noDangerouslySetInnerHtml: Safe - hardcoded CSS keyframes */}
-			<style dangerouslySetInnerHTML={{ __html: shimmerKeyframes }} />
+			<ShimmerKeyframes />
 			<Skeleton width={100} height={14} testId={`${testId}-label`} />
 			<Skeleton width={80} height={28} testId={`${testId}-value`} />
 			<Skeleton width={60} height={12} testId={`${testId}-change`} />

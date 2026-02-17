@@ -5,7 +5,7 @@
 // Set required environment variables before imports
 Bun.env.CREAM_ENV = "PAPER";
 
-import { describe, expect, mock, test } from "bun:test";
+import { describe, expect, test } from "bun:test";
 import {
 	buildMemoryContext,
 	type CBRMarketSnapshot,
@@ -14,11 +14,7 @@ import {
 	convertToRetrievedCase,
 	extractSimilarityFeatures,
 	generateCBRSituationBrief,
-	retainCase,
-	retrieveSimilarCases,
-	updateCaseOutcome,
 } from "./cbr";
-import type { EmbeddingClient } from "./embeddings";
 import type { TradeDecision } from "./index";
 
 // ============================================
@@ -65,53 +61,32 @@ function createMockDecision(overrides: Partial<TradeDecision> = {}): TradeDecisi
 	};
 }
 
-interface HelixClient {
-	query<T = unknown>(
-		queryName: string,
-		params?: Record<string, unknown>,
-	): Promise<{ data: T; executionTimeMs: number }>;
-}
+type RetrievedCase = CBRRetrievalResult["cases"][number];
 
-function createMockHelixClient(
-	overrides: Partial<{ query: HelixClient["query"] }> = {},
-): HelixClient {
+function createRetrievedCase(overrides: Partial<RetrievedCase> = {}): RetrievedCase {
 	return {
-		query: mock(() =>
-			Promise.resolve({
-				data: [] as unknown,
-				executionTimeMs: 10,
-			}),
-		) as HelixClient["query"],
+		caseId: "case-default",
+		shortSummary: "Test",
+		keyOutcomes: { result: "win", return: 0.02, durationHours: 24 },
+		asOfTimestamp: new Date().toISOString(),
+		ticker: "AAPL",
+		regime: "BULL_TREND",
+		similarityScore: 0.8,
 		...overrides,
 	};
 }
 
-function createMockEmbeddingClient(): EmbeddingClient {
+function createQualityResult(cases: RetrievedCase[]): CBRRetrievalResult {
 	return {
-		generateEmbedding: mock(() =>
-			Promise.resolve({
-				values: new Array(768).fill(0.1),
-				model: "test-model",
-				generatedAt: new Date().toISOString(),
-				inputLength: 100,
-			}),
-		),
-		batchGenerateEmbeddings: mock(() =>
-			Promise.resolve({
-				embeddings: [],
-				processingTimeMs: 10,
-				apiCalls: 0,
-			}),
-		),
-		getConfig: mock(() => ({
-			model: "test-model",
-			dimensions: 768,
-			batchSize: 100,
-			maxTokens: 8192,
-			provider: "gemini" as const,
-			apiKeyEnvVar: "TEST_API_KEY",
-		})),
-	} as unknown as EmbeddingClient;
+		cases,
+		statistics: {
+			totalCases: cases.length,
+			winRate: 0.6,
+			avgReturn: 0.02,
+			avgDuration: 25.6,
+		},
+		executionTimeMs: 50,
+	};
 }
 
 // ============================================
@@ -317,98 +292,55 @@ describe("extractSimilarityFeatures", () => {
 // CBR Quality Metrics Tests
 // ============================================
 
-describe("calculateCBRQuality", () => {
+describe("calculateCBRQuality sufficient cases", () => {
 	test("calculates quality for sufficient cases", () => {
-		const result: CBRRetrievalResult = {
-			cases: [
-				{
-					caseId: "1",
-					shortSummary: "Test",
-					keyOutcomes: { result: "win", return: 0.05, durationHours: 24 },
-					asOfTimestamp: new Date().toISOString(),
-					ticker: "AAPL",
-					regime: "BULL_TREND",
-					similarityScore: 0.9,
-				},
-				{
-					caseId: "2",
-					shortSummary: "Test",
-					keyOutcomes: { result: "win", return: 0.03, durationHours: 48 },
-					asOfTimestamp: new Date().toISOString(),
-					ticker: "AAPL",
-					regime: "BULL_TREND",
-					similarityScore: 0.85,
-				},
-				{
-					caseId: "3",
-					shortSummary: "Test",
-					keyOutcomes: { result: "loss", return: -0.02, durationHours: 12 },
-					asOfTimestamp: new Date().toISOString(),
-					ticker: "AAPL",
-					regime: "BEAR_TREND",
-					similarityScore: 0.8,
-				},
-				{
-					caseId: "4",
-					shortSummary: "Test",
-					keyOutcomes: { result: "win", return: 0.04, durationHours: 36 },
-					asOfTimestamp: new Date().toISOString(),
-					ticker: "AAPL",
-					regime: "RANGE",
-					similarityScore: 0.75,
-				},
-				{
-					caseId: "5",
-					shortSummary: "Test",
-					keyOutcomes: { result: "breakeven", return: 0, durationHours: 8 },
-					asOfTimestamp: new Date().toISOString(),
-					ticker: "AAPL",
-					regime: "BULL_TREND",
-					similarityScore: 0.7,
-				},
-			],
-			statistics: {
-				totalCases: 5,
-				winRate: 0.6,
-				avgReturn: 0.02,
-				avgDuration: 25.6,
-			},
-			executionTimeMs: 50,
-		};
-
+		const result = createQualityResult([
+			createRetrievedCase({
+				caseId: "1",
+				keyOutcomes: { result: "win", return: 0.05, durationHours: 24 },
+				similarityScore: 0.9,
+			}),
+			createRetrievedCase({
+				caseId: "2",
+				keyOutcomes: { result: "win", return: 0.03, durationHours: 48 },
+				similarityScore: 0.85,
+			}),
+			createRetrievedCase({
+				caseId: "3",
+				keyOutcomes: { result: "loss", return: -0.02, durationHours: 12 },
+				regime: "BEAR_TREND",
+			}),
+			createRetrievedCase({
+				caseId: "4",
+				keyOutcomes: { result: "win", return: 0.04, durationHours: 36 },
+				regime: "RANGE",
+				similarityScore: 0.75,
+			}),
+			createRetrievedCase({
+				caseId: "5",
+				keyOutcomes: { result: "breakeven", return: 0, durationHours: 8 },
+				similarityScore: 0.7,
+			}),
+		]);
 		const quality = calculateCBRQuality(result);
-
 		expect(quality.sufficientCases).toBe(true);
 		expect(quality.caseCount).toBe(5);
 		expect(quality.avgSimilarity).toBeCloseTo(0.8, 2);
 		expect(quality.historicalWinRate).toBe(0.6);
 		expect(quality.qualityScore).toBeGreaterThan(0);
 	});
+});
 
+describe("calculateCBRQuality insufficient cases", () => {
 	test("indicates insufficient cases", () => {
-		const result: CBRRetrievalResult = {
-			cases: [
-				{
-					caseId: "1",
-					shortSummary: "Test",
-					keyOutcomes: { result: "win", return: 0.05, durationHours: 24 },
-					asOfTimestamp: new Date().toISOString(),
-					ticker: "AAPL",
-					regime: "BULL_TREND",
-					similarityScore: 0.9,
-				},
-			],
-			statistics: {
-				totalCases: 1,
-				winRate: 1.0,
-				avgReturn: 0.05,
-				avgDuration: 24,
-			},
-			executionTimeMs: 20,
-		};
-
+		const result = createQualityResult([
+			createRetrievedCase({
+				caseId: "1",
+				keyOutcomes: { result: "win", return: 0.05, durationHours: 24 },
+				similarityScore: 0.9,
+			}),
+		]);
 		const quality = calculateCBRQuality(result, 5);
-
 		expect(quality.sufficientCases).toBe(false);
 		expect(quality.caseCount).toBe(1);
 	});
@@ -447,177 +379,5 @@ describe("buildMemoryContext", () => {
 			throw new Error("Expected case statistics to be defined");
 		}
 		expect(context.caseStatistics.winRate).toBe(1.0);
-	});
-});
-
-// ============================================
-// Vector Search Integration Tests
-// ============================================
-
-describe("retrieveSimilarCases", () => {
-	test("calls HelixDB with correct parameters", async () => {
-		const queryMock = mock(() =>
-			Promise.resolve({
-				data: [
-					{
-						decision_id: "dec-1",
-						instrument_id: "AAPL",
-						regime_label: "BULL_TREND",
-						action: "BUY",
-						rationale_text: "Test rationale",
-						environment: "PAPER",
-						similarity_score: 0.85,
-					},
-				],
-				executionTimeMs: 15,
-			}),
-		) as HelixClient["query"];
-
-		const client = createMockHelixClient({ query: queryMock });
-		const embedder = createMockEmbeddingClient();
-		const snapshot = createMockSnapshot();
-
-		const result = await retrieveSimilarCases(client, embedder, snapshot);
-
-		expect(queryMock).toHaveBeenCalled();
-		expect(result.cases).toHaveLength(1);
-		expect(result.cases[0]?.caseId).toBe("dec-1");
-	});
-
-	test("applies minimum similarity filter", async () => {
-		const queryMock = mock(() =>
-			Promise.resolve({
-				data: [
-					{
-						decision_id: "dec-1",
-						instrument_id: "AAPL",
-						regime_label: "BULL_TREND",
-						action: "BUY",
-						rationale_text: "High similarity",
-						environment: "PAPER",
-						similarity_score: 0.9,
-					},
-					{
-						decision_id: "dec-2",
-						instrument_id: "AAPL",
-						regime_label: "BULL_TREND",
-						action: "BUY",
-						rationale_text: "Low similarity",
-						environment: "PAPER",
-						similarity_score: 0.3,
-					},
-				],
-				executionTimeMs: 15,
-			}),
-		) as HelixClient["query"];
-
-		const client = createMockHelixClient({ query: queryMock });
-		const embedder = createMockEmbeddingClient();
-		const snapshot = createMockSnapshot();
-
-		const result = await retrieveSimilarCases(client, embedder, snapshot, {
-			minSimilarity: 0.5,
-		});
-
-		// Only the high similarity case should be returned
-		expect(result.cases).toHaveLength(1);
-		expect(result.cases[0]?.caseId).toBe("dec-1");
-	});
-
-	test("handles HelixDB errors gracefully", async () => {
-		const queryMock = mock(() => Promise.reject(new Error("Connection failed")));
-
-		const client = createMockHelixClient({ query: queryMock });
-		const embedder = createMockEmbeddingClient();
-		const snapshot = createMockSnapshot();
-
-		const result = await retrieveSimilarCases(client, embedder, snapshot);
-
-		// Should return empty results instead of throwing
-		expect(result.cases).toHaveLength(0);
-	});
-});
-
-// ============================================
-// Case Retention Tests
-// ============================================
-
-describe("retainCase", () => {
-	test("calls InsertTradeDecision with correct parameters", async () => {
-		const queryMock = mock(() =>
-			Promise.resolve({
-				data: { decision_id: "dec-new" },
-				executionTimeMs: 20,
-			}),
-		) as HelixClient["query"];
-
-		const client = createMockHelixClient({ query: queryMock });
-		const decision = createMockDecision({ decision_id: "dec-new" });
-
-		const result = await retainCase(client, decision);
-
-		expect(result.success).toBe(true);
-		expect(result.decisionId).toBe("dec-new");
-		expect(queryMock).toHaveBeenCalledWith(
-			"InsertTradeDecision",
-			expect.objectContaining({
-				decision_id: "dec-new",
-				instrument_id: "AAPL",
-				regime_label: "BULL_TREND",
-			}),
-		);
-	});
-
-	test("returns failure on HelixDB error", async () => {
-		const queryMock = mock(() => Promise.reject(new Error("Insert failed")));
-
-		const client = createMockHelixClient({ query: queryMock });
-		const decision = createMockDecision();
-
-		const result = await retainCase(client, decision);
-
-		expect(result.success).toBe(false);
-		expect(result.error).toContain("Insert failed");
-	});
-});
-
-describe("updateCaseOutcome", () => {
-	test("calls UpdateDecisionOutcome with serialized outcome", async () => {
-		const queryMock = mock(() =>
-			Promise.resolve({
-				data: { decision_id: "dec-123" },
-				executionTimeMs: 10,
-			}),
-		) as HelixClient["query"];
-
-		const client = createMockHelixClient({ query: queryMock });
-
-		const success = await updateCaseOutcome(client, "dec-123", {
-			pnl: 500,
-			returnPct: 0.03,
-			holdingHours: 48,
-		});
-
-		expect(success).toBe(true);
-		expect(queryMock).toHaveBeenCalledWith(
-			"UpdateDecisionOutcome",
-			expect.objectContaining({
-				decision_id: "dec-123",
-			}),
-		);
-	});
-
-	test("returns false on update failure", async () => {
-		const queryMock = mock(() => Promise.reject(new Error("Update failed")));
-
-		const client = createMockHelixClient({ query: queryMock });
-
-		const success = await updateCaseOutcome(client, "dec-123", {
-			pnl: 500,
-			returnPct: 0.03,
-			holdingHours: 48,
-		});
-
-		expect(success).toBe(false);
 	});
 });

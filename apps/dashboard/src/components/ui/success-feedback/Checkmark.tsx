@@ -5,7 +5,7 @@
  */
 
 import type React from "react";
-import { CHECKMARK_ANIMATION_DURATION, checkmarkKeyframes } from "./animations";
+import { CHECKMARK_ANIMATION_DURATION } from "./animations";
 import type { CheckmarkProps } from "./types";
 
 /**
@@ -41,24 +41,18 @@ export function Checkmark({
 		fill: "none",
 		strokeDasharray: pathLength,
 		strokeDashoffset: animated ? 0 : 0,
-		animation: animated
-			? `checkmark-draw ${duration}ms cubic-bezier(0.16, 1, 0.3, 1) forwards`
-			: "none",
+		animationDuration: `${duration}ms`,
 	};
 
 	return (
-		<>
-			{/* biome-ignore lint/security/noDangerouslySetInnerHtml: Safe - hardcoded CSS keyframes */}
-			{animated && <style dangerouslySetInnerHTML={{ __html: checkmarkKeyframes }} />}
-			<svg
-				viewBox="0 0 24 24"
-				style={svgStyles}
-				className={animated ? "checkmark-animated" : ""}
-				data-testid={testId}
-				aria-hidden="true"
-			>
-				<path d="M5 12l5 5L19 7" style={pathStyles} />
-			</svg>
-		</>
+		<svg
+			viewBox="0 0 24 24"
+			style={svgStyles}
+			className={animated ? "checkmark-animated animate-checkmark" : "checkmark-animated"}
+			data-testid={testId}
+			aria-hidden="true"
+		>
+			<path d="M5 12l5 5L19 7" style={pathStyles} />
+		</svg>
 	);
 }

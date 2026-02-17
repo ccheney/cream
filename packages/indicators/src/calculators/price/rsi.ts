@@ -38,6 +38,82 @@ export interface RSIResult {
 	timestamp: number;
 }
 
+interface GainLossAverages {
+	avgGain: number;
+	avgLoss: number;
+}
+
+function calculatePriceChanges(bars: OHLCVBar[]): number[] {
+	const changes: number[] = [];
+	for (let i = 1; i < bars.length; i++) {
+		const current = bars[i];
+		const previous = bars[i - 1];
+		if (current && previous) {
+			changes.push(current.close - previous.close);
+		}
+	}
+	return changes;
+}
+
+function getGainLoss(change: number): { gain: number; loss: number } {
+	return {
+		gain: change > 0 ? change : 0,
+		loss: change < 0 ? Math.abs(change) : 0,
+	};
+}
+
+function calculateInitialAverages(changes: number[], period: number): GainLossAverages | null {
+	if (changes.length < period) {
+		return null;
+	}
+
+	let avgGain = 0;
+	let avgLoss = 0;
+	for (const change of changes.slice(0, period)) {
+		const { gain, loss } = getGainLoss(change);
+		avgGain += gain;
+		avgLoss += loss;
+	}
+
+	return {
+		avgGain: avgGain / period,
+		avgLoss: avgLoss / period,
+	};
+}
+
+function applyWilderSmoothing(
+	averages: GainLossAverages,
+	change: number,
+	period: number,
+): GainLossAverages {
+	const { gain, loss } = getGainLoss(change);
+	return {
+		avgGain: (averages.avgGain * (period - 1) + gain) / period,
+		avgLoss: (averages.avgLoss * (period - 1) + loss) / period,
+	};
+}
+
+function toRSI(avgGain: number, avgLoss: number): number {
+	if (avgLoss === 0) {
+		return 100;
+	}
+	if (avgGain === 0) {
+		return 0;
+	}
+
+	const rs = avgGain / avgLoss;
+	return 100 - 100 / (1 + rs);
+}
+
+function toRSIResult(averages: GainLossAverages, timestamp: number): RSIResult {
+	return {
+		rsi: toRSI(averages.avgGain, averages.avgLoss),
+		avgGain: averages.avgGain,
+		avgLoss: averages.avgLoss,
+		timestamp,
+	};
+}
+
 // ============================================================
 // CALCULATORS
 // ============================================================
@@ -61,73 +137,18 @@ export function calculateRSI(bars: OHLCVBar[], period = 14): RSIResult | null {
 		return null;
 	}
 
-	// Calculate price changes
-	const changes: number[] = [];
-	for (let i = 1; i < bars.length; i++) {
-		const current = bars[i];
-		const previous = bars[i - 1];
-		if (!current || !previous) {
-			continue;
-		}
-		changes.push(current.close - previous.close);
-	}
-
-	if (changes.length < period) {
+	const changes = calculatePriceChanges(bars);
+	const initialAverages = calculateInitialAverages(changes, period);
+	if (!initialAverages) {
 		return null;
 	}
 
-	// Initial averages (simple average for first period)
-	let avgGain = 0;
-	let avgLoss = 0;
-
-	for (let i = 0; i < period; i++) {
-		const change = changes[i];
-		if (change === undefined) {
-			continue;
-		}
-		if (change > 0) {
-			avgGain += change;
-		} else {
-			avgLoss += Math.abs(change);
-		}
+	let averages = initialAverages;
+	for (const change of changes.slice(period)) {
+		averages = applyWilderSmoothing(averages, change, period);
 	}
 
-	avgGain /= period;
-	avgLoss /= period;
-
-	// Wilder's smoothing for subsequent values
-	for (let i = period; i < changes.length; i++) {
-		const change = changes[i];
-		if (change === undefined) {
-			continue;
-		}
-
-		const gain = change > 0 ? change : 0;
-		const loss = change < 0 ? Math.abs(change) : 0;
-
-		avgGain = (avgGain * (period - 1) + gain) / period;
-		avgLoss = (avgLoss * (period - 1) + loss) / period;
-	}
-
-	// Calculate RSI
-	let rsi: number;
-	if (avgLoss === 0) {
-		rsi = 100;
-	} else if (avgGain === 0) {
-		rsi = 0;
-	} else {
-		const rs = avgGain / avgLoss;
-		rsi = 100 - 100 / (1 + rs);
-	}
-
-	const lastBar = bars.at(-1);
-
-	return {
-		rsi,
-		avgGain,
-		avgLoss,
-		timestamp: lastBar?.timestamp ?? Date.now(),
-	};
+	return toRSIResult(averages, bars.at(-1)?.timestamp ?? Date.now());
 }
 
 /**
@@ -138,95 +159,28 @@ export function calculateRSI(bars: OHLCVBar[], period = 14): RSIResult | null {
  * @returns Array of RSI results
  */
 export function calculateRSISeries(bars: OHLCVBar[], period = 14): RSIResult[] {
-	const results: RSIResult[] = [];
-
 	if (bars.length < period + 1) {
-		return results;
+		return [];
 	}
 
-	// Calculate all price changes
-	const changes: number[] = [];
-	for (let i = 1; i < bars.length; i++) {
-		const current = bars[i];
-		const previous = bars[i - 1];
-		if (!current || !previous) {
-			continue;
-		}
-		changes.push(current.close - previous.close);
-	}
-
-	// Initial averages
-	let avgGain = 0;
-	let avgLoss = 0;
-
-	for (let i = 0; i < period; i++) {
-		const change = changes[i];
-		if (change === undefined) {
-			continue;
-		}
-		if (change > 0) {
-			avgGain += change;
-		} else {
-			avgLoss += Math.abs(change);
-		}
-	}
-
-	avgGain /= period;
-	avgLoss /= period;
-
-	// First RSI value
+	const changes = calculatePriceChanges(bars);
+	const initialAverages = calculateInitialAverages(changes, period);
 	const firstBar = bars[period];
-	if (firstBar) {
-		let rsi: number;
-		if (avgLoss === 0) {
-			rsi = 100;
-		} else if (avgGain === 0) {
-			rsi = 0;
-		} else {
-			const rs = avgGain / avgLoss;
-			rsi = 100 - 100 / (1 + rs);
-		}
-
-		results.push({
-			rsi,
-			avgGain,
-			avgLoss,
-			timestamp: firstBar.timestamp,
-		});
+	if (!initialAverages || !firstBar) {
+		return [];
 	}
 
-	// Calculate subsequent values using Wilder's smoothing
-	for (let i = period; i < changes.length; i++) {
-		const change = changes[i];
-		if (change === undefined) {
+	const results: RSIResult[] = [toRSIResult(initialAverages, firstBar.timestamp)];
+	let averages = initialAverages;
+
+	for (const [offset, change] of changes.slice(period).entries()) {
+		averages = applyWilderSmoothing(averages, change, period);
+		const bar = bars[period + offset + 1];
+		if (!bar) {
 			continue;
 		}
 
-		const gain = change > 0 ? change : 0;
-		const loss = change < 0 ? Math.abs(change) : 0;
-
-		avgGain = (avgGain * (period - 1) + gain) / period;
-		avgLoss = (avgLoss * (period - 1) + loss) / period;
-
-		let rsi: number;
-		if (avgLoss === 0) {
-			rsi = 100;
-		} else if (avgGain === 0) {
-			rsi = 0;
-		} else {
-			const rs = avgGain / avgLoss;
-			rsi = 100 - 100 / (1 + rs);
-		}
-
-		const bar = bars[i + 1];
-		if (bar) {
-			results.push({
-				rsi,
-				avgGain,
-				avgLoss,
-				timestamp: bar.timestamp,
-			});
-		}
+		results.push(toRSIResult(averages, bar.timestamp));
 	}
 
 	return results;

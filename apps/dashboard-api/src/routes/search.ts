@@ -31,6 +31,8 @@ const SearchResponseSchema = z.object({
 	timestamp: z.string(),
 });
 
+type SearchResult = z.infer<typeof SearchResultSchema>;
+
 // ============================================
 // Navigation Items (static)
 // ============================================
@@ -128,7 +130,7 @@ function fuzzyScore(query: string, text: string): number {
 	return (intersection / union) * 0.5;
 }
 
-function searchNavigation(query: string): Array<z.infer<typeof SearchResultSchema>> {
+function searchNavigation(query: string): SearchResult[] {
 	return NAVIGATION_ITEMS.map((item) => {
 		const titleScore = fuzzyScore(query, item.title);
 		const subtitleScore = item.subtitle ? fuzzyScore(query, item.subtitle) * 0.5 : 0;
@@ -137,6 +139,76 @@ function searchNavigation(query: string): Array<z.infer<typeof SearchResultSchem
 	})
 		.filter((item) => item.score > 0.3)
 		.toSorted((a, b) => b.score - a.score);
+}
+
+function addSymbolResult(query: string, results: SearchResult[]): void {
+	const isSymbolQuery = /^[A-Z]{1,5}$/i.test(query);
+	if (!isSymbolQuery) {
+		return;
+	}
+	const upperSymbol = query.toUpperCase();
+	results.push({
+		id: `symbol-${upperSymbol}`,
+		type: "symbol",
+		title: upperSymbol,
+		subtitle: "View chart",
+		url: `/charts/${upperSymbol}`,
+		score: 0.95,
+	});
+}
+
+async function addDecisionResults(query: string, results: SearchResult[]): Promise<void> {
+	const decisionsRows = await getDecisionsRepo().search(query, 5);
+	for (const row of decisionsRows) {
+		results.push({
+			id: `decision-${row.id}`,
+			type: "decision",
+			title: `${row.symbol} - ${row.action}`,
+			subtitle: "Decision",
+			url: `/decisions/${row.id}`,
+			score: fuzzyScore(query, `${row.symbol} ${row.action}`),
+		});
+	}
+}
+
+async function addThesisResults(query: string, results: SearchResult[]): Promise<void> {
+	const thesesRows = await getThesesRepo().search(query, 5);
+	for (const row of thesesRows) {
+		results.push({
+			id: `thesis-${row.thesisId}`,
+			type: "thesis",
+			title: row.entryThesis?.slice(0, 50) ?? row.instrumentId,
+			subtitle: row.instrumentId,
+			url: `/theses/${row.thesisId}`,
+			score: fuzzyScore(query, `${row.instrumentId} ${row.entryThesis ?? ""}`),
+		});
+	}
+}
+
+async function addAlertResults(query: string, results: SearchResult[]): Promise<void> {
+	const alertsRows = await getAlertsRepo().search(query, 5);
+	for (const row of alertsRows) {
+		results.push({
+			id: `alert-${row.id}`,
+			type: "alert",
+			title: row.message.slice(0, 50),
+			subtitle: row.title,
+			url: `/alerts#${row.id}`,
+			score: fuzzyScore(query, `${row.title} ${row.message}`),
+		});
+	}
+}
+
+async function addDatabaseSearchResults(query: string, results: SearchResult[]): Promise<void> {
+	try {
+		await Promise.all([
+			addDecisionResults(query, results),
+			addThesisResults(query, results),
+			addAlertResults(query, results),
+		]);
+	} catch {
+		// Search failures should not fail the entire endpoint.
+	}
 }
 
 // ============================================
@@ -168,76 +240,11 @@ const searchRoute = createRoute({
 
 app.openapi(searchRoute, async (c) => {
 	const { q: query, limit = 20 } = c.req.valid("query");
+	const results: SearchResult[] = [];
 
-	const results: Array<z.infer<typeof SearchResultSchema>> = [];
-
-	// Search navigation (static)
-	const navResults = searchNavigation(query);
-	results.push(...navResults);
-
-	// Check if query looks like a stock symbol (1-5 uppercase letters)
-	const isSymbolQuery = /^[A-Z]{1,5}$/i.test(query);
-
-	if (isSymbolQuery) {
-		const upperSymbol = query.toUpperCase();
-		// Add symbol as search result
-		results.push({
-			id: `symbol-${upperSymbol}`,
-			type: "symbol",
-			title: upperSymbol,
-			subtitle: "View chart",
-			url: `/charts/${upperSymbol}`,
-			score: 0.95,
-		});
-	}
-
-	try {
-		// Search decisions
-		const decisionsRepo = getDecisionsRepo();
-		const decisionsRows = await decisionsRepo.search(query, 5);
-
-		for (const r of decisionsRows) {
-			results.push({
-				id: `decision-${r.id}`,
-				type: "decision",
-				title: `${r.symbol} - ${r.action}`,
-				subtitle: "Decision",
-				url: `/decisions/${r.id}`,
-				score: fuzzyScore(query, `${r.symbol} ${r.action}`),
-			});
-		}
-
-		// Search theses
-		const thesesRepo = getThesesRepo();
-		const thesesRows = await thesesRepo.search(query, 5);
-
-		for (const r of thesesRows) {
-			const title = r.entryThesis?.slice(0, 50) ?? r.instrumentId;
-			results.push({
-				id: `thesis-${r.thesisId}`,
-				type: "thesis",
-				title,
-				subtitle: r.instrumentId,
-				url: `/theses/${r.thesisId}`,
-				score: fuzzyScore(query, `${r.instrumentId} ${r.entryThesis ?? ""}`),
-			});
-		}
-
-		// Search alerts
-		const alertsRepo = getAlertsRepo();
-		const alertsRows = await alertsRepo.search(query, 5);
-
-		for (const r of alertsRows) {
-			results.push({
-				id: `alert-${r.id}`,
-				type: "alert",
-				title: r.message.slice(0, 50),
-				subtitle: r.title,
-				url: `/alerts#${r.id}`,
-				score: fuzzyScore(query, `${r.title} ${r.message}`),
-			});
-		}
-	} catch (_error) {}
+	results.push(...searchNavigation(query));
+	addSymbolResult(query, results);
+	await addDatabaseSearchResults(query, results);
 
 	// Sort by score and limit
 	const sortedResults = results.toSorted((a, b) => b.score - a.score).slice(0, limit);

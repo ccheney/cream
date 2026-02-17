@@ -1,17 +1,12 @@
 /**
  * Corporate Actions Batch Job Tests
  *
- * Tests for the CorporateActionsBatchJob including calculation functions
- * and batch job processing.
+ * Tests for the CorporateActionsBatchJob calculation functions.
  */
 
-import { describe, expect, mock, test } from "bun:test";
-import type { CorporateActionsRepository } from "@cream/storage";
-import { requireArrayItem } from "@cream/test-utils";
+import { describe, expect, test } from "bun:test";
 import {
 	type AlpacaCorporateAction,
-	type AlpacaCorporateActionsClient,
-	CorporateActionsBatchJob,
 	calculateDaysToExDividend,
 	calculateDividendGrowth,
 	calculateDividendIndicators,
@@ -20,27 +15,6 @@ import {
 	hasPendingSplit,
 	mapAlpacaActionType,
 } from "./corporate-actions-batch.js";
-
-// ============================================
-// Mock Factories
-// ============================================
-
-function createMockClient(actions: AlpacaCorporateAction[] = []): AlpacaCorporateActionsClient {
-	return {
-		getCorporateActions: mock(async () => actions),
-		getCorporateActionsForSymbols: mock(async () => actions),
-	};
-}
-
-function createMockRepo(): CorporateActionsRepository {
-	return {
-		upsert: mock(async () => {}),
-		getForSymbol: mock(async () => []),
-		getSplits: mock(async () => []),
-		getDividends: mock(async () => []),
-		getByExDate: mock(async () => []),
-	} as unknown as CorporateActionsRepository;
-}
 
 // ============================================
 // Calculation Function Tests
@@ -201,538 +175,150 @@ describe("calculateSplitAdjustmentFactor", () => {
 	});
 });
 
-describe("hasPendingSplit", () => {
-	test("returns true for upcoming split", () => {
-		const futureDate = new Date();
-		futureDate.setDate(futureDate.getDate() + 15);
-		const actions: AlpacaCorporateAction[] = [
-			{
-				corporate_action_type: "Split",
-				symbol: "AAPL",
-				ex_date: futureDate.toISOString().slice(0, 10),
-				record_date: null,
-				payment_date: null,
-				value: 4,
-			},
-		];
-		expect(hasPendingSplit(actions)).toBe(true);
-	});
+function createAction(
+	overrides: Partial<AlpacaCorporateAction>,
+	corporate_action_type: AlpacaCorporateAction["corporate_action_type"] = "Split",
+): AlpacaCorporateAction {
+	return {
+		corporate_action_type,
+		symbol: "AAPL",
+		ex_date: new Date().toISOString().slice(0, 10),
+		record_date: null,
+		payment_date: null,
+		value: 4,
+		...overrides,
+	};
+}
 
-	test("returns true for upcoming reverse split", () => {
-		const futureDate = new Date();
-		futureDate.setDate(futureDate.getDate() + 10);
-		const actions: AlpacaCorporateAction[] = [
+test("hasPendingSplit returns true for upcoming split", () => {
+	const futureDate = new Date();
+	futureDate.setDate(futureDate.getDate() + 15);
+	const actions: AlpacaCorporateAction[] = [
+		createAction({ ex_date: futureDate.toISOString().slice(0, 10) }, "Split"),
+	];
+	expect(hasPendingSplit(actions)).toBe(true);
+});
+
+test("hasPendingSplit returns true for upcoming reverse split", () => {
+	const futureDate = new Date();
+	futureDate.setDate(futureDate.getDate() + 10);
+	const actions: AlpacaCorporateAction[] = [
+		createAction(
 			{
-				corporate_action_type: "ReverseSplit",
 				symbol: "XYZ",
 				ex_date: futureDate.toISOString().slice(0, 10),
-				record_date: null,
-				payment_date: null,
 				value: 0.1,
 			},
-		];
-		expect(hasPendingSplit(actions)).toBe(true);
-	});
+			"ReverseSplit",
+		),
+	];
+	expect(hasPendingSplit(actions)).toBe(true);
+});
 
-	test("returns false for past split", () => {
-		const pastDate = new Date();
-		pastDate.setDate(pastDate.getDate() - 10);
-		const actions: AlpacaCorporateAction[] = [
-			{
-				corporate_action_type: "Split",
-				symbol: "AAPL",
-				ex_date: pastDate.toISOString().slice(0, 10),
-				record_date: null,
-				payment_date: null,
-				value: 4,
-			},
-		];
-		expect(hasPendingSplit(actions)).toBe(false);
-	});
+test("hasPendingSplit returns false for past split", () => {
+	const pastDate = new Date();
+	pastDate.setDate(pastDate.getDate() - 10);
+	const actions: AlpacaCorporateAction[] = [
+		createAction({ ex_date: pastDate.toISOString().slice(0, 10) }, "Split"),
+	];
+	expect(hasPendingSplit(actions)).toBe(false);
+});
 
-	test("returns false for split beyond lookahead window", () => {
-		const farFutureDate = new Date();
-		farFutureDate.setDate(farFutureDate.getDate() + 60);
-		const actions: AlpacaCorporateAction[] = [
-			{
-				corporate_action_type: "Split",
-				symbol: "AAPL",
-				ex_date: farFutureDate.toISOString().slice(0, 10),
-				record_date: null,
-				payment_date: null,
-				value: 4,
-			},
-		];
-		expect(hasPendingSplit(actions, new Date(), 30)).toBe(false);
-	});
+test("hasPendingSplit returns false for split beyond lookahead window", () => {
+	const farFutureDate = new Date();
+	farFutureDate.setDate(farFutureDate.getDate() + 60);
+	const actions: AlpacaCorporateAction[] = [
+		createAction({ ex_date: farFutureDate.toISOString().slice(0, 10) }, "Split"),
+	];
+	expect(hasPendingSplit(actions, new Date(), 30)).toBe(false);
+});
 
-	test("returns false for non-split actions", () => {
-		const futureDate = new Date();
-		futureDate.setDate(futureDate.getDate() + 15);
-		const actions: AlpacaCorporateAction[] = [
+test("hasPendingSplit returns false for non-split actions", () => {
+	const futureDate = new Date();
+	futureDate.setDate(futureDate.getDate() + 15);
+	const actions: AlpacaCorporateAction[] = [
+		createAction(
 			{
-				corporate_action_type: "Dividend",
-				symbol: "AAPL",
 				ex_date: futureDate.toISOString().slice(0, 10),
-				record_date: null,
-				payment_date: null,
 				value: 0.25,
 			},
-		];
-		expect(hasPendingSplit(actions)).toBe(false);
-	});
-
-	test("returns false for empty actions array", () => {
-		expect(hasPendingSplit([])).toBe(false);
-	});
+			"Dividend",
+		),
+	];
+	expect(hasPendingSplit(actions)).toBe(false);
 });
 
-describe("calculateDividendIndicators", () => {
-	test("calculates all indicators correctly", () => {
-		// Use dates relative to today to ensure they're within trailing 12 months
-		const now = new Date();
-		const formatDateStr = (d: Date) => d.toISOString().slice(0, 10);
-
-		const q1 = new Date(now);
-		q1.setMonth(q1.getMonth() - 1);
-		const q2 = new Date(now);
-		q2.setMonth(q2.getMonth() - 4);
-		const q3 = new Date(now);
-		q3.setMonth(q3.getMonth() - 7);
-		const q4 = new Date(now);
-		q4.setMonth(q4.getMonth() - 10);
-
-		const dividends = [
-			{ amount: 0.5, exDate: formatDateStr(q1) },
-			{ amount: 0.5, exDate: formatDateStr(q2) },
-			{ amount: 0.5, exDate: formatDateStr(q3) },
-			{ amount: 0.5, exDate: formatDateStr(q4) },
-		];
-
-		const futureDate = new Date(now);
-		futureDate.setDate(futureDate.getDate() + 30);
-
-		const result = calculateDividendIndicators(
-			dividends,
-			100, // $100 stock price
-			formatDateStr(futureDate), // Future ex-date
-			1.8, // Prior year dividends
-		);
-
-		expect(result.trailingDividendYield).toBe(0.02); // 2% yield ($2 / $100)
-		// Days to ex-dividend may vary slightly due to time-of-day
-		expect(result.daysToExDividend).toBeGreaterThanOrEqual(29);
-		expect(result.daysToExDividend).toBeLessThanOrEqual(30);
-		expect(result.dividendGrowth).toBeCloseTo(0.1111, 3); // ~11% growth (2.0 vs 1.8)
-		expect(result.lastDividendAmount).toBe(0.5);
-		expect(result.annualDividend).toBe(2.0);
-	});
-
-	test("handles no dividends", () => {
-		const result = calculateDividendIndicators([], 100, null, 0);
-
-		expect(result.trailingDividendYield).toBeNull();
-		expect(result.daysToExDividend).toBeNull();
-		expect(result.dividendGrowth).toBeNull();
-		expect(result.lastDividendAmount).toBeNull();
-		expect(result.annualDividend).toBeNull();
-	});
-
-	test("handles null price", () => {
-		const dividends = [{ amount: 0.5, exDate: new Date().toISOString().slice(0, 10) }];
-		const result = calculateDividendIndicators(dividends, null, null, 0);
-
-		expect(result.trailingDividendYield).toBeNull();
-		expect(result.lastDividendAmount).toBe(0.5);
-		expect(result.annualDividend).toBe(0.5);
-	});
-
-	test("filters out dividends older than 12 months", () => {
-		const oldDate = new Date();
-		oldDate.setFullYear(oldDate.getFullYear() - 2);
-		const dividends = [
-			{ amount: 0.5, exDate: new Date().toISOString().slice(0, 10) },
-			{ amount: 10.0, exDate: oldDate.toISOString().slice(0, 10) }, // Old dividend should be excluded
-		];
-
-		const result = calculateDividendIndicators(dividends, 100, null, 0);
-		expect(result.annualDividend).toBe(0.5); // Only recent dividend counted
-	});
+test("hasPendingSplit returns false for empty actions array", () => {
+	expect(hasPendingSplit([])).toBe(false);
 });
 
-// ============================================
-// CorporateActionsBatchJob Tests
-// ============================================
+test("calculateDividendIndicators calculates all indicators correctly", () => {
+	// Use dates relative to today to ensure they're within trailing 12 months
+	const now = new Date();
+	const formatDateStr = (d: Date) => d.toISOString().slice(0, 10);
 
-describe("CorporateActionsBatchJob", () => {
-	describe("run", () => {
-		test("processes symbols and stores corporate actions", async () => {
-			const actions: AlpacaCorporateAction[] = [
-				{
-					corporate_action_type: "Dividend",
-					symbol: "AAPL",
-					ex_date: "2024-01-15",
-					record_date: "2024-01-16",
-					payment_date: "2024-01-20",
-					value: 0.24,
-				},
-				{
-					corporate_action_type: "Split",
-					symbol: "AAPL",
-					ex_date: "2024-08-01",
-					record_date: null,
-					payment_date: null,
-					value: 4,
-				},
-			];
+	const q1 = new Date(now);
+	q1.setMonth(q1.getMonth() - 1);
+	const q2 = new Date(now);
+	q2.setMonth(q2.getMonth() - 4);
+	const q3 = new Date(now);
+	q3.setMonth(q3.getMonth() - 7);
+	const q4 = new Date(now);
+	q4.setMonth(q4.getMonth() - 10);
 
-			const client = createMockClient(actions);
-			const repo = createMockRepo();
-			const job = new CorporateActionsBatchJob(client, repo);
+	const dividends = [
+		{ amount: 0.5, exDate: formatDateStr(q1) },
+		{ amount: 0.5, exDate: formatDateStr(q2) },
+		{ amount: 0.5, exDate: formatDateStr(q3) },
+		{ amount: 0.5, exDate: formatDateStr(q4) },
+	];
 
-			const result = await job.run(["AAPL"]);
+	const futureDate = new Date(now);
+	futureDate.setDate(futureDate.getDate() + 30);
 
-			expect(result.processed).toBe(1);
-			expect(result.failed).toBe(0);
-			expect(repo.upsert).toHaveBeenCalledTimes(2);
-		});
+	const result = calculateDividendIndicators(
+		dividends,
+		100, // $100 stock price
+		formatDateStr(futureDate), // Future ex-date
+		1.8, // Prior year dividends
+	);
 
-		test("handles multiple symbols", async () => {
-			const actions: AlpacaCorporateAction[] = [
-				{
-					corporate_action_type: "Dividend",
-					symbol: "AAPL",
-					ex_date: "2024-01-15",
-					record_date: null,
-					payment_date: null,
-					value: 0.24,
-				},
-				{
-					corporate_action_type: "Dividend",
-					symbol: "MSFT",
-					ex_date: "2024-01-15",
-					record_date: null,
-					payment_date: null,
-					value: 0.68,
-				},
-			];
+	expect(result.trailingDividendYield).toBe(0.02); // 2% yield ($2 / $100)
+	// Days to ex-dividend may vary slightly due to time-of-day
+	expect(result.daysToExDividend).toBeGreaterThanOrEqual(29);
+	expect(result.daysToExDividend).toBeLessThanOrEqual(30);
+	expect(result.dividendGrowth).toBeCloseTo(0.1111, 3); // ~11% growth (2.0 vs 1.8)
+	expect(result.lastDividendAmount).toBe(0.5);
+	expect(result.annualDividend).toBe(2.0);
+});
 
-			const client = createMockClient(actions);
-			const repo = createMockRepo();
-			const job = new CorporateActionsBatchJob(client, repo);
+test("calculateDividendIndicators handles no dividends", () => {
+	const result = calculateDividendIndicators([], 100, null, 0);
 
-			const result = await job.run(["AAPL", "MSFT"]);
+	expect(result.trailingDividendYield).toBeNull();
+	expect(result.daysToExDividend).toBeNull();
+	expect(result.dividendGrowth).toBeNull();
+	expect(result.lastDividendAmount).toBeNull();
+	expect(result.annualDividend).toBeNull();
+});
 
-			expect(result.processed).toBe(2);
-			expect(result.failed).toBe(0);
-		});
+test("calculateDividendIndicators handles null price", () => {
+	const dividends = [{ amount: 0.5, exDate: new Date().toISOString().slice(0, 10) }];
+	const result = calculateDividendIndicators(dividends, null, null, 0);
 
-		test("handles symbols with no corporate actions", async () => {
-			const client = createMockClient([]);
-			const repo = createMockRepo();
-			const job = new CorporateActionsBatchJob(client, repo);
+	expect(result.trailingDividendYield).toBeNull();
+	expect(result.lastDividendAmount).toBe(0.5);
+	expect(result.annualDividend).toBe(0.5);
+});
 
-			const result = await job.run(["AAPL"]);
+test("calculateDividendIndicators filters out dividends older than 12 months", () => {
+	const oldDate = new Date();
+	oldDate.setFullYear(oldDate.getFullYear() - 2);
+	const dividends = [
+		{ amount: 0.5, exDate: new Date().toISOString().slice(0, 10) },
+		{ amount: 10.0, exDate: oldDate.toISOString().slice(0, 10) }, // Old dividend should be excluded
+	];
 
-			expect(result.processed).toBe(1);
-			expect(result.failed).toBe(0);
-			expect(repo.upsert).not.toHaveBeenCalled();
-		});
-
-		test("handles API errors with retry", async () => {
-			let callCount = 0;
-			const client: AlpacaCorporateActionsClient = {
-				getCorporateActions: mock(async () => []),
-				getCorporateActionsForSymbols: mock(async () => {
-					callCount++;
-					if (callCount < 3) {
-						throw new Error("API error");
-					}
-					return [
-						{
-							corporate_action_type: "Dividend" as const,
-							symbol: "AAPL",
-							ex_date: "2024-01-15",
-							record_date: null,
-							payment_date: null,
-							value: 0.24,
-						},
-					];
-				}),
-			};
-
-			const repo = createMockRepo();
-			const job = new CorporateActionsBatchJob(client, repo, undefined, {
-				retryDelayMs: 10, // Fast retries for testing
-			});
-
-			const result = await job.run(["AAPL"]);
-
-			expect(result.processed).toBe(1);
-			expect(result.failed).toBe(0);
-			expect(callCount).toBe(3);
-		});
-
-		test("continues on individual symbol errors when configured", async () => {
-			const client = createMockClient([
-				{
-					corporate_action_type: "Dividend",
-					symbol: "AAPL",
-					ex_date: "2024-01-15",
-					record_date: null,
-					payment_date: null,
-					value: 0.24,
-				},
-			]);
-
-			const repo = createMockRepo();
-			(repo.upsert as ReturnType<typeof mock>).mockImplementation(async () => {
-				throw new Error("Database error");
-			});
-
-			const job = new CorporateActionsBatchJob(client, repo, undefined, {
-				continueOnError: true,
-			});
-
-			const result = await job.run(["AAPL", "MSFT"]);
-
-			// AAPL fails during upsert, MSFT has no actions so succeeds
-			expect(result.failed).toBe(1);
-			expect(result.processed).toBe(1);
-			expect(result.errors.length).toBe(1);
-			expect(requireArrayItem(result.errors, 0, "error").symbol).toBe("AAPL");
-		});
-
-		test("stops on error when continueOnError is false", async () => {
-			const client: AlpacaCorporateActionsClient = {
-				getCorporateActions: mock(async () => []),
-				getCorporateActionsForSymbols: mock(async () => {
-					throw new Error("API error");
-				}),
-			};
-
-			const repo = createMockRepo();
-			const job = new CorporateActionsBatchJob(client, repo, undefined, {
-				continueOnError: false,
-				maxRetries: 0,
-			});
-
-			await expect(job.run(["AAPL"])).rejects.toThrow("API error");
-		});
-
-		test("reports duration in milliseconds", async () => {
-			const client = createMockClient([]);
-			const repo = createMockRepo();
-			const job = new CorporateActionsBatchJob(client, repo);
-
-			const result = await job.run(["AAPL"]);
-
-			expect(result.durationMs).toBeGreaterThanOrEqual(0);
-		});
-	});
-
-	describe("action type mapping", () => {
-		test("stores dividend actions with amount", async () => {
-			const actions: AlpacaCorporateAction[] = [
-				{
-					corporate_action_type: "Dividend",
-					symbol: "AAPL",
-					ex_date: "2024-01-15",
-					record_date: "2024-01-16",
-					payment_date: "2024-01-20",
-					value: 0.24,
-					description: "Quarterly dividend",
-				},
-			];
-
-			const client = createMockClient(actions);
-			const repo = createMockRepo();
-			const job = new CorporateActionsBatchJob(client, repo);
-
-			await job.run(["AAPL"]);
-
-			const calls = (repo.upsert as ReturnType<typeof mock>).mock.calls;
-			expect(calls.length).toBe(1);
-			const insert = requireArrayItem(calls, 0, "upsert call")[0];
-			if (!insert) {
-				throw new Error("Expected insert payload");
-			}
-			expect(insert.actionType).toBe("dividend");
-			expect(insert.amount).toBe(0.24);
-			expect(insert.ratio).toBeNull();
-			expect(insert.details).toBe("Quarterly dividend");
-		});
-
-		test("stores split actions with ratio", async () => {
-			const actions: AlpacaCorporateAction[] = [
-				{
-					corporate_action_type: "Split",
-					symbol: "AAPL",
-					ex_date: "2024-08-01",
-					record_date: null,
-					payment_date: null,
-					value: 4,
-				},
-			];
-
-			const client = createMockClient(actions);
-			const repo = createMockRepo();
-			const job = new CorporateActionsBatchJob(client, repo);
-
-			await job.run(["AAPL"]);
-
-			const calls = (repo.upsert as ReturnType<typeof mock>).mock.calls;
-			expect(calls.length).toBe(1);
-			const insert = requireArrayItem(calls, 0, "upsert call")[0];
-			if (!insert) {
-				throw new Error("Expected insert payload");
-			}
-			expect(insert.actionType).toBe("split");
-			expect(insert.ratio).toBe(4);
-			expect(insert.amount).toBeNull();
-		});
-
-		test("stores reverse split with ratio", async () => {
-			const actions: AlpacaCorporateAction[] = [
-				{
-					corporate_action_type: "ReverseSplit",
-					symbol: "XYZ",
-					ex_date: "2024-03-01",
-					record_date: null,
-					payment_date: null,
-					value: 0.1,
-				},
-			];
-
-			const client = createMockClient(actions);
-			const repo = createMockRepo();
-			const job = new CorporateActionsBatchJob(client, repo);
-
-			await job.run(["XYZ"]);
-
-			const calls = (repo.upsert as ReturnType<typeof mock>).mock.calls;
-			expect(calls.length).toBe(1);
-			const insert = requireArrayItem(calls, 0, "upsert call")[0];
-			if (!insert) {
-				throw new Error("Expected insert payload");
-			}
-			expect(insert.actionType).toBe("reverse_split");
-			expect(insert.ratio).toBe(0.1);
-		});
-
-		test("stores special dividend", async () => {
-			const actions: AlpacaCorporateAction[] = [
-				{
-					corporate_action_type: "SpecialDividend",
-					symbol: "COST",
-					ex_date: "2024-12-01",
-					record_date: null,
-					payment_date: null,
-					value: 15.0,
-				},
-			];
-
-			const client = createMockClient(actions);
-			const repo = createMockRepo();
-			const job = new CorporateActionsBatchJob(client, repo);
-
-			await job.run(["COST"]);
-
-			const calls = (repo.upsert as ReturnType<typeof mock>).mock.calls;
-			expect(calls.length).toBe(1);
-			const insert = requireArrayItem(calls, 0, "upsert call")[0];
-			if (!insert) {
-				throw new Error("Expected insert payload");
-			}
-			expect(insert.actionType).toBe("special_dividend");
-			expect(insert.amount).toBe(15.0);
-		});
-	});
-
-	describe("configuration", () => {
-		test("uses default configuration", async () => {
-			const client = createMockClient([]);
-			const repo = createMockRepo();
-			const job = new CorporateActionsBatchJob(client, repo);
-
-			const result = await job.run(["AAPL"]);
-			expect(result.processed).toBe(1);
-		});
-
-		test("respects custom lookback days", async () => {
-			const client = createMockClient([]);
-			const repo = createMockRepo();
-			const job = new CorporateActionsBatchJob(client, repo, undefined, {
-				lookbackDays: 30,
-				lookaheadDays: 14,
-			});
-
-			await job.run(["AAPL"]);
-
-			// Verify the client was called (we can't easily verify dates without more mocking)
-			expect(client.getCorporateActionsForSymbols).toHaveBeenCalled();
-		});
-	});
-
-	describe("edge cases", () => {
-		test("handles empty symbols array", async () => {
-			const client = createMockClient([]);
-			const repo = createMockRepo();
-			const job = new CorporateActionsBatchJob(client, repo);
-
-			const result = await job.run([]);
-
-			expect(result.processed).toBe(0);
-			expect(result.failed).toBe(0);
-		});
-
-		test("handles case-insensitive symbol matching", async () => {
-			const actions: AlpacaCorporateAction[] = [
-				{
-					corporate_action_type: "Dividend",
-					symbol: "aapl", // lowercase from API
-					ex_date: "2024-01-15",
-					record_date: null,
-					payment_date: null,
-					value: 0.24,
-				},
-			];
-
-			const client = createMockClient(actions);
-			const repo = createMockRepo();
-			const job = new CorporateActionsBatchJob(client, repo);
-
-			const result = await job.run(["AAPL"]); // uppercase input
-
-			expect(result.processed).toBe(1);
-			expect(repo.upsert).toHaveBeenCalled();
-		});
-
-		test("handles actions without description", async () => {
-			const actions: AlpacaCorporateAction[] = [
-				{
-					corporate_action_type: "Dividend",
-					symbol: "AAPL",
-					ex_date: "2024-01-15",
-					record_date: null,
-					payment_date: null,
-					value: 0.24,
-					// no description
-				},
-			];
-
-			const client = createMockClient(actions);
-			const repo = createMockRepo();
-			const job = new CorporateActionsBatchJob(client, repo);
-
-			await job.run(["AAPL"]);
-
-			const calls = (repo.upsert as ReturnType<typeof mock>).mock.calls;
-			const insert = requireArrayItem(calls, 0, "upsert call")[0];
-			if (!insert) {
-				throw new Error("Expected insert payload");
-			}
-			expect(insert.details).toBeNull();
-		});
-	});
+	const result = calculateDividendIndicators(dividends, 100, null, 0);
+	expect(result.annualDividend).toBe(0.5); // Only recent dividend counted
 });

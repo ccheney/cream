@@ -11,11 +11,13 @@
 
 import {
 	type MutationFunction,
+	type QueryClient,
 	type QueryKey,
+	type UseMutationResult,
 	useMutation,
 	useQueryClient,
 } from "@tanstack/react-query";
-import { useRef } from "react";
+import { type MutableRefObject, useRef } from "react";
 import { useToastStore } from "@/stores/toast-store";
 
 export interface OptimisticMutationOptions<TData, TVariables, TContext = unknown> {
@@ -40,6 +42,135 @@ export interface OptimisticMutationResult<TData, TVariables> {
 	error: Error | null;
 	data: TData | undefined;
 	reset: () => void;
+}
+
+type MutationMessage<TPayload, TVariables> =
+	| string
+	| ((payload: TPayload, variables: TVariables) => string)
+	| undefined;
+
+function resolveMutationMessage<TPayload, TVariables>(
+	message: MutationMessage<TPayload, TVariables>,
+	payload: TPayload,
+	variables: TVariables,
+	fallback: string,
+): string {
+	if (typeof message === "function") {
+		return message(payload, variables);
+	}
+	return message ?? fallback;
+}
+
+function invalidateQueryKeys(queryClient: QueryClient, invalidateKeys?: QueryKey[]): void {
+	if (!invalidateKeys) {
+		return;
+	}
+	for (const key of invalidateKeys) {
+		queryClient.invalidateQueries({ queryKey: key });
+	}
+}
+
+interface OnMutateHandlerOptions<TData, TVariables, _TContext> {
+	queryClient: QueryClient;
+	queryKey: QueryKey;
+	optimisticUpdate: (currentData: TData | undefined, variables: TVariables) => TData;
+	previousDataRef: MutableRefObject<TData | undefined>;
+}
+
+function createOnMutateHandler<TData, TVariables, TContext>({
+	queryClient,
+	queryKey,
+	optimisticUpdate,
+	previousDataRef,
+}: OnMutateHandlerOptions<TData, TVariables, TContext>): (
+	variables: TVariables,
+) => Promise<TContext> {
+	return async (variables) => {
+		await queryClient.cancelQueries({ queryKey });
+		previousDataRef.current = queryClient.getQueryData<TData>(queryKey);
+		queryClient.setQueryData<TData>(queryKey, (currentData) =>
+			optimisticUpdate(currentData, variables),
+		);
+		return { previousData: previousDataRef.current } as TContext;
+	};
+}
+
+interface OnSuccessHandlerOptions<TData, TVariables, TContext> {
+	queryClient: QueryClient;
+	successMessage: OptimisticMutationOptions<TData, TVariables, TContext>["successMessage"];
+	showSuccessToast: boolean;
+	showSuccess: (message: string) => void;
+	invalidateKeys?: QueryKey[];
+	onSuccess?: (data: TData, variables: TVariables, context: TContext) => void;
+}
+
+function createOnSuccessHandler<TData, TVariables, TContext>({
+	queryClient,
+	successMessage,
+	showSuccessToast,
+	showSuccess,
+	invalidateKeys,
+	onSuccess,
+}: OnSuccessHandlerOptions<TData, TVariables, TContext>) {
+	return (data: TData, variables: TVariables, context: TContext) => {
+		if (showSuccessToast && successMessage) {
+			const message = resolveMutationMessage(successMessage, data, variables, "");
+			showSuccess(message);
+		}
+		invalidateQueryKeys(queryClient, invalidateKeys);
+		onSuccess?.(data, variables, context);
+	};
+}
+
+interface OnErrorHandlerOptions<TData, TVariables, TContext> {
+	queryClient: QueryClient;
+	queryKey: QueryKey;
+	previousDataRef: MutableRefObject<TData | undefined>;
+	errorMessage: OptimisticMutationOptions<TData, TVariables, TContext>["errorMessage"];
+	showErrorToast: boolean;
+	showError: (message: string) => void;
+	onError?: (error: Error, variables: TVariables, context: TContext | undefined) => void;
+}
+
+function createOnErrorHandler<TData, TVariables, TContext>({
+	queryClient,
+	queryKey,
+	previousDataRef,
+	errorMessage,
+	showErrorToast,
+	showError,
+	onError,
+}: OnErrorHandlerOptions<TData, TVariables, TContext>) {
+	return (error: Error, variables: TVariables, context: TContext | undefined) => {
+		if (previousDataRef.current !== undefined) {
+			queryClient.setQueryData(queryKey, previousDataRef.current);
+		}
+		if (showErrorToast) {
+			const message = resolveMutationMessage(
+				errorMessage,
+				error,
+				variables,
+				error.message ?? "An error occurred",
+			);
+			showError(message);
+		}
+		onError?.(error, variables, context);
+	};
+}
+
+function toMutationResult<TData, TVariables>(
+	mutation: UseMutationResult<TData, Error, TVariables, unknown>,
+): OptimisticMutationResult<TData, TVariables> {
+	return {
+		mutate: mutation.mutate,
+		mutateAsync: mutation.mutateAsync,
+		isPending: mutation.isPending,
+		isSuccess: mutation.isSuccess,
+		isError: mutation.isError,
+		error: mutation.error,
+		data: mutation.data,
+		reset: mutation.reset,
+	};
 }
 
 /**
@@ -78,66 +209,41 @@ export function useOptimisticMutation<TData, TVariables, TContext = unknown>(
 	const queryClient = useQueryClient();
 	const { success: showSuccess, error: showError } = useToastStore();
 	const previousDataRef = useRef<TData | undefined>(undefined);
+	const onMutate = createOnMutateHandler<TData, TVariables, TContext>({
+		queryClient,
+		queryKey,
+		optimisticUpdate,
+		previousDataRef,
+	});
+	const onSuccessHandler = createOnSuccessHandler<TData, TVariables, TContext>({
+		queryClient,
+		successMessage,
+		showSuccessToast,
+		showSuccess,
+		invalidateKeys,
+		onSuccess,
+	});
+	const onErrorHandler = createOnErrorHandler<TData, TVariables, TContext>({
+		queryClient,
+		queryKey,
+		previousDataRef,
+		errorMessage,
+		showErrorToast,
+		showError,
+		onError,
+	});
 
 	const mutation = useMutation<TData, Error, TVariables, TContext>({
 		mutationFn,
-
-		onMutate: async (variables) => {
-			await queryClient.cancelQueries({ queryKey });
-			previousDataRef.current = queryClient.getQueryData<TData>(queryKey);
-			queryClient.setQueryData<TData>(queryKey, (currentData) =>
-				optimisticUpdate(currentData, variables),
-			);
-			return { previousData: previousDataRef.current } as TContext;
-		},
-
-		onSuccess: (data, variables, context) => {
-			if (showSuccessToast && successMessage) {
-				const message =
-					typeof successMessage === "function" ? successMessage(data, variables) : successMessage;
-				showSuccess(message);
-			}
-
-			if (invalidateKeys) {
-				for (const key of invalidateKeys) {
-					queryClient.invalidateQueries({ queryKey: key });
-				}
-			}
-
-			onSuccess?.(data, variables, context);
-		},
-
-		onError: (error, variables, context) => {
-			if (previousDataRef.current !== undefined) {
-				queryClient.setQueryData(queryKey, previousDataRef.current);
-			}
-
-			if (showErrorToast) {
-				const message =
-					typeof errorMessage === "function"
-						? errorMessage(error, variables)
-						: (errorMessage ?? error.message ?? "An error occurred");
-				showError(message);
-			}
-
-			onError?.(error, variables, context);
-		},
-
+		onMutate,
+		onSuccess: onSuccessHandler,
+		onError: onErrorHandler,
 		onSettled: () => {
 			queryClient.invalidateQueries({ queryKey });
 		},
 	});
 
-	return {
-		mutate: mutation.mutate,
-		mutateAsync: mutation.mutateAsync,
-		isPending: mutation.isPending,
-		isSuccess: mutation.isSuccess,
-		isError: mutation.isError,
-		error: mutation.error,
-		data: mutation.data,
-		reset: mutation.reset,
-	};
+	return toMutationResult(mutation);
 }
 
 // ============================================

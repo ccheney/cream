@@ -8,17 +8,21 @@
  * @see docs/plans/04-memory-helixdb.md
  */
 
-import type {
-	Company,
-	DependencyType,
-	DependsOnEdge,
-	MarketCapBucket,
-	RelatedToEdge,
-	RelationshipType,
-} from "@cream/helix-schema";
+import type { DependencyType, RelationshipType } from "@cream/helix-schema";
 
 import type { HelixClient } from "../client.js";
 import { batchCreateEdges, createEdge, type EdgeInput } from "../queries/mutations.js";
+import {
+	batchUpsertCompanyNodes,
+	buildCorrelationPeerEdges,
+	buildIndustryPeerEdges,
+	buildSectorPeerEdges,
+	buildSupplyChainEdges,
+	calculateCorrelation,
+	calculateReturns,
+	getMarketCapBucket,
+	toCompanyNodes,
+} from "./company-graph-builder.helpers.js";
 
 // ============================================
 // Types
@@ -98,379 +102,21 @@ export interface CorrelationAnalysisOptions {
 	maxPairsPerSymbol?: number;
 }
 
-// ============================================
-// Market Cap Bucket Mapping
-// ============================================
+export { getMarketCapBucket, calculateCorrelation, calculateReturns };
 
-/**
- * Map market cap to bucket classification
- */
-export function getMarketCapBucket(marketCap: number | undefined): MarketCapBucket {
-	if (!marketCap) {
-		return "SMALL";
-	}
-	if (marketCap >= 200_000_000_000) {
-		return "MEGA";
-	}
-	if (marketCap >= 10_000_000_000) {
-		return "LARGE";
-	}
-	if (marketCap >= 2_000_000_000) {
-		return "MID";
-	}
-	if (marketCap >= 300_000_000) {
-		return "SMALL";
-	}
-	return "MICRO";
+interface ResolvedBuildOptions {
+	maxPeersPerCompany: number;
+	includeIndustryPeers: boolean;
+	correlationOptions: CorrelationAnalysisOptions;
+	batchSize: number;
 }
 
-// ============================================
-// Company Node Operations
-// ============================================
-
-/**
- * Upsert a company node in HelixDB
- */
-async function upsertCompanyNode(
-	client: HelixClient,
-	company: Company,
-): Promise<{ success: boolean; error?: string }> {
-	try {
-		await client.query("upsertCompany", {
-			symbol: company.symbol,
-			name: company.name,
-			sector: company.sector,
-			industry: company.industry,
-			market_cap_bucket: company.market_cap_bucket,
-		});
-		return { success: true };
-	} catch (error) {
-		return {
-			success: false,
-			error: error instanceof Error ? error.message : "Unknown error",
-		};
-	}
-}
-
-/**
- * Batch upsert company nodes
- */
-async function batchUpsertCompanyNodes(
-	client: HelixClient,
-	companies: Company[],
-): Promise<{ successful: number; failed: number; errors: string[] }> {
-	const errors: string[] = [];
-	let successful = 0;
-	let failed = 0;
-
-	for (const company of companies) {
-		const result = await upsertCompanyNode(client, company);
-		if (result.success) {
-			successful++;
-		} else {
-			failed++;
-			if (result.error) {
-				errors.push(`${company.symbol}: ${result.error}`);
-			}
-		}
-	}
-
-	return { successful, failed, errors };
-}
-
-// ============================================
-// Peer Relationship Building
-// ============================================
-
-/**
- * Group companies by sector
- */
-function groupBySector(companies: CompanyData[]): Map<string, CompanyData[]> {
-	const groups = new Map<string, CompanyData[]>();
-
-	for (const company of companies) {
-		const sector = company.sector ?? "Unknown";
-		const existing = groups.get(sector) ?? [];
-		existing.push(company);
-		groups.set(sector, existing);
-	}
-
-	return groups;
-}
-
-/**
- * Group companies by industry
- */
-function groupByIndustry(companies: CompanyData[]): Map<string, CompanyData[]> {
-	const groups = new Map<string, CompanyData[]>();
-
-	for (const company of companies) {
-		const industry = company.industry ?? "Unknown";
-		const existing = groups.get(industry) ?? [];
-		existing.push(company);
-		groups.set(industry, existing);
-	}
-
-	return groups;
-}
-
-/**
- * Build sector peer edges (RELATED_TO with SECTOR_PEER type)
- * Creates bidirectional peer relationships within each sector
- */
-function buildSectorPeerEdges(companies: CompanyData[], maxPeersPerCompany: number): EdgeInput[] {
-	const edges: EdgeInput[] = [];
-	const sectorGroups = groupBySector(companies);
-	const edgeSet = new Set<string>();
-
-	for (const [_sector, peers] of sectorGroups) {
-		if (peers.length < 2) {
-			continue;
-		}
-
-		// For each company in the sector, create edges to other peers
-		// Limit to maxPeersPerCompany to avoid hub explosion
-		for (let i = 0; i < peers.length; i++) {
-			const source = peers[i];
-			if (!source) {
-				continue;
-			}
-
-			let edgesCreated = 0;
-			for (let j = 0; j < peers.length && edgesCreated < maxPeersPerCompany; j++) {
-				if (i === j) {
-					continue;
-				}
-
-				const target = peers[j];
-				if (!target) {
-					continue;
-				}
-
-				// Create deterministic edge key to avoid duplicates
-				const edgeKey = [source.symbol, target.symbol].toSorted().join("->");
-				if (edgeSet.has(edgeKey)) {
-					continue;
-				}
-
-				edgeSet.add(edgeKey);
-
-				const edgeData: RelatedToEdge = {
-					source_id: source.symbol,
-					target_id: target.symbol,
-					relationship_type: "SECTOR_PEER" as RelationshipType,
-				};
-
-				edges.push({
-					sourceId: edgeData.source_id,
-					targetId: edgeData.target_id,
-					edgeType: "RELATED_TO",
-					properties: {
-						relationship_type: edgeData.relationship_type,
-					},
-				});
-
-				edgesCreated++;
-			}
-		}
-	}
-
-	return edges;
-}
-
-/**
- * Build industry peer edges (more specific than sector peers)
- * Uses SECTOR_PEER type but with industry-level grouping
- */
-function buildIndustryPeerEdges(
-	companies: CompanyData[],
-	maxPeersPerCompany: number,
-	existingEdges: Set<string>,
-): EdgeInput[] {
-	const edges: EdgeInput[] = [];
-	const industryGroups = groupByIndustry(companies);
-
-	for (const [_industry, peers] of industryGroups) {
-		if (peers.length < 2) {
-			continue;
-		}
-
-		for (let i = 0; i < peers.length; i++) {
-			const source = peers[i];
-			if (!source) {
-				continue;
-			}
-
-			let edgesCreated = 0;
-			for (let j = 0; j < peers.length && edgesCreated < maxPeersPerCompany; j++) {
-				if (i === j) {
-					continue;
-				}
-
-				const target = peers[j];
-				if (!target) {
-					continue;
-				}
-
-				const edgeKey = [source.symbol, target.symbol].toSorted().join("->");
-				if (existingEdges.has(edgeKey)) {
-					continue;
-				}
-
-				existingEdges.add(edgeKey);
-
-				edges.push({
-					sourceId: source.symbol,
-					targetId: target.symbol,
-					edgeType: "RELATED_TO",
-					properties: {
-						relationship_type: "SECTOR_PEER" as RelationshipType,
-					},
-				});
-
-				edgesCreated++;
-			}
-		}
-	}
-
-	return edges;
-}
-
-// ============================================
-// Correlation-Based Relationship Building
-// ============================================
-
-/**
- * Calculate Pearson correlation coefficient between two return series
- */
-export function calculateCorrelation(returnsA: number[], returnsB: number[]): number {
-	if (returnsA.length !== returnsB.length || returnsA.length < 2) {
-		return 0;
-	}
-
-	const n = returnsA.length;
-	const meanA = returnsA.reduce((sum, v) => sum + v, 0) / n;
-	const meanB = returnsB.reduce((sum, v) => sum + v, 0) / n;
-
-	let numerator = 0;
-	let sumSqA = 0;
-	let sumSqB = 0;
-
-	for (let i = 0; i < n; i++) {
-		const devA = (returnsA[i] ?? 0) - meanA;
-		const devB = (returnsB[i] ?? 0) - meanB;
-		numerator += devA * devB;
-		sumSqA += devA * devA;
-		sumSqB += devB * devB;
-	}
-
-	const denominator = Math.sqrt(sumSqA * sumSqB);
-	if (denominator === 0) {
-		return 0;
-	}
-
-	return numerator / denominator;
-}
-
-/**
- * Calculate daily returns from price series
- */
-export function calculateReturns(prices: number[]): number[] {
-	const returns: number[] = [];
-	for (let i = 1; i < prices.length; i++) {
-		const prev = prices[i - 1];
-		const curr = prices[i];
-		if (prev && prev > 0 && curr !== undefined) {
-			returns.push((curr - prev) / prev);
-		}
-	}
-	return returns;
-}
-
-/**
- * Build correlation pair edges (RELATED_TO with COMPETITOR type)
- * High correlation suggests competitive or co-movement relationship
- */
-function buildCorrelationPeerEdges(
-	pairs: CorrelationPair[],
-	options: CorrelationAnalysisOptions,
-	existingEdges: Set<string>,
-): EdgeInput[] {
-	const edges: EdgeInput[] = [];
-	const minCorrelation = options.minCorrelation ?? 0.7;
-	const maxPairsPerSymbol = options.maxPairsPerSymbol ?? 10;
-
-	// Filter pairs above threshold
-	const validPairs = pairs.filter((p) => Math.abs(p.correlation) >= minCorrelation);
-
-	// Sort by absolute correlation (strongest first)
-	const sortedPairs = validPairs.toSorted(
-		(a, b) => Math.abs(b.correlation) - Math.abs(a.correlation),
-	);
-
-	// Track edges per symbol to respect limit
-	const edgesPerSymbol = new Map<string, number>();
-
-	for (const pair of sortedPairs) {
-		const countA = edgesPerSymbol.get(pair.symbolA) ?? 0;
-		const countB = edgesPerSymbol.get(pair.symbolB) ?? 0;
-
-		if (countA >= maxPairsPerSymbol || countB >= maxPairsPerSymbol) {
-			continue;
-		}
-
-		const edgeKey = [pair.symbolA, pair.symbolB].toSorted().join("->");
-		if (existingEdges.has(edgeKey)) {
-			continue;
-		}
-
-		existingEdges.add(edgeKey);
-		edgesPerSymbol.set(pair.symbolA, countA + 1);
-		edgesPerSymbol.set(pair.symbolB, countB + 1);
-
-		edges.push({
-			sourceId: pair.symbolA,
-			targetId: pair.symbolB,
-			edgeType: "RELATED_TO",
-			properties: {
-				relationship_type: "COMPETITOR" as RelationshipType,
-			},
-		});
-	}
-
-	return edges;
-}
-
-// ============================================
-// Supply Chain Relationship Building
-// ============================================
-
-/**
- * Build supply chain edges (DEPENDS_ON)
- */
-function buildSupplyChainEdges(relationships: SupplyChainRelationship[]): EdgeInput[] {
-	const edges: EdgeInput[] = [];
-
-	for (const rel of relationships) {
-		const edgeData: DependsOnEdge = {
-			source_id: rel.sourceSymbol,
-			target_id: rel.targetSymbol,
-			relationship_type: rel.dependencyType,
-			strength: Math.max(0, Math.min(1, rel.strength)),
-		};
-
-		edges.push({
-			sourceId: edgeData.source_id,
-			targetId: edgeData.target_id,
-			edgeType: "DEPENDS_ON",
-			properties: {
-				relationship_type: edgeData.relationship_type,
-				strength: edgeData.strength,
-			},
-		});
-	}
-
-	return edges;
+interface BuiltEdgeSets {
+	sectorPeerEdges: EdgeInput[];
+	industryPeerEdges: EdgeInput[];
+	correlationEdges: EdgeInput[];
+	supplyChainEdges: EdgeInput[];
+	allEdges: EdgeInput[];
 }
 
 // ============================================
@@ -484,6 +130,74 @@ function buildSupplyChainEdges(relationships: SupplyChainRelationship[]): EdgeIn
  */
 export class CompanyGraphBuilder {
 	constructor(private readonly client: HelixClient) {}
+
+	private resolveBuildOptions(options: CompanyGraphBuildOptions): ResolvedBuildOptions {
+		return {
+			maxPeersPerCompany: options.maxPeersPerCompany ?? 20,
+			includeIndustryPeers: options.includeIndustryPeers ?? true,
+			correlationOptions: options.correlationOptions ?? {},
+			batchSize: options.batchSize ?? 100,
+		};
+	}
+
+	private collectNodeWarnings(nodeErrors: string[]): string[] {
+		if (nodeErrors.length <= 10) {
+			return [...nodeErrors];
+		}
+
+		return [...nodeErrors.slice(0, 10), `...and ${nodeErrors.length - 10} more node errors`];
+	}
+
+	private buildEdgeSets(
+		companies: CompanyData[],
+		correlationPairs: CorrelationPair[],
+		supplyChainRelationships: SupplyChainRelationship[],
+		options: ResolvedBuildOptions,
+	): BuiltEdgeSets {
+		const sectorPeerEdges = buildSectorPeerEdges(companies, options.maxPeersPerCompany);
+		const existingEdges = new Set(
+			sectorPeerEdges.map((edge) => [edge.sourceId, edge.targetId].toSorted().join("->")),
+		);
+		const industryPeerEdges = options.includeIndustryPeers
+			? buildIndustryPeerEdges(companies, options.maxPeersPerCompany, existingEdges)
+			: [];
+		const correlationEdges = buildCorrelationPeerEdges(
+			correlationPairs,
+			options.correlationOptions,
+			existingEdges,
+		);
+		const supplyChainEdges = buildSupplyChainEdges(supplyChainRelationships);
+		const allEdges = [
+			...sectorPeerEdges,
+			...industryPeerEdges,
+			...correlationEdges,
+			...supplyChainEdges,
+		];
+
+		return { sectorPeerEdges, industryPeerEdges, correlationEdges, supplyChainEdges, allEdges };
+	}
+
+	private async createEdgesInBatches(
+		edges: EdgeInput[],
+		batchSize: number,
+		warnings: string[],
+	): Promise<number> {
+		let totalEdgesCreated = 0;
+
+		for (let i = 0; i < edges.length; i += batchSize) {
+			const batch = edges.slice(i, i + batchSize);
+			const batchResult = await batchCreateEdges(this.client, batch);
+			totalEdgesCreated += batchResult.successful.length;
+
+			if (batchResult.failed.length > 0) {
+				warnings.push(
+					`Batch ${Math.floor(i / batchSize) + 1}: ${batchResult.failed.length} edges failed`,
+				);
+			}
+		}
+
+		return totalEdgesCreated;
+	}
 
 	/**
 	 * Build company graph from universe companies
@@ -501,77 +215,29 @@ export class CompanyGraphBuilder {
 	): Promise<CompanyGraphBuildResult> {
 		const startTime = performance.now();
 		const warnings: string[] = [];
-
-		const maxPeersPerCompany = options.maxPeersPerCompany ?? 20;
-		const includeIndustryPeers = options.includeIndustryPeers ?? true;
-		const correlationOptions = options.correlationOptions ?? {};
-		const batchSize = options.batchSize ?? 100;
-
-		// Step 1: Upsert company nodes
-		const companyNodes: Company[] = companies.map((c) => ({
-			symbol: c.symbol,
-			name: c.name ?? c.symbol,
-			sector: c.sector ?? "Unknown",
-			industry: c.industry ?? "Unknown",
-			market_cap_bucket: getMarketCapBucket(c.marketCap),
-		}));
-
+		const resolvedOptions = this.resolveBuildOptions(options);
+		const companyNodes = toCompanyNodes(companies);
 		const nodeResult = await batchUpsertCompanyNodes(this.client, companyNodes);
-		if (nodeResult.errors.length > 0) {
-			warnings.push(...nodeResult.errors.slice(0, 10));
-			if (nodeResult.errors.length > 10) {
-				warnings.push(`...and ${nodeResult.errors.length - 10} more node errors`);
-			}
-		}
+		warnings.push(...this.collectNodeWarnings(nodeResult.errors));
 
-		// Step 2: Build sector peer edges
-		const sectorPeerEdges = buildSectorPeerEdges(companies, maxPeersPerCompany);
-		const existingEdges = new Set(
-			sectorPeerEdges.map((e) => [e.sourceId, e.targetId].toSorted().join("->")),
-		);
-
-		// Step 3: Build industry peer edges (if enabled)
-		let industryPeerEdges: EdgeInput[] = [];
-		if (includeIndustryPeers) {
-			industryPeerEdges = buildIndustryPeerEdges(companies, maxPeersPerCompany, existingEdges);
-		}
-
-		// Step 4: Build correlation-based peer edges
-		const correlationEdges = buildCorrelationPeerEdges(
+		const edgeSets = this.buildEdgeSets(
+			companies,
 			correlationPairs,
-			correlationOptions,
-			existingEdges,
+			supplyChainRelationships,
+			resolvedOptions,
 		);
-
-		// Step 5: Build supply chain edges
-		const supplyChainEdges = buildSupplyChainEdges(supplyChainRelationships);
-
-		// Step 6: Batch create all edges
-		const allEdges = [
-			...sectorPeerEdges,
-			...industryPeerEdges,
-			...correlationEdges,
-			...supplyChainEdges,
-		];
-
-		let totalEdgesCreated = 0;
-		for (let i = 0; i < allEdges.length; i += batchSize) {
-			const batch = allEdges.slice(i, i + batchSize);
-			const batchResult = await batchCreateEdges(this.client, batch);
-			totalEdgesCreated += batchResult.successful.length;
-
-			if (batchResult.failed.length > 0) {
-				const failedCount = batchResult.failed.length;
-				warnings.push(`Batch ${Math.floor(i / batchSize) + 1}: ${failedCount} edges failed`);
-			}
-		}
+		const totalEdgesCreated = await this.createEdgesInBatches(
+			edgeSets.allEdges,
+			resolvedOptions.batchSize,
+			warnings,
+		);
 
 		return {
 			companiesUpserted: nodeResult.successful,
-			sectorPeerEdges: sectorPeerEdges.length,
-			industryPeerEdges: industryPeerEdges.length,
-			correlationPeerEdges: correlationEdges.length,
-			supplyChainEdges: supplyChainEdges.length,
+			sectorPeerEdges: edgeSets.sectorPeerEdges.length,
+			industryPeerEdges: edgeSets.industryPeerEdges.length,
+			correlationPeerEdges: edgeSets.correlationEdges.length,
+			supplyChainEdges: edgeSets.supplyChainEdges.length,
 			totalEdges: totalEdgesCreated,
 			executionTimeMs: performance.now() - startTime,
 			warnings,
@@ -636,9 +302,9 @@ export class CompanyGraphBuilder {
 				],
 			});
 
-			return result.data.map((r) => ({
-				symbol: r.target_symbol,
-				relationshipType: r.relationship_type,
+			return result.data.map((row) => ({
+				symbol: row.target_symbol,
+				relationshipType: row.relationship_type,
 			}));
 		} catch {
 			return [];
@@ -656,10 +322,10 @@ export class CompanyGraphBuilder {
 				Array<{ target_symbol: string; relationship_type: DependencyType; strength: number }>
 			>("getCompanyDependencies", { symbol });
 
-			return result.data.map((r) => ({
-				symbol: r.target_symbol,
-				dependencyType: r.relationship_type,
-				strength: r.strength,
+			return result.data.map((row) => ({
+				symbol: row.target_symbol,
+				dependencyType: row.relationship_type,
+				strength: row.strength,
 			}));
 		} catch {
 			return [];
@@ -677,10 +343,10 @@ export class CompanyGraphBuilder {
 				Array<{ source_symbol: string; relationship_type: DependencyType; strength: number }>
 			>("getDependentCompanies", { symbol });
 
-			return result.data.map((r) => ({
-				symbol: r.source_symbol,
-				dependencyType: r.relationship_type,
-				strength: r.strength,
+			return result.data.map((row) => ({
+				symbol: row.source_symbol,
+				dependencyType: row.relationship_type,
+				strength: row.strength,
 			}));
 		} catch {
 			return [];
@@ -700,7 +366,7 @@ export class CompanyGraphBuilder {
 		return {
 			successful: batchResult.successful.length,
 			failed: batchResult.failed.length,
-			errors: batchResult.failed.map((f) => f.error ?? f.id),
+			errors: batchResult.failed.map((failure) => failure.error ?? failure.id),
 		};
 	}
 
@@ -718,7 +384,7 @@ export class CompanyGraphBuilder {
 		return {
 			successful: batchResult.successful.length,
 			failed: batchResult.failed.length,
-			errors: batchResult.failed.map((f) => f.error ?? f.id),
+			errors: batchResult.failed.map((failure) => failure.error ?? failure.id),
 		};
 	}
 }

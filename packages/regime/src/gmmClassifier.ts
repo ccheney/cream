@@ -105,6 +105,9 @@ export const DEFAULT_GMM_CONFIG: GMMConfig = {
 	featureConfig: DEFAULT_FEATURE_CONFIG,
 };
 
+const MIN_CLUSTER_RESPONSIBILITY = 1e-10;
+const MIN_CLUSTER_VARIANCE = 1e-6;
+
 /**
  * Train a GMM model on candle data.
  *
@@ -242,52 +245,71 @@ function updateClusters(
 	responsibilities: number[][],
 	clusters: GMMCluster[],
 ): void {
-	const n = data.length;
-	const k = clusters.length;
-	const d = data[0]?.length ?? 4;
+	const sampleCount = data.length;
+	const dimensions = data[0]?.length ?? 4;
 
-	for (let c = 0; c < k; c++) {
-		const cluster = clusters[c];
-		if (!cluster) {
+	for (const [clusterIndex, cluster] of clusters.entries()) {
+		const softCount = computeSoftCount(responsibilities, clusterIndex);
+		if (softCount < MIN_CLUSTER_RESPONSIBILITY) {
 			continue;
 		}
 
-		// Compute N_k (soft count)
-		let nk = 0;
-		for (let i = 0; i < n; i++) {
-			nk += responsibilities[i]?.[c] ?? 0;
-		}
-
-		if (nk < 1e-10) {
-			continue;
-		}
-
-		cluster.weight = nk / n;
-
-		const newMean = new Array(d).fill(0);
-		for (let i = 0; i < n; i++) {
-			const r = responsibilities[i]?.[c] ?? 0;
-			for (let j = 0; j < d; j++) {
-				newMean[j] += r * (data[i]?.[j] ?? 0);
-			}
-		}
-		for (let j = 0; j < d; j++) {
-			newMean[j] /= nk;
-		}
-		cluster.mean = newMean;
-
-		const newVariance = new Array(d).fill(0);
-		for (let i = 0; i < n; i++) {
-			const r = responsibilities[i]?.[c] ?? 0;
-			for (let j = 0; j < d; j++) {
-				newVariance[j] += r * ((data[i]?.[j] ?? 0) - (newMean[j] ?? 0)) ** 2;
-			}
-		}
-		for (let j = 0; j < d; j++) {
-			newVariance[j] = Math.max((newVariance[j] ?? 0) / nk, 1e-6); // Floor to avoid singularity
-		}
-		cluster.variance = newVariance;
+		cluster.weight = softCount / sampleCount;
+		const mean = computeClusterMean(data, responsibilities, clusterIndex, dimensions, softCount);
+		cluster.mean = mean;
+		cluster.variance = computeClusterVariance(
+			data,
+			responsibilities,
+			clusterIndex,
+			mean,
+			dimensions,
+			softCount,
+		);
 	}
+}
+
+function computeSoftCount(responsibilities: number[][], clusterIndex: number): number {
+	return responsibilities.reduce((total, row) => total + (row?.[clusterIndex] ?? 0), 0);
+}
+
+function computeClusterMean(
+	data: number[][],
+	responsibilities: number[][],
+	clusterIndex: number,
+	dimensions: number,
+	softCount: number,
+): number[] {
+	const mean = new Array(dimensions).fill(0);
+
+	for (let sampleIndex = 0; sampleIndex < data.length; sampleIndex++) {
+		const responsibility = responsibilities[sampleIndex]?.[clusterIndex] ?? 0;
+		for (let featureIndex = 0; featureIndex < dimensions; featureIndex++) {
+			mean[featureIndex] += responsibility * (data[sampleIndex]?.[featureIndex] ?? 0);
+		}
+	}
+
+	return mean.map((value) => value / softCount);
+}
+
+function computeClusterVariance(
+	data: number[][],
+	responsibilities: number[][],
+	clusterIndex: number,
+	mean: number[],
+	dimensions: number,
+	softCount: number,
+): number[] {
+	const variance = new Array(dimensions).fill(0);
+
+	for (let sampleIndex = 0; sampleIndex < data.length; sampleIndex++) {
+		const responsibility = responsibilities[sampleIndex]?.[clusterIndex] ?? 0;
+		for (let featureIndex = 0; featureIndex < dimensions; featureIndex++) {
+			const delta = (data[sampleIndex]?.[featureIndex] ?? 0) - (mean[featureIndex] ?? 0);
+			variance[featureIndex] += responsibility * delta ** 2;
+		}
+	}
+
+	return variance.map((value) => Math.max(value / softCount, MIN_CLUSTER_VARIANCE));
 }
 
 /**

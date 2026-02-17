@@ -120,31 +120,30 @@ describe("splitTextWithOverlap", () => {
 // chunkParsedFiling Tests
 // ============================================
 
-describe("chunkParsedFiling", () => {
-	const createMockFiling = (): Filing => ({
-		accessionNumber: "0000320193-24-000081",
-		filingType: "10-K",
-		filedDate: new Date("2024-01-15"),
-		company: {
-			cik: "0000320193",
-			name: "Apple Inc.",
-			ticker: "AAPL",
-		},
-		primaryDocument: "aapl-20231230.htm",
-	});
+const createMockFiling = (): Filing => ({
+	accessionNumber: "0000320193-24-000081",
+	filingType: "10-K",
+	filedDate: new Date("2024-01-15"),
+	company: {
+		cik: "0000320193",
+		name: "Apple Inc.",
+		ticker: "AAPL",
+	},
+	primaryDocument: "aapl-20231230.htm",
+});
 
-	const createMockParsedFiling = (sections: Record<string, string>): ParsedFiling => ({
-		filing: createMockFiling(),
-		sections,
-		financialTables: [],
-		extractedAt: new Date(),
-	});
+const createMockParsedFiling = (sections: Record<string, string>): ParsedFiling => ({
+	filing: createMockFiling(),
+	sections,
+	financialTables: [],
+	extractedAt: new Date(),
+});
 
+describe("chunkParsedFiling metadata", () => {
 	test("creates chunks with correct metadata", () => {
 		const parsed = createMockParsedFiling({
 			business: "This is the business section content for testing purposes. ".repeat(10),
 		});
-
 		const chunks = chunkParsedFiling(parsed);
 
 		expect(chunks.length).toBeGreaterThan(0);
@@ -161,32 +160,29 @@ describe("chunkParsedFiling", () => {
 			business: "Business content ".repeat(100),
 			mda: "MDA content ".repeat(100),
 		});
-
 		const chunks = chunkParsedFiling(parsed);
-
-		// All chunks should have the same totalChunks
-		expect(chunks.length).toBeGreaterThan(0);
 		const firstChunk = chunks[0];
+
+		expect(chunks.length).toBeGreaterThan(0);
 		if (!firstChunk) {
 			throw new Error("Expected at least one chunk");
 		}
-		const totalChunks = firstChunk.totalChunks;
-		expect(totalChunks).toBe(chunks.length);
+		expect(firstChunk.totalChunks).toBe(chunks.length);
 		for (const chunk of chunks) {
-			expect(chunk.totalChunks).toBe(totalChunks);
+			expect(chunk.totalChunks).toBe(firstChunk.totalChunks);
 		}
 	});
+});
 
+describe("chunkParsedFiling section handling", () => {
 	test("skips sections shorter than minimum length", () => {
 		const parsed = createMockParsedFiling({
-			business: "Too short", // Less than 100 chars
+			business: "Too short",
 			mda: "This section is long enough to be included in the chunking process.".repeat(5),
 		});
-
 		const chunks = chunkParsedFiling(parsed);
-
-		// Should only have chunks from mda, not business
 		const sectionNames = chunks.map((c) => c.sectionName);
+
 		expect(sectionNames).not.toContain("Business Description");
 		expect(sectionNames.some((name) => name.includes("Management"))).toBe(true);
 	});
@@ -197,28 +193,22 @@ describe("chunkParsedFiling", () => {
 				5,
 			),
 		});
-
 		const chunks = chunkParsedFiling(parsed);
-
 		expect(chunks[0]?.chunkText.startsWith("## Risk Factors")).toBe(true);
 	});
+});
 
+describe("chunkParsedFiling identifiers", () => {
 	test("uses ticker when available, falls back to CIK", () => {
-		const filingWithTicker = createMockParsedFiling({
-			business: "Content ".repeat(50),
-		});
-		const chunksWithTicker = chunkParsedFiling(filingWithTicker);
+		const chunksWithTicker = chunkParsedFiling(
+			createMockParsedFiling({ business: "Content ".repeat(50) }),
+		);
 		expect(chunksWithTicker[0]?.companySymbol).toBe("AAPL");
 
-		// Test without ticker
 		const filingWithoutTicker: ParsedFiling = {
 			filing: {
 				...createMockFiling(),
-				company: {
-					cik: "0000320193",
-					name: "Apple Inc.",
-					ticker: undefined,
-				},
+				company: { cik: "0000320193", name: "Apple Inc.", ticker: undefined },
 			},
 			sections: { business: "Content ".repeat(50) },
 			financialTables: [],
@@ -232,18 +222,16 @@ describe("chunkParsedFiling", () => {
 		const parsed = createMockParsedFiling({
 			item_2_02: "Results of operations content for the current quarter. ".repeat(10),
 		});
-
 		const chunks = chunkParsedFiling(parsed);
-
 		expect(chunks[0]?.sectionName).toBe("Item 2.02");
 	});
+});
 
+describe("chunkParsedFiling multi-part sections", () => {
 	test("adds part numbers for multi-chunk sections", () => {
-		// Create a very long section that will be split into multiple chunks
 		const parsed = createMockParsedFiling({
-			business: "X".repeat(20000), // Will be split due to MAX_CHUNK_SIZE
+			business: "X".repeat(20000),
 		});
-
 		const chunks = chunkParsedFiling(parsed);
 
 		if (chunks.length > 1) {

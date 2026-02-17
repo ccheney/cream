@@ -173,18 +173,160 @@ function ShortcutsHelpDialog({
 	);
 }
 
-export function KeyboardShortcutsProvider({
-	children,
-	initialScope,
-}: KeyboardShortcutsProviderProps): ReactNode {
-	const router = useRouter();
-	const [scope, setScope] = useState<string | undefined>(initialScope);
-	const [isHelpOpen, setIsHelpOpen] = useState(false);
+function emitNavigationEvent(detail: { direction?: "prev" | "next"; action?: "select" }) {
+	window.dispatchEvent(new CustomEvent("keyboard-nav", { detail }));
+}
 
-	const { register, unregister, getShortcuts, clearSequence, shortcuts } = useKeyboardShortcuts({
-		scope,
-		enabled: true,
-	});
+interface ShortcutDefinitionsOptions {
+	openHelp: () => void;
+	closeHelp: () => void;
+	goConsole: () => void;
+	goPortfolio: () => void;
+	goDecisions: () => void;
+	goTheses: () => void;
+	goSettings: () => void;
+}
+
+interface ShortcutNavigationHandlers extends ShortcutDefinitionsOptions {}
+
+const STATIC_SHORTCUT_DEFINITIONS: Omit<KeyboardShortcut, "handler">[] = [
+	{
+		id: "prev-item",
+		name: "Previous item",
+		keys: ["k"],
+		group: "Lists",
+		description: "Move to previous item",
+	},
+	{
+		id: "prev-item-arrow",
+		name: "Previous item (arrow)",
+		keys: ["up"],
+		group: "Lists",
+		description: "Move to previous item",
+	},
+	{
+		id: "next-item",
+		name: "Next item",
+		keys: ["j"],
+		group: "Lists",
+		description: "Move to next item",
+	},
+	{
+		id: "next-item-arrow",
+		name: "Next item (arrow)",
+		keys: ["down"],
+		group: "Lists",
+		description: "Move to next item",
+	},
+	{
+		id: "select-item",
+		name: "Select item",
+		keys: ["enter"],
+		group: "Lists",
+		description: "Select or open current item",
+	},
+] as const;
+
+function createNavigationHandler(id: string) {
+	if (id === "select-item") {
+		return () => emitNavigationEvent({ action: "select" });
+	}
+	return () => emitNavigationEvent({ direction: id.startsWith("prev") ? "prev" : "next" });
+}
+
+function buildShortcutDefinitions({
+	openHelp,
+	closeHelp,
+	goConsole,
+	goPortfolio,
+	goDecisions,
+	goTheses,
+	goSettings,
+}: ShortcutNavigationHandlers): KeyboardShortcut[] {
+	const listNavigationShortcuts = STATIC_SHORTCUT_DEFINITIONS.map((shortcut) => ({
+		...shortcut,
+		handler: createNavigationHandler(shortcut.id),
+	}));
+
+	return [
+		{
+			id: "show-help",
+			name: "Show keyboard shortcuts",
+			keys: ["?"],
+			group: "General",
+			description: "Show this help dialog",
+			handler: openHelp,
+		},
+		{
+			id: "close-modal",
+			name: "Close",
+			keys: ["esc"],
+			group: "General",
+			description: "Close modal or drawer",
+			handler: closeHelp,
+		},
+		{
+			id: "go-console",
+			name: "Go to Console",
+			keys: ["g", "d"],
+			group: "Navigation",
+			description: "Go to Console",
+			handler: goConsole,
+		},
+		{
+			id: "go-portfolio",
+			name: "Go to Portfolio",
+			keys: ["g", "p"],
+			group: "Navigation",
+			description: "Go to Portfolio",
+			handler: goPortfolio,
+		},
+		{
+			id: "go-decisions",
+			name: "Go to Decisions",
+			keys: ["g", "t"],
+			group: "Navigation",
+			description: "Go to Decisions",
+			handler: goDecisions,
+		},
+		{
+			id: "go-theses",
+			name: "Go to Theses",
+			keys: ["g", "h"],
+			group: "Navigation",
+			description: "Go to Theses",
+			handler: goTheses,
+		},
+		{
+			id: "go-settings",
+			name: "Go to Settings",
+			keys: ["g", "s"],
+			group: "Navigation",
+			description: "Go to Settings",
+			handler: goSettings,
+		},
+		...listNavigationShortcuts,
+	];
+}
+
+function registerShortcutHandlers(
+	shortcuts: KeyboardShortcut[],
+	register: (shortcut: KeyboardShortcut) => void,
+	unregister: (id: string) => void,
+) {
+	for (const shortcut of shortcuts) {
+		register(shortcut);
+	}
+
+	return () => {
+		for (const shortcut of shortcuts) {
+			unregister(shortcut.id);
+		}
+	};
+}
+
+function useShortcutState(clearSequence: () => void) {
+	const [isHelpOpen, setIsHelpOpen] = useState(false);
 
 	const openHelp = useCallback(() => {
 		setIsHelpOpen(true);
@@ -195,145 +337,60 @@ export function KeyboardShortcutsProvider({
 		clearSequence();
 	}, [clearSequence]);
 
+	const closeHelpIfOpen = useCallback(() => {
+		if (!isHelpOpen) {
+			return;
+		}
+		closeHelp();
+	}, [isHelpOpen, closeHelp]);
+
+	return {
+		isHelpOpen,
+		openHelp,
+		closeHelp,
+		closeHelpIfOpen,
+		setIsHelpOpen,
+	};
+}
+
+function useShortcutRegistrationEffect(
+	shortcuts: KeyboardShortcut[],
+	register: (shortcut: KeyboardShortcut) => void,
+	unregister: (id: string) => void,
+) {
 	useEffect(() => {
-		register({
-			id: "show-help",
-			name: "Show keyboard shortcuts",
-			keys: ["?"],
-			group: "General",
-			description: "Show this help dialog",
-			handler: () => openHelp(),
-		});
+		return registerShortcutHandlers(shortcuts, register, unregister);
+	}, [shortcuts, register, unregister]);
+}
 
-		register({
-			id: "close-modal",
-			name: "Close",
-			keys: ["esc"],
-			group: "General",
-			description: "Close modal or drawer",
-			handler: () => {
-				if (isHelpOpen) {
-					closeHelp();
-				}
-			},
-		});
+export function KeyboardShortcutsProvider({
+	children,
+	initialScope,
+}: KeyboardShortcutsProviderProps): ReactNode {
+	const router = useRouter();
+	const [scope, setScope] = useState<string | undefined>(initialScope);
 
-		register({
-			id: "go-console",
-			name: "Go to Console",
-			keys: ["g", "d"],
-			group: "Navigation",
-			description: "Go to Console",
-			handler: () => router.push("/console"),
-		});
+	const { register, unregister, getShortcuts, clearSequence } = useKeyboardShortcuts({
+		scope,
+		enabled: true,
+	});
 
-		register({
-			id: "go-portfolio",
-			name: "Go to Portfolio",
-			keys: ["g", "p"],
-			group: "Navigation",
-			description: "Go to Portfolio",
-			handler: () => router.push("/portfolio"),
-		});
-
-		register({
-			id: "go-decisions",
-			name: "Go to Decisions",
-			keys: ["g", "t"],
-			group: "Navigation",
-			description: "Go to Decisions",
-			handler: () => router.push("/decisions"),
-		});
-
-		register({
-			id: "go-theses",
-			name: "Go to Theses",
-			keys: ["g", "h"],
-			group: "Navigation",
-			description: "Go to Theses",
-			handler: () => router.push("/theses"),
-		});
-
-		register({
-			id: "go-settings",
-			name: "Go to Settings",
-			keys: ["g", "s"],
-			group: "Navigation",
-			description: "Go to Settings",
-			handler: () => router.push("/config"),
-		});
-
-		// List navigation uses CustomEvents so list components can handle their own selection state
-		register({
-			id: "prev-item",
-			name: "Previous item",
-			keys: ["k"],
-			group: "Lists",
-			description: "Move to previous item in list",
-			handler: () => {
-				window.dispatchEvent(new CustomEvent("keyboard-nav", { detail: { direction: "prev" } }));
-			},
-		});
-
-		register({
-			id: "prev-item-arrow",
-			name: "Previous item (arrow)",
-			keys: ["up"],
-			group: "Lists",
-			description: "Move to previous item in list",
-			handler: () => {
-				window.dispatchEvent(new CustomEvent("keyboard-nav", { detail: { direction: "prev" } }));
-			},
-		});
-
-		register({
-			id: "next-item",
-			name: "Next item",
-			keys: ["j"],
-			group: "Lists",
-			description: "Move to next item in list",
-			handler: () => {
-				window.dispatchEvent(new CustomEvent("keyboard-nav", { detail: { direction: "next" } }));
-			},
-		});
-
-		register({
-			id: "next-item-arrow",
-			name: "Next item (arrow)",
-			keys: ["down"],
-			group: "Lists",
-			description: "Move to next item in list",
-			handler: () => {
-				window.dispatchEvent(new CustomEvent("keyboard-nav", { detail: { direction: "next" } }));
-			},
-		});
-
-		register({
-			id: "select-item",
-			name: "Select item",
-			keys: ["enter"],
-			group: "Lists",
-			description: "Select or open current item",
-			handler: () => {
-				window.dispatchEvent(new CustomEvent("keyboard-nav", { detail: { action: "select" } }));
-			},
-		});
-
-		return () => {
-			unregister("show-help");
-			unregister("close-modal");
-			unregister("go-console");
-			unregister("go-portfolio");
-			unregister("go-decisions");
-			unregister("go-theses");
-			unregister("go-settings");
-			unregister("prev-item");
-			unregister("prev-item-arrow");
-			unregister("next-item");
-			unregister("next-item-arrow");
-			unregister("select-item");
-		};
-	}, [register, unregister, router, openHelp, closeHelp, isHelpOpen]);
+	const { isHelpOpen, openHelp, closeHelp, closeHelpIfOpen, setIsHelpOpen } =
+		useShortcutState(clearSequence);
+	const shortcutDefinitions = useMemo(
+		() =>
+			buildShortcutDefinitions({
+				openHelp,
+				closeHelp: closeHelpIfOpen,
+				goConsole: () => router.push("/console"),
+				goPortfolio: () => router.push("/portfolio"),
+				goDecisions: () => router.push("/decisions"),
+				goTheses: () => router.push("/theses"),
+				goSettings: () => router.push("/config"),
+			}),
+		[openHelp, closeHelpIfOpen, router],
+	);
+	useShortcutRegistrationEffect(shortcutDefinitions, register, unregister);
 
 	const value = useMemo(
 		() => ({
@@ -352,7 +409,11 @@ export function KeyboardShortcutsProvider({
 	return (
 		<KeyboardShortcutsContext.Provider value={value}>
 			{children}
-			<ShortcutsHelpDialog open={isHelpOpen} onOpenChange={setIsHelpOpen} shortcuts={shortcuts} />
+			<ShortcutsHelpDialog
+				open={isHelpOpen}
+				onOpenChange={setIsHelpOpen}
+				shortcuts={shortcutDefinitions}
+			/>
 		</KeyboardShortcutsContext.Provider>
 	);
 }

@@ -121,6 +121,82 @@ export const DEFAULT_LIVE_PROTECTION: LiveProtectionOptions = {
 	ipWhitelist: undefined,
 };
 
+function getClientIp(headers: { get: (name: string) => string | null | undefined }): string {
+	return (
+		headers.get("X-Forwarded-For")?.split(",")[0]?.trim() ?? headers.get("X-Real-IP") ?? "unknown"
+	);
+}
+
+function requireLiveUser(session: Session | null, user: User | null): User {
+	if (!session || !user) {
+		throw new HTTPException(401, { message: "Authentication required for LIVE environment" });
+	}
+	return user;
+}
+
+function requireIpWhitelisted(options: LiveProtectionOptions, clientIp: string): void {
+	if (!options.ipWhitelist || options.ipWhitelist.length === 0) {
+		return;
+	}
+	if (!options.ipWhitelist.includes(clientIp)) {
+		throw new HTTPException(403, {
+			message: "Access denied: IP not whitelisted for LIVE environment",
+		});
+	}
+}
+
+function requireMfaEnabled(options: LiveProtectionOptions, user: User): void {
+	if (!options.requireMFA) {
+		return;
+	}
+	const twoFactorEnabled = (user as unknown as { twoFactorEnabled?: boolean }).twoFactorEnabled;
+	if (!twoFactorEnabled) {
+		throw new HTTPException(403, {
+			message: "Two-factor authentication must be enabled for LIVE environment",
+			cause: { code: "MFA_REQUIRED" },
+		});
+	}
+}
+
+function requireLiveConfirmation(
+	options: LiveProtectionOptions,
+	confirmation: string | undefined,
+): void {
+	if (!options.requireConfirmation) {
+		return;
+	}
+	if (confirmation !== "true") {
+		throw new HTTPException(428, {
+			message: "Action confirmation required for LIVE environment",
+			cause: { code: "CONFIRMATION_REQUIRED" },
+		});
+	}
+}
+
+function writeAuditEntry(
+	options: LiveProtectionOptions,
+	user: User,
+	context: { req: { method: string; path: string; header: (name: string) => string | undefined } },
+): void {
+	if (!options.auditLog) {
+		return;
+	}
+	const auditEntry = {
+		userId: user.id,
+		userEmail: user.email,
+		action: `${context.req.method} ${context.req.path}`,
+		ipAddress: getClientIp({ get: context.req.header }),
+		userAgent: context.req.header("User-Agent") ?? null,
+		environment: "LIVE",
+	};
+	import("../db.js").then(async ({ getAuditLogRepo }) => {
+		try {
+			const repo = await getAuditLogRepo();
+			await repo.create(auditEntry);
+		} catch {}
+	});
+}
+
 /**
  * Middleware to protect LIVE environment operations.
  *
@@ -130,77 +206,19 @@ export function liveProtection(
 	options: LiveProtectionOptions = DEFAULT_LIVE_PROTECTION,
 ): MiddlewareHandler<{ Variables: SessionVariables }> {
 	return async (c, next) => {
-		const env = requireEnv();
-
-		// Skip protection for non-LIVE environments
-		if (env !== "LIVE") {
+		if (requireEnv() !== "LIVE") {
 			await next();
 			return;
 		}
 
 		const session = c.get("session");
-		const user = c.get("user");
+		const user = requireLiveUser(session, c.get("user"));
 
-		if (!session || !user) {
-			throw new HTTPException(401, { message: "Authentication required for LIVE environment" });
-		}
-
-		// Check IP whitelist
-		if (options.ipWhitelist && options.ipWhitelist.length > 0) {
-			const clientIP =
-				c.req.header("X-Forwarded-For")?.split(",")[0]?.trim() ??
-				c.req.header("X-Real-IP") ??
-				"unknown";
-
-			if (!options.ipWhitelist.includes(clientIP)) {
-				throw new HTTPException(403, {
-					message: "Access denied: IP not whitelisted for LIVE environment",
-				});
-			}
-		}
-
-		// Check MFA verification (2FA enabled status)
-		// Note: In better-auth, 2FA status is on the user object
-		if (options.requireMFA) {
-			// Check if user has 2FA enabled - this is stored in the user record
-			const twoFactorEnabled = (user as unknown as { twoFactorEnabled?: boolean }).twoFactorEnabled;
-			if (!twoFactorEnabled) {
-				throw new HTTPException(403, {
-					message: "Two-factor authentication must be enabled for LIVE environment",
-					cause: { code: "MFA_REQUIRED" },
-				});
-			}
-		}
-
-		// Check confirmation header
-		if (options.requireConfirmation) {
-			const confirmation = c.req.header("X-Confirm-Action");
-			if (confirmation !== "true") {
-				throw new HTTPException(428, {
-					message: "Action confirmation required for LIVE environment",
-					cause: { code: "CONFIRMATION_REQUIRED" },
-				});
-			}
-		}
-
-		// Audit logging
-		if (options.auditLog) {
-			const auditEntry = {
-				userId: user.id,
-				userEmail: user.email,
-				action: `${c.req.method} ${c.req.path}`,
-				ipAddress: c.req.header("X-Forwarded-For") ?? c.req.header("X-Real-IP") ?? "unknown",
-				userAgent: c.req.header("User-Agent") ?? null,
-				environment: "LIVE",
-			};
-			// Persist audit entry to database (non-blocking)
-			import("../db.js").then(async ({ getAuditLogRepo }) => {
-				try {
-					const repo = await getAuditLogRepo();
-					await repo.create(auditEntry);
-				} catch {}
-			});
-		}
+		const clientIp = getClientIp({ get: (name) => c.req.header(name) });
+		requireIpWhitelisted(options, clientIp);
+		requireMfaEnabled(options, user);
+		requireLiveConfirmation(options, c.req.header("X-Confirm-Action"));
+		writeAuditEntry(options, user, c);
 
 		await next();
 	};

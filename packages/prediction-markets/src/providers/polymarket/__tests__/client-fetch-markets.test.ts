@@ -12,7 +12,7 @@ import {
 	restoreFetch,
 } from "./fixtures.js";
 
-describe("PolymarketClient.fetchMarkets", () => {
+describe("PolymarketClient.fetchMarkets single type", () => {
 	let ctx: FetchMockContext;
 
 	beforeEach(() => {
@@ -37,6 +37,18 @@ describe("PolymarketClient.fetchMarkets", () => {
 		expect(events.length).toBeGreaterThan(0);
 		expect(events[0]?.payload.platform).toBe("POLYMARKET");
 		expect(events[0]?.payload.marketType).toBe("FED_RATE");
+	});
+});
+
+describe("PolymarketClient.fetchMarkets multiple types", () => {
+	let ctx: FetchMockContext;
+
+	beforeEach(() => {
+		ctx = createFetchMock();
+	});
+
+	afterEach(() => {
+		restoreFetch(ctx);
 	});
 
 	it("should fetch markets for multiple types", async () => {
@@ -63,6 +75,18 @@ describe("PolymarketClient.fetchMarkets", () => {
 
 		expect(events.length).toBeGreaterThan(0);
 		expect(callCount).toBeGreaterThan(1);
+	});
+});
+
+describe("PolymarketClient.fetchMarkets query behavior", () => {
+	let ctx: FetchMockContext;
+
+	beforeEach(() => {
+		ctx = createFetchMock();
+	});
+
+	afterEach(() => {
+		restoreFetch(ctx);
 	});
 
 	it("should use default search queries when market type has no queries", async () => {
@@ -96,6 +120,18 @@ describe("PolymarketClient.fetchMarkets", () => {
 		const uniqueIds = [...new Set(eventIds)];
 		expect(eventIds.length).toBe(uniqueIds.length);
 	});
+});
+
+describe("PolymarketClient.fetchMarkets auth errors", () => {
+	let ctx: FetchMockContext;
+
+	beforeEach(() => {
+		ctx = createFetchMock();
+	});
+
+	afterEach(() => {
+		restoreFetch(ctx);
+	});
 
 	it("should throw AuthenticationError on 401", async () => {
 		ctx.mockFetch.mockImplementation(() => {
@@ -108,9 +144,21 @@ describe("PolymarketClient.fetchMarkets", () => {
 			await client.fetchMarkets(["FED_RATE"]);
 			expect.unreachable("Should have thrown");
 		} catch (error) {
-			expect((error as Error).name).toBe("PredictionMarketError");
+			expect((error as Error).name).toBe("AuthenticationError");
 			expect((error as AuthenticationError).code).toBe("AUTH_ERROR");
 		}
+	});
+});
+
+describe("PolymarketClient.fetchMarkets rate limit errors", () => {
+	let ctx: FetchMockContext;
+
+	beforeEach(() => {
+		ctx = createFetchMock();
+	});
+
+	afterEach(() => {
+		restoreFetch(ctx);
 	});
 
 	it("should throw RateLimitError on 429", async () => {
@@ -124,7 +172,7 @@ describe("PolymarketClient.fetchMarkets", () => {
 			await client.fetchMarkets(["FED_RATE"]);
 			expect.unreachable("Should have thrown");
 		} catch (error) {
-			expect((error as Error).name).toBe("PredictionMarketError");
+			expect((error as Error).name).toBe("RateLimitError");
 			expect((error as RateLimitError).code).toBe("RATE_LIMIT");
 		}
 	});

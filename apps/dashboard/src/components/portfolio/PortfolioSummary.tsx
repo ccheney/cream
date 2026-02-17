@@ -53,8 +53,7 @@ const MetricCard = memo(function MetricCard({
 					<span
 						className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse"
 						title="Live"
-						role="status"
-						aria-label="Live streaming"
+						aria-hidden="true"
 					/>
 				)}
 			</div>

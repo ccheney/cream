@@ -36,6 +36,56 @@ export interface UsePLDataReturn {
 	updateUnderlyingPrice: (price: number) => void;
 }
 
+function useLivePriceState(initialPrice: number) {
+	const [livePrice, setLivePrice] = useState(initialPrice);
+
+	useEffect(() => {
+		setLivePrice(initialPrice);
+	}, [initialPrice]);
+
+	return { livePrice, setLivePrice };
+}
+
+function resolveDte(legs: OptionLeg[], dteOverride?: number) {
+	if (dteOverride !== undefined) {
+		return dteOverride;
+	}
+	if (legs.length === 0) {
+		return 30;
+	}
+	const earliestExp = getEarliestExpiration(legs);
+	return calculateDTE(earliestExp);
+}
+
+function resolvePriceRange(livePrice: number, rangePercent: number) {
+	const min = livePrice * (1 - rangePercent / 100);
+	const max = livePrice * (1 + rangePercent / 100);
+	return { min, max };
+}
+
+function resolveCurrentPnl(data: PLDataPoint[], livePrice: number) {
+	const firstPoint = data[0];
+	if (data.length === 0 || !firstPoint) {
+		return { atExpiration: 0, today: 0 };
+	}
+
+	let closest = firstPoint;
+	let minDiff = Math.abs(closest.price - livePrice);
+
+	for (const point of data) {
+		const diff = Math.abs(point.price - livePrice);
+		if (diff < minDiff) {
+			minDiff = diff;
+			closest = point;
+		}
+	}
+
+	return {
+		atExpiration: closest.pnlAtExpiration,
+		today: closest.pnlToday,
+	};
+}
+
 /**
  * Hook to generate P/L data for options strategies.
  *
@@ -58,30 +108,14 @@ export function usePLData(options: UsePLDataOptions): UsePLDataReturn {
 		dteOverride,
 	} = options;
 
-	const [livePrice, setLivePrice] = useState(initialPrice);
+	const { livePrice, setLivePrice } = useLivePriceState(initialPrice);
 
-	useEffect(() => {
-		setLivePrice(initialPrice);
-	}, [initialPrice]);
+	const dte = useMemo(() => resolveDte(legs, dteOverride), [legs, dteOverride]);
+	const priceRange = useMemo(
+		() => resolvePriceRange(livePrice, rangePercent),
+		[livePrice, rangePercent],
+	);
 
-	const dte = useMemo(() => {
-		if (dteOverride !== undefined) {
-			return dteOverride;
-		}
-		if (legs.length === 0) {
-			return 30;
-		}
-		const earliestExp = getEarliestExpiration(legs);
-		return calculateDTE(earliestExp);
-	}, [legs, dteOverride]);
-
-	const priceRange = useMemo(() => {
-		const min = livePrice * (1 - rangePercent / 100);
-		const max = livePrice * (1 + rangePercent / 100);
-		return { min, max };
-	}, [livePrice, rangePercent]);
-
-	// Generate P/L data
 	const data = useMemo(() => {
 		if (legs.length === 0) {
 			return [];
@@ -89,7 +123,6 @@ export function usePLData(options: UsePLDataOptions): UsePLDataReturn {
 		return generatePLData(legs, livePrice, { rangePercent, points, dte });
 	}, [legs, livePrice, rangePercent, points, dte]);
 
-	// Analyze strategy
 	const analysis = useMemo(() => {
 		if (legs.length === 0 || data.length === 0) {
 			return {
@@ -103,35 +136,15 @@ export function usePLData(options: UsePLDataOptions): UsePLDataReturn {
 		return analyzeStrategy(legs, data);
 	}, [legs, data]);
 
-	// Calculate current P/L at underlying price
-	const currentPnl = useMemo(() => {
-		// Find data point closest to current price
-		const firstPoint = data[0];
-		if (data.length === 0 || !firstPoint) {
-			return { atExpiration: 0, today: 0 };
-		}
-
-		let closest = firstPoint;
-		let minDiff = Math.abs(closest.price - livePrice);
-
-		for (const point of data) {
-			const diff = Math.abs(point.price - livePrice);
-			if (diff < minDiff) {
-				minDiff = diff;
-				closest = point;
-			}
-		}
-
-		return {
-			atExpiration: closest.pnlAtExpiration,
-			today: closest.pnlToday,
-		};
-	}, [data, livePrice]);
+	const currentPnl = useMemo(() => resolveCurrentPnl(data, livePrice), [data, livePrice]);
 
 	// Update underlying price
-	const updateUnderlyingPrice = useCallback((price: number) => {
-		setLivePrice(price);
-	}, []);
+	const updateUnderlyingPrice = useCallback(
+		(price: number) => {
+			setLivePrice(price);
+		},
+		[setLivePrice],
+	);
 
 	return {
 		data,

@@ -252,57 +252,19 @@ function ImpactLegend({ compact = false }: { compact?: boolean }) {
 	);
 }
 
-// ============================================
-// Main Component
-// ============================================
-
-export function EconomicCalendar() {
+function useCalendarFiltersState() {
 	const [filters, setFilters] = useState<CalendarFilterState>(DEFAULT_FILTERS);
-	const [isDark, setIsDark] = useState(false);
-	const [selectedEvent, setSelectedEvent] = useState<EconomicEvent | null>(null);
-	const [isDrawerOpen, setIsDrawerOpen] = useState(false);
-	const { isMobile } = useMediaQuery();
-
-	// Ref to store latest events for the calendar callback (avoids stale closure)
-	const eventsRef = useRef<EconomicEvent[]>([]);
-
 	const { start, end } = useMemo(
 		() => getDateRangeFromFilter(filters.dateRange),
 		[filters.dateRange],
 	);
 
-	const { data, isLoading, error, refetch } = useEconomicCalendar({
-		startDate: start,
-		endDate: end,
-		impact: filters.impact,
-		country: filters.country === "ALL" ? undefined : filters.country,
-	});
-
-	// Keep ref in sync with latest data
-	useEffect(() => {
-		eventsRef.current = data?.events ?? [];
-	}, [data?.events]);
-
 	const handleFilterChange = useCallback((newFilters: CalendarFilterState) => {
 		setFilters(newFilters);
 	}, []);
-
 	const handleClearFilters = useCallback(() => {
 		setFilters(DEFAULT_FILTERS);
 	}, []);
-
-	const handleEventClick = useCallback((eventId: string) => {
-		const event = eventsRef.current.find((e) => e.id === eventId);
-		if (event) {
-			setSelectedEvent(event);
-			setIsDrawerOpen(true);
-		}
-	}, []);
-
-	const handleDrawerClose = useCallback(() => {
-		setIsDrawerOpen(false);
-	}, []);
-
 	const hasActiveFilters = useMemo(() => {
 		return (
 			filters.country !== DEFAULT_FILTERS.country ||
@@ -311,57 +273,40 @@ export function EconomicCalendar() {
 		);
 	}, [filters]);
 
-	const eventsService = useMemo(() => createEventsServicePlugin(), []);
+	return { filters, start, end, handleFilterChange, handleClearFilters, hasActiveFilters };
+}
 
-	const calendarEvents = useMemo(() => {
-		if (!data?.events) {
-			return [];
+function useEventSelection(events: EconomicEvent[] | undefined) {
+	const [selectedEvent, setSelectedEvent] = useState<EconomicEvent | null>(null);
+	const [isDrawerOpen, setIsDrawerOpen] = useState(false);
+	const eventsRef = useRef<EconomicEvent[]>([]);
+
+	useEffect(() => {
+		eventsRef.current = events ?? [];
+	}, [events]);
+
+	const handleEventClick = useCallback((eventId: string) => {
+		const event = eventsRef.current.find((candidate) => candidate.id === eventId);
+		if (!event) {
+			return;
 		}
-		return convertToCalendarEvents(data.events);
-	}, [data?.events]);
+		setSelectedEvent(event);
+		setIsDrawerOpen(true);
+	}, []);
+	const handleDrawerClose = useCallback(() => {
+		setIsDrawerOpen(false);
+	}, []);
 
-	// All screen sizes use month-agenda as default (cleaner list view)
-	// Additional views available on larger screens for users who want them
-	const views = useMemo(() => {
-		if (isMobile) {
-			return [createViewMonthAgenda()];
-		}
-		return [createViewMonthAgenda(), createViewMonthGrid(), createViewWeek()];
-	}, [isMobile]) as [ReturnType<typeof createViewWeek>, ...ReturnType<typeof createViewWeek>[]];
+	return { selectedEvent, isDrawerOpen, handleEventClick, handleDrawerClose };
+}
 
-	const defaultView = "month-agenda";
+function useIsDarkMode() {
+	const [isDark, setIsDark] = useState(false);
 
-	const calendar = useNextCalendarApp({
-		views,
-		defaultView,
-		locale: "en-US",
-		firstDayOfWeek: 1,
-		isDark,
-		dayBoundaries: {
-			start: "06:00",
-			end: "20:00",
-		},
-		weekOptions: {
-			gridHeight: isMobile ? 500 : 800,
-			nDays: isMobile ? 1 : 5,
-			eventWidth: 95,
-		},
-		calendars: IMPACT_CALENDARS,
-		events: calendarEvents,
-		plugins: [eventsService],
-		callbacks: {
-			onEventClick(event) {
-				handleEventClick(String(event.id));
-			},
-		},
-	});
-
-	// Detect dark mode changes
 	useEffect(() => {
 		if (typeof window === "undefined") {
 			return;
 		}
-
 		const root = document.documentElement;
 		if (!root) {
 			return;
@@ -373,23 +318,80 @@ export function EconomicCalendar() {
 		checkDarkMode();
 
 		const observer = new MutationObserver(checkDarkMode);
-		observer.observe(root, {
-			attributes: true,
-			attributeFilter: ["class"],
-		});
-
+		observer.observe(root, { attributes: true, attributeFilter: ["class"] });
 		return () => observer.disconnect();
 	}, []);
 
-	// Update calendar theme when dark mode changes
+	return isDark;
+}
+
+function useCalendarViews(isMobile: boolean) {
+	return useMemo(() => {
+		if (isMobile) {
+			return [createViewMonthAgenda()];
+		}
+		return [createViewMonthAgenda(), createViewMonthGrid(), createViewWeek()];
+	}, [isMobile]) as [ReturnType<typeof createViewWeek>, ...ReturnType<typeof createViewWeek>[]];
+}
+
+function useCalendarEvents(events: EconomicEvent[] | undefined) {
+	return useMemo(() => {
+		if (!events) {
+			return [];
+		}
+		return convertToCalendarEvents(events);
+	}, [events]);
+}
+
+interface UseCalendarAppProps {
+	isMobile: boolean;
+	isDark: boolean;
+	calendarEvents: CalendarEvent[];
+	eventsService: ReturnType<typeof createEventsServicePlugin>;
+	onEventClick: (eventId: string) => void;
+}
+
+function useCalendarApp({
+	isMobile,
+	isDark,
+	calendarEvents,
+	eventsService,
+	onEventClick,
+}: UseCalendarAppProps) {
+	const views = useCalendarViews(isMobile);
+
+	return useNextCalendarApp({
+		views,
+		defaultView: "month-agenda",
+		locale: "en-US",
+		firstDayOfWeek: 1,
+		isDark,
+		dayBoundaries: { start: "06:00", end: "20:00" },
+		weekOptions: { gridHeight: isMobile ? 500 : 800, nDays: isMobile ? 1 : 5, eventWidth: 95 },
+		calendars: IMPACT_CALENDARS,
+		events: calendarEvents,
+		plugins: [eventsService],
+		callbacks: {
+			onEventClick(event) {
+				onEventClick(String(event.id));
+			},
+		},
+	});
+}
+
+function useSyncCalendarTheme(calendar: ReturnType<typeof useNextCalendarApp>, isDark: boolean) {
 	useEffect(() => {
 		if (calendar) {
 			calendar.setTheme(isDark ? "dark" : "light");
 		}
 	}, [calendar, isDark]);
+}
 
-	// Update events when data changes
-	// Note: eventsService.set is only available after calendar initialization
+function useSyncCalendarEvents(
+	calendar: ReturnType<typeof useNextCalendarApp>,
+	eventsService: ReturnType<typeof createEventsServicePlugin>,
+	calendarEvents: CalendarEvent[],
+) {
 	useEffect(() => {
 		if (
 			calendar &&
@@ -400,46 +402,137 @@ export function EconomicCalendar() {
 			eventsService.set(calendarEvents);
 		}
 	}, [calendar, eventsService, calendarEvents]);
+}
 
+interface CalendarViewProps {
+	filters: CalendarFilterState;
+	onFilterChange: (filters: CalendarFilterState) => void;
+	isMobile: boolean;
+	eventCount: number;
+	lastUpdated: string;
+	calendar: ReturnType<typeof useNextCalendarApp>;
+}
+
+function CalendarView({
+	filters,
+	onFilterChange,
+	isMobile,
+	eventCount,
+	lastUpdated,
+	calendar,
+}: CalendarViewProps) {
+	return (
+		<div className="flex flex-col h-full gap-3">
+			<div className="shrink-0">
+				<CalendarFilters filters={filters} onFilterChange={onFilterChange} />
+			</div>
+			<div className="shrink-0 flex items-center justify-between">
+				<ImpactLegend compact={isMobile} />
+				<span className="text-[10px] sm:text-xs text-stone-500 dark:text-night-400">
+					{eventCount} events
+					<span className="hidden sm:inline">
+						{" "}
+						• Updated {new Date(lastUpdated).toLocaleTimeString()}
+					</span>
+				</span>
+			</div>
+			<div className="flex-1 min-h-0 bg-white dark:bg-night-800 rounded-lg border border-cream-200 dark:border-night-700 overflow-hidden [&_.sx-react-calendar-wrapper]:h-full [&_.sx-react-calendar]:h-full">
+				<ScheduleXCalendar calendarApp={calendar} customComponents={customComponents} />
+			</div>
+		</div>
+	);
+}
+
+interface CalendarStateViewProps {
+	isLoading: boolean;
+	error: unknown;
+	events: ReturnType<typeof useEconomicCalendar>["data"] | undefined;
+	hasActiveFilters: boolean;
+	onClearFilters: () => void;
+	onRetry: () => void;
+}
+
+function renderCalendarStateView({
+	isLoading,
+	error,
+	events,
+	hasActiveFilters,
+	onClearFilters,
+	onRetry,
+}: CalendarStateViewProps) {
 	if (isLoading) {
 		return <CalendarLoadingState />;
 	}
-
 	if (error) {
 		return (
 			<CalendarErrorState
 				message={error instanceof Error ? error.message : undefined}
-				onRetry={() => refetch()}
+				onRetry={onRetry}
 			/>
 		);
 	}
-
-	if (!data?.events || data.events.length === 0) {
+	if (!events?.events || events.events.length === 0) {
 		return (
-			<CalendarEmptyState hasActiveFilters={hasActiveFilters} onClearFilters={handleClearFilters} />
+			<CalendarEmptyState hasActiveFilters={hasActiveFilters} onClearFilters={onClearFilters} />
 		);
+	}
+	return null;
+}
+
+// ============================================
+// Main Component
+// ============================================
+
+export function EconomicCalendar() {
+	const { isMobile } = useMediaQuery();
+	const { filters, start, end, handleFilterChange, handleClearFilters, hasActiveFilters } =
+		useCalendarFiltersState();
+	const isDark = useIsDarkMode();
+
+	const { data, isLoading, error, refetch } = useEconomicCalendar({
+		startDate: start,
+		endDate: end,
+		impact: filters.impact,
+		country: filters.country === "ALL" ? undefined : filters.country,
+	});
+	const { selectedEvent, isDrawerOpen, handleEventClick, handleDrawerClose } = useEventSelection(
+		data?.events,
+	);
+
+	const eventsService = useMemo(() => createEventsServicePlugin(), []);
+	const calendarEvents = useCalendarEvents(data?.events);
+	const calendar = useCalendarApp({
+		isMobile,
+		isDark,
+		calendarEvents,
+		eventsService,
+		onEventClick: handleEventClick,
+	});
+	useSyncCalendarTheme(calendar, isDark);
+	useSyncCalendarEvents(calendar, eventsService, calendarEvents);
+
+	const stateView = renderCalendarStateView({
+		isLoading,
+		error,
+		events: data,
+		hasActiveFilters,
+		onClearFilters: handleClearFilters,
+		onRetry: () => refetch(),
+	});
+	if (stateView) {
+		return stateView;
 	}
 
 	return (
 		<>
-			<div className="flex flex-col h-full gap-3">
-				<div className="shrink-0">
-					<CalendarFilters filters={filters} onFilterChange={handleFilterChange} />
-				</div>
-				<div className="shrink-0 flex items-center justify-between">
-					<ImpactLegend compact={isMobile} />
-					<span className="text-[10px] sm:text-xs text-stone-500 dark:text-night-400">
-						{data.events.length} events
-						<span className="hidden sm:inline">
-							{" "}
-							• Updated {new Date(data.meta.lastUpdated).toLocaleTimeString()}
-						</span>
-					</span>
-				</div>
-				<div className="flex-1 min-h-0 bg-white dark:bg-night-800 rounded-lg border border-cream-200 dark:border-night-700 overflow-hidden [&_.sx-react-calendar-wrapper]:h-full [&_.sx-react-calendar]:h-full">
-					<ScheduleXCalendar calendarApp={calendar} customComponents={customComponents} />
-				</div>
-			</div>
+			<CalendarView
+				filters={filters}
+				onFilterChange={handleFilterChange}
+				isMobile={isMobile}
+				eventCount={data.events.length}
+				lastUpdated={data.meta.lastUpdated}
+				calendar={calendar}
+			/>
 			<EventDetailDrawer event={selectedEvent} isOpen={isDrawerOpen} onClose={handleDrawerClose} />
 		</>
 	);

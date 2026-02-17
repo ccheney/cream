@@ -28,7 +28,7 @@ function resetMetrics() {
 // getCompressionConfig Tests
 // ============================================
 
-describe("getCompressionConfig", () => {
+describe("getCompressionConfig - environment behavior", () => {
 	const originalEnv = Bun.env.NODE_ENV;
 	const originalWsCompression = Bun.env.WS_COMPRESSION_ENABLED;
 
@@ -82,7 +82,9 @@ describe("getCompressionConfig", () => {
 		expect(config.threshold).toBe(1024);
 		expect(config.level).toBe(6);
 	});
+});
 
+describe("getCompressionConfig - numeric bounds", () => {
 	it("has sensible compression level (1-9)", () => {
 		const config = getCompressionConfig();
 		expect(config.level).toBeGreaterThanOrEqual(1);
@@ -131,7 +133,7 @@ describe("getBunCompressionOptions", () => {
 // Metrics Recording Tests
 // ============================================
 
-describe("recordCompressionStats", () => {
+describe("recordCompressionStats - counters", () => {
 	beforeEach(resetMetrics);
 
 	it("increments totalMessages", () => {
@@ -160,6 +162,10 @@ describe("recordCompressionStats", () => {
 		expect(metrics.compressedMessages).toBe(0);
 		expect(metrics.skippedMessages).toBe(2);
 	});
+});
+
+describe("recordCompressionStats - byte accounting", () => {
+	beforeEach(resetMetrics);
 
 	it("tracks uncompressed bytes", () => {
 		recordCompressionStats(1000, 400, true);
@@ -414,54 +420,23 @@ describe("CompressionMetrics type", () => {
 // ============================================
 
 describe("module exports", () => {
-	it("exports getCompressionConfig", async () => {
+	it("exports all named functions", async () => {
 		const module = await import("./compression");
-		expect(typeof module.getCompressionConfig).toBe("function");
-	});
-
-	it("exports getBunCompressionOptions", async () => {
-		const module = await import("./compression");
-		expect(typeof module.getBunCompressionOptions).toBe("function");
-	});
-
-	it("exports recordCompressionStats", async () => {
-		const module = await import("./compression");
-		expect(typeof module.recordCompressionStats).toBe("function");
-	});
-
-	it("exports getCompressionMetrics", async () => {
-		const module = await import("./compression");
-		expect(typeof module.getCompressionMetrics).toBe("function");
-	});
-
-	it("exports resetCompressionMetrics", async () => {
-		const module = await import("./compression");
-		expect(typeof module.resetCompressionMetrics).toBe("function");
-	});
-
-	it("exports getBandwidthSavings", async () => {
-		const module = await import("./compression");
-		expect(typeof module.getBandwidthSavings).toBe("function");
-	});
-
-	it("exports shouldCompress", async () => {
-		const module = await import("./compression");
-		expect(typeof module.shouldCompress).toBe("function");
-	});
-
-	it("exports estimateCompressedSize", async () => {
-		const module = await import("./compression");
-		expect(typeof module.estimateCompressedSize).toBe("function");
-	});
-
-	it("exports logCompressionConfig", async () => {
-		const module = await import("./compression");
-		expect(typeof module.logCompressionConfig).toBe("function");
-	});
-
-	it("exports logCompressionMetrics", async () => {
-		const module = await import("./compression");
-		expect(typeof module.logCompressionMetrics).toBe("function");
+		const names = [
+			"getCompressionConfig",
+			"getBunCompressionOptions",
+			"recordCompressionStats",
+			"getCompressionMetrics",
+			"resetCompressionMetrics",
+			"getBandwidthSavings",
+			"shouldCompress",
+			"estimateCompressedSize",
+			"logCompressionConfig",
+			"logCompressionMetrics",
+		] as const;
+		for (const name of names) {
+			expect(typeof module[name]).toBe("function");
+		}
 	});
 
 	it("exports default object with all functions", async () => {

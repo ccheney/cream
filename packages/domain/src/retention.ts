@@ -373,6 +373,62 @@ export interface TierTransitionResult {
 	reason: string;
 }
 
+interface TierThreshold {
+	tier: StorageTier;
+	endDay: number;
+}
+
+const TIER_ORDER: StorageTier[] = ["HOT", "WARM", "COLD"];
+
+function buildTierThresholds(policy: RetentionPolicy): TierThreshold[] {
+	let cumulativeDays = 0;
+	const thresholds: TierThreshold[] = [];
+
+	for (const period of policy.periods) {
+		if (period.durationDays === PERMANENT) {
+			thresholds.push({ tier: period.tier, endDay: Number.MAX_SAFE_INTEGER });
+			continue;
+		}
+
+		cumulativeDays += period.durationDays;
+		thresholds.push({ tier: period.tier, endDay: cumulativeDays });
+	}
+
+	return thresholds;
+}
+
+function resolveExpectedTier(
+	ageDays: number,
+	thresholds: TierThreshold[],
+): { expectedTier: StorageTier | null; daysUntilNextTransition?: number } {
+	for (const threshold of thresholds) {
+		if (ageDays < threshold.endDay) {
+			return {
+				expectedTier: threshold.tier,
+				daysUntilNextTransition:
+					threshold.endDay === Number.MAX_SAFE_INTEGER ? undefined : threshold.endDay - ageDays,
+			};
+		}
+	}
+
+	return { expectedTier: null };
+}
+
+function hasExceededRetention(ageDays: number, thresholds: TierThreshold[]): boolean {
+	const lastThreshold = thresholds.at(-1);
+	return Boolean(
+		lastThreshold &&
+			lastThreshold.endDay !== Number.MAX_SAFE_INTEGER &&
+			ageDays >= lastThreshold.endDay,
+	);
+}
+
+function isForwardTransition(currentTier: StorageTier, expectedTier: StorageTier): boolean {
+	const currentIndex = TIER_ORDER.indexOf(currentTier);
+	const expectedIndex = TIER_ORDER.indexOf(expectedTier);
+	return expectedIndex > currentIndex;
+}
+
 /**
  * Determine if a node should transition to a different tier
  *
@@ -381,7 +437,6 @@ export interface TierTransitionResult {
  */
 export function getTransitionDecision(nodeInfo: NodeAgeInfo): TierTransitionResult {
 	const policy = getRetentionPolicy(nodeInfo.nodeType, nodeInfo.environment);
-
 	if (!policy) {
 		return {
 			shouldTransition: false,
@@ -390,77 +445,35 @@ export function getTransitionDecision(nodeInfo: NodeAgeInfo): TierTransitionResu
 		};
 	}
 
-	// Calculate cumulative age thresholds for each tier
-	let cumulativeDays = 0;
-	const tierThresholds: { tier: StorageTier; endDay: number }[] = [];
+	const thresholds = buildTierThresholds(policy);
+	const expectation = resolveExpectedTier(nodeInfo.ageDays, thresholds);
 
-	for (const period of policy.periods) {
-		if (period.durationDays === PERMANENT) {
-			tierThresholds.push({ tier: period.tier, endDay: Number.MAX_SAFE_INTEGER });
-		} else {
-			cumulativeDays += period.durationDays;
-			tierThresholds.push({ tier: period.tier, endDay: cumulativeDays });
-		}
+	if (!expectation.expectedTier && hasExceededRetention(nodeInfo.ageDays, thresholds)) {
+		return {
+			shouldTransition: false,
+			shouldDelete: true,
+			reason: `Node exceeded total retention of ${policy.totalRetentionDays} days`,
+		};
 	}
 
-	// Find current tier based on age
-	let expectedTier: StorageTier | null = null;
-	let daysUntilNext: number | undefined;
-
-	for (let i = 0; i < tierThresholds.length; i++) {
-		const threshold = tierThresholds[i];
-
-		if (!threshold) {
-			continue;
-		}
-
-		if (nodeInfo.ageDays < threshold.endDay) {
-			expectedTier = threshold.tier;
-			if (threshold.endDay !== Number.MAX_SAFE_INTEGER) {
-				daysUntilNext = threshold.endDay - nodeInfo.ageDays;
-			}
-			break;
-		}
-	}
-
-	// Check if node should be deleted (beyond all tiers)
-	if (!expectedTier) {
-		const lastThreshold = tierThresholds.at(-1);
-		if (
-			lastThreshold &&
-			lastThreshold.endDay !== Number.MAX_SAFE_INTEGER &&
-			nodeInfo.ageDays >= lastThreshold.endDay
-		) {
-			return {
-				shouldTransition: false,
-				shouldDelete: true,
-				reason: `Node exceeded total retention of ${policy.totalRetentionDays} days`,
-			};
-		}
-	}
-
-	// Check if transition needed
-	if (expectedTier && expectedTier !== nodeInfo.currentTier) {
-		// Only transition to "later" tiers (HOT → WARM → COLD)
-		const tierOrder: StorageTier[] = ["HOT", "WARM", "COLD"];
-		const currentIndex = tierOrder.indexOf(nodeInfo.currentTier);
-		const expectedIndex = tierOrder.indexOf(expectedTier);
-
-		if (expectedIndex > currentIndex) {
-			return {
-				shouldTransition: true,
-				targetTier: expectedTier,
-				shouldDelete: false,
-				daysUntilNextTransition: daysUntilNext,
-				reason: `Age ${nodeInfo.ageDays} days exceeds ${nodeInfo.currentTier} tier threshold`,
-			};
-		}
+	if (
+		expectation.expectedTier &&
+		expectation.expectedTier !== nodeInfo.currentTier &&
+		isForwardTransition(nodeInfo.currentTier, expectation.expectedTier)
+	) {
+		return {
+			shouldTransition: true,
+			targetTier: expectation.expectedTier,
+			shouldDelete: false,
+			daysUntilNextTransition: expectation.daysUntilNextTransition,
+			reason: `Age ${nodeInfo.ageDays} days exceeds ${nodeInfo.currentTier} tier threshold`,
+		};
 	}
 
 	return {
 		shouldTransition: false,
 		shouldDelete: false,
-		daysUntilNextTransition: daysUntilNext,
+		daysUntilNextTransition: expectation.daysUntilNextTransition,
 		reason: `Node at correct tier (${nodeInfo.currentTier}) for age ${nodeInfo.ageDays} days`,
 	};
 }

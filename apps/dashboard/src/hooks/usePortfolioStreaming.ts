@@ -49,75 +49,43 @@ export interface UsePortfolioStreamingResult {
 	refresh: () => void;
 }
 
-// ============================================
-// Hook
-// ============================================
+function usePositionSymbols(positions: Position[]): string[] {
+	return useMemo(() => [...new Set(positions.map((position) => position.symbol))], [positions]);
+}
 
-/**
- * Hook to manage real-time streaming for portfolio positions.
- *
- * @example
- * ```tsx
- * const { streamingPositions, state } = usePortfolioStreaming({
- *   positions: queryPositions,
- *   cash: summary?.cash,
- *   enabled: true,
- * });
- *
- * return (
- *   <>
- *     <PortfolioSummary nav={state.liveNav} pnl={state.liveTotalPnl} />
- *     {streamingPositions.map(pos => (
- *       <PositionRow key={pos.id} position={pos} />
- *     ))}
- *   </>
- * );
- * ```
- */
-export function usePortfolioStreaming(
-	options: UsePortfolioStreamingOptions = {},
-): UsePortfolioStreamingResult {
-	const { cash = 0, positions = [], enabled = true } = options;
-
-	const { subscribe, subscribeSymbols, connected } = useWebSocketContext();
+function useQuoteStore() {
 	const [quotes, setQuotes] = useState<Map<string, StreamingQuote>>(new Map());
 	const previousPricesRef = useRef<Map<string, number>>(new Map());
 	const lastUpdatedRef = useRef<Date | null>(null);
 
-	// Get unique symbols from positions
-	const symbols = useMemo(() => {
-		return [...new Set(positions.map((p) => p.symbol))];
-	}, [positions]);
+	return { quotes, setQuotes, previousPricesRef, lastUpdatedRef };
+}
 
-	// Subscribe to symbols when they change
-	useEffect(() => {
-		if (!enabled || !connected || symbols.length === 0) {
-			return;
-		}
+function createHandleQuoteUpdate(
+	setQuotes: React.Dispatch<React.SetStateAction<Map<string, StreamingQuote>>>,
+	previousPricesRef: React.MutableRefObject<Map<string, number>>,
+	lastUpdatedRef: React.MutableRefObject<Date | null>,
+) {
+	return useCallback(
+		(quote: StreamingQuote) => {
+			setQuotes((prev) => {
+				const updated = new Map(prev);
+				const existing = updated.get(quote.symbol);
 
-		// Subscribe to quotes channel
-		subscribe(["quotes"]);
-		subscribeSymbols(symbols);
-	}, [enabled, connected, symbols, subscribe, subscribeSymbols]);
+				if (existing && existing.price !== quote.price) {
+					previousPricesRef.current.set(quote.symbol, existing.price);
+				}
 
-	// Handle incoming quote updates
-	const handleQuoteUpdate = useCallback((quote: StreamingQuote) => {
-		setQuotes((prev) => {
-			const updated = new Map(prev);
-			const existing = updated.get(quote.symbol);
+				updated.set(quote.symbol, quote);
+				lastUpdatedRef.current = new Date();
+				return updated;
+			});
+		},
+		[setQuotes, previousPricesRef, lastUpdatedRef],
+	);
+}
 
-			// Store previous price for flash animation
-			if (existing && existing.price !== quote.price) {
-				previousPricesRef.current.set(quote.symbol, existing.price);
-			}
-
-			updated.set(quote.symbol, quote);
-			lastUpdatedRef.current = new Date();
-			return updated;
-		});
-	}, []);
-
-	// Expose handler for WebSocket provider
+function registerQuoteHandler(handleQuoteUpdate: (quote: StreamingQuote) => void) {
 	useEffect(() => {
 		(
 			window as unknown as { __portfolioQuoteHandler?: typeof handleQuoteUpdate }
@@ -127,15 +95,18 @@ export function usePortfolioStreaming(
 				.__portfolioQuoteHandler;
 		};
 	}, [handleQuoteUpdate]);
+}
 
-	// Calculate streaming positions with live P/L
-	const streamingPositions = useMemo((): StreamingPosition[] => {
+function useStreamingPositions(
+	positions: Position[],
+	quotes: Map<string, StreamingQuote>,
+	previousPricesRef: React.MutableRefObject<Map<string, number>>,
+) {
+	return useMemo(() => {
 		return positions.map((position) => {
 			const quote = quotes.get(position.symbol);
 			const livePrice = quote?.price ?? position.currentPrice;
 			const previousPrice = previousPricesRef.current.get(position.symbol) ?? position.currentPrice;
-
-			// Calculate P/L based on side
 			const multiplier = position.side === "LONG" ? 1 : -1;
 			const absQty = Math.abs(position.qty);
 			const liveMarketValue = livePrice * absQty;
@@ -144,9 +115,6 @@ export function usePortfolioStreaming(
 				position.avgEntry !== 0
 					? ((livePrice - position.avgEntry) / position.avgEntry) * 100 * multiplier
 					: 0;
-
-			// Calculate Day P&L using lastdayPrice from Alpaca
-			// Formula: (currentPrice - lastdayPrice) * qty
 			let liveDayPnl = 0;
 			if (position.lastdayPrice != null && livePrice > 0) {
 				liveDayPnl = (livePrice - position.lastdayPrice) * absQty * multiplier;
@@ -164,26 +132,24 @@ export function usePortfolioStreaming(
 				lastUpdated: quote?.timestamp ?? null,
 			};
 		});
-	}, [positions, quotes]);
+	}, [positions, quotes, previousPricesRef]);
+}
 
-	// Calculate portfolio-level metrics
-	const state = useMemo((): PortfolioStreamingState => {
+function usePortfolioStreamingState(
+	positions: Position[],
+	streamingPositions: StreamingPosition[],
+	cash: number,
+	lastUpdatedRef: React.MutableRefObject<Date | null>,
+) {
+	return useMemo((): PortfolioStreamingState => {
 		const totalMarketValue = streamingPositions.reduce((sum, p) => sum + p.liveMarketValue, 0);
 		const liveTotalPnl = streamingPositions.reduce((sum, p) => sum + p.liveUnrealizedPnl, 0);
 		const totalCostBasis = positions.reduce((sum, p) => sum + p.avgEntry * p.qty, 0);
 		const liveTotalPnlPct = totalCostBasis !== 0 ? (liveTotalPnl / totalCostBasis) * 100 : 0;
-
-		// Calculate NAV: cash + total market value
 		const liveNav = cash + totalMarketValue;
-
-		// Calculate Day P&L from streaming positions using lastdayPrice
 		const liveDayPnl = streamingPositions.reduce((sum, p) => sum + p.liveDayPnl, 0);
-
-		// Calculate Day P&L percentage based on yesterday's portfolio value
-		// Yesterday's value = current NAV - today's P&L
 		const yesterdayNav = liveNav - liveDayPnl;
 		const liveDayPnlPct = yesterdayNav > 0 ? (liveDayPnl / yesterdayNav) * 100 : 0;
-
 		const isStreaming = streamingPositions.some((p) => p.isStreaming);
 
 		return {
@@ -195,9 +161,52 @@ export function usePortfolioStreaming(
 			isStreaming,
 			lastUpdated: lastUpdatedRef.current,
 		};
-	}, [streamingPositions, positions, cash]);
+	}, [positions, streamingPositions, cash, lastUpdatedRef]);
+}
 
-	// Get quote for a symbol
+function useQuoteUpdateRegistration(
+	connected: boolean,
+	symbols: string[],
+	subscribe: (channels: string[]) => void,
+	subscribeSymbols: (symbols: string[]) => void,
+	enabled: boolean,
+) {
+	useEffect(() => {
+		if (!enabled || !connected || symbols.length === 0) {
+			return;
+		}
+		subscribe(["quotes"]);
+		subscribeSymbols(symbols);
+	}, [connected, enabled, symbols, subscribe, subscribeSymbols]);
+}
+
+function useLiveSymbolsState(symbols: string[]) {
+	const symbolsRef = useRef<string[]>([]);
+
+	useEffect(() => {
+		symbolsRef.current = symbols;
+	}, [symbols]);
+
+	return symbolsRef;
+}
+
+export function usePortfolioStreaming(
+	options: UsePortfolioStreamingOptions = {},
+): UsePortfolioStreamingResult {
+	const { cash = 0, positions = [], enabled = true } = options;
+	const { subscribe, subscribeSymbols, connected } = useWebSocketContext();
+
+	const symbols = usePositionSymbols(positions);
+	const { quotes, setQuotes, previousPricesRef, lastUpdatedRef } = useQuoteStore();
+	useQuoteUpdateRegistration(connected, symbols, subscribe, subscribeSymbols, enabled);
+	const symbolsRef = useLiveSymbolsState(symbols);
+
+	const handleQuoteUpdate = createHandleQuoteUpdate(setQuotes, previousPricesRef, lastUpdatedRef);
+	registerQuoteHandler(handleQuoteUpdate);
+
+	const streamingPositions = useStreamingPositions(positions, quotes, previousPricesRef);
+	const state = usePortfolioStreamingState(positions, streamingPositions, cash, lastUpdatedRef);
+
 	const getQuote = useCallback(
 		(symbol: string): StreamingQuote | undefined => {
 			return quotes.get(symbol);
@@ -205,12 +214,12 @@ export function usePortfolioStreaming(
 		[quotes],
 	);
 
-	// Force refresh subscriptions
 	const refresh = useCallback(() => {
-		if (connected && symbols.length > 0) {
-			subscribeSymbols(symbols);
+		const activeSymbols = symbolsRef.current;
+		if (connected && activeSymbols.length > 0) {
+			subscribeSymbols(activeSymbols);
 		}
-	}, [connected, symbols, subscribeSymbols]);
+	}, [connected, subscribeSymbols, symbolsRef]);
 
 	return {
 		streamingPositions,

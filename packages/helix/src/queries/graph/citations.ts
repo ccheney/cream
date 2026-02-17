@@ -36,6 +36,81 @@ export interface Citation {
 	fetchedAt: string;
 }
 
+type InfluencingNode = Awaited<ReturnType<typeof getInfluencingEvents>>[number];
+type CitationBuilder = (
+	node: InfluencingNode,
+	props: Record<string, unknown>,
+	defaultTimestamp: string,
+) => Citation;
+
+function toText(value: unknown, fallback = ""): string {
+	if (typeof value === "string") {
+		return value;
+	}
+	if (typeof value === "number" || typeof value === "boolean") {
+		return String(value);
+	}
+	return fallback;
+}
+
+function toMagnitudeScore(value: unknown, fallback: number): number {
+	if (!value) {
+		return fallback;
+	}
+	return Math.abs(Number(value));
+}
+
+const CITATION_BUILDERS: Record<string, CitationBuilder> = {
+	ExternalEvent: (node, props, defaultTimestamp) => ({
+		id: toText(props.event_id, node.id),
+		sourceType: "event",
+		title: toText(props.text_summary, toText(props.event_type, "External Event")),
+		source: toText(props.event_type, "Unknown"),
+		snippet: toText(props.payload, toText(props.text_summary)),
+		relevanceScore: 0.8,
+		fetchedAt: toText(props.event_time, defaultTimestamp),
+	}),
+	NewsItem: (node, props, defaultTimestamp) => ({
+		id: toText(props.item_id, node.id),
+		sourceType: "news",
+		title: toText(props.headline, "News Item"),
+		source: toText(props.source, "Unknown"),
+		snippet: toText(props.body_text, toText(props.headline)).slice(0, 500),
+		relevanceScore: toMagnitudeScore(props.sentiment_score, 0.7),
+		fetchedAt: toText(props.published_at, defaultTimestamp),
+	}),
+	FilingChunk: (node, props, defaultTimestamp) => {
+		const symbol = toText(props.company_symbol);
+		return {
+			id: toText(props.chunk_id, node.id),
+			sourceType: "filing",
+			url: `https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK=${symbol}`,
+			title: `${toText(props.filing_type)} Filing - ${symbol}`,
+			source: "SEC EDGAR",
+			snippet: toText(props.chunk_text).slice(0, 500),
+			relevanceScore: 0.75,
+			fetchedAt: toText(props.filing_date, defaultTimestamp),
+		};
+	},
+	TranscriptChunk: (node, props, defaultTimestamp) => ({
+		id: toText(props.chunk_id, node.id),
+		sourceType: "transcript",
+		title: `Earnings Call - ${toText(props.company_symbol)} (${toText(props.call_date)})`,
+		source: toText(props.speaker, "Earnings Call"),
+		snippet: toText(props.chunk_text).slice(0, 500),
+		relevanceScore: 0.7,
+		fetchedAt: toText(props.call_date, defaultTimestamp),
+	}),
+};
+
+function buildCitation(node: InfluencingNode, defaultTimestamp: string): Citation | undefined {
+	const builder = CITATION_BUILDERS[node.type];
+	if (!builder) {
+		return undefined;
+	}
+	return builder(node, node.properties as Record<string, unknown>, defaultTimestamp);
+}
+
 /**
  * Get citations for a trade decision.
  *
@@ -61,58 +136,10 @@ export async function getDecisionCitations(
 	client: HelixClient,
 	decisionId: string,
 ): Promise<Citation[]> {
-	const citations: Citation[] = [];
-
+	const defaultTimestamp = new Date().toISOString();
 	const influencingNodes = await getInfluencingEvents(client, decisionId);
-
-	for (const node of influencingNodes) {
-		const props = node.properties as Record<string, unknown>;
-
-		if (node.type === "ExternalEvent") {
-			citations.push({
-				id: String(props.event_id ?? node.id),
-				sourceType: "event",
-				title: String(props.text_summary ?? props.event_type ?? "External Event"),
-				source: String(props.event_type ?? "Unknown"),
-				snippet: String(props.payload ?? props.text_summary ?? ""),
-				relevanceScore: 0.8,
-				fetchedAt: String(props.event_time ?? new Date().toISOString()),
-			});
-		} else if (node.type === "NewsItem") {
-			citations.push({
-				id: String(props.item_id ?? node.id),
-				sourceType: "news",
-				title: String(props.headline ?? "News Item"),
-				source: String(props.source ?? "Unknown"),
-				snippet: String(props.body_text ?? props.headline ?? "").slice(0, 500),
-				relevanceScore: props.sentiment_score ? Math.abs(Number(props.sentiment_score)) : 0.7,
-				fetchedAt: String(props.published_at ?? new Date().toISOString()),
-			});
-		} else if (node.type === "FilingChunk") {
-			citations.push({
-				id: String(props.chunk_id ?? node.id),
-				sourceType: "filing",
-				url: `https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK=${props.company_symbol}`,
-				title: `${props.filing_type} Filing - ${props.company_symbol}`,
-				source: "SEC EDGAR",
-				snippet: String(props.chunk_text ?? "").slice(0, 500),
-				relevanceScore: 0.75,
-				fetchedAt: String(props.filing_date ?? new Date().toISOString()),
-			});
-		} else if (node.type === "TranscriptChunk") {
-			citations.push({
-				id: String(props.chunk_id ?? node.id),
-				sourceType: "transcript",
-				title: `Earnings Call - ${props.company_symbol} (${props.call_date})`,
-				source: String(props.speaker ?? "Earnings Call"),
-				snippet: String(props.chunk_text ?? "").slice(0, 500),
-				relevanceScore: 0.7,
-				fetchedAt: String(props.call_date ?? new Date().toISOString()),
-			});
-		}
-	}
-
-	citations.sort((a, b) => b.relevanceScore - a.relevanceScore);
-
-	return citations;
+	return influencingNodes
+		.map((node) => buildCitation(node, defaultTimestamp))
+		.filter((citation): citation is Citation => citation !== undefined)
+		.toSorted((a, b) => b.relevanceScore - a.relevanceScore);
 }

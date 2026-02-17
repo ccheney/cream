@@ -44,21 +44,24 @@ mock.module("@cream/domain", () => ({
 
 // Mock @cream/external-context
 const mockZodSchema = z.object({});
+function SemanticScholarClientMock() {}
+function ExtractionPipelineMock() {}
+function EntityLinkerMock() {}
 mock.module("@cream/external-context", () => ({
 	fetchNewsHeadlines: async () => [],
 	extractNewsContext: async () => ({ news: [], sentiment: {} }),
 	createSemanticScholarClient: () => ({
 		searchPapers: async () => ({ data: [], total: 0, offset: 0 }),
 	}),
-	SemanticScholarClient: class {},
+	SemanticScholarClient: SemanticScholarClientMock,
 	createExtractionPipeline: () => ({
 		processNews: async () => ({ events: [] }),
 	}),
-	ExtractionPipeline: class {},
+	ExtractionPipeline: ExtractionPipelineMock,
 	createEntityLinker: () => ({
 		link: async () => [],
 	}),
-	EntityLinker: class {},
+	EntityLinker: EntityLinkerMock,
 	ExtractionResultSchema: mockZodSchema,
 	DataPointSchema: mockZodSchema,
 	EntityTypeSchema: z.enum(["PERSON", "ORG", "PRODUCT"]),
@@ -100,90 +103,116 @@ mock.module("@cream/logger", () => ({
 	}),
 }));
 
-describe("macro-watch workflow", () => {
+const createStepContext = (inputData: Record<string, unknown>) => ({
+	inputData,
+	mapiTraceId: "test",
+	runId: "test-run",
+	context: { machineContext: undefined },
+	suspend: async () => undefined,
+	getInitData: () => undefined,
+	getStepResult: () => undefined,
+	runtimeContext: {},
+});
+
+function registerSchemaValidationTests(): void {
 	describe("schema validation", () => {
-		it("should validate input schema with required cycleId", () => {
-			const result = MacroWatchInputSchema.safeParse({
-				cycleId: "cycle-123",
-			});
-			expect(result.success).toBe(true);
-		});
+		const now = new Date().toISOString();
+		registerMacroWatchInputSchemaTests();
+		registerMacroWatchComponentSchemaTests(now);
+		registerMacroWatchOutputSchemaTest(now);
+	});
+}
 
-		it("should validate input schema with optional date", () => {
-			const result = MacroWatchInputSchema.safeParse({
-				cycleId: "cycle-123",
-				date: "2024-01-15",
-			});
-			expect(result.success).toBe(true);
-		});
+function registerMacroWatchInputSchemaTests(): void {
+	it("should validate input schema with required cycleId", () => {
+		expect(MacroWatchInputSchema.safeParse({ cycleId: "cycle-123" }).success).toBe(true);
+	});
 
-		it("should reject input without cycleId", () => {
-			const result = MacroWatchInputSchema.safeParse({});
-			expect(result.success).toBe(false);
-		});
+	it("should validate input schema with optional date", () => {
+		expect(
+			MacroWatchInputSchema.safeParse({ cycleId: "cycle-123", date: "2024-01-15" }).success,
+		).toBe(true);
+	});
 
-		it("should validate NewsItemSchema", () => {
-			const newsItem = {
+	it("should reject input without cycleId", () => {
+		expect(MacroWatchInputSchema.safeParse({}).success).toBe(false);
+	});
+}
+
+function registerMacroWatchComponentSchemaTests(now: string): void {
+	for (const schemaCase of buildMacroWatchSchemaCases(now)) {
+		it(`should validate ${schemaCase.name}`, () => {
+			expect(schemaCase.schema.safeParse(schemaCase.value).success).toBe(true);
+		});
+	}
+}
+
+function buildMacroWatchSchemaCases(
+	now: string,
+): { name: string; schema: z.ZodTypeAny; value: unknown }[] {
+	return [
+		{
+			name: "NewsItemSchema",
+			schema: NewsItemSchema,
+			value: {
 				headline: "Fed signals rate cut ahead",
 				source: "Reuters",
-				timestamp: new Date().toISOString(),
+				timestamp: now,
 				summary: "Federal Reserve indicates potential rate cuts in coming months",
 				sentiment: "POSITIVE" as const,
 				symbols: ["SPY", "QQQ"],
-			};
-			const result = NewsItemSchema.safeParse(newsItem);
-			expect(result.success).toBe(true);
-		});
-
-		it("should validate PredictionSignalSchema", () => {
-			const signal = {
+			},
+		},
+		{
+			name: "PredictionSignalSchema",
+			schema: PredictionSignalSchema,
+			value: {
 				market: "Fed Rate Cut March 2024",
 				probability: 0.72,
 				change24h: 0.05,
-				timestamp: new Date().toISOString(),
-			};
-			const result = PredictionSignalSchema.safeParse(signal);
-			expect(result.success).toBe(true);
-		});
-
-		it("should validate EconomicIndicatorSchema", () => {
-			const indicator = {
+				timestamp: now,
+			},
+		},
+		{
+			name: "EconomicIndicatorSchema",
+			schema: EconomicIndicatorSchema,
+			value: {
 				indicator: "CPI YoY",
 				value: 3.2,
 				previousValue: 3.4,
 				change: -0.2,
-				timestamp: new Date().toISOString(),
-			};
-			const result = EconomicIndicatorSchema.safeParse(indicator);
-			expect(result.success).toBe(true);
-		});
-
-		it("should validate MoverSchema", () => {
-			const mover = {
+				timestamp: now,
+			},
+		},
+		{
+			name: "MoverSchema",
+			schema: MoverSchema,
+			value: {
 				symbol: "NVDA",
 				name: "NVIDIA Corporation",
 				change: 5.2,
 				volume: 50000000,
 				reason: "Strong earnings beat",
-			};
-			const result = MoverSchema.safeParse(mover);
-			expect(result.success).toBe(true);
-		});
-
-		it("should validate NewspaperSectionSchema", () => {
-			const section = {
+			},
+		},
+		{
+			name: "NewspaperSectionSchema",
+			schema: NewspaperSectionSchema,
+			value: {
 				title: "Market Overview",
 				content: "Markets rallied on Fed commentary...",
 				highlights: ["S&P 500 up 1.2%", "Tech leads gains"],
-			};
-			const result = NewspaperSectionSchema.safeParse(section);
-			expect(result.success).toBe(true);
-		});
+			},
+		},
+	];
+}
 
-		it("should validate full output schema", () => {
-			const output = {
+function registerMacroWatchOutputSchemaTest(now: string): void {
+	it("should validate full output schema", () => {
+		expect(
+			MacroWatchOutputSchema.safeParse({
 				cycleId: "cycle-123",
-				timestamp: new Date().toISOString(),
+				timestamp: now,
 				sections: [
 					{
 						title: "Market Summary",
@@ -194,87 +223,55 @@ describe("macro-watch workflow", () => {
 				news: [],
 				predictions: [],
 				economic: [],
-				movers: {
-					gainers: [],
-					losers: [],
-				},
+				movers: { gainers: [], losers: [] },
 				errors: [],
-			};
-			const result = MacroWatchOutputSchema.safeParse(output);
-			expect(result.success).toBe(true);
-		});
+			}).success,
+		).toBe(true);
 	});
+}
 
+function registerWorkflowDefinitionTests(): void {
 	describe("workflow definition", () => {
 		it("should have correct workflow id", () => {
 			expect(macroWatchWorkflow.id).toBe("macro-watch");
 		});
 	});
+}
 
+function registerScanStepTests(): void {
 	describe("scan steps", () => {
-		const createStepContext = (inputData: Record<string, unknown>) => ({
-			inputData,
-			mapiTraceId: "test",
-			runId: "test-run",
-			context: { machineContext: undefined },
-			suspend: async () => undefined,
-			getInitData: () => undefined,
-			getStepResult: () => undefined,
-			runtimeContext: {},
-		});
+		const stepIdCases = [
+			{ step: scanNewsStep, expected: "macro-scan-news" },
+			{ step: scanPredictionsStep, expected: "macro-scan-predictions" },
+			{ step: scanEconomicStep, expected: "macro-scan-economic" },
+			{ step: scanMoversStep, expected: "macro-scan-movers" },
+			{ step: compileNewspaperStep, expected: "macro-compile-newspaper" },
+		];
 
-		it("scanNewsStep should have correct id", () => {
-			expect(scanNewsStep.id).toBe("macro-scan-news");
-		});
+		for (const stepCase of stepIdCases) {
+			it(`${stepCase.expected} should have correct id`, () => {
+				expect(stepCase.step.id).toBe(stepCase.expected);
+			});
+		}
 
-		it("scanPredictionsStep should have correct id", () => {
-			expect(scanPredictionsStep.id).toBe("macro-scan-predictions");
-		});
+		const executionCases = [
+			{ step: scanNewsStep, key: "news" },
+			{ step: scanPredictionsStep, key: "predictions" },
+			{ step: scanEconomicStep, key: "economic" },
+		] as const;
 
-		it("scanEconomicStep should have correct id", () => {
-			expect(scanEconomicStep.id).toBe("macro-scan-economic");
-		});
-
-		it("scanMoversStep should have correct id", () => {
-			expect(scanMoversStep.id).toBe("macro-scan-movers");
-		});
-
-		it("compileNewspaperStep should have correct id", () => {
-			expect(compileNewspaperStep.id).toBe("macro-compile-newspaper");
-		});
-
-		it("scanNewsStep should execute and return news array", async () => {
-			const result = await scanNewsStep.execute(
-				createStepContext({ cycleId: "test-cycle" }) as never,
-			);
-			expect(result).toHaveProperty("cycleId", "test-cycle");
-			expect(result).toHaveProperty("news");
-			if ("news" in result) {
-				expect(Array.isArray(result.news)).toBe(true);
-			}
-		});
-
-		it("scanPredictionsStep should execute and return predictions array", async () => {
-			const result = await scanPredictionsStep.execute(
-				createStepContext({ cycleId: "test-cycle" }) as never,
-			);
-			expect(result).toHaveProperty("cycleId", "test-cycle");
-			expect(result).toHaveProperty("predictions");
-			if ("predictions" in result) {
-				expect(Array.isArray(result.predictions)).toBe(true);
-			}
-		});
-
-		it("scanEconomicStep should execute and return economic array", async () => {
-			const result = await scanEconomicStep.execute(
-				createStepContext({ cycleId: "test-cycle" }) as never,
-			);
-			expect(result).toHaveProperty("cycleId", "test-cycle");
-			expect(result).toHaveProperty("economic");
-			if ("economic" in result) {
-				expect(Array.isArray(result.economic)).toBe(true);
-			}
-		});
+		for (const executionCase of executionCases) {
+			it(`${executionCase.key} step should execute and return array`, async () => {
+				const result = await executionCase.step.execute(
+					createStepContext({ cycleId: "test-cycle" }) as never,
+				);
+				expect(result).toHaveProperty("cycleId", "test-cycle");
+				expect(result).toHaveProperty(executionCase.key);
+				if (executionCase.key in result) {
+					expect(Array.isArray(result[executionCase.key])).toBe(true);
+				}
+			});
+		}
 
 		it("scanMoversStep should execute and return gainers/losers", async () => {
 			const result = await scanMoversStep.execute(
@@ -308,4 +305,10 @@ describe("macro-watch workflow", () => {
 			}
 		});
 	});
+}
+
+describe("macro-watch workflow", () => {
+	registerSchemaValidationTests();
+	registerWorkflowDefinitionTests();
+	registerScanStepTests();
 });

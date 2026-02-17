@@ -7,7 +7,7 @@
  * @see docs/plans/ui/20-design-philosophy.md lines 91-92
  */
 
-import type { HTMLAttributes, ReactNode } from "react";
+import type { HTMLAttributes, KeyboardEvent, ReactNode } from "react";
 
 export type ElevationLevel = 0 | 1 | 2 | 3 | 4;
 export type SurfaceVariant = "default" | "interactive" | "translucent" | "inset";
@@ -153,7 +153,7 @@ export function PanelFooter({ className = "", children, ...props }: PanelFooterP
 	);
 }
 
-export interface BackdropProps extends HTMLAttributes<HTMLDivElement> {
+export interface BackdropProps extends HTMLAttributes<HTMLButtonElement> {
 	type?: "modal" | "drawer";
 	visible?: boolean;
 	onClose?: () => void;
@@ -170,23 +170,26 @@ export function Backdrop({
 		return null;
 	}
 
+	const handleKeyDown = (event: KeyboardEvent<HTMLButtonElement>) => {
+		if (event.key === "Escape" || event.key === "Enter" || event.key === " ") {
+			event.preventDefault();
+			onClose?.();
+		}
+	};
+
 	return (
-		// biome-ignore lint/a11y/noStaticElementInteractions: Backdrop needs click handler for dismiss
-		<div
+		<button
+			type="button"
+			tabIndex={0}
 			className={`
-        fixed inset-0
-        ${type === "modal" ? "backdrop-modal z-modal" : "backdrop-drawer z-drawer"}
-        transition-opacity duration-200
-        ${visible ? "opacity-100" : "opacity-0"}
-        ${className}
-      `.trim()}
+				fixed inset-0
+				${type === "modal" ? "backdrop-modal z-modal" : "backdrop-drawer z-drawer"}
+				transition-opacity duration-200
+				${visible ? "opacity-100" : "opacity-0"}
+				${className}
+			`.trim()}
 			onClick={onClose}
-			onKeyDown={(e) => {
-				if (e.key === "Escape" || e.key === "Enter") {
-					onClose?.();
-				}
-			}}
-			role="presentation"
+			onKeyDown={handleKeyDown}
 			{...props}
 		/>
 	);

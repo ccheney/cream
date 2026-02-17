@@ -18,107 +18,111 @@ import { CommandContext } from "./context";
 import type { CommandItem, CommandPaletteProps, GroupedCommands } from "./types";
 import { scoreMatch } from "./utils";
 
-/**
- * Command Palette - Quick navigation and actions.
- *
- * @example
- * ```tsx
- * const [open, setOpen] = useState(false);
- *
- * // Trigger with Cmd+K
- * useEffect(() => {
- *   const handler = (e: KeyboardEvent) => {
- *     if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
- *       e.preventDefault();
- *       setOpen(true);
- *     }
- *   };
- *   window.addEventListener('keydown', handler);
- *   return () => window.removeEventListener('keydown', handler);
- * }, []);
- *
- * <CommandPalette
- *   open={open}
- *   onOpenChange={setOpen}
- *   commands={[
- *     { id: 'dashboard', label: 'Go to Dashboard', group: 'Navigation', onSelect: () => router.push('/') },
- *     { id: 'portfolio', label: 'Go to Portfolio', group: 'Navigation', onSelect: () => router.push('/portfolio') },
- *   ]}
- * />
- * ```
- */
-export function CommandPalette({
-	open,
-	onOpenChange,
-	commands,
-	placeholder = "Search commands...",
-	emptyMessage = "No results found",
-	loading = false,
-	recentIds = [],
-}: CommandPaletteProps) {
+const DEFAULT_EMPTY_MESSAGE = "No results found";
+const DEFAULT_PLACEHOLDER = "Search commands...";
+const DEFAULT_RECENT_MESSAGE = "Recent";
+const RECENT_GROUP = "__recent__";
+
+function filterCommands(
+	commands: CommandItem[],
+	search: string,
+	recentIds: string[],
+): CommandItem[] {
+	if (!search) {
+		const recent = recentIds
+			.map((id) => commands.find((c) => c.id === id))
+			.filter((c): c is CommandItem => c !== undefined);
+		const others = commands.filter((c) => !recentIds.includes(c.id));
+
+		return [...recent.map((command) => ({ ...command, group: DEFAULT_RECENT_MESSAGE })), ...others];
+	}
+
+	return commands
+		.map((item) => ({ item, score: scoreMatch(search, item) }))
+		.filter(({ score }) => score > 0)
+		.toSorted((a, b) => b.score - a.score)
+		.map(({ item }) => item);
+}
+
+function groupCommands(commands: CommandItem[]): GroupedCommands {
+	const allGroups = Object.groupBy(commands, (command) => command.group ?? RECENT_GROUP);
+	const ungrouped = allGroups[RECENT_GROUP] ?? [];
+	const { [RECENT_GROUP]: _, ...groups } = allGroups;
+	return { groups: groups as Record<string, CommandItem[]>, ungrouped };
+}
+
+interface PaletteStateProps {
+	open: boolean;
+	onOpenChange: (open: boolean) => void;
+	commands: CommandItem[];
+	recentIds: string[];
+}
+
+function usePaletteSearchState() {
 	const [search, setSearch] = useState("");
 	const [selectedIndex, setSelectedIndex] = useState(0);
-	const [mounted, setMounted] = useState(false);
 	const inputRef = useRef<HTMLInputElement>(null);
 	const listRef = useRef<HTMLDivElement>(null);
 
-	useEffect(() => {
-		setMounted(true);
+	const onSearchChange = useCallback((value: string) => {
+		setSearch(value);
+		setSelectedIndex(0);
 	}, []);
 
-	const close = useCallback(() => {
-		onOpenChange(false);
-	}, [onOpenChange]);
+	return {
+		search,
+		selectedIndex,
+		setSelectedIndex,
+		inputRef,
+		listRef,
+		onSearchChange,
+	};
+}
 
-	const filteredCommands = useMemo(() => {
-		if (!search) {
-			const recent = recentIds
-				.map((id) => commands.find((c) => c.id === id))
-				.filter((c): c is CommandItem => c !== undefined);
-
-			const others = commands.filter((c) => !recentIds.includes(c.id));
-			const recentWithGroup = recent.map((c) => ({ ...c, group: "Recent" }));
-
-			return [...recentWithGroup, ...others];
-		}
-
-		const scored = commands
-			.map((item) => ({ item, score: scoreMatch(search, item) }))
-			.filter(({ score }) => score > 0)
-			.toSorted((a, b) => b.score - a.score);
-
-		return scored.map(({ item }) => item);
-	}, [commands, search, recentIds]);
-
-	const groupedCommands = useMemo((): GroupedCommands => {
-		const UNGROUPED = "__ungrouped__";
-		const allGroups = Object.groupBy(filteredCommands, (c) => c.group ?? UNGROUPED);
-		const ungrouped = allGroups[UNGROUPED] ?? [];
-		const { [UNGROUPED]: _, ...groups } = allGroups;
-		return { groups: groups as Record<string, CommandItem[]>, ungrouped };
-	}, [filteredCommands]);
-
+function usePaletteOpenLifecycle(
+	open: boolean,
+	setSearch: (value: string) => void,
+	setSelectedIndex: (index: number) => void,
+) {
 	useEffect(() => {
 		if (open) {
 			setSearch("");
 			setSelectedIndex(0);
-			setTimeout(() => inputRef.current?.focus(), 0);
 		}
-	}, [open]);
+	}, [open, setSearch, setSelectedIndex]);
+}
 
-	const handleKeyDown = useCallback(
-		(e: React.KeyboardEvent) => {
-			switch (e.key) {
+function useCommandPaletteFilters(commands: CommandItem[], search: string, recentIds: string[]) {
+	const filteredCommands = useMemo(
+		() => filterCommands(commands, search, recentIds),
+		[commands, search, recentIds],
+	);
+	const groupedCommands = useMemo(() => groupCommands(filteredCommands), [filteredCommands]);
+
+	return { filteredCommands, groupedCommands };
+}
+
+function usePaletteKeyboardHandlers(
+	filteredCommands: CommandItem[],
+	selectedIndex: number,
+	close: () => void,
+	setSelectedIndex: (index: number) => void,
+) {
+	return useCallback(
+		(event: React.KeyboardEvent) => {
+			switch (event.key) {
 				case "ArrowDown":
-					e.preventDefault();
-					setSelectedIndex((i) => (i < filteredCommands.length - 1 ? i + 1 : 0));
+					event.preventDefault();
+					setSelectedIndex((selectedIndex + 1) % Math.max(filteredCommands.length, 1));
 					break;
 				case "ArrowUp":
-					e.preventDefault();
-					setSelectedIndex((i) => (i > 0 ? i - 1 : filteredCommands.length - 1));
+					event.preventDefault();
+					setSelectedIndex(
+						(selectedIndex - 1 + filteredCommands.length) % Math.max(filteredCommands.length, 1),
+					);
 					break;
 				case "Enter": {
-					e.preventDefault();
+					event.preventDefault();
 					const selected = filteredCommands[selectedIndex];
 					if (selected && !selected.disabled) {
 						selected.onSelect();
@@ -127,14 +131,30 @@ export function CommandPalette({
 					break;
 				}
 				case "Escape":
-					e.preventDefault();
+					event.preventDefault();
 					close();
 					break;
 			}
 		},
-		[filteredCommands, selectedIndex, close],
+		[close, filteredCommands, selectedIndex, setSelectedIndex],
 	);
+}
 
+function usePaletteAutoFocus(open: boolean, inputRef: React.RefObject<HTMLInputElement | null>) {
+	useEffect(() => {
+		if (!open) {
+			return;
+		}
+		setTimeout(() => {
+			inputRef.current?.focus();
+		}, 0);
+	}, [open, inputRef]);
+}
+
+function usePaletteSelectionScroll(
+	listRef: React.RefObject<HTMLDivElement | null>,
+	selectedIndex: number,
+) {
 	useEffect(() => {
 		const list = listRef.current;
 		if (!list) {
@@ -145,41 +165,50 @@ export function CommandPalette({
 		if (selectedElement) {
 			selectedElement.scrollIntoView({ block: "nearest" });
 		}
-	}, [selectedIndex]);
+	}, [listRef, selectedIndex]);
+}
 
-	if (!mounted || !open) {
-		return null;
-	}
-
-	return createPortal(
-		<CommandContext.Provider value={{ close, search, selectedIndex }}>
-			<div
-				className="fixed inset-0 z-50 bg-black/50 backdrop-blur-sm animate-in fade-in-0 duration-150"
-				onClick={close}
-				aria-hidden="true"
-			/>
-
-			<CommandPaletteContent
-				inputRef={inputRef}
-				listRef={listRef}
-				search={search}
-				setSearch={(value) => {
-					setSearch(value);
-					setSelectedIndex(0);
-				}}
-				placeholder={placeholder}
-				emptyMessage={emptyMessage}
-				loading={loading}
-				filteredCommands={filteredCommands}
-				groupedCommands={groupedCommands}
-				selectedIndex={selectedIndex}
-				setSelectedIndex={setSelectedIndex}
-				onKeyDown={handleKeyDown}
-				close={close}
-			/>
-		</CommandContext.Provider>,
-		document.body,
+function usePaletteState(props: PaletteStateProps) {
+	const { open, onOpenChange, commands, recentIds } = props;
+	const [mounted, setMounted] = useState(false);
+	const { search, selectedIndex, setSelectedIndex, inputRef, listRef, onSearchChange } =
+		usePaletteSearchState();
+	const { filteredCommands, groupedCommands } = useCommandPaletteFilters(
+		commands,
+		search,
+		recentIds,
 	);
+	const close = useCallback(() => onOpenChange(false), [onOpenChange]);
+
+	usePaletteOpenLifecycle(open, onSearchChange, setSelectedIndex);
+
+	usePaletteAutoFocus(open, inputRef);
+	usePaletteSelectionScroll(listRef, selectedIndex);
+
+	useEffect(() => {
+		setMounted(true);
+	}, []);
+
+	const handleKeyDown = usePaletteKeyboardHandlers(
+		filteredCommands,
+		selectedIndex,
+		close,
+		setSelectedIndex,
+	);
+
+	return {
+		mounted,
+		search,
+		selectedIndex,
+		inputRef,
+		listRef,
+		close,
+		filteredCommands,
+		groupedCommands,
+		setSelectedIndex,
+		onSearchChange,
+		handleKeyDown,
+	};
 }
 
 interface CommandPaletteContentProps {
@@ -194,11 +223,11 @@ interface CommandPaletteContentProps {
 	groupedCommands: GroupedCommands;
 	selectedIndex: number;
 	setSelectedIndex: (index: number) => void;
-	onKeyDown: (e: React.KeyboardEvent) => void;
+	onKeyDown: (event: React.KeyboardEvent) => void;
 	close: () => void;
 }
 
-function CommandPaletteContent({
+function CommandPaletteShell({
 	inputRef,
 	listRef,
 	search,
@@ -236,7 +265,6 @@ function CommandPaletteContent({
 					onKeyDown={onKeyDown}
 					placeholder={placeholder}
 				/>
-
 				<CommandList
 					listRef={listRef}
 					loading={loading}
@@ -247,34 +275,136 @@ function CommandPaletteContent({
 					setSelectedIndex={setSelectedIndex}
 					close={close}
 				/>
-
 				<div className="flex items-center justify-between px-4 py-2 border-t border-stone-200 dark:border-stone-700 text-xs text-stone-500">
 					<div className="flex items-center gap-3">
-						<span className="flex items-center gap-1">
-							<kbd className="px-1.5 py-0.5 bg-stone-100 dark:bg-stone-700 rounded text-[10px]">
-								↑
-							</kbd>
-							<kbd className="px-1.5 py-0.5 bg-stone-100 dark:bg-stone-700 rounded text-[10px]">
-								↓
-							</kbd>
-							<span>to navigate</span>
-						</span>
-						<span className="flex items-center gap-1">
-							<kbd className="px-1.5 py-0.5 bg-stone-100 dark:bg-stone-700 rounded text-[10px]">
-								↵
-							</kbd>
-							<span>to select</span>
-						</span>
-						<span className="flex items-center gap-1">
-							<kbd className="px-1.5 py-0.5 bg-stone-100 dark:bg-stone-700 rounded text-[10px]">
-								esc
-							</kbd>
-							<span>to close</span>
-						</span>
+						<KbdShortcut left="↑" right="↓" label="to navigate" />
+						<KbdShortcut left="↵" label="to select" />
+						<KbdShortcut left="esc" label="to close" />
 					</div>
 				</div>
 			</div>
 		</div>
+	);
+}
+
+function KbdShortcut({ left, right, label }: { left: string; right?: string; label: string }) {
+	return (
+		<span className="flex items-center gap-1">
+			<kbd className="px-1.5 py-0.5 bg-stone-100 dark:bg-stone-700 rounded text-[10px]">{left}</kbd>
+			{right && (
+				<kbd className="px-1.5 py-0.5 bg-stone-100 dark:bg-stone-700 rounded text-[10px]">
+					{right}
+				</kbd>
+			)}
+			<span>{label}</span>
+		</span>
+	);
+}
+
+function CommandPalettePortal({
+	close,
+	search,
+	selectedIndex,
+	inputRef,
+	listRef,
+	placeholder,
+	emptyMessage,
+	loading,
+	filteredCommands,
+	groupedCommands,
+	handleKeyDown,
+	onSearchChange,
+	setSelectedIndex,
+}: {
+	close: () => void;
+	search: string;
+	selectedIndex: number;
+	inputRef: React.RefObject<HTMLInputElement | null>;
+	listRef: React.RefObject<HTMLDivElement | null>;
+	placeholder: string;
+	emptyMessage: string;
+	loading: boolean;
+	filteredCommands: CommandItem[];
+	groupedCommands: GroupedCommands;
+	handleKeyDown: (event: React.KeyboardEvent) => void;
+	onSearchChange: (value: string) => void;
+	setSelectedIndex: (index: number) => void;
+}) {
+	return createPortal(
+		<>
+			<div
+				className="fixed inset-0 z-50 bg-black/50 backdrop-blur-sm animate-in fade-in-0 duration-150"
+				onClick={close}
+				aria-hidden="true"
+			/>
+			<CommandContext.Provider value={{ close, search, selectedIndex }}>
+				<CommandPaletteShell
+					inputRef={inputRef}
+					listRef={listRef}
+					search={search}
+					setSearch={onSearchChange}
+					placeholder={placeholder}
+					emptyMessage={emptyMessage}
+					loading={loading}
+					filteredCommands={filteredCommands}
+					groupedCommands={groupedCommands}
+					selectedIndex={selectedIndex}
+					setSelectedIndex={setSelectedIndex}
+					onKeyDown={handleKeyDown}
+					close={close}
+				/>
+			</CommandContext.Provider>
+		</>,
+		document.body,
+	);
+}
+
+/**
+ * Command Palette - Quick navigation and actions.
+ */
+export function CommandPalette({
+	open,
+	onOpenChange,
+	commands,
+	placeholder = DEFAULT_PLACEHOLDER,
+	emptyMessage = DEFAULT_EMPTY_MESSAGE,
+	loading = false,
+	recentIds = [],
+}: CommandPaletteProps) {
+	const {
+		mounted,
+		search,
+		selectedIndex,
+		inputRef,
+		listRef,
+		close,
+		filteredCommands,
+		groupedCommands,
+		setSelectedIndex,
+		onSearchChange,
+		handleKeyDown,
+	} = usePaletteState({ open, onOpenChange, commands, recentIds });
+
+	if (!mounted || !open) {
+		return null;
+	}
+
+	return (
+		<CommandPalettePortal
+			close={close}
+			search={search}
+			selectedIndex={selectedIndex}
+			inputRef={inputRef}
+			listRef={listRef}
+			placeholder={placeholder}
+			emptyMessage={emptyMessage}
+			loading={loading}
+			filteredCommands={filteredCommands}
+			groupedCommands={groupedCommands}
+			onSearchChange={onSearchChange}
+			handleKeyDown={handleKeyDown}
+			setSelectedIndex={setSelectedIndex}
+		/>
 	);
 }
 

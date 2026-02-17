@@ -149,6 +149,18 @@ export interface SentimentScoringConfig {
 	applyConfidence?: boolean;
 }
 
+type WeightedSentimentScore = {
+	score: number;
+	weight: number;
+	confidence: number;
+};
+
+type SentimentScoreBuckets = {
+	newsScores: WeightedSentimentScore[];
+	socialScores: WeightedSentimentScore[];
+	analystScores: WeightedSentimentScore[];
+};
+
 // ============================================
 // Helper Functions
 // ============================================
@@ -437,65 +449,65 @@ export class SentimentAggregationJob {
 		date: string,
 		sentimentData: ExtractedSentiment[],
 	): Promise<AggregatedSentiment> {
-		const referenceTime = new Date(date);
-		referenceTime.setHours(23, 59, 59, 999); // End of day
-
-		// Calculate scores with recency weights
-		const newsScores: Array<{ score: number; weight: number; confidence: number }> = [];
-		const socialScores: Array<{ score: number; weight: number; confidence: number }> = [];
-		const analystScores: Array<{ score: number; weight: number; confidence: number }> = [];
-
-		for (const sentiment of sentimentData) {
-			const score = computeSentimentScore(
-				sentiment.sentiment,
-				sentiment.confidence,
-				this.scoringConfig,
-			);
-			const weight = calculateRecencyWeight(sentiment.eventTime, referenceTime);
-
-			const entry = { score, weight, confidence: sentiment.confidence };
-
-			switch (sentiment.sourceType) {
-				case "news":
-				case "press_release":
-				case "transcript":
-					newsScores.push(entry);
-					break;
-				case "social":
-					socialScores.push(entry);
-					break;
-			}
-
-			// Analyst updates are also tracked separately
-			if (sentiment.eventType === "analyst_update") {
-				analystScores.push(entry);
-			}
-		}
-
-		// Combine all scores for overall sentiment
-		const allScores = [...newsScores, ...socialScores, ...analystScores];
-
-		// Calculate aggregate values
-		const sentimentScore = aggregateSentimentScores(allScores);
-		const sentimentStrength = calculateSentimentStrength(allScores);
-
-		// Calculate sentiment momentum
+		const referenceTime = this.getReferenceTime(date);
+		const buckets = this.buildScoreBuckets(sentimentData, referenceTime);
+		const allScores = [...buckets.newsScores, ...buckets.socialScores, ...buckets.analystScores];
 		const sentimentMomentum = await this.calculateMomentum(symbol, date);
-
-		// Detect event risk
-		const eventRiskFlag = detectEventRisk(sentimentData);
-
 		return {
 			symbol,
 			date,
-			sentimentScore,
-			sentimentStrength,
+			sentimentScore: aggregateSentimentScores(allScores),
+			sentimentStrength: calculateSentimentStrength(allScores),
 			newsVolume: sentimentData.length,
 			sentimentMomentum,
-			eventRiskFlag,
-			newsSentiment: aggregateSentimentScores(newsScores),
-			socialSentiment: aggregateSentimentScores(socialScores),
-			analystSentiment: aggregateSentimentScores(analystScores),
+			eventRiskFlag: detectEventRisk(sentimentData),
+			newsSentiment: aggregateSentimentScores(buckets.newsScores),
+			socialSentiment: aggregateSentimentScores(buckets.socialScores),
+			analystSentiment: aggregateSentimentScores(buckets.analystScores),
+		};
+	}
+
+	private getReferenceTime(date: string): Date {
+		const referenceTime = new Date(date);
+		referenceTime.setHours(23, 59, 59, 999);
+		return referenceTime;
+	}
+
+	private buildScoreBuckets(
+		sentimentData: ExtractedSentiment[],
+		referenceTime: Date,
+	): SentimentScoreBuckets {
+		const buckets: SentimentScoreBuckets = {
+			newsScores: [],
+			socialScores: [],
+			analystScores: [],
+		};
+
+		for (const sentiment of sentimentData) {
+			const entry = this.buildScoreEntry(sentiment, referenceTime);
+
+			if (sentiment.sourceType === "social") {
+				buckets.socialScores.push(entry);
+			} else {
+				buckets.newsScores.push(entry);
+			}
+
+			if (sentiment.eventType === "analyst_update") {
+				buckets.analystScores.push(entry);
+			}
+		}
+
+		return buckets;
+	}
+
+	private buildScoreEntry(
+		sentiment: ExtractedSentiment,
+		referenceTime: Date,
+	): WeightedSentimentScore {
+		return {
+			score: computeSentimentScore(sentiment.sentiment, sentiment.confidence, this.scoringConfig),
+			weight: calculateRecencyWeight(sentiment.eventTime, referenceTime),
+			confidence: sentiment.confidence,
 		};
 	}
 

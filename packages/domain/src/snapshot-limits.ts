@@ -1,17 +1,4 @@
-/**
- * Snapshot Size Limits and Performance Monitoring
- *
- * Implements size constraints, token estimation, and monitoring for market snapshots.
- * Ensures snapshots are efficiently consumable by LLMs within token budgets.
- *
- * @see docs/plans/03-market-snapshot.md - Market snapshot specification
- */
-
 import type { MarketSnapshot, SymbolSnapshot } from "./marketSnapshot";
-
-// ============================================
-// Size Limit Constants
-// ============================================
 
 /**
  * Snapshot size limits in bytes.
@@ -73,10 +60,6 @@ export const PERFORMANCE_LIMITS = {
 	/** Target protobuf encoding time (ms) */
 	TARGET_PROTOBUF_MS: 10,
 } as const;
-
-// ============================================
-// Types
-// ============================================
 
 /**
  * Result of snapshot size estimation.
@@ -148,10 +131,6 @@ export interface TruncationOptions {
 	/** Whether to keep most recent (true) or most significant (false) */
 	keepMostRecent?: boolean;
 }
-
-// ============================================
-// Size Estimation
-// ============================================
 
 /**
  * Estimate the JSON size of a market snapshot.
@@ -279,10 +258,6 @@ export function estimateSnapshotTokens(snapshot: MarketSnapshot): number {
 	return estimate.tokens;
 }
 
-// ============================================
-// Size Validation
-// ============================================
-
 /**
  * Validate snapshot size against limits.
  *
@@ -348,10 +323,6 @@ export function validateSnapshotSize(snapshot: MarketSnapshot): SnapshotSizeVali
 		recommendations,
 	};
 }
-
-// ============================================
-// Array Truncation
-// ============================================
 
 /**
  * Truncate arrays in a snapshot to stay within size limits.
@@ -426,10 +397,6 @@ export function truncateArray<T>(
 
 	return { result: array.slice(0, maxLength), removed };
 }
-
-// ============================================
-// Performance Monitoring
-// ============================================
 
 /**
  * Create a performance timer for snapshot assembly.
@@ -534,10 +501,6 @@ export class PerformanceTracker {
 	}
 }
 
-// ============================================
-// Formatting Utilities
-// ============================================
-
 /**
  * Format bytes to human-readable string.
  */
@@ -571,7 +534,7 @@ export function formatPerformanceMetrics(metrics: SnapshotPerformanceMetrics): s
 	];
 
 	if (!metrics.withinTarget) {
-		parts.push(`[SLOW]`);
+		parts.push("[SLOW]");
 	}
 
 	return parts.join(" | ");
@@ -587,9 +550,9 @@ export function formatSizeValidation(validation: SnapshotSizeValidation): string
 	];
 
 	if (!validation.valid) {
-		parts.push(`[OVERSIZED]`);
+		parts.push("[OVERSIZED]");
 	} else if (!validation.estimate.withinTarget) {
-		parts.push(`[ABOVE TARGET]`);
+		parts.push("[ABOVE TARGET]");
 	}
 
 	return parts.join(" | ");

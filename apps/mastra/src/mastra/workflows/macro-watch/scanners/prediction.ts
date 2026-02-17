@@ -13,6 +13,32 @@ import type { MacroWatchEntry, MacroWatchSession } from "../entry-schemas.js";
 
 const log = createNodeLogger({ service: "macro-watch-prediction", level: "info" });
 
+interface SignalDefinition {
+	displayName: string;
+	shortName: string;
+	format: (value: number) => string;
+	symbols: string[];
+	context: (value: number) => string;
+	order: number;
+}
+
+interface PredictionSignal {
+	signalType: string;
+	signalValue: number;
+}
+
+interface PredictionRepositories {
+	repo: {
+		getLatestSignals: () => Promise<PredictionSignal[]>;
+	};
+	macroWatchRepo: {
+		findEntries: (
+			filters: { category: string; fromTime: string },
+			limit: number,
+		) => Promise<Array<{ metadata?: unknown }>>;
+	};
+}
+
 /**
  * Determine the macro watch session based on current time.
  */
@@ -32,17 +58,7 @@ function getCurrentSession(): MacroWatchSession {
 /**
  * Signal configuration with display names, formatting, and context explanations.
  */
-const SIGNAL_CONFIG: Record<
-	string,
-	{
-		displayName: string;
-		shortName: string;
-		format: (value: number) => string;
-		symbols: string[];
-		context: (value: number) => string;
-		order: number;
-	}
-> = {
+const SIGNAL_CONFIG: Record<string, SignalDefinition> = {
 	fed_cut_probability: {
 		displayName: "Fed Rate Cut Probability",
 		shortName: "Fed Cut",
@@ -198,6 +214,119 @@ const SIGNAL_CONFIG: Record<
 	},
 };
 
+async function loadPredictionRepositories(): Promise<PredictionRepositories> {
+	const { PredictionMarketsRepository, MacroWatchRepository, getDb } = await import(
+		"@cream/storage"
+	);
+	const db = getDb();
+	return {
+		repo: new PredictionMarketsRepository(db),
+		macroWatchRepo: new MacroWatchRepository(db),
+	};
+}
+
+async function hasRecentComprehensiveSummary(
+	macroWatchRepo: PredictionRepositories["macroWatchRepo"],
+	now: Date,
+): Promise<boolean> {
+	const fourHoursAgo = new Date(now.getTime() - 4 * 60 * 60 * 1000);
+	const recentPredictionEntries = await macroWatchRepo.findEntries(
+		{ category: "PREDICTION", fromTime: fourHoursAgo.toISOString() },
+		5,
+	);
+	return recentPredictionEntries.some((entry) => {
+		const metadata = entry.metadata as Record<string, unknown> | undefined;
+		return metadata?.isComprehensive === true;
+	});
+}
+
+function createSignalMap(latestSignals: PredictionSignal[]): Map<string, number> {
+	return new Map(latestSignals.map((signal) => [signal.signalType, signal.signalValue]));
+}
+
+function getSortedSignalTypes(signalMap: Map<string, number>): string[] {
+	return Object.entries(SIGNAL_CONFIG)
+		.filter(([signalType]) => signalMap.has(signalType))
+		.sort(([, a], [, b]) => a.order - b.order)
+		.map(([signalType]) => signalType);
+}
+
+function buildKeyMetric(
+	label: string,
+	signalType: "fed_cut_probability" | "recession_12m" | "macro_uncertainty",
+	signalMap: Map<string, number>,
+): string | null {
+	const value = signalMap.get(signalType);
+	const config = SIGNAL_CONFIG[signalType];
+	if (value === undefined || !config) {
+		return null;
+	}
+	return `${label}: ${config.format(value)}`;
+}
+
+function buildHeadline(signalMap: Map<string, number>): string {
+	const metrics = [
+		buildKeyMetric("Fed Cut", "fed_cut_probability", signalMap),
+		buildKeyMetric("Recession", "recession_12m", signalMap),
+		buildKeyMetric("Uncertainty", "macro_uncertainty", signalMap),
+	].filter((metric): metric is string => metric !== null);
+	return `Prediction Markets Summary: ${metrics.join(" | ")}`;
+}
+
+function buildDetails(sortedSignalTypes: string[], signalMap: Map<string, number>): string[] {
+	const details: string[] = [];
+	for (const signalType of sortedSignalTypes) {
+		const config = SIGNAL_CONFIG[signalType];
+		const value = signalMap.get(signalType);
+		if (!config || value === undefined) {
+			continue;
+		}
+		details.push(`• ${config.displayName}: ${config.format(value)} — ${config.context(value)}`);
+	}
+	return details;
+}
+
+function collectSymbols(sortedSignalTypes: string[]): string[] {
+	const allSymbols = new Set<string>();
+	for (const signalType of sortedSignalTypes) {
+		const config = SIGNAL_CONFIG[signalType];
+		if (!config) {
+			continue;
+		}
+		for (const symbol of config.symbols) {
+			allSymbols.add(symbol);
+		}
+	}
+	return [...allSymbols].slice(0, 10);
+}
+
+function toSignalValueRecord(signalMap: Map<string, number>): Record<string, number> {
+	return Object.fromEntries(signalMap.entries());
+}
+
+function buildComprehensiveEntry(
+	now: Date,
+	session: MacroWatchSession,
+	latestSignals: PredictionSignal[],
+	sortedSignalTypes: string[],
+	signalMap: Map<string, number>,
+): MacroWatchEntry {
+	return {
+		timestamp: now.toISOString(),
+		session,
+		category: "PREDICTION",
+		headline: buildHeadline(signalMap),
+		symbols: collectSymbols(sortedSignalTypes),
+		source: "Prediction Markets (Kalshi + Polymarket)",
+		metadata: {
+			isComprehensive: true,
+			signalCount: latestSignals.length,
+			signals: toSignalValueRecord(signalMap),
+			details: buildDetails(sortedSignalTypes, signalMap).join("\n"),
+		},
+	};
+}
+
 /**
  * Scan prediction markets and create a comprehensive summary.
  *
@@ -211,118 +340,24 @@ export async function scanPredictionDeltas(): Promise<MacroWatchEntry[]> {
 	const now = new Date();
 
 	try {
-		// Dynamic import to avoid circular dependencies
-		const { PredictionMarketsRepository, MacroWatchRepository, getDb } = await import(
-			"@cream/storage"
-		);
-
-		const db = getDb();
-		const repo = new PredictionMarketsRepository(db);
-		const macroWatchRepo = new MacroWatchRepository(db);
-
-		// Get latest signals
+		const { repo, macroWatchRepo } = await loadPredictionRepositories();
 		const latestSignals = await repo.getLatestSignals();
-
 		if (latestSignals.length === 0) {
 			return [];
 		}
 
-		// Check for recent prediction summary to avoid duplicates
-		// Use 4-hour window for deduplication
-		const fourHoursAgo = new Date(now.getTime() - 4 * 60 * 60 * 1000);
-		const recentPredictionEntries = await macroWatchRepo.findEntries(
-			{ category: "PREDICTION", fromTime: fourHoursAgo.toISOString() },
-			5,
-		);
-
-		// Skip if we already have a recent comprehensive summary
-		const hasRecentSummary = recentPredictionEntries.some(
-			(e) => e.metadata && (e.metadata as Record<string, unknown>).isComprehensive === true,
-		);
-
-		if (hasRecentSummary) {
+		if (await hasRecentComprehensiveSummary(macroWatchRepo, now)) {
 			return [];
 		}
 
-		// Build signal map for easy lookup
-		const signalMap = new Map<string, number>();
-		for (const signal of latestSignals) {
-			signalMap.set(signal.signalType, signal.signalValue);
-		}
-
-		// Sort signals by configured order
-		const sortedSignalTypes = Object.entries(SIGNAL_CONFIG)
-			.filter(([type]) => signalMap.has(type))
-			.sort(([, a], [, b]) => a.order - b.order)
-			.map(([type]) => type);
-
-		// Build comprehensive headline with key metrics
-		const keyMetrics: string[] = [];
-		const fedCut = signalMap.get("fed_cut_probability");
-		const recession = signalMap.get("recession_12m");
-		const uncertainty = signalMap.get("macro_uncertainty");
-
-		if (fedCut !== undefined && SIGNAL_CONFIG.fed_cut_probability) {
-			keyMetrics.push(`Fed Cut: ${SIGNAL_CONFIG.fed_cut_probability.format(fedCut)}`);
-		}
-		if (recession !== undefined && SIGNAL_CONFIG.recession_12m) {
-			keyMetrics.push(`Recession: ${SIGNAL_CONFIG.recession_12m.format(recession)}`);
-		}
-		if (uncertainty !== undefined && SIGNAL_CONFIG.macro_uncertainty) {
-			keyMetrics.push(`Uncertainty: ${SIGNAL_CONFIG.macro_uncertainty.format(uncertainty)}`);
-		}
-
-		const headline = `Prediction Markets Summary: ${keyMetrics.join(" | ")}`;
-
-		// Build detailed breakdown with context
-		const details: string[] = [];
-		for (const signalType of sortedSignalTypes) {
-			const config = SIGNAL_CONFIG[signalType];
-			const value = signalMap.get(signalType);
-			if (config && value !== undefined) {
-				details.push(`• ${config.displayName}: ${config.format(value)} — ${config.context(value)}`);
-			}
-		}
-
-		// Collect all affected symbols
-		const allSymbols = new Set<string>();
-		for (const signalType of sortedSignalTypes) {
-			const config = SIGNAL_CONFIG[signalType];
-			if (config) {
-				for (const symbol of config.symbols) {
-					allSymbols.add(symbol);
-				}
-			}
-		}
-
-		// Build metadata with all signal values
-		const signalValues: Record<string, number> = {};
-		for (const [type, value] of signalMap) {
-			signalValues[type] = value;
-		}
-
-		return [
-			{
-				timestamp: now.toISOString(),
-				session,
-				category: "PREDICTION",
-				headline,
-				symbols: [...allSymbols].slice(0, 10), // Limit to top 10 symbols
-				source: "Prediction Markets (Kalshi + Polymarket)",
-				metadata: {
-					isComprehensive: true,
-					signalCount: latestSignals.length,
-					signals: signalValues,
-					details: details.join("\n"),
-				},
-			},
-		];
+		const signalMap = createSignalMap(latestSignals);
+		const sortedSignalTypes = getSortedSignalTypes(signalMap);
+		return [buildComprehensiveEntry(now, session, latestSignals, sortedSignalTypes, signalMap)];
 	} catch (error) {
 		log.error(
 			{ error: error instanceof Error ? error.message : String(error) },
 			"Prediction scan failed",
 		);
+		return [];
 	}
-
-	return [];
 }

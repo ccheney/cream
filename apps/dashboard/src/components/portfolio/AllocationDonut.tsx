@@ -1,12 +1,3 @@
-/**
- * AllocationDonut Component
- *
- * Donut chart showing portfolio sector allocation breakdown.
- * Derives sectors from position symbols using a sector mapping.
- *
- * @see docs/plans/ui/03-views.md Section 5: Portfolio Dashboard
- */
-
 "use client";
 
 import { memo, useMemo } from "react";
@@ -15,18 +6,10 @@ import type { StreamingPosition } from "@/hooks/usePortfolioStreaming";
 import type { Account, Position } from "@/lib/api/types";
 import { CHART_COLORS } from "@/lib/chart-config";
 
-// ============================================
-// Types
-// ============================================
-
 export interface AllocationDonutProps {
-	/** Positions to display - can be regular or streaming positions */
 	positions: Position[] | StreamingPosition[];
-	/** Account data for cash balance */
 	account?: Account;
-	/** Whether positions are streaming (shows live indicator) */
 	isStreaming?: boolean;
-	/** Loading state */
 	isLoading?: boolean;
 }
 
@@ -36,38 +19,30 @@ interface SectorAllocation {
 	percentage: number;
 	color: string;
 	symbols: string[];
-	/** Index signature for recharts compatibility */
 	[key: string]: string | number | string[] | undefined;
 }
 
-// ============================================
-// Sector Classifications
-// ============================================
+interface SectorAccumulator {
+	value: number;
+	symbols: string[];
+}
 
-/**
- * Sector color palette.
- */
 const SECTOR_COLORS: Record<string, string> = {
-	Technology: "#3B82F6", // blue
-	Healthcare: "#22C55E", // green
-	Financials: "#8B5CF6", // purple
-	Consumer: "#F97316", // orange
-	Energy: "#EF4444", // red
-	Industrials: "#78716C", // stone
-	Materials: "#14B8A6", // teal
-	Utilities: "#EC4899", // pink
-	"Real Estate": "#D97706", // amber
-	Communications: "#6366F1", // indigo
-	Cash: "#A1A1AA", // gray
-	Other: "#525252", // neutral
+	Technology: "#3B82F6",
+	Healthcare: "#22C55E",
+	Financials: "#8B5CF6",
+	Consumer: "#F97316",
+	Energy: "#EF4444",
+	Industrials: "#78716C",
+	Materials: "#14B8A6",
+	Utilities: "#EC4899",
+	"Real Estate": "#D97706",
+	Communications: "#6366F1",
+	Cash: "#A1A1AA",
+	Other: "#525252",
 };
 
-/**
- * Common stock to sector mappings.
- * Covers major S&P 500 and popular trading symbols.
- */
 const SYMBOL_SECTOR_MAP: Record<string, string> = {
-	// Technology
 	AAPL: "Technology",
 	MSFT: "Technology",
 	GOOGL: "Technology",
@@ -104,8 +79,6 @@ const SYMBOL_SECTOR_MAP: Record<string, string> = {
 	ZS: "Technology",
 	DDOG: "Technology",
 	TEAM: "Technology",
-
-	// Healthcare
 	JNJ: "Healthcare",
 	UNH: "Healthcare",
 	LLY: "Healthcare",
@@ -131,8 +104,6 @@ const SYMBOL_SECTOR_MAP: Record<string, string> = {
 	MCK: "Healthcare",
 	MRNA: "Healthcare",
 	BIIB: "Healthcare",
-
-	// Financials
 	JPM: "Financials",
 	V: "Financials",
 	MA: "Financials",
@@ -158,8 +129,6 @@ const SYMBOL_SECTOR_MAP: Record<string, string> = {
 	PYPL: "Financials",
 	AIG: "Financials",
 	MET: "Financials",
-
-	// Consumer Discretionary
 	TSLA: "Consumer",
 	HD: "Consumer",
 	MCD: "Consumer",
@@ -180,8 +149,6 @@ const SYMBOL_SECTOR_MAP: Record<string, string> = {
 	F: "Consumer",
 	RIVN: "Consumer",
 	LCID: "Consumer",
-
-	// Consumer Staples
 	WMT: "Consumer",
 	PG: "Consumer",
 	COST: "Consumer",
@@ -198,8 +165,6 @@ const SYMBOL_SECTOR_MAP: Record<string, string> = {
 	MDLZ: "Consumer",
 	STZ: "Consumer",
 	KDP: "Consumer",
-
-	// Energy
 	XOM: "Energy",
 	CVX: "Energy",
 	COP: "Energy",
@@ -215,8 +180,6 @@ const SYMBOL_SECTOR_MAP: Record<string, string> = {
 	FANG: "Energy",
 	HES: "Energy",
 	BKR: "Energy",
-
-	// Industrials
 	CAT: "Industrials",
 	BA: "Industrials",
 	HON: "Industrials",
@@ -240,8 +203,6 @@ const SYMBOL_SECTOR_MAP: Record<string, string> = {
 	UAL: "Industrials",
 	AAL: "Industrials",
 	LUV: "Industrials",
-
-	// Materials
 	LIN: "Materials",
 	APD: "Materials",
 	SHW: "Materials",
@@ -253,12 +214,9 @@ const SYMBOL_SECTOR_MAP: Record<string, string> = {
 	DOW: "Materials",
 	VMC: "Materials",
 	MLM: "Materials",
-
-	// Utilities
 	NEE: "Utilities",
 	DUK: "Utilities",
 	SO: "Utilities",
-	D: "Utilities",
 	AEP: "Utilities",
 	EXC: "Utilities",
 	SRE: "Utilities",
@@ -266,8 +224,7 @@ const SYMBOL_SECTOR_MAP: Record<string, string> = {
 	ES: "Utilities",
 	WEC: "Utilities",
 	ED: "Utilities",
-
-	// Real Estate
+	D: "Utilities",
 	PLD: "Real Estate",
 	AMT: "Real Estate",
 	CCI: "Real Estate",
@@ -279,8 +236,6 @@ const SYMBOL_SECTOR_MAP: Record<string, string> = {
 	DLR: "Real Estate",
 	AVB: "Real Estate",
 	EQR: "Real Estate",
-
-	// Communications
 	NFLX: "Communications",
 	DIS: "Communications",
 	CMCSA: "Communications",
@@ -293,8 +248,6 @@ const SYMBOL_SECTOR_MAP: Record<string, string> = {
 	FOXA: "Communications",
 	OMC: "Communications",
 	IPG: "Communications",
-
-	// ETFs - classify as "Other" or by primary sector
 	SPY: "Other",
 	QQQ: "Technology",
 	IWM: "Other",
@@ -314,18 +267,7 @@ const SYMBOL_SECTOR_MAP: Record<string, string> = {
 	XLC: "Communications",
 };
 
-/**
- * Get sector for a symbol.
- */
-function getSector(symbol: string): string {
-	return SYMBOL_SECTOR_MAP[symbol.toUpperCase()] ?? "Other";
-}
-
-// ============================================
-// Custom Tooltip
-// ============================================
-
-interface TooltipPayload {
+interface CustomTooltipPayload {
 	name: string;
 	value: number;
 	percentage: number;
@@ -334,7 +276,132 @@ interface TooltipPayload {
 
 interface CustomTooltipProps {
 	active?: boolean;
-	payload?: Array<{ payload: TooltipPayload }>;
+	payload?: Array<{ payload: CustomTooltipPayload }>;
+}
+
+function getSector(symbol: string): string {
+	return SYMBOL_SECTOR_MAP[symbol.toUpperCase()] ?? "Other";
+}
+
+function isStreamingPosition(
+	position: Position | StreamingPosition,
+): position is StreamingPosition {
+	return "liveMarketValue" in position;
+}
+
+function getMarketValue(position: Position | StreamingPosition, isStreaming: boolean): number {
+	if (isStreaming && isStreamingPosition(position)) {
+		return Math.abs(position.liveMarketValue ?? position.marketValue);
+	}
+
+	return Math.abs(position.marketValue);
+}
+
+function reduceSectorMap(
+	positions: Position[] | StreamingPosition[],
+	isStreaming: boolean,
+): Map<string, SectorAccumulator> {
+	const sectorMap = new Map<string, SectorAccumulator>();
+
+	for (const position of positions) {
+		const sector = getSector(position.symbol);
+		const current = sectorMap.get(sector) ?? { value: 0, symbols: [] };
+		const marketValue = getMarketValue(position, isStreaming);
+		current.value += marketValue;
+		current.symbols.push(position.symbol);
+		sectorMap.set(sector, current);
+	}
+
+	return sectorMap;
+}
+
+function addCashToSectors(sectorMap: Map<string, SectorAccumulator>, cash: number): void {
+	if (cash <= 0) {
+		return;
+	}
+
+	sectorMap.set("Cash", {
+		value: cash,
+		symbols: [],
+	});
+}
+
+function buildSectorData(
+	sectorMap: Map<string, SectorAccumulator>,
+	account: Account | undefined,
+): SectorAllocation[] {
+	const totalValue = account?.portfolioValue || account?.equity || account?.cash || 0;
+	const sectors: SectorAllocation[] = [];
+
+	for (const [sector, values] of sectorMap.entries()) {
+		const percentage = totalValue > 0 ? (values.value / totalValue) * 100 : 0;
+		sectors.push({
+			name: sector,
+			value: values.value,
+			percentage,
+			color: SECTOR_COLORS[sector] ?? SECTOR_COLORS.Other ?? "#525252",
+			symbols: values.symbols,
+		});
+	}
+
+	return sectors.toSorted((a, b) => b.value - a.value);
+}
+
+function AllocationLoadingState() {
+	return (
+		<div className="bg-white dark:bg-night-800 rounded-lg border border-cream-200 dark:border-night-700 p-5">
+			<h2 className="text-sm font-medium text-stone-500 dark:text-night-400 uppercase tracking-wide mb-4">
+				Allocation
+			</h2>
+			<div className="flex flex-col items-center gap-4">
+				<div className="h-32 w-32 rounded-full border-8 border-cream-100 dark:border-night-700 animate-pulse" />
+				<div className="w-full space-y-2">
+					{[1, 2, 3, 4].map((n) => (
+						<div key={`skeleton-${n}`} className="flex items-center justify-between">
+							<div className="h-4 w-20 bg-cream-100 dark:bg-night-700 rounded animate-pulse" />
+							<div className="h-4 w-12 bg-cream-100 dark:bg-night-700 rounded animate-pulse" />
+						</div>
+					))}
+				</div>
+			</div>
+		</div>
+	);
+}
+
+function AllocationEmptyState() {
+	return (
+		<div className="bg-white dark:bg-night-800 rounded-lg border border-cream-200 dark:border-night-700 p-5">
+			<h2 className="text-sm font-medium text-stone-500 dark:text-night-400 uppercase tracking-wide mb-4">
+				Allocation
+			</h2>
+			<div className="flex items-center justify-center h-48 text-stone-400 dark:text-night-500">
+				No positions
+			</div>
+		</div>
+	);
+}
+
+function AllocationLegend({ sectorData }: { sectorData: SectorAllocation[] }) {
+	return (
+		<div className="flex-1 min-w-0">
+			<ul className="space-y-1.5 font-mono text-xs">
+				{sectorData.map((sector) => (
+					<li key={sector.name} className="flex items-center gap-2">
+						<span
+							className="w-2.5 h-2.5 rounded-sm flex-shrink-0"
+							style={{ backgroundColor: sector.color }}
+						/>
+						<span className="text-stone-600 dark:text-night-200 flex-1 truncate">
+							{sector.name}
+						</span>
+						<span className="text-amber-600 dark:text-amber-400 font-medium">
+							{sector.percentage.toFixed(1)}%
+						</span>
+					</li>
+				))}
+			</ul>
+		</div>
+	);
 }
 
 function CustomTooltip({ active, payload }: CustomTooltipProps) {
@@ -375,118 +442,20 @@ function CustomTooltip({ active, payload }: CustomTooltipProps) {
 	);
 }
 
-// ============================================
-// Component
-// ============================================
-
-/**
- * Type guard to check if position is a streaming position
- */
-function isStreamingPosition(
-	position: Position | StreamingPosition,
-): position is StreamingPosition {
-	return "liveMarketValue" in position;
-}
-
-/**
- * AllocationDonut - Sector breakdown donut chart
- */
-export const AllocationDonut = memo(function AllocationDonut({
-	positions,
-	account,
-	isStreaming = false,
-	isLoading = false,
-}: AllocationDonutProps) {
-	// Calculate sector allocations using live market value when available
-	const sectorData = useMemo((): SectorAllocation[] => {
-		const cash = account?.cash ?? 0;
-		if (positions.length === 0 && cash === 0) {
-			return [];
-		}
-
-		// Group positions by sector
-		const sectorMap = new Map<string, { value: number; symbols: string[] }>();
-
-		for (const position of positions) {
-			const sector = getSector(position.symbol);
-			const current = sectorMap.get(sector) ?? { value: 0, symbols: [] };
-			// Use live market value if available (streaming positions)
-			const marketValue = isStreamingPosition(position)
-				? position.liveMarketValue
-				: position.marketValue;
-			current.value += Math.abs(marketValue);
-			current.symbols.push(position.symbol);
-			sectorMap.set(sector, current);
-		}
-
-		// Add cash if present
-		if (cash > 0) {
-			sectorMap.set("Cash", { value: cash, symbols: [] });
-		}
-
-		// Calculate total portfolio value
-		const totalValue = account?.portfolioValue || account?.equity || cash;
-
-		// Convert to array and calculate percentages
-		const allocations: SectorAllocation[] = [];
-		for (const [sector, data] of sectorMap.entries()) {
-			const percentage = totalValue > 0 ? (data.value / totalValue) * 100 : 0;
-			allocations.push({
-				name: sector,
-				value: data.value,
-				percentage,
-				color: SECTOR_COLORS[sector] ?? SECTOR_COLORS.Other ?? "#525252",
-				symbols: data.symbols,
-			});
-		}
-
-		// Sort by value descending
-		return allocations.toSorted((a, b) => b.value - a.value);
-	}, [positions, account]);
-
-	// Loading state
-	if (isLoading) {
-		return (
-			<div className="bg-white dark:bg-night-800 rounded-lg border border-cream-200 dark:border-night-700 p-5">
-				<h2 className="text-sm font-medium text-stone-500 dark:text-night-400 uppercase tracking-wide mb-4">
-					Allocation
-				</h2>
-				<div className="flex flex-col items-center gap-4">
-					<div className="h-32 w-32 rounded-full border-8 border-cream-100 dark:border-night-700 animate-pulse" />
-					<div className="w-full space-y-2">
-						{[1, 2, 3, 4].map((n) => (
-							<div key={`skeleton-${n}`} className="flex items-center justify-between">
-								<div className="h-4 w-20 bg-cream-100 dark:bg-night-700 rounded animate-pulse" />
-								<div className="h-4 w-12 bg-cream-100 dark:bg-night-700 rounded animate-pulse" />
-							</div>
-						))}
-					</div>
-				</div>
-			</div>
-		);
-	}
-
-	// Empty state
-	if (sectorData.length === 0) {
-		return (
-			<div className="bg-white dark:bg-night-800 rounded-lg border border-cream-200 dark:border-night-700 p-5">
-				<h2 className="text-sm font-medium text-stone-500 dark:text-night-400 uppercase tracking-wide mb-4">
-					Allocation
-				</h2>
-				<div className="flex items-center justify-center h-48 text-stone-400 dark:text-night-500">
-					No positions
-				</div>
-			</div>
-		);
-	}
-
+function AllocationChart({
+	sectorData,
+	isStreaming,
+}: {
+	sectorData: SectorAllocation[];
+	isStreaming: boolean;
+}) {
 	return (
 		<div className="bg-white dark:bg-night-800 rounded-lg border border-cream-200 dark:border-night-700 p-5">
 			<div className="flex items-center justify-between mb-4">
 				<h2 className="text-sm font-medium text-stone-500 dark:text-night-400 uppercase tracking-wide">
 					Allocation
 				</h2>
-				{isStreaming && (
+				{isStreaming ? (
 					<output
 						className="flex items-center gap-1.5 text-xs text-green-600 dark:text-green-400"
 						aria-label="Live streaming"
@@ -494,11 +463,9 @@ export const AllocationDonut = memo(function AllocationDonut({
 						<span className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse" />
 						Live
 					</output>
-				)}
+				) : null}
 			</div>
-
 			<div className="flex items-center gap-6">
-				{/* Donut Chart */}
 				<div className="w-40 h-40 flex-shrink-0">
 					<ResponsiveContainer width="100%" height="100%">
 						<PieChart>
@@ -520,29 +487,38 @@ export const AllocationDonut = memo(function AllocationDonut({
 						</PieChart>
 					</ResponsiveContainer>
 				</div>
-
-				{/* Custom Legend */}
-				<div className="flex-1 min-w-0">
-					<ul className="space-y-1.5 font-mono text-xs">
-						{sectorData.map((sector) => (
-							<li key={sector.name} className="flex items-center gap-2">
-								<span
-									className="w-2.5 h-2.5 rounded-sm flex-shrink-0"
-									style={{ backgroundColor: sector.color }}
-								/>
-								<span className="text-stone-600 dark:text-night-200 flex-1 truncate">
-									{sector.name}
-								</span>
-								<span className="text-amber-600 dark:text-amber-400 font-medium">
-									{sector.percentage.toFixed(1)}%
-								</span>
-							</li>
-						))}
-					</ul>
-				</div>
+				<AllocationLegend sectorData={sectorData} />
 			</div>
 		</div>
 	);
+}
+
+export const AllocationDonut = memo(function AllocationDonut({
+	positions,
+	account,
+	isStreaming = false,
+	isLoading = false,
+}: AllocationDonutProps) {
+	const sectorData = useMemo(() => {
+		const cash = account?.cash ?? 0;
+		if (positions.length === 0 && cash === 0) {
+			return [];
+		}
+
+		const sectorMap = reduceSectorMap(positions, isStreaming);
+		addCashToSectors(sectorMap, cash);
+		return buildSectorData(sectorMap, account);
+	}, [positions, account, isStreaming]);
+
+	if (isLoading) {
+		return <AllocationLoadingState />;
+	}
+
+	if (sectorData.length === 0) {
+		return <AllocationEmptyState />;
+	}
+
+	return <AllocationChart sectorData={sectorData} isStreaming={isStreaming} />;
 });
 
 export default AllocationDonut;

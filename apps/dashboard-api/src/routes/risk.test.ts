@@ -121,12 +121,11 @@ mock.module("../db", () => ({
 // Import after mocks are set up
 const { portfolioService } = await import("../services/portfolio");
 const { riskRoutes } = await import("./risk");
+const app = new Hono();
+app.route("/", riskRoutes);
 
-describe("Risk Routes", () => {
-	const app = new Hono();
-	app.route("/", riskRoutes);
-
-	it("GET /exposure returns 200 with metrics", async () => {
+describe("GET /risk/exposure", () => {
+	it("returns 200 with metrics", async () => {
 		// Mock DB snapshots repo
 		const mockSnapshotsRepo = {
 			getLatest: mock(() => Promise.resolve({ nav: 100000 })),
@@ -146,8 +145,10 @@ describe("Risk Routes", () => {
 		expect(data.long).toBe(1500);
 		expect(data.short).toBe(0);
 	});
+});
 
-	it("GET /greeks returns 200 with summary", async () => {
+describe("GET /risk/greeks", () => {
+	it("returns 200 with summary", async () => {
 		// Mock PortfolioService
 		spyOn(portfolioService, "getOptionsPositions").mockResolvedValue([
 			{

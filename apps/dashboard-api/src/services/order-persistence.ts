@@ -190,22 +190,7 @@ async function updateExistingOrder(
 	switch (event) {
 		case "fill":
 		case "partial_fill": {
-			const filledQty = Number(order.filled_qty);
-			const avgFillPrice = order.filled_avg_price ? Number(order.filled_avg_price) : null;
-			if (avgFillPrice !== null) {
-				await getOrdersRepo().updateFill(orderId, filledQty, avgFillPrice);
-				log.info(
-					{
-						orderId,
-						brokerOrderId: order.id,
-						symbol: order.symbol,
-						event,
-						filledQty,
-						avgFillPrice,
-					},
-					"Updated order fill",
-				);
-			}
+			await updateExistingOrderFill(orderId, event, order);
 			break;
 		}
 
@@ -213,33 +198,13 @@ async function updateExistingOrder(
 		case "expired":
 		case "rejected":
 		case "done_for_day": {
-			await getOrdersRepo().updateStatus(orderId, status);
-			log.info(
-				{
-					orderId,
-					brokerOrderId: order.id,
-					symbol: order.symbol,
-					event,
-					status,
-				},
-				"Updated order status",
-			);
+			await updateExistingOrderStatus(orderId, event, order, status, "info");
 			break;
 		}
 
 		case "new":
 		case "pending_new": {
-			await getOrdersRepo().updateStatus(orderId, status);
-			log.debug(
-				{
-					orderId,
-					brokerOrderId: order.id,
-					symbol: order.symbol,
-					event,
-					status,
-				},
-				"Updated order status",
-			);
+			await updateExistingOrderStatus(orderId, event, order, status, "debug");
 			break;
 		}
 
@@ -249,6 +214,54 @@ async function updateExistingOrder(
 				"Ignoring trade update event for order persistence",
 			);
 	}
+}
+
+async function updateExistingOrderFill(
+	orderId: string,
+	event: TradeUpdateEvent,
+	order: AlpacaOrder,
+): Promise<void> {
+	const filledQty = Number(order.filled_qty);
+	const avgFillPrice = order.filled_avg_price ? Number(order.filled_avg_price) : null;
+	if (avgFillPrice === null) {
+		return;
+	}
+
+	await getOrdersRepo().updateFill(orderId, filledQty, avgFillPrice);
+	log.info(
+		{
+			orderId,
+			brokerOrderId: order.id,
+			symbol: order.symbol,
+			event,
+			filledQty,
+			avgFillPrice,
+		},
+		"Updated order fill",
+	);
+}
+
+async function updateExistingOrderStatus(
+	orderId: string,
+	event: TradeUpdateEvent,
+	order: AlpacaOrder,
+	status: OrderStatus,
+	level: "info" | "debug",
+): Promise<void> {
+	await getOrdersRepo().updateStatus(orderId, status);
+	const fields = {
+		orderId,
+		brokerOrderId: order.id,
+		symbol: order.symbol,
+		event,
+		status,
+	};
+	if (level === "info") {
+		log.info(fields, "Updated order status");
+		return;
+	}
+
+	log.debug(fields, "Updated order status");
 }
 
 /**

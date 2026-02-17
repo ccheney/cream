@@ -28,15 +28,12 @@ import {
 	isTest,
 	requireEnv,
 } from "@cream/domain";
+import type { MacroWatchEntry } from "@cream/mastra";
 
 import { startIndicatorScheduler } from "../contexts/indicators/index.js";
 import { createMacroWatchService, createNewspaperService } from "../contexts/macro-watch/index.js";
 import { createFilingsSyncService } from "../contexts/trading-cycle/index.js";
 import { getDbClient, loadConfig, log, validateHelixDBOrExit } from "../shared/index.js";
-
-// ============================================
-// CLI Parsing
-// ============================================
 
 interface CliOptions {
 	service: string;
@@ -44,26 +41,20 @@ interface CliOptions {
 	dryRun: boolean;
 }
 
-function parseArgs(): CliOptions {
-	const args = process.argv.slice(2);
-	const service = args[0] ?? "";
+const VALID_SERVICES = [
+	"macro-watch",
+	"newspaper",
+	"filings-sync",
+	"short-interest",
+	"sentiment",
+	"corporate-actions",
+] as const;
 
-	let symbols: string[] = [];
-	let dryRun = false;
+type ServiceName = (typeof VALID_SERVICES)[number];
 
-	for (const arg of args.slice(1)) {
-		if (arg.startsWith("--symbols=")) {
-			symbols = arg.replace("--symbols=", "").split(",");
-		} else if (arg === "--dry-run") {
-			dryRun = true;
-		}
-	}
+type IndicatorJobName = "shortInterest" | "sentiment" | "corporateActions";
 
-	return { service, symbols, dryRun };
-}
-
-function printUsage(): void {
-	console.log(`
+const USAGE_TEXT = `
 Manual Service Trigger CLI
 
 Usage:
@@ -85,12 +76,131 @@ Examples:
   bun apps/worker/src/cli/trigger-service.ts macro-watch
   bun apps/worker/src/cli/trigger-service.ts filings-sync --symbols=AAPL,TSLA
   bun apps/worker/src/cli/trigger-service.ts short-interest --dry-run
-`);
+`.trim();
+
+function writeStdout(message = ""): void {
+	process.stdout.write(`${message}\n`);
 }
 
-// ============================================
-// Service Runners
-// ============================================
+function writeStderr(message: string): void {
+	process.stderr.write(`${message}\n`);
+}
+
+function parseArgs(): CliOptions {
+	const args = process.argv.slice(2);
+	const service = args[0] ?? "";
+
+	let symbols: string[] = [];
+	let dryRun = false;
+
+	for (const arg of args.slice(1)) {
+		if (arg.startsWith("--symbols=")) {
+			symbols = arg
+				.replace("--symbols=", "")
+				.split(",")
+				.map((symbol) => symbol.trim())
+				.filter(Boolean);
+		} else if (arg === "--dry-run") {
+			dryRun = true;
+		}
+	}
+
+	return { service, symbols, dryRun };
+}
+
+function isServiceName(value: string): value is ServiceName {
+	return VALID_SERVICES.includes(value as ServiceName);
+}
+
+function resolveRequestedService(options: CliOptions): ServiceName {
+	if (!options.service || options.service === "--help" || options.service === "-h") {
+		writeStdout(USAGE_TEXT);
+		process.exit(0);
+	}
+
+	if (!isServiceName(options.service)) {
+		writeStderr(`Unknown service: ${options.service}`);
+		writeStderr(`Valid services: ${VALID_SERVICES.join(", ")}`);
+		process.exit(1);
+	}
+
+	return options.service;
+}
+
+async function initializeRuntime(environment: RuntimeEnvironment): Promise<void> {
+	const ctx = createContext(environment, "manual");
+
+	if (!isTest(ctx)) {
+		await validateHelixDBOrExit(ctx);
+	}
+
+	await initCalendarService({
+		mode: environment as CreamEnvironment,
+		alpacaKey: Bun.env.ALPACA_KEY,
+		alpacaSecret: Bun.env.ALPACA_SECRET,
+	}).catch((error: unknown) => {
+		log.warn(
+			{ error: error instanceof Error ? error.message : String(error) },
+			"CalendarService initialization failed",
+		);
+	});
+}
+
+async function loadRuntimeConfig(environment: RuntimeEnvironment): Promise<FullRuntimeConfig> {
+	try {
+		return await loadConfig(environment);
+	} catch (error) {
+		log.error(
+			{ error: error instanceof Error ? error.message : "Unknown error" },
+			"Failed to load config. Run 'bun run db:seed' first.",
+		);
+		process.exit(1);
+	}
+}
+
+function resolveSymbols(options: CliOptions, config: FullRuntimeConfig): string[] {
+	return options.symbols.length > 0 ? options.symbols : (config.universe.staticSymbols ?? []);
+}
+
+function ensureSymbols(symbols: string[]): void {
+	if (symbols.length > 0) {
+		return;
+	}
+
+	writeStderr("No symbols configured. Use --symbols=AAPL,MSFT or configure in database.");
+	process.exit(1);
+}
+
+function printExecutionSummary(
+	service: ServiceName,
+	environment: RuntimeEnvironment,
+	symbols: string[],
+	dryRun: boolean,
+): void {
+	writeStdout(`\nService: ${service}`);
+	writeStdout(`Environment: ${environment}`);
+	writeStdout(`Symbols: ${symbols.join(", ")}`);
+	writeStdout(`Dry run: ${dryRun}`);
+	writeStdout();
+}
+
+function printHeader(title: string): void {
+	writeStdout(`\n--- ${title} ---`);
+}
+
+function printMacroWatchResults(entries: MacroWatchEntry[]): void {
+	if (entries.length === 0) {
+		return;
+	}
+
+	printHeader("MacroWatch Results");
+	for (const entry of entries.slice(0, 10)) {
+		writeStdout(`  [${entry.category}] ${entry.symbols.join(",") || "MACRO"}: ${entry.headline}`);
+	}
+	if (entries.length > 10) {
+		writeStdout(`  ... and ${entries.length - 10} more entries`);
+	}
+}
 
 async function runMacroWatch(symbols: string[]): Promise<void> {
 	log.info({ symbols }, "Starting MacroWatch scan");
@@ -99,16 +209,7 @@ async function runMacroWatch(symbols: string[]): Promise<void> {
 	const { entries, saved } = await service.run(symbols);
 
 	log.info({ entryCount: entries.length, savedCount: saved }, "MacroWatch scan complete");
-
-	if (entries.length > 0) {
-		console.log("\n--- MacroWatch Results ---");
-		for (const entry of entries.slice(0, 10)) {
-			console.log(`  [${entry.category}] ${entry.symbols.join(",") || "MACRO"}: ${entry.headline}`);
-		}
-		if (entries.length > 10) {
-			console.log(`  ... and ${entries.length - 10} more entries`);
-		}
-	}
+	printMacroWatchResults(entries);
 }
 
 async function runNewspaper(symbols: string[]): Promise<void> {
@@ -120,6 +221,17 @@ async function runNewspaper(symbols: string[]): Promise<void> {
 	log.info({}, "Newspaper compilation complete");
 }
 
+function printFilingsSyncResults(result: {
+	filingsIngested: number;
+	chunksCreated: number;
+	durationMs: number;
+}): void {
+	printHeader("Filings Sync Results");
+	writeStdout(`  Filings ingested: ${result.filingsIngested}`);
+	writeStdout(`  Chunks created: ${result.chunksCreated}`);
+	writeStdout(`  Duration: ${(result.durationMs / 1000).toFixed(1)}s`);
+}
+
 async function runFilingsSync(symbols: string[], environment: RuntimeEnvironment): Promise<void> {
 	log.info({ symbols }, "Starting SEC Filings sync");
 
@@ -127,29 +239,47 @@ async function runFilingsSync(symbols: string[], environment: RuntimeEnvironment
 	const service = createFilingsSyncService(db);
 	const result = await service.sync(symbols, environment);
 
-	if (result) {
-		log.info(
-			{
-				filingsIngested: result.filingsIngested,
-				chunksCreated: result.chunksCreated,
-				durationMs: result.durationMs,
-			},
-			"Filings sync complete",
-		);
-
-		console.log("\n--- Filings Sync Results ---");
-		console.log(`  Filings ingested: ${result.filingsIngested}`);
-		console.log(`  Chunks created: ${result.chunksCreated}`);
-		console.log(`  Duration: ${(result.durationMs / 1000).toFixed(1)}s`);
-	} else {
+	if (!result) {
 		log.warn({}, "Filings sync returned no result");
+		return;
+	}
+
+	log.info(
+		{
+			filingsIngested: result.filingsIngested,
+			chunksCreated: result.chunksCreated,
+			durationMs: result.durationMs,
+		},
+		"Filings sync complete",
+	);
+	printFilingsSyncResults(result);
+}
+
+function printIndicatorJobResults(
+	jobName: IndicatorJobName,
+	result: {
+		processed: number;
+		failed: number;
+		durationMs: number;
+		errors?: Array<{ symbol: string; error: string }>;
+	},
+): void {
+	printHeader(`${jobName} Results`);
+	writeStdout(`  Processed: ${result.processed}`);
+	writeStdout(`  Failed: ${result.failed}`);
+	writeStdout(`  Duration: ${(result.durationMs / 1000).toFixed(1)}s`);
+
+	if (!result.errors || result.errors.length === 0) {
+		return;
+	}
+
+	writeStdout("  Errors:");
+	for (const errorResult of result.errors.slice(0, 5)) {
+		writeStdout(`    - ${errorResult.symbol}: ${errorResult.error}`);
 	}
 }
 
-async function runIndicatorJob(
-	jobName: "shortInterest" | "sentiment" | "corporateActions",
-	symbols: string[],
-): Promise<void> {
+async function runIndicatorJob(jobName: IndicatorJobName, symbols: string[]): Promise<void> {
 	log.info({ job: jobName, symbols }, `Starting ${jobName} job`);
 
 	const db = await getDbClient();
@@ -175,128 +305,65 @@ async function runIndicatorJob(
 			`${jobName} job complete`,
 		);
 
-		console.log(`\n--- ${jobName} Results ---`);
-		console.log(`  Processed: ${result.processed}`);
-		console.log(`  Failed: ${result.failed}`);
-		console.log(`  Duration: ${(result.durationMs / 1000).toFixed(1)}s`);
-
-		if (result.errors && result.errors.length > 0) {
-			console.log("  Errors:");
-			for (const err of result.errors.slice(0, 5)) {
-				console.log(`    - ${err.symbol}: ${err.error}`);
-			}
-		}
+		printIndicatorJobResults(jobName, result);
 	} finally {
 		scheduler.stop();
 	}
 }
 
-// ============================================
-// Main
-// ============================================
+async function dispatchService(
+	service: ServiceName,
+	symbols: string[],
+	environment: RuntimeEnvironment,
+): Promise<void> {
+	switch (service) {
+		case "macro-watch":
+			await runMacroWatch(symbols);
+			return;
+		case "newspaper":
+			await runNewspaper(symbols);
+			return;
+		case "filings-sync":
+			await runFilingsSync(symbols, environment);
+			return;
+		case "short-interest":
+			await runIndicatorJob("shortInterest", symbols);
+			return;
+		case "sentiment":
+			await runIndicatorJob("sentiment", symbols);
+			return;
+		case "corporate-actions":
+			await runIndicatorJob("corporateActions", symbols);
+			return;
+	}
+}
 
 async function main(): Promise<void> {
 	const options = parseArgs();
-
-	if (!options.service || options.service === "--help" || options.service === "-h") {
-		printUsage();
-		process.exit(0);
-	}
-
-	const validServices = [
-		"macro-watch",
-		"newspaper",
-		"filings-sync",
-		"short-interest",
-		"sentiment",
-		"corporate-actions",
-	];
-
-	if (!validServices.includes(options.service)) {
-		console.error(`Unknown service: ${options.service}`);
-		console.error(`Valid services: ${validServices.join(", ")}`);
-		process.exit(1);
-	}
-
-	// Initialize environment
+	const service = resolveRequestedService(options);
 	const environment = requireEnv();
-	const ctx = createContext(environment, "manual");
 
-	if (!isTest(ctx)) {
-		await validateHelixDBOrExit(ctx);
-	}
+	await initializeRuntime(environment);
 
-	// Initialize calendar service
-	await initCalendarService({
-		mode: environment as CreamEnvironment,
-		alpacaKey: Bun.env.ALPACA_KEY,
-		alpacaSecret: Bun.env.ALPACA_SECRET,
-	}).catch((error: unknown) => {
-		log.warn(
-			{ error: error instanceof Error ? error.message : String(error) },
-			"CalendarService initialization failed",
-		);
-	});
+	const config = await loadRuntimeConfig(environment);
+	const symbols = resolveSymbols(options, config);
+	ensureSymbols(symbols);
 
-	// Load config to get default symbols
-	let config: FullRuntimeConfig;
-	try {
-		config = await loadConfig(environment);
-	} catch (error) {
-		log.error(
-			{ error: error instanceof Error ? error.message : "Unknown error" },
-			"Failed to load config. Run 'bun run db:seed' first.",
-		);
-		process.exit(1);
-	}
-
-	const symbols =
-		options.symbols.length > 0 ? options.symbols : (config.universe.staticSymbols ?? []);
-
-	if (symbols.length === 0) {
-		console.error("No symbols configured. Use --symbols=AAPL,MSFT or configure in database.");
-		process.exit(1);
-	}
-
-	console.log(`\nService: ${options.service}`);
-	console.log(`Environment: ${environment}`);
-	console.log(`Symbols: ${symbols.join(", ")}`);
-	console.log(`Dry run: ${options.dryRun}`);
-	console.log("");
-
+	printExecutionSummary(service, environment, symbols, options.dryRun);
 	if (options.dryRun) {
-		console.log("Dry run mode - no actual execution");
-		process.exit(0);
+		writeStdout("Dry run mode - no actual execution");
+		return;
 	}
 
 	const startTime = Date.now();
-
-	switch (options.service) {
-		case "macro-watch":
-			await runMacroWatch(symbols);
-			break;
-		case "newspaper":
-			await runNewspaper(symbols);
-			break;
-		case "filings-sync":
-			await runFilingsSync(symbols, environment);
-			break;
-		case "short-interest":
-			await runIndicatorJob("shortInterest", symbols);
-			break;
-		case "sentiment":
-			await runIndicatorJob("sentiment", symbols);
-			break;
-		case "corporate-actions":
-			await runIndicatorJob("corporateActions", symbols);
-			break;
-	}
+	await dispatchService(service, symbols, environment);
 
 	const elapsed = Date.now() - startTime;
-	console.log(`\nCompleted in ${(elapsed / 1000).toFixed(1)}s`);
+	writeStdout(`\nCompleted in ${(elapsed / 1000).toFixed(1)}s`);
 }
 
 main().catch((error) => {
-	console.error("Fatal error:", error);
+	const message = error instanceof Error ? error.message : String(error);
+	log.error({ error: message }, "Fatal error");
 	process.exit(1);
 });

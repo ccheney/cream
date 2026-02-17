@@ -193,69 +193,81 @@ export function calculateHoldingPeriod(entryDate: string, closedAt: string): num
  * @returns Array of lessons learned strings
  */
 export function generateLessonsLearned(input: ThesisMemoryInput, outcome: ThesisOutcome): string[] {
-	const lessons: string[] = [];
+	const holdingDays = calculateHoldingPeriod(input.entryDate, input.closedAt);
+	return [
+		...buildCloseReasonLessons(input, outcome),
+		...buildOutcomeLessons(input, outcome),
+		...buildHoldingPeriodLessons(holdingDays),
+		...buildRegimeLessons(input),
+	];
+}
 
-	// Analyze based on close reason
+function buildCloseReasonLessons(input: ThesisMemoryInput, outcome: ThesisOutcome): string[] {
+	const targetPrice = input.exitPrice ?? "N/A";
 	switch (input.closeReason) {
 		case "STOP_HIT":
-			lessons.push(`Stop loss triggered at ${input.exitPrice ?? "N/A"}`);
-			if (outcome === "LOSS") {
-				lessons.push("Risk management worked as intended - loss was limited");
-			}
-			break;
-
+			return outcome === "LOSS"
+				? [
+						`Stop loss triggered at ${targetPrice}`,
+						"Risk management worked as intended - loss was limited",
+					]
+				: [`Stop loss triggered at ${targetPrice}`];
 		case "TARGET_HIT":
-			lessons.push(`Target reached at ${input.exitPrice ?? "N/A"}`);
-			if (outcome === "WIN") {
-				lessons.push("Entry thesis validated - target execution successful");
-			}
-			break;
-
+			return outcome === "WIN"
+				? [
+						`Target reached at ${targetPrice}`,
+						"Entry thesis validated - target execution successful",
+					]
+				: [`Target reached at ${targetPrice}`];
 		case "INVALIDATED":
-			lessons.push("Original thesis was invalidated before full resolution");
-			lessons.push("Early exit prevented potential larger loss or gain");
-			break;
-
+			return [
+				"Original thesis was invalidated before full resolution",
+				"Early exit prevented potential larger loss or gain",
+			];
 		case "MANUAL":
-			lessons.push("Manual exit - discretionary decision");
-			break;
-
+			return ["Manual exit - discretionary decision"];
 		case "TIME_DECAY":
-			lessons.push("Position closed due to time decay considerations");
-			lessons.push("Consider time horizon in future similar setups");
-			break;
-
+			return [
+				"Position closed due to time decay considerations",
+				"Consider time horizon in future similar setups",
+			];
 		case "CORRELATION":
-			lessons.push("Position closed due to correlation risk management");
-			lessons.push("Monitor portfolio correlation in similar setups");
-			break;
+			return [
+				"Position closed due to correlation risk management",
+				"Monitor portfolio correlation in similar setups",
+			];
 	}
+	return [];
+}
 
-	// Analyze based on outcome
+function buildOutcomeLessons(input: ThesisMemoryInput, outcome: ThesisOutcome): string[] {
 	if (outcome === "WIN" && input.pnlPercent > 10) {
-		lessons.push("Strong positive outcome - review entry timing and sizing");
+		return ["Strong positive outcome - review entry timing and sizing"];
 	}
 	if (outcome === "LOSS" && input.pnlPercent < -10) {
-		lessons.push("Significant loss - review risk parameters and entry criteria");
+		return ["Significant loss - review risk parameters and entry criteria"];
 	}
 	if (outcome === "SCRATCH") {
-		lessons.push("Breakeven trade - consider if edge was present");
+		return ["Breakeven trade - consider if edge was present"];
 	}
+	return [];
+}
 
-	// Analyze holding period
-	const holdingDays = calculateHoldingPeriod(input.entryDate, input.closedAt);
+function buildHoldingPeriodLessons(holdingDays: number): string[] {
 	if (holdingDays <= 1) {
-		lessons.push("Very short holding period - day trade or quick exit");
-	} else if (holdingDays > 30) {
-		lessons.push("Long holding period - swing/position trade");
+		return ["Very short holding period - day trade or quick exit"];
 	}
-
-	// Regime analysis
-	if (input.entryRegime !== input.exitRegime && input.exitRegime) {
-		lessons.push(`Regime shifted from ${input.entryRegime} to ${input.exitRegime} during hold`);
+	if (holdingDays > 30) {
+		return ["Long holding period - swing/position trade"];
 	}
+	return [];
+}
 
-	return lessons;
+function buildRegimeLessons(input: ThesisMemoryInput): string[] {
+	if (!input.exitRegime || input.entryRegime === input.exitRegime) {
+		return [];
+	}
+	return [`Regime shifted from ${input.entryRegime} to ${input.exitRegime} during hold`];
 }
 
 // ============================================
@@ -490,7 +502,7 @@ export function summarizeThesisMemory(memory: ThesisMemory): string {
 		`(${memory.pnl_percent > 0 ? "+" : ""}${memory.pnl_percent.toFixed(1)}%,`,
 		`${memory.holding_period_days} days,`,
 		`${memory.close_reason})`,
-		`-`,
+		"-",
 		lessonsText,
 	].join(" ");
 }

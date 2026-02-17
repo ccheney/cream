@@ -6,6 +6,85 @@
 
 import type { PredictionMarketEvent, PredictionMarketScores } from "@cream/domain";
 
+const CUT_QUESTION_TERMS = ["cut", "decrease", "lower"];
+const HIKE_QUESTION_TERMS = ["hike", "increase", "raise"];
+const CUT_OUTCOME_TERMS = ["cut", "decrease"];
+const HIKE_OUTCOME_TERMS = ["hike", "increase"];
+
+type FedProbabilityKey = "fedCutProbability" | "fedHikeProbability";
+
+function includesAnyKeyword(value: string, keywords: readonly string[]): boolean {
+	return keywords.some((keyword) => value.includes(keyword));
+}
+
+function updateFedProbability(
+	scores: PredictionMarketScores,
+	key: FedProbabilityKey,
+	probability: number | undefined,
+): void {
+	if (probability === undefined) {
+		return;
+	}
+
+	scores[key] = Math.max(scores[key] ?? 0, probability);
+}
+
+function getOutcomeProbability(
+	market: PredictionMarketEvent,
+	outcomeName: "yes" | "no",
+): number | undefined {
+	const outcome = market.payload.outcomes.find(
+		(candidate) => candidate.outcome.toLowerCase() === outcomeName,
+	);
+	return outcome?.probability;
+}
+
+function applyQuestionBasedFedSignals(
+	questionLower: string,
+	yesProbability: number | undefined,
+	noProbability: number | undefined,
+	scores: PredictionMarketScores,
+): void {
+	if (yesProbability === undefined) {
+		return;
+	}
+
+	const isCutMarket = includesAnyKeyword(questionLower, CUT_QUESTION_TERMS);
+	const isHikeMarket = includesAnyKeyword(questionLower, HIKE_QUESTION_TERMS);
+	const isNoCutsMarket = questionLower.includes("no") && isCutMarket;
+
+	if (isCutMarket && !isNoCutsMarket) {
+		updateFedProbability(scores, "fedCutProbability", yesProbability);
+		return;
+	}
+
+	if (isNoCutsMarket) {
+		updateFedProbability(scores, "fedCutProbability", noProbability);
+		return;
+	}
+
+	if (isHikeMarket) {
+		updateFedProbability(scores, "fedHikeProbability", yesProbability);
+	}
+}
+
+function applyOutcomeBasedFedSignals(
+	outcomes: PredictionMarketEvent["payload"]["outcomes"],
+	scores: PredictionMarketScores,
+): void {
+	for (const outcome of outcomes) {
+		const outcomeLower = outcome.outcome.toLowerCase();
+
+		if (includesAnyKeyword(outcomeLower, CUT_OUTCOME_TERMS)) {
+			updateFedProbability(scores, "fedCutProbability", outcome.probability);
+		}
+
+		if (includesAnyKeyword(outcomeLower, HIKE_OUTCOME_TERMS)) {
+			updateFedProbability(scores, "fedHikeProbability", outcome.probability);
+		}
+	}
+}
+
 /**
  * Calculate Fed rate probabilities from Fed rate markets
  */
@@ -20,54 +99,11 @@ function calculateFedRateProbabilities(
 
 	for (const market of fedMarkets) {
 		const questionLower = market.payload.marketQuestion.toLowerCase();
-		const yesOutcome = market.payload.outcomes.find((o) => o.outcome.toLowerCase() === "yes");
-		const noOutcome = market.payload.outcomes.find((o) => o.outcome.toLowerCase() === "no");
+		const yesProbability = getOutcomeProbability(market, "yes");
+		const noProbability = getOutcomeProbability(market, "no");
 
-		// Check if this is a rate cut market (question contains "cut" or "decrease")
-		const isCutMarket =
-			questionLower.includes("cut") ||
-			questionLower.includes("decrease") ||
-			questionLower.includes("lower");
-
-		// Check if this is a rate hike market (question contains "hike" or "increase")
-		const isHikeMarket =
-			questionLower.includes("hike") ||
-			questionLower.includes("increase") ||
-			questionLower.includes("raise");
-
-		// Check if this is a "no cuts" market (negation)
-		const isNoCutsMarket = questionLower.includes("no") && isCutMarket;
-
-		if (yesOutcome) {
-			if (isCutMarket && !isNoCutsMarket) {
-				// "Fed rate cut?" with Yes outcome = probability of cut
-				scores.fedCutProbability = Math.max(scores.fedCutProbability ?? 0, yesOutcome.probability);
-			} else if (isNoCutsMarket) {
-				// "No Fed rate cuts?" with Yes = probability of NO cuts, so No outcome = probability of cuts
-				if (noOutcome) {
-					scores.fedCutProbability = Math.max(scores.fedCutProbability ?? 0, noOutcome.probability);
-				}
-			} else if (isHikeMarket) {
-				// "Fed rate hike?" with Yes outcome = probability of hike
-				scores.fedHikeProbability = Math.max(
-					scores.fedHikeProbability ?? 0,
-					yesOutcome.probability,
-				);
-			}
-		}
-
-		// Also check outcome names for explicit "cut"/"hike" labels (Kalshi style)
-		for (const outcome of market.payload.outcomes) {
-			const outcomeLower = outcome.outcome.toLowerCase();
-
-			if (outcomeLower.includes("cut") || outcomeLower.includes("decrease")) {
-				scores.fedCutProbability = Math.max(scores.fedCutProbability ?? 0, outcome.probability);
-			}
-
-			if (outcomeLower.includes("hike") || outcomeLower.includes("increase")) {
-				scores.fedHikeProbability = Math.max(scores.fedHikeProbability ?? 0, outcome.probability);
-			}
-		}
+		applyQuestionBasedFedSignals(questionLower, yesProbability, noProbability, scores);
+		applyOutcomeBasedFedSignals(market.payload.outcomes, scores);
 	}
 }
 

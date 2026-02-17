@@ -122,80 +122,24 @@ function evaluateExpirationDay(
 	isLong: boolean,
 	isShort: boolean,
 ): ExpirationEvaluation {
-	if (isPastCheckpoint("FORCE_CLOSE", etTimeMinutes)) {
-		return buildEvaluation(
-			position,
-			"CLOSE",
-			"FORCE_CLOSE",
-			10,
-			`Force close triggered at ${EXPIRATION_CHECKPOINT_TIMES.FORCE_CLOSE} ET - all positions must be closed`,
-			true,
-			EXPIRATION_CHECKPOINT_TIMES.FORCE_CLOSE,
-		);
+	const forceCloseEval = evaluateForceCloseCheckpoint(position, etTimeMinutes);
+	if (forceCloseEval) {
+		return forceCloseEval;
 	}
 
-	const autoCloseMinutes = parseETTimeToMinutes(config.autoCloseITMTime);
-	if (
-		etTimeMinutes >= autoCloseMinutes &&
-		(position.moneyness === "ITM" || position.moneyness === "DEEP_ITM")
-	) {
-		if (config.allowExercise && isLong) {
-			return buildEvaluation(
-				position,
-				"EXERCISE",
-				"ITM_EXPIRATION",
-				8,
-				`ITM ${position.right} - exercise allowed per configuration`,
-				false,
-				EXPIRATION_CHECKPOINT_TIMES.MARKET_CLOSE,
-			);
-		}
-
-		return buildEvaluation(
-			position,
-			"CLOSE",
-			"ITM_EXPIRATION",
-			9,
-			`ITM ${position.right} at ${config.autoCloseITMTime} ET - auto-close to avoid exercise/assignment`,
-			true,
-			config.autoCloseITMTime,
-		);
+	const autoCloseEval = evaluateAutoCloseITM(position, config, etTimeMinutes, isLong);
+	if (autoCloseEval) {
+		return autoCloseEval;
 	}
 
-	if (position.isPinRisk && isShort) {
-		const threshold = getPinRiskThreshold(position.underlyingPrice, config.pinRisk);
-		return buildEvaluation(
-			position,
-			"CLOSE",
-			"PIN_RISK",
-			9,
-			`Short ${position.right} within $${threshold.toFixed(2)} of strike - pin risk at expiration`,
-			true,
-			EXPIRATION_CHECKPOINT_TIMES.FORCE_CLOSE,
-		);
+	const pinRiskEval = evaluateExpirationDayPinRisk(position, config, isShort);
+	if (pinRiskEval) {
+		return pinRiskEval;
 	}
 
-	if (isPastCheckpoint("FINAL_WARNING", etTimeMinutes)) {
-		if (shouldLetExpireWorthless(position)) {
-			return buildEvaluation(
-				position,
-				"LET_EXPIRE",
-				"TIMELINE_TRIGGER",
-				3,
-				`Long OTM ${position.right} - letting expire worthless`,
-				false,
-			);
-		}
-
-		return buildEvaluation(
-			position,
-			"CLOSE",
-			"TIMELINE_TRIGGER",
-			7,
-			`Final warning at ${EXPIRATION_CHECKPOINT_TIMES.FINAL_WARNING} ET - close before force close at 3 PM`,
-			false,
-			EXPIRATION_CHECKPOINT_TIMES.FORCE_CLOSE,
-		);
+	const finalWarningEval = evaluateFinalWarning(position, etTimeMinutes);
+	if (finalWarningEval) {
+		return finalWarningEval;
 	}
 
 	return evaluateApproachingExpiration(
@@ -206,6 +150,114 @@ function evaluateExpirationDay(
 	);
 }
 
+function evaluateForceCloseCheckpoint(
+	position: ExpiringPosition,
+	etTimeMinutes: number,
+): ExpirationEvaluation | null {
+	if (!isPastCheckpoint("FORCE_CLOSE", etTimeMinutes)) {
+		return null;
+	}
+
+	return buildEvaluation(
+		position,
+		"CLOSE",
+		"FORCE_CLOSE",
+		10,
+		`Force close triggered at ${EXPIRATION_CHECKPOINT_TIMES.FORCE_CLOSE} ET - all positions must be closed`,
+		true,
+		EXPIRATION_CHECKPOINT_TIMES.FORCE_CLOSE,
+	);
+}
+
+function isInTheMoney(position: ExpiringPosition): boolean {
+	return position.moneyness === "ITM" || position.moneyness === "DEEP_ITM";
+}
+
+function evaluateAutoCloseITM(
+	position: ExpiringPosition,
+	config: ExpirationPolicyConfig,
+	etTimeMinutes: number,
+	isLong: boolean,
+): ExpirationEvaluation | null {
+	const autoCloseMinutes = parseETTimeToMinutes(config.autoCloseITMTime);
+	if (etTimeMinutes < autoCloseMinutes || !isInTheMoney(position)) {
+		return null;
+	}
+
+	if (config.allowExercise && isLong) {
+		return buildEvaluation(
+			position,
+			"EXERCISE",
+			"ITM_EXPIRATION",
+			8,
+			`ITM ${position.right} - exercise allowed per configuration`,
+			false,
+			EXPIRATION_CHECKPOINT_TIMES.MARKET_CLOSE,
+		);
+	}
+
+	return buildEvaluation(
+		position,
+		"CLOSE",
+		"ITM_EXPIRATION",
+		9,
+		`ITM ${position.right} at ${config.autoCloseITMTime} ET - auto-close to avoid exercise/assignment`,
+		true,
+		config.autoCloseITMTime,
+	);
+}
+
+function evaluateExpirationDayPinRisk(
+	position: ExpiringPosition,
+	config: ExpirationPolicyConfig,
+	isShort: boolean,
+): ExpirationEvaluation | null {
+	if (!position.isPinRisk || !isShort) {
+		return null;
+	}
+
+	const threshold = getPinRiskThreshold(position.underlyingPrice, config.pinRisk);
+	return buildEvaluation(
+		position,
+		"CLOSE",
+		"PIN_RISK",
+		9,
+		`Short ${position.right} within $${threshold.toFixed(2)} of strike - pin risk at expiration`,
+		true,
+		EXPIRATION_CHECKPOINT_TIMES.FORCE_CLOSE,
+	);
+}
+
+function evaluateFinalWarning(
+	position: ExpiringPosition,
+	etTimeMinutes: number,
+): ExpirationEvaluation | null {
+	if (!isPastCheckpoint("FINAL_WARNING", etTimeMinutes)) {
+		return null;
+	}
+
+	if (shouldLetExpireWorthless(position)) {
+		return buildEvaluation(
+			position,
+			"LET_EXPIRE",
+			"TIMELINE_TRIGGER",
+			3,
+			`Long OTM ${position.right} - letting expire worthless`,
+			false,
+		);
+	}
+
+	return buildEvaluation(
+		position,
+		"CLOSE",
+		"TIMELINE_TRIGGER",
+		7,
+		`Final warning at ${EXPIRATION_CHECKPOINT_TIMES.FINAL_WARNING} ET - close before force close at 3 PM`,
+		false,
+		EXPIRATION_CHECKPOINT_TIMES.FORCE_CLOSE,
+	);
+}
+
 function evaluateApproachingExpiration(
 	position: ExpiringPosition,
 	config: ExpirationPolicyConfig,
@@ -213,59 +265,7 @@ function evaluateApproachingExpiration(
 	isShort: boolean,
 ): ExpirationEvaluation {
 	if (position.dte <= minDTE) {
-		if (shouldLetExpireWorthless(position)) {
-			return buildEvaluation(
-				position,
-				"LET_EXPIRE",
-				"MINIMUM_DTE",
-				2,
-				`Long OTM ${position.right} at ${position.dte.toFixed(1)} DTE - letting expire worthless`,
-				false,
-			);
-		}
-
-		if (position.isPinRisk && isShort) {
-			const threshold = getPinRiskThreshold(position.underlyingPrice, config.pinRisk);
-			return buildEvaluation(
-				position,
-				"CLOSE",
-				"PIN_RISK",
-				9,
-				`Short ${position.right} at ${position.dte.toFixed(1)} DTE within $${threshold.toFixed(2)} of strike - close to avoid pin risk`,
-				true,
-			);
-		}
-
-		if (isShort || position.positionType === "COMPLEX_STRATEGY") {
-			return buildEvaluation(
-				position,
-				"ROLL",
-				"MINIMUM_DTE",
-				6,
-				`${position.positionType} at ${position.dte.toFixed(1)} DTE (minimum: ${minDTE}) - recommend rolling`,
-				false,
-			);
-		}
-
-		if (position.moneyness === "ITM" || position.moneyness === "DEEP_ITM") {
-			return buildEvaluation(
-				position,
-				"CLOSE",
-				"MINIMUM_DTE",
-				5,
-				`Long ITM ${position.right} at ${position.dte.toFixed(1)} DTE - close to capture remaining value`,
-				false,
-			);
-		}
-
-		return buildEvaluation(
-			position,
-			"CLOSE",
-			"MINIMUM_DTE",
-			4,
-			`${position.positionType} at ${position.dte.toFixed(1)} DTE (minimum: ${minDTE}) - recommend closing`,
-			false,
-		);
+		return evaluateAtMinimumDTE(position, config, minDTE, isShort);
 	}
 
 	if (position.dte <= minDTE * 1.5) {
@@ -285,6 +285,67 @@ function evaluateApproachingExpiration(
 		"MINIMUM_DTE",
 		1,
 		`${position.positionType} at ${position.dte.toFixed(1)} DTE - monitoring`,
+		false,
+	);
+}
+
+function evaluateAtMinimumDTE(
+	position: ExpiringPosition,
+	config: ExpirationPolicyConfig,
+	minDTE: number,
+	isShort: boolean,
+): ExpirationEvaluation {
+	if (shouldLetExpireWorthless(position)) {
+		return buildEvaluation(
+			position,
+			"LET_EXPIRE",
+			"MINIMUM_DTE",
+			2,
+			`Long OTM ${position.right} at ${position.dte.toFixed(1)} DTE - letting expire worthless`,
+			false,
+		);
+	}
+
+	if (position.isPinRisk && isShort) {
+		const threshold = getPinRiskThreshold(position.underlyingPrice, config.pinRisk);
+		return buildEvaluation(
+			position,
+			"CLOSE",
+			"PIN_RISK",
+			9,
+			`Short ${position.right} at ${position.dte.toFixed(1)} DTE within $${threshold.toFixed(2)} of strike - close to avoid pin risk`,
+			true,
+		);
+	}
+
+	if (isShort || position.positionType === "COMPLEX_STRATEGY") {
+		return buildEvaluation(
+			position,
+			"ROLL",
+			"MINIMUM_DTE",
+			6,
+			`${position.positionType} at ${position.dte.toFixed(1)} DTE (minimum: ${minDTE}) - recommend rolling`,
+			false,
+		);
+	}
+
+	if (isInTheMoney(position)) {
+		return buildEvaluation(
+			position,
+			"CLOSE",
+			"MINIMUM_DTE",
+			5,
+			`Long ITM ${position.right} at ${position.dte.toFixed(1)} DTE - close to capture remaining value`,
+			false,
+		);
+	}
+
+	return buildEvaluation(
+		position,
+		"CLOSE",
+		"MINIMUM_DTE",
+		4,
+		`${position.positionType} at ${position.dte.toFixed(1)} DTE (minimum: ${minDTE}) - recommend closing`,
 		false,
 	);
 }

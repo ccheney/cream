@@ -215,33 +215,107 @@ export interface SituationBriefInput {
  */
 function interpretIndicator(name: string, value: number): string {
 	const upperName = name.toUpperCase();
-
-	if (upperName.includes("RSI")) {
-		if (value > 70) {
-			return "overbought";
+	for (const parser of INDICATOR_INTERPRETERS) {
+		if (parser.matches(upperName)) {
+			return parser.interpret(value);
 		}
-		if (value < 30) {
-			return "oversold";
-		}
-		return "neutral";
 	}
-
-	if (upperName.includes("ATR")) {
-		// ATR interpretation depends on the price, but we can give a relative sense
-		return value > 5 ? "high volatility" : value > 2 ? "moderate volatility" : "low volatility";
-	}
-
-	if (upperName.includes("SMA")) {
-		// SMA doesn't have an interpretation without price context
-		return `${value.toFixed(2)}`;
-	}
-
-	if (upperName.includes("VOLUME_RATIO") || upperName.includes("VOLUME")) {
-		return value > 2 ? "high volume" : value > 1 ? "above average" : "below average";
-	}
-
-	// Default: just the value
 	return value.toFixed(2);
+}
+
+const INDICATOR_INTERPRETERS: Array<{
+	matches: (name: string) => boolean;
+	interpret: (value: number) => string;
+}> = [
+	{
+		matches: (name) => name.includes("RSI"),
+		interpret: (value) => {
+			if (value > 70) return "overbought";
+			if (value < 30) return "oversold";
+			return "neutral";
+		},
+	},
+	{
+		matches: (name) => name.includes("ATR"),
+		interpret: (value) =>
+			value > 5 ? "high volatility" : value > 2 ? "moderate volatility" : "low volatility",
+	},
+	{
+		matches: (name) => name.includes("SMA"),
+		interpret: (value) => value.toFixed(2),
+	},
+	{
+		matches: (name) => name.includes("VOLUME_RATIO") || name.includes("VOLUME"),
+		interpret: (value) =>
+			value > 2 ? "high volume" : value > 1 ? "above average" : "below average",
+	},
+];
+
+function createInstrument(input: SituationBriefInput): SituationBriefInstrument {
+	return {
+		symbol: input.symbol,
+		underlying: input.underlying,
+		assetType: input.assetType ?? (input.underlying ? "OPTION" : "EQUITY"),
+	};
+}
+
+function createRegime(input: SituationBriefInput): SituationBriefRegime {
+	return {
+		label: input.regimeLabel,
+		confidence: input.regimeConfidence ?? 1.0,
+	};
+}
+
+function createIndicators(
+	input: SituationBriefInput,
+	config: SituationBriefConfig,
+): SituationBriefIndicator[] {
+	const sourceIndicators = input.indicators;
+	if (!sourceIndicators) {
+		return [];
+	}
+	const indicators: SituationBriefIndicator[] = [];
+	for (const name of config.indicators) {
+		const value = sourceIndicators[name];
+		if (value === undefined) {
+			continue;
+		}
+		indicators.push({
+			name,
+			value,
+			interpretation: interpretIndicator(name, value),
+		});
+	}
+	return indicators;
+}
+
+function createPosition(input: SituationBriefInput): SituationBriefPosition | undefined {
+	if (!input.position) {
+		return undefined;
+	}
+	return {
+		direction: input.position.direction,
+		size: input.position.size,
+		unrealizedPnL: input.position.unrealizedPnL,
+		holdingDays: input.position.holdingDays,
+	};
+}
+
+function createRecentEvents(
+	input: SituationBriefInput,
+	config: SituationBriefConfig,
+): SituationBriefEvent[] {
+	const eventLookbackHours =
+		config.eventLookbackHours ?? DEFAULT_SITUATION_BRIEF_CONFIG.eventLookbackHours;
+	const cutoffTime = Date.now() - eventLookbackHours * 60 * 60 * 1000;
+	return (input.events ?? [])
+		.filter((event) => event.timestamp >= cutoffTime)
+		.slice(0, config.maxEvents)
+		.map((event) => ({
+			type: event.type,
+			summary: event.summary,
+			timestamp: event.timestamp,
+		}));
 }
 
 /**
@@ -289,59 +363,12 @@ export function generateSituationBrief(
 	config: SituationBriefConfig = DEFAULT_SITUATION_BRIEF_CONFIG,
 ): SituationBrief {
 	const mergedConfig = { ...DEFAULT_SITUATION_BRIEF_CONFIG, ...config };
-
-	// Build instrument
-	const instrument: SituationBriefInstrument = {
-		symbol: input.symbol,
-		underlying: input.underlying,
-		assetType: input.assetType ?? (input.underlying ? "OPTION" : "EQUITY"),
-	};
-
-	// Build regime
-	const regime: SituationBriefRegime = {
-		label: input.regimeLabel,
-		confidence: input.regimeConfidence ?? 1.0,
-	};
-
-	// Build indicators (filtered by config)
-	const indicators: SituationBriefIndicator[] = [];
-	if (input.indicators) {
-		for (const name of mergedConfig.indicators) {
-			const value = input.indicators[name];
-			if (value !== undefined) {
-				indicators.push({
-					name,
-					value,
-					interpretation: interpretIndicator(name, value),
-				});
-			}
-		}
-	}
-
-	// Build position
-	const position = input.position
-		? {
-				direction: input.position.direction,
-				size: input.position.size,
-				unrealizedPnL: input.position.unrealizedPnL,
-				holdingDays: input.position.holdingDays,
-			}
-		: undefined;
-
-	// Build events (limited by config)
-	const cutoffTime = Date.now() - mergedConfig.eventLookbackHours * 60 * 60 * 1000;
-	const recentEvents: SituationBriefEvent[] = (input.events ?? [])
-		.filter((e) => e.timestamp >= cutoffTime)
-		.slice(0, mergedConfig.maxEvents)
-		.map((e) => ({
-			type: e.type,
-			summary: e.summary,
-			timestamp: e.timestamp,
-		}));
-
-	// Generate text summary for embedding
+	const instrument = createInstrument(input);
+	const regime = createRegime(input);
+	const indicators = createIndicators(input, mergedConfig);
+	const position = createPosition(input);
+	const recentEvents = createRecentEvents(input, mergedConfig);
 	const textSummary = formatTextSummary(instrument, regime, indicators, position, recentEvents);
-
 	return {
 		instrument,
 		regime,

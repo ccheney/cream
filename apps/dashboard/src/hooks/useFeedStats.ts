@@ -29,74 +29,87 @@ interface RollingWindow {
 
 const WINDOW_SIZE_MS = 60_000; // 1 minute window
 const UPDATE_INTERVAL_MS = 1_000; // Update stats every second
+const EMPTY_STATS: FeedStats = {
+	totalPerMin: 0,
+	quotesPerMin: 0,
+	tradesPerMin: 0,
+	optionsPerMin: 0,
+	otherPerMin: 0,
+};
+
+function createRollingWindow(): RollingWindow {
+	return {
+		timestamps: [],
+		quotes: [],
+		trades: [],
+		options: [],
+	};
+}
+
+function prune(values: number[], cutoff: number): number[] {
+	return values.filter((timestamp) => timestamp > cutoff);
+}
+
+function pruneWindow(window: RollingWindow, cutoff: number): void {
+	window.timestamps = prune(window.timestamps, cutoff);
+	window.quotes = prune(window.quotes, cutoff);
+	window.trades = prune(window.trades, cutoff);
+	window.options = prune(window.options, cutoff);
+}
+
+function toFeedStats(window: RollingWindow): FeedStats {
+	const total = window.timestamps.length;
+	const quotes = window.quotes.length;
+	const trades = window.trades.length;
+	const options = window.options.length;
+	const other = Math.max(0, total - quotes - trades - options);
+
+	return {
+		totalPerMin: total,
+		quotesPerMin: quotes,
+		tradesPerMin: trades,
+		optionsPerMin: options,
+		otherPerMin: other,
+	};
+}
+
+function pushEvent(window: RollingWindow, type: EventType, now: number): void {
+	window.timestamps.push(now);
+	if (type === "quote") {
+		window.quotes.push(now);
+		return;
+	}
+	if (type === "trade") {
+		window.trades.push(now);
+		return;
+	}
+	if (type === "options_quote" || type === "options_trade") {
+		window.options.push(now);
+	}
+}
 
 /**
  * Hook to track feed event rates.
  */
 export function useFeedStats() {
-	const windowRef = useRef<RollingWindow>({
-		timestamps: [],
-		quotes: [],
-		trades: [],
-		options: [],
-	});
+	const windowRef = useRef<RollingWindow>(createRollingWindow());
+	const [stats, setStats] = useState<FeedStats>(EMPTY_STATS);
 
-	const [stats, setStats] = useState<FeedStats>({
-		totalPerMin: 0,
-		quotesPerMin: 0,
-		tradesPerMin: 0,
-		optionsPerMin: 0,
-		otherPerMin: 0,
-	});
-
-	// Record an event
 	const recordEvent = useCallback((type: EventType) => {
-		const now = Date.now();
+		pushEvent(windowRef.current, type, Date.now());
+	}, []);
+
+	const refreshStats = useCallback(() => {
+		const cutoff = Date.now() - WINDOW_SIZE_MS;
 		const window = windowRef.current;
-
-		window.timestamps.push(now);
-
-		if (type === "quote") {
-			window.quotes.push(now);
-		} else if (type === "trade") {
-			window.trades.push(now);
-		} else if (type === "options_quote" || type === "options_trade") {
-			window.options.push(now);
-		}
+		pruneWindow(window, cutoff);
+		setStats(toFeedStats(window));
 	}, []);
 
-	// Update stats periodically
 	useEffect(() => {
-		const updateStats = () => {
-			const now = Date.now();
-			const cutoff = now - WINDOW_SIZE_MS;
-			const window = windowRef.current;
-
-			// Prune old timestamps
-			window.timestamps = window.timestamps.filter((t) => t > cutoff);
-			window.quotes = window.quotes.filter((t) => t > cutoff);
-			window.trades = window.trades.filter((t) => t > cutoff);
-			window.options = window.options.filter((t) => t > cutoff);
-
-			// Calculate rates
-			const total = window.timestamps.length;
-			const quotes = window.quotes.length;
-			const trades = window.trades.length;
-			const options = window.options.length;
-			const other = total - quotes - trades - options;
-
-			setStats({
-				totalPerMin: total,
-				quotesPerMin: quotes,
-				tradesPerMin: trades,
-				optionsPerMin: options,
-				otherPerMin: Math.max(0, other),
-			});
-		};
-
-		const interval = setInterval(updateStats, UPDATE_INTERVAL_MS);
+		const interval = setInterval(refreshStats, UPDATE_INTERVAL_MS);
 		return () => clearInterval(interval);
-	}, []);
+	}, [refreshStats]);
 
 	return { stats, recordEvent };
 }

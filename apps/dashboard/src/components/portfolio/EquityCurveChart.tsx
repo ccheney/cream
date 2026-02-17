@@ -1,14 +1,5 @@
 "use client";
 
-/**
- * EquityCurveChart Component
- *
- * Displays portfolio equity curve using TradingView Lightweight Charts with area series.
- * Includes period selector and responsive sizing.
- *
- * @see docs/plans/ui/03-views.md Section 5: Portfolio Dashboard
- */
-
 import {
 	AreaSeries,
 	CrosshairMode,
@@ -19,21 +10,15 @@ import {
 	type SingleValueData,
 	type Time,
 } from "lightweight-charts";
-import { memo, useCallback, useEffect, useRef, useState } from "react";
+import { memo, type RefObject, useCallback, useEffect, useRef, useState } from "react";
 import type { PortfolioHistory, PortfolioHistoryPeriod } from "@/lib/api/types";
 
-// ============================================
-// Types
-// ============================================
-
-export interface EquityCurveChartProps {
+interface EquityCurveChartProps {
 	data?: PortfolioHistory;
 	period?: PortfolioHistoryPeriod;
 	onPeriodChange?: (period: PortfolioHistoryPeriod) => void;
 	isLoading?: boolean;
-	/** Current live equity to append as the latest point (real-time) */
 	liveEquity?: number;
-	/** Whether live data is streaming */
 	isStreaming?: boolean;
 }
 
@@ -41,10 +26,6 @@ interface PeriodConfig {
 	key: PortfolioHistoryPeriod;
 	label: string;
 }
-
-// ============================================
-// Constants
-// ============================================
 
 const PERIODS: PeriodConfig[] = [
 	{ key: "1D", label: "1D" },
@@ -55,68 +36,62 @@ const PERIODS: PeriodConfig[] = [
 	{ key: "all", label: "ALL" },
 ];
 
-// ============================================
-// Chart Configuration
-// ============================================
+function getChartOptions(isDark: boolean) {
+	return {
+		layout: {
+			background: { color: "transparent" },
+			textColor: isDark ? "#A8A29E" : "#78716C",
+			fontSize: 11,
+			fontFamily: "Geist Mono, ui-monospace, monospace",
+			attributionLogo: false,
+		},
+		grid: {
+			vertLines: { color: isDark ? "rgba(168, 162, 158, 0.1)" : "rgba(120, 113, 108, 0.1)" },
+			horzLines: { color: isDark ? "rgba(168, 162, 158, 0.1)" : "rgba(120, 113, 108, 0.1)" },
+		},
+		crosshair: {
+			mode: CrosshairMode.Normal,
+			vertLine: { color: "#D97706", style: LineStyle.Dashed, width: 1 as const },
+			horzLine: { color: "#D97706", style: LineStyle.Dashed, width: 1 as const },
+		},
+		rightPriceScale: {
+			borderVisible: false,
+		},
+		timeScale: {
+			borderVisible: false,
+			timeVisible: true,
+			secondsVisible: false,
+		},
+		handleScroll: false,
+		handleScale: false,
+	};
+}
 
-const getChartOptions = (isDark: boolean) => ({
-	layout: {
-		background: { color: "transparent" },
-		textColor: isDark ? "#A8A29E" : "#78716C",
-		fontSize: 11,
-		fontFamily: "Geist Mono, ui-monospace, monospace",
-		attributionLogo: false,
-	},
-	grid: {
-		vertLines: { color: isDark ? "rgba(168, 162, 158, 0.1)" : "rgba(120, 113, 108, 0.1)" },
-		horzLines: { color: isDark ? "rgba(168, 162, 158, 0.1)" : "rgba(120, 113, 108, 0.1)" },
-	},
-	crosshair: {
-		mode: CrosshairMode.Normal,
-		vertLine: { color: "#D97706", style: LineStyle.Dashed, width: 1 as const },
-		horzLine: { color: "#D97706", style: LineStyle.Dashed, width: 1 as const },
-	},
-	rightPriceScale: {
-		borderVisible: false,
-	},
-	timeScale: {
-		borderVisible: false,
-		timeVisible: true,
-		secondsVisible: false,
-	},
-	handleScroll: false,
-	handleScale: false,
-});
-
-const getSeriesOptions = (isDark: boolean) => ({
-	lineColor: "#D97706",
-	topColor: isDark ? "rgba(217, 119, 6, 0.4)" : "rgba(217, 119, 6, 0.3)",
-	bottomColor: isDark ? "rgba(217, 119, 6, 0.05)" : "rgba(217, 119, 6, 0.02)",
-	lineWidth: 2 as const,
-	crosshairMarkerVisible: true,
-	crosshairMarkerRadius: 4,
-	crosshairMarkerBorderColor: "#D97706",
-	crosshairMarkerBackgroundColor: isDark ? "#1C1917" : "#FFFFFF",
-	lastValueVisible: true,
-	priceLineVisible: true,
-	priceLineColor: "#D97706",
-	priceLineStyle: LineStyle.Dashed,
-});
-
-// ============================================
-// Data Transformation
-// ============================================
+function getSeriesOptions(isDark: boolean) {
+	return {
+		lineColor: "#D97706",
+		topColor: isDark ? "rgba(217, 119, 6, 0.4)" : "rgba(217, 119, 6, 0.3)",
+		bottomColor: isDark ? "rgba(217, 119, 6, 0.05)" : "rgba(217, 119, 6, 0.02)",
+		lineWidth: 2 as const,
+		crosshairMarkerVisible: true,
+		crosshairMarkerRadius: 4,
+		crosshairMarkerBorderColor: "#D97706",
+		crosshairMarkerBackgroundColor: isDark ? "#1C1917" : "#FFFFFF",
+		lastValueVisible: true,
+		priceLineVisible: true,
+		priceLineColor: "#D97706",
+		priceLineStyle: LineStyle.Dashed,
+	};
+}
 
 function transformData(data: PortfolioHistory, liveEquity?: number): SingleValueData[] {
 	const chartData = data.timestamp.map((ts, i) => ({
-		time: ts as Time, // Alpaca returns Unix epoch in seconds, which lightweight-charts expects
+		time: ts as Time,
 		value: data.equity[i] ?? 0,
 	}));
 
-	// Append live equity as the current point if available
 	if (liveEquity !== undefined && liveEquity > 0) {
-		const now = Math.floor(Date.now() / 1000) as Time; // Current time in Unix seconds
-		// Only append if it's after the last data point
+		const now = Math.floor(Date.now() / 1000) as Time;
 		const lastTime = chartData.at(-1)?.time;
 		if (!lastTime || now > lastTime) {
 			chartData.push({ time: now, value: liveEquity });
@@ -126,24 +101,7 @@ function transformData(data: PortfolioHistory, liveEquity?: number): SingleValue
 	return chartData;
 }
 
-// ============================================
-// Main Component
-// ============================================
-
-export const EquityCurveChart = memo(function EquityCurveChart({
-	data,
-	period = "1M",
-	onPeriodChange,
-	isLoading = false,
-	liveEquity,
-	isStreaming = false,
-}: EquityCurveChartProps) {
-	const containerRef = useRef<HTMLDivElement>(null);
-	const chartRef = useRef<IChartApi | null>(null);
-	const seriesRef = useRef<ISeriesApi<"Area"> | null>(null);
-	const [selectedPeriod, setSelectedPeriod] = useState<PortfolioHistoryPeriod>(period);
-
-	// Detect dark mode
+function useDarkMode() {
 	const [isDark, setIsDark] = useState(false);
 
 	useEffect(() => {
@@ -161,7 +119,14 @@ export const EquityCurveChart = memo(function EquityCurveChart({
 		return () => observer.disconnect();
 	}, []);
 
-	// Initialize chart
+	return isDark;
+}
+
+function useEquityChartInit({ isDark }: { isDark: boolean }) {
+	const containerRef = useRef<HTMLDivElement>(null);
+	const chartRef = useRef<IChartApi | null>(null);
+	const seriesRef = useRef<ISeriesApi<"Area"> | null>(null);
+
 	useEffect(() => {
 		if (!containerRef.current) {
 			return;
@@ -174,11 +139,9 @@ export const EquityCurveChart = memo(function EquityCurveChart({
 		});
 
 		const series = chart.addSeries(AreaSeries, getSeriesOptions(isDark));
-
 		chartRef.current = chart;
 		seriesRef.current = series;
 
-		// Cleanup on unmount
 		return () => {
 			chart.remove();
 			chartRef.current = null;
@@ -186,7 +149,18 @@ export const EquityCurveChart = memo(function EquityCurveChart({
 		};
 	}, [isDark]);
 
-	// Update chart options when theme changes
+	return { containerRef, chartRef, seriesRef };
+}
+
+function useEquityChartTheme({
+	isDark,
+	chartRef,
+	seriesRef,
+}: {
+	isDark: boolean;
+	chartRef: RefObject<IChartApi | null>;
+	seriesRef: RefObject<ISeriesApi<"Area"> | null>;
+}) {
 	useEffect(() => {
 		if (!chartRef.current || !seriesRef.current) {
 			return;
@@ -194,9 +168,20 @@ export const EquityCurveChart = memo(function EquityCurveChart({
 
 		chartRef.current.applyOptions(getChartOptions(isDark));
 		seriesRef.current.applyOptions(getSeriesOptions(isDark));
-	}, [isDark]);
+	}, [isDark, chartRef, seriesRef]);
+}
 
-	// Update data when it changes (including live equity updates)
+function useEquityChartData({
+	data,
+	liveEquity,
+	seriesRef,
+	chartRef,
+}: {
+	data?: PortfolioHistory;
+	liveEquity?: number;
+	seriesRef: RefObject<ISeriesApi<"Area"> | null>;
+	chartRef: RefObject<IChartApi | null>;
+}) {
 	useEffect(() => {
 		if (!seriesRef.current || !data) {
 			return;
@@ -205,9 +190,16 @@ export const EquityCurveChart = memo(function EquityCurveChart({
 		const chartData = transformData(data, liveEquity);
 		seriesRef.current.setData(chartData);
 		chartRef.current?.timeScale().fitContent();
-	}, [data, liveEquity]);
+	}, [chartRef, data, liveEquity, seriesRef]);
+}
 
-	// Handle resize
+function useEquityChartResize({
+	containerRef,
+	chartRef,
+}: {
+	containerRef: React.RefObject<HTMLDivElement | null>;
+	chartRef: RefObject<IChartApi | null>;
+}) {
 	useEffect(() => {
 		if (!containerRef.current || !chartRef.current) {
 			return;
@@ -223,7 +215,51 @@ export const EquityCurveChart = memo(function EquityCurveChart({
 		resizeObserver.observe(containerRef.current);
 
 		return () => resizeObserver.disconnect();
-	}, []);
+	}, [containerRef, chartRef]);
+}
+
+function PeriodButtons({
+	selectedPeriod,
+	onSelect,
+}: {
+	selectedPeriod: PortfolioHistoryPeriod;
+	onSelect: (period: PortfolioHistoryPeriod) => void;
+}) {
+	return (
+		<div className="flex gap-1">
+			{PERIODS.map((p) => (
+				<button
+					key={p.key}
+					type="button"
+					onClick={() => onSelect(p.key)}
+					className={`px-2 py-1 text-xs rounded transition-colors ${
+						selectedPeriod === p.key
+							? "bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400"
+							: "text-stone-400 dark:text-night-500 hover:text-stone-600 dark:hover:text-night-300"
+					}`}
+				>
+					{p.label}
+				</button>
+			))}
+		</div>
+	);
+}
+
+export const EquityCurveChart = memo(function EquityCurveChart({
+	data,
+	period = "1M",
+	onPeriodChange,
+	isLoading = false,
+	liveEquity,
+	isStreaming = false,
+}: EquityCurveChartProps) {
+	const [selectedPeriod, setSelectedPeriod] = useState<PortfolioHistoryPeriod>(period);
+	const isDark = useDarkMode();
+	const { containerRef, chartRef, seriesRef } = useEquityChartInit({ isDark });
+
+	useEquityChartTheme({ isDark, chartRef, seriesRef });
+	useEquityChartData({ data, liveEquity, seriesRef, chartRef });
+	useEquityChartResize({ containerRef, chartRef });
 
 	const handlePeriodClick = useCallback(
 		(newPeriod: PortfolioHistoryPeriod) => {
@@ -247,31 +283,14 @@ export const EquityCurveChart = memo(function EquityCurveChart({
 						</div>
 					)}
 				</div>
-				<div className="flex gap-1">
-					{PERIODS.map((p) => (
-						<button
-							key={p.key}
-							type="button"
-							onClick={() => handlePeriodClick(p.key)}
-							className={`px-2 py-1 text-xs rounded transition-colors ${
-								selectedPeriod === p.key
-									? "bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400"
-									: "text-stone-400 dark:text-night-500 hover:text-stone-600 dark:hover:text-night-300"
-							}`}
-						>
-							{p.label}
-						</button>
-					))}
-				</div>
+				<PeriodButtons selectedPeriod={selectedPeriod} onSelect={handlePeriodClick} />
 			</div>
-
-			{/* Chart Container */}
 			<div className="relative h-64">
-				{!isLoading && !data && (
+				{!isLoading && !data ? (
 					<div className="absolute inset-0 bg-cream-50 dark:bg-night-700 rounded flex items-center justify-center">
 						<span className="text-sm text-stone-400 dark:text-night-500">No data available</span>
 					</div>
-				)}
+				) : null}
 				<div
 					ref={containerRef}
 					className={`w-full h-full ${!isLoading && !data ? "invisible" : ""}`}

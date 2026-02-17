@@ -3,122 +3,39 @@
  *
  * Data access for trading decisions table.
  */
-import { and, avg, count, desc, eq, gte, ilike, inArray, lte, or, sql } from "drizzle-orm";
+import { and, avg, count, desc, eq, gte, ilike, inArray, or, sql } from "drizzle-orm";
 import { type Database, getDb } from "../db";
 import { decisions } from "../schema/core-trading";
 import { RepositoryError } from "./base";
+import { buildDecisionAnalytics } from "./decisions.analytics";
+import { buildDecisionFilterConditions } from "./decisions.filters";
+import type {
+	ConfidenceCalibrationBin,
+	CreateDecisionInput,
+	Decision,
+	DecisionAction,
+	DecisionAnalytics,
+	DecisionDirection,
+	DecisionFilters,
+	DecisionStatus,
+	SizeUnit,
+	StrategyBreakdownItem,
+} from "./decisions.types";
+import { mapDecisionRow } from "./decisions.types";
+import { buildDecisionUpdateData } from "./decisions.update";
 
-// ============================================
-// Types
-// ============================================
-
-export type DecisionStatus =
-	| "pending"
-	| "approved"
-	| "rejected"
-	| "executed"
-	| "cancelled"
-	| "expired";
-
-export type DecisionAction = "BUY" | "SELL" | "HOLD" | "CLOSE" | "INCREASE" | "REDUCE" | "NO_TRADE";
-export type SizeUnit = "SHARES" | "CONTRACTS" | "DOLLARS" | "PCT_EQUITY";
-export type DecisionDirection = "LONG" | "SHORT" | "FLAT";
-
-export interface Decision {
-	id: string;
-	cycleId: string;
-	symbol: string;
-	action: DecisionAction;
-	direction: DecisionDirection;
-	size: number;
-	sizeUnit: SizeUnit;
-	entryPrice: number | null;
-	stopPrice: number | null;
-	targetPrice: number | null;
-	status: DecisionStatus;
-	strategyFamily: string | null;
-	timeHorizon: string | null;
-	rationale: string | null;
-	bullishFactors: string[];
-	bearishFactors: string[];
-	confidenceScore: number | null;
-	riskScore: number | null;
-	metadata: Record<string, unknown>;
-	environment: string;
-	createdAt: string;
-	updatedAt: string;
-}
-
-export interface CreateDecisionInput {
-	id?: string;
-	cycleId: string;
-	symbol: string;
-	action: DecisionAction;
-	direction: DecisionDirection;
-	size: number;
-	sizeUnit?: SizeUnit;
-	entryPrice?: number | null;
-	stopPrice?: number | null;
-	targetPrice?: number | null;
-	status?: DecisionStatus;
-	strategyFamily?: string | null;
-	timeHorizon?: string | null;
-	rationale?: string | null;
-	bullishFactors?: string[];
-	bearishFactors?: string[];
-	confidenceScore?: number | null;
-	riskScore?: number | null;
-	metadata?: Record<string, unknown>;
-	environment: string;
-}
-
-export interface DecisionFilters {
-	symbol?: string;
-	status?: DecisionStatus | DecisionStatus[];
-	action?: DecisionAction;
-	direction?: DecisionDirection;
-	environment?: string;
-	cycleId?: string;
-	fromDate?: string;
-	toDate?: string;
-}
-
-// ============================================
-// Row Mapping
-// ============================================
-
-type DecisionRow = typeof decisions.$inferSelect;
-
-function mapDecisionRow(row: DecisionRow): Decision {
-	return {
-		id: row.id,
-		cycleId: row.cycleId,
-		symbol: row.symbol,
-		action: row.action as DecisionAction,
-		direction: row.direction as DecisionDirection,
-		size: Number(row.size),
-		sizeUnit: row.sizeUnit as SizeUnit,
-		entryPrice: row.entryPrice ? Number(row.entryPrice) : null,
-		stopPrice: row.stopPrice ? Number(row.stopPrice) : null,
-		targetPrice: row.targetPrice ? Number(row.targetPrice) : null,
-		status: row.status as DecisionStatus,
-		strategyFamily: row.strategyFamily,
-		timeHorizon: row.timeHorizon,
-		rationale: row.rationale,
-		bullishFactors: (row.bullishFactors as string[]) ?? [],
-		bearishFactors: (row.bearishFactors as string[]) ?? [],
-		confidenceScore: row.confidenceScore ? Number(row.confidenceScore) : null,
-		riskScore: row.riskScore ? Number(row.riskScore) : null,
-		metadata: (row.metadata as Record<string, unknown>) ?? {},
-		environment: row.environment,
-		createdAt: row.createdAt.toISOString(),
-		updatedAt: row.updatedAt.toISOString(),
-	};
-}
-
-// ============================================
-// Repository
-// ============================================
+export type {
+	ConfidenceCalibrationBin,
+	CreateDecisionInput,
+	Decision,
+	DecisionAction,
+	DecisionAnalytics,
+	DecisionDirection,
+	DecisionFilters,
+	DecisionStatus,
+	SizeUnit,
+	StrategyBreakdownItem,
+};
 
 export class DecisionsRepository {
 	private db: Database;
@@ -177,37 +94,7 @@ export class DecisionsRepository {
 		filters: DecisionFilters = {},
 		pagination?: { limit?: number; offset?: number },
 	): Promise<{ data: Decision[]; total: number; limit: number; offset: number }> {
-		const conditions = [];
-
-		if (filters.symbol) {
-			conditions.push(eq(decisions.symbol, filters.symbol));
-		}
-		if (filters.status) {
-			if (Array.isArray(filters.status)) {
-				conditions.push(inArray(decisions.status, filters.status));
-			} else {
-				conditions.push(eq(decisions.status, filters.status));
-			}
-		}
-		if (filters.action) {
-			conditions.push(eq(decisions.action, filters.action));
-		}
-		if (filters.direction) {
-			conditions.push(eq(decisions.direction, filters.direction));
-		}
-		if (filters.environment) {
-			conditions.push(eq(decisions.environment, filters.environment as "PAPER" | "LIVE"));
-		}
-		if (filters.cycleId) {
-			conditions.push(eq(decisions.cycleId, filters.cycleId));
-		}
-		if (filters.fromDate) {
-			conditions.push(gte(decisions.createdAt, new Date(filters.fromDate)));
-		}
-		if (filters.toDate) {
-			conditions.push(lte(decisions.createdAt, new Date(filters.toDate)));
-		}
-
+		const conditions = buildDecisionFilterConditions(filters);
 		const whereClause = conditions.length > 0 ? and(...conditions) : undefined;
 		const limit = pagination?.limit ?? 20;
 		const offset = pagination?.offset ?? 0;
@@ -324,56 +211,7 @@ export class DecisionsRepository {
 		id: string,
 		updates: Partial<Omit<CreateDecisionInput, "id" | "cycleId" | "environment">>,
 	): Promise<Decision> {
-		const updateData: Partial<typeof decisions.$inferInsert> = {
-			updatedAt: new Date(),
-		};
-
-		if (updates.symbol !== undefined) {
-			updateData.symbol = updates.symbol;
-		}
-		if (updates.action !== undefined) {
-			updateData.action = updates.action;
-		}
-		if (updates.direction !== undefined) {
-			updateData.direction = updates.direction;
-		}
-		if (updates.size !== undefined) {
-			updateData.size = String(updates.size);
-		}
-		if (updates.sizeUnit !== undefined) {
-			updateData.sizeUnit = updates.sizeUnit;
-		}
-		if (updates.entryPrice !== undefined) {
-			updateData.entryPrice = updates.entryPrice != null ? String(updates.entryPrice) : null;
-		}
-		if (updates.stopPrice !== undefined) {
-			updateData.stopPrice = updates.stopPrice != null ? String(updates.stopPrice) : null;
-		}
-		if (updates.targetPrice !== undefined) {
-			updateData.targetPrice = updates.targetPrice != null ? String(updates.targetPrice) : null;
-		}
-		if (updates.status !== undefined) {
-			updateData.status = updates.status;
-		}
-		if (updates.rationale !== undefined) {
-			updateData.rationale = updates.rationale;
-		}
-		if (updates.bullishFactors !== undefined) {
-			updateData.bullishFactors = updates.bullishFactors;
-		}
-		if (updates.bearishFactors !== undefined) {
-			updateData.bearishFactors = updates.bearishFactors;
-		}
-		if (updates.confidenceScore !== undefined) {
-			updateData.confidenceScore =
-				updates.confidenceScore != null ? String(updates.confidenceScore) : null;
-		}
-		if (updates.riskScore !== undefined) {
-			updateData.riskScore = updates.riskScore != null ? String(updates.riskScore) : null;
-		}
-		if (updates.metadata !== undefined) {
-			updateData.metadata = updates.metadata;
-		}
+		const updateData = buildDecisionUpdateData(updates);
 
 		const [row] = await this.db
 			.update(decisions)
@@ -432,15 +270,15 @@ export class DecisionsRepository {
 			.orderBy(desc(decisions.createdAt))
 			.limit(limit);
 
-		return rows.map((r) => ({
-			id: r.id,
-			symbol: r.symbol,
-			action: r.action as DecisionAction,
+		return rows.map((row) => ({
+			id: row.id,
+			symbol: row.symbol,
+			action: row.action as DecisionAction,
 		}));
 	}
 
 	async getDecisionAnalytics(filters: DecisionFilters = {}): Promise<DecisionAnalytics> {
-		const conditions = this.buildFilterConditions(filters);
+		const conditions = buildDecisionFilterConditions(filters);
 		const whereClause = conditions.length > 0 ? and(...conditions) : undefined;
 
 		const [statusCounts, actionCounts, directionCounts, avgScores] = await Promise.all([
@@ -469,41 +307,13 @@ export class DecisionsRepository {
 				.where(whereClause),
 		]);
 
-		const statusDistribution: Record<string, number> = {};
-		for (const row of statusCounts) {
-			statusDistribution[row.status] = row.count;
-		}
-
-		const actionDistribution: Record<string, number> = {};
-		for (const row of actionCounts) {
-			actionDistribution[row.action] = row.count;
-		}
-
-		const directionDistribution: Record<string, number> = {};
-		for (const row of directionCounts) {
-			directionDistribution[row.direction] = row.count;
-		}
-
-		const total = avgScores[0]?.total ?? 0;
-		const executed = statusDistribution.executed ?? 0;
-		const approved = statusDistribution.approved ?? 0;
-		const executionRate = total > 0 ? ((executed + approved) / total) * 100 : 0;
-
-		return {
-			totalDecisions: total,
-			executionRate,
-			statusDistribution,
-			actionDistribution,
-			directionDistribution,
-			avgConfidence: avgScores[0]?.avgConfidence ? Number(avgScores[0].avgConfidence) : null,
-			avgRisk: avgScores[0]?.avgRisk ? Number(avgScores[0].avgRisk) : null,
-		};
+		return buildDecisionAnalytics(statusCounts, actionCounts, directionCounts, avgScores[0]);
 	}
 
 	async getConfidenceCalibration(
 		filters: DecisionFilters = {},
 	): Promise<ConfidenceCalibrationBin[]> {
-		const conditions = this.buildFilterConditions(filters);
+		const conditions = buildDecisionFilterConditions(filters);
 		const whereClause = conditions.length > 0 ? and(...conditions) : undefined;
 
 		const rows = await this.db
@@ -545,7 +355,7 @@ export class DecisionsRepository {
 	}
 
 	async getStrategyBreakdown(filters: DecisionFilters = {}): Promise<StrategyBreakdownItem[]> {
-		const conditions = this.buildFilterConditions(filters);
+		const conditions = buildDecisionFilterConditions(filters);
 		const whereClause = conditions.length > 0 ? and(...conditions) : undefined;
 
 		const rows = await this.db
@@ -575,69 +385,4 @@ export class DecisionsRepository {
 			avgRisk: row.avgRisk ? Number(row.avgRisk) : null,
 		}));
 	}
-
-	private buildFilterConditions(filters: DecisionFilters) {
-		const conditions = [];
-
-		if (filters.symbol) {
-			conditions.push(eq(decisions.symbol, filters.symbol));
-		}
-		if (filters.status) {
-			if (Array.isArray(filters.status)) {
-				conditions.push(inArray(decisions.status, filters.status));
-			} else {
-				conditions.push(eq(decisions.status, filters.status));
-			}
-		}
-		if (filters.action) {
-			conditions.push(eq(decisions.action, filters.action));
-		}
-		if (filters.direction) {
-			conditions.push(eq(decisions.direction, filters.direction));
-		}
-		if (filters.environment) {
-			conditions.push(eq(decisions.environment, filters.environment as "PAPER" | "LIVE"));
-		}
-		if (filters.cycleId) {
-			conditions.push(eq(decisions.cycleId, filters.cycleId));
-		}
-		if (filters.fromDate) {
-			conditions.push(gte(decisions.createdAt, new Date(filters.fromDate)));
-		}
-		if (filters.toDate) {
-			conditions.push(lte(decisions.createdAt, new Date(filters.toDate)));
-		}
-
-		return conditions;
-	}
-}
-
-// ============================================
-// Analytics Types
-// ============================================
-
-export interface DecisionAnalytics {
-	totalDecisions: number;
-	executionRate: number;
-	statusDistribution: Record<string, number>;
-	actionDistribution: Record<string, number>;
-	directionDistribution: Record<string, number>;
-	avgConfidence: number | null;
-	avgRisk: number | null;
-}
-
-export interface ConfidenceCalibrationBin {
-	bin: string;
-	total: number;
-	executed: number;
-	executionRate: number;
-}
-
-export interface StrategyBreakdownItem {
-	strategyFamily: string;
-	count: number;
-	executedCount: number;
-	approvalRate: number;
-	avgConfidence: number | null;
-	avgRisk: number | null;
 }

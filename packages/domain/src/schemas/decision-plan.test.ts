@@ -16,93 +16,12 @@ import {
 	SizeSchema,
 	StrategyFamilySchema,
 	TimeInForceSchema,
-	validateDecisionPlan,
-	validateRiskReward,
 } from "./decision-plan.js";
-
-// ============================================
-// Test Data
-// ============================================
-
-const validEquityDecision = {
-	instrument: {
-		instrumentId: "AAPL",
-		instrumentType: "EQUITY" as const,
-	},
-	action: "INCREASE" as const,
-	size: {
-		quantity: 250,
-		unit: "SHARES" as const,
-		targetPositionQuantity: 500,
-	},
-	orderPlan: {
-		entryOrderType: "LIMIT" as const,
-		entryLimitPrice: 201.15,
-		exitOrderType: "MARKET" as const,
-		timeInForce: "DAY" as const,
-		executionTactic: "",
-		executionParams: {},
-	},
-	riskLevels: {
-		stopLossLevel: 195.0,
-		takeProfitLevel: 212.5,
-		denomination: "UNDERLYING_PRICE" as const,
-	},
-	strategyFamily: "TREND" as const,
-	rationale: "Regime=BULL_TREND; trend metrics strengthening",
-	confidence: 0.71,
-	references: {
-		usedIndicators: ["cfg:trend_strength"],
-		memoryCaseIds: ["td_0182"],
-		eventIds: [],
-	},
-};
-
-const validOptionDecision = {
-	instrument: {
-		instrumentId: "SPY_2026-03-20_450_C",
-		instrumentType: "OPTION" as const,
-		optionContract: {
-			underlyingSymbol: "SPY",
-			expirationDate: "2026-03-20",
-			strike: 450.0,
-			right: "CALL" as const,
-			multiplier: 100,
-		},
-	},
-	action: "BUY" as const,
-	size: {
-		quantity: 5,
-		unit: "CONTRACTS" as const,
-		targetPositionQuantity: 5,
-	},
-	orderPlan: {
-		entryOrderType: "LIMIT" as const,
-		entryLimitPrice: 12.5,
-		exitOrderType: "MARKET" as const,
-		timeInForce: "DAY" as const,
-	},
-	riskLevels: {
-		stopLossLevel: 445.0,
-		takeProfitLevel: 465.0,
-		denomination: "UNDERLYING_PRICE" as const,
-	},
-	strategyFamily: "TREND" as const,
-	rationale: "SPY in BULL_TREND; delta exposure adds to portfolio bias",
-	confidence: 0.65,
-};
-
-const validDecisionPlan = {
-	cycleId: "2026-01-04T15:00:00Z",
-	asOfTimestamp: "2026-01-04T15:00:00Z",
-	environment: "LIVE" as const,
-	decisions: [validEquityDecision],
-	portfolioNotes: "Increase trend sleeve via AAPL equity",
-};
-
-// ============================================
-// Enum Tests
-// ============================================
+import {
+	validDecisionPlan,
+	validEquityDecision,
+	validOptionDecision,
+} from "./decision-plan.test-data.js";
 
 describe("Enums", () => {
 	it("validates Environment enum", () => {
@@ -137,10 +56,6 @@ describe("Enums", () => {
 	});
 });
 
-// ============================================
-// ISO8601 Timestamp Tests
-// ============================================
-
 describe("ISO8601TimestampSchema", () => {
 	it("accepts valid timestamps", () => {
 		expect(ISO8601TimestampSchema.parse("2026-01-04T15:00:00Z")).toBe("2026-01-04T15:00:00Z");
@@ -151,14 +66,10 @@ describe("ISO8601TimestampSchema", () => {
 
 	it("rejects invalid timestamps", () => {
 		expect(() => ISO8601TimestampSchema.parse("2026-01-04")).toThrow();
-		expect(() => ISO8601TimestampSchema.parse("2026-01-04T15:00:00")).toThrow(); // No Z
-		expect(() => ISO8601TimestampSchema.parse("2026-01-04T15:00:00+00:00")).toThrow(); // Wrong offset format
+		expect(() => ISO8601TimestampSchema.parse("2026-01-04T15:00:00")).toThrow();
+		expect(() => ISO8601TimestampSchema.parse("2026-01-04T15:00:00+00:00")).toThrow();
 	});
 });
-
-// ============================================
-// Instrument Tests
-// ============================================
 
 describe("InstrumentSchema", () => {
 	it("validates equity instrument", () => {
@@ -195,10 +106,6 @@ describe("InstrumentSchema", () => {
 	});
 });
 
-// ============================================
-// OptionContract Tests
-// ============================================
-
 describe("OptionContractSchema", () => {
 	it("validates complete option contract", () => {
 		const contract = OptionContractSchema.parse({
@@ -216,7 +123,7 @@ describe("OptionContractSchema", () => {
 		expect(() =>
 			OptionContractSchema.parse({
 				underlyingSymbol: "SPY",
-				expirationDate: "03-20-2026", // Wrong format
+				expirationDate: "03-20-2026",
 				strike: 450.0,
 				right: "CALL",
 			}),
@@ -234,10 +141,6 @@ describe("OptionContractSchema", () => {
 	});
 });
 
-// ============================================
-// Size Tests
-// ============================================
-
 describe("SizeSchema", () => {
 	it("validates size with shares", () => {
 		const size = SizeSchema.parse({
@@ -253,7 +156,7 @@ describe("SizeSchema", () => {
 		const size = SizeSchema.parse({
 			quantity: 5,
 			unit: "CONTRACTS",
-			targetPositionQuantity: -5, // Short position
+			targetPositionQuantity: -5,
 		});
 		expect(size.targetPositionQuantity).toBe(-5);
 	});
@@ -267,10 +170,6 @@ describe("SizeSchema", () => {
 		expect(size.quantity).toBe(0);
 	});
 });
-
-// ============================================
-// RiskLevels Tests
-// ============================================
 
 describe("RiskLevelsSchema", () => {
 	it("validates risk levels", () => {
@@ -310,10 +209,6 @@ describe("RiskLevelsSchema", () => {
 		).toThrow();
 	});
 });
-
-// ============================================
-// OrderPlan Tests
-// ============================================
 
 describe("OrderPlanSchema", () => {
 	it("validates LIMIT order with price", () => {
@@ -371,10 +266,6 @@ describe("OrderPlanSchema", () => {
 	});
 });
 
-// ============================================
-// Decision Tests
-// ============================================
-
 describe("DecisionSchema", () => {
 	it("validates complete equity decision", () => {
 		const decision = DecisionSchema.parse(validEquityDecision);
@@ -390,19 +281,8 @@ describe("DecisionSchema", () => {
 	});
 
 	it("rejects confidence outside [0, 1]", () => {
-		expect(() =>
-			DecisionSchema.parse({
-				...validEquityDecision,
-				confidence: 1.5,
-			}),
-		).toThrow();
-
-		expect(() =>
-			DecisionSchema.parse({
-				...validEquityDecision,
-				confidence: -0.1,
-			}),
-		).toThrow();
+		expect(() => DecisionSchema.parse({ ...validEquityDecision, confidence: 1.5 })).toThrow();
+		expect(() => DecisionSchema.parse({ ...validEquityDecision, confidence: -0.1 })).toThrow();
 	});
 
 	it("provides default references", () => {
@@ -413,10 +293,6 @@ describe("DecisionSchema", () => {
 		expect(decision.references.eventIds).toEqual([]);
 	});
 });
-
-// ============================================
-// DecisionPlan Tests
-// ============================================
 
 describe("DecisionPlanSchema", () => {
 	it("validates complete decision plan", () => {
@@ -446,150 +322,5 @@ describe("DecisionPlanSchema", () => {
 		const { portfolioNotes, ...planWithoutNotes } = validDecisionPlan;
 		const plan = DecisionPlanSchema.parse(planWithoutNotes);
 		expect(plan.portfolioNotes).toBeUndefined();
-	});
-});
-
-// ============================================
-// validateRiskReward Tests
-// ============================================
-
-describe("validateRiskReward", () => {
-	it("validates good long position risk-reward", () => {
-		const decision = DecisionSchema.parse({
-			...validEquityDecision,
-			riskLevels: {
-				stopLossLevel: 195.0, // 6.15 risk
-				takeProfitLevel: 220.0, // 18.85 reward -> 3:1 RR
-				denomination: "UNDERLYING_PRICE",
-			},
-		});
-
-		const result = validateRiskReward(decision, 201.15);
-		expect(result.valid).toBe(true);
-		expect(result.riskRewardRatio).toBeGreaterThan(3);
-		expect(result.errors).toHaveLength(0);
-	});
-
-	it("rejects insufficient risk-reward ratio", () => {
-		const decision = DecisionSchema.parse({
-			...validEquityDecision,
-			riskLevels: {
-				stopLossLevel: 195.0, // 6.15 risk
-				takeProfitLevel: 205.0, // 3.85 reward -> 0.63:1 RR
-				denomination: "UNDERLYING_PRICE",
-			},
-		});
-
-		const result = validateRiskReward(decision, 201.15);
-		expect(result.valid).toBe(false);
-		expect(result.errors.some((e) => e.includes("below minimum 1.5:1"))).toBe(true);
-	});
-
-	it("rejects long position with stop above entry", () => {
-		const decision = DecisionSchema.parse({
-			...validEquityDecision,
-			riskLevels: {
-				stopLossLevel: 210.0, // Above entry
-				takeProfitLevel: 220.0,
-				denomination: "UNDERLYING_PRICE",
-			},
-		});
-
-		const result = validateRiskReward(decision, 201.15);
-		expect(result.valid).toBe(false);
-		expect(result.errors.some((e) => e.includes("must be below entry"))).toBe(true);
-	});
-
-	it("validates short position risk-reward", () => {
-		const shortDecision = DecisionSchema.parse({
-			...validEquityDecision,
-			size: {
-				quantity: 100,
-				unit: "SHARES",
-				targetPositionQuantity: -100, // Short position
-			},
-			riskLevels: {
-				stopLossLevel: 210.0, // Above entry (stop for short)
-				takeProfitLevel: 180.0, // Below entry (profit for short)
-				denomination: "UNDERLYING_PRICE",
-			},
-		});
-
-		const result = validateRiskReward(shortDecision, 200.0);
-		expect(result.valid).toBe(true);
-		expect(result.riskRewardRatio).toBe(2); // 20 reward / 10 risk
-	});
-
-	it("warns when stop exceeds 5x profit target", () => {
-		const decision = DecisionSchema.parse({
-			...validEquityDecision,
-			riskLevels: {
-				stopLossLevel: 150.0, // 51.15 risk
-				takeProfitLevel: 210.0, // 8.85 reward -> risk is >5x reward
-				denomination: "UNDERLYING_PRICE",
-			},
-		});
-
-		const result = validateRiskReward(decision, 201.15);
-		expect(result.warnings.some((w) => w.includes("5x"))).toBe(true);
-	});
-});
-
-// ============================================
-// validateDecisionPlan Tests
-// ============================================
-
-describe("validateDecisionPlan", () => {
-	it("validates complete plan", () => {
-		const result = validateDecisionPlan(validDecisionPlan);
-		expect(result.success).toBe(true);
-		expect(result.decisionPlan).toBeDefined();
-		expect(result.errors).toHaveLength(0);
-	});
-
-	it("rejects invalid plan structure", () => {
-		const result = validateDecisionPlan({
-			cycleId: "test",
-			// Missing required fields
-		});
-		expect(result.success).toBe(false);
-		expect(result.errors.length).toBeGreaterThan(0);
-	});
-
-	it("warns on NO_TRADE with non-zero quantity", () => {
-		const result = validateDecisionPlan({
-			...validDecisionPlan,
-			decisions: [
-				{
-					...validEquityDecision,
-					action: "NO_TRADE",
-					size: {
-						quantity: 100, // Should be 0
-						unit: "SHARES",
-						targetPositionQuantity: 0,
-					},
-				},
-			],
-		});
-		expect(result.success).toBe(true);
-		expect(result.warnings.some((w) => w.includes("NO_TRADE"))).toBe(true);
-	});
-
-	it("errors on wrong size unit for instrument type", () => {
-		const result = validateDecisionPlan({
-			...validDecisionPlan,
-			decisions: [
-				{
-					...validOptionDecision,
-					size: {
-						quantity: 5,
-						unit: "SHARES", // Should be CONTRACTS
-						targetPositionQuantity: 5,
-					},
-				},
-			],
-		});
-		expect(result.success).toBe(false);
-		expect(result.errors.some((e) => e.includes("CONTRACTS"))).toBe(true);
 	});
 });

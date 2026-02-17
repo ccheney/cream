@@ -8,7 +8,7 @@
 
 "use client";
 
-import { memo, useCallback, useMemo } from "react";
+import { memo, useCallback } from "react";
 import {
 	Area,
 	CartesianGrid,
@@ -37,8 +37,6 @@ export interface PLChartProps {
 	showBreakeven?: boolean;
 	/** Show current price marker (default: true) */
 	showCurrentPrice?: boolean;
-	/** Custom price range */
-	priceRange?: { min: number; max: number };
 	/** Price range percentage (default: 20) */
 	rangePercent?: number;
 	/** Chart height (default: 300) */
@@ -58,6 +56,11 @@ interface CustomTooltipProps {
 	payload?: Array<{ payload: CustomTooltipPayload }>;
 }
 
+function formatPnlValue(value: number): string {
+	const sign = value >= 0 ? "+" : "";
+	return `${sign}$${value.toLocaleString("en-US", { maximumFractionDigits: 0 })}`;
+}
+
 function CustomTooltip({ active, payload }: CustomTooltipProps) {
 	if (!active || !payload || payload.length === 0) {
 		return null;
@@ -67,13 +70,9 @@ function CustomTooltip({ active, payload }: CustomTooltipProps) {
 	if (!data) {
 		return null;
 	}
+
 	const expColor = data.pnlAtExpiration >= 0 ? CHART_COLORS.profit : CHART_COLORS.loss;
 	const todayColor = data.pnlToday >= 0 ? CHART_COLORS.profit : CHART_COLORS.loss;
-
-	const formatPnl = (value: number) => {
-		const sign = value >= 0 ? "+" : "";
-		return `${sign}$${value.toLocaleString("en-US", { maximumFractionDigits: 0 })}`;
-	};
 
 	return (
 		<div
@@ -90,9 +89,9 @@ function CustomTooltip({ active, payload }: CustomTooltipProps) {
 				${data.price.toFixed(2)}
 			</p>
 			<p style={{ color: expColor, margin: 0, marginBottom: 2 }}>
-				At Exp: {formatPnl(data.pnlAtExpiration)}
+				At Exp: {formatPnlValue(data.pnlAtExpiration)}
 			</p>
-			<p style={{ color: todayColor, margin: 0 }}>Today: {formatPnl(data.pnlToday)}</p>
+			<p style={{ color: todayColor, margin: 0 }}>{`Today: ${formatPnlValue(data.pnlToday)}`}</p>
 		</div>
 	);
 }
@@ -110,14 +109,6 @@ const ChartLegend = memo(function ChartLegend({
 	analysis,
 	dte,
 }: ChartLegendProps) {
-	const formatPnl = (value: number) => {
-		if (!Number.isFinite(value)) {
-			return "Unlimited";
-		}
-		const sign = value >= 0 ? "+" : "";
-		return `${sign}$${value.toLocaleString("en-US", { maximumFractionDigits: 0 })}`;
-	};
-
 	return (
 		<div className="flex flex-wrap items-center gap-4 text-xs mt-2">
 			{showAtExpiration && (
@@ -137,23 +128,279 @@ const ChartLegend = memo(function ChartLegend({
 			)}
 			<div className="flex items-center gap-1.5">
 				<span className="text-stone-500 dark:text-night-300">Max Profit:</span>
-				<span className="text-green-500 font-mono">{formatPnl(analysis.maxProfit)}</span>
+				<span className="text-green-500 font-mono">{formatLegendValue(analysis.maxProfit)}</span>
 			</div>
 			<div className="flex items-center gap-1.5">
 				<span className="text-stone-500 dark:text-night-300">Max Loss:</span>
-				<span className="text-red-500 font-mono">{formatPnl(analysis.maxLoss)}</span>
+				<span className="text-red-500 font-mono">{formatLegendValue(analysis.maxLoss)}</span>
 			</div>
 			{analysis.breakevens.length > 0 && (
 				<div className="flex items-center gap-1.5">
 					<span className="text-stone-500 dark:text-night-300">Break-even:</span>
 					<span className="text-stone-700 dark:text-night-100 font-mono">
-						${analysis.breakevens.map((b) => b.toFixed(2)).join(", $")}
+						${analysis.breakevens.map((price) => price.toFixed(2)).join(", $")}
 					</span>
 				</div>
 			)}
 		</div>
 	);
 });
+
+function formatLegendValue(value: number): string {
+	if (!Number.isFinite(value)) {
+		return "Unlimited";
+	}
+	return formatPnlValue(value);
+}
+
+function ChartDefinitions() {
+	return (
+		<defs>
+			<linearGradient id="profitGradient" x1="0" y1="0" x2="0" y2="1">
+				<stop offset="0%" stopColor={CHART_COLORS.profit} stopOpacity={0.3} />
+				<stop offset="100%" stopColor={CHART_COLORS.profit} stopOpacity={0} />
+			</linearGradient>
+			<linearGradient id="lossGradient" x1="0" y1="1" x2="0" y2="0">
+				<stop offset="0%" stopColor={CHART_COLORS.loss} stopOpacity={0.3} />
+				<stop offset="100%" stopColor={CHART_COLORS.loss} stopOpacity={0} />
+			</linearGradient>
+		</defs>
+	);
+}
+
+function ChartAxes({
+	priceRange,
+	yDomain,
+}: {
+	priceRange: { min: number; max: number };
+	yDomain: [number, number];
+}) {
+	return (
+		<>
+			<CartesianGrid strokeDasharray="3 3" stroke={CHART_COLORS.grid} />
+			<XAxis
+				dataKey="price"
+				stroke={CHART_COLORS.text}
+				tick={{ fill: CHART_COLORS.text, fontSize: 10 }}
+				tickFormatter={(value) => `$${value.toFixed(0)}`}
+				axisLine={{ stroke: CHART_COLORS.grid }}
+				tickLine={{ stroke: CHART_COLORS.grid }}
+				domain={[priceRange.min, priceRange.max]}
+			/>
+			<YAxis
+				domain={yDomain}
+				stroke={CHART_COLORS.text}
+				tick={{ fill: CHART_COLORS.text, fontSize: 10 }}
+				tickFormatter={(value) => `$${value.toLocaleString()}`}
+				axisLine={{ stroke: CHART_COLORS.grid }}
+				tickLine={{ stroke: CHART_COLORS.grid }}
+				width={60}
+			/>
+			<ReferenceLine y={0} stroke={CHART_COLORS.text} strokeWidth={1} />
+		</>
+	);
+}
+
+function PriceReferenceLine({
+	underlyingPrice,
+	showCurrentPrice,
+	showAtExpiration,
+	showToday,
+	showBreakeven,
+	analysis,
+}: {
+	underlyingPrice: number;
+	showCurrentPrice: boolean;
+	showAtExpiration: boolean;
+	showToday: boolean;
+	showBreakeven: boolean;
+	analysis: PLAnalysis;
+}) {
+	return (
+		<>
+			{showCurrentPrice && (
+				<ReferenceLine
+					x={underlyingPrice}
+					stroke={CHART_COLORS.primary}
+					strokeWidth={2}
+					strokeDasharray="5 5"
+					label={{
+						value: `Current $${underlyingPrice.toFixed(2)}`,
+						position: "top",
+						fill: CHART_COLORS.primary,
+						fontSize: 10,
+					}}
+				/>
+			)}
+			{showBreakeven && <BreakevenMarkers values={analysis.breakevens} />}
+			{showAtExpiration && (
+				<Area
+					type="monotone"
+					dataKey="pnlAtExpiration"
+					stroke="none"
+					fill="url(#profitGradient)"
+					isAnimationActive={false}
+				/>
+			)}
+			{showAtExpiration && (
+				<Line
+					type="monotone"
+					dataKey="pnlAtExpiration"
+					stroke={CHART_COLORS.profit}
+					strokeWidth={2}
+					dot={false}
+					isAnimationActive={false}
+				/>
+			)}
+			{showToday && (
+				<Line
+					type="monotone"
+					dataKey="pnlToday"
+					stroke={CHART_COLORS.primary}
+					strokeWidth={2}
+					strokeDasharray="5 5"
+					dot={false}
+					isAnimationActive={false}
+				/>
+			)}
+		</>
+	);
+}
+
+function PLChartSeries({
+	underlyingPrice,
+	showCurrentPrice,
+	showBreakeven,
+	showAtExpiration,
+	showToday,
+	analysis,
+	onMouseMove,
+	data,
+	priceRange,
+}: {
+	underlyingPrice: number;
+	showCurrentPrice: boolean;
+	showBreakeven: boolean;
+	showAtExpiration: boolean;
+	showToday: boolean;
+	analysis: PLAnalysis;
+	onMouseMove: (state: Record<string, unknown>) => void;
+	data: PLDataPoint[];
+	priceRange: { min: number; max: number };
+}) {
+	return (
+		<ComposedChart
+			data={data}
+			margin={{ top: 10, right: 10, left: 10, bottom: 0 }}
+			onMouseMove={onMouseMove}
+		>
+			<ChartDefinitions />
+			<ChartAxes priceRange={priceRange} yDomain={calculateYDomain(data)} />
+			<PriceReferenceLine
+				underlyingPrice={underlyingPrice}
+				showCurrentPrice={showCurrentPrice}
+				showBreakeven={showBreakeven}
+				showAtExpiration={showAtExpiration}
+				showToday={showToday}
+				analysis={analysis}
+			/>
+			<Tooltip content={<CustomTooltip />} cursor={{ stroke: CHART_COLORS.grid }} />
+		</ComposedChart>
+	);
+}
+
+function EmptyPLChart({ className, height }: { className: string; height: number }) {
+	return (
+		<div
+			className={`flex items-center justify-center text-stone-500 dark:text-night-300 ${className}`}
+			style={{ height: `${height}px` }}
+		>
+			Add positions to see P/L chart
+		</div>
+	);
+}
+
+function calculateYDomain(data: PLDataPoint[]): [number, number] {
+	if (data.length === 0) {
+		return [-1000, 1000];
+	}
+
+	const allValues = data.flatMap((d) => [d.pnlAtExpiration, d.pnlToday]);
+	const min = Math.min(...allValues, 0);
+	const max = Math.max(...allValues, 0);
+	const padding = Math.max(Math.abs(max - min) * 0.1, 100);
+
+	return [min - padding, max + padding];
+}
+
+function PLChartCanvas({
+	data,
+	analysis,
+	underlyingPrice,
+	priceRange,
+	height,
+	showCurrentPrice,
+	showBreakeven,
+	showAtExpiration,
+	showToday,
+	className,
+	onMouseMove,
+}: {
+	data: PLDataPoint[];
+	analysis: PLAnalysis;
+	underlyingPrice: number;
+	priceRange: { min: number; max: number };
+	height: number;
+	showCurrentPrice: boolean;
+	showBreakeven: boolean;
+	showAtExpiration: boolean;
+	showToday: boolean;
+	className?: string;
+	onMouseMove: (state: Record<string, unknown>) => void;
+}) {
+	return (
+		<div className={className} style={{ height: `${height}px` }}>
+			<ResponsiveContainer width="100%" height="100%">
+				<PLChartSeries
+					data={data}
+					underlyingPrice={underlyingPrice}
+					showCurrentPrice={showCurrentPrice}
+					showBreakeven={showBreakeven}
+					showAtExpiration={showAtExpiration}
+					showToday={showToday}
+					analysis={analysis}
+					onMouseMove={onMouseMove}
+					priceRange={priceRange}
+				/>
+			</ResponsiveContainer>
+		</div>
+	);
+}
+
+function BreakevenMarkers({ values }: { values: number[] }) {
+	if (values.length === 0) {
+		return null;
+	}
+
+	return (
+		<>
+			{values.map((be) => (
+				<ReferenceLine
+					key={be}
+					x={be}
+					stroke={CHART_COLORS.text}
+					strokeDasharray="3 3"
+					label={{
+						value: `BE $${be.toFixed(2)}`,
+						position: "bottom",
+						fill: CHART_COLORS.text,
+						fontSize: 9,
+					}}
+				/>
+			))}
+		</>
+	);
+}
 
 function PLChartComponent({
 	legs,
@@ -174,19 +421,6 @@ function PLChartComponent({
 		points: 100,
 	});
 
-	const yDomain = useMemo(() => {
-		if (data.length === 0) {
-			return [-1000, 1000];
-		}
-
-		const allValues = data.flatMap((d) => [d.pnlAtExpiration, d.pnlToday]);
-		const min = Math.min(...allValues, 0);
-		const max = Math.max(...allValues, 0);
-		const padding = Math.max(Math.abs(max - min) * 0.1, 100);
-
-		return [min - padding, max + padding];
-	}, [data]);
-
 	const handleMouseMove = useCallback(
 		(state: Record<string, unknown>) => {
 			const activePayload = state.activePayload as Array<{ payload: PLDataPoint }> | undefined;
@@ -201,117 +435,24 @@ function PLChartComponent({
 	);
 
 	if (legs.length === 0) {
-		return (
-			<div
-				className={`flex items-center justify-center text-stone-500 dark:text-night-300 ${className}`}
-				style={{ height: `${height}px` }}
-			>
-				Add positions to see P/L chart
-			</div>
-		);
+		return <EmptyPLChart className={className} height={height} />;
 	}
 
 	return (
-		<div className={className}>
-			<ResponsiveContainer width="100%" height={height}>
-				<ComposedChart
-					data={data}
-					margin={{ top: 10, right: 10, left: 10, bottom: 0 }}
-					onMouseMove={handleMouseMove}
-				>
-					<defs>
-						<linearGradient id="profitGradient" x1="0" y1="0" x2="0" y2="1">
-							<stop offset="0%" stopColor={CHART_COLORS.profit} stopOpacity={0.3} />
-							<stop offset="100%" stopColor={CHART_COLORS.profit} stopOpacity={0} />
-						</linearGradient>
-						<linearGradient id="lossGradient" x1="0" y1="1" x2="0" y2="0">
-							<stop offset="0%" stopColor={CHART_COLORS.loss} stopOpacity={0.3} />
-							<stop offset="100%" stopColor={CHART_COLORS.loss} stopOpacity={0} />
-						</linearGradient>
-					</defs>
-
-					<CartesianGrid strokeDasharray="3 3" stroke={CHART_COLORS.grid} />
-					<XAxis
-						dataKey="price"
-						stroke={CHART_COLORS.text}
-						tick={{ fill: CHART_COLORS.text, fontSize: 10 }}
-						tickFormatter={(value) => `$${value.toFixed(0)}`}
-						axisLine={{ stroke: CHART_COLORS.grid }}
-						tickLine={{ stroke: CHART_COLORS.grid }}
-						domain={[priceRange.min, priceRange.max]}
-					/>
-					<YAxis
-						domain={yDomain}
-						stroke={CHART_COLORS.text}
-						tick={{ fill: CHART_COLORS.text, fontSize: 10 }}
-						tickFormatter={(value) => `$${value.toLocaleString()}`}
-						axisLine={{ stroke: CHART_COLORS.grid }}
-						tickLine={{ stroke: CHART_COLORS.grid }}
-						width={60}
-					/>
-					<ReferenceLine y={0} stroke={CHART_COLORS.text} strokeWidth={1} />
-					{showCurrentPrice && (
-						<ReferenceLine
-							x={underlyingPrice}
-							stroke={CHART_COLORS.primary}
-							strokeWidth={2}
-							strokeDasharray="5 5"
-							label={{
-								value: `Current $${underlyingPrice.toFixed(2)}`,
-								position: "top",
-								fill: CHART_COLORS.primary,
-								fontSize: 10,
-							}}
-						/>
-					)}
-					{showBreakeven &&
-						analysis.breakevens.map((be) => (
-							<ReferenceLine
-								key={be}
-								x={be}
-								stroke={CHART_COLORS.text}
-								strokeDasharray="3 3"
-								label={{
-									value: `BE $${be.toFixed(2)}`,
-									position: "bottom",
-									fill: CHART_COLORS.text,
-									fontSize: 9,
-								}}
-							/>
-						))}
-					<Tooltip content={<CustomTooltip />} cursor={{ stroke: CHART_COLORS.grid }} />
-					{showAtExpiration && (
-						<Area
-							type="monotone"
-							dataKey="pnlAtExpiration"
-							stroke="none"
-							fill="url(#profitGradient)"
-							isAnimationActive={false}
-						/>
-					)}
-					{showAtExpiration && (
-						<Line
-							type="monotone"
-							dataKey="pnlAtExpiration"
-							stroke={CHART_COLORS.profit}
-							strokeWidth={2}
-							dot={false}
-							isAnimationActive={false}
-						/>
-					)}
-					{showToday && (
-						<Line
-							type="monotone"
-							dataKey="pnlToday"
-							stroke={CHART_COLORS.primary}
-							strokeWidth={2}
-							strokeDasharray="5 5"
-							dot={false}
-							isAnimationActive={false}
-						/>
-					)}
-				</ComposedChart>
-			</ResponsiveContainer>
+		<div>
+			<PLChartCanvas
+				data={data}
+				analysis={analysis}
+				underlyingPrice={underlyingPrice}
+				priceRange={priceRange}
+				height={height}
+				showCurrentPrice={showCurrentPrice}
+				showBreakeven={showBreakeven}
+				showAtExpiration={showAtExpiration}
+				showToday={showToday}
+				className={className}
+				onMouseMove={handleMouseMove}
+			/>
 			<ChartLegend
 				showAtExpiration={showAtExpiration}
 				showToday={showToday}

@@ -1,15 +1,13 @@
 /**
- * Tests for Secrets Management
+ * Tests for Secrets Management Providers and Factories
  */
 
 import { beforeEach, describe, expect, it } from "bun:test";
 import {
 	createEnvSecretsManager,
 	createSecretsManager,
-	EncryptedFileSecretsProvider,
 	EnvSecretsProvider,
 	MemorySecretsProvider,
-	SecretsManager,
 } from "./secrets";
 
 // Silent logger for tests
@@ -23,7 +21,7 @@ const silentLogger = {
 // EnvSecretsProvider Tests
 // ============================================
 
-describe("EnvSecretsProvider", () => {
+describe("EnvSecretsProvider core behavior", () => {
 	it("should have correct name", () => {
 		const provider = new EnvSecretsProvider();
 		expect(provider.name).toBe("env");
@@ -45,6 +43,13 @@ describe("EnvSecretsProvider", () => {
 		expect(value).toBeNull();
 	});
 
+	it("should always pass health check", async () => {
+		const provider = new EnvSecretsProvider();
+		expect(await provider.healthCheck()).toBe(true);
+	});
+});
+
+describe("EnvSecretsProvider prefix behavior", () => {
 	it("should check if key exists", async () => {
 		Bun.env.TEST_HAS_KEY = "value";
 		const provider = new EnvSecretsProvider();
@@ -77,18 +82,13 @@ describe("EnvSecretsProvider", () => {
 
 		delete Bun.env.PREFIX_SECRET;
 	});
-
-	it("should always pass health check", async () => {
-		const provider = new EnvSecretsProvider();
-		expect(await provider.healthCheck()).toBe(true);
-	});
 });
 
 // ============================================
 // MemorySecretsProvider Tests
 // ============================================
 
-describe("MemorySecretsProvider", () => {
+describe("MemorySecretsProvider basic operations", () => {
 	let provider: MemorySecretsProvider;
 
 	beforeEach(() => {
@@ -119,6 +119,14 @@ describe("MemorySecretsProvider", () => {
 		expect(await provider.has("EXISTS")).toBe(true);
 		expect(await provider.has("MISSING")).toBe(false);
 	});
+});
+
+describe("MemorySecretsProvider collection operations", () => {
+	let provider: MemorySecretsProvider;
+
+	beforeEach(() => {
+		provider = new MemorySecretsProvider();
+	});
 
 	it("should list all keys", async () => {
 		provider.set("A", "1");
@@ -147,331 +155,6 @@ describe("MemorySecretsProvider", () => {
 
 	it("should always pass health check", async () => {
 		expect(await provider.healthCheck()).toBe(true);
-	});
-});
-
-// ============================================
-// EncryptedFileSecretsProvider Tests
-// ============================================
-
-describe("EncryptedFileSecretsProvider", () => {
-	const testFilePath = `/tmp/test-secrets-${Date.now()}.enc`;
-	const testPassword = "test-encryption-password-123";
-	const testSecrets = {
-		API_KEY: "secret-api-key",
-		DB_PASSWORD: "super-secret-password",
-	};
-
-	it("should have correct name", () => {
-		const provider = new EncryptedFileSecretsProvider("/tmp/secrets.enc", "password");
-		expect(provider.name).toBe("encrypted-file");
-	});
-
-	it("should encrypt and decrypt secrets", () => {
-		// Encrypt
-		const encrypted = EncryptedFileSecretsProvider.encrypt(testSecrets, testPassword);
-		expect(encrypted).toBeDefined();
-		expect(typeof encrypted).toBe("string");
-
-		// Should be base64
-		expect(() => Buffer.from(encrypted, "base64")).not.toThrow();
-	});
-
-	it("should fail health check for missing file", async () => {
-		const provider = new EncryptedFileSecretsProvider("/nonexistent/path/secrets.enc", "password");
-		expect(await provider.healthCheck()).toBe(false);
-	});
-
-	it("should get secret from encrypted file", async () => {
-		// Create encrypted file
-		const encrypted = EncryptedFileSecretsProvider.encrypt(testSecrets, testPassword);
-		await Bun.write(testFilePath, encrypted);
-
-		const provider = new EncryptedFileSecretsProvider(testFilePath, testPassword);
-
-		const value = await provider.get("API_KEY");
-		expect(value).toBe("secret-api-key");
-
-		// Cleanup
-		await Bun.file(testFilePath)
-			.delete()
-			.catch(() => {});
-	});
-
-	it("should check if key exists in encrypted file", async () => {
-		// Create encrypted file
-		const encrypted = EncryptedFileSecretsProvider.encrypt(testSecrets, testPassword);
-		await Bun.write(testFilePath, encrypted);
-
-		const provider = new EncryptedFileSecretsProvider(testFilePath, testPassword);
-
-		expect(await provider.has("API_KEY")).toBe(true);
-		expect(await provider.has("NONEXISTENT")).toBe(false);
-
-		// Cleanup
-		await Bun.file(testFilePath)
-			.delete()
-			.catch(() => {});
-	});
-
-	it("should list all keys in encrypted file", async () => {
-		// Create encrypted file
-		const encrypted = EncryptedFileSecretsProvider.encrypt(testSecrets, testPassword);
-		await Bun.write(testFilePath, encrypted);
-
-		const provider = new EncryptedFileSecretsProvider(testFilePath, testPassword);
-
-		const keys = await provider.list();
-		expect(keys.toSorted()).toEqual(["API_KEY", "DB_PASSWORD"]);
-
-		// Cleanup
-		await Bun.file(testFilePath)
-			.delete()
-			.catch(() => {});
-	});
-
-	it("should pass health check for valid encrypted file", async () => {
-		// Create encrypted file
-		const encrypted = EncryptedFileSecretsProvider.encrypt(testSecrets, testPassword);
-		await Bun.write(testFilePath, encrypted);
-
-		const provider = new EncryptedFileSecretsProvider(testFilePath, testPassword);
-
-		expect(await provider.healthCheck()).toBe(true);
-
-		// Cleanup
-		await Bun.file(testFilePath)
-			.delete()
-			.catch(() => {});
-	});
-
-	it("should cache secrets and use cache", async () => {
-		// Create encrypted file
-		const encrypted = EncryptedFileSecretsProvider.encrypt(testSecrets, testPassword);
-		await Bun.write(testFilePath, encrypted);
-
-		const provider = new EncryptedFileSecretsProvider(testFilePath, testPassword);
-
-		// First call loads from file
-		const value1 = await provider.get("API_KEY");
-		expect(value1).toBe("secret-api-key");
-
-		// Second call uses cache
-		const value2 = await provider.get("DB_PASSWORD");
-		expect(value2).toBe("super-secret-password");
-
-		// Cleanup
-		await Bun.file(testFilePath)
-			.delete()
-			.catch(() => {});
-	});
-
-	it("should return null for missing key", async () => {
-		// Create encrypted file
-		const encrypted = EncryptedFileSecretsProvider.encrypt(testSecrets, testPassword);
-		await Bun.write(testFilePath, encrypted);
-
-		const provider = new EncryptedFileSecretsProvider(testFilePath, testPassword);
-
-		const value = await provider.get("MISSING_KEY");
-		expect(value).toBeNull();
-
-		// Cleanup
-		await Bun.file(testFilePath)
-			.delete()
-			.catch(() => {});
-	});
-});
-
-// ============================================
-// SecretsManager Tests
-// ============================================
-
-describe("SecretsManager", () => {
-	let memoryProvider: MemorySecretsProvider;
-	let manager: SecretsManager;
-
-	beforeEach(() => {
-		memoryProvider = new MemorySecretsProvider({
-			API_KEY: "primary-api-key",
-			DB_PASSWORD: "db-secret",
-		});
-		manager = new SecretsManager({
-			provider: memoryProvider,
-			cacheTtlMs: 60000,
-			auditEnabled: false,
-			logger: silentLogger,
-		});
-	});
-
-	describe("get", () => {
-		it("should get secret from provider", async () => {
-			const value = await manager.get("API_KEY");
-			expect(value).toBe("primary-api-key");
-		});
-
-		it("should return null for missing secret", async () => {
-			const value = await manager.get("MISSING_KEY");
-			expect(value).toBeNull();
-		});
-
-		it("should cache secrets", async () => {
-			// First call
-			await manager.get("API_KEY");
-
-			// Modify provider directly
-			memoryProvider.set("API_KEY", "modified-value");
-
-			// Should return cached value
-			const cached = await manager.get("API_KEY");
-			expect(cached).toBe("primary-api-key");
-		});
-	});
-
-	describe("getOrThrow", () => {
-		it("should return value if exists", async () => {
-			const value = await manager.getOrThrow("API_KEY");
-			expect(value).toBe("primary-api-key");
-		});
-
-		it("should throw if missing", async () => {
-			expect(manager.getOrThrow("MISSING")).rejects.toThrow("Secret not found");
-		});
-	});
-
-	describe("getMany", () => {
-		it("should get multiple secrets", async () => {
-			const secrets = await manager.getMany(["API_KEY", "DB_PASSWORD", "MISSING"]);
-
-			expect(secrets.API_KEY).toBe("primary-api-key");
-			expect(secrets.DB_PASSWORD).toBe("db-secret");
-			expect(secrets.MISSING).toBeNull();
-		});
-	});
-
-	describe("has", () => {
-		it("should check if secret exists", async () => {
-			expect(await manager.has("API_KEY")).toBe(true);
-			expect(await manager.has("MISSING")).toBe(false);
-		});
-	});
-
-	describe("refresh", () => {
-		it("should refresh cached secret", async () => {
-			// Cache the value
-			await manager.get("API_KEY");
-
-			// Modify provider
-			memoryProvider.set("API_KEY", "new-value");
-
-			// Refresh
-			await manager.refresh("API_KEY");
-
-			// Should get new value
-			const value = await manager.get("API_KEY");
-			expect(value).toBe("new-value");
-		});
-	});
-
-	describe("clearCache", () => {
-		it("should clear all cached secrets", async () => {
-			// Cache some values
-			await manager.get("API_KEY");
-			await manager.get("DB_PASSWORD");
-
-			expect(manager.getCacheStats().size).toBe(2);
-
-			manager.clearCache();
-
-			expect(manager.getCacheStats().size).toBe(0);
-		});
-	});
-
-	describe("getCacheStats", () => {
-		it("should return cache statistics", async () => {
-			await manager.get("API_KEY");
-			await manager.get("DB_PASSWORD");
-
-			const stats = manager.getCacheStats();
-			expect(stats.size).toBe(2);
-			expect(stats.keys).toContain("API_KEY");
-			expect(stats.keys).toContain("DB_PASSWORD");
-		});
-	});
-
-	describe("healthCheck", () => {
-		it("should check provider health", async () => {
-			const health = await manager.healthCheck();
-			expect(health.memory).toBe(true);
-		});
-	});
-
-	describe("fallback providers", () => {
-		it("should try fallback when primary fails", async () => {
-			const fallback = new MemorySecretsProvider({
-				FALLBACK_KEY: "fallback-value",
-			});
-
-			const managerWithFallback = new SecretsManager({
-				provider: memoryProvider,
-				fallbackProviders: [fallback],
-				cacheTtlMs: 60000,
-				auditEnabled: false,
-				logger: silentLogger,
-			});
-
-			// Key only in fallback
-			const value = await managerWithFallback.get("FALLBACK_KEY");
-			expect(value).toBe("fallback-value");
-		});
-
-		it("should return null if all providers fail", async () => {
-			const fallback = new MemorySecretsProvider({});
-
-			const managerWithFallback = new SecretsManager({
-				provider: memoryProvider,
-				fallbackProviders: [fallback],
-				cacheTtlMs: 60000,
-				auditEnabled: false,
-				logger: silentLogger,
-			});
-
-			const value = await managerWithFallback.get("NONEXISTENT");
-			expect(value).toBeNull();
-		});
-	});
-
-	describe("audit logging", () => {
-		it("should call onAudit callback", async () => {
-			const auditEvents: Array<{ action: string; key?: string }> = [];
-
-			const auditManager = new SecretsManager({
-				provider: memoryProvider,
-				cacheTtlMs: 60000,
-				auditEnabled: true,
-				onAudit: (event) => auditEvents.push(event),
-				logger: silentLogger,
-			});
-
-			await auditManager.get("API_KEY");
-
-			expect(auditEvents.some((e) => e.action === "cache_miss")).toBe(true);
-			expect(auditEvents.some((e) => e.action === "get")).toBe(true);
-		});
-	});
-
-	describe("no cache mode", () => {
-		it("should not cache when TTL is 0", async () => {
-			const noCacheManager = new SecretsManager({
-				provider: memoryProvider,
-				cacheTtlMs: 0,
-				auditEnabled: false,
-				logger: silentLogger,
-			});
-
-			await noCacheManager.get("API_KEY");
-			expect(noCacheManager.getCacheStats().size).toBe(0);
-		});
 	});
 });
 

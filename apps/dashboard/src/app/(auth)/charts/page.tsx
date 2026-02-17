@@ -12,6 +12,44 @@ import { useCallback, useState } from "react";
 import { Spinner } from "@/components/ui/spinner";
 import { useWatchlistStore } from "@/stores/watchlist-store";
 
+const POPULAR_SYMBOLS = [
+	"SPY",
+	"QQQ",
+	"AAPL",
+	"NVDA",
+	"TSLA",
+	"MSFT",
+	"AMZN",
+	"META",
+	"IWM",
+	"GLD",
+];
+
+interface SymbolGridProps {
+	symbols: readonly string[];
+	isNavigating: boolean;
+	onSymbolSelect: (symbol: string) => void;
+	className: string;
+}
+
+function SymbolGrid({ symbols, isNavigating, onSymbolSelect, className }: SymbolGridProps) {
+	return (
+		<div className="flex flex-wrap gap-2">
+			{symbols.map((symbol) => (
+				<button
+					key={symbol}
+					type="button"
+					onClick={() => onSymbolSelect(symbol)}
+					disabled={isNavigating}
+					className={className}
+				>
+					{symbol}
+				</button>
+			))}
+		</div>
+	);
+}
+
 export default function ChartsPage() {
 	const router = useRouter();
 	const watchlistSymbols = useWatchlistStore((s) => s.symbols);
@@ -82,26 +120,19 @@ export default function ChartsPage() {
 					<h2 className="text-sm font-medium text-stone-600 dark:text-night-200 dark:text-night-400 mb-3">
 						From Watchlist
 					</h2>
-					<div className="flex flex-wrap gap-2">
-						{watchlistSymbols.map((symbol) => (
-							<button
-								key={symbol}
-								type="button"
-								onClick={() => handleSymbolSelect(symbol)}
-								disabled={isNavigating}
-								className="
-                  px-4 py-2 bg-cream-100 dark:bg-night-700
-                  text-stone-700 dark:text-night-100
-                  rounded-md font-medium
-                  hover:bg-cream-200 dark:hover:bg-night-600
-                  disabled:opacity-50
-                  transition-colors duration-150
-                "
-							>
-								{symbol}
-							</button>
-						))}
-					</div>
+					<SymbolGrid
+						symbols={watchlistSymbols}
+						onSymbolSelect={handleSymbolSelect}
+						isNavigating={isNavigating}
+						className="
+              px-4 py-2 bg-cream-100 dark:bg-night-700
+              text-stone-700 dark:text-night-100
+              rounded-md font-medium
+              hover:bg-cream-200 dark:hover:bg-night-600
+              disabled:opacity-50
+              transition-colors duration-150
+            "
+					/>
 				</div>
 			)}
 
@@ -110,29 +141,20 @@ export default function ChartsPage() {
 				<h2 className="text-sm font-medium text-stone-600 dark:text-night-200 dark:text-night-400 mb-3">
 					Popular
 				</h2>
-				<div className="flex flex-wrap gap-2">
-					{["SPY", "QQQ", "AAPL", "NVDA", "TSLA", "MSFT", "AMZN", "META", "IWM", "GLD"].map(
-						(symbol) => (
-							<button
-								key={symbol}
-								type="button"
-								onClick={() => handleSymbolSelect(symbol)}
-								disabled={isNavigating}
-								className="
-                  px-4 py-2 bg-cream-50 dark:bg-night-800
-                  text-stone-600 dark:text-night-200
-                  border border-cream-200 dark:border-night-600
-                  rounded-md
-                  hover:bg-cream-100 dark:hover:bg-night-700
-                  disabled:opacity-50
-                  transition-colors duration-150
-                "
-							>
-								{symbol}
-							</button>
-						),
-					)}
-				</div>
+				<SymbolGrid
+					symbols={POPULAR_SYMBOLS}
+					onSymbolSelect={handleSymbolSelect}
+					isNavigating={isNavigating}
+					className="
+            px-4 py-2 bg-cream-50 dark:bg-night-800
+            text-stone-600 dark:text-night-200
+            border border-cream-200 dark:border-night-600
+            rounded-md
+            hover:bg-cream-100 dark:hover:bg-night-700
+            disabled:opacity-50
+            transition-colors duration-150
+          "
+				/>
 			</div>
 		</div>
 	);

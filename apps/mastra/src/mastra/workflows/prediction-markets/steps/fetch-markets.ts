@@ -75,6 +75,50 @@ function getUnifiedClient(): UnifiedPredictionMarketClient | null {
 	}
 }
 
+function buildEmptyOutput(fetchedAt: string) {
+	return {
+		signals: {
+			platforms: [],
+			timestamp: fetchedAt,
+		},
+		scores: {},
+		numericScores: {},
+		eventCount: 0,
+		arbitrageAlertCount: 0,
+		fetchedAt,
+	};
+}
+
+async function fetchMarketDataOrEmpty(
+	client: UnifiedPredictionMarketClient,
+	marketTypes: string[],
+	fetchedAt: string,
+) {
+	try {
+		const marketData = await client.getAllMarketData(marketTypes);
+
+		log.info(
+			{ eventCount: marketData.events.length, platforms: marketData.signals.platforms },
+			"Fetched prediction market data",
+		);
+
+		return {
+			signals: marketData.signals,
+			scores: marketData.scores,
+			numericScores: toNumericScores(marketData.scores),
+			eventCount: marketData.events.length,
+			arbitrageAlertCount: marketData.arbitrageAlerts.length,
+			fetchedAt,
+		};
+	} catch (error) {
+		log.warn(
+			{ error: error instanceof Error ? error.message : String(error) },
+			"Failed to fetch prediction market data",
+		);
+		return buildEmptyOutput(fetchedAt);
+	}
+}
+
 export const fetchPredictionMarketsStep = createStep({
 	id: "fetch-prediction-markets",
 	description: "Fetch prediction market data and compute macro signals",
@@ -87,68 +131,14 @@ export const fetchPredictionMarketsStep = createStep({
 
 		// In test mode, return empty context
 		if (isTest(ctx)) {
-			return {
-				signals: {
-					platforms: [],
-					timestamp: fetchedAt,
-				},
-				scores: {},
-				numericScores: {},
-				eventCount: 0,
-				arbitrageAlertCount: 0,
-				fetchedAt,
-			};
+			return buildEmptyOutput(fetchedAt);
 		}
 
 		const client = getUnifiedClient();
 		if (!client) {
-			return {
-				signals: {
-					platforms: [],
-					timestamp: fetchedAt,
-				},
-				scores: {},
-				numericScores: {},
-				eventCount: 0,
-				arbitrageAlertCount: 0,
-				fetchedAt,
-			};
+			return buildEmptyOutput(fetchedAt);
 		}
 
-		try {
-			const marketData = await client.getAllMarketData(inputData.marketTypes);
-
-			log.info(
-				{ eventCount: marketData.events.length, platforms: marketData.signals.platforms },
-				"Fetched prediction market data",
-			);
-
-			const numericScores = toNumericScores(marketData.scores);
-
-			return {
-				signals: marketData.signals,
-				scores: marketData.scores,
-				numericScores,
-				eventCount: marketData.events.length,
-				arbitrageAlertCount: marketData.arbitrageAlerts.length,
-				fetchedAt,
-			};
-		} catch (error) {
-			log.warn(
-				{ error: error instanceof Error ? error.message : String(error) },
-				"Failed to fetch prediction market data",
-			);
-			return {
-				signals: {
-					platforms: [],
-					timestamp: fetchedAt,
-				},
-				scores: {},
-				numericScores: {},
-				eventCount: 0,
-				arbitrageAlertCount: 0,
-				fetchedAt,
-			};
-		}
+		return fetchMarketDataOrEmpty(client, inputData.marketTypes, fetchedAt);
 	},
 });

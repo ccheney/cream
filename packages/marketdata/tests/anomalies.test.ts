@@ -14,14 +14,12 @@ import {
 } from "../src/validation/anomalies";
 import type { Candle } from "../src/validation/gaps";
 
-// Helper to generate test candles
 function generateCandles(count: number, symbol = "AAPL"): Candle[] {
 	const candles: Candle[] = [];
 	let price = 100;
 	const baseVolume = 1000000;
 
 	for (let i = 0; i < count; i++) {
-		// Normal random walk
 		const change = (Math.random() - 0.5) * 2;
 		price = Math.max(10, price + change);
 
@@ -55,9 +53,7 @@ describe("detectVolumeAnomalies", () => {
 
 	test("detects volume spike (>5σ)", () => {
 		const candles = generateCandles(30);
-
-		// Insert a massive volume spike
-		requireArrayItem(candles, 25, "candle").volume = 50000000; // 50x normal
+		requireArrayItem(candles, 25, "candle").volume = 50000000;
 
 		const anomalies = detectVolumeAnomalies(candles);
 		expect(anomalies.length).toBeGreaterThan(0);
@@ -66,9 +62,7 @@ describe("detectVolumeAnomalies", () => {
 
 	test("marks critical severity for extreme volume (>7.5σ)", () => {
 		const candles = generateCandles(30);
-
-		// Insert extreme volume spike
-		requireArrayItem(candles, 25, "candle").volume = 100000000; // 100x normal
+		requireArrayItem(candles, 25, "candle").volume = 100000000;
 
 		const anomalies = detectVolumeAnomalies(candles);
 		const critical = anomalies.filter((a) => a.severity === "critical");
@@ -78,7 +72,6 @@ describe("detectVolumeAnomalies", () => {
 	test("no anomalies for normal volume", () => {
 		const candles = generateCandles(30);
 		const anomalies = detectVolumeAnomalies(candles);
-		// May have some but should be few
 		expect(anomalies.length).toBeLessThan(5);
 	});
 });
@@ -86,10 +79,8 @@ describe("detectVolumeAnomalies", () => {
 describe("detectPriceSpikes", () => {
 	test("detects price spike (>10%)", () => {
 		const candles = generateCandles(10);
-
-		// Insert a large price spike
 		const prevClose = requireArrayItem(candles, 5, "candle").close;
-		requireArrayItem(candles, 6, "candle").close = prevClose * 1.15; // 15% spike up
+		requireArrayItem(candles, 6, "candle").close = prevClose * 1.15;
 
 		const anomalies = detectPriceSpikes(candles);
 		expect(anomalies.some((a) => a.type === "price_spike")).toBe(true);
@@ -97,10 +88,8 @@ describe("detectPriceSpikes", () => {
 
 	test("detects gap up", () => {
 		const candles = generateCandles(10);
-
-		// Insert a gap up (open significantly higher than prev close)
 		const prevClose = requireArrayItem(candles, 5, "candle").close;
-		requireArrayItem(candles, 6, "candle").open = prevClose * 1.15; // 15% gap up
+		requireArrayItem(candles, 6, "candle").open = prevClose * 1.15;
 
 		const anomalies = detectPriceSpikes(candles);
 		expect(anomalies.some((a) => a.type === "gap_up")).toBe(true);
@@ -108,10 +97,8 @@ describe("detectPriceSpikes", () => {
 
 	test("detects gap down", () => {
 		const candles = generateCandles(10);
-
-		// Insert a gap down
 		const prevClose = requireArrayItem(candles, 5, "candle").close;
-		requireArrayItem(candles, 6, "candle").open = prevClose * 0.85; // 15% gap down
+		requireArrayItem(candles, 6, "candle").open = prevClose * 0.85;
 
 		const anomalies = detectPriceSpikes(candles);
 		expect(anomalies.some((a) => a.type === "gap_down")).toBe(true);
@@ -119,9 +106,8 @@ describe("detectPriceSpikes", () => {
 
 	test("marks critical severity for extreme price spike (>15%)", () => {
 		const candles = generateCandles(10);
-
 		const prevClose = requireArrayItem(candles, 5, "candle").close;
-		requireArrayItem(candles, 6, "candle").close = prevClose * 1.2; // 20% spike
+		requireArrayItem(candles, 6, "candle").close = prevClose * 1.2;
 
 		const anomalies = detectPriceSpikes(candles);
 		const critical = anomalies.filter((a) => a.severity === "critical");
@@ -132,14 +118,11 @@ describe("detectPriceSpikes", () => {
 describe("detectFlashCrashes", () => {
 	test("detects flash crash with recovery", () => {
 		const candles = generateCandles(20);
-
-		// Set up a flash crash scenario
 		const basePrice = 100;
 		requireArrayItem(candles, 10, "candle").close = basePrice;
-		requireArrayItem(candles, 11, "candle").low = basePrice * 0.92; // 8% drop
+		requireArrayItem(candles, 11, "candle").low = basePrice * 0.92;
 		requireArrayItem(candles, 11, "candle").close = basePrice * 0.95;
-		// Recovery within 5 candles
-		requireArrayItem(candles, 12, "candle").close = basePrice * 0.98; // Back within 2%
+		requireArrayItem(candles, 12, "candle").close = basePrice * 0.98;
 
 		const anomalies = detectFlashCrashes(candles);
 		expect(anomalies.some((a) => a.type === "flash_crash")).toBe(true);
@@ -147,14 +130,11 @@ describe("detectFlashCrashes", () => {
 
 	test("detects flash rally with reversal", () => {
 		const candles = generateCandles(20);
-
-		// Set up a flash rally scenario
 		const basePrice = 100;
 		requireArrayItem(candles, 10, "candle").close = basePrice;
-		requireArrayItem(candles, 11, "candle").high = basePrice * 1.08; // 8% spike up
+		requireArrayItem(candles, 11, "candle").high = basePrice * 1.08;
 		requireArrayItem(candles, 11, "candle").close = basePrice * 1.05;
-		// Reversal within 5 candles
-		requireArrayItem(candles, 12, "candle").close = basePrice * 1.01; // Back within 2%
+		requireArrayItem(candles, 12, "candle").close = basePrice * 1.01;
 
 		const anomalies = detectFlashCrashes(candles);
 		expect(anomalies.some((a) => a.type === "flash_rally")).toBe(true);
@@ -162,13 +142,10 @@ describe("detectFlashCrashes", () => {
 
 	test("does not detect crash without recovery", () => {
 		const candles = generateCandles(20);
-
-		// Set up a crash without recovery
 		const basePrice = 100;
 		requireArrayItem(candles, 10, "candle").close = basePrice;
 		requireArrayItem(candles, 11, "candle").low = basePrice * 0.9;
 		requireArrayItem(candles, 11, "candle").close = basePrice * 0.9;
-		// No recovery - stays down
 		for (let i = 12; i < 17; i++) {
 			requireArrayItem(candles, i, "candle").close = basePrice * 0.88;
 		}
@@ -178,7 +155,7 @@ describe("detectFlashCrashes", () => {
 	});
 });
 
-describe("detectAllAnomalies", () => {
+describe("detectAllAnomalies summary", () => {
 	test("returns empty result for empty candles", () => {
 		const result = detectAllAnomalies([]);
 		expect(result.hasAnomalies).toBe(false);
@@ -191,11 +168,7 @@ describe("detectAllAnomalies", () => {
 
 	test("combines all anomaly types", () => {
 		const candles = generateCandles(30, "GOOGL");
-
-		// Add volume spike
 		requireArrayItem(candles, 25, "candle").volume = 50000000;
-
-		// Add price spike
 		const prevClose = requireArrayItem(candles, 15, "candle").close;
 		requireArrayItem(candles, 16, "candle").close = prevClose * 1.15;
 
@@ -207,11 +180,7 @@ describe("detectAllAnomalies", () => {
 
 	test("counts anomaly types correctly", () => {
 		const candles = generateCandles(30);
-
-		// Add volume spike
 		requireArrayItem(candles, 25, "candle").volume = 50000000;
-
-		// Add price spike
 		const prevClose = requireArrayItem(candles, 15, "candle").close;
 		requireArrayItem(candles, 16, "candle").close = prevClose * 1.15;
 
@@ -219,11 +188,11 @@ describe("detectAllAnomalies", () => {
 		expect(result.volumeAnomalies).toBeGreaterThanOrEqual(0);
 		expect(result.priceAnomalies).toBeGreaterThanOrEqual(0);
 	});
+});
 
+describe("detectAllAnomalies ordering", () => {
 	test("sorts anomalies by timestamp", () => {
 		const candles = generateCandles(30);
-
-		// Add multiple anomalies at different times
 		requireArrayItem(candles, 10, "candle").volume = 50000000;
 		requireArrayItem(candles, 20, "candle").volume = 50000000;
 
@@ -244,7 +213,6 @@ describe("detectAllAnomalies", () => {
 describe("filterAnomalousCandles", () => {
 	test("removes candles with critical anomalies", () => {
 		const candles = generateCandles(10);
-
 		const anomalies = [
 			{
 				type: "volume_spike" as const,
@@ -266,7 +234,6 @@ describe("filterAnomalousCandles", () => {
 
 	test("keeps candles with warning anomalies", () => {
 		const candles = generateCandles(10);
-
 		const anomalies = [
 			{
 				type: "volume_spike" as const,

@@ -112,6 +112,132 @@ export interface PortfolioRiskSummary {
 // AGGREGATION LOGIC
 // ============================================================
 
+const CONTRACT_MULTIPLIER = 100;
+
+interface GreeksTotals {
+	netDelta: number;
+	dollarDelta: number;
+	netGamma: number;
+	dollarGamma: number;
+	netTheta: number;
+	netVega: number;
+}
+
+interface OptionContribution {
+	positionDelta: number;
+	positionGamma: number;
+	positionTheta: number;
+	positionVega: number;
+	dollarDelta: number;
+	dollarGamma: number;
+}
+
+function createEmptyTotals(): GreeksTotals {
+	return {
+		netDelta: 0,
+		dollarDelta: 0,
+		netGamma: 0,
+		dollarGamma: 0,
+		netTheta: 0,
+		netVega: 0,
+	};
+}
+
+function createUnderlyingGreeks(symbol: string, underlyingPrice: number | null): UnderlyingGreeks {
+	return {
+		symbol,
+		underlyingPrice,
+		netDelta: 0,
+		netGamma: 0,
+		netTheta: 0,
+		netVega: 0,
+		callDelta: 0,
+		putDelta: 0,
+		optionPositions: 0,
+		stockShares: 0,
+	};
+}
+
+function getOrCreateUnderlying(
+	byUnderlying: Map<string, UnderlyingGreeks>,
+	symbol: string,
+	defaultUnderlyingPrice: number | null,
+): UnderlyingGreeks {
+	const existing = byUnderlying.get(symbol);
+	if (existing) {
+		return existing;
+	}
+
+	const created = createUnderlyingGreeks(symbol, defaultUnderlyingPrice);
+	byUnderlying.set(symbol, created);
+	return created;
+}
+
+function calculateOptionContribution(position: OptionPosition): OptionContribution {
+	const signedQuantity = position.quantity;
+	const positionDelta = position.delta * signedQuantity * CONTRACT_MULTIPLIER;
+	const positionGamma = position.gamma * signedQuantity * CONTRACT_MULTIPLIER;
+	const positionTheta = position.theta * signedQuantity * CONTRACT_MULTIPLIER;
+	const positionVega = position.vega * signedQuantity * CONTRACT_MULTIPLIER;
+	const underlyingPrice = position.underlyingPrice ?? 0;
+
+	return {
+		positionDelta,
+		positionGamma,
+		positionTheta,
+		positionVega,
+		dollarDelta: positionDelta * underlyingPrice,
+		dollarGamma: positionGamma * underlyingPrice * underlyingPrice,
+	};
+}
+
+function applyOptionToTotals(totals: GreeksTotals, contribution: OptionContribution): void {
+	totals.netDelta += contribution.positionDelta;
+	totals.dollarDelta += contribution.dollarDelta;
+	totals.netGamma += contribution.positionGamma;
+	totals.dollarGamma += contribution.dollarGamma;
+	totals.netTheta += contribution.positionTheta;
+	totals.netVega += contribution.positionVega;
+}
+
+function applyOptionToUnderlying(
+	underlyingData: UnderlyingGreeks,
+	position: OptionPosition,
+	contribution: OptionContribution,
+): void {
+	underlyingData.netDelta += contribution.positionDelta;
+	underlyingData.netGamma += contribution.positionGamma;
+	underlyingData.netTheta += contribution.positionTheta;
+	underlyingData.netVega += contribution.positionVega;
+	underlyingData.optionPositions += Math.abs(position.quantity);
+
+	if (position.underlyingPrice) {
+		underlyingData.underlyingPrice = position.underlyingPrice;
+	}
+
+	if (position.optionType === "call") {
+		underlyingData.callDelta += contribution.positionDelta;
+		return;
+	}
+
+	underlyingData.putDelta += contribution.positionDelta;
+}
+
+function applyStockToTotalsAndUnderlying(
+	totals: GreeksTotals,
+	byUnderlying: Map<string, UnderlyingGreeks>,
+	stock: StockPosition,
+): void {
+	const stockDelta = stock.quantity;
+	totals.netDelta += stockDelta;
+	totals.dollarDelta += stock.quantity * stock.currentPrice;
+
+	const underlyingData = getOrCreateUnderlying(byUnderlying, stock.symbol, stock.currentPrice);
+	underlyingData.netDelta += stockDelta;
+	underlyingData.stockShares += stock.quantity;
+	underlyingData.underlyingPrice = stock.currentPrice;
+}
+
 /**
  * Aggregate Greeks across option positions
  *
@@ -138,111 +264,31 @@ export function aggregateGreeks(
 	stockPositions: StockPosition[] = [],
 ): AggregatedGreeksResult {
 	const byUnderlying = new Map<string, UnderlyingGreeks>();
+	const totals = createEmptyTotals();
 
-	// Initialize aggregation
-	let totalNetDelta = 0;
-	let totalDollarDelta = 0;
-	let totalNetGamma = 0;
-	let totalDollarGamma = 0;
-	let totalNetTheta = 0;
-	let totalNetVega = 0;
+	for (const position of positions) {
+		const contribution = calculateOptionContribution(position);
+		applyOptionToTotals(totals, contribution);
 
-	// Process option positions
-	for (const pos of positions) {
-		const contractMultiplier = 100; // Standard options
-		const signedQuantity = pos.quantity;
-
-		// Position Greeks (scaled by quantity and multiplier)
-		const positionDelta = pos.delta * signedQuantity * contractMultiplier;
-		const positionGamma = pos.gamma * signedQuantity * contractMultiplier;
-		const positionTheta = pos.theta * signedQuantity * contractMultiplier;
-		const positionVega = pos.vega * signedQuantity * contractMultiplier;
-
-		// Dollar Greeks (if underlying price available)
-		const underlyingPrice = pos.underlyingPrice ?? 0;
-		const dollarDelta = positionDelta * underlyingPrice;
-		const dollarGamma = positionGamma * underlyingPrice * underlyingPrice;
-
-		// Accumulate totals
-		totalNetDelta += positionDelta;
-		totalDollarDelta += dollarDelta;
-		totalNetGamma += positionGamma;
-		totalDollarGamma += dollarGamma;
-		totalNetTheta += positionTheta;
-		totalNetVega += positionVega;
-
-		// Update per-underlying breakdown
-		let underlyingData = byUnderlying.get(pos.underlyingSymbol);
-		if (!underlyingData) {
-			underlyingData = {
-				symbol: pos.underlyingSymbol,
-				underlyingPrice: pos.underlyingPrice ?? null,
-				netDelta: 0,
-				netGamma: 0,
-				netTheta: 0,
-				netVega: 0,
-				callDelta: 0,
-				putDelta: 0,
-				optionPositions: 0,
-				stockShares: 0,
-			};
-			byUnderlying.set(pos.underlyingSymbol, underlyingData);
-		}
-
-		underlyingData.netDelta += positionDelta;
-		underlyingData.netGamma += positionGamma;
-		underlyingData.netTheta += positionTheta;
-		underlyingData.netVega += positionVega;
-		underlyingData.optionPositions += Math.abs(signedQuantity);
-
-		if (pos.underlyingPrice) {
-			underlyingData.underlyingPrice = pos.underlyingPrice;
-		}
-
-		if (pos.optionType === "call") {
-			underlyingData.callDelta += positionDelta;
-		} else {
-			underlyingData.putDelta += positionDelta;
-		}
+		const underlyingData = getOrCreateUnderlying(
+			byUnderlying,
+			position.underlyingSymbol,
+			position.underlyingPrice ?? null,
+		);
+		applyOptionToUnderlying(underlyingData, position, contribution);
 	}
 
-	// Add stock positions to delta
 	for (const stock of stockPositions) {
-		const stockDelta = stock.quantity; // 1 delta per share
-		const stockDollarDelta = stock.quantity * stock.currentPrice;
-
-		totalNetDelta += stockDelta;
-		totalDollarDelta += stockDollarDelta;
-
-		let underlyingData = byUnderlying.get(stock.symbol);
-		if (!underlyingData) {
-			underlyingData = {
-				symbol: stock.symbol,
-				underlyingPrice: stock.currentPrice,
-				netDelta: 0,
-				netGamma: 0,
-				netTheta: 0,
-				netVega: 0,
-				callDelta: 0,
-				putDelta: 0,
-				optionPositions: 0,
-				stockShares: 0,
-			};
-			byUnderlying.set(stock.symbol, underlyingData);
-		}
-
-		underlyingData.netDelta += stockDelta;
-		underlyingData.stockShares += stock.quantity;
-		underlyingData.underlyingPrice = stock.currentPrice;
+		applyStockToTotalsAndUnderlying(totals, byUnderlying, stock);
 	}
 
 	return {
-		netDelta: totalNetDelta,
-		dollarDelta: totalDollarDelta,
-		netGamma: totalNetGamma,
-		dollarGamma: totalDollarGamma,
-		netTheta: totalNetTheta,
-		netVega: totalNetVega,
+		netDelta: totals.netDelta,
+		dollarDelta: totals.dollarDelta,
+		netGamma: totals.netGamma,
+		dollarGamma: totals.dollarGamma,
+		netTheta: totals.netTheta,
+		netVega: totals.netVega,
 		byUnderlying,
 		positionCount: positions.length + stockPositions.length,
 		timestamp: Date.now(),

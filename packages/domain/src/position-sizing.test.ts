@@ -17,15 +17,15 @@ import {
 // Fixed Fractional Tests
 // ============================================
 
-describe("calculateFixedFractional", () => {
-	const baseInput = {
-		accountEquity: 100000,
-		price: 100,
-		stopLoss: 95,
-	};
+const fixedFractionalBaseInput = {
+	accountEquity: 100000,
+	price: 100,
+	stopLoss: 95,
+};
 
+describe("calculateFixedFractional sizing", () => {
 	test("calculates correct position for 1% risk", () => {
-		const result = calculateFixedFractional(baseInput, 0.01);
+		const result = calculateFixedFractional(fixedFractionalBaseInput, 0.01);
 		// Max risk = $1000, risk per share = $5
 		// Quantity = 1000 / 5 = 200 shares
 		expect(result.quantity).toBe(200);
@@ -34,7 +34,7 @@ describe("calculateFixedFractional", () => {
 	});
 
 	test("calculates correct position for 2% risk", () => {
-		const result = calculateFixedFractional(baseInput, 0.02);
+		const result = calculateFixedFractional(fixedFractionalBaseInput, 0.02);
 		// Max risk = $2000, risk per share = $5
 		// Quantity = 2000 / 5 = 400 shares
 		expect(result.quantity).toBe(400);
@@ -42,14 +42,14 @@ describe("calculateFixedFractional", () => {
 	});
 
 	test("includes risk-reward ratio when takeProfit provided", () => {
-		const result = calculateFixedFractional({ ...baseInput, takeProfit: 110 }, 0.01);
+		const result = calculateFixedFractional({ ...fixedFractionalBaseInput, takeProfit: 110 }, 0.01);
 		// Risk = $5, Reward = $10, RR = 2:1
 		expect(result.riskRewardRatio).toBe(2);
 	});
 
 	test("handles options with multiplier", () => {
 		const result = calculateFixedFractional(
-			{ ...baseInput, price: 5, stopLoss: 4, multiplier: 100 },
+			{ ...fixedFractionalBaseInput, price: 5, stopLoss: 4, multiplier: 100 },
 			0.01,
 		);
 		// Risk per contract = $1 * 100 = $100
@@ -65,22 +65,28 @@ describe("calculateFixedFractional", () => {
 		expect(result.quantity).toBe(0);
 		expect(result.dollarRisk).toBe(0);
 	});
+});
 
+describe("calculateFixedFractional validation", () => {
 	test("throws on invalid account equity", () => {
-		expect(() => calculateFixedFractional({ ...baseInput, accountEquity: -1000 }, 0.01)).toThrow();
+		expect(() =>
+			calculateFixedFractional({ ...fixedFractionalBaseInput, accountEquity: -1000 }, 0.01),
+		).toThrow();
 	});
 
 	test("throws on stop loss equal to price", () => {
-		expect(() => calculateFixedFractional({ ...baseInput, stopLoss: 100 }, 0.01)).toThrow();
+		expect(() =>
+			calculateFixedFractional({ ...fixedFractionalBaseInput, stopLoss: 100 }, 0.01),
+		).toThrow();
 	});
 
 	test("throws on invalid risk percent", () => {
-		expect(() => calculateFixedFractional(baseInput, 0)).toThrow();
-		expect(() => calculateFixedFractional(baseInput, 0.5)).toThrow();
+		expect(() => calculateFixedFractional(fixedFractionalBaseInput, 0)).toThrow();
+		expect(() => calculateFixedFractional(fixedFractionalBaseInput, 0.5)).toThrow();
 	});
 
 	test("defaults to 1% risk", () => {
-		const result = calculateFixedFractional(baseInput);
+		const result = calculateFixedFractional(fixedFractionalBaseInput);
 		expect(result.riskPercent).toBeCloseTo(0.01);
 	});
 });
@@ -282,20 +288,20 @@ describe("calculateLiquidityLimit", () => {
 // Options Delta-Adjusted Tests
 // ============================================
 
-describe("calculateDeltaAdjustedSize", () => {
-	const baseInput = {
-		accountEquity: 100000,
-		price: 5, // Option premium
-		stopLoss: 2.5,
-		delta: 0.5,
-		underlyingPrice: 100, // Underlying at $100
-		multiplier: 100,
-	};
+const deltaAdjustedBaseInput = {
+	accountEquity: 100000,
+	price: 5, // Option premium
+	stopLoss: 2.5,
+	delta: 0.5,
+	underlyingPrice: 100, // Underlying at $100
+	multiplier: 100,
+};
 
+describe("calculateDeltaAdjustedSize sizing", () => {
 	test("calculates contracts for target delta exposure", () => {
 		// With delta 0.5, each contract controls ~$5000 delta exposure
 		// (underlying ~$10, delta 0.5, multiplier 100)
-		const result = calculateDeltaAdjustedSize(baseInput, 10000);
+		const result = calculateDeltaAdjustedSize(deltaAdjustedBaseInput, 10000);
 		expect(result.quantity).toBeGreaterThan(0);
 	});
 
@@ -304,33 +310,37 @@ describe("calculateDeltaAdjustedSize", () => {
 		// deltaPerContract = delta * 100 * 100 = delta * 10000
 		// Low delta (0.2): 2000 per contract -> 50000/2000 = 25 contracts
 		// High delta (0.8): 8000 per contract -> 50000/8000 = 6 contracts
-		const lowDelta = calculateDeltaAdjustedSize({ ...baseInput, delta: 0.2 }, 50000);
-		const highDelta = calculateDeltaAdjustedSize({ ...baseInput, delta: 0.8 }, 50000);
+		const lowDelta = calculateDeltaAdjustedSize({ ...deltaAdjustedBaseInput, delta: 0.2 }, 50000);
+		const highDelta = calculateDeltaAdjustedSize({ ...deltaAdjustedBaseInput, delta: 0.8 }, 50000);
 		expect(lowDelta.quantity).toBeGreaterThan(highDelta.quantity);
 	});
+});
 
+describe("calculateDeltaAdjustedSize validation", () => {
 	test("throws on invalid delta", () => {
-		expect(() => calculateDeltaAdjustedSize({ ...baseInput, delta: 1.5 }, 10000)).toThrow();
+		expect(() =>
+			calculateDeltaAdjustedSize({ ...deltaAdjustedBaseInput, delta: 1.5 }, 10000),
+		).toThrow();
 	});
 
 	test("throws on invalid target exposure", () => {
-		expect(() => calculateDeltaAdjustedSize(baseInput, -1000)).toThrow();
+		expect(() => calculateDeltaAdjustedSize(deltaAdjustedBaseInput, -1000)).toThrow();
 	});
 
 	test("throws on invalid underlying price", () => {
-		expect(() => calculateDeltaAdjustedSize({ ...baseInput, underlyingPrice: 0 }, 10000)).toThrow(
-			"underlyingPrice must be positive",
-		);
-		expect(() => calculateDeltaAdjustedSize({ ...baseInput, underlyingPrice: -50 }, 10000)).toThrow(
-			"underlyingPrice must be positive",
-		);
+		expect(() =>
+			calculateDeltaAdjustedSize({ ...deltaAdjustedBaseInput, underlyingPrice: 0 }, 10000),
+		).toThrow("underlyingPrice must be positive");
+		expect(() =>
+			calculateDeltaAdjustedSize({ ...deltaAdjustedBaseInput, underlyingPrice: -50 }, 10000),
+		).toThrow("underlyingPrice must be positive");
 	});
 
 	test("returns zero quantity when exposure too small", () => {
 		// Very small target delta exposure relative to contract size
 		// deltaPerContract = 0.5 * 100 * 100 = 5000
 		// contracts = 100 / 5000 = 0
-		const result = calculateDeltaAdjustedSize(baseInput, 100);
+		const result = calculateDeltaAdjustedSize(deltaAdjustedBaseInput, 100);
 		expect(result.quantity).toBe(0);
 		expect(result.dollarRisk).toBe(0);
 		expect(result.riskPercent).toBe(0);
@@ -338,7 +348,7 @@ describe("calculateDeltaAdjustedSize", () => {
 	});
 
 	test("returns zero quantity with risk-reward when takeProfit provided", () => {
-		const result = calculateDeltaAdjustedSize({ ...baseInput, takeProfit: 10 }, 100);
+		const result = calculateDeltaAdjustedSize({ ...deltaAdjustedBaseInput, takeProfit: 10 }, 100);
 		expect(result.quantity).toBe(0);
 		// Risk = 5 - 2.5 = 2.5, Reward = 10 - 5 = 5, RR = 2
 		expect(result.riskRewardRatio).toBe(2);

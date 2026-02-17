@@ -19,6 +19,33 @@ export interface ATRResult {
 	timestamp: number;
 }
 
+function calculateInitialAverage(values: number[], period: number): number | null {
+	if (values.length < period) {
+		return null;
+	}
+
+	return values.slice(0, period).reduce((sum, value) => sum + value, 0) / period;
+}
+
+function collectTrueRanges(bars: OHLCVBar[]): number[] {
+	const trueRanges: number[] = [];
+
+	for (let i = 1; i < bars.length; i++) {
+		const current = bars[i];
+		const previous = bars[i - 1];
+		if (current && previous) {
+			trueRanges.push(calculateTrueRange(current, previous));
+		}
+	}
+
+	return trueRanges;
+}
+
+function applyWilderSmoothing(previousATR: number, trueRange: number, period: number): number {
+	const multiplier = 1 / period;
+	return (trueRange - previousATR) * multiplier + previousATR;
+}
+
 /**
  * Calculate True Range for a single bar
  *
@@ -48,29 +75,18 @@ export function calculateATR(bars: OHLCVBar[], period = 14): number | null {
 		return null;
 	}
 
-	// Calculate True Range for each bar (starting from index 1)
-	const trueRanges: number[] = [];
-	for (let i = 1; i < bars.length; i++) {
-		const current = bars[i];
-		const previous = bars[i - 1];
-		if (current && previous) {
-			trueRanges.push(calculateTrueRange(current, previous));
-		}
-	}
-
-	if (trueRanges.length < period) {
+	const trueRanges = collectTrueRanges(bars);
+	const initialATR = calculateInitialAverage(trueRanges, period);
+	if (initialATR === null) {
 		return null;
 	}
 
-	// Initial ATR is simple average of first 'period' true ranges
-	let atr = trueRanges.slice(0, period).reduce((a, b) => a + b, 0) / period;
+	let atr = initialATR;
 
-	// Apply Wilder's smoothing for remaining values
-	const multiplier = 1 / period;
 	for (let i = period; i < trueRanges.length; i++) {
 		const tr = trueRanges[i];
 		if (tr !== undefined) {
-			atr = (tr - atr) * multiplier + atr;
+			atr = applyWilderSmoothing(atr, tr, period);
 		}
 	}
 
@@ -95,43 +111,34 @@ export function calculateATRSeries(bars: OHLCVBar[], period = 14): ATRResult[] {
 	}
 
 	const results: ATRResult[] = [{ value: null, timestamp: firstBar.timestamp }];
-
-	// Calculate True Range for each bar (starting from index 1)
-	const trueRanges: number[] = [];
-	for (let i = 1; i < bars.length; i++) {
-		const current = bars[i];
-		const previous = bars[i - 1];
-		if (current && previous) {
-			trueRanges.push(calculateTrueRange(current, previous));
-		}
-	}
-
-	// Build ATR series using Wilder's smoothing
+	const trueRanges = collectTrueRanges(bars);
 	let atr: number | null = null;
+	let rollingSum = 0;
 
-	for (let i = 0; i < trueRanges.length; i++) {
-		const nextBar = bars[i + 1];
+	for (const [index, tr] of trueRanges.entries()) {
+		const nextBar = bars[index + 1];
 		if (!nextBar) {
 			continue;
 		}
 
-		const tr = trueRanges[i];
-		if (tr === undefined) {
+		rollingSum += tr;
+
+		if (index < period - 1) {
+			results.push({ value: null, timestamp: nextBar.timestamp });
 			continue;
 		}
 
-		if (i < period - 1) {
-			results.push({ value: null, timestamp: nextBar.timestamp });
-		} else if (i === period - 1) {
-			// Initial ATR is simple average
-			atr = trueRanges.slice(0, period).reduce((a, b) => a + b, 0) / period;
+		if (index === period - 1) {
+			atr = rollingSum / period;
 			results.push({ value: atr, timestamp: nextBar.timestamp });
-		} else if (atr !== null) {
-			// Wilder's smoothing
-			const multiplier = 1 / period;
-			atr = (tr - atr) * multiplier + atr;
-			results.push({ value: atr, timestamp: nextBar.timestamp });
+			continue;
 		}
+
+		if (atr !== null) {
+			atr = applyWilderSmoothing(atr, tr, period);
+		}
+
+		results.push({ value: atr, timestamp: nextBar.timestamp });
 	}
 
 	return results;

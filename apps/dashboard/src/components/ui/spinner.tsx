@@ -67,6 +67,10 @@ const spinKeyframes = `
   }
 `;
 
+function KeyframesStyle({ css }: { css: string }) {
+	return <style>{css}</style>;
+}
+
 // ============================================
 // Component
 // ============================================
@@ -109,8 +113,7 @@ export function Spinner({
 
 	return (
 		<>
-			{/* biome-ignore lint/security/noDangerouslySetInnerHtml: Safe - hardcoded CSS keyframes */}
-			<style dangerouslySetInnerHTML={{ __html: spinKeyframes }} />
+			<KeyframesStyle css={spinKeyframes} />
 			<svg
 				xmlns="http://www.w3.org/2000/svg"
 				viewBox="0 0 24 24"
@@ -119,13 +122,13 @@ export function Spinner({
 				strokeWidth="2"
 				strokeLinecap="round"
 				strokeLinejoin="round"
-				role="status"
 				aria-label={label}
 				data-testid={testId}
 				className={className}
 				style={spinnerStyle}
 				{...props}
 			>
+				<title>{label}</title>
 				{/* Circle with gap for spinning effect */}
 				<circle cx="12" cy="12" r="10" stroke="currentColor" strokeOpacity="0.25" fill="none" />
 				<path d="M12 2a10 10 0 0 1 10 10" stroke="currentColor" fill="none" />
@@ -174,11 +177,10 @@ export function SpinnerDots({
 
 	return (
 		<>
-			{/* biome-ignore lint/security/noDangerouslySetInnerHtml: Safe - hardcoded CSS keyframes */}
-			<style dangerouslySetInnerHTML={{ __html: pulseKeyframes }} />
-			<div
-				role="status"
+			<KeyframesStyle css={pulseKeyframes} />
+			<output
 				aria-label={label}
+				aria-live="polite"
 				data-testid={testId}
 				className={className}
 				style={containerStyle}
@@ -187,7 +189,7 @@ export function SpinnerDots({
 				<div style={{ ...dotStyle, animationDelay: "0ms" }} aria-hidden="true" />
 				<div style={{ ...dotStyle, animationDelay: "150ms" }} aria-hidden="true" />
 				<div style={{ ...dotStyle, animationDelay: "300ms" }} aria-hidden="true" />
-			</div>
+			</output>
 		</>
 	);
 }
@@ -236,17 +238,16 @@ export function SpinnerBar({
 
 	return (
 		<>
-			{/* biome-ignore lint/security/noDangerouslySetInnerHtml: Safe - hardcoded CSS keyframes */}
-			<style dangerouslySetInnerHTML={{ __html: slideKeyframes }} />
-			<div
-				role="status"
+			<KeyframesStyle css={slideKeyframes} />
+			<output
 				aria-label={label}
+				aria-live="polite"
 				data-testid={testId}
 				className={className}
 				style={containerStyle}
 			>
 				<div style={barStyle} aria-hidden="true" />
-			</div>
+			</output>
 		</>
 	);
 }
@@ -417,8 +418,7 @@ export function LoadingOverlay({
 
 			{isLoading && (
 				<>
-					{/* biome-ignore lint/security/noDangerouslySetInnerHtml: Safe - hardcoded CSS keyframes */}
-					<style dangerouslySetInnerHTML={{ __html: pulseOverlayKeyframes }} />
+					<KeyframesStyle css={pulseOverlayKeyframes} />
 					<output
 						aria-label={label}
 						style={{

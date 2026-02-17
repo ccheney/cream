@@ -160,6 +160,85 @@ export class SemanticScholarClient {
 		this.lastRequestTime = Date.now();
 	}
 
+	private buildRequestHeaders(): Record<string, string> {
+		const headers: Record<string, string> = {
+			"Content-Type": "application/json",
+		};
+
+		if (this.config.apiKey) {
+			headers["x-api-key"] = this.config.apiKey;
+		}
+
+		return headers;
+	}
+
+	private async fetchWithTimeout(url: string, headers: Record<string, string>): Promise<Response> {
+		const controller = new AbortController();
+		const timeoutId = setTimeout(() => controller.abort(), this.config.timeoutMs);
+
+		try {
+			return await fetch(url, {
+				method: "GET",
+				headers,
+				signal: controller.signal,
+			});
+		} finally {
+			clearTimeout(timeoutId);
+		}
+	}
+
+	private createApiError(response: Response): Error {
+		return new Error(`Semantic Scholar API error: ${response.status} ${response.statusText}`);
+	}
+
+	private getRateLimitWaitMs(response: Response): number {
+		const retryAfter = response.headers.get("Retry-After");
+		return retryAfter ? Number.parseInt(retryAfter, 10) * 1000 : 5000;
+	}
+
+	private async sleep(ms: number): Promise<void> {
+		await new Promise((resolve) => setTimeout(resolve, ms));
+	}
+
+	private async handleRateLimit(
+		response: Response,
+		rateLimitAttempts: number,
+		maxRateLimitAttempts: number,
+	): Promise<number> {
+		const nextRateLimitAttempts = rateLimitAttempts + 1;
+
+		if (nextRateLimitAttempts >= maxRateLimitAttempts) {
+			throw new Error("Rate limited too many times by Semantic Scholar");
+		}
+
+		const waitMs = this.getRateLimitWaitMs(response);
+		log.warn(
+			{ rateLimitAttempts: nextRateLimitAttempts, maxRateLimitAttempts, waitMs },
+			"Rate limited by Semantic Scholar, waiting...",
+		);
+		await this.sleep(waitMs);
+
+		return nextRateLimitAttempts;
+	}
+
+	private normalizeError(error: unknown): Error {
+		return error instanceof Error ? error : new Error(String(error));
+	}
+
+	private logRequestFailure(attempt: number, error: Error): void {
+		if (error.name === "AbortError") {
+			log.warn({ attempt }, "Semantic Scholar request timed out");
+			return;
+		}
+
+		log.warn({ attempt, error: error.message }, "Semantic Scholar request failed");
+	}
+
+	private async waitForBackoff(attempt: number): Promise<void> {
+		const backoffMs = Math.min(1000 * 2 ** attempt, 10000);
+		await this.sleep(backoffMs);
+	}
+
 	/**
 	 * Make an API request with retry logic
 	 */
@@ -173,60 +252,30 @@ export class SemanticScholarClient {
 			await this.rateLimit();
 
 			try {
-				const headers: Record<string, string> = {
-					"Content-Type": "application/json",
-				};
-
-				if (this.config.apiKey) {
-					headers["x-api-key"] = this.config.apiKey;
-				}
-
-				const controller = new AbortController();
-				const timeoutId = setTimeout(() => controller.abort(), this.config.timeoutMs);
-
-				const response = await fetch(url, {
-					method: "GET",
-					headers,
-					signal: controller.signal,
-				});
-
-				clearTimeout(timeoutId);
+				const response = await this.fetchWithTimeout(url, this.buildRequestHeaders());
 
 				if (!response.ok) {
 					if (response.status === 429) {
-						rateLimitAttempts++;
-						if (rateLimitAttempts >= maxRateLimitAttempts) {
-							throw new Error("Rate limited too many times by Semantic Scholar");
-						}
-						// Rate limited - wait and retry without counting against retries
-						const retryAfter = response.headers.get("Retry-After");
-						const waitMs = retryAfter ? Number.parseInt(retryAfter, 10) * 1000 : 5000;
-						log.warn(
-							{ rateLimitAttempts, maxRateLimitAttempts, waitMs },
-							"Rate limited by Semantic Scholar, waiting...",
+						rateLimitAttempts = await this.handleRateLimit(
+							response,
+							rateLimitAttempts,
+							maxRateLimitAttempts,
 						);
-						await new Promise((resolve) => setTimeout(resolve, waitMs));
 						continue;
 					}
-					throw new Error(`Semantic Scholar API error: ${response.status} ${response.statusText}`);
+
+					throw this.createApiError(response);
 				}
 
 				return (await response.json()) as T;
 			} catch (error) {
-				lastError = error instanceof Error ? error : new Error(String(error));
-
-				if (lastError.name === "AbortError") {
-					log.warn({ attempt }, "Semantic Scholar request timed out");
-				} else {
-					log.warn({ attempt, error: lastError.message }, "Semantic Scholar request failed");
-				}
+				lastError = this.normalizeError(error);
+				this.logRequestFailure(attempt, lastError);
 
 				attempt++;
 
-				// Exponential backoff
 				if (attempt < this.config.retries) {
-					const backoffMs = Math.min(1000 * 2 ** attempt, 10000);
-					await new Promise((resolve) => setTimeout(resolve, backoffMs));
+					await this.waitForBackoff(attempt);
 				}
 			}
 		}

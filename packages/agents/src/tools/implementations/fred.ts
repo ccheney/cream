@@ -58,6 +58,139 @@ function getImpact(releaseId: number): ReleaseImpact {
  */
 const FOMC_RELEASE_ID = FRED_RELEASES.FOMC.id;
 
+interface FREDObservationLike {
+	date: string;
+	value: string | null;
+}
+
+interface MacroSeriesFetchResult {
+	seriesId: string;
+	value: number;
+	date: string;
+	change?: number;
+}
+
+function toObservationValue(value: string | null): number | null {
+	if (value === null) {
+		return null;
+	}
+	const parsed = Number.parseFloat(value);
+	return Number.isNaN(parsed) ? null : parsed;
+}
+
+function getReleaseTime(releaseId: number): string {
+	return releaseId === FOMC_RELEASE_ID ? "14:00:00" : "08:30:00";
+}
+
+function toEconomicEvent(release: {
+	release_id: number | string;
+	date: string;
+}): EconomicEvent | null {
+	const releaseId = Number(release.release_id);
+	if (!TRACKED_RELEASE_IDS.has(releaseId)) {
+		return null;
+	}
+
+	const releaseMeta = getReleaseById(releaseId);
+	if (!releaseMeta) {
+		return null;
+	}
+
+	return {
+		id: `fred-${releaseId}-${release.date}`,
+		name: releaseMeta.name,
+		date: release.date,
+		time: getReleaseTime(releaseId),
+		impact: getImpact(releaseId),
+		forecast: null,
+		previous: null,
+		actual: null,
+	};
+}
+
+function toEconomicEvents(
+	releaseDates: { release_id: number | string; date: string }[],
+): EconomicEvent[] {
+	return releaseDates.flatMap((release) => {
+		const event = toEconomicEvent(release);
+		return event ? [event] : [];
+	});
+}
+
+function calculatePercentChange(
+	latestValue: number,
+	previousObservation: FREDObservationLike | undefined,
+): number | undefined {
+	if (!previousObservation) {
+		return undefined;
+	}
+
+	const previousValue = toObservationValue(previousObservation.value);
+	if (previousValue === null || previousValue === 0) {
+		return undefined;
+	}
+
+	return ((latestValue - previousValue) / Math.abs(previousValue)) * 100;
+}
+
+function toMacroSeriesResult(
+	seriesId: string,
+	observations: FREDObservationLike[],
+): MacroSeriesFetchResult | null {
+	const latest = observations[0];
+	if (!latest) {
+		return null;
+	}
+
+	const latestValue = toObservationValue(latest.value);
+	if (latestValue === null) {
+		return null;
+	}
+
+	return {
+		seriesId,
+		value: latestValue,
+		date: latest.date,
+		change: calculatePercentChange(latestValue, observations[1]),
+	};
+}
+
+async function fetchMacroSeries(
+	client: NonNullable<ReturnType<typeof getFREDClient>>,
+	seriesId: string,
+): Promise<MacroSeriesFetchResult | null> {
+	try {
+		const response = await client.getObservations(seriesId, {
+			limit: 2,
+			sort_order: "desc",
+		});
+		return toMacroSeriesResult(seriesId, response.observations);
+	} catch (error) {
+		log.warn(
+			{ seriesId, error: error instanceof Error ? error.message : String(error) },
+			"Failed to fetch FRED series",
+		);
+		return null;
+	}
+}
+
+function toMacroIndicatorRecord(
+	fetchResults: Array<MacroSeriesFetchResult | null>,
+): Record<string, MacroIndicatorValue> {
+	const results: Record<string, MacroIndicatorValue> = {};
+	for (const result of fetchResults) {
+		if (!result) {
+			continue;
+		}
+		results[result.seriesId] = {
+			value: result.value,
+			date: result.date,
+			change: result.change,
+		};
+	}
+	return results;
+}
+
 /**
  * Get economic calendar events from FRED.
  *
@@ -86,7 +219,6 @@ export async function getEconomicCalendar(
 	}
 
 	try {
-		// Fetch release dates for the specified range
 		const response = await client.getReleaseDates({
 			realtime_start: startDate,
 			realtime_end: endDate,
@@ -96,46 +228,8 @@ export async function getEconomicCalendar(
 			sort_order: "asc",
 		});
 
-		// Get release dates from response (API uses both field names)
 		const releaseDates = response.release_dates ?? response.release_date ?? [];
-
-		// Filter to only tracked releases and transform to EconomicEvent format
-		const events: EconomicEvent[] = [];
-
-		for (const release of releaseDates) {
-			const releaseId = Number(release.release_id);
-
-			// Skip releases we don't track
-			if (!TRACKED_RELEASE_IDS.has(releaseId)) {
-				continue;
-			}
-
-			// Get release metadata
-			const releaseMeta = getReleaseById(releaseId);
-			if (!releaseMeta) {
-				continue;
-			}
-
-			// Determine release time
-			// FOMC releases are at 2:00 PM ET, most others at 8:30 AM ET
-			const time = releaseId === FOMC_RELEASE_ID ? "14:00:00" : "08:30:00";
-
-			// Generate stable ID from release_id and date
-			const id = `fred-${releaseId}-${release.date}`;
-
-			events.push({
-				id,
-				name: releaseMeta.name,
-				date: release.date,
-				time,
-				impact: getImpact(releaseId),
-				forecast: null,
-				previous: null,
-				actual: null,
-			});
-		}
-
-		return events;
+		return toEconomicEvents(releaseDates);
 	} catch (error) {
 		log.warn(
 			{ error: error instanceof Error ? error.message : String(error) },
@@ -201,71 +295,10 @@ export async function getMacroIndicators(
 	}
 
 	const series = seriesIds ?? DEFAULT_MACRO_SERIES;
-	const results: Record<string, MacroIndicatorValue> = {};
 
-	// Fetch series in parallel with limited concurrency
-	// FRED rate limit: 120 req/min, so we can safely do parallel requests
-	const fetchPromises = series.map(async (seriesId) => {
-		try {
-			const response = await client.getObservations(seriesId, {
-				limit: 2,
-				sort_order: "desc",
-			});
-
-			const observations = response.observations;
-			if (observations.length === 0) {
-				return null;
-			}
-
-			const latest = observations[0];
-			if (!latest || latest.value === null) {
-				return null;
-			}
-
-			const latestValue = Number.parseFloat(latest.value);
-			if (Number.isNaN(latestValue)) {
-				return null;
-			}
-
-			// Calculate percent change if we have previous value
-			let change: number | undefined;
-			if (observations.length > 1) {
-				const previous = observations[1];
-				if (previous && previous.value !== null) {
-					const prevValue = Number.parseFloat(previous.value);
-					if (!Number.isNaN(prevValue) && prevValue !== 0) {
-						change = ((latestValue - prevValue) / Math.abs(prevValue)) * 100;
-					}
-				}
-			}
-
-			return {
-				seriesId,
-				value: latestValue,
-				date: latest.date,
-				change,
-			};
-		} catch (error) {
-			log.warn(
-				{ seriesId, error: error instanceof Error ? error.message : String(error) },
-				"Failed to fetch FRED series",
-			);
-			return null;
-		}
-	});
+	// FRED rate limit allows this parallel fan-out.
+	const fetchPromises = series.map((seriesId) => fetchMacroSeries(client, seriesId));
 
 	const fetchResults = await Promise.all(fetchPromises);
-
-	// Collect successful results
-	for (const result of fetchResults) {
-		if (result) {
-			results[result.seriesId] = {
-				value: result.value,
-				date: result.date,
-				change: result.change,
-			};
-		}
-	}
-
-	return results;
+	return toMacroIndicatorRecord(fetchResults);
 }
