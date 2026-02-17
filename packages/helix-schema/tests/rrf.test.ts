@@ -78,7 +78,7 @@ describe("calculateRRFScore", () => {
 // Rank Assignment Tests
 // ============================================
 
-describe("assignRanks", () => {
+describe("assignRanks basics", () => {
 	it("assigns ranks in score order", () => {
 		const results = [createResult("a", 0.9), createResult("b", 0.7), createResult("c", 0.5)];
 
@@ -119,7 +119,9 @@ describe("assignRanks", () => {
 		expect(rankB).toBe(1);
 		expect(rankC).toBe(3); // Skips rank 2
 	});
+});
 
+describe("assignRanks edge cases", () => {
 	it("handles empty results", () => {
 		const ranked = assignRanks([], "vector");
 		expect(ranked).toEqual([]);
@@ -149,7 +151,7 @@ describe("assignRanks", () => {
 // RRF Fusion Tests
 // ============================================
 
-describe("fuseWithRRF", () => {
+describe("fuseWithRRF vector and graph combinations", () => {
 	it("fuses vector-only results", () => {
 		const vectorResults = [createResult("a", 0.9), createResult("b", 0.7)];
 
@@ -173,7 +175,9 @@ describe("fuseWithRRF", () => {
 		expect(fused[0].ranks.graph).toBe(1);
 		expect(fused[0].ranks.vector).toBeUndefined();
 	});
+});
 
+describe("fuseWithRRF node overlap combinations", () => {
 	it("combines scores for nodes in both result sets", () => {
 		const vectorResults = [createResult("a", 0.9)];
 		const graphResults = [createResult("a", 0.8)];
@@ -224,7 +228,9 @@ describe("fuseWithRRF", () => {
 		expect(scoreA).toBeGreaterThan(scoreB);
 		expect(scoreA).toBeGreaterThan(scoreC);
 	});
+});
 
+describe("fuseWithRRF topK and thresholds", () => {
 	it("respects topK limit", () => {
 		const vectorResults = [
 			createResult("a", 0.9),
@@ -258,7 +264,9 @@ describe("fuseWithRRF", () => {
 		expect(fused.length).toBe(1);
 		expect(fused[0].nodeId).toBe("a");
 	});
+});
 
+describe("fuseWithRRF score configuration", () => {
 	it("uses default k=60", () => {
 		const vectorResults = [createResult("a", 0.9)];
 		const fused = fuseWithRRF(vectorResults, []);
@@ -282,10 +290,30 @@ describe("fuseWithRRF", () => {
 		expect(fused[0].originalScores.vector).toBe(0.9);
 		expect(fused[0].originalScores.graph).toBe(0.75);
 	});
+});
 
+describe("fuseWithRRF option variants", () => {
 	it("handles empty inputs", () => {
 		const fused = fuseWithRRF([], []);
 		expect(fused).toEqual([]);
+	});
+
+	it("preserves default options", () => {
+		const vectorResults = [createResult("a", 0.9), createResult("b", 0.5)];
+		const fused = fuseWithRRF(vectorResults, []);
+
+		expect(fused.length).toBe(2);
+		expect(fused[0]?.nodeId).toBe("a");
+		expect(fused[1]?.nodeId).toBe("b");
+	});
+
+	it("supports custom topK", () => {
+		const vectorResults = [createResult("a", 0.9), createResult("b", 0.5), createResult("c", 0.4)];
+		const fused = fuseWithRRF(vectorResults, [], { topK: 2, minScore: 0.01 });
+
+		expect(fused.length).toBe(2);
+		expect(fused[0]?.nodeId).toBe("a");
+		expect(fused[1]?.nodeId).toBe("b");
 	});
 });
 

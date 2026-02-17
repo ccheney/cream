@@ -56,7 +56,7 @@ function createMockSnapshot(overrides: Partial<CBRMarketSnapshot> = {}): CBRMark
 // Situation Brief Generation Tests
 // ============================================
 
-describe("generateCBRSituationBrief", () => {
+describe("generateCBRSituationBrief basics", () => {
 	test("generates basic brief with instrument and regime", () => {
 		const snapshot = createMockSnapshot({
 			indicators: undefined,
@@ -90,7 +90,9 @@ describe("generateCBRSituationBrief", () => {
 
 		expect(brief).toContain("Sector: Technology");
 	});
+});
 
+describe("generateCBRSituationBrief context", () => {
 	test("includes technical indicators", () => {
 		const snapshot = createMockSnapshot({
 			indicators: {
@@ -132,7 +134,7 @@ describe("generateCBRSituationBrief", () => {
 // Type Conversion Tests
 // ============================================
 
-describe("convertToRetrievedCase", () => {
+describe("convertToRetrievedCase basics", () => {
 	test("converts basic decision to retrieved case", () => {
 		const decision = createMockDecision();
 
@@ -170,7 +172,9 @@ describe("convertToRetrievedCase", () => {
 		expect(result.shortSummary.length).toBeLessThan(200);
 		expect(result.shortSummary).toContain("...");
 	});
+});
 
+describe("convertToRetrievedCase outcomes", () => {
 	test("parses realized outcome for win", () => {
 		const decision = createMockDecision({
 			realized_outcome: JSON.stringify({
@@ -271,7 +275,7 @@ describe("buildMemoryContext", () => {
 // Similarity Feature Extraction Tests
 // ============================================
 
-describe("extractSimilarityFeatures", () => {
+describe("extractSimilarityFeatures basics", () => {
 	test("extracts basic features", () => {
 		const snapshot = createMockSnapshot();
 
@@ -302,12 +306,13 @@ describe("extractSimilarityFeatures", () => {
 
 		expect(features.rsiBucket).toBe("oversold");
 	});
+});
 
+describe("extractSimilarityFeatures buckets", () => {
 	test("classifies RSI as neutral", () => {
 		const snapshot = createMockSnapshot({
 			indicators: { rsi: 50 },
 		});
-
 		const features = extractSimilarityFeatures(snapshot);
 
 		expect(features.rsiBucket).toBe("neutral");
@@ -358,7 +363,7 @@ describe("extractSimilarityFeatures", () => {
 // CBR Quality Metrics Tests
 // ============================================
 
-describe("calculateCBRQuality", () => {
+describe("calculateCBRQuality standard", () => {
 	test("calculates quality for good retrieval result", () => {
 		const winDecision = createMockDecision({
 			decision_id: "d1",
@@ -389,7 +394,9 @@ describe("calculateCBRQuality", () => {
 		expect(quality.regimeDiversity).toBeGreaterThan(0);
 		expect(quality.qualityScore).toBeGreaterThan(0.5);
 	});
+});
 
+describe("calculateCBRQuality edge cases", () => {
 	test("handles insufficient cases", () => {
 		const cases = [convertToRetrievedCase(createMockDecision(), 0.7)];
 

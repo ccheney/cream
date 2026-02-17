@@ -4,7 +4,7 @@
  * @see docs/plans/04-memory-helixdb.md:274-287
  */
 
-import { describe, expect, it } from "bun:test";
+import { describe, expect, it, test } from "bun:test";
 import {
 	calculateRetrievalStatistics,
 	DEFAULT_SITUATION_BRIEF_CONFIG,
@@ -18,8 +18,8 @@ import {
 // generateSituationBrief Tests
 // ============================================
 
-describe("generateSituationBrief", () => {
-	it("generates brief for equity with minimal input", () => {
+describe("generateSituationBrief instrument basics", () => {
+	test("generates brief for equity with minimal input", () => {
 		const input: SituationBriefInput = {
 			symbol: "AAPL",
 			regimeLabel: "BULLISH_TREND",
@@ -35,7 +35,7 @@ describe("generateSituationBrief", () => {
 		expect(brief.textSummary).toContain("BULLISH_TREND");
 	});
 
-	it("generates brief for option with underlying", () => {
+	test("generates brief for option with underlying", () => {
 		const input: SituationBriefInput = {
 			symbol: "AAPL240119C150",
 			underlying: "AAPL",
@@ -53,7 +53,7 @@ describe("generateSituationBrief", () => {
 		expect(brief.textSummary).toContain("underlying: AAPL");
 	});
 
-	it("infers OPTION type when underlying is present", () => {
+	test("infers OPTION type when underlying is present", () => {
 		const input: SituationBriefInput = {
 			symbol: "AAPL240119C150",
 			underlying: "AAPL",
@@ -64,8 +64,10 @@ describe("generateSituationBrief", () => {
 
 		expect(brief.instrument.assetType).toBe("OPTION");
 	});
+});
 
-	it("filters indicators by config", () => {
+describe("generateSituationBrief indicator filters", () => {
+	test("filters indicators by config", () => {
 		const input: SituationBriefInput = {
 			symbol: "AAPL",
 			regimeLabel: "BULLISH",
@@ -74,7 +76,7 @@ describe("generateSituationBrief", () => {
 				ATR_14: 3.2,
 				SMA_50: 180.5,
 				SMA_200: 165.0,
-				MACD: 2.5, // Not in default config
+				MACD: 2.5,
 			},
 		};
 
@@ -88,7 +90,7 @@ describe("generateSituationBrief", () => {
 		expect(brief.indicators.find((i) => i.name === "MACD")).toBeUndefined();
 	});
 
-	it("respects custom indicator config", () => {
+	test("respects custom indicator config", () => {
 		const input: SituationBriefInput = {
 			symbol: "AAPL",
 			regimeLabel: "BULLISH",
@@ -110,8 +112,10 @@ describe("generateSituationBrief", () => {
 		expect(brief.indicators.find((i) => i.name === "MACD")).toBeDefined();
 		expect(brief.indicators.find((i) => i.name === "CUSTOM_IND")).toBeUndefined();
 	});
+});
 
-	it("interprets RSI correctly", () => {
+describe("generateSituationBrief interpretation", () => {
+	test("interprets RSI correctly", () => {
 		const inputOverbought: SituationBriefInput = {
 			symbol: "AAPL",
 			regimeLabel: "BULLISH",
@@ -136,8 +140,10 @@ describe("generateSituationBrief", () => {
 		expect(briefOversold.indicators[0]?.interpretation).toBe("oversold");
 		expect(briefNeutral.indicators[0]?.interpretation).toBe("neutral");
 	});
+});
 
-	it("includes position context in text summary", () => {
+describe("generateSituationBrief position context", () => {
+	test("includes position context in text summary", () => {
 		const input: SituationBriefInput = {
 			symbol: "AAPL",
 			regimeLabel: "BULLISH",
@@ -159,7 +165,7 @@ describe("generateSituationBrief", () => {
 		expect(brief.textSummary).toContain("held 5 days");
 	});
 
-	it("excludes FLAT position from text summary", () => {
+	test("excludes FLAT position from text summary", () => {
 		const input: SituationBriefInput = {
 			symbol: "AAPL",
 			regimeLabel: "BULLISH",
@@ -176,8 +182,10 @@ describe("generateSituationBrief", () => {
 		expect(brief.position).toBeDefined();
 		expect(brief.textSummary).not.toContain("Position:");
 	});
+});
 
-	it("includes recent events in brief", () => {
+describe("generateSituationBrief event context", () => {
+	test("includes recent events in brief", () => {
 		const now = Date.now();
 		const input: SituationBriefInput = {
 			symbol: "AAPL",
@@ -195,9 +203,9 @@ describe("generateSituationBrief", () => {
 		expect(brief.textSummary).toContain("EARNINGS: Beat estimates by 5%");
 	});
 
-	it("filters out old events beyond lookback", () => {
+	test("filters out old events beyond lookback", () => {
 		const now = Date.now();
-		const oldTimestamp = now - 48 * 60 * 60 * 1000; // 48 hours ago
+		const oldTimestamp = now - 48 * 60 * 60 * 1000;
 
 		const input: SituationBriefInput = {
 			symbol: "AAPL",
@@ -213,8 +221,10 @@ describe("generateSituationBrief", () => {
 		expect(brief.recentEvents.length).toBe(1);
 		expect(brief.recentEvents[0]?.type).toBe("EARNINGS");
 	});
+});
 
-	it("limits events to maxEvents config", () => {
+describe("generateSituationBrief limits", () => {
+	test("limits events to maxEvents config", () => {
 		const now = Date.now();
 		const input: SituationBriefInput = {
 			symbol: "AAPL",
@@ -241,7 +251,7 @@ describe("generateSituationBrief", () => {
 // calculateRetrievalStatistics Tests
 // ============================================
 
-describe("calculateRetrievalStatistics", () => {
+describe("calculateRetrievalStatistics baseline", () => {
 	it("returns zero stats for empty arrays", () => {
 		const stats = calculateRetrievalStatistics([], []);
 
@@ -253,7 +263,7 @@ describe("calculateRetrievalStatistics", () => {
 	});
 
 	it("calculates correct win rate", () => {
-		const returns = [0.05, -0.02, 0.03, 0.08, -0.01]; // 3 wins, 2 losses
+		const returns = [0.05, -0.02, 0.03, 0.08, -0.01];
 		const holdingDays = [3, 5, 2, 7, 1];
 
 		const stats = calculateRetrievalStatistics(returns, holdingDays);
@@ -261,14 +271,15 @@ describe("calculateRetrievalStatistics", () => {
 		expect(stats.totalCases).toBe(5);
 		expect(stats.winRate).toBeCloseTo(0.6);
 	});
+});
 
+describe("calculateRetrievalStatistics advanced", () => {
 	it("calculates correct average return", () => {
 		const returns = [0.1, 0.05, -0.05];
 		const holdingDays = [1, 2, 3];
 
 		const stats = calculateRetrievalStatistics(returns, holdingDays);
 
-		// (0.10 + 0.05 - 0.05) / 3 = 0.0333...
 		expect(stats.avgReturn).toBeCloseTo(0.0333, 3);
 	});
 
@@ -280,20 +291,22 @@ describe("calculateRetrievalStatistics", () => {
 
 		expect(stats.avgHoldingDays).toBe(7.5);
 	});
+});
 
+describe("calculateRetrievalStatistics advanced distribution", () => {
 	it("calculates return distribution percentiles", () => {
-		// 10 values from 1% to 10%
 		const returns = [0.01, 0.02, 0.03, 0.04, 0.05, 0.06, 0.07, 0.08, 0.09, 0.1];
 		const holdingDays = Array(10).fill(1);
 
 		const stats = calculateRetrievalStatistics(returns, holdingDays);
 
-		// P50 should be close to median
 		expect(stats.returnDistribution.p50).toBeCloseTo(0.055);
 		expect(stats.returnDistribution.p10).toBeCloseTo(0.019);
 		expect(stats.returnDistribution.p90).toBeCloseTo(0.091);
 	});
+});
 
+describe("calculateRetrievalStatistics edge cases", () => {
 	it("handles single case", () => {
 		const returns = [0.05];
 		const holdingDays = [3];

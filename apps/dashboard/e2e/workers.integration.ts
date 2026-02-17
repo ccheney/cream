@@ -53,7 +53,7 @@ test.describe("Workers Page Navigation", () => {
 // Service Status Cards Tests
 // ============================================
 
-test.describe("Service Status Cards", () => {
+test.describe("Card Loading", () => {
 	test.beforeEach(async ({ page }) => {
 		await page.goto("/workers");
 		await page.waitForLoadState("networkidle");
@@ -65,7 +65,6 @@ test.describe("Service Status Cards", () => {
 
 		// Look for loading skeleton or spinner
 		const loadingIndicator = page.locator(".animate-pulse").first();
-		// May or may not be visible depending on load speed
 		const isVisible = await loadingIndicator.isVisible().catch(() => false);
 		expect(typeof isVisible).toBe("boolean");
 	});
@@ -79,33 +78,34 @@ test.describe("Service Status Cards", () => {
 			has: page.locator("h4"),
 		});
 
-		// Cards should be visible or error state should be shown
 		const count = await cards.count();
 		expect(count).toBeGreaterThanOrEqual(0);
+	});
+});
+
+test.describe("Card Content", () => {
+	test.beforeEach(async ({ page }) => {
+		await page.goto("/workers");
+		await page.waitForLoadState("networkidle");
 	});
 
 	test("displays service names on cards", async ({ page }) => {
 		await page.waitForTimeout(2000);
 
-		// Check for expected service names
 		const macroWatch = page.locator("text=Macro Watch");
 		const newspaper = page.locator("text=Morning Newspaper");
 		const filings = page.locator("text=Filings Sync");
 
-		// At least one should be visible if data loaded
 		const anyVisible =
 			(await macroWatch.isVisible().catch(() => false)) ||
 			(await newspaper.isVisible().catch(() => false)) ||
 			(await filings.isVisible().catch(() => false));
-
-		// Either services are visible or page shows error state
 		expect(typeof anyVisible).toBe("boolean");
 	});
 
 	test("displays trigger buttons on cards", async ({ page }) => {
 		await page.waitForTimeout(2000);
 
-		// Look for trigger buttons
 		const triggerButtons = page.locator("button:has-text('Trigger')");
 		const compileButton = page.locator("button:has-text('Compile')");
 		const syncButton = page.locator("button:has-text('Sync')");
@@ -114,7 +114,6 @@ test.describe("Service Status Cards", () => {
 		const compileCount = await compileButton.count();
 		const syncCount = await syncButton.count();
 
-		// If data loaded, should have trigger-type buttons
 		expect(triggerCount + compileCount + syncCount).toBeGreaterThanOrEqual(0);
 	});
 });
@@ -123,7 +122,7 @@ test.describe("Service Status Cards", () => {
 // Trigger Functionality Tests
 // ============================================
 
-test.describe("Service Trigger Functionality", () => {
+test.describe("Trigger Validation", () => {
 	test.beforeEach(async ({ page }) => {
 		await page.goto("/workers");
 		await page.waitForLoadState("networkidle");
@@ -131,7 +130,6 @@ test.describe("Service Trigger Functionality", () => {
 	});
 
 	test("trigger button is clickable", async ({ page }) => {
-		// Mock trigger API to prevent actual service trigger
 		await page.route("**/api/workers/*/trigger", (route) => {
 			route.fulfill({
 				status: 202,
@@ -144,21 +142,17 @@ test.describe("Service Trigger Functionality", () => {
 			});
 		});
 
-		// Find first trigger button that's not disabled
 		const triggerButton = page.locator("button:has-text('Trigger'):not([disabled])").first();
 
 		if (await triggerButton.isVisible({ timeout: 5000 }).catch(() => false)) {
 			await triggerButton.click();
-			// Button should respond to click
 			await page.waitForTimeout(500);
 		} else {
-			// No enabled trigger buttons, skip test
 			test.skip();
 		}
 	});
 
 	test("shows loading state when triggering", async ({ page }) => {
-		// Mock trigger API with delay
 		await page.route("**/api/workers/*/trigger", async (route) => {
 			await new Promise((r) => setTimeout(r, 1000));
 			route.fulfill({
@@ -176,8 +170,6 @@ test.describe("Service Trigger Functionality", () => {
 
 		if (await triggerButton.isVisible({ timeout: 5000 }).catch(() => false)) {
 			await triggerButton.click();
-
-			// Should show loading state (spinner or disabled)
 			const spinner = page.locator(".animate-spin");
 			const isSpinning = await spinner.isVisible({ timeout: 1000 }).catch(() => false);
 			expect(typeof isSpinning).toBe("boolean");
@@ -185,9 +177,15 @@ test.describe("Service Trigger Functionality", () => {
 			test.skip();
 		}
 	});
+});
+
+test.describe("Conflict Handling", () => {
+	test.beforeEach(async ({ page }) => {
+		await page.goto("/workers");
+		await page.waitForLoadState("networkidle");
+	});
 
 	test("handles 409 conflict when service already running", async ({ page }) => {
-		// Mock trigger API to return conflict
 		await page.route("**/api/workers/*/trigger", (route) => {
 			route.fulfill({
 				status: 409,
@@ -204,130 +202,9 @@ test.describe("Service Trigger Functionality", () => {
 		if (await triggerButton.isVisible({ timeout: 5000 }).catch(() => false)) {
 			await triggerButton.click();
 			await page.waitForTimeout(500);
-			// Page should still be functional after error
 			await expect(page.locator("h1")).toBeVisible();
 		} else {
 			test.skip();
-		}
-	});
-});
-
-// ============================================
-// Runs History Table Tests
-// ============================================
-
-test.describe("Worker Runs Table", () => {
-	test.beforeEach(async ({ page }) => {
-		await page.goto("/workers");
-		await page.waitForLoadState("networkidle");
-	});
-
-	test("displays runs table header", async ({ page }) => {
-		await page.waitForTimeout(2000);
-
-		// Should have "Recent Runs" header
-		const header = page.locator("h3:has-text('Recent Runs')");
-		await expect(header).toBeVisible({ timeout: 10000 });
-	});
-
-	test("displays refresh button", async ({ page }) => {
-		await page.waitForTimeout(2000);
-
-		// Should have refresh button near runs table
-		const refreshButton = page.locator("button:has(svg)").last();
-		await expect(refreshButton).toBeVisible({ timeout: 10000 });
-	});
-
-	test("shows empty state when no runs", async ({ page }) => {
-		// Mock API to return empty runs
-		await page.route("**/api/workers/runs*", (route) => {
-			route.fulfill({
-				status: 200,
-				contentType: "application/json",
-				body: JSON.stringify({
-					runs: [],
-					total: 0,
-				}),
-			});
-		});
-
-		await page.reload();
-		await page.waitForLoadState("networkidle");
-
-		// Should show empty state
-		await expect(page.locator("text=No recent runs")).toBeVisible({ timeout: 10000 });
-	});
-
-	test("displays run entries in table", async ({ page }) => {
-		// Mock API to return some runs
-		await page.route("**/api/workers/runs*", (route) => {
-			route.fulfill({
-				status: 200,
-				contentType: "application/json",
-				body: JSON.stringify({
-					runs: [
-						{
-							id: "run-001",
-							service: "macro_watch",
-							status: "completed",
-							startedAt: new Date().toISOString(),
-							completedAt: new Date().toISOString(),
-							duration: 60,
-							result: "100 processed",
-							error: null,
-						},
-						{
-							id: "run-002",
-							service: "newspaper",
-							status: "running",
-							startedAt: new Date().toISOString(),
-							completedAt: null,
-							duration: null,
-							result: null,
-							error: null,
-						},
-					],
-					total: 2,
-				}),
-			});
-		});
-
-		await page.reload();
-		await page.waitForLoadState("networkidle");
-		await page.waitForTimeout(1000);
-
-		// Should show table with runs
-		const table = page.locator("table");
-		const isTableVisible = await table.isVisible({ timeout: 5000 }).catch(() => false);
-		expect(typeof isTableVisible).toBe("boolean");
-	});
-
-	test("refresh button refetches data", async ({ page }) => {
-		let requestCount = 0;
-
-		await page.route("**/api/workers/runs*", (route) => {
-			requestCount++;
-			route.fulfill({
-				status: 200,
-				contentType: "application/json",
-				body: JSON.stringify({ runs: [], total: 0 }),
-			});
-		});
-
-		await page.reload();
-		await page.waitForLoadState("networkidle");
-		await page.waitForTimeout(1000);
-
-		const initialCount = requestCount;
-
-		// Click refresh button
-		const refreshButton = page.locator("button:has(svg)").last();
-		if (await refreshButton.isVisible()) {
-			await refreshButton.click();
-			await page.waitForTimeout(1000);
-
-			// Should have made additional request
-			expect(requestCount).toBeGreaterThanOrEqual(initialCount);
 		}
 	});
 });

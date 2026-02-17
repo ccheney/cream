@@ -4,7 +4,7 @@
  * Tests for trade cohort summary creation and grouping.
  */
 
-import { describe, expect, it } from "bun:test";
+import { describe, expect, it, test } from "bun:test";
 import {
 	createTradeCohortSummary,
 	formatMonthlyPeriod,
@@ -14,7 +14,7 @@ import {
 } from "../../src/retention/forgetting.js";
 
 describe("createTradeCohortSummary", () => {
-	it("creates summary from trade decisions", () => {
+	test("creates summary from trade decisions", () => {
 		const decisions: TradeDecisionInfo[] = [
 			{
 				decisionId: "d1",
@@ -59,7 +59,9 @@ describe("createTradeCohortSummary", () => {
 		expect(summary.stats.totalPnl).toBe(2500);
 		expect(summary.notableDecisionIds).toContain("d3");
 	});
+});
 
+describe("createTradeCohortSummary validations", () => {
 	it("throws for empty decisions", () => {
 		expect(() => createTradeCohortSummary("2024-Q3", "AAPL", "BULLISH", [])).toThrow(
 			"Cannot create summary",

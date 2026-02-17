@@ -279,7 +279,7 @@ describe("addTemporalPropertiesToEdge", () => {
 // calculateTemporalStats Tests
 // ============================================
 
-describe("calculateTemporalStats", () => {
+describe("calculateTemporalStats empty and legacy edges", () => {
 	it("returns zeros for empty array", () => {
 		const stats = calculateTemporalStats([]);
 
@@ -302,6 +302,23 @@ describe("calculateTemporalStats", () => {
 		expect(stats.activeEdges).toBe(3); // Legacy treated as active
 	});
 
+	it("handles mixed legacy and temporal edges", () => {
+		const edges = [
+			{}, // Legacy
+			{ valid_from: JAN_2024 }, // Temporal, active
+			{ valid_from: FEB_2024, valid_to: MAR_2024 }, // Temporal, expired
+		];
+		const stats = calculateTemporalStats(edges);
+
+		expect(stats.totalEdges).toBe(3);
+		expect(stats.legacyEdges).toBe(1);
+		expect(stats.temporalEdges).toBe(2);
+		expect(stats.activeEdges).toBe(2); // Legacy + temporal active
+		expect(stats.expiredEdges).toBe(1);
+	});
+});
+
+describe("calculateTemporalStats active and expired breakdown", () => {
 	it("counts active and expired edges", () => {
 		const edges = [
 			{ valid_from: JAN_2024 }, // Active (no valid_to)
@@ -316,7 +333,9 @@ describe("calculateTemporalStats", () => {
 		expect(stats.activeEdges).toBe(2);
 		expect(stats.expiredEdges).toBe(2);
 	});
+});
 
+describe("calculateTemporalStats time boundaries", () => {
 	it("finds earliest valid_from", () => {
 		const edges = [{ valid_from: MAR_2024 }, { valid_from: JAN_2024 }, { valid_from: FEB_2024 }];
 		const stats = calculateTemporalStats(edges);
@@ -333,20 +352,5 @@ describe("calculateTemporalStats", () => {
 		const stats = calculateTemporalStats(edges);
 
 		expect(stats.latestValidTo).toBe(MAY_2024);
-	});
-
-	it("handles mixed legacy and temporal edges", () => {
-		const edges = [
-			{}, // Legacy
-			{ valid_from: JAN_2024 }, // Temporal, active
-			{ valid_from: FEB_2024, valid_to: MAR_2024 }, // Temporal, expired
-		];
-		const stats = calculateTemporalStats(edges);
-
-		expect(stats.totalEdges).toBe(3);
-		expect(stats.legacyEdges).toBe(1);
-		expect(stats.temporalEdges).toBe(2);
-		expect(stats.activeEdges).toBe(2); // Legacy + temporal active
-		expect(stats.expiredEdges).toBe(1);
 	});
 });

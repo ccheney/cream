@@ -114,7 +114,7 @@ describe("calculateHoldingPeriod", () => {
 // Lessons Learned Generation Tests
 // ============================================
 
-describe("generateLessonsLearned", () => {
+describe("generateLessonsLearned close reasons", () => {
 	test("generates lessons for STOP_HIT", () => {
 		const input = createMockInput({
 			closeReason: "STOP_HIT",
@@ -147,7 +147,9 @@ describe("generateLessonsLearned", () => {
 
 		expect(lessons).toContain("Original thesis was invalidated before full resolution");
 	});
+});
 
+describe("generateLessonsLearned pnl outcomes", () => {
 	test("generates lessons for significant gains", () => {
 		const input = createMockInput({ pnlPercent: 15.0 });
 		const lessons = generateLessonsLearned(input, "WIN");
@@ -171,7 +173,9 @@ describe("generateLessonsLearned", () => {
 
 		expect(lessons.some((l) => l.includes("Breakeven trade"))).toBe(true);
 	});
+});
 
+describe("generateLessonsLearned regime and holding period", () => {
 	test("generates lessons for regime change", () => {
 		const input = createMockInput({
 			entryRegime: "BULL_TREND",
@@ -207,7 +211,7 @@ describe("generateLessonsLearned", () => {
 // ThesisMemory Creation Tests
 // ============================================
 
-describe("createThesisMemory", () => {
+describe("createThesisMemory core fields", () => {
 	test("creates ThesisMemory from input", () => {
 		const input = createMockInput();
 		const memory = createThesisMemory(input);
@@ -225,7 +229,26 @@ describe("createThesisMemory", () => {
 		expect(memory.exit_price).toBe(190.0);
 		expect(memory.environment).toBe("PAPER");
 	});
+});
 
+describe("createThesisMemory optional fields", () => {
+	test("handles optional fields", () => {
+		const input = createMockInput({
+			underlyingSymbol: undefined,
+			exitRegime: undefined,
+			entryPrice: undefined,
+			exitPrice: undefined,
+		});
+		const memory = createThesisMemory(input);
+
+		expect(memory.underlying_symbol).toBeUndefined();
+		expect(memory.exit_regime).toBeUndefined();
+		expect(memory.entry_price).toBeUndefined();
+		expect(memory.exit_price).toBeUndefined();
+	});
+});
+
+describe("createThesisMemory computed values", () => {
 	test("classifies outcome correctly", () => {
 		const winInput = createMockInput({ pnlPercent: 10.0 });
 		expect(createThesisMemory(winInput).outcome).toBe("WIN");
@@ -246,7 +269,9 @@ describe("createThesisMemory", () => {
 
 		expect(memory.holding_period_days).toBe(7);
 	});
+});
 
+describe("createThesisMemory lesson serialization", () => {
 	test("generates lessons learned as JSON array", () => {
 		const input = createMockInput();
 		const memory = createThesisMemory(input);
@@ -254,21 +279,6 @@ describe("createThesisMemory", () => {
 		const lessons = JSON.parse(memory.lessons_learned);
 		expect(Array.isArray(lessons)).toBe(true);
 		expect(lessons.length).toBeGreaterThan(0);
-	});
-
-	test("handles optional fields", () => {
-		const input = createMockInput({
-			underlyingSymbol: undefined,
-			exitRegime: undefined,
-			entryPrice: undefined,
-			exitPrice: undefined,
-		});
-		const memory = createThesisMemory(input);
-
-		expect(memory.underlying_symbol).toBeUndefined();
-		expect(memory.exit_regime).toBeUndefined();
-		expect(memory.entry_price).toBeUndefined();
-		expect(memory.exit_price).toBeUndefined();
 	});
 });
 

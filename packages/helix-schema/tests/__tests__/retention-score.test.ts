@@ -175,7 +175,7 @@ describe("hasComplianceOverride", () => {
 	});
 });
 
-describe("calculateRetentionScore", () => {
+describe("calculateRetentionScore summaries", () => {
 	it("returns breakdown with all components", () => {
 		const node = createNodeInfo({
 			createdAt: daysAgo(30),
@@ -194,6 +194,32 @@ describe("calculateRetentionScore", () => {
 		expect(breakdown.finalScore).toBeGreaterThan(0);
 	});
 
+	it("returns infinite score for LIVE compliance nodes", () => {
+		const node = createNodeInfo({
+			nodeType: "TradeDecision",
+			environment: "LIVE",
+			createdAt: daysAgo(100),
+		});
+
+		const breakdown = calculateRetentionScore(node);
+
+		expect(breakdown.complianceOverride).toBe(true);
+		expect(breakdown.finalScore).toBe(INFINITE_RETENTION);
+	});
+
+	it("accepts custom reference date", () => {
+		const node = createNodeInfo({
+			createdAt: new Date("2024-01-01"),
+		});
+
+		const refDate = new Date("2024-01-31");
+		const breakdown = calculateRetentionScore(node, refDate);
+
+		expect(breakdown.ageDays).toBe(30);
+	});
+});
+
+describe("calculateRetentionScore comparisons", () => {
 	it("calculates higher score for newer nodes", () => {
 		const newNode = createNodeInfo({ createdAt: daysAgo(7) });
 		const oldNode = createNodeInfo({ createdAt: daysAgo(365) });
@@ -228,29 +254,5 @@ describe("calculateRetentionScore", () => {
 		const smallScore = calculateRetentionScore(smallWin);
 
 		expect(bigScore.finalScore).toBeGreaterThan(smallScore.finalScore);
-	});
-
-	it("returns infinite score for LIVE compliance nodes", () => {
-		const node = createNodeInfo({
-			nodeType: "TradeDecision",
-			environment: "LIVE",
-			createdAt: daysAgo(100),
-		});
-
-		const breakdown = calculateRetentionScore(node);
-
-		expect(breakdown.complianceOverride).toBe(true);
-		expect(breakdown.finalScore).toBe(INFINITE_RETENTION);
-	});
-
-	it("accepts custom reference date", () => {
-		const node = createNodeInfo({
-			createdAt: new Date("2024-01-01"),
-		});
-
-		const refDate = new Date("2024-01-31");
-		const breakdown = calculateRetentionScore(node, refDate);
-
-		expect(breakdown.ageDays).toBe(30);
 	});
 });
