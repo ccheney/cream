@@ -16,7 +16,7 @@ const rows = await db
 	.orderBy(desc(decisions.createdAt))
 	.limit(20);
 
-console.log("Recent decisions:");
+process.stdout.write("Recent decisions:\n");
 for (const row of rows) {
-	console.log(JSON.stringify(row));
+	process.stdout.write(`${JSON.stringify(row)}\n`);
 }

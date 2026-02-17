@@ -10,7 +10,12 @@
 import { calculateVRP, classifyVRPLevel } from "@cream/indicators";
 import { createWorkflow } from "@mastra/core/workflows";
 import type { z } from "zod";
-
+import {
+	type CandleDataSchema,
+	type CandleSummarySchema,
+	WorkflowInputSchema,
+	WorkflowResultSchema,
+} from "./schemas.js";
 import {
 	actStep,
 	analystsStep,
@@ -21,13 +26,6 @@ import {
 	orientStep,
 	traderStep,
 } from "./steps/index.js";
-
-import {
-	type CandleDataSchema,
-	type CandleSummarySchema,
-	WorkflowInputSchema,
-	WorkflowResultSchema,
-} from "./schemas.js";
 
 type Candle = z.infer<typeof CandleDataSchema>;
 type CandleSummary = z.infer<typeof CandleSummarySchema>;

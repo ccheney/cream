@@ -63,22 +63,29 @@ async function main(): Promise<void> {
 	print(colors.bold("\n🔍 Validating versions...\n"));
 
 	const rootDir = await findProjectRoot();
+	const { allResults, runtimeChecks } = await collectValidationResults(rootDir);
+	const summary = calculateSummary(allResults);
+	printSummaryWithLogging(summary);
+	decideExitCode(runtimeChecks, summary);
+}
+
+async function collectValidationResults(rootDir: string): Promise<{
+	runtimeChecks: VersionConstraint[];
+	allResults: VersionConstraint[];
+}> {
 	const allResults: VersionConstraint[] = [];
 
-	// Runtime checks
 	printSectionHeader("Runtimes");
 	const runtimeChecks = await checkAllRuntimes();
 	printResults(runtimeChecks);
 	allResults.push(...runtimeChecks);
 
-	// TypeScript packages
 	print("");
 	printSectionHeader("TypeScript Packages");
 	const tsResults = await checkTypeScriptPackages(rootDir);
 	printResults(tsResults);
 	allResults.push(...tsResults);
 
-	// Rust crates
 	print("");
 	printSectionHeader("Rust Crates");
 	const rustResults = await checkRustCrates(rootDir);
@@ -89,10 +96,10 @@ async function main(): Promise<void> {
 		allResults.push(...rustResults);
 	}
 
-	// Calculate and print summary
-	const summary = calculateSummary(allResults);
-	printSummary(summary);
+	return { runtimeChecks, allResults };
+}
 
+function printSummaryWithLogging(summary: ReturnType<typeof calculateSummary>) {
 	log.info(
 		{
 			total: summary.total,
@@ -104,7 +111,13 @@ async function main(): Promise<void> {
 		"Version validation complete",
 	);
 
-	// Determine exit code
+	printSummary(summary);
+}
+
+function decideExitCode(
+	runtimeChecks: VersionConstraint[],
+	summary: { total: number; passed: number; failed: number; warnings: number; missing: number },
+) {
 	const runtimeMissing = runtimeChecks.some(
 		(r) => r.status === "missing" && REQUIRED_RUNTIMES.includes(r.name),
 	);

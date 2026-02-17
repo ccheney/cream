@@ -16,8 +16,8 @@ app.get("/test", () => new Response("ok"));
 
 Bun.env.CREAM_ENV = "PAPER";
 const r1 = await app.request("/test");
-console.log("paper", r1.status, await r1.text());
+process.stdout.write(`paper ${r1.status} ${await r1.text()}\n`);
 
 Bun.env.CREAM_ENV = "LIVE";
 const r2 = await app.request("/test");
-console.log("live", r2.status, await r2.text());
+process.stdout.write(`live ${r2.status} ${await r2.text()}\n`);
