@@ -104,6 +104,11 @@ async function executeAnalystsStep(
 	const warnings: string[] = [];
 	const batches = chunk(instruments, BATCH_SIZE);
 
+	const helixHealthy = await checkHelixAvailability(warnings);
+	if (!helixHealthy) {
+		log.warn({ cycleId }, "HelixDB unavailable — analysts will operate without graph context");
+	}
+
 	logAnalystsStart(cycleId, instruments.length, batches.length);
 	const metrics = await runAnalystsInParallel(
 		cycleId,
@@ -134,6 +139,22 @@ async function executeAnalystsStep(
 			batchCount: batches.length,
 		},
 	};
+}
+
+async function checkHelixAvailability(warnings: string[]): Promise<boolean> {
+	const host = Bun.env.HELIX_HOST ?? "localhost";
+	const port = Bun.env.HELIX_PORT ?? "6969";
+	const url = `http://${host}:${port}`;
+
+	try {
+		await fetch(url, { signal: AbortSignal.timeout(2_000) });
+		return true;
+	} catch {
+		warnings.push(
+			`HelixDB at ${url} is unreachable — graph context tools will return empty results`,
+		);
+		return false;
+	}
 }
 
 function logAnalystsStart(cycleId: string, symbolCount: number, batchCount: number): void {

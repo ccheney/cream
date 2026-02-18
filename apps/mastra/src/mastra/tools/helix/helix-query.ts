@@ -4,8 +4,9 @@
  * Query the HelixDB knowledge graph.
  */
 
-import { graphragQuery } from "@cream/agents/implementations";
+import { type GraphRAGQueryResult, graphragQuery } from "@cream/agents/implementations";
 import { createContext, requireEnv } from "@cream/domain";
+import { HelixError } from "@cream/helix";
 import { createTool } from "@mastra/core/tools";
 import { z } from "zod";
 
@@ -20,7 +21,10 @@ const HelixQueryInputSchema = z.object({
 	query: z
 		.string()
 		.min(3)
-		.describe("Natural language query for semantic search (e.g., 'AAPL earnings guidance')"),
+		.optional()
+		.describe(
+			"Natural language query for semantic search (e.g., 'AAPL earnings guidance'). Required unless symbol is provided.",
+		),
 	symbol: z.string().optional().describe("Optional company ticker symbol filter (e.g., 'AAPL')"),
 	limit: z
 		.number()
@@ -74,59 +78,92 @@ Stores of the system's learned memory including:
 	outputSchema: HelixQueryOutputSchema,
 	execute: async (inputData): Promise<HelixQueryResult> => {
 		const ctx = createToolContext();
-		const trunc = (text: string, maxChars = 1200) =>
-			text.length > maxChars ? `${text.slice(0, maxChars)}…` : text;
+		const query = inputData.query ?? `${inputData.symbol ?? "market"} recent context and patterns`;
 
-		const result = await graphragQuery(ctx, {
-			query: inputData.query,
-			limit: inputData.limit,
-			symbol: inputData.symbol,
-		});
-
-		// Flatten GraphRAG results into a generic node list
-		const nodes: unknown[] = [
-			...result.filingChunks.map((c) => ({
-				...c,
-				_type: "FilingChunk",
-				chunkText: trunc(c.chunkText),
-			})),
-			...result.transcriptChunks.map((c) => ({
-				...c,
-				_type: "TranscriptChunk",
-				chunkText: trunc(c.chunkText),
-			})),
-			...result.newsItems.map((n) => ({ ...n, _type: "NewsItem", bodyText: trunc(n.bodyText) })),
-			...result.externalEvents.map((e) => ({ ...e, _type: "ExternalEvent" })),
-			...result.companies.map((c) => ({ ...c, _type: "Company" })),
-		];
-		const edges: unknown[] = [];
-
-		// Guardrail: limit payload size
-		const maxNodes = inputData.maxNodes ?? 50;
-		const maxEdges = inputData.maxEdges ?? 100;
-
-		const nodesTotal = nodes.length;
-		const edgesTotal = edges.length;
-
-		const clippedNodes = nodesTotal > maxNodes ? nodes.slice(0, maxNodes) : nodes;
-		const clippedEdges = edgesTotal > maxEdges ? edges.slice(0, maxEdges) : edges;
-
-		return {
-			nodes: clippedNodes,
-			edges: clippedEdges,
-			metadata: {
-				executionTimeMs: result.executionTimeMs,
-				query: inputData.query,
+		let result: GraphRAGQueryResult;
+		try {
+			result = await graphragQuery(ctx, {
+				query,
+				limit: inputData.limit,
 				symbol: inputData.symbol,
-				limit: inputData.limit ?? 10,
-				nodesTotal,
-				edgesTotal,
-				nodesReturned: clippedNodes.length,
-				edgesReturned: clippedEdges.length,
-				truncated: nodesTotal > clippedNodes.length || edgesTotal > clippedEdges.length,
-			},
-		};
+			});
+		} catch (error) {
+			if (isHelixUnavailable(error)) {
+				return {
+					nodes: [],
+					edges: [],
+					metadata: {
+						unavailable: true,
+						error: error instanceof Error ? error.message : "HelixDB unavailable",
+						query,
+						symbol: inputData.symbol,
+					},
+				};
+			}
+			throw error;
+		}
+
+		return formatGraphRAGResult(result, inputData, query);
 	},
 });
+
+function formatGraphRAGResult(
+	result: GraphRAGQueryResult,
+	inputData: { maxNodes?: number; maxEdges?: number; limit?: number; symbol?: string },
+	query: string,
+): HelixQueryResult {
+	const trunc = (text: string, maxChars = 1200) =>
+		text.length > maxChars ? `${text.slice(0, maxChars)}…` : text;
+
+	const nodes: unknown[] = [
+		...result.filingChunks.map((c) => ({
+			...c,
+			_type: "FilingChunk",
+			chunkText: trunc(c.chunkText),
+		})),
+		...result.transcriptChunks.map((c) => ({
+			...c,
+			_type: "TranscriptChunk",
+			chunkText: trunc(c.chunkText),
+		})),
+		...result.newsItems.map((n) => ({ ...n, _type: "NewsItem", bodyText: trunc(n.bodyText) })),
+		...result.externalEvents.map((e) => ({ ...e, _type: "ExternalEvent" })),
+		...result.companies.map((c) => ({ ...c, _type: "Company" })),
+	];
+	const edges: unknown[] = [];
+
+	const maxNodes = inputData.maxNodes ?? 50;
+	const maxEdges = inputData.maxEdges ?? 100;
+	const nodesTotal = nodes.length;
+	const edgesTotal = edges.length;
+	const clippedNodes = nodesTotal > maxNodes ? nodes.slice(0, maxNodes) : nodes;
+	const clippedEdges = edgesTotal > maxEdges ? edges.slice(0, maxEdges) : edges;
+
+	return {
+		nodes: clippedNodes,
+		edges: clippedEdges,
+		metadata: {
+			executionTimeMs: result.executionTimeMs,
+			query,
+			symbol: inputData.symbol,
+			limit: inputData.limit ?? 10,
+			nodesTotal,
+			edgesTotal,
+			nodesReturned: clippedNodes.length,
+			edgesReturned: clippedEdges.length,
+			truncated: nodesTotal > clippedNodes.length || edgesTotal > clippedEdges.length,
+		},
+	};
+}
+
+function isHelixUnavailable(error: unknown): boolean {
+	if (!(error instanceof HelixError)) return false;
+	if (error.code === "CIRCUIT_OPEN" || error.code === "CONNECTION_FAILED") return true;
+	if (error.code === "QUERY_FAILED" && error.cause instanceof Error) {
+		const msg = error.cause.message;
+		return msg.includes("ConnectionRefused") || msg.includes("Unable to connect");
+	}
+	return false;
+}
 
 export { HelixQueryInputSchema, HelixQueryOutputSchema };

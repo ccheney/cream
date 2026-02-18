@@ -6,6 +6,7 @@
 
 import { graphragQuery as graphragQueryImpl } from "@cream/agents/implementations";
 import { createContext, requireEnv } from "@cream/domain";
+import { HelixError } from "@cream/helix";
 import { createTool } from "@mastra/core/tools";
 import { z } from "zod";
 
@@ -45,12 +46,36 @@ Returns results from multiple document types with company connections.`,
 	outputSchema: GraphRAGQueryOutputSchema,
 	execute: async (inputData) => {
 		const ctx = createToolContext();
-		return graphragQueryImpl(ctx, {
-			query: inputData.query,
-			limit: inputData.limit,
-			symbol: inputData.symbol,
-		});
+		try {
+			return await graphragQueryImpl(ctx, {
+				query: inputData.query,
+				limit: inputData.limit,
+				symbol: inputData.symbol,
+			});
+		} catch (error) {
+			if (isHelixUnavailable(error)) {
+				return {
+					filingChunks: [],
+					transcriptChunks: [],
+					newsItems: [],
+					externalEvents: [],
+					companies: [],
+					executionTimeMs: 0,
+				};
+			}
+			throw error;
+		}
 	},
 });
+
+function isHelixUnavailable(error: unknown): boolean {
+	if (!(error instanceof HelixError)) return false;
+	if (error.code === "CIRCUIT_OPEN" || error.code === "CONNECTION_FAILED") return true;
+	if (error.code === "QUERY_FAILED" && error.cause instanceof Error) {
+		const msg = error.cause.message;
+		return msg.includes("ConnectionRefused") || msg.includes("Unable to connect");
+	}
+	return false;
+}
 
 export { GraphRAGQueryInputSchema, GraphRAGQueryOutputSchema };
