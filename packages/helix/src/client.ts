@@ -21,6 +21,10 @@ export interface HelixClientConfig {
 	maxRetries?: number;
 	/** Base delay between retries in milliseconds (default: 100) */
 	retryDelay?: number;
+	/** Consecutive failures before circuit opens (default: 3) */
+	circuitBreakerThreshold?: number;
+	/** How long the circuit stays open in milliseconds (default: 30000) */
+	circuitBreakerResetMs?: number;
 }
 
 /**
@@ -32,6 +36,8 @@ const DEFAULT_CONFIG: Required<HelixClientConfig> = {
 	timeout: 5000,
 	maxRetries: 3,
 	retryDelay: 100,
+	circuitBreakerThreshold: 3,
+	circuitBreakerResetMs: 30_000,
 };
 
 /**
@@ -61,6 +67,7 @@ export class HelixError extends Error {
  */
 export type HelixErrorCode =
 	| "CONNECTION_FAILED"
+	| "CIRCUIT_OPEN"
 	| "QUERY_FAILED"
 	| "TIMEOUT"
 	| "INVALID_QUERY"
@@ -138,9 +145,24 @@ interface HelixQueryExecutor {
 	query(name: string, params?: Record<string, unknown>): Promise<unknown>;
 }
 
+type CircuitState = "closed" | "open" | "half-open";
+
+/** @internal Exported for testing only. */
+export interface CircuitBreakerRuntime {
+	state: CircuitState;
+	consecutiveFailures: number;
+	lastFailureTime: number;
+}
+
+/** @internal Create a fresh circuit breaker state for testing. */
+export function createCircuitBreakerRuntime(): CircuitBreakerRuntime {
+	return { state: "closed", consecutiveFailures: 0, lastFailureTime: 0 };
+}
+
 interface ClientRuntime {
 	connected: boolean;
 	helixInstance: HelixQueryExecutor | null;
+	circuit: CircuitBreakerRuntime;
 }
 
 /**
@@ -167,7 +189,7 @@ export function createHelixClient(config: HelixClientConfig = {}): HelixClient {
 	const mergedConfig = mergeClientConfig(config);
 	const runtime = createRuntime();
 	const getClient = createLazyClientGetter(runtime, mergedConfig);
-	const executeWithRetry = createRetryingQueryExecutor(getClient, mergedConfig);
+	const executeWithRetry = createRetryingQueryExecutor(getClient, mergedConfig, runtime.circuit);
 	return createClientFacade(runtime, mergedConfig, getClient, executeWithRetry);
 }
 
@@ -198,14 +220,36 @@ export function createHelixClientFromEnv(): HelixClient {
 
 /**
  * Check if an error is retryable.
+ * @internal Exported for testing only.
  */
-function isRetryable(error: unknown): boolean {
+export function isRetryable(error: unknown): boolean {
 	if (error instanceof HelixError) {
-		// Don't retry schema errors or invalid queries
-		return !["SCHEMA_ERROR", "INVALID_QUERY", "NOT_FOUND"].includes(error.code);
+		if (
+			["SCHEMA_ERROR", "INVALID_QUERY", "NOT_FOUND", "CONNECTION_FAILED", "CIRCUIT_OPEN"].includes(
+				error.code,
+			)
+		) {
+			return false;
+		}
+		// ConnectionRefused means the service isn't running — retrying is pointless
+		if (error.cause && isConnectionRefused(error.cause)) {
+			return false;
+		}
 	}
-	// Retry network errors
+	if (isConnectionRefused(error)) {
+		return false;
+	}
 	return true;
+}
+
+/** @internal Exported for testing only. */
+export function isConnectionRefused(error: unknown): boolean {
+	if (error instanceof Error) {
+		if ("code" in error && error.code === "ConnectionRefused") return true;
+		if (error.message.includes("ConnectionRefused")) return true;
+		if (error.message.includes("Unable to connect")) return true;
+	}
+	return false;
 }
 
 const sleep = Bun.sleep;
@@ -221,6 +265,7 @@ function createRuntime(): ClientRuntime {
 	return {
 		connected: false,
 		helixInstance: null,
+		circuit: { state: "closed", consecutiveFailures: 0, lastFailureTime: 0 },
 	};
 }
 
@@ -266,12 +311,17 @@ function createConnectionError(config: Required<HelixClientConfig>, error: unkno
 function createRetryingQueryExecutor(
 	getClient: () => Promise<HelixQueryExecutor>,
 	config: Required<HelixClientConfig>,
+	circuit: CircuitBreakerRuntime,
 ): <T>(queryName: string, params: HelixQueryParams) => Promise<QueryResult<T>> {
 	return async <T>(queryName: string, params: HelixQueryParams): Promise<QueryResult<T>> => {
+		checkCircuit(circuit, config);
+
 		let attempt = 1;
 		while (true) {
 			try {
-				return await executeQuery<T>(getClient, queryName, params, config.timeout);
+				const result = await executeQuery<T>(getClient, queryName, params, config.timeout);
+				onCircuitSuccess(circuit);
+				return result;
 			} catch (error) {
 				if (attempt < config.maxRetries && isRetryable(error)) {
 					const delay = config.retryDelay * 2 ** (attempt - 1);
@@ -279,10 +329,48 @@ function createRetryingQueryExecutor(
 					attempt += 1;
 					continue;
 				}
+				onCircuitFailure(circuit, config);
 				throw normalizeQueryError(queryName, error);
 			}
 		}
 	};
+}
+
+/** @internal Exported for testing only. */
+export function checkCircuit(
+	circuit: CircuitBreakerRuntime,
+	config: Required<HelixClientConfig>,
+): void {
+	if (circuit.state === "closed") return;
+
+	const elapsed = Date.now() - circuit.lastFailureTime;
+	if (elapsed >= config.circuitBreakerResetMs) {
+		circuit.state = "half-open";
+		return;
+	}
+
+	throw new HelixError(
+		`Circuit breaker open — HelixDB unavailable (${circuit.consecutiveFailures} consecutive failures, resets in ${config.circuitBreakerResetMs - elapsed}ms)`,
+		"CIRCUIT_OPEN",
+	);
+}
+
+/** @internal Exported for testing only. */
+export function onCircuitSuccess(circuit: CircuitBreakerRuntime): void {
+	circuit.state = "closed";
+	circuit.consecutiveFailures = 0;
+}
+
+/** @internal Exported for testing only. */
+export function onCircuitFailure(
+	circuit: CircuitBreakerRuntime,
+	config: Required<HelixClientConfig>,
+): void {
+	circuit.consecutiveFailures += 1;
+	circuit.lastFailureTime = Date.now();
+	if (circuit.consecutiveFailures >= config.circuitBreakerThreshold) {
+		circuit.state = "open";
+	}
 }
 
 async function executeQuery<T>(

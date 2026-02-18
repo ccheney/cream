@@ -213,6 +213,8 @@ function createMockClient(responseOverrides: Record<string, unknown> = {}): Heli
 			timeout: 5000,
 			maxRetries: 3,
 			retryDelay: 100,
+			circuitBreakerThreshold: 3,
+			circuitBreakerResetMs: 30_000,
 		}),
 	};
 }
