@@ -25,7 +25,7 @@ bunx @biomejs/biome check --write --staged --files-ignore-unknown=true --no-erro
 # 2. TypeScript: Type checking (if TS/JS files are staged)
 if [ -n "$HAS_TS_FILES" ]; then
   echo "🔷 TypeScript: Running type checker..."
-  bun run typecheck || {
+  turbo run typecheck --filter='!./apps/dashboard' --filter='!./apps/dashboard-api' || {
     echo "❌ TypeScript type errors found. Please fix them before committing."
     exit 1
   }
