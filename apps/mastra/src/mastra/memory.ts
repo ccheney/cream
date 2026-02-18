@@ -10,6 +10,7 @@
  * since agents are constructed before the Mastra instance.
  */
 
+import { getModelId } from "@cream/domain";
 import { Memory } from "@mastra/memory";
 
 import { storage } from "./storage.js";
@@ -25,6 +26,7 @@ export function createTraderMemory(): Memory {
 		options: {
 			lastMessages: 10,
 			observationalMemory: {
+				model: getModelId(),
 				scope: "resource",
 				observation: {
 					messageTokens: 128_000,
@@ -47,6 +49,7 @@ export function createAnalystMemory(): Memory {
 		options: {
 			lastMessages: 8,
 			observationalMemory: {
+				model: getModelId(),
 				scope: "resource",
 				observation: {
 					messageTokens: 128_000,
