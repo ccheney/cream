@@ -250,7 +250,7 @@ function registerScanStepTests(): void {
 
 		for (const stepCase of stepIdCases) {
 			it(`${stepCase.expected} should have correct id`, () => {
-				expect(stepCase.step.id).toBe(stepCase.expected);
+				expect(stepCase.step.id as string).toBe(stepCase.expected);
 			});
 		}
 
@@ -268,7 +268,7 @@ function registerScanStepTests(): void {
 				expect(result).toHaveProperty("cycleId", "test-cycle");
 				expect(result).toHaveProperty(executionCase.key);
 				if (executionCase.key in result) {
-					expect(Array.isArray(result[executionCase.key])).toBe(true);
+					expect(Array.isArray((result as Record<string, unknown>)[executionCase.key])).toBe(true);
 				}
 			});
 		}

@@ -411,47 +411,20 @@ function buildBatchOutcome(
 		);
 		return { decisions: [] };
 	}
-	const validatedPlan = validateDecisionPlan(cycleId, plan, warnings);
+	const validatedPlan = validateDecisionPlan(
+		cycleId,
+		plan as z.infer<typeof DecisionPlanSchema>,
+		warnings,
+	);
 	const batchDecisions = validatedPlan.decisions.filter((decision) =>
 		batchState.batchSet.has(decision.instrumentId),
 	);
-	logOffBatchDecisions(cycleId, batchState, validatedPlan.decisions, batchDecisions);
+	logOffBatchDecisions(batchState, validatedPlan.decisions, batchDecisions);
 	log.debug(
 		{ cycleId, batchIndex: batchState.batchIndex + 1, decisionCount: batchDecisions.length },
 		"Trader batch complete",
 	);
 	return { decisions: batchDecisions, portfolioNotes: validatedPlan.portfolioNotes };
-}
-
-function _isDecisionPlan(value: unknown): value is z.infer<typeof DecisionPlanSchema> {
-	return (
-		!!value &&
-		typeof value === "object" &&
-		"decisions" in value &&
-		Array.isArray((value as Record<string, unknown>).decisions)
-	);
-}
-
-function _logOffBatchDecisions(
-	cycleId: string,
-	batchState: TraderBatchState,
-	allDecisions: z.infer<typeof DecisionSchema>[],
-	batchDecisions: z.infer<typeof DecisionSchema>[],
-): void {
-	const offBatchCount = allDecisions.length - batchDecisions.length;
-	if (offBatchCount <= 0) return;
-	const offBatchSymbols = allDecisions
-		.filter((decision) => !batchState.batchSet.has(decision.instrumentId))
-		.map((decision) => decision.instrumentId);
-	log.warn(
-		{
-			cycleId,
-			batchIndex: batchState.batchIndex + 1,
-			offBatchCount,
-			offBatchSymbols,
-		},
-		"Filtered out decisions for symbols not in batch",
-	);
 }
 
 function validateDecisionPlan(

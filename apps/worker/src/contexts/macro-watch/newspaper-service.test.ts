@@ -134,7 +134,7 @@ mock.module("@cream/domain", () => ({
 	getFullModelId: () => "google/gemini-2.0-flash",
 }));
 
-let service: NewspaperService;
+let service: InstanceType<typeof NewspaperService>;
 
 beforeEach(() => {
 	service = createNewspaperService();

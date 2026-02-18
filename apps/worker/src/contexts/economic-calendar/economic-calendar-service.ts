@@ -98,7 +98,7 @@ export class EconomicCalendarService {
 			releaseName: event.name,
 			releaseDate: event.date,
 			releaseTime: event.time,
-			impact: event.impact,
+			impact: event.impact as "high" | "medium" | "low",
 			country: "US",
 			actual: event.actual,
 			previous: event.previous,

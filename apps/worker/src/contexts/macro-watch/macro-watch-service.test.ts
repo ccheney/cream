@@ -48,7 +48,7 @@ beforeAll(async () => {
 	({ createMacroWatchService, MacroWatchService } = await import("./macro-watch-service.js"));
 });
 
-let service: MacroWatchService;
+let service: InstanceType<typeof MacroWatchService>;
 
 beforeEach(() => {
 	service = createMacroWatchService();

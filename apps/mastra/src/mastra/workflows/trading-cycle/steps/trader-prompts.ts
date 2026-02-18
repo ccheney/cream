@@ -113,7 +113,7 @@ function buildTraderGlobalSections(
 		xmlPredictionMarketSignals(predictionMarketSignals),
 		buildRiskConstraintsSection(constraints),
 		buildPriorBatchSection(priorBatchDecisions),
-	].filter(Boolean);
+	].filter((s): s is string => Boolean(s));
 }
 
 function buildRiskConstraintsSection(constraints: Constraints | undefined): string | undefined {

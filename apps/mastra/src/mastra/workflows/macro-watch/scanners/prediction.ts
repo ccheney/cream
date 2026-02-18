@@ -221,7 +221,7 @@ async function loadPredictionRepositories(): Promise<PredictionRepositories> {
 	const db = getDb();
 	return {
 		repo: new PredictionMarketsRepository(db),
-		macroWatchRepo: new MacroWatchRepository(db),
+		macroWatchRepo: new MacroWatchRepository(db) as PredictionRepositories["macroWatchRepo"],
 	};
 }
 

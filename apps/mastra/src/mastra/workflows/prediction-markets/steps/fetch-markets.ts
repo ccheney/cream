@@ -17,7 +17,11 @@ import {
 } from "@cream/prediction-markets";
 import { createStep } from "@mastra/core/workflows";
 
-import { PredictionMarketsInputSchema, PredictionMarketsOutputSchema } from "../schemas.js";
+import {
+	type MarketType,
+	PredictionMarketsInputSchema,
+	PredictionMarketsOutputSchema,
+} from "../schemas.js";
 
 const log = createNodeLogger({ service: "prediction-markets", level: "info" });
 
@@ -91,7 +95,7 @@ function buildEmptyOutput(fetchedAt: string) {
 
 async function fetchMarketDataOrEmpty(
 	client: UnifiedPredictionMarketClient,
-	marketTypes: string[],
+	marketTypes: MarketType[],
 	fetchedAt: string,
 ) {
 	try {
