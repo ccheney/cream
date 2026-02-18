@@ -259,6 +259,24 @@ E::THESIS_INCLUDES {
 }
 
 // ============================================
+// Indicators - Vector Types
+// ============================================
+
+// Trading indicators/signals with embedded descriptions for semantic search
+V::Indicator {
+    INDEX indicator_id: String,
+    INDEX name: String,
+    INDEX category: String,
+    INDEX symbol: String,
+    embedding_text: String,
+    description: String,
+    INDEX indicator_type: String,
+    signal_value: F64,
+    INDEX environment: String,
+    created_at: Date DEFAULT NOW
+}
+
+// ============================================
 // Indicator & Research Graph Edges
 // ============================================
 

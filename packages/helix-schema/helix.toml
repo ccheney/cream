@@ -5,6 +5,6 @@ container_runtime = "docker"
 
 [local.dev]
 port = 6969
-build_mode = "debug"
+build_mode = "dev"
 
 [cloud]
