@@ -10,51 +10,57 @@
 #   CREAM_ENV - Environment (PAPER or LIVE)
 
 # ============================================
-# Stage 1: Build
+# Stage 1: Dependency cache
 # ============================================
-FROM rust:1.92-slim-bookworm AS builder
+FROM rust:1.92-slim-bookworm AS deps
 
-# Install build dependencies (includes buf for proto generation)
 RUN apt-get update && apt-get install -y \
     pkg-config \
     libssl-dev \
     curl \
     && rm -rf /var/lib/apt/lists/*
 
-# Install buf (for protobuf generation in build.rs)
 RUN curl -sSL "https://github.com/bufbuild/buf/releases/download/v1.32.2/buf-Linux-x86_64" -o /usr/local/bin/buf \
     && chmod +x /usr/local/bin/buf
 
-# Create workspace directory
 WORKDIR /workspace
 
-# Copy Cargo workspace files for dependency caching
+# Copy only manifests for dependency caching
 COPY Cargo.toml Cargo.lock ./
+COPY apps/alpaca-stream-proxy/Cargo.toml apps/alpaca-stream-proxy/Cargo.toml
+COPY apps/execution-engine/Cargo.toml apps/execution-engine/Cargo.toml
 
-# Copy the alpaca-stream-proxy package and proto definitions
-COPY apps/alpaca-stream-proxy apps/alpaca-stream-proxy
-COPY packages/proto packages/proto
-
-# Create dummy main.rs for dependency caching (if needed)
+# Create dummy sources to satisfy workspace resolution
 RUN mkdir -p apps/alpaca-stream-proxy/src && \
-    echo "fn main() {}" > apps/alpaca-stream-proxy/src/main.rs 2>/dev/null || true
+    echo "fn main() {}" > apps/alpaca-stream-proxy/src/main.rs && \
+    mkdir -p apps/execution-engine/src && \
+    echo "fn main() {}" > apps/execution-engine/src/main.rs && \
+    echo "" > apps/execution-engine/src/lib.rs
 
-# Build dependencies first (cached layer)
+# Build dependencies only (this layer is cached until Cargo.toml/Cargo.lock change)
 RUN cargo build --release -p alpaca-stream-proxy 2>/dev/null || true
 
-# Copy actual source
+# ============================================
+# Stage 2: Build
+# ============================================
+FROM deps AS builder
+
+# Copy real source and proto definitions
 COPY apps/alpaca-stream-proxy/src apps/alpaca-stream-proxy/src
 COPY apps/alpaca-stream-proxy/build.rs apps/alpaca-stream-proxy/build.rs
+COPY packages/proto packages/proto
+
+# Invalidate Cargo's fingerprint cache so it rebuilds with real source
+RUN touch apps/alpaca-stream-proxy/src/main.rs
 
 # Build the application
 RUN cargo build --release -p alpaca-stream-proxy
 
 # ============================================
-# Stage 2: Runtime
+# Stage 3: Runtime
 # ============================================
 FROM debian:bookworm-slim AS runtime
 
-# Install runtime dependencies
 RUN apt-get update && apt-get install -y \
     ca-certificates \
     libssl3 \
@@ -62,31 +68,23 @@ RUN apt-get update && apt-get install -y \
     netcat-openbsd \
     && rm -rf /var/lib/apt/lists/*
 
-# Create non-root user
 RUN useradd -m -u 1000 cream
 
-# Copy binary from builder
 COPY --from=builder /workspace/target/release/alpaca-stream-proxy /usr/local/bin/
 
-# Set ownership
 RUN chown cream:cream /usr/local/bin/alpaca-stream-proxy
 
-# Switch to non-root user
 USER cream
 
-# Expose ports (gRPC and health check)
 EXPOSE 50052
 EXPOSE 8082
 
-# Health check using HTTP endpoint
 HEALTHCHECK --interval=10s --timeout=5s --start-period=10s --retries=3 \
     CMD curl -f http://localhost:8082/healthz || exit 1
 
-# Default environment
 ENV CREAM_ENV=PAPER
 ENV RUST_LOG=info,alpaca_stream_proxy=debug
 ENV STREAM_PROXY_GRPC_PORT=50052
 ENV STREAM_PROXY_HEALTH_PORT=8082
 
-# Run the server
 CMD ["alpaca-stream-proxy"]

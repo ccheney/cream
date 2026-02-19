@@ -7,74 +7,73 @@
 # Used by: testcontainers in integration tests
 
 # ============================================
-# Stage 1: Build
+# Stage 1: Dependency cache
 # ============================================
-FROM rust:1.92-slim-bookworm AS builder
+FROM rust:1.92-slim-bookworm AS deps
 
-# Install build dependencies
 RUN apt-get update && apt-get install -y \
     pkg-config \
     libssl-dev \
     protobuf-compiler \
     && rm -rf /var/lib/apt/lists/*
 
-# Create workspace directory
 WORKDIR /workspace
 
-# Copy Cargo workspace files for dependency caching
+# Copy only manifests for dependency caching
 COPY Cargo.toml Cargo.lock ./
+COPY apps/execution-engine/Cargo.toml apps/execution-engine/Cargo.toml
+COPY apps/alpaca-stream-proxy/Cargo.toml apps/alpaca-stream-proxy/Cargo.toml
 
-# Copy the execution-engine package and schema-gen
-COPY apps/execution-engine apps/execution-engine
-COPY packages/schema-gen packages/schema-gen
-
-# Create dummy main.rs for dependency caching (if needed)
+# Create dummy sources to satisfy workspace resolution
 RUN mkdir -p apps/execution-engine/src && \
-    echo "fn main() {}" > apps/execution-engine/src/main.rs 2>/dev/null || true
+    echo "fn main() {}" > apps/execution-engine/src/main.rs && \
+    echo "" > apps/execution-engine/src/lib.rs && \
+    mkdir -p apps/alpaca-stream-proxy/src && \
+    echo "fn main() {}" > apps/alpaca-stream-proxy/src/main.rs
 
-# Build dependencies first (cached layer)
+# Build dependencies only (this layer is cached until Cargo.toml/Cargo.lock change)
 RUN cargo build --release -p execution-engine 2>/dev/null || true
 
-# Copy actual source
+# ============================================
+# Stage 2: Build
+# ============================================
+FROM deps AS builder
+
+# Copy real source and schema-gen
 COPY apps/execution-engine/src apps/execution-engine/src
 COPY apps/execution-engine/build.rs apps/execution-engine/build.rs
+COPY packages/schema-gen packages/schema-gen
+
+# Invalidate Cargo's fingerprint cache so it rebuilds with real source
+RUN touch apps/execution-engine/src/main.rs apps/execution-engine/src/lib.rs
 
 # Build the application
 RUN cargo build --release -p execution-engine
 
 # ============================================
-# Stage 2: Runtime
+# Stage 3: Runtime
 # ============================================
 FROM debian:bookworm-slim AS runtime
 
-# Install runtime dependencies
 RUN apt-get update && apt-get install -y \
     ca-certificates \
     libssl3 \
     && rm -rf /var/lib/apt/lists/*
 
-# Create non-root user
 RUN useradd -m -u 1000 cream
 
-# Copy binary from builder
 COPY --from=builder /workspace/target/release/execution-engine /usr/local/bin/
 
-# Set ownership
 RUN chown cream:cream /usr/local/bin/execution-engine
 
-# Switch to non-root user
 USER cream
 
-# Expose gRPC port
 EXPOSE 50051
 
-# Health check (gRPC reflection or simple TCP)
 HEALTHCHECK --interval=10s --timeout=5s --start-period=5s --retries=3 \
     CMD nc -z localhost 50051 || exit 1
 
-# Set environment for test mode
 ENV CREAM_ENV=PAPER
 ENV RUST_LOG=info,execution_engine=debug
 
-# Run the server
 CMD ["execution-engine"]

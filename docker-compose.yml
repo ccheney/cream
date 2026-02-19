@@ -152,8 +152,8 @@ services:
       - "8082:8082"    # Health check HTTP endpoint
     environment:
       - CREAM_ENV=${CREAM_ENV:-PAPER}
-      - ALPACA_API_KEY=${ALPACA_KEY:-}
-      - ALPACA_API_SECRET=${ALPACA_SECRET:-}
+      - ALPACA_KEY=${ALPACA_KEY:-}
+      - ALPACA_SECRET=${ALPACA_SECRET:-}
       - STREAM_PROXY_GRPC_PORT=50052
       - STREAM_PROXY_HEALTH_PORT=8082
       - RUST_LOG=info,alpaca_stream_proxy=debug
@@ -162,7 +162,7 @@ services:
       - OTEL_SERVICE_NAME=cream-alpaca-stream-proxy
     depends_on:
       otel-collector:
-        condition: service_healthy
+        condition: service_started
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8082/healthz"]
       interval: 10s
@@ -237,7 +237,7 @@ services:
       redis:
         condition: service_healthy
       otel-collector:
-        condition: service_healthy
+        condition: service_started
       alpaca-stream-proxy:
         condition: service_healthy
     healthcheck:
@@ -301,12 +301,6 @@ services:
       - ./packages/infra/observability/otel-collector-config.yaml:/etc/otel-collector-config.yaml:ro
     depends_on:
       - openobserve
-    healthcheck:
-      test: ["CMD", "wget", "-q", "--spider", "http://127.0.0.1:13133/"]
-      interval: 30s
-      timeout: 10s
-      retries: 5
-      start_period: 30s
     networks:
       - cream-network
 
