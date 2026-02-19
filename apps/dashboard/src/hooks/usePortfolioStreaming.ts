@@ -61,7 +61,7 @@ function useQuoteStore() {
 	return { quotes, setQuotes, previousPricesRef, lastUpdatedRef };
 }
 
-function createHandleQuoteUpdate(
+function useHandleQuoteUpdate(
 	setQuotes: React.Dispatch<React.SetStateAction<Map<string, StreamingQuote>>>,
 	previousPricesRef: React.MutableRefObject<Map<string, number>>,
 	lastUpdatedRef: React.MutableRefObject<Date | null>,
@@ -85,7 +85,7 @@ function createHandleQuoteUpdate(
 	);
 }
 
-function registerQuoteHandler(handleQuoteUpdate: (quote: StreamingQuote) => void) {
+function useRegisterQuoteHandler(handleQuoteUpdate: (quote: StreamingQuote) => void) {
 	useEffect(() => {
 		(
 			window as unknown as { __portfolioQuoteHandler?: typeof handleQuoteUpdate }
@@ -201,8 +201,8 @@ export function usePortfolioStreaming(
 	useQuoteUpdateRegistration(connected, symbols, subscribe, subscribeSymbols, enabled);
 	const symbolsRef = useLiveSymbolsState(symbols);
 
-	const handleQuoteUpdate = createHandleQuoteUpdate(setQuotes, previousPricesRef, lastUpdatedRef);
-	registerQuoteHandler(handleQuoteUpdate);
+	const handleQuoteUpdate = useHandleQuoteUpdate(setQuotes, previousPricesRef, lastUpdatedRef);
+	useRegisterQuoteHandler(handleQuoteUpdate);
 
 	const streamingPositions = useStreamingPositions(positions, quotes, previousPricesRef);
 	const state = usePortfolioStreamingState(positions, streamingPositions, cash, lastUpdatedRef);

@@ -62,7 +62,7 @@ export function useClearConnectionRecoveryTimers(refs: ConnectionRecoveryRefs) {
 	}, [refs]);
 }
 
-function createBackoffDelayCalculator({
+function useBackoffDelayCalculator({
 	retryAttempt,
 	backoff,
 }: {
@@ -136,7 +136,7 @@ export function useConnectionRecoveryBackoff({
 	retryTimerRef: TimeoutRef;
 	countdownTimerRef: IntervalRef;
 }) {
-	const getBackoffDelay = createBackoffDelayCalculator({ retryAttempt, backoff });
+	const getBackoffDelay = useBackoffDelayCalculator({ retryAttempt, backoff });
 	const shouldRetry = useRetryDecision({
 		error,
 		retryAttempt,

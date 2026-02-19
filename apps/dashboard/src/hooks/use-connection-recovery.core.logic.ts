@@ -122,7 +122,7 @@ function useConnectionRecoveryRuntime(
 	};
 }
 
-function createRecoveryBackoff(runtime: ConnectionRecoveryRuntime) {
+function useRecoveryBackoff(runtime: ConnectionRecoveryRuntime) {
 	return useConnectionRecoveryBackoff({
 		retryAttempt: runtime.retryAttempt,
 		error: runtime.error,
@@ -138,7 +138,7 @@ function createRecoveryBackoff(runtime: ConnectionRecoveryRuntime) {
 	});
 }
 
-function createRecoveryEventHandlers(runtime: ConnectionRecoveryRuntime) {
+function useRecoveryEventHandlers(runtime: ConnectionRecoveryRuntime) {
 	return useConnectionRecoveryEventHandlers({
 		clearTimers: runtime.clearTimers,
 		setState: runtime.setState,
@@ -153,7 +153,7 @@ function createRecoveryEventHandlers(runtime: ConnectionRecoveryRuntime) {
 	});
 }
 
-function createRecoveryHeartbeat(
+function useRecoveryHeartbeat(
 	runtime: ConnectionRecoveryRuntime,
 	handleDisconnected: (error?: ConnectionError) => void,
 ) {
@@ -175,7 +175,7 @@ function createRecoveryHeartbeat(
 	};
 }
 
-function createRecoveryActions(runtime: ConnectionRecoveryRuntime) {
+function useRecoveryActions(runtime: ConnectionRecoveryRuntime) {
 	return useConnectionRecoveryActions({
 		clearTimers: runtime.clearTimers,
 		setRetryCountdown: runtime.setRetryCountdown,
@@ -186,11 +186,11 @@ function createRecoveryActions(runtime: ConnectionRecoveryRuntime) {
 	});
 }
 
-function buildRecoveryLifecycle(runtime: ConnectionRecoveryRuntime) {
-	const { getBackoffDelay, shouldRetry } = createRecoveryBackoff(runtime);
-	const { handleConnected, handleDisconnected, handleError } = createRecoveryEventHandlers(runtime);
-	const heartbeat = createRecoveryHeartbeat(runtime, handleDisconnected);
-	const actions = createRecoveryActions(runtime);
+function useRecoveryLifecycle(runtime: ConnectionRecoveryRuntime) {
+	const { getBackoffDelay, shouldRetry } = useRecoveryBackoff(runtime);
+	const { handleConnected, handleDisconnected, handleError } = useRecoveryEventHandlers(runtime);
+	const heartbeat = useRecoveryHeartbeat(runtime, handleDisconnected);
+	const actions = useRecoveryActions(runtime);
 
 	return {
 		getBackoffDelay,
@@ -206,7 +206,7 @@ function buildRecoveryLifecycle(runtime: ConnectionRecoveryRuntime) {
 
 function useConnectionRecoveryCore(options: UseConnectionRecoveryOptions = {}) {
 	const runtime = useConnectionRecoveryRuntime(options);
-	const lifecycle = buildRecoveryLifecycle(runtime);
+	const lifecycle = useRecoveryLifecycle(runtime);
 
 	return { ...runtime, ...lifecycle };
 }
