@@ -382,17 +382,17 @@ function ChartMarkersCanvas({
 		priceLines: tradePriceLines,
 		getAnnotation,
 	} = useChartAnnotations({
-		trades,
+		trades: trades ?? [],
 		takeProfit,
 		stopLoss,
 	});
 
 	const allMarkers = useMemo(
-		() => [...tradeMarkers, ...extraMarkers],
+		() => [...tradeMarkers, ...(extraMarkers ?? [])],
 		[extraMarkers, tradeMarkers],
 	);
 	const allPriceLines = useMemo(
-		() => [...tradePriceLines, ...extraPriceLines],
+		() => [...tradePriceLines, ...(extraPriceLines ?? [])],
 		[extraPriceLines, tradePriceLines],
 	);
 
@@ -401,10 +401,10 @@ function ChartMarkersCanvas({
 	}, []);
 
 	const { popover, closePopover } = useTradeAnnotationClick({
-		showTradeDetails,
+		showTradeDetails: showTradeDetails ?? false,
 		containerRef,
 		chartRef,
-		trades,
+		trades: trades ?? [],
 		getAnnotation,
 		onTradeClick,
 	});

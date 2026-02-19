@@ -497,7 +497,13 @@ function formatGreekTrend({
  * Greeks Section
  */
 const GreeksSection = memo(function GreeksSection({ data }: { data: OptionsIndicatorsData }) {
-	const greekCards = [
+	const greekCards: Array<{
+		label: string;
+		trendPositive: string;
+		trendNegative: string;
+		value: number | null;
+		decimals?: number;
+	}> = [
 		{
 			...GREEK_ROW_LABELS.delta,
 			value: data.net_delta,

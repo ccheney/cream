@@ -1,9 +1,10 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
+import type { TickDirection } from "@/components/ui/tick-dots";
 import { useMultiTickHistory } from "@/hooks/useTickHistory";
 import { get } from "@/lib/api/client";
 import { useWebSocketContext } from "@/providers/WebSocketProvider";
-import type { Quote } from "./ticker-item";
+import type { Quote } from "../ticker-item";
 
 export interface TickerStripProps {
 	symbols: string[];
@@ -22,12 +23,12 @@ export interface TickerListItem {
 	symbol: string;
 	quote: Quote | undefined;
 	previousPrice: number | undefined;
-	tickHistory: Array<{ timestamp: number; price: number }>;
-	priceHistory: Array<{ time: string; price: number }>;
+	tickHistory: TickDirection[];
+	priceHistory: number[];
 }
 
 export interface TickerStripState {
-	scrollContainerRef: React.RefObject<HTMLDivElement>;
+	scrollContainerRef: React.RefObject<HTMLDivElement | null>;
 	quotes: Map<string, Quote>;
 	previousPrices: Map<string, number>;
 	symbolItems: TickerListItem[];
@@ -298,7 +299,18 @@ export function useTickerStripState({
 	allowRemove,
 	"data-testid": testId,
 	className,
-}: TickerStripProps): TickerStripState & { hasSymbols: boolean } {
+}: TickerStripProps): TickerStripState &
+	Pick<
+		TickerStripProps,
+		| "onSymbolAdd"
+		| "onSymbolRemove"
+		| "onSymbolClick"
+		| "showSparkline"
+		| "showTickHistory"
+		| "allowAdd"
+		| "allowRemove"
+		| "className"
+	> & { hasSymbols: boolean; testId?: string } {
 	const { getTicks, getPriceHistory, recordTick } = useMultiTickHistory();
 	const { quotes, previousPrices, fetchInitialQuotes, onQuoteUpdate } = useTickerData(
 		symbols,

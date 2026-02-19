@@ -278,7 +278,7 @@ const toastKeyframes = `
 export function ToastItem({ toast, onDismiss }: ToastProps) {
 	const variantStyle = VARIANT_STYLES[toast.variant];
 	const handlers = getToastHandlers(onDismiss, toast.id);
-	const styles = buildToastStyles(variantStyle, toast.dismissing);
+	const styles = buildToastStyles(variantStyle, toast.dismissing ?? false);
 
 	return (
 		<div

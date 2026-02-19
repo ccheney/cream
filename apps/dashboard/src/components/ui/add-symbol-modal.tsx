@@ -28,7 +28,7 @@ const MAX_SYMBOL_LENGTH = 5;
 interface UseAddSymbolStateResult {
 	symbol: string;
 	error: string | null;
-	inputRef: React.RefObject<HTMLInputElement>;
+	inputRef: React.RefObject<HTMLInputElement | null>;
 	handleSubmit: () => void;
 	handleQuickSelect: (symbol: string) => void;
 	handleChange: (value: string) => void;
@@ -65,7 +65,7 @@ function getAvailablePopular(existingSymbols: string[]): string[] {
 	return POPULAR_SYMBOLS.filter((symbol) => !existingSymbols.includes(symbol));
 }
 
-function useAutoFocusInput(isOpen: boolean): React.RefObject<HTMLInputElement> {
+function useAutoFocusInput(isOpen: boolean): React.RefObject<HTMLInputElement | null> {
 	const inputRef = useRef<HTMLInputElement>(null);
 
 	useEffect(() => {
@@ -244,7 +244,7 @@ function AddSymbolFormContent({
 	onKeyDown: (event: React.KeyboardEvent) => void;
 	availablePopular: string[];
 	onQuickSelect: (symbol: string) => void;
-	inputRef: React.RefObject<HTMLInputElement>;
+	inputRef: React.RefObject<HTMLInputElement | null>;
 }) {
 	return (
 		<>

@@ -1,4 +1,5 @@
 import { LineChart } from "lucide-react";
+import type { ReactElement } from "react";
 import type { PriceIndicators } from "@/lib/api/types";
 import { IndicatorGrid } from "../IndicatorGrid";
 import { type Freshness, IndicatorSection } from "../IndicatorSection";
@@ -150,7 +151,7 @@ const PRICE_INDICATORS: readonly PriceIndicatorRow[] = [
 	},
 ];
 
-function buildPriceIndicators(data: PriceIndicators | null | undefined): JSX.Element[] {
+function buildPriceIndicators(data: PriceIndicators | null | undefined): ReactElement[] {
 	return PRICE_INDICATORS.map((indicator) => (
 		<IndicatorValue
 			key={indicator.label}

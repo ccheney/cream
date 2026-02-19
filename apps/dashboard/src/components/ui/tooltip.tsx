@@ -293,22 +293,22 @@ function getTooltipArrowClassName(adjustedPosition: TooltipPosition): string {
 	}
 }
 
-function TooltipPortalContent({
-	children,
-	adjustedPosition,
-	contentId,
-	className,
-	style,
-	...props
-}: {
-	children: ReactNode;
-	adjustedPosition: TooltipPosition;
-	contentId: string;
-	className?: string;
-	style?: React.CSSProperties;
-} & Omit<TooltipContentProps, "children" | "position" | "className" | "style">) {
+const TooltipPortalContent = forwardRef<
+	HTMLDivElement,
+	{
+		children: ReactNode;
+		adjustedPosition: TooltipPosition;
+		contentId: string;
+		className?: string;
+		style?: React.CSSProperties;
+	} & Omit<TooltipContentProps, "children" | "position" | "className" | "style">
+>(function TooltipPortalContent(
+	{ children, adjustedPosition, contentId, className, style, ...props },
+	ref,
+) {
 	return (
 		<div
+			ref={ref}
 			role="tooltip"
 			id={contentId}
 			className={cn(
@@ -338,7 +338,7 @@ function TooltipPortalContent({
 			/>
 		</div>
 	);
-}
+});
 
 /**
  * TooltipContent - The tooltip content.

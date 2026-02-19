@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useQuotes } from "@/hooks/queries/useMarket";
-import { useOptionsPositions } from "@/hooks/queries/useOptionsPositions";
+import { type OptionsPosition, useOptionsPositions } from "@/hooks/queries/useOptionsPositions";
 import { usePositionGreeks } from "@/hooks/usePositionGreeks";
 
 export interface AggregateGreeksData {
@@ -171,7 +171,7 @@ function useAggregatePositionState() {
 }
 
 function useAggregateDerivedState(
-	positions: Array<{ id: string }>,
+	positions: OptionsPosition[],
 	providedSpyPrice: number | undefined,
 	underlyingPrices: Record<string, number>,
 	throttleMs: number,

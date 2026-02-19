@@ -16,6 +16,7 @@ import {
 	HistogramSeries,
 	type IChartApi,
 	LineSeries,
+	type LogicalRange,
 	type Time,
 } from "lightweight-charts";
 import { memo, useEffect, useRef } from "react";
@@ -134,7 +135,10 @@ function createIndicatorChart(container: HTMLDivElement, chartHeight: number): I
 	});
 }
 
-function attachResizeListener(containerRef: React.RefObject<HTMLDivElement>, chart: IChartApi) {
+function attachResizeListener(
+	containerRef: React.RefObject<HTMLDivElement | null>,
+	chart: IChartApi,
+) {
 	const handleResize = () => {
 		if (!containerRef.current) {
 			return;
@@ -149,9 +153,7 @@ function attachParentSync(parentChart: IChartApi | undefined, chart: IChartApi) 
 	if (!parentChart) {
 		return () => {};
 	}
-	const handleRangeChange = (
-		range: ReturnType<IChartApi["timeScale"]>["getVisibleLogicalRange"],
-	) => {
+	const handleRangeChange = (range: LogicalRange | null) => {
 		if (range) {
 			chart.timeScale().setVisibleLogicalRange(range);
 		}
@@ -196,7 +198,7 @@ function useIndicatorChart({
 	stochasticData,
 	volumeData,
 }: {
-	containerRef: React.RefObject<HTMLDivElement>;
+	containerRef: React.RefObject<HTMLDivElement | null>;
 	chartRef: React.RefObject<IChartApi | null>;
 	type: IndicatorType;
 	chartHeight: number;

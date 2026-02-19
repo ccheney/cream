@@ -73,8 +73,8 @@ interface TickerRowState {
 // Helpers
 // ============================================
 
-function calculateFlashClasses(isFlashing: boolean, direction: "up" | "down") {
-	if (!isFlashing) {
+function calculateFlashClasses(isFlashing: boolean, direction: "up" | "down" | null) {
+	if (!isFlashing || direction === null) {
 		return "";
 	}
 	return direction === "up" ? "animate-flash-profit" : "animate-flash-loss";
@@ -87,7 +87,7 @@ function buildTickerState({
 	quote: Quote | undefined;
 	flash: {
 		isFlashing: boolean;
-		direction: "up" | "down";
+		direction: "up" | "down" | null;
 	};
 }): TickerRowState {
 	const price = quote?.last ?? 0;

@@ -92,9 +92,9 @@ function useSuccessReset(
 	const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
 	useEffect(() => {
-		if (state === "success") {
+		if (state === "success" && onStateReset) {
 			timeoutRef.current = setTimeout(onStateReset, successDuration);
-		} else if (state === "error") {
+		} else if (state === "error" && onStateReset) {
 			timeoutRef.current = setTimeout(onStateReset, errorDuration);
 		}
 

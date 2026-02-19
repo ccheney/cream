@@ -70,12 +70,7 @@ function EmptyChainState({ className, testId }: { className: string; testId?: st
 	);
 }
 
-type VirtualItem = {
-	index: number;
-	key: string | number;
-	size: number;
-	start: number;
-};
+type VirtualItem = ReturnType<ReturnType<typeof useVirtualizer>["getVirtualItems"]>[number];
 
 function useOptionsChainVirtualization({
 	chain,
@@ -163,7 +158,7 @@ function OptionsChainContent({
 								put={row.put}
 								isAtm={row.strike === atmStrike}
 								underlyingPrice={underlyingPrice}
-								onContractClick={onContractClick}
+								onContractClick={(contract, type) => onContractClick(contract, type, row.strike)}
 								data-testid={`chain-row-${row.strike}`}
 							/>
 						</div>

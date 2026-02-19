@@ -214,7 +214,7 @@ export default function ConfigHistoryPage() {
 
 	return (
 		<ConfigHistoryLoadedView
-			history={history}
+			history={history ?? []}
 			onBack={() => router.back()}
 			selectedVersions={selectedVersions}
 			onCloseComparison={() => setSelectedVersions(null)}

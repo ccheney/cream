@@ -114,7 +114,7 @@ function DiffList({
 	after,
 }: {
 	entries: DiffEntry[];
-	onRevert?: (entry: DiffEntry) => void;
+	onRevert?: (path: string[], oldValue: unknown, newConfig: ConfigType) => void;
 	after: ConfigType;
 }) {
 	const handleRevert = (entry: DiffEntry) => {
@@ -172,7 +172,7 @@ const CHANGE_STATUS_CLASS: Record<DiffEntry["type"], { badge: string; row: strin
 };
 
 function DiffEntryRow({ entry, depth, onRevert }: DiffEntryRowProps) {
-	const hasChildren = entry.children?.length > 0;
+	const hasChildren = (entry.children?.length ?? 0) > 0;
 	const statusStyles = CHANGE_STATUS_CLASS[entry.type];
 
 	if (!entry.key) {
@@ -328,7 +328,7 @@ export function ConfigDiff<T extends ConfigType>(props: ConfigDiffProps<T>) {
 			mode={mode}
 			setMode={setMode}
 			showUnchanged={showUnchanged}
-			onRevert={onRevert}
+			onRevert={onRevert as ConfigDiffProps["onRevert"]}
 		/>
 	);
 }

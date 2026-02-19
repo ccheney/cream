@@ -217,7 +217,7 @@ function ChartSection({
 
 interface ChartContentBaseProps {
 	upperSymbol: string;
-	companyName: string;
+	companyName: string | undefined;
 	timeframe: ReturnType<typeof useChartPreferences>["timeframe"];
 	onTimeframeChange: ReturnType<typeof useChartPreferences>["setTimeframe"];
 	isIndicatorDrawerOpen: boolean;

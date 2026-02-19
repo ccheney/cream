@@ -87,13 +87,10 @@ export function playBellSound(type: "open" | "close", volume: number): void {
 	}
 }
 
-function getAudioContextClass():
-	| typeof window.AudioContext
-	| typeof window.webkitAudioContext
-	| undefined {
+function getAudioContextClass(): typeof AudioContext | undefined {
 	return (
 		window.AudioContext ??
-		(window as unknown as { webkitAudioContext?: typeof window.AudioContext }).webkitAudioContext
+		(window as unknown as { webkitAudioContext?: typeof AudioContext }).webkitAudioContext
 	);
 }
 

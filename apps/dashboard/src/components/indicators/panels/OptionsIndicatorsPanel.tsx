@@ -1,4 +1,5 @@
 import { Activity } from "lucide-react";
+import type { ReactElement } from "react";
 import type { OptionsIndicators } from "@/lib/api/types";
 import { IndicatorGrid } from "../IndicatorGrid";
 import { type Freshness, IndicatorSection } from "../IndicatorSection";
@@ -87,7 +88,7 @@ const OPTIONS_INDICATORS: readonly OptionsIndicatorRow[] = [
 	},
 ];
 
-function buildOptionsIndicators(data: OptionsIndicators | null | undefined): JSX.Element[] {
+function buildOptionsIndicators(data: OptionsIndicators | null | undefined): ReactElement[] {
 	return OPTIONS_INDICATORS.map((indicator) => (
 		<IndicatorValue
 			key={indicator.label}

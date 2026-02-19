@@ -529,8 +529,8 @@ export function EconomicCalendar() {
 				filters={filters}
 				onFilterChange={handleFilterChange}
 				isMobile={isMobile}
-				eventCount={data.events.length}
-				lastUpdated={data.meta.lastUpdated}
+				eventCount={data?.events.length ?? 0}
+				lastUpdated={data?.meta.lastUpdated ?? ""}
 				calendar={calendar}
 			/>
 			<EventDetailDrawer event={selectedEvent} isOpen={isDrawerOpen} onClose={handleDrawerClose} />

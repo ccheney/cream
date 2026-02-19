@@ -237,7 +237,7 @@ function getConcentrationText(loading: boolean, symbol: string | undefined, pct:
 	return `${symbol} ${formatPct(pct)}`;
 }
 
-function getLimitBarClass(status: "normal" | "warning" | "critical") {
+function getLimitBarClass(status: string) {
 	if (status === "critical") {
 		return "bg-red-500";
 	}
@@ -247,7 +247,7 @@ function getLimitBarClass(status: "normal" | "warning" | "critical") {
 	return "bg-green-500";
 }
 
-function getLimitTextClass(status: "normal" | "warning" | "critical") {
+function getLimitTextClass(status: string) {
 	if (status === "critical") {
 		return "text-red-500";
 	}

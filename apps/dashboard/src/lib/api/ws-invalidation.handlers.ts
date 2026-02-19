@@ -82,7 +82,11 @@ const HINT_RESOLVERS: Partial<Record<string, InvalidationHintResolver>> = {
 
 export function mapInvalidationHintToQueryKey(hint: string): readonly unknown[] | null {
 	const parts = hint.split(".");
-	const resolver = HINT_RESOLVERS[parts[0]];
+	const category = parts[0];
+	if (!category) {
+		return null;
+	}
+	const resolver = HINT_RESOLVERS[category];
 	return resolver ? resolver(parts) : null;
 }
 

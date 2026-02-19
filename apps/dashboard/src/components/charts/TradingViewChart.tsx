@@ -182,7 +182,7 @@ function useChartInitialization({
 	onCrosshairMove,
 	refs,
 }: {
-	containerRef: React.RefObject<HTMLDivElement>;
+	containerRef: React.RefObject<HTMLDivElement | null>;
 	width: number | string;
 	height: number;
 	data: OHLCVData[];
@@ -312,7 +312,7 @@ function useSessionBarsCleanup(refs: ChartRefs) {
 
 function useAutoResize(
 	autoResize: boolean,
-	containerRef: React.RefObject<HTMLDivElement>,
+	containerRef: React.RefObject<HTMLDivElement | null>,
 	chartRef: React.RefObject<IChartApi | null>,
 ) {
 	useEffect(() => {

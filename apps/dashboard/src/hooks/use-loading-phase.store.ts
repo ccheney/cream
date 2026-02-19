@@ -178,7 +178,11 @@ function createGetLoadersByPhase(get: () => LoadingPhaseState): LoadersByPhase {
 }
 
 function createStartLoading(
-	set: (updater: (state: LoadingPhaseState) => Partial<LoadingPhaseState>) => void,
+	set: (
+		updater:
+			| ((state: LoadingPhaseState) => Partial<LoadingPhaseState>)
+			| Partial<LoadingPhaseState>,
+	) => void,
 	get: () => LoadingPhaseState & LoadingPhaseStoreActions,
 ) {
 	return async () => {
@@ -202,7 +206,11 @@ function createStartLoading(
 }
 
 function createResetStore(
-	set: (updater: (state: LoadingPhaseState) => Partial<LoadingPhaseState>) => void,
+	set: (
+		updater:
+			| ((state: LoadingPhaseState) => Partial<LoadingPhaseState>)
+			| Partial<LoadingPhaseState>,
+	) => void,
 ) {
 	return () => {
 		set({

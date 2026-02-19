@@ -110,10 +110,12 @@ function buildSparklinePoints(
 }
 
 function buildCurveSegment(points: SparklinePoint[], index: number): string {
-	const current = points.at(index) ?? points[0];
-	const next = points.at(index + 1) ?? points.at(-1);
-	const previous = points.at(index - 1) ?? points[0];
-	const nextNext = points.at(index + 2) ?? points.at(-1);
+	const first = points[0] as SparklinePoint;
+	const last = points[points.length - 1] as SparklinePoint;
+	const current = points.at(index) ?? first;
+	const next = points.at(index + 1) ?? last;
+	const previous = points.at(index - 1) ?? first;
+	const nextNext = points.at(index + 2) ?? last;
 
 	const controlPoint1X = current[0] + (next[0] - previous[0]) / 6;
 	const controlPoint1Y = current[1] + (next[1] - previous[1]) / 6;

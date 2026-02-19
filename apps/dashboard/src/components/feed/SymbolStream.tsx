@@ -8,6 +8,7 @@
  */
 
 import { useVirtualizer } from "@tanstack/react-virtual";
+import type { ReactElement } from "react";
 import { useCallback, useEffect, useRef, useState } from "react";
 import {
 	EVENT_TYPE_COLORS,
@@ -40,7 +41,7 @@ interface StreamStats {
 	total: number;
 }
 
-type StreamVirtualizer = ReturnType<typeof useVirtualizer<HTMLElement, Element>>;
+type StreamVirtualizer = ReturnType<typeof useVirtualizer<HTMLDivElement, Element>>;
 
 const DEFAULT_MAX_EVENTS = 200;
 const ROW_HEIGHT = 40;
@@ -58,7 +59,7 @@ function calculateNextLatestQuote(
 	};
 }
 
-function formatChangeLabel(value?: number): JSX.Element | null {
+function formatChangeLabel(value?: number): ReactElement | null {
 	if (value === undefined || value === 0) {
 		return null;
 	}
@@ -166,7 +167,7 @@ function EventList({
 	parentRef,
 }: {
 	events: NormalizedEvent[];
-	virtualizer: ReturnType<typeof useVirtualizer<HTMLElement, Element>>;
+	virtualizer: StreamVirtualizer;
 	parentRef: React.RefObject<HTMLDivElement | null>;
 }) {
 	if (events.length === 0) {

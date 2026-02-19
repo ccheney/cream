@@ -24,7 +24,7 @@ function TickerStripContent({
 	scrollLeft,
 	scrollRight,
 }: {
-	scrollContainerRef: React.RefObject<HTMLDivElement>;
+	scrollContainerRef: React.RefObject<HTMLDivElement | null>;
 	symbolItems: TickerListItem[];
 	canScrollLeft: boolean;
 	canScrollRight: boolean;

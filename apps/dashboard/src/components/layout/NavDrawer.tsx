@@ -128,7 +128,7 @@ interface NavFooterProps {
 
 interface NavDrawerHeaderProps {
 	onClose: () => void;
-	closeButtonRef: React.RefObject<HTMLButtonElement>;
+	closeButtonRef: React.RefObject<HTMLButtonElement | null>;
 }
 
 function NavDrawerHeader({ onClose, closeButtonRef }: NavDrawerHeaderProps) {

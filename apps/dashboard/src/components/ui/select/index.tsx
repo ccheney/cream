@@ -284,7 +284,25 @@ function useSelectActions({
 }
 
 function useSelectState(
-	{ options, value, values, multiple, onSearchChange, disabled, onChange, onMultiChange },
+	{
+		options,
+		value,
+		values,
+		multiple,
+		onSearchChange,
+		disabled,
+		onChange,
+		onMultiChange,
+	}: {
+		options: SelectOption[];
+		value?: string;
+		values: string[];
+		multiple: boolean;
+		onSearchChange?: (query: string) => void;
+		disabled: boolean;
+		onChange?: (value: string) => void;
+		onMultiChange?: (values: string[]) => void;
+	},
 	ref: React.Ref<HTMLDivElement>,
 ): SelectState {
 	const [isOpen, setIsOpen] = useState(false);

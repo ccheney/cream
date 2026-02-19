@@ -116,10 +116,11 @@ function calculatePopoverPosition(
 
 	const defaultCandidate = candidates.find((entry) => entry.position === position) ?? candidates[1];
 	const fallbackCandidate = candidates[0] ?? defaultCandidate;
-	let result = defaultCandidate ?? fallbackCandidate;
+	let result =
+		defaultCandidate ?? fallbackCandidate ?? (candidates[1] as (typeof candidates)[number]);
 	let { top, left } = result;
 
-	if (result.position === "top" && candidates[1]?.top !== undefined && candidates[1].top < 0) {
+	if (result.position === "top" && candidates[1] && candidates[1].top < 0) {
 		result = candidates[1];
 		top = candidates[1].top;
 		left = candidates[1].left;
@@ -298,7 +299,7 @@ function PopoverArrow({
 	style,
 }: {
 	adjustedPosition: PopoverPosition;
-	style: string;
+	style: React.CSSProperties;
 }) {
 	return (
 		<div

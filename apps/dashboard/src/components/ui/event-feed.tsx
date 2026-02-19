@@ -356,7 +356,7 @@ function mapVirtualItemsToRows(params: {
 		size: number;
 		start: number;
 	};
-	event: FeedEvent;
+	event: FeedEvent | undefined;
 	onEventClick?: (event: FeedEvent) => void;
 }) {
 	const { virtualItem, event, onEventClick } = params;

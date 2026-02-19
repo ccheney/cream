@@ -403,7 +403,7 @@ function FeedEventStream({
 	filteredEvents: NormalizedEvent[];
 	parentRef: React.RefObject<HTMLDivElement | null>;
 	stats: { quotesPerMin: number; tradesPerMin: number; optionsPerMin: number; totalPerMin: number };
-	virtualizer: ReturnType<typeof useVirtualizer>;
+	virtualizer: ReturnType<typeof useVirtualizer<HTMLDivElement, Element>>;
 }) {
 	return (
 		<div className="flex-1 min-h-0 bg-white dark:bg-night-800 rounded-lg border border-cream-200 dark:border-night-700 flex flex-col overflow-hidden">
@@ -450,7 +450,7 @@ function VirtualizedEventList({
 	connected: boolean;
 	filteredEvents: NormalizedEvent[];
 	parentRef: React.RefObject<HTMLDivElement | null>;
-	virtualizer: ReturnType<typeof useVirtualizer>;
+	virtualizer: ReturnType<typeof useVirtualizer<HTMLDivElement, Element>>;
 }) {
 	return (
 		<div ref={parentRef} className="flex-1 min-h-0 overflow-auto">

@@ -324,7 +324,7 @@ function useHistoryChartInteraction(points: DataPointLike[]) {
 
 	return {
 		hoveredIndex,
-		hoveredPoint: hoveredIndex !== null ? points[hoveredIndex] : null,
+		hoveredPoint: hoveredIndex !== null ? (points[hoveredIndex] ?? null) : null,
 		handleMouseMove,
 		handleMouseLeave,
 	};

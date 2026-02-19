@@ -1,7 +1,7 @@
 "use client";
 
 import { memo, useCallback, useEffect, useMemo } from "react";
-import { useOptionsPositions } from "@/hooks/queries/useOptionsPositions";
+import { type OptionsPosition, useOptionsPositions } from "@/hooks/queries/useOptionsPositions";
 import {
 	type AggregateGreeks,
 	type StreamingOptionsPosition,
@@ -17,15 +17,21 @@ export interface OptionsPositionsWidgetProps {
 	className?: string;
 }
 
-interface NormalizedQuoteMessage {
+interface RawQuoteMessage {
 	type?: string;
 	symbol?: string;
 	price?: number;
 	last?: number;
 }
 
+interface NormalizedQuoteMessage {
+	type: string;
+	symbol: string;
+	price: number;
+}
+
 interface PositionDataResult {
-	positions: StreamingOptionsPosition[];
+	positions: OptionsPosition[];
 	underlyingPrices: Record<string, number>;
 	isLoading: boolean;
 	error: unknown;
@@ -34,7 +40,7 @@ interface PositionDataResult {
 }
 
 type OptionsPositionsState = {
-	positions: StreamingOptionsPosition[];
+	positions: OptionsPosition[];
 	streamingPositions: StreamingOptionsPosition[];
 	aggregateGreeks: AggregateGreeks;
 	isStreaming: boolean;
@@ -47,7 +53,7 @@ function safeParseMessage(message: unknown): NormalizedQuoteMessage | null {
 		return null;
 	}
 
-	const data = message as Partial<NormalizedQuoteMessage>;
+	const data = message as RawQuoteMessage;
 	if (!data.type || !data.symbol) {
 		return null;
 	}
@@ -83,7 +89,7 @@ function useStreamingPositionState({
 	positions,
 	underlyingPrices,
 }: {
-	positions: StreamingOptionsPosition[];
+	positions: OptionsPosition[];
 	underlyingPrices: Record<string, number>;
 }) {
 	const {
