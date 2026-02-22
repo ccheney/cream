@@ -1,4 +1,9 @@
-import { createHelixClientFromEnv, getDecisionCitations } from "@cream/helix";
+import {
+	createHelixClientFromEnv,
+	getDecisionCitations,
+	type Citation as HelixCitation,
+} from "@cream/helix";
+import type { AgentOutput as StoredAgentOutput } from "@cream/storage";
 import { createRoute, OpenAPIHono, z } from "@hono/zod-openapi";
 import { getAgentOutputsRepo, getDecisionsRepo, getOrdersRepo } from "../db.js";
 
@@ -26,7 +31,7 @@ const DecisionSchema = z.object({
 
 const AgentOutputSchema = z.object({
 	agentType: z.string(),
-	vote: z.enum(["APPROVE", "REJECT"]),
+	vote: z.enum(["APPROVE", "REJECT", "ABSTAIN"]),
 	confidence: z.number(),
 	reasoning: z.string(),
 	processingTimeMs: z.number(),
@@ -147,14 +152,7 @@ type DecisionMetadata = {
 
 type Citation = z.infer<typeof CitationSchema>;
 
-function mapAgentOutput(ao: {
-	agentType: string;
-	vote: "APPROVE" | "REJECT";
-	confidence: number;
-	reasoningSummary: string | null;
-	latencyMs: number | null;
-	createdAt: string;
-}) {
+function mapAgentOutput(ao: StoredAgentOutput): z.infer<typeof AgentOutputSchema> {
 	return {
 		agentType: ao.agentType,
 		vote: ao.vote,
@@ -165,15 +163,7 @@ function mapAgentOutput(ao: {
 	};
 }
 
-function mapCitation(citation: {
-	id: string;
-	url: string | null;
-	title: string;
-	source: string;
-	snippet: string;
-	relevanceScore: number;
-	fetchedAt: string;
-}): Citation {
+function mapCitation(citation: HelixCitation): Citation {
 	return {
 		id: citation.id,
 		url: citation.url ?? "",

@@ -258,6 +258,8 @@ export function rateLimit(config: Partial<RateLimitConfig> = {}): MiddlewareHand
 				c.req.header("x-forwarded-for")?.split(",")[0]?.trim() ??
 				c.req.header("x-real-ip") ??
 				"unknown";
+			const rateLimitMessage =
+				mergedConfig.message ?? DEFAULT_CONFIG.message ?? "Too many requests";
 			logRateLimitExceeded({
 				ip,
 				userId: (c.get("userId") as string | undefined) ?? "anonymous",
@@ -265,7 +267,7 @@ export function rateLimit(config: Partial<RateLimitConfig> = {}): MiddlewareHand
 				config: mergedConfig,
 			});
 			c.header("Retry-After", String(result.retryAfter));
-			return c.json(createRateLimitResponse(mergedConfig.message, result.retryAfter), 429);
+			return c.json(createRateLimitResponse(rateLimitMessage, result.retryAfter), 429);
 		}
 
 		return next();

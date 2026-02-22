@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, mock } from "bun:test";
-import { Hono } from "hono";
+import { Hono, type MiddlewareHandler } from "hono";
 import { HTTPException } from "hono/http-exception";
 
 const mockGetSession = mock(() => Promise.resolve(null as unknown));
@@ -50,22 +50,13 @@ function createMockSessionWithMFA() {
 }
 
 function withSessionData(sessionData: SessionData | null) {
-	return async (
-		c: Parameters<Hono<{ Variables: SessionVariables }>["use"]>[1] extends (
-			...args: infer A
-		) => unknown
-			? A[0]
-			: never,
-		next: Parameters<Hono<{ Variables: SessionVariables }>["use"]>[1] extends (
-			...args: infer A
-		) => unknown
-			? A[1]
-			: never,
-	) => {
+	const middleware: MiddlewareHandler<{ Variables: SessionVariables }> = async (c, next) => {
 		c.set("session", sessionData);
 		c.set("user", sessionData?.user ?? null);
 		await next();
 	};
+
+	return middleware;
 }
 
 function addErrorHandler(app: Hono<{ Variables: SessionVariables }>, includeCause = false) {

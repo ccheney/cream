@@ -8,7 +8,7 @@
  */
 
 import log from "../../logger.js";
-import type { TradingStreamEvent } from "../../services/alpaca-streaming.js";
+import type { TradeUpdateEvent, TradingStreamEvent } from "../../services/alpaca-streaming.js";
 import {
 	getTradingStreamService,
 	shutdownTradingStreamService,
@@ -18,13 +18,15 @@ import { broadcastOrderUpdate, broadcastPositionUpdate } from "../channels.js";
 
 let isInitialized = false;
 
-const FILL_EVENTS = new Set(["fill", "partial_fill"]);
+type TradeUpdateStreamEvent = Extract<TradingStreamEvent, { type: "trade_update" }>;
 
-function isFillEvent(eventType: string): boolean {
+const FILL_EVENTS = new Set<TradeUpdateEvent>(["fill", "partial_fill"]);
+
+function isFillEvent(eventType: TradeUpdateEvent): eventType is "fill" | "partial_fill" {
 	return FILL_EVENTS.has(eventType);
 }
 
-function getOrderInvalidates(eventType: string): string[] {
+function getOrderInvalidates(eventType: TradeUpdateEvent): string[] {
 	const invalidates = ["orders", "orders.recent"];
 	if (isFillEvent(eventType)) {
 		invalidates.push("portfolio.positions", "portfolio.summary", "portfolio.account");
@@ -32,15 +34,20 @@ function getOrderInvalidates(eventType: string): string[] {
 	return invalidates;
 }
 
-function createPositionUpdateData(event: TradingStreamEvent, timestamp: string) {
+function createPositionUpdateData(
+	event: TradeUpdateStreamEvent,
+	timestamp: string,
+	eventType: "fill" | "partial_fill",
+) {
 	const { order } = event.data;
 	const fillPrice = event.data.price ? Number.parseFloat(event.data.price) : null;
 	const fillQty = event.data.qty ? Number.parseFloat(event.data.qty) : null;
 	const positionQty = event.data.position_qty ? Number.parseFloat(event.data.position_qty) : 0;
-	const side = positionQty >= 0 ? "LONG" : "SHORT";
+	const side: "LONG" | "SHORT" = positionQty >= 0 ? "LONG" : "SHORT";
 	const qty = Math.abs(positionQty);
 	const avgEntry = order.filled_avg_price ? Number.parseFloat(order.filled_avg_price) : 0;
 	const marketValue = qty * (fillPrice ?? avgEntry);
+	const positionEvent: "fill" | "partial_fill" | "close" = qty === 0 ? "close" : eventType;
 
 	return {
 		payload: {
@@ -52,7 +59,7 @@ function createPositionUpdateData(event: TradingStreamEvent, timestamp: string) 
 				avgEntry,
 				marketValue,
 				unrealizedPnl: 0,
-				event: event.data.event === "fill" ? "fill" : "partial_fill",
+				event: positionEvent,
 				orderId: order.id,
 				timestamp,
 			},
@@ -79,11 +86,12 @@ async function handleTradeUpdate(event: TradingStreamEvent): Promise<void> {
 		return;
 	}
 
-	const { order } = event.data;
-	const eventType = event.data.event;
+	const tradeUpdate = event;
+	const { order } = tradeUpdate.data;
+	const eventType = tradeUpdate.data.event;
 	const timestamp = new Date().toISOString();
 
-	await persistOrderFromTradeUpdate(event.data.event, order);
+	await persistOrderFromTradeUpdate(eventType, order);
 	const orderUpdateSent = broadcastOrderUpdate({
 		type: "order_update",
 		data: {
@@ -96,7 +104,7 @@ async function handleTradeUpdate(event: TradingStreamEvent): Promise<void> {
 			qty: order.qty,
 			filledQty: order.filled_qty,
 			filledAvgPrice: order.filled_avg_price,
-			event: event.data.event,
+			event: eventType,
 			timestamp,
 		},
 		invalidates: getOrderInvalidates(eventType),
@@ -106,7 +114,7 @@ async function handleTradeUpdate(event: TradingStreamEvent): Promise<void> {
 		{
 			orderId: order.id,
 			symbol: order.symbol,
-			event: event.data.event,
+			event: eventType,
 			clientsSent: orderUpdateSent,
 		},
 		"Broadcasted order update",
@@ -116,7 +124,7 @@ async function handleTradeUpdate(event: TradingStreamEvent): Promise<void> {
 		return;
 	}
 
-	const positionUpdate = createPositionUpdateData(event, timestamp);
+	const positionUpdate = createPositionUpdateData(tradeUpdate, timestamp, eventType);
 	const positionUpdateSent = broadcastPositionUpdate(positionUpdate.payload);
 	log.debug(
 		{

@@ -69,7 +69,7 @@ function createGoogleProviderConfig() {
 		clientId: Bun.env.GOOGLE_CLIENT_ID ?? "",
 		clientSecret: Bun.env.GOOGLE_CLIENT_SECRET ?? "",
 		accessType: "offline" as const,
-		prompt: "select_account consent",
+		prompt: "select_account consent" as const,
 	};
 }
 

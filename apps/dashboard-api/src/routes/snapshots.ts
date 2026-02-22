@@ -1,3 +1,4 @@
+import type { CorporateAction } from "@cream/storage";
 import { createRoute, OpenAPIHono, z } from "@hono/zod-openapi";
 import { HTTPException } from "hono/http-exception";
 import {
@@ -235,7 +236,7 @@ function mapSentiment(sentiment: Record<string, unknown> | null) {
 	};
 }
 
-function mapCorporate(corporateActions: Record<string, unknown>[]) {
+function mapCorporate(corporateActions: CorporateAction[]) {
 	const recentAction = corporateActions[0];
 	if (!recentAction) {
 		return { corporate: EMPTY_CORPORATE, recentAction: null };
@@ -261,7 +262,7 @@ function buildSnapshot(
 	fundamentals: Record<string, unknown> | null,
 	shortInterest: Record<string, unknown> | null,
 	sentiment: Record<string, unknown> | null,
-	corporateActions: Record<string, unknown>[],
+	corporateActions: CorporateAction[],
 ): BatchSnapshot {
 	const fundamentalsMapped = mapFundamentals(fundamentals);
 	const corporateMapped = mapCorporate(corporateActions);
@@ -296,7 +297,7 @@ async function getSnapshotForSymbol(symbol: string): Promise<BatchSnapshot> {
 		(fundamentalsList?.[0] as Record<string, unknown> | undefined) ?? null,
 		(shortInterest as Record<string, unknown> | null) ?? null,
 		(sentiment as Record<string, unknown> | null) ?? null,
-		(corporateActions as Record<string, unknown>[] | undefined) ?? [],
+		corporateActions ?? [],
 	);
 }
 

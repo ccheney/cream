@@ -3,6 +3,7 @@
  */
 
 import type { CreamEnvironment } from "@cream/domain";
+import type { CyclePhase } from "@cream/domain/websocket";
 import { getCyclesRepo, getDecisionsRepo } from "../../src/db.js";
 import log from "../../src/logger.js";
 import { updateCycleState } from "../../src/routes/system/state.js";
@@ -68,7 +69,7 @@ export async function finalizeCycleState(params: {
 	environment: CreamEnvironment;
 	result: WorkflowResult;
 	durationMs: number;
-	emitProgress: (phase: string, progress: number, step: string, message: string) => void;
+	emitProgress: (phase: CyclePhase, progress: number, step: string, message: string) => void;
 	emitResult: (
 		status: "completed" | "failed",
 		durationMs: number,

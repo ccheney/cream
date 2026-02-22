@@ -4,7 +4,7 @@
  * Normalizes and emits agent/step events from workflow stream to websocket + persistence queues.
  */
 
-import type { CyclePhase } from "@cream/domain/websocket";
+import type { AgentType, CyclePhase } from "@cream/domain/websocket";
 import log from "../../src/logger.js";
 import {
 	queueAgentComplete,
@@ -23,10 +23,7 @@ import {
 	broadcastAgentToolResult,
 } from "../../src/websocket/handler.js";
 
-const AGENT_TYPE_MAP: Record<
-	string,
-	"grounding" | "news" | "fundamentals" | "bullish" | "bearish" | "trader" | "risk" | "critic"
-> = {
+const AGENT_TYPE_MAP: Record<string, AgentType> = {
 	grounding_agent: "grounding",
 	news_analyst: "news",
 	fundamentals_analyst: "fundamentals",
@@ -161,7 +158,7 @@ export function handleAgentEvent(agentEvent: Record<string, unknown>, cycleId: s
 function handleAgentStart(
 	_event: Record<string, unknown>,
 	cycleId: string,
-	agentType: string,
+	agentType: AgentType,
 	timestamp: string,
 	dbAgentType: string,
 ): void {
@@ -180,7 +177,7 @@ function handleAgentStart(
 
 type AgentChunkContext = {
 	cycleId: string;
-	agentType: string;
+	agentType: AgentType;
 	timestamp: string;
 	dbAgentType: string;
 	chunkType: string;
@@ -204,7 +201,7 @@ type AgentChunkContext = {
 function handleAgentChunk(
 	event: Record<string, unknown>,
 	cycleId: string,
-	agentType: string,
+	agentType: AgentType,
 	timestamp: string,
 	dbAgentType: string,
 ): void {
@@ -236,7 +233,7 @@ function handleAgentChunk(
 function extractAgentChunkContext(
 	event: Record<string, unknown>,
 	cycleId: string,
-	agentType: string,
+	agentType: AgentType,
 	timestamp: string,
 	dbAgentType: string,
 ): AgentChunkContext {
@@ -315,6 +312,10 @@ function resolveChunkAction(context: AgentChunkContext): AgentChunkAction {
 }
 
 function handleTextDelta(context: AgentChunkContext): void {
+	if (!context.textContent) {
+		return;
+	}
+
 	broadcastAgentTextDelta({
 		type: "agent_text_delta",
 		data: {
@@ -324,10 +325,14 @@ function handleTextDelta(context: AgentChunkContext): void {
 			timestamp: context.timestamp,
 		},
 	});
-	queueTextDelta(context.cycleId, context.dbAgentType, context.textContent ?? "");
+	queueTextDelta(context.cycleId, context.dbAgentType, context.textContent);
 }
 
 function handleReasoningDelta(context: AgentChunkContext): void {
+	if (!context.textContent) {
+		return;
+	}
+
 	broadcastAgentReasoning({
 		type: "agent_reasoning",
 		data: {
@@ -337,7 +342,7 @@ function handleReasoningDelta(context: AgentChunkContext): void {
 			timestamp: context.timestamp,
 		},
 	});
-	queueReasoningDelta(context.cycleId, context.dbAgentType, context.textContent ?? "");
+	queueReasoningDelta(context.cycleId, context.dbAgentType, context.textContent);
 }
 
 function handleToolResult(context: AgentChunkContext): void {
@@ -419,7 +424,7 @@ function handleChunkError(context: AgentChunkContext): void {
 function handleAgentComplete(
 	event: Record<string, unknown>,
 	cycleId: string,
-	agentType: string,
+	agentType: AgentType,
 	timestamp: string,
 	dbAgentType: string,
 ): void {
@@ -443,7 +448,7 @@ function handleAgentComplete(
 function handleAgentError(
 	event: Record<string, unknown>,
 	cycleId: string,
-	agentType: string,
+	agentType: AgentType,
 	timestamp: string,
 ): void {
 	broadcastAgentOutput({

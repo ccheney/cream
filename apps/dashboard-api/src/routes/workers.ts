@@ -116,6 +116,8 @@ const RunDetailsResponseSchema = z.object({
 	]),
 });
 
+type RunDetailsData = z.infer<typeof RunDetailsResponseSchema>["data"];
+
 const getWorkerStatusRoute = createRoute({
 	method: "get",
 	path: "/status",
@@ -174,13 +176,15 @@ app.openapi(triggerServiceRoute, async (c) => {
 	const body = await c.req.json().catch(() => ({}));
 	const { priority = "normal" } = TriggerRequestSchema.parse(body);
 	const environment = requireEnv();
+	const workerService = service as WorkerService;
+
 	try {
-		const { runId } = await triggerWorkerService(service as WorkerService, priority, environment);
+		const { runId } = await triggerWorkerService(workerService, priority, environment);
 		return c.json(
 			{
 				runId,
-				status: "started",
-				message: `${ServiceDisplayNames[service as WorkerService]} triggered`,
+				status: "started" as const,
+				message: `${ServiceDisplayNames[workerService]} triggered`,
 			},
 			202,
 		);
@@ -328,7 +332,8 @@ app.openapi(getRunDetailsRoute, async (c) => {
 			syncRun.startedAt,
 			syncRun.completedAt ?? new Date().toISOString(),
 		);
-		return c.json({ run, data }, 200);
+		const parsedData: RunDetailsData = RunDetailsResponseSchema.shape.data.parse(data);
+		return c.json({ run, data: parsedData }, 200);
 	} catch (error) {
 		if (error instanceof HTTPException) {
 			throw error;

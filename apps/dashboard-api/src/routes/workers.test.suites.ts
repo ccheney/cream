@@ -34,7 +34,7 @@ type WorkerTriggerResponse = {
 };
 
 type WorkersRoutesRequester = {
-	request: (path: string, init?: RequestInit) => Promise<Response>;
+	request: (path: string, init?: RequestInit) => Response | Promise<Response>;
 };
 
 async function requestJson<T>(

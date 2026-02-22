@@ -120,7 +120,7 @@ const FALLBACK_RESULT: WorkflowResult = {
 
 type WorkflowStream = {
 	fullStream: AsyncIterable<unknown>;
-	status: "running" | "success" | "failed";
+	status: string;
 	result?: Promise<unknown>;
 };
 

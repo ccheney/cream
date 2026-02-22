@@ -188,7 +188,9 @@ function stopQuoteBatching(runtime: PublisherRuntime): void {
 	runtime.quoteBatchInterval = null;
 }
 
-function normalizeHealthSourceState(status: SourceState["status"]): SourceState["status"] {
+type HealthSourceStatus = HealthCheckEvent["sources"][string];
+
+function normalizeHealthSourceState(status: SourceState["status"]): HealthSourceStatus {
 	return status === "connecting" ? "disconnected" : status;
 }
 
