@@ -18,7 +18,9 @@ export type WSMessageType =
 	| "order_update"
 	| "portfolio_update"
 	| "portfolio"
-	| "worker_run_update";
+	| "worker_run_update"
+	| "scanner_alert"
+	| "scanner_status";
 
 export interface WSMessage<T = unknown> {
 	type: WSMessageType;
@@ -137,5 +139,29 @@ export interface OptionsTradeData {
 	underlying: string;
 	price: number;
 	size: number;
+	timestamp: string;
+}
+
+export type ScannerSignal = "volume_spike" | "price_move" | "gap";
+
+export interface ScannerAlertData {
+	symbol: string;
+	signals: ScannerSignal[];
+	price: number;
+	volume: number;
+	avgVolume: number;
+	volumeRatio: number;
+	priceChangePct: number;
+	gapPct: number;
+	approxAtr: number;
+	timestamp: string;
+}
+
+export interface ScannerStatusData {
+	active: boolean;
+	symbolsTracked: number;
+	totalAlerts: number;
+	alertsLastHour: number;
+	configVersion?: string;
 	timestamp: string;
 }

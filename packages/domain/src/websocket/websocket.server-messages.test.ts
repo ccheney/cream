@@ -7,6 +7,8 @@ import {
 	OrderMessageSchema,
 	PongMessageSchema,
 	QuoteMessageSchema,
+	ScannerAlertMessageSchema,
+	ScannerStatusMessageSchema,
 	ServerMessageSchema,
 	SystemStatusMessageSchema,
 } from "./index.js";
@@ -208,6 +210,64 @@ describe("SystemStatusMessage", () => {
 			},
 		};
 		expect(SystemStatusMessageSchema.safeParse(msg).success).toBe(true);
+	});
+});
+
+describe("ScannerAlertMessage", () => {
+	it("validates scanner alert message", () => {
+		const msg = {
+			type: "scanner_alert",
+			data: {
+				symbol: "NVDA",
+				signals: ["volume_spike", "price_move"],
+				price: 812.44,
+				volume: 1245000,
+				avgVolume: 410000,
+				volumeRatio: 3.03,
+				priceChangePct: 2.84,
+				gapPct: 0.91,
+				approxAtr: 14.2,
+				timestamp: "2026-02-22T14:00:00Z",
+			},
+		};
+		expect(ScannerAlertMessageSchema.safeParse(msg).success).toBe(true);
+	});
+
+	it("rejects scanner alert with empty signals", () => {
+		expect(
+			ScannerAlertMessageSchema.safeParse({
+				type: "scanner_alert",
+				data: {
+					symbol: "NVDA",
+					signals: [],
+					price: 812.44,
+					volume: 1245000,
+					avgVolume: 410000,
+					volumeRatio: 3.03,
+					priceChangePct: 2.84,
+					gapPct: 0.91,
+					approxAtr: 14.2,
+					timestamp: "2026-02-22T14:00:00Z",
+				},
+			}).success,
+		).toBe(false);
+	});
+});
+
+describe("ScannerStatusMessage", () => {
+	it("validates scanner status message", () => {
+		const msg = {
+			type: "scanner_status",
+			data: {
+				active: true,
+				symbolsTracked: 4389,
+				totalAlerts: 1294,
+				alertsLastHour: 53,
+				configVersion: "scanner-v3",
+				timestamp: "2026-02-22T14:00:00Z",
+			},
+		};
+		expect(ScannerStatusMessageSchema.safeParse(msg).success).toBe(true);
 	});
 });
 

@@ -521,7 +521,7 @@ const universeSource = createMockUniverseSource(metadataBySymbol);
 - `@cream/domain` - Zod schemas, environment utilities
 - `@cream/indicators` - Technical indicator calculations
 - `@cream/regime` - Market regime classification
-- `@cream/universe` - Trading universe resolution
+- `@cream/domain` - Shared instrument metadata types
 - `@cream/logger` - Structured logging
 - `@msgpack/msgpack` - Options WebSocket encoding
 - `zod` - Schema validation

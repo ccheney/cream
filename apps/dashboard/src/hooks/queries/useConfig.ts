@@ -6,16 +6,17 @@ import type {
 	ConstraintsConfig,
 	Environment,
 	FullRuntimeConfig,
-	RuntimeUniverseConfig,
+	ScannerRuntimeStatus,
+	RuntimeScannerConfig,
 	SaveDraftInput,
 	ValidationResult,
 } from "@/lib/api/types";
 
-export function useUniverseConfig() {
+export function useScannerConfig() {
 	return useQuery({
-		queryKey: [...queryKeys.config.all, "universe"] as const,
+		queryKey: [...queryKeys.config.all, "scanner"] as const,
 		queryFn: async () => {
-			const { data } = await get<RuntimeUniverseConfig>("/api/config/universe");
+			const { data } = await get<RuntimeScannerConfig>("/api/config/scanner");
 			return data;
 		},
 		staleTime: STALE_TIMES.CONFIG,
@@ -23,18 +24,30 @@ export function useUniverseConfig() {
 	});
 }
 
-export function useUpdateUniverseConfig() {
+export function useUpdateScannerConfig() {
 	const queryClient = useQueryClient();
 
 	return useMutation({
-		mutationFn: async (universe: RuntimeUniverseConfig) => {
-			const { data } = await put<RuntimeUniverseConfig>("/api/config/universe", universe);
+		mutationFn: async (scanner: RuntimeScannerConfig) => {
+			const { data } = await put<RuntimeScannerConfig>("/api/config/scanner", scanner);
 			return data;
 		},
 		onSuccess: (data) => {
-			queryClient.setQueryData([...queryKeys.config.all, "universe"], data);
+			queryClient.setQueryData([...queryKeys.config.all, "scanner"], data);
 			queryClient.invalidateQueries({ queryKey: queryKeys.config.all });
 		},
+	});
+}
+
+export function useScannerStatus() {
+	return useQuery({
+		queryKey: [...queryKeys.config.all, "scanner-status"] as const,
+		queryFn: async () => {
+			const { data } = await get<ScannerRuntimeStatus>("/api/config/scanner/status");
+			return data;
+		},
+		staleTime: 15_000,
+		gcTime: CACHE_TIMES.CONFIG,
 	});
 }
 

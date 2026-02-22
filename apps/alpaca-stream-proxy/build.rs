@@ -37,6 +37,7 @@ fn main() {
     let proto_files = [
         proto_root.join("cream/v1/common.proto"),
         proto_root.join("cream/v1/execution.proto"),
+        proto_root.join("cream/v1/scanner.proto"),
         proto_root.join("cream/v1/stream_proxy.proto"),
     ];
 

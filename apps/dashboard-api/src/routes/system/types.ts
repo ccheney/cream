@@ -91,7 +91,7 @@ export const EnvironmentRequestSchema = z.object({
 export const TriggerCycleRequestSchema = z.object({
 	environment: EnvironmentSchema,
 	useDraftConfig: z.boolean().default(false),
-	symbols: z.array(z.string()).optional(),
+	symbols: z.array(z.string().min(1)).min(1),
 	confirmLive: z.boolean().optional(),
 });
 

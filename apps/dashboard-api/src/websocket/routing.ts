@@ -5,6 +5,7 @@
  */
 
 import { requireEnv } from "@cream/domain";
+import { createScannerClient } from "@cream/domain/grpc";
 import {
 	CHANNELS,
 	type Channel,
@@ -29,6 +30,14 @@ import {
 	handleUnsubscribeSymbols,
 } from "./handlers/index.js";
 import type { WebSocketWithMetadata } from "./types.js";
+
+const scannerGrpcClient = createScannerClient(
+	Bun.env.STREAM_PROXY_URL ?? "http://localhost:50052",
+	{
+		enableLogging: false,
+		maxRetries: 1,
+	},
+);
 
 /**
  * Handle subscribe message.
@@ -138,6 +147,33 @@ async function handleRequestState(
 		}
 		case "agents": {
 			await handleAgentsState(ws);
+			break;
+		}
+		case "scanner": {
+			try {
+				const status = await scannerGrpcClient.getScannerStatus();
+				sendMessage(ws, {
+					type: "scanner_status",
+					data: {
+						active: status.data.active,
+						symbolsTracked: status.data.symbolsTracked,
+						totalAlerts: Number(status.data.totalAlerts),
+						alertsLastHour: Number(status.data.alertsLastHour),
+						timestamp: new Date().toISOString(),
+					},
+				});
+			} catch {
+				sendMessage(ws, {
+					type: "scanner_status",
+					data: {
+						active: false,
+						symbolsTracked: 0,
+						totalAlerts: 0,
+						alertsLastHour: 0,
+						timestamp: new Date().toISOString(),
+					},
+				});
+			}
 			break;
 		}
 		default:

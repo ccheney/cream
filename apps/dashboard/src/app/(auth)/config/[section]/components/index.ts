@@ -17,4 +17,4 @@ export {
 	NotificationRow,
 	StatusBadge,
 } from "./shared";
-export { UniverseSection } from "./UniverseSection";
+export { ScannerSection } from "./ScannerSection";

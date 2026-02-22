@@ -12,6 +12,7 @@ import {
 	broadcast,
 	broadcastAll,
 	broadcastQuote,
+	broadcastScannerAlert,
 	type ConnectionMetadata,
 	closeAllConnections,
 	closeStaleConnections,
@@ -357,6 +358,41 @@ describe("broadcastAll", () => {
 		expect(sent).toBe(2);
 		expect(ws1.sentMessages).toHaveLength(1);
 		expect(ws2.sentMessages).toHaveLength(1);
+	});
+});
+
+describe("broadcastScannerAlert", () => {
+	it("sends scanner alerts only to scanner channel subscribers", () => {
+		const ws1 = createMockWebSocket();
+		ws1.data.channels.add("scanner");
+		handleOpen(ws1 as unknown as WebSocketWithMetadata);
+
+		const ws2 = createMockWebSocket();
+		ws2.data.channels.add("orders");
+		handleOpen(ws2 as unknown as WebSocketWithMetadata);
+
+		ws1.sentMessages = [];
+		ws2.sentMessages = [];
+
+		const sent = broadcastScannerAlert({
+			type: "scanner_alert",
+			data: {
+				symbol: "NVDA",
+				signals: ["volume_spike", "price_move"],
+				price: 812.44,
+				volume: 1245000,
+				avgVolume: 410000,
+				volumeRatio: 3.03,
+				priceChangePct: 2.84,
+				gapPct: 0.91,
+				approxAtr: 14.2,
+				timestamp: new Date().toISOString(),
+			},
+		});
+
+		expect(sent).toBe(1);
+		expect(ws1.sentMessages).toHaveLength(1);
+		expect(ws2.sentMessages).toHaveLength(0);
 	});
 });
 

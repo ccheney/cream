@@ -26,6 +26,7 @@ import { z } from "zod/v4";
  * - alerts: System alerts and notifications
  * - system: System status updates
  * - portfolio: Portfolio value and position updates
+ * - scanner: Autonomous scanner alerts and runtime status
  */
 export const Channel = z.enum([
 	"quotes",
@@ -39,6 +40,7 @@ export const Channel = z.enum([
 	"alerts",
 	"system",
 	"portfolio",
+	"scanner",
 	"filings",
 	"workers",
 ]);
@@ -69,6 +71,7 @@ export const CHANNEL_DESCRIPTIONS: Record<Channel, string> = {
 	alerts: "System alerts and notifications",
 	system: "System status updates",
 	portfolio: "Portfolio value and position updates",
+	scanner: "Autonomous scanner alerts and runtime status updates",
 	filings: "SEC filings sync progress and results",
 	workers: "Worker service status and run updates",
 };

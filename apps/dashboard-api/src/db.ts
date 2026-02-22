@@ -26,12 +26,12 @@ import {
 	PortfolioSnapshotsRepository,
 	PredictionMarketsRepository,
 	RegimeLabelsRepository,
+	ScannerConfigsRepository,
 	SentimentRepository,
 	ShortInterestRepository,
 	SystemStateRepository,
 	ThesisStateRepository,
 	TradingConfigRepository,
-	UniverseConfigsRepository,
 	UserPreferencesRepository,
 } from "@cream/storage";
 import { type Database, closeDb as drizzleCloseDb, getDb } from "@cream/storage/db";
@@ -137,10 +137,10 @@ export function getAgentConfigsRepo(): AgentConfigsRepository {
 }
 
 /**
- * Get universe configs repository
+ * Get scanner configs repository
  */
-export function getUniverseConfigsRepo(): UniverseConfigsRepository {
-	return new UniverseConfigsRepository();
+export function getScannerConfigsRepo(): ScannerConfigsRepository {
+	return new ScannerConfigsRepository();
 }
 
 /**
@@ -257,13 +257,13 @@ export function getRuntimeConfigService(): RuntimeConfigService {
 
 	const tradingRepo = getTradingConfigRepo();
 	const agentRepo = getAgentConfigsRepo();
-	const universeRepo = getUniverseConfigsRepo();
+	const scannerRepo = getScannerConfigsRepo();
 	const constraintsRepo = getConstraintsConfigRepo();
 
 	runtimeConfigService = createRuntimeConfigService(
 		tradingRepo,
 		agentRepo,
-		universeRepo,
+		scannerRepo,
 		constraintsRepo,
 	);
 	return runtimeConfigService;

@@ -12,3 +12,4 @@ export * from "./grpc/public-exports-core.js";
 // Import directly from "@cream/domain/grpc" instead.
 
 export * from "./grpc/public-exports-extended.js";
+export * from "./resolved-instrument.js";

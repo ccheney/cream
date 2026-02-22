@@ -158,8 +158,8 @@ async function loadRuntimeConfig(environment: RuntimeEnvironment): Promise<FullR
 	}
 }
 
-function resolveSymbols(options: CliOptions, config: FullRuntimeConfig): string[] {
-	return options.symbols.length > 0 ? options.symbols : (config.universe.staticSymbols ?? []);
+function resolveSymbols(options: CliOptions, _config: FullRuntimeConfig): string[] {
+	return options.symbols;
 }
 
 function ensureSymbols(symbols: string[]): void {
@@ -167,7 +167,7 @@ function ensureSymbols(symbols: string[]): void {
 		return;
 	}
 
-	writeStderr("No symbols configured. Use --symbols=AAPL,MSFT or configure in database.");
+	writeStderr("No symbols provided. Use --symbols=AAPL,MSFT.");
 	process.exit(1);
 }
 

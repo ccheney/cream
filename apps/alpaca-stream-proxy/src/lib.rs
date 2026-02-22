@@ -72,6 +72,10 @@ pub mod infrastructure;
 // =============================================================================
 
 // Domain types
+pub use application::services::scanner::{
+    ScannerService as ScannerAppService, ScannerStatusSnapshot,
+};
+pub use domain::scanner::{ScannerAlertDomain, ScannerBar, ScannerParams, SignalType, SymbolState};
 pub use domain::subscription::{
     ConsumerId, SubscriptionChanges, SubscriptionManager, SubscriptionStats, SubscriptionType,
     Symbol, TotalSubscriptionStats,
@@ -94,8 +98,10 @@ pub use infrastructure::broadcast::{
 // gRPC server (for integration tests)
 pub use infrastructure::grpc::{
     proto::cream::v1 as proto,
+    scanner_server::ScannerGrpcServer,
     server::{FeedState, StreamProxyServer, StreamProxyServerConfig},
 };
+pub use infrastructure::scanner::{ScannerConfigRepository, ScannerConfigRepositoryError};
 
 // Alpaca message types (for integration tests)
 pub use infrastructure::alpaca::messages::{

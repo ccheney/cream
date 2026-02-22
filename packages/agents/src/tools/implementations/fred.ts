@@ -6,7 +6,7 @@
  */
 
 import { type ExecutionContext, isTest } from "@cream/domain";
-import { FRED_RELEASES, getReleaseById, type ReleaseImpact } from "@cream/universe";
+import { FRED_RELEASES, getReleaseById, type ReleaseImpact } from "@cream/external-context";
 import { log } from "../../logger.js";
 import { getFREDClient } from "../clients.js";
 import type { EconomicEvent } from "../types.js";

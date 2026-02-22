@@ -18,7 +18,7 @@ import {
 	createAlpacaClientFromEnv,
 	isAlpacaConfigured,
 } from "@cream/marketdata";
-import { createFREDClient, type FREDClient } from "@cream/universe";
+import { createFREDClient, type FREDClient } from "@cream/external-context";
 
 // ============================================
 // gRPC Client Singletons

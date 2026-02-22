@@ -4,7 +4,7 @@
  * Config Section Page
  *
  * Dynamic routing for configuration sections:
- * - universe: Trading universe settings
+ * - scanner: Autonomous scanner settings
  * - constraints: Position and portfolio limits
  * - agents: Agent configuration
  * - risk: Risk management settings (alias for constraints)
@@ -19,8 +19,8 @@ import {
 	ConstraintsSection,
 	DisplaySection,
 	NotificationsSection,
+	ScannerSection,
 	SoundSection,
-	UniverseSection,
 } from "./components/index";
 import { type Section, VALID_SECTIONS } from "./types";
 
@@ -113,8 +113,8 @@ interface SectionContentProps {
 
 function SectionContent({ section }: SectionContentProps) {
 	switch (section) {
-		case "universe":
-			return <UniverseSection />;
+		case "scanner":
+			return <ScannerSection />;
 		case "constraints":
 		case "risk":
 			return <ConstraintsSection />;
@@ -127,6 +127,6 @@ function SectionContent({ section }: SectionContentProps) {
 		case "display":
 			return <DisplaySection />;
 		default:
-			return <UniverseSection />;
+			return <ScannerSection />;
 	}
 }

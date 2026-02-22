@@ -25,6 +25,8 @@ export {
 	broadcastIndicator,
 	broadcastOptionsQuote,
 	broadcastQuote,
+	broadcastScannerAlert,
+	broadcastScannerStatus,
 	broadcastTrade,
 	closeAllConnections,
 	closeStaleConnections,

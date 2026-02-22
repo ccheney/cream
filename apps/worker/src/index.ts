@@ -24,6 +24,10 @@ import {
 	type MacroWatchService,
 	type NewspaperService,
 } from "./contexts/macro-watch/index.js";
+import {
+	createScannerTriggerService,
+	type ScannerTriggerService,
+} from "./contexts/scanner/index.js";
 import { createSchedulerManager, type SchedulerManager } from "./contexts/scheduling/index.js";
 import {
 	type CycleTriggerService,
@@ -53,7 +57,6 @@ interface WorkerState {
 	runOnStartup: boolean;
 	schedulerDisabled: boolean;
 	lastRun: {
-		tradingCycle: Date | null;
 		predictionMarkets: Date | null;
 		filingsSync: Date | null;
 		macroWatch: Date | null;
@@ -62,6 +65,7 @@ interface WorkerState {
 	};
 	startedAt: Date;
 	cycleTrigger: CycleTriggerService;
+	scannerTrigger: ScannerTriggerService;
 	predictionMarkets: PredictionMarketsService;
 	filingsSync: FilingsSyncService | null;
 	macroWatch: MacroWatchService;
@@ -75,18 +79,24 @@ let state: WorkerState;
 type WorkerDb = Awaited<ReturnType<typeof getDbClient>>;
 
 type TrackedServiceName = "filings_sync" | "macro_watch" | "newspaper" | "economic_calendar";
+const MACRO_WATCH_INTERVAL_MS = 60 * 60 * 1000;
+const SYMBOL_LOOKBACK_LIMIT = 250;
 
 function getIntervals() {
 	return {
-		tradingCycleIntervalMs: state.config.trading.tradingCycleIntervalMs,
+		macroWatchIntervalMs: MACRO_WATCH_INTERVAL_MS,
 		predictionMarketsIntervalMs: state.config.trading.predictionMarketsIntervalMs,
 	};
 }
 
-function getInstruments(): string[] {
-	const symbols = state.config.universe.staticSymbols;
-	if (!symbols || symbols.length === 0) {
-		throw new Error("No instruments configured in universe.staticSymbols");
+function getRecentScannerSymbols(): string[] {
+	return state.scannerTrigger.getRecentSymbols(SYMBOL_LOOKBACK_LIMIT);
+}
+
+function getSymbolsForDataCollection(job: TrackedServiceName): string[] {
+	const symbols = getRecentScannerSymbols();
+	if (symbols.length === 0) {
+		log.warn({ job }, "No scanner symbols available for symbol-scoped data collection");
 	}
 	return symbols;
 }
@@ -124,11 +134,6 @@ async function runWithTracking(
 	}
 }
 
-async function runTradingCycle(): Promise<void> {
-	state.lastRun.tradingCycle = new Date();
-	await state.cycleTrigger.trigger(state.environment, getInstruments());
-}
-
 async function runPredictionMarkets(): Promise<void> {
 	state.lastRun.predictionMarkets = new Date();
 	await state.predictionMarkets.run();
@@ -141,7 +146,15 @@ async function runFilingsSync(): Promise<void> {
 			state.lastRun.filingsSync = new Date();
 		},
 		async () => {
-			const result = await state.filingsSync?.sync(getInstruments(), state.environment);
+			const symbols = getSymbolsForDataCollection("filings_sync");
+			if (symbols.length === 0) {
+				return {
+					success: true,
+					message: "Skipped: no recent scanner symbols",
+					processed: 0,
+				};
+			}
+			const result = await state.filingsSync?.sync(symbols, state.environment);
 			return {
 				success: true,
 				message: result
@@ -160,7 +173,15 @@ async function runMacroWatch(): Promise<void> {
 			state.lastRun.macroWatch = new Date();
 		},
 		async () => {
-			const { entries, saved } = await state.macroWatch.run(getInstruments());
+			const symbols = getSymbolsForDataCollection("macro_watch");
+			if (symbols.length === 0) {
+				return {
+					success: true,
+					message: "Skipped: no recent scanner symbols",
+					processed: 0,
+				};
+			}
+			const { entries, saved } = await state.macroWatch.run(symbols);
 			return {
 				success: true,
 				message: `${entries.length} entries, ${saved} saved`,
@@ -177,7 +198,15 @@ async function compileNewspaper(): Promise<void> {
 			state.lastRun.newspaper = new Date();
 		},
 		async () => {
-			const result = await state.newspaper.compile(getInstruments());
+			const symbols = getSymbolsForDataCollection("newspaper");
+			if (symbols.length === 0) {
+				return {
+					success: true,
+					message: "Skipped: no recent scanner symbols",
+					processed: 0,
+				};
+			}
+			const result = await state.newspaper.compile(symbols);
 			return {
 				success: result.compiled,
 				message: result.message,
@@ -209,7 +238,11 @@ async function triggerMacroWatch(): Promise<TriggerResult> {
 	try {
 		await handleReloadConfig();
 		state.lastRun.macroWatch = new Date();
-		const { entries, saved } = await state.macroWatch.run(getInstruments());
+		const symbols = getSymbolsForDataCollection("macro_watch");
+		if (symbols.length === 0) {
+			return successTriggerResult(startTime, "MacroWatch skipped: no recent scanner symbols");
+		}
+		const { entries, saved } = await state.macroWatch.run(symbols);
 		return successTriggerResult(
 			startTime,
 			`MacroWatch completed with ${entries.length} entries, ${saved} saved`,
@@ -227,7 +260,11 @@ async function triggerNewspaper(): Promise<TriggerResult> {
 	const startTime = Date.now();
 	try {
 		state.lastRun.newspaper = new Date();
-		const result = await state.newspaper.compile(getInstruments());
+		const symbols = getSymbolsForDataCollection("newspaper");
+		if (symbols.length === 0) {
+			return successTriggerResult(startTime, "Newspaper skipped: no recent scanner symbols");
+		}
+		const result = await state.newspaper.compile(symbols);
 		return successTriggerResult(startTime, result.message, { processed: result.entryCount });
 	} catch (error) {
 		return failedTriggerResult(startTime, "Newspaper compilation failed", error);
@@ -238,7 +275,11 @@ async function triggerFilingsSync(): Promise<TriggerResult> {
 	const startTime = Date.now();
 	try {
 		state.lastRun.filingsSync = new Date();
-		const result = await state.filingsSync?.sync(getInstruments(), state.environment);
+		const symbols = getSymbolsForDataCollection("filings_sync");
+		if (symbols.length === 0) {
+			return successTriggerResult(startTime, "Filings sync skipped: no recent scanner symbols");
+		}
+		const result = await state.filingsSync?.sync(symbols, state.environment);
 		if (!result) {
 			return successTriggerResult(startTime, "Filings sync completed (no result)");
 		}
@@ -284,6 +325,7 @@ async function handleReloadConfig(): Promise<void> {
 		getOldIntervals: getIntervals,
 		setConfig: (config) => {
 			state.config = config;
+			state.scannerTrigger.updateMaxCandidates(config.scanner.maxCandidates);
 		},
 		getNewIntervals: getIntervals,
 		onIntervalsChanged: () => state.schedulerManager?.restart(),
@@ -309,13 +351,24 @@ function createInitialState(
 	config: FullRuntimeConfig,
 	db: WorkerDb,
 ): WorkerState {
+	const cycleTrigger = createCycleTriggerServiceFromEnv();
+	const scannerTrigger = createScannerTriggerService(
+		{
+			environment,
+			streamProxyUrl: Bun.env.STREAM_PROXY_URL,
+			batchQuietWindowMs: 60_000,
+			batchMaxWindowMs: 5 * 60_000,
+			maxCandidates: config.scanner.maxCandidates,
+		},
+		{ cycleTrigger },
+	);
+
 	return {
 		config,
 		environment,
 		runOnStartup: Bun.env.RUN_ON_STARTUP === "true",
 		schedulerDisabled: Bun.env.SCHEDULER_DISABLED === "true",
 		lastRun: {
-			tradingCycle: null,
 			predictionMarkets: null,
 			filingsSync: null,
 			macroWatch: null,
@@ -323,7 +376,8 @@ function createInitialState(
 			economicCalendar: null,
 		},
 		startedAt: new Date(),
-		cycleTrigger: createCycleTriggerServiceFromEnv(),
+		cycleTrigger,
+		scannerTrigger,
 		predictionMarkets: createPredictionMarketsService(),
 		filingsSync: createFilingsSyncService(db),
 		macroWatch: (() => {
@@ -348,12 +402,12 @@ function logStartup(config: FullRuntimeConfig, environment: RuntimeEnvironment):
 	log.info({ environment, configId: config.trading.id }, "Worker starting");
 	log.info(
 		{
-			tradingCycleIntervalMs: intervals.tradingCycleIntervalMs,
+			macroWatchIntervalMs: intervals.macroWatchIntervalMs,
 			predictionMarketsIntervalMs: intervals.predictionMarketsIntervalMs,
+			scannerMaxCandidates: config.scanner.maxCandidates,
 		},
 		"Intervals configured",
 	);
-	log.info({ instruments: getInstruments() }, "Instruments configured");
 }
 
 function startHealthServer() {
@@ -361,11 +415,10 @@ function startHealthServer() {
 		getEnvironment: () => state.environment,
 		getConfigId: () => state.config.trading.id,
 		getIntervals,
-		getInstruments,
+		getInstruments: getRecentScannerSymbols,
 		getLastRun: () => state.lastRun,
 		getNextRun: () => state.schedulerManager?.getNextRunTimes() ?? null,
 		getRunningStatus: () => ({
-			tradingCycle: state.cycleTrigger.isRunning(),
 			predictionMarkets: state.predictionMarkets.isRunning(),
 			filingsSync: state.filingsSync?.isRunning() ?? false,
 			macroWatch: state.macroWatch.isRunning(),
@@ -402,15 +455,15 @@ async function startSchedulers(db: WorkerDb): Promise<void> {
 		log.info({}, "Scheduler disabled (SCHEDULER_DISABLED=true). Health endpoint only.");
 		return;
 	}
+	state.scannerTrigger.start();
 
 	if (state.runOnStartup) {
-		log.info({}, "Running cycles on startup");
-		await Promise.all([runTradingCycle(), runPredictionMarkets()]);
+		log.info({}, "Running startup jobs");
+		await runPredictionMarkets();
 	}
 
 	state.schedulerManager = createSchedulerManager(
 		{
-			runTradingCycle,
 			runPredictionMarkets,
 			runFilingsSync,
 			runMacroWatch,
@@ -423,7 +476,7 @@ async function startSchedulers(db: WorkerDb): Promise<void> {
 
 	state.indicatorScheduler = startIndicatorScheduler({
 		db,
-		getSymbols: getInstruments,
+		getSymbols: getRecentScannerSymbols,
 	});
 }
 
@@ -438,6 +491,7 @@ function registerSignalHandlers(healthServer: ReturnType<typeof startHealthServe
 		healthServer.stop();
 		state.schedulerManager?.stop();
 		state.indicatorScheduler?.stop();
+		await state.scannerTrigger.stop();
 		await shutdownTracing();
 		process.exit(0);
 	};

@@ -57,6 +57,18 @@ export type {
 	Quote,
 	SymbolSnapshot,
 } from "@cream/schema-gen/cream/v1/market_snapshot";
+// Scanner types
+export type {
+	GetScannerStatusRequest,
+	GetScannerStatusResponse,
+	ReloadScannerConfigRequest,
+	ReloadScannerConfigResponse,
+	ScannerAlert,
+	ScannerConfig,
+	StreamScannerAlertsRequest,
+	StreamScannerAlertsResponse,
+} from "@cream/schema-gen/cream/v1/scanner";
+export { ScannerSignalType } from "@cream/schema-gen/cream/v1/scanner";
 // Errors
 export { GrpcError, RetryBackoff, sleep } from "./errors.js";
 // Clients
@@ -71,6 +83,7 @@ export {
 	MarketDataServiceClient,
 	type SubscribeMarketDataInput,
 } from "./marketdata.js";
+export { createScannerClient, ScannerServiceClient } from "./scanner.js";
 // Types
 export {
 	DEFAULT_GRPC_CONFIG,

@@ -1,6 +1,6 @@
 import { and, asc, eq, gte, isNull, lte, or, sql } from "drizzle-orm";
 import { type Database, getDb } from "../db";
-import { indexConstituents } from "../schema/universe";
+import { indexConstituents } from "../schema/historical-universe";
 import {
 	type IndexConstituent,
 	type IndexId,

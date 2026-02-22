@@ -14,7 +14,7 @@ import {
 	type EconomicCalendarEvent,
 	EconomicCalendarRepository,
 } from "@cream/storage";
-import { createFREDClientFromEnv, getReleaseById } from "@cream/universe";
+import { createFREDClientFromEnv, getReleaseById } from "@cream/external-context";
 import log from "../logger.js";
 
 // ============================================

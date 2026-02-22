@@ -9,14 +9,14 @@ Bun.env.CREAM_ENV = "PAPER";
 
 import { afterEach, beforeEach, describe, expect, mock, test } from "bun:test";
 import type { ExecutionContext } from "@cream/domain";
+import {
+	type FREDObservation,
+	type FREDObservationsResponse,
+	type FREDReleaseDate,
+	type FREDReleaseDatesResponse,
+	FREDClient,
+} from "@cream/external-context";
 import { requireValue } from "@cream/test-utils";
-import type {
-	FREDObservation,
-	FREDObservationsResponse,
-	FREDReleaseDate,
-	FREDReleaseDatesResponse,
-} from "@cream/universe";
-import { FREDClient } from "@cream/universe";
 import { resetFREDClient, setFREDClientForTesting } from "../clients.js";
 import { getEconomicCalendar, getMacroIndicators } from "./fred.js";
 

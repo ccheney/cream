@@ -2294,6 +2294,137 @@ pub struct GetOptionChainResponse {
     #[prost(message, optional, tag="1")]
     pub chain: ::core::option::Option<OptionChain>,
 }
+/// Scanner alert generated from live bars.
+#[derive(Clone, PartialEq, ::prost::Message)]
+pub struct ScannerAlert {
+    /// Stock symbol
+    #[prost(string, tag="1")]
+    pub symbol: ::prost::alloc::string::String,
+    /// Alert event timestamp
+    #[prost(message, optional, tag="2")]
+    pub timestamp: ::core::option::Option<::prost_types::Timestamp>,
+    /// Signals detected for this symbol
+    #[prost(enumeration="ScannerSignalType", repeated, tag="3")]
+    pub signals: ::prost::alloc::vec::Vec<i32>,
+    /// Last trade/close price
+    #[prost(double, tag="4")]
+    pub price: f64,
+    /// Current bar volume
+    #[prost(int64, tag="5")]
+    pub volume: i64,
+    /// Rolling average volume baseline
+    #[prost(int64, tag="6")]
+    pub avg_volume: i64,
+    /// Volume ratio (volume / avg_volume)
+    #[prost(double, tag="7")]
+    pub volume_ratio: f64,
+    /// Price change percentage for the detection window
+    #[prost(double, tag="8")]
+    pub price_change_pct: f64,
+    /// Gap percentage vs previous day close
+    #[prost(double, tag="9")]
+    pub gap_pct: f64,
+    /// Approximate ATR for volatility context
+    #[prost(double, tag="10")]
+    pub approx_atr: f64,
+}
+/// Scanner runtime configuration.
+#[derive(Clone, Copy, PartialEq, ::prost::Message)]
+pub struct ScannerConfig {
+    /// Minimum stock price required
+    #[prost(double, tag="1")]
+    pub min_price: f64,
+    /// Minimum rolling average volume required
+    #[prost(int64, tag="2")]
+    pub min_avg_volume: i64,
+    /// Minimum volume ratio threshold
+    #[prost(double, tag="3")]
+    pub volume_spike_threshold: f64,
+    /// Minimum absolute price move percentage threshold
+    #[prost(double, tag="4")]
+    pub price_move_threshold: f64,
+    /// Minimum absolute gap percentage threshold
+    #[prost(double, tag="5")]
+    pub gap_threshold: f64,
+    /// Max candidates emitted per processing window
+    #[prost(int32, tag="6")]
+    pub max_candidates: i32,
+    /// Per-symbol cooldown after an alert
+    #[prost(int64, tag="7")]
+    pub cooldown_seconds: i64,
+    /// Enables scanner processing and alert emission
+    #[prost(bool, tag="8")]
+    pub enabled: bool,
+}
+#[derive(Clone, Copy, PartialEq, Eq, Hash, ::prost::Message)]
+pub struct StreamScannerAlertsRequest {
+}
+#[derive(Clone, PartialEq, ::prost::Message)]
+pub struct StreamScannerAlertsResponse {
+    #[prost(message, optional, tag="1")]
+    pub alert: ::core::option::Option<ScannerAlert>,
+}
+#[derive(Clone, Copy, PartialEq, Eq, Hash, ::prost::Message)]
+pub struct GetScannerStatusRequest {
+}
+#[derive(Clone, Copy, PartialEq, ::prost::Message)]
+pub struct GetScannerStatusResponse {
+    #[prost(bool, tag="1")]
+    pub active: bool,
+    #[prost(int32, tag="2")]
+    pub symbols_tracked: i32,
+    #[prost(int64, tag="3")]
+    pub total_alerts: i64,
+    #[prost(int64, tag="4")]
+    pub alerts_last_hour: i64,
+    #[prost(message, optional, tag="5")]
+    pub config: ::core::option::Option<ScannerConfig>,
+}
+#[derive(Clone, Copy, PartialEq, Eq, Hash, ::prost::Message)]
+pub struct ReloadScannerConfigRequest {
+}
+#[derive(Clone, PartialEq, ::prost::Message)]
+pub struct ReloadScannerConfigResponse {
+    #[prost(bool, tag="1")]
+    pub success: bool,
+    #[prost(string, tag="2")]
+    pub message: ::prost::alloc::string::String,
+    #[prost(message, optional, tag="3")]
+    pub config: ::core::option::Option<ScannerConfig>,
+}
+/// Scanner signal type.
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, PartialOrd, Ord, ::prost::Enumeration)]
+#[repr(i32)]
+pub enum ScannerSignalType {
+    Unspecified = 0,
+    VolumeSpike = 1,
+    PriceMove = 2,
+    Gap = 3,
+}
+impl ScannerSignalType {
+    /// String value of the enum field names used in the ProtoBuf definition.
+    ///
+    /// The values are not transformed in any way and thus are considered stable
+    /// (if the ProtoBuf definition does not change) and safe for programmatic use.
+    pub fn as_str_name(&self) -> &'static str {
+        match self {
+            Self::Unspecified => "SCANNER_SIGNAL_TYPE_UNSPECIFIED",
+            Self::VolumeSpike => "SCANNER_SIGNAL_TYPE_VOLUME_SPIKE",
+            Self::PriceMove => "SCANNER_SIGNAL_TYPE_PRICE_MOVE",
+            Self::Gap => "SCANNER_SIGNAL_TYPE_GAP",
+        }
+    }
+    /// Creates an enum from field names used in the ProtoBuf definition.
+    pub fn from_str_name(value: &str) -> ::core::option::Option<Self> {
+        match value {
+            "SCANNER_SIGNAL_TYPE_UNSPECIFIED" => Some(Self::Unspecified),
+            "SCANNER_SIGNAL_TYPE_VOLUME_SPIKE" => Some(Self::VolumeSpike),
+            "SCANNER_SIGNAL_TYPE_PRICE_MOVE" => Some(Self::PriceMove),
+            "SCANNER_SIGNAL_TYPE_GAP" => Some(Self::Gap),
+            _ => None,
+        }
+    }
+}
 // ============================================
 // Stock Market Data Messages
 // ============================================

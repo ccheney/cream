@@ -15,7 +15,7 @@ import {
 	DEFAULT_TRANSFORM_CONFIG,
 } from "@cream/indicators";
 import { classifyRegime, DEFAULT_RULE_BASED_CONFIG } from "@cream/regime";
-import type { ResolvedInstrument } from "@cream/universe";
+import type { ResolvedInstrument } from "@cream/domain";
 
 import { getGlobalCache, type SnapshotCache } from "./cache";
 import {

@@ -9,7 +9,7 @@ import type {
 	AgentConfig,
 	AlertSettings,
 	ConstraintsConfig,
-	RuntimeUniverseConfig,
+	RuntimeScannerConfig,
 } from "@/lib/api/types";
 
 interface UseEditorStateOptions<T> {
@@ -65,22 +65,22 @@ export function useEditorState<T>({
 	};
 }
 
-export function useUniverseEditor(
-	universe: RuntimeUniverseConfig | undefined,
+export function useScannerEditor(
+	scanner: RuntimeScannerConfig | undefined,
 	updateMutation: {
-		mutate: (data: RuntimeUniverseConfig, options?: { onSuccess?: () => void }) => void;
+		mutate: (data: RuntimeScannerConfig, options?: { onSuccess?: () => void }) => void;
 		isPending: boolean;
 	},
-): EditorState<RuntimeUniverseConfig> & { isPending: boolean } {
+): EditorState<RuntimeScannerConfig> & { isPending: boolean } {
 	const [editing, setEditing] = useState(false);
-	const [formData, setFormData] = useState<Partial<RuntimeUniverseConfig>>({});
+	const [formData, setFormData] = useState<Partial<RuntimeScannerConfig>>({});
 
 	const startEdit = useCallback(() => {
-		if (universe) {
-			setFormData(universe);
+		if (scanner) {
+			setFormData(scanner);
 			setEditing(true);
 		}
-	}, [universe]);
+	}, [scanner]);
 
 	const cancelEdit = useCallback(() => {
 		setEditing(false);
@@ -89,13 +89,13 @@ export function useUniverseEditor(
 
 	const saveEdit = useCallback(() => {
 		if (formData && Object.keys(formData).length > 0) {
-			updateMutation.mutate(formData as RuntimeUniverseConfig, {
+			updateMutation.mutate(formData as RuntimeScannerConfig, {
 				onSuccess: () => setEditing(false),
 			});
 		}
 	}, [formData, updateMutation]);
 
-	const updateFormData = useCallback((data: Partial<RuntimeUniverseConfig>) => {
+	const updateFormData = useCallback((data: Partial<RuntimeScannerConfig>) => {
 		setFormData((prev) => ({ ...prev, ...data }));
 	}, []);
 

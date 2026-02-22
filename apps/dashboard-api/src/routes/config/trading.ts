@@ -8,8 +8,8 @@ import {
 	type RuntimeAgentConfig,
 	type RuntimeAgentType,
 	RuntimeConfigError,
+	type RuntimeScannerConfig,
 	type RuntimeTradingConfig,
-	type RuntimeUniverseConfig,
 	type TradingEnvironment,
 } from "@cream/config";
 import { createRoute, OpenAPIHono } from "@hono/zod-openapi";
@@ -134,7 +134,7 @@ app.openapi(saveDraftRoute, async (c) => {
 		const service = await getRuntimeConfigService();
 		const config = await service.saveDraft(environment, {
 			trading: updates.trading as Partial<RuntimeTradingConfig>,
-			universe: updates.universe as Partial<RuntimeUniverseConfig>,
+			scanner: updates.scanner as Partial<RuntimeScannerConfig>,
 			agents: updates.agents as Partial<Record<RuntimeAgentType, Partial<RuntimeAgentConfig>>>,
 		});
 		return c.json(config, 200);

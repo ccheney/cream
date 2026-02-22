@@ -76,7 +76,18 @@ app.openapi(triggerCycleRoute, async (c) => {
 		confirmLive: body.confirmLive,
 		isInternal: isInternalAuth(c.req.header("Authorization")),
 	});
-	return c.json(result.body, result.status);
+	switch (result.status) {
+		case 200:
+			return c.json(result.body, 200);
+		case 400:
+			return c.json(result.body, 400);
+		case 409:
+			return c.json(result.body, 409);
+		case 429:
+			return c.json(result.body, 429);
+		default:
+			return c.json(result.body, 400);
+	}
 });
 
 // GET /api/system/cycle/:cycleId

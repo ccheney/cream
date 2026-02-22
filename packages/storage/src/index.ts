@@ -47,3 +47,4 @@ export {
 } from "./repositories/base.js";
 // Repositories
 export * from "./repositories/index.js";
+export * from "./point-in-time/index.js";

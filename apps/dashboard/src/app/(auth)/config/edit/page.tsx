@@ -5,9 +5,9 @@ import { useCallback, useState } from "react";
 import { ConfigDiff } from "@/components/config/ConfigDiff";
 import { useActiveConfig, useDraftConfig, useSaveDraft, useValidateDraft } from "@/hooks/queries";
 import type { FullRuntimeConfig, SaveDraftInput } from "@/lib/api/types";
-import { AgentConfigList, TradingConfigForm, UniverseConfigForm } from "./components/index";
+import { AgentConfigList, ScannerConfigForm, TradingConfigForm } from "./components/index";
 
-type TabType = "trading" | "agents" | "universe";
+type TabType = "trading" | "agents" | "scanner";
 
 interface ValidationResult {
 	valid: boolean;
@@ -53,9 +53,9 @@ function ConfigTabContent({
 	}
 
 	return (
-		<UniverseConfigForm
-			config={draftConfig.universe}
-			onSave={(updates) => onSave({ universe: updates })}
+		<ScannerConfigForm
+			config={draftConfig.scanner}
+			onSave={(updates) => onSave({ scanner: updates })}
 			onChange={onFormChange}
 			isSaving={isSaving}
 		/>
@@ -313,7 +313,7 @@ interface TabNavigationProps {
 }
 
 function TabNavigation({ activeTab, onTabChange }: TabNavigationProps) {
-	const tabs: TabType[] = ["trading", "agents", "universe"];
+	const tabs: TabType[] = ["trading", "agents", "scanner"];
 
 	return (
 		<div className="border-b border-cream-200 dark:border-night-700">

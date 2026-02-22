@@ -11,6 +11,7 @@ import type {
 	OptionsQuoteData,
 	OptionsTradeData,
 	QuoteData,
+	ScannerStatusData,
 	WSMessage,
 } from "./ws-invalidation.types";
 
@@ -352,6 +353,11 @@ function handleOptionsAggregate(
 	}
 }
 
+function handleScannerStatus(message: WSMessage, queryClient: QueryClient): void {
+	const data = message.data as ScannerStatusData;
+	queryClient.setQueryData([...queryKeys.config.all, "scanner-status"], data);
+}
+
 type WSMessageHandler = (message: WSMessage, context: WSHandlerContext) => void;
 
 const WS_MESSAGE_HANDLERS: Partial<Record<WSMessage["type"], WSMessageHandler>> = {
@@ -415,6 +421,10 @@ const WS_MESSAGE_HANDLERS: Partial<Record<WSMessage["type"], WSMessageHandler>> 
 	},
 	worker_run_update: (_, { queryClient }) => {
 		queryClient.invalidateQueries({ queryKey: queryKeys.workers.all });
+	},
+	scanner_alert: () => {},
+	scanner_status: (message, { queryClient }) => {
+		handleScannerStatus(message, queryClient);
 	},
 };
 

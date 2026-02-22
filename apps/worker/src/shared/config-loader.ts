@@ -16,12 +16,12 @@ export async function loadConfig(environment: RuntimeEnvironment): Promise<FullR
 export interface ReloadConfigDeps {
 	environment: RuntimeEnvironment;
 	getOldIntervals: () => {
-		tradingCycleIntervalMs: number;
+		macroWatchIntervalMs: number;
 		predictionMarketsIntervalMs: number;
 	};
 	setConfig: (config: FullRuntimeConfig) => void;
 	getNewIntervals: () => {
-		tradingCycleIntervalMs: number;
+		macroWatchIntervalMs: number;
 		predictionMarketsIntervalMs: number;
 	};
 	onIntervalsChanged: () => void;
@@ -37,12 +37,12 @@ export async function reloadConfig(deps: ReloadConfigDeps): Promise<void> {
 	deps.setConfig(newConfig);
 	const newIntervals = deps.getNewIntervals();
 
-	const tradingIntervalChanged =
-		oldIntervals.tradingCycleIntervalMs !== newIntervals.tradingCycleIntervalMs;
+	const macroWatchIntervalChanged =
+		oldIntervals.macroWatchIntervalMs !== newIntervals.macroWatchIntervalMs;
 	const predictionIntervalChanged =
 		oldIntervals.predictionMarketsIntervalMs !== newIntervals.predictionMarketsIntervalMs;
 
-	if (tradingIntervalChanged || predictionIntervalChanged) {
+	if (macroWatchIntervalChanged || predictionIntervalChanged) {
 		log.info({}, "Intervals changed, rescheduling");
 		deps.onIntervalsChanged();
 	}

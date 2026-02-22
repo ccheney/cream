@@ -21,16 +21,16 @@ import type {
 	RuntimePerInstrumentLimits,
 	RuntimePortfolioLimits,
 	RuntimeTradingConfig,
-	RuntimeUniverseConfig,
+	RuntimeScannerConfig,
 	TradingConfigRepository,
 	TradingEnvironment,
-	UniverseConfigsRepository,
+	ScannerConfigsRepository,
 } from "./types.js";
 import { validateForPromotion } from "./validation.js";
 
 type DraftUpdateConfig = Partial<{
 	trading: Partial<RuntimeTradingConfig>;
-	universe: Partial<RuntimeUniverseConfig>;
+	scanner: Partial<RuntimeScannerConfig>;
 	agents: Partial<Record<RuntimeAgentType, Partial<RuntimeAgentConfig>>>;
 	constraints: Partial<{
 		perInstrument: Partial<RuntimePerInstrumentLimits>;
@@ -43,7 +43,7 @@ export class RuntimeConfigService {
 	constructor(
 		private readonly tradingConfigRepo: TradingConfigRepository,
 		private readonly agentConfigsRepo: AgentConfigsRepository,
-		private readonly universeConfigsRepo: UniverseConfigsRepository,
+		private readonly scannerConfigsRepo: ScannerConfigsRepository,
 		private readonly constraintsConfigRepo?: ConstraintsConfigRepository,
 	) {}
 
@@ -53,8 +53,8 @@ export class RuntimeConfigService {
 			throw RuntimeConfigError.notSeeded(environment);
 		}
 
-		const universe = await this.universeConfigsRepo.getActive(environment);
-		if (!universe) {
+		const scanner = await this.scannerConfigsRepo.getActive(environment);
+		if (!scanner) {
 			throw RuntimeConfigError.notSeeded(environment);
 		}
 
@@ -69,7 +69,7 @@ export class RuntimeConfigService {
 			constraints = getDefaultConstraints(environment);
 		}
 
-		return { trading, agents, universe, constraints };
+		return { trading, agents, scanner, constraints };
 	}
 
 	async getDraft(environment: RuntimeEnvironment): Promise<FullRuntimeConfig> {
@@ -82,13 +82,13 @@ export class RuntimeConfigService {
 			trading = active;
 		}
 
-		let universe = await this.universeConfigsRepo.getDraft(environment);
-		if (!universe) {
-			const activeUniverse = await this.universeConfigsRepo.getActive(environment);
-			if (!activeUniverse) {
+		let scanner = await this.scannerConfigsRepo.getDraft(environment);
+		if (!scanner) {
+			const activeScanner = await this.scannerConfigsRepo.getActive(environment);
+			if (!activeScanner) {
 				throw RuntimeConfigError.notSeeded(environment);
 			}
-			universe = activeUniverse;
+			scanner = activeScanner;
 		}
 
 		const agentConfigs = await this.agentConfigsRepo.getAll(environment);
@@ -107,7 +107,7 @@ export class RuntimeConfigService {
 			constraints = getDefaultConstraints(environment);
 		}
 
-		return { trading, agents, universe, constraints };
+		return { trading, agents, scanner, constraints };
 	}
 
 	async saveDraft(
@@ -115,7 +115,7 @@ export class RuntimeConfigService {
 		config: DraftUpdateConfig,
 	): Promise<FullRuntimeConfig> {
 		await this.saveTradingDraft(environment, config.trading);
-		await this.saveUniverseDraft(environment, config.universe);
+		await this.saveScannerDraft(environment, config.scanner);
 		await this.saveAgentDrafts(environment, config.agents);
 		await this.saveConstraintsDraft(environment, config.constraints);
 
@@ -139,9 +139,9 @@ export class RuntimeConfigService {
 			await this.tradingConfigRepo.setStatus(tradingDraft.id, "active");
 		}
 
-		const universeDraft = await this.universeConfigsRepo.getDraft(environment);
-		if (universeDraft) {
-			await this.universeConfigsRepo.setStatus(universeDraft.id, "active");
+		const scannerDraft = await this.scannerConfigsRepo.getDraft(environment);
+		if (scannerDraft) {
+			await this.scannerConfigsRepo.setStatus(scannerDraft.id, "active");
 		}
 
 		if (this.constraintsConfigRepo) {
@@ -167,7 +167,7 @@ export class RuntimeConfigService {
 
 		await this.promoteTrading(sourceEnvironment, targetEnvironment);
 		await this.agentConfigsRepo.cloneToEnvironment(sourceEnvironment, targetEnvironment);
-		await this.promoteUniverse(sourceEnvironment, targetEnvironment);
+		await this.promoteScanner(sourceEnvironment, targetEnvironment);
 		await this.promoteConstraints(sourceEnvironment, targetEnvironment);
 
 		return this.getActiveConfig(targetEnvironment);
@@ -183,15 +183,15 @@ export class RuntimeConfigService {
 			environment as TradingEnvironment,
 		);
 
-		const [agentConfigs, universe, constraints] = await Promise.all([
+		const [agentConfigs, scanner, constraints] = await Promise.all([
 			this.agentConfigsRepo.getAll(environment as TradingEnvironment),
-			this.universeConfigsRepo.getActive(environment as TradingEnvironment),
+			this.scannerConfigsRepo.getActive(environment as TradingEnvironment),
 			this.constraintsConfigRepo?.getActive(environment as TradingEnvironment),
 		]);
 		const agents = this.buildAgentsMap(agentConfigs);
 
-		if (!universe) {
-			throw new RuntimeConfigError("No active universe config", "NOT_SEEDED", environment);
+		if (!scanner) {
+			throw new RuntimeConfigError("No active scanner config", "NOT_SEEDED", environment);
 		}
 
 		return history.map((tradingConfig, index) => {
@@ -201,7 +201,7 @@ export class RuntimeConfigService {
 			const fullConfig: FullRuntimeConfig = {
 				trading: tradingConfig,
 				agents,
-				universe,
+				scanner,
 				constraints: constraints ?? getDefaultConstraints(environment),
 			};
 
@@ -299,22 +299,22 @@ export class RuntimeConfigService {
 		});
 	}
 
-	private async saveUniverseDraft(
+	private async saveScannerDraft(
 		environment: RuntimeEnvironment,
-		universe: DraftUpdateConfig["universe"],
+		scanner: DraftUpdateConfig["scanner"],
 	): Promise<void> {
-		if (!universe) {
+		if (!scanner) {
 			return;
 		}
-		await this.universeConfigsRepo.saveDraft(environment, {
-			source: universe.source,
-			staticSymbols: universe.staticSymbols,
-			indexSource: universe.indexSource,
-			minVolume: universe.minVolume,
-			minMarketCap: universe.minMarketCap,
-			optionableOnly: universe.optionableOnly,
-			includeList: universe.includeList,
-			excludeList: universe.excludeList,
+		await this.scannerConfigsRepo.saveDraft(environment, {
+			minPrice: scanner.minPrice,
+			minAvgVolume: scanner.minAvgVolume,
+			volumeSpikeThreshold: scanner.volumeSpikeThreshold,
+			priceMoveThreshold: scanner.priceMoveThreshold,
+			gapThreshold: scanner.gapThreshold,
+			maxCandidates: scanner.maxCandidates,
+			cooldownSeconds: scanner.cooldownSeconds,
+			enabled: scanner.enabled,
 		});
 	}
 
@@ -377,29 +377,29 @@ export class RuntimeConfigService {
 		await this.tradingConfigRepo.setStatus(promotedTrading.id, "active");
 	}
 
-	private async promoteUniverse(
+	private async promoteScanner(
 		sourceEnvironment: RuntimeEnvironment,
 		targetEnvironment: RuntimeEnvironment,
 	): Promise<void> {
-		const sourceUniverse = await this.universeConfigsRepo.getActive(sourceEnvironment);
-		if (!sourceUniverse) {
+		const sourceScanner = await this.scannerConfigsRepo.getActive(sourceEnvironment);
+		if (!sourceScanner) {
 			return;
 		}
-		await this.universeConfigsRepo.saveDraft(targetEnvironment, {
-			source: sourceUniverse.source,
-			staticSymbols: sourceUniverse.staticSymbols,
-			indexSource: sourceUniverse.indexSource,
-			minVolume: sourceUniverse.minVolume,
-			minMarketCap: sourceUniverse.minMarketCap,
-			optionableOnly: sourceUniverse.optionableOnly,
-			includeList: sourceUniverse.includeList,
-			excludeList: sourceUniverse.excludeList,
+		await this.scannerConfigsRepo.saveDraft(targetEnvironment, {
+			minPrice: sourceScanner.minPrice,
+			minAvgVolume: sourceScanner.minAvgVolume,
+			volumeSpikeThreshold: sourceScanner.volumeSpikeThreshold,
+			priceMoveThreshold: sourceScanner.priceMoveThreshold,
+			gapThreshold: sourceScanner.gapThreshold,
+			maxCandidates: sourceScanner.maxCandidates,
+			cooldownSeconds: sourceScanner.cooldownSeconds,
+			enabled: sourceScanner.enabled,
 		});
-		const universeDraft = await this.universeConfigsRepo.getDraft(targetEnvironment);
-		if (!universeDraft) {
+		const scannerDraft = await this.scannerConfigsRepo.getDraft(targetEnvironment);
+		if (!scannerDraft) {
 			return;
 		}
-		await this.universeConfigsRepo.setStatus(universeDraft.id, "active");
+		await this.scannerConfigsRepo.setStatus(scannerDraft.id, "active");
 	}
 
 	private async promoteConstraints(
@@ -439,13 +439,13 @@ export class RuntimeConfigService {
 export function createRuntimeConfigService(
 	tradingConfigRepo: TradingConfigRepository,
 	agentConfigsRepo: AgentConfigsRepository,
-	universeConfigsRepo: UniverseConfigsRepository,
+	scannerConfigsRepo: ScannerConfigsRepository,
 	constraintsConfigRepo?: ConstraintsConfigRepository,
 ): RuntimeConfigService {
 	return new RuntimeConfigService(
 		tradingConfigRepo,
 		agentConfigsRepo,
-		universeConfigsRepo,
+		scannerConfigsRepo,
 		constraintsConfigRepo,
 	);
 }

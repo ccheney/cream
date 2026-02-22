@@ -20,7 +20,7 @@ import { runCycleWorkflow } from "./cycles.trigger-runner.js";
 export type TriggerCyclePayload = {
 	environment: CreamEnvironment;
 	useDraftConfig: boolean;
-	symbols?: string[];
+	symbols: string[];
 	confirmLive?: boolean;
 };
 
@@ -45,7 +45,7 @@ export function isInternalAuth(authHeader: string | undefined): boolean {
 }
 
 const NO_SYMBOLS_ERROR = {
-	error: "No symbols configured in universe. Configure staticSymbols first.",
+	error: "symbols[] is required for cycle trigger requests.",
 };
 
 const LIVE_CONFIRM_ERROR = { error: "confirmLive required to trigger LIVE cycle" };
@@ -212,24 +212,26 @@ function getRateLimitError(environment: CreamEnvironment): TriggerCycleResponse 
 async function resolveCycleSymbols(
 	environment: CreamEnvironment,
 	useDraftConfig: boolean,
-	symbols?: string[],
+	symbols: string[],
 ): Promise<ResolveCycleSymbolsResult> {
+	const requestSymbols = symbols.filter((symbol) => symbol.trim().length > 0);
+	if (requestSymbols.length === 0) {
+		return { ok: false, response: { status: 400, body: NO_SYMBOLS_ERROR } };
+	}
+
 	try {
 		const configService = await getRuntimeConfigService();
 		const config = useDraftConfig
 			? await configService.getDraft(environment)
 			: await configService.getActiveConfig(environment);
 		const configVersion = config.trading.id;
-		const resolvedSymbols = symbols ?? config.universe.staticSymbols ?? [];
-		if (!resolvedSymbols.length) {
-			return { ok: false, response: { status: 400, body: NO_SYMBOLS_ERROR } };
-		}
+		const resolvedSymbols = requestSymbols;
 
 		log.info(
 			{
 				symbolCount: resolvedSymbols.length,
 				symbols: resolvedSymbols,
-				fromRequest: !!symbols,
+				fromRequest: true,
 			},
 			"Resolved symbols for trading cycle",
 		);

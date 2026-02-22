@@ -83,6 +83,8 @@ pub enum SipEvent {
     Trade(super::messages::StockTradeMessage),
     /// Received a stock bar.
     Bar(super::messages::StockBarMessage),
+    /// Received a stock daily bar.
+    DailyBar(super::messages::StockBarMessage),
     /// Subscription confirmation.
     Subscribed {
         /// Subscribed quote symbols.
@@ -91,6 +93,8 @@ pub enum SipEvent {
         trades: Vec<String>,
         /// Subscribed bar symbols.
         bars: Vec<String>,
+        /// Subscribed daily bar symbols.
+        daily_bars: Vec<String>,
     },
     /// Error occurred.
     Error(String),
@@ -388,11 +392,13 @@ impl SipClient {
                         tracing::info!("SIP stream authenticated");
                         let _ = self.event_tx.send(SipEvent::Connected).await;
 
-                        // Restore subscriptions if any
                         let subs = self.subscriptions.read().clone();
-                        if let Some(request) = subs.to_subscribe_request() {
-                            self.send_subscribe(write, &request).await?;
-                        }
+                        let wildcard_request = SubscriptionRequest::subscribe()
+                            .with_quotes(subs.quotes)
+                            .with_trades(subs.trades)
+                            .with_bars(vec!["*".to_string()])
+                            .with_daily_bars(vec!["*".to_string()]);
+                        self.send_subscribe(write, &wildcard_request).await?;
                     } else if auth_handler.state() == AuthState::Connected {
                         // Send authentication
                         let auth_msg = auth_handler.create_auth_request();
@@ -430,6 +436,7 @@ impl SipClient {
                             quotes: sub.quotes,
                             trades: sub.trades,
                             bars: sub.bars,
+                            daily_bars: sub.daily_bars,
                         })
                         .await;
                 }
@@ -440,7 +447,11 @@ impl SipClient {
                     let _ = self.event_tx.send(SipEvent::Trade(trade)).await;
                 }
                 AlpacaMessage::StockBar(bar) => {
-                    let _ = self.event_tx.send(SipEvent::Bar(bar)).await;
+                    if bar.msg_type == "d" {
+                        let _ = self.event_tx.send(SipEvent::DailyBar(bar)).await;
+                    } else {
+                        let _ = self.event_tx.send(SipEvent::Bar(bar)).await;
+                    }
                 }
                 _ => {
                     tracing::trace!("Ignoring unhandled message type");
@@ -469,6 +480,7 @@ impl SipClient {
             quotes = ?request.quotes,
             trades = ?request.trades,
             bars = ?request.bars,
+            daily_bars = ?request.daily_bars,
             "Sending subscribe request"
         );
 

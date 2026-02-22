@@ -13,6 +13,11 @@ describe("SubscribeMessage", () => {
 		expect(SubscribeMessageSchema.safeParse(msg).success).toBe(true);
 	});
 
+	it("accepts scanner channel subscription", () => {
+		const msg = { type: "subscribe", channels: ["scanner"] };
+		expect(SubscribeMessageSchema.safeParse(msg).success).toBe(true);
+	});
+
 	it("rejects empty or invalid channels", () => {
 		expect(SubscribeMessageSchema.safeParse({ type: "subscribe", channels: [] }).success).toBe(
 			false,

@@ -21,6 +21,7 @@ use super::alpaca::messages::{
     TradeUpdateMessage,
 };
 use crate::BroadcastSettings;
+use crate::domain::scanner::ScannerAlertDomain;
 
 // =============================================================================
 // Broadcast Messages
@@ -68,6 +69,13 @@ pub struct OrderUpdateBroadcast {
     pub update: TradeUpdateMessage,
 }
 
+/// Scanner alert broadcast message.
+#[derive(Debug, Clone)]
+pub struct ScannerAlertBroadcast {
+    /// The scanner alert payload.
+    pub alert: ScannerAlertDomain,
+}
+
 // =============================================================================
 // Broadcast Hub
 // =============================================================================
@@ -87,6 +95,8 @@ pub struct BroadcastConfig {
     pub options_trades_capacity: usize,
     /// Capacity for order update channel.
     pub order_updates_capacity: usize,
+    /// Capacity for scanner alert channel.
+    pub scanner_alerts_capacity: usize,
 }
 
 impl Default for BroadcastConfig {
@@ -98,6 +108,7 @@ impl Default for BroadcastConfig {
             options_quotes_capacity: 50_000,
             options_trades_capacity: 10_000,
             order_updates_capacity: 1_000,
+            scanner_alerts_capacity: 1_000,
         }
     }
 }
@@ -111,6 +122,7 @@ impl From<BroadcastSettings> for BroadcastConfig {
             options_quotes_capacity: settings.options_quotes_capacity,
             options_trades_capacity: settings.options_trades_capacity,
             order_updates_capacity: settings.order_updates_capacity,
+            scanner_alerts_capacity: 1_000,
         }
     }
 }
@@ -142,6 +154,7 @@ pub struct BroadcastHub {
     options_quotes_tx: broadcast::Sender<OptionQuoteBroadcast>,
     options_trades_tx: broadcast::Sender<OptionTradeBroadcast>,
     order_updates_tx: broadcast::Sender<OrderUpdateBroadcast>,
+    scanner_alerts_tx: broadcast::Sender<ScannerAlertBroadcast>,
 }
 
 impl BroadcastHub {
@@ -155,6 +168,7 @@ impl BroadcastHub {
             options_quotes_tx: broadcast::channel(config.options_quotes_capacity).0,
             options_trades_tx: broadcast::channel(config.options_trades_capacity).0,
             order_updates_tx: broadcast::channel(config.order_updates_capacity).0,
+            scanner_alerts_tx: broadcast::channel(config.scanner_alerts_capacity).0,
         }
     }
 
@@ -310,6 +324,30 @@ impl BroadcastHub {
     }
 
     // =========================================================================
+    // Scanner Alerts Channel
+    // =========================================================================
+
+    /// Send a scanner alert to all subscribers.
+    #[must_use]
+    pub fn send_scanner_alert(&self, alert: ScannerAlertDomain) -> Option<usize> {
+        self.scanner_alerts_tx
+            .send(ScannerAlertBroadcast { alert })
+            .ok()
+    }
+
+    /// Get a new receiver for scanner alerts.
+    #[must_use]
+    pub fn scanner_alerts_rx(&self) -> broadcast::Receiver<ScannerAlertBroadcast> {
+        self.scanner_alerts_tx.subscribe()
+    }
+
+    /// Get the number of active scanner alert receivers.
+    #[must_use]
+    pub fn scanner_alerts_receiver_count(&self) -> usize {
+        self.scanner_alerts_tx.receiver_count()
+    }
+
+    // =========================================================================
     // Statistics
     // =========================================================================
 
@@ -323,6 +361,7 @@ impl BroadcastHub {
             options_quotes_receivers: self.options_quotes_receiver_count(),
             options_trades_receivers: self.options_trades_receiver_count(),
             order_updates_receivers: self.order_updates_receiver_count(),
+            scanner_alerts_receivers: self.scanner_alerts_receiver_count(),
         }
     }
 }
@@ -345,6 +384,8 @@ pub struct BroadcastStats {
     pub options_trades_receivers: usize,
     /// Number of order update receivers.
     pub order_updates_receivers: usize,
+    /// Number of scanner alert receivers.
+    pub scanner_alerts_receivers: usize,
 }
 
 impl BroadcastStats {
@@ -357,6 +398,7 @@ impl BroadcastStats {
             + self.options_quotes_receivers
             + self.options_trades_receivers
             + self.order_updates_receivers
+            + self.scanner_alerts_receivers
     }
 }
 
@@ -398,6 +440,7 @@ mod tests {
         assert_eq!(hub.options_quotes_receiver_count(), 0);
         assert_eq!(hub.options_trades_receiver_count(), 0);
         assert_eq!(hub.order_updates_receiver_count(), 0);
+        assert_eq!(hub.scanner_alerts_receiver_count(), 0);
     }
 
     #[test]
@@ -486,6 +529,7 @@ mod tests {
             options_quotes_capacity: 200,
             options_trades_capacity: 100,
             order_updates_capacity: 50,
+            scanner_alerts_capacity: 10,
         };
         let _hub = BroadcastHub::new(config);
         // Just verify it creates successfully with custom config

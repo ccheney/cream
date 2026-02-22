@@ -14,9 +14,9 @@ import {
 	RuntimeConfigError,
 	type RuntimeConfigService,
 	type RuntimeTradingConfig,
-	type RuntimeUniverseConfig,
+	type RuntimeScannerConfig,
 	type TradingConfigRepository,
-	type UniverseConfigsRepository,
+	type ScannerConfigsRepository,
 } from "./runtime-config";
 
 function createMockTradingConfig(
@@ -62,20 +62,20 @@ function createMockAgentConfig(
 	};
 }
 
-function createMockUniverseConfig(
-	overrides: Partial<RuntimeUniverseConfig> = {},
-): RuntimeUniverseConfig {
+function createMockScannerConfig(
+	overrides: Partial<RuntimeScannerConfig> = {},
+): RuntimeScannerConfig {
 	return {
 		id: "uc-001",
 		environment: "PAPER",
-		source: "static",
-		staticSymbols: ["AAPL", "GOOGL", "MSFT"],
-		indexSource: null,
-		minVolume: null,
-		minMarketCap: null,
-		optionableOnly: false,
-		includeList: [],
-		excludeList: [],
+		minPrice: 5,
+		minAvgVolume: 100000,
+		volumeSpikeThreshold: 3,
+		priceMoveThreshold: 2,
+		gapThreshold: 2,
+		maxCandidates: 10,
+		cooldownSeconds: 300,
+		enabled: true,
 		status: "active",
 		createdAt: new Date().toISOString(),
 		updatedAt: new Date().toISOString(),
@@ -85,7 +85,7 @@ function createMockUniverseConfig(
 
 function createAllAgentConfigs(): RuntimeAgentConfig[] {
 	const agentTypes: RuntimeAgentType[] = [
-		"technical_analyst",
+		"grounding_agent",
 		"news_analyst",
 		"fundamentals_analyst",
 		"bullish_researcher",
@@ -119,17 +119,17 @@ function createMockTradingConfigRepo(): TradingConfigRepository {
 function createMockAgentConfigsRepo(): AgentConfigsRepository {
 	return testDouble<AgentConfigsRepository>({
 		getAll: mock(() => Promise.resolve(createAllAgentConfigs())),
-		upsert: mock(() => Promise.resolve(createMockAgentConfig("technical_analyst"))),
+		upsert: mock(() => Promise.resolve(createMockAgentConfig("grounding_agent"))),
 		cloneToEnvironment: mock(() => Promise.resolve()),
 	});
 }
 
-function createMockUniverseConfigsRepo(): UniverseConfigsRepository {
-	return testDouble<UniverseConfigsRepository>({
-		getActive: mock(() => Promise.resolve(createMockUniverseConfig())),
+function createMockScannerConfigsRepo(): ScannerConfigsRepository {
+	return testDouble<ScannerConfigsRepository>({
+		getActive: mock(() => Promise.resolve(createMockScannerConfig())),
 		getDraft: mock(() => Promise.resolve(null)),
-		saveDraft: mock(() => Promise.resolve(createMockUniverseConfig({ status: "draft" }))),
-		setStatus: mock(() => Promise.resolve(createMockUniverseConfig())),
+		saveDraft: mock(() => Promise.resolve(createMockScannerConfig({ status: "draft" }))),
+		setStatus: mock(() => Promise.resolve(createMockScannerConfig())),
 	});
 }
 
@@ -140,18 +140,18 @@ function asMock(fn: unknown): ReturnType<typeof mock> {
 function createServiceHarness(): {
 	tradingRepo: TradingConfigRepository;
 	agentRepo: AgentConfigsRepository;
-	universeRepo: UniverseConfigsRepository;
+	scannerRepo: ScannerConfigsRepository;
 	service: RuntimeConfigService;
 } {
 	const tradingRepo = createMockTradingConfigRepo();
 	const agentRepo = createMockAgentConfigsRepo();
-	const universeRepo = createMockUniverseConfigsRepo();
-	const service = createRuntimeConfigService(tradingRepo, agentRepo, universeRepo);
+	const scannerRepo = createMockScannerConfigsRepo();
+	const service = createRuntimeConfigService(tradingRepo, agentRepo, scannerRepo);
 
 	return {
 		tradingRepo,
 		agentRepo,
-		universeRepo,
+		scannerRepo,
 		service,
 	};
 }
@@ -164,8 +164,8 @@ describe("RuntimeConfigService getActiveConfig", () => {
 
 		expect(config.trading).toBeDefined();
 		expect(config.trading.id).toBe("tc-001");
-		expect(config.universe).toBeDefined();
-		expect(config.universe.id).toBe("uc-001");
+		expect(config.scanner).toBeDefined();
+		expect(config.scanner.id).toBe("uc-001");
 		expect(config.agents).toBeDefined();
 		expect(Object.keys(config.agents)).toHaveLength(8);
 	});
@@ -178,9 +178,9 @@ describe("RuntimeConfigService getActiveConfig", () => {
 		await expect(service.getActiveConfig("PAPER")).rejects.toThrow(/No active config found/);
 	});
 
-	test("throws RuntimeConfigError when no universe config", async () => {
-		const { service, universeRepo } = createServiceHarness();
-		asMock(universeRepo.getActive).mockResolvedValue(null);
+	test("throws RuntimeConfigError when no scanner config", async () => {
+		const { service, scannerRepo } = createServiceHarness();
+		asMock(scannerRepo.getActive).mockResolvedValue(null);
 
 		await expect(service.getActiveConfig("PAPER")).rejects.toThrow(RuntimeConfigError);
 	});
@@ -188,9 +188,9 @@ describe("RuntimeConfigService getActiveConfig", () => {
 
 describe("RuntimeConfigService getDraft", () => {
 	test("returns draft config when exists", async () => {
-		const { service, tradingRepo, universeRepo } = createServiceHarness();
+		const { service, tradingRepo, scannerRepo } = createServiceHarness();
 		asMock(tradingRepo.getDraft).mockResolvedValue(createMockTradingConfig({ status: "draft" }));
-		asMock(universeRepo.getDraft).mockResolvedValue(createMockUniverseConfig({ status: "draft" }));
+		asMock(scannerRepo.getDraft).mockResolvedValue(createMockScannerConfig({ status: "draft" }));
 
 		const draft = await service.getDraft("PAPER");
 
@@ -206,7 +206,7 @@ describe("RuntimeConfigService getDraft", () => {
 	});
 });
 
-describe("RuntimeConfigService saveDraft trading and universe", () => {
+describe("RuntimeConfigService saveDraft trading and scanner", () => {
 	test("saves trading config changes", async () => {
 		const { service, tradingRepo } = createServiceHarness();
 
@@ -220,17 +220,17 @@ describe("RuntimeConfigService saveDraft trading and universe", () => {
 		expect(tradingRepo.saveDraft).toHaveBeenCalled();
 	});
 
-	test("saves universe config changes", async () => {
-		const { service, universeRepo } = createServiceHarness();
+	test("saves scanner config changes", async () => {
+		const { service, scannerRepo } = createServiceHarness();
 
 		await service.saveDraft("PAPER", {
-			universe: {
-				source: "index",
-				indexSource: "SP500",
+			scanner: {
+				minPrice: 10,
+				maxCandidates: 15,
 			},
 		});
 
-		expect(universeRepo.saveDraft).toHaveBeenCalled();
+		expect(scannerRepo.saveDraft).toHaveBeenCalled();
 	});
 });
 
@@ -240,8 +240,7 @@ describe("RuntimeConfigService saveDraft agents", () => {
 
 		await service.saveDraft("PAPER", {
 			agents: {
-				technical_analyst: {
-					model: "gemini-3-flash-preview",
+				grounding_agent: {
 					enabled: false,
 				},
 			},
@@ -287,29 +286,29 @@ describe("RuntimeConfigService validateForPromotion trading rules", () => {
 	});
 });
 
-describe("RuntimeConfigService validateForPromotion universe rules", () => {
-	test("fails when static universe has no symbols", async () => {
+describe("RuntimeConfigService validateForPromotion scanner rules", () => {
+	test("fails when max candidates is invalid", async () => {
 		const { service } = createServiceHarness();
 		const config = await service.getActiveConfig("PAPER");
-		config.universe.source = "static";
-		config.universe.staticSymbols = [];
+		config.scanner.maxCandidates = 0;
 
 		const result = await service.validateForPromotion(config);
 
 		expect(result.valid).toBe(false);
-		expect(result.errors.some((error) => error.field.includes("staticSymbols"))).toBe(true);
+		expect(result.errors.some((error) => error.field.includes("maxCandidates"))).toBe(true);
 	});
 
-	test("fails when index source missing indexSource", async () => {
+	test("fails when volume spike threshold is invalid", async () => {
 		const { service } = createServiceHarness();
 		const config = await service.getActiveConfig("PAPER");
-		config.universe.source = "index";
-		config.universe.indexSource = null;
+		config.scanner.volumeSpikeThreshold = 0.5;
 
 		const result = await service.validateForPromotion(config);
 
 		expect(result.valid).toBe(false);
-		expect(result.errors.some((error) => error.field.includes("indexSource"))).toBe(true);
+		expect(result.errors.some((error) => error.field.includes("volumeSpikeThreshold"))).toBe(
+			true,
+		);
 	});
 });
 
@@ -321,7 +320,7 @@ describe("RuntimeConfigService validateForPromotion agent and risk rules", () =>
 		for (const agentType of Object.keys(config.agents)) {
 			config.agents[agentType as RuntimeAgentType].enabled = false;
 		}
-		config.agents.technical_analyst.enabled = true;
+		config.agents.grounding_agent.enabled = true;
 		config.agents.trader.enabled = true;
 
 		const result = await service.validateForPromotion(config);
@@ -340,33 +339,31 @@ describe("RuntimeConfigService validateForPromotion agent and risk rules", () =>
 		expect(result.warnings.some((warning) => warning.includes("Kelly"))).toBe(true);
 	});
 
-	test("fails when symbols in both include and exclude", async () => {
+	test("warns when scanner is disabled", async () => {
 		const { service } = createServiceHarness();
 		const config = await service.getActiveConfig("PAPER");
-		config.universe.includeList = ["AAPL", "GOOGL"];
-		config.universe.excludeList = ["AAPL"];
+		config.scanner.enabled = false;
 
 		const result = await service.validateForPromotion(config);
 
-		expect(result.valid).toBe(false);
-		expect(result.errors.some((error) => error.message.includes("AAPL"))).toBe(true);
+		expect(result.warnings.some((warning) => warning.includes("Scanner is disabled"))).toBe(true);
 	});
 });
 
 describe("RuntimeConfigService promote", () => {
 	test("promotes draft to active", async () => {
-		const { service, tradingRepo, universeRepo } = createServiceHarness();
+		const { service, tradingRepo, scannerRepo } = createServiceHarness();
 		asMock(tradingRepo.getDraft).mockResolvedValue(
 			createMockTradingConfig({ id: "tc-draft", status: "draft" }),
 		);
-		asMock(universeRepo.getDraft).mockResolvedValue(
-			createMockUniverseConfig({ id: "uc-draft", status: "draft" }),
+		asMock(scannerRepo.getDraft).mockResolvedValue(
+			createMockScannerConfig({ id: "uc-draft", status: "draft" }),
 		);
 
 		await service.promote("PAPER");
 
 		expect(tradingRepo.setStatus).toHaveBeenCalledWith("tc-draft", "active");
-		expect(universeRepo.setStatus).toHaveBeenCalledWith("uc-draft", "active");
+		expect(scannerRepo.setStatus).toHaveBeenCalledWith("uc-draft", "active");
 	});
 
 	test("throws when validation fails", async () => {

@@ -327,4 +327,4 @@ The `@cream/external-context` package provides the qualitative market intelligen
 | `@cream/domain` | Shared Zod schemas |
 | `@cream/helix` | Graph database client |
 | `@cream/logger` | Structured logging |
-| `@cream/universe` | FRED series metadata, release classification |
+| `@cream/external-context` | FRED series metadata, release classification |

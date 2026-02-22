@@ -10,7 +10,7 @@ import {
 	useActiveConfig,
 	useConstraintsConfig,
 	useRuntimeConfigHistory,
-	useUniverseConfig,
+	useScannerConfig,
 } from "@/hooks/queries";
 
 const ENV_COLORS = {
@@ -19,7 +19,7 @@ const ENV_COLORS = {
 } as const;
 
 type ActiveConfigData = ReturnType<typeof useActiveConfig>["data"];
-type UniverseConfigData = ReturnType<typeof useUniverseConfig>["data"];
+type ScannerConfigData = ReturnType<typeof useScannerConfig>["data"];
 type ConstraintsConfigData = ReturnType<typeof useConstraintsConfig>["data"];
 type HistoryData = ReturnType<typeof useRuntimeConfigHistory>["data"];
 
@@ -87,15 +87,22 @@ function TradingConfigSummary({ config }: { config: ActiveConfigData }) {
 	);
 }
 
-function UniverseConfigSummary({ universe }: { universe: UniverseConfigData }) {
+function ScannerConfigSummary({ scanner }: { scanner: ScannerConfigData }) {
 	return (
-		<ConfigSection title="Universe" href="/config/universe">
-			<ConfigField label="Source" value={universe?.source ?? "--"} />
-			<ConfigField label="Optionable Only" value={String(universe?.optionableOnly ?? false)} />
-			<ConfigField label="Min Volume" value={universe?.minVolume?.toLocaleString() ?? "Not set"} />
+		<ConfigSection title="Scanner" href="/config/scanner">
+			<ConfigField label="Enabled" value={scanner?.enabled ? "Yes" : "No"} />
+			<ConfigField label="Min Price" value={scanner ? `$${scanner.minPrice.toFixed(2)}` : "--"} />
 			<ConfigField
-				label="Min Market Cap"
-				value={universe?.minMarketCap ? `$${(universe.minMarketCap / 1e9).toFixed(1)}B` : "Not set"}
+				label="Min Avg Volume"
+				value={scanner ? scanner.minAvgVolume.toLocaleString() : "--"}
+			/>
+			<ConfigField
+				label="Volume Spike"
+				value={scanner ? `${scanner.volumeSpikeThreshold.toFixed(1)}x` : "--"}
+			/>
+			<ConfigField
+				label="Price Move"
+				value={scanner ? `${scanner.priceMoveThreshold.toFixed(1)}%` : "--"}
 			/>
 		</ConfigSection>
 	);
@@ -128,14 +135,14 @@ function ConstraintsConfigSummary({ constraints }: { constraints: ConstraintsCon
 interface CoreConfigSectionsProps {
 	configLoading: boolean;
 	config: ActiveConfigData;
-	universe: UniverseConfigData;
+	scanner: ScannerConfigData;
 	constraints: ConstraintsConfigData;
 }
 
 function CoreConfigSections({
 	configLoading,
 	config,
-	universe,
+	scanner,
 	constraints,
 }: CoreConfigSectionsProps) {
 	if (configLoading) {
@@ -148,7 +155,7 @@ function CoreConfigSections({
 	return (
 		<div className="grid grid-cols-3 gap-6">
 			<TradingConfigSummary config={config} />
-			<UniverseConfigSummary universe={universe} />
+			<ScannerConfigSummary scanner={scanner} />
 			<ConstraintsConfigSummary constraints={constraints} />
 		</div>
 	);
@@ -239,7 +246,7 @@ function ConfigHistoryPanel({
 
 export default function ConfigPage() {
 	const { data: config, isLoading: configLoading } = useActiveConfig();
-	const { data: universe } = useUniverseConfig();
+	const { data: scanner } = useScannerConfig();
 	const { data: constraints } = useConstraintsConfig();
 	const { data: history, isLoading: historyLoading } = useRuntimeConfigHistory();
 
@@ -249,7 +256,7 @@ export default function ConfigPage() {
 			<CoreConfigSections
 				configLoading={configLoading}
 				config={config}
-				universe={universe}
+				scanner={scanner}
 				constraints={constraints}
 			/>
 			<PreferencesGrid />

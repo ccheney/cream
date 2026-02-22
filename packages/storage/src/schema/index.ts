@@ -28,9 +28,11 @@ export * from "./indicators";
 export * from "./market-data";
 // Relations
 export * from "./relations";
+// Scanner Config
+export * from "./scanner-config";
 // Thesis Management
 export * from "./thesis";
-// Universe Management
-export * from "./universe";
+// Historical Universe Management
+export * from "./historical-universe";
 // User Settings
 export * from "./user-settings";

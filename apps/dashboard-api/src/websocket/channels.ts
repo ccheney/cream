@@ -398,6 +398,20 @@ export function broadcastOrderUpdate(message: ServerMessage): number {
 }
 
 /**
+ * Broadcast scanner alert to connections subscribed to scanner channel.
+ */
+export function broadcastScannerAlert(message: ServerMessage): number {
+	return broadcast("scanner", message);
+}
+
+/**
+ * Broadcast scanner status to connections subscribed to scanner channel.
+ */
+export function broadcastScannerStatus(message: ServerMessage): number {
+	return broadcast("scanner", message);
+}
+
+/**
  * Broadcast worker run update to connections subscribed to workers channel.
  */
 export function broadcastWorkerRunUpdate(message: ServerMessage): number {

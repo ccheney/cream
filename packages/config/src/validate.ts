@@ -19,7 +19,7 @@ import { MemoryConfigSchema } from "./schemas/memory";
 import { MetricsConfigSchema } from "./schemas/metrics";
 import { PredictionMarketsConfigSchema } from "./schemas/prediction_markets";
 import { RegimeConfigSchema } from "./schemas/regime";
-import { UniverseConfigSchema } from "./schemas/universe";
+import { ScannerConfigSchema } from "./schemas/scanner";
 
 // ============================================
 // Complete Configuration Schema
@@ -67,9 +67,9 @@ export const CreamConfigSchema = z.object({
 	agents: AgentsConfigSchema.optional(),
 
 	/**
-	 * Trading universe configuration
+	 * Autonomous scanner configuration
 	 */
-	universe: UniverseConfigSchema.optional(),
+	scanner: ScannerConfigSchema.optional(),
 
 	/**
 	 * Execution and broker configuration
@@ -201,8 +201,8 @@ function getLiveEnvironmentWarnings(cfg: CreamConfig): string[] {
 	}
 
 	const warnings: string[] = [];
-	if (!cfg.universe) {
-		warnings.push("LIVE environment without universe configuration - no instruments to trade");
+	if (!cfg.scanner) {
+		warnings.push("LIVE environment without scanner configuration - no symbols to trigger");
 	}
 	if (
 		cfg.constraints?.per_instrument?.max_pct_equity !== undefined &&

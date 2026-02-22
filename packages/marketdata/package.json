@@ -21,7 +21,6 @@
 		"@cream/indicators": "workspace:*",
 		"@cream/logger": "workspace:*",
 		"@cream/regime": "workspace:*",
-		"@cream/universe": "workspace:*",
 		"zod": "4.3.6"
 	},
 	"devDependencies": {

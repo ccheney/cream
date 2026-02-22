@@ -81,22 +81,27 @@ export interface RuntimeTradingConfig {
 	promotedFrom: string | null;
 }
 
-export type UniverseSourceType = "static" | "index" | "screener";
-
-export interface RuntimeUniverseConfig {
+export interface RuntimeScannerConfig {
 	id: string;
 	environment: Environment;
-	source: UniverseSourceType;
-	staticSymbols: string[] | null;
-	indexSource: string | null;
-	minVolume: number | null;
-	minMarketCap: number | null;
-	optionableOnly: boolean;
-	includeList: string[];
-	excludeList: string[];
+	minPrice: number;
+	minAvgVolume: number;
+	volumeSpikeThreshold: number;
+	priceMoveThreshold: number;
+	gapThreshold: number;
+	maxCandidates: number;
+	cooldownSeconds: number;
+	enabled: boolean;
 	status: ConfigStatus;
 	createdAt: string;
 	updatedAt: string;
+}
+
+export interface ScannerRuntimeStatus {
+	active: boolean;
+	symbolsTracked: number;
+	totalAlerts: number;
+	alertsLastHour: number;
 }
 
 export interface RuntimeAgentConfig {
@@ -113,7 +118,7 @@ export interface RuntimeAgentConfig {
 export interface FullRuntimeConfig {
 	trading: RuntimeTradingConfig;
 	agents: Record<RuntimeAgentType, RuntimeAgentConfig>;
-	universe: RuntimeUniverseConfig;
+	scanner: RuntimeScannerConfig;
 }
 
 export interface ValidationError {
@@ -141,7 +146,7 @@ export interface ConfigHistoryEntry {
 
 export interface SaveDraftInput {
 	trading?: Partial<RuntimeTradingConfig>;
-	universe?: Partial<RuntimeUniverseConfig>;
+	scanner?: Partial<RuntimeScannerConfig>;
 	agents?: Partial<Record<RuntimeAgentType, Partial<RuntimeAgentConfig>>>;
 }
 

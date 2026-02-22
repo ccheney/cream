@@ -93,7 +93,7 @@ export function mapRunToSchema(run: IndicatorSyncRun) {
 
 interface WorkerHealthResponse {
 	next_run?: {
-		trading_cycle: string | null;
+		macro_watch: string | null;
 		prediction_markets: string | null;
 		filings_sync: string | null;
 	};
@@ -111,14 +111,14 @@ async function fetchNextRunByService(): Promise<Map<WorkerService, string | null
 		const healthResponse = await fetch(`${WORKER_URL}/health`);
 		if (!healthResponse.ok) {
 			return nextRunByService;
-		}
-		const health = (await healthResponse.json()) as WorkerHealthResponse;
-		if (health.next_run) {
-			nextRunByService.set("macro_watch", health.next_run.trading_cycle);
-			nextRunByService.set("newspaper", health.next_run.trading_cycle);
-			nextRunByService.set("filings_sync", health.next_run.filings_sync);
-			nextRunByService.set("prediction_markets", health.next_run.prediction_markets);
-		}
+			}
+			const health = (await healthResponse.json()) as WorkerHealthResponse;
+			if (health.next_run) {
+				nextRunByService.set("macro_watch", health.next_run.macro_watch);
+				nextRunByService.set("newspaper", health.next_run.macro_watch);
+				nextRunByService.set("filings_sync", health.next_run.filings_sync);
+				nextRunByService.set("prediction_markets", health.next_run.prediction_markets);
+			}
 		if (health.indicator_batch_jobs) {
 			const jobs = health.indicator_batch_jobs;
 			if (jobs.shortInterest?.next_run) {

@@ -26,7 +26,7 @@ import {
 } from "./repositories/agent-configs.js";
 import { ConstraintsConfigRepository } from "./repositories/constraints-config.js";
 import { TradingConfigRepository, type TradingEnvironment } from "./repositories/trading-config.js";
-import { UniverseConfigsRepository } from "./repositories/universe-configs.js";
+import { ScannerConfigsRepository } from "./repositories/scanner-configs.js";
 
 /** Extracted from packages/config/configs/default.yaml and apps/worker/src/index.ts */
 function getDefaultTradingConfig() {
@@ -67,15 +67,15 @@ const DEFAULT_AGENT_CONFIGS: Record<
 	critic: { enabled: true },
 };
 
-const DEFAULT_UNIVERSE_CONFIG = {
-	source: "static" as const,
-	staticSymbols: ["SPY", "QQQ", "IWM", "DIA", "AAPL", "MSFT", "GOOGL", "AMZN", "NVDA"],
-	indexSource: null,
-	minVolume: null,
-	minMarketCap: null,
-	optionableOnly: false,
-	includeList: [] as string[],
-	excludeList: [] as string[],
+const DEFAULT_SCANNER_CONFIG = {
+	minPrice: 5,
+	minAvgVolume: 100_000,
+	volumeSpikeThreshold: 3,
+	priceMoveThreshold: 2,
+	gapThreshold: 2,
+	maxCandidates: 10,
+	cooldownSeconds: 300,
+	enabled: true,
 };
 
 interface SeedOptions {
@@ -108,7 +108,7 @@ interface SeedResult {
 	environment: TradingEnvironment;
 	trading: "created" | "skipped" | "replaced";
 	agents: "created" | "skipped" | "replaced";
-	universe: "created" | "skipped" | "replaced";
+	scanner: "created" | "skipped" | "replaced";
 	constraints: "created" | "skipped" | "replaced";
 }
 
@@ -162,24 +162,24 @@ async function seedAgentConfigs(
 	return existingAgents.length > 0 ? "replaced" : "created";
 }
 
-async function seedUniverseConfig(
+async function seedScannerConfig(
 	environment: TradingEnvironment,
-	universeRepo: UniverseConfigsRepository,
-	existingUniverse: Awaited<ReturnType<UniverseConfigsRepository["getActive"]>>,
+	scannerRepo: ScannerConfigsRepository,
+	existingScanner: Awaited<ReturnType<ScannerConfigsRepository["getActive"]>>,
 	force: boolean,
-): Promise<SeedResult["universe"]> {
-	if (existingUniverse && !force) {
+): Promise<SeedResult["scanner"]> {
+	if (existingScanner && !force) {
 		return "skipped";
 	}
 
-	let status: SeedResult["universe"] = "created";
-	if (existingUniverse && force) {
-		await universeRepo.setStatus(existingUniverse.id, "archived");
+	let status: SeedResult["scanner"] = "created";
+	if (existingScanner && force) {
+		await scannerRepo.setStatus(existingScanner.id, "archived");
 		status = "replaced";
 	}
 
-	const draft = await universeRepo.saveDraft(environment, DEFAULT_UNIVERSE_CONFIG);
-	await universeRepo.setStatus(draft.id, "active");
+	const draft = await scannerRepo.saveDraft(environment, DEFAULT_SCANNER_CONFIG);
+	await scannerRepo.setStatus(draft.id, "active");
 	return status;
 }
 
@@ -210,18 +210,18 @@ async function seedEnvironment(
 	environment: TradingEnvironment,
 	tradingRepo: TradingConfigRepository,
 	agentRepo: AgentConfigsRepository,
-	universeRepo: UniverseConfigsRepository,
+	scannerRepo: ScannerConfigsRepository,
 	constraintsRepo: ConstraintsConfigRepository,
 	force: boolean,
 ): Promise<SeedResult> {
 	const existingTrading = await tradingRepo.getActive(environment);
-	const existingUniverse = await universeRepo.getActive(environment);
+	const existingScanner = await scannerRepo.getActive(environment);
 	const existingAgents = await agentRepo.getAll(environment);
 	const existingConstraints = await constraintsRepo.getActive(environment);
 
 	const trading = await seedTradingConfig(environment, tradingRepo, existingTrading, force);
 	const agents = await seedAgentConfigs(environment, agentRepo, existingAgents, force);
-	const universe = await seedUniverseConfig(environment, universeRepo, existingUniverse, force);
+	const scanner = await seedScannerConfig(environment, scannerRepo, existingScanner, force);
 	const constraints = await seedConstraintsConfig(
 		environment,
 		constraintsRepo,
@@ -229,7 +229,7 @@ async function seedEnvironment(
 		force,
 	);
 
-	return { environment, trading, agents, universe, constraints };
+	return { environment, trading, agents, scanner, constraints };
 }
 
 async function main(): Promise<void> {
@@ -243,7 +243,7 @@ async function main(): Promise<void> {
 	// Repositories use getDb() internally via Drizzle (reads DATABASE_URL)
 	const tradingRepo = new TradingConfigRepository();
 	const agentRepo = new AgentConfigsRepository();
-	const universeRepo = new UniverseConfigsRepository();
+	const scannerRepo = new ScannerConfigsRepository();
 	const constraintsRepo = new ConstraintsConfigRepository();
 
 	const results: SeedResult[] = [];
@@ -255,7 +255,7 @@ async function main(): Promise<void> {
 				env,
 				tradingRepo,
 				agentRepo,
-				universeRepo,
+				scannerRepo,
 				constraintsRepo,
 				options.force,
 			);
@@ -277,7 +277,7 @@ async function main(): Promise<void> {
 				environment: result.environment,
 				trading: result.trading,
 				agents: result.agents,
-				universe: result.universe,
+				scanner: result.scanner,
 				constraints: result.constraints,
 			},
 			"Environment seed summary",

@@ -1,0 +1,109 @@
+// Cream Trading System - Scanner Schema
+// gRPC service definition for autonomous scanner alerts
+//
+// NOTE: Using proto3 until Prost (Rust) supports Protobuf Editions.
+
+syntax = "proto3";
+
+package cream.v1;
+
+import "google/protobuf/timestamp.proto";
+
+// Scanner signal type.
+enum ScannerSignalType {
+  SCANNER_SIGNAL_TYPE_UNSPECIFIED = 0;
+  SCANNER_SIGNAL_TYPE_VOLUME_SPIKE = 1;
+  SCANNER_SIGNAL_TYPE_PRICE_MOVE = 2;
+  SCANNER_SIGNAL_TYPE_GAP = 3;
+}
+
+// Scanner alert generated from live bars.
+message ScannerAlert {
+  // Stock symbol
+  string symbol = 1;
+
+  // Alert event timestamp
+  google.protobuf.Timestamp timestamp = 2;
+
+  // Signals detected for this symbol
+  repeated ScannerSignalType signals = 3;
+
+  // Last trade/close price
+  double price = 4;
+
+  // Current bar volume
+  int64 volume = 5;
+
+  // Rolling average volume baseline
+  int64 avg_volume = 6;
+
+  // Volume ratio (volume / avg_volume)
+  double volume_ratio = 7;
+
+  // Price change percentage for the detection window
+  double price_change_pct = 8;
+
+  // Gap percentage vs previous day close
+  double gap_pct = 9;
+
+  // Approximate ATR for volatility context
+  double approx_atr = 10;
+}
+
+// Scanner runtime configuration.
+message ScannerConfig {
+  // Minimum stock price required
+  double min_price = 1;
+
+  // Minimum rolling average volume required
+  int64 min_avg_volume = 2;
+
+  // Minimum volume ratio threshold
+  double volume_spike_threshold = 3;
+
+  // Minimum absolute price move percentage threshold
+  double price_move_threshold = 4;
+
+  // Minimum absolute gap percentage threshold
+  double gap_threshold = 5;
+
+  // Max candidates emitted per processing window
+  int32 max_candidates = 6;
+
+  // Per-symbol cooldown after an alert
+  int64 cooldown_seconds = 7;
+
+  // Enables scanner processing and alert emission
+  bool enabled = 8;
+}
+
+message StreamScannerAlertsRequest {}
+
+message StreamScannerAlertsResponse {
+  ScannerAlert alert = 1;
+}
+
+message GetScannerStatusRequest {}
+
+message GetScannerStatusResponse {
+  bool active = 1;
+  int32 symbols_tracked = 2;
+  int64 total_alerts = 3;
+  int64 alerts_last_hour = 4;
+  ScannerConfig config = 5;
+}
+
+message ReloadScannerConfigRequest {}
+
+message ReloadScannerConfigResponse {
+  bool success = 1;
+  string message = 2;
+  ScannerConfig config = 3;
+}
+
+// Scanner service streams autonomous candidate alerts.
+service ScannerService {
+  rpc StreamScannerAlerts(StreamScannerAlertsRequest) returns (stream StreamScannerAlertsResponse);
+  rpc GetScannerStatus(GetScannerStatusRequest) returns (GetScannerStatusResponse);
+  rpc ReloadScannerConfig(ReloadScannerConfigRequest) returns (ReloadScannerConfigResponse);
+}

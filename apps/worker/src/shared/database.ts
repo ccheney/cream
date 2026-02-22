@@ -13,8 +13,8 @@ import {
 	closeDb as closeDbConnection,
 	type Database,
 	getDb,
+	ScannerConfigsRepository,
 	TradingConfigRepository,
-	UniverseConfigsRepository,
 } from "@cream/storage";
 import { log } from "./logger.js";
 
@@ -42,9 +42,9 @@ export function getRuntimeConfigService(): RuntimeConfigService {
 	// Repositories use getDb() internally
 	const tradingRepo = new TradingConfigRepository();
 	const agentRepo = new AgentConfigsRepository();
-	const universeRepo = new UniverseConfigsRepository();
+	const scannerRepo = new ScannerConfigsRepository();
 
-	runtimeConfigService = createRuntimeConfigService(tradingRepo, agentRepo, universeRepo);
+	runtimeConfigService = createRuntimeConfigService(tradingRepo, agentRepo, scannerRepo);
 	return runtimeConfigService;
 }
 

@@ -1071,6 +1071,13 @@ impl SubscriptionRequest {
         self.bars = symbols;
         self
     }
+
+    /// Add daily bar symbols.
+    #[must_use]
+    pub fn with_daily_bars(mut self, symbols: Vec<String>) -> Self {
+        self.daily_bars = symbols;
+        self
+    }
 }
 
 /// Listen request for trade updates stream.

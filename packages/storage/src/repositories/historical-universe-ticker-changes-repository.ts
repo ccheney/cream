@@ -1,6 +1,6 @@
 import { and, asc, desc, eq, gte, lte, sql } from "drizzle-orm";
 import { type Database, getDb } from "../db";
-import { tickerChanges } from "../schema/universe";
+import { tickerChanges } from "../schema/historical-universe";
 import { mapTickerChangeRow, type TickerChange } from "./historical-universe.types";
 
 export class TickerChangesRepository {

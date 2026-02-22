@@ -40,7 +40,7 @@ export class CycleTriggerService {
 		return this.running;
 	}
 
-	async trigger(environment: string, _symbols: string[]): Promise<CycleTriggerResult | null> {
+	async trigger(environment: string, symbols: string[]): Promise<CycleTriggerResult | null> {
 		if (this.running) {
 			log.info({}, "Skipping trading cycle - previous run still in progress");
 			return null;
@@ -49,13 +49,16 @@ export class CycleTriggerService {
 		this.running = true;
 
 		try {
-			return await this.triggerViaDashboardApi(environment);
+			return await this.triggerViaDashboardApi(environment, symbols);
 		} finally {
 			this.running = false;
 		}
 	}
 
-	private async triggerViaDashboardApi(environment: string): Promise<CycleTriggerResult | null> {
+	private async triggerViaDashboardApi(
+		environment: string,
+		symbols: string[],
+	): Promise<CycleTriggerResult | null> {
 		log.info(
 			{ environment, dashboardApiUrl: this.config.dashboardApiUrl },
 			"Triggering trading cycle via Dashboard API",
@@ -70,7 +73,7 @@ export class CycleTriggerService {
 				},
 				body: JSON.stringify({
 					environment,
-					// Symbols are loaded from runtime config by dashboard-api
+					symbols,
 				}),
 			});
 

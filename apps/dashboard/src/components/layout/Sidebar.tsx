@@ -25,6 +25,7 @@ import {
 	Moon,
 	RefreshCw,
 	Rss,
+	Search,
 	Settings,
 	ShieldAlert,
 	Sun,
@@ -68,6 +69,7 @@ export const NAV_GROUPS: NavItem[][] = [
 	[
 		{ href: "/calendar", label: "Calendar", icon: CalendarDays },
 		{ href: "/feed", label: "Feed", icon: Rss },
+		{ href: "/scanner", label: "Scanner", icon: Search },
 	],
 	[
 		{ href: "/workers", label: "Workers", icon: Cog },

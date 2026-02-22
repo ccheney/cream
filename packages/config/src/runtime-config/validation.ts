@@ -9,8 +9,8 @@ import type {
 	RuntimeAgentConfig,
 	RuntimeAgentType,
 	RuntimeConstraintsConfig,
+	RuntimeScannerConfig,
 	RuntimeTradingConfig,
-	RuntimeUniverseConfig,
 	RuntimeValidationResult,
 	ValidationError,
 } from "./types.js";
@@ -67,36 +67,37 @@ export function validateTradingConfig(
 	}
 }
 
-export function validateUniverseConfig(
-	config: RuntimeUniverseConfig,
+export function validateScannerConfig(
+	config: RuntimeScannerConfig,
 	errors: ValidationError[],
 	warnings: string[],
 ): void {
-	if (config.source === "static" && (!config.staticSymbols || config.staticSymbols.length === 0)) {
+	if (config.minPrice < 0) {
 		errors.push({
-			field: "universe.staticSymbols",
-			message: "Static source requires at least one symbol",
+			field: "scanner.minPrice",
+			message: "Minimum price must be >= 0",
 		});
 	}
-
-	if (config.source === "index" && !config.indexSource) {
+	if (config.minAvgVolume < 0) {
 		errors.push({
-			field: "universe.indexSource",
-			message: "Index source requires indexSource to be set",
+			field: "scanner.minAvgVolume",
+			message: "Minimum average volume must be >= 0",
 		});
 	}
-
-	const includeSet = new Set(config.includeList);
-	const overlapping = config.excludeList.filter((s) => includeSet.has(s));
-	if (overlapping.length > 0) {
+	if (config.volumeSpikeThreshold < 1) {
 		errors.push({
-			field: "universe.excludeList",
-			message: `Symbols cannot be in both include and exclude: ${overlapping.join(", ")}`,
+			field: "scanner.volumeSpikeThreshold",
+			message: "Volume spike threshold must be >= 1",
 		});
 	}
-
-	if (config.source === "static" && config.staticSymbols && config.staticSymbols.length > 100) {
-		warnings.push("Large static universe (>100 symbols) may impact performance");
+	if (config.maxCandidates < 1) {
+		errors.push({
+			field: "scanner.maxCandidates",
+			message: "Max candidates must be at least 1",
+		});
+	}
+	if (!config.enabled) {
+		warnings.push("Scanner is disabled; no autonomous OODA cycles will trigger");
 	}
 }
 
@@ -182,7 +183,7 @@ export function validateForPromotion(config: FullRuntimeConfig): RuntimeValidati
 	const warnings: string[] = [];
 
 	validateTradingConfig(config.trading, errors, warnings);
-	validateUniverseConfig(config.universe, errors, warnings);
+	validateScannerConfig(config.scanner, errors, warnings);
 	validateAgentConfigs(config.agents, errors, warnings);
 	validateConstraintsConfig(config.constraints, errors, warnings);
 	validateCrossConfig(config, errors, warnings);

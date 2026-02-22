@@ -21,5 +21,8 @@ pub mod health;
 /// Prometheus metrics instrumentation.
 pub mod metrics;
 
+/// Scanner infrastructure (config repository).
+pub mod scanner;
+
 /// OpenTelemetry tracing integration.
 pub mod telemetry;

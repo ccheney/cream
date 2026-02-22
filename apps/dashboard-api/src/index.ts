@@ -55,10 +55,12 @@ import {
 import {
 	initMarketDataStreaming,
 	initOptionsDataStreaming,
+	initScannerDataStreaming,
 	initSharedOptionsWebSocket,
 	initTradingUpdatesStreaming,
 	shutdownMarketDataStreaming,
 	shutdownOptionsDataStreaming,
+	shutdownScannerDataStreaming,
 	shutdownSharedOptionsWebSocket,
 	shutdownTradingUpdatesStreaming,
 } from "./streaming/index.js";
@@ -375,6 +377,14 @@ if (import.meta.main) {
 		);
 	});
 
+	// Initialize scanner data streaming (scanner alerts + scanner runtime status)
+	initScannerDataStreaming().catch((error) => {
+		log.warn(
+			{ error: error instanceof Error ? error.message : String(error) },
+			"Scanner data streaming initialization failed",
+		);
+	});
+
 	// Start event publisher for broadcasting events to WebSocket clients
 	const publisher = getEventPublisher();
 	publisher.start().catch((error) => {
@@ -425,6 +435,7 @@ if (import.meta.main) {
 		shutdownOptionsDataStreaming();
 		shutdownSharedOptionsWebSocket();
 		shutdownTradingUpdatesStreaming();
+		shutdownScannerDataStreaming();
 		closeAllConnections("Server shutting down");
 		closeDb();
 		await shutdownTracing();

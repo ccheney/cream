@@ -8,6 +8,7 @@
  */
 
 import type { HelixClient } from "../client.js";
+import type { ResolvedInstrument } from "@cream/domain";
 import {
 	type CompanyData,
 	type CompanyGraphBuildOptions,
@@ -17,24 +18,11 @@ import {
 	type SupplyChainRelationship,
 } from "./company-graph-builder.js";
 
+export type { ResolvedInstrument } from "@cream/domain";
+
 // ============================================
 // Types
 // ============================================
-
-/**
- * Resolved instrument from universe package
- * Matches the ResolvedInstrument interface from @cream/universe
- */
-export interface ResolvedInstrument {
-	symbol: string;
-	source: string;
-	name?: string;
-	sector?: string;
-	industry?: string;
-	marketCap?: number;
-	avgVolume?: number;
-	price?: number;
-}
 
 /**
  * Universe sync options

@@ -45,7 +45,7 @@ export interface ServiceTriggers {
 // ============================================
 
 export interface NextRunTimes {
-	tradingCycle: Date | null;
+	macroWatch: Date | null;
 	predictionMarkets: Date | null;
 	filingsSync: Date | null;
 }
@@ -54,21 +54,20 @@ export interface HealthServerDeps {
 	getEnvironment: () => RuntimeEnvironment;
 	getConfigId: () => string;
 	getIntervals: () => {
-		tradingCycleIntervalMs: number;
+		macroWatchIntervalMs: number;
 		predictionMarketsIntervalMs: number;
 	};
 	getInstruments: () => string[];
 	getLastRun: () => {
-		tradingCycle: Date | null;
+		macroWatch: Date | null;
 		predictionMarkets: Date | null;
 		filingsSync: Date | null;
 	};
 	getNextRun: () => NextRunTimes | null;
 	getRunningStatus: () => {
-		tradingCycle: boolean;
+		macroWatch: boolean;
 		predictionMarkets: boolean;
 		filingsSync: boolean;
-		macroWatch: boolean;
 		newspaper: boolean;
 	};
 	getIndicatorJobStatus: () => Record<string, JobState> | null;
@@ -119,7 +118,7 @@ function buildHealthResponse(deps: HealthServerDeps) {
 		environment: deps.getEnvironment(),
 		config_id: deps.getConfigId(),
 		intervals: {
-			trading_cycle_ms: intervals.tradingCycleIntervalMs,
+			macro_watch_ms: intervals.macroWatchIntervalMs,
 			prediction_markets_ms: intervals.predictionMarketsIntervalMs,
 		},
 		instruments: deps.getInstruments(),
@@ -244,12 +243,12 @@ export function createHealthServer(deps: HealthServerDeps, port?: number) {
 }
 
 function formatLastRun(lastRun: {
-	tradingCycle: Date | null;
+	macroWatch: Date | null;
 	predictionMarkets: Date | null;
 	filingsSync: Date | null;
 }) {
 	return {
-		trading_cycle: lastRun.tradingCycle?.toISOString() ?? null,
+		macro_watch: lastRun.macroWatch?.toISOString() ?? null,
 		prediction_markets: lastRun.predictionMarkets?.toISOString() ?? null,
 		filings_sync: lastRun.filingsSync?.toISOString() ?? null,
 	};
@@ -257,7 +256,7 @@ function formatLastRun(lastRun: {
 
 function formatNextRun(nextRun: NextRunTimes) {
 	return {
-		trading_cycle: nextRun.tradingCycle?.toISOString() ?? null,
+		macro_watch: nextRun.macroWatch?.toISOString() ?? null,
 		prediction_markets: nextRun.predictionMarkets?.toISOString() ?? null,
 		filings_sync: nextRun.filingsSync?.toISOString() ?? null,
 	};

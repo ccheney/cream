@@ -262,6 +262,36 @@ export const PortfolioDataSchema = z.object({
 
 export type PortfolioData = z.infer<typeof PortfolioDataSchema>;
 
+export const ScannerSignalSchema = z.enum(["volume_spike", "price_move", "gap"]);
+
+export type ScannerSignal = z.infer<typeof ScannerSignalSchema>;
+
+export const ScannerAlertDataSchema = z.object({
+	symbol: z.string().min(1).max(20),
+	signals: z.array(ScannerSignalSchema).min(1),
+	price: z.number().nonnegative(),
+	volume: z.number().int().nonnegative(),
+	avgVolume: z.number().int().nonnegative(),
+	volumeRatio: z.number().nonnegative(),
+	priceChangePct: z.number(),
+	gapPct: z.number(),
+	approxAtr: z.number().nonnegative(),
+	timestamp: z.string().datetime(),
+});
+
+export type ScannerAlertData = z.infer<typeof ScannerAlertDataSchema>;
+
+export const ScannerStatusDataSchema = z.object({
+	active: z.boolean(),
+	symbolsTracked: z.number().int().nonnegative(),
+	totalAlerts: z.number().int().nonnegative(),
+	alertsLastHour: z.number().int().nonnegative(),
+	configVersion: z.string().optional(),
+	timestamp: z.string().datetime(),
+});
+
+export type ScannerStatusData = z.infer<typeof ScannerStatusDataSchema>;
+
 export const ToolCallChunkDataSchema = z.object({
 	cycleId: z.string(),
 

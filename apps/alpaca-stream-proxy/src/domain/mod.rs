@@ -7,5 +7,8 @@
 /// Market data streaming types (quotes, trades, bars).
 pub mod streaming;
 
+/// Scanner domain types and signal detection logic.
+pub mod scanner;
+
 /// Subscription tracking and management.
 pub mod subscription;

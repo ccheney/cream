@@ -1,5 +1,9 @@
 import { z } from "zod";
-import type { indexConstituents, tickerChanges, universeSnapshots } from "../schema/universe";
+import type {
+	indexConstituents,
+	tickerChanges,
+	universeSnapshots,
+} from "../schema/historical-universe";
 
 export const IndexIdSchema = z.enum([
 	"SP500",

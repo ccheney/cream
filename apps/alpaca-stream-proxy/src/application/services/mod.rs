@@ -4,3 +4,6 @@
 //!
 //! - `SubscriptionService`: Manages client subscriptions and routing
 //! - `HealthService`: Monitors connection health and status
+
+/// Scanner orchestration service.
+pub mod scanner;

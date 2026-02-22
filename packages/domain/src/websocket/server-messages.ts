@@ -12,6 +12,8 @@ import {
 	PortfolioDataSchema,
 	QuoteDataSchema,
 	ReasoningChunkDataSchema,
+	ScannerAlertDataSchema,
+	ScannerStatusDataSchema,
 	SystemStatusDataSchema,
 	TextDeltaChunkDataSchema,
 	ToolCallChunkDataSchema,
@@ -230,6 +232,20 @@ export const PortfolioMessageSchema = z.object({
 
 export type PortfolioMessage = z.infer<typeof PortfolioMessageSchema>;
 
+export const ScannerAlertMessageSchema = z.object({
+	type: z.literal("scanner_alert"),
+	data: ScannerAlertDataSchema,
+});
+
+export type ScannerAlertMessage = z.infer<typeof ScannerAlertMessageSchema>;
+
+export const ScannerStatusMessageSchema = z.object({
+	type: z.literal("scanner_status"),
+	data: ScannerStatusDataSchema,
+});
+
+export type ScannerStatusMessage = z.infer<typeof ScannerStatusMessageSchema>;
+
 export const PongMessageSchema = z.object({
 	type: z.literal("pong"),
 	timestamp: z.string().datetime(),
@@ -436,6 +452,8 @@ export const ServerMessageSchema = z.discriminatedUnion("type", [
 	AlertMessageSchema,
 	SystemStatusMessageSchema,
 	PortfolioMessageSchema,
+	ScannerAlertMessageSchema,
+	ScannerStatusMessageSchema,
 	PongMessageSchema,
 	SubscribedMessageSchema,
 	UnsubscribedMessageSchema,

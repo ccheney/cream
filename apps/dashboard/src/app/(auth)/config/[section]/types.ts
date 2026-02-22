@@ -9,11 +9,11 @@ import type {
 	AgentStatus,
 	AlertSettings,
 	ConstraintsConfig,
-	RuntimeUniverseConfig,
+	RuntimeScannerConfig,
 } from "@/lib/api/types";
 
 export const VALID_SECTIONS = [
-	"universe",
+	"scanner",
 	"constraints",
 	"agents",
 	"risk",
@@ -34,11 +34,11 @@ export interface EditorHeaderProps {
 	editLabel?: string;
 }
 
-export interface UniverseSectionProps {
-	universe: RuntimeUniverseConfig;
+export interface ScannerSectionProps {
+	scanner: RuntimeScannerConfig;
 	editing: boolean;
-	formData: Partial<RuntimeUniverseConfig>;
-	onFormChange: (data: Partial<RuntimeUniverseConfig>) => void;
+	formData: Partial<RuntimeScannerConfig>;
+	onFormChange: (data: Partial<RuntimeScannerConfig>) => void;
 }
 
 export interface ConstraintFieldProps {

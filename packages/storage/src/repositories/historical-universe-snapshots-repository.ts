@@ -1,6 +1,6 @@
 import { and, asc, desc, eq, lte, sql } from "drizzle-orm";
 import { type Database, getDb } from "../db";
-import { universeSnapshots } from "../schema/universe";
+import { universeSnapshots } from "../schema/historical-universe";
 import { type IndexId, mapSnapshotRow, type UniverseSnapshot } from "./historical-universe.types";
 
 export class UniverseSnapshotsRepository {

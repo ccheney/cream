@@ -22,13 +22,12 @@ export type {
 	RuntimePortfolioLimits,
 	RuntimeTradingConfig,
 	RuntimeTradingConfigStatus,
-	RuntimeUniverseConfig,
-	RuntimeUniverseConfigStatus,
-	RuntimeUniverseSource,
+	RuntimeScannerConfig,
+	RuntimeScannerConfigStatus,
 	RuntimeValidationResult,
+	ScannerConfigsRepository,
 	TradingConfigRepository,
 	TradingEnvironment,
-	UniverseConfigsRepository,
 	ValidationError,
 } from "./runtime-config/index.js";
 export {

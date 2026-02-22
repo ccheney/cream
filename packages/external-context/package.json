@@ -25,7 +25,6 @@
 		"@cream/domain": "workspace:*",
 		"@cream/helix": "workspace:*",
 		"@cream/logger": "workspace:*",
-		"@cream/universe": "workspace:*",
 		"zod": "4.3.6"
 	},
 	"devDependencies": {

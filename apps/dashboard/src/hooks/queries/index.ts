@@ -59,10 +59,11 @@ export {
 	usePromoteDraft,
 	useRollbackConfig,
 	useRuntimeConfigHistory,
+	useScannerConfig,
+	useScannerStatus,
 	useSaveDraft,
-	useUniverseConfig,
 	useUpdateConstraintsConfig,
-	useUpdateUniverseConfig,
+	useUpdateScannerConfig,
 	useValidateDraft,
 } from "./useConfig";
 // Cycle Analytics

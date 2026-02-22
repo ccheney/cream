@@ -9,8 +9,8 @@
 import { OpenAPIHono } from "@hono/zod-openapi";
 import { agentsRoutes } from "./agents.js";
 import { constraintsRoutes } from "./constraints.js";
+import { scannerRoutes } from "./scanner.js";
 import { tradingRoutes } from "./trading.js";
-import { universeRoutes } from "./universe.js";
 import { versionsRoutes } from "./versions.js";
 
 const app = new OpenAPIHono();
@@ -18,7 +18,7 @@ const app = new OpenAPIHono();
 // Mount all config sub-routes
 app.route("/", tradingRoutes);
 app.route("/", agentsRoutes);
-app.route("/", universeRoutes);
+app.route("/", scannerRoutes);
 app.route("/", constraintsRoutes);
 app.route("/", versionsRoutes);
 

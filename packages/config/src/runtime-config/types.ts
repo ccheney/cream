@@ -68,25 +68,23 @@ export interface RuntimeAgentConfig {
 }
 
 // ============================================
-// Universe Config Types
+// Scanner Config Types
 // ============================================
 
-export type RuntimeUniverseSource = "static" | "index" | "screener";
+export type RuntimeScannerConfigStatus = "draft" | "testing" | "active" | "archived";
 
-export type RuntimeUniverseConfigStatus = "draft" | "testing" | "active" | "archived";
-
-export interface RuntimeUniverseConfig {
+export interface RuntimeScannerConfig {
 	id: string;
 	environment: TradingEnvironment;
-	source: RuntimeUniverseSource;
-	staticSymbols: string[] | null;
-	indexSource: string | null;
-	minVolume: number | null;
-	minMarketCap: number | null;
-	optionableOnly: boolean;
-	includeList: string[];
-	excludeList: string[];
-	status: RuntimeUniverseConfigStatus;
+	minPrice: number;
+	minAvgVolume: number;
+	volumeSpikeThreshold: number;
+	priceMoveThreshold: number;
+	gapThreshold: number;
+	maxCandidates: number;
+	cooldownSeconds: number;
+	enabled: boolean;
+	status: RuntimeScannerConfigStatus;
 	createdAt: string;
 	updatedAt: string;
 }
@@ -140,7 +138,7 @@ export interface RuntimeConstraintsConfig {
 export interface FullRuntimeConfig {
 	trading: RuntimeTradingConfig;
 	agents: Record<RuntimeAgentType, RuntimeAgentConfig>;
-	universe: RuntimeUniverseConfig;
+	scanner: RuntimeScannerConfig;
 	constraints: RuntimeConstraintsConfig;
 }
 
@@ -229,16 +227,16 @@ export interface AgentConfigsRepository {
 	): Promise<void> | Promise<unknown[]>;
 }
 
-export interface UniverseConfigsRepository {
-	getActive(environment: TradingEnvironment): Promise<RuntimeUniverseConfig | null>;
-	getDraft(environment: TradingEnvironment): Promise<RuntimeUniverseConfig | null>;
+export interface ScannerConfigsRepository {
+	getActive(environment: TradingEnvironment): Promise<RuntimeScannerConfig | null>;
+	getDraft(environment: TradingEnvironment): Promise<RuntimeScannerConfig | null>;
 	saveDraft(
 		environment: TradingEnvironment,
 		input: Partial<
-			Omit<RuntimeUniverseConfig, "id" | "environment" | "createdAt" | "updatedAt" | "status">
+			Omit<RuntimeScannerConfig, "id" | "environment" | "createdAt" | "updatedAt" | "status">
 		>,
-	): Promise<RuntimeUniverseConfig>;
-	setStatus(id: string, status: RuntimeUniverseConfigStatus): Promise<RuntimeUniverseConfig>;
+	): Promise<RuntimeScannerConfig>;
+	setStatus(id: string, status: RuntimeScannerConfigStatus): Promise<RuntimeScannerConfig>;
 }
 
 export interface ConstraintsConfigRepository {

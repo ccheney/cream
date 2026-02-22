@@ -29,17 +29,23 @@ use std::net::SocketAddr;
 use std::sync::Arc;
 use std::time::Duration;
 
+use alpaca_stream_proxy::application::ports::scanner::ScannerConfigPort;
+use alpaca_stream_proxy::application::services::scanner::ScannerService as ScannerAppService;
+use alpaca_stream_proxy::domain::scanner::ScannerParams;
 use alpaca_stream_proxy::infrastructure::alpaca::{
     OpraClient, OpraClientConfig, OpraEvent, SipClient, SipClientConfig, SipEvent, TradingClient,
     TradingClientConfig, TradingEvent,
 };
 use alpaca_stream_proxy::infrastructure::broadcast::{BroadcastConfig, BroadcastHub};
 use alpaca_stream_proxy::infrastructure::grpc::proto::cream::v1::ConnectionState;
+use alpaca_stream_proxy::infrastructure::grpc::proto::cream::v1::scanner_service_server::ScannerServiceServer;
 use alpaca_stream_proxy::infrastructure::grpc::proto::cream::v1::stream_proxy_service_server::StreamProxyServiceServer;
-use alpaca_stream_proxy::infrastructure::grpc::server::{
-    StreamProxyServer, StreamProxyServerConfig,
+use alpaca_stream_proxy::infrastructure::grpc::{
+    ScannerGrpcServer,
+    server::{StreamProxyServer, StreamProxyServerConfig},
 };
 use alpaca_stream_proxy::infrastructure::health::{HealthServer, HealthServerState};
+use alpaca_stream_proxy::infrastructure::scanner::ScannerConfigRepository;
 use alpaca_stream_proxy::infrastructure::telemetry;
 use alpaca_stream_proxy::{Environment, ProxyConfig, SubscriptionManager, init_metrics};
 use tokio::signal;
@@ -81,6 +87,38 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     // Initialize subscription manager
     let subscription_manager = Arc::new(SubscriptionManager::new());
+
+    // Initialize scanner config port and service
+    let scanner_config_port: Option<Arc<dyn ScannerConfigPort>> =
+        match ScannerConfigRepository::from_env(config.environment).await {
+            Ok(repo) => Some(Arc::new(repo)),
+            Err(error) => {
+                tracing::warn!(error = %error, "Scanner config repository unavailable, using defaults");
+                None
+            }
+        };
+
+    let scanner_params = if let Some(config_port) = scanner_config_port.as_ref() {
+        match config_port.load_config().await {
+            Ok(params) => params,
+            Err(error) => {
+                tracing::warn!(error = %error, "Failed to load scanner config, using defaults");
+                ScannerParams::default()
+            }
+        }
+    } else {
+        ScannerParams::default()
+    };
+
+    let scanner_service = Arc::new(ScannerAppService::new(
+        Arc::clone(&broadcast_hub),
+        scanner_params,
+        scanner_config_port,
+    ));
+    let scanner_grpc_server = Arc::new(ScannerGrpcServer::new(
+        Arc::clone(&scanner_service),
+        Arc::clone(&broadcast_hub),
+    ));
 
     // Initialize gRPC server
     let grpc_environment = match config.environment {
@@ -161,8 +199,15 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     // Spawn SIP event handler
     let sip_broadcast_hub = Arc::clone(&broadcast_hub);
     let sip_feed_state = Arc::clone(&sip_state);
+    let sip_scanner_service = Arc::clone(&scanner_service);
     tokio::spawn(async move {
-        handle_sip_events(sip_rx, sip_broadcast_hub, sip_feed_state).await;
+        handle_sip_events(
+            sip_rx,
+            sip_broadcast_hub,
+            sip_feed_state,
+            sip_scanner_service,
+        )
+        .await;
     });
 
     // Spawn OPRA event handler
@@ -208,15 +253,24 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         }
     });
 
+    // Spawn scanner processing loop
+    let scanner_runner = Arc::clone(&scanner_service);
+    let scanner_shutdown = shutdown_token.clone();
+    tokio::spawn(async move {
+        scanner_runner.run(scanner_shutdown).await;
+    });
+
     // Spawn gRPC server
     let grpc_addr: SocketAddr = format!("0.0.0.0:{}", config.server.grpc_port).parse()?;
     let grpc_service = StreamProxyServiceServer::from_arc(grpc_server);
+    let scanner_service = ScannerServiceServer::from_arc(scanner_grpc_server);
     let grpc_shutdown = shutdown_token.clone();
 
     tokio::spawn(async move {
         tracing::info!(addr = %grpc_addr, "gRPC server listening");
         if let Err(e) = Server::builder()
             .add_service(grpc_service)
+            .add_service(scanner_service)
             .serve_with_shutdown(grpc_addr, grpc_shutdown.cancelled())
             .await
         {
@@ -238,6 +292,7 @@ async fn handle_sip_events(
     mut rx: mpsc::Receiver<SipEvent>,
     broadcast_hub: Arc<BroadcastHub>,
     feed_state: Arc<alpaca_stream_proxy::infrastructure::grpc::server::FeedState>,
+    scanner_service: Arc<ScannerAppService>,
 ) {
     while let Some(event) = rx.recv().await {
         match event {
@@ -266,18 +321,24 @@ async fn handle_sip_events(
                 feed_state.increment_messages();
                 let _ = broadcast_hub.send_stock_bar(bar);
             }
+            SipEvent::DailyBar(bar) => {
+                feed_state.increment_messages();
+                scanner_service.handle_daily_bar(bar).await;
+            }
             SipEvent::Subscribed {
                 quotes,
                 trades,
                 bars,
+                daily_bars,
             } => {
-                let count = quotes.len() + trades.len() + bars.len();
+                let count = quotes.len() + trades.len() + bars.len() + daily_bars.len();
                 let count_i32 = i32::try_from(count).unwrap_or(i32::MAX);
                 feed_state.set_subscription_count(count_i32);
                 tracing::debug!(
                     quotes = quotes.len(),
                     trades = trades.len(),
                     bars = bars.len(),
+                    daily_bars = daily_bars.len(),
                     "SIP subscriptions updated"
                 );
             }

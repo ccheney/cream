@@ -172,26 +172,5 @@ export {
 	type RuleBasedConfig,
 	RuleBasedConfigSchema,
 } from "./regime";
-// Universe configuration
-export {
-	ComposeMode,
-	type ETFHoldingsSource,
-	ETFHoldingsSourceSchema,
-	IndexId,
-	type IndexSource,
-	IndexSourceSchema,
-	type OptionsUniverseConfig,
-	OptionsUniverseConfigSchema,
-	type ScreenerSource,
-	ScreenerSourceSchema,
-	type StaticSource,
-	StaticSourceSchema,
-	type UniverseConfig,
-	UniverseConfigSchema,
-	type UniverseFilters,
-	UniverseFiltersSchema,
-	UniverseProvider,
-	type UniverseSource,
-	UniverseSourceSchema,
-	UniverseSourceType,
-} from "./universe";
+// Scanner configuration
+export { type ScannerConfig, ScannerConfigSchema } from "./scanner";

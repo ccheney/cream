@@ -81,13 +81,12 @@ export {
 	type RuntimePortfolioLimits,
 	type RuntimeTradingConfig,
 	type RuntimeTradingConfigStatus,
-	type RuntimeUniverseConfig,
-	type RuntimeUniverseConfigStatus,
-	type RuntimeUniverseSource,
+	type RuntimeScannerConfig,
+	type RuntimeScannerConfigStatus,
 	type RuntimeValidationResult,
+	type ScannerConfigsRepository,
 	type TradingConfigRepository,
 	type TradingEnvironment,
-	type UniverseConfigsRepository,
 	type ValidationError as RuntimeValidationError,
 } from "./runtime-config";
 // All schemas and types

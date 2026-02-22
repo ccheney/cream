@@ -320,23 +320,15 @@ export {
 	type TradingEnvironment,
 	type UpdateTradingConfigInput,
 } from "./trading-config.js";
+// Scanner configs (migration 011+) - autonomous scanner configuration
 export {
-	type SourceType,
-	SourceTypeSchema,
-	type UniverseCache,
-	type UniverseCacheInsert,
-	UniverseCacheRepository,
-} from "./universe-cache.js";
-// Universe configs (migration 011) - trading universe configuration
-export {
-	type CreateUniverseConfigInput,
-	type UniverseConfig,
-	type UniverseConfigStatus,
-	UniverseConfigsRepository,
-	type UniverseEnvironment,
-	type UniverseSource,
-	type UpdateUniverseConfigInput,
-} from "./universe-configs.js";
+	type CreateScannerConfigInput,
+	type ScannerConfig,
+	type ScannerConfigStatus,
+	ScannerConfigsRepository,
+	type ScannerEnvironment,
+	type UpdateScannerConfigInput,
+} from "./scanner-configs.js";
 // User preferences (migration 014) - dashboard user preferences
 export {
 	type ChartTimeframe,

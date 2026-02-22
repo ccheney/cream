@@ -11,7 +11,7 @@ import {
 	type FREDSeriesId,
 	getReleaseById,
 	type ReleaseImpact,
-} from "@cream/universe";
+} from "../fred/index.js";
 import type { ParsedMacroRelease } from "../types.js";
 
 /**

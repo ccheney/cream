@@ -11,3 +11,6 @@
 //! ## Driver Ports (Inbound)
 //!
 //! - `StreamPort`: Interface exposed to gRPC clients for subscribing
+
+/// Scanner config loading port.
+pub mod scanner;

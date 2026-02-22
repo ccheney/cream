@@ -12,6 +12,7 @@ describe("Channel Enum", () => {
 		expect(CHANNELS).toContain("alerts");
 		expect(CHANNELS).toContain("system");
 		expect(CHANNELS).toContain("portfolio");
+		expect(CHANNELS).toContain("scanner");
 	});
 
 	it("validates valid and invalid channels", () => {

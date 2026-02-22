@@ -17,8 +17,6 @@ export const GlobalModelSchema = z.string();
 
 export const ConfigStatusSchema = z.enum(["draft", "testing", "active", "archived"]);
 
-export const UniverseSourceSchema = z.enum(["static", "index", "screener"]);
-
 export const AgentTypeSchema = z.enum([
 	"grounding_agent",
 	"news_analyst",
@@ -57,20 +55,27 @@ export const TradingConfigSchema = z.object({
 	promotedFrom: z.string().nullable(),
 });
 
-export const UniverseConfigSchema = z.object({
+export const ScannerConfigSchema = z.object({
 	id: z.string(),
 	environment: EnvironmentSchema,
-	source: UniverseSourceSchema,
-	staticSymbols: z.array(z.string()).nullable(),
-	indexSource: z.string().nullable(),
-	minVolume: z.number().nullable(),
-	minMarketCap: z.number().nullable(),
-	optionableOnly: z.boolean(),
-	includeList: z.array(z.string()),
-	excludeList: z.array(z.string()),
+	minPrice: z.number(),
+	minAvgVolume: z.number(),
+	volumeSpikeThreshold: z.number(),
+	priceMoveThreshold: z.number(),
+	gapThreshold: z.number(),
+	maxCandidates: z.number(),
+	cooldownSeconds: z.number(),
+	enabled: z.boolean(),
 	status: ConfigStatusSchema,
 	createdAt: z.string(),
 	updatedAt: z.string(),
+});
+
+export const ScannerStatusSchema = z.object({
+	active: z.boolean(),
+	symbolsTracked: z.number(),
+	totalAlerts: z.number(),
+	alertsLastHour: z.number(),
 });
 
 export const AgentConfigSchema = z.object({
@@ -119,7 +124,7 @@ export const ConstraintsConfigResponseSchema = z.object({
 export const FullConfigSchema = z.object({
 	trading: TradingConfigSchema,
 	agents: z.record(AgentTypeSchema, AgentConfigSchema),
-	universe: UniverseConfigSchema,
+	scanner: ScannerConfigSchema,
 	constraints: ConstraintsConfigResponseSchema,
 });
 
@@ -170,7 +175,7 @@ export const ErrorResponseSchema = z.object({
 
 export const SaveDraftInputSchema = z.object({
 	trading: TradingConfigSchema.partial().optional(),
-	universe: UniverseConfigSchema.partial().optional(),
+	scanner: ScannerConfigSchema.partial().optional(),
 	agents: z.record(AgentTypeSchema, AgentConfigSchema.partial()).optional(),
 });
 
@@ -184,15 +189,15 @@ export const RollbackInputSchema = z.object({
 	}),
 });
 
-export const UniverseConfigInputSchema = z.object({
-	source: UniverseSourceSchema.optional(),
-	staticSymbols: z.array(z.string()).nullable().optional(),
-	indexSource: z.string().nullable().optional(),
-	minVolume: z.number().nullable().optional(),
-	minMarketCap: z.number().nullable().optional(),
-	optionableOnly: z.boolean().optional(),
-	includeList: z.array(z.string()).optional(),
-	excludeList: z.array(z.string()).optional(),
+export const ScannerConfigInputSchema = z.object({
+	minPrice: z.number().optional(),
+	minAvgVolume: z.number().int().optional(),
+	volumeSpikeThreshold: z.number().optional(),
+	priceMoveThreshold: z.number().optional(),
+	gapThreshold: z.number().optional(),
+	maxCandidates: z.number().int().optional(),
+	cooldownSeconds: z.number().int().optional(),
+	enabled: z.boolean().optional(),
 });
 
 export const ConstraintsConfigInputSchema = z.object({

@@ -28,7 +28,6 @@ COPY packages/marketdata/package.json ./packages/marketdata/
 COPY packages/indicators/package.json ./packages/indicators/
 COPY packages/broker/package.json ./packages/broker/
 COPY packages/regime/package.json ./packages/regime/
-COPY packages/universe/package.json ./packages/universe/
 COPY packages/external-context/package.json ./packages/external-context/
 COPY packages/prediction-markets/package.json ./packages/prediction-markets/
 COPY packages/agents/package.json ./packages/agents/
@@ -87,9 +86,6 @@ WORKDIR /app/packages/marketdata
 RUN bun run build
 
 WORKDIR /app/packages/regime
-RUN bun run build
-
-WORKDIR /app/packages/universe
 RUN bun run build
 
 WORKDIR /app/packages/external-context

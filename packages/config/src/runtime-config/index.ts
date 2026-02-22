@@ -27,13 +27,12 @@ export type {
 	RuntimePortfolioLimits,
 	RuntimeTradingConfig,
 	RuntimeTradingConfigStatus,
-	RuntimeUniverseConfig,
-	RuntimeUniverseConfigStatus,
-	RuntimeUniverseSource,
+	RuntimeScannerConfig,
+	RuntimeScannerConfigStatus,
 	RuntimeValidationResult,
+	ScannerConfigsRepository,
 	TradingConfigRepository,
 	TradingEnvironment,
-	UniverseConfigsRepository,
 	ValidationError,
 } from "./types.js";
 export {
@@ -41,6 +40,6 @@ export {
 	validateConstraintsConfig,
 	validateCrossConfig,
 	validateForPromotion,
+	validateScannerConfig,
 	validateTradingConfig,
-	validateUniverseConfig,
 } from "./validation.js";

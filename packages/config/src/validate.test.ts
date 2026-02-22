@@ -179,7 +179,7 @@ describe("validateAtStartup baseline behavior", () => {
 });
 
 describe("validateAtStartup LIVE warnings for setup", () => {
-	it("warns about LIVE environment without universe", () => {
+	it("warns about LIVE environment without scanner", () => {
 		const result = validateAtStartup({
 			core: {
 				environment: "LIVE",
@@ -187,7 +187,7 @@ describe("validateAtStartup LIVE warnings for setup", () => {
 			},
 		});
 		expect(result.success).toBe(true);
-		expect(result.warnings.some((warning) => warning.includes("universe"))).toBe(true);
+		expect(result.warnings.some((warning) => warning.includes("scanner"))).toBe(true);
 	});
 
 	it("warns about flash model in LIVE environment", () => {
@@ -196,9 +196,15 @@ describe("validateAtStartup LIVE warnings for setup", () => {
 				environment: "LIVE",
 				llm: { model_id: "gemini-3-flash-preview" },
 			},
-			universe: {
-				compose_mode: "union",
-				sources: [{ type: "static", name: "test", tickers: ["SPY"] }],
+			scanner: {
+				minPrice: 5,
+				minAvgVolume: 100_000,
+				volumeSpikeThreshold: 3,
+				priceMoveThreshold: 2,
+				gapThreshold: 2,
+				maxCandidates: 10,
+				cooldownSeconds: 300,
+				enabled: true,
 			},
 		});
 		expect(result.success).toBe(true);
@@ -218,9 +224,15 @@ describe("validateAtStartup LIVE warnings for risk limits", () => {
 					max_pct_equity: 0.25, // 25% > 20% threshold
 				},
 			},
-			universe: {
-				compose_mode: "union",
-				sources: [{ type: "static", name: "test", tickers: ["SPY"] }],
+			scanner: {
+				minPrice: 5,
+				minAvgVolume: 100_000,
+				volumeSpikeThreshold: 3,
+				priceMoveThreshold: 2,
+				gapThreshold: 2,
+				maxCandidates: 10,
+				cooldownSeconds: 300,
+				enabled: true,
 			},
 		});
 		expect(result.success).toBe(true);
@@ -238,9 +250,15 @@ describe("validateAtStartup LIVE warnings for risk limits", () => {
 					max_gross_pct_equity: 4.0, // 4x > 3x threshold
 				},
 			},
-			universe: {
-				compose_mode: "union",
-				sources: [{ type: "static", name: "test", tickers: ["SPY"] }],
+			scanner: {
+				minPrice: 5,
+				minAvgVolume: 100_000,
+				volumeSpikeThreshold: 3,
+				priceMoveThreshold: 2,
+				gapThreshold: 2,
+				maxCandidates: 10,
+				cooldownSeconds: 300,
+				enabled: true,
 			},
 		});
 		expect(result.success).toBe(true);

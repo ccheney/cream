@@ -14,6 +14,7 @@
 //! 4. Streams matching messages to the client
 //! 5. Cleans up subscriptions on disconnect
 
+pub mod scanner_server;
 pub mod server;
 
 // Allow clippy warnings and missing docs in generated code
@@ -33,4 +34,5 @@ pub mod proto {
     }
 }
 
+pub use scanner_server::ScannerGrpcServer;
 pub use server::{StreamProxyServer, StreamProxyServerConfig};

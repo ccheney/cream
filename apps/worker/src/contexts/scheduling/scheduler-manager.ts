@@ -5,9 +5,8 @@
  * Provides lifecycle methods for starting, stopping, and rescheduling timers.
  *
  * Session-aware scheduling:
- * - RTH/PRE_MARKET: Full OODA trading cycle
- * - AFTER_HOURS/CLOSED: Lightweight macro watch scan
- * - Near open (9:00-9:30 AM ET): Compile morning newspaper before first RTH cycle
+ * - Runs macro watch hourly across all sessions
+ * - Near open (9:00-9:30 AM ET): Compile morning newspaper before macro watch
  */
 
 import { getCalendarService, type TradingSession } from "@cream/domain";
@@ -29,38 +28,35 @@ import {
 // ============================================
 
 export type JobName =
-	| "tradingCycle"
+	| "macroWatch"
 	| "predictionMarkets"
 	| "filingsSync"
-	| "macroWatch"
 	| "newspaper"
 	| "economicCalendar";
 
 export interface SchedulerTimers {
-	tradingCycle: ReturnType<typeof setTimeout> | null;
+	macroWatch: ReturnType<typeof setTimeout> | null;
 	predictionMarkets: ReturnType<typeof setTimeout> | null;
 	filingsSync: ReturnType<typeof setTimeout> | null;
 	economicCalendar: ReturnType<typeof setTimeout> | null;
 }
 
 export interface SchedulerIntervals {
-	tradingCycleIntervalMs: number;
 	predictionMarketsIntervalMs: number;
 }
 
 export interface NextRunTimes {
-	tradingCycle: Date | null;
+	macroWatch: Date | null;
 	predictionMarkets: Date | null;
 	filingsSync: Date | null;
 	economicCalendar: Date | null;
 }
 
 export interface SchedulerHandlers {
-	runTradingCycle: () => Promise<void>;
 	runPredictionMarkets: () => Promise<void>;
 	runFilingsSync: () => Promise<void>;
-	runMacroWatch?: () => Promise<void>;
-	compileNewspaper?: () => Promise<void>;
+	runMacroWatch: () => Promise<void>;
+	compileNewspaper: () => Promise<void>;
 	runEconomicCalendarSync?: () => Promise<void>;
 }
 
@@ -73,14 +69,14 @@ const FILINGS_SYNC_INTERVAL_MS = 24 * 60 * 60 * 1000;
 
 export class SchedulerManager {
 	private readonly timers: SchedulerTimers = {
-		tradingCycle: null,
+		macroWatch: null,
 		predictionMarkets: null,
 		filingsSync: null,
 		economicCalendar: null,
 	};
 
 	private nextRun: NextRunTimes = {
-		tradingCycle: null,
+		macroWatch: null,
 		predictionMarkets: null,
 		filingsSync: null,
 		economicCalendar: null,
@@ -106,7 +102,7 @@ export class SchedulerManager {
 
 		log.info(
 			{
-				tradingCycleMinutes: Math.round(msUntilHour / 60000),
+				macroWatchMinutes: Math.round(msUntilHour / 60000),
 				predictionsMinutes: Math.round(msUntil15Min / 60000),
 				filingsHours: Math.round(msUntil6AM / 3600000),
 				econCalendarHours: Math.round(msUntilEconCal / 3600000),
@@ -114,17 +110,17 @@ export class SchedulerManager {
 			"Scheduler started",
 		);
 
-		this.scheduleTradingCycle();
+		this.scheduleMacroWatch();
 		this.schedulePredictionMarkets();
 		this.scheduleFilingsSync();
 		this.scheduleEconomicCalendarSync();
 	}
 
 	stop(): void {
-		if (this.timers.tradingCycle) {
-			clearTimeout(this.timers.tradingCycle);
-			clearInterval(this.timers.tradingCycle);
-			this.timers.tradingCycle = null;
+		if (this.timers.macroWatch) {
+			clearTimeout(this.timers.macroWatch);
+			clearInterval(this.timers.macroWatch);
+			this.timers.macroWatch = null;
 		}
 		if (this.timers.predictionMarkets) {
 			clearTimeout(this.timers.predictionMarkets);
@@ -174,29 +170,19 @@ export class SchedulerManager {
 	}
 
 	private async runMacroWatchOrLog(session: TradingSession, message: string): Promise<void> {
-		if (this.handlers.runMacroWatch) {
-			log.info({ session }, message);
-			await this.handlers.runMacroWatch();
-			return;
-		}
-
-		log.info({ session }, `${message} (macro watch not configured)`);
+		log.info({ session }, message);
+		await this.handlers.runMacroWatch();
 	}
 
 	private async handleClosedSession(session: TradingSession): Promise<void> {
-		await this.runMacroWatchOrLog(
-			session,
-			"Market closed, running macro watch instead of trading cycle",
-		);
+		await this.runMacroWatchOrLog(session, "Market closed, running macro watch");
 	}
 
 	private async handlePremarketSession(session: TradingSession): Promise<void> {
 		if (this.isNearOpen()) {
-			if (this.handlers.compileNewspaper) {
-				log.info({}, "Near market open, compiling morning newspaper");
-				await this.handlers.compileNewspaper();
-			}
-			await this.handlers.runTradingCycle();
+			log.info({}, "Near market open, compiling morning newspaper");
+			await this.handlers.compileNewspaper();
+			await this.runMacroWatchOrLog(session, "Near open pre-market, running macro watch");
 			return;
 		}
 
@@ -204,17 +190,12 @@ export class SchedulerManager {
 	}
 
 	/**
-	 * Session-aware trading cycle handler.
-	 *
-	 * - RTH: Run full OODA trading cycle
-	 * - PRE_MARKET (near open): Compile newspaper, then run trading cycle
-	 * - PRE_MARKET (early): Run macro watch scan
-	 * - AFTER_HOURS/CLOSED: Run macro watch scan instead of trading cycle
+	 * Session-aware macro watch handler.
 	 */
-	private async runTradingCycleWithGating(): Promise<void> {
+	private async runMacroWatchWithSessionGating(): Promise<void> {
 		const session = await this.getCurrentSession();
 
-		log.info({ session }, "Trading cycle triggered");
+		log.info({ session }, "Macro watch cycle triggered");
 
 		if (session === "CLOSED" || session === "AFTER_HOURS") {
 			await this.handleClosedSession(session);
@@ -226,33 +207,33 @@ export class SchedulerManager {
 			return;
 		}
 
-		await this.handlers.runTradingCycle();
+		await this.runMacroWatchOrLog(session, "RTH session, running macro watch");
 	}
 
-	private scheduleTradingCycle(): void {
-		const intervals = this.intervalProvider();
+	private scheduleMacroWatch(): void {
 		const msUntilNextHour = calculateNextHourMs();
-		this.nextRun.tradingCycle = getNextHourDate();
+		const HOURLY_INTERVAL_MS = 60 * 60 * 1000;
+		this.nextRun.macroWatch = getNextHourDate();
 
-		this.timers.tradingCycle = setTimeout(() => {
-			this.runTradingCycleWithGating().catch((error) => {
+		this.timers.macroWatch = setTimeout(() => {
+			this.runMacroWatchWithSessionGating().catch((error) => {
 				log.error(
 					{ error: error instanceof Error ? error.message : String(error) },
-					"Trading cycle with gating failed",
+					"Macro watch cycle failed",
 				);
 			});
 			// Update next run time after execution
-			this.nextRun.tradingCycle = new Date(Date.now() + intervals.tradingCycleIntervalMs);
-			this.timers.tradingCycle = setInterval(() => {
-				this.runTradingCycleWithGating().catch((error) => {
+			this.nextRun.macroWatch = new Date(Date.now() + HOURLY_INTERVAL_MS);
+			this.timers.macroWatch = setInterval(() => {
+				this.runMacroWatchWithSessionGating().catch((error) => {
 					log.error(
 						{ error: error instanceof Error ? error.message : String(error) },
-						"Trading cycle with gating failed",
+						"Macro watch cycle failed",
 					);
 				});
 				// Update next run time after each interval execution
-				this.nextRun.tradingCycle = new Date(Date.now() + intervals.tradingCycleIntervalMs);
-			}, intervals.tradingCycleIntervalMs);
+				this.nextRun.macroWatch = new Date(Date.now() + HOURLY_INTERVAL_MS);
+			}, HOURLY_INTERVAL_MS);
 		}, msUntilNextHour);
 	}
 

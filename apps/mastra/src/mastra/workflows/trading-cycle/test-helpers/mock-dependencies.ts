@@ -11,7 +11,6 @@ export function registerTradingCycleMocks(): void {
 	registerBrokerMocks();
 	registerMarketDataMocks();
 	registerRegimeMocks();
-	registerUniverseMocks();
 	registerLoggerMocks();
 	registerExternalContextMocks();
 }
@@ -69,16 +68,6 @@ function registerRegimeMocks(): void {
 	}));
 }
 
-function registerUniverseMocks(): void {
-	mock.module("@cream/universe", () => ({
-		resolveUniverseSymbols: async () => ["AAPL", "MSFT"],
-		createFREDClient: () => ({
-			getObservations: async () => [],
-			getSeriesInfo: async () => null,
-		}),
-	}));
-}
-
 function registerLoggerMocks(): void {
 	mock.module("@cream/logger", () => ({
 		createNodeLogger: () => ({
@@ -102,6 +91,10 @@ function registerExternalContextMocks(): void {
 		ExtractionPipeline: ExtractionPipelineMock,
 		createEntityLinker: () => ({
 			link: async () => [],
+		}),
+		createFREDClient: () => ({
+			getObservations: async () => [],
+			getSeriesInfo: async () => null,
 		}),
 		EntityLinker: EntityLinkerMock,
 		ExtractionResultSchema: mockZodSchema,

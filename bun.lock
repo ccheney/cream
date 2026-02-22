@@ -5,12 +5,12 @@
     "": {
       "name": "cream",
       "devDependencies": {
-        "@biomejs/biome": "latest",
+        "@biomejs/biome": "2.4.2",
         "@cream/test-utils": "workspace:*",
-        "@typescript/native-preview": "latest",
-        "husky": "latest",
-        "testcontainers": "latest",
-        "turbo": "latest",
+        "@typescript/native-preview": "7.0.0-dev.20260219.1",
+        "husky": "9.1.7",
+        "testcontainers": "11.12.0",
+        "turbo": "2.8.10",
       },
     },
     "apps/alpaca-stream-proxy": {
@@ -74,6 +74,7 @@
         "@cream/config": "workspace:*",
         "@cream/dashboard-types": "workspace:*",
         "@cream/domain": "workspace:*",
+        "@cream/external-context": "workspace:*",
         "@cream/filings": "workspace:*",
         "@cream/helix": "workspace:*",
         "@cream/helix-schema": "workspace:*",
@@ -84,7 +85,6 @@
         "@cream/metrics": "workspace:*",
         "@cream/schema-gen": "workspace:*",
         "@cream/storage": "workspace:*",
-        "@cream/universe": "workspace:*",
         "@hono/zod-openapi": "1.2.1",
         "@opentelemetry/api": "1.9.0",
         "@opentelemetry/auto-instrumentations-node": "0.69.0",
@@ -132,7 +132,6 @@
         "@cream/regime": "workspace:*",
         "@cream/schema-gen": "workspace:*",
         "@cream/storage": "workspace:*",
-        "@cream/universe": "workspace:*",
         "@hono/node-server": "1.19.9",
         "@mastra/core": "1.3.0",
         "@mastra/hono": "1.1.2",
@@ -208,7 +207,6 @@
         "@cream/marketdata": "workspace:*",
         "@cream/schema-gen": "workspace:*",
         "@cream/storage": "workspace:*",
-        "@cream/universe": "workspace:*",
         "@google/genai": "1.41.0",
       },
       "devDependencies": {
@@ -288,7 +286,6 @@
         "@cream/domain": "workspace:*",
         "@cream/helix": "workspace:*",
         "@cream/logger": "workspace:*",
-        "@cream/universe": "workspace:*",
         "zod": "4.3.6",
       },
       "devDependencies": {
@@ -390,7 +387,6 @@
         "@cream/indicators": "workspace:*",
         "@cream/logger": "workspace:*",
         "@cream/regime": "workspace:*",
-        "@cream/universe": "workspace:*",
         "@msgpack/msgpack": "3.1.3",
         "zod": "4.3.6",
       },
@@ -493,22 +489,6 @@
     "packages/tsconfig": {
       "name": "@cream/tsconfig",
       "version": "0.0.0",
-    },
-    "packages/universe": {
-      "name": "@cream/universe",
-      "version": "0.0.1",
-      "dependencies": {
-        "@cream/config": "workspace:*",
-        "@cream/domain": "workspace:*",
-        "@cream/logger": "workspace:*",
-        "@cream/storage": "workspace:*",
-        "zod": "4.3.6",
-      },
-      "devDependencies": {
-        "@cream/tsconfig": "workspace:*",
-        "@types/bun": "1.3.9",
-        "@typescript/native-preview": "7.0.0-dev.20260212.1",
-      },
     },
   },
   "packages": {
@@ -691,8 +671,6 @@
     "@cream/test-utils": ["@cream/test-utils@workspace:packages/test-utils"],
 
     "@cream/tsconfig": ["@cream/tsconfig@workspace:packages/tsconfig"],
-
-    "@cream/universe": ["@cream/universe@workspace:packages/universe"],
 
     "@cream/worker": ["@cream/worker@workspace:apps/worker"],
 
@@ -2728,8 +2706,6 @@
 
     "@cream/test-utils/@typescript/native-preview": ["@typescript/native-preview@7.0.0-dev.20260212.1", "", { "optionalDependencies": { "@typescript/native-preview-darwin-arm64": "7.0.0-dev.20260212.1", "@typescript/native-preview-darwin-x64": "7.0.0-dev.20260212.1", "@typescript/native-preview-linux-arm": "7.0.0-dev.20260212.1", "@typescript/native-preview-linux-arm64": "7.0.0-dev.20260212.1", "@typescript/native-preview-linux-x64": "7.0.0-dev.20260212.1", "@typescript/native-preview-win32-arm64": "7.0.0-dev.20260212.1", "@typescript/native-preview-win32-x64": "7.0.0-dev.20260212.1" }, "bin": { "tsgo": "bin/tsgo.js" } }, "sha512-VHAVbp8d2VGm90EK//brKIYvT3iPrLXMq4/LApCdkKww/Hfn33zPRVmig4rswNaJiVu8XhcdHld5yfMw6d5A9Q=="],
 
-    "@cream/universe/@typescript/native-preview": ["@typescript/native-preview@7.0.0-dev.20260212.1", "", { "optionalDependencies": { "@typescript/native-preview-darwin-arm64": "7.0.0-dev.20260212.1", "@typescript/native-preview-darwin-x64": "7.0.0-dev.20260212.1", "@typescript/native-preview-linux-arm": "7.0.0-dev.20260212.1", "@typescript/native-preview-linux-arm64": "7.0.0-dev.20260212.1", "@typescript/native-preview-linux-x64": "7.0.0-dev.20260212.1", "@typescript/native-preview-win32-arm64": "7.0.0-dev.20260212.1", "@typescript/native-preview-win32-x64": "7.0.0-dev.20260212.1" }, "bin": { "tsgo": "bin/tsgo.js" } }, "sha512-VHAVbp8d2VGm90EK//brKIYvT3iPrLXMq4/LApCdkKww/Hfn33zPRVmig4rswNaJiVu8XhcdHld5yfMw6d5A9Q=="],
-
     "@cream/worker/@typescript/native-preview": ["@typescript/native-preview@7.0.0-dev.20260212.1", "", { "optionalDependencies": { "@typescript/native-preview-darwin-arm64": "7.0.0-dev.20260212.1", "@typescript/native-preview-darwin-x64": "7.0.0-dev.20260212.1", "@typescript/native-preview-linux-arm": "7.0.0-dev.20260212.1", "@typescript/native-preview-linux-arm64": "7.0.0-dev.20260212.1", "@typescript/native-preview-linux-x64": "7.0.0-dev.20260212.1", "@typescript/native-preview-win32-arm64": "7.0.0-dev.20260212.1", "@typescript/native-preview-win32-x64": "7.0.0-dev.20260212.1" }, "bin": { "tsgo": "bin/tsgo.js" } }, "sha512-VHAVbp8d2VGm90EK//brKIYvT3iPrLXMq4/LApCdkKww/Hfn33zPRVmig4rswNaJiVu8XhcdHld5yfMw6d5A9Q=="],
 
     "@esbuild-kit/core-utils/esbuild": ["esbuild@0.18.20", "", { "optionalDependencies": { "@esbuild/android-arm": "0.18.20", "@esbuild/android-arm64": "0.18.20", "@esbuild/android-x64": "0.18.20", "@esbuild/darwin-arm64": "0.18.20", "@esbuild/darwin-x64": "0.18.20", "@esbuild/freebsd-arm64": "0.18.20", "@esbuild/freebsd-x64": "0.18.20", "@esbuild/linux-arm": "0.18.20", "@esbuild/linux-arm64": "0.18.20", "@esbuild/linux-ia32": "0.18.20", "@esbuild/linux-loong64": "0.18.20", "@esbuild/linux-mips64el": "0.18.20", "@esbuild/linux-ppc64": "0.18.20", "@esbuild/linux-riscv64": "0.18.20", "@esbuild/linux-s390x": "0.18.20", "@esbuild/linux-x64": "0.18.20", "@esbuild/netbsd-x64": "0.18.20", "@esbuild/openbsd-x64": "0.18.20", "@esbuild/sunos-x64": "0.18.20", "@esbuild/win32-arm64": "0.18.20", "@esbuild/win32-ia32": "0.18.20", "@esbuild/win32-x64": "0.18.20" }, "bin": { "esbuild": "bin/esbuild" } }, "sha512-ceqxoedUrcayh7Y7ZX6NdbbDzGROiyVBgC4PriJThBKSVPWnnFHZAkfI1lJT8QFkOwH4qOS2SJkS4wvpGl8BpA=="],
@@ -3393,20 +3369,6 @@
     "@cream/test-utils/@typescript/native-preview/@typescript/native-preview-win32-arm64": ["@typescript/native-preview-win32-arm64@7.0.0-dev.20260212.1", "", { "os": "win32", "cpu": "arm64" }, "sha512-NhCXPQF6OTNEZl8iwRE1ef/zHiqit5p3m7hdT2vfAOi1iA2eoazX0zTSdhgjX83o9cLjen3V1R7nbSYehFHaqw=="],
 
     "@cream/test-utils/@typescript/native-preview/@typescript/native-preview-win32-x64": ["@typescript/native-preview-win32-x64@7.0.0-dev.20260212.1", "", { "os": "win32", "cpu": "x64" }, "sha512-0yqSBlASRx9rqM12QvaWc227w+bIsuI2EwAiNsoB1ybRbCXoXMah1RQlfjjTpD02eWCe/029vwrNhq+FLn7Z8A=="],
-
-    "@cream/universe/@typescript/native-preview/@typescript/native-preview-darwin-arm64": ["@typescript/native-preview-darwin-arm64@7.0.0-dev.20260212.1", "", { "os": "darwin", "cpu": "arm64" }, "sha512-HH4bOVbNW6ITv00VSaE3aZjCuU2d+amgFZKdhbq7NpcJDxFvxyy9GT9gkKV0D1DXz5qoxZIcyBEIbwrhABb9vg=="],
-
-    "@cream/universe/@typescript/native-preview/@typescript/native-preview-darwin-x64": ["@typescript/native-preview-darwin-x64@7.0.0-dev.20260212.1", "", { "os": "darwin", "cpu": "x64" }, "sha512-vnQ2xRJscbtyS/jHO5QY2xAZ3c11Yn1ZAor/XODDrxd7N7jIrm0Vtc2CIwsi51oncLS1SZtUd9cHZmJg5zUJrQ=="],
-
-    "@cream/universe/@typescript/native-preview/@typescript/native-preview-linux-arm": ["@typescript/native-preview-linux-arm@7.0.0-dev.20260212.1", "", { "os": "linux", "cpu": "arm" }, "sha512-T8sF3YtYtODhWnFNhVuL/GABCHpKJs6ZxTtSC1LtXoM/CE0Ai06k5WKOxJG5rJrBtLIW+Dempk7qKPfhNliDTA=="],
-
-    "@cream/universe/@typescript/native-preview/@typescript/native-preview-linux-arm64": ["@typescript/native-preview-linux-arm64@7.0.0-dev.20260212.1", "", { "os": "linux", "cpu": "arm64" }, "sha512-suA5OryrhL/tE7AiQXiNNV88XwKEOfO0sypJQj+cfg/fpQ2trFyDZcsdMLYVZ7J0zirDai6H3TDETYYoNFE1/g=="],
-
-    "@cream/universe/@typescript/native-preview/@typescript/native-preview-linux-x64": ["@typescript/native-preview-linux-x64@7.0.0-dev.20260212.1", "", { "os": "linux", "cpu": "x64" }, "sha512-w687rpZKJM0Lev0ya0GYJlnFCITTUmN8jDpwLXn60jrNEZzL2J4F7biA6papr2sMdKRfWvRklhjB1TKHbJ6FKA=="],
-
-    "@cream/universe/@typescript/native-preview/@typescript/native-preview-win32-arm64": ["@typescript/native-preview-win32-arm64@7.0.0-dev.20260212.1", "", { "os": "win32", "cpu": "arm64" }, "sha512-NhCXPQF6OTNEZl8iwRE1ef/zHiqit5p3m7hdT2vfAOi1iA2eoazX0zTSdhgjX83o9cLjen3V1R7nbSYehFHaqw=="],
-
-    "@cream/universe/@typescript/native-preview/@typescript/native-preview-win32-x64": ["@typescript/native-preview-win32-x64@7.0.0-dev.20260212.1", "", { "os": "win32", "cpu": "x64" }, "sha512-0yqSBlASRx9rqM12QvaWc227w+bIsuI2EwAiNsoB1ybRbCXoXMah1RQlfjjTpD02eWCe/029vwrNhq+FLn7Z8A=="],
 
     "@cream/worker/@typescript/native-preview/@typescript/native-preview-darwin-arm64": ["@typescript/native-preview-darwin-arm64@7.0.0-dev.20260212.1", "", { "os": "darwin", "cpu": "arm64" }, "sha512-HH4bOVbNW6ITv00VSaE3aZjCuU2d+amgFZKdhbq7NpcJDxFvxyy9GT9gkKV0D1DXz5qoxZIcyBEIbwrhABb9vg=="],
 

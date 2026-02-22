@@ -35,7 +35,6 @@
 		"@cream/marketdata": "workspace:*",
 		"@cream/schema-gen": "workspace:*",
 		"@cream/storage": "workspace:*",
-		"@cream/universe": "workspace:*",
 		"@google/genai": "1.41.0"
 	},
 	"devDependencies": {

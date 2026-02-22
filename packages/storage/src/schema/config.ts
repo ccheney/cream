@@ -1,7 +1,7 @@
 /**
  * Runtime Configuration Tables
  *
- * trading_config, agent_configs, universe_configs, constraints_config
+ * trading_config, agent_configs, constraints_config
  */
 import { sql } from "drizzle-orm";
 import {
@@ -9,7 +9,6 @@ import {
 	check,
 	index,
 	integer,
-	jsonb,
 	numeric,
 	pgTable,
 	text,
@@ -17,7 +16,7 @@ import {
 	uniqueIndex,
 	uuid,
 } from "drizzle-orm/pg-core";
-import { agentTypeEnum, configStatusEnum, environmentEnum, universeSourceEnum } from "./enums";
+import { agentTypeEnum, configStatusEnum, environmentEnum } from "./enums";
 
 // trading_config: Global trading configuration per environment
 export const tradingConfig = pgTable(
@@ -107,44 +106,6 @@ export const agentConfigs = pgTable(
 		index("idx_agent_configs_environment").on(table.environment),
 		index("idx_agent_configs_agent_type").on(table.agentType),
 		uniqueIndex("idx_agent_configs_env_agent").on(table.environment, table.agentType),
-	],
-);
-
-// universe_configs: Trading universe configuration
-export const universeConfigs = pgTable(
-	"universe_configs",
-	{
-		id: uuid("id").primaryKey().default(sql`uuidv7()`),
-		environment: environmentEnum("environment").notNull(),
-		source: universeSourceEnum("source").notNull(),
-
-		// Static symbols (JSON array)
-		staticSymbols: jsonb("static_symbols").$type<string[]>(),
-
-		// Index source configuration
-		indexSource: text("index_source"),
-
-		// Screener filters
-		minVolume: integer("min_volume"),
-		minMarketCap: integer("min_market_cap"),
-		optionableOnly: boolean("optionable_only").notNull().default(false),
-
-		// Include/exclude lists (JSON arrays)
-		includeList: jsonb("include_list").$type<string[]>().default([]),
-		excludeList: jsonb("exclude_list").$type<string[]>().default([]),
-
-		// Workflow status
-		status: configStatusEnum("status").notNull().default("draft"),
-		createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
-		updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
-	},
-	(table) => [
-		index("idx_universe_configs_environment").on(table.environment),
-		index("idx_universe_configs_status").on(table.status),
-		index("idx_universe_configs_env_status").on(table.environment, table.status),
-		uniqueIndex("idx_universe_configs_env_active")
-			.on(table.environment)
-			.where(sql`${table.status} = 'active'`),
 	],
 );
 
