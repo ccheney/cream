@@ -48,7 +48,20 @@ export interface TranscriptForEdge {
  * MENTIONS_COMPANY edge
  */
 export interface MentionsCompanyEdge {
-	source_id: string; // NewsItem.item_id
+	source_id: string; // NewsItem.id (internal Helix node ID)
+	target_id: string; // Company.symbol
+	sentiment?: number;
+	item_id?: string;
+	headline?: string;
+	source?: string;
+	published_at?: string;
+}
+
+/**
+ * EVENT_MENTIONS edge
+ */
+export interface EventMentionsEdge {
+	source_id: string; // ExternalEvent.event_id
 	target_id: string; // Company.symbol
 	sentiment?: number;
 }

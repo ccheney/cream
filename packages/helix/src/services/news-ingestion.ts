@@ -1,70 +1,19 @@
-/**
- * News Ingestion Service
- *
- * Ingests news items into HelixDB with embedding generation.
- * Creates MENTIONS_COMPANY edges for company references.
- *
- * @see docs/plans/04-memory-helixdb.md
- */
-
 import type { MentionsCompanyEdge, NewsItem } from "@cream/helix-schema";
 import { DEFAULT_EMBEDDING_CONFIG, EmbeddingClient } from "@cream/helix-schema";
 
 import type { HelixClient } from "../client.js";
 import { batchCreateEdges, type EdgeInput } from "../queries/mutations.js";
+import type {
+	NewsIngestionOptions,
+	NewsIngestionResult,
+	NewsItemInput,
+} from "./news-ingestion.types.js";
 
-// ============================================
-// Types
-// ============================================
-
-/**
- * News item input for ingestion
- */
-export interface NewsItemInput {
-	/** Unique item ID */
-	itemId: string;
-	/** News headline (embedded) */
-	headline: string;
-	/** News body text */
-	bodyText: string;
-	/** Publication timestamp */
-	publishedAt: Date;
-	/** News source name */
-	source: string;
-	/** Related stock symbols */
-	relatedSymbols: string[];
-	/** Sentiment score from -1.0 to 1.0 */
-	sentimentScore: number;
-}
-
-/**
- * Ingestion result
- */
-export interface NewsIngestionResult {
-	itemsIngested: number;
-	edgesCreated: number;
-	embeddingsGenerated: number;
-	duplicatesSkipped: number;
-	executionTimeMs: number;
-	warnings: string[];
-	errors: string[];
-}
-
-/**
- * Ingestion options
- */
-export interface NewsIngestionOptions {
-	/** Whether to generate embeddings (default: true) */
-	generateEmbeddings?: boolean;
-	/** Whether to create company mention edges (default: true) */
-	createCompanyEdges?: boolean;
-	/** Whether to check for duplicates via headline similarity (default: true) */
-	deduplicateByHeadline?: boolean;
-	/** Similarity threshold for duplicate detection (default: 0.95) */
-	deduplicationThreshold?: number;
-	/** Batch size for operations (default: 50) */
-	batchSize?: number;
-}
+export type {
+	NewsIngestionOptions,
+	NewsIngestionResult,
+	NewsItemInput,
+} from "./news-ingestion.types.js";
 
 interface ResolvedNewsIngestionOptions {
 	generateEmbeddings: boolean;
@@ -84,13 +33,19 @@ interface EmbeddingGenerationResult {
 	embeddingsGenerated: number;
 }
 
-// ============================================
-// Helper Functions
-// ============================================
+interface NewsUpsertResult {
+	success: boolean;
+	nodeId?: string;
+	error?: string;
+}
 
-/**
- * Convert NewsItemInput to HelixDB NewsItem
- */
+interface NewsUpsertBatchResult {
+	itemsIngested: number;
+	nodeIdsByItemId: Map<string, string>;
+}
+
+// Helper Functions
+
 function toNewsItem(input: NewsItemInput): NewsItem {
 	return {
 		item_id: input.itemId,
@@ -103,10 +58,6 @@ function toNewsItem(input: NewsItemInput): NewsItem {
 	};
 }
 
-/**
- * Build embeddable text from news item
- * Combines headline with truncated body for better context
- */
 function buildEmbeddableText(item: NewsItemInput, maxBodyLength = 500): string {
 	const bodyPreview =
 		item.bodyText.length > maxBodyLength
@@ -116,15 +67,8 @@ function buildEmbeddableText(item: NewsItemInput, maxBodyLength = 500): string {
 	return `${item.headline}\n\n${bodyPreview}`;
 }
 
-// ============================================
 // Main Service Class
-// ============================================
 
-/**
- * News Ingestion Service
- *
- * Ingests news items into HelixDB with embeddings and graph edges.
- */
 export class NewsIngestionService {
 	private embeddingClient: EmbeddingClient | null = null;
 
@@ -221,12 +165,10 @@ export class NewsIngestionService {
 	/**
 	 * Upsert a news item with embedding
 	 */
-	private async upsertNewsItem(
-		item: NewsItem,
-		embedding?: number[],
-	): Promise<{ success: boolean; error?: string }> {
+	private async upsertNewsItem(item: NewsItem, embedding?: number[]): Promise<NewsUpsertResult> {
 		try {
-			await this.client.query("InsertNewsItem", {
+			void embedding;
+			const result = await this.client.query<Record<string, unknown>>("InsertNewsItem", {
 				item_id: item.item_id,
 				headline: item.headline,
 				body_text: item.body_text,
@@ -234,10 +176,10 @@ export class NewsIngestionService {
 				related_symbols: item.related_symbols,
 				sentiment_score: item.sentiment_score,
 				published_at: item.published_at,
-				embedding,
-				embedding_model_version: DEFAULT_EMBEDDING_CONFIG.model,
 			});
-			return { success: true };
+
+			const nodeId = typeof result.data.id === "string" ? result.data.id : undefined;
+			return { success: true, nodeId };
 		} catch (error) {
 			return {
 				success: false,
@@ -295,8 +237,9 @@ export class NewsIngestionService {
 		embeddings: Map<string, number[]>,
 		batchSize: number,
 		errors: string[],
-	): Promise<number> {
+	): Promise<NewsUpsertBatchResult> {
 		let itemsIngested = 0;
+		const nodeIdsByItemId = new Map<string, string>();
 
 		for (let i = 0; i < newsItems.length; i += batchSize) {
 			const batch = newsItems.slice(i, i + batchSize);
@@ -304,25 +247,39 @@ export class NewsIngestionService {
 				const result = await this.upsertNewsItem(item, embeddings.get(item.item_id));
 				if (result.success) {
 					itemsIngested++;
+					if (result.nodeId) {
+						nodeIdsByItemId.set(item.item_id, result.nodeId);
+					}
 					continue;
 				}
 				errors.push(`Failed to ingest ${item.item_id}: ${result.error}`);
 			}
 		}
 
-		return itemsIngested;
+		return { itemsIngested, nodeIdsByItemId };
 	}
 
-	private buildCompanyEdges(items: NewsItemInput[], createCompanyEdges: boolean): EdgeInput[] {
+	private buildCompanyEdges(
+		items: NewsItemInput[],
+		nodeIdsByItemId: Map<string, string>,
+		createCompanyEdges: boolean,
+		warnings: string[],
+	): EdgeInput[] {
 		if (!createCompanyEdges) {
 			return [];
 		}
 
 		const edges: EdgeInput[] = [];
 		for (const item of items) {
+			const sourceNodeId = nodeIdsByItemId.get(item.itemId);
+			if (!sourceNodeId) {
+				warnings.push(`Skipped company edges for ${item.itemId}: missing Helix node ID`);
+				continue;
+			}
+
 			for (const symbol of item.relatedSymbols) {
 				const edge: MentionsCompanyEdge = {
-					source_id: item.itemId,
+					source_id: sourceNodeId,
 					target_id: symbol,
 					sentiment: item.sentimentScore,
 				};
@@ -331,6 +288,10 @@ export class NewsIngestionService {
 					targetId: edge.target_id,
 					edgeType: "MENTIONS_COMPANY",
 					properties: {
+						item_id: item.itemId,
+						headline: item.headline,
+						source: item.source,
+						published_at: item.publishedAt.toISOString(),
 						sentiment: edge.sentiment,
 					},
 				});
@@ -360,9 +321,22 @@ export class NewsIngestionService {
 		return edgesCreated;
 	}
 
-	/**
-	 * Ingest a batch of news items
-	 */
+	private createDuplicatesOnlyResult(
+		duplicatesSkipped: number,
+		startTime: number,
+		warnings: string[],
+	): NewsIngestionResult {
+		return {
+			itemsIngested: 0,
+			edgesCreated: 0,
+			embeddingsGenerated: 0,
+			duplicatesSkipped,
+			executionTimeMs: performance.now() - startTime,
+			warnings,
+			errors: [],
+		};
+	}
+
 	async ingestNews(
 		items: NewsItemInput[],
 		options: NewsIngestionOptions = {},
@@ -381,15 +355,7 @@ export class NewsIngestionService {
 			warnings,
 		);
 		if (uniqueItems.length === 0) {
-			return {
-				itemsIngested: 0,
-				edgesCreated: 0,
-				embeddingsGenerated: 0,
-				duplicatesSkipped,
-				executionTimeMs: performance.now() - startTime,
-				warnings,
-				errors: [],
-			};
+			return this.createDuplicatesOnlyResult(duplicatesSkipped, startTime, warnings);
 		}
 
 		const newsItems = uniqueItems.map(toNewsItem);
@@ -398,13 +364,18 @@ export class NewsIngestionService {
 			resolvedOptions.generateEmbeddings,
 			warnings,
 		);
-		const itemsIngested = await this.upsertNewsItems(
+		const { itemsIngested, nodeIdsByItemId } = await this.upsertNewsItems(
 			newsItems,
 			embeddings,
 			resolvedOptions.batchSize,
 			errors,
 		);
-		const edges = this.buildCompanyEdges(uniqueItems, resolvedOptions.createCompanyEdges);
+		const edges = this.buildCompanyEdges(
+			uniqueItems,
+			nodeIdsByItemId,
+			resolvedOptions.createCompanyEdges,
+			warnings,
+		);
 		const edgesCreated = await this.createEdgesInBatches(
 			edges,
 			resolvedOptions.batchSize,
@@ -422,9 +393,6 @@ export class NewsIngestionService {
 		};
 	}
 
-	/**
-	 * Ingest a single news item
-	 */
 	async ingestNewsItem(
 		item: NewsItemInput,
 		options: NewsIngestionOptions = {},
@@ -432,9 +400,6 @@ export class NewsIngestionService {
 		return this.ingestNews([item], options);
 	}
 
-	/**
-	 * Search for similar news by text
-	 */
 	async searchSimilarNews(
 		queryText: string,
 		limit = 10,
@@ -455,9 +420,6 @@ export class NewsIngestionService {
 		}
 	}
 
-	/**
-	 * Get news items by company symbol
-	 */
 	async getNewsByCompany(
 		symbol: string,
 		limit = 20,
@@ -466,70 +428,68 @@ export class NewsIngestionService {
 	> {
 		try {
 			const result = await this.client.query<
-				Array<{ item_id: string; headline: string; sentiment_score: number; published_at: string }>
-			>("getNewsByCompany", { symbol, limit });
+				Array<{
+					item_id?: string;
+					headline?: string;
+					sentiment?: number;
+					published_at?: string;
+				}>
+			>("GetCompanyNewsMentions", { symbol });
 
-			return result.data.map((row) => ({
-				itemId: row.item_id,
-				headline: row.headline,
-				sentimentScore: row.sentiment_score,
-				publishedAt: row.published_at,
+			return result.data.slice(0, limit).map((row) => ({
+				itemId: row.item_id ?? "",
+				headline: row.headline ?? "",
+				sentimentScore: row.sentiment ?? 0,
+				publishedAt: row.published_at ?? "",
 			}));
 		} catch {
 			return [];
 		}
 	}
 
-	/**
-	 * Get aggregate sentiment for a company from news
-	 */
 	async getCompanySentiment(
 		symbol: string,
 		daysBack = 7,
 	): Promise<{ avgSentiment: number; newsCount: number }> {
 		try {
-			const cutoffDate = new Date();
-			cutoffDate.setDate(cutoffDate.getDate() - daysBack);
-
-			const result = await this.client.query<Array<{ avg_sentiment: number; count: number }>>(
-				"getCompanySentiment",
-				{
-					symbol,
-					since: cutoffDate.toISOString(),
-				},
+			const cutoffMs = Date.now() - daysBack * 24 * 60 * 60 * 1000;
+			const result = await this.client.query<Array<{ sentiment?: number; published_at?: string }>>(
+				"GetCompanyNewsMentions",
+				{ symbol },
 			);
 
-			if (result.data.length > 0) {
-				const data = result.data[0];
-				return {
-					avgSentiment: data?.avg_sentiment ?? 0,
-					newsCount: data?.count ?? 0,
-				};
+			const recentRows = result.data.filter((row) => {
+				const publishedAt = row.published_at;
+				if (typeof publishedAt !== "string") {
+					return false;
+				}
+
+				const timestamp = Date.parse(publishedAt);
+				return Number.isFinite(timestamp) && timestamp >= cutoffMs;
+			});
+
+			if (recentRows.length === 0) {
+				return { avgSentiment: 0, newsCount: 0 };
 			}
 
-			return { avgSentiment: 0, newsCount: 0 };
+			const totalSentiment = recentRows.reduce(
+				(sum, row) => sum + (typeof row.sentiment === "number" ? row.sentiment : 0),
+				0,
+			);
+
+			return {
+				avgSentiment: totalSentiment / recentRows.length,
+				newsCount: recentRows.length,
+			};
 		} catch {
 			return { avgSentiment: 0, newsCount: 0 };
 		}
 	}
 }
 
-// ============================================
-// Factory Function
-// ============================================
-
-/**
- * Create a NewsIngestionService instance
- */
 export function createNewsIngestionService(client: HelixClient): NewsIngestionService {
 	return new NewsIngestionService(client);
 }
-
-// ============================================
-// Exported Helper Functions (for testing)
-// ============================================
-
-/** @internal Exported for testing */
 export const _internal = {
 	toNewsItem,
 	buildEmbeddableText,

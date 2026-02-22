@@ -75,13 +75,22 @@ export async function upsertTradeDecision(
 	embeddingModelVersion?: string,
 ): Promise<MutationResult> {
 	try {
-		const params: Record<string, unknown> = {
-			...decision,
-			embedding,
-			embedding_model_version: embeddingModelVersion,
-		};
-
-		await client.query("upsertTradeDecision", params);
+		void embedding;
+		void embeddingModelVersion;
+		await client.query("InsertTradeDecision", {
+			decision_id: decision.decision_id,
+			cycle_id: decision.cycle_id,
+			instrument_id: decision.instrument_id,
+			underlying_symbol: decision.underlying_symbol ?? decision.instrument_id,
+			regime_label: decision.regime_label,
+			action: decision.action,
+			decision_json: decision.decision_json,
+			rationale_text: decision.rationale_text,
+			snapshot_reference: decision.snapshot_reference,
+			realized_outcome: decision.realized_outcome ?? "",
+			environment: decision.environment,
+			closed_at: decision.closed_at ?? decision.created_at,
+		});
 
 		return {
 			success: true,
@@ -104,7 +113,14 @@ export async function createLifecycleEvent(
 	event: TradeLifecycleEvent,
 ): Promise<MutationResult> {
 	try {
-		await client.query("createLifecycleEvent", event as unknown as Record<string, unknown>);
+		await client.query("InsertLifecycleEvent", {
+			event_id: event.event_id,
+			decision_id: event.decision_id,
+			event_type: event.event_type,
+			price: event.price,
+			quantity: event.quantity,
+			environment: event.environment,
+		});
 
 		return {
 			success: true,
@@ -131,13 +147,16 @@ export async function upsertExternalEvent(
 	embeddingModelVersion?: string,
 ): Promise<MutationResult> {
 	try {
-		const params: Record<string, unknown> = {
-			...event,
-			embedding,
-			embedding_model_version: embeddingModelVersion,
-		};
-
-		await client.query("upsertExternalEvent", params);
+		void embedding;
+		void embeddingModelVersion;
+		await client.query("InsertExternalEvent", {
+			event_id: event.event_id,
+			event_type: event.event_type,
+			payload: event.payload,
+			text_summary: event.text_summary ?? event.payload,
+			related_instrument_ids: event.related_instrument_ids,
+			event_time: event.event_time,
+		});
 
 		return {
 			success: true,
@@ -161,12 +180,8 @@ export async function upsertExternalEvent(
  */
 export async function createEdge(client: HelixClient, edge: EdgeInput): Promise<MutationResult> {
 	try {
-		await client.query("createEdge", {
-			source_id: edge.sourceId,
-			target_id: edge.targetId,
-			edge_type: edge.edgeType,
-			properties: edge.properties ?? {},
-		});
+		const mutation = resolveEdgeMutation(edge);
+		await client.query(mutation.queryName, mutation.params);
 
 		return {
 			success: true,
@@ -179,6 +194,147 @@ export async function createEdge(client: HelixClient, edge: EdgeInput): Promise<
 			error: error instanceof Error ? error.message : "Unknown error",
 		};
 	}
+}
+
+interface EdgeMutation {
+	queryName: string;
+	params: Record<string, unknown>;
+}
+
+function toNumericProperty(
+	properties: Record<string, unknown>,
+	key: string,
+	fallback: number,
+): number {
+	const value = properties[key];
+	if (typeof value === "number" && Number.isFinite(value)) {
+		return value;
+	}
+	return fallback;
+}
+
+function toStringProperty(
+	properties: Record<string, unknown>,
+	key: string,
+	fallback: string,
+): string {
+	const value = properties[key];
+	if (typeof value === "string" && value.length > 0) {
+		return value;
+	}
+	return fallback;
+}
+
+function clampUnitInterval(value: number): number {
+	return Math.max(0, Math.min(1, value));
+}
+
+type EdgeMutationBuilder = (edge: EdgeInput, properties: Record<string, unknown>) => EdgeMutation;
+
+const EDGE_MUTATION_BUILDERS: Record<string, EdgeMutationBuilder> = {
+	INFLUENCED_DECISION: (edge, properties) => ({
+		queryName: "CreateInfluencedDecisionEdge",
+		params: {
+			event_id: edge.sourceId,
+			decision_id: edge.targetId,
+			influence_score: clampUnitInterval(toNumericProperty(properties, "influence_score", 0.5)),
+			influence_type: toStringProperty(properties, "influence_type", "UNKNOWN"),
+		},
+	}),
+	FILED_BY: (edge) => ({
+		queryName: "CreateFiledByEdge",
+		params: {
+			chunk_id: edge.sourceId,
+			company_symbol: edge.targetId,
+		},
+	}),
+	TRANSCRIPT_FOR: (edge) => ({
+		queryName: "CreateTranscriptForEdge",
+		params: {
+			chunk_id: edge.sourceId,
+			company_symbol: edge.targetId,
+		},
+	}),
+	MENTIONS_COMPANY: (edge, properties) => ({
+		queryName: "CreateMentionsCompanyEdgeByNodeId",
+		params: {
+			news_node_id: edge.sourceId,
+			company_symbol: edge.targetId,
+			news_item_id: toStringProperty(properties, "item_id", edge.sourceId),
+			sentiment: toNumericProperty(properties, "sentiment", 0),
+			headline: toStringProperty(properties, "headline", ""),
+			source: toStringProperty(properties, "source", ""),
+			published_at: toStringProperty(properties, "published_at", ""),
+		},
+	}),
+	EVENT_MENTIONS: (edge, properties) => ({
+		queryName: "CreateEventMentionsEdge",
+		params: {
+			event_id: edge.sourceId,
+			company_symbol: edge.targetId,
+			sentiment: toNumericProperty(properties, "sentiment", 0),
+		},
+	}),
+	RELATES_TO_MACRO: (edge) => ({
+		queryName: "CreateRelatesToMacroEdge",
+		params: {
+			event_id: edge.sourceId,
+			macro_entity_id: edge.targetId,
+		},
+	}),
+	RELATED_TO: (edge, properties) => ({
+		queryName: "CreateRelatedToEdge",
+		params: {
+			source_symbol: edge.sourceId,
+			target_symbol: edge.targetId,
+			relationship_type: toStringProperty(properties, "relationship_type", "SECTOR_PEER"),
+		},
+	}),
+	DEPENDS_ON: (edge, properties) => ({
+		queryName: "CreateDependsOnEdge",
+		params: {
+			source_symbol: edge.sourceId,
+			target_symbol: edge.targetId,
+			relationship_type: toStringProperty(properties, "relationship_type", "SUPPLIER"),
+			strength: clampUnitInterval(toNumericProperty(properties, "strength", 0.5)),
+		},
+	}),
+	HAS_EVENT: (edge) => ({
+		queryName: "CreateHasEventEdge",
+		params: {
+			decision_id: edge.sourceId,
+			event_id: edge.targetId,
+		},
+	}),
+	AFFECTED_BY: (edge, properties) => ({
+		queryName: "CreateAffectedByEdge",
+		params: {
+			company_symbol: edge.sourceId,
+			macro_entity_id: edge.targetId,
+			sensitivity: clampUnitInterval(toNumericProperty(properties, "sensitivity", 0.5)),
+		},
+	}),
+	THESIS_INCLUDES: (edge) => ({
+		queryName: "CreateThesisIncludesEdge",
+		params: {
+			thesis_id: edge.sourceId,
+			decision_id: edge.targetId,
+		},
+	}),
+};
+
+function normalizeEdgeType(edgeType: string): string {
+	return edgeType === "RELATES_TO" ? "RELATED_TO" : edgeType;
+}
+
+function resolveEdgeMutation(edge: EdgeInput): EdgeMutation {
+	const normalizedEdgeType = normalizeEdgeType(edge.edgeType);
+	const builder = EDGE_MUTATION_BUILDERS[normalizedEdgeType];
+	if (!builder) {
+		throw new Error(`Unsupported edge type: ${edge.edgeType}`);
+	}
+
+	return builder(edge, edge.properties ?? {});
 }
 
 /**

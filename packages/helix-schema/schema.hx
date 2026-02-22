@@ -206,6 +206,18 @@ E::MENTIONS_COMPANY {
     From: NewsItem,
     To: Company,
     Properties: {
+        sentiment: F64,
+        item_id: String,
+        headline: String,
+        source: String,
+        published_at: String
+    }
+}
+
+E::EVENT_MENTIONS {
+    From: ExternalEvent,
+    To: Company,
+    Properties: {
         sentiment: F64
     }
 }

@@ -142,7 +142,7 @@ async function upsertMacroEntity(
 	entity: MacroEntity,
 ): Promise<{ success: boolean; error?: string }> {
 	try {
-		await client.query("upsertMacroEntity", {
+		await client.query("InsertMacroEntity", {
 			entity_id: entity.entity_id,
 			name: entity.name,
 			description: entity.description,
@@ -378,14 +378,13 @@ export class MacroGraphBuilder {
 		macroEntityId: string,
 	): Promise<{ symbol: string; sensitivity: number }[]> {
 		try {
-			const result = await this.client.query<Array<{ source_symbol: string; sensitivity: number }>>(
-				"getCompaniesAffectedByMacro",
-				{ macro_entity_id: macroEntityId },
-			);
+			const result = await this.client.query<
+				Array<{ source_symbol?: string; symbol?: string; sensitivity?: number }>
+			>("GetCompaniesAffectedByMacro", { entity_id: macroEntityId });
 
 			return result.data.map((r) => ({
-				symbol: r.source_symbol,
-				sensitivity: r.sensitivity,
+				symbol: r.source_symbol ?? r.symbol ?? "",
+				sensitivity: r.sensitivity ?? 0,
 			}));
 		} catch {
 			return [];
@@ -400,13 +399,13 @@ export class MacroGraphBuilder {
 	): Promise<{ entityId: string; name: string; sensitivity: number }[]> {
 		try {
 			const result = await this.client.query<
-				Array<{ entity_id: string; name: string; sensitivity: number }>
-			>("getMacroFactorsForCompany", { symbol: companySymbol });
+				Array<{ entity_id: string; name: string; sensitivity?: number }>
+			>("GetMacroFactorsForCompany", { company_symbol: companySymbol });
 
 			return result.data.map((r) => ({
 				entityId: r.entity_id,
 				name: r.name,
-				sensitivity: r.sensitivity,
+				sensitivity: r.sensitivity ?? 0,
 			}));
 		} catch {
 			return [];
@@ -418,7 +417,7 @@ export class MacroGraphBuilder {
 	 */
 	async getAllMacroEntities(): Promise<MacroEntity[]> {
 		try {
-			const result = await this.client.query<MacroEntity[]>("getAllMacroEntities", {});
+			const result = await this.client.query<MacroEntity[]>("GetAllMacroEntities", {});
 			return result.data;
 		} catch {
 			return [];

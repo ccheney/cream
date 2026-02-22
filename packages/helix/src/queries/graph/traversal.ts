@@ -1,7 +1,7 @@
 /**
  * Graph Traversal Functions
  *
- * Core traversal operations including basic traverse and weighted traverse.
+ * Traversal helpers backed by compiled Helix queries.
  *
  * @see docs/plans/04-memory-helixdb.md
  */
@@ -14,12 +14,138 @@ import {
 	shouldFollowEdge,
 } from "./scoring.js";
 import type {
+	GraphEdge,
 	GraphNode,
 	TraversalOptions,
 	TraversalResponse,
 	WeightedTraversalResponse,
 } from "./types.js";
 import { DEFAULT_TRAVERSAL_OPTIONS } from "./types.js";
+
+type SupportedTraversal =
+	| {
+			queryName: "GetInfluencingEvents";
+			params: { decision_id: string };
+			edgeType: "INFLUENCED_DECISION";
+			direction: "incoming";
+			resultNodeType: "ExternalEvent";
+	  }
+	| {
+			queryName: "GetInfluencedDecisions";
+			params: { event_id: string };
+			edgeType: "INFLUENCED_DECISION";
+			direction: "outgoing";
+			resultNodeType: "TradeDecision";
+	  }
+	| {
+			queryName: "GetTradeWithEvents";
+			params: { decision_id: string };
+			edgeType: "HAS_EVENT";
+			direction: "outgoing";
+			resultNodeType: "TradeLifecycleEvent";
+	  };
+
+function toRowArray<T>(value: unknown): T[] {
+	if (Array.isArray(value)) {
+		return value as T[];
+	}
+	if (value && typeof value === "object") {
+		return [value as T];
+	}
+	return [];
+}
+
+function toGraphNode<T>(
+	row: Record<string, unknown>,
+	fallbackType: string,
+	fallbackId: string,
+): GraphNode<T> {
+	const id =
+		(typeof row.id === "string" && row.id) ||
+		(typeof row._id === "string" && row._id) ||
+		(typeof row.decision_id === "string" && row.decision_id) ||
+		(typeof row.event_id === "string" && row.event_id) ||
+		(typeof row.item_id === "string" && row.item_id) ||
+		(typeof row.chunk_id === "string" && row.chunk_id) ||
+		(typeof row.thesis_id === "string" && row.thesis_id) ||
+		(typeof row.hypothesis_id === "string" && row.hypothesis_id) ||
+		(typeof row.paper_id === "string" && row.paper_id) ||
+		(typeof row.symbol === "string" && row.symbol) ||
+		(typeof row.entity_id === "string" && row.entity_id) ||
+		fallbackId;
+
+	const type = typeof row.type === "string" && row.type.length > 0 ? row.type : fallbackType;
+	return {
+		id,
+		type,
+		properties: row as T,
+	};
+}
+
+function resolveTraversal(startNodeId: string, options: TraversalOptions): SupportedTraversal {
+	const edgeType = options.edgeTypes?.at(0);
+	const direction = options.direction;
+
+	if (edgeType === "INFLUENCED_DECISION" && direction === "incoming") {
+		return {
+			queryName: "GetInfluencingEvents",
+			params: { decision_id: startNodeId },
+			edgeType: "INFLUENCED_DECISION",
+			direction: "incoming",
+			resultNodeType: "ExternalEvent",
+		};
+	}
+
+	if (edgeType === "INFLUENCED_DECISION" && direction === "outgoing") {
+		return {
+			queryName: "GetInfluencedDecisions",
+			params: { event_id: startNodeId },
+			edgeType: "INFLUENCED_DECISION",
+			direction: "outgoing",
+			resultNodeType: "TradeDecision",
+		};
+	}
+
+	if (edgeType === "HAS_EVENT" && direction === "outgoing") {
+		return {
+			queryName: "GetTradeWithEvents",
+			params: { decision_id: startNodeId },
+			edgeType: "HAS_EVENT",
+			direction: "outgoing",
+			resultNodeType: "TradeLifecycleEvent",
+		};
+	}
+
+	throw new Error(
+		`Unsupported traversal: edgeTypes=${JSON.stringify(options.edgeTypes)} direction=${options.direction}`,
+	);
+}
+
+function buildPathEdge(
+	index: number,
+	edgeType: string,
+	startNodeId: string,
+	targetNodeId: string,
+	direction: "incoming" | "outgoing",
+): GraphEdge {
+	if (direction === "incoming") {
+		return {
+			id: `${edgeType}:${targetNodeId}->${startNodeId}:${index}`,
+			type: edgeType,
+			sourceId: targetNodeId,
+			targetId: startNodeId,
+			properties: {},
+		};
+	}
+
+	return {
+		id: `${edgeType}:${startNodeId}->${targetNodeId}:${index}`,
+		type: edgeType,
+		sourceId: startNodeId,
+		targetId: targetNodeId,
+		properties: {},
+	};
+}
 
 /**
  * Traverse the graph from a starting node.
@@ -44,25 +170,35 @@ export async function traverse<T = Record<string, unknown>>(
 	options: TraversalOptions = {},
 ): Promise<TraversalResponse<T>> {
 	const opts = { ...DEFAULT_TRAVERSAL_OPTIONS, ...options };
+	const startTime = performance.now();
 
-	const params: Record<string, unknown> = {
-		start_id: startNodeId,
-		max_depth: opts.maxDepth,
-		limit: opts.limit,
-		direction: opts.direction,
-		max_neighbors: opts.maxNeighborsPerNode,
+	let selection: SupportedTraversal;
+	try {
+		selection = resolveTraversal(startNodeId, opts);
+	} catch {
+		return {
+			paths: [],
+			nodes: [],
+			executionTimeMs: performance.now() - startTime,
+		};
+	}
+
+	const result = await client.query<unknown[]>(selection.queryName, selection.params);
+	const rows = toRowArray<Record<string, unknown>>(result.data).slice(0, opts.limit);
+	const neighborNodes = rows.map((row, index) =>
+		toGraphNode<T>(row, selection.resultNodeType, `${selection.resultNodeType}-${index}`),
+	);
+	const paths = neighborNodes.map((node, index) => ({
+		nodes: [node],
+		edges: [buildPathEdge(index, selection.edgeType, startNodeId, node.id, selection.direction)],
+		length: 1,
+	}));
+
+	return {
+		paths,
+		nodes: neighborNodes,
+		executionTimeMs: performance.now() - startTime,
 	};
-
-	if (opts.edgeTypes.length > 0) {
-		params.edge_types = opts.edgeTypes;
-	}
-
-	if (opts.edgeWeightThreshold > 0) {
-		params.min_edge_weight = opts.edgeWeightThreshold;
-	}
-
-	const result = await client.query<TraversalResponse<T>>("traverse", params);
-	return result.data;
 }
 
 /**
@@ -173,5 +309,5 @@ export async function getNeighbors<T = Record<string, unknown>>(
 		direction: options.direction ?? "both",
 	});
 
-	return result.nodes.filter((n) => n.id !== nodeId);
+	return result.nodes.filter((node) => node.id !== nodeId);
 }

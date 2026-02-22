@@ -45,7 +45,8 @@ QUERY InsertExternalEvent(
     event_type: String,
     payload: String,
     text_summary: String,
-    related_instrument_ids: String
+    related_instrument_ids: String,
+    event_time: Date
 ) =>
     event <- AddV<ExternalEvent>(
         Embed(text_summary),
@@ -54,7 +55,8 @@ QUERY InsertExternalEvent(
             event_type: event_type,
             payload: payload,
             text_summary: text_summary,
-            related_instrument_ids: related_instrument_ids
+            related_instrument_ids: related_instrument_ids,
+            event_time: event_time
         }
     )
     RETURN event
@@ -114,7 +116,8 @@ QUERY InsertNewsItem(
     body_text: String,
     source: String,
     related_symbols: String,
-    sentiment_score: F64
+    sentiment_score: F64,
+    published_at: Date
 ) =>
     item <- AddV<NewsItem>(
         Embed(headline),
@@ -124,7 +127,8 @@ QUERY InsertNewsItem(
             body_text: body_text,
             source: source,
             related_symbols: related_symbols,
-            sentiment_score: sentiment_score
+            sentiment_score: sentiment_score,
+            published_at: published_at
         }
     )
     RETURN item
@@ -301,6 +305,134 @@ QUERY InsertMacroEntity(
     RETURN entity
 
 // ============================================
+// Edge Creation Queries
+// ============================================
+
+QUERY CreateInfluencedDecisionEdge(
+    event_id: String,
+    decision_id: String,
+    influence_score: F64,
+    influence_type: String
+) =>
+    event <- V<ExternalEvent>::WHERE(_::{event_id}::EQ(event_id))
+    decision <- V<TradeDecision>::WHERE(_::{decision_id}::EQ(decision_id))
+    edge <- AddE<INFLUENCED_DECISION>({
+        influence_score: influence_score,
+        influence_type: influence_type
+    })::From(event)::To(decision)
+    RETURN edge
+
+QUERY CreateFiledByEdge(chunk_id: String, company_symbol: String) =>
+    chunk <- V<FilingChunk>::WHERE(_::{chunk_id}::EQ(chunk_id))
+    company <- N<Company>::WHERE(_::{symbol}::EQ(company_symbol))
+    edge <- AddE<FILED_BY>::From(chunk)::To(company)
+    RETURN edge
+
+QUERY CreateTranscriptForEdge(chunk_id: String, company_symbol: String) =>
+    chunk <- V<TranscriptChunk>::WHERE(_::{chunk_id}::EQ(chunk_id))
+    company <- N<Company>::WHERE(_::{symbol}::EQ(company_symbol))
+    edge <- AddE<TRANSCRIPT_FOR>::From(chunk)::To(company)
+    RETURN edge
+
+QUERY CreateMentionsCompanyEdge(
+    news_item_id: String,
+    company_symbol: String,
+    sentiment: F64,
+    headline: String,
+    source: String,
+    published_at: String
+) =>
+    item <- V<NewsItem>::WHERE(_::{item_id}::EQ(news_item_id))
+    company <- N<Company>::WHERE(_::{symbol}::EQ(company_symbol))
+    edge <- AddE<MENTIONS_COMPANY>({
+        sentiment: sentiment,
+        item_id: news_item_id,
+        headline: headline,
+        source: source,
+        published_at: published_at
+    })::From(item)::To(company)
+    RETURN edge
+
+QUERY CreateMentionsCompanyEdgeByNodeId(
+    news_node_id: ID,
+    company_symbol: String,
+    news_item_id: String,
+    sentiment: F64,
+    headline: String,
+    source: String,
+    published_at: String
+) =>
+    company <- N<Company>::WHERE(_::{symbol}::EQ(company_symbol))
+    edge <- AddE<MENTIONS_COMPANY>({
+        sentiment: sentiment,
+        item_id: news_item_id,
+        headline: headline,
+        source: source,
+        published_at: published_at
+    })::From(news_node_id)::To(company)
+    RETURN edge
+
+QUERY CreateRelatesToMacroEdge(event_id: String, macro_entity_id: String) =>
+    event <- V<ExternalEvent>::WHERE(_::{event_id}::EQ(event_id))
+    entity <- N<MacroEntity>::WHERE(_::{entity_id}::EQ(macro_entity_id))
+    edge <- AddE<RELATES_TO_MACRO>::From(event)::To(entity)
+    RETURN edge
+
+QUERY CreateRelatedToEdge(
+    source_symbol: String,
+    target_symbol: String,
+    relationship_type: String
+) =>
+    source <- N<Company>::WHERE(_::{symbol}::EQ(source_symbol))
+    target <- N<Company>::WHERE(_::{symbol}::EQ(target_symbol))
+    edge <- AddE<RELATED_TO>({
+        relationship_type: relationship_type
+    })::From(source)::To(target)
+    RETURN edge
+
+QUERY CreateDependsOnEdge(
+    source_symbol: String,
+    target_symbol: String,
+    relationship_type: String,
+    strength: F64
+) =>
+    source <- N<Company>::WHERE(_::{symbol}::EQ(source_symbol))
+    target <- N<Company>::WHERE(_::{symbol}::EQ(target_symbol))
+    edge <- AddE<DEPENDS_ON>({
+        relationship_type: relationship_type,
+        strength: strength
+    })::From(source)::To(target)
+    RETURN edge
+
+QUERY CreateHasEventEdge(decision_id: String, event_id: String) =>
+    decision <- V<TradeDecision>::WHERE(_::{decision_id}::EQ(decision_id))
+    event <- N<TradeLifecycleEvent>::WHERE(_::{event_id}::EQ(event_id))
+    edge <- AddE<HAS_EVENT>::From(decision)::To(event)
+    RETURN edge
+
+QUERY CreateAffectedByEdge(company_symbol: String, macro_entity_id: String, sensitivity: F64) =>
+    company <- N<Company>::WHERE(_::{symbol}::EQ(company_symbol))
+    entity <- N<MacroEntity>::WHERE(_::{entity_id}::EQ(macro_entity_id))
+    edge <- AddE<AFFECTED_BY>({
+        sensitivity: sensitivity
+    })::From(company)::To(entity)
+    RETURN edge
+
+QUERY CreateThesisIncludesEdge(thesis_id: String, decision_id: String) =>
+    thesis <- V<ThesisMemory>::WHERE(_::{thesis_id}::EQ(thesis_id))
+    decision <- V<TradeDecision>::WHERE(_::{decision_id}::EQ(decision_id))
+    edge <- AddE<THESIS_INCLUDES>::From(thesis)::To(decision)
+    RETURN edge
+
+QUERY CreateEventMentionsEdge(event_id: String, company_symbol: String, sentiment: F64) =>
+    event <- V<ExternalEvent>::WHERE(_::{event_id}::EQ(event_id))
+    company <- N<Company>::WHERE(_::{symbol}::EQ(company_symbol))
+    edge <- AddE<EVENT_MENTIONS>({
+        sentiment: sentiment
+    })::From(event)::To(company)
+    RETURN edge
+
+// ============================================
 // Vector Search Queries
 // ============================================
 
@@ -378,6 +510,11 @@ QUERY GetInfluencedDecisions(event_id: String) =>
     decisions <- event::Out<INFLUENCED_DECISION>
     RETURN decisions
 
+QUERY GetInfluencingEvents(decision_id: String) =>
+    decision <- V<TradeDecision>::WHERE(_::{decision_id}::EQ(decision_id))
+    events <- decision::In<INFLUENCED_DECISION>
+    RETURN events
+
 QUERY GetCompanyFilings(symbol: String) =>
     company <- N<Company>::WHERE(_::{symbol}::EQ(symbol))
     filings <- company::In<FILED_BY>
@@ -393,18 +530,23 @@ QUERY GetCompanyNews(symbol: String) =>
     news <- company::In<MENTIONS_COMPANY>
     RETURN news
 
-QUERY GetRelatedCompanies(symbol: String) =>
+QUERY GetCompanyNewsMentions(symbol: String) =>
     company <- N<Company>::WHERE(_::{symbol}::EQ(symbol))
+    mentions <- company::InE<MENTIONS_COMPANY>
+    RETURN mentions
+
+QUERY GetRelatedCompanies(company_symbol: String) =>
+    company <- N<Company>::WHERE(_::{symbol}::EQ(company_symbol))
     related <- company::Out<RELATED_TO>
     RETURN related
 
-QUERY GetCompanyDependencies(symbol: String) =>
-    company <- N<Company>::WHERE(_::{symbol}::EQ(symbol))
+QUERY GetCompanyDependencies(company_symbol: String) =>
+    company <- N<Company>::WHERE(_::{symbol}::EQ(company_symbol))
     deps <- company::Out<DEPENDS_ON>
     RETURN deps
 
-QUERY GetDependentCompanies(symbol: String) =>
-    company <- N<Company>::WHERE(_::{symbol}::EQ(symbol))
+QUERY GetDependentCompanies(company_symbol: String) =>
+    company <- N<Company>::WHERE(_::{symbol}::EQ(company_symbol))
     dependents <- company::In<DEPENDS_ON>
     RETURN dependents
 
@@ -412,6 +554,15 @@ QUERY GetCompaniesAffectedByMacro(entity_id: String) =>
     entity <- N<MacroEntity>::WHERE(_::{entity_id}::EQ(entity_id))
     companies <- entity::In<AFFECTED_BY>
     RETURN companies
+
+QUERY GetMacroFactorsForCompany(company_symbol: String) =>
+    company <- N<Company>::WHERE(_::{symbol}::EQ(company_symbol))
+    factors <- company::Out<AFFECTED_BY>
+    RETURN factors
+
+QUERY GetAllMacroEntities() =>
+    entities <- N<MacroEntity>
+    RETURN entities
 
 QUERY GetMacroEvents(entity_id: String) =>
     entity <- N<MacroEntity>::WHERE(_::{entity_id}::EQ(entity_id))
@@ -442,6 +593,26 @@ QUERY GetCompaniesBySector(sector: String) =>
 QUERY GetThesisById(thesis_id: String) =>
     thesis <- V<ThesisMemory>::WHERE(_::{thesis_id}::EQ(thesis_id))
     RETURN thesis
+
+QUERY GetExternalEventById(event_id: String) =>
+    event <- V<ExternalEvent>::WHERE(_::{event_id}::EQ(event_id))
+    RETURN event
+
+QUERY GetFilingChunkById(chunk_id: String) =>
+    chunk <- V<FilingChunk>::WHERE(_::{chunk_id}::EQ(chunk_id))
+    RETURN chunk
+
+QUERY GetTranscriptChunkById(chunk_id: String) =>
+    chunk <- V<TranscriptChunk>::WHERE(_::{chunk_id}::EQ(chunk_id))
+    RETURN chunk
+
+QUERY GetNewsItemById(news_item_id: String) =>
+    item <- V<NewsItem>::WHERE(_::{item_id}::EQ(news_item_id))
+    RETURN item
+
+QUERY GetMacroEntityById(entity_id: String) =>
+    entity <- N<MacroEntity>::WHERE(_::{entity_id}::EQ(entity_id))
+    RETURN entity
 
 // ============================================
 // Research Hypothesis Search Queries

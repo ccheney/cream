@@ -165,6 +165,11 @@ interface ClientRuntime {
 	circuit: CircuitBreakerRuntime;
 }
 
+interface HelixServerErrorPayload {
+	error: string;
+	code?: string;
+}
+
 /**
  * Create a HelixDB client.
  *
@@ -381,11 +386,79 @@ async function executeQuery<T>(
 ): Promise<QueryResult<T>> {
 	const startTime = performance.now();
 	const client = await getClient();
-	const data = (await Promise.race([
+	const rawData = (await Promise.race([
 		client.query(queryName, params),
 		createTimeoutPromise(timeoutMs),
-	])) as T;
+	])) as unknown;
+
+	if (isHelixServerErrorPayload(rawData)) {
+		throw new HelixError(
+			`Query "${queryName}" failed: ${rawData.error}`,
+			mapServerErrorCode(rawData),
+		);
+	}
+
+	const data = unwrapHelixResponse<T>(rawData);
 	return { data, executionTimeMs: performance.now() - startTime };
+}
+
+function isObjectRecord(value: unknown): value is Record<string, unknown> {
+	return typeof value === "object" && value !== null;
+}
+
+function isHelixServerErrorPayload(value: unknown): value is HelixServerErrorPayload {
+	return (
+		isObjectRecord(value) &&
+		typeof value.error === "string" &&
+		(value.code === undefined || typeof value.code === "string")
+	);
+}
+
+function mapServerErrorCode(payload: HelixServerErrorPayload): HelixErrorCode {
+	const code = payload.code?.toUpperCase();
+	if (code === "NOT_FOUND") {
+		return "NOT_FOUND";
+	}
+	if (code === "SCHEMA_ERROR") {
+		return "SCHEMA_ERROR";
+	}
+	if (code === "INVALID_QUERY" || code === "GRAPH_ERROR" || code === "DECODE_ERROR") {
+		return "INVALID_QUERY";
+	}
+	if (code === "TIMEOUT") {
+		return "TIMEOUT";
+	}
+
+	const lowerMessage = payload.error.toLowerCase();
+	if (lowerMessage.includes("not found") || lowerMessage.includes("notfound")) {
+		return "NOT_FOUND";
+	}
+	if (lowerMessage.includes("schema")) {
+		return "SCHEMA_ERROR";
+	}
+	if (lowerMessage.includes("invalid") || lowerMessage.includes("decode")) {
+		return "INVALID_QUERY";
+	}
+
+	return "QUERY_FAILED";
+}
+
+function unwrapHelixResponse<T>(value: unknown): T {
+	if (!isObjectRecord(value)) {
+		return value as T;
+	}
+
+	const keys = Object.keys(value);
+	if (keys.length !== 1) {
+		return value as T;
+	}
+
+	const singleKey = keys[0];
+	if (!singleKey) {
+		return value as T;
+	}
+
+	return value[singleKey] as T;
 }
 
 function createTimeoutPromise(timeoutMs: number): Promise<never> {

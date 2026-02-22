@@ -179,7 +179,7 @@ async function upsertCompanyNode(
 	company: Company,
 ): Promise<{ success: boolean; error?: string }> {
 	try {
-		await client.query("upsertCompany", {
+		await client.query("InsertCompany", {
 			symbol: company.symbol,
 			name: company.name,
 			sector: company.sector,

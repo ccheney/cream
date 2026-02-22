@@ -30,9 +30,7 @@ import type { HelixClient } from "../client";
 import { type GraphNode, getInfluencingEvents } from "./graph";
 import { type VectorSearchOptions, type VectorSearchResult, vectorSearch } from "./vector";
 
-// ============================================
 // Types
-// ============================================
 
 /**
  * Market snapshot context for retrieval
@@ -124,9 +122,7 @@ export interface TradeMemoryRetrievalResult {
 	};
 }
 
-// ============================================
 // Default Options
-// ============================================
 
 const DEFAULT_OPTIONS: Required<TradeMemoryRetrievalOptions> = {
 	topK: 10,
@@ -242,14 +238,14 @@ function toQualityResults(results: TradeFusedResult[]): TradeRetrievalResult[] {
 
 async function runPrimaryRetrieval(
 	client: HelixClient,
-	embedding: number[],
+	queryText: string,
 	snapshot: MarketSnapshot,
 	opts: Required<TradeMemoryRetrievalOptions>,
 ): Promise<RetrievalExecutionContext> {
 	const vectorSearchOpts = createVectorSearchOptions(opts, buildTradeFilters(snapshot));
 
 	const vectorStart = performance.now();
-	const vectorResults = await vectorSearch<TradeDecision>(client, embedding, vectorSearchOpts);
+	const vectorResults = await vectorSearch<TradeDecision>(client, queryText, vectorSearchOpts);
 	const vectorSearchMs = performance.now() - vectorStart;
 	const vectorRetrievalResults = toTradeRetrievalResults(vectorResults.results);
 
@@ -269,7 +265,7 @@ async function runPrimaryRetrieval(
 
 async function applyCorrectiveRetrieval(
 	client: HelixClient,
-	embedding: number[],
+	queryText: string,
 	context: RetrievalExecutionContext,
 	quality: QualityAssessment,
 	fusedResults: TradeFusedResult[],
@@ -278,7 +274,7 @@ async function applyCorrectiveRetrieval(
 		return { fusedResults, correctionApplied: false };
 	}
 
-	const broadenedResults = await vectorSearch<TradeDecision>(client, embedding, {
+	const broadenedResults = await vectorSearch<TradeDecision>(client, queryText, {
 		...context.vectorSearchOpts,
 		topK: context.opts.topK * 3,
 		minSimilarity: context.opts.minSimilarity * 0.7,
@@ -385,9 +381,7 @@ function calculateActionDistribution(decisions: TradeDecision[]): Record<string,
 	return distribution;
 }
 
-// ============================================
 // Situation Brief Generation
-// ============================================
 
 /**
  * Generate a situation brief from a market snapshot.
@@ -420,9 +414,18 @@ export function generateSituationBrief(snapshot: MarketSnapshot): string {
 	return parts.join(" ");
 }
 
-// ============================================
+function resolveRetrievalQueryText(
+	queryInput: string | number[],
+	snapshot: MarketSnapshot,
+): string {
+	if (typeof queryInput === "string" && queryInput.length > 0) {
+		return queryInput;
+	}
+
+	return generateSituationBrief(snapshot);
+}
+
 // Trade Memory Retrieval
-// ============================================
 
 /**
  * Retrieve similar trade memories using GraphRAG.
@@ -430,7 +433,7 @@ export function generateSituationBrief(snapshot: MarketSnapshot): string {
  * Combines vector search with graph filtering for optimal recall.
  *
  * @param client - HelixDB client
- * @param embedding - Query embedding (from situation brief)
+ * @param queryInput - Situation text or legacy embedding vector
  * @param snapshot - Market context for filtering
  * @param options - Retrieval options
  * @returns Retrieved trade memories with statistics
@@ -448,13 +451,14 @@ export function generateSituationBrief(snapshot: MarketSnapshot): string {
  */
 export async function retrieveTradeMemories(
 	client: HelixClient,
-	embedding: number[],
+	queryInput: string | number[],
 	snapshot: MarketSnapshot,
 	options: TradeMemoryRetrievalOptions = {},
 ): Promise<TradeMemoryRetrievalResult> {
 	const opts = { ...DEFAULT_OPTIONS, ...options };
 	const startTime = performance.now();
-	const retrievalContext = await runPrimaryRetrieval(client, embedding, snapshot, opts);
+	const queryText = resolveRetrievalQueryText(queryInput, snapshot);
+	const retrievalContext = await runPrimaryRetrieval(client, queryText, snapshot, opts);
 	const fusionStart = performance.now();
 	let fusedResults = fuseTradeResults(retrievalContext);
 	const fusionMs = performance.now() - fusionStart;
@@ -462,7 +466,7 @@ export async function retrieveTradeMemories(
 	const quality = assessRetrievalQuality(toQualityResults(fusedResults));
 	const correction = await applyCorrectiveRetrieval(
 		client,
-		embedding,
+		queryText,
 		retrievalContext,
 		quality,
 		fusedResults,
@@ -487,9 +491,7 @@ export async function retrieveTradeMemories(
 	};
 }
 
-// ============================================
 // Statistics Calculation
-// ============================================
 
 /**
  * Calculate aggregate statistics from retrieved trades.

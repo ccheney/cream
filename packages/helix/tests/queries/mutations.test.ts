@@ -246,8 +246,8 @@ describe("createEdge", () => {
 		const result = await createEdge(client, {
 			sourceId: "node-003",
 			targetId: "node-004",
-			edgeType: "FOLLOWS",
-			properties: { weight: 0.8 },
+			edgeType: "DEPENDS_ON",
+			properties: { relationship_type: "SUPPLIER", strength: 0.8 },
 		});
 
 		expect(result.success).toBe(true);
@@ -259,7 +259,7 @@ describe("createEdge", () => {
 		const result = await createEdge(failingClient, {
 			sourceId: "node-005",
 			targetId: "node-006",
-			edgeType: "TEST",
+			edgeType: "RELATED_TO",
 		});
 
 		expect(result.success).toBe(false);
@@ -358,7 +358,7 @@ describe("batchUpsertTradeDecisions: success case", () => {
 
 describe("batchUpsertTradeDecisions: partial failures", () => {
 	it("should handle partial failures", async () => {
-		const failingClient = createMockClient({ failOnQuery: "upsertTradeDecision" });
+		const failingClient = createMockClient({ failOnQuery: "InsertTradeDecision" });
 		const decisions: NodeWithEmbedding<TradeDecision>[] = [
 			{
 				node: {
@@ -468,7 +468,12 @@ describe("batchCreateEdges", () => {
 	it("should batch create edges", async () => {
 		const edges = [
 			{ sourceId: "a", targetId: "b", edgeType: "RELATES_TO" },
-			{ sourceId: "b", targetId: "c", edgeType: "FOLLOWS", properties: { weight: 0.5 } },
+			{
+				sourceId: "b",
+				targetId: "c",
+				edgeType: "DEPENDS_ON",
+				properties: { relationship_type: "SUPPLIER", strength: 0.5 },
+			},
 		];
 
 		const result = await batchCreateEdges(client, edges);
@@ -480,7 +485,7 @@ describe("batchCreateEdges", () => {
 
 	it("should handle all failures", async () => {
 		const failingClient = createMockClient({ shouldFail: true });
-		const edges = [{ sourceId: "x", targetId: "y", edgeType: "TEST" }];
+		const edges = [{ sourceId: "x", targetId: "y", edgeType: "RELATES_TO" }];
 
 		const result = await batchCreateEdges(failingClient, edges);
 

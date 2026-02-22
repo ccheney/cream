@@ -216,6 +216,7 @@ export class PaperIngestionService {
 		embedding?: number[],
 	): Promise<{ success: boolean; error?: string }> {
 		try {
+			void embedding;
 			await this.client.query("InsertAcademicPaper", {
 				paper_id: paper.paper_id,
 				title: paper.title,
@@ -224,8 +225,6 @@ export class PaperIngestionService {
 				url: paper.url ?? "",
 				publication_year: paper.publication_year ?? 0,
 				citation_count: paper.citation_count ?? 0,
-				embedding,
-				embedding_model_version: DEFAULT_EMBEDDING_CONFIG.model,
 			});
 			return { success: true };
 		} catch (error) {
@@ -394,8 +393,8 @@ export class PaperIngestionService {
 		}>
 	> {
 		try {
-			const result = await this.client.query<{
-				results: Array<{
+			const result = await this.client.query<
+				Array<{
 					paper_id: string;
 					title: string;
 					authors: string;
@@ -403,11 +402,12 @@ export class PaperIngestionService {
 					url?: string;
 					publication_year?: number;
 					citation_count: number;
+					similarity?: number;
 					score?: number;
-				}>;
-			}>("SearchAcademicPapers", { query_text: queryText, limit });
+				}>
+			>("SearchAcademicPapers", { query_text: queryText, limit });
 
-			return result.data.results.map((row) => ({
+			return result.data.map((row) => ({
 				paperId: row.paper_id,
 				title: row.title,
 				authors: row.authors,
@@ -415,7 +415,7 @@ export class PaperIngestionService {
 				url: row.url || undefined,
 				publicationYear: row.publication_year || undefined,
 				citationCount: row.citation_count,
-				similarity: row.score ?? 0,
+				similarity: row.similarity ?? row.score ?? 0,
 			}));
 		} catch {
 			return [];

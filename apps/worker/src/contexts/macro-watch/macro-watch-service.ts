@@ -34,7 +34,7 @@ function toNewsItemInput(entry: MacroWatchEntry): NewsItemInput {
 	} | null;
 
 	return {
-		itemId: metadata?.articleId ?? entry.id ?? crypto.randomUUID(),
+		itemId: String(metadata?.articleId ?? entry.id ?? crypto.randomUUID()),
 		headline: entry.headline,
 		bodyText: metadata?.summary ?? "",
 		publishedAt: new Date(entry.timestamp),

@@ -291,21 +291,23 @@ export class CompanyGraphBuilder {
 	): Promise<{ symbol: string; relationshipType: RelationshipType }[]> {
 		try {
 			const result = await this.client.query<
-				Array<{ target_symbol: string; relationship_type: RelationshipType }>
-			>("getRelatedCompanies", {
-				symbol,
-				relationship_types: relationshipTypes ?? [
-					"SECTOR_PEER",
-					"COMPETITOR",
-					"CUSTOMER",
-					"SUPPLY_CHAIN",
-				],
-			});
+				Array<{
+					target_symbol?: string;
+					symbol?: string;
+					relationship_type?: RelationshipType;
+				}>
+			>("GetRelatedCompanies", { company_symbol: symbol });
 
-			return result.data.map((row) => ({
-				symbol: row.target_symbol,
-				relationshipType: row.relationship_type,
-			}));
+			return result.data
+				.map((row) => ({
+					symbol: row.target_symbol ?? row.symbol ?? "",
+					relationshipType: row.relationship_type ?? "SECTOR_PEER",
+				}))
+				.filter(
+					(row) =>
+						row.symbol.length > 0 &&
+						(relationshipTypes === undefined || relationshipTypes.includes(row.relationshipType)),
+				);
 		} catch {
 			return [];
 		}
@@ -319,13 +321,18 @@ export class CompanyGraphBuilder {
 	): Promise<{ symbol: string; dependencyType: DependencyType; strength: number }[]> {
 		try {
 			const result = await this.client.query<
-				Array<{ target_symbol: string; relationship_type: DependencyType; strength: number }>
-			>("getCompanyDependencies", { symbol });
+				Array<{
+					target_symbol?: string;
+					symbol?: string;
+					relationship_type?: DependencyType;
+					strength?: number;
+				}>
+			>("GetCompanyDependencies", { company_symbol: symbol });
 
 			return result.data.map((row) => ({
-				symbol: row.target_symbol,
-				dependencyType: row.relationship_type,
-				strength: row.strength,
+				symbol: row.target_symbol ?? row.symbol ?? "",
+				dependencyType: row.relationship_type ?? "SUPPLIER",
+				strength: row.strength ?? 0,
 			}));
 		} catch {
 			return [];
@@ -340,13 +347,18 @@ export class CompanyGraphBuilder {
 	): Promise<{ symbol: string; dependencyType: DependencyType; strength: number }[]> {
 		try {
 			const result = await this.client.query<
-				Array<{ source_symbol: string; relationship_type: DependencyType; strength: number }>
-			>("getDependentCompanies", { symbol });
+				Array<{
+					source_symbol?: string;
+					symbol?: string;
+					relationship_type?: DependencyType;
+					strength?: number;
+				}>
+			>("GetDependentCompanies", { company_symbol: symbol });
 
 			return result.data.map((row) => ({
-				symbol: row.source_symbol,
-				dependencyType: row.relationship_type,
-				strength: row.strength,
+				symbol: row.source_symbol ?? row.symbol ?? "",
+				dependencyType: row.relationship_type ?? "SUPPLIER",
+				strength: row.strength ?? 0,
 			}));
 		} catch {
 			return [];
