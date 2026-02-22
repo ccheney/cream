@@ -74,7 +74,10 @@ const SCANNER_MUTABLE_FIELDS = [
 	"enabled",
 ] as const;
 
-const SCANNER_DEFAULT_VALUES: Pick<CreateScannerConfigInput, (typeof SCANNER_MUTABLE_FIELDS)[number]> = {
+const SCANNER_DEFAULT_VALUES: Pick<
+	CreateScannerConfigInput,
+	(typeof SCANNER_MUTABLE_FIELDS)[number]
+> = {
 	minPrice: 5,
 	minAvgVolume: 100_000,
 	volumeSpikeThreshold: 3,

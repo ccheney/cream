@@ -51,6 +51,12 @@ export {
 	streamTrades as proxyStreamTrades,
 	waitForProxy,
 } from "./proxy-client.js";
+// Scanner streaming (scanner gRPC bridge)
+export {
+	initScannerDataStreaming,
+	isScannerStreamingConnected,
+	shutdownScannerDataStreaming,
+} from "./scanner-data.js";
 // Shared Options WebSocket (single connection for Alpaca)
 export {
 	getSharedOptionsWebSocket,
@@ -66,9 +72,3 @@ export {
 	isTradingUpdatesConnected,
 	shutdownTradingUpdatesStreaming,
 } from "./trading-updates.js";
-// Scanner streaming (scanner gRPC bridge)
-export {
-	initScannerDataStreaming,
-	isScannerStreamingConnected,
-	shutdownScannerDataStreaming,
-} from "./scanner-data.js";

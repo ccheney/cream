@@ -23,10 +23,10 @@ fn make_bar(
 
 fn warm_state(state: &mut SymbolState, symbol: &str, base_close: f64, volume: i64) {
     for index in 0..20 {
-        let close = base_close + (index as f64 * 0.1);
+        let close = f64::from(index).mul_add(0.1, base_close);
         let bar = make_bar(
             symbol,
-            index as i64,
+            i64::from(index),
             close,
             volume,
             close + 0.5,

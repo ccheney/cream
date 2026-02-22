@@ -18,10 +18,13 @@ import {
 } from "./types.js";
 
 const app = new OpenAPIHono();
-const scannerGrpcClient = createScannerClient(Bun.env.STREAM_PROXY_URL ?? "http://localhost:50052", {
-	enableLogging: false,
-	maxRetries: 1,
-});
+const scannerGrpcClient = createScannerClient(
+	Bun.env.STREAM_PROXY_URL ?? "http://localhost:50052",
+	{
+		enableLogging: false,
+		maxRetries: 1,
+	},
+);
 
 // ============================================
 // GET /scanner - Get scanner configuration

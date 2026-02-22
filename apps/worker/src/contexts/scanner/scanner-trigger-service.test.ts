@@ -1,10 +1,7 @@
-import { afterEach, describe, expect, mock, test } from "bun:test";
+import { afterEach, expect, mock, test } from "bun:test";
 import type { ScannerAlert } from "@cream/domain/grpc";
 import type { CycleTriggerResult } from "../trading-cycle/cycle-trigger.js";
-import {
-	type ScannerAlertClientPort,
-	type ScannerAlertStreamOptions,
-} from "./scanner-alert-client.js";
+import type { ScannerAlertClientPort, ScannerAlertStreamOptions } from "./scanner-alert-client.js";
 import { createScannerTriggerService } from "./scanner-trigger-service.js";
 
 class PushScannerAlertClient implements ScannerAlertClientPort {
@@ -45,9 +42,7 @@ class PushScannerAlertClient implements ScannerAlertClientPort {
 		this.queue.push(item);
 	}
 
-	private async nextItem(
-		signal?: AbortSignal,
-	): Promise<ScannerAlert | Error | "close" | null> {
+	private async nextItem(signal?: AbortSignal): Promise<ScannerAlert | Error | "close" | null> {
 		if (this.queue.length > 0) {
 			return this.queue.shift() ?? null;
 		}
@@ -90,10 +85,7 @@ function createAlert(symbol: string, volumeRatio = 3): ScannerAlert {
 interface MockCycleTriggerHarness {
 	cycleTrigger: {
 		isRunning: () => boolean;
-		trigger: (
-			environment: string,
-			symbols: string[],
-		) => Promise<CycleTriggerResult | null>;
+		trigger: (environment: string, symbols: string[]) => Promise<CycleTriggerResult | null>;
 	};
 	triggerCalls: string[][];
 	releaseNextTrigger: () => void;
@@ -137,112 +129,113 @@ afterEach(async () => {
 	}
 });
 
-describe("ScannerTriggerService", () => {
-	test("guards against concurrent cycles and triggers queued batch after completion", async () => {
-		const scannerClient = new PushScannerAlertClient();
-		const harness = createMockCycleTriggerHarness();
-		const service = createScannerTriggerService(
-			{
-				environment: "PAPER",
-				batchQuietWindowMs: 15,
-				batchMaxWindowMs: 60,
-				reconnectDelayMs: 10,
-			},
-			{
-				scannerClient,
-				cycleTrigger: harness.cycleTrigger,
-			},
-		);
-		runningServices.push(service);
-		service.start();
+test("guards against concurrent cycles and triggers queued batch after completion", async () => {
+	const scannerClient = new PushScannerAlertClient();
+	const harness = createMockCycleTriggerHarness();
+	const service = createScannerTriggerService(
+		{
+			environment: "PAPER",
+			batchQuietWindowMs: 15,
+			batchMaxWindowMs: 60,
+			reconnectDelayMs: 10,
+		},
+		{
+			scannerClient,
+			cycleTrigger: harness.cycleTrigger,
+		},
+	);
+	runningServices.push(service);
+	service.start();
 
-		scannerClient.pushAlert(createAlert("AAPL", 6));
-		await Bun.sleep(25);
+	scannerClient.pushAlert(createAlert("AAPL", 6));
+	await Bun.sleep(25);
 
-		expect(harness.triggerCalls).toHaveLength(1);
-		expect(harness.triggerCalls[0]).toEqual(["AAPL"]);
+	expect(harness.triggerCalls).toHaveLength(1);
+	expect(harness.triggerCalls[0]).toEqual(["AAPL"]);
 
-		scannerClient.pushAlert(createAlert("MSFT", 5));
-		await Bun.sleep(25);
+	scannerClient.pushAlert(createAlert("MSFT", 5));
+	await Bun.sleep(25);
 
-		expect(harness.triggerCalls).toHaveLength(1);
+	expect(harness.triggerCalls).toHaveLength(1);
 
-		harness.releaseNextTrigger();
-		await Bun.sleep(35);
+	harness.releaseNextTrigger();
+	await Bun.sleep(35);
 
-		expect(harness.triggerCalls).toHaveLength(2);
-		expect(harness.triggerCalls[1]).toEqual(["MSFT"]);
-		harness.releaseNextTrigger();
-	});
+	expect(harness.triggerCalls).toHaveLength(2);
+	expect(harness.triggerCalls[1]).toEqual(["MSFT"]);
+	harness.releaseNextTrigger();
+});
 
-	test("drains pending symbols after a cycle completes", async () => {
-		const scannerClient = new PushScannerAlertClient();
-		const harness = createMockCycleTriggerHarness();
-		const service = createScannerTriggerService(
-			{
-				environment: "PAPER",
-				batchQuietWindowMs: 10,
-				batchMaxWindowMs: 50,
-				reconnectDelayMs: 10,
-			},
-			{
-				scannerClient,
-				cycleTrigger: harness.cycleTrigger,
-			},
-		);
-		runningServices.push(service);
-		service.start();
+test("drains pending symbols after a cycle completes", async () => {
+	const scannerClient = new PushScannerAlertClient();
+	const harness = createMockCycleTriggerHarness();
+	const service = createScannerTriggerService(
+		{
+			environment: "PAPER",
+			batchQuietWindowMs: 10,
+			batchMaxWindowMs: 50,
+			reconnectDelayMs: 10,
+		},
+		{
+			scannerClient,
+			cycleTrigger: harness.cycleTrigger,
+		},
+	);
+	runningServices.push(service);
+	service.start();
 
-		scannerClient.pushAlert(createAlert("AAPL", 8));
-		await Bun.sleep(20);
-		expect(harness.triggerCalls).toHaveLength(1);
+	scannerClient.pushAlert(createAlert("AAPL", 8));
+	await Bun.sleep(20);
+	expect(harness.triggerCalls).toHaveLength(1);
 
-		scannerClient.pushAlert(createAlert("NVDA", 7));
-		scannerClient.pushAlert(createAlert("TSLA", 6));
-		await Bun.sleep(20);
-		expect(harness.triggerCalls).toHaveLength(1);
+	scannerClient.pushAlert(createAlert("NVDA", 7));
+	scannerClient.pushAlert(createAlert("TSLA", 6));
+	await Bun.sleep(20);
+	expect(harness.triggerCalls).toHaveLength(1);
 
-		harness.releaseNextTrigger();
-		await Bun.sleep(35);
+	harness.releaseNextTrigger();
+	await Bun.sleep(35);
 
-		expect(harness.triggerCalls).toHaveLength(2);
-		expect(new Set(harness.triggerCalls[1])).toEqual(new Set(["NVDA", "TSLA"]));
-		harness.releaseNextTrigger();
-	});
+	expect(harness.triggerCalls).toHaveLength(2);
+	expect(new Set(harness.triggerCalls[1])).toEqual(new Set(["NVDA", "TSLA"]));
+	harness.releaseNextTrigger();
+});
 
-	test("reconnects after stream drop and continues triggering batches", async () => {
-		const scannerClient = new PushScannerAlertClient();
-		const triggerCalls: string[][] = [];
-		const cycleTrigger = {
-			isRunning: () => false,
-			trigger: mock(async (_environment: string, symbols: string[]) => {
-				triggerCalls.push(symbols);
-				return { cycleId: `cycle-${triggerCalls.length}`, status: "queued" } satisfies CycleTriggerResult;
-			}),
-		};
+test("reconnects after stream drop and continues triggering batches", async () => {
+	const scannerClient = new PushScannerAlertClient();
+	const triggerCalls: string[][] = [];
+	const cycleTrigger = {
+		isRunning: () => false,
+		trigger: mock(async (_environment: string, symbols: string[]) => {
+			triggerCalls.push(symbols);
+			return {
+				cycleId: `cycle-${triggerCalls.length}`,
+				status: "queued",
+			} satisfies CycleTriggerResult;
+		}),
+	};
 
-		const service = createScannerTriggerService(
-			{
-				environment: "PAPER",
-				batchQuietWindowMs: 10,
-				batchMaxWindowMs: 30,
-				reconnectDelayMs: 10,
-			},
-			{
-				scannerClient,
-				cycleTrigger,
-			},
-		);
-		runningServices.push(service);
-		service.start();
+	const service = createScannerTriggerService(
+		{
+			environment: "PAPER",
+			batchQuietWindowMs: 10,
+			batchMaxWindowMs: 30,
+			reconnectDelayMs: 10,
+		},
+		{
+			scannerClient,
+			cycleTrigger,
+		},
+	);
+	runningServices.push(service);
+	service.start();
 
-		scannerClient.pushError(new Error("stream dropped"));
-		await Bun.sleep(25);
+	scannerClient.pushError(new Error("stream dropped"));
+	await Bun.sleep(25);
 
-		scannerClient.pushAlert(createAlert("META", 9));
-		await Bun.sleep(25);
+	scannerClient.pushAlert(createAlert("META", 9));
+	await Bun.sleep(25);
 
-		expect(triggerCalls).toHaveLength(1);
-		expect(triggerCalls[0]).toEqual(["META"]);
-	});
+	expect(triggerCalls).toHaveLength(1);
+	expect(triggerCalls[0]).toEqual(["META"]);
 });

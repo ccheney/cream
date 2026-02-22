@@ -9,12 +9,12 @@
  * Impact of survivorship bias: 1-4% annual return inflation
  */
 
+import type { IndexId } from "../repositories/historical-universe.types.js";
 import type {
 	IndexConstituentsRepository,
 	TickerChangesRepository,
 	UniverseSnapshotsRepository,
 } from "../repositories/index.js";
-import type { IndexId } from "../repositories/historical-universe.types.js";
 
 export interface PointInTimeResult {
 	/** Symbols valid on the target date */

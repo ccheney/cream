@@ -143,7 +143,7 @@ impl SymbolState {
     }
 
     /// Update previous day close from a daily bar.
-    pub fn update_prev_close(&mut self, close: f64) {
+    pub const fn update_prev_close(&mut self, close: f64) {
         self.prev_day_close = Some(close);
     }
 
@@ -155,12 +155,11 @@ impl SymbolState {
         }
 
         self.last_alert_at
-            .map(|last| (now - last).num_seconds() < cooldown_seconds)
-            .unwrap_or(false)
+            .is_some_and(|last| (now - last).num_seconds() < cooldown_seconds)
     }
 
     /// Mark alert timestamp for cooldown tracking.
-    pub fn mark_alert(&mut self, now: DateTime<Utc>) {
+    pub const fn mark_alert(&mut self, now: DateTime<Utc>) {
         self.last_alert_at = Some(now);
     }
 

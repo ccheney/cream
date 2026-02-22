@@ -10,11 +10,11 @@ Bun.env.CREAM_ENV = "PAPER";
 import { afterEach, beforeEach, describe, expect, mock, test } from "bun:test";
 import type { ExecutionContext } from "@cream/domain";
 import {
+	FREDClient,
 	type FREDObservation,
 	type FREDObservationsResponse,
 	type FREDReleaseDate,
 	type FREDReleaseDatesResponse,
-	FREDClient,
 } from "@cream/external-context";
 import { requireValue } from "@cream/test-utils";
 import { resetFREDClient, setFREDClientForTesting } from "../clients.js";

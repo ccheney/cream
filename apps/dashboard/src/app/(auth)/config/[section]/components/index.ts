@@ -8,6 +8,7 @@ export { AgentsSection } from "./AgentsSection";
 export { ConstraintsSection } from "./ConstraintsSection";
 export { DisplaySection } from "./DisplaySection";
 export { NotificationsSection } from "./NotificationsSection";
+export { ScannerSection } from "./ScannerSection";
 export { SoundSection } from "./SoundSection";
 export {
 	ConstraintField,
@@ -17,4 +18,3 @@ export {
 	NotificationRow,
 	StatusBadge,
 } from "./shared";
-export { ScannerSection } from "./ScannerSection";

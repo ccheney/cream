@@ -274,6 +274,15 @@ export {
 	type RegimeType,
 	RegimeTypeSchema,
 } from "./regime-labels.js";
+// Scanner configs (migration 011+) - autonomous scanner configuration
+export {
+	type CreateScannerConfigInput,
+	type ScannerConfig,
+	type ScannerConfigStatus,
+	ScannerConfigsRepository,
+	type ScannerEnvironment,
+	type UpdateScannerConfigInput,
+} from "./scanner-configs.js";
 // Sentiment indicators (migration 008) - aggregated news/social/analyst sentiment
 export {
 	type CreateSentimentInput,
@@ -320,15 +329,6 @@ export {
 	type TradingEnvironment,
 	type UpdateTradingConfigInput,
 } from "./trading-config.js";
-// Scanner configs (migration 011+) - autonomous scanner configuration
-export {
-	type CreateScannerConfigInput,
-	type ScannerConfig,
-	type ScannerConfigStatus,
-	ScannerConfigsRepository,
-	type ScannerEnvironment,
-	type UpdateScannerConfigInput,
-} from "./scanner-configs.js";
 // User preferences (migration 014) - dashboard user preferences
 export {
 	type ChartTimeframe,

@@ -25,8 +25,8 @@ import {
 	type AgentType,
 } from "./repositories/agent-configs.js";
 import { ConstraintsConfigRepository } from "./repositories/constraints-config.js";
-import { TradingConfigRepository, type TradingEnvironment } from "./repositories/trading-config.js";
 import { ScannerConfigsRepository } from "./repositories/scanner-configs.js";
+import { TradingConfigRepository, type TradingEnvironment } from "./repositories/trading-config.js";
 
 /** Extracted from packages/config/configs/default.yaml and apps/worker/src/index.ts */
 function getDefaultTradingConfig() {

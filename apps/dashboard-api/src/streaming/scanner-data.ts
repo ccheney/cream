@@ -4,7 +4,7 @@
  * Bridges scanner gRPC stream from alpaca-stream-proxy to dashboard WebSocket clients.
  */
 
-import { createScannerClient, ScannerSignalType, type ScannerAlert } from "@cream/domain/grpc";
+import { createScannerClient, type ScannerAlert, ScannerSignalType } from "@cream/domain/grpc";
 import log from "../logger.js";
 import { broadcastScannerAlert, broadcastScannerStatus } from "../websocket/channels.js";
 
@@ -30,16 +30,13 @@ function toNumber(value: bigint | number | undefined): number {
 }
 
 function mapSignal(signal: ScannerSignalType): "volume_spike" | "price_move" | "gap" {
-	switch (signal) {
-		case ScannerSignalType.VOLUME_SPIKE:
-			return "volume_spike";
-		case ScannerSignalType.GAP:
-			return "gap";
-		case ScannerSignalType.PRICE_MOVE:
-		case ScannerSignalType.UNSPECIFIED:
-		default:
-			return "price_move";
+	if (signal === ScannerSignalType.VOLUME_SPIKE) {
+		return "volume_spike";
 	}
+	if (signal === ScannerSignalType.GAP) {
+		return "gap";
+	}
+	return "price_move";
 }
 
 function toIsoTimestamp(timestamp: ScannerAlert["timestamp"]): string {
@@ -82,73 +79,97 @@ async function broadcastScannerRuntimeStatus(): Promise<void> {
 	}
 }
 
+function toScannerAlertData(alert: ScannerAlert) {
+	return {
+		symbol: alert.symbol,
+		signals: alert.signals.map(mapSignal),
+		price: alert.price,
+		volume: toNumber(alert.volume),
+		avgVolume: toNumber(alert.avgVolume),
+		volumeRatio: alert.volumeRatio,
+		priceChangePct: alert.priceChangePct,
+		gapPct: alert.gapPct,
+		approxAtr: alert.approxAtr,
+		timestamp: toIsoTimestamp(alert.timestamp),
+	};
+}
+
+function broadcastLiveScannerAlert(alert: ScannerAlert): void {
+	broadcastScannerAlert({
+		type: "scanner_alert",
+		data: toScannerAlertData(alert),
+	});
+}
+
+async function streamScannerAlertsOnce(
+	signal: AbortSignal,
+	onAlertReceived: () => void,
+): Promise<void> {
+	for await (const streamResult of scannerClient.streamScannerAlerts()) {
+		if (signal.aborted) {
+			return;
+		}
+
+		const alert = streamResult.data.alert;
+		if (!alert) {
+			continue;
+		}
+
+		onAlertReceived();
+		broadcastLiveScannerAlert(alert);
+	}
+}
+
+type ReconnectReason = "stream-ended" | "stream-error";
+
+async function reconnectAfterDelay(
+	reason: ReconnectReason,
+	attempt: number,
+	error?: unknown,
+): Promise<number> {
+	const delayMs = calculateReconnectDelay(attempt);
+	const nextAttempt = attempt + 1;
+	streamingConnected = false;
+
+	if (reason === "stream-ended") {
+		log.warn(
+			{ attempt: nextAttempt, delayMs },
+			"Scanner alert stream ended unexpectedly, reconnecting",
+		);
+	} else {
+		log.warn(
+			{
+				attempt: nextAttempt,
+				delayMs,
+				error: error instanceof Error ? error.message : String(error),
+			},
+			"Scanner alert stream failed, reconnecting",
+		);
+	}
+
+	await Bun.sleep(delayMs);
+	return nextAttempt;
+}
+
 async function runScannerAlertStream(signal: AbortSignal): Promise<void> {
 	let reconnectAttempt = 0;
 
 	while (!signal.aborted) {
 		try {
 			streamingConnected = true;
-			for await (const streamResult of scannerClient.streamScannerAlerts()) {
-				if (signal.aborted) {
-					return;
-				}
-
-				const alert = streamResult.data.alert;
-				if (!alert) {
-					continue;
-				}
+			await streamScannerAlertsOnce(signal, () => {
 				reconnectAttempt = 0;
-
-				broadcastScannerAlert({
-					type: "scanner_alert",
-					data: {
-						symbol: alert.symbol,
-						signals: alert.signals.map(mapSignal),
-						price: alert.price,
-						volume: toNumber(alert.volume),
-						avgVolume: toNumber(alert.avgVolume),
-						volumeRatio: alert.volumeRatio,
-						priceChangePct: alert.priceChangePct,
-						gapPct: alert.gapPct,
-						approxAtr: alert.approxAtr,
-						timestamp: toIsoTimestamp(alert.timestamp),
-					},
-				});
-			}
+			});
 
 			if (signal.aborted) {
 				return;
 			}
-
-			const delayMs = calculateReconnectDelay(reconnectAttempt);
-			reconnectAttempt += 1;
-			streamingConnected = false;
-
-			log.warn(
-				{ attempt: reconnectAttempt, delayMs },
-				"Scanner alert stream ended unexpectedly, reconnecting",
-			);
-
-			await Bun.sleep(delayMs);
+			reconnectAttempt = await reconnectAfterDelay("stream-ended", reconnectAttempt);
 		} catch (error) {
 			if (signal.aborted) {
 				return;
 			}
-
-			const delayMs = calculateReconnectDelay(reconnectAttempt);
-			reconnectAttempt += 1;
-			streamingConnected = false;
-
-			log.warn(
-				{
-					attempt: reconnectAttempt,
-					delayMs,
-					error: error instanceof Error ? error.message : String(error),
-				},
-				"Scanner alert stream failed, reconnecting",
-			);
-
-			await Bun.sleep(delayMs);
+			reconnectAttempt = await reconnectAfterDelay("stream-error", reconnectAttempt, error);
 		}
 	}
 }

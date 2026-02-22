@@ -13,10 +13,10 @@ import {
 	type RuntimeAgentType,
 	RuntimeConfigError,
 	type RuntimeConfigService,
-	type RuntimeTradingConfig,
 	type RuntimeScannerConfig,
-	type TradingConfigRepository,
+	type RuntimeTradingConfig,
 	type ScannerConfigsRepository,
+	type TradingConfigRepository,
 } from "./runtime-config";
 
 function createMockTradingConfig(
@@ -306,9 +306,7 @@ describe("RuntimeConfigService validateForPromotion scanner rules", () => {
 		const result = await service.validateForPromotion(config);
 
 		expect(result.valid).toBe(false);
-		expect(result.errors.some((error) => error.field.includes("volumeSpikeThreshold"))).toBe(
-			true,
-		);
+		expect(result.errors.some((error) => error.field.includes("volumeSpikeThreshold"))).toBe(true);
 	});
 });
 

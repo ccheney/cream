@@ -88,6 +88,88 @@ function handlePing(ws: WebSocketWithMetadata, _message: PingMessage): void {
 	});
 }
 
+function sendSystemState(ws: WebSocketWithMetadata): void {
+	sendMessage(ws, {
+		type: "system_status",
+		data: {
+			health: "healthy",
+			uptimeSeconds: Math.floor(process.uptime()),
+			activeConnections: getConnectionCount(),
+			services: {},
+			environment: requireEnv(),
+			timestamp: new Date().toISOString(),
+		},
+	});
+}
+
+function sendCachedQuoteState(ws: WebSocketWithMetadata): void {
+	const metadata = ws.data;
+	for (const symbol of metadata.symbols) {
+		const cached = getCachedQuote(symbol);
+		if (!cached) {
+			continue;
+		}
+		sendMessage(ws, {
+			type: "quote",
+			data: {
+				symbol,
+				bid: cached.bid,
+				ask: cached.ask,
+				last: cached.last,
+				volume: cached.volume,
+				timestamp: cached.timestamp.toISOString(),
+			},
+		});
+	}
+}
+
+function sendDefaultRequestedChannelState(
+	ws: WebSocketWithMetadata,
+	message: RequestStateMessage,
+): void {
+	sendMessage(ws, {
+		type: "subscribed",
+		channels: [message.channel],
+	});
+}
+
+function toScannerStatusMessage(
+	status: Awaited<ReturnType<typeof scannerGrpcClient.getScannerStatus>>["data"],
+) {
+	return {
+		type: "scanner_status" as const,
+		data: {
+			active: status.active,
+			symbolsTracked: status.symbolsTracked,
+			totalAlerts: Number(status.totalAlerts),
+			alertsLastHour: Number(status.alertsLastHour),
+			timestamp: new Date().toISOString(),
+		},
+	};
+}
+
+function scannerStatusFallbackMessage() {
+	return {
+		type: "scanner_status" as const,
+		data: {
+			active: false,
+			symbolsTracked: 0,
+			totalAlerts: 0,
+			alertsLastHour: 0,
+			timestamp: new Date().toISOString(),
+		},
+	};
+}
+
+async function sendScannerState(ws: WebSocketWithMetadata): Promise<void> {
+	try {
+		const status = await scannerGrpcClient.getScannerStatus();
+		sendMessage(ws, toScannerStatusMessage(status.data));
+	} catch {
+		sendMessage(ws, scannerStatusFallbackMessage());
+	}
+}
+
 /**
  * Handle request state message.
  * Sends current state snapshot for the requested channel.
@@ -96,21 +178,9 @@ async function handleRequestState(
 	ws: WebSocketWithMetadata,
 	message: RequestStateMessage,
 ): Promise<void> {
-	const { channel } = message;
-
-	switch (channel) {
+	switch (message.channel) {
 		case "system": {
-			sendMessage(ws, {
-				type: "system_status",
-				data: {
-					health: "healthy",
-					uptimeSeconds: Math.floor(process.uptime()),
-					activeConnections: getConnectionCount(),
-					services: {},
-					environment: requireEnv(),
-					timestamp: new Date().toISOString(),
-				},
-			});
+			sendSystemState(ws);
 			break;
 		}
 		case "portfolio": {
@@ -126,23 +196,7 @@ async function handleRequestState(
 			break;
 		}
 		case "quotes": {
-			const metadata = ws.data;
-			for (const symbol of metadata.symbols) {
-				const cached = getCachedQuote(symbol);
-				if (cached) {
-					sendMessage(ws, {
-						type: "quote",
-						data: {
-							symbol,
-							bid: cached.bid,
-							ask: cached.ask,
-							last: cached.last,
-							volume: cached.volume,
-							timestamp: cached.timestamp.toISOString(),
-						},
-					});
-				}
-			}
+			sendCachedQuoteState(ws);
 			break;
 		}
 		case "agents": {
@@ -150,37 +204,12 @@ async function handleRequestState(
 			break;
 		}
 		case "scanner": {
-			try {
-				const status = await scannerGrpcClient.getScannerStatus();
-				sendMessage(ws, {
-					type: "scanner_status",
-					data: {
-						active: status.data.active,
-						symbolsTracked: status.data.symbolsTracked,
-						totalAlerts: Number(status.data.totalAlerts),
-						alertsLastHour: Number(status.data.alertsLastHour),
-						timestamp: new Date().toISOString(),
-					},
-				});
-			} catch {
-				sendMessage(ws, {
-					type: "scanner_status",
-					data: {
-						active: false,
-						symbolsTracked: 0,
-						totalAlerts: 0,
-						alertsLastHour: 0,
-						timestamp: new Date().toISOString(),
-					},
-				});
-			}
+			await sendScannerState(ws);
 			break;
 		}
-		default:
-			sendMessage(ws, {
-				type: "subscribed",
-				channels: [channel],
-			});
+		default: {
+			sendDefaultRequestedChannelState(ws, message);
+		}
 	}
 }
 

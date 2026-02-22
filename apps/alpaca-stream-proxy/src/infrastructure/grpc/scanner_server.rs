@@ -34,7 +34,10 @@ pub struct ScannerGrpcServer {
 impl ScannerGrpcServer {
     /// Create scanner gRPC server.
     #[must_use]
-    pub fn new(scanner_service: Arc<ScannerAppService>, broadcast_hub: SharedBroadcastHub) -> Self {
+    pub const fn new(
+        scanner_service: Arc<ScannerAppService>,
+        broadcast_hub: SharedBroadcastHub,
+    ) -> Self {
         Self {
             scanner_service,
             broadcast_hub,

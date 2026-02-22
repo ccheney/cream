@@ -6,14 +6,10 @@
 
 import type { RuntimeEnvironment } from "@cream/config";
 import type { ScannerAlert } from "@cream/domain/grpc";
-import type { CycleTriggerService } from "../trading-cycle/cycle-trigger.js";
-import { createAlertBatcher, type AlertBatcher } from "./alert-batcher.js";
-import type {
-	ScannerAlertClientPort,
-	ScannerAlertStreamOptions,
-} from "./scanner-alert-client.js";
-
 import { log } from "../../shared/logger.js";
+import type { CycleTriggerService } from "../trading-cycle/cycle-trigger.js";
+import { type AlertBatcher, createAlertBatcher } from "./alert-batcher.js";
+import type { ScannerAlertClientPort, ScannerAlertStreamOptions } from "./scanner-alert-client.js";
 import { createScannerAlertClient } from "./scanner-alert-client.js";
 
 const DEFAULT_RECONNECT_DELAY_MS = 1_000;
@@ -144,22 +140,37 @@ export class ScannerTriggerService {
 			.map(([symbol]) => symbol);
 	}
 
+	private shouldStopStream(options: ScannerAlertStreamOptions): boolean {
+		return !this.running || Boolean(options.signal?.aborted);
+	}
+
+	private consumeAlert(alert: ScannerAlert): void {
+		this.recordRecentSymbols([alert.symbol]);
+		this.batcher.addAlert(alert);
+	}
+
+	private async consumeStreamCycle(
+		options: ScannerAlertStreamOptions,
+	): Promise<"stopped" | "stream-ended"> {
+		for await (const alert of this.scannerClient.streamAlerts(options)) {
+			if (this.shouldStopStream(options)) {
+				return "stopped";
+			}
+			this.consumeAlert(alert);
+		}
+		return this.shouldStopStream(options) ? "stopped" : "stream-ended";
+	}
+
 	private async consumeScannerAlerts(options: ScannerAlertStreamOptions): Promise<void> {
-		while (this.running && !options.signal?.aborted) {
+		while (!this.shouldStopStream(options)) {
 			try {
-				for await (const alert of this.scannerClient.streamAlerts(options)) {
-					if (!this.running || options.signal?.aborted) {
-						return;
-					}
-					this.recordRecentSymbols([alert.symbol]);
-					this.batcher.addAlert(alert);
-				}
-				if (!this.running || options.signal?.aborted) {
+				const cycleResult = await this.consumeStreamCycle(options);
+				if (cycleResult === "stopped") {
 					return;
 				}
 				await this.sleepBeforeReconnect("stream-ended");
 			} catch (error) {
-				if (!this.running || options.signal?.aborted) {
+				if (this.shouldStopStream(options)) {
 					return;
 				}
 				log.warn(

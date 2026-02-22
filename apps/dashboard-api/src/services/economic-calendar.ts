@@ -9,12 +9,12 @@
 
 import { type EconomicEvent, getFredEconomicCalendar } from "@cream/agents";
 import { createContext, requireEnv } from "@cream/domain";
+import { createFREDClientFromEnv, getReleaseById } from "@cream/external-context";
 import {
 	type CreateEconomicCalendarEventInput,
 	type EconomicCalendarEvent,
 	EconomicCalendarRepository,
 } from "@cream/storage";
-import { createFREDClientFromEnv, getReleaseById } from "@cream/external-context";
 import log from "../logger.js";
 
 // ============================================

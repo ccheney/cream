@@ -7,6 +7,7 @@
  * @see docs/plans/02-data-layer.md - Feature Computation
  */
 
+import type { ResolvedInstrument } from "@cream/domain";
 import type { Candle as IndicatorCandle, IndicatorPipelineConfig } from "@cream/indicators";
 import {
 	applyTransforms,
@@ -15,7 +16,6 @@ import {
 	DEFAULT_TRANSFORM_CONFIG,
 } from "@cream/indicators";
 import { classifyRegime, DEFAULT_RULE_BASED_CONFIG } from "@cream/regime";
-import type { ResolvedInstrument } from "@cream/domain";
 
 import { getGlobalCache, type SnapshotCache } from "./cache";
 import {

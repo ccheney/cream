@@ -101,7 +101,9 @@ export class ScannerServiceClient {
 	/**
 	 * Reload scanner config from persistence.
 	 */
-	async reloadScannerConfig(cycleId?: string): Promise<GrpcCallResult<ReloadScannerConfigResponse>> {
+	async reloadScannerConfig(
+		cycleId?: string,
+	): Promise<GrpcCallResult<ReloadScannerConfigResponse>> {
 		const metadata = this.createMetadata(cycleId);
 		const request = create(ReloadScannerConfigRequestSchema, {});
 

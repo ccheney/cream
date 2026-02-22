@@ -17,7 +17,7 @@ export const VERSION = "0.0.1";
 export { sql } from "drizzle-orm";
 // Database client (Drizzle + PostgreSQL)
 export { closeDb, type Database, getDb } from "./db.js";
-
+export * from "./point-in-time/index.js";
 // Connection pooling (generic pool implementation)
 export {
 	type ConnectionPool,
@@ -47,4 +47,3 @@ export {
 } from "./repositories/base.js";
 // Repositories
 export * from "./repositories/index.js";
-export * from "./point-in-time/index.js";

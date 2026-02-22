@@ -22,6 +22,8 @@ export * from "./dashboard";
 export * from "./enums";
 // External Data
 export * from "./external";
+// Historical Universe Management
+export * from "./historical-universe";
 // Indicators
 export * from "./indicators";
 // Market Data
@@ -32,7 +34,5 @@ export * from "./relations";
 export * from "./scanner-config";
 // Thesis Management
 export * from "./thesis";
-// Historical Universe Management
-export * from "./historical-universe";
 // User Settings
 export * from "./user-settings";

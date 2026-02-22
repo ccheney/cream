@@ -30,13 +30,9 @@ export const scannerConfigs = pgTable(
 		priceMoveThreshold: numeric("price_move_threshold", { precision: 10, scale: 4 })
 			.notNull()
 			.default("2.0"),
-		gapThreshold: numeric("gap_threshold", { precision: 10, scale: 4 })
-			.notNull()
-			.default("2.0"),
+		gapThreshold: numeric("gap_threshold", { precision: 10, scale: 4 }).notNull().default("2.0"),
 		maxCandidates: integer("max_candidates").notNull().default(10),
-		cooldownSeconds: bigint("cooldown_seconds", { mode: "number" })
-			.notNull()
-			.default(300),
+		cooldownSeconds: bigint("cooldown_seconds", { mode: "number" }).notNull().default(300),
 		enabled: boolean("enabled").notNull().default(true),
 		status: configStatusEnum("status").notNull().default("draft"),
 		createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),

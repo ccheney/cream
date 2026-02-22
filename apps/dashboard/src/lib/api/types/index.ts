@@ -31,10 +31,10 @@ export type {
 	GlobalModel,
 	RuntimeAgentConfig,
 	RuntimeAgentType,
-	ScannerRuntimeStatus,
 	RuntimeScannerConfig,
 	RuntimeTradingConfig,
 	SaveDraftInput,
+	ScannerRuntimeStatus,
 	ValidationError,
 	ValidationResult,
 } from "./config";

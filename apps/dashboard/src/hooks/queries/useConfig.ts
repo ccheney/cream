@@ -6,9 +6,9 @@ import type {
 	ConstraintsConfig,
 	Environment,
 	FullRuntimeConfig,
-	ScannerRuntimeStatus,
 	RuntimeScannerConfig,
 	SaveDraftInput,
+	ScannerRuntimeStatus,
 	ValidationResult,
 } from "@/lib/api/types";
 

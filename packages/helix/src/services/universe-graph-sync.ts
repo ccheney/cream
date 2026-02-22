@@ -7,8 +7,8 @@
  * @see docs/plans/04-memory-helixdb.md
  */
 
-import type { HelixClient } from "../client.js";
 import type { ResolvedInstrument } from "@cream/domain";
+import type { HelixClient } from "../client.js";
 import {
 	type CompanyData,
 	type CompanyGraphBuildOptions,

@@ -12,15 +12,15 @@ export {
 } from "./alert-batcher.js";
 export {
 	createScannerAlertClient,
+	ScannerAlertClient,
 	type ScannerAlertClientConfig,
 	type ScannerAlertClientPort,
 	type ScannerAlertStreamOptions,
-	ScannerAlertClient,
 } from "./scanner-alert-client.js";
 export {
 	createScannerTriggerService,
 	type ScannerAlert,
+	ScannerTriggerService,
 	type ScannerTriggerServiceConfig,
 	type ScannerTriggerServiceDeps,
-	ScannerTriggerService,
 } from "./scanner-trigger-service.js";

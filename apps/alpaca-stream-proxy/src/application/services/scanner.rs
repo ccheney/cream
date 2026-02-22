@@ -52,8 +52,7 @@ impl ScannerRuntimeState {
 
         if self
             .current_bucket_minute
-            .map(|current| current != bucket)
-            .unwrap_or(false)
+            .is_some_and(|current| current != bucket)
         {
             self.flush_pending(params, broadcast_hub);
         }
@@ -73,8 +72,7 @@ impl ScannerRuntimeState {
 
         let avg_volume = state
             .average_volume()
-            .map(|value| value.round() as i64)
-            .unwrap_or(0);
+            .map_or(0, |value| value.round() as i64);
         let volume_ratio = state.volume_ratio(bar.volume).unwrap_or(0.0);
         let price_change_pct = state.price_change_pct(bar.close).unwrap_or(0.0);
         let gap_pct = state.gap_pct(bar.close).unwrap_or(0.0);
@@ -128,8 +126,7 @@ impl ScannerRuntimeState {
         while self
             .alert_timestamps
             .front()
-            .map(|timestamp| *timestamp < cutoff)
-            .unwrap_or(false)
+            .is_some_and(|timestamp| *timestamp < cutoff)
         {
             let _ = self.alert_timestamps.pop_front();
         }

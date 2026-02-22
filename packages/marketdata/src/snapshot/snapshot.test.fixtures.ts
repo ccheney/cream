@@ -1,5 +1,5 @@
-import type { Candle } from "@cream/indicators";
 import type { ResolvedInstrument } from "@cream/domain";
+import type { Candle } from "@cream/indicators";
 
 import { createMockCandleSource, createMockEventSource, createMockUniverseSource } from "./builder";
 import type { ExternalEventSummary, FeatureSnapshot, Timeframe } from "./schema";

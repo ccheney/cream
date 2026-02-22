@@ -12,13 +12,13 @@ import {
 	type ExecutionServiceClient,
 	type MarketDataServiceClient,
 } from "@cream/domain/grpc";
+import { createFREDClient, type FREDClient } from "@cream/external-context";
 import { createHelixClientFromEnv, type HelixClient } from "@cream/helix";
 import {
 	type AlpacaMarketDataClient,
 	createAlpacaClientFromEnv,
 	isAlpacaConfigured,
 } from "@cream/marketdata";
-import { createFREDClient, type FREDClient } from "@cream/external-context";
 
 // ============================================
 // gRPC Client Singletons

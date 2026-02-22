@@ -58,7 +58,7 @@ async function waitForScannerService(
 				log.info({ attempts: attempt }, "Scanner service became available");
 			}
 			return;
-		} catch (error) {
+		} catch {
 			const delayMs = calculateReconnectDelay(
 				attempt,
 				config.reconnectDelayMs,
@@ -93,87 +93,100 @@ export class ScannerAlertClient implements ScannerAlertClientPort {
 		};
 	}
 
-	async *streamAlerts(options: ScannerAlertStreamOptions = {}): AsyncGenerator<ScannerAlert> {
-		const scannerClient = createScannerClient(this.config.streamProxyUrl, {
+	private createGrpcClient() {
+		return createScannerClient(this.config.streamProxyUrl, {
 			enableLogging: false,
 			maxRetries: 0,
 		});
+	}
+
+	private shouldLogAttempt(attempt: number): boolean {
+		return attempt === 1 || attempt % 5 === 0;
+	}
+
+	private async *streamAlertsOnce(
+		scannerClient: ReturnType<typeof createScannerClient>,
+		signal?: AbortSignal,
+	): AsyncGenerator<ScannerAlert> {
+		for await (const streamResult of scannerClient.streamScannerAlerts()) {
+			if (signal?.aborted) {
+				return;
+			}
+			const alert = streamResult.data.alert;
+			if (alert) {
+				yield alert;
+			}
+		}
+	}
+
+	private async reconnectAfterInterrupt(attempt: number, error?: unknown): Promise<number> {
+		const delayMs = calculateReconnectDelay(
+			attempt,
+			this.config.reconnectDelayMs,
+			this.config.maxReconnectDelayMs,
+		);
+		const nextAttempt = attempt + 1;
+
+		if (!error) {
+			if (this.shouldLogAttempt(nextAttempt)) {
+				log.warn(
+					{
+						attempt: nextAttempt,
+						delayMs,
+						streamProxyUrl: this.config.streamProxyUrl,
+					},
+					"Scanner alert stream ended unexpectedly, reconnecting",
+				);
+			}
+		} else if (isUnavailableError(error)) {
+			if (this.shouldLogAttempt(nextAttempt)) {
+				log.info(
+					{
+						attempt: nextAttempt,
+						delayMs,
+						streamProxyUrl: this.config.streamProxyUrl,
+					},
+					"Scanner alert stream unavailable, retrying",
+				);
+			}
+		} else {
+			log.warn(
+				{
+					attempt: nextAttempt,
+					delayMs,
+					streamProxyUrl: this.config.streamProxyUrl,
+					error: toErrorMessage(error),
+				},
+				"Scanner alert stream failed, reconnecting",
+			);
+		}
+
+		await Bun.sleep(delayMs);
+		return nextAttempt;
+	}
+
+	async *streamAlerts(options: ScannerAlertStreamOptions = {}): AsyncGenerator<ScannerAlert> {
+		const scannerClient = this.createGrpcClient();
 
 		await waitForScannerService(scannerClient, this.config, options.signal);
 
 		let reconnectAttempt = 0;
 		while (!options.signal?.aborted) {
 			try {
-				for await (const streamResult of scannerClient.streamScannerAlerts()) {
-					if (options.signal?.aborted) {
-						return;
-					}
-
-					const alert = streamResult.data.alert;
-					if (alert) {
-						yield alert;
-					}
+				for await (const alert of this.streamAlertsOnce(scannerClient, options.signal)) {
 					reconnectAttempt = 0;
+					yield alert;
 				}
 
 				if (options.signal?.aborted) {
 					return;
 				}
-
-				const delayMs = calculateReconnectDelay(
-					reconnectAttempt,
-					this.config.reconnectDelayMs,
-					this.config.maxReconnectDelayMs,
-				);
-				reconnectAttempt += 1;
-
-				if (reconnectAttempt === 1 || reconnectAttempt % 5 === 0) {
-					log.warn(
-						{
-							attempt: reconnectAttempt,
-							delayMs,
-							streamProxyUrl: this.config.streamProxyUrl,
-						},
-						"Scanner alert stream ended unexpectedly, reconnecting",
-					);
-				}
-				await Bun.sleep(delayMs);
+				reconnectAttempt = await this.reconnectAfterInterrupt(reconnectAttempt);
 			} catch (error) {
 				if (options.signal?.aborted) {
 					return;
 				}
-
-				const delayMs = calculateReconnectDelay(
-					reconnectAttempt,
-					this.config.reconnectDelayMs,
-					this.config.maxReconnectDelayMs,
-				);
-				reconnectAttempt += 1;
-
-				const errorMessage = toErrorMessage(error);
-				if (isUnavailableError(error)) {
-					if (reconnectAttempt === 1 || reconnectAttempt % 5 === 0) {
-						log.info(
-							{
-								attempt: reconnectAttempt,
-								delayMs,
-								streamProxyUrl: this.config.streamProxyUrl,
-							},
-							"Scanner alert stream unavailable, retrying",
-						);
-					}
-				} else {
-					log.warn(
-						{
-							attempt: reconnectAttempt,
-							delayMs,
-							streamProxyUrl: this.config.streamProxyUrl,
-							error: errorMessage,
-						},
-						"Scanner alert stream failed, reconnecting",
-					);
-				}
-				await Bun.sleep(delayMs);
+				reconnectAttempt = await this.reconnectAfterInterrupt(reconnectAttempt, error);
 			}
 		}
 	}

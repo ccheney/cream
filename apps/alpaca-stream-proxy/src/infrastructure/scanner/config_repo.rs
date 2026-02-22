@@ -1,6 +1,6 @@
 //! Scanner Config Repository
 //!
-//! Loads active scanner config from PostgreSQL.
+//! Loads active scanner config from `PostgreSQL`.
 
 use async_trait::async_trait;
 use sqlx::{FromRow, PgPool, postgres::PgPoolOptions};
@@ -80,7 +80,7 @@ impl ScannerConfigRepository {
     }
 
     async fn load_config_internal(&self) -> Result<ScannerParams, ScannerConfigRepositoryError> {
-        let query = r#"
+        let query = r"
             SELECT
                 min_price,
                 min_avg_volume::bigint AS min_avg_volume,
@@ -95,7 +95,7 @@ impl ScannerConfigRepository {
               AND status = 'active'::config_status
             ORDER BY updated_at DESC
             LIMIT 1
-        "#;
+        ";
 
         let row = sqlx::query_as::<_, ScannerConfigRow>(query)
             .bind(&self.environment)
