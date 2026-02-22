@@ -5,7 +5,7 @@
 # Uses oven/bun as the runtime.
 #
 # Build: docker build -t cream-dashboard-api -f apps/dashboard-api/Dockerfile .
-# Run:   docker run -p 3001:3001 -e TURSO_DATABASE_URL=... cream-dashboard-api
+# Run:   docker run -p 3001:3001 cream-dashboard-api
 
 # ===========================================
 # Stage 1: Dependencies

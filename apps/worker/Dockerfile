@@ -5,7 +5,7 @@
 # Uses oven/bun as the runtime for improved performance.
 #
 # Build: docker build -t cream-worker -f apps/worker/Dockerfile .
-# Run:   docker run -e CREAM_ENV=PAPER -e TURSO_DATABASE_URL=... cream-worker
+# Run:   docker run -e CREAM_ENV=PAPER cream-worker
 
 # ===========================================
 # Stage 1: Dependencies
