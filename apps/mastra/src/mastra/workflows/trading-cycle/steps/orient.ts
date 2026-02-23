@@ -72,7 +72,7 @@ export const orientStep = createStep({
 	inputSchema: OrientInputSchema,
 	outputSchema: OrientOutputSchema,
 	execute: async ({ inputData }) => {
-		const { cycleId, marketSnapshot, regimeLabels: inputRegimeLabels, constraints } = inputData;
+		const { cycleId, marketSnapshot, constraints } = inputData;
 		const errors: string[] = [];
 		const warnings: string[] = [];
 
@@ -83,8 +83,6 @@ export const orientStep = createStep({
 		const regimeLabels = refineRegimeClassifications(
 			marketSnapshot.instruments,
 			marketSnapshot.candles,
-			inputRegimeLabels,
-			warnings,
 		);
 
 		// Load memory context (stub for now - will integrate HelixDB)
@@ -115,8 +113,6 @@ export const orientStep = createStep({
 function refineRegimeClassifications(
 	instruments: string[],
 	candles: Record<string, Candle[]>,
-	inputRegimeLabels: Record<string, z.infer<typeof RegimeDataSchema>>,
-	warnings: string[],
 ): Record<string, z.infer<typeof RegimeDataSchema>> {
 	const regimeLabels: Record<string, z.infer<typeof RegimeDataSchema>> = {};
 
@@ -124,38 +120,35 @@ function refineRegimeClassifications(
 		const symbolCandles = candles[symbol];
 
 		if (!symbolCandles || symbolCandles.length < 51) {
-			regimeLabels[symbol] = inputRegimeLabels[symbol] ?? {
-				regime: "RANGE_BOUND",
-				confidence: 0.5,
-				reasoning: "Insufficient data for refinement",
-			};
-			continue;
+			throw new Error(
+				`Insufficient candle data for ${symbol}. Need at least 51 candles, got ${symbolCandles?.length ?? 0}.`,
+			);
 		}
 
-		try {
-			const result = classifyRegime({ candles: symbolCandles }, DEFAULT_RULE_BASED_CONFIG);
+		const result = classifyRegime({ candles: symbolCandles }, DEFAULT_RULE_BASED_CONFIG);
 
-			const regimeMap: Record<string, string> = {
-				BULL_TREND: "BULL_TREND",
-				BEAR_TREND: "BEAR_TREND",
-				RANGE: "RANGE_BOUND",
-				HIGH_VOL: "HIGH_VOL",
-				LOW_VOL: "LOW_VOL",
-			};
+		const regimeMap: Record<string, z.infer<typeof RegimeDataSchema>["regime"]> = {
+			BULL_TREND: "BULL_TREND",
+			BEAR_TREND: "BEAR_TREND",
+			RANGE: "RANGE_BOUND",
+			HIGH_VOL: "HIGH_VOL",
+			LOW_VOL: "LOW_VOL",
+		};
 
-			regimeLabels[symbol] = {
-				regime: regimeMap[result.regime] ?? "RANGE_BOUND",
-				confidence: result.confidence ?? 0.7,
-				reasoning: result.reasoning,
-			};
-		} catch (error) {
-			warnings.push(`Regime classification failed for ${symbol}: ${formatError(error)}`);
-			regimeLabels[symbol] = inputRegimeLabels[symbol] ?? {
-				regime: "RANGE_BOUND",
-				confidence: 0.5,
-				reasoning: "Classification error",
-			};
+		const mappedRegime = regimeMap[result.regime];
+		if (!mappedRegime) {
+			throw new Error(`Unknown regime label '${String(result.regime)}' for ${symbol}`);
 		}
+
+		if (!Number.isFinite(result.confidence)) {
+			throw new Error(`Invalid regime confidence for ${symbol}: ${String(result.confidence)}`);
+		}
+
+		regimeLabels[symbol] = {
+			regime: mappedRegime,
+			confidence: result.confidence,
+			reasoning: result.reasoning,
+		};
 	}
 
 	return regimeLabels;
@@ -185,9 +178,4 @@ async function fetchPredictionSignals(_errors: string[]): Promise<
 	| undefined
 > {
 	return undefined;
-}
-
-function formatError(error: unknown): string {
-	if (error instanceof Error) return error.message;
-	return String(error);
 }

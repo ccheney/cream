@@ -89,7 +89,6 @@ export {
 	isMarketDataAvailable,
 	type MarketDataAdapter,
 	MarketDataConfigError,
-	MockMarketDataAdapter,
 } from "./factory";
 // Candle ingestion
 export {

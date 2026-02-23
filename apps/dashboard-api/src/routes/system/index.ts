@@ -7,6 +7,7 @@
 import { OpenAPIHono } from "@hono/zod-openapi";
 import controlRoutes from "./control.js";
 import cyclesRoutes from "./cycles.js";
+import frontendErrorRoutes from "./frontend-errors.js";
 import healthRoutes from "./health.js";
 import workerEventsRoutes from "./worker-events.js";
 
@@ -15,6 +16,7 @@ const app = new OpenAPIHono();
 // Mount sub-routers
 app.route("/", controlRoutes);
 app.route("/", cyclesRoutes);
+app.route("/", frontendErrorRoutes);
 app.route("/", healthRoutes);
 app.route("/worker-events", workerEventsRoutes);
 

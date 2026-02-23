@@ -22,13 +22,30 @@ const serviceName = Bun.env.OTEL_SERVICE_NAME ?? "cream-worker";
 
 let sdk: NodeSDK | null = null;
 
+function normalizeOtlpTraceUrl(endpoint: string): string {
+	const trimmed = endpoint.replace(/\/+$/, "");
+	return trimmed.endsWith("/v1/traces") ? trimmed : `${trimmed}/v1/traces`;
+}
+
+function resolveOtlpHeaders(): Record<string, string> | undefined {
+	const token = Bun.env.ZO_AUTH_TOKEN?.trim();
+	if (!token) {
+		return undefined;
+	}
+	const hasScheme = /^basic\s+|^bearer\s+/i.test(token);
+	return {
+		Authorization: hasScheme ? token : `Basic ${token}`,
+	};
+}
+
 export function initTracing(): void {
 	if (!otelEnabled) {
 		return;
 	}
 
 	const exporter = new OTLPTraceExporter({
-		url: `${otelEndpoint}/v1/traces`,
+		url: normalizeOtlpTraceUrl(otelEndpoint),
+		headers: resolveOtlpHeaders(),
 	});
 
 	sdk = new NodeSDK({
@@ -43,12 +60,28 @@ export function initTracing(): void {
 		textMapPropagator: new W3CTraceContextPropagator(),
 	});
 
-	sdk.start();
+	try {
+		sdk.start();
+	} catch (error) {
+		// biome-ignore lint/suspicious/noConsole: logger unavailable during tracing bootstrap
+		console.error(
+			`[tracing] Failed to initialize OpenTelemetry for ${serviceName}: ${error instanceof Error ? error.message : String(error)}`,
+		);
+		sdk = null;
+	}
 }
 
-export function shutdownTracing(): Promise<void> {
+export async function shutdownTracing(): Promise<void> {
 	if (sdk) {
-		return sdk.shutdown();
+		try {
+			await sdk.shutdown();
+		} catch (error) {
+			// biome-ignore lint/suspicious/noConsole: logger unavailable during tracing shutdown
+			console.error(
+				`[tracing] Failed to shutdown OpenTelemetry for ${serviceName}: ${error instanceof Error ? error.message : String(error)}`,
+			);
+		} finally {
+			sdk = null;
+		}
 	}
-	return Promise.resolve();
 }

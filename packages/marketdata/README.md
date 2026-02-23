@@ -21,7 +21,6 @@ flowchart TB
 
         subgraph Adapters
             Adapter["MarketDataAdapter"]
-            Mock["MockMarketDataAdapter"]
         end
 
         subgraph Processing
@@ -197,7 +196,7 @@ classDiagram
         +getQuote(symbol) AdapterQuote
         +getQuotes(symbols) Map~string, AdapterQuote~
         +isReady() boolean
-        +getType() "mock" | "alpaca"
+        +getType() "alpaca"
     }
 
     class AlpacaMarketDataAdapter {
@@ -207,25 +206,14 @@ classDiagram
         +getQuotes()
     }
 
-    class MockMarketDataAdapter {
-        -baseTimestamp: number
-        +getCandles()
-        +getQuote()
-        +getQuotes()
-    }
-
     MarketDataAdapter <|.. AlpacaMarketDataAdapter
-    MarketDataAdapter <|.. MockMarketDataAdapter
 ```
 
 ```typescript
-import { createMarketDataAdapter, MockMarketDataAdapter } from "@cream/marketdata";
+import { createMarketDataAdapter } from "@cream/marketdata";
 
 // Production: uses ALPACA_KEY + ALPACA_SECRET
 const adapter = createMarketDataAdapter();
-
-// Testing: deterministic fixture data
-const mockAdapter = new MockMarketDataAdapter();
 ```
 
 ## Feature Snapshots
@@ -503,11 +491,7 @@ Both `PAPER` and `LIVE` modes use real market data from Alpaca. The environment 
 ## Testing
 
 ```typescript
-import { MockMarketDataAdapter, createMockCandleSource } from "@cream/marketdata";
-
-// Mock adapter generates deterministic data based on symbol hash
-const mock = new MockMarketDataAdapter();
-const candles = await mock.getCandles("AAPL", "1h", "2026-01-01", "2026-01-10");
+import { createMockCandleSource } from "@cream/marketdata";
 
 // Custom mock sources for snapshot testing
 const candleSource = createMockCandleSource(candlesBySymbol);

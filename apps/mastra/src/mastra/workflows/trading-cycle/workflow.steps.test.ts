@@ -57,12 +57,23 @@ function registerObserveTests(): void {
 	});
 }
 
+function makeMockCandles(count: number) {
+	return Array.from({ length: count }, (_, i) => ({
+		timestamp: Date.now() - (count - i) * 86_400_000,
+		open: 150 + i * 0.1,
+		high: 151 + i * 0.1,
+		low: 149 + i * 0.1,
+		close: 150.5 + i * 0.1,
+		volume: 1_000_000 + i * 1000,
+	}));
+}
+
 function registerOrientTests(): void {
 	describe("orientStep", () => {
 		it("should execute and return memory context", async () => {
 			const marketSnapshot = {
 				instruments: ["AAPL"],
-				candles: {},
+				candles: { AAPL: makeMockCandles(60) },
 				quotes: {},
 				timestamp: Date.now(),
 			};

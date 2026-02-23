@@ -53,8 +53,8 @@ function addSecurityHeaders(response: NextResponse): NextResponse {
 
 		// CSP in production (development needs unsafe-eval for HMR)
 		// Note: API URL must be included in connect-src for cross-origin requests
-		const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001";
-		const wsUrl = process.env.NEXT_PUBLIC_WS_URL || "ws://localhost:3001/ws";
+		const apiUrl = process.env.NEXT_PUBLIC_API_URL;
+		const wsUrl = process.env.NEXT_PUBLIC_WS_URL;
 		response.headers.set(
 			"Content-Security-Policy",
 			[

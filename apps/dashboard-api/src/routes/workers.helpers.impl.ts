@@ -20,7 +20,15 @@ export type WorkerService =
 	| "corporate_actions"
 	| "prediction_markets";
 
-export const WORKER_URL = Bun.env.WORKER_URL ?? "http://localhost:3002";
+function requireWorkerUrl(): string {
+	const workerUrl = Bun.env.WORKER_URL;
+	if (!workerUrl) {
+		throw new Error("WORKER_URL environment variable is required.");
+	}
+	return workerUrl;
+}
+
+export const WORKER_URL = Bun.env.WORKER_URL;
 
 export const ALL_SERVICES: WorkerService[] = [
 	"macro_watch",
@@ -108,9 +116,9 @@ interface WorkerHealthResponse {
 async function fetchNextRunByService(): Promise<Map<WorkerService, string | null>> {
 	const nextRunByService = new Map<WorkerService, string | null>();
 	try {
-		const healthResponse = await fetch(`${WORKER_URL}/health`);
+		const healthResponse = await fetch(`${requireWorkerUrl()}/health`);
 		if (!healthResponse.ok) {
-			return nextRunByService;
+			throw new Error(`Worker health endpoint returned ${healthResponse.status}`);
 		}
 		const health = (await healthResponse.json()) as WorkerHealthResponse;
 		if (health.next_run) {
@@ -131,8 +139,12 @@ async function fetchNextRunByService(): Promise<Map<WorkerService, string | null
 				nextRunByService.set("corporate_actions", jobs.corporateActions.next_run);
 			}
 		}
-	} catch {
-		log.debug({}, "Worker health endpoint not available, schedule info unavailable");
+	} catch (error) {
+		log.error(
+			{ error: error instanceof Error ? error.message : String(error) },
+			"Failed to fetch worker schedule from worker health endpoint",
+		);
+		throw error;
 	}
 	return nextRunByService;
 }
@@ -284,7 +296,7 @@ export async function triggerWorkerService(
 
 	void (async () => {
 		try {
-			const response = await fetch(`${WORKER_URL}/trigger/${service}`, {
+			const response = await fetch(`${requireWorkerUrl()}/trigger/${service}`, {
 				method: "POST",
 				headers: { "Content-Type": "application/json" },
 			});

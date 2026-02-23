@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect } from "react";
+import { reportFrontendError } from "@/lib/error-telemetry";
 
 interface GlobalErrorProps {
 	error: Error & { digest?: string };
@@ -98,8 +99,8 @@ const styles = {
 // Global error must define its own <html> and <body> tags because it replaces the root layout
 export default function GlobalError({ error, reset }: GlobalErrorProps) {
 	useEffect(() => {
-		// TODO: Send to error tracking service (e.g., Sentry)
-	}, []);
+		reportFrontendError("global-error", error);
+	}, [error]);
 
 	const handleReset = () => {
 		reset();

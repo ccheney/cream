@@ -10,11 +10,10 @@
 "use client";
 
 import { AlertCircle } from "lucide-react";
-import { useEffect, useState } from "react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useIndicatorSnapshot } from "@/hooks/queries/useMarket";
 import type { DataQuality } from "@/lib/api/types";
-import { isOptionsMarketOpen } from "@/lib/market-hours";
+import { useIsOptionsMarketOpen } from "@/lib/market-hours";
 import { cn } from "@/lib/utils";
 import {
 	CorporatePanel,
@@ -210,17 +209,8 @@ function IndicatorSnapshotSkeleton({
 }
 
 function useIsMarketClosed(): boolean {
-	const [isMarketClosed, setIsMarketClosed] = useState(!isOptionsMarketOpen());
-
-	useEffect(() => {
-		setIsMarketClosed(!isOptionsMarketOpen());
-		const interval = setInterval(() => {
-			setIsMarketClosed(!isOptionsMarketOpen());
-		}, 60_000);
-		return () => clearInterval(interval);
-	}, []);
-
-	return isMarketClosed;
+	const { isOpen } = useIsOptionsMarketOpen();
+	return !isOpen;
 }
 
 function IndicatorPanelsGrid({

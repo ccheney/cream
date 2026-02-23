@@ -253,50 +253,19 @@ export class ExtractionClient implements IExtractionClient {
 		if (response.functionCalls && response.functionCalls.length > 0) {
 			const functionCall = response.functionCalls[0];
 			if (functionCall?.name === "submit_extraction" && functionCall.args) {
-				// Validate with Zod schema
 				const parsed = ExtractionResultSchema.safeParse(functionCall.args);
-				if (parsed.success) {
-					return parsed.data;
+				if (!parsed.success) {
+					throw new Error(
+						`submit_extraction payload failed validation: ${parsed.error.issues
+							.map((issue) => `${issue.path.join(".")}: ${issue.message}`)
+							.join("; ")}`,
+					);
 				}
-				// If validation fails, try to use the raw input with defaults
-				return this.sanitizeExtraction(functionCall.args as Record<string, unknown>);
+				return parsed.data;
 			}
 		}
 
-		// Fallback: return a minimal extraction if function wasn't called
-		return this.createFallbackExtraction(content);
-	}
-
-	/**
-	 * Sanitize and fill in defaults for extraction input
-	 */
-	private sanitizeExtraction(input: Record<string, unknown>): ExtractionResult {
-		return {
-			sentiment: (input.sentiment as "bullish" | "bearish" | "neutral") ?? "neutral",
-			confidence: typeof input.confidence === "number" ? input.confidence : 0.5,
-			entities: Array.isArray(input.entities) ? input.entities : [],
-			dataPoints: Array.isArray(input.dataPoints) ? input.dataPoints : [],
-			eventType: (input.eventType as ExtractionResult["eventType"]) ?? "other",
-			importance: typeof input.importance === "number" ? input.importance : 3,
-			summary: typeof input.summary === "string" ? input.summary : "",
-			keyInsights: Array.isArray(input.keyInsights) ? input.keyInsights : [],
-		};
-	}
-
-	/**
-	 * Create a fallback extraction when Gemini doesn't call the function
-	 */
-	private createFallbackExtraction(content: string): ExtractionResult {
-		return {
-			sentiment: "neutral",
-			confidence: 0.3,
-			entities: [],
-			dataPoints: [],
-			eventType: "other",
-			importance: 2,
-			summary: content.slice(0, 200) + (content.length > 200 ? "..." : ""),
-			keyInsights: [],
-		};
+		throw new Error("Gemini did not call submit_extraction.");
 	}
 
 	/**

@@ -10,6 +10,7 @@ import { type ExecutionContext, isTest } from "@cream/domain";
 import { createHelixClientFromEnv, type HealthCheckResult, type HelixClient } from "@cream/helix";
 import {
 	AgentConfigsRepository,
+	ConstraintsConfigRepository,
 	closeDb as closeDbConnection,
 	type Database,
 	getDb,
@@ -43,8 +44,14 @@ export function getRuntimeConfigService(): RuntimeConfigService {
 	const tradingRepo = new TradingConfigRepository();
 	const agentRepo = new AgentConfigsRepository();
 	const scannerRepo = new ScannerConfigsRepository();
+	const constraintsRepo = new ConstraintsConfigRepository();
 
-	runtimeConfigService = createRuntimeConfigService(tradingRepo, agentRepo, scannerRepo);
+	runtimeConfigService = createRuntimeConfigService(
+		tradingRepo,
+		agentRepo,
+		scannerRepo,
+		constraintsRepo,
+	);
 	return runtimeConfigService;
 }
 
@@ -58,21 +65,13 @@ export function resetRuntimeConfigService(): void {
 
 let helixClient: HelixClient | null = null;
 
-export function getHelixClient(): HelixClient | null {
+export function getHelixClient(): HelixClient {
 	if (helixClient) {
 		return helixClient;
 	}
 
-	try {
-		helixClient = createHelixClientFromEnv();
-		return helixClient;
-	} catch (error) {
-		log.error(
-			{ error: error instanceof Error ? error.message : "Unknown error" },
-			"Failed to create HelixDB client",
-		);
-		return null;
-	}
+	helixClient = createHelixClientFromEnv();
+	return helixClient;
 }
 
 export function closeHelixClient(): void {
@@ -83,15 +82,16 @@ export function closeHelixClient(): void {
 }
 
 export async function checkHelixHealth(): Promise<HealthCheckResult> {
-	const client = getHelixClient();
-	if (!client) {
+	try {
+		const client = getHelixClient();
+		return client.healthCheck();
+	} catch (error) {
 		return {
 			healthy: false,
 			latencyMs: 0,
-			error: "HelixDB client could not be created",
+			error: error instanceof Error ? error.message : "HelixDB client could not be created",
 		};
 	}
-	return client.healthCheck();
 }
 
 // ============================================
@@ -120,9 +120,14 @@ export async function validateHelixDBAtStartup(
 	const health = await checkHelixHealth();
 
 	if (!health.healthy) {
+		const configuredEndpoint = Bun.env.HELIX_URL
+			? Bun.env.HELIX_URL
+			: Bun.env.HELIX_HOST && Bun.env.HELIX_PORT
+				? `${Bun.env.HELIX_HOST}:${Bun.env.HELIX_PORT}`
+				: "not configured";
 		const errorMsg =
 			`HelixDB health check failed: ${health.error}. ` +
-			`Ensure HelixDB is running at ${Bun.env.HELIX_HOST ?? "localhost"}:${Bun.env.HELIX_PORT ?? "6969"}`;
+			`Ensure HelixDB endpoint is configured and reachable (${configuredEndpoint}).`;
 
 		log.error({ error: health.error }, errorMsg);
 

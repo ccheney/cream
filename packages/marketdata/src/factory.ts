@@ -10,7 +10,6 @@
 import { type CreamEnvironment, requireEnv } from "@cream/domain";
 import { AlpacaMarketDataAdapter, isAlpacaAdapterAvailable } from "./adapters/alpaca-adapter.js";
 import { MarketDataConfigError } from "./factory/errors.js";
-import { MockMarketDataAdapter } from "./factory/mock-market-data-adapter.js";
 
 // ============================================
 // Types
@@ -86,10 +85,10 @@ export interface MarketDataAdapter {
 	/**
 	 * Get the adapter type for logging.
 	 */
-	getType(): "mock" | "alpaca";
+	getType(): "alpaca";
 }
 
-export { MarketDataConfigError, MockMarketDataAdapter };
+export { MarketDataConfigError };
 
 // ============================================
 // Re-export Alpaca Adapter

@@ -48,7 +48,7 @@ export class MacroWatchService {
 	private running = false;
 	private lastRun: Date | null = null;
 	private getDb: (() => Database) | null = null;
-	private getHelix: (() => HelixClient | null) | null = null;
+	private getHelix: (() => HelixClient) | null = null;
 	private config: MacroWatchServiceConfig;
 
 	constructor(config: MacroWatchServiceConfig = {}) {
@@ -59,7 +59,7 @@ export class MacroWatchService {
 		this.getDb = getDb;
 	}
 
-	setHelixProvider(getHelix: () => HelixClient | null): void {
+	setHelixProvider(getHelix: () => HelixClient): void {
 		this.getHelix = getHelix;
 	}
 
@@ -85,11 +85,7 @@ export class MacroWatchService {
 		if (!this.getHelix) {
 			return 0;
 		}
-
 		const helixClient = this.getHelix();
-		if (!helixClient) {
-			return 0;
-		}
 
 		const newsEntries = entries.filter((entry) => entry.category === "NEWS");
 		if (newsEntries.length === 0) {
@@ -127,7 +123,7 @@ export class MacroWatchService {
 				{ error: error instanceof Error ? error.message : String(error) },
 				"HelixDB news ingestion failed",
 			);
-			return 0;
+			throw error;
 		}
 	}
 

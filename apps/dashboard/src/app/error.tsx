@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect } from "react";
+import { reportFrontendError } from "@/lib/error-telemetry";
 
 interface ErrorPageProps {
 	error: Error & { digest?: string };
@@ -84,8 +85,8 @@ const styles = {
 
 export default function ErrorPage({ error, reset }: ErrorPageProps): React.JSX.Element {
 	useEffect(() => {
-		// TODO: Send to error tracking service (e.g., Sentry)
-	}, []);
+		reportFrontendError("error", error);
+	}, [error]);
 
 	const handleReset = () => {
 		reset();

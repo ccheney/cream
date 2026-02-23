@@ -3,7 +3,7 @@
 	"version": "0.1.0",
 	"private": true,
 	"scripts": {
-		"dev": "set -a; [ -f ../../.env ] && . ../../.env; set +a; cargo run",
+		"dev": "set -a; [ -f ../../.env ] && . ../../.env; set +a; STREAM_PROXY_ENDPOINT=${STREAM_PROXY_ENDPOINT:-${STREAM_PROXY_URL:-}} cargo run",
 		"build": "cargo build --release",
 		"test": "cargo test",
 		"format": "cargo fmt",

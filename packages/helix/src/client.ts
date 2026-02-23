@@ -208,8 +208,27 @@ export function createHelixClient(config: HelixClientConfig = {}): HelixClient {
  * - HELIX_MAX_RETRIES (default: 3)
  */
 export function createHelixClientFromEnv(): HelixClient {
-	const host = Bun.env.HELIX_HOST ?? DEFAULT_CONFIG.host;
-	const port = Number.parseInt(Bun.env.HELIX_PORT ?? String(DEFAULT_CONFIG.port), 10);
+	const helixUrl = Bun.env.HELIX_URL;
+	let host: string;
+	let port: number;
+	if (helixUrl) {
+		const parsedUrl = new URL(helixUrl);
+		host = parsedUrl.hostname;
+		port = Number.parseInt(parsedUrl.port || String(DEFAULT_CONFIG.port), 10);
+	} else {
+		const envHost = Bun.env.HELIX_HOST;
+		const envPort = Bun.env.HELIX_PORT;
+		if (!envHost || !envPort) {
+			throw new Error("HELIX_URL or HELIX_HOST and HELIX_PORT environment variables are required");
+		}
+		host = envHost;
+		port = Number.parseInt(envPort, 10);
+	}
+
+	if (Number.isNaN(port) || port <= 0) {
+		throw new Error(`Invalid Helix port '${String(port)}'.`);
+	}
+
 	const timeout = Number.parseInt(Bun.env.HELIX_TIMEOUT ?? String(DEFAULT_CONFIG.timeout), 10);
 	const maxRetries = Number.parseInt(
 		Bun.env.HELIX_MAX_RETRIES ?? String(DEFAULT_CONFIG.maxRetries),

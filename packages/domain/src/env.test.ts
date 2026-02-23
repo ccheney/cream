@@ -44,7 +44,7 @@ describe("envSchema minimal configuration", () => {
 		expect(result.success).toBe(true);
 		if (result.success) {
 			expect(result.data.DATABASE_URL).toBeUndefined();
-			expect(result.data.HELIX_URL).toBe("http://localhost:6969");
+			expect(result.data.HELIX_URL).toBeUndefined();
 		}
 	});
 });
@@ -88,13 +88,6 @@ describe("envSchema URL validation", () => {
 			ALPACA_BASE_URL: "not-a-url",
 		});
 		expect(result.success).toBe(false);
-	});
-});
-
-describe("envSchema defaults", () => {
-	it("applies HELIX_URL default", () => {
-		const result = envSchema.parse(requiredEnvFields);
-		expect(result.HELIX_URL).toBe("http://localhost:6969");
 	});
 });
 
@@ -211,10 +204,49 @@ describe("getEnvDatabaseSuffix", () => {
 });
 
 describe("getHelixUrl", () => {
-	it("returns a valid URL string", () => {
-		const url = getHelixUrl();
-		expect(typeof url).toBe("string");
-		expect(url).toMatch(/^https?:\/\//);
+	const originalHelixUrl = Bun.env.HELIX_URL;
+	const originalHelixHost = Bun.env.HELIX_HOST;
+	const originalHelixPort = Bun.env.HELIX_PORT;
+
+	afterEach(() => {
+		if (originalHelixUrl === undefined) {
+			delete Bun.env.HELIX_URL;
+		} else {
+			Bun.env.HELIX_URL = originalHelixUrl;
+		}
+		if (originalHelixHost === undefined) {
+			delete Bun.env.HELIX_HOST;
+		} else {
+			Bun.env.HELIX_HOST = originalHelixHost;
+		}
+		if (originalHelixPort === undefined) {
+			delete Bun.env.HELIX_PORT;
+		} else {
+			Bun.env.HELIX_PORT = originalHelixPort;
+		}
+	});
+
+	it("returns HELIX_URL when configured", () => {
+		Bun.env.HELIX_URL = "https://helix.example.com:6969";
+		delete Bun.env.HELIX_HOST;
+		delete Bun.env.HELIX_PORT;
+		expect(getHelixUrl()).toBe("https://helix.example.com:6969");
+	});
+
+	it("builds URL from HELIX_HOST and HELIX_PORT when HELIX_URL is not set", () => {
+		delete Bun.env.HELIX_URL;
+		Bun.env.HELIX_HOST = "helix.internal";
+		Bun.env.HELIX_PORT = "6969";
+		expect(getHelixUrl()).toBe("http://helix.internal:6969");
+	});
+
+	it("throws when Helix environment variables are missing", () => {
+		delete Bun.env.HELIX_URL;
+		delete Bun.env.HELIX_HOST;
+		delete Bun.env.HELIX_PORT;
+		expect(() => getHelixUrl()).toThrow(
+			"HELIX_URL or HELIX_HOST and HELIX_PORT environment variables are required",
+		);
 	});
 });
 

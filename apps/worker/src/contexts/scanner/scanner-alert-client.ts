@@ -7,7 +7,7 @@
 import { createScannerClient, type ScannerAlert } from "@cream/domain/grpc";
 import { log } from "../../shared/logger.js";
 
-const DEFAULT_STREAM_PROXY_URL = Bun.env.STREAM_PROXY_URL ?? "http://localhost:50052";
+const DEFAULT_STREAM_PROXY_URL = Bun.env.STREAM_PROXY_URL;
 const DEFAULT_RECONNECT_DELAY_MS = 1_000;
 const DEFAULT_MAX_RECONNECT_DELAY_MS = 30_000;
 
@@ -86,8 +86,15 @@ export class ScannerAlertClient implements ScannerAlertClientPort {
 	private readonly config: NormalizedScannerAlertClientConfig;
 
 	constructor(config: ScannerAlertClientConfig = {}) {
+		const streamProxyUrl = config.streamProxyUrl ?? DEFAULT_STREAM_PROXY_URL;
+		if (!streamProxyUrl) {
+			throw new Error(
+				"ScannerAlertClient requires streamProxyUrl or STREAM_PROXY_URL environment variable.",
+			);
+		}
+
 		this.config = {
-			streamProxyUrl: config.streamProxyUrl ?? DEFAULT_STREAM_PROXY_URL,
+			streamProxyUrl,
 			reconnectDelayMs: config.reconnectDelayMs ?? DEFAULT_RECONNECT_DELAY_MS,
 			maxReconnectDelayMs: config.maxReconnectDelayMs ?? DEFAULT_MAX_RECONNECT_DELAY_MS,
 		};

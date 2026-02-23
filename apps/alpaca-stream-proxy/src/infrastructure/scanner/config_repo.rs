@@ -82,11 +82,11 @@ impl ScannerConfigRepository {
     async fn load_config_internal(&self) -> Result<ScannerParams, ScannerConfigRepositoryError> {
         let query = r"
             SELECT
-                min_price,
+                min_price::float8 AS min_price,
                 min_avg_volume::bigint AS min_avg_volume,
-                volume_spike_threshold,
-                price_move_threshold,
-                gap_threshold,
+                volume_spike_threshold::float8 AS volume_spike_threshold,
+                price_move_threshold::float8 AS price_move_threshold,
+                gap_threshold::float8 AS gap_threshold,
                 max_candidates,
                 cooldown_seconds::bigint AS cooldown_seconds,
                 enabled

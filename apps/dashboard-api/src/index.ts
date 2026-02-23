@@ -12,7 +12,7 @@ import { initTracing, shutdownTracing } from "./tracing.js";
 
 initTracing();
 
-import { type CreamEnvironment, initCalendarService } from "@cream/domain";
+import { initCalendarService, requireEnv } from "@cream/domain";
 import { createRoute, OpenAPIHono, z } from "@hono/zod-openapi";
 import { cors } from "hono/cors";
 import { logger as honoLogger } from "hono/logger";
@@ -196,6 +196,10 @@ app.use("/api/system/*", async (c, next) => {
 	if (c.req.path === "/api/system/worker-events") {
 		return next();
 	}
+	// Allow frontend error telemetry without auth so global render failures are still observable
+	if (c.req.path === "/api/system/frontend-errors") {
+		return next();
+	}
 	// Allow trigger-cycle to use either user auth or internal auth
 	if (c.req.path === "/api/system/trigger-cycle") {
 		const authHeader = c.req.header("Authorization");
@@ -330,20 +334,13 @@ if (import.meta.main) {
 		});
 
 	// Initialize CalendarService before serving (required by sync calendar methods in routes)
-	const creamEnv = (Bun.env.CREAM_ENV as CreamEnvironment | undefined) ?? "PAPER";
-	try {
-		await initCalendarService({
-			mode: creamEnv,
-			alpacaKey: Bun.env.ALPACA_KEY,
-			alpacaSecret: Bun.env.ALPACA_SECRET,
-		});
-		log.info({ mode: creamEnv }, "CalendarService initialized");
-	} catch (error: unknown) {
-		log.warn(
-			{ error: error instanceof Error ? error.message : String(error), mode: creamEnv },
-			"CalendarService initialization failed",
-		);
-	}
+	const creamEnv = requireEnv();
+	await initCalendarService({
+		mode: creamEnv,
+		alpacaKey: Bun.env.ALPACA_KEY,
+		alpacaSecret: Bun.env.ALPACA_SECRET,
+	});
+	log.info({ mode: creamEnv }, "CalendarService initialized");
 
 	// Start heartbeat for WebSocket connections
 	startHeartbeat();

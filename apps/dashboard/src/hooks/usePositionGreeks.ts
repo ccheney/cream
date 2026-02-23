@@ -19,7 +19,7 @@ import {
 	useState,
 } from "react";
 import type { OptionsPosition } from "@/hooks/queries/useOptionsPositions";
-import { isOptionsMarketOpen } from "@/lib/market-hours";
+import { useIsOptionsMarketOpen } from "@/lib/market-hours";
 
 export interface PositionGreeks {
 	/** Delta: change in option price per $1 change in underlying */
@@ -348,13 +348,14 @@ function scheduleGreeksRecalculation(
 	recalcTimerRef: RefObject<ReturnType<typeof setTimeout> | null>,
 	pendingUnderlyingUpdatesRef: RefObject<Record<string, number>>,
 	setThrottledUnderlyingPrices: Dispatch<SetStateAction<Record<string, number>>>,
+	isOptionsOpen: boolean,
 ) {
 	if (recalcTimerRef.current !== null) {
 		return;
 	}
 
 	recalcTimerRef.current = setTimeout(() => {
-		if (!isOptionsMarketOpen()) {
+		if (!isOptionsOpen) {
 			recalcTimerRef.current = null;
 			return;
 		}
@@ -375,6 +376,7 @@ function useUnderlyingsUpdater(
 	pendingUnderlyingUpdatesRef: RefObject<Record<string, number>>,
 	setThrottledUnderlyingPrices: Dispatch<SetStateAction<Record<string, number>>>,
 	setIsStreaming: Dispatch<SetStateAction<boolean>>,
+	isOptionsOpen: boolean,
 ) {
 	const recalcTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -383,19 +385,20 @@ function useUnderlyingsUpdater(
 			recalcTimerRef,
 			pendingUnderlyingUpdatesRef,
 			setThrottledUnderlyingPrices,
+			isOptionsOpen,
 		);
-	}, [pendingUnderlyingUpdatesRef, setThrottledUnderlyingPrices]);
+	}, [isOptionsOpen, pendingUnderlyingUpdatesRef, setThrottledUnderlyingPrices]);
 
 	const updateUnderlyingPrice = useCallback(
 		(symbol: string, price: number) => {
 			setIsStreaming(true);
-			if (!isOptionsMarketOpen()) {
+			if (!isOptionsOpen) {
 				return;
 			}
 			pendingUnderlyingUpdatesRef.current[symbol] = price;
 			scheduleGreeksRecalc();
 		},
-		[setIsStreaming, pendingUnderlyingUpdatesRef, scheduleGreeksRecalc],
+		[isOptionsOpen, setIsStreaming, pendingUnderlyingUpdatesRef, scheduleGreeksRecalc],
 	);
 
 	useEffect(() => {
@@ -447,6 +450,7 @@ export function usePositionGreeks(options: UsePositionGreeksOptions): UsePositio
 	const { positions, underlyingPrices, defaultIV = DEFAULT_IV } = options;
 	const previousPricesRef = useRef<Record<string, number>>({});
 	const pendingUnderlyingUpdatesRef = useRef<Record<string, number>>({});
+	const { isOpen: isOptionsOpen } = useIsOptionsMarketOpen();
 
 	const { contractPrices, isStreaming, updateContractPrice, setIsStreaming } =
 		useContractPriceState(positions, previousPricesRef);
@@ -456,6 +460,7 @@ export function usePositionGreeks(options: UsePositionGreeksOptions): UsePositio
 		pendingUnderlyingUpdatesRef,
 		setThrottledUnderlyingPrices,
 		setIsStreaming,
+		isOptionsOpen,
 	);
 	const { streamingPositions, portfolioGreeks } = useStreamingGreeks(
 		positions,

@@ -5,7 +5,6 @@
  * NO YAML fallback - if the database is not seeded, operations throw errors.
  */
 
-import { getDefaultConstraints } from "./defaults.js";
 import { RuntimeConfigError } from "./error.js";
 import { findChangedFields, generateChangeDescription } from "./history.js";
 import type {
@@ -44,7 +43,7 @@ export class RuntimeConfigService {
 		private readonly tradingConfigRepo: TradingConfigRepository,
 		private readonly agentConfigsRepo: AgentConfigsRepository,
 		private readonly scannerConfigsRepo: ScannerConfigsRepository,
-		private readonly constraintsConfigRepo?: ConstraintsConfigRepository,
+		private readonly constraintsConfigRepo: ConstraintsConfigRepository,
 	) {}
 
 	async getActiveConfig(environment: RuntimeEnvironment): Promise<FullRuntimeConfig> {
@@ -61,12 +60,9 @@ export class RuntimeConfigService {
 		const agentConfigs = await this.agentConfigsRepo.getAll(environment);
 		const agents = this.buildAgentsMap(agentConfigs);
 
-		let constraints: RuntimeConstraintsConfig;
-		if (this.constraintsConfigRepo) {
-			const constraintsConfig = await this.constraintsConfigRepo.getActive(environment);
-			constraints = constraintsConfig ?? getDefaultConstraints(environment);
-		} else {
-			constraints = getDefaultConstraints(environment);
+		const constraints = await this.constraintsConfigRepo.getActive(environment);
+		if (!constraints) {
+			throw RuntimeConfigError.notSeeded(environment);
 		}
 
 		return { trading, agents, scanner, constraints };
@@ -95,16 +91,15 @@ export class RuntimeConfigService {
 		const agents = this.buildAgentsMap(agentConfigs);
 
 		let constraints: RuntimeConstraintsConfig;
-		if (this.constraintsConfigRepo) {
-			const constraintsDraft = await this.constraintsConfigRepo.getDraft(environment);
-			if (constraintsDraft) {
-				constraints = constraintsDraft;
-			} else {
-				const activeConstraints = await this.constraintsConfigRepo.getActive(environment);
-				constraints = activeConstraints ?? getDefaultConstraints(environment);
-			}
+		const constraintsDraft = await this.constraintsConfigRepo.getDraft(environment);
+		if (constraintsDraft) {
+			constraints = constraintsDraft;
 		} else {
-			constraints = getDefaultConstraints(environment);
+			const activeConstraints = await this.constraintsConfigRepo.getActive(environment);
+			if (!activeConstraints) {
+				throw RuntimeConfigError.notSeeded(environment);
+			}
+			constraints = activeConstraints;
 		}
 
 		return { trading, agents, scanner, constraints };
@@ -144,11 +139,9 @@ export class RuntimeConfigService {
 			await this.scannerConfigsRepo.setStatus(scannerDraft.id, "active");
 		}
 
-		if (this.constraintsConfigRepo) {
-			const constraintsDraft = await this.constraintsConfigRepo.getDraft(environment);
-			if (constraintsDraft) {
-				await this.constraintsConfigRepo.setStatus(constraintsDraft.id, "active");
-			}
+		const constraintsDraft = await this.constraintsConfigRepo.getDraft(environment);
+		if (constraintsDraft) {
+			await this.constraintsConfigRepo.setStatus(constraintsDraft.id, "active");
 		}
 
 		return this.getActiveConfig(environment);
@@ -186,12 +179,15 @@ export class RuntimeConfigService {
 		const [agentConfigs, scanner, constraints] = await Promise.all([
 			this.agentConfigsRepo.getAll(environment as TradingEnvironment),
 			this.scannerConfigsRepo.getActive(environment as TradingEnvironment),
-			this.constraintsConfigRepo?.getActive(environment as TradingEnvironment),
+			this.constraintsConfigRepo.getActive(environment as TradingEnvironment),
 		]);
 		const agents = this.buildAgentsMap(agentConfigs);
 
 		if (!scanner) {
 			throw new RuntimeConfigError("No active scanner config", "NOT_SEEDED", environment);
+		}
+		if (!constraints) {
+			throw new RuntimeConfigError("No active constraints config", "NOT_SEEDED", environment);
 		}
 
 		return history.map((tradingConfig, index) => {
@@ -202,7 +198,7 @@ export class RuntimeConfigService {
 				trading: tradingConfig,
 				agents,
 				scanner,
-				constraints: constraints ?? getDefaultConstraints(environment),
+				constraints,
 			};
 
 			const description = generateChangeDescription(changedFields, tradingConfig, previousConfig);
@@ -340,7 +336,7 @@ export class RuntimeConfigService {
 		environment: RuntimeEnvironment,
 		constraints: DraftUpdateConfig["constraints"],
 	): Promise<void> {
-		if (!constraints || !this.constraintsConfigRepo) {
+		if (!constraints) {
 			return;
 		}
 		await this.constraintsConfigRepo.saveDraft(environment, {
@@ -406,12 +402,9 @@ export class RuntimeConfigService {
 		sourceEnvironment: RuntimeEnvironment,
 		targetEnvironment: RuntimeEnvironment,
 	): Promise<void> {
-		if (!this.constraintsConfigRepo) {
-			return;
-		}
 		const sourceConstraints = await this.constraintsConfigRepo.getActive(sourceEnvironment);
 		if (!sourceConstraints) {
-			return;
+			throw RuntimeConfigError.notSeeded(sourceEnvironment);
 		}
 		await this.constraintsConfigRepo.saveDraft(targetEnvironment, {
 			maxShares: sourceConstraints.perInstrument.maxShares,
@@ -430,7 +423,7 @@ export class RuntimeConfigService {
 		});
 		const constraintsDraft = await this.constraintsConfigRepo.getDraft(targetEnvironment);
 		if (!constraintsDraft) {
-			return;
+			throw RuntimeConfigError.notSeeded(targetEnvironment);
 		}
 		await this.constraintsConfigRepo.setStatus(constraintsDraft.id, "active");
 	}
@@ -440,7 +433,7 @@ export function createRuntimeConfigService(
 	tradingConfigRepo: TradingConfigRepository,
 	agentConfigsRepo: AgentConfigsRepository,
 	scannerConfigsRepo: ScannerConfigsRepository,
-	constraintsConfigRepo?: ConstraintsConfigRepository,
+	constraintsConfigRepo: ConstraintsConfigRepository,
 ): RuntimeConfigService {
 	return new RuntimeConfigService(
 		tradingConfigRepo,

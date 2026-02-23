@@ -155,54 +155,63 @@ export function trainGMM(candles: OHLCVBar[], config: GMMConfig = DEFAULT_GMM_CO
 	};
 }
 
-/**
- * Initialize clusters using k-means++ style initialization.
- */
-function initializeClusters(data: number[][], k: number, seed: number): GMMCluster[] {
-	const rng = createSeededRandom(seed);
-	const n = data.length;
-	const d = data[0]?.length ?? 4;
-	const clusters: GMMCluster[] = [];
+function selectNextCenter(data: number[][], centers: number[][], rng: () => number): number[] {
+	const distances = data.map((point) => {
+		return Math.min(...centers.map((center) => squaredDistance(point, center)));
+	});
+	const totalDist = distances.reduce((a, b) => a + b, 0);
+	const threshold = rng() * totalDist;
 
-	const firstIdx = Math.floor(rng() * n);
-	const firstCenter = data[firstIdx]?.slice() ?? new Array(d).fill(0);
+	let cumDist = 0;
+	let nextIdx = 0;
+	for (let i = 0; i < data.length; i++) {
+		cumDist += distances[i] ?? 0;
+		if (cumDist >= threshold) {
+			nextIdx = i;
+			break;
+		}
+	}
+	const nextCenter = data[nextIdx];
+	if (!nextCenter) {
+		throw new Error(`Failed to select cluster center at index ${nextIdx}`);
+	}
+	return nextCenter;
+}
+
+function initializeClusters(data: number[][], k: number, seed: number): GMMCluster[] {
+	if (data.length === 0) {
+		throw new Error("Cannot initialize GMM clusters without training data");
+	}
+	if (k <= 0) {
+		throw new Error(`Invalid GMM cluster count: ${k}`);
+	}
+
+	const rng = createSeededRandom(seed);
+	const d = data[0]?.length;
+	if (!d || d <= 0) {
+		throw new Error("Cannot initialize GMM clusters with empty feature vectors");
+	}
+
+	const firstIdx = Math.floor(rng() * data.length);
+	const firstCenter = data[firstIdx];
+	if (!firstCenter) {
+		throw new Error(`Failed to select initial cluster center at index ${firstIdx}`);
+	}
 	const centers: number[][] = [firstCenter];
 
 	for (let c = 1; c < k; c++) {
-		const distances = data.map((point) => {
-			const minDist = Math.min(...centers.map((center) => squaredDistance(point, center)));
-			return minDist;
-		});
-		const totalDist = distances.reduce((a, b) => a + b, 0);
-		const threshold = rng() * totalDist;
-
-		let cumDist = 0;
-		let nextIdx = 0;
-		for (let i = 0; i < n; i++) {
-			cumDist += distances[i] ?? 0;
-			if (cumDist >= threshold) {
-				nextIdx = i;
-				break;
-			}
-		}
-		centers.push(data[nextIdx]?.slice() ?? new Array(d).fill(0));
+		centers.push(selectNextCenter(data, centers, rng));
 	}
 
-	for (let c = 0; c < k; c++) {
-		const center = centers[c];
-		if (!center) {
-			continue;
-		}
-		clusters.push({
+	return centers
+		.filter((center): center is number[] => center != null)
+		.map((center, c) => ({
 			index: c,
 			mean: center,
 			variance: new Array(d).fill(1),
 			weight: 1 / k,
-			regime: "RANGE",
-		});
-	}
-
-	return clusters;
+			regime: "RANGE" as const,
+		}));
 }
 
 /**
@@ -245,8 +254,14 @@ function updateClusters(
 	responsibilities: number[][],
 	clusters: GMMCluster[],
 ): void {
+	if (data.length === 0) {
+		throw new Error("Cannot update GMM clusters without data");
+	}
 	const sampleCount = data.length;
-	const dimensions = data[0]?.length ?? 4;
+	const dimensions = data[0]?.length;
+	if (!dimensions || dimensions <= 0) {
+		throw new Error("Cannot update GMM clusters with empty feature vectors");
+	}
 
 	for (const [clusterIndex, cluster] of clusters.entries()) {
 		const softCount = computeSoftCount(responsibilities, clusterIndex);

@@ -249,7 +249,7 @@ classDiagram
 | `HTTP_PORT` | No | `50051` | HTTP server port |
 | `GRPC_PORT` | No | `50053` | gRPC server port |
 | `POSITION_MONITOR_ENABLED` | No | `true` | Enable position monitoring |
-| `STREAM_PROXY_ENDPOINT` | No | `http://localhost:50052` | Stream proxy gRPC endpoint |
+| `STREAM_PROXY_ENDPOINT` | Yes | - | Stream proxy gRPC endpoint |
 
 ### config.yaml
 

@@ -13,13 +13,13 @@
 //! ## Required
 //! - `ALPACA_KEY`: Broker API key
 //! - `ALPACA_SECRET`: Broker API secret
+//! - `CREAM_ENV`: PAPER | LIVE
+//! - `STREAM_PROXY_ENDPOINT`: Stream proxy gRPC endpoint
 //!
 //! ## Optional
-//! - `CREAM_ENV`: PAPER | LIVE (default: PAPER)
 //! - `HTTP_PORT`: HTTP server port (default: 50051)
 //! - `GRPC_PORT`: gRPC server port (default: 50053)
 //! - `POSITION_MONITOR_ENABLED`: Enable position monitoring (default: true)
-//! - `STREAM_PROXY_ENDPOINT`: Stream proxy gRPC endpoint (default: <http://localhost:50052>)
 //! - `RUST_LOG`: Log level (default: info)
 
 use std::net::SocketAddr;
@@ -209,11 +209,22 @@ fn init_tracing() {
 /// Parse configuration from environment variables.
 fn parse_config() -> Result<EngineConfig, Box<dyn std::error::Error>> {
     let env = std::env::var("CREAM_ENV")
-        .unwrap_or_else(|_| "PAPER".to_string())
+        .map_err(|_| {
+            std::io::Error::new(
+                std::io::ErrorKind::InvalidInput,
+                "CREAM_ENV environment variable is required. Set to PAPER or LIVE.",
+            )
+        })?
         .to_uppercase();
     let environment = match env.as_str() {
         "LIVE" => AlpacaEnvironment::Live,
-        _ => AlpacaEnvironment::Paper,
+        "PAPER" => AlpacaEnvironment::Paper,
+        _ => {
+            return Err(format!(
+                "Invalid CREAM_ENV value '{env}'. Supported values are PAPER and LIVE."
+            )
+            .into());
+        }
     };
 
     let api_key = std::env::var("ALPACA_KEY").unwrap_or_default();
@@ -237,8 +248,15 @@ fn parse_config() -> Result<EngineConfig, Box<dyn std::error::Error>> {
         .map(|v| v.to_lowercase() != "false" && v != "0")
         .unwrap_or(true);
 
-    let stream_proxy_endpoint = std::env::var("STREAM_PROXY_ENDPOINT")
-        .unwrap_or_else(|_| "http://localhost:50052".to_string());
+    let stream_proxy_endpoint = std::env::var("STREAM_PROXY_ENDPOINT").map_err(|_| {
+        std::io::Error::new(
+            std::io::ErrorKind::InvalidInput,
+            "STREAM_PROXY_ENDPOINT environment variable is required.",
+        )
+    })?;
+    if stream_proxy_endpoint.trim().is_empty() {
+        return Err("STREAM_PROXY_ENDPOINT must not be empty".into());
+    }
 
     Ok(EngineConfig {
         environment,

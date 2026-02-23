@@ -16,6 +16,7 @@ const originalAlpacaKey = Bun.env.ALPACA_KEY;
 const originalAlpacaSecret = Bun.env.ALPACA_SECRET;
 
 beforeEach(() => {
+	Bun.env.CREAM_ENV = "PAPER";
 	delete Bun.env.ALPACA_KEY;
 	delete Bun.env.ALPACA_SECRET;
 });
@@ -50,6 +51,7 @@ describe("createMarketDataAdapter", () => {
 	});
 
 	test("returns AlpacaMarketDataAdapter for LIVE with API keys", () => {
+		Bun.env.CREAM_ENV = "LIVE";
 		Bun.env.ALPACA_KEY = "test-key";
 		Bun.env.ALPACA_SECRET = "test-secret";
 		const adapter = createMarketDataAdapter("LIVE");

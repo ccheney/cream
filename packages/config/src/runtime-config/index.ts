@@ -4,7 +4,6 @@
  * @see docs/plans/22-self-service-dashboard.md (Phase 2)
  */
 
-export { getDefaultConstraints } from "./defaults.js";
 export { RuntimeConfigError } from "./error.js";
 export {
 	describeFieldChange,

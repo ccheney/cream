@@ -14,12 +14,6 @@ import { drizzle } from "drizzle-orm/node-postgres";
 import { Pool } from "pg";
 import * as schema from "./schema";
 
-// Environment-to-database mapping
-const DATABASE_URLS: Record<string, string | undefined> = {
-	PAPER: Bun.env.DATABASE_URL_PAPER ?? Bun.env.DATABASE_URL,
-	LIVE: Bun.env.DATABASE_URL,
-};
-
 // Test database URL
 const TEST_DATABASE_URL = Bun.env.TEST_DATABASE_URL;
 
@@ -32,13 +26,24 @@ function getDatabaseUrl(): string {
 		return TEST_DATABASE_URL;
 	}
 
-	const env = Bun.env.CREAM_ENV ?? "PAPER";
-	const url = DATABASE_URLS[env];
+	const env = Bun.env.CREAM_ENV;
+	if (!env) {
+		throw new Error("CREAM_ENV environment variable is required. Set it to PAPER or LIVE.");
+	}
+
+	let url: string | undefined;
+	if (env === "PAPER") {
+		url = Bun.env.DATABASE_URL_PAPER;
+	} else if (env === "LIVE") {
+		url = Bun.env.DATABASE_URL_LIVE;
+	} else {
+		throw new Error(`Invalid CREAM_ENV value '${env}'. Supported values are PAPER and LIVE.`);
+	}
 
 	if (!url) {
 		throw new Error(
-			`DATABASE_URL not configured for environment: ${env}. ` +
-				`Set DATABASE_URL_${env} or DATABASE_URL environment variable.`,
+			`Database URL not configured for environment '${env}'. ` +
+				`Set ${env === "PAPER" ? "DATABASE_URL_PAPER" : "DATABASE_URL_LIVE"}.`,
 		);
 	}
 

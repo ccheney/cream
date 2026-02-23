@@ -18,17 +18,18 @@
  */
 
 import { type Position as BrokerPosition, createAlpacaClient } from "@cream/broker";
+import type { RuntimeConstraintsConfig } from "@cream/config";
 import { createRoute, OpenAPIHono, z } from "@hono/zod-openapi";
-import { getPortfolioSnapshotsRepo } from "../db.js";
-import log from "../logger.js";
+import { getPortfolioSnapshotsRepo, getRuntimeConfigService } from "../db.js";
 import { portfolioService } from "../services/portfolio.js";
 import {
+	type ConstraintsConfig,
 	calculateExposure,
 	calculateLimits,
-	DEFAULT_EXPOSURE_LIMITS,
-	DEFAULT_OPTIONS,
+	type ExposureLimits,
 	getCorrelationMatrix,
 	getVaRMetrics,
+	type OptionsGreeksConstraints,
 	type PositionForExposure,
 } from "../services/risk/index.js";
 import { getCurrentEnvironment } from "./system.js";
@@ -49,8 +50,7 @@ function isAlpacaConfigured(): boolean {
 
 async function getAlpacaPositions(): Promise<BrokerPosition[]> {
 	if (!isAlpacaConfigured()) {
-		log.warn("Alpaca not configured, returning empty positions");
-		return [];
+		throw new Error("ALPACA_KEY and ALPACA_SECRET must be configured for risk routes.");
 	}
 
 	const client = createAlpacaClient({
@@ -69,6 +69,60 @@ function mapToExposurePositions(positions: BrokerPosition[]): PositionForExposur
 		quantity: p.qty,
 		marketValue: p.marketValue,
 	}));
+}
+
+function resolveNav(latestSnapshot: { nav?: number } | null, positions: BrokerPosition[]): number {
+	if (latestSnapshot?.nav && latestSnapshot.nav > 0) {
+		return latestSnapshot.nav;
+	}
+
+	const navFromPositions = positions.reduce((sum, position) => sum + position.marketValue, 0);
+	if (navFromPositions > 0) {
+		return navFromPositions;
+	}
+
+	throw new Error("Unable to determine portfolio NAV from snapshots or broker positions.");
+}
+
+async function getRuntimeConstraints(): Promise<RuntimeConstraintsConfig> {
+	const environment = getCurrentEnvironment();
+	const runtimeConfigService = getRuntimeConfigService();
+	const runtimeConfig = await runtimeConfigService.getActiveConfig(environment);
+	return runtimeConfig.constraints;
+}
+
+function toExposureLimits(constraints: RuntimeConstraintsConfig, nav: number): ExposureLimits {
+	return {
+		maxGrossExposure: nav * constraints.portfolio.maxGrossExposure,
+		maxNetExposure: nav * constraints.portfolio.maxNetExposure,
+		maxConcentration: constraints.portfolio.maxConcentration,
+	};
+}
+
+function toOptionsLimits(constraints: RuntimeConstraintsConfig): OptionsGreeksConstraints {
+	return {
+		max_delta_notional: constraints.options.maxDelta,
+		max_gamma: constraints.options.maxGamma,
+		max_vega: constraints.options.maxVega,
+		max_theta: -Math.abs(constraints.options.maxTheta),
+	};
+}
+
+function toLimitConstraints(constraints: RuntimeConstraintsConfig, nav: number): ConstraintsConfig {
+	return {
+		per_instrument: {
+			max_units: constraints.perInstrument.maxShares,
+			max_notional: constraints.perInstrument.maxNotional,
+			max_pct_equity: constraints.perInstrument.maxPctEquity,
+		},
+		portfolio: {
+			max_gross_notional: nav * constraints.portfolio.maxGrossExposure,
+			max_net_notional: nav * constraints.portfolio.maxNetExposure,
+			max_gross_pct_equity: constraints.portfolio.maxGrossExposure,
+			max_net_pct_equity: constraints.portfolio.maxNetExposure,
+		},
+		options: toOptionsLimits(constraints),
+	};
 }
 
 // ============================================
@@ -174,8 +228,8 @@ app.openapi(exposureRoute, async (c) => {
 
 	// 2. Get NAV
 	const latestSnapshot = await snapshotsRepo.getLatest(env);
-	const equity = positions.reduce((sum, p) => sum + p.marketValue, 0);
-	const nav = latestSnapshot?.nav ?? (equity || 100000);
+	const nav = resolveNav(latestSnapshot, positions);
+	const constraints = await getRuntimeConstraints();
 
 	// 3. Map to PositionForExposure
 	const positionsForExposure = mapToExposurePositions(positions);
@@ -184,7 +238,7 @@ app.openapi(exposureRoute, async (c) => {
 	const metrics = calculateExposure({
 		positions: positionsForExposure,
 		nav,
-		limits: DEFAULT_EXPOSURE_LIMITS,
+		limits: toExposureLimits(constraints, nav),
 	});
 
 	return c.json(metrics, 200);
@@ -209,6 +263,8 @@ const greeksRoute = createRoute({
 
 app.openapi(greeksRoute, async (c) => {
 	const options = await portfolioService.getOptionsPositions();
+	const constraints = await getRuntimeConstraints();
+	const optionLimits = toOptionsLimits(constraints);
 
 	let totalDeltaNotional = 0;
 	let totalGamma = 0;
@@ -250,10 +306,10 @@ app.openapi(greeksRoute, async (c) => {
 	});
 
 	return c.json({
-		delta: { current: totalDeltaNotional, limit: DEFAULT_OPTIONS.max_delta_notional },
-		gamma: { current: totalGamma, limit: DEFAULT_OPTIONS.max_gamma },
-		vega: { current: totalVega, limit: DEFAULT_OPTIONS.max_vega },
-		theta: { current: totalTheta, limit: DEFAULT_OPTIONS.max_theta },
+		delta: { current: totalDeltaNotional, limit: optionLimits.max_delta_notional },
+		gamma: { current: totalGamma, limit: optionLimits.max_gamma },
+		vega: { current: totalVega, limit: optionLimits.max_vega },
+		theta: { current: totalTheta, limit: optionLimits.max_theta },
 		byPosition,
 	});
 });
@@ -380,38 +436,27 @@ app.openapi(limitsRoute, async (c) => {
 
 	// Get NAV from latest snapshot (or calculate from positions)
 	const latestSnapshot = await snapshotsRepo.getLatest(env);
-	const nav = latestSnapshot?.nav ?? positions.reduce((sum, p) => sum + p.marketValue, 0);
+	const nav = resolveNav(latestSnapshot, positions);
 
 	// Convert positions for exposure calculation
 	const positionsForExposure = mapToExposurePositions(positions);
+	const constraints = await getRuntimeConstraints();
 
 	// Calculate exposure metrics
 	const exposure = calculateExposure({
 		positions: positionsForExposure,
 		nav,
-		limits: DEFAULT_EXPOSURE_LIMITS,
+		limits: toExposureLimits(constraints, nav),
 	});
 
 	// Calculate limit statuses
-	// Note: Greeks would come from options positions - not yet integrated
+	// Note: Greeks are omitted here because this route currently computes limit status from position
+	// exposure only.
 	const limits = calculateLimits({
 		exposure,
 		positions: positionsForExposure,
 		nav,
-		constraints: {
-			per_instrument: {
-				max_units: 1000,
-				max_notional: 50000,
-				max_pct_equity: 0.1,
-			},
-			portfolio: {
-				max_gross_notional: 500000,
-				max_net_notional: 250000,
-				max_gross_pct_equity: 2.0,
-				max_net_pct_equity: 1.0,
-			},
-			// Options limits omitted - no Greeks data yet
-		},
+		constraints: toLimitConstraints(constraints, nav),
 	});
 
 	return c.json(limits, 200);

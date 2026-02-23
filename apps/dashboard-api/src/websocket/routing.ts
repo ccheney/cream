@@ -31,13 +31,18 @@ import {
 } from "./handlers/index.js";
 import type { WebSocketWithMetadata } from "./types.js";
 
-const scannerGrpcClient = createScannerClient(
-	Bun.env.STREAM_PROXY_URL ?? "http://localhost:50052",
-	{
-		enableLogging: false,
-		maxRetries: 1,
-	},
-);
+function requireStreamProxyUrl(): string {
+	const streamProxyUrl = Bun.env.STREAM_PROXY_URL;
+	if (!streamProxyUrl) {
+		throw new Error("STREAM_PROXY_URL environment variable is required.");
+	}
+	return streamProxyUrl;
+}
+
+const scannerGrpcClient = createScannerClient(requireStreamProxyUrl(), {
+	enableLogging: false,
+	maxRetries: 1,
+});
 
 /**
  * Handle subscribe message.
@@ -148,25 +153,15 @@ function toScannerStatusMessage(
 	};
 }
 
-function scannerStatusFallbackMessage() {
-	return {
-		type: "scanner_status" as const,
-		data: {
-			active: false,
-			symbolsTracked: 0,
-			totalAlerts: 0,
-			alertsLastHour: 0,
-			timestamp: new Date().toISOString(),
-		},
-	};
-}
-
 async function sendScannerState(ws: WebSocketWithMetadata): Promise<void> {
 	try {
 		const status = await scannerGrpcClient.getScannerStatus();
 		sendMessage(ws, toScannerStatusMessage(status.data));
-	} catch {
-		sendMessage(ws, scannerStatusFallbackMessage());
+	} catch (error) {
+		sendError(
+			ws,
+			`Failed to fetch scanner status: ${error instanceof Error ? error.message : String(error)}`,
+		);
 	}
 }
 

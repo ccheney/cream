@@ -180,7 +180,7 @@ export interface ServicesHealthCardProps {
 }
 
 export function ServicesHealthCard({
-	apiBaseUrl = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:3001",
+	apiBaseUrl = process.env.NEXT_PUBLIC_API_URL,
 	pollingInterval = 30000,
 	compact = false,
 	className,

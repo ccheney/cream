@@ -8,7 +8,15 @@ import { createScannerClient, type ScannerAlert, ScannerSignalType } from "@crea
 import log from "../logger.js";
 import { broadcastScannerAlert, broadcastScannerStatus } from "../websocket/channels.js";
 
-const DEFAULT_STREAM_PROXY_URL = Bun.env.STREAM_PROXY_URL ?? "http://localhost:50052";
+function requireStreamProxyUrl(): string {
+	const streamProxyUrl = Bun.env.STREAM_PROXY_URL;
+	if (!streamProxyUrl) {
+		throw new Error("STREAM_PROXY_URL environment variable is required.");
+	}
+	return streamProxyUrl;
+}
+
+const DEFAULT_STREAM_PROXY_URL = requireStreamProxyUrl();
 const DEFAULT_STATUS_POLL_MS = 15_000;
 const DEFAULT_RECONNECT_DELAY_MS = 1_000;
 const DEFAULT_MAX_RECONNECT_DELAY_MS = 30_000;

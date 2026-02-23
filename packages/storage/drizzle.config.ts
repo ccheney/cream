@@ -2,25 +2,28 @@ import { defineConfig } from "drizzle-kit";
 
 // Environment-to-database mapping (mirrors db.ts logic)
 function getDatabaseUrl(): string {
-	const env = process.env.CREAM_ENV ?? "PAPER";
+	const env = process.env.CREAM_ENV;
+	if (!env) {
+		throw new Error("CREAM_ENV environment variable is required. Set it to PAPER or LIVE.");
+	}
 
 	if (env === "PAPER") {
-		return (
-			process.env.DATABASE_URL_PAPER ??
-			process.env.DATABASE_URL ??
-			"postgresql://cream:cream_dev_password@localhost:5432/cream_paper"
-		);
+		const url = process.env.DATABASE_URL_PAPER;
+		if (!url) {
+			throw new Error("DATABASE_URL_PAPER environment variable is required when CREAM_ENV=PAPER.");
+		}
+		return url;
 	}
 
 	if (env === "LIVE") {
-		return (
-			process.env.DATABASE_URL_LIVE ??
-			process.env.DATABASE_URL ??
-			"postgresql://cream:cream_dev_password@localhost:5432/cream"
-		);
+		const url = process.env.DATABASE_URL_LIVE;
+		if (!url) {
+			throw new Error("DATABASE_URL_LIVE environment variable is required when CREAM_ENV=LIVE.");
+		}
+		return url;
 	}
 
-	return process.env.DATABASE_URL ?? "postgresql://cream:cream_dev_password@localhost:5432/cream";
+	throw new Error(`Invalid CREAM_ENV value '${env}'. Supported values are PAPER and LIVE.`);
 }
 
 const databaseUrl = getDatabaseUrl();

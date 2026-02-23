@@ -81,30 +81,6 @@ export interface CalculateLimitsOptions {
 }
 
 // ============================================
-// Default Constraints (fallback if not configured)
-// ============================================
-
-const DEFAULT_PER_INSTRUMENT: PerInstrumentConstraints = {
-	max_units: 1000,
-	max_notional: 50000,
-	max_pct_equity: 0.1,
-};
-
-const DEFAULT_PORTFOLIO: PortfolioConstraints = {
-	max_gross_notional: 500000,
-	max_net_notional: 250000,
-	max_gross_pct_equity: 2.0,
-	max_net_pct_equity: 1.0,
-};
-
-export const DEFAULT_OPTIONS: OptionsGreeksConstraints = {
-	max_delta_notional: 100000,
-	max_gamma: 1000,
-	max_vega: 5000,
-	max_theta: -500,
-};
-
-// ============================================
 // Status Calculation
 // ============================================
 
@@ -339,17 +315,27 @@ export function calculateLimits(options: CalculateLimitsOptions): LimitStatusIte
 
 	const limits: LimitStatusItem[] = [];
 
+	const perInstrument = constraints.per_instrument;
+	if (!perInstrument) {
+		throw new Error("Missing per-instrument constraints");
+	}
+	const portfolio = constraints.portfolio;
+	if (!portfolio) {
+		throw new Error("Missing portfolio constraints");
+	}
+
 	// Per-instrument limits
-	const perInstrument = constraints.per_instrument ?? DEFAULT_PER_INSTRUMENT;
 	limits.push(...calculatePerInstrumentLimits(positions, nav, perInstrument));
 
 	// Portfolio limits
-	const portfolio = constraints.portfolio ?? DEFAULT_PORTFOLIO;
 	limits.push(...calculatePortfolioLimits(exposure, nav, portfolio));
 
 	// Options limits (only if Greeks provided)
 	if (greeks) {
-		const optionsConstraints = constraints.options ?? DEFAULT_OPTIONS;
+		const optionsConstraints = constraints.options;
+		if (!optionsConstraints) {
+			throw new Error("Missing options constraints while Greeks were provided");
+		}
 		limits.push(...calculateOptionsLimits(greeks, optionsConstraints));
 	}
 

@@ -111,24 +111,22 @@ function registerCreateHelixClientSuite(): void {
 
 function registerCreateHelixClientFromEnvSuite(): void {
 	describe("createHelixClientFromEnv", () => {
-		it("uses environment defaults when env vars not set", () => {
+		it("throws when env vars not set", () => {
+			const originalUrl = Bun.env.HELIX_URL;
 			const originalHost = Bun.env.HELIX_HOST;
 			const originalPort = Bun.env.HELIX_PORT;
+			delete Bun.env.HELIX_URL;
 			delete Bun.env.HELIX_HOST;
 			delete Bun.env.HELIX_PORT;
 
 			try {
-				const client = createHelixClientFromEnv();
-				const config = client.getConfig();
-				expect(config.host).toBe("localhost");
-				expect(config.port).toBe(6969);
+				expect(() => createHelixClientFromEnv()).toThrow(
+					"HELIX_URL or HELIX_HOST and HELIX_PORT environment variables are required",
+				);
 			} finally {
-				if (originalHost) {
-					Bun.env.HELIX_HOST = originalHost;
-				}
-				if (originalPort) {
-					Bun.env.HELIX_PORT = originalPort;
-				}
+				if (originalUrl) Bun.env.HELIX_URL = originalUrl;
+				if (originalHost) Bun.env.HELIX_HOST = originalHost;
+				if (originalPort) Bun.env.HELIX_PORT = originalPort;
 			}
 		});
 	});

@@ -1,18 +1,16 @@
-/**
- * Runtime Config Service Tests
- */
-
 // Set required environment variables before imports
 Bun.env.CREAM_ENV = "PAPER";
 
 import { describe, expect, mock, test } from "bun:test";
 import {
 	type AgentConfigsRepository,
+	type ConstraintsConfigRepository,
 	createRuntimeConfigService,
 	type RuntimeAgentConfig,
 	type RuntimeAgentType,
 	RuntimeConfigError,
 	type RuntimeConfigService,
+	type RuntimeConstraintsConfig,
 	type RuntimeScannerConfig,
 	type RuntimeTradingConfig,
 	type ScannerConfigsRepository,
@@ -45,7 +43,6 @@ function createMockTradingConfig(
 		...overrides,
 	};
 }
-
 function createMockAgentConfig(
 	agentType: RuntimeAgentType,
 	overrides: Partial<RuntimeAgentConfig> = {},
@@ -61,7 +58,6 @@ function createMockAgentConfig(
 		...overrides,
 	};
 }
-
 function createMockScannerConfig(
 	overrides: Partial<RuntimeScannerConfig> = {},
 ): RuntimeScannerConfig {
@@ -82,7 +78,6 @@ function createMockScannerConfig(
 		...overrides,
 	};
 }
-
 function createAllAgentConfigs(): RuntimeAgentConfig[] {
 	const agentTypes: RuntimeAgentType[] = [
 		"grounding_agent",
@@ -97,11 +92,43 @@ function createAllAgentConfigs(): RuntimeAgentConfig[] {
 
 	return agentTypes.map((agentType) => createMockAgentConfig(agentType));
 }
-
+function createMockConstraintsConfig(
+	overrides: Partial<RuntimeConstraintsConfig> = {},
+): RuntimeConstraintsConfig {
+	return {
+		id: "cc-001",
+		environment: "PAPER",
+		perInstrument: {
+			maxShares: 1_000,
+			maxContracts: 10,
+			maxNotional: 50_000,
+			maxPctEquity: 0.1,
+		},
+		portfolio: {
+			maxGrossExposure: 2,
+			maxNetExposure: 1,
+			maxConcentration: 0.25,
+			maxCorrelation: 0.7,
+			maxDrawdown: 0.15,
+			maxRiskPerTrade: 0.02,
+			maxSectorExposure: 0.3,
+			maxPositions: 10,
+		},
+		options: {
+			maxDelta: 100,
+			maxGamma: 50,
+			maxVega: 1_000,
+			maxTheta: 500,
+		},
+		status: "active",
+		createdAt: new Date().toISOString(),
+		updatedAt: new Date().toISOString(),
+		...overrides,
+	};
+}
 function testDouble<T>(partial: Partial<T>): T {
 	return partial as T;
 }
-
 function createMockTradingConfigRepo(): TradingConfigRepository {
 	return testDouble<TradingConfigRepository>({
 		getActive: mock(() => Promise.resolve(createMockTradingConfig())),
@@ -115,7 +142,6 @@ function createMockTradingConfigRepo(): TradingConfigRepository {
 		promote: mock(() => Promise.resolve(createMockTradingConfig())),
 	});
 }
-
 function createMockAgentConfigsRepo(): AgentConfigsRepository {
 	return testDouble<AgentConfigsRepository>({
 		getAll: mock(() => Promise.resolve(createAllAgentConfigs())),
@@ -123,7 +149,6 @@ function createMockAgentConfigsRepo(): AgentConfigsRepository {
 		cloneToEnvironment: mock(() => Promise.resolve()),
 	});
 }
-
 function createMockScannerConfigsRepo(): ScannerConfigsRepository {
 	return testDouble<ScannerConfigsRepository>({
 		getActive: mock(() => Promise.resolve(createMockScannerConfig())),
@@ -132,26 +157,35 @@ function createMockScannerConfigsRepo(): ScannerConfigsRepository {
 		setStatus: mock(() => Promise.resolve(createMockScannerConfig())),
 	});
 }
-
+function createMockConstraintsConfigsRepo(): ConstraintsConfigRepository {
+	return testDouble<ConstraintsConfigRepository>({
+		getActive: mock(() => Promise.resolve(createMockConstraintsConfig())),
+		getDraft: mock(() => Promise.resolve(null)),
+		saveDraft: mock(() => Promise.resolve(createMockConstraintsConfig({ status: "draft" }))),
+		setStatus: mock(() => Promise.resolve(createMockConstraintsConfig())),
+	});
+}
 function asMock(fn: unknown): ReturnType<typeof mock> {
 	return fn as ReturnType<typeof mock>;
 }
-
 function createServiceHarness(): {
 	tradingRepo: TradingConfigRepository;
 	agentRepo: AgentConfigsRepository;
 	scannerRepo: ScannerConfigsRepository;
+	constraintsRepo: ConstraintsConfigRepository;
 	service: RuntimeConfigService;
 } {
 	const tradingRepo = createMockTradingConfigRepo();
 	const agentRepo = createMockAgentConfigsRepo();
 	const scannerRepo = createMockScannerConfigsRepo();
-	const service = createRuntimeConfigService(tradingRepo, agentRepo, scannerRepo);
+	const constraintsRepo = createMockConstraintsConfigsRepo();
+	const service = createRuntimeConfigService(tradingRepo, agentRepo, scannerRepo, constraintsRepo);
 
 	return {
 		tradingRepo,
 		agentRepo,
 		scannerRepo,
+		constraintsRepo,
 		service,
 	};
 }

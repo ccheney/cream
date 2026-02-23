@@ -7,16 +7,16 @@
 
 /**
  * Get NEXT_PUBLIC_CREAM_ENV for client-side code.
- * Defaults to PAPER for local development.
  */
 function getClientEnv(): "PAPER" | "LIVE" {
 	const env = process.env.NEXT_PUBLIC_CREAM_ENV;
 	if (!env) {
-		// Default to PAPER for local development
-		return "PAPER";
+		throw new Error("NEXT_PUBLIC_CREAM_ENV environment variable is required.");
 	}
 	if (!["PAPER", "LIVE"].includes(env)) {
-		return "PAPER";
+		throw new Error(
+			`Invalid NEXT_PUBLIC_CREAM_ENV value '${env}'. Supported values are PAPER and LIVE.`,
+		);
 	}
 	return env as "PAPER" | "LIVE";
 }
@@ -24,11 +24,19 @@ function getClientEnv(): "PAPER" | "LIVE" {
 export const config = {
 	api: {
 		/** Base URL for the dashboard API */
-		baseUrl: process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001",
+		baseUrl: (() => {
+			const value = process.env.NEXT_PUBLIC_API_URL;
+			if (!value) throw new Error("NEXT_PUBLIC_API_URL environment variable is required.");
+			return value;
+		})(),
 	},
 	websocket: {
 		/** WebSocket URL for real-time updates */
-		url: process.env.NEXT_PUBLIC_WS_URL || "ws://localhost:3001/ws",
+		url: (() => {
+			const value = process.env.NEXT_PUBLIC_WS_URL;
+			if (!value) throw new Error("NEXT_PUBLIC_WS_URL environment variable is required.");
+			return value;
+		})(),
 		/** Reconnection delay in milliseconds */
 		reconnectDelay: 3000,
 		/** Maximum reconnection attempts before giving up */

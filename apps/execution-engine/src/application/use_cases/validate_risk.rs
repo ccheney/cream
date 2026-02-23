@@ -57,11 +57,7 @@ where
         // 2. Get active risk policy
         let policy = match self.risk_repo.find_active_policy().await {
             Ok(Some(policy)) => policy,
-            Ok(None) => {
-                return Ok(ConstraintCheckResponseDto::overall(
-                    RiskValidationDto::passed(),
-                ));
-            }
+            Ok(None) => return Err("No active risk policy configured".to_string()),
             Err(e) => return Err(format!("Failed to load risk policy: {e}")),
         };
 
@@ -103,7 +99,7 @@ where
         // Get active risk policy
         let policy = match self.risk_repo.find_active_policy().await {
             Ok(Some(policy)) => policy,
-            Ok(None) => return Ok(RiskValidationDto::passed()),
+            Ok(None) => return Err("No active risk policy configured".to_string()),
             Err(e) => return Err(format!("Failed to load risk policy: {e}")),
         };
 
@@ -130,7 +126,7 @@ where
         // Get active risk policy
         let policy = match self.risk_repo.find_active_policy().await {
             Ok(Some(policy)) => policy,
-            Ok(None) => return Ok(RiskValidationDto::passed()),
+            Ok(None) => return Err("No active risk policy configured".to_string()),
             Err(e) => return Err(format!("Failed to load risk policy: {e}")),
         };
 
@@ -281,8 +277,9 @@ mod tests {
             include_portfolio_context: false,
         };
 
-        let response = use_case.execute(request).await.unwrap();
-        assert!(response.result.passed);
+        let result = use_case.execute(request).await;
+        assert!(result.is_err());
+        assert_eq!(result.unwrap_err(), "No active risk policy configured");
     }
 
     #[tokio::test]
@@ -332,6 +329,10 @@ mod tests {
         let risk_repo = Arc::new(InMemoryRiskRepository::new());
         let order_repo = Arc::new(MockOrderRepo::new());
 
+        let mut policy = RiskPolicy::default();
+        policy.activate();
+        risk_repo.save_policy(&policy).await.unwrap();
+
         let use_case = ValidateRiskUseCase::new(risk_repo, order_repo);
 
         let order = create_test_order("order-1");
@@ -344,6 +345,10 @@ mod tests {
     async fn validate_multiple_orders() {
         let risk_repo = Arc::new(InMemoryRiskRepository::new());
         let order_repo = Arc::new(MockOrderRepo::new());
+
+        let mut policy = RiskPolicy::default();
+        policy.activate();
+        risk_repo.save_policy(&policy).await.unwrap();
 
         let use_case = ValidateRiskUseCase::new(risk_repo, order_repo);
 

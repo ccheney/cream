@@ -24,24 +24,27 @@ import {
 // gRPC Client Singletons
 // ============================================
 
-// gRPC services (MarketDataService, ExecutionService) run on port 50053
-// HTTP REST endpoints run on port 50051
-const DEFAULT_MARKET_DATA_URL = Bun.env.MARKET_DATA_SERVICE_URL ?? "http://localhost:50053";
-const DEFAULT_EXECUTION_URL = Bun.env.EXECUTION_SERVICE_URL ?? "http://localhost:50053";
+function requireServiceUrl(name: "MARKET_DATA_SERVICE_URL" | "EXECUTION_SERVICE_URL"): string {
+	const url = Bun.env[name];
+	if (!url) {
+		throw new Error(`${name} environment variable is required.`);
+	}
+	return url;
+}
 
 let marketDataClient: MarketDataServiceClient | null = null;
 let executionClient: ExecutionServiceClient | null = null;
 
 export function getMarketDataClient(): MarketDataServiceClient {
 	if (!marketDataClient) {
-		marketDataClient = createMarketDataClient(DEFAULT_MARKET_DATA_URL);
+		marketDataClient = createMarketDataClient(requireServiceUrl("MARKET_DATA_SERVICE_URL"));
 	}
 	return marketDataClient;
 }
 
 export function getExecutionClient(): ExecutionServiceClient {
 	if (!executionClient) {
-		executionClient = createExecutionClient(DEFAULT_EXECUTION_URL);
+		executionClient = createExecutionClient(requireServiceUrl("EXECUTION_SERVICE_URL"));
 	}
 	return executionClient;
 }

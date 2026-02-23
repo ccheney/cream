@@ -115,7 +115,29 @@ mock.module("../db", () => ({
 	getSentimentRepo: () => ({}),
 	getCorporateActionsRepo: () => ({}),
 	getPredictionMarketsRepo: () => ({}),
-	getRuntimeConfigService: () => ({}),
+	getRuntimeConfigService: () => ({
+		getActiveConfig: () =>
+			Promise.resolve({
+				constraints: {
+					perInstrument: {
+						maxShares: 1000,
+						maxNotional: 100000,
+						maxPctEquity: 0.25,
+					},
+					portfolio: {
+						maxGrossExposure: 2,
+						maxNetExposure: 1,
+						maxConcentration: 0.25,
+					},
+					options: {
+						maxDelta: 100000,
+						maxGamma: 1000,
+						maxVega: 5000,
+						maxTheta: 1000,
+					},
+				},
+			}),
+	}),
 }));
 
 // Import after mocks are set up

@@ -18,13 +18,19 @@ import {
 } from "./types.js";
 
 const app = new OpenAPIHono();
-const scannerGrpcClient = createScannerClient(
-	Bun.env.STREAM_PROXY_URL ?? "http://localhost:50052",
-	{
-		enableLogging: false,
-		maxRetries: 1,
-	},
-);
+
+function requireStreamProxyUrl(): string {
+	const streamProxyUrl = Bun.env.STREAM_PROXY_URL;
+	if (!streamProxyUrl) {
+		throw new Error("STREAM_PROXY_URL environment variable is required.");
+	}
+	return streamProxyUrl;
+}
+
+const scannerGrpcClient = createScannerClient(requireStreamProxyUrl(), {
+	enableLogging: false,
+	maxRetries: 1,
+});
 
 // ============================================
 // GET /scanner - Get scanner configuration
@@ -75,6 +81,10 @@ const getScannerStatusRoute = createRoute({
 			content: { "application/json": { schema: ScannerStatusSchema } },
 			description: "Scanner runtime status",
 		},
+		503: {
+			content: { "application/json": { schema: ErrorResponseSchema } },
+			description: "Scanner service unavailable",
+		},
 	},
 	tags: ["Config"],
 });
@@ -91,15 +101,13 @@ app.openapi(getScannerStatusRoute, async (c) => {
 			},
 			200,
 		);
-	} catch {
+	} catch (error) {
 		return c.json(
 			{
-				active: false,
-				symbolsTracked: 0,
-				totalAlerts: 0,
-				alertsLastHour: 0,
+				error: error instanceof Error ? error.message : "Scanner status unavailable",
+				code: "SERVICE_UNAVAILABLE",
 			},
-			200,
+			503,
 		);
 	}
 });

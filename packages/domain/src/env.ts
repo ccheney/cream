@@ -75,18 +75,6 @@ function isValidUrl(val: string): boolean {
 }
 
 /**
- * Optional URL schema with default - validates only when a value is provided
- * In Zod v4, we need to handle the optional case separately to apply defaults first
- */
-function optionalUrlWithDefault(defaultValue: string) {
-	return z
-		.string()
-		.optional()
-		.transform((val) => val ?? defaultValue)
-		.refine(isValidUrl, { message: "Invalid URL format" });
-}
-
-/**
  * Environment variable schema
  *
  * Note: CREAM_ENV is no longer part of the schema. Environment is determined
@@ -99,7 +87,11 @@ const envSchema = z.object({
 		.optional()
 		.refine((val) => val === undefined || isValidUrl(val), { message: "Invalid URL format" })
 		.describe("PostgreSQL database connection URL"),
-	HELIX_URL: optionalUrlWithDefault("http://localhost:6969").describe("HelixDB server URL"),
+	HELIX_URL: z
+		.string()
+		.optional()
+		.refine((val) => val === undefined || isValidUrl(val), { message: "Invalid URL format" })
+		.describe("HelixDB server URL"),
 	// Alternative HelixDB config (host:port vs URL)
 	HELIX_HOST: z.string().optional().describe("HelixDB host (alternative to HELIX_URL)"),
 	HELIX_PORT: z.coerce.number().optional().describe("HelixDB port (alternative to HELIX_URL)"),
@@ -276,13 +268,14 @@ export function getEnvDatabaseSuffix(ctx: ExecutionContext): string {
  * Get the HelixDB URL from either HELIX_URL or HELIX_HOST/HELIX_PORT
  */
 export function getHelixUrl(): string {
-	if (env.HELIX_URL) {
-		return env.HELIX_URL;
+	const helixUrl = Bun.env.HELIX_URL;
+	if (helixUrl) {
+		return helixUrl;
 	}
-	if (env.HELIX_HOST && env.HELIX_PORT) {
-		return `http://${env.HELIX_HOST}:${env.HELIX_PORT}`;
+	if (Bun.env.HELIX_HOST && Bun.env.HELIX_PORT) {
+		return `http://${Bun.env.HELIX_HOST}:${Bun.env.HELIX_PORT}`;
 	}
-	return "http://localhost:6969";
+	throw new Error("HELIX_URL or HELIX_HOST and HELIX_PORT environment variables are required");
 }
 
 /**

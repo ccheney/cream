@@ -18,27 +18,6 @@ const summaryRoute = createRoute({
 	tags: ["Portfolio"],
 });
 
-function buildDefaultSummary(
-	latestSnapshot: { nav?: number; cash?: number; timestamp?: string } | null,
-) {
-	const fallbackNav = latestSnapshot?.nav ?? 100000;
-	const fallbackCash = latestSnapshot?.cash ?? 100000;
-	return {
-		nav: fallbackNav,
-		cash: fallbackCash,
-		equity: 0,
-		buyingPower: fallbackCash * 4,
-		grossExposure: 0,
-		netExposure: 0,
-		positionCount: 0,
-		todayPnl: 0,
-		todayPnlPct: 0,
-		totalPnl: 0,
-		totalPnlPct: 0,
-		lastUpdated: latestSnapshot?.timestamp ?? new Date().toISOString(),
-	};
-}
-
 function calculateTodayPnl(
 	positions: Array<{ currentPrice: number; lastdayPrice: number; qty: number }>,
 ) {
@@ -123,8 +102,9 @@ async function getSummaryPayload() {
 	const latestSnapshot = await snapshotsRepo.getLatest(environment);
 
 	if (!isAlpacaConfigured()) {
-		log.warn("Alpaca not configured, returning default summary");
-		return buildDefaultSummary(latestSnapshot);
+		throw new HTTPException(503, {
+			message: "Broker credentials are not configured. Set ALPACA_KEY and ALPACA_SECRET.",
+		});
 	}
 
 	const firstSnapshot = await snapshotsRepo.getFirst(environment);
@@ -136,6 +116,9 @@ export function registerSummaryRoute(app: OpenAPIHono): void {
 		try {
 			return c.json(await getSummaryPayload());
 		} catch (error) {
+			if (error instanceof HTTPException) {
+				throw error;
+			}
 			log.error(
 				{ error: error instanceof Error ? error.message : String(error) },
 				"Failed to fetch Alpaca data for summary",

@@ -161,7 +161,15 @@ export function createAlpacaClientFromEnv(): AlpacaMarketDataClient {
 		throw new Error("ALPACA_KEY and ALPACA_SECRET environment variables are required");
 	}
 
-	const environment: TradingEnvironment = creamEnv === "LIVE" ? "LIVE" : "PAPER";
+	if (!creamEnv) {
+		throw new Error("CREAM_ENV environment variable is required. Set to PAPER or LIVE.");
+	}
+
+	if (creamEnv !== "PAPER" && creamEnv !== "LIVE") {
+		throw new Error(`Invalid CREAM_ENV value '${creamEnv}'. Supported values are PAPER and LIVE.`);
+	}
+
+	const environment: TradingEnvironment = creamEnv;
 	return new AlpacaMarketDataClient({ apiKey, apiSecret, environment });
 }
 

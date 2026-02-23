@@ -16,13 +16,6 @@ import type {
 
 const log = createNodeLogger({ service: "newspaper", level: "info" });
 
-const EMPTY_SECTIONS = {
-	macro: ["No significant macro developments"],
-	universe: ["No significant universe developments"],
-	predictionMarkets: ["No significant prediction market changes"],
-	economicCalendar: ["No economic releases expected today"],
-} as const;
-
 interface CategorizedEntries {
 	news: MacroWatchEntry[];
 	prediction: MacroWatchEntry[];
@@ -61,10 +54,6 @@ function categorizeEntries(entries: MacroWatchEntry[]): CategorizedEntries {
 
 function mentionsUniverse(entry: MacroWatchEntry, universeSet: Set<string>): boolean {
 	return entry.symbols.some((symbol) => universeSet.has(symbol.toUpperCase()));
-}
-
-function withFallback(lines: string[], fallback: string): string[] {
-	return lines.length > 0 ? lines : [fallback];
 }
 
 function buildMacroHeadlines(newsEntries: MacroWatchEntry[], universeSet: Set<string>): string[] {
@@ -157,10 +146,10 @@ export function compileNewspaper(
 	const economicCalendar = buildEconomicHeadlines(categorized.economic);
 
 	return {
-		macro: withFallback(macro, EMPTY_SECTIONS.macro[0]),
-		universe: withFallback(universe, EMPTY_SECTIONS.universe[0]),
-		predictionMarkets: withFallback(predictionMarkets, EMPTY_SECTIONS.predictionMarkets[0]),
-		economicCalendar: withFallback(economicCalendar, EMPTY_SECTIONS.economicCalendar[0]),
+		macro,
+		universe,
+		predictionMarkets,
+		economicCalendar,
 	};
 }
 

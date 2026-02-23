@@ -10,7 +10,6 @@
 import {
 	type CalendarDay,
 	getCalendarService,
-	initCalendarService,
 	type TradingSession,
 	TradingSessionSchema,
 } from "@cream/domain";
@@ -60,17 +59,11 @@ const ErrorSchema = z.object({
 
 /**
  * Get the calendar service, ensuring it's initialized.
- * Falls back to initialization if not yet done.
  */
 async function getService() {
-	let service = getCalendarService();
+	const service = getCalendarService();
 	if (!service) {
-		// Initialize with hardcoded service as fallback
-		await initCalendarService({ mode: "PAPER" });
-		service = getCalendarService();
-	}
-	if (!service) {
-		throw new Error("CalendarService unavailable");
+		throw new Error("CalendarService is not initialized");
 	}
 	return service;
 }
