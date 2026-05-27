@@ -153,9 +153,9 @@ function NewspaperDetails({ newspaper }: { newspaper: NewspaperData | null }) {
 								{sectionLabels[sectionKey] ?? sectionKey} ({bullets.length})
 							</div>
 							<ul className="space-y-1">
-								{bullets.map((bullet, idx) => (
+								{bullets.map((bullet) => (
 									<li
-										key={`${idx}-${bullet}`}
+										key={bullet}
 										className="text-sm text-stone-700 dark:text-night-200 leading-relaxed"
 									>
 										{bullet}
@@ -258,8 +258,8 @@ function IndicatorDetails({
 						</tr>
 					</thead>
 					<tbody className="divide-y divide-cream-100 dark:divide-night-700">
-						{entries.map((entry, idx) => (
-							<tr key={`${entry.symbol}-${idx}`}>
+						{entries.map((entry) => (
+							<tr key={`${entry.symbol}-${entry.date}`}>
 								<td className="py-1.5 pr-4 font-mono font-medium text-stone-900 dark:text-night-50">
 									{entry.symbol}
 								</td>

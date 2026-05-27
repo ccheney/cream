@@ -209,9 +209,9 @@ function ScannerAlertTape({ alerts, now }: { alerts: ScannerAlertData[]; now: nu
 				</div>
 			) : (
 				<div aria-live="polite" className="max-h-[34rem] space-y-2 overflow-y-auto pr-1">
-					{alerts.map((alert, index) => (
+					{alerts.map((alert) => (
 						<div
-							key={`${alert.symbol}-${alert.timestamp}-${index}`}
+							key={`${alert.symbol}-${alert.timestamp}`}
 							className="rounded-md border border-cream-200 bg-cream-50 p-3 dark:border-night-700 dark:bg-night-700"
 						>
 							<div className="flex items-center justify-between gap-2">

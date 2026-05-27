@@ -110,8 +110,8 @@ function Catalysts({ items }: { items: string[] }) {
 		<div className="bg-white dark:bg-night-800 rounded-lg border border-cream-200 dark:border-night-700 p-4">
 			<h2 className="text-lg font-medium text-stone-900 dark:text-night-50 mb-3">Catalysts</h2>
 			<ul className="space-y-2">
-				{items.map((catalyst, i) => (
-					<li key={`catalyst-${catalyst.slice(0, 20)}-${i}`} className="flex items-start gap-2">
+				{items.map((catalyst) => (
+					<li key={`catalyst-${catalyst}`} className="flex items-start gap-2">
 						<span className="mt-1.5 w-2 h-2 rounded-full bg-green-500 shrink-0" />
 						<span className="text-stone-700 dark:text-night-100">{catalyst}</span>
 					</li>
@@ -128,8 +128,8 @@ function InvalidationConditions({ items }: { items: string[] }) {
 				Invalidation Conditions
 			</h2>
 			<ul className="space-y-2">
-				{items.map((condition, i) => (
-					<li key={`condition-${condition.slice(0, 20)}-${i}`} className="flex items-start gap-2">
+				{items.map((condition) => (
+					<li key={`condition-${condition}`} className="flex items-start gap-2">
 						<span className="mt-1.5 w-2 h-2 rounded-full bg-red-500 shrink-0" />
 						<span className="text-stone-700 dark:text-night-100">{condition}</span>
 					</li>
@@ -146,11 +146,8 @@ function SupportingEvidenceSection({ items }: { items: SupportingEvidence[] }) {
 				Supporting Evidence
 			</h2>
 			<div className="space-y-3">
-				{items.map((evidence, i) => (
-					<EvidenceCard
-						key={`evidence-${evidence.type}-${evidence.summary.slice(0, 20)}-${i}`}
-						evidence={evidence}
-					/>
+				{items.map((evidence) => (
+					<EvidenceCard key={`evidence-${evidence.type}-${evidence.summary}`} evidence={evidence} />
 				))}
 			</div>
 		</div>

@@ -27,7 +27,7 @@ const isLive = Bun.env.CREAM_ENV === "LIVE";
 // Better Auth Instance (Lazy Initialization)
 // ============================================
 
-let _auth: ReturnType<typeof betterAuth> | null = null;
+let _auth: ReturnType<typeof createAuth> | null = null;
 
 const USER_FIELDS = {
 	emailVerified: "email_verified",
@@ -108,10 +108,8 @@ function getTrustedOrigins(): string[] {
  * Lazy initialization to avoid database connection at import time,
  * which allows tests to import this module without requiring a database.
  */
-export function getAuth(): ReturnType<typeof betterAuth> {
-	if (!_auth) {
-		_auth = createAuth();
-	}
+export function getAuth() {
+	_auth ??= createAuth();
 	return _auth;
 }
 
@@ -191,7 +189,7 @@ export interface User {
 	image?: string | null;
 	createdAt: Date;
 	updatedAt: Date;
-	twoFactorEnabled?: boolean;
+	twoFactorEnabled?: boolean | null;
 }
 
 /**

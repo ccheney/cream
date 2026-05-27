@@ -155,8 +155,7 @@ export const TickDots = memo(function TickDots({
 			<AnimatePresence mode="popLayout">
 				{displayTicks.map((direction, index) => (
 					<TickDot
-						// Use a stable key based on position from the end
-						// This ensures proper animation when new ticks are added
+						// biome-ignore lint/suspicious/noArrayIndexKey: stable position-based key for animation
 						key={`tick-${ticks.length - displayTicks.length + index}`}
 						direction={direction}
 						size={dotSize}
